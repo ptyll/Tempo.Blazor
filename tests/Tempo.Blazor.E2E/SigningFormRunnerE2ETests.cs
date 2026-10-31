@@ -117,8 +117,9 @@ public class SigningFormRunnerE2ETests : WasmTestBase
         var runner = GetRunner(page);
         var steps = GetStepsRail(runner);
 
-        // B25 (phase 2): the sheet is a presentation of the ONE steps rail — collapsing hides it.
-        await steps.Locator(".tm-signing-form-runner__mobile-minimize").ClickAsync();
+        // Phase 5 review: the HANDLE is the sheet's only toggle (the phase-2 Minimize row is
+        // gone) — collapsing hides the panel; the peek keeps progress + the "Sign now" CTA.
+        await steps.Locator(".tm-signing-form-runner__sheet-handle").ClickAsync();
         await Assertions.Expect(steps.Locator(".tm-signing-form-runner__mobile-expand")).ToBeVisibleAsync();
         await Assertions.Expect(steps.Locator(".tm-signing-form-runner__progress")).Not.ToBeVisibleAsync();
 
@@ -127,11 +128,12 @@ public class SigningFormRunnerE2ETests : WasmTestBase
     }
 
     /// <summary>
-    /// Expanding the mobile sheet with the keyboard moves focus onto the affordance that became
-    /// visible (the minimize button), so the next Enter / Tab continues from the sheet.
+    /// Expanding the mobile sheet with the keyboard moves focus onto the HANDLE — the one
+    /// affordance visible in every sheet state (phase 5 review; the expand CTA hides with the
+    /// state flip, the old minimize button is gone).
     /// </summary>
     [TestMethod]
-    [Description("After expanding the mobile sheet with Enter on 'Sign now', focus lands on the minimize button")]
+    [Description("After expanding the mobile sheet with Enter on 'Sign now', focus lands on the handle")]
     public async Task SigningFormRunner_ExpandingSheetKeepsFocusOnTheVisibleAffordance()
     {
         var page = await OpenRunnerAsync(390, 820);
@@ -139,7 +141,7 @@ public class SigningFormRunnerE2ETests : WasmTestBase
         var steps = GetStepsRail(runner);
 
         // Collapse first: the sheet starts expanded at 390, so "Sign now" becomes visible.
-        await steps.Locator(".tm-signing-form-runner__mobile-minimize").ClickAsync();
+        await steps.Locator(".tm-signing-form-runner__sheet-handle").ClickAsync();
         await Assertions.Expect(steps.Locator(".tm-signing-form-runner__mobile-expand")).ToBeVisibleAsync();
 
         var expand = steps.Locator(".tm-signing-form-runner__mobile-expand").First;
@@ -147,8 +149,8 @@ public class SigningFormRunnerE2ETests : WasmTestBase
         await page.Keyboard.PressAsync("Enter");
 
         var activeClass = await page.EvaluateAsync<string>("() => document.activeElement?.className?.toString() ?? ''");
-        StringAssert.Contains(activeClass, "tm-signing-form-runner__mobile-minimize",
-            $"expanding the sheet must move focus onto the now-visible minimize button, got '{activeClass}'");
+        StringAssert.Contains(activeClass, "tm-signing-form-runner__sheet-handle",
+            $"expanding the sheet must move focus onto the handle (visible in every state), got '{activeClass}'");
     }
 
     /// <summary>

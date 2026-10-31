@@ -663,6 +663,117 @@
     from `_signing-step-shell.css` into the new `_signing-steps.css` (both ship via
     `tempo-blazor-signing.css`).
 
+- **The signing runner's mobile panel is a real bottom sheet, and the sheet breakpoint moved from
+  768 to 640 (Signing redesign phase 5, S2-4).** The runner now classifies its OWN container (F1):
+  a new `LayoutMode` / `ResolvedLayoutChanged` pair wraps the runner root in the shared
+  `TmLayoutObserver` (the Gantt pattern — the root gained a `tm-signing-form-runner--mobile` /
+  `--tablet` modifier class), so a host with an app-level viewport scope gets the correct
+  presentation from the first frame. The sheet presentation itself stays CSS-only under
+  `@container tm-signing-runner (width < 640px)` — the sheet only pays off below the
+  single-column fold, a 640–767 column keeps the docked two-column panel. There is NO knob for the
+  old 768 behaviour: a host that wants the sheet at a wider container pins
+  `LayoutMode="TmLayoutMode.Mobile"` (and one that must never sheet pins `Desktop`/`Tablet`).
+  Below 640 the rail is a full-bleed bottom sheet with rounded TOP corners, an internal scroll
+  capped at `85dvh` and the safe-area inset. The sheet logic stays contained in the runner's
+  `MobileSheet` partial for the phase-9 migration onto the shared `TmDrawer`.
+  - *DOM structure.* The observer wraps the runner root in a `TmLayout` container element
+    (`div.tm-layout.tm-layout--mobile` / `--tablet` / `--desktop` …), so `.tm-signing-form-runner`
+    is no longer the outermost element a host sees:
+    ```html
+    <!-- before: the runner root was the host-placed element -->
+    <div class="tm-signing-form-runner …">…</div>
+
+    <!-- after: the F1 observer adds its own wrapper around the runner root -->
+    <div class="tm-layout tm-layout--mobile tm-layout--no-container">
+      <div class="tm-signing-form-runner …">…</div>
+    </div>
+    ```
+    Host CSS that targeted a PARENT of the runner (`.demo-card > .tm-signing-form-runner`) must
+    retarget; selectors ON `.tm-signing-form-runner` itself are unaffected.
+  - *Sheet states.* The sheet is a THREE-state CSS presentation (phase 5 review): **peek**
+    (collapsed — the handle, the done count strip `.tm-signing-form-runner__sheet-progress` and
+    the "Sign now" CTA stay visible above the document; the layout reserves the strip's measured
+    height through the new `--tm-signing-sheet-peek-height` knob on the runner root instead of the
+    old fixed `2 × space-16` padding guess), **expanded** (field list + step, capped at `85dvh`
+    with an internal scroll) and **full** (`.tm-signing-form-runner__steps--sheet-full` — the
+    active edit: step panel + sticky action bar visible, field list folded away). EVERY mobile
+    navigation (Next / Previous / Skip / field-list tap / document overlay tap — which now also
+    OPENS the collapsed sheet on the clicked field's step) lands in **full**; the handle toggles
+    expanded ↔ peek, and the More menu's "Field list" switches full → expanded, scrolls the list
+    into view and focuses the current row. There is deliberately NO resize-on-focus (it would
+    move a pressed control mid-press when a blurred input collapsed the sheet) and no JS state.
+  - *Toggles.* The HANDLE (`.tm-signing-form-runner__sheet-handle`) is the sheet's ONLY
+    `aria-expanded`/`aria-controls` toggle, and it keeps focus when the state flip hides the
+    focus owner. The phase-2 "Sign now" `aria-expanded` semantics are gone (it is an action, not
+    a toggle) and the expanded sheet's full-width "Minimize" row is REMOVED — "Show whole
+    document" in the More menu collapses to peek:
+    ```html
+    <!-- before (phase 2): both affordances rendered, both carried aria-expanded -->
+    <button class="tm-signing-form-runner__mobile-expand" aria-expanded="false" aria-controls="…">Sign now</button>
+    <button class="tm-signing-form-runner__mobile-minimize" aria-expanded="true" aria-controls="…">Minimize</button>
+
+    <!-- after: the handle is the only toggle; More → "Show whole document" collapses -->
+    <button class="tm-signing-form-runner__sheet-handle" aria-expanded="false" aria-controls="…">…</button>
+    <button class="tm-signing-form-runner__mobile-expand">Sign now</button>
+    ```
+    Tests or scripts that clicked `.tm-signing-form-runner__mobile-minimize` use the handle (or
+    the More menu's `tm-signing-form-runner__more-document` entry).
+  - *Action bar.* The mobile sticky action row is `Previous (1fr) | Next/Complete (2fr — the
+    primary stays the widest at 320) | ⋯ More` — the new `.tm-signing-form-runner__more` trigger
+    (a core `TmDropdown`; hidden on the docked containers, where the menu simply stays closed)
+    carries Skip (optional current field only), Field list, Language (expands the sheet and
+    focuses the picker) and "Show whole document". The desktop Skip row is unchanged; the menu
+    items render only while the trigger is visible, so no duplicated actions are exposed.
+  - *Auto-scroll.* Every step landing asks the new `signing-runner.js` module to put the active
+    field's document overlay above the sheet with ONE `scrollTo` — centred in the space above the
+    sheet, clamped so the field never hides under it; the overlay gained a `data-field-uuid`
+    anchor. Reduced motion scrolls instantly (`behavior: 'auto'`). The module is a dynamic
+    `import()` — **no `<script>` tag is needed** — and a circuit without it skips silently
+    (today's behaviour).
+  - *Choice cards (SI1).* On the mobile layout a select-typed field with at most five options
+    renders as radio CARDS (`.tm-signing-choice-step__options--cards` on the core `TmRadioGroup`,
+    56px whole-card rows) instead of the system picker; an OPTIONAL select's card set gains a
+    localized "None" card first (`TmSigningChoiceStep_None`) that sends the empty value — the
+    system picker's selectable placeholder keeps its contract. Six or more options keep `TmSelect`
+    at every width, and the desktop presentation is untouched.
+    ```html
+    <!-- before: the delivery field is always the system select -->
+    <div class="tm-signing-choice-step tm-signing-choice-step__select">…<select>…</div>
+
+    <!-- after (mobile layout, ≤ 5 options): the same values as whole-card radio rows -->
+    <fieldset class="tm-signing-choice-step__group">
+      <div class="tm-radio-group tm-signing-choice-step__options tm-signing-choice-step__options--cards">
+        <label class="tm-radio-option">…None</label>
+        <label class="tm-radio-option">…Paper</label>…
+      </div>
+    </fieldset>
+    ```
+  - *Signature default (SI3).* The runner gained `DefaultSignatureMode`
+    (`Auto|Draw|Typed|Upload`, default `Auto` = Draw on `pointer: coarse`, Typed elsewhere). The
+    template's stored `Preferences.Format` still wins over the parameter, and the signer's own tab
+    pick still wins over both. A host that relied on the old always-Typed first presentation on a
+    touch device pins `DefaultSignatureMode="TmSigningDefaultSignatureMode.Typed"`.
+  - *`TmSigningFormRunner` is `IAsyncDisposable` instead of `IDisposable` (the sync `Dispose` is
+    gone).* The runner cancels the pending autosave debounce and releases the `signing-runner.js`
+    module instance when it is disposed — but Blazor's renderer calls ONLY `DisposeAsync` when a
+    component implements both interfaces, so the cancellation put into the sync `Dispose` during
+    phase 5 never ran and a changed value fired its debounce into a disposed component. Keeping
+    `IAsyncDisposable` alone closes that hole. A host that disposed the runner explicitly — or a
+    test holding it in a `using` — must switch to the async form:
+    ```csharp
+    // before
+    runner.Dispose();
+    // or
+    using var runner = CreateRunner();
+
+    // after
+    await runner.DisposeAsync();
+    // or
+    await using var runner = CreateRunner();
+    ```
+    Hosts that only RENDER `<TmSigningFormRunner />` change nothing: the renderer disposes
+    `IAsyncDisposable` components on its own (same shape as the `TmToastContainer` change).
+
 ### Known issues
 
 - **Signing external / phone / attachment steps are documented placeholders (SI2).** Clicking
@@ -677,6 +788,27 @@
 
 ### Added
 
+- **Signing runner mobile sheet plumbing (Signing redesign phase 5), all additive.**
+  `TmSigningFormRunner` gains `LayoutMode` / `ResolvedLayoutChanged` (the F1 self-classification
+  pair, the Gantt pattern) and `DefaultSignatureMode` (SI3, see the Breaking / Migration entry
+  above); `TmSigningChoiceStep` gains the pass-through `LayoutMode` that presents ≤5 options as
+  radio cards on a mobile layout (SI1) — `Auto` does not measure; the runner passes its resolved
+  mode down, standalone hosts that want the narrow presentation pass `Mobile` explicitly. The
+  mobile sheet grows the `.tm-signing-form-runner__sheet-handle` toggle (its only `aria-expanded`
+  control), the `.tm-signing-form-runner__sheet-progress` peek strip (its own polite status region
+  while collapsed) and the `--tm-signing-sheet-peek-height` root knob, and the action row the
+  `.tm-signing-form-runner__more` overflow (`TmSigningFormRunner_More`, `_ShowFields`,
+  `_ShowDocument`, `_SheetExpand`, `_SheetCollapse` — en/cs/sk/fr). The unused
+  `TmSigningFormRunner_Minimize` key was removed (the Minimize row is gone — see Breaking above),
+  and the optional select's card set gained `TmSigningChoiceStep_None` ("None" / "Žádná" /
+  "Žiadna" / "Aucun"), all four `TmResources` tables + `MockTmLocalizer`. The package's new
+  `signing-runner.js` ES module (`_content/Tempo.Blazor.Signing/js/signing-runner.js`, dynamic
+  `import()` — no `<script>` tag; node lane `npm run test:signing-runner`) ships
+  `isCoarsePointer`, `scrollToField` (single scroll above the sheet, reduced-motion aware) and
+  `focusFieldButton` (the field-list focus move), and the field overlay root now carries
+  `data-field-uuid` as the scroll anchor. The runner implements `IAsyncDisposable` (only — the
+  sync `Dispose` never ran next to it): disposing cancels the pending autosave debounce and
+  releases the module instance, with `JSDisconnectedException` kept local everywhere.
 - **Core splat hooks for host a11y plumbing (Signing redesign phase 4 review), all additive.**
   `TmSelect` gains `SelectAttributes` (splatted on the native `<select>`; entries win over the
   component's own attributes), `TmCheckbox` gains `InputAttributes` (on the native `<input>`; its

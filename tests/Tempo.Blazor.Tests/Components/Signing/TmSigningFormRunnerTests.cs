@@ -378,6 +378,30 @@ public class TmSigningFormRunnerTests : LocalizationTestBase
     }
 
     [Fact]
+    public async Task Runner_Dispose_CancelsPendingAutoSave()
+    {
+        // Phase 5 review: the runner is IAsyncDisposable ONLY — Blazor's renderer (and bUnit's
+        // dispose) never call a sync Dispose next to it, so the pending autosave debounce must be
+        // cancelled in DisposeAsync. A value change followed by a dispose must stay silent no
+        // matter how far the clock advances afterwards.
+        var time = new FakeTimeProvider();
+        Services.AddSingleton<TimeProvider>(time);
+        var autosaves = 0;
+        var cut = Render<TmSigningFormRunner>(parameters => parameters
+            .Add(p => p.Fields, [CreateField("name", "Name", SigningFieldType.Text)])
+            .Add(p => p.AutoSaveDelay, TimeSpan.FromSeconds(1))
+            .Add(p => p.OnAutoSave, EventCallback.Factory.Create<IReadOnlyDictionary<string, object?>>(this, _ => autosaves++)));
+
+        cut.Find("input.tm-signing-text-step__input").Change("Alice");
+
+        await DisposeComponentsAsync();
+
+        time.Advance(TimeSpan.FromSeconds(10));
+
+        autosaves.Should().Be(0, "the dispose must cancel the pending autosave debounce");
+    }
+
+    [Fact]
     public void Loading_DisablesNavigation()
     {
         var cut = Render<TmSigningFormRunner>(parameters => parameters
@@ -406,12 +430,13 @@ public class TmSigningFormRunnerTests : LocalizationTestBase
     }
 
     /// <summary>
-    /// The mobile bottom sheet is a CSS presentation of the ONE steps rail: collapsed shows only
-    /// the expand affordance, expanded shows the minimize affordance plus the panel — driven by
-    /// the <c>--sheet-collapsed</c> / <c>--sheet-expanded</c> state classes.
+    /// The mobile bottom sheet is a CSS presentation of the ONE steps rail (phase 5 review): the
+    /// peek state's "Sign now" CTA expands it, and the full-width "Minimize" row is GONE — the
+    /// More menu's "Show whole document" collapses the sheet back to peek. Driven by the
+    /// <c>--sheet-collapsed</c> / <c>--sheet-expanded</c> state classes.
     /// </summary>
     [Fact]
-    public void MobileCollapsed_CanExpandAndMinimize()
+    public async Task MobileCollapsed_CanExpandAndMinimize()
     {
         var cut = Render<TmSigningFormRunner>(parameters => parameters
             .Add(p => p.Fields, [CreateField("name", "Name", SigningFieldType.Text)])
@@ -422,33 +447,37 @@ public class TmSigningFormRunnerTests : LocalizationTestBase
             "a collapsed mobile panel is a state class on the single steps rail");
         cut.Find(".tm-signing-form-runner__mobile-expand").Click();
         cut.Find(".tm-signing-form-runner__steps").ClassList.Should().Contain("tm-signing-form-runner__steps--sheet-expanded");
-        cut.Find(".tm-signing-form-runner__mobile-minimize").Should().NotBeNull();
         cut.FindAll(".tm-signing-form-runner__step-panel").Should().ContainSingle(
             "expanding must not render a second panel instance");
 
-        cut.Find(".tm-signing-form-runner__mobile-minimize").Click();
+        // The More menu's "Show whole document" is the minimize path (phase 5 review) — the old
+        // full-width Minimize button no longer exists. The awaited clicks matter: the dropdown's
+        // selection path yields before invoking OnSelect.
+        await cut.Find(".tm-signing-form-runner__more > button").ClickAsync(new MouseEventArgs());
+        await cut.Find(".tm-signing-form-runner__more-document").ClickAsync(new MouseEventArgs());
         cut.Find(".tm-signing-form-runner__steps").ClassList.Should().Contain("tm-signing-form-runner__steps--sheet-collapsed");
+        cut.FindAll(".tm-signing-form-runner__mobile-minimize").Should().BeEmpty("the Minimize row was removed");
     }
 
-    /// <summary>The mobile sheet always renders BOTH affordances — CSS hides the inactive one per
-    /// state class — and both describe the sheet state through <c>aria-expanded</c>.</summary>
+    /// <summary>The HANDLE is the sheet's ONLY aria-expanded toggle (phase 5 review): the peek
+    /// "Sign now" CTA carries no toggle semantics — the state is reachable through the handle.</summary>
     [Fact]
-    public void MobileSheet_RendersBothAffordances_WithTheSheetState()
+    public void MobileSheet_HandleIsTheOnlyAriaExpandedToggle()
     {
         var cut = Render<TmSigningFormRunner>(parameters => parameters
             .Add(p => p.Fields, [CreateField("name", "Name", SigningFieldType.Text)])
             .Add(p => p.MobilePanelMode, TmSigningFormRunnerMobilePanelMode.Collapsed));
 
-        cut.FindAll(".tm-signing-form-runner__mobile-expand").Should().ContainSingle();
-        cut.FindAll(".tm-signing-form-runner__mobile-minimize").Should().ContainSingle(
-            "BOTH affordances always render; CSS hides the one that does not match the sheet state");
-        cut.Find(".tm-signing-form-runner__mobile-expand").GetAttribute("aria-expanded").Should().Be("false");
-        cut.Find(".tm-signing-form-runner__mobile-minimize").GetAttribute("aria-expanded").Should().Be("false");
+        var handle = cut.Find(".tm-signing-form-runner__sheet-handle");
+        handle.GetAttribute("aria-expanded").Should().Be("false");
+        cut.Find(".tm-signing-form-runner__mobile-expand").GetAttribute("aria-expanded").Should().BeNull(
+            "the Sign-now CTA is an action, not a toggle");
 
-        cut.Find(".tm-signing-form-runner__mobile-expand").Click();
+        handle.Click();
 
-        cut.Find(".tm-signing-form-runner__mobile-expand").GetAttribute("aria-expanded").Should().Be("true");
-        cut.Find(".tm-signing-form-runner__mobile-minimize").GetAttribute("aria-expanded").Should().Be("true");
+        cut.Find(".tm-signing-form-runner__sheet-handle").GetAttribute("aria-expanded").Should().Be("true");
+        cut.FindAll(".tm-signing-form-runner__mobile-minimize").Should().BeEmpty(
+            "the expanded sheet has no minimize row — More → \"Show whole document\" collapses");
     }
 
     [Fact]
@@ -956,8 +985,10 @@ public class TmSigningFormRunnerTests : LocalizationTestBase
             "the language selector left the panel header");
     }
 
-    /// <summary>CSS contract of the sticky action footer (phase 3 review): desktop/tablet panels
-    /// cap at the viewport and keep the actions reachable; the skip row spans the grid.</summary>
+    /// <summary>CSS contract of the sticky action footer (phase 3 review, re-pinned in phase 5):
+    /// docked panels (≥ 640px — phase 5 moved the sheet breakpoint from 768) cap at the viewport
+    /// and keep the actions reachable; the skip row spans the grid, and the mobile sheet owns its
+    /// own sticky bar with the More overflow.</summary>
     [Fact]
     public void Runner_CssContract_StickyFooter_AndSkipRow()
     {
@@ -965,8 +996,8 @@ public class TmSigningFormRunnerTests : LocalizationTestBase
             ThemeCss.RepositoryRoot().FullName,
             "src", "Tempo.Blazor.Signing", "wwwroot", "css", "components", "_signing-form-runner.css"));
 
-        css.Should().Contain("@container tm-signing-runner (width >= 768px)",
-            "the sticky footer is scoped to desktop/tablet containers");
+        css.Should().Contain("@container tm-signing-runner (width >= 640px)",
+            "the sticky footer is scoped to docked containers (phase 5: the sheet moved to < 640px)");
         css.Should().Contain("max-height: calc(100dvh - (2 * var(--tm-space-4)))");
         css.Should().Contain("inset-block-end: 0");
         css.Should().Contain("z-index: var(--tm-z-sticky)", "a sticky surface never rides the modal band");
@@ -974,6 +1005,9 @@ public class TmSigningFormRunnerTests : LocalizationTestBase
         // Phase 3 review: the footer language select flexes and never overflows the footer row.
         css.Should().Contain("flex: 1 1 auto", "the language select grows with the footer row");
         css.Should().Contain("min-width: 0", "the language select may shrink instead of overflowing");
+        // Phase 5: the mobile sheet caps at 85dvh (the FULL state) with the safe-area inset.
+        css.Should().Contain("max-height: 85dvh", "the sheet's full state never covers the whole viewport");
+        css.Should().Contain("env(safe-area-inset-bottom", "the sheet respects the home-indicator inset");
     }
 
     /// <summary>

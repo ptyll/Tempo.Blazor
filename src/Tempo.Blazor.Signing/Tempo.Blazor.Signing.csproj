@@ -44,6 +44,15 @@
     </AssemblyAttribute>
   </ItemGroup>
 
+  <!-- The node:test files for the package's ES module live inside wwwroot (the root package.json
+       is "type": "module", so they import the module directly) and are a test asset, not a
+       published one: keeping them as Content would ship __tests__/*.test.mjs to every consumer's
+       static web assets. -->
+  <ItemGroup>
+    <Content Remove="wwwroot\**\__tests__\**" />
+    <None Include="wwwroot\**\__tests__\**" Pack="false" Visible="false" />
+  </ItemGroup>
+
   <ItemGroup>
     <None Include="..\..\README.md" Pack="true" PackagePath="\" Condition="Exists('..\..\README.md')" />
   </ItemGroup>

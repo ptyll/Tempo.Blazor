@@ -2,6 +2,8 @@ using System.Collections;
 using System.Globalization;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.JSInterop;
+using Tempo.Blazor.Abstractions.Layout;
 using Tempo.Blazor.Abstractions.Models;
 using Tempo.Blazor.Components.Inputs;
 
@@ -19,6 +21,13 @@ namespace Tempo.Blazor.Components.Signing;
 /// document chrome; the default stays today's chrome-free look.
 /// </para>
 /// <para>
+/// Signing redesign phase 5: the runner classifies its OWN container (F1 — see
+/// <c>TmSigningFormRunner.Layout.razor.cs</c>) so a narrow container presents the mobile sheet with
+/// radio-card choice fields (SI1) and resolves the <see cref="DefaultSignatureMode"/>; the active
+/// field is scrolled into view above the sheet by the package's <c>signing-runner.js</c> module
+/// after every landing render.
+/// </para>
+/// <para>
 /// KNOWN LIMITATION (security note — reworked in Signing redesign phase 6): the external steps are
 /// placeholders. Clicking "Start verification" / "Checkout" (the runner's
 /// <c>OnStart</c>/<c>OnCheckout</c> handlers store <c>true</c> for the field) marks the step
@@ -29,7 +38,7 @@ namespace Tempo.Blazor.Components.Signing;
 /// that a verification, payment, or upload happened.
 /// </para>
 /// </remarks>
-public partial class TmSigningFormRunner : IDisposable
+public partial class TmSigningFormRunner : IAsyncDisposable
 {
     private Dictionary<string, object?> _values = new(StringComparer.Ordinal);
     private IReadOnlyDictionary<string, object?>? _lastValues;
@@ -58,7 +67,13 @@ public partial class TmSigningFormRunner : IDisposable
 
     [Inject] private IServiceProvider Services { get; set; } = default!;
 
+    [Inject] private IJSRuntime JS { get; set; } = default!;
+
     private TimeProvider? _clock;
+
+    // signing-runner.js interop (phase 5) and the layout classification it serves live in the
+    // TmSigningFormRunner.Layout.razor.cs partial (phase 5 review split) — the runner only disposes the
+    // interop from here.
 
     // The autosave debounce runs on an injectable clock so tests advance a FakeTimeProvider instead
     // of sleeping. Resolved lazily (not [Inject]-ed directly): an unregistered optional service
@@ -153,6 +168,14 @@ public partial class TmSigningFormRunner : IDisposable
     /// <summary>Optional selector for a fixed complete target that the mobile panel must avoid.</summary>
     [Parameter] public string? MobileCompleteTargetSelector { get; set; }
 
+    /// <summary>
+    /// The capture mode a signature step STARTS in when the template's
+    /// <c>Preferences.Format</c> is silent (Signing redesign phase 5, SI3). <see cref="TmSigningDefaultSignatureMode.Auto"/>
+    /// — the default — resolves to Draw on a coarse pointer (a finger) and to Typed elsewhere;
+    /// the template's stored format always wins over this setting.
+    /// </summary>
+    [Parameter] public TmSigningDefaultSignatureMode DefaultSignatureMode { get; set; } = TmSigningDefaultSignatureMode.Auto;
+
     /// <summary>Additional CSS classes for the root element.</summary>
     [Parameter] public string? Class { get; set; }
 
@@ -199,10 +222,36 @@ public partial class TmSigningFormRunner : IDisposable
         ? 0
         : Math.Clamp(_currentStepIndex, 0, Plan.Steps.Count - 1);
 
-    // The Previous / Next / Skip navigation and the mobile-sheet presentation live in their own
-    // partial parts (phase 3 review split): TmSigningFormRunner.Navigation.cs carries the step
-    // navigation, TmSigningFormRunner.MobileSheet.cs the sheet state; the progress counts are in
-    // TmSigningFormRunner.Progress.cs.
+    // The layout plumbing (F1), the coarse-pointer probe / signature-mode resolution (SI3) and
+    // the pending auto-scroll live in their own partial parts (phase 5 review split):
+    // TmSigningFormRunner.Layout.razor.cs. The Previous / Next / Skip navigation is in
+    // TmSigningFormRunner.Navigation.cs, the mobile-sheet presentation state in
+    // TmSigningFormRunner.MobileSheet.cs; the progress counts are in TmSigningFormRunner.Progress.cs.
+
+    /// <summary>
+    /// The runner's SINGLE after-render pass (phase 5 review): resolve the coarse-pointer probe
+    /// once (SI3), then apply the pending auto-scroll and the pending sheet focus moves — AFTER
+    /// the render has applied the new step / sheet state, so the JS side measures settled
+    /// geometry and the focus targets are actually visible.
+    /// </summary>
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        try
+        {
+            await ResolvePointerAsync(firstRender);
+            await ApplyPendingScrollAsync();
+            await ApplyPendingSheetFocusAsync();
+        }
+        catch (Exception ex) when (ex is JSException
+            or JSDisconnectedException
+            or ObjectDisposedException
+            or TaskCanceledException
+            or InvalidOperationException)
+        {
+            // The after-render pass is best-effort by contract (see SigningRunnerInterop): a
+            // circuit that died mid-render keeps the failure local.
+        }
+    }
 
     private bool IsCompleteDisabled => IsLoading || IsCompleting || !AllRequiredFieldsComplete();
 
@@ -228,6 +277,7 @@ public partial class TmSigningFormRunner : IDisposable
         {
             var classes = new List<string> { "tm-signing-form-runner" };
             AddClass(classes, IsLoading, "tm-signing-form-runner--loading");
+            AddClass(classes, !string.IsNullOrEmpty(LayoutClass), LayoutClass);
             if (!string.IsNullOrWhiteSpace(Class))
             {
                 classes.Add(Class);
@@ -348,21 +398,6 @@ public partial class TmSigningFormRunner : IDisposable
         return GetValue(field.Uuid);
     }
 
-    private TmSignatureCaptureMode GetSignatureCaptureMode(SigningField field)
-    {
-        if (_signatureCaptureModes.TryGetValue(field.Uuid, out var mode))
-        {
-            return mode;
-        }
-
-        return field.Preferences.Format?.Trim().ToLowerInvariant() switch
-        {
-            "draw" or "drawn" or "handwritten" => TmSignatureCaptureMode.Draw,
-            "upload" => TmSignatureCaptureMode.Upload,
-            _ => TmSignatureCaptureMode.Typed
-        };
-    }
-
     private Task SetSignatureCaptureModeAsync(string fieldUuid, TmSignatureCaptureMode mode)
     {
         _signatureCaptureModes[fieldUuid] = mode;
@@ -386,7 +421,7 @@ public partial class TmSigningFormRunner : IDisposable
         return GetValue(fieldUuid) as IReadOnlyList<TmSigningStepAttachment> ?? [];
     }
 
-    private Task HandleOverlayClickAsync(TmSigningFieldOverlayPointerEventArgs args)
+    private async Task HandleOverlayClickAsync(TmSigningFieldOverlayPointerEventArgs args)
     {
         var index = Plan.Steps.FindIndex(step => step.Fields.Any(field => string.Equals(field.Uuid, args.Field.Uuid, StringComparison.Ordinal)));
         if (index >= 0)
@@ -398,9 +433,14 @@ public partial class TmSigningFormRunner : IDisposable
 
             _currentStepIndex = index;
             ClearValidationMessages();
-        }
 
-        return Task.CompletedTask;
+            // Signing redesign phase 5: clicking a field on the document OPENS the sheet on that
+            // field's step, landing in the FULL edit state (the collapsed peek must not swallow
+            // the click). On desktop the sheet state classes are inert. The scroll itself is
+            // requested, not performed: OnAfterRenderAsync runs it after this render.
+            LandMobileSheetOnFull();
+            RequestScrollToActiveField();
+        }
     }
 
     private async Task SetChoiceValueAsync(SigningStepItem step, object? value)
@@ -667,10 +707,21 @@ public partial class TmSigningFormRunner : IDisposable
     }
 
     /// <inheritdoc />
-    public void Dispose()
+    public async ValueTask DisposeAsync()
     {
+        // The runner is IAsyncDisposable ONLY (phase 5 review): the Blazor renderer disposes via
+        // IAsyncDisposable when both interfaces are present, so a sync Dispose() would never run
+        // and the pending autosave debounce would fire into a disposed component. Cancel the
+        // debounce first, then release the signing-runner.js module instance.
         _autoSaveCts?.Cancel();
         _autoSaveCts?.Dispose();
+        _autoSaveCts = null;
+
+        if (_runnerInterop is not null)
+        {
+            await _runnerInterop.DisposeAsync();
+            _runnerInterop = null;
+        }
     }
 }
 

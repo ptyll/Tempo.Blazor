@@ -314,6 +314,11 @@ public sealed class MarkupClassCoverageTests
         // grid) and the progress count span (visually carried by .tm-signing-form-runner__progress).
         "tm-signing-form-runner__progress-text",
         "tm-signing-form-runner__field-item",
+        // Signing redesign phase 5: the resolved-layout hooks (the F1 observer's classification,
+        // C#-computed on the root). The sheet presentation stays container-query driven — these
+        // modifiers deliberately carry no rule of their own.
+        "tm-signing-form-runner--mobile",
+        "tm-signing-form-runner--tablet",
         "tm-signing-number-step",
         "tm-signing-phone-step",
         "tm-signing-step-shell--invalid",

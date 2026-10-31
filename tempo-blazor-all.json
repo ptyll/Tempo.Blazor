@@ -65991,6 +65991,16 @@
           "documentationStatus": "merged"
         },
         {
+          "itemName": "TmSigningDefaultSignatureMode",
+          "kind": "Enum",
+          "category": "Components",
+          "namespace": "Tempo.Blazor.Components.Signing",
+          "description": "The default capture mode a signature step starts in (Signing redesign phase 5, SI3). The template's stored Preferences.Format always wins over this setting; it decides only when the template is silent.",
+          "packageId": "Tempo.Blazor.Signing",
+          "sourcePath": "src/Tempo.Blazor.Signing/Components/Signing/TmSigningDefaultSignatureMode.cs",
+          "documentationStatus": "merged"
+        },
+        {
           "itemName": "TmSigningFieldOptionAreaMappingEventArgs",
           "kind": "Class",
           "category": "Components",
@@ -67738,6 +67748,13 @@
               "description": "Optional checkbox fields rendered as one grouped checkbox step."
             },
             {
+              "name": "LayoutMode",
+              "type": "TmLayoutMode",
+              "isRequired": false,
+              "default": "TmLayoutMode.Auto",
+              "description": "The resolved layout this step renders in (Signing redesign phase 5). Auto does not measure anything — it renders the desktop markup; the runner passes its own resolved classification down (never Auto), and a standalone host that wants the narrow radio-card presentation without a runner passes Mobile explicitly. A forced Mobile presents up to five select/radio options as radio cards (SI1), so a test can render that presentation without a DOM."
+            },
+            {
               "name": "Value",
               "type": "object?",
               "isRequired": false,
@@ -68293,6 +68310,13 @@
               "description": "Callback invoked when the signing culture changes."
             },
             {
+              "name": "DefaultSignatureMode",
+              "type": "TmSigningDefaultSignatureMode",
+              "isRequired": false,
+              "default": "TmSigningDefaultSignatureMode.Auto",
+              "description": "The capture mode a signature step STARTS in when the template's Preferences.Format is silent (Signing redesign phase 5, SI3). Auto — the default — resolves to Draw on a coarse pointer (a finger) and to Typed elsewhere; the template's stored format always wins over this setting."
+            },
+            {
               "name": "DocumentHeaderActions",
               "type": "RenderFragment?",
               "isRequired": false,
@@ -68328,6 +68352,13 @@
               "type": "bool",
               "isRequired": false,
               "description": "Whether navigation and inputs are currently blocked by an external operation."
+            },
+            {
+              "name": "LayoutMode",
+              "type": "TmLayoutMode",
+              "isRequired": false,
+              "default": "TmLayoutMode.Auto",
+              "description": "The layout the runner renders (Signing redesign phase 5). Auto measures the runner's own container — a container narrower than the mobile breakpoint presents the steps rail as the bottom sheet (peek / expanded) with radio-card choice fields (SI1); wider containers keep the docked desktop panel. A forced value never measures, so a test (or a host that already knows the width) can pin the presentation without a DOM."
             },
             {
               "name": "MobileCompleteTargetSelector",
@@ -68372,6 +68403,12 @@
               "isRequired": false,
               "default": "[]",
               "description": "Document pages shown during signing."
+            },
+            {
+              "name": "ResolvedLayoutChanged",
+              "type": "EventCallback<TmLayoutMode>",
+              "isRequired": false,
+              "description": "Raised when the resolved layout changes. The initial value is not a change. Never pair LayoutMode with this callback: it reports the resolved mode, and a two-way bind would pin that mode."
             },
             {
               "name": "ShowDocumentToolbar",
@@ -69030,15 +69067,23 @@
         {
           "path": "src/Tempo.Blazor.Signing/wwwroot/js/pdf-template-designer.js",
           "kind": "JavaScript"
+        },
+        {
+          "path": "src/Tempo.Blazor.Signing/wwwroot/js/signing-runner.js",
+          "kind": "JavaScript"
+        },
+        {
+          "path": "src/Tempo.Blazor.Signing/wwwroot/js/__tests__/signing-runner.test.mjs",
+          "kind": "JavaScript"
         }
       ],
       "summary": {
-        "itemCount": 46,
-        "manualItemCount": 46,
-        "generatedItemCount": 46,
+        "itemCount": 47,
+        "manualItemCount": 47,
+        "generatedItemCount": 47,
         "generatedOnlyItemCount": 0,
         "componentCount": 31,
-        "publicApiTypeCount": 15
+        "publicApiTypeCount": 16
       }
     },
     {
@@ -123801,10 +123846,10 @@
   ],
   "summary": {
     "packageCount": 27,
-    "itemCount": 3341,
-    "manualItemCount": 3341,
+    "itemCount": 3342,
+    "manualItemCount": 3342,
     "generatedOnlyItemCount": 0,
     "componentCount": 503,
-    "publicApiTypeCount": 2785
+    "publicApiTypeCount": 2786
   }
 }

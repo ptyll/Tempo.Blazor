@@ -56,8 +56,9 @@ public class SigningQualityE2ETests : WasmTestBase
         var runner = GetRunner(page);
         await runner.ScrollIntoViewIfNeededAsync();
 
-        var minimize = runner.Locator(".tm-signing-form-runner__mobile-minimize").First;
-        await minimize.FocusAsync();
+        // Phase 5 review: the HANDLE is the sheet's only toggle (the Minimize row is gone).
+        var handle = runner.Locator(".tm-signing-form-runner__sheet-handle").First;
+        await handle.FocusAsync();
         await page.Keyboard.PressAsync("Enter");
         await Assertions.Expect(runner.Locator(".tm-signing-form-runner__mobile-expand")).ToBeVisibleAsync();
 

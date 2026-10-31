@@ -35,6 +35,9 @@ jobs:
       - name: Core helpers + overlay (pointer-drag, pointer-gesture, workflow, scheduler, dashboard, …)
         run: npm run test:overlay
 
+      - name: Signing runner (scrollToField above the mobile sheet + coarse-pointer probe)
+        run: npm run test:signing-runner
+
       - name: Diagram editor
         run: npm run test:diagram-editor
 

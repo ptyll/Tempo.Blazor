@@ -1,11 +1,21 @@
 @namespace Tempo.Blazor.Components.Signing
 @inherits Tempo.Blazor.Components.TmComponentBase
+@using Tempo.Blazor.Abstractions.Layout
 @using Tempo.Blazor.Abstractions.Models
 @using Tempo.Blazor.Components.Buttons
+@using Tempo.Blazor.Components.Dropdowns
 @using Tempo.Blazor.Components.Feedback
 @using Tempo.Blazor.Components.Inputs
 @using Tempo.Blazor.Components.Icons
+@using Tempo.Blazor.Components.Layout
+@using Tempo.Blazor.Components.Overlay
 
+@* The runner measures its OWN container (F1, Signing redesign phase 5): the observer is the
+   outer element, the runner root sits inside it and is the CSS size container the descendants
+   query. IsContainer=false: the observer root is a plain block that only reports a width. *@
+<TmLayoutObserver LayoutMode="LayoutForObserver" ResolvedLayoutChanged="OnResolvedLayoutChanged" IsContainer="false">
+<LayoutContent Context="lay">
+@{ ApplyLayout(lay.Resolved); }
 <div @attributes="AdditionalAttributes"
      class="@RootClass"
      aria-busy="@BoolText(IsLoading)">
@@ -79,32 +89,39 @@
         </div>
 
         @* B25 (Signing redesign phase 2): the steps rail hosts the ONE step panel. The column vs.
-           mobile-sheet presentation is CSS only (@container tm-signing-runner); the sheet state is
-           carried by the --sheet-collapsed / --sheet-expanded classes below, so the panel content
-           exists exactly once in the DOM at every width. *@
+            mobile-sheet presentation is CSS only (@container tm-signing-runner); the sheet state is
+            carried by the --sheet-collapsed / --sheet-expanded / --sheet-full classes below, so
+            the panel content exists exactly once in the DOM at every width. Collapsed is the PEEK
+            state (phase 5): the handle, the done count and the primary CTA stay visible above the
+            document. FULL (phase 5 review) is the active edit: step panel + sticky action bar,
+            field list hidden. *@
         <aside class="@StepsClass"
                data-testid="@TestId("signing-runner-steps")"
                data-complete-target="@MobileCompleteTargetSelector">
             <div class="tm-signing-form-runner__sheet-bar">
-                @* BOTH affordances always render — CSS hides the one that does not match the
-                   current sheet state, so a toggle focus move (OnAfterRenderAsync) can target the
-                   button that becomes visible. aria-expanded describes the sheet state. *@
+                @* The HANDLE is the sheet's ONLY aria-expanded toggle (phase 5 review): one
+                    control, visible in every sheet state, describing the sheet state and naming
+                    the ONE step panel it toggles. The peek CTA ("Sign now") and the More menu
+                    drive the same state machine without carrying toggle semantics. *@
+                <button type="button"
+                        class="tm-signing-form-runner__sheet-handle"
+                        aria-expanded="@BoolText(_sheetExpanded)"
+                        aria-controls="@_stepPanelId"
+                        aria-label="@SheetHandleAriaLabel"
+                        @ref="_sheetHandle"
+                        @onclick="ToggleMobileSheet">
+                    <span class="tm-signing-form-runner__sheet-handle-grip" aria-hidden="true"></span>
+                </button>
+                @* The PEEK strip (phase 5): the done count stays readable while the sheet is
+                    collapsed. It is a SECOND rendering of the count text, not of the panel's
+                    progress region — the live region remains the panel header's (one region).
+                    While collapsed it is the strip's own status region (phase 5 review), so the
+                    count announces without expanding. *@
+                <div class="tm-signing-form-runner__sheet-progress" role="@PeekProgressRole">@DoneCountText</div>
                 <button type="button"
                         class="tm-signing-form-runner__mobile-expand"
-                        aria-expanded="@BoolText(_sheetExpanded)"
-                        aria-controls="@_stepPanelId"
-                        @ref="_mobileExpandButton"
                         @onclick="ExpandMobilePanel">
                     @Loc["TmSigningFormRunner_SignNow"]
-                </button>
-                <button type="button"
-                        class="tm-signing-form-runner__mobile-minimize"
-                        aria-expanded="@BoolText(_sheetExpanded)"
-                        aria-controls="@_stepPanelId"
-                        aria-label="@Loc["TmSigningFormRunner_Minimize"]"
-                        @ref="_mobileMinimizeButton"
-                        @onclick="MinimizeMobilePanel">
-                    @Loc["TmSigningFormRunner_Minimize"]
                 </button>
             </div>
 
@@ -117,6 +134,8 @@
     }
     </div>
 </div>
+</LayoutContent>
+</TmLayoutObserver>
 
 @code {
     // INVARIANT (Signing redesign phase 2, bug B25): RenderStepPanel renders the ONE step panel
@@ -204,6 +223,7 @@
                                              Value="@GetValue(CurrentStep.Field.Uuid)"
                                              ValueChanged="value => SetChoiceValueAsync(CurrentStep, value)"
                                              AppearsOn="@CurrentStep.AppearsOn"
+                                             LayoutMode="ResolvedLayout"
                                              Culture="@CurrentCulture"
                                              FallbackCulture="@FallbackCulture"
                                              Disabled="@IsLoading" />
@@ -282,13 +302,17 @@
         }
 
         @* Sticky action footer (Signing redesign phase 3). The primary action is contextual:
-           "Next" while later steps remain, "Complete" once every required field is done — and on
-           the LAST step Complete renders (disabled while required work is missing) so the signer
-           sees the finishing action instead of a dead Next. Skip renders ONLY for an optional,
-           non-final current field and lives INSIDE the sticky footer as a full-width row, so the
-           keyboard order stays Previous → Next/Complete → Skip. The BEM classes
-           (__previous / __next / __skip / __complete) are the E2E contract — keep them on the
-           TmButton Class. *@
+            "Next" while later steps remain, "Complete" once every required field is done — and on
+            the LAST step Complete renders (disabled while required work is missing) so the signer
+            sees the finishing action instead of a dead Next. Skip renders ONLY for an optional,
+            non-final current field and lives INSIDE the sticky footer as a full-width row, so the
+            keyboard order stays Previous → Next/Complete → Skip. The BEM classes
+            (__previous / __next / __skip / __complete) are the E2E contract — keep them on the
+            TmButton Class. Phase 5: the row gains the "More" overflow for the MOBILE sheet (its
+            trigger hides on the desktop/tablet containers), carrying Skip, Language, the field
+            list and "Show whole document" — the trigger is one TmDropdown, the desktop Skip row
+            stays the keyboard-order contract, and the menu is simply closed wherever it is
+            hidden. *@
         <div class="tm-signing-form-runner__actions">
             <TmButton Variant="ButtonVariant.Secondary"
                       Size="ButtonSize.Lg"
@@ -318,6 +342,31 @@
                     @Loc["TmSigning_Next"]
                 </TmButton>
             }
+            <TmDropdown Class="tm-signing-form-runner__more"
+                        AriaLabel="@Loc["TmSigningFormRunner_More"]"
+                        Icon="more-vertical"
+                        ShowChevron="false"
+                        Align="OverlayAlign.End"
+                        OnSelect="HandleMoreSelectAsync">
+                @if (ShowSkipButton)
+                {
+                    <TmDropdownItem Value="skip" Class="tm-signing-form-runner__more-skip">
+                        @Loc["TmSigningFormRunner_Skip"]
+                    </TmDropdownItem>
+                }
+                <TmDropdownItem Value="fields" Class="tm-signing-form-runner__more-fields">
+                    @Loc["TmSigningFormRunner_ShowFields"]
+                </TmDropdownItem>
+                @if (ShowLanguagePicker)
+                {
+                    <TmDropdownItem Value="language" Class="tm-signing-form-runner__more-language">
+                        @Loc["TmSigningFormRunner_Language"]
+                    </TmDropdownItem>
+                }
+                <TmDropdownItem Value="document" Class="tm-signing-form-runner__more-document">
+                    @Loc["TmSigningFormRunner_ShowDocument"]
+                </TmDropdownItem>
+            </TmDropdown>
             @if (ShowSkipButton)
             {
                 <TmButton Variant="ButtonVariant.Link"
@@ -342,6 +391,7 @@
                     <select class="tm-signing-form-runner__language-select"
                             value="@CurrentCulture"
                             aria-label="@Loc["TmSigningFormRunner_LanguageAria"]"
+                            @ref="_languageSelect"
                             @onchange="HandleCultureChangedAsync">
                         @foreach (var culture in SupportedCultures)
                         {

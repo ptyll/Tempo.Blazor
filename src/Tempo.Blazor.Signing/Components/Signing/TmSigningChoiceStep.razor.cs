@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Components;
+using Tempo.Blazor.Abstractions.Layout;
 using Tempo.Blazor.Abstractions.Models;
 using Tempo.Blazor.Components.Inputs;
 using Tempo.Blazor.Models;
@@ -11,6 +12,12 @@ namespace Tempo.Blazor.Components.Signing;
 /// <see cref="TmRadio"/> and <see cref="TmCheckbox"/> option rows. The phase-2 group contract is
 /// kept: the radio and checkbox variants are real <c>fieldset</c>s named by a visually hidden
 /// <c>legend</c>, with a per-instance radio <c>name</c>.
+/// <para>
+/// Signing redesign phase 5 (SI1): on a MOBILE layout, choice fields with at most five options
+/// present as radio CARDS (the whole card is the clickable row) — a select-typed field swaps the
+/// system picker for the card set, a radio-typed field keeps its group with the card modifier.
+/// Six or more options keep the system <see cref="TmSelect"/> at every width.
+/// </para>
 /// </summary>
 public partial class TmSigningChoiceStep
 {
@@ -42,6 +49,16 @@ public partial class TmSigningChoiceStep
     /// <summary>Whether the input controls are disabled.</summary>
     [Parameter] public bool Disabled { get; set; }
 
+    /// <summary>
+    /// The resolved layout this step renders in (Signing redesign phase 5). <see cref="TmLayoutMode.Auto"/>
+    /// does NOT measure anything — it renders today's desktop markup; the runner passes its own
+    /// resolved classification down (never Auto), and a standalone host that wants the narrow
+    /// radio-card presentation without a runner passes <see cref="TmLayoutMode.Mobile"/> explicitly.
+    /// A forced <see cref="TmLayoutMode.Mobile"/> presents up to five select/radio options as radio
+    /// cards (SI1), so a test can render that presentation without a DOM.
+    /// </summary>
+    [Parameter] public TmLayoutMode LayoutMode { get; set; } = TmLayoutMode.Auto;
+
     /// <summary>Whether a single checkbox should show a generic instruction instead of the field label.</summary>
     [Parameter] public bool AnonymousCheckbox { get; set; }
 
@@ -66,6 +83,51 @@ public partial class TmSigningChoiceStep
 
     private bool IsCheckboxGroup => Field.Type == SigningFieldType.Checkbox && CheckboxFields.Count > 1;
 
+    private const int MaxRadioCardOptions = 5;
+
+    /// <summary>
+    /// SI1 (phase 5): up to five select/radio options present as radio CARDS on a mobile layout —
+    /// the whole card is the clickable row and every option fits without scrolling. More options
+    /// keep the system picker (<see cref="TmSelect"/>), whose native affordance scales.
+    /// </summary>
+    private bool UseRadioCards => LayoutMode == TmLayoutMode.Mobile
+        && Field.Type is SigningFieldType.Select or SigningFieldType.Radio
+        && Field.Options.Count > 0
+        && Field.Options.Count <= MaxRadioCardOptions;
+
+    /// <summary>
+    /// An OPTIONAL select rendered as cards keeps a way to CLEAR the choice (phase 5 review):
+    /// the system picker had a selectable "empty" placeholder, so the card set gains a localized
+    /// "None" card first, which sends the same empty value. Required fields keep only their real
+    /// options — the required validation explains the missing choice instead.
+    /// </summary>
+    private bool ShowNoneCard => UseRadioCards
+        && Field.Type == SigningFieldType.Select
+        && !Field.Required;
+
+    /// <summary>The TmRadioGroup class: the option-row skin plus the phase-5 card modifier.</summary>
+    private string RadioGroupClass => UseRadioCards
+        ? "tm-signing-choice-step__options tm-signing-choice-step__options--cards"
+        : "tm-signing-choice-step__options";
+
+    /// <summary>The TmRadioGroup options: the localized "None" card (empty value) first when the
+    /// select is optional, then the field's own options (stable uuid values, localized labels).</summary>
+    private List<RadioOption<string>> RadioOptions
+    {
+        get
+        {
+            var options = Field.Options
+                .Select(option => new RadioOption<string>(GetOptionLabel(option), option.Uuid))
+                .ToList();
+            if (ShowNoneCard)
+            {
+                options.Insert(0, new RadioOption<string>(Loc["TmSigningChoiceStep_None"], string.Empty));
+            }
+
+            return options;
+        }
+    }
+
     private string SingleValue => Value?.ToString() ?? string.Empty;
 
     private bool BoolValue => Value is bool boolValue && boolValue;
@@ -84,11 +146,6 @@ public partial class TmSigningChoiceStep
     /// <summary>The TmSelect options: stable option uuids as values, localized labels as text.</summary>
     private List<SelectOption<string>> SelectOptions => Field.Options
         .Select(option => new SelectOption<string>(option.Uuid, GetOptionLabel(option)))
-        .ToList();
-
-    /// <summary>The TmRadioGroup options (same stable values, localized labels).</summary>
-    private List<RadioOption<string>> RadioOptions => Field.Options
-        .Select(option => new RadioOption<string>(GetOptionLabel(option), option.Uuid))
         .ToList();
 
     private string ShellClass => string.Join(" ", new[] { "tm-signing-choice-step", Class }.Where(item => !string.IsNullOrWhiteSpace(item)));

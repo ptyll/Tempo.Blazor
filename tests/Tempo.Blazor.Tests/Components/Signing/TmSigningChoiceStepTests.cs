@@ -1,6 +1,7 @@
 using Bunit;
 using FluentAssertions;
 using Microsoft.AspNetCore.Components;
+using Tempo.Blazor.Abstractions.Layout;
 using Tempo.Blazor.Abstractions.Models;
 using Tempo.Blazor.Components.Signing;
 using Tempo.Blazor.Tests.Localization;
@@ -184,6 +185,151 @@ public class TmSigningChoiceStepTests : LocalizationTestBase
         cut.Find("select").Change(string.Empty);
 
         cut.Find(".tm-signing-step-shell__validation").TextContent.Should().Contain("choice");
+    }
+
+    // ── SI1 (Signing redesign phase 5): radio cards on a mobile layout ──
+
+    /// <summary>On a mobile layout a SELECT field with at most five options renders as radio CARDS
+    /// (the whole card is the clickable row, 56 px) — the system picker stays for the >5 case, so
+    /// the compact card set only replaces it where every option fits on screen.</summary>
+    [Fact]
+    public void ChoiceStep_Mobile_UpToFiveOptions_RendersRadioCards()
+    {
+        var field = CreateChoiceField(SigningFieldType.Select, required: true);
+        field.Options = Enumerable.Range(1, 5)
+            .Select(index => new SigningFieldOption { Uuid = $"opt-{index}", Value = $"Option {index}" })
+            .ToList();
+
+        var cut = Render<TmSigningChoiceStep>(parameters => parameters
+            .Add(p => p.Field, field)
+            .Add(p => p.LayoutMode, TmLayoutMode.Mobile));
+
+        cut.FindAll(".tm-radio-option").Should().HaveCount(5, "five options render as five radio cards");
+        cut.FindAll("select").Should().BeEmpty("the system picker is replaced by the cards on mobile");
+        cut.Find(".tm-radio-group").ClassList.Should().Contain("tm-signing-choice-step__options--cards",
+            "the card look rides the Signing CSS modifier on the core TmRadioGroup");
+
+        // The phase-2 group contract is kept: a real fieldset named by the hidden legend.
+        cut.Find("fieldset.tm-signing-choice-step__group").QuerySelector("legend").Should().NotBeNull();
+    }
+
+    /// <summary>Six options overflow the card set: the mobile layout keeps the core TmSelect (the
+    /// system picker), exactly like the desktop layout does.</summary>
+    [Fact]
+    public void ChoiceStep_Mobile_SixOptions_KeepsTmSelect()
+    {
+        var field = CreateChoiceField(SigningFieldType.Select, required: true);
+        field.Options = Enumerable.Range(1, 6)
+            .Select(index => new SigningFieldOption { Uuid = $"opt-{index}", Value = $"Option {index}" })
+            .ToList();
+
+        var cut = Render<TmSigningChoiceStep>(parameters => parameters
+            .Add(p => p.Field, field)
+            .Add(p => p.LayoutMode, TmLayoutMode.Mobile));
+
+        cut.Find("select.tm-select").Should().NotBeNull("six options stay the system picker");
+        cut.FindAll(".tm-radio-option").Should().BeEmpty();
+    }
+
+    /// <summary>A RADIO field on a mobile layout renders its (unchanged) TmRadioGroup with the card
+    /// modifier when the options fit — the cards are a LOOK on the same control, not a new one.</summary>
+    [Fact]
+    public void ChoiceStep_Mobile_RadioType_RendersCardsWithModifier()
+    {
+        var cut = Render<TmSigningChoiceStep>(parameters => parameters
+            .Add(p => p.Field, CreateChoiceField(SigningFieldType.Radio))
+            .Add(p => p.LayoutMode, TmLayoutMode.Mobile));
+
+        cut.Find(".tm-radio-group").ClassList.Should().Contain("tm-signing-choice-step__options--cards");
+        cut.FindAll(".tm-radio-option").Should().HaveCount(2);
+    }
+
+    /// <summary>Selecting a radio card raises the same stable option uuid the select raised — the
+    /// swap is a presentation detail, the value contract is untouched.</summary>
+    [Fact]
+    public async Task ChoiceStep_Mobile_RadioCards_SelectRaisesStableValue()
+    {
+        object? value = null;
+        var cut = Render<TmSigningChoiceStep>(parameters => parameters
+            .Add(p => p.Field, CreateChoiceField(SigningFieldType.Select))
+            .Add(p => p.LayoutMode, TmLayoutMode.Mobile)
+            .Add(p => p.ValueChanged, EventCallback.Factory.Create<object?>(this, changed => value = changed)));
+
+        await cut.FindAll("input[type='radio']")[2].ChangeAsync(new ChangeEventArgs { Value = "two" });
+
+        value.Should().Be("two");
+    }
+
+    /// <summary>Desktop (Auto / forced Desktop) keeps the select — the cards are a MOBILE layout
+    /// presentation only.</summary>
+    [Fact]
+    public void ChoiceStep_Desktop_UnderFiveOptions_KeepsTmSelect()
+    {
+        var cut = Render<TmSigningChoiceStep>(parameters => parameters
+            .Add(p => p.Field, CreateChoiceField(SigningFieldType.Select))
+            .Add(p => p.LayoutMode, TmLayoutMode.Desktop));
+
+        cut.Find("select.tm-select").Should().NotBeNull();
+        cut.FindAll(".tm-radio-option").Should().BeEmpty();
+    }
+
+    /// <summary>An OPTIONAL select rendered as cards keeps a way to CLEAR the choice (phase 5
+    /// review): a localized "None" card rides FIRST and sends the empty value — the system
+    /// picker's selectable placeholder keeps its contract in the card presentation.</summary>
+    [Fact]
+    public void ChoiceStep_Mobile_OptionalSelect_CardsCarryLocalizedNoneCardFirst()
+    {
+        var cut = Render<TmSigningChoiceStep>(parameters => parameters
+            .Add(p => p.Field, CreateChoiceField(SigningFieldType.Select))
+            .Add(p => p.LayoutMode, TmLayoutMode.Mobile));
+
+        var options = cut.FindAll(".tm-radio-option");
+        options.Should().HaveCount(3, "the None card rides before the field's own two options");
+        options[0].TextContent.Should().Contain("None", "the card set's clear choice is localized");
+        options[0].QuerySelector("input[type='radio']")!.HasAttribute("checked").Should().BeTrue(
+            "the empty value maps to the None card (the select's empty placeholder state)");
+    }
+
+    /// <summary>Selecting the None card raises the EMPTY value — the same contract the system
+    /// picker's selectable placeholder had.</summary>
+    [Fact]
+    public async Task ChoiceStep_Mobile_NoneCard_SendsEmptyValue()
+    {
+        object? value = "untouched";
+        var cut = Render<TmSigningChoiceStep>(parameters => parameters
+            .Add(p => p.Field, CreateChoiceField(SigningFieldType.Select))
+            .Add(p => p.LayoutMode, TmLayoutMode.Mobile)
+            .Add(p => p.ValueChanged, EventCallback.Factory.Create<object?>(this, changed => value = changed)));
+
+        await cut.FindAll(".tm-radio-option input[type='radio']")[0].ChangeAsync(new ChangeEventArgs { Value = "" });
+
+        value.Should().Be(string.Empty, "the None card clears the choice");
+    }
+
+    /// <summary>A REQUIRED select's card set carries no None card — the required validation
+    /// explains the missing choice instead of offering a value that cannot be submitted.</summary>
+    [Fact]
+    public void ChoiceStep_Mobile_RequiredSelect_HasNoNoneCard()
+    {
+        var cut = Render<TmSigningChoiceStep>(parameters => parameters
+            .Add(p => p.Field, CreateChoiceField(SigningFieldType.Select, required: true))
+            .Add(p => p.LayoutMode, TmLayoutMode.Mobile));
+
+        cut.FindAll(".tm-radio-option").Should().HaveCount(2, "required fields keep only their real options");
+        cut.FindAll(".tm-radio-option").Should().NotContain(option => option.TextContent.Contains("None"));
+    }
+
+    /// <summary>A RADIO field never gains the None card — a radio group has no empty semantics
+    /// (the signer picking between real options), only the SELECT's placeholder contract maps to it.</summary>
+    [Fact]
+    public void ChoiceStep_Mobile_OptionalRadio_HasNoNoneCard()
+    {
+        var cut = Render<TmSigningChoiceStep>(parameters => parameters
+            .Add(p => p.Field, CreateChoiceField(SigningFieldType.Radio))
+            .Add(p => p.LayoutMode, TmLayoutMode.Mobile));
+
+        cut.FindAll(".tm-radio-option").Should().HaveCount(2);
+        cut.FindAll(".tm-radio-option").Should().NotContain(option => option.TextContent.Contains("None"));
     }
 
     private static SigningField CreateChoiceField(SigningFieldType type, bool required = false)

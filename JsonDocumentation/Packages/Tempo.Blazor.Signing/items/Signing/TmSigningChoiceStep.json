@@ -61,6 +61,13 @@
       "description": "Optional checkbox fields rendered as one grouped checkbox step."
     },
     {
+      "name": "LayoutMode",
+      "type": "TmLayoutMode",
+      "isRequired": false,
+      "default": "TmLayoutMode.Auto",
+      "description": "The resolved layout this step renders in (Signing redesign phase 5). Auto does not measure anything — it renders the desktop markup; the runner passes its own resolved classification down (never Auto), and a standalone host that wants the narrow radio-card presentation without a runner passes Mobile explicitly. A forced Mobile presents up to five select/radio options as radio cards (SI1), so a test can render that presentation without a DOM."
+    },
+    {
       "name": "Value",
       "type": "object?",
       "isRequired": false,

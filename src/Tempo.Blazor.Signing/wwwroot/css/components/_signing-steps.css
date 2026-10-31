@@ -190,6 +190,35 @@
     border-bottom: 1px solid var(--tm-border-color);
 }
 
+/* SI1 (Signing redesign phase 5): on a MOBILE layout up to five select/radio options present as
+   radio CARDS — the whole card is the clickable row (the core TmRadio row is already a label),
+   56 px tall, a real border and radius instead of the row separators. Same strictly-narrower
+   package chain; `align-items: center` is the ONE deliberate override of the core row's
+   `flex-start` — a 56px card reads centred (radio dot mid-card), a separator row keeps the core
+   alignment. The modifier class rides the runner's mobile classification, so the look follows
+   the resolved layout without a container query. */
+.tm-signing-choice-step__options--cards .tm-radio-option {
+    min-height: calc(var(--tm-space-12) + var(--tm-space-2));
+    padding: var(--tm-space-2) var(--tm-space-3);
+    border: 1px solid var(--tm-border-color);
+    border-radius: var(--tm-radius-control);
+    background: var(--tm-bg-surface);
+    align-items: center;
+}
+
+.tm-signing-choice-step__options--cards .tm-radio-option.tm-radio-checked {
+    border-color: var(--tm-color-primary);
+    border-radius: var(--tm-radius-control);
+    background: var(--tm-color-primary-subtle);
+}
+
+/* The card's text block may wrap (long option labels) without breaking the 56px floor. */
+.tm-signing-choice-step__options--cards .tm-radio-option .tm-radio-text {
+    min-width: 0;
+    overflow-wrap: anywhere;
+    white-space: normal;
+}
+
 .tm-signing-choice-step__option--single {
     min-height: var(--tm-touch-target);
     align-items: center;

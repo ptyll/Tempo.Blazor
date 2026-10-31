@@ -9,6 +9,20 @@
        instead of shrink-to-fit. */
     min-inline-size: 0;
     inline-size: 100%;
+    /* Signing redesign phase 5 review: the height the mobile PEEK sheet occupies over the
+       document — handle + progress strip + primary CTA + their paddings/gaps + the safe-area
+       inset the sheet itself reserves. The mobile container query below uses it to reserve
+       document scroll space instead of the old fixed 2 × space-16 guess (a knob hosts can
+       override, e.g. for a taller injected CTA). Consumed only below 640px. */
+    --tm-signing-sheet-peek-height: calc(
+        var(--tm-space-2)                      /* sheet top padding */
+        + var(--tm-touch-target)               /* handle */
+        + var(--tm-space-1)                    /* sheet-bar gap */
+        + var(--tm-space-5)                    /* done-count strip (fixed-height line) */
+        + var(--tm-space-1)                    /* sheet-bar gap */
+        + var(--tm-touch-target)               /* "Sign now" CTA */
+        + var(--tm-space-3)                    /* sheet bottom padding */
+        + env(safe-area-inset-bottom, 0px));
 }
 
 .tm-signing-form-runner__layout {
@@ -347,10 +361,10 @@
     min-width: 0;
 }
 
-/* The sheet affordances (expand / minimize) keep their own button skin: they are plain buttons
-   outside the TmButton variants. */
+/* The sheet affordances (handle / peek CTA) keep their own button skin: they are plain
+   buttons outside the TmButton variants. */
 .tm-signing-form-runner__mobile-expand,
-.tm-signing-form-runner__mobile-minimize {
+.tm-signing-form-runner__sheet-handle {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -365,9 +379,17 @@
     cursor: pointer;
 }
 
-.tm-signing-form-runner__mobile-expand:hover,
-.tm-signing-form-runner__mobile-minimize:hover {
+.tm-signing-form-runner__mobile-expand:hover {
     background: var(--tm-bg-muted);
+}
+
+/* Pointer-only hover (phase 5 review): the handle is a touch surface — a finger tap must not
+   leave the muted wash stuck on, so the hover skin applies to hover-capable pointers only.
+   The focus ring stays on :focus-visible (the grip rule below), never on :focus or :hover. */
+@media (hover: hover) {
+    .tm-signing-form-runner__sheet-handle:hover {
+        background: var(--tm-bg-muted);
+    }
 }
 
 .tm-signing-form-runner__mobile-expand {
@@ -380,25 +402,89 @@
     background: var(--tm-color-primary-hover);
 }
 
+/* The handle (Signing redesign phase 5): the sheet's primary toggle. The button is a full-width
+   44 px row; the pill grip inside is the drawing. Keyboard focus rings the GRIP (a plain button
+   row has no box to outline), keeping the sheet face calm. */
+.tm-signing-form-runner__sheet-handle {
+    width: 100%;
+    padding: 0;
+    border: 0;
+    background: transparent;
+}
+
+.tm-signing-form-runner__sheet-handle:focus-visible {
+    outline: none;
+}
+
+.tm-signing-form-runner__sheet-handle:focus-visible .tm-signing-form-runner__sheet-handle-grip {
+    outline: calc(var(--tm-border-width) * 2) solid var(--tm-color-primary);
+    outline-offset: var(--tm-space-1);
+    background: var(--tm-color-primary);
+}
+
+.tm-signing-form-runner__sheet-handle-grip {
+    width: var(--tm-space-8);
+    height: calc(var(--tm-space-1) + 1px);
+    border-radius: var(--tm-radius-full);
+    background: var(--tm-text-tertiary);
+}
+
+/* The PEEK strip (phase 5): the done count above the collapsed sheet's primary CTA. The strip's
+   height is FIXED (one 20px token line) so the --tm-signing-sheet-peek-height knob on the root
+   stays honest — an auto-height strip would desync the layout's reserved scroll space. */
+.tm-signing-form-runner__sheet-progress {
+    min-height: var(--tm-space-5);
+    line-height: var(--tm-space-5);
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-sm);
+    font-weight: var(--tm-font-weight-semibold);
+    text-align: center;
+}
+
 .tm-signing-form-runner__sheet-bar {
-    /* The sheet affordances (expand / minimize) exist only in the mobile sheet presentation. */
+    /* The sheet affordances exist only in the mobile sheet presentation. */
     display: none;
 }
 
-@container tm-signing-runner (width < 768px) {
+/* The mobile "More" overflow (phase 5): the trigger hides on the desktop / tablet containers;
+   the menu simply stays closed wherever the trigger is hidden. */
+.tm-signing-form-runner__more {
+    display: none;
+}
+
+/* The trigger is a bare button (core paints only its colour) — the sheet bar owns its hit area
+   and chrome through the strictly-narrower runner chain. */
+.tm-signing-form-runner__more .tm-dropdown-trigger {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: var(--tm-touch-target);
+    min-width: var(--tm-touch-target);
+    padding: 0 var(--tm-space-2);
+    border: 1px solid var(--tm-border-color);
+    border-radius: var(--tm-radius-control);
+    background: var(--tm-bg-surface);
+    cursor: pointer;
+}
+
+@container tm-signing-runner (width < 640px) {
     .tm-signing-form-runner__layout {
         grid-template-columns: minmax(0, 1fr);
-        padding-bottom: calc(var(--tm-space-16) * 2);
+        /* The peek sheet floats over the document: reserve exactly its measured height (the
+           root's --tm-signing-sheet-peek-height knob — handle + progress + CTA + paddings +
+           safe-area inset) instead of the old fixed 2 × space-16 guess. */
+        padding-block-end: var(--tm-signing-sheet-peek-height);
     }
 
-    /* The single steps rail IS the bottom sheet: sticky card, expand / minimize affordances in
-       the sheet bar, and the sheet state carried by --sheet-collapsed / --sheet-expanded. The
-       panel content itself is rendered once (B25) — collapsing only hides it. */
+    /* The single steps rail IS the bottom sheet (Signing redesign phase 5): a full-bleed card
+       pinned to the container's bottom edge with rounded TOP corners, a handle, an internal
+       scroll and the safe-area inset. The sheet state is carried by --sheet-collapsed (the PEEK
+       presentation), --sheet-expanded and --sheet-full (FULL = expanded minus the field list);
+       the panel content itself is rendered once (B25). */
     .tm-signing-form-runner__steps {
         position: sticky;
-        inset-block-end: var(--tm-space-3);
+        inset-block-end: 0;
         z-index: var(--tm-z-sticky);
-        margin-inline: var(--tm-space-3);
         border-left: 0;
         padding-left: 0;
     }
@@ -407,33 +493,54 @@
         inset-block-end: calc(var(--tm-space-16) + var(--tm-space-3));
     }
 
+    .tm-signing-form-runner__steps--sheet-collapsed,
     .tm-signing-form-runner__steps--sheet-expanded {
-        padding: var(--tm-space-3);
+        padding: var(--tm-space-2) var(--tm-space-3);
         border: 1px solid var(--tm-border-color);
-        border-radius: var(--tm-radius-lg);
+        border-radius: var(--tm-radius-lg) var(--tm-radius-lg) 0 0;
         background: var(--tm-bg-surface);
         box-shadow: var(--tm-shadow-lg);
+        /* The sheet respects the home-indicator safe area it covers. */
+        padding-block-end: calc(var(--tm-space-3) + env(safe-area-inset-bottom, 0px));
+    }
+
+    /* PEEK (the collapsed state): the handle, the done count and the primary CTA stay visible
+       above the document; the panel content is hidden but still ONE DOM instance. */
+    .tm-signing-form-runner__steps--sheet-collapsed .tm-signing-form-runner__step-panel {
+        display: none;
+    }
+
+    /* EXPANDED: the sheet caps at 85dvh (the plan's sheet cap) and the panel scrolls INSIDE it;
+       the sticky action footer (the shared rule below) stays reachable. There is deliberately NO
+       focus-driven resize on top of this: a focus change would resize the sheet MID-PRESS — the
+       pressed control moves out from under the pointer between mousedown and mouseup and the tap
+       lands on nothing (a blurred input collapsing the sheet moved every row ~15dvh). The active
+       edit (FULL) is the same expanded sheet with the field list folded away (rule below): a text
+       entry keeps its focus, the on-screen keyboard auto-scrolls the field, and the phase-9
+       TmDrawer migration brings the proper keyboard-snap handling. */
+    .tm-signing-form-runner__steps--sheet-expanded {
+        display: flex;
+        flex-direction: column;
+        max-height: 85dvh;
     }
 
     .tm-signing-form-runner__sheet-bar {
         display: grid;
-        gap: var(--tm-space-2);
+        flex: 0 0 auto;
+        gap: var(--tm-space-1);
+        justify-items: center;
     }
 
-    .tm-signing-form-runner__steps--sheet-collapsed .tm-signing-form-runner__mobile-minimize {
-        display: none;
-    }
-
-    .tm-signing-form-runner__steps--sheet-expanded .tm-signing-form-runner__mobile-expand {
-        display: none;
-    }
-
-    .tm-signing-form-runner__steps--sheet-collapsed .tm-signing-form-runner__step-panel {
+    .tm-signing-form-runner__steps--sheet-expanded .tm-signing-form-runner__mobile-expand,
+    .tm-signing-form-runner__steps--sheet-expanded .tm-signing-form-runner__sheet-progress {
         display: none;
     }
 
     .tm-signing-form-runner__steps--sheet-expanded .tm-signing-form-runner__step-panel {
         position: static;
+        flex: 1 1 auto;
+        min-height: 0;
+        overflow: auto;
         padding: 0;
         border: 0;
         box-shadow: none;
@@ -443,13 +550,68 @@
         width: 100%;
         box-shadow: var(--tm-shadow-md);
     }
+
+    /* FULL (phase 5 review): the active edit — the step panel and the sticky action bar stay
+       visible, the field list folds away (one "Field list" tap in the More menu brings it back
+       and focuses the current row). */
+    .tm-signing-form-runner__steps--sheet-full .tm-signing-form-runner__field-list {
+        display: none;
+    }
+
+    /* The sticky action row becomes the sheet bar (phase 5, review grid): Previous (1fr) |
+       Next/Complete (2fr — the primary stays the widest) | ⋯ More (auto). The buttons keep their
+       normal TmButton chrome — sm type, the variant's own padding — across the whole mobile
+       range; only the EXTRA-narrow cut below tightens them. */
+    .tm-signing-form-runner__actions {
+        grid-template-columns: minmax(0, 1fr) minmax(0, 2fr) auto;
+        gap: var(--tm-space-1);
+        position: sticky;
+        inset-block-end: 0;
+        z-index: var(--tm-z-sticky);
+        background: var(--tm-bg-surface);
+        padding-block: var(--tm-space-2);
+    }
+
+    /* The sheet bar's buttons must shrink with the track, not overflow it (the grid track is
+       minmax(0, …), the button's own min-width still applies). */
+    .tm-signing-form-runner__steps .tm-signing-form-runner__actions .tm-signing-form-runner__previous,
+    .tm-signing-form-runner__steps .tm-signing-form-runner__actions .tm-signing-form-runner__next,
+    .tm-signing-form-runner__steps .tm-signing-form-runner__actions .tm-signing-form-runner__complete {
+        min-width: 0;
+    }
+
+    .tm-signing-form-runner__skip {
+        display: none;
+    }
+
+    .tm-signing-form-runner__more {
+        display: inline-flex;
+    }
 }
 
-/* Sticky action footer (Signing redesign phase 3 review) — DESKTOP/TABLET containers only: the
-   panel caps at the viewport height and scrolls internally, and the action row sticks to its
-   bottom, so Previous / Next | Complete (and the skip row) stay reachable without scrolling the
-   panel. The mobile sheet keeps its own rules above (the sheet scrolls with the page). */
-@container tm-signing-runner (width >= 768px) {
+/* The EXTRA-narrow cut (phase 5 review): below a ~360px container the sm button chrome cannot
+   fit the 1fr Previous column ("Previous" clipped at a 212px-wide runner — a 320 viewport inside
+   a padded host card), so the buttons drop to xs type with zero inline padding. The SUBJECTS
+   stay the runner's own BEM classes (never the bare core .tm-btn — a base claim on it would
+   fight the recorded tm-btn|tm-btn-* modifier pairs in UnconstrainedClassOwnershipTests), so the
+   wider containers keep the untouched TmButton look. 22.5rem == 360px at the 16px root size:
+   TmBreakpointsTests reserves the px literals in @container conditions for the documented
+   640/768/1024/1280 set, so the off-scale cut is written in rem. */
+@container tm-signing-runner (width < 22.5rem) {
+    .tm-signing-form-runner__steps .tm-signing-form-runner__actions .tm-signing-form-runner__previous,
+    .tm-signing-form-runner__steps .tm-signing-form-runner__actions .tm-signing-form-runner__next,
+    .tm-signing-form-runner__steps .tm-signing-form-runner__actions .tm-signing-form-runner__complete {
+        padding-inline: 0;
+        font-size: var(--tm-font-size-xs);
+    }
+}
+
+/* Sticky action footer (Signing redesign phase 3 review) — DOCKED containers (≥ 640px, phase 5
+   moved the sheet breakpoint from 768 to 640: the sheet presentation only pays off below the
+   single-column fold, a 640–767 column keeps the docked two-column panel): the panel caps at the
+   viewport height and scrolls internally, and the action row sticks to its bottom, so Previous /
+   Next | Complete (and the skip row) stay reachable without scrolling the panel. */
+@container tm-signing-runner (width >= 640px) {
     .tm-signing-form-runner__step-panel {
         max-height: calc(100dvh - (2 * var(--tm-space-4)));
         overflow: auto;

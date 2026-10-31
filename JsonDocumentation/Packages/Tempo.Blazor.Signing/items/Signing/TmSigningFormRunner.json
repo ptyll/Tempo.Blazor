@@ -63,6 +63,13 @@
       "description": "Callback invoked when the signing culture changes."
     },
     {
+      "name": "DefaultSignatureMode",
+      "type": "TmSigningDefaultSignatureMode",
+      "isRequired": false,
+      "default": "TmSigningDefaultSignatureMode.Auto",
+      "description": "The capture mode a signature step STARTS in when the template's Preferences.Format is silent (Signing redesign phase 5, SI3). Auto — the default — resolves to Draw on a coarse pointer (a finger) and to Typed elsewhere; the template's stored format always wins over this setting."
+    },
+    {
       "name": "FallbackCulture",
       "type": "string?",
       "isRequired": false,
@@ -86,6 +93,13 @@
       "type": "bool",
       "isRequired": false,
       "description": "Whether navigation and inputs are currently blocked by an external operation."
+    },
+    {
+      "name": "LayoutMode",
+      "type": "TmLayoutMode",
+      "isRequired": false,
+      "default": "TmLayoutMode.Auto",
+      "description": "The layout the runner renders (Signing redesign phase 5). Auto measures the runner's own container — a container narrower than the mobile breakpoint presents the steps rail as the bottom sheet (peek / expanded) with radio-card choice fields (SI1); wider containers keep the docked desktop panel. A forced value never measures, so a test (or a host that already knows the width) can pin the presentation without a DOM."
     },
     {
       "name": "MobileCompleteTargetSelector",
@@ -123,6 +137,12 @@
       "type": "EventCallback<SigningStepItem>",
       "isRequired": false,
       "description": "Callback invoked when the current step is submitted by moving forward."
+    },
+    {
+      "name": "ResolvedLayoutChanged",
+      "type": "EventCallback<TmLayoutMode>",
+      "isRequired": false,
+      "description": "Raised when the resolved layout changes. The initial value is not a change. Never pair LayoutMode with this callback: it reports the resolved mode, and a two-way bind would pin that mode."
     },
     {
       "name": "ShowLanguageSelector",

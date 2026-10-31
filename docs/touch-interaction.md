@@ -279,6 +279,35 @@ stack unambiguous:
   touch `contextmenu` (Android/Windows) is swallowed while the long-press session owns the menu —
   but only when the touch stack is actually attached (`inst.__touchDetach` exists).
 
+## Scroll + pointer probes in split packages — `signing-runner.js`
+
+Not every touch concern is a drag. `Tempo.Blazor.Signing` ships `signing-runner.js`
+(`_content/Tempo.Blazor.Signing/js/signing-runner.js`, Signing redesign phase 5): the
+`TmSigningFormRunner` imports it with a dynamic `import()` (no `<script>` tag) for three
+best-effort exports:
+
+- `isCoarsePointer()` — `matchMedia('(pointer: coarse)')` probe that resolves the runner's
+  `DefaultSignatureMode.Auto` (Draw on a finger, Typed elsewhere);
+- `scrollToField(fieldUuid)` — puts the active field's document overlay
+  (`.tm-signing-field[data-field-uuid="…"]`) into view with ONE `scrollTo` (phase 5 review — the
+  old centre-then-correct pair produced two jumps): the target centres the field in the space
+  ABOVE the sticky bottom sheet, clamped so the field's bottom never sits under the sheet top
+  (minus the gap) and its top never above the scroller viewport. The sheet's top edge cuts the
+  usable space only when it horizontally overlaps the field AND sits below the scroller viewport
+  top — the docked desktop rail sits beside the document column and never offsets the scroll, and
+  a sheet scrolled past covers nothing. The scroller is the field's nearest scrollable ancestor
+  (`overflow-y: auto/scroll` that actually overflows), falling back to the window.
+  `prefers-reduced-motion` scrolls with `behavior: 'auto'`.
+- `focusFieldButton(fieldUuid)` — scrolls the field list's row into view and focuses it (the
+  More menu's "Field list" entry hands focus back to the list's current row after the full →
+  expanded switch).
+
+The pure helpers (`isCoarsePointer`, `prefersReducedMotion`, `scrollBehavior`, `scrollTargetFor`,
+`clampScrollTop`, `nearestScrollable`) are exported for the node lane
+(`npm run test:signing-runner`); the DOM glue takes injectable `document`/`window`, so the tests
+stub them. A circuit without the module skips silently — the probe reads "fine pointer" and no
+scroll fires, which is exactly the pre-phase-5 desktop behaviour.
+
 ## Testing
 
 `src/Tempo.Blazor/wwwroot/js/__tests__/pointer-drag.test.mjs` drives the helper with hand-rolled

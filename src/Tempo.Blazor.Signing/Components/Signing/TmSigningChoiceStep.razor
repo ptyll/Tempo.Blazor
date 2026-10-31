@@ -36,12 +36,13 @@
             </div>
         </fieldset>
     }
-    else if (Field.Type == SigningFieldType.Select)
+    else if (Field.Type == SigningFieldType.Select && !UseRadioCards)
     {
         @* TmSelect (phase 4, SI1). The step's accessibility plumbing rides the core
             SelectAttributes splat (phase 4 review): aria-invalid + the description / validation
             ids reach the NATIVE <select>, and the shell title is its labelledby (the visible
-            field label stays the accessible name — see TmSelect.AriaLabel). *@
+            field label stays the accessible name — see TmSelect.AriaLabel). Phase 5: a mobile
+            layout with ≤ 5 options swaps this picker for the radio cards below (SI1). *@
         <TmSelect TValue="string"
                   Value="@SingleValue"
                   ValueChanged="HandleSingleValueChangedAsync"
@@ -53,12 +54,16 @@
                   Class="tm-signing-choice-step__select"
                   SelectAttributes="@(BuildSelectAttributes())" />
     }
-    else if (Field.Type == SigningFieldType.Radio)
+    else if (Field.Type == SigningFieldType.Select || Field.Type == SigningFieldType.Radio)
     {
         @* The radio group keeps the fieldset/legend group name (phase 2 contract) and renders the
             core TmRadioGroup rows (phase 4); the name is unique per component instance so two
             rendered groups never merge into one browser-level group. The selected row lights with
-            the primary-subtle state through _signing-steps.css (:has() on the package chain). *@
+            the primary-subtle state through _signing-steps.css (:has() on the package chain).
+            Phase 5 (SI1): on a mobile layout the rows present as radio CARDS (≤ 5 options) — the
+            same control, the same stable values, the card look rides the Signing CSS modifier.
+            Phase 5 review: an OPTIONAL select's card set gains a localized "None" card first that
+            sends the empty value (the system picker's selectable placeholder kept its contract). *@
         <fieldset class="tm-signing-choice-step__group"
                   aria-invalid="@InvalidText"
                   aria-describedby="@DescribedBy">
@@ -69,7 +74,7 @@
                           ValueChanged="HandleRadioValueChangedAsync"
                           Options="@RadioOptions"
                           Disabled="@Disabled"
-                          Class="tm-signing-choice-step__options" />
+                          Class="@RadioGroupClass" />
         </fieldset>
     }
     else if (Field.Type == SigningFieldType.Multiple)
