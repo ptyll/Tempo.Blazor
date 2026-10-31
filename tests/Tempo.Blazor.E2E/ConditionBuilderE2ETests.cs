@@ -19,13 +19,13 @@ public class ConditionBuilderE2ETests : WasmTestBase
 
         var builder = page.Locator("[data-testid='condition-builder']").First;
         await builder.ScrollIntoViewIfNeededAsync();
-        await builder.Locator(".tm-condition-builder__field").Nth(0).SelectOptionAsync("condition-country");
-        await builder.Locator(".tm-condition-builder__value-select").Nth(0).SelectOptionAsync("country-cz");
+        await builder.Locator(".tm-condition-builder__field select").Nth(0).SelectOptionAsync("condition-country");
+        await builder.Locator(".tm-condition-builder__value-select select").Nth(0).SelectOptionAsync("country-cz");
 
         await Expect(page.Locator("[data-testid='condition-builder-status']")).ToContainTextAsync("1 condition configured");
 
         await builder.Locator(".tm-condition-builder__add").ClickAsync();
-        await builder.Locator(".tm-condition-builder__field").Nth(1).SelectOptionAsync("condition-consent");
+        await builder.Locator(".tm-condition-builder__field select").Nth(1).SelectOptionAsync("condition-consent");
 
         await Expect(builder.Locator(".tm-condition-builder__row")).ToHaveCountAsync(2);
         await Expect(page.Locator("[data-testid='condition-builder-status']")).ToContainTextAsync("2 conditions configured");
@@ -43,12 +43,12 @@ public class ConditionBuilderE2ETests : WasmTestBase
 
         var builder = page.Locator("[data-testid='condition-builder']").First;
         await builder.ScrollIntoViewIfNeededAsync();
-        await builder.Locator(".tm-condition-builder__field").Nth(0).SelectOptionAsync("condition-country");
-        await builder.Locator(".tm-condition-builder__value-select").Nth(0).SelectOptionAsync("country-cz");
+        await builder.Locator(".tm-condition-builder__field select").Nth(0).SelectOptionAsync("condition-country");
+        await builder.Locator(".tm-condition-builder__value-select select").Nth(0).SelectOptionAsync("country-cz");
         await builder.Locator(".tm-condition-builder__add").ClickAsync();
-        await builder.Locator(".tm-condition-builder__field").Nth(1).SelectOptionAsync("condition-consent");
+        await builder.Locator(".tm-condition-builder__field select").Nth(1).SelectOptionAsync("condition-consent");
 
-        var operation = builder.Locator(".tm-condition-builder__operation").First;
+        var operation = builder.Locator(".tm-condition-builder__operation select").First;
         await operation.SelectOptionAsync("Or");
 
         await Expect(operation).ToHaveValueAsync("Or");
@@ -66,7 +66,7 @@ public class ConditionBuilderE2ETests : WasmTestBase
 
         var builder = page.Locator("[data-testid='condition-builder']").First;
         await builder.ScrollIntoViewIfNeededAsync();
-        await builder.Locator(".tm-condition-builder__field").Nth(0).SelectOptionAsync("condition-country");
+        await builder.Locator(".tm-condition-builder__field select").Nth(0).SelectOptionAsync("condition-country");
 
         await Expect(builder).ToHaveClassAsync(new Regex("tm-condition-builder--invalid"));
         await Expect(builder.Locator(".tm-condition-builder__validation")).ToContainTextAsync("Choose a value");

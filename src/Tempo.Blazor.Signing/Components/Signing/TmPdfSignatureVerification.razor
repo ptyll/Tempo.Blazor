@@ -1,24 +1,18 @@
 @namespace Tempo.Blazor.Components.Signing
 @using Tempo.Blazor.Abstractions.Models
+@using Tempo.Blazor.Components.Avatars
+@using Tempo.Blazor.Components.Buttons
+@using Tempo.Blazor.Components.Feedback
 
 <section @attributes="AdditionalAttributes"
          class="@RootClass"
          data-status="@Result.Status">
-    <div class="tm-pdf-signature-verification__status">
-        @if (Result.Status == SigningPdfVerificationStatus.Loading)
-        {
-            <TmSpinner Size="SpinnerSize.Sm" />
-        }
-        else
-        {
-            <TmIcon Name="@StatusIcon" Size="IconSize.Sm" />
-        }
-        <div>
-            <h2 class="tm-pdf-signature-verification__title">@StatusTitle</h2>
-            <p class="tm-pdf-signature-verification__message">@StatusMessage</p>
-        </div>
-    </div>
-
+    <TmAlert Severity="@BannerSeverity"
+             Role="@BannerRole"
+             Title="@StatusTitle"
+             Class="@BannerClass">
+        @StatusMessage
+    </TmAlert>
     @if (Result.Status == SigningPdfVerificationStatus.Empty)
     {
         <TmButton Icon="upload"
@@ -40,9 +34,13 @@
             }
             @if (!string.IsNullOrWhiteSpace(Result.Checksum))
             {
-                <div>
+                <div class="tm-pdf-signature-verification__checksum">
                     <dt>@Loc["TmPdfSignatureVerification_Checksum"]</dt>
-                    <dd>@Result.Checksum</dd>
+                    <dd>
+                        <span class="tm-pdf-signature-verification__checksum-value" title="@Result.Checksum">@TruncatedChecksum</span>
+                        <TmCopyButton Text="@Result.Checksum"
+                                      Class="tm-pdf-signature-verification__checksum-copy" />
+                    </dd>
                 </div>
             }
         </dl>
@@ -54,24 +52,40 @@
             <h3>@Loc["TmPdfSignatureVerification_Signatures"]</h3>
             @foreach (var signature in Result.Signatures)
             {
-                <article class="tm-pdf-signature-verification__signature">
-                    <strong>@(signature.SignerName ?? signature.SignerEmail ?? Loc["TmPdfSignatureVerification_UnknownSigner"])</strong>
-                    @if (!string.IsNullOrWhiteSpace(signature.SignerEmail))
-                    {
-                        <span>@signature.SignerEmail</span>
-                    }
-                    @if (signature.SignedAt is not null)
-                    {
-                        <time>@signature.SignedAt.Value.ToLocalTime().ToString("g")</time>
-                    }
-                    @if (!string.IsNullOrWhiteSpace(signature.VerificationMethod))
-                    {
-                        <span>@signature.VerificationMethod</span>
-                    }
-                    @if (!string.IsNullOrWhiteSpace(signature.CertificateSubject))
-                    {
-                        <span>@signature.CertificateSubject</span>
-                    }
+                <article class="tm-pdf-signature-verification__signature tm-pdf-signature-verification__signature--card">
+                    <header class="tm-pdf-signature-verification__signature-header">
+                        <TmAvatar Name="@GetSignerName(signature)" Size="AvatarSize.Sm" />
+                        <div class="tm-pdf-signature-verification__signature-identity">
+                            <strong>@GetSignerName(signature)</strong>
+                            @if (!string.IsNullOrWhiteSpace(signature.SignerEmail))
+                            {
+                                <span class="tm-pdf-signature-verification__signature-email">@signature.SignerEmail</span>
+                            }
+                        </div>
+                    </header>
+                    <dl class="tm-pdf-signature-verification__signature-details">
+                        @if (signature.SignedAt is not null)
+                        {
+                            <div>
+                                <dt>@Loc["TmPdfSignatureVerification_SignedAt"]</dt>
+                                <dd><time datetime="@SigningDateFormatter.FormatIso(signature.SignedAt.Value)">@SigningDateFormatter.Format(signature.SignedAt.Value)</time></dd>
+                            </div>
+                        }
+                        @if (!string.IsNullOrWhiteSpace(signature.VerificationMethod))
+                        {
+                            <div>
+                                <dt>@Loc["TmPdfSignatureVerification_SigningMethod"]</dt>
+                                <dd>@signature.VerificationMethod</dd>
+                            </div>
+                        }
+                        @if (!string.IsNullOrWhiteSpace(signature.CertificateSubject))
+                        {
+                            <div>
+                                <dt>@Loc["TmPdfSignatureVerification_Certificate"]</dt>
+                                <dd>@signature.CertificateSubject</dd>
+                            </div>
+                        }
+                    </dl>
                 </article>
             }
         </div>
@@ -91,16 +105,35 @@
     /// <summary>Additional HTML attributes passed to the root element.</summary>
     [Parameter(CaptureUnmatchedValues = true)] public Dictionary<string, object>? AdditionalAttributes { get; set; }
 
+    /// <summary>Display length of the truncated checksum (full value stays on the copy action and the title).</summary>
+    private const int ChecksumDisplayLength = 16;
+
     private string RootClass => string.IsNullOrWhiteSpace(Class)
         ? "tm-pdf-signature-verification"
         : $"tm-pdf-signature-verification {Class}";
 
-    private string StatusIcon => Result.Status switch
+    /// <summary>The banner's own classes: the base modifier plus the status modifier the CSS themes.</summary>
+    private string BannerClass =>
+        $"tm-pdf-signature-verification__banner tm-pdf-signature-verification__banner--{Result.Status.ToString().ToLowerInvariant()}";
+
+    private string TruncatedChecksum => Result.Checksum is { Length: > ChecksumDisplayLength } checksum
+        ? checksum[..ChecksumDisplayLength] + "…"
+        : Result.Checksum ?? string.Empty;
+
+    /// <summary>The status banner's live-region role: verified/found/loading results announce
+    /// politely (<c>status</c>), errors announce assertively (<c>alert</c>).</summary>
+    private string BannerRole => Result.Status is SigningPdfVerificationStatus.MalformedPdf
+        or SigningPdfVerificationStatus.Error
+        ? "alert"
+        : "status";
+
+    private AlertSeverity BannerSeverity => Result.Status switch
     {
-        SigningPdfVerificationStatus.Verified => IconNames.CheckCircle,
-        SigningPdfVerificationStatus.ChecksumNotFound => IconNames.SearchX,
-        SigningPdfVerificationStatus.MalformedPdf or SigningPdfVerificationStatus.Error => IconNames.AlertTriangle,
-        _ => IconNames.FileCheck
+        SigningPdfVerificationStatus.Verified => AlertSeverity.Success,
+        SigningPdfVerificationStatus.ChecksumNotFound => AlertSeverity.Warning,
+        SigningPdfVerificationStatus.MalformedPdf or SigningPdfVerificationStatus.Error => AlertSeverity.Error,
+        SigningPdfVerificationStatus.Loading => AlertSeverity.Info,
+        _ => AlertSeverity.Info
     };
 
     private string StatusTitle => Result.Status switch
@@ -124,4 +157,15 @@
             SigningPdfVerificationStatus.Error => Loc["TmPdfSignatureVerification_ErrorMessage"],
             _ => Loc["TmPdfSignatureVerification_EmptyMessage"]
         };
+
+    /// <summary>The signer's display name: the recorded name, else the email, else the localized
+    /// "Unknown signer" — never a blank card header (phase 7 review).</summary>
+    private string GetSignerName(SigningPdfSignatureInfo signature)
+    {
+        return !string.IsNullOrWhiteSpace(signature.SignerName)
+            ? signature.SignerName
+            : !string.IsNullOrWhiteSpace(signature.SignerEmail)
+                ? signature.SignerEmail
+                : Loc["TmPdfSignatureVerification_UnknownSigner"];
+    }
 }

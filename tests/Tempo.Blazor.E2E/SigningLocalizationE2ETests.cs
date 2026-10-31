@@ -142,14 +142,14 @@ public class SigningLocalizationE2ETests : WasmTestBase
         var page = await OpenSigningComponentsAsync();
         var condition = await GetByTestIdAsync(page, "condition-builder");
 
-        await condition.Locator(".tm-condition-builder__field").First.SelectOptionAsync("condition-country");
-        await condition.Locator(".tm-condition-builder__value-select").First.SelectOptionAsync("country-us");
+        await condition.Locator(".tm-condition-builder__field select").First.SelectOptionAsync("condition-country");
+        await condition.Locator(".tm-condition-builder__value-select select").First.SelectOptionAsync("country-us");
         await Assertions.Expect(await GetByTestIdAsync(page, "condition-builder-status")).ToContainTextAsync("1 condition");
 
         await page.Locator(".condition-builder-culture").First.SelectOptionAsync("cs-CZ");
 
-        await Assertions.Expect(condition.Locator(".tm-condition-builder__field").First).ToHaveValueAsync("condition-country");
-        await Assertions.Expect(condition.Locator(".tm-condition-builder__value-select").First).ToHaveValueAsync("country-us");
+        await Assertions.Expect(condition.Locator(".tm-condition-builder__field select").First).ToHaveValueAsync("condition-country");
+        await Assertions.Expect(condition.Locator(".tm-condition-builder__value-select select").First).ToHaveValueAsync("country-us");
         await Assertions.Expect(condition).ToContainTextAsync("Země");
         await Assertions.Expect(condition).ToContainTextAsync("Spojené státy");
     }

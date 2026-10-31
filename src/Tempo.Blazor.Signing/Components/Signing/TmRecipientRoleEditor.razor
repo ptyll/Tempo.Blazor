@@ -1,17 +1,22 @@
 @namespace Tempo.Blazor.Components.Signing
 @using Tempo.Blazor.Abstractions.Models
+@using Tempo.Blazor.Components.Inputs
 
 <div @attributes="AdditionalAttributes"
      class="@RootClass"
+     data-role-editor="@_editorId"
      aria-invalid="@BoolText(HasValidationErrors)">
     <div class="tm-recipient-role-editor__list">
         @for (var index = 0; index < _roles.Count; index++)
         {
             var rowIndex = index;
             var role = _roles[rowIndex];
+            var bodyId = $"tm-recipient-role-body-{role.Uuid}";
 
-            <div class="@GetRowClass(role)"
+            <div class="@GetCardClass(role)"
+                 @key="role.Uuid"
                  data-role-uuid="@role.Uuid"
+                 data-role-editor="@_editorId"
                  data-order="@role.Order"
                  draggable="@BoolText(!Disabled)"
                  @ondragstart="() => HandleDragStart(rowIndex)"
@@ -19,13 +24,20 @@
                  @ondragover:preventDefault="true"
                  @ondrop="() => DropRoleAsync(rowIndex)"
                  @ondrop:preventDefault="true">
-                <div class="tm-recipient-role-editor__order">
-                    <input class="tm-recipient-role-editor__order-input"
-                           type="number"
-                           aria-label="@Loc["TmRecipientRoleEditor_Order"]"
-                           value="@(role.Order + 1)"
-                           readonly />
-                    <div class="tm-recipient-role-editor__move-buttons">
+                <header class="tm-recipient-role-editor__card-header">
+                    <span class="tm-recipient-role-editor__drag-handle" aria-hidden="true">
+                        <TmIcon Name="grip-vertical" Size="IconSize.Xs" />
+                    </span>
+                    @* The visible number is decorative (the position is obvious); the visually
+                       hidden text carries the semantics for assistive technology (phase 7 review). *@
+                    <span class="tm-recipient-role-editor__order-badge">
+                        <span class="tm-sr-only">@string.Format(Loc["TmRecipientRoleEditor_SigningOrder"], role.Order + 1)</span>
+                        <span aria-hidden="true">@(role.Order + 1)</span>
+                    </span>
+                    <span class="@GetPillClass(role)"
+                          style="@GetPillStyle(role)">@role.Name</span>
+                    <span class="tm-recipient-role-editor__preview">@GetHeaderPreview(role)</span>
+                    <div class="tm-recipient-role-editor__header-actions">
                         <button type="button"
                                 class="tm-recipient-role-editor__move-up"
                                 aria-label="@Loc["TmRecipientRoleEditor_MoveUp"]"
@@ -40,113 +52,160 @@
                                 @onclick="() => MoveRoleAsync(rowIndex, 1)">
                             <TmIcon Name="chevron-down" Size="IconSize.Xs" />
                         </button>
+                        <button type="button"
+                                class="tm-recipient-role-editor__remove"
+                                aria-label="@Loc["TmRecipientRoleEditor_RemoveRole"]"
+                                disabled="@Disabled"
+                                @onclick="() => RemoveRoleAsync(rowIndex)">
+                            <TmIcon Name="trash-2" Size="IconSize.Xs" />
+                        </button>
+                        <button type="button"
+                                class="tm-recipient-role-editor__toggle"
+                                aria-expanded="@BoolText(IsExpanded(role))"
+                                aria-controls="@(IsExpanded(role) ? bodyId : null)"
+                                aria-label="@string.Format(Loc["TmRecipientRoleEditor_ToggleDetails"], role.Name)"
+                                disabled="@Disabled"
+                                @onclick="() => ToggleRoleAsync(role)">
+                            <TmIcon Name="@(IsExpanded(role) ? "chevron-up" : "chevron-down")" Size="IconSize.Xs" />
+                        </button>
                     </div>
-                </div>
+                </header>
 
-                <label class="tm-recipient-role-editor__field tm-recipient-role-editor__field--color">
-                    <span class="tm-recipient-role-editor__label">@Loc["TmRecipientRoleEditor_Color"]</span>
-                    <input class="tm-recipient-role-editor__color"
-                           type="color"
-                           value="@role.Color"
-                           disabled="@Disabled"
-                           @onchange="args => HandleColorChangedAsync(rowIndex, args)" />
-                </label>
-
-                <label class="tm-recipient-role-editor__field tm-recipient-role-editor__field--name">
-                    <span class="tm-recipient-role-editor__label">@Loc["TmRecipientRoleEditor_RoleName"]</span>
-                    <input class="tm-recipient-role-editor__name"
-                           type="text"
-                           value="@role.Name"
-                           disabled="@Disabled"
-                           @onchange="args => HandleNameChangedAsync(rowIndex, args)" />
-                </label>
-
-                @if (Mode == TmRecipientRoleEditorMode.SubmissionRecipients)
+                @if (IsExpanded(role))
                 {
-                    <label class="tm-recipient-role-editor__field tm-recipient-role-editor__field--full-name">
-                        <span class="tm-recipient-role-editor__label">@Loc["TmRecipientRoleEditor_FullName"]</span>
-                        <input class="tm-recipient-role-editor__full-name"
-                               type="text"
-                               value="@role.FullName"
-                               disabled="@Disabled"
-                               @onchange="args => HandleFullNameChangedAsync(rowIndex, args)" />
-                    </label>
+                    <div class="tm-recipient-role-editor__card-body" id="@bodyId">
+                        <div class="tm-recipient-role-editor__field tm-recipient-role-editor__field--name">
+                            <span class="tm-recipient-role-editor__label">@Loc["TmRecipientRoleEditor_RoleName"]</span>
+                            <TmTextInput Class="tm-recipient-role-editor__name"
+                                         aria-label="@Loc["TmRecipientRoleEditor_RoleName"]"
+                                         Value="@GetDraftValue(role, RoleFieldName, role.Name)"
+                                         ValueChanged="value => HandleDraftChanged(role, RoleFieldName, value)"
+                                         OnBlur="() => CommitDraftAsync(role, RoleFieldName, ApplyNameAsync)"
+                                         OnKeyDown="args => CommitDraftOnEnterAsync(args, role, RoleFieldName, ApplyNameAsync)"
+                                         Disabled="@Disabled" />
+                        </div>
 
-                    <label class="tm-recipient-role-editor__field tm-recipient-role-editor__field--email">
-                        <span class="tm-recipient-role-editor__label">@Loc["TmRecipientRoleEditor_Email"]</span>
-                        <input class="tm-recipient-role-editor__email"
-                               type="email"
-                               value="@role.Email"
-                               aria-invalid="@BoolText(IsEmailMissing(role))"
-                               disabled="@Disabled"
-                               @onchange="args => HandleEmailChangedAsync(rowIndex, args)" />
-                    </label>
+                            <div class="tm-recipient-role-editor__field tm-recipient-role-editor__field--color">
+                                <span class="tm-recipient-role-editor__label">@Loc["TmRecipientRoleEditor_Color"]</span>
+                                <div class="tm-recipient-role-editor__swatches" role="group" aria-label="@Loc["TmRecipientRoleEditor_Color"]">
+                                    @foreach (var (swatchColor, swatchIndex) in SigningRolePalette.DefaultColors.Select((color, i) => (color, i)))
+                                    {
+                                        var currentColor = swatchColor;
+                                        <button type="button"
+                                                class="tm-recipient-role-editor__swatch"
+                                                data-color="@currentColor"
+                                                style="@GetSwatchStyle(swatchIndex)"
+                                                aria-pressed="@BoolText(IsSwatchActive(role, currentColor))"
+                                                aria-label="@string.Format(Loc["TmRecipientRoleEditor_ColorValue"], GetSwatchName(swatchIndex))"
+                                                disabled="@Disabled"
+                                                @onclick="() => HandleColorChangedAsync(rowIndex, currentColor)"></button>
+                                    }
+                                    <label class="tm-recipient-role-editor__swatch-custom">
+                                        <span>@Loc["TmRecipientRoleEditor_CustomColor"]</span>
+                                        <input class="tm-recipient-role-editor__color"
+                                               type="color"
+                                               value="@role.Color"
+                                               disabled="@Disabled"
+                                               @onchange="args => HandleColorChangedAsync(rowIndex, args.Value?.ToString())" />
+                                    </label>
+                                </div>
+                            </div>
 
-                    <label class="tm-recipient-role-editor__field tm-recipient-role-editor__field--phone">
-                        <span class="tm-recipient-role-editor__label">@Loc["TmRecipientRoleEditor_Phone"]</span>
-                        <input class="tm-recipient-role-editor__phone"
-                               type="tel"
-                               value="@role.Phone"
-                               disabled="@Disabled"
-                               @onchange="args => HandlePhoneChangedAsync(rowIndex, args)" />
-                    </label>
-                }
-
-                <label class="tm-recipient-role-editor__field tm-recipient-role-editor__field--invite-by-role">
-                    <span class="tm-recipient-role-editor__label">@Loc["TmRecipientRoleEditor_InviteByRole"]</span>
-                    <select class="tm-recipient-role-editor__invite-by-role"
-                            value="@(role.InviteByRoleUuid ?? string.Empty)"
-                            disabled="@Disabled"
-                            @onchange="args => HandleInviteByRoleChangedAsync(rowIndex, args)">
-                        <option value="">@Loc["TmRecipientRoleEditor_NoInvite"]</option>
-                        @foreach (var optionRole in GetOtherRoles(role))
+                        @if (Mode == TmRecipientRoleEditorMode.SubmissionRecipients)
                         {
-                            <option value="@optionRole.Uuid">@optionRole.Name</option>
-                        }
-                    </select>
-                </label>
+                            <div class="tm-recipient-role-editor__field tm-recipient-role-editor__field--full-name">
+                                <span class="tm-recipient-role-editor__label">@Loc["TmRecipientRoleEditor_FullName"]</span>
+                                <TmTextInput Class="tm-recipient-role-editor__full-name"
+                                             Type="text"
+                                             aria-label="@Loc["TmRecipientRoleEditor_FullName"]"
+                                             Value="@GetDraftValue(role, RoleFieldFullName, role.FullName ?? string.Empty)"
+                                             ValueChanged="value => HandleDraftChanged(role, RoleFieldFullName, value)"
+                                             OnBlur="() => CommitDraftAsync(role, RoleFieldFullName, ApplyFullNameAsync)"
+                                             OnKeyDown="args => CommitDraftOnEnterAsync(args, role, RoleFieldFullName, ApplyFullNameAsync)"
+                                             Disabled="@Disabled" />
+                            </div>
 
-                <label class="tm-recipient-role-editor__field tm-recipient-role-editor__field--optional-invite-by-role">
-                    <span class="tm-recipient-role-editor__label">@Loc["TmRecipientRoleEditor_OptionalInviteByRole"]</span>
-                    <select class="tm-recipient-role-editor__optional-invite-by-role"
-                            value="@(role.OptionalInviteByRoleUuid ?? string.Empty)"
-                            disabled="@Disabled"
-                            @onchange="args => HandleOptionalInviteByRoleChangedAsync(rowIndex, args)">
-                        <option value="">@Loc["TmRecipientRoleEditor_NoInvite"]</option>
-                        @foreach (var optionRole in GetOtherRoles(role))
+                            <div class="tm-recipient-role-editor__field tm-recipient-role-editor__field--email">
+                                <span class="tm-recipient-role-editor__label">@Loc["TmRecipientRoleEditor_Email"]</span>
+                                <TmTextInput Class="tm-recipient-role-editor__email"
+                                             Type="email"
+                                             aria-label="@Loc["TmRecipientRoleEditor_Email"]"
+                                             aria-invalid="@BoolText(IsEmailMissing(role))"
+                                             Value="@GetDraftValue(role, RoleFieldEmail, role.Email ?? string.Empty)"
+                                             ValueChanged="value => HandleDraftChanged(role, RoleFieldEmail, value)"
+                                             OnBlur="() => CommitDraftAsync(role, RoleFieldEmail, ApplyEmailAsync)"
+                                             OnKeyDown="args => CommitDraftOnEnterAsync(args, role, RoleFieldEmail, ApplyEmailAsync)"
+                                             Disabled="@Disabled" />
+                            </div>
+
+                            <div class="tm-recipient-role-editor__field tm-recipient-role-editor__field--phone">
+                                <span class="tm-recipient-role-editor__label">@Loc["TmRecipientRoleEditor_Phone"]</span>
+                                <TmTextInput Class="tm-recipient-role-editor__phone"
+                                             Type="tel"
+                                             aria-label="@Loc["TmRecipientRoleEditor_Phone"]"
+                                             Value="@GetDraftValue(role, RoleFieldPhone, role.Phone ?? string.Empty)"
+                                             ValueChanged="value => HandleDraftChanged(role, RoleFieldPhone, value)"
+                                             OnBlur="() => CommitDraftAsync(role, RoleFieldPhone, ApplyPhoneAsync)"
+                                             OnKeyDown="args => CommitDraftOnEnterAsync(args, role, RoleFieldPhone, ApplyPhoneAsync)"
+                                             Disabled="@Disabled" />
+                            </div>
+                        }
+
+                        <div class="tm-recipient-role-editor__field tm-recipient-role-editor__field--invite-by-role">
+                            <span class="tm-recipient-role-editor__label">@Loc["TmRecipientRoleEditor_InviteByRole"]</span>
+                            <TmSelect Class="tm-recipient-role-editor__select tm-recipient-role-editor__invite-by-role"
+                                     AriaLabel="@Loc["TmRecipientRoleEditor_InviteByRole"]"
+                                     Placeholder="@Loc["TmRecipientRoleEditor_NoInvite"]"
+                                     PlaceholderSelectable="true"
+                                     Value="@(role.InviteByRoleUuid ?? string.Empty)"
+                                     ValueChanged="@((string? value) => HandleInviteByRoleChangedAsync(rowIndex, value))"
+                                     Disabled="@Disabled">
+                                @foreach (var optionRole in GetOtherRoles(role))
+                                {
+                                    <option value="@optionRole.Uuid">@optionRole.Name</option>
+                                }
+                            </TmSelect>
+                        </div>
+
+                        <div class="tm-recipient-role-editor__field tm-recipient-role-editor__field--optional-invite-by-role">
+                            <span class="tm-recipient-role-editor__label">@Loc["TmRecipientRoleEditor_OptionalInviteByRole"]</span>
+                            <TmSelect Class="tm-recipient-role-editor__select tm-recipient-role-editor__optional-invite-by-role"
+                                     AriaLabel="@Loc["TmRecipientRoleEditor_OptionalInviteByRole"]"
+                                     Placeholder="@Loc["TmRecipientRoleEditor_NoInvite"]"
+                                     PlaceholderSelectable="true"
+                                     Value="@(role.OptionalInviteByRoleUuid ?? string.Empty)"
+                                     ValueChanged="@((string? value) => HandleOptionalInviteByRoleChangedAsync(rowIndex, value))"
+                                     Disabled="@Disabled">
+                                @foreach (var optionRole in GetOtherRoles(role))
+                                {
+                                    <option value="@optionRole.Uuid">@optionRole.Name</option>
+                                }
+                            </TmSelect>
+                        </div>
+
+                        <div class="tm-recipient-role-editor__field tm-recipient-role-editor__field--invite-via-field">
+                            <span class="tm-recipient-role-editor__label">@Loc["TmRecipientRoleEditor_InviteViaField"]</span>
+                            <TmSelect Class="tm-recipient-role-editor__select tm-recipient-role-editor__invite-via-field"
+                                     AriaLabel="@Loc["TmRecipientRoleEditor_InviteViaField"]"
+                                     Placeholder="@Loc["TmRecipientRoleEditor_NoInvite"]"
+                                     PlaceholderSelectable="true"
+                                     Value="@(role.InviteViaFieldUuid ?? string.Empty)"
+                                     ValueChanged="@((string? value) => HandleInviteViaFieldChangedAsync(rowIndex, value))"
+                                     Disabled="@Disabled">
+                                @foreach (var field in Fields)
+                                {
+                                    <option value="@field.Uuid">@GetFieldLabel(field)</option>
+                                }
+                            </TmSelect>
+                        </div>
+
+                        @if (IsEmailMissing(role))
                         {
-                            <option value="@optionRole.Uuid">@optionRole.Name</option>
+                            <div class="tm-recipient-role-editor__validation" role="alert">
+                                <TmIcon Name="@IconNames.AlertCircle" Size="IconSize.Xs" />
+                                <span>@Loc["TmRecipientRoleEditor_EmailRequired"]</span>
+                            </div>
                         }
-                    </select>
-                </label>
-
-                <label class="tm-recipient-role-editor__field tm-recipient-role-editor__field--invite-via-field">
-                    <span class="tm-recipient-role-editor__label">@Loc["TmRecipientRoleEditor_InviteViaField"]</span>
-                    <select class="tm-recipient-role-editor__invite-via-field"
-                            value="@(role.InviteViaFieldUuid ?? string.Empty)"
-                            disabled="@Disabled"
-                            @onchange="args => HandleInviteViaFieldChangedAsync(rowIndex, args)">
-                        <option value="">@Loc["TmRecipientRoleEditor_NoInvite"]</option>
-                        @foreach (var field in Fields)
-                        {
-                            <option value="@field.Uuid">@GetFieldLabel(field)</option>
-                        }
-                    </select>
-                </label>
-
-                <button type="button"
-                        class="tm-recipient-role-editor__remove"
-                        aria-label="@Loc["TmRecipientRoleEditor_RemoveRole"]"
-                        disabled="@Disabled"
-                        @onclick="() => RemoveRoleAsync(rowIndex)">
-                    <TmIcon Name="trash-2" Size="IconSize.Xs" />
-                </button>
-
-                @if (IsEmailMissing(role))
-                {
-                    <div class="tm-recipient-role-editor__validation" role="alert">
-                        <TmIcon Name="@IconNames.AlertCircle" Size="IconSize.Xs" />
-                        <span>@Loc["TmRecipientRoleEditor_EmailRequired"]</span>
                     </div>
                 }
             </div>
@@ -162,4 +221,8 @@
             @Loc["TmRecipientRoleEditor_AddRole"]
         </button>
     </div>
+
+    @* Always rendered so the polite live region exists before the first announcement (phase 7
+       review): the move feedback ("{role} moved to position {n}") lands here. *@
+    <span class="tm-sr-only" aria-live="polite">@_moveAnnouncement</span>
 </div>

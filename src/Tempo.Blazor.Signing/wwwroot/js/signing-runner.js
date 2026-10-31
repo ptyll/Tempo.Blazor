@@ -326,6 +326,25 @@ export function scrollIntoView(selector, options = {}) {
 }
 
 /**
+ * Focuses the first element matching `selector` in the whole document (phase 7 review: an editor
+ * whose remove/move action rebuilds the rows must move the focus somewhere useful — the next row's
+ * action — instead of dropping it to <body>). Returns whether the element really owns the focus
+ * afterwards, so the caller can fall back to another target; a malformed selector must disable the
+ * move, never throw into the circuit.
+ *
+ * The implementation lives in the editors' neutral module `signing-editor.js` (shared with
+ * TmRecipientRoleEditor / TmConditionBuilder / TmFormulaBuilder through `SigningEditorInterop`);
+ * the re-export below keeps this module's public surface (the node lane imports it from here).
+ *
+ * @param {string} selector the CSS selector of the element to focus
+ * @param {{
+ *   document?: Document,
+ * }} [options] injectable environment for the node lane
+ * @returns {boolean} whether the focus landed on the element
+ */
+export { focusElement } from './signing-editor.js';
+
+/**
  * Scrolls the field list's button for `fieldUuid` into view and focuses it (the More menu's
  * "Field list" entry hands focus back to the list's current row). `scrollIntoView` first, so the
  * focus never lands off-screen inside the sheet's own scroll area.
@@ -333,7 +352,6 @@ export function scrollIntoView(selector, options = {}) {
  * @param {string} fieldUuid
  * @param {{
  *   document?: Document,
- *   window?: Window,
  *   buttonSelector?: string,
  * }} [options] injectable environment for the node lane
  */

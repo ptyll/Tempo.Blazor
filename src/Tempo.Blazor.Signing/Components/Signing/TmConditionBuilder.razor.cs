@@ -1,16 +1,38 @@
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
+using Microsoft.JSInterop;
 using Tempo.Blazor.Abstractions.Models;
 
 namespace Tempo.Blazor.Components.Signing;
 
 /// <summary>Builds conditional visibility rules for signing fields.</summary>
-public partial class TmConditionBuilder
+public partial class TmConditionBuilder : IAsyncDisposable
 {
     private static readonly SigningConditionOperation[] Operations = Enum.GetValues<SigningConditionOperation>();
 
-    private readonly List<SigningFieldCondition> _conditions = [];
+    /// <summary>A condition plus its stable row identity: the Guid keys the rendered row
+    /// (<c>@key</c>), so a move travels the DOM row (and its focus) with the condition. The id is
+    /// settable so a rebuild can reuse the id of the row that already occupies that position.</summary>
+    private sealed class ConditionRow
+    {
+        public Guid Id { get; set; } = Guid.NewGuid();
+
+        public SigningFieldCondition Condition { get; set; } = new();
+    }
+
+    private readonly List<ConditionRow> _rows = [];
+    private readonly Dictionary<Guid, string> _valueDrafts = new();
     private IReadOnlyList<SigningFieldCondition>? _lastConditions;
+    private SigningEditorInterop? _interop;
+    private string? _pendingFocusSelector;
+    private string? _moveAnnouncement;
+
+    /// <summary>Per-instance scope attribute for the remove-action focus selector (never a DOM id —
+    /// two builders on one page must not collide).</summary>
+    private readonly string _builderId = $"tm-condition-builder-{Guid.NewGuid():N}";
+
+    /// <summary>Injects the JS runtime for the remove/move focus hand-off (best-effort).</summary>
+    [Inject] private IJSRuntime JS { get; set; } = default!;
 
     /// <summary>All fields in the current signing template.</summary>
     [Parameter] public IReadOnlyList<SigningField> Fields { get; set; } = [];
@@ -42,8 +64,8 @@ public partial class TmConditionBuilder
 
     private IEnumerable<SigningField> ConditionSourceFields => Fields.Where(IsConditionSourceField);
 
-    private bool HasValidationErrors => _conditions.Any(condition => !IsBlank(condition)
-        && (IsValueMissing(condition) || CreatesCycle(condition)));
+    private bool HasValidationErrors => _rows.Any(row => !IsBlank(row.Condition)
+        && (IsValueMissing(row.Condition) || CreatesCycle(row.Condition)));
 
     private string RootClass
     {
@@ -64,18 +86,114 @@ public partial class TmConditionBuilder
 
     protected override void OnParametersSet()
     {
-        if (!ReferenceEquals(_lastConditions, Conditions))
+        if (ReferenceEquals(_lastConditions, Conditions))
         {
-            _conditions.Clear();
-            _conditions.AddRange((Conditions ?? []).Select(CloneAndNormalize));
-
-            if (_conditions.Count == 0)
-            {
-                _conditions.Add(CreateDefaultCondition());
-            }
-
-            _lastConditions = Conditions;
+            return;
         }
+
+        var incoming = (Conditions ?? []).Select(CloneAndNormalize).ToArray();
+
+        // Hosts (the demo page, TmSigningFieldEditorPanel) echo a NEW list after every change.
+        // Rebuilding for an equal echo minted fresh Guids, so @key recreated every row and the
+        // focus queued for the surviving row landed on <body>. An equal list keeps the rows —
+        // but only when there are rows to keep. An empty list against empty rows is the first
+        // render (or a cleared builder), which still needs its trailing blank draft.
+        if (_rows.Count > 0 && MatchesCurrentNonBlankRows(incoming))
+        {
+            _lastConditions = Conditions;
+            return;
+        }
+
+        var count = incoming.Length;
+        var reused = new List<ConditionRow>(count);
+        for (var i = 0; i < count; i++)
+        {
+            reused.Add(new ConditionRow
+            {
+                Id = i < _rows.Count ? _rows[i].Id : Guid.NewGuid(),
+                Condition = incoming[i]
+            });
+        }
+
+        _rows.Clear();
+        _rows.AddRange(reused);
+        _valueDrafts.Clear();
+
+        if (_rows.Count == 0)
+        {
+            _rows.Add(new ConditionRow());
+        }
+
+        _lastConditions = Conditions;
+    }
+
+    /// <summary>
+    /// Whether <paramref name="incoming"/> is the same non-blank condition list the rows already
+    /// show, in order, by value (FieldUuid / Action / Value / Operation). A trailing blank draft
+    /// the builder itself added is not part of the echoed list and does not count as a difference.
+    /// </summary>
+    private bool MatchesCurrentNonBlankRows(SigningFieldCondition[] incoming)
+    {
+        var current = _rows
+            .Select(row => row.Condition)
+            .Where(condition => !IsBlank(condition))
+            .ToArray();
+
+        if (current.Length != incoming.Length)
+        {
+            return false;
+        }
+
+        for (var i = 0; i < current.Length; i++)
+        {
+            if (!SameCondition(current[i], incoming[i]))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private static bool SameCondition(SigningFieldCondition left, SigningFieldCondition right)
+    {
+        return string.Equals(left.FieldUuid, right.FieldUuid, StringComparison.Ordinal)
+            && left.Action == right.Action
+            && string.Equals(left.Value, right.Value, StringComparison.Ordinal)
+            && left.Operation == right.Operation;
+    }
+
+    /// <summary>
+    /// Applies the focus hand-off AFTER the render that moved the rows (phase 7 review): a selector
+    /// captured before the render would hit the DOM before Blazor rebuilt it. The dashed Add action
+    /// is the fallback when the primary target no longer exists.
+    /// </summary>
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_pendingFocusSelector is null)
+        {
+            return;
+        }
+
+        var selector = _pendingFocusSelector;
+        _pendingFocusSelector = null;
+
+        _interop ??= new SigningEditorInterop(JS);
+        // Stay on the renderer sync context: the focus hand-off runs after the render that
+        // rebuilt the rows, and a captured context lets a later render see the cleared selector.
+        if (!await _interop.FocusSelectorAsync(selector))
+        {
+            await _interop.FocusSelectorAsync(AddActionSelector);
+        }
+    }
+
+    private string AddActionSelector => $"[data-condition-builder='{_builderId}'] .tm-condition-builder__add";
+
+    /// <summary>Queues the focus move onto <paramref name="selector"/> for the next render; the
+    /// builder's Add action is the fallback target.</summary>
+    private void RequestFocus(string selector)
+    {
+        _pendingFocusSelector = selector;
     }
 
     private static void AddClass(List<string> classes, bool condition, string cssClass)
@@ -88,23 +206,54 @@ public partial class TmConditionBuilder
 
     private static string BoolText(bool value) => value ? "true" : "false";
 
-    private async Task HandleFieldChangedAsync(int index, ChangeEventArgs args)
+    /// <summary>
+    /// Moves a row one slot up (<paramref name="delta"/> = -1) or down (+1; Q-S7 — the keyboard
+    /// alternative to drag &amp; drop). The conditions swap wholesale; the join operation stays
+    /// POSITIONAL — the leading row never carries one, so after a move its hidden operation
+    /// normalizes back to <see cref="SigningConditionOperation.And"/>. The focus stays INSIDE the
+    /// moved row (phase 7 review): the same-direction button at the new position, or the opposite
+    /// one when that direction hit the edge, and the result is announced.
+    /// </summary>
+    private async Task MoveConditionAsync(int index, int delta)
+    {
+        var target = index + delta;
+        if (Disabled || target < 0 || target >= _rows.Count)
+        {
+            return;
+        }
+
+        (_rows[index], _rows[target]) = (_rows[target], _rows[index]);
+        _rows[0].Condition.Operation = SigningConditionOperation.And;
+
+        var label = GetConditionLabel(_rows[target].Condition);
+        _moveAnnouncement = string.Format(Loc["TmConditionBuilder_ConditionMoved"], label, target + 1);
+        var sameDirectionEnabled = delta < 0 ? target > 0 : target < _rows.Count - 1;
+        var buttonClass = sameDirectionEnabled
+            ? (delta < 0 ? "tm-condition-builder__move-up" : "tm-condition-builder__move-down")
+            : (delta < 0 ? "tm-condition-builder__move-down" : "tm-condition-builder__move-up");
+        RequestFocus($"[data-condition-builder='{_builderId}'] .tm-condition-builder__row[data-row-id='{_rows[target].Id}'] .{buttonClass}");
+
+        await NotifyChangedAsync();
+    }
+
+    private async Task HandleFieldChangedAsync(int index, string? value)
     {
         if (!TryGetCondition(index, out var condition))
         {
             return;
         }
 
-        condition.FieldUuid = args.Value?.ToString() ?? string.Empty;
+        condition.FieldUuid = value ?? string.Empty;
         condition.Action = GetActionsFor(GetField(condition.FieldUuid)?.Type).First();
         condition.Value = null;
+        _valueDrafts.Remove(_rows[index].Id);
         await NotifyChangedAsync();
     }
 
-    private async Task HandleActionChangedAsync(int index, ChangeEventArgs args)
+    private async Task HandleActionChangedAsync(int index, string? value)
     {
         if (!TryGetCondition(index, out var condition)
-            || !Enum.TryParse<SigningConditionAction>(args.Value?.ToString(), out var action))
+            || !Enum.TryParse<SigningConditionAction>(value, out var action))
         {
             return;
         }
@@ -113,29 +262,32 @@ public partial class TmConditionBuilder
         if (!ActionRequiresValue(action))
         {
             condition.Value = null;
+            _valueDrafts.Remove(_rows[index].Id);
         }
 
         await NotifyChangedAsync();
     }
 
-    private async Task HandleValueChangedAsync(int index, ChangeEventArgs args)
+    /// <summary>The COMMIT path of a select-backed value (choice fields commit on change).</summary>
+    private async Task HandleValueChangedAsync(int index, string? value)
     {
         if (!TryGetCondition(index, out var condition))
         {
             return;
         }
 
-        condition.Value = string.IsNullOrWhiteSpace(args.Value?.ToString())
+        condition.Value = string.IsNullOrWhiteSpace(value)
             ? null
-            : args.Value?.ToString();
+            : value;
 
+        _valueDrafts.Remove(_rows[index].Id);
         await NotifyChangedAsync();
     }
 
-    private async Task HandleOperationChangedAsync(int index, ChangeEventArgs args)
+    private async Task HandleOperationChangedAsync(int index, string? value)
     {
         if (!TryGetCondition(index, out var condition)
-            || !Enum.TryParse<SigningConditionOperation>(args.Value?.ToString(), out var operation))
+            || !Enum.TryParse<SigningConditionOperation>(value, out var operation))
         {
             return;
         }
@@ -149,46 +301,120 @@ public partial class TmConditionBuilder
 
     private async Task AddConditionAsync()
     {
-        _conditions.Add(CreateDefaultCondition());
+        _rows.Add(new ConditionRow());
         await Task.CompletedTask;
     }
 
     private async Task RemoveConditionAsync(int index)
     {
-        if (index < 0 || index >= _conditions.Count)
+        if (index < 0 || index >= _rows.Count)
         {
             return;
         }
 
-        _conditions.RemoveAt(index);
+        _valueDrafts.Remove(_rows[index].Id);
+        _rows.RemoveAt(index);
 
-        if (_conditions.Count == 0)
+        if (_rows.Count == 0)
         {
-            _conditions.Add(CreateDefaultCondition());
+            _rows.Add(new ConditionRow());
         }
+
+        // The remove action deletes the row the user is acting on — the focus lands on the remove
+        // button of the row that now occupies the removed position, or on the dashed Add action
+        // when the last row collapsed into the empty draft. The move happens AFTER the render that
+        // rebuilt the list (phase 7 review).
+        RequestFocus(index < _rows.Count
+            ? $"[data-condition-builder='{_builderId}'] .tm-condition-builder__row[data-row-id='{_rows[index].Id}'] .tm-condition-builder__remove"
+            : AddActionSelector);
 
         await NotifyChangedAsync();
     }
 
+    /// <inheritdoc />
+    public async ValueTask DisposeAsync()
+    {
+        if (_interop is not null)
+        {
+            await _interop.DisposeAsync();
+            _interop = null;
+        }
+    }
+
+    // ── Value draft buffers (phase 7 review: keep the raw text while typing) ─────────
+
+    /// <summary>The displayed value: the live DRAFT while the user types, the committed value
+    /// otherwise. The draft is dropped on blur / Enter, where the commit normalizes.</summary>
+    private string GetDraftValue(ConditionRow row, string committed)
+    {
+        return _valueDrafts.TryGetValue(row.Id, out var draft) ? draft : committed;
+    }
+
+    private Task HandleDraftChanged(ConditionRow row, string? value)
+    {
+        if (Disabled)
+        {
+            return Task.CompletedTask;
+        }
+
+        // No normalization, no notification: the keystroke must not rebuild the rows (a blanking
+        // keystroke would wipe the value, and every keystroke would fire ConditionsChanged).
+        _valueDrafts[row.Id] = value ?? string.Empty;
+        return Task.CompletedTask;
+    }
+
+    private Task CommitDraftAsync(ConditionRow row)
+    {
+        if (Disabled || !_valueDrafts.Remove(row.Id, out var draft))
+        {
+            return Task.CompletedTask;
+        }
+
+        var index = _rows.FindIndex(candidate => candidate.Id == row.Id);
+        return index < 0 ? Task.CompletedTask : HandleValueChangedAsync(index, draft);
+    }
+
+    private Task CommitDraftOnEnterAsync(KeyboardEventArgs args, ConditionRow row)
+    {
+        return string.Equals(args.Key, "Enter", StringComparison.Ordinal)
+            ? CommitDraftAsync(row)
+            : Task.CompletedTask;
+    }
+
     private bool TryGetCondition(int index, out SigningFieldCondition condition)
     {
-        if (index < 0 || index >= _conditions.Count)
+        if (index < 0 || index >= _rows.Count)
         {
             condition = default!;
             return false;
         }
 
-        condition = _conditions[index];
+        condition = _rows[index].Condition;
         return true;
+    }
+
+    /// <summary>The name the move announcement carries: the field label, or the localized
+    /// "Condition" placeholder for a draft row without a field yet.</summary>
+    private string GetConditionLabel(SigningFieldCondition condition)
+    {
+        var field = GetField(condition.FieldUuid);
+        return field is null
+            ? Loc["TmConditionBuilder_Condition"]
+            : GetFieldLabel(field);
     }
 
     private Task NotifyChangedAsync()
     {
-        var materialized = _conditions
+        var materialized = _rows
+            .Select(row => row.Condition)
             .Where(condition => !IsBlank(condition))
             .Select(Clone)
             .ToArray();
 
+        // The list we just emitted is already what the rows show. Recording it means a host that
+        // writes the callback argument straight back (same instance) is a no-op, and a host that
+        // clones it falls through to the value comparison above instead of a Guid rebuild.
+        _lastConditions = materialized;
         return ConditionsChanged.InvokeAsync(materialized);
     }
 
@@ -219,16 +445,6 @@ public partial class TmConditionBuilder
             Action = condition.Action,
             Value = condition.Value,
             Operation = condition.Operation
-        };
-    }
-
-    private static SigningFieldCondition CreateDefaultCondition()
-    {
-        return new SigningFieldCondition
-        {
-            FieldUuid = string.Empty,
-            Action = SigningConditionAction.NotEmpty,
-            Operation = SigningConditionOperation.And
         };
     }
 

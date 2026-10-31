@@ -19,6 +19,19 @@
       "description": "Submission events to display."
     },
     {
+      "name": "HeaderContent",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "Host-rendered summary above the timeline (typically the document name, page/size metrics and its current status — the desktop reference's document card). The panel renders it verbatim before the event list; the timeline never invents document data it does not have (Q-S10)."
+    },
+    {
+      "name": "SortDirection",
+      "type": "SigningTimelineSortDirection",
+      "isRequired": false,
+      "default": "SigningTimelineSortDirection.Descending",
+      "description": "Sort direction of Events. Defaults to SigningTimelineSortDirection.Descending (the newest event first — today's behaviour, Q-S9); SigningTimelineSortDirection.Ascending renders the ceremony in its reading order."
+    },
+    {
       "name": "Class",
       "type": "string?",
       "isRequired": false,

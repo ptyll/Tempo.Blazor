@@ -1,0 +1,10 @@
+{
+  "kind": "Enum",
+  "category": "Components",
+  "namespace": "Tempo.Blazor.Components.Signing",
+  "description": "Sort direction of the TmSubmissionStatusTimeline event list. Descending (the default) keeps the historical newest-first order; Ascending renders the ceremony in its reading order.",
+  "packageId": "Tempo.Blazor.Signing",
+  "sourcePath": "src/Tempo.Blazor.Signing/Components/Signing/SigningTimelineSortDirection.cs",
+  "documentationStatus": "generated",
+  "itemName": "SigningTimelineSortDirection"
+}

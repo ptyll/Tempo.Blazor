@@ -58,7 +58,9 @@ public class SigningProductPanelsE2ETests : WasmTestBase
         await Assertions.Expect(panel.Locator(".tm-share-link-panel__embed-code")).ToHaveValueAsync("<iframe src=\"https://sign.example.test/s/demo-token\"></iframe>");
         await Assertions.Expect(panel).ToContainTextAsync("Expires");
 
-        await panel.Locator("input[type='checkbox']").UncheckAsync();
+        // The enable control is a core TmToggle now (input[role=switch], visually hidden): the
+        // click goes through the wrapping label (the phase-4 convention for hidden native inputs).
+        await panel.Locator(".tm-toggle-label").ClickAsync();
         await Assertions.Expect(await GetByTestIdAsync(page, "share-link-status")).ToContainTextAsync("Share link disabled");
         await Assertions.Expect(panel.Locator(".tm-share-link-panel__input")).ToBeDisabledAsync();
     }

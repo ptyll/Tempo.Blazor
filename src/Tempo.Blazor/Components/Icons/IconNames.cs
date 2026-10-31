@@ -105,6 +105,8 @@ public static class IconNames
     public const string Key           = "key";
     /// <summary>Icon name for: Shield, Protection.</summary>
     public const string Shield        = "shield";
+    /// <summary>Icon name for: ShieldCheck, Verified, Protection verified.</summary>
+    public const string ShieldCheck   = "shield-check";
 
     // ─── Files & Folders ──────────────────────────────────────────────────────
     /// <summary>Icon name for: File.</summary>
@@ -175,6 +177,8 @@ public static class IconNames
     // ─── Communication ────────────────────────────────────────────────────────
     /// <summary>Icon name for: Mail, Email.</summary>
     public const string Mail          = "mail";
+    /// <summary>Icon name for: MailX, BouncedEmail, DeliveryFailed.</summary>
+    public const string MailX         = "mail-x";
     /// <summary>Icon name for: Message.</summary>
     public const string Message       = "message";
     /// <summary>Icon name for: MessageSquare, Chat.</summary>

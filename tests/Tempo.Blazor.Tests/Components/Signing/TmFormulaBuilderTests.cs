@@ -7,8 +7,111 @@ using Tempo.Blazor.Tests.Localization;
 
 namespace Tempo.Blazor.Tests.Components.Signing;
 
+/// <summary>
+/// Formula builder (Signing redesign phase 7, S1-2): operator/function/token groups carry visible
+/// headings with <c>role="group"</c> + <c>aria-labelledby</c>, the operators form a grid that
+/// includes parentheses with localized spoken names (Q-S8 — the grammar itself stays), token cards
+/// show the field type, insertion happens at the textarea cursor through the neutral
+/// <c>signing-editor.js</c> module (with an append fallback when no JS runtime exists), and Save is
+/// the primary action.
+/// </summary>
 public class TmFormulaBuilderTests : LocalizationTestBase
 {
+    [Fact]
+    public void Formula_GroupsHaveRoleGroupAriaLabelledBy()
+    {
+        var cut = Render<TmFormulaBuilder>(parameters =>
+            parameters.Add(p => p.Field, CreateCurrentField())
+                      .Add(p => p.Fields, CreateFields()));
+
+        var groups = cut.FindAll("[role='group'][aria-labelledby]");
+        groups.Count.Should().BeGreaterThanOrEqualTo(3, "operators, functions and tokens are labelled groups");
+
+        foreach (var group in groups)
+        {
+            var headingId = group.GetAttribute("aria-labelledby");
+            cut.Find($"#{headingId}").TextContent.Should().NotBeEmpty(
+                "every group points at a VISIBLE heading element");
+        }
+    }
+
+    [Fact]
+    public void Formula_Parentheses_Available()
+    {
+        var cut = Render<TmFormulaBuilder>(parameters =>
+            parameters.Add(p => p.Field, CreateCurrentField())
+                      .Add(p => p.Fields, CreateFields()));
+
+        cut.Find("[data-operator='(']").Should().NotBeNull("parentheses are part of the operator grid");
+        cut.Find("[data-operator=')']").Should().NotBeNull();
+    }
+
+    /// <summary>The operator glyphs are ambiguous to a screen reader ("+", "*"); each button names
+    /// itself with the localized spoken name (phase 7 review).</summary>
+    [Theory]
+    [InlineData("+", "Plus")]
+    [InlineData("-", "Minus")]
+    [InlineData("*", "Multiply")]
+    [InlineData("/", "Divide")]
+    [InlineData("(", "Left parenthesis")]
+    [InlineData(")", "Right parenthesis")]
+    public void OperatorButtons_CarryLocalizedAriaLabels(string op, string expectedLabel)
+    {
+        var cut = Render<TmFormulaBuilder>(parameters =>
+            parameters.Add(p => p.Field, CreateCurrentField())
+                      .Add(p => p.Fields, CreateFields()));
+
+        cut.Find($"[data-operator='{op}']").GetAttribute("aria-label").Should().Be(expectedLabel);
+    }
+
+    [Fact]
+    public void Formula_TokensShowFieldType()
+    {
+        var cut = Render<TmFormulaBuilder>(parameters =>
+            parameters.Add(p => p.Field, CreateCurrentField())
+                      .Add(p => p.Fields, CreateFields()));
+
+        var token = cut.Find("[data-field-uuid='subtotal']");
+        token.QuerySelector(".tm-formula-builder__token-label")!.TextContent.Should().Contain("Subtotal");
+        token.QuerySelector(".tm-formula-builder__token-type")!.TextContent.Should().NotBeEmpty(
+            "every token card names its field type");
+    }
+
+    [Fact]
+    public void Formula_InsertsAtCursor()
+    {
+        // The JS module answers with the formula text reassembled around the simulated cursor.
+        JSInterop.SetupModule("./_content/Tempo.Blazor.Signing/js/signing-editor.js")
+            .Setup<string>("insertAtCursor", _ => true)
+            .SetResult("AB{{Subtotal}}CD");
+
+        string? captured = null;
+        var cut = Render<TmFormulaBuilder>(parameters =>
+            parameters.Add(p => p.Field, CreateCurrentField())
+                      .Add(p => p.Fields, CreateFields())
+                      .Add(p => p.ValueChanged, EventCallback.Factory.Create<string>(this, value => captured = value)));
+
+        cut.Find("[data-field-uuid='subtotal']").Click();
+
+        captured.Should().Be("AB{{Subtotal}}CD", "the module's cursor-aware result replaces the plain append");
+        JSInterop.VerifyInvoke("import");
+    }
+
+    [Fact]
+    public void Formula_InsertWithoutJs_FallsBackToAppend()
+    {
+        string? captured = null;
+        var cut = Render<TmFormulaBuilder>(parameters =>
+            parameters.Add(p => p.Field, CreateCurrentField())
+                      .Add(p => p.Fields, CreateFields())
+                      .Add(p => p.ValueChanged, EventCallback.Factory.Create<string>(this, value => captured = value)));
+
+        cut.Find("[data-field-uuid='subtotal']").Click();
+
+        // No JS runtime (bUnit default): the insertion degrades to appending the token.
+        captured.Should().Be("{{Subtotal}}");
+    }
+
     [Fact]
     public void Render_RendersTextarea()
     {
@@ -16,7 +119,8 @@ public class TmFormulaBuilderTests : LocalizationTestBase
             parameters.Add(p => p.Field, CreateCurrentField())
                       .Add(p => p.Fields, CreateFields()));
 
-        cut.Find("textarea.tm-formula-builder__textarea").Should().NotBeNull();
+        cut.Find(".tm-formula-builder__textarea textarea").Should().NotBeNull(
+            "the formula editor is the core TmTextArea");
     }
 
     [Fact]
@@ -26,8 +130,8 @@ public class TmFormulaBuilderTests : LocalizationTestBase
             parameters.Add(p => p.Field, CreateCurrentField())
                       .Add(p => p.Fields, CreateFields()));
 
-        cut.FindAll(".tm-formula-builder__token")
-            .Select(button => button.TextContent.Trim())
+        cut.FindAll(".tm-formula-builder__token .tm-formula-builder__token-label")
+            .Select(label => label.TextContent.Trim())
             .Should()
             .Contain(["Subtotal", "Tax"]);
     }
@@ -39,10 +143,10 @@ public class TmFormulaBuilderTests : LocalizationTestBase
             parameters.Add(p => p.Field, CreateCurrentField())
                       .Add(p => p.Fields, CreateFields()));
 
-        cut.FindAll(".tm-formula-builder__token")
-            .Select(button => button.TextContent.Trim())
+        cut.FindAll(".tm-formula-builder__token [data-field-uuid], .tm-formula-builder__token[data-field-uuid]")
+            .Select(button => button.GetAttribute("data-field-uuid"))
             .Should()
-            .Contain(["Plan price", "Multiplier"]);
+            .Contain(["plan", "multiplier"]);
     }
 
     [Fact]
@@ -52,7 +156,7 @@ public class TmFormulaBuilderTests : LocalizationTestBase
             parameters.Add(p => p.Field, CreateCurrentField())
                       .Add(p => p.Fields, CreateFields()));
 
-        cut.FindAll(".tm-formula-builder__token")
+        cut.FindAll(".tm-formula-builder__token[data-field-uuid]")
             .Select(button => button.GetAttribute("data-field-uuid"))
             .Should()
             .NotContain("total");
@@ -68,7 +172,7 @@ public class TmFormulaBuilderTests : LocalizationTestBase
             parameters.Add(p => p.Field, CreateCurrentField())
                       .Add(p => p.Fields, fields));
 
-        cut.FindAll(".tm-formula-builder__token")
+        cut.FindAll(".tm-formula-builder__token[data-field-uuid]")
             .Select(button => button.GetAttribute("data-field-uuid"))
             .Should()
             .NotContain("dependent");
@@ -86,7 +190,7 @@ public class TmFormulaBuilderTests : LocalizationTestBase
         cut.Find("[data-field-uuid='subtotal']").Click();
 
         captured.Should().Contain("{{Subtotal}}");
-        cut.Find(".tm-formula-builder__textarea").GetAttribute("value").Should().Contain("{{Subtotal}}");
+        cut.Find(".tm-formula-builder__textarea textarea").TextContent.Should().Contain("{{Subtotal}}");
     }
 
     [Fact]
@@ -105,7 +209,8 @@ public class TmFormulaBuilderTests : LocalizationTestBase
                       .Add(p => p.Culture, "en-US")
                       .Add(p => p.FallbackCulture, "cs-CZ"));
 
-        cut.Find("[data-field-uuid='subtotal']").TextContent.Trim().Should().Be("Subtotal localized");
+        cut.Find("[data-field-uuid='subtotal'] .tm-formula-builder__token-label").TextContent.Trim()
+            .Should().Be("Subtotal localized");
     }
 
     [Fact]
@@ -177,7 +282,7 @@ public class TmFormulaBuilderTests : LocalizationTestBase
         cut.Find(".tm-formula-builder__save").Click();
 
         saved.Should().BeFalse();
-        cut.Find(".tm-formula-builder__error").TextContent.Should().Contain("Missing");
+        cut.Find(".tm-formula-builder__textarea .tm-input-error-message").TextContent.Should().Contain("Missing");
     }
 
     [Fact]
@@ -212,8 +317,9 @@ public class TmFormulaBuilderTests : LocalizationTestBase
 
         cut.Render(parameters => parameters.Add(p => p.Culture, "cs-CZ"));
 
-        cut.Find(".tm-formula-builder__textarea").GetAttribute("value").Should().Be("{{Subtotal}}");
-        cut.Find("[data-field-uuid='subtotal']").TextContent.Should().Contain("Mezisoučet");
+        cut.Find(".tm-formula-builder__textarea textarea").TextContent.Should().Be("{{Subtotal}}");
+        cut.Find("[data-field-uuid='subtotal'] .tm-formula-builder__token-label").TextContent
+            .Should().Contain("Mezisoučet");
     }
 
     private static SigningField CreateCurrentField()

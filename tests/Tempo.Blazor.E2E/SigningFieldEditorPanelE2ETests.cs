@@ -209,7 +209,7 @@ public class SigningFieldEditorPanelE2ETests : WasmTestBase
         await panel.Locator(".tm-signing-field-editor-panel__open-conditions").ClickAsync();
         var builder = panel.Locator(".tm-signing-field-editor-panel__condition-builder").First;
         await Expect(builder.Locator(".tm-condition-builder")).ToBeVisibleAsync();
-        await builder.Locator(".tm-condition-builder__field").First.SelectOptionAsync("editor-consent");
+        await builder.Locator(".tm-condition-builder__field select").First.SelectOptionAsync("editor-consent");
 
         await Expect(page.Locator("[data-testid='field-editor-status']")).ToContainTextAsync("conditions: 1");
     }
@@ -228,19 +228,19 @@ public class SigningFieldEditorPanelE2ETests : WasmTestBase
         await panel.Locator(".tm-signing-field-editor-panel__open-conditions").ClickAsync();
         var builder = panel.Locator(".tm-signing-field-editor-panel__condition-builder").First;
 
-        await builder.Locator(".tm-condition-builder__field").First.SelectOptionAsync("editor-plan");
+        await builder.Locator(".tm-condition-builder__field select").First.SelectOptionAsync("editor-plan");
         await Expect(builder.Locator(".tm-condition-builder")).ToBeVisibleAsync();
         await Expect(builder.Locator(".tm-condition-builder__row")).ToHaveCountAsync(1);
 
-        await builder.Locator(".tm-condition-builder__value-select").First.SelectOptionAsync("editor-plan-pro");
+        await builder.Locator(".tm-condition-builder__value-select select").First.SelectOptionAsync("editor-plan-pro");
         await Expect(builder.Locator(".tm-condition-builder")).ToBeVisibleAsync();
         await Expect(page.Locator("[data-testid='field-editor-status']")).ToContainTextAsync("conditions: 1");
 
         await builder.Locator(".tm-condition-builder__add").ClickAsync();
-        await builder.Locator(".tm-condition-builder__operation").First.SelectOptionAsync("Or");
+        await builder.Locator(".tm-condition-builder__operation select").First.SelectOptionAsync("Or");
         await Expect(builder.Locator(".tm-condition-builder__row")).ToHaveCountAsync(2);
 
-        await builder.Locator(".tm-condition-builder__field").Nth(1).SelectOptionAsync("editor-consent");
+        await builder.Locator(".tm-condition-builder__field select").Nth(1).SelectOptionAsync("editor-consent");
         await Expect(builder.Locator(".tm-condition-builder")).ToBeVisibleAsync();
         await Expect(page.Locator("[data-testid='field-editor-status']")).ToContainTextAsync("conditions: 2");
     }

@@ -257,9 +257,14 @@ public sealed class MarkupClassCoverageTests
     /// </summary>
     private static readonly string[] UnstyledSigningMarkupClasses =
     [
+        "tm-audit-trail-viewer__table--documents",
+        "tm-audit-trail-viewer__table--events",
+        "tm-audit-trail-viewer__table--signers",
         "tm-audit-trail-viewer__localization",
         "tm-comment-composer__button--secondary",
         "tm-comment-composer__mention-name",
+        "tm-condition-builder__field-group--action",
+        "tm-condition-builder__field-group--field",
         "tm-condition-builder--invalid",
         "tm-document-comments-panel__thread-mention",
         "tm-document-page-viewer--with-toolbar",
@@ -270,6 +275,12 @@ public sealed class MarkupClassCoverageTests
         "tm-document-page-viewer__previous-page",
         "tm-document-page-viewer__zoom-in",
         "tm-document-page-viewer__zoom-out",
+        "tm-formula-builder__group--functions",
+        "tm-formula-builder__group--operators",
+        "tm-formula-builder__group--tokens",
+        "tm-formula-builder--invalid",
+        "tm-formula-builder__save",
+        "tm-pdf-signature-verification__signature--card",
         "tm-pdf-template-designer__bulk-actions",
         "tm-pdf-template-designer__continuous",
         "tm-pdf-template-designer__copy-field",
@@ -285,6 +296,16 @@ public sealed class MarkupClassCoverageTests
         "tm-pdf-template-designer__single-page",
         "tm-pdf-template-designer__zoom-in",
         "tm-pdf-template-designer__zoom-out",
+        "tm-recipient-role-editor--submission",
+        "tm-recipient-role-editor--template",
+        "tm-recipient-role-editor__field--color",
+        "tm-recipient-role-editor__field--email",
+        "tm-recipient-role-editor__field--full-name",
+        "tm-recipient-role-editor__field--invite-by-role",
+        "tm-recipient-role-editor__field--invite-via-field",
+        "tm-recipient-role-editor__field--name",
+        "tm-recipient-role-editor__field--optional-invite-by-role",
+        "tm-recipient-role-editor__field--phone",
         "tm-recipient-role-editor--invalid",
         "tm-signing-attachment-step",
         // Signing redesign phase 4 (SI1): "tm-signing-choice-step" and "tm-signing-signature-step"
@@ -446,7 +467,13 @@ public sealed class MarkupClassCoverageTests
             // merged into the shared step-validation stem — 6 → 11. Phase 6 review: the external
             // step's per-instance redirect-note id ("tm-signing-external-redirect-{Guid…}",
             // the aria-describedby target of the outbound provider link) — 11 → 12.
-            ExpectedUnmeasurableStems: 12),
+            // Signing redesign phase 7: the formula builder's labelled groups add the three
+            // per-instance heading ids (tm-formula-operators-/…-functions-/…-tokens-{Guid}) —
+            // 12 → 15 — and the remove-action focus scope adds the condition builder's per-instance
+            // data attribute (data-condition-builder-{Guid}) — 15 → 16. Phase 7 review: the count
+            // also carries the formula textarea's own per-instance id ("tm-formula-{Guid…}", the
+            // label's `for` target the first phase-7 pass missed) — 16 → 17.
+            ExpectedUnmeasurableStems: 17),
         new Scope("NotionEditor", "Tempo.Blazor.NotionEditor", UnstyledNotionMarkupClasses,
             MinRazorFiles: 125, MinMarkupClasses: 1900, InheritsCoreCss: true,
             ExpectedUnmeasurableStems: 17),

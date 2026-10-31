@@ -12,6 +12,13 @@ namespace Tempo.Blazor.Components.Signing;
 /// to the fine-pointer / no-scroll behaviour. The wrapper itself is <see cref="IAsyncDisposable"/>:
 /// the runner's <c>DisposeAsync</c> releases the module instance, and a failed import never
 /// retries per call (the failure is latched).
+/// <para>
+/// The former <c>FocusSelectorAsync</c> (the editors' remove-action focus move) moved to the
+/// neutral <see cref="SigningEditorInterop"/> + <c>signing-editor.js</c> module (phase 7 review):
+/// the editors must not depend on the runner's module, and the runner itself never needed the
+/// selector-based focus — <c>signing-runner.js</c> only re-exports <c>focusElement</c> to keep its
+/// own public surface.
+/// </para>
 /// </summary>
 internal sealed class SigningRunnerInterop : IAsyncDisposable
 {

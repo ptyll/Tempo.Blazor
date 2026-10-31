@@ -6,7 +6,7 @@
     <div class="tm-document-comments-panel__item-body">
         <header class="tm-document-comments-panel__item-header">
             <strong>@Comment.AuthorName</strong>
-            <time datetime="@Comment.CreatedAt.ToString("O")">@Comment.CreatedAt.ToLocalTime().ToString("g")</time>
+            <time datetime="@SigningDateFormatter.FormatIso(Comment.CreatedAt)">@SigningDateFormatter.Format(Comment.CreatedAt)</time>
             @if (Comment.EditedAt is not null)
             {
                 <span>@Loc["TmDocumentComments_Edited"]</span>

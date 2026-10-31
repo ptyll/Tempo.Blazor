@@ -15,20 +15,64 @@
     color: var(--tm-text-disabled);
 }
 
+/* ONE card: the rows share a single framed surface and separate by hairlines (the reference's
+   condition dialog), instead of one card per row. */
 .tm-condition-builder__rows {
     display: grid;
-    gap: var(--tm-space-3);
+    padding: var(--tm-space-2) var(--tm-space-3);
+    border: 1px solid var(--tm-border-color);
+    border-radius: var(--tm-radius-md);
+    background: var(--tm-bg-surface);
 }
 
 .tm-condition-builder__row {
     display: grid;
-    grid-template-columns: minmax(var(--tm-space-16), 0.7fr) minmax(var(--tm-space-16), 1fr) minmax(var(--tm-space-16), 1fr) minmax(var(--tm-space-16), 1fr) auto;
+    grid-template-columns: auto minmax(var(--tm-space-16), 0.7fr) minmax(var(--tm-space-16), 1fr) minmax(var(--tm-space-16), 1fr) minmax(var(--tm-space-16), 1fr) auto;
     gap: var(--tm-space-2);
     align-items: start;
-    padding: var(--tm-space-3);
+    padding: var(--tm-space-2) 0;
+    border-bottom: 1px solid var(--tm-border-color);
+}
+
+.tm-condition-builder__row:last-child {
+    border-bottom: 0;
+}
+
+/* Row reorder (Q-S7): up/down buttons, never drag & drop. */
+.tm-condition-builder__move {
+    display: grid;
+    gap: var(--tm-space-1);
+    justify-items: center;
+    align-self: center;
+}
+
+.tm-condition-builder__move-up,
+.tm-condition-builder__move-down {
+    display: inline-flex;
+    box-sizing: border-box;
+    align-items: center;
+    justify-content: center;
+    width: var(--tm-input-height-sm);
+    height: var(--tm-input-height-sm);
+    padding: 0;
     border: 1px solid var(--tm-border-color);
-    border-radius: var(--tm-radius-md);
+    border-radius: var(--tm-radius-sm);
     background: var(--tm-bg-surface);
+    color: var(--tm-text-primary);
+    font: inherit;
+    font-size: var(--tm-font-size-sm);
+    cursor: pointer;
+}
+
+.tm-condition-builder__move-up:hover:not(:disabled),
+.tm-condition-builder__move-down:hover:not(:disabled) {
+    background: var(--tm-bg-surface-secondary);
+}
+
+.tm-condition-builder__move-up:disabled,
+.tm-condition-builder__move-down:disabled {
+    color: var(--tm-text-disabled);
+    cursor: not-allowed;
 }
 
 .tm-condition-builder__field-group {
@@ -51,32 +95,21 @@
     font-weight: var(--tm-font-weight-medium);
 }
 
-.tm-condition-builder__field,
-.tm-condition-builder__action,
-.tm-condition-builder__operation,
-.tm-condition-builder__value-select,
-.tm-condition-builder__value-input,
-.tm-condition-builder__value-placeholder {
-    width: 100%;
-    box-sizing: border-box;
-    min-height: var(--tm-input-height-sm);
-    padding: var(--tm-space-1) var(--tm-space-2);
-    border: 1px solid var(--tm-border-color);
-    border-radius: var(--tm-radius-sm);
-    background: var(--tm-bg-surface);
-    color: var(--tm-text-primary);
-    font: inherit;
-    font-size: var(--tm-font-size-sm);
+/* The TmSelect/TmTextInput wrappers fill their grid column; the core controls bring their own
+   input chrome. */
+.tm-condition-builder__select,
+.tm-condition-builder__value-input {
+    min-width: 0;
 }
 
 .tm-condition-builder__value-placeholder {
     display: inline-flex;
     align-items: center;
+    min-height: var(--tm-input-height-sm);
     color: var(--tm-text-muted);
 }
 
-.tm-condition-builder__value-input[aria-invalid="true"],
-.tm-condition-builder__value-select[aria-invalid="true"] {
+.tm-condition-builder__value-input input[aria-invalid="true"] {
     border-color: var(--tm-color-danger);
     box-shadow: var(--tm-shadow-focus-danger);
 }
@@ -104,24 +137,32 @@
 }
 
 .tm-condition-builder__remove {
-    align-self: end;
+    align-self: center;
     width: var(--tm-input-height-sm);
     padding: 0;
+    color: var(--tm-text-secondary);
 }
 
-.tm-condition-builder__add {
-    background: var(--tm-color-primary);
-    border-color: var(--tm-color-primary);
-    color: var(--tm-text-inverse);
+.tm-condition-builder__remove:hover:not(:disabled) {
+    border-color: var(--tm-color-danger);
+    color: var(--tm-color-danger-text);
+}
+
+/* The dashed full-width add row (the reference's "+ Přidat podmínku"). */
+.tm-condition-builder__add--dashed {
+    inline-size: 100%;
+    justify-content: center;
+    border: 1px dashed var(--tm-border-color);
+    background: var(--tm-bg-surface);
+    color: var(--tm-color-primary-text);
+}
+
+.tm-condition-builder__add--dashed:hover:not(:disabled) {
+    background: var(--tm-color-primary-subtle);
 }
 
 .tm-condition-builder__remove:disabled,
-.tm-condition-builder__add:disabled,
-.tm-condition-builder__field:disabled,
-.tm-condition-builder__action:disabled,
-.tm-condition-builder__operation:disabled,
-.tm-condition-builder__value-select:disabled,
-.tm-condition-builder__value-input:disabled {
+.tm-condition-builder__add:disabled {
     color: var(--tm-text-disabled);
     cursor: not-allowed;
 }
@@ -134,7 +175,6 @@
 
 .tm-condition-builder__actions {
     display: flex;
-    justify-content: flex-end;
     gap: var(--tm-space-2);
 }
 
@@ -143,7 +183,27 @@
         grid-template-columns: 1fr;
     }
 
+    .tm-condition-builder__move {
+        grid-auto-flow: column;
+        /* The stacked layout stretches the single implicit column: keep the pair sized by its
+           content and aligned to the row's start (phase 7 review). */
+        grid-auto-columns: max-content;
+        justify-content: start;
+        justify-items: start;
+    }
+
     .tm-condition-builder__remove {
         justify-self: end;
+    }
+}
+
+/* A finger needs the 44px target (phase 7 review): the reorder pair and the remove action grow to
+   the shared touch-target token on a coarse pointer. */
+@media (pointer: coarse) {
+    .tm-condition-builder__move-up,
+    .tm-condition-builder__move-down,
+    .tm-condition-builder__remove {
+        min-width: var(--tm-touch-target);
+        min-height: var(--tm-touch-target);
     }
 }

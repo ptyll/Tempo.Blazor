@@ -1281,6 +1281,200 @@ findings table and the per-leg results) and the two perf runs
     ```
     Hosts that only RENDER `<TmSigningFormRunner />` change nothing: the renderer disposes
     `IAsyncDisposable` components on its own (same shape as the `TmToastContainer` change).
+
+- **The post-sign panels and the rule/role editors were rebuilt against the desktop references
+  (Signing redesign phase 7, S1-1/S1-2/SI1).** `TmSubmissionStatusTimeline`, `TmAuditTrailViewer`,
+  `TmPdfSignatureVerification`, `TmShareLinkPanel`, `TmConditionBuilder`, `TmFormulaBuilder` and
+  `TmRecipientRoleEditor` changed DOM, classes and in places semantics; every visible change is
+  below with its before/after. Additive API: `TmSubmissionStatusTimeline.SortDirection`
+  (`SigningTimelineSortDirection`, default `Descending` — the historical newest-first order,
+  Q-S9) and `HeaderContent` slots on the timeline and the audit viewer (the document
+  name/status card is host content — the models stay unchanged, Q-S10). Every timestamp now
+  formats through the shared `SigningDateFormatter` (local time, ambient culture) instead of
+  scattered `ToString("g")` copies.
+
+  - *Audit trail: the three `dl` card stacks are real tables.* Documents/Signers/Events render as
+    `<table>` with `<th scope="col">`; the network evidence splits into two lines (IP primary,
+    agent · zone secondary); signers get a `TmAvatar`; checksums render in `--tm-font-mono` with
+    `overflow-wrap: anywhere`; empty values show an en dash instead of blank cells. Under a
+    640px container the tables collapse to cards (the header cells are visually hidden and each
+    cell re-labels itself through `data-label`):
+    ```html
+    <!-- before: a card per document/signer/event inside a framed section -->
+    <section class="tm-audit-trail-viewer__section">
+      <dl class="tm-audit-trail-viewer__document">…</dl>
+    </section>
+
+    <!-- after: a table on wide containers, cards (data-label repeats the column name) below 640 -->
+    <table class="tm-audit-trail-viewer__table">
+      <thead><tr><th scope="col">File name</th><th scope="col">Checksum</th></tr></thead>
+      <tbody><tr><td data-label="File name">…</td><td data-label="Checksum">…</td></tr></tbody>
+    </table>
+    ```
+    Host CSS that selected `.tm-audit-trail-viewer__document/-signer/-entry` must retarget to the
+    table/row cells; the audit PDF link, the localization snapshot and the `HeaderContent` slot
+    (replacing the default `<h2>`) are unchanged otherwise.
+  - *Timeline: no more per-event cards.* Events are an `<ol>` list with one continuous axis
+    (pseudo-element) and hairline separators; neutral/informational events paint the SOFT marker
+    (`__marker--soft`), sent/completed/failed keep the solid disc; the recipient line gains the
+    localized "Recipient:" prefix (`TmSubmissionStatusTimeline_RecipientPrefix`); the header
+    wraps (`flex-wrap`). The item classes keep their severity modifiers
+    (`__item--success/--danger/--info/--primary/--neutral`), so theme overrides survive.
+    Sent events now carry `__item--primary` (previously `__item--neutral`) and the solid marker —
+    overrides that styled Sent through `--neutral` must retarget.
+    ```html
+    <!-- before: each event was a bordered card -->
+    <article class="tm-submission-status-timeline__item tm-submission-status-timeline__item--success">…</article>
+
+    <!-- after: a list item on the shared axis (cards are gone) -->
+    <ol class="tm-submission-status-timeline__items">
+      <li class="tm-submission-status-timeline__item tm-submission-status-timeline__item--success">…</li>
+    </ol>
+    ```
+  - *Verification: the status block is a `TmAlert`.* The custom status row became a core alert
+    (`role="status"` for verified/not-found/loading, `role="alert"` for malformed/error) with the
+    `tm-pdf-signature-verification__banner--{status}` modifier; each signature is a card with a
+    `TmAvatar` header and a three-column `dl` (one column below a 640px container); the checksum
+    shows the first 16 characters plus an ellipsis (the full value stays in the `title` attribute
+    and on the new `TmCopyButton`); the detail keys `SignedAt`/`SigningMethod`/`Certificate`
+    localize the signature card.
+  - *Share panel: a real toggle and labelled fields.* The bare checkbox became a core `TmToggle`
+    (`input[role="switch"]`), the link input gained a visible `label[for]`, both copy actions
+    render the labelled `TmCopyButton` (`ShowLabel="true"`), the QR sits in a framed block with a
+    localized scan hint (`TmShareLinkPanel_QrHint`), a separator divides the link area from the
+    embed area, and the embed `<label for>` now actually points at the textarea (a11y bug fix).
+    Below a 420px container the link/embed rows and the QR hint stack.
+    ```html
+    <!-- before: a bare checkbox with a text span, an aria-label-only input -->
+    <label class="tm-share-link-panel__toggle"><input type="checkbox" …><span>Enabled</span></label>
+    <input class="tm-share-link-panel__input" aria-label="Signing link" …>
+
+    <!-- after: core switch, visible labels -->
+    <div class="tm-toggle-wrapper"><input type="checkbox" role="switch" aria-checked="true" …></div>
+    <label class="tm-share-link-panel__link-label" for="tm-share-link-…">Signing link</label>
+    <input class="tm-share-link-panel__input tm-input" id="tm-share-link-…" …>
+    ```
+  - *Condition builder: core Tm components, one card, reorder buttons.* The native
+    `<select>`/`<input>` controls became `TmSelect`/`TmTextInput` (the controls moved INSIDE the
+    core component wrappers — `.tm-condition-builder__field` is now the `tm-select-wrapper` div,
+    the native `<select>` is its child), the rows share ONE card with hairline separators, the
+    add action is the dashed full-width row (`__add--dashed`), each row carries up/down reorder
+    buttons (`__move-up`/`__move-down`, Q-S7 — the join operation stays positional: the leading
+    row never shows an operation and normalizes back to `And` after a move), and the trash is the
+    danger icon button it already was.
+    ```html
+    <!-- before: the control WAS the classed element -->
+    <select class="tm-condition-builder__field" aria-label="Field" …>…</select>
+
+    <!-- after: the wrapper carries the class, the native select is a child -->
+    <div class="tm-select-wrapper tm-condition-builder__select tm-condition-builder__field">
+      <select id="…" class="tm-select" aria-label="Field" …>…</select>…
+    </div>
+    ```
+    Tests/hosts that changed `.tm-condition-builder__field` directly must select
+    `.tm-condition-builder__field select` (or drive the component parameter).
+  - *Formula builder: labelled groups, parentheses, cursor insertions.* The three palettes carry
+    visible headings and `role="group"` + `aria-labelledby` (`aria-label`-on-a-`div` is gone);
+    the operator grid adds `( )` (the grammar itself is unchanged — Q-S8); token cards show the
+    field type under the label (`__token-label`/`__token-type`); the editor is the core
+    `TmTextArea` (its error message replaces the builder's own alert row, so the invalid state is
+    announced by the control itself); Save is the primary button. Insertions go through the
+    `insertAtCursor` export of the package's neutral `signing-editor.js` module (dynamic
+    `import()`, no script tag) and land at the textarea's cursor; a view without the module
+    (bUnit, static render) still appends.
+    ```html
+    <!-- before: one flat toolbar with an aria-label, appended insertions -->
+    <div class="tm-formula-builder__toolbar" aria-label="Formula operators">…</div>
+
+    <!-- after: a labelled group, grid operators incl. ( ), cursor-aware insert -->
+    <section class="tm-formula-builder__group" role="group" aria-labelledby="tm-formula-operators-…">
+      <h3 id="tm-formula-operators-…" class="tm-formula-builder__section-title">Formula operators</h3>
+      <div class="tm-formula-builder__toolbar">…<button data-operator="(">(</button>…</div>
+    </section>
+    ```
+  - *Role editor: collapsible cards.* Each role row became a card with a header (drag handle,
+    the order BADGE `__order-badge` instead of the read-only number input, the role pill painted
+    in the role colour with the contrast-resolved text colour (`SigningRolePalette.ContrastTextFor`),
+    a contact preview when collapsed, the reorder arrows — KEPT as the a11y alternative to drag
+    & drop — the trash and the chevron toggle with `aria-expanded`/`aria-controls`). The body
+    edits through `TmTextInput`/`TmSelect`; the palette swatches (`__swatch[data-color]` with
+    `aria-pressed`) plus the "Custom…" native colour input replace the bare colour field; the
+    drag handle hides on `(pointer: coarse)`. "Role name" stays editable, the three invite
+    selects survive, and NO advanced-invitation section was added (Q-S6).
+    ```html
+    <!-- before: one grid row per role, the order as a read-only number input -->
+    <div class="tm-recipient-role-editor__row">
+      <input class="tm-recipient-role-editor__order-input" type="number" readonly value="1">
+      <input class="tm-recipient-role-editor__color" type="color" value="#2563eb">…
+
+    <!-- after: a collapsible card; header = badge + pill + preview + actions -->
+    <div class="tm-recipient-role-editor__card" data-role-uuid="…">
+      <header class="tm-recipient-role-editor__card-header">
+        <span class="tm-recipient-role-editor__order-badge">1</span>
+        <span class="tm-recipient-role-editor__role-pill" style="--tm-signing-role-color: …">Approver</span>
+        <button class="tm-recipient-role-editor__toggle" aria-expanded="true" aria-controls="…">…</button>
+      </header>
+      <div class="tm-recipient-role-editor__card-body">
+        <div class="tm-recipient-role-editor__swatches">
+          <button class="tm-recipient-role-editor__swatch" data-color="#2563eb" aria-pressed="true"></button>…
+        </div>…
+      </div>
+    </div>
+    ```
+    The old hooks `__order-input`, `__color` (now inside `__swatch-custom`), `__row` and the
+    always-visible `__move-up`/`__move-down` header buttons moved: hosts/tests that reordered via
+    the arrows find them in the card HEADER; the validation row renders inside the card body.
+
+  - *Phase 7 review (code/UX/architect follow-up).* The panels and editors above received the
+    review fixes; all additive, no host action:
+    - **Role pill ink is token-driven.** `SigningRolePalette.ContrastTextFor` now picks the ink
+      with the HIGHER ACTUAL WCAG contrast ratio and, for every default-palette colour (and the
+      legacy `#ca8a04`), emits `var(--tm-signing-role-N-on)` instead of a computed hex. New
+      per-theme token pairs `--tm-signing-role-1..6-on` in `tokens-signing.css`
+      (`:root`, dark, light-island), each ≥ 4.5:1 (re-verified by test against the stylesheet).
+      A colour-less (or unparsable) pill rides `var(--tm-color-on-primary)`; only a CUSTOM colour
+      computes — and it takes the fixed tone classes `__role-pill--on-light` /
+      `__role-pill--on-dark` (mapped to `--tm-signing-role-ink-dark` /
+      `--tm-color-on-primary-fixed`) instead of an inline hex. `--tm-signing-role-ink-dark`
+      (`#111827`) is declared on `:root` only and is never overridden: dark and indigo themes
+      redefine `--tm-color-gray-900` to white, which would paint white text on a light custom pill.
+      `ContrastTextFor` returns that token name (or `var(--tm-color-on-primary-fixed)`) for a
+      custom colour — never a hex.
+    - **Focus survives remove/move.** `TmRecipientRoleEditor` and `TmConditionBuilder` queue the
+      focus move and apply it in `OnAfterRenderAsync` through the neutral `signing-editor.js`
+      module (`focusElement`, document injectable; `SigningEditorInterop` replaces the editors'
+      use of the runner's wrapper). A remove lands the focus on the surviving row's action (the
+      Add action is the fallback); a move keeps the focus INSIDE the moved card/row — the
+      same-direction button, or the opposite one once the edge disables it — and announces
+      "{0} moved to position {1}" (`TmRecipientRoleEditor_RoleMoved` /
+      `TmConditionBuilder_ConditionMoved`) through an always-rendered polite live region. Role
+      cards are keyed by `role.Uuid`, condition rows by per-row Guids (`data-row-id`), so the
+      DOM (and the focus) travels with the moved item. All three editors (`TmRecipientRoleEditor`,
+      `TmConditionBuilder`, `TmFormulaBuilder`) are `IAsyncDisposable`: they release their
+      imported module on dispose (the same shape the runner already had).
+    - **Typing is never normalized mid-keystroke.** The role editor's name/full name/email/phone
+      and the condition builder's value keep the RAW text while typing (no notify, no
+      re-normalization per keystroke) and commit + normalize on blur or Enter.
+    - **Coarse pointers get 44 px targets** on the role editor's header buttons, palette swatches
+      and colour input, the condition builder's move/remove pair and the formula builder's
+      operators/functions/tokens (`--tm-touch-target` under `@media (pointer: coarse)`); the
+      condition builder's stacked (<768px container) move row sizes to content and aligns to the
+      row start.
+    - **Smaller a11y fixes:** the toggle's `aria-controls` renders only while the card is
+      expanded; the order badge carries a visually-hidden "Signing order {0}"
+      (`TmRecipientRoleEditor_SigningOrder`) with a decorative number; palette swatches announce
+      localized colour names (`TmRecipientRoleEditor_ColorBlue`…`ColorAmber`); the share toggle's
+      label is the static "Link sharing" (`TmShareLinkPanel_EnableSharing`) and the redundant
+      `Disabled="false"` is gone; the audit tables carry explicit
+      `table/rowgroup/row/columnheader/cell` roles (the narrow-panel card collapse would
+      otherwise drop the semantics); the audit viewer renders no header at all without a trail
+      and without a `HeaderContent` slot, and its avatar falls back to the signer's email; the
+      verification panel shows the localized "Unknown signer"
+      (`TmPdfSignatureVerification_UnknownSigner`) for a signature without name or email; the
+      formula operator keys carry localized spoken names (`TmFormulaBuilder_OperatorPlus`…); the
+      timeline's `mail-x` / `shield-check` icons are registered built-ins (`IconNames.MailX` /
+      `IconNames.ShieldCheck`); `TmDocumentCommentItem` formats timestamps through the shared
+      `SigningDateFormatter`.
 ### Fixed
 
 - **Core: the "More" overflow menu of `TmToolbar` / `TmMobileActionBar` now stays inside the viewport.**

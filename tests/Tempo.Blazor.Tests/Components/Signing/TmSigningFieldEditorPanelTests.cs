@@ -623,8 +623,8 @@ public class TmSigningFieldEditorPanelTests : LocalizationTestBase
                       .Add(p => p.FieldChanged, EventCallback.Factory.Create<SigningField>(this, field => captured = field)));
 
         cut.Find(".tm-signing-field-editor-panel__open-conditions").Click();
-        cut.Find(".tm-condition-builder__field").Change("country");
-        cut.Find(".tm-condition-builder__value-select").Change("country-cz");
+        cut.Find(".tm-condition-builder__field select").Change("country");
+        cut.Find(".tm-condition-builder__value-select select").Change("country-cz");
 
         captured.Should().NotBeNull();
         captured!.Conditions.Should().ContainSingle();
@@ -647,7 +647,7 @@ public class TmSigningFieldEditorPanelTests : LocalizationTestBase
                       })));
 
         cut.Find(".tm-signing-field-editor-panel__open-conditions").Click();
-        cut.Find(".tm-condition-builder__field").Change("country");
+        cut.Find(".tm-condition-builder__field select").Change("country");
 
         cut.FindAll(".tm-signing-field-editor-panel__condition-builder .tm-condition-builder")
             .Should()

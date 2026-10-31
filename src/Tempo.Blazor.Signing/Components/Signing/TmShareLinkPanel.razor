@@ -1,5 +1,7 @@
 @namespace Tempo.Blazor.Components.Signing
 @inherits Tempo.Blazor.Components.TmComponentBase
+@using Tempo.Blazor.Components.Buttons
+@using Tempo.Blazor.Components.Inputs
 
 <section @attributes="AdditionalAttributes"
          class="@RootClass"
@@ -9,53 +11,71 @@
             <h2 class="tm-share-link-panel__title">@Loc["TmShareLinkPanel_Title"]</h2>
             @if (ExpiresAt is not null)
             {
-                <p class="tm-share-link-panel__expiration">@Loc["TmShareLinkPanel_Expires", ExpiresAt.Value.ToLocalTime().ToString("g")]</p>
+                <p class="tm-share-link-panel__expiration">@Loc["TmShareLinkPanel_Expires", SigningDateFormatter.Format(ExpiresAt.Value)]</p>
             }
         </div>
-        <label class="tm-share-link-panel__toggle">
-            <input type="checkbox"
-                   checked="@Enabled"
-                   @onchange="HandleEnabledChangedAsync" />
-            <span>@(Enabled ? Loc["TmShareLinkPanel_Enabled"] : Loc["TmShareLinkPanel_Disabled"])</span>
-        </label>
+        <div class="tm-share-link-panel__toggle">
+            @* The label is STATIC ("Link sharing" — the control's name never flips with its own
+               state, so a screen reader does not re-read the switch while toggling it; phase 7
+               review). *@
+            <TmToggle Value="@Enabled"
+                      ValueChanged="HandleEnabledChangedAsync"
+                      Label="@Loc["TmShareLinkPanel_EnableSharing"]" />
+        </div>
     </header>
 
     <div class="tm-share-link-panel__link">
-        <input class="tm-share-link-panel__input"
-               value="@Link"
-               readonly
-               disabled="@(!Enabled)"
-               aria-label="@Loc["TmShareLinkPanel_LinkLabel"]" />
-        <TmCopyButton Text="@Link"
-                      Disabled="@(!Enabled)"
-                      data-testid="@TestId("share-link-copy")" />
+        <label class="tm-share-link-panel__link-label" for="@_linkInputId">@Loc["TmShareLinkPanel_LinkLabel"]</label>
+        <div class="tm-share-link-panel__link-row">
+            <input class="tm-share-link-panel__input tm-input"
+                   id="@_linkInputId"
+                   value="@Link"
+                   readonly
+                   disabled="@(!Enabled)" />
+            <TmCopyButton Text="@Link"
+                          ShowLabel="true"
+                          Disabled="@(!Enabled)"
+                          data-testid="@TestId("share-link-copy")" />
+        </div>
     </div>
 
     @if (ShowQrCode && !string.IsNullOrWhiteSpace(Link))
     {
-        <div class="tm-share-link-panel__qr">
-            @if (QrCodeComponentType is not null)
-            {
-                <DynamicComponent Type="QrCodeComponentType" Parameters="QrCodeParameters" />
-            }
+        <div class="tm-share-link-panel__qr-frame">
+            <div class="tm-share-link-panel__qr">
+                @if (QrCodeComponentType is not null)
+                {
+                    <DynamicComponent Type="QrCodeComponentType" Parameters="QrCodeParameters" />
+                }
+            </div>
+            <p class="tm-share-link-panel__qr-hint">@Loc["TmShareLinkPanel_QrHint"]</p>
         </div>
     }
 
     @if (!string.IsNullOrWhiteSpace(EmbedCode))
     {
+        <div class="tm-share-link-panel__separator" role="presentation"></div>
+
         <div class="tm-share-link-panel__embed">
-            <label class="tm-share-link-panel__embed-label">@Loc["TmShareLinkPanel_EmbedCode"]</label>
-            <textarea class="tm-share-link-panel__embed-code"
-                      readonly
-                      disabled="@(!Enabled)">@EmbedCode</textarea>
-            <TmCopyButton Text="@EmbedCode"
-                          Disabled="@(!Enabled)"
-                          data-testid="@TestId("share-link-embed-copy")" />
+            <label class="tm-share-link-panel__embed-label" for="@_embedInputId">@Loc["TmShareLinkPanel_EmbedCode"]</label>
+            <div class="tm-share-link-panel__embed-row">
+                <textarea class="tm-share-link-panel__embed-code"
+                          id="@_embedInputId"
+                          readonly
+                          disabled="@(!Enabled)">@EmbedCode</textarea>
+                <TmCopyButton Text="@EmbedCode"
+                              ShowLabel="true"
+                              Disabled="@(!Enabled)"
+                              data-testid="@TestId("share-link-embed-copy")" />
+            </div>
         </div>
     }
 </section>
 
 @code {
+    private readonly string _linkInputId = $"tm-share-link-{Guid.NewGuid():N}";
+    private readonly string _embedInputId = $"tm-share-embed-{Guid.NewGuid():N}";
+
     /// <summary>Public signing link.</summary>
     [Parameter] public string Link { get; set; } = string.Empty;
 
@@ -95,11 +115,10 @@
         Class
     }.Where(item => !string.IsNullOrWhiteSpace(item)));
 
-    private async Task HandleEnabledChangedAsync(ChangeEventArgs args)
+    private Task HandleEnabledChangedAsync(bool enabled)
     {
-        var enabled = args.Value is bool value && value;
         Enabled = enabled;
-        await EnabledChanged.InvokeAsync(enabled);
+        return EnabledChanged.InvokeAsync(enabled);
     }
 
     private static string BoolText(bool value) => value ? "true" : "false";

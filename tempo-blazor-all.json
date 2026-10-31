@@ -68869,6 +68869,16 @@
           ]
         },
         {
+          "itemName": "SigningTimelineSortDirection",
+          "kind": "Enum",
+          "category": "Components",
+          "namespace": "Tempo.Blazor.Components.Signing",
+          "description": "Sort direction of the TmSubmissionStatusTimeline event list. Descending (the default) keeps the historical newest-first order; Ascending renders the ceremony in its reading order.",
+          "packageId": "Tempo.Blazor.Signing",
+          "sourcePath": "src/Tempo.Blazor.Signing/Components/Signing/SigningTimelineSortDirection.cs",
+          "documentationStatus": "merged"
+        },
+        {
           "itemName": "TmDocumentPageViewerPointerEventArgs",
           "kind": "Record",
           "category": "Components",
@@ -69136,6 +69146,12 @@
               "type": "string?",
               "isRequired": false,
               "description": "Additional CSS classes for the root element."
+            },
+            {
+              "name": "HeaderContent",
+              "type": "RenderFragment?",
+              "isRequired": false,
+              "description": "Host-rendered document summary replacing the default title (the document name, its status badge and timestamp — the desktop reference's header card). The panel renders it verbatim; the audit model carries no document title, so without the slot the localized default title stays (Q-S10)."
             },
             {
               "name": "LocalizationSnapshot",
@@ -71988,6 +72004,19 @@
               "isRequired": false,
               "default": "[]",
               "description": "Submission events to display."
+            },
+            {
+              "name": "HeaderContent",
+              "type": "RenderFragment?",
+              "isRequired": false,
+              "description": "Host-rendered summary above the timeline (typically the document name, page/size metrics and its current status — the desktop reference's document card). The panel renders it verbatim before the event list; the timeline never invents document data it does not have (Q-S10)."
+            },
+            {
+              "name": "SortDirection",
+              "type": "SigningTimelineSortDirection",
+              "isRequired": false,
+              "default": "SigningTimelineSortDirection.Descending",
+              "description": "Sort direction of Events. Defaults to SigningTimelineSortDirection.Descending (the newest event first — today's behaviour, Q-S9); SigningTimelineSortDirection.Ascending renders the ceremony in its reading order."
             }
           ]
         }
@@ -72071,7 +72100,15 @@
           "kind": "JavaScript"
         },
         {
+          "path": "src/Tempo.Blazor.Signing/wwwroot/js/signing-editor.js",
+          "kind": "JavaScript"
+        },
+        {
           "path": "src/Tempo.Blazor.Signing/wwwroot/js/signing-runner.js",
+          "kind": "JavaScript"
+        },
+        {
+          "path": "src/Tempo.Blazor.Signing/wwwroot/js/__tests__/signing-editor.test.mjs",
           "kind": "JavaScript"
         },
         {
@@ -72080,12 +72117,12 @@
         }
       ],
       "summary": {
-        "itemCount": 52,
-        "manualItemCount": 52,
-        "generatedItemCount": 52,
+        "itemCount": 53,
+        "manualItemCount": 53,
+        "generatedItemCount": 53,
         "generatedOnlyItemCount": 0,
         "componentCount": 31,
-        "publicApiTypeCount": 21
+        "publicApiTypeCount": 22
       }
     },
     {
@@ -127066,10 +127103,10 @@
   ],
   "summary": {
     "packageCount": 27,
-    "itemCount": 3379,
-    "manualItemCount": 3379,
+    "itemCount": 3380,
+    "manualItemCount": 3380,
     "generatedOnlyItemCount": 0,
     "componentCount": 511,
-    "publicApiTypeCount": 2815
+    "publicApiTypeCount": 2816
   }
 }
