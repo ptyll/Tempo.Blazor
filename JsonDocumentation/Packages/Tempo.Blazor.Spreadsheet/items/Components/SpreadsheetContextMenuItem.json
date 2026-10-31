@@ -1,0 +1,10 @@
+{
+  "itemName": "SpreadsheetContextMenuItem",
+  "kind": "Record",
+  "category": "Components",
+  "namespace": "Tempo.Blazor.Components.Spreadsheet",
+  "description": "One entry of a spreadsheet context menu: a stable kebab-case Id the host dispatches on, the already-localized Label, and the DividerBefore / Danger modifiers. TmSpreadsheetContextMenu renders the same list as the anchored desktop menu and as the phone's bottom sheet.",
+  "packageId": "Tempo.Blazor.Spreadsheet",
+  "sourcePath": "src/Tempo.Blazor.Spreadsheet/Components/Spreadsheet/SpreadsheetContextMenuItem.cs",
+  "documentationStatus": "generated"
+}

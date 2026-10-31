@@ -47,7 +47,7 @@ public partial class SpreadsheetBaselineScreenshots
         var dialog = page.Locator(".tm-spreadsheet-t2c");
         await dialog.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10000 });
         await dialog.Locator(".tm-spreadsheet-t2c__btn--ok").ClickAsync(); // → step 2
-        await dialog.Locator(".tm-spreadsheet-t2c__delims input[type=checkbox]").Nth(1).CheckAsync(); // semicolon
+        await dialog.Locator(".tm-spreadsheet-t2c__delim", new() { HasTextString = "Semicolon" }).ClickAsync(); // semicolon
         await page.WaitForTimeoutAsync(400);
         await CaptureAsync(page, "t2c-01-step2-preview.png", dialog);
     }

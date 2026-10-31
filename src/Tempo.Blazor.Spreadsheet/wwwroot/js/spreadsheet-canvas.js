@@ -8,6 +8,20 @@ window.tmSpreadsheetCanvas = window.tmSpreadsheetCanvas || {};
     const maxStyleCacheSize = 1200;
     const maxDisplayValueCacheSize = 10000;
     const defaultCellFontFamily = "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace";
+    // Header labels are UI text, not cell data: the sans stack comes from --tm-spreadsheet-header-font
+    // (the token wins); this is only the fallback when a host loads the canvas without the stylesheet.
+    const defaultHeaderFont = "500 11px system-ui, -apple-system, Segoe UI, sans-serif";
+    // SP1 density render scales. Comfortable is a RENDER scale only — row heights are scaled by the
+    // component's geometry, fonts/handles here; the workbook model and every XLSX height stay exact.
+    const comfortableRowScale = 1.5;
+    const comfortableFontScale = 1.25;
+    const comfortableHandleScale = 1.4;
+    // Header gutters (row-header width 40 -> 56, column-header height 20 -> 28). This value MIRRORS
+    // SpreadsheetDensityScale.ComfortableGutterScale for the node lane and for a frame that does not
+    // carry the scales; the canvas itself never multiplies a gutter — the component ships the scaled
+    // RowHeaderWidth/ColumnHeaderHeight in the frame (one source of truth, see resolveContentPoint).
+    const comfortableGutterScale = 1.4;
+    const selectionFillAlphaDefault = 0.12;
     const keyboardRepeatPauseMs = 500;
     const keyboardRepeatAccelerationEnabledDefault = true;
     const defaultLayoutOverscanRows = 4;
@@ -1357,6 +1371,22 @@ window.tmSpreadsheetCanvas = window.tmSpreadsheetCanvas || {};
         return snapshot;
     }
 
+    /** Paints an opaque token colour at an alpha without leaking the globalAlpha into the next draw. */
+    function fillRectWithAlpha(ctx, color, alpha, x, y, w, h, metrics) {
+        const weight = Number(alpha);
+        if (!color || !Number.isFinite(weight) || weight >= 1 || weight <= 0) {
+            setContextFillStyle(ctx, color, metrics);
+            ctx.fillRect(x, y, w, h);
+            return;
+        }
+
+        const previous = ctx.globalAlpha;
+        ctx.globalAlpha = previous * weight;
+        setContextFillStyle(ctx, color, metrics);
+        ctx.fillRect(x, y, w, h);
+        ctx.globalAlpha = previous;
+    }
+
     function addDirtyRect(root, layer, rect) {
         const s = getState(root);
         const renderer = s?.renderer;
@@ -1377,6 +1407,21 @@ window.tmSpreadsheetCanvas = window.tmSpreadsheetCanvas || {};
                 s.metrics.contentDirtyRectArea += expanded.width * expanded.height;
             }
         }
+    }
+
+    /** Clamps every dirty rect to the surface and drops empty ones (the header layer clips each one). */
+    function normalizeDirtyRects(rects, width, height) {
+        const normalized = [];
+        for (const rect of rects || []) {
+            const x = Math.max(0, Math.floor(rect.x));
+            const y = Math.max(0, Math.floor(rect.y));
+            const right = Math.min(width, Math.ceil(rect.x + rect.width));
+            const bottom = Math.min(height, Math.ceil(rect.y + rect.height));
+            if (right > x && bottom > y) {
+                normalized.push({ x, y, width: right - x, height: bottom - y });
+            }
+        }
+        return normalized;
     }
 
     function unionRects(rects, width, height) {
@@ -1490,6 +1535,12 @@ window.tmSpreadsheetCanvas = window.tmSpreadsheetCanvas || {};
             }
             if (redrawKind === "selection") {
                 syncModelViewport(root, s.model);
+                if (dirty.header || dirty.headerRects.length > 0) {
+                    // A selection change moves the active-row/column tint: repaint ONLY the old and the
+                    // new header strips (the dirty rects addSelectionDirtyRectForChange registered), never
+                    // the whole header layer.
+                    renderHeaderLayer(root, s.model, { dirtyRects: dirty.headerRects, forceFull: dirty.header });
+                }
                 renderSelectionOverlay(root, s.model, { dirtyRects: dirty.selectionRects });
                 if (s.metrics) s.metrics.selectionPaintFrameCount += 1;
             } else if (redrawReason === "scroll" && tryBitmapScrollRedraw(root, s.model, oldScrollLeft, oldScrollTop)) {
@@ -1924,27 +1975,647 @@ window.tmSpreadsheetCanvas = window.tmSpreadsheetCanvas || {};
         }
     }
 
+    /** A token, or the second token when the first is not defined for this host. Never a literal. */
+    function cssToken(root, name, fallbackName) {
+        const value = css(root, name, "");
+        if (value) return value;
+        return fallbackName ? css(root, fallbackName, "") : "";
+    }
+
+    /**
+     * Splits a comma separated argument list at the TOP level (a `color(srgb …)` or a nested
+     * `color-mix()` keeps its own commas). Used by the colour-mix parser only.
+     */
+    function splitTopLevel(value) {
+        const parts = [];
+        let depth = 0;
+        let current = "";
+        for (const character of String(value)) {
+            if (character === "(") depth += 1;
+            if (character === ")") depth -= 1;
+            if (character === "," && depth === 0) {
+                parts.push(current.trim());
+                current = "";
+                continue;
+            }
+            current += character;
+        }
+        if (current.trim()) parts.push(current.trim());
+        return parts;
+    }
+
+    /**
+     * Parses the colour notations a COMPUTED component token can carry into `{ r, g, b, a }`:
+     * `#rgb`/`#rrggbb`/`#rrggbbaa`, `rgb()`/`rgba()`, `color(srgb r g b / a)` (what Chromium
+     * serialises a resolved `color-mix()` to) and `color-mix(in srgb, A p%, B)` (what an
+     * UNREGISTERED custom property keeps — custom properties substitute var() but never compute a
+     * colour function). `var(--x)` operands are resolved through `root` when a host hands one over.
+     * Anything else (a relative colour, `currentColor`) returns null so the caller keeps the raw
+     * token instead of painting garbage.
+     */
+    function parseColor(value, root) {
+        const text = String(value || "").trim();
+        if (!text) return null;
+
+        const varCall = /^var\(\s*(--[a-z0-9-]+)\s*(?:,[\s\S]*)?\)$/i.exec(text);
+        if (varCall) {
+            const resolved = root ? css(root, varCall[1], "") : "";
+            return resolved ? parseColor(resolved, root) : null;
+        }
+
+        const hex = /^#([0-9a-f]{3,8})$/i.exec(text);
+        if (hex) {
+            let digits = hex[1];
+            if (digits.length === 3 || digits.length === 4) {
+                digits = digits.split("").map(ch => ch + ch).join("");
+            }
+            if (digits.length !== 6 && digits.length !== 8) return null;
+            return {
+                r: parseInt(digits.slice(0, 2), 16),
+                g: parseInt(digits.slice(2, 4), 16),
+                b: parseInt(digits.slice(4, 6), 16),
+                a: digits.length === 8 ? parseInt(digits.slice(6, 8), 16) / 255 : 1
+            };
+        }
+
+        const rgb = /^rgba?\(([\s\S]*)\)$/i.exec(text);
+        if (rgb) {
+            const body = rgb[1].trim();
+            // A relative colour (`rgb(from …)`) is not a plain channel list — leave it to the browser.
+            if (/^from\b/i.test(body)) return null;
+            const [channels, alphaPart] = body.split("/");
+            const numbers = channels.split(/[,\s]+/).filter(Boolean);
+            if (numbers.length < 3 || numbers.some(part => !/^[\d.]+%?$/.test(part))) return null;
+            const channel = part => Math.round(part.endsWith("%")
+                ? (Number(part.slice(0, -1)) / 100) * 255
+                : Number(part));
+            let alpha = 1;
+            if (alphaPart != null) {
+                const trimmed = alphaPart.trim();
+                if (!/^[\d.]+%?$/.test(trimmed)) return null;
+                alpha = trimmed.endsWith("%") ? Number(trimmed.slice(0, -1)) / 100 : Number(trimmed);
+            } else if (numbers.length >= 4) {
+                const last = numbers[3];
+                alpha = last.endsWith("%") ? Number(last.slice(0, -1)) / 100 : Number(last);
+            }
+            return { r: channel(numbers[0]), g: channel(numbers[1]), b: channel(numbers[2]), a: alpha };
+        }
+
+        const color = /^color\(([\s\S]*)\)$/i.exec(text);
+        if (color) {
+            const body = color[1].trim();
+            const space = /^([a-z0-9-]+)\s+([\s\S]+)$/i.exec(body);
+            if (!space || space[1].toLowerCase() !== "srgb") return null;
+            const [channels, alphaPart] = space[2].split("/");
+            const numbers = channels.trim().split(/\s+/).filter(Boolean);
+            if (numbers.length < 3) return null;
+            const unit = part => {
+                if (part.endsWith("%")) return (Number(part.slice(0, -1)) / 100) * 255;
+                return Number(part) * 255;
+            };
+            const alpha = alphaPart == null
+                ? 1
+                : (alphaPart.trim().endsWith("%")
+                    ? Number(alphaPart.trim().slice(0, -1)) / 100
+                    : Number(alphaPart.trim()));
+            const parsed = { r: unit(numbers[0]), g: unit(numbers[1]), b: unit(numbers[2]), a: alpha };
+            // `none` and any other non-numeric component must NOT leak NaN into fillStyle — fall back.
+            return isFiniteColor(parsed) ? parsed : null;
+        }
+
+        const mix = /^color-mix\(([\s\S]*)\)$/i.exec(text);
+        if (mix) {
+            const parts = splitTopLevel(mix[1]);
+            if (parts.length < 3) return null;
+            const space = /^in\s+([a-z0-9-]+)$/i.exec(parts[0]);
+            if (!space) return null;
+            if (space[1].toLowerCase() !== "srgb") return null;
+            const operands = parts.slice(1).map(part => {
+                const percent = /\s([\d.]+)%\s*$/.exec(part);
+                return {
+                    color: parseColor(percent ? part.slice(0, percent.index).trim() : part, root),
+                    weight: percent ? Number(percent[1]) / 100 : null
+                };
+            });
+            if (operands.length !== 2 || !operands[0].color || !operands[1].color) return null;
+            const first = operands[0].weight ?? (operands[1].weight == null ? 0.5 : 1 - operands[1].weight);
+            const second = operands[1].weight ?? 1 - first;
+            const total = first + second || 1;
+            // Conservative contract: the canvas only MIXES two OPAQUE colours that add up to a full
+            // 100 %. A translucent operand or a short weight sum (< 100 %) would produce something the
+            // mixer cannot reason about, so the caller keeps the RAW token and the browser resolves it.
+            if (operands[0].color.a < 1 || operands[1].color.a < 1) return null;
+            if (total < 1 - 1e-6) return null;
+            const mixChannel = name =>
+                (operands[0].color[name] * first + operands[1].color[name] * second) / total;
+            const parsed = {
+                r: mixChannel("r"),
+                g: mixChannel("g"),
+                b: mixChannel("b"),
+                a: mixChannel("a")
+            };
+            return isFiniteColor(parsed) ? parsed : null;
+        }
+
+        return null;
+    }
+
+    /** True when every channel and the alpha of a parsed colour are finite numbers (no NaN from `none`). */
+    function isFiniteColor(parsed) {
+        return !!parsed
+            && Number.isFinite(parsed.r)
+            && Number.isFinite(parsed.g)
+            && Number.isFinite(parsed.b)
+            && Number.isFinite(parsed.a);
+    }
+
+    /** The canonical `rgb()`/`rgba()` string of a parsed colour (alpha 1 is never emitted as rgba). */
+    function formatColor(parsed) {
+        if (!parsed) return "";
+        const channel = value => Math.max(0, Math.min(255, Math.round(Number(value) || 0)));
+        const alpha = Math.max(0, Math.min(1, Number(parsed.a)));
+        if (alpha >= 1) return `rgb(${channel(parsed.r)}, ${channel(parsed.g)}, ${channel(parsed.b)})`;
+        return `rgba(${channel(parsed.r)}, ${channel(parsed.g)}, ${channel(parsed.b)}, ${Math.round(alpha * 1000) / 1000})`;
+    }
+
+    /**
+     * A token normalised for the canvas: the parsed colour when the notation is understood (so a
+     * `color-mix()` token is mixed HERE instead of being handed to `fillStyle`, where a browser that
+     * does not resolve it would silently keep the previous style), otherwise the raw token.
+     */
+    function resolveColorToken(root, value) {
+        const raw = String(value || "").trim();
+        if (!raw) return { value: raw, alpha: null };
+        const parsed = parseColor(raw, root);
+        if (!parsed) return { value: raw, alpha: null };
+        return { value: formatColor(parsed), alpha: Math.max(0, Math.min(1, Number(parsed.a))) };
+    }
+
+    /**
+     * A translucent rgba() built from an OPAQUE token colour. Only hex and rgb()/rgba() tokens are
+     * parsed; any other notation (a relative-colour or color-mix() token) is returned unchanged so the
+     * browser keeps resolving it rather than the canvas receiving garbage.
+     */
+    function withAlpha(color, alpha) {
+        const value = String(color || "").trim();
+        const weight = Number(alpha);
+        if (!value || !Number.isFinite(weight) || weight >= 1) return value;
+
+        const hex = /^#([0-9a-f]{3,8})$/i.exec(value);
+        if (hex) {
+            let digits = hex[1];
+            if (digits.length === 3 || digits.length === 4) {
+                digits = digits.split("").map(ch => ch + ch).join("");
+            }
+            if (digits.length !== 6 && digits.length !== 8) return value;
+            const r = parseInt(digits.slice(0, 2), 16);
+            const g = parseInt(digits.slice(2, 4), 16);
+            const b = parseInt(digits.slice(4, 6), 16);
+            return `rgba(${r}, ${g}, ${b}, ${weight})`;
+        }
+
+        const rgb = /^rgba?\(\s*([0-9.]+)[,\s]+([0-9.]+)[,\s]+([0-9.]+)/i.exec(value);
+        if (rgb) {
+            const round = part => Math.round(Number(part) || 0);
+            return `rgba(${round(rgb[1])}, ${round(rgb[2])}, ${round(rgb[3])}, ${weight})`;
+        }
+
+        return value;
+    }
+
+    /**
+     * Every colour the canvas paints. Tokens only: the component tokens declared on .tm-spreadsheet,
+     * each degrading to the core semantic token it derives from. Nothing here is a literal, so light,
+     * dark and the indigo theme reach the canvas (and the node lane can assert it).
+     */
     function buildPalette(root) {
+        const primary = css(root, "--tm-color-primary", "");
+        const warning = cssToken(root, "--tm-color-warning", "--tm-color-warning-strong");
+        const categoryRefs = ["--tm-category-1", "--tm-category-6", "--tm-category-4",
+            "--tm-category-2", "--tm-category-3", "--tm-category-8"];
+        const formulaRefs = categoryRefs.map((fallbackToken, index) => {
+            const stroke = cssToken(root, `--tm-spreadsheet-ref-${index}`, fallbackToken);
+            return { stroke, fill: withAlpha(stroke, 0.08) };
+        });
+        const fillAlpha = Number(css(root, "--tm-spreadsheet-selection-fill-alpha", ""));
+        // The active header strip: a `color-mix()` token (the OPAQUE dark override) is mixed here,
+        // because an unregistered custom property keeps the function unevaluated and a browser that
+        // refuses it in fillStyle would leave the previous style in place. `alpha` is null whenever the
+        // notation is not understood, so a caller can never claim opacity it does not have.
+        const headerActive = resolveColorToken(
+            root, cssToken(root, "--tm-spreadsheet-header-active-bg", "--tm-color-primary-subtle"));
+
         return {
-            surface: css(root, "--tm-color-surface", "#ffffff"),
-            elevated: css(root, "--tm-color-surface-elevated", "#f8fafc"),
-            hover: css(root, "--tm-color-surface-hover", "#f1f5f9"),
-            border: css(root, "--tm-color-border", "#cbd5e1"),
-            subtle: css(root, "--tm-color-border-subtle", "#e2e8f0"),
-            text: css(root, "--tm-color-text", "#0f172a"),
-            muted: css(root, "--tm-color-text-muted", "#64748b"),
-            primary: css(root, "--tm-color-primary", "#2563eb"),
-            primarySubtle: css(root, "--tm-color-primary-subtle", "rgba(37, 99, 235, 0.12)"),
-            selectionFill: "rgba(37, 99, 235, 0.12)",
-            formulaRefs: [
-                { stroke: "#1e8fe0", fill: "rgba(30, 143, 224, 0.08)" },
-                { stroke: "#e04030", fill: "rgba(224, 64, 48, 0.08)" },
-                { stroke: "#20a040", fill: "rgba(32, 160, 64, 0.08)" },
-                { stroke: "#a040c0", fill: "rgba(160, 64, 192, 0.08)" },
-                { stroke: "#e08020", fill: "rgba(224, 128, 32, 0.08)" },
-                { stroke: "#208080", fill: "rgba(32, 128, 128, 0.08)" }
-            ]
+            surface: css(root, "--tm-color-surface", ""),
+            elevated: css(root, "--tm-color-surface-elevated", ""),
+            hover: css(root, "--tm-color-surface-hover", ""),
+            border: css(root, "--tm-color-border", ""),
+            subtle: cssToken(root, "--tm-color-border-subtle", "--tm-color-border"),
+            text: cssToken(root, "--tm-color-text", "--tm-text-primary"),
+            muted: cssToken(root, "--tm-color-text-muted", "--tm-text-secondary"),
+            primary,
+            primarySubtle: cssToken(root, "--tm-color-primary-subtle", "--tm-color-primary-soft"),
+            headerBg: cssToken(root, "--tm-spreadsheet-header-bg", "--tm-color-surface-elevated"),
+            headerText: cssToken(root, "--tm-spreadsheet-header-text", "--tm-color-text-muted"),
+            headerActiveBg: headerActive.value,
+            headerActiveBgAlpha: headerActive.alpha,
+            headerActiveText: cssToken(root, "--tm-spreadsheet-header-active-text", "--tm-color-primary-text"),
+            headerFont: css(root, "--tm-spreadsheet-header-font", defaultHeaderFont),
+            gridline: cssToken(root, "--tm-spreadsheet-gridline", "--tm-color-border-subtle"),
+            selectionBorder: cssToken(root, "--tm-spreadsheet-selection-border", "--tm-color-primary"),
+            selectionFill: cssToken(root, "--tm-spreadsheet-selection-fill", "--tm-color-primary"),
+            selectionFillAlpha: Number.isFinite(fillAlpha) && fillAlpha > 0 && fillAlpha <= 1
+                ? fillAlpha
+                : selectionFillAlphaDefault,
+            hoverFill: withAlpha(cssToken(root, "--tm-color-gray-400", "--tm-color-text-muted"), 0.12),
+            danger: cssToken(root, "--tm-color-danger", "--tm-color-error"),
+            warning,
+            inverseText: cssToken(root, "--tm-color-on-primary", "--tm-text-inverse"),
+            hyperlink: cssToken(root, "--tm-text-link", "--tm-color-primary"),
+            searchMatchFill: withAlpha(warning, 0.3),
+            searchActiveFill: withAlpha(warning, 0.45),
+            searchActiveStroke: cssToken(root, "--tm-color-warning-strong", "--tm-color-warning"),
+            formulaRefs
         };
+    }
+
+    /** A pointer media query cannot be answered without the browser; a host without matchMedia is fine. */
+    function isCoarsePointer() {
+        try {
+            return !!(window.matchMedia && window.matchMedia("(pointer: coarse)").matches);
+        } catch {
+            return false;
+        }
+    }
+
+    // ── Touch gesture recognizer (phase 7; docs/touch-interaction.md) ─────────────────────────
+    // The decision table below is PURE: pointer kind + press origin + timing in, one action out. The
+    // gesture SESSIONS come from the shared core helpers (pointer-drag.js for the single-pointer
+    // press/tap/long-press, pointer-gesture.js for the two-finger pinch) — this file never implements
+    // a drag or a pinch of its own. Keeping the recognizer pure is what makes the touch rules
+    // node-testable (`npm run test:spreadsheet`) with no DOM at all.
+
+    /** The touch long-press that opens the cell context menu (same 500 ms as the wireframe canvas). */
+    const touchLongPressMs = 500;
+    /** Two taps inside this window (and inside the slop) are a double tap → start editing. */
+    const touchDoubleTapMs = 320;
+    /** A finger that travelled further than this is a pan/scroll, not a tap. */
+    const touchTapSlopPx = 24;
+    /** Movement that turns a press on a touch handle into a drag (the cell surface never drags). */
+    const touchDragThresholdPx = 8;
+    /** Pinch zoom lives on the component's own zoom grid (0.5–2.0 in 10 % steps). */
+    const pinchZoomMin = 0.5;
+    const pinchZoomMax = 2.0;
+    const pinchZoomStep = 0.1;
+    /** WCAG 2.5.7 / --tm-touch-target: the finger floor for a canvas hit area. */
+    const coarseTouchHitPx = 44;
+
+    function positiveOr(value, fallback) {
+        const number = Number(value);
+        return Number.isFinite(number) && number > 0 ? number : fallback;
+    }
+
+    /**
+     * The only pointer-kind switch the canvas branches on. A pen and a mouse keep the pre-phase-7
+     * click/drag path; only `touch` takes the touch gesture layer.
+     */
+    function resolvePointerKind(pointerType) {
+        const kind = String(pointerType ?? "mouse").trim().toLowerCase();
+        if (kind === "touch") return "touch";
+        if (kind === "pen") return "pen";
+        return "mouse";
+    }
+
+    /**
+     * Tap recognition (state → action). A tap selects the cell, a second tap inside the double-tap
+     * window starts editing, and a finger that travelled is a pan (`action: 'none'`).
+     * @returns {{ action: 'select-cell'|'start-edit'|'native-mouse'|'none', tapCount: number,
+     *             next: { time: number, x: number, y: number }|null }}
+     */
+    function resolveTouchTap(input) {
+        const opts = input || {};
+        const kind = resolvePointerKind(opts.pointerType);
+        if (kind !== "touch") return { action: "native-mouse", tapCount: 1, next: null };
+
+        const slop = positiveOr(opts.slopPx, touchTapSlopPx);
+        const doubleTapMs = positiveOr(opts.doubleTapMs, touchDoubleTapMs);
+        const now = Number(opts.now) || 0;
+        const x = Number(opts.x) || 0;
+        const y = Number(opts.y) || 0;
+        if ((Number(opts.moveDistance) || 0) > slop) return { action: "none", tapCount: 0, next: null };
+
+        const previous = opts.previous;
+        if (previous
+            && now - Number(previous.time) <= doubleTapMs
+            && Math.hypot(x - Number(previous.x), y - Number(previous.y)) <= slop) {
+            return { action: "start-edit", tapCount: 2, next: null };
+        }
+
+        return { action: "select-cell", tapCount: 1, next: { time: now, x, y } };
+    }
+
+    /** A date-like number format: a date cell must not open the decimal keypad. */
+    function isDateLikeNumberFormat(format) {
+        const text = String(format || "").toLowerCase();
+        if (!text) return false;
+        return /(yyyy|yy|dd|hh|ss)/.test(text) || /(^|[^a-z])[ydhms]([^a-z]|$)/.test(text);
+    }
+
+    /**
+     * The virtual keyboard a cell editor asks for, derived from the cell's value and number format.
+     * A numeric cell gets `inputmode="decimal"`; everything else (text, dates, formulas) gets `text`.
+     */
+    function resolveCellInputMode(cell) {
+        if (!cell) return "text";
+        const style = read(cell, "Style", null);
+        const format = String(read(style, "NumberFormat", "") || "").trim().toLowerCase();
+        if (format.includes("%")) return "decimal";
+        if (isDateLikeNumberFormat(format)) return "text";
+        const value = read(cell, "Value", "");
+        if (typeof value === "number" && Number.isFinite(value)) return "decimal";
+        if (typeof value === "string" && /^[-+]?\d+([.,]\d+)?\s*$/.test(value)) return "decimal";
+        return "text";
+    }
+
+    /**
+     * What a touch drag does, from the origin of the press. A drag from a selection handle extends
+     * the selection, a drag from the fill handle fills (the pre-existing fill drag), and a drag
+     * anywhere else is the browser's native pan — no JS gesture, no `preventDefault`.
+     * @returns {{ action: 'extend-selection'|'fill-handle'|'canvas-owned'|'native-pan'|'native-mouse',
+     *             kind: 'mouse'|'pen'|'touch', preventDefault: boolean }}
+     */
+    function resolveTouchDragAction(input) {
+        const opts = input || {};
+        const kind = resolvePointerKind(opts.pointerType);
+        if (kind !== "touch") return { action: "native-mouse", kind, preventDefault: false };
+        const origin = String(opts.origin ?? "");
+        if (origin === "auto-fill") return { action: "fill-handle", kind, preventDefault: false };
+        if (origin === "selection-handle") return { action: "extend-selection", kind, preventDefault: false };
+        if (origin === "filter-button" || origin === "validation-drop"
+            || origin === "resize" || origin === "overlay" || origin === "editor") {
+            return { action: "canvas-owned", kind, preventDefault: false };
+        }
+        // A finger on a cell/header/empty area pans the grid: the browser scrolls, never the canvas.
+        return { action: "native-pan", kind, preventDefault: false };
+    }
+
+    /** Long-press recognition: touch only, 500 ms by default. */
+    function resolveLongPressAction(input) {
+        const opts = input || {};
+        const longPressMs = positiveOr(opts.longPressMs, touchLongPressMs);
+        const kind = resolvePointerKind(opts.pointerType);
+        const durationMs = Number(opts.durationMs) || 0;
+        return {
+            action: kind === "touch" && durationMs >= longPressMs ? "open-context-menu" : "none",
+            longPressMs
+        };
+    }
+
+    /**
+     * Pinch → one clamped zoom value on the component's 10 % grid. The gesture reports a cumulative
+     * scale from its start; the recognizer turns it into the absolute zoom factor .NET owns, and
+     * `changed` is false for a tremor that never left the current step (no .NET call per frame).
+     */
+    function resolvePinchZoom(input) {
+        const opts = input || {};
+        const min = Number.isFinite(opts.minZoom) ? Number(opts.minZoom) : pinchZoomMin;
+        const max = Number.isFinite(opts.maxZoom) ? Number(opts.maxZoom) : pinchZoomMax;
+        const step = positiveOr(opts.step, pinchZoomStep);
+        const start = positiveOr(opts.startZoom, 1);
+        const scale = positiveOr(opts.scale, 1);
+        const target = Math.min(max, Math.max(min, start * scale));
+        const steps = (target - min) / step;
+        const index = target >= start
+            ? Math.floor(steps + 1e-9)
+            : Math.ceil(steps - 1e-9);
+        const zoom = Math.round((min + index * step) * 100) / 100;
+        const previous = Math.round(start * 100) / 100;
+        return {
+            zoom,
+            direction: zoom > previous ? 1 : zoom < previous ? -1 : 0,
+            changed: Math.abs(zoom - previous) > 0.001,
+            clamped: Math.abs(target - start * scale) > 0.001
+        };
+    }
+
+    /**
+     * The fill handle's HIT box (what a finger has to reach), from the density handle scale and the
+     * pointer kind. The compact fine-pointer box stays the historic 10 px — the mouse path is
+     * unchanged — while Comfortable grows it with the painted handle and a coarse pointer gets the
+     * finger floor.
+     */
+    function resolveAutoFillHitSize(input) {
+        const opts = input || {};
+        const handleScale = positiveOr(opts.handleScale, 1);
+        const hit = Math.max(10, Math.round(10 * handleScale));
+        return opts.coarse === true ? Math.max(hit, 24) : hit;
+    }
+
+    /**
+     * The DOM touch-handle rects for a selection rectangle (grid/scrolport coordinates): the four
+     * edge drops that extend the selection plus the fill handle at the bottom-right corner. They are
+     * real DOM boxes because `touch-action: none` can only be set on an element — a painted handle
+     * cannot stop the browser from panning the grid under the finger.
+     */
+    function resolveTouchHandleRects(input) {
+        const opts = input || {};
+        const width = Number(opts.width) || 0;
+        const height = Number(opts.height) || 0;
+        if (!(width > 0) || !(height > 0)) {
+            return { start: null, fill: null, end: null };
+        }
+
+        const x = Number(opts.x) || 0;
+        const y = Number(opts.y) || 0;
+        const coarse = opts.coarse === true;
+        // Two ROUND corner drops (drag-only, the selection extender) plus the fill handle. Full edge
+        // strips were rejected: on a phone (30px rows) a strip along the selection's edge swallowed the
+        // taps and long-presses meant for the selected row/column itself.
+        const size = Math.max(20, Math.round(Number(opts.hitSize) || (coarse ? 28 : 20)));
+        const half = size / 2;
+        // The bottom-right drop sits just outside the fill handle so the two never share a centre: the
+        // handle keeps Excel's corner (fill), the drop is the extend gesture next to it.
+        const offset = Math.round(size * 0.6);
+        return {
+            start: { x: x - half, y: y - half, width: size, height: size },
+            fill: { x: x + width - half, y: y + height - half, width: size, height: size },
+            end: { x: x + width + offset - half, y: y + height + offset - half, width: size, height: size }
+        };
+    }
+
+    /**
+     * Clips a handle box to the grid BODY (never over the frozen gutters). A box that would have to be
+     * SHIFTED onto the selection to fit is hidden instead: the drops must not cover the selected cells,
+     * and a sliver below `minSize` is not a finger target anyway.
+     */
+    function clipTouchHandleRect(input) {
+        const opts = input || {};
+        const rect = opts.rect;
+        const bounds = opts.bounds;
+        const minSize = Math.max(0, Number(opts.minSize) || 16);
+        if (!rect || !bounds) return null;
+        const left = Math.max(rect.x, bounds.x);
+        const top = Math.max(rect.y, bounds.y);
+        const right = Math.min(rect.x + rect.width, bounds.x + bounds.width);
+        const bottom = Math.min(rect.y + rect.height, bounds.y + bounds.height);
+        if (right - left < minSize || bottom - top < minSize) return null;
+        return { x: left, y: top, width: right - left, height: bottom - top };
+    }
+
+    /**
+     * The header filter button's hit rect. A fine pointer keeps the painted glyph rect exactly (no
+     * mouse regression); a coarse pointer grows the hit box to the touch floor, filling the row it
+     * sits in and never leaving its own column.
+     *
+     * The vertical bound is the BOX the funnel belongs to, not "the top of the canvas": the auto
+     * filter's funnel is painted in the header ROW (y = columnHeaderHeight + row top), so a resolver
+     * that clamped to `[0, headerHeight - height]` moved the whole touch target up into the column
+     * header gutter — the funnel itself became untappable and a tap on the gutter over that column
+     * opened the filter menu. `boundsTop` / `boundsHeight` carry the funnel's own box; the historic
+     * defaults (0 / `headerHeight`) keep every previous caller's answer identical.
+     */
+    function resolveFilterButtonHitRect(input) {
+        const opts = input || {};
+        const rect = opts.rect || {};
+        const x = Number(rect.x) || 0;
+        const y = Number(rect.y) || 0;
+        const w = Math.max(0, Number(rect.w ?? rect.width) || 0);
+        const h = Math.max(0, Number(rect.h ?? rect.height) || 0);
+        if (opts.coarse !== true) return { x, y, width: w, height: h };
+
+        const columnWidth = Math.max(w, Number(opts.columnWidth) || w);
+        const boundsTop = Number(opts.boundsTop) || 0;
+        const headerHeight = Math.max(h, Number(opts.boundsHeight ?? opts.headerHeight) || h);
+        const width = Math.min(columnWidth, Math.max(coarseTouchHitPx, w));
+        const height = Math.min(headerHeight, Math.max(coarseTouchHitPx, h));
+        const columnLeft = x + w - columnWidth;
+        const left = Math.max(columnLeft, Math.min(Math.round(x + w / 2 - width / 2), x + w - width));
+        const top = Math.max(boundsTop,
+            Math.min(Math.round(y + h / 2 - height / 2), boundsTop + headerHeight - height));
+        return { x: left, y: top, width, height };
+    }
+
+    /**
+     * SP1: resolves the requested grid density to the render scales the canvas paints with.
+     * Auto means "comfortable on a coarse pointer (touch), compact elsewhere".
+     */
+    function resolveDensity(density, coarsePointer) {
+        const requested = String(density ?? "").trim().toLowerCase();
+        const coarse = coarsePointer == null ? isCoarsePointer() : !!coarsePointer;
+        const comfortable = requested === "comfortable" || (requested !== "compact" && coarse);
+        return {
+            density: comfortable ? "comfortable" : "compact",
+            comfortable,
+            rowScale: comfortable ? comfortableRowScale : 1,
+            fontScale: comfortable ? comfortableFontScale : 1,
+            handleScale: comfortable ? comfortableHandleScale : 1,
+            gutterScale: comfortable ? comfortableGutterScale : 1
+        };
+    }
+
+    /**
+     * The density scales for a frame. The COMPONENT resolved them (`SpreadsheetDensityScale`) and ships
+     * them in the frame, so the canvas paints with exactly the scale the row geometry used; the JS rule
+     * is only the fallback for a frame without them (or a standalone canvas host).
+     */
+    function resolveDensityFromModel(model) {
+        const requested = String(read(model, "Density", "auto"));
+        const coarse = !!read(model, "PointerCoarse", false);
+        const resolved = resolveDensity(requested, coarse);
+        const scale = (value, fallback) => {
+            const number = Number(value);
+            return Number.isFinite(number) && number > 0 ? number : fallback;
+        };
+        return {
+            density: resolved.density,
+            comfortable: resolved.comfortable,
+            rowScale: scale(read(model, "DensityRowScale", 0), resolved.rowScale),
+            fontScale: scale(read(model, "DensityFontScale", 0), resolved.fontScale),
+            handleScale: scale(read(model, "DensityHandleScale", 0), resolved.handleScale),
+            gutterScale: scale(read(model, "DensityGutterScale", 0), resolved.gutterScale)
+        };
+    }
+
+    /**
+     * The header-label font at a density scale. The token is a CSS font SHORTHAND
+     * (`500 11px Inter, sans-serif`), so the size token inside it is scaled in place and the token
+     * itself is never rewritten (dimension + unit + family stay exactly what the host set).
+     */
+    function resolveHeaderFont(font, fontScale) {
+        const value = String(font || "");
+        const scale = Number(fontScale);
+        if (!value.trim() || !Number.isFinite(scale) || scale <= 0 || scale === 1) return value;
+        const size = /(^|\s)(\d*\.?\d+)(px|pt)(?=\s|\/|$)/.exec(value);
+        if (!size) return value;
+        const scaled = Math.round(Number(size[2]) * scale * 100) / 100;
+        return `${value.slice(0, size.index + size[1].length)}${scaled}${size[3]}${value.slice(size.index + size[0].length)}`;
+    }
+
+    /**
+     * The grid-body point of a client press: the header gutters and the logical scroll offset are the
+     * ONLY inputs, so a scaled gutter (Comfortable 56/28) shifts the hit path exactly the way it shifts
+     * the painted cells. `toContentPoint` feeds it the frame's own RowHeaderWidth/ColumnHeaderHeight.
+     */
+    function resolveContentPoint(input) {
+        const opts = input || {};
+        const number = (value) => (Number.isFinite(Number(value)) ? Number(value) : 0);
+        return {
+            x: number(opts.clientX) - number(opts.rectLeft) + number(opts.scrollLeft) - number(opts.rowHeaderWidth),
+            y: number(opts.clientY) - number(opts.rectTop) + number(opts.scrollTop) - number(opts.columnHeaderHeight)
+        };
+    }
+
+    function getDensityScales(root) {
+        const s = getState(root);
+        const model = s?.model;
+        const key = [
+            read(model, "Density", "auto"),
+            read(model, "PointerCoarse", false) ? 1 : 0,
+            read(model, "DensityRowScale", 0),
+            read(model, "DensityFontScale", 0),
+            read(model, "DensityHandleScale", 0),
+            read(model, "DensityGutterScale", 0)
+        ].join("|");
+        if (s?.densityScales?.key === key) return s.densityScales;
+        const scales = { key, ...resolveDensityFromModel(model) };
+        if (s) s.densityScales = scales;
+        return scales;
+    }
+
+    /**
+     * The active row/column header ranges of a selection. Pure: the canvas passes the local selection
+     * snapshot (the model's copy lags a drag), the node lane passes a plain object.
+     */
+    function resolveHeaderHighlight(selection) {
+        if (!selection) {
+            return {
+                hasSelection: false,
+                activeRow: -1,
+                activeCol: -1,
+                activeRows: { start: -1, end: -1 },
+                activeColumns: { start: -1, end: -1 }
+            };
+        }
+
+        const number = (value, fallback) => (Number.isFinite(Number(value)) ? Number(value) : fallback);
+        const activeRow = number(selection.row, -1);
+        const activeCol = number(selection.col, -1);
+        const startRow = number(selection.startRow, activeRow);
+        const startCol = number(selection.startCol, activeCol);
+        const endRow = number(selection.endRow, activeRow);
+        const endCol = number(selection.endCol, activeCol);
+
+        return {
+            hasSelection: true,
+            activeRow,
+            activeCol,
+            activeRows: { start: Math.min(startRow, endRow), end: Math.max(startRow, endRow) },
+            activeColumns: { start: Math.min(startCol, endCol), end: Math.max(startCol, endCol) }
+        };
+    }
+
+    function isHighlightedIndex(range, index) {
+        return !!range && index >= range.start && index <= range.end;
     }
 
     function createDebugMetrics() {
@@ -2138,13 +2809,19 @@ window.tmSpreadsheetCanvas = window.tmSpreadsheetCanvas || {};
     function toContentPoint(root, ev) {
         const s = getState(root);
         const model = s?.model || {};
-        const rowHeaderWidth = read(model, "RowHeaderWidth", 40);
-        const columnHeaderHeight = read(model, "ColumnHeaderHeight", 20);
         const rect = root.getBoundingClientRect();
-        return {
-            x: ev.clientX - rect.left + getLogicalScrollLeft(root) - rowHeaderWidth,
-            y: ev.clientY - rect.top + getLogicalScrollTop(root) - columnHeaderHeight
-        };
+        // The gutters come from the FRAME (the component scaled them per density), never from a
+        // constant: a 56/28 Comfortable gutter shifts the hit path exactly as it shifts the paint.
+        return resolveContentPoint({
+            clientX: ev.clientX,
+            clientY: ev.clientY,
+            rectLeft: rect.left,
+            rectTop: rect.top,
+            scrollLeft: getLogicalScrollLeft(root),
+            scrollTop: getLogicalScrollTop(root),
+            rowHeaderWidth: read(model, "RowHeaderWidth", 40),
+            columnHeaderHeight: read(model, "ColumnHeaderHeight", 20)
+        });
     }
 
     function screenX(model, col) {
@@ -2297,7 +2974,13 @@ window.tmSpreadsheetCanvas = window.tmSpreadsheetCanvas || {};
         const rect = getCellScreenRect(root, bounds.endRow, bounds.endCol);
         if (!rect) return false;
         const rootRect = root.getBoundingClientRect();
-        const handleSize = 10;
+        // SP1 + phase 7: the HIT box grows with the density and reaches the finger floor on a coarse
+        // pointer (the painted handle alone was still a 10px target on a tablet). A compact fine
+        // pointer keeps exactly the pre-phase-7 10px box, so the mouse path is unchanged.
+        const handleSize = resolveAutoFillHitSize({
+            handleScale: getDensityScales(root).handleScale,
+            coarse: read(getState(root)?.model, "PointerCoarse", false) === true
+        });
         const left = rootRect.left + rect.x + rect.width - handleSize;
         const top = rootRect.top + rect.y + rect.height - handleSize;
         return ev.clientX >= left
@@ -2779,6 +3462,78 @@ window.tmSpreadsheetCanvas = window.tmSpreadsheetCanvas || {};
         for (const rect of [beforeRect, afterRect]) {
             if (rect) addDirtyRect(root, "selection", rect);
         }
+
+        // The header highlight follows the selection, so the old and the new active row/column strips
+        // belong to the same repaint. Only the strips are dirty — the header layer is never repainted
+        // as a whole for a selection change.
+        for (const snapshot of [before, after]) {
+            for (const rect of headerHighlightDirtyRects(root, snapshot)) {
+                addDirtyRect(root, "header", rect);
+            }
+        }
+    }
+
+    /**
+     * The column-header strip and the row-header strip a selection highlights, intersected with the
+     * VISIBLE frames. A selection that extends past the viewport highlights the strips of the rows and
+     * columns that are ON screen (a bounding rect between two off-screen corners would be empty, and the
+     * visible part of the highlight would go stale).
+     */
+    function resolveHeaderStrips(bounds, rows, columns, rowHeaderWidth, columnHeaderHeight) {
+        if (!bounds || !Array.isArray(rows) || !Array.isArray(columns)) return [];
+
+        const visibleRows = rows.filter(frame => {
+            const index = Number(read(frame, "Index", -1));
+            return index >= bounds.minRow && index <= bounds.maxRow;
+        });
+        const visibleColumns = columns.filter(frame => {
+            const index = Number(read(frame, "Index", -1));
+            return index >= bounds.minCol && index <= bounds.maxCol;
+        });
+
+        const strips = [];
+        if (visibleColumns.length > 0) {
+            let left = Infinity;
+            let right = -Infinity;
+            for (const frame of visibleColumns) {
+                left = Math.min(left, read(frame, "x", 0));
+                right = Math.max(right, read(frame, "x", 0) + read(frame, "width", 0));
+            }
+            if (right > left) {
+                strips.push({ x: left, y: 0, width: right - left, height: columnHeaderHeight });
+            }
+        }
+
+        if (visibleRows.length > 0) {
+            let top = Infinity;
+            let bottom = -Infinity;
+            for (const frame of visibleRows) {
+                top = Math.min(top, read(frame, "y", 0));
+                bottom = Math.max(bottom, read(frame, "y", 0) + read(frame, "height", 0));
+            }
+            if (bottom > top) {
+                strips.push({ x: 0, y: top, width: rowHeaderWidth, height: bottom - top });
+            }
+        }
+
+        return strips;
+    }
+
+    /** The dirty rects the header highlight moved off and onto, in screen space. */
+    function headerHighlightDirtyRects(root, snapshot) {
+        const s = getState(root);
+        const model = s?.model;
+        if (!model || !snapshot) return [];
+
+        const width = Math.max(1, root.clientWidth || read(model, "ViewportWidth", 1));
+        const height = Math.max(1, root.clientHeight || read(model, "ViewportHeight", 1));
+        const layout = getVisibleLayout(root, model, width, height);
+        return resolveHeaderStrips(
+            selectionBounds(snapshot),
+            layout.rows,
+            layout.columns,
+            layout.rowHeaderWidth,
+            layout.columnHeaderHeight);
     }
 
     function getFormulaReferenceCells(root, model) {
@@ -3370,6 +4125,19 @@ window.tmSpreadsheetCanvas = window.tmSpreadsheetCanvas || {};
         return true;
     }
 
+    /**
+     * The Ctrl/Cmd chords the canvas CLAIMS. A chord outside this list is left to the browser (so the
+     * canvas never swallows a browser shortcut it does not implement), and a claimed one is
+     * `preventDefault`ed before the key reaches .NET — otherwise Ctrl+D would open the browser's
+     * bookmark dialog and Ctrl+R would RELOAD the page with the grid on it.
+     */
+    const canvasShortcutKeys = Object.freeze(["c", "v", "x", "z", "y", "b", "i", "u", "a", "1", "5", "f", "h", "0", "d", "r"]);
+
+    function isCanvasShortcutCommand(shortcutKey, key) {
+        if (canvasShortcutKeys.includes(shortcutKey)) return true;
+        return key === "Home" || key === "End";
+    }
+
     function handleNavigationKey(root, ev) {
         if (ev.altKey || ev.metaKey || ev.ctrlKey) return false;
         const s = getState(root);
@@ -3404,11 +4172,7 @@ window.tmSpreadsheetCanvas = window.tmSpreadsheetCanvas || {};
         const key = ev.key || "";
         const shortcutKey = key.length === 1 ? key.toLowerCase() : key;
         const isShortcut = ev.ctrlKey || ev.metaKey;
-        const isShortcutCommand = isShortcut && (
-            ["c", "v", "x", "z", "y", "b", "i", "u", "a", "1", "5", "f", "h", "0"].includes(shortcutKey) ||
-            key === "Home" ||
-            key === "End"
-        );
+        const isShortcutCommand = isShortcut && isCanvasShortcutCommand(shortcutKey, key);
         const isEditCommand = key === "Enter" || key === "F2" || key === "Escape" || key === "Delete";
         const isTextCommand = key.length === 1 && !ev.altKey && !ev.ctrlKey && !ev.metaKey;
         if (!isShortcutCommand && !isEditCommand && !isTextCommand) return false;
@@ -3954,6 +4718,7 @@ window.tmSpreadsheetCanvas = window.tmSpreadsheetCanvas || {};
 
         const changed = applyPatchesLocally(root, patches, "autofill");
         const target = selectionBounds(preview);
+        const beforeSelection = getSelectionSnapshot(root);
         setSheetSelection(root, target.endRow, target.endCol, target.startRow, target.startCol, target.endRow, target.endCol);
         const model = getState(root)?.model;
         write(model, "ActiveCellRef", toCellRef(target.endRow, target.endCol));
@@ -3963,6 +4728,7 @@ window.tmSpreadsheetCanvas = window.tmSpreadsheetCanvas || {};
         write(selection, "EndRow", target.endRow);
         write(selection, "EndCol", target.endCol);
         write(model, "Selection", selection);
+        addSelectionDirtyRectForChange(root, beforeSelection, getSelectionSnapshot(root));
         requestPaint(root, "autofill", "selection");
         debounceSelectionSync(root, 90);
         return changed;
@@ -4343,9 +5109,13 @@ window.tmSpreadsheetCanvas = window.tmSpreadsheetCanvas || {};
         return !!target.closest("input, textarea, select, [contenteditable=''], [contenteditable='true'], .tm-spreadsheet-canvas-grid__editor");
     }
 
+    // Anything the spreadsheet opened OVER the grid: the context menu, a legacy in-grid popup, or a
+    // core TmModal surface (every package dialog, incl. the column-width / row-height dialogs, which
+    // render inside the grid root). The grid's own key and wheel listeners must not answer those:
+    // Enter/Tab on a dialog button and Escape inside a dialog belong to the dialog.
     function isSpreadsheetOverlayTarget(target) {
         return target instanceof Element
-            && !!target.closest(".tm-spreadsheet-context-menu, .tm-spreadsheet-resize-dialog, .tm-spreadsheet-resize-dialog-backdrop");
+            && !!target.closest(".tm-spreadsheet-context-menu, .tm-spreadsheet-resize-dialog, .tm-modal-overlay");
     }
 
     function removeFormulaEditorChrome(editor) {
@@ -4710,6 +5480,9 @@ window.tmSpreadsheetCanvas = window.tmSpreadsheetCanvas || {};
         const input = document.createElement("input");
         input.className = "tm-spreadsheet-canvas-grid__editor";
         input.value = value;
+        // Phase 7: a finger gets the right virtual keyboard (decimal for a numeric cell, text for a
+        // date/text cell) — set on every editor, a hardware keyboard simply ignores it.
+        applyCellInputMode(input, cell);
         input.addEventListener("click", ev => ev.stopPropagation());
         input.addEventListener("dblclick", ev => ev.stopPropagation());
         input.addEventListener("keydown", ev => {
@@ -4848,6 +5621,609 @@ window.tmSpreadsheetCanvas = window.tmSpreadsheetCanvas || {};
         return letters + String(row + 1);
     }
 
+    // ── Touch gesture sessions (phase 7) ──────────────────────────────────────────────────────
+    // The single-pointer gesture comes from the shared core helper `pointer-drag.js` (threshold,
+    // long-press, pointer capture, cancel paths) and the two-finger zoom from `pointer-gesture.js`
+    // `attachPinch` — this file owns no drag and no pinch of its own (docs/touch-interaction.md).
+    //
+    // `document.currentScript` is only set while this classic script evaluates, so the helper URLs
+    // are resolved NOW, next to the package's own _content folder, exactly like scheduler.js and
+    // wireframe-designer.js do. A bare '_content/...' specifier is not a module specifier.
+    const tmSpreadsheetHelperUrls = (function () {
+        try {
+            const script = document.currentScript;
+            if (script && script.src) {
+                return {
+                    drag: new URL("../../Tempo.Blazor/js/pointer-drag.js", script.src).href,
+                    gesture: new URL("../../Tempo.Blazor/js/pointer-gesture.js", script.src).href
+                };
+            }
+        } catch (e) { /* fall through to the document-relative layout */ }
+
+        let base = "";
+        try { base = document.baseURI || ""; } catch (e) { /* no document (a node/vm host) */ }
+        const resolve = path => {
+            try { return new URL(path, base).href; } catch (e) { return path; }
+        };
+        return {
+            drag: resolve("_content/Tempo.Blazor/js/pointer-drag.js"),
+            gesture: resolve("_content/Tempo.Blazor/js/pointer-gesture.js")
+        };
+    })();
+
+    /** The `data-touch-handle` a press landed on (the DOM handle layer painted over the selection). */
+    function readTouchHandleTarget(ev) {
+        const handle = ev?.target?.closest?.("[data-touch-handle]");
+        if (!handle) return null;
+        return String(handle.getAttribute("data-touch-handle") || "");
+    }
+
+    /**
+     * The ORIGIN of a touch press — the input the pure drag recognizer needs. The order matters: the
+     * header filter button and the resize edge are checked by COORDINATES (their DOM overlay, if any,
+     * is transparent), and the fill handle wins over the selection markers it shares a corner with.
+     */
+    function classifyTouchOrigin(root, ev) {
+        if (!ev) return "empty";
+        if (isSpreadsheetOverlayTarget(ev.target)) return "overlay";
+        const s = getState(root);
+        if (s?.editor?.input && (ev.target === s.editor.input || s.editor.input.contains?.(ev.target))) return "editor";
+        if (hitFilterButton(root, ev)) return "filter-button";
+        if (hitValidationDropButton(root, ev)) return "validation-drop";
+        if (hitResize(root, ev)) return "resize";
+        if (hitAutoFillHandle(root, ev)) return "auto-fill";
+        // The DOM fill box belongs to the fill gesture, even when its centre sits a few px outside the
+        // painted square's hit box (the box is finger-sized, the painted handle is 6-8 px).
+        if (readTouchHandleTarget(ev) === "fill") return "auto-fill";
+        const hit = hitCell(root, toContentPoint(root, ev));
+        return hit ? "cell" : "header";
+    }
+
+    /** The window a long-press's release-click stays swallowed (the diagram editor's 350 ms + margin). */
+    const touchReleaseClickGuardMs = 400;
+
+    /**
+     * Opens the cell context menu at the finger (the long-press action).
+     *
+     * The finger is still DOWN when the menu appears, so the compatibility `click` of the lift would
+     * land on the freshly opened menu's overlay (or on one of its items) and close/activate it
+     * immediately. The guard armed here swallows document-level clicks for a short window after the
+     * release; it expires on its own, so the next tap works normally.
+     */
+    function openTouchContextMenu(root, info) {
+        const s = getState(root);
+        const ev = info?.event;
+        if (!s || !ev) return;
+        s.suppressClick = true;
+        // The guard is (re-)armed on the LIFT: a user may hold for seconds, and the click that must not
+        // reach the menu is the one the release produces, not the one the press could have produced.
+        s.touchMenuHold = true;
+        armTouchReleaseClickGuard(root);
+        const point = toContentPoint(root, { clientX: ev.clientX, clientY: ev.clientY });
+        // `anchor` = the gesture kind (a finger-sized menu offsets itself from the finger) and the viewport
+        // height lets the menu flip above the press point when there is no room below it.
+        const viewportHeight = Math.max(0, Number(window.innerHeight) || 0);
+        invokeDotNet(root, "OnCanvasContextMenu",
+            [point.x, point.y, ev.clientX, ev.clientY, "touch", viewportHeight], true).catch(() => {});
+    }
+
+    function armTouchReleaseClickGuard(root) {
+        if (typeof document === "undefined") return;
+        const s = getState(root);
+        if (!s) return;
+        disarmTouchReleaseClickGuard(root);
+        const swallow = event => {
+            event?.preventDefault?.();
+            event?.stopPropagation?.();
+        };
+        try {
+            document.addEventListener("click", swallow, true);
+            // A long-press may also synthesize the browser's context menu on the lift; the menu that
+            // just opened at the finger must not be closed by that either.
+            document.addEventListener("contextmenu", swallow, true);
+        } catch (e) { return; }
+        const timer = setTimeout(() => disarmTouchReleaseClickGuard(root), touchReleaseClickGuardMs);
+        s.touchClickGuard = { swallow, timer };
+    }
+
+    function disarmTouchReleaseClickGuard(root) {
+        const s = getState(root);
+        const guard = s?.touchClickGuard;
+        if (!s || !guard) return;
+        s.touchClickGuard = null;
+        // The guard also armed the canvas' own single-click swallow; releasing one must release both,
+        // or the NEXT legitimate click (on a cell) would be eaten.
+        s.suppressClick = false;
+        try { clearTimeout(guard.timer); } catch (e) { /* already fired */ }
+        try { document.removeEventListener("click", guard.swallow, true); } catch (e) { /* no document */ }
+        try { document.removeEventListener("contextmenu", guard.swallow, true); } catch (e) { /* no document */ }
+    }
+
+    /** The typed virtual keyboard for the cell under the finger (double tap → edit). */
+    function applyCellInputMode(input, cell) {
+        if (!input || !input.setAttribute) return;
+        const mode = resolveCellInputMode(cell);
+        try {
+            input.setAttribute("inputmode", mode);
+            input.setAttribute("autocapitalize", "off");
+            input.setAttribute("autocomplete", "off");
+            input.spellcheck = false;
+        } catch (e) { /* a host input stub without attributes */ }
+    }
+
+    /**
+     * A touch TAP: select the cell, or — inside the double-tap window — open the editor with the
+     * virtual keyboard the cell type asks for. The compatibility click that follows is swallowed, so
+     * the mouse path and the touch path can never both act on one press.
+     */
+    function handleTouchTap(root, info) {
+        const s = getState(root);
+        const ev = info?.event;
+        if (!s || !ev) return;
+        const decision = resolveTouchTap({
+            pointerType: info.pointerType,
+            now: performance.now(),
+            x: ev.clientX,
+            y: ev.clientY,
+            previous: s.touchTapCandidate
+        });
+        s.touchTapCandidate = decision.next;
+        if (decision.action !== "select-cell" && decision.action !== "start-edit") return;
+
+        s.suppressClick = true;
+        s.lastPointerButton = 0;
+        if (decision.action === "select-cell") {
+            if (!getSelectionDrag(root) && !getAutoFillState(root)?.active) {
+                activateCanvasPointer(root, ev);
+            }
+            return;
+        }
+
+        const hit = hitCell(root, toContentPoint(root, ev));
+        if (!hit) return;
+        updateLocalActiveCell(root, hit.row, hit.col, false, "pointer");
+        flushSelectionSettled(root);
+        if (root.dataset.readonly === "true") return;
+        openLocalEditor(root, hit);
+        const editor = getState(root)?.editor;
+        applyCellInputMode(editor?.input, hit.cell || findCell(getState(root)?.model, hit.row, hit.col));
+        editor?.input?.focus?.({ preventScroll: true });
+    }
+
+    /** Positions the DOM touch-handle layer over the painted selection (grid coordinates). */
+    function syncTouchHandles(root, model) {
+        const s = getState(root);
+        if (!s || !model) return;
+        let layer = s.touchHandles;
+        if (!layer || layer.isConnected === false) {
+            layer = s.touchHandles = root.querySelector?.("[data-touch-handles]") || null;
+        }
+        if (!layer) return;
+
+        const coarse = read(model, "PointerCoarse", false) === true || isCoarsePointer();
+        const rect = getSelectionScreenRect(root, getSelectionSnapshot(root));
+        const rects = resolveTouchHandleRects(rect
+            ? { x: rect.x, y: rect.y, width: rect.width, height: rect.height, coarse }
+            : { coarse });
+        const rowHeaderWidth = read(model, "RowHeaderWidth", 40);
+        const columnHeaderHeight = read(model, "ColumnHeaderHeight", 20);
+        const width = Math.max(1, root.clientWidth || 1);
+        const height = Math.max(1, root.clientHeight || 1);
+        const bounds = {
+            x: rowHeaderWidth,
+            y: columnHeaderHeight,
+            width: Math.max(0, width - rowHeaderWidth),
+            height: Math.max(0, height - columnHeaderHeight)
+        };
+
+        let visible = false;
+        for (const key of ["start", "fill", "end"]) {
+            const element = layer.querySelector?.(`[data-touch-handle="${key}"]`);
+            if (!element) continue;
+            // Clip rather than clamp: shifting a drop into the body would put it ON the selection.
+            const box = clipTouchHandleRect({ rect: rects[key], bounds, minSize: 16 });
+            if (!box) {
+                element.hidden = true;
+                continue;
+            }
+            element.hidden = false;
+            element.style.left = `${Math.round(box.x)}px`;
+            element.style.top = `${Math.round(box.y)}px`;
+            element.style.width = `${Math.round(box.width)}px`;
+            element.style.height = `${Math.round(box.height)}px`;
+            visible = true;
+        }
+        layer.dataset.touchHandlesVisible = visible ? "true" : "false";
+    }
+
+    /**
+     * Attaches the phase-7 touch sessions to a registered grid: one `pointer-drag.js` session for
+     * tap / double tap / long-press, one `pointer-gesture.js` pinch for the zoom. Both helpers load
+     * through a dynamic import; a failed load leaves the grid on its mouse path and logs once.
+     */
+    function attachTouchGestures(root) {
+        const s = getState(root);
+        if (!s || s.touch) return;
+        const urls = tmSpreadsheetHelperUrls;
+        if (!urls) return;
+
+        s.touch = {
+            ready: false,
+            detach() {
+                try { this.drag?.detach?.(); } catch (e) { /* already gone */ }
+                try { this.pinch?.detach?.(); } catch (e) { /* already gone */ }
+                this.drag = null;
+                this.pinch = null;
+            }
+        };
+        const session = s.touch;
+
+        Promise.all([import(urls.drag), import(urls.gesture)])
+            .then(([dragHelper, gestureHelper]) => {
+                const state = getState(root);
+                if (!state || state.touch !== session) return;   // disposed while loading
+
+                const touchDrag = dragHelper.attach(root, {
+                    pointerTypes: ["touch"],
+                    longPressMs: touchLongPressMs,
+                    threshold: touchDragThresholdPx,
+                    // CSS owns touch-action: pan-x pan-y on the grid — the finger must still scroll.
+                    touchAction: null,
+                    captureOn: "press",
+                    // The tap path arms the single swallow itself (a handled tap must not repeat as a
+                    // compatibility click); a real drag is never followed by a click we want.
+                    suppressClick: false,
+                    dragClass: null,
+                    onPress(info) {
+                        const origin = classifyTouchOrigin(root, info.event);
+                        const decision = resolveTouchDragAction({ pointerType: info.pointerType, origin });
+                        // Only the bare cell surface takes taps from this session. Everything else is
+                        // vetoed so its own path (fill drag, resize, filter button, editor) stays the
+                        // only one — and the browser keeps handling headers natively.
+                        return decision.action === "native-pan" && origin === "cell";
+                    },
+                    onStart(info) {
+                        if (info.origin === "long-press") {
+                            openTouchContextMenu(root, info);
+                            return;
+                        }
+                        // A threshold drag on the cell surface is the browser's pan: abort the session
+                        // so pointer-drag stops and nothing is prevented.
+                        return false;
+                    },
+                    onCancel() {
+                        const state2 = getState(root);
+                        if (state2) state2.touchTapCandidate = null;
+                    },
+                    onRelease(info) {
+                        const state2 = getState(root);
+                        if (state2?.touchMenuHold) {
+                            // The hold opened the cell menu: swallow what the LIFT produces.
+                            state2.touchMenuHold = false;
+                            armTouchReleaseClickGuard(root);
+                        }
+                        if (info.outcome !== "tap") return;
+                        handleTouchTap(root, info);
+                    }
+                });
+
+                const pinch = gestureHelper.attachPinch(root, {
+                    pointerTypes: ["touch"],
+                    // The canvas already owns ctrl+wheel zoom (OnCanvasZoomDelta); the pinch helper
+                    // must not bind a second wheel listener over it.
+                    wheel: false,
+                    touchAction: null,
+                    // A lone finger belongs to the native scroll and to the drag session above.
+                    captureSinglePointer: false,
+                    onStart(info) {
+                        const state2 = getState(root);
+                        if (!state2) return;
+                        touchDrag.cancel("pinch");
+                        cancelCanvasGesturesForPinch(root);
+                        state2.touchTapCandidate = null;
+                        state2.pinchStartZoom = positiveOr(read(state2.model, "Zoom", 1), 1);
+                        state2.pinchLastZoom = state2.pinchStartZoom;
+                    },
+                    onChange(info) {
+                        commitPinchZoom(root, info?.scale);
+                    },
+                    onEnd(info) {
+                        commitPinchZoom(root, info?.scale);
+                    },
+                    onCancel() {
+                        // Escape / pointercancel / lost capture: the pinch rolls back and commits nothing.
+                        const state2 = getState(root);
+                        if (state2) state2.pinchLastZoom = state2.pinchStartZoom;
+                    }
+                });
+
+                session.drag = touchDrag;
+                session.pinch = pinch;
+                session.ready = true;
+            })
+            .catch(err => {
+                console.warn("tmSpreadsheetCanvas: the shared pointer helpers (pointer-drag.js, pointer-gesture.js) "
+                    + "could not be loaded; the grid keeps its mouse interaction", err);
+            });
+    }
+
+    /**
+     * Cancels the canvas-owned single-finger gestures a pinch takes over: the fill drag, the selection
+     * drag, a pending drag candidate, the autoscroll loop and a queued handle tap. Without this a finger
+     * that had started a fill kept extending it while the other two fingers zoomed.
+     */
+    function cancelCanvasGesturesForPinch(root) {
+        const s = getState(root);
+        if (!s) return;
+        let repaint = false;
+        if (getAutoFillState(root)?.active) {
+            clearAutoFillDrag(root);
+            repaint = true;
+        }
+        if (getSelectionDrag(root)) {
+            setSelectionDrag(root, null);
+            repaint = true;
+        }
+        setPossibleDrag(root, null);
+        stopDragAutoscroll(root);
+        if (repaint) requestCanvasRedraw(root, "pinch", "full");
+    }
+
+    /** Turns one pinch scale into the absolute, clamped, step-quantized zoom .NET owns. */
+    function commitPinchZoom(root, scale) {
+        const s = getState(root);
+        if (!s) return false;
+        const decision = resolvePinchZoom({ startZoom: s.pinchStartZoom || 1, scale: positiveOr(scale, 1) });
+        if (!decision.changed || Math.abs(decision.zoom - (s.pinchLastZoom || 0)) < 0.001) return false;
+        s.pinchLastZoom = decision.zoom;
+        invokeDotNet(root, "OnCanvasZoomChanged", [decision.zoom], true).catch(() => {});
+        return true;
+    }
+
+    /**
+     * The density a pointer-kind CHANGE re-resolves to, or `reResolve: false` when the host pinned the
+     * density (an explicit Compact/Comfortable is not the browser's business). Pure so the node lane
+     * can pin the "only Auto follows the pointer" rule.
+     */
+    function resolvePointerKindDensityDecision(input) {
+        const opts = input || {};
+        const requested = String(opts.requested ?? "").trim().toLowerCase();
+        const coarse = !!opts.coarse;
+        const resolved = resolveDensity(requested, coarse);
+        return {
+            reResolve: requested !== "compact" && requested !== "comfortable",
+            density: resolved.density,
+            coarse,
+            gutterScale: resolved.gutterScale
+        };
+    }
+
+    /**
+     * Attaches exactly one `(pointer: coarse)` change listener. `requestedDensity` is a value or a
+     * getter (the model can be re-rendered with another density while the grid lives). Returns the
+     * listener so `dispose` can detach it, or null when the query has no addEventListener (a host
+     * without matchMedia keeps the density it resolved on the first frame).
+     */
+    function attachPointerKindListener(query, requestedDensity, notify) {
+        if (!query || typeof query.addEventListener !== "function") return null;
+        const onChange = event => {
+            const requested = typeof requestedDensity === "function" ? requestedDensity() : requestedDensity;
+            const decision = resolvePointerKindDensityDecision({ requested, coarse: !!event?.matches });
+            if (!decision.reResolve) return;
+            if (typeof notify === "function") notify(decision.density, decision.coarse);
+        };
+        try { query.addEventListener("change", onChange); } catch (e) { return null; }
+        return onChange;
+    }
+
+    // ── Live theme watcher (phase 7c, finding 18f08937) ─────────────────────────────────────
+    // The palette is a SNAPSHOT of the resolved tokens, so a dark/light or indigo flip on a live page
+    // used to recolour the chrome while the canvas (headers, selection) kept the OLD colours until the
+    // ResizeObserver happened to fire. One watcher repaints the canvas as fast as the CSS flips.
+    const liveThemeAttributes = ["data-theme", "data-tm-theme"];
+    // The `tm-dark` CLASS is Tempo's SECOND public dark switch (src/Tempo.Blazor/AGENT.md): a host that
+    // toggles it produces no theme-attribute mutation at all, so the class needs its own cheap observer.
+    const darkThemeClass = "tm-dark";
+    // The attributes are NOT always on <html>: the demo shell (and many hosts) put data-theme on a
+    // wrapper div while only `data-tm-theme` lives on :root, and ANY ancestor carrying one of them
+    // re-resolves the tokens for the grid. So the attribute observer watches the whole document subtree
+    // for just these two attribute names - Chromium filters the attribute changes before it notifies, and
+    // a theme flip is a rare user action, so this never turns into a per-frame cost.
+
+    /**
+     * Rebuilds the palette from the NEW token values and repaints every layer. Header, selection and
+     * content all read colours from the palette, so the repaint is `full` - a partial kind would leave
+     * one of them in the previous theme.
+     */
+    function applyLiveTheme(root) {
+        const s = getState(root);
+        if (!s) return false;
+        s.palette = buildPalette(root);
+        // Cell colour snapshots cache the painted style of a cell; the theme owns the ink, so drop them.
+        clearCellSnapshots(root, "theme-change");
+        requestCanvasRedraw(root, "theme-change", "full");
+        return true;
+    }
+
+    /** Whether a node carries the `.tm-dark` class switch (a fake node in the node lane may not). */
+    function hasDarkClass(node) {
+        const list = node ? node.classList : null;
+        return !!(list && typeof list.contains === "function" && list.contains(darkThemeClass));
+    }
+
+    /** The dark state the class switch currently describes (`html.tm-dark` OR `body.tm-dark`). */
+    function readDarkClassState(session) {
+        const doc = session ? session.document : null;
+        return hasDarkClass(doc ? doc.documentElement : null) || hasDarkClass(doc ? doc.body : null);
+    }
+
+    /**
+     * Repaints ONLY when the `tm-dark` class really changed: `class` mutates for many unrelated reasons
+     * (a menu opens, a layout helper toggles), so a blindly repainting observer would be a per-interaction
+     * full canvas redraw. Returns whether a repaint was requested.
+     */
+    function applyDarkClassChange(root, session) {
+        if (!session) return false;
+        const dark = readDarkClassState(session);
+        if (dark === session.lastDark) return false;
+        session.lastDark = dark;
+        return applyLiveTheme(root);
+    }
+
+    /**
+     * Watches BOTH live dark switches for the LIFETIME of a grid: the `data-theme` / `data-tm-theme`
+     * attributes (document subtree, two attribute names) and the `.tm-dark` class on `documentElement`
+     * and `body` (exactly two nodes, no subtree). Returns a session `{ observers, document, lastDark }`
+     * so `dispose` can disconnect every observer, or null when the environment has no MutationObserver
+     * (an ancient host keeps the resize-only behaviour). `environment` is the node-test seam.
+     */
+    function observeLiveTheme(root, environment) {
+        if (!root) return null;
+        const env = environment || {};
+        const doc = env.document || (typeof document !== "undefined" ? document : null);
+        const Observer = env.MutationObserver
+            || (typeof MutationObserver !== "undefined" ? MutationObserver : null);
+        const element = doc ? doc.documentElement : null;
+        if (!element || typeof Observer !== "function") return null;
+        const onChange = typeof env.onChange === "function" ? env.onChange : () => applyLiveTheme(root);
+        const session = {
+            root,
+            document: doc,
+            observers: [],
+            lastDark: false
+        };
+        session.lastDark = readDarkClassState(session);
+
+        const attributeObserver = new Observer(() => {
+            try { onChange(root); } catch (e) { /* a repaint must never break the mutation loop */ }
+        });
+        const classObserver = new Observer(() => {
+            try { applyDarkClassChange(root, session); } catch (e) { /* same: never break the loop */ }
+        });
+
+        try {
+            attributeObserver.observe(element, {
+                attributes: true,
+                attributeFilter: liveThemeAttributes.slice(),
+                subtree: true
+            });
+            session.observers.push(attributeObserver);
+
+            // Two nodes only: a class observer on the whole subtree would fire on every hover/menu class.
+            for (const node of [element, doc.body]) {
+                if (!node || typeof node !== "object") continue;
+                classObserver.observe(node, { attributes: true, attributeFilter: ["class"] });
+            }
+            if (doc.body) session.observers.push(classObserver);
+        } catch (e) {
+            detachLiveTheme(session);
+            return null;
+        }
+        return session;
+    }
+
+    /**
+     * Disconnects a live-theme session (or a single observer). Returns whether anything was detached.
+     */
+    function detachLiveTheme(session) {
+        if (!session) return false;
+        const observers = Array.isArray(session.observers)
+            ? session.observers
+            : (typeof session.disconnect === "function" ? [session] : []);
+        let detached = false;
+        for (const observer of observers) {
+            if (!observer || typeof observer.disconnect !== "function") continue;
+            try { observer.disconnect(); } catch (e) { /* already gone */ }
+            detached = true;
+        }
+        return detached;
+    }
+
+    /**
+     * Watches the `(pointer: coarse)` media query for the LIFETIME of a grid, so attaching a mouse to a
+     * tablet (or undocking a 2-in-1) re-resolves the Auto density instead of keeping the first answer.
+     */
+    function observePointerKind(root, dotNet) {
+        const s = getState(root);
+        if (!s || !window.matchMedia) return;
+        let query = null;
+        try { query = window.matchMedia("(pointer: coarse)"); } catch (e) { return; }
+        const onChange = attachPointerKindListener(
+            query,
+            () => read(getState(root)?.model, "Density", "auto"),
+            (_density, coarse) => {
+                // .NET re-resolves the density itself (an explicit Compact/Comfortable stays pinned), so
+                // only the coarse flag crosses the boundary.
+                invokeDotNet(root, "OnCanvasPointerKindChanged", [coarse], true).catch(() => {});
+            });
+        if (!onChange) return;
+        s.pointerKindQuery = query;
+        s.pointerKindListener = onChange;
+    }
+
+    /**
+     * The activation a PRIMARY press produces on the grid surface: select the cell, pick a formula
+     * reference, or forward the empty-area pointer. Phase 7 extracted it from `click` so the touch
+     * tap can reuse exactly ONE implementation instead of a near copy (the touch path calls this
+     * and swallows the compatibility click that follows).
+     */
+    function activateCanvasPointer(rootElement, ev) {
+        const s = getState(rootElement);
+        const p = toContentPoint(rootElement, ev);
+        const hit = hitCell(rootElement, p);
+        if (hit) {
+            const cell = findCell(getState(rootElement)?.model, hit.row, hit.col);
+            const hyperlink = read(cell, "Hyperlink", null);
+            if (hyperlink && (ev.ctrlKey || ev.metaKey)) {
+                ev.preventDefault?.();
+                handleHyperlinkClick(rootElement, hyperlink);
+                return;
+            }
+
+            if (isFormulaPointMode(rootElement) && s.editor) {
+                if (isFormulaEditorSelfHit(rootElement, hit)) {
+                    ignoreFormulaEditorSelfHit(rootElement);
+                } else {
+                    beginFormulaReferenceDrag(rootElement, hit);
+                    endFormulaReferenceDrag(rootElement);
+                    s.editor.input.focus({ preventScroll: true });
+                }
+                ev.preventDefault?.();
+                return;
+            }
+
+            if (isFormulaPointMode(rootElement)) {
+                if (isExternalFormulaSelfHit(rootElement, hit)) {
+                    if (Number(ev.detail || 0) >= 2) {
+                        updateLocalActiveCell(rootElement, hit.row, hit.col, false, "pointer");
+                        openLocalEditor(rootElement, hit);
+                    }
+                    ev.preventDefault?.();
+                    return;
+                }
+                invokeDotNet(rootElement, "OnCanvasCellPointer", [hit.row, hit.col, !!ev.shiftKey, !!ev.ctrlKey], true).catch(() => {});
+                ev.preventDefault?.();
+                return;
+            }
+
+            closeLocalEditor(rootElement, true);
+            if (!isFormulaPointMode(rootElement)) {
+                updateLocalActiveCell(rootElement, hit.row, hit.col, !!ev.shiftKey, "pointer");
+                flushSelectionSettled(rootElement);
+            }
+            invokeDotNet(rootElement, "OnCanvasCellPointer", [hit.row, hit.col, !!ev.shiftKey, !!ev.ctrlKey], true).catch(() => {});
+            return;
+        }
+
+        if (isFormulaPointMode(rootElement) && s.editor) {
+            preserveFormulaEditorFocus(rootElement);
+            ev.preventDefault?.();
+            return;
+        }
+
+        invokeDotNet(rootElement, "OnCanvasPointer", [p.x, p.y, !!ev.shiftKey, !!ev.ctrlKey], true).catch(() => {});
+    }
+
     window.tmSpreadsheetCanvas.register = function (root, canvas, headerCanvas, selectionCanvas, dotNet) {
         if (!dotNet) {
             dotNet = selectionCanvas;
@@ -4941,6 +6317,17 @@ window.tmSpreadsheetCanvas = window.tmSpreadsheetCanvas || {};
             visibleLayoutCache: null,
             metrics: createDebugMetrics(),
             resize: null,
+            // Phase 7 touch state: the two shared-helper sessions, the DOM handle layer cache, the
+            // pending double-tap candidate and the pinch's start zoom (the model's Zoom lags a frame).
+            touch: null,
+            touchTapCandidate: null,
+            touchHandles: null,
+            pinchStartZoom: 1,
+            pinchLastZoom: 1,
+            touchClickGuard: null,
+            touchMenuHold: false,
+            pointerKindQuery: null,
+            pointerKindListener: null,
             listeners: []
         };
 
@@ -4990,6 +6377,8 @@ window.tmSpreadsheetCanvas = window.tmSpreadsheetCanvas || {};
         };
         const onWheel = ev => {
             if (!s.model) return;
+            // A wheel over an open dialog scrolls the dialog's own body, never the grid behind it.
+            if (isSpreadsheetOverlayTarget(ev.target)) return;
 
             // Ctrl + wheel zooms the grid; the zoom factor itself lives in .NET state.
             if (ev.ctrlKey || ev.metaKey) {
@@ -5022,10 +6411,18 @@ window.tmSpreadsheetCanvas = window.tmSpreadsheetCanvas || {};
             scheduleNativeScrollSync(root, 120);
             debounceViewportSyncAfterPaint(root, false, 120);
         };
+        const clearTouchHover = () => {
+            if (!getSheetHover(root)) return;
+            setSheetHover(root, null);
+            requestCanvasRedraw(root, "pointer", "selection");
+        };
         const updatePointerCursor = () => {
             s.pointerFrame = 0;
             const point = s.pointerPoint;
             if (!point) return;
+            // A hovering FINGER is meaningless (it is gone the moment it lands elsewhere) and the tint it
+            // leaves behind follows the last touch point around the grid.
+            if (s.pointerKind === "touch") return;
             if (s.resize) {
                 root.style.cursor = s.resize.kind === "column" ? "col-resize" : "row-resize";
                 return;
@@ -5044,6 +6441,7 @@ window.tmSpreadsheetCanvas = window.tmSpreadsheetCanvas || {};
         };
         const onPointerMove = ev => {
             s.pointerPoint = { clientX: ev.clientX, clientY: ev.clientY };
+            s.pointerKind = resolvePointerKind(ev.pointerType);
             if (s.resize) {
                 updateResizeSession(root, ev);
                 ev.preventDefault();
@@ -5085,7 +6483,11 @@ window.tmSpreadsheetCanvas = window.tmSpreadsheetCanvas || {};
                     setSelectionDrag(root, { row: possibleDrag.row, col: possibleDrag.col });
                     s.suppressClick = true;
                     safeSetPointerCapture(root, ev.pointerId);
-                    updateLocalActiveCell(root, possibleDrag.row, possibleDrag.col, false, "pointer");
+                    // A selection-handle drag keeps the existing anchor and only moves the END; a body
+                    // drag (mouse/pen only) re-anchors on the pressed cell first.
+                    if (!possibleDrag.fromSelectionHandle) {
+                        updateLocalActiveCell(root, possibleDrag.row, possibleDrag.col, false, "pointer");
+                    }
                     updateDragSelectionTarget(root, ev.clientX, ev.clientY);
                     updateDragAutoscroll(root, ev.clientX, ev.clientY, ev.pointerId);
                     ev.preventDefault();
@@ -5150,6 +6552,11 @@ window.tmSpreadsheetCanvas = window.tmSpreadsheetCanvas || {};
         };
         const onPointerDownWrapper = ev => {
             s.lastPointerButton = Number(ev.button || 0);
+            // A second finger belongs to the pinch, never to the canvas' single-pointer path.
+            if (resolvePointerKind(ev.pointerType) === "touch") {
+                if (ev.isPrimary === false) return;
+                clearTouchHover();
+            }
             if (ev.button !== 0) {
                 s.blockNextClick = true;
                 if (shouldGuardFormulaGesture(root)) {
@@ -5269,7 +6676,12 @@ window.tmSpreadsheetCanvas = window.tmSpreadsheetCanvas || {};
                 }
             }
 
-            if (s.model && !isFormulaPointMode(root) && !isFormatPainterActive(root) && hitAutoFillHandle(root, ev)) {
+            // Item 7: a finger that landed on the DOM fill box owns the fill drag even where the
+            // coordinate hit test (density/coarse sized) does not reach.
+            const touchFillHandle = readTouchHandleTarget(ev) === "fill"
+                && resolvePointerKind(ev.pointerType) === "touch";
+            if (s.model && !isFormulaPointMode(root) && !isFormatPainterActive(root)
+                && (hitAutoFillHandle(root, ev) || touchFillHandle)) {
                 beginAutoFillDrag(root, ev.pointerId);
                 safeSetPointerCapture(root, ev.pointerId);
                 ev.preventDefault();
@@ -5277,9 +6689,35 @@ window.tmSpreadsheetCanvas = window.tmSpreadsheetCanvas || {};
                 return;
             }
 
+            // Phase 7: a finger that grabbed a selection-handle marker starts a selection drag from the
+            // CURRENT anchor. The marker owns touch-action: none, so the browser cannot pan under it.
+            const touchHandle = readTouchHandleTarget(ev);
+            if (touchHandle && touchHandle !== "fill" && resolvePointerKind(ev.pointerType) === "touch") {
+                // A round corner drop extends the selection BY DRAGGING (Shift+arrow is the keyboard
+                // alternative, the Fill entries cover the fill), so a tap on it does nothing at all —
+                // it must never move the selection to the neighbouring cell under the drop.
+                const bounds = selectionBounds(getSelectionSnapshot(root));
+                setSelectionDrag(root, null);
+                setPossibleDrag(root, {
+                    row: bounds.endRow,
+                    col: bounds.endCol,
+                    clientX: ev.clientX,
+                    clientY: ev.clientY,
+                    fromSelectionHandle: touchHandle
+                });
+                s.suppressClick = true;
+                safeSetPointerCapture(root, ev.pointerId);
+                return;
+            }
+
             if (s.model && !isFormulaPointMode(root) && !isFormatPainterActive(root)) {
                 const hit = hitCell(root, toContentPoint(root, ev));
-                setPossibleDrag(root, hit ? { row: hit.row, col: hit.col, clientX: ev.clientX, clientY: ev.clientY } : null);
+                // Phase 7: a FINGER on a cell pans the grid (the browser scrolls) — the canvas only
+                // starts its own drag-select for a mouse/pen, or from a selection-handle marker above.
+                const canDragSelect = resolvePointerKind(ev.pointerType) !== "touch";
+                setPossibleDrag(root, hit && canDragSelect
+                    ? { row: hit.row, col: hit.col, clientX: ev.clientX, clientY: ev.clientY }
+                    : null);
             }
         };
         const onPointerUp = ev => {
@@ -5339,6 +6777,7 @@ window.tmSpreadsheetCanvas = window.tmSpreadsheetCanvas || {};
                 setPossibleDrag(root, null);
                 stopDragAutoscroll(root);
                 safeReleasePointerCapture(root, ev.pointerId);
+                if (resolvePointerKind(ev.pointerType) === "touch") clearTouchHover();
                 scheduleSelectionSync(root);
                 ev.preventDefault();
                 return;
@@ -5367,7 +6806,7 @@ window.tmSpreadsheetCanvas = window.tmSpreadsheetCanvas || {};
             ev.preventDefault();
         };
         const onKeyDown = ev => {
-            if (isEditableKeyTarget(ev.target)) return;
+            if (isEditableKeyTarget(ev.target) || isSpreadsheetOverlayTarget(ev.target)) return;
             if (s.editor) return;
             if (handleNavigationKey(root, ev)) return;
             handleCommandKey(root, ev);
@@ -5397,59 +6836,7 @@ window.tmSpreadsheetCanvas = window.tmSpreadsheetCanvas || {};
                 return;
             }
             if (s.resize) return;
-            const p = toContentPoint(root, ev);
-            const hit = hitCell(root, p);
-            if (hit) {
-                const cell = findCell(getState(root)?.model, hit.row, hit.col);
-                const hyperlink = read(cell, "Hyperlink", null);
-                if (hyperlink && (ev.ctrlKey || ev.metaKey)) {
-                    ev.preventDefault();
-                    handleHyperlinkClick(root, hyperlink);
-                    return;
-                }
-
-                if (isFormulaPointMode(root) && s.editor) {
-                    if (isFormulaEditorSelfHit(root, hit)) {
-                        ignoreFormulaEditorSelfHit(root);
-                    } else {
-                        beginFormulaReferenceDrag(root, hit);
-                        endFormulaReferenceDrag(root);
-                        s.editor.input.focus({ preventScroll: true });
-                    }
-                    ev.preventDefault();
-                    return;
-                }
-
-                if (isFormulaPointMode(root)) {
-                    if (isExternalFormulaSelfHit(root, hit)) {
-                        if (Number(ev.detail || 0) >= 2) {
-                            updateLocalActiveCell(root, hit.row, hit.col, false, "pointer");
-                            openLocalEditor(root, hit);
-                        }
-                        ev.preventDefault();
-                        return;
-                    }
-                    invokeDotNet(root, "OnCanvasCellPointer", [hit.row, hit.col, !!ev.shiftKey, !!ev.ctrlKey], true).catch(() => {});
-                    ev.preventDefault();
-                    return;
-                }
-
-                closeLocalEditor(root, true);
-                if (!isFormulaPointMode(root)) {
-                    updateLocalActiveCell(root, hit.row, hit.col, !!ev.shiftKey, "pointer");
-                    flushSelectionSettled(root);
-                }
-                invokeDotNet(root, "OnCanvasCellPointer", [hit.row, hit.col, !!ev.shiftKey, !!ev.ctrlKey], true).catch(() => {});
-                return;
-            }
-
-            if (isFormulaPointMode(root) && s.editor) {
-                preserveFormulaEditorFocus(root);
-                ev.preventDefault();
-                return;
-            }
-
-            invokeDotNet(root, "OnCanvasPointer", [p.x, p.y, !!ev.shiftKey, !!ev.ctrlKey], true).catch(() => {});
+            activateCanvasPointer(root, ev);
         };
         const onDblClick = ev => {
             if (root.dataset.readonly === "true") {
@@ -5535,7 +6922,11 @@ window.tmSpreadsheetCanvas = window.tmSpreadsheetCanvas || {};
             s.suppressClick = false;
             s.lastPointerButton = 0;
             const p = toContentPoint(root, ev);
-            invokeDotNet(root, "OnCanvasContextMenu", [p.x, p.y, ev.clientX, ev.clientY], true).catch(() => {});
+            // The SAME six arguments as the touch path: a JSInvokable call must match the C# signature
+            // exactly (a short args array throws and kills every later interop on the page).
+            const viewportHeight = Math.max(0, Number(window.innerHeight) || 0);
+            invokeDotNet(root, "OnCanvasContextMenu",
+                [p.x, p.y, ev.clientX, ev.clientY, "pointer", viewportHeight], true).catch(() => {});
         };
         const onCopy = ev => {
             if (!isJsEngine(root)) return;
@@ -5626,8 +7017,21 @@ window.tmSpreadsheetCanvas = window.tmSpreadsheetCanvas || {};
             s.resizeObserver.observe(root);
         }
 
+        // A theme flip is an attribute change, not a resize: without this watcher the canvas keeps the
+        // palette it built on the last resize (finding 18f08937, phase 7c).
+        s.themeObserver = observeLiveTheme(root);
+
+        // The state must be reachable through getState() BEFORE the phase-7 sessions attach: both read
+        // it (unlike the observable helpers below, which already had it).
         root[stateKey] = s;
         syncAccessibilityState(root, "immediate");
+
+        // Phase 7: the touch sessions (shared pointer-drag.js / pointer-gesture.js) and the pointer-kind
+        // observer. Both degrade gracefully — without the helpers the grid keeps its mouse path, and
+        // without matchMedia the Auto density simply keeps the first answer.
+        attachTouchGestures(root);
+        observePointerKind(root, dotNet);
+
         notifyViewport(root, true);
     };
 
@@ -5646,6 +7050,18 @@ window.tmSpreadsheetCanvas = window.tmSpreadsheetCanvas || {};
             root.removeEventListener(event, listener, options);
         }
         if (s.resizeObserver) s.resizeObserver.disconnect();
+        detachLiveTheme(s.themeObserver);
+        s.themeObserver = null;
+        try { s.touch?.detach?.(); } catch (e) { /* the helpers were never loaded */ }
+        s.touch = null;
+        disarmTouchReleaseClickGuard(root);
+        try {
+            if (s.pointerKindQuery && s.pointerKindListener) {
+                s.pointerKindQuery.removeEventListener("change", s.pointerKindListener);
+            }
+        } catch (e) { /* a media query without removeEventListener */ }
+        s.pointerKindQuery = null;
+        s.pointerKindListener = null;
         if (s.paintFrame) cancelAnimationFrame(s.paintFrame);
         if (s.syncFrame) cancelAnimationFrame(s.syncFrame);
         if (s.pointerFrame) cancelAnimationFrame(s.pointerFrame);
@@ -5776,6 +7192,9 @@ window.tmSpreadsheetCanvas = window.tmSpreadsheetCanvas || {};
                 const endRow = Number(read(selection, "EndRow", row)) || row;
                 const endCol = Number(read(selection, "EndCol", col)) || col;
                 const activeRef = read(payload, "ActiveCellRef", toCellRef(row, col));
+                // The header highlight follows the selection — including a programmatic move (name box,
+                // Find, MoveActiveCellByAsync, formula restore), which must not leave the old strip lit.
+                const beforeSelection = getSelectionSnapshot(root);
                 setSheetSelection(root, row, col, startRow, startCol, endRow, endCol);
                 write(model, "ActiveCellRef", activeRef);
                 write(model, "activeCellRef", activeRef);
@@ -5786,6 +7205,7 @@ window.tmSpreadsheetCanvas = window.tmSpreadsheetCanvas || {};
                 write(selectionModel, "EndCol", endCol);
                 write(model, "Selection", selectionModel);
                 const scrolled = ensureCellVisibleLocal(root, row, col);
+                addSelectionDirtyRectForChange(root, beforeSelection, getSelectionSnapshot(root));
                 syncEditorAccessibility(root);
                 syncAccessibilityState(root, false);
                 requestCanvasRedraw(root, "sync-selection", scrolled ? "full" : "selection");
@@ -6332,6 +7752,11 @@ window.tmSpreadsheetCanvas = window.tmSpreadsheetCanvas || {};
             Math.round(read(model, "ScrollTop", 0) * 100) / 100,
             Math.round(width),
             Math.round(height),
+            // The render scale is part of the layout: a pinch (or the status-bar slider) changes the zoom
+            // without touching the scroll position or the viewport size, and a cache hit would then paint
+            // the OLD row heights / column widths — text clipped at the pre-zoom widths and offset.
+            Math.round(positiveOr(read(model, "Zoom", 1), 1) * 1000) / 1000,
+            Math.round(positiveOr(read(model, "DensityRowScale", 1), 1) * 1000) / 1000,
             rowHeaderWidth,
             columnHeaderHeight,
             freezeRows,
@@ -6698,12 +8123,15 @@ window.tmSpreadsheetCanvas = window.tmSpreadsheetCanvas || {};
         const ctx = canvas.getContext("2d");
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
         resetContextState(ctx);
-        const dirtyRect = settings.forceFull ? null : unionRects(settings.dirtyRects, width, height);
-        if (dirtyRect) {
-            ctx.clearRect(dirtyRect.x, dirtyRect.y, dirtyRect.width, dirtyRect.height);
+        const rects = settings.forceFull ? [] : normalizeDirtyRects(settings.dirtyRects, width, height);
+        if (rects.length > 0) {
+            // Every dirty rect is cleared and the union of them clipped in ONE pass: the header highlight
+            // touches the old and the new row/column strip of a selection, which are usually far apart,
+            // and a single bounding rect between them would repaint (almost) the whole layer.
+            for (const rect of rects) ctx.clearRect(rect.x, rect.y, rect.width, rect.height);
             contextSave(ctx, s.metrics);
             ctx.beginPath();
-            ctx.rect(dirtyRect.x, dirtyRect.y, dirtyRect.width, dirtyRect.height);
+            for (const rect of rects) ctx.rect(rect.x, rect.y, rect.width, rect.height);
             contextClip(ctx, s.metrics);
             drawHeaders(ctx, root, model, s.palette || buildPalette(root), width, height);
             contextRestore(ctx, s.metrics);
@@ -6765,6 +8193,10 @@ window.tmSpreadsheetCanvas = window.tmSpreadsheetCanvas || {};
         const palette = s.palette || buildPalette(root);
         drawSelection(ctx, root, model, palette, width, height);
         if (clipped) contextRestore(ctx, s.metrics);
+        // Phase 7: the DOM touch handles follow the painted selection (grid coordinates) — they are
+        // real elements so `touch-action: none` can stop the browser panning under a finger that
+        // grabbed a handle; on a fine pointer CSS hides the whole layer.
+        syncTouchHandles(root, model);
         if (s.metrics) {
             s.metrics.selectionRedrawCount += 1;
             const elapsed = performance.now() - started;
@@ -6782,38 +8214,54 @@ window.tmSpreadsheetCanvas = window.tmSpreadsheetCanvas || {};
         const rowHeaderWidth = read(model, "RowHeaderWidth", 40);
         const columnHeaderHeight = read(model, "ColumnHeaderHeight", 20);
         const layout = getVisibleLayout(root, model, width, height);
+        // The LOCAL selection snapshot, not the model's copy: during a drag the model lags a frame and
+        // the header must highlight the same range the selection layer draws.
+        const highlight = resolveHeaderHighlight(getSelectionSnapshot(root));
 
-        setContextFillStyle(ctx, palette.elevated, metrics);
+        setContextFillStyle(ctx, palette.headerBg, metrics);
         ctx.fillRect(0, 0, width, columnHeaderHeight);
         ctx.fillRect(0, 0, rowHeaderWidth, height);
         setContextStrokeStyle(ctx, palette.border, metrics);
         ctx.strokeRect(0.5, 0.5, rowHeaderWidth - 0.5, columnHeaderHeight - 0.5);
 
-        setContextFont(ctx, "500 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace", metrics);
+        // The label scales with the density font scale (the token itself is untouched): 11px labels on
+        // a 28px Comfortable gutter would read cramped next to the 12.5pt cells.
+        setContextFont(ctx, resolveHeaderFont(palette.headerFont, getDensityScales(root).fontScale), metrics);
         setContextTextAlign(ctx, "center", metrics);
         setContextTextBaseline(ctx, "middle", metrics);
-        setContextFillStyle(ctx, palette.muted, metrics);
 
         for (const col of layout.columns) {
             const x = col.x;
             const w = col.width;
-            setContextFillStyle(ctx, palette.elevated, metrics);
+            const active = isHighlightedIndex(highlight.activeColumns, read(col, "Index", -1));
+            setContextFillStyle(ctx, active ? palette.headerActiveBg : palette.headerBg, metrics);
             ctx.fillRect(x, 0, w, columnHeaderHeight);
             setContextStrokeStyle(ctx, palette.border, metrics);
             ctx.strokeRect(Math.floor(x) + 0.5, 0.5, w, columnHeaderHeight - 0.5);
-            setContextFillStyle(ctx, palette.muted, metrics);
+            setContextFillStyle(ctx, active ? palette.headerActiveText : palette.headerText, metrics);
             ctx.fillText(col.label, x + w / 2, columnHeaderHeight / 2);
+            if (active) {
+                // The accent rail sits on the grid edge of the gutter, the way the reference marks the
+                // active column: the tint alone must not be the only signal (forced-colors, colour vision).
+                setContextFillStyle(ctx, palette.selectionBorder, metrics);
+                ctx.fillRect(Math.floor(x), columnHeaderHeight - 2, w, 2);
+            }
         }
 
         for (const row of layout.rows) {
             const y = row.y;
             const h = row.height;
-            setContextFillStyle(ctx, palette.elevated, metrics);
+            const active = isHighlightedIndex(highlight.activeRows, row.index);
+            setContextFillStyle(ctx, active ? palette.headerActiveBg : palette.headerBg, metrics);
             ctx.fillRect(0, y, rowHeaderWidth, h);
             setContextStrokeStyle(ctx, palette.border, metrics);
             ctx.strokeRect(0.5, Math.floor(y) + 0.5, rowHeaderWidth - 0.5, h);
-            setContextFillStyle(ctx, palette.muted, metrics);
+            setContextFillStyle(ctx, active ? palette.headerActiveText : palette.headerText, metrics);
             ctx.fillText(String(row.index + 1), rowHeaderWidth / 2, y + h / 2);
+            if (active) {
+                setContextFillStyle(ctx, palette.selectionBorder, metrics);
+                ctx.fillRect(rowHeaderWidth - 2, Math.floor(y), 2, h);
+            }
         }
     }
 
@@ -6936,8 +8384,10 @@ window.tmSpreadsheetCanvas = window.tmSpreadsheetCanvas || {};
         return metrics;
     }
 
-    function filterButtonRect(x, y, w, h) {
-        const size = Math.min(16, Math.max(11, h - 4), Math.max(0, w - 2));
+    function filterButtonRect(x, y, w, h, scale) {
+        // Comfortable raises the cap so the funnel stays a touch target on the taller header row.
+        const maxSize = Math.round(16 * (Number(scale) > 0 ? Number(scale) : 1));
+        const size = Math.min(maxSize, Math.max(11, h - 4), Math.max(0, w - 2));
         return { x: x + w - size - 1, y: y + (h - size) / 2, w: size, h: size };
     }
 
@@ -6970,7 +8420,7 @@ window.tmSpreadsheetCanvas = window.tmSpreadsheetCanvas || {};
             if (w <= 0 || h <= 0) continue;
             if (x + w < rowHeaderWidth || y + h < columnHeaderHeight || x > width || y > height) continue;
 
-            const btn = filterButtonRect(x, y, w, h);
+            const btn = filterButtonRect(x, y, w, h, getDensityScales(root).handleScale);
             if (btn.w <= 0 || btn.x < rowHeaderWidth || btn.y < columnHeaderHeight) continue;
 
             const active = !!read(filter, "Active", false);
@@ -6982,7 +8432,7 @@ window.tmSpreadsheetCanvas = window.tmSpreadsheetCanvas || {};
             ctx.strokeRect(btn.x + 0.5, btn.y + 0.5, btn.w - 1, btn.h - 1);
 
             // funnel glyph (triangle pointing down)
-            ctx.fillStyle = active ? "#ffffff" : palette.muted;
+            ctx.fillStyle = active ? palette.inverseText : palette.muted;
             const cx = btn.x + btn.w / 2;
             const cy = btn.y + btn.h / 2;
             ctx.beginPath();
@@ -6996,7 +8446,28 @@ window.tmSpreadsheetCanvas = window.tmSpreadsheetCanvas || {};
             ctx.fill();
             ctx.restore();
 
-            s.filterButtons.push({ col, x: btn.x, y: btn.y, w: btn.w, h: btn.h, active });
+            s.filterButtons.push({
+                col,
+                x: btn.x,
+                y: btn.y,
+                w: btn.w,
+                h: btn.h,
+                // Phase 7: the painted funnel is 11-22px; a finger gets the touch floor inside its
+                // own column and header gutter, while a fine pointer keeps the painted rect.
+                hit: resolveFilterButtonHitRect({
+                    rect: btn,
+                    coarse: read(model, "PointerCoarse", false) === true,
+                    // The funnel's own CELL is the box: its painted width is the column width (a merged
+                    // header cell's funnel is clamped to the merged box) and its top/height keep the
+                    // touch target on the row the funnel is drawn in. `colFrame` does not exist here —
+                    // reading it threw inside the rAF paint and killed every AutoFilter button
+                    // (phase 7d regression, pinned by the node funnel lane).
+                    boundsTop: y,
+                    boundsHeight: h,
+                    columnWidth: w
+                }),
+                active
+            });
         }
     }
 
@@ -7008,13 +8479,17 @@ window.tmSpreadsheetCanvas = window.tmSpreadsheetCanvas || {};
         const lx = ev.clientX - rect.left;
         const ly = ev.clientY - rect.top;
         for (const b of buttons) {
-            if (lx >= b.x && lx <= b.x + b.w && ly >= b.y && ly <= b.y + b.h) return b;
+            // The coarse-pointer hit rect (phase 7) may be larger than the painted funnel; a fine
+            // pointer keeps the painted rectangle it always had.
+            const hit = b.hit || { x: b.x, y: b.y, width: b.w, height: b.h };
+            if (lx >= hit.x && lx <= hit.x + hit.width && ly >= hit.y && ly <= hit.y + hit.height) return b;
         }
         return null;
     }
 
-    function validationDropButtonRect(x, y, w, h) {
-        const size = Math.min(16, Math.max(11, h - 4), Math.max(0, w - 2));
+    function validationDropButtonRect(x, y, w, h, scale) {
+        const maxSize = Math.round(16 * (Number(scale) > 0 ? Number(scale) : 1));
+        const size = Math.min(maxSize, Math.max(11, h - 4), Math.max(0, w - 2));
         return { x: x + w - size - 1, y: y + (h - size) / 2, w: size, h: size };
     }
 
@@ -7050,19 +8525,19 @@ window.tmSpreadsheetCanvas = window.tmSpreadsheetCanvas || {};
             if (w <= 8 || h <= 4) continue;
             if (x + w < rowHeaderWidth || y + h < columnHeaderHeight || x > width || y > height) continue;
 
-            const btn = validationDropButtonRect(x, y, w, h);
+            const btn = validationDropButtonRect(x, y, w, h, getDensityScales(root).handleScale);
             if (btn.w <= 0 || btn.x < rowHeaderWidth || btn.y < columnHeaderHeight) continue;
             s.validationDropButtons.push({ row, col, x: btn.x, y: btn.y, w: btn.w, h: btn.h });
 
             ctx.save();
-            ctx.fillStyle = palette.elevated ?? "#f5f5f5";
-            ctx.strokeStyle = palette.border ?? "#bbb";
+            ctx.fillStyle = palette.elevated;
+            ctx.strokeStyle = palette.border;
             ctx.lineWidth = 1;
             ctx.fillRect(btn.x + 0.5, btn.y + 0.5, btn.w - 1, btn.h - 1);
             ctx.strokeRect(btn.x + 0.5, btn.y + 0.5, btn.w - 1, btn.h - 1);
 
             // Down-arrow glyph
-            ctx.fillStyle = palette.muted ?? "#666";
+            ctx.fillStyle = palette.muted;
             const cx = btn.x + btn.w / 2;
             const cy = btn.y + btn.h / 2;
             ctx.beginPath();
@@ -7107,7 +8582,7 @@ window.tmSpreadsheetCanvas = window.tmSpreadsheetCanvas || {};
         const canvasHeight = root.clientHeight;
 
         ctx.save();
-        ctx.strokeStyle = "#e53935";
+        ctx.strokeStyle = palette.danger;
         ctx.lineWidth = 2;
 
         for (const ref of refs) {
@@ -7151,6 +8626,10 @@ window.tmSpreadsheetCanvas = window.tmSpreadsheetCanvas || {};
         const layout = getVisibleLayout(root, model, width, height);
         const rows = layout.rows;
         const columns = layout.columns;
+        // Comfortable draws a bigger fill handle: a 6px square is untouchable on a coarse pointer.
+        const handleScale = getDensityScales(root).handleScale || 1;
+        const handleSize = Math.round(6 * handleScale);
+        const handleInset = Math.round(4 * handleScale);
         const active = parseCellRef(read(model, "ActiveCellRef", "A1"));
         const selection = read(model, "Selection", {});
         const startRow = read(selection, "StartRow", active.row);
@@ -7174,19 +8653,18 @@ window.tmSpreadsheetCanvas = window.tmSpreadsheetCanvas || {};
             if (x + w < rowHeaderWidth || y + h < columnHeaderHeight || x > width || y > height || w <= 0 || h <= 0) return;
 
             if (drawFill && !formulaPoint) {
-                setContextFillStyle(ctx, palette.selectionFill, metrics);
-                ctx.fillRect(x, y, w, h);
+                fillRectWithAlpha(ctx, palette.selectionFill, palette.selectionFillAlpha, x, y, w, h, metrics);
             }
 
             if (drawActive) {
-                setContextStrokeStyle(ctx, palette.primary, metrics);
+                setContextStrokeStyle(ctx, palette.selectionBorder, metrics);
                 setContextLineWidth(ctx, 2, metrics);
                 ctx.strokeRect(Math.floor(x) + 1, Math.floor(y) + 1, Math.max(0, w - 2), Math.max(0, h - 2));
             }
 
             if (drawHandle) {
-                setContextFillStyle(ctx, palette.primary, metrics);
-                ctx.fillRect(x + w - 4, y + h - 4, 6, 6);
+                setContextFillStyle(ctx, palette.selectionBorder, metrics);
+                ctx.fillRect(x + w - handleInset, y + h - handleInset, handleSize, handleSize);
             }
         };
 
@@ -7212,7 +8690,7 @@ window.tmSpreadsheetCanvas = window.tmSpreadsheetCanvas || {};
                 const w = read(hoverCol, "Width", 0);
                 const h = read(hoverRow, "Height", 0);
                 if (x + w >= rowHeaderWidth && y + h >= columnHeaderHeight && x <= width && y <= height && w > 0 && h > 0) {
-                    setContextFillStyle(ctx, "rgba(148, 163, 184, 0.12)", metrics);
+                    setContextFillStyle(ctx, palette.hoverFill, metrics);
                     ctx.fillRect(x, y, w, h);
                 }
             }
@@ -7304,10 +8782,10 @@ window.tmSpreadsheetCanvas = window.tmSpreadsheetCanvas || {};
                     const h = read(rowFrame, "Height", 0);
                     if (x + w < rowHeaderWidth || y + h < columnHeaderHeight || x > width || y > height || w <= 0 || h <= 0) continue;
                     const isActive = searchHighlights.active === key;
-                    setContextFillStyle(ctx, isActive ? "rgba(245, 158, 11, 0.45)" : "rgba(250, 204, 21, 0.30)", metrics);
+                    setContextFillStyle(ctx, isActive ? palette.searchActiveFill : palette.searchMatchFill, metrics);
                     ctx.fillRect(x, y, w, h);
                     if (isActive) {
-                        setContextStrokeStyle(ctx, "rgb(217, 119, 6)", metrics);
+                        setContextStrokeStyle(ctx, palette.searchActiveStroke, metrics);
                         setContextLineWidth(ctx, 2, metrics);
                         ctx.strokeRect(Math.floor(x) + 1, Math.floor(y) + 1, Math.max(0, w - 2), Math.max(0, h - 2));
                     }
@@ -7358,7 +8836,7 @@ window.tmSpreadsheetCanvas = window.tmSpreadsheetCanvas || {};
         const rowHeaderWidth = layout.rowHeaderWidth;
         const columnHeaderHeight = layout.columnHeaderHeight;
 
-        setContextStrokeStyle(ctx, palette.subtle, metrics);
+        setContextStrokeStyle(ctx, palette.gridline, metrics);
         setContextLineWidth(ctx, 1, metrics);
         ctx.beginPath();
         const verticalLines = new Set();
@@ -7492,7 +8970,7 @@ window.tmSpreadsheetCanvas = window.tmSpreadsheetCanvas || {};
         }
 
         const font = getCanvasFont(root, style);
-        const fontSize = (Number(read(style, "FontSize", 10)) || 10) * getRenderZoom(root);
+        const fontSize = (Number(read(style, "FontSize", 10)) || 10) * getRenderScale(root);
         setContextFont(ctx, font, debugMetrics);
         setContextFillStyle(ctx, paint.foreColor || palette.text, debugMetrics);
         setContextTextBaseline(ctx, paint.verticalBaseline, debugMetrics);
@@ -7575,14 +9053,20 @@ window.tmSpreadsheetCanvas = window.tmSpreadsheetCanvas || {};
         return zoom > 0 ? zoom : 1;
     }
 
+    /** Zoom × the density font scale: the cell text follows the grid density (SP1). */
+    function getRenderScale(root) {
+        const fontScale = getDensityScales(root).fontScale || 1;
+        return getRenderZoom(root) * fontScale;
+    }
+
     function getCanvasFont(root, style) {
-        const zoom = getRenderZoom(root);
+        const scale = getRenderScale(root);
         const key = [
             read(style, "FontFamily", null) || "",
             read(style, "FontSize", 10),
             read(style, "Bold", false) ? 1 : 0,
             read(style, "Italic", false) ? 1 : 0,
-            zoom
+            scale
         ].join("|");
         const s = getState(root);
         const cache = s?.fontStringCache;
@@ -7591,7 +9075,7 @@ window.tmSpreadsheetCanvas = window.tmSpreadsheetCanvas || {};
             if (cached) return cached;
         }
 
-        const fontSize = (Number(read(style, "FontSize", 10)) || 10) * zoom;
+        const fontSize = (Number(read(style, "FontSize", 10)) || 10) * scale;
         const fontFamily = read(style, "FontFamily", null) || defaultCellFontFamily;
         const weight = read(style, "Bold", false) ? "700" : "400";
         const italic = read(style, "Italic", false) ? "italic " : "";
@@ -7627,7 +9111,7 @@ window.tmSpreadsheetCanvas = window.tmSpreadsheetCanvas || {};
         const hasHyperlink = !!read(cell, "Hyperlink", null);
         const paint = {
             backgroundColor: read(style, "BackgroundColor", null),
-            foreColor: hasHyperlink ? "#2563EB" : (read(style, "ForeColor", null) || palette.text),
+            foreColor: hasHyperlink ? palette.hyperlink : (read(style, "ForeColor", null) || palette.text),
             horizontalAlignValue,
             verticalAlignValue,
             horizontalAlign: horizontalAlign(horizontalAlignValue),
@@ -7775,4 +9259,164 @@ window.tmSpreadsheetCanvas = window.tmSpreadsheetCanvas || {};
         if (align === "center") return x - width / 2;
         return x;
     }
+
+    /** Whether the browser reports a coarse pointer; a media query cannot be answered server-side. */
+    window.tmSpreadsheetCanvas.isCoarsePointer = function () {
+        return isCoarsePointer();
+    };
+
+    /**
+     * The centre of a cell in the ROOT ELEMENT's coordinate space (what a Playwright
+     * `Locator.ClickAsync(Position)` needs), derived from the grid's own painted geometry: the header
+     * gutters, the logical scroll and the frozen panes all come from the frame, so a test never has to
+     * hardcode 40/20 and can never drift from the canvas after a density change. Returns {-1,-1} for a
+     * cell the grid does not know.
+     */
+    window.tmSpreadsheetCanvas.getCellCenter = function (root, row, col) {
+        const s = getState(root);
+        const model = s?.model;
+        if (!model || !Number.isFinite(Number(row)) || !Number.isFinite(Number(col))) {
+            return { x: -1, y: -1 };
+        }
+        const rowIndex = Number(row);
+        const colIndex = Number(col);
+        const rect = getCellScreenRect(root, rowIndex, colIndex);
+        if (rect) {
+            return {
+                x: Math.round(rect.x + rect.width / 2),
+                y: Math.round(rect.y + rect.height / 2)
+            };
+        }
+
+        // Outside the painted window the frame's own row/column frames still give the geometry
+        // (screenX/screenY apply the gutter, the frozen offset and the scroll).
+        const rowFrame = (read(model, "Rows", []) || []).find(entry => read(entry, "Index", -1) === rowIndex);
+        const colFrame = (read(model, "Columns", []) || []).find(entry => read(entry, "Index", -1) === colIndex);
+        if (!rowFrame || !colFrame) return { x: -1, y: -1 };
+        return {
+            x: Math.round(screenX(model, colFrame) + read(colFrame, "Width", 0) / 2),
+            y: Math.round(screenY(model, rowFrame) + read(rowFrame, "Height", 0) / 2)
+        };
+    };
+
+    /**
+     * The gutters the grid is actually laid out with (the component scaled them per density). E2E uses
+     * it to assert the painted geometry instead of assuming 40/20.
+     * <para>
+     * Returns NULL when the root has no engine state/model: a caller must fail loudly instead of
+     * silently measuring a 40/20 grid that the canvas never painted (getCellCenter returns {-1,-1} for
+     * the same reason).
+     * </para>
+     */
+    function resolveGridGutters(root) {
+        const model = getState(root)?.model;
+        if (!model) return null;
+        return {
+            rowHeaderWidth: read(model, "RowHeaderWidth", 40),
+            columnHeaderHeight: read(model, "ColumnHeaderHeight", 20),
+            density: String(read(model, "DensityResolved", "Compact")),
+            gutterScale: getDensityScales(root).gutterScale
+        };
+    }
+
+    window.tmSpreadsheetCanvas.getGridGutters = resolveGridGutters;
+
+    /**
+     * Focuses the grid ONLY when the focus has not moved into another control. The previous shape —
+     * an `isFocusOutside` probe followed by `ElementReference.FocusAsync` — is a TOCTOU race: the
+     * probe answers for the moment it runs, and the focus hop lands a few ms later, so a surface that
+     * took the focus in between (the host's context menu, which focuses its first entry from its own
+     * OnAfterRenderAsync in the same batch) lost it again and its ArrowDown / Home / End walk was dead
+     * (phase 7d). One synchronous check-and-focus cannot be overtaken.
+     */
+    window.tmSpreadsheetCanvas.focusGridUnlessFocusMovedAway = function (root) {
+        if (!root) return false;
+        let active = null;
+        try { active = document.activeElement; } catch (e) { return false; }
+        // Nothing focused, or the grid already owns it (or one of its own controls) → take it.
+        const insideGrid = !active || active === document.body || active === document.documentElement
+            || active === root || root.contains?.(active) === true;
+        if (!insideGrid) return false;
+        try { root.focus({ preventScroll: true }); } catch (e) { return false; }
+        return true;
+    };
+
+    /**
+     * Whether the document's focus currently sits on a control OUTSIDE this grid. The grid claims the
+     * focus after a canvas activation, but a render can land AFTER the user has already moved on (a
+     * command-log flush, the viewport sync that the grid's own focusout schedules). Yanking the focus
+     * back then blurs that control — the formula bar's name box resets its typed ref on blur and the
+     * Enter that should navigate is swallowed by the grid's key handling instead. `body`/`html` (nothing
+     * focused) count as "not outside", so the historical focusing behaviour is unchanged.
+     * <para>
+     * Kept for compatibility: a host integration may still call it, but the GRID no longer does — a probe
+     * followed by a separate `ElementReference.FocusAsync` hop is a TOCTOU race, so the component uses
+     * {@link window.tmSpreadsheetCanvas.focusGridUnlessFocusMovedAway}, which checks and focuses in one
+     * task (phase 7d).
+     * </para>
+     */
+    window.tmSpreadsheetCanvas.isFocusOutside = function (root) {
+        if (!root) return false;
+        let active = null;
+        try { active = document.activeElement; } catch (e) { return false; }
+        if (!active || active === document.body || active === document.documentElement) return false;
+        try {
+            return !(active === root || root.contains?.(active) === true);
+        } catch (e) {
+            return false;
+        }
+    };
+
+    /**
+     * Node-test seam for the PURE helpers (npm run test:spreadsheet loads this file in a `vm` sandbox):
+     * the palette the tokens produce, the density resolution and the header highlight ranges. The
+     * interaction surface stays the public functions above and is exercised by the E2E lane.
+     */
+    window.tmSpreadsheetCanvas._internals = {
+        buildPalette,
+        // Phase 7c: the live theme watcher and the engine state slot it mutates (the node lane drives
+        // the shipped MutationObserver wiring with a fake observer instead of a browser).
+        observeLiveTheme,
+        detachLiveTheme,
+        readDarkClassState,
+        stateKey,
+        getState,
+        resolveDensity,
+        resolveDensityFromModel,
+        resolveHeaderHighlight,
+        resolveHeaderStrips,
+        withAlpha,
+        isHighlightedIndex,
+        isEditableKeyTarget,
+        isSpreadsheetOverlayTarget,
+        // Phase 7: the pure touch gesture recognizer (tap / double tap / drag origin / long press /
+        // pinch zoom / hit areas). The sessions themselves are the shared core pointer helpers.
+        resolvePointerKind,
+        resolveTouchTap,
+        resolveTouchDragAction,
+        resolveLongPressAction,
+        resolvePinchZoom,
+        resolveCellInputMode,
+        resolveAutoFillHitSize,
+        resolveTouchHandleRects,
+        clipTouchHandleRect,
+        isCanvasShortcutCommand,
+        resolveFilterButtonHitRect,
+        // The funnel bookkeeping itself: drawFilterButtons aborts the whole content paint (it runs in a
+        // requestAnimationFrame) if it throws, so the node lane drives it with a stub 2D context.
+        drawFilterButtons,
+        // Phase 7b: the density gutter contract, the header font scale, the colour parser behind the
+        // OPAQUE dark active header and the live pointer-kind decision (only Auto follows the media
+        // query; an explicitly pinned density ignores it).
+        parseColor,
+        formatColor,
+        resolveColorToken,
+        resolveHeaderFont,
+        resolveContentPoint,
+        resolvePointerKindDensityDecision,
+        attachPointerKindListener,
+        // The engine getters are node-tested too: a root without a model must answer null/{ -1, -1 }
+        // instead of silently measuring a 40/20 grid the canvas never painted.
+        resolveGridGutters
+    };
 })();

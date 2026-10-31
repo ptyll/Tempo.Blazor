@@ -1,0 +1,534 @@
+using Microsoft.Playwright;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+
+namespace Tempo.Blazor.E2E.Chat;
+
+/// <summary>
+/// E2E for the TmChat layout &amp; mobile phase (FZE-8) on the /chat demo (WASM), section
+/// <c>chat-mobile-section</c>. The narrow-chat behaviors branch on the CHAT's own width
+/// (<c>@container tm-chat (width &lt; 640px)</c>), so they are verifiable on a desktop window via
+/// the demo's fixed-width panes:
+/// <list type="bullet">
+/// <item><c>chat-fill-pane</c> — <c>FillParent</c>: the chat is a flex child of a split row
+/// (grows/shrinks, <c>tm-chat--fill</c>).</item>
+/// <item><c>chat-thread-overlay-pane</c> — a ~340px chat: the open thread panel overlays the
+/// FULL width instead of squeezing the composer.</item>
+/// <item><c>chat-mobile-phone</c> — a 375px phone frame with a fake 56px bottom navigation: the
+/// composer is sticky and rests 56px above the phone bottom while the page scrolls, and on a
+/// coarse pointer the send button reaches the 44px touch target.</item>
+/// <item>FZE-13 — a fake <c>window.visualViewport</c> (AddInitScriptAsync) emulates the iOS
+/// on-screen keyboard: the opt-in <c>TrackVirtualKeyboard</c> lifts the sticky composer above
+/// the shrunken visual viewport, rescues the pinned scroller and undoes everything on close.</item>
+/// </list>
+/// Screenshots (375×812 and 1440×900, the DoD viewports) land in <c>__screenshots__/chat/</c>
+/// as NEW files for the phase-9 UX review.
+/// </summary>
+[TestClass]
+public class ChatLayoutMobileE2ETests : WasmTestBase
+{
+    private const string ChatPage = "/chat";
+    private const string Section = "[data-testid='chat-mobile-section']";
+    private const string FillPane = "[data-testid='chat-fill-pane']";
+    private const string OverlayPane = "[data-testid='chat-thread-overlay-pane']";
+    private const string Phone = "[data-testid='chat-mobile-phone']";
+
+    private readonly List<string> _clientErrors = [];
+
+    private async Task<IPage> OpenAsync(int width, int height, bool mobileEmulation = false)
+    {
+        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        {
+            ViewportSize = new ViewportSize { Width = width, Height = height },
+            Locale = "en-US",
+            IgnoreHTTPSErrors = true,
+            IsMobile = mobileEmulation,
+            HasTouch = mobileEmulation,
+        });
+        RegisterContext(context);
+        var page = await context.NewPageAsync();
+        page.PageError += (_, e) => { lock (_clientErrors) _clientErrors.Add("PAGEERROR: " + e); };
+        page.Console += (_, m) =>
+        {
+            if (m.Type == "error" && m.Text.Contains("Unhandled exception"))
+                lock (_clientErrors) _clientErrors.Add("CONSOLE: " + m.Text);
+        };
+        await page.GotoAsync($"{BaseUrl}{ChatPage}", new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
+        await WaitForAppReadyAsync(page);
+
+        var section = page.Locator(Section);
+        await section.ScrollIntoViewIfNeededAsync();
+        await section.WaitForAsync(new LocatorWaitForOptions { Timeout = 30000 });
+        await page.WaitForTimeoutAsync(500);
+        return page;
+    }
+
+    private static async Task AssertNoClientErrorsAsync(List<string> clientErrors)
+    {
+        lock (clientErrors)
+        {
+            Assert.IsTrue(clientErrors.Count == 0,
+                "Unhandled client-side errors occurred:\n" + string.Join("\n", clientErrors));
+        }
+    }
+
+    private static async Task SaveScreenshotAsync(IPage page, string fileName)
+    {
+        var dir = Path.Combine(FindRepoRoot().FullName, "tests", "Tempo.Blazor.E2E", "__screenshots__", "chat");
+        Directory.CreateDirectory(dir);
+        await page.ScreenshotAsync(new PageScreenshotOptions { Path = Path.Combine(dir, $"{fileName}.png"), FullPage = false });
+    }
+
+    private static DirectoryInfo FindRepoRoot()
+    {
+        var directory = new DirectoryInfo(AppContext.BaseDirectory);
+        while (directory is not null)
+        {
+            if (File.Exists(Path.Combine(directory.FullName, "TempoBlazor.slnx"))) return directory;
+            directory = directory.Parent;
+        }
+        throw new InvalidOperationException("Repository root was not found.");
+    }
+
+    // ── FillParent ───────────────────────────────────────────────────────────
+
+    [TestMethod]
+    [TestCategory("WASM")]
+    public async Task FillParent_ChatGrowsWithTheSplitPane()
+    {
+        var page = await OpenAsync(1440, 900);
+        var chat = page.Locator($"{FillPane} .tm-chat");
+        await chat.WaitForAsync(new LocatorWaitForOptions { Timeout = 30000 });
+
+        // The modifier class is on the root …
+        var classAttribute = await chat.GetAttributeAsync("class");
+        StringAssert.Contains(classAttribute, "tm-chat--fill", "FillParent must render the tm-chat--fill modifier");
+
+        // … and the chat fills the fixed-height split row (minus the side panel's share of the gap).
+        var split = await page.Locator(".chat-demo-split").BoundingBoxAsync();
+        var side = await page.Locator($"{FillPane} .chat-demo-side").BoundingBoxAsync();
+        var box = await chat.BoundingBoxAsync();
+        Assert.IsNotNull(split);
+        Assert.IsNotNull(side);
+        Assert.IsNotNull(box);
+        Assert.AreEqual(split!.Height, box!.Height, 2.0,
+            "the chat must stretch to the split row's height as a flex child");
+        // Exact flex math (the grid column width varies with the demo layout): the chat takes
+        // everything beside the fixed side panel and the flex gap.
+        Assert.AreEqual(split.Width - side!.Width - 16, box.Width, 4.0,
+            "the chat must take the free width beside the fixed side panel");
+
+        await SaveScreenshotAsync(page, "chat-fill-1440");
+        await AssertNoClientErrorsAsync(_clientErrors);
+    }
+
+    // ── Narrow chat: full-width thread overlay ───────────────────────────────
+
+    [TestMethod]
+    [TestCategory("WASM")]
+    public async Task NarrowChat_ThreadPanelOverlaysFullWidth()
+    {
+        var page = await OpenAsync(1440, 900);
+        var chat = page.Locator($"{OverlayPane} .tm-chat");
+        await chat.WaitForAsync(new LocatorWaitForOptions { Timeout = 30000 });
+
+        // Open the thread of the first message (the demo seeds a reply on "mob1").
+        var badge = page.Locator($"{OverlayPane} [data-testid='chat-thread-open-mob1']");
+        await badge.ScrollIntoViewIfNeededAsync();
+        await badge.ClickAsync();
+        var panel = page.Locator($"{OverlayPane} .tm-chat__thread-panel");
+        await panel.WaitForAsync(new LocatorWaitForOptions { Timeout = 15000 });
+
+        var chatBox = await chat.BoundingBoxAsync();
+        var panelBox = await panel.BoundingBoxAsync();
+        Assert.IsNotNull(chatBox);
+        Assert.IsNotNull(panelBox);
+        Assert.AreEqual(chatBox!.Width, panelBox!.Width, 2.0,
+            "on a narrow chat the panel overlays the whole width instead of squeezing the composer");
+        Assert.AreEqual(chatBox!.X, panelBox!.X, 2.0, "the overlay starts at the chat's left edge");
+
+        // The composer is NOT squeezed: it keeps its full width under the overlay.
+        var inputArea = await page.Locator($"{OverlayPane} .tm-chat__input-area").BoundingBoxAsync();
+        Assert.IsNotNull(inputArea);
+        Assert.AreEqual(chatBox!.Width, inputArea!.Width, 2.0);
+
+        await SaveScreenshotAsync(page, "chat-thread-overlay-narrow");
+        await AssertNoClientErrorsAsync(_clientErrors);
+    }
+
+    // ── Sticky composer above the bottom navigation ──────────────────────────
+
+    [TestMethod]
+    [TestCategory("WASM")]
+    public async Task PhoneFrame_ComposerSticksAboveTheBottomNavigation()
+    {
+        var page = await OpenAsync(1440, 900);
+        var phone = page.Locator(Phone);
+        await phone.ScrollIntoViewIfNeededAsync();
+
+        var composer = page.Locator($"{Phone} .tm-chat__input-area");
+        await composer.WaitForAsync(new LocatorWaitForOptions { Timeout = 30000 });
+
+        var phoneBox = await phone.BoundingBoxAsync();
+        Assert.IsNotNull(phoneBox);
+        var navTop = phoneBox!.Y + phoneBox.Height - 56; // the fake nav is 56px tall
+
+        // Scroll the phone page: the chat's box extends past the fold, so the sticky composer
+        // stays pinned 56px above the phone bottom (the --tm-chat-composer-offset) at every
+        // scroll position where the chat's own box is still below the fold.
+        await page.EvaluateAsync(
+            "sel => { document.querySelector(sel).querySelector('.chat-demo-phone__page').scrollTop = 300; }",
+            Phone);
+        await page.WaitForTimeoutAsync(300);
+        var pinned = await composer.BoundingBoxAsync();
+        Assert.IsNotNull(pinned);
+        Assert.AreEqual(navTop, pinned!.Y + pinned.Height, 8.0,
+            "the composer must stick 56px above the phone bottom while the page scrolls");
+
+        await page.EvaluateAsync(
+            "sel => { document.querySelector(sel).querySelector('.chat-demo-phone__page').scrollTop = 700; }",
+            Phone);
+        await page.WaitForTimeoutAsync(300);
+        var pinnedDeeper = await composer.BoundingBoxAsync();
+        Assert.IsNotNull(pinnedDeeper);
+        Assert.AreEqual(navTop, pinnedDeeper!.Y + pinnedDeeper.Height, 8.0,
+            "still pinned while the chat's box extends past the fold");
+
+        // Scrolled past the chat's end, the composer RESTS at the chat's bottom edge — a sticky
+        // element can never leave its containing block.
+        await page.EvaluateAsync(
+            "sel => { document.querySelector(sel).querySelector('.chat-demo-phone__page').scrollTop = 999999; }",
+            Phone);
+        await page.WaitForTimeoutAsync(300);
+        var chatBox = await page.Locator($"{Phone} .tm-chat").First.BoundingBoxAsync();
+        var resting = await composer.BoundingBoxAsync();
+        Assert.IsNotNull(chatBox);
+        Assert.IsNotNull(resting);
+        Assert.AreEqual(chatBox!.Y + chatBox.Height, resting!.Y + resting.Height, 8.0,
+            "once the chat's bottom is visible the composer rests at the chat's bottom edge");
+
+        // The thread overlay's reply row sticks like the composer: open the mob1 thread, scroll
+        // the phone page and the reply row pins to the SAME 56px offset the composer uses.
+        var phoneBadge = page.Locator($"{Phone} [data-testid='chat-thread-open-mob1']");
+        await phoneBadge.ScrollIntoViewIfNeededAsync();
+        await phoneBadge.ClickAsync();
+        var threadInputArea = page.Locator($"{Phone} .tm-chat__thread-input-area");
+        await threadInputArea.WaitForAsync(new LocatorWaitForOptions { Timeout = 15000 });
+        await page.EvaluateAsync(
+            "sel => { document.querySelector(sel).querySelector('.chat-demo-phone__page').scrollTop = 300; }",
+            Phone);
+        await page.WaitForTimeoutAsync(300);
+        var threadPinned = await threadInputArea.BoundingBoxAsync();
+        Assert.IsNotNull(threadPinned);
+        Assert.AreEqual(navTop, threadPinned!.Y + threadPinned.Height, 8.0,
+            "the thread overlay's reply row sticks 56px above the phone bottom too");
+
+        // On a wide chat (the a11y section card is ~800px on this viewport) the composer keeps
+        // today's static position — sticky is the narrow-chat behavior only.
+        var wideComposer = page.Locator("[data-testid='chat-a11y-section'] .tm-chat__input-area").First;
+        var widePosition = await wideComposer.EvaluateAsync<string>("el => getComputedStyle(el).position");
+        Assert.AreEqual("static", widePosition, "the desktop composer must not become sticky");
+
+        await SaveScreenshotAsync(page, "chat-mobile-phone-1440");
+        await AssertNoClientErrorsAsync(_clientErrors);
+    }
+
+    // ── 375×812 DoD viewport: coarse-pointer targets + sticky ────────────────
+
+    [TestMethod]
+    [TestCategory("WASM")]
+    public async Task MobileViewport_TouchTargetsAndStickyComposer()
+    {
+        var page = await OpenAsync(375, 812, mobileEmulation: true);
+
+        // The device emulation must actually report a coarse pointer, or the 44px assertion
+        // below would say nothing.
+        var coarse = await page.EvaluateAsync<bool>("matchMedia('(pointer: coarse)').matches");
+        Assert.IsTrue(coarse, "the 375×812 mobile-emulated context must report pointer: coarse");
+
+        var sendButton = page.Locator($"{Phone} .tm-chat__send-btn").First;
+        var minWidth = await sendButton.EvaluateAsync<string>("el => getComputedStyle(el).minWidth");
+        Assert.AreEqual("44px", minWidth, "the send button reaches the --tm-touch-target on coarse pointers");
+
+        // The per-message actions live in the collaboration chat (the phone chat binds no action
+        // handlers on purpose); the coarse-pointer rule is viewport-independent, so 375px is fine.
+        var action = page.Locator("[data-testid='chat-collab-section'] .tm-chat__action").First;
+        var actionMinHeight = await action.EvaluateAsync<string>("el => getComputedStyle(el).minHeight");
+        Assert.AreEqual("44px", actionMinHeight, "the per-message actions reach the touch target too");
+
+        // The action bar is IN THE FLOW on a coarse pointer: every action of the collaboration
+        // chats must lie INSIDE its own chat's box (the old floating bar could hang outside).
+        var actionsInsideChats = await page.EvaluateAsync<bool[]>(
+            """
+            () => [...document.querySelectorAll("[data-testid='chat-collab-section'] .tm-chat__action")]
+                .map(a => {
+                    const chat = a.closest('.tm-chat').getBoundingClientRect();
+                    const r = a.getBoundingClientRect();
+                    return r.top >= chat.top - 1 && r.bottom <= chat.bottom + 1
+                        && r.left >= chat.left - 1 && r.right <= chat.right + 1;
+                })
+            """);
+        Assert.IsTrue(actionsInsideChats.Length > 0, "the collaboration chats must render actions");
+        Assert.IsTrue(actionsInsideChats.All(inside => inside),
+            "every per-message action must lie inside its chat's box on a coarse pointer");
+
+        // The thread close button is a 28px icon on fine pointers — it reaches the target too.
+        var overlayBadge = page.Locator($"{OverlayPane} [data-testid='chat-thread-open-mob1']");
+        await overlayBadge.ScrollIntoViewIfNeededAsync();
+        await overlayBadge.ClickAsync();
+        var threadClose = page.Locator($"{OverlayPane} .tm-chat__thread-close");
+        await threadClose.WaitForAsync(new LocatorWaitForOptions { Timeout = 15000 });
+        var closeMinHeight = await threadClose.EvaluateAsync<string>("el => getComputedStyle(el).minHeight");
+        Assert.AreEqual("44px", closeMinHeight, "the thread close button reaches the touch target too");
+
+        // And the sticky composer is live on the phone width as well.
+        var composer = page.Locator($"{Phone} .tm-chat__input-area");
+        var position = await composer.EvaluateAsync<string>("el => getComputedStyle(el).position");
+        Assert.AreEqual("sticky", position);
+
+        await SaveScreenshotAsync(page, "chat-mobile-375x812");
+        await AssertNoClientErrorsAsync(_clientErrors);
+    }
+
+    // ── FZE-13: the virtual keyboard lifts the sticky composer above the visual viewport ──
+
+    /// <summary>
+    /// A fake <c>window.visualViewport</c> (an EventTarget with mutable height/offsetTop and the
+    /// remaining spec surface) injected before the app boots — the tracker and the rescue need
+    /// nothing else. The listeners receive real <c>Event</c> objects, the way the tracker would
+    /// see them from a browser.
+    /// </summary>
+    private const string FakeVisualViewportScript =
+        """
+        (() => {
+            const listeners = { resize: [], scroll: [] };
+            const vv = {
+                height: 812,
+                width: 375,
+                offsetTop: 0,
+                offsetLeft: 0,
+                pageTop: 0,
+                pageLeft: 0,
+                scale: 1,
+                addEventListener(type, fn) { (listeners[type] ??= []).push(fn); },
+                removeEventListener(type, fn) {
+                    const list = listeners[type] ?? [];
+                    const index = list.indexOf(fn);
+                    if (index >= 0) list.splice(index, 1);
+                },
+                __dispatch(type) { for (const fn of [...(listeners[type] ?? [])]) fn(new Event(type)); },
+            };
+            Object.defineProperty(window, 'visualViewport', { value: vv, configurable: true });
+            window.__fakeVisualViewport = vv;
+        })();
+        """;
+
+    // WHY the emulation: Playwright cannot open a real iOS on-screen keyboard, and neither
+    // Chromium nor WebKit shrink the LAYOUT viewport for one — the keyboard is an OS overlay, so
+    // the sticky containing block never moves and the bug cannot reproduce natively. The test
+    // therefore injects a fake visualViewport BEFORE the app boots (AddInitScriptAsync), then
+    // shrinks its height by 300px and dispatches a resize — exactly the event pair iOS reports
+    // when the keyboard opens (and reverses both when it closes).
+
+    [TestMethod]
+    [TestCategory("WASM")]
+    public async Task VirtualKeyboard_LiftsTheStickyComposerAboveTheVisualViewport()
+    {
+        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
+        {
+            ViewportSize = new ViewportSize { Width = 375, Height = 812 },
+            Locale = "en-US",
+            IgnoreHTTPSErrors = true,
+            IsMobile = true,
+            HasTouch = true,
+        });
+        RegisterContext(context);
+        await context.AddInitScriptAsync(FakeVisualViewportScript);
+        var page = await context.NewPageAsync();
+        page.PageError += (_, e) => { lock (_clientErrors) _clientErrors.Add("PAGEERROR: " + e); };
+        page.Console += (_, m) =>
+        {
+            if (m.Type == "error" && m.Text.Contains("Unhandled exception"))
+                lock (_clientErrors) _clientErrors.Add("CONSOLE: " + m.Text);
+        };
+        await page.GotoAsync($"{BaseUrl}{ChatPage}", new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
+        await WaitForAppReadyAsync(page);
+
+        var phone = page.Locator(Phone);
+        await phone.ScrollIntoViewIfNeededAsync();
+        var composer = page.Locator($"{Phone} .tm-chat__input-area");
+        await composer.WaitForAsync(new LocatorWaitForOptions { Timeout = 30000 });
+        var root = page.Locator($"{Phone} .tm-chat").First;
+
+        // A four-message seed never overflows the demo chat's definite-height list, so the
+        // keyboard-open scroll room (and with it the rescue) would have nothing to move: send a
+        // few messages first — each append re-pins the scroller to the bottom. Every send is
+        // awaited individually (the submit rides an async .NET round trip).
+        var phoneInput = page.Locator($"{Phone} .tm-chat__input");
+        for (var i = 1; i <= 3; i++)
+        {
+            var before = await page.EvaluateAsync<int>(
+                "sel => document.querySelector(sel)?.querySelectorAll('.tm-chat__messages > [data-message-id]').length ?? 0",
+                Phone);
+            await phoneInput.FillAsync($"Keyboard demo message {i}");
+            await phoneInput.PressAsync("Enter");
+            await page.WaitForFunctionAsync(
+                $"sel => (document.querySelector(sel)?.querySelectorAll('.tm-chat__messages > [data-message-id]').length ?? 0) > {before}",
+                Phone);
+        }
+
+        // Pin the composer first (the chat's box extends past the phone fold at scrollTop 300).
+        await page.EvaluateAsync(
+            "sel => { document.querySelector(sel).querySelector('.chat-demo-phone__page').scrollTop = 300; }",
+            Phone);
+        await page.WaitForFunctionAsync(
+            "sel => { const el = document.querySelector(sel)?.querySelector('.tm-chat__input-area'); return !!el && Math.abs(Number.parseFloat(getComputedStyle(el).bottom) - 56) < 2; }",
+            Phone);
+        var pinnedBefore = (await composer.BoundingBoxAsync())!;
+
+        // The keyboard "opens": the visual viewport loses 300px …
+        await page.EvaluateAsync("() => { const vv = window.__fakeVisualViewport; vv.height = 812 - 300; vv.__dispatch('resize'); }");
+        // … the tracker coalesces through requestAnimationFrame — wait for the knob, not a timeout.
+        await page.WaitForFunctionAsync(
+            "sel => (document.querySelector(sel)?.querySelector('.tm-chat')?.style.getPropertyValue('--tm-chat-keyboard-inset') ?? '') === '300px'",
+            Phone);
+
+        // … the runtime knob and the marker land on the chat root …
+        var inset = await root.EvaluateAsync<string>("el => el.style.getPropertyValue('--tm-chat-keyboard-inset')");
+        Assert.AreEqual("300px", inset, "the tracker writes the covered gap as the runtime knob");
+        var marker = await root.EvaluateAsync<bool>("el => el.hasAttribute('data-tm-keyboard-open')");
+        Assert.IsTrue(marker, "the keyboard-open marker is set");
+
+        // … the sticky composer rests ON the keyboard — the keyboard covers the 56px nav, so the
+        // open-keyboard rule takes max(nav, keyboard) = 300, NOT nav + keyboard = 356 …
+        var computedBottom = await composer.EvaluateAsync<double>("el => Number.parseFloat(getComputedStyle(el).bottom)");
+        Assert.AreEqual(300.0, computedBottom, 2.0,
+            "the composer rests on the keyboard: the open-keyboard rule takes the LARGER of the nav offset and the runtime inset");
+
+        // … the composer itself sits 244px higher (300 − 56; its bottom edge is inside the
+        // shrunken visual viewport, tolerance 2px) …
+        var pinnedOpen = (await composer.BoundingBoxAsync())!;
+        Assert.AreEqual(pinnedBefore.Y - 244, pinnedOpen.Y, 2.0,
+            "the sticky composer must follow the visual viewport when the keyboard opens");
+        Assert.IsTrue(pinnedOpen.Y + pinnedOpen.Height <= 812 - 300 + 2,
+            "the composer's bottom edge must stay inside the visual viewport (512px) + 2px tolerance");
+
+        // … and the PINNED scroller was rescued to the bottom, so the last message stays visible:
+        // the last message row rests above the stuck composer and inside the phone's viewport.
+        var rescued = await page.EvaluateAsync<bool>(
+            """
+            sel => {
+                const c = document.querySelector(sel).querySelector('.tm-chat__messages');
+                return c.scrollHeight - c.scrollTop - c.clientHeight <= 40;
+            }
+            """, Phone);
+        Assert.IsTrue(rescued, "a pinned viewport is re-landed at the bottom so the last message is visible");
+        var lastMessageVisible = await page.EvaluateAsync<bool>(
+            """
+            sel => {
+                const scope = document.querySelector(sel);
+                const container = scope.querySelector('.tm-chat__messages');
+                if (!container) return false;
+                const items = container.querySelectorAll(':scope > .tm-chat__item');
+                const last = items[items.length - 1];
+                if (!last) return false;
+                const composer = scope.querySelector('.tm-chat__input-area').getBoundingClientRect();
+                const r = last.getBoundingClientRect();
+                return r.bottom <= composer.top + 2 && r.top >= 0;
+            }
+            """, Phone);
+        Assert.IsTrue(lastMessageVisible,
+            "the rescued last message must rest above the stuck composer (bottom <= composer.Y + 2) and inside the viewport (Y >= 0)");
+
+        // The keyboard "closes": the inline knob and marker are REMOVED (back to the cascade —
+        // not zeroed inline) and the composer returns to its pinned place.
+        await page.EvaluateAsync("() => { const vv = window.__fakeVisualViewport; vv.height = 812; vv.__dispatch('resize'); }");
+        await page.WaitForFunctionAsync(
+            "sel => (document.querySelector(sel)?.querySelector('.tm-chat')?.style.getPropertyValue('--tm-chat-keyboard-inset') ?? '') === ''",
+            Phone);
+
+        var insetAfter = await root.EvaluateAsync<string>("el => el.style.getPropertyValue('--tm-chat-keyboard-inset')");
+        Assert.AreEqual(string.Empty, insetAfter, "the inline knob is removed when the keyboard closes");
+        var markerAfter = await root.EvaluateAsync<bool>("el => el.hasAttribute('data-tm-keyboard-open')");
+        Assert.IsFalse(markerAfter, "the marker is removed when the keyboard closes");
+        var pinnedClosed = (await composer.BoundingBoxAsync())!;
+        Assert.AreEqual(pinnedBefore.Y, pinnedClosed.Y, 2.0, "the composer returns to its pinned place");
+
+        await AssertNoClientErrorsAsync(_clientErrors);
+    }
+
+    // ── Narrow overlay: keyboard focus never lands on a covered element ──────
+
+    [TestMethod]
+    [TestCategory("WASM")]
+    public async Task NarrowOverlay_FocusFromTheThreadInput_StaysInThePanelOrLeavesTheChat()
+    {
+        var page = await OpenAsync(1440, 900);
+        var badge = page.Locator($"{OverlayPane} [data-testid='chat-thread-open-mob1']");
+        await badge.ScrollIntoViewIfNeededAsync();
+        await badge.ClickAsync();
+        var threadInput = page.Locator($"{OverlayPane} .tm-chat__thread-input");
+        await threadInput.WaitForAsync(new LocatorWaitForOptions { Timeout = 15000 });
+        await threadInput.FocusAsync();
+
+        // Tab / Shift+Tab from the thread reply input: the covered body and composer are
+        // visibility:hidden behind the full-width overlay, so focus must never land there — it
+        // either stays inside the panel or leaves the chat entirely.
+        foreach (var key in new[] { "Tab", "Shift+Tab", "Shift+Tab" })
+        {
+            await page.Keyboard.PressAsync(key);
+            var focusLocation = await page.EvaluateAsync<string>(
+                """
+                () => {
+                    const el = document.activeElement;
+                    if (!el || el === document.body) return 'outside';
+                    const chat = document.querySelector("[data-testid='chat-thread-overlay-pane'] .tm-chat");
+                    if (!chat.contains(el)) return 'outside';
+                    const panel = chat.querySelector('.tm-chat__thread-panel');
+                    return panel.contains(el) ? 'panel' : 'chat-other';
+                }
+                """);
+            Assert.IsTrue(focusLocation is "panel" or "outside",
+                $"after {key} focus must stay inside the panel or leave the chat, got '{focusLocation}'");
+        }
+    }
+
+    // ── 320×640 dark mode: no horizontal overflow, full-width overlay ────────
+
+    [TestMethod]
+    [TestCategory("WASM")]
+    public async Task Mobile320_DarkMode_NoHorizontalOverflow()
+    {
+        var page = await OpenAsync(320, 640, mobileEmulation: true);
+
+        // Flip the demo's theme the same way the real toggle does (data-theme on the root and
+        // every themed wrapper), then guard the flip actually landed.
+        await page.EvaluateAsync(
+            """
+            () => {
+                document.documentElement.setAttribute('data-theme', 'dark');
+                document.querySelectorAll('[data-theme]').forEach(el => el.setAttribute('data-theme', 'dark'));
+            }
+            """);
+        var theme = await page.EvaluateAsync<string>("() => document.documentElement.getAttribute('data-theme')");
+        Assert.AreEqual("dark", theme, "the dark-mode flip must have landed on the root");
+
+        // The whole page fits the 320px scrollport: no horizontal overflow anywhere (the chat is
+        // a size container — its intrinsic 360px fallback must never widen the page).
+        var scrollWidth = await page.EvaluateAsync<int>("() => document.documentElement.scrollWidth");
+        Assert.IsTrue(scrollWidth <= 320, $"documentElement.scrollWidth must be <= 320, got {scrollWidth}");
+
+        // The full-width thread overlay still covers the whole (now ~288px) chat.
+        var badge = page.Locator($"{OverlayPane} [data-testid='chat-thread-open-mob1']");
+        await badge.ScrollIntoViewIfNeededAsync();
+        await badge.ClickAsync();
+        var chatBox = await page.Locator($"{OverlayPane} .tm-chat").BoundingBoxAsync();
+        var panelBox = await page.Locator($"{OverlayPane} .tm-chat__thread-panel").BoundingBoxAsync();
+        Assert.IsNotNull(chatBox);
+        Assert.IsNotNull(panelBox);
+        Assert.AreEqual(chatBox!.Width, panelBox!.Width, 2.0,
+            "at 320px the overlay still covers the whole chat");
+
+        await SaveScreenshotAsync(page, "chat-mobile-320-dark");
+        await AssertNoClientErrorsAsync(_clientErrors);
+    }
+}

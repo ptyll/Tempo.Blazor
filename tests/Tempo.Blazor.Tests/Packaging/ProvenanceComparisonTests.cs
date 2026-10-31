@@ -223,9 +223,9 @@ public class ProvenanceComparisonTests
         // js/__tests__/overlay.test.mjs + overlay-lifecycle.test.mjs + layout-observer.test.mjs +
         // tm-sheet.test.mjs + tm-focus-trap.test.mjs + tm-editor-shell.test.mjs + tm-menu-nav.test.mjs + tm-toolbar.test.mjs + pointer-drag.test.mjs + scheduler-pointer.test.mjs +
         // rte-caret-bookmark.test.mjs + tm-user-zone.test.mjs + tm-splitter.test.mjs + data-table-resize.test.mjs + data-table-pin.test.mjs + data-table-menu-keys.test.mjs + data-table-grid-keys.test.mjs + tm-color-gradient.test.mjs + pointer-gesture.test.mjs +
-        // workflow-designer-pointer.test.mjs + dashboard-pointer.test.mjs + tm-dod-space-guard.test.mjs + tm-toolbar-file-button.test.mjs + gantt-scroll-link.test.mjs + gantt-pointer.test.mjs + gantt-virtual.test.mjs + gantt-virtual-session.test.mjs —
+        // workflow-designer-pointer.test.mjs + dashboard-pointer.test.mjs + tm-dod-space-guard.test.mjs + tm-toolbar-file-button.test.mjs + gantt-scroll-link.test.mjs + gantt-pointer.test.mjs + gantt-virtual.test.mjs + gantt-virtual-session.test.mjs + chat.test.mjs (FZE-5) —
         // the Node tests ship in the repo, never in the nupkg.
-        denominator.PackExcludedFiles.Should().Be(27);
+        denominator.PackExcludedFiles.Should().Be(28);
     }
 
     /// <summary>

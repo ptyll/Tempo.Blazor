@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
+using Tempo.Blazor.Abstractions.Layout;
 using Tempo.Blazor.Components.Spreadsheet.Models;
 
 namespace Tempo.Blazor.Components.Spreadsheet.Dialogs;
@@ -12,6 +13,8 @@ namespace Tempo.Blazor.Components.Spreadsheet.Dialogs;
 /// </summary>
 public partial class TmSpreadsheetRemoveDuplicatesDialog
 {
+    private readonly string _idSuffix = Guid.NewGuid().ToString("N")[..8];
+
     private readonly HashSet<int> _selected = [];
     private bool _hasHeader = true;
     private bool _caseSensitive;
@@ -31,6 +34,18 @@ public partial class TmSpreadsheetRemoveDuplicatesDialog
     /// <summary>Raised when the dialog is dismissed.</summary>
     [Parameter] public EventCallback OnClose { get; set; }
 
+    /// <summary>
+    /// The id of the element focus returns to on close — the host spreadsheet passes its grid root so
+    /// focus lands on the grid. Null falls back to the element focused before the dialog opened.
+    /// </summary>
+    [Parameter] public string? RestoreFocusTargetId { get; set; }
+
+    /// <summary>
+    /// The layout the dialog renders. <see cref="TmLayoutMode.Auto"/> follows the viewport scope; a
+    /// forced value pins the mode without measuring, so a test can render the mobile sheet.
+    /// </summary>
+    [Parameter] public TmLayoutMode LayoutMode { get; set; } = TmLayoutMode.Auto;
+
     private IReadOnlyList<int> Columns { get; set; } = [];
 
     protected override void OnParametersSet()
@@ -42,6 +57,12 @@ public partial class TmSpreadsheetRemoveDuplicatesDialog
             foreach (var c in Columns)
                 _selected.Add(c);
     }
+
+    /// <summary>The first column's checkbox, or null for an empty range (a null id is skipped by the trap).</summary>
+    private string? FirstColumnDomId => Columns.Count == 0 ? null : ColumnDomId(Columns[0]);
+
+    /// <summary>The per-instance checkbox id the dialog focuses on open (the first column).</summary>
+    private string ColumnDomId(int col) => $"spreadsheet-dedup-column-{_idSuffix}-{col}";
 
     private string ColumnLabel(int col)
     {
@@ -83,9 +104,4 @@ public partial class TmSpreadsheetRemoveDuplicatesDialog
 
     private Task Close() => OnClose.InvokeAsync();
 
-    private async Task OnKeyDown(KeyboardEventArgs e)
-    {
-        if (e.Key == "Escape")
-            await Close();
-    }
 }

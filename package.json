@@ -15,6 +15,7 @@
     "test:pdf-viewer": "node scripts/run-node-tests.mjs src/Tempo.Blazor.PdfViewer/wwwroot/js",
     "test:diagram-editor": "node scripts/run-node-tests.mjs src/Tempo.Blazor.DiagramEditor/wwwroot/js",
     "test:wireframe": "node scripts/run-node-tests.mjs src/Tempo.Blazor.Wireframe/wwwroot/js",
+    "test:spreadsheet": "node scripts/run-node-tests.mjs src/Tempo.Blazor.Spreadsheet/wwwroot/js",
     "test:document-editor": "node scripts/run-node-tests.mjs src/Tempo.Blazor.DocumentEditor/wwwroot/js/document-editor src/Tempo.Blazor.DocumentEditor/wwwroot/js/document-editor-canvas scripts",
     "test:document-editor-modules": "npm run test:document-editor"
   },

@@ -1,0 +1,13 @@
+{
+  "itemName": "SpreadsheetFillDirection",
+  "kind": "Enum",
+  "category": "Spreadsheet",
+  "description": "The direction of a fill that does not need the fill-handle drag (WCAG 2.5.7 Dragging Movements). Down copies the leading row of the selection downwards (Ctrl+D, Fill down), Right copies the leading column rightwards (Ctrl+R, Fill right); both run the same AutoFillCommand as the pointer drag, so a keyboard or single-pointer fill is one undo step. The fill-handle drag stays the fast path on a coarse pointer.",
+  "packageId": "Tempo.Blazor.Spreadsheet",
+  "namespace": "Tempo.Blazor.Components.Spreadsheet",
+  "sourcePath": "src/Tempo.Blazor.Spreadsheet/Components/Spreadsheet/SpreadsheetFillDirection.cs",
+  "documentationStatus": "generated",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.Spreadsheet"
+  ]
+}

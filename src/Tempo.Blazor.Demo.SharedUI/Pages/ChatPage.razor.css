@@ -1,0 +1,322 @@
+/* ChatPage — Layout & mobile section (FZE-8).
+   The knobs --tm-chat-composer-offset / --tm-chat-safe-area-bottom are deliberately NOT declared
+   by the library (a default on .tm-chat or :root would shadow a host override); the demo is a
+   consumer and declares them here, on the panes that consume them. FillParent needs no knob:
+   the tm-chat--fill modifier releases the floor itself. */
+
+/* FillParent pane: a flex row whose chat grows/shrinks beside a fixed side panel. ::deep because
+   the chat root is rendered by the TmChat component — a plain descendant selector would carry
+   ChatPage's scope and never match. */
+.chat-demo-split {
+  display: flex;
+  align-items: stretch;
+  gap: var(--tm-space-4);
+  height: 360px;
+}
+
+.chat-demo-side {
+  width: 160px;
+  flex-shrink: 0;
+  padding: var(--tm-space-3);
+  border: 1px dashed var(--tm-border-color);
+  border-radius: var(--tm-radius-lg);
+  display: flex;
+  align-items: center;
+}
+
+/* Narrow-chat pane: ~340px wide, i.e. below the 640px tm-chat container breakpoint, so the
+   full-width thread overlay is demonstrable on a desktop window. */
+.chat-demo-narrow {
+  width: 340px;
+  max-width: 100%;
+}
+
+/* Phone frame: a 375px-wide scrollport with a fake bottom navigation; the host offset knob is
+   the navigation's height, so the sticky composer stays above it while the page scrolls. */
+.chat-demo-phone {
+  position: relative;
+  width: 375px;
+  max-width: 100%;
+  height: 640px;
+  border: 1px solid var(--tm-border-color);
+  border-radius: var(--tm-radius-xl);
+  overflow: hidden;
+}
+
+.chat-demo-phone__page {
+  height: 100%;
+  overflow-y: auto;
+}
+
+/* Taller than the scrollport on purpose: the chat's box extends past the fold, which is what
+   makes the sticky composer observable. */
+.chat-demo-phone__content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--tm-space-4);
+  padding: var(--tm-space-4) var(--tm-space-4) 0;
+  min-height: 1600px;
+}
+
+/* ::deep for the same scope reason as above — the chat root is TmChat's element. The chat gets
+   a DEFINITE height (like a real host's flex pane would): a content-sized chat would grow with
+   the keyboard-open scroll room the tracker reserves under its messages and the room would
+   never materialize. The ONLY knob the demo declares is the composer offset: the fake
+   navigation below is 56px tall — the offset the sticky composer has to clear. */
+.chat-demo-phone__content ::deep .tm-chat {
+  --tm-chat-composer-offset: 56px;
+  height: 1300px;
+}
+
+.chat-demo-phone__filler {
+  margin: 0;
+  font-size: var(--tm-font-size-xs);
+  color: var(--tm-color-text-secondary);
+}
+
+.chat-demo-phone__nav {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  background: var(--tm-bg-surface);
+  border-top: 1px solid var(--tm-border-color);
+}
+
+.chat-demo-phone__nav-item {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--tm-space-1);
+  font-size: var(--tm-font-size-xs);
+  color: var(--tm-color-text-secondary);
+}
+
+/* ── Custom Templates (FZE-9) ───────────────────────────────────────────
+   Host-owned markup rendered INSIDE a TmChat MessageTemplate carries the PAGE's CSS scope, so
+   these plain classes apply; the TmChatBubble internals style themselves. */
+
+/* Connection banner (BannerContent slot): status colors flip with the theme because every token
+   is semantic. The offline variant swaps the dot + background only. */
+.chat-demo-conn {
+  display: flex;
+  align-items: center;
+  gap: var(--tm-space-2);
+  padding: var(--tm-space-2) var(--tm-space-3);
+  border: 1px solid var(--tm-border-color);
+  border-radius: var(--tm-radius-md);
+  font-size: var(--tm-font-size-xs);
+  color: var(--tm-color-text-secondary);
+}
+
+.chat-demo-conn--online {
+  background: var(--tm-color-success-subtle);
+  border-color: var(--tm-color-success-soft-border);
+}
+
+.chat-demo-conn--offline {
+  background: var(--tm-color-warning-subtle);
+  border-color: var(--tm-color-warning);
+}
+
+.chat-demo-conn__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: var(--tm-color-success);
+}
+
+.chat-demo-conn--offline .chat-demo-conn__dot {
+  background: var(--tm-color-warning);
+}
+
+.chat-demo-conn__text {
+  flex: 1;
+  min-width: 0;
+}
+
+/* The owner note under the composer (ComposerAddon slot). */
+.chat-demo-owner-note {
+  display: flex;
+  align-items: center;
+  gap: var(--tm-space-1);
+  margin: var(--tm-space-2) 0 0;
+  font-size: var(--tm-font-size-xs);
+  color: var(--tm-color-text-secondary);
+}
+
+/* Badges the template paints into TmChatBubble's Badge slot. */
+.chat-demo-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 var(--tm-space-2);
+  border-radius: var(--tm-radius-full);
+  font-size: var(--tm-font-size-xs);
+  line-height: 1.6;
+}
+
+.chat-demo-badge--pending {
+  background: var(--tm-color-info-subtle);
+  color: var(--tm-color-info-text);
+}
+
+.chat-demo-badge--queued {
+  background: var(--tm-bg-muted);
+  color: var(--tm-color-text-secondary);
+}
+
+.chat-demo-badge--price {
+  background: var(--tm-color-warning-subtle);
+  color: var(--tm-color-warning-text);
+}
+
+/* Notes rendered by the template. The queued countdown moved into the ChatDemoQueuedCountdown
+   child, which carries its own scoped stylesheet. */
+.chat-demo-note {
+  font-size: var(--tm-font-size-xs);
+  color: var(--tm-color-text-secondary);
+}
+
+/* Action buttons the template renders into TmChatBubble's Actions slot — the HOST owns the
+   buttons, so they are plain elements styled here, tokenized like everything else. */
+.chat-demo-bubble-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--tm-space-2);
+}
+
+.chat-demo-bubble-action {
+  border: 1px solid var(--tm-border-color);
+  border-radius: var(--tm-radius-md);
+  background: var(--tm-bg-surface);
+  color: var(--tm-color-text-secondary);
+  font-size: var(--tm-font-size-xs);
+  padding: var(--tm-space-0-5) var(--tm-space-3);
+  cursor: pointer;
+  transition: border-color var(--tm-transition-fast), color var(--tm-transition-fast);
+}
+
+.chat-demo-bubble-action:hover {
+  border-color: var(--tm-color-primary);
+  color: var(--tm-color-primary);
+}
+
+.chat-demo-bubble-action:focus-visible {
+  outline: 2px solid var(--tm-color-primary);
+  outline-offset: 2px;
+}
+
+/* Primary action (Approve, Unlock): a filled pill — the one affirmative step in the bubble. */
+.chat-demo-bubble-action--primary {
+  background: var(--tm-color-primary);
+  color: var(--tm-color-primary-contrast);
+  border-color: transparent;
+}
+
+.chat-demo-bubble-action--primary:hover {
+  background: var(--tm-color-primary-hover);
+  color: var(--tm-color-primary-contrast);
+  border-color: transparent;
+}
+
+/* Destructive action (Discard, Stop): danger text that deepens to a danger border on hover —
+   the closest existing danger tokens (no filled-danger surface is defined). */
+.chat-demo-bubble-action--danger {
+  color: var(--tm-color-danger-text);
+}
+
+.chat-demo-bubble-action--danger:hover {
+  border-color: var(--tm-color-danger);
+  color: var(--tm-color-danger-text);
+}
+
+/* 44px touch targets on coarse pointers (WCAG 2.5.8) — same rule the library applies to its
+   own .tm-chat__action buttons. */
+@media (pointer: coarse) {
+  .chat-demo-bubble-action {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
+
+/* Inline AI-draft editor (the template's Edit state). */
+.chat-demo-draft-editor {
+  display: flex;
+  flex-direction: column;
+  gap: var(--tm-space-2);
+  align-self: flex-end;
+  width: min(100%, 26rem);
+  padding: var(--tm-space-2);
+  border: 1px dashed var(--tm-border-color);
+  border-radius: var(--tm-radius-md);
+  background: var(--tm-bg-surface);
+}
+
+.chat-demo-draft-editor__input {
+  width: 100%;
+  resize: vertical;
+  border: 1px solid var(--tm-border-color);
+  border-radius: var(--tm-radius-md);
+  padding: var(--tm-space-2);
+  font-size: var(--tm-font-size-sm);
+  color: var(--tm-text-primary);
+  background: var(--tm-bg-surface);
+}
+
+/* TmChatBubble standalone showcase: a flex column, because align-self (the alignment contract)
+   only has an effect inside one. */
+.chat-demo-bubbles {
+  display: flex;
+  flex-direction: column;
+  gap: var(--tm-space-3);
+  max-width: 32rem;
+}
+
+/* ── Subscribe Gate (FZE-9) ──────────────────────────────────────────── */
+.chat-demo-gate {
+  display: flex;
+  flex-direction: column;
+  gap: var(--tm-space-2);
+  padding: var(--tm-space-3);
+  border: 1px dashed var(--tm-border-color);
+  border-radius: var(--tm-radius-md);
+  background: var(--tm-bg-muted);
+}
+
+.chat-demo-gate__title {
+  margin: 0;
+  font-size: var(--tm-font-size-sm);
+  font-weight: 600;
+  color: var(--tm-text-primary);
+}
+
+.chat-demo-gate__text {
+  margin: 0;
+  font-size: var(--tm-font-size-xs);
+  color: var(--tm-color-text-secondary);
+}
+
+.chat-demo-gate-composer {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--tm-space-2);
+}
+
+.chat-demo-gate-composer__input {
+  flex: 1;
+  min-width: 0;
+  min-height: 2.5rem;
+  max-height: 8rem;
+  resize: none;
+  border: 1px solid var(--tm-border-color);
+  border-radius: var(--tm-radius-md);
+  padding: var(--tm-space-2) var(--tm-space-3);
+  font-size: var(--tm-font-size-sm);
+  color: var(--tm-text-primary);
+  background: var(--tm-bg-surface);
+}

@@ -1,0 +1,33 @@
+{
+  "itemName": "TmDiagramStencilIcon",
+  "kind": "Component",
+  "category": "Diagram",
+  "description": "Public small stencil preview: renders the registered stencil's compact SVG (the same text-trimming pipeline the toolbox tiles use) for hosts that present stencils outside the toolbox — the Modeling \"Open in editor\" notation palette and the preview legend embed it instead of duplicating the icon markup. Always aria-hidden: the visible text label of the surrounding row/tile owns the accessible name. A stencil id the registry does not know renders the generic fallback shape.",
+  "packageId": "Tempo.Blazor.DiagramEditor",
+  "namespace": "Tempo.Blazor.Components.Diagram",
+  "sourcePath": "src/Tempo.Blazor.DiagramEditor/Components/Diagram/TmDiagramStencilIcon.razor",
+  "documentationStatus": "generated",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.Diagram"
+  ],
+  "parameters": [
+    {
+      "name": "Class",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Additional CSS class."
+    },
+    {
+      "name": "Size",
+      "type": "string?",
+      "isRequired": false,
+      "description": "CSS size of the icon box (applied to width and height). Default \"32px\" — the toolbox tile size."
+    },
+    {
+      "name": "StencilId",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Stencil id to preview. Null or unknown ids render the fallback shape."
+    }
+  ]
+}

@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.Components.Web;
 using Tempo.Blazor.Components.Spreadsheet.Data;
 using Tempo.Blazor.Components.Spreadsheet.Models;
+using Tempo.Blazor.Abstractions.Layout;
 
 namespace Tempo.Blazor.Components.Spreadsheet.Dialogs;
 
@@ -12,6 +12,8 @@ namespace Tempo.Blazor.Components.Spreadsheet.Dialogs;
 /// </summary>
 public partial class TmSpreadsheetSortDialog
 {
+    private readonly string _idSuffix = Guid.NewGuid().ToString("N")[..8];
+
     private readonly List<SpreadsheetSortLevel> _levels = [];
     private bool _hasHeader = true;
     private bool _caseSensitive;
@@ -24,6 +26,63 @@ public partial class TmSpreadsheetSortDialog
 
     /// <summary>Raised when the dialog is dismissed.</summary>
     [Parameter] public EventCallback OnClose { get; set; }
+
+    /// <summary>
+    /// The id of the element focus returns to on close — the host spreadsheet passes its grid root so
+    /// focus lands on the grid. Null falls back to the element focused before the dialog opened.
+    /// </summary>
+    [Parameter] public string? RestoreFocusTargetId { get; set; }
+
+    /// <summary>
+    /// The layout the dialog renders. <see cref="TmLayoutMode.Auto"/> follows the viewport scope; a
+    /// forced value pins the mode without measuring, so a test can render the mobile sheet.
+    /// </summary>
+    [Parameter] public TmLayoutMode LayoutMode { get; set; } = TmLayoutMode.Auto;
+
+    /// <summary>The viewport's layout, when the app provides a viewport-scope observer.</summary>
+    [CascadingParameter(Name = TmLayoutScopes.Viewport)] private TmLayoutContext? Viewport { get; set; }
+
+    /// <summary>
+    /// Whether the level editor presents as cards (the phone layout). A forced <see cref="LayoutMode"/>
+    /// wins; <see cref="TmLayoutMode.Auto"/> reads the app-level viewport scope and keeps the table when
+    /// the host provides no scope.
+    /// </summary>
+    private bool Mobile => LayoutMode switch
+    {
+        TmLayoutMode.Mobile => true,
+        TmLayoutMode.Auto => Viewport?.IsMobile == true,
+        _ => false
+    };
+
+    private string AddLevelDomId => $"spreadsheet-sort-add-level-{_idSuffix}";
+
+    private void OnLevelKeyChanged(int index, int? value)
+    {
+        if (value is int column && index >= 0 && index < _levels.Count)
+        {
+            _levels[index].KeyIndex = column;
+        }
+    }
+
+    private void OnLevelSortOnChanged(int index, SpreadsheetSortOn? value)
+    {
+        if (value is SpreadsheetSortOn sortOn && index >= 0 && index < _levels.Count)
+        {
+            _levels[index].SortOn = sortOn;
+        }
+    }
+
+    private void OnLevelDirectionChanged(int index, SpreadsheetSortDirection? value)
+    {
+        if (value is SpreadsheetSortDirection direction && index >= 0 && index < _levels.Count)
+        {
+            _levels[index].Direction = direction;
+        }
+    }
+
+    private void OnHasHeaderChanged(bool value) => _hasHeader = value;
+
+    private void OnCaseSensitiveChanged(bool value) => _caseSensitive = value;
 
     /// <summary>The selectable column keys (within the range).</summary>
     private IReadOnlyList<(int Index, string Label)> ColumnChoices { get; set; } = [];
@@ -71,9 +130,4 @@ public partial class TmSpreadsheetSortDialog
 
     private Task Close() => OnClose.InvokeAsync();
 
-    private async Task OnKeyDown(KeyboardEventArgs e)
-    {
-        if (e.Key == "Escape")
-            await Close();
-    }
 }

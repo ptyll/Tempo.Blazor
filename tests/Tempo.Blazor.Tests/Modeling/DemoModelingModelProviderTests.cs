@@ -164,4 +164,40 @@ public sealed class DemoModelingModelProviderTests
             ? value.GetString()
             : null;
     }
+
+    // ── Phase 12: ParentId demo data ──────────────────────────────────────────
+
+    [Fact]
+    public async Task Default_model_stays_flat()
+    {
+        // A model without ParentId must look and behave exactly as before (the Auto grouping
+        // keeps the SemanticType groups) — the default demo provider must not carry parents.
+        var provider = new DemoModelingModelProvider();
+
+        var model = await provider.GetModelAsync(new ModelingModelRequest(), CancellationToken.None);
+
+        model.Elements.Select(element => element.ParentId)
+            .Should().OnlyContain(parentId => string.IsNullOrEmpty(parentId));
+    }
+
+    [Fact]
+    public void Hierarchy_model_parents_the_order_activities_under_the_subprocess()
+    {
+        var model = DemoModelingModelProvider.CreateHierarchyModel();
+
+        var subprocess = model.Elements.Should().ContainSingle(element => element.Id == "bpmn-subprocess-fulfillment")
+            .Subject;
+        subprocess.SemanticType.Should().Be("subprocess");
+        // Declared FIRST so the container paints below its children in the generated diagram.
+        model.Elements[0].Id.Should().Be("bpmn-subprocess-fulfillment");
+        model.Elements
+            .Where(element => element.Id is "bpmn-start-order" or "bpmn-validate-order" or "bpmn-ship-order")
+            .Select(element => element.ParentId)
+            .Should().OnlyContain(parentId => parentId == "bpmn-subprocess-fulfillment");
+
+        // The subprocess takes part in the view as a plain node — the diagram nesting is NOT
+        // driven by element ParentId (the confirmed phase-12 generator decision).
+        model.Views[0].Nodes.Should().Contain(node => node.ElementId == "bpmn-subprocess-fulfillment");
+        model.Views[0].Nodes.Should().OnlyContain(node => node.ParentNodeId == null);
+    }
 }

@@ -98,6 +98,29 @@ The pack ships the themes `dark`, `indigo` (primary / info families from the cor
 
 The theme is ambient for the synchronous `RenderSvg` calls (`StencilThemeScope`, internal and async-local, because `WireframeComponentDef.RenderSvg` is the frozen contract between the registry and custom providers); a custom pack with its own `themes` table is themed through the same name, and a pack without that theme keeps its own defaults. `StencilTokenScope` stays internal. **Custom stencil packs: the scope is synchronous only** - it is async-local and wraps the synchronous `RenderSvg` call, so a render function must read the theme (through the pack tokens) without awaiting; an `await` inside it, or handing the work to another thread, would see whichever theme is ambient where it resumes. `RenderSvg` is a synchronous delegate, so a provider that follows its contract is safe by construction. Exports: the browser draws the SVG with the theme before it posts it, so the PNG / PDF server rasterises it as it is; `WireframeExportRequest.Theme` carries the resolved canonical name or `null` for the default tokens (informational: the server never re-themes the SVG; the demo API validates and logs it), and the headless `IWireframeSvgRenderer` / the demo preview endpoints (`?theme=`) resolve the same order (`RenderDocumentAsync` also uses the document `TargetTheme`). The demo passes `indigo` / `indigo-dark` / `dark` from its colour theme and dark mode. The MCP authoring guide documents the themes (`themes` block).
 
+## The `TmSpreadsheet` stencil draws every chrome layout
+
+`TmSpreadsheet` is a placeable native stencil (`TempoNativeRendererDefinitions.RenderSpreadsheet`). Like the diagram
+editor and the dashboard stencils it honours an additive **`layoutMode`** prop (`auto | desktop | tablet | mobile`,
+default `auto`, exposed in the inspector's *Behavior* group), so a design can show the tablet and phone chrome of the
+spreadsheet instead of only the desktop ribbon:
+
+| `layoutMode` | Chrome the stencil paints |
+|---|---|
+| `auto` (default; unknown values too) | the DESKTOP chrome — ribbon tab strip plus the labelled groups |
+| `desktop` | the same desktop chrome |
+| `tablet` | TWO compact command rows (`data-region="command-row"`, `data-row-count="2"`) with no tab strip, then the formula bar, the grid, the sheet tabs and the status bar |
+| `mobile` | the compact header, ONE command row, the formula bar, the grid, the sheet tabs and the core mobile action bar (Insert / Format / Image / More) instead of the status bar |
+
+`auto` renders the desktop variant on purpose: the stencil communicates the presentation a designer CHOSE, it never
+re-flows the canvas from the element's width (the X11 convention the diagram editor and dashboard stencils follow). The
+`showHeader` prop keeps its meaning on desktop and tablet; on the mobile variant the compact header REPLACES the
+document header, exactly like the component (the two are mutually exclusive there). The SVG carries `data-layout` on the
+variant group and a `data-region` on every chrome block (`header`, `mobile-header`, `ribbon-tabs`, `ribbon-groups`,
+`command-row`, `formula-bar`, `grid`, `sheet-tabs`, `status-bar`, `action-bar`), so a test or a host keys off the
+structure instead of pixels. Colours come from the shared stencil palette only, and the desktop variant is unchanged.
+Guarded by `WireframeSpreadsheetRendererTests`.
+
 ## Icons (phase 2)
 
 Toolbar, properties-panel, toolbox and page-tab controls render `TmIcon` (`IconNames.*`), never emoji or Unicode

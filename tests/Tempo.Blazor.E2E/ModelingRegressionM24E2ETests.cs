@@ -177,12 +177,18 @@ public sealed class ModelingRegressionM24E2ETests : WasmTestBase
     {
         var source = page.Locator($"[data-testid='modeling-tree-node-{elementId}']");
         var target = page.Locator("[data-testid='modeling-diagram-preview-canvas-shell']");
+        // The requested offsets were written against a wider preview column. The workspace now
+        // lays the panels out as cards with token gutters, so clamp every drop point INTO the
+        // visible canvas shell — a drop outside it would land on a neighbouring panel.
+        var box = await target.BoundingBoxAsync() ?? throw new InvalidOperationException("modeling diagram canvas shell is not visible");
+        var x = Math.Clamp(targetX, 24, Math.Max(24, box.Width - 24));
+        var y = Math.Clamp(targetY, 24, Math.Max(24, box.Height - 24));
         await source.DragToAsync(target, new LocatorDragToOptions
         {
             TargetPosition = new TargetPosition
             {
-                X = (float)targetX,
-                Y = (float)targetY
+                X = (float)x,
+                Y = (float)y
             },
             Timeout = 10000
         });

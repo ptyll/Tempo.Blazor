@@ -104,6 +104,23 @@ public sealed class ModelingElementDto
         set => _name = value ?? string.Empty;
     }
 
+    private string _parentId = string.Empty;
+
+    /// <summary>
+    /// Identifier of the parent element inside the model, when the element is hierarchically
+    /// contained (for example a BPMN subprocess or a UML package). Empty when the element is a
+    /// root. Additive in 2.10.0: drives the model tree's hierarchy view only — the diagram
+    /// generator never maps it onto <see cref="ModelingViewNodeDto.ParentNodeId"/> (diagram
+    /// nesting stays owned by the view). A value that does not resolve to another element of the
+    /// model is reported by the MCP validation (a <c>hierarchy</c> issue) and the element renders
+    /// at the tree root.
+    /// </summary>
+    public string ParentId
+    {
+        get => _parentId;
+        set => _parentId = value ?? string.Empty;
+    }
+
     /// <summary>Optional element description.</summary>
     public string Description
     {

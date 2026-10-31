@@ -1,0 +1,200 @@
+{
+  "itemName": "TmChatBubble",
+  "kind": "Component",
+  "category": "Chat",
+  "description": "Presentation chat bubble for hosts that build their own message rows (e.g. inside TmChat.MessageTemplate). Every visual property is driven by --tm-chat-bubble-* CSS custom properties so a host can restyle whole variant families from one knob; the library declares no knob defaults, so an override on a wrapper, on :root or on the bubble itself always wins. Dark mode needs no overrides because the defaults reference semantic tokens that flip in tokens-dark.css. Carries NO domain copy — all labels (draft, scheduled, price, discard reason) come from the host via slots. The root carries data-variant=\"{variant}\" for host hooks and tests.",
+  "packageId": "Tempo.Blazor",
+  "namespace": "Tempo.Blazor.Components.Chat",
+  "sourcePath": "src/Tempo.Blazor/Components/Chat/TmChatBubble.razor",
+  "documentationStatus": "authored",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.Chat"
+  ],
+  "cssClasses": [
+    "tm-chat-bubble",
+    "tm-chat-bubble--incoming",
+    "tm-chat-bubble--outgoing",
+    "tm-chat-bubble--system",
+    "tm-chat-bubble--pill",
+    "tm-chat-bubble--pending",
+    "tm-chat-bubble--queued",
+    "tm-chat-bubble--discarded",
+    "tm-chat-bubble--locked",
+    "tm-chat-bubble__meta",
+    "tm-chat-bubble__actor",
+    "tm-chat-bubble__meta-separator",
+    "tm-chat-bubble__time",
+    "tm-chat-bubble__badge",
+    "tm-chat-bubble__body",
+    "tm-chat-bubble__note",
+    "tm-chat-bubble__actions"
+  ],
+  "cssVariables": [
+    {
+      "name": "--tm-chat-bubble-in-bg",
+      "description": "Background of Incoming bubbles. Defaults to --tm-bg-muted."
+    },
+    {
+      "name": "--tm-chat-bubble-in-fg",
+      "description": "Text colour of Incoming bubbles. Defaults to --tm-color-text."
+    },
+    {
+      "name": "--tm-chat-bubble-in-border",
+      "description": "Border of Incoming bubbles (painted as a 1px inset ring on the built-in .tm-chat__bubble). Defaults to transparent."
+    },
+    {
+      "name": "--tm-chat-bubble-out-bg",
+      "description": "Background of Outgoing bubbles. Defaults to --tm-color-primary."
+    },
+    {
+      "name": "--tm-chat-bubble-out-fg",
+      "description": "Text colour of Outgoing bubbles. Defaults to --tm-color-primary-contrast."
+    },
+    {
+      "name": "--tm-chat-bubble-out-border",
+      "description": "Border of Outgoing bubbles. Defaults to transparent."
+    },
+    {
+      "name": "--tm-chat-bubble-system-bg",
+      "description": "Background of System rows and Pill bubbles. Defaults to --tm-bg-muted."
+    },
+    {
+      "name": "--tm-chat-bubble-system-fg",
+      "description": "Text colour of System rows and Pill bubbles. Defaults to --tm-color-text-secondary."
+    },
+    {
+      "name": "--tm-chat-bubble-system-border",
+      "description": "Border of System rows and Pill bubbles. Defaults to transparent."
+    },
+    {
+      "name": "--tm-chat-bubble-pending-bg",
+      "description": "Background of Pending bubbles (dashed border). Defaults to --tm-bg-surface-secondary."
+    },
+    {
+      "name": "--tm-chat-bubble-pending-fg",
+      "description": "Text colour of Pending bubbles. Defaults to --tm-color-text-secondary."
+    },
+    {
+      "name": "--tm-chat-bubble-pending-border",
+      "description": "Dashed border colour of Pending bubbles. Defaults to --tm-border-color-strong."
+    },
+    {
+      "name": "--tm-chat-bubble-queued-bg",
+      "description": "Background of Queued bubbles. Defaults to --tm-color-info-subtle."
+    },
+    {
+      "name": "--tm-chat-bubble-queued-fg",
+      "description": "Text colour of Queued bubbles. Defaults to --tm-color-info-text."
+    },
+    {
+      "name": "--tm-chat-bubble-queued-border",
+      "description": "Border colour of Queued bubbles. Defaults to --tm-color-info-soft-border."
+    },
+    {
+      "name": "--tm-chat-bubble-discarded-bg",
+      "description": "Background of Discarded bubbles. Defaults to --tm-bg-muted (flips to the visible dark muted surface in dark mode)."
+    },
+    {
+      "name": "--tm-chat-bubble-discarded-fg",
+      "description": "Text colour of Discarded bubbles. Defaults to --tm-color-text-secondary."
+    },
+    {
+      "name": "--tm-chat-bubble-discarded-border",
+      "description": "Border colour of Discarded bubbles. Defaults to --tm-border-color."
+    },
+    {
+      "name": "--tm-chat-bubble-locked-bg",
+      "description": "Background of Locked bubbles. Defaults to --tm-color-primary-subtle."
+    },
+    {
+      "name": "--tm-chat-bubble-locked-fg",
+      "description": "Text colour of Locked bubbles. Defaults to --tm-color-primary-text."
+    },
+    {
+      "name": "--tm-chat-bubble-locked-border",
+      "description": "Border colour of Locked bubbles. Defaults to --tm-color-primary-soft-border."
+    },
+    {
+      "name": "--tm-chat-bubble-radius",
+      "description": "Corner radius of a bubble. Defaults to --tm-radius-xl (the Pill is always --tm-radius-full)."
+    },
+    {
+      "name": "--tm-chat-bubble-padding",
+      "description": "Bubble padding. Defaults to calc(var(--tm-space-2-5) - var(--tm-border-width)) calc(var(--tm-space-3-5) - var(--tm-border-width)) — compensated for the always-painted 1px border. The Pill overrides it to calc(var(--tm-space-1) - var(--tm-border-width)) calc(var(--tm-space-3) - var(--tm-border-width))."
+    },
+    {
+      "name": "--tm-chat-bubble-max-width",
+      "description": "Width cap of a bubble. A standalone TmChatBubble defaults to 80%; the built-in .tm-chat__message row caps at the same default, so a value set on a wrapper or :root tightens the whole conversation. The Pill is always capped at 100%."
+    }
+  ],
+  "parameters": [
+    {
+      "name": "Variant",
+      "type": "ChatBubbleVariant",
+      "isRequired": false,
+      "default": "Incoming",
+      "description": "Visual variant. Incoming/Outgoing/System/Pill/Pending/Queued/Discarded/Locked each emit the tm-chat-bubble--{variant} modifier class plus data-variant; Pill shares the system colour set (it is the compact inline form of a system notice). Discarded renders the body as a semantic <del> element; Locked never renders ChildContent."
+    },
+    {
+      "name": "ActorLabel",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Author name shown at the start of the meta row, before the time and separated from it by a middle dot (\" · \"). Null renders no actor label."
+    },
+    {
+      "name": "Timestamp",
+      "type": "DateTimeOffset?",
+      "isRequired": false,
+      "description": "Message time. When set, the meta row renders a <time> element whose datetime attribute carries the machine-readable UTC instant (ISO 8601) and whose text is the local HH:mm label — the same format the built-in TmChat rows use."
+    },
+    {
+      "name": "StatusLabel",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Machine-readable status rendered FIRST inside the bubble as a visually-hidden span (tm-sr-only). The host MUST provide a visible Badge or a StatusLabel for Pending, Queued, Discarded and Locked: the surface alone does not name the state and the variant icon is decorative. Null renders no status span."
+    },
+    {
+      "name": "ShowVariantIcon",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "Whether Locked renders a decorative lock icon and Queued a decorative clock icon (TmIcon, aria-hidden) inside the badge area. A redundant visual cue only — pair it with a visible Badge or a StatusLabel. No effect on the other six variants."
+    },
+    {
+      "name": "Badge",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "Badge slot rendered above the body — a reason badge (\"AI draft\"), a price (\"19 Kč\"), a status chip. Rendered raw (the host owns the markup) and for every variant, including Locked."
+    },
+    {
+      "name": "Meta",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "Extra meta content rendered INSIDE the meta row, after the actor label and time — an \"edited\" tag, a countdown, a read receipt. The meta row renders whenever any of ActorLabel, Timestamp or Meta is set."
+    },
+    {
+      "name": "Note",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "Note rendered BELOW the body — the reason a message was discarded, a scheduling hint, a delivery state. Rendered raw; inherits the variant foreground so it stays as readable as the bubble text. Rendered for every variant, including Locked."
+    },
+    {
+      "name": "Actions",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "Action row rendered at the bottom of the bubble — Approve/Edit/Discard buttons, an unlock button, a Stop button. The host owns the buttons and their events; the component only lays the row out. Rendered for every variant, including Locked."
+    },
+    {
+      "name": "ChildContent",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "The bubble body. NOT rendered for Locked — locked content must not leak into the DOM even when the host passes it (render the price through Badge, the hint through Note and the unlock button through Actions instead). For Discarded the body element is a semantic <del>."
+    },
+    {
+      "name": "Class",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Additional CSS classes appended to the tm-chat-bubble root."
+    }
+  ]
+}

@@ -89,6 +89,20 @@ public partial class TmDiagramEditor
         || (IsMobileLayout && (Shows(DiagramToolbarGroups.Search) || ShowsReadOnlyToggle
             || MobileMinimapToggleAvailable)));
 
+    /// <summary>
+    /// The floating mobile zoom pill rule (Fáze 9). The explicit <see cref="ShowMobileZoomOverlay"/>
+    /// knob wins: <c>true</c> shows the pill on a mobile layout even chrome-less (a viewer keeps
+    /// zoom buttons), <c>false</c> never shows it, and the default <c>null</c> keeps today's rule —
+    /// mobile + <see cref="ShowToolbar"/> + the Zoom group. The pill is a mobile-band surface: the
+    /// docked bands keep the status-bar zoom.
+    /// </summary>
+    private bool ShowsMobileZoomOverlay => ShowMobileZoomOverlay switch
+    {
+        true => IsMobileLayout,
+        false => false,
+        _ => IsMobileLayout && ShowToolbar && Shows(DiagramToolbarGroups.Zoom),
+    };
+
     /// <summary>Whether the status bar region renders.</summary>
     private bool ShowsStatusBar => ShowToolbar && ShowStatusBar
         && (Shows(DiagramToolbarGroups.Zoom) || ShowsReadOnlyToggle);
@@ -97,10 +111,26 @@ public partial class TmDiagramEditor
     private bool ShowsHeaderControls => ShowToolbar;
 
     /// <summary>
-    /// Whether the header bar region renders at all: the built-in controls, or a host slot
-    /// (an empty shell bar must not stay behind when <see cref="ShowToolbar"/> is false).
+    /// Whether the header bar region renders at all: built-in controls that actually paint, or a
+    /// host slot (an empty shell bar must not stay behind). Final UX review (M1): with
+    /// <see cref="ShowToolbar"/> true but NO content — a Zoom-only toolbar with no title and no
+    /// host slots, e.g. the Modeling preview — the bar is skipped entirely instead of painting a
+    /// dead row above the command row.
     /// </summary>
-    private bool ShowsHeaderBar => ShowsHeaderControls || HeaderStart is not null || HeaderActions is not null;
+    private bool ShowsHeaderBar => HeaderStart is not null || HeaderActions is not null
+        || (ShowsHeaderControls && ShowsHeaderBarContent);
+
+    /// <summary>Whether the header bar paints any BUILT-IN control: the title input, the mobile
+    /// history pair, the search toggle, the named panel toggles (only when a panel exists to
+    /// toggle) or the "⋯" view menu.</summary>
+    private bool ShowsHeaderBarContent => ShowTitle
+        || (IsMobileLayout && Shows(DiagramToolbarGroups.History))
+        || (!IsMobileLayout && (Shows(DiagramToolbarGroups.Search)
+            || (Shows(DiagramToolbarGroups.Panels) && HeaderPanelTogglesAvailable)))
+        || ShowsViewMenu;
+
+    /// <summary>Whether any named panel toggle would paint inside the header bar's panels group.</summary>
+    private bool HeaderPanelTogglesAvailable => ShowToolbox || ShowPropertiesPanel || ShowLayersPanel || ShowMinimap;
 
     // ── Inspector state (DI2) ────────────────────────────────────────────────
 

@@ -2,7 +2,7 @@
   "itemName": "TmSpreadsheetFormulaBar",
   "kind": "Component",
   "category": "Spreadsheet",
-  "description": "Displays the active cell reference and provides an input for editing cell values and formulas. Synchronizes bidirectionally with the active cell in the spreadsheet grid.",
+  "description": "Displays the active cell reference and provides an input for editing cell values and formulas. The fx mark is a permanent part of the bar, the name box offers the workbook's named ranges, and while the bar is editing it exposes the ✓ commit and ✗ revert buttons with localized accessible names. Synchronizes bidirectionally with the active cell in the spreadsheet grid.",
   "packageId": "Tempo.Blazor.Spreadsheet",
   "namespace": "Tempo.Blazor.Components.Spreadsheet",
   "sourcePath": "src/Tempo.Blazor.Spreadsheet/Components/Spreadsheet/TmSpreadsheetFormulaBar.razor",
@@ -76,6 +76,12 @@
       "type": "EventCallback<string?>",
       "isRequired": false,
       "description": "Called when the user commits a value from the formula bar."
+    },
+    {
+      "name": "NamedRanges",
+      "type": "IReadOnlyList<SpreadsheetNamedRange>?",
+      "isRequired": false,
+      "description": "The workbook's named ranges, offered as a dropdown list next to the name box. When the list is empty the chevron is not rendered and the name box stays the plain A1 input; selecting an entry raises OnNavigateToRef with the range name."
     }
   ]
 }

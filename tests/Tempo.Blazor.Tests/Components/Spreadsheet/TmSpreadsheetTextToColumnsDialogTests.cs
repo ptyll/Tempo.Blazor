@@ -45,7 +45,7 @@ public class TmSpreadsheetTextToColumnsDialogTests : LocalizationTestBase
         semicolon.Change(true);
 
         // Preview now splits into 3 columns → each preview row has 3 cells.
-        var firstRowCells = cut.FindAll(".tm-spreadsheet-t2c__preview-table tr")[0].QuerySelectorAll("td");
+        var firstRowCells = cut.FindAll(".tm-spreadsheet-t2c__preview-table tbody tr")[0].QuerySelectorAll("td");
         firstRowCells.Length.Should().Be(3);
         cut.Markup.Should().Contain("Novak");
     }

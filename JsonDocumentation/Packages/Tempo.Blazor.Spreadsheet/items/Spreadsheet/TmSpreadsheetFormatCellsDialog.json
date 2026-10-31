@@ -2,7 +2,7 @@
   "itemName": "TmSpreadsheetFormatCellsDialog",
   "kind": "Component",
   "category": "Spreadsheet",
-  "description": "Excel-style \"Format Cells\" dialog for editing the style of the selected spreadsheet cells. Presents Number, Alignment, Font, Border, and Fill tabs with a live preview, and raises OnApply with the resulting SpreadsheetCellStyle.",
+  "description": "The Format Cells dialog on the core TmModal frame: five tabs (Number, Alignment, Font, Border, Fill). On the Number tab the category is a keyboard-operable listbox on desktop/tablet and a core TmSelect above the options on a phone; decimal places use the core TmNumberInput stepper and the live preview is aligned like the format (numeric right, text left). The Border tab paints the package's registered tm-ss-border-* SVG icons, never Unicode box glyphs. Ctrl+Enter applies.",
   "packageId": "Tempo.Blazor.Spreadsheet",
   "namespace": "Tempo.Blazor.Components.Spreadsheet",
   "sourcePath": "src/Tempo.Blazor.Spreadsheet/Components/Spreadsheet/TmSpreadsheetFormatCellsDialog.razor",
@@ -28,6 +28,18 @@
       "type": "EventCallback",
       "isRequired": true,
       "editorRequired": true
+    },
+    {
+      "name": "RestoreFocusTargetId",
+      "type": "string",
+      "isRequired": false,
+      "description": "The id of the element focus returns to on close — the host spreadsheet passes its grid root so focus lands on the grid. Null falls back to the element focused before the dialog opened."
+    },
+    {
+      "name": "LayoutMode",
+      "type": "TmLayoutMode",
+      "isRequired": false,
+      "description": "The layout the dialog renders. Auto follows the viewport scope (a sheet on the narrow one); a forced value pins the mode without measuring, so a test can render the mobile sheet without a DOM."
     }
   ]
 }

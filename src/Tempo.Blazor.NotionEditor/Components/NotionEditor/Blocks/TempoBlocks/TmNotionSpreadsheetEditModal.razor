@@ -16,9 +16,14 @@
     {
         @if (SpreadsheetComponentType is not null)
         {
-            <DynamicComponent @ref="_spreadsheetRef"
-                              Type="SpreadsheetComponentType"
-                              Parameters="SpreadsheetEditorParameters" />
+            @* The wrapper is an element THIS component owns: a class passed to the child lands on the child's
+               root with the child's scope id, so a scoped rule for it here would never match (the dead
+               .tm-notion-spreadsheet-edit-modal__editor rule this replaces). *@
+            <div class="tm-notion-spreadsheet-edit-modal__editor">
+                <DynamicComponent @ref="_spreadsheetRef"
+                                  Type="SpreadsheetComponentType"
+                                  Parameters="SpreadsheetEditorParameters" />
+            </div>
         }
         else
         {

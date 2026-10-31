@@ -9,7 +9,8 @@
 @inject ILogger<TmModal> Logger
 @inject ILogger<OverlayLayout> LayoutLogger
 
-@if (Show && Viewport is null && LayoutMode == TmLayoutMode.Auto && MobilePresentation == MobilePresentation.Auto)
+@if (Show && Viewport is null && LayoutMode == TmLayoutMode.Auto
+    && MobilePresentation is MobilePresentation.Auto or MobilePresentation.AutoFullscreen)
 {
     @* No viewport scope: measure the fixed overlay itself, so the first frame is not stuck on the
        initial mode. The probe is an internal component, so it is opened from C# — a tag in markup
@@ -33,12 +34,16 @@
                           Active="@(_gate?.ScopeActive == true)"
                           NoteOpenerOnMount="true"
                           Class="@ScopeClass"
+                          DialogRole="@DialogRole"
                           AriaLabelledBy="@_titleId"
+                          AriaDescribedBy="@EffectiveAriaDescribedBy"
                           CloseOnEscape="CloseOnEscape"
                           OnEscape="HandleEscape"
+                          RestoreFocus="@RestoreFocus"
                           RestoreFocusTarget="RestoreFocusTarget"
                           RestoreFocusTargetId="@RestoreFocusTargetId"
-                          InitialFocusTargetId="@InitialFocusTargetId">
+                          InitialFocusTargetId="@InitialFocusTargetId"
+                          InitialFocusSelector="@InitialFocusSelector">
                 
                 @if (IsSheet && CloseOnOverlayClick)
                 {
@@ -62,12 +67,27 @@
                         }
                         @if (!string.IsNullOrEmpty(Subtitle))
                         {
-                            <p class="tm-modal-subtitle">@Subtitle</p>
+                            <p id="@_subtitleId" class="tm-modal-subtitle">@Subtitle</p>
                         }
                     </div>
+                    @if (HeaderActions is not null)
+                    {
+                        @* Fáze 10: a slot for host actions in the header row — e.g. a text "Close"
+                           button replacing the icon-only close on a dialog presentation. Rendered
+                           BETWEEN the header content and the built-in close button, inside the
+                           focus scope, so the trap covers it. Null (default) keeps today's DOM. *@
+                        <div class="tm-modal-header-actions">
+                            @HeaderActions
+                        </div>
+                    }
                     @if (ShowCloseButton)
                     {
-                        <button type="button"
+                        @* The splat goes FIRST so the built-in type/class/@onclick/aria-label win
+                           over a host-supplied attribute of the same name (last write wins in
+                           Blazor); a host splat may only ADD attributes (a test id, a focus hook).
+                        *@
+                        <button @attributes="CloseButtonAdditionalAttributes"
+                                type="button"
                                 class="tm-modal-close"
                                 @onclick="OnClose"
                                 aria-label="@Loc["TmModal_Close"]">
@@ -132,8 +152,12 @@
 
     /// <summary>
     /// How the modal presents on a narrow viewport. <see cref="MobilePresentation.Auto"/> follows the
-    /// viewport scope: a sheet on mobile, a dialog otherwise. A forced value renders that
-    /// presentation without measuring, so a test can render it without a DOM.
+    /// viewport scope: a sheet on mobile, a dialog otherwise.
+    /// <see cref="MobilePresentation.AutoFullscreen"/> is the same choice for a TALL surface (a tabbed
+    /// form, a table, a preview): a fullscreen panel on mobile, the centred dialog otherwise, because a
+    /// sheet would clip it. A forced <see cref="MobilePresentation.Sheet"/>,
+    /// <see cref="MobilePresentation.Fullscreen"/> or <see cref="MobilePresentation.Dialog"/> renders
+    /// that presentation without measuring, so a test can render it without a DOM.
     /// </summary>
     [Parameter] public MobilePresentation MobilePresentation { get; set; } = MobilePresentation.Auto;
 
@@ -158,6 +182,25 @@
     [Parameter] public bool Animated { get; set; } = true;
     
     [Parameter] public bool ShowCloseButton { get; set; } = true;
+
+    /// <summary>
+    /// Extra content rendered in the header row, between the header content and the built-in close
+    /// button, wrapped in <c>.tm-modal-header-actions</c>. The typical use is a host-styled close
+    /// affordance — e.g. a text <c>TmButton</c> "Close" paired with <see cref="ShowCloseButton"/>
+    /// set to <c>false</c> — or additional header actions. <c>null</c> (the default) keeps
+    /// today's header DOM unchanged. Content renders INSIDE the focus scope, so the Tab cycle
+    /// covers it.
+    /// </summary>
+    [Parameter] public RenderFragment? HeaderActions { get; set; }
+
+    /// <summary>
+    /// Extra attributes splatted onto the built-in close button — a host-owned
+    /// <c>data-testid</c> or a stable focus hook the host's restore path targets. Rendered only
+    /// with <see cref="ShowCloseButton"/>; never overrides the button's type, class, click
+    /// handler or accessible name.
+    /// </summary>
+    [Parameter] public Dictionary<string, object>? CloseButtonAdditionalAttributes { get; set; }
+
     [Parameter] public bool ShowFooter { get; set; } = true;
     [Parameter] public bool ShowDefaultFooterButtons { get; set; } = false;
     [Parameter] public bool ShowOkButton { get; set; } = true;
@@ -194,8 +237,39 @@
     /// </summary>
     [Parameter] public string? RestoreFocusTargetId { get; set; }
 
+    /// <summary>
+    /// Whether the modal's focus scope restores focus on close. Default <c>true</c> (the opener
+    /// is remembered at activation and focus returns there, or to an explicit restore target).
+    /// Set <c>false</c> when the HOST owns the restore — e.g. an editor that closes the dialog
+    /// through its own path and moves focus afterwards (single restore owner — final review):
+    /// the scope then renders <c>data-restore-focus="false"</c> and the module skips the restore.
+    /// </summary>
+    [Parameter] public bool RestoreFocus { get; set; } = true;
+
     /// <summary>The id of the element that receives focus when the modal opens.</summary>
     [Parameter] public string? InitialFocusTargetId { get; set; }
+
+    /// <summary>
+    /// A CSS selector for the element that receives focus when the modal opens — for a target that has
+    /// no stable id, or a set of candidates where the first match is the right one (a checked radio in a
+    /// list, the first checkbox of a list). Resolved inside the focus scope after the modal is promoted;
+    /// when it matches nothing the scope falls back to <see cref="InitialFocusTargetId"/> and then to its
+    /// own first-focusable path. Additive: the default (<c>null</c>) keeps the previous behaviour.
+    /// </summary>
+    [Parameter] public string? InitialFocusSelector { get; set; }
+
+    /// <summary>
+    /// The role of the trapped surface. <c>dialog</c> (the default) for a normal modal;
+    /// <c>alertdialog</c> for a surface whose message IS the content and whose actions are the only
+    /// way out.
+    /// </summary>
+    [Parameter] public string DialogRole { get; set; } = "dialog";
+
+    /// <summary>
+    /// The id of the element that describes the modal, wired to the scope's
+    /// <c>aria-describedby</c> — used by an <c>alertdialog</c>, whose body text is the description.
+    /// </summary>
+    [Parameter] public string? AriaDescribedBy { get; set; }
 
     /// <summary>The viewport's layout. A modal is positioned against the viewport, not its container.</summary>
     [CascadingParameter(Name = TmLayoutScopes.Viewport)] public TmLayoutContext? Viewport { get; set; }
@@ -220,6 +294,21 @@
     private ElementReference _panel;
     private TmSheetHandle? _handle;
     private string _titleId = Guid.NewGuid().ToString("N");
+
+    /// <summary>Id of the subtitle paragraph, the scope's aria-describedby target.</summary>
+    private string _subtitleId = Guid.NewGuid().ToString("N");
+
+    // The explicit AriaDescribedBy (alertdialog body) and the rendered subtitle both describe the
+    // dialog; aria-describedby accepts a space-separated id list, so both are kept.
+    private string? EffectiveAriaDescribedBy
+    {
+        get
+        {
+            var subtitle = string.IsNullOrEmpty(Subtitle) ? null : _subtitleId;
+            if (string.IsNullOrEmpty(AriaDescribedBy)) return subtitle;
+            return subtitle is null ? AriaDescribedBy : $"{AriaDescribedBy} {subtitle}";
+        }
+    }
     private bool _wasShown;
     private bool _gestureAttached;
     private bool _disposed;
@@ -247,9 +336,13 @@
 
     private bool IsSheet => ResolvedPresentation == MobilePresentation.Sheet;
 
-    private MobilePresentation ResolvedPresentation => MobilePresentation == MobilePresentation.Auto
-        ? (Context.IsMobile ? MobilePresentation.Sheet : MobilePresentation.Dialog)
-        : MobilePresentation;
+    private MobilePresentation ResolvedPresentation => MobilePresentation switch
+    {
+        MobilePresentation.Auto => Context.IsMobile ? MobilePresentation.Sheet : MobilePresentation.Dialog,
+        // A tall surface: fullscreen on a phone, the centred dialog everywhere else.
+        MobilePresentation.AutoFullscreen => Context.IsMobile ? MobilePresentation.Fullscreen : MobilePresentation.Dialog,
+        _ => MobilePresentation
+    };
 
     private string ScopeClass => $"tm-modal {GetModalClasses()}{(IsSheet ? " tm-sheet__panel" : "")}";
 

@@ -427,7 +427,14 @@ public sealed class MarkupClassCoverageTests
             // $"tm-gantt-task-percent-{Guid…}") add their two stems — 50 → 52.
             // TmGantt redesign phase 11: the portfolio's shared-axis scroll group id
             // ($"tm-gantt-portfolio-{Guid…}") adds its stem — 52 → 53.
-            ExpectedUnmeasurableStems: 53),
+            // FZE-2 (TmChat slots): the composer textarea id is per component instance
+            // ("tm-chat-composer-{counter}" in TmChat.razor.cs), so its prefix joined the scanned
+            // population — 53 → 54.
+            // FZE-5 (composer review): the thread panel's reply input gained its own per-instance
+            // id ("tm-chat-thread-{counter}" in TmChat.razor.cs) — 54 → 55.
+            // FZE-7 (a11y review): the thread panel's aria-labelledby target (the title span) is
+            // a third per-instance id ("tm-chat-thread-title-{counter}" in TmChat.razor.cs) — 55 → 56.
+            ExpectedUnmeasurableStems: 56),
         new Scope("Signing", "Tempo.Blazor.Signing", UnstyledSigningMarkupClasses,
             MinRazorFiles: 28, MinMarkupClasses: 400, InheritsCoreCss: true,
             // Signing redesign phase 2 (B25): the runner's single step panel id

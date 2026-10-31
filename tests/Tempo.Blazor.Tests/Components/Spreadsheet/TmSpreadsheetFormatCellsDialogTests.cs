@@ -1,7 +1,10 @@
 using Bunit;
+using Tempo.Blazor.Abstractions.Layout;
+using Tempo.Blazor.Components.Spreadsheet.Models;
 using FluentAssertions;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
+using Tempo.Blazor.Components.Feedback;
 using Tempo.Blazor.Components.Spreadsheet;
 using Tempo.Blazor.Components.Spreadsheet.Models;
 using Tempo.Blazor.Tests.Localization;
@@ -27,14 +30,37 @@ public class TmSpreadsheetFormatCellsDialogTests : LocalizationTestBase
                 EventCallback.Factory.Create(this, () => onClose?.Invoke())));
 
     [Fact]
+    public void FormatCells_Mobile_HidesTheBorderTab()
+    {
+        // Review round, G2: Border editing (like the ribbon's border picker and the merge toggle) is NOT part
+        // of the phone's basic set — full editing starts at the tablet.
+        var mobile = Render<TmSpreadsheetFormatCellsDialog>(p => p
+            .Add(c => c.LayoutMode, TmLayoutMode.Mobile)
+            .Add(c => c.Style, new SpreadsheetCellStyle()));
+
+        var mobileTabs = mobile.FindAll(".tm-fcd__tab").Select(t => t.TextContent.Trim()).ToArray();
+        mobileTabs.Should().NotContain("Borders");
+        mobileTabs.Should().Contain("Number");
+
+        var desktop = Render<TmSpreadsheetFormatCellsDialog>(p => p
+            .Add(c => c.LayoutMode, TmLayoutMode.Desktop)
+            .Add(c => c.Style, new SpreadsheetCellStyle()));
+        desktop.FindAll(".tm-fcd__tab").Select(t => t.TextContent.Trim())
+            .Should().Contain("Borders", "the desktop keeps the full tab set");
+    }
+
+    [Fact]
     public void CtrlEnter_OnApplyButton_AppliesExactlyOnce()
     {
         var applies = 0;
         var cut = RenderDialog(onApply: _ => applies++);
 
-        // .tm-fcd__actions buttons: [0] = Cancel, [1] = Apply
+        // The footer buttons are the core TmModal's own: they sit OUTSIDE the form's Ctrl+Enter
+        // wrapper, so their keydown carries no handler and only the native click applies — exactly
+        // one activation per press (docs/keyboard-activation-convention.md).
         var apply = cut.FindAll(".tm-fcd__actions button")[1];
-        apply.KeyDown(new KeyboardEventArgs { Key = "Enter", CtrlKey = true });
+        Assert.Throws<MissingEventHandlerException>(
+            () => apply.KeyDown(new KeyboardEventArgs { Key = "Enter", CtrlKey = true }));
         cut.FindAll(".tm-fcd__actions button")[1].Click();
 
         applies.Should().Be(1);
@@ -48,7 +74,8 @@ public class TmSpreadsheetFormatCellsDialogTests : LocalizationTestBase
         var cut = RenderDialog(onApply: _ => applies++, onClose: () => closes++);
 
         var cancel = cut.FindAll(".tm-fcd__actions button")[0];
-        cancel.KeyDown(new KeyboardEventArgs { Key = "Enter" });
+        Assert.Throws<MissingEventHandlerException>(
+            () => cancel.KeyDown(new KeyboardEventArgs { Key = "Enter" }));
         cut.FindAll(".tm-fcd__actions button")[0].Click();
 
         closes.Should().Be(1);
@@ -62,10 +89,10 @@ public class TmSpreadsheetFormatCellsDialogTests : LocalizationTestBase
         var closes = 0;
         var cut = RenderDialog(onApply: _ => applies++, onClose: () => closes++);
 
-        // Escape stays usable from the footer: the actions group handles it
-        // locally and stops it from also reaching the root's Escape case.
-        cut.FindAll(".tm-fcd__actions button")[1]
-            .KeyDown(new KeyboardEventArgs { Key = "Escape" });
+        // Escape is the shared frame's: the modal's document-level listener closes the dialog and the
+        // package never re-handles it (bUnit has no JS module, so the scope's JSInvokable is driven).
+        var scope = cut.FindComponents<TmFocusScope>().Single();
+        cut.InvokeAsync(() => scope.Instance.HandleFocusTrapEscapeAsync());
 
         closes.Should().Be(1);
         applies.Should().Be(0);
@@ -78,7 +105,10 @@ public class TmSpreadsheetFormatCellsDialogTests : LocalizationTestBase
         var cut = RenderDialog(onApply: _ => applies++);
 
         var fontTab = cut.FindAll(".tm-fcd__tab").First(e => e.TextContent.Contains("Font"));
-        fontTab.KeyDown(new KeyboardEventArgs { Key = "Enter", CtrlKey = true });
+        // The tab bar sits outside the form's Ctrl+Enter wrapper, so a key press there activates only
+        // the tab's own click — the tab carries no keydown handler at all.
+        Assert.Throws<MissingEventHandlerException>(
+            () => fontTab.KeyDown(new KeyboardEventArgs { Key = "Enter", CtrlKey = true }));
         cut.FindAll(".tm-fcd__tab").First(e => e.TextContent.Contains("Font")).Click();
 
         applies.Should().Be(0);

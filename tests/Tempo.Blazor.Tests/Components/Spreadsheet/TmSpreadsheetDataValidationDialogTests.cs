@@ -17,7 +17,7 @@ public class TmSpreadsheetDataValidationDialogTests : LocalizationTestBase
         var cut = Render<TmSpreadsheetDataValidationDialog>();
 
         cut.Find(".tm-dvd__tab--active").TextContent.Trim().Should().Be("Settings");
-        cut.Find(".tm-dvd__select").Should().NotBeNull("type select should be visible on Settings tab");
+        cut.Find(".tm-dvd__select select").Should().NotBeNull("type select should be visible on Settings tab");
     }
 
     [Fact]
@@ -30,6 +30,32 @@ public class TmSpreadsheetDataValidationDialogTests : LocalizationTestBase
         tabs[0].TextContent.Trim().Should().Be("Settings");
         tabs[1].TextContent.Trim().Should().Be("Input message");
         tabs[2].TextContent.Trim().Should().Be("Error alert");
+    }
+
+    [Fact]
+    public void NewRule_DefaultsTheErrorAlertOn_SoTheWarningStyleSurvives()
+    {
+        // A new rule used to seed "Show error alert" OFF, so a user who picked the Warning style got a
+        // rule with no ErrorAlert — which the engine treats as Stop. The severity silently vanished.
+        SpreadsheetDataValidation? applied = null;
+        var cut = Render<TmSpreadsheetDataValidationDialog>(p => p
+            .Add(c => c.Validation, new SpreadsheetDataValidation())
+            .Add(c => c.OnSave, EventCallback.Factory.Create<SpreadsheetDataValidation>(this, v => applied = v)));
+
+        // Settings: a whole-number rule between 1 and 10 (fills the values the rule needs).
+        cut.Find(".tm-dvd__select select").Change("Whole");
+        cut.FindAll(".tm-dvd__input")[0].Change("1");
+        cut.FindAll(".tm-dvd__input")[1].Change("10");
+
+        // Error alert: the severity select (the only select on that tab) picks Warning.
+        cut.FindAll(".tm-dvd__tab")[2].Click();
+        cut.Find(".tm-dvd__form .tm-dvd__select select").Change("Warning");
+        cut.FindAll(".tm-dvd__actions button").Last().Click();
+
+        applied.Should().NotBeNull();
+        applied!.ErrorAlert.Should().NotBeNull("a new rule keeps the error alert on by default");
+        applied.ErrorAlert!.Style.Should().Be(SpreadsheetValidationErrorStyle.Warning,
+            "the picked severity must reach the rule, not fall back to Stop");
     }
 
     // ── Tab navigation ────────────────────────────────────────────────────────
@@ -65,7 +91,7 @@ public class TmSpreadsheetDataValidationDialogTests : LocalizationTestBase
 
         // Default is "Any" — operator select should not be shown
         // Only the type select is rendered; no second <select>
-        cut.FindAll(".tm-dvd__select").Should().HaveCount(1);
+        cut.FindAll(".tm-dvd__select select").Should().HaveCount(1);
     }
 
     [Fact]
@@ -74,9 +100,9 @@ public class TmSpreadsheetDataValidationDialogTests : LocalizationTestBase
         var cut = Render<TmSpreadsheetDataValidationDialog>();
 
         // Change type to Whole
-        cut.Find(".tm-dvd__select").Change("Whole");
+        cut.Find(".tm-dvd__select select").Change("Whole");
 
-        cut.FindAll(".tm-dvd__select").Should().HaveCount(2, "Whole type should show operator select");
+        cut.FindAll(".tm-dvd__select select").Should().HaveCount(2, "Whole type should show operator select");
     }
 
     [Fact]
@@ -84,10 +110,10 @@ public class TmSpreadsheetDataValidationDialogTests : LocalizationTestBase
     {
         var cut = Render<TmSpreadsheetDataValidationDialog>();
 
-        cut.Find(".tm-dvd__select").Change("List");
+        cut.Find(".tm-dvd__select select").Change("List");
 
         // List type: no operator select, but source input appears
-        cut.FindAll(".tm-dvd__select").Should().HaveCount(1, "List type hides operator select");
+        cut.FindAll(".tm-dvd__select select").Should().HaveCount(1, "List type hides operator select");
         cut.Markup.Should().Contain("Source");
     }
 
@@ -96,7 +122,7 @@ public class TmSpreadsheetDataValidationDialogTests : LocalizationTestBase
     {
         var cut = Render<TmSpreadsheetDataValidationDialog>();
 
-        cut.Find(".tm-dvd__select").Change("List");
+        cut.Find(".tm-dvd__select select").Change("List");
 
         var checkboxes = cut.FindAll(".tm-dvd__checkbox");
         checkboxes.Any(el => el.TextContent.Contains("In-cell dropdown")).Should().BeTrue();
@@ -121,7 +147,7 @@ public class TmSpreadsheetDataValidationDialogTests : LocalizationTestBase
             .Add(c => c.Validation, dv));
 
         // Type select should show "Whole number"
-        cut.Find(".tm-dvd__select").InnerHtml.Should().Contain("Whole");
+        cut.Find(".tm-dvd__select select").InnerHtml.Should().Contain("Whole");
 
         // Formula inputs should be pre-filled
         var inputs = cut.FindAll(".tm-dvd__input");
@@ -160,7 +186,7 @@ public class TmSpreadsheetDataValidationDialogTests : LocalizationTestBase
             .Add(c => c.OnSave, EventCallback.Factory.Create<SpreadsheetDataValidation>(this, dv => saved = dv)));
 
         // Change type to List
-        cut.Find(".tm-dvd__select").Change("List");
+        cut.Find(".tm-dvd__select select").Change("List");
 
         await cut.InvokeAsync(() => cut.FindAll(".tm-dvd__actions button").Last().Click());
 
@@ -176,7 +202,7 @@ public class TmSpreadsheetDataValidationDialogTests : LocalizationTestBase
             .Add(c => c.Validation, new SpreadsheetDataValidation { Range = new SpreadsheetRange(0, 0, 0, 0) })
             .Add(c => c.OnSave, EventCallback.Factory.Create<SpreadsheetDataValidation>(this, dv => saved = dv)));
 
-        cut.Find(".tm-dvd__select").Change("Whole");
+        cut.Find(".tm-dvd__select select").Change("Whole");
 
         // Re-find inputs after type re-render to avoid stale element references
         await cut.InvokeAsync(() => cut.FindAll(".tm-dvd__input")[0].Change("5"));
@@ -229,7 +255,7 @@ public class TmSpreadsheetDataValidationDialogTests : LocalizationTestBase
             .Add(c => c.OnSave, EventCallback.Factory.Create<SpreadsheetDataValidation>(this, dv => saved = dv)));
 
         cut.FindAll(".tm-dvd__tab")[2].Click();
-        await cut.InvokeAsync(() => cut.Find("#tm-dvd-show-error").Change(false));
+        await cut.InvokeAsync(() => cut.Find(".tm-dvd__checks input").Change(false));
         await cut.InvokeAsync(() => cut.FindAll(".tm-dvd__actions button").Last().Click());
 
         saved!.ErrorAlert.Should().BeNull();

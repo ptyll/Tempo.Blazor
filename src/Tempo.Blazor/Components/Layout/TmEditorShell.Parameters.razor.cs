@@ -204,9 +204,10 @@ public partial class TmEditorShell
     [Parameter] public TmLayoutMode InitialMode { get; set; } = TmLayoutMode.Desktop;
 
     /// <summary>
-    /// Raised when the resolved layout changes. The initial value is not a change. Never pair
-    /// <see cref="LayoutMode"/> with this callback: it reports the resolved mode, and a two-way
-    /// bind would pin that mode.
+    /// Raised when the resolved layout changes. The initial value is not a change, except that an
+    /// Auto observer which inherits a non-Desktop resolution from a cascading parent reports it
+    /// once so late-mounted consumers adopt it. Never pair <see cref="LayoutMode"/> with this
+    /// callback: it reports the resolved mode, and a two-way bind would pin that mode.
     /// </summary>
     [Parameter] public EventCallback<TmLayoutMode> ResolvedLayoutChanged { get; set; }
 

@@ -114,6 +114,7 @@ builder.Services.AddTempoBlazorDocumentEditor();
 builder.Services.AddTempoBlazorDiagramEditor();
 builder.Services.AddTempoBlazorWireframe();
 builder.Services.AddTempoBlazorModeling();
+builder.Services.AddSingleton<IModelingModelProvider, Tempo.Blazor.Demo.SharedUI.Services.DemoUmlModelingModelProvider>();
 builder.Services.AddTempoBlazorSpreadsheet();
 builder.Services.AddTempoBlazorGanttXlsx();
 builder.Services.AddTempoBlazorDataTableXlsx();

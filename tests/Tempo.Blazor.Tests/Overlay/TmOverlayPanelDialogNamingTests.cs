@@ -17,6 +17,7 @@ using Tempo.Blazor.Components.NotionEditor.Services;
 using Tempo.Blazor.Components.NotionEditor.UI;
 using Tempo.Blazor.Components.Overlay;
 using Tempo.Blazor.Components.Pickers;
+using Tempo.Blazor.Components.Spreadsheet;
 using Tempo.Blazor.Interfaces;
 using Tempo.Blazor.NotionEditor.Interfaces;
 using Tempo.Blazor.Models;
@@ -310,6 +311,16 @@ public sealed class TmOverlayPanelDialogNamingTests : LocalizationTestBase
                         new FilterDefinition { FieldName = "Name", FieldLabel = "Name", FieldType = FilterFieldType.Text },
                     }));
                 cut.Find(".tm-filter-builder-add").Click();
+                return cut.Find("[role='dialog']");
+            },
+            // Redesign phase 5: the spreadsheet ribbon's colour pickers ride the shared overlay panel
+            // (Role="dialog", named through AriaLabel) — the text-colour trigger opens it.
+            ["TmSpreadsheetToolbar"] = () =>
+            {
+                var cut = Render<TmSpreadsheetToolbar>();
+                cut.FindAll(".tm-spreadsheet-toolbar__button")
+                    .First(button => button.GetAttribute("title") == "Text color picker")
+                    .Click();
                 return cut.Find("[role='dialog']");
             },
             // FZE-12: the annotator's runtime color palette rides the shared overlay panel

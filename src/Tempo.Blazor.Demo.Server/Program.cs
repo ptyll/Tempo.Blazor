@@ -1,5 +1,6 @@
 using System.Reflection;
 using Tempo.Blazor.Configuration;
+using Tempo.Blazor.Modeling;
 using Tempo.Blazor.EmailTemplates;
 using Tempo.Blazor.Demo.Services;
 using Tempo.Blazor.Demo.SharedUI.Localization;
@@ -111,6 +112,7 @@ builder.Services.AddTempoBlazorDocumentEditor();
 builder.Services.AddTempoBlazorDiagramEditor();
 builder.Services.AddTempoBlazorWireframe();
 builder.Services.AddTempoBlazorModeling();
+builder.Services.AddSingleton<IModelingModelProvider, Tempo.Blazor.Demo.SharedUI.Services.DemoUmlModelingModelProvider>();
 builder.Services.AddTempoBlazorSpreadsheet();
 builder.Services.AddTempoBlazorGanttXlsx();
 builder.Services.AddTempoBlazorDataTableXlsx();
@@ -176,6 +178,35 @@ app.Use(async (context, next) =>
     System.Globalization.CultureInfo.DefaultThreadCurrentUICulture = applied;
     System.Globalization.CultureInfo.CurrentCulture = applied;
     System.Globalization.CultureInfo.CurrentUICulture = applied;
+
+    await next();
+});
+
+// Modeling redesign phase 1 (CSP guard): a document request for the modeling editor with
+// ?csp=1 ships a Content-Security-Policy WITHOUT 'unsafe-eval', so the E2E can prove the
+// Modeling package works on strict hosts — focus restoration and the tree drag bridge run
+// through the modeling-editor.js ES module, never through eval. The demo shell's own CDN
+// sources stay allowed; only eval is forbidden. connect-src is built from the REQUEST host and
+// the configured API base URL — no hardcoded ports, so the header stays correct on any port/host
+// the demo is launched on (Blazor Server's SignalR negotiates ws/wss against the request host).
+var demoApiBaseUrl = builder.Configuration["DemoApi:BaseUrl"] ?? "https://localhost:5100";
+app.Use(async (context, next) =>
+{
+    if (HttpMethods.IsGet(context.Request.Method)
+        && context.Request.Path == "/modeling-editor"
+        && context.Request.Query["csp"] == "1")
+    {
+        var requestHost = context.Request.Host.Value;
+        var apiSource = demoApiBaseUrl.TrimEnd('/');
+        context.Response.Headers["Content-Security-Policy"] =
+            "default-src 'self'; "
+            + "script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://cdn.tailwindcss.com https://cdn.jsdelivr.net; "
+            + "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+            + "font-src 'self' data: https://fonts.gstatic.com; "
+            + "img-src 'self' data: blob: https:; "
+            + $"connect-src 'self' wss://{requestHost} ws://{requestHost} {apiSource} https://cdn.tailwindcss.com https://cdn.jsdelivr.net; "
+            + "object-src 'none'";
+    }
 
     await next();
 });

@@ -2,13 +2,108 @@
    Spreadsheet — TmSpreadsheet, TmSpreadsheetGrid
    ═══════════════════════════════════════════════════════════════ */
 
+/* ── Component tokens ──────────────────────────────────────────────────────────
+   Derived from the core semantic tokens only (never a literal), so light mode, dark mode and the
+   indigo theme all recompute them. The canvas reads them through buildPalette
+   (wwwroot/js/spreadsheet-canvas.js); a host overrides any single one on .tm-spreadsheet. */
 .tm-spreadsheet {
+    /* The header strip is a table-header surface, not the cell surface: it uses the same token the
+       core data table's header row uses (gray-50 in light, #0f172a in dark, so it is always distinct
+       from --tm-color-surface = the cell background). */
+    --tm-spreadsheet-header-bg: var(--tm-color-surface-secondary);
+    --tm-spreadsheet-header-text: var(--tm-color-text-muted);
+    --tm-spreadsheet-header-active-bg: var(--tm-color-primary-subtle);
+    --tm-spreadsheet-header-active-text: var(--tm-color-primary-text);
+    /* Canvas font shorthand: the canvas font parser needs a resolved length, so this token carries px
+       rather than a --tm-text-* scale reference (a rem in a font shorthand is not honoured everywhere). */
+    --tm-spreadsheet-header-font: var(--tm-font-medium) 11px var(--tm-font-sans);
+    --tm-spreadsheet-gridline: var(--tm-color-border-subtle);
+    --tm-spreadsheet-selection-border: var(--tm-color-primary);
+    /* The selection wash is a COLOUR plus a strength, not a pre-mixed rgba(): the canvas paints the
+       colour at selection-fill-alpha through globalAlpha (a color-mix()/rgba() string is not a colour
+       every canvas backend parses). Both stay overridable one level up. */
+    --tm-spreadsheet-selection-fill: var(--tm-color-primary);
+    --tm-spreadsheet-selection-fill-alpha: 0.12;
+    /* Six formula-reference colours mapped onto the categorical palette (dark lifts them to 400-tones). */
+    --tm-spreadsheet-ref-0: var(--tm-category-1);
+    --tm-spreadsheet-ref-1: var(--tm-category-6);
+    --tm-spreadsheet-ref-2: var(--tm-category-4);
+    --tm-spreadsheet-ref-3: var(--tm-category-2);
+    --tm-spreadsheet-ref-4: var(--tm-category-3);
+    --tm-spreadsheet-ref-5: var(--tm-category-8);
+    /* Find & Replace panel knobs: the floating desktop card reads these, so a host can widen or move
+       it without overriding the panel's scoped rules. */
+    --tm-spreadsheet-find-width: 30rem;
+    /* Ribbon menu knobs: the border picker, the Delete split and the colour popovers are core
+       TmOverlayPanel roots (browser top layer), so their surface lives in the package GLOBAL stylesheet
+       and reads these host-overridable knobs. */
+    --tm-spreadsheet-menu-min-width: 11.25rem;
+    --tm-spreadsheet-menu-max-height: 20rem;
+    --tm-spreadsheet-menu-padding-block: var(--tm-space-1);
+    --tm-spreadsheet-menu-padding-inline: 0;
+    /* The floor of the mobile layout's `height: 100%` (SP3): a host whose own height is auto would
+       otherwise collapse the grid to zero. */
+    --tm-spreadsheet-mobile-min-height: 32rem;
+    /* The phone GRID floor (phase 8): a host shorter than the fixed chrome (the Notion fullscreen edit
+       modal at 568x320 overrides the mobile height floor so its footer stays visible) must still show
+       rows. The grid keeps this height and the phone root scrolls instead of squeezing the grid to 0. */
+    --tm-spreadsheet-grid-min-height: 9rem;
+
     display: flex;
     flex-direction: column;
+    /* The containing block of an INLINE sheet (Find & Replace on a narrow container renders a
+       TmDrawer Modal=false, whose panel is position:absolute; inset:0). */
+    position: relative;
     background: var(--tm-color-surface);
     border: 1px solid var(--tm-color-border);
     border-radius: var(--tm-radius-md);
     overflow: hidden;
+}
+
+/* The DARK active-header override lives in the package theme layer (css/theme-spreadsheet-dark.css):
+   a component stylesheet may not carry a [data-theme="dark"] block (strict token audit). */
+
+/* ── Chrome (mode-scoped) ──────────────────────────────────────────────────────
+   Mode=Full paints the workspace and lifts the ribbon, the formula bar, the grid, the sheet tabs and
+   the status bar as cards. Mode=Embedded (Notion block, modal host) stays flat: the grid is the
+   surface and the chrome rows carry no card. The double class beats the child components' scoped
+   selectors (class + scope attribute) on specificity, so the mode always wins. */
+.tm-spreadsheet.tm-spreadsheet--workspace {
+    gap: var(--tm-space-2);
+    padding: var(--tm-space-2);
+    background: var(--tm-bg-workspace);
+}
+
+.tm-spreadsheet.tm-spreadsheet--workspace .tm-spreadsheet-toolbar,
+.tm-spreadsheet.tm-spreadsheet--workspace .tm-spreadsheet-formula-bar,
+.tm-spreadsheet.tm-spreadsheet--workspace .tm-spreadsheet-canvas-grid,
+.tm-spreadsheet.tm-spreadsheet--workspace .tm-spreadsheet-sheet-tabs,
+.tm-spreadsheet.tm-spreadsheet--workspace .tm-spreadsheet-statusbar {
+    background: var(--tm-color-surface);
+    border: 1px solid var(--tm-color-border);
+    border-radius: var(--tm-radius-card);
+    box-shadow: var(--tm-shadow-card);
+}
+
+.tm-spreadsheet.tm-spreadsheet--workspace .tm-spreadsheet-canvas-grid {
+    border-radius: var(--tm-radius-card);
+}
+
+.tm-spreadsheet.tm-spreadsheet--chrome-flat {
+    gap: 0;
+    padding: 0;
+    background: var(--tm-color-surface);
+    border-radius: var(--tm-radius-control);
+    box-shadow: none;
+}
+
+.tm-spreadsheet.tm-spreadsheet--chrome-flat .tm-spreadsheet-toolbar,
+.tm-spreadsheet.tm-spreadsheet--chrome-flat .tm-spreadsheet-formula-bar,
+.tm-spreadsheet.tm-spreadsheet--chrome-flat .tm-spreadsheet-canvas-grid,
+.tm-spreadsheet.tm-spreadsheet--chrome-flat .tm-spreadsheet-sheet-tabs,
+.tm-spreadsheet.tm-spreadsheet--chrome-flat .tm-spreadsheet-statusbar {
+    border-radius: 0;
+    box-shadow: none;
 }
 
 /* ── Grid ── */
@@ -35,6 +130,11 @@
     font-family: var(--tm-font-mono, ui-monospace, monospace);
     font-size: var(--tm-text-xs);
     outline: none;
+    /* Phase 7 touch: one finger pans/scrolls the grid NATIVELY (momentum included) and the browser's
+       own pinch-zoom is disabled, because the two-finger pinch is the core pointer-gesture.js gesture
+       (`touch-action: pan-x pan-y` is the same contract the PdfViewer wrap uses). A cross-paragraph
+       selection rectangle on a touch screen is never a text selection — see docs/touch-interaction.md. */
+    touch-action: pan-x pan-y;
 }
 
 .tm-spreadsheet-canvas-grid:focus {
@@ -104,17 +204,90 @@
     z-index: 0;
 }
 
+/* ── Touch handles (phase 7, WCAG 2.5.7) ──
+   The four edge drops extend the selection, the corner box fills from it. They are DOM elements so
+   `touch-action: none` can stop the browser panning the grid under the finger; the JS engine keeps
+   them over the painted selection. Tapping an edge drop extends the selection by one row/column —
+   the single-pointer alternative to dragging it (Shift+arrow is the keyboard one), while the fill's
+   non-drag path is the cell menu's Fill down / Fill right (Ctrl+D / Ctrl+R).
+   A FINE pointer hides the layer completely: the mouse keeps the painted handles and the classic
+   coordinate hit test, so nothing about the desktop interaction changes. */
+.tm-spreadsheet-canvas-grid__touch-handles {
+    position: absolute;
+    inset: 0 auto auto 0;
+    width: 1px;
+    height: 1px;
+    z-index: 4;
+    pointer-events: none;
+}
+
+.tm-spreadsheet-canvas-grid__touch-handle {
+    position: absolute;
+    display: block;
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    pointer-events: auto;
+    touch-action: none;
+    /* The visible affordance is the painted handle/fill square on the selection canvas; these boxes
+       only enlarge the reachable area. Never a text selection or a callout under the finger. */
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+}
+
+.tm-spreadsheet-canvas-grid__touch-handle[hidden] {
+    display: none;
+}
+
+/* The two corner drops are VISIBLE circles on a coarse pointer (the fill handle keeps its painted
+   square): a 12px dot in the selection border with a surface ring, inside the finger-sized hit box.
+   A fine pointer never renders the layer at all, so the mouse keeps the square it always had. */
+.tm-spreadsheet-canvas-grid__touch-handle--start::after,
+.tm-spreadsheet-canvas-grid__touch-handle--end::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: var(--tm-space-3);
+    height: var(--tm-space-3);
+    margin: calc(var(--tm-space-3) / -2) 0 0 calc(var(--tm-space-3) / -2);
+    border-radius: var(--tm-radius-pill);
+    background: var(--tm-spreadsheet-selection-border);
+    box-shadow: 0 0 0 var(--tm-space-0-5) var(--tm-color-surface);
+}
+
+.tm-spreadsheet-canvas-grid__touch-handle[hidden]::after {
+    display: none;
+}
+
+@media (pointer: fine) {
+    .tm-spreadsheet-canvas-grid__touch-handles {
+        display: none;
+    }
+}
+
 .tm-spreadsheet-canvas-grid__editor {
     position: absolute;
     z-index: 3;
     box-sizing: border-box;
     border: 2px solid var(--tm-color-primary);
+    /* The 2px primary border IS the focus indicator; the editor is created already focused, so a host
+       `*:focus-visible` ring would double it. The explicit :focus/:focus-visible rules below win on
+       specificity (class + pseudo-class) over a host universal selector. */
     outline: none;
     background: var(--tm-color-surface);
     color: var(--tm-color-text);
     font-family: inherit;
     font-size: inherit;
     padding: 0 var(--tm-space-1);
+}
+
+.tm-spreadsheet-canvas-grid__editor:focus,
+.tm-spreadsheet-canvas-grid__editor:focus-visible {
+    outline: none;
 }
 
 .tm-spreadsheet-canvas-grid__formula-suggestions,
@@ -135,7 +308,7 @@
     border: 1px solid var(--tm-color-border);
     border-radius: var(--tm-radius-sm);
     background: var(--tm-color-surface);
-    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.12);
+    box-shadow: var(--tm-shadow-popover);
 }
 
 .tm-spreadsheet-canvas-grid__formula-suggestion {
@@ -165,7 +338,7 @@
 
 .tm-spreadsheet-canvas-grid__formula-suggestion-signature {
     color: var(--tm-color-text-muted);
-    font-size: 11px;
+    font-size: var(--tm-text-xs);
 }
 
 .tm-spreadsheet-canvas-grid__formula-hint {
@@ -176,7 +349,7 @@
     border: 1px solid var(--tm-color-border);
     border-radius: var(--tm-radius-sm);
     background: var(--tm-color-surface-elevated);
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+    box-shadow: var(--tm-shadow-popover);
 }
 
 .tm-spreadsheet-canvas-grid__formula-hint-name {
@@ -187,8 +360,8 @@
 .tm-spreadsheet-canvas-grid__formula-hint-signature,
 .tm-spreadsheet-canvas-grid__formula-hint-summary {
     color: var(--tm-color-text-muted);
-    font-size: 11px;
-    line-height: 1.4;
+    font-size: var(--tm-text-xs);
+    line-height: var(--tm-line-height-snug);
 }
 
 .tm-spreadsheet-canvas-grid__formula-hint-arg--active {
@@ -400,34 +573,8 @@
 }
 
 /* ── Resize Dialog ── */
-.tm-spreadsheet-resize-dialog-backdrop {
-    position: fixed;
-    inset: 0;
-    background: var(--tm-bg-overlay);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: var(--tm-z-modal);
-}
-
-.tm-spreadsheet-resize-dialog {
-    background: var(--tm-color-surface-elevated);
-    border: 1px solid var(--tm-color-border);
-    border-radius: var(--tm-radius-md);
-    box-shadow: var(--tm-shadow-lg);
-    padding: var(--tm-space-3);
-    min-width: 200px;
-    display: flex;
-    flex-direction: column;
-    gap: var(--tm-space-2);
-}
-
-.tm-spreadsheet-resize-dialog__label {
-    font-size: var(--tm-text-sm);
-    font-weight: var(--tm-font-medium);
-    color: var(--tm-color-text);
-}
-
+/* The dialog rides the core TmModal frame now (phase 3, G6): the frame owns the overlay and the
+   card, so only the field and the two footer buttons are styled here. */
 .tm-spreadsheet-resize-dialog__input {
     padding: 5px 8px;
     border: 1px solid var(--tm-color-border);
@@ -443,12 +590,6 @@
 .tm-spreadsheet-resize-dialog__input:focus {
     border-color: var(--tm-color-primary);
     box-shadow: var(--tm-shadow-focus);
-}
-
-.tm-spreadsheet-resize-dialog__actions {
-    display: flex;
-    justify-content: flex-end;
-    gap: var(--tm-space-2);
 }
 
 .tm-spreadsheet-resize-dialog__btn {
@@ -468,7 +609,7 @@
 
 .tm-spreadsheet-resize-dialog__btn--ok {
     background: var(--tm-color-primary);
-    color: var(--tm-color-on-primary, #fff);
+    color: var(--tm-color-on-primary);
     border-color: var(--tm-color-primary);
 }
 
@@ -520,7 +661,24 @@
     box-shadow: var(--tm-shadow-lg);
     z-index: var(--tm-z-dropdown);
     min-width: 160px;
-    padding: 4px 0;
+    padding: var(--tm-space-1) 0;
+    /* The menu may be taller than the room the gesture left (the C# clamps its max-height): it scrolls
+       inside itself and the scroll never chains to the page behind it. */
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* A finger-sized menu on a coarse pointer: every entry clears the touch floor, so a long press opens a
+   menu that can actually be tapped (the desktop popover keeps its compact rows). */
+@media (any-pointer: coarse) {
+    .tm-spreadsheet-context-menu {
+        min-width: var(--tm-spreadsheet-menu-min-width);
+    }
+
+    .tm-spreadsheet-context-menu .tm-spreadsheet-context-menu__item {
+        min-height: var(--tm-touch-target);
+    }
 }
 
 .tm-spreadsheet-context-menu__item {
@@ -541,82 +699,398 @@
     margin: 4px 0;
 }
 
-/* ── Dialog ── */
-.tm-spreadsheet-dialog-backdrop {
-    position: fixed;
-    inset: 0;
-    background: var(--tm-bg-overlay);
+/* ── Dialogs: CONTENT only ────────────────────────────────────────────────────────────────
+   Every Spreadsheet dialog rides the core TmModal (redesign phase 3), which owns the overlay, the
+   card, the header with its close button, the footer bar and the mobile presentation (sheet or
+   fullscreen). Nothing here paints a card, a backdrop or a footer: these rules style the elements the
+   dialog components themselves render inside the modal body. The dialog's own root class sits on the
+   overlay (e.g. .tm-spreadsheet-name-manager), so a host or an E2E spec still finds one element per
+   dialog. */
+
+/* Name Manager toolbar */
+.tm-spreadsheet-name-manager__toolbar {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
-    justify-content: center;
-    z-index: var(--tm-z-modal);
-    padding: var(--tm-space-4);
+    gap: var(--tm-space-2);
+    margin-bottom: var(--tm-space-3);
+    container-type: inline-size;
 }
 
-.tm-spreadsheet-dialog {
-    background: var(--tm-color-surface-elevated);
-    border: 1px solid var(--tm-color-border);
-    border-radius: var(--tm-radius-lg);
-    box-shadow: var(--tm-shadow-xl);
-    min-width: min(360px, 100%);
-    max-width: 100%;
-    padding: var(--tm-space-4);
+/* The toolbar buttons are core TmButtons (New primary, Edit/Delete outline): only the shared
+   touch height is package-specific. */
+.tm-spreadsheet-name-manager__tool {
+    min-height: var(--tm-touch-target);
 }
 
-.tm-spreadsheet-dialog__title {
-    margin: 0 0 var(--tm-space-3);
-    font-size: var(--tm-text-lg);
-    font-weight: var(--tm-font-weight-semibold);
+.tm-spreadsheet-name-manager__tool:focus-visible,
+.tm-spreadsheet-name-manager__filter:focus-visible,
+.tm-spreadsheet-named-range-edit__input:focus-visible,
+.tm-spreadsheet-named-range-edit__select:focus-visible,
+.tm-spreadsheet-hyperlink__input:focus-visible,
+.tm-spreadsheet-hyperlink__select:focus-visible {
+    outline: 2px solid transparent;
+    box-shadow: var(--tm-focus-ring);
+}
+
+/* The filter is the core TmSearchInput (it paints its own field, magnifier and clear button); the
+   toolbar only places it at the end of the row. */
+.tm-spreadsheet-name-manager__filter {
+    flex: 1 1 auto;
+    min-width: var(--tm-space-20);
+    max-width: 20rem;
+    margin-left: auto;
+}
+
+@container (width < 640px) {
+    .tm-spreadsheet-name-manager__filter {
+        flex: 1 1 100%;
+        max-width: none;
+        margin-inline-start: 0;
+    }
+}
+
+/* At 320 the three actions used to wrap onto two rows (Delete alone under New/Edit). One row of three
+   equal tracks keeps the primary action next to its siblings and the filter keeps the full width below
+   it. The labels stay textual (no icon-only mode): every button keeps its accessible name from its own
+   text, and the 44px touch height is unchanged. The threshold is the same 22rem of DIALOG width the card
+   uses (the toolbar itself is a container, so the query resolves against `.tm-modal-overlay.…`). */
+@container (width < 22rem) {
+    .tm-spreadsheet-name-manager__toolbar {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .tm-spreadsheet-name-manager__tool {
+        width: 100%;
+        min-width: 0;
+        padding-inline: var(--tm-space-2);
+        font-size: var(--tm-text-sm);
+    }
+
+    .tm-spreadsheet-name-manager__filter {
+        grid-column: 1 / -1;
+        width: 100%;
+        min-width: 0;
+    }
+}
+
+
+/* Name Manager table */
+.tm-spreadsheet-name-manager__table-wrap {
+    overflow: auto;
+}
+
+.tm-spreadsheet-name-manager__table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: var(--tm-text-sm);
     color: var(--tm-color-text);
 }
 
-.tm-spreadsheet-dialog__body {
-    display: flex;
-    flex-direction: column;
-    gap: var(--tm-space-3);
-    margin-bottom: var(--tm-space-4);
+.tm-spreadsheet-name-manager__table th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    padding: var(--tm-space-2) var(--tm-space-3);
+    text-align: left;
+    font-weight: var(--tm-font-weight-semibold);
+    color: var(--tm-color-text-muted);
+    background: var(--tm-color-surface-elevated);
+    border-bottom: 1px solid var(--tm-color-border);
+    white-space: nowrap;
 }
 
-.tm-spreadsheet-dialog__actions {
+.tm-spreadsheet-name-manager__table td {
+    padding: var(--tm-space-2) var(--tm-space-3);
+    border-bottom: 1px solid var(--tm-color-border);
+    white-space: nowrap;
+}
+
+.tm-spreadsheet-name-manager__name {
+    max-width: 16rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.tm-spreadsheet-name-manager__table tbody tr {
+    cursor: pointer;
+}
+
+.tm-spreadsheet-name-manager__table tbody tr:hover {
+    background: var(--tm-color-surface-hover);
+}
+
+.tm-spreadsheet-name-manager__row--selected {
+    background: var(--tm-color-primary-subtle);
+}
+
+/* The selected row is not signalled by a tint alone: the primary rail on the leading cell keeps it
+   distinguishable in forced-colors and for a colour-blind reader. */
+.tm-spreadsheet-name-manager__row--selected td:first-child {
+    box-shadow: inset var(--tm-space-0-5) 0 0 var(--tm-color-primary);
+}
+
+.tm-spreadsheet-name-manager__table tbody tr:focus-visible {
+    outline: 2px solid var(--tm-color-primary);
+    outline-offset: -2px;
+}
+
+/* Name Manager on the phone: one card per range (name + value, the reference formula, a scope chip
+   and the comment), because the five-column table squeezed every column to ~60px. */
+.tm-spreadsheet-name-manager__cards {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-2);
+}
+
+.tm-spreadsheet-name-manager__card {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--tm-space-2);
+    min-height: var(--tm-touch-target);
+    padding: var(--tm-space-3);
+    border: 1px solid var(--tm-color-border);
+    border-radius: var(--tm-radius-card);
+    background: var(--tm-color-surface);
+    cursor: pointer;
+}
+
+.tm-spreadsheet-name-manager__card--selected {
+    background: var(--tm-color-primary-subtle);
+    box-shadow: inset var(--tm-space-0-5) 0 0 var(--tm-color-primary);
+}
+
+.tm-spreadsheet-name-manager__card:focus-visible {
+    outline: 2px solid var(--tm-color-primary);
+    outline-offset: -2px;
+}
+
+.tm-spreadsheet-name-manager__card-main {
+    flex: 1 1 0;
+    min-width: 0;
+}
+
+/* The name is ONE line with an ellipsis: a wrapping name pushed the value and the reference away on a
+   320 px card. The full name stays reachable through the element's title (phase 7c). */
+.tm-spreadsheet-name-manager__card-name {
+    font-size: var(--tm-text-md);
+    font-weight: var(--tm-font-weight-semibold);
+    color: var(--tm-color-text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* The phone card keeps both halves readable: the detail column keeps a minimum width and the scope
+   chip never breaks mid-word (the name is a single ellipsised line, above). */
+.tm-spreadsheet-name-manager__card-detail {
+    flex: 1 1 0;
+    min-width: 8rem;
+}
+
+.tm-spreadsheet-name-manager__card-value {
+    margin-top: var(--tm-space-1);
+    font-size: var(--tm-text-sm);
+    color: var(--tm-color-text-muted);
+    font-variant-numeric: tabular-nums;
+    overflow-wrap: anywhere;
+}
+
+.tm-spreadsheet-name-manager__card-detail {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-1);
+    font-size: var(--tm-text-sm);
+    color: var(--tm-color-text-muted);
+    overflow-wrap: anywhere;
+}
+
+/* The reference formula WRAPS instead of being squeezed out: `overflow-wrap: anywhere` breaks a long
+   `=Sheet!$B$2:$B$16` at any character, and two clamped lines keep the rest of the card (the scope
+   chip, the comment) reachable. The full reference stays in the element's title/aria-label. */
+.tm-spreadsheet-name-manager__card-refers {
+    color: var(--tm-color-text);
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    overflow: hidden;
+    overflow-wrap: anywhere;
+}
+
+.tm-spreadsheet-name-manager__chip {
+    align-self: flex-start;
+    display: inline-flex;
+    align-items: center;
+    max-width: 100%;
+    white-space: nowrap;
+    padding: 0 var(--tm-space-2);
+    border-radius: var(--tm-radius-pill);
+    background: var(--tm-color-surface-elevated);
+    color: var(--tm-color-text-muted);
+    font-size: var(--tm-text-xs);
+}
+
+.tm-spreadsheet-name-manager__card-comment {
+    font-size: var(--tm-text-xs);
+}
+
+.tm-spreadsheet-name-manager__card-chevron {
+    flex: 0 0 auto;
+    margin-top: var(--tm-space-1);
+    color: var(--tm-color-text-muted);
+}
+
+/* The 320 px card (decision SPREADSHEET-NAME-MANAGER-320-WRAP): the 22rem threshold is measured on the
+   DIALOG's own width — the overlay is the only surface that spans it (the body loses its 2 x 24 px
+   padding, which would flip the layout at 390 too). 320 px = 20rem < 22rem, a 390 phone = 24.4rem stays
+   the reference's two columns. `display: contents` lets the detail column's children join the card so the
+   scope chip can move UP under the name; the order values place it there, the reference keeps it under
+   the formula everywhere wider. */
+.tm-modal-overlay.tm-spreadsheet-name-manager {
+    container-type: inline-size;
+}
+
+@container (width < 22rem) {
+    .tm-spreadsheet-name-manager__card {
+        position: relative;
+        flex-direction: column;
+        gap: var(--tm-space-1);
+        padding-inline-end: var(--tm-space-8);
+    }
+
+    .tm-spreadsheet-name-manager__card-main {
+        flex: 0 0 auto;
+        width: 100%;
+    }
+
+    .tm-spreadsheet-name-manager__card-detail {
+        display: contents;
+    }
+
+    .tm-spreadsheet-name-manager__chip {
+        order: 1;
+    }
+
+    .tm-spreadsheet-name-manager__card-refers {
+        order: 2;
+        margin-top: var(--tm-space-1);
+    }
+
+    .tm-spreadsheet-name-manager__card-comment {
+        order: 3;
+        margin-top: var(--tm-space-1);
+    }
+
+    /* Out of flow, so the stacked card does not start with an empty chevron row. */
+    .tm-spreadsheet-name-manager__card-chevron {
+        position: absolute;
+        inset-block-start: var(--tm-space-3);
+        inset-inline-end: var(--tm-space-3);
+        margin: 0;
+    }
+}
+
+.tm-spreadsheet-name-manager__empty {
+    padding: var(--tm-space-6) var(--tm-space-3);
+    text-align: center;
+    color: var(--tm-color-text-muted);
+    font-size: var(--tm-text-sm);
+}
+
+/* Footers: the modal already paints the bar; the wrapper only lays the actions out. */
+.tm-spreadsheet-name-manager__actions,
+.tm-spreadsheet-named-range-edit__actions,
+.tm-spreadsheet-hyperlink__actions {
     display: flex;
     justify-content: flex-end;
     gap: var(--tm-space-2);
 }
 
-.tm-spreadsheet-dialog__label {
-    font-size: var(--tm-text-sm);
-    font-weight: var(--tm-font-medium);
-    color: var(--tm-color-text);
+/* The phone's Close is the reference's full-width primary action. */
+.tm-spreadsheet-name-manager__actions {
+    width: 100%;
 }
 
-.tm-spreadsheet-dialog__input {
-    padding: 6px 10px;
+.tm-spreadsheet-name-manager__btn--close.tm-btn-block {
+    width: 100%;
+}
+
+/* Form bodies */
+.tm-spreadsheet-named-range-edit__body,
+.tm-spreadsheet-hyperlink__body {
+    container-type: inline-size;
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-3);
+}
+
+.tm-spreadsheet-named-range-edit__field,
+.tm-spreadsheet-hyperlink__field {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-1);
+}
+
+/* Link-type segmented control: an equal-width 2x2 grid so "Named range" never wraps onto a lone
+   second row. `Class` sits on the .tm-radio-group root, which wraps .tm-radio-group-options
+   (global sheet, so no scoped deep combinator). */
+.tm-spreadsheet-hyperlink__kinds .tm-radio-group-options {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--tm-space-2);
+}
+
+.tm-spreadsheet-named-range-edit__field label,
+.tm-spreadsheet-hyperlink__field label {
+    font-size: var(--tm-text-sm);
+    font-weight: var(--tm-font-medium);
+    color: var(--tm-color-text-muted);
+}
+
+.tm-spreadsheet-named-range-edit__input,
+.tm-spreadsheet-named-range-edit__select,
+.tm-spreadsheet-hyperlink__input,
+.tm-spreadsheet-hyperlink__select {
+    width: 100%;
+    min-height: var(--tm-touch-target);
+    padding: var(--tm-space-1-5) var(--tm-space-2-5);
     border: 1px solid var(--tm-color-border);
-    border-radius: var(--tm-radius-sm);
+    border-radius: var(--tm-radius-md);
     background: var(--tm-color-surface);
     color: var(--tm-color-text);
     font-size: var(--tm-text-sm);
     outline: none;
-    transition: border-color var(--tm-transition-fast), box-shadow var(--tm-transition-fast);
 }
 
-.tm-spreadsheet-dialog__input:focus {
+.tm-spreadsheet-named-range-edit__input:focus,
+.tm-spreadsheet-named-range-edit__select:focus,
+.tm-spreadsheet-hyperlink__input:focus,
+.tm-spreadsheet-hyperlink__select:focus {
     border-color: var(--tm-color-primary);
-    box-shadow: var(--tm-shadow-focus);
+}
+
+/* A field the validation rejected keeps a persistent danger border next to its role="alert" text. */
+.tm-spreadsheet-named-range-edit__input[aria-invalid="true"] {
+    border-color: var(--tm-color-danger);
+}
+
+.tm-spreadsheet-named-range-edit__error {
+    font-size: var(--tm-text-xs);
+    color: var(--tm-color-danger);
 }
 
 /* ── Responsive ── */
-@media (max-width: 768px) {
+/* The query container is `.tm-spreadsheet` (a NAMED container), so these rules follow the CONTAINER
+   width, not the viewport: the same 640px threshold as TmBreakpoints.Sm, in range syntax. */
+@container tm-spreadsheet (width < 640px) {
     .tm-spreadsheet-grid {
         font-size: var(--tm-font-size-xs);
     }
 
     .tm-spreadsheet-header-cell {
         font-size: var(--tm-font-size-xs);
-    }
-
-    .tm-spreadsheet-dialog {
-        min-width: 100%;
     }
 }
 
@@ -627,43 +1101,22 @@
     cursor: crosshair;
 }
 
-/* Six highlight colours for referenced cells / ranges */
-.tm-spreadsheet-cell--formula-ref-0 { outline: 2px solid #1e8fe0; outline-offset: -1px; background: rgba(30, 143, 224, 0.08); }
-.tm-spreadsheet-cell--formula-ref-1 { outline: 2px solid #e04030; outline-offset: -1px; background: rgba(224, 64, 48, 0.08); }
-.tm-spreadsheet-cell--formula-ref-2 { outline: 2px solid #20a040; outline-offset: -1px; background: rgba(32, 160, 64, 0.08); }
-.tm-spreadsheet-cell--formula-ref-3 { outline: 2px solid #a040c0; outline-offset: -1px; background: rgba(160, 64, 192, 0.08); }
-.tm-spreadsheet-cell--formula-ref-4 { outline: 2px solid #e08020; outline-offset: -1px; background: rgba(224, 128, 32, 0.08); }
-.tm-spreadsheet-cell--formula-ref-5 { outline: 2px solid #208080; outline-offset: -1px; background: rgba(32, 128, 128, 0.08); }
+/* Six highlight colours for referenced cells / ranges — the same --tm-spreadsheet-ref-* tokens the
+   canvas palette reads, so the DOM cell and the painted cell can never disagree. */
+.tm-spreadsheet-cell--formula-ref-0 { outline: 2px solid var(--tm-spreadsheet-ref-0); outline-offset: -1px; background: color-mix(in srgb, var(--tm-spreadsheet-ref-0) 8%, transparent); }
+.tm-spreadsheet-cell--formula-ref-1 { outline: 2px solid var(--tm-spreadsheet-ref-1); outline-offset: -1px; background: color-mix(in srgb, var(--tm-spreadsheet-ref-1) 8%, transparent); }
+.tm-spreadsheet-cell--formula-ref-2 { outline: 2px solid var(--tm-spreadsheet-ref-2); outline-offset: -1px; background: color-mix(in srgb, var(--tm-spreadsheet-ref-2) 8%, transparent); }
+.tm-spreadsheet-cell--formula-ref-3 { outline: 2px solid var(--tm-spreadsheet-ref-3); outline-offset: -1px; background: color-mix(in srgb, var(--tm-spreadsheet-ref-3) 8%, transparent); }
+.tm-spreadsheet-cell--formula-ref-4 { outline: 2px solid var(--tm-spreadsheet-ref-4); outline-offset: -1px; background: color-mix(in srgb, var(--tm-spreadsheet-ref-4) 8%, transparent); }
+.tm-spreadsheet-cell--formula-ref-5 { outline: 2px solid var(--tm-spreadsheet-ref-5); outline-offset: -1px; background: color-mix(in srgb, var(--tm-spreadsheet-ref-5) 8%, transparent); }
 
 /* ── Format Cells Dialog ── */
 
-.tm-fcd {
-    background: var(--tm-color-surface-elevated);
-    border: 1px solid var(--tm-color-border);
-    border-radius: var(--tm-radius-lg);
-    box-shadow: var(--tm-shadow-xl);
-    width: min(640px, 100%);
-    max-height: 90vh;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-}
-
-.tm-fcd__header {
-    padding: var(--tm-space-4) var(--tm-space-4) 0;
-}
-
-.tm-fcd__title {
-    margin: 0 0 var(--tm-space-2);
-    font-size: var(--tm-text-lg);
-    font-weight: var(--tm-font-weight-semibold);
-    color: var(--tm-color-text);
-}
-
+/* Format Cells: CONTENT only — the card, header and footer bar belong to the core TmModal. */
 .tm-fcd__tabs {
     display: flex;
+    flex-wrap: wrap;
     border-bottom: 1px solid var(--tm-color-border);
-    padding: 0 var(--tm-space-4);
     gap: var(--tm-space-1);
 }
 
@@ -690,14 +1143,12 @@
 }
 
 .tm-fcd__body {
-    flex: 1;
-    overflow-y: auto;
-    padding: var(--tm-space-4);
+    padding: var(--tm-space-4) 0;
     min-height: 240px;
 }
 
 .tm-fcd__preview-section {
-    padding: 0 var(--tm-space-4) var(--tm-space-3);
+    padding: var(--tm-space-3) 0 0;
     border-top: 1px solid var(--tm-color-border);
 }
 
@@ -723,11 +1174,29 @@
     display: flex;
     justify-content: flex-end;
     gap: var(--tm-space-2);
-    padding: var(--tm-space-3) var(--tm-space-4);
-    border-top: 1px solid var(--tm-color-border);
 }
 
 /* Form layout */
+/* The phone layout of the Number tab: the category is a select ABOVE its options, so both keep the
+   full dialog width instead of the reference's 140px listbox column. */
+.tm-fcd__number {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-3);
+}
+
+.tm-fcd__category-select {
+    width: 100%;
+}
+
+.tm-fcd__number-options {
+    min-width: 0;
+}
+
+.tm-fcd__decimal {
+    max-width: 8rem;
+}
+
 .tm-fcd__form {
     display: flex;
     flex-direction: column;
@@ -800,12 +1269,19 @@
     border-radius: var(--tm-radius-sm);
     background: var(--tm-color-surface);
     overflow-y: auto;
-    flex: 1;
-    max-height: 200px;
+    flex: 0 0 auto;
+    max-height: 16rem;
 }
 
 .tm-fcd__listbox--sm {
     max-height: 120px;
+}
+
+/* The category listbox uses a roving tabindex: the selected OPTION is the tab stop, so the focus
+   indicator belongs on the option, not on the container. */
+.tm-fcd__listbox-item:focus-visible {
+    outline: 2px solid transparent;
+    box-shadow: var(--tm-focus-ring);
 }
 
 .tm-fcd__listbox-item {
@@ -821,7 +1297,7 @@
 
 .tm-fcd__listbox-item--selected {
     background: var(--tm-color-primary);
-    color: white;
+    color: var(--tm-color-on-primary);
 }
 
 .tm-fcd__btn-group {
@@ -849,7 +1325,7 @@
 
 .tm-fcd__btn--active {
     background: var(--tm-color-primary);
-    color: white;
+    color: var(--tm-color-on-primary);
     border-color: var(--tm-color-primary);
 }
 
@@ -883,10 +1359,10 @@
     width: 24px;
     height: 24px;
     border: 1px solid var(--tm-color-border);
-    border-radius: 2px;
+    border-radius: var(--tm-radius-xs);
     cursor: pointer;
     padding: 0;
-    font-size: 10px;
+    font-size: var(--tm-text-xs);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -905,10 +1381,10 @@
 .tm-fcd__palette-cell--transparent {
     background: repeating-linear-gradient(
         45deg,
-        #ccc 0px,
-        #ccc 3px,
-        white 3px,
-        white 6px
+        var(--tm-color-border) 0px,
+        var(--tm-color-border) 3px,
+        var(--tm-color-surface) 3px,
+        var(--tm-color-surface) 6px
     );
 }
 
@@ -918,11 +1394,13 @@
     gap: var(--tm-space-2);
 }
 
-/* ── Transparent backdrop (for dropdowns that close on outside click) ── */
-.tm-spreadsheet-dialog-backdrop--transparent {
+/* ── Popup backdrop (an in-cell dropdown that closes on an outside click; NOT a dialog — the
+   dialogs all ride the core TmModal) ── */
+.tm-spreadsheet-popup-backdrop {
+    position: fixed;
+    inset: 0;
     background: transparent;
-    align-items: flex-start;
-    justify-content: flex-start;
+    z-index: var(--tm-z-modal);
 }
 
 /* ── Validation in-cell dropdown ── */
@@ -959,32 +1437,11 @@
 }
 
 /* ── Validation dialog ── */
-.tm-dvd {
-    background: var(--tm-color-surface-elevated);
-    border: 1px solid var(--tm-color-border);
-    border-radius: var(--tm-radius-lg);
-    box-shadow: var(--tm-shadow-xl);
-    width: min(420px, 100%);
-    display: flex;
-    flex-direction: column;
-}
-
-.tm-dvd__header {
-    padding: var(--tm-space-4) var(--tm-space-4) 0;
-}
-
-.tm-dvd__title {
-    margin: 0;
-    font-size: var(--tm-text-lg);
-    font-weight: var(--tm-font-weight-semibold);
-    color: var(--tm-color-text);
-}
-
+/* Data Validation: CONTENT only — the card, header and footer bar belong to the core TmModal. */
 .tm-dvd__tabs {
     display: flex;
-    padding: 0 var(--tm-space-4);
+    flex-wrap: wrap;
     border-bottom: 1px solid var(--tm-color-border);
-    margin-top: var(--tm-space-3);
     gap: var(--tm-space-1);
 }
 
@@ -1005,17 +1462,32 @@
     font-weight: var(--tm-font-weight-medium);
 }
 
-.tm-dvd__body {
-    padding: var(--tm-space-4);
+/* The form measures its OWN container: the spreadsheet embeds in a Notion block/modal, so the
+   viewport does not decide the layout. Label | field from 640px up, stacked below that. */
+.tm-dvd__form {
+    padding: var(--tm-space-4) 0;
     display: flex;
     flex-direction: column;
     gap: var(--tm-space-3);
+}
+
+/* The container is the DIALOG OVERLAY (the viewport-sized surface the modal paints), so "label |
+   field from 640px" describes the dialog's available width: desktop and tablet get the grid, a
+   390/320 phone stacks. A body-level container would never reach it — the Medium card's body is
+   ~470px even on a 1440 viewport.
+   640px is tied to `ModalSize.Medium` (TmSpreadsheetDataValidationDialog stays Medium by design,
+   guarded by `DataValidationDialog_KeepsMediumSize_ForOverlayBreakpoint`): if the dialog ever grows to
+   Large/XLarge, the card itself would pass 640px and this threshold would describe the wrong surface —
+   recompute it before changing the size. */
+.tm-modal-overlay.tm-dvd {
+    container-type: inline-size;
 }
 
 .tm-dvd__field {
     display: flex;
     flex-direction: column;
     gap: var(--tm-space-1);
+    min-width: 0;
 }
 
 .tm-dvd__label {
@@ -1024,27 +1496,18 @@
     color: var(--tm-color-text);
 }
 
-.tm-dvd__select,
-.tm-dvd__input {
-    padding: 6px 10px;
-    border: 1px solid var(--tm-color-border);
-    border-radius: var(--tm-radius-sm);
-    background: var(--tm-color-surface);
-    color: var(--tm-color-text);
-    font-size: var(--tm-text-sm);
-    outline: none;
+.tm-dvd__select {
+    width: 100%;
 }
 
-.tm-dvd__select:focus,
-.tm-dvd__input:focus {
-    border-color: var(--tm-color-primary);
-    box-shadow: var(--tm-shadow-focus);
+.tm-dvd__field--multiline .tm-dvd__textarea {
+    width: 100%;
 }
 
 .tm-dvd__textarea {
-    padding: 6px 10px;
+    padding: var(--tm-space-1-5) var(--tm-space-2-5);
     border: 1px solid var(--tm-color-border);
-    border-radius: var(--tm-radius-sm);
+    border-radius: var(--tm-radius-control);
     background: var(--tm-color-surface);
     color: var(--tm-color-text);
     font-size: var(--tm-text-sm);
@@ -1052,50 +1515,134 @@
     resize: vertical;
 }
 
-.tm-dvd__checkbox {
+.tm-dvd__textarea:focus {
+    border-color: var(--tm-color-primary);
+    box-shadow: var(--tm-focus-ring);
+}
+
+.tm-dvd__checks {
     display: flex;
-    align-items: center;
-    gap: var(--tm-space-2);
+    flex-direction: column;
+    gap: var(--tm-space-1);
+}
+
+.tm-dvd__checkbox {
     font-size: var(--tm-text-sm);
     color: var(--tm-color-text);
+}
+
+@container (width >= 640px) {
+    .tm-dvd__field {
+        display: grid;
+        grid-template-columns: 8rem minmax(0, 1fr);
+        align-items: center;
+        column-gap: var(--tm-space-3);
+    }
+
+    .tm-dvd__field--multiline {
+        align-items: start;
+    }
+
+    .tm-dvd__checks {
+        padding-inline-start: calc(8rem + var(--tm-space-3));
+    }
 }
 
 .tm-dvd__actions {
     display: flex;
     justify-content: flex-end;
     gap: var(--tm-space-2);
-    padding: var(--tm-space-3) var(--tm-space-4);
-    border-top: 1px solid var(--tm-color-border);
 }
 
-/* ── Validation error alert ── */
+/* ── Validation alert (Stop / Warning / Information) ──
+   The severity paints the icon on the modal body's leading edge and the tint of the severity rail;
+   the card, the title and the footer bar belong to the core TmModal. The tint comes from a token per
+   severity, never a literal colour. */
 .tm-spreadsheet-alert {
-    background: var(--tm-color-surface-elevated);
-    border: 1px solid var(--tm-color-border);
-    border-radius: var(--tm-radius-lg);
-    box-shadow: var(--tm-shadow-xl);
-    min-width: min(320px, 100%);
-    max-width: min(480px, 100%);
-    padding: var(--tm-space-4);
+    --tm-spreadsheet-alert-ink: var(--tm-color-danger);
 }
 
-.tm-spreadsheet-alert__title {
-    margin: 0 0 var(--tm-space-2);
-    font-size: var(--tm-text-md);
-    font-weight: var(--tm-font-weight-semibold);
-    color: var(--tm-color-text);
+.tm-spreadsheet-alert--warning {
+    --tm-spreadsheet-alert-ink: var(--tm-color-warning);
+}
+
+.tm-spreadsheet-alert--information {
+    --tm-spreadsheet-alert-ink: var(--tm-color-info);
+}
+
+/* The severity reads as a large filled circle to the LEFT of the message (the reference's card), not
+   as a rail through the rounded corner. The circle's fill is the severity token, so it follows the
+   theme; the icon inside inherits the on-primary contrast colour. */
+.tm-spreadsheet-alert__badge {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--tm-space-12);
+    height: var(--tm-space-12);
+    border-radius: var(--tm-radius-pill);
+    background: var(--tm-spreadsheet-alert-ink);
+    color: var(--tm-color-on-primary);
 }
 
 .tm-spreadsheet-alert__message {
-    margin: 0 0 var(--tm-space-4);
-    font-size: var(--tm-text-sm);
-    color: var(--tm-color-text-muted);
+    margin: 0;
+    flex: 1 1 auto;
+    min-width: 0;
+    font-size: var(--tm-text-md);
+    color: var(--tm-color-text);
 }
 
 .tm-spreadsheet-alert__actions {
     display: flex;
     justify-content: flex-end;
     gap: var(--tm-space-2);
+}
+
+/* Badge and message share one row, and the reference's card has no divider under the title. */
+.tm-modal-overlay.tm-spreadsheet-alert .tm-modal-body {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--tm-space-4);
+}
+
+.tm-modal-overlay.tm-spreadsheet-alert .tm-modal-header {
+    border-bottom: none;
+    padding-bottom: var(--tm-space-2);
+}
+
+/* The reference wizard paints a COMPLETED step in the primary colour (the core stepper defaults to
+   the success green). The dialog's root class sits on the modal OVERLAY, so this override lives in the
+   package's global sheet — a scoped deep-combinator rule could never reach past the overlay's own scope. */
+.tm-spreadsheet-t2c .tm-stepper-step--completed .tm-stepper-indicator {
+    background: var(--tm-color-primary);
+    border-color: var(--tm-color-primary);
+    color: var(--tm-color-on-primary);
+}
+
+.tm-spreadsheet-t2c .tm-stepper-connector-line--completed {
+    background: var(--tm-color-primary);
+}
+
+/* Find & Replace on the mobile layout: the panel becomes the content of the non-modal bottom sheet,
+   so it drops the floating card chrome and fills the sheet. The two extra ancestors are deliberate —
+   the panel's own scoped rule (`.tm-spreadsheet-find[b-…]`) is a two-class specificity and ships in
+   the scoped bundle that loads AFTER this file, so a plain descendant selector loses and the phone
+   kept rendering the 20rem floating card inside the sheet. */
+/* The find sheet opens tall enough to show both fields and the counter before the user swipes: the
+   generic sheet starts at its peek detent, which cut the Replace-with row (phase-4 review). */
+.tm-drawer.tm-spreadsheet-find-host .tm-drawer__panel {
+    min-height: 60dvh;
+}
+
+.tm-drawer.tm-spreadsheet-find-host .tm-drawer__panel .tm-spreadsheet-find {
+    position: static;
+    width: 100%;
+    max-width: none;
+    padding: 0;
+    border: 0;
+    box-shadow: none;
+    background: transparent;
 }
 
 /* ── Reduced motion ──────────────────────────────────────────────────────────
@@ -1112,8 +1659,8 @@
   .tm-spreadsheet-col-resizer,
   .tm-spreadsheet-context-menu__item,
   .tm-spreadsheet-corner,
-  .tm-spreadsheet-dialog__input,
   .tm-spreadsheet-find__btn,
+  .tm-spreadsheet__mobile-header-action,
   .tm-spreadsheet-formula-bar__display,
   .tm-spreadsheet-formula-bar__input,
   .tm-spreadsheet-formula-bar__ref,
@@ -1132,4 +1679,236 @@
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
 }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════════════════════════
+   Responsive chrome (redesign phase 6)
+
+   The layout is the CONTAINER's, never the viewport's: the root is a named inline-size query container
+   (`.tm-spreadsheet`, `container-name: tm-spreadsheet`) and the core TmLayoutObserver renders the same
+   resolved mode as `data-layout` / `tm-spreadsheet--layout-*`. The desktop keeps the phase-5 tab strip,
+   the tablet renders two compact rows, the mobile is the G2 chrome (compact header, one basic row, sheet
+   tabs above the action bar, no status bar).
+   ═══════════════════════════════════════════════════════════════════════════════════════════════ */
+
+/* The observer's own root is the flex column the chrome lives in; the package root keeps the padding and
+   the workspace card. `min-height: 0` is what lets the grid scroll inside it.
+   It is ALSO the query container: the spreadsheet measures its own box, never the viewport (a phone-width
+   Notion block or modal inside a wide page is a phone). The containment deliberately sits HERE and not on
+   `.tm-spreadsheet` — `container-type: inline-size` implies `contain: layout`, which would make the root the
+   containing block of the dialogs' position:fixed surfaces and trap every dialog and sheet inside the card,
+   so the overlays are siblings of this container. All package @container rules query `tm-spreadsheet`, and
+   the widths come from TmBreakpoints (TmBreakpointsTests). */
+.tm-spreadsheet__layout {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+    min-width: 0;
+    container-type: inline-size;
+    container-name: tm-spreadsheet;
+}
+
+.tm-spreadsheet--workspace .tm-spreadsheet__layout {
+    gap: var(--tm-space-2);
+}
+
+/* SP3: the phone layout fills its container. `min-height` is the floor that keeps a host with no height on
+   the chain (an auto-height demo card) from collapsing the grid to zero, and `max-height` is the CEILING
+   that keeps `height: 100%` from resolving to `auto` inside an auto-height parent: the canvas grid's size
+   spacer is the whole scrollable sheet (200 rows), so an unbounded mobile grid grew to thousands of pixels
+   inside a normal document flow. With the cap the grid scrolls inside the component, exactly like the
+   reference's phone app. */
+.tm-spreadsheet--layout-mobile {
+    min-height: var(--tm-spreadsheet-mobile-min-height);
+    max-height: 100dvh;
+    /* A host may override the mobile floor (the Notion fullscreen edit modal sets it to 0 so its footer
+       cannot be pushed out of a 568x320 viewport). The phone root then becomes the scroll container
+       instead of clipping the grid to zero height; a host that fits the chrome never scrolls. */
+    overflow-y: auto;
+}
+
+/* The short-host fallback: the grid keeps a readable floor, so the phone chrome overflowing the host is
+   reachable by scrolling rather than the grid disappearing. The floor is a token because the host knows
+   how much room its own frame needs. */
+.tm-spreadsheet--layout-mobile .tm-spreadsheet-canvas-grid {
+    min-height: var(--tm-spreadsheet-grid-min-height);
+}
+
+.tm-spreadsheet--layout-mobile.tm-spreadsheet--workspace {
+    padding: 0;
+    gap: 0;
+}
+
+/* ── Mobile compact header (title + undo/redo + host actions) ── */
+.tm-spreadsheet__mobile-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--tm-space-2);
+    flex: 0 0 auto;
+    min-height: var(--tm-touch-target);
+    padding: var(--tm-space-1) var(--tm-space-3);
+    background: var(--tm-color-surface);
+    border-bottom: 1px solid var(--tm-color-border);
+}
+
+.tm-spreadsheet__mobile-header-start {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-2);
+    min-width: 0;
+}
+
+.tm-spreadsheet__mobile-title {
+    font-size: var(--tm-text-md);
+    font-weight: var(--tm-font-weight-semibold);
+    color: var(--tm-color-text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.tm-spreadsheet__mobile-header-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-1);
+    flex: 0 0 auto;
+}
+
+.tm-spreadsheet__mobile-header-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--tm-touch-target);
+    height: var(--tm-touch-target);
+    padding: 0;
+    border: 1px solid transparent;
+    border-radius: var(--tm-radius-sm);
+    background: transparent;
+    color: var(--tm-color-text-muted);
+    cursor: pointer;
+    transition: background var(--tm-transition-fast), color var(--tm-transition-fast);
+}
+
+.tm-spreadsheet__mobile-header-action:hover:not(:disabled) {
+    background: var(--tm-color-surface-hover);
+    color: var(--tm-color-text);
+}
+
+.tm-spreadsheet__mobile-header-action:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.tm-spreadsheet__mobile-header-action:focus-visible {
+    outline: 2px solid transparent;
+    box-shadow: var(--tm-focus-ring);
+}
+
+/* ── Mobile action bar ──
+   The bar rides the core TmMobileActionBar (F5); the package only removes the workspace card so it reads
+   as a bottom bar, and keeps it out of the grid's scroll box. */
+.tm-spreadsheet--layout-mobile .tm-spreadsheet__mobile-bar {
+    flex: 0 0 auto;
+    background: var(--tm-color-surface);
+    border-top: 1px solid var(--tm-color-border);
+}
+
+/* ── Grid context menu: mobile sheet ── */
+.tm-spreadsheet-context-sheet .tm-spreadsheet-context-menu--sheet {
+    position: static;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    max-height: 60dvh;
+    overflow-y: auto;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+}
+
+.tm-spreadsheet-context-menu--sheet .tm-spreadsheet-context-menu__item {
+    min-height: var(--tm-touch-target);
+    display: flex;
+    align-items: center;
+    padding-inline: var(--tm-space-3);
+}
+
+/* ── Coarse pointer: 44px targets on the compact chrome ── */
+@media (any-pointer: coarse) {
+    .tm-spreadsheet-compact-toolbar__row .tm-toolbar-btn,
+    .tm-spreadsheet-compact-toolbar__item {
+        min-height: var(--tm-touch-target);
+    }
+
+    .tm-spreadsheet-compact-toolbar__color .tm-spreadsheet-toolbar__button {
+        min-height: var(--tm-touch-target);
+        min-width: var(--tm-touch-target);
+    }
+}
+
+/* ── Coarse pointer: the 44px floor on the chrome's own controls (phase 6) ─────────────────────
+   The compact ribbon's buttons are handled above; these are the controls OUTSIDE a toolbar: the
+   formula bar's ✓ / ✗ pair, the sheet-tab scroll arrows and the zoom buttons. They stay compact for a
+   fine pointer (a 26px control is correct there) and grow only where a finger is the input. */
+@media (any-pointer: coarse) {
+    .tm-spreadsheet-formula-bar__btn,
+    .tm-spreadsheet-formula-bar__ref-toggle,
+    .tm-spreadsheet-sheet-tabs__scroll-button,
+    .tm-spreadsheet-sheet-tabs__add,
+    .tm-spreadsheet-statusbar__zoom-btn,
+    .tm-spreadsheet-statusbar__zoom-percent {
+        min-width: var(--tm-touch-target);
+        min-height: var(--tm-touch-target);
+    }
+}
+
+/* ── Context menu surfaces (rendered by TmSpreadsheetContextMenu, a sibling of the layout container) ──
+   The menu is position:fixed and lives outside the query container, so its coordinates are the gesture's
+   client point. The entries are real buttons (role=menuitem) — the phone sheet needs the 44px rows and the
+   desktop menu needs a full-width hit area. */
+.tm-spreadsheet-context-menu__overlay {
+    position: fixed;
+    inset: 0;
+    z-index: calc(var(--tm-z-dropdown) - 1);
+    background: transparent;
+}
+
+.tm-spreadsheet-context-menu__item {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    min-height: 2rem;
+    padding: var(--tm-space-1) var(--tm-space-3);
+    border: none;
+    background: none;
+    font-family: var(--tm-font-sans);
+    font-size: var(--tm-text-sm);
+    color: var(--tm-color-text);
+    text-align: start;
+    cursor: pointer;
+    transition: background var(--tm-transition-fast);
+}
+
+.tm-spreadsheet-context-menu__item:hover,
+.tm-spreadsheet-context-menu__item:focus-visible {
+    background: var(--tm-color-primary-subtle);
+    outline: none;
+}
+
+.tm-spreadsheet-context-menu__item--danger {
+    color: var(--tm-color-danger);
+}
+
+/* The phone sheet's rows are touch-sized and use the sans face, never the grid's mono font. */
+.tm-spreadsheet-context-menu--sheet .tm-spreadsheet-context-menu__item {
+    min-height: var(--tm-touch-target);
+    font-size: var(--tm-text-sm);
+}
+
+/* While a sheet owns the phone layout the sticky action bar is removed: it has a higher stacking order than
+   the drawer and would cover the sheet's footer (its Cancel / OK bar). */
+.tm-spreadsheet__mobile-bar--suppressed {
+    display: none;
 }

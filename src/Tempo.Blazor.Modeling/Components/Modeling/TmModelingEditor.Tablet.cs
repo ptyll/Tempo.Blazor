@@ -1,0 +1,285 @@
+using Microsoft.AspNetCore.Components;
+using Tempo.Blazor.Abstractions.Layout;
+using Tempo.Blazor.Modeling;
+
+namespace Tempo.Blazor.Components.Modeling;
+
+/// <summary>
+/// The Fáze 6 tablet half of <see cref="TmModelingEditor"/> (kept beside the main code-behind to
+/// respect the 1200-line source ceiling): the resolved-layout tracking, the tablet overlay rules
+/// — at most ONE side panel open, enforced by the editor's own handlers so the rule holds even
+/// before the shell's conflict pass — and the "Panels" tabs as the tablet visibility switch.
+/// Review fix: the tablet sheets carry their OWN flags (starting closed) so entering the tablet
+/// band never forces the desktop dock open, and leaving it never resets the desktop flags.
+/// </summary>
+public partial class TmModelingEditor
+{
+    // ── Resolved layout ──────────────────────────────────────────────────────
+
+    /// <summary>The tablet band's own sheet flags: BOTH start closed (the preview is alone until
+    /// the user opens a sheet — the same defaults the wireframe editor uses), and the issues dock
+    /// starts collapsed. The desktop dock flags are untouched by any of it. Final UX review (M2):
+    /// the issues are the FOURTH panel on this band — the side sheet starts closed too.</summary>
+    private bool _tabletTreeOpen;
+    private bool _tabletInspectorOpen;
+    private bool _tabletIssuesCollapsed = true;
+    private bool _tabletIssuesOpen;
+
+    /// <summary>Per-instance DOM ids of the tablet issues sheet (the focus-scope title and the body the tab's aria-controls names).</summary>
+    private readonly string _issuesSheetId = $"tm-modeling-issues-sheet-{Guid.NewGuid():N}";
+    private readonly string _issuesSheetTitleId = $"tm-modeling-issues-sheet-title-{Guid.NewGuid():N}";
+
+    /// <summary>Whether the tablet issues side sheet is open (the tablet band's own flag — the desktop dock and the mobile tab are separate states).</summary>
+    private bool IssuesSheetOpen => IsTablet && _tabletIssuesOpen;
+
+    /// <summary>Whether the editor's own container currently resolves the tablet band.</summary>
+    private bool IsTablet => _resolvedLayout == TmLayoutMode.Tablet;
+
+    /// <summary>Whether the tree drawer is open: the tablet flag on the tablet band, the desktop
+    /// dock flag everywhere else (the shell's LeftOpen parameter).</summary>
+    private bool TreeSheetOpen => IsTablet ? _tabletTreeOpen : _shellLeftOpen;
+
+    /// <summary>Whether the inspector sheet is open: the tablet flag on the tablet band, the
+    /// desktop dock flag everywhere else (the shell's RightOpen parameter).</summary>
+    private bool InspectorSheetOpen => IsTablet ? _tabletInspectorOpen : _shellRightOpen;
+
+    /// <summary>Whether the issues dock renders collapsed: the tablet band starts collapsed (its
+    /// own flag); the desktop dock keeps the user's choice.</summary>
+    private bool IssuesCollapsed => IsTablet ? _tabletIssuesCollapsed : _issuesCollapsed;
+
+    /// <summary>Tracks the resolved layout (the seed in <see cref="OnInitialized"/> plus a forced
+    /// flip in <see cref="OnParametersSetAsync"/>, the Auto editors through the outer observer —
+    /// and the shell's idempotent duplicate raise). Entering the tablet band resets ITS flags
+    /// (sheets closed, dock collapsed); leaving it drops them without touching the desktop dock
+    /// flags, which keep whatever the user had before entering the band.</summary>
+    private void ApplyResolvedLayout(TmLayoutMode mode)
+    {
+        if (_resolvedLayout == mode)
+        {
+            return;
+        }
+
+        var wasTablet = _resolvedLayout == TmLayoutMode.Tablet;
+        var wasMobile = _resolvedLayout == TmLayoutMode.Mobile;
+        _resolvedLayout = mode;
+        if (mode == TmLayoutMode.Tablet && !wasTablet)
+        {
+            _tabletTreeOpen = false;
+            _tabletInspectorOpen = false;
+            _tabletIssuesCollapsed = true;
+            _tabletIssuesOpen = false;
+        }
+        else if (wasTablet && mode != TmLayoutMode.Tablet)
+        {
+            _tabletTreeOpen = false;
+            _tabletInspectorOpen = false;
+            _tabletIssuesOpen = false;
+        }
+
+        // Fáze 7: entering the mobile band resets ITS surfaces — the change-view sheet is closed
+        // and the Issues tab shows the whole panel expanded. Leaving mobile keeps nothing (the
+        // band's state is re-seeded on the next entry, like the tablet's sheets).
+        if (mode == TmLayoutMode.Mobile && !wasMobile)
+        {
+            _changeViewOpen = false;
+            _mobileIssuesCollapsed = false;
+        }
+    }
+
+    private async Task OnShellResolvedLayoutChanged(TmLayoutMode mode)
+    {
+        // Fáze 10 review minor: a band flip re-presents the open "Open in editor" dialog —
+        // tablet→mobile swaps the docked HeaderActions close for the mobile icon close (and
+        // mobile→tablet the reverse), so the close that owned the focus UNMOUNTS and the focus
+        // would drop to body. Probe the focus BEFORE the flip render: if the close owned it,
+        // re-arm the close focus (the stable open-editor-close hook lives on whichever close is
+        // ACTIVE), and OnAfterRenderAsync moves it onto the new close after the flip.
+        var flipsModalPresentation = (_resolvedLayout == TmLayoutMode.Tablet && mode == TmLayoutMode.Mobile)
+            || (_resolvedLayout == TmLayoutMode.Mobile && mode == TmLayoutMode.Tablet);
+        if (_openedEditorDocument is not null
+            && flipsModalPresentation
+            && await IsFocusWithinAsync(OpenEditorCloseFocusSelector))
+        {
+            _shouldFocusOpenEditorCloseButton = true;
+        }
+
+        ApplyResolvedLayout(mode);
+    }
+
+    // ── One sheet at a time (the shell's Open callbacks) ─────────────────────
+
+    private Task OnShellLeftOpenChanged(bool open)
+    {
+        if (IsTablet)
+        {
+            _tabletTreeOpen = open;
+            if (open) _tabletInspectorOpen = false;
+            // The one-open rule covers the issues sheet too (final UX review M2).
+            if (open) _tabletIssuesOpen = false;
+            return Task.CompletedTask;
+        }
+
+        _shellLeftOpen = open;
+        return Task.CompletedTask;
+    }
+
+    private Task OnShellRightOpenChanged(bool open)
+    {
+        if (IsTablet)
+        {
+            _tabletInspectorOpen = open;
+            if (open) _tabletTreeOpen = false;
+            if (open) _tabletIssuesOpen = false;
+            return Task.CompletedTask;
+        }
+
+        _shellRightOpen = open;
+        return Task.CompletedTask;
+    }
+
+    // ── The tablet issues side sheet (final UX review M2) ────────────────────
+
+    /// <summary>Toggles the issues side sheet — the fourth tablet panel. Opening it closes the
+    /// tree drawer and the inspector sheet (the same one-open rule); closing it is the ×/Escape path.</summary>
+    private Task ToggleIssuesSheetAsync()
+    {
+        if (!IsTablet)
+        {
+            return Task.CompletedTask;
+        }
+
+        if (_tabletIssuesOpen)
+        {
+            _tabletIssuesOpen = false;
+            return Task.CompletedTask;
+        }
+
+        _tabletTreeOpen = false;
+        _tabletInspectorOpen = false;
+        _tabletIssuesOpen = true;
+        return Task.CompletedTask;
+    }
+
+    private Task CloseIssuesSheetAsync()
+    {
+        _tabletIssuesOpen = false;
+        return Task.CompletedTask;
+    }
+
+    // ── The "Panels" tabs as the tablet visibility switch ────────────────────
+
+    /// <summary>Toggles the tree drawer (the inspector sheet yields) — the tablet Tree tab.</summary>
+    private Task ToggleTreeSheetAsync()
+        => ToggleSheetAsync(OnShellLeftOpenChanged, TreeSheetOpen);
+
+    /// <summary>Toggles the inspector side sheet (the tree drawer yields) — the tablet Inspector tab.</summary>
+    private Task ToggleInspectorSheetAsync()
+        => ToggleSheetAsync(OnShellRightOpenChanged, InspectorSheetOpen);
+
+    private static async Task ToggleSheetAsync(Func<bool, Task> setOpen, bool isOpen)
+    {
+        if (isOpen)
+        {
+            await setOpen(false);
+        }
+        else
+        {
+            await setOpen(true);
+        }
+    }
+
+    /// <summary>The Preview tab: close every sheet — the preview alone.</summary>
+    private async Task ShowPreviewOnlyAsync()
+    {
+        if (TreeSheetOpen) await OnShellLeftOpenChanged(false);
+        if (InspectorSheetOpen) await OnShellRightOpenChanged(false);
+        if (IssuesSheetOpen) await CloseIssuesSheetAsync();
+    }
+
+    // ── Tree filter + cached child callbacks (Fáze 6 review fix, M26) ────────
+
+    /// <summary>
+    /// The tree filter's two-way storage (Fáze 6 review fix): a plain holder the tree's
+    /// <see cref="FilterTextChanged"/> callback writes into. The value is read on the NEXT
+    /// editor render (as the tree's <c>FilterText</c> seed), so a tree remount — a layout flip —
+    /// cannot lose the filter. The editor never re-renders for the write itself.
+    /// </summary>
+    private sealed class TreeFilterHolder { public string? Value; }
+
+    private readonly TreeFilterHolder _treeFilterHolder = new();
+
+    /// <summary>
+    /// A receiver that is deliberately NOT a component (the factory rejects null): a component
+    /// receiver would run its <see cref="Microsoft.AspNetCore.Components.IHandleEvent"/> path on
+    /// every raise — a full editor re-render per keystroke, which blew the M26 tree-filter budget
+    /// by ~170ms. The callback is also built ONCE (a per-render closure would change the tree's
+    /// parameter on every editor render and re-render the 200-row tree with it).
+    /// </summary>
+    private static readonly object TreeFilterReceiver = new();
+
+    private EventCallback<string?>? _treeFilterChangedCallback;
+
+    private EventCallback<string?> TreeFilterChanged
+    {
+        get
+        {
+            if (!_treeFilterChangedCallback.HasValue)
+            {
+                var holder = _treeFilterHolder;
+                _treeFilterChangedCallback = EventCallback.Factory.Create<string?>(TreeFilterReceiver, value =>
+                {
+                    holder.Value = value;
+                    return Task.CompletedTask;
+                });
+            }
+
+            return _treeFilterChangedCallback.Value;
+        }
+    }
+
+    // ── Cached tree/preview callbacks (Fáze 6 review fix, M26) ───────────────
+    // A method-group parameter (OnElementSelected="…") builds a NEW delegate on every editor
+    // render; the child's parameter diff then always sees a change and re-renders the 200-row
+    // tree (and the preview's editor) on every parent pass. Building each callback ONCE keeps
+    // the parameters reference-stable, so a parent re-render diffs to "no change".
+
+    private EventCallback<ModelingElementDto>? _onElementSelectedCallback;
+    private EventCallback<ModelingElementDto>? _onElementDragStartedCallback;
+    private EventCallback? _onElementDragEndedCallback;
+    private EventCallback<ModelingElementDto>? _onInsertIntoPreviewCallback;
+    private EventCallback<IReadOnlyCollection<string>>? _collapsedGroupsChangedCallback;
+    private EventCallback<IReadOnlyCollection<string>>? _collapsedElementsChangedCallback;
+
+    /// <summary>The tree's callbacks, built once per editor instance.</summary>
+    private (EventCallback<ModelingElementDto> Selected,
+             EventCallback<ModelingElementDto> DragStarted,
+             EventCallback DragEnded,
+             EventCallback<ModelingElementDto> Insert,
+             EventCallback<IReadOnlyCollection<string>> CollapsedChanged,
+             EventCallback<IReadOnlyCollection<string>> CollapsedElementsChanged) TreeCallbacks
+    {
+        get
+        {
+            _onElementSelectedCallback ??= EventCallback.Factory.Create<ModelingElementDto>(this, SelectElementAsync);
+            _onElementDragStartedCallback ??= EventCallback.Factory.Create<ModelingElementDto>(this, HandleElementDragStartedAsync);
+            _onElementDragEndedCallback ??= EventCallback.Factory.Create(this, HandleElementDragEndedAsync);
+            _onInsertIntoPreviewCallback ??= EventCallback.Factory.Create<ModelingElementDto>(this, HandleInsertIntoPreviewAsync);
+            _collapsedGroupsChangedCallback ??= EventCallback.Factory.Create<IReadOnlyCollection<string>>(this, value =>
+            {
+                _collapsedGroups = value;
+                return Task.CompletedTask;
+            });
+            _collapsedElementsChangedCallback ??= EventCallback.Factory.Create<IReadOnlyCollection<string>>(this, value =>
+            {
+                _collapsedElementIds = value;
+                return Task.CompletedTask;
+            });
+            return (_onElementSelectedCallback!.Value,
+                    _onElementDragStartedCallback!.Value,
+                    _onElementDragEndedCallback!.Value,
+                    _onInsertIntoPreviewCallback!.Value,
+                    _collapsedGroupsChangedCallback!.Value,
+                    _collapsedElementsChangedCallback!.Value);
+        }
+    }
+}

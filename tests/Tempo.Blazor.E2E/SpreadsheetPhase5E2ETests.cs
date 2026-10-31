@@ -15,6 +15,9 @@ public partial class SpreadsheetE2ETests
     private async Task<IPage> OpenPhase5DemoAsync()
     {
         var page = await CreatePageAsync();
+        // Redesign phase 6: the spreadsheet chrome follows its CONTAINER, so a 1280-wide page
+        // is the TABLET chrome (no ribbon tabs). These specs assert the DESKTOP ribbon.
+        await page.SetViewportSizeAsync(1440, 960);
         await page.GotoAsync($"{BaseUrl}/spreadsheet");
         await WaitForAppReadyAsync(page);
         var grid = DemoGrid(page);
@@ -47,14 +50,13 @@ public partial class SpreadsheetE2ETests
         await grid.ClickAsync(new LocatorClickOptions { Force = true, Position = new() { X = pt.X, Y = pt.Y } });
         await WaitForCanvasActiveRefAsync(grid, cellRef);
 
-        await DataTab(page).ClickAsync();
-        await DemoComponent(page).Locator(".tm-spreadsheet-toolbar__button[title='Data validation...']").ClickAsync();
+        await OpenToolbarCommandAsync(page, "Data", "data-validation", "Data validation...");
 
         var dialog = page.Locator(".tm-dvd");
         await dialog.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10000 });
 
         // Select "List" type — SelectOptionAsync fires change → OnTypeChanged → _validationType = List
-        await dialog.Locator(".tm-dvd__select").First.SelectOptionAsync("List");
+        await dialog.Locator(".tm-dvd__select select").First.SelectOptionAsync("List");
         await page.WaitForTimeoutAsync(200); // let Blazor re-render (operator select disappears)
 
         // Fill formula1 and fire change so Blazor @bind updates _formula1
@@ -65,25 +67,38 @@ public partial class SpreadsheetE2ETests
         await dialog.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Hidden, Timeout = 10000 });
     }
 
-    private static async Task SetWholeNumberValidationAsync(
+    internal static async Task SetWholeNumberValidationAsync(
         IPage page,
         ILocator grid,
         string cellRef,
         string min,
-        string max)
+        string max,
+        bool viaNameBox = false)
     {
-        var pt = await GetCanvasCellCenterAsync(grid, cellRef);
-        await grid.ClickAsync(new LocatorClickOptions { Force = true, Position = new() { X = pt.X, Y = pt.Y } });
+        if (viaNameBox)
+        {
+            // The name box selects the cell through the component's own navigation path, so the test
+            // does not depend on the canvas hit test of a touch viewport (coarse-pointer density
+            // changes the geometry the click maths would have to mirror).
+            await page.FillAsync(".tm-spreadsheet-formula-bar__ref", cellRef);
+            await page.Keyboard.PressAsync("Enter");
+            await page.WaitForTimeoutAsync(150);
+        }
+        else
+        {
+            var pt = await GetCanvasCellCenterAsync(grid, cellRef);
+            await grid.ClickAsync(new LocatorClickOptions { Force = true, Position = new() { X = pt.X, Y = pt.Y } });
+        }
+
         await WaitForCanvasActiveRefAsync(grid, cellRef);
 
-        await DataTab(page).ClickAsync();
-        await DemoComponent(page).Locator(".tm-spreadsheet-toolbar__button[title='Data validation...']").ClickAsync();
+        await OpenToolbarCommandAsync(page, "Data", "data-validation", "Data validation...");
 
         var dialog = page.Locator(".tm-dvd");
         await dialog.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10000 });
 
         // Select "Whole" type; operator defaults to "between"
-        await dialog.Locator(".tm-dvd__select").First.SelectOptionAsync("Whole");
+        await dialog.Locator(".tm-dvd__select select").First.SelectOptionAsync("Whole");
         await page.WaitForTimeoutAsync(200);
 
         // Fill min and max; dispatch change to update Blazor @bind
@@ -216,8 +231,7 @@ public partial class SpreadsheetE2ETests
         await grid.ClickAsync(new LocatorClickOptions { Force = true, Position = new() { X = pt.X, Y = pt.Y } });
         await WaitForCanvasActiveRefAsync(grid, "E5");
 
-        await DataTab(page).ClickAsync();
-        await DemoComponent(page).Locator(".tm-spreadsheet-toolbar__button[title='Data validation...']").ClickAsync();
+        await OpenToolbarCommandAsync(page, "Data", "data-validation", "Data validation...");
 
         var dialog = page.Locator(".tm-dvd");
         await dialog.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10000 });

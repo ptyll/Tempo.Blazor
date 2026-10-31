@@ -17,6 +17,7 @@
      role="@Role"
      aria-modal="@AriaModal"
      aria-labelledby="@AriaLabelledBy"
+     aria-describedby="@AriaDescribedBy"
      aria-label="@AriaLabel"
      tabindex="@TabIndex"
      data-restore-target="@(RestoreFocus ? RestoreFocusTargetId : null)"
@@ -61,6 +62,14 @@
 
     /// <summary>The id of the element that names the scope, wired to <c>aria-labelledby</c>.</summary>
     [Parameter] public string? AriaLabelledBy { get; set; }
+
+    /// <summary>
+    /// The id of the element that describes the scope, wired to <c>aria-describedby</c>. Additive:
+    /// a modal points it at its subtitle so screen readers announce title + description, and a surface
+    /// whose body text is the point of the surface (an <c>alertdialog</c> message) names it here.
+    /// Null renders no attribute.
+    /// </summary>
+    [Parameter] public string? AriaDescribedBy { get; set; }
 
     /// <summary>An accessible name for the scope, wired to <c>aria-label</c>.</summary>
     [Parameter] public string? AriaLabel { get; set; }

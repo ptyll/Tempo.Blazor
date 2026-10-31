@@ -62,6 +62,57 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
     /// <summary>Show the component toolbox panel on the left.</summary>
     [Parameter] public bool ShowToolbox { get; set; } = true;
 
+    /// <summary>
+    /// Fáze 15 (embedded hosts, e.g. the Modeling "Open in editor" dialog): stencil ids to pin
+    /// as the FIRST toolbox library (order preserved, unknown ids ignored) while the other
+    /// libraries start collapsed — search still spans the whole stencil library. <c>null</c>
+    /// (the default) keeps today's toolbox. Pass-through to <see cref="TmDiagramToolbox"/>.
+    /// </summary>
+    [Parameter] public IReadOnlyList<string>? PreferredStencilIds { get; set; }
+
+    /// <summary>
+    /// Header label of the pinned library (e.g. the notation profile's display name). Null
+    /// falls back to the localized <c>TmDiagramToolbox_PreferredDefault</c>. Pass-through to
+    /// <see cref="TmDiagramToolbox"/>; ignored while <see cref="PreferredStencilIds"/> is unset.
+    /// </summary>
+    [Parameter] public string? PreferredStencilsLabel { get; set; }
+
+    /// <summary>
+    /// Show the page-tab row above the canvas (Fáze 9, embedded viewers). Default <c>true</c> —
+    /// today's behavior in every layout. <c>false</c> drops the row entirely (a single-page
+    /// preview has nothing to switch); page switching stays available by setting the document's
+    /// own <see cref="DiagramDocument.ActivePageIndex"/> (the host owns the
+    /// <see cref="Document"/> reference) — the knob never hides pages through CSS.
+    /// </summary>
+    [Parameter] public bool ShowPageTabs { get; set; } = true;
+
+    /// <summary>
+    /// Fit the diagram when a NEW document identity renders for the first time (Fáze 9, embedded
+    /// viewers). Default <c>null</c> — today's no-auto-fit behavior. A value fits ONCE per document
+    /// instance after its first render (<see cref="DiagramFitMode.Width"/> is the embedded mobile
+    /// preview's fit-to-width); re-renders of the SAME document never re-fit, a replaced document
+    /// does. User zoom afterwards always wins.
+    /// </summary>
+    [Parameter] public DiagramFitMode? FitOnDocumentLoad { get; set; }
+
+    /// <summary>
+    /// The mobile floating zoom pill rule (Fáze 9, embedded viewers). Default <c>null</c> keeps
+    /// today's rule (<c>IsMobileLayout &amp;&amp; ShowToolbar &amp;&amp;</c> the Zoom group);
+    /// <c>true</c> shows the pill on a mobile layout even when <see cref="ShowToolbar"/> is
+    /// <c>false</c> (a chrome-less viewer keeps zoom buttons); <c>false</c> never shows it. The
+    /// pill is a mobile-band surface — on the docked bands the status bar owns the zoom.
+    /// </summary>
+    [Parameter] public bool? ShowMobileZoomOverlay { get; set; }
+
+    /// <summary>
+    /// The initial collapsed state of the minimap card (desktop) / floating overlay (tablet),
+    /// Fáze 9. Default <c>false</c> — today's expanded start. Seeded ONCE in
+    /// <see cref="OnInitialized"/> (a host like the Modeling tablet dialog starts with the map
+    /// collapsed); the user's own collapse/expand wins after start and the mobile X1 rule
+    /// (minimap hidden, toggled from the "⋯" menu) is unchanged.
+    /// </summary>
+    [Parameter] public bool MinimapInitiallyCollapsed { get; set; }
+
     /// <summary>Show the properties panel on the right.</summary>
     [Parameter] public bool ShowPropertiesPanel { get; set; } = true;
 
@@ -125,6 +176,43 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
 
     private TmDiagramCanvas? _canvas;
     private ElementReference _downloadAnchor;
+
+    /// <summary>
+    /// Returns the current canvas viewport in document-space coordinates — the visible window of
+    /// the page the user is looking at (additive, Fáze 6 review fix). Delegates to the embedded
+    /// <see cref="TmDiagramCanvas.GetViewport"/>; a zeroed tuple means the JS engine has not
+    /// reported a viewport yet (SSR, prerender, bUnit) and callers should fall back to the page
+    /// center. Hosts use it to place generated content at the center of what the user SEES
+    /// (e.g. the Modeling preview's non-drag "Insert into preview" path) instead of the page
+    /// center, which can sit outside the visible rect after a fit.
+    /// </summary>
+    public (double X, double Y, double W, double H) GetViewport()
+        => _canvas?.GetViewport() ?? (0, 0, 0, 0);
+
+    /// <summary>
+    /// Re-measures the canvas after the chrome AROUND the editor changed (final UX review, M5):
+    /// a host that grows or shrinks the editor's own box (a collapsed dock, a resized pane)
+    /// asks the JS engine to re-derive the scale and re-report the viewport and zoom — the same
+    /// relayout path the shell's panel toggles use. A no-op before the canvas mounted.
+    /// </summary>
+    public Task NotifyViewportChangedAsync()
+        => _canvas?.NotifyViewportChangedAsync() ?? Task.CompletedTask;
+
+    /// <summary>
+    /// Re-fits the current content to the editor's box (final UX review, M5): a host that grows
+    /// or shrinks the editor's own box (a collapsed dock, a resized pane) asks the JS engine for
+    /// a zoom-to-fit so the diagram fills the new box and the zoom report follows — the same
+    /// path the toolbar's Fit-to-view (and the document load) use. The zoom label re-renders with
+    /// the fitted scale. A no-op before the canvas mounted. Fáze 9: the optional
+    /// <paramref name="mode"/> picks the fit — <see cref="DiagramFitMode.Page"/> (default,
+    /// today's behavior) fits both axes, <see cref="DiagramFitMode.Width"/> scales by the
+    /// container width only (a tall diagram stays scrollable).
+    /// </summary>
+    public async Task FitToViewAsync(DiagramFitMode mode = DiagramFitMode.Page)
+    {
+        await FitToView(mode);
+        StateHasChanged();
+    }
 
     // ── Command stack ────────────────────────────────────────────────────────
     // One isolated stack per page so undo/redo is scoped to the active page.
@@ -192,6 +280,19 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
     private string? _importError;
     private string? _exportError;
     private DiagramMinimapViewport? _minimapViewport;
+
+    // Fáze 9: FitOnDocumentLoad bookkeeping — the last document identity that was scheduled a
+    // fit (so the same instance never re-fits) and the fit waiting for its first render.
+    private DiagramDocument? _lastFitDocument;
+    private DiagramFitMode? _pendingFitOnLoad;
+
+    // Fáze 9 review: the fit stays OWED until a canvas has actually performed it. The shell
+    // remounts <see cref="TmDiagramCanvas"/> on a mobile↔docked flip (it renders the canvas in
+    // different places), and the remounted canvas instance has lost any handed-over state — so
+    // the editor re-arms a still-owed fit on every canvas it is not already armed on, and the
+    // canvas' onFitted callback retires the owed flag after the real fit.
+    private bool _fitOwed;
+    private TmDiagramCanvas? _fitArmedCanvas;
 
     private string? _activeLayerId;
 
@@ -326,6 +427,11 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
         EnsureDocumentLayers(_document);
         _document.SnapToGrid(GridSize);
         EnsureCommandStackForActivePage();
+
+        // Fáze 9: the minimap start state is seeded ONCE, here — a host (the Modeling tablet
+        // dialog) starts the map collapsed without CSS. The user's own toggle wins after start;
+        // the mobile X1 snapshot (minimap hidden) applies unchanged on a mobile layout entry.
+        _minimapCollapsed = MinimapInitiallyCollapsed;
     }
 
     protected override void OnParametersSet()
@@ -343,10 +449,28 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
             EnsureCommandStackForActivePage();
         }
 
+        // Fáze 9: a NEW document identity (initial render included — the seeded _document is the
+        // same reference, hence the separate last-fit tracker) with FitOnDocumentLoad armed
+        // schedules ONE fit after that document's first render. The same instance re-rendering
+        // never re-fits; a replaced document does.
+        if (FitOnDocumentLoad is { } fitMode && Document is not null
+            && !ReferenceEquals(Document, _lastFitDocument))
+        {
+            _lastFitDocument = Document;
+            _pendingFitOnLoad = fitMode;
+            // A new document identity makes the fit owed again — even on a canvas instance a
+            // previous fit was already armed on (the ReferenceEquals check below).
+            _fitOwed = true;
+            _fitArmedCanvas = null;
+        }
+
         // A FORCED layout is the resolution: the shell reports changes only, and the initial
         // resolution is not a change — so a host (or test) that pins Tablet/Desktop/Mobile must
-        // see the tablet presentation from the first frame. Under Auto the shell's callback owns
-        // this state (it fires on the first container measurement).
+        // see the tablet presentation from the first frame. The initial value is not a change,
+        // except that an Auto observer which inherits a non-Desktop resolution from a cascading
+        // parent reports it once so late-mounted consumers adopt it. Under Auto the shell's
+        // callback owns this state (it fires on the first container measurement, or on that
+        // inherited first resolution).
         if (LayoutMode != TmLayoutMode.Auto && LayoutMode != _resolvedLayout)
         {
             ApplyResolvedLayout(LayoutMode);
@@ -1197,6 +1321,35 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
             _ = _canvas.SetActiveSearchResult(null);
     }
 
+    /// <summary>
+    /// Escape CONSUMED by the canvas' capture-phase consumer because the search panel is open
+    /// (focus inside the editor root): close the panel and move the focus back onto the canvas —
+    /// the input that held it dies with the panel, and without this the focus would drop to
+    /// <c>body</c>. The consumer marked the event (<c>preventDefault</c> + <c>tmEscapeHandled</c>)
+    /// BEFORE invoking, so a host overlay behind the editor (a dialog's focus trap) does not also
+    /// close on the same Escape. Double focus-restore note: the canvas is the restore target of
+    /// this path, while the TmModal host path restores the dialog trigger — the editor path is the
+    /// fallback that keeps the focus inside the editor when NO dialog sits behind it.
+    /// </summary>
+    private async Task HandleSearchEscape()
+    {
+        CloseSearchPanel();
+        if (_canvas is not null) await _canvas.FocusCanvasAsync();
+    }
+
+    /// <summary>
+    /// Escape CONSUMED by the canvas' capture-phase consumer because the header "⋯" view menu is
+    /// open (<c>data-open</c> on <c>.tm-diagram-editor__view-menu</c>): close the menu and hand the
+    /// focus back to its trigger — the menu items die with the render. The event is marked as
+    /// handled before this runs, so a host overlay behind the editor does not also close.
+    /// </summary>
+    private Task HandleViewMenuEscape()
+    {
+        _viewMenuOpen = false;
+        _viewMenuTriggerFocusPending = true;
+        return Task.CompletedTask;
+    }
+
     private void OnSearchQueryChanged(string query)
     {
         _searchQuery = query;
@@ -1646,12 +1799,14 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
             await _canvas.SetZoom(_zoomLevel);
     }
 
-    private async Task FitToView()
+    private async Task FitToView(DiagramFitMode mode = DiagramFitMode.Page)
     {
         if (_canvas is not null)
         {
-            var scale = await JS.InvokeAsync<double>("tmDiagramEditor.fitToView", _canvas.GetContainerRef(), 40);
-            _zoomLevel = scale;
+            // Fáze 9 review: ONE canvas fit path — the canvas applies the page-view margin and
+            // returns the FINAL scale (after the margin), so the zoom label never shows a
+            // pre-margin scale and both fit call sites cannot drift.
+            _zoomLevel = await _canvas.FitToView(mode);
         }
     }
 

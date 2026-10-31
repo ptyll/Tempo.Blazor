@@ -218,6 +218,15 @@
                 return FormatOptionValue(Value);
             }
 
+            // A NON-nullable value type at its default (int 0 / an enum's 0 member / a struct) is a
+            // real choice, not "nothing selected": emit its formatted value so the browser paints the
+            // option the model actually holds. Omitting the attribute left the select blank after a
+            // dialog switch back to Ascending / Any / Stop / General / column 0.
+            if (typeof(TValue).IsValueType && !IsNullableValueType)
+            {
+                return FormatOptionValue(Value);
+            }
+
             return (IsNullableValueType && HasEmptyOptionValue)
                 || (!typeof(TValue).IsValueType && HasNullValuedOption)
                 ? string.Empty

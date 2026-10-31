@@ -84,6 +84,15 @@ bottom sheet on a mobile one. The host contract every action surface must honour
 - The trigger is a real element passed as the panel's explicit `Anchor` (never a virtual
   anchor), carries `aria-haspopup="menu"`, `aria-expanded` and `aria-controls` pointing at the
   panel's stable `Id`, and the menu renders `role="menu"` / `role="menuitem"`.
+- **The panel stays inside the viewport, always.** The menu runs with `Flip` + `Shift` + the
+  `ConstrainHeight` knob of `TmOverlayPanel`: it flips to the other side of its trigger when the
+  preferred side has no room, is clamped along both axes, and — when it is taller than the room on
+  the resolved side (a toolbar can put twenty commands and three expanded lists into one "More":
+  1209 px of panel in a 768 px tablet viewport) — caps its own height to that room and scrolls
+  internally. Never let a menu paint entries outside the viewport: a top-layer panel has no page
+  scroll to rescue them, so every entry below the fold is simply unreachable by touch
+  (`tests/Tempo.Blazor.E2E/SpreadsheetPhase8OverflowE2ETests.cs` pins the tablet case, and
+  `TmToolbarOverflowTests.MoreMenu_AsksThePanelToStayInsideTheViewport` the options).
 - The initial focus moves to the first **enabled** menuitem (never a disabled one — `focus()`
   on a disabled button is a no-op and would leave focus on `<body>`); "enabled" here means
   neither native `disabled` nor `aria-disabled="true"` — an item that is only `aria-disabled`
@@ -217,8 +226,10 @@ editor) keeps focus.
       already on screen therefore stays above a popup opened after it, modal or not.
 9. **Known non-promoted surfaces (recorded exceptions).** Dialogs living in the extension
    packages still paint in their z-index band and were NOT promoted in this pass: the
-   Notion editor package surfaces, the spreadsheet package dialogs, the document-editor
+   Notion editor package surfaces, the document-editor
    package dialogs and the dashboard widget-selector layer (`_dashboard.css`). (The
+   spreadsheet package dialogs migrated onto `TmModal` in the Spreadsheet redesign phase 3 and
+   promote themselves — every one of the 14 dialogs; Find/Replace stays deliberately non-modal. The
    rich-text editor link/image/table/video/find dialogs migrated onto `TmModal` in 2.9.1
    and promote themselves; the signing package has no dialogs.) Opened while a core promoted
    surface is up they can paint under it — migrate them onto `TmModal`/`TmDialog` (which promote
@@ -231,3 +242,13 @@ editor) keeps focus.
     focus (first enabled item through `OnOpened` -> `focusFirst`, as `TmDropdown`, `TmSplitButton` and
     `TmContextMenu` do through `MenuNavInterop`) and the focus return to its trigger on an item activation
     (rule 4).
+11. **Stacked modals: the page is dimmed once, by the FIRST overlay.** Every `.tm-modal-overlay` paints the
+    page scrim (`rgba(0,0,0,.5)` light / `.7` dark) and a backdrop blur, so two open dialogs used to reach
+    `.75` / `.91` over the page and read almost black. A modal opened over another one (a later
+    sibling `.tm-modal-overlay` under the same parent — the rule is the `~` sibling combinator, so a modal
+    nested inside another modal's content still paints the full scrim) paints the light `--tm-modal-stacked-scrim` instead: 40 % of the same scrim colour through
+    `color-mix`, no blur. That keeps the page at one scrim and still gives the lower dialog a depth cue.
+    A host restores the old look with `--tm-modal-stacked-scrim: var(--tm-bg-overlay)`, or removes the cue
+    with `transparent`. Do not reach for `:has(~ .tm-modal-overlay)` to dim the dialog underneath: the
+    bUnit CSS-cascade reader (`CssCascade` + `ThemeCss.BundledCss`) mis-parses `:has()` and unrelated
+    contrast tests go red.

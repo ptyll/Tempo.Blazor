@@ -1,6 +1,8 @@
+using Microsoft.JSInterop;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Tempo.Blazor.Components.Spreadsheet.Models;
+using Tempo.Blazor.Abstractions.Layout;
 
 namespace Tempo.Blazor.Components.Spreadsheet.Dialogs;
 
@@ -9,13 +11,42 @@ namespace Tempo.Blazor.Components.Spreadsheet.Dialogs;
 /// </summary>
 public partial class TmSpreadsheetNamedRangeEditDialog
 {
+    // Per-instance id suffix: ids this phase introduced are implementation detail and never a
+    // selector. The form-field ids below predate this phase and stay constant because the published
+    // E2E lane keys off them (#nr-name, #nr-refers, …) — one dialog is open at a time, so they cannot
+    // collide.
+    private readonly string _idSuffix = Guid.NewGuid().ToString("N")[..8];
+    private readonly HashSet<string> _errors = [];
+
     private string _name = string.Empty;
     private string _refersTo = string.Empty;
     private NamedRangeScope _scope = NamedRangeScope.Workbook;
     private int _sheetIndex;
     private string? _comment;
-    private readonly HashSet<string> _errors = [];
     private bool _isNew;
+    private bool _seeded;
+    private SpreadsheetNamedRange? _seededFor;
+
+    private ElementReference _nameInputRef;
+    private ElementReference _refersToInputRef;
+    private ElementReference? _pendingErrorFocus;
+
+    private string NameErrorDomId => $"spreadsheet-named-range-edit-name-error-{_idSuffix}";
+
+    private string RefersToErrorDomId => $"spreadsheet-named-range-edit-refers-error-{_idSuffix}";
+
+    private string NameInputDomId => "nr-name";
+
+    private string RefersToInputDomId => "nr-refers";
+
+    private string ScopeSelectDomId => "nr-scope";
+
+    private string SheetSelectDomId => "nr-sheet";
+
+    private string CommentInputDomId => "nr-comment";
+
+    /// <summary>Whether the name field is currently marked invalid (required or not a valid name).</summary>
+    private bool HasNameError => _errors.Contains("name") || _errors.Contains("invalid");
 
     /// <summary>The workbook containing the named range.</summary>
     [Parameter, EditorRequired] public SpreadsheetWorkbook Workbook { get; set; } = null!;
@@ -29,8 +60,31 @@ public partial class TmSpreadsheetNamedRangeEditDialog
     /// <summary>Raised when the dialog is dismissed.</summary>
     [Parameter] public EventCallback OnCancel { get; set; }
 
+    /// <summary>
+    /// The id of the element focus returns to on close — the host spreadsheet passes the grid root (or
+    /// the Name Manager the editor was opened from). Null falls back to the opener.
+    /// </summary>
+    [Parameter] public string? RestoreFocusTargetId { get; set; }
+
+    /// <summary>
+    /// The layout the dialog renders. <see cref="TmLayoutMode.Auto"/> follows the viewport scope; a
+    /// forced value pins the mode without measuring, so a test can render the mobile sheet.
+    /// </summary>
+    [Parameter] public TmLayoutMode LayoutMode { get; set; } = TmLayoutMode.Auto;
+
     protected override void OnParametersSet()
     {
+        // Seed the form from the parameters ONCE per edit target. A Spreadsheet re-renders on its own
+        // (canvas sync callbacks, status aggregation) and re-sets the dialog's parameters with it;
+        // re-seeding on every parameter set would wipe what the user is typing mid-edit — which reads
+        // as a Save that silently refuses to close because the fields came back empty.
+        if (_seeded && ReferenceEquals(_seededFor, Range))
+        {
+            return;
+        }
+
+        _seeded = true;
+        _seededFor = Range;
         _isNew = Range is null;
         _name = Range?.Name ?? string.Empty;
         _refersTo = Range?.RefersTo ?? string.Empty;
@@ -40,23 +94,51 @@ public partial class TmSpreadsheetNamedRangeEditDialog
         _errors.Clear();
     }
 
+    /// <summary>After a failed save the first invalid field takes the focus, so the error is at hand.</summary>
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        await base.OnAfterRenderAsync(firstRender);
+
+        var target = _pendingErrorFocus;
+        _pendingErrorFocus = null;
+        if (target is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await target.Value.FocusAsync();
+        }
+        catch (Exception e) when (e is JSException or JSDisconnectedException or TaskCanceledException)
+        {
+            // The dialog may already be gone, or the circuit may be down.
+        }
+    }
+
     private void OnSaveClick()
     {
         _errors.Clear();
 
+        // "Required" wins over "not valid": an empty name is missing, not malformed, so the two
+        // messages never stack on the same field.
         if (string.IsNullOrWhiteSpace(_name))
+        {
             _errors.Add("name");
-
-        if (string.IsNullOrWhiteSpace(_refersTo))
-            _errors.Add("refersTo");
-
-        if (!SpreadsheetNamedRange.IsValidName(_name.Trim()))
+        }
+        else if (!SpreadsheetNamedRange.IsValidName(_name.Trim()))
         {
             _errors.Add("invalid");
         }
 
+        if (string.IsNullOrWhiteSpace(_refersTo))
+        {
+            _errors.Add("refersTo");
+        }
+
         if (_errors.Count > 0)
         {
+            _pendingErrorFocus = HasNameError ? _nameInputRef : _refersToInputRef;
             StateHasChanged();
             return;
         }
@@ -75,21 +157,9 @@ public partial class TmSpreadsheetNamedRangeEditDialog
 
     private void OnCancelClick() => OnCancel.InvokeAsync();
 
-    private async Task OnKeyDown(KeyboardEventArgs e)
+    private void OnKeyDown(KeyboardEventArgs e)
     {
-        if (e.Key == "Escape")
-            await OnCancel.InvokeAsync();
-        else if (e.Key == "Enter" && e.CtrlKey)
+        if (e.Key == "Enter" && e.CtrlKey)
             OnSaveClick();
-    }
-
-    // The dialog's Ctrl+Enter -> save shortcut lives on the root; the chrome
-    // buttons isolate their keydowns (stopPropagation) so Enter/Ctrl+Enter on
-    // them runs only the button's native click. Escape is re-handled here so
-    // it still cancels while focus sits on a button.
-    private async Task OnChromeKeyDown(KeyboardEventArgs e)
-    {
-        if (e.Key == "Escape")
-            await OnCancel.InvokeAsync();
     }
 }

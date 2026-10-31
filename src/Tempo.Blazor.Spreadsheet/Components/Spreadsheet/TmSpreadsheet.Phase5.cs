@@ -1,4 +1,6 @@
 using System.Globalization;
+using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Web;
 using Tempo.Blazor.Components.Spreadsheet.Commands;
 using Tempo.Blazor.Components.Spreadsheet.Data;
 using Tempo.Blazor.Components.Spreadsheet.Models;
@@ -22,12 +24,14 @@ public partial class TmSpreadsheet
     private bool _showValidationError;
     private string? _validationErrorTitle;
     private string? _validationErrorMessage;
+    private SpreadsheetValidationErrorStyle _validationErrorStyle = SpreadsheetValidationErrorStyle.Stop;
 
     // Pending commit that needs user confirmation (Warning/Information style)
     private Func<Task>? _pendingConfirmedCommit;
     private bool _showValidationConfirm;
     private string? _validationConfirmTitle;
     private string? _validationConfirmMessage;
+    private SpreadsheetValidationErrorStyle _validationConfirmStyle = SpreadsheetValidationErrorStyle.Warning;
 
     // ── In-cell validation dropdown ───────────────────────────────────────────
 
@@ -191,14 +195,16 @@ public partial class TmSpreadsheet
             return true;
 
         var errorStyle = result.ErrorStyle;
-        var title = rule.ErrorAlert?.Title ?? Loc["TmSpreadsheet_Validation_DefaultErrorTitle"];
-        var message = rule.ErrorAlert?.Message ?? Loc["TmSpreadsheet_Validation_DefaultErrorMessage"];
 
+        // The severity is the RULE's own style, so the alert picks its own icon and default words:
+        // a Stop is a hard block, a Warning and an Information ask whether to keep the value —
+        // and they no longer share one path, so an Information message never reads as a warning.
         if (errorStyle == SpreadsheetValidationErrorStyle.Stop)
         {
             _showValidationError = true;
-            _validationErrorTitle = title;
-            _validationErrorMessage = message;
+            _validationErrorStyle = SpreadsheetValidationErrorStyle.Stop;
+            _validationErrorTitle = rule.ErrorAlert?.Title;
+            _validationErrorMessage = rule.ErrorAlert?.Message;
             StateHasChanged();
             return false; // blocked
         }
@@ -206,8 +212,9 @@ public partial class TmSpreadsheet
         // Warning / Information — ask user to confirm
         _pendingConfirmedCommit = commitAction;
         _showValidationConfirm = true;
-        _validationConfirmTitle = title;
-        _validationConfirmMessage = message;
+        _validationConfirmStyle = errorStyle;
+        _validationConfirmTitle = rule.ErrorAlert?.Title;
+        _validationConfirmMessage = rule.ErrorAlert?.Message;
         StateHasChanged();
         return false; // deferred
     }
@@ -219,6 +226,10 @@ public partial class TmSpreadsheet
             .FirstOrDefault(dv => dv.Range.Contains(row, col));
     }
 
+    // Closing an alert only flips the flag: the alert's focus scope carries the restore target (the
+    // grid root), so focus returns to the grid when the trap deactivates — after the inert background
+    // is released. An explicit FocusAsync here would run while the grid is still inert and be a no-op,
+    // and the trap would then restore to the opener instead.
     private void DismissValidationError()
     {
         _showValidationError = false;
@@ -228,13 +239,14 @@ public partial class TmSpreadsheet
     private async Task ConfirmValidationWarning()
     {
         _showValidationConfirm = false;
-        if (_pendingConfirmedCommit is not null)
+        var action = _pendingConfirmedCommit;
+        _pendingConfirmedCommit = null;
+        StateHasChanged();
+
+        if (action is not null)
         {
-            var action = _pendingConfirmedCommit;
-            _pendingConfirmedCommit = null;
             await action();
         }
-        StateHasChanged();
     }
 
     private void DismissValidationConfirm()

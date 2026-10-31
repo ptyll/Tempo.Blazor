@@ -1056,6 +1056,9 @@ public sealed class BuiltInComponentSchemas : IWireframeSchemaSource
                 P("removable", "Removable", PropType.Bool,   true,      cat: "Behavior"),
                 P("variant",   "Variant",   PropType.Enum,   "default", cat: "Appearance",
                     opts: ["default","primary","success","danger","warning"]),
+                // Phase 15b: the toggle variant (native <button aria-pressed>) — the wireframe
+                // draws the pressed look, the same contract as the toolbar button.
+                P("pressed",   "Pressed (toggle)", PropType.Bool, false, cat: "Behavior"),
             ]
         };
 
@@ -2569,12 +2572,19 @@ public sealed class BuiltInComponentSchemas : IWireframeSchemaSource
         yield return new WireframeComponentSchema
         {
             Type = "TmSpreadsheet", Category = "Editors & Apps", DisplayName = "Spreadsheet",
-            DefaultWidth = 480, DefaultHeight = 320,
+            DefaultWidth = 640, DefaultHeight = 400,
             Props =
             [
                 P("rows",    "Rows",    PropType.Int, 8,  cat: "Appearance"),
                 P("columns", "Columns", PropType.Int, 6,  cat: "Appearance"),
                 P("sheetCount", "Sheet Count", PropType.Int, 2, cat: "Appearance"),
+                P("showHeader", "Show Header", PropType.Bool, false, cat: "Behavior"),
+                P("title", "Title", PropType.String, "Spreadsheet", cat: "Content"),
+                // The spreadsheet chrome follows its CONTAINER width (TmSpreadsheet.LayoutMode). "auto"
+                // renders the desktop variant; tablet draws two compact command rows, mobile a compact
+                // header, one command row and the core mobile action bar.
+                P("layoutMode", "Layout Mode", PropType.Enum, "auto", cat: "Behavior",
+                    opts: ["auto", "desktop", "tablet", "mobile"]),
             ]
         };
 
@@ -2692,6 +2702,16 @@ public sealed class BuiltInComponentSchemas : IWireframeSchemaSource
             Props =
             [
                 P("title", "Title", PropType.String, "Model", cat: "Content"),
+                P("showProviderSelector", "Show Provider Selector", PropType.Bool, true, cat: "Content"),
+                // Fáze 15: the preview legend card is part of the editor's look from this phase
+                // on (desktop/tablet card in the canvas corner, mobile "⋯" sheet).
+                P("showPreviewLegend", "Show Preview Legend", PropType.Bool, true, cat: "Content"),
+                // The editor's responsive band is a stated wireframe decision (the tablet band
+                // docks through the shell, the mobile band is the G2 viewing + light-edit
+                // presentation with the tablist panels and the in-flow action bar) — mirrors
+                // TmDiagramEditor.layoutMode.
+                P("layoutMode", "Layout Mode", PropType.Enum, "auto", cat: "Behavior",
+                    opts: ["auto", "desktop", "tablet", "mobile"]),
             ]
         };
 

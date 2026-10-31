@@ -118,6 +118,37 @@ public class TmNotionSpreadsheetBlockTests : LocalizationTestBase
         cut.FindAll(".tm-notion-spreadsheet-block__edit-btn").Should().BeEmpty();
     }
 
+    // ── Review round (phase 6): the edit modal keeps the container contract ─
+
+    [Fact]
+    public async Task EditModal_DoesNotPinLayoutMode_AndOwnsItsEditorWrapper()
+    {
+        // The modal is a FULLSCREEN surface: the editor must resolve its own container (a phone at 390, a
+        // tablet/desktop at 1024+) — pinning LayoutMode here would break the container contract — and the
+        // editor sits in a wrapper THIS component owns (a class handed to TmSpreadsheet would land on the
+        // child's root with the child's scope id, so the scoped rule would be dead).
+        var ctx = BuildContext(MockProvider());
+        var cut = Render<TmNotionSpreadsheetBlock>(p => p
+            .AddCascadingValue(ctx)
+            .Add(x => x.Content, MakeContent())
+            .Add(x => x.ReadOnly, false));
+
+        await cut.InvokeAsync(() => { });
+        await cut.InvokeAsync(() => cut.Find(".tm-notion-spreadsheet-block__edit-btn").Click());
+
+        var wrapper = cut.Find(".tm-notion-spreadsheet-edit-modal__editor");
+        wrapper.Should().NotBeNull("the editor wrapper is an element the modal itself renders");
+
+        // Scoped to the MODAL: the block's own preview is a DynamicComponent as well.
+        var modal = cut.FindComponents<TmNotionSpreadsheetEditModal>().First();
+        var dynamicComponent = modal.FindComponents<DynamicComponent>().First();
+        dynamicComponent.Instance.Parameters.Should().NotContainKey("LayoutMode",
+            "the fullscreen editor resolves its own container");
+        dynamicComponent.Instance.Parameters.Should().NotContainKey("Class",
+            "a Class passed to the child would be dead for the modal's scoped CSS");
+        dynamicComponent.Instance.Parameters.Should().ContainKey("Height");
+    }
+
     // ── SS-BLK-06: Klik na Edit → renderuje modal ──────────────────────────
 
     [Fact]

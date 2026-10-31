@@ -1,3 +1,4 @@
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using Json.Schema;
 using Microsoft.AspNetCore.Components.Rendering;
@@ -139,6 +140,34 @@ public class BuiltInStencilPackProviderTests
         packSvg.Should().Contain("<rect");
         packSvg.Should().NotContainEquivalentOf("<script");
         packSvg.Should().NotContainEquivalentOf("<foreignObject");
+    }
+
+    [Fact]
+    public async Task SpreadsheetNative_RendersTheGroupedRibbon_AndTheOptionalHeader()
+    {
+        var packRegistry = RegistryWith(new BuiltInStencilPackProvider());
+        var def = packRegistry.GetDef("TmSpreadsheet")!;
+
+        var plain = MakeElement(def);
+        plain.Props["showHeader"] = JsonSerializer.SerializeToElement(false);
+        var plainSvg = await BuildRenderer(packRegistry).RenderPageAsync(PageWith(plain));
+
+        foreach (var group in new[] { "Clipboard", "Font", "Alignment", "Number", "Cells", "Insert" })
+        {
+            plainSvg.Should().Contain(group, $"the wireframe ribbon names its group '{group}'");
+        }
+        plainSvg.Should().Contain("fx", "the formula bar paints the permanent fx mark");
+        plainSvg.Should().Contain("Ready", "the status bar is part of the native chrome");
+        plainSvg.Should().NotContain("Show grid lines", "the header is opt-in");
+
+        var withHeader = MakeElement(def);
+        withHeader.Props["showHeader"] = JsonSerializer.SerializeToElement(true);
+        withHeader.Props["title"] = JsonSerializer.SerializeToElement("Projekt Aurora");
+        var headerSvg = await BuildRenderer(packRegistry).RenderPageAsync(PageWith(withHeader));
+
+        headerSvg.Should().Contain("Projekt Aurora");
+        headerSvg.Should().Contain("Show grid lines");
+        headerSvg.Should().Contain("Download");
     }
 
     private static WireframeElement MakeElement(WireframeComponentDef def)

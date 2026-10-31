@@ -18,7 +18,7 @@
     background: var(--tm-color-surface);
 }
 
-.tm-modeling-model-tree__header h3 {
+.tm-modeling-model-tree__title {
     margin: 0;
     overflow: hidden;
     font-size: var(--tm-font-size-sm);
@@ -27,7 +27,7 @@
     white-space: nowrap;
 }
 
-.tm-modeling-model-tree__header span {
+.tm-modeling-model-tree__count {
     color: var(--tm-text-secondary);
     font-size: var(--tm-font-size-xs);
 }
@@ -35,6 +35,11 @@
 .tm-modeling-model-tree__search {
     display: grid;
     gap: var(--tm-space-1);
+}
+
+.tm-modeling-model-tree__search-label {
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-xs);
 }
 
 .tm-modeling-model-tree__search input {
@@ -51,8 +56,8 @@
 
 .tm-modeling-model-tree__search input:focus {
     border-color: var(--tm-color-primary);
-    outline: 2px solid var(--tm-color-primary-subtle);
-    outline-offset: 1px;
+    outline: 2px solid var(--tm-color-primary);
+    outline-offset: 2px;
 }
 
 .tm-modeling-model-tree__empty {
@@ -74,7 +79,7 @@
 .tm-modeling-model-tree__groups {
     display: grid;
     align-content: start;
-    gap: var(--tm-space-3);
+    gap: var(--tm-space-1);
     min-height: 0;
     margin: 0;
     padding: var(--tm-space-3);
@@ -82,62 +87,214 @@
     list-style: none;
 }
 
+/* APG tree pattern: the group TREEITEM owns focus, aria-expanded and the roving tabindex. */
 .tm-modeling-model-tree__group {
     display: grid;
-    gap: var(--tm-space-2);
     min-width: 0;
 }
 
+.tm-modeling-model-tree__group:focus-visible {
+    outline: 2px solid var(--tm-color-primary);
+    outline-offset: 2px;
+}
+
+/* The header row inside the treeitem is presentational: the click target and the tooltip
+   ("Collapse group"/"Expand group") live here, the semantics live on the treeitem. */
 .tm-modeling-model-tree__group-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: var(--tm-space-2);
-    padding: 0 var(--tm-space-1);
+    width: 100%;
+    min-width: 0;
+    padding: var(--tm-space-1) var(--tm-space-2);
+    border-radius: var(--tm-radius-md);
     color: var(--tm-color-text);
+    cursor: pointer;
     font-size: var(--tm-font-size-xs);
     font-weight: var(--tm-font-weight-semibold);
-    text-transform: uppercase;
+    text-align: start;
 }
 
-.tm-modeling-model-tree__group-header span {
+.tm-modeling-model-tree__group-header:hover {
+    background: var(--tm-bg-muted);
+}
+
+.tm-modeling-model-tree__group-chevron {
+    display: inline-grid;
+    place-items: center;
+    flex: 0 0 auto;
+    color: var(--tm-text-secondary);
+    transition: transform var(--tm-transition-fast);
+}
+
+.tm-modeling-model-tree__group[aria-expanded="false"] .tm-modeling-model-tree__group-chevron {
+    transform: rotate(-90deg);
+}
+
+.tm-modeling-model-tree__group-icon {
+    display: inline-grid;
+    place-items: center;
+    flex: 0 0 auto;
+    color: var(--tm-color-primary-text);
+}
+
+.tm-modeling-model-tree__group-label {
     overflow: hidden;
+    flex: 1 1 auto;
+    min-width: 0;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
 
-.tm-modeling-model-tree__group-header strong {
+.tm-modeling-model-tree__group-count {
+    flex: 0 0 auto;
+    min-width: var(--tm-space-6);
+    padding: 0 var(--tm-space-1);
+    border-radius: var(--tm-radius-full);
+    background: var(--tm-bg-muted);
     color: var(--tm-color-text);
     font-size: var(--tm-font-size-xs);
+    font-weight: var(--tm-font-weight-semibold);
+    text-align: center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .tm-modeling-model-tree__group-chevron {
+        transition: none;
+    }
+}
+
+@media (pointer: coarse) {
+    .tm-modeling-model-tree__group-header,
+    .tm-modeling-model-tree__node,
+    .tm-modeling-model-tree__insert {
+        min-height: var(--tm-touch-target);
+    }
+
+    /* Fáze 6 review: the insert action is a 44x44 target on a coarse pointer — the row is wide
+       enough for the reserved column, so the height alone would leave a narrow pill. */
+    .tm-modeling-model-tree__insert {
+        min-width: var(--tm-touch-target);
+    }
 }
 
 .tm-modeling-model-tree__nodes {
     display: grid;
-    gap: var(--tm-space-1);
+    gap: 0;
     margin: 0;
-    padding: 0;
+    padding-inline-start: var(--tm-space-5);
     list-style: none;
 }
 
+/* Fáze 6: the row wrapper hosts the node treeitem and — when the host allows tree reuse —
+   the non-drag "Insert into preview" action. The trailing auto track collapses to 0 when the
+   action is absent (AllowNodeDrop=false), so the row fills the width either way. */
+.tm-modeling-model-tree__node-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    min-width: 0;
+}
+
+/* ── Phase 12: the ParentId hierarchy ────────────────────────────────────────
+   Each hierarchy node button carries --tm-modeling-tree-level (its aria-level); the
+   token-driven indentation is computed HERE as the level-1 base indent plus (level − 1) × the
+   --tm-space-6 step — no hard-coded pixel in either language. (Phase-13 carry-forward: the
+   original --tm-space-4 step read as ~9px on screen once the chevron column ate into it — a
+   full --tm-space-6 keeps a clearly visible child offset at every level.) The chevron column
+   itself is untouched, so the disclosure glyphs stay aligned across levels. Flat-mode nodes
+   keep their own padding. */
+.tm-modeling-model-tree__branch {
+    display: grid;
+    min-width: 0;
+}
+
+.tm-modeling-model-tree__branch .tm-modeling-model-tree__node {
+    padding-inline-start: calc(var(--tm-space-2) + (var(--tm-modeling-tree-level, 1) - 1) * var(--tm-space-6));
+}
+
+.tm-modeling-model-tree__branch-children {
+    display: grid;
+    gap: 0;
+    margin: 0;
+    list-style: none;
+}
+
+/* The disclosure affordance of a parent node (pointer path; the keyboard path is the APG
+   Right/Left arrows). Rotation mirrors the group chevron via the button's aria-expanded. The
+   minimum size keeps the pointer affordance reachable (the coarse-pointer band grows it to the
+   full touch target). */
+.tm-modeling-model-tree__type-chevron {
+    display: inline-grid;
+    place-items: center;
+    min-width: var(--tm-space-6);
+    min-height: var(--tm-space-6);
+    color: var(--tm-text-secondary);
+    cursor: pointer;
+    transition: transform var(--tm-transition-fast);
+}
+
+@media (pointer: coarse) {
+    .tm-modeling-model-tree__type-chevron {
+        min-width: var(--tm-touch-target);
+        min-height: var(--tm-touch-target);
+    }
+}
+
+.tm-modeling-model-tree__node[aria-expanded="false"] .tm-modeling-model-tree__type-chevron {
+    transform: rotate(-90deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .tm-modeling-model-tree__type-chevron {
+        transition: none;
+    }
+}
+
+/* A parent node renders two extra leading tracks (chevron + direct child count pill) before
+   the icon/body/handle columns the flat nodes use. The rule lives AFTER the base node rule
+   with raised specificity — a parent's 5-track grid must win over the base 3-track one. */
+.tm-modeling-model-tree__child-count {
+    flex: 0 0 auto;
+    min-width: var(--tm-space-5);
+    padding: 0 var(--tm-space-1);
+    border-radius: var(--tm-radius-full);
+    background: var(--tm-bg-muted);
+    color: var(--tm-color-text);
+    font-size: var(--tm-font-size-xs);
+    font-weight: var(--tm-font-weight-semibold);
+    text-align: center;
+}
+
+/* Nodes are quiet rows: transparent chrome, hairline-free, hover paints muted. */
 .tm-modeling-model-tree__node {
     display: grid;
-    grid-template-columns: auto minmax(0, 1fr);
-    gap: var(--tm-space-1);
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: var(--tm-space-2);
+    align-items: center;
     width: 100%;
     min-width: 0;
-    padding: var(--tm-space-2);
-    border: 1px solid var(--tm-color-border-subtle);
+    padding: var(--tm-space-1) var(--tm-space-2);
+    border: 1px solid transparent;
     border-radius: var(--tm-radius-md);
-    background: var(--tm-bg-surface-secondary);
+    background: transparent;
     color: var(--tm-color-text);
     font: inherit;
     text-align: left;
     cursor: grab;
 }
 
+/* A parent node renders two extra leading tracks (chevron + direct child count pill) before
+   the icon/body/handle columns the flat nodes use. Declared after the base rule AND with the
+   doubled class specificity — phase 12 review: the base 3-track grid used to override this
+   rule (same specificity, later in the file) and the branch columns never applied. */
+.tm-modeling-model-tree__node.tm-modeling-model-tree__node--branch {
+    grid-template-columns: auto auto auto minmax(0, 1fr) auto;
+}
+
 .tm-modeling-model-tree__node:hover {
-    border-color: var(--tm-color-primary-soft-border);
-    background: var(--tm-color-primary-subtle);
+    background: var(--tm-bg-muted);
 }
 
 .tm-modeling-model-tree__node:active {
@@ -145,25 +302,46 @@
 }
 
 .tm-modeling-model-tree__node:focus-visible {
-    border-color: var(--tm-color-primary);
-    outline: 2px solid var(--tm-color-primary-subtle);
-    outline-offset: 1px;
+    outline: 2px solid var(--tm-color-primary);
+    outline-offset: 2px;
 }
 
 .tm-modeling-model-tree__node--selected {
-    border-color: var(--tm-color-primary);
+    border-color: var(--tm-color-primary-soft-border);
     background: var(--tm-color-primary-subtle);
-    box-shadow: inset 3px 0 0 var(--tm-color-primary);
 }
 
-.tm-modeling-model-tree__drag-handle {
-    grid-row: 1 / span 2;
+.tm-modeling-model-tree__type-icon {
+    display: inline-grid;
+    place-items: center;
     align-self: center;
-    color: var(--tm-color-text);
-    font-family: var(--tm-font-mono, monospace);
-    font-size: var(--tm-font-size-xs);
-    font-weight: var(--tm-font-weight-semibold);
-    letter-spacing: 0;
+    color: var(--tm-color-primary-text);
+}
+
+.tm-modeling-model-tree__node-body {
+    display: grid;
+    gap: var(--tm-space-1);
+    min-width: 0;
+}
+
+/* The drag affordance only surfaces on intent: node hover/focus, or coarse pointers where
+   there is no hover to rely on. */
+.tm-modeling-model-tree__drag-handle {
+    display: inline-grid;
+    place-items: center;
+    color: var(--tm-text-secondary);
+    opacity: 0;
+}
+
+.tm-modeling-model-tree__node:hover .tm-modeling-model-tree__drag-handle,
+.tm-modeling-model-tree__node:focus-visible .tm-modeling-model-tree__drag-handle {
+    opacity: 1;
+}
+
+@media (pointer: coarse) {
+    .tm-modeling-model-tree__drag-handle {
+        opacity: 1;
+    }
 }
 
 .tm-modeling-model-tree__node-name,
@@ -180,9 +358,61 @@
     font-weight: var(--tm-font-weight-semibold);
 }
 
+/* Final review (m1): the metadata line is secondary text — it never competes with the node name. */
 .tm-modeling-model-tree__node-meta {
-    color: var(--tm-color-text);
+    color: var(--tm-color-text-secondary);
     font-size: var(--tm-font-size-xs);
+}
+
+/* Fáze 6 (WCAG 2.5.7): the non-drag "Insert into preview" action. The reveal contract is the
+   core `.tm-reveal-on-hover` pair (markup): hidden until hover on a fine pointer ONLY, always
+   visible on (hover: none) and under :focus-within (docs/responsive-conventions.md). This
+   stylesheet owns the chrome and the coarse-pointer target. */
+.tm-modeling-model-tree__insert {
+    display: inline-grid;
+    place-items: center;
+    align-self: center;
+    flex: 0 0 auto;
+    width: var(--tm-space-8);
+    height: var(--tm-space-8);
+    margin-inline-start: var(--tm-space-1);
+    padding: 0;
+    border: 1px solid transparent;
+    border-radius: var(--tm-radius-md);
+    background: transparent;
+    color: var(--tm-text-secondary);
+    cursor: pointer;
+}
+
+/* Fáze 6 review: on a FINE pointer the reserved trailing column is gone — the row is a single
+   full-width track again (tree names truncate exactly as they did before phase 6) and the action
+   floats over the row's trailing edge, revealed on hover/focus of the row (the core reveal
+   pair). Coarse pointers keep the reserved column: an always-visible 44px target cannot share
+   the row with the name without pushing it, so the grid keeps both tracks there. */
+@media (hover: hover) and (pointer: fine) {
+    .tm-modeling-model-tree__node-row {
+        position: relative;
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .tm-modeling-model-tree__insert {
+        position: absolute;
+        inset-inline-end: var(--tm-space-1);
+        inset-block-start: 50%;
+        transform: translateY(-50%);
+        background: var(--tm-color-surface);
+    }
+}
+
+.tm-modeling-model-tree__insert:hover {
+    border-color: var(--tm-color-primary-soft-border);
+    background: var(--tm-color-primary-subtle);
+    color: var(--tm-color-primary);
+}
+
+.tm-modeling-model-tree__insert:focus-visible {
+    outline: 2px solid var(--tm-color-primary);
+    outline-offset: 2px;
 }
 
 @media (forced-colors: active) {
@@ -195,17 +425,33 @@
         color: CanvasText;
     }
 
-    .tm-modeling-model-tree__node:focus-visible,
-    .tm-modeling-model-tree__node--selected {
+    .tm-modeling-model-tree__group:focus-visible,
+    .tm-modeling-model-tree__node:focus-visible {
         outline: 2px solid Highlight;
         outline-offset: 2px;
+    }
+
+    .tm-modeling-model-tree__node--selected {
         border-color: Highlight;
         background: Canvas;
         color: CanvasText;
     }
 
     .tm-modeling-model-tree__node-meta,
-    .tm-modeling-model-tree__drag-handle {
+    .tm-modeling-model-tree__drag-handle,
+    .tm-modeling-model-tree__type-icon,
+    .tm-modeling-model-tree__type-chevron,
+    .tm-modeling-model-tree__child-count,
+    .tm-modeling-model-tree__group-icon,
+    .tm-modeling-model-tree__group-chevron,
+    .tm-modeling-model-tree__insert {
         color: CanvasText;
+    }
+
+    /* The non-drag alternative is never hidden in forced colors: the hover reveal is a
+       color-dependent affordance and the action must stay reachable. */
+    .tm-modeling-model-tree__insert {
+        opacity: 1;
+        border-color: CanvasText;
     }
 }

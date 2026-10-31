@@ -1,0 +1,10 @@
+{
+  "kind": "Class",
+  "category": "Modeling",
+  "namespace": "Tempo.Blazor.Modeling",
+  "description": "An aggregated change set passed to IModelingModelWriter.SaveChangesAsync (ModelId, ProviderKey, BaseVersion = Metadata.SourceVersion, Elements, Relationships).",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/Modeling/ModelingProviderContracts.cs",
+  "documentationStatus": "generated",
+  "itemName": "ModelingModelChangeSet"
+}

@@ -2,7 +2,7 @@
   "itemName": "TmSpreadsheetNameManagerDialog",
   "kind": "Component",
   "category": "Spreadsheet",
-  "description": "Name Manager dialog that lists all named ranges in the workbook, allows filtering, and raises events for New / Edit / Delete.",
+  "description": "Name Manager dialog that lists all named ranges in the workbook, allows filtering, and raises events for New / Edit / Delete. The list is a WAI-ARIA grid with a roving tabindex: the selected row is the single tab stop and carries the DOM focus, Up/Down/Home/End move the selection, Enter edits the selected range, Delete deletes it (the neighbour takes the selection) and a double click edits. The dialog itself is a modal overlay whose role, aria-modal, accessible name, initial focus, Escape handling and focus restore come from the core TmFocusScope; all element ids are per instance and none is a selector contract.",
   "packageId": "Tempo.Blazor.Spreadsheet",
   "namespace": "Tempo.Blazor.Components.Spreadsheet.Dialogs",
   "sourcePath": "src/Tempo.Blazor.Spreadsheet/Components/Spreadsheet/Dialogs/TmSpreadsheetNameManagerDialog.razor",
@@ -42,6 +42,18 @@
       "isRequired": true,
       "description": "Raised when the user wants to create a new named range.",
       "editorRequired": true
+    },
+    {
+      "name": "RestoreFocusTargetId",
+      "type": "string",
+      "isRequired": false,
+      "description": "The id of the element focus returns to on close — the host spreadsheet passes its grid root so focus lands on the grid. Null falls back to the element focused before the dialog opened."
+    },
+    {
+      "name": "LayoutMode",
+      "type": "TmLayoutMode",
+      "isRequired": false,
+      "description": "The layout the dialog renders. Auto follows the viewport scope (a sheet on the narrow one); a forced value pins the mode without measuring, so a test can render the mobile sheet without a DOM."
     }
   ],
   "subcategory": "Dialogs"

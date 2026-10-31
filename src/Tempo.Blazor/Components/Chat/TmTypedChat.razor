@@ -1,0 +1,14 @@
+@namespace Tempo.Blazor.Components.Chat
+@typeparam TItem
+@* TmTypedChat<TItem> — the generic variant of TmChat, composed OVER it (TmChat stays
+   non-generic). This file only renders the inner chat: Messages come from the item mapping
+   (TmTypedChat.razor.cs), the ItemTemplate/UseTemplateFor pair is translated to the inner
+   MessageTemplate/UseTemplateFor, and every OTHER TmChat parameter reaches the chat through
+   the @attributes splat (no IntelliSense there — see the AdditionalAttributes XML doc).
+   Messages/MessageTemplate/UseTemplateFor passed through the splat throw an ArgumentException
+   from OnParametersSet instead of silently fighting the derived values. *@
+<TmChat @attributes="AdditionalAttributes"
+        @ref="_chat"
+        Messages="_mappedMessages"
+        MessageTemplate="InnerMessageTemplate"
+        UseTemplateFor="InnerUseTemplateFor" />

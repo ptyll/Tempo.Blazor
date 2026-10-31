@@ -1,0 +1,57 @@
+{
+  "kind": "Class",
+  "category": "Chat",
+  "namespace": "Tempo.Blazor.Components.Chat",
+  "description": "Typed context handed to TmTypedChat<TItem>.ItemTemplate for every item it renders. It composes the host's TItem with the ChatMessageContext TmChat already builds around the mapped message — the item itself plus everything \"around\" it (the ChatMessage, own/thread/group position and the built-in row via DefaultContent). The item is recovered from the mapped message's ChatMessage.Payload (exact type), so it is the same instance the host passed in Items. The typed template renders only for messages whose payload IS a TItem — a selector-owned payload renders the built-in row instead and never reaches this context, so Item is always a real item.",
+  "packageId": "Tempo.Blazor",
+  "sourcePath": "src/Tempo.Blazor/Components/Chat/ChatItemContext.cs",
+  "documentationStatus": "generated",
+  "members": [
+    {
+      "name": "Item",
+      "kind": "Property",
+      "type": "TItem",
+      "description": "The host's domain item this row renders — recovered from the mapped message's ChatMessage.Payload (exact type), the same instance the host passed in Items. Never null: the typed template renders only for messages whose payload IS a TItem (a selector-owned payload renders the built-in row instead)."
+    },
+    {
+      "name": "Message",
+      "kind": "Property",
+      "type": "ChatMessageContext",
+      "description": "The message context of the mapped ChatMessage: the message itself (Message.Message), IsOwn, InThread, Index, IsFirstInGroup and DefaultContent."
+    },
+    {
+      "name": "IsOwn",
+      "kind": "Property",
+      "type": "bool",
+      "description": "Whether the mapped message was authored by TmChat.CurrentUser. A shortcut for Message.IsOwn."
+    },
+    {
+      "name": "InThread",
+      "kind": "Property",
+      "type": "bool",
+      "description": "Whether the mapped message renders inside the thread panel. A shortcut for Message.InThread."
+    },
+    {
+      "name": "Index",
+      "kind": "Property",
+      "type": "int",
+      "description": "Zero-based position of the mapped message within the sequence it renders in — the root conversation list, or the thread sequence when InThread is true. A shortcut for Message.Index."
+    },
+    {
+      "name": "IsFirstInGroup",
+      "kind": "Property",
+      "type": "bool",
+      "description": "Whether the previous rendered message had a different author or a different ChatMessage.Kind. The first message of a group can show its full metadata. A shortcut for Message.IsFirstInGroup."
+    },
+    {
+      "name": "DefaultContent",
+      "kind": "Property",
+      "type": "RenderFragment",
+      "description": "Render fragment with the built-in message row exactly as it renders without a template — returning it from the template keeps the default look. A shortcut for Message.DefaultContent."
+    }
+  ],
+  "examples": [
+    "<TmTypedChat Items=\"_events\" MessageSelector=\"@(e => Map(e))\">\n    <ItemTemplate Context=\"ctx\">\n        <TmChatBubble Variant=\"ChatBubbleVariant.Pending\" ActorLabel=\"@ctx.Item.Actor\">\n            <Badge><span class=\"ticket-badge\">#@ctx.Item.Id</span></Badge>\n            <ChildContent><span>@ctx.Message.Message.Text</span></ChildContent>\n        </TmChatBubble>\n    </ItemTemplate>\n</TmTypedChat>"
+  ],
+  "itemName": "ChatItemContext<TItem>"
+}

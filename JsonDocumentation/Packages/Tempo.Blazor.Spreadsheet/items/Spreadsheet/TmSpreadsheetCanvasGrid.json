@@ -12,10 +12,22 @@
   ],
   "parameters": [
     {
+      "name": "RootDomId",
+      "type": "string",
+      "isRequired": false,
+      "description": "The DOM id of the focusable grid root. The host supplies a per-instance id so an overlay can name the grid as its focus-restore target (TmFocusScope.RestoreFocusTargetId); null renders no id, which keeps a standalone grid unchanged."
+    },
+    {
       "name": "Sheet",
       "type": "SpreadsheetSheet?",
       "isRequired": false,
       "description": "The sheet to render."
+    },
+    {
+      "name": "SuppressFocusRestore",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Whether the host's own surface currently owns the focus (an open context menu, a resize dialog). While true the grid does not restore the focus to itself: the canvas activation that opened the surface arms that restore, and the grid's OnAfterRenderAsync runs in the same batch as the surface's, so the probe would answer stale and the FocusAsync hop would steal the caret out of the menu that just took it. Default false keeps the historical restore."
     },
     {
       "name": "ActiveCellChanged",
@@ -313,6 +325,46 @@
       "isRequired": false,
       "default": "1.0",
       "description": "The zoom factor applied to the grid geometry and fonts (1.0 = 100%)."
+    },
+    {
+      "name": "Density",
+      "type": "SpreadsheetDensity",
+      "isRequired": false,
+      "default": "SpreadsheetDensity.Auto",
+      "description": "Requested grid density. Auto is resolved against the browser's coarse-pointer media query — once before the first canvas frame and again whenever the query flips (a mouse attached to a tablet) — and scales the RENDERED row heights, fonts, handles and header gutters only (the sheet model and every XLSX height keep their values). The root carries data-density, but only once the pointer is known or the density is forced, so a touch device never flashes the compact attribute."
+    },
+    {
+      "name": "LayoutMode",
+      "type": "TmLayoutMode",
+      "isRequired": false,
+      "default": "TmLayoutMode.Auto",
+      "description": "The responsive layout of the hosting spreadsheet. Auto resolves from the app-level viewport scope (a bare grid); TmSpreadsheet passes its own resolved container layout, so the grid's context menu is a bottom sheet exactly when the spreadsheet is a phone."
+    },
+    {
+      "name": "RenderContextMenu",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "Whether this component renders the cell context menu itself. TmSpreadsheet passes false and renders the menu as a sibling of its layout container (a position:fixed menu inside the container would be positioned against the card). A standalone grid at a phone width must pass false too and render its own sheet."
+    },
+    {
+      "name": "OnContextMenuRequested",
+      "type": "EventCallback<SpreadsheetContextMenuRequest>",
+      "isRequired": false,
+      "default": "null",
+      "description": "Raised with the gesture when RenderContextMenu is false: the host owns the menu. The cell under the gesture has already become active."
+    },
+    {
+      "name": "OnZoomChanged",
+      "type": "EventCallback<double>",
+      "isRequired": false,
+      "description": "Raised when a two-finger pinch commits a zoom factor (clamped to 0.5–2.0 in whole 10 % steps). The pinch is a WCAG 2.5.7 path: the status-bar zoom buttons and the phone's More menu are its single-pointer alternative and drive the same OnZoomChanged."
+    },
+    {
+      "name": "OnFillRequested",
+      "type": "EventCallback<SpreadsheetFillDirection>",
+      "isRequired": false,
+      "description": "Raised when the user asks for a fill WITHOUT dragging the fill handle: the cell menu's Fill down / Fill right entries or Ctrl+D / Ctrl+R. The WCAG 2.5.7 non-drag alternative to the fill-handle drag; the workbook command (AutoFillCommand, one undo step) lives in TmSpreadsheet."
     }
   ]
 }

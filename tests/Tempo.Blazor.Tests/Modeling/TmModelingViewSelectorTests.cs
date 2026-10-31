@@ -45,7 +45,8 @@ public sealed class TmModelingViewSelectorTests : LocalizationTestBase
             .Add(p => p.NotationKey, "unknown"));
 
         cut.Find("[data-testid='modeling-view-selector']").Should().NotBeNull();
-        cut.FindAll("[data-testid='modeling-viewpoint-select']").Should().BeEmpty();
+        cut.Find("[data-testid='modeling-viewpoint-empty'] select").HasAttribute("disabled")
+            .Should().BeTrue("the Viewpoint select is disabled while no notation is chosen");
         cut.Find("[data-testid='modeling-viewpoint-empty']").TextContent.Should().Contain("No viewpoints");
     }
 
@@ -55,8 +56,71 @@ public sealed class TmModelingViewSelectorTests : LocalizationTestBase
         using var cut = Render<TmModelingViewSelector>(parameters => parameters
             .Add(p => p.NotationKey, "custom-empty"));
 
-        cut.FindAll("[data-testid='modeling-viewpoint-select']").Should().BeEmpty();
-        cut.Find("[data-testid='modeling-viewpoint-empty']").TextContent.Should().Contain("No viewpoints");
+        var empty = cut.Find("[data-testid='modeling-viewpoint-empty']");
+        empty.QuerySelector("select")!.HasAttribute("disabled").Should().BeTrue();
+        empty.TextContent.Should().Contain("No viewpoints");
+        empty.QuerySelector(".tm-modeling-view-selector__hint").Should().NotBeNull(
+            "the hint is a plain span below the disabled select");
+    }
+
+    [Fact]
+    public void Disabled_viewpoint_select_is_described_by_the_per_instance_hint()
+    {
+        using var cut = Render<TmModelingViewSelector>(parameters => parameters
+            .Add(p => p.NotationKey, (string?)null));
+
+        var select = cut.Find("[data-testid='modeling-viewpoint-empty'] select");
+        var describedBy = select.GetAttribute("aria-describedby");
+        describedBy.Should().NotBeNullOrEmpty("the disabled select points at the hint for assistive tech");
+        cut.Find($"[data-testid='modeling-viewpoint-empty'] #{describedBy}")
+            .Should().NotBeNull("the referenced hint element exists");
+        describedBy.Should().Contain("viewpoint-hint");
+        select.GetAttribute("aria-label").Should().Be("Viewpoint",
+            "the visible span is not a wrapping label — the select carries its accessible name on aria-label (axe select-name)");
+    }
+
+    [Fact]
+    public void Selects_have_visible_labels_above_field()
+    {
+        using var cut = Render<TmModelingViewSelector>(parameters => parameters
+            .Add(p => p.NotationKey, "bpmn"));
+
+        var field = cut.Find("label.tm-modeling-view-selector__field");
+
+        // MO3: the visible label is the FIRST child inside the field — it sits ABOVE the select
+        // (the old markup kept the label text but the phase contract locks the stacking).
+        field.Children.Should().HaveCountGreaterThan(1);
+        field.Children[0].TagName.Should().Be("SPAN", "the label text renders above the field");
+        field.Children[0].TextContent.Should().Contain("Notation");
+        field.Children.Last().TagName.Should().Be("SELECT");
+
+        var viewpointField = cut.FindAll("label.tm-modeling-view-selector__field").ElementAt(1);
+        viewpointField.Children[0].TextContent.Should().Contain("Viewpoint");
+        viewpointField.Children.Last().TagName.Should().Be("SELECT");
+    }
+
+    [Fact]
+    public void Select_field_height_comes_from_the_input_height_token()
+    {
+        var css = File.ReadAllText(FindViewSelectorCssPath());
+
+        css.Should().Contain("var(--tm-input-height-md)",
+            "the select height matches the new provider select (unified header fields, MO3)");
+        css.Should().NotContain("#", "no hardcoded colors — tokens only");
+    }
+
+    private static string FindViewSelectorCssPath()
+    {
+        var directory = new DirectoryInfo(AppContext.BaseDirectory);
+        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "TempoBlazor.slnx")))
+        {
+            directory = directory.Parent!;
+        }
+
+        directory.Should().NotBeNull("repo root with TempoBlazor.slnx must be reachable from the test output");
+        return Path.Combine(
+            directory!.FullName,
+            "src", "Tempo.Blazor.Modeling", "Components", "Modeling", "TmModelingViewSelector.razor.css");
     }
 
     [Fact]
@@ -80,6 +144,8 @@ public sealed class TmModelingViewSelectorTests : LocalizationTestBase
 
         cut.Find("[data-testid='modeling-notation-select']").TextContent.Should().Contain("Select notation");
         cut.Find("[data-testid='modeling-viewpoint-empty']").TextContent.Should().Contain("Select a notation");
+        cut.Find("[data-testid='modeling-viewpoint-empty'] select").HasAttribute("disabled")
+            .Should().BeTrue("the Viewpoint select renders disabled while no notation is chosen");
     }
 
     private sealed class TestNotationProfile : IModelingNotationProfile

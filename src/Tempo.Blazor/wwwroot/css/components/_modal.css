@@ -46,6 +46,17 @@
   overflow: visible;
 }
 
+/* Stacked modals (spreadsheet phase 3, two dialogs at a time). The FIRST overlay paints the full
+   scrim over the page; a second one, opened over it, paints only the light stacked scrim
+   (--tm-modal-stacked-scrim) and no blur. Two full scrims reached rgba(0,0,0,.75) and the page read
+   almost black; the light one dims the lower dialog just enough to keep the hierarchy. The rule keys
+   off document order, so it holds for any number of nested modals and changes nothing while only one
+   is open. A host restores the old behaviour by overriding the token. */
+.tm-modal-overlay ~ .tm-modal-overlay {
+  background: var(--tm-modal-stacked-scrim);
+  backdrop-filter: none;
+}
+
 @keyframes modalFadeIn {
   from {
     opacity: 0;
@@ -161,6 +172,15 @@
   min-width: 0;
 }
 
+/* Host actions slot in the header row (Fáze 10): a text close button or other host actions,
+   rendered between the header content and the built-in close button. */
+.tm-modal-header-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--tm-space-2);
+  flex-shrink: 0;
+}
+
 .tm-modal-title {
   font-size: var(--tm-font-size-lg);
   font-weight: var(--tm-font-weight-semibold);
@@ -175,13 +195,24 @@
   margin: var(--tm-space-1) 0 0 0;
 }
 
+/* The close box is optically CENTRED on the title's first line box: the header is a flex row aligned
+   to flex-start, so with equal top edges the box's centre sat ~4px below the centre of the
+   18px * 1.3 = 23.4px title line (the phase-3 UX finding, fixed once here for every dialog). The
+   offset is negative, per the line-box height difference.
+
+   The size is a local knob on purpose: a coarse pointer raises the box to the 44px touch floor
+   (`breakpoints.css` does that for every icon control), and the offset has to follow THAT size or the
+   icon is 6px low again on a phone. --tm-modal-close-size is the single source of both the box and
+   the offset, declared here (the fine-pointer default) and overridden in the media block below. */
 .tm-modal-close {
+  --tm-modal-close-size: 2rem;
   flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 2rem;
-  height: 2rem;
+  margin-block-start: calc((var(--tm-font-size-lg) * 1.3 - var(--tm-modal-close-size)) / 2);
+  width: var(--tm-modal-close-size);
+  height: var(--tm-modal-close-size);
   background: transparent;
   border: none;
   border-radius: var(--tm-radius-md);
@@ -194,6 +225,14 @@
 .tm-modal-close:hover {
   background: var(--tm-bg-muted);
   color: var(--tm-text-primary);
+}
+
+/* The touch floor `breakpoints.css` applies to icon controls also has to move the optical offset, so
+   the enlarged box publishes its size through the same knob the offset reads. */
+@media (pointer: coarse) {
+  .tm-modal-close {
+    --tm-modal-close-size: var(--tm-touch-target);
+  }
 }
 
 /* Modal Body */

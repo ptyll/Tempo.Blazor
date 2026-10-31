@@ -1,4 +1,5 @@
 using Bunit;
+using Tempo.Blazor.Components.Feedback;
 using FluentAssertions;
 using Tempo.Blazor.Components.Spreadsheet.Dialogs;
 using Tempo.Blazor.Components.Spreadsheet.Models;
@@ -16,8 +17,8 @@ public class TmSpreadsheetHyperlinkDialogTests : LocalizationTestBase
         var cut = Render<TmSpreadsheetHyperlinkDialog>(
             parameters => parameters.Add(p => p.Workbook, workbook));
 
-        cut.Find(".tm-spreadsheet-hyperlink__title").TextContent.Should().Be("Hyperlink");
-        var options = cut.FindAll("#hl-type option");
+        cut.Find(".tm-modal-title").TextContent.Should().Be("Hyperlink");
+        var options = cut.FindAll("#hl-type .tm-radio-segment");
         options.Count.Should().Be(4);
     }
 
@@ -78,9 +79,10 @@ public class TmSpreadsheetHyperlinkDialogTests : LocalizationTestBase
     }
 
     // ── Keyboard activation ─────────────────────────────────────────────────
-    // Ctrl+Enter -> save lives on the dialog root; the footer buttons and the
-    // header close button isolate their keydowns so the browser's native
-    // keydown -> click on a <button> can't also trigger the root shortcut.
+    // The dialog's Ctrl+Enter -> save shortcut lives on the root; a chrome group bars its keydown
+    // (@onkeydown:stopPropagation) so the browser's native keydown -> click on a <button> cannot also
+    // trigger the root shortcut. bUnit proves the barrier by refusing to dispatch the keydown at all
+    // (the element has no handler of its own) — that exception IS the observable proof.
 
     [Fact]
     public void CtrlEnter_OnSaveButton_SavesExactlyOnce()
@@ -94,9 +96,9 @@ public class TmSpreadsheetHyperlinkDialogTests : LocalizationTestBase
 
         cut.Find("#hl-target").Input("https://test.com");
 
-        cut.Find(".tm-spreadsheet-hyperlink__btn--ok")
-            .KeyDown(new Microsoft.AspNetCore.Components.Web.KeyboardEventArgs { Key = "Enter", CtrlKey = true });
-        cut.Find(".tm-spreadsheet-hyperlink__btn--ok").Click();
+        var save = cut.Find(".tm-spreadsheet-hyperlink__btn--ok");
+        Assert.Throws<MissingEventHandlerException>(() => save.KeyDown(new Microsoft.AspNetCore.Components.Web.KeyboardEventArgs { Key = "Enter", CtrlKey = true }));
+        save.Click();
 
         saves.Should().Be(1);
     }
@@ -113,16 +115,16 @@ public class TmSpreadsheetHyperlinkDialogTests : LocalizationTestBase
                 .Add(p => p.OnSave, _ => saves++)
                 .Add(p => p.OnCancel, () => cancels++));
 
-        cut.Find(".tm-spreadsheet-hyperlink__btn--cancel")
-            .KeyDown(new Microsoft.AspNetCore.Components.Web.KeyboardEventArgs { Key = "Enter" });
-        cut.Find(".tm-spreadsheet-hyperlink__btn--cancel").Click();
+        var cancel = cut.Find(".tm-spreadsheet-hyperlink__btn--cancel");
+        Assert.Throws<MissingEventHandlerException>(() => cancel.KeyDown(new Microsoft.AspNetCore.Components.Web.KeyboardEventArgs { Key = "Enter" }));
+        cancel.Click();
 
         cancels.Should().Be(1);
         saves.Should().Be(0);
     }
 
     [Fact]
-    public void Escape_OnSaveButton_CancelsOnce()
+    public async Task Escape_CancelsOnce_ThroughTheFocusScope()
     {
         var workbook = new SpreadsheetWorkbook();
         var saves = 0;
@@ -133,10 +135,12 @@ public class TmSpreadsheetHyperlinkDialogTests : LocalizationTestBase
                 .Add(p => p.OnSave, _ => saves++)
                 .Add(p => p.OnCancel, () => cancels++));
 
-        // Escape stays usable from the footer: the actions group handles it
-        // locally and stops it from also reaching the root's Escape case.
-        cut.Find(".tm-spreadsheet-hyperlink__btn--ok")
-            .KeyDown(new Microsoft.AspNetCore.Components.Web.KeyboardEventArgs { Key = "Escape" });
+        // Escape is the dialog's own dismissal, wherever the focus sits: the focus scope's
+        // document-level listener routes it back here exactly once. The footer buttons only fence
+        // their keydown so Ctrl+Enter cannot double-fire the root's save shortcut.
+        var scope = cut.FindComponent<TmFocusScope>();
+        scope.Instance.CloseOnEscape.Should().BeTrue();
+        await cut.InvokeAsync(() => scope.Instance.HandleFocusTrapEscapeAsync());
 
         cancels.Should().Be(1);
         saves.Should().Be(0);
@@ -154,7 +158,9 @@ public class TmSpreadsheetHyperlinkDialogTests : LocalizationTestBase
 
         cut.Find("#hl-target").Input("https://test.com");
 
-        cut.Find("#hl-target")
+        // A keydown inside a field reaches the form wrapper by bubbling in the browser; bUnit does not
+        // bubble, so the event is dispatched on the wrapper that owns the shortcut.
+        cut.Find(".tm-spreadsheet-hyperlink__body")
             .KeyDown(new Microsoft.AspNetCore.Components.Web.KeyboardEventArgs { Key = "Enter", CtrlKey = true });
 
         saved.Should().NotBeNull();
@@ -173,9 +179,11 @@ public class TmSpreadsheetHyperlinkDialogTests : LocalizationTestBase
                 .Add(p => p.OnSave, _ => saves++)
                 .Add(p => p.OnCancel, () => cancels++));
 
-        cut.Find(".tm-spreadsheet-hyperlink__close")
-            .KeyDown(new Microsoft.AspNetCore.Components.Web.KeyboardEventArgs { Key = "Enter", CtrlKey = true });
-        cut.Find(".tm-spreadsheet-hyperlink__close").Click();
+        // The close button is the shared frame's: it sits outside the form's Ctrl+Enter wrapper, so
+        // its keydown carries no handler and only its native click cancels.
+        var close = cut.Find(".tm-modal-close");
+        Assert.Throws<MissingEventHandlerException>(() => close.KeyDown(new Microsoft.AspNetCore.Components.Web.KeyboardEventArgs { Key = "Enter", CtrlKey = true }));
+        close.Click();
 
         cancels.Should().Be(1);
         saves.Should().Be(0);

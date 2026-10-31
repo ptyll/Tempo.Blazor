@@ -1,10 +1,10 @@
 {
-  "kind": "Class",
-  "category": "Modeling",
-  "namespace": "Tempo.Blazor.Mcp.Modeling",
-  "description": "MCP tools for listing and reading stored architecture/modeling models.",
-  "packageId": "Tempo.Blazor.Mcp",
-  "sourcePath": "src/Tempo.Blazor.Mcp/Modeling/ModelingModelTools.cs",
-  "documentationStatus": "generated",
-  "itemName": "ModelingModelTools"
+ "kind": "Class",
+ "category": "Modeling",
+ "namespace": "Tempo.Blazor.Mcp.Modeling",
+ "description": "MCP tools for listing and reading stored architecture/modeling models. modeling_get_model_tree (Fáze 12) returns each element's parentId — the model tree hierarchy (empty at the roots).",
+ "packageId": "Tempo.Blazor.Mcp",
+ "sourcePath": "src/Tempo.Blazor.Mcp/Modeling/ModelingModelTools.cs",
+ "documentationStatus": "generated",
+ "itemName": "ModelingModelTools"
 }

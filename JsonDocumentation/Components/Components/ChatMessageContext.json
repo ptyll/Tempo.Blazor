@@ -1,0 +1,63 @@
+{
+  "kind": "Class",
+  "category": "Components",
+  "namespace": "Tempo.Blazor.Components.Chat",
+  "description": "Context handed to the TmChat.MessageTemplate render fragment for every message it renders. The template receives everything TmChat knows \"around\" the message — the message itself, whether the current user sent it, whether it is rendered inside the thread panel, its position and group position — plus a DefaultContent fragment with the built-in message row, so a host can take over only special message kinds and fall back to the default look for ordinary messages. TmChat never interprets Kind, Metadata or Payload; they exist purely for the template.",
+  "packageId": "Tempo.Blazor",
+  "sourcePath": "src/Tempo.Blazor/Components/Chat/ChatMessageContext.cs",
+  "documentationStatus": "generated",
+  "members": [
+    {
+      "name": "Message",
+      "kind": "Property",
+      "type": "ChatMessage",
+      "description": "The message being rendered, including its host-owned Kind/Metadata/Payload."
+    },
+    {
+      "name": "IsOwn",
+      "kind": "Property",
+      "type": "bool",
+      "description": "Whether the message was authored by TmChat.CurrentUser (an \"own\" message)."
+    },
+    {
+      "name": "InThread",
+      "kind": "Property",
+      "type": "bool",
+      "description": "Whether the message is rendered inside the thread panel (the thread root or one of its replies) rather than in the root conversation list."
+    },
+    {
+      "name": "Index",
+      "kind": "Property",
+      "type": "int",
+      "description": "Zero-based position of the message within the sequence it is rendered in — the root conversation list, or the thread sequence when InThread is true."
+    },
+    {
+      "name": "IsFirstInGroup",
+      "kind": "Property",
+      "type": "bool",
+      "description": "Whether the previous rendered message had a different author or a different Kind. The first message of a group can show its full metadata; continuation messages typically hide repeated author names and timestamps."
+    },
+    {
+      "name": "DefaultContent",
+      "kind": "Property",
+      "type": "RenderFragment",
+      "description": "Render fragment with the built-in message row exactly as it renders without a template — returning it from the template keeps the default look for messages the host does not take over. The fragment does not include the message wrapper (the element carrying the data-message-id anchor); TmChat renders that around template output either way."
+    }
+  ],
+  "methods": [
+    {
+      "name": "PayloadAs",
+      "kind": "Method",
+      "description": "Returns the message's Payload typed as T, or default when the payload is null or of another type. No conversion is attempted — cast to the exact type the host stored on the message."
+    },
+    {
+      "name": "GetMetadata",
+      "kind": "Method",
+      "description": "Reads an entry from the message's Metadata cast to T, or fallback when the key is missing, the value is null or of another type. No conversion is attempted — store and read the same type."
+    }
+  ],
+  "examples": [
+    "<TmChat Messages=\"_messages\" CurrentUser=\"_user\">\n    <MessageTemplate Context=\"context\">\n        @if (context.Message.Kind == \"ai-draft\")\n        {\n            <MyDraftBubble Draft=\"@(context.PayloadAs<MyDraftDto>()!)\" />\n        }\n        else\n        {\n            @context.DefaultContent\n        }\n    </MessageTemplate>\n</TmChat>"
+  ],
+  "itemName": "ChatMessageContext"
+}

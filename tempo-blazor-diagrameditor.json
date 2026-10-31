@@ -1106,6 +1106,34 @@
       ]
     },
     {
+      "itemName": "DiagramFitMode",
+      "kind": "Enum",
+      "category": "Components",
+      "namespace": "Tempo.Blazor.Components.Diagram",
+      "description": "How TmDiagramEditor.FitToViewAsync (and the canvas fit) computes the fitted scale (Fáze 9, embedded viewers).",
+      "packageId": "Tempo.Blazor.DiagramEditor",
+      "sourcePath": "src/Tempo.Blazor.DiagramEditor/Components/Diagram/DiagramFitMode.cs",
+      "documentationStatus": "merged",
+      "values": [
+        {
+          "name": "Page",
+          "value": "0",
+          "description": "Fit the whole content (both axes) into the editor's box — the default, today's behavior."
+        },
+        {
+          "name": "Width",
+          "value": "1",
+          "description": "Scale so the content width matches the container width; the height may overflow and scroll (the embedded mobile preview's fit-on-load)."
+        }
+      ],
+      "examples": [
+        {
+          "title": "Fit a tall diagram to the editor width",
+          "code": "await editor.FitToViewAsync(DiagramFitMode.Width);"
+        }
+      ]
+    },
+    {
       "itemName": "DiagramGeometryHelper",
       "kind": "Class",
       "category": "Components",
@@ -4278,6 +4306,18 @@
           "description": "Raised when the context menu should be closed (e.g. second right-click)."
         },
         {
+          "name": "OnCloseSearch",
+          "type": "EventCallback",
+          "isRequired": false,
+          "description": "Raised when Escape is consumed by the editor capture-phase consumer because the search panel is open (and the focus is inside the editor). The host closes the panel; the event is marked as handled first, so an overlay behind the editor (a dialog focus trap) does not also close. Additive."
+        },
+        {
+          "name": "OnCloseViewMenu",
+          "type": "EventCallback",
+          "isRequired": false,
+          "description": "Raised when Escape is consumed by the editor capture-phase consumer because the header view menu is open (and the focus is inside the editor). The host closes the menu. Additive."
+        },
+        {
           "name": "OnConnectArrowClicked",
           "type": "EventCallback<(string NodeId, string Direction)>",
           "isRequired": false,
@@ -4670,7 +4710,7 @@
       "kind": "Component",
       "category": "Diagram",
       "namespace": "Tempo.Blazor.Components.Diagram",
-      "description": "Top-level diagram editor component. Renders through the core editor shell: a header (document title, named panel toggles, view-settings menu), a single command toolbar built on TmToolbar with Priority overflow, a status bar with the zoom controls, and an inspector with Properties | Layers tabs. The toolbar is a stable public contract: every toolbar group carries a data-tm-group attribute (history|clipboard|tools|format|insert|arrange|search|panels|zoom|view|canvas-size|layout|export|templates|import|readonly) and visibility is decided by ToolbarPreset/ToolbarGroups in C# — never target the toolbar's internal DOM with positional CSS.",
+      "description": "Top-level diagram editor component. Renders through the core editor shell: a header (document title, named panel toggles, view-settings menu), a single command toolbar built on TmToolbar with Priority overflow, a status bar with the zoom controls, and an inspector with Properties | Layers tabs. The toolbar is a stable public contract: every toolbar group carries a data-tm-group attribute (history|clipboard|tools|format|insert|arrange|search|panels|zoom|view|canvas-size|layout|export|templates|import|readonly) and visibility is decided by ToolbarPreset/ToolbarGroups in C# — never target the toolbar's internal DOM with positional CSS. The additive public GetViewport() (Fáze 6 review fix) returns the embedded canvas viewport in document space — the visible window the user is looking at — so hosts can place generated content (e.g. the Modeling preview's non-drag insert) at the center of what is VISIBLE instead of the page center.",
       "packageId": "Tempo.Blazor.DiagramEditor",
       "sourcePath": "src/Tempo.Blazor.DiagramEditor/Components/Diagram/TmDiagramEditor.razor",
       "documentationStatus": "merged",
@@ -4702,6 +4742,12 @@
           "isRequired": false,
           "default": "\"\"",
           "description": "Optional named HttpClient to use for SVG/PNG/PDF export calls."
+        },
+        {
+          "name": "FitOnDocumentLoad",
+          "type": "DiagramFitMode?",
+          "isRequired": false,
+          "description": "Fit the diagram once after the first render of a NEW document identity. Default null (no auto-fit). Width is the embedded mobile preview's fit-to-width; the same document never re-fits, a replaced document does, and user zoom afterwards wins."
         },
         {
           "name": "GridSize",
@@ -4743,6 +4789,12 @@
           "description": "How the editor resolves its layout. Auto (the default) measures the editor's own container width against LayoutBreakpoints — tablet 768-1199, desktop from 1200; a forced Tablet/Desktop/Mobile pins the presentation (tablet: docked panels with at most one expanded, the palette as a 44px rail, the minimap as a canvas overlay, full touch editing)."
         },
         {
+          "name": "MinimapInitiallyCollapsed",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Start the minimap card (desktop) / floating overlay (tablet) collapsed. Default false (today's expanded start); seeded once at initialization, the user's own toggle wins afterwards and the mobile X1 rule is unchanged. The Modeling tablet dialog seeds it from its resolved mode."
+        },
+        {
           "name": "MinimapPlacement",
           "type": "DiagramMinimapPlacement",
           "isRequired": false,
@@ -4761,6 +4813,18 @@
           "type": "EventCallback<string[]>",
           "isRequired": false,
           "description": "Raised when selected diagram item identifiers change."
+        },
+        {
+          "name": "PreferredStencilIds",
+          "type": "IReadOnlyList<string>?",
+          "isRequired": false,
+          "description": "Fáze 15 (embedded hosts, e.g. the Modeling \"Open in editor\" dialog): stencil ids to pin as the FIRST toolbox library (order preserved, unknown ids ignored) while the other libraries start collapsed — search still spans the whole stencil library. Null (the default) keeps today's toolbox. Pass-through to TmDiagramToolbox."
+        },
+        {
+          "name": "PreferredStencilsLabel",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Header label of the pinned library (e.g. the notation profile's display name). Null falls back to the localized TmDiagramToolbox_PreferredDefault. Pass-through to TmDiagramToolbox; ignored while PreferredStencilIds is unset."
         },
         {
           "name": "ReadOnly",
@@ -4800,6 +4864,19 @@
           "isRequired": false,
           "default": "true",
           "description": "Show the minimap (a card in the right column on desktop, an overlay over the canvas corner from tablet down — see MinimapPlacement)."
+        },
+        {
+          "name": "ShowMobileZoomOverlay",
+          "type": "bool?",
+          "isRequired": false,
+          "description": "The mobile floating zoom pill rule. Default null keeps today's rule (mobile layout + ShowToolbar + the Zoom group); true shows the pill on a mobile layout even chrome-less; false never shows it. The docked bands keep the status-bar zoom."
+        },
+        {
+          "name": "ShowPageTabs",
+          "type": "bool",
+          "isRequired": false,
+          "default": "true",
+          "description": "Show the page-tab row above the canvas in every layout. Default true; false drops the row entirely (page switching stays available by setting the document's ActivePageIndex) — the embedded single-page viewer's knob, never CSS."
         },
         {
           "name": "ShowPageView",
@@ -4894,6 +4971,12 @@
         {
           "title": "Tablet layout in a fixed-width host pane",
           "code": "<div style=\"width: 1100px\"><TmDiagramEditor Document=\"@document\" /></div>"
+        }
+      ],
+      "cssVariables": [
+        {
+          "name": "--tm-diagram-backdrop",
+          "description": "Fill of the area OUTSIDE the diagram page (.tm-diagram-page-backdrop). Follows the THEME: light keeps the historical --tm-paper-backdrop gray, a dark theme re-maps it to the workspace tone so the white paper floats on a dark canvas. Override this token (not --tm-paper-backdrop) to restyle the backdrop."
         }
       ]
     },
@@ -5400,6 +5483,39 @@
       ]
     },
     {
+      "itemName": "TmDiagramStencilIcon",
+      "kind": "Component",
+      "category": "Diagram",
+      "namespace": "Tempo.Blazor.Components.Diagram",
+      "description": "Public small stencil preview: renders the registered stencil's compact SVG (the same text-trimming pipeline the toolbox tiles use) for hosts that present stencils outside the toolbox — the Modeling \"Open in editor\" notation palette and the preview legend embed it instead of duplicating the icon markup. Always aria-hidden: the visible text label of the surrounding row/tile owns the accessible name. A stencil id the registry does not know renders the generic fallback shape.",
+      "packageId": "Tempo.Blazor.DiagramEditor",
+      "sourcePath": "src/Tempo.Blazor.DiagramEditor/Components/Diagram/TmDiagramStencilIcon.razor",
+      "documentationStatus": "merged",
+      "requiredImports": [
+        "@using Tempo.Blazor.Components.Diagram"
+      ],
+      "parameters": [
+        {
+          "name": "Class",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Additional CSS class."
+        },
+        {
+          "name": "Size",
+          "type": "string?",
+          "isRequired": false,
+          "description": "CSS size of the icon box (applied to width and height). Default \"32px\" — the toolbox tile size."
+        },
+        {
+          "name": "StencilId",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Stencil id to preview. Null or unknown ids render the fallback shape."
+        }
+      ]
+    },
+    {
       "itemName": "TmDiagramStencilShape",
       "kind": "Component",
       "category": "Diagram",
@@ -5604,6 +5720,18 @@
           "description": "When true (the mobile Shapes sheet), every category except the first (General/basic) starts collapsed — applied once; the user's own expand/collapse choices win afterwards."
         },
         {
+          "name": "PreferredStencilIds",
+          "type": "IReadOnlyList<string>?",
+          "isRequired": false,
+          "description": "Fáze 15 (the Modeling \"Open in editor\" notation palette): stencil ids to pin as the FIRST library — the palette of the active notation — while every other library starts collapsed (search still spans the whole stencil library). Order is preserved; unknown ids are ignored. Null (the default) keeps today's toolbox: no pinned library, all palettes expanded."
+        },
+        {
+          "name": "PreferredStencilsLabel",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Header label of the pinned library (the Modeling dialog passes the notation profile's display name). Null falls back to the localized TmDiagramToolbox_PreferredDefault. Ignored while PreferredStencilIds is unset."
+        },
+        {
           "name": "ReadOnly",
           "type": "bool",
           "isRequired": false,
@@ -5706,6 +5834,10 @@
       "kind": "JavaScript"
     },
     {
+      "path": "src/Tempo.Blazor.DiagramEditor/wwwroot/js/__tests__/diagram-editor-escape.test.mjs",
+      "kind": "JavaScript"
+    },
+    {
       "path": "src/Tempo.Blazor.DiagramEditor/wwwroot/js/__tests__/diagram-editor-touch.test.mjs",
       "kind": "JavaScript"
     },
@@ -5715,11 +5847,11 @@
     }
   ],
   "summary": {
-    "itemCount": 143,
-    "manualItemCount": 143,
-    "generatedItemCount": 134,
+    "itemCount": 145,
+    "manualItemCount": 145,
+    "generatedItemCount": 136,
     "generatedOnlyItemCount": 0,
-    "componentCount": 17,
-    "publicApiTypeCount": 117
+    "componentCount": 18,
+    "publicApiTypeCount": 118
   }
 }

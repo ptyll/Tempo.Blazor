@@ -1,0 +1,10 @@
+{
+  "kind": "Class",
+  "category": "Modeling",
+  "namespace": "Tempo.Blazor.Modeling",
+  "description": "The outcome of IModelingModelWriter.SaveChangesAsync (Succeeded, IsConflict, Message, Model?, Issues).",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/Modeling/ModelingProviderContracts.cs",
+  "documentationStatus": "generated",
+  "itemName": "ModelingModelSaveResult"
+}

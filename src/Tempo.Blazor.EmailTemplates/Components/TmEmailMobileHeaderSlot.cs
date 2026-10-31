@@ -11,10 +11,11 @@ namespace Tempo.Blazor.EmailTemplates.Components;
 /// Two jobs, one component, because both need the SAME input — the <see cref="TmLayoutContext"/> the
 /// shell cascades into its slots. A nested slot must never measure on its own (a private observer would
 /// classify with the shared 640/1024 thresholds instead of the editor's 768/1200 breakpoints), and the
-/// shell's <c>ResolvedLayoutChanged</c> callback deliberately reports CHANGES only: an app-level viewport
-/// observer can resolve the editor to mobile on the very first parameter pass, which is not a change and
-/// would leave a callback-only editor stuck on its <c>InitialMode</c>. The cascade is the one source that
-/// is correct in both cases (docs/editor-shell.md).
+/// shell's <c>ResolvedLayoutChanged</c> callback deliberately reports CHANGES only — the initial value
+/// is not a change, except that an Auto observer which inherits a non-Desktop resolution from a
+/// cascading parent reports it once so late-mounted consumers adopt it — and a callback-only path would
+/// still depend on the host wiring it. The cascade is the one source that is correct in both cases
+/// (docs/editor-shell.md).
 /// </para>
 /// </summary>
 internal sealed class TmEmailMobileHeaderSlot : ComponentBase

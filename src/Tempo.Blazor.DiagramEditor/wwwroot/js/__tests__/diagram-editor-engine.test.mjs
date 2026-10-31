@@ -637,6 +637,64 @@ test('fitToView clamps its fit scale', () => {
     assert.ok(fit <= 5.0, 'fitToView never exceeds MAX_SCALE');
 });
 
+test('fitToView width mode scales by container width only', () => {
+    const engine = loadEngine();
+    const { inst } = zoomInst();
+    engine.instances.set('z1', inst);
+    // Wide content (500 + 2*40 padding = 580 doc units) that is ALSO tall (5000 + 80 = 5080) in
+    // an 800x500 box: a PAGE fit would shrink to the MIN_SCALE floor (500/5080 clamps to 0.15);
+    // the width mode scales by the container width over the CONTENT WIDTH only and ignores the height.
+    inst.scenePane = { querySelectorAll: () => [{
+        getAttribute: n => n === 'data-node-id' ? 'n1' : null,
+    }] };
+    engine._nodeRect = () => ({ x: 0, y: 0, w: 500, h: 5000 });
+
+    const fit = engine.fitToView({ id: 'z1' }, 40, 'width');
+    assert.ok(Math.abs(fit - 800 / 580) < 1e-9, 'width mode scales by the container width over the content width');
+    const vb = readVb(inst);
+    assert.ok(Math.abs(vb.width - 580) < 1e-9, 'the viewBox width equals the padded content width');
+    assert.ok(fit > 0.15, 'the tall content does NOT shrink the scale the way a page fit would');
+    // The content's left edge (minus the padding) stays the visible left edge.
+    assert.ok(Math.abs(vb.x - -40) < 1e-9, 'the content keeps its padding offset');
+});
+
+test('fitToView without a mode keeps the page fit (today contract)', () => {
+    const engine = loadEngine();
+    const { inst } = zoomInst();
+    engine.instances.set('z1', inst);
+    inst.scenePane = { querySelectorAll: () => [{
+        getAttribute: n => n === 'data-node-id' ? 'n1' : null,
+    }] };
+    engine._nodeRect = () => ({ x: 0, y: 0, w: 500, h: 5000 });
+
+    const fit = engine.fitToView({ id: 'z1' }, 40);
+    // A page fit considers BOTH axes: the tall content hits the MIN_SCALE floor (clamped).
+    assert.ok(Math.abs(fit - 0.15) < 1e-9, 'the default mode fits the whole page (width AND height)');
+    assert.ok(Math.abs(readVb(inst).width - 800 / 0.15) < 1e-6, 'the viewBox matches the page fit');
+});
+
+test('fitToView width mode TOP-aligns content shorter than the visible band', () => {
+    const engine = loadEngine();
+    const { inst } = zoomInst();
+    engine.instances.set('z1', inst);
+    // SHORT content (500 wide + 80 padding; 60 tall + 80 padding = 140) in an 800x500 box: the
+    // width mode scales by the width (800/580 ≈ 1.379 → newH ≈ 362) — the band is TALLER than
+    // the content, and the content must pin to the band's TOP edge, not float centered.
+    inst.scenePane = { querySelectorAll: () => [{
+        getAttribute: n => n === 'data-node-id' ? 'n1' : null,
+    }] };
+    engine._nodeRect = () => ({ x: 0, y: 300, w: 500, h: 60 });
+
+    const fit = engine.fitToView({ id: 'z1' }, 40, 'width');
+    assert.ok(Math.abs(fit - 800 / 580) < 1e-9, 'width mode scales by the container width over the content width');
+    const vb = readVb(inst);
+    // Top-aligned: the padded content top (300 - 40 = 260) IS the visible top edge — the
+    // centered placement would have pushed the top up by (362 - 140) / 2 = 111 more.
+    assert.ok(Math.abs(vb.y - 260) < 1e-9, `the short content pins to the band top (got y=${vb.y})`);
+    assert.ok(Math.abs(vb.width - 580) < 1e-9, 'the viewBox width equals the padded content width');
+});
+
+
 // ── J10: one measured containing block for the fixed popovers ───────────────────────────────
 
 /** A fake editor root: querySelector returns the anchor, getBoundingClientRect the editor box,
@@ -1352,8 +1410,11 @@ test('context menu a11y: the first enabled item is focused, arrows/Home/End rove
     doc.dispatch('keydown', { key: 'Home', preventDefault() {} });
     assert.equal(doc.activeElement, cut, 'Home returns to the first');
 
-    doc.dispatch('keydown', { key: 'Escape' });
+    const escape = { key: 'Escape', defaultPrevented: false, preventDefault() { this.defaultPrevented = true; } };
+    doc.dispatch('keydown', escape);
     assert.deepEqual(closeCalls, ['CloseContextMenu'], 'Escape closes the menu');
+    assert.equal(escape.defaultPrevented, true, 'the menu owns the Escape: the capture consumer marks it');
+    assert.equal(escape.tmEscapeHandled, true, 'the bubble-phase focus trap honors the flag');
     assert.equal(doc.count('keydown'), 0, 'the key handler is removed with the menu');
 });
 

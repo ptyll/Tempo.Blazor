@@ -18,7 +18,7 @@ namespace Tempo.Blazor.Tests.Theme;
 /// convention <c>tokens-dark.css</c> already documents for <c>--tm-sort-indicator-active</c> and
 /// <c>--tm-color-on-primary</c>.
 /// </remarks>
-public sealed class TokenContrastTests
+public sealed partial class TokenContrastTests
 {
     /// <summary>
     /// Text×surface pairs held to AA. The denominator is this list itself: a token that vanishes from
@@ -476,6 +476,12 @@ public sealed class TokenContrastTests
             "--tm-bg-muted", "--tm-bg-page", "--tm-bg-surface", "--tm-bg-surface-secondary",
             "--tm-border-color", "--tm-border-color-control", "--tm-border-color-strong",
             "--tm-cal-range-bg",
+            // Phase 15b: the canvas backdrop is deliberately THEME-AWARE — light keeps the
+            // paper-backdrop gray, dark rides the workspace tone so the white page floats on
+            // a dark canvas (docs/diagram-editor.md, carry-forward F8 m5). Renamed to the
+            // generic --tm-canvas-backdrop in the phase 15b review; the DiagramEditor keeps
+            // a --tm-diagram-backdrop alias on .tm-diagram-canvas.
+            "--tm-canvas-backdrop",
             "--tm-calendar-view-event-bg", "--tm-calendar-view-event-border",
             "--tm-calendar-view-event-fg", "--tm-calendar-view-highlight",
             "--tm-calendar-view-today-bg", "--tm-calendar-view-today-fg",
@@ -1097,100 +1103,4 @@ public sealed class TokenContrastTests
             .Should().BeGreaterThanOrEqualTo(3, "checkbox accent, {0}", dark ? "dark" : "light");
     }
 
-    [Theory]
-    [InlineData(false, false)]
-    [InlineData(false, true)]
-    [InlineData(true, false)]
-    [InlineData(true, true)]
-    public void StateFocusRings_HoldThreeToOne_AgainstTheSurface(bool indigo, bool dark)
-    {
-        var tokens = indigo ? IndigoTokens(dark) : ThemeCss.TokenGraph(dark);
-        var surface = ThemeCss.ResolveColour("var(--tm-bg-surface)", tokens);
-
-        foreach (var ring in new[] { "--tm-focus-ring-danger", "--tm-focus-ring-success" })
-        {
-            ThemeCss.Contrast(ThemeCss.LastShadowColour(tokens[ring], tokens), surface)
-                .Should().BeGreaterThanOrEqualTo(3,
-                    "{0} je non-text indikátor a musí držet 3:1 proti povrchu ({1} {2})",
-                    ring, indigo ? "indigo" : "default", dark ? "dark" : "light");
-        }
-    }
-
-    /// <summary>
-    /// TmGantt phase 2: the status chips and the priority glyphs are painted on the Gantt's own
-    /// surfaces - the card (<c>--tm-bg-surface</c>) and the workspace behind it
-    /// (<c>--tm-bg-workspace</c>, which only the indigo theme moves) - so the F0 tokens are measured in
-    /// that context in light, dark and both indigo variants. Chip text holds AA on its fill; a priority
-    /// glyph holds the 3:1 a non-text mark needs against either surface.
-    /// </summary>
-    [Theory]
-    [InlineData(false, false)]
-    [InlineData(false, true)]
-    [InlineData(true, false)]
-    [InlineData(true, true)]
-    public void GanttStatusAndPriority_HoldContrast_OnTheGanttSurfaces(bool indigo, bool dark)
-    {
-        var tokens = indigo ? IndigoTokens(dark) : ThemeCss.TokenGraph(dark);
-        var theme = $"{(indigo ? "indigo" : "default")} {(dark ? "dark" : "light")}";
-
-        foreach (var status in new[] { "open", "inprogress", "done", "closed" })
-        {
-            var fill = PaintedColour($"var(--tm-status-{status}-bg)", tokens);
-            ThemeCss.Contrast(ThemeCss.ResolveColour($"var(--tm-status-{status}-fg)", tokens), fill)
-                .Should().BeGreaterThanOrEqualTo(4.5, "{0} chip text on its fill ({1})", status, theme);
-        }
-
-        foreach (var surface in new[] { "var(--tm-bg-surface)", "var(--tm-bg-workspace)" })
-        {
-            var ground = ThemeCss.ResolveColour(surface, tokens);
-            foreach (var priority in new[] { "lowest", "low", "medium", "high", "highest" })
-            {
-                ThemeCss.Contrast(ThemeCss.ResolveColour($"var(--tm-priority-{priority})", tokens), ground)
-                    .Should().BeGreaterThanOrEqualTo(3, "{0} priority glyph on {1} ({2})", priority, surface, theme);
-            }
-        }
-    }
-
-    /// <summary>
-    /// TmGantt phase 2 pairs painted by the redesigned markup: the workload cells (accent text on the
-    /// primary wash, danger text on the danger wash), the "Today" pill (inverse ink on the danger fill)
-    /// and the default bar label (fixed white on the solid primary).
-    /// </summary>
-    [Theory]
-    [InlineData(false, false)]
-    [InlineData(false, true)]
-    [InlineData(true, false)]
-    [InlineData(true, true)]
-    public void GanttWorkloadTodayAndBarLabel_HoldAa(bool indigo, bool dark)
-    {
-        var tokens = indigo ? IndigoTokens(dark) : ThemeCss.TokenGraph(dark);
-        var theme = $"{(indigo ? "indigo" : "default")} {(dark ? "dark" : "light")}";
-
-        var pairs = new[]
-        {
-            ("workload in capacity", "var(--tm-color-primary-text)", "var(--tm-color-primary-subtle)"),
-            ("workload overloaded", "var(--tm-color-danger-text)", "var(--tm-color-danger-subtle)"),
-            ("today pill", "var(--tm-text-inverse)", "var(--tm-color-danger)"),
-            ("bar label", "var(--tm-color-on-primary-fixed)", "var(--tm-color-primary-solid)"),
-        };
-
-        foreach (var (name, foreground, background) in pairs)
-        {
-            ThemeCss.Contrast(ThemeCss.ResolveColour(foreground, tokens), PaintedOnSurface(background, tokens))
-                .Should().BeGreaterThanOrEqualTo(4.5, "{0} ({1})", name, theme);
-        }
-    }
-
-    /// <summary>
-    /// The colour a fill paints over <c>--tm-bg-surface</c>: an <c>rgb(from …)</c> wash goes through
-    /// <see cref="PaintedColour"/>, a literal <c>rgba()</c> wash (the dark danger / info subtle) is
-    /// composited from its own channels, an opaque token resolves as is.
-    /// </summary>
-    private static string PaintedOnSurface(string tokenExpr, Dictionary<string, string> tokens)
-    {
-        var resolved = ThemeCss.ResolveColour(tokenExpr, tokens);
-        return resolved.StartsWith("rgba(", StringComparison.Ordinal)
-            ? OverScrim(tokenExpr, tokens, ThemeCss.ResolveColour("var(--tm-bg-surface)", tokens))
-            : PaintedColour(tokenExpr, tokens);
-    }
 }

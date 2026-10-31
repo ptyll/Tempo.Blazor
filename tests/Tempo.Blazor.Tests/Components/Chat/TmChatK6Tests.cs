@@ -34,8 +34,10 @@ public class TmChatK6Tests : LocalizationTestBase
 
         var cut = Render(messages);
 
-        // Reply is not shown in the main list (only the root).
-        cut.FindAll(".tm-chat__messages > .tm-chat__message").Should().HaveCount(1);
+        // Reply is not shown in the main list (only the root). Descendant selector: since the
+        // custom-template phase every message is wrapped in a .tm-chat__item carrying the
+        // data-message-id anchor, so .tm-chat__message is no longer a DIRECT child.
+        cut.FindAll(".tm-chat__messages .tm-chat__message").Should().HaveCount(1);
         var badge = cut.Find("[data-testid='chat-thread-open-m1']");
         badge.TextContent.Should().Contain("1");
     }
@@ -86,6 +88,25 @@ public class TmChatK6Tests : LocalizationTestBase
         edit.Should().NotBeNull();
         edit!.MessageId.Should().Be("m1");
         edit.NewText.Should().Be("Hello");
+    }
+
+    [Fact]
+    public async Task EditCommit_ThrowsInHost_EditStaysOpenWithText()
+    {
+        var messages = new[] { new ChatMessage("m1", "Helo", Me, ChatMessageType.Outgoing) };
+        var cut = Render(messages, p => p.Add(c => c.OnEditMessage,
+            EventCallback.Factory.Create<ChatMessageEdit>(this, _ => throw new InvalidOperationException("host handler failed"))));
+
+        cut.Find("[data-testid='chat-edit-m1']").Click();
+        cut.Find("[data-testid='chat-edit-input']").Input("Hello");
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => cut.InvokeAsync(
+            () => cut.Find("[data-testid='chat-edit-save']").Click()));
+
+        cut.Find("[data-testid='chat-edit-input']").GetAttribute("value").Should().Be("Hello",
+            "the editing id is cleared only after the handler completes — a failed edit keeps the text");
+        cut.FindAll("[data-testid='chat-edit-save']").Should().ContainSingle(
+            "the edit stays open so the failure can be retried");
     }
 
     [Fact]

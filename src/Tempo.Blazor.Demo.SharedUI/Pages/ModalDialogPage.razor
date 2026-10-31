@@ -20,6 +20,9 @@
         <TmButton OnClick="() => _showBasicModal = true" Variant="ButtonVariant.Primary" data-testid="open-basic-modal">
             Open Modal
         </TmButton>
+        <TmButton OnClick="() => _showIconModal = true" Variant="ButtonVariant.Outline" data-testid="open-icon-modal">
+            Modal with a header icon
+        </TmButton>
     </div>
 </section>
 
@@ -199,6 +202,16 @@
     </div>
 </TmModal>
 
+<!-- Modal with a header icon (the shared frame's × / title line-box alignment, phase 7c) -->
+<TmModal Show="_showIconModal"
+         OnClose="() => _showIconModal = false"
+         Title="Modal with an icon"
+         Subtitle="The header icon, the title and the close button share one line box."
+         Icon="info">
+    <p>The header icon sits in the same row as the title, so the close button's optical alignment is
+        measured against the title's first line here too.</p>
+</TmModal>
+
 <!-- Sized Modal -->
 <TmModal Show="_showSizedModal"
          OnClose="() => _showSizedModal = false"
@@ -333,6 +346,7 @@
 @code {
     // Basic Modal
     private bool _showBasicModal;
+    private bool _showIconModal;
     
     // Sized Modal
     private bool _showSizedModal;

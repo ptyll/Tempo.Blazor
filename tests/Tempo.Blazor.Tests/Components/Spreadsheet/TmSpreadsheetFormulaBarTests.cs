@@ -2,6 +2,7 @@ using Bunit;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Tempo.Blazor.Components.Spreadsheet;
+using Tempo.Blazor.Components.Spreadsheet.Models;
 using Tempo.Blazor.Tests.Localization;
 
 namespace Tempo.Blazor.Tests.Components.Spreadsheet;
@@ -188,6 +189,39 @@ public class TmSpreadsheetFormulaBarTests : LocalizationTestBase
     }
 
     [Fact]
+    public void NameBox_SurvivesAParentRender_WithTheSameActiveCell()
+    {
+        // A canvas activation re-renders the host several times (the command-log flush, the viewport
+        // sync the grid's own focusout schedules). The name box is a CONTROLLED input, so re-seeding it
+        // from ActiveCellRef on every parent pass silently replaced a ref the user was typing and the
+        // Enter that should navigate went to the active cell instead (phase-7 regression, caught by
+        // SpreadsheetPhase2VisualE2ETests.Phase2_NameBoxNavigation_MovesTheHeaderHighlight).
+        string? navigated = null;
+        var cut = Render<TmSpreadsheetFormulaBar>(parameters => parameters
+            .Add(p => p.ActiveCellRef, "D5")
+            .Add(p => p.OnNavigateToRef, EventCallback.Factory.Create<string>(this, value => navigated = value)));
+
+        cut.Find(".tm-spreadsheet-formula-bar__ref").Input("F7");
+
+        // The parent passes the SAME active cell again — an unrelated render, not a navigation.
+        cut.Render(parameters => parameters
+            .Add(p => p.ActiveCellRef, "D5")
+            .Add(p => p.OnNavigateToRef, EventCallback.Factory.Create<string>(this, value => navigated = value)));
+
+        cut.Find(".tm-spreadsheet-formula-bar__ref").GetAttribute("value").Should().Be("F7",
+            "an unrelated parent render must not overwrite the ref the user typed");
+
+        cut.Find(".tm-spreadsheet-formula-bar__ref").KeyDown("Enter");
+        navigated.Should().Be("F7", "Enter must navigate to the TYPED ref, not to the active cell");
+
+        // A real navigation still re-seeds the box.
+        cut.Render(parameters => parameters
+            .Add(p => p.ActiveCellRef, "F7")
+            .Add(p => p.OnNavigateToRef, EventCallback.Factory.Create<string>(this, value => navigated = value)));
+        cut.Find(".tm-spreadsheet-formula-bar__ref").GetAttribute("value").Should().Be("F7");
+    }
+
+    [Fact]
     public void NameBox_Escape_RevertsToActiveCellRef()
     {
         var cut = Render<TmSpreadsheetFormulaBar>(parameters => parameters
@@ -199,5 +233,243 @@ public class TmSpreadsheetFormulaBarTests : LocalizationTestBase
         nameBox.KeyDown("Escape");
 
         nameBox.GetAttribute("value").Should().Be("C3");
+    }
+
+    // ── Ribbon v2 / formula bar polish (phase 5) ──
+
+    [Fact]
+    public void FormulaBar_FxLabel_AlwaysVisible()
+    {
+        var cut = Render<TmSpreadsheetFormulaBar>(parameters => parameters
+            .Add(p => p.ActiveCellRef, "D5")
+            .Add(p => p.DisplayValue, "=C5-B5"));
+
+        var fx = cut.Find(".tm-spreadsheet-formula-bar__fx");
+        fx.TextContent.Trim().Should().Be("fx");
+
+        // It is a permanent part of the bar, not an edit-mode decoration: it survives editing too.
+        cut.Render(parameters => parameters
+            .Add(p => p.ActiveCellRef, "D5")
+            .Add(p => p.DisplayValue, "=C5-B5")
+            .Add(p => p.IsEditing, true));
+
+        cut.FindAll(".tm-spreadsheet-formula-bar__fx").Count.Should().Be(1);
+    }
+
+    [Fact]
+    public void FormulaBar_ConfirmCancelButtons_CommitAndRevert()
+    {
+        string? committed = null;
+        var cancelled = false;
+        var cut = Render<TmSpreadsheetFormulaBar>(parameters => parameters
+            .Add(p => p.ActiveCellRef, "A1")
+            .Add(p => p.DisplayValue, "Old")
+            .Add(p => p.IsEditing, true)
+            .Add(p => p.OnValueCommitted, EventCallback.Factory.Create<string?>(this, v => committed = v))
+            .Add(p => p.OnEditCancelled, EventCallback.Factory.Create(this, () => cancelled = true)));
+
+        var confirm = cut.Find(".tm-spreadsheet-formula-bar__confirm");
+        confirm.GetAttribute("aria-label").Should().Be("Confirm formula");
+        var cancel = cut.Find(".tm-spreadsheet-formula-bar__cancel");
+        cancel.GetAttribute("aria-label").Should().Be("Cancel formula");
+
+        cut.Find(".tm-spreadsheet-formula-bar__input").Input("New Value");
+        cut.Find(".tm-spreadsheet-formula-bar__confirm").Click();
+
+        cut.WaitForAssertion(() => committed.Should().Be("New Value"));
+
+        // A fresh edit session (the host first drops IsEditing after the commit, then re-opens it),
+        // then the ✗ reverts instead of committing.
+        cut.Render(parameters => parameters
+            .Add(p => p.ActiveCellRef, "A1")
+            .Add(p => p.DisplayValue, "Old")
+            .Add(p => p.IsEditing, false)
+            .Add(p => p.OnEditCancelled, EventCallback.Factory.Create(this, () => cancelled = true)));
+        cut.Render(parameters => parameters
+            .Add(p => p.ActiveCellRef, "A1")
+            .Add(p => p.DisplayValue, "Old")
+            .Add(p => p.IsEditing, true)
+            .Add(p => p.OnEditCancelled, EventCallback.Factory.Create(this, () => cancelled = true)));
+
+        cut.Find(".tm-spreadsheet-formula-bar__input").Input("Changed");
+        cut.Find(".tm-spreadsheet-formula-bar__cancel").Click();
+        cut.WaitForAssertion(() => cancelled.Should().BeTrue());
+    }
+
+    [Fact]
+    public void FormulaBar_ConfirmCancelButtons_HiddenWhenNotEditing()
+    {
+        var cut = Render<TmSpreadsheetFormulaBar>(parameters => parameters
+            .Add(p => p.ActiveCellRef, "A1")
+            .Add(p => p.DisplayValue, "Test"));
+
+        cut.FindAll(".tm-spreadsheet-formula-bar__confirm").Should().BeEmpty();
+        cut.FindAll(".tm-spreadsheet-formula-bar__cancel").Should().BeEmpty();
+    }
+
+    [Fact]
+    public void FormulaBar_NameBox_ListsNamedRanges_AndNavigates()
+    {
+        var ranges = new List<SpreadsheetNamedRange>
+        {
+            new() { Name = "TaxRate", RefersTo = "=Sheet1!$B$2", Scope = NamedRangeScope.Workbook },
+            new() { Name = "Total", RefersTo = "=Sheet1!$B$10", Scope = NamedRangeScope.Workbook },
+        };
+        string? navigated = null;
+
+        var cut = Render<TmSpreadsheetFormulaBar>(parameters => parameters
+            .Add(p => p.ActiveCellRef, "A1")
+            .Add(p => p.DisplayValue, "Test")
+            .Add(p => p.NamedRanges, ranges)
+            .Add(p => p.OnNavigateToRef, EventCallback.Factory.Create<string>(this, v => navigated = v)));
+
+        cut.FindAll(".tm-spreadsheet-formula-bar__ref-item").Should().BeEmpty("the list is closed until the chevron is used");
+
+        cut.Find(".tm-spreadsheet-formula-bar__ref-toggle").Click();
+
+        var items = cut.FindAll(".tm-spreadsheet-formula-bar__ref-item");
+        items.Count.Should().Be(2);
+        items.Select(i => i.TextContent.Trim()).Should().ContainInOrder("TaxRate", "Total");
+
+        items.First(i => i.TextContent.Contains("Total")).Click();
+
+        navigated.Should().Be("Total");
+        cut.FindAll(".tm-spreadsheet-formula-bar__ref-item").Should().BeEmpty();
+    }
+
+    [Fact]
+    public void FormulaBar_NameBox_ArrowKeys_MoveTheActiveRange_AndEnterNavigates()
+    {
+        // Redesign phase 6: the named-range list is a keyboard listbox. ArrowDown on the name box OPENS it
+        // (the Excel gesture) and the arrows then move the active option while the input keeps the focus —
+        // the input owns the selection, so aria-activedescendant points at the highlighted option and Enter
+        // navigates to it instead of re-parsing the typed text.
+        var ranges = new List<SpreadsheetNamedRange>
+        {
+            new() { Name = "TaxRate", RefersTo = "=Sheet1!$B$2", Scope = NamedRangeScope.Workbook },
+            new() { Name = "Total", RefersTo = "=Sheet1!$B$10", Scope = NamedRangeScope.Workbook },
+            new() { Name = "Vat", RefersTo = "=Sheet1!$B$11", Scope = NamedRangeScope.Workbook },
+        };
+        string? navigated = null;
+
+        var cut = Render<TmSpreadsheetFormulaBar>(parameters => parameters
+            .Add(p => p.ActiveCellRef, "A1")
+            .Add(p => p.DisplayValue, "Test")
+            .Add(p => p.NamedRanges, ranges)
+            .Add(p => p.OnNavigateToRef, EventCallback.Factory.Create<string>(this, v => navigated = v)));
+
+        var input = cut.Find(".tm-spreadsheet-formula-bar__ref");
+        input.KeyDown(new KeyboardEventArgs { Key = "ArrowDown" });
+        cut.Render();
+
+        cut.FindAll(".tm-spreadsheet-formula-bar__ref-item").Count.Should().Be(3, "ArrowDown opens the list");
+        input = cut.Find(".tm-spreadsheet-formula-bar__ref");
+        input.GetAttribute("aria-expanded").Should().Be("true");
+        var activeId = input.GetAttribute("aria-activedescendant");
+        activeId.Should().NotBeNullOrEmpty();
+        cut.Find($"[id='{activeId}']").TextContent.Trim().Should().Be("TaxRate", "the first option is active");
+
+        input.KeyDown(new KeyboardEventArgs { Key = "ArrowDown" });
+        cut.Render();
+        input = cut.Find(".tm-spreadsheet-formula-bar__ref");
+        cut.Find($"[id='{input.GetAttribute("aria-activedescendant")}']").TextContent.Trim().Should().Be("Total");
+        cut.Find($"[id='{input.GetAttribute("aria-activedescendant")}']").GetAttribute("aria-selected")
+            .Should().Be("true", "only the active option is selected");
+
+        // Wrapping: one more step from the last option returns to the first.
+        input.KeyDown(new KeyboardEventArgs { Key = "ArrowDown" });
+        cut.Render();
+        input = cut.Find(".tm-spreadsheet-formula-bar__ref");
+        cut.Find($"[id='{input.GetAttribute("aria-activedescendant")}']").TextContent.Trim().Should().Be("Vat");
+        input.KeyDown(new KeyboardEventArgs { Key = "ArrowUp" });
+        cut.Render();
+        input.KeyDown(new KeyboardEventArgs { Key = "ArrowUp" });
+        cut.Render();
+        input = cut.Find(".tm-spreadsheet-formula-bar__ref");
+        cut.Find($"[id='{input.GetAttribute("aria-activedescendant")}']").TextContent.Trim().Should().Be("TaxRate");
+
+        input.KeyDown(new KeyboardEventArgs { Key = "Enter" });
+        navigated.Should().Be("TaxRate", "Enter accepts the highlighted range, not the typed text");
+        cut.FindAll(".tm-spreadsheet-formula-bar__ref-item").Should().BeEmpty();
+    }
+
+    [Fact]
+    public void FormulaBar_NameBox_ArrowKeys_WithoutNamedRanges_DoNothing()
+    {
+        var cut = Render<TmSpreadsheetFormulaBar>(parameters => parameters
+            .Add(p => p.ActiveCellRef, "A1")
+            .Add(p => p.DisplayValue, "Test"));
+
+        cut.Find(".tm-spreadsheet-formula-bar__ref").KeyDown(new KeyboardEventArgs { Key = "ArrowDown" });
+
+        cut.FindAll(".tm-spreadsheet-formula-bar__ref-item").Should().BeEmpty();
+    }
+
+    [Fact]
+    public void FormulaBar_NameBox_NoNamedRanges_KeepsTheLegacyInput()
+    {
+        var cut = Render<TmSpreadsheetFormulaBar>(parameters => parameters
+            .Add(p => p.ActiveCellRef, "A1")
+            .Add(p => p.DisplayValue, "Test"));
+
+        cut.FindAll(".tm-spreadsheet-formula-bar__ref-toggle").Should().BeEmpty(
+            "a workbook without named ranges shows no empty dropdown");
+        cut.Find(".tm-spreadsheet-formula-bar__ref").Should().NotBeNull();
+    }
+
+    // ── Review round: list dismissal paths ──
+
+    [Fact]
+    public void FormulaBar_NameBox_EscapeOnTheToggle_ClosesTheList()
+    {
+        var cut = Render<TmSpreadsheetFormulaBar>(parameters => parameters
+            .Add(p => p.ActiveCellRef, "A1")
+            .Add(p => p.DisplayValue, "x")
+            .Add(p => p.NamedRanges, new List<SpreadsheetNamedRange>
+            {
+                new() { Name = "Total", RefersTo = "=A1" },
+            }));
+
+        var toggle = cut.Find(".tm-spreadsheet-formula-bar__ref-toggle");
+        toggle.Click();
+        cut.FindAll(".tm-spreadsheet-formula-bar__ref-item").Count.Should().Be(1);
+
+        toggle.KeyDown(new KeyboardEventArgs { Key = "Escape" });
+
+        cut.FindAll(".tm-spreadsheet-formula-bar__ref-item").Should().BeEmpty();
+    }
+
+    [Fact]
+    public void FormulaBar_NameBox_OutsideClick_ClosesTheList()
+    {
+        var cut = Render<TmSpreadsheetFormulaBar>(parameters => parameters
+            .Add(p => p.ActiveCellRef, "A1")
+            .Add(p => p.DisplayValue, "x")
+            .Add(p => p.NamedRanges, new List<SpreadsheetNamedRange>
+            {
+                new() { Name = "Total", RefersTo = "=A1" },
+            }));
+
+        cut.Find(".tm-spreadsheet-formula-bar__ref-toggle").Click();
+        cut.Find(".tm-spreadsheet-formula-bar__ref-overlay").Click();
+
+        cut.FindAll(".tm-spreadsheet-formula-bar__ref-item").Should().BeEmpty();
+    }
+
+    [Fact]
+    public void FormulaBar_NameBox_FocusOutOfTheWrapper_ClosesTheList()
+    {
+        var cut = Render<TmSpreadsheetFormulaBar>(parameters => parameters
+            .Add(p => p.ActiveCellRef, "A1")
+            .Add(p => p.DisplayValue, "x")
+            .Add(p => p.NamedRanges, new List<SpreadsheetNamedRange>
+            {
+                new() { Name = "Total", RefersTo = "=A1" },
+            }));
+
+        cut.Find(".tm-spreadsheet-formula-bar__ref-toggle").Click();
+        cut.Find(".tm-spreadsheet-formula-bar__name-box").FocusOut();
+
+        cut.FindAll(".tm-spreadsheet-formula-bar__ref-item").Should().BeEmpty();
     }
 }

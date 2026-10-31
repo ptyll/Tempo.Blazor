@@ -67,7 +67,13 @@ public enum MobilePresentation
     /// Follows the viewport scope: a sheet on mobile, a dialog otherwise. With no viewport scope it
     /// renders the component's initial mode.
     /// </summary>
-    Auto
+    Auto,
+
+    /// <summary>
+    /// Follows the viewport scope like <see cref="Auto"/>, but a TALL surface: a fullscreen panel on
+    /// mobile (a sheet would clip a tabbed form, a table or a preview), the centred dialog otherwise.
+    /// </summary>
+    AutoFullscreen
 }
 
 /// <summary>How the footer buttons of a modal or dialog are arranged.</summary>

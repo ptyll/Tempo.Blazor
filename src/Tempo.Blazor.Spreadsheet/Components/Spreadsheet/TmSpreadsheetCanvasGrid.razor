@@ -4,7 +4,7 @@
 
 @if (Sheet is null)
 {
-    <div class="tm-spreadsheet-canvas-grid tm-spreadsheet-grid--empty">
+    <div class="tm-spreadsheet-canvas-grid tm-spreadsheet-grid--empty" id="@RootDomId">
         @Loc["TmSpreadsheet_NoSheet"]
     </div>
 }
@@ -17,6 +17,7 @@ else
          aria-label="@Loc["TmSpreadsheet_Name"]"
          aria-describedby="@CanvasAccessibilityDescriptionDomId"
          aria-activedescendant="@ActiveCellDomId"
+         id="@RootDomId"
          tabindex="0"
          data-a11y-active-cell-id="@ActiveCellDomId"
          data-a11y-live-region-id="@LiveRegionDomId"
@@ -24,10 +25,17 @@ else
          data-a11y-active-cell-prefix="@Loc["TmSpreadsheet_ActiveCell"]"
          data-a11y-cell-editor-label="@Loc["TmSpreadsheet_CellEditorLabel"]"
          data-a11y-formula-editor-label="@Loc["TmSpreadsheet_FormulaEditorLabel"]"
+         data-density="@DensityScale.Name"
          data-external-formula-session-active="@(ExternalFormulaSessionActive ? "true" : "false")"
          data-external-formula-origin-ref="@ExternalFormulaOriginCellRef"
          data-readonly="@(IsReadonly ? "true" : null)"
          @ref="_rootElement">
+        @* Phase 7 touch handles: the DOM hit areas a finger grabs to EXTEND the selection (two round
+           corner drops) and to FILL from the selection corner. They live in the sticky scrollport layer so
+           they share the exact coordinate space the canvases paint in, and they are real elements
+           because `touch-action: none` can only be set on an element — a painted handle cannot stop the
+           browser panning the grid under the finger. The JS engine positions them from the painted
+           selection rectangle; a fine pointer hides the whole layer (CSS), so the mouse path is untouched. *@
         <div class="tm-spreadsheet-canvas-grid__layer" aria-hidden="true">
             <canvas class="tm-spreadsheet-canvas-grid__canvas tm-spreadsheet-canvas-grid__canvas--content"
                     @ref="_canvasElement"></canvas>
@@ -35,6 +43,17 @@ else
                     @ref="_headerCanvasElement"></canvas>
             <canvas class="tm-spreadsheet-canvas-grid__canvas tm-spreadsheet-canvas-grid__canvas--selection"
                     @ref="_selectionCanvasElement"></canvas>
+            <div class="tm-spreadsheet-canvas-grid__touch-handles" data-touch-handles>
+                @* Two ROUND corner drops (drag-only: they extend the selection) and the fill handle.
+                   Full edge strips were rejected — a strip along the selection's edge swallowed the taps
+                   meant for the selected row/column on a phone (30px rows, 44px finger). *@
+                <div class="tm-spreadsheet-canvas-grid__touch-handle tm-spreadsheet-canvas-grid__touch-handle--start"
+                     data-touch-handle="start" hidden></div>
+                <div class="tm-spreadsheet-canvas-grid__touch-handle tm-spreadsheet-canvas-grid__touch-handle--fill"
+                     data-touch-handle="fill" hidden></div>
+                <div class="tm-spreadsheet-canvas-grid__touch-handle tm-spreadsheet-canvas-grid__touch-handle--end"
+                     data-touch-handle="end" hidden></div>
+            </div>
         </div>
         <div class="tm-spreadsheet-canvas-grid__size"
              style="width:@TotalScrollableWidthPx;height:@TotalScrollableHeightPx;"></div>
@@ -50,18 +69,110 @@ else
 
         @if (_contextMenuVisible && !IsReadonly)
         {
-            <div class="tm-spreadsheet-context-menu"
-                 style="left:@(_contextMenuX)px;top:@(_contextMenuY)px;"
-                 @onclick:stopPropagation
-                 @onmousedown:stopPropagation
-                 @onpointerdown:stopPropagation
-                 @oncontextmenu:preventDefault
-                 @oncontextmenu:stopPropagation>
+            @* Standalone use on a fine pointer. TmSpreadsheet passes RenderContextMenu="false" and renders the
+               menu (and the phone's sheet) as a sibling of its layout container — see
+               SpreadsheetContextMenuRequest for why a position:fixed menu may not live in here. *@
+            @ContextMenuItems(isSheet: false)
+        }
+
+        @* STANDALONE-ONLY resize dialogs. TmSpreadsheet passes RenderContextMenu="false" and renders them as
+           siblings of its layout container: they are TmModal surfaces (position: fixed) and the container's
+           containment would place them against the card. The package keeps the input's and the buttons' class
+           hooks (the published tests key off them) and the numeric bounds. *@
+        @if (RenderContextMenu && _showColWidthDialog)
+        {
+            <TmModal Show="true"
+                     Title="@Loc["TmSpreadsheet_SetColumnWidth"]"
+                     Size="ModalSize.Small"
+                     MobilePresentation="MobilePresentation.Auto"
+                     FooterLayout="FooterLayout.Inline"
+                     CloseOnEscape="true"
+                     CloseOnOverlayClick="true"
+                     InitialFocusTargetId="@ColWidthInputDomId"
+                     RestoreFocusTargetId="@RootDomId"
+                     Class="tm-spreadsheet-resize-dialog"
+                     OnClose="CloseColumnWidthDialog">
+                <ChildContent>
+                    <input class="tm-spreadsheet-resize-dialog__input"
+                           id="@ColWidthInputDomId"
+                           type="number" min="16" max="1000"
+                           aria-label="@Loc["TmSpreadsheet_SetColumnWidth"]"
+                           value="@_colWidthInputValue"
+                           @oninput="e => _colWidthInputValue = e.Value?.ToString() ?? _colWidthInputValue"
+                           @onkeydown="OnColWidthInputKeyDown" />
+                </ChildContent>
+                <Footer>
+                    <button class="tm-spreadsheet-resize-dialog__btn tm-spreadsheet-resize-dialog__btn--cancel"
+                            @onclick="CloseColumnWidthDialog">@Loc["Tm_Cancel"]</button>
+                    <button class="tm-spreadsheet-resize-dialog__btn tm-spreadsheet-resize-dialog__btn--ok"
+                            @onclick="ApplyColWidth">@Loc["Tm_Apply"]</button>
+                </Footer>
+            </TmModal>
+        }
+
+        @if (RenderContextMenu && _showRowHeightDialog)
+        {
+            <TmModal Show="true"
+                     Title="@Loc["TmSpreadsheet_SetRowHeight"]"
+                     Size="ModalSize.Small"
+                     MobilePresentation="MobilePresentation.Auto"
+                     FooterLayout="FooterLayout.Inline"
+                     CloseOnEscape="true"
+                     CloseOnOverlayClick="true"
+                     InitialFocusTargetId="@RowHeightInputDomId"
+                     RestoreFocusTargetId="@RootDomId"
+                     Class="tm-spreadsheet-resize-dialog"
+                     OnClose="CloseRowHeightDialog">
+                <ChildContent>
+                    <input class="tm-spreadsheet-resize-dialog__input"
+                           id="@RowHeightInputDomId"
+                           type="number" min="8" max="500"
+                           aria-label="@Loc["TmSpreadsheet_SetRowHeight"]"
+                           value="@_rowHeightInputValue"
+                           @oninput="e => _rowHeightInputValue = e.Value?.ToString() ?? _rowHeightInputValue"
+                           @onkeydown="OnRowHeightInputKeyDown" />
+                </ChildContent>
+                <Footer>
+                    <button class="tm-spreadsheet-resize-dialog__btn tm-spreadsheet-resize-dialog__btn--cancel"
+                            @onclick="CloseRowHeightDialog">@Loc["Tm_Cancel"]</button>
+                    <button class="tm-spreadsheet-resize-dialog__btn tm-spreadsheet-resize-dialog__btn--ok"
+                            @onclick="ApplyRowHeight">@Loc["Tm_Apply"]</button>
+                </Footer>
+            </TmModal>
+        }
+    </div>
+}
+
+@code {
+    /// <summary>Whether the grid presents its overlays as sheets (a phone-width container).</summary>
+    private bool Mobile => LayoutMode switch
+    {
+        TmLayoutMode.Mobile => true,
+        TmLayoutMode.Tablet or TmLayoutMode.Desktop => false,
+        _ => Viewport?.IsMobile == true,
+    };
+
+    /// <summary>
+    /// The context menu's one item list for both presentations (the anchored menu and the mobile sheet), so a
+    /// new command cannot land in only one of them.
+    /// </summary>
+    private RenderFragment ContextMenuItems(bool isSheet) => @<text>
+        <div class="tm-spreadsheet-context-menu @(isSheet ? "tm-spreadsheet-context-menu--sheet" : null)"
+             role="menu"
+             style="@(isSheet ? null : $"left:{_contextMenuX}px;top:{_contextMenuY}px;")"
+             @onclick:stopPropagation
+             @onmousedown:stopPropagation
+             @onpointerdown:stopPropagation
+             @oncontextmenu:preventDefault
+             @oncontextmenu:stopPropagation>
                 <div class="tm-spreadsheet-context-menu__item" @onclick="ContextMenuFormatCells">@Loc["TmSpreadsheet_FormatCells"]</div>
                 <div class="tm-spreadsheet-context-menu__divider"></div>
                 <div class="tm-spreadsheet-context-menu__item" @onclick="ContextMenuCopy">@Loc["TmSpreadsheet_Copy"]</div>
                 <div class="tm-spreadsheet-context-menu__item" @onclick="ContextMenuCut">@Loc["TmSpreadsheet_Cut"]</div>
                 <div class="tm-spreadsheet-context-menu__item" @onclick="ContextMenuPaste">@Loc["TmSpreadsheet_Paste"]</div>
+                @* Phase 7: the non-drag alternative to the fill-handle drag (WCAG 2.5.7). *@
+                <div class="tm-spreadsheet-context-menu__item" @onclick="ContextMenuFillDown">@Loc["TmSpreadsheet_FillDown"]</div>
+                <div class="tm-spreadsheet-context-menu__item" @onclick="ContextMenuFillRight">@Loc["TmSpreadsheet_FillRight"]</div>
                 <div class="tm-spreadsheet-context-menu__divider"></div>
                 <div class="tm-spreadsheet-context-menu__item" @onclick="ContextMenuInsertRow">@Loc["TmSpreadsheet_InsertRow"]</div>
                 <div class="tm-spreadsheet-context-menu__item" @onclick="ContextMenuDeleteRow">@Loc["TmSpreadsheet_DeleteRow"]</div>
@@ -74,59 +185,6 @@ else
                 <div class="tm-spreadsheet-context-menu__item" @onclick="ContextMenuClearFormatting">@Loc["TmSpreadsheet_ClearFormatting"]</div>
                 <div class="tm-spreadsheet-context-menu__item" @onclick="ContextMenuClearContent">@Loc["TmSpreadsheet_ClearContent"]</div>
                 <div class="tm-spreadsheet-context-menu__item" @onclick="ContextMenuClearAll">@Loc["TmSpreadsheet_ClearAll"]</div>
-            </div>
-        }
-
-        @if (_showColWidthDialog)
-        {
-            <div class="tm-spreadsheet-resize-dialog-backdrop"
-                 @onclick="() => _showColWidthDialog = false"
-                 @onmousedown:stopPropagation
-                 @onpointerdown:stopPropagation>
-                <div class="tm-spreadsheet-resize-dialog"
-                     @onclick:stopPropagation
-                     @onmousedown:stopPropagation
-                     @onpointerdown:stopPropagation>
-                    <div class="tm-spreadsheet-resize-dialog__label">@Loc["TmSpreadsheet_SetColumnWidth"]</div>
-                    <input class="tm-spreadsheet-resize-dialog__input"
-                           type="number" min="16" max="1000"
-                           value="@_colWidthInputValue"
-                           @oninput="e => _colWidthInputValue = e.Value?.ToString() ?? _colWidthInputValue"
-                           @onkeydown="OnColWidthInputKeyDown" />
-                    <div class="tm-spreadsheet-resize-dialog__actions">
-                        <button class="tm-spreadsheet-resize-dialog__btn tm-spreadsheet-resize-dialog__btn--cancel"
-                                @onclick="() => _showColWidthDialog = false">@Loc["Tm_Cancel"]</button>
-                        <button class="tm-spreadsheet-resize-dialog__btn tm-spreadsheet-resize-dialog__btn--ok"
-                                @onclick="ApplyColWidth">@Loc["Tm_Apply"]</button>
-                    </div>
-                </div>
-            </div>
-        }
-
-        @if (_showRowHeightDialog)
-        {
-            <div class="tm-spreadsheet-resize-dialog-backdrop"
-                 @onclick="() => _showRowHeightDialog = false"
-                 @onmousedown:stopPropagation
-                 @onpointerdown:stopPropagation>
-                <div class="tm-spreadsheet-resize-dialog"
-                     @onclick:stopPropagation
-                     @onmousedown:stopPropagation
-                     @onpointerdown:stopPropagation>
-                    <div class="tm-spreadsheet-resize-dialog__label">@Loc["TmSpreadsheet_SetRowHeight"]</div>
-                    <input class="tm-spreadsheet-resize-dialog__input"
-                           type="number" min="8" max="500"
-                           value="@_rowHeightInputValue"
-                           @oninput="e => _rowHeightInputValue = e.Value?.ToString() ?? _rowHeightInputValue"
-                           @onkeydown="OnRowHeightInputKeyDown" />
-                    <div class="tm-spreadsheet-resize-dialog__actions">
-                        <button class="tm-spreadsheet-resize-dialog__btn tm-spreadsheet-resize-dialog__btn--cancel"
-                                @onclick="() => _showRowHeightDialog = false">@Loc["Tm_Cancel"]</button>
-                        <button class="tm-spreadsheet-resize-dialog__btn tm-spreadsheet-resize-dialog__btn--ok"
-                                @onclick="ApplyRowHeight">@Loc["Tm_Apply"]</button>
-                    </div>
-                </div>
-            </div>
-        }
-    </div>
+        </div>
+    </text>;
 }

@@ -158,6 +158,14 @@ internal sealed class ActionOverflowMenu : ComponentBase
         builder.AddComponentParameter(19, "InitialMode", InitialMode);
         builder.AddComponentParameter(20, "Placement", Placement);
         builder.AddComponentParameter(21, "Align", Align);
+        // A menu can be TALLER than the viewport (the spreadsheet's tablet rows put ~18 commands and
+        // three expanded lists into one "More": 1209px of panel in a 768px viewport). Flipping alone
+        // cannot save that — the panel has to cap itself to the room on the resolved side and scroll,
+        // otherwise every entry below the fold is painted outside the viewport with nothing to scroll
+        // it into view (a real tablet dead end, phase 8 regression f25a9d47). ConstrainHeight is the
+        // shared placement knob of TmOverlayPanel, so flip/shift/clamp stay overlay.js's business.
+        // Sequence 28 (not 22): the controlled-open frame keeps the numbers it has always had.
+        builder.AddComponentParameter(28, "ConstrainHeight", true);
         // The menu is the single owner of the open state. The panel runs CONTROLLED: every close
         // path — item select, CloseAsync, sheet Done, backdrop, swipe, Escape, outside pointer —
         // funnels through IsOpenChanged, so aria-expanded can never go stale (F5 R2-M1).

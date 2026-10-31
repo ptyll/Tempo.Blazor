@@ -1075,7 +1075,7 @@
       "kind": "Class",
       "category": "Modeling",
       "namespace": "Tempo.Blazor.Mcp.Modeling",
-      "description": "MCP tools for listing and reading stored architecture/modeling models.",
+      "description": "MCP tools for listing and reading stored architecture/modeling models. modeling_get_model_tree (Fáze 12) returns each element's parentId — the model tree hierarchy (empty at the roots).",
       "packageId": "Tempo.Blazor.Mcp",
       "sourcePath": "src/Tempo.Blazor.Mcp/Modeling/ModelingModelTools.cs",
       "documentationStatus": "merged"
@@ -1085,7 +1085,7 @@
       "kind": "Class",
       "category": "Modeling",
       "namespace": "Tempo.Blazor.Mcp.Modeling",
-      "description": "MCP write tools for architecture/modeling models.",
+      "description": "MCP write tools for architecture/modeling models. modeling_apply_operations (Fáze 12) accepts parentId on add_element/update_element — the parent must exist and the edge must not close a cycle (an empty string clears the parent), and delete_element is refused while the element still parents other elements (delete or reparent the children in the same batch; no cascade).",
       "packageId": "Tempo.Blazor.Mcp",
       "sourcePath": "src/Tempo.Blazor.Mcp/Modeling/ModelingOperationTools.cs",
       "documentationStatus": "merged"

@@ -126,6 +126,27 @@ public class TmFocusScopeTests : LocalizationTestBase
         cut.Find(".tm-focus-scope").GetAttribute("aria-labelledby").Should().Be("sheet-title");
     }
 
+    [Fact]
+    public void DescribedBy_WiresTheAccessibleDescription()
+    {
+        var cut = Render<TmFocusScope>(p => p
+            .Add(s => s.Active, true)
+            .Add(s => s.AriaDescribedBy, "sheet-subtitle")
+            .AddChildContent("<p id=\"sheet-subtitle\">Described</p>"));
+
+        cut.Find(".tm-focus-scope").GetAttribute("aria-describedby").Should().Be("sheet-subtitle");
+    }
+
+    [Fact]
+    public void DescribedBy_Unset_RendersNoAttribute()
+    {
+        var cut = Render<TmFocusScope>(p => p
+            .Add(s => s.Active, true)
+            .AddChildContent("<p>Content</p>"));
+
+        cut.Find(".tm-focus-scope").GetAttribute("aria-describedby").Should().BeNull();
+    }
+
     /// <summary>Renders a scope beside a sibling the trap must mark inert, and names a restore target.</summary>
     private sealed class ScopeHost : ComponentBase
     {

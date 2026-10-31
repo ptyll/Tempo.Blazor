@@ -2,7 +2,7 @@
   "itemName": "TmSpreadsheetSheetTabs",
   "kind": "Component",
   "category": "Spreadsheet",
-  "description": "Tab bar for switching between workbook sheets with add, delete, and rename support.",
+  "description": "Tab bar for switching between workbook sheets with add, delete, and rename support. The active tab is underlined in the accent colour, and when the strip overflows it gains a pair of scroll arrows.",
   "packageId": "Tempo.Blazor.Spreadsheet",
   "namespace": "Tempo.Blazor.Components.Spreadsheet",
   "sourcePath": "src/Tempo.Blazor.Spreadsheet/Components/Spreadsheet/TmSpreadsheetSheetTabs.razor",
@@ -64,6 +64,26 @@
       "type": "EventCallback<int>",
       "isRequired": false,
       "description": "Called when a tab is clicked in formula-point mode to switch the displayed sheet for ref selection."
+    },
+    {
+      "name": "ShowTabCloseButtons",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Whether every tab paints its own × close affordance (default true). With false the clean reference tab look is kept and deleting stays available from the tab's context menu."
+    },
+    {
+      "name": "RenderContextMenu",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "Whether this component renders its own tab context menu. TmSpreadsheet passes false and renders it as a sibling of the layout container."
+    },
+    {
+      "name": "OnContextMenuRequested",
+      "type": "EventCallback<SpreadsheetContextMenuRequest>",
+      "isRequired": false,
+      "default": "null",
+      "description": "Raised with the gesture when RenderContextMenu is false (SheetIndex + client point)."
     }
   ]
 }

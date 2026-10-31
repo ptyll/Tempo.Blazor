@@ -33,7 +33,8 @@
        ancestor's overflow (modal body, scrolling column) can no longer clip it, and overlay.js
        repositions it on scroll/resize, flipping above the trigger when there is no room below.
        On a narrow viewport (MobilePresentation=Auto) the same menu presents as a content-height
-       bottom sheet titled with the trigger text. *@
+       bottom sheet titled with the trigger text — or, for icon-only triggers (no Text), with the
+       AriaLabel so the sheet header never degrades to the generic fallback. *@
     <TmOverlayPanel Anchor="_triggerRef"
                     IsOpen="_isOpen"
                     IsOpenChanged="SetOpen"
@@ -43,6 +44,7 @@
                     Offset="Offset"
                     Role="menu"
                     Title="@(string.IsNullOrEmpty(Text) ? null : Text)"
+                    AriaLabel="@AriaLabel"
                     MobilePresentation="MobilePresentation"
                     LayoutMode="LayoutMode"
                     InitialMode="InitialMode"

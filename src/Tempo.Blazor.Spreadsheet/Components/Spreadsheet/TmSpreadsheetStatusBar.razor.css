@@ -104,7 +104,7 @@
 
 .tm-spreadsheet-statusbar__menu {
     position: absolute;
-    z-index: 30;
+    z-index: var(--tm-z-popover);
     min-width: 160px;
     padding: 4px;
     background: var(--tm-color-surface);

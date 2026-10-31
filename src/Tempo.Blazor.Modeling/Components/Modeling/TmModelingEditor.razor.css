@@ -1,7 +1,11 @@
+/* Fáze 5 (MO1): the root is the editor's own CSS size container AND a column that hosts either
+   the TmEditorShell (docked layouts — the shell fills the box) or the compact workspace children.
+   The height contract is the pre-redesign default: min(768px, 100vh - 32px) through tokens; the
+   additive Height parameter overrides it with an inline style (the host owns the sizing then). */
 .tm-modeling-editor {
     position: relative;
-    display: grid;
-    grid-template-rows: auto auto minmax(0, 1fr) auto;
+    display: flex;
+    flex-direction: column;
     height: min(calc(var(--tm-space-16) * 12), calc(100vh - var(--tm-space-8)));
     min-height: calc(var(--tm-space-16) * 8);
     width: 100%;
@@ -11,12 +15,88 @@
     background: var(--tm-color-surface);
     color: var(--tm-color-text);
     font-family: var(--tm-font-sans);
+    /* CSS size container: the editor resolves its layout from its OWN width
+       (docs/responsive-conventions.md). */
+    container: tm-modeling-editor / inline-size;
+}
+
+/* The layout observer and the shell are CHILD components: their roots carry THEIR own scope
+   attribute, so the classes the editor passes reach them only through ::deep from the editor
+   root (the TmEmailTemplateEditor pattern). The observer is the column that hosts either the
+   shell or the compact children; the shell fills the box the host gave the editor. */
+.tm-modeling-editor ::deep .tm-modeling-editor__layout {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 0;
+    min-block-size: 0;
+    min-inline-size: 0;
+}
+
+.tm-modeling-editor ::deep .tm-modeling-editor__shell {
+    flex: 1 1 0;
+    min-block-size: 0;
+}
+
+/* The modeling chrome rides INSIDE the shell regions: the header keeps its own padding, hairline
+   and surface (the compact header is the same fragment), so the shell's generic region padding
+   and hairline drop out here — no double borders, no double padding. */
+.tm-modeling-editor ::deep .tm-editor-shell__header {
+    padding: 0;
+    border-block-end: 0;
+    background: transparent;
+}
+
+.tm-modeling-editor ::deep .tm-editor-shell__status {
+    padding: 0;
+    border-block-start: 0;
+    background: transparent;
+}
+
+/* The canvas region hosts the preview + issues dock edge to edge: the diagram preview owns its
+   chrome and the dock owns its hairline, so the shell's generic canvas padding goes. */
+.tm-modeling-editor ::deep .tm-editor-shell__canvas {
+    display: flex;
+    padding: 0;
+    overflow: hidden;
+}
+
+/* The docked canvas: the preview row fills the region, the issues dock row is a clamped block
+   while expanded and auto (header only) while collapsed — the PARENT owns the dock height, the
+   panel itself no longer carries min/max-height. The region is the positioning context of the
+   reload indicator (final review: the open-editor dialog renders ONCE after the layout
+   observer — it is viewport-positioned and needs no container). */
+.tm-modeling-editor__canvas-body {
+    position: relative;
+    display: grid;
+    flex: 1 1 0;
+    grid-template-rows: minmax(0, 1fr) auto;
+    min-width: 0;
+    min-height: 0;
+}
+
+/* The dock row: a bounded fraction of the canvas column (32%, clamped 14rem–20rem). The embedded
+   viewer's own chrome (page tabs, header bar, toolbar, status bar) needs its own minority of the
+   column — the preview row keeps a 16rem MINIMUM so the diagram stays usable (a 720px-tall
+   editor leaves ~464px for the canvas row even with the dock at its 20rem cap, and the diagram
+   area stays ≥320px at the 1440x900/1280x800 baselines). The 14rem floor (review fix, phase 5)
+   keeps ≥2 FULL rows visible in the mixed scenario too — its recommendation box makes the rows
+   taller than the uniform stress list. The list scrolls inside whatever row the dock gets; the
+   header toggle collapses it entirely. Final UX review (M1): with ZERO issues the dock is a
+   one-line empty state — the row is auto and the preview takes the rest. */
+.tm-modeling-editor__canvas-body--issues-open {
+    grid-template-rows: minmax(calc(var(--tm-space-16) * 4), 1fr) clamp(calc(var(--tm-space-16) * 3.5), 32%, calc(var(--tm-space-16) * 5));
+}
+
+.tm-modeling-editor__canvas-body--issues-empty {
+    grid-template-rows: minmax(0, 1fr) auto;
 }
 
 .tm-modeling-editor__panel-tabs {
     display: none;
 }
 
+/* Final review (m2): the toolbar rows center their items — the baseline-align flex-end rule
+   let the wrapped title row sink below the header's hairline at the docked widths. */
 .tm-modeling-editor__toolbar {
     display: flex;
     align-items: center;
@@ -25,26 +105,98 @@
     padding: var(--tm-space-3) var(--tm-space-4);
     border-bottom: 1px solid var(--tm-color-border);
     background: var(--tm-bg-surface-secondary);
+    flex-shrink: 0;
+}
+
+/* Review fix (phase 3): the provider field/chip and the notation/viewpoint selector are one
+   right-aligned group. It owns the leftover toolbar width and wraps as a whole when the title
+   takes the row. Items align to the START: the Viewpoint hint under the disabled select grows
+   that field downward without shifting the provider label's baseline. */
+.tm-modeling-editor__context {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    justify-content: flex-end;
+    gap: var(--tm-space-3);
+    min-width: 0;
+    flex: 1 1 auto;
 }
 
 .tm-modeling-editor__title-group {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--tm-space-3);
+    row-gap: var(--tm-space-1);
     min-width: 0;
 }
 
+/* The title wraps instead of ellipsizing: the state badge next to it stays reachable even
+   in a narrow toolbar, and long localized titles are never cut off. */
 .tm-modeling-editor__title {
     margin: 0;
+    flex: 0 1 auto;
     font-size: var(--tm-font-size-lg);
     font-weight: var(--tm-font-weight-semibold);
     line-height: var(--tm-line-height-tight);
 }
 
+/* The state badge sits next to the title; the wrapper is owner-rendered, the badge inside
+   comes from TmBadge (hence ::deep). */
 .tm-modeling-editor__state {
-    display: block;
-    margin-top: var(--tm-space-1);
-    color: var(--tm-text-secondary);
-    font-size: var(--tm-font-size-xs);
+    display: inline-flex;
+    flex: 0 0 auto;
 }
 
+.tm-modeling-editor__state ::deep .tm-badge {
+    max-width: 100%;
+}
+
+/* MO3: the header provider select mirrors the TmModelingViewSelector fields (label above the
+   field, --tm-input-height-md) so the three labeled selects read as one row. The field grows
+   with the leftover context width (review fix, phase 3) so longer provider names are not
+   truncated; the final-review cap (m2) keeps the field from starving the view selector. */
+.tm-modeling-editor__field {
+    display: grid;
+    gap: var(--tm-space-1);
+    flex: 1 1 calc(var(--tm-space-16) * 4);
+    min-width: calc(var(--tm-space-16) * 3);
+    max-inline-size: calc(var(--tm-space-16) * 5);
+}
+
+.tm-modeling-editor__field > span {
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-xs);
+    font-weight: var(--tm-font-weight-medium);
+}
+
+.tm-modeling-editor__field select {
+    width: 100%;
+    min-width: 0;
+    height: var(--tm-input-height-md);
+    padding: 0 var(--tm-space-8) 0 var(--tm-space-3);
+    border: 1px solid var(--tm-color-border);
+    border-radius: var(--tm-radius-md);
+    background: var(--tm-color-surface);
+    color: var(--tm-color-text);
+    font: inherit;
+    font-size: var(--tm-font-size-sm);
+    /* Fáze 7 review: long provider/notation names ellipsize instead of clipping mid-glyph. */
+    text-overflow: ellipsis;
+}
+
+/* Review fix (phase 3): the outline is the focus-VISIBLE affordance only — plain :focus keeps
+   the border change so mouse clicks do not draw a ring around the select. */
+.tm-modeling-editor__field select:focus {
+    border-color: var(--tm-color-primary);
+}
+
+.tm-modeling-editor__field select:focus-visible {
+    outline: 2px solid var(--tm-color-primary);
+    outline-offset: 2px;
+}
+
+/* Without the selector the provider stays a single labeled value chip (MO3). */
 .tm-modeling-editor__chips {
     display: flex;
     flex-wrap: wrap;
@@ -84,6 +236,7 @@
     min-height: calc(var(--tm-space-16) * 5);
     padding: var(--tm-space-8);
     text-align: left;
+    flex-shrink: 0;
 }
 
 .tm-modeling-editor__single-state h3 {
@@ -114,8 +267,12 @@
     border-radius: var(--tm-radius-full);
     background: var(--tm-bg-muted);
     color: var(--tm-text-secondary);
-    font-size: var(--tm-font-size-lg);
-    font-weight: var(--tm-font-weight-semibold);
+}
+
+.tm-modeling-editor__single-state--error .tm-modeling-editor__state-mark {
+    border-color: var(--tm-color-danger-soft-border);
+    background: var(--tm-color-danger-subtle);
+    color: var(--tm-color-danger-text);
 }
 
 .tm-modeling-editor__detail {
@@ -126,12 +283,153 @@
     color: var(--tm-color-danger-text) !important;
 }
 
-.tm-modeling-editor__workspace {
+/* Final UX review (M4): the recoverable single-state screens carry the shared Retry affordance
+   under their text — a Secondary button driving the editor's reload path. */
+.tm-modeling-editor__state-actions {
+    display: flex;
+    margin-block-start: var(--tm-space-3);
+}
+
+/* Final review (m3): the freshness warning is the warning tint (colour-plus-shape: the alert
+   triangle rides the same rule through the stale StatusStripIcon). */
+.tm-modeling-editor__status-icon--stale {
+    color: var(--tm-color-warning-text);
+}
+
+/* ── Compact layout (the editor container below its own mobile threshold) ─────────────
+   The compact styles key off the root's data-layout — the MARKUP branch decides, not the
+   viewport, so a 500px editor inside a wide page gets the compact workspace and a 390px
+   viewport inside a wide container never does (responsive-conventions.md). */
+
+/* Fáze 7: the mobile chrome is one column — the compact header, the TmTabs panel strip (ONE
+   panel at a time), the status card and the in-flow action bar. The shell is the focusWithin
+   surface (positioning context of the reload indicator) and the flex remainder of the editor.
+   Fáze 7 review: overflow CLIPS — the shell itself never scrolls (the tab bodies scroll inside
+   their panels), so the action bar cannot be pushed below the fold by long tab content. The
+   `overflow: hidden` line is the legacy fallback: browsers without `clip` support keep clipping
+   instead of scrolling the shell open. */
+[data-layout='mobile'] .tm-modeling-editor__mobile-shell {
     position: relative;
-    display: grid;
-    grid-template-columns: minmax(calc(var(--tm-space-16) * 3), calc(var(--tm-space-16) * 4)) minmax(0, 1fr) minmax(calc(var(--tm-space-16) * 3), calc(var(--tm-space-16) * 4));
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 0;
+    min-height: 0;
+    min-width: 0;
+    overflow: hidden;
+    overflow: clip;
+    background: var(--tm-bg-workspace);
+}
+
+/* Fáze 7 re-review (empty/error screens): the single-state screen is the flex REMAINDER of the
+   shell — the header stays on top, the reduced action bar pins to the BOTTOM, and tall error
+   detail text scrolls inside the screen instead of pushing the bar below the fold. */
+[data-layout='mobile'] .tm-modeling-editor__mobile-shell > .tm-modeling-editor__single-state {
+    flex: 1 1 0;
+    min-height: 0;
+    overflow: auto;
+}
+
+/* The panel area: the TmTabs fills the remainder; the tab BODY scrolls inside so the tab
+   strip, the status card and the action bar never move while the content scrolls. */
+[data-layout='mobile'] .tm-modeling-editor__mobile-panels {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 0;
+    min-height: 0;
+}
+
+/* Fáze 7 review fix: these rules are anchored on .tm-modeling-editor__mobile-panels — the
+   EDITOR-rendered wrapper. Anchoring on .tm-modeling-editor__panel-tabs compiled to a scope
+   attribute that class never carries (it is the CHILD-rendered TmTabs root), so the whole
+   block was dead and the strip overflowed at 320. */
+[data-layout='mobile'] .tm-modeling-editor__mobile-panels ::deep .tm-modeling-editor__panel-tabs {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 0;
+    min-height: 0;
+}
+
+[data-layout='mobile'] .tm-modeling-editor__mobile-panels ::deep .tm-tabs__header {
+    flex-shrink: 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+
+/* Fáze 7 review (320 tab strip): the four tabs + badge share the row — every tab may shrink
+   below its label (min-width 0) and ellipsizes instead of pushing the strip wider than the
+   editor; the tight padding-inline keeps enough letters readable. The label span (not the
+   button) carries the ellipsis: the button is an inline-flex with icon/badge siblings. */
+[data-layout='mobile'] .tm-modeling-editor__mobile-panels ::deep .tm-tab {
+    min-height: var(--tm-touch-target);
+    flex: 1 1 auto;
+    min-width: 0;
+    justify-content: center;
+    padding-inline: var(--tm-space-2);
+}
+
+[data-layout='mobile'] .tm-modeling-editor__mobile-panels ::deep .tm-tab .tm-tab__label {
+    overflow: hidden;
+    min-width: 0;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Fáze 7 review (Issues tab overflow at 320): the tab panel is a flex column that CLIPS — the
+   inner panel is the single scroll surface, so a long issue list can no longer push the status
+   card or the action bar below the fold. */
+[data-layout='mobile'] .tm-modeling-editor__mobile-panels ::deep .tm-tabs__panel {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 0;
     min-height: 0;
     overflow: hidden;
+    padding: 0;
+}
+
+/* The single visible panel body: it takes the tab panel's REMAINDER (the preview tab's status
+   card owns its own flex-shrink: 0 row above it) and SCROLLS itself (the compact inspector
+   stacks source + properties in one column). height:auto + flex-grow replaces the old
+   height:100% — a 100% child inside the clipped tab panel was what overflowed at 320. */
+[data-layout='mobile'] .tm-modeling-editor__panel {
+    flex: 1 1 0;
+    height: auto;
+    min-height: 0;
+    overflow: auto;
+}
+
+/* The scroll padding that keeps the last row reachable above the sticky action bar and the
+   home-indicator safe area — the Preview tab is excluded: the canvas fills its flex track
+   edge to edge (the padding used to paint a dead gap below the diagram). */
+[data-layout='mobile'] .tm-modeling-editor__tree,
+[data-layout='mobile'] .tm-modeling-editor__inspector,
+[data-layout='mobile'] .tm-modeling-editor__issues {
+    padding-bottom: calc(var(--tm-space-2) + env(safe-area-inset-bottom, 0px));
+}
+
+/* Fáze 7 review (mobile preview size): the preview section is a flex COLUMN that fills its tab
+   track — the diagram preview and the embedded editor host stretch over the full remaining
+   height, so no dead gap is left below the canvas (the old height:100% chain collapsed under
+   the clipped tab panel). The class names are the Modeling preview's own — the embedded editor
+   is only reached through the class IT carries (its host class), never its internals. */
+[data-layout='mobile'] .tm-modeling-editor__preview ::deep .tm-modeling-diagram-preview {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+/* Fáze 7 re-review (mobile preview canvas floor): the shell keeps the preview's own floor even
+   on the compact band — a short tab body can no longer collapse the canvas to a sliver; the
+   panel scrolls instead. */
+[data-layout='mobile'] .tm-modeling-editor__preview ::deep .tm-modeling-diagram-preview__canvas-shell {
+    flex: 1 1 0;
+    min-height: calc(var(--tm-space-16) * 3);
+}
+
+[data-layout='mobile'] .tm-modeling-editor__preview ::deep .tm-modeling-diagram-preview__editor {
+    flex: 1 1 0;
+    height: 100%;
+    min-height: 0;
 }
 
 /* Reload affordance over the mounted workspace (force reload keeps _model alive, so the
@@ -152,28 +450,25 @@
     background: var(--tm-color-surface);
     color: var(--tm-text-secondary);
     font-size: var(--tm-font-size-sm);
-    box-shadow: var(--tm-shadow-md, 0 2px 8px rgb(0 0 0 / 0.15));
+    box-shadow: var(--tm-shadow-md);
 }
 
+/* The panel wrapper carries NO card chrome: on the docked layouts the shell's aside owns the
+   surface and the hairline (the phase 2 card chrome doubled with it); on the compact layout the
+   workspace background hosts the flat panels. The wrapper FILLS its host (the stretched shell
+   aside or the compact grid row) so the INNER scroll containers — the tree's group list, the
+   tab body — actually constrain instead of growing the aside. */
 .tm-modeling-editor__panel {
     min-width: 0;
     min-height: 0;
-    overflow: auto;
+    height: 100%;
+    overflow: hidden;
     background: var(--tm-color-surface);
-}
-
-.tm-modeling-editor__tree,
-.tm-modeling-editor__inspector {
-    border-inline-end: 1px solid var(--tm-color-border);
+    color: var(--tm-color-text);
 }
 
 .tm-modeling-editor__tree {
     overflow: hidden;
-}
-
-.tm-modeling-editor__inspector {
-    border-inline-start: 1px solid var(--tm-color-border);
-    border-inline-end: 0;
 }
 
 .tm-modeling-editor__panel-header {
@@ -250,8 +545,10 @@
     font-size: var(--tm-font-size-xs);
 }
 
+/* The preview row of the docked canvas: the diagram preview inside owns height: 100%. */
 .tm-modeling-editor__preview {
     display: block;
+    min-height: 0;
     overflow: hidden;
 }
 
@@ -281,6 +578,63 @@
     font-weight: var(--tm-font-weight-medium);
 }
 
+/* The docked inspector fills its aside like the tree panel does (one full-height column); the
+   tab strip stays reachable while the tab body scrolls inside the shell's aside. No header
+   slots are in use, so the strip is the direct .tm-tabs > .tm-tabs__header child. The strip's
+   hairline comes from the core .tm-tabs--line rule — no duplicate here.
+   Review fix (phase 13): the THREE-tab strip (Properties | Relations | Source) must fit the
+   280px aside — the strip re-declares the core --tm-tab-padding-x row metric to --tm-space-3
+   (the value the core's own ≤640px band uses) instead of the default 1rem, the tabs may SHRINK
+   below their label (flex-shrink + min-width: 0) and the label span ellipsizes, so the Source
+   tab's right edge stays inside the panel at 1440 and in the longest localized labels alike.
+   The Relations tab body pads itself through its own .tm-modeling-related rule. */
+.tm-modeling-editor__inspector {
+    min-height: 0;
+    height: 100%;
+}
+
+.tm-modeling-editor__inspector ::deep .tm-tabs {
+    --tm-tab-padding-x: var(--tm-space-3);
+}
+
+.tm-modeling-editor__inspector ::deep .tm-tab {
+    flex: 0 1 auto;
+    min-width: 0;
+}
+
+.tm-modeling-editor__inspector ::deep .tm-tab .tm-tab__label {
+    overflow: hidden;
+    min-width: 0;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.tm-modeling-editor__inspector ::deep .tm-tabs__header {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: var(--tm-color-surface);
+}
+
+/* Review fix (phase 5, double hairline): the tab body sits flush under the strip — the core
+   panel padding and the inner panels' own border-block painted a second rule under the strip. */
+.tm-modeling-editor__inspector ::deep .tm-tabs__panel {
+    padding: 0;
+}
+
+.tm-modeling-editor__inspector ::deep .tm-modeling-inspector,
+.tm-modeling-editor__inspector ::deep .tm-modeling-source-panel {
+    border-block: 0;
+}
+
+/* The stale-source badge on the Source tab (a11y review, phase 5): the warning tokens tint the
+   badge so the marker is colour-plus-text ("Stale"), never a bare glyph. */
+.tm-modeling-editor__inspector ::deep .tm-tab[data-stale="true"] .tm-tab__badge {
+    color: var(--tm-color-warning-text);
+    background: var(--tm-color-warning-soft);
+    border: 1px solid var(--tm-color-warning-soft-border);
+}
+
 .tm-modeling-editor__status {
     display: flex;
     flex-wrap: wrap;
@@ -290,53 +644,94 @@
     background: var(--tm-bg-surface-secondary);
     color: var(--tm-text-secondary);
     font-size: var(--tm-font-size-xs);
+    flex-shrink: 0;
+}
+
+/* Phase 2 (gap #3): each count is a separated status item; a state icon leads the strip.
+   Sibling separators (no positional child indexes) keep the DOM order free. */
+.tm-modeling-editor__status-item {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--tm-space-1);
+    min-width: 0;
+}
+
+.tm-modeling-editor__status-item + .tm-modeling-editor__status-item {
+    border-inline-start: 1px solid var(--tm-color-border);
+    padding-inline-start: var(--tm-space-3);
+}
+
+/* Review fix (phase 3): the state/last-loaded item is pushed to the trailing edge of the
+   strip — the counts read first, the freshness line anchors the end. */
+.tm-modeling-editor__status-item--state {
+    margin-inline-start: auto;
+}
+
+.tm-modeling-editor__status-icon {
+    display: inline-grid;
+    place-items: center;
+    flex: 0 0 auto;
+    color: var(--tm-color-success-text);
+}
+
+.tm-modeling-editor[data-state="error"] .tm-modeling-editor__status-icon {
+    color: var(--tm-color-danger-text);
+}
+
+.tm-modeling-editor[data-state="loading"] .tm-modeling-editor__status-icon,
+.tm-modeling-editor[data-state="empty"] .tm-modeling-editor__status-icon {
+    color: var(--tm-text-secondary);
 }
 
 .tm-modeling-editor__status strong {
     color: var(--tm-color-text);
 }
 
-.tm-modeling-editor__open-editor {
-    position: absolute;
-    inset: var(--tm-space-4);
-    z-index: 20;
-    display: grid;
-    grid-template-rows: auto minmax(0, 1fr);
+/* Fáze 4 (G6): the "Open in editor" surface is a core TmModal — a viewport-positioned dialog
+   with a scrim, a focus scope and Escape. The in-editor overlay box (position:absolute inside
+   the editor root, its own header and close button) is gone; only the dialog BODY styling
+   remains. The size rides on the modal panel through the overlay class: ~90vw × 90vh on the
+   docked layouts (TmModal's own --xl/--fullscreen caps are intentionally replaced). Fáze 7:
+   the editor's own MOBILE band presents the dialog through TmModal's Fullscreen presentation
+   (the .tm-modal--fullscreen-presentation class the component adds), so the 90vw rule is
+   scoped to the non-fullscreen overlay and must not fight it. */
+::deep .tm-modeling-editor__open-editor-modal:not(.tm-modal--fullscreen-presentation) .tm-modal {
+    width: 90vw;
+    max-width: 90vw;
+    height: 90vh;
+    max-height: 90vh;
+}
+
+/* The dialog's breathing room belongs to the TmModal BODY (the frame owns the header/footer
+   rhythm); the editor body wrapper stays a pure flex container. */
+::deep .tm-modeling-editor__open-editor-modal .tm-modal-body {
+    padding: var(--tm-space-4);
+}
+
+/* The fullscreen mobile presentation drops the body padding: the diagram editor IS the dialog
+   body — a full-height container under the one header row (its DE bottom sheet and action bar
+   must not collide with the modal header or the editor's own action bar, which stays inert
+   under the overlay). */
+::deep .tm-modeling-editor__open-editor-modal.tm-modal--fullscreen-presentation .tm-modal-body {
+    padding: 0;
+}
+
+/* Fáze 7 review: the fullscreen mobile header keeps ONE line — the summary subtitle clamps
+   (a wrapped second line would push the editor body down at 320). Final review re-fix: the
+   old `[data-layout='mobile'] ::deep …` form put this stylesheet's scope attribute on the
+   TmLayoutObserver root (a child component — it never carries the editor's scope id), so the
+   selector could never match. The modal is editor-owned once it renders as a sibling of the
+   observer inside the editor root, so anchor on the editor scope and key the mobile band off
+   the fullscreen presentation modifier instead. */
+::deep .tm-modeling-editor__open-editor-modal.tm-modal--fullscreen-presentation .tm-modal-subtitle {
     overflow: hidden;
-    border: 1px solid var(--tm-color-border);
-    border-radius: var(--tm-radius-lg);
-    background: var(--tm-color-surface);
-    box-shadow: var(--tm-shadow-xl);
-}
-
-.tm-modeling-editor__open-editor-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: var(--tm-space-4);
-    padding: var(--tm-space-3) var(--tm-space-4);
-    border-bottom: 1px solid var(--tm-color-border);
-    background: var(--tm-bg-surface-secondary);
-}
-
-.tm-modeling-editor__open-editor-header h3 {
-    margin: 0;
-    font-size: var(--tm-font-size-md);
-    font-weight: var(--tm-font-weight-semibold);
-    line-height: var(--tm-line-height-tight);
-}
-
-.tm-modeling-editor__open-editor-header span {
-    display: block;
-    margin-top: var(--tm-space-1);
-    color: var(--tm-text-secondary);
-    font-size: var(--tm-font-size-xs);
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .tm-modeling-editor__open-editor-body {
+    height: 100%;
     min-height: 0;
-    padding: var(--tm-space-3);
-    background: var(--tm-bg-surface-secondary);
 }
 
 ::deep .tm-modeling-editor__open-editor-diagram {
@@ -344,149 +739,346 @@
     min-height: calc(var(--tm-space-16) * 7);
 }
 
-@media (max-width: 48rem) {
-    .tm-modeling-editor {
-        height: min(calc(var(--tm-space-16) * 11), calc(100dvh - var(--tm-space-6)));
-        min-height: calc(var(--tm-space-16) * 8);
-        overflow: hidden;
-    }
+/* Fáze 7: the compact header is a single row — see the mobile chrome section below. */
 
-    .tm-modeling-editor__toolbar {
-        align-items: flex-start;
-        flex-direction: column;
-    }
-
-    .tm-modeling-editor__chips {
-        justify-content: flex-start;
-        width: 100%;
-    }
-
-    .tm-modeling-editor__chip {
-        max-width: 100%;
-    }
-
-    .tm-modeling-editor__panel-tabs {
-        display: grid;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-        gap: var(--tm-space-1);
-        padding: var(--tm-space-2);
-        border-bottom: 1px solid var(--tm-color-border);
-        background: var(--tm-bg-surface-secondary);
-    }
-
-    .tm-modeling-editor__panel-tab {
-        min-width: 0;
-        min-height: calc(var(--tm-space-8) + var(--tm-space-1));
-        padding: var(--tm-space-2) var(--tm-space-3);
-        border: 1px solid transparent;
-        border-radius: var(--tm-radius-md);
-        background: transparent;
-        color: var(--tm-text-secondary);
-        font: inherit;
-        font-size: var(--tm-font-size-sm);
-        font-weight: var(--tm-font-weight-medium);
-        line-height: var(--tm-line-height-tight);
-        text-overflow: ellipsis;
-        white-space: nowrap;
-        overflow: hidden;
-        cursor: pointer;
-    }
-
-    .tm-modeling-editor__panel-tab:hover {
-        border-color: var(--tm-color-border);
-        background: var(--tm-color-surface);
-        color: var(--tm-color-text);
-    }
-
-    .tm-modeling-editor__panel-tab:focus-visible {
-        outline: 2px solid var(--tm-color-primary);
-        outline-offset: 2px;
-    }
-
-    .tm-modeling-editor__panel-tab--active {
-        border-color: var(--tm-color-primary-soft-border);
-        background: var(--tm-color-surface);
-        color: var(--tm-color-primary);
-        box-shadow: var(--tm-shadow-sm);
-    }
-
-    .tm-modeling-editor__workspace {
-        grid-template-columns: minmax(0, 1fr);
-        overflow: hidden;
-    }
-
-    .tm-modeling-editor__tree,
-    .tm-modeling-editor__inspector {
-        border-inline: 0;
-    }
-
-    .tm-modeling-editor__panel {
-        display: none;
-        height: 100%;
-    }
-
-    .tm-modeling-editor__panel--active {
-        display: block;
-    }
-
-    .tm-modeling-editor__open-editor {
-        position: fixed;
-        inset: var(--tm-space-3);
-    }
-
-    .tm-modeling-editor__status {
-        overflow: hidden;
-        white-space: nowrap;
-    }
+/* Final UX review (M2): the tablet band has FOUR panel tabs (Tree | Preview | Inspector | Issues
+   — the issues open the side sheet). */
+[data-layout='tablet'] .tm-modeling-editor__panel-tabs {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: var(--tm-space-1);
+    padding: var(--tm-space-2);
+    border-bottom: 1px solid var(--tm-color-border);
+    background: var(--tm-bg-surface-secondary);
+    flex-shrink: 0;
 }
 
-@media (max-width: 42rem) {
-    .tm-modeling-editor {
-        min-height: calc(var(--tm-space-16) * 7);
-        border-radius: var(--tm-radius-md);
+/* The tablet issues count badge inside its tab button — a plain count pill that shares the
+   tab's active tint. */
+[data-layout='tablet'] .tm-modeling-editor__panel-tab-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: var(--tm-space-6);
+    margin-inline-start: var(--tm-space-1);
+    padding: 0 var(--tm-space-2);
+    border: 1px solid var(--tm-color-border);
+    border-radius: var(--tm-radius-full);
+    background: var(--tm-bg-muted);
+    color: var(--tm-color-text);
+    font-size: var(--tm-font-size-xs);
+    line-height: var(--tm-line-height-tight);
+}
+
+[data-layout='tablet'] .tm-modeling-editor__panel-tab {
+    min-width: 0;
+    min-height: calc(var(--tm-space-8) + var(--tm-space-1));
+    padding: var(--tm-space-2) var(--tm-space-3);
+    border: 1px solid transparent;
+    border-radius: var(--tm-radius-md);
+    background: transparent;
+    color: var(--tm-text-secondary);
+    font: inherit;
+    font-size: var(--tm-font-size-sm);
+    font-weight: var(--tm-font-weight-medium);
+    line-height: var(--tm-line-height-tight);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    overflow: hidden;
+    cursor: pointer;
+}
+
+[data-layout='tablet'] .tm-modeling-editor__panel-tab:hover {
+    border-color: var(--tm-color-border);
+    background: var(--tm-color-surface);
+    color: var(--tm-color-text);
+}
+
+[data-layout='tablet'] .tm-modeling-editor__panel-tab:focus-visible {
+    outline: 2px solid var(--tm-color-primary);
+    outline-offset: 2px;
+}
+
+[data-layout='tablet'] .tm-modeling-editor__panel-tab--active {
+    border-color: var(--tm-color-primary-soft-border);
+    background: var(--tm-color-surface);
+    color: var(--tm-color-primary);
+    box-shadow: var(--tm-shadow-sm);
+}
+
+/* Fáze 7: the compact header is a single row — the title group and the "⋯" overflow share it;
+   the context group (selects) is a docked-layout surface only. */
+[data-layout='mobile'] .tm-modeling-editor__toolbar {
+    align-items: center;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    gap: var(--tm-space-2);
+    padding: var(--tm-space-2) var(--tm-space-3);
+}
+
+/* Final review (m6): the title shrinks to the compact size and the title GROUP wraps — the
+   state badge drops below the title instead of being pushed out of a nowrap row at 320. */
+[data-layout='mobile'] .tm-modeling-editor__title {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: var(--tm-font-size-md);
+}
+
+[data-layout='mobile'] .tm-modeling-editor__title-group {
+    flex: 1 1 auto;
+    flex-wrap: wrap;
+    min-width: 0;
+}
+
+[data-layout='mobile'] .tm-modeling-editor__more-host {
+    display: inline-flex;
+    flex: 0 0 auto;
+}
+
+[data-layout='mobile'] .tm-modeling-editor__more-host:focus-visible {
+    outline: 2px solid var(--tm-color-primary);
+    outline-offset: 2px;
+}
+
+[data-layout='mobile'] .tm-modeling-editor__more-host ::deep .tm-dropdown-trigger {
+    min-height: var(--tm-touch-target);
+    min-width: var(--tm-touch-target);
+    justify-content: center;
+    padding: 0;
+}
+
+/* The status card: ONE compact row of the four counts (Fáze 7 re-review) — the numbers are the
+   visible content, the labels ride sr-only spans (the card keeps its role="status" label), and
+   the loaded line is sr-only too. The single text line returns ~110px to the preview canvas at
+   320px (the two-row label tile grid was the reason the diagram vanished below the fold). The
+   card lives in the PREVIEW tab body, above the scrolling panel — a hairline under it (not on
+   top) and flex-shrink: 0 keep it a fixed header row of that one tab. */
+[data-layout='mobile'] .tm-modeling-editor__status-card {
+    display: grid;
+    gap: var(--tm-space-1);
+    flex-shrink: 0;
+    padding: var(--tm-space-2) var(--tm-space-3);
+    border-bottom: 1px solid var(--tm-color-border);
+    background: var(--tm-bg-surface-secondary);
+}
+
+/* Four columns of numbers — the cs/sk labels are sr-only now, so the columns cannot collide
+   and each tile centers its count in one equal track. */
+[data-layout='mobile'] .tm-modeling-editor__status-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: var(--tm-space-2);
+}
+
+/* Final UX review (M3): each tile stacks the aria-hidden type icon, the count and a SHORT
+   visible label — the sr-only-only numbers were unreadable without the card's context. The
+   label wraps to TWO lines max (final review: a long cs/sk form ellipsized mid-word at 320px
+   — two full lines keep the word legible without pushing the four columns wide). */
+[data-layout='mobile'] .tm-modeling-editor__status-tile {
+    display: grid;
+    place-items: center;
+    gap: var(--tm-space-1);
+    min-width: 0;
+    padding: var(--tm-space-1) var(--tm-space-2);
+    border: 1px solid var(--tm-color-border-subtle);
+    border-radius: var(--tm-radius-md);
+    background: var(--tm-color-surface);
+}
+
+[data-layout='mobile'] .tm-modeling-editor__status-tile-icon {
+    display: inline-grid;
+    place-items: center;
+    color: var(--tm-text-secondary);
+}
+
+[data-layout='mobile'] .tm-modeling-editor__status-tile strong {
+    font-size: var(--tm-font-size-md);
+    font-weight: var(--tm-font-weight-semibold);
+}
+
+[data-layout='mobile'] .tm-modeling-editor__status-label {
+    display: -webkit-box;
+    overflow: hidden;
+    width: 100%;
+    color: var(--tm-color-text-secondary);
+    font-size: var(--tm-font-size-xs);
+    text-align: center;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    word-break: break-word;
+    line-clamp: 2;
+    white-space: normal;
+}
+
+/* The loaded time: part of the aria-live status region only — the visible card is the one
+   number row. The sr-only pattern is written out (not the utility class) because this scoped
+   rule would out-cascade a shared class on the same property set. */
+[data-layout='mobile'] .tm-modeling-editor__status-loaded {
+    position: absolute;
+    overflow: hidden;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    border: 0;
+    padding: 0;
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
+    white-space: nowrap;
+}
+
+/* The "Change view" sheet body: the labeled selects stack in one column (the shared
+   ProviderSelectContent fragment carries the .tm-modeling-editor__field shape; the view
+   selector fields come from the child component, hence ::deep). */
+[data-layout='mobile'] .tm-modeling-editor__change-view-body {
+    display: grid;
+    gap: var(--tm-space-4);
+    padding: var(--tm-space-4);
+}
+
+[data-layout='mobile'] .tm-modeling-editor__change-view-body ::deep .tm-modeling-view-selector {
+    display: grid;
+    gap: var(--tm-space-3);
+}
+
+[data-layout='mobile'] .tm-modeling-editor__change-view-body ::deep .tm-modeling-view-selector__field {
+    width: 100%;
+}
+
+[data-layout='mobile'] .tm-modeling-editor__change-view-body ::deep .tm-modeling-view-selector__field select {
+    text-overflow: ellipsis;
+}
+
+/* ── Tablet layout (the editor container in the 768-1199 band) ───────────────────────
+   Fáze 6: the shell's Overlay presentation owns the structure (tree drawer / inspector
+   sheet, at most one open). The editor's own chrome keeps three duties here: the "Panels"
+   tabs row under the header (shared chrome with the compact row above), the coarse-pointer
+   44px targets, and a status strip that wraps instead of overflowing horizontally. */
+
+/* The tablet tab row sits inside the shell's header region: the overlay drawers cover the
+   main region only, so the switches stay reachable while a sheet is open. */
+[data-layout='tablet'] .tm-modeling-editor__panel-tabs {
+    border-bottom: 0;
+}
+
+/* Fáze 6 review: the tablet canvas floor. The shell canvas row is a minmax(0,1fr) track that
+   collapses under the stacked tablet chrome (header, panel tabs, status strip) — the preview's
+   inner floor alone cannot grow a minmax(0,…) track. On the tablet band the preview row keeps a
+   usable floor (the shell main region fills the rest); the compact band and the desktop dock
+   keep their own sizing. Final UX review (M2): the tablet band has NO dock row — the issues
+   live in the side sheet, so the second grid row is empty (auto = 0) and the canvas keeps the
+   full floor with the sheet open too. */
+[data-layout='tablet'] .tm-modeling-editor__canvas-body {
+    grid-template-rows: minmax(calc(var(--tm-space-16) * 5), 1fr) auto;
+}
+
+/* The tablet issues side sheet (final UX review M2): the same overlay shape the shell's tablet
+   presentation renders for the inspector — anchored to the editor root's END edge, over the
+   canvas, non-modal (the preview stays reachable). Re-review (M2): the HOST is editor-owned —
+   the TmFocusScope root never receives this stylesheet's scope attribute, so the positioning
+   lives on this plain div; the canvas body is the positioning context. The sheet body scrolls
+   inside whatever height the canvas column gives the host. */
+[data-layout='tablet'] .tm-modeling-editor__issues-sheet-host {
+    position: absolute;
+    inset-block: 0;
+    inset-inline-end: 0;
+    z-index: var(--tm-z-inline-sheet);
+    display: flex;
+    flex-direction: column;
+    width: min(20rem, 100%);
+    overflow: hidden;
+    border-inline-start: 1px solid var(--tm-color-border);
+    background: var(--tm-color-surface);
+    box-shadow: var(--tm-shadow-lg);
+}
+
+/* The focus scope fills the host (the child root needs ::deep to receive any rule at all). */
+[data-layout='tablet'] .tm-modeling-editor__issues-sheet-host ::deep .tm-modeling-editor__issues-sheet {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
+[data-layout='tablet'] .tm-modeling-editor__sheet-header {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-2);
+    flex-shrink: 0;
+    padding: var(--tm-space-2) var(--tm-space-3);
+    border-bottom: 1px solid var(--tm-color-border);
+    background: var(--tm-bg-surface-secondary);
+}
+
+[data-layout='tablet'] .tm-modeling-editor__sheet-title {
+    flex: 1 1 auto;
+    overflow: hidden;
+    font-size: var(--tm-font-size-sm);
+    font-weight: var(--tm-font-weight-semibold);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+[data-layout='tablet'] .tm-modeling-editor__sheet-count {
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-xs);
+}
+
+[data-layout='tablet'] .tm-modeling-editor__sheet-close {
+    display: inline-grid;
+    place-items: center;
+    flex: 0 0 auto;
+    width: var(--tm-space-8);
+    height: var(--tm-space-8);
+    padding: 0;
+    border: 1px solid transparent;
+    border-radius: var(--tm-radius-md);
+    background: transparent;
+    color: var(--tm-color-text);
+    cursor: pointer;
+}
+
+[data-layout='tablet'] .tm-modeling-editor__sheet-close:hover {
+    background: var(--tm-bg-muted);
+}
+
+[data-layout='tablet'] .tm-modeling-editor__sheet-close:focus-visible {
+    outline: 2px solid var(--tm-color-primary);
+    outline-offset: 2px;
+}
+
+/* The sheet body scrolls; the panel inside is the whole body (its own header is suppressed —
+   the sheet header already names the panel and shows the count). */
+[data-layout='tablet'] .tm-modeling-editor__sheet-body {
+    display: grid;
+    flex: 1 1 0;
+    min-height: 0;
+}
+
+[data-layout='tablet'] .tm-modeling-editor__sheet-body ::deep .tm-modeling-issue-panel {
+    display: grid;
+    grid-template-rows: minmax(0, 1fr);
+    height: 100%;
+    min-height: 0;
+    border: 0;
+}
+
+[data-layout='tablet'] .tm-modeling-editor__sheet-body ::deep .tm-modeling-issue-panel__header {
+    display: none;
+}
+
+/* Fáze 6 (touch): every control the phase names reaches --tm-touch-target on a coarse
+   pointer — the panel tabs and the selects (the editor's own field and the view selector's
+   fields, the latter a child component hence ::deep). The tree nodes and group headers, the
+   issue rows and the source panel's load button carry the same rule in their own stylesheets. */
+@media (pointer: coarse) {
+    [data-layout='tablet'] .tm-modeling-editor__panel-tab {
+        min-height: var(--tm-touch-target);
     }
 
-    .tm-modeling-editor__toolbar {
-        gap: var(--tm-space-3);
-        padding: var(--tm-space-3);
-    }
-
-    .tm-modeling-editor__chips {
-        display: grid;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-    }
-
-    .tm-modeling-editor__chip {
-        padding: var(--tm-space-2);
-    }
-
-    .tm-modeling-editor__chip span {
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-    }
-
-    .tm-modeling-editor__panel-tabs {
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-    }
-
-    .tm-modeling-editor__panel-tab {
-        padding-inline: var(--tm-space-2);
-        font-size: var(--tm-font-size-xs);
-    }
-
-    .tm-modeling-editor__open-editor {
-        inset: var(--tm-space-2);
-        border-radius: var(--tm-radius-md);
-    }
-
-    .tm-modeling-editor__open-editor-header {
-        align-items: flex-start;
-        flex-direction: column;
-    }
-
-    .tm-modeling-editor__open-editor-header .tm-btn {
-        width: 100%;
+    .tm-modeling-editor__field select,
+    .tm-modeling-editor__context ::deep .tm-modeling-view-selector__field select {
+        min-height: var(--tm-touch-target);
     }
 }
 
@@ -495,8 +1087,6 @@
     .tm-modeling-editor__toolbar,
     .tm-modeling-editor__panel,
     .tm-modeling-editor__status,
-    .tm-modeling-editor__open-editor,
-    .tm-modeling-editor__open-editor-header,
     .tm-modeling-editor__open-editor-body,
     .tm-modeling-editor__panel-tabs {
         border-color: CanvasText;
@@ -506,10 +1096,19 @@
 
     .tm-modeling-editor__chip,
     .tm-modeling-editor__panel-tab,
-    .tm-modeling-editor__state-mark {
+    .tm-modeling-editor__state-mark,
+    .tm-modeling-editor__state ::deep .tm-badge {
         border-color: CanvasText;
         background: Canvas;
         color: CanvasText;
+    }
+
+    .tm-modeling-editor__field select {
+        border-color: CanvasText;
+    }
+
+    .tm-modeling-editor__status-item + .tm-modeling-editor__status-item {
+        border-color: CanvasText;
     }
 
     .tm-modeling-editor__panel-tab:focus-visible,
@@ -518,5 +1117,109 @@
         outline-offset: 2px;
         border-color: Highlight;
         color: Highlight;
+    }
+
+    .tm-modeling-editor__inspector ::deep .tm-tabs__header {
+        border-color: CanvasText;
+        background: Canvas;
+    }
+}
+
+/* ── Fáze 14: editing chrome ────────────────────────────────────────────────
+   The inspector header's undo/redo pair, the editing alerts and the discard modal body.
+   Tokens only — no literals; the buttons are small icon buttons that grow to the touch
+   target on coarse pointers. */
+
+.tm-modeling-editor__history-buttons {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--tm-space-1);
+}
+
+.tm-modeling-editor__history-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: var(--tm-space-8);
+    min-height: var(--tm-space-8);
+    padding: var(--tm-space-1);
+    border: 1px solid var(--tm-color-border-subtle);
+    border-radius: var(--tm-radius-sm);
+    background: var(--tm-surface);
+    color: var(--tm-text-primary);
+    cursor: pointer;
+}
+
+.tm-modeling-editor__history-btn:hover:not(:disabled) {
+    background: var(--tm-color-primary-subtle);
+    border-color: var(--tm-color-primary);
+}
+
+.tm-modeling-editor__history-btn:disabled {
+    opacity: 0.5;
+    cursor: default;
+}
+
+.tm-modeling-editor__history-btn:focus-visible {
+    outline: 2px solid var(--tm-color-primary);
+    outline-offset: 1px;
+}
+
+.tm-modeling-editor__history-btn--save {
+    color: var(--tm-color-primary);
+}
+
+.tm-modeling-editor__editing-alert {
+    display: grid;
+    gap: var(--tm-space-2);
+    margin-block-end: var(--tm-space-3);
+}
+
+.tm-modeling-editor__conflict-reload {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--tm-space-2);
+    justify-self: start;
+    padding: var(--tm-space-2) var(--tm-space-3);
+    border: 1px solid var(--tm-color-border-subtle);
+    border-radius: var(--tm-radius-sm);
+    background: var(--tm-surface);
+    color: var(--tm-text-primary);
+    cursor: pointer;
+}
+
+.tm-modeling-editor__conflict-reload:hover {
+    background: var(--tm-color-primary-subtle);
+    border-color: var(--tm-color-primary);
+}
+
+.tm-modeling-editor__conflict-reload:focus-visible {
+    outline: 2px solid var(--tm-color-primary);
+    outline-offset: 1px;
+}
+
+.tm-modeling-editor__discard-body {
+    display: grid;
+    gap: var(--tm-space-3);
+}
+
+.tm-modeling-editor__discard-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--tm-space-2);
+}
+
+@media (pointer: coarse) {
+    .tm-modeling-editor__history-btn,
+    .tm-modeling-editor__conflict-reload {
+        min-width: var(--tm-touch-target);
+        min-height: var(--tm-touch-target);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .tm-modeling-editor__history-btn,
+    .tm-modeling-editor__conflict-reload {
+        transition: none;
     }
 }
