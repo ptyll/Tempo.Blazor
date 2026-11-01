@@ -32,7 +32,7 @@ references them without Blazor or Markdig.
 | `ActionsTemplate` | `RenderFragment?` | `null` | Replaces the whole built-in bar with host actions (the host then owns the keyboard model). |
 | `ShowSources` | `bool` | `true` | Render the cited sources as cards, in part order. |
 | `ShowFollowUps` | `bool` | `true` | Render `Message.FollowUps` as chips. |
-| `ReadAloud` | `bool` | `false` | Offer the "Read aloud" action (feature-detected `speechSynthesis`; hidden when the browser has none). |
+| `ReadAloud` | `bool` | `false` | Offer the "Read aloud" action (feature-detected `speechSynthesis`; hidden when the browser has none). The detect is not tied to the first render, so a host that turns this on later still gets the action. |
 | `OnRegenerate` | `EventCallback` | — | Raised when the reader asks for another generation. The action renders only when a handler is bound. |
 | `OnFeedback` | `EventCallback<AiFeedback>` | — | Raised with the rating; a negative rating is raised again with the optional reason. The thumbs render only when a handler is bound. |
 | `OnFollowUp` | `EventCallback<string>` | — | Raised with the suggestion text of an activated chip. |
@@ -152,7 +152,10 @@ surviving link gets `target="_blank"` with `rel="noopener noreferrer nofollow"`.
   wrapping, Home/End jump to the ends, and focus follows the tab stop through
   `ElementReference.FocusAsync`. No second JS gesture module is involved — the pattern
   `TmEmailVariablePicker` uses. The version switcher is a separate `role="group"` with native buttons
-  (Tab reaches it), and the prompt's keyboard model is not claimed for a host `ActionsTemplate`.
+  (Tab reaches it), and its position is spoken as a full phrase — "Version 2 of 3" — from a visually
+  hidden span: the visible "2/3" is `aria-hidden`, because an `aria-label` on a plain span is dropped
+  (a span is `role="generic"`, which prohibits author names), so the short form alone would reach a
+  screen reader as "2/3". The prompt's keyboard model is not claimed for a host `ActionsTemplate`.
 - **Copy** announces through a sibling `role="status"` live region ("Copied") and never renames the
   button; the clipboard write is best effort — a refused write leaves the control in its resting state.
 - **Popovers** are the core `TmOverlayPanel` (top layer, `role="dialog"` with an accessible name,
@@ -170,8 +173,12 @@ surviving link gets `target="_blank"` with `rel="noopener noreferrer nofollow"`.
   clicked somewhere else and undoing that click is worse than a focus that follows it.
 - **Touch** — on a coarse pointer every action, version button, preview close, chip and feedback button
   reaches the 44 px floor (`--tm-touch-target`).
-- **Forced colors** — the avatar, cards, error block, chips and the user bubble opt out of the automatic
-  adjustment and ask for `Canvas`/`CanvasText`.
+- **Forced colors** — the avatar, the source card, the error block, the version switcher and the follow-up
+  chip opt out of the automatic adjustment and ask for `Canvas`/`CanvasText`, and every control inside one
+  of those surfaces restores the system `Highlight` focus ring (the opt-out is inherited, so without the
+  rule the theme token ring would paint on a Canvas surface). The **user bubble is deliberately not opted
+  out**: the property inherits, so opting the bubble out would strip the system palette from the markdown it
+  carries — and the bubble needs nothing, because its author background is remapped to `Canvas` anyway.
 - **Reduced motion** — this component adds no animation of its own; the streaming caret
   (`.tm-ai-streaming`) and the thinking pair (`.tm-ai-shimmer`, the spinner) are package-level primitives
   that carry their own `prefers-reduced-motion` blocks.
@@ -205,3 +212,9 @@ synthesis simply gets a quieter component, never a dead button.
 markers are dropped while the block structure survives (one line per paragraph, list item, code line and
 table row, blank lines between blocks). Link and image targets never travel — only their label (or alt
 text). The walk runs over the same safe pipeline as the renderer, so raw HTML stays literal text.
+
+The projection runs **per text part** and the parts are joined with a blank line. A part boundary is a
+real break on screen — a tool call or a reasoning panel sits between the two — so an answer that says
+"Let me look that up." before a tool call and "It is 20 °C." after it copies as two blocks, never as the
+glued "Let me look that up.It is 20 °C." that concatenating the markdown first would produce. Inside one
+part the markdown is one document, exactly as it is rendered.

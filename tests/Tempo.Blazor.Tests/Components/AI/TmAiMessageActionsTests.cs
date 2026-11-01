@@ -171,6 +171,31 @@ public sealed class TmAiMessageActionsTests : LocalizationTestBase
     }
 
     [Fact]
+    public void Copy_KeepsTheBlockBoundaryBetweenTextPartsSeparatedByAToolCall()
+    {
+        var module = SetupInterop();
+        var message = new AiMessage
+        {
+            Id = "assistant-1",
+            Role = AiMessageRole.Assistant,
+            Status = AiMessageStatus.Completed,
+        };
+        message.Parts.Add(new AiTextPart("Let me look that up."));
+        message.Parts.Add(new AiToolCallPart(new AiToolCall { Id = "call-1", Name = "weather" }));
+        message.Parts.Add(new AiTextPart("It is 20 °C."));
+
+        var cut = Render<TmAiMessage>(parameters => parameters.Add(component => component.Message, message));
+        cut.Find("[data-tm-ai-action=\"copy\"]").Click();
+
+        module.Invocations.Should().ContainSingle(item => item.Identifier == "copyText")
+            .Which.Arguments[0].Should().Be(
+                "Let me look that up.\n\nIt is 20 °C.",
+                "every text part is its own block on screen (a tool call sits between the two), so the " +
+                "plain text has to break at the part boundary — concatenating the markdown first turns " +
+                "two blocks into one glued sentence");
+    }
+
+    [Fact]
     public void Copy_AnnouncesTheCopiedStateInASiblingLiveRegion()
     {
         SetupInterop();
@@ -256,7 +281,11 @@ public sealed class TmAiMessageActionsTests : LocalizationTestBase
         group.GetAttribute("role").Should().Be("group");
         group.GetAttribute("aria-label").Should().Be("Answer versions");
         cut.Find(".tm-ai-message__version-label").TextContent.Should().Be("2/3");
-        cut.Find(".tm-ai-message__version-label").GetAttribute("aria-label").Should().Be("Version 2 of 3");
+        cut.Find(".tm-ai-message__version-label").GetAttribute("aria-hidden").Should().Be("true",
+            "the short \"2/3\" is the visual form only; the spoken form is real text next to it");
+        group.TextContent.Should().Contain("Version 2 of 3",
+            "an aria-label on a <span> is ignored by the accessible name computation (a plain span is " +
+            "role=generic, which prohibits naming) — the full phrase has to exist as readable text");
         cut.Find(".tm-ai-message__body").TextContent.Should().Contain("second");
     }
 
@@ -474,6 +503,24 @@ public sealed class TmAiMessageActionsTests : LocalizationTestBase
 
         module.Invocations.Should().Contain(item => item.Identifier == "stopSpeaking");
         cut.Find("[data-tm-ai-action=\"read-aloud\"]").GetAttribute("aria-pressed").Should().Be("false");
+    }
+
+    [Fact]
+    public void ReadAloud_EnabledAfterTheFirstRender_OffersTheActionOnceTheProbeRuns()
+    {
+        SetupInterop(speechSupported: true);
+        var message = Completed();
+        var cut = Render<TmAiMessage>(parameters => parameters.Add(component => component.Message, message));
+
+        cut.FindAll("[data-tm-ai-action=\"read-aloud\"]").Should().BeEmpty();
+
+        cut.Render(parameters => parameters
+            .Add(component => component.Message, message)
+            .Add(component => component.ReadAloud, true));
+
+        // The feature detect may not be tied to the first render: a host that turns Read aloud on later
+        // must get the action instead of a permanently quieter component.
+        cut.WaitForAssertion(() => cut.Find("[data-tm-ai-action=\"read-aloud\"]").Should().NotBeNull());
     }
 
     [Fact]

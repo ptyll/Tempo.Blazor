@@ -504,16 +504,33 @@
     .tm-ai-message__source,
     .tm-ai-message__error,
     .tm-ai-message__versions,
-    .tm-ai-message__follow-up,
-    .tm-ai-message--user .tm-ai-message__body {
+    .tm-ai-message__follow-up {
         forced-color-adjust: none;
         border-color: CanvasText;
         background-color: Canvas;
         color: CanvasText;
     }
 
+    /* The user bubble is NOT in the list above on purpose: forced-color-adjust INHERITS, so opting the
+       bubble out would also take the system palette away from the markdown it carries (paragraphs, links,
+       headings keep the theme's own text colour on a Canvas surface — dark text on black in a dark
+       high-contrast scheme). It needs no opt-out: under forced colours its author background is remapped to
+       Canvas anyway, which is exactly what the rule asked for. */
+
     .tm-ai-message__error {
         border-color: LinkText;
+    }
+
+    /* forced-color-adjust: none opts the FOCUS RING out of the system palette too, and the property is
+       inherited — so the version buttons (inside __versions), Retry (inside __error), the follow-up chip
+       (itself opted out) and the source card's link (inside __source) would keep painting the theme token
+       ring on a Canvas surface. All four go back to the system Highlight colour, the same rule
+       _markdown-view.css, _ai-tool-call.css and _ai-thinking.css already carry. */
+    .tm-ai-message__version-button:focus-visible,
+    .tm-ai-message__retry:focus-visible,
+    .tm-ai-message__follow-up:focus-visible,
+    .tm-ai-message__source-title a:focus-visible {
+        outline-color: Highlight;
     }
 
     .tm-ai-message__action[aria-pressed="true"],

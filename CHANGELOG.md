@@ -324,12 +324,12 @@ chips with a source preview, source cards, follow-up chips and the action toolba
   (`user`/`assistant`/`system`/`tool`) and `data-status` (`pending`/`streaming`/`completed`/`stopped`/
   `failed`) contract, and the user turn mirrors itself (`--user`, `flex-direction: row-reverse`) while
   its text stays left-aligned.
-- **Actions** — copy sends `AiMessageText.ToPlainText(AiMessage.ActiveText)` (no markdown markers) and
-  announces "Copied" through a sibling `role="status"` live region; regenerate, thumbs up/down and
-  read-aloud render only when the host binds their handler (no dead buttons). A negative rating is
-  raised immediately and again with the optional reason; the reason popover is dismissible and never
-  required. Read aloud is opt-in (`ReadAloud`), feature-detected, and reports the end of an utterance
-  back so the toggle returns to "Read aloud" by itself.
+- **Actions** — copy sends the message's plain text (`AiMessageText.ToPlainText`, applied per text part,
+  no markdown markers) and announces "Copied" through a sibling `role="status"` live region; regenerate,
+  thumbs up/down and read-aloud render only when the host binds their handler (no dead buttons). A
+  negative rating is raised immediately and again with the optional reason; the reason popover is
+  dismissible and never required. Read aloud is opt-in (`ReadAloud`), feature-detected, and reports the
+  end of an utterance back so the toggle returns to "Read aloud" by itself.
 - **Model additions (Abstractions, still UI-free)** — `AiMessage.Versions` + `AiMessageVersion`,
   `AiMessage.ActiveVersionIndex` (**nullable; `null` = the newest version**, out-of-range values clamp
   through the new `EffectiveVersionIndex`), `AiMessage.ActiveParts` / `ActiveText`,
@@ -378,6 +378,37 @@ chips with a source preview, source cards, follow-up chips and the action toolba
 new in the unreleased 2.10.0, so no released consumer sees the model additions; a host that writes
 `AiMessage.ActiveVersionIndex` keeps the explicit index it sets, and leaving it `null` keeps showing
 the newest generation.
+
+**Post-hoc verification round** (`TmAiMessage`, same plan) — four defects found while re-reading the
+committed phase, fixed with tests and **no public API change**:
+
+- **Copy and Read aloud keep the block boundary between text parts.** Both used to flatten
+  `string.Concat(parts)` as ONE markdown document, so an answer with a tool call (or a reasoning panel)
+  between two prose blocks copied as "Let me look that up.It is 20 °C." — two blocks glued into one
+  sentence, with no space, let alone a paragraph break. The component now projects each `AiTextPart`
+  through `AiMessageText.ToPlainText` and joins the blocks with a blank line, which is what the reader
+  sees. Pinned by
+  `TmAiMessageActionsTests.Copy_KeepsTheBlockBoundaryBetweenTextPartsSeparatedByAToolCall`.
+- **The version count is announced as a phrase.** The switcher put `aria-label="Version 2 of 3"` on the
+  visible `<span>2/3</span>`. A span is `role="generic"`, which prohibits author-provided names, so the
+  label was dropped by the accessible-name computation and a screen reader read only "2/3". The visual
+  short form is now `aria-hidden` and the full phrase renders as real text in a `.tm-sr-only` span next
+  to it (the same utility the message's live region uses).
+- **`ReadAloud` toggled after the first render now offers the action.** The `speechSynthesis` feature
+  detect sat behind `if (!firstRender)`, so a host that turned the option on later (a reader preference,
+  a settings switch) never got the button — a permanently quieter component instead of a feature
+  detect. The probe now runs once, on whichever render first asks for it (`_speechProbed` still caps it
+  at one round trip).
+- **Forced colors: the system focus ring is restored inside every opted-out surface, and the user bubble
+  is no longer opted out.** `forced-color-adjust: none` INHERITS, so the version buttons, Retry, the
+  follow-up chip and the source card's link kept painting the theme token ring on a `Canvas` surface
+  (they now go back to `Highlight`, the rule `_markdown-view.css`, `_ai-tool-call.css` and
+  `_ai-thinking.css` already carried). The same inheritance made the user bubble's opt-out strip the
+  system palette from the markdown it carries — its paragraphs, links and headings kept the theme's own
+  text colour on a Canvas surface, i.e. dark text on black in a dark high-contrast scheme. The bubble
+  needs no opt-out at all: its author background is remapped to `Canvas` anyway. Pinned by
+  `TmAiMessageCssTests.ForcedColors_RestoreTheSystemFocusRingInsideTheOptedOutSurfaces` and
+  `..._TheUserBubbleDoesNotOptItsContentOutOfTheSystemPalette`.
 
 ### AI conversation package — AI models and safe markdown (plan 7f21f26b, phase 2)
 

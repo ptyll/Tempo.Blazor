@@ -165,8 +165,18 @@ public partial class TmAiMessage
         }
     }
 
-    /// <summary>The markdown of the displayed version, in part order.</summary>
-    private string Text => string.Concat(Parts.OfType<AiTextPart>().Select(part => part.Markdown));
+    /// <summary>
+    /// The displayed version projected to plain text — what Copy sends to the clipboard and what Read
+    /// aloud speaks. Each text part is flattened on its OWN and the blocks are joined with a blank line:
+    /// a part boundary is a real break on screen (a tool call or a reasoning panel sits between the two),
+    /// so concatenating the markdown into one document first would glue the sentence before a tool call
+    /// to the one after it ("Let me look that up.It is 20 °C.").
+    /// </summary>
+    private string PlainText => string.Join(
+        "\n\n",
+        Parts.OfType<AiTextPart>()
+            .Select(part => AiMessageText.ToPlainText(part.Markdown))
+            .Where(text => text.Length > 0));
 
     private IReadOnlyList<string> FollowUps => Message is null ? Array.Empty<string>() : (IReadOnlyList<string>)Message.FollowUps.ToList();
 
@@ -273,7 +283,10 @@ public partial class TmAiMessage
     /// <inheritdoc />
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (!firstRender || !ReadAloud || _speechProbed || _disposed)
+        // The feature detect is NOT tied to the first render: a host that turns ReadAloud on later (a
+        // reader preference, a host setting) must still get the action instead of a permanently quieter
+        // component. _speechProbed keeps the probe to one round trip whatever render asks for it first.
+        if (!ReadAloud || _speechProbed || _disposed)
         {
             return;
         }
@@ -478,7 +491,7 @@ public partial class TmAiMessage
 
     private async Task CopyAsync()
     {
-        var text = AiMessageText.ToPlainText(Text);
+        var text = PlainText;
         var module = await EnsureModuleAsync();
         if (module is null)
         {
@@ -681,7 +694,7 @@ public partial class TmAiMessage
             _self ??= DotNetObjectReference.Create(this);
             _speaking = await module.InvokeAsync<bool>(
                 "speak",
-                AiMessageText.ToPlainText(Text),
+                PlainText,
                 CultureInfo.CurrentUICulture.Name,
                 _self);
         }

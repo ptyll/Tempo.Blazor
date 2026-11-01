@@ -159,10 +159,13 @@
                         @onclick="() => ChangeVersionAsync(-1)">
                     <TmIcon Name="@IconNames.ChevronLeft" Size="IconSize.Sm" />
                 </button>
-                <span class="tm-ai-message__version-label"
-                      aria-label="@Loc["TmAiMessage_Version", DisplayedVersionIndex + 1, VersionCount]">
+                @* The visible "2/3" is the visual form only: a plain span is role=generic, so an aria-label
+                   on it is dropped by the accessible-name computation. The spoken form is real text in a
+                   visually hidden span, which every reader announces. *@
+                <span class="tm-ai-message__version-label" aria-hidden="true">
                     @Loc["TmAiMessage_VersionShort", DisplayedVersionIndex + 1, VersionCount]
                 </span>
+                <span class="tm-sr-only">@Loc["TmAiMessage_Version", DisplayedVersionIndex + 1, VersionCount]</span>
                 <button type="button"
                         class="tm-ai-message__version-button"
                         data-tm-ai-action="version-next"

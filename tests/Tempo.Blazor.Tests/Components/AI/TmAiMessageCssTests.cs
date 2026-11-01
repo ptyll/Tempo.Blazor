@@ -90,6 +90,94 @@ public sealed class TmAiMessageCssTests
             .And.Contain("CanvasText", "the surfaces and the user bubble must survive Windows high contrast");
     }
 
+    /// <summary>
+    /// <c>forced-color-adjust: none</c> opts an element out of the system palette for EVERY colour — the focus
+    /// ring included, and the property INHERITS. Four focusable controls of this component therefore sit
+    /// inside an opted-out surface: the two version buttons (inside <c>__versions</c>), the follow-up chip
+    /// (itself opted out), Retry (inside <c>__error</c>) and the source card's link (inside <c>__source</c>).
+    /// Without a Highlight rule each of them keeps painting the theme token ring on a Canvas surface, which is
+    /// the defect <c>_markdown-view.css</c>, <c>_ai-tool-call.css</c> and <c>_ai-thinking.css</c> already avoid
+    /// for their own controls.
+    /// </summary>
+    [Fact]
+    public void ForcedColors_RestoreTheSystemFocusRingInsideTheOptedOutSurfaces()
+    {
+        var ringed = SystemRingSelectors();
+
+        foreach (var selector in new[]
+                 {
+                     ".tm-ai-message__version-button:focus-visible",
+                     ".tm-ai-message__follow-up:focus-visible",
+                     ".tm-ai-message__retry:focus-visible",
+                     ".tm-ai-message__source-title a:focus-visible",
+                 })
+        {
+            ringed.Should().Contain(selector,
+                "the control inherits forced-color-adjust: none from its surface, so its ring needs the " +
+                "system Highlight colour to stay visible in Windows high contrast");
+        }
+    }
+
+    /// <summary>
+    /// The opt-out is inherited, so opting the USER BUBBLE out would also strip its markdown (paragraphs,
+    /// links, headings) of the system remapping: those keep the theme's own text colour on a Canvas surface,
+    /// which in a dark high-contrast scheme is dark text on black. The bubble needs no opt-out at all — under
+    /// forced colours its author background is remapped to Canvas anyway, which is exactly what the rule asks
+    /// for — so the opt-out belongs on the surfaces that carry their own painted chrome, never on the body
+    /// that carries the reader's text.
+    /// </summary>
+    [Fact]
+    public void ForcedColors_TheUserBubbleDoesNotOptItsContentOutOfTheSystemPalette()
+    {
+        var optedOut = OptedOutSelectors();
+
+        optedOut.Should().NotBeEmpty("the stylesheet keeps its forced-colors opt-outs");
+        optedOut.Should().NotContain(selector => selector.Contains("tm-ai-message__body", StringComparison.Ordinal),
+            "the user bubble carries the turn's markdown; opting it out takes the system palette away from " +
+            "the reader's own text");
+    }
+
+    /// <summary>Every selector of the forced-colors block that restores the system <c>Highlight</c> ring.</summary>
+    private static List<string> SystemRingSelectors()
+        => Regex.Matches(ForcedColorsBlock(), @"([^{}]*:focus-visible[^{}]*)\{([^}]*)\}")
+            .Where(match => ThemeCss.Normalise(match.Groups[2].Value)
+                .Contains("outline-color: Highlight", StringComparison.Ordinal))
+            .SelectMany(match => ThemeCss.SelectorParts(match.Groups[1].Value))
+            .ToList();
+
+    /// <summary>Every selector of the forced-colors block inside the rule that sets <c>forced-color-adjust: none</c>.</summary>
+    private static List<string> OptedOutSelectors()
+        => Regex.Matches(ForcedColorsBlock(), @"([^{}]+)\{([^}]*)\}")
+            .Where(match => ThemeCss.Normalise(match.Groups[2].Value)
+                .Contains("forced-color-adjust: none", StringComparison.Ordinal))
+            .SelectMany(match => ThemeCss.SelectorParts(match.Groups[1].Value))
+            .ToList();
+
+    /// <summary>
+    /// The body of the <c>@media (forced-colors: active)</c> block, matched by brace depth so a nested rule
+    /// cannot truncate it (the stylesheet is already comment-stripped by <see cref="Stylesheet"/>).
+    /// </summary>
+    private static string ForcedColorsBlock()
+    {
+        const string marker = "@media (forced-colors: active)";
+        var css = Stylesheet();
+        var start = css.IndexOf(marker, StringComparison.Ordinal);
+        start.Should().BeGreaterThanOrEqualTo(0, $"the stylesheet must keep its {marker} block");
+
+        var opened = css.IndexOf('{', start);
+        var depth = 0;
+        for (var index = opened; index < css.Length; index++)
+        {
+            depth += css[index] switch { '{' => 1, '}' => -1, _ => 0 };
+            if (depth == 0)
+            {
+                return css[(opened + 1)..index];
+            }
+        }
+
+        return css[(opened + 1)..];
+    }
+
     [Fact]
     public void TheStylesheetDeclaresNoAnimationOfItsOwn()
     {
