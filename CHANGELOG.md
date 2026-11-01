@@ -81,6 +81,68 @@ sheet and the resource keys are all new.
   `validate --fail-on-drift` clean; contract in [docs/approval-card.md](docs/approval-card.md). The
   demo page and the E2E/screenshot lane belong to phase 6 of the plan.
 
+### Human-in-the-loop components — `TmReviewQueue` (plan 10b3966f, phase 3)
+
+The queue of items a human has to decide on: risk/priority ordering, filter tabs with counts,
+per-row decisions, single-key shortcuts, and a one-at-a-time Focus mode. **No breaking change** —
+the component, the eight Abstractions models, the stylesheet and the resource keys are all new.
+
+- **`TmReviewQueue<TItem>`** (`src/Tempo.Blazor/Components/Approvals/`) — `Items`, `IdSelector`,
+  `TitleSelector`, `SubtitleSelector`, `RiskSelector`, `PrioritySelector`, `ItemTemplate`,
+  `DetailTemplate`, `EmptyContent`, `LoadingContent`, `IsLoading`, `Mode` (`ReviewQueueMode.List` /
+  `Focus`), `SortMode` (`ReviewQueueSort`), `Actions` (`ReviewQueueActions` flags), `QuickActions`,
+  `OnAction` (`Func<ReviewQueueActionArgs<TItem>, Task>`), `Tabs` / `ActiveTabId` /
+  `ActiveTabIdChanged`, `ActiveItemId` / `ActiveItemIdChanged`, `AutoAdvance`, `EnableShortcuts`,
+  `AriaLabel`, `TabsAriaLabel`, `Class`, `LayoutMode` / `InitialMode`, plus the public
+  `OrderedItems` / `PendingItems` / `PendingCount` / `HandledItemIds` / `ActiveItemKey` /
+  `ActiveItem` / `IsBusy` / `RaiseActionAsync(…)` / `ClearHandledAsync()`.
+- **Async decisions** — while `OnAction` runs the queue is `aria-busy` and every action button is
+  disabled; the item is resolved (and the selection advances) only when the callback completes
+  without throwing. A throw shows a localized `TmAlert`, announces the error and leaves the item
+  pending. Skip calls the callback but never resolves the item.
+- **Ordering** — `SortMode` is stable: risk descending then the highest priority (default), the
+  highest priority then risk, or the host's own order. `PrioritySelector` ranks a higher value first.
+- **Two ARIA patterns, chosen by content** — rows without buttons are an APG `listbox` (option rows,
+  `aria-selected`), rows with buttons switch to a `grid` (row → gridcell) because an `option` may not
+  contain interactive controls. One roving tab stop follows the selection; arrow keys, Home/End and
+  J/K move it together with real DOM focus, and the browser scrolls the newly focused row (or the
+  Focus detail) into view — never `preventScroll`, which would leave the focus ring below the fold
+  (WCAG 2.4.7). Resolved rows collapse into a result row (CSS height transition, inactive half
+  `inert`) and leave the pending sequence.
+- **Keyboard ownership is per surface** — the navigation/shortcut handler lives on the list body and
+  the Focus view, not on the queue root, so keys pressed on the inner `TmTabs` strip move the tab
+  selection only (they no longer approve or jump an item the reviewer never focused). `ItemTemplate`
+  and `DetailTemplate` are fenced by the component itself, so a text field inside a host template
+  keeps its arrows, `Home` and `End` even without the host's own `@onkeydown:stopPropagation` fence
+  (which stays supported as defence in depth).
+- **Decision-inbox variant** — `QuickActions` adds host-named buttons to the same group;
+  `Actions="ReviewQueueActions.None"` with two quick actions is the two-button inbox. A quick action
+  raises `Action = ReviewQueueAction.QuickAction` with its `QuickActionId`, and its label becomes the
+  announced verb. The descriptors (`ReviewQueueTab`, `ReviewQueueQuickAction`) are `init`-only, so a
+  host cannot mutate a tab count or a quick action mid-session by accident; an object initializer
+  keeps working unchanged.
+- **Accessibility** — ONE polite live region announces every result and error
+  ("Approved: Invoice #2042. Remaining: 3."); the busy indicator has no role (the root `aria-busy`
+  carries it) and the error alert is `role="group"`. Row buttons are named by their item
+  ("Approve: Invoice #2042", WCAG 2.4.6 with the visible verb inside the name, WCAG 2.5.3); the A/E/
+  R/S shortcuts are advertised through `aria-keyshortcuts`, can be switched off
+  (`EnableShortcuts="false"`, WCAG 2.1.4) and never fire from inside a templated text field. The
+  previous/next buttons advertise `K`/`J` the same way. Focus moves into the next item's detail after
+  a decision and returns to the next row in list mode; the mobile Focus mode reuses
+  `TmMobileActionBar` instead of a second tab-stop group; `:focus-visible` uses `--tm-focus-ring` with
+  a `forced-colors` Highlight ring on every focus stop; coarse pointers get `--tm-touch-target`; the
+  collapse and the busy spinner are covered by reduced-motion rules.
+- **Models** (`src/Tempo.Blazor.Abstractions/Models/Reviews/`, namespace
+  `Tempo.Blazor.Abstractions.Models.Reviews`) — `ReviewQueueMode`, `ReviewQueueSort`,
+  `ReviewQueueActions` (flags), `ReviewQueueAction`, `ReviewQueueActionArgs<TItem>`,
+  `ReviewQueueTab`, `ReviewQueueQuickAction` and `ReviewQueueQuickActionVariant`.
+- **Localization** — 32 `TmReviewQueue_*` keys in all four resource tables. **Wireframe** — the
+  queue is a placeable stencil (`review-queue` role, `Feedback` category, declarative render listing
+  rows, risk badges and both decisions) and its role exists in the built-in UI-role vocabulary.
+- **Docs** — JSON overlays for the component and the eight models, bundles regenerated,
+  `validate --fail-on-drift` clean; contract in [docs/review-queue.md](docs/review-queue.md). The
+  demo page and the E2E/screenshot lane belong to phase 6 of the plan.
+
 ### Human-in-the-loop components — shared diff engine in `Tempo.Blazor.Abstractions` (plan 10b3966f, phase 1)
 
 The diff algorithms that existed twice (word level in `DocumentTextDiffHelper`, line level in

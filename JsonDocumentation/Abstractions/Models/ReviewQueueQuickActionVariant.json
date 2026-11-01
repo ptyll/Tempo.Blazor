@@ -1,0 +1,10 @@
+{
+  "kind": "Enum",
+  "category": "Models",
+  "namespace": "Tempo.Blazor.Abstractions.Models.Reviews",
+  "description": "The visual weight of a ReviewQueueQuickAction.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/Models/Reviews/ReviewQueueQuickActionVariant.cs",
+  "documentationStatus": "generated",
+  "itemName": "ReviewQueueQuickActionVariant"
+}

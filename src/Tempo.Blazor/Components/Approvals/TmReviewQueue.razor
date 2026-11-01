@@ -1,0 +1,340 @@
+@namespace Tempo.Blazor.Components.Approvals
+@typeparam TItem
+@inherits Tempo.Blazor.Components.TmComponentBase
+@using Tempo.Blazor.Abstractions.Layout
+@using Tempo.Blazor.Abstractions.Models.Approvals
+@using Tempo.Blazor.Abstractions.Models.Reviews
+@using Tempo.Blazor.Components.Actions
+@using Tempo.Blazor.Components.DataDisplay
+@using Tempo.Blazor.Components.Feedback
+@using Tempo.Blazor.Components.Icons
+@using Tempo.Blazor.Components.Layout
+@using Tempo.Blazor.Components.Navigation
+
+@* The queue resolves its own width (Focus mode hands the actions to TmMobileActionBar below the
+   mobile breakpoint) but is otherwise JS-free: every branch below is markup plus CSS. *@
+<TmLayoutObserver LayoutMode="LayoutMode" InitialMode="InitialMode">
+    <LayoutContent Context="ctx">
+        <div @ref="_rootElement"
+             class="@RootClass"
+             data-testid="@RootTestId("review-queue")"
+             data-mode="@(Mode == ReviewQueueMode.Focus ? "focus" : "list")"
+             data-layout="@ctx.CssModifier"
+             role="group"
+             aria-label="@EffectiveAriaLabel"
+             aria-busy="@(IsLoading || IsBusy ? "true" : null)"
+             tabindex="-1"
+             @attributes="AdditionalAttributes">
+
+            @if (Tabs is { Count: > 0 })
+            {
+                @* The tab strip is TmTabs (controlled): the queue raises the id and the HOST filters
+                   Items, because only the host knows what a tab means for its data. Each panel
+                   carries the body so the tabs stay a valid tablist/tabpanel pair — an empty panel
+                   would leave aria-controls pointing at nothing. *@
+                <TmTabs ActiveTabId="@EffectiveTabId"
+                        ActiveTabIdChanged="OnTabChangedAsync"
+                        AriaLabel="@EffectiveTabsLabel"
+                        Class="tm-review-queue__tabs"
+                        DataTestId="@TestId("review-tabs")">
+                    @foreach (var tab in Tabs!)
+                    {
+                        <TmTabPanel Id="@tab.Id" Title="@tab.Title" Icon="@tab.Icon" Badge="@TabBadge(tab)">
+                            @QueueBodyFor(ctx)
+                        </TmTabPanel>
+                    }
+                </TmTabs>
+            }
+            else
+            {
+                @QueueBodyFor(ctx)
+            }
+
+            @if (ShowShortcutHint)
+            {
+                <p class="tm-review-queue__hint" data-testid="@TestId("review-hint")">@ShortcutHint</p>
+            }
+
+            @* ONE polite live region for the whole component: every result and every error is
+               announced here, and nothing else in the queue claims a live role. *@
+            <div class="tm-sr-only"
+                 role="status"
+                 aria-live="polite"
+                 aria-atomic="true"
+                 data-testid="@TestId("review-announcements")">@_announcement</div>
+        </div>
+    </LayoutContent>
+</TmLayoutObserver>
+
+@code {
+    /// <summary>The queue body: the error alert, the loading skeleton, the list, or the Focus view.</summary>
+    /// <param name="ctx">The resolved layout (a mobile Focus mode uses the action bar).</param>
+    private RenderFragment QueueBodyFor(TmLayoutContext ctx) => @<text>
+        @if (ErrorMessage is not null)
+        {
+            <div class="tm-review-queue__alert" data-testid="@TestId("review-error")">
+                @* Role=group, never role=alert: the single live region above carries the message. *@
+                <TmAlert Severity="AlertSeverity.Error" Role="group">@ErrorMessage</TmAlert>
+            </div>
+        }
+
+        @if (IsLoading)
+        {
+            <div class="tm-review-queue__loading"
+                 data-testid="@TestId("review-loading")"
+                 aria-busy="true"
+                 aria-label="@Loc["TmReviewQueue_Loading"]">
+                @if (LoadingContent is not null)
+                {
+                    @LoadingContent
+                }
+                else
+                {
+                    @for (var index = 0; index < 3; index++)
+                    {
+                        <div class="tm-review-queue__skeleton" data-testid="@TestId("review-skeleton")">
+                            <TmSkeleton Variant="SkeletonVariant.Text" Width="55%" />
+                            <TmSkeleton Variant="SkeletonVariant.Text" Width="30%" />
+                        </div>
+                    }
+                }
+            </div>
+        }
+        else if (_ordered.Count == 0)
+        {
+            @EmptyBody(allReviewed: false)
+        }
+        else if (Mode == ReviewQueueMode.Focus)
+        {
+            if (ActiveEntry is { } active)
+            {
+                @FocusBody(ctx, active)
+            }
+            else
+            {
+                @EmptyBody(allReviewed: true)
+            }
+        }
+        else
+        {
+            <div class="tm-review-queue__list"
+                 role="@ListRole"
+                 aria-label="@ListLabel"
+                 data-testid="@TestId("review-list")"
+                 @onkeydown="HandleKeyDownAsync">
+                @foreach (var entry in _ordered)
+                {
+                    @ListRow(entry)
+                }
+            </div>
+        }
+    </text>;
+
+    /// <summary>One selectable row of the list.</summary>
+    /// <param name="entry">The item, its ranks and its position in the presentation order.</param>
+    private RenderFragment ListRow(ItemEntry entry) => @<div class="@RowClass(entry)"
+             role="@RowRole"
+             aria-selected="@(IsActive(entry) ? "true" : "false")"
+             aria-disabled="@(IsHandled(entry) ? "true" : null)"
+             tabindex="@(IsActive(entry) ? "0" : "-1")"
+             data-item-id="@entry.Id"
+             data-testid="@TestId("review-item")"
+             @ref="_rowElements[entry.Id]"
+             @onclick="() => SelectAsync(entry)">
+        <div class="tm-review-queue__cell" role="@(HasRowButtons ? "gridcell" : null)">
+            @* Both halves stay mounted so the row can transition its height; the inactive half is
+               inert, which takes it out of the tab order AND the accessibility tree. *@
+            <div class="tm-review-queue__row-collapse" inert="@IsHandled(entry)">
+                <div class="tm-review-queue__row-inner">
+                    <div class="tm-review-queue__row-main">
+                        <div class="tm-review-queue__row-heading">
+                            <p class="tm-review-queue__row-title" data-testid="@TestId("review-item-title")">@entry.Title</p>
+                            <span class="tm-review-queue__row-risk" data-testid="@TestId("review-item-risk")">
+                                <TmBadge Variant="@RiskBadgeVariant(entry.Risk)" BadgeStyle="BadgeStyle.Subtle" Icon="@RiskIcon(entry.Risk)">@RiskLabel(entry.Risk)</TmBadge>
+                            </span>
+                        </div>
+                        @if (!string.IsNullOrWhiteSpace(entry.Subtitle))
+                        {
+                            <p class="tm-review-queue__row-subtitle" data-testid="@TestId("review-item-subtitle")">@entry.Subtitle</p>
+                        }
+                        @if (ItemTemplate is not null)
+                        {
+                            @* Fenced: a host's text field (or a select, or a contenteditable) keeps
+                               its arrows, Home and End even when the host forgets its own
+                               @onkeydown:stopPropagation — the host fence is defence in depth. *@
+                            <div class="tm-review-queue__row-content"
+                                 data-testid="@TestId("review-item-content")"
+                                 @onkeydown:stopPropagation="true">@ItemTemplate(entry.Item)</div>
+                        }
+                    </div>
+                    @if (HasRowButtons && !IsHandled(entry))
+                    {
+                        <div class="tm-review-queue__row-actions"
+                             role="group"
+                             aria-label="@ActionsGroupLabel(entry)"
+                             data-testid="@TestId("review-item-actions")">
+                            @foreach (var button in ButtonsFor(entry, itemQualifiedName: true))
+                            {
+                                @ActionButton(entry, button)
+                            }
+                        </div>
+                    }
+                </div>
+            </div>
+            <div class="tm-review-queue__row-collapse" inert="@(!IsHandled(entry))">
+                <div class="tm-review-queue__row-inner tm-review-queue__row-inner--summary">
+                    <span class="tm-review-queue__row-icon" aria-hidden="true">
+                        <TmIcon Name="@IconNames.CheckCircle" Size="IconSize.Sm" />
+                    </span>
+                    <span class="tm-review-queue__row-title">@entry.Title</span>
+                    <span class="tm-review-queue__row-result" data-testid="@TestId("review-item-result-label")">@ResultLabelOf(entry)</span>
+                </div>
+            </div>
+        </div>
+    </div>;
+
+    /// <summary>One action button of an item (a built-in verb or a host quick action).</summary>
+    /// <param name="entry">The item the button acts on.</param>
+    /// <param name="button">The verb, label, icon, test id and accessible name.</param>
+    private RenderFragment ActionButton(ItemEntry entry, ActionButtonModel button) => @<button type="button"
+             class="tm-btn tm-btn-sm tm-review-queue__action @button.CssClass"
+             data-testid="@TestId(button.TestIdName)"
+             aria-keyshortcuts="@button.Shortcut"
+             aria-label="@button.AriaLabel"
+             disabled="@IsBusy"
+             aria-busy="@(IsActingOn(entry, button) ? "true" : null)"
+             @onclick="() => RunActionAsync(entry, button.Action, button.QuickActionId)"
+             @onclick:stopPropagation="true">
+        @if (IsActingOn(entry, button))
+        {
+            <span class="tm-review-queue__spinner" aria-hidden="true"></span>
+        }
+        else if (button.Icon is not null)
+        {
+            <TmIcon Name="@button.Icon" Size="IconSize.Xs" />
+        }
+        <span class="tm-btn-label">@button.Label</span>
+    </button>;
+
+    /// <summary>One item at a time: position, navigation, detail and the shared action group.</summary>
+    /// <param name="ctx">The resolved layout — a mobile layout moves the actions into the bar.</param>
+    /// <param name="entry">The active item.</param>
+    private RenderFragment FocusBody(TmLayoutContext ctx, ItemEntry entry) => @<text>
+        <div class="tm-review-queue__focus"
+             data-testid="@TestId("review-focus")"
+             role="group"
+             aria-label="@CurrentItemLabel"
+             tabindex="-1"
+             @ref="_focusElement"
+             @onkeydown="HandleKeyDownAsync">
+            <div class="tm-review-queue__focus-header">
+                @if (PositionText is { } position)
+                {
+                    @* aria-live=off: the polite region announces the RESULT, not every move. *@
+                    <span class="tm-review-queue__position" data-testid="@TestId("review-position")" aria-live="off">@position</span>
+                }
+                <div class="tm-review-queue__nav" role="group" aria-label="@Loc["TmReviewQueue_Navigation"]">
+                    <button type="button"
+                            class="tm-btn tm-btn-ghost tm-btn-sm tm-review-queue__nav-button"
+                            data-testid="@TestId("review-prev")"
+                            aria-label="@Loc["TmReviewQueue_Previous"]"
+                            aria-keyshortcuts="@(EnableShortcuts ? "K" : null)"
+                            disabled="@(!CanGoPrevious)"
+                            @onclick="MovePreviousAsync">
+                        <TmIcon Name="@IconNames.ChevronLeft" Size="IconSize.Sm" />
+                    </button>
+                    <button type="button"
+                            class="tm-btn tm-btn-ghost tm-btn-sm tm-review-queue__nav-button"
+                            data-testid="@TestId("review-next")"
+                            aria-label="@Loc["TmReviewQueue_Next"]"
+                            aria-keyshortcuts="@(EnableShortcuts ? "J" : null)"
+                            disabled="@(!CanGoNext)"
+                            @onclick="MoveNextAsync">
+                        <TmIcon Name="@IconNames.ChevronRight" Size="IconSize.Sm" />
+                    </button>
+                </div>
+            </div>
+
+            <div class="tm-review-queue__focus-card">
+                <div class="tm-review-queue__row-heading">
+                    <p class="tm-review-queue__focus-title" data-testid="@TestId("review-focus-title")">@entry.Title</p>
+                    <span class="tm-review-queue__row-risk" data-testid="@TestId("review-focus-risk")">
+                        <TmBadge Variant="@RiskBadgeVariant(entry.Risk)" BadgeStyle="BadgeStyle.Subtle" Icon="@RiskIcon(entry.Risk)">@RiskLabel(entry.Risk)</TmBadge>
+                    </span>
+                </div>
+                @if (!string.IsNullOrWhiteSpace(entry.Subtitle))
+                {
+                    <p class="tm-review-queue__row-subtitle">@entry.Subtitle</p>
+                }
+                @if (IsHandled(entry))
+                {
+                    <div class="tm-review-queue__handled" data-testid="@TestId("review-handled")">
+                        <TmIcon Name="@IconNames.CheckCircle" Size="IconSize.Sm" />
+                        <span>@ResultLabelOf(entry)</span>
+                    </div>
+                }
+                @if (DetailTemplate is not null)
+                {
+                    @* Fenced like the row body: the detail's own controls (a textarea of notes, a
+                       select of review reasons) own their keys. Navigation stays available through
+                       the prev/next buttons and from the card's chrome. *@
+                    <div class="tm-review-queue__detail"
+                         data-testid="@TestId("review-detail")"
+                         @onkeydown:stopPropagation="true">@DetailTemplate(entry.Item)</div>
+                }
+            </div>
+
+            @if (!IsHandled(entry) && HasActions)
+            {
+                if (ctx.IsMobile)
+                {
+                    @* The bar's items are the same verbs as the inline group — one set of tab stops. *@
+                    <TmMobileActionBar Items="@MobileActionItems(entry)"
+                                       MaxVisible="4"
+                                       AriaLabel="@ActionsGroupLabel(entry)"
+                                       Placement="ActionBarPlacement.StickyContainer"
+                                       LayoutMode="TmLayoutMode.Mobile" />
+                }
+                else
+                {
+                    <div class="tm-review-queue__actions"
+                         role="group"
+                         aria-label="@ActionsGroupLabel(entry)"
+                         data-testid="@TestId("review-actions")">
+                        @foreach (var button in ButtonsFor(entry, itemQualifiedName: false))
+                        {
+                            @ActionButton(entry, button)
+                        }
+                    </div>
+                }
+            }
+            else if (PendingCount > 0)
+            {
+                <div class="tm-review-queue__actions" data-testid="@TestId("review-actions")">
+                    <button type="button"
+                            class="tm-btn tm-btn-primary tm-btn-sm tm-review-queue__action"
+                            data-testid="@TestId("review-next-item")"
+                            @onclick="MoveToEdgeAfterHandled">
+                        <TmIcon Name="@IconNames.ArrowRight" Size="IconSize.Xs" />
+                        <span class="tm-btn-label">@Loc["TmReviewQueue_NextPending"]</span>
+                    </button>
+                </div>
+            }
+        </div>
+    </text>;
+
+    /// <summary>The empty state — "nothing to review" or, in Focus mode, "everything is reviewed".</summary>
+    /// <param name="allReviewed">Whether the queue HAS items but none is pending.</param>
+    private RenderFragment EmptyBody(bool allReviewed) => @<div class="tm-review-queue__empty" data-testid="@TestId("review-empty")">
+        @if (EmptyContent is not null && !allReviewed)
+        {
+            @EmptyContent
+        }
+        else
+        {
+            <TmEmptyState Icon="@IconNames.CheckCircle"
+                          Title="@(allReviewed ? Loc["TmReviewQueue_AllReviewedTitle"] : Loc["TmReviewQueue_EmptyTitle"])"
+                          Description="@(allReviewed ? Loc["TmReviewQueue_AllReviewedDescription"] : Loc["TmReviewQueue_EmptyDescription"])" />
+        }
+    </div>;
+}

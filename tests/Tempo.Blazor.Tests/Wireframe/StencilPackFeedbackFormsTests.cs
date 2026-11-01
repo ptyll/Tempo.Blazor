@@ -41,7 +41,8 @@ public class StencilPackFeedbackFormsTests
         "TmFlatColorPicker",
         "TmColorPalette",
         "TmColorGradient",
-        "TmApprovalCard"
+        "TmApprovalCard",
+        "TmReviewQueue"
     ];
 
     public static TheoryData<string> FeedbackFormTypeData
@@ -58,7 +59,7 @@ public class StencilPackFeedbackFormsTests
     [Fact]
     public void FeedbackFormTypeList_CoversPlanScope()
     {
-        FeedbackFormTypes.Should().HaveCount(31);
+        FeedbackFormTypes.Should().HaveCount(32);
         FeedbackFormTypes.Should().Contain(["TmAlert", "TmProgressBar", "TmNotificationBell", "TmFormField", "TmColorGradient"]);
     }
 
@@ -137,6 +138,24 @@ public class StencilPackFeedbackFormsTests
 
         var quiet = await RenderAsync("TmApprovalCard", ("showCountdown", false));
         quiet.Should().NotContain("Expires in");
+    }
+
+    [Fact]
+    public async Task ReviewQueue_RendersRowsWithRiskAndBothDecisions()
+    {
+        var list = await RenderAsync("TmReviewQueue", ("title", "My reviews"), ("itemCount", 3));
+        list.Should().Contain(">My reviews<");
+        list.Should().Contain(">Invoice #2041<");
+        list.Should().Contain(">High risk<");
+        list.Should().Contain(">Approve<");
+        list.Should().Contain(">Reject<");
+        list.Should().Contain("Items to review");
+        list.Should().NotContain(">TmReviewQueue<");
+
+        var focus = await RenderAsync("TmReviewQueue", ("mode", "focus"));
+        focus.Should().Contain(">Item 1 of 4<");
+        focus.Should().Contain(">Detail of the current item<");
+        focus.Should().NotContain("items to review", "focus mode is one item at a time");
     }
 
     [Fact]

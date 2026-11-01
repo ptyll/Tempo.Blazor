@@ -153,6 +153,7 @@ public sealed class BuiltInComponentSchemas : IWireframeSchemaSource
             ["TmBarcode"] = ["icon"],
             ["TmChangeDiff"] = ["diff-view"],
             ["TmApprovalCard"] = ["approval-card"],
+            ["TmReviewQueue"] = ["review-queue"],
             ["TmMultiViewList"] = ["list-view"],
             ["TmDataTable"] = ["data-table"],
             ["TmPagination"] = ["pagination"],
@@ -1127,6 +1128,21 @@ public sealed class BuiltInComponentSchemas : IWireframeSchemaSource
                 P("risk",          "Risk",          PropType.Enum,   "medium",                                     cat: "Content",
                     opts: ["low", "medium", "high", "critical"]),
                 P("showCountdown", "Show Countdown", PropType.Bool,  true,                                        cat: "Appearance"),
+            ]
+        };
+
+        yield return new WireframeComponentSchema
+        {
+            Type = "TmReviewQueue", Category = "Feedback", DisplayName = "Review Queue",
+            DefaultWidth = 440, DefaultHeight = 320,
+            Props =
+            [
+                P("title",       "Title",       PropType.String, "Review queue",                              cat: "Content"),
+                P("mode",        "Mode",        PropType.Enum,   "list",                                      cat: "Appearance",
+                    opts: ["list", "focus"]),
+                P("itemCount",   "Item Count",  PropType.Int,    4,                                           cat: "Content"),
+                P("showRisk",    "Show Risk",   PropType.Bool,   true,                                        cat: "Appearance"),
+                P("showActions", "Show Actions", PropType.Bool,  true,                                        cat: "Appearance"),
             ]
         };
 

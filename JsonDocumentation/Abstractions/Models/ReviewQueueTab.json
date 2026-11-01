@@ -1,0 +1,10 @@
+{
+  "kind": "Class",
+  "category": "Models",
+  "namespace": "Tempo.Blazor.Abstractions.Models.Reviews",
+  "description": "One filter tab of a review queue: a stable id the host filters Items by, the visible title and an optional count shown as a badge. The queue renders the tab strip and raises ActiveTabIdChanged; it never filters the items itself, because only the host knows what \"Open\" or \"Needs my review\" means for its data. The count is the host's number for the SAME query, so it always agrees with the list the host passes back.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/Models/Reviews/ReviewQueueTab.cs",
+  "documentationStatus": "generated",
+  "itemName": "ReviewQueueTab"
+}

@@ -1,0 +1,10 @@
+{
+  "kind": "Enum",
+  "category": "Models",
+  "namespace": "Tempo.Blazor.Abstractions.Models.Reviews",
+  "description": "The order TmReviewQueue<TItem> presents its items in. Sorting is stable: items with an equal rank keep the order the host supplied them in, so a re-render never shuffles rows.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/Models/Reviews/ReviewQueueSort.cs",
+  "documentationStatus": "generated",
+  "itemName": "ReviewQueueSort"
+}

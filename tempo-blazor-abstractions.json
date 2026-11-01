@@ -33,6 +33,7 @@
       "Tempo.Blazor.Abstractions.Layout",
       "Tempo.Blazor.Abstractions.Models",
       "Tempo.Blazor.Abstractions.Models.Approvals",
+      "Tempo.Blazor.Abstractions.Models.Reviews",
       "Tempo.Blazor.Abstractions.PivotTable",
       "Tempo.Blazor.Abstractions.Shared",
       "Tempo.Blazor.Abstractions.Wireframe.Export",
@@ -18244,6 +18245,206 @@
       "packageId": "Tempo.Blazor.Abstractions",
       "sourcePath": "src/Tempo.Blazor.Abstractions/Models/RedactionModels.cs",
       "documentationStatus": "merged"
+    },
+    {
+      "itemName": "ReviewQueueAction",
+      "kind": "Enum",
+      "category": "Models",
+      "namespace": "Tempo.Blazor.Abstractions.Models.Reviews",
+      "description": "Which button produced a ReviewQueueActionArgs<TItem>.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Models/Reviews/ReviewQueueAction.cs",
+      "documentationStatus": "merged"
+    },
+    {
+      "itemName": "ReviewQueueActionArgs<TItem>",
+      "kind": "Class",
+      "category": "Models",
+      "namespace": "Tempo.Blazor.Abstractions.Models.Reviews",
+      "description": "One raised decision of a review queue: which item, which verb, and — for a host-defined QuickAction — which quick action fired. TmReviewQueue<TItem> awaits the host's OnAction callback with these args and only resolves the item when it completes without throwing, so a failed save keeps the item pending and the queue usable.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Models/Reviews/ReviewQueueActionArgs.cs",
+      "documentationStatus": "merged",
+      "typeParameters": [
+        {
+          "name": "TItem",
+          "description": "Generic type parameter TItem."
+        }
+      ],
+      "members": [
+        {
+          "name": "Action",
+          "kind": "Property",
+          "type": "ReviewQueueAction",
+          "description": "Which verb fired."
+        },
+        {
+          "name": "AvailableActions",
+          "kind": "Property",
+          "type": "ReviewQueueActions",
+          "description": "The verb set the queue had enabled for this interaction."
+        },
+        {
+          "name": "IsApprove",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Whether the item was approved."
+        },
+        {
+          "name": "IsEdit",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Whether the item was marked as reviewed with changes."
+        },
+        {
+          "name": "IsQuickAction",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Whether a host-defined quick action fired."
+        },
+        {
+          "name": "IsReject",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Whether the item was rejected."
+        },
+        {
+          "name": "IsSkip",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Whether the item was deferred (still pending after the callback)."
+        },
+        {
+          "name": "Item",
+          "kind": "Property",
+          "type": "TItem",
+          "description": "The item the decision belongs to."
+        },
+        {
+          "name": "QuickActionId",
+          "kind": "Property",
+          "type": "string?",
+          "description": "The quick action's id when Action is QuickAction; otherwise null."
+        }
+      ]
+    },
+    {
+      "itemName": "ReviewQueueActions",
+      "kind": "Enum",
+      "category": "Models",
+      "namespace": "Tempo.Blazor.Abstractions.Models.Reviews",
+      "description": "The built-in decisions TmReviewQueue<TItem> offers for an item. A flagged set, so a host enables exactly the verbs its workflow has: a document queue usually offers Approve and Reject, a content queue adds Edit and Skip.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Models/Reviews/ReviewQueueActions.cs",
+      "documentationStatus": "merged"
+    },
+    {
+      "itemName": "ReviewQueueMode",
+      "kind": "Enum",
+      "category": "Models",
+      "namespace": "Tempo.Blazor.Abstractions.Models.Reviews",
+      "description": "How TmReviewQueue<TItem> presents the items it was given.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Models/Reviews/ReviewQueueMode.cs",
+      "documentationStatus": "merged"
+    },
+    {
+      "itemName": "ReviewQueueQuickAction",
+      "kind": "Class",
+      "category": "Models",
+      "namespace": "Tempo.Blazor.Abstractions.Models.Reviews",
+      "description": "A host-defined button of a review queue row — the \"decision inbox\" variant, where an item is resolved with two purpose-named buttons (\"Approve & file\", \"Send back to the author\") instead of the built-in verbs. Activating one raises OnAction with QuickAction and this action's Id. Like every action it resolves the item only when the callback completes without throwing, and the localized result announced to screen readers uses Label as the verb.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Models/Reviews/ReviewQueueQuickAction.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "AriaLabel",
+          "kind": "Property",
+          "type": "string?",
+          "description": "Accessible name override for the row button. When omitted the button is named by a localized \"<label>: <item title>\" template (WCAG 2.4.6 — a row of three identically named \"Approve\" buttons is indistinguishable in a screen reader's button list)."
+        },
+        {
+          "name": "Icon",
+          "kind": "Property",
+          "type": "string?",
+          "description": "Optional icon name (an IconNames value or a registered icon)."
+        },
+        {
+          "name": "Id",
+          "kind": "Property",
+          "type": "string",
+          "description": "Stable identity of the action, carried in QuickActionId. Required and unique within the queue."
+        },
+        {
+          "name": "Label",
+          "kind": "Property",
+          "type": "string",
+          "description": "The visible button label. Required — it is also the verb the live region announces."
+        },
+        {
+          "name": "Variant",
+          "kind": "Property",
+          "type": "ReviewQueueQuickActionVariant",
+          "description": "The button's visual weight. Default Secondary."
+        }
+      ]
+    },
+    {
+      "itemName": "ReviewQueueQuickActionVariant",
+      "kind": "Enum",
+      "category": "Models",
+      "namespace": "Tempo.Blazor.Abstractions.Models.Reviews",
+      "description": "The visual weight of a ReviewQueueQuickAction.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Models/Reviews/ReviewQueueQuickActionVariant.cs",
+      "documentationStatus": "merged"
+    },
+    {
+      "itemName": "ReviewQueueSort",
+      "kind": "Enum",
+      "category": "Models",
+      "namespace": "Tempo.Blazor.Abstractions.Models.Reviews",
+      "description": "The order TmReviewQueue<TItem> presents its items in. Sorting is stable: items with an equal rank keep the order the host supplied them in, so a re-render never shuffles rows.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Models/Reviews/ReviewQueueSort.cs",
+      "documentationStatus": "merged"
+    },
+    {
+      "itemName": "ReviewQueueTab",
+      "kind": "Class",
+      "category": "Models",
+      "namespace": "Tempo.Blazor.Abstractions.Models.Reviews",
+      "description": "One filter tab of a review queue: a stable id the host filters Items by, the visible title and an optional count shown as a badge. The queue renders the tab strip and raises ActiveTabIdChanged; it never filters the items itself, because only the host knows what \"Open\" or \"Needs my review\" means for its data. The count is the host's number for the SAME query, so it always agrees with the list the host passes back.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Models/Reviews/ReviewQueueTab.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Count",
+          "kind": "Property",
+          "type": "int?",
+          "description": "Optional badge count for this tab — normally the number of items the tab's query returns. Null renders no badge; zero renders \"0\" (an empty tab still reports its emptiness)."
+        },
+        {
+          "name": "Icon",
+          "kind": "Property",
+          "type": "string?",
+          "description": "Optional icon name (an IconNames value or a registered icon)."
+        },
+        {
+          "name": "Id",
+          "kind": "Property",
+          "type": "string",
+          "description": "Stable identity of the tab, used as the tab panel id. Required."
+        },
+        {
+          "name": "Title",
+          "kind": "Property",
+          "type": "string",
+          "description": "The visible tab label. Required."
+        }
+      ]
     },
     {
       "itemName": "SchedulerEventContext",
@@ -38938,11 +39139,11 @@
   ],
   "libraryExamples": [],
   "summary": {
-    "itemCount": 1554,
-    "manualItemCount": 1554,
-    "generatedItemCount": 1537,
+    "itemCount": 1562,
+    "manualItemCount": 1562,
+    "generatedItemCount": 1545,
     "generatedOnlyItemCount": 0,
     "componentCount": 0,
-    "publicApiTypeCount": 1537
+    "publicApiTypeCount": 1545
   }
 }

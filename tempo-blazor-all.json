@@ -2652,6 +2652,312 @@
           ]
         },
         {
+          "itemName": "TmReviewQueue",
+          "kind": "Component",
+          "category": "Approvals",
+          "namespace": "Tempo.Blazor.Components.Approvals",
+          "description": "A queue of items a human has to decide on: rows sorted by risk and priority, a localized risk badge per item, optional filter tabs with counts, Approve / Edit / Reject / Skip actions (buttons and single-key shortcuts), and a one-at-a-time Focus mode with a \"Item 3 of 12\" position and previous/next navigation. The queue is a controlled component over a host-owned list: it sorts and presents Items, tracks which items were resolved in the current session, and never removes an item from the host's data. It resolves an item only after OnAction completes without throwing — a failed save shows a localized error and leaves the item pending. A resolved item collapses into a result row (a CSS height transition, no JS) and leaves the pending sequence. Accessibility: the list is an APG listbox when its rows carry no buttons and switches to a grid when they do (an option may not contain interactive controls); selection follows focus with a roving tabindex, every row button carries the item in its accessible name, exactly ONE polite live region announces a result, and the single-key shortcuts are disableable and never fire from inside a templated text field (host templates fence their own keys with @onkeydown:stopPropagation — the same rule as TmDataTable's cell templates).",
+          "packageId": "Tempo.Blazor",
+          "sourcePath": "src/Tempo.Blazor/Components/Approvals/TmReviewQueue.razor",
+          "documentationStatus": "merged",
+          "requiredImports": [
+            "@using Tempo.Blazor.Abstractions.Models.Approvals",
+            "@using Tempo.Blazor.Abstractions.Models.Reviews",
+            "@using Tempo.Blazor.Components.Approvals"
+          ],
+          "typeParameters": [
+            {
+              "name": "TItem",
+              "description": "Generic type parameter TItem."
+            }
+          ],
+          "parameters": [
+            {
+              "name": "Actions",
+              "type": "ReviewQueueActions",
+              "isRequired": false,
+              "default": "ReviewQueueActions.All",
+              "description": "The built-in verbs offered per item. Default All. Combine it with QuickActions for the \"decision inbox\" variant (two host-named buttons): set this to None and supply the two quick actions."
+            },
+            {
+              "name": "ActiveItemId",
+              "type": "string?",
+              "isRequired": false,
+              "description": "The selected item id (the row that owns the roving tabindex and, in Focus mode, the item whose detail is rendered). When null or unknown, the first pending item is selected. Pair it with ActiveItemIdChanged (@bind-ActiveItemId)."
+            },
+            {
+              "name": "ActiveItemIdChanged",
+              "type": "EventCallback<string?>",
+              "isRequired": false,
+              "description": "Raised when the selection or the tab follows it moves — a click, an arrow key, a skip, auto-advance or a programmatic RaiseActionAsync. Null when nothing is pending any more."
+            },
+            {
+              "name": "ActiveTabId",
+              "type": "string?",
+              "isRequired": false,
+              "description": "The selected tab id. When it is null or names no tab, the first tab is selected. Pair it with ActiveTabIdChanged (@bind-ActiveTabId); the host filters Items in response."
+            },
+            {
+              "name": "ActiveTabIdChanged",
+              "type": "EventCallback<string>",
+              "isRequired": false,
+              "description": "Raised when the user selects a tab."
+            },
+            {
+              "name": "AriaLabel",
+              "type": "string?",
+              "isRequired": false,
+              "description": "Accessible name of the queue group. Defaults to a localized \"Review queue\"."
+            },
+            {
+              "name": "AutoAdvance",
+              "type": "bool",
+              "isRequired": false,
+              "default": "true",
+              "description": "Whether a resolved item hands the selection to the next pending item automatically. Default true. With false the resolved item stays displayed (its detail shows a result banner and a localized \"next item\" button), which suits a reviewer who wants to read the result first. Skip always moves on."
+            },
+            {
+              "name": "Class",
+              "type": "string?",
+              "isRequired": false,
+              "description": "Additional CSS classes for the root element."
+            },
+            {
+              "name": "DetailTemplate",
+              "type": "RenderFragment<TItem>?",
+              "isRequired": false,
+              "description": "The Focus mode body of the active item (a diff, a document preview, a key/value grid). When omitted Focus mode shows the title, the subtitle and the risk badge only."
+            },
+            {
+              "name": "EmptyContent",
+              "type": "RenderFragment?",
+              "isRequired": false,
+              "description": "Content shown instead of the built-in empty state when the queue has no items."
+            },
+            {
+              "name": "EnableShortcuts",
+              "type": "bool",
+              "isRequired": false,
+              "default": "true",
+              "description": "Whether the A / E / R / S single-key shortcuts and the J / K navigation keys are active. Default true; the arrow keys, Home and End are the widget's own keyboard contract and stay active either way. WCAG 2.1.4 requires the opt-out this parameter provides."
+            },
+            {
+              "name": "IdSelector",
+              "type": "Func<TItem, string>?",
+              "isRequired": false,
+              "description": "Stable identity of an item. Used as the render key, the value of data-item-id and the key of the resolved set, so it must be stable across renders and unique within Items. When omitted the item's index is used (stable only while the list order is)."
+            },
+            {
+              "name": "InitialMode",
+              "type": "TmLayoutMode",
+              "isRequired": false,
+              "default": "TmLayoutMode.Desktop",
+              "description": "The layout rendered before the first measurement (static SSR and the first frame). Default Desktop."
+            },
+            {
+              "name": "IsLoading",
+              "type": "bool",
+              "isRequired": false,
+              "description": "Renders the loading skeleton, marks the queue aria-busy and ignores actions. Default false."
+            },
+            {
+              "name": "Items",
+              "type": "IReadOnlyList<TItem>?",
+              "isRequired": false,
+              "description": "The items to review — normally already filtered by ActiveTabId. The queue sorts them but never removes one: a resolved item stays in the list as a collapsed result row."
+            },
+            {
+              "name": "ItemTemplate",
+              "type": "RenderFragment<TItem>?",
+              "isRequired": false,
+              "description": "Optional row body rendered under the title, above the row's action buttons."
+            },
+            {
+              "name": "LayoutMode",
+              "type": "TmLayoutMode",
+              "isRequired": false,
+              "default": "TmLayoutMode.Auto",
+              "description": "The layout Focus mode resolves its action presentation from. Auto (the default) measures this queue's own container; a forced value pins it for a host or a test. On a mobile layout the Focus mode actions move into TmMobileActionBar."
+            },
+            {
+              "name": "LoadingContent",
+              "type": "RenderFragment?",
+              "isRequired": false,
+              "description": "Content shown while IsLoading is true. Defaults to three skeleton rows."
+            },
+            {
+              "name": "Mode",
+              "type": "ReviewQueueMode",
+              "isRequired": false,
+              "default": "ReviewQueueMode.List",
+              "description": "List (many rows) or Focus (one item at a time). Default List."
+            },
+            {
+              "name": "OnAction",
+              "type": "Func<ReviewQueueActionArgs<TItem>, Task>?",
+              "isRequired": false,
+              "description": "Callback that persists a decision. While it runs the queue is aria-busy and every action button is disabled. When it throws, a localized error is shown in an alert, the error is announced and the item stays pending — a failed save must never look like a decision."
+            },
+            {
+              "name": "PrioritySelector",
+              "type": "Func<TItem, int>?",
+              "isRequired": false,
+              "description": "The item's priority for sorting — a HIGHER value ranks first. Ties fall back to the other rank and then to the order Items arrived in. Defaults to 0 (no ranking)."
+            },
+            {
+              "name": "QuickActions",
+              "type": "IReadOnlyList<ReviewQueueQuickAction>?",
+              "isRequired": false,
+              "description": "Host-defined buttons rendered in the same group as the built-in verbs, for a decision inbox whose verbs are named by the workflow (\"Approve & file\", \"Send back to the author\"). Activating one raises OnAction with QuickAction and QuickActionId."
+            },
+            {
+              "name": "RiskSelector",
+              "type": "Func<TItem, ApprovalRisk>?",
+              "isRequired": false,
+              "description": "The item's risk, shown as a localized badge and used by RiskThenPriority. Defaults to Low."
+            },
+            {
+              "name": "SortMode",
+              "type": "ReviewQueueSort",
+              "isRequired": false,
+              "default": "ReviewQueueSort.RiskThenPriority",
+              "description": "How the pending items are ordered. Default RiskThenPriority."
+            },
+            {
+              "name": "SubtitleSelector",
+              "type": "Func<TItem, string?>?",
+              "isRequired": false,
+              "description": "Optional secondary line under the title (a category, owner or due date)."
+            },
+            {
+              "name": "Tabs",
+              "type": "IReadOnlyList<ReviewQueueTab>?",
+              "isRequired": false,
+              "description": "The filter tabs rendered above the queue. The queue raises ActiveTabIdChanged and renders whatever Items the host passes back — it never guesses the predicate, because only the host knows what a tab means for its data."
+            },
+            {
+              "name": "TabsAriaLabel",
+              "type": "string?",
+              "isRequired": false,
+              "description": "Accessible name of the tab strip. Defaults to a localized \"Review tabs\"."
+            },
+            {
+              "name": "TitleSelector",
+              "type": "Func<TItem, string>?",
+              "isRequired": false,
+              "description": "The item's heading, rendered as the row title and used in announcements. Defaults to ToString."
+            }
+          ],
+          "methods": [
+            {
+              "name": "RaiseActionAsync",
+              "returnType": "Task",
+              "description": "Raises a built-in action for the active item exactly as its button would - the same pending state, auto-advance and announcement. A no-op when nothing is active, the verb is not enabled or an action is already running."
+            },
+            {
+              "name": "ClearHandledAsync",
+              "returnType": "Task",
+              "description": "Forgets every item resolved in this session so the queue is fully pending again. The host's own data is never touched."
+            }
+          ],
+          "properties": [
+            {
+              "name": "OrderedItems",
+              "type": "IReadOnlyList<TItem>",
+              "description": "Every item in the order the queue presents it (pending and resolved alike)."
+            },
+            {
+              "name": "PendingItems",
+              "type": "IReadOnlyList<TItem>",
+              "description": "The items that still need a decision, in presentation order."
+            },
+            {
+              "name": "PendingCount",
+              "type": "int",
+              "description": "The number of items that still need a decision."
+            },
+            {
+              "name": "HandledItemIds",
+              "type": "IReadOnlyCollection<string>",
+              "description": "Ids of the items resolved in this session."
+            },
+            {
+              "name": "ActiveItemKey",
+              "type": "string?",
+              "description": "The id of the item that owns the selection, or null when nothing is pending."
+            },
+            {
+              "name": "ActiveItem",
+              "type": "TItem?",
+              "description": "The active item, or default when the queue is empty."
+            },
+            {
+              "name": "IsBusy",
+              "type": "bool",
+              "description": "Whether an action is being persisted right now."
+            },
+            {
+              "name": "IsLoadingItems",
+              "type": "bool",
+              "description": "Whether the queue renders the loading skeleton (mirrors IsLoading)."
+            }
+          ],
+          "cssClasses": [
+            "tm-review-queue",
+            "tm-review-queue--list",
+            "tm-review-queue--focus",
+            "tm-review-queue--busy",
+            "tm-review-queue__tabs",
+            "tm-review-queue__hint",
+            "tm-review-queue__alert",
+            "tm-review-queue__list",
+            "tm-review-queue__row",
+            "tm-review-queue__row--active",
+            "tm-review-queue__row--handled",
+            "tm-review-queue__cell",
+            "tm-review-queue__row-collapse",
+            "tm-review-queue__row-inner",
+            "tm-review-queue__row-inner--summary",
+            "tm-review-queue__row-main",
+            "tm-review-queue__row-heading",
+            "tm-review-queue__row-title",
+            "tm-review-queue__row-risk",
+            "tm-review-queue__row-subtitle",
+            "tm-review-queue__row-content",
+            "tm-review-queue__row-actions",
+            "tm-review-queue__action",
+            "tm-review-queue__spinner",
+            "tm-review-queue__row-icon",
+            "tm-review-queue__row-result",
+            "tm-review-queue__focus",
+            "tm-review-queue__focus-header",
+            "tm-review-queue__position",
+            "tm-review-queue__nav",
+            "tm-review-queue__nav-button",
+            "tm-review-queue__focus-card",
+            "tm-review-queue__focus-title",
+            "tm-review-queue__handled",
+            "tm-review-queue__detail",
+            "tm-review-queue__actions",
+            "tm-review-queue__loading",
+            "tm-review-queue__skeleton",
+            "tm-review-queue__empty",
+            "tm-review-queue__announcements"
+          ],
+          "examples": [
+            {
+              "title": "List mode with filter tabs",
+              "description": "A triage screen: rows sorted by risk and priority, each with its own decisions, and tabs whose counts the host owns.",
+              "code": "<TmReviewQueue TItem=\"InvoiceDto\"\n               Items=\"@_invoices\"\n               IdSelector=\"invoice => invoice.Id\"\n               TitleSelector=\"invoice => invoice.Number\"\n               SubtitleSelector=\"invoice => invoice.Supplier\"\n               RiskSelector=\"invoice => invoice.Risk\"\n               PrioritySelector=\"invoice => invoice.Priority\"\n               Actions=\"ReviewQueueActions.Decisions\"\n               OnAction=\"HandleActionAsync\"\n               Tabs=\"@_tabs\"\n               @bind-ActiveTabId=\"_activeTabId\" />"
+            },
+            {
+              "title": "Focus mode, one item at a time",
+              "description": "A review session with a detail preview and a position counter; on a mobile container the actions move into the action bar.",
+              "code": "<TmReviewQueue TItem=\"InvoiceDto\"\n               Items=\"@_invoices\"\n               Mode=\"ReviewQueueMode.Focus\"\n               IdSelector=\"invoice => invoice.Id\"\n               TitleSelector=\"invoice => invoice.Number\"\n               RiskSelector=\"invoice => invoice.Risk\"\n               AutoAdvance=\"true\"\n               OnAction=\"HandleActionAsync\">\n    <DetailTemplate Context=\"invoice\">\n        <TmApprovalCard Title=\"@invoice.Number\" Risk=\"@invoice.Risk\" />\n    </DetailTemplate>\n</TmReviewQueue>"
+            }
+          ]
+        },
+        {
           "itemName": "TmAuditLogViewer",
           "kind": "Component",
           "category": "Audit Log",
@@ -31264,6 +31570,10 @@
           "kind": "Css"
         },
         {
+          "path": "src/Tempo.Blazor/wwwroot/css/components/_review-queue.css",
+          "kind": "Css"
+        },
+        {
           "path": "src/Tempo.Blazor/wwwroot/css/components/_rich-editor-full.css",
           "kind": "Css"
         },
@@ -31725,11 +32035,11 @@
         }
       ],
       "summary": {
-        "itemCount": 411,
-        "manualItemCount": 411,
-        "generatedItemCount": 403,
+        "itemCount": 412,
+        "manualItemCount": 412,
+        "generatedItemCount": 404,
         "generatedOnlyItemCount": 0,
-        "componentCount": 221,
+        "componentCount": 222,
         "publicApiTypeCount": 182
       }
     },
@@ -73216,6 +73526,7 @@
           "Tempo.Blazor.Abstractions.Layout",
           "Tempo.Blazor.Abstractions.Models",
           "Tempo.Blazor.Abstractions.Models.Approvals",
+          "Tempo.Blazor.Abstractions.Models.Reviews",
           "Tempo.Blazor.Abstractions.PivotTable",
           "Tempo.Blazor.Abstractions.Shared",
           "Tempo.Blazor.Abstractions.Wireframe.Export",
@@ -91427,6 +91738,206 @@
           "packageId": "Tempo.Blazor.Abstractions",
           "sourcePath": "src/Tempo.Blazor.Abstractions/Models/RedactionModels.cs",
           "documentationStatus": "merged"
+        },
+        {
+          "itemName": "ReviewQueueAction",
+          "kind": "Enum",
+          "category": "Models",
+          "namespace": "Tempo.Blazor.Abstractions.Models.Reviews",
+          "description": "Which button produced a ReviewQueueActionArgs<TItem>.",
+          "packageId": "Tempo.Blazor.Abstractions",
+          "sourcePath": "src/Tempo.Blazor.Abstractions/Models/Reviews/ReviewQueueAction.cs",
+          "documentationStatus": "merged"
+        },
+        {
+          "itemName": "ReviewQueueActionArgs<TItem>",
+          "kind": "Class",
+          "category": "Models",
+          "namespace": "Tempo.Blazor.Abstractions.Models.Reviews",
+          "description": "One raised decision of a review queue: which item, which verb, and — for a host-defined QuickAction — which quick action fired. TmReviewQueue<TItem> awaits the host's OnAction callback with these args and only resolves the item when it completes without throwing, so a failed save keeps the item pending and the queue usable.",
+          "packageId": "Tempo.Blazor.Abstractions",
+          "sourcePath": "src/Tempo.Blazor.Abstractions/Models/Reviews/ReviewQueueActionArgs.cs",
+          "documentationStatus": "merged",
+          "typeParameters": [
+            {
+              "name": "TItem",
+              "description": "Generic type parameter TItem."
+            }
+          ],
+          "members": [
+            {
+              "name": "Action",
+              "kind": "Property",
+              "type": "ReviewQueueAction",
+              "description": "Which verb fired."
+            },
+            {
+              "name": "AvailableActions",
+              "kind": "Property",
+              "type": "ReviewQueueActions",
+              "description": "The verb set the queue had enabled for this interaction."
+            },
+            {
+              "name": "IsApprove",
+              "kind": "Property",
+              "type": "bool",
+              "description": "Whether the item was approved."
+            },
+            {
+              "name": "IsEdit",
+              "kind": "Property",
+              "type": "bool",
+              "description": "Whether the item was marked as reviewed with changes."
+            },
+            {
+              "name": "IsQuickAction",
+              "kind": "Property",
+              "type": "bool",
+              "description": "Whether a host-defined quick action fired."
+            },
+            {
+              "name": "IsReject",
+              "kind": "Property",
+              "type": "bool",
+              "description": "Whether the item was rejected."
+            },
+            {
+              "name": "IsSkip",
+              "kind": "Property",
+              "type": "bool",
+              "description": "Whether the item was deferred (still pending after the callback)."
+            },
+            {
+              "name": "Item",
+              "kind": "Property",
+              "type": "TItem",
+              "description": "The item the decision belongs to."
+            },
+            {
+              "name": "QuickActionId",
+              "kind": "Property",
+              "type": "string?",
+              "description": "The quick action's id when Action is QuickAction; otherwise null."
+            }
+          ]
+        },
+        {
+          "itemName": "ReviewQueueActions",
+          "kind": "Enum",
+          "category": "Models",
+          "namespace": "Tempo.Blazor.Abstractions.Models.Reviews",
+          "description": "The built-in decisions TmReviewQueue<TItem> offers for an item. A flagged set, so a host enables exactly the verbs its workflow has: a document queue usually offers Approve and Reject, a content queue adds Edit and Skip.",
+          "packageId": "Tempo.Blazor.Abstractions",
+          "sourcePath": "src/Tempo.Blazor.Abstractions/Models/Reviews/ReviewQueueActions.cs",
+          "documentationStatus": "merged"
+        },
+        {
+          "itemName": "ReviewQueueMode",
+          "kind": "Enum",
+          "category": "Models",
+          "namespace": "Tempo.Blazor.Abstractions.Models.Reviews",
+          "description": "How TmReviewQueue<TItem> presents the items it was given.",
+          "packageId": "Tempo.Blazor.Abstractions",
+          "sourcePath": "src/Tempo.Blazor.Abstractions/Models/Reviews/ReviewQueueMode.cs",
+          "documentationStatus": "merged"
+        },
+        {
+          "itemName": "ReviewQueueQuickAction",
+          "kind": "Class",
+          "category": "Models",
+          "namespace": "Tempo.Blazor.Abstractions.Models.Reviews",
+          "description": "A host-defined button of a review queue row — the \"decision inbox\" variant, where an item is resolved with two purpose-named buttons (\"Approve & file\", \"Send back to the author\") instead of the built-in verbs. Activating one raises OnAction with QuickAction and this action's Id. Like every action it resolves the item only when the callback completes without throwing, and the localized result announced to screen readers uses Label as the verb.",
+          "packageId": "Tempo.Blazor.Abstractions",
+          "sourcePath": "src/Tempo.Blazor.Abstractions/Models/Reviews/ReviewQueueQuickAction.cs",
+          "documentationStatus": "merged",
+          "members": [
+            {
+              "name": "AriaLabel",
+              "kind": "Property",
+              "type": "string?",
+              "description": "Accessible name override for the row button. When omitted the button is named by a localized \"<label>: <item title>\" template (WCAG 2.4.6 — a row of three identically named \"Approve\" buttons is indistinguishable in a screen reader's button list)."
+            },
+            {
+              "name": "Icon",
+              "kind": "Property",
+              "type": "string?",
+              "description": "Optional icon name (an IconNames value or a registered icon)."
+            },
+            {
+              "name": "Id",
+              "kind": "Property",
+              "type": "string",
+              "description": "Stable identity of the action, carried in QuickActionId. Required and unique within the queue."
+            },
+            {
+              "name": "Label",
+              "kind": "Property",
+              "type": "string",
+              "description": "The visible button label. Required — it is also the verb the live region announces."
+            },
+            {
+              "name": "Variant",
+              "kind": "Property",
+              "type": "ReviewQueueQuickActionVariant",
+              "description": "The button's visual weight. Default Secondary."
+            }
+          ]
+        },
+        {
+          "itemName": "ReviewQueueQuickActionVariant",
+          "kind": "Enum",
+          "category": "Models",
+          "namespace": "Tempo.Blazor.Abstractions.Models.Reviews",
+          "description": "The visual weight of a ReviewQueueQuickAction.",
+          "packageId": "Tempo.Blazor.Abstractions",
+          "sourcePath": "src/Tempo.Blazor.Abstractions/Models/Reviews/ReviewQueueQuickActionVariant.cs",
+          "documentationStatus": "merged"
+        },
+        {
+          "itemName": "ReviewQueueSort",
+          "kind": "Enum",
+          "category": "Models",
+          "namespace": "Tempo.Blazor.Abstractions.Models.Reviews",
+          "description": "The order TmReviewQueue<TItem> presents its items in. Sorting is stable: items with an equal rank keep the order the host supplied them in, so a re-render never shuffles rows.",
+          "packageId": "Tempo.Blazor.Abstractions",
+          "sourcePath": "src/Tempo.Blazor.Abstractions/Models/Reviews/ReviewQueueSort.cs",
+          "documentationStatus": "merged"
+        },
+        {
+          "itemName": "ReviewQueueTab",
+          "kind": "Class",
+          "category": "Models",
+          "namespace": "Tempo.Blazor.Abstractions.Models.Reviews",
+          "description": "One filter tab of a review queue: a stable id the host filters Items by, the visible title and an optional count shown as a badge. The queue renders the tab strip and raises ActiveTabIdChanged; it never filters the items itself, because only the host knows what \"Open\" or \"Needs my review\" means for its data. The count is the host's number for the SAME query, so it always agrees with the list the host passes back.",
+          "packageId": "Tempo.Blazor.Abstractions",
+          "sourcePath": "src/Tempo.Blazor.Abstractions/Models/Reviews/ReviewQueueTab.cs",
+          "documentationStatus": "merged",
+          "members": [
+            {
+              "name": "Count",
+              "kind": "Property",
+              "type": "int?",
+              "description": "Optional badge count for this tab — normally the number of items the tab's query returns. Null renders no badge; zero renders \"0\" (an empty tab still reports its emptiness)."
+            },
+            {
+              "name": "Icon",
+              "kind": "Property",
+              "type": "string?",
+              "description": "Optional icon name (an IconNames value or a registered icon)."
+            },
+            {
+              "name": "Id",
+              "kind": "Property",
+              "type": "string",
+              "description": "Stable identity of the tab, used as the tab panel id. Required."
+            },
+            {
+              "name": "Title",
+              "kind": "Property",
+              "type": "string",
+              "description": "The visible tab label. Required."
+            }
+          ]
         },
         {
           "itemName": "SchedulerEventContext",
@@ -112121,12 +112632,12 @@
       ],
       "libraryExamples": [],
       "summary": {
-        "itemCount": 1554,
-        "manualItemCount": 1554,
-        "generatedItemCount": 1537,
+        "itemCount": 1562,
+        "manualItemCount": 1562,
+        "generatedItemCount": 1545,
         "generatedOnlyItemCount": 0,
         "componentCount": 0,
-        "publicApiTypeCount": 1537
+        "publicApiTypeCount": 1545
       }
     },
     {
@@ -129119,10 +129630,10 @@
   ],
   "summary": {
     "packageCount": 28,
-    "itemCount": 3427,
-    "manualItemCount": 3427,
+    "itemCount": 3436,
+    "manualItemCount": 3436,
     "generatedOnlyItemCount": 0,
-    "componentCount": 520,
-    "publicApiTypeCount": 2854
+    "componentCount": 521,
+    "publicApiTypeCount": 2862
   }
 }
