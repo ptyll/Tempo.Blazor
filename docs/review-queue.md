@@ -222,3 +222,10 @@ the BEM modifiers `tm-review-queue--list`, `--focus` and `--busy`.
 
 Nothing to migrate: the component, its models, its resource keys and its stylesheet are new, and no
 existing component changed.
+
+## Demo and tests
+
+The demo page is `/human-in-the-loop` (demo `HumanInTheLoopPage`): twelve invoices in both presentations
+with the A/E/R/S shortcuts, auto-advance and a host-owned counter readout. Component contract:
+`tests/Tempo.Blazor.Tests/Approvals/TmReviewQueueTests.cs`; demo contract:
+`HumanInTheLoopDemoPageTests`; browser lane: `HumanInTheLoopE2ETests` (WASM).

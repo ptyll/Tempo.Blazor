@@ -152,12 +152,13 @@ managed hosts instead, start the four apps above and set
 
 ## Code Organization
 
-### Component Categories (29 folders in `src/Tempo.Blazor/Components/`)
+### Component Categories (30 folders in `src/Tempo.Blazor/Components/`)
 
 | Category | Components |
 |----------|------------|
 | Activity | `TmActivityLog`, `TmActivityComments`, `TmActivityAttachments`, `TmActivityTimeline`, `TmRichEditorFull`, `TmRichEditorSimple` |
 | AITools | `TmAIPrompt` |
+| Approvals | `TmApprovalCard`, `TmReviewQueue` (generic, List/Focus), `TmInlineDiff`, `TmSuggestionCard` — the human-in-the-loop decision surfaces ([docs/approval-card.md](docs/approval-card.md), [docs/review-queue.md](docs/review-queue.md), [docs/inline-diff.md](docs/inline-diff.md), [docs/suggestion-card.md](docs/suggestion-card.md)); `TmPermissionRequest` lives in the AI package ([docs/permission-request.md](docs/permission-request.md)); demo: `/human-in-the-loop` |
 | Chat | `TmChat`, `TmChatBubble`, `TmTypedChat` (generic wrapper composed over `TmChat`) |
 | Avatars | `TmAvatar`, `TmAvatarGroup` |
 | Buttons | `TmButton`, `TmSplitButton`, `TmCopyButton` |

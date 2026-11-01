@@ -214,3 +214,10 @@ rendered declaratively (no native renderer). Contract test:
 `_ExpiringSoon`, `_ExpiredAnnouncement`, `_ApprovedSummary`, `_RejectedSummary`,
 `_CancelledSummary`, `_Undo`, `_UndoLabel`, `_UndoAnnouncement`, `_UnknownDecider`,
 `_ApproveAnnouncement`, `_RejectAnnouncement`, `_Error`, `_DetailsLabel`.
+
+## Demo and tests
+
+The demo page is `/human-in-the-loop` (demo `HumanInTheLoopPage`): an invoice release with a half-hour
+deadline, a 30-second Undo window and the keyboard path. Component contract:
+`tests/Tempo.Blazor.Tests/Approvals/TmApprovalCardTests.cs`; demo contract:
+`HumanInTheLoopDemoPageTests`; browser lane: `HumanInTheLoopE2ETests` (WASM).

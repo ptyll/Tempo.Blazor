@@ -160,3 +160,11 @@ without it the row says only "42 min left".
 - Styling: `_content/Tempo.Blazor.AI/css/tempo-blazor-ai.css` (the `_ai-permission.css` partial). Every
   rule reads `--tm-*` tokens; there is no JS in this component.
 - Wireframe: the `permission-request` role with a declarative stencil in the `Feedback` category.
+
+## Demo and tests
+
+The demo section lives on the AI conversation page (`/ai-conversation`, the demo
+`PermissionRequestDemoSection`): `web.search` with its scopes, the duration group, the countdown row and
+Revoke. Component contract: `tests/Tempo.Blazor.Tests/Components/AI/TmPermissionRequestTests.cs`; demo
+contract: `PermissionRequestDemoSectionTests`; browser lane: `HumanInTheLoopE2ETests` (WASM, the
+permission spec).

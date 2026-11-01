@@ -130,3 +130,10 @@ such an input: it renders the coarser hunks, sets `data-fallback` and shows a lo
 | `AcceptHunkAsync(id)` / `RejectHunkAsync(id)` | Decide one change programmatically. |
 | `AcceptAllAsync()` / `RejectAllAsync()` | Bulk decisions. |
 | `UndoAsync()` | Restore the previous accepted set. |
+
+## Demo and tests
+
+The demo page is `/human-in-the-loop` (demo `HumanInTheLoopPage`): the "AI rewrite of one paragraph"
+diff with three changes, the per-change decisions and the resulting text. Component contract:
+`tests/Tempo.Blazor.Tests/Approvals/TmInlineDiffTests.cs`; demo contract:
+`HumanInTheLoopDemoPageTests`; browser lane: `HumanInTheLoopE2ETests` (WASM).

@@ -100,3 +100,10 @@ error. Dismissal is not undoable.
 | `Announcement` | The latest announcement (mirrored into the live region). |
 | `AcceptAsync()` / `DismissAsync()` | Run the decision programmatically. |
 | `UndoAsync()` | Withdraw an acceptance while the window is open. |
+
+## Demo and tests
+
+The demo page is `/human-in-the-loop` (demo `HumanInTheLoopPage`): a suggestion with a confidence, a
+rationale disclosure, two alternatives and an Undo window. Component contract:
+`tests/Tempo.Blazor.Tests/Approvals/TmSuggestionCardTests.cs`; demo contract:
+`HumanInTheLoopDemoPageTests`; browser lane: `HumanInTheLoopE2ETests` (WASM).

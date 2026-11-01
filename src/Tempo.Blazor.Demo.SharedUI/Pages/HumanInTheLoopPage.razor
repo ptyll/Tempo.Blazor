@@ -1,0 +1,573 @@
+@page "/human-in-the-loop"
+@using Tempo.Blazor.Abstractions.Models.Approvals
+@using Tempo.Blazor.Abstractions.Models.Diffs
+@using Tempo.Blazor.Abstractions.Models.Reviews
+@using Tempo.Blazor.Components.Approvals
+@using Tempo.Blazor.Diff
+@inject ITmLocalizer Loc
+
+<PageTitle>@Loc["TmDemo_HumanInTheLoop_Title"] - Tempo.Blazor</PageTitle>
+
+@* Demo-only chrome of this page. The four decision surfaces are styled by their components; these rules
+   only frame them (the page header, the demo action row, the status list and the result line) with the
+   library's own tokens, so the frame follows the light/dark theme without a second palette. *@
+<style>
+    .hitl-title {
+        margin: 0 0 var(--tm-space-2);
+        color: var(--tm-text-primary);
+        font-size: var(--tm-font-size-2xl);
+        font-weight: var(--tm-font-weight-bold);
+        line-height: var(--tm-line-height-tight);
+    }
+
+    .hitl-intro,
+    .hitl-section-intro {
+        margin: 0;
+        max-inline-size: 64rem;
+        color: var(--tm-text-secondary);
+        font-size: var(--tm-font-size-sm);
+    }
+
+    .hitl-page-header {
+        margin-block-end: var(--tm-space-8);
+    }
+
+    .hitl-section {
+        margin-block-end: var(--tm-space-8);
+    }
+
+    .hitl-section-heading {
+        margin: 0 0 var(--tm-space-1);
+        color: var(--tm-text-primary);
+        font-size: var(--tm-font-size-lg);
+        font-weight: var(--tm-font-weight-semibold);
+    }
+
+    .hitl-demo-actions {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: var(--tm-space-3);
+        margin-block: var(--tm-space-3);
+    }
+
+    .hitl-demo-button {
+        min-block-size: var(--tm-touch-target);
+        padding-inline: var(--tm-space-4);
+        padding-block: var(--tm-space-2);
+        border: var(--tm-border-width) solid var(--tm-border-color);
+        border-radius: var(--tm-radius-md);
+        background: var(--tm-bg-surface);
+        color: var(--tm-text-primary);
+        font-size: var(--tm-font-size-sm);
+        font-weight: var(--tm-font-weight-medium);
+        cursor: pointer;
+    }
+
+    .hitl-demo-button:hover {
+        border-color: var(--tm-color-primary);
+        color: var(--tm-color-primary-text);
+    }
+
+    .hitl-demo-button[aria-pressed='true'] {
+        border-color: var(--tm-color-primary);
+        color: var(--tm-color-primary-text);
+        font-weight: var(--tm-font-weight-semibold);
+    }
+
+    .hitl-demo-button:focus-visible {
+        /* The box shadow is the visible ring, the transparent outline is its fallback: Windows High Contrast
+           strips box shadows, so without an outline the demo buttons would have no focus indicator there at
+           all (WCAG 2.4.7). The forced-colors block below repaints the outline in the system's colour. */
+        outline: 2px solid transparent;
+        outline-offset: 2px;
+        box-shadow: var(--tm-focus-ring);
+    }
+
+    .hitl-demo-hint {
+        margin: 0;
+        color: var(--tm-text-secondary);
+        font-size: var(--tm-font-size-sm);
+    }
+
+    .hitl-demo-status {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+        gap: var(--tm-space-3);
+        margin: var(--tm-space-3) 0 0;
+        padding: var(--tm-space-3);
+        border: var(--tm-border-width) dashed var(--tm-border-color);
+        border-radius: var(--tm-radius-md);
+        background: var(--tm-bg-surface);
+        font-size: var(--tm-font-size-sm);
+    }
+
+    .hitl-demo-status__item dt {
+        margin: 0;
+        color: var(--tm-text-secondary);
+    }
+
+    .hitl-demo-status__item dd {
+        margin: 0;
+        color: var(--tm-text-primary);
+        font-weight: var(--tm-font-weight-medium);
+        overflow-wrap: anywhere;
+    }
+
+    .hitl-demo-result {
+        margin: var(--tm-space-3) 0 0;
+        padding: var(--tm-space-3);
+        border: var(--tm-border-width) solid var(--tm-border-color);
+        border-radius: var(--tm-radius-md);
+        background: var(--tm-bg-surface);
+        color: var(--tm-text-primary);
+        font-size: var(--tm-font-size-sm);
+        overflow-wrap: anywhere;
+    }
+
+    .hitl-preview {
+        margin: 0;
+        color: var(--tm-text-secondary);
+        font-size: var(--tm-font-size-sm);
+    }
+
+    /* High Contrast forces every colour to a system value, and a transparent outline is not exempt: without
+       this rule the ring above stays invisible where it is the ONLY focus indicator. */
+    @@media (forced-colors: active) {
+        .hitl-demo-button:focus-visible {
+            outline-color: Highlight;
+        }
+    }
+</style>
+
+<div class="hitl-page" data-testid="hitl-demo">
+    <div class="hitl-page-header">
+        <h1 class="hitl-title">@Loc["TmDemo_HumanInTheLoop_Title"]</h1>
+        <p class="hitl-intro">@Loc["TmDemo_HumanInTheLoop_Intro"]</p>
+    </div>
+
+    @* ── Approval with a deadline and an Undo window ─────────────────────────────────────────── *@
+    <section class="demo-section hitl-section" data-testid="hitl-approval-section">
+        <h2 class="hitl-section-heading">@Loc["TmDemo_HumanInTheLoop_ApprovalHeading"]</h2>
+        <p class="hitl-section-intro">@Loc["TmDemo_HumanInTheLoop_ApprovalIntro"]</p>
+
+        <div class="showcase-card">
+            <TmApprovalCard @key="_approvalKey"
+                            DataTestId="hitl-approval"
+                            Title="@Loc["TmDemo_HumanInTheLoop_ApprovalTitle"]"
+                            Description="@Loc["TmDemo_HumanInTheLoop_ApprovalDescription"]"
+                            Risk="ApprovalRisk.High"
+                            Details="ApprovalDetails"
+                            ExpiresAt="_approvalExpiresAt"
+                            UndoWindow="DecisionUndoWindow"
+                            DecidedBy="@Loc["TmDemo_HumanInTheLoop_ApprovalDecider"]"
+                            @bind-State="_approvalState"
+                            OnDecision="HandleApprovalDecisionAsync"
+                            OnUndo="HandleApprovalUndoAsync">
+                <PreviewContent>
+                    <p class="hitl-preview">@Loc["TmDemo_HumanInTheLoop_ApprovalPreview"]</p>
+                </PreviewContent>
+            </TmApprovalCard>
+
+            <div class="hitl-demo-actions">
+                <button type="button"
+                        class="hitl-demo-button"
+                        data-testid="hitl-approval-reset"
+                        @onclick="ResetApprovalAsync">
+                    @Loc["TmDemo_HumanInTheLoop_ApprovalReset"]
+                </button>
+                <span class="hitl-demo-hint">@Loc["TmDemo_HumanInTheLoop_ApprovalKeyboardHint"]</span>
+            </div>
+
+            <dl class="hitl-demo-status" aria-label="@Loc["TmDemo_HumanInTheLoop_ApprovalStatusLabel"]">
+                <div class="hitl-demo-status__item">
+                    <dt>@Loc["TmDemo_HumanInTheLoop_ApprovalStateLabel"]</dt>
+                    <dd data-testid="hitl-approval-state">@ApprovalStateLabel</dd>
+                </div>
+                <div class="hitl-demo-status__item">
+                    <dt>@Loc["TmDemo_HumanInTheLoop_ApprovalDecisions"]</dt>
+                    <dd data-testid="hitl-approval-decisions">@_approvalDecisions</dd>
+                </div>
+                <div class="hitl-demo-status__item">
+                    <dt>@Loc["TmDemo_HumanInTheLoop_ApprovalUndone"]</dt>
+                    <dd data-testid="hitl-approval-undone">@_approvalUndone</dd>
+                </div>
+            </dl>
+        </div>
+    </section>
+
+    @* ── The review queue in both presentations ─────────────────────────────────────────────── *@
+    <section class="demo-section hitl-section" data-testid="hitl-queue-section">
+        <h2 class="hitl-section-heading">@Loc["TmDemo_HumanInTheLoop_QueueHeading"]</h2>
+        <p class="hitl-section-intro">@Loc["TmDemo_HumanInTheLoop_QueueIntro"]</p>
+
+        <div class="showcase-card">
+            <div class="hitl-demo-actions">
+                <span class="hitl-demo-hint">@Loc["TmDemo_HumanInTheLoop_QueueModeLabel"]</span>
+                <button type="button"
+                        class="hitl-demo-button"
+                        data-testid="hitl-queue-mode-list"
+                        aria-pressed="@(IsQueueList ? "true" : "false")"
+                        @onclick="ShowQueueList">
+                    @Loc["TmDemo_HumanInTheLoop_QueueModeList"]
+                </button>
+                <button type="button"
+                        class="hitl-demo-button"
+                        data-testid="hitl-queue-mode-focus"
+                        aria-pressed="@(IsQueueList ? "false" : "true")"
+                        @onclick="ShowQueueFocus">
+                    @Loc["TmDemo_HumanInTheLoop_QueueModeFocus"]
+                </button>
+                <button type="button"
+                        class="hitl-demo-button"
+                        data-testid="hitl-queue-reset"
+                        @onclick="ResetQueueAsync">
+                    @Loc["TmDemo_HumanInTheLoop_QueueReset"]
+                </button>
+                <span class="hitl-demo-hint">@Loc["TmDemo_HumanInTheLoop_QueueShortcutsHint"]</span>
+            </div>
+
+            <TmReviewQueue @key="_queueKey"
+                           TItem="HumanInTheLoopPageSamples.ReviewDocument"
+                           DataTestId="hitl-queue"
+                           Items="HumanInTheLoopPageSamples.ReviewItems"
+                           IdSelector="item => item.Id"
+                           TitleSelector="item => item.Number"
+                           SubtitleSelector="item => item.Supplier"
+                           RiskSelector="item => item.Risk"
+                           PrioritySelector="item => item.Priority"
+                           Mode="_queueMode"
+                           Actions="ReviewQueueActions.All"
+                           OnAction="HandleQueueActionAsync" />
+
+            <dl class="hitl-demo-status" aria-label="@Loc["TmDemo_HumanInTheLoop_QueueStatusLabel"]">
+                <div class="hitl-demo-status__item">
+                    <dt>@Loc["TmDemo_HumanInTheLoop_QueuePending"]</dt>
+                    <dd data-testid="hitl-queue-pending">@QueuePendingCount</dd>
+                </div>
+                <div class="hitl-demo-status__item">
+                    <dt>@Loc["TmDemo_HumanInTheLoop_QueueHandled"]</dt>
+                    <dd data-testid="hitl-queue-handled">@_queueHandled</dd>
+                </div>
+                <div class="hitl-demo-status__item">
+                    <dt>@Loc["TmDemo_HumanInTheLoop_QueueLast"]</dt>
+                    <dd data-testid="hitl-queue-last">@(_queueLastAction ?? Loc["TmDemo_HumanInTheLoop_QueueNoAction"])</dd>
+                </div>
+            </dl>
+        </div>
+    </section>
+
+    @* ── The inline diff of an AI rewrite ───────────────────────────────────────────────────── *@
+    <section class="demo-section hitl-section" data-testid="hitl-diff-section">
+        <h2 class="hitl-section-heading">@Loc["TmDemo_HumanInTheLoop_DiffHeading"]</h2>
+        <p class="hitl-section-intro">@Loc["TmDemo_HumanInTheLoop_DiffIntro"]</p>
+
+        <div class="showcase-card">
+            <TmInlineDiff DataTestId="hitl-diff"
+                          OldText="@HumanInTheLoopPageSamples.OriginalParagraph"
+                          NewText="@HumanInTheLoopPageSamples.ProposedParagraph"
+                          Mode="InlineDiffMode.Review"
+                          AcceptedHunkIds="_acceptedHunks"
+                          AcceptedHunkIdsChanged="HandleAcceptedHunksChanged"
+                          ResultChanged="HandleDiffResultChanged" />
+
+            <div class="hitl-demo-actions">
+                <button type="button"
+                        class="hitl-demo-button"
+                        data-testid="hitl-diff-reset"
+                        @onclick="ResetDiffAsync">
+                    @Loc["TmDemo_HumanInTheLoop_DiffReset"]
+                </button>
+                <span class="hitl-demo-hint" data-testid="hitl-diff-accepted">
+                    @string.Format(Loc["TmDemo_HumanInTheLoop_DiffAccepted"], _acceptedHunks.Count, _diffChangeCount)
+                </span>
+            </div>
+
+            <p class="hitl-demo-result" data-testid="hitl-diff-result">@_diffResult</p>
+        </div>
+    </section>
+
+    @* ── A machine suggestion ───────────────────────────────────────────────────────────────── *@
+    <section class="demo-section hitl-section" data-testid="hitl-suggestion-section">
+        <h2 class="hitl-section-heading">@Loc["TmDemo_HumanInTheLoop_SuggestionHeading"]</h2>
+        <p class="hitl-section-intro">@Loc["TmDemo_HumanInTheLoop_SuggestionIntro"]</p>
+
+        <div class="showcase-card">
+            <TmSuggestionCard @key="_suggestionKey"
+                              DataTestId="hitl-suggestion"
+                              Title="@Loc["TmDemo_HumanInTheLoop_SuggestionTitle"]"
+                              Text="@Loc["TmDemo_HumanInTheLoop_SuggestionText"]"
+                              Confidence="0.72"
+                              ShowConfidencePercent="true"
+                              Rationale="@Loc["TmDemo_HumanInTheLoop_SuggestionRationale"]"
+                              Alternatives="SuggestionAlternatives"
+                              @bind-SelectedAlternative="_selectedAlternative"
+                              UndoWindow="DecisionUndoWindow"
+                              OnAccept="HandleSuggestionAcceptAsync"
+                              OnDismiss="HandleSuggestionDismissAsync"
+                              OnUndo="HandleSuggestionUndoAsync" />
+
+            <div class="hitl-demo-actions">
+                <button type="button"
+                        class="hitl-demo-button"
+                        data-testid="hitl-suggestion-reset"
+                        @onclick="ResetSuggestionAsync">
+                    @Loc["TmDemo_HumanInTheLoop_SuggestionReset"]
+                </button>
+            </div>
+
+            <p class="hitl-demo-result" data-testid="hitl-suggestion-status">@SuggestionStatusText</p>
+
+            <dl class="hitl-demo-status" aria-label="@Loc["TmDemo_HumanInTheLoop_SuggestionStatusLabel"]">
+                <div class="hitl-demo-status__item">
+                    <dt>@Loc["TmDemo_HumanInTheLoop_Undone"]</dt>
+                    <dd data-testid="hitl-suggestion-undone">@_suggestionUndone</dd>
+                </div>
+            </dl>
+        </div>
+    </section>
+</div>
+
+@code {
+    /// <summary>How long a decision can be taken back on this page (the card and the suggestion share it).</summary>
+    private static readonly TimeSpan DecisionUndoWindow = TimeSpan.FromSeconds(30);
+
+    /// <summary>
+    /// The deadline the card counts down to. Long enough that a visitor reading the page never sees it expire
+    /// (the expiry state itself is covered by the component tests, not by a demo that cannot wait half an hour).
+    /// </summary>
+    private static readonly TimeSpan ApprovalWindow = TimeSpan.FromMinutes(30);
+
+    private ApprovalState _approvalState = ApprovalState.Pending;
+    private DateTimeOffset _approvalExpiresAt;
+    private int _approvalKey;
+    private int _approvalDecisions;
+    private int _approvalUndone;
+
+    private ReviewQueueMode _queueMode = ReviewQueueMode.List;
+    private int _queueKey;
+    private int _queueHandled;
+    private string? _queueLastAction;
+
+    private IReadOnlyList<string> _acceptedHunks = [];
+    private string _diffResult = HumanInTheLoopPageSamples.OriginalParagraph;
+    private int _diffChangeCount;
+
+    private int _suggestionKey;
+    private SuggestionOutcome _suggestionOutcome;
+    private string? _selectedAlternative;
+    private int _suggestionUndone;
+
+    /// <summary>Whether the queue renders the list presentation (the alternative is one item at a time).</summary>
+    private bool IsQueueList => _queueMode == ReviewQueueMode.List;
+
+    /// <summary>Items still waiting for a decision — the queue never removes a resolved one from the list.</summary>
+    private int QueuePendingCount => HumanInTheLoopPageSamples.ReviewItems.Count - _queueHandled;
+
+    /// <summary>The request's state as a localized word (the card shows it too, collapsed).</summary>
+    private string ApprovalStateLabel => _approvalState switch
+    {
+        ApprovalState.Approved => Loc["TmDemo_HumanInTheLoop_StateApproved"],
+        ApprovalState.Rejected => Loc["TmDemo_HumanInTheLoop_StateRejected"],
+        ApprovalState.Expired => Loc["TmDemo_HumanInTheLoop_StateExpired"],
+        ApprovalState.Cancelled => Loc["TmDemo_HumanInTheLoop_StateCancelled"],
+        _ => Loc["TmDemo_HumanInTheLoop_StatePending"],
+    };
+
+    /// <summary>The key/value details of the sample request, resolved on every render so a culture change sticks.</summary>
+    private IReadOnlyList<KeyValuePair<string, string>> ApprovalDetails =>
+    [
+        new(Loc["TmDemo_HumanInTheLoop_DetailAmount"], Loc["TmDemo_HumanInTheLoop_DetailAmountValue"]),
+        new(Loc["TmDemo_HumanInTheLoop_DetailSupplier"], Loc["TmDemo_HumanInTheLoop_DetailSupplierValue"]),
+        new(Loc["TmDemo_HumanInTheLoop_DetailDue"], Loc["TmDemo_HumanInTheLoop_DetailDueValue"]),
+    ];
+
+    /// <summary>The two alternatives the suggestion card offers (labels, so they come from the resources).</summary>
+    private IReadOnlyList<string> SuggestionAlternatives =>
+    [
+        Loc["TmDemo_HumanInTheLoop_SuggestionAlternative1"],
+        Loc["TmDemo_HumanInTheLoop_SuggestionAlternative2"],
+    ];
+
+    /// <summary>What the suggestion's outcome line reads — the outcome plus the alternative that was accepted.</summary>
+    private string SuggestionStatusText => _suggestionOutcome switch
+    {
+        SuggestionOutcome.Accepted when _selectedAlternative is { Length: > 0 } alternative
+            => string.Format(Loc["TmDemo_HumanInTheLoop_SuggestionAcceptedWith"], alternative),
+        SuggestionOutcome.Accepted => Loc["TmDemo_HumanInTheLoop_SuggestionAccepted"],
+        SuggestionOutcome.Dismissed => Loc["TmDemo_HumanInTheLoop_SuggestionDismissed"],
+        _ => Loc["TmDemo_HumanInTheLoop_SuggestionWaiting"],
+    };
+
+    /// <inheritdoc />
+    protected override void OnInitialized()
+    {
+        _approvalExpiresAt = DateTimeOffset.UtcNow.Add(ApprovalWindow);
+
+        // The page counts the changes itself: a host knows its own content, and the count has to be right on
+        // the very first paint (the component's own result is only readable after it has rendered once).
+        _diffChangeCount = TextDiff
+            .Words(HumanInTheLoopPageSamples.OriginalParagraph, HumanInTheLoopPageSamples.ProposedParagraph)
+            .Changes.Count;
+    }
+
+    // ── Approval ─────────────────────────────────────────────────────────────────────────────
+
+    /// <summary>Persists the decision the card raised. The card leaves <c>Pending</c> only when this succeeds.</summary>
+    /// <param name="decision">The decision the reader took.</param>
+    private Task HandleApprovalDecisionAsync(ApprovalDecision decision)
+    {
+        // The demo stores nothing: it counts what it would have persisted, which is exactly what the page's
+        // status list shows. A real host writes the decision (and stamps its own server time) here.
+        _ = decision;
+        _approvalDecisions++;
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    /// <summary>Takes the decision back; the card returns to <c>Pending</c> only when this succeeds.</summary>
+    private Task HandleApprovalUndoAsync()
+    {
+        if (_approvalDecisions > 0)
+        {
+            _approvalDecisions--;
+        }
+
+        _approvalUndone++;
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    /// <summary>Starts a new request: a fresh card (via <c>@key</c>), a new deadline and cleared counters.</summary>
+    private Task ResetApprovalAsync()
+    {
+        _approvalKey++;
+        _approvalState = ApprovalState.Pending;
+        _approvalExpiresAt = DateTimeOffset.UtcNow.Add(ApprovalWindow);
+        _approvalDecisions = 0;
+        _approvalUndone = 0;
+        return Task.CompletedTask;
+    }
+
+    // ── Review queue ─────────────────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Records the decision the queue raised. The queue resolves the item and advances the selection only when
+    /// this completes without throwing, so the page's counters are the host's own bookkeeping.
+    /// </summary>
+    /// <param name="args">The item, the verb and — for a quick action — its id.</param>
+    private Task HandleQueueActionAsync(ReviewQueueActionArgs<HumanInTheLoopPageSamples.ReviewDocument> args)
+    {
+        if (args.Action == ReviewQueueAction.Skip)
+        {
+            // Skip is the one verb that leaves the item pending; the queue moves the selection on itself.
+            return Task.CompletedTask;
+        }
+
+        _queueHandled++;
+        _queueLastAction = string.Format(
+            Loc["TmDemo_HumanInTheLoop_QueueLastAction"],
+            ResultLabel(args.Action),
+            args.Item.Number);
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    private string ResultLabel(ReviewQueueAction action) => action switch
+    {
+        ReviewQueueAction.Approve => Loc["TmReviewQueue_ResultApproved"],
+        ReviewQueueAction.Reject => Loc["TmReviewQueue_ResultRejected"],
+        ReviewQueueAction.Skip => Loc["TmReviewQueue_ResultSkipped"],
+        _ => Loc["TmReviewQueue_ResultEdited"],
+    };
+
+    private Task ShowQueueList()
+    {
+        _queueMode = ReviewQueueMode.List;
+        return Task.CompletedTask;
+    }
+
+    private Task ShowQueueFocus()
+    {
+        _queueMode = ReviewQueueMode.Focus;
+        return Task.CompletedTask;
+    }
+
+    /// <summary>Restarts the queue: a fresh component (via <c>@key</c>) forgets the resolved set.</summary>
+    private Task ResetQueueAsync()
+    {
+        _queueKey++;
+        _queueHandled = 0;
+        _queueLastAction = null;
+        return Task.CompletedTask;
+    }
+
+    // ── Inline diff ──────────────────────────────────────────────────────────────────────────
+
+    /// <summary>Keeps the host-owned accepted set in step with the diff's own decisions.</summary>
+    /// <param name="accepted">The ids of the changes the reader accepted.</param>
+    private Task HandleAcceptedHunksChanged(IReadOnlyList<string> accepted)
+    {
+        _acceptedHunks = accepted;
+        return Task.CompletedTask;
+    }
+
+    /// <summary>Shows the resulting text the component computed — the applied mixture, never a re-implementation.</summary>
+    /// <param name="result">The exact <c>TextDiffResult.Apply</c> output.</param>
+    private Task HandleDiffResultChanged(string result)
+    {
+        _diffResult = result;
+        return Task.CompletedTask;
+    }
+
+    /// <summary>Rejects every change again: an empty accepted set reproduces the original paragraph.</summary>
+    private Task ResetDiffAsync()
+    {
+        _acceptedHunks = [];
+        _diffResult = HumanInTheLoopPageSamples.OriginalParagraph;
+        return Task.CompletedTask;
+    }
+
+    // ── Suggestion ───────────────────────────────────────────────────────────────────────────
+
+    private Task HandleSuggestionAcceptAsync(string accepted)
+    {
+        _suggestionOutcome = SuggestionOutcome.Accepted;
+        _selectedAlternative = accepted;
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    private Task HandleSuggestionDismissAsync()
+    {
+        _suggestionOutcome = SuggestionOutcome.Dismissed;
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    private Task HandleSuggestionUndoAsync()
+    {
+        _suggestionOutcome = SuggestionOutcome.Pending;
+        _suggestionUndone++;
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    /// <summary>Brings the dismissed/accepted suggestion back as a fresh card (via <c>@key</c>).</summary>
+    private Task ResetSuggestionAsync()
+    {
+        _suggestionKey++;
+        _suggestionOutcome = SuggestionOutcome.Pending;
+        _selectedAlternative = null;
+        _suggestionUndone = 0;
+        return Task.CompletedTask;
+    }
+
+    /// <summary>What the suggestion card decided, mirrored by the page so the outcome line can name it.</summary>
+    private enum SuggestionOutcome
+    {
+        Pending,
+        Accepted,
+        Dismissed,
+    }
+}

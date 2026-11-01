@@ -76,7 +76,45 @@ four Abstractions models, the CSS partial and the resource keys are all new; no 
   declarative render) with a built-in vocabulary entry, so "every component has a role" holds.
 - **Docs** — JSON overlays for the component and the four models, bundles regenerated,
   `validate --fail-on-drift` clean; contract in [docs/permission-request.md](docs/permission-request.md).
-  The demo page and the E2E/screenshot lane belong to phase 6 of the plan.
+  The demo page and the E2E/screenshot lane belong to phase 6 of the plan (see below).
+
+### Human-in-the-loop demo, documentation and E2E (plan 10b3966f, phase 6)
+
+The phase that turns the four core decision surfaces and the agent's permission request into one
+runnable, documented and tested story. **No public API change** — demo pages, tests and docs only.
+
+- **Demo page `/human-in-the-loop`** (`src/Tempo.Blazor.Demo.SharedUI/Pages/HumanInTheLoopPage.razor`,
+  NavMenu entry "Human in the Loop") renders four sections, each a REAL component wired to a working
+  host: an approval card with a half-hour deadline, a 30-second Undo window and the keyboard path
+  (`Ctrl`/`⌘`+Enter approves, `Ctrl`/`⌘`+Backspace rejects) next to the request state, the recorded
+  decisions and the undone count; the twelve-item review queue in BOTH presentations (List and the
+  one-at-a-time Focus view with its "Item 3 of 12" counter) with `ReviewQueueActions.All`, the
+  A/E/R/S shortcuts, J/K and arrow navigation, auto-advance and a host-owned pending / reviewed /
+  last-decision readout; the inline diff of an "AI rewrite of one paragraph" with its three changes,
+  the per-change decisions, the bulk actions and the resulting text; and a suggestion card with a
+  72 % confidence, a rationale disclosure, two alternatives and an Undo window. The demo DATA (the two
+  paragraphs, the twelve invoices) lives in `HumanInTheLoopPageSamples`. Each section reports its state
+  in its OWN named `<dl>` ("Approval status" / "Review queue status" / "Suggestion status"), so a
+  screen-reader user listing the page's regions can tell the three readouts apart.
+- **Permission request section on `/ai-conversation`** (`PermissionRequestDemoSection`) — `web.search`
+  on a concrete target with a reason, the four scope radios plus the duration group, the countdown
+  row, Revoke, and the host's own "grant in force" / "revoked" readout.
+- **Localization** — 56 `TmDemo_HumanInTheLoop_*` keys and 9 `TmDemo_AiConversation_Permission*` keys
+  in all four demo tables (`DemoResources{,.cs,.sk,.fr}.json`); the pages render no hardcoded string
+  (a missing key fails the bUnit contract).
+- **Tests** — 18 bUnit cases (`HumanInTheLoopDemoPageTests`, `PermissionRequestDemoSectionTests`)
+  covering every section and every decision path, plus three CSS guards
+  (`HumanInTheLoopDemoPageCssTests`: semantic tokens and no raw palette step, the visible
+  `--tm-focus-ring` with a forced-colors `Highlight` outline, 44 px coarse-pointer targets, and no
+  animation of the page's own). 9 WASM Playwright specs
+  (`tests/Tempo.Blazor.E2E/Approvals/HumanInTheLoopE2ETests.cs`): keyboard approval + Undo, the live
+  countdown and the risk words, A/R/S with auto-advance plus the queue restart, the Focus
+  presentation, accepting 2 of 3 diff changes with the exact resulting text, permission grant/revoke
+  on the AI page, a scoped axe scan of the decided state (with the one-polite-live-region contract
+  per component) and the light/dark 1440 + 375 px screenshots under
+  `tests/Tempo.Blazor.E2E/__screenshots__/human-in-the-loop/`.
+- **Docs** — the AGENTS.md component categories gained the `Approvals` row (linking all five
+  contracts and the demo path).
 
 ### Human-in-the-loop components — `TmApprovalCard` (plan 10b3966f, phase 2)
 
