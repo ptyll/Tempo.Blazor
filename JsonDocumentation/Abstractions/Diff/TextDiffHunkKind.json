@@ -1,0 +1,36 @@
+{
+  "kind": "Enum",
+  "category": "Diff",
+  "namespace": "Tempo.Blazor.Diff",
+  "description": "Nature of a single TextDiffHunk. It drives both the rendering (inserted text, removed text) and the decision a consumer offers: a Replace hunk is one decision even though it covers both sides.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/Diff/TextDiffHunkKind.cs",
+  "documentationStatus": "generated",
+  "members": [
+    {
+      "name": "Equal",
+      "kind": "Field",
+      "type": "TextDiffHunkKind",
+      "description": "The text is present in both inputs; there is nothing to decide."
+    },
+    {
+      "name": "Insert",
+      "kind": "Field",
+      "type": "TextDiffHunkKind",
+      "description": "Text exists only in the new input, so OldText is empty."
+    },
+    {
+      "name": "Delete",
+      "kind": "Field",
+      "type": "TextDiffHunkKind",
+      "description": "Text exists only in the old input, so NewText is empty."
+    },
+    {
+      "name": "Replace",
+      "kind": "Field",
+      "type": "TextDiffHunkKind",
+      "description": "Old text was replaced by new text; both sides are accepted or rejected together."
+    }
+  ],
+  "itemName": "TextDiffHunkKind"
+}

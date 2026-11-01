@@ -22,6 +22,55 @@
 > (Fáze 15b). Contracts: [docs/modeling-editor.md](docs/modeling-editor.md),
 > [docs/diagram-editor.md](docs/diagram-editor.md).
 
+### Human-in-the-loop components — shared diff engine in `Tempo.Blazor.Abstractions` (plan 10b3966f, phase 1)
+
+The diff algorithms that existed twice (word level in `DocumentTextDiffHelper`, line level in
+`TmTextLineDiff`) now live in ONE UI-free engine, `Tempo.Blazor.Diff.TextDiff` in
+`Tempo.Blazor.Abstractions` (no Blazor reference, so a backend can diff too). Both historical
+helpers became delegating façades: their public API, their segment/line shape and their rendered
+output are unchanged. **No breaking change is introduced by this phase** — the only visible
+differences are documented below.
+
+- **`Tempo.Blazor.Diff` types** (`src/Tempo.Blazor.Abstractions/Diff/`) — `TextDiff.Words(…)` /
+  `TextDiff.Lines(…)` return a `TextDiffResult` whose `Hunks` **tile both inputs**: concatenating
+  `TextDiffHunk.OldText` over all hunks reproduces the old text and concatenating `NewText`
+  reproduces the new text, character for character. A hunk carries a deterministic `Id`
+  (`replace-15-15`), `Kind` (`Equal` / `Insert` / `Delete` / `Replace`), both texts, both
+  `TextRange` spans (character offsets) and the `OldUnitCount` / `NewUnitCount` (tokens or lines).
+  `TextDiffResult.Apply(acceptedHunkIds)` takes every accepted hunk from the new text and every
+  other hunk from the old one, so `Apply([])` returns the original text and
+  `Apply(result.HunkIds)` returns the new text — an arbitrary subset in between yields a valid
+  text where the rejected changes keep their old wording. `Changes` exposes only the hunks a
+  reviewer can decide on.
+- **Performance** — the longest-common-subsequence table is built only for the region between the
+  common prefix and the common suffix, so editing one word of a long document costs a table over
+  the changed neighbourhood instead of over the whole input. Above `TextDiffOptions.MaxTokens`
+  (default 20 000 tokens per input) or `TextDiffOptions.MaxCells` (default 4 000 000 table cells)
+  the comparison degrades instead of throwing: a word diff falls back to line level, a line diff to
+  a single whole-text change, reported through `TextDiffResult.Fallback`
+  (`None` / `LineLevel` / `SingleChange`) and `IsDegraded`.
+- **`DocumentTextDiffHelper.Diff`** keeps its `Unchanged` / `Removed` / `Added` segments and reads
+  the same for the same input (pinned by explicit goldens plus a frozen copy of the pre-extraction
+  algorithm compared over a corpus that includes punctuation, repeated whitespace, diacritics and
+  CRLF). **Visible difference for very large inputs:** above the token limit the segments now
+  describe whole lines rather than words, instead of the comparison allocating a quadratic table.
+  `DocumentTextDiffResult.IsDegraded` (new, additive, `init`-only) reports that the segments are
+  coarse, so a review UI can say the comparison is approximate instead of presenting a line-level
+  result as word-level.
+- **`TmTextLineDiff.Compute`** keeps its `TmFileVersionDiffLine` output, 1-based line numbers and
+  removed-then-added ordering, and still normalizes CRLF to LF. `TextDiff.Lines` itself compares the
+  text it is given, so a caller that wants the normalization has to apply it (the façade does).
+  **Visible difference for very large inputs:** above `DefaultMaxTokens` / `DefaultMaxCells` the
+  result is one block of removed lines followed by one block of added lines covering the whole
+  text, instead of an allocation of up to hundreds of millions of table cells.
+- **One tokenizer** — `DocumentTextDiffHelper` no longer carries its own copy of the word-token
+  regex: it re-joins hunk tokens through the engine's `DiffAlgorithm.TokenizeWords`, so the join can
+  never drift from the boundaries the engine computed.
+- **Documentation** — JSON overlays for the eight new public types under
+  `JsonDocumentation/Abstractions/Diff/`, with the enum values documented; the
+  `DocumentTextDiffHelper` and `TmTextLineDiff` overlays now name the shared engine. Bundles
+  regenerated; `validate --fail-on-drift` reports 0 generated-only items.
+
 ### AI conversation package — demo page, documentation and E2E (plan 7f21f26b, phase 7)
 
 Wave 1 of the AI components gets its showcase and its regression net: the `/ai-conversation` demo page, the

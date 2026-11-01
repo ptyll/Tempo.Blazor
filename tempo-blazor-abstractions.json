@@ -53,6 +53,7 @@
       "Tempo.Blazor.Components.Wireframe",
       "Tempo.Blazor.Components.Wireframe.Models",
       "Tempo.Blazor.Components.Wireframe.Stencil",
+      "Tempo.Blazor.Diff",
       "Tempo.Blazor.DocumentEditor.Interfaces",
       "Tempo.Blazor.DocumentEditor.Models",
       "Tempo.Blazor.DocumentEditor.Performance",
@@ -3295,6 +3296,372 @@
       "packageId": "Tempo.Blazor.Abstractions",
       "sourcePath": "src/Tempo.Blazor.Abstractions/Diagram/Models/DiagramStencilTextStyle.cs",
       "documentationStatus": "merged"
+    },
+    {
+      "itemName": "TextDiff",
+      "kind": "Class",
+      "category": "Diff",
+      "namespace": "Tempo.Blazor.Diff",
+      "description": "The shared diff engine of the library: turns two texts into an ordered list of TextDiffHunk values that tile both inputs, so a caller can present the changes, accept or reject each of them and produce the resulting text through Apply. It is a pure, allocation-conscious and UI-free function of its arguments, safe to call from WebAssembly, Server and InteractiveAuto render modes as well as from a backend that never references Blazor. Both historical helpers — the word-level DocumentTextDiffHelper and the line-level TmTextLineDiff — delegate to it, so there is exactly one comparison algorithm in the library. A pathological input never throws and never blocks: above MaxTokens or MaxCells the comparison degrades to a coarser granularity and says so through Fallback.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Diff/TextDiff.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Lines",
+          "kind": "Method",
+          "type": "TextDiffResult",
+          "description": "Compares two texts at line granularity. Lines are split on \\n and every character (including a trailing \\r and the line breaks) stays inside the hunks, so the hunks tile both inputs; a mixed CRLF/LF pair therefore reports the affected lines as changed instead of silently normalizing them.",
+          "parameters": [
+            {
+              "name": "oldText",
+              "type": "string?"
+            },
+            {
+              "name": "newText",
+              "type": "string?"
+            },
+            {
+              "name": "options",
+              "type": "TextDiffOptions?",
+              "default": "null"
+            }
+          ]
+        },
+        {
+          "name": "Words",
+          "kind": "Method",
+          "type": "TextDiffResult",
+          "description": "Compares two texts at word granularity. A token is a word (including its combining marks and digits), a run of digits, or a single punctuation character; whitespace is not a token, so a re-flowed paragraph is not a change, and every hunk keeps the exact characters (including the whitespace between tokens) so that the hunks still tile the inputs.",
+          "parameters": [
+            {
+              "name": "oldText",
+              "type": "string?"
+            },
+            {
+              "name": "newText",
+              "type": "string?"
+            },
+            {
+              "name": "options",
+              "type": "TextDiffOptions?",
+              "default": "null"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "itemName": "TextDiffFallbackKind",
+      "kind": "Enum",
+      "category": "Diff",
+      "namespace": "Tempo.Blazor.Diff",
+      "description": "How far a TextDiffResult had to degrade to stay within the configured limits. A pathological input never throws — the comparison is coarsened instead and reports that it was, so a consumer can tell the reader the diff is approximate.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Diff/TextDiffFallbackKind.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "None",
+          "kind": "Field",
+          "type": "TextDiffFallbackKind",
+          "description": "The comparison ran at the requested granularity and within the limits."
+        },
+        {
+          "name": "LineLevel",
+          "kind": "Field",
+          "type": "TextDiffFallbackKind",
+          "description": "A word-level comparison exceeded MaxTokens or MaxCells, so the result describes whole lines instead."
+        },
+        {
+          "name": "SingleChange",
+          "kind": "Field",
+          "type": "TextDiffFallbackKind",
+          "description": "Even the line-level comparison exceeded the limits, so the result is a single change over the whole input (or a single Equal hunk when the inputs match)."
+        }
+      ]
+    },
+    {
+      "itemName": "TextDiffGranularity",
+      "kind": "Enum",
+      "category": "Diff",
+      "namespace": "Tempo.Blazor.Diff",
+      "description": "Unit a TextDiff comparison works on. Word level compares word, number and punctuation tokens (so a re-flowed paragraph is not a change); line level compares whole lines including their line break.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Diff/TextDiffGranularity.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Words",
+          "kind": "Field",
+          "type": "TextDiffGranularity",
+          "description": "Word, number and punctuation tokens. Whitespace is not a token of its own."
+        },
+        {
+          "name": "Lines",
+          "kind": "Field",
+          "type": "TextDiffGranularity",
+          "description": "Whole lines, so every difference is a whole-line insertion, deletion or replacement."
+        }
+      ]
+    },
+    {
+      "itemName": "TextDiffHunk",
+      "kind": "Class",
+      "category": "Diff",
+      "namespace": "Tempo.Blazor.Diff",
+      "description": "One contiguous piece of a TextDiffResult. The hunks of a result are ordered and tile both inputs: concatenating OldText over all hunks reproduces the old input exactly and concatenating NewText reproduces the new input exactly. That invariant is what lets a consumer accept an arbitrary subset of the changes and still get a valid text out of Apply.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Diff/TextDiffHunk.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Id",
+          "kind": "Property",
+          "type": "required string",
+          "description": "Deterministic identifier built from the kind and both offsets, for example replace-15-15. It stays the same across repeated runs over the same inputs, so an accepted-change set can be kept in a component's state across re-renders, and it is unique within a result."
+        },
+        {
+          "name": "IsChange",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Whether the hunk represents an actual change (anything but Equal)."
+        },
+        {
+          "name": "Kind",
+          "kind": "Property",
+          "type": "required TextDiffHunkKind",
+          "description": "What kind of piece this hunk is."
+        },
+        {
+          "name": "NewRange",
+          "kind": "Property",
+          "type": "required TextRange",
+          "description": "Span of the new input this hunk covers."
+        },
+        {
+          "name": "NewText",
+          "kind": "Property",
+          "type": "required string",
+          "description": "Exact text of the new input covered by this hunk (empty for Delete)."
+        },
+        {
+          "name": "NewUnitCount",
+          "kind": "Property",
+          "type": "required int",
+          "description": "How many comparison units of the new input the hunk covers."
+        },
+        {
+          "name": "OldRange",
+          "kind": "Property",
+          "type": "required TextRange",
+          "description": "Span of the old input this hunk covers."
+        },
+        {
+          "name": "OldText",
+          "kind": "Property",
+          "type": "required string",
+          "description": "Exact text of the old input covered by this hunk (empty for Insert). It may include the whitespace or line break that separates it from the next hunk, which is what keeps the hunks an exact tiling."
+        },
+        {
+          "name": "OldUnitCount",
+          "kind": "Property",
+          "type": "required int",
+          "description": "How many comparison units of the old input the hunk covers — word tokens for a word diff, lines for a line diff. A line-level renderer needs the count rather than the character span: a trailing empty line occupies no character at all, so the span cannot express it."
+        }
+      ]
+    },
+    {
+      "itemName": "TextDiffHunkKind",
+      "kind": "Enum",
+      "category": "Diff",
+      "namespace": "Tempo.Blazor.Diff",
+      "description": "Nature of a single TextDiffHunk. It drives both the rendering (inserted text, removed text) and the decision a consumer offers: a Replace hunk is one decision even though it covers both sides.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Diff/TextDiffHunkKind.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Equal",
+          "kind": "Field",
+          "type": "TextDiffHunkKind",
+          "description": "The text is present in both inputs; there is nothing to decide."
+        },
+        {
+          "name": "Insert",
+          "kind": "Field",
+          "type": "TextDiffHunkKind",
+          "description": "Text exists only in the new input, so OldText is empty."
+        },
+        {
+          "name": "Delete",
+          "kind": "Field",
+          "type": "TextDiffHunkKind",
+          "description": "Text exists only in the old input, so NewText is empty."
+        },
+        {
+          "name": "Replace",
+          "kind": "Field",
+          "type": "TextDiffHunkKind",
+          "description": "Old text was replaced by new text; both sides are accepted or rejected together."
+        }
+      ]
+    },
+    {
+      "itemName": "TextDiffOptions",
+      "kind": "Class",
+      "category": "Diff",
+      "namespace": "Tempo.Blazor.Diff",
+      "description": "Limits that keep a TextDiff comparison bounded. The defaults suit interactive review of prose and terminal-sized source files; a host that diffs very large documents on purpose can raise them, and a host that wants an early degradation can lower them.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Diff/TextDiffOptions.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "DefaultMaxCells",
+          "kind": "Field",
+          "type": "int",
+          "description": "Default value of MaxCells (4 000 000 cells ≈ 16 MB of table)."
+        },
+        {
+          "name": "DefaultMaxTokens",
+          "kind": "Field",
+          "type": "int",
+          "description": "Default value of MaxTokens."
+        },
+        {
+          "name": "Default",
+          "kind": "Property",
+          "type": "static TextDiffOptions",
+          "description": "Shared immutable instance used when a caller passes no options."
+        },
+        {
+          "name": "MaxCells",
+          "kind": "Property",
+          "type": "int",
+          "description": "Maximum number of cells in the longest-common-subsequence table built after stripping the common prefix and suffix — the real memory guard, because two very different inputs inside MaxTokens can still require a quadratic table. Exceeding it degrades exactly like MaxTokens does. Values below 1 are treated as 1. Defaults to DefaultMaxCells."
+        },
+        {
+          "name": "MaxTokens",
+          "kind": "Property",
+          "type": "int",
+          "description": "Maximum number of tokens (words or lines) per input before the comparison degrades: a word diff falls back to line level, a line diff to a single whole-text change. Values below 1 are treated as 1. Defaults to DefaultMaxTokens."
+        }
+      ]
+    },
+    {
+      "itemName": "TextDiffResult",
+      "kind": "Class",
+      "category": "Diff",
+      "namespace": "Tempo.Blazor.Diff",
+      "description": "Result of a TextDiff comparison: an ordered list of TextDiffHunk values that tiles both inputs, plus the operation that turns any subset of the changes into a text.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Diff/TextDiffResult.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Apply",
+          "kind": "Method",
+          "type": "string",
+          "description": "Builds the resulting text for a set of accepted hunk ids: every accepted hunk contributes NewText, every other hunk contributes OldText. Because the hunks tile both inputs, passing no id (or null) returns OldText character for character and passing every id (HunkIds) returns NewText character for character. Any mix in between returns a text where the rejected changes keep their old wording. Ids that do not belong to this result are ignored, so a stale accepted-change set cannot corrupt the output.",
+          "parameters": [
+            {
+              "name": "acceptedHunkIds",
+              "type": "IEnumerable<string>?"
+            }
+          ]
+        },
+        {
+          "name": "Changes",
+          "kind": "Property",
+          "type": "IReadOnlyList<TextDiffHunk>",
+          "description": "Only the hunks a consumer can accept or reject, in document order."
+        },
+        {
+          "name": "Fallback",
+          "kind": "Property",
+          "type": "TextDiffFallbackKind",
+          "description": "Whether and how far the comparison had to degrade to stay within the configured limits."
+        },
+        {
+          "name": "Granularity",
+          "kind": "Property",
+          "type": "TextDiffGranularity",
+          "description": "Granularity the result was actually produced at (may be coarser than requested, see Fallback)."
+        },
+        {
+          "name": "HasChanges",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Whether the two inputs differ at all."
+        },
+        {
+          "name": "HunkIds",
+          "kind": "Property",
+          "type": "IReadOnlyList<string>",
+          "description": "Ids of every hunk, in document order. Passing this collection to Apply accepts everything."
+        },
+        {
+          "name": "Hunks",
+          "kind": "Property",
+          "type": "IReadOnlyList<TextDiffHunk>",
+          "description": "Every hunk in document order — equal and changed pieces interleaved."
+        },
+        {
+          "name": "IsDegraded",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Whether the comparison degraded at all (Fallback is not None)."
+        },
+        {
+          "name": "NewText",
+          "kind": "Property",
+          "type": "string",
+          "description": "The new input the result describes (never null; a null argument is read as empty)."
+        },
+        {
+          "name": "OldText",
+          "kind": "Property",
+          "type": "string",
+          "description": "The old input the result describes (never null; a null argument is read as empty)."
+        }
+      ]
+    },
+    {
+      "itemName": "TextRange",
+      "kind": "RecordStruct",
+      "category": "Diff",
+      "namespace": "Tempo.Blazor.Diff",
+      "description": "A half-open span of one input text used by a TextDiffHunk. Offsets are CHARACTER offsets into the corresponding input (OldText for the old side, NewText for the new side), independent of the TextDiffGranularity: a word diff and a line diff both report character offsets, so a consumer can slice the original text — or scroll a viewer — without re-running the engine.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Diff/TextRange.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "End",
+          "kind": "Property",
+          "type": "int",
+          "description": "Offset one past the last covered character."
+        },
+        {
+          "name": "IsEmpty",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Whether the span covers no character at all."
+        },
+        {
+          "name": "Length",
+          "kind": "Property",
+          "type": "int",
+          "description": "Number of characters covered; 0 for the empty side of an insertion or deletion."
+        },
+        {
+          "name": "Start",
+          "kind": "Property",
+          "type": "int",
+          "description": "Zero-based offset of the first character covered by the span."
+        }
+      ]
     },
     {
       "itemName": "ApproximateDocumentTextMeasurer",
@@ -8300,7 +8667,7 @@
       "kind": "Class",
       "category": "Document Editor",
       "namespace": "Tempo.Blazor.DocumentEditor.Services",
-      "description": "Creates deterministic word-level diffs for document text.",
+      "description": "Creates deterministic word-level diffs for document text on top of the shared Tempo.Blazor.Diff.TextDiff engine, and extracts readable plain text from a document snapshot or a single block. Above the engine's DefaultMaxTokens / DefaultMaxCells limits the comparison degrades to line level and DocumentTextDiffResult.IsDegraded says so.",
       "packageId": "Tempo.Blazor.Abstractions",
       "sourcePath": "src/Tempo.Blazor.Abstractions/DocumentEditor/Services/DocumentTextDiffHelper.cs",
       "documentationStatus": "merged",
@@ -8309,7 +8676,7 @@
           "name": "Diff",
           "kind": "Method",
           "type": "DocumentTextDiffResult",
-          "description": "Diffs old and new text at word/punctuation level.",
+          "description": "Diffs old and new text at word/punctuation level and returns the ordered Unchanged/Removed/Added segments the document comparison renders.",
           "parameters": [
             {
               "name": "oldText",
@@ -8355,7 +8722,15 @@
       "description": "Result of a word-level text diff.",
       "packageId": "Tempo.Blazor.Abstractions",
       "sourcePath": "src/Tempo.Blazor.Abstractions/DocumentEditor/Models/DocumentTextDiff.cs",
-      "documentationStatus": "merged"
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "IsDegraded",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Whether the comparison had to degrade to stay within the engine's limits (TextDiffOptions.DefaultMaxTokens / DefaultMaxCells). A degraded diff is approximate: the segments describe whole lines instead of words, and an input that exceeds even the line limits yields the whole old text as one Removed segment followed by the whole new text as one Added segment. A consumer that surfaces a review decision should say the comparison is coarse instead of presenting it as a word-level result."
+        }
+      ]
     },
     {
       "itemName": "DocumentTextDiffSegment",
@@ -38500,11 +38875,11 @@
   ],
   "libraryExamples": [],
   "summary": {
-    "itemCount": 1543,
-    "manualItemCount": 1543,
-    "generatedItemCount": 1526,
+    "itemCount": 1551,
+    "manualItemCount": 1551,
+    "generatedItemCount": 1534,
     "generatedOnlyItemCount": 0,
     "componentCount": 0,
-    "publicApiTypeCount": 1526
+    "publicApiTypeCount": 1534
   }
 }

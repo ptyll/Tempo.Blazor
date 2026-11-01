@@ -29,6 +29,17 @@ public sealed class DocumentTextDiffResult
     /// <summary>Ordered diff segments.</summary>
     public List<DocumentTextDiffSegment> Segments { get; set; } = [];
 
+    /// <summary>
+    /// Whether the comparison had to degrade to stay within the engine's limits
+    /// (<c>TextDiffOptions.DefaultMaxTokens</c> / <c>DefaultMaxCells</c>). A degraded diff is
+    /// approximate: the segments describe whole lines instead of words, and for an input that
+    /// exceeds even the line limits the whole old text is one <see cref="DocumentTextDiffSegmentKind.Removed"/>
+    /// segment followed by the whole new text as one <see cref="DocumentTextDiffSegmentKind.Added"/>
+    /// segment. A consumer that surfaces a review decision should say the comparison is coarse
+    /// instead of presenting it as a word-level result.
+    /// </summary>
+    public bool IsDegraded { get; init; }
+
     /// <summary>Whether the compared text is identical.</summary>
     public bool HasChanges => Segments.Any(segment => segment.Kind != DocumentTextDiffSegmentKind.Unchanged);
 }

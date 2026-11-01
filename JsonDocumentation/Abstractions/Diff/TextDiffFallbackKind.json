@@ -1,0 +1,30 @@
+{
+  "kind": "Enum",
+  "category": "Diff",
+  "namespace": "Tempo.Blazor.Diff",
+  "description": "How far a TextDiffResult had to degrade to stay within the configured limits. A pathological input never throws — the comparison is coarsened instead and reports that it was, so a consumer can tell the reader the diff is approximate.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/Diff/TextDiffFallbackKind.cs",
+  "documentationStatus": "generated",
+  "members": [
+    {
+      "name": "None",
+      "kind": "Field",
+      "type": "TextDiffFallbackKind",
+      "description": "The comparison ran at the requested granularity and within the limits."
+    },
+    {
+      "name": "LineLevel",
+      "kind": "Field",
+      "type": "TextDiffFallbackKind",
+      "description": "A word-level comparison exceeded MaxTokens or MaxCells, so the result describes whole lines instead."
+    },
+    {
+      "name": "SingleChange",
+      "kind": "Field",
+      "type": "TextDiffFallbackKind",
+      "description": "Even the line-level comparison exceeded the limits, so the result is a single change over the whole input (or a single Equal hunk when the inputs match)."
+    }
+  ],
+  "itemName": "TextDiffFallbackKind"
+}

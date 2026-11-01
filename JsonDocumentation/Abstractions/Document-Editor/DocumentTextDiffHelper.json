@@ -2,7 +2,7 @@
   "kind": "Class",
   "category": "Document Editor",
   "namespace": "Tempo.Blazor.DocumentEditor.Services",
-  "description": "Creates deterministic word-level diffs for document text.",
+  "description": "Creates deterministic word-level diffs for document text on top of the shared Tempo.Blazor.Diff.TextDiff engine, and extracts readable plain text from a document snapshot or a single block. Above the engine's DefaultMaxTokens / DefaultMaxCells limits the comparison degrades to line level and DocumentTextDiffResult.IsDegraded says so.",
   "packageId": "Tempo.Blazor.Abstractions",
   "sourcePath": "src/Tempo.Blazor.Abstractions/DocumentEditor/Services/DocumentTextDiffHelper.cs",
   "documentationStatus": "generated",
@@ -11,7 +11,7 @@
       "name": "Diff",
       "kind": "Method",
       "type": "DocumentTextDiffResult",
-      "description": "Diffs old and new text at word/punctuation level.",
+      "description": "Diffs old and new text at word/punctuation level and returns the ordered Unchanged/Removed/Added segments the document comparison renders.",
       "parameters": [
         {
           "name": "oldText",
