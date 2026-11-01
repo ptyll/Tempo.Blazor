@@ -226,10 +226,64 @@ public sealed class AiMarkdownViewCssTests
     }
 
     /// <summary>
+    /// <c>forced-color-adjust: none</c> opts an element out of the system palette for EVERY colour — the focus
+    /// ring included, and the property INHERITS, so the <c>&lt;pre&gt;</c> scroller and the copy button inherit
+    /// the opt-out from the code card. Without a Highlight rule the three focusable controls of an answer
+    /// (citation chip, copy button, <c>&lt;pre&gt;</c>) keep painting the theme token ring on the Canvas
+    /// surface, which is exactly the defect <c>_ai-tool-call.css</c> and <c>_ai-thinking.css</c> already avoid
+    /// for their own controls. The link and the table wrapper are NOT opted out, so they keep following the
+    /// system palette without a rule of their own.
+    /// </summary>
+    [Fact]
+    public void ForcedColors_RestoreTheSystemFocusRing()
+    {
+        var css = Strip(PackageCss()
+            .Single(pair => pair.File.EndsWith("components/_markdown-view.css", StringComparison.Ordinal))
+            .Css);
+        var block = Block(css, "@media (forced-colors: active)");
+
+        var ringed = Regex.Matches(block, @"([^{}]*:focus-visible[^{}]*)\{([^}]*)\}")
+            .Where(match => ThemeCss.Normalise(match.Groups[2].Value)
+                .Contains("outline-color: Highlight", StringComparison.Ordinal))
+            .SelectMany(match => ThemeCss.SelectorParts(match.Groups[1].Value))
+            .ToList();
+
+        ringed.Should().Contain(".tm-markdown-view__citation:focus-visible",
+            "the citation chip is opted OUT of the system palette, so its ring needs the system Highlight colour");
+        ringed.Should().Contain(".tm-markdown-view__code-copy:focus-visible",
+            "the copy button inherits the opt-out from the code card header");
+        ringed.Should().Contain(".tm-markdown-view pre:focus-visible",
+            "the keyboard-scrollable <pre> inherits the opt-out from the code card");
+    }
+
+    /// <summary>
     /// The declarations of the rule whose selector is EXACTLY <paramref name="selector"/> (the shared reader
     /// anchors on the block's opening brace, so a nesting rule is never mistaken for its parent).
     /// </summary>
     private static string DeclarationsOf(string css, string selector) => ThemeCss.RuleDeclarations(css, selector);
+
+    /// <summary>
+    /// The body of the block whose selector starts at <paramref name="selector"/>, matched by brace depth so a
+    /// nested rule cannot truncate it (the stylesheet is already comment-stripped by <see cref="Strip"/>).
+    /// </summary>
+    private static string Block(string css, string selector)
+    {
+        var start = css.IndexOf(selector, StringComparison.Ordinal);
+        start.Should().BeGreaterThanOrEqualTo(0, $"the stylesheet must keep its {selector} block");
+
+        var opened = css.IndexOf('{', start);
+        var depth = 0;
+        for (var index = opened; index < css.Length; index++)
+        {
+            depth += css[index] switch { '{' => 1, '}' => -1, _ => 0 };
+            if (depth == 0)
+            {
+                return css[(opened + 1)..index];
+            }
+        }
+
+        return css[(opened + 1)..];
+    }
 
     /// <summary>
     /// Specificity of the simple selectors this stylesheet uses, encoded as ids*10^6 + classes*10^3 + types

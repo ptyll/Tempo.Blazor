@@ -140,7 +140,9 @@
     margin-block: 0 var(--tm-space-3);
     max-inline-size: 100%;
     overflow-x: auto;
-    /* the scroll container must stay keyboard reachable (WCAG 2.1.1) */
+    /* A slimmer scrollbar so a wide table's chrome does not dominate the answer. Keyboard reachability is
+       NOT this declaration's job: the wrapper is focusable through the tabindex="0" the renderer emits
+       (AiMarkdownTableRenderer), which is what lets a keyboard reader scroll the table at all. */
     scrollbar-width: thin;
 }
 
@@ -344,5 +346,16 @@
         border-color: CanvasText;
         background-color: Canvas;
         color: CanvasText;
+    }
+
+    /* forced-color-adjust: none opts the FOCUS RING out of the system palette too, and the property is
+       inherited — so the citation chip, the copy button and the keyboard-scrollable <pre> (which inherit it
+       from the code card) would keep painting the theme token ring on a Canvas surface. All three go back to
+       the system Highlight colour, the same rule _ai-tool-call.css and _ai-thinking.css already carry. A link
+       and the table wrapper are NOT opted out, so they keep following the system palette on their own. */
+    .tm-markdown-view__citation:focus-visible,
+    .tm-markdown-view__code-copy:focus-visible,
+    .tm-markdown-view pre:focus-visible {
+        outline-color: Highlight;
     }
 }

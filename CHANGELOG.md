@@ -430,6 +430,14 @@ render answers through. Contract: [docs/ai-markdown.md](docs/ai-markdown.md).
   exception) and an error delta after `Completed`/`Stopped` is ignored — the state machine is documented
   on `Apply`. Decision `AI-MARKDOWN-COPY-DELEGATED` records why the citation chips and the copy button
   are markup + ES-module delegation rather than Blazor components.
+- **Post-hoc verification fix (forced colors)** — the `forced-colors` block opts the code card and the
+  citation chip out of the system palette with `forced-color-adjust: none`, and that property is
+  **inherited**, so it opted their **focus ring** out too: the citation chip, the copy button and the
+  keyboard-scrollable `<pre>` (all three focus stops of an answer) kept painting the theme token ring on
+  a `Canvas` surface. All three now paint `outline-color: Highlight`, the same rule
+  `_ai-tool-call.css` and `_ai-thinking.css` already carry for their own controls, pinned by
+  `AiMarkdownViewCssTests.ForcedColors_RestoreTheSystemFocusRing`. The link and the table wrapper are
+  **not** opted out, so they keep following the system palette without a rule of their own.
 
 **No breaking changes** — new package surface only; nothing in the core library or an existing
 component changed. Hosts must load `_content/Tempo.Blazor.AI/css/tempo-blazor-ai.css` (already part of
