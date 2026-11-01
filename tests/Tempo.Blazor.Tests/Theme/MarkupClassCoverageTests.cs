@@ -424,7 +424,10 @@ public sealed class MarkupClassCoverageTests
             // id ("tm-chat-thread-{counter}" in TmChat.razor.cs) — 54 → 55.
             // FZE-7 (a11y review): the thread panel's aria-labelledby target (the title span) is
             // a third per-instance id ("tm-chat-thread-title-{counter}" in TmChat.razor.cs) — 55 → 56.
-            ExpectedUnmeasurableStems: 56),
+            // Plan 10b3966f phase 2 (TmApprovalCard): the per-instance id prefix
+            // ("tm-approval-card-{Guid…}" in TmApprovalCard.razor.cs) plus the interpolated risk and
+            // state modifiers ($"tm-approval-card--risk-{…}", $"tm-approval-card--{…}") — 56 → 59.
+            ExpectedUnmeasurableStems: 59),
         new Scope("Signing", "Tempo.Blazor.Signing", UnstyledSigningMarkupClasses,
             MinRazorFiles: 28, MinMarkupClasses: 400, InheritsCoreCss: true,
             // Signing redesign phase 2 (B25): the runner's single step panel id

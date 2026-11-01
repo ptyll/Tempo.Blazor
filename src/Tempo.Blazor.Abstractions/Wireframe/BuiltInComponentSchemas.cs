@@ -152,6 +152,7 @@ public sealed class BuiltInComponentSchemas : IWireframeSchemaSource
             ["TmQRCode"] = ["icon"],
             ["TmBarcode"] = ["icon"],
             ["TmChangeDiff"] = ["diff-view"],
+            ["TmApprovalCard"] = ["approval-card"],
             ["TmMultiViewList"] = ["list-view"],
             ["TmDataTable"] = ["data-table"],
             ["TmPagination"] = ["pagination"],
@@ -1112,6 +1113,20 @@ public sealed class BuiltInComponentSchemas : IWireframeSchemaSource
                 P("title",       "Title",        PropType.String, "No data",                        cat: "Content"),
                 P("description", "Description",  PropType.String, "There is nothing to display here.", cat: "Content"),
                 P("actionLabel", "Action Label", PropType.String, "Add item",                       cat: "Content"),
+            ]
+        };
+
+        yield return new WireframeComponentSchema
+        {
+            Type = "TmApprovalCard", Category = "Feedback", DisplayName = "Approval Card",
+            DefaultWidth = 420, DefaultHeight = 210,
+            Props =
+            [
+                P("title",         "Title",         PropType.String, "Release the invoice",                        cat: "Content"),
+                P("description",   "Description",   PropType.String, "The requester wants the invoice sent today.", cat: "Content"),
+                P("risk",          "Risk",          PropType.Enum,   "medium",                                     cat: "Content",
+                    opts: ["low", "medium", "high", "critical"]),
+                P("showCountdown", "Show Countdown", PropType.Bool,  true,                                        cat: "Appearance"),
             ]
         };
 

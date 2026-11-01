@@ -32,6 +32,7 @@
       "Tempo.Blazor.Abstractions.Interfaces",
       "Tempo.Blazor.Abstractions.Layout",
       "Tempo.Blazor.Abstractions.Models",
+      "Tempo.Blazor.Abstractions.Models.Approvals",
       "Tempo.Blazor.Abstractions.PivotTable",
       "Tempo.Blazor.Abstractions.Shared",
       "Tempo.Blazor.Abstractions.Wireframe.Export",
@@ -13629,6 +13630,68 @@
       "description": "Format options for AI prompt output content.",
       "packageId": "Tempo.Blazor.Abstractions",
       "sourcePath": "src/Tempo.Blazor.Abstractions/Models/AIPromptOutput.cs",
+      "documentationStatus": "merged"
+    },
+    {
+      "itemName": "ApprovalDecision",
+      "kind": "Record",
+      "category": "Models",
+      "namespace": "Tempo.Blazor.Abstractions.Models.Approvals",
+      "description": "One human decision on an approval request: the outcome (Approved or Rejected), the optional note the decider wrote, who decided and when. TmApprovalCard hands it to OnDecision and leaves the Pending state only when the callback completes without throwing, so a failed save never looks like a decision.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Models/Approvals/ApprovalDecision.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "DecidedAt",
+          "kind": "Property",
+          "type": "DateTimeOffset?",
+          "description": "Moment of the decision, when the host knows it."
+        },
+        {
+          "name": "DecidedBy",
+          "kind": "Property",
+          "type": "string?",
+          "description": "Display name of the person who decided, when the host knows it."
+        },
+        {
+          "name": "IsApproved",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Whether the request was approved (the shorthand hosts branch on most often)."
+        },
+        {
+          "name": "Note",
+          "kind": "Property",
+          "type": "string?",
+          "description": "Note the decider wrote, or null when none was asked for or given."
+        },
+        {
+          "name": "State",
+          "kind": "Property",
+          "type": "ApprovalState",
+          "description": "Outcome of the decision: Approved or Rejected."
+        }
+      ]
+    },
+    {
+      "itemName": "ApprovalRisk",
+      "kind": "Enum",
+      "category": "Models",
+      "namespace": "Tempo.Blazor.Abstractions.Models.Approvals",
+      "description": "Risk level of an approval request, shown as a localized badge on TmApprovalCard: Low, Medium, High or Critical. The level drives the badge text and the card's accent, so the risk always arrives in words and the colour is only the second channel.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Models/Approvals/ApprovalRisk.cs",
+      "documentationStatus": "merged"
+    },
+    {
+      "itemName": "ApprovalState",
+      "kind": "Enum",
+      "category": "Models",
+      "namespace": "Tempo.Blazor.Abstractions.Models.Approvals",
+      "description": "Lifecycle state of an approval request rendered by TmApprovalCard: Pending, Approved, Rejected, Expired or Cancelled. Pending is the only state in which the card offers its actions; every other state collapses it into a single result row.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Models/Approvals/ApprovalState.cs",
       "documentationStatus": "merged"
     },
     {
@@ -38875,11 +38938,11 @@
   ],
   "libraryExamples": [],
   "summary": {
-    "itemCount": 1551,
-    "manualItemCount": 1551,
-    "generatedItemCount": 1534,
+    "itemCount": 1554,
+    "manualItemCount": 1554,
+    "generatedItemCount": 1537,
     "generatedOnlyItemCount": 0,
     "componentCount": 0,
-    "publicApiTypeCount": 1534
+    "publicApiTypeCount": 1537
   }
 }

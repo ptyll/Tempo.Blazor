@@ -22,6 +22,65 @@
 > (Fáze 15b). Contracts: [docs/modeling-editor.md](docs/modeling-editor.md),
 > [docs/diagram-editor.md](docs/diagram-editor.md).
 
+### Human-in-the-loop components — `TmApprovalCard` (plan 10b3966f, phase 2)
+
+The first human-in-the-loop component: a request for a human decision with a risk badge, details, a
+deadline countdown, Approve / Reject (optionally with a mandatory note), collapse into a result row
+and an Undo window. **No breaking change** — the component, the three Abstractions models, the CSS
+sheet and the resource keys are all new.
+
+- **`TmApprovalCard`** (`src/Tempo.Blazor/Components/Approvals/`) — `Title`, `Description`,
+  `Risk` (`ApprovalRisk`), `PreviewContent`, `Details` (rendered as a `<dl>`), `ExpiresAt`,
+  `RequireNoteOnReject`, `AllowNote`, `State` / `StateChanged` (controlled, `@bind-State`),
+  `DecidedBy`, `DecidedAt`, `DecisionNote`, `OnDecision` (`Func<ApprovalDecision, Task>`),
+  `UndoWindow`, `OnUndo` / `Undone`, `EnableShortcuts`, `Compact`, `Class`, `AriaLabel`, plus the
+  public `ApproveAsync()` / `RejectAsync()` / `UndoAsync()` and `CanDecide` / `Announcement`. The
+  card leaves `Pending` only when `OnDecision` completes without throwing: while it runs the actions
+  are disabled and the card is `aria-busy`; when it throws, a `TmAlert` shows the localized error
+  and the request stays decidable — unless the deadline passed while the save ran, in which case the
+  card expires (a request that ran out of time is not decidable) and the host hears exactly one
+  state transition.
+- **Countdown via `TimeProvider`** — `ExpiresAt` renders `mm:ss` (`h:mm:ss` above an hour) in a
+  `<time aria-live="off">`; the one-second timer (`ApprovalCountdownTicker`, the same shape as the
+  AI elapsed ticker) is armed ONLY while there is something to count and disarmed the moment there
+  is not, so a decided card never re-renders. One minute before the deadline the card announces it
+  once; when the deadline passes the state becomes `Expired`, the actions disable and the expiry is
+  announced. The countdown text is neutral and takes the danger colour only in the expired state, so
+  red keeps meaning urgent. A host-supplied `State="Expired"` behaves the same.
+- **Collapse and Undo** — a decided card collapses into a row that reads "Approved — {who}, {when}"
+  (localized template; "Unknown" when the host supplies no `DecidedBy`), with the decision timestamp
+  taken from `DecidedAt`, the decision itself, or the clock. With `UndoWindow` (and `OnUndo` /
+  `Undone` wired) the row offers Undo until the window elapses; Undo returns the card to `Pending`,
+  raises `StateChanged(Pending)` and runs `OnUndo`. The collapse is a CSS height transition
+  (`grid-template-rows` 1fr → 0fr) — no JS — and both halves stay mounted with the inactive one
+  `inert`, so the height can animate while the hidden half leaves the tab order and the
+  accessibility tree.
+- **Keyboard** — `Ctrl`/`⌘`+`Enter` approves and `Ctrl`/`⌘`+`Backspace` rejects, advertised through
+  `aria-keyshortcuts`, only while focus is inside the card, never while a decision is in flight and
+  never from inside the note field (its keys are fenced with `@onkeydown:stopPropagation`;
+  `Escape` clears the draft note). `EnableShortcuts="false"` removes the handlers and the
+  `aria-keyshortcuts` declarations.
+- **Accessibility** — exactly ONE polite live region carries every announcement (decision, expiry,
+  expiry warning, refused rejection, error, undo) and the ticking countdown is `aria-live="off"`;
+  the risk is a localized badge text ("High risk"), never colour alone; the group is named by
+  `Title` (`aria-label`, so no `aria-labelledby` can dangle into the collapsed half); the
+  `RequireNoteOnReject` refusal marks the field `aria-invalid` + `aria-describedby` and moves focus
+  to it; a decision moves focus to the surviving Undo (or the card root, `tabindex="-1"`) and Undo
+  moves it back to Approve; `:focus-visible` uses `--tm-focus-ring` with a `forced-colors` Highlight
+  ring on every focus stop; the coarse-pointer floor is `--tm-touch-target`; the collapse and the
+  busy spinner are covered by reduced-motion rules.
+- **Models** (`src/Tempo.Blazor.Abstractions/Models/Approvals/`, namespace
+  `Tempo.Blazor.Abstractions.Models.Approvals`) — `ApprovalRisk` (Low/Medium/High/Critical),
+  `ApprovalState` (Pending/Approved/Rejected/Expired/Cancelled) and the `ApprovalDecision` record
+  (`State`, `Note`, `DecidedBy`, `DecidedAt`, `IsApproved`, `Approve(…)` / `Reject(…)`; a state that
+  is not a decision is refused with `ArgumentOutOfRangeException`).
+- **Localization** — 25 `TmApprovalCard_*` keys in all four resource tables. **Wireframe** — the
+  card is a placeable stencil (`approval-card` role, `Feedback` category, declarative render) and its
+  role exists in the built-in UI-role vocabulary, so "every component has a role" holds.
+- **Docs** — JSON overlays for the component and the three models, bundles regenerated,
+  `validate --fail-on-drift` clean; contract in [docs/approval-card.md](docs/approval-card.md). The
+  demo page and the E2E/screenshot lane belong to phase 6 of the plan.
+
 ### Human-in-the-loop components — shared diff engine in `Tempo.Blazor.Abstractions` (plan 10b3966f, phase 1)
 
 The diff algorithms that existed twice (word level in `DocumentTextDiffHelper`, line level in

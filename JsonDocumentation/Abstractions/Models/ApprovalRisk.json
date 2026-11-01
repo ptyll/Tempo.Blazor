@@ -1,0 +1,10 @@
+{
+  "kind": "Enum",
+  "category": "Models",
+  "namespace": "Tempo.Blazor.Abstractions.Models.Approvals",
+  "description": "Risk level of an approval request, shown as a localized badge on TmApprovalCard: Low, Medium, High or Critical. The level drives the badge text and the card's accent, so the risk always arrives in words and the colour is only the second channel.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/Models/Approvals/ApprovalRisk.cs",
+  "documentationStatus": "generated",
+  "itemName": "ApprovalRisk"
+}

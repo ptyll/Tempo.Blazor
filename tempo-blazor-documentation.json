@@ -75,6 +75,7 @@
       "Tempo.Blazor.Components.Actions",
       "Tempo.Blazor.Components.Activity",
       "Tempo.Blazor.Components.AITools",
+      "Tempo.Blazor.Components.Approvals",
       "Tempo.Blazor.Components.AuditLog",
       "Tempo.Blazor.Components.Avatars",
       "Tempo.Blazor.Components.Buttons",
@@ -2425,6 +2426,226 @@
           "type": "string?",
           "isRequired": false,
           "description": "Placeholder text for the prompt input."
+        }
+      ]
+    },
+    {
+      "itemName": "TmApprovalCard",
+      "kind": "Component",
+      "category": "Approvals",
+      "namespace": "Tempo.Blazor.Components.Approvals",
+      "description": "A request for a human decision: heading, description, a localized risk badge, a host-supplied preview and key/value details, an optional countdown to the deadline, and Approve / Reject actions with an optional note. It is a controlled component - the host owns State and hears every transition through StateChanged - and it leaves the pending state only after OnDecision completes without throwing, so a failed save is reported in a TmAlert and the request stays decidable. A decided card collapses into a single row that names who decided and when; with UndoWindow it also offers Undo until that window elapses. One polite live region carries every announcement, the ticking countdown is aria-live=\"off\", and the Ctrl/Cmd shortcuts only fire while focus is inside the card and never from inside the note field.",
+      "packageId": "Tempo.Blazor",
+      "sourcePath": "src/Tempo.Blazor/Components/Approvals/TmApprovalCard.razor",
+      "documentationStatus": "merged",
+      "requiredImports": [
+        "@using Tempo.Blazor.Abstractions.Models.Approvals",
+        "@using Tempo.Blazor.Components.Approvals"
+      ],
+      "parameters": [
+        {
+          "name": "AllowNote",
+          "type": "bool",
+          "isRequired": false,
+          "default": "true",
+          "description": "Whether the optional note field is offered at all. Default is true; the field is always rendered when RequireNoteOnReject is set."
+        },
+        {
+          "name": "AriaLabel",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Accessible name of the group when Title is omitted. Defaults to a localized \"Approval request\"."
+        },
+        {
+          "name": "Class",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Additional CSS classes for the root element."
+        },
+        {
+          "name": "Compact",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Renders the condensed single-row variant: no description, preview or details, with the heading, risk, countdown and actions on one line. Default is false."
+        },
+        {
+          "name": "DecidedAt",
+          "type": "DateTimeOffset?",
+          "isRequired": false,
+          "description": "Moment of the decision, shown in the collapsed row. When omitted the moment the decision was raised is used."
+        },
+        {
+          "name": "DecidedBy",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Display name of the person who decided, shown in the collapsed row. When omitted the row says \"Unknown\"."
+        },
+        {
+          "name": "DecisionNote",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Note to show in the collapsed row. When omitted the note typed by the decider is used, so a host that does not echo it still shows what was written."
+        },
+        {
+          "name": "Description",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Free-text description of what is being approved."
+        },
+        {
+          "name": "Details",
+          "type": "IReadOnlyList<KeyValuePair<string, string>>?",
+          "isRequired": false,
+          "description": "Key/value details of the request, rendered as a definition list. Hidden in Compact mode."
+        },
+        {
+          "name": "EnableShortcuts",
+          "type": "bool",
+          "isRequired": false,
+          "default": "true",
+          "description": "Whether the Ctrl/Cmd+Enter (approve) and Ctrl/Cmd+Backspace (reject) shortcuts are active while focus is inside the card. Default is true; the card never reacts to those keys typed in the note field."
+        },
+        {
+          "name": "ExpiresAt",
+          "type": "DateTimeOffset?",
+          "isRequired": false,
+          "description": "Deadline of the request. While the card is pending the remaining time is shown as a countdown; once it elapses the state becomes Expired and the actions are disabled."
+        },
+        {
+          "name": "OnDecision",
+          "type": "Func<ApprovalDecision, Task>?",
+          "isRequired": false,
+          "description": "Callback that persists the decision. The card stays Pending while it runs (actions disabled, card aria-busy); when it throws, the error is shown in a TmAlert and the request stays decidable."
+        },
+        {
+          "name": "OnUndo",
+          "type": "Func<Task>?",
+          "isRequired": false,
+          "description": "Callback invoked when the user undoes a decision. It runs first and, when it succeeds, the card returns to Pending; a throw keeps the decision and shows the localized error. Undo is offered only when this callback (or Undone) is wired."
+        },
+        {
+          "name": "PreviewContent",
+          "type": "RenderFragment?",
+          "isRequired": false,
+          "description": "Host-rendered preview of the thing being approved (a document excerpt, a diff, a summary of the pending change). Hidden in Compact mode."
+        },
+        {
+          "name": "RequireNoteOnReject",
+          "type": "bool",
+          "isRequired": false,
+          "description": "When true a rejection without a note is refused: the note field is marked aria-invalid, the reason is announced and the decision is not raised. Default is false."
+        },
+        {
+          "name": "Risk",
+          "type": "ApprovalRisk",
+          "isRequired": false,
+          "default": "ApprovalRisk.Low",
+          "description": "Risk level shown as a localized badge and as the card's accent. Default is ApprovalRisk.Low."
+        },
+        {
+          "name": "State",
+          "type": "ApprovalState",
+          "isRequired": false,
+          "default": "ApprovalState.Pending",
+          "description": "Current state of the request. Default is ApprovalState.Pending."
+        },
+        {
+          "name": "StateChanged",
+          "type": "EventCallback<ApprovalState>",
+          "isRequired": false,
+          "description": "Raised whenever the card transitions state - a decision, the automatic expiry and Undo. Use it with @bind-State."
+        },
+        {
+          "name": "Title",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Heading of the request. When omitted the group is named by AriaLabel (or a localized default) and no heading is rendered."
+        },
+        {
+          "name": "Undone",
+          "type": "EventCallback",
+          "isRequired": false,
+          "description": "Raised together with OnUndo for hosts that prefer an EventCallback."
+        },
+        {
+          "name": "UndoWindow",
+          "type": "TimeSpan?",
+          "isRequired": false,
+          "description": "How long after a decision the collapsed row offers Undo. When null (the default) or zero, no Undo is offered; the window starts at the moment the decision was raised."
+        }
+      ],
+      "methods": [
+        {
+          "name": "ApproveAsync",
+          "returnType": "Task",
+          "description": "Approves the request: runs OnDecision and, on success, leaves the pending state. A no-op when the request is not decidable."
+        },
+        {
+          "name": "RejectAsync",
+          "returnType": "Task",
+          "description": "Rejects the request. When RequireNoteOnReject is set and the note is blank, the request stays pending and the note field is marked invalid."
+        },
+        {
+          "name": "UndoAsync",
+          "returnType": "Task",
+          "description": "Withdraws the last decision while the undo window is open: OnUndo / Undone runs and, when it succeeds, the card returns to Pending and focus returns to the primary action. A failing undo keeps the decision. A no-op once the window has elapsed."
+        }
+      ],
+      "cssClasses": [
+        "tm-approval-card",
+        "tm-approval-card--compact",
+        "tm-approval-card--busy",
+        "tm-approval-card--collapsed",
+        "tm-approval-card--risk-low",
+        "tm-approval-card--risk-medium",
+        "tm-approval-card--risk-high",
+        "tm-approval-card--risk-critical",
+        "tm-approval-card--pending",
+        "tm-approval-card--approved",
+        "tm-approval-card--rejected",
+        "tm-approval-card--expired",
+        "tm-approval-card--cancelled",
+        "tm-approval-card__collapse",
+        "tm-approval-card__body",
+        "tm-approval-card__body-inner",
+        "tm-approval-card__header",
+        "tm-approval-card__heading",
+        "tm-approval-card__title",
+        "tm-approval-card__risk",
+        "tm-approval-card__deadline",
+        "tm-approval-card__deadline--expired",
+        "tm-approval-card__deadline-label",
+        "tm-approval-card__countdown",
+        "tm-approval-card__description",
+        "tm-approval-card__preview",
+        "tm-approval-card__details",
+        "tm-approval-card__detail",
+        "tm-approval-card__detail-term",
+        "tm-approval-card__detail-value",
+        "tm-approval-card__note",
+        "tm-approval-card__note-label",
+        "tm-approval-card__note-input",
+        "tm-approval-card__note-error",
+        "tm-approval-card__alert",
+        "tm-approval-card__actions",
+        "tm-approval-card__action",
+        "tm-approval-card__spinner",
+        "tm-approval-card__summary",
+        "tm-approval-card__summary-inner",
+        "tm-approval-card__summary-icon",
+        "tm-approval-card__summary-title",
+        "tm-approval-card__summary-text",
+        "tm-approval-card__summary-note",
+        "tm-approval-card__undo"
+      ],
+      "examples": [
+        {
+          "title": "Approval request with a deadline, details and an undo window",
+          "code": "<TmApprovalCard Title=\"Release the invoice\"\n                Description=\"The requester wants the invoice sent today.\"\n                Risk=\"ApprovalRisk.High\"\n                Details=\"@details\"\n                ExpiresAt=\"@deadline\"\n                RequireNoteOnReject=\"true\"\n                UndoWindow=\"TimeSpan.FromSeconds(30)\"\n                OnDecision=\"@SubmitAsync\"\n                OnUndo=\"@WithdrawAsync\"\n                @bind-State=\"state\" />"
+        },
+        {
+          "title": "Compact row inside a decision inbox",
+          "code": "<TmApprovalCard Title=\"Refund order #1042\"\n                Risk=\"ApprovalRisk.Medium\"\n                Compact=\"true\"\n                ExpiresAt=\"@inTwoHours\"\n                OnDecision=\"@SubmitAsync\" />"
         }
       ]
     },
@@ -30665,6 +30886,10 @@
       "kind": "Css"
     },
     {
+      "path": "src/Tempo.Blazor/wwwroot/css/components/_approval-card.css",
+      "kind": "Css"
+    },
+    {
       "path": "src/Tempo.Blazor/wwwroot/css/components/_attachment-manager.css",
       "kind": "Css"
     },
@@ -31498,11 +31723,11 @@
     }
   ],
   "summary": {
-    "itemCount": 410,
-    "manualItemCount": 410,
-    "generatedItemCount": 402,
+    "itemCount": 411,
+    "manualItemCount": 411,
+    "generatedItemCount": 403,
     "generatedOnlyItemCount": 0,
-    "componentCount": 220,
+    "componentCount": 221,
     "publicApiTypeCount": 182
   }
 }

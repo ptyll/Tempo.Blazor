@@ -80,6 +80,7 @@
 @import "components/_chip.css";
 @import "components/_kanban.css";
 @import "components/_change-diff.css";
+@import "components/_approval-card.css";
 @import "components/_query-input.css";
 
 /* 7. Data Table & Pivot Table */

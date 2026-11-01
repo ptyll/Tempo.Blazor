@@ -40,7 +40,8 @@ public class StencilPackFeedbackFormsTests
         "TmColorPicker",
         "TmFlatColorPicker",
         "TmColorPalette",
-        "TmColorGradient"
+        "TmColorGradient",
+        "TmApprovalCard"
     ];
 
     public static TheoryData<string> FeedbackFormTypeData
@@ -57,7 +58,7 @@ public class StencilPackFeedbackFormsTests
     [Fact]
     public void FeedbackFormTypeList_CoversPlanScope()
     {
-        FeedbackFormTypes.Should().HaveCount(30);
+        FeedbackFormTypes.Should().HaveCount(31);
         FeedbackFormTypes.Should().Contain(["TmAlert", "TmProgressBar", "TmNotificationBell", "TmFormField", "TmColorGradient"]);
     }
 
@@ -119,6 +120,23 @@ public class StencilPackFeedbackFormsTests
 
         swatches.Count.Should().BeGreaterThanOrEqualTo(8);
         svg.Should().NotContain(">TmColorPalette<");
+    }
+
+    [Fact]
+    public async Task ApprovalCard_RendersTheRiskAccentBothActionsAndTheDeadline()
+    {
+        var high = await RenderAsync("TmApprovalCard", ("title", "Release the invoice"), ("risk", "high"));
+        high.Should().Contain(">Release the invoice<");
+        high.Should().Contain(">Approve<");
+        high.Should().Contain(">Reject<");
+        high.Should().Contain(">Expires in 04:00<");
+        high.Should().Contain("#ef4444", "a high-risk request gets the danger accent");
+
+        var low = await RenderAsync("TmApprovalCard", ("risk", "low"));
+        low.Should().Contain("#22c55e", "a low-risk request gets the success accent");
+
+        var quiet = await RenderAsync("TmApprovalCard", ("showCountdown", false));
+        quiet.Should().NotContain("Expires in");
     }
 
     [Fact]
