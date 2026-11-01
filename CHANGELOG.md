@@ -22,6 +22,62 @@
 > (Fáze 15b). Contracts: [docs/modeling-editor.md](docs/modeling-editor.md),
 > [docs/diagram-editor.md](docs/diagram-editor.md).
 
+### AI conversation package — demo page, documentation and E2E (plan 7f21f26b, phase 7)
+
+Wave 1 of the AI components gets its showcase and its regression net: the `/ai-conversation` demo page, the
+complete JSON documentation set and the E2E lane. **No public API changed in this phase** — the parameters,
+defaults, DOM hooks and resource keys are exactly the ones phases 1–6 shipped.
+
+- **Demo page `/ai-conversation`** (`src/Tempo.Blazor.Demo.SharedUI/Pages/AiConversationPage.razor`, nav entry
+  "AI Conversation") — a real `TmAiConversation` fed by an in-page `IAsyncEnumerable<AiStreamDelta>` generator
+  (no model is called): reasoning steps, one successful and one failing tool call (the failed card offers Retry
+  and the page counts the retries), a markdown table, a code block, two cited sources, follow-up chips and the
+  completion announcement, about 2 s per answer, so Stop, the streaming caret and the render throttle are all
+  visible. Per-turn actions come through the conversation's `MessageTemplate` — regenerate with the version
+  switcher, thumbs up/down, answer retry, tool-call retry, citation preview, follow-up chips — and only on an
+  ASSISTANT turn: regenerating or rating the reader's own prompt is not an action that exists. The composer on
+  the page carries three slash commands (`/summarise`, `/translate`, `/metrics`), an in-memory
+  `IAiMentionProvider`, `MaxAttachments=3` / `MaxFileSize=2 MB`, a model select and the localized
+  `data-testid="ai-demo-submission"` readout of what the last `AiComposerSubmit` carried.
+- **Standalone sections** — every tool-call state (queued, running, succeeded, failed, cancelled, redacted) plus
+  a grouped run of three, the thinking pill in both states, the reasoning panel collapsed and expanded, and a
+  hostile markdown sample (raw HTML, an `onerror` image, `javascript:` / `data:` / `vbscript:` links) that
+  renders nothing executable.
+- **Strings** — every label, heading, status, suggestion, tool display name and command title of the page is a
+  `TmDemo_AiConversation_*` key in all four demo tables (`DemoResources.json` + `.cs` / `.sk` / `.fr`), guarded
+  by `DemoResourceCompletenessTests`. The sample CONTENT — the simulated answer, the gallery's sample calls, the
+  command prompts and the JSON payloads — stays in English, like the sample data of every other demo page.
+- **Documentation** — the JSON overlays are complete for `Tempo.Blazor.AI` (the eight components plus
+  `AiMarkdownRenderer`, `AiMarkdownRenderOptions`, `AiMarkdownCodeBlockContext`, `AiMessageText` and
+  `AIServiceCollectionExtensions`) and for the AI contracts in `Tempo.Blazor.Abstractions`:
+  `validate --fail-on-drift` reports **0 generated-only items**, and regenerating `tempo-blazor-ai.json` /
+  `tempo-blazor-all.json` reproduces the committed bundles byte for byte.
+  [docs/ai-conversation.md](docs/ai-conversation.md) gained a "Demo" section.
+- **E2E + bUnit** — `tests/Tempo.Blazor.E2E/AI/AiConversationE2ETests.cs` (WASM @ 7106, plus
+  `AiConversationServerSmokeE2ETests` on the Server demo) proves the stream completes with the table, the code
+  block, both citation chips, the reasoning panel and the two tool-call cards; Retry turns the failed call
+  succeeded; Stop keeps the partial answer and marks the turn `stopped`; a citation chip opens the source
+  preview, the focus moves into it and Escape returns it to that chip; `/` opens the command listbox while the
+  textarea keeps the focus, Escape closes it, Shift+Enter keeps the line and Enter sends; axe-core finds no
+  critical/serious violation in the empty and the finished state, and the transcript stays the conversation's
+  only `aria-live` element. Screenshots of the light/dark 1440 px and the 375 px layouts land in
+  `tests/Tempo.Blazor.E2E/__screenshots__/ai-conversation/`. Server-side, `AiConversationDemoPageTests` pins the
+  same page (empty state with its suggestions, the streamed answer's parts, the failed-call retry, regeneration
+  with versions, feedback, the submit-and-clear path, every standalone section, the XSS sample and the
+  localized tool/command labels).
+- **Visual review fix** — `_markdown-view.css` restores the list markers of a rendered answer (`ul` →
+  disc/circle/square by nesting depth, `ol` → decimal); task lists keep their markerless look. **Consumers see
+  a styling change, not an API one**: where a host reset — Tailwind's Preflight (`ul, ol { list-style: none }`)
+  is the common one — had flattened a bulleted answer into indented paragraphs, the markers now come back. The
+  demo page also gives both sections a `scroll-margin-block-start` (an anchor or a screenshot never parks the
+  heading under the sticky header) and reports the reasoning duration once the answer finishes.
+- **Review follow-up** — the demo's reset button keeps a focus indicator in forced-colors mode
+  (`outline: 2px solid transparent`, repainted with `Highlight` by a `forced-colors` block, because High
+  Contrast drops the `box-shadow` ring), the demo status list reads `--tm-border-width` instead of a `1px`
+  literal, and two guards pin the result: `AiMarkdownViewCssTests` checks the list markers (including the
+  specificity of the task-list exception) and `AiConversationDemoPageCssTests` the focus fallback and the border
+  token.
+
 ### AI conversation package — `TmAiComposer` prompt composer (plan 7f21f26b, phase 6)
 
 The prompt side of a conversation as a component: an autosizing textarea with a real IME guard, a send/stop

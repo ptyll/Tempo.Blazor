@@ -197,6 +197,66 @@ public sealed class AiMarkdownViewCssTests
             string.Join(", ", emitted.Except(styled)));
     }
 
+    /// <summary>
+    /// A host reset removes the markers of a rendered answer — Tailwind's Preflight (`ul, ol { list-style:
+    /// none }`) is the common one — so the package declares them on its OWN content. This guard pins both
+    /// halves of the rule: the marker of every nesting level and the task-list exception, which only wins
+    /// while it out-specifies the deepest nesting rule (an item carries a checkbox instead of a bullet).
+    /// </summary>
+    [Fact]
+    public void MarkdownView_RestoresListMarkers_AndTaskListsStayMarkerless()
+    {
+        var css = Strip(PackageCss()
+            .Single(pair => pair.File.EndsWith("components/_markdown-view.css", StringComparison.Ordinal))
+            .Css);
+
+        DeclarationsOf(css, ".tm-markdown-view ul").Should().Contain("list-style-type: disc",
+            "a bulleted answer has to read as a list even under a host reset");
+        DeclarationsOf(css, ".tm-markdown-view ul ul").Should().Contain("list-style-type: circle");
+        DeclarationsOf(css, ".tm-markdown-view ul ul ul").Should().Contain("list-style-type: square");
+        DeclarationsOf(css, ".tm-markdown-view ol").Should().Contain("list-style-type: decimal");
+
+        DeclarationsOf(css, ".tm-markdown-view .contains-task-list").Should()
+            .Contain("list-style: none", "a task item carries its own checkbox instead of a marker");
+
+        SpecificityRank(".tm-markdown-view .contains-task-list").Should()
+            .BeGreaterThan(SpecificityRank(".tm-markdown-view ul ul ul"),
+                "the task-list exception only wins while its specificity beats the deepest nesting rule "
+                + "(.contains-task-list is (0,2,0), the nested ul rule (0,1,3))");
+    }
+
+    /// <summary>
+    /// The declarations of the rule whose selector is EXACTLY <paramref name="selector"/> (the shared reader
+    /// anchors on the block's opening brace, so a nesting rule is never mistaken for its parent).
+    /// </summary>
+    private static string DeclarationsOf(string css, string selector) => ThemeCss.RuleDeclarations(css, selector);
+
+    /// <summary>
+    /// Specificity of the simple selectors this stylesheet uses, encoded as ids*10^6 + classes*10^3 + types
+    /// so the comparison is a number: (0,2,0) → 2000, (0,1,3) → 1003.
+    /// </summary>
+    private static int SpecificityRank(string selector)
+    {
+        var ids = 0;
+        var classes = 0;
+        var types = 0;
+
+        foreach (var compound in selector.Split([' ', '>', '+', '~'], StringSplitOptions.RemoveEmptyEntries))
+        {
+            var type = Regex.Match(compound, @"^[a-zA-Z][\w-]*", RegexOptions.Compiled, RegexTimeout);
+            if (type.Success)
+            {
+                types++;
+            }
+
+            var rest = compound[type.Length..];
+            ids += Regex.Matches(rest, @"#[\w-]+", RegexOptions.Compiled, RegexTimeout).Count;
+            classes += Regex.Matches(rest, @"\.[\w-]+|\[[^\]]*\]|:(?!:)[\w-]+", RegexOptions.Compiled, RegexTimeout).Count;
+        }
+
+        return (ids * 1_000_000) + (classes * 1_000) + types;
+    }
+
     private static string Strip(string css) => Comment.Replace(css, " ");
 
     /// <summary>Every stylesheet of the package, keyed by repo-relative path.</summary>

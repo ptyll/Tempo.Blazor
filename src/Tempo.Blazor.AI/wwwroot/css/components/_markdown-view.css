@@ -59,6 +59,26 @@
     padding-inline-start: var(--tm-space-5);
 }
 
+/* A host reset removes the markers — Tailwind's Preflight is the common one (`ul, ol { list-style: none }`),
+   and without this rule a bulleted answer reads as a run of indented paragraphs, so the reader cannot tell a
+   list item from a wrapped line. The view restores the markers for its OWN content (`.contains-task-list`
+   below stays markerless: its items carry a checkbox instead). */
+.tm-markdown-view ul {
+    list-style-type: disc;
+}
+
+.tm-markdown-view ul ul {
+    list-style-type: circle;
+}
+
+.tm-markdown-view ul ul ul {
+    list-style-type: square;
+}
+
+.tm-markdown-view ol {
+    list-style-type: decimal;
+}
+
 .tm-markdown-view li + li {
     margin-block-start: var(--tm-space-1);
 }

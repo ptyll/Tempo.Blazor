@@ -167,6 +167,32 @@ resets it to the new tail. The default is `null`: no window, every turn rendered
   caret and the thinking shimmer belong to `_ai-streaming.css` / `_ai-thinking.css`), and the module's
   smooth scroll is dropped when the system asks for reduced motion.
 
+## Demo
+
+The `/ai-conversation` demo page (`src/Tempo.Blazor.Demo.SharedUI/Pages/AiConversationPage.razor`) runs the
+whole contract without a model: a local `IAsyncEnumerable<AiStreamDelta>` generator produces the reasoning
+steps, one successful and one failing tool call (the failed card offers Retry), a markdown table, a code
+block, two cited sources and the completion, and the page attaches the per-turn actions through the
+conversation's `MessageTemplate` (regenerate with a version switcher, feedback, answer retry, tool-call retry,
+citation preview, follow-up chips). Its composer is wired with three slash commands, an in-memory mention
+provider and attachment limits, and the page reports what a submit carried
+(`data-testid="ai-demo-submission"`). Below the conversation the page renders the same components on their
+own — every tool-call state plus a grouped run, the thinking pill in both states, the reasoning panel
+collapsed and expanded, and a hostile markdown sample that neutralises raw HTML and `javascript:` / `data:` /
+`vbscript:` links.
+
+The page is also the E2E subject: `tests/Tempo.Blazor.E2E/AI/AiConversationE2ETests.cs` (WASM, plus a Server
+smoke) drives the stream, Stop, the citation preview with its focus return, the composer's `/` combobox and
+Enter/Shift+Enter contract, and axe-core scans of the empty and the finished state; light/dark desktop and
+375 px screenshots land in `tests/Tempo.Blazor.E2E/__screenshots__/ai-conversation/`. The bUnit half is
+`tests/Tempo.Blazor.Tests/Components/AI/AiConversationDemoPageTests.cs`.
+
+The demo strings are `TmDemo_AiConversation_*` keys in `DemoResources{,.cs,.sk,.fr}.json`. The page's LABELS —
+including the two tool-call display names and the slash-command titles, which a reader sees in the tool cards and
+in the `/` list — resolve through `ITmLocalizer`; the sample CONTENT (the simulated answer, the standalone
+gallery's sample calls, the command prompts and the JSON payloads) stays in English, like the sample data of
+every other demo page.
+
 ## Localization
 
 Keys in `TmResources{,.cs,.sk,.fr}.json`: `TmAiConversation_Transcript` (the log's accessible name),
