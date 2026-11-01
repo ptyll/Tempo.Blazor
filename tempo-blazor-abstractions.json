@@ -33,6 +33,7 @@
       "Tempo.Blazor.Abstractions.Layout",
       "Tempo.Blazor.Abstractions.Models",
       "Tempo.Blazor.Abstractions.Models.Approvals",
+      "Tempo.Blazor.Abstractions.Models.Diffs",
       "Tempo.Blazor.Abstractions.Models.Reviews",
       "Tempo.Blazor.Abstractions.PivotTable",
       "Tempo.Blazor.Abstractions.Shared",
@@ -17390,6 +17391,46 @@
       "description": "Factory methods and built-in implementations of IImageUrlResolver.",
       "packageId": "Tempo.Blazor.Abstractions",
       "sourcePath": "src/Tempo.Blazor.Abstractions/Models/ImageUrlResolvers.cs",
+      "documentationStatus": "merged"
+    },
+    {
+      "itemName": "InlineDiffDecision",
+      "kind": "Record",
+      "category": "Models",
+      "namespace": "Tempo.Blazor.Abstractions.Models.Diffs",
+      "description": "One human decision on a single change of a TmInlineDiff: the hunk id, whether it was accepted and the whole resulting text. TmInlineDiff hands it to OnDecision before the decision is applied, so a host can persist the decision and the resulting wording in one round trip and a failed save never looks like an accepted change.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Models/Diffs/InlineDiffDecision.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Accepted",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Whether the change was accepted (true) or rejected (false)."
+        },
+        {
+          "name": "HunkId",
+          "kind": "Property",
+          "type": "string",
+          "description": "Identifier of the decided change (the hunk's stable Id)."
+        },
+        {
+          "name": "Result",
+          "kind": "Property",
+          "type": "string",
+          "description": "The whole resulting text after the decision."
+        }
+      ]
+    },
+    {
+      "itemName": "InlineDiffMode",
+      "kind": "Enum",
+      "category": "Models",
+      "namespace": "Tempo.Blazor.Abstractions.Models.Diffs",
+      "description": "How TmInlineDiff presents the comparison of two texts: Display renders the changes only, Review adds one decision per change (marker button, popover Accept / Reject, bulk actions, one level of Undo). The mode is about the user interface only - both modes show exactly the same hunks and the same TextDiffResult.Apply output.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Models/Diffs/InlineDiffMode.cs",
       "documentationStatus": "merged"
     },
     {
@@ -39139,11 +39180,11 @@
   ],
   "libraryExamples": [],
   "summary": {
-    "itemCount": 1562,
-    "manualItemCount": 1562,
-    "generatedItemCount": 1545,
+    "itemCount": 1564,
+    "manualItemCount": 1564,
+    "generatedItemCount": 1547,
     "generatedOnlyItemCount": 0,
     "componentCount": 0,
-    "publicApiTypeCount": 1545
+    "publicApiTypeCount": 1547
   }
 }

@@ -143,6 +143,68 @@ the component, the eight Abstractions models, the stylesheet and the resource ke
   `validate --fail-on-drift` clean; contract in [docs/review-queue.md](docs/review-queue.md). The
   demo page and the E2E/screenshot lane belong to phase 6 of the plan.
 
+### Human-in-the-loop components — `TmInlineDiff` and `TmSuggestionCard` (plan 10b3966f, phase 4)
+
+Two more human-in-the-loop decisions: an inline comparison whose every change can be accepted or
+rejected, and a machine suggestion with a confidence band and alternatives. **No breaking change** —
+both components, the two new Abstractions models, the two CSS sheets, the wireframe entries and the
+resource keys are all new.
+
+- **`TmInlineDiff`** (`src/Tempo.Blazor/Components/Approvals/`) — renders the shared
+  `Tempo.Blazor.Diff` comparison as real `<ins>` / `<del>` elements, each side preceded by a visually
+  hidden "Inserted: " / "Removed: " label. `Mode` (`InlineDiffMode.Display` default, `Review`) decides
+  whether there are decisions; `ReadOnly` removes every decision surface even in `Review`
+  (`IsReview` is the effective, public switch). Review adds the toolbar (`Changes: N`, Accept all,
+  Reject all, Undo), one marker button per change that opens a non-modal Accept / Reject popover (with
+  the `A` / `R` shortcuts announced through `aria-keyshortcuts`, disableable via `EnableShortcuts`) and
+  one level of Undo. `AcceptedHunkIds` / `AcceptedHunkIdsChanged` are the two-way accepted set (change
+  ids only) and `ResultChanged` raises the exact `TextDiffResult.Apply` output; `OnDecision`
+  (`Func<InlineDiffDecision, Task>`) runs before a decision is applied, so a throw leaves the change
+  undecided with the localized error. `Options` tunes the engine limits; a degraded comparison renders
+  the coarser hunks, sets `data-fallback` and shows a localized note instead of throwing. Public API:
+  `IsReview`, `ResultText`, `AcceptedIds`, `CanUndo`, `Diff` (the `TextDiffResult` behind the
+  rendering), `Announcement`, `AcceptHunkAsync` / `RejectHunkAsync`, `AcceptAllAsync` /
+  `RejectAllAsync`, `UndoAsync`.
+  **Note for hosts that compute the result themselves:** the unchanged hunks belong to the applied set
+  (the separator between two changes lives in the hunk before it), so derive the wording from
+  `ResultChanged` / `ResultText` rather than calling `Apply` with the changed ids alone.
+- **`TmSuggestionCard`** (`src/Tempo.Blazor/Components/Approvals/`) — `Text` (required), optional
+  `Title`, `Confidence` (`double?` → a localized High / Medium / Low band, plus the percentage with
+  `ShowConfidencePercent`), `Rationale` behind a native `<details>` (a blank rationale removes the
+  disclosure), and `Alternatives` as a `radiogroup` two-way bound through `SelectedAlternative` /
+  `SelectedAlternativeChanged`. `OnAccept` (`Func<string, Task>`) receives the selected alternative or
+  `Text`; `OnDismiss` (`Func<Task>`) — both paired with the `Accepted` / `Dismissed` `EventCallback`s —
+  run while the card is `aria-busy` and the actions are disabled, and collapse the card only when they
+  complete without throwing. `UndoWindow` + `OnUndo` / `Undone` offer Undo on the accepted row
+  (`TimeProvider` clock); dismissal is not undoable. Public API: `IsBusy`, `CanDecide`,
+  `CurrentAlternative`, `Announcement`, `AcceptAsync`, `DismissAsync`, `UndoAsync`.
+- **Models** (`src/Tempo.Blazor.Abstractions/Models/Diffs/`, namespace
+  `Tempo.Blazor.Abstractions.Models.Diffs`) — `InlineDiffMode` and `InlineDiffDecision`.
+- **Localization** — `TmInlineDiff_*` (31 English / 35 Czech and Slovak / 33 French entries) and
+  `TmSuggestionCard_*` (18) in all four resource tables and both `MockTmLocalizer` maps. The two bulk
+  announcements are PLURAL families (`_One` / `_Other`, plus `_Few` / `_Many` in Czech and Slovak)
+  resolved through `Loc.Plural`, so a bulk decision over one change reads "1 change accepted." and
+  Czech's 2–4 form is the one its sentence needs; `TmInlineDiff_ChangesLabel` stays a neutral
+  "Changes: {0}" because a labelled count needs no grammatical form
+  ([localization-plurals.md](docs/localization-plurals.md)).
+- **Accessibility** — both components keep exactly ONE polite live region (the busy state and the
+  errors ride on it, never on a second `role="status"` / `role="alert"`); the inline diff moves focus
+  into its popover and restores it to the marker on Escape and on a decision; the popover also
+  dismisses on a `Tab` past its first / last stop and on a click on the diff text (the inner moves and
+  the marker keep it open), and its expanded marker takes `--tm-color-on-primary` as ink on the primary
+  fill; the suggestion card moves focus to Undo after an acceptance (or to the card root) and back to
+  Accept on undo; `forced-colors`
+  keeps a `Highlight` ring on every focus stop and the diff keeps its underline / strike-through as a
+  non-colour channel; coarse pointers get `--tm-touch-target`; both sheets have a reduced-motion block
+  and their animated subjects are in the `animations.css` enumeration.
+- **Wireframe** — `TmInlineDiff` (`inline-diff` role) and `TmSuggestionCard` (`suggestion-card` role)
+  are placeable stencils in the `Feedback` category with declarative renders and built-in vocabulary
+  entries; `StencilFormatSpecInvariantsTests` keeps the pack and the schemas in step.
+- **Docs** — JSON overlays for both components and both models, bundles regenerated,
+  `validate --fail-on-drift` clean; contracts in [docs/inline-diff.md](docs/inline-diff.md) and
+  [docs/suggestion-card.md](docs/suggestion-card.md). The demo page and the E2E/screenshot lane belong
+  to phase 6 of the plan.
+
 ### Human-in-the-loop components — shared diff engine in `Tempo.Blazor.Abstractions` (plan 10b3966f, phase 1)
 
 The diff algorithms that existed twice (word level in `DocumentTextDiffHelper`, line level in

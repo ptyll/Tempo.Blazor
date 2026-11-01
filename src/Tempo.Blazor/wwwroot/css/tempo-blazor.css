@@ -82,6 +82,8 @@
 @import "components/_change-diff.css";
 @import "components/_approval-card.css";
 @import "components/_review-queue.css";
+@import "components/_inline-diff.css";
+@import "components/_suggestion-card.css";
 @import "components/_query-input.css";
 
 /* 7. Data Table & Pivot Table */

@@ -1,0 +1,297 @@
+/* ═══════════════════════════════════════════════════════
+   TmSuggestionCard — one machine suggestion a human decides on
+   Contract: docs/suggestion-card.md
+   ═══════════════════════════════════════════════════════ */
+
+/* ── Base ──────────────────────────────────────────────── */
+.tm-suggestion-card {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-3);
+    padding: var(--tm-space-4);
+    background: var(--tm-bg-surface);
+    color: var(--tm-text-primary);
+    border: 1px solid var(--tm-border-color);
+    border-inline-start: 3px solid var(--tm-color-primary);
+    border-radius: var(--tm-radius-card);
+    box-shadow: var(--tm-shadow-sm);
+    font-size: var(--tm-font-size-sm);
+    line-height: 1.5;
+    transition: border-color var(--tm-transition-normal), background-color var(--tm-transition-normal);
+}
+
+.tm-suggestion-card:focus-visible {
+    outline: 2px solid transparent;
+    box-shadow: var(--tm-focus-ring);
+}
+
+/* A decided suggestion is a result row, not a proposal: the accent and the shadow go away. */
+.tm-suggestion-card--collapsed {
+    gap: var(--tm-space-2);
+    background: var(--tm-bg-surface-secondary);
+    box-shadow: none;
+}
+
+.tm-suggestion-card--collapsed:focus-visible {
+    outline: 2px solid transparent;
+    box-shadow: var(--tm-focus-ring);
+}
+
+/* ── Confidence accent ─────────────────────────────────── */
+.tm-suggestion-card--confidence-high {
+    border-inline-start-color: var(--tm-color-success);
+}
+
+.tm-suggestion-card--confidence-medium {
+    border-inline-start-color: var(--tm-color-warning);
+}
+
+.tm-suggestion-card--confidence-low {
+    border-inline-start-color: var(--tm-color-danger);
+}
+
+/* A pending save: the actions are disabled and the pointer says so. */
+.tm-suggestion-card--busy {
+    cursor: progress;
+}
+
+/* ── Collapse (height transition, no JS) ───────────────── */
+.tm-suggestion-card__collapse {
+    display: grid;
+    grid-template-rows: 1fr;
+    visibility: visible;
+    transition: grid-template-rows var(--tm-transition-slow), visibility 0s;
+}
+
+.tm-suggestion-card__collapse[inert] {
+    grid-template-rows: 0fr;
+    visibility: hidden;
+    transition: grid-template-rows var(--tm-transition-slow), visibility 0s linear var(--tm-transition-slow);
+}
+
+.tm-suggestion-card__body,
+.tm-suggestion-card__summary {
+    min-inline-size: 0;
+}
+
+.tm-suggestion-card__body-inner,
+.tm-suggestion-card__summary-inner {
+    min-block-size: 0;
+    overflow: hidden;
+}
+
+.tm-suggestion-card__body-inner {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-3);
+}
+
+.tm-suggestion-card__summary-inner {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-2);
+    flex-wrap: wrap;
+}
+
+/* ── Header ────────────────────────────────────────────── */
+.tm-suggestion-card__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--tm-space-3);
+    flex-wrap: wrap;
+}
+
+.tm-suggestion-card__title {
+    margin: 0;
+    font-size: var(--tm-font-size-md);
+    font-weight: var(--tm-font-weight-semibold);
+    color: var(--tm-text-primary);
+}
+
+.tm-suggestion-card__confidence {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--tm-space-1);
+    padding: var(--tm-space-0-5) var(--tm-space-2);
+    background: var(--tm-bg-surface-secondary);
+    color: var(--tm-text-secondary);
+    border: 1px solid var(--tm-border-color);
+    border-radius: var(--tm-radius-full);
+    font-size: var(--tm-font-size-xs);
+    font-weight: var(--tm-font-weight-medium);
+    white-space: nowrap;
+}
+
+.tm-suggestion-card__confidence-label {
+    display: inline;
+}
+
+.tm-suggestion-card__confidence-percent {
+    display: inline;
+    font-variant-numeric: tabular-nums;
+    color: var(--tm-text-secondary);
+}
+
+/* ── Suggested text ────────────────────────────────────── */
+.tm-suggestion-card__text {
+    margin: 0;
+    padding: var(--tm-space-2) var(--tm-space-3);
+    background: var(--tm-bg-surface-secondary);
+    border-inline-start: 2px solid var(--tm-color-primary);
+    border-radius: var(--tm-radius-md);
+    color: var(--tm-text-primary);
+    overflow-wrap: anywhere;
+}
+
+/* ── Rationale disclosure ──────────────────────────────── */
+.tm-suggestion-card__rationale {
+    font-size: var(--tm-font-size-xs);
+    color: var(--tm-text-secondary);
+}
+
+.tm-suggestion-card__rationale-summary {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--tm-space-1);
+    padding: var(--tm-space-1) var(--tm-space-2);
+    border-radius: var(--tm-radius-control);
+    color: var(--tm-color-primary);
+    font-weight: var(--tm-font-weight-medium);
+    cursor: pointer;
+}
+
+.tm-suggestion-card__rationale-summary:focus-visible {
+    outline: 2px solid transparent;
+    box-shadow: var(--tm-focus-ring);
+}
+
+.tm-suggestion-card__rationale-text {
+    margin: var(--tm-space-1) 0 0;
+    color: var(--tm-text-secondary);
+}
+
+/* ── Alternatives ──────────────────────────────────────── */
+.tm-suggestion-card__alternatives {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-1);
+    padding: var(--tm-space-2);
+    background: var(--tm-bg-surface-secondary);
+    border: 1px solid var(--tm-border-color);
+    border-radius: var(--tm-radius-md);
+}
+
+.tm-suggestion-card__alternative {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-2);
+    padding: var(--tm-space-1) var(--tm-space-2);
+    border-radius: var(--tm-radius-control);
+    cursor: pointer;
+}
+
+.tm-suggestion-card__alternative-input {
+    flex: none;
+    accent-color: var(--tm-color-primary);
+}
+
+.tm-suggestion-card__alternative-input:focus-visible {
+    outline: 2px solid transparent;
+    box-shadow: var(--tm-focus-ring);
+}
+
+.tm-suggestion-card__alternative-text {
+    display: inline;
+    color: var(--tm-text-primary);
+    overflow-wrap: anywhere;
+}
+
+/* ── Error and actions ─────────────────────────────────── */
+.tm-suggestion-card__alert {
+    margin: 0;
+    padding: var(--tm-space-2);
+    color: var(--tm-color-danger-text);
+    background: var(--tm-color-danger-subtle);
+    border-inline-start: 2px solid var(--tm-color-danger);
+    border-radius: var(--tm-radius-md);
+    font-size: var(--tm-font-size-xs);
+}
+
+.tm-suggestion-card__actions {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-2);
+    flex-wrap: wrap;
+}
+
+.tm-suggestion-card__action:focus-visible,
+.tm-suggestion-card__undo:focus-visible {
+    outline: 2px solid transparent;
+    box-shadow: var(--tm-focus-ring);
+}
+
+/* ── Decided row ───────────────────────────────────────── */
+.tm-suggestion-card__summary-icon {
+    display: inline-flex;
+    flex: none;
+    color: var(--tm-text-secondary);
+}
+
+.tm-suggestion-card__summary-title {
+    font-weight: var(--tm-font-weight-semibold);
+    color: var(--tm-text-primary);
+}
+
+.tm-suggestion-card__summary-text {
+    color: var(--tm-text-secondary);
+    overflow-wrap: anywhere;
+}
+
+.tm-suggestion-card__undo {
+    margin-inline-start: auto;
+}
+
+/* ── Coarse pointers: every control is a finger target ── */
+@media (pointer: coarse) {
+    .tm-suggestion-card__action,
+    .tm-suggestion-card__undo,
+    .tm-suggestion-card__alternative {
+        min-block-size: var(--tm-touch-target);
+    }
+}
+
+/* ── Forced colors ─────────────────────────────────────── */
+@media (forced-colors: active) {
+    /* No forced-color-adjust opt-out anywhere in this card: the system palette is the point, and the
+       confidence band is always spelled out as a label, so the accent colour is never the only
+       signal. The box-shadow focus ring is forced away, so every focus stop re-declares the system
+       Highlight ring here. */
+    .tm-suggestion-card {
+        border-color: CanvasText;
+    }
+
+    .tm-suggestion-card__confidence,
+    .tm-suggestion-card__alternatives {
+        border-color: CanvasText;
+    }
+
+    .tm-suggestion-card:focus-visible,
+    .tm-suggestion-card--collapsed:focus-visible,
+    .tm-suggestion-card__action:focus-visible,
+    .tm-suggestion-card__undo:focus-visible,
+    .tm-suggestion-card__alternative-input:focus-visible,
+    .tm-suggestion-card__rationale-summary:focus-visible {
+        outline: 2px solid Highlight;
+        outline-offset: 2px;
+        box-shadow: none;
+    }
+}
+
+/* ── Reduced motion ────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+    .tm-suggestion-card,
+    .tm-suggestion-card__collapse {
+        transition: none;
+    }
+}

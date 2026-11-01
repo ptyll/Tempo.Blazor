@@ -42,7 +42,9 @@ public class StencilPackFeedbackFormsTests
         "TmColorPalette",
         "TmColorGradient",
         "TmApprovalCard",
-        "TmReviewQueue"
+        "TmReviewQueue",
+        "TmInlineDiff",
+        "TmSuggestionCard"
     ];
 
     public static TheoryData<string> FeedbackFormTypeData
@@ -59,7 +61,7 @@ public class StencilPackFeedbackFormsTests
     [Fact]
     public void FeedbackFormTypeList_CoversPlanScope()
     {
-        FeedbackFormTypes.Should().HaveCount(32);
+        FeedbackFormTypes.Should().HaveCount(34);
         FeedbackFormTypes.Should().Contain(["TmAlert", "TmProgressBar", "TmNotificationBell", "TmFormField", "TmColorGradient"]);
     }
 
@@ -156,6 +158,43 @@ public class StencilPackFeedbackFormsTests
         focus.Should().Contain(">Item 1 of 4<");
         focus.Should().Contain(">Detail of the current item<");
         focus.Should().NotContain("items to review", "focus mode is one item at a time");
+    }
+
+    [Fact]
+    public async Task InlineDiff_RendersBothSidesAndTheReviewActions()
+    {
+        var display = await RenderAsync("TmInlineDiff");
+        display.Should().Contain(">old wording<");
+        display.Should().Contain(">new wording<");
+        display.Should().NotContain(">Accept all<", "display mode has no decisions");
+
+        var review = await RenderAsync("TmInlineDiff", ("mode", "review"));
+        review.Should().Contain(">Changes: 2<");
+        review.Should().Contain(">Accept all<");
+        review.Should().Contain(">Reject all<");
+
+        var lines = await RenderAsync("TmInlineDiff", ("granularity", "lines"));
+        lines.Should().Contain("Whole lines are compared");
+        lines.Should().NotContain(">TmInlineDiff<");
+    }
+
+    [Fact]
+    public async Task SuggestionCard_RendersConfidenceRationaleAlternativesAndActions()
+    {
+        var svg = await RenderAsync("TmSuggestionCard", ("title", "Layout suggestion"), ("confidence", "high"));
+
+        svg.Should().Contain(">Layout suggestion<");
+        svg.Should().Contain(">Move the summary above the fold.<");
+        svg.Should().Contain(">Confidence:<");
+        svg.Should().Contain(">high<");
+        svg.Should().Contain(">Why this suggestion<");
+        svg.Should().Contain(">Accept<");
+        svg.Should().Contain(">Dismiss<");
+        svg.Should().NotContain(">TmSuggestionCard<");
+
+        var quiet = await RenderAsync("TmSuggestionCard", ("confidence", "none"), ("showRationale", false), ("alternatives", 0));
+        quiet.Should().NotContain(">Confidence:<");
+        quiet.Should().NotContain(">Why this suggestion<");
     }
 
     [Fact]

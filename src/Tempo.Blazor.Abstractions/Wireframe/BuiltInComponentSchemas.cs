@@ -154,6 +154,8 @@ public sealed class BuiltInComponentSchemas : IWireframeSchemaSource
             ["TmChangeDiff"] = ["diff-view"],
             ["TmApprovalCard"] = ["approval-card"],
             ["TmReviewQueue"] = ["review-queue"],
+            ["TmInlineDiff"] = ["inline-diff"],
+            ["TmSuggestionCard"] = ["suggestion-card"],
             ["TmMultiViewList"] = ["list-view"],
             ["TmDataTable"] = ["data-table"],
             ["TmPagination"] = ["pagination"],
@@ -1143,6 +1145,35 @@ public sealed class BuiltInComponentSchemas : IWireframeSchemaSource
                 P("itemCount",   "Item Count",  PropType.Int,    4,                                           cat: "Content"),
                 P("showRisk",    "Show Risk",   PropType.Bool,   true,                                        cat: "Appearance"),
                 P("showActions", "Show Actions", PropType.Bool,  true,                                        cat: "Appearance"),
+            ]
+        };
+
+        yield return new WireframeComponentSchema
+        {
+            Type = "TmInlineDiff", Category = "Feedback", DisplayName = "Inline Diff",
+            DefaultWidth = 420, DefaultHeight = 120,
+            Props =
+            [
+                P("mode",        "Mode",        PropType.Enum, "display", cat: "Appearance",
+                    opts: ["display", "review"]),
+                P("granularity", "Granularity", PropType.Enum, "words",   cat: "Content",
+                    opts: ["words", "lines"]),
+                P("showCount",   "Show Count",  PropType.Bool, true,      cat: "Appearance"),
+            ]
+        };
+
+        yield return new WireframeComponentSchema
+        {
+            Type = "TmSuggestionCard", Category = "Feedback", DisplayName = "Suggestion Card",
+            DefaultWidth = 400, DefaultHeight = 210,
+            Props =
+            [
+                P("title",           "Title",            PropType.String, "Layout suggestion",                 cat: "Content"),
+                P("text",            "Text",             PropType.String, "Move the summary above the fold.",  cat: "Content"),
+                P("confidence",      "Confidence",       PropType.Enum,   "high",                              cat: "Content",
+                    opts: ["none", "low", "medium", "high"]),
+                P("showRationale",   "Show Rationale",   PropType.Bool,   true,                                cat: "Appearance"),
+                P("alternatives",    "Alternatives",     PropType.Int,    2,                                   cat: "Content"),
             ]
         };
 

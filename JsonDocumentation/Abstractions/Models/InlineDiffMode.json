@@ -1,0 +1,10 @@
+{
+  "itemName": "InlineDiffMode",
+  "kind": "Enum",
+  "category": "Models",
+  "namespace": "Tempo.Blazor.Abstractions.Models.Diffs",
+  "description": "How TmInlineDiff presents the comparison of two texts: Display renders the changes only, Review adds one decision per change (marker button, popover Accept / Reject, bulk actions, one level of Undo). The mode is about the user interface only - both modes show exactly the same hunks and the same TextDiffResult.Apply output.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/Models/Diffs/InlineDiffMode.cs",
+  "documentationStatus": "generated"
+}

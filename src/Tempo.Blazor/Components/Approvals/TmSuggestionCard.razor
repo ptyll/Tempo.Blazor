@@ -1,0 +1,146 @@
+@namespace Tempo.Blazor.Components.Approvals
+@inherits Tempo.Blazor.Components.TmComponentBase
+@using Tempo.Blazor.Components.Icons
+
+@* One machine suggestion a human accepts or dismisses. The pending half and the decided half are BOTH
+   mounted so the collapse can transition the height (grid-template-rows 1fr -> 0fr, see
+   _suggestion-card.css); the inactive half carries the inert attribute, so it leaves the tab order and
+   the accessibility tree. The rationale is a native <details>, which keeps the disclosure
+   keyboard-operable without a JS handler. *@
+<section @ref="_rootElement"
+         class="@RootClass"
+         data-testid="@RootTestId("suggestion-card")"
+         data-state="@StateName"
+         data-confidence="@ConfidenceName"
+         role="group"
+         aria-label="@EffectiveAriaLabel"
+         aria-busy="@(IsBusy ? "true" : null)"
+         tabindex="-1"
+         @attributes="AdditionalAttributes">
+
+    <div class="tm-suggestion-card__collapse tm-suggestion-card__body" inert="@IsCollapsed">
+        <div class="tm-suggestion-card__body-inner">
+
+            <div class="tm-suggestion-card__header">
+                @if (!string.IsNullOrWhiteSpace(Title))
+                {
+                    <p class="tm-suggestion-card__title" data-testid="@TestId("suggestion-title")">@Title</p>
+                }
+                @if (HasConfidence)
+                {
+                    <span class="tm-suggestion-card__confidence" data-testid="@TestId("suggestion-confidence")">
+                        <TmIcon Name="@ConfidenceIcon" Size="IconSize.Xs" />
+                        <span class="tm-suggestion-card__confidence-label">@ConfidenceLabel</span>
+                        @if (ShowConfidencePercent)
+                        {
+                            <span class="tm-suggestion-card__confidence-percent"
+                                  data-testid="@TestId("suggestion-confidence-percent")">@ConfidencePercentText</span>
+                        }
+                    </span>
+                }
+            </div>
+
+            <p class="tm-suggestion-card__text" data-testid="@TestId("suggestion-text")">@Text</p>
+
+            @if (HasRationale)
+            {
+                <details class="tm-suggestion-card__rationale"
+                         data-testid="@TestId("suggestion-rationale")"
+                         open="@RationaleDefaultExpanded">
+                    <summary class="tm-suggestion-card__rationale-summary"
+                             data-testid="@TestId("suggestion-rationale-summary")">@Loc["TmSuggestionCard_Rationale"]</summary>
+                    <p class="tm-suggestion-card__rationale-text"
+                       data-testid="@TestId("suggestion-rationale-text")">@Rationale</p>
+                </details>
+            }
+
+            @if (HasAlternatives)
+            {
+                <div class="tm-suggestion-card__alternatives"
+                     role="radiogroup"
+                     aria-label="@Loc["TmSuggestionCard_Alternatives"]"
+                     data-testid="@TestId("suggestion-alternatives")">
+                    @foreach (var alternative in Alternatives!)
+                    {
+                        <label class="tm-suggestion-card__alternative">
+                            <input class="tm-suggestion-card__alternative-input"
+                                   type="radio"
+                                   name="@AlternativeGroupName"
+                                   value="@alternative"
+                                   checked="@IsSelected(alternative)"
+                                   disabled="@IsBusy"
+                                   data-testid="@TestId("suggestion-alternative")"
+                                   @onchange="() => SelectAlternative(alternative)" />
+                            <span class="tm-suggestion-card__alternative-text">@alternative</span>
+                        </label>
+                    }
+                </div>
+            }
+
+            @if (ErrorMessage is not null)
+            {
+                @* A plain paragraph, never a second live region: the single polite region below carries
+                   the message (role=alert would announce the same failure twice). *@
+                <p class="tm-suggestion-card__alert" data-testid="@TestId("suggestion-error")">@ErrorMessage</p>
+            }
+
+            <div class="tm-suggestion-card__actions" data-testid="@TestId("suggestion-actions")">
+                <button type="button"
+                        @ref="_acceptElement"
+                        class="tm-btn tm-btn-primary tm-btn-sm tm-suggestion-card__action"
+                        data-testid="@TestId("suggestion-accept")"
+                        disabled="@IsBusy"
+                        @onclick="AcceptAsync">
+                    <TmIcon Name="@IconNames.Check" Size="IconSize.Xs" />
+                    <span class="tm-btn-label">@Loc["TmSuggestionCard_Accept"]</span>
+                </button>
+                <button type="button"
+                        class="tm-btn tm-btn-ghost tm-btn-sm tm-suggestion-card__action"
+                        data-testid="@TestId("suggestion-dismiss")"
+                        disabled="@IsBusy"
+                        @onclick="DismissAsync">
+                    <TmIcon Name="@IconNames.X" Size="IconSize.Xs" />
+                    <span class="tm-btn-label">@Loc["TmSuggestionCard_Dismiss"]</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="tm-suggestion-card__collapse tm-suggestion-card__summary"
+         data-testid="@TestId("suggestion-summary")"
+         inert="@(!IsCollapsed)">
+        <div class="tm-suggestion-card__summary-inner">
+            @if (!string.IsNullOrEmpty(StateIcon))
+            {
+                <span class="tm-suggestion-card__summary-icon" aria-hidden="true">
+                    <TmIcon Name="@StateIcon" Size="IconSize.Sm" />
+                </span>
+            }
+            @if (!string.IsNullOrWhiteSpace(Title))
+            {
+                <span class="tm-suggestion-card__summary-title">@Title</span>
+            }
+            <span class="tm-suggestion-card__summary-text" data-testid="@TestId("suggestion-summary-text")">@SummaryText</span>
+            @if (ShowUndo)
+            {
+                <button type="button"
+                        @ref="_undoElement"
+                        class="tm-btn tm-btn-ghost tm-btn-sm tm-suggestion-card__undo"
+                        data-testid="@TestId("suggestion-undo")"
+                        aria-label="@UndoLabel"
+                        @onclick="UndoAsync">
+                    <TmIcon Name="@IconNames.RotateCcw" Size="IconSize.Xs" />
+                    <span class="tm-btn-label">@Loc["TmSuggestionCard_Undo"]</span>
+                </button>
+            }
+        </div>
+    </div>
+
+    @* ONE polite live region for the whole card: every decision, every error and the undo is
+       announced here, and nothing else in the card claims a live role. *@
+    <div class="tm-sr-only"
+         role="status"
+         aria-live="polite"
+         aria-atomic="true"
+         data-testid="@TestId("suggestion-announcements")">@_announcement</div>
+</section>
