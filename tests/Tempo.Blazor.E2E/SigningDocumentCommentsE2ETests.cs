@@ -234,7 +234,7 @@ public class SigningDocumentCommentsE2ETests : WasmTestBase
         await WaitForAppReadyAsync(page);
 
         var viewer = await OpenCommentsViewerAsync(page);
-        await page.Locator("[data-testid='document-comments-layout']").SelectOptionAsync("Mobile");
+        await page.Locator("[data-testid='document-comments-layout'] select").SelectOptionAsync("Mobile");
         var sheet = viewer.Locator(".tm-document-page-viewer__comments-sheet .tm-drawer__panel").First;
         await Assertions.Expect(sheet).ToBeVisibleAsync();
         await Assertions.Expect(viewer.Locator(".tm-document-page-viewer__comments-sheet")).ToHaveAttributeAsync("data-snap-index", "0");

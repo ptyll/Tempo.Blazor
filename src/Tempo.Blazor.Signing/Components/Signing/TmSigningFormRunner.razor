@@ -382,8 +382,10 @@
         <div class="tm-signing-form-runner__actions">
             <TmButton Variant="ButtonVariant.Secondary"
                       Size="ButtonSize.Lg"
+                      Icon="@IconNames.ChevronLeft"
                       Class="tm-signing-form-runner__previous"
                       Disabled="@IsPreviousDisabled"
+                      AriaLabel="@Loc["TmSigning_Previous"]"
                       OnClick="GoPreviousAsync">
                 @Loc["TmSigning_Previous"]
             </TmButton>

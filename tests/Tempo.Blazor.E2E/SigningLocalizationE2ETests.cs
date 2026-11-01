@@ -31,6 +31,8 @@ public class SigningLocalizationE2ETests : WasmTestBase
     public async Task FieldEditor_UpdatesLocalizedLabelAndKeepsOptionValue()
     {
         var page = await OpenSigningComponentsAsync();
+        await page.SetViewportSizeAsync(1440, 900);
+        await page.AddStyleTagAsync(new PageAddStyleTagOptions { Content = SigningRedesignPhase9Specs.WideLayoutStyle });
         var designer = GetDesigner(page);
         await designer.ScrollIntoViewIfNeededAsync();
 
@@ -42,6 +44,7 @@ public class SigningLocalizationE2ETests : WasmTestBase
 
         await Assertions.Expect(designer.Locator("[data-field-uuid='designer-name']").First).ToContainTextAsync("Signer legal name");
 
+        await DismissDesignerInspectorSheetAsync(page, designer);
         await designer.Locator("[data-field-uuid='designer-delivery']").First.ClickAsync();
         var optionInput = designer.Locator("[data-localized-option-uuid='designer-delivery-email'] .tm-signing-field-editor-panel__localized-option-label").First;
         await ReplaceInputValueAsync(page, optionInput, "Electronic delivery");
@@ -144,7 +147,7 @@ public class SigningLocalizationE2ETests : WasmTestBase
         await condition.Locator(".tm-condition-builder__value-select select").First.SelectOptionAsync("country-us");
         await Assertions.Expect(await GetByTestIdAsync(page, "condition-builder-status")).ToContainTextAsync("1 condition");
 
-        await page.Locator(".condition-builder-culture").First.SelectOptionAsync("cs-CZ");
+        await page.Locator("[data-testid='condition-builder-culture'] select").First.SelectOptionAsync("cs-CZ");
 
         await Assertions.Expect(condition.Locator(".tm-condition-builder__field select").First).ToHaveValueAsync("condition-country");
         await Assertions.Expect(condition.Locator(".tm-condition-builder__value-select select").First).ToHaveValueAsync("country-us");
@@ -232,6 +235,22 @@ public class SigningLocalizationE2ETests : WasmTestBase
                 return { x: fieldRect.x - pageRect.x, y: fieldRect.y - pageRect.y };
             }
             """);
+    }
+
+    /// <summary>
+    /// At tablet width the inspector is a right overlay sheet and it swallows the next field click.
+    /// Close it (or Escape) before selecting a second field.
+    /// </summary>
+    private static async Task DismissDesignerInspectorSheetAsync(IPage page, ILocator designer)
+    {
+        var close = designer.Locator("[data-testid='editor-shell-right-overlay-close'], [data-testid$='editor-shell-right-overlay-close']");
+        if (await close.CountAsync() > 0 && await close.First.IsVisibleAsync())
+        {
+            await close.First.ClickAsync();
+            return;
+        }
+
+        await page.Keyboard.PressAsync("Escape");
     }
 
     private static async Task SelectPreviewCultureAsync(IPage page, ILocator designer, string culture)

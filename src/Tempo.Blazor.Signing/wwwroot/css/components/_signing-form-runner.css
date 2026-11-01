@@ -659,6 +659,14 @@
         z-index: var(--tm-z-sticky);
         background: var(--tm-bg-surface);
         padding-block: var(--tm-space-2);
+        /* Sit in the body padding so the last step control can scroll clear of the footer. */
+        margin-block-end: calc(-1 * var(--tm-signing-runner-footer, calc(var(--tm-touch-target) + var(--tm-space-4))));
+    }
+
+    .tm-signing-form-runner__steps .tm-signing-form-runner__step-panel {
+        --tm-signing-runner-footer: calc(var(--tm-touch-target) + var(--tm-space-4));
+        scroll-padding-block-end: var(--tm-signing-runner-footer);
+        padding-block-end: var(--tm-signing-runner-footer);
     }
 
     /* The sheet bar's buttons must shrink with the track, not overflow it (the grid track is
@@ -677,6 +685,13 @@
     .tm-signing-form-runner__more {
         display: inline-flex;
     }
+}
+
+/* Chevron stays out of the docked Previous button. The extra-narrow cut below turns it back on.
+   This claims .tm-icon (recorded in UnconstrainedClassOwnershipTests): strictly narrower than
+   the core icon rule, so the docked runner hides its own chevron and nowhere else. */
+.tm-signing-form-runner__previous .tm-icon {
+    display: none;
 }
 
 /* The EXTRA-narrow cut (phase 5 review): below a ~360px container the sm button chrome cannot
@@ -702,6 +717,24 @@
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
+    }
+
+    /* Previous is icon-only here ("Previ…" at 320). The visible label is clipped; aria-label
+       on the button keeps the name. The chevron is hidden above this cut. */
+    .tm-signing-form-runner__steps .tm-signing-form-runner__actions .tm-signing-form-runner__previous .tm-icon {
+        display: inline-flex;
+    }
+
+    .tm-signing-form-runner__steps .tm-signing-form-runner__actions .tm-signing-form-runner__previous .tm-btn-label {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip-path: inset(50%);
+        white-space: nowrap;
+        border: 0;
     }
 }
 

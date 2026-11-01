@@ -95,9 +95,22 @@ public class SigningContainerQueryE2ETests : WasmTestBase
     {
         foreach (var page in await OpenBothSigningPagesAsync())
         {
+            // The bridge drive ends on the Preview tab, which unmounts the designer. The Place tab
+            // stays enabled, so bring the designer back before measuring it.
+            if (page.Url.Contains("/signing-from-editor", StringComparison.Ordinal))
+            {
+                await page.Locator("[data-testid='signing-from-editor-tab-place']").ClickAsync();
+                await page.WaitForFunctionAsync(
+                    "() => [...document.querySelectorAll('.tm-pdf-template-designer')].some(el => el.offsetWidth > 0)",
+                    null,
+                    new PageWaitForFunctionOptions { Timeout = 30_000 });
+            }
+
             var measurement = await page.EvaluateAsync<string>("""
                 () => {
-                    const designer = document.querySelector('.tm-pdf-template-designer');
+                    const designer = [...document.querySelectorAll('.tm-pdf-template-designer')]
+                        .find(el => el.getClientRects().length > 0)
+                        ?? document.querySelector('.tm-pdf-template-designer');
                     const shell = designer?.closest('.tm-editor-shell') ?? designer;
                     const main = shell?.querySelector('.tm-editor-shell__main');
                     const regions = ['left', 'canvas', 'right'].filter(region =>
@@ -111,7 +124,7 @@ public class SigningContainerQueryE2ETests : WasmTestBase
             var (tracks, containerWidth) = ParseMeasurement(measurement);
 
             Assert.AreEqual(3, tracks.Split(' ', StringSplitOptions.RemoveEmptyEntries).Length,
-                $"the designer shell is {containerWidth}px wide at a 1440px viewport, so it must keep its " +
+                $"the designer shell is {containerWidth}px wide at a 1440px viewport ({page.Url}), so it must keep its " +
                 $"palette | canvas | inspector regions, but the rendered regions were '{tracks}'");
         }
     }
@@ -124,8 +137,10 @@ public class SigningContainerQueryE2ETests : WasmTestBase
         {
             var measurement = await page.EvaluateAsync<string>("""
                 () => {
-                    const root = document.querySelector('.tm-signing-form-runner');
-                    const layout = document.querySelector('.tm-signing-form-runner__layout');
+                    const root = [...document.querySelectorAll('.tm-signing-form-runner')]
+                        .find(el => el.getClientRects().length > 0)
+                        ?? document.querySelector('.tm-signing-form-runner');
+                    const layout = root?.querySelector('.tm-signing-form-runner__layout');
                     if (!layout) return JSON.stringify({ tracks: '', containerWidth: 0 });
                     return JSON.stringify({
                         tracks: getComputedStyle(layout).gridTemplateColumns,
@@ -204,6 +219,12 @@ public class SigningContainerQueryE2ETests : WasmTestBase
                 await page.WaitForSelectorAsync(
                     "[data-testid='signing-from-editor-designer'] .tm-pdf-template-designer__workspace",
                     new PageWaitForSelectorOptions { State = WaitForSelectorState.Attached, Timeout = 15_000 });
+                // The workspace attaches one render before the shell lays out. Measuring before
+                // that reports a 0px shell with no regions.
+                await page.WaitForFunctionAsync(
+                    "() => [...document.querySelectorAll('.tm-pdf-template-designer')].some(el => el.getClientRects().length > 0 && el.offsetWidth > 0)",
+                    null,
+                    new PageWaitForFunctionOptions { Timeout = 15_000 });
                 break;
             }
             catch (TimeoutException)

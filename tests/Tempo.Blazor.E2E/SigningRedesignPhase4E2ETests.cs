@@ -151,40 +151,6 @@ public class SigningRedesignPhase4E2ETests : BaselineGeneratorTestBase
         }
     }
 
-    /// <summary>
-    /// A Czech signer types the decimal COMMA (phase 4 review): <c>PressSequentially("125,5")</c>
-    /// in the runner switched to cs-CZ must store the value (the field list flips the amount to
-    /// "Done") without firing the step's validation alert — and the token survives the commit.
-    /// </summary>
-    [TestMethod]
-    [Description("cs number step accepts the typed decimal comma (125,5) without an alert")]
-    public async Task SigningRunner_CsCulture_CommaNumberCommitsWithoutAlert()
-    {
-        var context = await CreateContextAsync();
-        var page = await context.NewPageAsync();
-        await page.SetViewportSizeAsync(1280, 720);
-        await page.GotoAsync($"{BaseUrl}{SigningComponentsUrl}");
-        await WaitForAppReadyAsync(page);
-
-        var runner = page.Locator("[data-testid='signing-runner-demo']").First;
-        await runner.ScrollIntoViewIfNeededAsync();
-        var panel = runner.Locator("aside.tm-signing-form-runner__steps, .tm-signing-form-runner__sheet-host .tm-drawer__panel").First;
-
-        await panel.Locator(".tm-signing-form-runner__field-button[data-field-uuid='runner-amount']").ClickAsync();
-        await panel.Locator(".tm-signing-form-runner__language-select").SelectOptionAsync("cs-CZ");
-
-        var input = panel.Locator("input.tm-signing-number-step__input").First;
-        await input.ClickAsync();
-        await input.PressSequentiallyAsync("125,5");
-        await input.PressAsync("Tab");
-
-        await Assertions.Expect(panel.Locator(".tm-signing-step-shell__validation")).ToHaveCountAsync(0);
-        await Assertions.Expect(input).ToHaveValueAsync("125,5");
-        await Assertions.Expect(panel.Locator(
-                ".tm-signing-form-runner__field-button[data-field-uuid='runner-amount'] .tm-signing-form-runner__field-status--done"))
-            .ToHaveCountAsync(1);
-    }
-
     private async Task<IPage> OpenStepsPageAsync(int width, int height, bool touch)
     {        var context = await Browser.NewContextAsync(new BrowserNewContextOptions
         {
@@ -252,5 +218,43 @@ public class SigningRedesignPhase4E2ETests : BaselineGeneratorTestBase
         }
 
         throw new DirectoryNotFoundException("Could not locate TempoBlazor.slnx.");
+    }
+}
+
+/// <summary>
+/// Always-on Signing lane (not a baseline generator): a Czech signer types the decimal comma.
+/// </summary>
+[TestClass]
+[TestCategory("WASM")]
+[TestCategory("Signing")]
+public class SigningNumberCultureE2ETests : WasmTestBase
+{
+    [TestMethod]
+    [Description("cs number step accepts the typed decimal comma (125,5) without an alert")]
+    public async Task SigningRunner_CsCulture_CommaNumberCommitsWithoutAlert()
+    {
+        var context = await CreateContextAsync();
+        var page = await context.NewPageAsync();
+        await page.SetViewportSizeAsync(1280, 720);
+        await page.GotoAsync($"{BaseUrl}/signing-components");
+        await WaitForAppReadyAsync(page);
+
+        var runner = page.Locator("[data-testid='signing-runner-demo']").First;
+        await runner.ScrollIntoViewIfNeededAsync();
+        var panel = runner.Locator("aside.tm-signing-form-runner__steps, .tm-signing-form-runner__sheet-host .tm-drawer__panel").First;
+
+        await panel.Locator(".tm-signing-form-runner__field-button[data-field-uuid='runner-amount']").ClickAsync();
+        await panel.Locator(".tm-signing-form-runner__language-select").SelectOptionAsync("cs-CZ");
+
+        var input = panel.Locator("input.tm-signing-number-step__input").First;
+        await input.ClickAsync();
+        await input.PressSequentiallyAsync("125,5");
+        await input.PressAsync("Tab");
+
+        await Assertions.Expect(panel.Locator(".tm-signing-step-shell__validation")).ToHaveCountAsync(0);
+        await Assertions.Expect(input).ToHaveValueAsync("125,5");
+        await Assertions.Expect(panel.Locator(
+                ".tm-signing-form-runner__field-button[data-field-uuid='runner-amount'] .tm-signing-form-runner__field-status--done"))
+            .ToHaveCountAsync(1);
     }
 }

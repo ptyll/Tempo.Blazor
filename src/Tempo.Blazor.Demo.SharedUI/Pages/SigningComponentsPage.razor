@@ -71,17 +71,16 @@
 
     <div class="showcase-card">
         <div class="mb-4 flex flex-wrap items-center gap-3 text-sm text-slate-700 dark:text-slate-300">
-            <label class="inline-flex items-center gap-2">
-                <input type="checkbox" class="rounded border-slate-300" @bind="_showResolvedComments" />
-                <span>Show resolved comments</span>
-            </label>
-            <label class="inline-flex items-center gap-2">
-                <span>Comments layout</span>
-                <select class="rounded border border-slate-300" data-testid="document-comments-layout" @bind="_commentViewerLayout">
-                    <option value="@TmLayoutMode.Auto">Auto</option>
-                    <option value="@TmLayoutMode.Mobile">Mobile</option>
-                </select>
-            </label>
+            <TmCheckbox Label="Show resolved comments"
+                        Value="_showResolvedComments"
+                        ValueChanged="value => _showResolvedComments = value" />
+            <TmSelect TValue="TmLayoutMode"
+                      Id="document-comments-layout"
+                      Label="Comments layout"
+                      Value="_commentViewerLayout"
+                      ValueChanged="SetCommentViewerLayout"
+                      Options="_commentLayoutOptions"
+                      data-testid="document-comments-layout" />
             <span class="text-slate-500 dark:text-slate-400" data-testid="document-comments-last-event">@_commentLastEvent</span>
         </div>
 
@@ -234,16 +233,15 @@
     </div>
 
     <div class="showcase-card">
-        <label class="inline-flex items-center gap-2 mb-3 text-sm text-slate-600 dark:text-slate-400">
-            <span>Preview language</span>
-            <select class="tm-input condition-builder-culture"
-                    @bind="_conditionCulture">
-                @foreach (var culture in _signingCultures)
-                {
-                    <option value="@culture">@culture</option>
-                }
-            </select>
-        </label>
+        <div class="mb-3 signing-components-page__culture">
+            <TmSelect TValue="string"
+                      Id="condition-builder-culture"
+                      Label="Preview language"
+                      Value="_conditionCulture"
+                      ValueChanged="SetConditionCulture"
+                      Options="_signingCultureOptions"
+                      data-testid="condition-builder-culture" />
+        </div>
         <TmConditionBuilder Fields="_conditionFields"
                             CurrentFieldUuid="conditional-signature"
                             Conditions="_conditionRules"
@@ -468,6 +466,14 @@
     </div>
 
     <div class="showcase-card">
+        <div class="mb-3 signing-components-page__culture" data-testid="signing-runner-signature-mode">
+            <TmSelect TValue="TmSigningDefaultSignatureMode"
+                      Id="signing-runner-signature-mode"
+                      Label="Default signature mode"
+                      Value="_runnerSignatureMode"
+                      ValueChanged="SetRunnerSignatureMode"
+                      Options="_signatureModeOptions" />
+        </div>
         <TmSigningFormRunner Pages="@_runnerPages"
                              Fields="@RunnerFields"
                              SubmitterRoles="@_templateRoles"
@@ -480,6 +486,8 @@
                              FallbackCulture="cs-CZ"
                              SupportedCultures="_signingCultures"
                              ShowLanguageSelector="true"
+                             DocumentTitle="Service order approval"
+                             DefaultSignatureMode="_runnerSignatureMode"
                              OnLocalizationSnapshotChanged="HandleRunnerLocalizationSnapshotChanged"
                              AutoSaveDelay="@TimeSpan.FromMilliseconds(80)"
                              data-testid="signing-runner-demo" />
@@ -520,12 +528,12 @@
         <div class="mt-3 text-sm text-slate-600 dark:text-slate-400" data-testid="signing-active-steps-status">
             @_activeStepsStatus
         </div>
-        <label class="mt-1 flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
-            <input type="checkbox"
-                   data-testid="signing-active-steps-fail-toggle"
-                   @bind="_activeSimulateProviderFailure" />
-            Simulate provider failure (external error state)
-        </label>
+        <div class="mt-1">
+            <TmCheckbox Label="Simulate provider failure (external error state)"
+                        Value="_activeSimulateProviderFailure"
+                        ValueChanged="value => _activeSimulateProviderFailure = value"
+                        InputAttributes="_failToggleInputAttributes" />
+        </div>
     </div>
 </section>
 
@@ -787,6 +795,11 @@
     private DocumentCommentMode _commentMode = DocumentCommentMode.Browse;
     private bool _showResolvedComments;
     private TmLayoutMode _commentViewerLayout = TmLayoutMode.Auto;
+    private static readonly IReadOnlyList<SelectOption<TmLayoutMode>> _commentLayoutOptions =
+    [
+        new() { Value = TmLayoutMode.Auto, Label = "Auto" },
+        new() { Value = TmLayoutMode.Mobile, Label = "Mobile" }
+    ];
     private int _commentPageIndex;
     private string? _selectedCommentThreadId = "comment-amount";
     private string _commentLastEvent = "Comments ready";
@@ -811,9 +824,22 @@
     private string? _formulaValue;
     private string _formulaStatus = "No formula saved";
     private readonly IReadOnlyList<string> _signingCultures = ["cs-CZ", "en-US"];
+    private readonly IReadOnlyList<SelectOption<string>> _signingCultureOptions =
+    [
+        new() { Value = "cs-CZ", Label = "cs-CZ" },
+        new() { Value = "en-US", Label = "en-US" }
+    ];
     private string? _fieldEditorCulture = "en-US";
     private string? _designerCulture = "cs-CZ";
     private string? _runnerCulture = "en-US";
+    private TmSigningDefaultSignatureMode _runnerSignatureMode = TmSigningDefaultSignatureMode.Auto;
+    private static readonly IReadOnlyList<SelectOption<TmSigningDefaultSignatureMode>> _signatureModeOptions =
+    [
+        new() { Value = TmSigningDefaultSignatureMode.Auto, Label = "Auto (Draw on touch)" },
+        new() { Value = TmSigningDefaultSignatureMode.Draw, Label = "Draw" },
+        new() { Value = TmSigningDefaultSignatureMode.Typed, Label = "Typed" },
+        new() { Value = TmSigningDefaultSignatureMode.Upload, Label = "Upload" }
+    ];
     private IReadOnlyList<SigningSubmitterRole> _templateRoles =
     [
         new SigningSubmitterRole { Uuid = "template-signer", Name = "Signer 1", Color = SigningRolePalette.DefaultColors[0], Order = 0 },
@@ -1106,6 +1132,18 @@
     private bool _activeExternalLoading;
     private string? _activeExternalError;
     private bool _activeSimulateProviderFailure;
+
+    // data-testid on the native input (InputAttributes), not the wrapper — GetByLabel can check it.
+    private static readonly Dictionary<string, object> _failToggleInputAttributes = new()
+    {
+        ["data-testid"] = "signing-active-steps-fail-toggle"
+    };
+
+    private void SetCommentViewerLayout(TmLayoutMode mode) => _commentViewerLayout = mode;
+
+    private void SetConditionCulture(string? culture) => _conditionCulture = culture;
+
+    private void SetRunnerSignatureMode(TmSigningDefaultSignatureMode mode) => _runnerSignatureMode = mode;
     private string _activeStepsStatus = "Active-steps runner ready — OTP code 123456";
 
     private SigningDocumentPage _activeStepsPage => new()

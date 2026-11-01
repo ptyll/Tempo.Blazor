@@ -215,6 +215,17 @@ public sealed class DocumentEditorSigningBridgeE2ETests : WasmTestBase
             phase);
         Directory.CreateDirectory(dir);
         var path = Path.Combine(dir, fileName);
+        // Phase 0–2 captures are historical. Rewriting them is opt-in, same as the redesign
+        // generators. The behaviour assertions above still run; the byte check reads the committed PNG.
+        var flag = Environment.GetEnvironmentVariable("TM_WRITE_BASELINES");
+        var write = string.Equals(flag, "1", StringComparison.Ordinal)
+            || string.Equals(flag, "true", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(flag, "yes", StringComparison.OrdinalIgnoreCase);
+        if (!write)
+        {
+            return path;
+        }
+
         await page.ScreenshotAsync(new PageScreenshotOptions
         {
             Path = path,

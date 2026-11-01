@@ -7783,7 +7783,7 @@
               "name": "TestId",
               "kind": "Property",
               "type": "string?",
-              "description": "Host test id copied onto the overflow entry as data-testid. Used when the action has no copy on the bar (a toolbar button with Priority == OverflowOnly). Empty renders no attribute."
+              "description": "Host test id rendered as data-testid on the TmMobileActionBar tile and on the overflow entry. Used when the action has no copy on the bar (a toolbar button with Priority == OverflowOnly). Empty renders no attribute. Markup change: a host that already set TestId now gets that id on the bar button, not only the menu."
             }
           ],
           "properties": [

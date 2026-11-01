@@ -24,6 +24,57 @@
 > (Fáze 15b). Contracts: [docs/modeling-editor.md](docs/modeling-editor.md),
 > [docs/diagram-editor.md](docs/diagram-editor.md).
 
+### Signing redesign — plan summary (plan 1fba4858, phases 1–10)
+
+`Tempo.Blazor.Signing` was rebuilt against the 22 reference screens in
+`output/imagegen/tempo-reimagined/Tempo.Blazor.Signing/` (66 mockups). Binding decisions: **SI1**
+every step input is a Tm component (date stays a native `<input type="date">`); **SI2** phone /
+upload / external steps complete only when the host confirms them (opt-in; a bare click is not
+proof); **SI3** `DefaultSignatureMode=Auto` starts Draw on a coarse pointer; **SI4** the field
+list is the stepper; **SI5** geometry can be edited in px. The designer edits fully from the
+tablet up (768 / 1200) and is viewing + light edits on a phone; the runner edits fully on a phone
+inside a `TmDrawer` sheet. Contract: [docs/signing.md](docs/signing.md). Demo:
+`/signing-from-editor` is one workspace (Edit → Place fields → Preview), `/signing-components`
+shows `DocumentTitle`, `DefaultSignatureMode` and the active-steps host.
+
+| Phase | Result |
+|---|---|
+| 1 | Container queries (640/768/1024/1280), token hygiene, `--tm-signing-role-1..6` (role 6 `#a16207`), dashed invalid field |
+| 2 | ONE step panel (B25 — the hidden duplicate is gone), accessible names on every step input |
+| 3 | Runner panel: titled header, permanent field list, action footer, completion hero; `DocumentTitle` |
+| 4 | Steps on Tm components; number parses the field culture; 44 px targets |
+| 5 | Runner sheet below 640; `LayoutMode`; `DefaultSignatureMode`; `signing-runner.js` |
+| 6 | Active-steps host contract (OTP / upload / external) — opt-in, not proof without the host |
+| 7 | Authoring panels (timeline, audit, share link, verification, comments) on the same chrome |
+| 8 | Designer on `TmEditorShell`; pointer events replace mouse/HTML5 drag; inspector on Tm components |
+| 9 | Runner sheet and comments panel on the shared `TmDrawer`; viewer pinch is opt-in |
+| 10 | `/signing-from-editor` workspace, this summary, [docs/signing.md](docs/signing.md) |
+
+Verification deviation (phase 10, recorded on request): the complete E2E suite was not run.
+The gate that ran is the Signing set —
+`FullyQualifiedName~Signing|PdfTemplateDesigner|ConditionBuilder|FormulaBuilder|RecipientRoleEditor|DocumentComments`
+— plus the phase-10 captures (`TM_WRITE_BASELINES=1`).
+
+Core additions that landed for this plan (all additive, defaults keep the old markup):
+
+- `TmAlert.Role` — the alert role is host-settable.
+- `TmSelect.SelectAttributes` — splat onto the native `<select>` (wins over the component's own).
+- `TmCheckbox.InputAttributes` — splat onto the native checkbox; `aria-describedby` merges with the help id.
+- `TmFileDropZone.InputAttributes` and `ShowFileList` (`false` hides the zone's own file list).
+- `ButtonVariant.OutlinePrimary` — transparent fill, primary border and ink.
+- `pointer-drag.js` `listenerCapture` — the drag listener captures, so a child cannot swallow the move.
+- `TmContextMenu.Open()` / `IsOpenChanged` — the designer opens its one menu and hears it close.
+- `TmTextArea.FocusAsync()` — moves focus to the textarea (no-op until it has rendered).
+- `TmTextArea` sets `aria-invalid` from its own error and from a surrounding `TmFormField` error.
+- `TmDropdown` sheet `min-height` — a phone sheet is tall enough to show its items.
+- `IconNames.ShieldCheck` and `IconNames.MailX`.
+- `TmMobileActionBar` renders `TmActionItem.TestId` as `data-testid` (markup change; see the `TestId` XML doc).
+- `TmContextMenuItem.OnClick` is kept across close (the handler runs after the menu closes).
+- `.tm-toolbar-btn--outline-primary` — transparent fill, primary border and ink on a toolbar button.
+
+Breaking items, with the before/after, are indexed under **Breaking / Migration** below
+(phases 1, 2, 3, 4, 5, 7, 8, 9). Phases 6 and 10 add parameters only.
+
 ### Spreadsheet redesign — plan summary (plan 8959eebe, phases 1–8)
 
 The `Tempo.Blazor.Spreadsheet` package was rebuilt against 57 reference mockups
@@ -109,6 +160,27 @@ findings table and the per-leg results) and the two perf runs
   ≤ +10 % budget is claimed.
 
 ### Breaking / Migration
+
+- **Signing redesign — breaking-change index (phases 1–9).** The full before/after for each item
+  lives in the entry linked below. Nothing in phase 10 changes a public contract.
+
+  | Item | Where |
+  |---|---|
+  | Container queries replace viewport `@media`; grid class moved to `__layout` / `__workspace-grid` | phase 1, Breaking / Migration |
+  | Token fallbacks removed (`#fff`, `--tm-color-border`, sticky z-index) | phase 1, Breaking / Migration |
+  | Role colour 6 default `#ca8a04` → `#a16207` (stored templates keep their hex) | phase 1, Breaking / Migration |
+  | ONE step panel — `.tm-signing-form-runner__mobile-panel` and `data-mobile` are gone (B25) | phase 2, Breaking / Migration |
+  | "Accessibility mode" toggle removed; the panel is one instance at every width | phase 3, Breaking / Migration |
+  | Completion panel / footer DOM (hero, sticky action row, titled field list) | phase 3, Breaking / Migration |
+  | Step inputs are Tm components; number is `type="text"` + culture parse (no `min`/`max`/`step` attrs) | phase 4, Breaking / Migration |
+  | Sheet breakpoint 768 → 640; no knob for the old 768 sheet (`LayoutMode=Mobile` pins it) | phase 5, Breaking / Migration |
+  | `DefaultSignatureMode=Auto` starts Draw on a coarse pointer (template format still wins) | phase 5, Breaking / Migration |
+  | `MobileMode` is `[Obsolete]`; pin `LayoutMode` | phase 5, Breaking / Migration |
+  | Authoring panel DOM rewritten (audit tables, role-editor cards, condition / formula / timeline) | phase 7, Breaking / Migration |
+  | Designer pointer events replace `mousedown` / HTML5 drag; root is `TmEditorShell` | phase 8, Breaking / Migration |
+  | Overlay callbacks take `TmSigningFieldOverlayPointerEventArgs` (was `MouseEventArgs`) | phase 8, Breaking / Migration |
+  | Field inspector is built from Tm components (`TmSigningFieldEditorActions`, geometry section) | phase 8, Breaking / Migration |
+  | Mobile runner sheet and comments panel are `TmDrawer`; viewer pager raises `PageRequested` | phase 9, Breaking / Migration |
 
 - **Signing redesign (phase 9): the mobile runner sheet is the shared `TmDrawer`, the comments panel is a `TmDrawer` sheet, and the viewer / designer mobile chrome moved.** Hosts and tests that keyed off the phase-5 local sheet classes, the comments panel as an `aside`, or the viewer's old pager buttons must follow the new DOM. Public parameters are additive except where a selector assumed the old tree.
 

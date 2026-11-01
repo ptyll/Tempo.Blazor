@@ -657,6 +657,11 @@
 .tm-document-page-viewer__comments-sheet .tm-document-comments-panel__items {
     min-block-size: 0;
     overflow: auto;
+    /* The sticky composer covers this much of the scroller. Padding lets the selected
+       comment scroll clear; scroll-padding keeps scrollIntoView above the composer. */
+    --tm-signing-comment-composer: 8.5rem;
+    padding-block-end: var(--tm-signing-comment-composer);
+    scroll-padding-block-end: var(--tm-signing-comment-composer);
 }
 
 .tm-document-page-viewer__comments-sheet .tm-comment-composer,

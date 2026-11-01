@@ -6,3 +6,9 @@
 [data-testid='signing-steps-demo'] > ::deep .tm-signing-external-step {
     align-self: start;
 }
+
+/* The demo culture / signature-mode selects sit in a flex header; keep them from stretching
+   across the whole card. */
+.signing-components-page__culture {
+    max-inline-size: 18rem;
+}

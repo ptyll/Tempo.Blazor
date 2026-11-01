@@ -22,6 +22,8 @@ public partial class TmSigningNumberStep
     private readonly string _validationId = $"tm-signing-step-validation-{Guid.NewGuid():N}";
     private string? _validationMessage;
     private string? _displayText;
+    private decimal? _lastParameterValue;
+    private bool _sawParameterValue;
 
     /// <summary>Signing field represented by this step.</summary>
     [Parameter] public SigningField Field { get; set; } = new() { Type = SigningFieldType.Number };
@@ -58,6 +60,28 @@ public partial class TmSigningNumberStep
     /// <inheritdoc />
     protected override void OnParametersSet()
     {
+        // Reformat only when the incoming Value changed and is not what the current text already
+        // parses to. A trailing comma ("125,") does not parse, so an echo of null must not wipe it.
+        // A null Value with blank text is the same case. The child's own render (before the parent
+        // echoes) does not change Value, so an in-progress "125,5" survives until the echo matches.
+        if (_sawParameterValue && Equals(Value, _lastParameterValue))
+        {
+            return;
+        }
+
+        _sawParameterValue = true;
+        _lastParameterValue = Value;
+
+        if (Value is null && string.IsNullOrWhiteSpace(_displayText))
+        {
+            return;
+        }
+
+        if (_displayText is not null && TryParseNumber(_displayText, out var parsed) && parsed == Value)
+        {
+            return;
+        }
+
         _displayText = FormatNumber(Value);
     }
 

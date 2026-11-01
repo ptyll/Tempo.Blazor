@@ -328,8 +328,7 @@ internal static class SigningRedesignPhase6Specs
     /// restored afterwards.</summary>
     public static async Task CaptureExternalErrorAsync(IPage page, ILocator runner, List<string> written, string fileName)
     {
-        var toggle = page.Locator("[data-testid='signing-active-steps-fail-toggle']").First;
-        await toggle.CheckAsync();
+        await page.GetByLabel("Simulate provider failure (external error state)").CheckAsync();
 
         await runner.Locator(".tm-signing-external-step__start-button").First.ClickAsync();
         await Assertions.Expect(runner.Locator(".tm-signing-step-shell__validation").First)
@@ -344,7 +343,7 @@ internal static class SigningRedesignPhase6Specs
         Console.WriteLine($"[signing-phase-6] wrote {path}");
         written.Add(path);
 
-        await toggle.UncheckAsync();
+        await page.GetByLabel("Simulate provider failure (external error state)").UncheckAsync();
     }
 
     private static DirectoryInfo FindRepoRoot()

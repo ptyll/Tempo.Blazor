@@ -6994,7 +6994,9 @@ Signing modely jsou v `Tempo.Blazor.Abstractions`, aby je mohlo referencovat API
 <script src="_content/Tempo.Blazor/js/signature-capture.js"></script>
 ```
 
-`TmPdfTemplateDesigner`, `TmSigningFormRunner`, `TmDocumentPageViewer`, produktové panely a signing step komponenty jsou provider-agnostic. `TmPdfTemplateDesigner` používá malý JS helper načítaný dynamickým importem pro přesný převod souřadnic při zoomu a vkládání polí; hostitelská aplikace typicky jen načte hlavní CSS:
+`TmPdfTemplateDesigner`, `TmSigningFormRunner`, `TmDocumentPageViewer`, produktové panely a signing step komponenty jsou provider-agnostic. Kroky runneru jsou `TmTextInput`, `TmTextArea`, `TmSelect`, `TmCheckbox`, `TmRadioGroup`, `TmFileDropZone`; **výjimka je datum** — nativní `<input type="date">`. Mobilní panel runneru je `TmDrawer` bottom sheet (pásma 640 / 1024). Runner vždy zapíná `EnablePinchZoom`. `DefaultSignatureMode` (`Auto` = Draw na hrubém ukazateli) rozhoduje jen když šablona režim neřekne. Aktivní kroky (telefon / příloha / externí) se dokončí až po potvrzení hostitelem — externí jen na hostem zapsané `true`. Přílohu čte host uvnitř callbacku (limit SignalR). Designer měří vlastní kontejner (`LayoutMode`, prahy 768 / 1200). Inspektor vždy ukazuje geometrii; samostatný panel má `ShowGeometry` default false. Barva role 6 je `#a16207` (light) / `#facc15` (dark). Plný kontrakt: [docs/signing.md](docs/signing.md).
+
+`TmPdfTemplateDesigner` načítá `pdf-template-designer.js` a `pdf-template-designer-pointer.js` (a přes něj `pointer-drag.js`). `TmSigningFormRunner` načítá `signing-runner.js` (`pointer-gesture.js`). `TmRecipientRoleEditor`, `TmConditionBuilder` a `TmFormulaBuilder` sdílejí `signing-editor.js` — `formula-builder.js` neexistuje. Signing ES moduly nepotřebují `<script>`. CSP: 4 Signing moduly + `pointer-drag.js`, `pointer-gesture.js`, `signature-capture.js` (žádný `eval`). `_content/Tempo.Blazor/js/` musí být servírován. Hostitelská aplikace typicky jen načte CSS:
 
 ```html
 <link href="_content/Tempo.Blazor/css/tempo-blazor.css" rel="stylesheet" />

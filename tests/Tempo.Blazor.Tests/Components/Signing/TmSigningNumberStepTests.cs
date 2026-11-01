@@ -200,4 +200,30 @@ public class TmSigningNumberStepTests : LocalizationTestBase
         cut.Find("input").Input("5");
         cut.FindAll(".tm-signing-step-shell__validation").Should().BeEmpty("typing clears the stale message");
     }
+
+    /// <summary>
+    /// An echo host under cs-CZ must keep a trailing comma. OnParametersSet used to reformat the
+    /// incoming value on every render, so "125," became "125" before the signer could type "5".
+    /// </summary>
+    [Fact]
+    public void EchoHost_CsCz_KeepsTrailingComma_ThenParses()
+    {
+        decimal? value = null;
+        var cut = Render<TmSigningNumberStep>(parameters => parameters
+            .Add(p => p.Field, new SigningField { Name = "Amount", Type = SigningFieldType.Number })
+            .Add(p => p.Culture, "cs-CZ")
+            .Add(p => p.Value, value)
+            .Add(p => p.ValueChanged, EventCallback.Factory.Create<decimal?>(this, next => value = next)));
+
+        cut.Find("input").Input("125,");
+        cut.Render(parameters => parameters.Add(p => p.Value, value));
+
+        cut.Find("input").GetAttribute("value").Should().Be("125,", "a trailing comma is still being typed");
+
+        cut.Find("input").Input("125,5");
+        cut.Render(parameters => parameters.Add(p => p.Value, value));
+
+        value.Should().Be(125.5m);
+        cut.Find("input").GetAttribute("value").Should().Be("125,5");
+    }
 }

@@ -236,6 +236,10 @@ public class UnconstrainedClassOwnershipTests
         // subjects (the list class / the runner actions chain), so import order decides nothing.
         ".tm-btn-label Tempo.Blazor.Signing/_signing-form-runner.css|Tempo.Blazor/_button.css",
         ".tm-drawer__body Tempo.Blazor.Signing/_document-comments.css|Tempo.Blazor/_drawer.css",
+
+        // Phase 10 review: Previous is icon-only below 22.5rem. The docked rule hides that chevron
+        // (display:none) against the core icon's inline-block. Strictly narrower runner chain.
+        ".tm-icon Tempo.Blazor.Signing/_signing-form-runner.css|Tempo.Blazor/_icon.css",
     ];
 
     [Fact]
