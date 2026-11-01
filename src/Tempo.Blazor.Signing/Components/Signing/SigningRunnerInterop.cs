@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
 
 namespace Tempo.Blazor.Components.Signing;
@@ -66,6 +67,78 @@ internal sealed class SigningRunnerInterop : IAsyncDisposable
         catch (TaskCanceledException)
         {
             return false;
+        }
+    }
+
+    /// <summary>
+    /// Attaches the shared two-finger pinch to the viewer viewport. The commit calls
+    /// <c>OnViewerPinchCommit</c> on <paramref name="viewer"/>. Best-effort: a missing module is a no-op.
+    /// </summary>
+    public async Task<IJSObjectReference?> EnableViewerPinchAsync(ElementReference viewport, DotNetObjectReference<TmDocumentPageViewer> viewer)
+    {
+        if (_importFailed || !await EnsureModuleAsync().ConfigureAwait(false))
+        {
+            return null;
+        }
+
+        try
+        {
+            // enableViewerPinch returns { detach }. The caller keeps it and calls detach when the
+            // viewport unmounts — disposing only the module would leave the gesture attached.
+            return await _module!.InvokeAsync<IJSObjectReference>("enableViewerPinch", viewport, viewer).ConfigureAwait(false);
+        }
+        catch (JSDisconnectedException)
+        {
+            return null;
+        }
+        catch (JSException)
+        {
+            return null;
+        }
+        catch (ObjectDisposedException)
+        {
+            return null;
+        }
+        catch (TaskCanceledException)
+        {
+            return null;
+        }
+    }
+
+    /// <summary>Calls <c>detach</c> on a pinch handle, then disposes it. Best-effort.</summary>
+    public static async Task DetachPinchAsync(IJSObjectReference? pinch)
+    {
+        if (pinch is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await pinch.InvokeVoidAsync("detach").ConfigureAwait(false);
+        }
+        catch (JSDisconnectedException)
+        {
+        }
+        catch (JSException)
+        {
+        }
+        catch (ObjectDisposedException)
+        {
+        }
+        catch (TaskCanceledException)
+        {
+        }
+
+        try
+        {
+            await pinch.DisposeAsync().ConfigureAwait(false);
+        }
+        catch (JSDisconnectedException)
+        {
+        }
+        catch (ObjectDisposedException)
+        {
         }
     }
 

@@ -2,6 +2,7 @@ using System.Globalization;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.JSInterop;
+using Tempo.Blazor.Abstractions.Layout;
 using Tempo.Blazor.Abstractions.Models;
 
 namespace Tempo.Blazor.Components.Signing;
@@ -26,7 +27,7 @@ public partial class TmPdfTemplateDesigner
 
     private async Task CommitFieldDrag(DesignerDragCommit? commit)
     {
-        if (Disabled || commit is null || string.IsNullOrWhiteSpace(commit.FieldUuid))
+        if (Disabled || ResolvedLayout == TmLayoutMode.Mobile || commit is null || string.IsNullOrWhiteSpace(commit.FieldUuid))
         {
             return;
         }

@@ -16,14 +16,12 @@ public class SigningLocalizationE2ETests : WasmTestBase
 
         var field = designer.Locator("[data-field-uuid='designer-name']").First;
         await Assertions.Expect(field).ToContainTextAsync("Celé jméno");
-        var before = await field.BoundingBoxAsync();
-        Assert.IsNotNull(before);
+        var before = await FieldOffsetAsync(field);
 
         await SelectPreviewCultureAsync(page, designer, "en-US");
 
         await Assertions.Expect(field).ToContainTextAsync("Full name");
-        var after = await field.BoundingBoxAsync();
-        Assert.IsNotNull(after);
+        var after = await FieldOffsetAsync(field);
         Assert.AreEqual(before.X, after.X, 1.0, "Changing preview language must not move the field horizontally.");
         Assert.AreEqual(before.Y, after.Y, 1.0, "Changing preview language must not move the field vertically.");
     }
@@ -223,6 +221,19 @@ public class SigningLocalizationE2ETests : WasmTestBase
     /// The preview language sits in the toolbar overflow at the demo card width, so the select itself
     /// is collapsed. The More item carries the same value.
     /// </summary>
+    private static async Task<(double X, double Y)> FieldOffsetAsync(ILocator field)
+    {
+        return await field.EvaluateAsync<(double X, double Y)>(
+            """
+            element => {
+                const page = element.closest('.tm-pdf-template-designer__page-frame') ?? element.offsetParent;
+                const fieldRect = element.getBoundingClientRect();
+                const pageRect = page.getBoundingClientRect();
+                return { x: fieldRect.x - pageRect.x, y: fieldRect.y - pageRect.y };
+            }
+            """);
+    }
+
     private static async Task SelectPreviewCultureAsync(IPage page, ILocator designer, string culture)
     {
         var select = designer.Locator(".tm-pdf-template-designer__culture-preview").First;

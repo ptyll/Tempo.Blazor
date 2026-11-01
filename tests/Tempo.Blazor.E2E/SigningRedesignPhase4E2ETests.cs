@@ -168,7 +168,7 @@ public class SigningRedesignPhase4E2ETests : BaselineGeneratorTestBase
 
         var runner = page.Locator("[data-testid='signing-runner-demo']").First;
         await runner.ScrollIntoViewIfNeededAsync();
-        var panel = runner.Locator(".tm-signing-form-runner__steps").First;
+        var panel = runner.Locator("aside.tm-signing-form-runner__steps, .tm-signing-form-runner__sheet-host .tm-drawer__panel").First;
 
         await panel.Locator(".tm-signing-form-runner__field-button[data-field-uuid='runner-amount']").ClickAsync();
         await panel.Locator(".tm-signing-form-runner__language-select").SelectOptionAsync("cs-CZ");

@@ -1,27 +1,51 @@
 using Microsoft.AspNetCore.Components;
+using Tempo.Blazor.Abstractions.Layout;
 using Tempo.Blazor.Components.Inputs;
 
 namespace Tempo.Blazor.Components.Signing;
 
 /// <content>
-/// Mobile bottom-sheet presentation state of the single steps rail (phase 3 review split — a pure
-/// move from <c>TmSigningFormRunner.razor.cs</c>): the sheet state machine, the affordance element
-/// references and the pending focus moves. The panel content itself is rendered ONCE (B25) — this
-/// state only drives the CSS classes.
-/// <para>
-/// Signing redesign phase 5: the sheet is a THREE-state CSS presentation (review round) —
-/// <c>peek</c> (handle + done count + the primary "Sign now" CTA), <c>expanded</c> (field list +
-/// step) and <c>full</c> (the active edit: step panel + sticky action bar, field list hidden —
-/// every navigation lands here). The HANDLE is the only <c>aria-expanded</c> toggle; the phase-2
-/// full-width "Minimize" row is gone ("Show whole document" in the More menu collapses to peek).
-/// </para>
+/// Mobile bottom-sheet state of the single steps rail. The panel content renders ONCE (B25).
+/// Peek / list / full are the shared <c>TmDrawer</c> snap index (<c>data-snap-index</c> 0 / 1 / 2);
+/// the full edit also sets <c>--list-hidden</c>. The runner handle is the only
+/// <c>aria-expanded</c> toggle — the drawer's own handle is off. Crossing the mobile breakpoint
+/// remounts the drawer; this state survives, focus inside the sheet does not.
 /// </content>
 public partial class TmSigningFormRunner
 {
     // The sheet is "open" in the expanded AND the full state (both show the step panel); full is
-    // the active-edit presentation that additionally hides the field list (CSS --sheet-full).
+    // the active-edit presentation that additionally hides the field list.
     private bool _sheetExpanded;
     private bool _sheetFull;
+
+    /// <summary>Peek / half / full fractions of the shared sheet (phase 9, G13).</summary>
+    private static readonly double[] RunnerSheetSnaps = [0.28, 0.55, 1];
+
+    /// <summary>The mobile branch hosts the single panel inside <c>TmDrawer</c>. Desktop and tablet keep the column.</summary>
+    private bool IsMobileSheet => ResolvedLayout == TmLayoutMode.Mobile;
+
+    /// <summary>Peek = 0, list = 1, full edit = 2. The drawer snap follows the sheet state machine.</summary>
+    private int RunnerSheetSnapIndex => !_sheetExpanded ? 0 : _sheetFull ? 2 : 1;
+
+    /// <summary>
+    /// Snap fraction for the layout reserve. Expanded and full set
+    /// <c>--tm-signing-sheet-reserve</c> to this fraction of the 85dvh host (the drawer panel
+    /// height) so the field can scroll above the sheet. Peek leaves the var unset and keeps the
+    /// content-sized peek token.
+    /// </summary>
+    private string? MobileSheetReserveStyle
+    {
+        get
+        {
+            if (!IsMobileSheet || RunnerSheetSnapIndex <= 0)
+            {
+                return null;
+            }
+
+            var fraction = RunnerSheetSnaps[Math.Clamp(RunnerSheetSnapIndex, 0, RunnerSheetSnaps.Length - 1)];
+            return FormattableString.Invariant($"--tm-signing-sheet-snap: {fraction:0.##}");
+        }
+    }
     private bool _pendingHandleFocus;
     private bool _pendingLanguageSelectFocus;
     private string? _pendingFieldListFocus;
@@ -29,20 +53,18 @@ public partial class TmSigningFormRunner
     private ElementReference _languageSelect;
 
     /// <summary>
-    /// The single steps rail. On a mobile-sized container it presents as the bottom sheet: the
-    /// <c>--sheet-collapsed</c> / <c>--sheet-expanded</c> / <c>--sheet-full</c> state classes drive
-    /// the CSS-only sheet presentation (the panel itself stays one DOM instance at every width).
-    /// Collapsed is the PEEK state: the handle, the done count and the primary CTA stay visible
-    /// above the document; FULL is the active edit: step panel + sticky action bar, list hidden.
+    /// The single steps rail. Desktop and tablet keep the column. On mobile the rail is the
+    /// shared <c>TmDrawer</c> (phase 9): peek / list / full are the drawer's snap index
+    /// (<c>data-snap-index</c> 0 / 1 / 2), not a local sheet stylesheet. The content classes
+    /// only fold the field list in the full edit and lift the rail above a host complete bar.
     /// </summary>
     private string StepsClass
     {
         get
         {
             var classes = new List<string> { "tm-signing-form-runner__steps" };
-            AddClass(classes, _sheetExpanded, "tm-signing-form-runner__steps--sheet-expanded");
-            AddClass(classes, _sheetExpanded && _sheetFull, "tm-signing-form-runner__steps--sheet-full");
-            AddClass(classes, !_sheetExpanded, "tm-signing-form-runner__steps--sheet-collapsed");
+            AddClass(classes, IsMobileSheet && _sheetExpanded && !_sheetFull, "tm-signing-form-runner__steps--list");
+            AddClass(classes, IsMobileSheet && _sheetExpanded && _sheetFull, "tm-signing-form-runner__steps--list-hidden");
             AddClass(classes, !string.IsNullOrWhiteSpace(MobileCompleteTargetSelector), "tm-signing-form-runner__steps--has-complete-target");
             return string.Join(" ", classes);
         }
@@ -71,6 +93,29 @@ public partial class TmSigningFormRunner
     /// <summary>The handle toggles the sheet between the LIST presentation and the peek state
     /// (phase 5 review: the handle is the ONLY aria-expanded toggle). From the full edit state it
     /// collapses straight to peek — the list is one "Field list" tap away in the More menu.</summary>
+    /// <summary>
+    /// A swipe on the shared sheet reports a snap index. It drives the same state machine as the
+    /// handle — it does not open a second panel and it does not carry <c>aria-expanded</c>.
+    /// </summary>
+    private Task OnRunnerSheetSnapChanged(int index)
+    {
+        if (index <= 0)
+        {
+            CollapseMobileSheet();
+        }
+        else if (index >= 2)
+        {
+            LandMobileSheetOnFull();
+        }
+        else
+        {
+            _sheetExpanded = true;
+            _sheetFull = false;
+        }
+
+        return Task.CompletedTask;
+    }
+
     private void ToggleMobileSheet()
     {
         if (_sheetExpanded)

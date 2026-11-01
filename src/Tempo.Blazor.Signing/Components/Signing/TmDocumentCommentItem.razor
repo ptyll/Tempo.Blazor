@@ -1,27 +1,24 @@
 @namespace Tempo.Blazor.Components.Signing
+@inherits Tempo.Blazor.Components.TmComponentBase
+@inject IServiceProvider HostServices
+@using System.Globalization
 @using Tempo.Blazor.Abstractions.Models
+@using Tempo.Blazor.Components.Dropdowns
 
 <article class="tm-document-comments-panel__item" data-comment-id="@Comment.Id">
-    <div class="tm-document-comments-panel__avatar" aria-hidden="true">@Initials(Comment.AuthorName)</div>
+    <div class="tm-document-comments-panel__avatar"
+         data-avatar-token="@AvatarToken"
+         aria-hidden="true">@Initials(Comment.AuthorName)</div>
     <div class="tm-document-comments-panel__item-body">
         <header class="tm-document-comments-panel__item-header">
             <strong>@Comment.AuthorName</strong>
-            <time datetime="@SigningDateFormatter.FormatIso(Comment.CreatedAt)">@SigningDateFormatter.Format(Comment.CreatedAt)</time>
+            <time datetime="@SigningDateFormatter.FormatIso(Comment.CreatedAt)" title="@Absolute(Comment.CreatedAt)">@Relative(Comment.CreatedAt)</time>
             @if (Comment.EditedAt is not null)
             {
                 <span>@Loc["TmDocumentComments_Edited"]</span>
             }
         </header>
-        <p class="tm-document-comments-panel__body">@Comment.Body</p>
-        @if (Comment.Mentions.Count > 0)
-        {
-            <div class="tm-document-comments-panel__mentions">
-                @foreach (var mention in Comment.Mentions)
-                {
-                    <span class="tm-document-comments-panel__mention">@mention.DisplayName</span>
-                }
-            </div>
-        }
+        <p class="tm-document-comments-panel__body">@Body</p>
         <div class="tm-document-comments-panel__item-actions">
             <TmCommentReactionBar Reactions="@Comment.Reactions"
                                   CurrentUserId="@CurrentUserId"
@@ -29,23 +26,40 @@
                                   PickerOpen="@PickerOpen"
                                   PickerOpenChanged="PickerOpenChanged"
                                   OnReactionToggled="ToggleReactionAsync" />
-            @if (CanEdit)
+            @if (HasItemActions)
             {
-                <button type="button" class="tm-document-comments-panel__text-action" disabled="@Disabled" @onclick="EditAsync">
-                    @Loc["TmDocumentComments_Edit"]
-                </button>
-            }
-            @if (CanDelete)
-            {
-                <button type="button" class="tm-document-comments-panel__text-action" disabled="@Disabled" @onclick="DeleteAsync">
-                    @Loc["TmDocumentComments_Delete"]
-                </button>
+                <TmDropdown Text="@Loc["TmDocumentComments_More"]"
+                            AriaLabel="@Loc["TmDocumentComments_ItemActions"]"
+                            ShowChevron="false"
+                            Class="tm-document-comments-panel__more"
+                            Disabled="@Disabled"
+                            OnSelect="HandleActionAsync">
+                    @if (CanEdit)
+                    {
+                        <TmDropdownItem Value="edit">@Loc["TmDocumentComments_Edit"]</TmDropdownItem>
+                    }
+                    @if (CanDelete)
+                    {
+                        <TmDropdownItem Value="delete">@Loc["TmDocumentComments_Delete"]</TmDropdownItem>
+                    }
+                </TmDropdown>
             }
         </div>
     </div>
 </article>
 
 @code {
+    private static readonly string[] AvatarTokens =
+    [
+        "primary",
+        "info",
+        "success",
+        "warning",
+        "danger"
+    ];
+
+    private Tempo.Blazor.Localization.ITmRelativeTimeFormatter? _relative;
+
     /// <summary>Parent thread id.</summary>
     [Parameter, EditorRequired] public string ThreadId { get; set; } = string.Empty;
 
@@ -77,6 +91,65 @@
 
     private bool CanDelete => DocumentCommentPermissionHelper.CanDelete(Comment, CurrentUserId);
 
+    private bool HasItemActions => CanEdit || CanDelete;
+
+    private string AvatarToken => AvatarTokens[StableIndex(Comment.AuthorId)];
+
+    private RenderFragment Body => builder =>
+    {
+        var text = Comment.Body ?? string.Empty;
+        var mentions = Comment.Mentions
+            .Select(mention => mention.DisplayName)
+            .Where(name => !string.IsNullOrWhiteSpace(name))
+            .Distinct(StringComparer.Ordinal)
+            .OrderByDescending(name => name.Length)
+            .ToArray();
+        var sequence = 0;
+        var index = 0;
+        while (index < text.Length)
+        {
+            var match = FindMention(text, index, mentions);
+            if (match is null)
+            {
+                builder.AddContent(sequence++, text[index..]);
+                break;
+            }
+
+            if (match.Value.Start > index)
+            {
+                builder.AddContent(sequence++, text[index..match.Value.Start]);
+            }
+
+            builder.OpenElement(sequence++, "mark");
+            builder.AddAttribute(sequence++, "class", "tm-document-comments-panel__mention");
+            builder.AddContent(sequence++, text.Substring(match.Value.Start, match.Value.Length));
+            builder.CloseElement();
+            index = match.Value.Start + match.Value.Length;
+        }
+    };
+
+    private string Relative(DateTimeOffset value)
+    {
+        _relative ??= Tempo.Blazor.Localization.TmRelativeTime.Resolve(HostServices, Loc);
+        return _relative.Format(value);
+    }
+
+    private string Absolute(DateTimeOffset value)
+    {
+        _relative ??= Tempo.Blazor.Localization.TmRelativeTime.Resolve(HostServices, Loc);
+        return _relative.Absolute(value);
+    }
+
+    private Task HandleActionAsync(string value)
+    {
+        return value switch
+        {
+            "edit" => EditAsync(),
+            "delete" => DeleteAsync(),
+            _ => Task.CompletedTask
+        };
+    }
+
     private Task EditAsync()
     {
         return Disabled ? Task.CompletedTask : OnEditRequested.InvokeAsync(Comment);
@@ -103,6 +176,37 @@
                 CommentId = Comment.Id,
                 Value = reaction
             });
+    }
+
+    private static int StableIndex(string authorId)
+    {
+        var hash = 0;
+        foreach (var ch in authorId ?? string.Empty)
+        {
+            hash = unchecked((hash * 31) + ch);
+        }
+
+        return Math.Abs(hash % AvatarTokens.Length);
+    }
+
+    private static (int Start, int Length)? FindMention(string text, int from, string[] names)
+    {
+        var best = -1;
+        var length = 0;
+        foreach (var name in names)
+        {
+            var token = "@" + name;
+            var at = text.IndexOf(token, from, StringComparison.Ordinal);
+            if (at < 0 || (best >= 0 && at >= best))
+            {
+                continue;
+            }
+
+            best = at;
+            length = token.Length;
+        }
+
+        return best < 0 ? null : (best, length);
     }
 
     private static string Initials(string value)

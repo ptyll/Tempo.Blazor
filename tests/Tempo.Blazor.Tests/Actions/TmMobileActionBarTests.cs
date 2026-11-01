@@ -910,6 +910,22 @@ public class TmMobileActionBarTests : LocalizationTestBase
             .HasAttribute("aria-pressed").Should().BeFalse();
     }
 
+    [Fact]
+    public void VisibleTile_CarriesTheItemTestId()
+    {
+        var cut = Render<TmMobileActionBar>(p => p
+            .Add(x => x.LayoutMode, TmLayoutMode.Mobile)
+            .Add(x => x.MaxVisible, 3)
+            .Add(x => x.Items, new List<TmActionItem>
+            {
+                new() { Id = "delete-selected", Label = "Delete", TestId = "designer-mobile-delete" },
+                Action("Detect"),
+            }));
+
+        cut.Find("[data-action-id='delete-selected']").GetAttribute("data-testid")
+            .Should().Be("designer-mobile-delete");
+    }
+
     private static string BarCss(bool stripComments = false)
     {
         var css = File.ReadAllText(RepoPath(

@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Time.Testing;
+using Tempo.Blazor.Abstractions.Layout;
 using Tempo.Blazor.Abstractions.Models;
 using Tempo.Blazor.Components.Signing;
 using Tempo.Blazor.Tests.Localization;
@@ -430,23 +431,22 @@ public class TmSigningFormRunnerTests : LocalizationTestBase
     }
 
     /// <summary>
-    /// The mobile bottom sheet is a CSS presentation of the ONE steps rail (phase 5 review): the
-    /// peek state's "Sign now" CTA expands it, and the full-width "Minimize" row is GONE — the
-    /// More menu's "Show whole document" collapses the sheet back to peek. Driven by the
-    /// <c>--sheet-collapsed</c> / <c>--sheet-expanded</c> state classes.
+    /// The mobile bottom sheet is the shared <c>TmDrawer</c> (phase 9): the peek state's "Sign now"
+    /// CTA expands it, and the full-width "Minimize" row is GONE — the More menu's "Show whole
+    /// document" collapses the sheet back to peek. Peek / list are <c>data-snap-index</c> 0 / 1.
     /// </summary>
     [Fact]
     public async Task MobileCollapsed_CanExpandAndMinimize()
     {
         var cut = Render<TmSigningFormRunner>(parameters => parameters
             .Add(p => p.Fields, [CreateField("name", "Name", SigningFieldType.Text)])
+            .Add(p => p.LayoutMode, TmLayoutMode.Mobile)
             .Add(p => p.MobilePanelMode, TmSigningFormRunnerMobilePanelMode.Collapsed));
 
-        cut.Find(".tm-signing-form-runner__steps").ClassList.Should().Contain(
-            "tm-signing-form-runner__steps--sheet-collapsed",
-            "a collapsed mobile panel is a state class on the single steps rail");
+        cut.Find(".tm-signing-form-runner__steps").GetAttribute("data-snap-index").Should().Be("0",
+            "a collapsed mobile panel is the shared drawer's peek snap");
         cut.Find(".tm-signing-form-runner__mobile-expand").Click();
-        cut.Find(".tm-signing-form-runner__steps").ClassList.Should().Contain("tm-signing-form-runner__steps--sheet-expanded");
+        cut.Find(".tm-signing-form-runner__steps").GetAttribute("data-snap-index").Should().Be("1");
         cut.FindAll(".tm-signing-form-runner__step-panel").Should().ContainSingle(
             "expanding must not render a second panel instance");
 
@@ -455,7 +455,7 @@ public class TmSigningFormRunnerTests : LocalizationTestBase
         // selection path yields before invoking OnSelect.
         await cut.Find(".tm-signing-form-runner__more > button").ClickAsync(new MouseEventArgs());
         await cut.Find(".tm-signing-form-runner__more-document").ClickAsync(new MouseEventArgs());
-        cut.Find(".tm-signing-form-runner__steps").ClassList.Should().Contain("tm-signing-form-runner__steps--sheet-collapsed");
+        cut.Find(".tm-signing-form-runner__steps").GetAttribute("data-snap-index").Should().Be("0");
         cut.FindAll(".tm-signing-form-runner__mobile-minimize").Should().BeEmpty("the Minimize row was removed");
     }
 
@@ -466,6 +466,7 @@ public class TmSigningFormRunnerTests : LocalizationTestBase
     {
         var cut = Render<TmSigningFormRunner>(parameters => parameters
             .Add(p => p.Fields, [CreateField("name", "Name", SigningFieldType.Text)])
+            .Add(p => p.LayoutMode, TmLayoutMode.Mobile)
             .Add(p => p.MobilePanelMode, TmSigningFormRunnerMobilePanelMode.Collapsed));
 
         var handle = cut.Find(".tm-signing-form-runner__sheet-handle");
@@ -478,6 +479,10 @@ public class TmSigningFormRunnerTests : LocalizationTestBase
         cut.Find(".tm-signing-form-runner__sheet-handle").GetAttribute("aria-expanded").Should().Be("true");
         cut.FindAll(".tm-signing-form-runner__mobile-minimize").Should().BeEmpty(
             "the expanded sheet has no minimize row — More → \"Show whole document\" collapses");
+        cut.FindAll(".tm-sheet-handle").Should().BeEmpty(
+            "the runner handle is the only grabber — TmDrawer ShowHandle is false");
+        cut.Find(".tm-signing-form-runner__documents .tm-signing-form-runner__sheet-host")
+            .Should().NotBeNull("the sheet shares the documents grid cell");
     }
 
     [Fact]
@@ -1005,9 +1010,15 @@ public class TmSigningFormRunnerTests : LocalizationTestBase
         // Phase 3 review: the footer language select flexes and never overflows the footer row.
         css.Should().Contain("flex: 1 1 auto", "the language select grows with the footer row");
         css.Should().Contain("min-width: 0", "the language select may shrink instead of overflowing");
-        // Phase 5: the mobile sheet caps at 85dvh (the FULL state) with the safe-area inset.
-        css.Should().Contain("max-height: 85dvh", "the sheet's full state never covers the whole viewport");
-        css.Should().Contain("env(safe-area-inset-bottom", "the sheet respects the home-indicator inset");
+        // Phase 9: the local 85dvh frame is gone. Peek / list / full are TmDrawer snap indexes,
+        // and the drawer panel (not a local sheet) owns the safe-area inset.
+        css.Should().Contain("data-snap-index", "the mobile sheet is the shared drawer's snap");
+        css.Should().Contain("height: 85dvh", "the sticky host is the viewport frame the drawer fills");
+        css.Should().Contain("padding-block-end: var(--tm-signing-sheet-reserve, var(--tm-signing-sheet-peek-height))",
+            "expanded and full reserve the current panel, peek keeps the content-sized token");
+        css.Should().Contain("--tm-signing-sheet-reserve: calc(var(--tm-signing-sheet-snap, 0.55) * 85dvh)");
+        css.Should().Contain("--tm-signing-sheet-reserve: calc(var(--tm-signing-sheet-snap, 1) * 85dvh)");
+        css.Should().Contain("env(safe-area-inset-bottom", "the peek reserve still respects the home-indicator inset");
     }
 
     /// <summary>

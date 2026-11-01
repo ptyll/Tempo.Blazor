@@ -10,6 +10,17 @@ namespace Tempo.Blazor.Tests.Components.Inputs;
 public class TmTextAreaTests : LocalizationTestBase
 {
     [Fact]
+    public async Task TmTextArea_FocusAsync_MovesFocusToTheTextarea()
+    {
+        var cut = Render<TmTextArea>(p => p.Add(c => c.Value, "hello"));
+
+        await cut.InvokeAsync(async () => await cut.Instance.FocusAsync());
+
+        JSInterop.Invocations.Should().Contain(invocation =>
+            invocation.Identifier.Contains("focus", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
     public void TmTextArea_Renders_Textarea_Element()
     {
         var cut = Render<TmTextArea>();

@@ -110,7 +110,14 @@
     /* Distinct from the selected-state shadow: keyboard focus is the focus ring, not the selection.
        The token is a shadow, so outline cannot carry it. */
     outline: 2px solid transparent;
-    box-shadow: var(--tm-shadow-focus), var(--tm-focus-ring);
+    box-shadow: var(--tm-focus-ring);
+}
+
+@media (forced-colors: active) {
+    .tm-signing-field:focus-visible {
+        /* forced-color-adjust: none on an ancestor would strip the system ring; declare it here. */
+        outline-color: Highlight;
+    }
 }
 
 @media (pointer: coarse) {

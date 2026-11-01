@@ -4,6 +4,7 @@
     justify-items: center;
     gap: var(--tm-space-3);
     color: var(--tm-text-primary);
+    background: var(--tm-bg-workspace);
     /* The comments layout and future responsive rules query the viewer's own width, not the
        viewport — the viewer is embedded in designers and runners at arbitrary widths. */
     container: tm-document-page-viewer / inline-size;
@@ -17,10 +18,99 @@
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    justify-content: center;
+    justify-content: flex-start;
     gap: var(--tm-space-2);
     width: 100%;
     min-width: 0;
+}
+
+.tm-document-page-viewer__zoom-controls {
+    border: 1px solid var(--tm-border-color);
+    border-radius: var(--tm-radius-sm);
+    background: var(--tm-bg-surface);
+}
+
+.tm-document-page-viewer__page-input {
+    inline-size: calc(var(--tm-space-10) + var(--tm-space-2));
+    min-height: var(--tm-space-8);
+    border: 1px solid var(--tm-border-color);
+    border-radius: var(--tm-radius-sm);
+    background: var(--tm-bg-surface);
+    color: var(--tm-text-primary);
+    font: inherit;
+    text-align: center;
+}
+
+.tm-document-page-viewer__page-label-text {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+}
+
+.tm-document-page-viewer__mention-badge-name {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+}
+
+.tm-document-page-viewer__mention-badge {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--tm-space-6);
+    padding: 0 var(--tm-space-2);
+    border-radius: var(--tm-radius-full, var(--tm-radius-sm));
+    background: var(--tm-color-info-subtle);
+    color: var(--tm-color-info-text);
+    font-size: var(--tm-font-size-xs);
+}
+
+@container tm-document-page-viewer (width < 40rem) {
+    .tm-document-page-viewer__pagination,
+    .tm-document-page-viewer__zoom-controls,
+    .tm-document-page-viewer__comment-controls {
+        flex-wrap: nowrap;
+        flex: 0 0 auto;
+    }
+
+    .tm-document-page-viewer__toolbar {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+    }
+
+    .tm-document-page-viewer__toolbar-button,
+    .tm-document-page-viewer__page-input {
+        min-width: var(--tm-touch-target);
+        min-height: var(--tm-touch-target);
+    }
+}
+
+@media (pointer: coarse) {
+    .tm-document-page-viewer__page-input {
+        min-width: var(--tm-touch-target);
+        min-height: var(--tm-touch-target);
+    }
+}
+
+/* Fit text hides only on a very narrow toolbar. 30rem is below TmBreakpoints.Sm, so the px
+   rule does not apply — a px literal here would have to be one of 640/768/1024/1280. */
+@container tm-document-page-viewer (width < 30rem) {
+    .tm-document-page-viewer__fit-width span,
+    .tm-document-page-viewer__fit-page span {
+        position: absolute;
+        inline-size: 1px;
+        block-size: 1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+    }
+
+    .tm-document-page-viewer__toolbar-button {
+        min-width: var(--tm-touch-target);
+        min-height: var(--tm-touch-target);
+    }
 }
 
 .tm-document-page-viewer__pagination,
@@ -96,12 +186,22 @@
     max-width: 100%;
     overflow: auto;
     padding: var(--tm-space-1);
+    /* One finger scrolls the page. Two fingers are the shared pinch (pointer-gesture.js); claiming
+       pan-x pan-y here blocks the browser page zoom so the pinch owns the gesture. */
+    touch-action: pan-x pan-y;
+}
+
+/* A comment drag must not pan the page. The viewport keeps pan-x pan-y for browsing. */
+.tm-document-page-viewer--comment-mode .tm-document-page-viewer__page {
+    touch-action: none;
 }
 
 .tm-document-page-viewer__page {
     position: relative;
     width: calc(100% * var(--tm-document-page-scale, 1));
-    max-width: 100%;
+    /* A pinch (and the zoom buttons) must be able to grow the page past the viewport; the
+       viewport scrolls. max-width: 100% used to cancel every scale above 1. */
+    max-width: none;
     overflow: hidden;
     border: 1px solid var(--tm-border-color);
     border-radius: var(--tm-radius-md);

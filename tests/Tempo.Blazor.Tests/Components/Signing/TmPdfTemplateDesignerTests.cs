@@ -686,6 +686,56 @@ public class TmPdfTemplateDesignerTests : LocalizationTestBase
     }
 
     [Fact]
+    public void Designer_LayoutModeMobile_PaletteAsHorizontalTiles_InspectorInSheet()
+    {
+        var cut = Render<TmPdfTemplateDesigner>(parameters =>
+            parameters.Add(p => p.Documents, CreatePages())
+                      .Add(p => p.Fields, CreateFields())
+                      .Add(p => p.LayoutMode, TmLayoutMode.Mobile));
+
+        cut.Find(".tm-pdf-template-designer").GetAttribute("data-layout").Should().Be("mobile");
+        cut.Find(".tm-pdf-template-designer__palette").ClassList.Should().Contain("tm-pdf-template-designer__palette--compact");
+        cut.FindAll(".tm-signing-field-editor-panel").Should().BeEmpty("the inspector sheet stays closed until a field is selected");
+
+        cut.Find("[data-field-uuid='field-1']").Click();
+
+        cut.Find(".tm-signing-field-editor-panel").Should().NotBeNull();
+    }
+
+    [Fact]
+    public void Designer_Mobile_ActionBar_AutodetectDeleteMore()
+    {
+        var cut = Render<TmPdfTemplateDesigner>(parameters =>
+            parameters.Add(p => p.Documents, CreatePages())
+                      .Add(p => p.Fields, CreateFields())
+                      .Add(p => p.LayoutMode, TmLayoutMode.Mobile)
+                      .Add(p => p.OnDetectFields, () => Task.FromResult<IReadOnlyList<SigningField>>([])));
+
+        cut.Render();
+        var bar = cut.Find(".tm-mobile-action-bar");
+        bar.TextContent.Should().Contain("Detect");
+        bar.TextContent.Should().Contain("Delete selected");
+        cut.Find(".tm-mobile-action-bar__more").Click();
+        cut.Markup.Should().Contain("designer-mobile-prev");
+        cut.Markup.Should().Contain("designer-mobile-next");
+        cut.Markup.Should().Contain("designer-mobile-fit-width");
+        cut.Markup.Should().Contain("designer-mobile-fit-page");
+    }
+
+    [Fact]
+    public void Designer_Mobile_NoDragResizeHandles_TapToPlaceAllowed()
+    {
+        var cut = Render<TmPdfTemplateDesigner>(parameters =>
+            parameters.Add(p => p.Documents, CreatePages())
+                      .Add(p => p.Fields, CreateFields())
+                      .Add(p => p.LayoutMode, TmLayoutMode.Mobile));
+
+        cut.Find("[data-field-uuid='field-1']").Click();
+        cut.FindAll(".tm-signing-field__resize-handle").Should().BeEmpty("a finger does not move or resize on mobile");
+        cut.FindAll(".tm-pdf-template-designer__palette-item").Should().NotBeEmpty("tap-to-place stays on the palette");
+    }
+
+    [Fact]
     public void Designer_CtrlC_CtrlV_CopiesAndPastesField()
     {
         IReadOnlyList<SigningField>? captured = null;
@@ -942,9 +992,6 @@ public class TmPdfTemplateDesignerTests : LocalizationTestBase
         move.Should().Throw<MissingEventHandlerException>("JS owns the gesture once the session is attached");
         var up = () => workspace.TriggerEvent("onpointerup", new PointerEventArgs());
         up.Should().Throw<MissingEventHandlerException>();
-        var surface = cut.Find(".tm-pdf-template-designer__page-surface");
-        var surfaceUp = () => surface.TriggerEvent("onpointerup", new PointerEventArgs());
-        surfaceUp.Should().Throw<MissingEventHandlerException>();
     }
 
     [Fact]

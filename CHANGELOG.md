@@ -2,6 +2,8 @@
 
 ## 2.10.0 (unreleased)
 
+- **`TmTextArea.FocusAsync()`** moves focus to the textarea (no-op until it has rendered). Additive; nothing existing changes.
+
 > 2.10.0 also ships every 2.9.1 entry below; when upgrading from 2.9.0 read both Breaking / Migration
 > sections.
 >
@@ -107,6 +109,82 @@ findings table and the per-leg results) and the two perf runs
   ≤ +10 % budget is claimed.
 
 ### Breaking / Migration
+
+- **Signing redesign (phase 9): the mobile runner sheet is the shared `TmDrawer`, the comments panel is a `TmDrawer` sheet, and the viewer / designer mobile chrome moved.** Hosts and tests that keyed off the phase-5 local sheet classes, the comments panel as an `aside`, or the viewer's old pager buttons must follow the new DOM. Public parameters are additive except where a selector assumed the old tree.
+
+  **Runner sheet → `TmDrawer`.** Below 640px of the runner container the single step panel is no longer a CSS-positioned `aside`. It is hosted once inside a non-modal `TmDrawer` (`Position=Bottom`, `Modal=false`, `ShowHandle=false`) that shares the documents grid cell. The host is `position: sticky; inset-block-end: 0; height: 85dvh`, so the peek stays on the viewport while the document scrolls. Peek / list / full are `data-snap-index` `0` / `1` / `2` (fractions `0.28` / `0.55` / `1`) plus `--list-hidden` on the full edit. The local `--sheet-*` classes are gone. The drawer root is `pointer-events: none`; clicks land on `.tm-drawer__panel`. The runner handle (`.tm-signing-form-runner__sheet-handle`, 44px, centred) is the only `aria-expanded` toggle — there is no `.tm-sheet-handle`. Crossing the breakpoint remounts the drawer; peek/list/full state is kept, focus inside the sheet is not. Desktop and tablet keep the `aside`.
+
+  ```html
+  <!-- before (mobile) -->
+  <aside class="tm-signing-form-runner__steps tm-signing-form-runner__steps--sheet-expanded tm-signing-form-runner__steps--sheet-full">
+    <button class="tm-signing-form-runner__sheet-handle" aria-expanded="true"></button>
+    <div class="tm-signing-form-runner__step-panel">…</div>
+  </aside>
+  <!-- after (mobile) -->
+  <div class="tm-signing-form-runner__sheet-host" data-testid="signing-runner-steps">
+    <div class="tm-drawer tm-drawer--bottom tm-drawer--inline tm-signing-form-runner__steps tm-signing-form-runner__steps--list-hidden"
+         data-snap-index="2" data-snap-points="0.28,0.55,1">
+      <div class="tm-drawer__panel">
+        <button class="tm-signing-form-runner__sheet-handle" aria-expanded="true"></button>
+        <div class="tm-signing-form-runner__step-panel">…</div>
+      </div>
+    </div>
+  </div>
+  ```
+
+  ```css
+  /* before */
+  .tm-signing-form-runner__steps--sheet-full .tm-signing-form-runner__field-list { display: none; }
+  /* after */
+  .tm-signing-form-runner__steps[data-snap-index="2"] .tm-signing-form-runner__field-list,
+  .tm-signing-form-runner__steps--list-hidden .tm-signing-form-runner__field-list { display: none; }
+  ```
+
+  **Comments.** `LayoutMode=Auto` follows the viewer's own container: below 640px the comment panel is a non-modal bottom `TmDrawer` (`tm-document-page-viewer__comments-sheet`). The docked shell and the drawer share one comments-shell fragment (host template, or the draft section plus the thread panel). `OnClose` and `OnNewComment` are new panel parameters; `OnCommentsClose` is the matching new viewer parameter. `OnClose` did not exist before this phase. A host that selected the comments shell as a sibling of the page column must follow the drawer on mobile.
+
+  **Comment chrome, before → after.**
+
+  | Before | After |
+  | --- | --- |
+  | Filter `role="tablist"` | `role="group"` + `aria-pressed` + a visible label (`aria-labelledby`) |
+  | Text action buttons | `⋯` `TmDropdown`, permission-gated |
+  | Mention chips | Inline `<mark>` |
+  | Mention count on the comments toggle | Separate `.tm-document-page-viewer__mention-badge` |
+  | Page label text | Page `<input>` (`PageRequested`); readonly `n / N` when that callback is unset |
+  | Absolute comment time | Relative time, absolute time in `title` |
+  | Composer `<textarea>` | `TmTextArea` wrapper (do not pass `class` through the splat) |
+  | Designer mobile toolbar | Action bar; fit / culture live in More |
+  | Runner sheet classes | `TmDrawer` (`data-snap-index`, `--list-hidden`) |
+
+  **New parameters.** Panel: `LayoutMode`, `OnClose`, `OnNewComment`. Viewer: `LayoutMode`, `OnCommentsClose`, `EnablePinchZoom` (default `false`; the runner and the demo viewer opt in, the designer stays off). Toolbar groups: `data-tm-group` `pages` | `zoom` | `comments`.
+
+  **Hosting.** `TmDocumentPageViewer` pinch imports `signing-runner.js`, which loads the core `pointer-gesture.js`. Serve `_content/Tempo.Blazor/js/` and list that file in the CSP. Without it, pinch is a no-op and the zoom buttons still work.
+
+  ```html
+  <!-- before (mobile) -->
+  <div class="tm-document-page-viewer__comments-shell">
+    <aside class="tm-document-comment-thread-panel" data-testid="document-comments-panel">…</aside>
+  </div>
+  <!-- after (mobile) -->
+  <div class="tm-drawer tm-drawer--bottom tm-drawer--inline tm-document-page-viewer__comments-sheet" data-snap-index="0">
+    <div class="tm-drawer__panel">
+      <aside class="tm-document-comment-thread-panel" data-testid="document-comments-panel">…</aside>
+    </div>
+  </div>
+  ```
+
+  **Viewer.** `TmDocumentPageViewer` raises `PageRequested` (`EventCallback<int>`) when the page input commits a page, in addition to `PreviousPageRequested` / `NextPageRequested`. A host that only listened to the previous/next callbacks still works; a custom pager that wrote the page input must also handle `PageRequested`.
+
+  ```razor
+  @* before *@
+  <TmDocumentPageViewer PreviousPageRequested="Prev" NextPageRequested="Next" />
+  @* after — PageRequested is additive; wire it when the page input should navigate *@
+  <TmDocumentPageViewer PreviousPageRequested="Prev" NextPageRequested="Next" PageRequested="GoTo" />
+  ```
+
+  **Designer mobile.** `TmPdfTemplateDesigner` on a mobile container (`LayoutMode` / the shell's own container, &lt; 768px) is viewing plus light edits: a `TmMobileActionBar` and one bottom sheet, not the docked palette and inspector. Tablet (768–1199, including 1024 with touch) keeps the overlay panels. `MobileMode` remains the obsolete alias of `LayoutMode=Mobile`. A selector that assumed the palette was always in the document flow must key off `data-layout` and the shell sheet, not the viewport.
+
+  **Viewer pinch.** `TmDocumentPageViewer` attaches the shared `pointer-gesture.js` `attachPinch` on `.tm-document-page-viewer__viewport` (touch + ctrl+wheel). A commit raises the existing `ScaleChanged` with the absolute scale and sets `ZoomMode` to `Custom`. The page no longer carries `max-width: 100%`, so a scale above 1 scrolls inside the viewport instead of being clipped. There is no second pinch implementation.
 
 - **Signing redesign (phase 8): the PDF template designer and its field overlay use pointer events, and the designer renders through `TmEditorShell`.** A host or a test that dispatched `mousedown` / `mousemove` / `mouseup` or an HTML5 drag on the designer must dispatch the pointer equivalents, and a selector that assumed the designer root was a plain `div` must follow the shell:
 

@@ -1068,11 +1068,24 @@
           "description": "Whether panel interaction is disabled."
         },
         {
+          "name": "LayoutMode",
+          "type": "TmLayoutMode",
+          "isRequired": false,
+          "default": "TmLayoutMode.Auto",
+          "description": "Forced layout. Mobile keeps the composer sticky inside the host sheet."
+        },
+        {
           "name": "MentionUsers",
           "type": "IReadOnlyList<DocumentCommentUser>",
           "isRequired": false,
           "default": "[]",
           "description": "Users available for mention suggestions."
+        },
+        {
+          "name": "OnClose",
+          "type": "EventCallback",
+          "isRequired": false,
+          "description": "Raised when the panel close button is activated."
         },
         {
           "name": "OnDeleteRequested",
@@ -1091,6 +1104,12 @@
           "type": "EventCallback<DocumentCommentEditRequest>",
           "isRequired": false,
           "description": "Callback invoked when editing a comment is requested."
+        },
+        {
+          "name": "OnNewComment",
+          "type": "EventCallback",
+          "isRequired": false,
+          "description": "Raised by the New comment button so the host can enable comment mode."
         },
         {
           "name": "OnReactionToggled",
@@ -1238,6 +1257,12 @@
           "description": "Whether comment interactions are disabled. Defaults to false."
         },
         {
+          "name": "EnablePinchZoom",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Attaches the shared two-finger pinch to the page viewport. Off by default: a designer page must not steal the overlay's pointer. The runner and the demo viewer opt in."
+        },
+        {
           "name": "Error",
           "type": "string?",
           "isRequired": false,
@@ -1261,6 +1286,13 @@
           "isRequired": false,
           "default": "true",
           "description": "Whether overlay content should receive pointer events. Defaults to true."
+        },
+        {
+          "name": "LayoutMode",
+          "type": "TmLayoutMode",
+          "isRequired": false,
+          "default": "TmLayoutMode.Auto",
+          "description": "Forced layout. Mobile hosts the comments panel in a non-modal bottom TmDrawer. Auto keeps the docked comments column."
         },
         {
           "name": "MaxScale",
@@ -1332,6 +1364,12 @@
           "description": "Callback invoked when resolving a comment thread is requested."
         },
         {
+          "name": "OnCommentsClose",
+          "type": "EventCallback",
+          "isRequired": false,
+          "description": "Raised when the mobile comments sheet close button is activated."
+        },
+        {
           "name": "OnCommentThreadCreateRequested",
           "type": "EventCallback<DocumentCommentThreadCreateRequest>",
           "isRequired": false,
@@ -1378,6 +1416,12 @@
           "type": "int?",
           "isRequired": false,
           "description": "Displayed current page number for pagination controls. Defaults to the page index plus one."
+        },
+        {
+          "name": "PageRequested",
+          "type": "EventCallback<int>",
+          "isRequired": false,
+          "description": "Raised when the page input commits a page number, in addition to the previous and next callbacks."
         },
         {
           "name": "PageTemplate",

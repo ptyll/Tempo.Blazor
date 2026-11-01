@@ -1,5 +1,6 @@
 @page "/signing-components"
 @using System.Net.Http.Json
+@using Tempo.Blazor.Abstractions.Layout
 @using Tempo.Blazor.DocumentEditor.Services
 @using DocumentRenditionAnchor = Tempo.Blazor.DocumentEditor.Models.DocumentRenditionAnchor
 @using DocumentRenditionAnchorType = Tempo.Blazor.DocumentEditor.Models.DocumentRenditionAnchorType
@@ -29,6 +30,7 @@
     <div class="showcase-card">
         <div class="max-w-3xl mx-auto">
             <TmDocumentPageViewer Page="_demoPage"
+                                  EnablePinchZoom="true"
                                   Id="demo-signing-page-1"
                                   Class="signing-components-page__viewer"
                                   ShowToolbar="true"
@@ -73,10 +75,18 @@
                 <input type="checkbox" class="rounded border-slate-300" @bind="_showResolvedComments" />
                 <span>Show resolved comments</span>
             </label>
+            <label class="inline-flex items-center gap-2">
+                <span>Comments layout</span>
+                <select class="rounded border border-slate-300" data-testid="document-comments-layout" @bind="_commentViewerLayout">
+                    <option value="@TmLayoutMode.Auto">Auto</option>
+                    <option value="@TmLayoutMode.Mobile">Mobile</option>
+                </select>
+            </label>
             <span class="text-slate-500 dark:text-slate-400" data-testid="document-comments-last-event">@_commentLastEvent</span>
         </div>
 
         <TmDocumentPageViewer Page="_commentPage"
+                              EnablePinchZoom="true"
                               Id="demo-document-comments-page"
                               Class="signing-components-page__viewer signing-components-page__comments-viewer"
                               ShowToolbar="true"
@@ -104,6 +114,7 @@
                               OnCommentReactionToggled="HandleCommentReactionToggled"
                               OnCommentMentionedUsersChanged="HandleCommentMentionsChanged"
                               OnCommentThreadNavigateRequested="HandleCommentThreadNavigateRequested"
+                              LayoutMode="_commentViewerLayout"
                               data-testid="document-comments-viewer" />
     </div>
 </section>
@@ -361,8 +372,9 @@
         <span class="px-2 py-0.5 text-xs font-medium bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 rounded-full">Phase 8</span>
     </div>
 
-    <div class="showcase-card">
+    <div class="showcase-card" style="--tm-pdf-template-designer-height: min(100dvh, 64rem); min-height: 28rem;">
         <TmPdfTemplateDesigner Documents="_designerPages"
+                               Height="min(100dvh, 64rem)"
                                Fields="_designerFields"
                                FieldsChanged="HandleDesignerFieldsChanged"
                                SubmitterRoles="_templateRoles"
@@ -457,7 +469,7 @@
 
     <div class="showcase-card">
         <TmSigningFormRunner Pages="@_runnerPages"
-                             Fields="@_runnerFields"
+                             Fields="@RunnerFields"
                              SubmitterRoles="@_templateRoles"
                              Values="@_runnerValues"
                              ValuesChanged="HandleRunnerValuesChanged"
@@ -774,6 +786,7 @@
     private string _lastInteraction = "No page interaction yet";
     private DocumentCommentMode _commentMode = DocumentCommentMode.Browse;
     private bool _showResolvedComments;
+    private TmLayoutMode _commentViewerLayout = TmLayoutMode.Auto;
     private int _commentPageIndex;
     private string? _selectedCommentThreadId = "comment-amount";
     private string _commentLastEvent = "Comments ready";
@@ -1040,9 +1053,51 @@
     };
 
     private IReadOnlyList<SigningDocumentPage> _runnerPages =>
-    [
-        _runnerPage
-    ];
+        string.Equals(GetQueryValue("runnerPages"), "2", StringComparison.Ordinal)
+            ?
+            [
+                _runnerPage,
+                new SigningDocumentPage
+                {
+                    AttachmentUuid = "runner-order",
+                    PageIndex = 1,
+                    ImageUrl = RunnerPageImage,
+                    Width = 612,
+                    Height = 792,
+                    Label = "Service order approval page 2"
+                }
+            ]
+            : [_runnerPage];
+
+    private IReadOnlyList<SigningField> RunnerFields =>
+        string.Equals(GetQueryValue("runnerPages"), "2", StringComparison.Ordinal)
+            ?
+            [
+                _runnerFields[0],
+                new SigningField
+                {
+                    Uuid = "runner-page-2",
+                    SubmitterUuid = "template-signer",
+                    Name = "Page two note",
+                    Labels = Localized("Poznámka na druhé straně", ("en-US", "Page two note")),
+                    Type = SigningFieldType.Text,
+                    Required = true,
+                    Areas =
+                    [
+                        new SigningFieldArea
+                        {
+                            Uuid = "runner-page-2-area",
+                            AttachmentUuid = "runner-order",
+                            Page = 1,
+                            X = 0.118,
+                            Y = 0.2,
+                            Width = 0.458,
+                            Height = 0.053
+                        }
+                    ]
+                }
+            ]
+            : _runnerFields;
 
     // ── Active steps contract (Signing redesign phase 6, demo-only fake host). ──
     private const string DemoOtpCode = "123456";
@@ -2139,7 +2194,7 @@
                     {
                         Uuid = $"detected-area-{Guid.NewGuid():N}",
                         AttachmentUuid = "designer-nda",
-                        Page = 1,
+                        Page = 0,
                         X = 0.14,
                         Y = 0.67,
                         Width = 0.24,

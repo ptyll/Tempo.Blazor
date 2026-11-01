@@ -74,6 +74,12 @@
       "description": "Whether document comments are enabled for this viewer."
     },
     {
+      "name": "EnablePinchZoom",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Attaches the shared two-finger pinch to the page viewport. Off by default: a designer page must not steal the overlay's pointer. The runner and the demo viewer opt in."
+    },
+    {
       "name": "CommentThreadPanelTemplate",
       "type": "RenderFragment<IReadOnlyList<DocumentCommentThread>>?",
       "isRequired": false,
@@ -111,6 +117,13 @@
       "description": "Whether to show the loading skeleton instead of the page."
     },
     {
+      "name": "LayoutMode",
+      "type": "TmLayoutMode",
+      "isRequired": false,
+      "default": "Auto",
+      "description": "Forced layout. Mobile hosts the comments panel in a non-modal bottom TmDrawer. Auto keeps the docked comments column."
+    },
+    {
       "name": "IsOverlayInteractive",
       "type": "bool",
       "isRequired": false,
@@ -137,6 +150,18 @@
       "isRequired": false,
       "default": "0.5",
       "description": "Smallest allowed visual scale. Defaults to 0.5."
+    },
+    {
+      "name": "OnCommentsClose",
+      "type": "EventCallback",
+      "isRequired": false,
+      "description": "Raised when the mobile comments sheet close button is activated."
+    },
+    {
+      "name": "PageRequested",
+      "type": "EventCallback<int>",
+      "isRequired": false,
+      "description": "Raised when the page input commits a page number, in addition to the previous and next callbacks."
     },
     {
       "name": "NextPageRequested",

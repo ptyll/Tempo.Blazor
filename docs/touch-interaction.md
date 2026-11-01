@@ -304,6 +304,11 @@ best-effort exports:
 - `focusFieldButton(fieldUuid)` — scrolls the field list's row into view and focuses it (the
   More menu's "Field list" entry hands focus back to the list's current row after the full →
   expanded switch).
+- `enableViewerPinch(element, dotNetRef)` — opt-in page pinch for `TmDocumentPageViewer`
+  (`EnablePinchZoom`, default off; the runner and the demo viewer opt in, the designer does not).
+  It imports the core `pointer-gesture.js` and returns `{ detach }`. The caller keeps that handle
+  and calls `detach` when the viewport unmounts. Serve `_content/Tempo.Blazor/js/` and list
+  `pointer-gesture.js` in the CSP; a missing module leaves the zoom buttons working.
 
 The pure helpers (`isCoarsePointer`, `prefersReducedMotion`, `scrollBehavior`, `scrollTargetFor`,
 `clampScrollTop`, `nearestScrollable`) are exported for the node lane

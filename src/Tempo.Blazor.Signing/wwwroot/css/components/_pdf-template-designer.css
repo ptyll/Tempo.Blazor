@@ -1,10 +1,12 @@
 .tm-pdf-template-designer {
     display: flex;
     /* The historical fixed height stays the default. A host overrides
-       --tm-pdf-template-designer-height, or the Height parameter, when the shell should fill it. */
-    block-size: var(--tm-pdf-template-designer-height, calc(var(--tm-space-16) * 16));
-    min-block-size: 0;
-    max-block-size: var(--tm-pdf-template-designer-height, calc(var(--tm-space-16) * 16));
+       --tm-pdf-template-designer-height, or the Height parameter, when the shell should fill it.
+       The floor keeps the mobile zoom bar on screen when a 390/320 demo card would otherwise
+       shrink the shell below the canvas + action bar + zoom row. */
+    block-size: max(28rem, var(--tm-pdf-template-designer-height, calc(var(--tm-space-16) * 16)));
+    min-block-size: 28rem;
+    max-block-size: max(28rem, var(--tm-pdf-template-designer-height, calc(var(--tm-space-16) * 16)));
     color: var(--tm-text-primary);
 }
 
@@ -63,14 +65,7 @@
     inline-size: 100%;
 }
 
-/* The tablet rail is rendered in the toolbar slot so the inspector sheet cannot cover it.
-   The shell region is a row; stack the rail under the button bar. */
-.tm-editor-shell__toolbar:has(.tm-pdf-template-designer__palette--canvas) {
-    display: flex;
-    flex-direction: column;
-    align-items: stretch;
-    gap: var(--tm-space-2);
-}
+
 
 .tm-pdf-template-designer__culture-control {
     gap: var(--tm-space-2);
@@ -163,6 +158,38 @@
     padding: 0;
 }
 
+.tm-pdf-template-designer__palette--compact {
+    display: flex;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    gap: var(--tm-space-2);
+}
+
+.tm-pdf-template-designer__palette--compact .tm-pdf-template-designer__palette-item {
+    flex: 0 0 auto;
+    min-inline-size: var(--tm-touch-target);
+    min-block-size: var(--tm-touch-target);
+}
+
+.tm-editor-shell[data-layout="mobile"] .tm-pdf-template-designer__palette--canvas,
+.tm-pdf-template-designer[data-layout="mobile"] .tm-pdf-template-designer__palette--canvas {
+    display: flex;
+}
+
+.tm-pdf-template-designer__zoom-bar {
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    gap: var(--tm-space-2);
+    min-height: var(--tm-touch-target);
+}
+
+.tm-pdf-template-designer__zoom-bar .tm-pdf-template-designer__toolbar-button {
+    min-width: var(--tm-touch-target);
+    min-height: var(--tm-touch-target);
+}
+
 .tm-pdf-template-designer__palette--rail .tm-pdf-template-designer__palette-label {
     position: absolute;
     inline-size: 1px;
@@ -181,7 +208,9 @@
 }
 
 .tm-editor-shell[data-layout="tablet"] .tm-pdf-template-designer__palette--canvas {
-    display: grid;
+    display: flex;
+    flex-wrap: nowrap;
+    overflow-x: auto;
 }
 
 .tm-pdf-template-designer__palette-item,

@@ -8,11 +8,40 @@ import {
     prefersReducedMotion,
     scrollBehavior,
     scrollIntoView,
+    resolveSheetCeiling,
     scrollTargetFor,
-    scrollToField
+    scrollToField,
+    attachViewerPinch
 } from '../signing-runner.js';
 
 const matchMedia = (matchesByQuery) => (query) => ({ matches: matchesByQuery[query] ?? false });
+
+test('viewer pinch commits the shared helper scale against the current scale', () => {
+    const listeners = new Map();
+    const element = {
+        addEventListener(type, handler) { listeners.set(type, handler); },
+        removeEventListener() { },
+        style: {},
+    };
+    let committed = 0;
+    const session = attachViewerPinch(element, {
+        getScale: () => 1.25,
+        onCommit: scale => { committed = scale; },
+        attachPinch(_element, options) {
+            options.onStart();
+            options.onEnd({ scale: 1.2 });
+            return { detach() { } };
+        },
+    });
+
+    assert.equal(committed, 1.5);
+    assert.equal(typeof session.detach, 'function');
+});
+
+test('viewer pinch without the shared helper is a no-op', () => {
+    const session = attachViewerPinch({ addEventListener() { } }, { onCommit() { throw new Error('must not commit'); } });
+    session.detach();
+});
 
 // ── isCoarsePointer ────────────────────────────────────────────
 
@@ -107,7 +136,20 @@ test('nearestScrollable returns null for an orphan element', () => {
 function fakeField(fieldRect) {
     return {
         rect: fieldRect,
-        getBoundingClientRect() { return fieldRect; }
+        getBoundingClientRect() { return fieldRect; },
+        closest(selector) {
+            const className = selector.startsWith('.') ? selector.slice(1) : selector;
+            let current = this;
+            while (current) {
+                if (current.classList?.includes(className)) {
+                    return current;
+                }
+
+                current = current.parentElement;
+            }
+
+            return null;
+        }
     };
 }
 
@@ -121,6 +163,19 @@ function fakeScroller({ top = 0, height = 800, scrollTop = 0, scrollHeight = 200
         scrollHeight,
         clientHeight,
         computed: { overflowY },
+        closest(selector) {
+            const className = selector.startsWith('.') ? selector.slice(1) : selector;
+            let current = this;
+            while (current) {
+                if (current.classList?.includes(className)) {
+                    return current;
+                }
+
+                current = current.parentElement;
+            }
+
+            return null;
+        },
         getBoundingClientRect() { return { top, height }; },
         scrollTo(options) { calls.push(options); }
     };
@@ -145,7 +200,7 @@ function fakeDocument(field, sheet, scrollerElement = null) {
         defaultView: { getComputedStyle: (el) => el.computed ?? { overflowY: 'visible' } },
         querySelector(selector) {
             if (selector.startsWith('.tm-signing-field')) return field;
-            if (selector === '.tm-signing-form-runner__steps') return sheet;
+            if (selector === '.tm-signing-form-runner__steps .tm-drawer__panel') return sheet;
             return scrollerElement;
         }
     };
@@ -209,6 +264,87 @@ test('scrollToField scrolls a NON-WINDOW scroller (the sheet-internal ancestor)'
     assert.deepEqual(scroller.calls, [{ top: 488, behavior: 'smooth' }]);
 });
 
+test('a multi-page runner scrolls the pages wrapper, not the per-page document', () => {
+    const field = fakeField(rect(700, 760));
+    const page = fakeScroller({ top: 80, height: 200, scrollTop: 0, scrollHeight: 900, clientHeight: 200, overflowY: 'auto' });
+    page.classList = ['tm-signing-form-runner__document'];
+    const pages = fakeScroller({ top: 0, height: 500, scrollTop: 0, scrollHeight: 1800, clientHeight: 500, overflowY: 'auto' });
+    pages.classList = ['tm-signing-form-runner__pages'];
+    page.parentElement = pages;
+    field.parentElement = page;
+    pages.scrollHeight = 1800;
+    pages.clientHeight = 500;
+    const sheet = {
+        getBoundingClientRect: () => ({ top: 400, bottom: 844, left: 0, right: 390 }),
+        contains: () => false,
+    };
+    const win = fakeWindow({ innerHeight: 844, scrollY: 0, documentHeight: 4000 });
+
+    scrollToField('sig-1', { document: fakeDocument(field, sheet), window: win });
+
+    assert.equal(page.calls.length, 0, 'the per-page document is not the snap scroller');
+    assert.equal(pages.calls.length, 1, 'the pages wrapper moves the field above the panel');
+    assert.equal(win.calls.length, 0);
+});
+
+test('a pages wrapper that does not overflow lets the window move the field', () => {
+    const field = fakeField(rect(700, 760));
+    const pages = fakeScroller({ top: 0, height: 1800, scrollTop: 0, scrollHeight: 1800, clientHeight: 1800, overflowY: 'visible' });
+    pages.classList = ['tm-signing-form-runner__pages'];
+    pages.scrollHeight = 1800;
+    pages.clientHeight = 1800;
+    field.parentElement = pages;
+    const sheet = {
+        getBoundingClientRect: () => ({ top: 400, bottom: 844, left: 0, right: 390 }),
+        contains: () => false,
+    };
+    const win = fakeWindow({ innerHeight: 844, scrollY: 0, documentHeight: 4000 });
+
+    scrollToField('sig-1', { document: fakeDocument(field, sheet), window: win });
+
+    assert.equal(pages.calls.length, 0, 'a non-overflowing pages wrapper is not the scroller');
+    assert.equal(win.calls.length, 1, 'the window lifts the field above the sticky sheet');
+});
+
+test('a clipped documents frame scrolls the pages wrapper even when it does not overflow yet', () => {
+    const field = fakeField(rect(700, 760));
+    const pages = fakeScroller({ top: 0, height: 500, scrollTop: 0, scrollHeight: 500, clientHeight: 500, overflowY: 'auto' });
+    pages.classList = ['tm-signing-form-runner__pages'];
+    pages.scrollHeight = 500;
+    pages.clientHeight = 500;
+    const frame = fakeScroller({ top: 0, height: 844, scrollTop: 0, scrollHeight: 844, clientHeight: 844, overflowY: 'hidden' });
+    frame.classList = ['tm-signing-form-runner__documents'];
+    pages.parentElement = frame;
+    field.parentElement = pages;
+    const sheet = {
+        getBoundingClientRect: () => ({ top: 400, bottom: 844, left: 0, right: 390 }),
+        contains: () => false,
+    };
+    const win = fakeWindow({ innerHeight: 844, scrollY: 0, documentHeight: 4000 });
+
+    scrollToField('sig-1', { document: fakeDocument(field, sheet), window: win });
+
+    assert.equal(win.calls.length, 0, 'the window must not move a field the clipped frame hides');
+    assert.equal(pages.calls.length, 1, 'the pages wrapper is the scroller inside a clipped frame');
+});
+
+test('a nested document overflow scrolls the field against an anchored sheet', () => {
+    const field = fakeField(rect(700, 760));
+    const inner = fakeScroller({ top: 0, height: 400, scrollTop: 0, scrollHeight: 900, clientHeight: 400, overflowY: 'auto' });
+    field.parentElement = inner;
+    const sheet = {
+        getBoundingClientRect: () => ({ top: 139, bottom: 844, left: 0, right: 390 }),
+        contains: () => false,
+    };
+    const win = fakeWindow({ innerHeight: 844, scrollY: 0, documentHeight: 4000 });
+
+    scrollToField('sig-1', { document: fakeDocument(field, sheet), window: win });
+
+    assert.equal(win.calls.length, 0, 'the window must not move the anchored sheet with the field');
+    assert.equal(inner.calls.length, 1);
+    assert.ok(inner.calls[0].top > 0, 'the field is lifted inside the page scroller');
+});
+
 test('scrollToField keeps the element target inside its scroll range', () => {
     const field = fakeField(rect(600, 660));
     const win = fakeWindow();
@@ -239,6 +375,84 @@ test('scrollToField without a matching field does nothing', () => {
     scrollToField('missing', { document: fakeDocument(null, null), window: win });
 
     assert.equal(win.calls.length, 0);
+});
+
+test('a host top above the viewport is not the ceiling — the snap panel is', () => {
+    const host = {
+        getBoundingClientRect: () => ({ top: -200, bottom: 517, height: 717, left: 0, right: 390 }),
+    };
+    const drawer = {
+        getAttribute(name) {
+            if (name === 'data-snap-points') return '0.28,0.55,1';
+            if (name === 'data-snap-index') return '1';
+            return null;
+        },
+    };
+    const panel = {
+        closest(selector) {
+            if (selector === '.tm-signing-form-runner__sheet-host') return host;
+            if (selector === '.tm-drawer') return drawer;
+            return null;
+        },
+        getBoundingClientRect: () => ({ top: -200, bottom: 517, height: 717, left: 0, right: 390 }),
+    };
+    const ceiling = resolveSheetCeiling(panel, panel.getBoundingClientRect(), 0, 844);
+    // Snap 0.55 of the 717px host, anchored to the host bottom still in view.
+    assert.ok(Math.abs(ceiling.top - (517 - 0.55 * 717)) < 0.5, `ceiling ${ceiling.top}`);
+    assert.ok(ceiling.top > 0, 'the ceiling stays inside the viewport');
+});
+
+test('scrollToField lifts the field above a scrolled-away host using the snap panel', () => {
+    const field = fakeField(rect(700, 760));
+    const host = {
+        getBoundingClientRect: () => ({ top: -200, bottom: 517, height: 717, left: 0, right: 390 }),
+    };
+    const drawer = {
+        getAttribute(name) {
+            if (name === 'data-snap-points') return '0.28,0.55,1';
+            if (name === 'data-snap-index') return '1';
+            return null;
+        },
+    };
+    const panel = {
+        closest(selector) {
+            if (selector === '.tm-signing-form-runner__sheet-host') return host;
+            if (selector === '.tm-drawer') return drawer;
+            return null;
+        },
+        getBoundingClientRect: () => ({ top: -200, bottom: 517, height: 717, left: 0, right: 390 }),
+    };
+    const win = fakeWindow({ innerHeight: 844, scrollY: 200, documentHeight: 4000 });
+    scrollToField('sig-1', { document: fakeDocument(field, panel), window: win });
+    // No-sheet centre would land at 508. The snap ceiling must scroll further so the field clears it.
+    assert.equal(win.calls.length, 1);
+    assert.ok(win.calls[0].top > 508, `expected a lift above the snap panel, got ${win.calls[0].top}`);
+});
+
+test('scrollToField waits for a height transition, and reduced motion does not', async () => {
+    const field = fakeField(rect(700, 760));
+    const listeners = {};
+    const panel = {
+        getBoundingClientRect: () => ({ top: 500, bottom: 844, height: 344, left: 0, right: 390 }),
+        closest: () => null,
+        addEventListener(type, fn) { listeners[type] = fn; },
+        removeEventListener(type) { delete listeners[type]; },
+        computed: { overflowY: 'visible', transitionDuration: '0.2s', transitionProperty: 'height' },
+    };
+    const win = fakeWindow({ innerHeight: 844, scrollY: 0, documentHeight: 3000 });
+    win.setTimeout = (fn) => { win.pending = fn; return 7; };
+    win.clearTimeout = () => { win.cleared = true; };
+    const pending = scrollToField('sig-1', { document: fakeDocument(field, panel), window: win });
+    assert.equal(win.calls.length, 0, 'does not scroll while the snap is in flight');
+    listeners.transitionend({ target: panel, propertyName: 'height' });
+    await pending;
+    assert.equal(win.calls.length, 1);
+    assert.equal(win.cleared, true, 'the fallback timer is cleared');
+
+    const reduced = fakeWindow({ innerHeight: 844, scrollY: 0, documentHeight: 3000 });
+    reduced.matchMedia = (query) => ({ matches: query.includes('reduce') });
+    scrollToField('sig-1', { document: fakeDocument(field, panel), window: reduced });
+    assert.equal(reduced.calls.length, 1, 'reduced motion scrolls immediately');
 });
 
 test('scrollToField without a uuid does nothing', () => {

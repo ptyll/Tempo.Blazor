@@ -19567,6 +19567,13 @@
         "tm-input-disabled",
         "tm-input-error-message"
       ],
+      "methods": [
+        {
+          "name": "FocusAsync",
+          "signature": "Task FocusAsync()",
+          "description": "Moves focus to the textarea. No-op until the element has rendered."
+        }
+      ],
       "examples": [
         {
           "title": "Basic textarea",

@@ -469,12 +469,16 @@ public class SigningFormRunnerE2ETests : WasmTestBase
 
     private static ILocator GetDesktopPanel(ILocator runner)
     {
-        return runner.Locator(".tm-signing-form-runner__steps").First;
+        return runner.Locator("aside.tm-signing-form-runner__steps").First;
     }
 
+    /// <summary>
+    /// The mobile rail is the shared drawer panel (the drawer root is pointer-events: none).
+    /// Desktop keeps the aside. Exactly one of the two is in the DOM.
+    /// </summary>
     private static ILocator GetStepsRail(ILocator runner)
     {
-        return runner.Locator(".tm-signing-form-runner__steps").First;
+        return runner.Locator(".tm-signing-form-runner__sheet-host .tm-drawer__panel, aside.tm-signing-form-runner__steps").First;
     }
 
     private static async Task DrawSignatureAsync(IPage page, ILocator signatureCapture)

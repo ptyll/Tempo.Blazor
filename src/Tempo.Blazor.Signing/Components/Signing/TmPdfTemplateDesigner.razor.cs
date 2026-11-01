@@ -244,9 +244,99 @@ public partial class TmPdfTemplateDesigner : IAsyncDisposable
     }
 
     private bool InspectorOpen =>
-        ResolvedLayout != TmLayoutMode.Tablet || (SelectedFieldCount > 0 && !_inspectorDismissed);
+        ResolvedLayout is TmLayoutMode.Tablet or TmLayoutMode.Mobile
+            ? SelectedFieldCount > 0 && !_inspectorDismissed
+            : true;
 
-    private bool ShowCanvasPalette => ResolvedLayout == TmLayoutMode.Tablet;
+    private bool ShowCanvasPalette => ResolvedLayout is TmLayoutMode.Tablet or TmLayoutMode.Mobile;
+
+    /// <summary>
+    /// Mobile (G2) action bar: Autodetect, Delete selected, and More. Null off mobile so the shell
+    /// keeps the toolbar. Pages and view stay reachable from More because the shell hides the
+    /// toolbar once the bar is set.
+    /// </summary>
+    private IReadOnlyList<TmActionItem>? MobileActionItems =>
+        ResolvedLayout == TmLayoutMode.Mobile ? BuildMobileActions() : null;
+
+    private IReadOnlyList<TmActionItem> BuildMobileActions()
+    {
+        var items = new List<TmActionItem>();
+        if (OnDetectFields is not null)
+        {
+            items.Add(new TmActionItem
+            {
+                Id = "autodetect",
+                TestId = "designer-mobile-detect",
+                Icon = "scan-line",
+                Label = Loc["TmPdfTemplateDesigner_AutodetectShort"],
+                Disabled = _isDetecting,
+                OnClick = EventCallback.Factory.Create(this, DetectFieldsAsync)
+            });
+        }
+
+        items.Add(new TmActionItem
+        {
+            Id = "delete-selected",
+            TestId = "designer-mobile-delete",
+            Icon = "trash-2",
+            Label = Loc["TmPdfTemplateDesigner_DeleteSelected"],
+            Danger = true,
+            Disabled = SelectedFieldCount == 0,
+            OnClick = EventCallback.Factory.Create(this, DeleteSelectedAsync)
+        });
+        items.Add(new TmActionItem
+        {
+            Id = "previous-page",
+            TestId = "designer-mobile-prev",
+            Label = Loc["TmPdfTemplateDesigner_PreviousPage"],
+            Icon = "chevron-left",
+            Overflow = ActionOverflow.Always,
+            Disabled = !CanGoPrevious,
+            OnClick = EventCallback.Factory.Create(this, GoToPreviousPageAsync)
+        });
+        items.Add(new TmActionItem
+        {
+            Id = "next-page",
+            TestId = "designer-mobile-next",
+            Label = Loc["TmPdfTemplateDesigner_NextPage"],
+            Icon = "chevron-right",
+            Overflow = ActionOverflow.Always,
+            Disabled = !CanGoNext,
+            OnClick = EventCallback.Factory.Create(this, GoToNextPageAsync)
+        });
+        items.Add(new TmActionItem
+        {
+            Id = "fit-width",
+            TestId = "designer-mobile-fit-width",
+            Label = Loc["TmPdfTemplateDesigner_FitWidth"],
+            Icon = "maximize-2",
+            Overflow = ActionOverflow.Always,
+            OnClick = EventCallback.Factory.Create(this, FitWidthAsync)
+        });
+        items.Add(new TmActionItem
+        {
+            Id = "fit-page",
+            TestId = "designer-mobile-fit-page",
+            Label = Loc["TmPdfTemplateDesigner_FitPage"],
+            Icon = "minimize-2",
+            Overflow = ActionOverflow.Always,
+            OnClick = EventCallback.Factory.Create(this, FitPageAsync)
+        });
+        if (ShouldShowCulturePreview)
+        {
+            items.Add(new TmActionItem
+            {
+                Id = "culture",
+                TestId = "designer-mobile-culture",
+                Label = Loc["TmPdfTemplateDesigner_CulturePreview"],
+                Icon = "languages",
+                Overflow = ActionOverflow.Always,
+                OnClick = EventCallback.Factory.Create(this, CycleCultureAsync)
+            });
+        }
+
+        return items;
+    }
 
     /// <summary>
     /// The docked palette is the Left content. On a tablet the rail owns the palette, so Left
@@ -267,7 +357,7 @@ public partial class TmPdfTemplateDesigner : IAsyncDisposable
 
     private Task OnInspectorOpenChanged(bool open)
     {
-        if (!open && ResolvedLayout == TmLayoutMode.Tablet)
+        if (!open && ResolvedLayout is TmLayoutMode.Tablet or TmLayoutMode.Mobile)
         {
             _inspectorDismissed = true;
         }
@@ -540,8 +630,9 @@ public partial class TmPdfTemplateDesigner : IAsyncDisposable
                 builder.AddAttribute(sequence++, "Area", currentArea);
                 builder.AddAttribute(sequence++, "RoleColor", GetFieldRoleColor(currentField));
                 builder.AddAttribute(sequence++, "Selected", _selectedFieldUuids.Contains(currentField.Uuid));
-                builder.AddAttribute(sequence++, "Draggable", !Disabled && !_drawType.HasValue);
-                builder.AddAttribute(sequence++, "Editable", !Disabled && _selectedFieldUuids.Contains(currentField.Uuid));
+                // G2: a finger may select and tap-to-place. Move and resize stay tablet and up.
+                builder.AddAttribute(sequence++, "Draggable", !Disabled && !_drawType.HasValue && ResolvedLayout != TmLayoutMode.Mobile);
+                builder.AddAttribute(sequence++, "Editable", !Disabled && _selectedFieldUuids.Contains(currentField.Uuid) && ResolvedLayout != TmLayoutMode.Mobile);
                 builder.AddAttribute(sequence++, "ReadOnly", Disabled);
                 builder.AddAttribute(sequence++, "Culture", Culture);
                 builder.AddAttribute(sequence++, "FallbackCulture", FallbackCulture);
@@ -720,6 +811,27 @@ public partial class TmPdfTemplateDesigner : IAsyncDisposable
 
     private Task FitPageAsync() => SetScaleAsync(0.85, DocumentPageZoomMode.FitPage);
 
+    private Task CycleCultureAsync()
+    {
+        var cultures = DesignerCultures;
+        if (cultures.Count < 2)
+        {
+            return Task.CompletedTask;
+        }
+
+        var index = -1;
+        for (var i = 0; i < cultures.Count; i++)
+        {
+            if (string.Equals(cultures[i], CurrentCulture, StringComparison.OrdinalIgnoreCase))
+            {
+                index = i;
+                break;
+            }
+        }
+        var next = cultures[(index + 1 + cultures.Count) % cultures.Count];
+        return HandleCultureValueChangedAsync(next);
+    }
+
     private async Task HandleCultureChangedAsync(ChangeEventArgs args)
     {
         Culture = NormalizeCulture(args.Value?.ToString());
@@ -769,7 +881,7 @@ public partial class TmPdfTemplateDesigner : IAsyncDisposable
 
     private Task StartMoveAsync(TmSigningFieldOverlayPointerEventArgs args)
     {
-        if (Disabled || args.Field is null || args.Area is null)
+        if (Disabled || ResolvedLayout == TmLayoutMode.Mobile || args.Field is null || args.Area is null)
         {
             return Task.CompletedTask;
         }
@@ -796,7 +908,7 @@ public partial class TmPdfTemplateDesigner : IAsyncDisposable
 
     private Task StartResizeAsync(TmSigningFieldOverlayResizeEventArgs args)
     {
-        if (Disabled || args.Field is null || args.Area is null)
+        if (Disabled || ResolvedLayout == TmLayoutMode.Mobile || args.Field is null || args.Area is null)
         {
             return Task.CompletedTask;
         }
@@ -1013,180 +1125,4 @@ public partial class TmPdfTemplateDesigner : IAsyncDisposable
     }
 
     private static double Clamp(double value, double min, double max) => Math.Min(Math.Max(value, min), max);
-
-    private IReadOnlyList<string> GetDesignerCultures()
-    {
-        var cultures = new List<string>();
-        AddCultures(cultures, SupportedCultures);
-        AddCulture(cultures, Culture);
-        AddCulture(cultures, FallbackCulture);
-        return cultures;
-    }
-
-    private static void AddCultures(List<string> target, IEnumerable<string>? cultures)
-    {
-        if (cultures is null)
-        {
-            return;
-        }
-
-        foreach (var culture in cultures)
-        {
-            AddCulture(target, culture);
-        }
-    }
-
-    private static void AddCulture(List<string> target, string? culture)
-    {
-        var normalized = NormalizeCulture(culture);
-        if (!string.IsNullOrWhiteSpace(normalized)
-            && !target.Any(item => string.Equals(item, normalized, StringComparison.OrdinalIgnoreCase)))
-        {
-            target.Add(normalized);
-        }
-    }
-
-    private static string? NormalizeCulture(string? culture)
-    {
-        var trimmed = culture?.Trim();
-        if (string.IsNullOrWhiteSpace(trimmed))
-        {
-            return null;
-        }
-
-        try
-        {
-            return CultureInfo.GetCultureInfo(trimmed).Name;
-        }
-        catch (CultureNotFoundException)
-        {
-            return trimmed;
-        }
-    }
-
-    private static string GetCultureLabel(string culture)
-    {
-        try
-        {
-            var cultureInfo = CultureInfo.GetCultureInfo(culture);
-            return string.Create(CultureInfo.InvariantCulture, $"{cultureInfo.NativeName} ({cultureInfo.Name})");
-        }
-        catch (CultureNotFoundException)
-        {
-            return culture;
-        }
-    }
-
-    private enum ContextMenuKind
-    {
-        Page,
-        Field,
-        Selection
-    }
-
-    private sealed record ContextMenuState(
-        ContextMenuKind Kind,
-        double X,
-        double Y,
-        string? FieldUuid,
-        string? AttachmentUuid,
-        int PageIndex,
-        double? DocumentX,
-        double? DocumentY);
-
-    private sealed record AreaSnapshot(string FieldUuid, string AreaUuid, SigningFieldArea Area);
-
-    private sealed record MoveState(double StartClientX, double StartClientY, IReadOnlyList<AreaSnapshot> Areas);
-
-    private sealed record ResizeState(string FieldUuid, string AreaUuid, SigningFieldArea Area, SigningResizeHandle Handle, double StartClientX, double StartClientY);
-
-    private sealed class PageSurfaceRect
-    {
-        public double Left { get; set; }
-
-        public double Top { get; set; }
-
-        public double Width { get; set; }
-
-        public double Height { get; set; }
-    }
-
-    private sealed class FixedOrigin
-    {
-        public double Left { get; set; }
-
-        public double Top { get; set; }
-    }
-
-    /// <summary>A long-press the pointer session wants opened as a context menu. Not part of the component contract.</summary>
-    internal sealed record FieldContextMenuRequest
-    {
-        /// <summary>Field the finger held.</summary>
-        public string? FieldUuid { get; set; }
-
-        /// <summary>Viewport X of the finger.</summary>
-        public double ClientX { get; set; }
-
-        /// <summary>Viewport Y of the finger.</summary>
-        public double ClientY { get; set; }
-    }
-
-    /// <summary>One committed move or resize reported by the pointer helper. Not part of the component contract.</summary>
-    internal sealed record DesignerDragCommit
-    {
-        /// <summary>Field the gesture started on.</summary>
-        public string? FieldUuid { get; set; }
-
-        /// <summary>Resize handle, or null when the gesture moved the field.</summary>
-        public string? Handle { get; set; }
-
-        /// <summary>Area the resize handle belongs to. A move leaves it null and moves every area.</summary>
-        public string? AreaUuid { get; set; }
-
-        /// <summary>Horizontal delta normalized against the measured page surface.</summary>
-        public double NormalizedDx { get; set; }
-
-        /// <summary>Vertical delta normalized against the measured page surface.</summary>
-        public double NormalizedDy { get; set; }
-    }
-
-    /// <summary>A palette press that ended on a page, reported by the pointer session. Not part of the component contract.</summary>
-    internal sealed record PaletteDropCommit
-    {
-        /// <summary>Page the pointer ended on (<c>attachment:index</c>).</summary>
-        public string? PageKey { get; set; }
-
-        /// <summary>Horizontal position, 0–1 of the page surface.</summary>
-        public double X { get; set; }
-
-        /// <summary>Vertical position, 0–1 of the page surface.</summary>
-        public double Y { get; set; }
-
-        /// <summary>Field type read from the palette item. The JS session is the owner, so the drop no longer depends on a Blazor drag type.</summary>
-        public string? Type { get; set; }
-    }
-
-    private sealed class DrawState
-    {
-        public DrawState(SigningDocumentPage page, double startX, double startY, SigningFieldArea area, bool isSelectionBox = false)
-        {
-            Page = page;
-            StartX = startX;
-            StartY = startY;
-            Area = area;
-            IsSelectionBox = isSelectionBox;
-        }
-
-        public SigningDocumentPage Page { get; }
-
-        public string PageKey => GetPageKey(Page);
-
-        public double StartX { get; }
-
-        public double StartY { get; }
-
-        public SigningFieldArea Area { get; set; }
-
-        public bool IsSelectionBox { get; }
-    }
 }

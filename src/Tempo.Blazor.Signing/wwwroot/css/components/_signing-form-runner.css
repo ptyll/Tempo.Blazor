@@ -23,6 +23,22 @@
         + var(--tm-touch-target)               /* "Sign now" CTA */
         + var(--tm-space-3)                    /* sheet bottom padding */
         + env(safe-area-inset-bottom, 0px));
+    /* Live snap fraction of the 85dvh host. The runner overwrites it from the drawer snap index
+       (peek 0.28, list 0.55, full 1) so expanded/full padding matches the panel, not only the peek. */
+    --tm-signing-sheet-snap: 0.28;
+}
+
+/* Viewport-anchored overlay (phase 9 review). The host is the first child of the documents cell
+   and takes no row: a negative end margin lets the pages flow under an 85dvh frame. Sticky keeps
+   that frame's bottom on the scrollport bottom. The host takes no hits — the panel does. */
+.tm-signing-form-runner__sheet-host {
+    position: sticky;
+    inset-block-end: 0;
+    height: 85dvh;
+    margin-block-end: -85dvh;
+    pointer-events: none;
+    z-index: var(--tm-z-sticky);
+    min-height: 0;
 }
 
 .tm-signing-form-runner__layout {
@@ -52,6 +68,14 @@
     padding: var(--tm-space-4);
     border-radius: var(--tm-radius-card);
     background: var(--tm-bg-workspace);
+}
+
+/* The page stack. Snap 1/2 (below) turns this into the one scroller; desktop leaves it a block. */
+.tm-signing-form-runner__pages {
+    display: grid;
+    gap: var(--tm-space-4);
+    min-width: 0;
+    min-height: 0;
 }
 
 /* Signing redesign phase 3 review: the page wrapper is a LIGHT ISLAND (`data-theme="light"` on
@@ -405,8 +429,15 @@
 /* The handle (Signing redesign phase 5): the sheet's primary toggle. The button is a full-width
    44 px row; the pill grip inside is the drawing. Keyboard focus rings the GRIP (a plain button
    row has no box to outline), keeping the sheet face calm. */
+/* The runner handle is the only toggle: 44px, centred. The drawer's TmSheetHandle is off
+   (ShowHandle=false) so a finger never meets two grabs. */
 .tm-signing-form-runner__sheet-handle {
-    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: auto;
+    min-width: var(--tm-touch-target);
+    min-height: var(--tm-touch-target);
     padding: 0;
     border: 0;
     background: transparent;
@@ -470,58 +501,87 @@
 @container tm-signing-runner (width < 640px) {
     .tm-signing-form-runner__layout {
         grid-template-columns: minmax(0, 1fr);
-        /* The peek sheet floats over the document: reserve exactly its measured height (the
-           root's --tm-signing-sheet-peek-height knob — handle + progress + CTA + paddings +
-           safe-area inset) instead of the old fixed 2 × space-16 guess. */
-        padding-block-end: var(--tm-signing-sheet-peek-height);
+        /* Peek reserves the content-sized token. Expanded / full (snap index 1 / 2) reserve the
+           drawer panel — the snap fraction of the 85dvh host, written as --tm-signing-sheet-snap
+           on this element — so a field can scroll above the sheet instead of stopping under it. */
+        padding-block-end: var(--tm-signing-sheet-reserve, var(--tm-signing-sheet-peek-height));
     }
 
-    /* The single steps rail IS the bottom sheet (Signing redesign phase 5): a full-bleed card
-       pinned to the container's bottom edge with rounded TOP corners, a handle, an internal
-       scroll and the safe-area inset. The sheet state is carried by --sheet-collapsed (the PEEK
-       presentation), --sheet-expanded and --sheet-full (FULL = expanded minus the field list);
-       the panel content itself is rendered once (B25). */
-    .tm-signing-form-runner__steps {
-        position: sticky;
+    .tm-signing-form-runner__layout:has(.tm-signing-form-runner__steps[data-snap-index="1"]) {
+        --tm-signing-sheet-reserve: calc(var(--tm-signing-sheet-snap, 0.55) * 85dvh);
+    }
+
+    .tm-signing-form-runner__layout:has(.tm-signing-form-runner__steps[data-snap-index="2"]) {
+        --tm-signing-sheet-reserve: calc(var(--tm-signing-sheet-snap, 1) * 85dvh);
+    }
+
+    /* Expanded / full: this runner's documents cell is a viewport frame. The sheet host is absolute
+       to that frame (never fixed — a demo page has several runners). The pages wrapper is the only
+       scroller inside the frame, so moving a field cannot carry the sheet away. Peek stays the
+       sticky overlay. */
+    .tm-signing-form-runner__layout:has(.tm-signing-form-runner__steps[data-snap-index="1"]) .tm-signing-form-runner__documents,
+    .tm-signing-form-runner__layout:has(.tm-signing-form-runner__steps[data-snap-index="2"]) .tm-signing-form-runner__documents {
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        block-size: 100dvh;
+        max-block-size: 100dvh;
+        overflow: hidden;
+        padding-block-end: 0;
+    }
+
+    .tm-signing-form-runner__layout:has(.tm-signing-form-runner__steps[data-snap-index="1"]) .tm-signing-form-runner__sheet-host,
+    .tm-signing-form-runner__layout:has(.tm-signing-form-runner__steps[data-snap-index="2"]) .tm-signing-form-runner__sheet-host {
+        position: absolute;
+        inset-inline: 0;
         inset-block-end: 0;
+        margin-block-end: 0;
+        height: var(--tm-signing-sheet-reserve, calc(var(--tm-signing-sheet-snap, 0.55) * 85dvh));
+        max-height: 85dvh;
         z-index: var(--tm-z-sticky);
+    }
+
+    .tm-signing-form-runner__layout:has(.tm-signing-form-runner__steps[data-snap-index="1"]) .tm-signing-form-runner__sheet-host .tm-drawer__panel,
+    .tm-signing-form-runner__layout:has(.tm-signing-form-runner__steps[data-snap-index="2"]) .tm-signing-form-runner__sheet-host .tm-drawer__panel {
+        height: 100%;
+        max-height: 100%;
+    }
+
+    /* Snap 1/2: ONE pages wrapper fills the frame and scrolls. Per-page boxes stay auto-height.
+       Nested overflow is visible so it cannot steal the scroll. End padding is the live panel. */
+    .tm-signing-form-runner__layout:has(.tm-signing-form-runner__steps[data-snap-index="1"]) .tm-signing-form-runner__pages,
+    .tm-signing-form-runner__layout:has(.tm-signing-form-runner__steps[data-snap-index="2"]) .tm-signing-form-runner__pages {
+        display: grid;
+        flex: 1 1 auto;
+        min-block-size: 0;
+        overflow: auto;
+        padding-block-end: var(--tm-signing-sheet-reserve, calc(var(--tm-signing-sheet-snap, 0.55) * 85dvh));
+    }
+
+    .tm-signing-form-runner__layout:has(.tm-signing-form-runner__steps[data-snap-index="1"]) .tm-signing-form-runner__document,
+    .tm-signing-form-runner__layout:has(.tm-signing-form-runner__steps[data-snap-index="2"]) .tm-signing-form-runner__document,
+    .tm-signing-form-runner__layout:has(.tm-signing-form-runner__steps[data-snap-index="1"]) .tm-document-page-viewer__viewport,
+    .tm-signing-form-runner__layout:has(.tm-signing-form-runner__steps[data-snap-index="2"]) .tm-document-page-viewer__viewport {
+        overflow: visible;
+    }
+
+    /* The single steps rail IS the shared TmDrawer (phase 9, G13). Peek / list / full are the
+       drawer's snap index (data-snap-index 0 / 1 / 2) — there is no local sheet frame. The rail
+       class rides the drawer root, so drop the docked column chrome and let the drawer panel own
+       the card, the radius, the shadow and the safe-area inset. */
+    .tm-signing-form-runner__steps {
         border-left: 0;
         padding-left: 0;
     }
 
-    .tm-signing-form-runner__steps--has-complete-target {
+    .tm-signing-form-runner__steps--has-complete-target.tm-drawer--inline.tm-drawer--bottom {
         inset-block-end: calc(var(--tm-space-16) + var(--tm-space-3));
     }
 
-    .tm-signing-form-runner__steps--sheet-collapsed,
-    .tm-signing-form-runner__steps--sheet-expanded {
-        padding: var(--tm-space-2) var(--tm-space-3);
-        border: 1px solid var(--tm-border-color);
-        border-radius: var(--tm-radius-lg) var(--tm-radius-lg) 0 0;
-        background: var(--tm-bg-surface);
-        box-shadow: var(--tm-shadow-lg);
-        /* The sheet respects the home-indicator safe area it covers. */
-        padding-block-end: calc(var(--tm-space-3) + env(safe-area-inset-bottom, 0px));
-    }
-
-    /* PEEK (the collapsed state): the handle, the done count and the primary CTA stay visible
-       above the document; the panel content is hidden but still ONE DOM instance. */
-    .tm-signing-form-runner__steps--sheet-collapsed .tm-signing-form-runner__step-panel {
+    /* PEEK (snap 0): the handle, the done count and the primary CTA stay visible above the
+       document; the panel content is hidden but still ONE DOM instance. */
+    .tm-signing-form-runner__steps[data-snap-index="0"] .tm-signing-form-runner__step-panel {
         display: none;
-    }
-
-    /* EXPANDED: the sheet caps at 85dvh (the plan's sheet cap) and the panel scrolls INSIDE it;
-       the sticky action footer (the shared rule below) stays reachable. There is deliberately NO
-       focus-driven resize on top of this: a focus change would resize the sheet MID-PRESS — the
-       pressed control moves out from under the pointer between mousedown and mouseup and the tap
-       lands on nothing (a blurred input collapsing the sheet moved every row ~15dvh). The active
-       edit (FULL) is the same expanded sheet with the field list folded away (rule below): a text
-       entry keeps its focus, the on-screen keyboard auto-scrolls the field, and the phase-9
-       TmDrawer migration brings the proper keyboard-snap handling. */
-    .tm-signing-form-runner__steps--sheet-expanded {
-        display: flex;
-        flex-direction: column;
-        max-height: 85dvh;
     }
 
     .tm-signing-form-runner__sheet-bar {
@@ -531,19 +591,48 @@
         justify-items: center;
     }
 
-    .tm-signing-form-runner__steps--sheet-expanded .tm-signing-form-runner__mobile-expand,
-    .tm-signing-form-runner__steps--sheet-expanded .tm-signing-form-runner__sheet-progress {
+    .tm-signing-form-runner__sheet-handle {
+        justify-self: center;
+    }
+
+    /* LIST and FULL (snap 1 / 2): the peek strip yields to the panel header's live region. The
+       drawer panel already scrolls; the step card drops its own frame so it does not nest a
+       second card inside the sheet. */
+    .tm-signing-form-runner__steps[data-snap-index="1"] .tm-signing-form-runner__mobile-expand,
+    .tm-signing-form-runner__steps[data-snap-index="1"] .tm-signing-form-runner__sheet-progress,
+    .tm-signing-form-runner__steps[data-snap-index="2"] .tm-signing-form-runner__mobile-expand,
+    .tm-signing-form-runner__steps[data-snap-index="2"] .tm-signing-form-runner__sheet-progress {
         display: none;
     }
 
-    .tm-signing-form-runner__steps--sheet-expanded .tm-signing-form-runner__step-panel {
+    .tm-signing-form-runner__steps[data-snap-index="1"] .tm-signing-form-runner__step-panel,
+    .tm-signing-form-runner__steps[data-snap-index="2"] .tm-signing-form-runner__step-panel {
         position: static;
-        flex: 1 1 auto;
         min-height: 0;
-        overflow: auto;
         padding: 0;
         border: 0;
         box-shadow: none;
+    }
+
+    /* LIST (snap 1): the drawer body is the only scroller. The action bar pins to its end so a
+       long field list cannot scroll the Previous / Next row out of the sheet. */
+    .tm-signing-form-runner__steps.tm-signing-form-runner__steps--list .tm-drawer__body {
+        display: flex;
+        flex-direction: column;
+        overflow: auto;
+    }
+
+    .tm-signing-form-runner__steps[data-snap-index="1"] .tm-signing-form-runner__step-panel {
+        display: flex;
+        flex-direction: column;
+        flex: 1 1 auto;
+        min-block-size: min-content;
+    }
+
+    .tm-signing-form-runner__steps[data-snap-index="1"] .tm-signing-form-runner__actions {
+        position: sticky;
+        inset-block-end: 0;
+        margin-block-start: auto;
     }
 
     .tm-signing-form-runner__mobile-expand {
@@ -551,10 +640,10 @@
         box-shadow: var(--tm-shadow-md);
     }
 
-    /* FULL (phase 5 review): the active edit — the step panel and the sticky action bar stay
-       visible, the field list folds away (one "Field list" tap in the More menu brings it back
-       and focuses the current row). */
-    .tm-signing-form-runner__steps--sheet-full .tm-signing-form-runner__field-list {
+    /* FULL (snap 2): the active edit — the step panel and the sticky action bar stay visible,
+       the field list folds away (one "Field list" tap in the More menu brings it back and
+       focuses the current row). */
+    .tm-signing-form-runner__steps--list-hidden .tm-signing-form-runner__field-list {
         display: none;
     }
 
@@ -578,6 +667,7 @@
     .tm-signing-form-runner__steps .tm-signing-form-runner__actions .tm-signing-form-runner__next,
     .tm-signing-form-runner__steps .tm-signing-form-runner__actions .tm-signing-form-runner__complete {
         min-width: 0;
+        width: 100%;
     }
 
     .tm-signing-form-runner__skip {
@@ -603,6 +693,15 @@
     .tm-signing-form-runner__steps .tm-signing-form-runner__actions .tm-signing-form-runner__complete {
         padding-inline: 0;
         font-size: var(--tm-font-size-xs);
+    }
+
+    .tm-signing-form-runner__steps .tm-signing-form-runner__actions .tm-btn-label {
+        display: block;
+        min-width: 0;
+        max-width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
     }
 }
 

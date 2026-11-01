@@ -60,7 +60,17 @@ internal static class SigningRedesignPhase5Specs
 
     public static ILocator GetRunner(IPage page) => page.Locator("[data-testid='signing-runner-demo']").First;
 
-    public static ILocator GetStepsRail(ILocator runner) => runner.Locator(".tm-signing-form-runner__steps").First;
+    /// <summary>
+    /// The mobile steps rail is the shared <c>TmDrawer</c> panel (phase 9). The drawer root is
+    /// <c>pointer-events: none</c>, so clicks and taps must land on the panel. Desktop and tablet
+    /// keep the <c>aside</c>.
+    /// </summary>
+    public static ILocator GetStepsRail(ILocator runner) =>
+        runner.Locator(".tm-signing-form-runner__sheet-host .tm-drawer__panel, aside.tm-signing-form-runner__steps").First;
+
+    /// <summary>The drawer root carries <c>data-snap-index</c> (0 peek / 1 list / 2 full).</summary>
+    public static ILocator GetSheet(ILocator runner) =>
+        runner.Locator(".tm-signing-form-runner__sheet-host .tm-drawer").First;
 
     /// <summary>
     /// Selects a field through the list and POSITIVELY waits for the step landing. The sheet lands
@@ -277,15 +287,23 @@ internal static class SigningRedesignPhase5Specs
     /// <summary>The active field overlay must sit ABOVE the sheet top after a step landing.</summary>
     public static async Task AssertActiveFieldAboveSheetAsync(IPage page)
     {
-        var bounds = await page.EvaluateAsync<double[]>(
-            """
-            () => {
-                const field = document.querySelector('.tm-signing-field--selected');
-                const sheet = document.querySelector('.tm-signing-form-runner__steps');
-                if (!field || !sheet) return [-1, -1];
-                return [field.getBoundingClientRect().bottom, sheet.getBoundingClientRect().top];
-            }
-            """);
+        await page.Locator("[data-testid='signing-runner-demo'] .tm-signing-form-runner__documents").First
+            .ScrollIntoViewIfNeededAsync();
+        var bounds = new double[] { -1, -1 };
+        for (var attempt = 0; attempt < 20 && bounds[0] < 0; attempt++)
+        {
+            await page.WaitForTimeoutAsync(150);
+            bounds = await page.EvaluateAsync<double[]>(
+                """
+                () => {
+                    const runner = document.querySelector("[data-testid='signing-runner-demo']");
+                    const field = runner?.querySelector('.tm-signing-field--selected');
+                    const sheet = runner?.querySelector('.tm-signing-form-runner__sheet-host .tm-drawer__panel, aside.tm-signing-form-runner__steps');
+                    if (!field || !sheet || field.getBoundingClientRect().height <= 0) return [-1, -1];
+                    return [field.getBoundingClientRect().bottom, sheet.getBoundingClientRect().top];
+                }
+                """);
+        }
 
         Assert.IsTrue(bounds[0] >= 0, "the runner renders a selected field overlay");
         Assert.IsTrue(
@@ -593,7 +611,7 @@ public class SigningRedesignPhase5BehaviorE2ETests : WasmTestBase
         var visibleInsideSheet = await page.EvaluateAsync<bool>(
             """
             () => {
-                const sheet = document.querySelector('.tm-signing-form-runner__steps').getBoundingClientRect();
+                const sheet = document.querySelector('.tm-signing-form-runner__sheet-host .tm-drawer__panel').getBoundingClientRect();
                 const current = document.querySelector('.tm-signing-form-runner__current-step');
                 if (!current) return false;
                 const controls = current.querySelectorAll('input, select');
@@ -631,16 +649,26 @@ public class SigningRedesignPhase5BehaviorE2ETests : WasmTestBase
             .ToHaveAttributeAsync("aria-current", "step");
 
         await steps.Locator(".tm-signing-form-runner__previous").TapAsync();
+        await Assertions.Expect(steps.Locator(".tm-signing-form-runner__field-button[data-field-uuid='runner-name']"))
+            .ToHaveAttributeAsync("aria-current", "step");
+        await runner.Locator(".tm-signing-form-runner__documents").ScrollIntoViewIfNeededAsync();
 
-        var bounds = await page.EvaluateAsync<double[]>(
-            """
-            () => {
-                const field = document.querySelector('.tm-signing-field--selected');
-                const sheet = document.querySelector('.tm-signing-form-runner__steps');
-                if (!field || !sheet) return [-1, -1];
-                return [field.getBoundingClientRect().bottom, sheet.getBoundingClientRect().top];
-            }
-            """);
+        var bounds = new double[] { -1, -1 };
+        for (var attempt = 0; attempt < 20 && bounds[0] < 0; attempt++)
+        {
+            await page.WaitForTimeoutAsync(150);
+            bounds = await page.EvaluateAsync<double[]>(
+                """
+                () => {
+                    const runner = document.querySelector("[data-testid='signing-runner-demo']");
+                    const field = runner?.querySelector('.tm-signing-field--selected');
+                    const sheet = runner?.querySelector('.tm-signing-form-runner__sheet-host .tm-drawer__panel, aside.tm-signing-form-runner__steps');
+                    if (!field || !sheet || field.getBoundingClientRect().height <= 0) return [-1, -1];
+                    return [field.getBoundingClientRect().bottom, sheet.getBoundingClientRect().top];
+                }
+                """);
+        }
+
         Assert.IsTrue(bounds[0] >= 0, "the runner renders a selected field overlay");
         Assert.IsTrue(
             bounds[0] <= bounds[1] + 2,
@@ -665,9 +693,10 @@ public class SigningRedesignPhase5BehaviorE2ETests : WasmTestBase
         await page.WaitForTimeoutAsync(150);
         await overlay.TapAsync();
 
-        var classes = await steps.GetAttributeAsync("class") ?? string.Empty;
-        StringAssert.Contains(classes, "tm-signing-form-runner__steps--sheet-expanded", "the overlay tap opens the sheet");
-        StringAssert.Contains(classes, "tm-signing-form-runner__steps--sheet-full", "the overlay tap lands in the full edit state");
+        var sheet = SigningRedesignPhase5Specs.GetSheet(runner);
+        await Assertions.Expect(sheet).ToHaveAttributeAsync("data-snap-index", "2");
+        var classes = await sheet.GetAttributeAsync("class") ?? string.Empty;
+        StringAssert.Contains(classes, "tm-signing-form-runner__steps--list-hidden", "the overlay tap lands in the full edit state");
 
         // The pending auto-scroll fires after the render and animates (smooth): poll until the
         // sheet's growth has settled before measuring, instead of racing a single read.
@@ -679,7 +708,7 @@ public class SigningRedesignPhase5BehaviorE2ETests : WasmTestBase
                 """
                 () => {
                     const field = document.querySelector('.tm-signing-field--selected');
-                    const sheet = document.querySelector('.tm-signing-form-runner__steps');
+                    const sheet = document.querySelector('.tm-signing-form-runner__sheet-host .tm-drawer__panel, aside.tm-signing-form-runner__steps');
                     if (!field || !sheet) return [-1, -1];
                     return [field.getBoundingClientRect().bottom, sheet.getBoundingClientRect().top];
                 }

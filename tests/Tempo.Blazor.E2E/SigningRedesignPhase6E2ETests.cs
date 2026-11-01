@@ -86,7 +86,8 @@ internal static class SigningRedesignPhase6Specs
     public static ILocator GetActiveRunner(IPage page) =>
         page.Locator("[data-testid='signing-active-steps-demo']").First;
 
-    public static ILocator GetStepsRail(ILocator runner) => runner.Locator(".tm-signing-form-runner__steps").First;
+    public static ILocator GetStepsRail(ILocator runner) =>
+        runner.Locator(".tm-signing-form-runner__sheet-host .tm-drawer__panel, aside.tm-signing-form-runner__steps").First;
 
     /// <summary>
     /// Completes the phone flow against the fake host: send (skipped when the OTP row is already

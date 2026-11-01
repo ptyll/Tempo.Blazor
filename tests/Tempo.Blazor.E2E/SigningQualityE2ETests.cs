@@ -28,7 +28,7 @@ public class SigningQualityE2ETests : WasmTestBase
         var page = await OpenSigningComponentsAsync();
         var runner = GetRunner(page);
         await runner.ScrollIntoViewIfNeededAsync();
-        var panel = runner.Locator(".tm-signing-form-runner__steps").First;
+        var panel = runner.Locator("aside.tm-signing-form-runner__steps, .tm-signing-form-runner__sheet-host .tm-drawer__panel").First;
 
         await panel.Locator("input.tm-signing-text-step__input").FocusAsync();
         await page.Keyboard.InsertTextAsync("Alex Johnson");
@@ -67,7 +67,7 @@ public class SigningQualityE2ETests : WasmTestBase
         await page.Keyboard.PressAsync("Enter");
 
         // Phase 2 (B25): the single steps rail is the mobile sheet — the input lives inside it.
-        var input = runner.Locator(".tm-signing-form-runner__steps input.tm-signing-text-step__input").First;
+        var input = runner.Locator(".tm-signing-form-runner__sheet-host input.tm-signing-text-step__input").First;
         await Assertions.Expect(input).ToBeVisibleAsync();
         await input.FocusAsync();
 
@@ -119,7 +119,7 @@ public class SigningQualityE2ETests : WasmTestBase
         var runner = GetRunner(page);
         await runner.ScrollIntoViewIfNeededAsync();
 
-        await Assertions.Expect(runner.Locator(".tm-signing-form-runner__steps")).ToBeVisibleAsync();
+        await Assertions.Expect(runner.Locator(".tm-signing-form-runner__sheet-host .tm-drawer__panel")).ToBeVisibleAsync();
         await TakeScreenshotAsync(page, "signing-phase12-runner-mobile");
     }
 

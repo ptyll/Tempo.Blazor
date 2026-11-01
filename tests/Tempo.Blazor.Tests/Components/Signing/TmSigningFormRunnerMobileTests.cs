@@ -43,17 +43,20 @@ public class TmSigningFormRunnerMobileTests : LocalizationTestBase
         handle.Click();
 
         cut.Find(".tm-signing-form-runner__sheet-handle").GetAttribute("aria-expanded").Should().Be("true");
-        cut.Find(".tm-signing-form-runner__steps").ClassList.Should().Contain(
-            "tm-signing-form-runner__steps--sheet-expanded",
-            "the handle expands the same single rail (B25: one panel instance)").And.NotContain(
-            "tm-signing-form-runner__steps--sheet-full",
+        cut.Find(".tm-signing-form-runner__steps").GetAttribute("data-snap-index").Should().Be("1",
+            "the handle expands the shared drawer onto the LIST snap (B25: one panel instance)");
+        cut.Find(".tm-signing-form-runner__layout").GetAttribute("style").Should().Contain(
+            "--tm-signing-sheet-snap: 0.55",
+            "expanded reserves the list snap of the 85dvh host, not only the peek height");
+        cut.Find(".tm-signing-form-runner__steps").ClassList.Should().NotContain(
+            "tm-signing-form-runner__steps--list-hidden",
             "the handle expands onto the LIST presentation, not the full edit state");
 
         cut.Find(".tm-signing-form-runner__sheet-handle").Click();
 
         cut.Find(".tm-signing-form-runner__sheet-handle").GetAttribute("aria-expanded").Should().Be("false");
-        cut.Find(".tm-signing-form-runner__steps").ClassList.Should().Contain(
-            "tm-signing-form-runner__steps--sheet-collapsed");
+        cut.Find(".tm-signing-form-runner__steps").GetAttribute("data-snap-index").Should().Be("0",
+            "the handle collapses the shared drawer to the peek snap");
     }
 
     /// <summary>The peek state (today's Collapsed) is not a dead end: it keeps the done count and
@@ -89,7 +92,7 @@ public class TmSigningFormRunnerMobileTests : LocalizationTestBase
     // ── Full state (phase 5 review) ──────────────────────────────
 
     /// <summary>Every mobile navigation lands in the FULL edit state: step panel + sticky action
-    /// bar visible, field list hidden (the CSS folds it away under <c>--sheet-full</c>).</summary>
+    /// bar visible, field list hidden (the CSS folds it away under <c>--list-hidden</c>).</summary>
     [Fact]
     public async Task Runner_Mobile_NextLandsInFullState_FieldListHidden()
     {
@@ -98,11 +101,11 @@ public class TmSigningFormRunnerMobileTests : LocalizationTestBase
         await cut.Find("input.tm-signing-text-step__input").ChangeAsync(new ChangeEventArgs { Value = "Alice" });
         await cut.Find(".tm-signing-form-runner__next").ClickAsync(new MouseEventArgs());
 
-        var steps = cut.Find(".tm-signing-form-runner__steps").ClassList;
-        steps.Should().Contain("tm-signing-form-runner__steps--sheet-full",
-                "Next lands the sheet in the full edit state")
-            .And.Contain("tm-signing-form-runner__steps--sheet-expanded",
-                "full rides the expanded sheet frame (one CSS presentation)");
+        var steps = cut.Find(".tm-signing-form-runner__steps");
+        steps.GetAttribute("data-snap-index").Should().Be("2",
+            "Next lands the shared drawer on the full snap");
+        steps.ClassList.Should().Contain("tm-signing-form-runner__steps--list-hidden",
+            "full hides the field list; the drawer owns the frame");
 
         FullStateHidesFieldList_CssContract();
     }
@@ -118,9 +121,8 @@ public class TmSigningFormRunnerMobileTests : LocalizationTestBase
         await cut.Find(".tm-signing-form-runner__field-button[data-field-uuid='second']")
             .ClickAsync(new MouseEventArgs());
 
-        cut.Find(".tm-signing-form-runner__steps").ClassList.Should().Contain(
-            "tm-signing-form-runner__steps--sheet-full",
-            "a list tap is a navigation — the sheet lands in the full edit state");
+        cut.Find(".tm-signing-form-runner__steps").GetAttribute("data-snap-index").Should().Be("2",
+            "a list tap is a navigation — the drawer lands on the full snap");
     }
 
     /// <summary>The More menu's "Field list" entry switches the full edit state onto the list
@@ -132,15 +134,15 @@ public class TmSigningFormRunnerMobileTests : LocalizationTestBase
         var cut = RenderMobileRunner(mobilePanelMode: TmSigningFormRunnerMobilePanelMode.Expanded);
         await cut.Find(".tm-signing-form-runner__field-button[data-field-uuid='second']")
             .ClickAsync(new MouseEventArgs());
-        cut.Find(".tm-signing-form-runner__steps").ClassList.Should().Contain("tm-signing-form-runner__steps--sheet-full");
+        cut.Find(".tm-signing-form-runner__steps").GetAttribute("data-snap-index").Should().Be("2");
 
         await OpenMoreMenuAsync(cut);
         await cut.Find(".tm-signing-form-runner__more-fields").ClickAsync(new MouseEventArgs());
 
-        cut.Find(".tm-signing-form-runner__steps").ClassList.Should().Contain(
-                "tm-signing-form-runner__steps--sheet-expanded")
-            .And.NotContain("tm-signing-form-runner__steps--sheet-full",
-                "\"Field list\" leaves the full edit state");
+        var steps = cut.Find(".tm-signing-form-runner__steps");
+        steps.GetAttribute("data-snap-index").Should().Be("1",
+            "\"Field list\" leaves the full snap for the list snap");
+        steps.ClassList.Should().NotContain("tm-signing-form-runner__steps--list-hidden");
 
         cut.WaitForAssertion(() => module.Invocations.Should().Contain(i => i.Identifier == "focusFieldButton"
                 && i.Arguments.Contains("second"),
@@ -148,7 +150,8 @@ public class TmSigningFormRunnerMobileTests : LocalizationTestBase
     }
 
     /// <summary>The CSS contract of the full state: the field list folds away under
-    /// <c>--sheet-full</c> while the step panel and the sticky action bar stay visible.</summary>
+    /// <c>--list-hidden</c> while the step panel and the sticky action bar stay visible.
+    /// The local phase-5 sheet frame is gone — height is the shared drawer's snap.</summary>
     [Fact]
     public void FullStateHidesFieldList_CssContract()
     {
@@ -156,8 +159,10 @@ public class TmSigningFormRunnerMobileTests : LocalizationTestBase
             ThemeCss.RepositoryRoot().FullName,
             "src", "Tempo.Blazor.Signing", "wwwroot", "css", "components", "_signing-form-runner.css"));
 
-        css.Should().Contain(".tm-signing-form-runner__steps--sheet-full .tm-signing-form-runner__field-list",
-            "the full state hides the field list (CSS-only, no new public parameter)");
+        css.Should().Contain(".tm-signing-form-runner__steps--list-hidden .tm-signing-form-runner__field-list",
+            "the full state hides the field list (content class on the shared drawer, no new public parameter)");
+        css.Should().NotContain("tm-signing-form-runner__steps--sheet-",
+            "the phase-5 local sheet frame is gone; peek/list/full are TmDrawer snap indexes");
     }
 
     // ── More menu ────────────────────────────────────────────────
@@ -204,10 +209,10 @@ public class TmSigningFormRunnerMobileTests : LocalizationTestBase
 
         await cut.Find(".tm-signing-form-runner__more-document").ClickAsync(new MouseEventArgs());
 
-        cut.Find(".tm-signing-form-runner__steps").ClassList.Should().Contain(
-                "tm-signing-form-runner__steps--sheet-collapsed",
-                "\"Show whole document\" collapses the sheet so the document shows (peek)")
-            .And.NotContain("tm-signing-form-runner__steps--sheet-full");
+        var steps = cut.Find(".tm-signing-form-runner__steps");
+        steps.GetAttribute("data-snap-index").Should().Be("0",
+            "\"Show whole document\" collapses the shared drawer to the peek snap");
+        steps.ClassList.Should().NotContain("tm-signing-form-runner__steps--list-hidden");
     }
 
     /// <summary>The More menu's Language entry hands the focus to the sheet's language selector
@@ -222,9 +227,8 @@ public class TmSigningFormRunnerMobileTests : LocalizationTestBase
         await cut.Find(".tm-signing-form-runner__more-language").ClickAsync(new MouseEventArgs());
 
         cut.WaitForAssertion(() =>
-            cut.Find(".tm-signing-form-runner__steps").ClassList.Should().Contain(
-                "tm-signing-form-runner__steps--sheet-expanded",
-                "focusing the language select requires the expanded sheet"));
+            cut.Find(".tm-signing-form-runner__steps").GetAttribute("data-snap-index").Should().Be("1",
+                "focusing the language select requires the list snap"));
     }
 
     // ── Auto-scroll ──────────────────────────────────────────────
@@ -275,9 +279,9 @@ public class TmSigningFormRunnerMobileTests : LocalizationTestBase
 
         cut.FindAll(".tm-signing-field-overlay")[1].Click();
 
-        var classes = cut.Find(".tm-signing-form-runner__steps").ClassList;
-        classes.Should().Contain("tm-signing-form-runner__steps--sheet-expanded")
-            .And.Contain("tm-signing-form-runner__steps--sheet-full", "an overlay tap lands in the full edit state");
+        var steps = cut.Find(".tm-signing-form-runner__steps");
+        steps.GetAttribute("data-snap-index").Should().Be("2", "an overlay tap lands on the full snap");
+        steps.ClassList.Should().Contain("tm-signing-form-runner__steps--list-hidden");
         cut.Find(".tm-signing-form-runner__step-panel").TextContent.Should().Contain("Second");
     }
 

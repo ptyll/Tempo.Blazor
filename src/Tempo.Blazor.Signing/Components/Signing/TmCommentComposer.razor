@@ -1,17 +1,20 @@
 @namespace Tempo.Blazor.Components.Signing
+@inherits Tempo.Blazor.Components.TmComponentBase
 @using Tempo.Blazor.Abstractions.Models
+@using Tempo.Blazor.Components.Inputs
 
 <div class="@RootClass">
-    <label class="tm-comment-composer__label" for="@_inputId">@AriaLabel</label>
-    <textarea id="@_inputId"
-              class="tm-comment-composer__input"
-              rows="@Rows"
-              placeholder="@Placeholder"
-              disabled="@Disabled"
-              autofocus="@AutoFocus"
-              value="@_text"
-              @oninput="HandleInputAsync"
-              @onkeydown="HandleKeyDownAsync"></textarea>
+    <TmTextArea @ref="_textArea"
+                Id="@_inputId"
+                Class="tm-comment-composer__field"
+                Value="@_text"
+                ValueChanged="HandleTextChangedAsync"
+                Immediate="true"
+                Rows="@Rows"
+                Placeholder="@Placeholder"
+                Label="@AriaLabel"
+                Disabled="@Disabled"
+                AdditionalAttributes="InputAttributes" />
 
     @if (_showMentions && FilteredMentionUsers.Count > 0)
     {
@@ -147,6 +150,42 @@
             _hasInitializedValue = true;
             SynchronizeMentionsFromText();
         }
+    }
+
+    private TmTextArea? _textArea;
+    private bool _autoFocused;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!AutoFocus || _autoFocused || Disabled || _textArea is null)
+        {
+            return;
+        }
+
+        _autoFocused = true;
+        await _textArea.FocusAsync();
+    }
+
+    private Dictionary<string, object> InputAttributes
+    {
+        get
+        {
+            var attributes = new Dictionary<string, object>
+            {
+                ["onkeydown"] = EventCallback.Factory.Create<KeyboardEventArgs>(this, HandleKeyDownAsync)
+            };
+            if (AutoFocus)
+            {
+                attributes["autofocus"] = true;
+            }
+
+            return attributes;
+        }
+    }
+
+    private Task HandleTextChangedAsync(string value)
+    {
+        return HandleInputAsync(new ChangeEventArgs { Value = value });
     }
 
     private async Task HandleInputAsync(ChangeEventArgs args)

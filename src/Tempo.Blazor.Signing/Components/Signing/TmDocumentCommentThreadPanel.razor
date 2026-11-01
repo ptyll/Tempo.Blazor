@@ -1,8 +1,11 @@
 @namespace Tempo.Blazor.Components.Signing
 @inherits Tempo.Blazor.Components.TmComponentBase
 @implements Tempo.Blazor.Abstractions.Shared.ITmDraftGuard
+@using Tempo.Blazor.Abstractions.Layout
 @using Tempo.Blazor.Abstractions.Models
 @using Tempo.Blazor.Abstractions.Shared
+@using Tempo.Blazor.Components.Buttons
+@using Tempo.Blazor.Components.Dropdowns
 
 <aside class="@RootClass"
        aria-label="@Loc["TmDocumentComments_PanelLabel"]"
@@ -14,26 +17,50 @@
             <h3 class="tm-document-comments-panel__title">@Loc["TmDocumentComments_Title"]</h3>
             <p class="tm-document-comments-panel__summary">@SummaryText</p>
         </div>
-        @if (!string.IsNullOrWhiteSpace(SelectedThreadId))
-        {
-            <button type="button"
-                    class="tm-document-comments-panel__icon-button"
-                    aria-label="@Loc["TmDocumentComments_CloseThread"]"
-                    disabled="@Disabled"
-                    @onclick="ClearSelectionAsync">
-                <TmIcon Name="@IconNames.X" Size="IconSize.Sm" />
-            </button>
-        }
+        <div class="tm-document-comments-panel__header-actions">
+            @if (OnNewComment.HasDelegate)
+            {
+                <button type="button"
+                        class="tm-document-comments-panel__new"
+                        aria-label="@Loc["TmDocumentComments_NewCommentAria"]"
+                        disabled="@Disabled"
+                        @onclick="OnNewComment">
+                    <TmIcon Name="plus" Size="IconSize.Sm" />
+                    <span class="tm-document-comments-panel__new-label">@Loc["TmDocumentComments_NewComment"]</span>
+                </button>
+            }
+            @if (OnClose.HasDelegate)
+            {
+                <button type="button"
+                        class="tm-document-comments-panel__close"
+                        aria-label="@Loc["TmDocumentComments_ClosePanel"]"
+                        disabled="@Disabled"
+                        @onclick="OnClose">
+                    <TmIcon Name="@IconNames.X" Size="IconSize.Sm" />
+                </button>
+            }
+            @if (!string.IsNullOrWhiteSpace(SelectedThreadId) && !ShowThreadBack)
+            {
+                <button type="button"
+                        class="tm-document-comments-panel__icon-button"
+                        aria-label="@Loc["TmDocumentComments_CloseThread"]"
+                        disabled="@Disabled"
+                        @onclick="ClearSelectionAsync">
+                    <TmIcon Name="@IconNames.X" Size="IconSize.Sm" />
+                </button>
+            }
+        </div>
     </header>
 
-    <div class="tm-document-comments-panel__filters" role="tablist" aria-label="@Loc["TmDocumentComments_FilterLabel"]">
-        <button type="button" class="@FilterButtonClass(DocumentCommentThreadFilter.Open)" disabled="@Disabled" @onclick="() => SetFilter(DocumentCommentThreadFilter.Open)">
+    <div class="tm-document-comments-panel__filters" role="group" aria-labelledby="@_filterLabelId">
+        <span id="@_filterLabelId" class="tm-document-comments-panel__filter-label">@Loc["TmDocumentComments_FilterLabel"]</span>
+        <button type="button" class="@FilterButtonClass(DocumentCommentThreadFilter.Open)" aria-pressed="@Pressed(DocumentCommentThreadFilter.Open)" disabled="@Disabled" @onclick="() => SetFilter(DocumentCommentThreadFilter.Open)">
             @Loc["TmDocumentComments_FilterOpen"]
         </button>
-        <button type="button" class="@FilterButtonClass(DocumentCommentThreadFilter.Mentions)" disabled="@Disabled" @onclick="() => SetFilter(DocumentCommentThreadFilter.Mentions)">
+        <button type="button" class="@FilterButtonClass(DocumentCommentThreadFilter.Mentions)" aria-pressed="@Pressed(DocumentCommentThreadFilter.Mentions)" disabled="@Disabled" @onclick="() => SetFilter(DocumentCommentThreadFilter.Mentions)">
             @Loc["TmDocumentComments_FilterMentions"]
         </button>
-        <button type="button" class="@FilterButtonClass(DocumentCommentThreadFilter.Resolved)" disabled="@Disabled" @onclick="() => SetFilter(DocumentCommentThreadFilter.Resolved)">
+        <button type="button" class="@FilterButtonClass(DocumentCommentThreadFilter.Resolved)" aria-pressed="@Pressed(DocumentCommentThreadFilter.Resolved)" disabled="@Disabled" @onclick="() => SetFilter(DocumentCommentThreadFilter.Resolved)">
             @Loc["TmDocumentComments_FilterResolved"]
         </button>
     </div>
@@ -42,13 +69,16 @@
     {
         <section class="tm-document-comments-panel__detail" data-thread-id="@SelectedThread.Id">
             <div class="tm-document-comments-panel__detail-header">
-                <button type="button"
-                        class="tm-document-comments-panel__back"
-                        disabled="@Disabled"
-                        @onclick="ClearSelectionAsync">
-                    <TmIcon Name="chevron-left" Size="IconSize.Sm" />
-                    <span>@Loc["TmDocumentComments_BackToList"]</span>
-                </button>
+                @if (ShowThreadBack)
+                {
+                    <button type="button"
+                            class="tm-document-comments-panel__back"
+                            disabled="@Disabled"
+                            @onclick="ClearSelectionAsync">
+                        <TmIcon Name="chevron-left" Size="IconSize.Sm" />
+                        <span>@Loc["TmDocumentComments_BackToList"]</span>
+                    </button>
+                }
                 <span class="@StatusClass(SelectedThread)">@StatusText(SelectedThread)</span>
             </div>
 
@@ -146,6 +176,7 @@
 
     /// <summary>Last draft state handed to the parent — used to dedup <see cref="OnDraftChanged"/> notifications.</summary>
     private TmCommentDraftState _lastDraftState = new(false, null, false);
+    private readonly string _filterLabelId = $"tm-comment-filters-{Guid.NewGuid():N}";
 
     /// <summary>Comment threads to render.</summary>
     [Parameter] public IReadOnlyList<DocumentCommentThread> Threads { get; set; } = [];
@@ -191,6 +222,15 @@
 
     /// <summary>Additional CSS class.</summary>
     [Parameter] public string? Class { get; set; }
+
+    /// <summary>Forced layout. Mobile keeps the composer sticky inside the host sheet.</summary>
+    [Parameter] public TmLayoutMode LayoutMode { get; set; } = TmLayoutMode.Auto;
+
+    /// <summary>Optional close of the comments surface. Absent means no close control.</summary>
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    /// <summary>Starts a new comment (enables comment mode on the host).</summary>
+    [Parameter] public EventCallback OnNewComment { get; set; }
 
     /// <summary>
     /// Notifies the parent that the panel's comment draft state changed. The reply and edit
@@ -330,6 +370,11 @@
     };
 
     private string SummaryText => Loc["TmDocumentComments_Summary", DocumentCommentHelper.CountOpenThreads(Threads), Threads.Count];
+
+    private string Pressed(DocumentCommentThreadFilter filter) => filter == _filter ? "true" : "false";
+
+    /// <summary>Mobile detail uses Back. The header X is the desktop close, so the two never both show.</summary>
+    private bool ShowThreadBack => LayoutMode == TmLayoutMode.Mobile;
 
     private string FilterButtonClass(DocumentCommentThreadFilter filter)
     {

@@ -230,6 +230,12 @@ public class UnconstrainedClassOwnershipTests
         // .tm-signing-choice-step__options--cards chain — an intentional, mobile-presentation-only
         // Override (the desktop container keeps the system select and never renders the chain).
         ".tm-radio-option Tempo.Blazor.Signing/_signing-steps.css|Tempo.Blazor/_radio-group.css",
+
+        // Signing phase 9 review: the list snap pins the action row inside the drawer body, and the
+        // extra-narrow runner ellipsizes the button label. Both are strictly narrower than the core
+        // subjects (the list class / the runner actions chain), so import order decides nothing.
+        ".tm-btn-label Tempo.Blazor.Signing/_signing-form-runner.css|Tempo.Blazor/_button.css",
+        ".tm-drawer__body Tempo.Blazor.Signing/_document-comments.css|Tempo.Blazor/_drawer.css",
     ];
 
     [Fact]

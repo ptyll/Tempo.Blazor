@@ -19,7 +19,10 @@
                LeftOpen="PaletteOpen"
                LeftOpenChanged="OnPaletteOpenChanged"
                RightOpen="InspectorOpen"
-               RightOpenChanged="OnInspectorOpenChanged">
+               RightOpenChanged="OnInspectorOpenChanged"
+               MobileActions="MobileActionItems"
+               MobileActionsMaxVisible="4"
+                Left="@DockedPalette">
     <Toolbar>
         <TmPdfTemplateDesignerToolbar TwoRow="@(ResolvedLayout == TmLayoutMode.Tablet)"
                                       PageLabel="@PageLabel"
@@ -50,27 +53,15 @@
                                       OnFitPage="FitPageAsync"
                                       OnDetect="DetectFieldsAsync"
                                       OnDeleteSelected="DeleteSelectedAsync" />
-        @* The shell's inspector sheet covers the canvas from its top edge, so the tablet rail lives
-           above the canvas. One palette instance occupies this slot. *@
+    </Toolbar>
+    <Canvas>
+        @* One palette instance. Tablet: icon rail above the canvas. Mobile (G2): horizontal tiles.
+           Desktop keeps the docked Left palette. *@
         @if (ShowCanvasPalette && !Disabled && Documents.Count > 0)
         {
-            <TmPdfTemplateDesignerPalette Variant="PdfTemplatePaletteVariant.Rail"
-                                          FieldTypes="AllowedTypes"
-                                          ItemClass="GetPaletteItemClass"
-                                          Label="GetFieldTypeLabel"
-                                          Icon="GetIconName"
-                                          OnPointerDown="StartPaletteDrag"
-                                          OnPointerUp="FinishPalettePressAsync"
-                                          OnClick="HandlePaletteClickAsync"
-                                          OnCancel="EndPaletteDrag" />
-        }
-    </Toolbar>
-    <Left>
-        @if (ShowDockedPalette)
-        {
-            <TmPdfTemplateDesignerPalette Variant="@(ResolvedLayout == TmLayoutMode.Mobile ? PdfTemplatePaletteVariant.Compact : PdfTemplatePaletteVariant.Docked)"
-                                          FieldTypes="AllowedTypes"
+            <TmPdfTemplateDesignerPalette Variant="@(ResolvedLayout == TmLayoutMode.Mobile ? PdfTemplatePaletteVariant.Compact : PdfTemplatePaletteVariant.Rail)"
                                           ShowMobileDraw="@(ResolvedLayout == TmLayoutMode.Mobile)"
+                                          FieldTypes="AllowedTypes"
                                           ItemClass="GetPaletteItemClass"
                                           Label="GetFieldTypeLabel"
                                           Icon="GetIconName"
@@ -80,8 +71,6 @@
                                           OnCancel="EndPaletteDrag"
                                           OnMobileDraw="() => SelectFieldTypeAsync(AllowedTypes.FirstOrDefault())" />
         }
-    </Left>
-    <Canvas>
         <div class="tm-pdf-template-designer__workspace"
              tabindex="0"
              @ref="_workspaceRef"
@@ -122,6 +111,18 @@
                 </section>
             }
         </div>
+        @if (ResolvedLayout == TmLayoutMode.Mobile && Documents.Count > 0)
+        {
+            <div class="tm-pdf-template-designer__zoom-bar" data-tm-group="zoom" role="group" aria-label="@Loc["TmPdfTemplateDesigner_GroupZoom"]">
+                <button type="button" class="tm-pdf-template-designer__toolbar-button tm-pdf-template-designer__zoom-out" disabled="@(!CanZoomOut)" aria-label="@Loc["TmPdfTemplateDesigner_ZoomOut"]" @onclick="ZoomOutAsync">
+                    <TmIcon Name="zoom-out" Size="IconSize.Sm" />
+                </button>
+                <span class="tm-pdf-template-designer__zoom-label" role="status" aria-live="polite">@ZoomLabel</span>
+                <button type="button" class="tm-pdf-template-designer__toolbar-button tm-pdf-template-designer__zoom-in" disabled="@(!CanZoomIn)" aria-label="@Loc["TmPdfTemplateDesigner_ZoomIn"]" @onclick="ZoomInAsync">
+                    <TmIcon Name="zoom-in" Size="IconSize.Sm" />
+                </button>
+            </div>
+        }
         @if (_contextMenu is not null)
         {
             <TmContextMenu @ref="_contextMenuRef"
@@ -175,6 +176,12 @@
             </TmContextMenu>
         }
     </Canvas>
+    <StatusBar>
+        @if (ResolvedLayout != TmLayoutMode.Mobile && Documents.Count > 0)
+        {
+            <span class="tm-pdf-template-designer__status-zoom">@ZoomLabel</span>
+        }
+    </StatusBar>
     <Right>
         <aside class="tm-pdf-template-designer__panel" @onkeydown:stopPropagation="true">
             <TmSigningFieldEditorPanel Field="SelectedField"
@@ -199,3 +206,25 @@
         </aside>
     </Right>
 </TmEditorShell>
+
+@code {
+    /// <summary>
+    /// Null on tablet and mobile, so the shell hides the Left toggle. An empty Left fragment
+    /// still counts as content and opens an empty palette panel.
+    /// </summary>
+    private RenderFragment? DockedPalette => ShowDockedPalette ? DockedPaletteBody : null;
+
+    private RenderFragment DockedPaletteBody => @<text>
+        <TmPdfTemplateDesignerPalette Variant="PdfTemplatePaletteVariant.Docked"
+                                      FieldTypes="AllowedTypes"
+                                      ShowMobileDraw="false"
+                                      ItemClass="GetPaletteItemClass"
+                                      Label="GetFieldTypeLabel"
+                                      Icon="GetIconName"
+                                      OnPointerDown="StartPaletteDrag"
+                                      OnPointerUp="FinishPalettePressAsync"
+                                      OnClick="HandlePaletteClickAsync"
+                                      OnCancel="EndPaletteDrag"
+                                      OnMobileDraw="() => SelectFieldTypeAsync(AllowedTypes.FirstOrDefault())" />
+    </text>;
+}

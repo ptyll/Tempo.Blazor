@@ -72,8 +72,8 @@
 
     private string RootClass => Variant switch
     {
-        PdfTemplatePaletteVariant.Rail => "tm-pdf-template-designer__palette tm-pdf-template-designer__palette--rail",
-        PdfTemplatePaletteVariant.Compact => "tm-pdf-template-designer__palette tm-pdf-template-designer__palette--compact",
+        PdfTemplatePaletteVariant.Rail => "tm-pdf-template-designer__palette tm-pdf-template-designer__palette--rail tm-pdf-template-designer__palette--canvas",
+        PdfTemplatePaletteVariant.Compact => "tm-pdf-template-designer__palette tm-pdf-template-designer__palette--compact tm-pdf-template-designer__palette--canvas",
         _ => "tm-pdf-template-designer__palette tm-pdf-template-designer__palette--docked"
     };
 }

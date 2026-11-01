@@ -21,7 +21,7 @@
      aria-busy="@BoolText(IsLoading)">
     @* The runner root is the CSS size container (see _signing-form-runner.css); its grid lives on
        an inner element because a @container rule can never restyle the container itself. *@
-    <div class="tm-signing-form-runner__layout">
+    <div class="tm-signing-form-runner__layout" style="@MobileSheetReserveStyle">
     @if (Plan.Steps.Count == 0)
     {
         <div class="tm-signing-form-runner__empty" role="status">
@@ -33,6 +33,51 @@
     else
     {
         <div class="tm-signing-form-runner__documents" data-testid="@TestId("signing-runner-documents")">
+            @if (IsMobileSheet)
+            {
+                <div class="tm-signing-form-runner__sheet-host"
+                     data-testid="@TestId("signing-runner-steps")"
+                     data-complete-target="@MobileCompleteTargetSelector">
+                    <TmDrawer IsOpen="true"
+                              Position="DrawerPosition.Bottom"
+                              Modal="false"
+                              ShowOverlay="false"
+                              ShowCloseButton="false"
+                              CloseOnEscape="false"
+                              SwipeToDismiss="false"
+                              ShowHandle="false"
+                              SnapPoints="RunnerSheetSnaps"
+                              SnapIndex="RunnerSheetSnapIndex"
+                              SnapIndexChanged="OnRunnerSheetSnapChanged"
+                              MaxHeight="1"
+                              LayoutMode="TmLayoutMode.Mobile"
+                              Class="@StepsClass"
+                              AriaLabel="@Loc["TmSigningFormRunner_PanelTitle"]">
+                        <HeaderContent>
+                            <div class="tm-signing-form-runner__sheet-bar">
+                                <button type="button"
+                                        class="tm-signing-form-runner__sheet-handle"
+                                        aria-expanded="@BoolText(_sheetExpanded)"
+                                        aria-controls="@_stepPanelId"
+                                        aria-label="@SheetHandleAriaLabel"
+                                        @ref="_sheetHandle"
+                                        @onclick="ToggleMobileSheet">
+                                    <span class="tm-signing-form-runner__sheet-handle-grip" aria-hidden="true"></span>
+                                </button>
+                                <div class="tm-signing-form-runner__sheet-progress" role="@PeekProgressRole">@DoneCountText</div>
+                                <button type="button"
+                                        class="tm-signing-form-runner__mobile-expand"
+                                        @onclick="ExpandMobilePanel">
+                                    @Loc["TmSigningFormRunner_SignNow"]
+                                </button>
+                            </div>
+                        </HeaderContent>
+                        <ChildContent>
+                            @RunnerStepCascade
+                        </ChildContent>
+                    </TmDrawer>
+                </div>
+            }
             @* U4 (Signing redesign phase 3): optional document header. The default stays today's
                chrome-free look — the header renders only when a title or host actions exist. *@
             @if (HasDocumentHeader)
@@ -49,6 +94,9 @@
                 </div>
             }
 
+            @* One pages scroller (phase 9 review): snap 1/2 sizes THIS wrapper, never each page.
+               A per-page flex item collapses a multi-page runner to a sliver. *@
+            <div class="tm-signing-form-runner__pages">
             @foreach (var documentPage in Pages)
             {
                 @* Light island (phase 3 review): the paper sheet stays white inside a dark host, so
@@ -62,6 +110,7 @@
                        pagination controls would be dead chrome — pagination comes with a later phase
                        if it is ever needed. *@
                     <TmDocumentPageViewer Page="@documentPage"
+                                          EnablePinchZoom="true"
                                           ShowToolbar="@ShowDocumentToolbar"
                                           ShowZoomControls="@ShowDocumentToolbar"
                                           ShowPaginationControls="false"
@@ -86,57 +135,23 @@
                     </TmDocumentPageViewer>
                 </div>
             }
-        </div>
-
-        @* B25 (Signing redesign phase 2): the steps rail hosts the ONE step panel. The column vs.
-            mobile-sheet presentation is CSS only (@container tm-signing-runner); the sheet state is
-            carried by the --sheet-collapsed / --sheet-expanded / --sheet-full classes below, so
-            the panel content exists exactly once in the DOM at every width. Collapsed is the PEEK
-            state (phase 5): the handle, the done count and the primary CTA stay visible above the
-            document. FULL (phase 5 review) is the active edit: step panel + sticky action bar,
-            field list hidden. *@
-        <aside class="@StepsClass"
-               data-testid="@TestId("signing-runner-steps")"
-               data-complete-target="@MobileCompleteTargetSelector">
-            <div class="tm-signing-form-runner__sheet-bar">
-                @* The HANDLE is the sheet's ONLY aria-expanded toggle (phase 5 review): one
-                    control, visible in every sheet state, describing the sheet state and naming
-                    the ONE step panel it toggles. The peek CTA ("Sign now") and the More menu
-                    drive the same state machine without carrying toggle semantics. *@
-                <button type="button"
-                        class="tm-signing-form-runner__sheet-handle"
-                        aria-expanded="@BoolText(_sheetExpanded)"
-                        aria-controls="@_stepPanelId"
-                        aria-label="@SheetHandleAriaLabel"
-                        @ref="_sheetHandle"
-                        @onclick="ToggleMobileSheet">
-                    <span class="tm-signing-form-runner__sheet-handle-grip" aria-hidden="true"></span>
-                </button>
-                @* The PEEK strip (phase 5): the done count stays readable while the sheet is
-                    collapsed. It is a SECOND rendering of the count text, not of the panel's
-                    progress region — the live region remains the panel header's (one region).
-                    While collapsed it is the strip's own status region (phase 5 review), so the
-                    count announces without expanding. *@
-                <div class="tm-signing-form-runner__sheet-progress" role="@PeekProgressRole">@DoneCountText</div>
-                <button type="button"
-                        class="tm-signing-form-runner__mobile-expand"
-                        @onclick="ExpandMobilePanel">
-                    @Loc["TmSigningFormRunner_SignNow"]
-                </button>
             </div>
 
-            <CascadingValue Value="_stepFocusSignal" IsFixed="true">
-                <CascadingValue Name="TmSigningRunnerValidation" Value="@_validationMessage" IsFixed="false">
-                    @* The phone step keys its host-reported send off this flag (phase 6 review
-                        fix): hosted, the send click never fakes progress — the OTP row, the
-                        countdown and the announcement follow only the CodeSent parameter the
-                        runner reports AFTER the host accepted the dispatch. *@
-                    <CascadingValue Name="TmSigningRunnerHosted" Value="true" IsFixed="true">
-                        @RenderStepPanel()
-                    </CascadingValue>
-                </CascadingValue>
-            </CascadingValue>
-        </aside>
+
+        </div>
+
+        @* B25: the steps rail hosts the ONE step panel. Phase 9 MOVES that instance into a
+           non-modal TmDrawer on a mobile layout (G13 / FZE5-G13-RUNNER-SHEET) and keeps the
+           desktop/tablet column. RenderStepPanel is called from exactly one branch.
+           Crossing the breakpoint remounts the sheet (see the mobile branch above). *@
+        @if (!IsMobileSheet)
+        {
+            <aside class="@StepsClass"
+                   data-testid="@TestId("signing-runner-steps")"
+                   data-complete-target="@MobileCompleteTargetSelector">
+                @RunnerStepCascade
+            </aside>
+        }
     }
     </div>
 </div>
@@ -144,12 +159,19 @@
 </TmLayoutObserver>
 
 @code {
-    // INVARIANT (Signing redesign phase 2, bug B25): RenderStepPanel renders the ONE step panel
-    // instance of the runner — the desktop rail and the mobile bottom sheet are CSS presentations
-    // of it, never a second copy. The Phase 9 migration of this panel into a shared TmDrawer MUST
-    // MOVE this exact instance into the sheet host (moving the RenderFragment / element), never
-    // render it twice; the bUnit gate Runner_RendersExactlyOneStepShell_AndOneSignatureCapture
-    // and the E2E SigningFormRunner_SinglePanelInstanceInDom_AtMobileAndDesktop guard that.
+    // INVARIANT (Signing redesign phase 2, bug B25; phase 9 MOVE): RenderStepPanel is the ONE step
+    // panel. The mobile branch hosts it inside TmDrawer; the desktop/tablet branch hosts it in the
+    // aside. Exactly one branch renders, so the panel exists once. The bUnit gate
+    // Runner_RendersExactlyOneStepShell_AndOneSignatureCapture and the E2E
+    // SigningFormRunner_SinglePanelInstanceInDom_AtMobileAndDesktop guard that.
+    private RenderFragment RunnerStepCascade => @<CascadingValue Value="_stepFocusSignal" IsFixed="true">
+        <CascadingValue Name="TmSigningRunnerValidation" Value="@_validationMessage" IsFixed="false">
+            <CascadingValue Name="TmSigningRunnerHosted" Value="true" IsFixed="true">
+                @RenderStepPanel()
+            </CascadingValue>
+        </CascadingValue>
+    </CascadingValue>;
+
     private RenderFragment RenderStepPanel() => @<div id="@_stepPanelId" class="tm-signing-form-runner__step-panel">
         <header class="tm-signing-form-runner__panel-header">
             <h2 class="tm-signing-form-runner__panel-title">@Loc["TmSigningFormRunner_PanelTitle"]</h2>
