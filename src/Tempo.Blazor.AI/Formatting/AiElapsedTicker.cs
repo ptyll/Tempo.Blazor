@@ -1,15 +1,17 @@
 namespace Tempo.Blazor.AI.Formatting;
 
 /// <summary>
-/// Drives the live elapsed timer of a running tool call and of a running reasoning panel: a repeating
-/// timer on the injected <see cref="TimeProvider"/> that re-renders the owner once a second and stops the
-/// moment the work finishes.
+/// Drives the live timer of a running tool call, of a running reasoning panel and of a granted
+/// permission: a repeating timer on the injected <see cref="TimeProvider"/> that re-renders the owner
+/// once a second and stops the moment there is nothing left to count (the work finished, or the
+/// permission ran out).
 /// </summary>
 /// <remarks>
 /// <para>
 /// The timer exists only while there is something to count. A finished call keeps its recorded duration,
 /// so leaving a timer armed would either keep the UI re-rendering forever or (worse) overwrite a fact with
-/// an estimate.
+/// an estimate. A granted permission stops counting the moment it expires — an expired row has nothing
+/// left to show.
 /// </para>
 /// <para>
 /// The callback runs on a thread-pool thread with <see cref="TimeProvider.System"/> (and on the advancing

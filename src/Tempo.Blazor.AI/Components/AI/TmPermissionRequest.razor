@@ -1,0 +1,205 @@
+@namespace Tempo.Blazor.Components.AI
+@inherits Tempo.Blazor.Components.TmComponentBase
+@using Tempo.Blazor.Abstractions.Models.Approvals
+@using Tempo.Blazor.AI.Models
+@using Tempo.Blazor.Components.DataDisplay
+@using Tempo.Blazor.Components.Icons
+
+@* The agent's request for one concrete permission. Every user-facing string comes from ITmLocalizer;
+   the risk is always spelled out next to its colour, the scope and duration are native radio groups
+   (so the arrow keys work without a line of JavaScript), and the announced channel is the single
+   polite live region at the bottom. The pending and decided halves stay mounted so the collapse can
+   transition the height — the inactive half is inert, which keeps it out of the tab order and out of
+   the accessibility tree (see _ai-permission.css). *@
+<section @ref="_rootElement"
+         class="tm-ai-permission @Class"
+         data-testid="@RootTestId("ai-permission")"
+         data-state="@StateName"
+         data-risk="@RiskName"
+         role="group"
+         tabindex="-1"
+         aria-label="@GroupLabel"
+         aria-busy="@(IsBusy ? "true" : null)"
+         @onkeydown="HandleKeyDown"
+         @attributes="AdditionalAttributes">
+
+    <div class="tm-ai-permission__collapse tm-ai-permission__body" inert="@IsCollapsed">
+        <div class="tm-ai-permission__body-inner">
+
+            <div class="tm-ai-permission__header">
+                <span class="tm-ai-permission__icon" aria-hidden="true">
+                    <TmIcon Name="@IconNames.Key" Size="IconSize.Sm" />
+                </span>
+                <div class="tm-ai-permission__heading">
+                    <p class="tm-ai-permission__title" data-testid="@TestId("ai-permission-title")">@DisplayName</p>
+                    <p class="tm-ai-permission__hint">@Loc["TmPermissionRequest_Hint"]</p>
+                </div>
+                <span class="tm-ai-permission__risk" data-testid="@TestId("ai-permission-risk")">
+                    <TmBadge Variant="@RiskBadgeVariant"
+                             BadgeStyle="BadgeStyle.Subtle"
+                             Icon="@RiskIcon">@RiskLabel</TmBadge>
+                </span>
+            </div>
+
+            <dl class="tm-ai-permission__details"
+                aria-label="@Loc["TmPermissionRequest_DetailsLabel"]"
+                data-testid="@TestId("ai-permission-details")">
+                <div class="tm-ai-permission__detail">
+                    <dt class="tm-ai-permission__detail-term">@Loc["TmPermissionRequest_ToolLabel"]</dt>
+                    <dd class="tm-ai-permission__detail-value">
+                        <code class="tm-ai-permission__code"
+                              data-testid="@TestId("ai-permission-tool")">@ToolName</code>
+                    </dd>
+                </div>
+                @if (!string.IsNullOrWhiteSpace(Target))
+                {
+                    <div class="tm-ai-permission__detail">
+                        <dt class="tm-ai-permission__detail-term">@Loc["TmPermissionRequest_TargetLabel"]</dt>
+                        <dd class="tm-ai-permission__detail-value">
+                            <code class="tm-ai-permission__code"
+                                  data-testid="@TestId("ai-permission-target")">@Target</code>
+                        </dd>
+                    </div>
+                }
+                @if (!string.IsNullOrWhiteSpace(Reason))
+                {
+                    <div class="tm-ai-permission__detail">
+                        <dt class="tm-ai-permission__detail-term">@Loc["TmPermissionRequest_ReasonLabel"]</dt>
+                        <dd class="tm-ai-permission__detail-value tm-ai-permission__reason"
+                            data-testid="@TestId("ai-permission-reason")">@Reason</dd>
+                    </div>
+                }
+            </dl>
+
+            <div class="tm-ai-permission__scope"
+                 role="radiogroup"
+                 aria-labelledby="@ScopeLabelId"
+                 data-testid="@TestId("ai-permission-scopes")">
+                <span class="tm-ai-permission__group-label" id="@ScopeLabelId">@Loc["TmPermissionRequest_ScopeLabel"]</span>
+                @foreach (var scope in EffectiveScopes)
+                {
+                    <label class="tm-ai-permission__option">
+                        <input class="tm-ai-permission__radio"
+                               type="radio"
+                               name="@ScopeGroupName"
+                               value="@ScopeModifier(scope)"
+                               checked="@(_selectedScope == scope)"
+                               disabled="@(!CanDecide)"
+                               data-testid="@TestId($"ai-permission-scope-{ScopeModifier(scope)}")"
+                               @onchange="_ => SelectScope(scope)" />
+                        <span class="tm-ai-permission__option-label">@ScopeLabel(scope)</span>
+                    </label>
+                }
+            </div>
+
+            @if (ShowDurationGroup)
+            {
+                <div class="tm-ai-permission__durations"
+                     role="radiogroup"
+                     aria-labelledby="@DurationLabelId"
+                     data-testid="@TestId("ai-permission-durations")">
+                    <span class="tm-ai-permission__group-label" id="@DurationLabelId">@Loc["TmPermissionRequest_DurationLabel"]</span>
+                    @for (var index = 0; index < EffectiveDurations.Count; index++)
+                    {
+                        var duration = EffectiveDurations[index];
+                        var position = index;
+                        <label class="tm-ai-permission__option">
+                            <input class="tm-ai-permission__radio"
+                                   type="radio"
+                                   name="@DurationGroupName"
+                                   value="@position"
+                                   checked="@(_selectedDuration == duration)"
+                                   disabled="@(!CanDecide)"
+                                   data-testid="@TestId($"ai-permission-duration-{position}")"
+                                   @onchange="_ => SelectDuration(duration)" />
+                            <span class="tm-ai-permission__option-label">@FormatDuration(duration)</span>
+                        </label>
+                    }
+                </div>
+            }
+
+            @if (ErrorMessage is not null)
+            {
+                <p class="tm-ai-permission__alert"
+                   data-testid="@TestId("ai-permission-error")">@ErrorMessage</p>
+            }
+
+            <div class="tm-ai-permission__actions">
+                <button type="button"
+                        @ref="_allowElement"
+                        class="tm-btn tm-btn-primary tm-btn-sm tm-ai-permission__action"
+                        data-testid="@TestId("ai-permission-allow")"
+                        disabled="@(!CanDecide)"
+                        aria-busy="@(_busy ? "true" : null)"
+                        aria-keyshortcuts="@AllowShortcuts"
+                        aria-label="@Loc["TmPermissionRequest_AllowFor", DisplayName]"
+                        @onclick="AllowAsync">
+                    <span class="tm-btn-label">@Loc["TmPermissionRequest_Allow"]</span>
+                </button>
+                <button type="button"
+                        class="tm-btn tm-btn-secondary tm-btn-sm tm-ai-permission__action"
+                        data-testid="@TestId("ai-permission-deny")"
+                        disabled="@(!CanDecide)"
+                        aria-busy="@(_busy ? "true" : null)"
+                        aria-keyshortcuts="@DenyShortcuts"
+                        aria-label="@Loc["TmPermissionRequest_DenyFor", DisplayName]"
+                        @onclick="DenyAsync">
+                    <span class="tm-btn-label">@Loc["TmPermissionRequest_Deny"]</span>
+                </button>
+            </div>
+
+            @if (EnableShortcuts)
+            {
+                <p class="tm-ai-permission__shortcuts"
+                   data-testid="@TestId("ai-permission-shortcuts")">@Loc["TmPermissionRequest_ShortcutsHint"]</p>
+            }
+        </div>
+    </div>
+
+    <div class="tm-ai-permission__collapse tm-ai-permission__summary" inert="@(!IsCollapsed)">
+        <div class="tm-ai-permission__summary-inner">
+            <span class="tm-ai-permission__summary-icon" aria-hidden="true">
+                <TmIcon Name="@StateIcon" Size="IconSize.Sm" />
+            </span>
+            <span class="tm-ai-permission__summary-title">@DisplayName</span>
+            @if (RemainingText is not null)
+            {
+                @* The countdown is NOT a live region: a value that changes every second would talk over
+                   everything else. The single announcement channel is the live region at the bottom. *@
+                <time class="tm-ai-permission__summary-text tm-ai-permission__countdown"
+                      datetime="@ExpiresAtIso"
+                      aria-live="off"
+                      data-testid="@TestId("ai-permission-summary")">@SummaryText</time>
+            }
+            else
+            {
+                <p class="tm-ai-permission__summary-text"
+                   data-testid="@TestId("ai-permission-summary")">@SummaryText</p>
+            }
+            @if (ShowRevoke)
+            {
+                @* Plain event handlers rather than a focus directive: the flag is what lets an expiry
+                   hand the focus to the group root instead of letting the browser drop it to <body>
+                   when this button disappears. *@
+                <button type="button"
+                        @ref="_revokeElement"
+                        class="tm-btn tm-btn-ghost tm-btn-sm tm-ai-permission__revoke"
+                        data-testid="@TestId("ai-permission-revoke")"
+                        aria-label="@Loc["TmPermissionRequest_RevokeLabel", DisplayName]"
+                        disabled="@_revoking"
+                        @onfocusin="_ => _revokeHasFocus = true"
+                        @onfocusout="_ => _revokeHasFocus = false"
+                        @onclick="RevokeAsync">
+                    <TmIcon Name="@IconNames.RotateCcw" Size="IconSize.Xs" />
+                    <span class="tm-btn-label">@Loc["TmPermissionRequest_Revoke"]</span>
+                </button>
+            }
+        </div>
+    </div>
+
+    <div class="tm-sr-only"
+         role="status"
+         aria-live="polite"
+         aria-atomic="true"
+         data-testid="@TestId("ai-permission-announcements")">@_announcement</div>
+</section>

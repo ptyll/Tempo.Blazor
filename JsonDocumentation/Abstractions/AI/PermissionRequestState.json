@@ -1,0 +1,10 @@
+{
+  "kind": "Enum",
+  "category": "AI",
+  "namespace": "Tempo.Blazor.AI.Models",
+  "description": "Lifecycle state of a permission request rendered by TmPermissionRequest: Pending, Granted, Denied or Expired. Pending is the only state that offers Allow and Deny; every other state collapses the request into a single result row.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/AI/Permissions/PermissionRequestState.cs",
+  "documentationStatus": "generated",
+  "itemName": "PermissionRequestState"
+}

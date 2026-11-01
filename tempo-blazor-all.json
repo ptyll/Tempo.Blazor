@@ -35254,6 +35254,127 @@
           ]
         },
         {
+          "itemName": "TmPermissionRequest",
+          "kind": "Component",
+          "category": "AI",
+          "namespace": "Tempo.Blazor.Components.AI",
+          "description": "The agent's request for one concrete permission: the tool it wants to use, the target it wants to reach, why it needs it, a localized risk badge, the scopes the host is willing to offer, and an Allow / Deny decision with an optional duration. A decision collapses the request into a single result row; a granted permission keeps a live countdown driven by the injected TimeProvider and offers Revoke until it runs out. Exactly one polite live region carries every announcement, the ticking countdown is aria-live=off, and the collapse moves focus to the surviving control (Revoke, else the group root) while Revoke hands it back to Allow.",
+          "packageId": "Tempo.Blazor.AI",
+          "sourcePath": "src/Tempo.Blazor.AI/Components/AI/TmPermissionRequest.razor",
+          "documentationStatus": "merged",
+          "requiredImports": [
+            "@using Tempo.Blazor.Components.AI"
+          ],
+          "parameters": [
+            {
+              "name": "AriaLabel",
+              "type": "string?",
+              "isRequired": false,
+              "description": "Accessible name of the group. Defaults to a localized \"Permission request\"."
+            },
+            {
+              "name": "Class",
+              "type": "string?",
+              "isRequired": false,
+              "description": "Additional CSS classes for the root element."
+            },
+            {
+              "name": "DurationOptions",
+              "type": "IReadOnlyList<TimeSpan>?",
+              "isRequired": false,
+              "description": "The durations offered for PermissionScope.ForDuration, in the offered order. Default is 15 minutes and one hour; values that are zero or negative are ignored and an empty list falls back to the default, because a \"for a while\" permission always needs a length. To forbid the timed scope exclude it from ScopeOptions."
+            },
+            {
+              "name": "EnableShortcuts",
+              "type": "bool",
+              "isRequired": false,
+              "default": "true",
+              "description": "Whether the Ctrl/Cmd+Enter (allow) and Ctrl/Cmd+Backspace (deny) shortcuts are active while focus is inside the request, and whether the keyboard hint and aria-keyshortcuts are advertised. Default is true."
+            },
+            {
+              "name": "Grant",
+              "type": "PermissionGrant?",
+              "isRequired": false,
+              "description": "The permission currently in force. While this parameter is set the request renders its granted row with the remaining time and Revoke; once the grant's PermissionGrant.ExpiresAt passes, the row becomes expired and GrantChanged reports a cleared grant. A new request needs a new component instance (render it with @key)."
+            },
+            {
+              "name": "GrantChanged",
+              "type": "EventCallback<PermissionGrant?>",
+              "isRequired": false,
+              "description": "Raised with the grant a decision produced and with null when the permission is revoked or runs out. Use it with @bind-Grant."
+            },
+            {
+              "name": "OnDecision",
+              "type": "Func<PermissionDecision, Task>?",
+              "isRequired": false,
+              "description": "Callback that persists the decision. The request stays pending while it runs (both actions disabled, the request aria-busy); when it throws, the error is shown and the request stays decidable."
+            },
+            {
+              "name": "OnRevoke",
+              "type": "Func<Task>?",
+              "isRequired": false,
+              "description": "Callback invoked when the reader revokes a permission. A throw keeps the grant and shows the localized error; without a callback Revoke still clears the grant locally and reports the cleared grant through GrantChanged."
+            },
+            {
+              "name": "Reason",
+              "type": "string?",
+              "isRequired": false,
+              "description": "Why the agent needs the permission, in the agent's own words. When omitted the reason row is not rendered."
+            },
+            {
+              "name": "Risk",
+              "type": "ApprovalRisk",
+              "isRequired": false,
+              "default": "ApprovalRisk.Low",
+              "description": "Risk of the permission, shown as a localized badge. Default is ApprovalRisk.Low."
+            },
+            {
+              "name": "ScopeOptions",
+              "type": "IReadOnlyList<PermissionScope>?",
+              "isRequired": false,
+              "description": "The scopes the reader may pick from, in the offered order. Default is every scope (PermissionScope.Once, PermissionScope.ForDuration, PermissionScope.Session, PermissionScope.Always); an empty or all-invalid list falls back to PermissionScope.Once, so a request can always be answered. Excluding a scope here is how a host forbids it."
+            },
+            {
+              "name": "Target",
+              "type": "string?",
+              "isRequired": false,
+              "description": "The target of the call — a path, a URL, a mailbox or whatever the tool operates on. When omitted the target row is not rendered."
+            },
+            {
+              "name": "ToolDisplayName",
+              "type": "string?",
+              "isRequired": false,
+              "description": "Human-readable name of the tool. When omitted the request is named by ToolName."
+            },
+            {
+              "name": "ToolName",
+              "type": "string?",
+              "isRequired": false,
+              "description": "Technical name of the tool the agent wants to use (for example web.search), shown as code in the request details."
+            },
+            {
+              "name": "AdditionalAttributes",
+              "type": "Dictionary<string, object>?",
+              "isRequired": false,
+              "description": "Additional HTML attributes applied to the root element."
+            }
+          ],
+          "examples": [
+            {
+              "title": "Ask before the agent uses a tool",
+              "code": "<TmPermissionRequest ToolName=\"web.search\"\n                     ToolDisplayName=\"Web search\"\n                     Target=\"https://example.com/pricing\"\n                     Reason=\"The agent needs the current pricing page to answer.\"\n                     Risk=\"ApprovalRisk.Medium\"\n                     OnDecision=\"HandleDecisionAsync\" />"
+            },
+            {
+              "title": "Persist the grant and let the reader revoke it",
+              "code": "<TmPermissionRequest ToolName=\"mail.send\"\n                     Target=\"invoices@contoso.com\"\n                     @bind-Grant=\"grant\"\n                     OnDecision=\"SaveDecisionAsync\"\n                     OnRevoke=\"RevokeAsync\" />"
+            },
+            {
+              "title": "Offer only the modest scopes",
+              "code": "<TmPermissionRequest ToolName=\"files.read\"\n                     ScopeOptions=\"@(new[] { PermissionScope.Once, PermissionScope.ForDuration })\"\n                     DurationOptions=\"@(new[] { TimeSpan.FromMinutes(5), TimeSpan.FromMinutes(30) })\"\n                     OnDecision=\"HandleDecisionAsync\" />"
+            }
+          ]
+        },
+        {
           "itemName": "TmReasoningPanel",
           "kind": "Component",
           "category": "AI",
@@ -35640,6 +35761,10 @@
           "kind": "Css"
         },
         {
+          "path": "src/Tempo.Blazor.AI/wwwroot/css/components/_ai-permission.css",
+          "kind": "Css"
+        },
+        {
           "path": "src/Tempo.Blazor.AI/wwwroot/css/components/_ai-streaming.css",
           "kind": "Css"
         },
@@ -35685,11 +35810,11 @@
         }
       ],
       "summary": {
-        "itemCount": 13,
-        "manualItemCount": 13,
-        "generatedItemCount": 13,
+        "itemCount": 14,
+        "manualItemCount": 14,
+        "generatedItemCount": 14,
         "generatedOnlyItemCount": 0,
-        "componentCount": 8,
+        "componentCount": 9,
         "publicApiTypeCount": 5
       }
     },
@@ -74552,6 +74677,158 @@
           ]
         },
         {
+          "itemName": "PermissionDecision",
+          "kind": "Record",
+          "category": "AI",
+          "namespace": "Tempo.Blazor.AI.Models",
+          "description": "One answer to a permission request: the reader either granted a PermissionGrant or denied it. A granted decision always carries the grant it produced — the scope and the expiry the host has to persist — and a denial never does.",
+          "packageId": "Tempo.Blazor.Abstractions",
+          "sourcePath": "src/Tempo.Blazor.Abstractions/AI/Permissions/PermissionDecision.cs",
+          "documentationStatus": "merged",
+          "members": [
+            {
+              "name": "Allow",
+              "kind": "Method",
+              "type": "PermissionDecision",
+              "description": "Creates a decision that grants grant.",
+              "parameters": [
+                {
+                  "name": "grant",
+                  "type": "PermissionGrant"
+                },
+                {
+                  "name": "decidedAt",
+                  "type": "DateTimeOffset?",
+                  "default": "null"
+                }
+              ]
+            },
+            {
+              "name": "Deny",
+              "kind": "Method",
+              "type": "PermissionDecision",
+              "description": "Creates a denial.",
+              "parameters": [
+                {
+                  "name": "decidedAt",
+                  "type": "DateTimeOffset?",
+                  "default": "null"
+                }
+              ]
+            },
+            {
+              "name": "DecidedAt",
+              "kind": "Property",
+              "type": "DateTimeOffset?",
+              "description": "Moment of the decision, when the host knows it."
+            },
+            {
+              "name": "Grant",
+              "kind": "Property",
+              "type": "PermissionGrant?",
+              "description": "The granted permission, or null for a denial."
+            },
+            {
+              "name": "IsDenied",
+              "kind": "Property",
+              "type": "bool",
+              "description": "Whether the reader denied the permission."
+            },
+            {
+              "name": "IsGranted",
+              "kind": "Property",
+              "type": "bool",
+              "description": "Whether the reader granted the permission."
+            },
+            {
+              "name": "Scope",
+              "kind": "Property",
+              "type": "PermissionScope",
+              "description": "The scope of a granted decision, taken from its grant. A denial reports Once because it grants nothing at all — read IsDenied to tell the two apart."
+            }
+          ]
+        },
+        {
+          "itemName": "PermissionGrant",
+          "kind": "Record",
+          "category": "AI",
+          "namespace": "Tempo.Blazor.AI.Models",
+          "description": "The permission the reader actually granted: a PermissionScope plus, for a scope that can run out, both ends of its window. The record is a value, so TmPermissionRequest can tell a re-rendered parameter from a new grant and cannot resurrect a revoked permission; a timed grant must name its ExpiresAt and a grant that never expires must not carry one.",
+          "packageId": "Tempo.Blazor.Abstractions",
+          "sourcePath": "src/Tempo.Blazor.Abstractions/AI/Permissions/PermissionGrant.cs",
+          "documentationStatus": "merged",
+          "members": [
+            {
+              "name": "IsExpired",
+              "kind": "Method",
+              "type": "bool",
+              "description": "Whether the permission has run out at now.",
+              "parameters": [
+                {
+                  "name": "now",
+                  "type": "DateTimeOffset"
+                }
+              ]
+            },
+            {
+              "name": "Remaining",
+              "kind": "Method",
+              "type": "TimeSpan?",
+              "description": "Time left until the permission ends, never negative.",
+              "parameters": [
+                {
+                  "name": "now",
+                  "type": "DateTimeOffset"
+                }
+              ]
+            },
+            {
+              "name": "Duration",
+              "kind": "Property",
+              "type": "TimeSpan?",
+              "description": "The window the permission was granted for — ExpiresAt minus GrantedAt — or null when either end is unknown. This is what makes the granted row read \"Allowed for 1 h · 42 min left\" instead of only a countdown."
+            },
+            {
+              "name": "ExpiresAt",
+              "kind": "Property",
+              "type": "DateTimeOffset?",
+              "description": "Moment the permission ends, or null when it does not expire."
+            },
+            {
+              "name": "GrantedAt",
+              "kind": "Property",
+              "type": "DateTimeOffset?",
+              "description": "Moment the permission was granted, when the host records it."
+            },
+            {
+              "name": "Scope",
+              "kind": "Property",
+              "type": "PermissionScope",
+              "description": "How long the permission lasts."
+            }
+          ]
+        },
+        {
+          "itemName": "PermissionRequestState",
+          "kind": "Enum",
+          "category": "AI",
+          "namespace": "Tempo.Blazor.AI.Models",
+          "description": "Lifecycle state of a permission request rendered by TmPermissionRequest: Pending, Granted, Denied or Expired. Pending is the only state that offers Allow and Deny; every other state collapses the request into a single result row.",
+          "packageId": "Tempo.Blazor.Abstractions",
+          "sourcePath": "src/Tempo.Blazor.Abstractions/AI/Permissions/PermissionRequestState.cs",
+          "documentationStatus": "merged"
+        },
+        {
+          "itemName": "PermissionScope",
+          "kind": "Enum",
+          "category": "AI",
+          "namespace": "Tempo.Blazor.AI.Models",
+          "description": "How long a permission the reader granted lasts: Once, ForDuration, Session or Always. TmPermissionRequest offers only the scopes its host lists in ScopeOptions, so an app that never wants to hand out a permanent permission simply does not offer Always.",
+          "packageId": "Tempo.Blazor.Abstractions",
+          "sourcePath": "src/Tempo.Blazor.Abstractions/AI/Permissions/PermissionScope.cs",
+          "documentationStatus": "merged"
+        },
+        {
           "itemName": "CsvColumnMapping",
           "kind": "Class",
           "category": "Diagram",
@@ -113034,12 +113311,12 @@
       ],
       "libraryExamples": [],
       "summary": {
-        "itemCount": 1564,
-        "manualItemCount": 1564,
-        "generatedItemCount": 1547,
+        "itemCount": 1568,
+        "manualItemCount": 1568,
+        "generatedItemCount": 1551,
         "generatedOnlyItemCount": 0,
         "componentCount": 0,
-        "publicApiTypeCount": 1547
+        "publicApiTypeCount": 1551
       }
     },
     {
@@ -130032,10 +130309,10 @@
   ],
   "summary": {
     "packageCount": 28,
-    "itemCount": 3440,
-    "manualItemCount": 3440,
+    "itemCount": 3445,
+    "manualItemCount": 3445,
     "generatedOnlyItemCount": 0,
-    "componentCount": 523,
-    "publicApiTypeCount": 2864
+    "componentCount": 524,
+    "publicApiTypeCount": 2868
   }
 }

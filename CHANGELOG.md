@@ -22,6 +22,62 @@
 > (Fáze 15b). Contracts: [docs/modeling-editor.md](docs/modeling-editor.md),
 > [docs/diagram-editor.md](docs/diagram-editor.md).
 
+### AI permission requests — `TmPermissionRequest` (plan 10b3966f, phase 5)
+
+The agent's request for one concrete permission, in the AI split package: which tool, on which target,
+why, how risky — and the decision the reader gives (once, for a while, for the session, always) with a
+live countdown and a Revoke while the permission is in force. **No breaking change** — the component, the
+four Abstractions models, the CSS partial and the resource keys are all new; no existing API changed.
+
+- **`TmPermissionRequest`** (`src/Tempo.Blazor.AI/Components/AI/`) — `ToolName`, `ToolDisplayName`,
+  `Target`, `Reason`, `Risk` (`ApprovalRisk`), `ScopeOptions`, `DurationOptions`, `Grant` /
+  `GrantChanged` (`@bind-Grant`), `OnDecision` (`Func<PermissionDecision, Task>`), `OnRevoke`,
+  `EnableShortcuts`, `Class`, `AriaLabel`, plus the public `AllowAsync()` / `DenyAsync()` /
+  `RevokeAsync()`, `State` (`PermissionRequestState`), `CanDecide`, `IsBusy`, `CurrentGrant` and
+  `Announcement`. The request leaves `pending` only when `OnDecision` completes without throwing:
+  while it runs both actions are disabled and the request is `aria-busy`; when it throws, the
+  localized error is shown and the request stays decidable.
+- **Scopes** — the scope `radiogroup` is fed ONLY by `ScopeOptions` (in the host's order). `null`
+  offers `Once` / `ForDuration` / `Session` / `Always`; an explicitly empty (or entirely invalid) list
+  falls back to `Once`, so a host that filtered its scopes down to nothing never accidentally offers
+  "always". `ForDuration` reveals a second native `radiogroup` over `DurationOptions` (default 15
+  minutes and one hour; a non-positive value is ignored); the chosen duration becomes
+  `PermissionGrant.ExpiresAt = now + duration`. A denial collapses into its `Denied` row and raises NO
+  `GrantChanged` (it grants nothing); a grant raises the grant.
+- **Live countdown via `TimeProvider`** — the granted row reads "Allowed for 1 h · 42 min left"
+  (localized templates for hours / hours+minutes / minutes / seconds; `GrantedAt` supplies the window,
+  without it the row shows only "42 min left"). The timer is the package's existing `AiElapsedTicker`,
+  armed only while there is something to count and disarmed the moment the permission expires. When
+  `Grant.ExpiresAt` passes the state becomes `Expired`, the row loses Revoke, the expiry is announced
+  ONCE and `GrantChanged` reports a cleared grant — for the host a permission that ran out and one that
+  was withdrawn are the same fact. A deadline that passes while a revoke is still saving wins: the
+  request stays `Expired` (never back to `pending`) and the host hears the cleared grant exactly once.
+  `Revoke` raises `OnRevoke` (and clears the grant locally when the host wires no callback); a throwing
+  revoke keeps the grant and shows the error.
+- **Accessibility** — exactly ONE polite live region carries every announcement (granted, denied,
+  revoked, expired, error) and the ticking countdown is `aria-live="off"`; the risk is always spelled
+  out ("High risk") next to its colour; the scope and duration radios are native groups with a visible
+  `aria-labelledby` label and one tab stop each; the collapse (a JS-free `grid-template-rows` height
+  transition with the inactive half `inert`) moves focus to Revoke (else the group root,
+  `tabindex="-1"`), Revoke hands it back to Allow, and an expiry that removes a focused Revoke hands the
+  focus to the group root instead of letting the browser drop it to `<body>`; `Ctrl`/`⌘`+`Enter` allows and
+  `Ctrl`/`⌘`+`Backspace` denies (advertised through `aria-keyshortcuts` plus the visible keyboard hint,
+  removable with `EnableShortcuts="false"`); `:focus-visible` uses `--tm-focus-ring` with a
+  `forced-colors` `Highlight` outline on every focus stop; every control reaches `--tm-touch-target` on
+  a coarse pointer; the collapse transition is off under `prefers-reduced-motion`.
+- **Models** (`src/Tempo.Blazor.Abstractions/AI/Permissions/`, namespace `Tempo.Blazor.AI.Models`) —
+  `PermissionScope` (Once/ForDuration/Session/Always), the `PermissionGrant` record (`Scope`,
+  `ExpiresAt`, `GrantedAt`, `Duration`, `IsExpired(now)`, `Remaining(now)`; a timed grant must name its
+  expiry, `Once`/`Always` must not carry one, and an expiry before `GrantedAt` is refused), the
+  `PermissionDecision` record (`Allow(grant)` / `Deny()`; a grant is required for a grant and refused
+  for a denial) and `PermissionRequestState` (Pending/Granted/Denied/Expired).
+- **Localization** — 40 `TmPermissionRequest_*` keys in all four resource tables.
+- **Wireframe** — the request is a placeable stencil (`permission-request` role, `Feedback` category,
+  declarative render) with a built-in vocabulary entry, so "every component has a role" holds.
+- **Docs** — JSON overlays for the component and the four models, bundles regenerated,
+  `validate --fail-on-drift` clean; contract in [docs/permission-request.md](docs/permission-request.md).
+  The demo page and the E2E/screenshot lane belong to phase 6 of the plan.
+
 ### Human-in-the-loop components — `TmApprovalCard` (plan 10b3966f, phase 2)
 
 The first human-in-the-loop component: a request for a human decision with a risk badge, details, a

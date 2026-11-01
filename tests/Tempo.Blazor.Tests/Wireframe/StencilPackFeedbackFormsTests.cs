@@ -44,7 +44,8 @@ public class StencilPackFeedbackFormsTests
         "TmApprovalCard",
         "TmReviewQueue",
         "TmInlineDiff",
-        "TmSuggestionCard"
+        "TmSuggestionCard",
+        "TmPermissionRequest"
     ];
 
     public static TheoryData<string> FeedbackFormTypeData
@@ -61,7 +62,7 @@ public class StencilPackFeedbackFormsTests
     [Fact]
     public void FeedbackFormTypeList_CoversPlanScope()
     {
-        FeedbackFormTypes.Should().HaveCount(34);
+        FeedbackFormTypes.Should().HaveCount(35);
         FeedbackFormTypes.Should().Contain(["TmAlert", "TmProgressBar", "TmNotificationBell", "TmFormField", "TmColorGradient"]);
     }
 

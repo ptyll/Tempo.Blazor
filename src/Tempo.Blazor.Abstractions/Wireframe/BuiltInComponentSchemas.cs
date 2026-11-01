@@ -156,6 +156,7 @@ public sealed class BuiltInComponentSchemas : IWireframeSchemaSource
             ["TmReviewQueue"] = ["review-queue"],
             ["TmInlineDiff"] = ["inline-diff"],
             ["TmSuggestionCard"] = ["suggestion-card"],
+            ["TmPermissionRequest"] = ["permission-request"],
             ["TmMultiViewList"] = ["list-view"],
             ["TmDataTable"] = ["data-table"],
             ["TmPagination"] = ["pagination"],
@@ -1174,6 +1175,22 @@ public sealed class BuiltInComponentSchemas : IWireframeSchemaSource
                     opts: ["none", "low", "medium", "high"]),
                 P("showRationale",   "Show Rationale",   PropType.Bool,   true,                                cat: "Appearance"),
                 P("alternatives",    "Alternatives",     PropType.Int,    2,                                   cat: "Content"),
+            ]
+        };
+
+        yield return new WireframeComponentSchema
+        {
+            Type = "TmPermissionRequest", Category = "Feedback", DisplayName = "Permission Request",
+            DefaultWidth = 420, DefaultHeight = 220,
+            Props =
+            [
+                P("tool",       "Tool",        PropType.String, "web.search",                     cat: "Content"),
+                P("target",     "Target",      PropType.String, "https://example.com/pricing",    cat: "Content"),
+                P("risk",       "Risk",        PropType.Enum,   "medium",                         cat: "Content",
+                    opts: ["low", "medium", "high", "critical"]),
+                P("scope",      "Scope",       PropType.Enum,   "for-duration",                   cat: "Appearance",
+                    opts: ["once", "for-duration", "session", "always"]),
+                P("showReason", "Show Reason", PropType.Bool,   true,                             cat: "Appearance"),
             ]
         };
 

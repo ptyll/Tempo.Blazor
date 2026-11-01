@@ -698,6 +698,158 @@
       ]
     },
     {
+      "itemName": "PermissionDecision",
+      "kind": "Record",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.AI.Models",
+      "description": "One answer to a permission request: the reader either granted a PermissionGrant or denied it. A granted decision always carries the grant it produced — the scope and the expiry the host has to persist — and a denial never does.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/AI/Permissions/PermissionDecision.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Allow",
+          "kind": "Method",
+          "type": "PermissionDecision",
+          "description": "Creates a decision that grants grant.",
+          "parameters": [
+            {
+              "name": "grant",
+              "type": "PermissionGrant"
+            },
+            {
+              "name": "decidedAt",
+              "type": "DateTimeOffset?",
+              "default": "null"
+            }
+          ]
+        },
+        {
+          "name": "Deny",
+          "kind": "Method",
+          "type": "PermissionDecision",
+          "description": "Creates a denial.",
+          "parameters": [
+            {
+              "name": "decidedAt",
+              "type": "DateTimeOffset?",
+              "default": "null"
+            }
+          ]
+        },
+        {
+          "name": "DecidedAt",
+          "kind": "Property",
+          "type": "DateTimeOffset?",
+          "description": "Moment of the decision, when the host knows it."
+        },
+        {
+          "name": "Grant",
+          "kind": "Property",
+          "type": "PermissionGrant?",
+          "description": "The granted permission, or null for a denial."
+        },
+        {
+          "name": "IsDenied",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Whether the reader denied the permission."
+        },
+        {
+          "name": "IsGranted",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Whether the reader granted the permission."
+        },
+        {
+          "name": "Scope",
+          "kind": "Property",
+          "type": "PermissionScope",
+          "description": "The scope of a granted decision, taken from its grant. A denial reports Once because it grants nothing at all — read IsDenied to tell the two apart."
+        }
+      ]
+    },
+    {
+      "itemName": "PermissionGrant",
+      "kind": "Record",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.AI.Models",
+      "description": "The permission the reader actually granted: a PermissionScope plus, for a scope that can run out, both ends of its window. The record is a value, so TmPermissionRequest can tell a re-rendered parameter from a new grant and cannot resurrect a revoked permission; a timed grant must name its ExpiresAt and a grant that never expires must not carry one.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/AI/Permissions/PermissionGrant.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "IsExpired",
+          "kind": "Method",
+          "type": "bool",
+          "description": "Whether the permission has run out at now.",
+          "parameters": [
+            {
+              "name": "now",
+              "type": "DateTimeOffset"
+            }
+          ]
+        },
+        {
+          "name": "Remaining",
+          "kind": "Method",
+          "type": "TimeSpan?",
+          "description": "Time left until the permission ends, never negative.",
+          "parameters": [
+            {
+              "name": "now",
+              "type": "DateTimeOffset"
+            }
+          ]
+        },
+        {
+          "name": "Duration",
+          "kind": "Property",
+          "type": "TimeSpan?",
+          "description": "The window the permission was granted for — ExpiresAt minus GrantedAt — or null when either end is unknown. This is what makes the granted row read \"Allowed for 1 h · 42 min left\" instead of only a countdown."
+        },
+        {
+          "name": "ExpiresAt",
+          "kind": "Property",
+          "type": "DateTimeOffset?",
+          "description": "Moment the permission ends, or null when it does not expire."
+        },
+        {
+          "name": "GrantedAt",
+          "kind": "Property",
+          "type": "DateTimeOffset?",
+          "description": "Moment the permission was granted, when the host records it."
+        },
+        {
+          "name": "Scope",
+          "kind": "Property",
+          "type": "PermissionScope",
+          "description": "How long the permission lasts."
+        }
+      ]
+    },
+    {
+      "itemName": "PermissionRequestState",
+      "kind": "Enum",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.AI.Models",
+      "description": "Lifecycle state of a permission request rendered by TmPermissionRequest: Pending, Granted, Denied or Expired. Pending is the only state that offers Allow and Deny; every other state collapses the request into a single result row.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/AI/Permissions/PermissionRequestState.cs",
+      "documentationStatus": "merged"
+    },
+    {
+      "itemName": "PermissionScope",
+      "kind": "Enum",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.AI.Models",
+      "description": "How long a permission the reader granted lasts: Once, ForDuration, Session or Always. TmPermissionRequest offers only the scopes its host lists in ScopeOptions, so an app that never wants to hand out a permanent permission simply does not offer Always.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/AI/Permissions/PermissionScope.cs",
+      "documentationStatus": "merged"
+    },
+    {
       "itemName": "CsvColumnMapping",
       "kind": "Class",
       "category": "Diagram",
@@ -39180,11 +39332,11 @@
   ],
   "libraryExamples": [],
   "summary": {
-    "itemCount": 1564,
-    "manualItemCount": 1564,
-    "generatedItemCount": 1547,
+    "itemCount": 1568,
+    "manualItemCount": 1568,
+    "generatedItemCount": 1551,
     "generatedOnlyItemCount": 0,
     "componentCount": 0,
-    "publicApiTypeCount": 1547
+    "publicApiTypeCount": 1551
   }
 }
