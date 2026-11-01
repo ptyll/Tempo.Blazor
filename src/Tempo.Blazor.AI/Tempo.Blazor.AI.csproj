@@ -55,4 +55,16 @@
     <None Include="README.md" Pack="true" PackagePath="\" />
   </ItemGroup>
 
+  <!-- Keep the node test suites out of the NuGet package (the pattern every other JS-shipping
+       package declares): without it wwwroot/js/__tests__/*.test.mjs would be packed as static web
+       assets and published to consumers as _content/Tempo.Blazor.AI/js/__tests__/. -->
+  <ItemGroup>
+    <Content Remove="wwwroot\js\**\*.test.mjs" />
+    <Content Remove="wwwroot\js\**\__tests__\**" />
+    <Content Remove="wwwroot\js\**\*.md" />
+    <None Include="wwwroot\js\**\*.test.mjs" Pack="false" Visible="false" />
+    <None Include="wwwroot\js\**\__tests__\**" Pack="false" Visible="false" />
+    <None Include="wwwroot\js\**\*.md" Pack="false" Visible="false" />
+  </ItemGroup>
+
 </Project>
