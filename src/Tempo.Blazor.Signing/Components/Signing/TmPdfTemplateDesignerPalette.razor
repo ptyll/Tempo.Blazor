@@ -1,0 +1,79 @@
+@namespace Tempo.Blazor.Components.Signing
+@using Tempo.Blazor.Abstractions.Models
+
+<aside class="@RootClass" aria-label="@Loc["TmPdfTemplateDesigner_Palette"]">
+    @if (Variant == PdfTemplatePaletteVariant.Docked)
+    {
+        <h2 class="tm-pdf-template-designer__palette-title">@Loc["TmPdfTemplateDesigner_Palette"]</h2>
+        <p class="tm-pdf-template-designer__palette-help">@Loc["TmPdfTemplateDesigner_PaletteHelp"]</p>
+    }
+    @if (ShowMobileDraw)
+    {
+        <button type="button"
+                class="tm-pdf-template-designer__mobile-draw"
+                @onclick="OnMobileDraw">
+            <TmIcon Name="plus" Size="IconSize.Sm" />
+            @Loc["TmSigning_AddField"]
+        </button>
+    }
+    @foreach (var type in FieldTypes)
+    {
+        var label = Label?.Invoke(type) ?? type.ToString();
+        <button type="button"
+                class="@ItemClass?.Invoke(type)"
+                data-field-type="@type"
+                title="@label"
+                aria-label="@label"
+                @onpointerdown="() => OnPointerDown.InvokeAsync(type)"
+                @onpointerup="() => OnPointerUp.InvokeAsync(type)"
+                @onpointerup:stopPropagation="true"
+                @onclick="() => OnClick.InvokeAsync(type)"
+                @onclick:stopPropagation="true"
+                @onpointercancel="OnCancel">
+            <TmIcon Name="@(Icon?.Invoke(type) ?? "square")" Size="IconSize.Sm" />
+            <span class="tm-pdf-template-designer__palette-label">@label</span>
+        </button>
+    }
+</aside>
+
+@code {
+    /// <summary>Where the palette is rendered. One instance occupies one slot.</summary>
+    [Parameter] public PdfTemplatePaletteVariant Variant { get; set; } = PdfTemplatePaletteVariant.Docked;
+
+    /// <summary>Field types offered by the palette.</summary>
+    [Parameter] public IReadOnlyList<SigningFieldType> FieldTypes { get; set; } = [];
+
+    /// <summary>Whether the mobile draw button renders. Only the docked slot uses it.</summary>
+    [Parameter] public bool ShowMobileDraw { get; set; }
+
+    /// <summary>Class of one palette item.</summary>
+    [Parameter] public Func<SigningFieldType, string>? ItemClass { get; set; }
+
+    /// <summary>Visible label of one field type.</summary>
+    [Parameter] public Func<SigningFieldType, string>? Label { get; set; }
+
+    /// <summary>Icon name of one field type.</summary>
+    [Parameter] public Func<SigningFieldType, string>? Icon { get; set; }
+
+    /// <summary>A press started on a palette item.</summary>
+    [Parameter] public EventCallback<SigningFieldType> OnPointerDown { get; set; }
+
+    /// <summary>A press ended on a palette item.</summary>
+    [Parameter] public EventCallback<SigningFieldType> OnPointerUp { get; set; }
+
+    /// <summary>A click on a palette item.</summary>
+    [Parameter] public EventCallback<SigningFieldType> OnClick { get; set; }
+
+    /// <summary>A press was cancelled.</summary>
+    [Parameter] public EventCallback OnCancel { get; set; }
+
+    /// <summary>The mobile draw button was activated.</summary>
+    [Parameter] public EventCallback OnMobileDraw { get; set; }
+
+    private string RootClass => Variant switch
+    {
+        PdfTemplatePaletteVariant.Rail => "tm-pdf-template-designer__palette tm-pdf-template-designer__palette--rail",
+        PdfTemplatePaletteVariant.Compact => "tm-pdf-template-designer__palette tm-pdf-template-designer__palette--compact",
+        _ => "tm-pdf-template-designer__palette tm-pdf-template-designer__palette--docked"
+    };
+}

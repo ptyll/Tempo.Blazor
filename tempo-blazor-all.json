@@ -22031,6 +22031,12 @@
               "description": "Additional CSS class for the root element."
             },
             {
+              "name": "IsOpenChanged",
+              "type": "EventCallback<bool>",
+              "isRequired": false,
+              "description": "Raised when the menu opens or closes, including a close from the overlay. A host that mounts the menu only while it is open uses this to drop that mount."
+            },
+            {
               "name": "MobilePresentation",
               "type": "PanelPresentation",
               "isRequired": false,
@@ -68777,6 +68783,16 @@
           "documentationStatus": "merged"
         },
         {
+          "itemName": "PdfTemplatePaletteVariant",
+          "kind": "Enum",
+          "category": "Components",
+          "namespace": "Tempo.Blazor.Components.Signing",
+          "description": "Where a TmPdfTemplateDesignerPalette renders. One designer slot uses one variant.",
+          "packageId": "Tempo.Blazor.Signing",
+          "sourcePath": "src/Tempo.Blazor.Signing/Components/Signing/PdfTemplatePaletteVariant.cs",
+          "documentationStatus": "merged"
+        },
+        {
           "itemName": "SigningAttachmentUploadRequest",
           "kind": "Record",
           "category": "Components",
@@ -70294,10 +70310,29 @@
               "description": "Callback invoked when the signing fields collection changes."
             },
             {
+              "name": "Height",
+              "type": "string?",
+              "isRequired": false,
+              "description": "CSS block size of the designer. Null keeps var(--tm-pdf-template-designer-height), which defaults to the historical fixed height."
+            },
+            {
+              "name": "LayoutBreakpoints",
+              "type": "TmLayoutBreakpoints?",
+              "isRequired": false,
+              "description": "Breakpoints the shell classifies its own container with. Null uses the designer default (mobile below 768, desktop from 1200)."
+            },
+            {
+              "name": "LayoutMode",
+              "type": "TmLayoutMode",
+              "isRequired": false,
+              "default": "TmLayoutMode.Auto",
+              "description": "Auto classifies the designer's own container through TmEditorShell against LayoutBreakpoints (mobile <768, tablet 768–1199, desktop ≥1200); a forced value pins the layout"
+            },
+            {
               "name": "MobileMode",
               "type": "bool",
               "isRequired": false,
-              "description": "Whether to render a compact mobile-oriented designer layout."
+              "description": "Obsolete alias that forces TmLayoutMode.Mobile. New hosts set LayoutMode."
             },
             {
               "name": "OnDetectFields",
@@ -70381,6 +70416,281 @@
               "type": "EventCallback<DocumentPageZoomMode>",
               "isRequired": false,
               "description": "Callback invoked when the document zoom behavior changes."
+            }
+          ]
+        },
+        {
+          "itemName": "TmPdfTemplateDesignerPalette",
+          "kind": "Component",
+          "category": "Signing",
+          "namespace": "Tempo.Blazor.Components.Signing",
+          "description": "The field-type palette. One designer slot renders one variant: docked, rail or compact.",
+          "packageId": "Tempo.Blazor.Signing",
+          "sourcePath": "src/Tempo.Blazor.Signing/Components/Signing/TmPdfTemplateDesignerPalette.razor",
+          "documentationStatus": "merged",
+          "requiredImports": [
+            "@using Tempo.Blazor.Components.Signing"
+          ],
+          "parameters": [
+            {
+              "name": "FieldTypes",
+              "type": "IReadOnlyList<SigningFieldType>",
+              "isRequired": false,
+              "default": "[]",
+              "description": "Field types offered by the palette."
+            },
+            {
+              "name": "Icon",
+              "type": "Func<SigningFieldType, string>?",
+              "isRequired": false,
+              "description": "Icon name of one field type."
+            },
+            {
+              "name": "ItemClass",
+              "type": "Func<SigningFieldType, string>?",
+              "isRequired": false,
+              "description": "Class of one palette item."
+            },
+            {
+              "name": "Label",
+              "type": "Func<SigningFieldType, string>?",
+              "isRequired": false,
+              "description": "Visible label of one field type."
+            },
+            {
+              "name": "OnCancel",
+              "type": "EventCallback",
+              "isRequired": false,
+              "description": "A press was cancelled."
+            },
+            {
+              "name": "OnClick",
+              "type": "EventCallback<SigningFieldType>",
+              "isRequired": false,
+              "description": "A click on a palette item."
+            },
+            {
+              "name": "OnMobileDraw",
+              "type": "EventCallback",
+              "isRequired": false,
+              "description": "The mobile draw button was activated."
+            },
+            {
+              "name": "OnPointerDown",
+              "type": "EventCallback<SigningFieldType>",
+              "isRequired": false,
+              "description": "A press started on a palette item."
+            },
+            {
+              "name": "OnPointerUp",
+              "type": "EventCallback<SigningFieldType>",
+              "isRequired": false,
+              "description": "A press ended on a palette item."
+            },
+            {
+              "name": "ShowMobileDraw",
+              "type": "bool",
+              "isRequired": false,
+              "description": "Whether the mobile draw button renders. Only the docked slot uses it."
+            },
+            {
+              "name": "Variant",
+              "type": "PdfTemplatePaletteVariant",
+              "isRequired": false,
+              "default": "PdfTemplatePaletteVariant.Docked",
+              "description": "Where the palette is rendered. One instance occupies one slot."
+            }
+          ]
+        },
+        {
+          "itemName": "TmPdfTemplateDesignerToolbar",
+          "kind": "Component",
+          "category": "Signing",
+          "namespace": "Tempo.Blazor.Components.Signing",
+          "description": "The designer command row. Groups are pages, view, language, zoom and detect.",
+          "packageId": "Tempo.Blazor.Signing",
+          "sourcePath": "src/Tempo.Blazor.Signing/Components/Signing/TmPdfTemplateDesignerToolbar.razor",
+          "documentationStatus": "merged",
+          "requiredImports": [
+            "@using Tempo.Blazor.Components.Signing"
+          ],
+          "parameters": [
+            {
+              "name": "CanGoNext",
+              "type": "bool",
+              "isRequired": false,
+              "description": "Whether a next page exists."
+            },
+            {
+              "name": "CanGoPrevious",
+              "type": "bool",
+              "isRequired": false,
+              "description": "Whether a previous page exists."
+            },
+            {
+              "name": "CanZoomIn",
+              "type": "bool",
+              "isRequired": false,
+              "description": "Whether zoom can increase."
+            },
+            {
+              "name": "CanZoomOut",
+              "type": "bool",
+              "isRequired": false,
+              "description": "Whether zoom can decrease."
+            },
+            {
+              "name": "ContinuousActive",
+              "type": "bool",
+              "isRequired": false,
+              "description": "Whether the continuous view is active."
+            },
+            {
+              "name": "CultureAttributes",
+              "type": "Dictionary<string, object>?",
+              "isRequired": false,
+              "description": "Attributes of the culture select."
+            },
+            {
+              "name": "CultureLabel",
+              "type": "Func<string, string>",
+              "isRequired": false,
+              "default": "static culture => culture",
+              "description": "Localizes a culture code."
+            },
+            {
+              "name": "CultureMenuItems",
+              "type": "IReadOnlyList<TmActionItem>",
+              "isRequired": false,
+              "default": "[]",
+              "description": "Overflow entries of the language item."
+            },
+            {
+              "name": "Cultures",
+              "type": "IReadOnlyList<string>",
+              "isRequired": false,
+              "default": "[]",
+              "description": "Cultures offered by the language group."
+            },
+            {
+              "name": "CurrentCulture",
+              "type": "string?",
+              "isRequired": false,
+              "description": "The selected culture."
+            },
+            {
+              "name": "Detecting",
+              "type": "bool",
+              "isRequired": false,
+              "description": "Whether Autodetect is in flight."
+            },
+            {
+              "name": "OnContinuous",
+              "type": "EventCallback",
+              "isRequired": false,
+              "description": "Selects the continuous view."
+            },
+            {
+              "name": "OnCultureChanged",
+              "type": "EventCallback<string>",
+              "isRequired": false,
+              "description": "Raised when the culture select changes."
+            },
+            {
+              "name": "OnDeleteSelected",
+              "type": "EventCallback",
+              "isRequired": false,
+              "description": "Deletes the selection."
+            },
+            {
+              "name": "OnDetect",
+              "type": "EventCallback",
+              "isRequired": false,
+              "description": "Runs Autodetect."
+            },
+            {
+              "name": "OnFitPage",
+              "type": "EventCallback",
+              "isRequired": false,
+              "description": "Fits the whole page."
+            },
+            {
+              "name": "OnFitWidth",
+              "type": "EventCallback",
+              "isRequired": false,
+              "description": "Fits the page width."
+            },
+            {
+              "name": "OnNextPage",
+              "type": "EventCallback",
+              "isRequired": false,
+              "description": "Goes to the next page."
+            },
+            {
+              "name": "OnPreviousPage",
+              "type": "EventCallback",
+              "isRequired": false,
+              "description": "Goes to the previous page."
+            },
+            {
+              "name": "OnSinglePage",
+              "type": "EventCallback",
+              "isRequired": false,
+              "description": "Selects the single-page view."
+            },
+            {
+              "name": "OnZoomIn",
+              "type": "EventCallback",
+              "isRequired": false,
+              "description": "Zooms in."
+            },
+            {
+              "name": "OnZoomOut",
+              "type": "EventCallback",
+              "isRequired": false,
+              "description": "Zooms out."
+            },
+            {
+              "name": "PageLabel",
+              "type": "string?",
+              "isRequired": false,
+              "description": "Page indicator text."
+            },
+            {
+              "name": "ShowCulture",
+              "type": "bool",
+              "isRequired": false,
+              "description": "Whether the language group renders."
+            },
+            {
+              "name": "ShowDeleteSelected",
+              "type": "bool",
+              "isRequired": false,
+              "description": "Whether the detect group offers Delete selected."
+            },
+            {
+              "name": "ShowDetect",
+              "type": "bool",
+              "isRequired": false,
+              "description": "Whether the detect group offers Autodetect."
+            },
+            {
+              "name": "SinglePageActive",
+              "type": "bool",
+              "isRequired": false,
+              "description": "Whether the single-page view is active."
+            },
+            {
+              "name": "TwoRow",
+              "type": "bool",
+              "isRequired": false,
+              "description": "Tablet layout: pages and view stay on the first row; zoom, detect and language wrap to a second row."
+            },
+            {
+              "name": "ZoomLabel",
+              "type": "string?",
+              "isRequired": false,
+              "description": "Zoom indicator text."
             }
           ]
         },
@@ -70998,6 +71308,178 @@
           ]
         },
         {
+          "itemName": "TmSigningFieldEditorActions",
+          "kind": "Component",
+          "category": "Signing",
+          "namespace": "Tempo.Blazor.Components.Signing",
+          "description": "The field inspector actions, selection actions and optional numeric geometry.",
+          "packageId": "Tempo.Blazor.Signing",
+          "sourcePath": "src/Tempo.Blazor.Signing/Components/Signing/TmSigningFieldEditorActions.razor",
+          "documentationStatus": "merged",
+          "requiredImports": [
+            "@using Tempo.Blazor.Components.Signing"
+          ],
+          "parameters": [
+            {
+              "name": "GeometryArea",
+              "type": "SigningFieldArea?",
+              "isRequired": false,
+              "description": "The area the geometry inputs edit. Null hides the section."
+            },
+            {
+              "name": "GeometryHeight",
+              "type": "int?",
+              "isRequired": false,
+              "description": "Height in pixels."
+            },
+            {
+              "name": "GeometryHeightAttributes",
+              "type": "Dictionary<string, object>?",
+              "isRequired": false,
+              "description": "Attributes forwarded to the height input."
+            },
+            {
+              "name": "GeometryWidth",
+              "type": "int?",
+              "isRequired": false,
+              "description": "Width in pixels."
+            },
+            {
+              "name": "GeometryWidthAttributes",
+              "type": "Dictionary<string, object>?",
+              "isRequired": false,
+              "description": "Attributes forwarded to the width input."
+            },
+            {
+              "name": "GeometryX",
+              "type": "int?",
+              "isRequired": false,
+              "description": "Horizontal position in pixels."
+            },
+            {
+              "name": "GeometryXAttributes",
+              "type": "Dictionary<string, object>?",
+              "isRequired": false,
+              "description": "Attributes forwarded to the X input."
+            },
+            {
+              "name": "GeometryY",
+              "type": "int?",
+              "isRequired": false,
+              "description": "Vertical position in pixels."
+            },
+            {
+              "name": "GeometryYAttributes",
+              "type": "Dictionary<string, object>?",
+              "isRequired": false,
+              "description": "Attributes forwarded to the Y input."
+            },
+            {
+              "name": "OnCopy",
+              "type": "EventCallback",
+              "isRequired": false,
+              "description": "Copies the edited field."
+            },
+            {
+              "name": "OnCopySelection",
+              "type": "EventCallback",
+              "isRequired": false,
+              "description": "Copies every selected field."
+            },
+            {
+              "name": "OnDelete",
+              "type": "EventCallback",
+              "isRequired": false,
+              "description": "Deletes the edited field."
+            },
+            {
+              "name": "OnDeleteSelection",
+              "type": "EventCallback",
+              "isRequired": false,
+              "description": "Deletes every selected field."
+            },
+            {
+              "name": "OnGeometryHeightChanged",
+              "type": "EventCallback<int?>",
+              "isRequired": false,
+              "description": "Raised when the height changes."
+            },
+            {
+              "name": "OnGeometryWidthChanged",
+              "type": "EventCallback<int?>",
+              "isRequired": false,
+              "description": "Raised when the width changes."
+            },
+            {
+              "name": "OnGeometryXChanged",
+              "type": "EventCallback<int?>",
+              "isRequired": false,
+              "description": "Raised when the horizontal position changes."
+            },
+            {
+              "name": "OnGeometryYChanged",
+              "type": "EventCallback<int?>",
+              "isRequired": false,
+              "description": "Raised when the vertical position changes."
+            },
+            {
+              "name": "OnPaste",
+              "type": "EventCallback",
+              "isRequired": false,
+              "description": "Pastes the clipboard."
+            },
+            {
+              "name": "PasteEnabled",
+              "type": "bool",
+              "isRequired": false,
+              "default": "true",
+              "description": "Whether the clipboard has a field the Paste action can place."
+            },
+            {
+              "name": "ReadOnly",
+              "type": "bool",
+              "isRequired": false,
+              "description": "Whether the inspector is read-only. Geometry stays editable to read; actions disable."
+            },
+            {
+              "name": "ShowCopy",
+              "type": "bool",
+              "isRequired": false,
+              "description": "Whether the Copy action has a host delegate."
+            },
+            {
+              "name": "ShowCopySelection",
+              "type": "bool",
+              "isRequired": false,
+              "description": "Whether the selection Copy action has a host delegate."
+            },
+            {
+              "name": "ShowDelete",
+              "type": "bool",
+              "isRequired": false,
+              "description": "Whether the Delete action has a host delegate."
+            },
+            {
+              "name": "ShowDeleteSelection",
+              "type": "bool",
+              "isRequired": false,
+              "description": "Whether the selection Delete action has a host delegate."
+            },
+            {
+              "name": "ShowGeometry",
+              "type": "bool",
+              "isRequired": false,
+              "description": "Whether the pixel geometry section is shown."
+            },
+            {
+              "name": "ShowPaste",
+              "type": "bool",
+              "isRequired": false,
+              "description": "Whether the selection Paste action has a host delegate."
+            }
+          ]
+        },
+        {
           "itemName": "TmSigningFieldEditorPanel",
           "kind": "Component",
           "category": "Signing",
@@ -71054,16 +71536,71 @@
               "description": "All fields in the current signing template, used by condition and formula builders."
             },
             {
+              "name": "OnCopyRequested",
+              "type": "EventCallback<SigningField>",
+              "isRequired": false,
+              "description": "Raised when the author copies the edited field."
+            },
+            {
+              "name": "OnCopySelectionRequested",
+              "type": "EventCallback",
+              "isRequired": false,
+              "description": "Raised when the author copies the current selection."
+            },
+            {
+              "name": "OnDeleteRequested",
+              "type": "EventCallback<SigningField>",
+              "isRequired": false,
+              "description": "Raised when the author deletes the edited field."
+            },
+            {
+              "name": "OnDeleteSelectionRequested",
+              "type": "EventCallback",
+              "isRequired": false,
+              "description": "Raised when the author deletes the current selection."
+            },
+            {
+              "name": "OnPasteRequested",
+              "type": "EventCallback",
+              "isRequired": false,
+              "description": "Raised when the author pastes the clipboard into the template."
+            },
+            {
               "name": "OptionAreaMappingRequested",
               "type": "EventCallback<TmSigningFieldOptionAreaMappingEventArgs>",
               "isRequired": false,
               "description": "Callback invoked when a radio or multiple option should be mapped to a document area."
             },
             {
+              "name": "PageHeight",
+              "type": "double",
+              "isRequired": false,
+              "description": "Page height used to convert the optional geometry editors from normalized areas."
+            },
+            {
+              "name": "PageWidth",
+              "type": "double",
+              "isRequired": false,
+              "description": "Page width used to convert the optional geometry editors from normalized areas."
+            },
+            {
+              "name": "PasteEnabled",
+              "type": "bool",
+              "isRequired": false,
+              "default": "true",
+              "description": "Whether the clipboard has a field the Paste action can place."
+            },
+            {
               "name": "ReadOnly",
               "type": "bool",
               "isRequired": false,
               "description": "Whether the panel should prevent edits."
+            },
+            {
+              "name": "ShowGeometry",
+              "type": "bool",
+              "isRequired": false,
+              "description": "Whether to show the optional pixel geometry editors."
             },
             {
               "name": "ShowLocalizationEditor",
@@ -72096,6 +72633,10 @@
           "kind": "Css"
         },
         {
+          "path": "src/Tempo.Blazor.Signing/wwwroot/js/pdf-template-designer-pointer.js",
+          "kind": "JavaScript"
+        },
+        {
           "path": "src/Tempo.Blazor.Signing/wwwroot/js/pdf-template-designer.js",
           "kind": "JavaScript"
         },
@@ -72108,6 +72649,10 @@
           "kind": "JavaScript"
         },
         {
+          "path": "src/Tempo.Blazor.Signing/wwwroot/js/__tests__/pdf-template-designer-pointer.test.mjs",
+          "kind": "JavaScript"
+        },
+        {
           "path": "src/Tempo.Blazor.Signing/wwwroot/js/__tests__/signing-editor.test.mjs",
           "kind": "JavaScript"
         },
@@ -72117,12 +72662,12 @@
         }
       ],
       "summary": {
-        "itemCount": 53,
-        "manualItemCount": 53,
-        "generatedItemCount": 53,
+        "itemCount": 57,
+        "manualItemCount": 57,
+        "generatedItemCount": 57,
         "generatedOnlyItemCount": 0,
-        "componentCount": 31,
-        "publicApiTypeCount": 22
+        "componentCount": 34,
+        "publicApiTypeCount": 23
       }
     },
     {
@@ -127103,10 +127648,10 @@
   ],
   "summary": {
     "packageCount": 27,
-    "itemCount": 3380,
-    "manualItemCount": 3380,
+    "itemCount": 3384,
+    "manualItemCount": 3384,
     "generatedOnlyItemCount": 0,
-    "componentCount": 511,
-    "publicApiTypeCount": 2816
+    "componentCount": 514,
+    "publicApiTypeCount": 2817
   }
 }

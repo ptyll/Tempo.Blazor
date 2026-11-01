@@ -1,6 +1,7 @@
 using System.Globalization;
 using Microsoft.AspNetCore.Components;
 using Tempo.Blazor.Abstractions.Models;
+using Tempo.Blazor.Components.Inputs;
 
 namespace Tempo.Blazor.Components.Signing;
 
@@ -13,6 +14,7 @@ public partial class TmSigningFieldEditorPanel
     private bool _showConditions;
     private bool _showFormula;
     private string? _localizationCulture;
+    private readonly HashSet<string> _collapsedSections = new(StringComparer.Ordinal);
 
     /// <summary>Selected signing field edited by the panel.</summary>
     [Parameter] public SigningField? Field { get; set; }
@@ -46,6 +48,30 @@ public partial class TmSigningFieldEditorPanel
 
     /// <summary>Callback invoked when the current field should be copied to all pages.</summary>
     [Parameter] public EventCallback<SigningField> CopyToAllPagesRequested { get; set; }
+
+    /// <summary>Callback invoked when the inspector's Copy action should copy the edited field.</summary>
+    [Parameter] public EventCallback<SigningField> OnCopyRequested { get; set; }
+
+    /// <summary>Callback invoked when the inspector's Delete action should delete the edited field.</summary>
+    [Parameter] public EventCallback<SigningField> OnDeleteRequested { get; set; }
+
+    /// <summary>Callback invoked when the inspector's selection Copy action should copy every selected field.</summary>
+    [Parameter] public EventCallback OnCopySelectionRequested { get; set; }
+
+    /// <summary>Callback invoked when the inspector's selection Paste action should paste the clipboard.</summary>
+    [Parameter] public EventCallback OnPasteRequested { get; set; }
+
+    /// <summary>Callback invoked when the inspector's selection Delete action should delete every selected field.</summary>
+    [Parameter] public EventCallback OnDeleteSelectionRequested { get; set; }
+
+    /// <summary>Whether to show the optional pixel geometry section. Defaults to false.</summary>
+    [Parameter] public bool ShowGeometry { get; set; }
+
+    /// <summary>Page width in pixels used to convert the normalized area when <see cref="ShowGeometry"/> is set.</summary>
+    [Parameter] public double PageWidth { get; set; }
+
+    /// <summary>Page height in pixels used to convert the normalized area when <see cref="ShowGeometry"/> is set.</summary>
+    [Parameter] public double PageHeight { get; set; }
 
     /// <summary>Additional CSS classes for the root element.</summary>
     [Parameter] public string? Class { get; set; }
@@ -86,6 +112,83 @@ public partial class TmSigningFieldEditorPanel
     private string ColorInputValue => _field is null
         ? SigningRolePalette.ColorForOrder(0)
         : _field.Preferences.Color ?? SigningRolePalette.ResolveRoleHexColor(SubmitterRoles, _field.SubmitterUuid) ?? SigningRolePalette.ColorForOrder(0);
+
+    private string RoleDotStyle
+    {
+        get
+        {
+            var color = SigningRolePalette.ResolveRoleColor(SubmitterRoles, _field?.SubmitterUuid)
+                ?? "var(--tm-signing-role-1)";
+            return $"--tm-signing-role-color: {color};";
+        }
+    }
+
+    private SigningFieldArea? GeometryArea => _field?.Areas.FirstOrDefault();
+
+    private SigningRectangle GeometryPixels => GeometryArea is null || PageWidth <= 0 || PageHeight <= 0
+        ? new SigningRectangle(0, 0, 0, 0)
+        : SigningGeometryHelper.ToPixels(GeometryArea, PageWidth, PageHeight);
+
+    private List<RadioOption<string>> SignatureFormatOptions =>
+    [
+        new(Loc["TmSigning_Draw"], string.Empty),
+        new(Loc["TmSigning_Type"], "typed"),
+        new(Loc["TmSigning_Upload"], "upload")
+    ];
+
+    private static Dictionary<string, object> Hook(string cssClass) => new() { ["class"] = cssClass };
+
+    private Dictionary<string, object> TypeSelectAttributes => Hook("tm-signing-field-editor-panel__type");
+
+    private Dictionary<string, object> SubmitterSelectAttributes => Hook("tm-signing-field-editor-panel__submitter");
+
+    private Dictionary<string, object> DescriptionAttributes => Hook("tm-signing-field-editor-panel__description");
+
+    private Dictionary<string, object> RequiredInputAttributes => Hook("tm-signing-field-editor-panel__required");
+
+    private Dictionary<string, object> ReadOnlyInputAttributes => Hook("tm-signing-field-editor-panel__readonly");
+
+    private Dictionary<string, object> PrefillableInputAttributes => Hook("tm-signing-field-editor-panel__prefillable");
+
+    private Dictionary<string, object> LocalizationCultureAttributes => Hook("tm-signing-field-editor-panel__localization-culture");
+
+    private Dictionary<string, object> LocalizedDescriptionAttributes => Hook("tm-signing-field-editor-panel__localized-description");
+
+    private Dictionary<string, object> DefaultOptionAttributes => Hook("tm-signing-field-editor-panel__default-option");
+
+    private Dictionary<string, object> ValidationModeAttributes => Hook("tm-signing-field-editor-panel__validation-mode");
+
+    private Dictionary<string, object> SignatureIdAttributes => Hook("tm-signing-field-editor-panel__signature-id");
+
+    private Dictionary<string, object> StampLogoAttributes => Hook("tm-signing-field-editor-panel__stamp-logo");
+
+    private Dictionary<string, object> FontFamilyAttributes => Hook("tm-signing-field-editor-panel__font-family");
+
+    private Dictionary<string, object> FontSizeAttributes => Hook("tm-number-input__input tm-signing-field-editor-panel__font-size");
+
+    private Dictionary<string, object> AlignAttributes => Hook("tm-signing-field-editor-panel__align");
+
+    private Dictionary<string, object> GeometryXAttributes => Hook("tm-number-input__input tm-signing-field-editor-panel__geometry-x");
+
+    private Dictionary<string, object> GeometryYAttributes => Hook("tm-number-input__input tm-signing-field-editor-panel__geometry-y");
+
+    private Dictionary<string, object> GeometryWidthAttributes => Hook("tm-number-input__input tm-signing-field-editor-panel__geometry-width");
+
+    private Dictionary<string, object> GeometryHeightAttributes => Hook("tm-number-input__input tm-signing-field-editor-panel__geometry-height");
+
+    private bool IsSectionExpanded(string section) => !_collapsedSections.Contains(section);
+
+    /// <summary>Whether the clipboard has something the selection Paste action can place. A host that tracks a clipboard sets this so an empty clipboard disables Paste.</summary>
+    [Parameter] public bool PasteEnabled { get; set; } = true;
+
+    private void ToggleSection(string section)
+    {
+
+        if (!_collapsedSections.Add(section))
+        {
+            _collapsedSections.Remove(section);
+        }
+    }
 
     private string RootClass
     {
@@ -168,6 +271,111 @@ public partial class TmSigningFieldEditorPanel
             ? UpdateFieldAsync(field => ApplyFieldType(field, type))
             : Task.CompletedTask;
     }
+
+    private Task HandleTypeValueChangedAsync(string value) => HandleTypeChangedAsync(new ChangeEventArgs { Value = value });
+
+    private Task HandleNameValueChangedAsync(string value) => HandleNameChangedAsync(new ChangeEventArgs { Value = value });
+
+    private Task HandleTextValueChangedAsync(string value, Action<SigningField, string?> update)
+        => HandleTextPropertyChangedAsync(new ChangeEventArgs { Value = value }, update);
+
+    private Task HandleBoolValueChangedAsync(bool value, Action<SigningField, bool> update)
+        => UpdateFieldAsync(field => update(field, value));
+
+    /// <summary>
+    /// The field's own ReadOnly flag. The panel parameter of the same name locks every other control,
+    /// but this toggle is the control that changes the flag, so it stays enabled.
+    /// </summary>
+    private Task HandleReadOnlyToggleAsync(bool value)
+    {
+        if (_field is null)
+        {
+            return Task.CompletedTask;
+        }
+
+        _field.ReadOnly = value;
+        return FieldChanged.InvokeAsync(Clone(_field));
+    }
+
+    private Task HandleSubmitterValueChangedAsync(string value) => HandleSubmitterChangedAsync(new ChangeEventArgs { Value = value });
+
+    private Task UpdateOptionValueFromTextAsync(string optionUuid, string value)
+        => UpdateOptionValueAsync(optionUuid, new ChangeEventArgs { Value = value });
+
+    private Task HandleDefaultValueFromTextAsync(string value) => HandleDefaultValueChangedAsync(new ChangeEventArgs { Value = value });
+
+    private Task HandleLocalizationCultureValueChangedAsync(string value)
+        => HandleLocalizationCultureChangedAsync(new ChangeEventArgs { Value = value });
+
+    private Task HandleLocalizedTextValueChangedAsync(string value, Func<SigningField, SigningLocalizedText> selectText)
+        => HandleLocalizedTextChangedAsync(new ChangeEventArgs { Value = value }, selectText);
+
+    private Task HandleLocalizedValidationMessageValueChangedAsync(string value)
+        => HandleLocalizedValidationMessageChangedAsync(new ChangeEventArgs { Value = value });
+
+    private Task HandleLocalizedOptionLabelValueChangedAsync(string optionUuid, string value)
+        => HandleLocalizedOptionLabelChangedAsync(optionUuid, new ChangeEventArgs { Value = value });
+
+    private Task HandleValidationModeValueChangedAsync(string value)
+        => HandleValidationModeChangedAsync(new ChangeEventArgs { Value = value });
+
+    private Task HandleValidationTextChangedAsync(string value, Action<SigningFieldValidation, string?> update)
+        => HandleValidationValueChangedAsync(new ChangeEventArgs { Value = value }, update);
+
+    private Task HandlePreferenceTextValueChangedAsync(string value, Action<SigningFieldPreferences, string?> update)
+        => HandlePreferenceTextChangedAsync(new ChangeEventArgs { Value = value }, update);
+
+    private Task HandlePreferenceBoolValueChangedAsync(bool value, Action<SigningFieldPreferences, bool?> update)
+        => UpdatePreferencesAsync(preferences => update(preferences, value));
+
+    private Task HandleSignatureFormatChangedAsync(string value)
+        => HandlePreferenceTextValueChangedAsync(value, (preferences, text) => preferences.Format = text);
+
+    private int? FontSizeValue => _field?.Preferences.FontSize is double size ? (int)Math.Round(size) : null;
+
+    private static int Rounded(double value) => (int)Math.Round(value);
+
+    private Task HandleFontSizeValueChangedAsync(int? value)
+        => UpdatePreferencesAsync(preferences => preferences.FontSize = value);
+
+    private Task HandleGeometryChangedAsync(int? x, int? y, int? width, int? height)
+    {
+        if (GeometryArea is null || PageWidth <= 0 || PageHeight <= 0)
+        {
+            return Task.CompletedTask;
+        }
+
+        var current = GeometryPixels;
+        var rectangle = new SigningRectangle(
+            x ?? current.X,
+            y ?? current.Y,
+            width ?? current.Width,
+            height ?? current.Height);
+        var normalized = SigningGeometryHelper.ToNormalized(rectangle, PageWidth, PageHeight);
+        return UpdateFieldAsync(field =>
+        {
+            var area = field.Areas.FirstOrDefault();
+            if (area is null)
+            {
+                return;
+            }
+
+            area.X = normalized.X;
+            area.Y = normalized.Y;
+            area.Width = normalized.Width;
+            area.Height = normalized.Height;
+        });
+    }
+
+    private Task CopyFieldAsync() => _field is null || ReadOnly ? Task.CompletedTask : OnCopyRequested.InvokeAsync(Clone(_field));
+
+    private Task DeleteFieldAsync() => _field is null || ReadOnly ? Task.CompletedTask : OnDeleteRequested.InvokeAsync(Clone(_field));
+
+    private Task CopySelectionAsync() => ReadOnly ? Task.CompletedTask : OnCopySelectionRequested.InvokeAsync();
+
+    private Task PasteSelectionAsync() => ReadOnly ? Task.CompletedTask : OnPasteRequested.InvokeAsync();
+
+    private Task DeleteSelectionAsync() => ReadOnly ? Task.CompletedTask : OnDeleteSelectionRequested.InvokeAsync();
 
     private Task HandleTextPropertyChangedAsync(ChangeEventArgs args, Action<SigningField, string?> update)
     {

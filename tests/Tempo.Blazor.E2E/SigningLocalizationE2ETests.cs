@@ -19,7 +19,7 @@ public class SigningLocalizationE2ETests : WasmTestBase
         var before = await field.BoundingBoxAsync();
         Assert.IsNotNull(before);
 
-        await designer.Locator(".tm-pdf-template-designer__culture-preview").SelectOptionAsync("en-US");
+        await SelectPreviewCultureAsync(page, designer, "en-US");
 
         await Assertions.Expect(field).ToContainTextAsync("Full name");
         var after = await field.BoundingBoxAsync();
@@ -37,7 +37,7 @@ public class SigningLocalizationE2ETests : WasmTestBase
         await designer.ScrollIntoViewIfNeededAsync();
 
         await designer.Locator("[data-field-uuid='designer-name']").First.ClickAsync();
-        await designer.Locator(".tm-pdf-template-designer__culture-preview").SelectOptionAsync("en-US");
+        await SelectPreviewCultureAsync(page, designer, "en-US");
         await designer.Locator(".tm-signing-field-editor-panel__localization-culture").First.SelectOptionAsync("en-US");
         var labelInput = designer.Locator(".tm-signing-field-editor-panel__localized-label").First;
         await ReplaceInputValueAsync(page, labelInput, "Signer legal name");
@@ -62,7 +62,7 @@ public class SigningLocalizationE2ETests : WasmTestBase
         await designer.ScrollIntoViewIfNeededAsync();
 
         await designer.Locator("[data-field-uuid='designer-name']").First.ClickAsync();
-        await designer.Locator(".tm-pdf-template-designer__culture-preview").SelectOptionAsync("cs-CZ");
+        await SelectPreviewCultureAsync(page, designer, "cs-CZ");
         await designer.Locator(".tm-signing-field-editor-panel__localization-culture").First.SelectOptionAsync("cs-CZ");
         await ReplaceInputValueAsync(page, designer.Locator(".tm-signing-field-editor-panel__localized-label").First, "Podepisující osoba");
 
@@ -163,7 +163,7 @@ public class SigningLocalizationE2ETests : WasmTestBase
         var designer = GetDesigner(page);
         await designer.ScrollIntoViewIfNeededAsync();
         await designer.Locator("[data-field-uuid='designer-name']").First.ClickAsync();
-        await designer.Locator(".tm-pdf-template-designer__culture-preview").SelectOptionAsync("cs-CZ");
+        await SelectPreviewCultureAsync(page, designer, "cs-CZ");
         await designer.Locator(".tm-signing-field-editor-panel__localization-culture").First.SelectOptionAsync("cs-CZ");
         await ReplaceInputValueAsync(page, designer.Locator(".tm-signing-field-editor-panel__localized-label").First, "NejdelšíPodepisujícíOsobaBezMezer");
 
@@ -217,6 +217,26 @@ public class SigningLocalizationE2ETests : WasmTestBase
         await page.GotoAsync($"{BaseUrl}/signing-components");
         await WaitForAppReadyAsync(page);
         return page;
+    }
+
+    /// <summary>
+    /// The preview language sits in the toolbar overflow at the demo card width, so the select itself
+    /// is collapsed. The More item carries the same value.
+    /// </summary>
+    private static async Task SelectPreviewCultureAsync(IPage page, ILocator designer, string culture)
+    {
+        var select = designer.Locator(".tm-pdf-template-designer__culture-preview").First;
+        var collapsed = await select.EvaluateAsync<bool>(
+            "element => element.closest('.tm-toolbar-item--collapsed') !== null");
+        if (!collapsed && await select.IsVisibleAsync())
+        {
+            await select.SelectOptionAsync(culture);
+            return;
+        }
+
+        await designer.Locator("button.tm-toolbar-more").ClickAsync();
+        var label = culture == "cs-CZ" ? "Čeština" : "English";
+        await designer.Locator(".tm-toolbar-more__item").Filter(new() { HasText = label }).First.ClickAsync();
     }
 
     private static ILocator GetDesigner(IPage page)

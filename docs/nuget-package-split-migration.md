@@ -94,7 +94,7 @@ Feature CSS entry points:
 <link href="_content/Tempo.Blazor.Signing/css/tempo-blazor-signing.css" rel="stylesheet" />
 ```
 
-`TmPdfTemplateDesigner` imports `_content/Tempo.Blazor.Signing/js/pdf-template-designer.js` as an ES module. Apps normally do not need a separate `<script>` tag for it, but CSP rules and static-asset allowlists must allow the new path.
+`TmPdfTemplateDesigner` imports `_content/Tempo.Blazor.Signing/js/pdf-template-designer.js`, which loads `pdf-template-designer-pointer.js` and the core `pointer-drag.js`. Serve `_content/Tempo.Blazor/js/` as well. Apps normally do not need a separate `<script>` tag, but CSP rules and static-asset allowlists must allow both paths.
 
 ## Signing Migration Notes
 

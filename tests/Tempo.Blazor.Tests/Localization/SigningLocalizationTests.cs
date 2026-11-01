@@ -344,6 +344,7 @@ public class SigningLocalizationTests : LocalizationTestBase
     [InlineData("TmPdfTemplateDesigner_EmptyDescription")]
     [InlineData("TmPdfTemplateDesigner_Palette")]
     [InlineData("TmPdfTemplateDesigner_ToolbarLabel")]
+    [InlineData("TmPdfTemplateDesigner_ToolbarSecondaryLabel")]
     [InlineData("TmPdfTemplateDesigner_PreviousPage")]
     [InlineData("TmPdfTemplateDesigner_NextPage")]
     [InlineData("TmPdfTemplateDesigner_PageLabel")]

@@ -9,9 +9,9 @@
                required="@Required"
                aria-required="@(Required ? "true" : null)"
                aria-checked="@(IsIndeterminate ? "mixed" : null)"
-               class="tm-checkbox-input"
+               class="@CheckboxCssClass"
                @onchange="HandleChangeAsync"
-               @attributes="InputAttributes"
+               @attributes="NativeInputAttributes"
                aria-describedby="@DescribedBy" />
         <span class="tm-checkbox-custom @(IsIndeterminate ? "tm-checkbox-custom-indeterminate" : "")">
             @if (Value)
@@ -120,6 +120,39 @@
     /// for a screen reader.
     /// </summary>
     private bool IsIndeterminate => Indeterminate && !Value;
+
+    /// <summary>
+    /// The native input keeps <c>tm-checkbox-input</c> even when <see cref="InputAttributes"/>
+    /// carries a host <c>class</c>. A splat applied last would otherwise replace the core class
+    /// and paint a second, unstyled box beside the custom one.
+    /// </summary>
+    private string CheckboxCssClass
+    {
+        get
+        {
+            var extra = InputAttributes is not null
+                && InputAttributes.TryGetValue("class", out var value)
+                ? value?.ToString()
+                : null;
+            return string.IsNullOrWhiteSpace(extra) ? "tm-checkbox-input" : $"tm-checkbox-input {extra}";
+        }
+    }
+
+    /// <summary>Host attributes for the native input, minus <c>class</c> (merged into <see cref="CheckboxCssClass"/>).</summary>
+    private Dictionary<string, object>? NativeInputAttributes
+    {
+        get
+        {
+            if (InputAttributes is null || !InputAttributes.ContainsKey("class"))
+            {
+                return InputAttributes;
+            }
+
+            var copy = new Dictionary<string, object>(InputAttributes);
+            copy.Remove("class");
+            return copy;
+        }
+    }
 
     private async Task HandleChangeAsync(ChangeEventArgs e)
     {

@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using Bunit;
 using FluentAssertions;
 using Microsoft.AspNetCore.Components;
@@ -476,7 +477,7 @@ public class TmSigningFieldEditorPanelTests : LocalizationTestBase
             parameters.Add(p => p.Field, CreateField(type: SigningFieldType.Signature))
                       .Add(p => p.FieldChanged, EventCallback.Factory.Create<SigningField>(this, field => captured = field)));
 
-        cut.Find(".tm-signing-field-editor-panel__signature-format").Change("typed");
+        cut.FindAll(".tm-signing-field-editor-panel__signature-format input[type='radio']")[1].Change(true);
         cut.Find(".tm-signing-field-editor-panel__signature-id").Change(true);
 
         captured.Should().NotBeNull();
@@ -730,6 +731,192 @@ public class TmSigningFieldEditorPanelTests : LocalizationTestBase
                 ]
             }
         ];
+    }
+
+    [Fact]
+    public void FieldEditor_TypePill_PrimarySubtle()
+    {
+        var cut = Render<TmSigningFieldEditorPanel>(parameters =>
+            parameters.Add(p => p.Field, CreateField()));
+
+        var pill = cut.Find(".tm-signing-field-editor-panel__type-badge");
+        pill.ClassList.Should().Contain("tm-badge-primary");
+        pill.ClassList.Should().Contain("tm-badge-subtle");
+        pill.ClassList.Should().Contain("tm-badge-pill");
+    }
+
+    [Fact]
+    public void FieldEditor_Sections_CollapsibleWithAriaExpanded()
+    {
+        var cut = Render<TmSigningFieldEditorPanel>(parameters =>
+            parameters.Add(p => p.Field, CreateField())
+                      .Add(p => p.ShowLocalizationEditor, true)
+                      .Add(p => p.SupportedCultures, new[] { "en-US", "cs-CZ" }));
+
+        foreach (var section in new[] { "localization", "validation", "preferences", "rules" })
+        {
+            var toggle = cut.Find($".tm-signing-field-editor-panel__section-toggle[data-section='{section}']");
+            toggle.GetAttribute("aria-expanded").Should().Be("true", $"{section} starts expanded");
+            toggle.GetAttribute("aria-controls").Should().NotBeNullOrWhiteSpace();
+        }
+
+        cut.Find(".tm-signing-field-editor-panel__section-toggle[data-section='validation']").Click();
+
+        cut.Find(".tm-signing-field-editor-panel__section-toggle[data-section='validation']")
+            .GetAttribute("aria-expanded").Should().Be("false");
+        cut.FindAll(".tm-signing-field-editor-panel__validation-message").Should().BeEmpty();
+    }
+
+    [Fact]
+    public void FieldEditor_SignatureFormat_TmRadioGroup_MapsToPreferencesFormat()
+    {
+        SigningField? captured = null;
+        var cut = Render<TmSigningFieldEditorPanel>(parameters =>
+            parameters.Add(p => p.Field, CreateField(SigningFieldType.Signature))
+                      .Add(p => p.FieldChanged, EventCallback.Factory.Create<SigningField>(this, field => captured = field)));
+
+        cut.Find(".tm-signing-field-editor-panel__signature-format").GetAttribute("role").Should().Be("radiogroup");
+        cut.FindAll(".tm-signing-field-editor-panel__signature-format input[type='radio']").Should().HaveCount(3);
+
+        cut.FindAll(".tm-signing-field-editor-panel__signature-format input[type='radio']")[1].Change(true);
+
+        captured.Should().NotBeNull();
+        captured!.Preferences.Format.Should().Be("typed");
+    }
+
+    [Fact]
+    public void FieldEditor_RoleSelect_TmSelect_WithColorDot()
+    {
+        var cut = Render<TmSigningFieldEditorPanel>(parameters =>
+            parameters.Add(p => p.Field, CreateField())
+                      .Add(p => p.SubmitterRoles, CreateRoles()));
+
+        cut.Find("select.tm-signing-field-editor-panel__submitter").Should().NotBeNull();
+        cut.Find("select.tm-signing-field-editor-panel__submitter").ClassList.Should().Contain("tm-select",
+            "the hook class merges with the core select class instead of replacing it");
+        var dot = cut.Find(".tm-signing-field-editor-panel__role-dot");
+        dot.GetAttribute("style").Should().Contain("--tm-signing-role-color:");
+        dot.GetAttribute("aria-hidden").Should().Be("true");
+    }
+
+    [Fact]
+    public void FieldEditor_ActionsSection_InvokesCopyDeleteCallbacks()
+    {
+        var copied = false;
+        var deleted = false;
+        var cut = Render<TmSigningFieldEditorPanel>(parameters =>
+            parameters.Add(p => p.Field, CreateField())
+                      .Add(p => p.OnCopyRequested, EventCallback.Factory.Create<SigningField>(this, _ => copied = true))
+                      .Add(p => p.OnDeleteRequested, EventCallback.Factory.Create<SigningField>(this, _ => deleted = true)));
+
+        cut.Find(".tm-signing-field-editor-panel__actions").Should().NotBeNull();
+        cut.Find(".tm-signing-field-editor-panel__copy-field").Click();
+        cut.Find(".tm-signing-field-editor-panel__delete-field").Click();
+
+        copied.Should().BeTrue();
+        deleted.Should().BeTrue();
+    }
+
+    [Fact]
+    public void FieldEditor_SelectionSection_CopyPasteDeleteSelection()
+    {
+        var copied = false;
+        var pasted = false;
+        var deleted = false;
+        var cut = Render<TmSigningFieldEditorPanel>(parameters =>
+            parameters.Add(p => p.Field, CreateField())
+                      .Add(p => p.OnCopySelectionRequested, EventCallback.Factory.Create(this, () => copied = true))
+                      .Add(p => p.OnPasteRequested, EventCallback.Factory.Create(this, () => pasted = true))
+                      .Add(p => p.OnDeleteSelectionRequested, EventCallback.Factory.Create(this, () => deleted = true)));
+
+        cut.Find(".tm-signing-field-editor-panel__selection").Should().NotBeNull();
+        cut.Find(".tm-signing-field-editor-panel__copy-selection").Click();
+        cut.Find(".tm-signing-field-editor-panel__paste-selection").Click();
+        cut.Find(".tm-signing-field-editor-panel__delete-selection").Click();
+
+        copied.Should().BeTrue();
+        pasted.Should().BeTrue();
+        deleted.Should().BeTrue();
+    }
+
+    [Fact]
+    public void FieldEditor_Geometry_Px_OptIn_ConvertsFromNormalizedArea()
+    {
+        SigningField? captured = null;
+        var field = CreateField();
+        field.Areas =
+        [
+            new SigningFieldArea
+            {
+                Uuid = "area-1",
+                Page = 0,
+                X = 0.1,
+                Y = 0.2,
+                Width = 0.3,
+                Height = 0.4
+            }
+        ];
+        var cut = Render<TmSigningFieldEditorPanel>(parameters =>
+            parameters.Add(p => p.Field, field)
+                      .Add(p => p.ShowGeometry, true)
+                      .Add(p => p.PageWidth, 1000)
+                      .Add(p => p.PageHeight, 500)
+                      .Add(p => p.FieldChanged, EventCallback.Factory.Create<SigningField>(this, value => captured = value)));
+
+        cut.Find(".tm-signing-field-editor-panel__geometry").Should().NotBeNull();
+        cut.Find(".tm-signing-field-editor-panel__geometry-x").GetAttribute("value").Should().Be("100");
+        cut.Find(".tm-signing-field-editor-panel__geometry-y").GetAttribute("value").Should().Be("100");
+        cut.Find(".tm-signing-field-editor-panel__geometry-width").GetAttribute("value").Should().Be("300");
+        cut.Find(".tm-signing-field-editor-panel__geometry-height").GetAttribute("value").Should().Be("200");
+
+        cut.Find(".tm-signing-field-editor-panel__geometry-x").Change("250");
+
+        captured.Should().NotBeNull();
+        captured!.Areas.Single().X.Should().BeApproximately(0.25, 0.0001);
+    }
+
+    [Fact]
+    public void FieldEditor_ReadOnly_DisablesAll()
+    {
+        var cut = Render<TmSigningFieldEditorPanel>(parameters =>
+            parameters.Add(p => p.Field, CreateField(SigningFieldType.Signature))
+                      .Add(p => p.ShowGeometry, true)
+                      .Add(p => p.PageWidth, 1000)
+                      .Add(p => p.PageHeight, 1000)
+                      .Add(p => p.ReadOnly, true)
+                      .Add(p => p.OnCopyRequested, EventCallback.Factory.Create<SigningField>(this, _ => { }))
+                      .Add(p => p.OnDeleteRequested, EventCallback.Factory.Create<SigningField>(this, _ => { })));
+
+        cut.FindAll(".tm-signing-field-editor-panel input, .tm-signing-field-editor-panel select, .tm-signing-field-editor-panel textarea, .tm-signing-field-editor-panel button")
+            .Where(element => element.ClassList.Contains("tm-signing-field-editor-panel__readonly") is false)
+            .Should().OnlyContain(element => element.HasAttribute("disabled"));
+        cut.Find(".tm-signing-field-editor-panel__readonly").HasAttribute("disabled").Should().BeFalse(
+            "the ReadOnly checkbox is the control that changes the flag, so the panel lock must not disable it");
+    }
+
+    [Fact]
+    public void FieldEditor_UsesTmComponents_NoNativeInputsExceptColor()
+    {
+        var source = File.ReadAllText(Path.Combine(
+            FindRepositoryRoot(), "src", "Tempo.Blazor.Signing", "Components", "Signing", "TmSigningFieldEditorPanel.razor"));
+
+        Regex.Matches(source, @"<input\b[^>]*>", RegexOptions.IgnoreCase)
+            .Select(match => match.Value)
+            .Should().OnlyContain(input => input.Contains("type=\"color\"", StringComparison.OrdinalIgnoreCase),
+                "SI1: the colour picker is the only native input the inspector may render");
+        Regex.IsMatch(source, @"<select\b", RegexOptions.IgnoreCase).Should().BeFalse();
+        Regex.IsMatch(source, @"<textarea\b", RegexOptions.IgnoreCase).Should().BeFalse();
+    }
+
+    private static string FindRepositoryRoot()
+    {
+        var directory = new DirectoryInfo(AppContext.BaseDirectory);
+        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "TempoBlazor.slnx")))
+        {
+            directory = directory.Parent;
+        }
+
+        return directory?.FullName ?? throw new InvalidOperationException("Repository root not found.");
     }
 
     private static IReadOnlyList<SigningField> CreateFormulaFields()

@@ -108,6 +108,19 @@ findings table and the per-leg results) and the two perf runs
 
 ### Breaking / Migration
 
+- **Signing redesign (phase 8): the PDF template designer and its field overlay use pointer events, and the designer renders through `TmEditorShell`.** A host or a test that dispatched `mousedown` / `mousemove` / `mouseup` or an HTML5 drag on the designer must dispatch the pointer equivalents, and a selector that assumed the designer root was a plain `div` must follow the shell:
+
+  ```html
+  <!-- before -->
+  <div class="tm-pdf-template-designer" onmousedown="..." onmousemove="..."></div>
+  <!-- after -->
+  <div class="tm-editor-shell tm-pdf-template-designer" data-layout="desktop">
+      <div class="tm-pdf-template-designer__workspace"></div>
+  </div>
+  ```
+
+  `MobileMode` stays as an obsolete alias that forces `TmLayoutMode.Mobile`; new hosts set `LayoutMode`. The shell classifies its own container with `LayoutBreakpoints` (default 768 / 1200). The toolbar is a `TmToolbar` with named groups `data-tm-group="pages|view|language|zoom|detect"`. The custom `__context-actions` menu is gone; its items are now core `TmContextMenuItem` (`role=menuitem`; class hooks via `Class`). A selector that assumed plain button children of the menu must change. One `TmContextMenu` (opened with `TmContextMenu.Open()`) carries the same item classes. A palette tap arms drawing and a second tap places a default-sized field. The designer height is `--tm-pdf-template-designer-height` (or the `Height` parameter); the old fixed height remains the default. The move and resize session is attached to the workspace element, not the document.
+
 - **Spreadsheet redesign (phase 7c): the Sort dialog wraps its content in `div.tm-spreadsheet-sort__body`.** The wrapper is the inline-size query container the phone toolbar needs (it is the element the 320 px "stack the options" rule measures), and it carries the phone modifier `tm-spreadsheet-sort__body--mobile`. Every existing hook still matches — `.tm-spreadsheet-sort__toolbar`, `.tm-spreadsheet-sort__toggles`, `.tm-spreadsheet-sort__table`, `.tm-spreadsheet-sort__card`, `.tm-spreadsheet-sort__tool`, `__btn--ok` / `__btn--cancel` are untouched — but a selector that assumed the toolbar was a DIRECT child of the modal body must become a descendant selector:
 
   ```css
@@ -1477,6 +1490,8 @@ findings table and the per-leg results) and the two perf runs
       `SigningDateFormatter`.
 ### Fixed
 
+- **Signing: a palette or field drag no longer also draws on the page.** The palette session stops the press before the page surface's bubble listener, so a drag places or moves a field and does not start a selection box. `ButtonVariant.OutlinePrimary` is the Autodetect toolbar variant.
+- **Core: `TmContextMenuItem` keeps `OnClick` across the close render.** The item copies the callback, closes the parent, then invokes it, so a menu that unmounts on close still runs the action.
 - **Core: the "More" overflow menu of `TmToolbar` / `TmMobileActionBar` now stays inside the viewport.**
   The shared `ActionOverflowMenu` panel opens with `TmOverlayPanel.ConstrainHeight` in addition to the
   flip/clamp placement it already used, so a menu taller than the room on its resolved side flips above
@@ -1525,6 +1540,9 @@ findings table and the per-leg results) and the two perf runs
   reading the uploaded file at the host).
 
 ### Added
+- **Core: `pointer-drag.js` listens in the capture phase when `listenerCapture` is set, and `TmContextMenu` reports open changes.** `listenerCapture` starts a gesture even when a child calls `stopPropagation`; detach removes that listener. `TmContextMenu.Open()` is public and idempotent. `IsOpenChanged` is raised from `SetOpenAsync` (toggle, `Open`, `CloseMenu` and an overlay dismiss) after the open state has changed, and the callback is awaited.
+- **Signing redesign (phase 8): the field inspector is built from Tm components and its sections collapse.** `TmSigningFieldEditorPanel` renders actions, selection and an optional geometry section through `TmSigningFieldEditorActions`. New callbacks: `OnCopyRequested`, `OnDeleteRequested`, `OnCopySelectionRequested`, `OnPasteRequested`, `OnDeleteSelectionRequested`. `ShowGeometry`, `PageWidth` and `PageHeight` expose a numeric resize (WCAG 2.5.7). `TmPdfTemplateDesigner.LayoutBreakpoints` defaults to 768 / 1200. `TmContextMenu.Open()` opens the designer's one menu. The overlay pointer callbacks take `TmSigningFieldOverlayPointerEventArgs`.
+
 - **Spreadsheet redesign (phase 8): `TmSpreadsheet` honours the core `data-testid` contract.**
   The component now derives from `TmComponentBase` and its root renders
   `data-testid="@RootTestId()"` before the splatted attributes, so `DataTestId` labels the root (and a

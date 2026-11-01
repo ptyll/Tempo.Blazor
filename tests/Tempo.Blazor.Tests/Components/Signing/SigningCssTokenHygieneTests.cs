@@ -34,7 +34,8 @@ public class SigningCssTokenHygieneTests
     private static readonly string[] RuntimeLocalCustomProperties =
     [
         "--tm-document-page-scale",
-        "--tm-signing-role-color"
+        "--tm-signing-role-color",
+        "--tm-pdf-template-designer-height"
     ];
 
     /// <summary>Legacy border aliases; the canonical Signing border token is <c>--tm-border-color</c>.</summary>

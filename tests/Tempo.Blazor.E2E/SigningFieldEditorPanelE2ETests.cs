@@ -184,7 +184,7 @@ public class SigningFieldEditorPanelE2ETests : WasmTestBase
 
         var panel = await GetPanelAsync(page);
         await panel.Locator(".tm-signing-field-editor-panel__type").SelectOptionAsync("Text");
-        await panel.Locator(".tm-signing-field-editor-panel__required").CheckAsync();
+        await panel.Locator(".tm-signing-field-editor-panel__required").EvaluateAsync("el => el.click()");
         await panel.Locator(".tm-signing-field-editor-panel__validation-min").FillAsync("2");
         await panel.Locator(".tm-signing-field-editor-panel__validation-min").PressAsync("Tab");
         await panel.Locator(".tm-signing-field-editor-panel__validation-message").FillAsync("Choose at least two characters");

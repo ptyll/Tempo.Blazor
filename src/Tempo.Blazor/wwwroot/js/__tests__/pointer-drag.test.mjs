@@ -945,6 +945,27 @@ test('accept runs after the selector match and receives the keydown event', () =
     assert.deepEqual(seen, [row], 'accept only sees keydowns the selector already claimed');
 });
 
+test('capture is not an alias of listenerCapture', async () => {
+    const { readFileSync } = await import('node:fs');
+    const source = readFileSync(new URL('../pointer-drag.js', import.meta.url), 'utf8');
+    assert.equal(/options\.capture(?!On)/.test(source), false,
+        'the capture alias collided with pointer capture; only listenerCapture listens in that phase');
+});
+
+test('listenerCapture starts a gesture when a child stops the bubble, and detach removes that listener', () => {
+    const parent = fakeElement();
+    const handle = child(parent, ['.handle']);
+    const r = recorder();
+    const drag = attach(parent, { listenerCapture: true, selector: '.handle', threshold: 0, ...r.options });
+
+    const event = ptr({ target: handle, clientX: 4, clientY: 4 });
+    parent.dispatchPhased('pointerdown', event);
+    assert.equal(r.names().includes('press'), true, 'a capture listener sees the press before the child stops it');
+
+    drag.detach();
+    assert.equal(parent.captures('pointerdown'), false, 'detach removes the capture-phase listener');
+});
+
 test('accept runs before shift handling reports and never for non-arrow keys', () => {
     const el = fakeElement();
     const accepted = [];

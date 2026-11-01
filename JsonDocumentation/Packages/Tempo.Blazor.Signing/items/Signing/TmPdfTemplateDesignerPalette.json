@@ -1,0 +1,83 @@
+{
+  "itemName": "TmPdfTemplateDesignerPalette",
+  "kind": "Component",
+  "category": "Signing",
+  "description": "The field-type palette. One designer slot renders one variant: docked, rail or compact.",
+  "packageId": "Tempo.Blazor.Signing",
+  "namespace": "Tempo.Blazor.Components.Signing",
+  "sourcePath": "src/Tempo.Blazor.Signing/Components/Signing/TmPdfTemplateDesignerPalette.razor",
+  "documentationStatus": "generated",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.Signing"
+  ],
+  "parameters": [
+    {
+      "name": "Variant",
+      "type": "PdfTemplatePaletteVariant",
+      "isRequired": false,
+      "default": "Docked",
+      "description": "Where the palette is rendered. One instance occupies one slot."
+    },
+    {
+      "name": "FieldTypes",
+      "type": "IReadOnlyList<SigningFieldType>",
+      "isRequired": false,
+      "default": "[]",
+      "description": "Field types offered by the palette."
+    },
+    {
+      "name": "ShowMobileDraw",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Whether the mobile draw button renders. Only the docked slot uses it."
+    },
+    {
+      "name": "ItemClass",
+      "type": "Func<SigningFieldType, string>?",
+      "isRequired": false,
+      "description": "Class of one palette item."
+    },
+    {
+      "name": "Label",
+      "type": "Func<SigningFieldType, string>?",
+      "isRequired": false,
+      "description": "Visible label of one field type."
+    },
+    {
+      "name": "Icon",
+      "type": "Func<SigningFieldType, string>?",
+      "isRequired": false,
+      "description": "Icon name of one field type."
+    },
+    {
+      "name": "OnPointerDown",
+      "type": "EventCallback<SigningFieldType>",
+      "isRequired": false,
+      "description": "A press started on a palette item."
+    },
+    {
+      "name": "OnPointerUp",
+      "type": "EventCallback<SigningFieldType>",
+      "isRequired": false,
+      "description": "A press ended on a palette item."
+    },
+    {
+      "name": "OnClick",
+      "type": "EventCallback<SigningFieldType>",
+      "isRequired": false,
+      "description": "A click on a palette item."
+    },
+    {
+      "name": "OnCancel",
+      "type": "EventCallback",
+      "isRequired": false,
+      "description": "A press was cancelled."
+    },
+    {
+      "name": "OnMobileDraw",
+      "type": "EventCallback",
+      "isRequired": false,
+      "description": "The mobile draw button was activated."
+    }
+  ]
+}

@@ -38,6 +38,12 @@
 .tm-toolbar .tm-toolbar-btn { flex-shrink: 0; }
 .tm-toolbar-btn:hover:not(:disabled) { background: var(--tm-bg-muted); color: var(--tm-text-primary); }
 .tm-toolbar-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.tm-toolbar-btn--outlineprimary,
+.tm-toolbar-btn--outline-primary {
+  background: transparent;
+  border: 1px solid var(--tm-color-primary);
+  color: var(--tm-color-primary);
+}
 .tm-toolbar-btn--primary { background: var(--tm-color-primary); color: white; }
 .tm-toolbar-btn--primary:hover:not(:disabled) { filter: brightness(0.9); color: white; }
 .tm-toolbar-btn--danger  { color: var(--tm-color-danger); }

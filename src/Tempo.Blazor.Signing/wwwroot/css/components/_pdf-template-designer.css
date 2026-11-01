@@ -1,31 +1,21 @@
 .tm-pdf-template-designer {
-    display: grid;
-    min-height: 0;
+    display: flex;
+    /* The historical fixed height stays the default. A host overrides
+       --tm-pdf-template-designer-height, or the Height parameter, when the shell should fill it. */
+    block-size: var(--tm-pdf-template-designer-height, calc(var(--tm-space-16) * 16));
+    min-block-size: 0;
+    max-block-size: var(--tm-pdf-template-designer-height, calc(var(--tm-space-16) * 16));
     color: var(--tm-text-primary);
 }
 
 .tm-pdf-template-designer__workspace {
+    display: flex;
+    flex-direction: column;
     min-width: 0;
-    /*
-     * The workspace region — not the component root — is the CSS container on purpose: the designer
-     * renders its context menu as a `position: fixed` host anchored to viewport coordinates, and a
-     * container would become that fixed host's containing block (the Gantt lesson) and displace the
-     * menu. The host is a SIBLING of the workspace under the root, so the workspace is a safe
-     * container. A @container rule can never restyle the CONTAINER itself, so the workspace's
-     * responsive grid lives on the inner `__workspace-grid` element below.
-     */
-    container: tm-pdf-template-designer / inline-size;
-    /* inline-size containment sizes the box as if it were empty: keep it filling its parent
-       instead of shrink-to-fit. */
     min-inline-size: 0;
     inline-size: 100%;
-}
-
-.tm-pdf-template-designer__workspace-grid {
-    display: grid;
-    grid-template-columns: minmax(calc(var(--tm-space-16) * 3), calc(var(--tm-space-16) * 3.25)) minmax(0, 1fr) minmax(calc(var(--tm-space-16) * 4.25), calc(var(--tm-space-16) * 5));
-    gap: var(--tm-space-4);
-    align-items: start;
+    min-block-size: 0;
+    block-size: 100%;
 }
 
 .tm-pdf-template-designer--disabled {
@@ -34,40 +24,64 @@
 
 .tm-pdf-template-designer__canvas {
     min-width: 0;
-    min-height: calc(var(--tm-space-16) * 8);
+    flex: 1 1 0;
+    flex-basis: 1fr;
+    min-block-size: 0;
     overflow: auto;
     padding: var(--tm-space-4);
     border: 1px solid var(--tm-border-color);
     border-radius: var(--tm-radius-md);
-    background: var(--tm-bg-muted);
+    background: var(--tm-bg-workspace);
 }
 
+/* The toolbar is a TmToolbar now: it owns its own row, overflow and gap. The designer class only
+   drops the shell's extra bottom margin so the canvas starts flush under it. */
 .tm-pdf-template-designer__toolbar {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: space-between;
-    gap: var(--tm-space-2);
+    margin-bottom: 0;
     min-width: 0;
-    margin-bottom: var(--tm-space-3);
 }
 
-.tm-pdf-template-designer__page-controls,
-.tm-pdf-template-designer__view-controls,
-.tm-pdf-template-designer__zoom-controls,
-.tm-pdf-template-designer__culture-control {
-    display: inline-flex;
-    flex-wrap: wrap;
-    align-items: center;
+/* Tablet: two toolbars, one per row. A single overflowing row clipped Fit width / Fit page.
+   The rows stretch to the shell slot. A flex item otherwise shrinks to its content, and TmToolbar
+   then measures that content width and collapses every labelled button into More. */
+.tm-pdf-template-designer__toolbar-rows {
+    display: flex;
+    flex-direction: column;
     gap: var(--tm-space-1);
     min-width: 0;
+    inline-size: 100%;
+}
+
+.tm-pdf-template-designer__toolbar-row {
+    display: flex;
+    min-width: 0;
+    inline-size: 100%;
+}
+
+.tm-pdf-template-designer__toolbar-row > .tm-pdf-template-designer__toolbar {
+    flex: 1 1 auto;
+    inline-size: 100%;
+}
+
+/* The tablet rail is rendered in the toolbar slot so the inspector sheet cannot cover it.
+   The shell region is a row; stack the rail under the button bar. */
+.tm-editor-shell__toolbar:has(.tm-pdf-template-designer__palette--canvas) {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--tm-space-2);
 }
 
 .tm-pdf-template-designer__culture-control {
     gap: var(--tm-space-2);
     color: var(--tm-text-secondary);
     font-size: var(--tm-font-size-sm);
+    /* The label sits above the select; a wrapping flex item painted it over the next group. */
+    flex-wrap: nowrap;
+    flex-shrink: 0;
 }
+
+
 
 .tm-pdf-template-designer__culture-preview {
     box-sizing: border-box;
@@ -133,15 +147,47 @@
     background: var(--tm-bg-surface);
 }
 
-.tm-pdf-template-designer__palette--compact {
-    grid-template-columns: repeat(auto-fit, minmax(var(--tm-space-12), 1fr));
+.tm-pdf-template-designer__palette--rail {
+    display: flex;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    grid-template-columns: none;
+}
+
+.tm-pdf-template-designer__palette--rail .tm-pdf-template-designer__palette-item {
+    flex: 0 0 auto;
+    inline-size: var(--tm-touch-target);
+    block-size: var(--tm-touch-target);
+    min-inline-size: var(--tm-touch-target);
+    min-block-size: var(--tm-touch-target);
+    padding: 0;
+}
+
+.tm-pdf-template-designer__palette--rail .tm-pdf-template-designer__palette-label {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+/* The canvas rail only earns its place on a tablet, where the shell hides the docked palette. */
+.tm-pdf-template-designer__palette--canvas {
+    display: none;
+}
+
+.tm-editor-shell[data-layout="tablet"] .tm-pdf-template-designer__palette--canvas {
+    display: grid;
 }
 
 .tm-pdf-template-designer__palette-item,
 .tm-pdf-template-designer__mobile-draw,
 .tm-pdf-template-designer__detect,
-.tm-pdf-template-designer__delete-selected,
-.tm-pdf-template-designer__context-trigger {
+.tm-pdf-template-designer__delete-selected {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -166,9 +212,10 @@
 .tm-pdf-template-designer__palette-item span,
 .tm-pdf-template-designer__mobile-draw {
     min-width: 0;
-    overflow-wrap: anywhere;
+    overflow: hidden;
     text-align: left;
-    white-space: normal;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .tm-pdf-template-designer__palette-item[draggable="true"] {
@@ -193,7 +240,9 @@
 }
 
 .tm-pdf-template-designer__clipboard-status {
-    display: inline-flex;
+    /* A block, not an inline flex: an inline status shares a line with the page grid, and the
+       paste render wraps that line, sliding the page out from under the click. */
+    display: flex;
     align-items: center;
     gap: var(--tm-space-2);
     max-width: 100%;
@@ -208,7 +257,9 @@
 
 .tm-pdf-template-designer__clipboard-status span {
     min-width: 0;
-    overflow-wrap: anywhere;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .tm-pdf-template-designer__pages {
@@ -217,7 +268,10 @@
 }
 
 .tm-pdf-template-designer__page-frame {
+    /* The canvas column is 1fr; the page fills it instead of stopping at a fixed column. */
+    inline-size: 100%;
     min-width: 0;
+    margin-inline: auto;
 }
 
 .tm-pdf-template-designer__page-surface {
@@ -248,14 +302,21 @@
 
 .tm-pdf-template-designer__panel {
     min-width: 0;
+    /* The inspector is an inline-size container, which sizes as if empty and then stretches to a
+       percentage height. That stretch feeds back into the shell and moves the page under a paste. */
+    align-self: start;
+    block-size: auto;
 }
 
-.tm-pdf-template-designer__context-host {
+.tm-pdf-template-designer__context-anchor {
+    position: absolute;
+    inline-size: 0;
+    block-size: 0;
+}
+
+.tm-pdf-template-designer__context-menu {
     position: fixed;
     z-index: var(--tm-z-tooltip);
-}
-
-.tm-pdf-template-designer__context-actions {
     display: grid;
     min-width: calc(var(--tm-space-16) * 2.5);
     padding: var(--tm-space-1);
@@ -265,76 +326,13 @@
     box-shadow: var(--tm-shadow-lg);
 }
 
-.tm-pdf-template-designer__context-host .tm-context-menu-wrapper {
-    position: absolute;
-    width: 0;
-    height: 0;
-    overflow: hidden;
-    pointer-events: none;
-}
-
-.tm-pdf-template-designer__context-action {
-    display: flex;
-    align-items: center;
-    min-height: var(--tm-space-8);
-    padding: var(--tm-space-2) var(--tm-space-3);
-    border: 0;
-    border-radius: var(--tm-radius-sm);
-    background: transparent;
-    color: var(--tm-text-primary);
-    font: inherit;
-    text-align: left;
-    cursor: pointer;
-}
-
-.tm-pdf-template-designer__context-action:hover {
-    background: var(--tm-bg-muted);
-}
-
-.tm-pdf-template-designer__context-action:disabled {
-    color: var(--tm-text-disabled);
-    cursor: default;
-}
-
-.tm-pdf-template-designer__context-trigger {
-    min-width: var(--tm-space-8);
-    min-height: var(--tm-space-8);
-    padding: var(--tm-space-1);
-    opacity: 0;
-}
-
 .tm-pdf-template-designer__detection-error {
     margin-bottom: var(--tm-space-3);
 }
 
-/* Breakpoints are the library convention (640/768/1024/1280) applied to the designer's own width.
-   Measured at a 1440×900 demo viewport the workspace container is ~1030px, while the pre-change
-   viewport steps fired at 1100/900 — i.e. at container ≈787/644px. The container thresholds are
-   therefore the LOWER steps (768/640): keying the collapse to 1024 would have dropped the designer
-   to two columns at common desktop sizes (the container runs ~72% of the viewport inside the demo
-   shell). The right panel drops below the canvas once the workspace is tablet-narrow, and the
-   palette stacks once it is phone-narrow — independent of how wide the viewport is. */
-@container tm-pdf-template-designer (width < 768px) {
-    .tm-pdf-template-designer__workspace-grid {
-        grid-template-columns: minmax(calc(var(--tm-space-16) * 2.5), calc(var(--tm-space-16) * 3)) minmax(0, 1fr);
-    }
-
-    .tm-pdf-template-designer__panel {
-        grid-column: 1 / -1;
-    }
-}
-
-@container tm-pdf-template-designer (width < 640px) {
-    .tm-pdf-template-designer__workspace-grid,
-    .tm-pdf-template-designer--mobile .tm-pdf-template-designer__workspace-grid {
-        grid-template-columns: minmax(0, 1fr);
-    }
-
-    .tm-pdf-template-designer__palette {
-        grid-template-columns: repeat(auto-fit, minmax(calc(var(--tm-space-16) * 1.25), 1fr));
-    }
-
-    .tm-pdf-template-designer__toolbar {
-        justify-content: flex-start;
+@media (pointer: coarse) {
+    .tm-pdf-template-designer__context-menu .tm-context-menu__item,
+    .tm-pdf-template-designer__context-menu [role="menuitem"] {
+        min-block-size: var(--tm-touch-target);
     }
 }

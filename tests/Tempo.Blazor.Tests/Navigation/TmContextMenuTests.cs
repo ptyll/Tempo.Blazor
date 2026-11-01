@@ -303,6 +303,80 @@ public class TmContextMenuTests : LocalizationTestBase
             .Should().Be(1, "after dispose the call is a no-op, not an exception");
     }
 
+    [Fact]
+    public void TmContextMenu_Open_RendersMenu_AndIsIdempotent()
+    {
+        var cut = Render<TmContextMenu>(p => p
+            .Add(x => x.Trigger, (RenderFragment)(b => b.AddMarkupContent(0, "<span>Open</span>")))
+            .AddChildContent<TmContextMenuItem>(mi => mi.Add(x => x.Label, "Edit")));
+
+        cut.FindAll("[role='menu']").Should().BeEmpty();
+        cut.InvokeAsync(() => cut.Instance.Open());
+        cut.FindAll("[role='menu']").Should().ContainSingle();
+        cut.InvokeAsync(() => cut.Instance.Open());
+        cut.FindAll("[role='menu']").Should().ContainSingle("a second Open does not nest another menu");
+    }
+
+    [Fact]
+    public void TmContextMenu_IsOpenChanged_RaisedFromSetOpenAndCloseMenu()
+    {
+        var reported = new List<bool>();
+        var cut = Render<TmContextMenu>(p => p
+            .Add(x => x.Trigger, (RenderFragment)(b => b.AddMarkupContent(0, "<span>Open</span>")))
+            .Add(x => x.IsOpenChanged, EventCallback.Factory.Create<bool>(this, reported.Add))
+            .AddChildContent<TmContextMenuItem>(mi => mi.Add(x => x.Label, "Edit")));
+
+        cut.InvokeAsync(() => cut.Instance.Open());
+        reported.Should().Equal(true);
+
+        cut.Find(".tm-context-menu__item").Click();
+        cut.WaitForAssertion(() => reported.Should().Equal(true, false));
+    }
+
+    [Fact]
+    public async Task ContextMenu_Escape_RaisesIsOpenChangedFalseExactlyOnce()
+    {
+        var reported = new List<bool>();
+        var cut = Render<TmContextMenu>(p => p
+            .Add(x => x.Trigger, (RenderFragment)(b => b.AddMarkupContent(0, "<span>Open</span>")))
+            .Add(x => x.IsOpenChanged, EventCallback.Factory.Create<bool>(this, reported.Add))
+            .AddChildContent<TmContextMenuItem>(mi => mi.Add(x => x.Label, "Edit")));
+
+        await cut.InvokeAsync(() => cut.Instance.Open());
+        reported.Should().Equal([true], "Open raises the callback after the menu is open");
+
+        var overlay = cut.FindComponent<TmOverlayPanel>();
+        await cut.InvokeAsync(() => overlay.Instance.NotifyDismissedAsync("escape"));
+        await cut.InvokeAsync(() => overlay.Instance.NotifyDismissedAsync("escape"));
+
+        reported.Should().Equal([true, false], "Escape raises IsOpenChanged(false) exactly once");
+        cut.FindAll("[role='menu']").Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task TmContextMenuItem_OnClick_InvokedAfterParentCloses()
+    {
+        var clicked = false;
+        var menuOpenWhenClicked = true;
+        IRenderedComponent<TmContextMenu>? cut = null;
+        cut = Render<TmContextMenu>(p => p
+            .Add(x => x.Trigger, (RenderFragment)(b => b.AddMarkupContent(0, "<span>Open</span>")))
+            .AddChildContent<TmContextMenuItem>(mi => mi
+                .Add(x => x.Label, "Edit")
+                .Add(x => x.OnClick, EventCallback.Factory.Create(this, () =>
+                {
+                    menuOpenWhenClicked = cut!.FindAll("[role='menu']").Count > 0;
+                    clicked = true;
+                }))));
+
+        cut.Find(".tm-context-menu__trigger").Click();
+        cut.Find(".tm-context-menu__item").Click();
+        await cut.InvokeAsync(() => Task.Yield());
+
+        clicked.Should().BeTrue("closing the menu must not drop the item's OnClick");
+        menuOpenWhenClicked.Should().BeFalse("the parent closes before the item handler runs");
+    }
+
     // ── Helper ─────────────────────────────────────────────
 
     private IRenderedComponent<TmContextMenu> RenderOpenMenu()

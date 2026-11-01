@@ -185,7 +185,6 @@ public class UnconstrainedClassOwnershipTests
         // context-menu wrapper (position, Override).
         ".tm-btn Tempo.Blazor/_button.css|Tempo.Blazor/_color-picker.css",
         ".tm-condition-builder__row Tempo.Blazor.Signing/_condition-builder.css|Tempo.Blazor.Signing/_signing-field-editor-panel.css",
-        ".tm-context-menu-wrapper Tempo.Blazor.Signing/_pdf-template-designer.css|Tempo.Blazor/_context-menu.css",
 
         // NotionEditor's dark skin restyles the typography file's blocks — background Overrides on
         // the callout/code-block classes and on code itself, all inside the notion regions.

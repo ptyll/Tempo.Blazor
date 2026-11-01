@@ -2,12 +2,15 @@ using System.Globalization;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.JSInterop;
+using Tempo.Blazor.Abstractions.Layout;
 using Tempo.Blazor.Abstractions.Models;
+using Tempo.Blazor.Components.Actions;
+using Tempo.Blazor.Components.Navigation;
 
 namespace Tempo.Blazor.Components.Signing;
 
 /// <summary>Designs PDF signing templates with page overlays, field palette, selection, and field settings.</summary>
-public partial class TmPdfTemplateDesigner
+public partial class TmPdfTemplateDesigner : IAsyncDisposable
 {
     private const double DefaultPageWidth = 1000;
     private const double DefaultPageHeight = 1000;
@@ -38,14 +41,41 @@ public partial class TmPdfTemplateDesigner
     private int? _lastPageIndexParameter;
     private SigningFieldType? _drawType;
     private SigningFieldType? _dragType;
+    private bool _paletteHandledByPointer;
     private DrawState? _drawState;
     private MoveState? _moveState;
     private ResizeState? _resizeState;
     private ContextMenuState? _contextMenu;
+    private bool _contextMenuPending;
+    private ContextMenuState? _contextAction;
     private readonly List<SigningField> _clipboardFields = [];
     private readonly Dictionary<string, ElementReference> _pageSurfaceRefs = [];
     private string? _clipboardStatus;
+
     private IJSObjectReference? _jsModule;
+    private IJSObjectReference? _fieldDrag;
+    private DotNetObjectReference<TmPdfTemplateDesigner>? _selfRef;
+    private ElementReference _workspaceRef;
+    private ElementReference _attachedWorkspace;
+    private bool _fieldDragAttached;
+    private bool _attachingFieldDrag;
+
+    /// <summary>
+    /// Blazor move/up listeners. Omitted once the JS session owns the gesture, so a pointer move
+    /// does not schedule a render.
+    /// </summary>
+    private Dictionary<string, object>? WorkspacePointerHandlers =>
+        _fieldDragAttached
+            ? null
+            : new Dictionary<string, object>
+            {
+                ["onpointermove"] = EventCallback.Factory.Create<PointerEventArgs>(this, HandlePointerMoveAsync),
+                ["onpointerup"] = EventCallback.Factory.Create<PointerEventArgs>(this, HandlePointerUpAsync),
+            };
+    private bool _paletteOpen = true;
+    private bool _inspectorDismissed;
+    private TmLayoutMode _resolvedLayout = TmLayoutMode.Desktop;
+    private TmContextMenu? _contextMenuRef;
     private bool _isDetecting;
     private string? _detectionError;
     private int _currentPageIndex;
@@ -74,8 +104,30 @@ public partial class TmPdfTemplateDesigner
     /// <summary>Whether editing controls should be disabled.</summary>
     [Parameter] public bool Disabled { get; set; }
 
-    /// <summary>Whether to render a compact mobile-oriented designer layout.</summary>
+    /// <summary>
+    /// CSS block size of the designer. Null keeps
+    /// <c>var(--tm-pdf-template-designer-height)</c>, which defaults to the historical fixed height.
+    /// </summary>
+    [Parameter] public string? Height { get; set; }
+
+    /// <summary>
+    /// Breakpoints the shell classifies its own container with. Null uses the designer default
+    /// (mobile below 768, desktop from 1200), the same steps as the sibling editors.
+    /// </summary>
+    [Parameter] public TmLayoutBreakpoints? LayoutBreakpoints { get; set; }
+
+    /// <summary>
+    /// Whether to force the mobile layout. Obsolete: set <see cref="LayoutMode"/> to
+    /// <see cref="TmLayoutMode.Mobile"/>; this flag stays as an alias that maps to it.
+    /// </summary>
+    [Obsolete("Use LayoutMode: MobileMode stays as an alias that forces TmLayoutMode.Mobile.")]
     [Parameter] public bool MobileMode { get; set; }
+
+    /// <summary>
+    /// How the designer decides its layout. <see cref="TmLayoutMode.Auto"/> follows the shell's own
+    /// container measurement; a forced value renders that layout without a DOM measurement. Defaults to Auto.
+    /// </summary>
+    [Parameter] public TmLayoutMode LayoutMode { get; set; } = TmLayoutMode.Auto;
 
     /// <summary>Current page index used when <see cref="ViewMode"/> is <see cref="DocumentPageViewMode.SinglePage"/>.</summary>
     [Parameter] public int PageIndex { get; set; }
@@ -138,6 +190,10 @@ public partial class TmPdfTemplateDesigner
 
     private int SelectedFieldCount => _selectedFieldUuids.Count(uuid => _fields.Any(item => item.Uuid == uuid));
 
+    private string RootStyle => string.IsNullOrWhiteSpace(Height)
+        ? string.Empty
+        : $"--tm-pdf-template-designer-height: {Height};";
+
     private string RootClass
     {
         get
@@ -146,7 +202,9 @@ public partial class TmPdfTemplateDesigner
             AddClass(classes, _drawType.HasValue, "tm-pdf-template-designer--drawing");
             AddClass(classes, _dragType.HasValue, "tm-pdf-template-designer--dragging");
             AddClass(classes, Disabled, "tm-pdf-template-designer--disabled");
-            AddClass(classes, MobileMode, "tm-pdf-template-designer--mobile");
+#pragma warning disable CS0618
+            AddClass(classes, MobileMode || ResolvedLayout == TmLayoutMode.Mobile, "tm-pdf-template-designer--mobile");
+#pragma warning restore CS0618
 
             if (!string.IsNullOrWhiteSpace(Class))
             {
@@ -157,9 +215,103 @@ public partial class TmPdfTemplateDesigner
         }
     }
 
-    private string PaletteClass => MobileMode
+    private static readonly TmLayoutBreakpoints DesignerBreakpoints = new(768, 1200);
+
+    private TmLayoutMode ShellLayoutMode
+    {
+        get
+        {
+#pragma warning disable CS0618
+            // MobileMode is the obsolete alias. The shell only sees LayoutMode, so the alias has to
+            // pin it or a wide test host classifies the designer as desktop.
+            if (MobileMode) return TmLayoutMode.Mobile;
+#pragma warning restore CS0618
+            return LayoutMode;
+        }
+    }
+
+    private TmLayoutMode ResolvedLayout
+    {
+        get
+        {
+#pragma warning disable CS0618
+            if (MobileMode) return TmLayoutMode.Mobile;
+#pragma warning restore CS0618
+            // A forced mode wins. Auto follows the shell's own measurement, reported through
+            // ResolvedLayoutChanged — never a JS read of data-layout.
+            return LayoutMode != TmLayoutMode.Auto ? LayoutMode : _resolvedLayout;
+        }
+    }
+
+    private bool InspectorOpen =>
+        ResolvedLayout != TmLayoutMode.Tablet || (SelectedFieldCount > 0 && !_inspectorDismissed);
+
+    private bool ShowCanvasPalette => ResolvedLayout == TmLayoutMode.Tablet;
+
+    /// <summary>
+    /// The docked palette is the Left content. On a tablet the rail owns the palette, so Left
+    /// must render nothing — an empty fragment still counts as content and opens the drawer.
+    /// </summary>
+    private bool ShowDockedPalette => !Disabled && Documents.Count > 0 && !ShowCanvasPalette;
+
+    private Task OnShellLayoutChanged(TmLayoutMode mode)
+    {
+        if (mode == TmLayoutMode.Auto || mode == _resolvedLayout)
+        {
+            return Task.CompletedTask;
+        }
+
+        _resolvedLayout = mode;
+        return InvokeAsync(StateHasChanged);
+    }
+
+    private Task OnInspectorOpenChanged(bool open)
+    {
+        if (!open && ResolvedLayout == TmLayoutMode.Tablet)
+        {
+            _inspectorDismissed = true;
+        }
+
+        return InvokeAsync(StateHasChanged);
+    }
+
+    private bool PaletteOpen => ShowDockedPalette && _paletteOpen;
+
+    private Task OnPaletteOpenChanged(bool open)
+    {
+        _paletteOpen = open;
+        return InvokeAsync(StateHasChanged);
+    }
+
+    private Dictionary<string, object> CulturePreviewAttributes => new()
+    {
+        ["class"] = "tm-pdf-template-designer__culture-preview",
+        ["aria-label"] = Loc["TmPdfTemplateDesigner_CulturePreviewAria"]
+    };
+
+    private string ViewButtonClass(DocumentPageViewMode mode, string hook)
+        => _viewMode == mode
+            ? $"tm-pdf-template-designer__toolbar-button--active {hook}"
+            : hook;
+
+    private Task HandleCultureValueChangedAsync(string value)
+        => HandleCultureChangedAsync(new ChangeEventArgs { Value = value });
+
+    private IReadOnlyList<TmActionItem> CultureMenuItems => DesignerCultures
+        .Select(culture => new TmActionItem
+        {
+            Id = "culture-" + culture,
+            Label = GetCultureLabel(culture),
+            Checked = string.Equals(culture, CurrentCulture, StringComparison.OrdinalIgnoreCase),
+            OnClick = EventCallback.Factory.Create(this, () => HandleCultureValueChangedAsync(culture))
+        })
+        .ToList();
+
+    private string PaletteClass => ResolvedLayout == TmLayoutMode.Mobile
         ? "tm-pdf-template-designer__palette tm-pdf-template-designer__palette--compact"
-        : "tm-pdf-template-designer__palette";
+        : ResolvedLayout == TmLayoutMode.Tablet
+            ? "tm-pdf-template-designer__palette tm-pdf-template-designer__palette--rail"
+            : "tm-pdf-template-designer__palette";
 
     private string ContextMenuStyle => _contextMenu is null
         ? string.Empty
@@ -225,22 +377,157 @@ public partial class TmPdfTemplateDesigner
         EnsureSelectedPageVisible();
     }
 
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        await base.OnAfterRenderAsync(firstRender);
+        await OpenContextMenuAsync();
+
+        if (Disabled)
+        {
+            await DetachFieldDragAsync();
+            return;
+        }
+
+        // A layout switch remounts the canvas, so the session follows the new workspace element.
+        // Re-entered while an attach is in flight: that entry owns the workspace, and detaching here
+        // would drop the session it is about to keep.
+        if (_attachingFieldDrag)
+        {
+            return;
+        }
+
+        if (_fieldDragAttached && _attachedWorkspace.Equals(_workspaceRef))
+        {
+            return;
+        }
+
+        _attachingFieldDrag = true;
+        try
+        {
+            await AttachFieldDragAsync();
+        }
+        finally
+        {
+            _attachingFieldDrag = false;
+        }
+    }
+
+    private async Task AttachFieldDragAsync()
+    {
+        await DetachFieldDragAsync();
+
+        try
+        {
+            _jsModule ??= await JS.InvokeAsync<IJSObjectReference>("import", "./_content/Tempo.Blazor.Signing/js/pdf-template-designer.js");
+            _selfRef ??= DotNetObjectReference.Create(this);
+            _fieldDrag = await _jsModule.InvokeAsync<IJSObjectReference>("attachFieldDrag", _workspaceRef, _selfRef);
+            _attachedWorkspace = _workspaceRef;
+            // A real module returns a session whose detach is a function. Loose JS (bUnit) returns a
+            // stand-in for every invoke, including a missing export, and that stand-in must not steal
+            // the gesture from the Blazor fallback.
+            var probe = await _fieldDrag.InvokeAsync<string?>("probe");
+            _fieldDragAttached = probe == "pdf-template-designer-pointer";
+            if (_fieldDragAttached)
+            {
+                // Drop the Blazor move/up listeners now that JS owns the gesture. The guard above
+                // keeps this render from attaching a second session.
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+        catch (JSException)
+        {
+            // bUnit and prerender have no module; the pointer handlers stay the fallback.
+        }
+        catch (JSDisconnectedException)
+        {
+            _fieldDragAttached = false;
+        }
+        catch (InvalidOperationException)
+        {
+            // bUnit and prerender have no module; the pointer handlers stay the fallback.
+        }
+    }
+
+    private async Task DetachFieldDragAsync()
+    {
+        _fieldDragAttached = false;
+        _attachedWorkspace = default;
+        var session = _fieldDrag;
+        _fieldDrag = null;
+        if (session is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await session.InvokeVoidAsync("detach");
+            await session.DisposeAsync();
+        }
+        catch (Exception ex) when (ex is JSException or JSDisconnectedException or InvalidOperationException)
+        {
+            // The circuit is already gone, or the session never attached.
+        }
+    }
+
+    private async Task OpenContextMenuAsync()
+    {
+        if (_contextMenu is null || _contextMenuRef is null)
+        {
+            return;
+        }
+
+        if (!_contextMenuPending)
+        {
+            return;
+        }
+
+        _contextMenuPending = false;
+        _contextMenuRef.Open();
+        await Task.CompletedTask;
+    }
+
+    private Task OnContextMenuOpenChanged(bool open)
+    {
+        if (open)
+        {
+            return Task.CompletedTask;
+        }
+
+        // Unmount on close. A menu left mounted reopens itself on the next render, and its
+        // trigger stays in the tab order.
+        _contextMenu = null;
+        _contextMenuPending = false;
+        return InvokeAsync(StateHasChanged);
+    }
+
+
     private RenderFragment RenderPageOverlay(SigningDocumentPage page) => builder =>
     {
         var sequence = 0;
         builder.OpenElement(sequence++, "div");
         builder.AddAttribute(sequence++, "class", "tm-pdf-template-designer__page-surface");
         builder.AddAttribute(sequence++, "data-page-key", GetPageKey(page));
-        builder.AddAttribute(sequence++, "onmousedown", EventCallback.Factory.Create<MouseEventArgs>(this, args => HandlePagePointerDownAsync(page, args)));
-        builder.AddAttribute(sequence++, "onmousemove", EventCallback.Factory.Create<MouseEventArgs>(this, args => HandlePagePointerMoveAsync(page, args)));
-        builder.AddAttribute(sequence++, "onmouseup", EventCallback.Factory.Create<MouseEventArgs>(this, args => HandlePagePointerUpAsync(page, args)));
-        builder.AddAttribute(sequence++, "oncontextmenu", EventCallback.Factory.Create<MouseEventArgs>(this, args => OpenPageContextMenu(page, args)));
-        builder.AddEventPreventDefaultAttribute(sequence++, "oncontextmenu", true);
-        builder.AddAttribute(sequence++, "ondragover", EventCallback.Factory.Create<DragEventArgs>(this, _ => Task.CompletedTask));
-        builder.AddEventPreventDefaultAttribute(sequence++, "ondragover", true);
-        builder.AddAttribute(sequence++, "ondrop", EventCallback.Factory.Create<DragEventArgs>(this, args => HandlePaletteDropAsync(page, args)));
-        builder.AddEventPreventDefaultAttribute(sequence++, "ondrop", true);
-        builder.AddElementReferenceCapture(sequence++, reference => _pageSurfaceRefs[GetPageKey(page)] = reference);
+        builder.AddAttribute(sequence++, "onpointerdown", EventCallback.Factory.Create<PointerEventArgs>(this, args => HandlePagePointerDownAsync(page, args)));
+        // A press must not move focus: the workspace is a tall focusable, and the browser scrolls it into view
+        // before the gesture is measured, which shifts the page under the pointer.
+        builder.AddEventPreventDefaultAttribute(sequence++, "onpointerdown", true);
+        // pointerdown's default is not the mouse focus: the mousedown that follows still scrolls the canvas
+        // to reveal the focused workspace. This is not a drag handler — it only cancels that focus.
+        builder.AddEventPreventDefaultAttribute(sequence++, "onmousedown", true);
+        // The move listener exists only while a Blazor draw is in progress and JS has not taken
+        // the gesture. The capture frame stays at a fixed sequence so adding the listener does not
+        // shift it (Blazor cannot remove an ElementReferenceCapture).
+        if (!_fieldDragAttached && _drawState is not null)
+        {
+            builder.AddAttribute(20, "onpointermove", EventCallback.Factory.Create<PointerEventArgs>(this, args => HandlePagePointerMoveAsync(page, args)));
+        }
+        // pointerup stays even after the JS session attaches. The session owns move and resize, but a
+        // draw commits here, and the handler returns immediately when no draw is in progress.
+        builder.AddAttribute(21, "onpointerup", EventCallback.Factory.Create<PointerEventArgs>(this, args => HandlePagePointerUpAsync(page, args)));
+        builder.AddAttribute(22, "oncontextmenu", EventCallback.Factory.Create<MouseEventArgs>(this, args => OpenPageContextMenu(page, args)));
+        builder.AddEventPreventDefaultAttribute(23, "oncontextmenu", true);
+        builder.AddElementReferenceCapture(24, reference => _pageSurfaceRefs[GetPageKey(page)] = reference);
 
         foreach (var field in _fields)
         {
@@ -315,9 +602,41 @@ public partial class TmPdfTemplateDesigner
         return Task.CompletedTask;
     }
 
+    private Task HandlePaletteClickAsync(SigningFieldType type)
+    {
+        // A real press already committed through pointerup; the click that follows it must not place
+        // a second field. bUnit's Click() raises onclick without a pointer, so that path still works.
+        if (_paletteHandledByPointer)
+        {
+            _paletteHandledByPointer = false;
+            return Task.CompletedTask;
+        }
+
+        return _drawType == type ? PlacePaletteFieldAsync(type) : SelectFieldTypeAsync(type);
+    }
+
+    private async Task PlacePaletteFieldAsync(SigningFieldType type)
+    {
+        if (Disabled || Documents.Count == 0)
+        {
+            return;
+        }
+
+        var page = VisibleDocuments.FirstOrDefault() ?? Documents[Math.Clamp(_currentPageIndex, 0, Documents.Count - 1)];
+        var area = CreateDefaultAreaAtPoint(page, type, 0.1, 0.1);
+        var field = CreateField(type, area);
+        _fields.Add(field);
+        _selectedFieldUuids.Clear();
+        _selectedFieldUuids.Add(field.Uuid);
+        _drawType = type;
+        _contextMenu = null;
+        await NotifyFieldsChangedAsync();
+    }
+
     private Task StartPaletteDrag(SigningFieldType type)
     {
-        if (Disabled)
+        // The JS session owns the palette while it is attached. These handlers are the fallback.
+        if (Disabled || _fieldDragAttached)
         {
             return Task.CompletedTask;
         }
@@ -332,6 +651,22 @@ public partial class TmPdfTemplateDesigner
     {
         _dragType = null;
         return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// A press that ends on the palette itself is a tap (select the type, or place a default field on
+    /// the second tap). A press that ends on a page is a placement and is committed there.
+    /// </summary>
+    private Task FinishPalettePressAsync(SigningFieldType type)
+    {
+        if (_fieldDragAttached || _dragType != type)
+        {
+            return Task.CompletedTask;
+        }
+
+        _dragType = null;
+        _paletteHandledByPointer = true;
+        return _drawType == type ? PlacePaletteFieldAsync(type) : SelectFieldTypeAsync(type);
     }
 
     private async Task GoToPreviousPageAsync()
@@ -400,146 +735,6 @@ public partial class TmPdfTemplateDesigner
         await ZoomModeChanged.InvokeAsync(_zoomMode);
     }
 
-    private async Task HandlePaletteDropAsync(SigningDocumentPage page, DragEventArgs args)
-    {
-        if (Disabled || _dragType is not { } type)
-        {
-            return;
-        }
-
-        var point = await ToPointAsync(page, args);
-        var area = CreateDefaultAreaAtPoint(page, type, point.X, point.Y);
-        var field = CreateField(type, area);
-        _fields.Add(field);
-        _selectedFieldUuids.Clear();
-        _selectedFieldUuids.Add(field.Uuid);
-        _dragType = null;
-        _drawType = null;
-        await NotifyFieldsChangedAsync();
-    }
-
-    private async Task HandlePagePointerDownAsync(SigningDocumentPage page, MouseEventArgs args)
-    {
-        if (Disabled)
-        {
-            return;
-        }
-
-        var point = await ToPointAsync(page, args);
-        if (_drawType.HasValue)
-        {
-            _drawState = new DrawState(page, point.X, point.Y, new SigningFieldArea
-            {
-                Uuid = Guid.NewGuid().ToString("N"),
-                AttachmentUuid = page.AttachmentUuid,
-                Page = page.PageIndex,
-                X = point.X,
-                Y = point.Y
-            });
-            return;
-        }
-
-        _selectedFieldUuids.Clear();
-        _drawState = new DrawState(page, point.X, point.Y, new SigningFieldArea
-        {
-            Uuid = "selection",
-            AttachmentUuid = page.AttachmentUuid,
-            Page = page.PageIndex,
-            X = point.X,
-            Y = point.Y
-        }, isSelectionBox: true);
-        await Task.CompletedTask;
-    }
-
-    private async Task HandlePagePointerMoveAsync(SigningDocumentPage page, MouseEventArgs args)
-    {
-        if (_drawState is null || _drawState.PageKey != GetPageKey(page))
-        {
-            return;
-        }
-
-        var point = await ToPointAsync(page, args);
-        _drawState.Area = CreateAreaFromPoints(_drawState.Page, _drawState.StartX, _drawState.StartY, point.X, point.Y, _drawState.Area.Uuid);
-    }
-
-    private async Task HandlePagePointerUpAsync(SigningDocumentPage page, MouseEventArgs args)
-    {
-        if (_drawState is null || _drawState.PageKey != GetPageKey(page))
-        {
-            return;
-        }
-
-        var point = await ToPointAsync(page, args);
-        _drawState.Area = CreateAreaFromPoints(_drawState.Page, _drawState.StartX, _drawState.StartY, point.X, point.Y, _drawState.Area.Uuid);
-        await HandlePointerUpAsync(args);
-    }
-
-    private async Task HandlePointerMoveAsync(MouseEventArgs args)
-    {
-        if (_moveState is not null)
-        {
-            var deltaX = (args.ClientX - _moveState.StartClientX) / DefaultPageWidth;
-            var deltaY = (args.ClientY - _moveState.StartClientY) / DefaultPageHeight;
-            ApplyMove(deltaX, deltaY);
-            return;
-        }
-
-        if (_resizeState is not null)
-        {
-            var deltaX = (args.ClientX - _resizeState.StartClientX) / DefaultPageWidth;
-            var deltaY = (args.ClientY - _resizeState.StartClientY) / DefaultPageHeight;
-            ApplyResize(deltaX, deltaY);
-            await NotifyFieldsChangedAsync();
-        }
-    }
-
-    private async Task HandlePointerUpAsync(MouseEventArgs args)
-    {
-        if (_drawState is not null)
-        {
-            var state = _drawState;
-            _drawState = null;
-
-            if (state.Area.Width < MinWidth || state.Area.Height < MinHeight)
-            {
-                return;
-            }
-
-            if (state.IsSelectionBox)
-            {
-                SelectFieldsInRectangle(state.Page, state.Area);
-                return;
-            }
-
-            if (_drawType.HasValue)
-            {
-                var field = CreateField(_drawType.Value, state.Area);
-                _fields.Add(field);
-                _selectedFieldUuids.Clear();
-                _selectedFieldUuids.Add(field.Uuid);
-                await NotifyFieldsChangedAsync();
-            }
-        }
-
-        if (_moveState is not null)
-        {
-            _moveState = null;
-            await NotifyFieldsChangedAsync();
-        }
-
-        _resizeState = null;
-    }
-
-    private async Task HandleDesignerKeyDownAsync(KeyboardEventArgs args)
-    {
-        if (Disabled || args.Key is not "Delete" || _selectedFieldUuids.Count == 0)
-        {
-            return;
-        }
-
-        await DeleteSelectedAsync();
-    }
-
     private async Task SelectFieldAsync(TmSigningFieldOverlayPointerEventArgs args, bool append)
     {
         if (args.Field is null)
@@ -552,6 +747,8 @@ public partial class TmPdfTemplateDesigner
         {
             _selectedFieldUuids.Clear();
         }
+
+        _inspectorDismissed = false;
 
         if (useAppend && _selectedFieldUuids.Contains(args.Field.Uuid))
         {
@@ -627,12 +824,12 @@ public partial class TmPdfTemplateDesigner
         {
             var field = _fields.FirstOrDefault(item => item.Uuid == snapshot.FieldUuid);
             var area = field?.Areas.FirstOrDefault(item => item.Uuid == snapshot.AreaUuid);
-            if (area is null)
+            if (field is null || area is null)
             {
                 continue;
             }
 
-            CopyInto(area, SigningGeometryHelper.Move(snapshot.Area, deltaX, deltaY, MinWidth, MinHeight));
+            ReplaceArea(field, area, SigningGeometryHelper.Move(snapshot.Area, deltaX, deltaY, MinWidth, MinHeight));
         }
     }
 
@@ -645,12 +842,12 @@ public partial class TmPdfTemplateDesigner
 
         var field = _fields.FirstOrDefault(item => item.Uuid == _resizeState.FieldUuid);
         var area = field?.Areas.FirstOrDefault(item => item.Uuid == _resizeState.AreaUuid);
-        if (area is null)
+        if (field is null || area is null)
         {
             return;
         }
 
-        CopyInto(area, SigningGeometryHelper.Resize(_resizeState.Area, _resizeState.Handle, deltaX, deltaY, MinWidth, MinHeight));
+        ReplaceArea(field, area, SigningGeometryHelper.Resize(_resizeState.Area, _resizeState.Handle, deltaX, deltaY, MinWidth, MinHeight));
     }
 
     private void SelectFieldsInRectangle(SigningDocumentPage page, SigningFieldArea selection)
@@ -661,6 +858,7 @@ public partial class TmPdfTemplateDesigner
             if (GetAreasForPage(field, page).Any(area => Intersects(area, selection)))
             {
                 _selectedFieldUuids.Add(field.Uuid);
+                _inspectorDismissed = false;
             }
         }
     }
@@ -673,176 +871,6 @@ public partial class TmPdfTemplateDesigner
             _fields[index] = Clone(field);
             await NotifyFieldsChangedAsync();
         }
-    }
-
-    private async Task DeleteSelectedAsync()
-    {
-        if (_selectedFieldUuids.Count == 0)
-        {
-            return;
-        }
-
-        _fields.RemoveAll(field => _selectedFieldUuids.Contains(field.Uuid));
-        _selectedFieldUuids.Clear();
-        _contextMenu = null;
-        await NotifyFieldsChangedAsync();
-    }
-
-    private Task OpenFieldContextMenuAsync(TmSigningFieldOverlayPointerEventArgs args)
-    {
-        if (args.Field is null)
-        {
-            return Task.CompletedTask;
-        }
-
-        if (!_selectedFieldUuids.Contains(args.Field.Uuid))
-        {
-            _selectedFieldUuids.Clear();
-            _selectedFieldUuids.Add(args.Field.Uuid);
-        }
-
-        _contextMenu = new ContextMenuState(
-            SelectedFieldCount > 1 ? ContextMenuKind.Selection : ContextMenuKind.Field,
-            args.MouseEventArgs.ClientX,
-            args.MouseEventArgs.ClientY,
-            args.Field.Uuid,
-            args.Area?.AttachmentUuid,
-            args.Area?.Page ?? 0,
-            null,
-            null);
-        return Task.CompletedTask;
-    }
-
-    private async Task OpenPageContextMenu(SigningDocumentPage page, MouseEventArgs args)
-    {
-        var point = await ToPointAsync(page, args);
-        _contextMenu = new ContextMenuState(
-            ContextMenuKind.Page,
-            args.ClientX,
-            args.ClientY,
-            null,
-            page.AttachmentUuid,
-            page.PageIndex,
-            point.X,
-            point.Y);
-    }
-
-    private Task CopyContextFieldAsync()
-    {
-        var field = _fields.FirstOrDefault(item => item.Uuid == _contextMenu?.FieldUuid);
-        _clipboardFields.Clear();
-        if (field is not null)
-        {
-            _clipboardFields.Add(Clone(field));
-            _clipboardStatus = Loc["TmPdfTemplateDesigner_FieldCopied"];
-        }
-
-        _contextMenu = null;
-        return Task.CompletedTask;
-    }
-
-    private Task CopySelectionAsync()
-    {
-        _clipboardFields.Clear();
-        _clipboardFields.AddRange(_fields
-            .Where(item => _selectedFieldUuids.Contains(item.Uuid))
-            .Select(Clone));
-
-        if (_clipboardFields.Count > 0)
-        {
-            _clipboardStatus = _clipboardFields.Count == 1
-                ? Loc["TmPdfTemplateDesigner_FieldCopied"]
-                : Loc["TmPdfTemplateDesigner_SelectionCopied"];
-        }
-
-        _contextMenu = null;
-        return Task.CompletedTask;
-    }
-
-    private async Task DeleteContextFieldAsync()
-    {
-        if (_contextMenu?.FieldUuid is null)
-        {
-            return;
-        }
-
-        _fields.RemoveAll(field => field.Uuid == _contextMenu.FieldUuid);
-        _selectedFieldUuids.Remove(_contextMenu.FieldUuid);
-        _contextMenu = null;
-        await NotifyFieldsChangedAsync();
-    }
-
-    private async Task PasteFieldAsync()
-    {
-        if (_clipboardFields.Count == 0 || _contextMenu is null)
-        {
-            return;
-        }
-
-        var clones = _clipboardFields.Select(Clone).ToList();
-        var allAreas = clones.SelectMany(field => field.Areas).ToArray();
-        var sourceBounds = allAreas.Length > 0
-            ? SigningGeometryHelper.GetSelectionRectangle(allAreas)
-            : new SigningRectangle(0, 0, MinWidth, MinHeight);
-        var targetX = _contextMenu.DocumentX ?? Clamp(sourceBounds.X + 0.03 + sourceBounds.Width / 2, 0, 1);
-        var targetY = _contextMenu.DocumentY ?? Clamp(sourceBounds.Y + 0.03 + sourceBounds.Height / 2, 0, 1);
-        var desiredX = Clamp(targetX - sourceBounds.Width / 2, 0, Math.Max(0, 1 - sourceBounds.Width));
-        var desiredY = Clamp(targetY - sourceBounds.Height / 2, 0, Math.Max(0, 1 - sourceBounds.Height));
-        var deltaX = desiredX - sourceBounds.X;
-        var deltaY = desiredY - sourceBounds.Y;
-
-        foreach (var clone in clones)
-        {
-            clone.Uuid = Guid.NewGuid().ToString("N");
-            clone.Name = $"{clone.Name} copy".Trim();
-            foreach (var area in clone.Areas)
-            {
-                area.Uuid = Guid.NewGuid().ToString("N");
-                area.AttachmentUuid = _contextMenu.AttachmentUuid;
-                area.Page = _contextMenu.PageIndex;
-                area.X = Clamp(area.X + deltaX, 0, Math.Max(0, 1 - area.Width));
-                area.Y = Clamp(area.Y + deltaY, 0, Math.Max(0, 1 - area.Height));
-            }
-        }
-
-        _fields.AddRange(clones);
-        _selectedFieldUuids.Clear();
-        foreach (var clone in clones)
-        {
-            _selectedFieldUuids.Add(clone.Uuid);
-        }
-
-        _contextMenu = null;
-        _clipboardStatus = clones.Count == 1
-            ? Loc["TmPdfTemplateDesigner_FieldPasted"]
-            : Loc["TmPdfTemplateDesigner_SelectionPasted"];
-        await NotifyFieldsChangedAsync();
-    }
-
-    private async Task CopyFieldToAllPagesAsync(SigningField field)
-    {
-        var target = _fields.FirstOrDefault(item => item.Uuid == field.Uuid);
-        var sourceArea = target?.Areas.FirstOrDefault();
-        if (target is null || sourceArea is null)
-        {
-            return;
-        }
-
-        foreach (var page in Documents.Where(page => page.AttachmentUuid == sourceArea.AttachmentUuid))
-        {
-            if (target.Areas.Any(area => area.AttachmentUuid == page.AttachmentUuid && area.Page == page.PageIndex))
-            {
-                continue;
-            }
-
-            var copy = Clone(sourceArea);
-            copy.Uuid = Guid.NewGuid().ToString("N");
-            copy.Page = page.PageIndex;
-            copy.AttachmentUuid = page.AttachmentUuid;
-            target.Areas.Add(copy);
-        }
-
-        await NotifyFieldsChangedAsync();
     }
 
     private async Task DetectFieldsAsync()
@@ -961,127 +989,6 @@ public partial class TmPdfTemplateDesigner
         return CurrentPage is not null && area.AttachmentUuid == CurrentPage.AttachmentUuid && area.Page == CurrentPage.PageIndex;
     }
 
-    private async Task<(double X, double Y)> ToPointAsync(SigningDocumentPage page, MouseEventArgs args)
-    {
-        if (_pageSurfaceRefs.TryGetValue(GetPageKey(page), out var reference))
-        {
-            try
-            {
-                _jsModule ??= await JS.InvokeAsync<IJSObjectReference>("import", "./_content/Tempo.Blazor.Signing/js/pdf-template-designer.js");
-                if (_jsModule is null)
-                {
-                    return ToPointFromOffset(page, args);
-                }
-
-                var rect = await _jsModule.InvokeAsync<PageSurfaceRect>("getElementRect", reference);
-                if (rect is { Width: > 0, Height: > 0 } && (args.ClientX != 0 || args.ClientY != 0))
-                {
-                    return (
-                        Clamp((args.ClientX - rect.Left) / rect.Width, 0, 1),
-                        Clamp((args.ClientY - rect.Top) / rect.Height, 0, 1));
-                }
-            }
-            catch (JSException)
-            {
-                // Fall back to event offsets when JavaScript is unavailable in tests or prerendering.
-            }
-            catch (InvalidOperationException)
-            {
-                // Fall back to event offsets when JavaScript is unavailable in tests or prerendering.
-            }
-        }
-
-        return ToPointFromOffset(page, args);
-    }
-
-    private static (double X, double Y) ToPointFromOffset(SigningDocumentPage page, MouseEventArgs args)
-    {
-        var width = page.Width > 0 ? page.Width : DefaultPageWidth;
-        var height = page.Height > 0 ? page.Height : DefaultPageHeight;
-        return (
-            Clamp(args.OffsetX / width, 0, 1),
-            Clamp(args.OffsetY / height, 0, 1));
-    }
-
-    private static SigningFieldArea CreateAreaFromPoints(SigningDocumentPage page, double startX, double startY, double endX, double endY, string uuid)
-    {
-        var x = Math.Min(startX, endX);
-        var y = Math.Min(startY, endY);
-        var width = Math.Abs(endX - startX);
-        var height = Math.Abs(endY - startY);
-
-        return new SigningFieldArea
-        {
-            Uuid = uuid,
-            AttachmentUuid = page.AttachmentUuid,
-            Page = page.PageIndex,
-            X = x,
-            Y = y,
-            Width = width,
-            Height = height
-        };
-    }
-
-    private static SigningFieldArea CreateDefaultAreaAtPoint(SigningDocumentPage page, SigningFieldType type, double x, double y)
-    {
-        var (width, height) = GetDefaultAreaSize(type);
-        return new SigningFieldArea
-        {
-            Uuid = Guid.NewGuid().ToString("N"),
-            AttachmentUuid = page.AttachmentUuid,
-            Page = page.PageIndex,
-            X = Clamp(x - width / 2, 0, 1 - width),
-            Y = Clamp(y - height / 2, 0, 1 - height),
-            Width = width,
-            Height = height
-        };
-    }
-
-    private static (double Width, double Height) GetDefaultAreaSize(SigningFieldType type)
-    {
-        return type switch
-        {
-            SigningFieldType.Signature => (0.34, 0.065),
-            SigningFieldType.Initials => (0.16, 0.065),
-            SigningFieldType.Date or SigningFieldType.DateNow => (0.22, 0.055),
-            SigningFieldType.Number => (0.2, 0.055),
-            SigningFieldType.Checkbox => (0.08, 0.05),
-            SigningFieldType.Radio or SigningFieldType.Select or SigningFieldType.Multiple => (0.32, 0.06),
-            SigningFieldType.File or SigningFieldType.Image or SigningFieldType.Stamp => (0.26, 0.07),
-            SigningFieldType.Phone => (0.28, 0.055),
-            _ => (0.3, 0.055)
-        };
-    }
-
-    private static bool Intersects(SigningFieldArea a, SigningFieldArea b)
-    {
-        return a.X < b.X + b.Width
-            && a.X + a.Width > b.X
-            && a.Y < b.Y + b.Height
-            && a.Y + a.Height > b.Y;
-    }
-
-    private static string GetAreaStyle(SigningFieldArea area)
-    {
-        return string.Create(
-            CultureInfo.InvariantCulture,
-            $"left: {area.X * 100}%; top: {area.Y * 100}%; width: {area.Width * 100}%; height: {area.Height * 100}%;");
-    }
-
-    private static string GetRectangleStyle(SigningRectangle rectangle)
-    {
-        return string.Create(
-            CultureInfo.InvariantCulture,
-            $"left: {rectangle.X * 100}%; top: {rectangle.Y * 100}%; width: {rectangle.Width * 100}%; height: {rectangle.Height * 100}%;");
-    }
-
-    private string GetPaletteItemClass(SigningFieldType type)
-    {
-        return _drawType == type
-            ? "tm-pdf-template-designer__palette-item tm-pdf-template-designer__palette-item--active"
-            : "tm-pdf-template-designer__palette-item";
-    }
-
     private string GetFieldTypeLabel(SigningFieldType type)
     {
         return SigningTextResolver.FieldTypeLabel(type, Loc);
@@ -1170,122 +1077,6 @@ public partial class TmPdfTemplateDesigner
         }
     }
 
-    private static void CopyInto(SigningFieldArea target, SigningFieldArea source)
-    {
-        target.X = source.X;
-        target.Y = source.Y;
-        target.Width = source.Width;
-        target.Height = source.Height;
-        target.CellWidth = source.CellWidth;
-        target.OptionUuid = source.OptionUuid;
-    }
-
-    private static SigningField Clone(SigningField field)
-    {
-        return new SigningField
-        {
-            Uuid = field.Uuid,
-            SubmitterUuid = field.SubmitterUuid,
-            Name = field.Name,
-            Labels = Clone(field.Labels),
-            Title = field.Title,
-            Titles = Clone(field.Titles),
-            Description = field.Description,
-            Descriptions = Clone(field.Descriptions),
-            Placeholders = Clone(field.Placeholders),
-            Type = field.Type,
-            Required = field.Required,
-            ReadOnly = field.ReadOnly,
-            Prefillable = field.Prefillable,
-            DefaultValue = field.DefaultValue,
-            Preferences = Clone(field.Preferences),
-            Validation = field.Validation is null ? null : Clone(field.Validation),
-            Conditions = field.Conditions.Select(Clone).ToList(),
-            Options = field.Options.Select(Clone).ToList(),
-            Areas = field.Areas.Select(Clone).ToList()
-        };
-    }
-
-    private static SigningFieldPreferences Clone(SigningFieldPreferences preferences)
-    {
-        return new SigningFieldPreferences
-        {
-            Color = preferences.Color,
-            Align = preferences.Align,
-            Format = preferences.Format,
-            FontFamily = preferences.FontFamily,
-            FontSize = preferences.FontSize,
-            WithSignatureId = preferences.WithSignatureId,
-            WithLogo = preferences.WithLogo,
-            ReasonFieldUuid = preferences.ReasonFieldUuid,
-            Formula = preferences.Formula,
-            Currency = preferences.Currency,
-            Price = preferences.Price,
-            PriceId = preferences.PriceId,
-            PaymentLinkId = preferences.PaymentLinkId,
-            AdditionalSettings = new Dictionary<string, object?>(preferences.AdditionalSettings)
-        };
-    }
-
-    private static SigningFieldValidation Clone(SigningFieldValidation validation)
-    {
-        return new SigningFieldValidation
-        {
-            Pattern = validation.Pattern,
-            Message = validation.Message,
-            Messages = Clone(validation.Messages),
-            Min = validation.Min,
-            Max = validation.Max,
-            Step = validation.Step
-        };
-    }
-
-    private static SigningFieldCondition Clone(SigningFieldCondition condition)
-    {
-        return new SigningFieldCondition
-        {
-            FieldUuid = condition.FieldUuid,
-            Action = condition.Action,
-            Value = condition.Value,
-            Operation = condition.Operation
-        };
-    }
-
-    private static SigningFieldOption Clone(SigningFieldOption option)
-    {
-        return new SigningFieldOption
-        {
-            Uuid = option.Uuid,
-            Labels = Clone(option.Labels),
-            Value = option.Value
-        };
-    }
-
-    private static SigningLocalizedText Clone(SigningLocalizedText text)
-    {
-        return new SigningLocalizedText
-        {
-            Default = text.Default,
-            Translations = new Dictionary<string, string>(text.Translations, StringComparer.OrdinalIgnoreCase)
-        };
-    }
-
-    private static SigningFieldArea Clone(SigningFieldArea area)
-    {
-        return new SigningFieldArea
-        {
-            Uuid = area.Uuid,
-            AttachmentUuid = area.AttachmentUuid,
-            Page = area.Page,
-            X = area.X,
-            Y = area.Y,
-            Width = area.Width,
-            Height = area.Height,
-            CellWidth = area.CellWidth,
-            OptionUuid = area.OptionUuid
-        };
-    }
-
     private enum ContextMenuKind
     {
         Page,
@@ -1318,6 +1109,61 @@ public partial class TmPdfTemplateDesigner
         public double Width { get; set; }
 
         public double Height { get; set; }
+    }
+
+    private sealed class FixedOrigin
+    {
+        public double Left { get; set; }
+
+        public double Top { get; set; }
+    }
+
+    /// <summary>A long-press the pointer session wants opened as a context menu. Not part of the component contract.</summary>
+    internal sealed record FieldContextMenuRequest
+    {
+        /// <summary>Field the finger held.</summary>
+        public string? FieldUuid { get; set; }
+
+        /// <summary>Viewport X of the finger.</summary>
+        public double ClientX { get; set; }
+
+        /// <summary>Viewport Y of the finger.</summary>
+        public double ClientY { get; set; }
+    }
+
+    /// <summary>One committed move or resize reported by the pointer helper. Not part of the component contract.</summary>
+    internal sealed record DesignerDragCommit
+    {
+        /// <summary>Field the gesture started on.</summary>
+        public string? FieldUuid { get; set; }
+
+        /// <summary>Resize handle, or null when the gesture moved the field.</summary>
+        public string? Handle { get; set; }
+
+        /// <summary>Area the resize handle belongs to. A move leaves it null and moves every area.</summary>
+        public string? AreaUuid { get; set; }
+
+        /// <summary>Horizontal delta normalized against the measured page surface.</summary>
+        public double NormalizedDx { get; set; }
+
+        /// <summary>Vertical delta normalized against the measured page surface.</summary>
+        public double NormalizedDy { get; set; }
+    }
+
+    /// <summary>A palette press that ended on a page, reported by the pointer session. Not part of the component contract.</summary>
+    internal sealed record PaletteDropCommit
+    {
+        /// <summary>Page the pointer ended on (<c>attachment:index</c>).</summary>
+        public string? PageKey { get; set; }
+
+        /// <summary>Horizontal position, 0–1 of the page surface.</summary>
+        public double X { get; set; }
+
+        /// <summary>Vertical position, 0–1 of the page surface.</summary>
+        public double Y { get; set; }
+
+        /// <summary>Field type read from the palette item. The JS session is the owner, so the drop no longer depends on a Blazor drag type.</summary>
+        public string? Type { get; set; }
     }
 
     private sealed class DrawState

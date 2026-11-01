@@ -13,6 +13,8 @@ public enum ButtonVariant
     Danger,
     /// <summary>Outline.</summary>
     Outline,
+    /// <summary>Primary outline. Transparent fill, primary border and ink.</summary>
+    OutlinePrimary,
     /// <summary>Link.</summary>
     Link,
     /// <summary>Default.</summary>

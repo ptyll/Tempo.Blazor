@@ -1,0 +1,183 @@
+@namespace Tempo.Blazor.Components.Signing
+@using Tempo.Blazor.Abstractions.Models
+@using Tempo.Blazor.Components.Buttons
+@using Tempo.Blazor.Components.Inputs
+
+@* Actions, selection and geometry of the field inspector. A button renders only when its
+   callback has a delegate, and a section renders only when it has something to show. *@
+@if (ShowCopy || ShowDelete)
+{
+    <section class="tm-signing-field-editor-panel__section tm-signing-field-editor-panel__actions">
+        <h3 class="tm-signing-field-editor-panel__section-title">@Loc["TmSigningFieldEditorPanel_Actions"]</h3>
+        @if (ShowCopy)
+        {
+            <TmButton Class="tm-signing-field-editor-panel__copy-field"
+                      Variant="ButtonVariant.Secondary"
+                      Disabled="@ReadOnly"
+                      OnClick="OnCopy">
+                <TmIcon Name="copy" Size="IconSize.Xs" />
+                @Loc["TmPdfTemplateDesigner_CopyField"]
+            </TmButton>
+        }
+        @if (ShowDelete)
+        {
+            <TmButton Class="tm-signing-field-editor-panel__delete-field"
+                      Variant="ButtonVariant.Secondary"
+                      Disabled="@ReadOnly"
+                      OnClick="OnDelete">
+                <TmIcon Name="trash-2" Size="IconSize.Xs" />
+                @Loc["TmPdfTemplateDesigner_DeleteField"]
+            </TmButton>
+        }
+    </section>
+}
+
+@if (ShowCopySelection || ShowPaste || ShowDeleteSelection)
+{
+    <section class="tm-signing-field-editor-panel__section tm-signing-field-editor-panel__selection">
+        <h3 class="tm-signing-field-editor-panel__section-title">@Loc["TmSigningFieldEditorPanel_Selection"]</h3>
+        @if (ShowCopySelection)
+        {
+            <TmButton Class="tm-signing-field-editor-panel__copy-selection"
+                      Variant="ButtonVariant.Secondary"
+                      Disabled="@ReadOnly"
+                      OnClick="OnCopySelection">
+                <TmIcon Name="copy" Size="IconSize.Xs" />
+                @Loc["TmPdfTemplateDesigner_CopySelection"]
+            </TmButton>
+        }
+        @if (ShowPaste)
+        {
+            <TmButton Class="tm-signing-field-editor-panel__paste-selection"
+                      Variant="ButtonVariant.Secondary"
+                      Disabled="@(ReadOnly || !PasteEnabled)"
+                      OnClick="OnPaste">
+                <TmIcon Name="clipboard" Size="IconSize.Xs" />
+                @Loc["TmPdfTemplateDesigner_PasteField"]
+            </TmButton>
+        }
+        @if (ShowDeleteSelection)
+        {
+            <TmButton Class="tm-signing-field-editor-panel__delete-selection"
+                      Variant="ButtonVariant.Secondary"
+                      Disabled="@ReadOnly"
+                      OnClick="OnDeleteSelection">
+                <TmIcon Name="trash-2" Size="IconSize.Xs" />
+                @Loc["TmPdfTemplateDesigner_DeleteSelection"]
+            </TmButton>
+        }
+    </section>
+}
+
+@if (ShowGeometry && GeometryArea is not null)
+{
+    <section class="tm-signing-field-editor-panel__section tm-signing-field-editor-panel__geometry">
+        <h3 class="tm-signing-field-editor-panel__section-title">@Loc["TmSigningFieldEditorPanel_Geometry"]</h3>
+        <div class="tm-signing-field-editor-panel__grid">
+            <TmNumberInput Label="@Loc["TmSigningFieldEditorPanel_GeometryX"]"
+                           Value="@GeometryX"
+                           ValueChanged="OnGeometryXChanged"
+                           Disabled="@ReadOnly"
+                           ShowButtons="false"
+                           AdditionalAttributes="@GeometryXAttributes" />
+            <TmNumberInput Label="@Loc["TmSigningFieldEditorPanel_GeometryY"]"
+                           Value="@GeometryY"
+                           ValueChanged="OnGeometryYChanged"
+                           Disabled="@ReadOnly"
+                           ShowButtons="false"
+                           AdditionalAttributes="@GeometryYAttributes" />
+            <TmNumberInput Label="@Loc["TmSigningFieldEditorPanel_GeometryWidth"]"
+                           Value="@GeometryWidth"
+                           ValueChanged="OnGeometryWidthChanged"
+                           Disabled="@ReadOnly"
+                           ShowButtons="false"
+                           AdditionalAttributes="@GeometryWidthAttributes" />
+            <TmNumberInput Label="@Loc["TmSigningFieldEditorPanel_GeometryHeight"]"
+                           Value="@GeometryHeight"
+                           ValueChanged="OnGeometryHeightChanged"
+                           Disabled="@ReadOnly"
+                           ShowButtons="false"
+                           AdditionalAttributes="@GeometryHeightAttributes" />
+        </div>
+    </section>
+}
+
+@code {
+    /// <summary>Whether the inspector is read-only. Geometry stays editable to read; actions disable.</summary>
+    [Parameter] public bool ReadOnly { get; set; }
+
+    /// <summary>Whether the clipboard has a field the Paste action can place.</summary>
+    [Parameter] public bool PasteEnabled { get; set; } = true;
+
+    /// <summary>Whether the Copy action has a host delegate.</summary>
+    [Parameter] public bool ShowCopy { get; set; }
+
+    /// <summary>Whether the Delete action has a host delegate.</summary>
+    [Parameter] public bool ShowDelete { get; set; }
+
+    /// <summary>Whether the selection Copy action has a host delegate.</summary>
+    [Parameter] public bool ShowCopySelection { get; set; }
+
+    /// <summary>Whether the selection Paste action has a host delegate.</summary>
+    [Parameter] public bool ShowPaste { get; set; }
+
+    /// <summary>Whether the selection Delete action has a host delegate.</summary>
+    [Parameter] public bool ShowDeleteSelection { get; set; }
+
+    /// <summary>Copies the edited field.</summary>
+    [Parameter] public EventCallback OnCopy { get; set; }
+
+    /// <summary>Deletes the edited field.</summary>
+    [Parameter] public EventCallback OnDelete { get; set; }
+
+    /// <summary>Copies every selected field.</summary>
+    [Parameter] public EventCallback OnCopySelection { get; set; }
+
+    /// <summary>Pastes the clipboard.</summary>
+    [Parameter] public EventCallback OnPaste { get; set; }
+
+    /// <summary>Deletes every selected field.</summary>
+    [Parameter] public EventCallback OnDeleteSelection { get; set; }
+
+    /// <summary>Whether the pixel geometry section is shown.</summary>
+    [Parameter] public bool ShowGeometry { get; set; }
+
+    /// <summary>The area the geometry inputs edit. Null hides the section.</summary>
+    [Parameter] public SigningFieldArea? GeometryArea { get; set; }
+
+    /// <summary>Horizontal position in pixels.</summary>
+    [Parameter] public int? GeometryX { get; set; }
+
+    /// <summary>Vertical position in pixels.</summary>
+    [Parameter] public int? GeometryY { get; set; }
+
+    /// <summary>Width in pixels.</summary>
+    [Parameter] public int? GeometryWidth { get; set; }
+
+    /// <summary>Height in pixels.</summary>
+    [Parameter] public int? GeometryHeight { get; set; }
+
+    /// <summary>Raised when the horizontal position changes.</summary>
+    [Parameter] public EventCallback<int?> OnGeometryXChanged { get; set; }
+
+    /// <summary>Raised when the vertical position changes.</summary>
+    [Parameter] public EventCallback<int?> OnGeometryYChanged { get; set; }
+
+    /// <summary>Raised when the width changes.</summary>
+    [Parameter] public EventCallback<int?> OnGeometryWidthChanged { get; set; }
+
+    /// <summary>Raised when the height changes.</summary>
+    [Parameter] public EventCallback<int?> OnGeometryHeightChanged { get; set; }
+
+    /// <summary>Attributes forwarded to the X input.</summary>
+    [Parameter] public Dictionary<string, object>? GeometryXAttributes { get; set; }
+
+    /// <summary>Attributes forwarded to the Y input.</summary>
+    [Parameter] public Dictionary<string, object>? GeometryYAttributes { get; set; }
+
+    /// <summary>Attributes forwarded to the width input.</summary>
+    [Parameter] public Dictionary<string, object>? GeometryWidthAttributes { get; set; }
+
+    /// <summary>Attributes forwarded to the height input.</summary>
+    [Parameter] public Dictionary<string, object>? GeometryHeightAttributes { get; set; }
+}

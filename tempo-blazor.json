@@ -22029,6 +22029,12 @@
           "description": "Additional CSS class for the root element."
         },
         {
+          "name": "IsOpenChanged",
+          "type": "EventCallback<bool>",
+          "isRequired": false,
+          "description": "Raised when the menu opens or closes, including a close from the overlay. A host that mounts the menu only while it is open uses this to drop that mount."
+        },
+        {
           "name": "MobilePresentation",
           "type": "PanelPresentation",
           "isRequired": false,

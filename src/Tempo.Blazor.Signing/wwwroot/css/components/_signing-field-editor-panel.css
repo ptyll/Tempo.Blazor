@@ -10,8 +10,10 @@
     /* Header/grid re-wrap keys off the panel's own width (in the designer inspector it is a narrow
        column on a wide desktop viewport), never the viewport. */
     container: tm-signing-field-editor-panel / inline-size;
-    /* inline-size containment sizes the box as if it were empty: keep it filling its parent
-       instead of shrink-to-fit. */
+    /* Size containment would size this box as if it were empty, and a stretched shell panel then
+       feeds that empty height back into the page. Style containment keeps the container queries
+       without that loop. */
+    contain: style;
     min-inline-size: 0;
     inline-size: 100%;
 }
@@ -60,15 +62,7 @@
 }
 
 .tm-signing-field-editor-panel__type-badge {
-    display: inline-flex;
-    align-items: center;
-    min-height: var(--tm-space-6);
-    padding: 0 var(--tm-space-2);
-    border: 1px solid var(--tm-border-color);
-    border-radius: var(--tm-radius-sm);
-    background: var(--tm-bg-surface-secondary);
-    color: var(--tm-text-secondary);
-    font-size: var(--tm-font-size-xs);
+    justify-self: start;
 }
 
 .tm-signing-field-editor-panel__section {

@@ -33,6 +33,12 @@
       "description": "Title of the sheet header when the menu presents as a bottom sheet. When null (default), the localized TmContextMenu_SheetTitle default is used. The value also names the popover (aria-label) — the menu carries no other accessible name, so a role menu popover is not unnamed (since 2.9.1)."
     },
     {
+      "name": "IsOpenChanged",
+      "type": "EventCallback<bool>",
+      "isRequired": false,
+      "description": "Raised when the menu opens or closes, including a close from the overlay. A host that mounts the menu only while it is open uses this to drop that mount."
+    },
+    {
       "name": "Class",
       "type": "string?",
       "isRequired": false,

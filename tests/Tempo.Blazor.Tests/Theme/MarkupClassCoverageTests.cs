@@ -250,7 +250,7 @@ public sealed class MarkupClassCoverageTests
     ];
 
     /// <summary>
-    /// The 52 classes Signing markup emits with no rule in Signing's stylesheets OR the core's on
+    /// The classes Signing markup emits with no rule in Signing's stylesheets OR the core's on
     /// 2.8.26 — Signing project-references the core package, so a core-owned class
     /// (<c>tm-btn</c>) is covered, and only what remains unstyled after BOTH trees are read lands
     /// here.
@@ -281,21 +281,10 @@ public sealed class MarkupClassCoverageTests
         "tm-formula-builder--invalid",
         "tm-formula-builder__save",
         "tm-pdf-signature-verification__signature--card",
-        "tm-pdf-template-designer__bulk-actions",
-        "tm-pdf-template-designer__continuous",
-        "tm-pdf-template-designer__copy-field",
-        "tm-pdf-template-designer__copy-selection",
-        "tm-pdf-template-designer__delete-field",
-        "tm-pdf-template-designer__delete-selection",
-        "tm-pdf-template-designer__detect-menu",
-        "tm-pdf-template-designer__fit-page",
-        "tm-pdf-template-designer__fit-width",
-        "tm-pdf-template-designer__next-page",
-        "tm-pdf-template-designer__paste-field",
-        "tm-pdf-template-designer__previous-page",
-        "tm-pdf-template-designer__single-page",
-        "tm-pdf-template-designer__zoom-in",
-        "tm-pdf-template-designer__zoom-out",
+        "tm-pdf-template-designer--mobile",
+        "tm-pdf-template-designer__palette--compact",
+        "tm-pdf-template-designer__palette-help",
+        "tm-pdf-template-designer__palette-title",
         "tm-recipient-role-editor--submission",
         "tm-recipient-role-editor--template",
         "tm-recipient-role-editor__field--color",
@@ -320,13 +309,22 @@ public sealed class MarkupClassCoverageTests
         // way "tm-signing-choice-step" above did — the wide-container hero rule styles through the
         // ancestor compound ".tm-signing-external-step .tm-signing-step-shell__header", and the
         // sweep reads an ancestor compound as coverage.
-        "tm-signing-field",
         "tm-signing-field-editor-panel--empty",
+        "tm-signing-field-editor-panel__geometry",
+        "tm-signing-field-editor-panel__geometry-height",
+        "tm-signing-field-editor-panel__geometry-width",
+        "tm-signing-field-editor-panel__geometry-x",
+        "tm-signing-field-editor-panel__geometry-y",
         "tm-signing-field-editor-panel__localization",
         "tm-signing-field-editor-panel__options",
         "tm-signing-field-editor-panel__prefillable",
         "tm-signing-field-editor-panel__readonly",
         "tm-signing-field-editor-panel__required",
+        "tm-signing-field-editor-panel__role",
+        "tm-signing-field-editor-panel__role-dot",
+        "tm-signing-field-editor-panel__rule-actions",
+        "tm-signing-field-editor-panel__section-toggle",
+        "tm-signing-field-editor-panel__selection",
         "tm-signing-field-editor-panel__signature-id",
         "tm-signing-field-editor-panel__stamp-logo",
         // Signing redesign phase 3: the "Accessibility mode" toggle is gone, so

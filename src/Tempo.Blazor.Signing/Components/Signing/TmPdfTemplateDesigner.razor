@@ -1,312 +1,201 @@
 @namespace Tempo.Blazor.Components.Signing
+@using Tempo.Blazor.Abstractions.Layout
 @using Tempo.Blazor.Abstractions.Models
+@using Tempo.Blazor.Components.Buttons
+@using Tempo.Blazor.Components.Inputs
+@using Tempo.Blazor.Components.Layout
+@using Tempo.Blazor.Components.Navigation
+@using Tempo.Blazor.Components.Toolbar
 
-<div @attributes="AdditionalAttributes"
-     class="@RootClass"
-     tabindex="0"
-     @onkeydown="HandleDesignerKeyDownAsync"
-     @onmousemove="HandlePointerMoveAsync"
-     @onmouseup="HandlePointerUpAsync">
-    @if (Documents.Count == 0)
-    {
-        <TmEmptyState Icon="file-text"
-                      Title="@Loc["TmPdfTemplateDesigner_EmptyTitle"]"
-                      Description="@Loc["TmPdfTemplateDesigner_EmptyDescription"]" />
-    }
-    else
-    {
-        @* The workspace is the CSS size container (see _pdf-template-designer.css); its grid lives
-           on an inner element because a @container rule can never restyle the container itself. *@
-        <div class="tm-pdf-template-designer__workspace">
-            <div class="tm-pdf-template-designer__workspace-grid">
-            @if (!Disabled)
+<TmEditorShell @attributes="AdditionalAttributes"
+               Class="@RootClass"
+               style="@RootStyle"
+               LayoutMode="ShellLayoutMode"
+               Breakpoints="@(LayoutBreakpoints ?? DesignerBreakpoints)"
+               ResolvedLayoutChanged="OnShellLayoutChanged"
+               TabletPanelPresentation="TabletPanelPresentation.Overlay"
+               LeftTitle="@Loc["TmPdfTemplateDesigner_Palette"]"
+               RightTitle="@Loc["TmPdfTemplateDesigner_Inspector"]"
+               LeftOpen="PaletteOpen"
+               LeftOpenChanged="OnPaletteOpenChanged"
+               RightOpen="InspectorOpen"
+               RightOpenChanged="OnInspectorOpenChanged">
+    <Toolbar>
+        <TmPdfTemplateDesignerToolbar TwoRow="@(ResolvedLayout == TmLayoutMode.Tablet)"
+                                      PageLabel="@PageLabel"
+                                      ZoomLabel="@ZoomLabel"
+                                      CanGoPrevious="CanGoPrevious"
+                                      CanGoNext="CanGoNext"
+                                      CanZoomOut="CanZoomOut"
+                                      CanZoomIn="CanZoomIn"
+                                      SinglePageActive="@(_viewMode == DocumentPageViewMode.SinglePage)"
+                                      ContinuousActive="@(_viewMode == DocumentPageViewMode.Continuous)"
+                                      ShowCulture="ShouldShowCulturePreview"
+                                      Cultures="DesignerCultures"
+                                      CurrentCulture="@CurrentCulture"
+                                      CultureMenuItems="CultureMenuItems"
+                                      CultureAttributes="CulturePreviewAttributes"
+                                      CultureLabel="GetCultureLabel"
+                                      ShowDetect="@(OnDetectFields is not null)"
+                                      Detecting="_isDetecting"
+                                      ShowDeleteSelected="@(SelectedFieldCount > 1)"
+                                      OnPreviousPage="GoToPreviousPageAsync"
+                                      OnNextPage="GoToNextPageAsync"
+                                      OnSinglePage="() => SetViewModeAsync(DocumentPageViewMode.SinglePage)"
+                                      OnContinuous="() => SetViewModeAsync(DocumentPageViewMode.Continuous)"
+                                      OnCultureChanged="HandleCultureValueChangedAsync"
+                                      OnZoomOut="ZoomOutAsync"
+                                      OnZoomIn="ZoomInAsync"
+                                      OnFitWidth="FitWidthAsync"
+                                      OnFitPage="FitPageAsync"
+                                      OnDetect="DetectFieldsAsync"
+                                      OnDeleteSelected="DeleteSelectedAsync" />
+        @* The shell's inspector sheet covers the canvas from its top edge, so the tablet rail lives
+           above the canvas. One palette instance occupies this slot. *@
+        @if (ShowCanvasPalette && !Disabled && Documents.Count > 0)
+        {
+            <TmPdfTemplateDesignerPalette Variant="PdfTemplatePaletteVariant.Rail"
+                                          FieldTypes="AllowedTypes"
+                                          ItemClass="GetPaletteItemClass"
+                                          Label="GetFieldTypeLabel"
+                                          Icon="GetIconName"
+                                          OnPointerDown="StartPaletteDrag"
+                                          OnPointerUp="FinishPalettePressAsync"
+                                          OnClick="HandlePaletteClickAsync"
+                                          OnCancel="EndPaletteDrag" />
+        }
+    </Toolbar>
+    <Left>
+        @if (ShowDockedPalette)
+        {
+            <TmPdfTemplateDesignerPalette Variant="@(ResolvedLayout == TmLayoutMode.Mobile ? PdfTemplatePaletteVariant.Compact : PdfTemplatePaletteVariant.Docked)"
+                                          FieldTypes="AllowedTypes"
+                                          ShowMobileDraw="@(ResolvedLayout == TmLayoutMode.Mobile)"
+                                          ItemClass="GetPaletteItemClass"
+                                          Label="GetFieldTypeLabel"
+                                          Icon="GetIconName"
+                                          OnPointerDown="StartPaletteDrag"
+                                          OnPointerUp="FinishPalettePressAsync"
+                                          OnClick="HandlePaletteClickAsync"
+                                          OnCancel="EndPaletteDrag"
+                                          OnMobileDraw="() => SelectFieldTypeAsync(AllowedTypes.FirstOrDefault())" />
+        }
+    </Left>
+    <Canvas>
+        <div class="tm-pdf-template-designer__workspace"
+             tabindex="0"
+             @ref="_workspaceRef"
+             @onkeydown="HandleDesignerKeyDownAsync"
+             @attributes="WorkspacePointerHandlers">
+            @if (Documents.Count == 0)
             {
-                <aside class="@PaletteClass" aria-label="@Loc["TmPdfTemplateDesigner_Palette"]">
-                    @if (MobileMode)
-                    {
-                        <button type="button"
-                                class="tm-pdf-template-designer__mobile-draw"
-                                @onclick="() => SelectFieldTypeAsync(AllowedTypes.FirstOrDefault())">
-                            <TmIcon Name="plus" Size="IconSize.Sm" />
-                            @Loc["TmSigning_AddField"]
-                        </button>
-                    }
-
-                    @foreach (var type in AllowedTypes)
-                    {
-                        <button type="button"
-                                class="@GetPaletteItemClass(type)"
-                                data-field-type="@type"
-                                draggable="true"
-                                title="@GetFieldTypeLabel(type)"
-                                @ondragstart="() => StartPaletteDrag(type)"
-                                @ondragend="EndPaletteDrag"
-                                @onclick="() => SelectFieldTypeAsync(type)">
-                            <TmIcon Name="@GetIconName(type)" Size="IconSize.Sm" />
-                            <span>@GetFieldTypeLabel(type)</span>
-                        </button>
-                    }
-                </aside>
+                <TmEmptyState Icon="file-text"
+                              Title="@Loc["TmPdfTemplateDesigner_EmptyTitle"]"
+                              Description="@Loc["TmPdfTemplateDesigner_EmptyDescription"]" />
             }
-
-            @* N190: a labelled <section> region — the host layout owns the page's single
-               <main> landmark; components never emit it (036ce5fd/a59cac9a rule). *@
-            <section class="tm-pdf-template-designer__canvas"
-                     aria-label="@Loc["TmPdfTemplateDesigner_CanvasLabel"]">
-                <div class="tm-pdf-template-designer__toolbar" role="group" aria-label="@Loc["TmPdfTemplateDesigner_ToolbarLabel"]">
-                    <div class="tm-pdf-template-designer__page-controls">
-                        <button type="button"
-                                class="tm-pdf-template-designer__toolbar-button tm-pdf-template-designer__previous-page"
-                                disabled="@(!CanGoPrevious)"
-                                aria-label="@Loc["TmPdfTemplateDesigner_PreviousPage"]"
-                                @onclick="GoToPreviousPageAsync">
-                            <TmIcon Name="chevron-left" Size="IconSize.Sm" />
-                        </button>
-                        <span class="tm-pdf-template-designer__page-label">@PageLabel</span>
-                        <button type="button"
-                                class="tm-pdf-template-designer__toolbar-button tm-pdf-template-designer__next-page"
-                                disabled="@(!CanGoNext)"
-                                aria-label="@Loc["TmPdfTemplateDesigner_NextPage"]"
-                                @onclick="GoToNextPageAsync">
-                            <TmIcon Name="chevron-right" Size="IconSize.Sm" />
-                        </button>
-                    </div>
-
-                    <div class="tm-pdf-template-designer__view-controls">
-                        <button type="button"
-                                class="tm-pdf-template-designer__toolbar-button tm-pdf-template-designer__single-page @(_viewMode == DocumentPageViewMode.SinglePage ? "tm-pdf-template-designer__toolbar-button--active" : "")"
-                                aria-label="@Loc["TmPdfTemplateDesigner_SinglePage"]"
-                                @onclick="() => SetViewModeAsync(DocumentPageViewMode.SinglePage)">
-                            <TmIcon Name="file-text" Size="IconSize.Sm" />
-                        </button>
-                        <button type="button"
-                                class="tm-pdf-template-designer__toolbar-button tm-pdf-template-designer__continuous @(_viewMode == DocumentPageViewMode.Continuous ? "tm-pdf-template-designer__toolbar-button--active" : "")"
-                                aria-label="@Loc["TmPdfTemplateDesigner_Continuous"]"
-                                @onclick="() => SetViewModeAsync(DocumentPageViewMode.Continuous)">
-                            <TmIcon Name="list" Size="IconSize.Sm" />
-                        </button>
-                    </div>
-
-                    @if (ShouldShowCulturePreview)
+            else
+            {
+                <section class="tm-pdf-template-designer__canvas" aria-label="@Loc["TmPdfTemplateDesigner_CanvasLabel"]">
+                    @if (!string.IsNullOrWhiteSpace(_detectionError))
                     {
-                        <label class="tm-pdf-template-designer__culture-control">
-                            <span>@Loc["TmPdfTemplateDesigner_CulturePreview"]</span>
-                            <select class="tm-pdf-template-designer__culture-preview"
-                                    value="@CurrentCulture"
-                                    aria-label="@Loc["TmPdfTemplateDesigner_CulturePreviewAria"]"
-                                    @onchange="HandleCultureChangedAsync">
-                                @foreach (var culture in DesignerCultures)
-                                {
-                                    <option value="@culture">@GetCultureLabel(culture)</option>
-                                }
-                            </select>
-                        </label>
+                        <TmAlert Severity="AlertSeverity.Error" Class="tm-pdf-template-designer__detection-error">@_detectionError</TmAlert>
                     }
-
-                    <div class="tm-pdf-template-designer__zoom-controls">
-                        <button type="button"
-                                class="tm-pdf-template-designer__toolbar-button tm-pdf-template-designer__zoom-out"
-                                disabled="@(!CanZoomOut)"
-                                aria-label="@Loc["TmPdfTemplateDesigner_ZoomOut"]"
-                                @onclick="ZoomOutAsync">
-                            <TmIcon Name="zoom-out" Size="IconSize.Sm" />
-                        </button>
-                        <span class="tm-pdf-template-designer__zoom-label" role="status" aria-live="polite">@ZoomLabel</span>
-                        <button type="button"
-                                class="tm-pdf-template-designer__toolbar-button tm-pdf-template-designer__zoom-in"
-                                disabled="@(!CanZoomIn)"
-                                aria-label="@Loc["TmPdfTemplateDesigner_ZoomIn"]"
-                                @onclick="ZoomInAsync">
-                            <TmIcon Name="zoom-in" Size="IconSize.Sm" />
-                        </button>
-                        <button type="button"
-                                class="tm-pdf-template-designer__toolbar-button tm-pdf-template-designer__fit-width"
-                                aria-label="@Loc["TmPdfTemplateDesigner_FitWidth"]"
-                                @onclick="FitWidthAsync">
-                            <TmIcon Name="maximize-2" Size="IconSize.Sm" />
-                        </button>
-                        <button type="button"
-                                class="tm-pdf-template-designer__toolbar-button tm-pdf-template-designer__fit-page"
-                                aria-label="@Loc["TmPdfTemplateDesigner_FitPage"]"
-                                @onclick="FitPageAsync">
-                            <TmIcon Name="minimize-2" Size="IconSize.Sm" />
-                        </button>
-                    </div>
-                </div>
-
-                @if (!string.IsNullOrWhiteSpace(_detectionError))
-                {
-                    <TmAlert Severity="AlertSeverity.Error"
-                             Class="tm-pdf-template-designer__detection-error">
-                        @_detectionError
-                    </TmAlert>
-                }
-
-                @if (SelectedFieldCount > 1)
-                {
-                    <div class="tm-pdf-template-designer__bulk-actions">
-                        <button type="button"
-                                class="tm-pdf-template-designer__delete-selected"
-                                @onclick="DeleteSelectedAsync">
-                            <TmIcon Name="trash-2" Size="IconSize.Xs" />
-                            @Loc["TmPdfTemplateDesigner_DeleteSelected"]
-                        </button>
-                    </div>
-                }
-
-                @if (OnDetectFields is not null)
-                {
-                    <button type="button"
-                            class="tm-pdf-template-designer__detect"
-                            disabled="@_isDetecting"
-                            @onclick="DetectFieldsAsync">
-                        <TmIcon Name="scan-line" Size="IconSize.Sm" />
-                        @(_isDetecting ? Loc["TmPdfTemplateDesigner_Detecting"] : Loc["TmPdfTemplateDesigner_Autodetect"])
-                    </button>
-                }
-
-                @if (!string.IsNullOrWhiteSpace(_clipboardStatus))
-                {
-                    <div class="tm-pdf-template-designer__clipboard-status" role="status">
-                        <TmIcon Name="clipboard-check" Size="IconSize.Xs" />
-                        <span>@_clipboardStatus</span>
-                    </div>
-                }
-
-                <div class="tm-pdf-template-designer__pages">
-                    @foreach (var page in VisibleDocuments)
+                    @if (!string.IsNullOrWhiteSpace(_clipboardStatus))
                     {
-                        <section class="tm-pdf-template-designer__page-frame"
-                                 data-page-key="@GetPageKey(page)">
-                            <TmDocumentPageViewer Page="page"
-                                                  Id="@GetPageElementId(page)"
-                                                  Scale="_scale"
-                                                  ZoomMode="_zoomMode"
-                                                  OverlayTemplate="context => RenderPageOverlay(context)" />
-                        </section>
+                        <div class="tm-pdf-template-designer__clipboard-status" role="status">
+                            <TmIcon Name="clipboard-check" Size="IconSize.Xs" />
+                            <span>@_clipboardStatus</span>
+                        </div>
                     }
-                </div>
-            </section>
-
-            <aside class="tm-pdf-template-designer__panel"
-                   @onkeydown:stopPropagation="true">
-                <TmSigningFieldEditorPanel Field="SelectedField"
-                                           FieldChanged="HandleEditorFieldChangedAsync"
-                                           Fields="_fields"
-                                           SubmitterRoles="SubmitterRoles"
-                                           ReadOnly="Disabled"
-                                           Culture="@Culture"
-                                           FallbackCulture="@FallbackCulture"
-                                           SupportedCultures="DesignerCultures"
-                                           ShowLocalizationEditor="ShowCulturePreview"
-                                           CopyToAllPagesRequested="CopyFieldToAllPagesAsync" />
-            </aside>
-            </div>
+                    <div class="tm-pdf-template-designer__pages">
+                        @foreach (var page in VisibleDocuments)
+                        {
+                            <section class="tm-pdf-template-designer__page-frame" data-page-key="@GetPageKey(page)">
+                                <TmDocumentPageViewer Page="page"
+                                                      Id="@GetPageElementId(page)"
+                                                      Scale="_scale"
+                                                      ZoomMode="_zoomMode"
+                                                      OverlayTemplate="context => RenderPageOverlay(context)" />
+                            </section>
+                        }
+                    </div>
+                </section>
+            }
         </div>
-    }
-
-    @if (_contextMenu is not null)
-    {
-        <div class="tm-pdf-template-designer__context-host"
-             style="@ContextMenuStyle">
-            <div class="tm-pdf-template-designer__context-actions" role="menu">
-                @if (_contextMenu.Kind == ContextMenuKind.Field)
-                {
-                    <button type="button"
-                            role="menuitem"
-                            class="tm-pdf-template-designer__context-action tm-pdf-template-designer__copy-field"
-                            @onclick="CopyContextFieldAsync">
-                        @Loc["TmPdfTemplateDesigner_CopyField"]
-                    </button>
-                    <button type="button"
-                            role="menuitem"
-                            class="tm-pdf-template-designer__context-action tm-pdf-template-designer__delete-field"
-                            @onclick="DeleteContextFieldAsync">
-                        @Loc["TmPdfTemplateDesigner_DeleteField"]
-                    </button>
-                }
-                else if (_contextMenu.Kind == ContextMenuKind.Selection)
-                {
-                    <button type="button"
-                            role="menuitem"
-                            class="tm-pdf-template-designer__context-action tm-pdf-template-designer__copy-selection"
-                            @onclick="CopySelectionAsync">
-                        @Loc["TmPdfTemplateDesigner_CopySelection"]
-                    </button>
-                    <button type="button"
-                            role="menuitem"
-                            class="tm-pdf-template-designer__context-action tm-pdf-template-designer__delete-selection"
-                            @onclick="DeleteSelectedAsync">
-                        @Loc["TmPdfTemplateDesigner_DeleteSelection"]
-                    </button>
-                }
-                else
-                {
-                    <button type="button"
-                            role="menuitem"
-                            class="tm-pdf-template-designer__context-action tm-pdf-template-designer__paste-field"
-                            disabled="@(!HasClipboardFields)"
-                            @onclick="PasteFieldAsync">
-                        @Loc["TmPdfTemplateDesigner_PasteField"]
-                    </button>
-                    @if (OnDetectFields is not null)
-                    {
-                        <button type="button"
-                                role="menuitem"
-                                class="tm-pdf-template-designer__context-action tm-pdf-template-designer__detect-menu"
-                                @onclick="DetectFieldsAsync">
-                            @Loc["TmPdfTemplateDesigner_Autodetect"]
-                        </button>
-                    }
-                }
-            </div>
-
-            <TmContextMenu Class="tm-pdf-template-designer__context-menu">
+        @if (_contextMenu is not null)
+        {
+            <TmContextMenu @ref="_contextMenuRef"
+                           Class="tm-pdf-template-designer__context-menu"
+                           SheetTitle="@Loc["TmPdfTemplateDesigner_ContextMenu"]"
+                           IsOpenChanged="OnContextMenuOpenChanged">
                 <Trigger>
-                    <button type="button" class="tm-pdf-template-designer__context-trigger">@Loc["TmPdfTemplateDesigner_ContextMenu"]</button>
+                    <span class="tm-pdf-template-designer__context-anchor" style="@ContextMenuStyle" tabindex="-1" aria-hidden="true"></span>
                 </Trigger>
                 <ChildContent>
                     @if (_contextMenu.Kind == ContextMenuKind.Field)
                     {
-                        <TmContextMenuItem Label="@Loc["TmPdfTemplateDesigner_CopyField"]"
+                        <TmContextMenuItem Class="tm-pdf-template-designer__copy-field"
                                            Icon="copy"
-                                           Class="tm-pdf-template-designer__copy-field"
-                                           OnClick="CopyContextFieldAsync" />
-                        <TmContextMenuItem Label="@Loc["TmPdfTemplateDesigner_DeleteField"]"
+                                           Label="@Loc["TmPdfTemplateDesigner_CopyField"]"
+                                           OnClick="@CopyMenuField(_contextMenu.FieldUuid)" />
+                        <TmContextMenuItem Class="tm-pdf-template-designer__delete-field"
                                            Icon="trash-2"
                                            IsDangerous="true"
-                                           Class="tm-pdf-template-designer__delete-field"
-                                           OnClick="DeleteContextFieldAsync" />
+                                           Label="@Loc["TmPdfTemplateDesigner_DeleteField"]"
+                                           OnClick="@DeleteMenuField(_contextMenu.FieldUuid)" />
                     }
                     else if (_contextMenu.Kind == ContextMenuKind.Selection)
                     {
-                        <TmContextMenuItem Label="@Loc["TmPdfTemplateDesigner_CopySelection"]"
+                        <TmContextMenuItem Class="tm-pdf-template-designer__copy-selection"
                                            Icon="copy"
-                                           Class="tm-pdf-template-designer__copy-selection"
-                                           OnClick="CopySelectionAsync" />
-                        <TmContextMenuItem Label="@Loc["TmPdfTemplateDesigner_DeleteSelection"]"
+                                           Label="@Loc["TmPdfTemplateDesigner_CopySelection"]"
+                                           OnClick="@CopyMenuSelection()" />
+                        <TmContextMenuItem Class="tm-pdf-template-designer__delete-selection"
                                            Icon="trash-2"
                                            IsDangerous="true"
-                                           Class="tm-pdf-template-designer__delete-selection"
+                                           Label="@Loc["TmPdfTemplateDesigner_DeleteSelection"]"
                                            OnClick="DeleteSelectedAsync" />
                     }
                     else
                     {
-                        <TmContextMenuItem Label="@Loc["TmPdfTemplateDesigner_PasteField"]"
+                        <TmContextMenuItem Class="tm-pdf-template-designer__paste-field"
                                            Icon="clipboard"
-                                           Class="tm-pdf-template-designer__paste-field"
                                            Disabled="@(!HasClipboardFields)"
-                                           OnClick="PasteFieldAsync" />
+                                           Label="@Loc["TmPdfTemplateDesigner_PasteField"]"
+                                           OnClick="@PasteMenuField(_contextMenu)" />
                         @if (OnDetectFields is not null)
                         {
-                            <TmContextMenuItem Label="@Loc["TmPdfTemplateDesigner_Autodetect"]"
+                            <TmContextMenuItem Class="tm-pdf-template-designer__detect-menu"
                                                Icon="scan-line"
-                                               Class="tm-pdf-template-designer__detect-menu"
+                                               Label="@Loc["TmPdfTemplateDesigner_Autodetect"]"
                                                OnClick="DetectFieldsAsync" />
                         }
                     }
                 </ChildContent>
             </TmContextMenu>
-        </div>
-    }
-</div>
+        }
+    </Canvas>
+    <Right>
+        <aside class="tm-pdf-template-designer__panel" @onkeydown:stopPropagation="true">
+            <TmSigningFieldEditorPanel Field="SelectedField"
+                                       FieldChanged="HandleEditorFieldChangedAsync"
+                                       Fields="_fields"
+                                       SubmitterRoles="SubmitterRoles"
+                                       ReadOnly="Disabled"
+                                       Culture="@Culture"
+                                       FallbackCulture="@FallbackCulture"
+                                       SupportedCultures="DesignerCultures"
+                                       ShowLocalizationEditor="ShowCulturePreview"
+                                       CopyToAllPagesRequested="CopyFieldToAllPagesAsync"
+                                       OnCopyRequested="CopyContextFieldFromInspectorAsync"
+                                       OnDeleteRequested="DeleteContextFieldFromInspectorAsync"
+                                       OnCopySelectionRequested="CopySelectionAsync"
+                                       OnPasteRequested="PasteFromInspectorAsync"
+                                       OnDeleteSelectionRequested="DeleteSelectedAsync"
+                                       PasteEnabled="HasClipboardFields"
+                                       ShowGeometry="true"
+                                       PageWidth="@(CurrentPage?.Width ?? 0)"
+                                       PageHeight="@(CurrentPage?.Height ?? 0)" />
+        </aside>
+    </Right>
+</TmEditorShell>
