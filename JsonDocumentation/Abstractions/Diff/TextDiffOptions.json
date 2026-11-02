@@ -1,0 +1,42 @@
+{
+  "kind": "Class",
+  "category": "Diff",
+  "namespace": "Tempo.Blazor.Diff",
+  "description": "Limits that keep a TextDiff comparison bounded. The defaults suit interactive review of prose and terminal-sized source files; a host that diffs very large documents on purpose can raise them, and a host that wants an early degradation can lower them.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/Diff/TextDiffOptions.cs",
+  "documentationStatus": "generated",
+  "members": [
+    {
+      "name": "DefaultMaxCells",
+      "kind": "Field",
+      "type": "int",
+      "description": "Default value of MaxCells (4 000 000 cells ≈ 16 MB of table)."
+    },
+    {
+      "name": "DefaultMaxTokens",
+      "kind": "Field",
+      "type": "int",
+      "description": "Default value of MaxTokens."
+    },
+    {
+      "name": "Default",
+      "kind": "Property",
+      "type": "static TextDiffOptions",
+      "description": "Shared immutable instance used when a caller passes no options."
+    },
+    {
+      "name": "MaxCells",
+      "kind": "Property",
+      "type": "int",
+      "description": "Maximum number of cells in the longest-common-subsequence table built after stripping the common prefix and suffix — the real memory guard, because two very different inputs inside MaxTokens can still require a quadratic table. Exceeding it degrades exactly like MaxTokens does. Values below 1 are treated as 1. Defaults to DefaultMaxCells."
+    },
+    {
+      "name": "MaxTokens",
+      "kind": "Property",
+      "type": "int",
+      "description": "Maximum number of tokens (words or lines) per input before the comparison degrades: a word diff falls back to line level, a line diff to a single whole-text change. Values below 1 are treated as 1. Defaults to DefaultMaxTokens."
+    }
+  ],
+  "itemName": "TextDiffOptions"
+}

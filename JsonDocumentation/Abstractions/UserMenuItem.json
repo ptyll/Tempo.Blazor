@@ -1,0 +1,59 @@
+{
+  "itemName": "UserMenuItem",
+  "kind": "Class",
+  "category": "Models",
+  "namespace": "Tempo.Blazor.Models",
+  "description": "One entry of a user menu (the account dropdown of TmTopBar). An entry is a command (Href for navigation, OnClick otherwise), a destructive command (IsDanger) or a separator between groups (Separator).",
+  "properties": [
+    {
+      "name": "Id",
+      "type": "string",
+      "isRequired": true,
+      "description": "Stable identifier of the entry, unique inside one menu (used for test ids and @key)."
+    },
+    {
+      "name": "Label",
+      "type": "string",
+      "isRequired": true,
+      "description": "Visible label; also the accessible name of the entry."
+    },
+    {
+      "name": "Icon",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Optional icon name from IconNames."
+    },
+    {
+      "name": "Href",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Navigation URL. When set the entry renders as a link; otherwise it is a button that raises OnClick."
+    },
+    {
+      "name": "OnClick",
+      "type": "Func<Task>?",
+      "isRequired": false,
+      "description": "Callback of a command entry (ignored when Href is set). The menu closes BEFORE the callback runs and awaits it. A callback that changes the HOST's own state is responsible for the render (StateHasChanged()) — it is a delegate invoked by a child component, not an EventCallback owned by the host, so no automatic re-render follows. A callback that only calls a service (navigation, a toast, a save) needs nothing."
+    },
+    {
+      "name": "IsDanger",
+      "type": "bool",
+      "isRequired": false,
+      "default": "false",
+      "description": "Renders the entry in the destructive style (a red label) — a signal that must not be the ONLY cue for screen readers; the label has to be self-explanatory."
+    },
+    {
+      "name": "Separator",
+      "type": "bool",
+      "isRequired": false,
+      "default": "false",
+      "description": "Renders the entry as a separator line instead of a command; Label is ignored."
+    }
+  ],
+  "examples": [
+    {
+      "title": "Account menu with a destructive entry",
+      "code": "var accountItems = new List<UserMenuItem>\n{\n    new(\"profile\", \"Your profile\", \"user\", \"/profile\"),\n    new(\"settings\", \"Account settings\", \"settings\", \"/settings\"),\n    UserMenuItem.CreateSeparator(\"sep-destructive\"),\n    new(\"delete\", \"Delete account\", \"trash\", onClick: DeleteAccountAsync, isDanger: true)\n};\n\n<TmTopBar User=\"currentUser\" UserMenuItems=\"accountItems\" OnLogout=\"HandleLogout\" />"
+    }
+  ]
+}

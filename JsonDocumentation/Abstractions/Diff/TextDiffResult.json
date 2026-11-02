@@ -1,0 +1,78 @@
+{
+  "kind": "Class",
+  "category": "Diff",
+  "namespace": "Tempo.Blazor.Diff",
+  "description": "Result of a TextDiff comparison: an ordered list of TextDiffHunk values that tiles both inputs, plus the operation that turns any subset of the changes into a text.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/Diff/TextDiffResult.cs",
+  "documentationStatus": "generated",
+  "members": [
+    {
+      "name": "Apply",
+      "kind": "Method",
+      "type": "string",
+      "description": "Builds the resulting text for a set of accepted hunk ids: every accepted hunk contributes NewText, every other hunk contributes OldText. Because the hunks tile both inputs, passing no id (or null) returns OldText character for character and passing every id (HunkIds) returns NewText character for character. Any mix in between returns a text where the rejected changes keep their old wording. Ids that do not belong to this result are ignored, so a stale accepted-change set cannot corrupt the output.",
+      "parameters": [
+        {
+          "name": "acceptedHunkIds",
+          "type": "IEnumerable<string>?"
+        }
+      ]
+    },
+    {
+      "name": "Changes",
+      "kind": "Property",
+      "type": "IReadOnlyList<TextDiffHunk>",
+      "description": "Only the hunks a consumer can accept or reject, in document order."
+    },
+    {
+      "name": "Fallback",
+      "kind": "Property",
+      "type": "TextDiffFallbackKind",
+      "description": "Whether and how far the comparison had to degrade to stay within the configured limits."
+    },
+    {
+      "name": "Granularity",
+      "kind": "Property",
+      "type": "TextDiffGranularity",
+      "description": "Granularity the result was actually produced at (may be coarser than requested, see Fallback)."
+    },
+    {
+      "name": "HasChanges",
+      "kind": "Property",
+      "type": "bool",
+      "description": "Whether the two inputs differ at all."
+    },
+    {
+      "name": "HunkIds",
+      "kind": "Property",
+      "type": "IReadOnlyList<string>",
+      "description": "Ids of every hunk, in document order. Passing this collection to Apply accepts everything."
+    },
+    {
+      "name": "Hunks",
+      "kind": "Property",
+      "type": "IReadOnlyList<TextDiffHunk>",
+      "description": "Every hunk in document order — equal and changed pieces interleaved."
+    },
+    {
+      "name": "IsDegraded",
+      "kind": "Property",
+      "type": "bool",
+      "description": "Whether the comparison degraded at all (Fallback is not None)."
+    },
+    {
+      "name": "NewText",
+      "kind": "Property",
+      "type": "string",
+      "description": "The new input the result describes (never null; a null argument is read as empty)."
+    },
+    {
+      "name": "OldText",
+      "kind": "Property",
+      "type": "string",
+      "description": "The old input the result describes (never null; a null argument is read as empty)."
+    }
+  ],
+  "itemName": "TextDiffResult"
+}

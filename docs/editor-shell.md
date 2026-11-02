@@ -171,6 +171,12 @@ never takes the canvas below `MinCanvasWidth` (400). A resize raises `LeftWidthC
 (the configured maximum, capped by what the canvas can give up above `MinCanvasWidth`); under a
 coarse pointer an invisible 24px hit area widens the 6px strip.
 
+The pointer half is the SHARED panel-resize helper (`wwwroot/js/tm-panel-resize.js`, over
+`pointer-drag.js`) — `tm-editor-shell.js` is a thin wrapper that pins this shell's canvas selector,
+CSS width variable, drag class and commit method, and `TmAppShell` uses the same helper for its work
+area. The C# keyboard path shares the clamp vectors through `PanelResize.Clamp`
+([docs/touch-interaction.md](touch-interaction.md)).
+
 On a **tablet layout** `MinCanvasWidth` also bounds the *initial* layout: the one expanded panel
 renders narrower — by the measured canvas deficit below `MinCanvasWidth`, **clamped to the panel's
 minimum** — so at 768 the canvas keeps everything the panel can give (~358px with the default

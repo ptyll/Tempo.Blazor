@@ -1,0 +1,160 @@
+{
+  "itemName": "TmInlineDiff",
+  "kind": "Component",
+  "category": "Approvals",
+  "description": "An inline comparison of two texts built on Tempo.Blazor.Diff: every change is a real <ins> / <del> pair preceded by a visually hidden label, so the difference is carried by semantics and text rather than by colour alone. Display mode (the default) presents the changes; Review mode adds one decision per change - a marker button that opens a non-modal popover with Accept / Reject (and the A / R shortcuts inside it), bulk Accept all / Reject all, one level of Undo and a two-way AcceptedHunkIds. The component is a controlled component over that set: the host owns it, hears every change through AcceptedHunkIdsChanged and receives the resulting wording through ResultChanged - always the exact TextDiffResult.Apply output. OnDecision runs before a decision is applied; a throw leaves the change undecided and surfaces the localized error. A pathological input degrades to the engine's fallback and says so instead of throwing. Accessibility: the marker is a labelled button (aria-haspopup / aria-expanded / aria-controls), opening the popover moves focus into it and Escape closes it with focus restored to the marker, exactly one polite live region announces every result, and the shortcuts can be turned off and never fire from a repeat or a modified key press.",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.Approvals",
+    "@using Tempo.Blazor.Abstractions.Models.Diffs",
+    "@using Tempo.Blazor.Diff"
+  ],
+  "parameters": [
+    {
+      "name": "OldText",
+      "type": "string?",
+      "isRequired": false,
+      "description": "The original text; null is read as empty."
+    },
+    {
+      "name": "NewText",
+      "type": "string?",
+      "isRequired": false,
+      "description": "The proposed text; null is read as empty."
+    },
+    {
+      "name": "Granularity",
+      "type": "TextDiffGranularity",
+      "isRequired": false,
+      "description": "Comparison granularity. Words (the default) gives one decision per changed word, Lines one per changed line."
+    },
+    {
+      "name": "Mode",
+      "type": "InlineDiffMode",
+      "isRequired": false,
+      "description": "How the comparison is presented. Default is Display."
+    },
+    {
+      "name": "ReadOnly",
+      "type": "bool",
+      "isRequired": false,
+      "description": "When true, every decision surface is removed even in Review - the diff degrades to the read-only presentation. The effective switch is IsReview."
+    },
+    {
+      "name": "AcceptedHunkIds",
+      "type": "IReadOnlyList<string>?",
+      "isRequired": false,
+      "description": "Ids of the accepted CHANGES. The rest are rejected, so null or an empty set means 'nothing accepted yet' and ResultText is the old text."
+    },
+    {
+      "name": "AcceptedHunkIdsChanged",
+      "type": "EventCallback<IReadOnlyList<string>>",
+      "isRequired": false,
+      "description": "Raised whenever the accepted set changes through a decision, a bulk action or Undo."
+    },
+    {
+      "name": "ResultChanged",
+      "type": "EventCallback<string>",
+      "isRequired": false,
+      "description": "Raised with the resulting text - the exact TextDiffResult.Apply output for the new accepted set."
+    },
+    {
+      "name": "OnDecision",
+      "type": "Func<InlineDiffDecision, Task>?",
+      "isRequired": false,
+      "description": "Invoked for every change a decision is about to apply. A throw leaves the change undecided and shows the localized error."
+    },
+    {
+      "name": "EnableShortcuts",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Whether the A (accept) and R (reject) shortcuts work inside an open popover. Default true."
+    },
+    {
+      "name": "Options",
+      "type": "TextDiffOptions?",
+      "isRequired": false,
+      "description": "Limits of the comparison; null keeps the engine defaults."
+    },
+    {
+      "name": "Class",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Additional CSS classes for the root element."
+    },
+    {
+      "name": "AriaLabel",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Accessible name of the diff group. Defaults to a localized 'Inline diff'."
+    }
+  ],
+  "methods": [
+    {
+      "name": "AcceptHunkAsync",
+      "returnType": "Task",
+      "description": "Accepts one change: runs OnDecision and applies the decision only when it completes without throwing. A no-op for an unknown id or outside Review mode."
+    },
+    {
+      "name": "RejectHunkAsync",
+      "returnType": "Task",
+      "description": "Rejects one change. Behaves like AcceptHunkAsync."
+    },
+    {
+      "name": "AcceptAllAsync",
+      "returnType": "Task",
+      "description": "Accepts every change that is not accepted yet; a throw applies none of them."
+    },
+    {
+      "name": "RejectAllAsync",
+      "returnType": "Task",
+      "description": "Rejects every change that is still accepted."
+    },
+    {
+      "name": "UndoAsync",
+      "returnType": "Task",
+      "description": "Restores the accepted set from before the last decision."
+    }
+  ],
+  "cssClasses": [
+    "tm-inline-diff",
+    "tm-inline-diff--review",
+    "tm-inline-diff--lines",
+    "tm-inline-diff--degraded",
+    "tm-inline-diff__toolbar",
+    "tm-inline-diff__count",
+    "tm-inline-diff__bulk",
+    "tm-inline-diff__action",
+    "tm-inline-diff__undo",
+    "tm-inline-diff__fallback",
+    "tm-inline-diff__error",
+    "tm-inline-diff__content",
+    "tm-inline-diff__equal",
+    "tm-inline-diff__change",
+    "tm-inline-diff__change--pending",
+    "tm-inline-diff__change--accepted",
+    "tm-inline-diff__change--rejected",
+    "tm-inline-diff__ins",
+    "tm-inline-diff__del",
+    "tm-inline-diff__marker",
+    "tm-inline-diff__popover",
+    "tm-inline-diff__popover-action",
+    "tm-inline-diff__hint",
+    "tm-inline-diff__no-changes"
+  ],
+  "examples": [
+    {
+      "title": "Review the proposed wording",
+      "description": "Every change becomes a decision; the host keeps the accepted set and receives the resulting text.",
+      "code": "<TmInlineDiff OldText=\"@original\"\n              NewText=\"@proposed\"\n              Mode=\"InlineDiffMode.Review\"\n              AcceptedHunkIds=\"@accepted\"\n              AcceptedHunkIdsChanged=\"@(ids => accepted = ids)\"\n              ResultChanged=\"@(text => result = text)\"\n              OnDecision=\"@PersistAsync\" />"
+    },
+    {
+      "title": "Read-only comparison",
+      "description": "The unchanged default: an inline render of the differences without any decision surface.",
+      "code": "<TmInlineDiff OldText=\"@original\" NewText=\"@proposed\" />"
+    }
+  ],
+  "notes": [
+    "AcceptedHunkIds lists the ids of CHANGES only. The unchanged hunks are part of the applied set internally, because the separator between two changes belongs to the hunk before it.",
+    "A change above TextDiffOptions.MaxTokens / MaxCells degrades to the engine's fallback (line level, then a single whole-text change) and reports it through the data-fallback attribute and a localized note."
+  ]
+}

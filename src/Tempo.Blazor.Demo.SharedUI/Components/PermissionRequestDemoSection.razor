@@ -1,0 +1,194 @@
+@using Tempo.Blazor.Abstractions.Models.Approvals
+@using Tempo.Blazor.Components.AI
+@using Tempo.Blazor.AI.Models
+@inject ITmLocalizer Loc
+
+@* Demo-only chrome of the permission section. The request itself is styled by the AI package; these rules
+   only frame it (the action row, the status list) with the library's own tokens, so the frame follows the
+   light/dark theme without a second palette. *@
+<style>
+    .ai-permission-demo-heading {
+        margin: 0 0 var(--tm-space-1);
+        color: var(--tm-text-primary);
+        font-size: var(--tm-font-size-lg);
+        font-weight: var(--tm-font-weight-semibold);
+    }
+
+    .ai-permission-demo-intro {
+        margin: 0;
+        max-inline-size: 64rem;
+        color: var(--tm-text-secondary);
+        font-size: var(--tm-font-size-sm);
+    }
+
+    .ai-permission-demo-actions {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: var(--tm-space-3);
+        margin-block: var(--tm-space-3);
+    }
+
+    .ai-permission-demo-button {
+        min-block-size: var(--tm-touch-target);
+        padding-inline: var(--tm-space-4);
+        padding-block: var(--tm-space-2);
+        border: var(--tm-border-width) solid var(--tm-border-color);
+        border-radius: var(--tm-radius-md);
+        background: var(--tm-bg-surface);
+        color: var(--tm-text-primary);
+        font-size: var(--tm-font-size-sm);
+        font-weight: var(--tm-font-weight-medium);
+        cursor: pointer;
+    }
+
+    .ai-permission-demo-button:hover {
+        border-color: var(--tm-color-primary);
+        color: var(--tm-color-primary-text);
+    }
+
+    .ai-permission-demo-button:focus-visible {
+        /* The box shadow is the visible ring, the transparent outline is its fallback: Windows High Contrast
+           strips box shadows, so without an outline the button has no focus indicator there at all (2.4.7). */
+        outline: 2px solid transparent;
+        outline-offset: 2px;
+        box-shadow: var(--tm-focus-ring);
+    }
+
+    .ai-permission-demo-hint {
+        margin: 0;
+        color: var(--tm-text-secondary);
+        font-size: var(--tm-font-size-sm);
+    }
+
+    .ai-permission-demo-status {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+        gap: var(--tm-space-3);
+        margin: var(--tm-space-3) 0 0;
+        padding: var(--tm-space-3);
+        border: var(--tm-border-width) dashed var(--tm-border-color);
+        border-radius: var(--tm-radius-md);
+        background: var(--tm-bg-surface);
+        font-size: var(--tm-font-size-sm);
+    }
+
+    .ai-permission-demo-status__item dt {
+        margin: 0;
+        color: var(--tm-text-secondary);
+    }
+
+    .ai-permission-demo-status__item dd {
+        margin: 0;
+        color: var(--tm-text-primary);
+        font-weight: var(--tm-font-weight-medium);
+        overflow-wrap: anywhere;
+    }
+
+    /* High Contrast forces every colour to a system value, and a transparent outline is not exempt: without
+       this rule the ring above stays invisible where it is the ONLY focus indicator. */
+    @@media (forced-colors: active) {
+        .ai-permission-demo-button:focus-visible {
+            outline-color: Highlight;
+        }
+    }
+</style>
+
+<section class="demo-section" data-testid="ai-permission-demo">
+    <h3 class="ai-permission-demo-heading">@Loc["TmDemo_AiConversation_PermissionHeading"]</h3>
+    <p class="ai-permission-demo-intro">@Loc["TmDemo_AiConversation_PermissionIntro"]</p>
+
+    <div class="showcase-card">
+        <TmPermissionRequest @key="_requestKey"
+                             DataTestId="ai-permission"
+                             ToolName="web.search"
+                             ToolDisplayName="@Loc["TmDemo_AiConversation_PermissionToolName"]"
+                             Target="https://example.com/pricing"
+                             Reason="@Loc["TmDemo_AiConversation_PermissionReason"]"
+                             Risk="ApprovalRisk.Medium"
+                             Grant="_grant"
+                             GrantChanged="HandleGrantChanged"
+                             OnDecision="HandleDecisionAsync"
+                             OnRevoke="HandleRevokeAsync" />
+
+        <div class="ai-permission-demo-actions">
+            <button type="button"
+                    class="ai-permission-demo-button"
+                    data-testid="ai-permission-demo-reset"
+                    @onclick="ResetAsync">
+                @Loc["TmDemo_AiConversation_PermissionReset"]
+            </button>
+            <span class="ai-permission-demo-hint">@Loc["TmPermissionRequest_ShortcutsHint"]</span>
+        </div>
+
+        <dl class="ai-permission-demo-status" aria-label="@Loc["TmDemo_AiConversation_PermissionStatusLabel"]">
+            <div class="ai-permission-demo-status__item">
+                <dt>@Loc["TmDemo_AiConversation_PermissionGrantLabel"]</dt>
+                <dd data-testid="ai-permission-demo-grant">@GrantText</dd>
+            </div>
+            <div class="ai-permission-demo-status__item">
+                <dt>@Loc["TmDemo_AiConversation_PermissionRevokedLabel"]</dt>
+                <dd data-testid="ai-permission-demo-revoked">@_revoked</dd>
+            </div>
+        </dl>
+    </div>
+</section>
+
+@code {
+    private PermissionGrant? _grant;
+    private int _requestKey;
+    private int _revoked;
+
+    /// <summary>
+    /// What the host did with the decision, in words: the scope it received, or the fact that nothing is in
+    /// force. A denial grants nothing, so the line keeps saying so — the request's own row already says it was
+    /// denied.
+    /// </summary>
+    private string GrantText => _grant is null
+        ? Loc["TmDemo_AiConversation_PermissionNoGrant"]
+        : ScopeLabel(_grant.Scope);
+
+    /// <summary>The granted scope as a localized phrase, taken from the same keys the request's radios use.</summary>
+    /// <param name="scope">The scope the reader picked.</param>
+    private string ScopeLabel(PermissionScope scope) => scope switch
+    {
+        PermissionScope.ForDuration => Loc["TmPermissionRequest_ScopeForDuration"],
+        PermissionScope.Session => Loc["TmPermissionRequest_ScopeSession"],
+        PermissionScope.Always => Loc["TmPermissionRequest_ScopeAlways"],
+        _ => Loc["TmPermissionRequest_ScopeOnce"],
+    };
+
+    /// <summary>Persists the decision. The request leaves <c>pending</c> only when this completes.</summary>
+    /// <param name="decision">The decision the reader took.</param>
+    private Task HandleDecisionAsync(PermissionDecision decision)
+    {
+        // A denial carries no grant, so the host stores nothing for it; an allowance hands the host the whole
+        // window, which is what a real host persists (and expires) on its own side.
+        _ = decision;
+        return Task.CompletedTask;
+    }
+
+    /// <summary>Stores the grant the request reports — an allowance sets it, an expiry clears it.</summary>
+    /// <param name="grant">The grant in force, or null when the permission is gone.</param>
+    private Task HandleGrantChanged(PermissionGrant? grant)
+    {
+        _grant = grant;
+        return Task.CompletedTask;
+    }
+
+    /// <summary>Hands the permission back; the request clears its own grant once this succeeds.</summary>
+    private Task HandleRevokeAsync()
+    {
+        _revoked++;
+        return Task.CompletedTask;
+    }
+
+    /// <summary>Starts a new request: a fresh component (via <c>@key</c>) and a cleared counter.</summary>
+    private Task ResetAsync()
+    {
+        _requestKey++;
+        _grant = null;
+        _revoked = 0;
+        return Task.CompletedTask;
+    }
+}

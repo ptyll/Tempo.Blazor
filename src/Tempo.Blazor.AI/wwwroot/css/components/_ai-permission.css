@@ -1,0 +1,369 @@
+/* ═══════════════════════════════════════════════════════════════════════════════════════════════
+   TmPermissionRequest — the agent's request for one concrete permission
+   Contract: docs/permission-request.md
+   Every rule reads a --tm-* design token (no colour literal, no raw palette step, no [data-theme]
+   block); the package's shared token gate is AiMarkdownViewCssTests.
+   ═══════════════════════════════════════════════════════════════════════════════════════════════ */
+
+.tm-ai-permission {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-3);
+    padding: var(--tm-space-4);
+    border: var(--tm-border-width) solid var(--tm-border-color);
+    border-inline-start: 3px solid var(--tm-color-primary);
+    border-radius: var(--tm-radius-card);
+    background-color: var(--tm-bg-surface);
+    color: var(--tm-text-primary);
+    box-shadow: var(--tm-shadow-sm);
+    font-size: var(--tm-font-size-sm);
+    line-height: 1.5;
+    transition: border-color var(--tm-transition-normal), background-color var(--tm-transition-normal);
+}
+
+.tm-ai-permission:focus-visible {
+    outline: 2px solid transparent;
+    box-shadow: var(--tm-focus-ring);
+}
+
+/* A decided request is a result row, not a question: the accent and the shadow go away. */
+.tm-ai-permission[data-state="granted"],
+.tm-ai-permission[data-state="denied"],
+.tm-ai-permission[data-state="expired"] {
+    gap: var(--tm-space-2);
+    background-color: var(--tm-bg-surface-secondary);
+    box-shadow: none;
+}
+
+/* ── Risk ────────────────────────────────────────────────────────────────────────────────────
+   The colour is the SECOND channel: the badge always carries the risk in words as well. */
+.tm-ai-permission[data-risk="low"] {
+    border-inline-start-color: var(--tm-color-success);
+}
+
+.tm-ai-permission[data-risk="medium"] {
+    border-inline-start-color: var(--tm-color-warning);
+}
+
+.tm-ai-permission[data-risk="high"],
+.tm-ai-permission[data-risk="critical"] {
+    border-inline-start-color: var(--tm-color-danger);
+}
+
+/* ── Collapse (height transition, no JavaScript) ────────────────────────────────────────────
+   Both halves stay mounted so the height can animate; the inactive one is inert in the markup
+   (out of the tab order and out of the accessibility tree) and hidden here. */
+.tm-ai-permission__collapse {
+    display: grid;
+    grid-template-rows: 1fr;
+    visibility: visible;
+    transition: grid-template-rows var(--tm-transition-slow), visibility 0s;
+}
+
+.tm-ai-permission__collapse[inert] {
+    grid-template-rows: 0fr;
+    visibility: hidden;
+    transition: grid-template-rows var(--tm-transition-slow), visibility 0s linear var(--tm-transition-slow);
+}
+
+.tm-ai-permission__body,
+.tm-ai-permission__summary {
+    min-inline-size: 0;
+}
+
+.tm-ai-permission__body-inner,
+.tm-ai-permission__summary-inner {
+    min-block-size: 0;
+    overflow: hidden;
+}
+
+.tm-ai-permission__body-inner {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-3);
+}
+
+.tm-ai-permission__summary-inner {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-2);
+    flex-wrap: wrap;
+}
+
+/* ── Header ─────────────────────────────────────────────────────────────────────────────── */
+.tm-ai-permission__header {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--tm-space-3);
+    flex-wrap: wrap;
+}
+
+.tm-ai-permission__icon {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    color: var(--tm-color-primary-text);
+}
+
+.tm-ai-permission__heading {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-0-5);
+    min-inline-size: 0;
+    flex: 1 1 auto;
+}
+
+.tm-ai-permission__title {
+    margin: 0;
+    color: var(--tm-text-primary);
+    font-size: var(--tm-font-size-md);
+    font-weight: var(--tm-font-weight-semibold);
+    overflow-wrap: anywhere;
+}
+
+.tm-ai-permission__hint {
+    margin: 0;
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-xs);
+}
+
+.tm-ai-permission__risk {
+    display: inline-flex;
+    flex: 0 0 auto;
+}
+
+/* ── Details ────────────────────────────────────────────────────────────────────────────── */
+.tm-ai-permission__details {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+    gap: var(--tm-space-2) var(--tm-space-4);
+    margin: 0;
+}
+
+.tm-ai-permission__detail {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-0-5);
+    min-inline-size: 0;
+}
+
+.tm-ai-permission__detail-term {
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-xs);
+    font-weight: var(--tm-font-weight-medium);
+}
+
+.tm-ai-permission__detail-value {
+    margin: 0;
+    color: var(--tm-text-primary);
+    overflow-wrap: anywhere;
+}
+
+.tm-ai-permission__code {
+    padding: var(--tm-space-0-5) var(--tm-space-1);
+    border: var(--tm-border-width) solid var(--tm-border-color);
+    border-radius: var(--tm-radius-sm);
+    background-color: var(--tm-bg-surface-secondary);
+    color: var(--tm-text-primary);
+    font-family: var(--tm-font-mono);
+    font-size: var(--tm-font-size-xs);
+    overflow-wrap: anywhere;
+}
+
+.tm-ai-permission__reason {
+    color: var(--tm-text-secondary);
+}
+
+/* ── Scope and duration radiogroups ─────────────────────────────────────────────────────── */
+.tm-ai-permission__scope,
+.tm-ai-permission__durations {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--tm-space-1) var(--tm-space-3);
+    flex-wrap: wrap;
+    padding: 0;
+    border: 0;
+    margin: 0;
+}
+
+.tm-ai-permission__group-label {
+    flex: 0 0 100%;
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-xs);
+    font-weight: var(--tm-font-weight-medium);
+}
+
+.tm-ai-permission__option {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--tm-space-1-5);
+    padding: var(--tm-space-1) var(--tm-space-2);
+    border: var(--tm-border-width) solid var(--tm-border-color-control);
+    border-radius: var(--tm-radius-control);
+    background-color: var(--tm-bg-surface);
+    color: var(--tm-text-primary);
+    cursor: pointer;
+}
+
+.tm-ai-permission__option:hover {
+    background-color: var(--tm-color-surface-hover);
+}
+
+.tm-ai-permission__option:has(.tm-ai-permission__radio:checked) {
+    border-color: var(--tm-border-color-focus);
+    background-color: var(--tm-color-primary-subtle);
+    color: var(--tm-color-primary-text);
+    font-weight: var(--tm-font-weight-medium);
+}
+
+.tm-ai-permission__radio {
+    inline-size: var(--tm-font-size-md);
+    block-size: var(--tm-font-size-md);
+    margin: 0;
+    accent-color: var(--tm-color-primary);
+}
+
+.tm-ai-permission__radio:focus-visible {
+    outline: 2px solid var(--tm-border-color-focus);
+    outline-offset: 2px;
+}
+
+.tm-ai-permission__radio:disabled,
+.tm-ai-permission__radio:disabled + .tm-ai-permission__option-label {
+    color: var(--tm-text-disabled);
+    cursor: not-allowed;
+}
+
+.tm-ai-permission__option-label {
+    overflow-wrap: anywhere;
+}
+
+/* ── Error ──────────────────────────────────────────────────────────────────────────────── */
+.tm-ai-permission__alert {
+    margin: 0;
+    padding: var(--tm-space-2);
+    border: var(--tm-border-width) solid var(--tm-color-danger);
+    border-radius: var(--tm-radius-md);
+    background-color: var(--tm-color-danger-subtle);
+    color: var(--tm-color-danger-text);
+    font-size: var(--tm-font-size-xs);
+}
+
+/* ── Actions ────────────────────────────────────────────────────────────────────────────── */
+.tm-ai-permission__actions {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-2);
+    flex-wrap: wrap;
+}
+
+.tm-ai-permission__action {
+    gap: var(--tm-space-1-5);
+}
+
+.tm-ai-permission[aria-busy="true"] .tm-ai-permission__action {
+    cursor: progress;
+}
+
+.tm-ai-permission__shortcuts {
+    margin: 0;
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-xs);
+}
+
+/* ── Decided row ────────────────────────────────────────────────────────────────────────── */
+.tm-ai-permission__summary-icon {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    color: var(--tm-color-success-text);
+}
+
+.tm-ai-permission[data-state="denied"] .tm-ai-permission__summary-icon {
+    color: var(--tm-color-danger-text);
+}
+
+.tm-ai-permission[data-state="expired"] .tm-ai-permission__summary-icon {
+    color: var(--tm-color-warning-text);
+}
+
+.tm-ai-permission__summary-title {
+    color: var(--tm-text-primary);
+    font-weight: var(--tm-font-weight-semibold);
+    overflow-wrap: anywhere;
+}
+
+.tm-ai-permission__summary-text {
+    margin: 0;
+    color: var(--tm-text-secondary);
+}
+
+.tm-ai-permission__countdown {
+    font-variant-numeric: tabular-nums;
+    font-weight: var(--tm-font-weight-medium);
+    color: var(--tm-text-primary);
+}
+
+.tm-ai-permission[data-state="expired"] .tm-ai-permission__countdown {
+    color: var(--tm-color-danger-text);
+}
+
+.tm-ai-permission__revoke {
+    margin-inline-start: auto;
+}
+
+.tm-ai-permission__revoke:focus-visible {
+    outline: 2px solid transparent;
+    box-shadow: var(--tm-focus-ring);
+}
+
+/* ── Coarse pointer: every control is a thumb target ────────────────────────────────────── */
+@media (pointer: coarse) {
+    .tm-ai-permission__action,
+    .tm-ai-permission__revoke {
+        min-block-size: var(--tm-touch-target);
+        min-inline-size: var(--tm-touch-target);
+    }
+
+    .tm-ai-permission__option,
+    .tm-ai-permission__radio {
+        min-block-size: var(--tm-touch-target);
+    }
+}
+
+/* ── Forced colors (Windows high contrast) ──────────────────────────────────────────────────
+   No forced-color-adjust opt-out anywhere in this card: the system palette is the point. A box-shadow
+   focus ring is dropped by the UA, so every focus stop re-declares the system Highlight ring. */
+@media (forced-colors: active) {
+    .tm-ai-permission {
+        border-color: CanvasText;
+    }
+
+    .tm-ai-permission__option,
+    .tm-ai-permission__code {
+        border-color: ButtonText;
+    }
+
+    .tm-ai-permission__alert {
+        border-color: Mark;
+        color: CanvasText;
+    }
+
+    .tm-ai-permission:focus-visible,
+    .tm-ai-permission__action:focus-visible,
+    .tm-ai-permission__revoke:focus-visible,
+    .tm-ai-permission__radio:focus-visible {
+        outline: 2px solid Highlight;
+        outline-offset: 2px;
+        outline-color: Highlight;
+        box-shadow: none;
+    }
+}
+
+/* ── Reduced motion ───────────────────────────────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+    .tm-ai-permission,
+    .tm-ai-permission__collapse {
+        transition: none;
+    }
+}

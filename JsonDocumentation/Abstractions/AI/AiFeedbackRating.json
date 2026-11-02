@@ -1,0 +1,10 @@
+{
+  "kind": "Enum",
+  "category": "AI",
+  "namespace": "Tempo.Blazor.AI.Models",
+  "description": "How the reader rated an assistant answer — None (unrated), Positive (thumbs up) or Negative (thumbs down).",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/AI/AiFeedbackRating.cs",
+  "documentationStatus": "generated",
+  "itemName": "AiFeedbackRating"
+}

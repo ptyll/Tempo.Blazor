@@ -1,0 +1,410 @@
+/* ═══════════════════════════════════════════════════════════════
+   TmAppShell — the application frame (navigation, top bar, content, work area)
+   ═══════════════════════════════════════════════════════════════ */
+
+/* The shell is a container-owned composite: the layout is resolved by its TmLayoutObserver and the
+   markup branch decides what renders, so this file carries NO width conditions of its own. Every
+   value is a semantic token — the dark theme redefines tokens, never this file. */
+
+.tm-app-shell {
+    display: block;
+    block-size: 100%;
+    min-block-size: 0;
+}
+
+/* The frame is the CSS size container (so a host can embed the shell at any width). Overlays are
+   rendered BESIDE it, never inside it: a fixed-position drawer inside a container-type box would be
+   clipped and pinned by that box. */
+.tm-app-shell__frame {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    block-size: 100%;
+    min-block-size: 0;
+    container-type: inline-size;
+    container-name: tm-app-shell;
+    background-color: var(--tm-bg-workspace);
+}
+
+/* ── Skip link ───────────────────────────────────────────── */
+
+/* First focusable element of the page, hidden until it takes the focus. The hiding is the
+   visually-hidden pattern, NOT a transform: the frame clips nothing (a host embeds the shell
+   mid-page), so a link merely moved above the frame would still paint over the host's content. */
+.tm-app-shell__skip-link {
+    position: absolute;
+    inset-block-start: var(--tm-space-2);
+    inset-inline-start: var(--tm-space-2);
+    z-index: var(--tm-z-tooltip);
+    padding: var(--tm-space-2) var(--tm-space-4);
+    background-color: var(--tm-bg-surface);
+    color: var(--tm-text-link);
+    font-size: var(--tm-font-size-sm);
+    font-weight: var(--tm-font-weight-medium);
+    text-decoration: none;
+    border: 1px solid var(--tm-border-color);
+    border-radius: var(--tm-radius-control);
+    box-shadow: var(--tm-shadow-popover);
+    clip-path: inset(50%);
+    inline-size: 1px;
+    block-size: 1px;
+    overflow: hidden;
+    white-space: nowrap;
+}
+
+.tm-app-shell__skip-link:focus-visible,
+.tm-app-shell__skip-link:focus {
+    clip-path: none;
+    inline-size: auto;
+    block-size: auto;
+    overflow: visible;
+    outline: 2px solid transparent;
+    box-shadow: var(--tm-focus-ring);
+}
+
+/* ── Top bar ─────────────────────────────────────────────── */
+
+.tm-app-shell__topbar {
+    position: relative;
+    z-index: var(--tm-z-sticky);
+    flex: 0 0 auto;
+    min-inline-size: 0;
+    padding-block-start: env(safe-area-inset-top, 0px);
+}
+
+/* A host TopBar slot carries no opener of its own, so the frame renders one beside it: the header
+   becomes the row that holds the two. The modifier is emitted ONLY when that opener exists, so the
+   default header markup is untouched. */
+.tm-app-shell__topbar--menu {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    gap: var(--tm-space-2);
+    padding-inline-start: env(safe-area-inset-left, 0px);
+    padding-inline-end: env(safe-area-inset-right, 0px);
+}
+
+.tm-app-shell__topbar-content {
+    min-inline-size: 0;
+}
+
+/* The phone navigation disclosure button: a 44px target at every pointer, because it is the only way
+   into the navigation when no docked column exists. */
+.tm-app-shell__menu-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    inline-size: var(--tm-touch-target);
+    block-size: var(--tm-touch-target);
+    margin-inline-start: var(--tm-space-2);
+    color: var(--tm-text-primary);
+    background-color: transparent;
+    border: 1px solid transparent;
+    border-radius: var(--tm-radius-control);
+    cursor: pointer;
+}
+
+.tm-app-shell__menu-button:hover {
+    background-color: var(--tm-color-surface-hover);
+}
+
+.tm-app-shell__menu-button:focus-visible {
+    outline: 2px solid transparent;
+    box-shadow: var(--tm-focus-ring);
+}
+
+/* ── Body: navigation column, content, work area ─────────── */
+
+.tm-app-shell__body {
+    display: flex;
+    flex-direction: row;
+    flex: 1 1 auto;
+    min-block-size: 0;
+    min-inline-size: 0;
+}
+
+.tm-app-shell__sidebar {
+    display: flex;
+    flex-direction: column;
+    flex: 0 0 auto;
+    min-block-size: 0;
+}
+
+/* The rail presentation (tablet and the phone fallback): the column is the icon rail and the full
+   navigation opens in an overlay drawer, so the column never clips a flyout. */
+.tm-app-shell__sidebar--rail {
+    inline-size: var(--tm-sidebar-collapsed);
+    align-items: center;
+    overflow: visible;
+}
+
+/* A host-supplied rail has no toggle of its own, so the shell renders the overlay's opener here. */
+.tm-app-shell__nav-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    inline-size: var(--tm-touch-target);
+    block-size: var(--tm-touch-target);
+    margin: var(--tm-space-2) auto;
+    color: var(--tm-text-primary);
+    background-color: var(--tm-bg-surface);
+    border: 1px solid var(--tm-border-color);
+    border-radius: var(--tm-radius-control);
+    cursor: pointer;
+}
+
+.tm-app-shell__nav-toggle:hover {
+    background-color: var(--tm-color-surface-hover);
+}
+
+.tm-app-shell__nav-toggle:focus-visible {
+    outline: 2px solid transparent;
+    box-shadow: var(--tm-focus-ring);
+}
+
+.tm-app-shell__main {
+    flex: 1 1 auto;
+    min-inline-size: 0;
+    min-block-size: 0;
+    overflow: auto;
+    background-color: var(--tm-bg-surface);
+}
+
+/* The skip link's target takes the focus, so it needs a visible indicator. */
+.tm-app-shell__main:focus-visible {
+    outline: 2px solid var(--tm-border-color-focus);
+    outline-offset: calc(-1 * 2px);
+}
+
+/* ── Work area ───────────────────────────────────────────── */
+
+.tm-app-shell__work-area {
+    display: flex;
+    flex-direction: column;
+    flex: 0 0 auto;
+    inline-size: var(--tm-app-shell-work-area-width, 420px);
+    min-block-size: 0;
+    background-color: var(--tm-bg-surface);
+    border-inline-start: 1px solid var(--tm-border-color);
+}
+
+.tm-app-shell__work-area-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--tm-space-2);
+    flex: 0 0 auto;
+    padding-inline-start: var(--tm-space-3);
+    border-block-end: 1px solid var(--tm-border-color);
+}
+
+.tm-app-shell__work-area-title {
+    margin: 0;
+    font-size: var(--tm-font-size-sm);
+    font-weight: var(--tm-font-weight-semibold);
+    color: var(--tm-text-primary);
+}
+
+.tm-app-shell__work-area-close {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    inline-size: var(--tm-touch-target);
+    block-size: var(--tm-touch-target);
+    color: var(--tm-text-secondary);
+    background: none;
+    border: none;
+    border-radius: var(--tm-radius-control);
+    cursor: pointer;
+}
+
+.tm-app-shell__work-area-close:hover {
+    color: var(--tm-text-primary);
+    background-color: var(--tm-color-surface-hover);
+}
+
+.tm-app-shell__work-area-close:focus-visible {
+    outline: 2px solid transparent;
+    box-shadow: var(--tm-focus-ring);
+}
+
+.tm-app-shell__work-area-body {
+    flex: 1 1 auto;
+    min-block-size: 0;
+    overflow: auto;
+    padding: var(--tm-space-3);
+}
+
+/* ── The resize separator ────────────────────────────────── */
+
+/* The visual strip is 6px; the pointer-drag helper drives it (docs/touch-interaction.md) and the
+   keyboard path lives in Blazor (arrows, Home/End, double-click reset). */
+.tm-app-shell__resizer {
+    align-self: stretch;
+    flex-shrink: 0;
+    inline-size: var(--tm-space-1-5);
+    margin-inline: calc(-0.5 * var(--tm-space-1-5));
+    position: relative;
+    z-index: 1;
+    cursor: col-resize;
+    touch-action: none;
+    background: transparent;
+}
+
+.tm-app-shell__resizer:hover,
+.tm-panel-resize__handle--dragging {
+    background: var(--tm-color-primary-subtle);
+}
+
+.tm-app-shell__resizer:focus-visible {
+    outline: 2px solid transparent;
+    background: var(--tm-color-primary-subtle);
+    box-shadow: inset var(--tm-focus-ring);
+}
+
+/* Under a coarse pointer the 6px strip is a poor target: an invisible ::before widens the hit area
+   (the strip stays the visual affordance and the ARIA element). */
+@media (pointer: coarse) {
+    .tm-app-shell__resizer::before {
+        content: "";
+        position: absolute;
+        inset-block: 0;
+        inset-inline-start: 50%;
+        inline-size: var(--tm-space-6);
+        margin-inline-start: calc(-0.5 * var(--tm-space-6));
+    }
+}
+
+/* ── Inset variant: the content is a card on the workspace ─ */
+
+.tm-app-shell--inset .tm-app-shell__body {
+    gap: var(--tm-space-2);
+    padding: var(--tm-space-2);
+    padding-block-start: 0;
+}
+
+.tm-app-shell--inset .tm-app-shell__main {
+    border: 1px solid var(--tm-border-color);
+    border-radius: var(--tm-radius-card);
+    box-shadow: var(--tm-shadow-card);
+    padding: var(--tm-space-4);
+}
+
+.tm-app-shell--inset .tm-app-shell__work-area {
+    border: 1px solid var(--tm-border-color);
+    border-radius: var(--tm-radius-card);
+}
+
+/* ── Flat variant: edge to edge, hairline dividers only ──── */
+
+.tm-app-shell--flat .tm-app-shell__body {
+    gap: 0;
+}
+
+.tm-app-shell--flat .tm-app-shell__main {
+    padding: var(--tm-space-4);
+}
+
+/* ── Navigation overlay (the rail's and the phone's expanded drawer) ─────── */
+
+/* The nav surface fills the drawer body: the drawer's own body padding is cancelled for the shell's
+   navigation only, so the drawer's class ownership stays untouched. */
+.tm-app-shell__nav {
+    display: flex;
+    flex-direction: column;
+    min-block-size: 0;
+}
+
+/* A phone drawer sits against the notch edge: its content keeps the safe area on both sides. */
+.tm-app-shell__overlay--mobile .tm-app-shell__nav {
+    padding-inline: env(safe-area-inset-left, 0px) env(safe-area-inset-right, 0px);
+}
+
+/* A host-supplied navigation surface: the frame gives it the one named navigation landmark, so the
+   slot content must not render a <nav> of its own. */
+.tm-app-shell__nav-slot {
+    display: flex;
+    flex-direction: column;
+    min-block-size: 0;
+}
+
+.tm-app-shell__overlay .tm-app-shell__nav {
+    margin: calc(-1 * var(--tm-space-5));
+}
+
+/* ── Phone bottom navigation ─────────────────────────────── */
+
+/* The bar is a layout ROW of the frame, never viewport-fixed chrome: the frame classifies its own
+   width, so a fixed bar would be pinned to (and clipped by) the frame instead of the viewport, and it
+   would cover the content it sits next to. */
+.tm-app-shell__bottom-nav {
+    flex: 0 0 auto;
+    min-inline-size: 0;
+    background-color: var(--tm-bg-surface);
+    border-block-start: 1px solid var(--tm-border-color);
+    padding-inline: env(safe-area-inset-left, 0px) env(safe-area-inset-right, 0px);
+    padding-block-end: env(safe-area-inset-bottom, 0px);
+}
+
+.tm-app-shell .tm-bottom-nav--app-shell {
+    position: static;
+    inset: auto;
+    block-size: auto;
+    border-block-start: 0;
+    background-color: transparent;
+    padding-block-end: 0;
+    z-index: auto;
+}
+
+/* The bar's entries are the phone's primary navigation: they take the library focus ring like every
+   other control of the frame (the transparent outline is what forced colors paints). */
+.tm-app-shell__bottom-nav .tm-bottom-nav__link:focus-visible,
+.tm-app-shell__bottom-nav .tm-bottom-nav__button:focus-visible {
+    outline: 2px solid transparent;
+    box-shadow: var(--tm-focus-ring);
+}
+
+/* ── Forced colors ───────────────────────────────────────── */
+
+@media (forced-colors: active) {
+    .tm-app-shell__skip-link:focus-visible,
+    .tm-app-shell__skip-link:focus,
+    .tm-app-shell__nav-toggle:focus-visible,
+    .tm-app-shell__menu-button:focus-visible,
+    .tm-app-shell__bottom-nav .tm-bottom-nav__link:focus-visible,
+    .tm-app-shell__bottom-nav .tm-bottom-nav__button:focus-visible,
+    .tm-app-shell__work-area-close:focus-visible,
+    .tm-app-shell__main:focus-visible,
+    .tm-app-shell__resizer:focus-visible {
+        outline: 2px solid Highlight;
+        outline-offset: 2px;
+        box-shadow: none;
+    }
+
+    /* The surface tokens collapse to Canvas in High Contrast, so the separator's hover and dragging
+       highlight would disappear: paint the system Highlight colour instead, so a user can see the
+       strip under the pointer. */
+    .tm-app-shell__resizer:hover,
+    .tm-panel-resize__handle--dragging {
+        background: Highlight;
+    }
+
+    .tm-app-shell__work-area,
+    .tm-app-shell__work-area-header,
+    .tm-app-shell__bottom-nav {
+        border-color: CanvasText;
+    }
+}
+
+/* ── Coarse pointers: 44px targets ───────────────────────── */
+
+/* A finger needs the shared touch target on every control of the phone chrome; the visible strip of
+   the bar's entries is narrow, so the hit area is grown to the shared token (the drawer's links
+   already get it from _sidebar-nav.css). */
+@media (pointer: coarse) {
+    .tm-app-shell__bottom-nav .tm-bottom-nav__link,
+    .tm-app-shell__bottom-nav .tm-bottom-nav__button {
+        min-block-size: var(--tm-touch-target);
+        min-inline-size: var(--tm-touch-target);
+    }
+}

@@ -22,36 +22,86 @@ namespace Tempo.Blazor.Tests.Toolbar;
 public sealed class ToolbarRoleGuardTests
 {
     /// <summary>
-    /// F4: the ONE markup that claims <c>role="toolbar"</c> — core <c>TmToolbar</c>, which ships the real
-    /// mechanism (tm-toolbar.js: roving tabindex + arrow/Home/End). Anything else stays banned; a new
-    /// claimant must add itself here AND pass <see cref="TheAllowListedToolbar_ShipsTheRovingMechanism"/>.
+    /// The markup that claims <c>role="toolbar"</c>, each with the mechanism it ships: core <c>TmToolbar</c>
+    /// (tm-toolbar.js: roving tabindex + arrow/Home/End) and the AI package's <c>TmAiMessage</c> action bar
+    /// (a Blazor-owned roving tabindex, no second JS gesture module). Anything else stays banned; a new
+    /// claimant must add itself here AND pass <see cref="EveryAllowListedToolbar_ShipsTheMechanismItClaims"/>.
     /// </summary>
-    private static readonly string[] RovingToolbarImplementations =
+    /// <remarks>
+    /// The mechanism half of this guard used to be dead code: its assertion block carried literal
+    /// <c>\n</c> sequences instead of newlines, so — being preceded by <c>//</c> — the whole block sat
+    /// inside one line comment and only the allow-list membership was ever measured. It now runs through
+    /// <see cref="ToolbarMechanismCheck"/>, which is itself pinned on a synthetic toolbar that claims the
+    /// role and ships nothing (<see cref="TheMechanismCheck_RejectsAToolbarWithoutItsMechanism"/>).
+    /// </remarks>
+    private static readonly (string RelativePath, ToolbarMechanism Mechanism)[] RovingToolbarImplementations =
     [
-        "src/Tempo.Blazor/Components/Toolbar/TmToolbar.razor",
+        ("src/Tempo.Blazor/Components/Toolbar/TmToolbar.razor", ToolbarMechanism.CoreModule),
+        ("src/Tempo.Blazor.AI/Components/AI/TmAiMessage.razor", ToolbarMechanism.BlazorRovingTabIndex),
     ];
 
     [Fact]
-    public void TheAllowListedToolbar_ShipsTheRovingMechanism()
+    public void EveryAllowListedToolbar_ShipsTheMechanismItClaims()
     {
         var root = FindRepositoryRoot();
-        foreach (var relative in RovingToolbarImplementations)
+        foreach (var (relative, mechanism) in RovingToolbarImplementations)
         {
             var markup = File.ReadAllText(Path.Combine(root, relative));
             ToolbarRoleScanner.Find(markup, relative).Should().NotBeEmpty(
                 $"{relative} is on the allow-list because it claims role=toolbar");
-            // H14: a comment mentioning the module satisfied the old Contain("tm-toolbar.js"). The markup must USE the interop\n            // wrapper, and the wrapper must carry the module path and the attach call - comments stripped.\n            var code = System.Text.RegularExpressions.Regex.Replace(markup, @"@\*.*?\*@", string.Empty, System.Text.RegularExpressions.RegexOptions.Singleline);\n            code.Should().Contain("new ToolbarInterop(", $"{relative} must attach the roving-tabindex module it claims the role with");\n            code.Should().Contain("AttachAsync(");\n            var interop = System.Text.RegularExpressions.Regex.Replace(\n                File.ReadAllText(Path.Combine(root, "src", "Tempo.Blazor", "Helpers", "ToolbarInterop.cs")), @"^\\s*///.*$|//.*$", string.Empty, System.Text.RegularExpressions.RegexOptions.Multiline);\n            interop.Should().Contain("\\"./_content/Tempo.Blazor/js/tm-toolbar.js\\"").And.Contain("\\"attach\\"");
+
+            // H14: a comment mentioning the module satisfied the old Contain("tm-toolbar.js"). The markup
+            // must USE the mechanism, with the comments stripped first.
+            ToolbarMechanismCheck.Findings(mechanism, relative, markup).Should().BeEmpty(
+                "{0} claims role=toolbar but does not ship the roving mechanism it declared:{1}{2}",
+                relative,
+                Environment.NewLine,
+                string.Join(Environment.NewLine, ToolbarMechanismCheck.Findings(mechanism, relative, markup)));
         }
+
+        var interop = ToolbarMechanismCheck.StripComments(
+            File.ReadAllText(Path.Combine(root, "src", "Tempo.Blazor", "Helpers", "ToolbarInterop.cs")));
+        interop.Should().Contain("\"./_content/Tempo.Blazor/js/tm-toolbar.js\"").And.Contain("\"attach\"");
 
         var module = File.ReadAllText(Path.Combine(root, "src", "Tempo.Blazor", "wwwroot", "js", "tm-toolbar.js"));
         module.Should().Contain("export function nextRovingIndex").And.Contain("export function rovingItems")
             .And.Contain("tabindex").And.Contain("keydown");
     }
 
+    /// <summary>
+    /// The checker itself is pinned on a synthetic toolbar that claims the role and ships nothing: without
+    /// this fact a swallowed or vacuous check would pass for every real component (the previous revision of
+    /// this guard had its whole assertion block inside a line comment).
+    /// </summary>
+    [Fact]
+    public void TheMechanismCheck_RejectsAToolbarWithoutItsMechanism()
+    {
+        const string markup = """
+            <div role="toolbar" aria-label="akce"><button type="button">A</button></div>
+            """;
+
+        ToolbarMechanismCheck.Findings(ToolbarMechanism.BlazorRovingTabIndex, "fixture.razor", markup)
+            .Should().NotBeEmpty();
+        ToolbarMechanismCheck.Findings(ToolbarMechanism.CoreModule, "fixture.razor", markup)
+            .Should().NotBeEmpty();
+
+        const string blazor = """
+            <div role="toolbar" aria-label="akce" @onkeydown="HandleKeyDown">
+                <button type="button" tabindex="@TabIndexFor(0)">A</button>
+            </div>
+            """;
+        ToolbarMechanismCheck.Findings(ToolbarMechanism.BlazorRovingTabIndex, "fixture.razor", blazor)
+            .Should().NotBeEmpty("Arrow keys and a focus move are part of the mechanism");
+
+        var code = File.ReadAllText(Path.Combine(FindRepositoryRoot(), "src", "Tempo.Blazor.AI", "Components", "AI", "TmAiMessage.razor"));
+        ToolbarMechanismCheck.Findings(ToolbarMechanism.BlazorRovingTabIndex, "TmAiMessage.razor", code)
+            .Should().BeEmpty();
+    }
+
     [Fact]
     public void LibraryAndDemoMarkup_DoesNotClaimToolbarWithoutARovingMechanism()
     {
-        var hits = FindToolbarRoles(ReadSrcMarkup().Where(file => !RovingToolbarImplementations.Contains(file.RelativePath)).ToList());
+        var hits = FindToolbarRoles(ReadSrcMarkup().Where(file => !RovingToolbarImplementations.Any(entry => entry.RelativePath == file.RelativePath)).ToList());
 
         hits.Should().BeEmpty(
             "role=toolbar bez roving tabindexu je afordance bez mechanismu. Nalezeno:\n"
@@ -157,4 +207,79 @@ internal static class ToolbarRoleScanner
         var to = Math.Min(text.Length, index + 40);
         return text[from..to].Replace('\n', ' ').Trim();
     }
+}
+
+/// <summary>How a <c>role="toolbar"</c> markup implements the roving tabindex it promises.</summary>
+internal enum ToolbarMechanism
+{
+    /// <summary>The core <c>tm-toolbar.js</c> module, attached through <c>ToolbarInterop</c>.</summary>
+    CoreModule,
+
+    /// <summary>
+    /// A Blazor-owned roving tabindex: the <c>tabindex</c> of every control is COMPUTED from one tab-stop
+    /// field, Arrow/Home/End are handled in C#, and focus follows the tab stop through
+    /// <c>ElementReference.FocusAsync</c> — no second JS gesture module. The pattern
+    /// <c>TmEmailVariablePicker</c> and <c>TmModelingModelTree</c> already use.
+    /// </summary>
+    BlazorRovingTabIndex,
+}
+
+/// <summary>
+/// Static probe of one allow-listed <c>role="toolbar"</c> markup: every promise the role makes has to be
+/// backed by code in the file, with Razor and HTML comments stripped first (a comment mentioning the
+/// mechanism is not the mechanism).
+/// </summary>
+internal static class ToolbarMechanismCheck
+{
+    private static readonly Regex RazorComment = new(@"@\*.*?\*@", RegexOptions.Singleline | RegexOptions.Compiled);
+    private static readonly Regex HtmlComment = new(@"<!--.*?-->", RegexOptions.Singleline | RegexOptions.Compiled);
+    private static readonly Regex LineComment = new(@"//.*?$", RegexOptions.Multiline | RegexOptions.Compiled);
+
+    /// <summary>Returns one finding per missing piece of the declared mechanism; empty when it is complete.</summary>
+    public static IReadOnlyList<string> Findings(
+        ToolbarMechanism mechanism,
+        string relativePath,
+        string markup)
+    {
+        var code = StripComments(markup);
+        var findings = new List<string>();
+
+        void Require(bool present, string description)
+        {
+            if (!present)
+            {
+                findings.Add($"{relativePath}: {description}");
+            }
+        }
+
+        switch (mechanism)
+        {
+            case ToolbarMechanism.CoreModule:
+                Require(code.Contains("new ToolbarInterop(", StringComparison.Ordinal), "no ToolbarInterop wrapper");
+                Require(code.Contains("AttachAsync(", StringComparison.Ordinal), "no AttachAsync call");
+                break;
+
+            case ToolbarMechanism.BlazorRovingTabIndex:
+                Require(code.Contains("tabindex=", StringComparison.Ordinal), "no tabindex attribute");
+                Require(code.Contains("TabIndexFor(", StringComparison.Ordinal), "the tab stop is not computed");
+                Require(code.Contains("\"ArrowRight\"", StringComparison.Ordinal), "ArrowRight is not handled");
+                Require(code.Contains("\"ArrowLeft\"", StringComparison.Ordinal), "ArrowLeft is not handled");
+                Require(code.Contains("\"Home\"", StringComparison.Ordinal), "Home is not handled");
+                Require(code.Contains("\"End\"", StringComparison.Ordinal), "End is not handled");
+                Require(code.Contains("FocusAsync(", StringComparison.Ordinal), "the tab stop never moves the focus");
+                break;
+
+            default:
+                findings.Add($"{relativePath}: unknown mechanism {mechanism}");
+                break;
+        }
+
+        return findings;
+    }
+
+    /// <summary>Removes Razor, HTML and line comments so a mentioning comment cannot satisfy a check.</summary>
+    public static string StripComments(string markup)
+        => LineComment.Replace(
+            HtmlComment.Replace(RazorComment.Replace(markup, string.Empty), string.Empty),
+            string.Empty);
 }

@@ -22,6 +22,7 @@
 @import "components/_skeleton.css";
 
 /* 4. Layout */
+@import "components/_app-shell.css";
 @import "components/_sidebar-nav.css";
 @import "components/_topbar.css";
 @import "components/_breadcrumb.css";
@@ -80,6 +81,11 @@
 @import "components/_chip.css";
 @import "components/_kanban.css";
 @import "components/_change-diff.css";
+@import "components/_approval-card.css";
+@import "components/_review-queue.css";
+@import "components/_inline-diff.css";
+@import "components/_suggestion-card.css";
+@import "components/_onboarding-checklist.css";
 @import "components/_query-input.css";
 
 /* 7. Data Table & Pivot Table */
@@ -130,6 +136,7 @@
 @import "components/_tooltip.css";
 @import "components/_popover.css";
 @import "components/_overlay-panel.css";
+@import "components/_user-menu.css";
 
 /* 12. Files & Gallery */
 @import "components/_file-drop-zone.css";

@@ -1,0 +1,526 @@
+@namespace Tempo.Blazor.Components.AI
+@inherits Tempo.Blazor.Components.TmComponentBase
+@using Microsoft.Extensions.DependencyInjection
+@using Tempo.Blazor.AI.Formatting
+@using Tempo.Blazor.AI.Models
+@using Tempo.Blazor.Components.Icons
+@inject IJSRuntime JS
+@implements IAsyncDisposable
+
+@* One tool/function invocation. The row is a static summary (state icon, name, localized status and the
+   elapsed time); Copy, Retry and the disclosure are separate native buttons inside the same row, so a
+   keyboard user reaches each of them with Tab and activates it with Enter/Space without emulation. The
+   JSON payloads are pretty-printed but never trusted: a payload that does not parse is shown verbatim,
+   and a redacted call shows a localized notice and offers no path out of the page at all. *@
+@if (ToolCall is { } call)
+{
+    <div class="tm-tool-call tm-tool-call--@StatusModifier @Class"
+         data-testid="@RootTestId("tool-call")"
+         data-status="@StatusModifier"
+         data-tool-call-id="@call.Id"
+         @attributes="AdditionalAttributes">
+        <div class="tm-tool-call__header">
+            <span class="tm-tool-call__status-icon" aria-hidden="true">
+                <TmIcon Name="@StatusIcon" Size="IconSize.Sm" />
+            </span>
+            <span class="tm-tool-call__name">@DisplayName</span>
+            <span class="tm-tool-call__status">@StatusLabel</span>
+            @if (DurationText is { } duration)
+            {
+                <span class="tm-tool-call__duration">@duration</span>
+            }
+
+            @* Every control in the row names the tool it belongs to: inside a group the same three buttons
+               repeat per card, and "Copy tool call" × N is not a usable list of buttons (WCAG 2.4.6). *@
+            <span class="tm-tool-call__actions">
+                @if (CanCopy)
+                {
+                    <button type="button"
+                            class="tm-tool-call__copy"
+                            data-copied="@(_copied ? "true" : null)"
+                            aria-label="@Loc["TmToolCallCard_CopyFor", DisplayName]"
+                            @onclick="CopyAsync">
+                        <TmIcon Name="@(_copied ? IconNames.Check : IconNames.Copy)" Size="IconSize.Sm" />
+                    </button>
+                }
+                @if (CanRetry)
+                {
+                    <button type="button"
+                            class="tm-tool-call__retry"
+                            aria-label="@Loc["TmToolCallCard_RetryFor", DisplayName]"
+                            disabled="@_retrying"
+                            @onclick="RetryAsync">
+                        <TmIcon Name="@IconNames.Refresh" Size="IconSize.Sm" />
+                        <span>@Loc["TmToolCallCard_Retry"]</span>
+                    </button>
+                }
+                @if (CanExpand)
+                {
+                    @* aria-controls names the region only while the region is rendered: a collapsed
+                       disclosure renders no details, so the id would point at nothing. *@
+                    <button type="button"
+                            class="tm-tool-call__toggle"
+                            aria-expanded="@(_expanded ? "true" : "false")"
+                            aria-controls="@(_expanded ? _detailsId : null)"
+                            aria-label="@Loc["TmToolCallCard_DetailsFor", DisplayName]"
+                            @onclick="Toggle">
+                        <TmIcon Name="@IconNames.ChevronDown" Size="IconSize.Sm" />
+                    </button>
+                }
+            </span>
+        </div>
+
+        @if (call.IsRedacted)
+        {
+            <p class="tm-tool-call__redacted">
+                <TmIcon Name="@IconNames.Lock" Size="IconSize.Sm" />
+                <span>@Loc["TmToolCallCard_Redacted"]</span>
+            </p>
+        }
+        else if (_expanded)
+        {
+            <div id="@_detailsId" class="tm-tool-call__details">
+                @if (_prettyArguments is not null)
+                {
+                    <section class="tm-tool-call__section tm-tool-call__arguments"
+                             aria-label="@Loc["TmToolCallCard_Arguments"]">
+                        <pre class="tm-tool-call__pre" tabindex="0"><code>@_prettyArguments</code></pre>
+                    </section>
+                }
+                @if (_prettyResult is not null)
+                {
+                    <section class="tm-tool-call__section tm-tool-call__result"
+                             aria-label="@Loc["TmToolCallCard_Result"]">
+                        <pre class="tm-tool-call__pre" tabindex="0"><code>@_prettyResult</code></pre>
+                    </section>
+                }
+                @if (!string.IsNullOrWhiteSpace(call.Error))
+                {
+                    <p class="tm-tool-call__error">
+                        <span class="tm-tool-call__error-label">@Loc["TmToolCallCard_Error"]</span>
+                        <span class="tm-tool-call__error-text">@call.Error</span>
+                    </p>
+                }
+            </div>
+        }
+
+        @* One live region per card: a status transition and the copy confirmation are announced here and
+           nowhere else. The error text is NOT a second live region — the announcement already says the
+           call failed, and a failing call opens its details, so the message itself is on screen. *@
+        <div class="tm-sr-only" role="status">@_liveAnnouncement</div>
+    </div>
+}
+
+@code {
+    private const string InteropModulePath = "./_content/Tempo.Blazor.AI/js/ai-message.js";
+
+    [Inject] private IServiceProvider Services { get; set; } = default!;
+
+    private readonly string _detailsId = $"tm-tool-call-details-{Guid.NewGuid():n}";
+    private IJSObjectReference? _module;
+    private AiElapsedTicker? _ticker;
+    private TimeProvider? _clock;
+    private AiToolCall? _lastCall;
+    private AiToolCallStatus? _lastStatus;
+    private DateTimeOffset? _observedStart;
+    private DateTimeOffset? _observedEnd;
+    private string _liveAnnouncement = string.Empty;
+    private string? _prettyArguments;
+    private string? _prettyResult;
+    private string? _copyText;
+    private string? _formattedArgumentsJson;
+    private string? _formattedResultJson;
+    private bool _formattedRedacted;
+    private bool _hasFormattedPayloads;
+    private bool _expanded;
+    private bool _copied;
+    private bool _retrying;
+    private bool _disposed;
+    private CancellationTokenSource? _copiedReset;
+
+    /// <summary>
+    /// The call this card renders. A null value renders nothing at all, so a host can bind a part list
+    /// without a null check.
+    /// </summary>
+    [Parameter, EditorRequired] public AiToolCall? ToolCall { get; set; }
+
+    /// <summary>
+    /// Whether the arguments/result disclosure starts open. Default false. The value seeds the initial
+    /// state only: after that the reader owns it, and a call that FAILS while on screen opens itself so the
+    /// error is visible without a second interaction.
+    /// </summary>
+    [Parameter] public bool DefaultExpanded { get; set; }
+
+    /// <summary>
+    /// Raised when the reader asks to run a failed call again. The Retry button renders only for a call in
+    /// <see cref="AiToolCallStatus.Failed"/> with a bound handler — never a button that does nothing.
+    /// </summary>
+    [Parameter] public EventCallback OnRetry { get; set; }
+
+    /// <summary>Additional CSS class(es) for the root element.</summary>
+    [Parameter] public string? Class { get; set; }
+
+    /// <summary>Additional HTML attributes applied to the root element.</summary>
+    [Parameter(CaptureUnmatchedValues = true)] public Dictionary<string, object>? AdditionalAttributes { get; set; }
+
+    /// <summary>
+    /// The clock behind the live elapsed timer. Resolved through <see cref="IServiceProvider"/> so a host
+    /// that never registers a <see cref="TimeProvider"/> still gets <see cref="TimeProvider.System"/>; tests
+    /// register a <c>FakeTimeProvider</c>.
+    /// </summary>
+    private TimeProvider Clock => _clock ??= Services.GetService<TimeProvider>() ?? TimeProvider.System;
+
+    private string DisplayName => string.IsNullOrWhiteSpace(ToolCall?.DisplayName)
+        ? ToolCall?.Name ?? string.Empty
+        : ToolCall!.DisplayName!;
+
+    private string StatusModifier => ToolCall?.Status switch
+    {
+        AiToolCallStatus.Running => "running",
+        AiToolCallStatus.Succeeded => "succeeded",
+        AiToolCallStatus.Failed => "failed",
+        AiToolCallStatus.Cancelled => "cancelled",
+        _ => "queued",
+    };
+
+    private string StatusLabel => ToolCall?.Status switch
+    {
+        AiToolCallStatus.Running => Loc["TmToolCallCard_Status_Running"],
+        AiToolCallStatus.Succeeded => Loc["TmToolCallCard_Status_Succeeded"],
+        AiToolCallStatus.Failed => Loc["TmToolCallCard_Status_Failed"],
+        AiToolCallStatus.Cancelled => Loc["TmToolCallCard_Status_Cancelled"],
+        _ => Loc["TmToolCallCard_Status_Queued"],
+    };
+
+    private string StatusIcon => ToolCall?.Status switch
+    {
+        AiToolCallStatus.Running => IconNames.Activity,
+        AiToolCallStatus.Succeeded => IconNames.Check,
+        AiToolCallStatus.Failed => IconNames.AlertCircle,
+        AiToolCallStatus.Cancelled => IconNames.XCircle,
+        _ => IconNames.Clock,
+    };
+
+    private bool IsLive => ToolCall?.Status is AiToolCallStatus.Queued or AiToolCallStatus.Running;
+
+    private bool CanCopy => ToolCall is { IsRedacted: false } && _copyText is { Length: > 0 };
+
+    private bool CanRetry => OnRetry.HasDelegate && ToolCall?.Status == AiToolCallStatus.Failed;
+
+    private bool CanExpand => ToolCall is { IsRedacted: false }
+        && (_prettyArguments is not null
+            || _prettyResult is not null
+            || !string.IsNullOrWhiteSpace(ToolCall.Error));
+
+    /// <summary>The elapsed time, or null when the call has no start to measure from.</summary>
+    private TimeSpan? Elapsed
+    {
+        get
+        {
+            if (ToolCall is not { } call)
+            {
+                return null;
+            }
+
+            var start = call.StartedAt ?? _observedStart;
+            if (start is null)
+            {
+                return null;
+            }
+
+            var end = call.CompletedAt ?? (IsLive ? Clock.GetUtcNow() : _observedEnd ?? Clock.GetUtcNow());
+            return end - start;
+        }
+    }
+
+    private string? DurationText => Elapsed is { } elapsed
+        ? AiDurationFormatter.Format(elapsed, Loc)
+        : null;
+
+    /// <inheritdoc />
+    protected override void OnParametersSet()
+    {
+        var call = ToolCall;
+        if (!ReferenceEquals(_lastCall, call))
+        {
+            // A different call is a different row: no interaction state may leak across it.
+            _lastCall = call;
+            _observedStart = null;
+            _observedEnd = null;
+            _expanded = DefaultExpanded;
+            _copied = false;
+            _retrying = false;
+            _liveAnnouncement = string.Empty;
+            _lastStatus = call?.Status;
+        }
+
+        if (call is null)
+        {
+            return;
+        }
+
+        var status = call.Status;
+        if (_lastStatus != status)
+        {
+            if (status == AiToolCallStatus.Failed)
+            {
+                // A failure is the one transition the reader must not have to go looking for.
+                _expanded = true;
+                _observedEnd ??= Clock.GetUtcNow();
+            }
+
+            if (status is AiToolCallStatus.Succeeded or AiToolCallStatus.Failed or AiToolCallStatus.Cancelled)
+            {
+                _observedEnd ??= Clock.GetUtcNow();
+            }
+
+            var label = StatusLabel;
+            _liveAnnouncement = Loc["TmToolCallCard_Announcement", DisplayName, label];
+            _lastStatus = status;
+        }
+
+        if (_observedStart is null && status == AiToolCallStatus.Running)
+        {
+            _observedStart = Clock.GetUtcNow();
+        }
+
+        // A payload that arrived after the first render (a streaming call fills its arguments late) has to
+        // reach the disclosure without a re-mount. The formatting is cached on the payload strings: a status
+        // tick re-renders the row, and re-parsing the same JSON on every tick is pure waste.
+        RefreshPayloads(call);
+    }
+
+    /// <summary>
+    /// Re-formats the arguments and the result only when an input actually changed. The cache is keyed on the
+    /// payload strings themselves, so two different calls that happen to carry the same payload share the
+    /// formatted result — the output depends on nothing else.
+    /// </summary>
+    private void RefreshPayloads(AiToolCall call)
+    {
+        if (_hasFormattedPayloads
+            && _formattedRedacted == call.IsRedacted
+            && string.Equals(_formattedArgumentsJson, call.ArgumentsJson, StringComparison.Ordinal)
+            && string.Equals(_formattedResultJson, call.ResultJson, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        _hasFormattedPayloads = true;
+        _formattedArgumentsJson = call.ArgumentsJson;
+        _formattedResultJson = call.ResultJson;
+        _formattedRedacted = call.IsRedacted;
+        (_prettyArguments, _prettyResult, _copyText) = PreparePayloads(call);
+    }
+
+    /// <inheritdoc />
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (IsLive && Elapsed is not null)
+        {
+            StartTicker();
+        }
+        else
+        {
+            _ticker?.Stop();
+        }
+    }
+
+    private static (string? Arguments, string? Result, string? CopyText) PreparePayloads(AiToolCall? call)
+    {
+        if (call is null || call.IsRedacted)
+        {
+            return (null, null, null);
+        }
+
+        var arguments = Readable(call.ArgumentsJson);
+        var result = Readable(call.ResultJson);
+        var copy = string.Join(
+            "\n\n",
+            new[] { arguments, result }.Where(section => section is not null));
+
+        return (arguments, result, copy.Length == 0 ? null : copy);
+    }
+
+    /// <summary>Pretty-printed JSON when it parses, the raw payload otherwise — never nothing.</summary>
+    private static string? Readable(string? json)
+    {
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            return null;
+        }
+
+        return AiJsonPrettyPrinter.TryFormat(json, out var formatted) ? formatted : json;
+    }
+
+    private void StartTicker()
+    {
+        _ticker ??= new AiElapsedTicker(Clock, OnTickAsync);
+        _ticker.Start();
+    }
+
+    private Task OnTickAsync() => InvokeAsync(StateHasChanged);
+
+    private void Toggle() => _expanded = !_expanded;
+
+    /// <summary>
+    /// Runs the host's retry. The button disables itself and the handler refuses re-entry while the host's
+    /// task is pending: a reader who clicks twice on a slow re-run would otherwise fire
+    /// <see cref="OnRetry"/> twice for one intent.
+    /// </summary>
+    private async Task RetryAsync()
+    {
+        if (_retrying || !OnRetry.HasDelegate)
+        {
+            return;
+        }
+
+        _retrying = true;
+        try
+        {
+            await OnRetry.InvokeAsync();
+        }
+        finally
+        {
+            _retrying = false;
+        }
+    }
+
+    private async Task CopyAsync()
+    {
+        if (_copyText is not { Length: > 0 })
+        {
+            return;
+        }
+
+        var module = await EnsureModuleAsync();
+        if (module is null)
+        {
+            return;
+        }
+
+        bool copied;
+        try
+        {
+            copied = await module.InvokeAsync<bool>("copyText", _copyText);
+        }
+        catch (Exception exception) when (IsInteropFailure(exception))
+        {
+            return;
+        }
+
+        if (!copied)
+        {
+            // A refused clipboard write (permissions, insecure context) must not claim success.
+            return;
+        }
+
+        _copied = true;
+        _liveAnnouncement = Loc["TmToolCallCard_Copied"];
+        ScheduleCopiedReset();
+    }
+
+    /// <summary>
+    /// The copied confirmation resets itself, so the button does not keep claiming an old copy. The reset
+    /// runs on the renderer and is cancelled on dispose.
+    /// </summary>
+    private void ScheduleCopiedReset()
+    {
+        _copiedReset?.Cancel();
+        _copiedReset?.Dispose();
+        _copiedReset = new CancellationTokenSource();
+        _ = ResetCopiedAsync(_copiedReset.Token);
+    }
+
+    private async Task ResetCopiedAsync(CancellationToken token)
+    {
+        try
+        {
+            await Task.Delay(TimeSpan.FromSeconds(2), token);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+
+        if (_disposed)
+        {
+            return;
+        }
+
+        try
+        {
+            await InvokeAsync(() =>
+            {
+                _copied = false;
+                if (string.Equals(_liveAnnouncement, Loc["TmToolCallCard_Copied"], StringComparison.Ordinal))
+                {
+                    _liveAnnouncement = string.Empty;
+                }
+
+                StateHasChanged();
+            });
+        }
+        catch (ObjectDisposedException)
+        {
+            // The card was removed while the confirmation was pending.
+        }
+    }
+
+    private async Task<IJSObjectReference?> EnsureModuleAsync()
+    {
+        if (_disposed)
+        {
+            return null;
+        }
+
+        if (_module is not null)
+        {
+            return _module;
+        }
+
+        try
+        {
+            _module = await JS.InvokeAsync<IJSObjectReference>("import", InteropModulePath);
+        }
+        catch (Exception exception) when (IsInteropFailure(exception))
+        {
+            return null;
+        }
+
+        return _module;
+    }
+
+    private static bool IsInteropFailure(Exception exception)
+        => exception is JSException or JSDisconnectedException or InvalidOperationException or NotSupportedException;
+
+    /// <inheritdoc />
+    public async ValueTask DisposeAsync()
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        _disposed = true;
+        _ticker?.Dispose();
+        _ticker = null;
+        _copiedReset?.Cancel();
+        _copiedReset?.Dispose();
+        _copiedReset = null;
+
+        var module = _module;
+        _module = null;
+        if (module is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await module.DisposeAsync();
+        }
+        catch (Exception exception) when (IsInteropFailure(exception))
+        {
+        }
+    }
+}

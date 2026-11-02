@@ -1,0 +1,405 @@
+/* ═══════════════════════════════════════════════════════
+   TmApprovalCard — human-in-the-loop approval request
+   Contract: docs/approval-card.md
+   ═══════════════════════════════════════════════════════ */
+
+/* ── Base ──────────────────────────────────────────────── */
+.tm-approval-card {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-3);
+    padding: var(--tm-space-4);
+    background: var(--tm-bg-surface);
+    color: var(--tm-text-primary);
+    border: 1px solid var(--tm-border-color);
+    border-inline-start: 3px solid var(--tm-color-primary);
+    border-radius: var(--tm-radius-card);
+    box-shadow: var(--tm-shadow-sm);
+    font-size: var(--tm-font-size-sm);
+    line-height: 1.5;
+    transition: border-color var(--tm-transition-normal), background-color var(--tm-transition-normal);
+}
+
+.tm-approval-card:focus-visible {
+    outline: 2px solid transparent;
+    box-shadow: var(--tm-focus-ring);
+}
+
+/* A decided card is a result row, not a request: the accent and the shadow go away. */
+.tm-approval-card--collapsed {
+    gap: var(--tm-space-2);
+    background: var(--tm-bg-surface-secondary);
+    box-shadow: none;
+}
+
+.tm-approval-card--collapsed:focus-visible {
+    outline: 2px solid transparent;
+    box-shadow: var(--tm-focus-ring);
+}
+
+/* ── Risk levels ───────────────────────────────────────── */
+.tm-approval-card--risk-low {
+    border-inline-start-color: var(--tm-color-success);
+}
+
+.tm-approval-card--risk-medium {
+    border-inline-start-color: var(--tm-color-warning);
+}
+
+.tm-approval-card--risk-high,
+.tm-approval-card--risk-critical {
+    border-inline-start-color: var(--tm-color-danger);
+}
+
+/* ── Collapse (height transition, no JS) ───────────────── */
+.tm-approval-card__collapse {
+    display: grid;
+    grid-template-rows: 1fr;
+    visibility: visible;
+    transition: grid-template-rows var(--tm-transition-slow), visibility 0s;
+}
+
+/* The inactive half is inert and hidden; the height still animates while it leaves. */
+.tm-approval-card__collapse[inert] {
+    grid-template-rows: 0fr;
+    visibility: hidden;
+    transition: grid-template-rows var(--tm-transition-slow), visibility 0s linear var(--tm-transition-slow);
+}
+
+.tm-approval-card__body,
+.tm-approval-card__summary {
+    min-inline-size: 0;
+}
+
+/* The inner element is the one that clips: a 0fr grid row only collapses if its content can
+   shrink, so it carries min-block-size: 0 and overflow: hidden. */
+.tm-approval-card__body-inner,
+.tm-approval-card__summary-inner {
+    min-block-size: 0;
+    overflow: hidden;
+}
+
+.tm-approval-card__body-inner {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-3);
+}
+
+.tm-approval-card__summary-inner {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-2);
+    flex-wrap: wrap;
+}
+
+/* ── Header ────────────────────────────────────────────── */
+.tm-approval-card__header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--tm-space-3);
+    flex-wrap: wrap;
+}
+
+.tm-approval-card__heading {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-2);
+    flex-wrap: wrap;
+    min-inline-size: 0;
+}
+
+.tm-approval-card__title {
+    margin: 0;
+    font-size: var(--tm-font-size-md);
+    font-weight: var(--tm-font-weight-semibold);
+    color: var(--tm-text-primary);
+}
+
+.tm-approval-card__risk {
+    display: inline-flex;
+    flex-shrink: 0;
+}
+
+/* ── Countdown ─────────────────────────────────────────── */
+.tm-approval-card__deadline {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--tm-space-1);
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-xs);
+    white-space: nowrap;
+}
+
+.tm-approval-card__deadline--expired {
+    color: var(--tm-color-danger-text);
+    font-weight: var(--tm-font-weight-semibold);
+}
+
+.tm-approval-card__deadline-label {
+    color: var(--tm-text-secondary);
+}
+
+.tm-approval-card__countdown {
+    font-variant-numeric: tabular-nums;
+    font-weight: var(--tm-font-weight-medium);
+    color: var(--tm-text-primary);
+}
+
+/* The danger colour belongs to the EXPIRED countdown only. It is the second signal that the deadline
+   has passed (the word "Expired" inside the same element is the first), so a bare countdown rule
+   would flatten the expired state, the one-minute warning and a card with hours left into the same
+   urgency — red stops meaning anything. Guard: TmApprovalCardCssTests. */
+.tm-approval-card__deadline--expired .tm-approval-card__countdown {
+    color: var(--tm-color-danger-text);
+}
+
+/* ── Content ───────────────────────────────────────────── */
+.tm-approval-card__description {
+    margin: 0;
+    color: var(--tm-text-secondary);
+}
+
+.tm-approval-card__preview {
+    padding: var(--tm-space-3);
+    background: var(--tm-bg-surface-secondary);
+    border: 1px solid var(--tm-border-color);
+    border-radius: var(--tm-radius-md);
+}
+
+.tm-approval-card__details {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+    gap: var(--tm-space-2) var(--tm-space-4);
+    margin: 0;
+}
+
+.tm-approval-card__detail {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-0-5);
+    min-inline-size: 0;
+}
+
+.tm-approval-card__detail-term {
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-xs);
+    font-weight: var(--tm-font-weight-medium);
+}
+
+.tm-approval-card__detail-value {
+    margin: 0;
+    color: var(--tm-text-primary);
+    overflow-wrap: anywhere;
+}
+
+/* ── Note ──────────────────────────────────────────────── */
+.tm-approval-card__note {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-1);
+}
+
+.tm-approval-card__note-label {
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-xs);
+    font-weight: var(--tm-font-weight-medium);
+}
+
+.tm-approval-card__note-input {
+    inline-size: 100%;
+    padding: var(--tm-space-2);
+    border: 1px solid var(--tm-border-color-control);
+    border-radius: var(--tm-radius-control);
+    background: var(--tm-bg-surface);
+    color: var(--tm-text-primary);
+    font: inherit;
+    font-size: var(--tm-font-size-sm);
+    resize: vertical;
+}
+
+.tm-approval-card__note-input::placeholder {
+    color: var(--tm-text-placeholder);
+}
+
+.tm-approval-card__note-input:focus-visible {
+    outline: 2px solid transparent;
+    border-color: var(--tm-border-color-focus);
+    box-shadow: var(--tm-focus-ring);
+}
+
+.tm-approval-card__note-input[aria-invalid="true"] {
+    border-color: var(--tm-color-danger);
+}
+
+.tm-approval-card__note-input[aria-invalid="true"]:focus-visible {
+    outline: 2px solid transparent;
+    box-shadow: var(--tm-focus-ring-danger);
+}
+
+.tm-approval-card__note-error {
+    color: var(--tm-color-danger-text);
+    font-size: var(--tm-font-size-xs);
+}
+
+/* ── Error ─────────────────────────────────────────────── */
+.tm-approval-card__alert {
+    display: block;
+}
+
+/* ── Actions ───────────────────────────────────────────── */
+.tm-approval-card__actions {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-2);
+    flex-wrap: wrap;
+}
+
+.tm-approval-card__action {
+    gap: var(--tm-space-1-5);
+}
+
+/* The decision is being saved: nothing may be clicked twice, and the wait reads as progress. */
+.tm-approval-card--busy .tm-approval-card__action {
+    cursor: progress;
+}
+
+.tm-approval-card__spinner {
+    display: inline-block;
+    inline-size: 0.875em;
+    block-size: 0.875em;
+    border: 2px solid currentColor;
+    border-block-start-color: transparent;
+    border-radius: var(--tm-radius-full);
+    animation: tm-approval-card-spin 0.8s linear infinite;
+}
+
+@keyframes tm-approval-card-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* ── Collapsed result row ──────────────────────────────── */
+.tm-approval-card__summary-icon {
+    display: inline-flex;
+    flex-shrink: 0;
+    color: var(--tm-color-success-text);
+}
+
+.tm-approval-card--rejected .tm-approval-card__summary-icon,
+.tm-approval-card--cancelled .tm-approval-card__summary-icon {
+    color: var(--tm-color-danger-text);
+}
+
+.tm-approval-card--expired .tm-approval-card__summary-icon {
+    color: var(--tm-color-warning-text);
+}
+
+.tm-approval-card__summary-title {
+    font-weight: var(--tm-font-weight-semibold);
+    color: var(--tm-text-primary);
+    overflow-wrap: anywhere;
+}
+
+.tm-approval-card__summary-text {
+    color: var(--tm-text-secondary);
+}
+
+.tm-approval-card__summary-note {
+    color: var(--tm-text-secondary);
+    font-style: italic;
+    overflow-wrap: anywhere;
+}
+
+.tm-approval-card__undo {
+    margin-inline-start: auto;
+}
+
+.tm-approval-card__undo:focus-visible {
+    outline: 2px solid transparent;
+    box-shadow: var(--tm-focus-ring);
+}
+
+/* ── Compact single-row variant ────────────────────────── */
+.tm-approval-card--compact {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: var(--tm-space-2) var(--tm-space-3);
+    padding: var(--tm-space-2) var(--tm-space-3);
+}
+
+.tm-approval-card--compact .tm-approval-card__body-inner {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: var(--tm-space-2) var(--tm-space-3);
+}
+
+.tm-approval-card--compact .tm-approval-card__header {
+    grid-column: 1;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.tm-approval-card--compact .tm-approval-card__title {
+    font-size: var(--tm-font-size-sm);
+}
+
+.tm-approval-card--compact .tm-approval-card__actions {
+    grid-column: 2;
+}
+
+.tm-approval-card--compact .tm-approval-card__note,
+.tm-approval-card--compact .tm-approval-card__alert {
+    grid-column: 1 / -1;
+}
+
+/* ── Coarse pointers: the actions are finger targets ───── */
+@media (pointer: coarse) {
+    .tm-approval-card__action,
+    .tm-approval-card__undo {
+        min-block-size: var(--tm-touch-target);
+        min-inline-size: var(--tm-touch-target);
+    }
+}
+
+/* ── Forced colors ─────────────────────────────────────── */
+@media (forced-colors: active) {
+    /* No forced-color-adjust opt-out anywhere in this card: the system palette is the point.
+       The box-shadow focus ring is forced away by the UA, so every focus stop re-declares the
+       system Highlight ring here (see the review learning on stacked opt-outs). */
+    .tm-approval-card {
+        border-color: CanvasText;
+    }
+
+    .tm-approval-card__note-input {
+        border-color: ButtonText;
+    }
+
+    .tm-approval-card__note-input[aria-invalid="true"] {
+        border-color: Mark;
+    }
+
+    .tm-approval-card:focus-visible,
+    .tm-approval-card__action:focus-visible,
+    .tm-approval-card__undo:focus-visible,
+    .tm-approval-card__note-input:focus-visible {
+        outline: 2px solid Highlight;
+        outline-offset: 2px;
+        box-shadow: none;
+    }
+}
+
+/* ── Reduced motion ────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+    .tm-approval-card,
+    .tm-approval-card__collapse {
+        transition: none;
+    }
+
+    .tm-approval-card__spinner {
+        animation: none;
+    }
+}

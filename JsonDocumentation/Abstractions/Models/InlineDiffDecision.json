@@ -1,0 +1,10 @@
+{
+  "itemName": "InlineDiffDecision",
+  "kind": "Record",
+  "category": "Models",
+  "namespace": "Tempo.Blazor.Abstractions.Models.Diffs",
+  "description": "One human decision on a single change of a TmInlineDiff: the hunk id, whether it was accepted and the whole resulting text. TmInlineDiff hands it to OnDecision before the decision is applied, so a host can persist the decision and the resulting wording in one round trip and a failed save never looks like an accepted change.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/Models/Diffs/InlineDiffDecision.cs",
+  "documentationStatus": "generated"
+}

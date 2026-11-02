@@ -1,0 +1,180 @@
+{
+  "itemName": "TmSuggestionCard",
+  "kind": "Component",
+  "category": "Approvals",
+  "description": "One machine suggestion a human accepts or dismisses: the suggested text, a localized confidence band (with an optional percentage), the rationale behind a native disclosure and, when the host offers more than one wording, a radiogroup of alternatives. Accept and Dismiss are asynchronous callbacks - the card leaves the pending state only when they complete without throwing, so a failed save never looks like a decision - and with UndoWindow the decided row offers Undo until that window elapses (a TimeProvider clock). Exactly one polite live region announces every decision, focus follows the collapse (to Undo when it is offered, back to the primary action on undo), and the confidence is always spelled out as a label so colour is never the only signal.",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.Approvals"
+  ],
+  "parameters": [
+    {
+      "name": "Text",
+      "type": "string",
+      "isRequired": true,
+      "description": "The suggested text - what the machine proposes and what Accept applies when no alternative is selected."
+    },
+    {
+      "name": "Title",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Optional heading naming the suggestion."
+    },
+    {
+      "name": "Confidence",
+      "type": "double?",
+      "isRequired": false,
+      "description": "How sure the machine is, from 0 to 1. Rendered as a localized band (High / Medium / Low confidence) and, with ShowConfidencePercent, as a percentage. null shows no confidence."
+    },
+    {
+      "name": "ShowConfidencePercent",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Whether the numeric percentage is shown next to the localized confidence label. Default false."
+    },
+    {
+      "name": "Rationale",
+      "type": "string?",
+      "isRequired": false,
+      "description": "The reasoning behind the suggestion, shown behind a native disclosure. When null or blank the disclosure is not rendered at all."
+    },
+    {
+      "name": "RationaleDefaultExpanded",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Whether the rationale disclosure starts expanded. Default false."
+    },
+    {
+      "name": "Alternatives",
+      "type": "IReadOnlyList<string>?",
+      "isRequired": false,
+      "description": "Other wordings the machine offers, presented as a radiogroup; the selected one becomes the accepted text instead of Text."
+    },
+    {
+      "name": "SelectedAlternative",
+      "type": "string?",
+      "isRequired": false,
+      "description": "The selected alternative (two-way). null means none is selected, so Accept applies Text."
+    },
+    {
+      "name": "SelectedAlternativeChanged",
+      "type": "EventCallback<string?>",
+      "isRequired": false,
+      "description": "Raised when the user selects an alternative."
+    },
+    {
+      "name": "OnAccept",
+      "type": "Func<string, Task>?",
+      "isRequired": false,
+      "description": "Callback that persists an acceptance; it receives the accepted text. The card stays pending while it runs and only collapses when it completes without throwing."
+    },
+    {
+      "name": "Accepted",
+      "type": "EventCallback<string>",
+      "isRequired": false,
+      "description": "Raised together with OnAccept for hosts that prefer an EventCallback."
+    },
+    {
+      "name": "OnDismiss",
+      "type": "Func<Task>?",
+      "isRequired": false,
+      "description": "Callback that persists a dismissal. A throw keeps the suggestion pending."
+    },
+    {
+      "name": "Dismissed",
+      "type": "EventCallback",
+      "isRequired": false,
+      "description": "Raised together with OnDismiss."
+    },
+    {
+      "name": "UndoWindow",
+      "type": "TimeSpan?",
+      "isRequired": false,
+      "description": "How long after an acceptance the decided row offers Undo. null or zero offers no Undo."
+    },
+    {
+      "name": "OnUndo",
+      "type": "Func<Task>?",
+      "isRequired": false,
+      "description": "Callback invoked when the user undoes an acceptance; a throw keeps the decision."
+    },
+    {
+      "name": "Undone",
+      "type": "EventCallback",
+      "isRequired": false,
+      "description": "Raised together with OnUndo."
+    },
+    {
+      "name": "Class",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Additional CSS classes for the root element."
+    },
+    {
+      "name": "AriaLabel",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Accessible name of the card when Title is omitted. Defaults to a localized 'Suggestion'."
+    }
+  ],
+  "methods": [
+    {
+      "name": "AcceptAsync",
+      "returnType": "Task",
+      "description": "Accepts the suggestion: runs OnAccept (and Accepted) with the selected alternative or Text, and collapses the card only when they succeed."
+    },
+    {
+      "name": "DismissAsync",
+      "returnType": "Task",
+      "description": "Dismisses the suggestion: runs OnDismiss (and Dismissed) and collapses the card only when they succeed."
+    },
+    {
+      "name": "UndoAsync",
+      "returnType": "Task",
+      "description": "Withdraws an acceptance while the undo window is open. A no-op once the window has elapsed."
+    }
+  ],
+  "cssClasses": [
+    "tm-suggestion-card",
+    "tm-suggestion-card--collapsed",
+    "tm-suggestion-card--busy",
+    "tm-suggestion-card--confidence-high",
+    "tm-suggestion-card--confidence-medium",
+    "tm-suggestion-card--confidence-low",
+    "tm-suggestion-card__collapse",
+    "tm-suggestion-card__body",
+    "tm-suggestion-card__body-inner",
+    "tm-suggestion-card__header",
+    "tm-suggestion-card__title",
+    "tm-suggestion-card__confidence",
+    "tm-suggestion-card__confidence-label",
+    "tm-suggestion-card__confidence-percent",
+    "tm-suggestion-card__text",
+    "tm-suggestion-card__rationale",
+    "tm-suggestion-card__rationale-summary",
+    "tm-suggestion-card__rationale-text",
+    "tm-suggestion-card__alternatives",
+    "tm-suggestion-card__alternative",
+    "tm-suggestion-card__alternative-input",
+    "tm-suggestion-card__alternative-text",
+    "tm-suggestion-card__alert",
+    "tm-suggestion-card__actions",
+    "tm-suggestion-card__action",
+    "tm-suggestion-card__summary",
+    "tm-suggestion-card__summary-inner",
+    "tm-suggestion-card__summary-icon",
+    "tm-suggestion-card__summary-title",
+    "tm-suggestion-card__summary-text",
+    "tm-suggestion-card__undo"
+  ],
+  "examples": [
+    {
+      "title": "A suggestion with alternatives and an undo window",
+      "description": "The reader can accept the proposed wording, pick an alternative or dismiss the suggestion.",
+      "code": "<TmSuggestionCard Title=\"Layout suggestion\"\n                   Text=\"Move the summary above the fold.\"\n                   Confidence=\"0.87\"\n                   ShowConfidencePercent=\"true\"\n                   Rationale=\"The summary is the first thing a reader scans.\"\n                   Alternatives=\"@alternatives\"\n                   @bind-SelectedAlternative=\"selected\"\n                   UndoWindow=\"@(TimeSpan.FromSeconds(30))\"\n                   OnAccept=\"@SaveAsync\"\n                   OnDismiss=\"@DismissAsync\"\n                   OnUndo=\"@WithdrawAsync\" />"
+    }
+  ],
+  "notes": [
+    "The confidence band thresholds are 0.8 (high) and 0.5 (medium); below that the band is low.",
+    "The card is self-managed: it keeps its own decided state. Render it with @key when a host reuses one instance for a different suggestion."
+  ]
+}

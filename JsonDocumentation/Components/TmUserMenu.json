@@ -1,0 +1,149 @@
+{
+  "itemName": "TmUserMenu",
+  "kind": "Component",
+  "category": "Layout",
+  "description": "Account menu of an application shell: an APG menu button whose popup shows the signed-in user card, an optional profile-completion block, the host's entries plus the built-in profile/settings/completion entries, an optional theme switch, an extra slot (a language switcher) and the localized sign out — rendered as an anchored popover or, on a mobile viewport, a bottom sheet.",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.Layout",
+    "@using Tempo.Blazor.Interfaces"
+  ],
+  "parameters": [
+    {
+      "name": "User",
+      "type": "IUserInfo?",
+      "isRequired": false,
+      "description": "The signed-in user: the trigger shows the avatar (and the display name unless ShowUserName is false), the popup shows the account card. Null renders no avatar, no name and no card — the menu then offers only the entries (a host can present a \"sign in\" action as an item)."
+    },
+    {
+      "name": "ShowUserName",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "Whether the trigger prints the display name next to the avatar. Default true; false gives an avatar-only trigger whose accessible name is still AriaLabel."
+    },
+    {
+      "name": "Items",
+      "type": "IReadOnlyList<UserMenuItem>?",
+      "isRequired": false,
+      "description": "Host entries of the popup, rendered above the built-in profile/settings/completion/theme and sign-out lines. A UserMenuItem with Href renders as a link, one with OnClick as a command, Separator as a group separator and IsDanger in the destructive style. Give every entry a unique Id — it is what data-testid=\"user-menu-item-{Id}\" is built from, so two entries that share one (or both leave the default empty string) render fine but become indistinguishable to host tests and E2E selectors; separators need no id. Null renders no host entries."
+    },
+    {
+      "name": "ProfileHref",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Target of the built-in, localized \"Profile\" entry. Null hides the entry: the library does not invent an account route."
+    },
+    {
+      "name": "SettingsHref",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Target of the built-in, localized \"Settings\" entry. Null hides the entry."
+    },
+    {
+      "name": "ProfileCompletion",
+      "type": "int?",
+      "isRequired": false,
+      "description": "Profile completion percentage (0–100, clamped). Null hides the block. When set, the popup shows a TmProgressBar with the localized \"Profile 40% complete\" text above the entries; give the block its action through ProfileCompletionHref or OnProfileCompletion."
+    },
+    {
+      "name": "ProfileCompletionHref",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Target of the \"Complete your profile\" entry that renders while the completion is under 100 %. Null with no OnProfileCompletion handler hides the entry. When both are given the link wins: the entry navigates and the callback does not run (one action, not two)."
+    },
+    {
+      "name": "OnProfileCompletion",
+      "type": "EventCallback",
+      "isRequired": false,
+      "description": "Fires when the \"Complete your profile\" entry (a command, not a link) is chosen. The menu closes first."
+    },
+    {
+      "name": "ShowThemeToggle",
+      "type": "bool",
+      "isRequired": false,
+      "default": "false",
+      "description": "Renders a theme switch entry (menuitemcheckbox) bound to the ambient ThemeService. Default false. Without a registered service the entry is not rendered — there would be no theme to report or switch."
+    },
+    {
+      "name": "ExtraContent",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "Slot at the bottom of the popup, above the sign out — a language switcher, a workspace switcher. Rendered inside a named role=\"group\" (a menu may not own arbitrary children). The slot is inside menu interaction mode, so every interactive element in it must be a menu item: role=\"menuitem\", menuitemradio or menuitemcheckbox with tabindex=\"-1\". Arrow keys only move between those roles and Tab dismisses the menu, so a plain button, a select or a link without a menu role is visible but unreachable by keyboard (WCAG 2.1.1). Use Items for commands and links."
+    },
+    {
+      "name": "OnItemSelected",
+      "type": "EventCallback<UserMenuItem>",
+      "isRequired": false,
+      "description": "Fires after an entry of Items was chosen — AFTER the awaited UserMenuItem.OnClick, so a host that stores the chosen command re-renders with its result. Not raised for the built-in profile / settings / completion / theme / sign-out lines."
+    },
+    {
+      "name": "OnLogout",
+      "type": "EventCallback",
+      "isRequired": false,
+      "description": "Fires when the built-in sign-out entry is chosen. The entry renders only when this callback is bound (the library never invents an authentication flow)."
+    },
+    {
+      "name": "AriaLabel",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Accessible name of the trigger and of the popup. Null uses the localized label — and, while the display name is visible, the localized \"{name} — user menu\" template, so the accessible name contains the visible text (WCAG 2.5.3 Label in Name). A host with more than one account surface names this one (\"Signed-in account\")."
+    },
+    {
+      "name": "MobilePresentation",
+      "type": "PanelPresentation",
+      "isRequired": false,
+      "default": "PanelPresentation.Auto",
+      "description": "How the popup presents on a narrow viewport. Default PanelPresentation.Auto: a content-height bottom sheet on a mobile viewport (the drawer owns focus and restore), the anchored popover otherwise. A forced value renders that presentation without measuring."
+    },
+    {
+      "name": "Class",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Additional CSS class for the root element."
+    }
+  ],
+  "cssClasses": [
+    "tm-user-menu",
+    "tm-user-menu__trigger",
+    "tm-user-menu__trigger-name",
+    "tm-user-menu__panel",
+    "tm-user-menu__body",
+    "tm-user-menu__card",
+    "tm-user-menu__card-identity",
+    "tm-user-menu__card-name",
+    "tm-user-menu__card-email",
+    "tm-user-menu__completion",
+    "tm-user-menu__completion-text",
+    "tm-user-menu__item",
+    "tm-user-menu__item--danger",
+    "tm-user-menu__item-check",
+    "tm-user-menu__separator",
+    "tm-user-menu__extra"
+  ],
+  "examples": [
+    {
+      "title": "Account menu with the profile card, progress and theme switch",
+      "code": "<TmUserMenu User=\"currentUser\"\n            Items=\"accountItems\"\n            ProfileHref=\"/profile\"\n            SettingsHref=\"/settings\"\n            ProfileCompletion=\"profileCompletion\"\n            ProfileCompletionHref=\"/profile/edit\"\n            ShowThemeToggle=\"true\"\n            OnItemSelected=\"HandleAccountItem\"\n            OnLogout=\"HandleLogout\" />"
+    },
+    {
+      "title": "Avatar-only trigger with a mobile bottom sheet",
+      "code": "<TmUserMenu User=\"currentUser\"\n            ShowUserName=\"false\"\n            AriaLabel=\"Signed-in account\"\n            MobilePresentation=\"PanelPresentation.Auto\"\n            OnLogout=\"HandleLogout\" />"
+    },
+    {
+      "title": "Language switcher in the extra slot (menu items, not a select)",
+      "code": "<TmUserMenu User=\"currentUser\" OnLogout=\"HandleLogout\">\n    <ExtraContent>\n        @foreach (var culture in Cultures)\n        {\n            <button type=\"button\" role=\"menuitemradio\" tabindex=\"-1\"\n                    aria-checked=\"@(culture.Code == currentCulture ? \"true\" : \"false\")\"\n                    @onclick=\"() => SetCultureAsync(culture.Code)\">@culture.DisplayName</button>\n        }\n    </ExtraContent>\n</TmUserMenu>"
+    }
+  ],
+  "usedAbstractions": [
+    {
+      "name": "IUserInfo",
+      "description": "Interface describing the signed-in user",
+      "parameter": "User"
+    },
+    {
+      "name": "UserMenuItem",
+      "description": "Model representing one entry of the account menu",
+      "parameter": "Items"
+    }
+  ]
+}

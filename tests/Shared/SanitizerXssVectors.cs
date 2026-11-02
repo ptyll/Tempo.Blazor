@@ -1,4 +1,3 @@
-using System.Text;
 using FluentAssertions;
 using Tempo.Blazor.EmailTemplates.Abstractions.Rendering;
 
@@ -13,71 +12,13 @@ namespace Tempo.Blazor.Testing;
 /// </summary>
 internal static class SanitizerXssVectors
 {
-    /// <summary>Classic and mutation-XSS payloads: script/event/URL smuggling plus parser-confusion.</summary>
-    internal static readonly string[] Payloads =
-    [
-        "<script>alert(1)</script>",
-        "<SCRIPT>alert(1)</SCRIPT>",
-        "<scr<script>ipt>alert(1)</scr</script>ipt>",
-        "<script src=//evil/x.js></script>",
-        "<script>alert(1)",
-        "<img src=x onerror=alert(1)>",
-        "<img src=x onerror=alert(1) />",
-        "<svg onload=alert(1)>",
-        "<svg><style><img src=x onerror=alert(1)></style></svg>",
-        "<svg><script>alert(1)</script></svg>",
-        "<math><mtext><table><mglyph><style><img src=x onerror=alert(1)>",
-        "<noscript><p title=\"</noscript><img src=x onerror=alert(1)>\">",
-        "<a href=\"javascript:alert(1)\">x</a>",
-        "<a href='javascript:alert(1)'>x</a>",
-        "<a href=javascript:alert(1)>x</a>",
-        "<a href=\"java\tscript:alert(1)\">x</a>",
-        "<a href=\"java\nscript:alert(1)\">x</a>",
-        "<a href=\"&#106;avascript:alert(1)\">x</a>",
-        "<a href=\"javascript&#58;alert(1)\">x</a>",
-        "<a href=\"vbscript:msgbox(1)\">x</a>",
-        "<a href=\"data:text/html;base64,PHNjcmlwdD4=\">x</a>",
-        "<a href=\" javascript:alert(1)\">x</a>",
-        "<a href=\"\u0001javascript:alert(1)\">x</a>",
-        "<a href=\"//evil.example/x\">x</a>",
-        "<a href=\"https://ok.example/x\" onclick=\"alert(1)\">x</a>",
-        "<b style=\"background:url(javascript:alert(1))\">x</b>",
-        "<b style=\"width:expression(alert(1))\">x</b>",
-        "<div onmouseover=alert(1)>x</div>",
-        "<!--<script>alert(1)</script>-->",
-        "<!--><script>alert(1)</script>-->",
-        "<!---><script>alert(1)</script>-->",
-        "<!--><img src=x onerror=alert(1)>-->",
-        "<![CDATA[<script>alert(1)</script>]]>",
-        "<title><script>alert(1)</script></title>",
-        "<textarea><script>alert(1)</script></textarea>",
-        "<iframe src=\"javascript:alert(1)\"></iframe>",
-        "<object data=\"javascript:alert(1)\"></object>",
-        "<embed src=\"javascript:alert(1)\">",
-        "<base href=\"javascript:alert(1)//\">",
-        "<meta http-equiv=\"refresh\" content=\"0;url=javascript:alert(1)\">",
-        "<link rel=stylesheet href=\"javascript:alert(1)\">",
-        "<form action=\"javascript:alert(1)\"><input name=x></form>",
-        "<b><i></b></i>",
-        "<b>x<i>y</b>z</i>",
-        "</b>",
-        "</mj-text></mj-raw>",
-        "<mj-text onload=alert(1)>x</mj-text>",
-        "<b>x</b></mj-text><script>alert(1)</script>",
-        "<b",
-        "<b>",
-        "<a href=\"https://ok.example/x",
-        "<!-",
-        "<svg/onload=alert(1)>",
-        "<a href=\"https://ok.example/x\" target=\"_blank\" rel=\"noopener\">x</a>",
-        // Headings are allow-listed (D28) and carry NO attribute: a heading is a formatting element, not a
-        // container for an event handler or a style that could paint over the editor.
-        "<h1 onclick=alert(1) style=\"background:url(javascript:alert(1))\">Ahoj</h1>",
-        "<h2><img src=x onerror=alert(1)></h2>",
-        "<h3 style=\"position:fixed;inset:0\">x</h3>",
-        "<h4 onmouseover=alert(1)>x</h4>",
-        "<h5>x</h5><h6>y</h6>",
-    ];
+    /// <summary>
+    /// The shared payload set, linked from <c>tests/Shared/XssPayloads.cs</c> so the sanitizer contract and
+    /// the AI markdown contract are held to the very same bytes. That file carries no sanitizer dependency,
+    /// which is why the general test project can link it without an <c>InternalsVisibleTo</c> across the
+    /// email assemblies.
+    /// </summary>
+    internal static string[] Payloads => XssPayloads.Payloads;
 
     /// <summary>
     /// The nonce an attacker forges when they try to make the masking/restore round-trip delete their own
@@ -201,28 +142,6 @@ internal static class SanitizerXssVectors
         output.Should().NotContain("\uE001", because);
     }
 
-    /// <summary>A deterministic adjective/noun soup fuzzer: adversarial but reproducible.</summary>
-    internal static IEnumerable<string> Fuzz(int count, int seed = 20261020)
-    {
-        string[] parts =
-        [
-            "<", ">", "&", "\"", "'", "/", "!", "-", "=", " ", "a", "b", "i", "br", "span", "p", "ul",
-            "li", "strong", "em", "mj-text", "mj-raw", "script", "svg", "style", "onload", "href",
-            "javascript:", "http://x.y/z", "#", "{{ a }}", "{% if a %}", "\u00a0", "\uE000", "\\",
-            ";", ":", "&#106;", "&amp;", "&lt;", "-->", "<!--", "&#xE000;", "&#xE001;", "_0", "{{ x }}",
-        ];
-
-        var random = new Random(seed);
-        for (var i = 0; i < count; i++)
-        {
-            var builder = new StringBuilder();
-            var length = random.Next(1, 14);
-            for (var part = 0; part < length; part++)
-            {
-                builder.Append(parts[random.Next(parts.Length)]);
-            }
-
-            yield return builder.ToString();
-        }
-    }
+    /// <summary>A deterministic adjective/noun soup fuzzer, shared with the AI markdown suite.</summary>
+    internal static IEnumerable<string> Fuzz(int count, int seed = 20261020) => XssPayloads.Fuzz(count, seed);
 }

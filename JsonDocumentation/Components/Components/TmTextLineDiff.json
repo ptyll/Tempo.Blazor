@@ -2,9 +2,17 @@
   "kind": "Class",
   "category": "Components",
   "namespace": "Tempo.Blazor.Components.Files",
-  "description": "Computes a line-by-line diff (via longest-common-subsequence) between two text versions; useful for IFileVersioningHook implementations.",
+  "description": "Computes a line-by-line diff between two text versions on top of the shared Tempo.Blazor.Diff.TextDiff engine; useful for IFileVersioningHook implementations that version text content. CRLF is normalized to LF before the comparison. Above the engine's DefaultMaxTokens / DefaultMaxCells limits the comparison degrades to one block of removed lines followed by one block of added lines covering the whole text.",
   "packageId": "Tempo.Blazor",
   "sourcePath": "src/Tempo.Blazor/Components/Files/TmTextLineDiff.cs",
   "documentationStatus": "generated",
-  "itemName": "TmTextLineDiff"
+  "itemName": "TmTextLineDiff",
+  "members": [
+    {
+      "name": "Compute",
+      "kind": "Method",
+      "type": "IReadOnlyList<TmFileVersionDiffLine>",
+      "description": "Produces added/removed/unchanged lines describing the change from old to new text, with 1-based line numbers in both versions and a replacement emitted as removed-then-added."
+    }
+  ]
 }

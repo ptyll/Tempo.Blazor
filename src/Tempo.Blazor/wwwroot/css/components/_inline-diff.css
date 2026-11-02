@@ -1,0 +1,290 @@
+/* ═══════════════════════════════════════════════════════
+   TmInlineDiff — inline comparison of two texts
+   Contract: docs/inline-diff.md
+   ═══════════════════════════════════════════════════════ */
+
+/* ── Base ──────────────────────────────────────────────── */
+.tm-inline-diff {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-2);
+    padding: var(--tm-space-3);
+    background: var(--tm-bg-surface);
+    color: var(--tm-text-primary);
+    border: 1px solid var(--tm-border-color);
+    border-radius: var(--tm-radius-card);
+    font-size: var(--tm-font-size-sm);
+    line-height: 1.6;
+}
+
+.tm-inline-diff:focus-visible {
+    outline: 2px solid transparent;
+    box-shadow: var(--tm-focus-ring);
+}
+
+/* ── Toolbar ───────────────────────────────────────────── */
+.tm-inline-diff__toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--tm-space-2);
+    flex-wrap: wrap;
+}
+
+.tm-inline-diff__count {
+    font-size: var(--tm-font-size-xs);
+    font-weight: var(--tm-font-weight-medium);
+    color: var(--tm-text-secondary);
+}
+
+.tm-inline-diff__bulk {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-2);
+    flex-wrap: wrap;
+}
+
+.tm-inline-diff__action:focus-visible,
+.tm-inline-diff__undo:focus-visible,
+.tm-inline-diff__marker:focus-visible,
+.tm-inline-diff__popover-action:focus-visible {
+    outline: 2px solid transparent;
+    box-shadow: var(--tm-focus-ring);
+}
+
+/* ── Content: one flowing text, changes inline ─────────── */
+.tm-inline-diff__content {
+    display: block;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+/* Unchanged context around a change — the text the two inputs share. */
+.tm-inline-diff__equal {
+    color: inherit;
+}
+
+/* The review presentation adds the toolbar above the text; the pure display one is the bare diff. */
+.tm-inline-diff--review {
+    gap: var(--tm-space-2);
+}
+
+/* A degraded comparison is announced in prose as well; the modifier keeps the fallback band visible
+   above the (coarser) hunks without changing their rendering. */
+.tm-inline-diff--degraded {
+    border-color: var(--tm-color-warning-soft-border);
+}
+
+/* A line-level comparison stacks whole lines; the marker and popover therefore stay in the flow. */
+.tm-inline-diff--lines .tm-inline-diff__content {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--tm-space-1);
+}
+
+/* A change span is inline-block only on a coarse pointer and in line mode, where the marker needs its
+   own hit area; in word mode the span must keep the text flowing, so it stays inline. */
+.tm-inline-diff__change {
+    display: inline;
+    position: relative;
+    border-radius: var(--tm-radius-control);
+    transition: background-color var(--tm-transition-normal);
+}
+
+.tm-inline-diff--lines .tm-inline-diff__change {
+    display: inline-block;
+    max-inline-size: 100%;
+}
+
+/* ── The two sides of a change ─────────────────────────── */
+.tm-inline-diff__ins,
+.tm-inline-diff__del {
+    padding: 0 var(--tm-space-0-5);
+    border-radius: var(--tm-radius-md);
+}
+
+.tm-inline-diff__ins {
+    background: var(--tm-color-success-subtle);
+    color: var(--tm-color-success-text);
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 2px;
+}
+
+.tm-inline-diff__del {
+    background: var(--tm-color-danger-subtle);
+    color: var(--tm-color-danger-text);
+    text-decoration: line-through;
+    text-decoration-thickness: 1px;
+}
+
+/* In line mode each side owns its line, so the block form is what reads as a diff. */
+.tm-inline-diff--lines .tm-inline-diff__ins,
+.tm-inline-diff--lines .tm-inline-diff__del {
+    display: block;
+}
+
+/* ── Change state ──────────────────────────────────────── */
+/* Pending is the absence of a decision — no styling of its own beyond the neutral surface. */
+.tm-inline-diff__change--pending {
+    background: transparent;
+}
+
+.tm-inline-diff__change--accepted .tm-inline-diff__ins {
+    border: 1px solid var(--tm-color-success-soft-border);
+}
+
+.tm-inline-diff__change--rejected .tm-inline-diff__del {
+    border: 1px solid var(--tm-color-danger-soft-border);
+}
+
+.tm-inline-diff__change--rejected .tm-inline-diff__ins {
+    background: transparent;
+    color: var(--tm-text-secondary);
+    text-decoration: line-through;
+}
+
+/* ── Marker ────────────────────────────────────────────── */
+.tm-inline-diff__marker {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    inline-size: var(--tm-space-5);
+    block-size: var(--tm-space-5);
+    margin-inline-start: var(--tm-space-1);
+    padding: 0;
+    vertical-align: baseline;
+    color: var(--tm-color-primary);
+    background: var(--tm-bg-surface-secondary);
+    border: 1px solid var(--tm-border-color-control);
+    border-radius: var(--tm-radius-full);
+    cursor: pointer;
+    transition: background-color var(--tm-transition-normal), border-color var(--tm-transition-normal);
+}
+
+.tm-inline-diff__marker:hover {
+    background: var(--tm-bg-surface);
+    border-color: var(--tm-color-primary);
+}
+
+/* The expanded marker fills with primary, so its glyph needs the token that means "ink ON a primary
+   fill" — --tm-color-on-primary (what .tm-btn-primary uses) resolves through --tm-text-inverse and the
+   dark theme flips it at once, where --tm-bg-surface is a SURFACE role that stays dark in dark mode
+   (under 3:1 on primary-400, the non-text minimum of WCAG 2.2 SC 1.4.11). */
+.tm-inline-diff__marker[aria-expanded="true"] {
+    background: var(--tm-color-primary);
+    border-color: var(--tm-color-primary);
+    color: var(--tm-color-on-primary);
+}
+
+/* ── Popover ───────────────────────────────────────────── */
+.tm-inline-diff__popover {
+    position: absolute;
+    z-index: 2;
+    inset-block-start: calc(100% + var(--tm-space-1));
+    inset-inline-start: 0;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--tm-space-2);
+    padding: var(--tm-space-2);
+    background: var(--tm-bg-surface);
+    border: 1px solid var(--tm-border-color);
+    border-radius: var(--tm-radius-md);
+    box-shadow: var(--tm-shadow-sm);
+    max-inline-size: 100%;
+    box-sizing: border-box;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    transition: opacity var(--tm-transition-normal), transform var(--tm-transition-normal);
+}
+
+.tm-inline-diff__hint {
+    display: block;
+    flex-basis: 100%;
+    font-size: var(--tm-font-size-xs);
+    color: var(--tm-text-secondary);
+}
+
+/* ── Degraded comparison and empty state ───────────────── */
+.tm-inline-diff__fallback,
+.tm-inline-diff__error,
+.tm-inline-diff__no-changes {
+    margin: 0;
+    font-size: var(--tm-font-size-xs);
+    color: var(--tm-text-secondary);
+}
+
+.tm-inline-diff__fallback {
+    padding: var(--tm-space-1-5) var(--tm-space-2);
+    background: var(--tm-bg-surface-secondary);
+    border-inline-start: 2px solid var(--tm-color-warning);
+    border-radius: var(--tm-radius-md);
+}
+
+.tm-inline-diff__error {
+    color: var(--tm-color-danger-text);
+}
+
+/* ── Coarse pointers: every control is a finger target ── */
+@media (pointer: coarse) {
+    .tm-inline-diff__marker,
+    .tm-inline-diff__action,
+    .tm-inline-diff__undo,
+    .tm-inline-diff__popover-action {
+        min-block-size: var(--tm-touch-target);
+        min-inline-size: var(--tm-touch-target);
+    }
+
+    .tm-inline-diff__marker {
+        inline-size: var(--tm-touch-target);
+        block-size: var(--tm-touch-target);
+    }
+}
+
+/* ── Forced colors ─────────────────────────────────────── */
+@media (forced-colors: active) {
+    /* No forced-color-adjust opt-out anywhere in this diff: the system palette is the point, and the
+       change is carried by the ins/del semantics, the hidden label AND the decoration (underline /
+       strike-through), which the UA keeps. The box-shadow focus ring is forced away, so every focus
+       stop re-declares the system Highlight ring here. */
+    .tm-inline-diff {
+        border-color: CanvasText;
+    }
+
+    .tm-inline-diff__marker {
+        border-color: ButtonText;
+    }
+
+    .tm-inline-diff__popover {
+        border-color: CanvasText;
+    }
+
+    .tm-inline-diff__ins {
+        border: 1px solid LinkText;
+    }
+
+    .tm-inline-diff__del {
+        border: 1px solid GrayText;
+    }
+
+    .tm-inline-diff:focus-visible,
+    .tm-inline-diff__marker:focus-visible,
+    .tm-inline-diff__action:focus-visible,
+    .tm-inline-diff__undo:focus-visible,
+    .tm-inline-diff__popover-action:focus-visible {
+        outline: 2px solid Highlight;
+        outline-offset: 2px;
+        box-shadow: none;
+    }
+}
+
+/* ── Reduced motion ────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+    .tm-inline-diff__popover,
+    .tm-inline-diff__change,
+    .tm-inline-diff__marker {
+        transition: none;
+    }
+}

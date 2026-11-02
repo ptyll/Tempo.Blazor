@@ -1,0 +1,10 @@
+{
+  "kind": "Class",
+  "category": "AI",
+  "namespace": "Tempo.Blazor.AI.Models",
+  "description": "The reader's rating of an assistant answer (thumbs up or thumbs down) with the optional free-text reason typed after a negative rating, and the time it was cast. TmAiMessage raises it twice for a negative rating: once on the press, and once more with the reason when the reader submits it — the reason is always optional.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/AI/AiFeedback.cs",
+  "documentationStatus": "generated",
+  "itemName": "AiFeedback"
+}

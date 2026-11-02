@@ -152,6 +152,12 @@ public sealed class BuiltInComponentSchemas : IWireframeSchemaSource
             ["TmQRCode"] = ["icon"],
             ["TmBarcode"] = ["icon"],
             ["TmChangeDiff"] = ["diff-view"],
+            ["TmOnboardingChecklist"] = ["onboarding-checklist"],
+            ["TmApprovalCard"] = ["approval-card"],
+            ["TmReviewQueue"] = ["review-queue"],
+            ["TmInlineDiff"] = ["inline-diff"],
+            ["TmSuggestionCard"] = ["suggestion-card"],
+            ["TmPermissionRequest"] = ["permission-request"],
             ["TmMultiViewList"] = ["list-view"],
             ["TmDataTable"] = ["data-table"],
             ["TmPagination"] = ["pagination"],
@@ -1112,6 +1118,96 @@ public sealed class BuiltInComponentSchemas : IWireframeSchemaSource
                 P("title",       "Title",        PropType.String, "No data",                        cat: "Content"),
                 P("description", "Description",  PropType.String, "There is nothing to display here.", cat: "Content"),
                 P("actionLabel", "Action Label", PropType.String, "Add item",                       cat: "Content"),
+            ]
+        };
+
+        yield return new WireframeComponentSchema
+        {
+            Type = "TmApprovalCard", Category = "Feedback", DisplayName = "Approval Card",
+            DefaultWidth = 420, DefaultHeight = 210,
+            Props =
+            [
+                P("title",         "Title",         PropType.String, "Release the invoice",                        cat: "Content"),
+                P("description",   "Description",   PropType.String, "The requester wants the invoice sent today.", cat: "Content"),
+                P("risk",          "Risk",          PropType.Enum,   "medium",                                     cat: "Content",
+                    opts: ["low", "medium", "high", "critical"]),
+                P("showCountdown", "Show Countdown", PropType.Bool,  true,                                        cat: "Appearance"),
+            ]
+        };
+
+        yield return new WireframeComponentSchema
+        {
+            Type = "TmOnboardingChecklist", Category = "Data Display", DisplayName = "Onboarding Checklist",
+            DefaultWidth = 360, DefaultHeight = 320,
+            Props =
+            [
+                P("title",           "Title",            PropType.String, "Get started",                   cat: "Content"),
+                P("layout",          "Layout",           PropType.Enum,   "list",                          cat: "Appearance",
+                    opts: ["list", "card", "grid"]),
+                P("stepCount",       "Steps",            PropType.Int,    5,                               cat: "Content"),
+                P("doneCount",       "Completed Steps",  PropType.Int,    2,                               cat: "Content"),
+                P("showProgress",    "Show Progress",    PropType.Bool,  true,                            cat: "Appearance"),
+                P("dismissible",     "Dismissible",      PropType.Bool,  false,                           cat: "Appearance"),
+            ]
+        };
+
+        yield return new WireframeComponentSchema
+        {
+            Type = "TmReviewQueue", Category = "Feedback", DisplayName = "Review Queue",
+            DefaultWidth = 440, DefaultHeight = 320,
+            Props =
+            [
+                P("title",       "Title",       PropType.String, "Review queue",                              cat: "Content"),
+                P("mode",        "Mode",        PropType.Enum,   "list",                                      cat: "Appearance",
+                    opts: ["list", "focus"]),
+                P("itemCount",   "Item Count",  PropType.Int,    4,                                           cat: "Content"),
+                P("showRisk",    "Show Risk",   PropType.Bool,   true,                                        cat: "Appearance"),
+                P("showActions", "Show Actions", PropType.Bool,  true,                                        cat: "Appearance"),
+            ]
+        };
+
+        yield return new WireframeComponentSchema
+        {
+            Type = "TmInlineDiff", Category = "Feedback", DisplayName = "Inline Diff",
+            DefaultWidth = 420, DefaultHeight = 120,
+            Props =
+            [
+                P("mode",        "Mode",        PropType.Enum, "display", cat: "Appearance",
+                    opts: ["display", "review"]),
+                P("granularity", "Granularity", PropType.Enum, "words",   cat: "Content",
+                    opts: ["words", "lines"]),
+                P("showCount",   "Show Count",  PropType.Bool, true,      cat: "Appearance"),
+            ]
+        };
+
+        yield return new WireframeComponentSchema
+        {
+            Type = "TmSuggestionCard", Category = "Feedback", DisplayName = "Suggestion Card",
+            DefaultWidth = 400, DefaultHeight = 210,
+            Props =
+            [
+                P("title",           "Title",            PropType.String, "Layout suggestion",                 cat: "Content"),
+                P("text",            "Text",             PropType.String, "Move the summary above the fold.",  cat: "Content"),
+                P("confidence",      "Confidence",       PropType.Enum,   "high",                              cat: "Content",
+                    opts: ["none", "low", "medium", "high"]),
+                P("showRationale",   "Show Rationale",   PropType.Bool,   true,                                cat: "Appearance"),
+                P("alternatives",    "Alternatives",     PropType.Int,    2,                                   cat: "Content"),
+            ]
+        };
+
+        yield return new WireframeComponentSchema
+        {
+            Type = "TmPermissionRequest", Category = "Feedback", DisplayName = "Permission Request",
+            DefaultWidth = 420, DefaultHeight = 220,
+            Props =
+            [
+                P("tool",       "Tool",        PropType.String, "web.search",                     cat: "Content"),
+                P("target",     "Target",      PropType.String, "https://example.com/pricing",    cat: "Content"),
+                P("risk",       "Risk",        PropType.Enum,   "medium",                         cat: "Content",
+                    opts: ["low", "medium", "high", "critical"]),
+                P("scope",      "Scope",       PropType.Enum,   "for-duration",                   cat: "Appearance",
+                    opts: ["once", "for-duration", "session", "always"]),
+                P("showReason", "Show Reason", PropType.Bool,   true,                             cat: "Appearance"),
             ]
         };
 

@@ -1,0 +1,66 @@
+{
+  "kind": "Class",
+  "category": "Diff",
+  "namespace": "Tempo.Blazor.Diff",
+  "description": "One contiguous piece of a TextDiffResult. The hunks of a result are ordered and tile both inputs: concatenating OldText over all hunks reproduces the old input exactly and concatenating NewText reproduces the new input exactly. That invariant is what lets a consumer accept an arbitrary subset of the changes and still get a valid text out of Apply.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/Diff/TextDiffHunk.cs",
+  "documentationStatus": "generated",
+  "members": [
+    {
+      "name": "Id",
+      "kind": "Property",
+      "type": "required string",
+      "description": "Deterministic identifier built from the kind and both offsets, for example replace-15-15. It stays the same across repeated runs over the same inputs, so an accepted-change set can be kept in a component's state across re-renders, and it is unique within a result."
+    },
+    {
+      "name": "IsChange",
+      "kind": "Property",
+      "type": "bool",
+      "description": "Whether the hunk represents an actual change (anything but Equal)."
+    },
+    {
+      "name": "Kind",
+      "kind": "Property",
+      "type": "required TextDiffHunkKind",
+      "description": "What kind of piece this hunk is."
+    },
+    {
+      "name": "NewRange",
+      "kind": "Property",
+      "type": "required TextRange",
+      "description": "Span of the new input this hunk covers."
+    },
+    {
+      "name": "NewText",
+      "kind": "Property",
+      "type": "required string",
+      "description": "Exact text of the new input covered by this hunk (empty for Delete)."
+    },
+    {
+      "name": "NewUnitCount",
+      "kind": "Property",
+      "type": "required int",
+      "description": "How many comparison units of the new input the hunk covers."
+    },
+    {
+      "name": "OldRange",
+      "kind": "Property",
+      "type": "required TextRange",
+      "description": "Span of the old input this hunk covers."
+    },
+    {
+      "name": "OldText",
+      "kind": "Property",
+      "type": "required string",
+      "description": "Exact text of the old input covered by this hunk (empty for Insert). It may include the whitespace or line break that separates it from the next hunk, which is what keeps the hunks an exact tiling."
+    },
+    {
+      "name": "OldUnitCount",
+      "kind": "Property",
+      "type": "required int",
+      "description": "How many comparison units of the old input the hunk covers — word tokens for a word diff, lines for a line diff. A line-level renderer needs the count rather than the character span: a trailing empty line occupies no character at all, so the span cannot express it."
+    }
+  ],
+  "itemName": "TextDiffHunk"
+}

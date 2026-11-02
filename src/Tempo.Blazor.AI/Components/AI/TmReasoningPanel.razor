@@ -1,0 +1,263 @@
+@namespace Tempo.Blazor.Components.AI
+@inherits Tempo.Blazor.Components.TmComponentBase
+@using Microsoft.Extensions.DependencyInjection
+@using Tempo.Blazor.AI.Formatting
+@using Tempo.Blazor.AI.Markdown
+@using Tempo.Blazor.AI.Models
+@using Tempo.Blazor.Components.Icons
+@implements IAsyncDisposable
+
+@* One reasoning ("thinking") part of an assistant message: a disclosure whose collapsed summary reports
+   what the thinking cost ("Přemýšlel 12 s"), whose body holds the ordered steps and the sources the model
+   inspected. While the model is still thinking the summary counts up live and the trailing step keeps the
+   package's streaming caret. The panel owns exactly ONE role=status region — the one that announces the
+   finished reasoning. *@
+@if (Reasoning is { } reasoning)
+{
+    <section class="tm-ai-reasoning @Class"
+             data-testid="@RootTestId("ai-reasoning")"
+             data-running="@(IsLive ? "true" : null)"
+             @attributes="AdditionalAttributes">
+        @* aria-controls names the body only while the body is rendered (see the card's note): a collapsed
+           disclosure renders no region, so a constant id would point at nothing. *@
+        <button type="button"
+                class="tm-ai-reasoning__toggle"
+                aria-expanded="@(_expanded ? "true" : "false")"
+                aria-controls="@(_expanded ? _bodyId : null)"
+                @onclick="Toggle">
+            <span class="tm-ai-reasoning__icon" aria-hidden="true">
+                <TmIcon Name="@IconNames.WandSparkles" Size="IconSize.Sm" />
+            </span>
+            <span class="tm-ai-reasoning__summary @(IsLive ? "tm-ai-shimmer" : null)">@SummaryText</span>
+            <span class="tm-ai-reasoning__chevron" aria-hidden="true">
+                <TmIcon Name="@IconNames.ChevronDown" Size="IconSize.Sm" />
+            </span>
+        </button>
+
+        @if (_expanded)
+        {
+            <div id="@_bodyId" class="tm-ai-reasoning__body">
+                @if (reasoning.Steps.Count > 0)
+                {
+                    <ol class="tm-ai-reasoning__steps" aria-label="@Loc["TmReasoningPanel_Steps"]">
+                        @for (var index = 0; index < reasoning.Steps.Count; index++)
+                        {
+                            var streaming = IsLive && index == reasoning.Steps.Count - 1;
+                            <li class="tm-ai-reasoning__step @(streaming ? "tm-ai-streaming" : null)">
+                                @reasoning.Steps[index]
+                            </li>
+                        }
+                    </ol>
+                }
+                @if (ShowSources && reasoning.Sources.Count > 0)
+                {
+                    <ul class="tm-ai-reasoning__sources" aria-label="@Loc["TmReasoningPanel_Sources"]">
+                        @for (var index = 0; index < reasoning.Sources.Count; index++)
+                        {
+                            var source = reasoning.Sources[index];
+                            var href = SafeLink(source.Url);
+                            <li class="tm-ai-reasoning__source">
+                                <span class="tm-ai-reasoning__source-index" aria-hidden="true">@(index + 1)</span>
+                                <span class="tm-ai-reasoning__source-body">
+                                    @if (href is not null)
+                                    {
+                                        <a class="tm-ai-reasoning__source-title"
+                                           href="@href"
+                                           target="_blank"
+                                           rel="noopener noreferrer nofollow">@source.Title</a>
+                                    }
+                                    else
+                                    {
+                                        <span class="tm-ai-reasoning__source-title">@source.Title</span>
+                                    }
+                                    @if (!string.IsNullOrWhiteSpace(source.Domain))
+                                    {
+                                        <span class="tm-ai-reasoning__source-domain">@source.Domain</span>
+                                    }
+                                </span>
+                            </li>
+                        }
+                    </ul>
+                }
+            </div>
+        }
+
+        @* The panel's only live region: the transition to a finished reasoning is the one change that
+           happens without any interaction. Phase changes of the still-running steps are not announced —
+           they would narrate every token. *@
+        <div class="tm-sr-only" role="status">@_liveAnnouncement</div>
+    </section>
+}
+
+@code {
+    private readonly string _bodyId = $"tm-ai-reasoning-body-{Guid.NewGuid():n}";
+
+    [Inject] private IServiceProvider Services { get; set; } = default!;
+    private AiElapsedTicker? _ticker;
+    private TimeProvider? _clock;
+    private AiReasoningPart? _lastReasoning;
+    private DateTimeOffset? _observedStart;
+    private string _liveAnnouncement = string.Empty;
+    private bool _expanded;
+    private bool _wasLive;
+    private bool _disposed;
+
+    /// <summary>
+    /// The reasoning part this panel renders. A null value renders nothing, so a host can bind a part list
+    /// without a null check.
+    /// </summary>
+    [Parameter, EditorRequired] public AiReasoningPart? Reasoning { get; set; }
+
+    /// <summary>
+    /// Whether the model is still reasoning. Default false. While true the summary counts up live, shimmers
+    /// and the trailing step carries the streaming caret; when the host flips it to false the panel settles
+    /// on <see cref="AiReasoningPart.DurationMs"/> and announces the result.
+    /// </summary>
+    [Parameter] public bool IsRunning { get; set; }
+
+    /// <summary>Whether the body starts expanded. Default false — the collapsed summary is the point.</summary>
+    [Parameter] public bool DefaultExpanded { get; set; }
+
+    /// <summary>Render the inspected sources under the steps. Default true.</summary>
+    [Parameter] public bool ShowSources { get; set; } = true;
+
+    /// <summary>Additional CSS class(es) for the root element.</summary>
+    [Parameter] public string? Class { get; set; }
+
+    /// <summary>Additional HTML attributes applied to the root element.</summary>
+    [Parameter(CaptureUnmatchedValues = true)] public Dictionary<string, object>? AdditionalAttributes { get; set; }
+
+    /// <summary>
+    /// The clock behind the live counter. Resolved through <see cref="IServiceProvider"/> so a host that never
+    /// registers a <see cref="TimeProvider"/> still gets <see cref="TimeProvider.System"/>; tests register a
+    /// <c>FakeTimeProvider</c>.
+    /// </summary>
+    private TimeProvider Clock => _clock ??= Services.GetService<TimeProvider>() ?? TimeProvider.System;
+
+    private bool IsLive => IsRunning;
+
+    /// <summary>
+    /// The collapsed summary: the live count-up while the model thinks, the cost once it finished, and the
+    /// plain "Thinking" label when the host reported no duration at all.
+    /// </summary>
+    private string SummaryText
+    {
+        get
+        {
+            if (IsLive)
+            {
+                return Loc["TmReasoningPanel_ThinkingFor", AiDurationFormatter.Format(LiveElapsed, Loc)];
+            }
+
+            if (Reasoning?.DurationMs is { } durationMs)
+            {
+                return Loc["TmReasoningPanel_ThoughtFor",
+                    AiDurationFormatter.Format(TimeSpan.FromMilliseconds(durationMs), Loc)];
+            }
+
+            return Loc["TmReasoningPanel_Thinking"];
+        }
+    }
+
+    /// <summary>
+    /// The elapsed thinking time while running, measured from the moment the panel first saw the live state
+    /// (the reasoning model carries a total, not a start). Re-rendered once a second by the ticker.
+    /// </summary>
+    private TimeSpan LiveElapsed
+    {
+        get
+        {
+            if (_observedStart is not { } start)
+            {
+                return TimeSpan.Zero;
+            }
+
+            var elapsed = Clock.GetUtcNow() - start;
+            return elapsed < TimeSpan.Zero ? TimeSpan.Zero : elapsed;
+        }
+    }
+
+    /// <inheritdoc />
+    protected override void OnInitialized() => _expanded = DefaultExpanded;
+
+    /// <inheritdoc />
+    protected override void OnParametersSet()
+    {
+        if (!ReferenceEquals(_lastReasoning, Reasoning))
+        {
+            // A different reasoning part is a different thought: no timer or announcement carries over.
+            _lastReasoning = Reasoning;
+            _observedStart = null;
+            _liveAnnouncement = string.Empty;
+            _wasLive = IsLive;
+        }
+
+        if (IsLive)
+        {
+            _observedStart ??= Clock.GetUtcNow();
+            _wasLive = true;
+            return;
+        }
+
+        if (_lastReasoning is null || _liveAnnouncement.Length > 0)
+        {
+            return;
+        }
+
+        if (_wasLive && Reasoning?.DurationMs is { } durationMs)
+        {
+            // The reader watched this reasoning run; the finished cost is the one change worth announcing.
+            _liveAnnouncement = Loc["TmReasoningPanel_ThoughtFor",
+                AiDurationFormatter.Format(TimeSpan.FromMilliseconds(durationMs), Loc)];
+        }
+
+        _wasLive = false;
+    }
+
+    /// <inheritdoc />
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (IsLive)
+        {
+            _ticker ??= new AiElapsedTicker(Clock, OnTickAsync);
+            _ticker.Start();
+        }
+        else
+        {
+            _ticker?.Stop();
+        }
+    }
+
+    private Task OnTickAsync() => InvokeAsync(StateHasChanged);
+
+    private void Toggle() => _expanded = !_expanded;
+
+    /// <summary>
+    /// The href a source may be rendered with: the package's URL allowlist decides, and a refused target is
+    /// rendered as plain text rather than a dead <c>#</c> link.
+    /// </summary>
+    private static string? SafeLink(string? url)
+    {
+        if (string.IsNullOrWhiteSpace(url))
+        {
+            return null;
+        }
+
+        var sanitized = AiMarkdownUrlPolicy.SanitizeLink(url);
+        return string.Equals(sanitized, AiMarkdownUrlPolicy.RefusedUrl, StringComparison.Ordinal) ? null : sanitized;
+    }
+
+    /// <inheritdoc />
+    public ValueTask DisposeAsync()
+    {
+        if (_disposed)
+        {
+            return ValueTask.CompletedTask;
+        }
+
+        _disposed = true;
+        _ticker?.Dispose();
+        _ticker = null;
+        return ValueTask.CompletedTask;
+    }
+}

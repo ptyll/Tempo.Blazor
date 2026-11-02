@@ -1,3 +1,7 @@
+/* ═══════════════════════════════════════════════════════
+   TmTopBar — application header
+   ═══════════════════════════════════════════════════════ */
+
 .tm-topbar {
   display: flex;
   align-items: center;
@@ -10,9 +14,74 @@
   top: 0;
   z-index: var(--tm-z-sticky);
 }
-.tm-topbar-brand { font-size: var(--tm-font-size-lg); font-weight: var(--tm-font-weight-bold); color: var(--tm-text-primary); text-decoration: none; }
-.tm-topbar-spacer { flex: 1; }
-.tm-topbar-actions { display: flex; align-items: center; gap: var(--tm-space-1); }
+
+/* The brand is the part that gives way: the actions (and the account button) must stay on screen
+   in a narrow bar. It shrinks and ellipsises instead of pushing them out of the header. */
+.tm-topbar-brand {
+  font-size: var(--tm-font-size-lg);
+  font-weight: var(--tm-font-weight-bold);
+  color: var(--tm-text-primary);
+  text-decoration: none;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.tm-topbar-brand-title {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tm-topbar-center {
+  display: flex;
+  align-items: center;
+  gap: var(--tm-space-2);
+  min-width: 0;
+  overflow: hidden;
+}
+
+.tm-topbar-spacer {
+  flex: 1;
+}
+
+.tm-topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--tm-space-1);
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+/* ── Navigation disclosure (host drawer toggle) ─────────── */
+
+.tm-topbar-menu-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  flex-shrink: 0;
+  color: var(--tm-text-secondary);
+  border-radius: var(--tm-radius-md);
+  border: none;
+  background: none;
+  cursor: pointer;
+  transition: background-color var(--tm-transition-fast), color var(--tm-transition-fast);
+}
+
+.tm-topbar-menu-btn:hover {
+  background-color: var(--tm-color-surface-hover);
+  color: var(--tm-text-primary);
+}
+
+.tm-topbar-menu-btn:focus-visible {
+  outline: 2px solid transparent;
+  box-shadow: var(--tm-focus-ring);
+}
+
+/* ── Icon button (utility) ─────────────────────────────── */
+
 .tm-topbar-icon-btn {
   display: flex;
   align-items: center;
@@ -27,4 +96,192 @@
   position: relative;
   transition: background-color var(--tm-transition-fast), color var(--tm-transition-fast);
 }
-.tm-topbar-icon-btn:hover { background-color: var(--tm-color-gray-100); color: var(--tm-text-primary); }
+
+.tm-topbar-icon-btn:hover {
+  background-color: var(--tm-color-surface-hover);
+  color: var(--tm-text-primary);
+}
+
+.tm-topbar-icon-btn:focus-visible {
+  outline: 2px solid transparent;
+  box-shadow: var(--tm-focus-ring);
+}
+
+/* ── Command palette trigger ────────────────────────────── */
+
+.tm-topbar-search-trigger {
+  display: flex;
+  align-items: center;
+  gap: var(--tm-space-2);
+  height: 2.25rem;
+  padding: 0 var(--tm-space-2) 0 var(--tm-space-3);
+  color: var(--tm-text-secondary);
+  background-color: var(--tm-bg-surface-secondary);
+  border: 1px solid var(--tm-border-color);
+  border-radius: var(--tm-radius-md);
+  cursor: pointer;
+  transition: background-color var(--tm-transition-fast), border-color var(--tm-transition-fast),
+              color var(--tm-transition-fast);
+}
+
+.tm-topbar-search-trigger:hover {
+  background-color: var(--tm-color-surface-hover);
+  color: var(--tm-text-primary);
+}
+
+.tm-topbar-search-trigger:focus-visible {
+  outline: 2px solid transparent;
+  box-shadow: var(--tm-focus-ring);
+}
+
+/* The chord is a keyboard glyph, so it is set in the mono face and stays a hint, not a label. */
+.tm-topbar-search-hint {
+  font-family: var(--tm-font-mono);
+  font-size: var(--tm-font-size-xs);
+  line-height: var(--tm-line-height-tight);
+  color: var(--tm-text-tertiary);
+  white-space: nowrap;
+}
+
+/* ── Account menu ───────────────────────────────────────── */
+
+.tm-topbar-user {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.tm-topbar-user-button {
+  display: flex;
+  align-items: center;
+  gap: var(--tm-space-2);
+  padding: var(--tm-space-1);
+  color: var(--tm-text-primary);
+  background: none;
+  border: 1px solid transparent;
+  border-radius: var(--tm-radius-md);
+  cursor: pointer;
+  transition: background-color var(--tm-transition-fast), border-color var(--tm-transition-fast);
+}
+
+.tm-topbar-user-button:hover {
+  background-color: var(--tm-color-surface-hover);
+}
+
+.tm-topbar-user-button:focus-visible {
+  outline: 2px solid transparent;
+  box-shadow: var(--tm-focus-ring);
+}
+
+.tm-topbar-user-name {
+  max-width: 12rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--tm-font-size-sm);
+  font-weight: var(--tm-font-weight-medium);
+}
+
+/* Sits under the menu (z-index in the header's stacking context) and over the page, so the first
+   click after opening dismisses instead of acting on whatever it landed on. */
+.tm-topbar-user-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: calc(var(--tm-z-popover) - 1);
+  background: none;
+  border: none;
+}
+
+.tm-topbar-user-menu {
+  position: absolute;
+  top: calc(100% + var(--tm-space-1));
+  right: 0;
+  z-index: var(--tm-z-popover);
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 12rem;
+  max-width: 20rem;
+  padding: var(--tm-space-1);
+  background-color: var(--tm-bg-surface);
+  border: 1px solid var(--tm-border-color);
+  border-radius: var(--tm-radius-lg);
+  box-shadow: var(--tm-shadow-popover);
+}
+
+.tm-topbar-user-menu-item {
+  display: flex;
+  align-items: center;
+  gap: var(--tm-space-2);
+  width: 100%;
+  padding: var(--tm-space-2) var(--tm-space-3);
+  font-size: var(--tm-font-size-sm);
+  font-weight: var(--tm-font-weight-normal);
+  color: var(--tm-text-primary);
+  text-align: left;
+  text-decoration: none;
+  background: none;
+  border: none;
+  border-radius: var(--tm-radius-md);
+  cursor: pointer;
+  transition: background-color var(--tm-transition-fast), color var(--tm-transition-fast);
+}
+
+.tm-topbar-user-menu-item:hover {
+  background-color: var(--tm-color-surface-hover);
+}
+
+.tm-topbar-user-menu-item:focus-visible {
+  outline: 2px solid transparent;
+  box-shadow: var(--tm-focus-ring);
+}
+
+.tm-topbar-user-menu-item-danger {
+  color: var(--tm-color-danger);
+}
+
+.tm-topbar-user-menu-separator {
+  height: 1px;
+  margin: var(--tm-space-1) 0;
+  background-color: var(--tm-border-color);
+}
+
+@media (forced-colors: active) {
+  .tm-topbar-menu-btn:focus-visible,
+  .tm-topbar-search-trigger:focus-visible,
+  .tm-topbar-user-button:focus-visible,
+  .tm-topbar-user-menu-item:focus-visible {
+    outline: 2px solid Highlight;
+    outline-offset: 2px;
+    box-shadow: none;
+  }
+
+  .tm-topbar-user-menu {
+    border-color: CanvasText;
+  }
+}
+
+/* ── Touch ─────────────────────────────────────────────── */
+
+@media (pointer: coarse) {
+  .tm-topbar-menu-btn,
+  .tm-topbar-search-trigger,
+  .tm-topbar-user-button {
+    min-block-size: var(--tm-touch-target);
+  }
+
+  /* The disclosure button is square (2.25rem icon chrome) on a fine pointer; a finger needs the
+     full 44px in BOTH axes. */
+  .tm-topbar-menu-btn {
+    min-inline-size: var(--tm-touch-target);
+  }
+
+  .tm-topbar-user-menu-item {
+    min-block-size: var(--tm-touch-target);
+  }
+
+  .tm-topbar-search-trigger {
+    padding-inline: var(--tm-space-3);
+  }
+
+}

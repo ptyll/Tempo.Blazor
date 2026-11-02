@@ -1,0 +1,10 @@
+{
+  "kind": "Record",
+  "category": "Models",
+  "namespace": "Tempo.Blazor.Abstractions.Models.Approvals",
+  "description": "One human decision on an approval request: the outcome (Approved or Rejected), the optional note the decider wrote, who decided and when. TmApprovalCard hands it to OnDecision and leaves the Pending state only when the callback completes without throwing, so a failed save never looks like a decision.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/Models/Approvals/ApprovalDecision.cs",
+  "documentationStatus": "generated",
+  "itemName": "ApprovalDecision"
+}

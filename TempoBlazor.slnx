@@ -15,6 +15,7 @@
     <Project Path="src/Tempo.Blazor.DocumentFormats/Tempo.Blazor.DocumentFormats.csproj" />
     <Project Path="src/Tempo.Blazor/Tempo.Blazor.csproj" />
     <Project Path="src/Tempo.Blazor.All/Tempo.Blazor.All.csproj" />
+    <Project Path="src/Tempo.Blazor.AI/Tempo.Blazor.AI.csproj" />
     <Project Path="src/Tempo.Blazor.Codes/Tempo.Blazor.Codes.csproj" />
     <Project Path="src/Tempo.Blazor.DiagramEditor/Tempo.Blazor.DiagramEditor.csproj" />
     <Project Path="src/Tempo.Blazor.GanttXlsx/Tempo.Blazor.GanttXlsx.csproj" />

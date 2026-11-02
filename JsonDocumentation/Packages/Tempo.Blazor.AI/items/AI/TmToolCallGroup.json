@@ -1,0 +1,49 @@
+{
+  "itemName": "TmToolCallGroup",
+  "kind": "Component",
+  "category": "AI",
+  "namespace": "Tempo.Blazor.Components.AI",
+  "description": "A run of consecutive tool calls collapsed into one summary line — \"3 tools · 1 failed · 4.2 s\" — whose disclosure renders one TmToolCallCard per call. The counts are localized through plural families, so Czech reads \"3 nástroje · 1 selhal\" and the duration uses the localizer's decimal separator (\"4,2 s\"). The total duration is shown only once every call of the run has finished: a total that is still growing is not a duration, and the running card carries its own live elapsed time. TmAiMessage groups a run of two or more consecutive tool-call parts and renders a single call as its own card.",
+  "packageId": "Tempo.Blazor.AI",
+  "sourcePath": "src/Tempo.Blazor.AI/Components/AI/TmToolCallGroup.razor",
+  "documentationStatus": "generated",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.AI"
+  ],
+  "examples": [
+    {
+      "title": "Collapse an agent loop into one line",
+      "code": "<TmToolCallGroup ToolCalls=\"@message.Parts.OfType<AiToolCallPart>().Select(part => part.ToolCall).ToList()\" />"
+    },
+    {
+      "title": "Start expanded and let the host retry a failed call of the run",
+      "code": "<TmToolCallGroup ToolCalls=\"@calls\"\n                  DefaultExpanded=\"true\"\n                  OnRetry=\"@(call => agent.RunToolCallAsync(call))\" />"
+    }
+  ],
+  "parameters": [
+    {
+      "name": "Class",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Additional CSS class(es) for the root element."
+    },
+    {
+      "name": "DefaultExpanded",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Whether the run starts expanded. Default false: a long agent loop stays one tidy line."
+    },
+    {
+      "name": "OnRetry",
+      "type": "EventCallback<AiToolCall>",
+      "isRequired": false,
+      "description": "Raised with the call that failed when the reader asks to run it again; forwarded to every card in the run. The cards' Retry buttons render only when a handler is bound."
+    },
+    {
+      "name": "ToolCalls",
+      "type": "IReadOnlyList<AiToolCall>?",
+      "isRequired": true,
+      "description": "The calls of one run, in arrival order. An empty or null list renders nothing, so a host can bind a filtered list without branching."
+    }
+  ]
+}

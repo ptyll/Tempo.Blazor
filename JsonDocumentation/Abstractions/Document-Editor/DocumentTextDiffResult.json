@@ -6,5 +6,13 @@
   "packageId": "Tempo.Blazor.Abstractions",
   "sourcePath": "src/Tempo.Blazor.Abstractions/DocumentEditor/Models/DocumentTextDiff.cs",
   "documentationStatus": "generated",
-  "itemName": "DocumentTextDiffResult"
+  "itemName": "DocumentTextDiffResult",
+  "members": [
+    {
+      "name": "IsDegraded",
+      "kind": "Property",
+      "type": "bool",
+      "description": "Whether the comparison had to degrade to stay within the engine's limits (TextDiffOptions.DefaultMaxTokens / DefaultMaxCells). A degraded diff is approximate: the segments describe whole lines instead of words, and an input that exceeds even the line limits yields the whole old text as one Removed segment followed by the whole new text as one Added segment. A consumer that surfaces a review decision should say the comparison is coarse instead of presenting it as a word-level result."
+    }
+  ]
 }

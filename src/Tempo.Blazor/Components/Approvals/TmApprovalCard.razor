@@ -1,0 +1,179 @@
+@namespace Tempo.Blazor.Components.Approvals
+@inherits Tempo.Blazor.Components.TmComponentBase
+@using Tempo.Blazor.Abstractions.Models.Approvals
+@using Tempo.Blazor.Components.DataDisplay
+
+<section @ref="_rootElement"
+         class="@RootClass"
+         data-testid="@RootTestId("approval-card")"
+         data-state="@StateName"
+         role="group"
+         tabindex="-1"
+         aria-label="@GroupLabel"
+         aria-busy="@(IsBusy ? "true" : null)"
+         @onkeydown="HandleCardKeyDown">
+
+    @* The pending half and the decided half are BOTH mounted so the collapse can transition the
+       height (grid-template-rows 1fr -> 0fr, see _approval-card.css). The inactive half carries the
+       inert attribute: it is out of the tab order and out of the accessibility tree, which is what
+       the CSS visibility rule alone cannot promise a test. *@
+    <div class="tm-approval-card__collapse tm-approval-card__body" inert="@IsCollapsed">
+        <div class="tm-approval-card__body-inner">
+
+            <div class="tm-approval-card__header">
+                <div class="tm-approval-card__heading">
+                    @if (!string.IsNullOrWhiteSpace(Title))
+                    {
+                        <p class="tm-approval-card__title" data-testid="@TestId("approval-title")">@Title</p>
+                    }
+                    <span class="tm-approval-card__risk" data-testid="@TestId("approval-risk")">
+                        <TmBadge Variant="@RiskBadgeVariant" BadgeStyle="BadgeStyle.Subtle" Icon="@RiskIcon">@RiskLabel</TmBadge>
+                    </span>
+                </div>
+
+                @if (ExpiresAt is not null)
+                {
+                    <div class="tm-approval-card__deadline @(IsExpired ? "tm-approval-card__deadline--expired" : null)"
+                         data-testid="@TestId("approval-countdown")">
+                        <TmIcon Name="@IconNames.Clock" Size="IconSize.Xs" />
+                        @if (IsExpired)
+                        {
+                            <span class="tm-approval-card__countdown" aria-live="off">@Loc["TmApprovalCard_Expired"]</span>
+                        }
+                        else
+                        {
+                            <span class="tm-approval-card__deadline-label">@Loc["TmApprovalCard_ExpiresIn"]</span>
+                            <time class="tm-approval-card__countdown"
+                                  datetime="@ExpiresAtIso"
+                                  aria-live="off">@CountdownText</time>
+                        }
+                    </div>
+                }
+            </div>
+
+            @if (!Compact && !string.IsNullOrWhiteSpace(Description))
+            {
+                <p class="tm-approval-card__description" data-testid="@TestId("approval-description")">@Description</p>
+            }
+
+            @if (!Compact && PreviewContent is not null)
+            {
+                <div class="tm-approval-card__preview" data-testid="@TestId("approval-preview")">@PreviewContent</div>
+            }
+
+            @if (!Compact && HasDetails)
+            {
+                <dl class="tm-approval-card__details"
+                    aria-label="@Loc["TmApprovalCard_DetailsLabel"]"
+                    data-testid="@TestId("approval-details")">
+                    @foreach (var detail in Details!)
+                    {
+                        <div class="tm-approval-card__detail">
+                            <dt class="tm-approval-card__detail-term">@detail.Key</dt>
+                            <dd class="tm-approval-card__detail-value">@detail.Value</dd>
+                        </div>
+                    }
+                </dl>
+            }
+
+            @if (ShowNote)
+            {
+                <div class="tm-approval-card__note">
+                    <label class="tm-approval-card__note-label" for="@NoteId">@Loc["TmApprovalCard_NoteLabel"]</label>
+                    <textarea @ref="_noteElement"
+                              class="tm-approval-card__note-input"
+                              id="@NoteId"
+                              rows="2"
+                              data-testid="@TestId("approval-note")"
+                              placeholder="@Loc["TmApprovalCard_NotePlaceholder"]"
+                              aria-invalid="@(NoteInvalid ? "true" : null)"
+                              aria-describedby="@(NoteInvalid ? NoteErrorId : null)"
+                              @bind="Note"
+                              @bind:event="oninput"
+                              @onkeydown="HandleNoteKeyDown"
+                              @onkeydown:stopPropagation="true"></textarea>
+                    @if (NoteInvalid)
+                    {
+                        <div class="tm-approval-card__note-error"
+                             id="@NoteErrorId"
+                             data-testid="@TestId("approval-note-error")">@Loc["TmApprovalCard_NoteRequired"]</div>
+                    }
+                </div>
+            }
+
+            @if (ErrorMessage is not null)
+            {
+                <div class="tm-approval-card__alert" id="@ErrorId" data-testid="@TestId("approval-error")">
+                    <TmAlert Severity="AlertSeverity.Error" Role="group">@ErrorMessage</TmAlert>
+                </div>
+            }
+
+            <div class="tm-approval-card__actions" data-testid="@TestId("approval-actions")">
+                <button type="button"
+                        @ref="_approveElement"
+                        class="tm-btn tm-btn-primary tm-btn-sm tm-approval-card__action"
+                        data-testid="@TestId("approval-approve")"
+                        disabled="@(!CanDecide)"
+                        aria-busy="@(IsApproving ? "true" : null)"
+                        aria-keyshortcuts="@ApproveShortcuts"
+                        aria-describedby="@(ErrorMessage is not null ? ErrorId : null)"
+                        @onclick="ApproveAsync">
+                    @if (IsApproving)
+                    {
+                        <span class="tm-approval-card__spinner" aria-hidden="true"></span>
+                    }
+                    <span class="tm-btn-label">@Loc["TmApprovalCard_Approve"]</span>
+                </button>
+                <button type="button"
+                        class="tm-btn tm-btn-danger tm-btn-sm tm-approval-card__action"
+                        data-testid="@TestId("approval-reject")"
+                        disabled="@(!CanDecide)"
+                        aria-busy="@(IsRejecting ? "true" : null)"
+                        aria-keyshortcuts="@RejectShortcuts"
+                        aria-describedby="@(ErrorMessage is not null ? ErrorId : null)"
+                        @onclick="RejectAsync">
+                    @if (IsRejecting)
+                    {
+                        <span class="tm-approval-card__spinner" aria-hidden="true"></span>
+                    }
+                    <span class="tm-btn-label">@Loc["TmApprovalCard_Reject"]</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="tm-approval-card__collapse tm-approval-card__summary" inert="@(!IsCollapsed)">
+        <div class="tm-approval-card__summary-inner">
+            <span class="tm-approval-card__summary-icon" aria-hidden="true">
+                <TmIcon Name="@StateIcon" Size="IconSize.Sm" />
+            </span>
+            @if (!string.IsNullOrWhiteSpace(Title))
+            {
+                <span class="tm-approval-card__summary-title">@Title</span>
+            }
+            <span class="tm-approval-card__summary-text" data-testid="@TestId("approval-summary-text")">@SummaryText</span>
+            @if (SummaryNote is not null)
+            {
+                <span class="tm-approval-card__summary-note" data-testid="@TestId("approval-summary-note")">@SummaryNote</span>
+            }
+            @if (ShowUndo)
+            {
+                <button type="button"
+                        @ref="_undoElement"
+                        class="tm-btn tm-btn-ghost tm-btn-sm tm-approval-card__undo"
+                        data-testid="@TestId("approval-undo")"
+                        aria-label="@UndoLabel"
+                        @onclick="UndoAsync">
+                    <TmIcon Name="@IconNames.RotateCcw" Size="IconSize.Xs" />
+                    <span class="tm-btn-label">@Loc["TmApprovalCard_Undo"]</span>
+                </button>
+            }
+        </div>
+    </div>
+
+    <div class="tm-sr-only"
+         role="status"
+         aria-live="polite"
+         aria-atomic="true"
+         data-testid="@TestId("approval-announcements")">@_announcement</div>
+</section>

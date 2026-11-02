@@ -1,57 +1,73 @@
-using System.Text.RegularExpressions;
+using Tempo.Blazor.Diff;
 using Tempo.Blazor.DocumentEditor.Models;
 
 namespace Tempo.Blazor.DocumentEditor.Services;
 
-/// <summary>Creates deterministic word-level diffs for document text.</summary>
+/// <summary>
+/// Creates deterministic word-level diffs for document text.
+/// <para>
+/// The comparison itself lives in the shared UI-free engine <see cref="TextDiff"/>; this helper is
+/// the document-editor façade over it. It keeps the historical segment shape (one segment per run
+/// of equal, removed or added tokens, tokens joined the way document text reads) so the rendered
+/// comparison does not change, and it adds the document-specific plumbing: extracting readable plain
+/// text from a snapshot and from a single block.
+/// </para>
+/// <para>
+/// Above <see cref="TextDiffOptions.DefaultMaxTokens"/> tokens per text (or
+/// <see cref="TextDiffOptions.DefaultMaxCells"/> table cells) the comparison degrades to line level
+/// instead of building an unbounded table, and <see cref="DocumentTextDiffResult.IsDegraded"/> says
+/// so, so a caller can present the comparison as coarse rather than as word-level.
+/// </para>
+/// </summary>
 public static class DocumentTextDiffHelper
 {
-    private static readonly Regex TokenRegex = new(@"\p{L}[\p{L}\p{M}\p{N}]*|\p{N}+|[^\s]", RegexOptions.Compiled | RegexOptions.CultureInvariant);
-
     /// <summary>Diffs old and new text at word/punctuation level.</summary>
+    /// <param name="oldText">The original text; <c>null</c> is read as empty.</param>
+    /// <param name="newText">The new text; <c>null</c> is read as empty.</param>
+    /// <returns>
+    /// The ordered segments of the comparison; <see cref="DocumentTextDiffResult.IsDegraded"/> says
+    /// whether the engine had to coarsen it to stay within its limits.
+    /// </returns>
     public static DocumentTextDiffResult Diff(string? oldText, string? newText)
     {
-        var oldTokens = Tokenize(oldText);
-        var newTokens = Tokenize(newText);
-        var table = BuildLcsTable(oldTokens, newTokens);
-        var segments = new List<DocumentTextDiffSegment>();
+        var diff = TextDiff.Words(oldText, newText);
+        var segments = new List<DocumentTextDiffSegment>(diff.Hunks.Count);
 
-        var oldIndex = 0;
-        var newIndex = 0;
-        while (oldIndex < oldTokens.Count && newIndex < newTokens.Count)
+        foreach (var hunk in diff.Hunks)
         {
-            if (string.Equals(oldTokens[oldIndex], newTokens[newIndex], StringComparison.Ordinal))
+            switch (hunk.Kind)
             {
-                Append(segments, DocumentTextDiffSegmentKind.Unchanged, oldTokens[oldIndex]);
-                oldIndex++;
-                newIndex++;
-            }
-            else if (table[oldIndex + 1, newIndex] >= table[oldIndex, newIndex + 1])
-            {
-                Append(segments, DocumentTextDiffSegmentKind.Removed, oldTokens[oldIndex]);
-                oldIndex++;
-            }
-            else
-            {
-                Append(segments, DocumentTextDiffSegmentKind.Added, newTokens[newIndex]);
-                newIndex++;
+                case TextDiffHunkKind.Equal:
+                    Append(segments, DocumentTextDiffSegmentKind.Unchanged, JoinTokens(hunk.OldText));
+                    break;
+
+                case TextDiffHunkKind.Delete:
+                    Append(segments, DocumentTextDiffSegmentKind.Removed, JoinTokens(hunk.OldText));
+                    break;
+
+                case TextDiffHunkKind.Insert:
+                    Append(segments, DocumentTextDiffSegmentKind.Added, JoinTokens(hunk.NewText));
+                    break;
+
+                default:
+                    // A replacement is one decision in the shared engine but two segments here, in
+                    // the same order the historical implementation emitted them.
+                    Append(segments, DocumentTextDiffSegmentKind.Removed, JoinTokens(hunk.OldText));
+                    Append(segments, DocumentTextDiffSegmentKind.Added, JoinTokens(hunk.NewText));
+                    break;
             }
         }
 
-        while (oldIndex < oldTokens.Count)
+        return new DocumentTextDiffResult
         {
-            Append(segments, DocumentTextDiffSegmentKind.Removed, oldTokens[oldIndex++]);
-        }
-
-        while (newIndex < newTokens.Count)
-        {
-            Append(segments, DocumentTextDiffSegmentKind.Added, newTokens[newIndex++]);
-        }
-
-        return new DocumentTextDiffResult { Segments = segments };
+            Segments = segments,
+            IsDegraded = diff.IsDegraded
+        };
     }
 
     /// <summary>Extracts readable plain text from a document snapshot.</summary>
+    /// <param name="document">The document snapshot; <c>null</c> yields an empty string.</param>
+    /// <returns>The block texts joined by the platform line separator.</returns>
     public static string ExtractPlainText(DocumentEditorDocument? document)
     {
         if (document is null)
@@ -66,58 +82,51 @@ public static class DocumentTextDiffHelper
     }
 
     /// <summary>Extracts readable plain text from a single document block.</summary>
+    /// <param name="block">The block to read.</param>
+    /// <returns>The block text.</returns>
     public static string ExtractBlockPlainText(DocumentBlock block)
         => GetBlockText(block);
 
-    private static List<string> Tokenize(string? text)
+    private static void Append(ICollection<DocumentTextDiffSegment> segments, DocumentTextDiffSegmentKind kind, string text)
     {
-        if (string.IsNullOrWhiteSpace(text))
+        if (text.Length == 0)
         {
-            return [];
-        }
-
-        return TokenRegex.Matches(text)
-            .Select(match => match.Value)
-            .ToList();
-    }
-
-    private static int[,] BuildLcsTable(IReadOnlyList<string> oldTokens, IReadOnlyList<string> newTokens)
-    {
-        var table = new int[oldTokens.Count + 1, newTokens.Count + 1];
-        for (var oldIndex = oldTokens.Count - 1; oldIndex >= 0; oldIndex--)
-        {
-            for (var newIndex = newTokens.Count - 1; newIndex >= 0; newIndex--)
-            {
-                table[oldIndex, newIndex] = string.Equals(oldTokens[oldIndex], newTokens[newIndex], StringComparison.Ordinal)
-                    ? table[oldIndex + 1, newIndex + 1] + 1
-                    : Math.Max(table[oldIndex + 1, newIndex], table[oldIndex, newIndex + 1]);
-            }
-        }
-
-        return table;
-    }
-
-    private static void Append(ICollection<DocumentTextDiffSegment> segments, DocumentTextDiffSegmentKind kind, string token)
-    {
-        var last = segments.LastOrDefault();
-        if (last?.Kind == kind)
-        {
-            last.Text = JoinTokens(last.Text, token);
             return;
         }
 
         segments.Add(new DocumentTextDiffSegment
         {
             Kind = kind,
-            Text = token
+            Text = text
         });
     }
 
-    private static string JoinTokens(string current, string next)
+    /// <summary>
+    /// Re-joins the tokens of a hunk the way document text reads: tokens sit next to each other
+    /// unless a space is needed between a word and a following word or opening bracket. The hunk
+    /// carries the exact characters of the input, so the join has to run over the tokens rather
+    /// than over the raw text — and it runs over the engine's own tokenizer
+    /// (<see cref="DiffAlgorithm.TokenizeWords"/>) so this join can never drift from the tokens the
+    /// hunk boundaries were computed on.
+    /// </summary>
+    private static string JoinTokens(string text)
     {
-        return NeedsSpace(current, next)
-            ? current + " " + next
-            : current + next;
+        if (string.IsNullOrEmpty(text))
+        {
+            return string.Empty;
+        }
+
+        var joined = string.Empty;
+        foreach (var unit in DiffAlgorithm.TokenizeWords(text))
+        {
+            joined = joined.Length == 0
+                ? unit.Text
+                : NeedsSpace(joined, unit.Text)
+                    ? joined + " " + unit.Text
+                    : joined + unit.Text;
+        }
+
+        return joined;
     }
 
     private static bool NeedsSpace(string current, string next)

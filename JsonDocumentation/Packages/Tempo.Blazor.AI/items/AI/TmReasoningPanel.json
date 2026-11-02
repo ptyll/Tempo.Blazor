@@ -1,0 +1,59 @@
+{
+  "itemName": "TmReasoningPanel",
+  "kind": "Component",
+  "category": "AI",
+  "namespace": "Tempo.Blazor.Components.AI",
+  "description": "The reasoning (\"thinking\") part of an AI turn as a disclosure: collapsed it reports what the thinking cost (\"Thought for 12.0 s\"), expanded it lists the ordered steps and the sources the model inspected. While the model is still reasoning the summary counts up live on the injected TimeProvider, shimmers and the trailing step keeps the package's streaming caret. Source links go through the package's URL allowlist, so a refused scheme renders as plain text instead of a dead link. The panel owns exactly one role=status live region and announces the finished reasoning — not every token.",
+  "packageId": "Tempo.Blazor.AI",
+  "sourcePath": "src/Tempo.Blazor.AI/Components/AI/TmReasoningPanel.razor",
+  "documentationStatus": "generated",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.AI"
+  ],
+  "examples": [
+    {
+      "title": "Render a finished reasoning part",
+      "code": "<TmReasoningPanel Reasoning=\"@reasoningPart\" />"
+    },
+    {
+      "title": "Keep the live state while the answer is still streaming",
+      "code": "<TmReasoningPanel Reasoning=\"@reasoningPart\"\n                  IsRunning=\"@(message.Status == AiMessageStatus.Streaming)\" />"
+    },
+    {
+      "title": "Open the steps immediately and hide the inspected sources",
+      "code": "<TmReasoningPanel Reasoning=\"@reasoningPart\" DefaultExpanded=\"true\" ShowSources=\"false\" />"
+    }
+  ],
+  "parameters": [
+    {
+      "name": "Class",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Additional CSS class(es) for the root element."
+    },
+    {
+      "name": "DefaultExpanded",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Whether the body starts expanded. Default false — the collapsed summary is the point."
+    },
+    {
+      "name": "IsRunning",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Whether the model is still reasoning. Default false. While true the summary counts up live, shimmers and the trailing step carries the streaming caret; when the host flips it to false the panel settles on AiReasoningPart.DurationMs and announces the result."
+    },
+    {
+      "name": "Reasoning",
+      "type": "AiReasoningPart?",
+      "isRequired": true,
+      "description": "The reasoning part this panel renders. A null value renders nothing, so a host can bind a part list without a null check."
+    },
+    {
+      "name": "ShowSources",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Render the inspected sources under the steps. Default true."
+    }
+  ]
+}

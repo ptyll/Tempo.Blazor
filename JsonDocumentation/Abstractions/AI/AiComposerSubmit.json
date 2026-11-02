@@ -1,0 +1,10 @@
+{
+  "kind": "Class",
+  "category": "AI",
+  "namespace": "Tempo.Blazor.AI.Models",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/AI/AiComposerSubmit.cs",
+  "documentationStatus": "generated",
+  "itemName": "AiComposerSubmit",
+  "description": "What a composer sends: the prompt text, the attachments the reader picked, the selected model, the mentions the draft references and the slash command it started from. A plain container so a backend can consume it without Blazor — the composer raises it through OnSubmit and clears the draft only after the handler completed."
+}

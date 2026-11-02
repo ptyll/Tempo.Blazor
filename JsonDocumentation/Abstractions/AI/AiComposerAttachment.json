@@ -1,0 +1,10 @@
+{
+  "kind": "Class",
+  "category": "AI",
+  "namespace": "Tempo.Blazor.AI.Models",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/AI/AiComposerAttachment.cs",
+  "documentationStatus": "generated",
+  "itemName": "AiComposerAttachment",
+  "description": "One file attached to a prompt: the metadata a submit contract needs (name, size in bytes, MIME type, optional URL) plus an opaque Content slot the host uses to keep the browser file, a stream or a blob handle. The composer never reads Content — it only enforces MaxAttachments and MaxFileSize on the metadata it can see and renders the chips."
+}

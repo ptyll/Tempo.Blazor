@@ -1,0 +1,66 @@
+{
+  "kind": "Class",
+  "category": "Components",
+  "namespace": "Tempo.Blazor.Components.DataDisplay",
+  "description": "One step of a TmOnboardingChecklist: what to do, how it is presented and — once the user worked through it — whether it is done. The checklist writes IsDone on the instance it was given before raising OnTaskToggle, so the component works without a bound handler; a host that reloads the steps from storage gives it new instances.",
+  "packageId": "Tempo.Blazor",
+  "sourcePath": "src/Tempo.Blazor/Components/DataDisplay/OnboardingModels.cs",
+  "documentationStatus": "documented",
+  "itemName": "OnboardingTask",
+  "members": [
+    {
+      "name": "Id",
+      "kind": "Property",
+      "type": "string",
+      "description": "Stable identifier, unique within one checklist: it is the suffix of the step's data-testid. It never reaches a DOM id — the checkbox, description and group-body ids are built from the step's POSITION, so two ids that reduce to the same id-safe form (a.b and a-b) cannot collide. Two steps that share one Id render fine but make host tests ambiguous."
+    },
+    {
+      "name": "Title",
+      "kind": "Property",
+      "type": "string",
+      "description": "The step's text — the visible label AND the accessible name of its checkbox."
+    },
+    {
+      "name": "Description",
+      "kind": "Property",
+      "type": "string?",
+      "description": "Optional explanation under the title, wired to the checkbox through aria-describedby."
+    },
+    {
+      "name": "IsDone",
+      "kind": "Property",
+      "type": "bool",
+      "description": "Whether the step is done. The checklist writes this value when the user toggles the checkbox; the done styling (strike-through) and the progress follow it."
+    },
+    {
+      "name": "IsOptional",
+      "kind": "Property",
+      "type": "bool",
+      "description": "Marks the step as optional: it renders a localized \"Optional\" badge, it still counts in the progress sentence, but it never blocks the celebration — the checklist is complete once every required step is done."
+    },
+    {
+      "name": "Group",
+      "kind": "Property",
+      "type": "string?",
+      "description": "Group the step belongs to. Steps that share a group render under one collapsible header with their own progress count; steps with no group render as a plain list. The value is both the group's visible title and its stable key, so casing and spacing matter."
+    },
+    {
+      "name": "ActionLabel",
+      "kind": "Property",
+      "type": "string?",
+      "description": "Visible text of the step's call-to-action. An action renders only when it has a target — ActionHref or OnAction; a label alone renders nothing."
+    },
+    {
+      "name": "ActionHref",
+      "kind": "Property",
+      "type": "string?",
+      "description": "Navigation target of the call-to-action; renders a link. Only a relative URL or the http, https or mailto scheme is rendered: javascript:, data: and vbscript: values are refused, and so is a protocol-relative //host/path (it leaves the origin). A refused value is no target at all, so the action renders nothing unless OnAction is set. OnAction wins when both are set (the handler decides what to do, including navigating)."
+    },
+    {
+      "name": "OnAction",
+      "kind": "Property",
+      "type": "Func<OnboardingTask, Task>?",
+      "description": "Handler of the call-to-action when it is a command rather than a link. The checklist awaits it, so a handler that loads data keeps its busy state. Setting it does NOT check the step — completing a step stays the user's decision."
+    }
+  ]
+}

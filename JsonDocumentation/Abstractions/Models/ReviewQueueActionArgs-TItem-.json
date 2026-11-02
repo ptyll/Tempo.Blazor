@@ -1,0 +1,16 @@
+{
+  "kind": "Class",
+  "category": "Models",
+  "namespace": "Tempo.Blazor.Abstractions.Models.Reviews",
+  "description": "One raised decision of a review queue: which item, which verb, and — for a host-defined QuickAction — which quick action fired. TmReviewQueue<TItem> awaits the host's OnAction callback with these args and only resolves the item when it completes without throwing, so a failed save keeps the item pending and the queue usable.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/Models/Reviews/ReviewQueueActionArgs.cs",
+  "documentationStatus": "generated",
+  "typeParameters": [
+    {
+      "name": "TItem",
+      "description": "Generic type parameter TItem."
+    }
+  ],
+  "itemName": "ReviewQueueActionArgs<TItem>"
+}

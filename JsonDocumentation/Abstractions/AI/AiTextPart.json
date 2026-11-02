@@ -1,0 +1,10 @@
+{
+  "kind": "Class",
+  "category": "AI",
+  "namespace": "Tempo.Blazor.AI.Models",
+  "description": "The markdown text of a message. Untrusted model output, so it is rendered through TmMarkdownView's safe pipeline; Append grows it as streamed chunks arrive.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/AI/AiMessagePart.cs",
+  "documentationStatus": "generated",
+  "itemName": "AiTextPart"
+}

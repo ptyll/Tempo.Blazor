@@ -41,7 +41,7 @@ namespace Tempo.Blazor.Tests.Theme;
 /// of what markup emits without a rule on 2.8.26 — 148 in core, 52 in Signing, 44 in NotionEditor:
 /// semantic modifiers that style nothing by design (<c>tm-modal--center</c> is the DEFAULT position
 /// — there is nothing to declare), structural hooks styled through their parent
-/// (<c>tm-sidebar-nav-list</c> inside <c>.tm-sidebar-nav</c>), and dead utility references
+/// (a structural hook whose layout comes from its ancestor), and dead utility references
 /// (<c>tm-mb-4</c>) kept on the markup for consumers. The recording also carried
 /// <c>tm-button</c>/<c>tm-button--ghost</c>/<c>tm-button--sm</c>, which turned out to be not dead
 /// references at all but one live defect — the TmGantt import label, the only visible upload
@@ -205,12 +205,8 @@ public sealed class MarkupClassCoverageTests
         "tm-screening__resolution-note",
         "tm-screening__source",
         "tm-screening__time",
-        "tm-sidebar-badge",
-        "tm-sidebar-nav-children",
-        "tm-sidebar-nav-label",
-        "tm-sidebar-nav-link",
-        "tm-sidebar-nav-link-child",
-        "tm-sidebar-nav-list",
+        // F1 (sidebar/topbar additive phase): the nav rail and the header gained real rules, so six
+        // sidebar and eight topbar classes left the inventory (see _sidebar-nav.css/_topbar.css).
         "tm-signature-capture__preview-svg",
         "tm-signature-capture__previous-preview",
         "tm-signature-capture__remember",
@@ -234,16 +230,7 @@ public sealed class MarkupClassCoverageTests
         "tm-toggle-section__label",
         "tm-toggle-section__radio",
         "tm-toggle-section__radios",
-        "tm-topbar-brand-title",
-        "tm-topbar-center",
-        "tm-topbar-search-hint",
-        "tm-topbar-search-trigger",
-        "tm-topbar-user",
-        "tm-topbar-user-button",
-        "tm-topbar-user-menu",
-        "tm-topbar-user-menu-item",
         "tm-topbar-user-menu-logout",
-        "tm-topbar-user-name",
         "tm-tree-list-row--root",
         "tm-upload-progress__action--cancel",
         "tm-upload-progress__action--resume",
@@ -458,10 +445,19 @@ public sealed class MarkupClassCoverageTests
             // id ("tm-chat-thread-{counter}" in TmChat.razor.cs) — 54 → 55.
             // FZE-7 (a11y review): the thread panel's aria-labelledby target (the title span) is
             // a third per-instance id ("tm-chat-thread-title-{counter}" in TmChat.razor.cs) — 55 → 56.
-            // Comment surface 2.10.0: the internal modifiers are interpolated
+            // Plan 10b3966f phase 2 (TmApprovalCard): the per-instance id prefix
+            // ("tm-approval-card-{Guid…}" in TmApprovalCard.razor.cs) plus the interpolated risk and
+            // state modifiers ($"tm-approval-card--risk-{…}", $"tm-approval-card--{…}") — 56 → 59.
+            // Plan 5d396592 phase 3 (TmAppShell): the variant modifier ($"tm-app-shell--{Variant}") and
+            // the ONE per-instance id prefix every id of the shell shares
+            // ("tm-app-shell-{instanceId}-main|-work-area|…") add their two stems — 62 → 64.
+            // Plan 5d396592 phase 5 (TmOnboardingChecklist): the ONE per-instance id prefix every id
+            // of the checklist shares ("tm-onboarding-checklist-{instanceId}-title|-check-…|
+            // -desc-…|-group-…") adds its single stem — 64 → 65.
+            // Comment surface 2.10.0 (merged from main): the internal modifiers are interpolated
             // ($"tm-comment-item{...}", $"tm-comment-editor{...}"), so the sweep counts the two
-            // stems and cannot see the --internal suffix — 56 → 58.
-            ExpectedUnmeasurableStems: 58),
+            // stems and cannot see the --internal suffix — 65 → 67.
+            ExpectedUnmeasurableStems: 67),
         new Scope("Signing", "Tempo.Blazor.Signing", UnstyledSigningMarkupClasses,
             MinRazorFiles: 28, MinMarkupClasses: 400, InheritsCoreCss: true,
             // Signing redesign phase 2 (B25): the runner's single step panel id

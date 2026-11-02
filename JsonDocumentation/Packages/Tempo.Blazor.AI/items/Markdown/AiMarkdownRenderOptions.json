@@ -1,0 +1,10 @@
+{
+  "kind": "Class",
+  "category": "Markdown",
+  "namespace": "Tempo.Blazor.AI.Markdown",
+  "description": "Localized labels and host seams for AiMarkdownRenderer — the code-block copy/copied labels, the citation chip's accessible name, the scrollable table region's name (TableLabel) and the optional CodeBlockRenderer that takes over a code block (for example with syntax-highlighted markup). The renderer never invents user-visible text: TmMarkdownView supplies every label from ITmLocalizer.",
+  "packageId": "Tempo.Blazor.AI",
+  "sourcePath": "src/Tempo.Blazor.AI/Markdown/AiMarkdownRenderOptions.cs",
+  "documentationStatus": "generated",
+  "itemName": "AiMarkdownRenderOptions"
+}

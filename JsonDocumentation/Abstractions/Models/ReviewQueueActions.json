@@ -1,0 +1,10 @@
+{
+  "kind": "Enum",
+  "category": "Models",
+  "namespace": "Tempo.Blazor.Abstractions.Models.Reviews",
+  "description": "The built-in decisions TmReviewQueue<TItem> offers for an item. A flagged set, so a host enables exactly the verbs its workflow has: a document queue usually offers Approve and Reject, a content queue adds Edit and Skip.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/Models/Reviews/ReviewQueueActions.cs",
+  "documentationStatus": "generated",
+  "itemName": "ReviewQueueActions"
+}

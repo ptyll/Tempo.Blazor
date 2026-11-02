@@ -80,7 +80,7 @@ public class TmEditorShellResizerTests : LocalizationTestBase
     [InlineData(300.6, 280, 200, 480, 5000, 400, 301)]
     public void Clamp_MatchesTheJsVectors(double requested, double current, int min, int max, double canvas, int minCanvas, double expected)
     {
-        EditorShellResize.Clamp(requested, current, min, max, canvas, minCanvas).Should().Be(expected);
+        PanelResize.Clamp(requested, current, min, max, canvas, minCanvas).Should().Be(expected);
     }
 
     [Theory]
@@ -89,7 +89,7 @@ public class TmEditorShellResizerTests : LocalizationTestBase
     [InlineData("320.5px", 321)]
     public void TryParsePx_AcceptsPlainPixelLengths(string value, int expected)
     {
-        EditorShellResize.TryParsePx(value, out var px).Should().BeTrue();
+        PanelResize.TryParsePx(value, out var px).Should().BeTrue();
         px.Should().Be(expected);
     }
 
@@ -103,7 +103,7 @@ public class TmEditorShellResizerTests : LocalizationTestBase
     [InlineData("-5px")]
     public void TryParsePx_RejectsAnythingElse(string? value)
     {
-        EditorShellResize.TryParsePx(value, out _).Should().BeFalse();
+        PanelResize.TryParsePx(value, out _).Should().BeFalse();
     }
 
     [Fact]
