@@ -5,6 +5,6 @@
   "namespace": "Tempo.Blazor.DocumentEditor.Services",
   "description": "Collaboration provider for multi-server deployments: extends the in-memory provider with a backplane so operation batches and cursors broadcast on one server instance fan out to all others. Each instance keeps its own local sequence numbers; ordering consistency across replicas comes from DocumentOperationConflictResolver's logical-timestamp order, not from server sequences.",
   "packageId": "Tempo.Blazor.Abstractions",
-  "sourcePath": "src/Tempo.Blazor.Abstractions/DocumentEditor/Services/ extends the in-memory provider with a backplane so operation batches and cursors broadcast on one server instance fan out to all others; cross-replica ordering consistency comes from DocumentOperationConflictResolver's logical-timestamp order.:DocumentCollaborationBackplane.cs",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/DocumentEditor/Services/DocumentCollaborationBackplane.cs",
   "documentationStatus": "generated"
 }

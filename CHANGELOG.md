@@ -3,6 +3,8 @@
 ## 2.10.0 (unreleased)
 
 - **`TmTextArea.FocusAsync()`** moves focus to the textarea (no-op until it has rendered). Additive; nothing existing changes.
+- **Comment entry model: `TmCommentEntry.IsInternal` and `Badges`.** Additive on `Tempo.Blazor.Abstractions`. `IsInternal` (default `false`) marks a comment the rendering component distinguishes visually; the component never hides internal content — the consumer or server filters it. `Badges` is a `List<TmCommentBadge>` (`Text`, `Tone`, optional `Icon` and `Title`); `TmCommentBadgeTone` is `Neutral`, `Info`, `Success`, `Warning`, `Danger`, `Accent`. `TmCommentEntry.IsValid` is unchanged.
+- **Docs:** the stale `ICommentEntry` documentation overlay (the interface was removed in 2.0.0) is gone from the abstractions bundle, and `TmCommentReaction.IsValid` is documented as a property, not a field.
 
 > 2.10.0 also ships every 2.9.1 entry below; when upgrading from 2.9.0 read both Breaking / Migration
 > sections.

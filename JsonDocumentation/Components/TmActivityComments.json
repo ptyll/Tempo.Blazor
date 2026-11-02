@@ -10,7 +10,7 @@
   "parameters": [
     {
       "name": "Comments",
-      "type": "IReadOnlyList<ICommentEntry>",
+      "type": "IReadOnlyList<TmCommentEntry>",
       "isRequired": false,
       "default": "[]"
     },

@@ -42,6 +42,15 @@ public sealed class TmCommentEntry
     /// <summary>Arbitrary metadata for consumer use.</summary>
     public Dictionary<string, object>? Metadata { get; set; }
 
+    /// <summary>
+    /// Internal comment, visible only to privileged users; the rendering component distinguishes it visually.
+    /// The component never hides internal content — the consumer or server filters it.
+    /// </summary>
+    public bool IsInternal { get; set; }
+
+    /// <summary>Consumer-supplied badges rendered with the entry. Invalid badges are not rendered.</summary>
+    public List<TmCommentBadge> Badges { get; set; } = [];
+
     /// <summary>Returns true when the required identity and body fields are populated.</summary>
     public bool IsValid
         => !string.IsNullOrWhiteSpace(Id)

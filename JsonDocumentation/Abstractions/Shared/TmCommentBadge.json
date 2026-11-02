@@ -1,0 +1,42 @@
+{
+  "kind": "Class",
+  "category": "Shared",
+  "namespace": "Tempo.Blazor.Abstractions.Shared",
+  "description": "A consumer-supplied label rendered next to a comment entry. Text is already localized by the consumer; the component does not translate it.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/Shared/TmCommentBadge.cs",
+  "documentationStatus": "generated",
+  "members": [
+    {
+      "name": "Icon",
+      "kind": "Property",
+      "type": "string?",
+      "description": "Optional Tempo icon name rendered with the badge."
+    },
+    {
+      "name": "IsValid",
+      "kind": "Property",
+      "type": "bool",
+      "description": "Returns true when Text contains non-whitespace characters."
+    },
+    {
+      "name": "Text",
+      "kind": "Property",
+      "type": "string",
+      "description": "Badge text, already localized by the consumer. Required for the badge to render."
+    },
+    {
+      "name": "Title",
+      "kind": "Property",
+      "type": "string?",
+      "description": "Optional tooltip and accessible description."
+    },
+    {
+      "name": "Tone",
+      "kind": "Property",
+      "type": "TmCommentBadgeTone",
+      "description": "Visual tone. Defaults to Neutral."
+    }
+  ],
+  "itemName": "TmCommentBadge"
+}

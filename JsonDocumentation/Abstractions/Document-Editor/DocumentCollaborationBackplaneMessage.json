@@ -5,6 +5,6 @@
   "namespace": "Tempo.Blazor.DocumentEditor.Services",
   "description": "Envelope fanned out between server instances by a collaboration backplane.",
   "packageId": "Tempo.Blazor.Abstractions",
-  "sourcePath": "src/Tempo.Blazor.Abstractions/DocumentEditor/Services/ document id, source instance id (echo suppression), and an operation batch or cursor payload.:DocumentCollaborationBackplane.cs",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/DocumentEditor/Services/DocumentCollaborationBackplane.cs",
   "documentationStatus": "generated"
 }

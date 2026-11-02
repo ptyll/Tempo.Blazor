@@ -83379,16 +83379,6 @@
           "documentationStatus": "merged"
         },
         {
-          "kind": "Interface",
-          "category": "Interfaces",
-          "namespace": "Tempo.Blazor.Interfaces",
-          "description": "Represents a single comment entry in TmActivityComments.",
-          "packageId": "Tempo.Blazor.Abstractions",
-          "sourcePath": "src/Tempo.Blazor.Abstractions/Interfaces/ICommentEntry.cs",
-          "documentationStatus": "generated",
-          "itemName": "ICommentEntry"
-        },
-        {
           "itemName": "IDashboardProvider",
           "kind": "Interface",
           "category": "Interfaces",
@@ -102489,6 +102479,58 @@
           "documentationStatus": "merged"
         },
         {
+          "itemName": "TmCommentBadge",
+          "kind": "Class",
+          "category": "Shared",
+          "namespace": "Tempo.Blazor.Abstractions.Shared",
+          "description": "A consumer-supplied label rendered next to a comment entry. Text is already localized by the consumer; the component does not translate it.",
+          "packageId": "Tempo.Blazor.Abstractions",
+          "sourcePath": "src/Tempo.Blazor.Abstractions/Shared/TmCommentBadge.cs",
+          "documentationStatus": "merged",
+          "members": [
+            {
+              "name": "Icon",
+              "kind": "Property",
+              "type": "string?",
+              "description": "Optional Tempo icon name rendered with the badge."
+            },
+            {
+              "name": "IsValid",
+              "kind": "Property",
+              "type": "bool",
+              "description": "Returns true when Text contains non-whitespace characters."
+            },
+            {
+              "name": "Text",
+              "kind": "Property",
+              "type": "string",
+              "description": "Badge text, already localized by the consumer. Required for the badge to render."
+            },
+            {
+              "name": "Title",
+              "kind": "Property",
+              "type": "string?",
+              "description": "Optional tooltip and accessible description."
+            },
+            {
+              "name": "Tone",
+              "kind": "Property",
+              "type": "TmCommentBadgeTone",
+              "description": "Visual tone. Defaults to Neutral."
+            }
+          ]
+        },
+        {
+          "itemName": "TmCommentBadgeTone",
+          "kind": "Enum",
+          "category": "Shared",
+          "namespace": "Tempo.Blazor.Abstractions.Shared",
+          "description": "Visual tone of a comment badge. Mapped to a badge variant by the rendering component.",
+          "packageId": "Tempo.Blazor.Abstractions",
+          "sourcePath": "src/Tempo.Blazor.Abstractions/Shared/TmCommentBadgeTone.cs",
+          "documentationStatus": "merged"
+        },
+        {
           "itemName": "TmCommentBodyFormat",
           "kind": "Enum",
           "category": "Shared",
@@ -102545,6 +102587,12 @@
               "description": "Author snapshot captured when the entry was created."
             },
             {
+              "name": "Badges",
+              "kind": "Property",
+              "type": "List<TmCommentBadge>",
+              "description": "Consumer-supplied badges rendered with the entry. Invalid badges are not rendered."
+            },
+            {
               "name": "Body",
               "kind": "Property",
               "type": "string",
@@ -102585,6 +102633,12 @@
               "kind": "Property",
               "type": "string",
               "description": "Stable entry identifier."
+            },
+            {
+              "name": "IsInternal",
+              "kind": "Property",
+              "type": "bool",
+              "description": "Internal comment, visible only to privileged users; the rendering component distinguishes it visually. The component never hides internal content — the consumer or server filters it."
             },
             {
               "name": "Mentions",
@@ -110713,12 +110767,12 @@
       ],
       "libraryExamples": [],
       "summary": {
-        "itemCount": 1514,
-        "manualItemCount": 1514,
-        "generatedItemCount": 1497,
+        "itemCount": 1515,
+        "manualItemCount": 1515,
+        "generatedItemCount": 1499,
         "generatedOnlyItemCount": 0,
         "componentCount": 0,
-        "publicApiTypeCount": 1497
+        "publicApiTypeCount": 1499
       }
     },
     {
@@ -127699,10 +127753,10 @@
   ],
   "summary": {
     "packageCount": 27,
-    "itemCount": 3384,
-    "manualItemCount": 3384,
+    "itemCount": 3385,
+    "manualItemCount": 3385,
     "generatedOnlyItemCount": 0,
     "componentCount": 514,
-    "publicApiTypeCount": 2817
+    "publicApiTypeCount": 2819
   }
 }

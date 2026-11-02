@@ -1,0 +1,10 @@
+{
+  "kind": "Enum",
+  "category": "Shared",
+  "namespace": "Tempo.Blazor.Abstractions.Shared",
+  "description": "Visual tone of a comment badge. Mapped to a badge variant by the rendering component.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/Shared/TmCommentBadgeTone.cs",
+  "documentationStatus": "generated",
+  "itemName": "TmCommentBadgeTone"
+}

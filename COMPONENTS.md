@@ -6365,7 +6365,7 @@ Kompletní panel aktivity entity (timeline + komentáře + přílohy).
 |----------|-----|---------|-------|
 | `EntityId` | `string` | — | ID entity |
 | `TimelineEntries` | `IEnumerable<ITimelineEntry>?` | `null` | Timeline |
-| `Comments` | `IReadOnlyList<ICommentEntry>?` | `null` | Komentáře |
+| `Comments` | `IReadOnlyList<TmCommentEntry>` | `[]` | Komentáře |
 | `Attachments` | `IReadOnlyList<IFileAttachment>?` | `null` | Přílohy |
 | `AttachmentProvider` | `IFileAttachmentProvider?` | `null` | Provider příloh |
 | `ShowTimeline` | `bool` | `true` | Zobrazit timeline |
@@ -6420,7 +6420,7 @@ Komentáře s přidáváním, editací a mazáním.
 
 | Parametr | Typ | Výchozí | Popis |
 |----------|-----|---------|-------|
-| `Comments` | `IReadOnlyList<ICommentEntry>` | `[]` | Komentáře |
+| `Comments` | `IReadOnlyList<TmCommentEntry>` | `[]` | Komentáře |
 | `OnCommentAdded` | `EventCallback<string>` | — | Přidání |
 | `OnCommentDeleted` | `EventCallback<string>` | — | Smazání |
 | `OnCommentEdited` | `EventCallback<(string Id, string NewText)>` | — | Editace |

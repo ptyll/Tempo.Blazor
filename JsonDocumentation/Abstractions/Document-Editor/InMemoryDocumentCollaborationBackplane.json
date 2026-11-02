@@ -5,6 +5,6 @@
   "namespace": "Tempo.Blazor.DocumentEditor.Services",
   "description": "In-process implementation of IDocumentCollaborationBackplane",
   "packageId": "Tempo.Blazor.Abstractions",
-  "sourcePath": "src/Tempo.Blazor.Abstractions/DocumentEditor/Services/ fans messages out to every subscription of the same document. Serves tests and single-process multi-instance setups.:DocumentCollaborationBackplane.cs",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/DocumentEditor/Services/DocumentCollaborationBackplane.cs",
   "documentationStatus": "generated"
 }
