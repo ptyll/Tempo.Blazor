@@ -1,0 +1,506 @@
+@page "/app-shell"
+@using Tempo.Blazor.Abstractions.Layout
+@using Tempo.Blazor.Components.DataDisplay
+@using Tempo.Blazor.Components.Layout
+@using Tempo.Blazor.Components.Overlay
+@using Tempo.Blazor.Interfaces
+@using Tempo.Blazor.Models
+@inject ITmLocalizer Loc
+
+<PageTitle>@Loc["TmAppShellDemo_Title"] – Tempo.Blazor</PageTitle>
+
+@* This page IS a whole application frame, so it takes the demo's full content width (the same
+   stable data-demo-shell hooks the modeling editor page uses): the docked demo sidebar would leave
+   a 1080 px column at 1440 and the desktop preset (1280) could only be reviewed by scrolling the
+   stage. Navigation is one link away (the browser's back button or any other demo entry). *@
+<style>
+    .demo-shell:has(.app-shell-page) [data-demo-shell="sidebar"] { display: none !important; }
+    /* width:auto, never 100vw: the viewport unit includes the vertical scrollbar, so the frame page
+       grew a ~15 px horizontal scrollbar on a desktop browser (WCAG 1.4.10 reflow). */
+    .demo-shell:has(.app-shell-page) [data-demo-shell="main"] { margin-left: 0 !important; width: auto !important; max-width: none !important; }
+    .demo-shell:has(.app-shell-page) [data-demo-shell="page-body"] { max-width: none !important; }
+</style>
+
+@* Plan 5d396592 phase 6: the frame series demo. The live frame sits inside a width-controlled stage,
+   so the desktop, tablet and phone presentations can all be shown WITHOUT changing the browser
+   viewport. The width is driven by buttons (never a drag-only handle), which doubles as the
+   WCAG 2.5.7 alternative for the shell's own resizable work area. *@
+
+<div class="app-shell-page" data-testid="app-shell-page">
+    <header class="app-shell-page__header">
+        <div class="app-shell-page__header-row">
+            <h1 class="app-shell-page__title">@Loc["TmAppShellDemo_Title"]</h1>
+            @* This page hides the demo's own navigation column (it IS a frame), so it brings the
+               theme switch and the way back itself — the frame's account menu switch is inside the
+               component, not a page control. *@
+            <div class="app-shell-page__header-actions">
+                <a class="app-shell-page__back-link" href="layout">@Loc["TmAppShellDemo_BackToDemos"]</a>
+                <ThemeToggle />
+            </div>
+        </div>
+        <p class="app-shell-page__intro">@Loc["TmAppShellDemo_Intro"]</p>
+    </header>
+
+    <section class="app-shell-page__section" data-testid="app-shell-live">
+        <h2 class="app-shell-page__section-title">@Loc["TmAppShellDemo_LiveTitle"]</h2>
+        <p class="app-shell-page__section-description">@Loc["TmAppShellDemo_LiveDescription"]</p>
+
+        <div class="app-shell-page__controls">
+            <div class="app-shell-page__control" role="group" aria-label="@Loc["TmAppShellDemo_VariantGroup"]">
+                <span class="app-shell-page__control-label">@Loc["TmAppShellDemo_VariantLabel"]</span>
+                <button type="button"
+                        class="tm-btn tm-btn-secondary tm-btn-sm"
+                        data-testid="app-shell-variant-inset"
+                        aria-pressed="@BoolText(_variant == AppShellVariant.Inset)"
+                        @onclick="() => _variant = AppShellVariant.Inset">@Loc["TmAppShellDemo_VariantInset"]</button>
+                <button type="button"
+                        class="tm-btn tm-btn-secondary tm-btn-sm"
+                        data-testid="app-shell-variant-flat"
+                        aria-pressed="@BoolText(_variant == AppShellVariant.Flat)"
+                        @onclick="() => _variant = AppShellVariant.Flat">@Loc["TmAppShellDemo_VariantFlat"]</button>
+            </div>
+
+            <div class="app-shell-page__control" role="group" aria-label="@Loc["TmAppShellDemo_WidthGroup"]">
+                <span class="app-shell-page__control-label">@Loc["TmAppShellDemo_WidthLabel"]</span>
+                @foreach (var preset in WidthPresets)
+                {
+                    <button type="button"
+                            class="tm-btn tm-btn-secondary tm-btn-sm"
+                            data-testid="@($"app-shell-width-{preset.Key}")"
+                            aria-pressed="@BoolText(_widthPreset == preset.Key)"
+                            @onclick="() => _widthPreset = preset.Key">@Loc[preset.LabelKey]</button>
+                }
+            </div>
+
+            <div class="app-shell-page__control">
+                <button type="button"
+                        class="tm-btn tm-btn-secondary tm-btn-sm"
+                        data-testid="app-shell-work-area-toggle"
+                        aria-pressed="@BoolText(_workAreaOpen)"
+                        @onclick="ToggleWorkArea">@Loc[_workAreaOpen ? "TmAppShellDemo_HideSources" : "TmAppShellDemo_ShowSources"]</button>
+                <span class="app-shell-page__resolved"
+                      data-testid="app-shell-resolved-layout"
+                      data-resolved="@CssMode(_resolvedLayout)">@Loc["TmAppShellDemo_Resolved", Loc[ResolvedLabelKey]]</span>
+            </div>
+        </div>
+
+        @* The stage scrolls horizontally when a preset is wider than the demo column, so the desktop
+           presentation is reachable at any browser width instead of being clipped. Its height is the
+           page stylesheet's job (`min(60rem, 100dvh - …)`): a fixed inline 60rem was taller than any
+           phone viewport, which pushed the frame's own footer off screen inside a scrolling page. *@
+        <div class="app-shell-page__stage"
+             data-testid="app-shell-stage"
+             role="region"
+             aria-label="@Loc["TmAppShellDemo_StageLabel"]"
+             tabindex="0">
+            <div class="app-shell-page__viewport"
+                 data-testid="app-shell-viewport"
+                 style="inline-size: @ViewportWidthCss">
+                <TmAppShell TestIdPrefix="shell"
+                            Variant="_variant"
+                            Title="@Loc["TmAppShellDemo_Brand"]"
+                            NavSections="_navSections"
+                            SidebarNavLabel="@Loc["TmAppShellDemo_NavLabel"]"
+                            WorkAreaLabel="@Loc["TmAppShellDemo_SourcesTitle"]"
+                            PersistKey="demo-app-shell"
+                            ResolvedLayoutChanged="OnResolvedLayoutChanged"
+                            @bind-WorkAreaOpen="_workAreaOpen"
+                            @bind-WorkAreaWidth="_workAreaWidth"
+                            @bind-SidebarCollapsed="_sidebarCollapsed">
+                    <TopBarActions>
+                        <span class="app-shell-page__topbar-note">@Loc["TmAppShellDemo_TopBarNote"]</span>
+                    </TopBarActions>
+                    <SidebarHeader>
+                        <div class="app-shell-page__brand">
+                            <TmIcon Name="@IconNames.Layout" Size="IconSize.Sm" />
+                            <span>@Loc["TmAppShellDemo_Brand"]</span>
+                        </div>
+                    </SidebarHeader>
+                    @* The account lives in the navigation column's footer and therefore also inside the
+                       phone drawer: the same slot, mounted at every width. *@
+                    <SidebarFooter>
+                        <TmUserMenu TestIdPrefix="frame-account"
+                                    User="_user"
+                                    Items="_userItems"
+                                    ProfileCompletion="60"
+                                    ShowThemeToggle="true"
+                                    OnProfileCompletion="OnProfileCompletion"
+                                    OnLogout="OnLogout" />
+                    </SidebarFooter>
+                    <WorkArea>
+                        <div class="app-shell-page__sources" data-testid="app-shell-sources">
+                            <p class="app-shell-page__sources-intro">@Loc["TmAppShellDemo_SourcesIntro"]</p>
+                            <ul class="app-shell-page__source-list">
+                                @foreach (var source in SourceItems)
+                                {
+                                    <li class="app-shell-page__source">
+                                        <TmIcon Name="@source.Icon" Size="IconSize.Sm" />
+                                        <span>@Loc[source.LabelKey]</span>
+                                    </li>
+                                }
+                            </ul>
+                        </div>
+                    </WorkArea>
+                    <ChildContent>
+                        <div class="app-shell-page__content">
+                            <h2 class="app-shell-page__content-title">@Loc["TmAppShellDemo_ContentTitle"]</h2>
+                            <p class="app-shell-page__content-body">@Loc["TmAppShellDemo_ContentBody"]</p>
+
+                            <TmOnboardingChecklist TestIdPrefix="live"
+                                                   Title="@Loc["TmAppShellDemo_FrameChecklistTitle"]"
+                                                   Layout="OnboardingChecklistLayout.Card"
+                                                   Tasks="_frameTasks"
+                                                   OnTaskToggle="OnFrameTaskToggle" />
+
+                            <div class="app-shell-page__stats">
+                                @foreach (var stat in Stats)
+                                {
+                                    <div class="app-shell-page__stat">
+                                        <span class="app-shell-page__stat-value">@stat.Value</span>
+                                        <span class="app-shell-page__stat-label">@Loc[stat.LabelKey]</span>
+                                    </div>
+                                }
+                            </div>
+
+                            <p class="app-shell-page__last-step" data-testid="app-shell-frame-last-step">
+                                @Loc["TmAppShellDemo_LastStep", _lastFrameStep ?? Loc["TmAppShellDemo_None"]]
+                            </p>
+                        </div>
+                    </ChildContent>
+                </TmAppShell>
+            </div>
+        </div>
+    </section>
+
+    <section class="app-shell-page__section" data-testid="app-shell-user-menu">
+        <h2 class="app-shell-page__section-title">@Loc["TmAppShellDemo_UserMenuTitle"]</h2>
+        <p class="app-shell-page__section-description">@Loc["TmAppShellDemo_UserMenuDescription"]</p>
+
+        <div class="app-shell-page__grid">
+            <div class="app-shell-page__card">
+                <h3 class="app-shell-page__card-title">@Loc["TmAppShellDemo_UserMenuPopover"]</h3>
+                <p class="app-shell-page__card-note">@Loc["TmAppShellDemo_UserMenuPopoverNote"]</p>
+                <TmUserMenu TestIdPrefix="standalone"
+                            User="_user"
+                            Items="_userItems"
+                            ProfileCompletion="60"
+                            ShowThemeToggle="true"
+                            OnItemSelected="OnAccountItemSelected"
+                            OnProfileCompletion="OnProfileCompletion"
+                            OnLogout="OnLogout" />
+            </div>
+
+            <div class="app-shell-page__card">
+                <h3 class="app-shell-page__card-title">@Loc["TmAppShellDemo_UserMenuSheet"]</h3>
+                <p class="app-shell-page__card-note">@Loc["TmAppShellDemo_UserMenuSheetNote"]</p>
+                @* A forced sheet presentation: the same menu as the content-height bottom sheet a phone
+                   gets, so the mobile interaction can be reviewed at any viewport. *@
+                <TmUserMenu TestIdPrefix="standalone-sheet"
+                            User="_user"
+                            Items="_userItems"
+                            ProfileCompletion="60"
+                            ShowThemeToggle="true"
+                            MobilePresentation="PanelPresentation.Sheet"
+                            OnItemSelected="OnAccountItemSelected"
+                            OnLogout="OnLogout" />
+            </div>
+
+            <div class="app-shell-page__card">
+                <h3 class="app-shell-page__card-title">@Loc["TmAppShellDemo_UserMenuAvatarOnly"]</h3>
+                <p class="app-shell-page__card-note">@Loc["TmAppShellDemo_UserMenuAvatarOnlyNote"]</p>
+                <TmUserMenu TestIdPrefix="standalone-avatar"
+                            User="_user"
+                            Items="_userItems"
+                            ShowUserName="false"
+                            OnItemSelected="OnAccountItemSelected"
+                            OnLogout="OnLogout" />
+            </div>
+        </div>
+
+        <p class="app-shell-page__last-action" data-testid="app-shell-last-action">
+            @Loc["TmAppShellDemo_LastAction", _lastAccountAction ?? Loc["TmAppShellDemo_None"]]
+        </p>
+    </section>
+
+    <section class="app-shell-page__section" data-testid="app-shell-checklist">
+        <h2 class="app-shell-page__section-title">@Loc["TmAppShellDemo_ChecklistTitle"]</h2>
+        <p class="app-shell-page__section-description">@Loc["TmAppShellDemo_ChecklistDescription"]</p>
+
+        <div class="app-shell-page__grid">
+            <div class="app-shell-page__card">
+                <h3 class="app-shell-page__card-title">@Loc["TmAppShellDemo_ChecklistList"]</h3>
+                <TmOnboardingChecklist TestIdPrefix="checklist-list"
+                                       Title="@Loc["TmAppShellDemo_ChecklistGuideTitle"]"
+                                       Layout="OnboardingChecklistLayout.List"
+                                       Tasks="_listTasks"
+                                       OnTaskToggle="OnChecklistTaskToggle" />
+            </div>
+
+            <div class="app-shell-page__card">
+                <h3 class="app-shell-page__card-title">@Loc["TmAppShellDemo_ChecklistCard"]</h3>
+                @* The opt-in auto-collapse: a finished group folds away and hands the focus to its own
+                   header, so a keyboard user is never dropped on the document body. *@
+                <TmOnboardingChecklist TestIdPrefix="checklist-card"
+                                       Title="@Loc["TmAppShellDemo_ChecklistGuideTitle"]"
+                                       Layout="OnboardingChecklistLayout.Card"
+                                       CollapseCompletedGroups="true"
+                                       Tasks="_cardTasks"
+                                       OnTaskToggle="OnChecklistTaskToggle" />
+            </div>
+
+            <div class="app-shell-page__card">
+                <h3 class="app-shell-page__card-title">@Loc["TmAppShellDemo_ChecklistGrid"]</h3>
+                @* The tips-panel presentation: one tile per step, so the guide can sit next to content. *@
+                <TmOnboardingChecklist TestIdPrefix="checklist-grid"
+                                       Layout="OnboardingChecklistLayout.Grid"
+                                       ShowProgress="false"
+                                       Tasks="_gridTasks"
+                                       OnTaskToggle="OnChecklistTaskToggle" />
+            </div>
+        </div>
+
+        <div class="app-shell-page__card app-shell-page__card--wide">
+            <h3 class="app-shell-page__card-title">@Loc["TmAppShellDemo_ChecklistDismiss"]</h3>
+            <p class="app-shell-page__card-note">@Loc["TmAppShellDemo_ChecklistDismissNote"]</p>
+            @if (_showDismissibleGuide)
+            {
+                <TmOnboardingChecklist TestIdPrefix="checklist-dismissible"
+                                       Title="@Loc["TmAppShellDemo_ChecklistGuideTitle"]"
+                                       Tasks="_dismissibleTasks"
+                                       Dismissible="true"
+                                       OnDismiss="OnChecklistDismissed"
+                                       OnTaskToggle="OnChecklistTaskToggle" />
+            }
+            else
+            {
+                <button type="button"
+                        class="tm-btn tm-btn-secondary tm-btn-sm"
+                        data-testid="app-shell-checklist-restore"
+                        @onclick="RestoreDismissibleGuide">@Loc["TmAppShellDemo_ChecklistRestore"]</button>
+            }
+        </div>
+
+        <p class="app-shell-page__last-action" data-testid="app-shell-checklist-last">
+            @Loc["TmAppShellDemo_LastStep", _lastChecklistStep ?? Loc["TmAppShellDemo_None"]]
+        </p>
+    </section>
+</div>
+
+@code {
+    private static readonly (string Key, string LabelKey)[] WidthPresets =
+    [
+        ("fit", "TmAppShellDemo_WidthFit"),
+        ("phone", "TmAppShellDemo_WidthPhone"),
+        ("tablet", "TmAppShellDemo_WidthTablet"),
+        ("desktop", "TmAppShellDemo_WidthDesktop"),
+    ];
+
+    private static readonly (string Icon, string LabelKey)[] SourceItems =
+    [
+        (IconNames.Database, "TmAppShellDemo_SourceOne"),
+        (IconNames.Folder, "TmAppShellDemo_SourceTwo"),
+        (IconNames.Users, "TmAppShellDemo_SourceThree"),
+    ];
+
+    private static readonly (string Value, string LabelKey)[] Stats =
+    [
+        ("12", "TmAppShellDemo_StatOrders"),
+        ("4", "TmAppShellDemo_StatReports"),
+        ("96%", "TmAppShellDemo_StatOnTime"),
+    ];
+
+    private AppShellVariant _variant = AppShellVariant.Inset;
+    private string _widthPreset = "fit";
+    private bool _workAreaOpen;
+    private int _workAreaWidth = 420;
+    private bool _sidebarCollapsed;
+    private TmLayoutMode _resolvedLayout = TmLayoutMode.Desktop;
+    private string? _lastFrameStep;
+    private string? _lastChecklistStep;
+    private string? _lastAccountAction;
+    private bool _showDismissibleGuide = true;
+
+    private readonly IUserInfo _user = new DemoUser();
+
+    private IReadOnlyList<SidebarNavSection> _navSections = [];
+    private IReadOnlyList<UserMenuItem> _userItems = [];
+    private List<OnboardingTask> _frameTasks = [];
+    private List<OnboardingTask> _listTasks = [];
+    private List<OnboardingTask> _cardTasks = [];
+    private List<OnboardingTask> _gridTasks = [];
+    private List<OnboardingTask> _dismissibleTasks = [];
+
+    private string ViewportWidthCss => _widthPreset switch
+    {
+        "phone" => "375px",
+        "tablet" => "900px",
+        "desktop" => "1280px",
+        _ => "100%",
+    };
+
+    private static string BoolText(bool value) => value ? "true" : "false";
+
+    private static string CssMode(TmLayoutMode mode) => mode switch
+    {
+        TmLayoutMode.Tablet => "tablet",
+        TmLayoutMode.Mobile => "mobile",
+        _ => "desktop",
+    };
+
+    private string ResolvedLabelKey => CssMode(_resolvedLayout) switch
+    {
+        "tablet" => "TmAppShellDemo_ResolvedTablet",
+        "mobile" => "TmAppShellDemo_ResolvedMobile",
+        _ => "TmAppShellDemo_ResolvedDesktop",
+    };
+
+    protected override void OnInitialized()
+    {
+        _navSections =
+        [
+            new(Loc["TmAppShellDemo_WorkspaceSection"],
+            [
+                new SidebarNavItem { Id = "overview", Label = Loc["TmAppShellDemo_NavOverview"], Icon = IconNames.Home, Href = "app-shell#app-shell-live", IsActive = true },
+                new SidebarNavItem { Id = "orders", Label = Loc["TmAppShellDemo_NavOrders"], Icon = IconNames.BarChart2, Href = "app-shell#app-shell-live", BadgeCount = 3 },
+                new SidebarNavItem { Id = "reports", Label = Loc["TmAppShellDemo_NavReports"], Icon = IconNames.PieChart, Href = "app-shell#app-shell-live" },
+            ]),
+            new(Loc["TmAppShellDemo_ReportsSection"],
+            [
+                new SidebarNavItem { Id = "members", Label = Loc["TmAppShellDemo_NavMembers"], Icon = IconNames.Users, Href = "app-shell#app-shell-live" },
+                new SidebarNavItem { Id = "billing", Label = Loc["TmAppShellDemo_NavBilling"], Icon = IconNames.Settings, Href = "app-shell#app-shell-live" },
+            ]),
+        ];
+
+        _userItems =
+        [
+            new("orders", Loc["TmAppShellDemo_NavOrders"], IconNames.BarChart2),
+            new("members", Loc["TmAppShellDemo_NavMembers"], IconNames.Users),
+            UserMenuItem.CreateSeparator("sep-account"),
+            new("billing", Loc["TmAppShellDemo_NavBilling"], IconNames.Settings, onClick: () => AccountActionAsync("TmAppShellDemo_LastActionBilling")),
+        ];
+
+        _frameTasks = BuildTasks("frame");
+        _listTasks = BuildTasks("list");
+        _cardTasks = BuildTasks("card");
+        _gridTasks = BuildTasks("grid");
+        _dismissibleTasks = BuildTasks("dismiss");
+    }
+
+    /// <summary>
+    /// One run of the demo's setup steps. Each checklist owns its OWN list: the component treats a new
+    /// list identity as a new run, so sharing one instance between the layouts would make the three
+    /// presentations fight over the same progress.
+    /// <para>
+    /// The wording is localized like every other user-facing string: these steps render in five
+    /// checklists and in the "last checked step" readout, so a literal would switch a cs/sk/fr demo
+    /// page back to English in the middle of the guide.
+    /// </para>
+    /// </summary>
+    private List<OnboardingTask> BuildTasks(string prefix) =>
+    [
+        new()
+        {
+            Id = $"{prefix}-1",
+            Title = Loc["TmAppShellDemo_TaskConnect"],
+            Description = Loc["TmAppShellDemo_TaskConnectDescription"],
+        },
+        new()
+        {
+            Id = $"{prefix}-2",
+            Title = Loc["TmAppShellDemo_TaskInvite"],
+            Group = Loc["TmAppShellDemo_GroupTeam"],
+        },
+        new()
+        {
+            Id = $"{prefix}-3",
+            Title = Loc["TmAppShellDemo_TaskPlan"],
+            Group = Loc["TmAppShellDemo_GroupTeam"],
+        },
+        new()
+        {
+            Id = $"{prefix}-4",
+            Title = Loc["TmAppShellDemo_TaskPublish"],
+            Group = Loc["TmAppShellDemo_GroupGettingStarted"],
+            IsOptional = true,
+        },
+    ];
+
+    private Task OnResolvedLayoutChanged(TmLayoutMode mode)
+    {
+        _resolvedLayout = mode;
+        return Task.CompletedTask;
+    }
+
+    private void ToggleWorkArea() => _workAreaOpen = !_workAreaOpen;
+
+    private async Task OnFrameTaskToggle(OnboardingTask task)
+    {
+        _lastFrameStep = task.Title;
+        // The checklist is a child component: the callback runs inside ITS handler, so a host that
+        // changes its own state from it asks for the render (the same rule the library documents).
+        StateHasChanged();
+        await Task.CompletedTask;
+    }
+
+    private async Task OnChecklistTaskToggle(OnboardingTask task)
+    {
+        _lastChecklistStep = task.Title;
+        StateHasChanged();
+        await Task.CompletedTask;
+    }
+
+    private Task OnChecklistDismissed()
+    {
+        _showDismissibleGuide = false;
+        return Task.CompletedTask;
+    }
+
+    private void RestoreDismissibleGuide()
+    {
+        // A NEW list identity is a new run, which is also how a dismissed checklist comes back.
+        _dismissibleTasks = BuildTasks("dismiss");
+        _showDismissibleGuide = true;
+    }
+
+    private async Task AccountActionAsync(string labelKey)
+    {
+        _lastAccountAction = Loc[labelKey];
+        StateHasChanged();
+        await Task.CompletedTask;
+    }
+
+    private Task OnAccountItemSelected(UserMenuItem item)
+    {
+        // The LABEL, not the id: the readout is a localized sentence ("Last account action: {0}") and
+        // an id such as "orders" is a slug, not wording a screen reader should read.
+        _lastAccountAction = item.Label;
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    private Task OnProfileCompletion()
+    {
+        _lastAccountAction = Loc["TmAppShellDemo_CompleteProfile"];
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    private Task OnLogout()
+    {
+        _lastAccountAction = Loc["TmUserMenu_SignOut"];
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Sample demo data, not UI wording: a signed-in user's own name and address are values the host
+    /// supplies about a real person, so they are deliberately not localization keys.
+    /// </summary>
+    private sealed class DemoUser : IUserInfo
+    {
+        public string Id => "demo-user";
+        public string DisplayName => "Jane Doe";
+        public string? Email => "jane@example.com";
+        public string? AvatarSrc => null;
+    }
+}

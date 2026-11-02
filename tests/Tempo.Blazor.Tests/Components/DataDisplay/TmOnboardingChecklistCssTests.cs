@@ -142,6 +142,19 @@ public class TmOnboardingChecklistCssTests
             "the author display:flex outranks the user agent's [hidden] rule, so the component declares it");
     }
 
+    [Fact]
+    public void TheGroupTitle_WrapsInsteadOfBeingTruncated()
+    {
+        var title = Block(Sheet(), ".tm-onboarding-checklist__group-title {");
+
+        title.Should().NotContain("text-overflow: ellipsis",
+            "the group header shares its row with the count and the chevron, so on a narrow card " +
+            "(~317 px inside the demo) the name was cut to 'Getting star…' (phase 6 visual review)");
+        title.Should().NotContain("white-space: nowrap");
+        title.Should().Contain("overflow-wrap: anywhere",
+            "a long word in a group name has to break rather than push the count out of the card");
+    }
+
     private static string Block(string css, string atRule)
     {
         var start = css.IndexOf(atRule, StringComparison.Ordinal);

@@ -22,6 +22,70 @@
 > (Fáze 15b). Contracts: [docs/modeling-editor.md](docs/modeling-editor.md),
 > [docs/diagram-editor.md](docs/diagram-editor.md).
 
+### Demo, documentation and E2E — the app shell series (plan 5d396592, phase 6)
+
+The frame series ships with a real demo page and a browser-proven contract instead of a unit-tested
+API only.
+
+- **New demo page `/app-shell`** (`src/Tempo.Blazor.Demo.SharedUI/Pages/AppShellPage.razor`). The
+  live `TmAppShell` is embedded in a **width-controlled stage**: `Fit`, `Phone 375`, `Tablet 900` and
+  `Desktop 1280` buttons change the container the frame measures, so the docked desktop column, the
+  tablet rail with its overlay drawer and the phone drawer are all reviewable at one browser width —
+  no viewport resizing, and no drag-only control (WCAG 2.5.7). The page also demonstrates the
+  `Inset` / `Flat` variant switch, the sectioned navigation model, the `Sources` work area (closed
+  until the toggle opens it, so a phone never loads with a modal sheet over its content), the account
+  menu in `SidebarFooter` (profile completion + theme switch, and the same slot inside the phone
+  drawer) and an onboarding checklist inside `main`. The page takes the demo's full content width
+  (it hides the demo sidebar through the same stable `data-demo-shell` hooks the modeling editor page
+  uses) and carries its own theme switch and a link back to the component demos, so the desktop
+  preset fits without scrolling the stage.
+- **Standalone sections** for `TmUserMenu` (anchored popover, forced `MobilePresentation="Sheet"`
+  bottom sheet, avatar-only trigger) and for `TmOnboardingChecklist` (`List`, `Card` with
+  `CollapseCompletedGroups`, `Grid` tips panel, and a `Dismissible` guide the page brings back with a
+  new `Tasks` list identity).
+- **New E2E lane** `tests/Tempo.Blazor.E2E/AppShellE2ETests.cs` (WASM `:7106` and Server `:7107`):
+  work-area resize by pointer and by keyboard (`ArrowLeft`/`ArrowRight`, `Home`/`End`, the separator's
+  ARIA values), persistence of the resized width across a reload, the `SidebarCollapsed` round-trip,
+  the phone drawer (opener `aria-expanded`/`aria-controls`, focus into the drawer, Escape and the
+  chosen entry closing it, focus back on the hamburger), the account menu's APG keyboard contract
+  (ArrowDown/ArrowUp open-and-focus, Home/End, Escape restores focus) and its theme switch, a checklist
+  toggle with its single polite announcement, and a scoped axe scan (`wcag2a`/`wcag2aa`, critical and
+  serious) of the frame only. Light/dark reference screenshots at 375 / 900 / 1440 land in
+  `tests/Tempo.Blazor.E2E/TestResults/app-shell`.
+- **Demo strings are localized** in all four demo tables (`src/Tempo.Blazor.Demo.SharedUI/Resources/
+  DemoResources{,.cs,.sk,.fr}.json`) — no hardcoded page text, and the same keys the E2E specs assert.
+- **`MainLayout` stays the hand-written Tailwind shell.** Converting the demo's layout to `TmAppShell`
+  was evaluated and rejected for this release: the demo layout is the reference for the library's
+  Tailwind chrome and its stable hooks (the `data-demo-shell="sidebar"` / `"main"` / `"page-body"`
+  attributes that demo pages style against, the fixed mobile header, the sticky top bar) — a frame
+  conversion changes those selectors, and "the smoke E2E lane passes without selector changes" was the
+  agreed precondition. `TmAppShell` is therefore documented and demonstrated on its own page
+  ([docs/app-shell.md](docs/app-shell.md)) and stays opt-in for hosts. Revisit as a separate
+  demo-migration change if the shell's chrome is ever adopted by the demo for real.
+- **Docs and catalogues**: a *Demo page* section in [docs/app-shell.md](docs/app-shell.md) and
+  `TmAppShell` added to the Layout row of `AGENTS.md`; the JSON documentation overlays were regenerated
+  and `validate --fail-on-drift` reports no drift.
+- **No breaking change**: the phase adds a demo page, demo resources, documentation and E2E specs only —
+  no component parameter, default or markup changed.
+- **Review fixes** (code, architecture and UX review of this phase):
+  - The demo's checklist steps are **localized**, not English literals: `BuildTasks` is an instance
+    method reading `TmAppShellDemo_TaskConnect`, `…_TaskConnectDescription`, `…_TaskInvite`,
+    `…_TaskPlan`, `…_TaskPublish`, `…_GroupTeam` and `…_GroupGettingStarted` from all four demo tables,
+    because those steps render in five checklists and in the "last checked step" readout (a literal
+    switched a cs/sk/fr page back to English mid-guide).
+  - The account readout shows the **localized item label** instead of the raw item id ("Last account
+    action: orders" read a slug to a screen reader).
+  - Demo links are **relative** (`href="layout"`, `app-shell#app-shell-live`), so they follow
+    `<base href>` instead of breaking when the demo is hosted under a sub-path.
+  - The full-bleed override uses `width: auto` / `max-width: none` instead of `100vw`, which includes
+    the vertical scrollbar and grew a ~15 px horizontal scrollbar on a desktop browser (WCAG 1.4.10).
+  - The stage height moved from an inline `60rem` to the page stylesheet's
+    `min(60rem, 100dvh - var(--tm-space-16))`, so the frame fits a phone viewport instead of pushing
+    its own footer off screen.
+  - `TmOnboardingChecklist`'s **group title wraps** instead of being ellipsized: at the demo card's
+    ~317 px, "Getting started" was cut to "Getting star…". Visual fix only — classes, tokens and the
+    public API are untouched; the committed CSS bundle was regenerated.
+
 ### Setup guide — `TmOnboardingChecklist` (plan 5d396592, phase 5)
 
 The onboarding checklist the frame series was missing: `TmOnboardingChecklist` (core, `DataDisplay`)

@@ -171,9 +171,11 @@
 .tm-onboarding-checklist__group-title {
     flex: 1 1 auto;
     min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    /* The group name WRAPS instead of being ellipsized: the header row also carries the count and the
+       chevron, so on a narrow card (~317 px inside the /app-shell demo) "Getting started" was cut to
+       "Getting star…". A group name is short, so a second line costs one row of height, never a word
+       (phase 6 visual review). */
+    overflow-wrap: anywhere;
 }
 
 .tm-onboarding-checklist__group-count {

@@ -80,6 +80,11 @@ component captures each header's `ElementReference` through a render-tree fragme
 
 Steps without a group render in a plain list of their own, outside any disclosure.
 
+The group header row carries three things: the name, the counted `x of y` progress and the chevron.
+The **name wraps** instead of being ellipsized (`overflow-wrap: anywhere`), because a narrow card
+(~317 px in the `/app-shell` demo) previously cut "Getting started" down to "Getting star…" — a short
+name costs one line of height, never a word.
+
 ## Layouts
 
 | `Layout` | Presentation |

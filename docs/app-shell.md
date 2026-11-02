@@ -12,7 +12,7 @@ sections, `aria-current`, rail tooltips), `TmTopBar` (the bar chrome and its acc
 - Styles: `wwwroot/css/components/_app-shell.css`
 - Shared resize helper: `wwwroot/js/tm-panel-resize.js` (over `pointer-drag.js`); C# mirror
   `Tempo.Blazor.Helpers.PanelResize` / `PanelResizeInterop`
-- Demo: `/app-shell` (plan phase 6)
+- Demo: `/app-shell` (see *Demo page*)
 - Tests: `tests/Tempo.Blazor.Tests/Layout/TmAppShellTests.cs`,
   `tests/Tempo.Blazor.Tests/Layout/TmAppShellWorkAreaTests.cs`,
   `tests/Tempo.Blazor.Tests/Layout/TmAppShellMobileTests.cs`,
@@ -255,6 +255,27 @@ round-trip: the close comes back as `false` and the host re-opens with `true`.
   `TmDrawer` / `TmSidebar` / `TmBottomNavigation` (all three subjects are enumerated in
   `animations.css`). A motion the frame ever adds has to join that block.
 
+## Demo page
+
+The `/app-shell` demo page (`src/Tempo.Blazor.Demo.SharedUI/Pages/AppShellPage.razor`) embeds the live
+frame in a **width-controlled stage** instead of resizing the browser window, so the desktop, tablet and
+phone presentations are all reviewable at one viewport:
+
+| Part | What it shows |
+|---|---|
+| Stage (`app-shell-stage`) | A horizontally scrollable box around `app-shell-viewport` whose height the page stylesheet caps at `min(60rem, 100dvh - var(--tm-space-16))` — an inline 60rem was taller than any phone viewport, so the frame's footer sat off screen inside a page that already scrolls. The frame measures the stage, so the layout follows the chosen width. The page takes the demo's full content width (`width: auto`, never `100vw`, which includes the scrollbar width; the demo sidebar is hidden through the `data-demo-shell` hooks) so the desktop preset fits. |
+| Width presets | `Fit` (`100%`), `Phone 375`, `Tablet 900` and `Desktop 1280`. Buttons, not a drag handle — the same non-drag alternative the work-area separator offers (WCAG 2.5.7), and the readout next to them reports the resolved layout. |
+| Variant switch | `Inset` / `Flat` (`aria-pressed`, `data-variant` on the frame). |
+| Sources toggle | Opens the frame's work area: the docked resizable column on a desktop container, the bottom sheet on a phone container (default closed, so a phone never loads with a modal sheet over its content). |
+| Frame content | The sectioned navigation model (`Workspace` / `Reports`), the account menu in `SidebarFooter` (profile completion and the theme switch) and an onboarding checklist inside `main`, plus the frame's own top bar. |
+| `TmUserMenu` section | The account menu as the anchored popover (`Auto`), the **forced** `MobilePresentation="Sheet"` bottom sheet and the avatar-only trigger. |
+| `TmOnboardingChecklist` section | `List`, `Card` (with `CollapseCompletedGroups`) and `Grid` (tips panel) presentations, plus a `Dismissible` guide that the page brings back with a new `Tasks` list identity. |
+
+Both standalone sections report their last action back to the page. The E2E lane
+(`tests/Tempo.Blazor.E2E/AppShellE2ETests.cs`, WASM and Server) drives exactly this page: keyboard and
+pointer resize of the work area, persistence across a reload, the phone drawer, the account menu's
+keyboard behaviour and a checklist toggle, plus a scoped axe scan of the frame.
+
 ## Hosting notes
 
 - The shell fills its parent's height (`block-size: 100%`); give it a height (`100dvh`, a grid row or
@@ -266,6 +287,15 @@ round-trip: the close comes back as `false` and the host re-opens with `true`.
   renders the opener itself, and `MobileNav="BottomNavigation"` needs no opener at all. A custom
   `TopBar` that already carries its own opener passes `ShowTopBarMenuButton="false"` and calls
   `OpenNavigationAsync()`.
+
+## Demo host note
+
+The demo application's own `MainLayout.razor` stays the hand-written Tailwind shell: it is the
+reference for the demo's chrome and its stable hooks (`data-demo-shell="sidebar"` / `"main"` /
+`"page-body"`, the fixed mobile header and the sticky top bar), and converting it to `TmAppShell`
+would change those selectors. The frame is therefore demonstrated and documented on `/app-shell`
+and stays opt-in for hosts; the conversion decision and its precondition are recorded in
+`CHANGELOG.md`.
 
 ## See also
 
