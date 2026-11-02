@@ -124,9 +124,22 @@
     position: relative;
 }
 
-.tm-dbtm__item:hover .tm-dbtm__item-actions {
+.tm-dbtm__item:hover .tm-dbtm__item-actions,
+.tm-dbtm__item:focus-within .tm-dbtm__item-actions {
     opacity: 1;
     pointer-events: auto;
+}
+
+@media (hover: none) {
+    .tm-dbtm__item-actions {
+        opacity: 1;
+        pointer-events: auto;
+    }
+
+    .tm-dbtm__action-btn {
+        min-width: var(--tm-touch-target, 24px);
+        min-height: var(--tm-touch-target, 24px);
+    }
 }
 
 .tm-dbtm__item--confirming .tm-dbtm__use-btn {

@@ -107,6 +107,12 @@
     background: var(--tm-color-warning);
 }
 
+.tm-npsd__locked-hint {
+    margin: 0;
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-sm);
+}
+
 .tm-npsd__field {
     display: grid;
     gap: var(--tm-space-2);

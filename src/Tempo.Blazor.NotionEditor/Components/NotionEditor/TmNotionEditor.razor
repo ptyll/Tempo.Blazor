@@ -20,7 +20,8 @@
         @* ── Sidebar ───────────────────────────────────────────────────────── *@
         @if (EffectiveShowSidebar && !IsReadOnlyViewMode && !HasNoAccess)
         {
-            <aside class="tm-notion-sidebar @(_sidebarVisible ? "tm-notion-sidebar--visible" : "tm-notion-sidebar--hidden")"
+            <aside id="tm-notion-sidebar"
+                   class="tm-notion-sidebar @(_sidebarVisible ? "tm-notion-sidebar--visible" : "tm-notion-sidebar--hidden")"
                    aria-label="@Loc["TmNotionEditor_SidebarLabel"]"
                    role="navigation">
                 <button class="tm-notion-sidebar-close"
@@ -60,6 +61,8 @@
                     <button class="tm-notion-sidebar-toggle"
                             type="button"
                             aria-label="@Loc["TmNotionEditor_ToggleSidebar"]"
+                            aria-expanded="@_sidebarVisible"
+                            aria-controls="tm-notion-sidebar"
                             title="@Loc["TmNotionEditor_ToggleSidebar"]"
                             @onclick="ToggleSidebar">
                         <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
@@ -296,17 +299,11 @@
             @if (_context.AuditProvider is not null && _auditPanelOpen)
             {
                 <aside class="tm-notion-shell-panel tm-notion-shell-panel--wide">
+                    @* The panel owns the only close button. A second shell button next to it was a
+                       duplicate control for the same action. *@
                     <TmNotionAuditLogPanel ActivityProvider="_context.AuditProvider"
-                                           Class="tm-notion-audit-panel tm-notion-shell-panel__content" />
-                    <button type="button"
-                            class="tm-notion-shell-panel__close"
-                            aria-label="@Loc["Tm_Close"]"
-                            title="@Loc["Tm_Close"]"
-                            @onclick="CloseAuditPanel">
-                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-                            <path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-                        </svg>
-                    </button>
+                                           Class="tm-notion-audit-panel tm-notion-shell-panel__content"
+                                           OnClosed="CloseAuditPanel" />
                 </aside>
             }
 

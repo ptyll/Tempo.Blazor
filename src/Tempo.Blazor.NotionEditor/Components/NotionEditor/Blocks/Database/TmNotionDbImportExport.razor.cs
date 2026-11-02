@@ -11,6 +11,13 @@ public partial class TmNotionDbImportExport : ComponentBase
 {
     [Inject] private IJSRuntime JS { get; set; } = default!;
 
+    /// <summary>Suffixes the file input id and the export radio name so two dialogs do not collide.</summary>
+    private readonly string _idSuffix = Guid.NewGuid().ToString("N");
+
+    private string FileInputId => $"tm-dbie-file-{_idSuffix}";
+
+    private string ExportViewName => $"tm-dbie-view-{_idSuffix}";
+
     [CascadingParameter] private NotionEditorContext Context { get; set; } = default!;
 
     // ── Parameters ────────────────────────────────────────────────────────────

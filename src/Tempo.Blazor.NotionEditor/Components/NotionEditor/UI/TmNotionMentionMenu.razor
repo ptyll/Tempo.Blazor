@@ -96,7 +96,7 @@
                          role="option"
                          aria-selected="@(pIdx == _selectedIndex)"
                          @onclick="() => SelectUserAsync(p)"
-                         @onmouseenter="() => _selectedIndex = pIdx">
+                         @onpointermove="() => _selectedIndex = pIdx">
                         <div class="tm-nmm__avatar" aria-hidden="true">
                             @if (!string.IsNullOrEmpty(p.AvatarUrl))
                             {
@@ -136,7 +136,7 @@
                          role="option"
                          aria-selected="@(pgIdx == _selectedIndex)"
                          @onclick="() => SelectPageAsync(capturedPg)"
-                         @onmouseenter="() => _selectedIndex = pgIdx">
+                         @onpointermove="() => _selectedIndex = pgIdx">
                         <span class="tm-nmm__page-icon" aria-hidden="true">@GetPageIcon(capturedPg)</span>
                         <div class="tm-nmm__item-body">
                             <span class="tm-nmm__item-title">@GetPageTitle(capturedPg)</span>
@@ -150,21 +150,21 @@
                 <div class="tm-nmm__item @(0 == _selectedIndex ? "tm-nmm__item--selected" : "")"
                      role="option" aria-selected="@(0 == _selectedIndex)"
                      @onclick="() => SelectDateByIndexAsync(0)"
-                     @onmouseenter="() => _selectedIndex = 0">
+                     @onpointermove="() => _selectedIndex = 0">
                     @DateIcon
                     <span class="tm-nmm__item-title">@Loc["TmNotionMentionMenu_DateToday"]</span>
                 </div>
                 <div class="tm-nmm__item @(1 == _selectedIndex ? "tm-nmm__item--selected" : "")"
                      role="option" aria-selected="@(1 == _selectedIndex)"
                      @onclick="() => SelectDateByIndexAsync(1)"
-                     @onmouseenter="() => _selectedIndex = 1">
+                     @onpointermove="() => _selectedIndex = 1">
                     @DateIcon
                     <span class="tm-nmm__item-title">@Loc["TmNotionMentionMenu_DateTomorrow"]</span>
                 </div>
                 <div class="tm-nmm__item @(2 == _selectedIndex ? "tm-nmm__item--selected" : "")"
                      role="option" aria-selected="@(2 == _selectedIndex)"
                      @onclick="() => SelectDateByIndexAsync(2)"
-                     @onmouseenter="() => _selectedIndex = 2">
+                     @onpointermove="() => _selectedIndex = 2">
                     @DateIcon
                     <span class="tm-nmm__item-title">@Loc["TmNotionMentionMenu_DateYesterday"]</span>
                 </div>

@@ -21,6 +21,7 @@
                 <div class="tm-dbg__card"
                      role="button"
                      tabindex="0"
+                     data-testid="notion-db-gallery-card"
                      @key="rec.Id"
                      @onclick="() => HandleCardClickAsync(rec)"
                      @onkeydown="e => HandleCardKeyAsync(e, rec)">

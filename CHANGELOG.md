@@ -181,6 +181,43 @@ findings table and the per-leg results) and the two perf runs
 
 ### Breaking / Migration
 
+- **Notion editor (phase 1): behaviour and DOM.** Nothing was added to `INotionDatabaseProvider` or `INotionPublicShareProvider`.
+
+  **Thread card body is a button.** The block-comment thread list item used to be a `div.tm-nbcp__thread-card` that also handled keydown, with nested resolve buttons. A button cannot contain a button, so the card stays a `div.tm-nbcp__thread-card` and its body is `button.tm-nbcp__thread-card__open`; the resolve actions stay a sibling `div.tm-nbcp__thread-card__actions`. Enter/Space selects the thread once, through the native button.
+
+  ```html
+  <!-- before -->
+  <div class="tm-nbcp__thread-card" tabindex="0">…<button class="tm-nbcp__thread-card__action">…</button></div>
+  <!-- after -->
+  <div class="tm-nbcp__thread-card">
+    <button type="button" class="tm-nbcp__thread-card__open">…</button>
+    <div class="tm-nbcp__thread-card__actions"><button class="tm-nbcp__thread-card__action">…</button></div>
+  </div>
+  ```
+
+  **Entry actions moved into a menu.** Reply stays an inline button (`data-testid="notion-comment-reply"`). Edit, Delete and Quote left the hover row and now live in the core `TmDropdown` (`data-testid="notion-comment-entry-menu"`, items `notion-comment-edit-menu` / `notion-comment-delete-menu` / `notion-comment-quote-menu`). A host that selected `.tm-nbcp__entry-action` for Edit or Delete must open the menu first.
+
+  ```html
+  <!-- before -->
+  <button data-testid="notion-comment-edit" class="tm-nbcp__entry-action">Edit</button>
+  <button data-testid="notion-comment-delete" class="tm-nbcp__entry-action">Delete</button>
+  <!-- after -->
+  <button data-testid="notion-comment-reply">Reply</button>
+  <div data-testid="notion-comment-entry-menu" class="tm-dropdown-wrapper">…</div>
+  ```
+
+  **Audit panel close.** The shell rendered its own close button next to the panel's. The shell button is gone; the panel's own close button closes the panel through `OnClosed`.
+
+  **Active public share is locked.** While a share is usable, Allow comments and the expiry date are disabled and a hint (`Notion_Share_LockedHint`) explains that revoking the link is how to change them. There is still no `UpdateShareAsync`.
+
+  **Table column resize no longer re-renders per pointermove.** The live width is written to the header cell by `notion-db-column-resize.js` (it imports the shared `pointer-drag.js`; there is no second drag implementation) and `OnFieldResized` fires once, on pointerup. Alt+Arrow on the handle (`role="separator"`, `tabindex="0"`) is the non-drag alternative.
+
+  **Smaller DOM additions, all additive:** the record detail shows a Delete button (`data-testid="notion-db-record-delete"`) only when `OnRecordDeleted` has a delegate, and confirms through `TmDialog`; the calendar "+N more" overflow is a button that opens a day list (`data-testid="notion-db-calendar-day-list"`); the table renders a record-count footer; an empty board group renders `tm-dbb__empty`. `TmNotionDbFieldEditor` and `TmNotionDbImportExport` suffix their `id`/`for`/`name` so two instances on one page no longer collide.
+
+  **Fixed:** comment authors no longer stamp a hardcoded id — `CurrentUserId` is the author; the audit panel no longer renders a second close button next to its own; mention clicks are handled by the panel, not dropped; an active public share locks Allow comments and the expiry date and points at the hint with `aria-describedby`; the table column resize no longer re-renders per pointermove; the calendar "+N more" overflow opens the day list.
+
+  **Added:** a database record can be deleted. The row ⋯ menu (`data-testid="notion-db-table-row-delete"`) and the record detail confirm through `TmDialog`, then raise `OnRecordDeleted`.
+
 - **Comment surface (this release): no public-API break.** New parameters default off. Recorded DOM additions, not replacements: `data-comment-id` and `data-internal` on every `.tm-comment-item`; `tm-comment-item--internal` plus the lock badge when `IsInternal`; `data-badge-tone` pills when `Badges` has valid entries; `.tm-comment-actions__custom` when `CommentActions` is set; `.tm-comment-internal-toggle` and `tm-comment-editor--internal` when the composer switch is on. One behaviour change, already recorded above: an empty `.tm-comment-actions` row is no longer rendered when the comment has no edit, no delete and no `CommentActions`. `OnCommentAdded` is unchanged. `TmGantt` still raises `OnCommentAdded(TmCommentEntry)` once.
 
 - **Signing redesign — breaking-change index (phases 1–9).** The full before/after for each item

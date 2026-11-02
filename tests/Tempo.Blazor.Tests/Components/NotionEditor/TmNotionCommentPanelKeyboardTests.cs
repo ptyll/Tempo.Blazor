@@ -1,5 +1,6 @@
 using AngleSharp.Dom;
 using Bunit;
+using Tempo.Blazor.Components.Dropdowns;
 using FluentAssertions;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Rendering;
@@ -40,7 +41,7 @@ public sealed class TmNotionCommentPanelKeyboardTests : LocalizationTestBase
     public void TextPanel_EnterOnEntryEditButton_OpensEdit_WithoutStartingReply()
     {
         var cut = RenderTextPanel();
-        var edit = FindAction(cut, "tm-ntcp__entry-action", "Edit");
+        var edit = Menu(cut);
 
         var act = () => edit.KeyDown(new KeyboardEventArgs { Key = "Enter" });
         act.Should().Throw<MissingEventHandlerException>(
@@ -48,7 +49,7 @@ public sealed class TmNotionCommentPanelKeyboardTests : LocalizationTestBase
         cut.FindAll(".tm-ntcp__inline-reply").Should().BeEmpty();
 
         // The native click half of the sequence still does the button's own job.
-        FindAction(cut, "tm-ntcp__entry-action", "Edit").Click();
+        SelectMenu(cut, "edit");
         cut.FindAll(".tm-ntcp__edit-wrap").Should().ContainSingle();
         cut.FindAll(".tm-ntcp__inline-reply").Should().BeEmpty();
     }
@@ -57,12 +58,12 @@ public sealed class TmNotionCommentPanelKeyboardTests : LocalizationTestBase
     public void TextPanel_EnterOnEntryDeleteButton_Confirms_WithoutStartingReply()
     {
         var cut = RenderTextPanel();
-        var delete = FindAction(cut, "tm-ntcp__entry-action", "Delete");
+        var delete = Menu(cut);
 
         var act = () => delete.KeyDown(new KeyboardEventArgs { Key = "Enter" });
         act.Should().Throw<MissingEventHandlerException>();
 
-        FindAction(cut, "tm-ntcp__entry-action", "Delete").Click();
+        SelectMenu(cut, "delete");
         cut.FindAll(".tm-dialog").Should().ContainSingle("the delete click shows its confirm dialog");
         cut.FindAll(".tm-ntcp__inline-reply").Should().BeEmpty();
     }
@@ -71,7 +72,7 @@ public sealed class TmNotionCommentPanelKeyboardTests : LocalizationTestBase
     public void TextPanel_EnterInEditTextarea_DoesNotStartReply_EscapeCancelsEdit()
     {
         var cut = RenderTextPanel();
-        FindAction(cut, "tm-ntcp__entry-action", "Edit").Click();
+        SelectMenu(cut, "edit");
         cut.FindAll(".tm-ntcp__edit-wrap").Should().ContainSingle();
 
         // Enter inside the edit textarea inserts a newline natively; the edit
@@ -103,14 +104,14 @@ public sealed class TmNotionCommentPanelKeyboardTests : LocalizationTestBase
     public void BlockPanel_EnterOnEntryEditButton_OpensEdit_WithoutStartingReply()
     {
         var cut = RenderBlockPanel();
-        var edit = FindAction(cut, "tm-nbcp__entry-action", "Edit");
+        var edit = Menu(cut);
 
         var act = () => edit.KeyDown(new KeyboardEventArgs { Key = "Enter" });
         act.Should().Throw<MissingEventHandlerException>(
             "the actions group stops keydowns before the entry's Enter->reply handler");
         cut.FindAll(".tm-nbcp__inline-reply").Should().BeEmpty();
 
-        FindAction(cut, "tm-nbcp__entry-action", "Edit").Click();
+        SelectMenu(cut, "edit");
         cut.FindAll(".tm-nbcp__edit-wrap").Should().ContainSingle();
         cut.FindAll(".tm-nbcp__inline-reply").Should().BeEmpty();
     }
@@ -119,12 +120,12 @@ public sealed class TmNotionCommentPanelKeyboardTests : LocalizationTestBase
     public void BlockPanel_EnterOnEntryDeleteButton_Confirms_WithoutStartingReply()
     {
         var cut = RenderBlockPanel();
-        var delete = FindAction(cut, "tm-nbcp__entry-action", "Delete");
+        var delete = Menu(cut);
 
         var act = () => delete.KeyDown(new KeyboardEventArgs { Key = "Enter" });
         act.Should().Throw<MissingEventHandlerException>();
 
-        FindAction(cut, "tm-nbcp__entry-action", "Delete").Click();
+        SelectMenu(cut, "delete");
         cut.FindAll(".tm-dialog").Should().ContainSingle();
         cut.FindAll(".tm-nbcp__inline-reply").Should().BeEmpty();
     }
@@ -133,7 +134,7 @@ public sealed class TmNotionCommentPanelKeyboardTests : LocalizationTestBase
     public void BlockPanel_EnterInEditTextarea_DoesNotStartReply_EscapeCancelsEdit()
     {
         var cut = RenderBlockPanel();
-        FindAction(cut, "tm-nbcp__entry-action", "Edit").Click();
+        SelectMenu(cut, "edit");
         cut.FindAll(".tm-nbcp__edit-wrap").Should().ContainSingle();
 
         cut.Find("textarea.tm-nbcp__edit-input")
@@ -175,10 +176,11 @@ public sealed class TmNotionCommentPanelKeyboardTests : LocalizationTestBase
             CommentProvider = new FakeBlockCommentProvider(BlockId, ThreadId)
         };
 
-    private static IElement FindAction<T>(IRenderedComponent<T> cut, string actionClass, string titlePart)
-        where T : Microsoft.AspNetCore.Components.IComponent
-        => cut.FindAll($".{actionClass}")
-              .First(e => e.GetAttribute("title")?.Contains(titlePart) == true);
+    private static IElement Menu(IRenderedComponent<IComponent> cut)
+        => cut.Find("[data-testid=notion-comment-entry-menu]");
+
+    private static void SelectMenu(IRenderedComponent<IComponent> cut, string value)
+        => cut.InvokeAsync(() => cut.FindComponent<TmDropdown>().Instance.SelectItemAsync(value)).Wait();
 
     public sealed class TextPanelHost : ComponentBase
     {

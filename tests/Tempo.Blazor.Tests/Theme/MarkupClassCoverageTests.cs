@@ -383,7 +383,9 @@ public sealed class MarkupClassCoverageTests
         "tm-notion-presentation-toggle",
         "tm-notion-reading-exit",
         "tm-notion-reading-toggle",
-        "tm-notion-shell-panel__close",
+        // Notion redesign phase 1: the shell's duplicate audit-panel close button is gone (its
+        // class was the shell-panel close modifier), so the entry was struck off. The panel
+        // closes through its own button.
         "tm-notion-skeleton--rect",
         "tm-notion-spreadsheet-block__missing",
         "tm-notion-spreadsheet-edit-modal__btn--discard",
@@ -482,7 +484,12 @@ public sealed class MarkupClassCoverageTests
             ExpectedUnmeasurableStems: 17),
         new Scope("NotionEditor", "Tempo.Blazor.NotionEditor", UnstyledNotionMarkupClasses,
             MinRazorFiles: 125, MinMarkupClasses: 1900, InheritsCoreCss: true,
-            ExpectedUnmeasurableStems: 17),
+            // Notion redesign phase 1: the field editor and the import/export dialog suffix their
+            // ids so two instances on one page no longer collide ("tm-dbfe-{name}-{guid}",
+            // "tm-dbie-file-{guid}", "tm-dbie-view-{guid}"). The sweep sees the three stems and
+            // cannot see the suffix — 17 → 20. The shared comment list adds one more interpolated
+            // status class — 17 → 18.
+            ExpectedUnmeasurableStems: 18),
     ];
 
     [Fact]

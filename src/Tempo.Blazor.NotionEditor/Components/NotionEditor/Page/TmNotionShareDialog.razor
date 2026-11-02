@@ -43,10 +43,18 @@
                     <span>@StatusText</span>
                 </div>
 
+                @if (IsShareUsable)
+                {
+                    <p id="tm-npsd-locked-hint" class="tm-npsd__locked-hint" data-testid="@TestId("notion-share-locked-hint")">
+                        @Loc["Notion_Share_LockedHint"]
+                    </p>
+                }
+
                 <label class="tm-npsd__toggle">
                     <input type="checkbox"
                            checked="@_allowComments"
-                           disabled="@_saving"
+                           disabled="@(_saving || IsShareUsable)"
+                           aria-describedby="@(IsShareUsable ? "tm-npsd-locked-hint" : null)"
                            data-testid="@TestId("notion-share-allow-comments")"
                            @onchange="HandleAllowCommentsChanged" />
                     <span>@Loc["Notion_Share_AllowComments"]</span>
@@ -58,7 +66,8 @@
                            class="tm-npsd__input"
                            type="date"
                            value="@ExpiresValue"
-                           disabled="@_saving"
+                           disabled="@(_saving || IsShareUsable)"
+                           aria-describedby="@(IsShareUsable ? "tm-npsd-locked-hint" : null)"
                            data-testid="@TestId("notion-share-expires")"
                            @onchange="HandleExpiresChanged" />
                 </div>

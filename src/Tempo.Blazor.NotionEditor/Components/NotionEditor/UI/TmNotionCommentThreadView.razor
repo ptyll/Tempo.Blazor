@@ -1,0 +1,242 @@
+@namespace Tempo.Blazor.Components.NotionEditor.UI
+@inherits Tempo.Blazor.Components.TmComponentBase
+@using Tempo.Blazor.Abstractions.Shared
+@using Tempo.Blazor.Components.NotionEditor.Models
+
+@* Shared reply tree. The parent owns loading, the provider and the delete dialog. *@
+<div class="@WrapperClass"
+     role="list"
+     aria-label="@Resolved.ListLabel"
+     data-testid="@TestId("notion-comment-thread")">
+    @foreach (var node in Flatten(Nodes))
+    {
+        <div class="@($"{ClassPrefix}__entry {ClassPrefix}__entry--level-{node.Level} {(ReplyingToEntryId == node.Entry.Id ? $"{ClassPrefix}__entry--replying" : "")}")"
+             role="listitem"
+             tabindex="0"
+             data-testid="@TestId("notion-comment-entry")"
+             @onkeydown="e => OnKey(e, node.Entry)">
+            <div class="@($"{ClassPrefix}__entry-indent")"></div>
+            <div class="@($"{ClassPrefix}__entry-content")">
+                <div class="@($"{ClassPrefix}__avatar")" aria-hidden="true">
+                    @if (!string.IsNullOrEmpty(node.Entry.AuthorAvatarUrl()))
+                    {
+                        <img class="@($"{ClassPrefix}__avatar-img")" src="@node.Entry.AuthorAvatarUrl()" alt="" />
+                    }
+                    else
+                    {
+                        <span class="@($"{ClassPrefix}__avatar-fallback")">@Initial(node.Entry.AuthorDisplayName())</span>
+                    }
+                </div>
+                <div class="@($"{ClassPrefix}__entry-body")">
+                    <div class="@($"{ClassPrefix}__entry-meta")">
+                        <span class="@($"{ClassPrefix}__entry-author")">@node.Entry.AuthorDisplayName()</span>
+                        <time class="@($"{ClassPrefix}__entry-time")"
+                              datetime="@node.Entry.CreatedAt.UtcDateTime.ToString("O", System.Globalization.CultureInfo.InvariantCulture)"
+                              title="@AbsoluteTimeOf(node.Entry.CreatedAt)">
+                            @FormatTimeOf(node.Entry.CreatedAt)
+                        </time>
+                    </div>
+                    @if (EditingEntryId == node.Entry.Id)
+                    {
+                        <div class="@($"{ClassPrefix}__edit-wrap")" @onkeydown:stopPropagation="true">
+                            <TmCommentMentionInput Class="@($"{ClassPrefix}__edit-input")"
+                                                   Rows="3"
+                                                   Value="@EditText"
+                                                   ValueChanged="OnEditDraftAsync"
+                                                   OnKeyDown="OnEditKeyDown"
+                                                   AriaLabel="@Resolved.EditLabel"
+                                                   MentionProvider="@MentionProvider" />
+                            <div class="@($"{ClassPrefix}__edit-actions")">
+                                <button class="@($"{ClassPrefix}__edit-save")" type="button" disabled="@string.IsNullOrWhiteSpace(EditText)" @onclick="OnSaveEdit">@Resolved.Save</button>
+                                <button class="@($"{ClassPrefix}__edit-cancel")" type="button" @onclick="OnCancelEdit">@Resolved.Cancel</button>
+                            </div>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="@($"{ClassPrefix}__entry-text")">@(FormatBody is null ? (MarkupString)node.Entry.HtmlContent() : FormatBody(node.Entry))</div>
+                        @if (node.Entry.EditedAt is not null)
+                        {
+                            <span class="@($"{ClassPrefix}__entry-edited")">@Resolved.Edited</span>
+                        }
+                        @if (Reactions is not null)
+                        {
+                            @Reactions(node.Entry)
+                        }
+                    }
+                    <TmNotionCommentThreadActions ClassPrefix="@ClassPrefix"
+                                                  ActionsLabel="@Resolved.ActionsLabel"
+                                                  ReplyText="@Resolved.Reply"
+                                                  MoreText="@Resolved.More"
+                                                  EditText="@Resolved.Edit"
+                                                  DeleteText="@Resolved.Delete"
+                                                  QuoteText="@Resolved.Quote"
+                                                  CanEdit="@(CanEdit is not null && CanEdit(node.Entry))"
+                                                  CanDelete="@(CanDelete is not null && CanDelete(node.Entry))"
+                                                  CanQuote="@(OnQuote.HasDelegate)"
+                                                  OnReply="() => OnReply.InvokeAsync(node.Entry)"
+                                                  OnEdit="() => OnEdit.InvokeAsync(node.Entry)"
+                                                  OnDelete="() => OnDelete.InvokeAsync(node.Entry)"
+                                                  OnQuote="() => OnQuote.InvokeAsync(node.Entry)" />
+                    @if (ReplyingToEntryId == node.Entry.Id)
+                    {
+                        <TmNotionCommentComposer ClassPrefix="@ClassPrefix"
+                                                 Class="@($"{ClassPrefix}__inline-reply")"
+                                                 Value="@InlineReplyText"
+                                                 Baseline="@InlineReplyBaseline"
+                                                 ResetToken="@InlineReplyResetToken"
+                                                 TextChanged="@InlineReplyTextChanged"
+                                                 DraftChanged="OnInlineDraftAsync"
+                                                 Placeholder="@Resolved.ReplyPlaceholder"
+                                                 AriaLabel="@Resolved.ReplyLabel"
+                                                 Hint="@Resolved.ReplyHint"
+                                                 SubmitText="@Resolved.ReplySubmit"
+                                                 CancelText="@Resolved.Cancel"
+                                                 Cancel="OnCancelReply"
+                                                 OnSubmit="SubmitInlineAsync"
+                                                 Submitting="@Submitting"
+                                                 Rows="2"
+                                                 MentionProvider="@MentionProvider" />
+                    }
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    /// <summary>CSS class prefix of the owning panel.</summary>
+    [Parameter, EditorRequired] public string ClassPrefix { get; set; } = "tm-nbcp";
+
+    /// <summary>Additional class applied to the list root (alongside the default thread class).</summary>
+    [Parameter] public string? Class { get; set; }
+
+    /// <summary>Every user-visible string. Null resolves the labels from <c>Loc</c> and <see cref="LabelPrefix"/>.</summary>
+    [Parameter] public TmNotionCommentLabels? Labels { get; set; }
+
+    /// <summary>Localization prefix used when <see cref="Labels"/> is null.</summary>
+    [Parameter] public string LabelPrefix { get; set; } = "TmNotionBlockComment";
+
+    /// <summary>Reply tree. The parent builds it.</summary>
+    [Parameter] public IReadOnlyList<CommentThreadNode> Nodes { get; set; } = [];
+
+    /// <summary>Entry currently being replied to.</summary>
+    [Parameter] public string? ReplyingToEntryId { get; set; }
+
+    /// <summary>Entry currently being edited.</summary>
+    [Parameter] public string? EditingEntryId { get; set; }
+
+    /// <summary>Text of the open edit.</summary>
+    [Parameter] public string EditText { get; set; } = string.Empty;
+
+    /// <summary>Raised when the edit text changes.</summary>
+    [Parameter] public EventCallback<string> OnEditTextChanged { get; set; }
+
+    /// <summary>Seed of the open inline reply (the auto-inserted quote). Not updated per keystroke.</summary>
+    [Parameter] public string InlineReplyText { get; set; } = string.Empty;
+
+    /// <summary>Text that does not count as an inline-reply draft.</summary>
+    [Parameter] public string InlineReplyBaseline { get; set; } = string.Empty;
+
+    /// <summary>Bumped by the parent to clear or reseed the inline composer.</summary>
+    [Parameter] public int InlineReplyResetToken { get; set; }
+
+    /// <summary>Stores the inline reply text without re-rendering the thread.</summary>
+    [Parameter] public Action<string>? InlineReplyTextChanged { get; set; }
+
+    /// <summary>Turns an entry body into the markup the panel shows.</summary>
+    [Parameter] public Func<TmCommentEntry, MarkupString>? FormatBody { get; set; }
+
+    /// <summary>Raised after a draft-bearing field changes, so the parent can publish its snapshot.</summary>
+    [Parameter] public EventCallback OnDraftChanged { get; set; }
+
+    /// <summary>People provider for @-mentions inside edit and reply composers.</summary>
+    [Parameter] public ITmPeopleProvider? MentionProvider { get; set; }
+
+    /// <summary>True when the current user may edit the entry.</summary>
+    [Parameter] public Func<TmCommentEntry, bool>? CanEdit { get; set; }
+
+    /// <summary>True when the current user may delete the entry.</summary>
+    [Parameter] public Func<TmCommentEntry, bool>? CanDelete { get; set; }
+
+    /// <summary>Relative time. The parent resolves <c>ITmRelativeTimeFormatter</c>.</summary>
+    [Parameter] public Func<DateTimeOffset, string>? FormatTime { get; set; }
+
+    /// <summary>Absolute time for the <c>title</c>.</summary>
+    [Parameter] public Func<DateTimeOffset, string>? AbsoluteTime { get; set; }
+
+    /// <summary>Reactions fragment. Null hides reactions.</summary>
+    [Parameter] public RenderFragment<TmCommentEntry>? Reactions { get; set; }
+
+    /// <summary>Raised for a keydown on an entry row.</summary>
+    [Parameter] public EventCallback<TmNotionCommentEntryKey> OnEntryKeyDown { get; set; }
+
+    /// <summary>Raised for a keydown inside the edit composer.</summary>
+    [Parameter] public EventCallback<KeyboardEventArgs> OnEditKeyDown { get; set; }
+
+    /// <summary>Raised by Reply.</summary>
+    [Parameter] public EventCallback<TmCommentEntry> OnReply { get; set; }
+
+    /// <summary>Raised by Edit.</summary>
+    [Parameter] public EventCallback<TmCommentEntry> OnEdit { get; set; }
+
+    /// <summary>Raised by Delete. The parent shows the confirm dialog.</summary>
+    [Parameter] public EventCallback<TmCommentEntry> OnDelete { get; set; }
+
+    /// <summary>Raised by Quote. A delegate is what shows the menu item.</summary>
+    [Parameter] public EventCallback<TmCommentEntry> OnQuote { get; set; }
+
+    /// <summary>Raised by the inline reply submit.</summary>
+    [Parameter] public EventCallback OnSubmitReply { get; set; }
+
+    /// <summary>Raised by the inline reply cancel.</summary>
+    [Parameter] public EventCallback OnCancelReply { get; set; }
+
+    /// <summary>Raised by the edit save.</summary>
+    [Parameter] public EventCallback OnSaveEdit { get; set; }
+
+    /// <summary>Raised by the edit cancel.</summary>
+    [Parameter] public EventCallback OnCancelEdit { get; set; }
+
+    /// <summary>True while a send is in flight.</summary>
+    [Parameter] public bool Submitting { get; set; }
+
+    private Task OnKey(KeyboardEventArgs e, TmCommentEntry entry)
+        => OnEntryKeyDown.InvokeAsync(new TmNotionCommentEntryKey(e, entry));
+
+    private Task OnInlineDraftAsync(bool _) => OnDraftChanged.InvokeAsync();
+
+    private Task OnEditDraftAsync(string text) => OnEditTextChanged.InvokeAsync(text);
+
+    private Task SubmitInlineAsync(string text)
+    {
+        InlineReplyTextChanged?.Invoke(text);
+        return OnSubmitReply.InvokeAsync();
+    }
+
+    private TmNotionCommentLabels Resolved => Labels ?? TmNotionCommentLabels.For(Loc, LabelPrefix);
+
+    private string WrapperClass => string.IsNullOrEmpty(Class)
+        ? $"{ClassPrefix}__thread"
+        : $"{ClassPrefix}__thread {Class}";
+
+    private string FormatTimeOf(DateTimeOffset value) => FormatTime?.Invoke(value) ?? string.Empty;
+
+    private string AbsoluteTimeOf(DateTimeOffset value) => AbsoluteTime?.Invoke(value) ?? string.Empty;
+
+    private static string Initial(string name)
+        => name.Length > 0 ? name[0].ToString().ToUpperInvariant() : "?";
+
+    private static IEnumerable<CommentThreadNode> Flatten(IEnumerable<CommentThreadNode> nodes)
+    {
+        foreach (var node in nodes)
+        {
+            yield return node;
+            foreach (var child in Flatten(node.Children))
+                yield return child;
+        }
+    }
+
+    /// <summary>A keydown on one entry row, so the parent can start or cancel a reply.</summary>
+    public readonly record struct TmNotionCommentEntryKey(KeyboardEventArgs Args, TmCommentEntry Entry);
+}

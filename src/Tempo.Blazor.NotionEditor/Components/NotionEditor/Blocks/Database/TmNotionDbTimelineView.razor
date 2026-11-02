@@ -102,6 +102,7 @@
                     <div class="tm-dbt__sidebar-row"
                          role="button"
                          tabindex="0"
+                         data-testid="notion-db-timeline-bar"
                          @onclick="() => OnRecordClicked.InvokeAsync(rec)"
                          @onkeydown="e => HandleItemKeyAsync(e, rec)">
                         <span class="tm-dbt__sidebar-name">@GetPrimaryValue(rec)</span>

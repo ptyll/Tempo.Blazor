@@ -48,6 +48,12 @@
       "editorRequired": true
     },
     {
+      "name": "OnRecordDeleted",
+      "type": "EventCallback<IDatabaseRecord>",
+      "description": "Raised after the user confirms deleting a row. The block owns the provider call.",
+      "isRequired": false
+    },
+    {
       "name": "OnNewRecord",
       "type": "EventCallback",
       "isRequired": false

@@ -20,6 +20,23 @@ public class NotionCommentsE2ETests : WasmTestBase
         await page.WaitForTimeoutAsync(200);
     }
 
+    /// <summary>
+    /// Edit and Delete live in the entry ⋯ menu (TmDropdown), not as inline buttons.
+    /// Reply stays a direct button. Opens the menu on the entry that contains <paramref name="entryText"/>
+    /// (or the first entry) and returns the menu item.
+    /// </summary>
+    internal static async Task<ILocator> OpenCommentEntryMenuAsync(IPage page, string prefix, string action, string? entryText = null)
+    {
+        var entry = entryText is null
+            ? page.Locator($".{prefix}__entry").First
+            : page.Locator($".{prefix}__entry").Filter(new LocatorFilterOptions { HasText = entryText }).First;
+        var trigger = entry.GetByTestId("notion-comment-entry-menu").Locator(".tm-dropdown-trigger");
+        await trigger.ClickAsync();
+        var item = page.GetByTestId($"notion-comment-{action}-menu").Last;
+        await item.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 5000 });
+        return item;
+    }
+
     private async Task<IPage> OpenNotionEditorAsync()
     {
         using var http = DemoApiTestHttp.CreateClient();
@@ -114,7 +131,7 @@ public class NotionCommentsE2ETests : WasmTestBase
         await OpenBlockCommentPanelAsync(page);
         await AddBlockCommentAsync(page, "Comment to edit");
 
-        var editBtn = page.Locator(".tm-nbcp__entry-action").Filter(new() { HasText = "Edit" }).First;
+        var editBtn = await OpenCommentEntryMenuAsync(page, "tm-nbcp", "edit", "Comment to edit");
         await editBtn.ClickAsync();
 
         var editInput = page.Locator(".tm-nbcp__edit-input").First;
@@ -140,7 +157,7 @@ public class NotionCommentsE2ETests : WasmTestBase
         var entryBefore = page.Locator(".tm-nbcp__entry-text").Filter(new() { HasText = "Comment to delete" }).First;
         Assert.IsTrue(await entryBefore.IsVisibleAsync());
 
-        var deleteBtn = page.Locator(".tm-nbcp__entry-action--danger").First;
+        var deleteBtn = await OpenCommentEntryMenuAsync(page, "tm-nbcp", "delete", "Comment to delete");
         await deleteBtn.ClickAsync();
 
         var okBtn = page.Locator(".tm-dialog-btn-ok").First;
@@ -399,7 +416,7 @@ public class NotionCommentsE2ETests : WasmTestBase
         // Pre-seeded comments have CanEdit=false; add a new one first.
         await AddPageCommentAsync(page, "Page comment to edit");
 
-        var editBtn = page.Locator(".tm-npcp__entry-action").Filter(new() { HasText = "Edit" }).First;
+        var editBtn = await OpenCommentEntryMenuAsync(page, "tm-npcp", "edit", "Page comment to edit");
         await editBtn.ClickAsync();
 
         var editInput = page.Locator(".tm-npcp__edit-input").First;
@@ -425,7 +442,7 @@ public class NotionCommentsE2ETests : WasmTestBase
         var entryBefore = page.Locator(".tm-npcp__entry-text").Filter(new() { HasText = "Page comment to delete" }).First;
         Assert.IsTrue(await entryBefore.IsVisibleAsync());
 
-        var deleteBtn = page.Locator(".tm-npcp__entry-action--danger").First;
+        var deleteBtn = await OpenCommentEntryMenuAsync(page, "tm-npcp", "delete", "Page comment to delete");
         await deleteBtn.ClickAsync();
 
         var okBtn = page.Locator(".tm-dialog-btn-ok").First;
@@ -611,7 +628,7 @@ public class NotionCommentsE2ETests : WasmTestBase
         var commentId = await markBefore.First.EvaluateAsync<string>("el => el.dataset.commentId");
         Assert.IsFalse(string.IsNullOrEmpty(commentId), "Mark should have data-comment-id");
 
-        var deleteBtn = page.Locator(".tm-ntcp__entry-action--danger").First;
+        var deleteBtn = await OpenCommentEntryMenuAsync(page, "tm-ntcp", "delete", "Text comment to delete");
         await deleteBtn.ClickAsync();
 
         var okBtn = page.Locator(".tm-dialog-btn-ok").First;
@@ -1616,7 +1633,7 @@ public class NotionCommentsRecoveryE2ETests : NotionE2ETestBase
         });
         await CaptureBaselineAsync("comments", "block-panel-resolved", page.Locator(".tm-nbcp").First);
 
-        await page.Locator(".tm-nbcp__entry-action--danger").Last.ClickAsync();
+        await (await NotionCommentsE2ETests.OpenCommentEntryMenuAsync(page, "tm-nbcp", "delete")).ClickAsync();
         await page.Locator(".tm-dialog-btn-ok").First.WaitForAsync(new LocatorWaitForOptions
         {
             State = WaitForSelectorState.Visible,

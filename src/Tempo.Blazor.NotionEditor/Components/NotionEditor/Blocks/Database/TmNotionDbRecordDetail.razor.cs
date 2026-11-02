@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Components;
+using Tempo.Blazor.Components;
 using Tempo.Blazor.Components.NotionEditor.Services;
 using Tempo.Blazor.NotionEditor.Enums;
 using Tempo.Blazor.NotionEditor.Interfaces;
@@ -6,7 +7,7 @@ using Tempo.Blazor.NotionEditor.Models;
 
 namespace Tempo.Blazor.Components.NotionEditor.Blocks.Database;
 
-public partial class TmNotionDbRecordDetail : ComponentBase
+public partial class TmNotionDbRecordDetail
 {
     // ── Cascaded context ─────────────────────────────────────────────────────
 
@@ -23,6 +24,14 @@ public partial class TmNotionDbRecordDetail : ComponentBase
     [Parameter] public EventCallback                  OnClose         { get; set; }
     [Parameter] public EventCallback<IDatabaseRecord> OnRecordUpdated { get; set; }
     [Parameter] public EventCallback<IDatabaseRecord> OnOpenAsPage    { get; set; }
+
+    /// <summary>
+    /// Raised after the user confirms deleting this record. The detail does not call the provider
+    /// itself — the host owns the row list and the <c>DeleteRecordAsync</c> call.
+    /// </summary>
+    [Parameter] public EventCallback<IDatabaseRecord> OnRecordDeleted { get; set; }
+
+    private bool _showDeleteConfirm;
 
     // ── Field editing state ──────────────────────────────────────────────────
 
@@ -261,6 +270,27 @@ public partial class TmNotionDbRecordDetail : ComponentBase
     {
         await OnOpenAsPage.InvokeAsync(Record);
         await OnClose.InvokeAsync();
+    }
+
+    private void AskDelete() => _showDeleteConfirm = true;
+
+    private string? _deleteError;
+
+    private async Task HandleDeleteConfirmAsync(bool? confirmed)
+    {
+        _showDeleteConfirm = false;
+        if (confirmed != true) return;
+        // The block closes this detail only after the provider accepts the delete. A throw
+        // leaves the dialog open and surfaces the localized error.
+        try
+        {
+            await OnRecordDeleted.InvokeAsync(Record);
+        }
+        catch (Exception)
+        {
+            _deleteError = Loc["TmNotionDbRecordDetail_DeleteFailed"];
+            return;
+        }
     }
 
     // ── Field type icon ───────────────────────────────────────────────────────

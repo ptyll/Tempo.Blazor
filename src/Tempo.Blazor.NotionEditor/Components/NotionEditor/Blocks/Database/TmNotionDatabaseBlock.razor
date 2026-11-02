@@ -3,6 +3,10 @@
 @using Tempo.Blazor.NotionEditor.Models
 @using Tempo.Blazor.NotionEditor.Interfaces
 
+@if (!string.IsNullOrEmpty(_deleteError))
+{
+    <div class="tm-db__error" role="alert">@_deleteError</div>
+}
 <div class="tm-db @(IsFocused ? "tm-db--focused" : "")"
      tabindex="-1"
      @onfocus="OnFocused"
@@ -153,6 +157,7 @@
                     <button class="tm-db__new-chevron @(_showTemplateMenu ? "tm-db__new-chevron--active" : "")"
                             type="button"
                             title="@Loc["TmNotionDatabaseBlock_Templates"]"
+                            @ref="_templateTrigger"
                             @onclick="ToggleTemplateMenu">
                         <svg width="10" height="10" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                             <path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -187,6 +192,7 @@
                 {
                     <button class="tm-db__view-tab @(_activeViewId == v.Id ? "tm-db__view-tab--active" : "")"
                             role="tab"
+                            data-testid="notion-db-view-tab"
                             aria-selected="@(_activeViewId == v.Id)"
                             type="button"
                             @onclick="() => SetActiveViewAsync(v.Id)"
@@ -364,7 +370,7 @@
                                 ReadOnly="@ReadOnly"
                                 OnRecordCreated="HandleTemplateRecordCreatedAsync"
                                 OnEditTemplate="HandleEditTemplateAsync"
-                                OnClose="() => _showTemplateMenu = false" />
+                                OnClose="CloseTemplateMenuAsync" />
     }
 
     @if (_openRecord is not null)
@@ -374,7 +380,9 @@
                                 DatabaseName="@(_inlineContent?.Title ?? string.Empty)"
                                 ReadOnly="@ReadOnly"
                                 OnClose="HandleRecordDetailClosedAsync"
-                                OnRecordUpdated="HandleRecordDetailUpdatedAsync" />
+                                OnRecordUpdated="HandleRecordDetailUpdatedAsync"
+                                OnRecordDeleted="HandleRecordDeletedAsync"
+                                OnOpenAsPage="HandleRecordOpenedAsPageAsync" />
     }
 
     @if (_editingTemplate is not null)
@@ -498,6 +506,7 @@
                            OnExpandRecord="HandleExpandRecordAsync"
                            OnNewRecord="HandleNewRecordAsync"
                            OnNewField="HandleAddFieldAsync"
+                           OnRecordDeleted="HandleRecordDeletedAsync"
                            OnFieldResized="HandleFieldResizedAsync"
                            OnFieldMoved="HandleFieldMovedAsync"
                            OnFieldEdit="OpenFieldEditor" />;

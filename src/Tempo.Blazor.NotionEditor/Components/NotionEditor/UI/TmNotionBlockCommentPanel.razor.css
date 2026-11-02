@@ -251,16 +251,29 @@
 
 .tm-nbcp__thread-card {
     display: flex;
+    flex-direction: column;
+}
+
+.tm-nbcp__thread-card__open {
+    display: flex;
     gap: 10px;
+    width: 100%;
     padding: 10px 12px;
     border-radius: 6px;
     cursor: pointer;
-    transition: background 80ms;
     border: 1px solid transparent;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    text-align: start;
 }
 
-.tm-nbcp__thread-card:hover {
-    background: var(--tm-bg-hover, rgba(55,53,47,0.06));
+.tm-nbcp__thread-card__open:hover {
+    background: var(--tm-bg-muted);
+}
+
+.tm-nbcp__thread-card:hover .tm-nbcp__thread-card__open {
+    background: var(--tm-bg-muted);
 }
 
 .tm-nbcp__thread-card--resolved {
@@ -450,13 +463,13 @@
 
 /* ── Entry ─────────────────────────────────────────────────────────────────── */
 
-.tm-nbcp__entry {
+::deep .tm-nbcp__entry {
     display: flex;
     flex-direction: row;
     align-items: flex-start;
 }
 
-.tm-nbcp__entry-indent {
+::deep .tm-nbcp__entry-indent {
     flex-shrink: 0;
     width: 0;
     border-left: 2px solid var(--tm-border, rgba(55,53,47,0.10));
@@ -465,13 +478,13 @@
     min-height: 20px;
 }
 
-.tm-nbcp__entry--level-1 .tm-nbcp__entry-indent { width: 12px; }
-.tm-nbcp__entry--level-2 .tm-nbcp__entry-indent { width: 24px; }
-.tm-nbcp__entry--level-3 .tm-nbcp__entry-indent { width: 36px; }
-.tm-nbcp__entry--level-4 .tm-nbcp__entry-indent { width: 48px; }
-.tm-nbcp__entry--level-5 .tm-nbcp__entry-indent { width: 60px; }
+::deep .tm-nbcp__entry--level-1 .tm-nbcp__entry-indent { width: 12px; }
+::deep .tm-nbcp__entry--level-2 .tm-nbcp__entry-indent { width: 24px; }
+::deep .tm-nbcp__entry--level-3 .tm-nbcp__entry-indent { width: 36px; }
+::deep .tm-nbcp__entry--level-4 .tm-nbcp__entry-indent { width: 48px; }
+::deep .tm-nbcp__entry--level-5 .tm-nbcp__entry-indent { width: 60px; }
 
-.tm-nbcp__entry-content {
+::deep .tm-nbcp__entry-content {
     flex: 1;
     display: flex;
     gap: 10px;
@@ -481,7 +494,7 @@
 
 /* ── Avatar ────────────────────────────────────────────────────────────────── */
 
-.tm-nbcp__avatar {
+::deep .tm-nbcp__avatar {
     flex-shrink: 0;
     width: 28px;
     height: 28px;
@@ -493,13 +506,13 @@
     justify-content: center;
 }
 
-.tm-nbcp__avatar-img {
+::deep .tm-nbcp__avatar-img {
     width: 100%;
     height: 100%;
     object-fit: cover;
 }
 
-.tm-nbcp__avatar-fallback {
+::deep .tm-nbcp__avatar-fallback {
     font-size: 12px;
     font-weight: 600;
     color: #fff;
@@ -508,7 +521,7 @@
 
 /* ── Entry body ────────────────────────────────────────────────────────────── */
 
-.tm-nbcp__entry-body {
+::deep .tm-nbcp__entry-body {
     flex: 1;
     min-width: 0;
     display: flex;
@@ -516,13 +529,13 @@
     gap: 4px;
 }
 
-.tm-nbcp__entry-meta {
+::deep .tm-nbcp__entry-meta {
     display: flex;
     align-items: baseline;
     gap: 6px;
 }
 
-.tm-nbcp__entry-author {
+::deep .tm-nbcp__entry-author {
     font-size: 13px;
     font-weight: 600;
     color: var(--tm-text-primary, rgb(55,53,47));
@@ -531,21 +544,21 @@
     text-overflow: ellipsis;
 }
 
-.tm-nbcp__entry-time {
+::deep .tm-nbcp__entry-time {
     font-size: 11px;
     color: var(--tm-text-secondary, rgba(55,53,47,0.45));
     white-space: nowrap;
     flex-shrink: 0;
 }
 
-.tm-nbcp__entry-text {
+::deep .tm-nbcp__entry-text {
     font-size: 13.5px;
     line-height: 1.5;
     color: var(--tm-text-primary, rgb(55,53,47));
     word-break: break-word;
 }
 
-.tm-nbcp__entry-edited {
+::deep .tm-nbcp__entry-edited {
     font-size: 11px;
     color: var(--tm-text-secondary, rgba(55,53,47,0.45));
     font-style: italic;
@@ -553,18 +566,21 @@
 
 /* ── Entry actions ─────────────────────────────────────────────────────────── */
 
-.tm-nbcp__entry-actions {
+::deep .tm-nbcp__entry-actions {
     display: flex;
+    flex-wrap: nowrap;
     gap: 2px;
     opacity: 0;
     transition: opacity 100ms;
+    position: relative;
 }
 
-.tm-nbcp__entry:hover .tm-nbcp__entry-actions {
+::deep .tm-nbcp__entry:hover .tm-nbcp__entry-actions,
+::deep .tm-nbcp__entry:focus-within .tm-nbcp__entry-actions {
     opacity: 1;
 }
 
-.tm-nbcp__entry-action {
+::deep .tm-nbcp__entry-action {
     display: flex;
     align-items: center;
     gap: 4px;
@@ -578,25 +594,25 @@
     transition: background 80ms, color 80ms;
 }
 
-.tm-nbcp__entry-action:hover {
+::deep .tm-nbcp__entry-action:hover {
     background: var(--tm-bg-hover, rgba(55,53,47,0.06));
     color: var(--tm-text-primary, rgb(55,53,47));
 }
 
-.tm-nbcp__entry-action--danger:hover {
+::deep .tm-nbcp__entry-action--danger:hover {
     background: rgba(235,87,87,0.08);
     color: var(--tm-red, #eb5757);
 }
 
 /* ── Edit mode ─────────────────────────────────────────────────────────────── */
 
-.tm-nbcp__edit-wrap {
+::deep .tm-nbcp__edit-wrap {
     display: flex;
     flex-direction: column;
     gap: 6px;
 }
 
-.tm-nbcp__edit-input {
+::deep .tm-nbcp__edit-input {
     width: 100%;
     box-sizing: border-box;
     padding: 6px 8px;
@@ -611,13 +627,13 @@
     line-height: 1.5;
 }
 
-.tm-nbcp__edit-actions {
+::deep .tm-nbcp__edit-actions {
     display: flex;
     gap: 6px;
     justify-content: flex-end;
 }
 
-.tm-nbcp__edit-save {
+::deep .tm-nbcp__edit-save {
     padding: 4px 12px;
     border: none;
     border-radius: 5px;
@@ -629,12 +645,12 @@
     transition: opacity 80ms;
 }
 
-.tm-nbcp__edit-save:disabled {
+::deep .tm-nbcp__edit-save:disabled {
     opacity: 0.45;
     cursor: not-allowed;
 }
 
-.tm-nbcp__edit-cancel {
+::deep .tm-nbcp__edit-cancel {
     padding: 4px 12px;
     border: 1px solid var(--tm-border, rgba(55,53,47,0.16));
     border-radius: 5px;
@@ -645,13 +661,13 @@
     transition: background 80ms;
 }
 
-.tm-nbcp__edit-cancel:hover {
+::deep .tm-nbcp__edit-cancel:hover {
     background: var(--tm-bg-hover, rgba(55,53,47,0.06));
 }
 
 /* ── Inline reply ──────────────────────────────────────────────────────────── */
 
-.tm-nbcp__inline-reply {
+::deep .tm-nbcp__inline-reply {
     margin-top: 6px;
     padding: 8px;
     background: var(--tm-bg-subtle, rgba(55,53,47,0.02));
@@ -662,12 +678,12 @@
     gap: 5px;
 }
 
-.tm-nbcp__reply-btns {
+::deep .tm-nbcp__reply-btns {
     display: flex;
     gap: 6px;
 }
 
-.tm-nbcp__reply-cancel {
+::deep .tm-nbcp__reply-cancel {
     padding: 4px 10px;
     border: 1px solid var(--tm-border, rgba(55,53,47,0.16));
     border-radius: 5px;
@@ -678,13 +694,13 @@
     transition: background 80ms;
 }
 
-.tm-nbcp__reply-cancel:hover {
+::deep .tm-nbcp__reply-cancel:hover {
     background: var(--tm-bg-hover, rgba(55,53,47,0.06));
 }
 
 /* ── Reply area ────────────────────────────────────────────────────────────── */
 
-.tm-nbcp__reply {
+::deep .tm-nbcp__reply {
     flex-shrink: 0;
     border-top: 1px solid var(--tm-border, rgba(55,53,47,0.09));
     padding: 10px 14px;
@@ -693,7 +709,7 @@
     gap: 6px;
 }
 
-.tm-nbcp__reply-input {
+::deep .tm-nbcp__reply-input {
     width: 100%;
     box-sizing: border-box;
     padding: 7px 9px;
@@ -709,26 +725,26 @@
     transition: border-color 100ms;
 }
 
-.tm-nbcp__reply-input:focus {
+::deep .tm-nbcp__reply-input:focus {
     border-color: var(--tm-accent, #2383e2);
 }
 
-.tm-nbcp__reply-input::placeholder {
+::deep .tm-nbcp__reply-input::placeholder {
     color: var(--tm-text-secondary, rgba(55,53,47,0.40));
 }
 
-.tm-nbcp__reply-actions {
+::deep .tm-nbcp__reply-actions {
     display: flex;
     align-items: center;
     justify-content: space-between;
 }
 
-.tm-nbcp__reply-hint {
+::deep .tm-nbcp__reply-hint {
     font-size: 11px;
     color: var(--tm-text-secondary, rgba(55,53,47,0.40));
 }
 
-.tm-nbcp__reply-send {
+::deep .tm-nbcp__reply-send {
     display: flex;
     align-items: center;
     gap: 5px;
@@ -743,11 +759,11 @@
     transition: opacity 80ms, background 80ms;
 }
 
-.tm-nbcp__reply-send:hover:not(:disabled) {
+::deep .tm-nbcp__reply-send:hover:not(:disabled) {
     background: var(--tm-accent-hover, #1a6fc4);
 }
 
-.tm-nbcp__reply-send:disabled {
+::deep .tm-nbcp__reply-send:disabled {
     opacity: 0.45;
     cursor: not-allowed;
 }
@@ -775,12 +791,12 @@
 
 /* ── Active reply branch highlight ─────────────────────────────────────────── */
 
-.tm-nbcp__entry--replying .tm-nbcp__entry-indent {
+::deep .tm-nbcp__entry--replying .tm-nbcp__entry-indent {
     border-left-color: var(--tm-accent, #2383e2);
     border-left-width: 3px;
 }
 
-.tm-nbcp__entry--replying .tm-nbcp__entry-content {
+::deep .tm-nbcp__entry--replying .tm-nbcp__entry-content {
     background: var(--tm-bg-hover, rgba(35,131,226,0.06));
     border-radius: 6px;
 }

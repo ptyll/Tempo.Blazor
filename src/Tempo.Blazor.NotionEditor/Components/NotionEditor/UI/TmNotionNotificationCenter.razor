@@ -113,7 +113,7 @@
     [Parameter] public string? Class { get; set; }
 
     /// <summary>User whose notifications should be shown in the center.</summary>
-    [Parameter] public string CurrentUserId { get; set; } = "demo";
+    [Parameter] public string CurrentUserId { get; set; } = string.Empty;
 
     /// <summary>Raised whenever the dropdown is opened or closed.</summary>
     [Parameter] public EventCallback<bool> OnDropdownOpenChanged { get; set; }

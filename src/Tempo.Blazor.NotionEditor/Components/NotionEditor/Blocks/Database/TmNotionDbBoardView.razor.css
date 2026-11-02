@@ -248,6 +248,14 @@
 
 /* ── Drop hint ─────────────────────────────────────────────────────────── */
 
+.tm-dbb__empty {
+    margin: 0;
+    padding: 18px 12px;
+    text-align: center;
+    font-size: 12px;
+    color: var(--tm-text-tertiary);
+}
+
 .tm-dbb__drop-hint {
     padding: 18px 12px;
     text-align: center;

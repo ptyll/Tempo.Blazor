@@ -20,6 +20,11 @@ public partial class TmNotionDbFieldEditor : ComponentBase
 
     // ── General state ─────────────────────────────────────────────────────────
 
+    /// <summary>Suffixes every input id so two editors on one page do not share an id.</summary>
+    private readonly string _idSuffix = Guid.NewGuid().ToString("N");
+
+    private string IdFor(string name) => $"tm-dbfe-{name}-{_idSuffix}";
+
     private string            _name        = string.Empty;
     private DatabaseFieldType _type;
     private bool              _typeChanged;

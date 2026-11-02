@@ -54,9 +54,10 @@
             </button>
         </div>
         <div class="tm-notion-cover-dialog__body">
-            <p class="tm-notion-cover-dialog__label">@Loc["TmNotionPageHeader_CoverUrl"]</p>
+            <label class="tm-notion-cover-dialog__label" for="tm-notion-cover-url">@Loc["TmNotionPageHeader_CoverUrl"]</label>
             <div class="tm-notion-cover-dialog__input-row">
                 <input class="tm-notion-cover-dialog__input"
+                       id="tm-notion-cover-url"
                        type="url"
                        placeholder="https://..."
                        @bind="_coverUrlInput"
@@ -121,7 +122,7 @@
     @* Quick-add hover buttons *@
     @if (!ReadOnly)
     {
-        <div class="tm-notion-header-meta__add-row" aria-hidden="true">
+        <div class="tm-notion-header-meta__add-row">
             @if (string.IsNullOrEmpty(Page.IconEmoji) && string.IsNullOrEmpty(Page.IconImageUrl))
             {
                 <button class="tm-notion-header-meta__add-btn" type="button" @onclick="ToggleIconPickerAsync">
@@ -224,6 +225,7 @@
         <div class="tm-notion-emoji-picker__header">
             <input class="tm-notion-emoji-picker__search"
                    type="search"
+                   aria-label="@Loc["TmNotionPageHeader_EmojiSearch"]"
                    placeholder="@Loc["TmNotionPageHeader_EmojiSearch"]"
                    @bind="_emojiSearch"
                    @bind:event="oninput"

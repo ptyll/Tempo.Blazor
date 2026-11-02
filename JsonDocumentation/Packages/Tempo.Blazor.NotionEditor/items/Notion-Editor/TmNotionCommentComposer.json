@@ -1,0 +1,148 @@
+{
+  "itemName": "TmNotionCommentComposer",
+  "kind": "Component",
+  "category": "Notion Editor",
+  "description": "TmNotionCommentComposer Blazor component in the Notion Editor category.",
+  "packageId": "Tempo.Blazor.NotionEditor",
+  "namespace": "Tempo.Blazor.Components.NotionEditor",
+  "sourcePath": "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/UI/TmNotionCommentComposer.razor",
+  "documentationStatus": "generated",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.NotionEditor"
+  ],
+  "parameters": [
+    {
+      "name": "AriaLabel",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Accessible name of the composer."
+    },
+    {
+      "name": "AuthorAvatarUrl",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Avatar image. Empty falls back to initials."
+    },
+    {
+      "name": "AuthorName",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Display name used for the avatar initials."
+    },
+    {
+      "name": "Baseline",
+      "type": "string",
+      "isRequired": false,
+      "default": "\"\"",
+      "description": "Text that does not count as a draft (the auto-inserted quote). Empty for a fresh composer."
+    },
+    {
+      "name": "Cancel",
+      "type": "EventCallback",
+      "isRequired": false,
+      "description": "Raised when the user cancels. Presence of a delegate shows the cancel button."
+    },
+    {
+      "name": "CancelText",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Cancel button label. Rendered only when Cancel has a delegate."
+    },
+    {
+      "name": "Class",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Wrapper class. Defaults to {ClassPrefix}__reply."
+    },
+    {
+      "name": "ClassPrefix",
+      "type": "string",
+      "isRequired": true,
+      "default": "\"tm-nbcp\"",
+      "description": "CSS class prefix of the owning panel (tm-nbcp, tm-ntcp, tm-npcp).",
+      "editorRequired": true
+    },
+    {
+      "name": "Disabled",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Disables the composer regardless of its text."
+    },
+    {
+      "name": "DraftChanged",
+      "type": "EventCallback<bool>",
+      "isRequired": false,
+      "description": "Raised only when the draft flag flips: the text differs from Baseline. Not raised per keystroke, so the parent thread is not rebuilt while the user types."
+    },
+    {
+      "name": "Hint",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Hint rendered beside the submit button (for example Ctrl+Enter)."
+    },
+    {
+      "name": "MentionProvider",
+      "type": "ITmPeopleProvider?",
+      "isRequired": false,
+      "description": "People provider for @-mentions. Null hides the mention menu."
+    },
+    {
+      "name": "OnSubmit",
+      "type": "EventCallback<string>",
+      "isRequired": false,
+      "description": "Raised on submit with the current text. The parent owns the provider call."
+    },
+    {
+      "name": "Placeholder",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Placeholder shown in the empty composer."
+    },
+    {
+      "name": "ResetToken",
+      "type": "int",
+      "isRequired": false,
+      "description": "Bumped by the parent to apply Value again (clear or reseed)."
+    },
+    {
+      "name": "Rows",
+      "type": "int",
+      "isRequired": false,
+      "default": "2",
+      "description": "Visible rows of the composer."
+    },
+    {
+      "name": "ShowAvatar",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Shows the current user's avatar (or initials) beside the composer."
+    },
+    {
+      "name": "SubmitText",
+      "type": "string",
+      "isRequired": false,
+      "default": "\"\"",
+      "description": "Submit button label."
+    },
+    {
+      "name": "Submitting",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Disables the composer and the submit button while a send is in flight."
+    },
+    {
+      "name": "TextChanged",
+      "type": "Action<string>?",
+      "isRequired": false,
+      "description": "Receives every text change WITHOUT re-rendering the parent (a plain action, not an event callback). The parent stores it so HasUnsavedDraft can be polled."
+    },
+    {
+      "name": "Value",
+      "type": "string",
+      "isRequired": false,
+      "default": "\"\"",
+      "description": "Seed and reset channel. The composer does not write back on each keystroke — that would re-render the parent thread. The parent sets this to clear or to prefill a quote."
+    }
+  ],
+  "subcategory": "UI"
+}

@@ -1471,6 +1471,124 @@
       "itemName": "Tempo.Blazor.Components.NotionEditor.Commands.BatchCommand"
     },
     {
+      "itemName": "TmNotionCommentLabels",
+      "kind": "Record",
+      "category": "Components",
+      "namespace": "Tempo.Blazor.Components.NotionEditor.UI",
+      "description": "Every user-visible string of the shared comment thread, resolved from one localization prefix.",
+      "packageId": "Tempo.Blazor.NotionEditor",
+      "sourcePath": "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/UI/TmNotionCommentLabels.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "For",
+          "kind": "Method",
+          "type": "TmNotionCommentLabels",
+          "description": "Builds the record from one panel's localization prefix (TmNotionBlockComment, …).",
+          "parameters": [
+            {
+              "name": "loc",
+              "type": "ITmLocalizer"
+            },
+            {
+              "name": "prefix",
+              "type": "string"
+            }
+          ]
+        },
+        {
+          "name": "ActionsLabel",
+          "kind": "Property",
+          "type": "string?",
+          "description": "Accessible name of the actions group."
+        },
+        {
+          "name": "Cancel",
+          "kind": "Property",
+          "type": "string",
+          "description": "Cancel button label."
+        },
+        {
+          "name": "Delete",
+          "kind": "Property",
+          "type": "string",
+          "description": "Delete menu item label."
+        },
+        {
+          "name": "Edit",
+          "kind": "Property",
+          "type": "string",
+          "description": "Edit menu item label."
+        },
+        {
+          "name": "Edited",
+          "kind": "Property",
+          "type": "string",
+          "description": "Edited marker."
+        },
+        {
+          "name": "EditLabel",
+          "kind": "Property",
+          "type": "string",
+          "description": "Accessible name of the edit composer."
+        },
+        {
+          "name": "ListLabel",
+          "kind": "Property",
+          "type": "string?",
+          "description": "Accessible name of the thread list."
+        },
+        {
+          "name": "More",
+          "kind": "Property",
+          "type": "string",
+          "description": "⋯ menu label."
+        },
+        {
+          "name": "Quote",
+          "kind": "Property",
+          "type": "string",
+          "description": "Quote menu item label."
+        },
+        {
+          "name": "Reply",
+          "kind": "Property",
+          "type": "string",
+          "description": "Reply button label. Reply stays inline."
+        },
+        {
+          "name": "ReplyHint",
+          "kind": "Property",
+          "type": "string?",
+          "description": "Hint beside the inline reply submit button."
+        },
+        {
+          "name": "ReplyLabel",
+          "kind": "Property",
+          "type": "string?",
+          "description": "Inline reply accessible name."
+        },
+        {
+          "name": "ReplyPlaceholder",
+          "kind": "Property",
+          "type": "string?",
+          "description": "Inline reply placeholder."
+        },
+        {
+          "name": "ReplySubmit",
+          "kind": "Property",
+          "type": "string",
+          "description": "Inline reply submit label."
+        },
+        {
+          "name": "Save",
+          "kind": "Property",
+          "type": "string",
+          "description": "Save button label."
+        }
+      ]
+    },
+    {
       "itemName": "TmNotionDbCellBase",
       "kind": "Class",
       "category": "Components",
@@ -3366,6 +3484,579 @@
       ]
     },
     {
+      "itemName": "TmNotionCommentComposer",
+      "kind": "Component",
+      "category": "Notion Editor",
+      "subcategory": "UI",
+      "namespace": "Tempo.Blazor.Components.NotionEditor",
+      "description": "TmNotionCommentComposer Blazor component in the Notion Editor category.",
+      "packageId": "Tempo.Blazor.NotionEditor",
+      "sourcePath": "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/UI/TmNotionCommentComposer.razor",
+      "documentationStatus": "merged",
+      "requiredImports": [
+        "@using Tempo.Blazor.Components.NotionEditor"
+      ],
+      "parameters": [
+        {
+          "name": "AriaLabel",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Accessible name of the composer."
+        },
+        {
+          "name": "AuthorAvatarUrl",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Avatar image. Empty falls back to initials."
+        },
+        {
+          "name": "AuthorName",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Display name used for the avatar initials."
+        },
+        {
+          "name": "Baseline",
+          "type": "string",
+          "isRequired": false,
+          "default": "\"\"",
+          "description": "Text that does not count as a draft (the auto-inserted quote). Empty for a fresh composer."
+        },
+        {
+          "name": "Cancel",
+          "type": "EventCallback",
+          "isRequired": false,
+          "description": "Raised when the user cancels. Presence of a delegate shows the cancel button."
+        },
+        {
+          "name": "CancelText",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Cancel button label. Rendered only when Cancel has a delegate."
+        },
+        {
+          "name": "Class",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Wrapper class. Defaults to {ClassPrefix}__reply."
+        },
+        {
+          "name": "ClassPrefix",
+          "type": "string",
+          "isRequired": true,
+          "default": "\"tm-nbcp\"",
+          "description": "CSS class prefix of the owning panel (tm-nbcp, tm-ntcp, tm-npcp).",
+          "editorRequired": true
+        },
+        {
+          "name": "Disabled",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Disables the composer regardless of its text."
+        },
+        {
+          "name": "DraftChanged",
+          "type": "EventCallback<bool>",
+          "isRequired": false,
+          "description": "Raised only when the draft flag flips: the text differs from Baseline. Not raised per keystroke, so the parent thread is not rebuilt while the user types."
+        },
+        {
+          "name": "Hint",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Hint rendered beside the submit button (for example Ctrl+Enter)."
+        },
+        {
+          "name": "MentionProvider",
+          "type": "ITmPeopleProvider?",
+          "isRequired": false,
+          "description": "People provider for @-mentions. Null hides the mention menu."
+        },
+        {
+          "name": "OnSubmit",
+          "type": "EventCallback<string>",
+          "isRequired": false,
+          "description": "Raised on submit with the current text. The parent owns the provider call."
+        },
+        {
+          "name": "Placeholder",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Placeholder shown in the empty composer."
+        },
+        {
+          "name": "ResetToken",
+          "type": "int",
+          "isRequired": false,
+          "description": "Bumped by the parent to apply Value again (clear or reseed)."
+        },
+        {
+          "name": "Rows",
+          "type": "int",
+          "isRequired": false,
+          "default": "2",
+          "description": "Visible rows of the composer."
+        },
+        {
+          "name": "ShowAvatar",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Shows the current user's avatar (or initials) beside the composer."
+        },
+        {
+          "name": "SubmitText",
+          "type": "string",
+          "isRequired": false,
+          "default": "\"\"",
+          "description": "Submit button label."
+        },
+        {
+          "name": "Submitting",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Disables the composer and the submit button while a send is in flight."
+        },
+        {
+          "name": "TextChanged",
+          "type": "Action<string>?",
+          "isRequired": false,
+          "description": "Receives every text change WITHOUT re-rendering the parent (a plain action, not an event callback). The parent stores it so HasUnsavedDraft can be polled."
+        },
+        {
+          "name": "Value",
+          "type": "string",
+          "isRequired": false,
+          "default": "\"\"",
+          "description": "Seed and reset channel. The composer does not write back on each keystroke — that would re-render the parent thread. The parent sets this to clear or to prefill a quote."
+        }
+      ]
+    },
+    {
+      "itemName": "TmNotionCommentThreadActions",
+      "kind": "Component",
+      "category": "Notion Editor",
+      "subcategory": "UI",
+      "namespace": "Tempo.Blazor.Components.NotionEditor",
+      "description": "TmNotionCommentThreadActions Blazor component in the Notion Editor category.",
+      "packageId": "Tempo.Blazor.NotionEditor",
+      "sourcePath": "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/UI/TmNotionCommentThreadActions.razor",
+      "documentationStatus": "merged",
+      "requiredImports": [
+        "@using Tempo.Blazor.Components.NotionEditor"
+      ],
+      "parameters": [
+        {
+          "name": "ActionsLabel",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Accessible name of the actions group."
+        },
+        {
+          "name": "CanDelete",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Shows Delete."
+        },
+        {
+          "name": "CanEdit",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Shows Edit."
+        },
+        {
+          "name": "CanQuote",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Shows Quote in the menu."
+        },
+        {
+          "name": "ClassPrefix",
+          "type": "string",
+          "isRequired": true,
+          "default": "\"tm-nbcp\"",
+          "description": "CSS class prefix of the owning panel.",
+          "editorRequired": true
+        },
+        {
+          "name": "DeleteText",
+          "type": "string",
+          "isRequired": false,
+          "default": "\"\"",
+          "description": "Delete button label."
+        },
+        {
+          "name": "EditText",
+          "type": "string",
+          "isRequired": false,
+          "default": "\"\"",
+          "description": "Edit button label."
+        },
+        {
+          "name": "MoreText",
+          "type": "string",
+          "isRequired": false,
+          "default": "\"\"",
+          "description": "⋯ menu label."
+        },
+        {
+          "name": "OnDelete",
+          "type": "EventCallback",
+          "isRequired": false,
+          "description": "Raised by Delete. The parent owns the confirm dialog."
+        },
+        {
+          "name": "OnEdit",
+          "type": "EventCallback",
+          "isRequired": false,
+          "description": "Raised by Edit."
+        },
+        {
+          "name": "OnQuote",
+          "type": "EventCallback",
+          "isRequired": false,
+          "description": "Raised by Quote."
+        },
+        {
+          "name": "OnReply",
+          "type": "EventCallback",
+          "isRequired": false,
+          "description": "Raised by Reply."
+        },
+        {
+          "name": "QuoteText",
+          "type": "string",
+          "isRequired": false,
+          "default": "\"\"",
+          "description": "Quote menu item label."
+        },
+        {
+          "name": "ReplyText",
+          "type": "string",
+          "isRequired": false,
+          "default": "\"\"",
+          "description": "Reply button label. Reply is always visible."
+        }
+      ]
+    },
+    {
+      "itemName": "TmNotionCommentThreadList",
+      "kind": "Component",
+      "category": "Notion Editor",
+      "subcategory": "UI",
+      "namespace": "Tempo.Blazor.Components.NotionEditor",
+      "description": "Shared comment thread list: loading and empty states plus the delete confirmation the three panels used to copy.",
+      "packageId": "Tempo.Blazor.NotionEditor",
+      "sourcePath": "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/UI/TmNotionCommentThreadList.razor",
+      "documentationStatus": "merged",
+      "requiredImports": [
+        "@using Tempo.Blazor.Components.NotionEditor",
+        "@using Tempo.Blazor.Components.NotionEditor.UI"
+      ],
+      "parameters": [
+        {
+          "name": "ChildContent",
+          "type": "RenderFragment?",
+          "isRequired": false,
+          "description": "The list body. Rendered only when the list is neither loading nor empty."
+        },
+        {
+          "name": "Class",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Class of the list root. Defaults to {ClassPrefix}__thread."
+        },
+        {
+          "name": "ClassPrefix",
+          "type": "string",
+          "isRequired": true,
+          "default": "\"tm-nbcp\"",
+          "description": "CSS class prefix of the owning panel.",
+          "editorRequired": true
+        },
+        {
+          "name": "DeleteCancelText",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Delete dialog cancel label."
+        },
+        {
+          "name": "DeleteMessage",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Delete dialog message."
+        },
+        {
+          "name": "DeleteOkText",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Delete dialog confirm label."
+        },
+        {
+          "name": "DeleteTitle",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Delete dialog title."
+        },
+        {
+          "name": "Empty",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Shows the empty status when nothing is loading."
+        },
+        {
+          "name": "EmptyText",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Empty status text."
+        },
+        {
+          "name": "ListLabel",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Accessible name of the list."
+        },
+        {
+          "name": "Loading",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Shows the loading status instead of the list."
+        },
+        {
+          "name": "LoadingText",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Loading status text."
+        },
+        {
+          "name": "OnDeleteResult",
+          "type": "EventCallback<bool?>",
+          "isRequired": false,
+          "description": "Raised by the delete dialog."
+        },
+        {
+          "name": "ShowDeleteConfirm",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Shows the shared delete confirmation."
+        }
+      ]
+    },
+    {
+      "itemName": "TmNotionCommentThreadView",
+      "kind": "Component",
+      "category": "Notion Editor",
+      "subcategory": "UI",
+      "namespace": "Tempo.Blazor.Components.NotionEditor",
+      "description": "TmNotionCommentThreadView Blazor component in the Notion Editor category.",
+      "packageId": "Tempo.Blazor.NotionEditor",
+      "sourcePath": "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/UI/TmNotionCommentThreadView.razor",
+      "documentationStatus": "merged",
+      "requiredImports": [
+        "@using Tempo.Blazor.Components.NotionEditor"
+      ],
+      "parameters": [
+        {
+          "name": "AbsoluteTime",
+          "type": "Func<DateTimeOffset, string>?",
+          "isRequired": false,
+          "description": "Absolute time for the title."
+        },
+        {
+          "name": "CanDelete",
+          "type": "Func<TmCommentEntry, bool>?",
+          "isRequired": false,
+          "description": "True when the current user may delete the entry."
+        },
+        {
+          "name": "CanEdit",
+          "type": "Func<TmCommentEntry, bool>?",
+          "isRequired": false,
+          "description": "True when the current user may edit the entry."
+        },
+        {
+          "name": "Class",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Class of the list root. Defaults to {ClassPrefix}__thread."
+        },
+        {
+          "name": "ClassPrefix",
+          "type": "string",
+          "isRequired": true,
+          "default": "\"tm-nbcp\"",
+          "description": "CSS class prefix of the owning panel.",
+          "editorRequired": true
+        },
+        {
+          "name": "EditingEntryId",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Entry currently being edited."
+        },
+        {
+          "name": "EditText",
+          "type": "string",
+          "isRequired": false,
+          "default": "\"\"",
+          "description": "Text of the open edit."
+        },
+        {
+          "name": "FormatBody",
+          "type": "Func<TmCommentEntry, MarkupString>?",
+          "isRequired": false,
+          "description": "Turns an entry body into the markup the panel shows."
+        },
+        {
+          "name": "FormatTime",
+          "type": "Func<DateTimeOffset, string>?",
+          "isRequired": false,
+          "description": "Relative time. The parent resolves ITmRelativeTimeFormatter."
+        },
+        {
+          "name": "InlineReplyBaseline",
+          "type": "string",
+          "isRequired": false,
+          "default": "\"\"",
+          "description": "Text that does not count as an inline-reply draft."
+        },
+        {
+          "name": "InlineReplyResetToken",
+          "type": "int",
+          "isRequired": false,
+          "description": "Bumped by the parent to clear or reseed the inline composer."
+        },
+        {
+          "name": "InlineReplyText",
+          "type": "string",
+          "isRequired": false,
+          "default": "\"\"",
+          "description": "Seed of the open inline reply (the auto-inserted quote). Not updated per keystroke."
+        },
+        {
+          "name": "InlineReplyTextChanged",
+          "type": "Action<string>?",
+          "isRequired": false,
+          "description": "Stores the inline reply text without re-rendering the thread."
+        },
+        {
+          "name": "LabelPrefix",
+          "type": "string",
+          "isRequired": false,
+          "default": "\"TmNotionBlockComment\"",
+          "description": "Localization prefix used when Labels is null."
+        },
+        {
+          "name": "Labels",
+          "type": "TmNotionCommentLabels?",
+          "isRequired": false,
+          "description": "Resolved strings. Null reads them from LabelPrefix."
+        },
+        {
+          "name": "MentionProvider",
+          "type": "ITmPeopleProvider?",
+          "isRequired": false,
+          "description": "People provider for @-mentions inside edit and reply composers."
+        },
+        {
+          "name": "Nodes",
+          "type": "IReadOnlyList<CommentThreadNode>",
+          "isRequired": false,
+          "default": "[]",
+          "description": "Reply tree. The parent builds it."
+        },
+        {
+          "name": "OnCancelEdit",
+          "type": "EventCallback",
+          "isRequired": false,
+          "description": "Raised by the edit cancel."
+        },
+        {
+          "name": "OnCancelReply",
+          "type": "EventCallback",
+          "isRequired": false,
+          "description": "Raised by the inline reply cancel."
+        },
+        {
+          "name": "OnDelete",
+          "type": "EventCallback<TmCommentEntry>",
+          "isRequired": false,
+          "description": "Raised by Delete. The parent shows the confirm dialog."
+        },
+        {
+          "name": "OnDraftChanged",
+          "type": "EventCallback",
+          "isRequired": false,
+          "description": "Raised after a draft-bearing field changes, so the parent can publish its snapshot."
+        },
+        {
+          "name": "OnEdit",
+          "type": "EventCallback<TmCommentEntry>",
+          "isRequired": false,
+          "description": "Raised by Edit."
+        },
+        {
+          "name": "OnEditKeyDown",
+          "type": "EventCallback<KeyboardEventArgs>",
+          "isRequired": false,
+          "description": "Raised for a keydown inside the edit composer."
+        },
+        {
+          "name": "OnEditTextChanged",
+          "type": "EventCallback<string>",
+          "isRequired": false,
+          "description": "Raised when the edit text changes."
+        },
+        {
+          "name": "OnEntryKeyDown",
+          "type": "EventCallback<TmNotionCommentEntryKey>",
+          "isRequired": false,
+          "description": "Raised for a keydown on an entry row."
+        },
+        {
+          "name": "OnQuote",
+          "type": "EventCallback<TmCommentEntry>",
+          "isRequired": false,
+          "description": "Raised by Quote. A delegate shows the menu item."
+        },
+        {
+          "name": "OnReply",
+          "type": "EventCallback<TmCommentEntry>",
+          "isRequired": false,
+          "description": "Raised by Reply."
+        },
+        {
+          "name": "OnSaveEdit",
+          "type": "EventCallback",
+          "isRequired": false,
+          "description": "Raised by the edit save."
+        },
+        {
+          "name": "OnSubmitReply",
+          "type": "EventCallback",
+          "isRequired": false,
+          "description": "Raised by the inline reply submit."
+        },
+        {
+          "name": "Reactions",
+          "type": "RenderFragment<TmCommentEntry>?",
+          "isRequired": false,
+          "description": "Reactions fragment. Null hides reactions."
+        },
+        {
+          "name": "ReplyingToEntryId",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Entry currently being replied to."
+        },
+        {
+          "name": "Submitting",
+          "type": "bool",
+          "isRequired": false,
+          "description": "True while a send is in flight."
+        }
+      ]
+    },
+    {
       "itemName": "TmNotionContentByLabelBlock",
       "kind": "Component",
       "category": "Notion Editor",
@@ -4239,6 +4930,12 @@
           "isRequired": false
         },
         {
+          "name": "OnRecordDeleted",
+          "type": "EventCallback<IDatabaseRecord>",
+          "isRequired": false,
+          "description": "Raised after the user confirms deleting this record. The detail does not call the provider itself — the host owns the row list and the DeleteRecordAsync call."
+        },
+        {
           "name": "OnRecordUpdated",
           "type": "EventCallback<IDatabaseRecord>",
           "isRequired": false
@@ -4365,6 +5062,12 @@
           "name": "OnRecordClicked",
           "type": "EventCallback<IDatabaseRecord>",
           "isRequired": false
+        },
+        {
+          "name": "OnRecordDeleted",
+          "type": "EventCallback<IDatabaseRecord>",
+          "isRequired": false,
+          "description": "Raised after the user confirms deleting a row. The block owns the provider call."
         },
         {
           "name": "OnRecordUpdated",
@@ -5933,7 +6636,7 @@
           "name": "CurrentUserId",
           "type": "string",
           "isRequired": false,
-          "default": "\"demo\"",
+          "default": "\"\"",
           "description": "User whose notifications should be shown in the center."
         },
         {
@@ -8529,16 +9232,24 @@
       "kind": "Css"
     },
     {
+      "path": "src/Tempo.Blazor.NotionEditor/wwwroot/js/notion-db-column-resize.js",
+      "kind": "JavaScript"
+    },
+    {
       "path": "src/Tempo.Blazor.NotionEditor/wwwroot/js/notion-editor.js",
+      "kind": "JavaScript"
+    },
+    {
+      "path": "src/Tempo.Blazor.NotionEditor/wwwroot/js/__tests__/notion-db-column-resize.test.mjs",
       "kind": "JavaScript"
     }
   ],
   "summary": {
-    "itemCount": 173,
-    "manualItemCount": 173,
-    "generatedItemCount": 172,
+    "itemCount": 178,
+    "manualItemCount": 178,
+    "generatedItemCount": 177,
     "generatedOnlyItemCount": 0,
-    "componentCount": 128,
-    "publicApiTypeCount": 44
+    "componentCount": 132,
+    "publicApiTypeCount": 45
   }
 }

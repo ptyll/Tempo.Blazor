@@ -1,4 +1,5 @@
 @namespace Tempo.Blazor.Components.NotionEditor.Blocks.Database
+@inherits Tempo.Blazor.Components.TmComponentBase
 @using Tempo.Blazor.NotionEditor.Models
 @using Tempo.Blazor.NotionEditor.Interfaces
 @using Tempo.Blazor.NotionEditor.Enums
@@ -73,6 +74,7 @@
 
                 <div class="@cls"
                      role="gridcell"
+                     data-testid="notion-db-calendar-cell"
                      aria-label="@date.ToString("d MMMM yyyy")"
                      @ondragover:preventDefault="true"
                      @ondragenter:preventDefault="true"
@@ -95,6 +97,7 @@
                         var title      = GetPrimaryValue(rec);
 
                         <div class="tm-dbcal__event @(isDragging ? "tm-dbcal__event--dragging" : "")"
+                             data-testid="notion-db-calendar-event"
                              style="--event-color: @eventColor"
                              draggable="@(!ReadOnly ? "true" : "false")"
                              role="button"
@@ -110,13 +113,42 @@
                         </div>
                     }
 
-                    @* Overflow indicator *@
+                    @* Overflow — the +N button IS the popover trigger, so Escape, focus-into-first
+                       and refocus-on-close stay inside TmPopover. No second close control. *@
                     @if (OverflowCount(cell) > 0)
                     {
-                        <span class="tm-dbcal__overflow"
-                              @onclick:stopPropagation="true">
-                            +@OverflowCount(cell)&nbsp;@Loc["TmNotionDbCalendarView_More"]
-                        </span>
+                        var overflowCell = cell;
+                        <TmPopover IsOpen="@(_overflowDate == overflowCell.Date)"
+                                   IsOpenChanged="open => SetOverflowOpen(overflowCell.Date, open)"
+                                   ShowArrow="false"
+                                   TrapFocus="true"
+                                   Role="dialog"
+                                   Title="@Loc["TmNotionDbCalendarView_DayList", overflowCell.Date.ToString("d")]"
+                                   Class="tm-dbcal__overflow-popover"
+                                   @onclick:stopPropagation="true">
+                            <TriggerContent>
+                                <span class="tm-dbcal__overflow"
+                                      data-testid="@TestId("notion-db-calendar-overflow")">
+                                    +@OverflowCount(overflowCell)&nbsp;@Loc["TmNotionDbCalendarView_More"]
+                                </span>
+                            </TriggerContent>
+                            <ChildContent>
+                                <ul class="tm-dbcal__day-list-items"
+                                    data-testid="@TestId("notion-db-calendar-day-list")">
+                                    @foreach (var rec in overflowCell.Records)
+                                    {
+                                        var overflowRec = rec;
+                                        <li>
+                                            <button type="button"
+                                                    class="tm-dbcal__day-list-item"
+                                                    @onclick="() => SelectOverflowRecordAsync(overflowRec)">
+                                                @GetPrimaryValue(overflowRec)
+                                            </button>
+                                        </li>
+                                    }
+                                </ul>
+                            </ChildContent>
+                        </TmPopover>
                     }
 
                 </div>

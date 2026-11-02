@@ -1,6 +1,7 @@
 /* ── Wrapper ────────────────────────────────────────────────────────────── */
 
 .tm-dbcal {
+    position: relative;
     display: flex;
     flex-direction: column;
     height: 100%;
@@ -167,8 +168,8 @@
 }
 
 .tm-dbcal__cell-num--today {
-    background: var(--tm-primary, #2383e2);
-    color: #fff;
+    background: var(--tm-color-primary);
+    color: var(--tm-color-on-primary);
     font-weight: 700;
 }
 
@@ -183,7 +184,7 @@
     font-size: 11px;
     font-weight: 500;
     line-height: 1.3;
-    background: color-mix(in srgb, var(--event-color, #2383e2) 14%, white);
+    background: color-mix(in srgb, var(--event-color, var(--tm-color-primary)) 14%, var(--tm-bg-surface));
     color: color-mix(in srgb, var(--event-color, #2383e2) 70%, #111);
     cursor: pointer;
     outline: none;
@@ -195,7 +196,7 @@
 }
 
 .tm-dbcal__event:hover {
-    background: color-mix(in srgb, var(--event-color, #2383e2) 22%, white);
+    background: color-mix(in srgb, var(--event-color, var(--tm-color-primary)) 22%, var(--tm-bg-surface));
 }
 
 .tm-dbcal__event:focus-visible {
@@ -227,10 +228,88 @@
 
 .tm-dbcal__overflow {
     font-size: 10px;
-    color: var(--tm-text-muted, #9a9a9a);
+    color: var(--tm-text-muted);
     padding: 1px 4px;
-    cursor: default;
+    border: none;
+    background: transparent;
+    font-family: inherit;
+    text-align: start;
+    cursor: pointer;
     flex-shrink: 0;
+}
+
+.tm-dbcal__overflow:hover,
+.tm-dbcal__overflow:focus-visible {
+    color: var(--tm-color-primary);
+    text-decoration: underline;
+}
+
+.tm-dbcal__day-list {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--tm-space-4);
+    background: var(--tm-bg-overlay);
+}
+
+.tm-dbcal__day-list-card {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-2);
+    width: min(20rem, 100%);
+    max-height: 80%;
+    padding: var(--tm-space-3);
+    border: 1px solid var(--tm-border-color);
+    border-radius: var(--tm-radius-md);
+    background: var(--tm-bg-surface);
+    box-shadow: var(--tm-shadow-lg);
+}
+
+.tm-dbcal__day-list-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--tm-space-2);
+    font-size: var(--tm-font-size-sm);
+    font-weight: var(--tm-font-weight-medium);
+}
+
+.tm-dbcal__day-list-close {
+    border: none;
+    background: transparent;
+    color: var(--tm-text-secondary);
+    font-family: inherit;
+    font-size: var(--tm-font-size-sm);
+    cursor: pointer;
+}
+
+.tm-dbcal__day-list-items {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    overflow: auto;
+}
+
+.tm-dbcal__day-list-item {
+    display: block;
+    width: 100%;
+    padding: var(--tm-space-2);
+    border: none;
+    border-radius: var(--tm-radius-sm);
+    background: transparent;
+    color: var(--tm-text-primary);
+    font-family: inherit;
+    font-size: var(--tm-font-size-sm);
+    text-align: start;
+    cursor: pointer;
+}
+
+.tm-dbcal__day-list-item:hover,
+.tm-dbcal__day-list-item:focus-visible {
+    background: var(--tm-bg-muted);
 }
 
 /* ── No date field ──────────────────────────────────────────────────────── */
@@ -246,21 +325,21 @@
 
 :global(.tm-dark) .tm-dbcal__cell--other-month,
 :global([data-theme="dark"]) .tm-dbcal__cell--other-month {
-    background: var(--tm-bg-subtle, #1a1a1a);
+    background: var(--tm-bg-muted);
 }
 
 :global(.tm-dark) .tm-dbcal__event,
 :global([data-theme="dark"]) .tm-dbcal__event {
-    background: color-mix(in srgb, var(--event-color, #2383e2) 18%, #222);
-    color: color-mix(in srgb, var(--event-color, #2383e2) 60%, #eee);
+    background: color-mix(in srgb, var(--event-color, var(--tm-color-primary)) 18%, var(--tm-bg-surface));
+    color: color-mix(in srgb, var(--event-color, var(--tm-color-primary)) 60%, var(--tm-text-primary));
 }
 
 :global(.tm-dark) .tm-dbcal__event:hover,
 :global([data-theme="dark"]) .tm-dbcal__event:hover {
-    background: color-mix(in srgb, var(--event-color, #2383e2) 28%, #222);
+    background: color-mix(in srgb, var(--event-color, var(--tm-color-primary)) 28%, var(--tm-bg-surface));
 }
 
 :global(.tm-dark) .tm-dbcal__cell--target,
 :global([data-theme="dark"]) .tm-dbcal__cell--target {
-    background: color-mix(in srgb, var(--tm-primary, #2383e2) 12%, #222) !important;
+    background: color-mix(in srgb, var(--tm-color-primary) 12%, var(--tm-bg-surface)) !important;
 }

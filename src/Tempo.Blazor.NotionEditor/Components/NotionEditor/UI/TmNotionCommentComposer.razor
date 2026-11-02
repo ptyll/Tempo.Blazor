@@ -1,0 +1,171 @@
+@namespace Tempo.Blazor.Components.NotionEditor.UI
+@using Tempo.Blazor.Abstractions.Shared
+@using Tempo.Blazor.Components.Avatars
+@inherits Tempo.Blazor.Components.TmComponentBase
+
+@* Isolated composer. Its text lives in this component, so a keystroke re-renders the composer
+   only — the parent thread tree is not rebuilt until the parent itself re-renders. *@
+<div class="@WrapperClass" data-testid="@TestId(RootTestIdName)">
+    @if (ShowAvatar)
+    {
+        <TmAvatar Name="@AuthorName" Src="@AuthorAvatarUrl" Size="AvatarSize.Sm" Alt="" />
+    }
+    <TmCommentMentionInput Class="@($"{ClassPrefix}__reply-input")"
+                           Rows="@Rows"
+                           Placeholder="@Placeholder"
+                           Disabled="@Disabled"
+                           Value="@_text"
+                           ValueChanged="OnTextChanged"
+                           OnKeyDown="HandleKeyDownAsync"
+                           AriaLabel="@AriaLabel"
+                           MentionProvider="@MentionProvider" />
+    <div class="@($"{ClassPrefix}__reply-actions")">
+        @if (Cancel.HasDelegate)
+        {
+            <button class="@($"{ClassPrefix}__reply-cancel")"
+                    type="button"
+                    @onclick="Cancel">
+                @CancelText
+            </button>
+        }
+        else if (!string.IsNullOrEmpty(Hint))
+        {
+            <span class="@($"{ClassPrefix}__reply-hint")">@Hint</span>
+        }
+        <button class="@($"{ClassPrefix}__reply-send")"
+                type="button"
+                data-testid="@TestId("notion-comment-composer-submit")"
+                disabled="@(string.IsNullOrWhiteSpace(_text) || Submitting || Disabled)"
+                @onclick="SubmitAsync">
+            @if (Submitting)
+            {
+                <span class="@($"{ClassPrefix}__spinner {ClassPrefix}__spinner--sm")" aria-hidden="true"></span>
+            }
+            @SubmitText
+        </button>
+    </div>
+</div>
+
+@code {
+    private const string RootTestIdName = "notion-comment-composer";
+
+    private string _text = string.Empty;
+
+    /// <summary>CSS class prefix of the owning panel (<c>tm-nbcp</c>, <c>tm-ntcp</c>, <c>tm-npcp</c>).</summary>
+    [Parameter, EditorRequired] public string ClassPrefix { get; set; } = "tm-nbcp";
+
+    /// <summary>Wrapper class. Defaults to <c>{ClassPrefix}__reply</c>.</summary>
+    [Parameter] public string? Class { get; set; }
+
+    /// <summary>
+    /// Seed and reset channel. The composer does not write back on each keystroke — that would
+    /// re-render the parent thread. The parent sets this to clear or to prefill a quote.
+    /// </summary>
+    [Parameter] public string Value { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Text that does not count as a draft (the auto-inserted quote). Empty for a fresh composer.
+    /// </summary>
+    [Parameter] public string Baseline { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Receives every text change WITHOUT re-rendering the parent (a plain action, not an event
+    /// callback). The parent stores it so <c>HasUnsavedDraft</c> can be polled.
+    /// </summary>
+    [Parameter] public Action<string>? TextChanged { get; set; }
+
+    /// <summary>
+    /// Raised only when the draft flag flips: the text differs from <see cref="Baseline"/>.
+    /// Not raised per keystroke, so the parent thread is not rebuilt while the user types.
+    /// </summary>
+    [Parameter] public EventCallback<bool> DraftChanged { get; set; }
+
+    /// <summary>Placeholder shown in the empty composer.</summary>
+    [Parameter] public string? Placeholder { get; set; }
+
+    /// <summary>Accessible name of the composer.</summary>
+    [Parameter] public string? AriaLabel { get; set; }
+
+    /// <summary>Hint rendered beside the submit button (for example Ctrl+Enter).</summary>
+    [Parameter] public string? Hint { get; set; }
+
+    /// <summary>Submit button label.</summary>
+    [Parameter] public string SubmitText { get; set; } = string.Empty;
+
+    /// <summary>Cancel button label. Rendered only when <see cref="Cancel"/> has a delegate.</summary>
+    [Parameter] public string? CancelText { get; set; }
+
+    /// <summary>Raised when the user cancels. Presence of a delegate shows the cancel button.</summary>
+    [Parameter] public EventCallback Cancel { get; set; }
+
+    /// <summary>Raised on submit with the current text. The parent owns the provider call.</summary>
+    [Parameter] public EventCallback<string> OnSubmit { get; set; }
+
+    /// <summary>People provider for @-mentions. Null hides the mention menu.</summary>
+    [Parameter] public ITmPeopleProvider? MentionProvider { get; set; }
+
+    /// <summary>Visible rows of the composer.</summary>
+    [Parameter] public int Rows { get; set; } = 2;
+
+    /// <summary>Disables the composer and the submit button while a send is in flight.</summary>
+    [Parameter] public bool Submitting { get; set; }
+
+    /// <summary>Disables the composer regardless of its text.</summary>
+    [Parameter] public bool Disabled { get; set; }
+
+    /// <summary>Bumped by the parent to apply <see cref="Value"/> again (clear or reseed).</summary>
+    [Parameter] public int ResetToken { get; set; }
+
+    /// <summary>Shows the current user's avatar (or initials) beside the composer.</summary>
+    [Parameter] public bool ShowAvatar { get; set; }
+
+    /// <summary>Display name used for the avatar initials.</summary>
+    [Parameter] public string? AuthorName { get; set; }
+
+    /// <summary>Avatar image. Empty falls back to initials.</summary>
+    [Parameter] public string? AuthorAvatarUrl { get; set; }
+
+    private bool _differs;
+    private int _seenToken = int.MinValue;
+
+    private string WrapperClass => Class ?? $"{ClassPrefix}__reply";
+
+    protected override void OnParametersSet()
+    {
+        // A keystroke never writes Value, so a parent re-render must not clobber the text.
+        // The parent bumps ResetToken when it clears or reseeds (discard, send, a new quote).
+        if (_seenToken != ResetToken)
+        {
+            _seenToken = ResetToken;
+            _text = Value ?? string.Empty;
+            _differs = false;
+        }
+    }
+
+    private async Task OnTextChanged(string value)
+    {
+        _text = value ?? string.Empty;
+        TextChanged?.Invoke(_text);
+        var differs = !string.IsNullOrWhiteSpace(_text)
+            && !string.Equals(_text, Baseline ?? string.Empty, StringComparison.Ordinal);
+        if (differs == _differs)
+            return;
+        _differs = differs;
+        await DraftChanged.InvokeAsync(differs);
+    }
+
+    private async Task HandleKeyDownAsync(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" && (e.CtrlKey || e.MetaKey) && !string.IsNullOrWhiteSpace(_text))
+            await OnSubmit.InvokeAsync(_text);
+        else if (e.Key == "Escape" && Cancel.HasDelegate)
+            await Cancel.InvokeAsync();
+    }
+
+    private async Task SubmitAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_text) || Submitting || Disabled)
+            return;
+        await OnSubmit.InvokeAsync(_text);
+    }
+}

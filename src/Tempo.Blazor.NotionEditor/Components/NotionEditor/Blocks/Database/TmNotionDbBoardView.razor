@@ -1,4 +1,5 @@
 @namespace Tempo.Blazor.Components.NotionEditor.Blocks.Database
+@inherits Tempo.Blazor.Components.TmComponentBase
 @using Tempo.Blazor.NotionEditor.Models
 @using Tempo.Blazor.NotionEditor.Interfaces
 @using Tempo.Blazor.NotionEditor.Enums
@@ -13,7 +14,8 @@
             var isTarget = _dragOverGroup == gv && _dragRecordId.HasValue;
 
             <div class="tm-dbb__col @(isTarget ? "tm-dbb__col--target" : "")"
-                 data-group-value="@gv">
+                 data-group-value="@gv"
+                 data-testid="notion-db-board-group">
 
                 @* ── Column header ───────────────────────────── *@
                 <div class="tm-dbb__col-header">
@@ -49,6 +51,7 @@
 
                         <div class="tm-dbb__card @(isDraggingThis ? "tm-dbb__card--dragging" : "")"
                              draggable="@(!ReadOnly ? "true" : "false")"
+                             data-testid="notion-db-board-card"
                              data-record-id="@rec.Id"
                              data-from-group="@gv"
                              role="button"
@@ -99,6 +102,10 @@
                     @if (group.Records.Count == 0 && isTarget)
                     {
                         <div class="tm-dbb__drop-hint">@Loc["TmNotionDbBoardView_DropHere"]</div>
+                    }
+                    else if (group.Records.Count == 0)
+                    {
+                        <p class="tm-dbb__empty" data-testid="@TestId("notion-db-board-empty")">@Loc["TmNotionDbBoardView_EmptyGroup"]</p>
                     }
 
                 </div>

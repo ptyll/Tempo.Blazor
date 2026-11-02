@@ -5,6 +5,66 @@
 @import "components/_notion-notifications.css";
 @import "components/_notion-floating-menus.css";
 
+/* The shared thread view is a layout-neutral wrapper: the panel's list stays the flex parent. */
+.tm-notion-comment-thread {
+    display: contents;
+}
+
+/* Shared entry and composer surface. One copy for the three panels; the panel prefix
+   (tm-nbcp / tm-ntcp / tm-npcp) only chooses which panel the rule paints. */
+.tm-nbcp__entry-actions,
+.tm-ntcp__entry-actions,
+.tm-npcp__entry-actions {
+    display: flex;
+    gap: var(--tm-space-1);
+    opacity: 0;
+}
+
+.tm-nbcp__entry:hover .tm-nbcp__entry-actions,
+.tm-nbcp__entry:focus-within .tm-nbcp__entry-actions,
+.tm-ntcp__entry:hover .tm-ntcp__entry-actions,
+.tm-ntcp__entry:focus-within .tm-ntcp__entry-actions,
+.tm-npcp__entry:hover .tm-npcp__entry-actions,
+.tm-npcp__entry:focus-within .tm-npcp__entry-actions,
+.tm-nbcp__entry-actions:focus-within,
+.tm-ntcp__entry-actions:focus-within,
+.tm-npcp__entry-actions:focus-within {
+    opacity: 1;
+}
+
+.tm-nbcp__entry-action,
+.tm-ntcp__entry-action,
+.tm-npcp__entry-action {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--tm-space-1);
+    min-height: var(--tm-space-6);
+    padding: var(--tm-space-1) var(--tm-space-2);
+    border: none;
+    border-radius: var(--tm-radius-sm);
+    background: transparent;
+    color: var(--tm-text-secondary);
+    font: inherit;
+    cursor: pointer;
+}
+
+.tm-nbcp__inline-reply,
+.tm-ntcp__inline-reply,
+.tm-npcp__inline-reply,
+.tm-nbcp__reply,
+.tm-ntcp__reply,
+.tm-npcp__reply {
+    background: var(--tm-bg-surface);
+    color: var(--tm-text-primary);
+}
+
+.tm-nbcp__edit-save:disabled,
+.tm-ntcp__edit-save:disabled,
+.tm-npcp__edit-save:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
 /* ── Reduced motion ──────────────────────────────────────────────────────────
    Explicit enumeration of every Tempo.Blazor.NotionEditor animated subject (mirrors the core block in
    animations.css and the DiagramEditor package block, never a universal selector).

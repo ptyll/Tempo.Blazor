@@ -17,9 +17,9 @@
 
     @* ── Name & type ─────────────────────────────────────────────────────── *@
     <div class="tm-dbfe__section">
-        <label class="tm-dbfe__label" for="tm-dbfe-name">@Loc["TmNotionDbFieldEditor_FieldName"]</label>
+        <label class="tm-dbfe__label" for="@IdFor("name")">@Loc["TmNotionDbFieldEditor_FieldName"]</label>
         <input class="tm-dbfe__input"
-               id="tm-dbfe-name"
+               id="@IdFor("name")"
                type="text"
                value="@_name"
                disabled="@ReadOnly"
@@ -30,10 +30,10 @@
     @if (!Field.IsPrimary)
     {
         <div class="tm-dbfe__section">
-            <label class="tm-dbfe__label" for="tm-dbfe-type">@Loc["TmNotionDbFieldEditor_FieldType"]</label>
+            <label class="tm-dbfe__label" for="@IdFor("type")">@Loc["TmNotionDbFieldEditor_FieldType"]</label>
             <div class="tm-dbfe__select-wrap">
                 <select class="tm-dbfe__select"
-                        id="tm-dbfe-type"
+                        id="@IdFor("type")"
                         disabled="@ReadOnly"
                         @onchange="OnTypeChanged">
                     @foreach (var t in Enum.GetValues<DatabaseFieldType>())
@@ -177,10 +177,10 @@
     @if (_type == DatabaseFieldType.Number)
     {
         <div class="tm-dbfe__section">
-            <label class="tm-dbfe__label" for="tm-dbfe-numfmt">@Loc["TmNotionDbFieldEditor_NumberFormat"]</label>
+            <label class="tm-dbfe__label" for="@IdFor("numfmt")">@Loc["TmNotionDbFieldEditor_NumberFormat"]</label>
             <div class="tm-dbfe__select-wrap">
                 <select class="tm-dbfe__select"
-                        id="tm-dbfe-numfmt"
+                        id="@IdFor("numfmt")"
                         disabled="@ReadOnly"
                         @onchange="e => { if (Enum.TryParse<NumberFormat>(e.Value?.ToString(), out var f)) _numberFormat = f; }">
                     @foreach (var f in Enum.GetValues<NumberFormat>())
@@ -195,9 +195,9 @@
     @if (_type == DatabaseFieldType.Formula)
     {
         <div class="tm-dbfe__section">
-            <label class="tm-dbfe__label" for="tm-dbfe-formula">@Loc["TmNotionDbFieldEditor_Formula"]</label>
+            <label class="tm-dbfe__label" for="@IdFor("formula")">@Loc["TmNotionDbFieldEditor_Formula"]</label>
             <textarea class="tm-dbfe__textarea"
-                      id="tm-dbfe-formula"
+                      id="@IdFor("formula")"
                       rows="3"
                       disabled="@ReadOnly"
                       placeholder="@Loc["TmNotionDbFieldEditor_FormulaPlaceholder"]"
@@ -208,9 +208,9 @@
     @if (_type == DatabaseFieldType.Relation)
     {
         <div class="tm-dbfe__section">
-            <label class="tm-dbfe__label" for="tm-dbfe-reldb">@Loc["TmNotionDbFieldEditor_RelationTarget"]</label>
+            <label class="tm-dbfe__label" for="@IdFor("reldb")">@Loc["TmNotionDbFieldEditor_RelationTarget"]</label>
             <input class="tm-dbfe__input"
-                   id="tm-dbfe-reldb"
+                   id="@IdFor("reldb")"
                    type="text"
                    disabled="@ReadOnly"
                    placeholder="@Loc["TmNotionDbFieldEditor_RelationTargetPlaceholder"]"
@@ -235,7 +235,7 @@
         var relFields = RelationFields.ToList();
 
         <div class="tm-dbfe__section">
-            <label class="tm-dbfe__label" for="tm-dbfe-rollrel">@Loc["TmNotionDbFieldEditor_RollupRelation"]</label>
+            <label class="tm-dbfe__label" for="@IdFor("rollrel")">@Loc["TmNotionDbFieldEditor_RollupRelation"]</label>
             @if (relFields.Count == 0)
             {
                 <p class="tm-dbfe__hint">@Loc["TmNotionDbFieldEditor_NoRelationFields"]</p>
@@ -244,7 +244,7 @@
             {
                 <div class="tm-dbfe__select-wrap">
                     <select class="tm-dbfe__select"
-                            id="tm-dbfe-rollrel"
+                            id="@IdFor("rollrel")"
                             disabled="@ReadOnly"
                             @onchange="SetRollupRelationField">
                         <option value="">@Loc["TmNotionDbFieldEditor_SelectField"]</option>
@@ -260,10 +260,10 @@
         @if (RollupRelationField?.Config is IRelationFieldConfig relConf)
         {
             <div class="tm-dbfe__section">
-                <label class="tm-dbfe__label" for="tm-dbfe-rollprop">@Loc["TmNotionDbFieldEditor_RollupProperty"]</label>
+                <label class="tm-dbfe__label" for="@IdFor("rollprop")">@Loc["TmNotionDbFieldEditor_RollupProperty"]</label>
                 <div class="tm-dbfe__select-wrap">
                     <select class="tm-dbfe__select"
-                            id="tm-dbfe-rollprop"
+                            id="@IdFor("rollprop")"
                             disabled="@ReadOnly"
                             @onchange="SetRollupTargetField">
                         <option value="">@Loc["TmNotionDbFieldEditor_SelectField"]</option>
@@ -277,10 +277,10 @@
         }
 
         <div class="tm-dbfe__section">
-            <label class="tm-dbfe__label" for="tm-dbfe-rollagg">@Loc["TmNotionDbFieldEditor_RollupAggregate"]</label>
+            <label class="tm-dbfe__label" for="@IdFor("rollagg")">@Loc["TmNotionDbFieldEditor_RollupAggregate"]</label>
             <div class="tm-dbfe__select-wrap">
                 <select class="tm-dbfe__select"
-                        id="tm-dbfe-rollagg"
+                        id="@IdFor("rollagg")"
                         disabled="@ReadOnly"
                         @onchange="e => { if (Enum.TryParse<RollupAggregation>(e.Value?.ToString(), out var a)) _rollupAggregation = a; }">
                     @foreach (var a in Enum.GetValues<RollupAggregation>())
@@ -295,10 +295,10 @@
     @if (_type is DatabaseFieldType.Date or DatabaseFieldType.DateRange)
     {
         <div class="tm-dbfe__section">
-            <label class="tm-dbfe__label" for="tm-dbfe-datefmt">@Loc["TmNotionDbFieldEditor_DateFormat"]</label>
+            <label class="tm-dbfe__label" for="@IdFor("datefmt")">@Loc["TmNotionDbFieldEditor_DateFormat"]</label>
             <div class="tm-dbfe__select-wrap">
                 <select class="tm-dbfe__select"
-                        id="tm-dbfe-datefmt"
+                        id="@IdFor("datefmt")"
                         disabled="@ReadOnly"
                         @onchange="e => _dateFormat = e.Value?.ToString() ?? _dateFormat">
                     <option value="MMMM D, YYYY"  selected="@(_dateFormat == "MMMM D, YYYY")">@Loc["TmNotionDbFieldEditor_DF_Full"]</option>

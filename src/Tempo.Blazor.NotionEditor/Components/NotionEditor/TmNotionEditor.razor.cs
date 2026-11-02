@@ -209,7 +209,7 @@ public partial class TmNotionEditor : TmComponentBase, IAsyncDisposable
             if (_resolvedCurrentUser is not null)
                 return string.IsNullOrWhiteSpace(_resolvedCurrentUser.User?.Id) ? "anonymous" : _resolvedCurrentUser.User.Id;
 
-            return string.IsNullOrWhiteSpace(CurrentUserId) ? "demo" : CurrentUserId.Trim();
+            return string.IsNullOrWhiteSpace(CurrentUserId) ? string.Empty : CurrentUserId.Trim();
         }
     }
 
@@ -220,7 +220,7 @@ public partial class TmNotionEditor : TmComponentBase, IAsyncDisposable
             if (_resolvedCurrentUser is not null)
                 return _resolvedCurrentUser.User;
 
-            var userId = string.IsNullOrWhiteSpace(CurrentUserId) ? "demo" : CurrentUserId.Trim();
+            var userId = string.IsNullOrWhiteSpace(CurrentUserId) ? string.Empty : CurrentUserId.Trim();
             return new TmUserRef { Id = userId, DisplayName = userId };
         }
     }

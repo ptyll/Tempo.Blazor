@@ -952,7 +952,7 @@ public partial class TmNotionPage : ComponentBase, IAsyncDisposable
             {
                 var comments = await Context.CommentProvider.GetBlockCommentsAsync(blockId);
                 foreach (var c in comments)
-                    await Context.CommentProvider.MarkThreadAsReadAsync(c.Id, "demo");
+                    await Context.CommentProvider.MarkThreadAsReadAsync(c.Id, Context.CurrentUserId);
                 await HandleBlockCommentCountChangedAsync(blockId);
             }
             catch { }
@@ -977,7 +977,7 @@ public partial class TmNotionPage : ComponentBase, IAsyncDisposable
             try
             {
                 var comments = await Context.CommentProvider.GetBlockCommentsAsync(blockId);
-                _blockCommentCounts[blockId] = ComputeBlockCommentInfo(comments);
+                _blockCommentCounts[blockId] = ComputeBlockCommentInfo(comments, Context.CurrentUserId);
                 StateHasChanged();
             }
             catch { }
@@ -999,7 +999,7 @@ public partial class TmNotionPage : ComponentBase, IAsyncDisposable
         try
         {
             var comments = await Context.CommentProvider.GetBlockCommentsAsync(blockId);
-            var info = ComputeBlockCommentInfo(comments);
+            var info = ComputeBlockCommentInfo(comments, Context.CurrentUserId);
             if (info.Unresolved > 0 || info.ResolvedUnread > 0)
                 _blockCommentCounts[blockId] = info;
             else
@@ -1010,11 +1010,12 @@ public partial class TmNotionPage : ComponentBase, IAsyncDisposable
         catch { }
     }
 
-    private static BlockCommentInfo ComputeBlockCommentInfo(IEnumerable<TmCommentThread> comments)
+    private static BlockCommentInfo ComputeBlockCommentInfo(IEnumerable<TmCommentThread> comments, string currentUserId)
     {
         var list = comments.ToList();
         var unresolved   = list.Count(c => !c.IsResolved());
-        var resolvedUnread = list.Count(c => c.IsResolved() && !c.ReadByUserIds.Contains("demo"));
+        var userId = currentUserId ?? string.Empty;
+        var resolvedUnread = list.Count(c => c.IsResolved() && !c.ReadByUserIds.Contains(userId));
 
         // Find the latest entry across all threads for tooltip data
         TmCommentEntry? latest = null;
@@ -1036,7 +1037,7 @@ public partial class TmNotionPage : ComponentBase, IAsyncDisposable
                 text = text[..120] + "…";
         }
 
-        var hasUnread = list.Any(c => c.LastActivityAt().HasValue && !c.ReadByUserIds.Contains("demo"));
+        var hasUnread = list.Any(c => c.LastActivityAt().HasValue && !c.ReadByUserIds.Contains(userId));
 
         return new BlockCommentInfo(
             unresolved,
@@ -1065,7 +1066,7 @@ public partial class TmNotionPage : ComponentBase, IAsyncDisposable
             {
                 var comments = await Context.CommentProvider.GetBlockCommentsAsync(blockId);
                 foreach (var c in comments)
-                    await Context.CommentProvider.MarkThreadAsReadAsync(c.Id, "demo");
+                    await Context.CommentProvider.MarkThreadAsReadAsync(c.Id, Context.CurrentUserId);
                 await HandleBlockCommentCountChangedAsync(blockId);
             }
             catch { }
@@ -1090,7 +1091,7 @@ public partial class TmNotionPage : ComponentBase, IAsyncDisposable
             try
             {
                 var comments = await Context.CommentProvider.GetBlockCommentsAsync(blockId);
-                _blockCommentCounts[blockId] = ComputeBlockCommentInfo(comments);
+                _blockCommentCounts[blockId] = ComputeBlockCommentInfo(comments, Context.CurrentUserId);
                 StateHasChanged();
             }
             catch { }

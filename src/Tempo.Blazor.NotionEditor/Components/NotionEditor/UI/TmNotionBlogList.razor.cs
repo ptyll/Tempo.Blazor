@@ -114,7 +114,7 @@ public partial class TmNotionBlogList : TmComponentBase
             {
                 SpaceId = SpaceId,
                 Title = Loc["Notion_Blog_NewPostTitle"],
-                AuthorId = string.IsNullOrWhiteSpace(CurrentUserId) ? "demo" : CurrentUserId,
+                AuthorId = string.IsNullOrWhiteSpace(CurrentUserId) ? string.Empty : CurrentUserId,
                 Blocks =
                 [
                     new PageBlock

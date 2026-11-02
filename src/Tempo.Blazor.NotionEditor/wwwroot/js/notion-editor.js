@@ -3649,14 +3649,39 @@ window.tmNotionPdf = (function () {
 
 window.tmDb = window.tmDb || {};
 
+// Column resize lives in its own module so it can import the shared pointer-drag helper.
+// Capture the script directory once, while document.currentScript is still this classic script
+// (a later call sees null). Same pattern as tmNotionPdf._scriptDir.
+const _tmDbScriptDir = (() => {
+    const src = document.currentScript?.src ?? '';
+    return src ? src.substring(0, src.lastIndexOf('/') + 1) : '';
+})();
+
+let _columnResizeModule = null;
+
+function loadColumnResizeModule() {
+    if (_columnResizeModule) return _columnResizeModule;
+    const specifier = _tmDbScriptDir
+        ? _tmDbScriptDir + 'notion-db-column-resize.js'
+        : new URL('_content/Tempo.Blazor.NotionEditor/js/notion-db-column-resize.js', document.baseURI).href;
+    _columnResizeModule = import(specifier).catch((err) => {
+        _columnResizeModule = null;
+        console.error('tmDb.attachColumnResize: notion-db-column-resize.js failed to load', err);
+        throw err;
+    });
+    return _columnResizeModule;
+}
+
+window.tmDb.attachColumnResize = function (root, dotNetRef) {
+    return loadColumnResizeModule().then((mod) => mod.attachColumnResize(root, dotNetRef));
+};
+
 // Board drag-and-drop: fully JS-driven. Blazor drag events are async (WASM interop)
 // so preventDefault/setData never fire in time. All drag logic lives here; Blazor
 // is called back via [JSInvokable] only for state mutations.
 window.tmDb.initBoardDrag = function (element, dotNetRef) {
     if (!element || element._tmBoardDragInit) return;
     element._tmBoardDragInit = true;
-    console.log('[tmDb] initBoardDrag called, element:', element, 'dotNetRef:', dotNetRef);
-
     let isDragging = false;
     let lastEnteredCol = null;
     let draggedRecordId = '';
@@ -3665,7 +3690,6 @@ window.tmDb.initBoardDrag = function (element, dotNetRef) {
 
     element.addEventListener('dragstart', function (e) {
         const card = e.target.closest('[data-record-id]');
-        console.log('[tmDb] dragstart fired, target:', e.target, 'card found:', card);
         if (!card) return;
         isDragging = true;
         lastEnteredCol = null;
@@ -3674,7 +3698,6 @@ window.tmDb.initBoardDrag = function (element, dotNetRef) {
         dropHandled = false;
         e.dataTransfer.effectAllowed = 'move';
         e.dataTransfer.setData('text/plain', draggedRecordId);
-        console.log('[tmDb] dragstart: recordId=' + draggedRecordId + ' fromGroup=' + draggedFromGroup);
         dotNetRef.invokeMethodAsync('JsDragStart', draggedRecordId, draggedFromGroup);
     }, true);
 
@@ -3690,24 +3713,20 @@ window.tmDb.initBoardDrag = function (element, dotNetRef) {
         if (col && col !== lastEnteredCol) {
             lastEnteredCol = col;
             e.preventDefault();
-            console.log('[tmDb] dragenter col: groupValue=' + col.dataset.groupValue);
             dotNetRef.invokeMethodAsync('JsDragEnter', col.dataset.groupValue);
         }
     }, true);
 
     element.addEventListener('drop', function (e) {
         const col = e.target.closest('[data-group-value]');
-        console.log('[tmDb] drop fired, isDragging=' + isDragging + ', col:', col);
         if (!isDragging) return;
         isDragging = false;
         lastEnteredCol = null;
         dropHandled = true;
         e.preventDefault();
         if (col) {
-            console.log('[tmDb] drop: groupValue=' + col.dataset.groupValue);
             dotNetRef.invokeMethodAsync('JsDrop', col.dataset.groupValue, draggedRecordId, draggedFromGroup);
         } else {
-            console.log('[tmDb] drop: outside column, calling JsDragEnd');
             draggedRecordId = '';
             draggedFromGroup = '';
             dropHandled = false;
@@ -3716,7 +3735,6 @@ window.tmDb.initBoardDrag = function (element, dotNetRef) {
     }, true);
 
     element.addEventListener('dragend', function (e) {
-        console.log('[tmDb] dragend fired, isDragging was=' + isDragging);
         isDragging = false;
         lastEnteredCol = null;
         draggedRecordId = '';

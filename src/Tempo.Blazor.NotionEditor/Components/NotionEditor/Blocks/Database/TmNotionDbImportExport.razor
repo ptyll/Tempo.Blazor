@@ -71,9 +71,9 @@
                         <InputFile OnChange="HandleFileSelectedAsync"
                                    accept=".csv"
                                    class="tm-dbie__file-input"
-                                   id="tm-dbie-file"
+                                   id="@FileInputId"
                                    disabled="@_importLoading" />
-                        <label for="tm-dbie-file" class="tm-dbie__drop-label">
+                        <label for="@FileInputId" class="tm-dbie__drop-label">
                             @if (_importLoading)
                             {
                                 <span class="tm-dbie__spinner" aria-hidden="true"></span>
@@ -204,7 +204,7 @@
 
                     <div class="tm-dbie__export-options">
                         <label class="tm-dbie__export-opt @(_exportViewId is null ? "tm-dbie__export-opt--active" : "")">
-                            <input type="radio" name="tm-dbie-view" @onchange="() => _exportViewId = null" checked="@(_exportViewId is null)" />
+                            <input type="radio" name="@ExportViewName" @onchange="() => _exportViewId = null" checked="@(_exportViewId is null)" />
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                                 <path d="M3 9h18M3 15h18M9 3v18M15 3v18" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
                             </svg>
@@ -215,7 +215,7 @@
                         {
                             var v = view;
                             <label class="tm-dbie__export-opt @(_exportViewId == v.Id ? "tm-dbie__export-opt--active" : "")">
-                                <input type="radio" name="tm-dbie-view" @onchange="() => _exportViewId = v.Id" checked="@(_exportViewId == v.Id)" />
+                                <input type="radio" name="@ExportViewName" @onchange="() => _exportViewId = v.Id" checked="@(_exportViewId == v.Id)" />
                                 <span class="tm-dbie__view-icon" aria-hidden="true">@ViewIcon(v.Type)</span>
                                 @v.Name
                             </label>

@@ -416,6 +416,36 @@ public partial class TmNotionDatabaseBlock : ComponentBase
         return Task.CompletedTask;
     }
 
+    /// <summary>
+    /// Adapts the detail's record callback to the block's parameterless <c>OnOpenAsPage</c>.
+    /// The open record is already <c>_openRecord</c>, so the host does not need the record again.
+    /// </summary>
+    private Task HandleRecordOpenedAsPageAsync(IDatabaseRecord _)
+        => OnOpenAsPage.InvokeAsync();
+
+    private string? _deleteError;
+
+    private async Task HandleRecordDeletedAsync(IDatabaseRecord record)
+    {
+        if (Context.DatabaseProvider is null || ReadOnly) return;
+        try
+        {
+            await Context.DatabaseProvider.DeleteRecordAsync(_databaseId.ToString(), record.Id.ToString());
+        }
+        catch (Exception)
+        {
+            _deleteError = Loc["TmNotionDbRecordDetail_DeleteFailed"];
+            StateHasChanged();
+            throw;
+        }
+
+        _deleteError = null;
+        _records.RemoveAll(r => r.Id == record.Id);
+        if (_totalRecords > 0) _totalRecords--;
+        if (_openRecord?.Id == record.Id) _openRecord = null;
+        StateHasChanged();
+    }
+
     private async Task HandleRecordUpdatedAsync(IDatabaseRecord record)
     {
         if (Context.DatabaseProvider is null || ReadOnly) return;
@@ -573,6 +603,15 @@ public partial class TmNotionDatabaseBlock : ComponentBase
         _showImportExport = false;
         await LoadRecordsAsync();
         StateHasChanged();
+    }
+
+    private ElementReference _templateTrigger;
+
+    private async Task CloseTemplateMenuAsync()
+    {
+        _showTemplateMenu = false;
+        try { await _templateTrigger.FocusAsync(); }
+        catch (Exception ex) { Console.Error.WriteLine($"template menu focus return failed: {ex.Message}"); }
     }
 
     private void ToggleTemplateMenu()

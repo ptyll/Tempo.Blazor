@@ -1,17 +1,19 @@
 using System.Globalization;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
+using Tempo.Blazor.Components;
 using Tempo.Blazor.NotionEditor.Enums;
 using Tempo.Blazor.NotionEditor.Interfaces;
 using Tempo.Blazor.NotionEditor.Models;
 
 namespace Tempo.Blazor.Components.NotionEditor.Blocks.Database;
 
-public partial class TmNotionDbCalendarView : ComponentBase
+public partial class TmNotionDbCalendarView
 {
     private record CalendarCell(DateOnly Date, bool IsCurrentMonth, List<IDatabaseRecord> Records);
 
-    private const int MaxEventsPerCell = 4;
+    // Three chips fit the cell; the fourth event is the +N overflow popover.
+    private const int MaxEventsPerCell = 3;
 
     // ── Parameters ───────────────────────────────────────────────────────────
 
@@ -28,6 +30,9 @@ public partial class TmNotionDbCalendarView : ComponentBase
 
     private DateOnly         _currentMonth;
     private List<CalendarCell> _cells = [];
+
+    /// <summary>The day whose overflow list is open, or null when the list is closed.</summary>
+    private DateOnly? _overflowDate;
     private bool               _initialized;
 
     protected override void OnParametersSet()
@@ -137,6 +142,22 @@ public partial class TmNotionDbCalendarView : ComponentBase
 
     private static int OverflowCount(CalendarCell cell)
         => Math.Max(0, cell.Records.Count - MaxEventsPerCell);
+
+    private Task SetOverflowOpen(DateOnly date, bool open)
+    {
+        _overflowDate = open ? date : (_overflowDate == date ? null : _overflowDate);
+        return Task.CompletedTask;
+    }
+
+    private async Task SelectOverflowRecordAsync(IDatabaseRecord record)
+    {
+        _overflowDate = null;
+        await HandleEventClickAsync(record);
+    }
+
+    private CalendarCell? OverflowCell => _overflowDate is { } date
+        ? _cells.FirstOrDefault(c => c.Date == date)
+        : null;
 
     // ── Event color ───────────────────────────────────────────────────────────
 

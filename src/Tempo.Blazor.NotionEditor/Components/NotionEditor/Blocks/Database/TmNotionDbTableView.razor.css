@@ -128,6 +128,7 @@
 }
 
 .tm-dbt__th:hover .tm-dbt__resize-handle::after,
+.tm-dbt__resize-handle:focus-visible::after,
 .tm-dbt-wrap.tm-dbt--resizing .tm-dbt__resize-handle::after {
     background: var(--tm-accent, #3b82f6);
 }
@@ -419,6 +420,55 @@
 .tm-dbt__add-row-btn:hover {
     background: var(--tm-bg-2, #f3f4f6);
     color: var(--tm-text, #374151);
+}
+
+.tm-dbt__row-menu {
+    display: none;
+    margin-inline-start: var(--tm-space-1);
+}
+
+.tm-dbt__row-delete {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: var(--tm-space-6);
+    min-height: var(--tm-space-6);
+    padding: 0;
+    border: none;
+    background: transparent;
+    color: var(--tm-color-danger);
+    cursor: pointer;
+}
+
+.tm-dbt__row:hover .tm-dbt__row-menu,
+.tm-dbt__row:focus-within .tm-dbt__row-menu {
+    display: inline-flex;
+}
+
+@media (hover: none) {
+    .tm-dbt__row-menu {
+        display: inline-flex;
+    }
+}
+
+.tm-dbt__resize-hint {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+}
+
+.tm-dbt__row-delete ::deep .tm-dropdown-trigger {
+    min-width: var(--tm-touch-target, 24px);
+    min-height: var(--tm-touch-target, 24px);
+}
+
+.tm-dbt__footer {
+    padding: 6px 14px;
+    border-top: 1px solid var(--tm-border-color);
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-sm);
 }
 
 /* ── Empty state ────────────────────────────────────────────────────────── */

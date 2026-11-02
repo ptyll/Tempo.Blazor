@@ -2,7 +2,7 @@
 @using Tempo.Blazor.NotionEditor.Interfaces
 @using Tempo.Blazor.NotionEditor.Models
 
-<div class="tm-dbtm" role="dialog" aria-label="@Loc["TmNotionDbTemplateMenu_Title"]">
+<div class="tm-dbtm" role="dialog" aria-label="@Loc["TmNotionDbTemplateMenu_Title"]" @ref="_root" @onkeydown="OnKeyDown">
 
     @* ── Header ───────────────────────────────────────────────────────────── *@
     <div class="tm-dbtm__header">

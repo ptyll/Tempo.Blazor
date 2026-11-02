@@ -47,6 +47,12 @@
       "isRequired": false
     },
     {
+      "name": "OnRecordDeleted",
+      "type": "EventCallback<IDatabaseRecord>",
+      "description": "Raised after the user confirms deleting this record. The detail does not call the provider itself — the host owns the row list and the DeleteRecordAsync call.",
+      "isRequired": false
+    },
+    {
       "name": "OnOpenAsPage",
       "type": "EventCallback<IDatabaseRecord>",
       "isRequired": false

@@ -321,8 +321,10 @@ public class NotionDatabaseBasicE2ETests : WasmTestBase
         var firstRow = db.Locator(".tm-dbt__row").First;
         await firstRow.WaitForAsync(new LocatorWaitForOptions { Timeout = 8000 });
         var spacer = firstRow.Locator(".tm-dbt__cell--spacer");
-        await spacer.ScrollIntoViewIfNeededAsync();
-        await spacer.ClickAsync(new LocatorClickOptions { Force = true });
+        await spacer.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Attached, Timeout = 8000 });
+        // The spacer is past the horizontal scroll and under the sticky columns, so a pointer
+        // click never reaches it. Dispatch the click on the cell itself.
+        await spacer.EvaluateAsync("el => el.click()");
         await page.WaitForTimeoutAsync(800);
     }
 

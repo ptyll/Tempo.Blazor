@@ -1,0 +1,10 @@
+{
+  "kind": "Record",
+  "category": "Components",
+  "namespace": "Tempo.Blazor.Components.NotionEditor.UI",
+  "description": "Every user-visible string of the shared comment thread, resolved from one localization prefix.",
+  "packageId": "Tempo.Blazor.NotionEditor",
+  "sourcePath": "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/UI/TmNotionCommentLabels.cs",
+  "documentationStatus": "generated",
+  "itemName": "TmNotionCommentLabels"
+}

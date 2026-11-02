@@ -60,6 +60,35 @@ public class MockNotionDatabaseStore : INotionDatabaseProvider
                 _records[record.Id] = record;
             }
         }
+        else if (string.Equals(seed, "calendar-overflow", StringComparison.OrdinalIgnoreCase))
+        {
+            // Four events on one day of the current month, so the calendar's 3-chip cap
+            // renders the +N overflow popover no matter which month the test runs in.
+            var day = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 15, 12, 0, 0, DateTimeKind.Utc);
+            var names = new[] { "Overflow alpha", "Overflow beta", "Overflow gamma", "Overflow delta" };
+            for (var i = 0; i < names.Length; i++)
+            {
+                var record = new DatabaseRecord
+                {
+                    Id = Guid.NewGuid(),
+                    DatabaseId = DbId,
+                    CreatedAt = day,
+                    LastEditedAt = day,
+                    Fields = new Dictionary<string, object?>
+                    {
+                        [_fName.ToString()] = names[i],
+                        [_fStatus.ToString()] = "Not Started",
+                        [_fPriority.ToString()] = "Low",
+                        [_fDueDate.ToString()] = day,
+                        [_fTags.ToString()] = Array.Empty<string>(),
+                        [_fProgress.ToString()] = 0d,
+                        [_fDone.ToString()] = false,
+                        [_fAssignee.ToString()] = "alice",
+                    },
+                };
+                _records[record.Id] = record;
+            }
+        }
     }
 
     private void Reset()

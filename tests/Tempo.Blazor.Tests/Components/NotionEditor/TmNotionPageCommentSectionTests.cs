@@ -1,5 +1,6 @@
 using AngleSharp.Dom;
 using Bunit;
+using Tempo.Blazor.Components.Dropdowns;
 using FluentAssertions;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Rendering;
@@ -145,14 +146,14 @@ public sealed class TmNotionPageCommentSectionTests : LocalizationTestBase
 
         await SeedCommentAsync(cut);
 
-        var edit = FindEntryAction(cut, "Edit");
+        var edit = OpenMenuItem(cut, "notion-comment-edit-menu");
         var act = () => edit.KeyDown(new KeyboardEventArgs { Key = "Enter" });
         act.Should().Throw<MissingEventHandlerException>(
             "the actions group stops keydowns before the entry's Enter->reply handler");
         cut.FindAll(".tm-npcp__inline-reply").Should().BeEmpty();
 
         // The native click half of the sequence still does the button's own job.
-        FindEntryAction(cut, "Edit").Click();
+        OpenMenuItem(cut, "notion-comment-edit-menu");
         cut.FindAll(".tm-npcp__edit-wrap").Should().ContainSingle();
         cut.FindAll(".tm-npcp__inline-reply").Should().BeEmpty();
     }
@@ -173,11 +174,11 @@ public sealed class TmNotionPageCommentSectionTests : LocalizationTestBase
 
         await SeedCommentAsync(cut);
 
-        var delete = FindEntryAction(cut, "Delete");
+        var delete = OpenMenuItem(cut, "notion-comment-delete-menu");
         var act = () => delete.KeyDown(new KeyboardEventArgs { Key = "Enter" });
         act.Should().Throw<MissingEventHandlerException>();
 
-        FindEntryAction(cut, "Delete").Click();
+        OpenMenuItem(cut, "notion-comment-delete-menu");
         cut.FindAll(".tm-dialog").Should().ContainSingle("the delete click shows its confirm dialog");
         cut.FindAll(".tm-npcp__inline-reply").Should().BeEmpty();
     }
@@ -197,7 +198,7 @@ public sealed class TmNotionPageCommentSectionTests : LocalizationTestBase
             .Add(component => component.PageId, PageId.ToString("D")));
 
         await SeedCommentAsync(cut);
-        FindEntryAction(cut, "Edit").Click();
+        OpenMenuItem(cut, "notion-comment-edit-menu");
         cut.FindAll(".tm-npcp__edit-wrap").Should().ContainSingle();
 
         // Enter inside the edit input inserts a newline natively; the edit
@@ -246,9 +247,12 @@ public sealed class TmNotionPageCommentSectionTests : LocalizationTestBase
             cut.Find(".tm-npcp__entry-text").TextContent.Should().Contain("Page comment"));
     }
 
-    private static IElement FindEntryAction(IRenderedComponent<PageCommentHost> cut, string titlePart)
-        => cut.FindAll(".tm-npcp__entry-action")
-              .First(e => e.GetAttribute("title")?.Contains(titlePart) == true);
+    private static IElement OpenMenuItem(IRenderedComponent<PageCommentHost> cut, string testId)
+    {
+        var value = testId.Contains("delete") ? "delete" : "edit";
+        cut.InvokeAsync(() => cut.FindComponent<TmDropdown>().Instance.SelectItemAsync(value)).Wait();
+        return cut.Find("[data-testid=notion-comment-entry-menu]");
+    }
 
     public sealed class PageCommentHost : ComponentBase
     {

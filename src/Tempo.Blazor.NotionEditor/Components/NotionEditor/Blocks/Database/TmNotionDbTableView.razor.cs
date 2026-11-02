@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
+using Microsoft.JSInterop;
+using Tempo.Blazor.Components;
 using Tempo.Blazor.NotionEditor.Enums;
 using Tempo.Blazor.NotionEditor.Interfaces;
 using Tempo.Blazor.NotionEditor.Models;
@@ -8,8 +10,16 @@ namespace Tempo.Blazor.Components.NotionEditor.Blocks.Database;
 
 public enum TableRowHeight { Short, Medium, Tall }
 
-public partial class TmNotionDbTableView : ComponentBase
+public partial class TmNotionDbTableView : IAsyncDisposable
 {
+    [Inject] private IJSRuntime JS { get; set; } = default!;
+
+    private ElementReference _tableRef;
+    private IJSObjectReference? _resizeSession;
+    private DotNetObjectReference<TmNotionDbTableView>? _dotNetRef;
+    private readonly string _resizeHintId = $"tm-dbt-resize-hint-{Guid.NewGuid():N}";
+    private string ResizeHintId => _resizeHintId;
+
     // ── Parameters ───────────────────────────────────────────────────────────
 
     [Parameter, EditorRequired] public IReadOnlyList<IDatabaseField>  Fields  { get; set; } = [];
@@ -23,6 +33,9 @@ public partial class TmNotionDbTableView : ComponentBase
     [Parameter] public EventCallback                                   OnNewField      { get; set; }
     [Parameter] public EventCallback<IDatabaseRecord>                  OnRecordClicked { get; set; }
     [Parameter] public EventCallback<(Guid FieldId, int Width)>        OnFieldResized  { get; set; }
+
+    /// <summary>Raised after the user confirms deleting a row. The block owns the provider call.</summary>
+    [Parameter] public EventCallback<IDatabaseRecord>                  OnRecordDeleted { get; set; }
     [Parameter] public EventCallback<(int FromIndex, int ToIndex)>     OnFieldMoved    { get; set; }
     [Parameter] public EventCallback<IDatabaseField>                   OnFieldEdit     { get; set; }
     [Parameter] public IDatabaseField?                                 GroupByField    { get; set; }
@@ -106,40 +119,102 @@ public partial class TmNotionDbTableView : ComponentBase
     }
 
     // ── Column resize ─────────────────────────────────────────────────────────
+    // The drag writes the width to the header cell in JS (notion-db-column-resize.js, which
+    // imports the shared pointer-drag helper). Blazor state changes only when the gesture ends,
+    // so a pointermove never re-renders the table. Alt+Arrow on the handle is the keyboard path.
 
-    private Guid?  _resizingFieldId;
-    private double _resizeStartX;
-    private int    _resizeStartWidth;
     private readonly Dictionary<Guid, int> _columnWidths = new();
 
-    private void StartResize(PointerEventArgs e, IDatabaseField field)
+    private IDatabaseRecord? _pendingDelete;
+
+    private void AskDeleteRow(IDatabaseRecord record) => _pendingDelete = record;
+
+    private Task OnRowMenuAsync(IDatabaseRecord record, string value)
     {
-        _resizingFieldId  = field.Id;
-        _resizeStartX     = e.ClientX;
-        _resizeStartWidth = GetColumnWidth(field);
+        if (value == "delete") AskDeleteRow(record);
+        return Task.CompletedTask;
     }
 
-    private void OnResizeMove(PointerEventArgs e)
+    private Task ConfirmDeleteRowAsync(bool? confirmed)
     {
-        if (_resizingFieldId is null) return;
-        var delta    = (int)(e.ClientX - _resizeStartX);
-        var newWidth = Math.Max(60, _resizeStartWidth + delta);
-        _columnWidths[_resizingFieldId.Value] = newWidth;
+        var record = _pendingDelete;
+        _pendingDelete = null;
+        return confirmed == true && record is not null
+            ? OnRecordDeleted.InvokeAsync(record)
+            : Task.CompletedTask;
     }
 
-    private async Task StopResizeAsync(PointerEventArgs e)
+    private bool _resizeWanted;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (_resizingFieldId is null) return;
-        var fieldId = _resizingFieldId.Value;
-        _resizingFieldId = null;
-        var width = _columnWidths.TryGetValue(fieldId, out var w) ? w : 140;
-        await OnFieldResized.InvokeAsync((fieldId, width));
+        // Delegated attach listens on the table root, so later fields and a ReadOnly flip that
+        // mounts handles after the first render still resize. Re-attach only when the want-state
+        // changes (ReadOnly), not on every render.
+        var want = !ReadOnly;
+        if (want == _resizeWanted && _resizeSession is not null) return;
+        if (!want)
+        {
+            await DetachResizeAsync();
+            _resizeWanted = false;
+            return;
+        }
+
+        _dotNetRef ??= DotNetObjectReference.Create(this);
+        try
+        {
+            _resizeSession = await JS.InvokeAsync<IJSObjectReference>(
+                "tmDb.attachColumnResize", _tableRef, _dotNetRef);
+            _resizeWanted = true;
+        }
+        catch (Exception ex)
+        {
+            _resizeWanted = false;
+            Console.Error.WriteLine($"tmDb.attachColumnResize failed: {ex.Message}");
+        }
+    }
+
+    private async Task DetachResizeAsync()
+    {
+        if (_resizeSession is null) return;
+        var session = _resizeSession;
+        _resizeSession = null;
+        try { await session.InvokeVoidAsync("detach"); }
+        catch (JSDisconnectedException) { }
+        catch (Exception ex) { Console.Error.WriteLine($"column resize detach failed: {ex.Message}"); }
+        try { await session.DisposeAsync(); }
+        catch (JSDisconnectedException) { }
+    }
+
+    /// <summary>JS callback. Commits a finished resize — never called per pointermove.</summary>
+    [JSInvokable]
+    public Task OnColumnResized(string fieldId, int width)
+    {
+        if (!Guid.TryParse(fieldId, out var id)) return Task.CompletedTask;
+        _columnWidths[id] = Math.Max(60, width);
+        return OnFieldResized.InvokeAsync((id, _columnWidths[id]));
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        try { await DetachResizeAsync(); }
+        catch (JSDisconnectedException) { }
+        catch (Exception ex) { Console.Error.WriteLine($"column resize dispose failed: {ex.Message}"); }
+        _dotNetRef?.Dispose();
     }
 
     // ── Column drag reorder ───────────────────────────────────────────────────
 
     private int _dragFromFieldIndex = -1;
     private int _dragOverFieldIndex = -1;
+
+    private void OnHeaderDragStart(DragEventArgs e, int fieldIndex)
+    {
+        // The handle is draggable="false" and preventDefaults its own dragstart. A bubbled
+        // dragstart whose type we cannot see still starts a reorder — the handle's own
+        // handler stops that. This path is the column-header reorder.
+        OnDragStart(fieldIndex);
+    }
 
     private void OnDragStart(int fieldIndex) => _dragFromFieldIndex = fieldIndex;
 

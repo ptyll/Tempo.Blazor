@@ -36,6 +36,7 @@
             <div class="tm-dblv__row"
                  role="listitem"
                  tabindex="0"
+                 data-testid="notion-db-list-row"
                  @key="rec.Id"
                  @onclick="() => HandleRowClickAsync(rec)"
                  @onkeydown="e => HandleRowKeyAsync(e, rec)">
