@@ -1,0 +1,21 @@
+{
+  "kind": "Enum",
+  "category": "Components",
+  "namespace": "Tempo.Blazor.Components.Layout",
+  "description": "How TmSidebar compares an item's Href with the current location when AutoActive is on. Exact marks only the page itself; Prefix also marks a parent entry for its sub-pages, on a segment boundary — so '/settings' matches '/settings/profile' but never '/settings-old'. The root '/' entry stays exact in both modes.",
+  "packageId": "Tempo.Blazor",
+  "sourcePath": "src/Tempo.Blazor/Components/Layout/SidebarNavMatchMode.cs",
+  "documentationStatus": "authored",
+  "itemName": "SidebarNavMatchMode",
+  "members": [
+    {
+      "name": "Exact",
+      "description": "The item is active only when its path equals the current path — '/settings' is NOT active on '/settings/profile'. The default, because it never lights up two entries for one page."
+    },
+    {
+      "name": "Prefix",
+      "description": "The item is active when its path equals the current path OR the current path continues it ('/settings' is active on '/settings/profile'). Use it for a section entry that owns its sub-pages; a segment boundary is respected, so '/settings' never matches '/settings-old'."
+    }
+  ],
+  "usageExample": "<TmSidebar Sections=\"sections\" AutoActive=\"true\" AutoActiveMatchMode=\"SidebarNavMatchMode.Prefix\" />"
+}

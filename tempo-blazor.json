@@ -8382,6 +8382,27 @@
       ]
     },
     {
+      "itemName": "SidebarNavMatchMode",
+      "kind": "Enum",
+      "category": "Components",
+      "namespace": "Tempo.Blazor.Components.Layout",
+      "description": "How TmSidebar compares an item's Href with the current location when AutoActive is on. Exact marks only the page itself; Prefix also marks a parent entry for its sub-pages, on a segment boundary — so '/settings' matches '/settings/profile' but never '/settings-old'. The root '/' entry stays exact in both modes.",
+      "packageId": "Tempo.Blazor",
+      "sourcePath": "src/Tempo.Blazor/Components/Layout/SidebarNavMatchMode.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Exact",
+          "description": "The item is active only when its path equals the current path — '/settings' is NOT active on '/settings/profile'. The default, because it never lights up two entries for one page."
+        },
+        {
+          "name": "Prefix",
+          "description": "The item is active when its path equals the current path OR the current path continues it ('/settings' is active on '/settings/profile'). Use it for a section entry that owns its sub-pages; a segment boundary is respected, so '/settings' never matches '/settings-old'."
+        }
+      ],
+      "usageExample": "<TmSidebar Sections=\"sections\" AutoActive=\"true\" AutoActiveMatchMode=\"SidebarNavMatchMode.Prefix\" />"
+    },
+    {
       "itemName": "SidePanelPresentation",
       "kind": "Enum",
       "category": "Components",
@@ -22162,7 +22183,7 @@
       "kind": "Component",
       "category": "Layout",
       "namespace": "Tempo.Blazor.Components.Layout",
-      "description": "Collapsible sidebar navigation with icon-only collapsed state, nested child items, badge counts, and optional header/footer slots.",
+      "description": "Collapsible sidebar navigation with icon-only collapsed state, optional named sections, nested child items, badge counts, a current-page marker and optional header/footer slots.",
       "packageId": "Tempo.Blazor",
       "sourcePath": "src/Tempo.Blazor/Components/Layout/TmSidebar.razor",
       "documentationStatus": "merged",
@@ -22171,6 +22192,19 @@
         "@using Tempo.Blazor.Interfaces"
       ],
       "parameters": [
+        {
+          "name": "AutoActive",
+          "type": "bool",
+          "isRequired": false,
+          "description": "When true, an item is shown as the current page when its Href matches the current location, in addition to its own IsActive. Default false: the host decides, exactly as before."
+        },
+        {
+          "name": "AutoActiveMatchMode",
+          "type": "SidebarNavMatchMode",
+          "isRequired": false,
+          "default": "SidebarNavMatchMode.Exact",
+          "description": "How AutoActive compares paths. SidebarNavMatchMode.Exact (default) marks only the page itself; SidebarNavMatchMode.Prefix also marks a parent entry for its sub-pages on a segment boundary (the root \"/\" entry stays exact in both modes)."
+        },
         {
           "name": "Class",
           "type": "string?",
@@ -22182,6 +22216,13 @@
           "type": "bool",
           "isRequired": false,
           "description": "Whether the sidebar is in collapsed (icon-only) state."
+        },
+        {
+          "name": "CollapseTooltips",
+          "type": "bool",
+          "isRequired": false,
+          "default": "true",
+          "description": "When true (the default) a COLLAPSED item renders a TmTooltip with its label, so the icon-only rail still tells a sighted user what an icon means. The accessible name is not optional: the link keeps its aria-label even with this turned off. Turning it off also keeps the collapsed nav a vertical scroll container, which a tooltip would need to escape."
         },
         {
           "name": "Footer",
@@ -22200,19 +22241,32 @@
           "type": "IReadOnlyList<ISidebarNavItem>",
           "isRequired": false,
           "default": "[]",
-          "description": "Navigation items to display."
+          "description": "Navigation items rendered as one ungrouped list, before any <see cref=\"Sections\"/>."
+        },
+        {
+          "name": "NavLabel",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Accessible name of the navigation landmark. Null (the default) uses the localized \"Sidebar navigation\" — a host with more than one navigation landmark names this one after its purpose (\"Product navigation\")."
         },
         {
           "name": "OnToggle",
           "type": "EventCallback",
           "isRequired": false,
           "description": "Fires when the toggle button is clicked."
+        },
+        {
+          "name": "Sections",
+          "type": "IReadOnlyList<SidebarNavSection>?",
+          "isRequired": false,
+          "description": "Optional named groups of navigation items, each rendered under its own visible heading (h2) that also names the group's list through aria-labelledby. Null (the default) keeps the single ungrouped list, so existing markup is unchanged."
         }
       ],
       "cssClasses": [
         "tm-sidebar",
         "tm-sidebar-collapsed",
         "tm-sidebar-expanded",
+        "tm-sidebar-tooltips",
         "tm-sidebar-header",
         "tm-sidebar-toggle",
         "tm-sidebar-nav",
@@ -22224,19 +22278,35 @@
         "tm-sidebar-nav-label",
         "tm-sidebar-nav-children",
         "tm-sidebar-badge",
-        "tm-sidebar-footer"
+        "tm-sidebar-section",
+        "tm-sidebar-section-title",
+        "tm-sidebar-footer",
+        "tm-sidebar-nav-tooltip"
       ],
       "usedAbstractions": [
         {
           "name": "SidebarNavItem",
           "description": "Model representing a navigation item in the sidebar",
           "parameter": "Items"
+        },
+        {
+          "name": "SidebarNavSection",
+          "description": "Model representing one named group of navigation items",
+          "parameter": "Sections"
         }
       ],
       "examples": [
         {
           "title": "Basic sidebar with navigation items",
           "code": "<TmSidebar Items=\"navItems\" Collapsed=\"sidebarCollapsed\" OnToggle=\"() => sidebarCollapsed = !sidebarCollapsed\">\n    <Header>\n        <img src=\"logo.svg\" alt=\"Logo\" />\n    </Header>\n</TmSidebar>"
+        },
+        {
+          "title": "Sectioned sidebar that follows the current page",
+          "code": "<TmSidebar Sections=\"sections\"\n           NavLabel=\"Product navigation\"\n           AutoActive=\"true\"\n           AutoActiveMatchMode=\"SidebarNavMatchMode.Prefix\"\n           Collapsed=\"railCollapsed\"\n           OnToggle=\"ToggleRail\" />"
+        },
+        {
+          "title": "Icon-only rail without tooltips (keeps the vertical scroller)",
+          "code": "<TmSidebar Items=\"navItems\" Collapsed=\"true\" CollapseTooltips=\"false\" />"
         }
       ]
     },
@@ -22573,7 +22643,7 @@
       "kind": "Component",
       "category": "Layout",
       "namespace": "Tempo.Blazor.Components.Layout",
-      "description": "Application top bar with brand area, center content slot, action buttons, command palette trigger, and user avatar menu with sign-out support.",
+      "description": "Application top bar with brand area, center content slot, action buttons, an opt-in navigation disclosure button, a command palette trigger with its key chord, and an account menu (APG menu with host entries and a localized sign out).",
       "packageId": "Tempo.Blazor",
       "sourcePath": "src/Tempo.Blazor/Components/Layout/TmTopBar.razor",
       "documentationStatus": "merged",
@@ -22613,6 +22683,33 @@
           "description": "Additional CSS class for the root element."
         },
         {
+          "name": "CommandPaletteKeyShortcuts",
+          "type": "string?",
+          "isRequired": false,
+          "default": "\"Control+K Meta+K\"",
+          "description": "The aria-keyshortcuts value of the command palette trigger — the chord the host actually binds, in the space-separated ARIA syntax. Defaults to \"Control+K Meta+K\", the chord the default hint documents; a host that rebinds the palette passes its own value here so the announcement cannot contradict the printed hint. Null or empty omits the attribute."
+        },
+        {
+          "name": "CommandPaletteShortcut",
+          "type": "string?",
+          "isRequired": false,
+          "default": "\"Ctrl+K\"",
+          "description": "The key chord printed in the command palette trigger (\"Ctrl+K\"). It is a label, not a keybinding — the host binds the shortcut. An empty string hides the hint and keeps the localized accessible name; what the trigger announces to assistive technology is CommandPaletteKeyShortcuts."
+        },
+        {
+          "name": "MenuControlsId",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Id of the element the menu button controls (the host's navigation drawer), reported as aria-controls. Null omits the attribute."
+        },
+        {
+          "name": "MenuExpanded",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Whether the navigation the menu button toggles is currently open — reported as aria-expanded on the button. The host owns the state (this component never changes it).",
+          "default": "false"
+        },
+        {
           "name": "OnCommandPalette",
           "type": "EventCallback",
           "isRequired": false,
@@ -22622,13 +22719,38 @@
           "name": "OnLogout",
           "type": "EventCallback",
           "isRequired": false,
-          "description": "Fires when the user clicks \"Sign out\"."
+          "description": "Fires when the user clicks the sign-out entry of the account menu."
+        },
+        {
+          "name": "OnMenuToggle",
+          "type": "EventCallback",
+          "isRequired": false,
+          "description": "Fires when the navigation disclosure button is clicked."
+        },
+        {
+          "name": "ShowMenuButton",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Renders the navigation disclosure button that opens the host's navigation drawer (mobile navigation, a collapsible rail). Default false: no button, the bar is unchanged.",
+          "default": "false"
         },
         {
           "name": "User",
           "type": "IUserInfo?",
           "isRequired": false,
           "description": "Currently logged-in user. When set, renders user avatar and menu."
+        },
+        {
+          "name": "UserMenuItems",
+          "type": "IReadOnlyList<UserMenuItem>?",
+          "isRequired": false,
+          "description": "Entries of the account menu, above the built-in sign out. A UserMenuItem with Href renders as a link, one with OnClick as a command, Separator as a group separator and IsDanger in the destructive style. Null renders no host entries."
+        },
+        {
+          "name": "UserMenuLabel",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Accessible name of the account button and of its menu. Null (the default) uses the localized \"User menu\"; a host with more than one account surface names this one (\"Signed-in account\")."
         }
       ],
       "cssClasses": [
@@ -22637,6 +22759,7 @@
         "tm-topbar-brand-title",
         "tm-topbar-center",
         "tm-topbar-actions",
+        "tm-topbar-menu-btn",
         "tm-topbar-search-trigger",
         "tm-topbar-search-hint",
         "tm-topbar-user",
@@ -22644,6 +22767,8 @@
         "tm-topbar-user-name",
         "tm-topbar-user-menu",
         "tm-topbar-user-menu-item",
+        "tm-topbar-user-menu-item-danger",
+        "tm-topbar-user-menu-separator",
         "tm-topbar-user-menu-logout",
         "tm-topbar-icon-btn"
       ],
@@ -22655,6 +22780,22 @@
         {
           "title": "Top bar with custom center content",
           "code": "<TmTopBar BrandTitle=\"Admin\">\n    <CenterContent>\n        <TmBreadcrumbs Items=\"breadcrumbs\" />\n    </CenterContent>\n    <ActionsContent>\n        <TmNotificationBell CurrentUserId=\"current-user\" />\n    </ActionsContent>\n</TmTopBar>"
+        },
+        {
+          "title": "Top bar with a navigation drawer toggle and an account menu",
+          "code": "<TmTopBar BrandTitle=\"Admin\"\n          ShowMenuButton=\"true\"\n          MenuExpanded=\"drawerOpen\"\n          MenuControlsId=\"app-drawer\"\n          OnMenuToggle=\"() => drawerOpen = !drawerOpen\"\n          User=\"currentUser\"\n          UserMenuItems=\"accountItems\"\n          OnLogout=\"HandleLogout\" />"
+        }
+      ],
+      "usedAbstractions": [
+        {
+          "name": "IUserInfo",
+          "description": "Interface describing the signed-in user",
+          "parameter": "User"
+        },
+        {
+          "name": "UserMenuItem",
+          "description": "Model representing one entry of the account menu",
+          "parameter": "UserMenuItems"
         }
       ]
     },
@@ -32394,11 +32535,11 @@
     }
   ],
   "summary": {
-    "itemCount": 414,
-    "manualItemCount": 414,
-    "generatedItemCount": 406,
+    "itemCount": 415,
+    "manualItemCount": 415,
+    "generatedItemCount": 407,
     "generatedOnlyItemCount": 0,
     "componentCount": 224,
-    "publicApiTypeCount": 182
+    "publicApiTypeCount": 183
   }
 }

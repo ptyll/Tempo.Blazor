@@ -2,7 +2,7 @@
   "itemName": "TmSidebar",
   "kind": "Component",
   "category": "Layout",
-  "description": "Collapsible sidebar navigation with icon-only collapsed state, nested child items, badge counts, and optional header/footer slots.",
+  "description": "Collapsible sidebar navigation with icon-only collapsed state, optional named sections, nested child items, badge counts, a current-page marker and optional header/footer slots.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Layout",
     "@using Tempo.Blazor.Interfaces"
@@ -13,7 +13,13 @@
       "type": "IReadOnlyList<ISidebarNavItem>",
       "isRequired": false,
       "default": "[]",
-      "description": "Navigation items to display."
+      "description": "Navigation items rendered as one ungrouped list, before any <see cref=\"Sections\"/>."
+    },
+    {
+      "name": "Sections",
+      "type": "IReadOnlyList<SidebarNavSection>?",
+      "isRequired": false,
+      "description": "Optional named groups of navigation items, each rendered under its own visible heading (h2) that also names the group's list through aria-labelledby. Null (the default) keeps the single ungrouped list, so existing markup is unchanged."
     },
     {
       "name": "Collapsed",
@@ -26,6 +32,32 @@
       "type": "EventCallback",
       "isRequired": false,
       "description": "Fires when the toggle button is clicked."
+    },
+    {
+      "name": "NavLabel",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Accessible name of the navigation landmark. Null (the default) uses the localized \"Sidebar navigation\" — a host with more than one navigation landmark names this one after its purpose (\"Product navigation\")."
+    },
+    {
+      "name": "AutoActive",
+      "type": "bool",
+      "isRequired": false,
+      "description": "When true, an item is shown as the current page when its Href matches the current location, in addition to its own IsActive. Default false: the host decides, exactly as before."
+    },
+    {
+      "name": "AutoActiveMatchMode",
+      "type": "SidebarNavMatchMode",
+      "isRequired": false,
+      "default": "Exact",
+      "description": "How AutoActive compares paths. SidebarNavMatchMode.Exact (default) marks only the page itself; SidebarNavMatchMode.Prefix also marks a parent entry for its sub-pages on a segment boundary (the root \"/\" entry stays exact in both modes)."
+    },
+    {
+      "name": "CollapseTooltips",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "When true (the default) a COLLAPSED item renders a TmTooltip with its label, so the icon-only rail still tells a sighted user what an icon means. The accessible name is not optional: the link keeps its aria-label even with this turned off. Turning it off also keeps the collapsed nav a vertical scroll container, which a tooltip would need to escape."
     },
     {
       "name": "Header",
@@ -50,6 +82,7 @@
     "tm-sidebar",
     "tm-sidebar-collapsed",
     "tm-sidebar-expanded",
+    "tm-sidebar-tooltips",
     "tm-sidebar-header",
     "tm-sidebar-toggle",
     "tm-sidebar-nav",
@@ -61,19 +94,35 @@
     "tm-sidebar-nav-label",
     "tm-sidebar-nav-children",
     "tm-sidebar-badge",
-    "tm-sidebar-footer"
+    "tm-sidebar-section",
+    "tm-sidebar-section-title",
+    "tm-sidebar-footer",
+    "tm-sidebar-nav-tooltip"
   ],
   "usedAbstractions": [
     {
       "name": "SidebarNavItem",
       "description": "Model representing a navigation item in the sidebar",
       "parameter": "Items"
+    },
+    {
+      "name": "SidebarNavSection",
+      "description": "Model representing one named group of navigation items",
+      "parameter": "Sections"
     }
   ],
   "examples": [
     {
       "title": "Basic sidebar with navigation items",
       "code": "<TmSidebar Items=\"navItems\" Collapsed=\"sidebarCollapsed\" OnToggle=\"() => sidebarCollapsed = !sidebarCollapsed\">\n    <Header>\n        <img src=\"logo.svg\" alt=\"Logo\" />\n    </Header>\n</TmSidebar>"
+    },
+    {
+      "title": "Sectioned sidebar that follows the current page",
+      "code": "<TmSidebar Sections=\"sections\"\n           NavLabel=\"Product navigation\"\n           AutoActive=\"true\"\n           AutoActiveMatchMode=\"SidebarNavMatchMode.Prefix\"\n           Collapsed=\"railCollapsed\"\n           OnToggle=\"ToggleRail\" />"
+    },
+    {
+      "title": "Icon-only rail without tooltips (keeps the vertical scroller)",
+      "code": "<TmSidebar Items=\"navItems\" Collapsed=\"true\" CollapseTooltips=\"false\" />"
     }
   ]
 }

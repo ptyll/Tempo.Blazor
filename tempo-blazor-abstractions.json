@@ -18891,6 +18891,51 @@
       ]
     },
     {
+      "itemName": "SidebarNavSection",
+      "kind": "Record",
+      "category": "Models",
+      "namespace": "Tempo.Blazor.Models",
+      "description": "A named group of navigation items, rendered by TmSidebar under one visible heading that also names the group's list through aria-labelledby.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Models/SidebarNavSection.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Items",
+          "kind": "Property",
+          "type": "IReadOnlyList<ISidebarNavItem>",
+          "description": "Items of the group, in display order."
+        },
+        {
+          "name": "Title",
+          "kind": "Property",
+          "type": "string",
+          "description": "Heading text of the group. Rendered as the section heading and used as the accessible name of the group's list — keep it short (\"Main\", \"Administration\")."
+        }
+      ],
+      "properties": [
+        {
+          "name": "Title",
+          "type": "string",
+          "isRequired": true,
+          "description": "Heading text of the group. Rendered as the section heading and used as the accessible name of the group's list — keep it short (\"Main\", \"Administration\")."
+        },
+        {
+          "name": "Items",
+          "type": "IReadOnlyList<ISidebarNavItem>",
+          "isRequired": false,
+          "default": "[]",
+          "description": "Items of the group, in display order."
+        }
+      ],
+      "examples": [
+        {
+          "title": "Two navigation groups",
+          "code": "var sections = new List<SidebarNavSection>\n{\n    new(\"Main\", new List<ISidebarNavItem>\n    {\n        new SidebarNavItem { Id = \"home\", Label = \"Dashboard\", Icon = \"home\", Href = \"/\" },\n        new SidebarNavItem { Id = \"orders\", Label = \"Orders\", Icon = \"package\", Href = \"/orders\" }\n    }),\n    new(\"Administration\", new List<ISidebarNavItem>\n    {\n        new SidebarNavItem { Id = \"users\", Label = \"Users\", Icon = \"users\", Href = \"/users\" }\n    })\n};\n\n<TmSidebar Sections=\"sections\" AutoActive=\"true\" />"
+        }
+      ]
+    },
+    {
       "itemName": "SigningAuditTrail",
       "kind": "Class",
       "category": "Models",
@@ -21222,6 +21267,124 @@
         {
           "name": "TMetadata",
           "description": "Generic type parameter TMetadata."
+        }
+      ]
+    },
+    {
+      "itemName": "UserMenuItem",
+      "kind": "Record",
+      "category": "Models",
+      "namespace": "Tempo.Blazor.Models",
+      "description": "One entry of a user menu (the account dropdown of TmTopBar). An entry is a command (Href for navigation, OnClick otherwise), a destructive command (IsDanger) or a separator between groups (Separator).",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Models/UserMenuItem.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "CreateSeparator",
+          "kind": "Method",
+          "type": "UserMenuItem",
+          "description": "Creates a separator between groups of entries.",
+          "parameters": [
+            {
+              "name": "id",
+              "type": "string"
+            }
+          ]
+        },
+        {
+          "name": "Href",
+          "kind": "Property",
+          "type": "string?",
+          "description": "Navigation URL. When set the entry renders as a link; otherwise it is a button that raises OnClick."
+        },
+        {
+          "name": "Icon",
+          "kind": "Property",
+          "type": "string?",
+          "description": "Optional icon name from IconNames."
+        },
+        {
+          "name": "Id",
+          "kind": "Property",
+          "type": "string",
+          "description": "Stable identifier of the entry, unique inside one menu (used for test ids and @key)."
+        },
+        {
+          "name": "IsDanger",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Renders the entry in the destructive style (a red label) — a signal that must not be the ONLY cue for screen readers; the label has to be self-explanatory."
+        },
+        {
+          "name": "Label",
+          "kind": "Property",
+          "type": "string",
+          "description": "Visible label; also the accessible name of the entry."
+        },
+        {
+          "name": "OnClick",
+          "kind": "Property",
+          "type": "Func<Task>?",
+          "description": "Callback of a command entry (ignored when Href is set). The menu closes BEFORE the callback runs and awaits it. A callback that changes the HOST's own state is responsible for the render (`StateHasChanged()`) — it is a delegate invoked by a child component, not a EventCallback owned by the host, so no automatic re-render follows. A callback that only calls a service (navigation, a toast, a save) needs nothing."
+        },
+        {
+          "name": "Separator",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Renders the entry as a separator line instead of a command; Label is ignored."
+        }
+      ],
+      "properties": [
+        {
+          "name": "Id",
+          "type": "string",
+          "isRequired": true,
+          "description": "Stable identifier of the entry, unique inside one menu (used for test ids and @key)."
+        },
+        {
+          "name": "Label",
+          "type": "string",
+          "isRequired": true,
+          "description": "Visible label; also the accessible name of the entry."
+        },
+        {
+          "name": "Icon",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Optional icon name from IconNames."
+        },
+        {
+          "name": "Href",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Navigation URL. When set the entry renders as a link; otherwise it is a button that raises OnClick."
+        },
+        {
+          "name": "OnClick",
+          "type": "Func<Task>?",
+          "isRequired": false,
+          "description": "Callback of a command entry (ignored when Href is set). The menu closes BEFORE the callback runs and awaits it. A callback that changes the HOST's own state is responsible for the render (StateHasChanged()) — it is a delegate invoked by a child component, not an EventCallback owned by the host, so no automatic re-render follows. A callback that only calls a service (navigation, a toast, a save) needs nothing."
+        },
+        {
+          "name": "IsDanger",
+          "type": "bool",
+          "isRequired": false,
+          "default": "false",
+          "description": "Renders the entry in the destructive style (a red label) — a signal that must not be the ONLY cue for screen readers; the label has to be self-explanatory."
+        },
+        {
+          "name": "Separator",
+          "type": "bool",
+          "isRequired": false,
+          "default": "false",
+          "description": "Renders the entry as a separator line instead of a command; Label is ignored."
+        }
+      ],
+      "examples": [
+        {
+          "title": "Account menu with a destructive entry",
+          "code": "var accountItems = new List<UserMenuItem>\n{\n    new(\"profile\", \"Your profile\", \"user\", \"/profile\"),\n    new(\"settings\", \"Account settings\", \"settings\", \"/settings\"),\n    UserMenuItem.CreateSeparator(\"sep-destructive\"),\n    new(\"delete\", \"Delete account\", \"trash\", onClick: DeleteAccountAsync, isDanger: true)\n};\n\n<TmTopBar User=\"currentUser\" UserMenuItems=\"accountItems\" OnLogout=\"HandleLogout\" />"
         }
       ]
     },
@@ -39332,11 +39495,11 @@
   ],
   "libraryExamples": [],
   "summary": {
-    "itemCount": 1568,
-    "manualItemCount": 1568,
-    "generatedItemCount": 1551,
+    "itemCount": 1570,
+    "manualItemCount": 1570,
+    "generatedItemCount": 1553,
     "generatedOnlyItemCount": 0,
     "componentCount": 0,
-    "publicApiTypeCount": 1551
+    "publicApiTypeCount": 1553
   }
 }

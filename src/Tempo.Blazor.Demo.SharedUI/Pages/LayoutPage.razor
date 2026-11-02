@@ -85,8 +85,10 @@
         </div>
         
         <!-- Demo Sidebar -->
-        <div class="mt-4 border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden" style="height: 300px;">
+        <div class="mt-4 border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden" style="height: 300px;"
+             data-testid="sidebar-basic-demo">
             <TmSidebar Items="_sidebarItems"
+                      NavLabel="Component navigation"
                       Collapsed="_sidebarCollapsed"
                       OnToggle="() => _sidebarCollapsed = !_sidebarCollapsed"
                       Class="h-full">
@@ -101,6 +103,50 @@
                 </Header>
             </TmSidebar>
         </div>
+
+        <div class="mt-6">
+            <p class="text-sm text-slate-500 mb-2">
+                Sectioned rail with <code class="px-1.5 py-0.5 bg-slate-200 dark:bg-slate-700 rounded">Sections</code>
+                (each group is named by its heading) and
+                <code class="px-1.5 py-0.5 bg-slate-200 dark:bg-slate-700 rounded">AutoActive</code>
+                — the entry matching the current page reports aria-current automatically.
+            </p>
+            <div class="flex gap-4 mb-3">
+                <TmButton Variant="ButtonVariant.Primary" OnClick="() => _sectionedSidebarCollapsed = false">
+                    Expand
+                </TmButton>
+                <TmButton Variant="ButtonVariant.Secondary" OnClick="() => _sectionedSidebarCollapsed = true">
+                    Collapse (icon rail + tooltips)
+                </TmButton>
+            </div>
+            <div class="border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden" style="height: 300px;"
+                 data-testid="sidebar-sectioned-demo">
+                <TmSidebar Sections="_sidebarSections"
+                          TestIdPrefix="sectioned"
+                          NavLabel="Sectioned navigation"
+                          AutoActive="true"
+                          AutoActiveMatchMode="SidebarNavMatchMode.Prefix"
+                          Collapsed="_sectionedSidebarCollapsed"
+                          OnToggle="() => _sectionedSidebarCollapsed = !_sectionedSidebarCollapsed"
+                          Class="h-full">
+                    <Header>
+                        <div class="flex items-center gap-2 px-4 py-3 border-b border-slate-200 dark:border-slate-700">
+                            <TmIcon Name="layout" />
+                            @if (!_sectionedSidebarCollapsed)
+                            {
+                                <span class="font-semibold">Sectioned rail</span>
+                            }
+                        </div>
+                    </Header>
+                    <Footer>
+                        @if (!_sectionedSidebarCollapsed)
+                        {
+                            <p class="text-xs text-slate-500">Footer slot</p>
+                        }
+                    </Footer>
+                </TmSidebar>
+            </div>
+        </div>
     </div>
 </section>
 
@@ -114,18 +160,33 @@
         <span class="px-2 py-0.5 text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded-full">Layout</span>
     </div>
     
-    <div class="showcase-card p-0 overflow-hidden">
-        <TmTopBar BrandTitle="Tempo.Blazor Demo" 
-                  OnCommandPalette="() => _commandPaletteOpen = true">
-            <ActionsContent>
-                <TmButton Variant="ButtonVariant.Ghost" Size="ButtonSize.Sm" Icon="@IconNames.Bell" OnClick='() => Toast.ShowInfo("Notifications clicked")' />
-                <TmButton Variant="ButtonVariant.Ghost" Size="ButtonSize.Sm" Icon="@IconNames.User" OnClick='() => Toast.ShowInfo("Profile clicked")' />
-            </ActionsContent>
-        </TmTopBar>
-        
-        <div class="p-4">
+    @* No overflow-hidden here: the account menu is an absolutely positioned dropdown and a
+       clipping card would cut its lower half off (the shell renders overlays outside clipping
+       containers for the same reason). *@
+    <div class="showcase-card p-0">
+        <div data-testid="topbar-demo">
+            <TmTopBar BrandTitle="Tempo.Blazor Demo"
+                      ShowMenuButton="true"
+                      MenuExpanded="_topBarMenuExpanded"
+                      MenuControlsId="layout-topbar-menu-target"
+                      OnMenuToggle="() => _topBarMenuExpanded = !_topBarMenuExpanded"
+                      CommandPaletteShortcut="Ctrl+K"
+                      User="_topBarUser"
+                      UserMenuItems="_userMenuItems"
+                      OnCommandPalette="() => _commandPaletteOpen = true"
+                      OnLogout="OnTopBarLogout">
+                <ActionsContent>
+                    <TmButton Variant="ButtonVariant.Ghost" Size="ButtonSize.Sm" Icon="@IconNames.Bell" OnClick='() => Toast.ShowInfo("Notifications clicked")' />
+                </ActionsContent>
+            </TmTopBar>
+        </div>
+
+        <div class="p-4" id="layout-topbar-menu-target">
             <p class="text-sm text-slate-600 dark:text-slate-400">
-                Click the search button (⌘K) or user icons in the top bar.
+                Click the search button (Ctrl+K), the navigation disclosure button or the account avatar.
+            </p>
+            <p class="mt-2 text-sm text-slate-600 dark:text-slate-400" data-testid="topbar-last-action">
+                Last account action: <strong>@(_lastAccountAction ?? "none")</strong>
             </p>
         </div>
     </div>
@@ -350,6 +411,30 @@
 
 @code {
     private bool _sidebarCollapsed = false;
+    private bool _sectionedSidebarCollapsed = false;
+    private bool _topBarMenuExpanded = false;
+    private string? _lastAccountAction;
+    private readonly IUserInfo _topBarUser = new DemoUser("Jane Doe", "jane@example.com");
+
+    private List<UserMenuItem> _userMenuItems = new();
+
+    private List<SidebarNavSection> _sidebarSections = new()
+    {
+        new("Workspace", new List<ISidebarNavItem>
+        {
+            new SidebarNavItem("nav-layout", "Layout", "layout", "/layout"),
+            new SidebarNavItem("nav-tables", "Data tables", "table", "/datatable"),
+            new SidebarNavItem("nav-charts", "Charts", "bar-chart-2", "/charts", badgeCount: 2),
+        }),
+        new("Administration", new List<ISidebarNavItem>
+        {
+            new SidebarNavItem("nav-forms", "Forms", "file-text", "/forms"),
+            new SidebarNavItem("nav-pickers", "Pickers", "calendar", "/pickers", children: new()
+            {
+                new SidebarNavItem("nav-pickers-date", "Date pickers", null, "/pickers"),
+            }),
+        }),
+    };
     private bool _commandPaletteOpen = false;
     private string? _lastCommand;
     private bool _sectionCollapsed = false;
@@ -445,6 +530,14 @@
 
     protected override void OnInitialized()
     {
+        _userMenuItems = new List<UserMenuItem>
+        {
+            new("profile", "Your profile", "user", onClick: () => AccountActionAsync("Your profile")),
+            new("settings", "Account settings", "settings", onClick: () => AccountActionAsync("Account settings")),
+            UserMenuItem.CreateSeparator("sep-danger"),
+            new("delete", "Delete account", "trash-2", onClick: () => AccountActionAsync("Delete account"), isDanger: true),
+        };
+
         _availableActions = new List<ICommandPaletteAction>
         {
             new CommandPaletteAction("home", "Go to Dashboard", "Navigate to home page", "home", async () => await ExecuteCommand("home", "/")),
@@ -480,6 +573,28 @@
     }
 
     private void OnEditClick() => Toast.ShowInfo("Edit clicked");
+
+    private async Task AccountActionAsync(string action)
+    {
+        _lastAccountAction = action;
+        Toast.ShowInfo($"{action} selected");
+        // The callback runs inside TmTopBar's event handler, so the child re-renders and this page
+        // does not: a host that changes its OWN state from a menu callback asks for the render.
+        StateHasChanged();
+        await Task.CompletedTask;
+    }
+
+    private void OnTopBarLogout()
+    {
+        _lastAccountAction = "Sign out";
+        Toast.ShowInfo("Sign out clicked");
+    }
+
+    private sealed record DemoUser(string DisplayName, string Email) : IUserInfo
+    {
+        public string Id => "demo-user";
+        public string? AvatarSrc => null;
+    }
     private void OnDeleteClick() => Toast.ShowWarning("Delete clicked");
 
     private sealed class GroupedCommandAction(string id, string title, string category, string shortcut) : ICommandPaletteAction

@@ -41,7 +41,7 @@ namespace Tempo.Blazor.Tests.Theme;
 /// of what markup emits without a rule on 2.8.26 — 148 in core, 52 in Signing, 44 in NotionEditor:
 /// semantic modifiers that style nothing by design (<c>tm-modal--center</c> is the DEFAULT position
 /// — there is nothing to declare), structural hooks styled through their parent
-/// (<c>tm-sidebar-nav-list</c> inside <c>.tm-sidebar-nav</c>), and dead utility references
+/// (a structural hook whose layout comes from its ancestor), and dead utility references
 /// (<c>tm-mb-4</c>) kept on the markup for consumers. The recording also carried
 /// <c>tm-button</c>/<c>tm-button--ghost</c>/<c>tm-button--sm</c>, which turned out to be not dead
 /// references at all but one live defect — the TmGantt import label, the only visible upload
@@ -202,12 +202,8 @@ public sealed class MarkupClassCoverageTests
         "tm-screening__resolution-note",
         "tm-screening__source",
         "tm-screening__time",
-        "tm-sidebar-badge",
-        "tm-sidebar-nav-children",
-        "tm-sidebar-nav-label",
-        "tm-sidebar-nav-link",
-        "tm-sidebar-nav-link-child",
-        "tm-sidebar-nav-list",
+        // F1 (sidebar/topbar additive phase): the nav rail and the header gained real rules, so six
+        // sidebar and eight topbar classes left the inventory (see _sidebar-nav.css/_topbar.css).
         "tm-signature-capture__preview-svg",
         "tm-signature-capture__previous-preview",
         "tm-signature-capture__remember",
@@ -231,16 +227,7 @@ public sealed class MarkupClassCoverageTests
         "tm-toggle-section__label",
         "tm-toggle-section__radio",
         "tm-toggle-section__radios",
-        "tm-topbar-brand-title",
-        "tm-topbar-center",
-        "tm-topbar-search-hint",
-        "tm-topbar-search-trigger",
-        "tm-topbar-user",
-        "tm-topbar-user-button",
-        "tm-topbar-user-menu",
-        "tm-topbar-user-menu-item",
         "tm-topbar-user-menu-logout",
-        "tm-topbar-user-name",
         "tm-tree-list-row--root",
         "tm-upload-progress__action--cancel",
         "tm-upload-progress__action--resume",

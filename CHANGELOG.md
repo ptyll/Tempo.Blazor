@@ -78,6 +78,82 @@ four Abstractions models, the CSS partial and the resource keys are all new; no 
   `validate --fail-on-drift` clean; contract in [docs/permission-request.md](docs/permission-request.md).
   The demo page and the E2E/screenshot lane belong to phase 6 of the plan (see below).
 
+### App shell groundwork — additive `TmSidebar` and `TmTopBar` extensions (plan 5d396592, phase 1)
+
+Contract: [docs/sidebar-and-topbar.md](docs/sidebar-and-topbar.md).
+
+The two navigation primitives the coming app shell composes gain the capabilities that used to force a host to
+wrap them. **No public parameter changed type, was removed, or changed its default**, so a page that renders
+`<TmSidebar Items="…" />` or `<TmTopBar BrandTitle="…" />` today is unchanged — apart from two now-localized
+labels (below). The hardcoded English strings are gone from both components: `HardcodedAriaLabelGuardTests`
+stays green and every new key exists in `TmResources{,.cs,.sk,.fr}.json` and in the test `MockTmLocalizer`.
+
+- **`TmSidebar.Sections`** (`IReadOnlyList<SidebarNavSection>?`, null = today's single list) renders named groups:
+  each group is an `h2.tm-sidebar-section-title` whose id names the group's `ul.tm-sidebar-nav-list` through
+  `aria-labelledby`, so a screen-reader user hears the group ("Main, list, 4 items") instead of one long list.
+  `Items` keeps rendering first and unlabelled, so both models can be combined. `SidebarNavSection` is a new
+  `Tempo.Blazor.Models` record (`Title`, `Items`).
+- **`TmSidebar.AutoActive`** (`bool`, default `false`) resolves the current page from the `NavigationManager` and
+  reports it as `aria-current="page"` on the link (the `tm-sidebar-nav-item-active` class follows). The
+  comparison is `SidebarNavMatchMode.Exact` (default — only the page itself) or `Prefix` (a parent entry for its
+  sub-pages, on a SEGMENT boundary: `/settings` matches `/settings/profile`, never `/settings-old`; the root `/`
+  entry stays exact in both modes). An explicit `IsActive` always wins, and the component subscribes to
+  `LocationChanged` only while `AutoActive` is on, so the default renders no subscription.
+- **`TmSidebar.NavLabel`** names the `<nav>` landmark; null uses the localized "Sidebar navigation". A host with a
+  second navigation landmark (a second rail, a section menu) must name this one — two identically named
+  navigation landmarks are one indistinguishable landmark.
+- **Collapsed rail** — an icon-only link now always carries its label as `aria-label` (the badge count is part of
+  it: the badge is not rendered in the collapsed state, and a count nobody can read is a lost notification) and,
+  with `CollapseTooltips` (default `true`), a `TmTooltip` with the same text. The tooltip has to escape the
+  3.5rem rail, and a scroll container clips on BOTH axes, so the component adds `tm-sidebar-tooltips` and the
+  stylesheet turns the rail's clipping off while it is set: **a collapsed rail therefore does not scroll**.
+  `CollapseTooltips="false"` drops the tooltip, keeps the accessible name and restores the vertical scroller.
+- **`TmTopBar.ShowMenuButton`** + `MenuExpanded` + `OnMenuToggle` + `MenuControlsId` — an opt-in navigation
+  disclosure button (`aria-label` renamed from localization, `aria-expanded` from `MenuExpanded`, `aria-controls`
+  from `MenuControlsId`). The host owns the drawer state; the component never changes it.
+- **`TmTopBar.CommandPaletteShortcut`** (`string?`, default `"Ctrl+K"`) is the chord printed in the palette
+  trigger (an empty string hides the hint); **`TmTopBar.CommandPaletteKeyShortcuts`** (`string?`, default
+  `"Control+K Meta+K"`) is the `aria-keyshortcuts` value, so a host that rebinds the palette announces the
+  chord it actually binds (null or empty omits the attribute). The trigger keeps its localized name.
+- **`TmTopBar.UserMenuItems`** (`IReadOnlyList<UserMenuItem>?`) renders host entries above the built-in sign out,
+  with `UserMenuItem` (new `Tempo.Blazor.Models` record: `Id`, `Label`, `Icon`, `Href` **or** `OnClick`,
+  `IsDanger`, `Separator`, plus `UserMenuItem.CreateSeparator(id)`). The account dropdown is now an APG
+  **menu button**: `aria-haspopup="menu"` + `aria-expanded` on the trigger, `role="menu"` with an accessible
+  name on the container, `role="menuitem"` with `tabindex="-1"` on every entry (so the menu is one roving
+  focus stop, not one per entry), `role="separator"` between groups (no `aria-hidden` — the role already
+  hides it). **Opening moves focus into the menu** (first entry; ArrowDown on the trigger opens at the first
+  entry, ArrowUp at the last), ArrowDown/ArrowUp step with wraparound, Home/End jump to the edges, and
+  Escape, Tab or Shift+Tab from ANY entry close the menu and return focus to the trigger; a backdrop click
+  does the same instead of dropping focus on `<body>`. Choosing an entry is the one close path that leaves
+  focus to navigation/command. `User`/`OnLogout` keep their meaning; `UserMenuLabel` overrides the accessible
+  name.
+- **Localization** — new keys `TmSidebar_NavLabel`, `TmSidebar_ItemLabelWithCount`, `TmTopBar_MenuButton`,
+  `TmTopBar_SignOut` (en/cs/sk/fr). The sidebar toggle reuses the existing `TmSidebar_CollapseMenu` /
+  `TmSidebar_ExpandMenu`.
+- **CSS** — `_sidebar-nav.css` now styles the real anchor (`tm-sidebar-nav-link`, previously unstyled markup: the
+  list item carried the link's padding/hover) and both stylesheets use semantic tokens only
+  (`--tm-color-surface-hover`, `--tm-text-tertiary`, …), `:focus-visible` with `--tm-focus-ring`, a
+  `forced-colors` `Highlight` ring (the current page included), `--tm-touch-target` on a coarse pointer, and
+  reduced-motion coverage for every new transition.
+- **Docs / demo / tests** — overlays for `TmSidebar`, `TmTopBar`, `SidebarNavSection`, `UserMenuItem` and the
+  `SidebarNavMatchMode` enum (bundles regenerated, `validate --fail-on-drift` clean); the `/layout` demo page
+  showcases the sectioned rail (with the current-page marker) and the top bar with a disclosure button and an
+  account menu; 87 bUnit tests (`TmSidebarTests`, the new `TmTopBarTests` and `LayoutPageChromeTests`) and the `LayoutChromeE2ETests` lane
+  cover headings, `aria-current`, the collapsed rail's names/tooltips, the disclosure button, every APG menu
+  keyboard path (open-focus, arrows with wraparound, Home/End, Escape and Tab focus return), the 44px coarse
+  targets and the dark theme.
+
+Behaviour notes for existing hosts (no API change):
+
+| Before | After |
+|---|---|
+| Sidebar toggle `aria-label="Expand sidebar"` / `"Collapse sidebar"` | localized `TmSidebar_ExpandMenu` / `TmSidebar_CollapseMenu` ("Expand menu" / "Collapse menu", cs "Rozbalit menu" / "Sbalit menu") |
+| Top bar sign out rendered the literal `Sign out` | localized `TmTopBar_SignOut` ("Sign out", cs "Odhlásit se") |
+| `nav.tm-sidebar-nav` had no accessible name | localized `aria-label` (override with `NavLabel`) |
+| A collapsed link had no accessible name at all | `aria-label` with the label (+ badge count) |
+| Command palette hint read `⌘K` | `Ctrl+K` by default — set `CommandPaletteShortcut="⌘K"` to keep the old text |
+| Account menu Tab-out closed only from the last (first) entry and could drop focus on `<body>` | Tab from any entry closes it and focus returns to the trigger; ArrowDown/ArrowUp/Home/End navigate the entries (the trigger's `aria-haspopup="menu"` now describes real menu behaviour) |
+
 ### Human-in-the-loop demo, documentation and E2E (plan 10b3966f, phase 6)
 
 The phase that turns the four core decision surfaces and the agent's permission request into one

@@ -1,8 +1,20 @@
 @namespace Tempo.Blazor.Components.Layout
+@inherits Tempo.Blazor.Components.TmComponentBase
+@implements IDisposable
 @using Tempo.Blazor.Interfaces
 @using Tempo.Blazor.Components.Icons
+@using Tempo.Blazor.Components.Feedback
+@using Microsoft.AspNetCore.Components.Routing
+@inject NavigationManager Navigation
 
-<aside class="tm-sidebar @(Collapsed ? "tm-sidebar-collapsed" : "tm-sidebar-expanded") @(Class)" @attributes="AdditionalAttributes">
+@* The sidebar is a presentation of the host's navigation model: it owns state only where a
+   purely visual decision is undone by the host (which entry is the page the user is on).
+   Sections, aria-current and the collapsed flyout are additive — the flat Items list renders
+   exactly the markup it did before. *@
+
+<aside class="tm-sidebar @(Collapsed ? "tm-sidebar-collapsed" : "tm-sidebar-expanded") @(Collapsed && CollapseTooltips ? "tm-sidebar-tooltips" : null) @Class"
+       data-testid="@RootTestId("sidebar")"
+       @attributes="AdditionalAttributes">
     <div class="tm-sidebar-header">
         @if (Header is not null)
         {
@@ -10,51 +22,44 @@
         }
         <button class="tm-sidebar-toggle"
                 type="button"
-                aria-label="@(Collapsed ? "Expand sidebar" : "Collapse sidebar")"
+                data-testid="@TestId("sidebar-toggle")"
+                aria-label="@(Collapsed ? Loc["TmSidebar_ExpandMenu"] : Loc["TmSidebar_CollapseMenu"])"
                 @onclick="HandleToggleAsync">
             <TmIcon Name="@(Collapsed ? IconNames.ChevronRight : IconNames.ChevronLeft)" Size="IconSize.Sm" />
         </button>
     </div>
 
-    <nav class="tm-sidebar-nav">
-        <ul class="tm-sidebar-nav-list">
-            @foreach (var item in Items)
+    <nav class="tm-sidebar-nav" aria-label="@EffectiveNavLabel" data-testid="@TestId("sidebar-nav")">
+        @if (Items.Count > 0)
+        {
+            <ul class="tm-sidebar-nav-list">
+                @foreach (var item in Items)
+                {
+                    @RenderItem(item, isChild: false)
+                }
+            </ul>
+        }
+
+        @if (Sections is { Count: > 0 })
+        {
+            @for (var index = 0; index < Sections.Count; index++)
             {
-                <li class="tm-sidebar-nav-item @(item.IsActive ? "tm-sidebar-nav-item-active" : "")">
-                    <a href="@item.Href" class="tm-sidebar-nav-link">
-                        @if (!string.IsNullOrEmpty(item.Icon))
+                var group = Sections[index];
+                var titleId = SectionTitleId(index);
+                <div class="tm-sidebar-section">
+                    <h2 class="tm-sidebar-section-title" id="@titleId">@group.Title</h2>
+                    <ul class="tm-sidebar-nav-list" aria-labelledby="@titleId">
+                        @if (group.Items is { Count: > 0 })
                         {
-                            <TmIcon Name="@item.Icon" Size="IconSize.Sm" />
-                        }
-                        @if (!Collapsed)
-                        {
-                            <span class="tm-sidebar-nav-label">@item.Label</span>
-                            @if (item.BadgeCount.HasValue && item.BadgeCount.Value > 0)
+                            @foreach (var item in group.Items)
                             {
-                                <span class="tm-sidebar-badge">@item.BadgeCount</span>
+                                @RenderItem(item, isChild: false)
                             }
                         }
-                    </a>
-                    @if (!Collapsed && item.Children is { Count: > 0 })
-                    {
-                        <ul class="tm-sidebar-nav-children">
-                            @foreach (var child in item.Children)
-                            {
-                                <li class="tm-sidebar-nav-item @(child.IsActive ? "tm-sidebar-nav-item-active" : "")">
-                                    <a href="@child.Href" class="tm-sidebar-nav-link tm-sidebar-nav-link-child">
-                                        @if (!string.IsNullOrEmpty(child.Icon))
-                                        {
-                                            <TmIcon Name="@child.Icon" Size="IconSize.Xs" />
-                                        }
-                                        <span class="tm-sidebar-nav-label">@child.Label</span>
-                                    </a>
-                                </li>
-                            }
-                        </ul>
-                    }
-                </li>
+                    </ul>
+                </div>
             }
-        </ul>
+        }
     </nav>
 
     @if (Footer is not null)
@@ -64,14 +69,53 @@
 </aside>
 
 @code {
-    /// <summary>Navigation items to display.</summary>
+    private readonly string _sectionIdPrefix = $"tm-sidebar-section-{Guid.NewGuid():N}";
+    private bool _listeningToLocation;
+
+    /// <summary>Navigation items rendered as one ungrouped list, before any <see cref="Sections"/>.</summary>
     [Parameter] public IReadOnlyList<ISidebarNavItem> Items { get; set; } = [];
+
+    /// <summary>
+    /// Optional named groups of navigation items, each rendered under its own visible heading
+    /// (<c>h2</c>) that also names the group's list through <c>aria-labelledby</c>. Null (the
+    /// default) keeps the single ungrouped list, so existing markup is unchanged.
+    /// </summary>
+    [Parameter] public IReadOnlyList<SidebarNavSection>? Sections { get; set; }
 
     /// <summary>Whether the sidebar is in collapsed (icon-only) state.</summary>
     [Parameter] public bool Collapsed { get; set; }
 
     /// <summary>Fires when the toggle button is clicked.</summary>
     [Parameter] public EventCallback OnToggle { get; set; }
+
+    /// <summary>
+    /// Accessible name of the navigation landmark. Null (the default) uses the localized
+    /// "Sidebar navigation" — a host with more than one navigation landmark names this one after
+    /// its purpose ("Product navigation").
+    /// </summary>
+    [Parameter] public string? NavLabel { get; set; }
+
+    /// <summary>
+    /// When true, an item is shown as the current page when its <see cref="ISidebarNavItem.Href"/>
+    /// matches the current location, in addition to its own <see cref="ISidebarNavItem.IsActive"/>.
+    /// Default false: the host decides, exactly as before.
+    /// </summary>
+    [Parameter] public bool AutoActive { get; set; }
+
+    /// <summary>
+    /// How <see cref="AutoActive"/> compares paths. <see cref="SidebarNavMatchMode.Exact"/> (default)
+    /// marks only the page itself; <see cref="SidebarNavMatchMode.Prefix"/> also marks a parent entry
+    /// for its sub-pages on a segment boundary (the root "/" entry stays exact in both modes).
+    /// </summary>
+    [Parameter] public SidebarNavMatchMode AutoActiveMatchMode { get; set; } = SidebarNavMatchMode.Exact;
+
+    /// <summary>
+    /// When true (the default) a COLLAPSED item renders a <c>TmTooltip</c> with its label, so the
+    /// icon-only rail still tells a sighted user what an icon means. The accessible name is not
+    /// optional: the link keeps its <c>aria-label</c> even with this turned off. Turning it off also
+    /// keeps the collapsed nav a vertical scroll container, which a tooltip would need to escape.
+    /// </summary>
+    [Parameter] public bool CollapseTooltips { get; set; } = true;
 
     /// <summary>Optional header content (e.g. logo).</summary>
     [Parameter] public RenderFragment? Header { get; set; }
@@ -84,6 +128,147 @@
 
     /// <summary>Additional HTML attributes for the root element.</summary>
     [Parameter(CaptureUnmatchedValues = true)] public Dictionary<string, object>? AdditionalAttributes { get; set; }
+
+    private string EffectiveNavLabel => string.IsNullOrWhiteSpace(NavLabel) ? Loc["TmSidebar_NavLabel"] : NavLabel!;
+
+    /// <inheritdoc />
+    protected override void OnParametersSet()
+    {
+        // The active entry is a function of the URL, so an SPA route change has to re-render the
+        // rail; subscribing only while AutoActive is on keeps the default component subscription-free.
+        if (AutoActive && !_listeningToLocation)
+        {
+            Navigation.LocationChanged += HandleLocationChanged;
+            _listeningToLocation = true;
+        }
+        else if (!AutoActive && _listeningToLocation)
+        {
+            Navigation.LocationChanged -= HandleLocationChanged;
+            _listeningToLocation = false;
+        }
+    }
+
+    /// <inheritdoc />
+    public void Dispose()
+    {
+        if (!_listeningToLocation)
+        {
+            return;
+        }
+
+        Navigation.LocationChanged -= HandleLocationChanged;
+        _listeningToLocation = false;
+    }
+
+    private void HandleLocationChanged(object? sender, LocationChangedEventArgs args)
+        => _ = InvokeAsync(StateHasChanged);
+
+    private string SectionTitleId(int index) => $"{_sectionIdPrefix}-{index}";
+
+    private RenderFragment RenderItem(ISidebarNavItem item, bool isChild) => @<li class="tm-sidebar-nav-item @(IsActive(item) ? "tm-sidebar-nav-item-active" : null)"
+            data-testid="@TestId($"sidebar-item-{item.Id}")">
+        @if (Collapsed && CollapseTooltips)
+        {
+            <TmTooltip Text="@AccessibleLabel(item)" Position="TooltipPosition.Right" Class="tm-sidebar-nav-tooltip">
+                @RenderLink(item, isChild)
+            </TmTooltip>
+        }
+        else
+        {
+            @RenderLink(item, isChild)
+        }
+        @if (!Collapsed && item.Children is { Count: > 0 })
+        {
+            <ul class="tm-sidebar-nav-children">
+                @foreach (var child in item.Children)
+                {
+                    @RenderItem(child, isChild: true)
+                }
+            </ul>
+        }
+    </li>;
+
+    private RenderFragment RenderLink(ISidebarNavItem item, bool isChild) => @<a href="@item.Href"
+            class="tm-sidebar-nav-link @(isChild ? "tm-sidebar-nav-link-child" : null)"
+            aria-label="@CollapsedName(item)"
+            aria-current="@(IsActive(item) ? "page" : null)">
+        @if (!string.IsNullOrEmpty(item.Icon))
+        {
+            <TmIcon Name="@item.Icon" Size="@(isChild ? IconSize.Xs : IconSize.Sm)" />
+        }
+        @if (!Collapsed)
+        {
+            <span class="tm-sidebar-nav-label">@item.Label</span>
+            @if (item.BadgeCount is > 0)
+            {
+                <span class="tm-sidebar-badge">@item.BadgeCount</span>
+            }
+        }
+    </a>;
+
+    /// <summary>
+    /// The name of an icon-only entry: the label plus the badge count, because the badge is not
+    /// rendered in the collapsed state and a count nobody can read is a lost notification.
+    /// </summary>
+    private string AccessibleLabel(ISidebarNavItem item)
+        => item.BadgeCount is > 0
+            ? Loc["TmSidebar_ItemLabelWithCount", item.Label, item.BadgeCount.Value.ToString(CultureInfo.CurrentCulture)]
+            : item.Label;
+
+    /// <summary>
+    /// Whether the entry is the current page: the host's explicit flag, or — with
+    /// <see cref="AutoActive"/> — the current location. An explicit flag is never overridden.
+    /// </summary>
+    private bool IsActive(ISidebarNavItem item)
+        => item.IsActive || (AutoActive && MatchesLocation(item.Href));
+
+    /// <summary>The collapsed aria-label, or null when the item has no label at all — an empty
+    /// aria-label would override the icon's fallback name instead of leaving it alone.</summary>
+    private string? CollapsedName(ISidebarNavItem item)
+        => Collapsed && !string.IsNullOrWhiteSpace(item.Label) ? AccessibleLabel(item) : null;
+
+    private bool MatchesLocation(string? href)
+    {
+        if (string.IsNullOrWhiteSpace(href))
+        {
+            return false;
+        }
+
+        var itemPath = PathOf(href);
+        var currentPath = PathOf(Navigation.ToBaseRelativePath(Navigation.Uri));
+        if (itemPath.Length == 0)
+        {
+            // A root entry ("/") is the root page and nothing else: as a prefix it would claim
+            // every page, and treating its empty path as "no match" would leave it dead.
+            return currentPath.Length == 0;
+        }
+
+        if (string.Equals(itemPath, currentPath, StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        return AutoActiveMatchMode == SidebarNavMatchMode.Prefix
+            && currentPath.Length > itemPath.Length
+            && currentPath.StartsWith(itemPath + "/", StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>Normalises an href or a location to a comparable path: no query, no fragment, no surrounding slashes.</summary>
+    private static string PathOf(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return string.Empty;
+        }
+
+        if (Uri.TryCreate(value, UriKind.Absolute, out var absolute))
+        {
+            value = absolute.AbsolutePath;
+        }
+
+        var separator = value.IndexOfAny(['?', '#']);
+        return (separator >= 0 ? value[..separator] : value).Trim('/');
+    }
 
     private async Task HandleToggleAsync() => await OnToggle.InvokeAsync();
 }

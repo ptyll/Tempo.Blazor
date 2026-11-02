@@ -1,3 +1,7 @@
+/* ═══════════════════════════════════════════════════════
+   TmSidebar — navigation rail (expanded + icon-only collapsed)
+   ═══════════════════════════════════════════════════════ */
+
 .tm-sidebar {
   display: flex;
   flex-direction: column;
@@ -8,7 +12,22 @@
   transition: width var(--tm-transition-slow);
   overflow: hidden;
 }
-.tm-sidebar-collapsed { width: var(--tm-sidebar-collapsed); }
+
+.tm-sidebar-collapsed {
+  width: var(--tm-sidebar-collapsed);
+}
+
+/* A collapsed rail that shows a tooltip cannot clip. The tooltip is an absolutely positioned box
+   anchored to the icon it explains, so it has to escape the 3.5rem rail — and a scroll container
+   (`overflow-y: auto`) clips on BOTH axes, which would leave the tooltip invisible. The host that
+   turns tooltips off (`CollapseTooltips="false"`) gets the scroller back, which is why the escape
+   is tied to the class the component only emits when tooltips are on. */
+.tm-sidebar-collapsed.tm-sidebar-tooltips,
+.tm-sidebar-collapsed.tm-sidebar-tooltips .tm-sidebar-nav,
+.tm-sidebar-collapsed.tm-sidebar-tooltips .tm-sidebar-nav-list {
+  overflow: visible;
+}
+
 .tm-sidebar-header {
   display: flex;
   align-items: center;
@@ -18,7 +37,15 @@
   flex-shrink: 0;
   height: var(--tm-topbar-height);
 }
-.tm-sidebar-logo { font-size: var(--tm-font-size-lg); font-weight: var(--tm-font-weight-bold); color: var(--tm-text-primary); white-space: nowrap; overflow: hidden; }
+
+.tm-sidebar-logo {
+  font-size: var(--tm-font-size-lg);
+  font-weight: var(--tm-font-weight-bold);
+  color: var(--tm-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+}
+
 .tm-sidebar-toggle {
   display: flex;
   align-items: center;
@@ -31,37 +58,202 @@
   color: var(--tm-text-secondary);
   cursor: pointer;
   flex-shrink: 0;
-  transition: background-color var(--tm-transition-fast);
+  transition: background-color var(--tm-transition-fast), color var(--tm-transition-fast);
 }
-.tm-sidebar-toggle:hover { background-color: var(--tm-color-gray-100); }
-.tm-sidebar-nav { flex: 1; padding: var(--tm-space-2); overflow-y: auto; }
+
+.tm-sidebar-toggle:hover {
+  background-color: var(--tm-color-surface-hover);
+  color: var(--tm-text-primary);
+}
+
+.tm-sidebar-toggle:focus-visible {
+  outline: 2px solid transparent;
+  box-shadow: var(--tm-focus-ring);
+}
+
+.tm-sidebar-nav {
+  flex: 1;
+  min-height: 0;
+  padding: var(--tm-space-2);
+  overflow-y: auto;
+}
+
+/* ── Lists ─────────────────────────────────────────────── */
+
+.tm-sidebar-nav-list,
+.tm-sidebar-nav-children {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.tm-sidebar-nav-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--tm-space-0-5);
+}
+
+.tm-sidebar-nav-children {
+  display: flex;
+  flex-direction: column;
+  gap: var(--tm-space-0-5);
+  margin-top: var(--tm-space-0-5);
+  padding-left: var(--tm-space-6);
+}
+
 .tm-sidebar-nav-item {
+  display: block;
+  min-width: 0;
+}
+
+/* ── Sections ──────────────────────────────────────────── */
+
+.tm-sidebar-section + .tm-sidebar-section {
+  margin-top: var(--tm-space-3);
+}
+
+.tm-sidebar-section-title {
+  margin: 0;
+  padding: var(--tm-space-2) var(--tm-space-3) var(--tm-space-1);
+  font-size: var(--tm-font-size-xs);
+  font-weight: var(--tm-font-weight-semibold);
+  line-height: var(--tm-line-height-tight);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--tm-text-tertiary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* The heading still NAMES the group for a screen reader while the rail is icon-only; it just
+   stops taking room a 3.5rem column does not have. */
+.tm-sidebar-collapsed .tm-sidebar-section-title {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  border: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* ── Links ─────────────────────────────────────────────── */
+
+.tm-sidebar-nav-link {
   display: flex;
   align-items: center;
   gap: var(--tm-space-3);
   width: 100%;
+  min-width: 0;
   padding: var(--tm-space-2) var(--tm-space-3);
   font-size: var(--tm-font-size-sm);
   font-weight: var(--tm-font-weight-medium);
   color: var(--tm-text-secondary);
+  text-decoration: none;
   border-radius: var(--tm-radius-md);
-  border: none;
   background: none;
   cursor: pointer;
-  text-align: left;
-  text-decoration: none;
   white-space: nowrap;
   overflow: hidden;
   transition: background-color var(--tm-transition-fast), color var(--tm-transition-fast);
 }
-.tm-sidebar-nav-item:hover { background-color: var(--tm-color-gray-100); color: var(--tm-text-primary); }
-.tm-sidebar-nav-item-active { background-color: var(--tm-color-primary-subtle); color: var(--tm-color-primary); }
-.tm-sidebar-nav-item-active:hover { background-color: var(--tm-color-primary-subtle); }
-.tm-sidebar-nav-item-icon { flex-shrink: 0; }
-.tm-sidebar-nav-item-label { flex: 1; overflow: hidden; text-overflow: ellipsis; }
-.tm-sidebar-nav-item-badge { flex-shrink: 0; }
+
+.tm-sidebar-nav-link:hover {
+  background-color: var(--tm-color-surface-hover);
+  color: var(--tm-text-primary);
+}
+
+.tm-sidebar-nav-link:focus-visible {
+  outline: 2px solid transparent;
+  box-shadow: var(--tm-focus-ring);
+}
+
+/* The current page carries aria-current in markup; the wash is its visual twin. The collapsed
+   branch reaches the link through the tooltip wrapper. */
+.tm-sidebar-nav-item-active > .tm-sidebar-nav-link,
+.tm-sidebar-nav-item-active > .tm-tooltip .tm-sidebar-nav-link {
+  background-color: var(--tm-color-primary-subtle);
+  color: var(--tm-color-primary);
+}
+
+/* A forced-colours theme drops the subtle wash, so the current page gets a system Highlight ring. */
+@media (forced-colors: active) {
+  [aria-current="page"].tm-sidebar-nav-link {
+    outline: 2px solid Highlight;
+    outline-offset: -2px;
+  }
+
+  .tm-sidebar-toggle:focus-visible,
+  .tm-sidebar-nav-link:focus-visible {
+    outline: 2px solid Highlight;
+    outline-offset: 2px;
+    box-shadow: none;
+  }
+}
+
+.tm-sidebar-nav-link-child {
+  font-weight: var(--tm-font-weight-normal);
+}
+
+.tm-sidebar-nav-label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tm-sidebar-badge {
+  flex-shrink: 0;
+  min-width: 1.25rem;
+  padding: 0 var(--tm-space-1-5);
+  border-radius: var(--tm-radius-full);
+  background-color: var(--tm-color-primary-subtle);
+  color: var(--tm-color-primary);
+  font-size: var(--tm-font-size-xs);
+  font-weight: var(--tm-font-weight-semibold);
+  line-height: 1.25rem;
+  text-align: center;
+}
+
+/* ── Collapsed item flyout ─────────────────────────────── */
+
+/* In the collapsed state each item is wrapped in TmTooltip, whose root and trigger are inline
+   boxes narrower than the item — the link has to fill the rail. The wrapper carries its own class
+   so this file never re-declares a property `.tm-tooltip*` already owns (the class-ownership
+   sweep treats a bare `.tm-tooltip { display: … }` here as a manifest-order collision). */
+.tm-sidebar-nav-item > .tm-tooltip.tm-sidebar-nav-tooltip {
+  display: flex;
+  width: 100%;
+}
+
+.tm-sidebar-nav-item > .tm-tooltip.tm-sidebar-nav-tooltip > * {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.tm-sidebar-collapsed .tm-sidebar-nav-link {
+  justify-content: center;
+  gap: 0;
+}
+
 .tm-sidebar-footer {
   padding: var(--tm-space-3) var(--tm-space-4);
   border-top: 1px solid var(--tm-border-color);
   flex-shrink: 0;
+}
+
+/* ── Touch ─────────────────────────────────────────────── */
+
+@media (pointer: coarse) {
+  .tm-sidebar-toggle {
+    width: var(--tm-touch-target);
+    height: var(--tm-touch-target);
+  }
+
+  .tm-sidebar-nav-link {
+    min-block-size: var(--tm-touch-target);
+  }
 }

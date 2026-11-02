@@ -1010,6 +1010,10 @@ public abstract class LocalizationTestBase : BunitContext
         // TmLayout
         ["TmSidebar_CollapseMenu"]       = "Collapse menu",
         ["TmSidebar_ExpandMenu"]         = "Expand menu",
+        ["TmSidebar_NavLabel"]            = "Sidebar navigation",
+        ["TmSidebar_ItemLabelWithCount"]  = "{0} ({1})",
+        ["TmTopBar_MenuButton"]           = "Navigation menu",
+        ["TmTopBar_SignOut"]              = "Sign out",
         ["TmTopBar_OpenSearch"]          = "Search (Ctrl+K)",
         ["TmTopBar_OpenNotifications"]   = "Open notifications",
         ["TmTopBar_OpenUserMenu"]        = "Open user menu",
@@ -6043,6 +6047,10 @@ public abstract class LocalizationTestBase : BunitContext
         // TmLayout
         ["TmSidebar_CollapseMenu"]     = "Sbalit menu",
         ["TmSidebar_ExpandMenu"]       = "Rozbalit menu",
+        ["TmSidebar_NavLabel"]           = "Navigace v postranním panelu",
+        ["TmSidebar_ItemLabelWithCount"] = "{0} ({1})",
+        ["TmTopBar_MenuButton"]          = "Nabídka navigace",
+        ["TmTopBar_SignOut"]             = "Odhlásit se",
         ["TmTopBar_OpenSearch"]        = "Hledat (Ctrl+K)",
         ["TmTopBar_OpenNotifications"] = "Otevřít oznámení",
         ["TmTopBar_OpenUserMenu"] = "Otevřít nabídku uživatele",
