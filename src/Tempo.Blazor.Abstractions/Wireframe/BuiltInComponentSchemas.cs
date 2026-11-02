@@ -152,6 +152,7 @@ public sealed class BuiltInComponentSchemas : IWireframeSchemaSource
             ["TmQRCode"] = ["icon"],
             ["TmBarcode"] = ["icon"],
             ["TmChangeDiff"] = ["diff-view"],
+            ["TmOnboardingChecklist"] = ["onboarding-checklist"],
             ["TmApprovalCard"] = ["approval-card"],
             ["TmReviewQueue"] = ["review-queue"],
             ["TmInlineDiff"] = ["inline-diff"],
@@ -1131,6 +1132,22 @@ public sealed class BuiltInComponentSchemas : IWireframeSchemaSource
                 P("risk",          "Risk",          PropType.Enum,   "medium",                                     cat: "Content",
                     opts: ["low", "medium", "high", "critical"]),
                 P("showCountdown", "Show Countdown", PropType.Bool,  true,                                        cat: "Appearance"),
+            ]
+        };
+
+        yield return new WireframeComponentSchema
+        {
+            Type = "TmOnboardingChecklist", Category = "Data Display", DisplayName = "Onboarding Checklist",
+            DefaultWidth = 360, DefaultHeight = 320,
+            Props =
+            [
+                P("title",           "Title",            PropType.String, "Get started",                   cat: "Content"),
+                P("layout",          "Layout",           PropType.Enum,   "list",                          cat: "Appearance",
+                    opts: ["list", "card", "grid"]),
+                P("stepCount",       "Steps",            PropType.Int,    5,                               cat: "Content"),
+                P("doneCount",       "Completed Steps",  PropType.Int,    2,                               cat: "Content"),
+                P("showProgress",    "Show Progress",    PropType.Bool,  true,                            cat: "Appearance"),
+                P("dismissible",     "Dismissible",      PropType.Bool,  false,                           cat: "Appearance"),
             ]
         };
 

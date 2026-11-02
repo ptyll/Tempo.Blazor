@@ -1,4 +1,4 @@
-﻿using Bunit;
+using Bunit;
 using Microsoft.Extensions.DependencyInjection;
 using System.Text.Json;
 using Tempo.Blazor.Components.DocumentEditor;
@@ -2829,6 +2829,20 @@ public abstract class LocalizationTestBase : BunitContext
         ["TmUserMenu_ThemeToggle"] = "Dark theme",
         ["TmUserMenu_ExtraLabel"] = "Account options",
         ["TmUserMenu_SignOut"] = "Sign out",
+        // Onboarding checklist (plan 5d396592, Fáze 5)
+        ["TmOnboardingChecklist_AnnounceAllDone"] = "All steps are complete.",
+        ["TmOnboardingChecklist_AnnounceTaskDone"] = "{0} — done. {1}",
+        ["TmOnboardingChecklist_AnnounceTaskDoneAllComplete"] = "{0}. {1}",
+        ["TmOnboardingChecklist_AnnounceTaskReopened"] = "{0} — reopened. {1}",
+        ["TmOnboardingChecklist_CompletedText"] = "You have completed every step. You can keep this list around for reference.",
+        ["TmOnboardingChecklist_CompletedTitle"] = "All done!",
+        ["TmOnboardingChecklist_Dismiss"] = "Dismiss checklist",
+        ["TmOnboardingChecklist_Empty"] = "No steps yet.",
+        ["TmOnboardingChecklist_Label"] = "Onboarding checklist",
+        ["TmOnboardingChecklist_Optional"] = "Optional",
+        ["TmOnboardingChecklist_Progress_One"] = "{1} of {0} task done",
+        ["TmOnboardingChecklist_Progress_Other"] = "{1} of {0} tasks done",
+        ["TmOnboardingChecklist_ProgressLabel"] = "Progress",
         ["TmAppShell_SkipToContent"] = "Skip to content",
         ["TmAppShell_NavLabel"] = "Main navigation",
         ["TmAppShell_WorkArea"] = "Work area",
@@ -7544,6 +7558,22 @@ public abstract class LocalizationTestBase : BunitContext
         ["TmUserMenu_ThemeToggle"] = "Tmavý motiv",
         ["TmUserMenu_ExtraLabel"] = "Možnosti účtu",
         ["TmUserMenu_SignOut"] = "Odhlásit se",
+        // Onboarding checklist (plan 5d396592, Fáze 5)
+        ["TmOnboardingChecklist_AnnounceAllDone"] = "Všechny kroky jsou hotové.",
+        ["TmOnboardingChecklist_AnnounceTaskDone"] = "{0} — hotovo. {1}",
+        ["TmOnboardingChecklist_AnnounceTaskDoneAllComplete"] = "{0}. {1}",
+        ["TmOnboardingChecklist_AnnounceTaskReopened"] = "{0} — znovu otevřeno. {1}",
+        ["TmOnboardingChecklist_CompletedText"] = "Dokončili jste všechny kroky. Seznam si můžete nechat pro připomenutí.",
+        ["TmOnboardingChecklist_CompletedTitle"] = "Hotovo!",
+        ["TmOnboardingChecklist_Dismiss"] = "Zavřít seznam kroků",
+        ["TmOnboardingChecklist_Empty"] = "Zatím žádné kroky.",
+        ["TmOnboardingChecklist_Label"] = "Seznam úvodních kroků",
+        ["TmOnboardingChecklist_Optional"] = "Nepovinné",
+        ["TmOnboardingChecklist_Progress_One"] = "{1} z {0} úkolu hotovo",
+        ["TmOnboardingChecklist_Progress_Few"] = "{1} ze {0} úkolů hotovo",
+        ["TmOnboardingChecklist_Progress_Many"] = "{1} z {0} úkolu hotovo",
+        ["TmOnboardingChecklist_Progress_Other"] = "{1} z {0} úkolů hotovo",
+        ["TmOnboardingChecklist_ProgressLabel"] = "Průběh",
         ["TmAppShell_SkipToContent"] = "Přeskočit na obsah",
         ["TmAppShell_NavLabel"] = "Hlavní navigace",
         ["TmAppShell_WorkArea"] = "Pracovní plocha",

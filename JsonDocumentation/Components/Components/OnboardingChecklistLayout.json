@@ -1,0 +1,25 @@
+{
+  "kind": "Enum",
+  "category": "Components",
+  "namespace": "Tempo.Blazor.Components.DataDisplay",
+  "description": "The presentation of a TmOnboardingChecklist: a plain list, one card surface (the setup guide) or a tile grid (the tips panel).",
+  "packageId": "Tempo.Blazor",
+  "sourcePath": "src/Tempo.Blazor/Components/DataDisplay/OnboardingModels.cs",
+  "documentationStatus": "documented",
+  "itemName": "OnboardingChecklistLayout",
+  "members": [
+    {
+      "name": "List",
+      "description": "A plain vertical list without card chrome — the default, suitable for a sidebar or a page section that already provides its own surface."
+    },
+    {
+      "name": "Card",
+      "description": "One card surface: the title header, the progress block and the list inside a bordered, rounded panel. The setup-guide presentation."
+    },
+    {
+      "name": "Grid",
+      "description": "A responsive tile grid — each step becomes a tile in an auto-fitting column track. The tips-panel presentation; prefer it for short titles, because a tile has much less room for a description than a list row."
+    }
+  ],
+  "usageExample": "<TmOnboardingChecklist Tasks=\"Steps\" Layout=\"OnboardingChecklistLayout.Grid\" />"
+}

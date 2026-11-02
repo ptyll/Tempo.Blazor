@@ -8139,6 +8139,97 @@
           "documentationStatus": "merged"
         },
         {
+          "itemName": "OnboardingChecklistLayout",
+          "kind": "Enum",
+          "category": "Components",
+          "namespace": "Tempo.Blazor.Components.DataDisplay",
+          "description": "The presentation of a TmOnboardingChecklist: a plain list, one card surface (the setup guide) or a tile grid (the tips panel).",
+          "packageId": "Tempo.Blazor",
+          "sourcePath": "src/Tempo.Blazor/Components/DataDisplay/OnboardingModels.cs",
+          "documentationStatus": "merged",
+          "members": [
+            {
+              "name": "List",
+              "description": "A plain vertical list without card chrome — the default, suitable for a sidebar or a page section that already provides its own surface."
+            },
+            {
+              "name": "Card",
+              "description": "One card surface: the title header, the progress block and the list inside a bordered, rounded panel. The setup-guide presentation."
+            },
+            {
+              "name": "Grid",
+              "description": "A responsive tile grid — each step becomes a tile in an auto-fitting column track. The tips-panel presentation; prefer it for short titles, because a tile has much less room for a description than a list row."
+            }
+          ],
+          "usageExample": "<TmOnboardingChecklist Tasks=\"Steps\" Layout=\"OnboardingChecklistLayout.Grid\" />"
+        },
+        {
+          "itemName": "OnboardingTask",
+          "kind": "Class",
+          "category": "Components",
+          "namespace": "Tempo.Blazor.Components.DataDisplay",
+          "description": "One step of a TmOnboardingChecklist: what to do, how it is presented and — once the user worked through it — whether it is done. The checklist writes IsDone on the instance it was given before raising OnTaskToggle, so the component works without a bound handler; a host that reloads the steps from storage gives it new instances.",
+          "packageId": "Tempo.Blazor",
+          "sourcePath": "src/Tempo.Blazor/Components/DataDisplay/OnboardingModels.cs",
+          "documentationStatus": "merged",
+          "members": [
+            {
+              "name": "Id",
+              "kind": "Property",
+              "type": "string",
+              "description": "Stable identifier, unique within one checklist: it is the suffix of the step's data-testid. It never reaches a DOM id — the checkbox, description and group-body ids are built from the step's POSITION, so two ids that reduce to the same id-safe form (a.b and a-b) cannot collide. Two steps that share one Id render fine but make host tests ambiguous."
+            },
+            {
+              "name": "Title",
+              "kind": "Property",
+              "type": "string",
+              "description": "The step's text — the visible label AND the accessible name of its checkbox."
+            },
+            {
+              "name": "Description",
+              "kind": "Property",
+              "type": "string?",
+              "description": "Optional explanation under the title, wired to the checkbox through aria-describedby."
+            },
+            {
+              "name": "IsDone",
+              "kind": "Property",
+              "type": "bool",
+              "description": "Whether the step is done. The checklist writes this value when the user toggles the checkbox; the done styling (strike-through) and the progress follow it."
+            },
+            {
+              "name": "IsOptional",
+              "kind": "Property",
+              "type": "bool",
+              "description": "Marks the step as optional: it renders a localized \"Optional\" badge, it still counts in the progress sentence, but it never blocks the celebration — the checklist is complete once every required step is done."
+            },
+            {
+              "name": "Group",
+              "kind": "Property",
+              "type": "string?",
+              "description": "Group the step belongs to. Steps that share a group render under one collapsible header with their own progress count; steps with no group render as a plain list. The value is both the group's visible title and its stable key, so casing and spacing matter."
+            },
+            {
+              "name": "ActionLabel",
+              "kind": "Property",
+              "type": "string?",
+              "description": "Visible text of the step's call-to-action. An action renders only when it has a target — ActionHref or OnAction; a label alone renders nothing."
+            },
+            {
+              "name": "ActionHref",
+              "kind": "Property",
+              "type": "string?",
+              "description": "Navigation target of the call-to-action; renders a link. Only a relative URL or the http, https or mailto scheme is rendered: javascript:, data: and vbscript: values are refused, and so is a protocol-relative //host/path (it leaves the origin). A refused value is no target at all, so the action renders nothing unless OnAction is set. OnAction wins when both are set (the handler decides what to do, including navigating)."
+            },
+            {
+              "name": "OnAction",
+              "kind": "Property",
+              "type": "Func<OnboardingTask, Task>?",
+              "description": "Handler of the call-to-action when it is a command rather than a link. The checklist awaits it, so a handler that loads data keeps its busy state. Setting it does NOT check the step — completing a step stays the user's decision."
+            }
+          ]
+        },
+        {
           "itemName": "OverlayAlign",
           "kind": "Enum",
           "category": "Components",
@@ -11080,6 +11171,155 @@
             {
               "title": "Server-side grouping with per-group pagination in MultiViewList",
               "code": "@using Tempo.Blazor.Components.DataDisplay\n@using Tempo.Blazor.Models\n\n@* Server-side grouping: When GroupableFields are set and DataProvider implements\n   GetGroupedDataAsync, the component calls GetGroupedDataAsync with GroupByColumns\n   and GroupPageRequests in the DataTableQuery. If GetGroupedDataAsync returns null,\n   it falls back to client-side grouping.\n\n   Per-group pagination: When the server returns GroupPaging metadata,\n   TmMultiViewList renders a compact TmPagination inside each expanded group\n   (works in all 3 view modes). The global footer pagination is hidden\n   when grouping is active. *@\n\n<TmMultiViewList TItem=\"PersonDto\"\n                 DataProvider=\"@_dataProvider\"\n                 ViewContext=\"persons-list\"\n                 TitleField=\"@(p => p.FullName)\"\n                 SubTitleField=\"@(p => p.Email)\"\n                 StatusLabelField=\"@(p => p.IsActive ? \"Active\" : \"Inactive\")\"\n                 StatusColorField=\"@(p => p.IsActive ? \"#22c55e\" : \"#ef4444\")\"\n                 GroupableFields=\"@_groupFields\"\n                 ShowSearch=\"true\"\n                 ShowViewSwitcher=\"true\"\n                 DefaultPageSize=\"10\" />\n\n@code {\n    [Inject] private IDataTableDataProvider<PersonDto> DataProvider { get; set; } = default!;\n    private IDataTableDataProvider<PersonDto> _dataProvider = default!;\n\n    // Define which fields the user can group by\n    private readonly IReadOnlyList<GroupFieldDefinition<PersonDto>> _groupFields =\n    [\n        new GroupFieldDefinition<PersonDto>\n        {\n            FieldName = \"Role\",\n            Label = \"Role\",\n            FieldAccessor = p => p.Role\n        },\n        new GroupFieldDefinition<PersonDto>\n        {\n            FieldName = \"Department\",\n            Label = \"Department\",\n            FieldAccessor = p => p.Department\n        },\n        new GroupFieldDefinition<PersonDto>\n        {\n            FieldName = \"IsActive\",\n            Label = \"Active\",\n            FieldAccessor = p => p.IsActive,\n            DisplayFormatter = v => v is true ? \"Active\" : \"Inactive\"\n        }\n    ];\n\n    protected override void OnInitialized() => _dataProvider = DataProvider;\n}\n\n// The same IDataTableDataProvider works for both TmDataTable and TmMultiViewList.\n// Implement GetGroupedDataAsync with GroupPageRequests support for per-group navigation.\n// See TmDataTable documentation for the complete DataProvider implementation example."
+            }
+          ]
+        },
+        {
+          "itemName": "TmOnboardingChecklist",
+          "kind": "Component",
+          "category": "Data Display",
+          "namespace": "Tempo.Blazor.Components.DataDisplay",
+          "description": "The setup guide / progress tracker of an application: a checklist of onboarding steps the user works through, with a counted progress line, collapsible groups, an optional call-to-action per step and a celebration block once every required step is done. Pure Blazor — native checkboxes own the activation, each group header is an APG disclosure button, exactly one polite live region announces the transitions and the visible celebration is an icon plus text (no confetti, no motion-only signal).",
+          "packageId": "Tempo.Blazor",
+          "sourcePath": "src/Tempo.Blazor/Components/DataDisplay/TmOnboardingChecklist.razor",
+          "documentationStatus": "merged",
+          "requiredImports": [
+            "@using Tempo.Blazor.Components.DataDisplay"
+          ],
+          "parameters": [
+            {
+              "name": "Class",
+              "type": "string?",
+              "isRequired": false,
+              "description": "Additional CSS class(es) on the root section."
+            },
+            {
+              "name": "CollapseCompletedGroups",
+              "type": "bool",
+              "isRequired": false,
+              "description": "Collapses a group automatically when its last step is checked. Default false: a group that folds under the user's cursor hides the work just finished. When enabled, the focus moves from the now-hidden checkbox to that group's header (which reports aria-expanded=\"false\"), so a keyboard user is never dropped on the document body.",
+              "default": "false"
+            },
+            {
+              "name": "CompletedText",
+              "type": "string?",
+              "isRequired": false,
+              "description": "Body text of the celebration block. Null uses the localized sentence."
+            },
+            {
+              "name": "CompletedTitle",
+              "type": "string?",
+              "isRequired": false,
+              "description": "Title of the celebration block. Null uses the localized \"All done!\"."
+            },
+            {
+              "name": "Dismissible",
+              "type": "bool",
+              "isRequired": false,
+              "description": "Renders the dismiss button: an icon button whose accessible name is the localized \"Dismiss checklist\", a 32 px target on a fine pointer (above the 24 px minimum of WCAG 2.5.8) and a 44 px one on a coarse pointer. Default false — an onboarding guide that can vanish needs a host that can bring it back.",
+              "default": "false"
+            },
+            {
+              "name": "HeadingLevel",
+              "type": "int",
+              "isRequired": false,
+              "default": "2",
+              "description": "Heading level of Title (1–6), so the checklist can sit under the right page heading. A value outside 1–6 falls back to 2. The title renders as role=\"heading\" with aria-level, which keeps the level dynamic without a tag-name switch."
+            },
+            {
+              "name": "Layout",
+              "type": "OnboardingChecklistLayout",
+              "isRequired": false,
+              "default": "OnboardingChecklistLayout.List",
+              "description": "Presentation: List (the default — a plain vertical list for a sidebar or a page section that already has a surface), Card (the setup-guide presentation on one bordered surface with the title header and progress block) or Grid (the tips-panel presentation: one tile per step in an auto-fitting grid)."
+            },
+            {
+              "name": "OnDismiss",
+              "type": "EventCallback",
+              "isRequired": false,
+              "description": "Fires when the user dismisses the checklist. The checklist hides itself first, so a host that never binds this callback still gets a closed surface. A host that also removes the component from its layout owns the focus afterwards: move it to a stable element (a page heading or the control that opened the guide) with FocusAsync, because the button that had focus no longer exists — docs/onboarding-checklist.md shows the exact pattern."
+            },
+            {
+              "name": "OnTaskToggle",
+              "type": "EventCallback<OnboardingTask>",
+              "isRequired": false,
+              "description": "Fires after a step was toggled, with the step whose IsDone the checklist has already written. Persist the value (or the whole list) from the handler — the checklist never edits the collection itself."
+            },
+            {
+              "name": "ShowCelebration",
+              "type": "bool",
+              "isRequired": false,
+              "default": "true",
+              "description": "Renders the celebration block — a trophy icon plus a title and a body line — once every required step is done. The block is not a live region: the completion is announced once through the announcer, so nothing is announced twice. Reduced motion neutralises its pop animation."
+            },
+            {
+              "name": "ShowProgress",
+              "type": "bool",
+              "isRequired": false,
+              "default": "true",
+              "description": "Renders the progress block: a TmProgressBar (named by its role, \"Progress\", with the whole percentage as aria-valuenow) plus the counted sentence next to it (\"3 of 7 tasks done\" in English, grammatical plural in cs/sk/fr — the plural family keys on the TOTAL, which is what the counted noun agrees with, and takes the done count as the second argument). The sentence is not a live region; only the announcer is."
+            },
+            {
+              "name": "Tasks",
+              "type": "IReadOnlyList<OnboardingTask>",
+              "isRequired": true,
+              "default": "[]",
+              "description": "The steps to work through, in render order. A step without a Group renders in the leading plain list; grouped steps render under their collapsible header (groups in the order of their first step). An empty list renders the localized empty state and no progress block. The checklist writes OnboardingTask.IsDone on the instances it was given before it raises OnTaskToggle, so it works without a bound handler; a NEW list identity is treated as a new onboarding run (a dismissed checklist comes back).",
+              "editorRequired": true
+            },
+            {
+              "name": "Title",
+              "type": "string?",
+              "isRequired": false,
+              "description": "Visible title of the checklist. When set it is also the accessible name of the region (the root is a section named by this heading — HeadingLevel picks the level); when null the region keeps the localized \"Onboarding checklist\" name and no header row renders (unless Dismissible adds one for the close button)."
+            }
+          ],
+          "cssClasses": [
+            "tm-onboarding-checklist",
+            "tm-onboarding-checklist--list",
+            "tm-onboarding-checklist--card",
+            "tm-onboarding-checklist--grid",
+            "tm-onboarding-checklist__header",
+            "tm-onboarding-checklist__title",
+            "tm-onboarding-checklist__dismiss",
+            "tm-onboarding-checklist__progress",
+            "tm-onboarding-checklist__progress-text",
+            "tm-onboarding-checklist__celebration",
+            "tm-onboarding-checklist__celebration-icon",
+            "tm-onboarding-checklist__celebration-text",
+            "tm-onboarding-checklist__celebration-title",
+            "tm-onboarding-checklist__celebration-body",
+            "tm-onboarding-checklist__empty",
+            "tm-onboarding-checklist__group",
+            "tm-onboarding-checklist__group-toggle",
+            "tm-onboarding-checklist__group-title",
+            "tm-onboarding-checklist__group-count",
+            "tm-onboarding-checklist__chevron",
+            "tm-onboarding-checklist__group-body",
+            "tm-onboarding-checklist__list",
+            "tm-onboarding-checklist__item",
+            "tm-onboarding-checklist__item--done",
+            "tm-onboarding-checklist__item--optional",
+            "tm-onboarding-checklist__checkbox",
+            "tm-onboarding-checklist__body",
+            "tm-onboarding-checklist__label",
+            "tm-onboarding-checklist__task-title",
+            "tm-onboarding-checklist__badge",
+            "tm-onboarding-checklist__description",
+            "tm-onboarding-checklist__action"
+          ],
+          "examples": [
+            {
+              "title": "A grouped setup guide with progress, actions and dismissal",
+              "code": "<TmOnboardingChecklist Tasks=\"Steps\"\n                      Title=\"Get started\"\n                      Layout=\"OnboardingChecklistLayout.Card\"\n                      Dismissible=\"true\"\n                      OnTaskToggle=\"HandleStepToggled\"\n                      OnDismiss=\"HandleDismissed\" />\n\n@code {\n    private readonly List<OnboardingTask> Steps =\n    [\n        new() { Id = \"workspace\", Title = \"Create a workspace\", Group = \"Basics\", IsDone = true },\n        new() { Id = \"invite\", Title = \"Invite a teammate\", Group = \"Basics\" },\n        new() { Id = \"data\", Title = \"Connect a data source\", Group = \"Data\",\n                Description = \"Postgres, MSSQL or a CSV file.\",\n                ActionLabel = \"Open settings\", ActionHref = \"/settings\" },\n        new() { Id = \"changelog\", Title = \"Read the changelog\", IsOptional = true },\n    ];\n}"
+            },
+            {
+              "title": "Auto-collapse finished groups and a custom celebration",
+              "code": "<TmOnboardingChecklist Tasks=\"Steps\"\n                      CollapseCompletedGroups=\"true\"\n                      CompletedTitle=\"Setup finished\"\n                      CompletedText=\"Everything is ready — open your first dashboard.\" />"
+            },
+            {
+              "title": "The tips-panel presentation",
+              "code": "<TmOnboardingChecklist Tasks=\"Tips\"\n                      Layout=\"OnboardingChecklistLayout.Grid\"\n                      Title=\"Tips\"\n                      ShowProgress=\"false\" />"
             }
           ]
         },
@@ -32612,6 +32852,10 @@
           "kind": "Css"
         },
         {
+          "path": "src/Tempo.Blazor/wwwroot/css/components/_onboarding-checklist.css",
+          "kind": "Css"
+        },
+        {
           "path": "src/Tempo.Blazor/wwwroot/css/components/_overlay-panel.css",
           "kind": "Css"
         },
@@ -33133,12 +33377,12 @@
         }
       ],
       "summary": {
-        "itemCount": 419,
-        "manualItemCount": 419,
-        "generatedItemCount": 411,
+        "itemCount": 422,
+        "manualItemCount": 422,
+        "generatedItemCount": 414,
         "generatedOnlyItemCount": 0,
-        "componentCount": 226,
-        "publicApiTypeCount": 185
+        "componentCount": 227,
+        "publicApiTypeCount": 187
       }
     },
     {
@@ -131209,10 +131453,10 @@
   ],
   "summary": {
     "packageCount": 28,
-    "itemCount": 3452,
-    "manualItemCount": 3452,
+    "itemCount": 3455,
+    "manualItemCount": 3455,
     "generatedOnlyItemCount": 0,
-    "componentCount": 526,
-    "publicApiTypeCount": 2873
+    "componentCount": 527,
+    "publicApiTypeCount": 2875
   }
 }

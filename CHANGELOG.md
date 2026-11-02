@@ -22,6 +22,50 @@
 > (Fáze 15b). Contracts: [docs/modeling-editor.md](docs/modeling-editor.md),
 > [docs/diagram-editor.md](docs/diagram-editor.md).
 
+### Setup guide — `TmOnboardingChecklist` (plan 5d396592, phase 5)
+
+The onboarding checklist the frame series was missing: `TmOnboardingChecklist` (core, `DataDisplay`)
+renders a list of `OnboardingTask` steps with a counted progress line, APG disclosure groups, an
+opt-in call-to-action per step and a celebration state, in three presentations (`OnboardingChecklistLayout`
+`List` / `Card` / `Grid` — the grid is the tips panel). Contract:
+[docs/onboarding-checklist.md](docs/onboarding-checklist.md).
+
+- **Pure Blazor, no JavaScript.** Steps are native `<input type="checkbox">` elements associated with
+  their own `<label>`, group headers are native `<button>`s carrying `aria-expanded`/`aria-controls`,
+  and the whole component adds no key handling — exactly one activation per key press.
+- **The component writes `OnboardingTask.IsDone`** on the instance it was given before it raises
+  `OnTaskToggle`, so the checklist is usable without a bound handler; a new `Tasks` list identity is a
+  new run.
+- **One polite live region** announces a completed step, a reopened step and the overall completion
+  (one composed message each). The visible celebration block is not a live region and the group
+  disclosures announce nothing, so nothing is announced twice.
+- **`CollapseCompletedGroups` defaults to `false`** — a group that folds under the cursor hides the
+  work just finished. When it is enabled, the focus moves from the hidden checkbox to the collapsed
+  group's header instead of falling to the document body.
+- **`Dismissible` closes the checklist locally in every case** (`OnDismiss` is raised when bound), so a
+  host that never binds the callback is not stuck with a surface it cannot close; the host owns the
+  focus after it removes the component.
+- **Localized** in en/cs/sk/fr — including the counted progress sentence as a real plural family keyed
+  on the total (`"3 of 7 tasks done"`, "3 z 7 úkolů hotovo", "3 z 7 úloh hotovo", "3 sur 7 tâches
+  terminées") — plus a `_onboarding-checklist.css` sheet on semantic tokens with dark values from the
+  token layer, a forced-colours `Highlight` ring, 44 px coarse targets and a reduced-motion entry for
+  the celebration's pop.
+- **Wireframe citizen**: catalogued with the `onboarding-checklist` role and rendered by the built-in
+  stencil pack, so the MCP catalogue and the editor palette agree.
+- **Review round (code + UX)**: the checkbox/description/group-body DOM ids are built from a step's
+  **position** instead of a slug of its id (`a.b` and `a-b` can no longer collide and make a `<label>`
+  point at the neighbour's box; `OnboardingTask.Id` is the `data-testid` suffix only), an
+  `OnboardingTask.ActionHref` renders only for a relative URL or the `http`/`https`/`mailto` scheme
+  (`javascript:`, `data:`, `vbscript:` and protocol-relative `//host` values are rendered as no link at
+  all), the joined completion announcement moved into the resource
+  `TmOnboardingChecklist_AnnounceTaskDoneAllComplete` (`"{0}. {1}"`) so translators own the
+  punctuation, the dismiss button is a 32 px target on a fine pointer (above the 24 px minimum of
+  WCAG 2.5.8, unchanged 44 px on coarse pointers), the finished-group collapse no longer builds the
+  whole group projection to answer one question, and the docs gained the `OnDismiss` focus pattern
+  (`FocusAsync` on a page heading — the component cannot focus an element it does not render). No
+  public API change.
+- **No breaking change** — a new component plus a new model; nothing existing changed.
+
 ### Application frame — `TmAppShell` phone presentation (plan 5d396592, phase 4)
 
 The phone layout the phase-3 notes deferred: a phone container renders **no navigation column at all**.

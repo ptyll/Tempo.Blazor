@@ -34,6 +34,13 @@
   to   { background-position: 200% 0; }
 }
 
+/* The onboarding celebration: a short pop of the trophy, never a moving page. Neutralised by the
+   reduced-motion block below. */
+@keyframes tm-onboarding-celebration-pop {
+  from { opacity: 0; transform: scale(0.85); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
 /* ── Utility Classes ──────────────────────────────────────────── */
 
 .tm-animate-spin     { animation: tm-spin 1s linear infinite; }
@@ -286,6 +293,7 @@
   .tm-number-input,
   .tm-number-input__decrement,
   .tm-number-input__increment,
+  .tm-onboarding-checklist__celebration-icon,
   .tm-overlay-panel-sheet__done,
   .tm-page-btn,
   .tm-pagination-btn,

@@ -164,7 +164,7 @@ managed hosts instead, start the four apps above and set
 | Buttons | `TmButton`, `TmSplitButton`, `TmCopyButton` |
 | Charts | `TmChart` (Bar, Line, Pie, Donut, HorizontalBar — pure SVG), `TmStockChart` (Candlestick, OHLC, Line), `TmSparkline` (Line, Bar, Area, Pie), `TmGauge` (Arc, Circular, Linear) |
 | Dashboard | `TmDashboard`, `TmWidgetSelector` (drag & resize grid, JS interop) |
-| DataDisplay | `TmBadge`, `TmCard`, `TmEmptyState`, `TmMultiViewList`, `TmStatCard`, `TmAccordion`, `TmAccordionItem`, `TmChip`, `TmChipGroup`, `TmKanbanBoard`, `TmChangeDiff` |
+| DataDisplay | `TmBadge`, `TmCard`, `TmEmptyState`, `TmMultiViewList`, `TmStatCard`, `TmAccordion`, `TmAccordionItem`, `TmChip`, `TmChipGroup`, `TmKanbanBoard`, `TmChangeDiff`, `TmOnboardingChecklist` (setup guide / progress tracker over `OnboardingTask`: counted progress with a grammatical plural family, APG disclosure groups, opt-in auto-collapse with focus hand-back, `Dismissible`, `List`/`Card`/`Grid` layouts, one polite live region, celebration state — [docs/onboarding-checklist.md](docs/onboarding-checklist.md)) |
 | DataTable | `TmDataTable`, `TmDataTableColumn`, `TmColumnFilter`, `TmColumnPicker`, `TmPagination`, `TmViewManager`, `TmBulkActionBar` |
 | Spreadsheet | `TmSpreadsheet`, `TmSpreadsheetGrid`, `TmSpreadsheetToolbar`, `TmSpreadsheetFormulaBar`, `TmSpreadsheetSheetTabs` (Excel-like with formulas, styling, XLSX import/export, freeze panes, merge cells) |
 | Dropdowns | `TmDropdown`, `TmDropdownItem`, `TmFilterableDropdown` |

@@ -417,7 +417,10 @@ public sealed class MarkupClassCoverageTests
             // Plan 5d396592 phase 3 (TmAppShell): the variant modifier ($"tm-app-shell--{Variant}") and
             // the ONE per-instance id prefix every id of the shell shares
             // ("tm-app-shell-{instanceId}-main|-work-area|…") add their two stems — 62 → 64.
-            ExpectedUnmeasurableStems: 64),
+            // Plan 5d396592 phase 5 (TmOnboardingChecklist): the ONE per-instance id prefix every id
+            // of the checklist shares ("tm-onboarding-checklist-{instanceId}-title|-check-…|
+            // -desc-…|-group-…") adds its single stem — 64 → 65.
+            ExpectedUnmeasurableStems: 65),
         new Scope("Signing", "Tempo.Blazor.Signing", UnstyledSigningMarkupClasses,
             MinRazorFiles: 28, MinMarkupClasses: 400, InheritsCoreCss: true,
             // Signing redesign phase 2 (B25): the runner's single step panel id

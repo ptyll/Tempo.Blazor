@@ -1,0 +1,381 @@
+/* ═══════════════════════════════════════════════════════
+   TmOnboardingChecklist — setup guide / progress tracker
+   ═══════════════════════════════════════════════════════ */
+
+/* Every value is a semantic token: the dark theme redefines the tokens, never this file. The
+   layout is an explicit parameter (List / Card / Grid), not a container query — a checklist can
+   sit in a sidebar or in a wide tips panel without changing its presentation. */
+
+.tm-onboarding-checklist {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-3);
+    min-width: 0;
+    color: var(--tm-text-primary);
+    font-size: var(--tm-font-size-sm);
+}
+
+/* The default presentation carries no surface chrome — the host (a sidebar, a page section) already
+   provides one. The rule is explicit so the modifier is a stated contract, not an undefined class. */
+.tm-onboarding-checklist--list {
+    padding: 0;
+    background-color: transparent;
+    border: 0;
+}
+
+/* ── Card surface ──────────────────────────────────────── */
+
+.tm-onboarding-checklist--card {
+    padding: var(--tm-space-4);
+    background-color: var(--tm-bg-surface);
+    border: var(--tm-border-width) solid var(--tm-border-color);
+    border-radius: var(--tm-radius-card);
+    box-shadow: var(--tm-shadow-card);
+}
+
+/* ── Header ────────────────────────────────────────────── */
+
+.tm-onboarding-checklist__header {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--tm-space-3);
+    min-width: 0;
+}
+
+.tm-onboarding-checklist__title {
+    flex: 1 1 auto;
+    min-width: 0;
+    margin: 0;
+    font-size: var(--tm-font-size-base);
+    font-weight: var(--tm-font-weight-semibold);
+    color: var(--tm-text-primary);
+}
+
+/* 32 px on a fine pointer: WCAG 2.5.8 asks for 24 px and 24 px only just meets it, so the icon
+   button keeps a margin (the coarse-pointer block below enlarges it to the 44 px target). */
+.tm-onboarding-checklist__dismiss {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    inline-size: var(--tm-space-8);
+    block-size: var(--tm-space-8);
+    padding: 0;
+    color: var(--tm-text-secondary);
+    background: none;
+    border: 1px solid transparent;
+    border-radius: var(--tm-radius-md);
+    cursor: pointer;
+}
+
+.tm-onboarding-checklist__dismiss:hover {
+    color: var(--tm-text-primary);
+    background-color: var(--tm-color-surface-hover);
+}
+
+/* ── Progress ──────────────────────────────────────────── */
+
+.tm-onboarding-checklist__progress {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-3);
+    min-width: 0;
+}
+
+.tm-onboarding-checklist__progress .tm-progress-bar {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.tm-onboarding-checklist__progress-text {
+    flex: 0 0 auto;
+    font-size: var(--tm-font-size-xs);
+    color: var(--tm-text-secondary);
+    white-space: nowrap;
+}
+
+/* ── Celebration ───────────────────────────────────────── */
+
+/* An icon plus two lines of text — no confetti, no colour-only signal. The icon is the only
+   animated subject of the component; the reduced-motion block in animations.css neutralises it. */
+.tm-onboarding-checklist__celebration {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--tm-space-3);
+    padding: var(--tm-space-3);
+    background-color: var(--tm-color-success-soft);
+    border: var(--tm-border-width) solid var(--tm-color-success-soft-border);
+    border-radius: var(--tm-radius-md);
+}
+
+.tm-onboarding-checklist__celebration-icon {
+    flex: 0 0 auto;
+    display: inline-flex;
+    color: var(--tm-color-success-text);
+    animation: tm-onboarding-celebration-pop var(--tm-transition-normal) ease-out;
+}
+
+.tm-onboarding-checklist__celebration-text {
+    min-width: 0;
+}
+
+.tm-onboarding-checklist__celebration-title {
+    margin: 0;
+    font-weight: var(--tm-font-weight-semibold);
+    color: var(--tm-color-success-text);
+}
+
+.tm-onboarding-checklist__celebration-body {
+    margin: 0;
+    font-size: var(--tm-font-size-xs);
+    color: var(--tm-text-secondary);
+}
+
+/* ── Empty state ───────────────────────────────────────── */
+
+.tm-onboarding-checklist__empty {
+    margin: 0;
+    color: var(--tm-text-muted);
+    font-size: var(--tm-font-size-sm);
+}
+
+/* ── Groups (APG disclosure) ───────────────────────────── */
+
+.tm-onboarding-checklist__group {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-1);
+    min-width: 0;
+}
+
+.tm-onboarding-checklist__group-toggle {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-2);
+    inline-size: 100%;
+    padding: var(--tm-space-1) 0;
+    color: var(--tm-text-primary);
+    font-size: var(--tm-font-size-sm);
+    font-weight: var(--tm-font-weight-medium);
+    text-align: start;
+    background: none;
+    border: 1px solid transparent;
+    border-radius: var(--tm-radius-md);
+    cursor: pointer;
+}
+
+.tm-onboarding-checklist__group-toggle:hover {
+    background-color: var(--tm-color-surface-hover);
+}
+
+.tm-onboarding-checklist__group-title {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.tm-onboarding-checklist__group-count {
+    flex: 0 0 auto;
+    font-size: var(--tm-font-size-xs);
+    font-weight: var(--tm-font-weight-normal);
+    color: var(--tm-text-muted);
+    white-space: nowrap;
+}
+
+.tm-onboarding-checklist__chevron {
+    flex: 0 0 auto;
+    display: inline-flex;
+    color: var(--tm-text-muted);
+}
+
+/* The body stays mounted so aria-controls always resolves; the attribute removes it from the
+   accessibility tree and the tab order. The explicit rule is required because the author
+   `display: flex` below outranks the user agent's `[hidden] { display: none }`. */
+.tm-onboarding-checklist__group-body[hidden] {
+    display: none;
+}
+
+.tm-onboarding-checklist__group-body {
+    display: flex;
+    flex-direction: column;
+}
+
+/* ── Steps ─────────────────────────────────────────────── */
+
+.tm-onboarding-checklist__list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-1);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    min-width: 0;
+}
+
+/* The tips-panel presentation: one tile per step, auto-fitting the available width. */
+.tm-onboarding-checklist--grid .tm-onboarding-checklist__list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+    gap: var(--tm-space-3);
+}
+
+.tm-onboarding-checklist__item {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--tm-space-3);
+    min-width: 0;
+    padding: var(--tm-space-2);
+    border-radius: var(--tm-radius-md);
+}
+
+.tm-onboarding-checklist__item:hover {
+    background-color: var(--tm-color-surface-hover);
+}
+
+.tm-onboarding-checklist--grid .tm-onboarding-checklist__item {
+    border: var(--tm-border-width) solid var(--tm-border-color);
+    padding: var(--tm-space-3);
+}
+
+.tm-onboarding-checklist__checkbox {
+    flex: 0 0 auto;
+    inline-size: var(--tm-space-4);
+    block-size: var(--tm-space-4);
+    margin: 0;
+    accent-color: var(--tm-color-primary);
+    cursor: pointer;
+}
+
+.tm-onboarding-checklist__body {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-1);
+    min-width: 0;
+}
+
+.tm-onboarding-checklist__label {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--tm-space-2);
+    min-width: 0;
+    cursor: pointer;
+}
+
+.tm-onboarding-checklist__task-title {
+    min-width: 0;
+    overflow-wrap: anywhere;
+    color: var(--tm-text-primary);
+}
+
+/* Done steps are struck through (a second signal next to the checked box — the text itself is
+   never hidden, so the accessible name and the visible label stay identical). */
+.tm-onboarding-checklist__item--done .tm-onboarding-checklist__task-title {
+    text-decoration: line-through;
+    color: var(--tm-text-muted);
+}
+
+.tm-onboarding-checklist__item--optional .tm-onboarding-checklist__task-title {
+    color: var(--tm-text-secondary);
+}
+
+.tm-onboarding-checklist__badge {
+    flex: 0 0 auto;
+    padding: 0 var(--tm-space-2);
+    font-size: var(--tm-font-size-xs);
+    color: var(--tm-text-secondary);
+    background-color: var(--tm-color-surface-muted);
+    border: var(--tm-border-width) solid var(--tm-border-color);
+    border-radius: var(--tm-radius-pill);
+    white-space: nowrap;
+}
+
+.tm-onboarding-checklist__description {
+    margin: 0;
+    font-size: var(--tm-font-size-xs);
+    color: var(--tm-text-secondary);
+    overflow-wrap: anywhere;
+}
+
+/* The action carries the shared .tm-btn / .tm-btn-ghost / .tm-btn-sm classes; this rule adds only
+   layout the button base does not declare (no restyling of the wrapped component's properties). */
+.tm-onboarding-checklist__action {
+    flex: 0 0 auto;
+    align-self: center;
+    margin-inline-start: auto;
+}
+
+/* ── Focus ─────────────────────────────────────────────── */
+
+.tm-onboarding-checklist__dismiss:focus-visible,
+.tm-onboarding-checklist__group-toggle:focus-visible,
+.tm-onboarding-checklist__checkbox:focus-visible,
+.tm-onboarding-checklist__action:focus-visible {
+    outline: 2px solid transparent;
+    outline-offset: 2px;
+    box-shadow: var(--tm-focus-ring);
+}
+
+/* ── Touch ─────────────────────────────────────────────── */
+
+/* 44 px coarse targets (WCAG 2.5.5): the header, the dismissal and the whole label row — the
+   label is what enlarges the checkbox's hit area, so the box itself keeps its visual size. */
+@media (pointer: coarse) {
+    .tm-onboarding-checklist__dismiss {
+        inline-size: var(--tm-touch-target);
+        block-size: var(--tm-touch-target);
+    }
+
+    .tm-onboarding-checklist__group-toggle {
+        min-block-size: var(--tm-touch-target);
+    }
+
+    .tm-onboarding-checklist__label {
+        min-block-size: var(--tm-touch-target);
+    }
+
+    .tm-onboarding-checklist__checkbox {
+        inline-size: var(--tm-space-5);
+        block-size: var(--tm-space-5);
+    }
+
+    .tm-onboarding-checklist__action {
+        min-block-size: var(--tm-touch-target);
+    }
+}
+
+/* ── Forced colours ────────────────────────────────────── */
+
+/* The system colours replace every token in High Contrast, so the focus ring has to be painted
+   with the system Highlight colour and the surface borders with CanvasText. */
+@media (forced-colors: active) {
+    .tm-onboarding-checklist__dismiss:focus-visible,
+    .tm-onboarding-checklist__dismiss:focus,
+    .tm-onboarding-checklist__group-toggle:focus-visible,
+    .tm-onboarding-checklist__group-toggle:focus,
+    .tm-onboarding-checklist__checkbox:focus-visible,
+    .tm-onboarding-checklist__checkbox:focus,
+    .tm-onboarding-checklist__action:focus-visible,
+    .tm-onboarding-checklist__action:focus {
+        outline: 2px solid Highlight;
+        outline-offset: 2px;
+        box-shadow: none;
+    }
+
+    .tm-onboarding-checklist--card,
+    .tm-onboarding-checklist__badge,
+    .tm-onboarding-checklist--grid .tm-onboarding-checklist__item {
+        border-color: CanvasText;
+    }
+
+    .tm-onboarding-checklist__celebration {
+        border-color: CanvasText;
+    }
+
+    .tm-onboarding-checklist__item--done .tm-onboarding-checklist__task-title {
+        color: GrayText;
+    }
+}
