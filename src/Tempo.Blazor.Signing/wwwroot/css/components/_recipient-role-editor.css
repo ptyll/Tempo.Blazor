@@ -2,7 +2,7 @@
     display: grid;
     gap: var(--tm-space-3);
     color: var(--tm-text-primary);
-    /* The row grids re-wrap by the editor's own width — the editor is embedded in inspectors and
+    /* The card grids re-wrap by the editor's own width — the editor is embedded in inspectors and
        dialogs whose width is unrelated to the viewport. */
     container: tm-recipient-role-editor / inline-size;
     /* inline-size containment sizes the box as if it were empty: keep it filling its parent
@@ -20,79 +20,123 @@
     gap: var(--tm-space-3);
 }
 
-.tm-recipient-role-editor__row {
+/* One collapsible card per role: a header strip (badge, pill, preview, actions) over the editing
+   body. */
+.tm-recipient-role-editor__card {
     display: grid;
-    gap: var(--tm-space-3) var(--tm-space-2);
-    align-items: start;
-    padding: var(--tm-space-4);
+    gap: var(--tm-space-3);
+    padding: var(--tm-space-2) var(--tm-space-3);
     border: 1px solid var(--tm-border-color);
     border-radius: var(--tm-radius-md);
     background: var(--tm-bg-surface);
     box-shadow: var(--tm-shadow-sm);
 }
 
-.tm-recipient-role-editor--template .tm-recipient-role-editor__row {
-    grid-template-columns:
-        calc(var(--tm-input-height-sm) * 2 + var(--tm-space-1))
-        var(--tm-space-12)
-        minmax(calc(var(--tm-space-16) * 2), 1fr)
-        minmax(calc(var(--tm-space-16) * 3), 1.4fr)
-        auto;
-    grid-template-areas:
-        "order color name invite remove"
-        "order . optional via remove"
-        "validation validation validation validation validation";
+.tm-recipient-role-editor__card--collapsed {
+    padding-block: var(--tm-space-2);
 }
 
-.tm-recipient-role-editor--submission .tm-recipient-role-editor__row {
-    grid-template-columns:
-        calc(var(--tm-input-height-sm) * 2 + var(--tm-space-1))
-        var(--tm-space-12)
-        minmax(calc(var(--tm-space-12) * 2), 0.8fr)
-        minmax(calc(var(--tm-space-16) + var(--tm-space-12)), 1fr)
-        minmax(calc(var(--tm-space-16) + var(--tm-space-12)), 1.1fr)
-        minmax(calc(var(--tm-space-16) + var(--tm-space-12)), 0.9fr)
-        minmax(calc(var(--tm-space-16) * 2), 1.15fr)
-        auto;
-    grid-template-areas:
-        "order color name full email phone invite remove"
-        "order . optional optional via via via remove"
-        "validation validation validation validation validation validation validation validation";
-}
-
-.tm-recipient-role-editor__row--invalid {
+.tm-recipient-role-editor__card--invalid {
     border-color: var(--tm-color-danger);
     background: color-mix(in srgb, var(--tm-color-danger) 4%, var(--tm-bg-surface));
 }
 
-.tm-recipient-role-editor__order {
-    grid-area: order;
-    display: grid;
-    grid-template-columns: calc(var(--tm-input-height-sm) * 2 + var(--tm-space-1));
-    gap: var(--tm-space-1);
-    align-items: start;
-    justify-items: start;
-    width: calc(var(--tm-input-height-sm) * 2 + var(--tm-space-1));
+.tm-recipient-role-editor__card-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--tm-space-2);
+    min-width: 0;
 }
 
-.tm-recipient-role-editor__order-input {
+.tm-recipient-role-editor__drag-handle {
+    display: inline-flex;
+    align-items: center;
+    color: var(--tm-text-tertiary);
+    cursor: grab;
+}
+
+/* The handle is a POINTER affordance only: on a coarse pointer the reorder happens through the
+   arrow buttons (the keyboard alternative stays available at every width). */
+@media (pointer: coarse) {
+    .tm-recipient-role-editor__drag-handle {
+        display: none;
+    }
+}
+
+/* The signing order badge replaces the old read-only number input. */
+.tm-recipient-role-editor__order-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
     width: var(--tm-input-height-sm);
-    min-height: var(--tm-input-height-sm);
-    padding: 0;
-    border: 1px solid var(--tm-border-color);
-    border-radius: var(--tm-radius-sm);
+    height: var(--tm-input-height-sm);
+    border-radius: var(--tm-radius-full);
     background: var(--tm-bg-surface-secondary);
     color: var(--tm-text-secondary);
-    font: inherit;
     font-size: var(--tm-font-size-sm);
     font-weight: var(--tm-font-weight-semibold);
-    text-align: center;
 }
 
-.tm-recipient-role-editor__move-buttons {
-    display: flex;
+/* The role pill paints the role colour (runtime local custom property). The text ink rides the
+   same inline style when it resolves through a token (--tm-signing-role-N-on for default-palette
+   colours, --tm-color-on-primary for a colour-less pill); a CUSTOM colour (fixed data the theme
+   cannot re-ink) takes the tone class instead — the fixed inks stay tokens, never an inline hex. */
+.tm-recipient-role-editor__role-pill {
+    display: inline-flex;
+    align-items: center;
+    flex: 0 1 auto;
+    max-inline-size: 100%;
+    padding: var(--tm-space-1) var(--tm-space-3);
+    border-radius: var(--tm-radius-full);
+    background: var(--tm-signing-role-color, var(--tm-color-primary));
+    font-size: var(--tm-font-size-sm);
+    font-weight: var(--tm-font-weight-semibold);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.tm-recipient-role-editor__role-pill--on-light {
+    /* A light custom paint: the near-black ink is fixed. --tm-color-gray-900 is NOT that ink —
+       dark and indigo themes redefine it to white. --tm-signing-role-ink-dark is declared on
+       :root only and is never overridden. */
+    color: var(--tm-signing-role-ink-dark);
+}
+
+.tm-recipient-role-editor__role-pill--on-dark {
+    /* A dark custom paint: the white ink is fixed (--tm-color-on-primary flips with the theme). */
+    color: var(--tm-color-on-primary-fixed);
+}
+
+.tm-recipient-role-editor__preview {
+    flex: 1 1 auto;
+    min-width: 0;
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-sm);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.tm-recipient-role-editor__card--collapsed .tm-recipient-role-editor__preview {
+    display: inline;
+}
+
+.tm-recipient-role-editor__header-actions {
+    display: inline-flex;
+    align-items: center;
     gap: var(--tm-space-1);
-    width: 100%;
+    margin-inline-start: auto;
+}
+
+.tm-recipient-role-editor__card-body {
+    display: grid;
+    gap: var(--tm-space-3);
+    padding-top: var(--tm-space-2);
+    padding-inline: var(--tm-space-2) var(--tm-space-2) var(--tm-space-3);
+    border-top: 1px solid var(--tm-border-color);
 }
 
 .tm-recipient-role-editor__field {
@@ -101,66 +145,50 @@
     min-width: 0;
 }
 
-.tm-recipient-role-editor__field--color {
-    grid-area: color;
-    width: var(--tm-space-12);
-}
-
-.tm-recipient-role-editor__field--name {
-    grid-area: name;
-}
-
-.tm-recipient-role-editor__field--full-name {
-    grid-area: full;
-}
-
-.tm-recipient-role-editor__field--email {
-    grid-area: email;
-}
-
-.tm-recipient-role-editor__field--phone {
-    grid-area: phone;
-}
-
-.tm-recipient-role-editor__field--invite-by-role {
-    grid-area: invite;
-}
-
-.tm-recipient-role-editor__field--optional-invite-by-role {
-    grid-area: optional;
-}
-
-.tm-recipient-role-editor__field--invite-via-field {
-    grid-area: via;
-}
-
 .tm-recipient-role-editor__label {
     color: var(--tm-text-secondary);
     font-size: var(--tm-font-size-xs);
     font-weight: var(--tm-font-weight-medium);
 }
 
-.tm-recipient-role-editor__name,
-.tm-recipient-role-editor__email,
-.tm-recipient-role-editor__full-name,
-.tm-recipient-role-editor__phone,
-.tm-recipient-role-editor__invite-by-role,
-.tm-recipient-role-editor__optional-invite-by-role,
-.tm-recipient-role-editor__invite-via-field {
-    width: 100%;
-    min-height: var(--tm-input-height-sm);
-    padding: var(--tm-space-1) var(--tm-space-2);
-    border: 1px solid var(--tm-border-color);
-    border-radius: var(--tm-radius-sm);
-    background: var(--tm-bg-surface);
-    color: var(--tm-text-primary);
-    font: inherit;
-    font-size: var(--tm-font-size-sm);
+/* Palette swatches: the default palette paints through its tokens (a host rebrand reaches the
+   swatches without touching this file). */
+.tm-recipient-role-editor__swatches {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--tm-space-2);
+}
+
+.tm-recipient-role-editor__swatch {
+    inline-size: var(--tm-input-height-sm);
+    block-size: var(--tm-input-height-sm);
+    padding: 0;
+    border: 2px solid var(--tm-border-color);
+    border-radius: var(--tm-radius-full);
+    background: var(--tm-signing-role-color, var(--tm-color-primary));
+    cursor: pointer;
+}
+
+.tm-recipient-role-editor__swatch[aria-pressed="true"] {
+    border-color: var(--tm-text-primary);
+}
+
+.tm-recipient-role-editor__swatch:disabled {
+    cursor: not-allowed;
+}
+
+.tm-recipient-role-editor__swatch-custom {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--tm-space-1);
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-xs);
 }
 
 .tm-recipient-role-editor__color {
-    width: var(--tm-input-height-sm);
-    height: var(--tm-input-height-sm);
+    inline-size: var(--tm-input-height-sm);
+    block-size: var(--tm-input-height-sm);
     padding: 0;
     border: 1px solid var(--tm-border-color);
     border-radius: var(--tm-radius-sm);
@@ -176,13 +204,15 @@
 .tm-recipient-role-editor__move-up,
 .tm-recipient-role-editor__move-down,
 .tm-recipient-role-editor__remove,
+.tm-recipient-role-editor__toggle,
 .tm-recipient-role-editor__add {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: var(--tm-space-1);
     min-height: var(--tm-input-height-sm);
-    padding: var(--tm-space-1) var(--tm-space-3);
+    min-width: var(--tm-input-height-sm);
+    padding: var(--tm-space-1) var(--tm-space-2);
     border: 1px solid var(--tm-border-color);
     border-radius: var(--tm-radius-sm);
     background: var(--tm-bg-surface);
@@ -194,19 +224,11 @@
 
 .tm-recipient-role-editor__move-up:hover:not(:disabled),
 .tm-recipient-role-editor__move-down:hover:not(:disabled),
-.tm-recipient-role-editor__remove:hover:not(:disabled) {
+.tm-recipient-role-editor__toggle:hover:not(:disabled) {
     background: var(--tm-bg-surface-secondary);
 }
 
-.tm-recipient-role-editor__move-up,
-.tm-recipient-role-editor__move-down,
 .tm-recipient-role-editor__remove {
-    width: var(--tm-input-height-sm);
-    padding: 0;
-}
-
-.tm-recipient-role-editor__remove {
-    grid-area: remove;
     color: var(--tm-text-secondary);
 }
 
@@ -216,29 +238,24 @@
 }
 
 .tm-recipient-role-editor__add {
-    background: var(--tm-color-primary);
-    border-color: var(--tm-color-primary);
-    color: var(--tm-text-inverse);
+    justify-self: start;
+    gap: var(--tm-space-2);
+    padding: var(--tm-space-2) var(--tm-space-4);
+    border: 1px solid var(--tm-color-primary-soft-border);
+    background: var(--tm-color-primary-subtle);
+    color: var(--tm-color-primary-text);
 }
 
 .tm-recipient-role-editor__move-up:disabled,
 .tm-recipient-role-editor__move-down:disabled,
 .tm-recipient-role-editor__remove:disabled,
-.tm-recipient-role-editor__add:disabled,
-.tm-recipient-role-editor__name:disabled,
-.tm-recipient-role-editor__email:disabled,
-.tm-recipient-role-editor__full-name:disabled,
-.tm-recipient-role-editor__phone:disabled,
-.tm-recipient-role-editor__invite-by-role:disabled,
-.tm-recipient-role-editor__optional-invite-by-role:disabled,
-.tm-recipient-role-editor__invite-via-field:disabled,
-.tm-recipient-role-editor__color:disabled {
+.tm-recipient-role-editor__toggle:disabled,
+.tm-recipient-role-editor__add:disabled {
     color: var(--tm-text-disabled);
     cursor: not-allowed;
 }
 
 .tm-recipient-role-editor__validation {
-    grid-area: validation;
     display: inline-flex;
     align-items: center;
     gap: var(--tm-space-1);
@@ -252,66 +269,39 @@
 
 .tm-recipient-role-editor__actions {
     display: flex;
-    justify-content: flex-end;
     gap: var(--tm-space-2);
 }
 
 @container tm-recipient-role-editor (width < 1024px) {
-    .tm-recipient-role-editor--template .tm-recipient-role-editor__row {
-        grid-template-columns: calc(var(--tm-input-height-sm) * 2 + var(--tm-space-1)) var(--tm-space-12) minmax(0, 1fr) auto;
-        grid-template-areas:
-            "order color name remove"
-            "order . invite invite"
-            "order . optional optional"
-            "order . via via"
-            "validation validation validation validation";
-    }
-
-    .tm-recipient-role-editor--submission .tm-recipient-role-editor__row {
-        grid-template-columns: calc(var(--tm-input-height-sm) * 2 + var(--tm-space-1)) var(--tm-space-12) repeat(2, minmax(0, 1fr)) auto;
-        grid-template-areas:
-            "order color name name remove"
-            "full full email email email"
-            "phone phone invite invite invite"
-            "optional optional via via via"
-            "validation validation validation validation validation";
-    }
-
-    .tm-recipient-role-editor__remove {
-        justify-self: end;
+    .tm-recipient-role-editor__card-body {
+        padding-inline: 0;
     }
 }
 
 @container tm-recipient-role-editor (width < 640px) {
-    .tm-recipient-role-editor--template .tm-recipient-role-editor__row,
-    .tm-recipient-role-editor--submission .tm-recipient-role-editor__row {
-        grid-template-columns: 1fr;
-        grid-template-areas:
-            "order"
-            "color"
-            "name"
-            "full"
-            "email"
-            "phone"
-            "invite"
-            "optional"
-            "via"
-            "remove"
-            "validation";
+    .tm-recipient-role-editor__preview {
+        /* On a narrow container the contact preview wraps under the pill instead of squeezing the
+           header actions. */
+        flex-basis: 100%;
+        order: 10;
+        white-space: normal;
     }
 
-    .tm-recipient-role-editor__order {
-        grid-template-columns: var(--tm-input-height-sm) auto;
-        justify-items: start;
-        width: auto;
+    .tm-recipient-role-editor__header-actions {
+        margin-inline-start: 0;
     }
+}
 
-    .tm-recipient-role-editor__field--color {
-        width: 100%;
-    }
-
-    .tm-recipient-role-editor__remove {
-        justify-self: stretch;
-        width: 100%;
+/* A finger needs the 44px target (phase 7 review): the header actions, the palette swatches and
+   the custom colour input grow to the shared touch-target token on a coarse pointer. */
+@media (pointer: coarse) {
+    .tm-recipient-role-editor__move-up,
+    .tm-recipient-role-editor__move-down,
+    .tm-recipient-role-editor__remove,
+    .tm-recipient-role-editor__toggle,
+    .tm-recipient-role-editor__swatch,
+    .tm-recipient-role-editor__color {
+        min-width: var(--tm-touch-target);
+        min-height: var(--tm-touch-target);
     }
 }

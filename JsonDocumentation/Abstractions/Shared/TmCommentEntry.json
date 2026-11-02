@@ -8,6 +8,12 @@
   "documentationStatus": "generated",
   "members": [
     {
+      "name": "Badges",
+      "kind": "Property",
+      "type": "List<TmCommentBadge>",
+      "description": "Consumer-supplied badges rendered with the entry. Invalid badges are not rendered."
+    },
+    {
       "name": "Author",
       "kind": "Property",
       "type": "TmUserRef",
@@ -54,6 +60,12 @@
       "kind": "Property",
       "type": "string",
       "description": "Stable entry identifier."
+    },
+    {
+      "name": "IsInternal",
+      "kind": "Property",
+      "type": "bool",
+      "description": "Internal comment, visible only to privileged users; the rendering component distinguishes it visually. The component never hides internal content — the consumer or server filters it."
     },
     {
       "name": "Mentions",

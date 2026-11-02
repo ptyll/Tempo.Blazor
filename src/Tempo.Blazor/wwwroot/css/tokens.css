@@ -504,6 +504,18 @@
   --tm-priority-high:          #c2410c;
   --tm-priority-highest:       var(--tm-color-danger);
 
+  /* TmActivityComments internal-comment wash. Warning family, not a new hue:
+     IconNames.Lock and the localized "Internal" label are the non-colour cue.
+     Body text (--tm-text-primary / --tm-text-secondary) holds 4.5:1 on the wash,
+     and the accent bar holds 3:1 against --tm-bg-surface (TokenContrastTests).
+     There is no separate fg: the item inherits the thread's text tokens. */
+  --tm-comment-internal-bg:     var(--tm-color-warning-subtle);
+  --tm-comment-internal-accent: var(--tm-color-warning-strong);
+  /* Padding plus the accent bar, so an internal item can cancel that inset. */
+  --tm-comment-internal-inset:  calc(var(--tm-space-2) + var(--tm-space-1));
+  /* Consumer-badge cap. A longer label wraps; it does not widen the thread. */
+  --tm-comment-badge-max-width: 16rem;
+
   /* The solid event fill when the consumer sets no colour. -600, not the theme's
      primary step: in dark the primary step is -400, and white text on it falls short
      of 3:1. -600 holds in both themes. */

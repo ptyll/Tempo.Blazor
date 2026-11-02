@@ -24,7 +24,7 @@ namespace Tempo.Blazor.Tests.Documentation;
 public sealed class UndescribedParametersRatchetTests
 {
     /// <summary>Undescribed <c>parameters[].description</c> entries measured on ratchet day.</summary>
-    private const int MaxUndescribedParameters = 882;
+    private const int MaxUndescribedParameters = 877;
 
     private static string JsonDocumentationDir =>
         Path.Combine(ThemeCss.RepositoryRoot().FullName, "JsonDocumentation");

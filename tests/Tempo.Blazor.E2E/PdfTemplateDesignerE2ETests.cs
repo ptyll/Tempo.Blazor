@@ -3,6 +3,43 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Tempo.Blazor.E2E;
 
+/// <summary>
+/// Server circuit: one palette click must arm draw mode and add nothing. A second click places
+/// exactly one field. WASM cannot show the double activation the JS tap path used to cause.
+/// </summary>
+[TestClass]
+public class PdfTemplateDesignerServerE2ETests : ServerTestBase
+{
+    [TestMethod]
+    [Description("One palette click adds no field; the second places exactly one")]
+    public async Task PdfTemplateDesigner_PaletteClick_AddsOneFieldOnTheSecondClick()
+    {
+        var context = await CreateContextAsync();
+        var page = await context.NewPageAsync();
+        await page.SetViewportSizeAsync(1440, 900);
+        await page.GotoAsync($"{BaseUrl}/signing-components");
+        await WaitForAppReadyAsync(page);
+        await page.AddStyleTagAsync(new PageAddStyleTagOptions { Content = SigningRedesignPhase8Specs.WideLayoutStyle });
+        await page.EvaluateAsync("() => window.dispatchEvent(new Event('resize'))");
+
+        var designer = page.Locator("[data-testid='pdf-template-designer']").First;
+        await designer.ScrollIntoViewIfNeededAsync();
+        var status = page.Locator("[data-testid='pdf-template-designer-status']");
+        await Assertions.Expect(status).ToContainTextAsync("2 designer fields");
+
+        var text = designer.Locator("[data-field-type='Text']").First;
+        await text.ClickAsync();
+        await page.WaitForTimeoutAsync(400);
+        await Assertions.Expect(status).ToContainTextAsync("2 designer fields");
+        await Assertions.Expect(designer).ToHaveClassAsync(new System.Text.RegularExpressions.Regex("tm-pdf-template-designer--drawing"));
+        await Assertions.Expect(designer.Locator(".tm-signing-field")).ToHaveCountAsync(2);
+
+        await text.ClickAsync();
+        await Assertions.Expect(status).ToContainTextAsync("3 designer fields");
+        await Assertions.Expect(designer.Locator(".tm-signing-field")).ToHaveCountAsync(3);
+    }
+}
+
 [TestClass]
 public class PdfTemplateDesignerE2ETests : WasmTestBase
 {
@@ -51,14 +88,14 @@ public class PdfTemplateDesignerE2ETests : WasmTestBase
         var before = await pageElement.BoundingBoxAsync();
         Assert.IsNotNull(before);
 
-        await designer.Locator(".tm-pdf-template-designer__zoom-in").ClickAsync();
+        await ClickDesignerCommandAsync(page, designer, ".tm-pdf-template-designer__zoom-in", "Zoom in");
         await Expect(designer.Locator(".tm-pdf-template-designer__zoom-label")).ToContainTextAsync("125%");
         var zoomed = await pageElement.BoundingBoxAsync();
         Assert.IsNotNull(zoomed);
         Assert.IsTrue(zoomed!.Width > before!.Width, "Zoom in should increase the visible designer page width.");
         await Expect(designer.Locator(".tm-signing-field")).ToHaveCountAsync(2);
 
-        await designer.Locator(".tm-pdf-template-designer__fit-page").ClickAsync();
+        await ClickDesignerCommandAsync(page, designer, ".tm-pdf-template-designer__fit-page", "Fit page");
         await Expect(designer.Locator(".tm-pdf-template-designer__zoom-label")).ToContainTextAsync("85%");
     }
 
@@ -70,7 +107,7 @@ public class PdfTemplateDesignerE2ETests : WasmTestBase
         var designer = GetDesigner(page);
 
         await designer.Locator(".tm-pdf-template-designer__next-page").ClickAsync();
-        var surface = designer.Locator("[data-page-key='designer-nda:1'] .tm-pdf-template-designer__page-surface").First;
+        var surface = designer.Locator(".tm-pdf-template-designer__page-surface[data-page-key='designer-nda:1']").First;
         var surfaceBox = await surface.BoundingBoxAsync();
         Assert.IsNotNull(surfaceBox);
 
@@ -96,7 +133,7 @@ public class PdfTemplateDesignerE2ETests : WasmTestBase
         var designer = GetDesigner(page);
 
         await designer.Locator("[data-field-type='Text']").ClickAsync();
-        var surface = designer.Locator("[data-page-key='designer-nda:0'] .tm-pdf-template-designer__page-surface").First;
+        var surface = designer.Locator(".tm-pdf-template-designer__page-surface[data-page-key='designer-nda:0']").First;
         await surface.ScrollIntoViewIfNeededAsync();
         var box = await surface.BoundingBoxAsync();
         Assert.IsNotNull(box);
@@ -116,7 +153,7 @@ public class PdfTemplateDesignerE2ETests : WasmTestBase
     {
         var page = await OpenDesignerAsync();
         var designer = GetDesigner(page);
-        var surface = designer.Locator("[data-page-key='designer-nda:0'] .tm-pdf-template-designer__page-surface").First;
+        var surface = designer.Locator(".tm-pdf-template-designer__page-surface[data-page-key='designer-nda:0']").First;
         var surfaceBox = await surface.BoundingBoxAsync();
         Assert.IsNotNull(surfaceBox);
 
@@ -180,31 +217,30 @@ public class PdfTemplateDesignerE2ETests : WasmTestBase
         var page = await OpenDesignerAsync();
         var designer = GetDesigner(page);
         var field = designer.Locator("[data-field-uuid='designer-name']").First;
+        await field.ClickAsync(new LocatorClickOptions { Force = true });
         var before = await field.BoundingBoxAsync();
         Assert.IsNotNull(before);
 
-        await page.Mouse.MoveAsync(before.X + 10, before.Y + 10);
-        await page.Mouse.DownAsync();
-        await page.Mouse.MoveAsync(before.X + 80, before.Y + 50);
-        await page.Mouse.UpAsync();
-
-        var moved = await field.BoundingBoxAsync();
-        Assert.IsNotNull(moved);
-        Assert.IsTrue(moved.X > before.X);
-
-        await field.ClickAsync();
         var handle = designer.Locator("[data-field-uuid='designer-name'] [data-handle='SouthEast']").First;
         var handleBox = await handle.BoundingBoxAsync();
         Assert.IsNotNull(handleBox);
-
-        await page.Mouse.MoveAsync(handleBox.X + 2, handleBox.Y + 2);
+        await page.Mouse.MoveAsync(handleBox.X + handleBox.Width / 2, handleBox.Y + handleBox.Height / 2);
         await page.Mouse.DownAsync();
-        await page.Mouse.MoveAsync(handleBox.X + 80, handleBox.Y + 60);
+        await page.Mouse.MoveAsync(handleBox.X + handleBox.Width / 2 + 40, handleBox.Y + handleBox.Height / 2 + 24);
         await page.Mouse.UpAsync();
 
         var resized = await field.BoundingBoxAsync();
         Assert.IsNotNull(resized);
-        Assert.IsTrue(resized.Width > moved.Width);
+        Assert.IsTrue(resized.Width > before.Width);
+
+        await page.Mouse.MoveAsync(resized.X + 10, resized.Y + 10);
+        await page.Mouse.DownAsync();
+        await page.Mouse.MoveAsync(resized.X + 46, resized.Y + 30);
+        await page.Mouse.UpAsync();
+
+        var moved = await field.BoundingBoxAsync();
+        Assert.IsNotNull(moved);
+        Assert.IsTrue(moved.X > resized.X);
     }
 
     [TestMethod]
@@ -216,8 +252,8 @@ public class PdfTemplateDesignerE2ETests : WasmTestBase
         var field = designer.Locator("[data-field-uuid='designer-name']").First;
 
         await field.ClickAsync(new LocatorClickOptions { Button = MouseButton.Right });
-        await Expect(designer.Locator(".tm-pdf-template-designer__context-actions")).ToBeVisibleAsync();
-        await designer.Locator(".tm-pdf-template-designer__context-actions .tm-pdf-template-designer__delete-field").ClickAsync();
+        await Expect(page.Locator(".tm-context-menu.tm-overlay-panel--open")).ToHaveCountAsync(1);
+        await ClickOpenMenuItemAsync(page, ".tm-pdf-template-designer__delete-field");
 
         await Expect(page.Locator("[data-testid='pdf-template-designer-status']")).ToContainTextAsync("1 designer field");
     }
@@ -231,19 +267,18 @@ public class PdfTemplateDesignerE2ETests : WasmTestBase
         var field = designer.Locator("[data-field-uuid='designer-name']").First;
 
         await field.ClickAsync(new LocatorClickOptions { Button = MouseButton.Right });
-        await designer.Locator(".tm-pdf-template-designer__context-actions .tm-pdf-template-designer__copy-field").ClickAsync();
+        await ClickOpenMenuItemAsync(page, ".tm-pdf-template-designer__copy-field");
 
-        await Expect(designer.Locator(".tm-pdf-template-designer__context-actions")).ToHaveCountAsync(0);
+        await Expect(designer.Locator(".tm-pdf-template-designer__context-menu")).ToHaveCountAsync(0);
         await Expect(designer.Locator(".tm-pdf-template-designer__clipboard-status")).ToContainTextAsync("Field copied");
 
-        var surface = designer.Locator("[data-page-key='designer-nda:0'] .tm-pdf-template-designer__page-surface").First;
+        var surface = designer.Locator(".tm-pdf-template-designer__page-surface[data-page-key='designer-nda:0']").First;
         var surfaceBox = await surface.BoundingBoxAsync();
         Assert.IsNotNull(surfaceBox);
         var targetX = surfaceBox.X + surfaceBox.Width * 0.72;
         var targetY = surfaceBox.Y + surfaceBox.Height * 0.68;
-
         await page.Mouse.ClickAsync((float)targetX, (float)targetY, new MouseClickOptions { Button = MouseButton.Right });
-        await designer.Locator(".tm-pdf-template-designer__context-actions .tm-pdf-template-designer__paste-field").ClickAsync();
+        await ClickOpenMenuItemAsync(page, ".tm-pdf-template-designer__paste-field");
 
         await Expect(page.Locator("[data-testid='pdf-template-designer-status']")).ToContainTextAsync("3 designer fields");
         await Expect(designer.Locator(".tm-pdf-template-designer__clipboard-status")).ToContainTextAsync("Field pasted");
@@ -283,10 +318,27 @@ public class PdfTemplateDesignerE2ETests : WasmTestBase
         var designer = GetDesigner(page);
 
         await designer.Locator("[data-field-uuid='designer-name']").ClickAsync();
+        await designer.Locator(".tm-pdf-template-designer__workspace").FocusAsync();
         await page.Keyboard.PressAsync("Delete");
 
         await Expect(page.Locator("[data-testid='pdf-template-designer-status']")).ToContainTextAsync("1 designer field");
         await Expect(designer.Locator("[data-field-uuid='designer-name']")).ToHaveCountAsync(0);
+    }
+
+    [TestMethod]
+    [Description("Delete with Autodetect focused does not delete the selected field")]
+    public async Task PdfTemplateDesigner_DeleteWithDetectFocused_DoesNotDelete()
+    {
+        var page = await OpenDesignerAsync();
+        var designer = GetDesigner(page);
+
+        await designer.Locator("[data-field-uuid='designer-name']").ClickAsync();
+        var detect = designer.Locator(".tm-pdf-template-designer__detect").First;
+        await detect.FocusAsync();
+        await page.Keyboard.PressAsync("Delete");
+
+        await Expect(designer.Locator("[data-field-uuid='designer-name']")).ToHaveCountAsync(1);
+        await Expect(page.Locator("[data-testid='pdf-template-designer-status']")).ToContainTextAsync("2 designer fields");
     }
 
     [TestMethod]
@@ -338,15 +390,13 @@ public class PdfTemplateDesignerE2ETests : WasmTestBase
         var designer = GetDesigner(page);
 
         await designer.Locator("[data-field-uuid='designer-name']").ClickAsync();
-        await designer.Locator("[data-field-uuid='designer-delivery']").DispatchEventAsync("click", new Dictionary<string, object>
+        await designer.Locator("[data-field-uuid='designer-delivery']").ClickAsync(new LocatorClickOptions
         {
-            ["bubbles"] = true,
-            ["cancelable"] = true,
-            ["ctrlKey"] = true
+            Modifiers = [KeyboardModifier.Control]
         });
 
         await Expect(designer.Locator(".tm-signing-field--selected")).ToHaveCountAsync(2);
-        await designer.Locator(".tm-pdf-template-designer__delete-selected").ClickAsync();
+        await ClickDesignerCommandAsync(page, designer, ".tm-pdf-template-designer__delete-selected", "Delete selected");
 
         await Expect(page.Locator("[data-testid='pdf-template-designer-status']")).ToContainTextAsync("0 designer fields");
     }
@@ -369,13 +419,51 @@ public class PdfTemplateDesignerE2ETests : WasmTestBase
 
     private async Task<IPage> OpenDesignerAsync()
     {
+        // 1440 keeps the demo card wide enough for the shell to dock both panels. The default 1280
+        // viewport classifies the card as a tablet, where the inspector is an overlay sheet.
         var context = await CreateContextAsync();
         var page = await context.NewPageAsync();
+        await page.SetViewportSizeAsync(1440, 900);
         await page.GotoAsync($"{BaseUrl}/signing-components");
         await WaitForAppReadyAsync(page);
+        // The demo sidebar keeps a 1440 viewport's designer under the desktop breakpoint, so the
+        // palette opens as an overlay and covers the page the gestures land on.
+        await page.AddStyleTagAsync(new PageAddStyleTagOptions { Content = SigningRedesignPhase8Specs.WideLayoutStyle });
+        await page.EvaluateAsync("() => window.dispatchEvent(new Event('resize'))");
         var designer = GetDesigner(page);
         await designer.ScrollIntoViewIfNeededAsync();
         return page;
+    }
+
+    /// <summary>
+    /// The designer toolbar overflows at the demo card width, so a pinned zoom command can sit under
+    /// the More trigger. Click the bar button when it is free; otherwise invoke the same command from More.
+    /// </summary>
+    private static async Task ClickDesignerCommandAsync(IPage page, ILocator designer, string hook, string label)
+    {
+        var button = designer.Locator(hook).First;
+        var collapsed = await button.EvaluateAsync<bool>(
+            "button => button.closest('.tm-toolbar-item--collapsed') !== null");
+        if (!collapsed)
+        {
+            // The sticky demo header covers the toolbar after the page grows. Dispatch on the button
+            // itself so the click is not intercepted and does not land on the More trigger.
+            await button.DispatchEventAsync("click");
+            return;
+        }
+
+        await designer.Locator("button.tm-toolbar-more").DispatchEventAsync("click");
+        await designer.Locator(".tm-toolbar-more__item").Filter(new() { HasText = label }).First.ClickAsync();
+    }
+
+    /// <summary>
+    /// A top-layer popover reports a box Playwright will not click. Hit the painted item directly.
+    /// </summary>
+    private static async Task ClickOpenMenuItemAsync(IPage page, string selector)
+    {
+        // A mouse click at the painted popover is treated as outside and dismisses it before the
+        // item runs. The button's own click reaches Blazor's delegator.
+        await page.EvaluateAsync("selector => document.querySelector(selector)?.click()", selector);
     }
 
     private static ILocator GetDesigner(IPage page)

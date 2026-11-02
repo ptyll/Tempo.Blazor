@@ -30,11 +30,14 @@ public class SigningStepsE2ETests : WasmTestBase
         var steps = GetSteps(page);
 
         await steps.Locator("[data-testid='signing-step-select'] select").SelectOptionAsync("option-2");
-        await steps.Locator("[data-testid='signing-step-radio'] input[type='radio'][value='option-1']").CheckAsync();
-        await steps.Locator("[data-testid='signing-step-multiple'] input[type='checkbox'][value='option-1']").CheckAsync();
-        await steps.Locator("[data-testid='signing-step-multiple'] input[type='checkbox'][value='option-3']").CheckAsync();
+        // Phase 4: the radio / checkbox rows are the core Tm components — the native input is the
+        // visually hidden hit target inside the wrapping label, so a user clicks the ROW.
+        await steps.Locator("[data-testid='signing-step-radio'] .tm-radio-option", new() { HasText = "One" }).ClickAsync();
+        await steps.Locator("[data-testid='signing-step-multiple'] .tm-checkbox-label", new() { HasText = "One" }).ClickAsync();
+        await steps.Locator("[data-testid='signing-step-multiple'] .tm-checkbox-label", new() { HasText = "Three" }).ClickAsync();
 
         await Assertions.Expect(steps.Locator("[data-testid='signing-step-select'] select")).ToHaveValueAsync("option-2");
+        await Assertions.Expect(steps.GetByRole(AriaRole.Radio, new() { Name = "One" })).ToBeCheckedAsync();
         await Assertions.Expect(page.Locator("[data-testid='signing-steps-status']")).ToContainTextAsync("Multiple: 2");
     }
 
@@ -97,17 +100,18 @@ public class SigningStepsE2ETests : WasmTestBase
         await steps.GetByLabel("Full name").FillAsync("Alex Johnson");
         await steps.GetByLabel("Amount").FillAsync("42.5");
         await steps.GetByLabel("Signing date").FillAsync("2026-05-08");
-        // Exact: "Country calling code" (the phone select's aria-label) also contains "Country".
-        await steps.GetByLabel("Country", new() { Exact = true }).SelectOptionAsync("option-1");
+        // Exact, scoped to the select step: the phone country select is labelled "Country" too.
+        await steps.Locator("[data-testid='signing-step-select']").GetByLabel("Country", new() { Exact = true }).SelectOptionAsync("option-1");
 
         await Assertions.Expect(steps.Locator("[data-testid='signing-step-text'] input")).ToHaveValueAsync("Alex Johnson");
         await Assertions.Expect(steps.Locator("[data-testid='signing-step-number'] input")).ToHaveValueAsync("42.5");
         await Assertions.Expect(steps.Locator("[data-testid='signing-step-date'] input")).ToHaveValueAsync("2026-05-08");
         await Assertions.Expect(steps.Locator("[data-testid='signing-step-select'] select")).ToHaveValueAsync("option-1");
 
-        // Radio and multiple checkboxes are named by their option labels inside the fieldset group.
-        await steps.Locator("[data-testid='signing-step-radio'] input[type='radio'][value='option-1']").CheckAsync();
-        await Assertions.Expect(steps.Locator("[data-testid='signing-step-radio'] input[type='radio'][value='option-1']")).ToBeCheckedAsync();
+        // The radio rows are named by their option labels (the core TmRadio label wraps the
+        // visually hidden native input): the user clicks the row, the state is read by role+name.
+        await steps.Locator("[data-testid='signing-step-radio'] .tm-radio-option", new() { HasText = "One" }).ClickAsync();
+        await Assertions.Expect(steps.GetByRole(AriaRole.Radio, new() { Name = "One" })).ToBeCheckedAsync();
 
         // Phone controls: country calling code, phone number, and (after send) the OTP input.
         var phone = steps.Locator("[data-testid='signing-step-phone']");

@@ -67,12 +67,46 @@
     {
       "name": "OnCommentAdded",
       "type": "EventCallback<string>",
-      "isRequired": false
+      "isRequired": false,
+      "description": "Raised with the submitted HTML when the user posts a new comment. Stays for hosts that only need the body; prefer OnCommentSubmitted when the internal flag matters. Forwarded to TmActivityComments."
+    },
+    {
+      "name": "OnCommentSubmitted",
+      "type": "EventCallback<TmCommentSubmission>",
+      "isRequired": false,
+      "description": "Raised before OnCommentAdded with the HTML and the composer internal flag. Forwarded unchanged; the log does not interpret or filter internal comments."
     },
     {
       "name": "OnCommentDeleted",
       "type": "EventCallback<string>",
-      "isRequired": false
+      "isRequired": false,
+      "description": "Raised with the comment id when the user deletes a comment. Forwarded to TmActivityComments."
+    },
+    {
+      "name": "CommentActions",
+      "type": "RenderFragment<TmCommentEntry>?",
+      "isRequired": false,
+      "description": "Consumer actions rendered after the built-in Edit and Delete buttons, once per comment. Forwarded; the log does not interpret the fragment."
+    },
+    {
+      "name": "SupportsMentions",
+      "type": "bool",
+      "isRequired": false,
+      "default": "false",
+      "description": "Passes mention autocomplete through to the comments tab. Without MentionProvider the editor stays off even when this is true. Defaults to false."
+    },
+    {
+      "name": "MentionProvider",
+      "type": "ITmPeopleProvider?",
+      "isRequired": false,
+      "description": "People source for the comments-tab mention picker. Null (or SupportsMentions false) leaves autocomplete off."
+    },
+    {
+      "name": "ShowInternalToggle",
+      "type": "bool",
+      "isRequired": false,
+      "default": "false",
+      "description": "Shows the internal switch in the new-comment composer. Off by default. The log never hides the resulting comment — the consumer filters visibility."
     },
     {
       "name": "TimelineFilter",

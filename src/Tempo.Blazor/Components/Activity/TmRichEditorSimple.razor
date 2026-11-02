@@ -21,6 +21,11 @@
              id="@_editorId"
              @ref="_editorRef"
              contenteditable="@(!IsDisabled)"
+             role="@(_showMentionDropdown ? "combobox" : null)"
+             aria-expanded="@(_showMentionDropdown ? "true" : null)"
+             aria-controls="@(_showMentionDropdown ? _mentionListId : null)"
+             aria-activedescendant="@MentionActiveDescendant"
+             aria-autocomplete="@(_showMentionDropdown ? "list" : null)"
              @oninput="@HandleInput"
              @onfocus="@HandleFocus"
              @onblur="@HandleBlur"
@@ -32,6 +37,18 @@
         @if (_isEmpty && !string.IsNullOrEmpty(Placeholder))
         {
             <div class="tm-rte-placeholder">@Placeholder</div>
+        }
+
+        @if (_showMentionDropdown && SupportsMentions)
+        {
+            <MentionAutocomplete @ref="_mentionList"
+                IsVisible="true"
+                ListId="@_mentionListId"
+                Users="@_mentionUsers"
+                Query="@_mentionQuery"
+                HighlightedIndex="@_highlightedMentionIndex"
+                OnUserSelected="@OnMentionSelected"
+                OnHighlightedIndexChanged="@OnMentionIndexChanged" />
         }
     </div>
     
@@ -53,17 +70,6 @@
             RestoreFocusTargetId="@_editorId"
             OnConfirm="@OnLinkConfirm"
             OnCancel="@OnLinkCancel" />
-    }
-
-    @if (_showMentionDropdown && SupportsMentions)
-    {
-        <MentionAutocomplete
-            IsVisible="true"
-            Users="@_mentionUsers"
-            Query="@_mentionQuery"
-            HighlightedIndex="@_highlightedMentionIndex"
-            OnUserSelected="@OnMentionSelected"
-            OnHighlightedIndexChanged="@OnMentionIndexChanged" />
     }
 
     @if (_showTokenDropdown && SupportsTokens)
@@ -178,6 +184,7 @@
     private int _charCount = 0;
     private bool _showLinkDialog;
     private bool _showMentionDropdown;
+    private MentionAutocomplete? _mentionList;
     private string _mentionQuery = string.Empty;
     private int _highlightedMentionIndex;
     private List<MentionUser> _mentionUsers = new();
@@ -210,6 +217,19 @@
 
     /// <summary>Stable per-instance id of the content surface; the link dialog restores focus to it.</summary>
     private string _editorId { get; } = $"tm-rte-editor-{Guid.NewGuid().ToString("N")[..8]}";
+
+    /// <summary>Listbox id owned here, not by the dropdown, so aria-controls is known before the child renders.</summary>
+    private string _mentionListId => $"{_editorId}-mentions";
+
+    /// <summary>
+    /// Active option id, computed here from the highlight so the first open already names option 0
+    /// (the child ref is not available on the render that opens the list).
+    /// </summary>
+    private string? MentionActiveDescendant
+        => !_showMentionDropdown ? null
+            : _mentionUsers.Count > 0 ? $"{_mentionListId}-option-{_highlightedMentionIndex}"
+            : !string.IsNullOrEmpty(_mentionQuery) ? $"{_mentionListId}-option-0"
+            : null;
 
     /// <summary>
     /// True while the link dialog is open. The caret bookmark is a JS-side Range record (a
@@ -576,7 +596,9 @@
         
         var users = await MentionProvider.SearchAsync(new TmPeopleQuery { SearchText = _mentionQuery, Take = 8 });
         _mentionUsers = users.Select(ToMentionUser).ToList();
-        _showMentionDropdown = _mentionUsers.Count > 0;
+        // A typed query with no match keeps the list open so the empty state is visible.
+        // An empty query with nobody to offer stays closed.
+        _showMentionDropdown = _mentionUsers.Count > 0 || !string.IsNullOrEmpty(_mentionQuery);
         await InvokeAsync(StateHasChanged);
     }
 
@@ -964,7 +986,7 @@
         _mentionQuery = query;
         var users = await MentionProvider.SearchAsync(new TmPeopleQuery { SearchText = query, Take = 8 });
         _mentionUsers = users.Select(ToMentionUser).ToList();
-        _showMentionDropdown = _mentionUsers.Count > 0;
+        _showMentionDropdown = _mentionUsers.Count > 0 || !string.IsNullOrEmpty(query);
         _highlightedMentionIndex = 0;
         await InvokeAsync(StateHasChanged);
     }

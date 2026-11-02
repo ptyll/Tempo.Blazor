@@ -16,6 +16,7 @@
                aria-required="@(Required ? "true" : null)"
                aria-label="@AccessibleName"
                aria-labelledby="@AriaLabelledBy"
+               aria-describedby="@AriaDescribedBy"
                aria-checked="@Value.ToString().ToLowerInvariant()"
                @onchange="HandleChangeAsync" />
         <span class="tm-toggle-track">
@@ -55,6 +56,13 @@
     /// itself has to stay alone inside its own element.
     /// </summary>
     [Parameter] public string? AriaLabelledBy { get; set; }
+
+    /// <summary>
+    /// Id of the element that describes the switch, rendered as <c>aria-describedby</c> on the inner
+    /// input (<c>role="switch"</c>). Use it for a hint that must not become a second accessible name.
+    /// Null (the default) renders no attribute.
+    /// </summary>
+    [Parameter] public string? AriaDescribedBy { get; set; }
 
     /// <summary>
     /// Id applied to the inner input, so a host-owned <c>&lt;label for="…"&gt;</c> can point at the switch.

@@ -140,6 +140,66 @@
       "documentationStatus": "merged"
     },
     {
+      "itemName": "PdfTemplatePaletteVariant",
+      "kind": "Enum",
+      "category": "Components",
+      "namespace": "Tempo.Blazor.Components.Signing",
+      "description": "Where a TmPdfTemplateDesignerPalette renders. One designer slot uses one variant.",
+      "packageId": "Tempo.Blazor.Signing",
+      "sourcePath": "src/Tempo.Blazor.Signing/Components/Signing/PdfTemplatePaletteVariant.cs",
+      "documentationStatus": "merged"
+    },
+    {
+      "itemName": "SigningAttachmentUploadRequest",
+      "kind": "Record",
+      "category": "Components",
+      "namespace": "Tempo.Blazor.Components.Signing",
+      "description": "Host upload request for an attachment signing field (Signing redesign phase 6, S2-5). The runner raises it through TmSigningFormRunner.OnAttachmentSelected and stores the returned url on the attachment. Security note: the file CONTENT is read by the HOST (OpenReadStream) — never inside the component — because on Blazor Server browser files stream over SignalR with tight message limits. Without the callback the picked files stay client-side metadata (the documented placeholder behaviour).",
+      "packageId": "Tempo.Blazor.Signing",
+      "sourcePath": "src/Tempo.Blazor.Signing/Components/Signing/SigningActiveStepContracts.cs",
+      "documentationStatus": "merged"
+    },
+    {
+      "itemName": "SigningExternalStepContext",
+      "kind": "Record",
+      "category": "Components",
+      "namespace": "Tempo.Blazor.Components.Signing",
+      "description": "Host-provided context for an external verification / KBA / payment signing field (Signing redesign phase 6, SI2). The runner resolves it from TmSigningFormRunner.StepContextProvider on every render and feeds the external step: the provider link, the inline KBA questions, the provider's loading state and error, and the provider's display name. The CONTEXT NEVER CONFIRMS the step — only a stored provider result (value true in Values) does.",
+      "packageId": "Tempo.Blazor.Signing",
+      "sourcePath": "src/Tempo.Blazor.Signing/Components/Signing/SigningActiveStepContracts.cs",
+      "documentationStatus": "merged"
+    },
+    {
+      "itemName": "SigningExternalStepRequest",
+      "kind": "Record",
+      "category": "Components",
+      "namespace": "Tempo.Blazor.Components.Signing",
+      "description": "Host request raised when the signer starts an external flow — verification, KBA answer submission or payment (Signing redesign phase 6, SI2). The runner raises it through TmSigningFormRunner.OnExternalStepRequested; with the callback wired the runner stores NOTHING on the click itself — the step completes solely after the host stores the provider result (value true) through TmSigningFormRunner.Values. The Answers carry the inline KBA answers for THIS request only — the runner never stores them as the field value, so a leaked answer cannot complete anything.",
+      "packageId": "Tempo.Blazor.Signing",
+      "sourcePath": "src/Tempo.Blazor.Signing/Components/Signing/SigningActiveStepContracts.cs",
+      "documentationStatus": "merged"
+    },
+    {
+      "itemName": "SigningPhoneCodeRequest",
+      "kind": "Record",
+      "category": "Components",
+      "namespace": "Tempo.Blazor.Components.Signing",
+      "description": "Host request to dispatch an OTP code for a phone signing field (Signing redesign phase 6, S2-5). The runner raises it through TmSigningFormRunner.OnSendPhoneCode when the signer asks for a code; without that callback wired, no request is ever raised and the phone step keeps its documented cosmetic behaviour (no SMS is sent).",
+      "packageId": "Tempo.Blazor.Signing",
+      "sourcePath": "src/Tempo.Blazor.Signing/Components/Signing/SigningActiveStepContracts.cs",
+      "documentationStatus": "merged"
+    },
+    {
+      "itemName": "SigningPhoneVerificationRequest",
+      "kind": "Record",
+      "category": "Components",
+      "namespace": "Tempo.Blazor.Components.Signing",
+      "description": "Host request to verify a typed OTP code for a phone signing field (Signing redesign phase 6, S2-5). The host's answer is the ONLY confirmation the runner accepts: true completes the step, false shows the localized invalid-code message — until then the phone field never completes, no matter what value it carries.",
+      "packageId": "Tempo.Blazor.Signing",
+      "sourcePath": "src/Tempo.Blazor.Signing/Components/Signing/SigningActiveStepContracts.cs",
+      "documentationStatus": "merged"
+    },
+    {
       "itemName": "SigningRolePalette",
       "kind": "Class",
       "category": "Components",
@@ -182,6 +242,16 @@
       ]
     },
     {
+      "itemName": "SigningTimelineSortDirection",
+      "kind": "Enum",
+      "category": "Components",
+      "namespace": "Tempo.Blazor.Components.Signing",
+      "description": "Sort direction of the TmSubmissionStatusTimeline event list. Descending (the default) keeps the historical newest-first order; Ascending renders the ceremony in its reading order.",
+      "packageId": "Tempo.Blazor.Signing",
+      "sourcePath": "src/Tempo.Blazor.Signing/Components/Signing/SigningTimelineSortDirection.cs",
+      "documentationStatus": "merged"
+    },
+    {
       "itemName": "TmDocumentPageViewerPointerEventArgs",
       "kind": "Record",
       "category": "Components",
@@ -213,6 +283,16 @@
       "description": "Editing mode for TmRecipientRoleEditor.",
       "packageId": "Tempo.Blazor.Signing",
       "sourcePath": "src/Tempo.Blazor.Signing/Components/Signing/TmRecipientRoleEditorMode.cs",
+      "documentationStatus": "merged"
+    },
+    {
+      "itemName": "TmSigningDefaultSignatureMode",
+      "kind": "Enum",
+      "category": "Components",
+      "namespace": "Tempo.Blazor.Components.Signing",
+      "description": "The default capture mode a signature step starts in (Signing redesign phase 5, SI3). The template's stored Preferences.Format always wins over this setting; it decides only when the template is silent.",
+      "packageId": "Tempo.Blazor.Signing",
+      "sourcePath": "src/Tempo.Blazor.Signing/Components/Signing/TmSigningDefaultSignatureMode.cs",
       "documentationStatus": "merged"
     },
     {
@@ -357,7 +437,7 @@
           "name": "Url",
           "kind": "Property",
           "type": "string?",
-          "description": "Optional preview or download URL."
+          "description": "Host-provided download/storage URL (the upload result); never a client-generated preview."
         },
         {
           "name": "Uuid",
@@ -439,6 +519,12 @@
           "type": "string?",
           "isRequired": false,
           "description": "Additional CSS classes for the root element."
+        },
+        {
+          "name": "HeaderContent",
+          "type": "RenderFragment?",
+          "isRequired": false,
+          "description": "Host-rendered document summary replacing the default title (the document name, its status badge and timestamp — the desktop reference's header card). The panel renders it verbatim; the audit model carries no document title, so without the slot the localized default title stays (Q-S10)."
         },
         {
           "name": "LocalizationSnapshot",
@@ -982,11 +1068,24 @@
           "description": "Whether panel interaction is disabled."
         },
         {
+          "name": "LayoutMode",
+          "type": "TmLayoutMode",
+          "isRequired": false,
+          "default": "TmLayoutMode.Auto",
+          "description": "Forced layout. Mobile keeps the composer sticky inside the host sheet."
+        },
+        {
           "name": "MentionUsers",
           "type": "IReadOnlyList<DocumentCommentUser>",
           "isRequired": false,
           "default": "[]",
           "description": "Users available for mention suggestions."
+        },
+        {
+          "name": "OnClose",
+          "type": "EventCallback",
+          "isRequired": false,
+          "description": "Raised when the panel close button is activated."
         },
         {
           "name": "OnDeleteRequested",
@@ -1005,6 +1104,12 @@
           "type": "EventCallback<DocumentCommentEditRequest>",
           "isRequired": false,
           "description": "Callback invoked when editing a comment is requested."
+        },
+        {
+          "name": "OnNewComment",
+          "type": "EventCallback",
+          "isRequired": false,
+          "description": "Raised by the New comment button so the host can enable comment mode."
         },
         {
           "name": "OnReactionToggled",
@@ -1152,6 +1257,12 @@
           "description": "Whether comment interactions are disabled. Defaults to false."
         },
         {
+          "name": "EnablePinchZoom",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Attaches the shared two-finger pinch to the page viewport. Off by default: a designer page must not steal the overlay's pointer. The runner and the demo viewer opt in."
+        },
+        {
           "name": "Error",
           "type": "string?",
           "isRequired": false,
@@ -1175,6 +1286,13 @@
           "isRequired": false,
           "default": "true",
           "description": "Whether overlay content should receive pointer events. Defaults to true."
+        },
+        {
+          "name": "LayoutMode",
+          "type": "TmLayoutMode",
+          "isRequired": false,
+          "default": "TmLayoutMode.Auto",
+          "description": "Forced layout. Mobile hosts the comments panel in a non-modal bottom TmDrawer. Auto keeps the docked comments column."
         },
         {
           "name": "MaxScale",
@@ -1246,6 +1364,12 @@
           "description": "Callback invoked when resolving a comment thread is requested."
         },
         {
+          "name": "OnCommentsClose",
+          "type": "EventCallback",
+          "isRequired": false,
+          "description": "Raised when the mobile comments sheet close button is activated."
+        },
+        {
           "name": "OnCommentThreadCreateRequested",
           "type": "EventCallback<DocumentCommentThreadCreateRequest>",
           "isRequired": false,
@@ -1292,6 +1416,12 @@
           "type": "int?",
           "isRequired": false,
           "description": "Displayed current page number for pagination controls. Defaults to the page index plus one."
+        },
+        {
+          "name": "PageRequested",
+          "type": "EventCallback<int>",
+          "isRequired": false,
+          "description": "Raised when the page input commits a page number, in addition to the previous and next callbacks."
         },
         {
           "name": "PageTemplate",
@@ -1581,10 +1711,29 @@
           "description": "Callback invoked when the signing fields collection changes."
         },
         {
+          "name": "Height",
+          "type": "string?",
+          "isRequired": false,
+          "description": "CSS block size of the designer. Null keeps var(--tm-pdf-template-designer-height), which defaults to the historical fixed height."
+        },
+        {
+          "name": "LayoutBreakpoints",
+          "type": "TmLayoutBreakpoints?",
+          "isRequired": false,
+          "description": "Breakpoints the shell classifies its own container with. Null uses the designer default (mobile below 768, desktop from 1200)."
+        },
+        {
+          "name": "LayoutMode",
+          "type": "TmLayoutMode",
+          "isRequired": false,
+          "default": "TmLayoutMode.Auto",
+          "description": "Auto classifies the designer's own container through TmEditorShell against LayoutBreakpoints (mobile <768, tablet 768–1199, desktop ≥1200); a forced value pins the layout"
+        },
+        {
           "name": "MobileMode",
           "type": "bool",
           "isRequired": false,
-          "description": "Whether to render a compact mobile-oriented designer layout."
+          "description": "Obsolete alias that forces TmLayoutMode.Mobile. New hosts set LayoutMode."
         },
         {
           "name": "OnDetectFields",
@@ -1668,6 +1817,281 @@
           "type": "EventCallback<DocumentPageZoomMode>",
           "isRequired": false,
           "description": "Callback invoked when the document zoom behavior changes."
+        }
+      ]
+    },
+    {
+      "itemName": "TmPdfTemplateDesignerPalette",
+      "kind": "Component",
+      "category": "Signing",
+      "namespace": "Tempo.Blazor.Components.Signing",
+      "description": "The field-type palette. One designer slot renders one variant: docked, rail or compact.",
+      "packageId": "Tempo.Blazor.Signing",
+      "sourcePath": "src/Tempo.Blazor.Signing/Components/Signing/TmPdfTemplateDesignerPalette.razor",
+      "documentationStatus": "merged",
+      "requiredImports": [
+        "@using Tempo.Blazor.Components.Signing"
+      ],
+      "parameters": [
+        {
+          "name": "FieldTypes",
+          "type": "IReadOnlyList<SigningFieldType>",
+          "isRequired": false,
+          "default": "[]",
+          "description": "Field types offered by the palette."
+        },
+        {
+          "name": "Icon",
+          "type": "Func<SigningFieldType, string>?",
+          "isRequired": false,
+          "description": "Icon name of one field type."
+        },
+        {
+          "name": "ItemClass",
+          "type": "Func<SigningFieldType, string>?",
+          "isRequired": false,
+          "description": "Class of one palette item."
+        },
+        {
+          "name": "Label",
+          "type": "Func<SigningFieldType, string>?",
+          "isRequired": false,
+          "description": "Visible label of one field type."
+        },
+        {
+          "name": "OnCancel",
+          "type": "EventCallback",
+          "isRequired": false,
+          "description": "A press was cancelled."
+        },
+        {
+          "name": "OnClick",
+          "type": "EventCallback<SigningFieldType>",
+          "isRequired": false,
+          "description": "A click on a palette item."
+        },
+        {
+          "name": "OnMobileDraw",
+          "type": "EventCallback",
+          "isRequired": false,
+          "description": "The mobile draw button was activated."
+        },
+        {
+          "name": "OnPointerDown",
+          "type": "EventCallback<SigningFieldType>",
+          "isRequired": false,
+          "description": "A press started on a palette item."
+        },
+        {
+          "name": "OnPointerUp",
+          "type": "EventCallback<SigningFieldType>",
+          "isRequired": false,
+          "description": "A press ended on a palette item."
+        },
+        {
+          "name": "ShowMobileDraw",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Whether the mobile draw button renders. Only the docked slot uses it."
+        },
+        {
+          "name": "Variant",
+          "type": "PdfTemplatePaletteVariant",
+          "isRequired": false,
+          "default": "PdfTemplatePaletteVariant.Docked",
+          "description": "Where the palette is rendered. One instance occupies one slot."
+        }
+      ]
+    },
+    {
+      "itemName": "TmPdfTemplateDesignerToolbar",
+      "kind": "Component",
+      "category": "Signing",
+      "namespace": "Tempo.Blazor.Components.Signing",
+      "description": "The designer command row. Groups are pages, view, language, zoom and detect.",
+      "packageId": "Tempo.Blazor.Signing",
+      "sourcePath": "src/Tempo.Blazor.Signing/Components/Signing/TmPdfTemplateDesignerToolbar.razor",
+      "documentationStatus": "merged",
+      "requiredImports": [
+        "@using Tempo.Blazor.Components.Signing"
+      ],
+      "parameters": [
+        {
+          "name": "CanGoNext",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Whether a next page exists."
+        },
+        {
+          "name": "CanGoPrevious",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Whether a previous page exists."
+        },
+        {
+          "name": "CanZoomIn",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Whether zoom can increase."
+        },
+        {
+          "name": "CanZoomOut",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Whether zoom can decrease."
+        },
+        {
+          "name": "ContinuousActive",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Whether the continuous view is active."
+        },
+        {
+          "name": "CultureAttributes",
+          "type": "Dictionary<string, object>?",
+          "isRequired": false,
+          "description": "Attributes of the culture select."
+        },
+        {
+          "name": "CultureLabel",
+          "type": "Func<string, string>",
+          "isRequired": false,
+          "default": "static culture => culture",
+          "description": "Localizes a culture code."
+        },
+        {
+          "name": "CultureMenuItems",
+          "type": "IReadOnlyList<TmActionItem>",
+          "isRequired": false,
+          "default": "[]",
+          "description": "Overflow entries of the language item."
+        },
+        {
+          "name": "Cultures",
+          "type": "IReadOnlyList<string>",
+          "isRequired": false,
+          "default": "[]",
+          "description": "Cultures offered by the language group."
+        },
+        {
+          "name": "CurrentCulture",
+          "type": "string?",
+          "isRequired": false,
+          "description": "The selected culture."
+        },
+        {
+          "name": "Detecting",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Whether Autodetect is in flight."
+        },
+        {
+          "name": "OnContinuous",
+          "type": "EventCallback",
+          "isRequired": false,
+          "description": "Selects the continuous view."
+        },
+        {
+          "name": "OnCultureChanged",
+          "type": "EventCallback<string>",
+          "isRequired": false,
+          "description": "Raised when the culture select changes."
+        },
+        {
+          "name": "OnDeleteSelected",
+          "type": "EventCallback",
+          "isRequired": false,
+          "description": "Deletes the selection."
+        },
+        {
+          "name": "OnDetect",
+          "type": "EventCallback",
+          "isRequired": false,
+          "description": "Runs Autodetect."
+        },
+        {
+          "name": "OnFitPage",
+          "type": "EventCallback",
+          "isRequired": false,
+          "description": "Fits the whole page."
+        },
+        {
+          "name": "OnFitWidth",
+          "type": "EventCallback",
+          "isRequired": false,
+          "description": "Fits the page width."
+        },
+        {
+          "name": "OnNextPage",
+          "type": "EventCallback",
+          "isRequired": false,
+          "description": "Goes to the next page."
+        },
+        {
+          "name": "OnPreviousPage",
+          "type": "EventCallback",
+          "isRequired": false,
+          "description": "Goes to the previous page."
+        },
+        {
+          "name": "OnSinglePage",
+          "type": "EventCallback",
+          "isRequired": false,
+          "description": "Selects the single-page view."
+        },
+        {
+          "name": "OnZoomIn",
+          "type": "EventCallback",
+          "isRequired": false,
+          "description": "Zooms in."
+        },
+        {
+          "name": "OnZoomOut",
+          "type": "EventCallback",
+          "isRequired": false,
+          "description": "Zooms out."
+        },
+        {
+          "name": "PageLabel",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Page indicator text."
+        },
+        {
+          "name": "ShowCulture",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Whether the language group renders."
+        },
+        {
+          "name": "ShowDeleteSelected",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Whether the detect group offers Delete selected."
+        },
+        {
+          "name": "ShowDetect",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Whether the detect group offers Autodetect."
+        },
+        {
+          "name": "SinglePageActive",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Whether the single-page view is active."
+        },
+        {
+          "name": "TwoRow",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Tablet layout: pages and view stay on the first row; zoom, detect and language wrap to a second row."
+        },
+        {
+          "name": "ZoomLabel",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Zoom indicator text."
         }
       ]
     },
@@ -1823,7 +2247,7 @@
       "kind": "Component",
       "category": "Signing",
       "namespace": "Tempo.Blazor.Components.Signing",
-      "description": "Renders image, file, and generated stamp signing steps.",
+      "description": "Renders image, file, and generated stamp signing steps. Upload contract (Signing redesign phase 6): the upload is host-owned — the runner hands the picked IBrowserFile to the host (OnAttachmentSelected) and stores the host-returned url on the card; the file CONTENT is read at the host (Blazor Server streams browser files over SignalR with tight message limits). The component only ever reads a downscaled image thumbnail (RequestImageFileAsync) for the local preview. Without the resolver the picked files stay client-side metadata.",
       "packageId": "Tempo.Blazor.Signing",
       "sourcePath": "src/Tempo.Blazor.Signing/Components/Signing/TmSigningAttachmentStep.razor",
       "documentationStatus": "merged",
@@ -1863,6 +2287,12 @@
           "description": "Callback invoked when attachments change."
         },
         {
+          "name": "Capture",
+          "type": "string?",
+          "isRequired": false,
+          "description": "The native capture attribute for mobile camera capture (Signing redesign phase 6, optional) — for example environment or user. Splatted on the native file input of Image fields only."
+        },
+        {
           "name": "Class",
           "type": "string?",
           "isRequired": false,
@@ -1872,7 +2302,7 @@
           "name": "Culture",
           "type": "string?",
           "isRequired": false,
-          "description": "Culture used to resolve localized field text."
+          "description": "Culture used to resolve localized field text and to format file sizes (cs-CZ renders \"1,2 MB\")."
         },
         {
           "name": "Disabled",
@@ -1893,10 +2323,28 @@
           "description": "Signing field represented by this step."
         },
         {
+          "name": "MaxFiles",
+          "type": "int?",
+          "isRequired": false,
+          "description": "Maximum number of attachments (Signing redesign phase 6). Overflowing files show the localized \"up to {0} files\" message and are rejected; the first files stay. The value is also the platform read budget (Math.Max(MaxFiles ?? 10, 1)) — a pick beyond the budget is refused by the platform itself and rejected wholesale."
+        },
+        {
+          "name": "MaxFileSize",
+          "type": "long?",
+          "isRequired": false,
+          "description": "Maximum accepted file size in bytes (Signing redesign phase 6). A larger file shows the localized \"file is larger than …\" message and never joins the attachments — the rejection happens BEFORE any host upload round-trip. NOTE: this is a CLIENT-REPORTED limit (the browser's declared size) and is UX only — the host must enforce the real limit via OpenReadStream(maxAllowedSize)."
+        },
+        {
           "name": "StampValue",
           "type": "string?",
           "isRequired": false,
           "description": "Generated stamp text or image identifier."
+        },
+        {
+          "name": "UploadUrlResolver",
+          "type": "Func<IBrowserFile, Task<string?>>?",
+          "isRequired": false,
+          "description": "Host-provided upload resolver (Signing redesign phase 6): receives the picked file and returns the uploaded file's url, which the card then previews. TmSigningFormRunner passes its OnAttachmentSelected host hook through; a step without a resolver keeps the client-side-only placeholder behaviour. The file content is read by the HOST — never here."
         }
       ]
     },
@@ -1961,6 +2409,13 @@
           "isRequired": false,
           "default": "[]",
           "description": "Optional checkbox fields rendered as one grouped checkbox step."
+        },
+        {
+          "name": "LayoutMode",
+          "type": "TmLayoutMode",
+          "isRequired": false,
+          "default": "TmLayoutMode.Auto",
+          "description": "The resolved layout this step renders in (Signing redesign phase 5). Auto does not measure anything — it renders the desktop markup; the runner passes its own resolved classification down (never Auto), and a standalone host that wants the narrow radio-card presentation without a runner passes Mobile explicitly. A forced Mobile presents up to five select/radio options as radio cards (SI1), so a test can render that presentation without a DOM."
         },
         {
           "name": "Value",
@@ -2146,7 +2601,7 @@
       "kind": "Component",
       "category": "Signing",
       "namespace": "Tempo.Blazor.Components.Signing",
-      "description": "Provider-agnostic placeholder step for verification, KBA, and payment flows. Known limitations / security note (reworked in Signing redesign phase 6): the step only RENDERS the external flow — raising OnStart or OnCheckout marks the field complete without contacting any provider (the runner's default handlers store true), and ExternalUrl merely opens a link in a new tab. The resulting field value is untrusted presentation state, not evidence that a verification or payment happened.",
+      "description": "Provider-agnostic step for verification, KBA, and payment flows. Security note (Signing redesign phase 6 contract): the step only RENDERS the external flow — what happens after OnStart / OnCheckout / OnSubmitAnswers is the HOST's contract. Inside TmSigningFormRunner with OnExternalStepRequested wired the runner stores nothing: the step completes solely after the host stores the provider result (value true or the string \"true\") through Values. Without that callback the legacy behaviour stores true on the click, which is presentation state and NOT evidence that a verification or payment happened. The ExternalUrl link opens in a new tab with rel=\"noopener noreferrer\", references the localized redirect note through aria-describedby and carries an aria-hidden external-link icon. With a named provider the verified state reads \"Verified by {provider}\". One always-rendered polite live region announces the phase events (loading / verified); while the provider runs the Start / Checkout / Submit action stays in place, disabled and aria-busy. KBA answers are submitted through OnSubmitAnswers (a SigningExternalStepRequest) and are never stored as the field value.",
       "packageId": "Tempo.Blazor.Signing",
       "sourcePath": "src/Tempo.Blazor.Signing/Components/Signing/TmSigningExternalStep.razor",
       "documentationStatus": "merged",
@@ -2176,7 +2631,7 @@
           "name": "Culture",
           "type": "string?",
           "isRequired": false,
-          "description": "Culture used to resolve localized field text."
+          "description": "Culture used to resolve localized field text and to format the payment amount (cs-CZ renders \"1 500,00 Kč\")."
         },
         {
           "name": "Disabled",
@@ -2218,13 +2673,25 @@
           "name": "OnCheckout",
           "type": "EventCallback<SigningField>",
           "isRequired": false,
-          "description": "Callback invoked when payment checkout should start."
+          "description": "Callback invoked when payment checkout should start. Inside the runner this notifies the HOST (OnExternalStepRequested); without that hook the legacy click stores true — presentation state, never proof of a payment. While IsLoading the action stays in place, disabled and aria-busy."
         },
         {
           "name": "OnStart",
           "type": "EventCallback<SigningField>",
           "isRequired": false,
-          "description": "Callback invoked when verification or KBA should start."
+          "description": "Callback invoked when verification or KBA should start. Inside the runner this notifies the HOST (OnExternalStepRequested); without that hook the legacy click stores true — presentation state, never proof of a verification. While IsLoading the action stays in place, disabled and aria-busy."
+        },
+        {
+          "name": "OnSubmitAnswers",
+          "type": "EventCallback<SigningExternalStepRequest>",
+          "isRequired": false,
+          "description": "Callback invoked when the signer SUBMITS the inline KBA answers (Signing redesign phase 6 review). The request carries the field and the typed answers — the answers are NEVER stored as the field value; the host's stored provider result is the only completion evidence."
+        },
+        {
+          "name": "ProviderName",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Display name of the verification / payment provider (Signing redesign phase 6) — the runner resolves it from the host's StepContextProvider and renders the localized provider line above the call to action. With a named provider the verified state reads the combined \"Verified by {provider}\" text."
         },
         {
           "name": "Questions",
@@ -2232,6 +2699,184 @@
           "isRequired": false,
           "default": "[]",
           "description": "KBA questions to answer inline."
+        },
+        {
+          "name": "Value",
+          "type": "object?",
+          "isRequired": false,
+          "description": "Current field value. When it carries true (a bool or the string \"true\" — the shape the runner stores), the step shows the verified / paid state instead of the call to action."
+        }
+      ]
+    },
+    {
+      "itemName": "TmSigningFieldEditorActions",
+      "kind": "Component",
+      "category": "Signing",
+      "namespace": "Tempo.Blazor.Components.Signing",
+      "description": "The field inspector actions, selection actions and optional numeric geometry.",
+      "packageId": "Tempo.Blazor.Signing",
+      "sourcePath": "src/Tempo.Blazor.Signing/Components/Signing/TmSigningFieldEditorActions.razor",
+      "documentationStatus": "merged",
+      "requiredImports": [
+        "@using Tempo.Blazor.Components.Signing"
+      ],
+      "parameters": [
+        {
+          "name": "GeometryArea",
+          "type": "SigningFieldArea?",
+          "isRequired": false,
+          "description": "The area the geometry inputs edit. Null hides the section."
+        },
+        {
+          "name": "GeometryHeight",
+          "type": "int?",
+          "isRequired": false,
+          "description": "Height in pixels."
+        },
+        {
+          "name": "GeometryHeightAttributes",
+          "type": "Dictionary<string, object>?",
+          "isRequired": false,
+          "description": "Attributes forwarded to the height input."
+        },
+        {
+          "name": "GeometryWidth",
+          "type": "int?",
+          "isRequired": false,
+          "description": "Width in pixels."
+        },
+        {
+          "name": "GeometryWidthAttributes",
+          "type": "Dictionary<string, object>?",
+          "isRequired": false,
+          "description": "Attributes forwarded to the width input."
+        },
+        {
+          "name": "GeometryX",
+          "type": "int?",
+          "isRequired": false,
+          "description": "Horizontal position in pixels."
+        },
+        {
+          "name": "GeometryXAttributes",
+          "type": "Dictionary<string, object>?",
+          "isRequired": false,
+          "description": "Attributes forwarded to the X input."
+        },
+        {
+          "name": "GeometryY",
+          "type": "int?",
+          "isRequired": false,
+          "description": "Vertical position in pixels."
+        },
+        {
+          "name": "GeometryYAttributes",
+          "type": "Dictionary<string, object>?",
+          "isRequired": false,
+          "description": "Attributes forwarded to the Y input."
+        },
+        {
+          "name": "OnCopy",
+          "type": "EventCallback",
+          "isRequired": false,
+          "description": "Copies the edited field."
+        },
+        {
+          "name": "OnCopySelection",
+          "type": "EventCallback",
+          "isRequired": false,
+          "description": "Copies every selected field."
+        },
+        {
+          "name": "OnDelete",
+          "type": "EventCallback",
+          "isRequired": false,
+          "description": "Deletes the edited field."
+        },
+        {
+          "name": "OnDeleteSelection",
+          "type": "EventCallback",
+          "isRequired": false,
+          "description": "Deletes every selected field."
+        },
+        {
+          "name": "OnGeometryHeightChanged",
+          "type": "EventCallback<int?>",
+          "isRequired": false,
+          "description": "Raised when the height changes."
+        },
+        {
+          "name": "OnGeometryWidthChanged",
+          "type": "EventCallback<int?>",
+          "isRequired": false,
+          "description": "Raised when the width changes."
+        },
+        {
+          "name": "OnGeometryXChanged",
+          "type": "EventCallback<int?>",
+          "isRequired": false,
+          "description": "Raised when the horizontal position changes."
+        },
+        {
+          "name": "OnGeometryYChanged",
+          "type": "EventCallback<int?>",
+          "isRequired": false,
+          "description": "Raised when the vertical position changes."
+        },
+        {
+          "name": "OnPaste",
+          "type": "EventCallback",
+          "isRequired": false,
+          "description": "Pastes the clipboard."
+        },
+        {
+          "name": "PasteEnabled",
+          "type": "bool",
+          "isRequired": false,
+          "default": "true",
+          "description": "Whether the clipboard has a field the Paste action can place."
+        },
+        {
+          "name": "ReadOnly",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Whether the inspector is read-only. Geometry stays editable to read; actions disable."
+        },
+        {
+          "name": "ShowCopy",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Whether the Copy action has a host delegate."
+        },
+        {
+          "name": "ShowCopySelection",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Whether the selection Copy action has a host delegate."
+        },
+        {
+          "name": "ShowDelete",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Whether the Delete action has a host delegate."
+        },
+        {
+          "name": "ShowDeleteSelection",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Whether the selection Delete action has a host delegate."
+        },
+        {
+          "name": "ShowGeometry",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Whether the pixel geometry section is shown."
+        },
+        {
+          "name": "ShowPaste",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Whether the selection Paste action has a host delegate."
         }
       ]
     },
@@ -2292,16 +2937,71 @@
           "description": "All fields in the current signing template, used by condition and formula builders."
         },
         {
+          "name": "OnCopyRequested",
+          "type": "EventCallback<SigningField>",
+          "isRequired": false,
+          "description": "Raised when the author copies the edited field."
+        },
+        {
+          "name": "OnCopySelectionRequested",
+          "type": "EventCallback",
+          "isRequired": false,
+          "description": "Raised when the author copies the current selection."
+        },
+        {
+          "name": "OnDeleteRequested",
+          "type": "EventCallback<SigningField>",
+          "isRequired": false,
+          "description": "Raised when the author deletes the edited field."
+        },
+        {
+          "name": "OnDeleteSelectionRequested",
+          "type": "EventCallback",
+          "isRequired": false,
+          "description": "Raised when the author deletes the current selection."
+        },
+        {
+          "name": "OnPasteRequested",
+          "type": "EventCallback",
+          "isRequired": false,
+          "description": "Raised when the author pastes the clipboard into the template."
+        },
+        {
           "name": "OptionAreaMappingRequested",
           "type": "EventCallback<TmSigningFieldOptionAreaMappingEventArgs>",
           "isRequired": false,
           "description": "Callback invoked when a radio or multiple option should be mapped to a document area."
         },
         {
+          "name": "PageHeight",
+          "type": "double",
+          "isRequired": false,
+          "description": "Page height used to convert the optional geometry editors from normalized areas."
+        },
+        {
+          "name": "PageWidth",
+          "type": "double",
+          "isRequired": false,
+          "description": "Page width used to convert the optional geometry editors from normalized areas."
+        },
+        {
+          "name": "PasteEnabled",
+          "type": "bool",
+          "isRequired": false,
+          "default": "true",
+          "description": "Whether the clipboard has a field the Paste action can place."
+        },
+        {
           "name": "ReadOnly",
           "type": "bool",
           "isRequired": false,
           "description": "Whether the panel should prevent edits."
+        },
+        {
+          "name": "ShowGeometry",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Whether to show the optional pixel geometry editors."
         },
         {
           "name": "ShowLocalizationEditor",
@@ -2478,7 +3178,7 @@
       "kind": "Component",
       "category": "Signing",
       "namespace": "Tempo.Blazor.Components.Signing",
-      "description": "Coordinates a linear signing ceremony over document pages and signing field steps. Known limitations / security note (reworked in Signing redesign phase 6): the external steps are placeholders — clicking \"Start verification\" / \"Checkout\" (OnStart/OnCheckout store true for the field) marks the step COMPLETE WITHOUT ANY VERIFICATION taking place, the phone step sends no SMS and checks no OTP, and the attachment step's upload stays in the browser. Treat the resulting field values as untrusted presentation state, never as proof that a verification, payment, or upload happened.",
+      "description": "Coordinates a linear signing ceremony over document pages and signing field steps. Active-steps contract (Signing redesign phase 6, S2-5/SI2 — opt-in): with OnSendPhoneCode / OnVerifyPhoneCode / OnAttachmentSelected / OnExternalStepRequested wired, the phone OTP, the attachment upload and the external verification are confirmed by the HOST — a phone step completes only after the host verifier answers true, the attachment card carries the host-returned upload url, and an external step completes only after the host stores the provider result (value true) through Values. Without the callbacks the documented legacy behaviour stands (the click stores true, the typed phone completes the step, uploads stay client-side), so completion of those steps is presentation state, never proof that a verification, payment, or upload happened.",
       "packageId": "Tempo.Blazor.Signing",
       "sourcePath": "src/Tempo.Blazor.Signing/Components/Signing/TmSigningFormRunner.razor",
       "documentationStatus": "merged",
@@ -2510,6 +3210,13 @@
           "type": "EventCallback<string?>",
           "isRequired": false,
           "description": "Callback invoked when the signing culture changes."
+        },
+        {
+          "name": "DefaultSignatureMode",
+          "type": "TmSigningDefaultSignatureMode",
+          "isRequired": false,
+          "default": "TmSigningDefaultSignatureMode.Auto",
+          "description": "The capture mode a signature step STARTS in when the template's Preferences.Format is silent (Signing redesign phase 5, SI3). Auto — the default — resolves to Draw on a coarse pointer (a finger) and to Typed elsewhere; the template's stored format always wins over this setting."
         },
         {
           "name": "DocumentHeaderActions",
@@ -2549,6 +3256,13 @@
           "description": "Whether navigation and inputs are currently blocked by an external operation."
         },
         {
+          "name": "LayoutMode",
+          "type": "TmLayoutMode",
+          "isRequired": false,
+          "default": "TmLayoutMode.Auto",
+          "description": "The layout the runner renders (Signing redesign phase 5). Auto measures the runner's own container — a container narrower than the mobile breakpoint presents the steps rail as the bottom sheet (peek / expanded) with radio-card choice fields (SI1); wider containers keep the docked desktop panel. A forced value never measures, so a test (or a host that already knows the width) can pin the presentation without a DOM."
+        },
+        {
           "name": "MobileCompleteTargetSelector",
           "type": "string?",
           "isRequired": false,
@@ -2560,6 +3274,12 @@
           "isRequired": false,
           "default": "TmSigningFormRunnerMobilePanelMode.Expanded",
           "description": "Initial presentation mode for the mobile bottom panel."
+        },
+        {
+          "name": "OnAttachmentSelected",
+          "type": "Func<SigningAttachmentUploadRequest, Task<string?>>?",
+          "isRequired": false,
+          "description": "Host upload hook for attachment fields (Signing redesign phase 6, S2-5, opt-in). The runner hands the picked IBrowserFile over and stores the RETURNED url on the attachment card; a null result (or a throwing host, cancellation aside) REJECTS the file with the localized failure message. Security: read the file content in the HOST (File.OpenReadStream) — never rely on the component to do it — because on Blazor Server browser files stream over SignalR with tight message limits, so a large upload must be consumed (and ideally persisted) by the server, in one pass. The step-side MaxFileSize limit is a CLIENT-REPORTED courtesy (the browser's declared size) — the host MUST enforce the real limit via OpenReadStream(maxAllowedSize). Without the hook the picked files stay client-side metadata (the documented placeholder behaviour)."
         },
         {
           "name": "OnAutoSave",
@@ -2574,10 +3294,22 @@
           "description": "Callback invoked when all required fields are complete and the signer completes the form."
         },
         {
+          "name": "OnExternalStepRequested",
+          "type": "EventCallback<SigningExternalStepRequest>",
+          "isRequired": false,
+          "description": "Host hook raised when the signer starts an external flow — verification, KBA answer submission or payment (Signing redesign phase 6, SI2, opt-in). The request carries the field and, for KBA, the typed answers (which are never stored as the field value). With this hook wired the runner stores NOTHING on the click: the step completes solely after the host performs the provider flow and stores the result (value true or the string \"true\") through Values. Without the hook the legacy behaviour keeps storing true on the click — presentation state, never proof that a verification or payment happened."
+        },
+        {
           "name": "OnLocalizationSnapshotChanged",
           "type": "EventCallback<SigningSubmissionLocalizationSnapshot>",
           "isRequired": false,
           "description": "Callback invoked with a resolved localization snapshot for audit storage."
+        },
+        {
+          "name": "OnSendPhoneCode",
+          "type": "EventCallback<SigningPhoneCodeRequest>",
+          "isRequired": false,
+          "description": "Host hook that dispatches the OTP code for a phone field (Signing redesign phase 6, S2-5, opt-in). Raised with the normalized number every time the signer sends or resends a code; the runner itself never dispatches an SMS. Without the callback the phone step keeps the documented cosmetic behaviour (nothing is sent)."
         },
         {
           "name": "OnStepSubmit",
@@ -2586,11 +3318,23 @@
           "description": "Callback invoked when the current step is submitted by moving forward."
         },
         {
+          "name": "OnVerifyPhoneCode",
+          "type": "Func<SigningPhoneVerificationRequest, Task<bool>>?",
+          "isRequired": false,
+          "description": "Host hook that verifies the typed OTP code (Signing redesign phase 6, S2-5, opt-in). Returning true is the ONLY way a phone field completes while this hook is wired — the runner records the confirmation (runner-internal, bound to the VERIFIED number, never part of Values) and shows the verified state; false shows the localized invalid-code message with the error owned by the OTP input. A throwing verifier shows the localized unavailable message and never records a confirmation. Security: the host owns RATE LIMITING and ATTEMPT COUNTING, and because the confirmation is runner-internal (not persisted), a RESUMED session must re-verify — keep your own record host-side. Without the hook, today's behaviour stands: the typed phone number alone completes the step (no code is ever checked)."
+        },
+        {
           "name": "Pages",
           "type": "IReadOnlyList<SigningDocumentPage>",
           "isRequired": false,
           "default": "[]",
           "description": "Document pages shown during signing."
+        },
+        {
+          "name": "ResolvedLayoutChanged",
+          "type": "EventCallback<TmLayoutMode>",
+          "isRequired": false,
+          "description": "Raised when the resolved layout changes. The initial value is not a change. Never pair LayoutMode with this callback: it reports the resolved mode, and a two-way bind would pin that mode."
         },
         {
           "name": "ShowDocumentToolbar",
@@ -2604,6 +3348,12 @@
           "type": "bool",
           "isRequired": false,
           "description": "Whether the runner should show a language selector when multiple cultures are available."
+        },
+        {
+          "name": "StepContextProvider",
+          "type": "Func<SigningField, SigningExternalStepContext?>?",
+          "isRequired": false,
+          "description": "Provider context for an external field, resolved per render (Signing redesign phase 6, SI2, opt-in): the provider page url, the inline KBA questions, the loading state, the provider error and the provider display name. The CONTEXT never confirms the step — only the stored provider result does; return null to keep the step's own defaults."
         },
         {
           "name": "SubmitterRoles",
@@ -2668,7 +3418,7 @@
           "name": "Culture",
           "type": "string?",
           "isRequired": false,
-          "description": "Culture used to resolve localized field text."
+          "description": "Culture used to resolve localized field text and to parse and format the number — the decimal comma of a cs template is a first-class input (Signing redesign phase 4)."
         },
         {
           "name": "Disabled",
@@ -2707,7 +3457,7 @@
       "kind": "Component",
       "category": "Signing",
       "namespace": "Tempo.Blazor.Components.Signing",
-      "description": "Renders a phone verification signing step with country code, phone input, and OTP state.",
+      "description": "Renders a phone verification signing step with country code, phone input, OTP state and a functional resend countdown. Security note (Signing redesign phase 6): raising OnSendCode and OnVerifyCode only NOTIFIES the host — the component never dispatches an SMS and never decides whether a code is valid; inside TmSigningFormRunner the host verifies through the runner's OnVerifyPhoneCode hook and the step renders the confirmed state through Verified. The typed OTP is never stored as the field value. The verified state LOCKS the number input and the country select and replaces Send with a Secondary Change number action (OnChangeNumber) that asks the host to clear its confirmation. One always-rendered polite live region announces the phase events (code sent / verified / resend available); the ticking countdown text is aria-live=\"off\". The invalid-code error is owned by the OTP input (aria-invalid + described-by there, phone input clean) and clears when a new draft is typed. After a code was sent the Send action is Secondary and disabled while the countdown runs, and the OTP input takes the focus after a send/resend. The component is IAsyncDisposable: the countdown timer is released on dispose and the tick is guarded by a disposed flag.",
       "packageId": "Tempo.Blazor.Signing",
       "sourcePath": "src/Tempo.Blazor.Signing/Components/Signing/TmSigningPhoneStep.razor",
       "documentationStatus": "merged",
@@ -2735,10 +3485,9 @@
         },
         {
           "name": "CountryCode",
-          "type": "string",
+          "type": "string?",
           "isRequired": false,
-          "default": "\"+1\"",
-          "description": "Selected country calling code."
+          "description": "Selected country calling code. When omitted (null), the default comes from Culture: +420 for the Czech, +421 for the Slovak and +1 for every other culture — the old hardcoded \"+1\" default opened a Czech signer's step on the wrong prefix (Signing redesign phase 4)."
         },
         {
           "name": "CountryCodeChanged",
@@ -2757,7 +3506,7 @@
           "name": "Culture",
           "type": "string?",
           "isRequired": false,
-          "description": "Culture used to resolve localized field text."
+          "description": "Culture used to resolve localized field text and to derive the default country code (+420 cs, +421 sk, otherwise +1)."
         },
         {
           "name": "Disabled",
@@ -2778,10 +3527,22 @@
           "description": "Signing field represented by this step."
         },
         {
+          "name": "OnChangeNumber",
+          "type": "EventCallback",
+          "isRequired": false,
+          "description": "Raised when the signer asks to change the verified number (Signing redesign phase 6 review): the runner clears its host confirmation so Verified flips back to false and the number input unlocks. A standalone host mirrors the same clear through its own state."
+        },
+        {
           "name": "OnSendCode",
           "type": "EventCallback<string>",
           "isRequired": false,
-          "description": "Callback invoked when a verification code should be sent."
+          "description": "Callback invoked when a verification code should be sent. The component never dispatches an SMS — the host (the runner's OnSendPhoneCode) owns the dispatch. An empty number returns early without raising the callback, the countdown starts only after the callback succeeds, and a failing host shows the localized unavailable message."
+        },
+        {
+          "name": "OnVerifyCode",
+          "type": "EventCallback",
+          "isRequired": false,
+          "description": "Raised when the signer asks to verify the typed code (Signing redesign phase 6). The step itself never decides validity — the RUNNER checks it against the host verifier; a standalone host binds its own check here and mirrors the result back through Verified. A throwing host shows the localized unavailable message and never flips any state."
         },
         {
           "name": "OtpCode",
@@ -2794,6 +3555,12 @@
           "type": "EventCallback<string?>",
           "isRequired": false,
           "description": "Callback invoked when OTP code changes."
+        },
+        {
+          "name": "OtpInvalid",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Whether the CURRENT validation message targets the OTP input (Signing redesign phase 6 review — error ownership): the input carries aria-invalid + the error state and references the validation id, while the phone input stays clean."
         },
         {
           "name": "PhoneNumber",
@@ -2825,6 +3592,12 @@
           "type": "EventCallback<string?>",
           "isRequired": false,
           "description": "Callback invoked when the normalized phone value changes."
+        },
+        {
+          "name": "Verified",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Whether the host CONFIRMED the typed code (Signing redesign phase 6). The state is host-owned — inside the runner it flips only after the host verifier answered true — and replaces the OTP input, the Verify action and the resend affordances with the localized verified status."
         }
       ]
     },
@@ -2905,6 +3678,13 @@
           "type": "string?",
           "isRequired": false,
           "description": "Additional CSS classes for the shell element."
+        },
+        {
+          "name": "ClearButtonPlacement",
+          "type": "TmSignatureClearButtonPlacement",
+          "isRequired": false,
+          "default": "TmSignatureClearButtonPlacement.Overlay",
+          "description": "Where the capture's Clear button renders. Defaults to Overlay (Signing redesign phase 4): the button sits on the signing surface itself instead of a row below it. Hosts can restore the row with TmSignatureClearButtonPlacement.Actions."
         },
         {
           "name": "Culture",
@@ -3162,6 +3942,19 @@
           "isRequired": false,
           "default": "[]",
           "description": "Submission events to display."
+        },
+        {
+          "name": "HeaderContent",
+          "type": "RenderFragment?",
+          "isRequired": false,
+          "description": "Host-rendered summary above the timeline (typically the document name, page/size metrics and its current status — the desktop reference's document card). The panel renders it verbatim before the event list; the timeline never invents document data it does not have (Q-S10)."
+        },
+        {
+          "name": "SortDirection",
+          "type": "SigningTimelineSortDirection",
+          "isRequired": false,
+          "default": "SigningTimelineSortDirection.Descending",
+          "description": "Sort direction of Events. Defaults to SigningTimelineSortDirection.Descending (the newest event first — today's behaviour, Q-S9); SigningTimelineSortDirection.Ascending renders the ceremony in its reading order."
         }
       ]
     }
@@ -3225,6 +4018,10 @@
       "kind": "Css"
     },
     {
+      "path": "src/Tempo.Blazor.Signing/wwwroot/css/components/_signing-steps.css",
+      "kind": "Css"
+    },
+    {
       "path": "src/Tempo.Blazor.Signing/wwwroot/css/components/_submission-status-timeline.css",
       "kind": "Css"
     },
@@ -3237,16 +4034,40 @@
       "kind": "Css"
     },
     {
+      "path": "src/Tempo.Blazor.Signing/wwwroot/js/pdf-template-designer-pointer.js",
+      "kind": "JavaScript"
+    },
+    {
       "path": "src/Tempo.Blazor.Signing/wwwroot/js/pdf-template-designer.js",
+      "kind": "JavaScript"
+    },
+    {
+      "path": "src/Tempo.Blazor.Signing/wwwroot/js/signing-editor.js",
+      "kind": "JavaScript"
+    },
+    {
+      "path": "src/Tempo.Blazor.Signing/wwwroot/js/signing-runner.js",
+      "kind": "JavaScript"
+    },
+    {
+      "path": "src/Tempo.Blazor.Signing/wwwroot/js/__tests__/pdf-template-designer-pointer.test.mjs",
+      "kind": "JavaScript"
+    },
+    {
+      "path": "src/Tempo.Blazor.Signing/wwwroot/js/__tests__/signing-editor.test.mjs",
+      "kind": "JavaScript"
+    },
+    {
+      "path": "src/Tempo.Blazor.Signing/wwwroot/js/__tests__/signing-runner.test.mjs",
       "kind": "JavaScript"
     }
   ],
   "summary": {
-    "itemCount": 46,
-    "manualItemCount": 46,
-    "generatedItemCount": 46,
+    "itemCount": 57,
+    "manualItemCount": 57,
+    "generatedItemCount": 57,
     "generatedOnlyItemCount": 0,
-    "componentCount": 31,
-    "publicApiTypeCount": 15
+    "componentCount": 34,
+    "publicApiTypeCount": 23
   }
 }

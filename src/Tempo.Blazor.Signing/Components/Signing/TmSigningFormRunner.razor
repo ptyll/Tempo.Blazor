@@ -1,17 +1,27 @@
 @namespace Tempo.Blazor.Components.Signing
 @inherits Tempo.Blazor.Components.TmComponentBase
+@using Tempo.Blazor.Abstractions.Layout
 @using Tempo.Blazor.Abstractions.Models
 @using Tempo.Blazor.Components.Buttons
+@using Tempo.Blazor.Components.Dropdowns
 @using Tempo.Blazor.Components.Feedback
 @using Tempo.Blazor.Components.Inputs
 @using Tempo.Blazor.Components.Icons
+@using Tempo.Blazor.Components.Layout
+@using Tempo.Blazor.Components.Overlay
 
+@* The runner measures its OWN container (F1, Signing redesign phase 5): the observer is the
+   outer element, the runner root sits inside it and is the CSS size container the descendants
+   query. IsContainer=false: the observer root is a plain block that only reports a width. *@
+<TmLayoutObserver LayoutMode="LayoutForObserver" ResolvedLayoutChanged="OnResolvedLayoutChanged" IsContainer="false">
+<LayoutContent Context="lay">
+@{ ApplyLayout(lay.Resolved); }
 <div @attributes="AdditionalAttributes"
      class="@RootClass"
      aria-busy="@BoolText(IsLoading)">
     @* The runner root is the CSS size container (see _signing-form-runner.css); its grid lives on
        an inner element because a @container rule can never restyle the container itself. *@
-    <div class="tm-signing-form-runner__layout">
+    <div class="tm-signing-form-runner__layout" style="@MobileSheetReserveStyle">
     @if (Plan.Steps.Count == 0)
     {
         <div class="tm-signing-form-runner__empty" role="status">
@@ -23,6 +33,51 @@
     else
     {
         <div class="tm-signing-form-runner__documents" data-testid="@TestId("signing-runner-documents")">
+            @if (IsMobileSheet)
+            {
+                <div class="tm-signing-form-runner__sheet-host"
+                     data-testid="@TestId("signing-runner-steps")"
+                     data-complete-target="@MobileCompleteTargetSelector">
+                    <TmDrawer IsOpen="true"
+                              Position="DrawerPosition.Bottom"
+                              Modal="false"
+                              ShowOverlay="false"
+                              ShowCloseButton="false"
+                              CloseOnEscape="false"
+                              SwipeToDismiss="false"
+                              ShowHandle="false"
+                              SnapPoints="RunnerSheetSnaps"
+                              SnapIndex="RunnerSheetSnapIndex"
+                              SnapIndexChanged="OnRunnerSheetSnapChanged"
+                              MaxHeight="1"
+                              LayoutMode="TmLayoutMode.Mobile"
+                              Class="@StepsClass"
+                              AriaLabel="@Loc["TmSigningFormRunner_PanelTitle"]">
+                        <HeaderContent>
+                            <div class="tm-signing-form-runner__sheet-bar">
+                                <button type="button"
+                                        class="tm-signing-form-runner__sheet-handle"
+                                        aria-expanded="@BoolText(_sheetExpanded)"
+                                        aria-controls="@_stepPanelId"
+                                        aria-label="@SheetHandleAriaLabel"
+                                        @ref="_sheetHandle"
+                                        @onclick="ToggleMobileSheet">
+                                    <span class="tm-signing-form-runner__sheet-handle-grip" aria-hidden="true"></span>
+                                </button>
+                                <div class="tm-signing-form-runner__sheet-progress" role="@PeekProgressRole">@DoneCountText</div>
+                                <button type="button"
+                                        class="tm-signing-form-runner__mobile-expand"
+                                        @onclick="ExpandMobilePanel">
+                                    @Loc["TmSigningFormRunner_SignNow"]
+                                </button>
+                            </div>
+                        </HeaderContent>
+                        <ChildContent>
+                            @RunnerStepCascade
+                        </ChildContent>
+                    </TmDrawer>
+                </div>
+            }
             @* U4 (Signing redesign phase 3): optional document header. The default stays today's
                chrome-free look — the header renders only when a title or host actions exist. *@
             @if (HasDocumentHeader)
@@ -39,6 +94,9 @@
                 </div>
             }
 
+            @* One pages scroller (phase 9 review): snap 1/2 sizes THIS wrapper, never each page.
+               A per-page flex item collapses a multi-page runner to a sliver. *@
+            <div class="tm-signing-form-runner__pages">
             @foreach (var documentPage in Pages)
             {
                 @* Light island (phase 3 review): the paper sheet stays white inside a dark host, so
@@ -52,6 +110,7 @@
                        pagination controls would be dead chrome — pagination comes with a later phase
                        if it is ever needed. *@
                     <TmDocumentPageViewer Page="@documentPage"
+                                          EnablePinchZoom="true"
                                           ShowToolbar="@ShowDocumentToolbar"
                                           ShowZoomControls="@ShowDocumentToolbar"
                                           ShowPaginationControls="false"
@@ -76,55 +135,43 @@
                     </TmDocumentPageViewer>
                 </div>
             }
-        </div>
-
-        @* B25 (Signing redesign phase 2): the steps rail hosts the ONE step panel. The column vs.
-           mobile-sheet presentation is CSS only (@container tm-signing-runner); the sheet state is
-           carried by the --sheet-collapsed / --sheet-expanded classes below, so the panel content
-           exists exactly once in the DOM at every width. *@
-        <aside class="@StepsClass"
-               data-testid="@TestId("signing-runner-steps")"
-               data-complete-target="@MobileCompleteTargetSelector">
-            <div class="tm-signing-form-runner__sheet-bar">
-                @* BOTH affordances always render — CSS hides the one that does not match the
-                   current sheet state, so a toggle focus move (OnAfterRenderAsync) can target the
-                   button that becomes visible. aria-expanded describes the sheet state. *@
-                <button type="button"
-                        class="tm-signing-form-runner__mobile-expand"
-                        aria-expanded="@BoolText(_sheetExpanded)"
-                        aria-controls="@_stepPanelId"
-                        @ref="_mobileExpandButton"
-                        @onclick="ExpandMobilePanel">
-                    @Loc["TmSigningFormRunner_SignNow"]
-                </button>
-                <button type="button"
-                        class="tm-signing-form-runner__mobile-minimize"
-                        aria-expanded="@BoolText(_sheetExpanded)"
-                        aria-controls="@_stepPanelId"
-                        aria-label="@Loc["TmSigningFormRunner_Minimize"]"
-                        @ref="_mobileMinimizeButton"
-                        @onclick="MinimizeMobilePanel">
-                    @Loc["TmSigningFormRunner_Minimize"]
-                </button>
             </div>
 
-            <CascadingValue Value="_stepFocusSignal" IsFixed="true">
-                <CascadingValue Name="TmSigningRunnerValidation" Value="@_validationMessage" IsFixed="false">
-                    @RenderStepPanel()
-                </CascadingValue>
-            </CascadingValue>
-        </aside>
+
+        </div>
+
+        @* B25: the steps rail hosts the ONE step panel. Phase 9 MOVES that instance into a
+           non-modal TmDrawer on a mobile layout (G13 / FZE5-G13-RUNNER-SHEET) and keeps the
+           desktop/tablet column. RenderStepPanel is called from exactly one branch.
+           Crossing the breakpoint remounts the sheet (see the mobile branch above). *@
+        @if (!IsMobileSheet)
+        {
+            <aside class="@StepsClass"
+                   data-testid="@TestId("signing-runner-steps")"
+                   data-complete-target="@MobileCompleteTargetSelector">
+                @RunnerStepCascade
+            </aside>
+        }
     }
     </div>
 </div>
+</LayoutContent>
+</TmLayoutObserver>
 
 @code {
-    // INVARIANT (Signing redesign phase 2, bug B25): RenderStepPanel renders the ONE step panel
-    // instance of the runner — the desktop rail and the mobile bottom sheet are CSS presentations
-    // of it, never a second copy. The Phase 9 migration of this panel into a shared TmDrawer MUST
-    // MOVE this exact instance into the sheet host (moving the RenderFragment / element), never
-    // render it twice; the bUnit gate Runner_RendersExactlyOneStepShell_AndOneSignatureCapture
-    // and the E2E SigningFormRunner_SinglePanelInstanceInDom_AtMobileAndDesktop guard that.
+    // INVARIANT (Signing redesign phase 2, bug B25; phase 9 MOVE): RenderStepPanel is the ONE step
+    // panel. The mobile branch hosts it inside TmDrawer; the desktop/tablet branch hosts it in the
+    // aside. Exactly one branch renders, so the panel exists once. The bUnit gate
+    // Runner_RendersExactlyOneStepShell_AndOneSignatureCapture and the E2E
+    // SigningFormRunner_SinglePanelInstanceInDom_AtMobileAndDesktop guard that.
+    private RenderFragment RunnerStepCascade => @<CascadingValue Value="_stepFocusSignal" IsFixed="true">
+        <CascadingValue Name="TmSigningRunnerValidation" Value="@_validationMessage" IsFixed="false">
+            <CascadingValue Name="TmSigningRunnerHosted" Value="true" IsFixed="true">
+                @RenderStepPanel()
+            </CascadingValue>
+        </CascadingValue>
+    </CascadingValue>;
+
     private RenderFragment RenderStepPanel() => @<div id="@_stepPanelId" class="tm-signing-form-runner__step-panel">
         <header class="tm-signing-form-runner__panel-header">
             <h2 class="tm-signing-form-runner__panel-title">@Loc["TmSigningFormRunner_PanelTitle"]</h2>
@@ -204,6 +251,7 @@
                                              Value="@GetValue(CurrentStep.Field.Uuid)"
                                              ValueChanged="value => SetChoiceValueAsync(CurrentStep, value)"
                                              AppearsOn="@CurrentStep.AppearsOn"
+                                             LayoutMode="ResolvedLayout"
                                              Culture="@CurrentCulture"
                                              FallbackCulture="@FallbackCulture"
                                              Disabled="@IsLoading" />
@@ -211,6 +259,10 @@
                     case SigningFieldType.Image:
                     case SigningFieldType.File:
                     case SigningFieldType.Stamp:
+                        @* Phase 6: the upload is host-owned — the runner hands the picked file to
+                            OnAttachmentSelected and stores the host url on the card (only when a
+                            host uploader is wired; without one the legacy client-side-only
+                            behaviour stands). *@
                         <TmSigningAttachmentStep Field="CurrentStep.Field"
                                                  Attachments="@GetAttachments(CurrentStep.Field.Uuid)"
                                                  AttachmentsChanged="value => SetFieldValueAsync(CurrentStep.Field.Uuid, value)"
@@ -218,6 +270,7 @@
                                                  AppearsOn="@CurrentStep.AppearsOn"
                                                  AllowMultiple="@(CurrentStep.Field.Type == SigningFieldType.File)"
                                                  Accept="@(CurrentStep.Field.Type == SigningFieldType.Image ? "image/*" : null)"
+                                                 UploadUrlResolver="@GetAttachmentUploadResolver(CurrentStep.Field.Uuid)"
                                                  Culture="@CurrentCulture"
                                                  FallbackCulture="@FallbackCulture"
                                                  Disabled="@IsLoading" />
@@ -235,10 +288,26 @@
                                                 Disabled="@IsLoading" />
                         break;
                     case SigningFieldType.Phone:
+                        @* Phase 6 (opt-in): the send/verify callbacks reach the phone step ONLY
+                            when the host wired OnSendPhoneCode / OnVerifyPhoneCode — a legacy
+                            runner renders neither a forwarding send nor a Verify action, and the
+                            typed phone still completes the step on its own. The typed OTP draft
+                            is never stored as the field value; the code-sent state and the draft
+                            survive navigating away and back (review item 12), the OTP error is
+                            owned by the OTP input (item 8) and Change number clears the host
+                            confirmation (item 1). *@
                         <TmSigningPhoneStep Field="CurrentStep.Field"
                                             PhoneNumber="@GetStringValue(CurrentStep.Field.Uuid)"
                                             PhoneNumberChanged="value => SetFieldValueAsync(CurrentStep.Field.Uuid, value)"
                                             ValueChanged="value => SetFieldValueAsync(CurrentStep.Field.Uuid, value)"
+                                            OtpCode="@GetPhoneCodeDraft(CurrentStep.Field.Uuid)"
+                                            OtpCodeChanged="code => SetPhoneCodeDraftAsync(CurrentStep.Field.Uuid, code)"
+                                            CodeSent="@IsPhoneCodeSent(CurrentStep.Field.Uuid)"
+                                            OtpInvalid="@_phoneOtpInvalid.Contains(CurrentStep.Field.Uuid)"
+                                            OnSendCode="@GetPhoneSendCallback(CurrentStep.Field.Uuid)"
+                                            OnVerifyCode="@GetPhoneVerifyCallback(CurrentStep.Field.Uuid)"
+                                            OnChangeNumber="@GetPhoneChangeNumberCallback(CurrentStep.Field.Uuid)"
+                                            Verified="@IsPhoneVerified(CurrentStep.Field)"
                                             AppearsOn="@CurrentStep.AppearsOn"
                                             Culture="@CurrentCulture"
                                             FallbackCulture="@FallbackCulture"
@@ -247,13 +316,31 @@
                     case SigningFieldType.Verification:
                     case SigningFieldType.Kba:
                     case SigningFieldType.Payment:
-                        <TmSigningExternalStep Field="CurrentStep.Field"
-                                               AppearsOn="@CurrentStep.AppearsOn"
-                                               Disabled="@IsLoading"
-                                               Culture="@CurrentCulture"
-                                               FallbackCulture="@FallbackCulture"
-                                               OnStart="field => SetFieldValueAsync(field.Uuid, true)"
-                                               OnCheckout="field => SetFieldValueAsync(field.Uuid, true)" />
+                        {
+                            @* Phase 6 (SI2): the host's provider context feeds the step — url,
+                                KBA questions, loading state, error and provider name. The click
+                                goes through StartExternalStepAsync: with OnExternalStepRequested
+                                wired it only notifies the host (the step completes when the host
+                                stores the provider result through Values); without it the legacy
+                                click stores true. The KBA submit hands the typed ANSWERS to the
+                                host through the request — they are never stored as the field
+                                value (review item 4). *@
+                            var externalContext = ResolveExternalStepContext(CurrentStep.Field);
+                            <TmSigningExternalStep Field="CurrentStep.Field"
+                                                   Value="@GetValue(CurrentStep.Field.Uuid)"
+                                                   AppearsOn="@CurrentStep.AppearsOn"
+                                                   Disabled="@IsLoading"
+                                                   Culture="@CurrentCulture"
+                                                   FallbackCulture="@FallbackCulture"
+                                                   ExternalUrl="@externalContext?.ExternalUrl"
+                                                   Questions="@(externalContext?.Questions ?? [])"
+                                                   IsLoading="@(externalContext?.IsLoading == true)"
+                                                   Error="@externalContext?.Error"
+                                                   ProviderName="@externalContext?.ProviderName"
+                                                   OnStart="StartExternalStepAsync"
+                                                   OnCheckout="StartExternalStepAsync"
+                                                   OnSubmitAnswers="StartExternalStepAsync" />
+                        }
                         break;
                 }
             </div>
@@ -281,18 +368,24 @@
         }
 
         @* Sticky action footer (Signing redesign phase 3). The primary action is contextual:
-           "Next" while later steps remain, "Complete" once every required field is done — and on
-           the LAST step Complete renders (disabled while required work is missing) so the signer
-           sees the finishing action instead of a dead Next. Skip renders ONLY for an optional,
-           non-final current field and lives INSIDE the sticky footer as a full-width row, so the
-           keyboard order stays Previous → Next/Complete → Skip. The BEM classes
-           (__previous / __next / __skip / __complete) are the E2E contract — keep them on the
-           TmButton Class. *@
+            "Next" while later steps remain, "Complete" once every required field is done — and on
+            the LAST step Complete renders (disabled while required work is missing) so the signer
+            sees the finishing action instead of a dead Next. Skip renders ONLY for an optional,
+            non-final current field and lives INSIDE the sticky footer as a full-width row, so the
+            keyboard order stays Previous → Next/Complete → Skip. The BEM classes
+            (__previous / __next / __skip / __complete) are the E2E contract — keep them on the
+            TmButton Class. Phase 5: the row gains the "More" overflow for the MOBILE sheet (its
+            trigger hides on the desktop/tablet containers), carrying Skip, Language, the field
+            list and "Show whole document" — the trigger is one TmDropdown, the desktop Skip row
+            stays the keyboard-order contract, and the menu is simply closed wherever it is
+            hidden. *@
         <div class="tm-signing-form-runner__actions">
             <TmButton Variant="ButtonVariant.Secondary"
                       Size="ButtonSize.Lg"
+                      Icon="@IconNames.ChevronLeft"
                       Class="tm-signing-form-runner__previous"
                       Disabled="@IsPreviousDisabled"
+                      AriaLabel="@Loc["TmSigning_Previous"]"
                       OnClick="GoPreviousAsync">
                 @Loc["TmSigning_Previous"]
             </TmButton>
@@ -317,6 +410,31 @@
                     @Loc["TmSigning_Next"]
                 </TmButton>
             }
+            <TmDropdown Class="tm-signing-form-runner__more"
+                        AriaLabel="@Loc["TmSigningFormRunner_More"]"
+                        Icon="more-vertical"
+                        ShowChevron="false"
+                        Align="OverlayAlign.End"
+                        OnSelect="HandleMoreSelectAsync">
+                @if (ShowSkipButton)
+                {
+                    <TmDropdownItem Value="skip" Class="tm-signing-form-runner__more-skip">
+                        @Loc["TmSigningFormRunner_Skip"]
+                    </TmDropdownItem>
+                }
+                <TmDropdownItem Value="fields" Class="tm-signing-form-runner__more-fields">
+                    @Loc["TmSigningFormRunner_ShowFields"]
+                </TmDropdownItem>
+                @if (ShowLanguagePicker)
+                {
+                    <TmDropdownItem Value="language" Class="tm-signing-form-runner__more-language">
+                        @Loc["TmSigningFormRunner_Language"]
+                    </TmDropdownItem>
+                }
+                <TmDropdownItem Value="document" Class="tm-signing-form-runner__more-document">
+                    @Loc["TmSigningFormRunner_ShowDocument"]
+                </TmDropdownItem>
+            </TmDropdown>
             @if (ShowSkipButton)
             {
                 <TmButton Variant="ButtonVariant.Link"
@@ -341,6 +459,7 @@
                     <select class="tm-signing-form-runner__language-select"
                             value="@CurrentCulture"
                             aria-label="@Loc["TmSigningFormRunner_LanguageAria"]"
+                            @ref="_languageSelect"
                             @onchange="HandleCultureChangedAsync">
                         @foreach (var culture in SupportedCultures)
                         {

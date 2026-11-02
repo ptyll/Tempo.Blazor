@@ -33,7 +33,7 @@
       "name": "Culture",
       "type": "string?",
       "isRequired": false,
-      "description": "Culture used to resolve localized field text."
+      "description": "Culture used to resolve localized field text and to parse and format the number — the decimal comma of a cs template is a first-class input (Signing redesign phase 4)."
     },
     {
       "name": "Disabled",

@@ -55,6 +55,14 @@ public partial class TmSigningSignatureStep
     /// <summary>Offered capture modes. Defaults to draw, type and upload.</summary>
     [Parameter] public IReadOnlyList<TmSignatureCaptureMode>? Modes { get; set; }
 
+    /// <summary>
+    /// Where the capture's Clear button renders. Defaults to <see
+    /// cref="TmSignatureClearButtonPlacement.Overlay"/> (Signing redesign phase 4): the button sits
+    /// on the signing surface itself instead of a row below it. Hosts can restore the row with
+    /// <see cref="TmSignatureClearButtonPlacement.Actions"/>.
+    /// </summary>
+    [Parameter] public TmSignatureClearButtonPlacement ClearButtonPlacement { get; set; } = TmSignatureClearButtonPlacement.Overlay;
+
     /// <summary>Validation message shown by the step shell below the capture.</summary>
     [Parameter] public string? ValidationMessage { get; set; }
 

@@ -185,7 +185,6 @@ public class UnconstrainedClassOwnershipTests
         // context-menu wrapper (position, Override).
         ".tm-btn Tempo.Blazor/_button.css|Tempo.Blazor/_color-picker.css",
         ".tm-condition-builder__row Tempo.Blazor.Signing/_condition-builder.css|Tempo.Blazor.Signing/_signing-field-editor-panel.css",
-        ".tm-context-menu-wrapper Tempo.Blazor.Signing/_pdf-template-designer.css|Tempo.Blazor/_context-menu.css",
 
         // NotionEditor's dark skin restyles the typography file's blocks — background Overrides on
         // the callout/code-block classes and on code itself, all inside the notion regions.
@@ -224,6 +223,23 @@ public class UnconstrainedClassOwnershipTests
         // into the card shadow (Strictly-narrower .tm-signing-form-runner__document context; the
         // viewer's own --tm-shadow-sm stays the winner everywhere else — Override).
         ".tm-document-page-viewer__page Tempo.Blazor.Signing/_document-page-viewer.css|Tempo.Blazor.Signing/_signing-form-runner.css",
+
+        // Signing redesign phase 5 (recorded in phase 6 — the pair shipped unrecorded): the SI1
+        // radio CARDS deliberately centre the option row (a 56px card reads centred, the radio
+        // dot mid-card) against the core row's flex-start, through the strictly-narrower
+        // .tm-signing-choice-step__options--cards chain — an intentional, mobile-presentation-only
+        // Override (the desktop container keeps the system select and never renders the chain).
+        ".tm-radio-option Tempo.Blazor.Signing/_signing-steps.css|Tempo.Blazor/_radio-group.css",
+
+        // Signing phase 9 review: the list snap pins the action row inside the drawer body, and the
+        // extra-narrow runner ellipsizes the button label. Both are strictly narrower than the core
+        // subjects (the list class / the runner actions chain), so import order decides nothing.
+        ".tm-btn-label Tempo.Blazor.Signing/_signing-form-runner.css|Tempo.Blazor/_button.css",
+        ".tm-drawer__body Tempo.Blazor.Signing/_document-comments.css|Tempo.Blazor/_drawer.css",
+
+        // Phase 10 review: Previous is icon-only below 22.5rem. The docked rule hides that chevron
+        // (display:none) against the core icon's inline-block. Strictly narrower runner chain.
+        ".tm-icon Tempo.Blazor.Signing/_signing-form-runner.css|Tempo.Blazor/_icon.css",
     ];
 
     [Fact]

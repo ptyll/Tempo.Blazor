@@ -2,9 +2,11 @@ using System.Reflection;
 using Bunit;
 using FluentAssertions;
 using Microsoft.AspNetCore.Components;
+using NSubstitute;
 using Tempo.Blazor.Abstractions.Shared;
 using Tempo.Blazor.Components.Activity;
 using Tempo.Blazor.Tests.Localization;
+using Tempo.Blazor.Tests.Theme;
 
 namespace Tempo.Blazor.Tests.Activity;
 
@@ -651,6 +653,497 @@ public class TmActivityCommentsTests : LocalizationTestBase
         cut.FindAll(".tm-comment-item").Count.Should().Be(2);
         cut.Instance.HasUnsavedDraft.Should().BeFalse();
         states.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void Comments_PublicEntry_HasNoInternalMarker_AndDataInternalFalse()
+    {
+        var cut = Render<TmActivityComments>(p => p
+            .Add(c => c.Comments, TwoComments()));
+
+        var item = cut.Find(".tm-comment-item");
+        item.GetAttribute("data-comment-id").Should().Be("c1");
+        item.GetAttribute("data-internal").Should().Be("false");
+        item.ClassList.Should().NotContain("tm-comment-item--internal");
+        cut.FindAll(".tm-comment-internal-label").Should().BeEmpty();
+        cut.FindAll(".tm-comment-badge").Should().BeEmpty();
+    }
+
+    [Fact]
+    public void Comments_InternalEntry_RendersLockLabel_AndKeepsTheBody()
+    {
+        var comments = TwoComments();
+        comments[0].IsInternal = true;
+
+        var cut = Render<TmActivityComments>(p => p
+            .Add(c => c.Comments, comments));
+
+        var item = cut.Find("[data-comment-id='c1']");
+        item.GetAttribute("data-internal").Should().Be("true");
+        item.ClassList.Should().Contain("tm-comment-item--internal");
+        item.TextContent.Should().Contain("Internal");
+        item.TextContent.Should().Contain("First comment");
+        var label = item.QuerySelector(".tm-comment-internal-label")!;
+        label.QuerySelector(".tm-icon").Should().NotBeNull();
+        label.InnerHtml.Should().Contain("M7 11V7a5 5 0 0 1 10 0v4", "the internal cue is IconNames.Lock, not EyeOff");
+        label.InnerHtml.Should().NotContain("M17.94 17.94", "EyeOff is not the internal cue");
+        label.HasAttribute("aria-label").Should().BeFalse("the visible label is the accessible name");
+        label.QuerySelector(".tm-sr-only")!.TextContent.Should().Be(": Visible only to internal users");
+        cut.Find("[data-comment-id='c2']").GetAttribute("data-internal").Should().Be("false");
+    }
+
+    [Fact]
+    public void Comments_NullBadges_RendersTheEntry_WithoutBadges()
+    {
+        var comments = TwoComments();
+        comments[0].Badges = null!;
+
+        var cut = Render<TmActivityComments>(p => p
+            .Add(c => c.Comments, comments));
+
+        cut.Find("[data-comment-id='c1']").TextContent.Should().Contain("First comment");
+        cut.FindAll(".tm-comment-badge").Should().BeEmpty();
+    }
+
+    [Fact]
+    public void Comments_Badges_RenderInMeta_WithToneAttribute_AndSkipInvalid()
+    {
+        var comments = TwoComments();
+        comments[1].Badges =
+        [
+            new TmCommentBadge { Text = "Blocked", Tone = TmCommentBadgeTone.Danger, Icon = "alert-circle", Title = "Waiting on vendor" },
+            new TmCommentBadge { Text = "   ", Tone = TmCommentBadgeTone.Info },
+            new TmCommentBadge { Text = "Done", Tone = TmCommentBadgeTone.Success },
+            new TmCommentBadge { Text = "Watch", Tone = TmCommentBadgeTone.Warning },
+            new TmCommentBadge { Text = "FYI", Tone = TmCommentBadgeTone.Info },
+            new TmCommentBadge { Text = "Pinned", Tone = TmCommentBadgeTone.Accent },
+            new TmCommentBadge { Text = "Note", Tone = TmCommentBadgeTone.Neutral }
+        ];
+
+        var cut = Render<TmActivityComments>(p => p
+            .Add(c => c.Comments, comments));
+
+        var meta = cut.Find("[data-comment-id='c2'] .tm-comment-meta");
+        var badges = meta.QuerySelectorAll(".tm-comment-badge");
+        badges.Should().HaveCount(6);
+        badges[0].GetAttribute("data-badge-tone").Should().Be("danger");
+        badges[0].ClassList.Should().Contain("tm-badge-danger");
+        badges[0].GetAttribute("title").Should().Be("Waiting on vendor");
+        badges[0].HasAttribute("aria-label").Should().BeFalse();
+        badges[0].QuerySelector(".tm-sr-only")!.TextContent.Should().Be(": Waiting on vendor");
+        badges[0].TextContent.Should().Contain("Blocked");
+        badges[1].GetAttribute("data-badge-tone").Should().Be("success");
+        badges[1].ClassList.Should().Contain("tm-badge-success");
+        badges[2].GetAttribute("data-badge-tone").Should().Be("warning");
+        badges[2].ClassList.Should().Contain("tm-badge-warning");
+        badges[3].GetAttribute("data-badge-tone").Should().Be("info");
+        badges[3].ClassList.Should().Contain("tm-badge-info");
+        badges[4].GetAttribute("data-badge-tone").Should().Be("accent");
+        badges[4].ClassList.Should().Contain("tm-badge-primary");
+        badges[5].GetAttribute("data-badge-tone").Should().Be("neutral");
+        badges[5].ClassList.Should().Contain("tm-badge-default");
+        cut.FindAll("[data-comment-id='c2'] [data-badge-tone]").Should().HaveCount(6);
+    }
+
+    [Fact]
+    public void Comments_InternalAndEdited_ShowsBothCues()
+    {
+        var comments = TwoComments();
+        comments[0].IsInternal = true;
+        comments[0].EditedAt = DateTimeOffset.Now.AddMinutes(-5);
+        comments[0].Badges = [new TmCommentBadge { Text = "Admin", Tone = TmCommentBadgeTone.Warning }];
+
+        var cut = Render<TmActivityComments>(p => p
+            .Add(c => c.Comments, comments));
+
+        var meta = cut.Find("[data-comment-id='c1'] .tm-comment-meta");
+        meta.QuerySelector(".tm-comment-edited").Should().NotBeNull();
+        meta.QuerySelector(".tm-comment-internal-label")!.TextContent.Should().Contain("Internal");
+        meta.QuerySelector(".tm-comment-internal-label")!.GetAttribute("title")
+            .Should().Be("Visible only to internal users");
+        meta.QuerySelector("[data-badge-tone='warning']").Should().NotBeNull();
+    }
+
+    [Fact]
+    public void Comments_InternalLabel_IsLocalizedInCzech()
+    {
+        UseCzechLocalization();
+        var comments = TwoComments();
+        comments[0].IsInternal = true;
+
+        var cut = Render<TmActivityComments>(p => p
+            .Add(c => c.Comments, comments));
+
+        var label = cut.Find(".tm-comment-internal-label");
+        label.TextContent.Should().Contain("Interní");
+        label.GetAttribute("title").Should().Be("Viditelné jen interním uživatelům");
+        label.QuerySelector(".tm-sr-only")!.TextContent.Should().Be(": Viditelné jen interním uživatelům");
+    }
+
+    [Fact]
+    public void ActivityCommentsCss_BadgeWidthAndInternalInset_ComeFromTokens()
+    {
+        var root = ThemeCss.RepositoryRoot().FullName;
+        var css = File.ReadAllText(Path.Combine(root, "src", "Tempo.Blazor", "wwwroot", "css", "components", "_activity-comments.css"));
+        var tokens = File.ReadAllText(Path.Combine(root, "src", "Tempo.Blazor", "wwwroot", "css", "tokens.css"));
+
+        css.Should().Contain("max-width: var(--tm-comment-badge-max-width)");
+        css.Should().NotContain("16rem");
+        css.Should().Contain("margin-inline-start: calc(-1 * var(--tm-comment-internal-inset))");
+        css.Should().Contain("IconNames.Lock");
+        tokens.Should().Contain("--tm-comment-badge-max-width:");
+        tokens.Should().Contain("--tm-comment-internal-inset:");
+        tokens.Should().MatchRegex(@"--tm-comment-internal-inset:\s*calc\(var\(--tm-space-2\) \+ var\(--tm-space-1\)\)");
+        tokens.Should().NotContain("--tm-comment-internal-fg");
+    }
+
+    [Fact]
+    public void CommentActions_RenderedPerCommentWithEntryContext()
+    {
+        var seen = new List<string>();
+        var cut = Render<TmActivityComments>(p => p
+            .Add(c => c.Comments, TwoComments())
+            .Add(c => c.CommentActions, entry => builder =>
+            {
+                seen.Add(entry.Id);
+                builder.OpenElement(0, "button");
+                builder.AddAttribute(1, "type", "button");
+                builder.AddAttribute(2, "class", "tm-comment-custom-probe");
+                builder.AddAttribute(3, "data-entry-id", entry.Id);
+                builder.AddContent(4, entry.Author.DisplayName);
+                builder.CloseElement();
+            }));
+
+        var items = cut.FindAll(".tm-comment-item");
+        items.Should().HaveCount(2);
+        seen.Should().Equal("c1", "c2");
+        foreach (var item in items)
+        {
+            var actions = item.QuerySelector(".tm-comment-actions")!;
+            var custom = actions.QuerySelector(".tm-comment-actions__custom")!;
+            // Custom slot follows the built-in edit/delete controls, never precedes them.
+            actions.LastElementChild.Should().BeSameAs(custom);
+            var probe = custom.QuerySelector(".tm-comment-custom-probe")!;
+            probe.GetAttribute("data-entry-id").Should().Be(item.GetAttribute("data-comment-id"));
+        }
+
+        items[0].QuerySelector(".tm-comment-edit-btn").Should().NotBeNull();
+        items[1].QuerySelector(".tm-comment-edit-btn").Should().BeNull();
+    }
+
+    [Fact]
+    public void CommentActions_ContainerRenderedWithoutEditDelete()
+    {
+        var comments = TwoComments();
+        comments[1].CanEdit = false;
+        comments[1].CanDelete = false;
+
+        var cut = Render<TmActivityComments>(p => p
+            .Add(c => c.Comments, comments)
+            .Add(c => c.CommentActions, entry => builder =>
+            {
+                builder.OpenElement(0, "button");
+                builder.AddAttribute(1, "type", "button");
+                builder.AddAttribute(2, "class", "tm-comment-custom-probe");
+                builder.AddContent(3, entry.Id);
+                builder.CloseElement();
+            }));
+
+        var bob = cut.FindAll(".tm-comment-item")[1];
+        bob.QuerySelector(".tm-comment-edit-btn").Should().BeNull();
+        bob.QuerySelector(".tm-comment-delete-btn").Should().BeNull();
+        bob.QuerySelector(".tm-comment-actions .tm-comment-actions__custom .tm-comment-custom-probe")
+            .Should().NotBeNull();
+    }
+
+    [Fact]
+    public void CommentActions_HiddenWhileEditingThatComment()
+    {
+        var cut = Render<TmActivityComments>(p => p
+            .Add(c => c.Comments, TwoComments())
+            .Add(c => c.CommentActions, entry => builder =>
+            {
+                builder.OpenElement(0, "button");
+                builder.AddAttribute(1, "type", "button");
+                builder.AddAttribute(2, "class", "tm-comment-custom-probe");
+                builder.AddAttribute(3, "data-entry-id", entry.Id);
+                builder.CloseElement();
+            }));
+
+        cut.FindAll(".tm-comment-item")[0].QuerySelector(".tm-comment-edit-btn")!.Click();
+
+        var editing = cut.Find("[data-comment-id='c1']");
+        editing.QuerySelector(".tm-comment-actions").Should().BeNull();
+        editing.QuerySelector(".tm-comment-actions__custom").Should().BeNull();
+        editing.QuerySelector(".tm-comment-editor").Should().NotBeNull();
+
+        var other = cut.Find("[data-comment-id='c2']");
+        other.QuerySelector(".tm-comment-actions__custom .tm-comment-custom-probe")
+            .GetAttribute("data-entry-id").Should().Be("c2");
+    }
+
+    [Fact]
+    public void NoActions_NoEmptyContainer()
+    {
+        var comments = TwoComments();
+        comments[1].CanEdit = false;
+        comments[1].CanDelete = false;
+
+        var cut = Render<TmActivityComments>(p => p
+            .Add(c => c.Comments, comments));
+
+        cut.FindAll(".tm-comment-item")[0].QuerySelector(".tm-comment-actions").Should().NotBeNull();
+        cut.FindAll(".tm-comment-item")[1].QuerySelector(".tm-comment-actions").Should().BeNull();
+        cut.FindAll(".tm-comment-actions__custom").Should().BeEmpty();
+    }
+
+    [Fact]
+    public void MentionProvider_PassedToComposerEditor()
+    {
+        var provider = Substitute.For<ITmPeopleProvider>();
+        var cut = Render<TmActivityComments>(p => p
+            .Add(c => c.Comments, TwoComments())
+            .Add(c => c.SupportsMentions, true)
+            .Add(c => c.MentionProvider, provider));
+
+        cut.Find(".tm-comments-add-btn").Click();
+
+        var editor = cut.FindComponent<TmRichEditorSimple>();
+        editor.Instance.SupportsMentions.Should().BeTrue();
+        editor.Instance.MentionProvider.Should().BeSameAs(provider);
+    }
+
+    [Fact]
+    public void MentionProvider_PassedToInlineEditEditor()
+    {
+        var provider = Substitute.For<ITmPeopleProvider>();
+        var cut = Render<TmActivityComments>(p => p
+            .Add(c => c.Comments, TwoComments())
+            .Add(c => c.SupportsMentions, true)
+            .Add(c => c.MentionProvider, provider));
+
+        cut.FindAll(".tm-comment-item")[0].QuerySelector(".tm-comment-edit-btn")!.Click();
+
+        var editor = cut.FindComponent<TmRichEditorSimple>();
+        editor.Instance.SupportsMentions.Should().BeTrue();
+        editor.Instance.MentionProvider.Should().BeSameAs(provider);
+    }
+
+    [Fact]
+    public void SupportsMentionsWithoutProvider_NoAutocomplete()
+    {
+        var cut = Render<TmActivityComments>(p => p
+            .Add(c => c.Comments, TwoComments())
+            .Add(c => c.SupportsMentions, true));
+
+        cut.Find(".tm-comments-add-btn").Click();
+
+        var editor = cut.FindComponent<TmRichEditorSimple>();
+        editor.Instance.SupportsMentions.Should().BeFalse("autocomplete stays off without a provider; no exception");
+        editor.Instance.MentionProvider.Should().BeNull();
+        cut.FindAll(".tm-rte-mention-dropdown").Should().BeEmpty();
+    }
+
+    [Fact]
+    public void InternalToggle_HiddenByDefault()
+    {
+        var cut = Render<TmActivityComments>(p => p
+            .Add(c => c.Comments, TwoComments()));
+
+        cut.Find(".tm-comments-add-btn").Click();
+
+        cut.FindAll(".tm-comment-internal-toggle").Should().BeEmpty();
+        cut.Find(".tm-comment-editor").ClassList.Should().NotContain("tm-comment-editor--internal");
+    }
+
+    [Fact]
+    public async Task InternalToggle_Submit_InvokesOnCommentSubmittedWithFlag_AndOnCommentAdded()
+    {
+        var order = new List<string>();
+        string? added = null;
+        TmCommentSubmission? submitted = null;
+        var cut = Render<TmActivityComments>(p => p
+            .Add(c => c.Comments, TwoComments())
+            .Add(c => c.ShowInternalToggle, true)
+            .Add(c => c.OnCommentAdded, EventCallback.Factory.Create<string>(this, html =>
+            {
+                order.Add("added");
+                added = html;
+            }))
+            .Add(c => c.OnCommentSubmitted, EventCallback.Factory.Create<TmCommentSubmission>(this, submission =>
+            {
+                order.Add("submitted");
+                submitted = submission;
+            })));
+
+        cut.Find(".tm-comments-add-btn").Click();
+        cut.Find(".tm-comment-internal-toggle input").Change(true);
+        await cut.InvokeAsync(() => cut.Instance.SetEditorContentForTestAsync("<p>Internal note</p>"));
+        cut.Find(".tm-comment-submit-btn").Click();
+
+        // Document order: OnCommentSubmitted, then OnCommentAdded, with the same HTML.
+        order.Should().Equal("submitted", "added");
+        added.Should().Be("<p>Internal note</p>");
+        submitted.Should().NotBeNull();
+        submitted!.Html.Should().Be(added);
+        submitted.IsInternal.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task InternalToggle_ResetAfterSubmit()
+    {
+        var cut = Render<TmActivityComments>(p => p
+            .Add(c => c.Comments, TwoComments())
+            .Add(c => c.ShowInternalToggle, true)
+            .Add(c => c.OnCommentAdded, EventCallback.Factory.Create<string>(this, _ => { })));
+
+        cut.Find(".tm-comments-add-btn").Click();
+        cut.Find(".tm-comment-internal-toggle input").Change(true);
+        await cut.InvokeAsync(() => cut.Instance.SetEditorContentForTestAsync("<p>once</p>"));
+        cut.Find(".tm-comment-submit-btn").Click();
+
+        cut.Find(".tm-comments-add-btn").Click();
+        cut.Find(".tm-comment-internal-toggle input").HasAttribute("checked").Should().BeFalse();
+        cut.Find(".tm-comment-editor").ClassList.Should().NotContain("tm-comment-editor--internal");
+    }
+
+    [Fact]
+    public async Task InternalToggle_DisabledWhileSubmitting()
+    {
+        IRenderedComponent<TmActivityComments> cut = null!;
+        cut = Render<TmActivityComments>(p => p
+            .Add(c => c.Comments, TwoComments())
+            .Add(c => c.ShowInternalToggle, true)
+            .Add(c => c.OnCommentAdded, EventCallback.Factory.Create<string>(this, _ =>
+            {
+                cut.Render();
+                cut.Find(".tm-comment-internal-toggle input").HasAttribute("disabled").Should().BeTrue();
+                cut.Find(".tm-comment-submit-btn").HasAttribute("disabled").Should().BeTrue();
+                return Task.CompletedTask;
+            })));
+
+        cut.Find(".tm-comments-add-btn").Click();
+        cut.Find(".tm-comment-internal-toggle input").Change(true);
+        await cut.InvokeAsync(() => cut.Instance.SetEditorContentForTestAsync("<p>slow</p>"));
+        cut.Find(".tm-comment-submit-btn").Click();
+    }
+
+    [Fact]
+    public void InternalToggle_NotShownInInlineEdit()
+    {
+        var cut = Render<TmActivityComments>(p => p
+            .Add(c => c.Comments, TwoComments())
+            .Add(c => c.ShowInternalToggle, true));
+
+        cut.FindAll(".tm-comment-item")[0].QuerySelector(".tm-comment-edit-btn")!.Click();
+
+        cut.FindAll(".tm-comment-editor").Should().ContainSingle();
+        cut.FindAll(".tm-comment-internal-toggle").Should().BeEmpty();
+    }
+
+    [Fact]
+    public void Composer_InternalMode_HasModifierClass()
+    {
+        var cut = Render<TmActivityComments>(p => p
+            .Add(c => c.Comments, TwoComments())
+            .Add(c => c.ShowInternalToggle, true));
+
+        cut.Find(".tm-comments-add-btn").Click();
+        cut.Find(".tm-comment-editor").ClassList.Should().NotContain("tm-comment-editor--internal");
+
+        cut.Find(".tm-comment-internal-toggle input").Change(true);
+
+        cut.Find(".tm-comment-editor").ClassList.Should().Contain("tm-comment-editor--internal");
+    }
+
+    [Fact]
+    public void InternalToggle_UsesLocalizedLabel_AndNativeSwitch()
+    {
+        var cut = Render<TmActivityComments>(p => p
+            .Add(c => c.Comments, TwoComments())
+            .Add(c => c.ShowInternalToggle, true));
+
+        cut.Find(".tm-comments-add-btn").Click();
+
+        var input = cut.Find(".tm-comment-internal-toggle input");
+        input.GetAttribute("type").Should().Be("checkbox");
+        input.GetAttribute("role").Should().Be("switch");
+        cut.Find(".tm-comment-internal-toggle").TextContent.Should().Contain("Internal");
+        cut.Markup.Should().Contain("Only internal users will see this comment.");
+    }
+
+    [Fact]
+    public void InternalToggle_HintId_IsPerInstance_AndDescribesTheSwitch()
+    {
+        var first = Render<TmActivityComments>(p => p
+            .Add(c => c.Comments, TwoComments())
+            .Add(c => c.ShowInternalToggle, true));
+        var second = Render<TmActivityComments>(p => p
+            .Add(c => c.Comments, TwoComments())
+            .Add(c => c.ShowInternalToggle, true));
+
+        first.Find(".tm-comments-add-btn").Click();
+        second.Find(".tm-comments-add-btn").Click();
+
+        var hintA = first.Find(".tm-comment-internal-toggle-hint");
+        var hintB = second.Find(".tm-comment-internal-toggle-hint");
+        hintA.Id.Should().NotBe("tm-comment-internal-toggle-hint");
+        hintA.Id.Should().NotBe(hintB.Id);
+        first.Find(".tm-comment-internal-toggle input").GetAttribute("aria-describedby").Should().Be(hintA.Id);
+    }
+
+    [Fact]
+    public async Task InlineEdit_Save_SetsSubmitting_SoASecondSaveIsIgnored()
+    {
+        var saves = 0;
+        var release = new TaskCompletionSource();
+        var cut = Render<TmActivityComments>(p => p
+            .Add(c => c.Comments, TwoComments())
+            .Add(c => c.OnCommentEdited, EventCallback.Factory.Create<(string Id, string Html)>(this, async _ =>
+            {
+                saves++;
+                await release.Task;
+            })));
+
+        cut.FindAll(".tm-comment-item")[0].QuerySelector(".tm-comment-edit-btn")!.Click();
+        var first = cut.InvokeAsync(() => cut.Find(".tm-comment-submit-btn").Click());
+        cut.Find(".tm-comment-submit-btn").Click();
+        release.SetResult();
+        await first;
+
+        saves.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task InternalToggle_DiscardDraft_ResetsSwitch()
+    {
+        var states = new List<TmCommentDraftState>();
+        var cut = Render<TmActivityComments>(p => p
+            .Add(c => c.Comments, TwoComments())
+            .Add(c => c.ShowInternalToggle, true)
+            .Add(c => c.OnDraftChanged, EventCallback.Factory.Create<TmCommentDraftState>(this, states.Add)));
+
+        cut.Find(".tm-comments-add-btn").Click();
+        cut.Find(".tm-comment-internal-toggle input").Change(true);
+
+        states.Should().Contain(new TmCommentDraftState(true, null, false, true));
+
+        await cut.InvokeAsync(() => cut.Instance.DiscardDraftAsync());
+
+        states.Last().Should().Be(new TmCommentDraftState(false, null, false, false));
+    }
+
+    [Fact]
+    public void CommentActions_CustomSlot_DoesNotEmulateActivation()
+    {
+        var source = File.ReadAllText(Path.Combine(
+            ThemeCss.RepositoryRoot().FullName,
+            "src", "Tempo.Blazor", "Components", "Activity", "TmActivityComments.razor"));
+        var slot = source.IndexOf("tm-comment-actions__custom", StringComparison.Ordinal);
+        slot.Should().BeGreaterThan(0);
+        var window = source.Substring(slot, Math.Min(400, source.Length - slot));
+        window.Should().NotContain("onkeydown");
+        window.Should().NotContain("tabindex");
     }
 
     private static TmCommentEntry Comment(

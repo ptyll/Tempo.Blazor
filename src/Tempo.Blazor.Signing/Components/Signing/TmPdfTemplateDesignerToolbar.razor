@@ -1,0 +1,277 @@
+@namespace Tempo.Blazor.Components.Signing
+@using Tempo.Blazor.Components.Actions
+@using Tempo.Blazor.Components.Inputs
+@using Tempo.Blazor.Components.Toolbar
+
+<div class="@RootClass">
+    <div class="tm-pdf-template-designer__toolbar-row">
+        <TmToolbar Class="tm-pdf-template-designer__toolbar"
+                   AriaLabel="@Loc["TmPdfTemplateDesigner_ToolbarLabel"]"
+                   Overflow="ToolbarOverflow.Menu"
+                   Labels="ToolbarLabels.Auto">
+            <TmToolbarGroup Label="@Loc["TmPdfTemplateDesigner_GroupPages"]" data-tm-group="pages">
+                <TmToolbarButton Class="tm-pdf-template-designer__previous-page"
+                                 Priority="ToolbarButtonPriority.Pinned"
+                                 Icon="chevron-left"
+                                 Text="@Loc["TmPdfTemplateDesigner_PreviousPage"]"
+                                 Tooltip="@Loc["TmPdfTemplateDesigner_PreviousPage"]"
+                                 Disabled="@(!CanGoPrevious)"
+                                 OnClick="OnPreviousPage" />
+                <span class="tm-pdf-template-designer__page-label">@PageLabel</span>
+                <TmToolbarButton Class="tm-pdf-template-designer__next-page"
+                                 Priority="ToolbarButtonPriority.Pinned"
+                                 Icon="chevron-right"
+                                 Text="@Loc["TmPdfTemplateDesigner_NextPage"]"
+                                 Tooltip="@Loc["TmPdfTemplateDesigner_NextPage"]"
+                                 Disabled="@(!CanGoNext)"
+                                 OnClick="OnNextPage" />
+            </TmToolbarGroup>
+            <TmToolbarGroup Label="@Loc["TmPdfTemplateDesigner_GroupView"]" data-tm-group="view">
+                <TmToolbarButton Class="@ViewClass(SinglePageActive, "tm-pdf-template-designer__single-page")"
+                                 Priority="ToolbarButtonPriority.Pinned"
+                                 Icon="file-text"
+                                 Text="@Loc["TmPdfTemplateDesigner_SinglePage"]"
+                                 Tooltip="@Loc["TmPdfTemplateDesigner_SinglePage"]"
+                                 Pressed="@SinglePageActive"
+                                 OnClick="OnSinglePage" />
+                <TmToolbarButton Class="@ViewClass(ContinuousActive, "tm-pdf-template-designer__continuous")"
+                                 Priority="ToolbarButtonPriority.Pinned"
+                                 Icon="list"
+                                 Text="@Loc["TmPdfTemplateDesigner_Continuous"]"
+                                 Tooltip="@Loc["TmPdfTemplateDesigner_Continuous"]"
+                                 Pressed="@ContinuousActive"
+                                 OnClick="OnContinuous" />
+            </TmToolbarGroup>
+            @if (!TwoRow)
+            {
+                @TrailingGroups
+            }
+        </TmToolbar>
+    </div>
+    @if (TwoRow)
+    {
+        <div class="tm-pdf-template-designer__toolbar-row">
+            <TmToolbar Class="tm-pdf-template-designer__toolbar tm-pdf-template-designer__toolbar--secondary"
+                       AriaLabel="@Loc["TmPdfTemplateDesigner_ToolbarSecondaryLabel"]"
+                       Overflow="ToolbarOverflow.Menu"
+                       Labels="ToolbarLabels.Auto">
+                @TrailingGroups
+            </TmToolbar>
+        </div>
+    }
+</div>
+
+@code {
+    /// <summary>
+    /// Tablet layout: pages and view stay on the first row; zoom, detect and language wrap to a
+    /// second row so Fit width and Fit page are not clipped. The groups keep the frozen
+    /// <c>data-tm-group</c> keys in either layout.
+    /// </summary>
+    [Parameter] public bool TwoRow { get; set; }
+
+    /// <summary>Page indicator text.</summary>
+    [Parameter] public string? PageLabel { get; set; }
+
+    /// <summary>Zoom indicator text.</summary>
+    [Parameter] public string? ZoomLabel { get; set; }
+
+    /// <summary>Whether a previous page exists.</summary>
+    [Parameter] public bool CanGoPrevious { get; set; }
+
+    /// <summary>Whether a next page exists.</summary>
+    [Parameter] public bool CanGoNext { get; set; }
+
+    /// <summary>Whether zoom can decrease.</summary>
+    [Parameter] public bool CanZoomOut { get; set; }
+
+    /// <summary>Whether zoom can increase.</summary>
+    [Parameter] public bool CanZoomIn { get; set; }
+
+    /// <summary>Whether the single-page view is active.</summary>
+    [Parameter] public bool SinglePageActive { get; set; }
+
+    /// <summary>Whether the continuous view is active.</summary>
+    [Parameter] public bool ContinuousActive { get; set; }
+
+    /// <summary>Whether the language group renders.</summary>
+    [Parameter] public bool ShowCulture { get; set; }
+
+    /// <summary>Cultures offered by the language group.</summary>
+    [Parameter] public IReadOnlyList<string> Cultures { get; set; } = [];
+
+    /// <summary>The selected culture.</summary>
+    [Parameter] public string? CurrentCulture { get; set; }
+
+    /// <summary>Overflow entries of the language item.</summary>
+    [Parameter] public IReadOnlyList<TmActionItem> CultureMenuItems { get; set; } = [];
+
+    /// <summary>Attributes of the culture select.</summary>
+    [Parameter] public Dictionary<string, object>? CultureAttributes { get; set; }
+
+    /// <summary>Localizes a culture code.</summary>
+    [Parameter] public Func<string, string> CultureLabel { get; set; } = static culture => culture;
+
+    /// <summary>Whether the detect group offers Autodetect.</summary>
+    [Parameter] public bool ShowDetect { get; set; }
+
+    /// <summary>Whether Autodetect is in flight.</summary>
+    [Parameter] public bool Detecting { get; set; }
+
+    /// <summary>Whether the detect group offers Delete selected.</summary>
+    [Parameter] public bool ShowDeleteSelected { get; set; }
+
+    /// <summary>Goes to the previous page.</summary>
+    [Parameter] public EventCallback OnPreviousPage { get; set; }
+
+    /// <summary>Goes to the next page.</summary>
+    [Parameter] public EventCallback OnNextPage { get; set; }
+
+    /// <summary>Selects the single-page view.</summary>
+    [Parameter] public EventCallback OnSinglePage { get; set; }
+
+    /// <summary>Selects the continuous view.</summary>
+    [Parameter] public EventCallback OnContinuous { get; set; }
+
+    /// <summary>Raised when the culture select changes.</summary>
+    [Parameter] public EventCallback<string> OnCultureChanged { get; set; }
+
+    /// <summary>Zooms out.</summary>
+    [Parameter] public EventCallback OnZoomOut { get; set; }
+
+    /// <summary>Zooms in.</summary>
+    [Parameter] public EventCallback OnZoomIn { get; set; }
+
+    /// <summary>Fits the page width.</summary>
+    [Parameter] public EventCallback OnFitWidth { get; set; }
+
+    /// <summary>Fits the whole page.</summary>
+    [Parameter] public EventCallback OnFitPage { get; set; }
+
+    /// <summary>Runs Autodetect.</summary>
+    [Parameter] public EventCallback OnDetect { get; set; }
+
+    /// <summary>Deletes the selection.</summary>
+    [Parameter] public EventCallback OnDeleteSelected { get; set; }
+
+    private string RootClass => TwoRow
+        ? "tm-pdf-template-designer__toolbar-rows"
+        : "tm-pdf-template-designer__toolbar-rows tm-pdf-template-designer__toolbar-rows--single";
+
+    private static string ViewClass(bool active, string hook)
+        => active ? $"tm-pdf-template-designer__toolbar-button--active {hook}" : hook;
+
+    private RenderFragment TrailingGroups => builder =>
+    {
+        if (ShowCulture)
+        {
+            builder.OpenComponent<TmToolbarGroup>(0);
+            builder.AddComponentParameter(1, "Label", Loc["TmPdfTemplateDesigner_GroupLanguage"]);
+            builder.AddMultipleAttributes(2, GroupAttributes("language"));
+            builder.AddComponentParameter(3, "ChildContent", (RenderFragment)(group =>
+            {
+                group.OpenComponent<TmToolbarItem>(0);
+                group.AddComponentParameter(1, "Class", "tm-pdf-template-designer__culture-control");
+                group.AddComponentParameter(2, "Priority", ToolbarButtonPriority.Secondary);
+                group.AddComponentParameter(3, "MenuLabel", Loc["TmPdfTemplateDesigner_CulturePreview"]);
+                group.AddComponentParameter(4, "MenuItems", CultureMenuItems);
+                group.AddComponentParameter(5, "ChildContent", (RenderFragment)(item =>
+                {
+                    item.OpenComponent<TmSelect<string>>(0);
+                    item.AddComponentParameter(1, "Label", Loc["TmPdfTemplateDesigner_CulturePreview"]);
+                    item.AddComponentParameter(2, "Value", CurrentCulture);
+                    item.AddComponentParameter(3, "ValueChanged", OnCultureChanged);
+                    item.AddComponentParameter(4, "SelectAttributes", CultureAttributes);
+                    item.AddComponentParameter(5, "ChildContent", (RenderFragment)(select =>
+                    {
+                        var option = 0;
+                        foreach (var culture in Cultures)
+                        {
+                            select.OpenElement(option++, "option");
+                            select.AddAttribute(option++, "value", culture);
+                            select.AddContent(option++, CultureLabel(culture));
+                            select.CloseElement();
+                        }
+                    }));
+                    item.CloseComponent();
+                }));
+                group.CloseComponent();
+            }));
+            builder.CloseComponent();
+        }
+
+        builder.OpenComponent<TmToolbarGroup>(10);
+        builder.AddComponentParameter(11, "Label", Loc["TmPdfTemplateDesigner_GroupZoom"]);
+        builder.AddMultipleAttributes(12, GroupAttributes("zoom"));
+        builder.AddComponentParameter(13, "ChildContent", (RenderFragment)(group =>
+        {
+            var item = 0;
+            WriteButton(group, ref item, "tm-pdf-template-designer__zoom-out", "zoom-out", Loc["TmPdfTemplateDesigner_ZoomOut"], !CanZoomOut, OnZoomOut);
+            group.OpenElement(item++, "span");
+            group.AddAttribute(item++, "class", "tm-pdf-template-designer__zoom-label");
+            group.AddAttribute(item++, "role", "status");
+            group.AddAttribute(item++, "aria-live", "polite");
+            group.AddContent(item++, ZoomLabel);
+            group.CloseElement();
+            WriteButton(group, ref item, "tm-pdf-template-designer__zoom-in", "zoom-in", Loc["TmPdfTemplateDesigner_ZoomIn"], !CanZoomIn, OnZoomIn);
+            WriteButton(group, ref item, "tm-pdf-template-designer__fit-width", "maximize-2", Loc["TmPdfTemplateDesigner_FitWidth"], false, OnFitWidth);
+            WriteButton(group, ref item, "tm-pdf-template-designer__fit-page", "minimize-2", Loc["TmPdfTemplateDesigner_FitPage"], false, OnFitPage);
+        }));
+        builder.CloseComponent();
+
+        if (!ShowDetect && !ShowDeleteSelected)
+        {
+            return;
+        }
+
+        builder.OpenComponent<TmToolbarGroup>(20);
+        builder.AddComponentParameter(21, "Label", Loc["TmPdfTemplateDesigner_GroupDetect"]);
+        builder.AddMultipleAttributes(22, GroupAttributes("detect"));
+        builder.AddComponentParameter(23, "ChildContent", (RenderFragment)(group =>
+        {
+            var item = 0;
+            if (ShowDetect)
+            {
+                group.OpenComponent<TmToolbarButton>(item++);
+                group.AddComponentParameter(item++, "Class", "tm-pdf-template-designer__detect");
+                group.AddComponentParameter(item++, "Priority", ToolbarButtonPriority.Primary);
+                group.AddComponentParameter(item++, "Variant", ButtonVariant.OutlinePrimary);
+                group.AddComponentParameter(item++, "Icon", "scan-line");
+                group.AddComponentParameter(item++, "Text", Detecting ? Loc["TmPdfTemplateDesigner_Detecting"] : Loc["TmPdfTemplateDesigner_Autodetect"]);
+                group.AddComponentParameter(item++, "Tooltip", Loc["TmPdfTemplateDesigner_Autodetect"]);
+                group.AddComponentParameter(item++, "Disabled", Detecting);
+                group.AddComponentParameter(item++, "OnClick", OnDetect);
+                group.CloseComponent();
+            }
+
+            if (ShowDeleteSelected)
+            {
+                WriteButton(group, ref item, "tm-pdf-template-designer__delete-selected", "trash-2", Loc["TmPdfTemplateDesigner_DeleteSelected"], false, OnDeleteSelected, ToolbarButtonPriority.Primary);
+            }
+        }));
+        builder.CloseComponent();
+    };
+
+    private static Dictionary<string, object> GroupAttributes(string group) =>
+        new() { ["data-tm-group"] = group };
+
+    private static void WriteButton(
+        Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder group,
+        ref int item,
+        string cssClass,
+        string icon,
+        string text,
+        bool disabled,
+        EventCallback onClick,
+        ToolbarButtonPriority priority = ToolbarButtonPriority.Pinned)
+    {
+        group.OpenComponent<TmToolbarButton>(item++);
+        group.AddComponentParameter(item++, "Class", cssClass);
+        group.AddComponentParameter(item++, "Priority", priority);
+        group.AddComponentParameter(item++, "Icon", icon);
+        group.AddComponentParameter(item++, "Text", text);
+        group.AddComponentParameter(item++, "Tooltip", text);
+        group.AddComponentParameter(item++, "Disabled", disabled);
+        group.AddComponentParameter(item++, "OnClick", onClick);
+        group.CloseComponent();
+    }
+}

@@ -5,6 +5,6 @@
   "namespace": "Tempo.Blazor.DocumentEditor.Services",
   "description": "Cross-instance fan-out boundary for document collaboration: server instances publish operation batches and cursors per document and subscribe to receive the other instances' traffic. The in-memory implementation serves tests and single-process multi-instance setups; a distributed implementation (e.g. Redis pub/sub) makes the collaboration provider multi-server.",
   "packageId": "Tempo.Blazor.Abstractions",
-  "sourcePath": "src/Tempo.Blazor.Abstractions/DocumentEditor/Services/ server instances publish operation batches and cursors per document and subscribe to receive other instances' traffic. Implementations: InMemoryDocumentCollaborationBackplane (tests/single-process) and RedisDocumentCollaborationBackplane (multi-server).:DocumentCollaborationBackplane.cs",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/DocumentEditor/Services/DocumentCollaborationBackplane.cs",
   "documentationStatus": "generated"
 }

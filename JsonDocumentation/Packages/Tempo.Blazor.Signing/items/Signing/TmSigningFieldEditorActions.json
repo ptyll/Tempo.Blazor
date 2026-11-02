@@ -1,0 +1,41 @@
+{
+  "itemName": "TmSigningFieldEditorActions",
+  "kind": "Component",
+  "category": "Signing",
+  "description": "The field inspector actions, selection actions and optional numeric geometry.",
+  "packageId": "Tempo.Blazor.Signing",
+  "namespace": "Tempo.Blazor.Components.Signing",
+  "sourcePath": "src/Tempo.Blazor.Signing/Components/Signing/TmSigningFieldEditorActions.razor",
+  "documentationStatus": "generated",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.Signing"
+  ],
+  "parameters": [
+    { "name": "ReadOnly", "type": "bool", "isRequired": false, "description": "Whether the inspector is read-only. Geometry stays editable to read; actions disable." },
+    { "name": "PasteEnabled", "type": "bool", "isRequired": false, "default": "true", "description": "Whether the clipboard has a field the Paste action can place." },
+    { "name": "ShowCopy", "type": "bool", "isRequired": false, "description": "Whether the Copy action has a host delegate." },
+    { "name": "ShowDelete", "type": "bool", "isRequired": false, "description": "Whether the Delete action has a host delegate." },
+    { "name": "ShowCopySelection", "type": "bool", "isRequired": false, "description": "Whether the selection Copy action has a host delegate." },
+    { "name": "ShowPaste", "type": "bool", "isRequired": false, "description": "Whether the selection Paste action has a host delegate." },
+    { "name": "ShowDeleteSelection", "type": "bool", "isRequired": false, "description": "Whether the selection Delete action has a host delegate." },
+    { "name": "OnCopy", "type": "EventCallback", "isRequired": false, "description": "Copies the edited field." },
+    { "name": "OnDelete", "type": "EventCallback", "isRequired": false, "description": "Deletes the edited field." },
+    { "name": "OnCopySelection", "type": "EventCallback", "isRequired": false, "description": "Copies every selected field." },
+    { "name": "OnPaste", "type": "EventCallback", "isRequired": false, "description": "Pastes the clipboard." },
+    { "name": "OnDeleteSelection", "type": "EventCallback", "isRequired": false, "description": "Deletes every selected field." },
+    { "name": "ShowGeometry", "type": "bool", "isRequired": false, "description": "Whether the pixel geometry section is shown." },
+    { "name": "GeometryArea", "type": "SigningFieldArea?", "isRequired": false, "description": "The area the geometry inputs edit. Null hides the section." },
+    { "name": "GeometryX", "type": "int?", "isRequired": false, "description": "Horizontal position in pixels." },
+    { "name": "GeometryY", "type": "int?", "isRequired": false, "description": "Vertical position in pixels." },
+    { "name": "GeometryWidth", "type": "int?", "isRequired": false, "description": "Width in pixels." },
+    { "name": "GeometryHeight", "type": "int?", "isRequired": false, "description": "Height in pixels." },
+    { "name": "OnGeometryXChanged", "type": "EventCallback<int?>", "isRequired": false, "description": "Raised when the horizontal position changes." },
+    { "name": "OnGeometryYChanged", "type": "EventCallback<int?>", "isRequired": false, "description": "Raised when the vertical position changes." },
+    { "name": "OnGeometryWidthChanged", "type": "EventCallback<int?>", "isRequired": false, "description": "Raised when the width changes." },
+    { "name": "OnGeometryHeightChanged", "type": "EventCallback<int?>", "isRequired": false, "description": "Raised when the height changes." },
+    { "name": "GeometryXAttributes", "type": "Dictionary<string, object>?", "isRequired": false, "description": "Attributes forwarded to the X input." },
+    { "name": "GeometryYAttributes", "type": "Dictionary<string, object>?", "isRequired": false, "description": "Attributes forwarded to the Y input." },
+    { "name": "GeometryWidthAttributes", "type": "Dictionary<string, object>?", "isRequired": false, "description": "Attributes forwarded to the width input." },
+    { "name": "GeometryHeightAttributes", "type": "Dictionary<string, object>?", "isRequired": false, "description": "Attributes forwarded to the height input." }
+  ]
+}

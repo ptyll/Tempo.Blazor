@@ -631,5 +631,12 @@
   "TmAppShellDemo_LastActionBilling": "Fakturace",
   "TmAppShellDemo_CompleteProfile": "Dokončit profil",
   "TmAppShellDemo_StageLabel": "Scéna náhledu rámu — živý rám měří tento box, ne okno prohlížeče. Při širší předvolbě ji posuňte.",
-  "TmAppShellDemo_BackToDemos": "Všechny komponenty"
+  "TmAppShellDemo_BackToDemos": "Všechny komponenty",
+  "TmDemo_ActivityComments_MakePublic": "Zveřejnit",
+  "TmDemo_ActivityComments_MakeInternal": "Označit jako interní",
+  "TmDemo_ActivityComments_ToggleTitleInternal": "Zveřejnit tento komentář?",
+  "TmDemo_ActivityComments_ToggleTitlePublic": "Označit tento komentář jako interní?",
+  "TmDemo_ActivityComments_ToggleMessageInternal": "Komentář uvidí každý, kdo vlákno otevře. Již odeslané notifikace nelze odvolat.",
+  "TmDemo_ActivityComments_ToggleMessagePublic": "Interní komentář mají vidět jen privilegovaní uživatelé. Komponenta ho neskrývá — filtrování je na aplikaci. Již odeslané notifikace nelze odvolat.",
+  "TmDemo_ActivityComments_ToggleConfirm": "Změnit viditelnost"
 }

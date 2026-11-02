@@ -2,12 +2,18 @@
 
 @if (IsVisible)
 {
-    <div class="tm-rte-mention-dropdown">
+    <div id="@EffectiveListId"
+         class="tm-rte-mention-dropdown"
+         role="listbox"
+         aria-label="@Loc["TmRichEditor_MentionList"]">
         @if (FilteredUsers.Any())
         {
             @foreach (var (user, index) in FilteredUsers.Select((u, i) => (u, i)))
             {
                 <div class="tm-rte-mention-user @(index == HighlightedIndex ? "tm-rte-mention-highlighted" : "")"
+                     role="option"
+                     id="@OptionId(index)"
+                     aria-selected="@(index == HighlightedIndex ? "true" : "false")"
                      @onclick="() => SelectUser(user)"
                      @onclick:stopPropagation
                      @onmouseenter="() => OnMouseEnter(index)"
@@ -31,7 +37,11 @@
         }
         else
         {
-            <div class="tm-rte-mention-empty">@Loc["TmRichEditor_MentionEmpty"]</div>
+            <div class="tm-rte-mention-empty"
+                 id="@OptionId(0)"
+                 role="option"
+                 aria-disabled="true"
+                 aria-selected="false">@Loc["TmRichEditor_MentionEmpty"]</div>
         }
     </div>
 }
@@ -66,6 +76,24 @@
     /// Callback when the highlighted index changes.
     /// </summary>
     [Parameter] public EventCallback<int> OnHighlightedIndexChanged { get; set; }
+
+    /// <summary>
+    /// Id of the listbox, owned by the editor (<c>{editorId}-mentions</c>) so <c>aria-controls</c>
+    /// names a stable target. Empty falls back to a per-instance id.
+    /// </summary>
+    [Parameter] public string? ListId { get; set; }
+
+    /// <summary>Id of the highlighted option, so the editor can point <c>aria-activedescendant</c> at it.</summary>
+    public string? ActiveOptionId
+        => IsVisible && (FilteredUsers.Any() || !string.IsNullOrEmpty(Query))
+            ? OptionId(FilteredUsers.Any() ? HighlightedIndex : 0)
+            : null;
+
+    private string EffectiveListId => string.IsNullOrEmpty(ListId) ? _fallbackListId : ListId;
+
+    private readonly string _fallbackListId = "tm-mention-list-" + Guid.NewGuid().ToString("N")[..8];
+
+    private string OptionId(int index) => $"{EffectiveListId}-option-{index}";
 
     private IEnumerable<MentionUser> FilteredUsers => 
         string.IsNullOrWhiteSpace(Query) 

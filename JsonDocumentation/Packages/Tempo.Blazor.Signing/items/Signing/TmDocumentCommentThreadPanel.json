@@ -37,6 +37,25 @@
       "description": "Current user id for mentions and active reactions."
     },
     {
+      "name": "LayoutMode",
+      "type": "TmLayoutMode",
+      "isRequired": false,
+      "default": "Auto",
+      "description": "Forced layout. Mobile keeps the composer sticky inside the host sheet."
+    },
+    {
+      "name": "OnClose",
+      "type": "EventCallback",
+      "isRequired": false,
+      "description": "Raised when the panel close button is activated."
+    },
+    {
+      "name": "OnNewComment",
+      "type": "EventCallback",
+      "isRequired": false,
+      "description": "Raised by the New comment button so the host can enable comment mode."
+    },
+    {
       "name": "Disabled",
       "type": "bool",
       "isRequired": false,

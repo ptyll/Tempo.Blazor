@@ -33,7 +33,7 @@ public class SigningDocumentCommentsE2ETests : WasmTestBase
         await Assertions.Expect(viewer.Locator("[data-testid='document-comment-draft']")).ToBeVisibleAsync();
 
         var composer = viewer.Locator("[data-testid='document-comment-draft'] .tm-comment-composer").First;
-        await composer.Locator(".tm-comment-composer__input").FillAsync("Please check @Nor");
+        await composer.Locator("textarea").FillAsync("Please check @Nor");
         await Assertions.Expect(composer.Locator(".tm-comment-composer__mention-option")).ToContainTextAsync("Nora Lee");
         await composer.Locator(".tm-comment-composer__mention-option").ClickAsync();
         await composer.Locator(".tm-comment-composer__button--primary").ClickAsync();
@@ -62,7 +62,7 @@ public class SigningDocumentCommentsE2ETests : WasmTestBase
         await Assertions.Expect(panel.Locator(".tm-document-comments-panel__detail")).ToBeVisibleAsync();
 
         var replyComposer = panel.Locator(".tm-document-comments-panel__detail .tm-comment-composer").Last;
-        await replyComposer.Locator(".tm-comment-composer__input").FillAsync("Finance approved the amount.");
+        await replyComposer.Locator("textarea").FillAsync("Finance approved the amount.");
         await replyComposer.Locator(".tm-comment-composer__button--primary").ClickAsync();
         await Assertions.Expect(page.Locator("[data-testid='document-comments-last-event']")).ToContainTextAsync("Reply added");
         await Assertions.Expect(panel).ToContainTextAsync("Finance approved the amount.");
@@ -112,7 +112,7 @@ public class SigningDocumentCommentsE2ETests : WasmTestBase
         Assert.IsNotNull(box, "Document comment page should have a bounding box after draft cancellation.");
         await DragAreaAsync(page, box.X, box.Y, box.Width, box.Height, 0.22, 0.54, 0.44, 0.64);
         var composer = viewer.Locator("[data-testid='document-comment-draft'] .tm-comment-composer").First;
-        await composer.Locator(".tm-comment-composer__input").FillAsync("Area review from E2E");
+        await composer.Locator("textarea").FillAsync("Area review from E2E");
         await composer.Locator(".tm-comment-composer__button--primary").ClickAsync();
 
         await Assertions.Expect(page.Locator("[data-testid='document-comments-last-event']")).ToContainTextAsync("Created comment: Area review from E2E");
@@ -130,11 +130,11 @@ public class SigningDocumentCommentsE2ETests : WasmTestBase
         await WaitForAppReadyAsync(page);
 
         var viewer = await OpenCommentsViewerAsync(page);
-        await Assertions.Expect(viewer.Locator(".tm-document-page-viewer__page-label")).ToContainTextAsync("1 / 2");
+        await Assertions.Expect(viewer.Locator(".tm-document-page-viewer__page-input")).ToHaveValueAsync("1 / 2");
         await Assertions.Expect(viewer.Locator("[data-thread-id='comment-page-two']")).ToHaveCountAsync(0);
 
         await viewer.Locator(".tm-document-page-viewer__next-page").ClickAsync();
-        await Assertions.Expect(viewer.Locator(".tm-document-page-viewer__page-label")).ToContainTextAsync("2 / 2");
+        await Assertions.Expect(viewer.Locator(".tm-document-page-viewer__page-input")).ToHaveValueAsync("2 / 2");
 
         var pageTwoMarker = viewer.Locator("[data-thread-id='comment-page-two']").First;
         await Assertions.Expect(pageTwoMarker).ToBeVisibleAsync();
@@ -171,7 +171,7 @@ public class SigningDocumentCommentsE2ETests : WasmTestBase
         await Assertions.Expect(composer).ToBeVisibleAsync();
         await Assertions.Expect(composer.Locator(".tm-comment-composer__button--primary")).ToBeDisabledAsync();
 
-        await composer.Locator(".tm-comment-composer__input").FillAsync("   ");
+        await composer.Locator("textarea").FillAsync("   ");
         await Assertions.Expect(composer.Locator(".tm-comment-composer__button--primary")).ToBeDisabledAsync();
     }
 
@@ -234,11 +234,10 @@ public class SigningDocumentCommentsE2ETests : WasmTestBase
         await WaitForAppReadyAsync(page);
 
         var viewer = await OpenCommentsViewerAsync(page);
-        var commentsShell = viewer.Locator(".tm-document-page-viewer__comments-shell").First;
-        await Assertions.Expect(commentsShell).ToBeVisibleAsync();
-
-        var position = await commentsShell.EvaluateAsync<string>("element => getComputedStyle(element).position");
-        Assert.AreEqual("sticky", position);
+        await page.Locator("[data-testid='document-comments-layout'] select").SelectOptionAsync("Mobile");
+        var sheet = viewer.Locator(".tm-document-page-viewer__comments-sheet .tm-drawer__panel").First;
+        await Assertions.Expect(sheet).ToBeVisibleAsync();
+        await Assertions.Expect(viewer.Locator(".tm-document-page-viewer__comments-sheet")).ToHaveAttributeAsync("data-snap-index", "0");
 
         var panel = viewer.Locator("[data-testid='document-comments-panel']").First;
         await Assertions.Expect(panel).ToBeVisibleAsync();

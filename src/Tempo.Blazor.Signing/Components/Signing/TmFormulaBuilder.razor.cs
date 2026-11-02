@@ -6,12 +6,17 @@ using Tempo.Blazor.Abstractions.Models;
 namespace Tempo.Blazor.Components.Signing;
 
 /// <summary>Builds computed signing field formulas from numeric field tokens and operators.</summary>
-public partial class TmFormulaBuilder
+public partial class TmFormulaBuilder : IAsyncDisposable
 {
-    private static readonly string[] Operators = ["+", "-", "*", "/"];
+    private static readonly string[] Operators = ["+", "-", "*", "/", "(", ")"];
     private static readonly string[] Functions = ["round(n, d)", "abs(n)"];
 
     private readonly string _textareaId = $"tm-formula-{Guid.NewGuid():N}";
+    private readonly string _operatorsHeadingId = $"tm-formula-operators-{Guid.NewGuid():N}";
+    private readonly string _functionsHeadingId = $"tm-formula-functions-{Guid.NewGuid():N}";
+    private readonly string _tokensHeadingId = $"tm-formula-tokens-{Guid.NewGuid():N}";
+    private ElementReference _textareaHost;
+    private SigningEditorInterop? _interop;
     private string _formulaText = string.Empty;
     private string? _lastSourceFormula;
     private string? _error;
@@ -97,9 +102,9 @@ public partial class TmFormulaBuilder
 
     private static string BoolText(bool value) => value ? "true" : "false";
 
-    private async Task HandleInputAsync(ChangeEventArgs args)
+    private async Task HandleInputAsync(string value)
     {
-        _formulaText = args.Value?.ToString() ?? string.Empty;
+        _formulaText = value ?? string.Empty;
         _lastSourceFormula = _formulaText;
         _error = null;
         await ValueChanged.InvokeAsync(_formulaText);
@@ -115,11 +120,37 @@ public partial class TmFormulaBuilder
         return SigningTextResolver.FieldLabel(field, Culture, FallbackCulture, Loc);
     }
 
+    private string GetFieldTypeLabel(SigningFieldType type)
+    {
+        return SigningTextResolver.FieldTypeLabel(type, Loc);
+    }
+
     private static string GetOperatorText(string op)
     {
         return " " + op + " ";
     }
 
+    /// <summary>The spoken name of an operator glyph (the "+" / "*" keys are ambiguous to a
+    /// screen reader; phase 7 review).</summary>
+    private string GetOperatorAriaLabel(string op)
+    {
+        return op switch
+        {
+            "+" => Loc["TmFormulaBuilder_OperatorPlus"],
+            "-" => Loc["TmFormulaBuilder_OperatorMinus"],
+            "*" => Loc["TmFormulaBuilder_OperatorMultiply"],
+            "/" => Loc["TmFormulaBuilder_OperatorDivide"],
+            "(" => Loc["TmFormulaBuilder_OperatorLeftParenthesis"],
+            ")" => Loc["TmFormulaBuilder_OperatorRightParenthesis"],
+            _ => op
+        };
+    }
+
+    /// <summary>
+    /// Inserts a fragment at the textarea's cursor through <c>signing-editor.js</c>; without a JS
+    /// runtime (bUnit, static rendering, a disposed circuit) the fragment appends, so the builder
+    /// stays usable everywhere.
+    /// </summary>
     private async Task InsertTextAsync(string text)
     {
         if (Disabled)
@@ -127,7 +158,9 @@ public partial class TmFormulaBuilder
             return;
         }
 
-        _formulaText += text;
+        _interop ??= new SigningEditorInterop(JS);
+        var inserted = await _interop.InsertAtCursorAsync(_textareaHost, text);
+        _formulaText = inserted ?? _formulaText + text;
         _lastSourceFormula = _formulaText;
         _error = null;
         await ValueChanged.InvokeAsync(_formulaText);
@@ -187,5 +220,15 @@ public partial class TmFormulaBuilder
                     NumberStyles.Number,
                     CultureInfo.InvariantCulture,
                     out _)));
+    }
+
+    /// <inheritdoc />
+    public async ValueTask DisposeAsync()
+    {
+        if (_interop is not null)
+        {
+            await _interop.DisposeAsync().ConfigureAwait(false);
+            _interop = null;
+        }
     }
 }

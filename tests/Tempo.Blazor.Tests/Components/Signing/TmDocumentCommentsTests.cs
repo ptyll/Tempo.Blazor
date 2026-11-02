@@ -1,8 +1,11 @@
 using Bunit;
 using FluentAssertions;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
+using Tempo.Blazor.Abstractions.Layout;
 using Tempo.Blazor.Abstractions.Models;
+using Tempo.Blazor.Localization;
 using Tempo.Blazor.Components.Signing;
 using Tempo.Blazor.Tests.Localization;
 
@@ -35,6 +38,134 @@ public class TmDocumentCommentsTests : LocalizationTestBase
         cut.Find(".tm-document-comments-panel").TextContent.Should().Contain("Needs review");
         cut.Find(".tm-document-comments-layer__point").GetAttribute("style").Should().Contain("left: 25%");
         cut.FindAll(".tm-document-comments-layer__area").Should().BeEmpty("resolved threads are hidden by default");
+    }
+
+    [Fact]
+    public void Viewer_Mobile_CommentsPanelInSheet_WithStickyComposer()
+    {
+        var cut = Render<TmDocumentPageViewer>(parameters =>
+            parameters.Add(p => p.Page, CreatePage())
+                      .Add(p => p.CommentsEnabled, true)
+                      .Add(p => p.LayoutMode, TmLayoutMode.Mobile)
+                      .Add(p => p.CommentThreads, SampleThreads()));
+
+        cut.Find(".tm-document-page-viewer__comments-sheet").Should().NotBeNull();
+        cut.Find(".tm-drawer--bottom").Should().NotBeNull();
+        cut.Find(".tm-document-comments-panel").Should().NotBeNull();
+    }
+
+    [Fact]
+    public void Comments_Filters_RoleGroup_AriaPressed()
+    {
+        var cut = Render<TmDocumentCommentThreadPanel>(parameters =>
+            parameters.Add(p => p.Threads, SampleThreads()));
+
+        var filters = cut.Find(".tm-document-comments-panel__filters");
+        filters.GetAttribute("role").Should().Be("group");
+        filters.GetAttribute("aria-labelledby").Should().NotBeNullOrWhiteSpace();
+        cut.Find(".tm-document-comments-panel__filter-label").TextContent.Should().NotBeNullOrWhiteSpace();
+        cut.FindAll(".tm-document-comments-panel__filter").Should().OnlyContain(button =>
+            button.GetAttribute("aria-pressed") == "true" || button.GetAttribute("aria-pressed") == "false");
+        cut.FindAll("[role='tablist']").Should().BeEmpty();
+    }
+
+    [Fact]
+    public void Comments_FilterLabelVisible()
+    {
+        var cut = Render<TmDocumentCommentThreadPanel>(parameters =>
+            parameters.Add(p => p.Threads, SampleThreads()));
+
+        cut.Find(".tm-document-comments-panel__filter-label").TextContent.Should().NotBeNullOrWhiteSpace();
+    }
+
+    [Fact]
+    public void Comments_MentionHighlightedInBody_AndEncoded()
+    {
+        var threads = SampleThreads().ToList();
+        threads[0].Comments[0].Body = "Hi @Alice Johnson <script>alert(1)</script>";
+        threads[0].Comments[0].Mentions = [new DocumentCommentMention { UserId = "u1", DisplayName = "Alice Johnson" }];
+        var cut = Render<TmDocumentCommentThreadPanel>(parameters =>
+            parameters.Add(p => p.Threads, threads)
+                      .Add(p => p.SelectedThreadId, threads[0].Id));
+
+        var markup = cut.Markup;
+        markup.Should().Contain("tm-document-comments-panel__mention");
+        markup.Should().Contain("&lt;script&gt;");
+        markup.Should().NotContain("<script>alert");
+    }
+
+    [Fact]
+    public void Comments_ItemActions_InMoreMenu_OnlyWithPermission()
+    {
+        var threads = SampleThreads().ToList();
+        threads[0].Comments[0].CanEdit = false;
+        threads[0].Comments[0].CanDelete = false;
+        var cut = Render<TmDocumentCommentThreadPanel>(parameters =>
+            parameters.Add(p => p.Threads, threads)
+                      .Add(p => p.SelectedThreadId, threads[0].Id)
+                      .Add(p => p.CurrentUserId, "someone-else"));
+
+        cut.FindAll(".tm-document-comments-panel__text-action").Should().BeEmpty();
+        cut.FindAll(".tm-document-comments-panel__more").Should().BeEmpty("no permission means no more menu");
+    }
+
+    [Fact]
+    public void Comments_RelativeTime_TodayYesterday()
+    {
+        var now = new DateTimeOffset(2026, 5, 10, 12, 0, 0, TimeSpan.Zero);
+        Services.AddSingleton<TimeProvider>(new FixedTime(now));
+        var threads = SampleThreads().ToList();
+        threads[0].Comments[0].CreatedAt = now.AddHours(-2);
+        var cut = Render<TmDocumentCommentThreadPanel>(parameters =>
+            parameters.Add(p => p.Threads, threads)
+                      .Add(p => p.SelectedThreadId, threads[0].Id));
+
+        cut.Find("time").TextContent.Should().NotContain("5/9/2026");
+        cut.Find("time").GetAttribute("datetime").Should().NotBeNullOrWhiteSpace();
+    }
+
+    [Fact]
+    public void Comments_NewCommentButton_EnablesCommentMode()
+    {
+        DocumentCommentMode? mode = null;
+        var cut = Render<TmDocumentPageViewer>(parameters =>
+            parameters.Add(p => p.Page, CreatePage())
+                      .Add(p => p.CommentsEnabled, true)
+                      .Add(p => p.CommentThreads, SampleThreads())
+                      .Add(p => p.CommentModeChanged, (DocumentCommentMode value) => mode = value));
+
+        cut.Find(".tm-document-comments-panel__new").Click();
+        mode.Should().Be(DocumentCommentMode.Comment);
+    }
+
+    [Fact]
+    public void Comments_OnClose_Callback()
+    {
+        var closed = false;
+        var cut = Render<TmDocumentCommentThreadPanel>(parameters =>
+            parameters.Add(p => p.Threads, SampleThreads())
+                      .Add(p => p.OnClose, () => closed = true));
+
+        cut.Find(".tm-document-comments-panel__close").Click();
+        closed.Should().BeTrue();
+    }
+
+    [Fact]
+    public void Comments_AvatarColor_DeterministicFromAuthor_TokenPalette()
+    {
+        var threads = SampleThreads();
+        var cut = Render<TmDocumentCommentThreadPanel>(parameters =>
+            parameters.Add(p => p.Threads, threads)
+                      .Add(p => p.SelectedThreadId, threads[0].Id));
+
+        var avatar = cut.Find(".tm-document-comments-panel__avatar");
+        avatar.GetAttribute("data-avatar-token").Should().BeOneOf("primary", "info", "success", "warning", "danger");
+        avatar.GetAttribute("style").Should().BeNull();
+    }
+
+    private sealed class FixedTime(DateTimeOffset now) : TimeProvider
+    {
+        public override DateTimeOffset GetUtcNow() => now;
     }
 
     [Fact]
@@ -117,8 +248,8 @@ public class TmDocumentCommentsTests : LocalizationTestBase
                       .Add(p => p.CommentsEnabled, true)
                       .Add(p => p.CommentMode, DocumentCommentMode.Comment));
 
-        cut.Find(".tm-document-page-viewer__page").MouseDown(new MouseEventArgs { OffsetX = 400, OffsetY = 250, Buttons = 1 });
-        cut.Find(".tm-document-page-viewer__page").MouseUp(new MouseEventArgs { OffsetX = 400, OffsetY = 250, Buttons = 0 });
+        cut.Find(".tm-document-page-viewer__page").PointerDown(new PointerEventArgs { OffsetX = 400, OffsetY = 250, Buttons = 1 });
+        cut.Find(".tm-document-page-viewer__page").PointerUp(new PointerEventArgs { OffsetX = 400, OffsetY = 250, Buttons = 0 });
 
         cut.Find("[data-testid='document-comment-draft']").TextContent.Should().Contain("New comment");
         cut.Find(".tm-document-comments-layer__draft-point").GetAttribute("style").Should().Contain("left: 50%");
@@ -133,9 +264,9 @@ public class TmDocumentCommentsTests : LocalizationTestBase
                       .Add(p => p.CommentMode, DocumentCommentMode.Comment));
 
         var page = cut.Find(".tm-document-page-viewer__page");
-        page.MouseDown(new MouseEventArgs { OffsetX = 80, OffsetY = 100, Buttons = 1 });
-        page.MouseMove(new MouseEventArgs { OffsetX = 240, OffsetY = 300, Buttons = 1 });
-        page.MouseUp(new MouseEventArgs { OffsetX = 240, OffsetY = 300, Buttons = 0 });
+        page.PointerDown(new PointerEventArgs { OffsetX = 80, OffsetY = 100, Buttons = 1 });
+        page.PointerMove(new PointerEventArgs { OffsetX = 240, OffsetY = 300, Buttons = 1 });
+        page.PointerUp(new PointerEventArgs { OffsetX = 240, OffsetY = 300, Buttons = 0 });
 
         var draft = cut.Find(".tm-document-comments-layer__draft");
         draft.GetAttribute("style").Should().Contain("left: 10%");
@@ -152,9 +283,9 @@ public class TmDocumentCommentsTests : LocalizationTestBase
                       .Add(p => p.CommentMode, DocumentCommentMode.Comment)
                       .Add(p => p.OnCommentThreadCreateRequested, value => request = value));
 
-        cut.Find(".tm-document-page-viewer__page").MouseDown(new MouseEventArgs { OffsetX = 200, OffsetY = 500, Buttons = 1 });
-        cut.Find(".tm-document-page-viewer__page").MouseUp(new MouseEventArgs { OffsetX = 200, OffsetY = 500, Buttons = 0 });
-        cut.Find(".tm-comment-composer__input").Input("Please check this clause");
+        cut.Find(".tm-document-page-viewer__page").PointerDown(new PointerEventArgs { OffsetX = 200, OffsetY = 500, Buttons = 1 });
+        cut.Find(".tm-document-page-viewer__page").PointerUp(new PointerEventArgs { OffsetX = 200, OffsetY = 500, Buttons = 0 });
+        cut.Find(".tm-comment-composer textarea").Input("Please check this clause");
         cut.Find(".tm-comment-composer__button--primary").Click();
 
         request.Should().NotBeNull();
@@ -190,7 +321,7 @@ public class TmDocumentCommentsTests : LocalizationTestBase
                       .Add(p => p.CommentMode, DocumentCommentMode.Comment)
                       .Add(p => p.OnCommentThreadCreateRequested, value => request = value));
 
-        cut.Find(".tm-document-page-viewer__page").MouseDown(new MouseEventArgs { OffsetX = 200, OffsetY = 500, Buttons = 1 });
+        cut.Find(".tm-document-page-viewer__page").PointerDown(new PointerEventArgs { OffsetX = 200, OffsetY = 500, Buttons = 1 });
         cut.FindAll("[data-testid='document-comment-draft']").Should().BeEmpty();
         request.Should().BeNull();
     }
@@ -214,7 +345,7 @@ public class TmDocumentCommentsTests : LocalizationTestBase
         selected.Should().Be("thread-1");
 
         cut.Render(parameters => parameters.Add(p => p.SelectedThreadId, "thread-1"));
-        cut.Find(".tm-comment-composer__input").Input("Reply body");
+        cut.Find(".tm-comment-composer textarea").Input("Reply body");
         cut.Find(".tm-comment-composer__button--primary").Click();
         cut.Find(".tm-document-comments-panel__resolve").Click();
         cut.Find(".tm-document-comments-panel__reaction-add").Click();
@@ -250,10 +381,10 @@ public class TmDocumentCommentsTests : LocalizationTestBase
             parameters.Add(p => p.MentionUsers, MentionUsers())
                       .Add(p => p.MentionsChanged, value => mentions = value));
 
-        cut.Find(".tm-comment-composer__input").Input("Hello @al");
+        cut.Find(".tm-comment-composer textarea").Input("Hello @al");
         cut.Find(".tm-comment-composer__mention-option").Click();
 
-        cut.Find(".tm-comment-composer__input").GetAttribute("value").Should().Be("Hello @Alice Johnson ");
+        cut.Find(".tm-comment-composer textarea").TextContent.Should().Contain("Hello @Alice Johnson");
         mentions.Should().ContainSingle(mention => mention.UserId == "u1");
     }
 
@@ -265,11 +396,11 @@ public class TmDocumentCommentsTests : LocalizationTestBase
             parameters.Add(p => p.MentionUsers, MentionUsers())
                       .Add(p => p.MentionsChanged, value => mentions = value));
 
-        cut.Find(".tm-comment-composer__input").Input("@");
-        cut.Find(".tm-comment-composer__input").KeyDown(new KeyboardEventArgs { Key = "ArrowDown" });
-        cut.Find(".tm-comment-composer__input").KeyDown(new KeyboardEventArgs { Key = "Enter" });
+        cut.Find(".tm-comment-composer textarea").Input("@");
+        cut.Find(".tm-comment-composer textarea").KeyDown(new KeyboardEventArgs { Key = "ArrowDown" });
+        cut.Find(".tm-comment-composer textarea").KeyDown(new KeyboardEventArgs { Key = "Enter" });
 
-        cut.Find(".tm-comment-composer__input").GetAttribute("value").Should().Be("@Bob Stone ");
+        cut.Find(".tm-comment-composer textarea").TextContent.Should().Contain("@Bob Stone");
         mentions.Should().ContainSingle(mention => mention.UserId == "u2");
     }
 
@@ -281,10 +412,45 @@ public class TmDocumentCommentsTests : LocalizationTestBase
             parameters.Add(p => p.SubmitOnEnter, true)
                       .Add(p => p.OnSubmit, args => submitted = args));
 
-        cut.Find(".tm-comment-composer__input").Input("Keyboard reply");
-        cut.Find(".tm-comment-composer__input").KeyDown(new KeyboardEventArgs { Key = "Enter" });
+        cut.Find(".tm-comment-composer textarea").Input("Keyboard reply");
+        cut.Find(".tm-comment-composer textarea").KeyDown(new KeyboardEventArgs { Key = "Enter" });
 
         submitted!.Body.Should().Be("Keyboard reply");
+    }
+
+    [Fact]
+    public void Composer_AutoFocus_SetsAutofocusAndKeepsTextareaClass()
+    {
+        var cut = Render<TmCommentComposer>(parameters =>
+            parameters.Add(p => p.AutoFocus, true));
+
+        var field = cut.Find("textarea");
+        field.GetAttribute("autofocus").Should().NotBeNull();
+        field.ClassList.Should().Contain("tm-textarea");
+        JSInterop.Invocations.Count(invocation =>
+            invocation.Identifier.Contains("focus", StringComparison.OrdinalIgnoreCase))
+            .Should().Be(1, "AutoFocus moves focus through TmTextArea.FocusAsync exactly once");
+    }
+
+    [Fact]
+    public void Viewer_MobileDraft_SubmitsFromSheet()
+    {
+        DocumentCommentThreadCreateRequest? created = null;
+        var cut = Render<TmDocumentPageViewer>(parameters =>
+            parameters.Add(p => p.Page, CreatePage())
+                      .Add(p => p.LayoutMode, TmLayoutMode.Mobile)
+                      .Add(p => p.CommentsEnabled, true)
+                      .Add(p => p.CommentMode, DocumentCommentMode.Comment)
+                      .Add(p => p.OnCommentThreadCreateRequested, request => created = request));
+
+        cut.Find(".tm-document-page-viewer__comments-sheet").Should().NotBeNull();
+        cut.Find(".tm-document-page-viewer__page").PointerDown(new PointerEventArgs { OffsetX = 100, OffsetY = 100, Buttons = 1 });
+        cut.Find(".tm-document-page-viewer__page").PointerUp(new PointerEventArgs { OffsetX = 100, OffsetY = 100, Buttons = 1 });
+        cut.Find(".tm-comment-composer textarea").Input("Sheet draft");
+        cut.Find(".tm-comment-composer__button--primary").Click();
+
+        created.Should().NotBeNull();
+        created!.Body.Should().Be("Sheet draft");
     }
 
     private static SigningDocumentPage CreatePage(double width = 800, double height = 1000)

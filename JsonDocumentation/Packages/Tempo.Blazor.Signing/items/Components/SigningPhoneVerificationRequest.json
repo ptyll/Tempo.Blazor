@@ -1,0 +1,10 @@
+{
+  "kind": "Record",
+  "category": "Components",
+  "namespace": "Tempo.Blazor.Components.Signing",
+  "description": "Host request to verify a typed OTP code for a phone signing field (Signing redesign phase 6, S2-5). The host's answer is the ONLY confirmation the runner accepts: true completes the step, false shows the localized invalid-code message — until then the phone field never completes, no matter what value it carries.",
+  "packageId": "Tempo.Blazor.Signing",
+  "sourcePath": "src/Tempo.Blazor.Signing/Components/Signing/SigningActiveStepContracts.cs",
+  "documentationStatus": "generated",
+  "itemName": "SigningPhoneVerificationRequest"
+}

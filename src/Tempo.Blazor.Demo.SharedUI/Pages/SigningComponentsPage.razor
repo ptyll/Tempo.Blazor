@@ -1,5 +1,6 @@
 @page "/signing-components"
 @using System.Net.Http.Json
+@using Tempo.Blazor.Abstractions.Layout
 @using Tempo.Blazor.DocumentEditor.Services
 @using DocumentRenditionAnchor = Tempo.Blazor.DocumentEditor.Models.DocumentRenditionAnchor
 @using DocumentRenditionAnchorType = Tempo.Blazor.DocumentEditor.Models.DocumentRenditionAnchorType
@@ -29,6 +30,7 @@
     <div class="showcase-card">
         <div class="max-w-3xl mx-auto">
             <TmDocumentPageViewer Page="_demoPage"
+                                  EnablePinchZoom="true"
                                   Id="demo-signing-page-1"
                                   Class="signing-components-page__viewer"
                                   ShowToolbar="true"
@@ -69,14 +71,21 @@
 
     <div class="showcase-card">
         <div class="mb-4 flex flex-wrap items-center gap-3 text-sm text-slate-700 dark:text-slate-300">
-            <label class="inline-flex items-center gap-2">
-                <input type="checkbox" class="rounded border-slate-300" @bind="_showResolvedComments" />
-                <span>Show resolved comments</span>
-            </label>
+            <TmCheckbox Label="Show resolved comments"
+                        Value="_showResolvedComments"
+                        ValueChanged="value => _showResolvedComments = value" />
+            <TmSelect TValue="TmLayoutMode"
+                      Id="document-comments-layout"
+                      Label="Comments layout"
+                      Value="_commentViewerLayout"
+                      ValueChanged="SetCommentViewerLayout"
+                      Options="_commentLayoutOptions"
+                      data-testid="document-comments-layout" />
             <span class="text-slate-500 dark:text-slate-400" data-testid="document-comments-last-event">@_commentLastEvent</span>
         </div>
 
         <TmDocumentPageViewer Page="_commentPage"
+                              EnablePinchZoom="true"
                               Id="demo-document-comments-page"
                               Class="signing-components-page__viewer signing-components-page__comments-viewer"
                               ShowToolbar="true"
@@ -104,6 +113,7 @@
                               OnCommentReactionToggled="HandleCommentReactionToggled"
                               OnCommentMentionedUsersChanged="HandleCommentMentionsChanged"
                               OnCommentThreadNavigateRequested="HandleCommentThreadNavigateRequested"
+                              LayoutMode="_commentViewerLayout"
                               data-testid="document-comments-viewer" />
     </div>
 </section>
@@ -223,16 +233,15 @@
     </div>
 
     <div class="showcase-card">
-        <label class="inline-flex items-center gap-2 mb-3 text-sm text-slate-600 dark:text-slate-400">
-            <span>Preview language</span>
-            <select class="tm-input condition-builder-culture"
-                    @bind="_conditionCulture">
-                @foreach (var culture in _signingCultures)
-                {
-                    <option value="@culture">@culture</option>
-                }
-            </select>
-        </label>
+        <div class="mb-3 signing-components-page__culture">
+            <TmSelect TValue="string"
+                      Id="condition-builder-culture"
+                      Label="Preview language"
+                      Value="_conditionCulture"
+                      ValueChanged="SetConditionCulture"
+                      Options="_signingCultureOptions"
+                      data-testid="condition-builder-culture" />
+        </div>
         <TmConditionBuilder Fields="_conditionFields"
                             CurrentFieldUuid="conditional-signature"
                             Conditions="_conditionRules"
@@ -361,8 +370,9 @@
         <span class="px-2 py-0.5 text-xs font-medium bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 rounded-full">Phase 8</span>
     </div>
 
-    <div class="showcase-card">
+    <div class="showcase-card" style="--tm-pdf-template-designer-height: min(100dvh, 64rem); min-height: 28rem;">
         <TmPdfTemplateDesigner Documents="_designerPages"
+                               Height="min(100dvh, 64rem)"
                                Fields="_designerFields"
                                FieldsChanged="HandleDesignerFieldsChanged"
                                SubmitterRoles="_templateRoles"
@@ -415,9 +425,14 @@
                                  Value="@_stepMultipleValue"
                                  ValueChanged="HandleStepMultipleChanged"
                                  data-testid="signing-step-multiple" />
+            @* Phase 6 review: the standalone image step carries a small MaxFileSize so the
+                localized "file is larger than …" rejection is demonstrable (and capturable)
+                against a real browser pick. Client-reported limit — a real host enforces the
+                real one via OpenReadStream(maxAllowedSize). *@
             <TmSigningAttachmentStep Field="@_stepImageField"
                                      Attachments="@_stepImageAttachments"
                                      AttachmentsChanged="HandleStepImageAttachmentsChanged"
+                                     MaxFileSize="50000"
                                      data-testid="signing-step-image" />
             <TmSigningPhoneStep Field="@_stepPhoneField"
                                 CountryCode="+420"
@@ -451,8 +466,16 @@
     </div>
 
     <div class="showcase-card">
+        <div class="mb-3 signing-components-page__culture" data-testid="signing-runner-signature-mode">
+            <TmSelect TValue="TmSigningDefaultSignatureMode"
+                      Id="signing-runner-signature-mode"
+                      Label="Default signature mode"
+                      Value="_runnerSignatureMode"
+                      ValueChanged="SetRunnerSignatureMode"
+                      Options="_signatureModeOptions" />
+        </div>
         <TmSigningFormRunner Pages="@_runnerPages"
-                             Fields="@_runnerFields"
+                             Fields="@RunnerFields"
                              SubmitterRoles="@_templateRoles"
                              Values="@_runnerValues"
                              ValuesChanged="HandleRunnerValuesChanged"
@@ -463,6 +486,8 @@
                              FallbackCulture="cs-CZ"
                              SupportedCultures="_signingCultures"
                              ShowLanguageSelector="true"
+                             DocumentTitle="Service order approval"
+                             DefaultSignatureMode="_runnerSignatureMode"
                              OnLocalizationSnapshotChanged="HandleRunnerLocalizationSnapshotChanged"
                              AutoSaveDelay="@TimeSpan.FromMilliseconds(80)"
                              data-testid="signing-runner-demo" />
@@ -475,12 +500,51 @@
 <section class="demo-section">
     <div class="flex items-center justify-between gap-4 mb-4">
         <div>
+            <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Active Steps Contract (opt-in)</h2>
+            <p class="text-sm text-slate-600 dark:text-slate-400">Phone OTP, upload and external verification confirmed by a FAKE host — demo code 123456, in-memory PNG upload, simulated provider (Signing redesign phase 6).</p>
+        </div>
+        <span class="px-2 py-0.5 text-xs font-medium bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 rounded-full">Phase 6</span>
+    </div>
+
+    <div class="showcase-card">
+        @* The fake host (phase 6, demo-only): the runner's active-step callbacks are wired — the
+           OTP is checked HERE (code 123456), the upload "persists" HERE (returns a tiny PNG data
+           url) and the external verification completes HERE after a simulated provider call. No
+           step can complete until this host confirms it — the SI2 contract. *@
+        <TmSigningFormRunner Pages="@_activeStepsPages"
+                             Fields="@_activeStepFields"
+                             SubmitterRoles="@_templateRoles"
+                             Values="@_activeStepValues"
+                             ValuesChanged="HandleActiveStepValuesChanged"
+                             OnComplete="HandleActiveStepComplete"
+                             Culture="@_runnerCulture"
+                             FallbackCulture="cs-CZ"
+                             OnSendPhoneCode="HandleActiveSendPhoneCode"
+                             OnVerifyPhoneCode="HandleActiveVerifyPhoneCode"
+                             OnAttachmentSelected="HandleActiveAttachmentSelected"
+                             OnExternalStepRequested="HandleActiveExternalRequested"
+                             StepContextProvider="ResolveActiveExternalContext"
+                             data-testid="signing-active-steps-demo" />
+        <div class="mt-3 text-sm text-slate-600 dark:text-slate-400" data-testid="signing-active-steps-status">
+            @_activeStepsStatus
+        </div>
+        <div class="mt-1">
+            <TmCheckbox Label="Simulate provider failure (external error state)"
+                        Value="_activeSimulateProviderFailure"
+                        ValueChanged="value => _activeSimulateProviderFailure = value"
+                        InputAttributes="_failToggleInputAttributes" />
+        </div>
+    </div>
+</section>
+
+<section class="demo-section">
+    <div class="flex items-center justify-between gap-4 mb-4">
+        <div>
             <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Completion Panel</h2>
             <p class="text-sm text-slate-600 dark:text-slate-400">Final signer confirmation with document download, copy sending, and custom next action.</p>
         </div>
         <span class="px-2 py-0.5 text-xs font-medium bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 rounded-full">Phase 11</span>
     </div>
-
     <div class="showcase-card">
         @* Signing redesign phase 3 demo-only composition: the completion panel next to the
            submission status timeline and audit trail viewer, the way a host assembles the
@@ -730,6 +794,12 @@
     private string _lastInteraction = "No page interaction yet";
     private DocumentCommentMode _commentMode = DocumentCommentMode.Browse;
     private bool _showResolvedComments;
+    private TmLayoutMode _commentViewerLayout = TmLayoutMode.Auto;
+    private static readonly IReadOnlyList<SelectOption<TmLayoutMode>> _commentLayoutOptions =
+    [
+        new() { Value = TmLayoutMode.Auto, Label = "Auto" },
+        new() { Value = TmLayoutMode.Mobile, Label = "Mobile" }
+    ];
     private int _commentPageIndex;
     private string? _selectedCommentThreadId = "comment-amount";
     private string _commentLastEvent = "Comments ready";
@@ -754,9 +824,22 @@
     private string? _formulaValue;
     private string _formulaStatus = "No formula saved";
     private readonly IReadOnlyList<string> _signingCultures = ["cs-CZ", "en-US"];
+    private readonly IReadOnlyList<SelectOption<string>> _signingCultureOptions =
+    [
+        new() { Value = "cs-CZ", Label = "cs-CZ" },
+        new() { Value = "en-US", Label = "en-US" }
+    ];
     private string? _fieldEditorCulture = "en-US";
     private string? _designerCulture = "cs-CZ";
     private string? _runnerCulture = "en-US";
+    private TmSigningDefaultSignatureMode _runnerSignatureMode = TmSigningDefaultSignatureMode.Auto;
+    private static readonly IReadOnlyList<SelectOption<TmSigningDefaultSignatureMode>> _signatureModeOptions =
+    [
+        new() { Value = TmSigningDefaultSignatureMode.Auto, Label = "Auto (Draw on touch)" },
+        new() { Value = TmSigningDefaultSignatureMode.Draw, Label = "Draw" },
+        new() { Value = TmSigningDefaultSignatureMode.Typed, Label = "Typed" },
+        new() { Value = TmSigningDefaultSignatureMode.Upload, Label = "Upload" }
+    ];
     private IReadOnlyList<SigningSubmitterRole> _templateRoles =
     [
         new SigningSubmitterRole { Uuid = "template-signer", Name = "Signer 1", Color = SigningRolePalette.DefaultColors[0], Order = 0 },
@@ -996,8 +1079,158 @@
     };
 
     private IReadOnlyList<SigningDocumentPage> _runnerPages =>
+        string.Equals(GetQueryValue("runnerPages"), "2", StringComparison.Ordinal)
+            ?
+            [
+                _runnerPage,
+                new SigningDocumentPage
+                {
+                    AttachmentUuid = "runner-order",
+                    PageIndex = 1,
+                    ImageUrl = RunnerPageImage,
+                    Width = 612,
+                    Height = 792,
+                    Label = "Service order approval page 2"
+                }
+            ]
+            : [_runnerPage];
+
+    private IReadOnlyList<SigningField> RunnerFields =>
+        string.Equals(GetQueryValue("runnerPages"), "2", StringComparison.Ordinal)
+            ?
+            [
+                _runnerFields[0],
+                new SigningField
+                {
+                    Uuid = "runner-page-2",
+                    SubmitterUuid = "template-signer",
+                    Name = "Page two note",
+                    Labels = Localized("Poznámka na druhé straně", ("en-US", "Page two note")),
+                    Type = SigningFieldType.Text,
+                    Required = true,
+                    Areas =
+                    [
+                        new SigningFieldArea
+                        {
+                            Uuid = "runner-page-2-area",
+                            AttachmentUuid = "runner-order",
+                            Page = 1,
+                            X = 0.118,
+                            Y = 0.2,
+                            Width = 0.458,
+                            Height = 0.053
+                        }
+                    ]
+                }
+            ]
+            : _runnerFields;
+
+    // ── Active steps contract (Signing redesign phase 6, demo-only fake host). ──
+    private const string DemoOtpCode = "123456";
+    private const string DemoPngDataUrl = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
+    private IReadOnlyDictionary<string, object?> _activeStepValues = new Dictionary<string, object?>(StringComparer.Ordinal);
+    private bool _activeExternalLoading;
+    private string? _activeExternalError;
+    private bool _activeSimulateProviderFailure;
+
+    // data-testid on the native input (InputAttributes), not the wrapper — GetByLabel can check it.
+    private static readonly Dictionary<string, object> _failToggleInputAttributes = new()
+    {
+        ["data-testid"] = "signing-active-steps-fail-toggle"
+    };
+
+    private void SetCommentViewerLayout(TmLayoutMode mode) => _commentViewerLayout = mode;
+
+    private void SetConditionCulture(string? culture) => _conditionCulture = culture;
+
+    private void SetRunnerSignatureMode(TmSigningDefaultSignatureMode mode) => _runnerSignatureMode = mode;
+    private string _activeStepsStatus = "Active-steps runner ready — OTP code 123456";
+
+    private SigningDocumentPage _activeStepsPage => new()
+    {
+        AttachmentUuid = "active-steps",
+        PageIndex = 0,
+        ImageUrl = RunnerPageImage,
+        Width = 612,
+        Height = 792,
+        Label = "Active steps contract"
+    };
+
+    private IReadOnlyList<SigningDocumentPage> _activeStepsPages => [_activeStepsPage];
+
+    private IReadOnlyList<SigningField> _activeStepFields =>
     [
-        _runnerPage
+        new SigningField
+        {
+            Uuid = "active-phone",
+            SubmitterUuid = "template-signer",
+            Name = "Phone verification",
+            Labels = Localized("Telefonní ověření", ("en-US", "Phone verification")),
+            Type = SigningFieldType.Phone,
+            Required = true,
+            Validation = new SigningFieldValidation
+            {
+                Message = "Telefonní ověření je povinné.",
+                Messages = Localized("Telefonní ověření je povinné.", ("en-US", "Phone verification is required."))
+            },
+            Areas =
+            [
+                new SigningFieldArea
+                {
+                    Uuid = "active-phone-area",
+                    AttachmentUuid = "active-steps",
+                    Page = 0,
+                    X = 0.118,
+                    Y = 0.16,
+                    Width = 0.458,
+                    Height = 0.053
+                }
+            ]
+        },
+        new SigningField
+        {
+            Uuid = "active-attachment",
+            SubmitterUuid = "template-signer",
+            Name = "Signed photo",
+            Labels = Localized("Podepsaná fotka", ("en-US", "Signed photo")),
+            Type = SigningFieldType.Image,
+            Required = true,
+            Areas =
+            [
+                new SigningFieldArea
+                {
+                    Uuid = "active-attachment-area",
+                    AttachmentUuid = "active-steps",
+                    Page = 0,
+                    X = 0.118,
+                    Y = 0.3,
+                    Width = 0.307,
+                    Height = 0.053
+                }
+            ]
+        },
+        new SigningField
+        {
+            Uuid = "active-verification",
+            SubmitterUuid = "template-signer",
+            Name = "Identity check",
+            Labels = Localized("Ověření identity", ("en-US", "Identity check")),
+            Type = SigningFieldType.Verification,
+            Required = true,
+            Areas =
+            [
+                new SigningFieldArea
+                {
+                    Uuid = "active-verification-area",
+                    AttachmentUuid = "active-steps",
+                    Page = 0,
+                    X = 0.118,
+                    Y = 0.44,
+                    Width = 0.383,
+                    Height = 0.053
+                }
+            ]
+        }
     ];
 
     private IReadOnlyList<SigningField> _runnerFields =>
@@ -1999,7 +2232,7 @@
                     {
                         Uuid = $"detected-area-{Guid.NewGuid():N}",
                         AttachmentUuid = "designer-nda",
-                        Page = 1,
+                        Page = 0,
                         X = 0.14,
                         Y = 0.67,
                         Width = 0.24,
@@ -2073,6 +2306,96 @@
     {
         _runnerValues = new Dictionary<string, object?>(values, StringComparer.Ordinal);
         _runnerStatus = $"Completed with {values.Count} values";
+    }
+
+    // ── Active steps contract: the FAKE host (phase 6, demo-only). Each handler confirms its
+    //    step the way a real provider integration would; none of them can be skipped by the
+    //    component itself. ──
+
+    private void HandleActiveStepValuesChanged(IReadOnlyDictionary<string, object?> values)
+    {
+        _activeStepValues = new Dictionary<string, object?>(values, StringComparer.Ordinal);
+    }
+
+    private void HandleActiveStepComplete(IReadOnlyDictionary<string, object?> values)
+    {
+        _activeStepValues = new Dictionary<string, object?>(values, StringComparer.Ordinal);
+        _activeStepsStatus = $"Contract completed with {values.Count} confirmed values";
+    }
+
+    private Task HandleActiveSendPhoneCode(SigningPhoneCodeRequest request)
+    {
+        _activeStepsStatus = $"Code dispatched to {request.Phone} — the demo code is {DemoOtpCode}";
+        return Task.CompletedTask;
+    }
+
+    private Task<bool> HandleActiveVerifyPhoneCode(SigningPhoneVerificationRequest request)
+    {
+        // The check runs HERE, at the host — the component never decides validity.
+        var verified = string.Equals(request.Code, DemoOtpCode, StringComparison.Ordinal);
+        _activeStepsStatus = verified
+            ? $"Phone {request.Phone} verified"
+            : $"Code '{request.Code}' rejected by the demo host";
+        return Task.FromResult(verified);
+    }
+
+    private Task<string?> HandleActiveAttachmentSelected(SigningAttachmentUploadRequest request)
+    {
+        return HandleActiveAttachmentSelectedCoreAsync(request);
+    }
+
+    private async Task<string?> HandleActiveAttachmentSelectedCoreAsync(SigningAttachmentUploadRequest request)
+    {
+        // The demo upload takes a beat so the busy state ("Uploading …", disabled zone) is
+        // actually visible and capturable (phase 6 review: the attachment-uploading capture). A
+        // real host reads request.File.OpenReadStream(maxAllowedSize) here — on Blazor Server the
+        // content must be consumed at the host (SignalR message limits), and the real size limit
+        // is enforced HERE, at the host (the step-side MaxFileSize is client-reported, UX only).
+        // The demo "persists" a tiny PNG and returns its url, which the card then previews.
+        await Task.Delay(1200);
+        _activeStepsStatus = $"Uploaded {request.File.Name} ({request.File.Size} B) to the demo store";
+        return DemoPngDataUrl;
+    }
+
+    private async Task HandleActiveExternalRequested(SigningExternalStepRequest request)
+    {
+        _activeExternalLoading = true;
+        _activeExternalError = null;
+        _activeStepsStatus = "Verification started — the demo provider is thinking...";
+        _activeStepValues = new Dictionary<string, object?>(_activeStepValues, StringComparer.Ordinal);
+
+        await Task.Delay(800);
+
+        _activeExternalLoading = false;
+
+        // The failure toggle (demo-only, for the external-error capture/state): a real provider
+        // reports errors the same way — through the context, never through a stored value.
+        if (_activeSimulateProviderFailure)
+        {
+            _activeExternalError = "The demo provider reported a failure. Please try again.";
+            _activeStepsStatus = $"Provider failed for {request.Field.Name} (simulated)";
+            return;
+        }
+
+        _activeStepValues = new Dictionary<string, object?>(_activeStepValues, StringComparer.Ordinal)
+        {
+            [request.Field.Uuid] = true
+        };
+        _activeStepsStatus = $"Identity check confirmed by the demo provider ({request.Field.Name})";
+    }
+
+    private SigningExternalStepContext? ResolveActiveExternalContext(SigningField field)
+    {
+        if (field.Type is not (SigningFieldType.Verification or SigningFieldType.Kba or SigningFieldType.Payment))
+        {
+            return null;
+        }
+
+        return new SigningExternalStepContext(
+            ExternalUrl: "https://verify.example.test/session",
+            IsLoading: _activeExternalLoading,
+            Error: _activeExternalError,
+            ProviderName: "Demo Verify");
     }
 
     private void HandleCompletionSendCopy()

@@ -1,0 +1,10 @@
+{
+  "kind": "Record",
+  "category": "Components",
+  "namespace": "Tempo.Blazor.Components.Signing",
+  "description": "Host upload request for an attachment signing field (Signing redesign phase 6, S2-5). The runner raises it through TmSigningFormRunner.OnAttachmentSelected and stores the returned url on the attachment. Security note: the file CONTENT is read by the HOST (OpenReadStream) — never inside the component — because on Blazor Server browser files stream over SignalR with tight message limits. Without the callback the picked files stay client-side metadata (the documented placeholder behaviour).",
+  "packageId": "Tempo.Blazor.Signing",
+  "sourcePath": "src/Tempo.Blazor.Signing/Components/Signing/SigningActiveStepContracts.cs",
+  "documentationStatus": "generated",
+  "itemName": "SigningAttachmentUploadRequest"
+}

@@ -14,6 +14,8 @@
     font-weight: var(--tm-font-weight-medium);
     line-height: var(--tm-line-height-tight);
     cursor: pointer;
+    /* A finger drag moves the field; the browser must not pan the page instead. */
+    touch-action: none;
     user-select: none;
     box-sizing: border-box;
     overflow: visible;
@@ -100,7 +102,32 @@
     flex: 0 0 auto;
 }
 
+.tm-signing-field {
+    --tm-signing-handle-hit: var(--tm-space-6);
+}
+
+.tm-signing-field:focus-visible {
+    /* Distinct from the selected-state shadow: keyboard focus is the focus ring, not the selection.
+       The token is a shadow, so outline cannot carry it. */
+    outline: 2px solid transparent;
+    box-shadow: var(--tm-focus-ring);
+}
+
+@media (forced-colors: active) {
+    .tm-signing-field:focus-visible {
+        /* forced-color-adjust: none on an ancestor would strip the system ring; declare it here. */
+        outline-color: Highlight;
+    }
+}
+
+@media (pointer: coarse) {
+    .tm-signing-field {
+        --tm-signing-handle-hit: var(--tm-touch-target);
+    }
+}
+
 .tm-signing-field__label {
+    color: var(--tm-text-primary);
     /* Phase 3 review round 2: the label keeps its natural width — it may shrink when the head
        runs out of room, but never below 6rem while there IS room (`min(100%, 6rem)` keeps tiny
        fields from over-promising space) — so a field ≥ 160px never truncates its label to a
@@ -170,21 +197,25 @@
 .tm-signing-field__options {
     display: inline-flex;
     align-items: center;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     gap: var(--tm-space-1);
     min-width: 0;
-    overflow: visible;
+    max-width: 100%;
+    overflow: hidden;
 }
 
 .tm-signing-field__option {
-    display: inline-flex;
-    align-items: center;
-    max-width: 100%;
+    /* inline-block, not inline-flex: ellipsis does not apply to a flex container, so a narrow
+       choice chip wrapped its label mid-word ("E-m:" / "Papi"). The chip keeps its text width;
+       the row clips, so a wide preview still shows the full label. */
+    display: inline-block;
+    flex: 0 0 auto;
     padding: 0 var(--tm-space-1);
+    line-height: var(--tm-line-height-tight);
     border: 1px solid var(--tm-border-color);
     border-radius: var(--tm-radius-full);
-    overflow-wrap: anywhere;
-    white-space: normal;
+    white-space: nowrap;
+    vertical-align: middle;
 }
 
 .tm-signing-field__option--checked {
@@ -252,62 +283,70 @@
 .tm-signing-field__resize-handle,
 .tm-signing-field-overlay__handle {
     position: absolute;
+    /* The box is the visible dot, so a press on the dot lands on the handle. The touch hit area
+       grows around it without moving the box the tests measure. */
     width: var(--tm-space-2);
     height: var(--tm-space-2);
+    margin: calc(var(--tm-space-2) / -2);
     border: 1px solid var(--tm-bg-surface);
     border-radius: var(--tm-radius-full);
     background: var(--tm-color-primary);
     pointer-events: auto;
 }
 
+.tm-signing-field__resize-handle::before,
+.tm-signing-field-overlay__handle::before {
+    content: "";
+    position: absolute;
+    inset: calc((var(--tm-space-2) - var(--tm-signing-handle-hit, var(--tm-space-6))) / 2);
+    /* The enlarged hit area must own the pointer, or a finger on the 44px target misses the 8px dot. */
+    pointer-events: auto;
+}
+
 .tm-signing-field__resize-handle--north-west {
-    top: calc(var(--tm-space-1) * -1);
-    left: calc(var(--tm-space-1) * -1);
+    top: 0;
+    left: 0;
     cursor: nwse-resize;
 }
 
 .tm-signing-field__resize-handle--north {
-    top: calc(var(--tm-space-1) * -1);
+    top: 0;
     left: 50%;
-    transform: translateX(-50%);
     cursor: ns-resize;
 }
 
 .tm-signing-field__resize-handle--north-east {
-    top: calc(var(--tm-space-1) * -1);
-    right: calc(var(--tm-space-1) * -1);
+    top: 0;
+    right: 0;
     cursor: nesw-resize;
 }
 
 .tm-signing-field__resize-handle--east {
     top: 50%;
-    right: calc(var(--tm-space-1) * -1);
-    transform: translateY(-50%);
+    right: 0;
     cursor: ew-resize;
 }
 
 .tm-signing-field__resize-handle--south-east {
-    right: calc(var(--tm-space-1) * -1);
-    bottom: calc(var(--tm-space-1) * -1);
+    right: 0;
+    bottom: 0;
     cursor: nwse-resize;
 }
 
 .tm-signing-field__resize-handle--south {
-    bottom: calc(var(--tm-space-1) * -1);
+    bottom: 0;
     left: 50%;
-    transform: translateX(-50%);
     cursor: ns-resize;
 }
 
 .tm-signing-field__resize-handle--south-west {
-    bottom: calc(var(--tm-space-1) * -1);
-    left: calc(var(--tm-space-1) * -1);
+    bottom: 0;
+    left: 0;
     cursor: nesw-resize;
 }
 
 .tm-signing-field__resize-handle--west {
     top: 50%;
-    left: calc(var(--tm-space-1) * -1);
-    transform: translateY(-50%);
+    left: 0;
     cursor: ew-resize;
 }

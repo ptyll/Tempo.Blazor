@@ -1,0 +1,10 @@
+{
+  "kind": "Enum",
+  "category": "Signing",
+  "namespace": "Tempo.Blazor.Components.Signing",
+  "description": "The default capture mode a signature step starts in (Signing redesign phase 5, SI3). The template's stored Preferences.Format always wins over this setting; it decides only when the template is silent.",
+  "packageId": "Tempo.Blazor.Signing",
+  "sourcePath": "src/Tempo.Blazor.Signing/Components/Signing/TmSigningDefaultSignatureMode.cs",
+  "documentationStatus": "generated",
+  "itemName": "TmSigningDefaultSignatureMode"
+}

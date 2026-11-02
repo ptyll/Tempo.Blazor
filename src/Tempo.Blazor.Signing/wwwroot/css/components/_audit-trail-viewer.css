@@ -18,9 +18,16 @@
 
 .tm-audit-trail-viewer__header {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
     gap: var(--tm-space-3);
+}
+
+.tm-audit-trail-viewer__header-content {
+    display: grid;
+    gap: var(--tm-space-2);
+    min-width: 0;
 }
 
 .tm-audit-trail-viewer__header h2,
@@ -32,54 +39,79 @@
     text-decoration: none;
 }
 
+/* A section is a labelled block, not a nested card: the tables carry their own row borders, so
+   section frames would only add the card-in-card look the reference drops. */
 .tm-audit-trail-viewer__section {
     display: grid;
     gap: var(--tm-space-2);
-    padding: var(--tm-space-4);
-    border: 1px solid var(--tm-border-color);
-    border-radius: var(--tm-radius-md);
-    background: var(--tm-bg-surface);
-}
-
-.tm-audit-trail-viewer__entries {
-    display: grid;
-    gap: var(--tm-space-2);
-}
-
-.tm-audit-trail-viewer__document,
-.tm-audit-trail-viewer__signer,
-.tm-audit-trail-viewer__entry,
-.tm-audit-trail-viewer__localization-summary,
-.tm-audit-trail-viewer__field-snapshot {
-    display: grid;
-    gap: var(--tm-space-2);
-    margin: 0;
-    padding: var(--tm-space-3);
-    border: 1px solid var(--tm-border-color);
-    border-radius: var(--tm-radius-md);
-    background: var(--tm-bg-surface-secondary);
-}
-
-.tm-audit-trail-viewer__document div,
-.tm-audit-trail-viewer__signer div,
-.tm-audit-trail-viewer__localization-summary div {
-    display: grid;
-    gap: var(--tm-space-1);
+    min-width: 0;
 }
 
 .tm-audit-trail-viewer__localization-summary {
+    display: grid;
     grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+    gap: var(--tm-space-3);
+    margin: 0;
+}
+
+.tm-audit-trail-viewer__localization-summary div {
+    display: grid;
+    gap: var(--tm-space-1);
+    align-content: start;
 }
 
 .tm-audit-trail-viewer__field-snapshots {
     display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr));
     gap: var(--tm-space-2);
+}
+
+.tm-audit-trail-viewer__field-snapshot {
+    display: grid;
+    gap: var(--tm-space-1);
+    margin: 0;
+    padding: var(--tm-space-2) var(--tm-space-3);
+    border: 1px solid var(--tm-border-color);
+    border-radius: var(--tm-radius-sm);
+    background: var(--tm-bg-surface-secondary);
 }
 
 .tm-audit-trail-viewer__field-snapshot span {
     color: var(--tm-text-secondary);
     font-size: var(--tm-font-size-sm);
     overflow-wrap: anywhere;
+}
+
+/* Tables: the desktop reference lays Documents/Signers/Events out as real tables with column
+   headers. */
+.tm-audit-trail-viewer__table {
+    inline-size: 100%;
+    border-collapse: collapse;
+    font-size: var(--tm-font-size-sm);
+}
+
+.tm-audit-trail-viewer__table th,
+.tm-audit-trail-viewer__table td {
+    padding: var(--tm-space-2) var(--tm-space-3);
+    border-bottom: 1px solid var(--tm-border-color);
+    text-align: start;
+    vertical-align: top;
+}
+
+.tm-audit-trail-viewer__table th {
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-xs);
+    font-weight: var(--tm-font-weight-semibold);
+    background: var(--tm-bg-surface-secondary);
+}
+
+.tm-audit-trail-viewer__table tbody tr:last-child th,
+.tm-audit-trail-viewer__table tbody tr:last-child td {
+    border-bottom: 0;
+}
+
+.tm-audit-trail-viewer__table td time {
+    white-space: nowrap;
 }
 
 .tm-audit-trail-viewer dt {
@@ -93,7 +125,97 @@
     overflow-wrap: anywhere;
 }
 
-.tm-audit-trail-viewer__entry {
+/* Checksums are machine evidence: monospace and wrappable anywhere, never truncating a hash. */
+.tm-audit-trail-viewer__checksum {
+    font-family: var(--tm-font-mono);
+    font-size: var(--tm-font-size-xs);
+    overflow-wrap: anywhere;
+}
+
+/* Identity cell: avatar + name over the email. */
+.tm-audit-trail-viewer__identity {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--tm-space-2);
+    min-width: 0;
+}
+
+.tm-audit-trail-viewer__identity-text {
+    display: grid;
+    min-width: 0;
+}
+
+.tm-audit-trail-viewer__identity-name {
+    font-weight: var(--tm-font-weight-medium);
+    color: var(--tm-text-primary);
+}
+
+.tm-audit-trail-viewer__identity-detail {
     color: var(--tm-text-secondary);
-    font-size: var(--tm-font-size-sm);
+    font-size: var(--tm-font-size-xs);
+    overflow-wrap: anywhere;
+}
+
+/* Network evidence: IP on the primary line, agent + zone on the softer secondary line. */
+.tm-audit-trail-viewer__network {
+    display: grid;
+    gap: var(--tm-space-1);
+    min-width: 0;
+}
+
+.tm-audit-trail-viewer__network-primary {
+    font-family: var(--tm-font-mono);
+    overflow-wrap: anywhere;
+}
+
+.tm-audit-trail-viewer__network-secondary {
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-xs);
+    overflow-wrap: anywhere;
+}
+
+/* Narrow container: every table collapses to cards (one block per row, the header cell text
+   repeated through the data-label attribute). */
+@container tm-audit-trail-viewer (width < 640px) {
+    .tm-audit-trail-viewer__table,
+    .tm-audit-trail-viewer__table tbody {
+        display: grid;
+        gap: var(--tm-space-2);
+    }
+
+    .tm-audit-trail-viewer__table thead {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        margin: -1px;
+        padding: 0;
+        overflow: hidden;
+        clip-path: inset(50%);
+        white-space: nowrap;
+        border: 0;
+    }
+
+    .tm-audit-trail-viewer__table tr {
+        display: grid;
+        gap: var(--tm-space-1);
+        padding: var(--tm-space-3);
+        border: 1px solid var(--tm-border-color);
+        border-radius: var(--tm-radius-md);
+        background: var(--tm-bg-surface-secondary);
+    }
+
+    .tm-audit-trail-viewer__table td {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        gap: var(--tm-space-1);
+        padding: 0;
+        border-bottom: 0;
+    }
+
+    .tm-audit-trail-viewer__table td::before {
+        content: attr(data-label);
+        color: var(--tm-text-secondary);
+        font-size: var(--tm-font-size-xs);
+        font-weight: var(--tm-font-weight-semibold);
+    }
 }

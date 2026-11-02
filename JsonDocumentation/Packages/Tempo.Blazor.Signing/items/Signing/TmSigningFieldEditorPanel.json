@@ -61,10 +61,65 @@
       "description": "Callback invoked when a radio or multiple option should be mapped to a document area."
     },
     {
+      "name": "OnCopyRequested",
+      "type": "EventCallback<SigningField>",
+      "isRequired": false,
+      "description": "Raised when the author copies the edited field."
+    },
+    {
+      "name": "OnCopySelectionRequested",
+      "type": "EventCallback",
+      "isRequired": false,
+      "description": "Raised when the author copies the current selection."
+    },
+    {
+      "name": "OnDeleteRequested",
+      "type": "EventCallback<SigningField>",
+      "isRequired": false,
+      "description": "Raised when the author deletes the edited field."
+    },
+    {
+      "name": "OnDeleteSelectionRequested",
+      "type": "EventCallback",
+      "isRequired": false,
+      "description": "Raised when the author deletes the current selection."
+    },
+    {
+      "name": "OnPasteRequested",
+      "type": "EventCallback",
+      "isRequired": false,
+      "description": "Raised when the author pastes the clipboard into the template."
+    },
+    {
+      "name": "PageHeight",
+      "type": "double",
+      "isRequired": false,
+      "description": "Page height used to convert the optional geometry editors from normalized areas."
+    },
+    {
+      "name": "PasteEnabled",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "Whether the clipboard has a field the Paste action can place."
+    },
+    {
+      "name": "PageWidth",
+      "type": "double",
+      "isRequired": false,
+      "description": "Page width used to convert the optional geometry editors from normalized areas."
+    },
+    {
       "name": "ReadOnly",
       "type": "bool",
       "isRequired": false,
       "description": "Whether the panel should prevent edits."
+    },
+    {
+      "name": "ShowGeometry",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Whether to show the optional pixel geometry editors."
     },
     {
       "name": "ShowLocalizationEditor",

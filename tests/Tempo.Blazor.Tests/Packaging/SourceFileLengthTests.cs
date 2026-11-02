@@ -56,7 +56,6 @@ public class SourceFileLengthTests
         "src/Tempo.Blazor/Components/DataDisplay/TmMultiViewList.razor",
         "src/Tempo.Blazor.DocumentEditor/Components/DocumentEditor/TmDocumentEditor.razor",
         "tests/Tempo.Blazor.E2E/DocumentEditorCanvasUxFixE2ETests.cs",
-        "src/Tempo.Blazor.Signing/Components/Signing/TmPdfTemplateDesigner.razor.cs",
         "src/Tempo.Blazor/Components/Files/TmDocumentManager.razor.cs",
         "tests/Tempo.Blazor.E2E/DocumentEditorCanvasImageE2ETests.cs",
         "tests/Tempo.Blazor.DocumentFormats.Tests/DocumentDocxFormatTests.cs",

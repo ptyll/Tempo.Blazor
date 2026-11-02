@@ -6,7 +6,8 @@
     {
         <label for="@Id" class="tm-input-label @(Required ? "tm-input-label-required" : "")">@Label</label>
     }
-    <textarea id="@Id"
+    <textarea @ref="_element"
+              id="@Id"
               placeholder="@Placeholder"
               rows="@Rows"
               maxlength="@MaxLength"
@@ -92,7 +93,12 @@
     [Parameter(CaptureUnmatchedValues = true)] public Dictionary<string, object>? AdditionalAttributes { get; set; }
 
     // ── Accessibility ────────────────────────────────────────────
-    private bool IsInvalid => !string.IsNullOrEmpty(Error);
+    /// <summary>
+    /// The invalid state mirrors any rendered message: the textarea's own <see cref="Error"/> and
+    /// a field-level error message (the <c>TmFormField</c> cascade) both set
+    /// <c>aria-invalid="true"</c> on the native element.
+    /// </summary>
+    private bool IsInvalid => !string.IsNullOrEmpty(Error) || !string.IsNullOrEmpty(FormFieldErrorId);
     private string ErrorId => $"{Id}-error";
 
     /// <summary>
@@ -105,6 +111,20 @@
     private string? FormFieldErrorId { get; set; }
 
     private string? DescribedBy => !string.IsNullOrEmpty(Error) ? ErrorId : FormFieldErrorId;
+
+    private ElementReference _element;
+
+    /// <summary>Moves focus to the textarea. No-op until the element has rendered.</summary>
+    public async Task FocusAsync()
+    {
+        try
+        {
+            await _element.FocusAsync();
+        }
+        catch (InvalidOperationException)
+        {
+        }
+    }
 
     private string InputCssClass =>
         $"tm-input tm-textarea{(string.IsNullOrEmpty(Error) ? "" : " tm-input-error")}{(Disabled ? " tm-input-disabled" : "")}";

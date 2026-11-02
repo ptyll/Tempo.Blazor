@@ -9,6 +9,15 @@
     inline-size: 100%;
 }
 
+.tm-submission-status-timeline__header-content {
+    display: grid;
+    gap: var(--tm-space-2);
+    padding: var(--tm-space-3) var(--tm-space-4);
+    border: 1px solid var(--tm-border-color);
+    border-radius: var(--tm-radius-md);
+    background: var(--tm-bg-surface-secondary);
+}
+
 .tm-submission-status-timeline__empty {
     padding: var(--tm-space-4);
     border: 1px dashed var(--tm-border-color);
@@ -16,18 +25,44 @@
     color: var(--tm-text-secondary);
 }
 
-.tm-submission-status-timeline__item {
+/* The continuous axis: one drawn line through every marker (pseudo-element on the list), not a
+   border segment per item. */
+.tm-submission-status-timeline__items {
+    position: relative;
     display: grid;
-    grid-template-columns: auto minmax(0, 1fr);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.tm-submission-status-timeline__items::before {
+    content: "";
+    position: absolute;
+    top: var(--tm-space-7);
+    bottom: var(--tm-space-7);
+    left: calc(var(--tm-space-7) / 2);
+    width: 1px;
+    background: var(--tm-border-color);
+}
+
+.tm-submission-status-timeline__item {
+    position: relative;
+    display: grid;
+    grid-template-columns: var(--tm-space-7) minmax(0, 1fr);
     gap: var(--tm-space-3);
     align-items: start;
-    padding: var(--tm-space-3);
-    border: 1px solid var(--tm-border-color);
-    border-radius: var(--tm-radius-md);
-    background: var(--tm-bg-surface);
+    padding: var(--tm-space-2) 0 var(--tm-space-3);
+    /* No card per item: items sit directly on the panel, separated by a hairline. */
+    border-bottom: 1px solid var(--tm-border-color);
+}
+
+.tm-submission-status-timeline__item:last-child {
+    border-bottom: 0;
 }
 
 .tm-submission-status-timeline__marker {
+    position: relative;
+    z-index: 1;
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -40,27 +75,38 @@
 
 .tm-submission-status-timeline__item--success .tm-submission-status-timeline__marker {
     background: var(--tm-color-success);
+    color: var(--tm-color-on-primary);
 }
 
 .tm-submission-status-timeline__item--danger .tm-submission-status-timeline__marker {
     background: var(--tm-color-danger);
+    color: var(--tm-color-on-primary);
 }
 
-.tm-submission-status-timeline__item--info .tm-submission-status-timeline__marker {
-    background: var(--tm-color-info);
+/* Neutral/informational events: the SOFT marker — a tinted disc with a coloured glyph, so a read
+   event never shouts louder than the completed/failed ones. */
+.tm-submission-status-timeline__marker--soft {
+    background: var(--tm-color-primary-subtle);
+    color: var(--tm-color-primary-text);
+}
+
+.tm-submission-status-timeline__item--info .tm-submission-status-timeline__marker--soft {
+    background: color-mix(in srgb, var(--tm-color-info) 12%, var(--tm-bg-surface));
+    color: var(--tm-color-info-text);
 }
 
 .tm-submission-status-timeline__body {
     display: grid;
-    gap: var(--tm-space-2);
+    gap: var(--tm-space-1);
     min-width: 0;
 }
 
 .tm-submission-status-timeline__header {
     display: flex;
+    flex-wrap: wrap;
     align-items: baseline;
     justify-content: space-between;
-    gap: var(--tm-space-3);
+    gap: var(--tm-space-1) var(--tm-space-3);
 }
 
 .tm-submission-status-timeline__title {
@@ -74,6 +120,11 @@
 .tm-submission-status-timeline__metadata {
     color: var(--tm-text-secondary);
     font-size: var(--tm-font-size-sm);
+}
+
+.tm-submission-status-timeline__recipient-prefix {
+    margin-right: var(--tm-space-1);
+    color: var(--tm-text-tertiary);
 }
 
 .tm-submission-status-timeline__metadata {
@@ -94,4 +145,21 @@
 
 .tm-submission-status-timeline__metadata dd {
     margin: 0;
+}
+
+/* A narrow panel drops the timestamp beside the title line and tightens the axis. */
+@container tm-submission-status-timeline (width < 640px) {
+    .tm-submission-status-timeline__items::before {
+        left: calc(var(--tm-space-6) / 2);
+    }
+
+    .tm-submission-status-timeline__item {
+        grid-template-columns: var(--tm-space-6) minmax(0, 1fr);
+        padding: var(--tm-space-2) 0;
+    }
+
+    .tm-submission-status-timeline__marker {
+        width: var(--tm-space-6);
+        height: var(--tm-space-6);
+    }
 }

@@ -1,5 +1,8 @@
 @namespace Tempo.Blazor.Components.Signing
 @using Tempo.Blazor.Abstractions.Models
+@using Tempo.Blazor.Components.Buttons
+@using Tempo.Blazor.Components.DataDisplay
+@using Tempo.Blazor.Components.Inputs
 
 <aside @attributes="AdditionalAttributes"
        class="@RootClass"
@@ -18,89 +21,83 @@
                 <p class="tm-signing-field-editor-panel__eyebrow">@Loc["TmSigning_FieldSettings"]</p>
                 <h2 class="tm-signing-field-editor-panel__title">@GetPanelTitle()</h2>
             </div>
-            <span class="tm-signing-field-editor-panel__type-badge">@GetFieldTypeLabel(_field.Type)</span>
+            <TmBadge Class="tm-signing-field-editor-panel__type-badge"
+                     Variant="BadgeVariant.Primary"
+                     BadgeStyle="BadgeStyle.Subtle"
+                     Pill="true">@GetFieldTypeLabel(_field.Type)</TmBadge>
         </header>
 
         <section class="tm-signing-field-editor-panel__section">
             <h3 class="tm-signing-field-editor-panel__section-title">@Loc["TmSigningFieldEditorPanel_Common"]</h3>
 
-            <label class="tm-signing-field-editor-panel__field">
-                <span class="tm-signing-field-editor-panel__label">@Loc["TmSigningFieldEditorPanel_Type"]</span>
-                <select class="tm-signing-field-editor-panel__type"
-                        value="@_field.Type.ToString()"
-                        disabled="@ReadOnly"
-                        @onchange="HandleTypeChangedAsync">
-                    @foreach (var type in Enum.GetValues<SigningFieldType>())
-                    {
-                        <option value="@type.ToString()">@GetFieldTypeLabel(type)</option>
-                    }
-                </select>
-            </label>
+            <TmSelect TValue="string"
+                      Class="tm-signing-field-editor-panel__field"
+                      Label="@Loc["TmSigningFieldEditorPanel_Type"]"
+                      Value="@_field.Type.ToString()"
+                      ValueChanged="HandleTypeValueChangedAsync"
+                      Disabled="@ReadOnly"
+                      SelectAttributes="@TypeSelectAttributes">
+                @foreach (var type in Enum.GetValues<SigningFieldType>())
+                {
+                    <option value="@type.ToString()">@GetFieldTypeLabel(type)</option>
+                }
+            </TmSelect>
 
-            <label class="tm-signing-field-editor-panel__field">
-                <span class="tm-signing-field-editor-panel__label">@Loc["TmSigningFieldEditorPanel_Name"]</span>
-                <input class="tm-signing-field-editor-panel__name"
-                       type="text"
-                       value="@_field.Name"
-                       disabled="@ReadOnly"
-                       @onchange="HandleNameChangedAsync" />
-            </label>
+            <TmTextInput Class="tm-signing-field-editor-panel__name"
+                         Label="@Loc["TmSigningFieldEditorPanel_Name"]"
+                         Value="@(_field.Name ?? string.Empty)"
+                         ValueChanged="HandleNameValueChangedAsync"
+                         Disabled="@ReadOnly" />
 
-            <label class="tm-signing-field-editor-panel__field">
-                <span class="tm-signing-field-editor-panel__label">@Loc["TmSigningFieldEditorPanel_TitleInput"]</span>
-                <input class="tm-signing-field-editor-panel__field-title-input"
-                       type="text"
-                       value="@_field.Title"
-                       disabled="@ReadOnly"
-                       @onchange="args => HandleTextPropertyChangedAsync(args, (field, value) => field.Title = value)" />
-            </label>
+            <TmTextInput Class="tm-signing-field-editor-panel__field-title-input"
+                         Label="@Loc["TmSigningFieldEditorPanel_TitleInput"]"
+                         Value="@(_field.Title ?? string.Empty)"
+                         ValueChanged="value => HandleTextValueChangedAsync(value, (field, text) => field.Title = text)"
+                         Disabled="@ReadOnly" />
 
-            <label class="tm-signing-field-editor-panel__field">
-                <span class="tm-signing-field-editor-panel__label">@Loc["TmSigningFieldEditorPanel_Description"]</span>
-                <textarea class="tm-signing-field-editor-panel__description"
-                          disabled="@ReadOnly"
-                          @onchange="args => HandleTextPropertyChangedAsync(args, (field, value) => field.Description = value)">@_field.Description</textarea>
-            </label>
+            <TmTextArea Label="@Loc["TmSigningFieldEditorPanel_Description"]"
+                        Value="@(_field.Description ?? string.Empty)"
+                        ValueChanged="value => HandleTextValueChangedAsync(value, (field, text) => field.Description = text)"
+                        Disabled="@ReadOnly"
+                        AdditionalAttributes="@DescriptionAttributes" />
 
-            <label class="tm-signing-field-editor-panel__field">
-                <span class="tm-signing-field-editor-panel__label">@Loc["TmSigningFieldEditorPanel_SubmitterRole"]</span>
-                <select class="tm-signing-field-editor-panel__submitter"
-                        value="@(_field.SubmitterUuid ?? string.Empty)"
-                        disabled="@ReadOnly"
-                        @onchange="HandleSubmitterChangedAsync">
+            <div class="tm-signing-field-editor-panel__role">
+                <span class="tm-signing-field-editor-panel__role-dot"
+                      style="@RoleDotStyle"
+                      aria-hidden="true"></span>
+                <TmSelect TValue="string"
+                          Class="tm-signing-field-editor-panel__field"
+                          Label="@Loc["TmSigningFieldEditorPanel_SubmitterRole"]"
+                          Value="@(_field.SubmitterUuid ?? string.Empty)"
+                          ValueChanged="HandleSubmitterValueChangedAsync"
+                          Disabled="@ReadOnly"
+                          SelectAttributes="@SubmitterSelectAttributes">
                     <option value="">@Loc["TmSigningFieldEditorPanel_NoRole"]</option>
                     @foreach (var role in SubmitterRoles)
                     {
                         <option value="@role.Uuid">@role.Name</option>
                     }
-                </select>
-            </label>
+                </TmSelect>
+            </div>
 
             <div class="tm-signing-field-editor-panel__toggles">
-                <label class="tm-signing-field-editor-panel__check">
-                    <input class="tm-signing-field-editor-panel__required"
-                           type="checkbox"
-                           checked="@_field.Required"
-                           disabled="@ReadOnly"
-                           @onchange="args => HandleBoolPropertyChangedAsync(args, (field, value) => field.Required = value)" />
-                    <span>@Loc["TmSigning_Required"]</span>
-                </label>
-                <label class="tm-signing-field-editor-panel__check">
-                    <input class="tm-signing-field-editor-panel__readonly"
-                           type="checkbox"
-                           checked="@_field.ReadOnly"
-                           disabled="@ReadOnly"
-                           @onchange="args => HandleBoolPropertyChangedAsync(args, (field, value) => field.ReadOnly = value)" />
-                    <span>@Loc["TmSigningFieldEditorPanel_ReadOnly"]</span>
-                </label>
-                <label class="tm-signing-field-editor-panel__check">
-                    <input class="tm-signing-field-editor-panel__prefillable"
-                           type="checkbox"
-                           checked="@_field.Prefillable"
-                           disabled="@ReadOnly"
-                           @onchange="args => HandleBoolPropertyChangedAsync(args, (field, value) => field.Prefillable = value)" />
-                    <span>@Loc["TmSigningFieldEditorPanel_Prefillable"]</span>
-                </label>
+                <TmCheckbox Class="tm-signing-field-editor-panel__check"
+                            Label="@Loc["TmSigning_Required"]"
+                            Value="@_field.Required"
+                            ValueChanged="value => HandleBoolValueChangedAsync(value, (field, flag) => field.Required = flag)"
+                            Disabled="@ReadOnly"
+                            InputAttributes="@RequiredInputAttributes" />
+                <TmCheckbox Class="tm-signing-field-editor-panel__check"
+                            Label="@Loc["TmSigningFieldEditorPanel_ReadOnly"]"
+                            Value="@_field.ReadOnly"
+                            ValueChanged="HandleReadOnlyToggleAsync"
+                            InputAttributes="@ReadOnlyInputAttributes" />
+                <TmCheckbox Class="tm-signing-field-editor-panel__check"
+                            Label="@Loc["TmSigningFieldEditorPanel_Prefillable"]"
+                            Value="@_field.Prefillable"
+                            ValueChanged="value => HandleBoolValueChangedAsync(value, (field, flag) => field.Prefillable = flag)"
+                            Disabled="@ReadOnly"
+                            InputAttributes="@PrefillableInputAttributes" />
             </div>
         </section>
 
@@ -108,97 +105,92 @@
         {
             <section class="tm-signing-field-editor-panel__section tm-signing-field-editor-panel__localization">
                 <div class="tm-signing-field-editor-panel__section-header">
-                    <h3 class="tm-signing-field-editor-panel__section-title">@Loc["TmSigningFieldEditorPanel_Localization"]</h3>
-                    <label class="tm-signing-field-editor-panel__field tm-signing-field-editor-panel__localization-language">
-                        <span class="tm-signing-field-editor-panel__label">@Loc["TmSigningFieldEditorPanel_LocalizationCulture"]</span>
-                        <select class="tm-signing-field-editor-panel__localization-culture"
-                                value="@ActiveLocalizationCulture"
-                                disabled="@ReadOnly"
-                                @onchange="HandleLocalizationCultureChangedAsync">
-                            @foreach (var culture in LocalizationCultures)
-                            {
-                                <option value="@culture">@GetCultureLabel(culture)</option>
-                            }
-                        </select>
-                    </label>
+                    <button type="button"
+                            class="tm-signing-field-editor-panel__section-toggle"
+                            data-section="localization"
+                            aria-expanded="@BoolText(IsSectionExpanded("localization"))"
+                            aria-controls="tm-signing-field-editor-section-localization"
+                            disabled="@ReadOnly"
+                            @onclick="@(() => ToggleSection("localization"))">
+                        <TmIcon Name="@(IsSectionExpanded("localization") ? "chevron-down" : "chevron-right")" Size="IconSize.Xs" />
+                        @Loc["TmSigningFieldEditorPanel_Localization"]
+                    </button>
+                    <TmSelect TValue="string"
+                              Class="tm-signing-field-editor-panel__field tm-signing-field-editor-panel__localization-language"
+                              Label="@Loc["TmSigningFieldEditorPanel_LocalizationCulture"]"
+                              Value="@ActiveLocalizationCulture"
+                              ValueChanged="HandleLocalizationCultureValueChangedAsync"
+                              Disabled="@ReadOnly"
+                              SelectAttributes="@LocalizationCultureAttributes">
+                        @foreach (var culture in LocalizationCultures)
+                        {
+                            <option value="@culture">@GetCultureLabel(culture)</option>
+                        }
+                    </TmSelect>
                 </div>
 
-                @if (!string.IsNullOrWhiteSpace(FallbackCulture))
+                @if (IsSectionExpanded("localization"))
                 {
-                    <p class="tm-signing-field-editor-panel__template-language">
-                        @Loc["TmSigningFieldEditorPanel_TemplateLanguage"]: @GetCultureLabel(FallbackCulture!)
-                    </p>
-                }
-
-                @if (MissingLocalizationCount > 0)
-                {
-                    <div class="tm-signing-field-editor-panel__missing-localization"
-                         role="status"
-                         aria-live="polite">
-                        <TmIcon Name="alert-triangle" Size="IconSize.Xs" />
-                        <span>@Loc["TmSigningFieldEditorPanel_MissingLocalizationWarning", MissingLocalizationCount, ActiveLocalizationCulture]</span>
-                    </div>
-                }
-
-                <label class="tm-signing-field-editor-panel__field">
-                    <span class="tm-signing-field-editor-panel__label">@Loc["TmSigningFieldEditorPanel_LocalizedLabel"]</span>
-                    <input class="tm-signing-field-editor-panel__localized-label"
-                           type="text"
-                           value="@GetLocalizedText(_field.Labels)"
-                           disabled="@ReadOnly"
-                           @onchange="args => HandleLocalizedTextChangedAsync(args, field => field.Labels)" />
-                </label>
-
-                <label class="tm-signing-field-editor-panel__field">
-                    <span class="tm-signing-field-editor-panel__label">@Loc["TmSigningFieldEditorPanel_LocalizedTitle"]</span>
-                    <input class="tm-signing-field-editor-panel__localized-title"
-                           type="text"
-                           value="@GetLocalizedText(_field.Titles)"
-                           disabled="@ReadOnly"
-                           @onchange="args => HandleLocalizedTextChangedAsync(args, field => field.Titles)" />
-                </label>
-
-                <label class="tm-signing-field-editor-panel__field">
-                    <span class="tm-signing-field-editor-panel__label">@Loc["TmSigningFieldEditorPanel_LocalizedDescription"]</span>
-                    <textarea class="tm-signing-field-editor-panel__localized-description"
-                              disabled="@ReadOnly"
-                              @onchange="args => HandleLocalizedTextChangedAsync(args, field => field.Descriptions)">@GetLocalizedText(_field.Descriptions)</textarea>
-                </label>
-
-                <label class="tm-signing-field-editor-panel__field">
-                    <span class="tm-signing-field-editor-panel__label">@Loc["TmSigningFieldEditorPanel_LocalizedPlaceholder"]</span>
-                    <input class="tm-signing-field-editor-panel__localized-placeholder"
-                           type="text"
-                           value="@GetLocalizedText(_field.Placeholders)"
-                           disabled="@ReadOnly"
-                           @onchange="args => HandleLocalizedTextChangedAsync(args, field => field.Placeholders)" />
-                </label>
-
-                <label class="tm-signing-field-editor-panel__field">
-                    <span class="tm-signing-field-editor-panel__label">@Loc["TmSigningFieldEditorPanel_LocalizedValidationMessage"]</span>
-                    <input class="tm-signing-field-editor-panel__localized-validation-message"
-                           type="text"
-                           value="@GetLocalizedText(_field.Validation?.Messages)"
-                           disabled="@ReadOnly"
-                           @onchange="HandleLocalizedValidationMessageChangedAsync" />
-                </label>
-
-                @if (IsChoiceField)
-                {
-                    <div class="tm-signing-field-editor-panel__localized-options">
-                        <p class="tm-signing-field-editor-panel__localized-options-title">@Loc["TmSigningFieldEditorPanel_LocalizedOptionLabels"]</p>
-                        @foreach (var option in _field.Options)
+                    <div id="tm-signing-field-editor-section-localization">
+                        @if (!string.IsNullOrWhiteSpace(FallbackCulture))
                         {
-                            var optionUuid = option.Uuid;
-                            <label class="tm-signing-field-editor-panel__field"
-                                   data-localized-option-uuid="@option.Uuid">
-                                <span class="tm-signing-field-editor-panel__label">@option.Value</span>
-                                <input class="tm-signing-field-editor-panel__localized-option-label"
-                                       type="text"
-                                       value="@GetLocalizedText(option.Labels)"
-                                       disabled="@ReadOnly"
-                                       @onchange="args => HandleLocalizedOptionLabelChangedAsync(optionUuid, args)" />
-                            </label>
+                            <p class="tm-signing-field-editor-panel__template-language">
+                                @Loc["TmSigningFieldEditorPanel_TemplateLanguage"]: @GetCultureLabel(FallbackCulture!)
+                            </p>
+                        }
+
+                        @if (MissingLocalizationCount > 0)
+                        {
+                            <div class="tm-signing-field-editor-panel__missing-localization"
+                                 role="status"
+                                 aria-live="polite">
+                                <TmIcon Name="alert-triangle" Size="IconSize.Xs" />
+                                <span>@Loc["TmSigningFieldEditorPanel_MissingLocalizationWarning", MissingLocalizationCount, ActiveLocalizationCulture]</span>
+                            </div>
+                        }
+
+                        <TmTextInput Class="tm-signing-field-editor-panel__localized-label"
+                                     Label="@Loc["TmSigningFieldEditorPanel_LocalizedLabel"]"
+                                     Value="@GetLocalizedText(_field.Labels)"
+                                     ValueChanged="value => HandleLocalizedTextValueChangedAsync(value, field => field.Labels)"
+                                     Disabled="@ReadOnly" />
+                        <TmTextInput Class="tm-signing-field-editor-panel__localized-title"
+                                     Label="@Loc["TmSigningFieldEditorPanel_LocalizedTitle"]"
+                                     Value="@GetLocalizedText(_field.Titles)"
+                                     ValueChanged="value => HandleLocalizedTextValueChangedAsync(value, field => field.Titles)"
+                                     Disabled="@ReadOnly" />
+                        <TmTextArea Label="@Loc["TmSigningFieldEditorPanel_LocalizedDescription"]"
+                                    Value="@GetLocalizedText(_field.Descriptions)"
+                                    ValueChanged="value => HandleLocalizedTextValueChangedAsync(value, field => field.Descriptions)"
+                                    Disabled="@ReadOnly"
+                                    AdditionalAttributes="@LocalizedDescriptionAttributes" />
+                        <TmTextInput Class="tm-signing-field-editor-panel__localized-placeholder"
+                                     Label="@Loc["TmSigningFieldEditorPanel_LocalizedPlaceholder"]"
+                                     Value="@GetLocalizedText(_field.Placeholders)"
+                                     ValueChanged="value => HandleLocalizedTextValueChangedAsync(value, field => field.Placeholders)"
+                                     Disabled="@ReadOnly" />
+                        <TmTextInput Class="tm-signing-field-editor-panel__localized-validation-message"
+                                     Label="@Loc["TmSigningFieldEditorPanel_LocalizedValidationMessage"]"
+                                     Value="@GetLocalizedText(_field.Validation?.Messages)"
+                                     ValueChanged="HandleLocalizedValidationMessageValueChangedAsync"
+                                     Disabled="@ReadOnly" />
+
+                        @if (IsChoiceField)
+                        {
+                            <div class="tm-signing-field-editor-panel__localized-options">
+                                <p class="tm-signing-field-editor-panel__localized-options-title">@Loc["TmSigningFieldEditorPanel_LocalizedOptionLabels"]</p>
+                                @foreach (var option in _field.Options)
+                                {
+                                    var optionUuid = option.Uuid;
+                                    <div class="tm-signing-field-editor-panel__field" data-localized-option-uuid="@option.Uuid">
+                                        <TmTextInput Class="tm-signing-field-editor-panel__localized-option-label"
+                                                     Label="@option.Value"
+                                                     Value="@GetLocalizedText(option.Labels)"
+                                                     ValueChanged="value => HandleLocalizedOptionLabelValueChangedAsync(optionUuid, value)"
+                                                     Disabled="@ReadOnly" />
+                                    </div>
+                                }
+                            </div>
                         }
                     </div>
                 }
@@ -210,295 +202,337 @@
             <section class="tm-signing-field-editor-panel__section tm-signing-field-editor-panel__options">
                 <div class="tm-signing-field-editor-panel__section-header">
                     <h3 class="tm-signing-field-editor-panel__section-title">@Loc["TmSigningFieldEditorPanel_Options"]</h3>
-                    <button type="button"
-                            class="tm-signing-field-editor-panel__add-option"
-                            disabled="@ReadOnly"
-                            @onclick="AddOptionAsync">
+                    <TmButton Class="tm-signing-field-editor-panel__add-option"
+                              Variant="ButtonVariant.Ghost"
+                              Disabled="@ReadOnly"
+                              OnClick="AddOptionAsync">
                         <TmIcon Name="plus" Size="IconSize.Xs" />
                         @Loc["TmSigningFieldEditorPanel_AddOption"]
-                    </button>
+                    </TmButton>
                 </div>
 
                 @foreach (var option in _field.Options)
                 {
                     var optionUuid = option.Uuid;
                     <div class="tm-signing-field-editor-panel__option-row" data-option-uuid="@option.Uuid">
-                        <input class="tm-signing-field-editor-panel__option-value"
-                               type="text"
-                               value="@option.Value"
-                               disabled="@ReadOnly"
-                               @onchange="args => UpdateOptionValueAsync(optionUuid, args)" />
-                        <button type="button"
-                                class="tm-signing-field-editor-panel__move-option-up"
-                                disabled="@ReadOnly"
-                                aria-label="@Loc["TmSigningFieldEditorPanel_MoveOptionUp"]"
-                                @onclick="() => MoveOptionAsync(optionUuid, -1)">
+                        <TmTextInput Class="tm-signing-field-editor-panel__option-value"
+                                     Value="@(option.Value ?? string.Empty)"
+                                     ValueChanged="value => UpdateOptionValueFromTextAsync(optionUuid, value)"
+                                     Disabled="@ReadOnly" />
+                        <TmButton Class="tm-signing-field-editor-panel__move-option-up"
+                                  Variant="ButtonVariant.Ghost"
+                                  Disabled="@ReadOnly"
+                                  AriaLabel="@Loc["TmSigningFieldEditorPanel_MoveOptionUp"]"
+                                  OnClick="() => MoveOptionAsync(optionUuid, -1)">
                             <TmIcon Name="chevron-up" Size="IconSize.Xs" />
-                        </button>
-                        <button type="button"
-                                class="tm-signing-field-editor-panel__move-option-down"
-                                disabled="@ReadOnly"
-                                aria-label="@Loc["TmSigningFieldEditorPanel_MoveOptionDown"]"
-                                @onclick="() => MoveOptionAsync(optionUuid, 1)">
+                        </TmButton>
+                        <TmButton Class="tm-signing-field-editor-panel__move-option-down"
+                                  Variant="ButtonVariant.Ghost"
+                                  Disabled="@ReadOnly"
+                                  AriaLabel="@Loc["TmSigningFieldEditorPanel_MoveOptionDown"]"
+                                  OnClick="() => MoveOptionAsync(optionUuid, 1)">
                             <TmIcon Name="chevron-down" Size="IconSize.Xs" />
-                        </button>
+                        </TmButton>
                         @if (_field.Type is SigningFieldType.Radio or SigningFieldType.Multiple)
                         {
-                            <button type="button"
-                                    class="tm-signing-field-editor-panel__map-option"
-                                    disabled="@ReadOnly"
-                                    @onclick="() => RequestOptionAreaMappingAsync(option)">
+                            <TmButton Class="tm-signing-field-editor-panel__map-option"
+                                      Variant="ButtonVariant.Ghost"
+                                      Disabled="@ReadOnly"
+                                      OnClick="() => RequestOptionAreaMappingAsync(option)">
                                 <TmIcon Name="map-pin" Size="IconSize.Xs" />
                                 @Loc["TmSigningFieldEditorPanel_MapOption"]
-                            </button>
+                            </TmButton>
                         }
-                        <button type="button"
-                                class="tm-signing-field-editor-panel__remove-option"
-                                disabled="@ReadOnly"
-                                aria-label="@Loc["TmSigningFieldEditorPanel_RemoveOption"]"
-                                @onclick="() => RemoveOptionAsync(optionUuid)">
+                        <TmButton Class="tm-signing-field-editor-panel__remove-option"
+                                  Variant="ButtonVariant.Ghost"
+                                  Disabled="@ReadOnly"
+                                  AriaLabel="@Loc["TmSigningFieldEditorPanel_RemoveOption"]"
+                                  OnClick="() => RemoveOptionAsync(optionUuid)">
                             <TmIcon Name="trash-2" Size="IconSize.Xs" />
-                        </button>
+                        </TmButton>
                     </div>
                 }
 
-                <label class="tm-signing-field-editor-panel__field">
-                    <span class="tm-signing-field-editor-panel__label">@Loc["TmSigningFieldEditorPanel_DefaultValue"]</span>
-                    <select class="tm-signing-field-editor-panel__default-option"
-                            value="@(_field.DefaultValue?.ToString() ?? string.Empty)"
-                            disabled="@ReadOnly"
-                            @onchange="HandleDefaultValueChangedAsync">
-                        <option value="">@Loc["TmSigningFieldEditorPanel_NoDefault"]</option>
-                        @foreach (var option in _field.Options)
-                        {
-                            <option value="@option.Uuid">@option.Value</option>
-                        }
-                    </select>
-                </label>
+                <TmSelect TValue="string"
+                          Class="tm-signing-field-editor-panel__field"
+                          Label="@Loc["TmSigningFieldEditorPanel_DefaultValue"]"
+                          Value="@(_field.DefaultValue?.ToString() ?? string.Empty)"
+                          ValueChanged="HandleDefaultValueFromTextAsync"
+                          Disabled="@ReadOnly"
+                          SelectAttributes="@DefaultOptionAttributes">
+                    <option value="">@Loc["TmSigningFieldEditorPanel_NoDefault"]</option>
+                    @foreach (var option in _field.Options)
+                    {
+                        <option value="@option.Uuid">@option.Value</option>
+                    }
+                </TmSelect>
             </section>
         }
 
         <section class="tm-signing-field-editor-panel__section">
-            <h3 class="tm-signing-field-editor-panel__section-title">@Loc["TmSigningFieldEditorPanel_Validation"]</h3>
-
-            @if (IsTextLikeField)
-            {
-                <label class="tm-signing-field-editor-panel__field">
-                    <span class="tm-signing-field-editor-panel__label">@Loc["TmSigningFieldEditorPanel_ValidationMode"]</span>
-                    <select class="tm-signing-field-editor-panel__validation-mode"
-                            value="@GetValidationMode()"
-                            disabled="@ReadOnly"
-                            @onchange="HandleValidationModeChangedAsync">
-                        <option value="None">@Loc["TmSigningFieldEditorPanel_None"]</option>
-                        <option value="Regex">@Loc["TmSigningFieldEditorPanel_Regex"]</option>
-                    </select>
-                </label>
-
-                <label class="tm-signing-field-editor-panel__field">
-                    <span class="tm-signing-field-editor-panel__label">@Loc["TmSigningFieldEditorPanel_Pattern"]</span>
-                    <input class="tm-signing-field-editor-panel__validation-pattern"
-                           type="text"
-                           value="@_field.Validation?.Pattern"
-                           disabled="@ReadOnly"
-                           @onchange="args => HandleValidationValueChangedAsync(args, (validation, value) => validation.Pattern = value)" />
-                </label>
-            }
-
-            @if (IsTextLikeField || IsNumberField || IsDateField)
-            {
-                <div class="tm-signing-field-editor-panel__grid">
-                    <label class="tm-signing-field-editor-panel__field">
-                        <span class="tm-signing-field-editor-panel__label">@Loc["TmSigningFieldEditorPanel_Min"]</span>
-                        <input class="tm-signing-field-editor-panel__validation-min"
-                               type="text"
-                               value="@_field.Validation?.Min"
-                               disabled="@ReadOnly"
-                               @onchange="args => HandleValidationValueChangedAsync(args, (validation, value) => validation.Min = value)" />
-                    </label>
-                    <label class="tm-signing-field-editor-panel__field">
-                        <span class="tm-signing-field-editor-panel__label">@Loc["TmSigningFieldEditorPanel_Max"]</span>
-                        <input class="tm-signing-field-editor-panel__validation-max"
-                               type="text"
-                               value="@_field.Validation?.Max"
-                               disabled="@ReadOnly"
-                               @onchange="args => HandleValidationValueChangedAsync(args, (validation, value) => validation.Max = value)" />
-                    </label>
-                </div>
-            }
-
-            @if (IsNumberField)
-            {
-                <label class="tm-signing-field-editor-panel__field">
-                    <span class="tm-signing-field-editor-panel__label">@Loc["TmSigningFieldEditorPanel_Step"]</span>
-                    <input class="tm-signing-field-editor-panel__validation-step"
-                           type="text"
-                           value="@_field.Validation?.Step"
-                           disabled="@ReadOnly"
-                           @onchange="args => HandleValidationValueChangedAsync(args, (validation, value) => validation.Step = value)" />
-                </label>
-            }
-
-            @if (IsDateField)
-            {
-                <label class="tm-signing-field-editor-panel__field">
-                    <span class="tm-signing-field-editor-panel__label">@Loc["TmSigningFieldEditorPanel_DateFormat"]</span>
-                    <input class="tm-signing-field-editor-panel__date-format"
-                           type="text"
-                           value="@_field.Preferences.Format"
-                           disabled="@ReadOnly"
-                           @onchange="args => HandlePreferenceTextChangedAsync(args, (preferences, value) => preferences.Format = value)" />
-                </label>
-            }
-
-            <label class="tm-signing-field-editor-panel__field">
-                <span class="tm-signing-field-editor-panel__label">@Loc["TmSigningFieldEditorPanel_ValidationMessage"]</span>
-                <input class="tm-signing-field-editor-panel__validation-message"
-                       type="text"
-                       value="@_field.Validation?.Message"
-                       disabled="@ReadOnly"
-                       @onchange="args => HandleValidationValueChangedAsync(args, (validation, value) => validation.Message = value)" />
-            </label>
-        </section>
-
-        <section class="tm-signing-field-editor-panel__section">
-            <h3 class="tm-signing-field-editor-panel__section-title">@Loc["TmSigningFieldEditorPanel_Preferences"]</h3>
-
-            @if (IsSignatureField)
-            {
-                <label class="tm-signing-field-editor-panel__field">
-                    <span class="tm-signing-field-editor-panel__label">@Loc["TmSigningFieldEditorPanel_SignatureFormat"]</span>
-                    <select class="tm-signing-field-editor-panel__signature-format"
-                            value="@(_field.Preferences.Format ?? string.Empty)"
-                            disabled="@ReadOnly"
-                            @onchange="args => HandlePreferenceTextChangedAsync(args, (preferences, value) => preferences.Format = value)">
-                        <option value="">@Loc["TmSigning_Draw"]</option>
-                        <option value="typed">@Loc["TmSigning_Type"]</option>
-                        <option value="upload">@Loc["TmSigning_Upload"]</option>
-                    </select>
-                </label>
-                <label class="tm-signing-field-editor-panel__check">
-                    <input class="tm-signing-field-editor-panel__signature-id"
-                           type="checkbox"
-                           checked="@(_field.Preferences.WithSignatureId == true)"
-                           disabled="@ReadOnly"
-                           @onchange="args => HandlePreferenceBoolChangedAsync(args, (preferences, value) => preferences.WithSignatureId = value)" />
-                    <span>@Loc["TmSigningFieldEditorPanel_WithSignatureId"]</span>
-                </label>
-            }
-
-            @if (IsStampField)
-            {
-                <label class="tm-signing-field-editor-panel__check">
-                    <input class="tm-signing-field-editor-panel__stamp-logo"
-                           type="checkbox"
-                           checked="@(_field.Preferences.WithLogo == true)"
-                           disabled="@ReadOnly"
-                           @onchange="args => HandlePreferenceBoolChangedAsync(args, (preferences, value) => preferences.WithLogo = value)" />
-                    <span>@Loc["TmSigningFieldEditorPanel_WithLogo"]</span>
-                </label>
-            }
-
-            <div class="tm-signing-field-editor-panel__grid">
-                <label class="tm-signing-field-editor-panel__field">
-                    <span class="tm-signing-field-editor-panel__label">@Loc["TmSigningFieldEditorPanel_FontFamily"]</span>
-                    <select class="tm-signing-field-editor-panel__font-family"
-                            value="@(_field.Preferences.FontFamily ?? string.Empty)"
-                            disabled="@ReadOnly"
-                            @onchange="args => HandlePreferenceTextChangedAsync(args, (preferences, value) => preferences.FontFamily = value)">
-                        <option value="">@Loc["TmSigningFieldEditorPanel_Default"]</option>
-                        <option value="sans">@Loc["TmSigningFieldEditorPanel_FontSans"]</option>
-                        <option value="serif">@Loc["TmSigningFieldEditorPanel_FontSerif"]</option>
-                        <option value="mono">@Loc["TmSigningFieldEditorPanel_FontMono"]</option>
-                    </select>
-                </label>
-                <label class="tm-signing-field-editor-panel__field">
-                    <span class="tm-signing-field-editor-panel__label">@Loc["TmSigningFieldEditorPanel_FontSize"]</span>
-                    <input class="tm-signing-field-editor-panel__font-size"
-                           type="number"
-                           value="@_field.Preferences.FontSize"
-                           disabled="@ReadOnly"
-                           @onchange="HandleFontSizeChangedAsync" />
-                </label>
-            </div>
-
-            <div class="tm-signing-field-editor-panel__grid">
-                <label class="tm-signing-field-editor-panel__field">
-                    <span class="tm-signing-field-editor-panel__label">@Loc["TmSigningFieldEditorPanel_Align"]</span>
-                    <select class="tm-signing-field-editor-panel__align"
-                            value="@(_field.Preferences.Align ?? string.Empty)"
-                            disabled="@ReadOnly"
-                            @onchange="args => HandlePreferenceTextChangedAsync(args, (preferences, value) => preferences.Align = value)">
-                        <option value="">@Loc["TmSigningFieldEditorPanel_Default"]</option>
-                        <option value="left">@Loc["TmSigningFieldEditorPanel_Left"]</option>
-                        <option value="center">@Loc["TmSigningFieldEditorPanel_Center"]</option>
-                        <option value="right">@Loc["TmSigningFieldEditorPanel_Right"]</option>
-                    </select>
-                </label>
-                <label class="tm-signing-field-editor-panel__field">
-                    <span class="tm-signing-field-editor-panel__label">@Loc["TmSigningFieldEditorPanel_Color"]</span>
-                    <input class="tm-signing-field-editor-panel__color"
-                           type="color"
-                           value="@ColorInputValue"
-                           disabled="@ReadOnly"
-                           @onchange="args => HandlePreferenceTextChangedAsync(args, (preferences, value) => preferences.Color = value)" />
-                </label>
-            </div>
-
             <button type="button"
-                    class="tm-signing-field-editor-panel__copy-to-pages"
+                    class="tm-signing-field-editor-panel__section-toggle"
+                    data-section="validation"
+                    aria-expanded="@BoolText(IsSectionExpanded("validation"))"
+                    aria-controls="tm-signing-field-editor-section-validation"
                     disabled="@ReadOnly"
-                    @onclick="CopyToAllPagesAsync">
-                <TmIcon Name="copy" Size="IconSize.Xs" />
-                @Loc["TmSigningFieldEditorPanel_CopyToAllPages"]
+                    @onclick="@(() => ToggleSection("validation"))">
+                <TmIcon Name="@(IsSectionExpanded("validation") ? "chevron-down" : "chevron-right")" Size="IconSize.Xs" />
+                @Loc["TmSigningFieldEditorPanel_Validation"]
             </button>
+
+            @if (IsSectionExpanded("validation"))
+            {
+                <div id="tm-signing-field-editor-section-validation">
+                    @if (IsTextLikeField)
+                    {
+                        <TmSelect TValue="string"
+                                  Class="tm-signing-field-editor-panel__field"
+                                  Label="@Loc["TmSigningFieldEditorPanel_ValidationMode"]"
+                                  Value="@GetValidationMode()"
+                                  ValueChanged="HandleValidationModeValueChangedAsync"
+                                  Disabled="@ReadOnly"
+                                  SelectAttributes="@ValidationModeAttributes">
+                            <option value="None">@Loc["TmSigningFieldEditorPanel_None"]</option>
+                            <option value="Regex">@Loc["TmSigningFieldEditorPanel_Regex"]</option>
+                        </TmSelect>
+                        <TmTextInput Class="tm-signing-field-editor-panel__validation-pattern"
+                                     Label="@Loc["TmSigningFieldEditorPanel_Pattern"]"
+                                     Value="@(_field.Validation?.Pattern ?? string.Empty)"
+                                     ValueChanged="value => HandleValidationTextChangedAsync(value, (validation, text) => validation.Pattern = text)"
+                                     Disabled="@ReadOnly" />
+                    }
+
+                    @if (IsTextLikeField || IsNumberField || IsDateField)
+                    {
+                        <div class="tm-signing-field-editor-panel__grid">
+                            <TmTextInput Class="tm-signing-field-editor-panel__validation-min"
+                                         Label="@Loc["TmSigningFieldEditorPanel_Min"]"
+                                         Value="@(_field.Validation?.Min ?? string.Empty)"
+                                         ValueChanged="value => HandleValidationTextChangedAsync(value, (validation, text) => validation.Min = text)"
+                                         Disabled="@ReadOnly" />
+                            <TmTextInput Class="tm-signing-field-editor-panel__validation-max"
+                                         Label="@Loc["TmSigningFieldEditorPanel_Max"]"
+                                         Value="@(_field.Validation?.Max ?? string.Empty)"
+                                         ValueChanged="value => HandleValidationTextChangedAsync(value, (validation, text) => validation.Max = text)"
+                                         Disabled="@ReadOnly" />
+                        </div>
+                    }
+
+                    @if (IsNumberField)
+                    {
+                        <TmTextInput Class="tm-signing-field-editor-panel__validation-step"
+                                     Label="@Loc["TmSigningFieldEditorPanel_Step"]"
+                                     Value="@(_field.Validation?.Step ?? string.Empty)"
+                                     ValueChanged="value => HandleValidationTextChangedAsync(value, (validation, text) => validation.Step = text)"
+                                     Disabled="@ReadOnly" />
+                    }
+
+                    @if (IsDateField)
+                    {
+                        <TmTextInput Class="tm-signing-field-editor-panel__date-format"
+                                     Label="@Loc["TmSigningFieldEditorPanel_DateFormat"]"
+                                     Value="@(_field.Preferences.Format ?? string.Empty)"
+                                     ValueChanged="value => HandlePreferenceTextValueChangedAsync(value, (preferences, text) => preferences.Format = text)"
+                                     Disabled="@ReadOnly" />
+                    }
+
+                    <TmTextInput Class="tm-signing-field-editor-panel__validation-message"
+                                 Label="@Loc["TmSigningFieldEditorPanel_ValidationMessage"]"
+                                 Value="@(_field.Validation?.Message ?? string.Empty)"
+                                 ValueChanged="value => HandleValidationTextChangedAsync(value, (validation, text) => validation.Message = text)"
+                                 Disabled="@ReadOnly" />
+                </div>
+            }
         </section>
 
         <section class="tm-signing-field-editor-panel__section">
-            <h3 class="tm-signing-field-editor-panel__section-title">@Loc["TmSigningFieldEditorPanel_Rules"]</h3>
-            <div class="tm-signing-field-editor-panel__actions">
-                <button type="button"
-                        class="tm-signing-field-editor-panel__open-conditions"
-                        disabled="@ReadOnly"
-                        @onclick="ToggleConditions">
-                    <TmIcon Name="filter" Size="IconSize.Xs" />
-                    @Loc["TmSigning_Condition"]
-                </button>
-                @if (CanEditFormula)
-                {
-                    <button type="button"
-                            class="tm-signing-field-editor-panel__open-formula"
-                            disabled="@ReadOnly"
-                            @onclick="ToggleFormula">
-                        <TmIcon Name="calculator" Size="IconSize.Xs" />
-                        @Loc["TmSigning_Formula"]
-                    </button>
-                }
-            </div>
+            <button type="button"
+                    class="tm-signing-field-editor-panel__section-toggle"
+                    data-section="preferences"
+                    aria-expanded="@BoolText(IsSectionExpanded("preferences"))"
+                    aria-controls="tm-signing-field-editor-section-preferences"
+                    disabled="@ReadOnly"
+                    @onclick="@(() => ToggleSection("preferences"))">
+                <TmIcon Name="@(IsSectionExpanded("preferences") ? "chevron-down" : "chevron-right")" Size="IconSize.Xs" />
+                @Loc["TmSigningFieldEditorPanel_Preferences"]
+            </button>
 
-            @if (_showConditions)
+            @if (IsSectionExpanded("preferences"))
             {
-                <div class="tm-signing-field-editor-panel__condition-builder">
-                    <TmConditionBuilder Fields="Fields"
-                                        CurrentFieldUuid="@_field.Uuid"
-                                        Conditions="_field.Conditions"
-                                        ConditionsChanged="HandleConditionsChangedAsync"
-                                        Culture="@Culture"
-                                        FallbackCulture="@FallbackCulture"
-                                        Disabled="@ReadOnly" />
-                </div>
-            }
+                <div id="tm-signing-field-editor-section-preferences">
+                    @if (IsSignatureField)
+                    {
+                        <TmRadioGroup T="string"
+                                      Class="tm-signing-field-editor-panel__signature-format"
+                                      Label="@Loc["TmSigningFieldEditorPanel_SignatureFormat"]"
+                                      Options="@SignatureFormatOptions"
+                                      Value="@(_field.Preferences.Format ?? string.Empty)"
+                                      ValueChanged="HandleSignatureFormatChangedAsync"
+                                      Disabled="@ReadOnly"
+                                      Layout="RadioLayout.Horizontal" />
+                        <TmCheckbox Class="tm-signing-field-editor-panel__check"
+                                    Label="@Loc["TmSigningFieldEditorPanel_WithSignatureId"]"
+                                    Value="@(_field.Preferences.WithSignatureId == true)"
+                                    ValueChanged="value => HandlePreferenceBoolValueChangedAsync(value, (preferences, flag) => preferences.WithSignatureId = flag)"
+                                    Disabled="@ReadOnly"
+                                    InputAttributes="@SignatureIdAttributes" />
+                    }
 
-            @if (_showFormula && CanEditFormula)
-            {
-                <div class="tm-signing-field-editor-panel__formula-builder">
-                    <TmFormulaBuilder Field="_field"
-                                      Fields="Fields"
-                                      Culture="@Culture"
-                                      FallbackCulture="@FallbackCulture"
-                                      Saved="HandleFormulaSavedAsync"
-                                      Disabled="@ReadOnly" />
+                    @if (IsStampField)
+                    {
+                        <TmCheckbox Class="tm-signing-field-editor-panel__check"
+                                    Label="@Loc["TmSigningFieldEditorPanel_WithLogo"]"
+                                    Value="@(_field.Preferences.WithLogo == true)"
+                                    ValueChanged="value => HandlePreferenceBoolValueChangedAsync(value, (preferences, flag) => preferences.WithLogo = flag)"
+                                    Disabled="@ReadOnly"
+                                    InputAttributes="@StampLogoAttributes" />
+                    }
+
+                    <div class="tm-signing-field-editor-panel__grid">
+                        <TmSelect TValue="string"
+                                  Class="tm-signing-field-editor-panel__field"
+                                  Label="@Loc["TmSigningFieldEditorPanel_FontFamily"]"
+                                  Value="@(_field.Preferences.FontFamily ?? string.Empty)"
+                                  ValueChanged="value => HandlePreferenceTextValueChangedAsync(value, (preferences, text) => preferences.FontFamily = text)"
+                                  Disabled="@ReadOnly"
+                                  SelectAttributes="@FontFamilyAttributes">
+                            <option value="">@Loc["TmSigningFieldEditorPanel_Default"]</option>
+                            <option value="sans">@Loc["TmSigningFieldEditorPanel_FontSans"]</option>
+                            <option value="serif">@Loc["TmSigningFieldEditorPanel_FontSerif"]</option>
+                            <option value="mono">@Loc["TmSigningFieldEditorPanel_FontMono"]</option>
+                        </TmSelect>
+                        <TmNumberInput Class="tm-signing-field-editor-panel__field"
+                                       Label="@Loc["TmSigningFieldEditorPanel_FontSize"]"
+                                       Value="@FontSizeValue"
+                                       ValueChanged="HandleFontSizeValueChangedAsync"
+                                       Disabled="@ReadOnly"
+                                       ShowButtons="false"
+                                       AdditionalAttributes="@FontSizeAttributes" />
+                    </div>
+
+                    <div class="tm-signing-field-editor-panel__grid">
+                        <TmSelect TValue="string"
+                                  Class="tm-signing-field-editor-panel__field"
+                                  Label="@Loc["TmSigningFieldEditorPanel_Align"]"
+                                  Value="@(_field.Preferences.Align ?? string.Empty)"
+                                  ValueChanged="value => HandlePreferenceTextValueChangedAsync(value, (preferences, text) => preferences.Align = text)"
+                                  Disabled="@ReadOnly"
+                                  SelectAttributes="@AlignAttributes">
+                            <option value="">@Loc["TmSigningFieldEditorPanel_Default"]</option>
+                            <option value="left">@Loc["TmSigningFieldEditorPanel_Left"]</option>
+                            <option value="center">@Loc["TmSigningFieldEditorPanel_Center"]</option>
+                            <option value="right">@Loc["TmSigningFieldEditorPanel_Right"]</option>
+                        </TmSelect>
+                        <label class="tm-signing-field-editor-panel__field">
+                            <span class="tm-signing-field-editor-panel__label">@Loc["TmSigningFieldEditorPanel_Color"]</span>
+                            <input class="tm-signing-field-editor-panel__color"
+                                   type="color"
+                                   value="@ColorInputValue"
+                                   disabled="@ReadOnly"
+                                   @onchange="args => HandlePreferenceTextChangedAsync(args, (preferences, value) => preferences.Color = value)" />
+                        </label>
+                    </div>
+
+                    <TmButton Class="tm-signing-field-editor-panel__copy-to-pages"
+                              Variant="ButtonVariant.Secondary"
+                              Disabled="@ReadOnly"
+                              OnClick="CopyToAllPagesAsync">
+                        <TmIcon Name="copy" Size="IconSize.Xs" />
+                        @Loc["TmSigningFieldEditorPanel_CopyToAllPages"]
+                    </TmButton>
                 </div>
             }
         </section>
+
+        <section class="tm-signing-field-editor-panel__section">
+            <button type="button"
+                    class="tm-signing-field-editor-panel__section-toggle"
+                    data-section="rules"
+                    aria-expanded="@BoolText(IsSectionExpanded("rules"))"
+                    aria-controls="tm-signing-field-editor-section-rules"
+                    disabled="@ReadOnly"
+                    @onclick="@(() => ToggleSection("rules"))">
+                <TmIcon Name="@(IsSectionExpanded("rules") ? "chevron-down" : "chevron-right")" Size="IconSize.Xs" />
+                @Loc["TmSigningFieldEditorPanel_Rules"]
+            </button>
+
+            @if (IsSectionExpanded("rules"))
+            {
+                <div id="tm-signing-field-editor-section-rules">
+                    <div class="tm-signing-field-editor-panel__rule-actions">
+                        <TmButton Class="tm-signing-field-editor-panel__open-conditions"
+                                  Variant="ButtonVariant.Ghost"
+                                  Disabled="@ReadOnly"
+                                  OnClick="ToggleConditions">
+                            <TmIcon Name="filter" Size="IconSize.Xs" />
+                            @Loc["TmSigning_Condition"]
+                        </TmButton>
+                        @if (CanEditFormula)
+                        {
+                            <TmButton Class="tm-signing-field-editor-panel__open-formula"
+                                      Variant="ButtonVariant.Ghost"
+                                      Disabled="@ReadOnly"
+                                      OnClick="ToggleFormula">
+                                <TmIcon Name="calculator" Size="IconSize.Xs" />
+                                @Loc["TmSigning_Formula"]
+                            </TmButton>
+                        }
+                    </div>
+
+                    @if (_showConditions)
+                    {
+                        <div class="tm-signing-field-editor-panel__condition-builder">
+                            <TmConditionBuilder Fields="Fields"
+                                                CurrentFieldUuid="@_field.Uuid"
+                                                Conditions="_field.Conditions"
+                                                ConditionsChanged="HandleConditionsChangedAsync"
+                                                Culture="@Culture"
+                                                FallbackCulture="@FallbackCulture"
+                                                Disabled="@ReadOnly" />
+                        </div>
+                    }
+
+                    @if (_showFormula && CanEditFormula)
+                    {
+                        <div class="tm-signing-field-editor-panel__formula-builder">
+                            <TmFormulaBuilder Field="_field"
+                                              Fields="Fields"
+                                              Culture="@Culture"
+                                              FallbackCulture="@FallbackCulture"
+                                              Saved="HandleFormulaSavedAsync"
+                                              Disabled="@ReadOnly" />
+                        </div>
+                    }
+                </div>
+            }
+        </section>
+
+        <TmSigningFieldEditorActions ReadOnly="ReadOnly"
+                                    PasteEnabled="PasteEnabled"
+                                    ShowCopy="OnCopyRequested.HasDelegate"
+                                    ShowDelete="OnDeleteRequested.HasDelegate"
+                                    ShowCopySelection="OnCopySelectionRequested.HasDelegate"
+                                    ShowPaste="OnPasteRequested.HasDelegate"
+                                    ShowDeleteSelection="OnDeleteSelectionRequested.HasDelegate"
+                                    OnCopy="CopyFieldAsync"
+                                    OnDelete="DeleteFieldAsync"
+                                    OnCopySelection="CopySelectionAsync"
+                                    OnPaste="PasteSelectionAsync"
+                                    OnDeleteSelection="DeleteSelectionAsync"
+                                    ShowGeometry="ShowGeometry"
+                                    GeometryArea="GeometryArea"
+                                    GeometryX="@Rounded(GeometryPixels.X)"
+                                    GeometryY="@Rounded(GeometryPixels.Y)"
+                                    GeometryWidth="@Rounded(GeometryPixels.Width)"
+                                    GeometryHeight="@Rounded(GeometryPixels.Height)"
+                                    OnGeometryXChanged="(int? value) => HandleGeometryChangedAsync(value, null, null, null)"
+                                    OnGeometryYChanged="(int? value) => HandleGeometryChangedAsync(null, value, null, null)"
+                                    OnGeometryWidthChanged="(int? value) => HandleGeometryChangedAsync(null, null, value, null)"
+                                    OnGeometryHeightChanged="(int? value) => HandleGeometryChangedAsync(null, null, null, value)"
+                                    GeometryXAttributes="GeometryXAttributes"
+                                    GeometryYAttributes="GeometryYAttributes"
+                                    GeometryWidthAttributes="GeometryWidthAttributes"
+                                    GeometryHeightAttributes="GeometryHeightAttributes" />
     }
 </aside>

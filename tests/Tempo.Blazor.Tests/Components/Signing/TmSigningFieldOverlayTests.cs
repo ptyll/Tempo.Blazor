@@ -439,6 +439,31 @@ public class TmSigningFieldOverlayTests : LocalizationTestBase
     }
 
     [Fact]
+    public void Overlay_PointerEvents_EmitMoveAndResize()
+    {
+        TmSigningFieldOverlayPointerEventArgs? moved = null;
+        TmSigningFieldOverlayResizeEventArgs? resized = null;
+
+        var cut = Render<TmSigningFieldOverlay>(parameters =>
+            parameters.Add(p => p.Field, CreateField())
+                      .Add(p => p.Draggable, true)
+                      .Add(p => p.Editable, true)
+                      .Add(p => p.OnStartMove, EventCallback.Factory.Create<TmSigningFieldOverlayPointerEventArgs>(this, args => moved = args))
+                      .Add(p => p.OnStartResize, EventCallback.Factory.Create<TmSigningFieldOverlayResizeEventArgs>(this, args => resized = args)));
+
+        var field = cut.Find(".tm-signing-field");
+        field.TriggerEvent("onpointerdown", new PointerEventArgs { ClientX = 12, PointerId = 7, PointerType = "touch" });
+
+        moved.Should().NotBeNull();
+        moved!.MouseEventArgs.ClientX.Should().Be(12);
+
+        cut.Find("[data-handle='SouthEast']").TriggerEvent("onpointerdown", new PointerEventArgs { ClientX = 40, PointerId = 9, PointerType = "pen" });
+
+        resized.Should().NotBeNull();
+        resized!.Handle.Should().Be(SigningResizeHandle.SouthEast);
+    }
+
+    [Fact]
     public void MouseDown_WhenDraggable_InvokesOnStartMove()
     {
         var invoked = false;
@@ -448,7 +473,7 @@ public class TmSigningFieldOverlayTests : LocalizationTestBase
                       .Add(p => p.Draggable, true)
                       .Add(p => p.OnStartMove, EventCallback.Factory.Create<TmSigningFieldOverlayPointerEventArgs>(this, _ => invoked = true)));
 
-        cut.Find(".tm-signing-field").MouseDown();
+        cut.Find(".tm-signing-field").TriggerEvent("onpointerdown", new PointerEventArgs());
 
         invoked.Should().BeTrue();
     }
@@ -463,7 +488,7 @@ public class TmSigningFieldOverlayTests : LocalizationTestBase
                       .Add(p => p.Editable, true)
                       .Add(p => p.OnStartResize, EventCallback.Factory.Create<TmSigningFieldOverlayResizeEventArgs>(this, args => captured = args)));
 
-        cut.Find("[data-handle='SouthEast']").MouseDown();
+        cut.Find("[data-handle='SouthEast']").TriggerEvent("onpointerdown", new PointerEventArgs());
 
         captured.Should().NotBeNull();
         captured!.Handle.Should().Be(SigningResizeHandle.SouthEast);

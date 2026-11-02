@@ -10,6 +10,17 @@ namespace Tempo.Blazor.Tests.Components.Inputs;
 public class TmTextAreaTests : LocalizationTestBase
 {
     [Fact]
+    public async Task TmTextArea_FocusAsync_MovesFocusToTheTextarea()
+    {
+        var cut = Render<TmTextArea>(p => p.Add(c => c.Value, "hello"));
+
+        await cut.InvokeAsync(async () => await cut.Instance.FocusAsync());
+
+        JSInterop.Invocations.Should().Contain(invocation =>
+            invocation.Identifier.Contains("focus", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
     public void TmTextArea_Renders_Textarea_Element()
     {
         var cut = Render<TmTextArea>();
@@ -137,5 +148,39 @@ public class TmTextAreaTests : LocalizationTestBase
         var cut = Render<TmTextArea>(p => p.Add(c => c.Label, "Comment"));
         cut.Find("textarea").HasAttribute("aria-required").Should().BeFalse();
         cut.Find("label").ClassList.Should().NotContain("tm-input-label-required");
+    }
+
+    // ── Invalid state (aria-invalid while a message shows) ───────
+
+    [Fact]
+    public void TmTextArea_Error_SetsAriaInvalidOnTextarea()
+    {
+        var cut = Render<TmTextArea>(p => p.Add(c => c.Error, "Required"));
+
+        cut.Find("textarea").GetAttribute("aria-invalid").Should().Be("true");
+    }
+
+    /// <summary>
+    /// A field-level error message (the <see cref="Tempo.Blazor.Components.Forms.TmFormField"/>
+    /// error-id cascade the Signing steps use) must flag the textarea invalid too — the message
+    /// the signer reads is described on the control.
+    /// </summary>
+    [Fact]
+    public void TmTextArea_FormFieldErrorId_SetsAriaInvalidAndDescribedBy()
+    {
+        var cut = Render<TmTextArea>(p => p
+            .Add(c => c.Label, "Comment")
+            .AddCascadingValue(Tempo.Blazor.Components.Forms.TmFormField.ErrorIdCascadingName, "field-error-1"));
+
+        cut.Find("textarea").GetAttribute("aria-invalid").Should().Be("true");
+        cut.Find("textarea").GetAttribute("aria-describedby").Should().Be("field-error-1");
+    }
+
+    [Fact]
+    public void TmTextArea_NoMessage_NoAriaInvalid()
+    {
+        var cut = Render<TmTextArea>(p => p.Add(c => c.Label, "Comment"));
+
+        cut.Find("textarea").GetAttribute("aria-invalid").Should().BeNull();
     }
 }

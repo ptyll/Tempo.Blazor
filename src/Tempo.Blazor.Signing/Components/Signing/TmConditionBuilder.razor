@@ -1,111 +1,128 @@
 @namespace Tempo.Blazor.Components.Signing
 @using Tempo.Blazor.Abstractions.Models
+@using Tempo.Blazor.Components.Inputs
 
 <div @attributes="AdditionalAttributes"
      class="@RootClass"
      aria-invalid="@BoolText(HasValidationErrors)"
-     data-valid="@BoolText(!HasValidationErrors)">
+     data-valid="@BoolText(!HasValidationErrors)"
+     data-condition-builder="@_builderId">
     <div class="tm-condition-builder__rows">
-        @for (var index = 0; index < _conditions.Count; index++)
+        @for (var index = 0; index < _rows.Count; index++)
         {
             var rowIndex = index;
-            var condition = _conditions[rowIndex];
+            var row = _rows[rowIndex];
+            var condition = row.Condition;
             var sourceField = GetField(condition.FieldUuid);
             var valueRequired = ActionRequiresValue(condition.Action);
 
-            <div class="tm-condition-builder__row" data-index="@rowIndex">
+            @* The row key is the stable per-row Guid: after a move the DOM row (and its focus)
+               travels with the condition instead of every row re-rendering in place. *@
+            <div class="tm-condition-builder__row" @key="row.Id" data-row-id="@row.Id" data-index="@rowIndex">
+                <div class="tm-condition-builder__move">
+                    <button type="button"
+                            class="tm-condition-builder__move-up"
+                            aria-label="@Loc["TmConditionBuilder_MoveUp"]"
+                            disabled="@(Disabled || rowIndex == 0)"
+                            @onclick="() => MoveConditionAsync(rowIndex, -1)">
+                        <TmIcon Name="chevron-up" Size="IconSize.Xs" />
+                    </button>
+                    <button type="button"
+                            class="tm-condition-builder__move-down"
+                            aria-label="@Loc["TmConditionBuilder_MoveDown"]"
+                            disabled="@(Disabled || rowIndex == _rows.Count - 1)"
+                            @onclick="() => MoveConditionAsync(rowIndex, 1)">
+                        <TmIcon Name="chevron-down" Size="IconSize.Xs" />
+                    </button>
+                </div>
+
                 @if (rowIndex > 0)
                 {
-                    <label class="tm-condition-builder__field-group tm-condition-builder__field-group--operation">
+                    <div class="tm-condition-builder__field-group tm-condition-builder__field-group--operation">
                         <span class="tm-condition-builder__label">@Loc["TmConditionBuilder_Operation"]</span>
-                        <select class="tm-condition-builder__operation"
-                                aria-label="@Loc["TmConditionBuilder_Operation"]"
-                                value="@condition.Operation"
-                                disabled="@Disabled"
-                                @onchange="args => HandleOperationChangedAsync(rowIndex, args)">
+                        <TmSelect Class="tm-condition-builder__select tm-condition-builder__operation"
+                                  AriaLabel="@Loc["TmConditionBuilder_Operation"]"
+                                  Value="@condition.Operation.ToString()"
+                                  ValueChanged="@((string? value) => HandleOperationChangedAsync(rowIndex, value))"
+                                  Disabled="@Disabled">
                             @foreach (var operation in Operations)
                             {
                                 <option value="@operation">@GetOperationLabel(operation)</option>
                             }
-                        </select>
-                    </label>
+                        </TmSelect>
+                    </div>
                 }
                 else
                 {
                     <span class="tm-condition-builder__operation-spacer" aria-hidden="true"></span>
                 }
 
-                <label class="tm-condition-builder__field-group">
+                <div class="tm-condition-builder__field-group tm-condition-builder__field-group--field">
                     <span class="tm-condition-builder__label">@Loc["TmConditionBuilder_Field"]</span>
-                    <select class="tm-condition-builder__field"
-                            aria-label="@Loc["TmConditionBuilder_Field"]"
-                            value="@condition.FieldUuid"
-                            disabled="@Disabled"
-                            @onchange="args => HandleFieldChangedAsync(rowIndex, args)">
-                        <option value="">@Loc["TmConditionBuilder_SelectField"]</option>
+                    <TmSelect Class="tm-condition-builder__select tm-condition-builder__field"
+                              AriaLabel="@Loc["TmConditionBuilder_Field"]"
+                              Placeholder="@Loc["TmConditionBuilder_SelectField"]"
+                              PlaceholderSelectable="true"
+                              Value="@condition.FieldUuid"
+                              ValueChanged="@((string? value) => HandleFieldChangedAsync(rowIndex, value))"
+                              Disabled="@Disabled">
                         @foreach (var field in ConditionSourceFields)
                         {
                             <option value="@field.Uuid">@GetFieldLabel(field)</option>
                         }
-                    </select>
-                </label>
+                    </TmSelect>
+                </div>
 
-                <label class="tm-condition-builder__field-group">
+                <div class="tm-condition-builder__field-group tm-condition-builder__field-group--action">
                     <span class="tm-condition-builder__label">@Loc["TmConditionBuilder_Action"]</span>
-                    <select class="tm-condition-builder__action"
-                            aria-label="@Loc["TmConditionBuilder_Action"]"
-                            value="@condition.Action"
-                            disabled="@(Disabled || sourceField is null)"
-                            @onchange="args => HandleActionChangedAsync(rowIndex, args)">
+                    <TmSelect Class="tm-condition-builder__select tm-condition-builder__action"
+                              AriaLabel="@Loc["TmConditionBuilder_Action"]"
+                              Value="@condition.Action.ToString()"
+                              ValueChanged="@((string? value) => HandleActionChangedAsync(rowIndex, value))"
+                              Disabled="@(Disabled || sourceField is null)">
                         @foreach (var action in GetActionsFor(sourceField?.Type))
                         {
                             <option value="@action">@GetActionLabel(action)</option>
                         }
-                    </select>
-                </label>
+                    </TmSelect>
+                </div>
 
-                <label class="tm-condition-builder__field-group tm-condition-builder__field-group--value">
+                <div class="tm-condition-builder__field-group tm-condition-builder__field-group--value">
                     <span class="tm-condition-builder__label">@Loc["TmConditionBuilder_Value"]</span>
                     @if (!valueRequired)
                     {
-                        <span class="tm-condition-builder__value-placeholder">-</span>
+                        <span class="tm-condition-builder__value-placeholder" aria-hidden="true">–</span>
                     }
                     else if (IsChoiceField(sourceField))
                     {
-                        <select class="tm-condition-builder__value-select"
-                                aria-label="@Loc["TmConditionBuilder_Value"]"
-                                value="@condition.Value"
-                                aria-invalid="@BoolText(IsValueMissing(condition))"
-                                disabled="@Disabled"
-                                @onchange="args => HandleValueChangedAsync(rowIndex, args)">
-                            <option value="">@Loc["TmConditionBuilder_SelectValue"]</option>
+                        <TmSelect Class="tm-condition-builder__select tm-condition-builder__value-select"
+                                  AriaLabel="@Loc["TmConditionBuilder_Value"]"
+                                  Placeholder="@Loc["TmConditionBuilder_SelectValue"]"
+                                  PlaceholderSelectable="true"
+                                  Value="@condition.Value"
+                                  ValueChanged="@((string? value) => HandleValueChangedAsync(rowIndex, value))"
+                                  Disabled="@Disabled">
                             @foreach (var option in sourceField!.Options)
                             {
                                 <option value="@option.Uuid">@GetOptionLabel(option)</option>
                             }
-                        </select>
-                    }
-                    else if (sourceField?.Type is SigningFieldType.Number)
-                    {
-                        <input class="tm-condition-builder__value-input"
-                               type="number"
-                               aria-label="@Loc["TmConditionBuilder_Value"]"
-                               aria-invalid="@BoolText(IsValueMissing(condition))"
-                               value="@condition.Value"
-                               disabled="@Disabled"
-                               @onchange="args => HandleValueChangedAsync(rowIndex, args)" />
+                        </TmSelect>
                     }
                     else
                     {
-                        <input class="tm-condition-builder__value-input"
-                               type="text"
-                               aria-label="@Loc["TmConditionBuilder_Value"]"
-                               aria-invalid="@BoolText(IsValueMissing(condition))"
-                               value="@condition.Value"
-                               disabled="@Disabled"
-                               @onchange="args => HandleValueChangedAsync(rowIndex, args)" />
+                        @* The raw text stays in a per-row draft while typing (phase 7 review — no
+                           normalize, no ConditionsChanged per keystroke); blur / Enter commits. *@
+                        <TmTextInput Class="tm-condition-builder__value-input"
+                                     Type="@(sourceField?.Type is SigningFieldType.Number ? "number" : "text")"
+                                     aria-label="@Loc["TmConditionBuilder_Value"]"
+                                     aria-invalid="@BoolText(IsValueMissing(condition))"
+                                     Value="@GetDraftValue(row, condition.Value ?? string.Empty)"
+                                     ValueChanged="value => HandleDraftChanged(row, value)"
+                                     OnBlur="() => CommitDraftAsync(row)"
+                                     OnKeyDown="args => CommitDraftOnEnterAsync(args, row)"
+                                     Disabled="@Disabled" />
                     }
-                </label>
+                </div>
 
                 <button type="button"
                         class="tm-condition-builder__remove"
@@ -125,11 +142,15 @@
 
     <div class="tm-condition-builder__actions">
         <button type="button"
-                class="tm-condition-builder__add"
+                class="tm-condition-builder__add tm-condition-builder__add--dashed"
                 disabled="@Disabled"
                 @onclick="AddConditionAsync">
             <TmIcon Name="plus" Size="IconSize.Xs" />
             @Loc["TmConditionBuilder_AddCondition"]
         </button>
     </div>
+
+    @* Always rendered so the polite live region exists before the first announcement (phase 7
+       review): the move feedback ("{0} moved to position {1}") lands here. *@
+    <span class="tm-sr-only" aria-live="polite">@_moveAnnouncement</span>
 </div>

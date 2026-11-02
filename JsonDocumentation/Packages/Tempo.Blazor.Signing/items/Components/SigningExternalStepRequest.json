@@ -1,0 +1,10 @@
+{
+  "kind": "Record",
+  "category": "Components",
+  "namespace": "Tempo.Blazor.Components.Signing",
+  "description": "Host request raised when the signer starts an external flow — verification, KBA answer submission or payment (Signing redesign phase 6, SI2). The runner raises it through TmSigningFormRunner.OnExternalStepRequested; with the callback wired the runner stores NOTHING on the click itself — the step completes solely after the host stores the provider result (value true) through TmSigningFormRunner.Values. The Answers carry the inline KBA answers for THIS request only — the runner never stores them as the field value, so a leaked answer cannot complete anything.",
+  "packageId": "Tempo.Blazor.Signing",
+  "sourcePath": "src/Tempo.Blazor.Signing/Components/Signing/SigningActiveStepContracts.cs",
+  "documentationStatus": "generated",
+  "itemName": "SigningExternalStepRequest"
+}

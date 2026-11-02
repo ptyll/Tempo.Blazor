@@ -1,0 +1,10 @@
+{
+  "itemName": "PdfTemplatePaletteVariant",
+  "kind": "Enum",
+  "category": "Components",
+  "description": "Where a TmPdfTemplateDesignerPalette renders. One designer slot uses one variant.",
+  "packageId": "Tempo.Blazor.Signing",
+  "namespace": "Tempo.Blazor.Components.Signing",
+  "sourcePath": "src/Tempo.Blazor.Signing/Components/Signing/PdfTemplatePaletteVariant.cs",
+  "documentationStatus": "generated"
+}

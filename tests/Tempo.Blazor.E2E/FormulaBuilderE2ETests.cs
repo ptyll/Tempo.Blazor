@@ -23,7 +23,7 @@ public class FormulaBuilderE2ETests : WasmTestBase
         await builder.Locator("[data-operator='+']").ClickAsync();
         await builder.Locator("[data-field-uuid='formula-tax']").ClickAsync();
 
-        await Expect(builder.Locator(".tm-formula-builder__textarea"))
+        await Expect(builder.Locator(".tm-formula-builder__textarea textarea"))
             .ToHaveValueAsync(new Regex(@"\{\{Subtotal\}\}\s\+\s\{\{Tax\}\}"));
     }
 
@@ -60,10 +60,10 @@ public class FormulaBuilderE2ETests : WasmTestBase
 
         var builder = page.Locator("[data-testid='formula-builder']").First;
         await builder.ScrollIntoViewIfNeededAsync();
-        await builder.Locator(".tm-formula-builder__textarea").FillAsync("{{Missing}} + 1");
+        await builder.Locator(".tm-formula-builder__textarea textarea").FillAsync("{{Missing}} + 1");
         await builder.Locator(".tm-formula-builder__save").ClickAsync();
 
-        await Expect(builder.Locator(".tm-formula-builder__error")).ToContainTextAsync("Missing");
+        await Expect(builder.Locator(".tm-formula-builder__textarea .tm-input-error-message")).ToContainTextAsync("Missing");
     }
 
     private static ILocatorAssertions Expect(ILocator locator) => Assertions.Expect(locator);

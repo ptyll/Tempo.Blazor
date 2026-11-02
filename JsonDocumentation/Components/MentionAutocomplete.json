@@ -8,6 +8,12 @@
   ],
   "parameters": [
     {
+      "name": "ListId",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Id of the listbox, owned by the editor ({editorId}-mentions) so aria-controls names a stable target. Empty falls back to a per-instance id."
+    },
+    {
       "name": "IsVisible",
       "type": "bool",
       "isRequired": false
@@ -54,7 +60,7 @@
   "examples": [
     {
       "title": "Used internally by rich editors",
-      "code": "<MentionAutocomplete IsVisible=\"true\" Users=\"@users\" Query=\"@query\" HighlightedIndex=\"0\" OnUserSelected=\"HandleSelected\" OnHighlightedIndexChanged=\"HandleIndexChanged\" />"
+      "code": "<MentionAutocomplete IsVisible=\"true\" ListId=\"editor-mentions\" Users=\"@users\" Query=\"@query\" HighlightedIndex=\"0\" OnUserSelected=\"HandleSelected\" OnHighlightedIndexChanged=\"HandleIndexChanged\" />"
     }
   ]
 }

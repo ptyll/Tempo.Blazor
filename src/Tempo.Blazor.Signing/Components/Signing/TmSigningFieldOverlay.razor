@@ -9,6 +9,7 @@
      aria-label="@AriaLabel"
      aria-invalid="@BoolText(Invalid)"
      aria-disabled="@BoolText(IsDisabled)"
+     data-field-uuid="@Field.Uuid"
      data-completed="@BoolText(Completed)"
      @onclick="HandleClickAsync"
      @onclick:stopPropagation="true"
@@ -18,8 +19,8 @@
      @oncontextmenu:preventDefault="PreventDefaultContextMenu"
      @oncontextmenu:stopPropagation="true"
      @onkeydown="HandleKeyDownAsync"
-     @onmousedown="HandleStartMoveAsync"
-     @onmousedown:stopPropagation="StopMouseDownPropagation">
+     @onpointerdown="HandleStartMoveAsync"
+     @onpointerdown:stopPropagation="StopMouseDownPropagation">
     <span class="tm-signing-field__icon" data-icon="@IconName" aria-hidden="true">
         <TmIcon Name="@IconName" Size="IconSize.Xs" />
     </span>
@@ -112,8 +113,8 @@
             {
                 <span class="@GetResizeHandleClass(handle)"
                       data-handle="@handle"
-                      @onmousedown="args => HandleStartResizeAsync(handle, args)"
-                      @onmousedown:stopPropagation="true"></span>
+                      @onpointerdown="args => HandleStartResizeAsync(handle, args)"
+                      @onpointerdown:stopPropagation="true"></span>
             }
         </span>
     }

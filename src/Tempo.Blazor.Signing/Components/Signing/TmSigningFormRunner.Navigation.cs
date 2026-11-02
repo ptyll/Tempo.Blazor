@@ -6,7 +6,9 @@ namespace Tempo.Blazor.Components.Signing;
 /// Step navigation of the wizard (phase 3 review split — a pure move from
 /// <c>TmSigningFormRunner.razor.cs</c>): the Previous / Next / Complete gating, the Skip
 /// affordance and the direct jump from the permanent field list. Every landing on a DIFFERENT
-/// step bumps the focus signal so the step shell moves focus onto the new title.
+/// step bumps the focus signal so the step shell moves focus onto the new title — and (Signing
+/// redesign phase 5) lands the mobile sheet in the FULL edit state and records the pending
+/// auto-scroll that <c>OnAfterRenderAsync</c> performs once the render has applied the new state.
 /// </content>
 public partial class TmSigningFormRunner
 {
@@ -23,7 +25,7 @@ public partial class TmSigningFormRunner
         && !CurrentStep.Field.Required
         && CurrentStepIndex < Plan.Steps.Count - 1;
 
-    private Task SelectStep(int index)
+    private async Task SelectStep(int index)
     {
         var clamped = Math.Clamp(index, 0, Math.Max(0, Plan.Steps.Count - 1));
         if (clamped != _currentStepIndex)
@@ -33,7 +35,8 @@ public partial class TmSigningFormRunner
 
         _currentStepIndex = clamped;
         ClearValidationMessages();
-        return Task.CompletedTask;
+        LandMobileSheetOnFull();
+        RequestScrollToActiveField();
     }
 
     private async Task GoNextAsync()
@@ -53,6 +56,8 @@ public partial class TmSigningFormRunner
             }
 
             _currentStepIndex = invalidIndex;
+            LandMobileSheetOnFull();
+            RequestScrollToActiveField();
             return;
         }
 
@@ -61,35 +66,38 @@ public partial class TmSigningFormRunner
         {
             _currentStepIndex++;
             _stepFocusSignal.Version++;
+            LandMobileSheetOnFull();
+            RequestScrollToActiveField();
         }
     }
 
-    private Task GoPreviousAsync()
+    private async Task GoPreviousAsync()
     {
         if (!IsPreviousDisabled)
         {
             _currentStepIndex--;
             _stepFocusSignal.Version++;
             ClearValidationMessages();
+            LandMobileSheetOnFull();
+            RequestScrollToActiveField();
         }
-
-        return Task.CompletedTask;
     }
 
-    private Task SkipCurrentAsync()
+    private async Task SkipCurrentAsync()
     {
         // The skip affordance renders only for an optional current field (phase 3); the guard
         // keeps a stale click (field became required between renders) a no-op.
         if (IsLoading || IsCompleting || CurrentStep is null || CurrentStep.Field.Required
             || _currentStepIndex >= Plan.Steps.Count - 1)
         {
-            return Task.CompletedTask;
+            return;
         }
 
         _currentStepIndex++;
         _stepFocusSignal.Version++;
         ClearValidationMessages();
-        return Task.CompletedTask;
+        LandMobileSheetOnFull();
+        RequestScrollToActiveField();
     }
 
     private bool IsStepComplete(SigningStepItem step)

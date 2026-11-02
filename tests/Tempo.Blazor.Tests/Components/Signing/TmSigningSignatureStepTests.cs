@@ -41,6 +41,24 @@ public class TmSigningSignatureStepTests : LocalizationTestBase
         cut.Find(".tm-signing-step-shell__optional").TextContent.Should().Contain("Optional");
     }
 
+    /// <summary>
+    /// Signing redesign phase 4: the capture's Clear button renders INSIDE the signature surface
+    /// (<c>ClearButtonPlacement.Overlay</c>, the F8 core addition) — the clear sits on the canvas
+    /// instead of in a row below it.
+    /// </summary>
+    [Fact]
+    public void SignatureStep_ClearButtonInsideCanvas()
+    {
+        var cut = Render<TmSigningSignatureStep>(parameters => parameters
+            .Add(p => p.Field, CreateSignatureField())
+            .Add(p => p.Mode, TmSignatureCaptureMode.Draw));
+
+        var surface = cut.Find(".tm-signature-capture__surface");
+        surface.QuerySelector(".tm-signature-capture__clear").Should().NotBeNull(
+            "Clear renders as an overlay inside the signing surface");
+        surface.QuerySelectorAll(".tm-signature-capture__canvas").Should().NotBeNull();
+    }
+
     /// <summary>The capture is the only required-marker: the step shell owns the required presentation,
     /// so the runner's signature step surfaces exactly one validation alert.</summary>
     [Fact]

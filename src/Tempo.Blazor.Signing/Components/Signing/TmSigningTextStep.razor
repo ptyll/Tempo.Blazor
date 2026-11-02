@@ -1,5 +1,6 @@
 @namespace Tempo.Blazor.Components.Signing
 @using Tempo.Blazor.Abstractions.Models
+@using Tempo.Blazor.Components.Inputs
 
 <TmSigningStepShell Field="Field"
                     TitleId="@_titleId"
@@ -11,32 +12,47 @@
                     FallbackCulture="@FallbackCulture"
                     Class="@ShellClass"
                     @attributes="AdditionalAttributes">
-    @* The shell title carries this instance's stable id; the input references it with
-       aria-labelledby (and the description / validation ids, when they render) so getByLabel
-       resolves and assistive technology hears why the field is invalid. *@
+    @* SI1 (Signing redesign phase 4): the value input is the core TmTextInput / TmTextArea. The
+       shell title carries this instance's stable id and stays the input's accessible name through
+       the splatted aria-labelledby (no second visible label); the description and the validation
+       alert (while one shows) are the splatted aria-describedby. TmTextInput renders its own
+       aria-describedby BEFORE the splat and only when an Error/HelpText is set — neither is used
+       here, so the splat is the single source of that attribute. *@
     @if (IsMultiline)
     {
-        <textarea class="tm-signing-text-step__input tm-signing-text-step__textarea"
-                  value="@Value"
-                  disabled="@Disabled"
-                  maxlength="@MaxLength"
-                  placeholder="@PlaceholderText"
-                  aria-labelledby="@_titleId"
-                  aria-describedby="@DescribedBy"
-                  aria-invalid="@BoolText(HasValidationMessage)"
-                  @onchange="HandleValueChangedAsync"></textarea>
+        <TmTextArea Value="@(_value ?? string.Empty)"
+                    ValueChanged="HandleValueChangedAsync"
+                    Placeholder="@PlaceholderText"
+                    MaxLength="@MaxLength"
+                    Rows="4"
+                    Disabled="@Disabled"
+                    Class="tm-signing-text-step__textarea"
+                    AdditionalAttributes="@(BuildInputAttributes())" />
     }
     else
     {
-        <input class="tm-signing-text-step__input"
-               type="text"
-               value="@Value"
-               disabled="@Disabled"
-               maxlength="@MaxLength"
-               placeholder="@PlaceholderText"
-               aria-labelledby="@_titleId"
-               aria-describedby="@DescribedBy"
-               aria-invalid="@BoolText(HasValidationMessage)"
-               @onchange="HandleValueChangedAsync" />
+        <TmTextInput Value="@(_value ?? string.Empty)"
+                     ValueChanged="HandleValueChangedAsync"
+                     OnBlur="HandleCommitAsync"
+                     Type="text"
+                     Placeholder="@PlaceholderText"
+                     Disabled="@Disabled"
+                     IsValid="@ValidationState"
+                     Class="tm-signing-text-step__input"
+                     AdditionalAttributes="@(BuildInputAttributes())" />
+    }
+
+    @* "n / max" counter (phase 4): the VISIBLE count is decorative (aria-hidden — the length is
+       obvious from the input itself), while a permanent visually-hidden polite live region
+       carries the announcement, filled ONLY at the limit — announcing every keystroke would talk
+       over the typed text, and an empty live region stays silent. *@
+    @if (MaxLength is { } maxLength)
+    {
+        <div class="tm-signing-text-step__count" aria-hidden="true">
+            @Loc["TmSigningStep_CharCount", _value?.Length ?? 0, maxLength]
+        </div>
+        <span class="tm-sr-only" aria-live="polite">
+            @(IsAtLimit(maxLength) ? Loc["TmSigningStep_CharCount", _value?.Length ?? 0, maxLength] : string.Empty)
+        </span>
     }
 </TmSigningStepShell>

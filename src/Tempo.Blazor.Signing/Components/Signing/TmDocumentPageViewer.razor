@@ -1,6 +1,15 @@
 @namespace Tempo.Blazor.Components.Signing
+@inject IJSRuntime JS
 @inherits Tempo.Blazor.Components.TmComponentBase
+@using Tempo.Blazor.Abstractions.Layout
 @using Tempo.Blazor.Abstractions.Models
+@using Tempo.Blazor.Components.Layout
+
+@* Auto follows THIS viewer's container (phase 9 review), the same way TmPdfViewer does.
+   IsContainer=false: the viewer root is already the CSS size container. *@
+<TmLayoutObserver LayoutMode="LayoutMode" ResolvedLayoutChanged="OnResolvedLayoutChanged" IsContainer="false">
+<LayoutContent>
+@{ ApplyObservedLayout(context.Resolved); }
 
 <div @attributes="AdditionalAttributes"
      class="@RootClass"
@@ -32,7 +41,7 @@
             <div class="tm-document-page-viewer__toolbar" role="group" aria-label="@Loc["TmDocumentPageViewer_ToolbarLabel"]">
                 @if (ShowPaginationControls)
                 {
-                    <div class="tm-document-page-viewer__pagination">
+                    <div class="tm-document-page-viewer__pagination" data-tm-group="pages" role="group" aria-label="@Loc["TmDocumentPageViewer_PaginationLabel"]">
                         <button type="button"
                                 class="tm-document-page-viewer__toolbar-button tm-document-page-viewer__previous-page"
                                 disabled="@(!CanGoPrevious)"
@@ -40,9 +49,32 @@
                                 @onclick="GoToPreviousPageAsync">
                             <TmIcon Name="chevron-left" Size="IconSize.Sm" />
                         </button>
-                        <span class="tm-document-page-viewer__page-label">
-                            @CurrentPageNumber / @CurrentTotalPages
-                        </span>
+                        <label class="tm-document-page-viewer__page-label">
+                            <span class="tm-document-page-viewer__page-label-text">@Loc["TmDocumentPageViewer_PageInputLabel"]</span>
+                            @if (PageRequested.HasDelegate)
+                            {
+                                <input type="number"
+                                       class="tm-document-page-viewer__page-input"
+                                       min="1"
+                                       max="@CurrentTotalPages"
+                                       value="@CurrentPageNumber"
+                                       @key="_pageInputVersion"
+                                       aria-label="@Loc["TmDocumentPageViewer_PageInputLabel"]"
+                                       @onchange="HandlePageInputAsync" />
+                            }
+                            else
+                            {
+                                <input type="text"
+                                       class="tm-document-page-viewer__page-input"
+                                       readonly
+                                       value="@($"{CurrentPageNumber} / {CurrentTotalPages}")"
+                                       aria-label="@Loc["TmDocumentPageViewer_PageInputLabel"]" />
+                            }
+                            @if (PageRequested.HasDelegate)
+                            {
+                                <span aria-hidden="true">/ @CurrentTotalPages</span>
+                            }
+                        </label>
                         <button type="button"
                                 class="tm-document-page-viewer__toolbar-button tm-document-page-viewer__next-page"
                                 disabled="@(!CanGoNext)"
@@ -55,7 +87,7 @@
 
                 @if (ShowZoomControls)
                 {
-                    <div class="tm-document-page-viewer__zoom-controls">
+                    <div class="tm-document-page-viewer__zoom-controls" data-tm-group="zoom" role="group" aria-label="@Loc["TmDocumentPageViewer_ZoomLabel"]">
                         <button type="button"
                                 class="tm-document-page-viewer__toolbar-button tm-document-page-viewer__zoom-out"
                                 disabled="@(!CanZoomOut)"
@@ -92,7 +124,7 @@
 
                 @if (CommentsEnabled)
                 {
-                    <div class="tm-document-page-viewer__comment-controls">
+                    <div class="tm-document-page-viewer__comment-controls" data-tm-group="comments" role="group" aria-label="@Loc["TmDocumentComments_ToolbarLabel"]">
                         <button type="button"
                                 class="@CommentModeButtonClass"
                                 aria-pressed="@(CommentMode == DocumentCommentMode.Comment ? "true" : "false")"
@@ -105,11 +137,14 @@
                             {
                                 <span class="tm-document-page-viewer__comment-count">@OpenCommentCount</span>
                             }
-                            @if (MentionCommentCount > 0)
-                            {
-                                <span class="tm-document-page-viewer__mention-count" title="@Loc["TmDocumentComments_FilterMentions"]">@MentionCommentCount</span>
-                            }
                         </button>
+                        @if (MentionCommentCount > 0)
+                        {
+                            <span class="tm-document-page-viewer__mention-badge">
+                                <span class="tm-document-page-viewer__mention-badge-name">@Loc["TmDocumentComments_MentionCount", MentionCommentCount]</span>
+                                <span aria-hidden="true">@MentionCommentCount</span>
+                            </span>
+                        }
                     </div>
                 }
             </div>
@@ -138,7 +173,7 @@
         }
 
         <div class="tm-document-page-viewer__content">
-            <div class="tm-document-page-viewer__viewport">
+            <div class="tm-document-page-viewer__viewport" @ref="_viewportElement">
                 <div id="@PageElementId"
                      @ref="_pageElement"
                      class="tm-document-page-viewer__page"
@@ -147,10 +182,11 @@
                      role="img"
                      aria-label="@PageAriaLabel"
                      @onclick="HandlePageClickAsync"
-                     @onmousedown="HandleCommentPointerDownAsync"
-                     @onmousedown:preventDefault="ShouldPreventCommentPointerDefault"
-                     @onmousemove="HandleCommentPointerMoveAsync"
-                     @onmouseup="HandleCommentPointerUpAsync"
+                     @onpointerdown="HandleCommentPointerDownAsync"
+                     @onpointerdown:preventDefault="ShouldPreventCommentPointerDefault"
+                     @onpointermove="HandleCommentPointerMoveAsync"
+                     @onpointerup="HandleCommentPointerUpAsync"
+                      @onpointercancel="HandleCommentPointerCancel"
                      @onkeydown="HandlePageKeyDownAsync"
                      @oncontextmenu="HandlePageContextMenuAsync"
                      @oncontextmenu:preventDefault="PreventDefaultContextMenu"
@@ -197,61 +233,98 @@
                 </div>
             </div>
 
-            @if (CommentsEnabled)
+            @if (CommentsEnabled && !IsMobileComments)
             {
                 <div class="tm-document-page-viewer__comments-shell">
-                    @if (CommentThreadPanelTemplate is not null)
-                    {
-                        @CommentThreadPanelTemplate(CommentThreads)
-                    }
-                    else
-                    {
-                        @if (_draftAnchor is not null)
-                        {
-                            <section class="tm-document-page-viewer__draft-panel" data-testid="@TestId("document-comment-draft")">
-                                <header class="tm-document-page-viewer__draft-header">
-                                    <span>@Loc["TmDocumentComments_NewThread"]</span>
-                                    <button type="button"
-                                            class="tm-document-page-viewer__draft-close"
-                                            aria-label="@Loc["TmDocumentComments_Cancel"]"
-                                            @onclick="CancelDraftAsync">
-                                        <TmIcon Name="@IconNames.X" Size="IconSize.Sm" />
-                                    </button>
-                                </header>
-                                <p class="tm-document-page-viewer__draft-location">@Loc["TmDocumentComments_PageLocation", _draftAnchor.PageNumber]</p>
-                                <TmCommentComposer @bind-Value="_draftText"
-                                                   @bind-Value:after="NotifyDraftChangedAsync"
-                                                   Placeholder="@Loc["TmDocumentComments_NewPlaceholder"]"
-                                                   AriaLabel="@Loc["TmDocumentComments_NewLabel"]"
-                                                   SubmitText="@Loc["TmDocumentComments_AddComment"]"
-                                                   MentionUsers="@MentionUsers"
-                                                   Disabled="@Disabled"
-                                                   AutoFocus="true"
-                                                   MentionsChanged="HandleDraftMentionsChangedAsync"
-                                                   OnSubmit="CreateThreadAsync"
-                                                   OnCancel="CancelDraftAsync" />
-                            </section>
-                        }
-
-                        <TmDocumentCommentThreadPanel @ref="_threadPanel"
-                                                      Threads="@CommentThreads"
-                                                      SelectedThreadId="@SelectedCommentThreadId"
-                                                      SelectedThreadIdChanged="SelectCommentThreadAsync"
-                                                      CurrentUserId="@CurrentUserId"
-                                                      MentionUsers="@MentionUsers"
-                                                      AllowReplyToResolved="@AllowReplyToResolved"
-                                                      Disabled="@Disabled"
-                                                      OnDraftChanged="HandlePanelDraftChangedAsync"
-                                                      OnReplyRequested="@OnCommentReplyRequested"
-                                                      OnResolveRequested="@OnCommentResolveRequested"
-                                                      OnReopenRequested="@OnCommentReopenRequested"
-                                                      OnEditRequested="@OnCommentEditRequested"
-                                                      OnDeleteRequested="@OnCommentDeleteRequested"
-                                                      OnReactionToggled="@OnCommentReactionToggled"
-                                                      OnThreadNavigateRequested="@OnCommentThreadNavigateRequested" />
-                    }
+                    @CommentsShellBody
                 </div>
+            }
+            else if (CommentsEnabled)
+            {
+                <TmDrawer IsOpen="true"
+                          Position="DrawerPosition.Bottom"
+                          Modal="false"
+                          ShowOverlay="false"
+                          ShowHandle="true"
+                          ShowCloseButton="false"
+                          CloseOnEscape="false"
+                          SwipeToDismiss="false"
+                          LayoutMode="TmLayoutMode.Mobile"
+                          SnapPoints="@(new[] { 0.5, 0.72, 0.92 })"
+                          Class="tm-document-page-viewer__comments-sheet"
+                          AriaLabel="@Loc["TmDocumentComments_PanelLabel"]">
+                    <ChildContent>
+                        <div class="tm-document-page-viewer__comments-shell">
+                            @CommentsShellBody
+                        </div>
+                    </ChildContent>
+                </TmDrawer>
             }
         </div>
     }
 </div>
+</LayoutContent>
+</TmLayoutObserver>
+
+@code {
+    /// <summary>
+    /// The comments-shell body, rendered from exactly one branch (docked column or the mobile
+    /// drawer). A host template replaces the whole body; otherwise the draft section and the
+    /// thread panel. Keeping one fragment stops the two branches drifting apart.
+    /// </summary>
+    private RenderFragment CommentsShellBody => @<text>
+        @if (CommentThreadPanelTemplate is not null)
+        {
+            @CommentThreadPanelTemplate(CommentThreads)
+        }
+        else
+        {
+            @if (_draftAnchor is not null)
+            {
+                <section class="tm-document-page-viewer__draft-panel" data-testid="@TestId("document-comment-draft")">
+                    <header class="tm-document-page-viewer__draft-header">
+                        <span>@Loc["TmDocumentComments_NewThread"]</span>
+                        <button type="button"
+                                class="tm-document-page-viewer__draft-close"
+                                aria-label="@Loc["TmDocumentComments_Cancel"]"
+                                @onclick="CancelDraftAsync">
+                            <TmIcon Name="@IconNames.X" Size="IconSize.Sm" />
+                        </button>
+                    </header>
+                    <p class="tm-document-page-viewer__draft-location">@Loc["TmDocumentComments_PageLocation", _draftAnchor.PageNumber]</p>
+                    <TmCommentComposer @bind-Value="_draftText"
+                                       @bind-Value:after="NotifyDraftChangedAsync"
+                                       Placeholder="@Loc["TmDocumentComments_NewPlaceholder"]"
+                                       AriaLabel="@Loc["TmDocumentComments_NewLabel"]"
+                                       SubmitText="@Loc["TmDocumentComments_AddComment"]"
+                                       MentionUsers="@MentionUsers"
+                                       Disabled="@Disabled"
+                                       AutoFocus="true"
+                                       MentionsChanged="HandleDraftMentionsChangedAsync"
+                                       OnSubmit="CreateThreadAsync"
+                                       OnCancel="CancelDraftAsync" />
+                </section>
+            }
+
+            <TmDocumentCommentThreadPanel @ref="_threadPanel"
+                                          LayoutMode="EffectiveLayout"
+                                          OnClose="OnCommentsClose"
+                                          OnNewComment="EnableCommentModeAsync"
+                                          Threads="@CommentThreads"
+                                          SelectedThreadId="@SelectedCommentThreadId"
+                                          SelectedThreadIdChanged="SelectCommentThreadAsync"
+                                          CurrentUserId="@CurrentUserId"
+                                          MentionUsers="@MentionUsers"
+                                          AllowReplyToResolved="@AllowReplyToResolved"
+                                          Disabled="@Disabled"
+                                          OnDraftChanged="HandlePanelDraftChangedAsync"
+                                          OnReplyRequested="@OnCommentReplyRequested"
+                                          OnResolveRequested="@OnCommentResolveRequested"
+                                          OnReopenRequested="@OnCommentReopenRequested"
+                                          OnEditRequested="@OnCommentEditRequested"
+                                          OnDeleteRequested="@OnCommentDeleteRequested"
+                                          OnReactionToggled="@OnCommentReactionToggled"
+                                          OnThreadNavigateRequested="@OnCommentThreadNavigateRequested" />
+        }
+    </text>;
+}

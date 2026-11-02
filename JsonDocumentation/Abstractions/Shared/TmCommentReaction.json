@@ -9,7 +9,7 @@
   "members": [
     {
       "name": "IsValid",
-      "kind": "Field",
+      "kind": "Property",
       "type": "bool",
       "description": "Returns true when the reaction has a value."
     },

@@ -1021,6 +1021,12 @@
           "description": "Whether the autocomplete dropdown is visible."
         },
         {
+          "name": "ListId",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Id of the listbox, owned by the editor ({editorId}-mentions) so aria-controls names a stable target. Empty falls back to a per-instance id."
+        },
+        {
           "name": "OnHighlightedIndexChanged",
           "type": "EventCallback<int>",
           "isRequired": false,
@@ -1061,7 +1067,7 @@
       "examples": [
         {
           "title": "Used internally by rich editors",
-          "code": "<MentionAutocomplete IsVisible=\"true\" Users=\"@users\" Query=\"@query\" HighlightedIndex=\"0\" OnUserSelected=\"HandleSelected\" OnHighlightedIndexChanged=\"HandleIndexChanged\" />"
+          "code": "<MentionAutocomplete IsVisible=\"true\" ListId=\"editor-mentions\" Users=\"@users\" Query=\"@query\" HighlightedIndex=\"0\" OnUserSelected=\"HandleSelected\" OnHighlightedIndexChanged=\"HandleIndexChanged\" />"
         }
       ]
     },
@@ -1245,7 +1251,7 @@
       "kind": "Component",
       "category": "Activity",
       "namespace": "Tempo.Blazor.Components.Activity",
-      "description": "Comment thread component with inline rich text editing via TmRichEditorSimple. Supports adding, editing, and deleting comments with author avatars, relative timestamps, and edit indicators. Communicates changes via EventCallbacks. Exposes a draft-guard surface: OnDraftChanged reports every TmCommentDraftState transition (editor open/closed, which comment is edited, whether unsaved content exists) with value-equality dedup, HasUnsavedDraft polls the same flag at any time, and DiscardDraftAsync closes the editor after the consumer's own confirmation.",
+      "description": "Comment thread component with inline rich text editing via TmRichEditorSimple. Supports adding, editing, and deleting comments with author avatars, relative timestamps, and edit indicators. Communicates changes via EventCallbacks. Exposes a draft-guard surface: OnDraftChanged reports every TmCommentDraftState transition (editor open/closed, which comment is edited, whether unsaved content exists) with value-equality dedup, HasUnsavedDraft polls the same flag at any time, and DiscardDraftAsync closes the editor after the consumer's own confirmation. CommentActions is an optional per-comment RenderFragment<TmCommentEntry> rendered after Edit/Delete inside .tm-comment-actions, wrapped by .tm-comment-actions__custom; the consumer supplies the button and any confirmation dialog. The actions row is omitted when the comment cannot be edited or deleted and CommentActions is unset, and it is hidden on the comment currently being edited. The wrapper is not focusable and handles no keys. Each comment item carries data-comment-id (the entry id) and data-internal=\"true|false\". An internal entry also gets tm-comment-item--internal and a lock TmBadge (IconNames.Lock plus the localized Internal label; the explanatory title is repeated in a tm-sr-only span, not an aria-label). Each rendered consumer badge carries data-badge-tone (neutral|info|success|warning|danger|accent) and, when Title is set, the same tm-sr-only \": {Title}\" pattern. The component never hides an internal comment.",
       "packageId": "Tempo.Blazor",
       "sourcePath": "src/Tempo.Blazor/Components/Activity/TmActivityComments.razor",
       "documentationStatus": "merged",
@@ -1255,25 +1261,47 @@
       ],
       "parameters": [
         {
+          "name": "CommentActions",
+          "type": "RenderFragment<TmCommentEntry>?",
+          "isRequired": false,
+          "description": "Consumer actions rendered after the built-in Edit and Delete buttons, inside .tm-comment-actions wrapped by .tm-comment-actions__custom, once per comment with that comment's TmCommentEntry. The component does not interpret the fragment: the consumer supplies its own button and any confirmation dialog (for example an admin toggle between internal and public). The component never hides an internal comment. The actions row renders when the comment can be edited or deleted, or when this fragment is set; it is omitted when none of those apply. While that comment is being edited inline the row is hidden; other comments keep theirs. The wrapper is not focusable and does not handle keys, so it does not change tab order — put a native button in the fragment."
+        },
+        {
           "name": "Comments",
           "type": "IReadOnlyList<TmCommentEntry>",
           "isRequired": false,
-          "default": "[]"
+          "default": "[]",
+          "description": "Comments to render. An entry with IsInternal is painted with the internal wash, IconNames.Lock and the localized Internal label; it is never hidden — the consumer or server filters visibility. Valid Badges render in the meta row as subtle pill TmBadges. A null Badges list is treated as empty. Defaults to an empty list."
+        },
+        {
+          "name": "MentionProvider",
+          "type": "ITmPeopleProvider?",
+          "isRequired": false,
+          "description": "People source for the composer and inline-editor mention picker. Null (or SupportsMentions false) leaves autocomplete off."
         },
         {
           "name": "OnCommentAdded",
           "type": "EventCallback<string>",
-          "isRequired": false
+          "isRequired": false,
+          "description": "Raised with the submitted HTML when the user posts a new comment. Stays for hosts that only need the body. Prefer OnCommentSubmitted when the host must also know whether the composer was in internal mode — that callback fires first, then this one, with the same HTML. Both stay; neither replaces the other."
         },
         {
           "name": "OnCommentDeleted",
           "type": "EventCallback<string>",
-          "isRequired": false
+          "isRequired": false,
+          "description": "Raised with the comment id when the user deletes a comment."
         },
         {
           "name": "OnCommentEdited",
           "type": "EventCallback<(string Id, string Html)>",
-          "isRequired": false
+          "isRequired": false,
+          "description": "Raised with the comment id and the new HTML when the user saves an edit."
+        },
+        {
+          "name": "OnCommentSubmitted",
+          "type": "EventCallback<TmCommentSubmission>",
+          "isRequired": false,
+          "description": "Raised when the user posts a NEW comment, before OnCommentAdded, with the HTML and the composer internal flag (TmCommentSubmission). Document order is fixed: this callback, then OnCommentAdded. An edit does not raise it. An effectively empty composer raises neither callback. When this callback has no delegate, only OnCommentAdded runs."
         },
         {
           "name": "OnDraftChanged",
@@ -1285,7 +1313,22 @@
           "name": "ShowAddButton",
           "type": "bool",
           "isRequired": false,
-          "default": "true"
+          "default": "true",
+          "description": "Shows the Add comment button when no editor is open. Defaults to true."
+        },
+        {
+          "name": "ShowInternalToggle",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Shows the internal switch (TmToggle, role=switch, localized TmActivityComments_InternalToggle) in the new-comment composer footer. Off by default. The inline editor never shows it. After a successful post, cancel, or DiscardDraftAsync the switch returns to off. It is disabled while the post is in flight. On paints tm-comment-editor--internal.",
+          "default": "false"
+        },
+        {
+          "name": "SupportsMentions",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Passes mention autocomplete through to the new-comment composer and the inline editor. Without MentionProvider the editor stays off even when this is true — no exception, no empty picker. Defaults to false.",
+          "default": "false"
         }
       ],
       "methods": [
@@ -1312,24 +1355,50 @@
           "description": "Whether the component currently holds an unsaved comment draft — the same value the OnDraftChanged HasUnsavedContent flag carries, read live from the current editor state so consumers can poll it at any time (e.g. before a refresh that would discard the draft). Read it on the component's dispatcher (an event handler or InvokeAsync) from background threads."
         }
       ],
+      "domAttributes": [
+        {
+          "name": "data-comment-id",
+          "element": "li.tm-comment-item",
+          "description": "The comment entry id. Present on every rendered item."
+        },
+        {
+          "name": "data-internal",
+          "element": "li.tm-comment-item",
+          "description": "\"true\" when the entry is internal, otherwise \"false\". Always present; never omitted."
+        },
+        {
+          "name": "data-badge-tone",
+          "element": ".tm-comment-badge",
+          "description": "Lower-cased TmCommentBadgeTone of a rendered consumer badge: neutral, info, success, warning, danger or accent. Not set on the internal lock badge."
+        }
+      ],
       "cssClasses": [
         "tm-comments",
         "tm-comments-empty",
         "tm-comment-list",
         "tm-comment-item",
+        "tm-comment-item--internal",
         "tm-comment-avatar",
         "tm-comment-body",
         "tm-comment-meta",
         "tm-comment-author",
         "tm-comment-time",
         "tm-comment-edited",
+        "tm-comment-internal-label",
+        "tm-comment-badge",
         "tm-comment-content",
         "tm-comment-actions",
+        "tm-comment-actions__custom",
         "tm-comment-editor",
         "tm-comment-editor-actions",
         "tm-comments-add-btn"
       ],
       "examples": [
+        {
+          "title": "Host action per comment (button + confirmation dialog)",
+          "description": "CommentActions receives the entry. The dialog and the IsInternal flip belong to the host; the component only paints the result and never hides an internal comment.",
+          "code": "<TmActivityComments Comments=\"@comments\"\n                     CommentActions=\"@VisibilityAction\" />\n<TmDialog Show=\"@_confirm\" Type=\"DialogType.Confirm\"\n          Title=\"Change visibility?\"\n          Message=\"Notifications already sent cannot be recalled.\"\n          OnResult=\"ApplyVisibility\" />\n\n@code {\n    private RenderFragment<TmCommentEntry> VisibilityAction => comment => __builder =>\n    {\n        <TmButton Variant=\"ButtonVariant.Ghost\" Size=\"ButtonSize.Sm\" Icon=\"@IconNames.Lock\"\n                  OnClick=\"@(() => Ask(comment))\">Toggle</TmButton>\n    };\n}"
+        },
         {
           "title": "Comment section with add/edit/delete",
           "code": "<TmActivityComments Comments=\"@comments\"\n                     OnCommentAdded=\"HandleAdd\"\n                     OnCommentDeleted=\"HandleDelete\"\n                     OnCommentEdited=\"HandleEdit\"\n                     ShowAddButton=\"true\" />"
@@ -1370,6 +1439,12 @@
           "default": "[]"
         },
         {
+          "name": "CommentActions",
+          "type": "RenderFragment<TmCommentEntry>?",
+          "isRequired": false,
+          "description": "Consumer actions rendered after the built-in Edit and Delete buttons, once per comment. Forwarded; the log does not interpret the fragment."
+        },
+        {
           "name": "Comments",
           "type": "IReadOnlyList<TmCommentEntry>",
           "isRequired": false,
@@ -1392,14 +1467,28 @@
           "isRequired": false
         },
         {
+          "name": "MentionProvider",
+          "type": "ITmPeopleProvider?",
+          "isRequired": false,
+          "description": "People source for the comments-tab mention picker. Null (or SupportsMentions false) leaves autocomplete off."
+        },
+        {
           "name": "OnCommentAdded",
           "type": "EventCallback<string>",
-          "isRequired": false
+          "isRequired": false,
+          "description": "Raised with the submitted HTML when the user posts a new comment. Stays for hosts that only need the body; prefer OnCommentSubmitted when the internal flag matters. Forwarded to TmActivityComments."
         },
         {
           "name": "OnCommentDeleted",
           "type": "EventCallback<string>",
-          "isRequired": false
+          "isRequired": false,
+          "description": "Raised with the comment id when the user deletes a comment. Forwarded to TmActivityComments."
+        },
+        {
+          "name": "OnCommentSubmitted",
+          "type": "EventCallback<TmCommentSubmission>",
+          "isRequired": false,
+          "description": "Raised before OnCommentAdded with the HTML and the composer internal flag. Forwarded unchanged; the log does not interpret or filter internal comments."
         },
         {
           "name": "ShowAttachments",
@@ -1414,6 +1503,13 @@
           "default": "true"
         },
         {
+          "name": "ShowInternalToggle",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Shows the internal switch in the new-comment composer. Off by default. The log never hides the resulting comment — the consumer filters visibility.",
+          "default": "false"
+        },
+        {
           "name": "ShowTimeline",
           "type": "bool",
           "isRequired": false,
@@ -1424,6 +1520,13 @@
           "type": "bool",
           "isRequired": false,
           "description": "When true, the timeline tab renders a built-in search + type filter bar (default: false)."
+        },
+        {
+          "name": "SupportsMentions",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Passes mention autocomplete through to the comments tab. Without MentionProvider the editor stays off even when this is true. Defaults to false.",
+          "default": "false"
         },
         {
           "name": "TimelineDataProvider",
@@ -8820,7 +8923,7 @@
           "name": "TestId",
           "kind": "Property",
           "type": "string?",
-          "description": "Host test id copied onto the overflow entry as data-testid. Used when the action has no copy on the bar (a toolbar button with Priority == OverflowOnly). Empty renders no attribute."
+          "description": "Host test id rendered as data-testid on the TmMobileActionBar tile and on the overflow entry. Used when the action has no copy on the bar (a toolbar button with Priority == OverflowOnly). Empty renders no attribute. Markup change: a host that already set TestId now gets that id on the bar button, not only the menu."
         }
       ],
       "properties": [
@@ -15342,6 +15445,12 @@
           "description": "Optional aria-label passed to the internal file input."
         },
         {
+          "name": "InputAttributes",
+          "type": "Dictionary<string, object>?",
+          "isRequired": false,
+          "description": "Additional attributes splatted onto the internal input type=\"file\" element. Use it for the accessibility plumbing a host step owns — aria-describedby, aria-invalid, aria-labelledby. Entries win over the component's own attributes (the splat is applied last). Additive: nothing existing changes."
+        },
+        {
           "name": "InputTestId",
           "type": "string?",
           "isRequired": false,
@@ -15365,6 +15474,13 @@
           "type": "EventCallback<InputFileChangeEventArgs>",
           "isRequired": false,
           "description": "Fires when files are selected via click or drag-and-drop."
+        },
+        {
+          "name": "ShowFileList",
+          "type": "bool",
+          "isRequired": false,
+          "default": "true",
+          "description": "Whether the zone renders its OWN list of the files picked through it (default true). A host that presents the picked files itself (e.g. the Signing attachment step renders its own attachment cards) passes false so the files do not show TWICE."
         }
       ],
       "cssClasses": [
@@ -17427,6 +17543,12 @@
           "type": "bool",
           "isRequired": false,
           "description": "Shows an indeterminate (dash) state when true and Value is false."
+        },
+        {
+          "name": "InputAttributes",
+          "type": "Dictionary<string, object>?",
+          "isRequired": false,
+          "description": "Additional attributes splatted onto the NATIVE input element (the wrapper splat AdditionalAttributes cannot reach it). Use it for the accessibility plumbing a host step owns — aria-invalid, aria-describedby, aria-labelledby. Entries win over the component's own attributes (the splat is applied last), except aria-describedby, which merges with the help text id. Additive: nothing existing changes."
         },
         {
           "name": "Label",
@@ -20146,6 +20268,12 @@
           "description": "Marks the select as required. Shows a required marker on the label and sets aria-required on the <select> element. Caveat: every empty option (the placeholder — selectable or not — and any null-valued option) carries the empty wire value, so picking it counts as \"no selection\" and native validation reports the field as missing."
         },
         {
+          "name": "SelectAttributes",
+          "type": "Dictionary<string, object>?",
+          "isRequired": false,
+          "description": "Additional attributes splatted onto the NATIVE select element (the wrapper splat AdditionalAttributes cannot reach it). Use it for the accessibility plumbing a host step owns — aria-invalid, aria-describedby, aria-labelledby — or any other select-level attribute. Entries win over the component's own attributes (the splat is applied last). Additive: nothing existing changes."
+        },
+        {
           "name": "Value",
           "type": "TValue?",
           "isRequired": false,
@@ -20730,6 +20858,13 @@
         "tm-input-disabled",
         "tm-input-error-message"
       ],
+      "methods": [
+        {
+          "name": "FocusAsync",
+          "signature": "Task FocusAsync()",
+          "description": "Moves focus to the textarea. No-op until the element has rendered."
+        }
+      ],
       "examples": [
         {
           "title": "Basic textarea",
@@ -20961,6 +21096,12 @@
         "@using Tempo.Blazor.Components.Inputs"
       ],
       "parameters": [
+        {
+          "name": "AriaDescribedBy",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Id of the element that describes the switch, rendered as aria-describedby on the inner input (role=switch). Use it for a hint that must not become a second accessible name. Null (the default) renders no attribute."
+        },
         {
           "name": "AriaLabel",
           "type": "string?",
@@ -23848,6 +23989,12 @@
           "type": "string?",
           "isRequired": false,
           "description": "Additional CSS class for the root element."
+        },
+        {
+          "name": "IsOpenChanged",
+          "type": "EventCallback<bool>",
+          "isRequired": false,
+          "description": "Raised when the menu opens or closes, including a close from the overlay. A host that mounts the menu only while it is open uses this to drop that mount."
         },
         {
           "name": "MobilePresentation",
@@ -27433,6 +27580,12 @@
           "default": "false"
         },
         {
+          "name": "CommentActions",
+          "type": "RenderFragment<TmCommentEntry>?",
+          "isRequired": false,
+          "description": "Consumer actions rendered after the built-in Edit and Delete buttons of each task comment. Forwarded; the panel does not interpret the fragment."
+        },
+        {
           "name": "Dependencies",
           "type": "IReadOnlyList<GanttDependency>",
           "isRequired": false,
@@ -27452,6 +27605,12 @@
           "isRequired": false,
           "description": "When true the Progress section states that one of the task's assignees is over capacity (read-only).",
           "default": "false"
+        },
+        {
+          "name": "MentionProvider",
+          "type": "ITmPeopleProvider?",
+          "isRequired": false,
+          "description": "People source for the task-comment mention picker. Null (or SupportsMentions false) leaves autocomplete off."
         },
         {
           "name": "MobileReadOnly",
@@ -27488,7 +27647,7 @@
           "name": "OnCommentAdded",
           "type": "EventCallback<TmCommentEntry>",
           "isRequired": false,
-          "description": "Fires when the user submits a new comment."
+          "description": "Fires when the user submits a new comment. The entry's IsInternal is the composer flag when the host used the internal switch; the panel never hides internal comments."
         },
         {
           "name": "OnDependencyAdded",
@@ -27531,6 +27690,20 @@
           "type": "EventCallback<(string TaskId, GanttTimeLogEntry Entry)>",
           "isRequired": false,
           "description": "Fires when the user stops the timer (arg = taskId + completed log entry)."
+        },
+        {
+          "name": "ShowInternalToggle",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Shows the internal switch in the new-comment composer. Off by default. The panel never filters the resulting comment.",
+          "default": "false"
+        },
+        {
+          "name": "SupportsMentions",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Passes mention autocomplete through to the task comments. Without MentionProvider the editor stays off even when this is true. Defaults to false. Mention ids from MentionProvider are not preserved (HTML stripped; Mentions parsed from @word text).",
+          "default": "false"
         },
         {
           "name": "Tabbed",

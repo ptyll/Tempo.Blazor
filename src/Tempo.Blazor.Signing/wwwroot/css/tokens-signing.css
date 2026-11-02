@@ -24,6 +24,30 @@
     --tm-signing-role-4: #9333ea;
     --tm-signing-role-5: #0891b2;
     --tm-signing-role-6: #a16207;
+
+    /*
+     * Near-black ink of a LIGHT custom role paint. Declared on :root ONLY and never overridden —
+     * not in the dark block, not in the light island, not by tokens-dark.css or theme-indigo.css.
+     * Those themes redefine --tm-color-gray-900 to white, which would paint white text on a light
+     * custom pill. The value is the light gray-900 (#111827) and must stay that concrete colour in
+     * every theme. Hosts rebranding it rebrand the custom-paint ink everywhere at once.
+     */
+    --tm-signing-role-ink-dark: #111827;
+
+    /*
+     * The role pill's text ink per paint (phase 7 review): the ink with the higher actual WCAG
+     * contrast ratio against its role colour (light paints take the near-black ink, saturated
+     * mid paints the white one). SigningRolePalette.ContrastTextFor emits `var(--tm-signing-role-N-on)`
+     * for every default-palette (and legacy #ca8a04) colour, so a host rebranding `--tm-signing-role-N`
+     * keeps the text readable by overriding the `-on` twin. Every pair holds ≥ 4.5:1
+     * (SigningRoleContrastTokenTests parses this file and re-computes the ratios).
+     */
+    --tm-signing-role-1-on: #ffffff;
+    --tm-signing-role-2-on: #111827;
+    --tm-signing-role-3-on: #ffffff;
+    --tm-signing-role-4-on: #ffffff;
+    --tm-signing-role-5-on: #111827;
+    --tm-signing-role-6-on: #ffffff;
 }
 
 [data-theme="dark"],
@@ -34,6 +58,14 @@
     --tm-signing-role-4: #c084fc;
     --tm-signing-role-5: #22d3ee;
     --tm-signing-role-6: #facc15;
+
+    /* The dark palette lightens every role paint, so every ink flips to the near-black one. */
+    --tm-signing-role-1-on: #111827;
+    --tm-signing-role-2-on: #111827;
+    --tm-signing-role-3-on: #111827;
+    --tm-signing-role-4-on: #111827;
+    --tm-signing-role-5-on: #111827;
+    --tm-signing-role-6-on: #111827;
 }
 
 /* Light island: a forced-light signing surface inside a dark page keeps the light palette. */
@@ -44,4 +76,10 @@
     --tm-signing-role-4: #9333ea;
     --tm-signing-role-5: #0891b2;
     --tm-signing-role-6: #a16207;
+    --tm-signing-role-1-on: #ffffff;
+    --tm-signing-role-2-on: #111827;
+    --tm-signing-role-3-on: #ffffff;
+    --tm-signing-role-4-on: #ffffff;
+    --tm-signing-role-5-on: #111827;
+    --tm-signing-role-6-on: #ffffff;
 }

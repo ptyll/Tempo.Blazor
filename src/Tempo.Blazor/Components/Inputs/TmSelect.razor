@@ -22,7 +22,8 @@
                 aria-invalid="@(IsInvalid ? "true" : null)"
                 aria-describedby="@DescribedBy"
                 aria-label="@(AriaLabel ?? (string.IsNullOrEmpty(Label) && !string.IsNullOrEmpty(Placeholder) && !PlaceholderSelectable ? Placeholder : null))"
-                @onchange="HandleChangeAsync">
+                @onchange="HandleChangeAsync"
+                @attributes="NativeSelectAttributes">
             @if (!string.IsNullOrEmpty(Placeholder))
             {
                 <option value="" disabled="@(!PlaceholderSelectable)" selected="@IsDefaultSelection">@Placeholder</option>
@@ -124,6 +125,15 @@
 
     /// <summary>Additional attributes applied to the root element.</summary>
     [Parameter(CaptureUnmatchedValues = true)] public Dictionary<string, object>? AdditionalAttributes { get; set; }
+
+    /// <summary>
+    /// Additional attributes splatted onto the NATIVE <c>&lt;select&gt;</c> element (the wrapper
+    /// splat <see cref="AdditionalAttributes"/> cannot reach it). Use it for the accessibility
+    /// plumbing a host step owns — <c>aria-invalid</c>, <c>aria-describedby</c>,
+    /// <c>aria-labelledby</c> — or any other select-level attribute. Entries win over the
+    /// component's own attributes (the splat is applied last). Additive: nothing existing changes.
+    /// </summary>
+    [Parameter] public Dictionary<string, object>? SelectAttributes { get; set; }
 
     /// <summary>Typed option list. When provided, &lt;option&gt; elements are generated automatically.</summary>
     [Parameter] public IReadOnlyList<SelectOption<TValue>>? Options { get; set; }
@@ -241,8 +251,38 @@
             _ => value.ToString() ?? string.Empty,
         };
 
-    private string SelectCssClass =>
-        $"tm-select{(string.IsNullOrEmpty(Error) ? "" : " tm-select-error")}{(Disabled ? " tm-select-disabled" : "")}";
+    private string SelectCssClass
+    {
+        get
+        {
+            var extra = SelectAttributes is not null
+                && SelectAttributes.TryGetValue("class", out var value)
+                ? value?.ToString()
+                : null;
+            var core = $"tm-select{(string.IsNullOrEmpty(Error) ? "" : " tm-select-error")}{(Disabled ? " tm-select-disabled" : "")}";
+            return string.IsNullOrWhiteSpace(extra) ? core : $"{core} {extra}";
+        }
+    }
+
+    /// <summary>
+    /// Host attributes for the native select, minus <c>class</c>. A splat applied last used to
+    /// replace <c>tm-select</c>, which drops <c>appearance: none</c> and paints the browser
+    /// chevron beside the component's own arrow.
+    /// </summary>
+    private Dictionary<string, object>? NativeSelectAttributes
+    {
+        get
+        {
+            if (SelectAttributes is null || !SelectAttributes.ContainsKey("class"))
+            {
+                return SelectAttributes;
+            }
+
+            var copy = new Dictionary<string, object>(SelectAttributes);
+            copy.Remove("class");
+            return copy;
+        }
+    }
 
     private async Task HandleChangeAsync(ChangeEventArgs e)
     {

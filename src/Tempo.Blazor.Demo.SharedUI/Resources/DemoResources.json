@@ -631,5 +631,12 @@
   "TmAppShellDemo_LastActionBilling": "Billing",
   "TmAppShellDemo_CompleteProfile": "Complete your profile",
   "TmAppShellDemo_StageLabel": "Frame preview stage — the live frame measures this box, not the browser window. Scroll it when a preset is wider than the demo column.",
-  "TmAppShellDemo_BackToDemos": "All components"
+  "TmAppShellDemo_BackToDemos": "All components",
+  "TmDemo_ActivityComments_MakePublic": "Make public",
+  "TmDemo_ActivityComments_MakeInternal": "Make internal",
+  "TmDemo_ActivityComments_ToggleTitleInternal": "Make this comment public?",
+  "TmDemo_ActivityComments_ToggleTitlePublic": "Make this comment internal?",
+  "TmDemo_ActivityComments_ToggleMessageInternal": "Everyone who can open this thread will see the comment. Notifications already sent cannot be recalled.",
+  "TmDemo_ActivityComments_ToggleMessagePublic": "Only privileged users should see an internal comment. The component does not hide it — your app must filter it. Notifications already sent cannot be recalled.",
+  "TmDemo_ActivityComments_ToggleConfirm": "Change visibility"
 }

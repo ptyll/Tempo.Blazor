@@ -17,6 +17,32 @@ public class TmCommentAbstractionsTests
     }
 
     [Fact]
+    public void TmCommentEntry_Defaults_IsInternalFalse_BadgesEmpty()
+    {
+        var entry = new TmCommentEntry();
+
+        entry.IsInternal.Should().BeFalse();
+        entry.Badges.Should().NotBeNull().And.BeEmpty();
+    }
+
+    [Fact]
+    public void TmCommentBadge_IsValid_RequiresText()
+    {
+        new TmCommentBadge().IsValid.Should().BeFalse();
+        new TmCommentBadge { Text = "   " }.IsValid.Should().BeFalse();
+        new TmCommentBadge { Text = "Internal" }.IsValid.Should().BeTrue();
+    }
+
+    [Fact]
+    public void TmCommentBadgeTone_HasExpectedMembers()
+    {
+        Enum.GetNames<TmCommentBadgeTone>().Should().Equal(
+            "Neutral", "Info", "Success", "Warning", "Danger", "Accent");
+        ((int)TmCommentBadgeTone.Neutral).Should().Be(0);
+        ((int)TmCommentBadgeTone.Accent).Should().Be(5);
+    }
+
+    [Fact]
     public void TmCommentThread_IsValid_RequiresEntityAndId()
     {
         var thread = new TmCommentThread

@@ -1,16 +1,27 @@
 @namespace Tempo.Blazor.Components.Signing
 @using Tempo.Blazor.Abstractions.Models
+@using Tempo.Blazor.Components.Avatars
 
 <section @attributes="AdditionalAttributes" class="@RootClass">
-    @if (Trail is null)
-    {
-        <div class="tm-audit-trail-viewer__empty">@Loc["TmAuditTrailViewer_Empty"]</div>
-    }
-    else
+    @* The header only renders when there is something to head (phase 7 review): a Trail-less,
+       header-less viewer shows just the empty state — never a lone "Audit trail" title. *@
+    @if (Trail is not null || HeaderContent is not null)
     {
         <header class="tm-audit-trail-viewer__header">
-            <h2>@Loc["TmAuditTrailViewer_Title"]</h2>
-            @if (!string.IsNullOrWhiteSpace(Trail.AuditPdfUrl))
+            @if (HeaderContent is not null)
+            {
+                @* Host-owned document title/status (Q-S10 — the audit model stays unchanged; the host
+                   renders the document card the desktop reference shows). *@
+                <div class="tm-audit-trail-viewer__header-content">
+                    @HeaderContent
+                </div>
+            }
+            else
+            {
+                <h2>@Loc["TmAuditTrailViewer_Title"]</h2>
+            }
+
+            @if (Trail?.AuditPdfUrl is not null)
             {
                 <a class="tm-btn tm-btn-outline tm-btn-sm tm-audit-trail-viewer__audit-pdf"
                    href="@Trail.AuditPdfUrl"
@@ -20,7 +31,14 @@
                 </a>
             }
         </header>
+    }
 
+    @if (Trail is null)
+    {
+        <div class="tm-audit-trail-viewer__empty">@Loc["TmAuditTrailViewer_Empty"]</div>
+    }
+    else
+    {
         @if (LocalizationSnapshot is not null)
         {
             <section class="tm-audit-trail-viewer__section tm-audit-trail-viewer__localization"
@@ -66,65 +84,101 @@
 
         <section class="tm-audit-trail-viewer__section">
             <h3>@Loc["TmAuditTrailViewer_Documents"]</h3>
-            @foreach (var document in Trail.Documents)
-            {
-                <dl class="tm-audit-trail-viewer__document">
-                    <div>
-                        <dt>@Loc["TmAuditTrailViewer_FileName"]</dt>
-                        <dd>@document.FileName</dd>
-                    </div>
-                    <div>
-                        <dt>@Loc["TmAuditTrailViewer_Checksum"]</dt>
-                        <dd>@document.Checksum</dd>
-                    </div>
-                </dl>
-            }
+            @* The tables carry explicit ARIA roles (phase 7 review): the narrow-panel CSS collapses
+               them to display:block cards, which would otherwise drop the table semantics. *@
+            <table class="tm-audit-trail-viewer__table tm-audit-trail-viewer__table--documents" role="table">
+                <thead role="rowgroup">
+                    <tr role="row">
+                        <th scope="col" role="columnheader">@Loc["TmAuditTrailViewer_FileName"]</th>
+                        <th scope="col" role="columnheader">@Loc["TmAuditTrailViewer_Checksum"]</th>
+                    </tr>
+                </thead>
+                <tbody role="rowgroup">
+                    @foreach (var document in Trail.Documents)
+                    {
+                        <tr role="row">
+                            <td role="cell" data-label="@Loc["TmAuditTrailViewer_FileName"]">@FormatValue(document.FileName)</td>
+                            <td role="cell" data-label="@Loc["TmAuditTrailViewer_Checksum"]"><span class="tm-audit-trail-viewer__checksum">@FormatValue(document.Checksum)</span></td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
         </section>
 
         <section class="tm-audit-trail-viewer__section">
             <h3>@Loc["TmAuditTrailViewer_Signers"]</h3>
-            @foreach (var signer in Trail.Signers)
-            {
-                <dl class="tm-audit-trail-viewer__signer">
-                    <div>
-                        <dt>@Loc["TmAuditTrailViewer_Identity"]</dt>
-                        <dd>@signer.FullName (@signer.Email)</dd>
-                    </div>
-                    <div>
-                        <dt>@Loc["TmAuditTrailViewer_Network"]</dt>
-                        <dd>@FormatNetwork(signer.IpAddress, signer.UserAgent, signer.TimeZone)</dd>
-                    </div>
-                    @if (!string.IsNullOrWhiteSpace(signer.VerificationMethod))
+            <table class="tm-audit-trail-viewer__table tm-audit-trail-viewer__table--signers" role="table">
+                <thead role="rowgroup">
+                    <tr role="row">
+                        <th scope="col" role="columnheader">@Loc["TmAuditTrailViewer_Identity"]</th>
+                        <th scope="col" role="columnheader">@Loc["TmAuditTrailViewer_Network"]</th>
+                        <th scope="col" role="columnheader">@Loc["TmAuditTrailViewer_VerificationMethod"]</th>
+                    </tr>
+                </thead>
+                <tbody role="rowgroup">
+                    @foreach (var signer in Trail.Signers)
                     {
-                        <div>
-                            <dt>@Loc["TmAuditTrailViewer_VerificationMethod"]</dt>
-                            <dd>@signer.VerificationMethod</dd>
-                        </div>
+                        <tr role="row">
+                            <td role="cell" data-label="@Loc["TmAuditTrailViewer_Identity"]">
+                                <span class="tm-audit-trail-viewer__identity">
+                                    <TmAvatar Name="@(string.IsNullOrWhiteSpace(signer.FullName) ? signer.Email : signer.FullName)" Size="AvatarSize.Sm" />
+                                    <span class="tm-audit-trail-viewer__identity-text">
+                                        <span class="tm-audit-trail-viewer__identity-name">@FormatValue(signer.FullName)</span>
+                                        <span class="tm-audit-trail-viewer__identity-detail">@FormatValue(signer.Email)</span>
+                                    </span>
+                                </span>
+                            </td>
+                            <td role="cell" data-label="@Loc["TmAuditTrailViewer_Network"]">
+                                <span class="tm-audit-trail-viewer__network">
+                                    <span class="tm-audit-trail-viewer__network-primary">@FormatNetworkPrimary(signer.IpAddress)</span>
+                                    @if (HasNetworkSecondary(signer.UserAgent, signer.TimeZone))
+                                    {
+                                        <span class="tm-audit-trail-viewer__network-secondary">@JoinNetworkSecondary(signer.UserAgent, signer.TimeZone)</span>
+                                    }
+                                </span>
+                            </td>
+                            <td role="cell" data-label="@Loc["TmAuditTrailViewer_VerificationMethod"]">@FormatValue(signer.VerificationMethod)</td>
+                        </tr>
                     }
-                </dl>
-            }
+                </tbody>
+            </table>
         </section>
 
         <section class="tm-audit-trail-viewer__section">
             <h3>@Loc["TmAuditTrailViewer_Events"]</h3>
-            <div class="tm-audit-trail-viewer__entries">
-                @foreach (var item in Trail.Events.OrderBy(item => item.OccurredAt))
-                {
-                    <article class="tm-audit-trail-viewer__entry">
-                        <strong>@item.Label</strong>
-                        <time>@item.OccurredAt.ToLocalTime().ToString("g")</time>
-                        @if (!string.IsNullOrWhiteSpace(item.Actor))
-                        {
-                            <span>@item.Actor</span>
-                        }
-                        <span>@FormatNetwork(item.IpAddress, item.UserAgent, item.TimeZone)</span>
-                        @if (!string.IsNullOrWhiteSpace(item.VerificationMethod))
-                        {
-                            <span>@item.VerificationMethod</span>
-                        }
-                    </article>
-                }
-            </div>
+            <table class="tm-audit-trail-viewer__table tm-audit-trail-viewer__table--events" role="table">
+                <thead role="rowgroup">
+                    <tr role="row">
+                        <th scope="col" role="columnheader">@Loc["TmAuditTrailViewer_Event"]</th>
+                        <th scope="col" role="columnheader">@Loc["TmAuditTrailViewer_EventTime"]</th>
+                        <th scope="col" role="columnheader">@Loc["TmAuditTrailViewer_Actor"]</th>
+                        <th scope="col" role="columnheader">@Loc["TmAuditTrailViewer_Network"]</th>
+                        <th scope="col" role="columnheader">@Loc["TmAuditTrailViewer_VerificationMethod"]</th>
+                    </tr>
+                </thead>
+                <tbody role="rowgroup">
+                    @foreach (var item in Trail.Events.OrderBy(entry => entry.OccurredAt))
+                    {
+                        <tr role="row">
+                            <td role="cell" data-label="@Loc["TmAuditTrailViewer_Event"]">@FormatValue(item.Label)</td>
+                            <td role="cell" data-label="@Loc["TmAuditTrailViewer_EventTime"]">
+                                <time datetime="@SigningDateFormatter.FormatIso(item.OccurredAt)">@SigningDateFormatter.Format(item.OccurredAt)</time>
+                            </td>
+                            <td role="cell" data-label="@Loc["TmAuditTrailViewer_Actor"]">@FormatValue(item.Actor)</td>
+                            <td role="cell" data-label="@Loc["TmAuditTrailViewer_Network"]">
+                                <span class="tm-audit-trail-viewer__network">
+                                    <span class="tm-audit-trail-viewer__network-primary">@FormatNetworkPrimary(item.IpAddress)</span>
+                                    @if (HasNetworkSecondary(item.UserAgent, item.TimeZone))
+                                    {
+                                        <span class="tm-audit-trail-viewer__network-secondary">@JoinNetworkSecondary(item.UserAgent, item.TimeZone)</span>
+                                    }
+                                </span>
+                            </td>
+                            <td role="cell" data-label="@Loc["TmAuditTrailViewer_VerificationMethod"]">@FormatValue(item.VerificationMethod)</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
         </section>
     }
 </section>
@@ -136,6 +190,14 @@
     /// <summary>Optional resolved signing localization snapshot captured during the ceremony.</summary>
     [Parameter] public SigningSubmissionLocalizationSnapshot? LocalizationSnapshot { get; set; }
 
+    /// <summary>
+    /// Host-rendered document summary replacing the default title (the document name, its status
+    /// badge and timestamp — the desktop reference's header card). The panel renders it verbatim;
+    /// the audit model carries no document title, so without the slot the localized default title
+    /// stays (Q-S10).
+    /// </summary>
+    [Parameter] public RenderFragment? HeaderContent { get; set; }
+
     /// <summary>Additional CSS classes for the root element.</summary>
     [Parameter] public string? Class { get; set; }
 
@@ -146,9 +208,32 @@
         ? "tm-audit-trail-viewer"
         : $"tm-audit-trail-viewer {Class}";
 
-    private static string FormatNetwork(string? ipAddress, string? userAgent, string? timeZone)
+    /// <summary>The en dash an empty evidence cell renders (never blank space).</summary>
+    private const string Dash = "\u2013";
+
+    /// <summary>The primary network line: the IP address (or the dash when the trail records none).</summary>
+    private static string FormatNetworkPrimary(string? ipAddress)
     {
-        return string.Join(" · ", new[] { ipAddress, userAgent, timeZone }.Where(value => !string.IsNullOrWhiteSpace(value)));
+        return string.IsNullOrWhiteSpace(ipAddress)
+            ? Dash
+            : ipAddress;
+    }
+
+    /// <summary>Whether a secondary network line (agent and/or zone) exists at all.</summary>
+    private static bool HasNetworkSecondary(string? userAgent, string? timeZone)
+    {
+        return !string.IsNullOrWhiteSpace(userAgent) || !string.IsNullOrWhiteSpace(timeZone);
+    }
+
+    /// <summary>The secondary network line: user agent and time zone joined by an interpunct.</summary>
+    private static string JoinNetworkSecondary(string? userAgent, string? timeZone)
+    {
+        return string.Join(" · ", new[] { userAgent, timeZone }.Where(value => !string.IsNullOrWhiteSpace(value)));
+    }
+
+    private string FormatValue(string? value)
+    {
+        return string.IsNullOrWhiteSpace(value) ? Dash : value;
     }
 
     private string FormatSnapshotValue(string? value)

@@ -189,11 +189,11 @@ else
 
         // Y9: keyed elements must be SIBLINGS for the differ to compare their keys — the earlier
         // per-item regions scoped each key to its own region, so mutation order was never
-        // key-compared. Each item owns a fixed 16-slot stride; only the key carries identity.
+        // key-compared. Each item owns a fixed 20-slot stride; only the key carries identity.
         for (var i = 0; i < visible.Count; i++)
         {
             var item = visible[i];
-            var seq = 10 + (i * 16);
+            var seq = 10 + (i * 20);
             // X3: the bar's own tile button (icon over a two-line label), never .tm-btn — the
             // .tm-btn contract (fixed height, nowrap label) made labels illegible at 320/390.
             // The full label stays in the DOM (clamped to two lines), so no title attribute is
@@ -203,6 +203,10 @@ else
             builder.AddAttribute(seq + 2, "class", "tm-mobile-action-bar__action tm-touch-target");
             builder.AddAttribute(seq + 3, "disabled", item.Disabled);
             builder.AddAttribute(seq + 4, "data-action-id", string.IsNullOrEmpty(item.Id) ? item.Label : item.Id);
+            if (!string.IsNullOrEmpty(item.TestId))
+            {
+                builder.AddAttribute(seq + 17, "data-testid", item.TestId);
+            }
             // A stable DOM id for the tile (namespaced by the host's TestIdPrefix): the restore-focus
             // target of the surfaces the tile opens (the TmGantt mobile sheets, for one). The
             // TmActionItem.Id contract already reserves the id namespace for exactly this use.

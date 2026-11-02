@@ -1,67 +1,81 @@
 @namespace Tempo.Blazor.Components.Signing
 @using Tempo.Blazor.Abstractions.Models
+@using Tempo.Blazor.Components.Inputs
+@inject Microsoft.JSInterop.IJSRuntime JS
 
 <div @attributes="AdditionalAttributes"
      class="@RootClass"
      aria-invalid="@BoolText(_error is not null)">
     <div class="tm-formula-builder__editor">
         <label class="tm-formula-builder__label" for="@_textareaId">@Loc["TmFormulaBuilder_Formula"]</label>
-        <textarea id="@_textareaId"
-                  class="tm-formula-builder__textarea"
-                  value="@_formulaText"
-                  placeholder="@Loc["TmFormulaBuilder_Placeholder"]"
-                  disabled="@Disabled"
-                  rows="4"
-                  @oninput="HandleInputAsync"></textarea>
+        <div class="tm-formula-builder__textarea" @ref="_textareaHost">
+            <TmTextArea Id="@_textareaId"
+                        Value="@_formulaText"
+                        Placeholder="@Loc["TmFormulaBuilder_Placeholder"]"
+                        Disabled="@Disabled"
+                        Rows="4"
+                        Immediate="true"
+                        Error="@_error"
+                        ValueChanged="HandleInputAsync" />
+        </div>
     </div>
 
-    <div class="tm-formula-builder__toolbar" aria-label="@Loc["TmFormulaBuilder_Operators"]">
-        @foreach (var op in Operators)
-        {
-            var operatorText = GetOperatorText(op);
-            <button type="button"
-                    class="tm-formula-builder__operator"
-                    data-operator="@op"
-                    disabled="@Disabled"
-                    @onclick="() => InsertTextAsync(operatorText)">
-                @op
-            </button>
-        }
+    <section class="tm-formula-builder__group tm-formula-builder__group--operators" role="group" aria-labelledby="@_operatorsHeadingId">
+        <h3 class="tm-formula-builder__section-title" id="@_operatorsHeadingId">@Loc["TmFormulaBuilder_Operators"]</h3>
+        <div class="tm-formula-builder__toolbar">
+            @foreach (var op in Operators)
+            {
+                var operatorText = GetOperatorText(op);
+                @* The operator glyphs are ambiguous to a screen reader ("+", "*"); the button
+                   carries the localized spoken name (phase 7 review). *@
+                <button type="button"
+                        class="tm-formula-builder__operator"
+                        data-operator="@op"
+                        aria-label="@GetOperatorAriaLabel(op)"
+                        disabled="@Disabled"
+                        @onclick="() => InsertTextAsync(operatorText)">
+                    @op
+                </button>
+            }
+        </div>
+    </section>
 
-        @foreach (var function in Functions)
-        {
-            <button type="button"
-                    class="tm-formula-builder__function"
-                    data-function="@function"
-                    disabled="@Disabled"
-                    @onclick="() => InsertTextAsync(function)">
-                @function
-            </button>
-        }
-    </div>
+    <section class="tm-formula-builder__group tm-formula-builder__group--functions" role="group" aria-labelledby="@_functionsHeadingId">
+        <h3 class="tm-formula-builder__section-title" id="@_functionsHeadingId">@Loc["TmFormulaBuilder_Functions"]</h3>
+        <div class="tm-formula-builder__functions">
+            @foreach (var function in Functions)
+            {
+                <button type="button"
+                        class="tm-formula-builder__function"
+                        data-function="@function"
+                        disabled="@Disabled"
+                        @onclick="() => InsertTextAsync(function)">
+                    @function
+                </button>
+            }
+        </div>
+    </section>
 
-    <div class="tm-formula-builder__tokens" aria-label="@Loc["TmFormulaBuilder_Tokens"]">
-        @foreach (var sourceField in FormulaSourceFields)
-        {
-            var fieldLabel = GetLocalizedFieldLabel(sourceField);
-            <button type="button"
-                    class="tm-formula-builder__token"
-                    data-field-uuid="@sourceField.Uuid"
-                    disabled="@Disabled"
-                    @onclick="() => InsertFieldTokenAsync(sourceField)">
-                @fieldLabel
-            </button>
-        }
-    </div>
-
-    @if (_error is not null)
-    {
-        <div class="tm-formula-builder__error" role="alert">@_error</div>
-    }
+    <section class="tm-formula-builder__group tm-formula-builder__group--tokens" role="group" aria-labelledby="@_tokensHeadingId">
+        <h3 class="tm-formula-builder__section-title" id="@_tokensHeadingId">@Loc["TmFormulaBuilder_Tokens"]</h3>
+        <div class="tm-formula-builder__tokens">
+            @foreach (var sourceField in FormulaSourceFields)
+            {
+                <button type="button"
+                        class="tm-formula-builder__token"
+                        data-field-uuid="@sourceField.Uuid"
+                        disabled="@Disabled"
+                        @onclick="() => InsertFieldTokenAsync(sourceField)">
+                    <span class="tm-formula-builder__token-label">@GetLocalizedFieldLabel(sourceField)</span>
+                    <span class="tm-formula-builder__token-type">@GetFieldTypeLabel(sourceField.Type)</span>
+                </button>
+            }
+        </div>
+    </section>
 
     <div class="tm-formula-builder__actions">
         <button type="button"
-                class="tm-formula-builder__save"
+                class="tm-btn tm-btn-primary tm-btn-sm tm-formula-builder__save"
                 disabled="@Disabled"
                 @onclick="SaveAsync">
             <TmIcon Name="save" Size="IconSize.Xs" />

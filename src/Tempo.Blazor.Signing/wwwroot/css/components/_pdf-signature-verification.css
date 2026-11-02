@@ -1,10 +1,6 @@
 .tm-pdf-signature-verification {
     display: grid;
     gap: var(--tm-space-3);
-    padding: var(--tm-space-4);
-    border: 1px solid var(--tm-border-color);
-    border-radius: var(--tm-radius-md);
-    background: var(--tm-bg-surface);
     color: var(--tm-text-primary);
     container: tm-pdf-signature-verification / inline-size;
     /* inline-size containment sizes the box as if it were empty: keep it filling its parent
@@ -13,36 +9,31 @@
     inline-size: 100%;
 }
 
-.tm-pdf-signature-verification__status {
-    display: flex;
-    align-items: center;
-    gap: var(--tm-space-2);
+/* The status banner IS a TmAlert; the modifier class only tunes the panel context. */
+.tm-pdf-signature-verification__banner.tm-alert {
+    border-radius: var(--tm-radius-md);
 }
 
-.tm-pdf-signature-verification__title {
-    margin: 0;
-    font-size: var(--tm-font-size-lg);
-    font-weight: var(--tm-font-weight-semibold);
-}
-
-.tm-pdf-signature-verification__message {
-    margin: var(--tm-space-1) 0 0;
-    color: var(--tm-text-secondary);
+.tm-pdf-signature-verification__verify {
+    justify-self: start;
 }
 
 .tm-pdf-signature-verification__details {
     display: grid;
-    gap: var(--tm-space-2);
-    padding: var(--tm-space-3);
+    grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+    gap: var(--tm-space-2) var(--tm-space-4);
+    margin: 0;
+    padding: var(--tm-space-3) var(--tm-space-4);
     border: 1px solid var(--tm-border-color);
     border-radius: var(--tm-radius-md);
     background: var(--tm-bg-surface-secondary);
 }
 
-.tm-pdf-signature-verification__details div,
-.tm-pdf-signature-verification__signature {
+.tm-pdf-signature-verification__details div {
     display: grid;
     gap: var(--tm-space-1);
+    align-content: start;
+    min-width: 0;
 }
 
 .tm-pdf-signature-verification__details dt {
@@ -52,7 +43,24 @@
 }
 
 .tm-pdf-signature-verification__details dd {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--tm-space-2);
     margin: 0;
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+/* Checksum: machine evidence — monospace, shown truncated with the full value on the copy action
+   (and the title attribute), never wrapping the card into a hash wall. */
+.tm-pdf-signature-verification__checksum {
+    grid-column: 1 / -1;
+}
+
+.tm-pdf-signature-verification__checksum-value {
+    font-family: var(--tm-font-mono);
+    font-size: var(--tm-font-size-sm);
     overflow-wrap: anywhere;
 }
 
@@ -66,11 +74,71 @@
     font-size: var(--tm-font-size-md);
 }
 
+/* One signature = one card: avatar header + the three-column detail dl. */
 .tm-pdf-signature-verification__signature {
-    padding: var(--tm-space-3);
+    display: grid;
+    gap: var(--tm-space-3);
+    padding: var(--tm-space-3) var(--tm-space-4);
     border: 1px solid var(--tm-border-color);
     border-radius: var(--tm-radius-md);
-    background: var(--tm-bg-surface-secondary);
+    background: var(--tm-bg-surface);
+}
+
+.tm-pdf-signature-verification__signature-header {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-3);
+    min-width: 0;
+}
+
+.tm-pdf-signature-verification__signature-identity {
+    display: grid;
+    min-width: 0;
+}
+
+.tm-pdf-signature-verification__signature-identity strong {
+    font-size: var(--tm-font-size-md);
+    color: var(--tm-text-primary);
+}
+
+.tm-pdf-signature-verification__signature-email {
     color: var(--tm-text-secondary);
     font-size: var(--tm-font-size-sm);
+    overflow-wrap: anywhere;
+}
+
+.tm-pdf-signature-verification__signature-details {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--tm-space-2) var(--tm-space-4);
+    margin: 0;
+    padding-top: var(--tm-space-3);
+    border-top: 1px solid var(--tm-border-color);
+}
+
+.tm-pdf-signature-verification__signature-details div {
+    display: grid;
+    gap: var(--tm-space-1);
+    align-content: start;
+    min-width: 0;
+}
+
+.tm-pdf-signature-verification__signature-details dt {
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-xs);
+    font-weight: var(--tm-font-weight-semibold);
+}
+
+.tm-pdf-signature-verification__signature-details dd {
+    margin: 0;
+    color: var(--tm-text-primary);
+    font-size: var(--tm-font-size-sm);
+    overflow-wrap: anywhere;
+}
+
+/* A narrow container stacks the signature details into one column. */
+@container tm-pdf-signature-verification (width < 640px) {
+    .tm-pdf-signature-verification__signature-details {
+        grid-template-columns: minmax(0, 1fr);
+    }
 }

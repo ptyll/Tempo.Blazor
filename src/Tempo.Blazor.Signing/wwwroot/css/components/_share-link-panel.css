@@ -1,10 +1,6 @@
 .tm-share-link-panel {
     display: grid;
     gap: var(--tm-space-3);
-    padding: var(--tm-space-4);
-    border: 1px solid var(--tm-border-color);
-    border-radius: var(--tm-radius-md);
-    background: var(--tm-bg-surface);
     color: var(--tm-text-primary);
     container: tm-share-link-panel / inline-size;
     /* inline-size containment sizes the box as if it were empty: keep it filling its parent
@@ -19,6 +15,7 @@
 
 .tm-share-link-panel__header {
     display: flex;
+    flex-wrap: wrap;
     align-items: start;
     justify-content: space-between;
     gap: var(--tm-space-3);
@@ -37,14 +34,24 @@
 }
 
 .tm-share-link-panel__toggle {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--tm-space-2);
     color: var(--tm-text-secondary);
     font-size: var(--tm-font-size-sm);
 }
 
 .tm-share-link-panel__link {
+    display: grid;
+    gap: var(--tm-space-1);
+    min-width: 0;
+}
+
+.tm-share-link-panel__link-label,
+.tm-share-link-panel__embed-label {
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-sm);
+    font-weight: var(--tm-font-weight-semibold);
+}
+
+.tm-share-link-panel__link-row {
     display: flex;
     align-items: center;
     gap: var(--tm-space-2);
@@ -53,12 +60,13 @@
 
 .tm-share-link-panel__input,
 .tm-share-link-panel__embed-code {
+    flex: 1 1 auto;
     width: 100%;
     min-width: 0;
     border: 1px solid var(--tm-border-color);
     border-radius: var(--tm-radius-md);
     background: var(--tm-bg-surface);
-    color: var(--tm-text-primary);
+    color: var(--tm-text-secondary);
     font: inherit;
 }
 
@@ -67,28 +75,66 @@
     padding: 0 var(--tm-space-3);
 }
 
-.tm-share-link-panel__qr {
-    display: grid;
-    justify-items: center;
+/* QR in a framed block, the scan hint beside it on wide containers. */
+.tm-share-link-panel__qr-frame {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-4);
     padding: var(--tm-space-3);
     border: 1px solid var(--tm-border-color);
     border-radius: var(--tm-radius-md);
     background: var(--tm-bg-surface);
 }
 
-.tm-share-link-panel__embed {
+.tm-share-link-panel__qr {
     display: grid;
-    gap: var(--tm-space-2);
+    flex: 0 0 auto;
+    justify-items: center;
+    padding: var(--tm-space-2);
+    border: 1px solid var(--tm-border-color);
+    border-radius: var(--tm-radius-sm);
+    background: var(--tm-bg-surface);
 }
 
-.tm-share-link-panel__embed-label {
+.tm-share-link-panel__qr-hint {
+    margin: 0;
     color: var(--tm-text-secondary);
     font-size: var(--tm-font-size-sm);
-    font-weight: var(--tm-font-weight-semibold);
+}
+
+.tm-share-link-panel__separator {
+    height: 1px;
+    background: var(--tm-border-color);
+}
+
+.tm-share-link-panel__embed {
+    display: grid;
+    gap: var(--tm-space-1);
+}
+
+.tm-share-link-panel__embed-row {
+    display: flex;
+    align-items: stretch;
+    gap: var(--tm-space-2);
+    min-width: 0;
 }
 
 .tm-share-link-panel__embed-code {
     min-height: calc(var(--tm-space-16) * 2);
     padding: var(--tm-space-3);
     resize: vertical;
+}
+
+/* A narrow container stacks the link/embed rows and moves the hint under the QR. */
+@container tm-share-link-panel (width < 26.25rem) {
+    .tm-share-link-panel__link-row,
+    .tm-share-link-panel__embed-row {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .tm-share-link-panel__qr-frame {
+        flex-direction: column;
+        align-items: flex-start;
+    }
 }

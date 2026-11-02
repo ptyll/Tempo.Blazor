@@ -90,6 +90,12 @@
       "description": "Marks the select as required. Shows a required marker on the label and sets aria-required on the <select> element. Caveat: every empty option (the placeholder — selectable or not — and any null-valued option) carries the empty wire value, so picking it counts as \"no selection\" and native validation reports the field as missing."
     },
     {
+      "name": "SelectAttributes",
+      "type": "Dictionary<string, object>?",
+      "isRequired": false,
+      "description": "Additional attributes splatted onto the NATIVE select element (the wrapper splat AdditionalAttributes cannot reach it). Use it for the accessibility plumbing a host step owns — aria-invalid, aria-describedby, aria-labelledby — or any other select-level attribute. Entries win over the component's own attributes (the splat is applied last). Additive: nothing existing changes."
+    },
+    {
       "name": "Value",
       "type": "TValue?",
       "isRequired": false,

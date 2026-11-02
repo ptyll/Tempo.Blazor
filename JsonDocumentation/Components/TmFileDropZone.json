@@ -57,6 +57,19 @@
       "description": "Optional aria-label passed to the internal file input."
     },
     {
+      "name": "InputAttributes",
+      "type": "Dictionary<string, object>?",
+      "isRequired": false,
+      "description": "Additional attributes splatted onto the internal input type=\"file\" element. Use it for the accessibility plumbing a host step owns — aria-describedby, aria-invalid, aria-labelledby. Entries win over the component's own attributes (the splat is applied last). Additive: nothing existing changes."
+    },
+    {
+      "name": "ShowFileList",
+      "type": "bool",
+      "isRequired": false,
+      "default": "True",
+      "description": "Whether the zone renders its OWN list of the files picked through it (default true). A host that presents the picked files itself (e.g. the Signing attachment step renders its own attachment cards) passes false so the files do not show TWICE."
+    },
+    {
       "name": "Class",
       "type": "string?",
       "isRequired": false,

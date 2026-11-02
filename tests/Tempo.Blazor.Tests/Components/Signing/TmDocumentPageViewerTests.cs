@@ -2,6 +2,7 @@ using Bunit;
 using FluentAssertions;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
+using Microsoft.JSInterop;
 using Tempo.Blazor.Abstractions.Models;
 using Tempo.Blazor.Components.Signing;
 using Tempo.Blazor.Tests.Localization;
@@ -129,9 +130,101 @@ public class TmDocumentPageViewerTests : LocalizationTestBase
                       .Add(p => p.PageNumber, 2)
                       .Add(p => p.TotalPages, 4));
 
-        cut.Find(".tm-document-page-viewer__page-label").TextContent.Should().Contain("2 / 4");
+        cut.Find(".tm-document-page-viewer__page-input").GetAttribute("value").Should().Be("2 / 4");
+        cut.Find(".tm-document-page-viewer__page-input").GetAttribute("value").Should().Contain("4");
         cut.Find(".tm-document-page-viewer__previous-page").GetAttribute("aria-label").Should().Be("Previous page");
         cut.Find(".tm-document-page-viewer__next-page").GetAttribute("aria-label").Should().Be("Next page");
+    }
+
+    [Fact]
+    public void Viewer_PageInput_RaisesPageRequested()
+    {
+        var requested = 0;
+        var cut = Render<TmDocumentPageViewer>(parameters =>
+            parameters.Add(p => p.Page, CreatePage())
+                      .Add(p => p.ShowToolbar, true)
+                      .Add(p => p.ShowPaginationControls, true)
+                      .Add(p => p.PageNumber, 1)
+                      .Add(p => p.TotalPages, 4)
+                      .Add(p => p.PageRequested, (int page) => requested = page));
+
+        cut.Find(".tm-document-page-viewer__page-input").Change("3");
+
+        requested.Should().Be(3);
+    }
+
+    [Fact]
+    public void Viewer_PageInput_WithoutPageRequested_IsReadonlyCount()
+    {
+        var cut = Render<TmDocumentPageViewer>(parameters =>
+            parameters.Add(p => p.Page, CreatePage())
+                      .Add(p => p.ShowToolbar, true)
+                      .Add(p => p.ShowPaginationControls, true)
+                      .Add(p => p.PageNumber, 2)
+                      .Add(p => p.TotalPages, 4));
+
+        var input = cut.Find(".tm-document-page-viewer__page-input");
+        input.GetAttribute("readonly").Should().NotBeNull();
+        input.GetAttribute("value").Should().Be("2 / 4");
+    }
+
+    [Fact]
+    public void Viewer_PageInput_OutOfRange_ResetsAndDoesNotRaise()
+    {
+        var requested = 0;
+        var cut = Render<TmDocumentPageViewer>(parameters =>
+            parameters.Add(p => p.Page, CreatePage())
+                      .Add(p => p.ShowToolbar, true)
+                      .Add(p => p.ShowPaginationControls, true)
+                      .Add(p => p.PageNumber, 1)
+                      .Add(p => p.TotalPages, 4)
+                      .Add(p => p.PageRequested, (int page) => requested = page));
+
+        cut.Find(".tm-document-page-viewer__page-input").Change("99");
+
+        requested.Should().Be(0);
+        cut.Find(".tm-document-page-viewer__page-input").GetAttribute("value").Should().Be("1");
+    }
+
+    [Fact]
+    public void Viewer_Pinch_IsNotAttachedUnlessOptedIn()
+    {
+        Render<TmDocumentPageViewer>(parameters => parameters.Add(p => p.Page, CreatePage()));
+
+        JSInterop.Invocations.Should().NotContain(invocation => invocation.Identifier == "enableViewerPinch");
+    }
+
+    [Fact]
+    public async Task Viewer_Pinch_OptIn_InvokesAndDetachesOnDispose()
+    {
+        var module = JSInterop.SetupModule("./_content/Tempo.Blazor.Signing/js/signing-runner.js");
+        var pinch = module.SetupModule("enableViewerPinch", _ => true);
+        pinch.SetupVoid("detach", _ => true).SetVoidResult();
+
+        var cut = Render<TmDocumentPageViewer>(parameters =>
+            parameters.Add(p => p.Page, CreatePage())
+                      .Add(p => p.EnablePinchZoom, true));
+
+        cut.WaitForAssertion(() => module.Invocations.Should().Contain(invocation => invocation.Identifier == "enableViewerPinch"));
+
+        await cut.Instance.DisposeAsync();
+
+        pinch.Invocations.Should().Contain(invocation => invocation.Identifier == "detach");
+    }
+
+    [Fact]
+    public void Viewer_Toolbar_GroupsAndLeftAligned()
+    {
+        var cut = Render<TmDocumentPageViewer>(parameters =>
+            parameters.Add(p => p.Page, CreatePage())
+                      .Add(p => p.ShowToolbar, true)
+                      .Add(p => p.ShowPaginationControls, true)
+                      .Add(p => p.ShowZoomControls, true));
+
+        var groups = cut.FindAll("[data-tm-group]").Select(node => node.GetAttribute("data-tm-group")).ToList();
+        groups.Should().Contain("pages");
+        groups.Should().Contain("zoom");
+        cut.Find(".tm-document-page-viewer__toolbar").ClassList.Should().Contain("tm-document-page-viewer__toolbar");
     }
 
     [Fact]

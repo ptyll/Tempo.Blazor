@@ -18,13 +18,13 @@ public class SigningFormRunnerE2ETests : WasmTestBase
         await panel.Locator(".tm-signing-form-runner__next").ClickAsync();
 
         await Assertions.Expect(panel.Locator(".tm-signing-step-shell__title")).ToContainTextAsync("Delivery method");
-        await panel.Locator("select.tm-signing-choice-step__select").SelectOptionAsync("paper");
+        await panel.Locator(".tm-signing-choice-step__select select").SelectOptionAsync("paper");
         await panel.Locator(".tm-signing-form-runner__next").ClickAsync();
 
         await panel.Locator("input.tm-signing-number-step__input").FillAsync("100");
         await panel.Locator(".tm-signing-form-runner__next").ClickAsync();
 
-        await panel.Locator("input.tm-signing-choice-step__checkbox").CheckAsync();
+        await panel.Locator(".tm-signing-choice-step .tm-checkbox-label").First.ClickAsync();
         await panel.Locator(".tm-signing-form-runner__next").ClickAsync();
 
         await Assertions.Expect(panel.Locator(".tm-signing-step-shell__title")).ToContainTextAsync("Internal note");
@@ -68,7 +68,7 @@ public class SigningFormRunnerE2ETests : WasmTestBase
 
         await panel.Locator("input.tm-signing-text-step__input").FillAsync("Alex Johnson");
         await panel.Locator(".tm-signing-form-runner__next").ClickAsync();
-        await panel.Locator("select.tm-signing-choice-step__select").SelectOptionAsync("paper");
+        await panel.Locator(".tm-signing-choice-step__select select").SelectOptionAsync("paper");
         await panel.Locator(".tm-signing-form-runner__next").ClickAsync();
         await panel.Locator("input.tm-signing-number-step__input").FillAsync("100");
         await panel.Locator(".tm-signing-form-runner__next").ClickAsync();
@@ -117,8 +117,9 @@ public class SigningFormRunnerE2ETests : WasmTestBase
         var runner = GetRunner(page);
         var steps = GetStepsRail(runner);
 
-        // B25 (phase 2): the sheet is a presentation of the ONE steps rail — collapsing hides it.
-        await steps.Locator(".tm-signing-form-runner__mobile-minimize").ClickAsync();
+        // Phase 5 review: the HANDLE is the sheet's only toggle (the phase-2 Minimize row is
+        // gone) — collapsing hides the panel; the peek keeps progress + the "Sign now" CTA.
+        await steps.Locator(".tm-signing-form-runner__sheet-handle").ClickAsync();
         await Assertions.Expect(steps.Locator(".tm-signing-form-runner__mobile-expand")).ToBeVisibleAsync();
         await Assertions.Expect(steps.Locator(".tm-signing-form-runner__progress")).Not.ToBeVisibleAsync();
 
@@ -127,11 +128,12 @@ public class SigningFormRunnerE2ETests : WasmTestBase
     }
 
     /// <summary>
-    /// Expanding the mobile sheet with the keyboard moves focus onto the affordance that became
-    /// visible (the minimize button), so the next Enter / Tab continues from the sheet.
+    /// Expanding the mobile sheet with the keyboard moves focus onto the HANDLE — the one
+    /// affordance visible in every sheet state (phase 5 review; the expand CTA hides with the
+    /// state flip, the old minimize button is gone).
     /// </summary>
     [TestMethod]
-    [Description("After expanding the mobile sheet with Enter on 'Sign now', focus lands on the minimize button")]
+    [Description("After expanding the mobile sheet with Enter on 'Sign now', focus lands on the handle")]
     public async Task SigningFormRunner_ExpandingSheetKeepsFocusOnTheVisibleAffordance()
     {
         var page = await OpenRunnerAsync(390, 820);
@@ -139,7 +141,7 @@ public class SigningFormRunnerE2ETests : WasmTestBase
         var steps = GetStepsRail(runner);
 
         // Collapse first: the sheet starts expanded at 390, so "Sign now" becomes visible.
-        await steps.Locator(".tm-signing-form-runner__mobile-minimize").ClickAsync();
+        await steps.Locator(".tm-signing-form-runner__sheet-handle").ClickAsync();
         await Assertions.Expect(steps.Locator(".tm-signing-form-runner__mobile-expand")).ToBeVisibleAsync();
 
         var expand = steps.Locator(".tm-signing-form-runner__mobile-expand").First;
@@ -147,8 +149,8 @@ public class SigningFormRunnerE2ETests : WasmTestBase
         await page.Keyboard.PressAsync("Enter");
 
         var activeClass = await page.EvaluateAsync<string>("() => document.activeElement?.className?.toString() ?? ''");
-        StringAssert.Contains(activeClass, "tm-signing-form-runner__mobile-minimize",
-            $"expanding the sheet must move focus onto the now-visible minimize button, got '{activeClass}'");
+        StringAssert.Contains(activeClass, "tm-signing-form-runner__sheet-handle",
+            $"expanding the sheet must move focus onto the handle (visible in every state), got '{activeClass}'");
     }
 
     /// <summary>
@@ -237,7 +239,7 @@ public class SigningFormRunnerE2ETests : WasmTestBase
         await panel.Locator(".tm-signing-form-runner__field-button[data-field-uuid='runner-name']").ClickAsync();
         await panel.Locator("input.tm-signing-text-step__input").FillAsync("Alex Johnson");
         await panel.Locator(".tm-signing-form-runner__field-button[data-field-uuid='runner-delivery']").ClickAsync();
-        await panel.Locator("select.tm-signing-choice-step__select").SelectOptionAsync("paper");
+        await panel.Locator(".tm-signing-choice-step__select select").SelectOptionAsync("paper");
         await panel.Locator(".tm-signing-form-runner__field-button[data-field-uuid='runner-amount']").ClickAsync();
         await panel.Locator("input.tm-signing-number-step__input").FillAsync("100");
         // The number input commits on change (blur) — Tab so the progress count below sees it.
@@ -247,7 +249,7 @@ public class SigningFormRunnerE2ETests : WasmTestBase
 
         // The toggle reveals the conditional note (the list grows to 7 rows).
         await panel.Locator(".tm-signing-form-runner__field-button[data-field-uuid='runner-extra-toggle']").ClickAsync();
-        await panel.Locator("input.tm-signing-choice-step__checkbox").CheckAsync();
+        await panel.Locator(".tm-signing-choice-step .tm-checkbox-label").First.ClickAsync();
         await Assertions.Expect(panel.Locator(".tm-signing-form-runner__field-button")).ToHaveCountAsync(7);
 
         await panel.Locator(".tm-signing-form-runner__field-button[data-field-uuid='runner-extra-note']").ClickAsync();
@@ -467,12 +469,16 @@ public class SigningFormRunnerE2ETests : WasmTestBase
 
     private static ILocator GetDesktopPanel(ILocator runner)
     {
-        return runner.Locator(".tm-signing-form-runner__steps").First;
+        return runner.Locator("aside.tm-signing-form-runner__steps").First;
     }
 
+    /// <summary>
+    /// The mobile rail is the shared drawer panel (the drawer root is pointer-events: none).
+    /// Desktop keeps the aside. Exactly one of the two is in the DOM.
+    /// </summary>
     private static ILocator GetStepsRail(ILocator runner)
     {
-        return runner.Locator(".tm-signing-form-runner__steps").First;
+        return runner.Locator(".tm-signing-form-runner__sheet-host .tm-drawer__panel, aside.tm-signing-form-runner__steps").First;
     }
 
     private static async Task DrawSignatureAsync(IPage page, ILocator signatureCapture)

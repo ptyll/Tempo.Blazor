@@ -90,9 +90,35 @@
     },
     {
       "name": "OnCommentAdded",
-      "type": "EventCallback<GanttComment>",
+      "type": "EventCallback<TmCommentEntry>",
       "isRequired": false,
-      "description": "Fires when the user submits a new comment."
+      "description": "Fires when the user submits a new comment. The entry's IsInternal is the composer flag when the host used the internal switch; the panel never hides internal comments."
+    },
+    {
+      "name": "CommentActions",
+      "type": "RenderFragment<TmCommentEntry>?",
+      "isRequired": false,
+      "description": "Consumer actions rendered after the built-in Edit and Delete buttons of each task comment. Forwarded; the panel does not interpret the fragment."
+    },
+    {
+      "name": "SupportsMentions",
+      "type": "bool",
+      "isRequired": false,
+      "default": "false",
+      "description": "Passes mention autocomplete through to the task comments. Without MentionProvider the editor stays off even when this is true. Defaults to false. Mention ids from MentionProvider are not preserved (HTML stripped; Mentions parsed from @word text)."
+    },
+    {
+      "name": "MentionProvider",
+      "type": "ITmPeopleProvider?",
+      "isRequired": false,
+      "description": "People source for the task-comment mention picker. Null (or SupportsMentions false) leaves autocomplete off."
+    },
+    {
+      "name": "ShowInternalToggle",
+      "type": "bool",
+      "isRequired": false,
+      "default": "false",
+      "description": "Shows the internal switch in the new-comment composer. Off by default. The panel never filters the resulting comment."
     },
     {
       "name": "OnDependencyAdded",

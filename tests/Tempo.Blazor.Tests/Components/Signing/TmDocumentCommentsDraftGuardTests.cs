@@ -45,14 +45,14 @@ public class TmDocumentCommentsDraftGuardTests : LocalizationTestBase
             .Add(c => c.CurrentUserId, "u1")
             .Add(c => c.OnDraftChanged, EventCallback.Factory.Create<TmCommentDraftState>(this, s => states.Add(s))));
 
-        cut.Find(".tm-comment-composer__input").Input("Reply draft");
+        cut.Find(".tm-comment-composer textarea").Input("Reply draft");
         states[^1].Should().Be(new TmCommentDraftState(true, null, true));
         cut.Instance.HasUnsavedDraft.Should().BeTrue();
 
         cut.InvokeAsync(() => cut.Instance.DiscardDraftAsync()).Wait();
 
         cut.Instance.HasUnsavedDraft.Should().BeFalse();
-        (cut.Find(".tm-comment-composer__input").GetAttribute("value") ?? string.Empty).Should().BeEmpty();
+        (cut.Find(".tm-comment-composer textarea").GetAttribute("value") ?? string.Empty).Should().BeEmpty();
         states.Last().Should().Be(new TmCommentDraftState(true, null, false));
     }
 
@@ -66,12 +66,12 @@ public class TmDocumentCommentsDraftGuardTests : LocalizationTestBase
             .Add(c => c.CurrentUserId, "u2")
             .Add(c => c.OnDraftChanged, EventCallback.Factory.Create<TmCommentDraftState>(this, s => states.Add(s))));
 
-        FindTextAction(cut, "Edit").Click();
+        ChooseEdit(cut);
 
         states[^1].Should().Be(new TmCommentDraftState(true, "comment-1", false),
             "opening an edit without changing anything is not an unsaved draft");
 
-        cut.Find(".tm-comment-composer__input").Input("Edited body");
+        cut.Find(".tm-comment-composer textarea").Input("Edited body");
         states[^1].Should().Be(new TmCommentDraftState(true, "comment-1", true));
         cut.Instance.HasUnsavedDraft.Should().BeTrue();
     }
@@ -84,12 +84,12 @@ public class TmDocumentCommentsDraftGuardTests : LocalizationTestBase
             .Add(c => c.SelectedThreadId, "thread-1")
             .Add(c => c.CurrentUserId, "u1"));
 
-        cut.Find(".tm-comment-composer__input").Input("Reply for thread 1");
+        cut.Find(".tm-comment-composer textarea").Input("Reply for thread 1");
         cut.Instance.HasUnsavedDraft.Should().BeTrue();
 
         cut.Render(p => p.Add(c => c.SelectedThreadId, "thread-2"));
 
-        (cut.Find(".tm-comment-composer__input").GetAttribute("value") ?? string.Empty)
+        (cut.Find(".tm-comment-composer textarea").GetAttribute("value") ?? string.Empty)
             .Should().BeEmpty("a fresh thread must not inherit the previous thread's reply draft");
         cut.Instance.HasUnsavedDraft.Should().BeFalse();
     }
@@ -104,7 +104,7 @@ public class TmDocumentCommentsDraftGuardTests : LocalizationTestBase
             .Add(c => c.CurrentUserId, "u1")
             .Add(c => c.OnDraftChanged, EventCallback.Factory.Create<TmCommentDraftState>(this, s => states.Add(s))));
 
-        cut.Find(".tm-comment-composer__input").Input("Reply draft");
+        cut.Find(".tm-comment-composer textarea").Input("Reply draft");
         cut.Instance.HasUnsavedDraft.Should().BeTrue();
 
         // The panel's own clear button (X / back) — the reply composer unmounts with it.
@@ -119,7 +119,7 @@ public class TmDocumentCommentsDraftGuardTests : LocalizationTestBase
 
         cut.Render(p => p.Add(c => c.SelectedThreadId, "thread-1"));
 
-        (cut.Find(".tm-comment-composer__input").GetAttribute("value") ?? string.Empty)
+        (cut.Find(".tm-comment-composer textarea").GetAttribute("value") ?? string.Empty)
             .Should().BeEmpty("reselecting the thread starts with an empty reply composer");
         cut.Instance.HasUnsavedDraft.Should().BeFalse();
     }
@@ -134,10 +134,10 @@ public class TmDocumentCommentsDraftGuardTests : LocalizationTestBase
             .Add(c => c.CurrentUserId, "u2")
             .Add(c => c.OnDraftChanged, EventCallback.Factory.Create<TmCommentDraftState>(this, s => states.Add(s))));
 
-        cut.Find(".tm-comment-composer__input").Input("Reply draft");
+        cut.Find(".tm-comment-composer textarea").Input("Reply draft");
         cut.Instance.HasUnsavedDraft.Should().BeTrue();
 
-        FindTextAction(cut, "Edit").Click();
+        ChooseEdit(cut);
 
         states.Last().Should().Be(new TmCommentDraftState(true, "comment-1", false),
             "the reply composer unmounted with the edit — its draft must not be counted");
@@ -147,7 +147,7 @@ public class TmDocumentCommentsDraftGuardTests : LocalizationTestBase
         cut.Find(".tm-comment-composer__button--secondary").Click();
 
         cut.Instance.HasUnsavedDraft.Should().BeFalse();
-        (cut.Find(".tm-comment-composer__input").GetAttribute("value") ?? string.Empty).Should().BeEmpty();
+        (cut.Find(".tm-comment-composer textarea").GetAttribute("value") ?? string.Empty).Should().BeEmpty();
     }
 
     // ── Page viewer (own draft panel + embedded panel aggregation) ──────
@@ -165,7 +165,7 @@ public class TmDocumentCommentsDraftGuardTests : LocalizationTestBase
             .Add(c => c.OnDraftChanged, EventCallback.Factory.Create<TmCommentDraftState>(this, s => states.Add(s))));
 
         StartPointDraft(cut);
-        cut.Find(".tm-comment-composer__input").Input("Please check this clause");
+        cut.Find(".tm-comment-composer textarea").Input("Please check this clause");
 
         cut.Instance.HasUnsavedDraft.Should().BeTrue();
 
@@ -195,14 +195,14 @@ public class TmDocumentCommentsDraftGuardTests : LocalizationTestBase
         // notification must already report the open editor, before anything is typed.
         states[0].Should().Be(new TmCommentDraftState(true, null, false));
 
-        cut.Find(".tm-comment-composer__input").Input("Reply draft");
+        cut.Find(".tm-comment-composer textarea").Input("Reply draft");
 
         states.Should().Contain(s => s.HasUnsavedContent,
             "a draft typed into the embedded panel's reply composer must surface on the viewer");
         cut.Instance.HasUnsavedDraft.Should().BeTrue();
 
         // Opening an edit inside the embedded panel surfaces its comment id on the viewer.
-        FindTextAction(cut, "Edit").Click();
+        ChooseEdit(cut);
         states.Last().EditingCommentId.Should().Be("comment-1");
 
         cut.InvokeAsync(() => cut.Instance.DiscardDraftAsync()).Wait();
@@ -251,7 +251,7 @@ public class TmDocumentCommentsDraftGuardTests : LocalizationTestBase
             .Add(c => c.CurrentUserId, "u1")
             .Add(c => c.OnDraftChanged, EventCallback.Factory.Create<TmCommentDraftState>(this, s => states.Add(s))));
 
-        cut.Find(".tm-comment-composer__input").Input("Reply draft");
+        cut.Find(".tm-comment-composer textarea").Input("Reply draft");
         cut.Instance.HasUnsavedDraft.Should().BeTrue();
 
         // The host swaps in its own panel template mid-draft — the embedded panel unmounts and
@@ -272,9 +272,9 @@ public class TmDocumentCommentsDraftGuardTests : LocalizationTestBase
         // Reselecting the thread mounts a fresh, empty reply composer.
         cut.Render(p => p.Add(c => c.SelectedCommentThreadId, "thread-1"));
 
-        cut.FindAll(".tm-comment-composer__input").Should().ContainSingle(
+        cut.FindAll(".tm-comment-composer textarea").Should().ContainSingle(
             "the embedded panel remounts once the template is cleared");
-        (cut.Find(".tm-comment-composer__input").GetAttribute("value") ?? string.Empty)
+        (cut.Find(".tm-comment-composer textarea").GetAttribute("value") ?? string.Empty)
             .Should().BeEmpty("the remounted panel starts with an empty reply composer");
         cut.Instance.HasUnsavedDraft.Should().BeFalse("the pre-takeover draft must not come back with the remounted panel");
         states.Last().HasUnsavedContent.Should().BeFalse();
@@ -292,7 +292,7 @@ public class TmDocumentCommentsDraftGuardTests : LocalizationTestBase
             .Add(c => c.CurrentUserId, "u1")
             .Add(c => c.OnDraftChanged, EventCallback.Factory.Create<TmCommentDraftState>(this, s => states.Add(s))));
 
-        cut.Find(".tm-comment-composer__input").Input("Reply draft");
+        cut.Find(".tm-comment-composer textarea").Input("Reply draft");
         cut.Instance.HasUnsavedDraft.Should().BeTrue();
 
         // The host flips IsLoading mid-draft — the comments shell (and the embedded panel with
@@ -303,7 +303,7 @@ public class TmDocumentCommentsDraftGuardTests : LocalizationTestBase
 
         cut.Render(p => p.Add(c => c.IsLoading, false));
 
-        cut.FindAll(".tm-comment-composer__input").Should().ContainSingle("the embedded panel remounts after loading");
+        cut.FindAll(".tm-comment-composer textarea").Should().ContainSingle("the embedded panel remounts after loading");
         cut.Instance.HasUnsavedDraft.Should().BeFalse("loading completion remounts a FRESH panel — the stale draft must not come back");
         states.Last().HasUnsavedContent.Should().BeFalse();
     }
@@ -333,19 +333,38 @@ public class TmDocumentCommentsDraftGuardTests : LocalizationTestBase
 
     private static void StartPointDraft(IRenderedComponent<TmDocumentPageViewer> cut)
     {
-        cut.Find(".tm-document-page-viewer__page")
-            .MouseDown(new MouseEventArgs { OffsetX = 200, OffsetY = 500, Buttons = 1 });
-        cut.Find(".tm-document-page-viewer__page")
-            .MouseUp(new MouseEventArgs { OffsetX = 200, OffsetY = 500, Buttons = 0 });
+        var page = cut.Find(".tm-document-page-viewer__page");
+        page.TriggerEvent("onpointerdown", new PointerEventArgs { OffsetX = 200, OffsetY = 500, Buttons = 1, PointerType = "mouse" });
+        page.TriggerEvent("onpointerup", new PointerEventArgs { OffsetX = 200, OffsetY = 500, Buttons = 0, PointerType = "mouse" });
+    }
+
+    private static void ChooseEdit<T>(IRenderedComponent<T> cut)
+        where T : IComponent
+    {
+        var dropdown = ((IRenderedComponent<IComponent>)(object)cut).FindComponent<Tempo.Blazor.Components.Dropdowns.TmDropdown>();
+        cut.InvokeAsync(() => dropdown.Instance.SelectItemAsync("edit")).GetAwaiter().GetResult();
     }
 
     private static IElement FindTextAction(IRenderedComponent<TmDocumentCommentThreadPanel> cut, string text)
-        => cut.FindAll(".tm-document-comments-panel__text-action")
-              .First(e => e.TextContent.Contains(text));
+        => FindItemAction(cut, text);
 
     private static IElement FindTextAction(IRenderedComponent<TmDocumentPageViewer> cut, string text)
-        => cut.FindAll(".tm-document-comments-panel__text-action")
-              .First(e => e.TextContent.Contains(text));
+        => FindItemAction(cut, text);
+
+    private static IElement FindItemAction<T>(IRenderedComponent<T> cut, string text)
+        where T : Microsoft.AspNetCore.Components.IComponent
+    {
+        var direct = cut.FindAll(".tm-document-comments-panel__text-action")
+            .FirstOrDefault(element => element.TextContent.Contains(text, StringComparison.Ordinal));
+        if (direct is not null)
+        {
+            return direct;
+        }
+
+        cut.Find(".tm-document-comments-panel__more .tm-dropdown-trigger").Click();
+        return cut.FindAll(".tm-dropdown-item")
+            .First(element => element.TextContent.Contains(text, StringComparison.Ordinal));
+    }
 
     private static SigningDocumentPage CreatePage(double width = 800, double height = 1000) => new()
     {

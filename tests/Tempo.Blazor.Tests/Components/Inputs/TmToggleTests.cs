@@ -256,6 +256,25 @@ public class TmToggleTests : LocalizationTestBase
     }
 
     [Fact]
+    public void TmToggle_AriaDescribedBy_LandsOnTheSwitch()
+    {
+        var cut = Render<TmToggle>(p => p
+            .Add(c => c.Label, "Internal")
+            .Add(c => c.AriaDescribedBy, "hint-1"));
+
+        cut.Find("input[role='switch']").GetAttribute("aria-describedby").Should().Be("hint-1");
+        cut.Find(".tm-toggle-wrapper").HasAttribute("aria-describedby").Should().BeFalse();
+    }
+
+    [Fact]
+    public void TmToggle_NoAriaDescribedBy_WhenUnset()
+    {
+        var cut = Render<TmToggle>(p => p.Add(c => c.Label, "Internal"));
+
+        cut.Find("input[role='switch']").HasAttribute("aria-describedby").Should().BeFalse();
+    }
+
+    [Fact]
     public void TmToggle_NotRequired_LeavesNoRequiredMarkers()
     {
         var cut = Render<TmToggle>(p => p.Add(c => c.Label, "Dark mode"));

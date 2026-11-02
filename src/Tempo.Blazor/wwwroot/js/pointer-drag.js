@@ -123,6 +123,10 @@ function toNumber(value, fallback) {
  * @param {string} [options.selector] delegate: start only from descendants matching this selector
  * @param {string[]} [options.pointerTypes] restrict which pointer types may start a gesture
  * @param {'press'|'start'} [options.captureOn='press'] when to take pointer capture
+ * @param {boolean} [options.listenerCapture=false] listen for pointerdown in the capture phase.
+ *   A child that calls stopPropagation (a field handle) still starts the gesture. The listener
+ *   does not stop the event, so the child's own handler still runs. Named `listenerCapture`
+ *   because `capture` collides with pointer capture.
  * @param {boolean} [options.cancelOnEscape=true] cancel an active gesture on Escape
  * @param {boolean} [options.suppressClick=true] swallow the click that follows a real drag
  * @param {string|null} [options.dragClass='tm-pointer-dragging'] class on the target while dragging
@@ -138,6 +142,7 @@ export function attach(element, options = {}) {
     const selector = typeof options.selector === 'string' && options.selector ? options.selector : null;
     const pointerTypes = Array.isArray(options.pointerTypes) ? options.pointerTypes : null;
     const captureOnStart = options.captureOn === 'start';
+    const captureListener = options.listenerCapture === true;
     const cancelOnEscape = options.cancelOnEscape !== false;
     const suppressClick = options.suppressClick !== false;
     const dragClass = options.dragClass === undefined ? DEFAULT_DRAG_CLASS : options.dragClass;
@@ -403,7 +408,9 @@ export function attach(element, options = {}) {
         if (session?.started && event.cancelable !== false) event.preventDefault?.();
     }
 
-    element.addEventListener('pointerdown', onPointerDown);
+    // capture: a child that stops the bubble (a field handle) still has to start the gesture.
+    // The listener does not stop the event, so the child's own handler still runs.
+    element.addEventListener('pointerdown', onPointerDown, captureListener);
     element.addEventListener('pointermove', onPointerMove);
     element.addEventListener('pointerup', onPointerUp);
     element.addEventListener('pointercancel', onPointerCancel);
@@ -424,7 +431,7 @@ export function attach(element, options = {}) {
             detached = true;
             cancelGesture('detached');
             disarmClickSuppression();
-            element.removeEventListener('pointerdown', onPointerDown);
+            element.removeEventListener('pointerdown', onPointerDown, captureListener);
             element.removeEventListener('pointermove', onPointerMove);
             element.removeEventListener('pointerup', onPointerUp);
             element.removeEventListener('pointercancel', onPointerCancel);

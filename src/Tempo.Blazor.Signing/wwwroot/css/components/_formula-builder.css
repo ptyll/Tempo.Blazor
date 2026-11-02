@@ -15,44 +15,38 @@
 
 .tm-formula-builder__editor {
     display: grid;
-    gap: var(--tm-space-2);
+    gap: var(--tm-space-1);
 }
 
 .tm-formula-builder__label,
 .tm-formula-builder__section-title {
+    margin: 0;
     color: var(--tm-text-secondary);
     font-size: var(--tm-font-size-sm);
-    font-weight: var(--tm-font-weight-medium);
+    font-weight: var(--tm-font-weight-semibold);
 }
 
+/* The formula editor is the core TmTextArea — the wrapper only carries the group context; the
+   core input brings its own chrome (and its own invalid styling through Error). */
 .tm-formula-builder__textarea {
-    width: 100%;
-    min-height: var(--tm-space-16);
-    padding: var(--tm-space-3);
-    border: 1px solid var(--tm-border-color);
-    border-radius: var(--tm-radius-md);
-    background: var(--tm-bg-surface);
-    color: var(--tm-text-primary);
-    font-family: var(--tm-font-mono);
-    font-size: var(--tm-font-size-sm);
-    line-height: var(--tm-line-height-normal);
-    resize: vertical;
+    min-width: 0;
 }
 
-.tm-formula-builder__textarea:focus {
-    outline: none;
-    border-color: var(--tm-border-color-focus);
-    box-shadow: var(--tm-shadow-focus);
+/* A labelled group: operators, functions and tokens each carry a visible heading. */
+.tm-formula-builder__group {
+    display: grid;
+    gap: var(--tm-space-2);
 }
 
-.tm-formula-builder--invalid .tm-formula-builder__textarea {
-    border-color: var(--tm-color-danger);
-    box-shadow: var(--tm-shadow-focus-danger);
+/* Operator GRID: square keys laid out on the reference's grid, parentheses included. */
+.tm-formula-builder__toolbar {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(var(--tm-input-height-md), 1fr));
+    gap: var(--tm-space-2);
 }
 
-.tm-formula-builder__toolbar,
-.tm-formula-builder__tokens,
-.tm-formula-builder__actions {
+.tm-formula-builder__functions,
+.tm-formula-builder__tokens {
     display: flex;
     flex-wrap: wrap;
     gap: var(--tm-space-2);
@@ -60,8 +54,7 @@
 
 .tm-formula-builder__operator,
 .tm-formula-builder__function,
-.tm-formula-builder__token,
-.tm-formula-builder__save {
+.tm-formula-builder__token {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -78,49 +71,60 @@
 }
 
 .tm-formula-builder__operator {
-    width: var(--tm-input-height-sm);
     padding: 0;
     font-family: var(--tm-font-mono);
     font-weight: var(--tm-font-weight-semibold);
+}
+
+.tm-formula-builder__operator:hover:not(:disabled),
+.tm-formula-builder__function:hover:not(:disabled),
+.tm-formula-builder__token:hover:not(:disabled) {
+    background: var(--tm-bg-surface-secondary);
 }
 
 .tm-formula-builder__function {
     font-family: var(--tm-font-mono);
 }
 
-.tm-formula-builder__tokens {
-    padding: var(--tm-space-3);
-    border: 1px dashed var(--tm-border-color);
-    border-radius: var(--tm-radius-md);
-    background: var(--tm-bg-surface-secondary);
-}
-
+/* Token cards: field label over its type, like the reference's "Hodinová sazba / Číslo". */
 .tm-formula-builder__token {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--tm-space-1);
+    padding: var(--tm-space-2) var(--tm-space-3);
     border-color: var(--tm-color-primary-soft-border);
     background: var(--tm-color-primary-subtle);
     color: var(--tm-color-primary-text);
 }
 
-.tm-formula-builder__save {
-    border-color: var(--tm-color-primary);
-    background: var(--tm-color-primary);
-    color: var(--tm-text-inverse);
+.tm-formula-builder__token-label {
+    font-weight: var(--tm-font-weight-medium);
+}
+
+.tm-formula-builder__token-type {
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-xs);
 }
 
 .tm-formula-builder__operator:disabled,
 .tm-formula-builder__function:disabled,
-.tm-formula-builder__token:disabled,
-.tm-formula-builder__save:disabled,
-.tm-formula-builder__textarea:disabled {
+.tm-formula-builder__token:disabled {
     color: var(--tm-text-disabled);
     cursor: not-allowed;
 }
 
-.tm-formula-builder__error {
-    color: var(--tm-color-danger-text);
-    font-size: var(--tm-font-size-sm);
+.tm-formula-builder__actions {
+    display: flex;
+    justify-content: flex-end;
 }
 
-.tm-formula-builder__actions {
-    justify-content: flex-end;
+/* A finger needs the 44px target (phase 7 review): the operator keys, the function chips and the
+   token cards grow to the shared touch-target token on a coarse pointer. */
+@media (pointer: coarse) {
+    .tm-formula-builder__operator,
+    .tm-formula-builder__function,
+    .tm-formula-builder__token {
+        min-width: var(--tm-touch-target);
+        min-height: var(--tm-touch-target);
+    }
 }

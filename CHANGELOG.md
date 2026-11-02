@@ -2,6 +2,22 @@
 
 ## 2.10.0 (unreleased)
 
+- **`TmTextArea.FocusAsync()`** moves focus to the textarea (no-op until it has rendered). Additive; nothing existing changes.
+- **`TmToggle.AriaDescribedBy`.** Additive. Rendered as `aria-describedby` on the inner `role="switch"` input, not on the wrapper. Null (the default) renders no attribute, so existing toggles are unchanged. A hint belongs here — splatting `aria-describedby` through `AdditionalAttributes` lands on the wrapper and does not describe the switch.
+- **Comment entry model: `TmCommentEntry.IsInternal` and `Badges`.** Additive on `Tempo.Blazor.Abstractions`. `IsInternal` (default `false`) marks a comment the rendering component distinguishes visually; the component never hides internal content — the consumer or server filters it. `Badges` is a `List<TmCommentBadge>` (`Text`, `Tone`, optional `Icon` and `Title`); `TmCommentBadgeTone` is `Neutral`, `Info`, `Success`, `Warning`, `Danger`, `Accent`. `TmCommentEntry.IsValid` is unchanged.
+- **`TmActivityComments` paints internal comments and consumer badges.** An internal entry gets `tm-comment-item--internal`, `data-internal="true"`, a warning wash from `--tm-comment-internal-bg` / `--tm-comment-internal-accent` (dark mode is the token override, not a component `[data-theme=dark]` block), and a lock `TmBadge` (`IconNames.Lock`, `TmActivityComments_InternalBadge` + `TmActivityComments_InternalBadgeTitle` in a `tm-sr-only` span, not an `aria-label`) — colour is not the only cue. Valid `Badges` render in `.tm-comment-meta` as subtle pill `TmBadge`s (`tm-comment-badge`, `data-badge-tone`). Tone mapping: Info/Success/Warning/Danger match `BadgeVariant` by name; **Neutral → Default** and **Accent → Primary** (`TmBadge` has no Accent variant; Primary is emphasis, not a status). Invalid badges (blank `Text`) are skipped. Every item now carries `data-comment-id` and `data-internal="true"|"false"`. No new animation, so no reduced-motion rule.
+  - **DOM before:** `<li class="tm-comment-item">` and a meta row of author, time, and an optional `(edited)` span.
+  - **DOM after:** the same `<li>` plus `data-comment-id` and `data-internal`. An internal entry also gets `tm-comment-item--internal`. When `IsInternal` is false and `Badges` is empty, the meta children are unchanged. An internal entry appends a warning `TmBadge.tm-comment-internal-label` (`IconNames.Lock` + localized text, with the title repeated in a `tm-sr-only` span) and is pulled back by `--tm-comment-internal-inset` so its avatar lines up with the thread. Each valid badge appends a `TmBadge` (`.tm-badge.tm-comment-badge`, capped by `--tm-comment-badge-max-width`) after that; a set `Title` is repeated in a `tm-sr-only` span, and a null `Badges` list renders nothing. `.tm-comment-meta` now wraps (`flex-wrap`) so a long badge or several badges stay inside the thread.
+- **`TmActivityComments` composer mentions and internal switch.** Additive. `SupportsMentions` + `MentionProvider` pass through to the new-comment `TmRichEditorSimple` and the inline editor. Without a provider, `SupportsMentions=true` leaves autocomplete off (no exception, no empty picker). `ShowInternalToggle` (default false) adds a labelled `TmToggle` (`role="switch"`, `TmActivityComments_InternalToggle`) in the new-comment footer only; the inline editor never shows it. On paints `tm-comment-editor--internal` with the same `--tm-comment-internal-*` tokens as an internal comment, and a visually-hidden live region announces the mode. The switch is disabled while the post is in flight and resets to off after a successful post, cancel, or `DiscardDraftAsync`. `TmCommentDraftState` gains an optional `IsInternal` (default false; existing three-argument constructions are unchanged) — it is not part of the dirty decision. New `TmCommentSubmission(Html, IsInternal)` and `OnCommentSubmitted`. **Document order, pinned:** `OnCommentSubmitted`, then `OnCommentAdded`, same HTML. `OnCommentAdded` still fires and is unchanged. An edit does not raise `OnCommentSubmitted`. Effectively empty content raises neither.
+  - **DOM before:** `.tm-comment-editor` with the editor and Submit / Cancel (or Save / Cancel).
+  - **DOM after:** the same, plus `SupportsMentions`/`MentionProvider` on the editor when both are set. With `ShowInternalToggle`, the new-comment footer starts with `.tm-comment-internal-toggle` (a `TmToggle`) and a `tm-sr-only` hint; an internal composer also has `tm-comment-editor--internal`. No new `data-*` attribute.
+- **`TmActivityComments.CommentActions`.** Optional `RenderFragment<TmCommentEntry>?`. Rendered after the built-in Edit and Delete buttons, inside `.tm-comment-actions`, wrapped by `.tm-comment-actions__custom`, once per comment with that entry. The consumer supplies the button and any confirmation dialog (the demo toggles internal/public through `TmDialog`, including the warning that notifications already sent cannot be recalled). The component does not interpret the fragment and never hides an internal comment. The actions row renders when the comment can be edited or deleted, or when the fragment is set; it is omitted when none of those apply, and it is hidden on the comment currently being edited (other comments keep theirs). The wrapper is not focusable and handles no keys, so tab order is unchanged — put a native button in the fragment.
+  - **DOM before:** `.tm-comment-actions` rendered whenever the comment was not being edited, even with no Edit and no Delete button.
+  - **DOM after:** the row renders only when `CanEdit`, `CanDelete`, or `CommentActions` applies. When `CommentActions` is set, a `<span class="tm-comment-actions__custom">` follows the built-in buttons and contains the fragment. No new `data-*` attribute.
+- **Docs:** the stale `ICommentEntry` documentation overlay (the interface was removed in 2.0.0) is gone from the abstractions bundle, and `TmCommentReaction.IsValid` is documented as a property, not a field.
+- **Comment surface passthrough.** `TmActivityLog` and `TmGanttTaskPanel` already owned the comment callbacks, so `CommentActions`, `SupportsMentions`, `MentionProvider`, `ShowInternalToggle` and `OnCommentSubmitted` are forwarded. Defaults stay off. The log raises the host callbacks in the same order as `TmActivityComments`. The task panel still posts one `TmCommentEntry` through its existing `OnCommentAdded`; `IsInternal` on that entry is the composer flag captured from `OnCommentSubmitted` (that callback fires first and does not post a second entry). Neither host hides an internal comment. `TmGantt` does not forward the new comment parameters yet; only a standalone `TmGanttTaskPanel` exposes them.
+- **Wireframe:** `TmActivityComments` stencil states `showInternalComment`, `showBadges`, `showCustomActions`, `composerInternal` (all default false, so the pre-2.10 drawing is unchanged). Roles stay `list-view` and `text-area`.
+
 > 2.10.0 also ships every 2.9.1 entry below; when upgrading from 2.9.0 read both Breaking / Migration
 > sections.
 >
@@ -1152,6 +1168,63 @@ demo page ships with them.
 that already links the core stylesheet gains one more `<link>` for the new package when it adopts
 the AI components.
 
+### Changed
+
+- **`TmRichEditorSimple` / `MentionAutocomplete`: the mention list is a listbox the editor owns.** The content surface is a combobox only while the picker is open. The editor owns the list id (`{editorId}-mentions`) and computes `aria-activedescendant` from its highlight, so the first open already names option 0 — the dropdown no longer mints the id. Options carry `aria-selected`. An empty `@` query keeps the list open; a query with no match stays open on `.tm-rte-mention-empty` (`role="option"`, `aria-disabled="true"`, its own id). Display names wrap (`overflow-wrap: anywhere`). New key `TmRichEditor_MentionList` names the listbox. `TmRichEditorFull` still renders the same list and now keeps a no-match query open too.
+  - **DOM before:** the dropdown had no role; its id was a random `tm-mention-list-*` owned by the dropdown; the content surface had no combobox attributes; a no-match query unmounted the list; names did not wrap.
+  - **DOM after:** `[role=combobox][aria-expanded=true][aria-controls="{editorId}-mentions"][aria-activedescendant="{editorId}-mentions-option-N"][aria-autocomplete=list]` on `.tm-rte-editor-content`, and `[role=listbox][aria-label]` (key `TmRichEditor_MentionList`) on `.tm-rte-mention-dropdown`. Each `.tm-rte-mention-user` is `[role=option][aria-selected]`. The empty state is `[role=option][aria-disabled=true]`. In `TmRichEditorSimple` the list is a child of `.tm-rte-editor-content-wrapper` and opens under it (`inset-inline-start: 0; top: 100%`) instead of covering the toolbar.
+
+### Signing redesign — plan summary (plan 1fba4858, phases 1–10)
+
+`Tempo.Blazor.Signing` was rebuilt against the 22 reference screens in
+`output/imagegen/tempo-reimagined/Tempo.Blazor.Signing/` (66 mockups). Binding decisions: **SI1**
+every step input is a Tm component (date stays a native `<input type="date">`); **SI2** phone /
+upload / external steps complete only when the host confirms them (opt-in; a bare click is not
+proof); **SI3** `DefaultSignatureMode=Auto` starts Draw on a coarse pointer; **SI4** the field
+list is the stepper; **SI5** geometry can be edited in px. The designer edits fully from the
+tablet up (768 / 1200) and is viewing + light edits on a phone; the runner edits fully on a phone
+inside a `TmDrawer` sheet. Contract: [docs/signing.md](docs/signing.md). Demo:
+`/signing-from-editor` is one workspace (Edit → Place fields → Preview), `/signing-components`
+shows `DocumentTitle`, `DefaultSignatureMode` and the active-steps host.
+
+| Phase | Result |
+|---|---|
+| 1 | Container queries (640/768/1024/1280), token hygiene, `--tm-signing-role-1..6` (role 6 `#a16207`), dashed invalid field |
+| 2 | ONE step panel (B25 — the hidden duplicate is gone), accessible names on every step input |
+| 3 | Runner panel: titled header, permanent field list, action footer, completion hero; `DocumentTitle` |
+| 4 | Steps on Tm components; number parses the field culture; 44 px targets |
+| 5 | Runner sheet below 640; `LayoutMode`; `DefaultSignatureMode`; `signing-runner.js` |
+| 6 | Active-steps host contract (OTP / upload / external) — opt-in, not proof without the host |
+| 7 | Authoring panels (timeline, audit, share link, verification, comments) on the same chrome |
+| 8 | Designer on `TmEditorShell`; pointer events replace mouse/HTML5 drag; inspector on Tm components |
+| 9 | Runner sheet and comments panel on the shared `TmDrawer`; viewer pinch is opt-in |
+| 10 | `/signing-from-editor` workspace, this summary, [docs/signing.md](docs/signing.md) |
+
+Verification deviation (phase 10, recorded on request): the complete E2E suite was not run.
+The gate that ran is the Signing set —
+`FullyQualifiedName~Signing|PdfTemplateDesigner|ConditionBuilder|FormulaBuilder|RecipientRoleEditor|DocumentComments`
+— plus the phase-10 captures (`TM_WRITE_BASELINES=1`).
+
+Core additions that landed for this plan (all additive, defaults keep the old markup):
+
+- `TmAlert.Role` — the alert role is host-settable.
+- `TmSelect.SelectAttributes` — splat onto the native `<select>` (wins over the component's own).
+- `TmCheckbox.InputAttributes` — splat onto the native checkbox; `aria-describedby` merges with the help id.
+- `TmFileDropZone.InputAttributes` and `ShowFileList` (`false` hides the zone's own file list).
+- `ButtonVariant.OutlinePrimary` — transparent fill, primary border and ink.
+- `pointer-drag.js` `listenerCapture` — the drag listener captures, so a child cannot swallow the move.
+- `TmContextMenu.Open()` / `IsOpenChanged` — the designer opens its one menu and hears it close.
+- `TmTextArea.FocusAsync()` — moves focus to the textarea (no-op until it has rendered).
+- `TmTextArea` sets `aria-invalid` from its own error and from a surrounding `TmFormField` error.
+- `TmDropdown` sheet `min-height` — a phone sheet is tall enough to show its items.
+- `IconNames.ShieldCheck` and `IconNames.MailX`.
+- `TmMobileActionBar` renders `TmActionItem.TestId` as `data-testid` (markup change; see the `TestId` XML doc).
+- `TmContextMenuItem.OnClick` is kept across close (the handler runs after the menu closes).
+- `.tm-toolbar-btn--outline-primary` — transparent fill, primary border and ink on a toolbar button.
+
+Breaking items, with the before/after, are indexed under **Breaking / Migration** below
+(phases 1, 2, 3, 4, 5, 7, 8, 9). Phases 6 and 10 add parameters only.
+
 ### Spreadsheet redesign — plan summary (plan 8959eebe, phases 1–8)
 
 The `Tempo.Blazor.Spreadsheet` package was rebuilt against 57 reference mockups
@@ -1237,6 +1310,118 @@ findings table and the per-leg results) and the two perf runs
   ≤ +10 % budget is claimed.
 
 ### Breaking / Migration
+
+- **Comment surface (this release): no public-API break.** New parameters default off. Recorded DOM additions, not replacements: `data-comment-id` and `data-internal` on every `.tm-comment-item`; `tm-comment-item--internal` plus the lock badge when `IsInternal`; `data-badge-tone` pills when `Badges` has valid entries; `.tm-comment-actions__custom` when `CommentActions` is set; `.tm-comment-internal-toggle` and `tm-comment-editor--internal` when the composer switch is on. One behaviour change, already recorded above: an empty `.tm-comment-actions` row is no longer rendered when the comment has no edit, no delete and no `CommentActions`. `OnCommentAdded` is unchanged. `TmGantt` still raises `OnCommentAdded(TmCommentEntry)` once.
+
+- **Signing redesign — breaking-change index (phases 1–9).** The full before/after for each item
+  lives in the entry linked below. Nothing in phase 10 changes a public contract.
+
+  | Item | Where |
+  |---|---|
+  | Container queries replace viewport `@media`; grid class moved to `__layout` / `__workspace-grid` | phase 1, Breaking / Migration |
+  | Token fallbacks removed (`#fff`, `--tm-color-border`, sticky z-index) | phase 1, Breaking / Migration |
+  | Role colour 6 default `#ca8a04` → `#a16207` (stored templates keep their hex) | phase 1, Breaking / Migration |
+  | ONE step panel — `.tm-signing-form-runner__mobile-panel` and `data-mobile` are gone (B25) | phase 2, Breaking / Migration |
+  | "Accessibility mode" toggle removed; the panel is one instance at every width | phase 3, Breaking / Migration |
+  | Completion panel / footer DOM (hero, sticky action row, titled field list) | phase 3, Breaking / Migration |
+  | Step inputs are Tm components; number is `type="text"` + culture parse (no `min`/`max`/`step` attrs) | phase 4, Breaking / Migration |
+  | Sheet breakpoint 768 → 640; no knob for the old 768 sheet (`LayoutMode=Mobile` pins it) | phase 5, Breaking / Migration |
+  | `DefaultSignatureMode=Auto` starts Draw on a coarse pointer (template format still wins) | phase 5, Breaking / Migration |
+  | `MobileMode` is `[Obsolete]`; pin `LayoutMode` | phase 5, Breaking / Migration |
+  | Authoring panel DOM rewritten (audit tables, role-editor cards, condition / formula / timeline) | phase 7, Breaking / Migration |
+  | Designer pointer events replace `mousedown` / HTML5 drag; root is `TmEditorShell` | phase 8, Breaking / Migration |
+  | Overlay callbacks take `TmSigningFieldOverlayPointerEventArgs` (was `MouseEventArgs`) | phase 8, Breaking / Migration |
+  | Field inspector is built from Tm components (`TmSigningFieldEditorActions`, geometry section) | phase 8, Breaking / Migration |
+  | Mobile runner sheet and comments panel are `TmDrawer`; viewer pager raises `PageRequested` | phase 9, Breaking / Migration |
+
+- **Signing redesign (phase 9): the mobile runner sheet is the shared `TmDrawer`, the comments panel is a `TmDrawer` sheet, and the viewer / designer mobile chrome moved.** Hosts and tests that keyed off the phase-5 local sheet classes, the comments panel as an `aside`, or the viewer's old pager buttons must follow the new DOM. Public parameters are additive except where a selector assumed the old tree.
+
+  **Runner sheet → `TmDrawer`.** Below 640px of the runner container the single step panel is no longer a CSS-positioned `aside`. It is hosted once inside a non-modal `TmDrawer` (`Position=Bottom`, `Modal=false`, `ShowHandle=false`) that shares the documents grid cell. The host is `position: sticky; inset-block-end: 0; height: 85dvh`, so the peek stays on the viewport while the document scrolls. Peek / list / full are `data-snap-index` `0` / `1` / `2` (fractions `0.28` / `0.55` / `1`) plus `--list-hidden` on the full edit. The local `--sheet-*` classes are gone. The drawer root is `pointer-events: none`; clicks land on `.tm-drawer__panel`. The runner handle (`.tm-signing-form-runner__sheet-handle`, 44px, centred) is the only `aria-expanded` toggle — there is no `.tm-sheet-handle`. Crossing the breakpoint remounts the drawer; peek/list/full state is kept, focus inside the sheet is not. Desktop and tablet keep the `aside`.
+
+  ```html
+  <!-- before (mobile) -->
+  <aside class="tm-signing-form-runner__steps tm-signing-form-runner__steps--sheet-expanded tm-signing-form-runner__steps--sheet-full">
+    <button class="tm-signing-form-runner__sheet-handle" aria-expanded="true"></button>
+    <div class="tm-signing-form-runner__step-panel">…</div>
+  </aside>
+  <!-- after (mobile) -->
+  <div class="tm-signing-form-runner__sheet-host" data-testid="signing-runner-steps">
+    <div class="tm-drawer tm-drawer--bottom tm-drawer--inline tm-signing-form-runner__steps tm-signing-form-runner__steps--list-hidden"
+         data-snap-index="2" data-snap-points="0.28,0.55,1">
+      <div class="tm-drawer__panel">
+        <button class="tm-signing-form-runner__sheet-handle" aria-expanded="true"></button>
+        <div class="tm-signing-form-runner__step-panel">…</div>
+      </div>
+    </div>
+  </div>
+  ```
+
+  ```css
+  /* before */
+  .tm-signing-form-runner__steps--sheet-full .tm-signing-form-runner__field-list { display: none; }
+  /* after */
+  .tm-signing-form-runner__steps[data-snap-index="2"] .tm-signing-form-runner__field-list,
+  .tm-signing-form-runner__steps--list-hidden .tm-signing-form-runner__field-list { display: none; }
+  ```
+
+  **Comments.** `LayoutMode=Auto` follows the viewer's own container: below 640px the comment panel is a non-modal bottom `TmDrawer` (`tm-document-page-viewer__comments-sheet`). The docked shell and the drawer share one comments-shell fragment (host template, or the draft section plus the thread panel). `OnClose` and `OnNewComment` are new panel parameters; `OnCommentsClose` is the matching new viewer parameter. `OnClose` did not exist before this phase. A host that selected the comments shell as a sibling of the page column must follow the drawer on mobile.
+
+  **Comment chrome, before → after.**
+
+  | Before | After |
+  | --- | --- |
+  | Filter `role="tablist"` | `role="group"` + `aria-pressed` + a visible label (`aria-labelledby`) |
+  | Text action buttons | `⋯` `TmDropdown`, permission-gated |
+  | Mention chips | Inline `<mark>` |
+  | Mention count on the comments toggle | Separate `.tm-document-page-viewer__mention-badge` |
+  | Page label text | Page `<input>` (`PageRequested`); readonly `n / N` when that callback is unset |
+  | Absolute comment time | Relative time, absolute time in `title` |
+  | Composer `<textarea>` | `TmTextArea` wrapper (do not pass `class` through the splat) |
+  | Designer mobile toolbar | Action bar; fit / culture live in More |
+  | Runner sheet classes | `TmDrawer` (`data-snap-index`, `--list-hidden`) |
+
+  **New parameters.** Panel: `LayoutMode`, `OnClose`, `OnNewComment`. Viewer: `LayoutMode`, `OnCommentsClose`, `EnablePinchZoom` (default `false`; the runner and the demo viewer opt in, the designer stays off). Toolbar groups: `data-tm-group` `pages` | `zoom` | `comments`.
+
+  **Hosting.** `TmDocumentPageViewer` pinch imports `signing-runner.js`, which loads the core `pointer-gesture.js`. Serve `_content/Tempo.Blazor/js/` and list that file in the CSP. Without it, pinch is a no-op and the zoom buttons still work.
+
+  ```html
+  <!-- before (mobile) -->
+  <div class="tm-document-page-viewer__comments-shell">
+    <aside class="tm-document-comment-thread-panel" data-testid="document-comments-panel">…</aside>
+  </div>
+  <!-- after (mobile) -->
+  <div class="tm-drawer tm-drawer--bottom tm-drawer--inline tm-document-page-viewer__comments-sheet" data-snap-index="0">
+    <div class="tm-drawer__panel">
+      <aside class="tm-document-comment-thread-panel" data-testid="document-comments-panel">…</aside>
+    </div>
+  </div>
+  ```
+
+  **Viewer.** `TmDocumentPageViewer` raises `PageRequested` (`EventCallback<int>`) when the page input commits a page, in addition to `PreviousPageRequested` / `NextPageRequested`. A host that only listened to the previous/next callbacks still works; a custom pager that wrote the page input must also handle `PageRequested`.
+
+  ```razor
+  @* before *@
+  <TmDocumentPageViewer PreviousPageRequested="Prev" NextPageRequested="Next" />
+  @* after — PageRequested is additive; wire it when the page input should navigate *@
+  <TmDocumentPageViewer PreviousPageRequested="Prev" NextPageRequested="Next" PageRequested="GoTo" />
+  ```
+
+  **Designer mobile.** `TmPdfTemplateDesigner` on a mobile container (`LayoutMode` / the shell's own container, &lt; 768px) is viewing plus light edits: a `TmMobileActionBar` and one bottom sheet, not the docked palette and inspector. Tablet (768–1199, including 1024 with touch) keeps the overlay panels. `MobileMode` remains the obsolete alias of `LayoutMode=Mobile`. A selector that assumed the palette was always in the document flow must key off `data-layout` and the shell sheet, not the viewport.
+
+  **Viewer pinch.** `TmDocumentPageViewer` attaches the shared `pointer-gesture.js` `attachPinch` on `.tm-document-page-viewer__viewport` (touch + ctrl+wheel). A commit raises the existing `ScaleChanged` with the absolute scale and sets `ZoomMode` to `Custom`. The page no longer carries `max-width: 100%`, so a scale above 1 scrolls inside the viewport instead of being clipped. There is no second pinch implementation.
+
+- **Signing redesign (phase 8): the PDF template designer and its field overlay use pointer events, and the designer renders through `TmEditorShell`.** A host or a test that dispatched `mousedown` / `mousemove` / `mouseup` or an HTML5 drag on the designer must dispatch the pointer equivalents, and a selector that assumed the designer root was a plain `div` must follow the shell:
+
+  ```html
+  <!-- before -->
+  <div class="tm-pdf-template-designer" onmousedown="..." onmousemove="..."></div>
+  <!-- after -->
+  <div class="tm-editor-shell tm-pdf-template-designer" data-layout="desktop">
+      <div class="tm-pdf-template-designer__workspace"></div>
+  </div>
+  ```
+
+  `MobileMode` stays as an obsolete alias that forces `TmLayoutMode.Mobile`; new hosts set `LayoutMode`. The shell classifies its own container with `LayoutBreakpoints` (default 768 / 1200). The toolbar is a `TmToolbar` with named groups `data-tm-group="pages|view|language|zoom|detect"`. The custom `__context-actions` menu is gone; its items are now core `TmContextMenuItem` (`role=menuitem`; class hooks via `Class`). A selector that assumed plain button children of the menu must change. One `TmContextMenu` (opened with `TmContextMenu.Open()`) carries the same item classes. A palette tap arms drawing and a second tap places a default-sized field. The designer height is `--tm-pdf-template-designer-height` (or the `Height` parameter); the old fixed height remains the default. The move and resize session is attached to the workspace element, not the document.
 
 - **Spreadsheet redesign (phase 7c): the Sort dialog wraps its content in `div.tm-spreadsheet-sort__body`.** The wrapper is the inline-size query container the phone toolbar needs (it is the element the 320 px "stack the options" rule measures), and it carries the phone modifier `tm-spreadsheet-sort__body--mobile`. Every existing hook still matches — `.tm-spreadsheet-sort__toolbar`, `.tm-spreadsheet-sort__toggles`, `.tm-spreadsheet-sort__table`, `.tm-spreadsheet-sort__card`, `.tm-spreadsheet-sort__tool`, `__btn--ok` / `__btn--cancel` are untouched — but a selector that assumed the toolbar was a DIRECT child of the modal body must become a descendant selector:
 
@@ -2197,8 +2382,418 @@ findings table and the per-leg results) and the two perf runs
     </section>
     ```
 
+- **Signing steps render on the core Tm components (Signing redesign phase 4, S2-3/SI1).** Every
+  step input moved from a raw element to the core input components — the date input stays NATIVE
+  (`<input type="date|month|datetime-local">`, the SI1 exception, styled with the core `tm-input`
+  classes) so the mobile pickers keep working. What changes in the DOM and for hosts:
+  - *Text.* The input is a `TmTextInput` / `TmTextArea` (`div.tm-input-wrapper > input.tm-input`,
+    `textarea.tm-textarea`); the accessible name is still the step title id via the splatted
+    `aria-labelledby`, and `maxlength` / `pattern` splat onto the native element. A "n / max"
+    counter (`.tm-signing-text-step__count`) renders while the field carries a max length — the
+    visible count is `aria-hidden` and a permanent visually-hidden polite live region announces
+    only AT the limit (phase 4 review).
+    ```css
+    /* before */ input.tm-signing-text-step__input { … }
+    /* after  */ .tm-signing-text-step input.tm-signing-text-step__input { … }
+    /* the same class stays on the <input>; the textarea variant moved to the wrapper */
+    .tm-signing-text-step__textarea { … }  /* now the TmTextArea wrapper div, not the textarea */
+    ```
+  - *Number (behavior change).* The input is `type="text"` + `inputmode="decimal"` and parses with
+    the FIELD culture, so a Czech signer can finally type the decimal comma ("125,5") — the old
+    native `type="number"` + InvariantCulture parse rejected it. The parse contract (phase 4
+    review) is strict about group separators: `NumberStyles.Float` WITHOUT `AllowThousands`, so an
+    en-US "1,5" is an invalid half and NOT one thousand five; only a whitespace-like group
+    separator (the NBSP of cs-CZ "1 000,5") is stripped before the parse. The native `step`
+    attribute is no longer applied either (it was inert on the old markup and is meaningless on a
+    text input — `SigningFieldValidation.Step` stays in the model for hosts). The `min` / `max`
+    attributes are gone (inert on a text input); the allowed range renders as a localized hint
+    (`.tm-signing-number-step__range`, `TmSigningStep_NumberRange`, "Allowed range: 1 – 1 000 000"
+    for cs-CZ) referenced from the input's `aria-describedby`. The min/max validation messages are
+    unchanged.
+  - *Validation commits, keystrokes flow (behavior change).* The text and number steps raise
+    `ValueChanged` — and the runner's `ValuesChanged` — PER KEYSTROKE again (the runner's auto-save
+    is debounced by `AutoSaveDelay`,
+    so this is only a traffic change), while the validation message is computed on COMMIT (blur /
+    change) — typing never fires the step's alert, and typing after a failed commit clears it.
+    Same for the KBA answers. A host that showed its own "invalid" marker per keystroke now sees
+    the marker only after the field commits.
+  - *Choice.* The select variant renders the core `TmSelect` — the `tm-signing-choice-step__select`
+    class moved from the `<select>` to the component wrapper, and the select's accessible name is
+    the field label (`aria-label`). The step's plumbing reaches the NATIVE `<select>` through the
+    core `TmSelect.SelectAttributes` splat (phase 4 review): the title id as `aria-labelledby`,
+    the description / validation ids as `aria-describedby`, and `aria-invalid` on the select
+    itself. The
+    radio variant keeps the `fieldset` / visually hidden `legend` and renders the core
+    `TmRadioGroup` (`.tm-radio-group`, `TmRadio` rows — the inputs no longer carry a `value`
+    attribute; select radios by role/label, `getByRole('radio', { name: 'Email' })`), with the
+    field type's own `circle-dot` glyph in the palette / list / header (a bare circle read like
+    any bullet). The
+    checkbox variants render `TmCheckbox` rows (`.tm-checkbox-wrapper` with the package
+    `tm-signing-choice-step__option` / `__checkbox-row` classes; grouped checkbox fields carry
+    their description as the row's help text, whose id the input references through the core
+    `aria-describedby`).
+    ```css
+    /* before */ input.tm-signing-choice-step__radio { … }   /* the raw radio input */
+    /* after  */ .tm-signing-choice-step .tm-radio-option { … }  /* the core TmRadio row */
+    ```
+  - *Phone.* The country select is a `TmSelect` (the `tm-signing-phone-step__country` class moved
+    from the `<select>` to the wrapper) and the number input a `TmTextInput Type="tel"`; all three
+    controls (country / number / OTP) now carry VISIBLE localized labels
+    (`TmSigningStep_PhoneCountryLabel`, `_PhoneNumberLabel`, `_OtpLabel`) — the old aria-label
+    keys (`TmSigningStep_CountryCodeAria` / `_PhoneInputAria` / `_OtpInputAria`) were removed in
+    the phase-4 review, and the number's placeholder is an EXAMPLE FORMAT for the selected
+    calling code ("777 123 456" for +420) instead of a repeated label. The OTP input keeps
+    `inputmode="numeric"` + `autocomplete="one-time-code"`. **The default
+    country code comes from the field culture** (+420 for cs, +421 for sk, otherwise +1) — the old
+    hardcoded `"+1"` default opened a Czech signer's step on the wrong prefix. `CountryCode` is
+    now `string?`; an explicitly passed code keeps winning over the culture default, a culture
+    default the host's `CountryOptions` do not offer falls back to the FIRST option, and the
+    PICKED code is component-local state (phase 4 review) — a host that does not bind
+    `CountryCodeChanged` no longer sees the select snap back on the next render.
+  - *Attachment.* The upload is the core `TmFileDropZone` (the custom signing icon content replaced
+    the default emoji; the file input carries `aria-label` + a stable `data-testid`, and the
+    description / invalid state ride the core `InputAttributes` splat — phase 4 review). The
+    zone's own picked-files list is SUPPRESSED (`ShowFileList="false"`, the core addition) because
+    the step renders its own cards — the same file never shows twice. Cards show a preview
+    (decorative, `alt=""`) or type icon, a culturally formatted "size · type" line
+    (`.tm-signing-attachment-step__meta`, "1,2 MB" under cs-CZ — the old size was culture-invariant)
+    under a localized "Attached files (N)" heading; the remove action is a ghost `TmButton`
+    whose accessible name carries the FILE NAME (`TmSigningStep_RemoveFile`, "Remove
+    contract.pdf") and whose visible text collapses to a 44 px icon-only target on the narrow
+    step container, where the card itself wraps (phase 4 review).
+  - *External.* The step gains a hero icon in a primary-subtle circle — on a WIDE step container
+    it sits beside the title / description in the header row (phase 4 review) — a per-type default
+    description (`TmSigningStep_VerificationDescription` / `_KbaDescription` / `_PaymentDescription`,
+    overridable by the field description), a culture-formatted payment amount (cs-CZ renders
+    "1 500,00 Kč" — the old rendering was culture-invariant "EUR 19.50"), Start as the primary
+    `TmButton` with the open link as an outline sibling (the `tm-btn` / `tm-btn-outline` classes
+    are the core `_button.css` contract — keep that stylesheet shipped whenever this step renders),
+    and the **verified / paid state**: the new
+    `Value` parameter (the runner passes the stored field value) replaces the call to action with a
+    localized "Verified" / "Paid" status once the value is `true`. The `.tm-signing-external-step__question`
+    wrapper is gone (each KBA answer is a labelled `TmTextInput`).
+  - *Signature.* The capture's Clear button moved INSIDE the signing surface — the step passes
+    `ClearButtonPlacement="Overlay"` (the F8 core addition) by default; the new
+    `TmSigningSignatureStep.ClearButtonPlacement` parameter restores the row
+    (`TmSignatureClearButtonPlacement.Actions`). The step shell header now renders the field type's
+    icon (`.tm-signing-step-shell__icon`, the shared `SigningFieldTypeIcons` glyph).
+  - *Touch sizing.* Step inputs and actions meet the 44 px touch target (`--tm-touch-target`), 48 px
+    (`--tm-space-12`) in the narrow step container; the value rows (date + Today, phone + Send code,
+    external actions) stack under each other on the narrow container — with the input's height
+    decided by its own content again, not the stretched row (the date / OTP input rendered ~190 px
+    tall; phase 4 review). The "Today" action reads as a tonal chip (primary-subtle background,
+    primary ink, no border). The step-specific styles moved
+    from `_signing-step-shell.css` into the new `_signing-steps.css` (both ship via
+    `tempo-blazor-signing.css`).
+
+- **The signing runner's mobile panel is a real bottom sheet, and the sheet breakpoint moved from
+  768 to 640 (Signing redesign phase 5, S2-4).** The runner now classifies its OWN container (F1):
+  a new `LayoutMode` / `ResolvedLayoutChanged` pair wraps the runner root in the shared
+  `TmLayoutObserver` (the Gantt pattern — the root gained a `tm-signing-form-runner--mobile` /
+  `--tablet` modifier class), so a host with an app-level viewport scope gets the correct
+  presentation from the first frame. The sheet presentation itself stays CSS-only under
+  `@container tm-signing-runner (width < 640px)` — the sheet only pays off below the
+  single-column fold, a 640–767 column keeps the docked two-column panel. There is NO knob for the
+  old 768 behaviour: a host that wants the sheet at a wider container pins
+  `LayoutMode="TmLayoutMode.Mobile"` (and one that must never sheet pins `Desktop`/`Tablet`).
+  Below 640 the rail is a full-bleed bottom sheet with rounded TOP corners, an internal scroll
+  capped at `85dvh` and the safe-area inset. The sheet logic stays contained in the runner's
+  `MobileSheet` partial for the phase-9 migration onto the shared `TmDrawer`.
+  - *DOM structure.* The observer wraps the runner root in a `TmLayout` container element
+    (`div.tm-layout.tm-layout--mobile` / `--tablet` / `--desktop` …), so `.tm-signing-form-runner`
+    is no longer the outermost element a host sees:
+    ```html
+    <!-- before: the runner root was the host-placed element -->
+    <div class="tm-signing-form-runner …">…</div>
+
+    <!-- after: the F1 observer adds its own wrapper around the runner root -->
+    <div class="tm-layout tm-layout--mobile tm-layout--no-container">
+      <div class="tm-signing-form-runner …">…</div>
+    </div>
+    ```
+    Host CSS that targeted a PARENT of the runner (`.demo-card > .tm-signing-form-runner`) must
+    retarget; selectors ON `.tm-signing-form-runner` itself are unaffected.
+  - *Sheet states.* The sheet is a THREE-state CSS presentation (phase 5 review): **peek**
+    (collapsed — the handle, the done count strip `.tm-signing-form-runner__sheet-progress` and
+    the "Sign now" CTA stay visible above the document; the layout reserves the strip's measured
+    height through the new `--tm-signing-sheet-peek-height` knob on the runner root instead of the
+    old fixed `2 × space-16` padding guess), **expanded** (field list + step, capped at `85dvh`
+    with an internal scroll) and **full** (`.tm-signing-form-runner__steps--sheet-full` — the
+    active edit: step panel + sticky action bar visible, field list folded away). EVERY mobile
+    navigation (Next / Previous / Skip / field-list tap / document overlay tap — which now also
+    OPENS the collapsed sheet on the clicked field's step) lands in **full**; the handle toggles
+    expanded ↔ peek, and the More menu's "Field list" switches full → expanded, scrolls the list
+    into view and focuses the current row. There is deliberately NO resize-on-focus (it would
+    move a pressed control mid-press when a blurred input collapsed the sheet) and no JS state.
+  - *Toggles.* The HANDLE (`.tm-signing-form-runner__sheet-handle`) is the sheet's ONLY
+    `aria-expanded`/`aria-controls` toggle, and it keeps focus when the state flip hides the
+    focus owner. The phase-2 "Sign now" `aria-expanded` semantics are gone (it is an action, not
+    a toggle) and the expanded sheet's full-width "Minimize" row is REMOVED — "Show whole
+    document" in the More menu collapses to peek:
+    ```html
+    <!-- before (phase 2): both affordances rendered, both carried aria-expanded -->
+    <button class="tm-signing-form-runner__mobile-expand" aria-expanded="false" aria-controls="…">Sign now</button>
+    <button class="tm-signing-form-runner__mobile-minimize" aria-expanded="true" aria-controls="…">Minimize</button>
+
+    <!-- after: the handle is the only toggle; More → "Show whole document" collapses -->
+    <button class="tm-signing-form-runner__sheet-handle" aria-expanded="false" aria-controls="…">…</button>
+    <button class="tm-signing-form-runner__mobile-expand">Sign now</button>
+    ```
+    Tests or scripts that clicked `.tm-signing-form-runner__mobile-minimize` use the handle (or
+    the More menu's `tm-signing-form-runner__more-document` entry).
+  - *Action bar.* The mobile sticky action row is `Previous (1fr) | Next/Complete (2fr — the
+    primary stays the widest at 320) | ⋯ More` — the new `.tm-signing-form-runner__more` trigger
+    (a core `TmDropdown`; hidden on the docked containers, where the menu simply stays closed)
+    carries Skip (optional current field only), Field list, Language (expands the sheet and
+    focuses the picker) and "Show whole document". The desktop Skip row is unchanged; the menu
+    items render only while the trigger is visible, so no duplicated actions are exposed.
+  - *Auto-scroll.* Every step landing asks the new `signing-runner.js` module to put the active
+    field's document overlay above the sheet with ONE `scrollTo` — centred in the space above the
+    sheet, clamped so the field never hides under it; the overlay gained a `data-field-uuid`
+    anchor. Reduced motion scrolls instantly (`behavior: 'auto'`). The module is a dynamic
+    `import()` — **no `<script>` tag is needed** — and a circuit without it skips silently
+    (today's behaviour).
+  - *Choice cards (SI1).* On the mobile layout a select-typed field with at most five options
+    renders as radio CARDS (`.tm-signing-choice-step__options--cards` on the core `TmRadioGroup`,
+    56px whole-card rows) instead of the system picker; an OPTIONAL select's card set gains a
+    localized "None" card first (`TmSigningChoiceStep_None`) that sends the empty value — the
+    system picker's selectable placeholder keeps its contract. Six or more options keep `TmSelect`
+    at every width, and the desktop presentation is untouched.
+    ```html
+    <!-- before: the delivery field is always the system select -->
+    <div class="tm-signing-choice-step tm-signing-choice-step__select">…<select>…</div>
+
+    <!-- after (mobile layout, ≤ 5 options): the same values as whole-card radio rows -->
+    <fieldset class="tm-signing-choice-step__group">
+      <div class="tm-radio-group tm-signing-choice-step__options tm-signing-choice-step__options--cards">
+        <label class="tm-radio-option">…None</label>
+        <label class="tm-radio-option">…Paper</label>…
+      </div>
+    </fieldset>
+    ```
+  - *Signature default (SI3).* The runner gained `DefaultSignatureMode`
+    (`Auto|Draw|Typed|Upload`, default `Auto` = Draw on `pointer: coarse`, Typed elsewhere). The
+    template's stored `Preferences.Format` still wins over the parameter, and the signer's own tab
+    pick still wins over both. A host that relied on the old always-Typed first presentation on a
+    touch device pins `DefaultSignatureMode="TmSigningDefaultSignatureMode.Typed"`.
+  - *`TmSigningFormRunner` is `IAsyncDisposable` instead of `IDisposable` (the sync `Dispose` is
+    gone).* The runner cancels the pending autosave debounce and releases the `signing-runner.js`
+    module instance when it is disposed — but Blazor's renderer calls ONLY `DisposeAsync` when a
+    component implements both interfaces, so the cancellation put into the sync `Dispose` during
+    phase 5 never ran and a changed value fired its debounce into a disposed component. Keeping
+    `IAsyncDisposable` alone closes that hole. A host that disposed the runner explicitly — or a
+    test holding it in a `using` — must switch to the async form:
+    ```csharp
+    // before
+    runner.Dispose();
+    // or
+    using var runner = CreateRunner();
+
+    // after
+    await runner.DisposeAsync();
+    // or
+    await using var runner = CreateRunner();
+    ```
+    Hosts that only RENDER `<TmSigningFormRunner />` change nothing: the renderer disposes
+    `IAsyncDisposable` components on its own (same shape as the `TmToastContainer` change).
+
+- **The post-sign panels and the rule/role editors were rebuilt against the desktop references
+  (Signing redesign phase 7, S1-1/S1-2/SI1).** `TmSubmissionStatusTimeline`, `TmAuditTrailViewer`,
+  `TmPdfSignatureVerification`, `TmShareLinkPanel`, `TmConditionBuilder`, `TmFormulaBuilder` and
+  `TmRecipientRoleEditor` changed DOM, classes and in places semantics; every visible change is
+  below with its before/after. Additive API: `TmSubmissionStatusTimeline.SortDirection`
+  (`SigningTimelineSortDirection`, default `Descending` — the historical newest-first order,
+  Q-S9) and `HeaderContent` slots on the timeline and the audit viewer (the document
+  name/status card is host content — the models stay unchanged, Q-S10). Every timestamp now
+  formats through the shared `SigningDateFormatter` (local time, ambient culture) instead of
+  scattered `ToString("g")` copies.
+
+  - *Audit trail: the three `dl` card stacks are real tables.* Documents/Signers/Events render as
+    `<table>` with `<th scope="col">`; the network evidence splits into two lines (IP primary,
+    agent · zone secondary); signers get a `TmAvatar`; checksums render in `--tm-font-mono` with
+    `overflow-wrap: anywhere`; empty values show an en dash instead of blank cells. Under a
+    640px container the tables collapse to cards (the header cells are visually hidden and each
+    cell re-labels itself through `data-label`):
+    ```html
+    <!-- before: a card per document/signer/event inside a framed section -->
+    <section class="tm-audit-trail-viewer__section">
+      <dl class="tm-audit-trail-viewer__document">…</dl>
+    </section>
+
+    <!-- after: a table on wide containers, cards (data-label repeats the column name) below 640 -->
+    <table class="tm-audit-trail-viewer__table">
+      <thead><tr><th scope="col">File name</th><th scope="col">Checksum</th></tr></thead>
+      <tbody><tr><td data-label="File name">…</td><td data-label="Checksum">…</td></tr></tbody>
+    </table>
+    ```
+    Host CSS that selected `.tm-audit-trail-viewer__document/-signer/-entry` must retarget to the
+    table/row cells; the audit PDF link, the localization snapshot and the `HeaderContent` slot
+    (replacing the default `<h2>`) are unchanged otherwise.
+  - *Timeline: no more per-event cards.* Events are an `<ol>` list with one continuous axis
+    (pseudo-element) and hairline separators; neutral/informational events paint the SOFT marker
+    (`__marker--soft`), sent/completed/failed keep the solid disc; the recipient line gains the
+    localized "Recipient:" prefix (`TmSubmissionStatusTimeline_RecipientPrefix`); the header
+    wraps (`flex-wrap`). The item classes keep their severity modifiers
+    (`__item--success/--danger/--info/--primary/--neutral`), so theme overrides survive.
+    Sent events now carry `__item--primary` (previously `__item--neutral`) and the solid marker —
+    overrides that styled Sent through `--neutral` must retarget.
+    ```html
+    <!-- before: each event was a bordered card -->
+    <article class="tm-submission-status-timeline__item tm-submission-status-timeline__item--success">…</article>
+
+    <!-- after: a list item on the shared axis (cards are gone) -->
+    <ol class="tm-submission-status-timeline__items">
+      <li class="tm-submission-status-timeline__item tm-submission-status-timeline__item--success">…</li>
+    </ol>
+    ```
+  - *Verification: the status block is a `TmAlert`.* The custom status row became a core alert
+    (`role="status"` for verified/not-found/loading, `role="alert"` for malformed/error) with the
+    `tm-pdf-signature-verification__banner--{status}` modifier; each signature is a card with a
+    `TmAvatar` header and a three-column `dl` (one column below a 640px container); the checksum
+    shows the first 16 characters plus an ellipsis (the full value stays in the `title` attribute
+    and on the new `TmCopyButton`); the detail keys `SignedAt`/`SigningMethod`/`Certificate`
+    localize the signature card.
+  - *Share panel: a real toggle and labelled fields.* The bare checkbox became a core `TmToggle`
+    (`input[role="switch"]`), the link input gained a visible `label[for]`, both copy actions
+    render the labelled `TmCopyButton` (`ShowLabel="true"`), the QR sits in a framed block with a
+    localized scan hint (`TmShareLinkPanel_QrHint`), a separator divides the link area from the
+    embed area, and the embed `<label for>` now actually points at the textarea (a11y bug fix).
+    Below a 420px container the link/embed rows and the QR hint stack.
+    ```html
+    <!-- before: a bare checkbox with a text span, an aria-label-only input -->
+    <label class="tm-share-link-panel__toggle"><input type="checkbox" …><span>Enabled</span></label>
+    <input class="tm-share-link-panel__input" aria-label="Signing link" …>
+
+    <!-- after: core switch, visible labels -->
+    <div class="tm-toggle-wrapper"><input type="checkbox" role="switch" aria-checked="true" …></div>
+    <label class="tm-share-link-panel__link-label" for="tm-share-link-…">Signing link</label>
+    <input class="tm-share-link-panel__input tm-input" id="tm-share-link-…" …>
+    ```
+  - *Condition builder: core Tm components, one card, reorder buttons.* The native
+    `<select>`/`<input>` controls became `TmSelect`/`TmTextInput` (the controls moved INSIDE the
+    core component wrappers — `.tm-condition-builder__field` is now the `tm-select-wrapper` div,
+    the native `<select>` is its child), the rows share ONE card with hairline separators, the
+    add action is the dashed full-width row (`__add--dashed`), each row carries up/down reorder
+    buttons (`__move-up`/`__move-down`, Q-S7 — the join operation stays positional: the leading
+    row never shows an operation and normalizes back to `And` after a move), and the trash is the
+    danger icon button it already was.
+    ```html
+    <!-- before: the control WAS the classed element -->
+    <select class="tm-condition-builder__field" aria-label="Field" …>…</select>
+
+    <!-- after: the wrapper carries the class, the native select is a child -->
+    <div class="tm-select-wrapper tm-condition-builder__select tm-condition-builder__field">
+      <select id="…" class="tm-select" aria-label="Field" …>…</select>…
+    </div>
+    ```
+    Tests/hosts that changed `.tm-condition-builder__field` directly must select
+    `.tm-condition-builder__field select` (or drive the component parameter).
+  - *Formula builder: labelled groups, parentheses, cursor insertions.* The three palettes carry
+    visible headings and `role="group"` + `aria-labelledby` (`aria-label`-on-a-`div` is gone);
+    the operator grid adds `( )` (the grammar itself is unchanged — Q-S8); token cards show the
+    field type under the label (`__token-label`/`__token-type`); the editor is the core
+    `TmTextArea` (its error message replaces the builder's own alert row, so the invalid state is
+    announced by the control itself); Save is the primary button. Insertions go through the
+    `insertAtCursor` export of the package's neutral `signing-editor.js` module (dynamic
+    `import()`, no script tag) and land at the textarea's cursor; a view without the module
+    (bUnit, static render) still appends.
+    ```html
+    <!-- before: one flat toolbar with an aria-label, appended insertions -->
+    <div class="tm-formula-builder__toolbar" aria-label="Formula operators">…</div>
+
+    <!-- after: a labelled group, grid operators incl. ( ), cursor-aware insert -->
+    <section class="tm-formula-builder__group" role="group" aria-labelledby="tm-formula-operators-…">
+      <h3 id="tm-formula-operators-…" class="tm-formula-builder__section-title">Formula operators</h3>
+      <div class="tm-formula-builder__toolbar">…<button data-operator="(">(</button>…</div>
+    </section>
+    ```
+  - *Role editor: collapsible cards.* Each role row became a card with a header (drag handle,
+    the order BADGE `__order-badge` instead of the read-only number input, the role pill painted
+    in the role colour with the contrast-resolved text colour (`SigningRolePalette.ContrastTextFor`),
+    a contact preview when collapsed, the reorder arrows — KEPT as the a11y alternative to drag
+    & drop — the trash and the chevron toggle with `aria-expanded`/`aria-controls`). The body
+    edits through `TmTextInput`/`TmSelect`; the palette swatches (`__swatch[data-color]` with
+    `aria-pressed`) plus the "Custom…" native colour input replace the bare colour field; the
+    drag handle hides on `(pointer: coarse)`. "Role name" stays editable, the three invite
+    selects survive, and NO advanced-invitation section was added (Q-S6).
+    ```html
+    <!-- before: one grid row per role, the order as a read-only number input -->
+    <div class="tm-recipient-role-editor__row">
+      <input class="tm-recipient-role-editor__order-input" type="number" readonly value="1">
+      <input class="tm-recipient-role-editor__color" type="color" value="#2563eb">…
+
+    <!-- after: a collapsible card; header = badge + pill + preview + actions -->
+    <div class="tm-recipient-role-editor__card" data-role-uuid="…">
+      <header class="tm-recipient-role-editor__card-header">
+        <span class="tm-recipient-role-editor__order-badge">1</span>
+        <span class="tm-recipient-role-editor__role-pill" style="--tm-signing-role-color: …">Approver</span>
+        <button class="tm-recipient-role-editor__toggle" aria-expanded="true" aria-controls="…">…</button>
+      </header>
+      <div class="tm-recipient-role-editor__card-body">
+        <div class="tm-recipient-role-editor__swatches">
+          <button class="tm-recipient-role-editor__swatch" data-color="#2563eb" aria-pressed="true"></button>…
+        </div>…
+      </div>
+    </div>
+    ```
+    The old hooks `__order-input`, `__color` (now inside `__swatch-custom`), `__row` and the
+    always-visible `__move-up`/`__move-down` header buttons moved: hosts/tests that reordered via
+    the arrows find them in the card HEADER; the validation row renders inside the card body.
+
+  - *Phase 7 review (code/UX/architect follow-up).* The panels and editors above received the
+    review fixes; all additive, no host action:
+    - **Role pill ink is token-driven.** `SigningRolePalette.ContrastTextFor` now picks the ink
+      with the HIGHER ACTUAL WCAG contrast ratio and, for every default-palette colour (and the
+      legacy `#ca8a04`), emits `var(--tm-signing-role-N-on)` instead of a computed hex. New
+      per-theme token pairs `--tm-signing-role-1..6-on` in `tokens-signing.css`
+      (`:root`, dark, light-island), each ≥ 4.5:1 (re-verified by test against the stylesheet).
+      A colour-less (or unparsable) pill rides `var(--tm-color-on-primary)`; only a CUSTOM colour
+      computes — and it takes the fixed tone classes `__role-pill--on-light` /
+      `__role-pill--on-dark` (mapped to `--tm-signing-role-ink-dark` /
+      `--tm-color-on-primary-fixed`) instead of an inline hex. `--tm-signing-role-ink-dark`
+      (`#111827`) is declared on `:root` only and is never overridden: dark and indigo themes
+      redefine `--tm-color-gray-900` to white, which would paint white text on a light custom pill.
+      `ContrastTextFor` returns that token name (or `var(--tm-color-on-primary-fixed)`) for a
+      custom colour — never a hex.
+    - **Focus survives remove/move.** `TmRecipientRoleEditor` and `TmConditionBuilder` queue the
+      focus move and apply it in `OnAfterRenderAsync` through the neutral `signing-editor.js`
+      module (`focusElement`, document injectable; `SigningEditorInterop` replaces the editors'
+      use of the runner's wrapper). A remove lands the focus on the surviving row's action (the
+      Add action is the fallback); a move keeps the focus INSIDE the moved card/row — the
+      same-direction button, or the opposite one once the edge disables it — and announces
+      "{0} moved to position {1}" (`TmRecipientRoleEditor_RoleMoved` /
+      `TmConditionBuilder_ConditionMoved`) through an always-rendered polite live region. Role
+      cards are keyed by `role.Uuid`, condition rows by per-row Guids (`data-row-id`), so the
+      DOM (and the focus) travels with the moved item. All three editors (`TmRecipientRoleEditor`,
+      `TmConditionBuilder`, `TmFormulaBuilder`) are `IAsyncDisposable`: they release their
+      imported module on dispose (the same shape the runner already had).
+    - **Typing is never normalized mid-keystroke.** The role editor's name/full name/email/phone
+      and the condition builder's value keep the RAW text while typing (no notify, no
+      re-normalization per keystroke) and commit + normalize on blur or Enter.
+    - **Coarse pointers get 44 px targets** on the role editor's header buttons, palette swatches
+      and colour input, the condition builder's move/remove pair and the formula builder's
+      operators/functions/tokens (`--tm-touch-target` under `@media (pointer: coarse)`); the
+      condition builder's stacked (<768px container) move row sizes to content and aligns to the
+      row start.
+    - **Smaller a11y fixes:** the toggle's `aria-controls` renders only while the card is
+      expanded; the order badge carries a visually-hidden "Signing order {0}"
+      (`TmRecipientRoleEditor_SigningOrder`) with a decorative number; palette swatches announce
+      localized colour names (`TmRecipientRoleEditor_ColorBlue`…`ColorAmber`); the share toggle's
+      label is the static "Link sharing" (`TmShareLinkPanel_EnableSharing`) and the redundant
+      `Disabled="false"` is gone; the audit tables carry explicit
+      `table/rowgroup/row/columnheader/cell` roles (the narrow-panel card collapse would
+      otherwise drop the semantics); the audit viewer renders no header at all without a trail
+      and without a `HeaderContent` slot, and its avatar falls back to the signer's email; the
+      verification panel shows the localized "Unknown signer"
+      (`TmPdfSignatureVerification_UnknownSigner`) for a signature without name or email; the
+      formula operator keys carry localized spoken names (`TmFormulaBuilder_OperatorPlus`…); the
+      timeline's `mail-x` / `shield-check` icons are registered built-ins (`IconNames.MailX` /
+      `IconNames.ShieldCheck`); `TmDocumentCommentItem` formats timestamps through the shared
+      `SigningDateFormatter`.
 ### Fixed
 
+- **Signing: a palette or field drag no longer also draws on the page.** The palette session stops the press before the page surface's bubble listener, so a drag places or moves a field and does not start a selection box. `ButtonVariant.OutlinePrimary` is the Autodetect toolbar variant.
+- **Core: `TmContextMenuItem` keeps `OnClick` across the close render.** The item copies the callback, closes the parent, then invokes it, so a menu that unmounts on close still runs the action.
 - **Core: the "More" overflow menu of `TmToolbar` / `TmMobileActionBar` now stays inside the viewport.**
   The shared `ActionOverflowMenu` panel opens with `TmOverlayPanel.ConstrainHeight` in addition to the
   flip/clamp placement it already used, so a menu taller than the room on its resolved side flips above
@@ -2232,14 +2827,24 @@ findings table and the per-leg results) and the two perf runs
 
 ### Known issues
 
-- **Signing external / phone / attachment steps are documented placeholders (SI2).** Clicking
-  "Start verification" / "Checkout" marks the step complete WITHOUT any verification or payment
-  taking place, the phone step sends no SMS and checks no OTP, and the attachment step's upload
-  stays in the browser. The resulting field values are untrusted presentation state. The XML docs
-  and the JSON component documentation carry a "Known limitations / security note"; a
-  provider-backed contract is planned for Signing redesign phase 6.
+- **Signing external / phone / attachment steps WITHOUT the host callbacks remain documented
+  placeholders (SI2 — narrowed in phase 6).** When a host does NOT wire the phase-6 active-step
+  callbacks, the legacy behaviour stands: clicking "Start verification" / "Checkout" marks the
+  step complete WITHOUT any verification or payment taking place, the phone step sends no SMS and
+  checks no OTP, and the attachment step's upload stays in the browser — the resulting field
+  values are untrusted presentation state, and the "Verified" / "Paid" status reflects the STORED
+  value (a tampered stored value still shows as verified). Wire the callbacks (see Added below) to
+  close this: with `OnVerifyPhoneCode` / `OnAttachmentSelected` / `OnExternalStepRequested` wired,
+  a phone step completes only after the host verifier answers `true`, the attachment card carries
+  the host-returned upload url, and an external step completes solely after the host stores the
+  provider result through `Values`. The "Known limitations / security note" wording in the XML
+  docs and the JSON component documentation now describes this contract (and the SignalR note on
+  reading the uploaded file at the host).
 
 ### Added
+- **Core: `pointer-drag.js` listens in the capture phase when `listenerCapture` is set, and `TmContextMenu` reports open changes.** `listenerCapture` starts a gesture even when a child calls `stopPropagation`; detach removes that listener. `TmContextMenu.Open()` is public and idempotent. `IsOpenChanged` is raised from `SetOpenAsync` (toggle, `Open`, `CloseMenu` and an overlay dismiss) after the open state has changed, and the callback is awaited.
+- **Signing redesign (phase 8): the field inspector is built from Tm components and its sections collapse.** `TmSigningFieldEditorPanel` renders actions, selection and an optional geometry section through `TmSigningFieldEditorActions`. New callbacks: `OnCopyRequested`, `OnDeleteRequested`, `OnCopySelectionRequested`, `OnPasteRequested`, `OnDeleteSelectionRequested`. `ShowGeometry`, `PageWidth` and `PageHeight` expose a numeric resize (WCAG 2.5.7). `TmPdfTemplateDesigner.LayoutBreakpoints` defaults to 768 / 1200. `TmContextMenu.Open()` opens the designer's one menu. The overlay pointer callbacks take `TmSigningFieldOverlayPointerEventArgs`.
+
 - **Spreadsheet redesign (phase 8): `TmSpreadsheet` honours the core `data-testid` contract.**
   The component now derives from `TmComponentBase` and its root renders
   `data-testid="@RootTestId()"` before the splatted attributes, so `DataTestId` labels the root (and a
@@ -2296,6 +2901,210 @@ findings table and the per-leg results) and the two perf runs
 
 - **Fixed (Spreadsheet formula bar): an unrelated parent render no longer overwrites a ref typed into the name box.** `TmSpreadsheetFormulaBar` re-seeded its controlled `_nameBoxValue` from `ActiveCellRef` on EVERY parent pass, so any render that landed between the keystroke and the Enter (a command-log flush after a canvas click, the viewport sync the grid's focusout schedules) patched the input back to the active cell and the Enter navigated there instead of to the typed ref. It is now seeded only when the active cell actually changed. Related: the grid takes the focus back after a canvas activation only while the focus is not already in another control (`tmSpreadsheetCanvas.isFocusOutside`), so a late frame cannot blur a control the user has moved to.
 
+- **Signing active-steps contract (Signing redesign phase 6, S2-5/SI2), all opt-in.** The phone
+  OTP, the attachment upload and the external verification become HOST-CONFIRMED steps.
+  `TmSigningFormRunner` gains `OnSendPhoneCode`
+  (`EventCallback<SigningPhoneCodeRequest>`), `OnVerifyPhoneCode`
+  (`Func<SigningPhoneVerificationRequest, Task<bool>>`), `OnAttachmentSelected`
+  (`Func<SigningAttachmentUploadRequest, Task<string?>>`), `OnExternalStepRequested`
+  (`EventCallback<SigningExternalStepRequest>` — the field plus the typed KBA answers) and
+  `StepContextProvider`
+  (`Func<SigningField, SigningExternalStepContext?>`), with the four new contract records
+  (`SigningPhoneCodeRequest`, `SigningPhoneVerificationRequest`, `SigningExternalStepContext`,
+  `SigningAttachmentUploadRequest`) in the Signing package. The contract:
+  - *Phone.* While `OnVerifyPhoneCode` is wired, a phone field completes ONLY after the host
+    verifier answers `true` (the runner records the confirmation; a rejected code shows the
+    localized "code is not valid" message and never completes the step); the typed OTP is never
+    stored as the field value. `OnSendPhoneCode` receives the normalized number on every
+    send/resend.
+  - *Upload.* `OnAttachmentSelected` receives the picked `IBrowserFile` and its returned url is
+    stored on the attachment card. Read the content in the HOST (`File.OpenReadStream`) — on
+    Blazor Server browser files stream over SignalR with tight message limits. The step itself
+    never reads a picked file's content beyond the optional local image thumbnail.
+  - *External.* With `OnExternalStepRequested` wired, the Start/Checkout click only notifies the
+    host — the step completes solely after the host stores the provider result (value `true`)
+    through `Values`; `StepContextProvider` feeds the provider page url, inline KBA questions,
+    loading state, error and provider name per field. The provider link keeps
+    `rel="noopener noreferrer"` and now carries a localized redirect note
+    (`TmSigningStep_RedirectNote`) and provider line (`TmSigningStep_ExternalProvider`).
+  Without the callbacks, today's documented behaviour stands unchanged (regression-tested): the
+  typed phone completes the step, uploads stay client-side metadata and the external click stores
+  `true` — presentation state, never proof that a verification, payment or upload happened.
+  No breaking change without the callbacks wired. New localized keys `TmSigningStep_Verify`,
+  `_Resend`, `_InvalidCode`, `_FileTooLarge`, `_TooManyFiles`, `_ExternalProvider` and
+  `_RedirectNote` in en / cs / sk / fr + `MockTmLocalizer`.
+- **Signing active-steps review fixes (phase 6 review) — reviewed-contract hardening.**
+  - *Phone verification is bound to the NUMBER.* The runner keeps the host confirmation in a
+    uuid → verified-number map (runner-internal, never in `Values`) — a phone step is verified
+    only while the field's current value still equals the number the OTP was verified for, so
+    editing the number (or a host-pushed value change) makes the step incomplete again. The
+    verified state LOCKS the number input and the country select and replaces "Send code" with a
+    Secondary **Change number** action (`TmSigningStep_ChangeNumber`) that clears the host
+    confirmation and unlocks the editing.
+  - *Upload contract.* A host resolver returning `null` (or throwing — cancellation aside)
+    REJECTS the file: it never joins the attachments and the localized
+    `TmSigningStep_UploadFailed` ("{0} could not be uploaded.") shows. The local image preview is
+    presentation-only: it lives in a component-local map keyed by the attachment uuid and is
+    never written into the persisted `Url` (the legacy path keeps `Url` null). The upload round
+    trip is BUSY state: the drop zone disables and a spinner row announces "Uploading {name}…"
+    (`TmSigningStep_Uploading`) through a polite live region, cleared in `finally`. Single-file
+    mode keeps the existing attachment when nothing was accepted (a rejected replacement no
+    longer drops the previous file). The platform read budget matches `MaxFiles`
+    (`GetMultipleFiles(Math.Max(MaxFiles ?? 10, 1))`, the same value on
+    `TmFileDropZone.MaxFileCount` — an overflow pick degrades to an empty readable set, and the
+    change event still fires so the localized limit message can render). The preview data url
+    uses the decoded image's content type and only PNG/JPEG/GIF/WebP picks are previewed (SVG
+    skipped). `MaxFileSize` is CLIENT-REPORTED — hosts must enforce the real limit via
+    `OpenReadStream(maxAllowedSize)`.
+  - *External opt-in completion.* With `OnExternalStepRequested` wired, the external/KBA/payment
+    field completes ONLY for the confirmed provider result — value `true` or the string
+    `"true"` (case-insensitive); the string `"false"` keeps the step incomplete. Legacy rule
+    unchanged without the callback.
+  - *KBA submit.* The questions branch gains a "Submit answers" action
+    (`TmSigningStep_SubmitAnswers`), and `OnExternalStepRequested` now carries
+    `SigningExternalStepRequest` (`Field` + `IReadOnlyDictionary<string, string?> Answers`) —
+    the typed KBA answers ride the request to the host and are NEVER stored as the field value.
+  - *Host callback errors.* Send/Verify are guarded against double-raises; a failing
+    `OnVerifyPhoneCode` / `OnSendPhoneCode` (cancellation aside) shows the localized
+    `TmSigningStep_VerificationUnavailable` message, NEVER marks the step verified and starts no
+    countdown; the resend countdown starts only after the host accepted the send; a send on an
+    empty number returns early without raising the callback; the request records
+    (`SigningPhoneCodeRequest`, `SigningPhoneVerificationRequest`) now carry non-nullable
+    `Phone`. All active-step requests gained an init-only `CancellationToken` fed from a
+    runner-owned source cancelled in `DisposeAsync`.
+  - *Focus and announcements (WCAG 2.4.3/4.1.3).* The phone and external steps each keep ONE
+    always-rendered visually-hidden `role=status` polite region announcing the phase events
+    ("Code sent", "Verified"/"Paid", "Resend available" — new keys `TmSigningStep_CodeSent`,
+    `_ResendAvailable`; "Loading…" reuses `_LoadingExternal`); the inserted verified/loading
+    blocks carry no role of their own and the ticking countdown text is `aria-live="off"`. After
+    a successful verification the runner moves focus to the step title (navigation signal);
+    after send/resend the OTP input takes the focus; while the provider runs the external
+    Start/Checkout action stays IN PLACE, disabled and `aria-busy`. The invalid-code error is
+    owned by the OTP input (`aria-invalid` + described-by there, phone input clean) and clears
+    when a new draft is typed. After a code was sent the Send action is Secondary and disabled
+    while the countdown runs. The outbound provider link references the redirect note via
+    `aria-describedby` (the note carries a stable id) and the external-link icon is
+    aria-hidden; the verified state reads "Verified by {provider}"
+    (`TmSigningStep_VerifiedBy`) when the provider names itself. The runner keeps the per-field
+    code-sent state and the OTP draft, so navigating away and back restores the OTP row and the
+    typed draft. `TmSigningPhoneStep` stays `IAsyncDisposable` (the Blazor renderer prefers the
+    async interface when both are present — the same decision the runner documents; the
+    countdown `ITimer` is released there); the countdown tick is guarded by a `_disposed` flag
+    (the nested `InvokeAsync` was removed) and the countdown stops once verified. New keys in
+    en / cs / sk / fr + `MockTmLocalizer`.
+  - *Host-reported send state (review fix).* Inside the runner the phone step no longer trusts
+    its own send click: the runner cascades `TmSigningRunnerHosted` and clears the per-field sent
+    state while its dispatch runs, so the OTP row, the resend countdown and the "Code sent"
+    announcement appear ONLY when the host-reported `CodeSent` parameter flips `true` — a
+    THROWING/failing `OnSendPhoneCode` leaves the plain phone form with the localized
+    unavailable alert (no row, no countdown, no announcement) and a successful retry raises the
+    row through the same flip. A mount that arrives with `CodeSent` already true (navigating away
+    and back) resumes a ticking countdown without re-announcing the send. Standalone steps keep
+    the local behaviour. The after-send OTP focus moves WITHOUT `preventScroll`, so the browser
+    scrolls the code row into view in every scrollable ancestor (the capped desktop panel and the
+    390 bottom sheet included); the move defers past the in-flight render (a browser ignores
+    focus on a disabled input), and the RUNNER additionally reveals the whole code row
+    (`scrollIntoView` `block: 'nearest'` through `signing-runner.js`, honoured by the node lane)
+    so the Verify action and the fresh countdown stay visible inside the mobile sheet. Also fixed
+    a double-prefix normalization bug: re-sending the stored normalized number produced
+    `+420420…` — a number already carrying the SELECTED calling code now keeps its digits
+    verbatim.
+  - *Per field+operation cancellation (review fix).* The active-step requests' runner-owned
+    cancellation is now ONE source PER FIELD+OPERATION (phone send / verify, attachment upload,
+    external flow, keyed by field uuid) instead of a single global source: a new request
+    supersedes only its own slot's predecessor — a verify on one field no longer cancels an
+    in-flight send on another. `DisposeAsync` still cancels ALL live sources, and the contract
+    records' XML docs describe the narrowed scope. New tests pin the per-field/per-operation
+    isolation, the request payload (field uuid + normalized phone) and the no-OTP-row-on-failure
+    contract; the phase-6 capture for the rejected code scrolls the step alert into view (the
+    capped desktop panel scrolls internally) and `TmSigningStepAttachment.Url`'s XML/JSON summary
+    now reads "Host-provided download/storage URL (the upload result); never a client-generated
+    preview."
+- **TmFileDropZone: the hidden file input stays invisible when disabled.** `_file-drop-zone.css`
+  pins `.tm-file-drop-zone__input, .tm-file-drop-zone__input[disabled] { opacity: 0; }` — a UA
+  or host stylesheet that dims disabled inputs would otherwise paint the native file picker over
+  the drop area while the zone is busy/disabled (`tempo-blazor.bundled.css` regenerated).
+- **TmFileDropZone: the MaxFileCount budget degrades safely.** An overflow pick (more files than
+  the budget) used to throw the platform exception; it now degrades to an empty readable set and
+  the change event still fires, so a consumer can render its own localized limit message
+  (additive; hosts whose picks never overflow never see a change).
+- **Signing phone step runs a real resend countdown (Signing redesign phase 6).** `TmSigningPhoneStep`
+  gains `Verified` (the host-confirmed state that replaces the OTP row) and `OnVerifyCode`, and the
+  countdown now TICKS on the injectable `TimeProvider` (the same seam the runner's autosave uses —
+  tests advance a `FakeTimeProvider`, no sleeps): "Send code" starts the
+  `ResendSeconds` window (default 30), the text counts down, and at zero it becomes the real
+  localized "Resend" action which re-sends and restarts the window. The timer is disposed with the
+  component. A standalone host without `OnVerifyCode` renders no Verify action — the legacy
+  behaviour is byte-identical.
+- **Signing attachment limits and local image preview (Signing redesign phase 6).**
+  `TmSigningAttachmentStep` gains `MaxFileSize` (bytes; a larger file shows the localized
+  `{0} is larger than the allowed {1}` message — culturally formatted — and never joins the
+  attachments), `MaxFiles` (localized `up to {0} files` message; the first files stay), `Capture`
+  (the native `capture` camera attribute, Image fields only) and `UploadUrlResolver`
+  (the runner's host upload hook; the resolver's url wins over the local preview). Without a host
+  url, an Image pick renders a LOCAL downscaled thumbnail through the core
+  `RequestImageFileAsync` (no custom JS; best-effort — a refused stream simply skips the preview;
+  note the core API refuses custom `IBrowserFile` implementations, so bUnit cannot exercise the
+  decoder — the rendered preview is covered by the phase-6 E2E suite against the real browser
+  pipeline).
+- **Signing demo: the active-steps fake host.** The `/signing-components` demo gains an
+  "Active Steps Contract" runner (`signing-active-steps-demo`) wired to a demo-only host: OTP code
+  `123456`, an in-memory PNG upload (with a deliberate delay so the busy state is visible) and a
+  simulated provider that confirms the verification after ~400 ms — no step completes until the
+  host confirms it. A "Simulate provider failure" toggle (`signing-active-steps-fail-toggle`)
+  demonstrates the provider-error state, and the standalone image step carries a small
+  `MaxFileSize` so the size-limit rejection is demonstrable.
+- **Signing runner mobile sheet plumbing (Signing redesign phase 5), all additive.**
+  `TmSigningFormRunner` gains `LayoutMode` / `ResolvedLayoutChanged` (the F1 self-classification
+  pair, the Gantt pattern) and `DefaultSignatureMode` (SI3, see the Breaking / Migration entry
+  above); `TmSigningChoiceStep` gains the pass-through `LayoutMode` that presents ≤5 options as
+  radio cards on a mobile layout (SI1) — `Auto` does not measure; the runner passes its resolved
+  mode down, standalone hosts that want the narrow presentation pass `Mobile` explicitly. The
+  mobile sheet grows the `.tm-signing-form-runner__sheet-handle` toggle (its only `aria-expanded`
+  control), the `.tm-signing-form-runner__sheet-progress` peek strip (its own polite status region
+  while collapsed) and the `--tm-signing-sheet-peek-height` root knob, and the action row the
+  `.tm-signing-form-runner__more` overflow (`TmSigningFormRunner_More`, `_ShowFields`,
+  `_ShowDocument`, `_SheetExpand`, `_SheetCollapse` — en/cs/sk/fr). The unused
+  `TmSigningFormRunner_Minimize` key was removed (the Minimize row is gone — see Breaking above),
+  and the optional select's card set gained `TmSigningChoiceStep_None` ("None" / "Žádná" /
+  "Žiadna" / "Aucun"), all four `TmResources` tables + `MockTmLocalizer`. The package's new
+  `signing-runner.js` ES module (`_content/Tempo.Blazor.Signing/js/signing-runner.js`, dynamic
+  `import()` — no `<script>` tag; node lane `npm run test:signing-runner`) ships
+  `isCoarsePointer`, `scrollToField` (single scroll above the sheet, reduced-motion aware) and
+  `focusFieldButton` (the field-list focus move), and the field overlay root now carries
+  `data-field-uuid` as the scroll anchor. The runner implements `IAsyncDisposable` (only — the
+  sync `Dispose` never ran next to it): disposing cancels the pending autosave debounce and
+  releases the module instance, with `JSDisconnectedException` kept local everywhere.
+- **Core splat hooks for host a11y plumbing (Signing redesign phase 4 review), all additive.**
+  `TmSelect` gains `SelectAttributes` (splatted on the native `<select>`; entries win over the
+  component's own attributes), `TmCheckbox` gains `InputAttributes` (on the native `<input>`; its
+  `HelpText` block now also carries an id the input references via `aria-describedby`), and
+  `TmFileDropZone` gains `InputAttributes` (on the internal file input) and `ShowFileList`
+  (default `true`; `false` hides the zone's own picked-files list when the host renders the files
+  itself). `TmTextArea` sets `aria-invalid="true"` while any message shows — its own `Error` or a
+  field-level `TmFormField` error. The file drop area paints a visible focus ring when the
+  (opacity-0) input takes keyboard focus (`:has(:focus-visible)` in `_file-drop-zone.css`).
+- **Signing step fixes (Signing redesign phase 4 review).** The phone country pick survives a host
+  without a bound `CountryCodeChanged` (local state + a parameter-change sync), the number parse
+  is strict about group separators (see the Breaking / Migration entry), validation commits on
+  blur instead of firing per keystroke, and the narrow-container date / OTP input no longer
+  stretches ~190 px tall. New localized keys `TmSigningStep_MinLength` ("Use at least {0}
+  characters.", the text step's commit-side minimum length) and `TmSigningStep_RemoveFile`
+  ("Remove {0}", the attachment remove button's accessible name) in en / cs / sk / fr; the unused
+  `TmSigningStep_CountryCodeAria` / `_PhoneInputAria` / `_OtpInputAria` keys were removed from the
+  resources and the test mock together with their last callers.
+- **Signing step inputs and states (Signing redesign phase 4), additive.** `TmSigningExternalStep`
+  gains `Value` (the stored field value; `true` — bool or string — shows the localized
+  "Verified" / "Paid" state instead of the call to action, the runner passes it), and
+  `TmSigningSignatureStep` gains `ClearButtonPlacement` (default
+  `TmSignatureClearButtonPlacement.Overlay`, hosts restore the row with `Actions`). The number
+  step shows the localized allowed-range hint (`TmSigningStep_NumberRange`, culture-formatted), the
+  text step the "n / max" counter (`TmSigningStep_CharCount`, live only at the limit), the
+  attachment step the "Attached files ({0})" heading (`TmSigningStep_AttachedFiles`), the phone
+  step visible labels (`TmSigningStep_PhoneCountryLabel`, `_PhoneNumberLabel`, `_OtpLabel`) and the
+  external step the per-type default descriptions (`TmSigningStep_VerificationDescription`,
+  `_KbaDescription`, `_PaymentDescription`) and the state strings (`_Verified`, `_Paid`) — all in
+  en / cs / sk / fr.
 - **Signing runner document chrome (Signing redesign phase 3, U4), all opt-in.** `TmSigningFormRunner`
   gains `DocumentTitle` (a header above the pages), `ShowDocumentToolbar` (default `false` — today's
   chrome-free look; `true` passes `ShowToolbar` / `ShowZoomControls` to
@@ -3515,6 +4324,7 @@ findings table and the per-leg results) and the two perf runs
 
 ### Changed
 
+- **`TmTextArea` sets `aria-invalid="true"` when a wrapping `TmFormField` shows an error.** The textarea used to mark itself invalid only from its own `Error` parameter, so a field-level message (the `TmFormField` cascade) rendered the alert without the invalid state on the control — screen readers announced the error while the field still read as valid. The textarea also references the field-level message through its `aria-describedby`. A textarea with only its own `Error` is unchanged.
 - **TmGantt phase 10: the Excel import respects the dialog's mapping for the first time, and the workbook cell values are culture-invariant.** `TmGanttImportDialog` used to call the GanttXlsx importer with `Import(stream, null)` behind its reflection, so the mapping the user confirmed never reached the import; it now reads the headers, confirms the mapping and imports the mapped result (details under Added). `GanttXlsxExporter` (and the built-in preview) format cell values through the shared `GanttColumnValues.Format` with `CultureInfo.InvariantCulture` — on a server under a decimal-comma culture a `12,5` estimation becomes `12.5` in the workbook, which is the value Excel expects. The phase-10 review fixes fold in here: a host-seeded mapping list with the same source column twice no longer throws (`ArgumentException`) — the first mapping wins; the warnings alert no longer repeats the plural title as its expander (a "Show details" key) and its footer offers one primary Close; the mobile preview `<details>` keeps the `role="img"` name; and the wording fixed in en/sk ("would close a cycle", "čiara Dnes" — the Slovak was written with the Czech vowel).
 - **`Tempo.Blazor.Modeling` issue panel: the severity chips are core `TmChip`s (phase 15b — DOM classes changed, the test-id/aria contract is unchanged).** The panel no longer hand-rolls its aria-pressed `<button>`; each severity chip is now a `TmChip` in the pressed variant, so the chip carries the core chip vocabulary (`tm-chip tm-chip--outlined tm-chip--md tm-chip--pressed`) NEXT TO the panel's own `tm-modeling-issue-panel__chip[--error|--warning|--info]` classes, and the keyboard/focus/forced-colors story (the shared `--tm-focus-ring`, the coarse-pointer `--tm-touch-target`) comes from the core `_chip.css`. `data-testid="modeling-issue-severity-chip-*"`, `aria-pressed` and the count inside the accessible name are unchanged. A selector written against the removed `.tm-modeling-issue-panel__chip-label` span must target `.tm-chip__label` instead (the panel's compact row sizing and severity palette keep working through the panel hook class).
 

@@ -1,0 +1,86 @@
+/* Demo-only (Signing redesign phase 10): one workspace instead of a long stacked page.
+   Tokens only. The designer is full width — no showcase-card. */
+.signing-bridge {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-3);
+    min-block-size: calc(100dvh - var(--tm-space-16));
+    color: var(--tm-text-primary);
+}
+
+.signing-bridge__header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: var(--tm-space-4);
+}
+
+.signing-bridge__title {
+    margin: 0 0 var(--tm-space-1);
+    font-size: var(--tm-font-size-2xl);
+    font-weight: var(--tm-font-weight-bold);
+    color: var(--tm-text-primary);
+}
+
+.signing-bridge__lead,
+.signing-bridge__hint,
+.signing-bridge__meta,
+.signing-bridge__status {
+    margin: 0;
+    font-size: var(--tm-font-size-sm);
+    color: var(--tm-text-secondary);
+    max-inline-size: 48rem;
+}
+
+.signing-bridge__layout {
+    min-inline-size: 14rem;
+    max-inline-size: 18rem;
+    flex: 1 1 14rem;
+}
+
+.signing-bridge__status {
+    min-block-size: var(--tm-space-5);
+}
+
+.signing-bridge__tabs {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-block-size: 0;
+}
+
+.signing-bridge__stage {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-3);
+    min-block-size: 70dvh;
+}
+
+/* The Edit stage lives outside TmTabs so the editor stays mounted. Hidden, not unmounted. */
+.signing-bridge__edit-stage[hidden] {
+    display: none;
+}
+
+.signing-bridge__toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--tm-space-2);
+}
+
+.signing-bridge__surface {
+    flex: 1 1 auto;
+    min-block-size: 60dvh;
+    min-inline-size: 0;
+    border: var(--tm-border-width) solid var(--tm-border-color);
+    border-radius: var(--tm-radius-card);
+    background: var(--tm-bg-surface);
+    overflow: auto;
+}
+
+.signing-bridge__surface--designer,
+.signing-bridge__surface--runner {
+    min-block-size: 72dvh;
+    background: var(--tm-bg-workspace);
+}

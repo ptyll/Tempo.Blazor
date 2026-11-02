@@ -107,6 +107,9 @@ public sealed class MarkupClassCoverageTests
         "tm-comment-cancel-btn",
         "tm-comment-delete-btn",
         "tm-comment-edit-btn",
+        // The internal-switch hint is a visually-hidden aria-describedby target (tm-sr-only
+        // carries the hiding). The class is the stable hook, so it stays rule-free.
+        "tm-comment-internal-toggle-hint",
         "tm-comment-submit-btn",
         "tm-currency-input",
         "tm-currency-input__amount",
@@ -237,56 +240,83 @@ public sealed class MarkupClassCoverageTests
     ];
 
     /// <summary>
-    /// The 52 classes Signing markup emits with no rule in Signing's stylesheets OR the core's on
+    /// The classes Signing markup emits with no rule in Signing's stylesheets OR the core's on
     /// 2.8.26 — Signing project-references the core package, so a core-owned class
     /// (<c>tm-btn</c>) is covered, and only what remains unstyled after BOTH trees are read lands
     /// here.
     /// </summary>
     private static readonly string[] UnstyledSigningMarkupClasses =
     [
+        "tm-audit-trail-viewer__table--documents",
+        "tm-audit-trail-viewer__table--events",
+        "tm-audit-trail-viewer__table--signers",
         "tm-audit-trail-viewer__localization",
         "tm-comment-composer__button--secondary",
         "tm-comment-composer__mention-name",
+        "tm-condition-builder__field-group--action",
+        "tm-condition-builder__field-group--field",
         "tm-condition-builder--invalid",
+        "tm-document-comments-panel__close",
+        "tm-document-comments-panel__new",
         "tm-document-comments-panel__thread-mention",
         "tm-document-page-viewer--with-toolbar",
         "tm-document-page-viewer__comment-toggle",
-        "tm-document-page-viewer__fit-page",
-        "tm-document-page-viewer__fit-width",
         "tm-document-page-viewer__next-page",
         "tm-document-page-viewer__previous-page",
         "tm-document-page-viewer__zoom-in",
         "tm-document-page-viewer__zoom-out",
-        "tm-pdf-template-designer__bulk-actions",
-        "tm-pdf-template-designer__continuous",
-        "tm-pdf-template-designer__copy-field",
-        "tm-pdf-template-designer__copy-selection",
-        "tm-pdf-template-designer__delete-field",
-        "tm-pdf-template-designer__delete-selection",
-        "tm-pdf-template-designer__detect-menu",
-        "tm-pdf-template-designer__fit-page",
-        "tm-pdf-template-designer__fit-width",
-        "tm-pdf-template-designer__next-page",
-        "tm-pdf-template-designer__paste-field",
-        "tm-pdf-template-designer__previous-page",
-        "tm-pdf-template-designer__single-page",
+        "tm-formula-builder__group--functions",
+        "tm-formula-builder__group--operators",
+        "tm-formula-builder__group--tokens",
+        "tm-formula-builder--invalid",
+        "tm-formula-builder__save",
+        "tm-pdf-signature-verification__signature--card",
+        "tm-pdf-template-designer__status-zoom",
         "tm-pdf-template-designer__zoom-in",
         "tm-pdf-template-designer__zoom-out",
+        "tm-pdf-template-designer--mobile",
+        "tm-pdf-template-designer__palette-help",
+        "tm-pdf-template-designer__palette-title",
+        "tm-recipient-role-editor--submission",
+        "tm-recipient-role-editor--template",
+        "tm-recipient-role-editor__field--color",
+        "tm-recipient-role-editor__field--email",
+        "tm-recipient-role-editor__field--full-name",
+        "tm-recipient-role-editor__field--invite-by-role",
+        "tm-recipient-role-editor__field--invite-via-field",
+        "tm-recipient-role-editor__field--name",
+        "tm-recipient-role-editor__field--optional-invite-by-role",
+        "tm-recipient-role-editor__field--phone",
         "tm-recipient-role-editor--invalid",
         "tm-signing-attachment-step",
-        "tm-signing-choice-step",
-        "tm-signing-choice-step__checkbox",
-        "tm-signing-choice-step__option--single",
-        "tm-signing-choice-step__radio",
+        // Signing redesign phase 4 (SI1): "tm-signing-choice-step" and "tm-signing-signature-step"
+        // left this inventory because _signing-steps.css now styles through them (the strictly
+        // narrower ancestor chains on the radio-checked row and the capture's mode tabs) — the
+        // sweep reads an ancestor compound as coverage. The raw choice inputs became core Tm
+        // components, so "tm-signing-choice-step__checkbox" and "tm-signing-choice-step__radio"
+        // left the markup AND this inventory; "tm-signing-choice-step__option--single" gained its
+        // own rule in the same sheet and left the same way.
         "tm-signing-date-step",
-        "tm-signing-external-step",
-        "tm-signing-field",
+        // Signing redesign phase 4 review: "tm-signing-external-step" left this inventory the same
+        // way "tm-signing-choice-step" above did — the wide-container hero rule styles through the
+        // ancestor compound ".tm-signing-external-step .tm-signing-step-shell__header", and the
+        // sweep reads an ancestor compound as coverage.
         "tm-signing-field-editor-panel--empty",
+        "tm-signing-field-editor-panel__geometry",
+        "tm-signing-field-editor-panel__geometry-height",
+        "tm-signing-field-editor-panel__geometry-width",
+        "tm-signing-field-editor-panel__geometry-x",
+        "tm-signing-field-editor-panel__geometry-y",
         "tm-signing-field-editor-panel__localization",
         "tm-signing-field-editor-panel__options",
         "tm-signing-field-editor-panel__prefillable",
         "tm-signing-field-editor-panel__readonly",
         "tm-signing-field-editor-panel__required",
+        "tm-signing-field-editor-panel__role",
+        "tm-signing-field-editor-panel__role-dot",
+        "tm-signing-field-editor-panel__rule-actions",
+        "tm-signing-field-editor-panel__section-toggle",
+        "tm-signing-field-editor-panel__selection",
         "tm-signing-field-editor-panel__signature-id",
         "tm-signing-field-editor-panel__stamp-logo",
         // Signing redesign phase 3: the "Accessibility mode" toggle is gone, so
@@ -295,9 +325,13 @@ public sealed class MarkupClassCoverageTests
         // grid) and the progress count span (visually carried by .tm-signing-form-runner__progress).
         "tm-signing-form-runner__progress-text",
         "tm-signing-form-runner__field-item",
+        // Signing redesign phase 5: the resolved-layout hooks (the F1 observer's classification,
+        // C#-computed on the root). The sheet presentation stays container-query driven — these
+        // modifiers deliberately carry no rule of their own.
+        "tm-signing-form-runner--mobile",
+        "tm-signing-form-runner--tablet",
         "tm-signing-number-step",
         "tm-signing-phone-step",
-        "tm-signing-signature-step",
         "tm-signing-step-shell--invalid",
         "tm-signing-step-shell--required",
         "tm-signing-text-step",
@@ -420,7 +454,10 @@ public sealed class MarkupClassCoverageTests
             // Plan 5d396592 phase 5 (TmOnboardingChecklist): the ONE per-instance id prefix every id
             // of the checklist shares ("tm-onboarding-checklist-{instanceId}-title|-check-…|
             // -desc-…|-group-…") adds its single stem — 64 → 65.
-            ExpectedUnmeasurableStems: 65),
+            // Comment surface 2.10.0 (merged from main): the internal modifiers are interpolated
+            // ($"tm-comment-item{...}", $"tm-comment-editor{...}"), so the sweep counts the two
+            // stems and cannot see the --internal suffix — 65 → 67.
+            ExpectedUnmeasurableStems: 67),
         new Scope("Signing", "Tempo.Blazor.Signing", UnstyledSigningMarkupClasses,
             MinRazorFiles: 28, MinMarkupClasses: 400, InheritsCoreCss: true,
             // Signing redesign phase 2 (B25): the runner's single step panel id
@@ -429,8 +466,16 @@ public sealed class MarkupClassCoverageTests
             // per-instance accessible ids the step components own ("tm-signing-step-title-{Guid…}",
             // "tm-signing-step-description-{…}", "tm-signing-step-validation-{Guid…}") joined the
             // scanned population; the text step's old "tm-signing-text-validation-{Guid…}" stem
-            // merged into the shared step-validation stem — 6 → 11.
-            ExpectedUnmeasurableStems: 11),
+            // merged into the shared step-validation stem — 6 → 11. Phase 6 review: the external
+            // step's per-instance redirect-note id ("tm-signing-external-redirect-{Guid…}",
+            // the aria-describedby target of the outbound provider link) — 11 → 12.
+            // Signing redesign phase 7: the formula builder's labelled groups add the three
+            // per-instance heading ids (tm-formula-operators-/…-functions-/…-tokens-{Guid}) —
+            // 12 → 15 — and the remove-action focus scope adds the condition builder's per-instance
+            // data attribute (data-condition-builder-{Guid}) — 15 → 16. Phase 7 review: the count
+            // also carries the formula textarea's own per-instance id ("tm-formula-{Guid…}", the
+            // label's `for` target the first phase-7 pass missed) — 16 → 17.
+            ExpectedUnmeasurableStems: 17),
         new Scope("NotionEditor", "Tempo.Blazor.NotionEditor", UnstyledNotionMarkupClasses,
             MinRazorFiles: 125, MinMarkupClasses: 1900, InheritsCoreCss: true,
             ExpectedUnmeasurableStems: 17),

@@ -11,6 +11,7 @@
     "test:reporting-modules": "node scripts/run-node-tests.mjs src/Tempo.Blazor.Reporting/wwwroot/js/reporting",
     "test:email-templates": "node scripts/run-node-tests.mjs src/Tempo.Blazor.EmailTemplates/wwwroot",
     "test:overlay": "node scripts/run-node-tests.mjs src/Tempo.Blazor/wwwroot/js",
+    "test:signing-runner": "node scripts/run-node-tests.mjs src/Tempo.Blazor.Signing/wwwroot/js",
     "test:pdf-viewer": "node scripts/run-node-tests.mjs src/Tempo.Blazor.PdfViewer/wwwroot/js",
     "test:diagram-editor": "node scripts/run-node-tests.mjs src/Tempo.Blazor.DiagramEditor/wwwroot/js",
     "test:wireframe": "node scripts/run-node-tests.mjs src/Tempo.Blazor.Wireframe/wwwroot/js",

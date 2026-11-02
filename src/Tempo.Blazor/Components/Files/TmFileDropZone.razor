@@ -28,10 +28,11 @@
                    disabled="@Disabled"
                    class="tm-file-drop-zone__input"
                    aria-label="@InputAriaLabel"
-                   data-testid="@InputTestId" />
+                   data-testid="@InputTestId"
+                   @attributes="InputAttributes" />
     </div>
 
-    @if (_selectedFiles.Count > 0)
+    @if (ShowFileList && _selectedFiles.Count > 0)
     {
         <div class="tm-file-drop-zone__file-list">
             @foreach (var file in _selectedFiles)
@@ -76,7 +77,12 @@
     /// <summary>Optional custom content to display inside the drop zone.</summary>
     [Parameter] public RenderFragment? ChildContent { get; set; }
 
-    /// <summary>Maximum number of files to accept from a single selection. Default 10.</summary>
+    /// <summary>
+    /// Maximum number of files to accept from a single selection. Default 10. The budget is a
+    /// safety cap enforced by the platform's read; an overflow pick degrades to an empty
+    /// selection (nothing is readable beyond the budget) instead of throwing, and the change
+    /// event still fires so the consumer can render its own localized limit message.
+    /// </summary>
     [Parameter] public int MaxFileCount { get; set; } = 10;
 
     /// <summary>Optional test id passed to the internal file input.</summary>
@@ -84,6 +90,21 @@
 
     /// <summary>Optional aria-label passed to the internal file input.</summary>
     [Parameter] public string? InputAriaLabel { get; set; }
+
+    /// <summary>
+    /// Additional attributes splatted onto the internal <c>&lt;input type="file"&gt;</c> element.
+    /// Use it for the accessibility plumbing a host step owns — <c>aria-describedby</c>,
+    /// <c>aria-invalid</c>, <c>aria-labelledby</c>. Entries win over the component's own attributes
+    /// (the splat is applied last). Additive: nothing existing changes.
+    /// </summary>
+    [Parameter] public Dictionary<string, object>? InputAttributes { get; set; }
+
+    /// <summary>
+    /// Whether the zone renders its OWN list of the files picked through it (default <c>true</c>).
+    /// A host that presents the picked files itself (e.g. the Signing attachment step renders its
+    /// own attachment cards) passes <c>false</c> so the files do not show TWICE.
+    /// </summary>
+    [Parameter] public bool ShowFileList { get; set; } = true;
 
     /// <summary>Additional CSS class for the root element.</summary>
     [Parameter] public string? Class { get; set; }
@@ -108,7 +129,21 @@
     {
         if (Multiple)
         {
-            var files = e.GetMultipleFiles(MaxFileCount);
+            // The read budget is a SAFETY cap: the platform itself refuses reads beyond it, and
+            // an overflow pick degrades to an EMPTY selection (nothing is readable beyond the
+            // budget — even the first file, because File is a budget-of-one read) instead of
+            // throwing; OnFilesSelected still fires so the consumer can render its own localized
+            // limit message and decide what to do.
+            List<IBrowserFile> files;
+            try
+            {
+                files = [.. e.GetMultipleFiles(MaxFileCount)];
+            }
+            catch (InvalidOperationException)
+            {
+                files = [];
+            }
+
             foreach (var file in files)
             {
                 if (!_selectedFiles.Any(f => f.Name == file.Name && f.Size == file.Size))

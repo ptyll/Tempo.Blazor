@@ -2,6 +2,8 @@ using System.Collections;
 using System.Globalization;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.JSInterop;
+using Tempo.Blazor.Abstractions.Layout;
 using Tempo.Blazor.Abstractions.Models;
 using Tempo.Blazor.Components.Inputs;
 
@@ -19,17 +21,35 @@ namespace Tempo.Blazor.Components.Signing;
 /// document chrome; the default stays today's chrome-free look.
 /// </para>
 /// <para>
-/// KNOWN LIMITATION (security note — reworked in Signing redesign phase 6): the external steps are
-/// placeholders. Clicking "Start verification" / "Checkout" (the runner's
-/// <c>OnStart</c>/<c>OnCheckout</c> handlers store <c>true</c> for the field) marks the step
-/// COMPLETE WITHOUT ANY VERIFICATION actually taking place, and the phone step's OTP and the
-/// attachment step's upload are equally cosmetic in this package — no SMS is sent and no file
-/// leaves the browser. A host MUST wire its own provider-backed flow (or treat the field value as
-/// untrusted) until that phase lands; completion of such a step is presentation state, never proof
-/// that a verification, payment, or upload happened.
+/// Signing redesign phase 5: the runner classifies its OWN container (F1 — see
+/// <c>TmSigningFormRunner.Layout.razor.cs</c>) so a narrow container presents the mobile sheet with
+/// radio-card choice fields (SI1) and resolves the <see cref="DefaultSignatureMode"/>; the active
+/// field is scrolled into view above the sheet by the package's <c>signing-runner.js</c> module
+/// after every landing render.
+/// </para>
+/// <para>
+/// Signing redesign phase 6 (S2-5/SI2): the phone OTP, the attachment upload and the external
+/// verification become HOST-CONFIRMED steps through <see cref="OnSendPhoneCode"/>,
+/// <see cref="OnVerifyPhoneCode"/>, <see cref="OnAttachmentSelected"/>,
+/// <see cref="OnExternalStepRequested"/> and <see cref="StepContextProvider"/>. The contract is
+/// OPT-IN: without the callbacks the legacy behaviour (documented since phase 1) keeps working —
+/// the external click stores <c>true</c>, the typed phone completes the step and uploads stay
+/// client-side metadata. With the callbacks, those values are trusted only when the HOST produced
+/// them: the OTP is verified by the host (the confirmation is bound to the verified number and
+/// kept RUNNER-INTERNAL — never in <see cref="Values"/>, so a resumed session re-verifies), the
+/// upload result is the host url (a null result or a failing host rejects the file), and the
+/// external step completes solely after the host stores the provider result through
+/// <see cref="Values"/>.
+/// </para>
+/// <para>
+/// SECURITY NOTE (phase 6): without the host callbacks, completion of a phone, attachment or
+/// external step is presentation state — no SMS is sent, no file leaves the browser and
+/// "Start verification" / "Checkout" stores <c>true</c> unconditionally. Wire the callbacks and
+/// treat only the host-produced values as evidence; see each parameter's documentation for the
+/// exact contract and the SignalR note on <see cref="OnAttachmentSelected"/>.
 /// </para>
 /// </remarks>
-public partial class TmSigningFormRunner : IDisposable
+public partial class TmSigningFormRunner : IAsyncDisposable
 {
     private Dictionary<string, object?> _values = new(StringComparer.Ordinal);
     private IReadOnlyDictionary<string, object?>? _lastValues;
@@ -58,7 +78,13 @@ public partial class TmSigningFormRunner : IDisposable
 
     [Inject] private IServiceProvider Services { get; set; } = default!;
 
+    [Inject] private IJSRuntime JS { get; set; } = default!;
+
     private TimeProvider? _clock;
+
+    // signing-runner.js interop (phase 5) and the layout classification it serves live in the
+    // TmSigningFormRunner.Layout.razor.cs partial (phase 5 review split) — the runner only disposes the
+    // interop from here.
 
     // The autosave debounce runs on an injectable clock so tests advance a FakeTimeProvider instead
     // of sleeping. Resolved lazily (not [Inject]-ed directly): an unregistered optional service
@@ -153,6 +179,74 @@ public partial class TmSigningFormRunner : IDisposable
     /// <summary>Optional selector for a fixed complete target that the mobile panel must avoid.</summary>
     [Parameter] public string? MobileCompleteTargetSelector { get; set; }
 
+    /// <summary>
+    /// The capture mode a signature step STARTS in when the template's
+    /// <c>Preferences.Format</c> is silent (Signing redesign phase 5, SI3). <see cref="TmSigningDefaultSignatureMode.Auto"/>
+    /// — the default — resolves to Draw on a coarse pointer (a finger) and to Typed elsewhere;
+    /// the template's stored format always wins over this setting.
+    /// </summary>
+    [Parameter] public TmSigningDefaultSignatureMode DefaultSignatureMode { get; set; } = TmSigningDefaultSignatureMode.Auto;
+
+    /// <summary>
+    /// Host hook that dispatches the OTP code for a phone field (Signing redesign phase 6, S2-5,
+    /// opt-in). Raised with the normalized number every time the signer sends or resends a code;
+    /// the runner itself never dispatches an SMS. Without the callback the phone step keeps the
+    /// documented cosmetic behaviour (nothing is sent).
+    /// </summary>
+    [Parameter] public EventCallback<SigningPhoneCodeRequest> OnSendPhoneCode { get; set; }
+
+    /// <summary>
+    /// Host hook that verifies the typed OTP code (Signing redesign phase 6, S2-5, opt-in).
+    /// Returning <c>true</c> is the ONLY way a phone field completes while this hook is wired —
+    /// the runner records the confirmation (runner-internal, bound to the VERIFIED number, never
+    /// part of <see cref="Values"/>) and shows the verified state; <c>false</c> shows the
+    /// localized invalid-code message with the error owned by the OTP input. A THROWING verifier
+    /// shows the localized unavailable message and never records a confirmation. Without the
+    /// hook, today's behaviour stands: the typed phone number alone completes the step (no code
+    /// is ever checked).
+    /// </summary>
+    /// <remarks>
+    /// SECURITY NOTE (phase 6 review): the host owns RATE LIMITING and ATTEMPT COUNTING for the
+    /// verification — the component only throttles the UI. And because the confirmation state is
+    /// runner-internal (not in <see cref="Values"/> and not persisted), a RESUMED session must
+    /// re-verify; keep your own record host-side when the verifier answers <c>true</c>.
+    /// </remarks>
+    [Parameter] public Func<SigningPhoneVerificationRequest, Task<bool>>? OnVerifyPhoneCode { get; set; }
+
+    /// <summary>
+    /// Host upload hook for attachment fields (Signing redesign phase 6, S2-5, opt-in). The runner
+    /// hands the picked <see cref="IBrowserFile"/> over and stores the RETURNED url on the
+    /// attachment card; a <c>null</c> result (or a throwing host, cancellation aside) REJECTS the
+    /// file with the localized failure message. SECURITY: read the file content in the HOST
+    /// (<c>File.OpenReadStream</c>) — never rely on the component to do it — because on Blazor
+    /// Server browser files stream over SignalR with tight message limits, so a large upload must
+    /// be consumed (and ideally persisted) by the server, in one pass. The step-side
+    /// <c>MaxFileSize</c> limit is a CLIENT-REPORTED courtesy (the browser's declared size) — the
+    /// host MUST enforce the real limit via <c>OpenReadStream(maxAllowedSize)</c>. Without the
+    /// hook the picked files stay client-side metadata (the documented placeholder behaviour).
+    /// </summary>
+    [Parameter] public Func<SigningAttachmentUploadRequest, Task<string?>>? OnAttachmentSelected { get; set; }
+
+    /// <summary>
+    /// Host hook raised when the signer starts an external flow — verification, KBA answer
+    /// submission or payment (Signing redesign phase 6, SI2, opt-in). The request carries the
+    /// field and, for KBA, the typed ANSWERS (which are never stored as the field value). With
+    /// this hook wired the runner stores NOTHING on the click: the step completes solely after
+    /// the host performs the provider flow and stores the result (value <c>true</c> or the
+    /// string <c>"true"</c>) through <see cref="Values"/>. Without the hook the legacy behaviour
+    /// keeps storing <c>true</c> on the click — presentation state, never proof that a
+    /// verification or payment happened.
+    /// </summary>
+    [Parameter] public EventCallback<SigningExternalStepRequest> OnExternalStepRequested { get; set; }
+
+    /// <summary>
+    /// Provider context for an external field, resolved per render (Signing redesign phase 6,
+    /// SI2, opt-in): the provider page url, the inline KBA questions, the loading state, the
+    /// provider error and the provider display name. The CONTEXT never confirms the step — only
+    /// the stored provider result does; return <c>null</c> to keep the step's own defaults.
+    /// </summary>
+    [Parameter] public Func<SigningField, SigningExternalStepContext?>? StepContextProvider { get; set; }
+
     /// <summary>Additional CSS classes for the root element.</summary>
     [Parameter] public string? Class { get; set; }
 
@@ -199,10 +293,37 @@ public partial class TmSigningFormRunner : IDisposable
         ? 0
         : Math.Clamp(_currentStepIndex, 0, Plan.Steps.Count - 1);
 
-    // The Previous / Next / Skip navigation and the mobile-sheet presentation live in their own
-    // partial parts (phase 3 review split): TmSigningFormRunner.Navigation.cs carries the step
-    // navigation, TmSigningFormRunner.MobileSheet.cs the sheet state; the progress counts are in
-    // TmSigningFormRunner.Progress.cs.
+    // The layout plumbing (F1), the coarse-pointer probe / signature-mode resolution (SI3) and
+    // the pending auto-scroll live in their own partial parts (phase 5 review split):
+    // TmSigningFormRunner.Layout.razor.cs. The Previous / Next / Skip navigation is in
+    // TmSigningFormRunner.Navigation.cs, the mobile-sheet presentation state in
+    // TmSigningFormRunner.MobileSheet.cs; the progress counts are in TmSigningFormRunner.Progress.cs.
+
+    /// <summary>
+    /// The runner's SINGLE after-render pass (phase 5 review): resolve the coarse-pointer probe
+    /// once (SI3), then apply the pending auto-scroll and the pending sheet focus moves — AFTER
+    /// the render has applied the new step / sheet state, so the JS side measures settled
+    /// geometry and the focus targets are actually visible.
+    /// </summary>
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        try
+        {
+            await ResolvePointerAsync(firstRender);
+            await ApplyPendingScrollAsync();
+            await ApplyPendingOtpRowRevealAsync();
+            await ApplyPendingSheetFocusAsync();
+        }
+        catch (Exception ex) when (ex is JSException
+            or JSDisconnectedException
+            or ObjectDisposedException
+            or TaskCanceledException
+            or InvalidOperationException)
+        {
+            // The after-render pass is best-effort by contract (see SigningRunnerInterop): a
+            // circuit that died mid-render keeps the failure local.
+        }
+    }
 
     private bool IsCompleteDisabled => IsLoading || IsCompleting || !AllRequiredFieldsComplete();
 
@@ -228,6 +349,7 @@ public partial class TmSigningFormRunner : IDisposable
         {
             var classes = new List<string> { "tm-signing-form-runner" };
             AddClass(classes, IsLoading, "tm-signing-form-runner--loading");
+            AddClass(classes, !string.IsNullOrEmpty(LayoutClass), LayoutClass);
             if (!string.IsNullOrWhiteSpace(Class))
             {
                 classes.Add(Class);
@@ -348,21 +470,6 @@ public partial class TmSigningFormRunner : IDisposable
         return GetValue(field.Uuid);
     }
 
-    private TmSignatureCaptureMode GetSignatureCaptureMode(SigningField field)
-    {
-        if (_signatureCaptureModes.TryGetValue(field.Uuid, out var mode))
-        {
-            return mode;
-        }
-
-        return field.Preferences.Format?.Trim().ToLowerInvariant() switch
-        {
-            "draw" or "drawn" or "handwritten" => TmSignatureCaptureMode.Draw,
-            "upload" => TmSignatureCaptureMode.Upload,
-            _ => TmSignatureCaptureMode.Typed
-        };
-    }
-
     private Task SetSignatureCaptureModeAsync(string fieldUuid, TmSignatureCaptureMode mode)
     {
         _signatureCaptureModes[fieldUuid] = mode;
@@ -386,7 +493,7 @@ public partial class TmSigningFormRunner : IDisposable
         return GetValue(fieldUuid) as IReadOnlyList<TmSigningStepAttachment> ?? [];
     }
 
-    private Task HandleOverlayClickAsync(TmSigningFieldOverlayPointerEventArgs args)
+    private async Task HandleOverlayClickAsync(TmSigningFieldOverlayPointerEventArgs args)
     {
         var index = Plan.Steps.FindIndex(step => step.Fields.Any(field => string.Equals(field.Uuid, args.Field.Uuid, StringComparison.Ordinal)));
         if (index >= 0)
@@ -398,9 +505,14 @@ public partial class TmSigningFormRunner : IDisposable
 
             _currentStepIndex = index;
             ClearValidationMessages();
-        }
 
-        return Task.CompletedTask;
+            // Signing redesign phase 5: clicking a field on the document OPENS the sheet on that
+            // field's step, landing in the FULL edit state (the collapsed peek must not swallow
+            // the click). On desktop the sheet state classes are inert. The scroll itself is
+            // requested, not performed: OnAfterRenderAsync runs it after this render.
+            LandMobileSheetOnFull();
+            RequestScrollToActiveField();
+        }
     }
 
     private async Task SetChoiceValueAsync(SigningStepItem step, object? value)
@@ -426,6 +538,16 @@ public partial class TmSigningFormRunner : IDisposable
     {
         _values[fieldUuid] = value;
         _valuesVersion++;
+
+        // Phone confirmation binding (phase 6 review item 1): the verification is bound to the
+        // VERIFIED NUMBER — a value change to a different number voids it, so the step is
+        // incomplete until the new number is verified again.
+        if (_verifiedPhoneNumbers.TryGetValue(fieldUuid, out var verifiedNumber)
+            && !string.Equals(FormatValue(value), verifiedNumber, StringComparison.Ordinal))
+        {
+            _verifiedPhoneNumbers.Remove(fieldUuid);
+        }
+
         await PublishValuesAsync();
     }
 
@@ -506,9 +628,31 @@ public partial class TmSigningFormRunner : IDisposable
             SigningFieldType.Checkbox => value is bool boolValue && boolValue,
             SigningFieldType.Multiple => GetValues(value).Any(),
             SigningFieldType.Image or SigningFieldType.File => value is IReadOnlyCollection<TmSigningStepAttachment> { Count: > 0 },
-            SigningFieldType.Verification or SigningFieldType.Kba or SigningFieldType.Payment => value is bool boolValue && boolValue || !string.IsNullOrWhiteSpace(FormatValue(value)),
+            // OPT-IN (Signing redesign phase 6): with a host verifier wired, the phone field
+            // completes ONLY after the HOST confirmed the typed OTP for THIS NUMBER — a typed
+            // number alone is presentation state, and a different number voids the confirmation
+            // (phase 6 review item 1). Without the hook today's behaviour stands: any non-empty
+            // phone completes the step.
+            SigningFieldType.Phone when OnVerifyPhoneCode is not null
+                => IsPhoneVerified(field),
+            // OPT-IN (Signing redesign phase 6, review item 3): with the external callback wired
+            // the step completes ONLY for the CONFIRMED provider result — value true or the
+            // string "true" (case-insensitive, the same shape the step renders as verified).
+            // "false" (or any other value) is NOT completion. Without the callback the legacy
+            // rule stands: any non-empty value or true completes.
+            SigningFieldType.Verification or SigningFieldType.Kba or SigningFieldType.Payment when OnExternalStepRequested.HasDelegate
+                => IsExternalConfirmed(value),
+            SigningFieldType.Verification or SigningFieldType.Kba or SigningFieldType.Payment
+                => value is bool boolValue && boolValue || !string.IsNullOrWhiteSpace(FormatValue(value)),
             _ => !string.IsNullOrWhiteSpace(FormatValue(value))
         };
+    }
+
+    /// <summary>The CONFIRMED external result shape (phase 6 review item 3): bool true or the string "true", case-insensitive.</summary>
+    private static bool IsExternalConfirmed(object? value)
+    {
+        return value is true
+            || string.Equals(FormatValue(value), bool.TrueString, StringComparison.OrdinalIgnoreCase);
     }
 
     private void ScheduleAutoSave(IReadOnlyDictionary<string, object?> snapshot)
@@ -667,10 +811,31 @@ public partial class TmSigningFormRunner : IDisposable
     }
 
     /// <inheritdoc />
-    public void Dispose()
+    public async ValueTask DisposeAsync()
     {
+        // The runner is IAsyncDisposable ONLY (phase 5 review): the Blazor renderer disposes via
+        // IAsyncDisposable when both interfaces are present, so a sync Dispose() would never run
+        // and the pending autosave debounce would fire into a disposed component. Cancel the
+        // debounce first, then release EVERY active-step host callback's cancellation source (one
+        // per field+operation — phase 6 review item 10; ALL of them cancel here so no in-flight
+        // host op survives the runner), then the signing-runner.js module instance.
         _autoSaveCts?.Cancel();
         _autoSaveCts?.Dispose();
+        _autoSaveCts = null;
+
+        foreach (var activeStepCts in _activeStepCts.Values)
+        {
+            activeStepCts.Cancel();
+            activeStepCts.Dispose();
+        }
+
+        _activeStepCts.Clear();
+
+        if (_runnerInterop is not null)
+        {
+            await _runnerInterop.DisposeAsync();
+            _runnerInterop = null;
+        }
     }
 }
 

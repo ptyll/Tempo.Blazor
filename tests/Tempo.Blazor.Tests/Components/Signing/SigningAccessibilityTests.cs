@@ -69,9 +69,10 @@ public class SigningAccessibilityTests : LocalizationTestBase
             parameters.Add(p => p.Field, field)
                       .Add(p => p.Culture, "cs-CZ"));
 
-        cut.Find(".tm-signing-text-step__input").Change(string.Empty);
-
         var input = cut.Find(".tm-signing-text-step__input");
+        input.Change(string.Empty);
+        input.Blur();
+
         var describedBy = input.GetAttribute("aria-describedby");
         describedBy.Should().NotBeNullOrWhiteSpace();
         cut.Find($"#{describedBy}").TextContent.Should().Be("Jméno je povinné.");
@@ -221,13 +222,86 @@ public class SigningAccessibilityTests : LocalizationTestBase
             .Add(p => p.Field, new SigningField { Uuid = "phone", Name = "Phone", Type = SigningFieldType.Phone, Required = true })
             .Add(p => p.CodeSent, true));
 
-        var country = cut.Find("select.tm-signing-phone-step__country");
+        var country = cut.Find(".tm-signing-phone-step__country select");
         var phone = cut.Find("input.tm-signing-phone-step__input");
         var otp = cut.Find("input.tm-signing-phone-step__otp");
 
         HasAccessibleName(country).Should().BeTrue($"country select needs a name; markup: {country.OuterHtml}");
         HasAccessibleName(phone).Should().BeTrue($"phone input needs a name; markup: {phone.OuterHtml}");
         HasAccessibleName(otp).Should().BeTrue($"OTP input needs a name; markup: {otp.OuterHtml}");
+    }
+
+    /// <summary>
+    /// Phase 4 review: the invalid state and the step alert's description must sit on the element
+    /// the user actually interacts with — the native control (input / select / checkbox / file
+    /// input) or, for grouped controls, the real group container — for EVERY step type. The test
+    /// drives the runner's failed-Next path, which is the one validation every step receives.
+    /// </summary>
+    [Theory]
+    [InlineData(SigningFieldType.Text)]
+    [InlineData(SigningFieldType.Number)]
+    [InlineData(SigningFieldType.Date)]
+    [InlineData(SigningFieldType.Select)]
+    [InlineData(SigningFieldType.Checkbox)]
+    [InlineData(SigningFieldType.Multiple)]
+    [InlineData(SigningFieldType.Radio)]
+    [InlineData(SigningFieldType.Image)]
+    [InlineData(SigningFieldType.Signature)]
+    [InlineData(SigningFieldType.Phone)]
+    public void Step_Validation_ReachesTheFocusableElement_AriaInvalidAndDescribedBy(SigningFieldType type)
+    {
+        var field = CreateTextField();
+        field.Type = type;
+        field.Name = $"{type} field";
+        field.Required = true;
+        if (type is SigningFieldType.Select or SigningFieldType.Radio or SigningFieldType.Multiple)
+        {
+            field.Options =
+            [
+                new SigningFieldOption { Uuid = "option-a", Value = "Email" },
+                new SigningFieldOption { Uuid = "option-b", Value = "Paper" }
+            ];
+        }
+
+        var cut = Render<TmSigningFormRunner>(parameters => parameters.Add(p => p.Fields,
+        [
+            field,
+            // A trailing optional step keeps the primary a NEXT (on a single-field plan the last
+            // step's primary is the Complete button, which a disabled TmButton swallows).
+            CreateTextField()
+        ]));
+        cut.Find(".tm-signing-form-runner__next").Click();
+
+        var validationId = cut.Find(".tm-signing-step-shell__validation[role='alert']").GetAttribute("id");
+        validationId.Should().NotBeNullOrWhiteSpace($"{type} steps show the shell alert on a failed Next");
+
+        var targets = type switch
+        {
+            SigningFieldType.Text => cut.FindAll("input.tm-signing-text-step__input"),
+            SigningFieldType.Number => cut.FindAll("input.tm-signing-number-step__input"),
+            SigningFieldType.Date => cut.FindAll("input.tm-signing-date-step__input"),
+            SigningFieldType.Select => cut.FindAll("select"),
+            // The single checkbox names the native input through the core InputAttributes splat;
+            // grouped variants (multiple / radio) describe the REAL group container.
+            SigningFieldType.Checkbox => cut.FindAll("input[type='checkbox']"),
+            SigningFieldType.Multiple or SigningFieldType.Radio => cut.FindAll("fieldset.tm-signing-choice-step__group"),
+            SigningFieldType.Image => cut.FindAll("input[type='file']"),
+            // The signature capture's canvas is inside the group wrapper the step owns — the
+            // wrapper is the element carrying the step's invalid state and description.
+            SigningFieldType.Signature => cut.FindAll("[role='group'][aria-invalid]"),
+            SigningFieldType.Phone => cut.FindAll("input.tm-signing-phone-step__input"),
+            _ => throw new ArgumentOutOfRangeException(nameof(type), type, null)
+        };
+        targets.Should().NotBeEmpty($"the {type} step must render its control");
+
+        foreach (var target in targets)
+        {
+            target.GetAttribute("aria-invalid").Should().Be(
+                "true",
+                $"the {type} step's <{target.TagName.ToLowerInvariant()}> must mirror the invalid state; markup: {target.OuterHtml}");
+            target.GetAttribute("aria-describedby")!.Split(' ', StringSplitOptions.RemoveEmptyEntries)
+                .Should().Contain(validationId!, $"the {type} step's alert must be described on the control");
+        }
     }
 
     [Fact]
@@ -251,6 +325,7 @@ public class SigningAccessibilityTests : LocalizationTestBase
             "_signing-field-overlay.css",
             "_signing-form-runner.css",
             "_signing-step-shell.css",
+            "_signing-steps.css",
             "_submission-status-timeline.css"
         };
         var signingCssFiles = Directory.GetFiles(cssDirectory, "*.css")
@@ -288,8 +363,9 @@ public class SigningAccessibilityTests : LocalizationTestBase
 
     /// <summary>
     /// Whether a form control resolves an accessible name: <c>aria-label</c>, an
-    /// <c>aria-labelledby</c> whose every referenced id EXISTS in the fragment, or a wrapping
-    /// <c>&lt;label&gt;</c> with content.
+    /// <c>aria-labelledby</c> whose every referenced id EXISTS in the fragment, a wrapping
+    /// <c>&lt;label&gt;</c> with content, or a <c>&lt;label for&gt;</c> association (the core Tm
+    /// inputs label their native element this way).
     /// </summary>
     private static bool HasAccessibleName(AngleSharp.Dom.IElement input)
     {
@@ -313,7 +389,26 @@ public class SigningAccessibilityTests : LocalizationTestBase
             return true;
         }
 
-        return input.Closest("label")?.TextContent.Trim().Length > 0;
+        if (input.Closest("label")?.TextContent.Trim().Length > 0)
+        {
+            return true;
+        }
+
+        var id = input.GetAttribute("id");
+        return !string.IsNullOrWhiteSpace(id)
+            && FindLabelFor(input, id!)?.TextContent.Trim().Length > 0;
+    }
+
+    /// <summary>Resolves the <c>&lt;label for="{id}"&gt;</c> of a control from its fragment.</summary>
+    private static AngleSharp.Dom.IElement? FindLabelFor(AngleSharp.Dom.IElement input, string id)
+    {
+        var root = input;
+        while (root.ParentElement is not null)
+        {
+            root = root.ParentElement;
+        }
+
+        return root.QuerySelector($"label[for='{id}']");
     }
 
     /// <summary>

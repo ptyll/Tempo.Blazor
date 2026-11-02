@@ -1,13 +1,15 @@
 using System.Globalization;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
+using Microsoft.JSInterop;
+using Tempo.Blazor.Abstractions.Layout;
 using Tempo.Blazor.Abstractions.Models;
 using Tempo.Blazor.Abstractions.Shared;
 
 namespace Tempo.Blazor.Components.Signing;
 
 /// <summary>Displays a normalized signing document page and optional overlays.</summary>
-public partial class TmDocumentPageViewer : ITmDraftGuard
+public partial class TmDocumentPageViewer : ITmDraftGuard, IAsyncDisposable
 {
     private static readonly double[] ZoomSteps = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0];
     private double _scale = 1.0;
@@ -15,9 +17,18 @@ public partial class TmDocumentPageViewer : ITmDraftGuard
     private DocumentCommentAnchor? _draftAnchor;
     private IReadOnlyList<DocumentCommentMention> _draftMentions = [];
     private bool _isCommentPointerDown;
+    private bool _commentPointerMoved;
     private double _commentStartX;
     private double _commentStartY;
+    private double _commentStartClientX;
+    private double _commentStartClientY;
     private ElementReference _pageElement;
+    private ElementReference _viewportElement;
+    private SigningRunnerInterop? _pinchInterop;
+    private DotNetObjectReference<TmDocumentPageViewer>? _self;
+    private IJSObjectReference? _pinchHandle;
+    private bool _pinchAttached;
+    private TmLayoutMode _observedLayout = TmLayoutMode.Desktop;
 
     /// <summary>Text of the new-thread draft composer (bound internally — the host cannot see it otherwise).</summary>
     private string _draftText = string.Empty;
@@ -79,6 +90,46 @@ public partial class TmDocumentPageViewer : ITmDraftGuard
 
     /// <summary>Callback invoked when the page view mode changes.</summary>
     [Parameter] public EventCallback<DocumentPageViewMode> ViewModeChanged { get; set; }
+
+    /// <summary>
+    /// Layout of the comments surface. <see cref="TmLayoutMode.Auto"/> (default) follows this
+    /// viewer's own container through <c>TmLayoutObserver</c> — below 640px the comments panel is
+    /// the bottom drawer. A forced value pins the branch (tests, hosts).
+    /// </summary>
+    [Parameter] public TmLayoutMode LayoutMode { get; set; } = TmLayoutMode.Auto;
+
+    /// <summary>
+    /// Attaches the shared two-finger pinch to the page viewport. Off by default: a designer page
+    /// must not steal the overlay's pointer. The runner and the demo viewer opt in.
+    /// </summary>
+    [Parameter] public bool EnablePinchZoom { get; set; }
+
+    /// <summary>The layout the comments branch actually renders. A forced mode wins over the measurement.</summary>
+    private TmLayoutMode EffectiveLayout => LayoutMode == TmLayoutMode.Auto ? _observedLayout : LayoutMode;
+
+    private bool IsMobileComments => EffectiveLayout == TmLayoutMode.Mobile;
+
+    private void ApplyObservedLayout(TmLayoutMode resolved) => _observedLayout = resolved;
+
+    private Task OnResolvedLayoutChanged(TmLayoutMode mode)
+    {
+        if (mode == _observedLayout)
+        {
+            return Task.CompletedTask;
+        }
+
+        _observedLayout = mode;
+        return InvokeAsync(StateHasChanged);
+    }
+
+    /// <summary>Raised when the comments surface asks to close. Optional.</summary>
+    [Parameter] public EventCallback OnCommentsClose { get; set; }
+
+    /// <summary>
+    /// Raised when the page field commits a page number. Additive: previous/next stay on their
+    /// own callbacks.
+    /// </summary>
+    [Parameter] public EventCallback<int> PageRequested { get; set; }
 
     /// <summary>Whether to render the viewer toolbar. Defaults to false for layout compatibility.</summary>
     [Parameter] public bool ShowToolbar { get; set; }
@@ -453,6 +504,35 @@ public partial class TmDocumentPageViewer : ITmDraftGuard
         return SetScaleAsync(0.85, DocumentPageZoomMode.FitPage);
     }
 
+    private Task EnableCommentModeAsync()
+    {
+        if (Disabled || CommentMode == DocumentCommentMode.Comment)
+        {
+            return Task.CompletedTask;
+        }
+
+        return ToggleCommentModeAsync();
+    }
+
+    /// <summary>
+    /// Bumped when the typed page is rejected or left unchanged, so the input re-renders its
+    /// value. A stale or out-of-range string would otherwise stay in the box.
+    /// </summary>
+    private int _pageInputVersion;
+
+    private async Task HandlePageInputAsync(ChangeEventArgs args)
+    {
+        var parsed = int.TryParse(args.Value?.ToString(), NumberStyles.Integer, CultureInfo.InvariantCulture, out var page)
+            || int.TryParse(args.Value?.ToString(), NumberStyles.Integer, CultureInfo.CurrentCulture, out page);
+        if (!parsed || page < 1 || page > CurrentTotalPages || page == CurrentPageNumber)
+        {
+            _pageInputVersion++;
+            return;
+        }
+
+        await PageRequested.InvokeAsync(page);
+    }
+
     private async Task ToggleCommentModeAsync()
     {
         if (Disabled)
@@ -532,7 +612,7 @@ public partial class TmDocumentPageViewer : ITmDraftGuard
         return Task.CompletedTask;
     }
 
-    private async Task HandleCommentPointerDownAsync(MouseEventArgs args)
+    private async Task HandleCommentPointerDownAsync(PointerEventArgs args)
     {
         if (!CanCreateCommentDraft(args))
         {
@@ -540,15 +620,18 @@ public partial class TmDocumentPageViewer : ITmDraftGuard
         }
 
         _isCommentPointerDown = true;
+        _commentPointerMoved = false;
         _commentStartX = NormalizeOffsetX(args);
         _commentStartY = NormalizeOffsetY(args);
+        _commentStartClientX = args.ClientX;
+        _commentStartClientY = args.ClientY;
         _draftAnchor = DocumentCommentAnchor.Point(CurrentPageNumber, _commentStartX, _commentStartY);
         // The anchor opens the draft panel — a transition the consumer must see even if the
         // gesture never completes with a pointer-up.
         await NotifyDraftChangedAsync();
     }
 
-    private Task HandleCommentPointerMoveAsync(MouseEventArgs args)
+    private Task HandleCommentPointerMoveAsync(PointerEventArgs args)
     {
         if (!_isCommentPointerDown || !CanCreateCommentDraft(args))
         {
@@ -559,7 +642,12 @@ public partial class TmDocumentPageViewer : ITmDraftGuard
         var currentY = NormalizeOffsetY(args);
         var width = Math.Abs(currentX - _commentStartX);
         var height = Math.Abs(currentY - _commentStartY);
-        if (width > 0.01 || height > 0.01)
+        if (GestureMoved(args, width, height))
+        {
+            _commentPointerMoved = true;
+        }
+
+        if (_commentPointerMoved && (width > 0.01 || height > 0.01))
         {
             _draftAnchor = DocumentCommentAnchor.Area(
                 CurrentPageNumber,
@@ -572,7 +660,14 @@ public partial class TmDocumentPageViewer : ITmDraftGuard
         return Task.CompletedTask;
     }
 
-    private async Task HandleCommentPointerUpAsync(MouseEventArgs args)
+    private async Task HandleCommentPointerCancel()
+    {
+        _isCommentPointerDown = false;
+        _draftAnchor = null;
+        await NotifyDraftChangedAsync();
+    }
+
+    private async Task HandleCommentPointerUpAsync(PointerEventArgs args)
     {
         if (!_isCommentPointerDown || !CanCreateCommentDraft(args))
         {
@@ -584,7 +679,7 @@ public partial class TmDocumentPageViewer : ITmDraftGuard
         var currentY = NormalizeOffsetY(args);
         var width = Math.Abs(currentX - _commentStartX);
         var height = Math.Abs(currentY - _commentStartY);
-        var anchor = width > 0.01 || height > 0.01
+        var anchor = _commentPointerMoved && (width > 0.01 || height > 0.01)
             ? DocumentCommentAnchor.Area(
                 CurrentPageNumber,
                 Math.Min(_commentStartX, currentX),
@@ -597,6 +692,26 @@ public partial class TmDocumentPageViewer : ITmDraftGuard
         _isCommentPointerDown = false;
         // An area gesture can change the anchor's shape (point → area) — report the final one.
         await NotifyDraftChangedAsync();
+    }
+
+    private bool GestureMoved(MouseEventArgs args, double width, double height)
+    {
+        // A real pointer reports client coordinates. A stationary click can still retarget on
+        // pointer-up (the draft panel opens under the cursor) and report a huge offset delta —
+        // that is not a drag. bUnit events have no client point, so the offset delta is the
+        // only signal there.
+        if (args.ClientX != 0 || args.ClientY != 0 || _commentStartClientX != 0 || _commentStartClientY != 0)
+        {
+            return MovedPastClick(args);
+        }
+
+        return width > 0.01 || height > 0.01;
+    }
+
+    private bool MovedPastClick(MouseEventArgs args)
+    {
+        return Math.Abs(args.ClientX - _commentStartClientX) > 4
+            || Math.Abs(args.ClientY - _commentStartClientY) > 4;
     }
 
     private bool CanCreateCommentDraft(MouseEventArgs args)
@@ -623,6 +738,58 @@ public partial class TmDocumentPageViewer : ITmDraftGuard
     private static double Clamp01(double value)
     {
         return double.IsFinite(value) ? Math.Min(Math.Max(value, 0), 1) : 0;
+    }
+
+    /// <summary>The shared pinch commits an absolute scale and demotes the zoom mode to Custom.</summary>
+    [JSInvokable]
+    public Task OnViewerPinchCommit(double scale) =>
+        InvokeAsync(async () =>
+        {
+            await SetScaleAsync(scale, DocumentPageZoomMode.Custom);
+            StateHasChanged();
+        });
+
+    /// <inheritdoc />
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        // No page, still loading, or an error: the viewport is not in the tree. Drop a handle
+        // left over from the previous page so the next mount attaches again.
+        if (!EnablePinchZoom || Page is null || IsLoading || !string.IsNullOrWhiteSpace(Error))
+        {
+            _pinchAttached = false;
+            await DetachPinchAsync();
+            return;
+        }
+
+        if (_pinchAttached)
+        {
+            return;
+        }
+
+        _pinchInterop ??= new SigningRunnerInterop(JS);
+        _self ??= DotNetObjectReference.Create(this);
+        _pinchHandle = await _pinchInterop.EnableViewerPinchAsync(_viewportElement, _self);
+        _pinchAttached = _pinchHandle is not null;
+    }
+
+    private async Task DetachPinchAsync()
+    {
+        var handle = _pinchHandle;
+        _pinchHandle = null;
+        await SigningRunnerInterop.DetachPinchAsync(handle);
+    }
+
+    /// <inheritdoc />
+    public async ValueTask DisposeAsync()
+    {
+        await DetachPinchAsync();
+
+        if (_pinchInterop is not null)
+        {
+            await _pinchInterop.DisposeAsync();
+        }
+
+        _self?.Dispose();
     }
 
     private async Task SetScaleAsync(double scale, DocumentPageZoomMode zoomMode)

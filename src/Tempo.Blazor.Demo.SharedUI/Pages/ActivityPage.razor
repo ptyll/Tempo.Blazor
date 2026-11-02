@@ -1,5 +1,6 @@
 @page "/activity"
 @using Tempo.Blazor.Abstractions.Shared
+@inject ITmLocalizer Loc
 <PageTitle>Activity – Tempo.Blazor</PageTitle>
 
 <!-- Page Header -->
@@ -47,7 +48,7 @@
 </section>
 
 <!-- Activity Comments (standalone + draft guard) -->
-<section class="demo-section" data-testid="activity-comments-section">
+<section id="activity-comments" class="demo-section" data-testid="activity-comments-section">
     <div class="flex items-center space-x-2 mb-4">
         <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Activity Comments</h2>
         <span class="px-2 py-0.5 text-xs font-medium bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-300 rounded-full">Standalone · Draft guard</span>
@@ -58,6 +59,12 @@
         the flags a dirty-guard needs before a refresh or retry throws an in-progress comment away.
         "Discard draft" demonstrates the consumer path once the user confirmed the discard
         (<code>DiscardDraftAsync</code> via <code>@@ref</code>; the component itself never asks).
+        Each comment also carries a host action (Unlock when internal, Lock when public, with a
+        short visible label) that asks in a dialog before flipping internal / public — the
+        component only paints the result. Making a comment public is the dangerous confirm.
+        The composer offers mentions (<code>@@</code> opens people from a local provider) and an
+        Internal switch. Posting with the switch on marks the new comment internal; the component
+        still shows it.
     </p>
 
     <div class="max-w-3xl">
@@ -70,6 +77,7 @@
             <span class="ml-2 font-mono" aria-hidden="true">editor-open=<span data-testid="activity-comments-draft-open">@FormatDraftFlag(_draftState.IsEditorOpen)</span></span>
             <span class="ml-3 font-mono" aria-hidden="true">editing=<span data-testid="activity-comments-draft-editing">@(_draftState.EditingCommentId ?? "none")</span></span>
             <span class="ml-3 font-mono" aria-hidden="true">unsaved=<span data-testid="activity-comments-draft-unsaved">@FormatDraftFlag(_draftState.HasUnsavedContent)</span></span>
+            <span class="ml-3 font-mono" aria-hidden="true">internal=<span data-testid="activity-comments-draft-internal">@FormatDraftFlag(_draftState.IsInternal)</span></span>
         </div>
 
         <div class="mb-4">
@@ -86,10 +94,15 @@
         <div class="showcase-card">
             <TmActivityComments @ref="_commentsComponent"
                                 Comments="@_standaloneComments"
+                                SupportsMentions="true"
+                                MentionProvider="@_mentionProvider"
+                                ShowInternalToggle="true"
                                 OnCommentAdded="@AddStandaloneComment"
+                                OnCommentSubmitted="@AddStandaloneSubmission"
                                 OnCommentEdited="@EditStandaloneComment"
                                 OnCommentDeleted="@DeleteStandaloneComment"
-                                OnDraftChanged="@HandleDraftChanged" />
+                                OnDraftChanged="@HandleDraftChanged"
+                                CommentActions="@CommentVisibilityAction" />
         </div>
     </div>
 </section>
@@ -222,6 +235,16 @@
     </div>
 </section>
 
+<TmDialog Show="_showVisibilityDialog"
+          Type="DialogType.Confirm"
+          Variant="DialogVariant.Warning"
+          IsDangerous="@VisibilityIsDangerous"
+          Title="@VisibilityDialogTitle"
+          Message="@VisibilityDialogMessage"
+          OkButtonText="@Loc["TmDemo_ActivityComments_ToggleConfirm"]"
+          OnResult="HandleVisibilityResult"
+          data-testid="activity-comments-visibility-dialog" />
+
 @code {
     [Inject] private ActivityHttpService ActivityService { get; set; } = default!;
     [Inject] private AttachmentHttpProvider AttachmentProvider { get; set; } = default!;
@@ -295,6 +318,11 @@
             BodyFormat = TmCommentBodyFormat.Html,
             CreatedAt = DateTimeOffset.Now.AddHours(-3),
             EditedAt = DateTimeOffset.Now.AddHours(-2),
+            IsInternal = true,
+            Badges =
+            [
+                new TmCommentBadge { Text = "Admin only", Tone = TmCommentBadgeTone.Info, Icon = IconNames.Info, Title = "Visible to administrators" }
+            ],
             CanEdit = true,
             CanDelete = true
         },
@@ -305,6 +333,20 @@
             Author = new TmUserRef { Id = "bob", DisplayName = "Bob Carter" },
             Body = "Status page updated and subscribers notified at 21:45.",
             CreatedAt = DateTimeOffset.Now.AddMinutes(-90),
+            Badges =
+            [
+                new TmCommentBadge
+                {
+                    Text = "Waiting on the external vendor's change-advisory board before the maintenance window can be confirmed",
+                    Tone = TmCommentBadgeTone.Info,
+                    Title = "Long badge text wraps instead of overflowing the thread"
+                },
+                new TmCommentBadge { Text = "Status", Tone = TmCommentBadgeTone.Success },
+                new TmCommentBadge { Text = "Pinned", Tone = TmCommentBadgeTone.Accent },
+                new TmCommentBadge { Text = "Note", Tone = TmCommentBadgeTone.Neutral },
+                new TmCommentBadge { Text = "Review", Tone = TmCommentBadgeTone.Warning },
+                new TmCommentBadge { Text = "Blocked", Tone = TmCommentBadgeTone.Danger }
+            ],
             CanEdit = false,
             CanDelete = true
         },
@@ -313,7 +355,7 @@
             Id = "demo-c3",
             ThreadId = "demo-comments",
             Author = new TmUserRef { Id = "carol", DisplayName = "Carol Diaz" },
-            Body = "Read-only viewer — this comment exposes no edit or delete action.",
+            Body = "Read-only viewer — this comment exposes no edit or delete action and no badges.",
             CreatedAt = DateTimeOffset.Now.AddMinutes(-30)
         }
     ];
@@ -341,6 +383,18 @@
         return _commentsComponent?.DiscardDraftAsync() ?? Task.CompletedTask;
     }
 
+    private bool? _pendingSubmissionInternal;
+
+    /// <summary>
+    /// Fires before <see cref="AddStandaloneComment"/> (document order). Remembers the internal
+    /// flag so the HTML callback can stamp the new entry; the component does not hide it.
+    /// </summary>
+    private Task AddStandaloneSubmission(TmCommentSubmission submission)
+    {
+        _pendingSubmissionInternal = submission.IsInternal;
+        return Task.CompletedTask;
+    }
+
     private Task AddStandaloneComment(string html)
     {
         _standaloneComments.Add(new TmCommentEntry
@@ -351,9 +405,11 @@
             Body = html,
             BodyFormat = TmCommentBodyFormat.Html,
             CreatedAt = DateTimeOffset.Now,
+            IsInternal = _pendingSubmissionInternal == true,
             CanEdit = true,
             CanDelete = true
         });
+        _pendingSubmissionInternal = null;
         return Task.CompletedTask;
     }
 
@@ -366,6 +422,74 @@
             comment.BodyFormat = TmCommentBodyFormat.Html;
             comment.EditedAt = DateTimeOffset.Now;
         }
+        return Task.CompletedTask;
+    }
+
+    private string? _pendingVisibilityCommentId;
+    private bool _showVisibilityDialog;
+
+    private string VisibilityDialogTitle
+        => PendingComment()?.IsInternal == true
+            ? Loc["TmDemo_ActivityComments_ToggleTitleInternal"]
+            : Loc["TmDemo_ActivityComments_ToggleTitlePublic"];
+
+    private string VisibilityDialogMessage
+        => PendingComment()?.IsInternal == true
+            ? Loc["TmDemo_ActivityComments_ToggleMessageInternal"]
+            : Loc["TmDemo_ActivityComments_ToggleMessagePublic"];
+
+    // Making a comment public is the irreversible step (notifications already sent cannot be
+    // recalled, and everyone who opens the thread will see it). Marking one internal is not.
+    private bool VisibilityIsDangerous => PendingComment()?.IsInternal == true;
+
+    private TmCommentEntry? PendingComment()
+        => _pendingVisibilityCommentId is null
+            ? null
+            : _standaloneComments.FirstOrDefault(c => c.Id == _pendingVisibilityCommentId);
+
+    /// <summary>
+    /// Host-owned action. The component renders the fragment and does not know what it does;
+    /// the dialog and the visibility flip live here.
+    /// </summary>
+    private RenderFragment<TmCommentEntry> CommentVisibilityAction => comment => __builder =>
+    {
+        var label = comment.IsInternal
+            ? Loc["TmDemo_ActivityComments_MakePublic"]
+            : Loc["TmDemo_ActivityComments_MakeInternal"];
+        // Unlock = the comment is internal and the action makes it public; Lock = it is public
+        // and the action makes it internal. Same link style as Edit/Delete, with a short visible label.
+        <button type="button"
+                class="tm-link-button"
+                title="@label"
+                aria-label="@label"
+                data-testid="@($"activity-comments-toggle-{comment.Id}")"
+                @onclick="@(() => AskToggleVisibility(comment))">
+            <TmIcon Name="@(comment.IsInternal ? IconNames.Unlock : IconNames.Lock)" Size="IconSize.Xs" />
+            <span>@label</span>
+        </button>
+    };
+
+    private void AskToggleVisibility(TmCommentEntry comment)
+    {
+        _pendingVisibilityCommentId = comment.Id;
+        _showVisibilityDialog = true;
+    }
+
+    private Task HandleVisibilityResult(bool? confirmed)
+    {
+        if (confirmed == true)
+        {
+            // No-op when the comment was deleted while the dialog was open: the id no longer
+            // resolves, so nothing is flipped and the dialog just closes.
+            var comment = PendingComment();
+            if (comment is not null)
+            {
+                comment.IsInternal = !comment.IsInternal;
+            }
+        }
+
+        _showVisibilityDialog = false;
+        _pendingVisibilityCommentId = null;
         return Task.CompletedTask;
     }
 

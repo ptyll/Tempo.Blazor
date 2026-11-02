@@ -1,0 +1,10 @@
+{
+  "kind": "Record",
+  "category": "Shared",
+  "namespace": "Tempo.Blazor.Abstractions.Shared",
+  "description": "Payload of a newly posted comment from TmActivityComments, delivered by OnCommentSubmitted before OnCommentAdded. Html is the composer HTML; IsInternal is the composer switch at submit. The component does not hide the resulting comment.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/Shared/TmCommentSubmission.cs",
+  "documentationStatus": "generated",
+  "itemName": "TmCommentSubmission"
+}

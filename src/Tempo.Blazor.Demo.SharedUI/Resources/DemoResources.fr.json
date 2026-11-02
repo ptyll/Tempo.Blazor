@@ -631,5 +631,12 @@
   "TmAppShellDemo_LastActionBilling": "Facturation",
   "TmAppShellDemo_CompleteProfile": "Compléter votre profil",
   "TmAppShellDemo_StageLabel": "Scène d'aperçu de la coquille — la coquille vivante mesure cette boîte, pas la fenêtre du navigateur. Faites-la défiler quand un préréglage dépasse la colonne de démo.",
-  "TmAppShellDemo_BackToDemos": "Tous les composants"
+  "TmAppShellDemo_BackToDemos": "Tous les composants",
+  "TmDemo_ActivityComments_MakePublic": "Rendre public",
+  "TmDemo_ActivityComments_MakeInternal": "Rendre interne",
+  "TmDemo_ActivityComments_ToggleTitleInternal": "Rendre ce commentaire public ?",
+  "TmDemo_ActivityComments_ToggleTitlePublic": "Rendre ce commentaire interne ?",
+  "TmDemo_ActivityComments_ToggleMessageInternal": "Toute personne qui ouvre ce fil verra le commentaire. Les notifications déjà envoyées ne peuvent pas être rappelées.",
+  "TmDemo_ActivityComments_ToggleMessagePublic": "Seul un utilisateur privilégié devrait voir un commentaire interne. Le composant ne le masque pas — c'est à l'application de filtrer. Les notifications déjà envoyées ne peuvent pas être rappelées.",
+  "TmDemo_ActivityComments_ToggleConfirm": "Changer la visibilité"
 }

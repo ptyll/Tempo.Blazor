@@ -17,9 +17,10 @@ public sealed class TmActionItem
     public string Id { get; set; } = string.Empty;
 
     /// <summary>
-    /// Host test id copied onto the overflow entry as <c>data-testid</c>. Used when the action has
-    /// no copy on the bar (a toolbar button with <c>Priority == OverflowOnly</c>). Empty renders no
-    /// attribute.
+    /// Host test id rendered as <c>data-testid</c> on the <c>TmMobileActionBar</c> tile and on the
+    /// overflow entry. Used when the action has no copy on the bar (a toolbar button with
+    /// <c>Priority == OverflowOnly</c>). Empty renders no attribute. Markup change: a host that
+    /// already set <see cref="TestId"/> now gets that id on the bar button, not only the menu.
     /// </summary>
     public string? TestId { get; set; }
 

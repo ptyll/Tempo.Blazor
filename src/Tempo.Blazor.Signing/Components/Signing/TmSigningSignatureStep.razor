@@ -21,6 +21,8 @@
          aria-labelledby="@_titleId"
          aria-describedby="@DescribedBy"
          aria-invalid="@BoolText(HasValidationMessage)">
+        @* ClearButtonPlacement.Overlay (phase 4): the Clear button sits ON the signing surface
+            instead of in a row below it — the F8 core addition. *@
         <TmSignatureCapture Value="@Value"
                             ValueChanged="ValueChanged"
                             Required="false"
@@ -28,6 +30,7 @@
                             Mode="Mode"
                             ModeChanged="ModeChanged"
                             Modes="@Modes"
+                            ClearButtonPlacement="ClearButtonPlacement"
                             Disabled="@Disabled" />
     </div>
 </TmSigningStepShell>

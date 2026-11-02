@@ -35,7 +35,7 @@
        SheetTitle or the localized TmContextMenu_SheetTitle default. *@
     <TmOverlayPanel Anchor="_triggerRef"
                     IsOpen="_isOpen"
-                    IsOpenChanged="SetOpen"
+                    IsOpenChanged="SetOpenAsync"
                     OnOpened="FocusFirstItemAsync"
                     Placement="OverlayPlacement.Bottom"
                     Align="OverlayAlign.End"
@@ -58,9 +58,21 @@
     private bool _disposed;
     private bool _focusTriggerAfterClose;
 
-    private void SetOpen(bool open)
+    /// <summary>
+    /// Applies the open state, then raises <see cref="IsOpenChanged"/>. The callback runs after the
+    /// state has changed, and it is awaited, so a host that drops the menu on close cannot race a
+    /// render that still sees it open. Toggle, <see cref="Open"/>, <see cref="CloseMenu"/> and the
+    /// overlay's own dismiss all come through here.
+    /// </summary>
+    private Task SetOpenAsync(bool open)
     {
+        if (_isOpen == open)
+        {
+            return Task.CompletedTask;
+        }
+
         _isOpen = open;
+        return IsOpenChanged.InvokeAsync(open);
     }
 
     /// <summary>The trigger element that opens the menu.</summary>
@@ -86,6 +98,13 @@
     /// </summary>
     [Parameter] public string? SheetTitle { get; set; }
 
+    /// <summary>
+    /// Raised when the menu opens or closes, including a close that came from the overlay
+    /// (Escape, outside click) rather than from an item. A host that mounts the menu only while
+    /// it is open uses this to drop that mount, so a later render cannot reopen it.
+    /// </summary>
+    [Parameter] public EventCallback<bool> IsOpenChanged { get; set; }
+
     /// <summary>Additional CSS class for the root element.</summary>
     [Parameter] public string? Class { get; set; }
 
@@ -97,14 +116,40 @@
     // the popover (TmOverlayPanel emits Title as its aria-label when nothing else names it).
     private string EffectiveSheetTitle => string.IsNullOrEmpty(SheetTitle) ? Loc["TmContextMenu_SheetTitle"] : SheetTitle!;
 
-    private void ToggleMenu()
+    private void ToggleMenu() => _ = InvokeAsync(async () =>
     {
-        _isOpen = !_isOpen;
+        await SetOpenAsync(!_isOpen);
+        StateHasChanged();
+    });
+
+    /// <summary>
+    /// Opens the menu. A host that owns a pointer position uses this after it has decided which
+    /// actions apply. The open is applied on the renderer, and <see cref="IsOpenChanged"/> is
+    /// awaited before the menu paints, so the callback always observes the new state.
+    /// </summary>
+    public void Open() => _ = InvokeAsync(OpenAsync);
+
+    private async Task OpenAsync()
+    {
+        if (_isOpen)
+        {
+            return;
+        }
+
+        await SetOpenAsync(true);
+        StateHasChanged();
     }
 
-    internal void CloseMenu()
+    internal void CloseMenu() => _ = InvokeAsync(CloseMenuAsync);
+
+    private async Task CloseMenuAsync()
     {
-        _isOpen = false;
+        if (!_isOpen)
+        {
+            return;
+        }
+
+        await SetOpenAsync(false);
         // docs/overlays.md rule 4: an item activation closes without overlay.js's focus restore - return focus to the
         // trigger (the TmDropdown.SelectItemAsync pattern), or a keyboard activation leaves focus on <body>.
         _focusTriggerAfterClose = true;

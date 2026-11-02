@@ -106,6 +106,8 @@ public partial class TmSigningStepShell
 
     private bool IsRequired => Required ?? Field?.Required == true;
 
+    private SigningFieldType FieldType => Field?.Type ?? SigningFieldType.Text;
+
     private bool HasDescription => !string.IsNullOrWhiteSpace(ResolvedDescription);
 
     private bool HasValidationMessage => !string.IsNullOrWhiteSpace(EffectiveValidationMessage);

@@ -3,49 +3,79 @@
 @using Tempo.Blazor.Abstractions.Models
 
 <section @attributes="AdditionalAttributes" class="@RootClass">
+    @if (HeaderContent is not null)
+    {
+        @* Host-owned document summary (name/status — Q-S10: the model stays unchanged, the panel
+           does not invent document metadata it does not have). *@
+        <div class="tm-submission-status-timeline__header-content">
+            @HeaderContent
+        </div>
+    }
+
     @if (Events.Count == 0)
     {
         <div class="tm-submission-status-timeline__empty">@Loc["TmSubmissionStatusTimeline_Empty"]</div>
     }
     else
     {
-        @foreach (var item in OrderedEvents)
-        {
-            <article class="@GetItemClass(item)" data-event-type="@item.Type">
-                <span class="tm-submission-status-timeline__marker" aria-hidden="true">
-                    <TmIcon Name="@GetIcon(item.Type)" Size="IconSize.Xs" />
-                </span>
-                <div class="tm-submission-status-timeline__body">
-                    <header class="tm-submission-status-timeline__header">
-                        <h3 class="tm-submission-status-timeline__title">@GetLabel(item.Type)</h3>
-                        <time class="tm-submission-status-timeline__time" datetime="@item.CreatedAt.ToString("O", CultureInfo.InvariantCulture)">
-                            @item.CreatedAt.ToLocalTime().ToString("g", CultureInfo.CurrentCulture)
-                        </time>
-                    </header>
-                    <div class="tm-submission-status-timeline__recipient">
-                        @GetRecipientText(item)
+        <ol class="tm-submission-status-timeline__items">
+            @foreach (var item in OrderedEvents)
+            {
+                <li class="@GetItemClass(item)" data-event-type="@item.Type">
+                    <span class="@GetMarkerClass(item)" aria-hidden="true">
+                        <TmIcon Name="@GetIcon(item.Type)" Size="IconSize.Xs" />
+                    </span>
+                    <div class="tm-submission-status-timeline__body">
+                        <header class="tm-submission-status-timeline__header">
+                            <h3 class="tm-submission-status-timeline__title">@GetLabel(item.Type)</h3>
+                            <time class="tm-submission-status-timeline__time"
+                                  datetime="@SigningDateFormatter.FormatIso(item.CreatedAt)">
+                                @SigningDateFormatter.Format(item.CreatedAt)
+                            </time>
+                        </header>
+                        @if (!string.IsNullOrWhiteSpace(GetRecipientText(item)))
+                        {
+                            <div class="tm-submission-status-timeline__recipient">
+                                <span class="tm-submission-status-timeline__recipient-prefix">@Loc["TmSubmissionStatusTimeline_RecipientPrefix"]</span>
+                                @GetRecipientText(item)
+                            </div>
+                        }
+                        @if (item.Metadata.Count > 0)
+                        {
+                            <dl class="tm-submission-status-timeline__metadata">
+                                @foreach (var pair in item.Metadata)
+                                {
+                                    <div class="tm-submission-status-timeline__metadata-row">
+                                        <dt>@pair.Key</dt>
+                                        <dd>@pair.Value</dd>
+                                    </div>
+                                }
+                            </dl>
+                        }
                     </div>
-                    @if (item.Metadata.Count > 0)
-                    {
-                        <dl class="tm-submission-status-timeline__metadata">
-                            @foreach (var pair in item.Metadata)
-                            {
-                                <div class="tm-submission-status-timeline__metadata-row">
-                                    <dt>@pair.Key</dt>
-                                    <dd>@pair.Value</dd>
-                                </div>
-                            }
-                        </dl>
-                    }
-                </div>
-            </article>
-        }
+                </li>
+            }
+        </ol>
     }
 </section>
 
 @code {
     /// <summary>Submission events to display.</summary>
     [Parameter] public IReadOnlyList<SigningSubmissionStatusEvent> Events { get; set; } = [];
+
+    /// <summary>
+    /// Sort direction of <see cref="Events"/>. Defaults to <see cref="SigningTimelineSortDirection.Descending"/>
+    /// (the newest event first — today's behaviour, Q-S9); <see cref="SigningTimelineSortDirection.Ascending"/>
+    /// renders the ceremony in its reading order.
+    /// </summary>
+    [Parameter] public SigningTimelineSortDirection SortDirection { get; set; } = SigningTimelineSortDirection.Descending;
+
+    /// <summary>
+    /// Host-rendered summary above the timeline (typically the document name, page/size metrics and
+    /// its current status — the desktop reference's document card). The panel renders it verbatim
+    /// before the event list; the timeline never invents document data it does not have (Q-S10).
+    /// </summary>
+    [Parameter] public RenderFragment? HeaderContent { get; set; }
 
     /// <summary>Additional CSS classes for the root element.</summary>
     [Parameter] public string? Class { get; set; }
@@ -57,11 +87,26 @@
         ? "tm-submission-status-timeline"
         : $"tm-submission-status-timeline {Class}";
 
-    private IEnumerable<SigningSubmissionStatusEvent> OrderedEvents => Events.OrderByDescending(item => item.CreatedAt);
+    private IEnumerable<SigningSubmissionStatusEvent> OrderedEvents => SortDirection == SigningTimelineSortDirection.Ascending
+        ? Events.OrderBy(item => item.CreatedAt)
+        : Events.OrderByDescending(item => item.CreatedAt);
 
     private string GetItemClass(SigningSubmissionStatusEvent item)
     {
         return $"tm-submission-status-timeline__item tm-submission-status-timeline__item--{GetSeverity(item.Type)}";
+    }
+
+    /// <summary>
+    /// Neutral/informational events (opened, metadata-only steps) paint the SOFT marker — a tinted
+    /// disc with a coloured glyph; the sent/primary, completed and failed events keep the SOLID
+    /// filled disc of the reference. The modifier lands on the marker, the severity stays on the
+    /// item.
+    /// </summary>
+    private string GetMarkerClass(SigningSubmissionStatusEvent item)
+    {
+        return GetSeverity(item.Type) is "neutral" or "info"
+            ? "tm-submission-status-timeline__marker tm-submission-status-timeline__marker--soft"
+            : "tm-submission-status-timeline__marker";
     }
 
     private static string GetSeverity(SigningSubmissionStatusEventType type)
@@ -71,6 +116,7 @@
             SigningSubmissionStatusEventType.Completed or SigningSubmissionStatusEventType.VerificationCompleted or SigningSubmissionStatusEventType.KbaCompleted => "success",
             SigningSubmissionStatusEventType.Declined or SigningSubmissionStatusEventType.EmailBounced or SigningSubmissionStatusEventType.EmailComplaint => "danger",
             SigningSubmissionStatusEventType.Opened => "info",
+            SigningSubmissionStatusEventType.Sent => "primary",
             _ => "neutral"
         };
     }
@@ -79,15 +125,15 @@
     {
         return type switch
         {
-            SigningSubmissionStatusEventType.Sent => "send",
-            SigningSubmissionStatusEventType.Opened => "eye",
-            SigningSubmissionStatusEventType.Completed => "check-circle",
-            SigningSubmissionStatusEventType.Declined => "x-circle",
-            SigningSubmissionStatusEventType.EmailBounced => "mail-x",
-            SigningSubmissionStatusEventType.EmailComplaint => "alert-triangle",
-            SigningSubmissionStatusEventType.VerificationCompleted => "shield-check",
-            SigningSubmissionStatusEventType.KbaCompleted => "lock",
-            _ => "circle"
+            SigningSubmissionStatusEventType.Sent => IconNames.Send,
+            SigningSubmissionStatusEventType.Opened => IconNames.Eye,
+            SigningSubmissionStatusEventType.Completed => IconNames.CheckCircle,
+            SigningSubmissionStatusEventType.Declined => IconNames.XCircle,
+            SigningSubmissionStatusEventType.EmailBounced => IconNames.MailX,
+            SigningSubmissionStatusEventType.EmailComplaint => IconNames.AlertTriangle,
+            SigningSubmissionStatusEventType.VerificationCompleted => IconNames.ShieldCheck,
+            SigningSubmissionStatusEventType.KbaCompleted => IconNames.Lock,
+            _ => IconNames.Circle
         };
     }
 

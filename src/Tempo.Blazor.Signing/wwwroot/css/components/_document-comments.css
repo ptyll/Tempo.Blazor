@@ -223,9 +223,35 @@
 }
 
 .tm-document-comments-panel__filters {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
     gap: var(--tm-space-1);
+}
+
+.tm-document-comments-panel__filter-label {
+    font-size: var(--tm-font-size-sm);
+    color: var(--tm-text-secondary);
+}
+
+.tm-document-comments-panel__header,
+.tm-document-comments-panel__header-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: var(--tm-space-2);
+    min-width: 0;
+}
+
+.tm-document-comments-panel__new-label {
+    min-width: 0;
+}
+
+.tm-document-comments-panel__mention {
+    background: var(--tm-color-info-subtle);
+    color: var(--tm-color-info-text);
+    border-radius: var(--tm-radius-sm);
 }
 
 .tm-document-comments-panel__filter,
@@ -238,6 +264,7 @@
     align-items: center;
     justify-content: center;
     gap: var(--tm-space-1);
+    padding-inline: var(--tm-space-3);
     border: 1px solid var(--tm-border-color);
     border-radius: var(--tm-radius-sm);
     background: var(--tm-bg-surface);
@@ -245,6 +272,20 @@
     font: inherit;
     font-size: var(--tm-font-size-sm);
     cursor: pointer;
+}
+
+@media (pointer: coarse) {
+    .tm-document-comments-panel__filter {
+        min-height: var(--tm-touch-target);
+        padding-inline: var(--tm-space-3);
+    }
+}
+
+@container tm-document-comments-panel (width < 40rem) {
+    .tm-document-comments-panel__filter {
+        min-height: var(--tm-touch-target);
+        padding-inline: var(--tm-space-3);
+    }
 }
 
 .tm-document-comments-panel__filter--active,
@@ -295,6 +336,31 @@
     color: var(--tm-color-on-primary);
     font-size: var(--tm-font-size-xs);
     font-weight: var(--tm-font-weight-semibold);
+}
+
+.tm-document-comments-panel__avatar[data-avatar-token="primary"] {
+    background: var(--tm-color-primary-subtle);
+    color: var(--tm-color-primary-text);
+}
+
+.tm-document-comments-panel__avatar[data-avatar-token="info"] {
+    background: var(--tm-color-info-subtle);
+    color: var(--tm-color-info-text);
+}
+
+.tm-document-comments-panel__avatar[data-avatar-token="success"] {
+    background: var(--tm-color-success-subtle);
+    color: var(--tm-color-success-text);
+}
+
+.tm-document-comments-panel__avatar[data-avatar-token="warning"] {
+    background: var(--tm-color-warning-subtle);
+    color: var(--tm-color-warning-text);
+}
+
+.tm-document-comments-panel__avatar[data-avatar-token="danger"] {
+    background: var(--tm-color-danger-subtle);
+    color: var(--tm-color-danger-text);
 }
 
 .tm-document-comments-panel__thread-body,
@@ -428,11 +494,11 @@
     font-weight: var(--tm-font-weight-semibold);
 }
 
+.tm-comment-composer__field .tm-textarea,
 .tm-comment-composer__input {
     width: 100%;
     min-width: 0;
     resize: vertical;
-    border: 1px solid var(--tm-border-color);
     border-radius: var(--tm-radius-sm);
     padding: var(--tm-space-2);
     background: var(--tm-bg-surface);
@@ -497,7 +563,12 @@
 }
 
 .tm-comment-composer__actions {
+    flex-wrap: wrap;
     justify-content: flex-end;
+}
+
+.tm-comment-composer__actions .tm-comment-composer__button {
+    min-width: 0;
 }
 
 .tm-comment-composer__button {
@@ -509,13 +580,108 @@
     cursor: default;
 }
 
-@container tm-document-page-viewer (width < 1024px) {
-    .tm-document-page-viewer--with-comments .tm-document-page-viewer__comments-shell {
-        position: sticky;
-        bottom: var(--tm-space-2);
-        z-index: var(--tm-z-sticky);
-        max-height: min(70vh, 34rem);
-        overflow: auto;
-        border-radius: var(--tm-radius-md);
+/* The drawer panel clips overflow. The body is a height-constrained column (flex-basis 0, or
+   it grows with the composer and the panel clips it). Header and filters stay auto; the thread
+   list is the only minmax(0, 1fr) row, so the composer row stays inside the sheet at every snap. */
+.tm-document-page-viewer__comments-sheet .tm-drawer__body {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 0%;
+    block-size: 0;
+    min-block-size: 0;
+    overflow: hidden;
+}
+
+.tm-document-page-viewer__comments-sheet .tm-document-page-viewer__comments-shell {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-block-size: 0;
+    overflow: auto;
+}
+
+.tm-document-page-viewer__comments-sheet .tm-document-comments-panel {
+    display: grid;
+    grid-template-rows: auto auto minmax(0, 1fr);
+    flex: 1 1 auto;
+    min-block-size: 0;
+    overflow: hidden;
+}
+
+.tm-document-page-viewer__comments-sheet .tm-drawer__body .tm-document-comments-panel__detail {
+    display: grid;
+    grid-template-rows: auto auto minmax(0, 1fr) auto auto;
+    min-height: 0;
+    min-block-size: 0;
+    overflow: auto;
+}
+
+.tm-document-page-viewer__comments-sheet .tm-document-comments-panel__filters {
+    display: flex;
+    flex-wrap: wrap;
+    min-width: 0;
+}
+
+.tm-document-page-viewer__comments-sheet .tm-document-comments-panel__filter {
+    flex: 1 1 0;
+    min-width: 0;
+}
+
+@container tm-document-comments-panel (width < 22.5rem) {
+    .tm-document-comments-panel__new-label {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip-path: inset(50%);
+        white-space: nowrap;
+        border: 0;
     }
+}
+
+.tm-document-page-viewer__comments-sheet .tm-document-comments-panel__filter-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
+}
+
+.tm-document-page-viewer__comments-sheet .tm-document-comments-panel__list,
+.tm-document-page-viewer__comments-sheet .tm-document-comments-panel__items {
+    min-block-size: 0;
+    overflow: auto;
+    /* The sticky composer covers this much of the scroller. Padding lets the selected
+       comment scroll clear; scroll-padding keeps scrollIntoView above the composer. */
+    --tm-signing-comment-composer: 8.5rem;
+    padding-block-end: var(--tm-signing-comment-composer);
+    scroll-padding-block-end: var(--tm-signing-comment-composer);
+}
+
+.tm-document-page-viewer__comments-sheet .tm-comment-composer,
+.tm-document-page-viewer__comments-sheet .tm-document-comments-panel__composer,
+.tm-document-page-viewer__comments-sheet .tm-document-page-viewer__draft-panel {
+    position: sticky;
+    inset-block-end: 0;
+    z-index: 2;
+    flex: 0 0 auto;
+    min-block-size: max-content;
+    background: var(--tm-bg-surface);
+}
+
+.tm-document-page-viewer__comments-sheet .tm-document-page-viewer__draft-panel {
+    order: 2;
+}
+
+.tm-document-page-viewer__comments-sheet .tm-comment-composer .tm-textarea,
+.tm-document-page-viewer__comments-sheet .tm-comment-composer__input,
+.tm-document-page-viewer__comments-sheet .tm-document-page-viewer__draft-panel .tm-textarea {
+    min-block-size: calc(var(--tm-space-12));
+    block-size: calc(var(--tm-space-12));
 }

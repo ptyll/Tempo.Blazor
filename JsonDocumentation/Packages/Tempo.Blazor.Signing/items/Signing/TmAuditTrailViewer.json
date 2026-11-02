@@ -28,6 +28,12 @@
       "type": "SigningSubmissionLocalizationSnapshot?",
       "isRequired": false,
       "description": "Optional resolved signing localization snapshot captured during the ceremony."
+    },
+    {
+      "name": "HeaderContent",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "Host-rendered document summary replacing the default title (the document name, its status badge and timestamp — the desktop reference's header card). The panel renders it verbatim; the audit model carries no document title, so without the slot the localized default title stays (Q-S10)."
     }
   ]
 }

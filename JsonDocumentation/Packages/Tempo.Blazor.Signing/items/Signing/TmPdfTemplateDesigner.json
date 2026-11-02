@@ -49,6 +49,18 @@
       "description": "Whether editing controls should be disabled."
     },
     {
+      "name": "Height",
+      "type": "string?",
+      "isRequired": false,
+      "description": "CSS block size of the designer. Null keeps var(--tm-pdf-template-designer-height), which defaults to the historical fixed height."
+    },
+    {
+      "name": "LayoutBreakpoints",
+      "type": "TmLayoutBreakpoints?",
+      "isRequired": false,
+      "description": "Breakpoints the shell classifies its own container with. Null uses the designer default (mobile below 768, desktop from 1200)."
+    },
+    {
       "name": "FallbackCulture",
       "type": "string?",
       "isRequired": false,
@@ -71,7 +83,14 @@
       "name": "MobileMode",
       "type": "bool",
       "isRequired": false,
-      "description": "Whether to render a compact mobile-oriented designer layout."
+      "description": "Obsolete alias that forces TmLayoutMode.Mobile. New hosts set LayoutMode."
+    },
+    {
+      "name": "LayoutMode",
+      "type": "TmLayoutMode",
+      "isRequired": false,
+      "default": "Auto",
+      "description": "Auto classifies the designer's own container through TmEditorShell against LayoutBreakpoints (mobile <768, tablet 768–1199, desktop ≥1200); a forced value pins the layout"
     },
     {
       "name": "OnDetectFields",

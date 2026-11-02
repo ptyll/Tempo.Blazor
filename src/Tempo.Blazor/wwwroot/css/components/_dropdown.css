@@ -78,9 +78,13 @@
 
 /* T15 — the sheet presentation: the sheet body already pads 20px (the header title's left edge),
    so the popover's own item padding would push the text 12px further in. It comes off and the
-   items become full-width rows flush with the title, like the redesign mockup. */
+   items become full-width rows flush with the title, like the redesign mockup. The rows keep the
+   44px touch floor at EVERY pointer (the coarse-pointer rule above still applies to the pop-up
+   menu): the sheet IS the touch presentation, and a narrow desktop window or a mouse-driven
+   session gets the same hit area instead of a ~28px row. */
 .tm-overlay-panel-sheet .tm-dropdown-item {
   padding-inline: 0;
+  min-height: var(--tm-touch-target);
 }
 
 .tm-overlay-panel-sheet .tm-dropdown-sep {

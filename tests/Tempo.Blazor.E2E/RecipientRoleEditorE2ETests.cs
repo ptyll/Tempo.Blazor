@@ -20,7 +20,7 @@ public class RecipientRoleEditorE2ETests : WasmTestBase
         await editor.ScrollIntoViewIfNeededAsync();
         await editor.Locator(".tm-recipient-role-editor__add").ClickAsync();
 
-        await Expect(editor.Locator(".tm-recipient-role-editor__row")).ToHaveCountAsync(3);
+        await Expect(editor.Locator(".tm-recipient-role-editor__card")).ToHaveCountAsync(3);
         await Expect(page.Locator("[data-testid='recipient-role-editor-template-status']")).ToContainTextAsync("3 roles");
     }
 
@@ -85,8 +85,8 @@ public class RecipientRoleEditorE2ETests : WasmTestBase
 
         await editor.Locator(".tm-recipient-role-editor__move-down").First.ClickAsync();
 
-        await Expect(editor.Locator(".tm-recipient-role-editor__row").First).ToHaveAttributeAsync("data-role-uuid", "template-approver");
-        await Expect(editor.Locator(".tm-recipient-role-editor__order-input").First).ToHaveValueAsync("1");
+        await Expect(editor.Locator(".tm-recipient-role-editor__card").First).ToHaveAttributeAsync("data-role-uuid", "template-approver");
+        await Expect(editor.Locator(".tm-recipient-role-editor__order-badge").First).ToContainTextAsync("1");
         await Expect(page.Locator("[data-testid='recipient-role-editor-template-status']")).ToContainTextAsync("1. Approver");
     }
 
@@ -100,10 +100,10 @@ public class RecipientRoleEditorE2ETests : WasmTestBase
         await page.GotoAsync($"{BaseUrl}/signing-components");
         await WaitForAppReadyAsync(page);
 
-        var row = page.Locator("[data-testid='recipient-role-editor-template'] .tm-recipient-role-editor__row").First;
+        var row = page.Locator("[data-testid='recipient-role-editor-template'] .tm-recipient-role-editor__card").First;
         await row.ScrollIntoViewIfNeededAsync();
 
-        var order = await row.Locator(".tm-recipient-role-editor__order").BoundingBoxAsync();
+        var order = await row.Locator(".tm-recipient-role-editor__order-badge").BoundingBoxAsync();
         var color = await row.Locator(".tm-recipient-role-editor__field--color").BoundingBoxAsync();
         var name = await row.Locator(".tm-recipient-role-editor__field--name").BoundingBoxAsync();
         var invite = await row.Locator(".tm-recipient-role-editor__field--invite-by-role").BoundingBoxAsync();
@@ -112,9 +112,9 @@ public class RecipientRoleEditorE2ETests : WasmTestBase
         Assert.IsNotNull(color);
         Assert.IsNotNull(name);
         Assert.IsNotNull(invite);
-        Assert.IsTrue(order.X + order.Width <= color.X, "Order controls must not overlap the color picker.");
-        Assert.IsTrue(color.X + color.Width <= name.X, "Color picker must not overlap the role name.");
-        Assert.IsTrue(invite.X - (name.X + name.Width) <= 24, "Role name and invite-by-role controls should stay visually grouped.");
+        Assert.IsTrue(order.Y + order.Height <= color.Y, "Order badge must sit in the header row above the card body.");
+        Assert.IsTrue(name.Y + name.Height <= color.Y, "Role name field must sit above the color swatches (the card body order).");
+        Assert.IsTrue(invite.Y - (name.Y + name.Height) >= 0, "Role name field must stay above the invite-by-role control.");
     }
 
     private static ILocatorAssertions Expect(ILocator locator) => Assertions.Expect(locator);

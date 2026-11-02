@@ -1,5 +1,6 @@
 @namespace Tempo.Blazor.Components.Signing
 @using Tempo.Blazor.Abstractions.Models
+@using Tempo.Blazor.Components.Inputs
 
 <TmSigningStepShell Field="Field"
                     TitleId="@_titleId"
@@ -11,18 +12,23 @@
                     FallbackCulture="@FallbackCulture"
                     Class="@ShellClass"
                     @attributes="AdditionalAttributes">
-    @* The shell title is the input's accessible name (this instance's stable id), the description
-       (when the field carries one) and the validation alert (while one shows) its descriptions. *@
-    <input class="tm-signing-number-step__input"
-           type="number"
-           value="@FormattedValue"
-           min="@Field.Validation?.Min"
-           max="@Field.Validation?.Max"
-           step="@Field.Validation?.Step"
-           disabled="@Disabled"
-           placeholder="@PlaceholderText"
-           aria-labelledby="@_titleId"
-           aria-describedby="@DescribedBy"
-           aria-invalid="@BoolText(HasValidationMessage)"
-           @onchange="HandleValueChangedAsync" />
+    @* SI1 (Signing redesign phase 4): a type="text" input with inputmode="decimal" — the numeric
+       keyboard stays, but a Czech signer can finally type the decimal COMMA, which the old native
+       type="number" + InvariantCulture parse rejected. The shell title (this instance's stable id)
+       is the accessible name; the range hint (below), the field description and the validation
+       alert are the splatted aria-describedby. *@
+    <TmTextInput Value="@DisplayValue"
+                 ValueChanged="HandleValueChangedAsync"
+                 OnBlur="HandleBlurAsync"
+                 Type="text"
+                 Placeholder="@PlaceholderText"
+                 Disabled="@Disabled"
+                 IsValid="@ValidationState"
+                 Class="tm-signing-number-step__input"
+                 AdditionalAttributes="@(BuildInputAttributes())" />
+
+    @if (HasRangeHint)
+    {
+        <div id="@RangeHintId" class="tm-signing-number-step__range">@RangeHintText</div>
+    }
 </TmSigningStepShell>

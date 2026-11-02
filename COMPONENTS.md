@@ -6365,14 +6365,19 @@ Kompletní panel aktivity entity (timeline + komentáře + přílohy).
 |----------|-----|---------|-------|
 | `EntityId` | `string` | — | ID entity |
 | `TimelineEntries` | `IEnumerable<ITimelineEntry>?` | `null` | Timeline |
-| `Comments` | `IReadOnlyList<ICommentEntry>?` | `null` | Komentáře |
+| `Comments` | `IReadOnlyList<TmCommentEntry>` | `[]` | Komentáře |
 | `Attachments` | `IReadOnlyList<IFileAttachment>?` | `null` | Přílohy |
 | `AttachmentProvider` | `IFileAttachmentProvider?` | `null` | Provider příloh |
 | `ShowTimeline` | `bool` | `true` | Zobrazit timeline |
 | `ShowComments` | `bool` | `true` | Zobrazit komentáře |
 | `ShowAttachments` | `bool` | `true` | Zobrazit přílohy |
-| `OnCommentAdded` | `EventCallback<string>` | — | Přidání komentáře |
+| `OnCommentAdded` | `EventCallback<string>` | — | Přidání komentáře (HTML). Předává se do `TmActivityComments`; při novém komentáři až po `OnCommentSubmitted` |
+| `OnCommentSubmitted` | `EventCallback<TmCommentSubmission>` | — | Nový komentář: HTML + příznak interního režimu. Log nic nefiltruje |
 | `OnCommentDeleted` | `EventCallback<string>` | — | Smazání komentáře |
+| `CommentActions` | `RenderFragment<TmCommentEntry>?` | `null` | Vlastní akce za Edit/Delete; předá se beze změny |
+| `SupportsMentions` | `bool` | `false` | Našeptávač zmínek na záložce komentářů; bez `MentionProvider` zůstane vypnutý |
+| `MentionProvider` | `ITmPeopleProvider?` | `null` | Zdroj lidí pro `@` |
+| `ShowInternalToggle` | `bool` | `false` | Přepínač Interní v composeru. Log interní komentář neskryje |
 | `Class` | `string?` | `null` | Další CSS třídy |
 | `AdditionalAttributes` | `Dictionary<string, object>?` | `null` | Další HTML atributy |
 
@@ -6399,18 +6404,25 @@ Komentáře s přidáváním, editací a mazáním.
 | `tm-comments` | Kořenový kontejner |
 | `tm-comments-empty` | Prázdný stav |
 | `tm-comment-list` | Seznam komentářů |
-| `tm-comment-item` | Položka komentáře |
+| `tm-comment-item` | Položka komentáře (`data-comment-id`, `data-internal`) |
+| `tm-comment-item--internal` | Interní komentář (podbarvení + levý pruh) |
 | `tm-comment-avatar` | Avatar autora |
 | `tm-comment-body` | Tělo komentáře |
 | `tm-comment-meta` | Metadata |
 | `tm-comment-author` | Autor |
 | `tm-comment-time` | Čas |
 | `tm-comment-edited` | Indikátor editace |
+| `tm-comment-internal-label` | Štítek interního komentáře (`IconNames.Lock` + lokalizovaný text; jen při `IsInternal`) |
+| `tm-comment-badge` | Spotřebitelský štítek v `.tm-comment-meta` (`TmBadge`, `data-badge-tone`) |
 | `tm-comment-content` | Obsah komentáře |
-| `tm-comment-actions` | Akce |
+| `tm-comment-actions` | Akce (edit/delete a volitelně `CommentActions`; prázdný řádek se nevykreslí) |
+| `tm-comment-actions__custom` | Obal spotřebitelského `CommentActions` (není fokusovatelný, bez kláves) |
 | `tm-comment-edit-btn` | Tlačítko editace |
 | `tm-comment-delete-btn` | Tlačítko smazání |
 | `tm-comment-editor` | Editor komentáře |
+| `tm-comment-editor--internal` | Composer v interním režimu (stejné tokeny jako interní komentář) |
+| `tm-comment-internal-toggle` | Přepínač Interní v patičce composeru (jen při `ShowInternalToggle`; ne v inline editaci) |
+| `tm-comment-internal-toggle-hint` | Skrytý popis přepínače (`aria-describedby`; id je per instance) |
 | `tm-comment-editor-actions` | Akce editoru |
 | `tm-comment-submit-btn` | Tlačítko odeslání |
 | `tm-comment-cancel-btn` | Tlačítko zrušení |
@@ -6420,11 +6432,16 @@ Komentáře s přidáváním, editací a mazáním.
 
 | Parametr | Typ | Výchozí | Popis |
 |----------|-----|---------|-------|
-| `Comments` | `IReadOnlyList<ICommentEntry>` | `[]` | Komentáře |
-| `OnCommentAdded` | `EventCallback<string>` | — | Přidání |
+| `Comments` | `IReadOnlyList<TmCommentEntry>` | `[]` | Komentáře |
+| `OnCommentAdded` | `EventCallback<string>` | — | Přidání (HTML). Zůstává; při novém komentáři se volá až po `OnCommentSubmitted` |
+| `OnCommentSubmitted` | `EventCallback<TmCommentSubmission>` | — | Nový komentář: HTML + `IsInternal`. Pořadí: tento callback, pak `OnCommentAdded`. Editace ho nevolá |
 | `OnCommentDeleted` | `EventCallback<string>` | — | Smazání |
 | `OnCommentEdited` | `EventCallback<(string Id, string NewText)>` | — | Editace |
 | `ShowAddButton` | `bool` | `true` | Zobrazit přidávání |
+| `SupportsMentions` | `bool` | `false` | Našeptávač zmínek v composeru i inline editaci; bez `MentionProvider` zůstane vypnutý |
+| `MentionProvider` | `ITmPeopleProvider?` | `null` | Zdroj lidí pro `@` |
+| `ShowInternalToggle` | `bool` | `false` | Přepínač Interní v composeru; po odeslání/zrušení se vrací na vypnuto |
+| `CommentActions` | `RenderFragment<TmCommentEntry>?` | `null` | Vlastní akce za Edit/Delete (tlačítko i dialog dodá konzument); skryté při inline editaci daného komentáře |
 | `Disabled` | `bool` | `false` | Zakáže přidávání komentářů |
 | `Class` | `string?` | `null` | Další CSS třídy |
 | `AdditionalAttributes` | `Dictionary<string, object>?` | `null` | Další HTML atributy |
@@ -6620,7 +6637,7 @@ Jednoduchý rich text editor (pro komentáře).
 | `ValueChanged` | `EventCallback<string>` | — | Změna |
 | `Placeholder` | `string?` | `null` | Placeholder |
 | `MaxLength` | `int?` | `null` | Max. znaků |
-| `SupportsMentions` | `bool` | `false` | @zmínky |
+| `SupportsMentions` | `bool` | `false` | @zmínky; otevřený listbox je `role=combobox` s `aria-controls` `{editorId}-mentions` |
 | `MentionProvider` | `IMentionDataProvider?` | `null` | Provider zmínek |
 | `SupportsTokens` | `bool` | `false` | Podpora tokenů/proměnných |
 | `TokenProvider` | `ITokenDataProvider?` | `null` | Provider tokenů |
@@ -6994,7 +7011,9 @@ Signing modely jsou v `Tempo.Blazor.Abstractions`, aby je mohlo referencovat API
 <script src="_content/Tempo.Blazor/js/signature-capture.js"></script>
 ```
 
-`TmPdfTemplateDesigner`, `TmSigningFormRunner`, `TmDocumentPageViewer`, produktové panely a signing step komponenty jsou provider-agnostic. `TmPdfTemplateDesigner` používá malý JS helper načítaný dynamickým importem pro přesný převod souřadnic při zoomu a vkládání polí; hostitelská aplikace typicky jen načte hlavní CSS:
+`TmPdfTemplateDesigner`, `TmSigningFormRunner`, `TmDocumentPageViewer`, produktové panely a signing step komponenty jsou provider-agnostic. Kroky runneru jsou `TmTextInput`, `TmTextArea`, `TmSelect`, `TmCheckbox`, `TmRadioGroup`, `TmFileDropZone`; **výjimka je datum** — nativní `<input type="date">`. Mobilní panel runneru je `TmDrawer` bottom sheet (pásma 640 / 1024). Runner vždy zapíná `EnablePinchZoom`. `DefaultSignatureMode` (`Auto` = Draw na hrubém ukazateli) rozhoduje jen když šablona režim neřekne. Aktivní kroky (telefon / příloha / externí) se dokončí až po potvrzení hostitelem — externí jen na hostem zapsané `true`. Přílohu čte host uvnitř callbacku (limit SignalR). Designer měří vlastní kontejner (`LayoutMode`, prahy 768 / 1200). Inspektor vždy ukazuje geometrii; samostatný panel má `ShowGeometry` default false. Barva role 6 je `#a16207` (light) / `#facc15` (dark). Plný kontrakt: [docs/signing.md](docs/signing.md).
+
+`TmPdfTemplateDesigner` načítá `pdf-template-designer.js` a `pdf-template-designer-pointer.js` (a přes něj `pointer-drag.js`). `TmSigningFormRunner` načítá `signing-runner.js` (`pointer-gesture.js`). `TmRecipientRoleEditor`, `TmConditionBuilder` a `TmFormulaBuilder` sdílejí `signing-editor.js` — `formula-builder.js` neexistuje. Signing ES moduly nepotřebují `<script>`. CSP: 4 Signing moduly + `pointer-drag.js`, `pointer-gesture.js`, `signature-capture.js` (žádný `eval`). `_content/Tempo.Blazor/js/` musí být servírován. Hostitelská aplikace typicky jen načte CSS:
 
 ```html
 <link href="_content/Tempo.Blazor/css/tempo-blazor.css" rel="stylesheet" />

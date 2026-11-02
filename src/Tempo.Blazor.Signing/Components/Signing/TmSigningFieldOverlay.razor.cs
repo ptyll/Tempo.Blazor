@@ -404,14 +404,14 @@ public partial class TmSigningFieldOverlay
         return OnClick.InvokeAsync(new TmSigningFieldOverlayPointerEventArgs(Field, Area, new MouseEventArgs()));
     }
 
-    private Task HandleStartMoveAsync(MouseEventArgs args)
+    private Task HandleStartMoveAsync(PointerEventArgs args)
     {
         return Field is null || IsDisabled || !Draggable || !OnStartMove.HasDelegate
             ? Task.CompletedTask
             : OnStartMove.InvokeAsync(new TmSigningFieldOverlayPointerEventArgs(Field, Area, args));
     }
 
-    private Task HandleStartResizeAsync(SigningResizeHandle handle, MouseEventArgs args)
+    private Task HandleStartResizeAsync(SigningResizeHandle handle, PointerEventArgs args)
     {
         return Field is null || IsDisabled || !Editable || !OnStartResize.HasDelegate
             ? Task.CompletedTask
