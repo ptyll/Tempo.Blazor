@@ -796,6 +796,119 @@ public class TmActivityCommentsTests : LocalizationTestBase
         tokens.Should().NotContain("--tm-comment-internal-fg");
     }
 
+    [Fact]
+    public void CommentActions_RenderedPerCommentWithEntryContext()
+    {
+        var seen = new List<string>();
+        var cut = Render<TmActivityComments>(p => p
+            .Add(c => c.Comments, TwoComments())
+            .Add(c => c.CommentActions, entry => builder =>
+            {
+                seen.Add(entry.Id);
+                builder.OpenElement(0, "button");
+                builder.AddAttribute(1, "type", "button");
+                builder.AddAttribute(2, "class", "tm-comment-custom-probe");
+                builder.AddAttribute(3, "data-entry-id", entry.Id);
+                builder.AddContent(4, entry.Author.DisplayName);
+                builder.CloseElement();
+            }));
+
+        var items = cut.FindAll(".tm-comment-item");
+        items.Should().HaveCount(2);
+        seen.Should().Equal("c1", "c2");
+        foreach (var item in items)
+        {
+            var actions = item.QuerySelector(".tm-comment-actions")!;
+            var custom = actions.QuerySelector(".tm-comment-actions__custom")!;
+            // Custom slot follows the built-in edit/delete controls, never precedes them.
+            actions.LastElementChild.Should().BeSameAs(custom);
+            var probe = custom.QuerySelector(".tm-comment-custom-probe")!;
+            probe.GetAttribute("data-entry-id").Should().Be(item.GetAttribute("data-comment-id"));
+        }
+
+        items[0].QuerySelector(".tm-comment-edit-btn").Should().NotBeNull();
+        items[1].QuerySelector(".tm-comment-edit-btn").Should().BeNull();
+    }
+
+    [Fact]
+    public void CommentActions_ContainerRenderedWithoutEditDelete()
+    {
+        var comments = TwoComments();
+        comments[1].CanEdit = false;
+        comments[1].CanDelete = false;
+
+        var cut = Render<TmActivityComments>(p => p
+            .Add(c => c.Comments, comments)
+            .Add(c => c.CommentActions, entry => builder =>
+            {
+                builder.OpenElement(0, "button");
+                builder.AddAttribute(1, "type", "button");
+                builder.AddAttribute(2, "class", "tm-comment-custom-probe");
+                builder.AddContent(3, entry.Id);
+                builder.CloseElement();
+            }));
+
+        var bob = cut.FindAll(".tm-comment-item")[1];
+        bob.QuerySelector(".tm-comment-edit-btn").Should().BeNull();
+        bob.QuerySelector(".tm-comment-delete-btn").Should().BeNull();
+        bob.QuerySelector(".tm-comment-actions .tm-comment-actions__custom .tm-comment-custom-probe")
+            .Should().NotBeNull();
+    }
+
+    [Fact]
+    public void CommentActions_HiddenWhileEditingThatComment()
+    {
+        var cut = Render<TmActivityComments>(p => p
+            .Add(c => c.Comments, TwoComments())
+            .Add(c => c.CommentActions, entry => builder =>
+            {
+                builder.OpenElement(0, "button");
+                builder.AddAttribute(1, "type", "button");
+                builder.AddAttribute(2, "class", "tm-comment-custom-probe");
+                builder.AddAttribute(3, "data-entry-id", entry.Id);
+                builder.CloseElement();
+            }));
+
+        cut.FindAll(".tm-comment-item")[0].QuerySelector(".tm-comment-edit-btn")!.Click();
+
+        var editing = cut.Find("[data-comment-id='c1']");
+        editing.QuerySelector(".tm-comment-actions").Should().BeNull();
+        editing.QuerySelector(".tm-comment-actions__custom").Should().BeNull();
+        editing.QuerySelector(".tm-comment-editor").Should().NotBeNull();
+
+        var other = cut.Find("[data-comment-id='c2']");
+        other.QuerySelector(".tm-comment-actions__custom .tm-comment-custom-probe")
+            .GetAttribute("data-entry-id").Should().Be("c2");
+    }
+
+    [Fact]
+    public void NoActions_NoEmptyContainer()
+    {
+        var comments = TwoComments();
+        comments[1].CanEdit = false;
+        comments[1].CanDelete = false;
+
+        var cut = Render<TmActivityComments>(p => p
+            .Add(c => c.Comments, comments));
+
+        cut.FindAll(".tm-comment-item")[0].QuerySelector(".tm-comment-actions").Should().NotBeNull();
+        cut.FindAll(".tm-comment-item")[1].QuerySelector(".tm-comment-actions").Should().BeNull();
+        cut.FindAll(".tm-comment-actions__custom").Should().BeEmpty();
+    }
+
+    [Fact]
+    public void CommentActions_CustomSlot_DoesNotEmulateActivation()
+    {
+        var source = File.ReadAllText(Path.Combine(
+            ThemeCss.RepositoryRoot().FullName,
+            "src", "Tempo.Blazor", "Components", "Activity", "TmActivityComments.razor"));
+        var slot = source.IndexOf("tm-comment-actions__custom", StringComparison.Ordinal);
+        slot.Should().BeGreaterThan(0);
+        var window = source.Substring(slot, Math.Min(400, source.Length - slot));
+        window.Should().NotContain("onkeydown");
+        window.Should().NotContain("tabindex");
+    }
+
     private static TmCommentEntry Comment(
         string id,
         string authorName,

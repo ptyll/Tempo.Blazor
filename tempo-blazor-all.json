@@ -1241,7 +1241,7 @@
           "kind": "Component",
           "category": "Activity",
           "namespace": "Tempo.Blazor.Components.Activity",
-          "description": "Comment thread component with inline rich text editing via TmRichEditorSimple. Supports adding, editing, and deleting comments with author avatars, relative timestamps, and edit indicators. Communicates changes via EventCallbacks. Exposes a draft-guard surface: OnDraftChanged reports every TmCommentDraftState transition (editor open/closed, which comment is edited, whether unsaved content exists) with value-equality dedup, HasUnsavedDraft polls the same flag at any time, and DiscardDraftAsync closes the editor after the consumer's own confirmation. Each comment item carries data-comment-id (the entry id) and data-internal=\"true|false\". An internal entry also gets tm-comment-item--internal and a lock TmBadge (IconNames.Lock plus the localized Internal label; the explanatory title is repeated in a tm-sr-only span, not an aria-label). Each rendered consumer badge carries data-badge-tone (neutral|info|success|warning|danger|accent) and, when Title is set, the same tm-sr-only \": {Title}\" pattern.",
+          "description": "Comment thread component with inline rich text editing via TmRichEditorSimple. Supports adding, editing, and deleting comments with author avatars, relative timestamps, and edit indicators. Communicates changes via EventCallbacks. Exposes a draft-guard surface: OnDraftChanged reports every TmCommentDraftState transition (editor open/closed, which comment is edited, whether unsaved content exists) with value-equality dedup, HasUnsavedDraft polls the same flag at any time, and DiscardDraftAsync closes the editor after the consumer's own confirmation. CommentActions is an optional per-comment RenderFragment<TmCommentEntry> rendered after Edit/Delete inside .tm-comment-actions, wrapped by .tm-comment-actions__custom; the consumer supplies the button and any confirmation dialog. The actions row is omitted when the comment cannot be edited or deleted and CommentActions is unset, and it is hidden on the comment currently being edited. The wrapper is not focusable and handles no keys. Each comment item carries data-comment-id (the entry id) and data-internal=\"true|false\". An internal entry also gets tm-comment-item--internal and a lock TmBadge (IconNames.Lock plus the localized Internal label; the explanatory title is repeated in a tm-sr-only span, not an aria-label). Each rendered consumer badge carries data-badge-tone (neutral|info|success|warning|danger|accent) and, when Title is set, the same tm-sr-only \": {Title}\" pattern. The component never hides an internal comment.",
           "packageId": "Tempo.Blazor",
           "sourcePath": "src/Tempo.Blazor/Components/Activity/TmActivityComments.razor",
           "documentationStatus": "merged",
@@ -1250,6 +1250,12 @@
             "@using Tempo.Blazor.Components.Activity"
           ],
           "parameters": [
+            {
+              "name": "CommentActions",
+              "type": "RenderFragment<TmCommentEntry>?",
+              "isRequired": false,
+              "description": "Consumer actions rendered after the built-in Edit and Delete buttons, inside .tm-comment-actions wrapped by .tm-comment-actions__custom, once per comment with that comment's TmCommentEntry. The component does not interpret the fragment: the consumer supplies its own button and any confirmation dialog (for example an admin toggle between internal and public). The component never hides an internal comment. The actions row renders when the comment can be edited or deleted, or when this fragment is set; it is omitted when none of those apply. While that comment is being edited inline the row is hidden; other comments keep theirs. The wrapper is not focusable and does not handle keys, so it does not change tab order — put a native button in the fragment."
+            },
             {
               "name": "Comments",
               "type": "IReadOnlyList<TmCommentEntry>",
@@ -1346,11 +1352,17 @@
             "tm-comment-badge",
             "tm-comment-content",
             "tm-comment-actions",
+            "tm-comment-actions__custom",
             "tm-comment-editor",
             "tm-comment-editor-actions",
             "tm-comments-add-btn"
           ],
           "examples": [
+            {
+              "title": "Host action per comment (button + confirmation dialog)",
+              "description": "CommentActions receives the entry. The dialog and the IsInternal flip belong to the host; the component only paints the result and never hides an internal comment.",
+              "code": "<TmActivityComments Comments=\"@comments\"\n                     CommentActions=\"@VisibilityAction\" />\n<TmDialog Show=\"@_confirm\" Type=\"DialogType.Confirm\"\n          Title=\"Change visibility?\"\n          Message=\"Notifications already sent cannot be recalled.\"\n          OnResult=\"ApplyVisibility\" />\n\n@code {\n    private RenderFragment<TmCommentEntry> VisibilityAction => comment => __builder =>\n    {\n        <TmButton Variant=\"ButtonVariant.Ghost\" Size=\"ButtonSize.Sm\" Icon=\"@IconNames.Lock\"\n                  OnClick=\"@(() => Ask(comment))\">Toggle</TmButton>\n    };\n}"
+            },
             {
               "title": "Comment section with add/edit/delete",
               "code": "<TmActivityComments Comments=\"@comments\"\n                     OnCommentAdded=\"HandleAdd\"\n                     OnCommentDeleted=\"HandleDelete\"\n                     OnCommentEdited=\"HandleEdit\"\n                     ShowAddButton=\"true\" />"

@@ -448,5 +448,12 @@
   "TmDemo_EmailTemplates_Editor_SaveBackground": "Uložiť z vlákna na pozadí",
   "TmDemo_EmailTemplates_Editor_HostDirty_Yes": "Hostiteľ: neuložené zmeny",
   "TmDemo_EmailTemplates_Editor_HostDirty_No": "Hostiteľ: žiadne neuložené zmeny",
-  "TmDemo_EmailTemplates_Editor_ResolvedLayout": "Rozloženie: {0}"
+  "TmDemo_EmailTemplates_Editor_ResolvedLayout": "Rozloženie: {0}",
+  "TmDemo_ActivityComments_MakePublic": "Zverejniť",
+  "TmDemo_ActivityComments_MakeInternal": "Označiť ako interné",
+  "TmDemo_ActivityComments_ToggleTitleInternal": "Zverejniť tento komentár?",
+  "TmDemo_ActivityComments_ToggleTitlePublic": "Označiť tento komentár ako interný?",
+  "TmDemo_ActivityComments_ToggleMessageInternal": "Komentár uvidí každý, kto vlákno otvorí. Už odoslané notifikácie nemožno odvolať.",
+  "TmDemo_ActivityComments_ToggleMessagePublic": "Interný komentár majú vidieť len privilegovaní používatelia. Komponenta ho neskrýva — filtrovanie je na aplikácii. Už odoslané notifikácie nemožno odvolať.",
+  "TmDemo_ActivityComments_ToggleConfirm": "Zmeniť viditeľnosť"
 }

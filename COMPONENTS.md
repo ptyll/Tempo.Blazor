@@ -6410,7 +6410,8 @@ Komentáře s přidáváním, editací a mazáním.
 | `tm-comment-internal-label` | Štítek interního komentáře (`IconNames.Lock` + lokalizovaný text; jen při `IsInternal`) |
 | `tm-comment-badge` | Spotřebitelský štítek v `.tm-comment-meta` (`TmBadge`, `data-badge-tone`) |
 | `tm-comment-content` | Obsah komentáře |
-| `tm-comment-actions` | Akce |
+| `tm-comment-actions` | Akce (edit/delete a volitelně `CommentActions`; prázdný řádek se nevykreslí) |
+| `tm-comment-actions__custom` | Obal spotřebitelského `CommentActions` (není fokusovatelný, bez kláves) |
 | `tm-comment-edit-btn` | Tlačítko editace |
 | `tm-comment-delete-btn` | Tlačítko smazání |
 | `tm-comment-editor` | Editor komentáře |
@@ -6428,6 +6429,7 @@ Komentáře s přidáváním, editací a mazáním.
 | `OnCommentDeleted` | `EventCallback<string>` | — | Smazání |
 | `OnCommentEdited` | `EventCallback<(string Id, string NewText)>` | — | Editace |
 | `ShowAddButton` | `bool` | `true` | Zobrazit přidávání |
+| `CommentActions` | `RenderFragment<TmCommentEntry>?` | `null` | Vlastní akce za Edit/Delete (tlačítko i dialog dodá konzument); skryté při inline editaci daného komentáře |
 | `Disabled` | `bool` | `false` | Zakáže přidávání komentářů |
 | `Class` | `string?` | `null` | Další CSS třídy |
 | `AdditionalAttributes` | `Dictionary<string, object>?` | `null` | Další HTML atributy |

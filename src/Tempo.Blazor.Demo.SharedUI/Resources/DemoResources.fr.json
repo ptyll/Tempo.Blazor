@@ -448,5 +448,12 @@
   "TmDemo_EmailTemplates_Editor_SaveBackground": "Enregistrer depuis un thread d’arrière-plan",
   "TmDemo_EmailTemplates_Editor_HostDirty_Yes": "Hôte : modifications non enregistrées",
   "TmDemo_EmailTemplates_Editor_HostDirty_No": "Hôte : aucune modification non enregistrée",
-  "TmDemo_EmailTemplates_Editor_ResolvedLayout": "Disposition : {0}"
+  "TmDemo_EmailTemplates_Editor_ResolvedLayout": "Disposition : {0}",
+  "TmDemo_ActivityComments_MakePublic": "Rendre public",
+  "TmDemo_ActivityComments_MakeInternal": "Rendre interne",
+  "TmDemo_ActivityComments_ToggleTitleInternal": "Rendre ce commentaire public ?",
+  "TmDemo_ActivityComments_ToggleTitlePublic": "Rendre ce commentaire interne ?",
+  "TmDemo_ActivityComments_ToggleMessageInternal": "Toute personne qui ouvre ce fil verra le commentaire. Les notifications déjà envoyées ne peuvent pas être rappelées.",
+  "TmDemo_ActivityComments_ToggleMessagePublic": "Seul un utilisateur privilégié devrait voir un commentaire interne. Le composant ne le masque pas — c'est à l'application de filtrer. Les notifications déjà envoyées ne peuvent pas être rappelées.",
+  "TmDemo_ActivityComments_ToggleConfirm": "Changer la visibilité"
 }

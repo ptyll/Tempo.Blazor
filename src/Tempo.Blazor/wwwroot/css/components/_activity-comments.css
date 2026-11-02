@@ -77,8 +77,25 @@
 
 .tm-comment-actions {
   display: flex;
+  flex-wrap: wrap;
+  align-items: center;
   gap: var(--tm-space-3);
   margin-top: var(--tm-space-1);
+}
+
+/* Consumer slot. Not focusable; inherits the row's alignment so a host button
+   sits on the same line as Edit/Delete and wraps with them on a narrow thread. */
+.tm-comment-actions__custom {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--tm-space-2);
+}
+
+/* Host action in the slot (demo visibility toggle): icon + short label, same line as Edit/Delete. */
+.tm-comment-actions__custom .tm-link-button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--tm-space-1);
 }
 
 .tm-comment-editor {

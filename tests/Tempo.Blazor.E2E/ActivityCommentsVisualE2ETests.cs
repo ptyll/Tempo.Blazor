@@ -46,10 +46,12 @@ public class ActivityCommentsVisualE2ETests : WasmTestBase
 
     private async Task CaptureSectionAsync(IPage page, string name)
     {
-        await WaitForLayoutToSettleAsync(page, SectionSelector);
+        // Park the pointer so a sticky header or a leftover tooltip is not in the shot.
+        await page.Mouse.MoveAsync(0, 0);
+        await WaitForLayoutToSettleAsync(page, ".tm-comments");
         Directory.CreateDirectory(OutputDirectory);
         var path = Path.Combine(OutputDirectory, $"{name}.png");
-        await page.Locator(SectionSelector).ScreenshotAsync(new LocatorScreenshotOptions
+        await page.Locator(".tm-comments").ScreenshotAsync(new LocatorScreenshotOptions
         {
             Path = path,
             Timeout = 60_000

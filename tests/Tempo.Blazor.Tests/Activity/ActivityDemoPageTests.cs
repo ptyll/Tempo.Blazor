@@ -4,6 +4,7 @@ using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Tempo.Blazor.Demo.Services;
 using Tempo.Blazor.Demo.SharedUI.Pages;
+using Tempo.Blazor.Localization;
 using Tempo.Blazor.Tests.Localization;
 
 namespace Tempo.Blazor.Tests.Activity;
@@ -17,6 +18,7 @@ public class ActivityDemoPageTests : LocalizationTestBase
 {
     public ActivityDemoPageTests()
     {
+        Services.AddSingleton<ITmLocalizer>(new DemoTableEnglishLocalizer(BuildEnglishLocalizer()));
         Services.AddHttpClient("DemoApi", client =>
                 client.BaseAddress = new Uri("https://demo.test"))
             .ConfigurePrimaryHttpMessageHandler(() => new DemoApiHandler());
@@ -101,6 +103,59 @@ public class ActivityDemoPageTests : LocalizationTestBase
         cut.Find("[data-testid='activity-comments-draft-unsaved']").TextContent.Trim().Should().Be("no");
         cut.Find("[data-testid='activity-comments-discard-draft']").HasAttribute("disabled").Should().BeTrue();
     }
+
+    [Fact]
+    public void VisibilityAction_ShowsUnlockWhenInternal_LockWhenPublic_WithVisibleLabel()
+    {
+        var cut = Render<ActivityPage>();
+
+        var internalToggle = cut.Find("[data-testid='activity-comments-toggle-demo-c1']");
+        internalToggle.TextContent.Should().Contain("Make public");
+        internalToggle.GetAttribute("aria-label").Should().Be("Make public");
+        internalToggle.ClassList.Should().Contain("tm-link-button");
+        internalToggle.InnerHtml.Should().Contain("M7 11V7a5 5 0 0 1 9.9-1", "internal comment offers Unlock");
+
+        var publicToggle = cut.Find("[data-testid='activity-comments-toggle-demo-c2']");
+        publicToggle.TextContent.Should().Contain("Make internal");
+        publicToggle.InnerHtml.Should().Contain("M7 11V7a5 5 0 0 1 10 0v4", "public comment offers Lock");
+    }
+
+    [Fact]
+    public void VisibilityDialog_IsDangerousOnlyWhenMakingPublic()
+    {
+        var cut = Render<ActivityPage>();
+
+        cut.Find("[data-testid='activity-comments-toggle-demo-c2']").Click();
+        VisibilityDialog(cut).ClassList.Should().NotContain("tm-dialog--dangerous");
+        VisibilityDialog(cut).ClassList.Should().Contain("tm-dialog--warning");
+
+        cut.Find("[data-testid='activity-comments-visibility-dialog'] .tm-dialog-btn-cancel").Click();
+
+        cut.Find("[data-testid='activity-comments-toggle-demo-c1']").Click();
+        VisibilityDialog(cut).ClassList.Should().Contain("tm-dialog--dangerous");
+    }
+
+    [Fact]
+    public void VisibilityConfirm_IsNoOp_WhenCommentDeletedWhileDialogOpen()
+    {
+        var cut = Render<ActivityPage>();
+
+        cut.Find("[data-testid='activity-comments-toggle-demo-c1']").Click();
+        VisibilityDialog(cut).ClassList.Should().Contain("tm-dialog--dangerous");
+
+        // Delete the pending comment through its own action while the dialog is still open.
+        cut.Find("[data-comment-id='demo-c1'] .tm-comment-delete-btn").Click();
+        cut.FindAll("[data-comment-id='demo-c1']").Should().BeEmpty();
+
+        cut.Find("[data-testid='activity-comments-visibility-dialog'] .tm-dialog-btn-ok").Click();
+
+        cut.FindAll("[data-testid='activity-comments-visibility-dialog']").Should().BeEmpty();
+        cut.FindAll("[data-testid='activity-comments-section'] .tm-comment-item").Should().HaveCount(2);
+        cut.Find("[data-comment-id='demo-c2']").GetAttribute("data-internal").Should().Be("false");
+    }
+
+    private static AngleSharp.Dom.IElement VisibilityDialog(IRenderedComponent<ActivityPage> cut)
+        => cut.Find("[data-testid='activity-comments-visibility-dialog'] .tm-dialog");
 
     private sealed class DemoApiHandler : HttpMessageHandler
     {

@@ -1,5 +1,6 @@
 @page "/activity"
 @using Tempo.Blazor.Abstractions.Shared
+@inject ITmLocalizer Loc
 <PageTitle>Activity – Tempo.Blazor</PageTitle>
 
 <!-- Page Header -->
@@ -58,6 +59,9 @@
         the flags a dirty-guard needs before a refresh or retry throws an in-progress comment away.
         "Discard draft" demonstrates the consumer path once the user confirmed the discard
         (<code>DiscardDraftAsync</code> via <code>@@ref</code>; the component itself never asks).
+        Each comment also carries a host action (Unlock when internal, Lock when public, with a
+        short visible label) that asks in a dialog before flipping internal / public — the
+        component only paints the result. Making a comment public is the dangerous confirm.
     </p>
 
     <div class="max-w-3xl">
@@ -89,7 +93,8 @@
                                 OnCommentAdded="@AddStandaloneComment"
                                 OnCommentEdited="@EditStandaloneComment"
                                 OnCommentDeleted="@DeleteStandaloneComment"
-                                OnDraftChanged="@HandleDraftChanged" />
+                                OnDraftChanged="@HandleDraftChanged"
+                                CommentActions="@CommentVisibilityAction" />
         </div>
     </div>
 </section>
@@ -221,6 +226,16 @@
         </div>
     </div>
 </section>
+
+<TmDialog Show="_showVisibilityDialog"
+          Type="DialogType.Confirm"
+          Variant="DialogVariant.Warning"
+          IsDangerous="@VisibilityIsDangerous"
+          Title="@VisibilityDialogTitle"
+          Message="@VisibilityDialogMessage"
+          OkButtonText="@Loc["TmDemo_ActivityComments_ToggleConfirm"]"
+          OnResult="HandleVisibilityResult"
+          data-testid="activity-comments-visibility-dialog" />
 
 @code {
     [Inject] private ActivityHttpService ActivityService { get; set; } = default!;
@@ -385,6 +400,74 @@
             comment.BodyFormat = TmCommentBodyFormat.Html;
             comment.EditedAt = DateTimeOffset.Now;
         }
+        return Task.CompletedTask;
+    }
+
+    private string? _pendingVisibilityCommentId;
+    private bool _showVisibilityDialog;
+
+    private string VisibilityDialogTitle
+        => PendingComment()?.IsInternal == true
+            ? Loc["TmDemo_ActivityComments_ToggleTitleInternal"]
+            : Loc["TmDemo_ActivityComments_ToggleTitlePublic"];
+
+    private string VisibilityDialogMessage
+        => PendingComment()?.IsInternal == true
+            ? Loc["TmDemo_ActivityComments_ToggleMessageInternal"]
+            : Loc["TmDemo_ActivityComments_ToggleMessagePublic"];
+
+    // Making a comment public is the irreversible step (notifications already sent cannot be
+    // recalled, and everyone who opens the thread will see it). Marking one internal is not.
+    private bool VisibilityIsDangerous => PendingComment()?.IsInternal == true;
+
+    private TmCommentEntry? PendingComment()
+        => _pendingVisibilityCommentId is null
+            ? null
+            : _standaloneComments.FirstOrDefault(c => c.Id == _pendingVisibilityCommentId);
+
+    /// <summary>
+    /// Host-owned action. The component renders the fragment and does not know what it does;
+    /// the dialog and the visibility flip live here.
+    /// </summary>
+    private RenderFragment<TmCommentEntry> CommentVisibilityAction => comment => __builder =>
+    {
+        var label = comment.IsInternal
+            ? Loc["TmDemo_ActivityComments_MakePublic"]
+            : Loc["TmDemo_ActivityComments_MakeInternal"];
+        // Unlock = the comment is internal and the action makes it public; Lock = it is public
+        // and the action makes it internal. Same link style as Edit/Delete, with a short visible label.
+        <button type="button"
+                class="tm-link-button"
+                title="@label"
+                aria-label="@label"
+                data-testid="@($"activity-comments-toggle-{comment.Id}")"
+                @onclick="@(() => AskToggleVisibility(comment))">
+            <TmIcon Name="@(comment.IsInternal ? IconNames.Unlock : IconNames.Lock)" Size="IconSize.Xs" />
+            <span>@label</span>
+        </button>
+    };
+
+    private void AskToggleVisibility(TmCommentEntry comment)
+    {
+        _pendingVisibilityCommentId = comment.Id;
+        _showVisibilityDialog = true;
+    }
+
+    private Task HandleVisibilityResult(bool? confirmed)
+    {
+        if (confirmed == true)
+        {
+            // No-op when the comment was deleted while the dialog was open: the id no longer
+            // resolves, so nothing is flipped and the dialog just closes.
+            var comment = PendingComment();
+            if (comment is not null)
+            {
+                comment.IsInternal = !comment.IsInternal;
+            }
+        }
+
+        _showVisibilityDialog = false;
+        _pendingVisibilityCommentId = null;
         return Task.CompletedTask;
     }
 

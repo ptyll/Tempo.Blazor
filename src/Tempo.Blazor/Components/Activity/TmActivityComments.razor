@@ -109,24 +109,37 @@
                                     @c.Body
                                 }
                             </div>
-                            <div class="tm-comment-actions">
-                                @if (c.CanEdit)
-                                {
-                                    <button class="tm-link-button tm-comment-edit-btn"
-                                            type="button"
-                                            @onclick="() => StartEdit(c)">
-                                        @Loc["Tm_Edit"]
-                                    </button>
-                                }
-                                @if (c.CanDelete)
-                                {
-                                    <button class="tm-link-button tm-comment-delete-btn"
-                                            type="button"
-                                            @onclick="() => DeleteCommentAsync(c.Id)">
-                                        @Loc["Tm_Delete"]
-                                    </button>
-                                }
-                            </div>
+                            @if (c.CanEdit || c.CanDelete || CommentActions is not null)
+                            {
+                                <div class="tm-comment-actions">
+                                    @if (c.CanEdit)
+                                    {
+                                        <button class="tm-link-button tm-comment-edit-btn"
+                                                type="button"
+                                                @onclick="() => StartEdit(c)">
+                                            @Loc["Tm_Edit"]
+                                        </button>
+                                    }
+                                    @if (c.CanDelete)
+                                    {
+                                        <button class="tm-link-button tm-comment-delete-btn"
+                                                type="button"
+                                                @onclick="() => DeleteCommentAsync(c.Id)">
+                                            @Loc["Tm_Delete"]
+                                        </button>
+                                    }
+                                    @if (CommentActions is not null)
+                                    {
+                                        @* Consumer content only. No key handler and no tabindex here:
+                                           native buttons activate themselves; a non-native control
+                                           inside the fragment must emulate Enter/Space on its own
+                                           (docs/keyboard-activation-convention.md). *@
+                                        <span class="tm-comment-actions__custom">
+                                            @CommentActions(c)
+                                        </span>
+                                    }
+                                </div>
+                            }
                         }
                     </div>
                 </li>
@@ -185,6 +198,28 @@
 
     /// <summary>Shows the Add comment button when no editor is open. Defaults to true.</summary>
     [Parameter] public bool ShowAddButton { get; set; } = true;
+
+    /// <summary>
+    /// Consumer actions rendered after the built-in Edit and Delete buttons, inside
+    /// <c>.tm-comment-actions</c> wrapped by <c>.tm-comment-actions__custom</c>, once per comment
+    /// with that comment's <see cref="TmCommentEntry"/>. The component does not interpret the
+    /// fragment: the consumer supplies its own button and any confirmation dialog (for example an
+    /// admin toggle between internal and public). The component never hides an internal comment —
+    /// flipping <see cref="TmCommentEntry.IsInternal"/> is the consumer's job.
+    /// <para>
+    /// The actions row renders when the comment can be edited or deleted, or when this fragment is
+    /// set; it is omitted entirely when none of those apply, so an empty row is never painted.
+    /// While that comment is being edited inline the row (built-in buttons and this fragment) is
+    /// hidden; other comments keep theirs.
+    /// </para>
+    /// <para>
+    /// The wrapper is not focusable and does not handle keys, so it does not change tab order.
+    /// Put a native <c>&lt;button&gt;</c> (or <c>TmButton</c>) in the fragment — the browser
+    /// activates it. A non-native focusable must emulate Enter and Space itself; see
+    /// <c>docs/keyboard-activation-convention.md</c>.
+    /// </para>
+    /// </summary>
+    [Parameter] public RenderFragment<TmCommentEntry>? CommentActions { get; set; }
 
     /// <summary>
     /// Notifies the parent that the comment draft state changed. Fires ONLY when the
