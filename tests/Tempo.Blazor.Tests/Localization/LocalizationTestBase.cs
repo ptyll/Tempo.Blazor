@@ -1,4 +1,4 @@
-using Bunit;
+﻿using Bunit;
 using Microsoft.Extensions.DependencyInjection;
 using System.Text.Json;
 using Tempo.Blazor.Components.DocumentEditor;
@@ -2829,6 +2829,11 @@ public abstract class LocalizationTestBase : BunitContext
         ["TmUserMenu_ThemeToggle"] = "Dark theme",
         ["TmUserMenu_ExtraLabel"] = "Account options",
         ["TmUserMenu_SignOut"] = "Sign out",
+        ["TmAppShell_SkipToContent"] = "Skip to content",
+        ["TmAppShell_NavLabel"] = "Main navigation",
+        ["TmAppShell_WorkArea"] = "Work area",
+        ["TmAppShell_ResizeWorkArea"] = "Resize work area",
+        ["TmAppShell_CloseWorkArea"] = "Close work area",
         ["TmWorkflowToolbox_ZoomIn"] = "Zoom in",
         ["TmWorkflowToolbox_ZoomOut"] = "Zoom out",
         ["TmWorkflowToolbox_FitToView"] = "Fit to view",
@@ -7538,6 +7543,11 @@ public abstract class LocalizationTestBase : BunitContext
         ["TmUserMenu_ThemeToggle"] = "Tmavý motiv",
         ["TmUserMenu_ExtraLabel"] = "Možnosti účtu",
         ["TmUserMenu_SignOut"] = "Odhlásit se",
+        ["TmAppShell_SkipToContent"] = "Přeskočit na obsah",
+        ["TmAppShell_NavLabel"] = "Hlavní navigace",
+        ["TmAppShell_WorkArea"] = "Pracovní plocha",
+        ["TmAppShell_ResizeWorkArea"] = "Změnit šířku pracovní plochy",
+        ["TmAppShell_CloseWorkArea"] = "Zavřít pracovní plochu",
         ["TmWorkflowToolbox_ZoomIn"] = "Přiblížit",
         ["TmWorkflowToolbox_ZoomOut"] = "Oddálit",
         ["TmWorkflowToolbox_FitToView"] = "Přizpůsobit zobrazení",

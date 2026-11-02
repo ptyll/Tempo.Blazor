@@ -12,9 +12,23 @@
    Sections, aria-current and the collapsed flyout are additive — the flat Items list renders
    exactly the markup it did before. *@
 
-<aside class="tm-sidebar @(Collapsed ? "tm-sidebar-collapsed" : "tm-sidebar-expanded") @(Collapsed && CollapseTooltips ? "tm-sidebar-tooltips" : null) @Class"
-       data-testid="@RootTestId("sidebar")"
-       @attributes="AdditionalAttributes">
+@if (IsLandmark)
+{
+    <aside class="@RootCss" data-testid="@RootTestId("sidebar")" @attributes="AdditionalAttributes">
+        @Body
+    </aside>
+}
+else
+{
+    @* A frame (TmAppShell) owns the page's landmarks: the sidebar keeps its <nav> landmark, the
+       wrapper is a plain <div>, and the page has no second complementary landmark. *@
+    <div class="@RootCss" data-testid="@RootTestId("sidebar")" @attributes="AdditionalAttributes">
+        @Body
+    </div>
+}
+
+@code {
+    private RenderFragment Body => @<text>
     <div class="tm-sidebar-header">
         @if (Header is not null)
         {
@@ -24,6 +38,8 @@
                 type="button"
                 data-testid="@TestId("sidebar-toggle")"
                 aria-label="@(Collapsed ? Loc["TmSidebar_ExpandMenu"] : Loc["TmSidebar_CollapseMenu"])"
+                aria-expanded="@ExpandedAttribute"
+                aria-controls="@ToggleAriaControls"
                 @onclick="HandleToggleAsync">
             <TmIcon Name="@(Collapsed ? IconNames.ChevronRight : IconNames.ChevronLeft)" Size="IconSize.Sm" />
         </button>
@@ -66,9 +82,7 @@
     {
         <div class="tm-sidebar-footer">@Footer</div>
     }
-</aside>
-
-@code {
+    </text>;
     private readonly string _sectionIdPrefix = $"tm-sidebar-section-{Guid.NewGuid():N}";
     private bool _listeningToLocation;
 
@@ -123,6 +137,31 @@
     /// <summary>Optional footer content (e.g. user info, version).</summary>
     [Parameter] public RenderFragment? Footer { get; set; }
 
+    /// <summary>
+    /// When true (the default) the root is an <c>&lt;aside&gt;</c> — a complementary landmark, which
+    /// is what a sidebar next to the page content is. Pass <c>false</c> when the sidebar is composed
+    /// into an application frame that owns the page's landmarks (<c>TmAppShell</c>): the root then
+    /// renders as a plain <c>&lt;div&gt;</c> and the <c>&lt;nav&gt;</c> inside keeps naming the menu,
+    /// so the page never carries two complementary landmarks.
+    /// </summary>
+    [Parameter] public bool IsLandmark { get; set; } = true;
+
+    /// <summary>
+    /// When set, the toggle reports the state of the surface it opens through <c>aria-expanded</c>
+    /// (<c>true</c> / <c>false</c>). Null (the default) renders no attribute — a plain collapse toggle
+    /// is not a disclosure and has no surface of its own. A frame whose rail toggle opens an overlay
+    /// drawer (<c>TmAppShell</c>) passes the drawer's open state, so the opener says whether the
+    /// thing it controls is open; pair it with <see cref="ToggleAriaControls"/>.
+    /// </summary>
+    [Parameter] public bool? ToggleAriaExpanded { get; set; }
+
+    /// <summary>
+    /// The DOM id of the surface the toggle opens, rendered as <c>aria-controls</c>. Null (the
+    /// default) renders no attribute: an expanded state with no identifiable target tells a screen
+    /// reader nothing.
+    /// </summary>
+    [Parameter] public string? ToggleAriaControls { get; set; }
+
     /// <summary>Additional CSS class for the root element.</summary>
     [Parameter] public string? Class { get; set; }
 
@@ -130,6 +169,23 @@
     [Parameter(CaptureUnmatchedValues = true)] public Dictionary<string, object>? AdditionalAttributes { get; set; }
 
     private string EffectiveNavLabel => string.IsNullOrWhiteSpace(NavLabel) ? Loc["TmSidebar_NavLabel"] : NavLabel!;
+
+    /// <summary>The toggle's <c>aria-expanded</c> value, or null when the host reports no surface.</summary>
+    private string? ExpandedAttribute => ToggleAriaExpanded switch
+    {
+        true => "true",
+        false => "false",
+        _ => null,
+    };
+
+    /// <summary>The root's class list — identical for the landmark and the plain-wrapper form.</summary>
+    private string RootCss => string.Join(" ", new[]
+    {
+        "tm-sidebar",
+        Collapsed ? "tm-sidebar-collapsed" : "tm-sidebar-expanded",
+        Collapsed && CollapseTooltips ? "tm-sidebar-tooltips" : null,
+        Class,
+    }.Where(static c => !string.IsNullOrWhiteSpace(c)));
 
     /// <inheritdoc />
     protected override void OnParametersSet()

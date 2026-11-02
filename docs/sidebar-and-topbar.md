@@ -29,7 +29,10 @@ disclosure button and account menu.
 | `AutoActiveMatchMode` | `SidebarNavMatchMode` | `Exact` | `Exact` or `Prefix` (sub-pages, on a segment boundary). |
 | `CollapseTooltips` | `bool` | `true` | Render a `TmTooltip` per collapsed item; off restores the rail's vertical scroller. |
 | `Header`, `Footer` | `RenderFragment?` | `null` | Slots around the navigation. |
-| `Class`, `AdditionalAttributes` | | | Forwarded to the root `<aside>`. |
+| `IsLandmark` | `bool` | `true` | Render the root as the `<aside>` complementary landmark. `false` renders a plain `<div>` (the `<nav>` keeps naming the menu) — for a frame that owns the page's landmarks. |
+| `ToggleAriaExpanded` | `bool?` | `null` | `aria-expanded` of the header toggle: whether the surface it opens is open. Null renders no attribute — a plain collapse toggle is not a disclosure and owns no surface. |
+| `ToggleAriaControls` | `string?` | `null` | `aria-controls` of the header toggle: the id of that surface. |
+| `Class`, `AdditionalAttributes` | | | Forwarded to the root `<aside>` (a `<div>` with `IsLandmark="false"`). |
 
 `SidebarNavSection` is `Title` + `Items`; `ISidebarNavItem` supplies `Id`, `Label`, `Icon`, `Href`,
 `BadgeCount`, `IsActive` and `Children`.
@@ -87,10 +90,27 @@ collapsed rail with tooltips does not scroll its overflow. A host whose collapse
 taller than the rail passes `CollapseTooltips="false"` and gets the scroller back; the accessible name
 stays either way.
 
+### Inside an application frame (`IsLandmark`)
+
+`TmAppShell` renders the page's landmarks itself, so it composes the sidebar with
+`IsLandmark="false"`: the root becomes a plain `<div class="tm-sidebar">` and the `<nav>` inside keeps
+its `aria-label` — the page then carries exactly one navigation landmark and exactly one complementary
+landmark (the work area). The default (`true`) is today's `<aside>` root, so a sidebar a page renders on
+its own is unchanged. The same idea applies to `TmTopBar.IsLandmark` (a `<header>` by default, a
+`<div>` inside `TmAppShell`'s own header).
+
+The frame also uses the toggle's disclosure parameters: on a tablet the header toggle opens the
+navigation overlay drawer instead of collapsing a column, so `TmAppShell` passes
+`ToggleAriaExpanded` (the drawer's open state) and `ToggleAriaControls` (the drawer's id). It is
+opt-in: a sidebar on its own never claims to control a surface it does not own, and the docked
+desktop column passes neither.
+
 ### Accessibility summary
 
 - Landmark: `<nav aria-label="…">` named from `NavLabel` or the localization (`TmSidebar_NavLabel`).
-- Toggle: `aria-label` from `TmSidebar_CollapseMenu` / `TmSidebar_ExpandMenu`, `:focus-visible` ring.
+- Toggle: `aria-label` from `TmSidebar_CollapseMenu` / `TmSidebar_ExpandMenu`, `:focus-visible` ring,
+  plus `aria-expanded` / `aria-controls` when a host reports the surface the toggle opens
+  (`ToggleAriaExpanded` / `ToggleAriaControls`).
 - Current page: `aria-current="page"` plus the system `Highlight` ring under `forced-colors`.
 - Keyboard: native links and a native toggle — no key emulation, one activation per press.
 - Touch: the toggle and every link reach `--tm-touch-target` (44px) on a coarse pointer.
@@ -116,7 +136,8 @@ stays either way.
 | `UserMenuLabel` | `string?` | `null` → localized | Accessible name of the account button and menu. |
 | `OnCommandPalette` | `EventCallback` | — | Palette trigger clicked (the trigger renders only with a handler). |
 | `OnLogout` | `EventCallback` | — | Sign-out entry clicked. |
-| `Class`, `AdditionalAttributes` | | | Forwarded to the root `<header>`. |
+| `IsLandmark` | `bool` | `true` | Render the root as the `<header>` banner landmark. `false` renders a plain `<div>` — for a frame that owns the page's landmarks. |
+| `Class`, `AdditionalAttributes` | | | Forwarded to the root `<header>` (a `<div>` with `IsLandmark="false"`). |
 
 ### Disclosure button
 

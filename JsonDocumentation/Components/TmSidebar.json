@@ -76,6 +76,25 @@
       "type": "string?",
       "isRequired": false,
       "description": "Additional CSS class for the root element."
+    },
+    {
+      "name": "IsLandmark",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "When true (the default) the root is an aside element — a complementary landmark, which is what a sidebar next to the page content is. Pass false when the sidebar is composed into an application frame that owns the page landmarks (TmAppShell): the root then renders as a plain div and the nav inside keeps naming the menu, so the page never carries two complementary landmarks."
+    },
+    {
+      "name": "ToggleAriaExpanded",
+      "type": "bool?",
+      "isRequired": false,
+      "description": "When set, the toggle reports the state of the surface it opens through aria-expanded (true / false). Null (the default) renders no attribute — a plain collapse toggle is not a disclosure and has no surface of its own. A frame whose rail toggle opens an overlay drawer (TmAppShell) passes the drawer's open state; pair it with ToggleAriaControls."
+    },
+    {
+      "name": "ToggleAriaControls",
+      "type": "string?",
+      "isRequired": false,
+      "description": "The DOM id of the surface the toggle opens, rendered as aria-controls. Null (the default) renders no attribute: an expanded state with no identifiable target tells a screen reader nothing."
     }
   ],
   "cssClasses": [

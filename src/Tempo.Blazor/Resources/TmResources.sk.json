@@ -6444,5 +6444,10 @@
   "TmUserMenu_ThemeToggle": "Tmavá téma",
   "TmUserMenu_ExtraLabel": "Možnosti účtu",
   "TmUserMenu_SignOut": "Odhlásiť sa",
-  "TmUserMenu_TriggerLabel": "{0} — používateľské menu"
+  "TmUserMenu_TriggerLabel": "{0} — používateľské menu",
+  "TmAppShell_SkipToContent": "Preskočiť na obsah",
+  "TmAppShell_NavLabel": "Hlavná navigácia",
+  "TmAppShell_WorkArea": "Pracovná plocha",
+  "TmAppShell_ResizeWorkArea": "Zmeniť šírku pracovnej plochy",
+  "TmAppShell_CloseWorkArea": "Zavrieť pracovnú plochu"
 }

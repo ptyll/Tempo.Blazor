@@ -399,6 +399,35 @@ public class TmSidebarTests : LocalizationTestBase
     }
 
     [Fact]
+    public void Toggle_Reports_The_Surface_It_Opens_Only_When_A_Host_Says_So()
+    {
+        var plain = Render<TmSidebar>(p => p
+            .Add(c => c.Items, SampleItems));
+
+        plain.Find(".tm-sidebar-toggle").GetAttribute("aria-expanded").Should().BeNull(
+            "a plain collapse toggle is not a disclosure: it opens no surface of its own");
+        plain.Find(".tm-sidebar-toggle").GetAttribute("aria-controls").Should().BeNull();
+
+        var opener = Render<TmSidebar>(p => p
+            .Add(c => c.Collapsed, true)
+            .Add(c => c.Items, SampleItems)
+            .Add(c => c.ToggleAriaExpanded, true)
+            .Add(c => c.ToggleAriaControls, "nav-overlay"));
+
+        var toggle = opener.Find(".tm-sidebar-toggle");
+        toggle.GetAttribute("aria-expanded").Should().Be("true",
+            "a rail toggle that opens an overlay drawer must say whether that drawer is open");
+        toggle.GetAttribute("aria-controls").Should().Be("nav-overlay",
+            "the expanded state is only meaningful next to the surface it describes");
+
+        var closed = Render<TmSidebar>(p => p
+            .Add(c => c.Items, SampleItems)
+            .Add(c => c.ToggleAriaExpanded, false));
+
+        closed.Find(".tm-sidebar-toggle").GetAttribute("aria-expanded").Should().Be("false");
+    }
+
+    [Fact]
     public void Nav_Has_A_Localized_Accessible_Name()
     {
         var cut = Render<TmSidebar>(p => p

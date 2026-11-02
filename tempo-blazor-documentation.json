@@ -5729,6 +5729,27 @@
       "documentationStatus": "merged"
     },
     {
+      "itemName": "AppShellVariant",
+      "kind": "Enum",
+      "category": "Components",
+      "namespace": "Tempo.Blazor.Components.Layout",
+      "description": "The visual treatment of the TmAppShell frame: how the page content sits on the shell's workspace background.",
+      "packageId": "Tempo.Blazor",
+      "sourcePath": "src/Tempo.Blazor/Components/Layout/AppShellVariant.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Inset",
+          "description": "The content is a rounded card floating on the workspace background (the default): the frame reads as one surface with a gutter around it, like a desktop application window."
+        },
+        {
+          "name": "Flat",
+          "description": "The content fills the frame edge to edge, separated from the navigation by a hairline border only. The denser treatment for data-heavy applications."
+        }
+      ],
+      "usageExample": "<TmAppShell Variant=\"AppShellVariant.Flat\" Title=\"Acme\">…</TmAppShell>"
+    },
+    {
       "itemName": "AvatarColor",
       "kind": "Enum",
       "category": "Components",
@@ -21059,6 +21080,283 @@
       ]
     },
     {
+      "itemName": "TmAppShell",
+      "kind": "Component",
+      "category": "Layout",
+      "namespace": "Tempo.Blazor.Components.Layout",
+      "description": "The application frame: one composite that renders the page's landmarks (a top bar, one named navigation column, the content and an optional resizable work area) and resolves its own layout from its container width. Desktop renders the docked navigation column; a tablet container renders it as an icon rail that expands into a overlay drawer; the phone fallback (until the plan's mobile phase) renders the same rail. The shell never copies navigation, focus or sheet logic — it composes TmSidebar, TmTopBar and a modal TmDrawer.",
+      "packageId": "Tempo.Blazor",
+      "sourcePath": "src/Tempo.Blazor/Components/Layout/TmAppShell.razor",
+      "documentationStatus": "merged",
+      "requiredImports": [
+        "@using Tempo.Blazor.Components.Layout",
+        "@using Tempo.Blazor.Interfaces",
+        "@using Tempo.Blazor.Models"
+      ],
+      "parameters": [
+        {
+          "name": "Breakpoints",
+          "type": "TmLayoutBreakpoints?",
+          "isRequired": false,
+          "description": "Per-instance layout thresholds. Null uses the shell's own pair — mobile below 768px, desktop from 1200px, the room a frame with a docked navigation column and a work area needs. Only the markup branch moves: the stylesheet carries no width condition."
+        },
+        {
+          "name": "ChildContent",
+          "type": "RenderFragment?",
+          "isRequired": false,
+          "description": "The page content, rendered inside the shell's main landmark. The skip link targets it."
+        },
+        {
+          "name": "Class",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Extra CSS classes for the shell root."
+        },
+        {
+          "name": "InitialMode",
+          "type": "TmLayoutMode",
+          "isRequired": false,
+          "default": "TmLayoutMode.Desktop",
+          "description": "The layout rendered before the first measurement (static SSR, prerender, the first frame)."
+        },
+        {
+          "name": "LayoutMode",
+          "type": "TmLayoutMode",
+          "isRequired": false,
+          "default": "TmLayoutMode.Auto",
+          "description": "The layout the shell renders. Auto (default) measures the shell's own root, so an application embedded at any width resolves a mode from that width and never from the viewport. A forced value never measures, so a test can render a mode without a DOM."
+        },
+        {
+          "name": "MinContentWidth",
+          "type": "int",
+          "isRequired": false,
+          "default": "480",
+          "description": "The content width, in CSS pixels, a resize never takes away: growing the work area stops where the content would drop below it. A negative value throws ArgumentOutOfRangeException."
+        },
+        {
+          "name": "NavItems",
+          "type": "IReadOnlyList<ISidebarNavItem>?",
+          "isRequired": false,
+          "description": "Navigation items for the built-in sidebar, rendered by TmSidebar as one ungrouped list. Ignored when NavSections or Sidebar is set."
+        },
+        {
+          "name": "NavSections",
+          "type": "IReadOnlyList<SidebarNavSection>?",
+          "isRequired": false,
+          "description": "Named groups of navigation items for the built-in sidebar, each under its own visible heading. Takes precedence over NavItems (a shell shows one navigation model, never the same entries twice); ignored when Sidebar is set."
+        },
+        {
+          "name": "OnLogout",
+          "type": "EventCallback",
+          "isRequired": false,
+          "description": "Raised when the user picks the sign-out entry of the built-in top bar's account menu. Without a handler no sign-out line renders."
+        },
+        {
+          "name": "PersistKey",
+          "type": "string?",
+          "isRequired": false,
+          "description": "When set, the layout the user chose persists to (and restores from) localStorage under this key: the work-area width they resized (with the host width it was resized from, so a host that changes its own default invalidates it) and the navigation collapsed state. A restore is reported through WorkAreaWidthChanged / SidebarCollapsedChanged, since it counts as a user value. Null disables persistence."
+        },
+        {
+          "name": "ResolvedLayoutChanged",
+          "type": "EventCallback<TmLayoutMode>",
+          "isRequired": false,
+          "description": "Raised when the resolved layout changes. The initial value is not a change. Never pair it with LayoutMode: it reports the resolved mode, and a two-way bind would pin that mode."
+        },
+        {
+          "name": "Sidebar",
+          "type": "RenderFragment?",
+          "isRequired": false,
+          "description": "A custom navigation surface, replacing the built-in sidebar entirely. It is rendered inside the shell's navigation column on desktop and inside the overlay drawer on a tablet layout, wrapped in the shell's one named nav landmark — so the slot content must not render a nav of its own, and a custom rail that has to survive the 3.5rem column supplies its own collapsed rendering."
+        },
+        {
+          "name": "SidebarCollapsed",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Whether the docked navigation column is collapsed to an icon rail. Two-way with SidebarCollapsedChanged. A tablet (and the phone fallback) always renders the rail and expands the navigation into the overlay drawer instead, so the value only applies on a desktop layout.",
+          "default": "false"
+        },
+        {
+          "name": "SidebarCollapsedChanged",
+          "type": "EventCallback<bool>",
+          "isRequired": false,
+          "description": "Raised when the user collapses or expands the docked navigation column, and when a persisted collapsed state is restored on load."
+        },
+        {
+          "name": "SidebarFooter",
+          "type": "RenderFragment?",
+          "isRequired": false,
+          "description": "Content below the navigation list (the signed-in account, a version stamp). Built-in sidebar only."
+        },
+        {
+          "name": "SidebarHeader",
+          "type": "RenderFragment?",
+          "isRequired": false,
+          "description": "Content above the navigation list (a logo, a workspace switcher). Built-in sidebar only."
+        },
+        {
+          "name": "SidebarNavLabel",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Accessible name of the navigation landmark and title of the tablet overlay drawer. Null uses the localized \"Main navigation\" — a shell that carries more than one navigation landmark names each one after its purpose."
+        },
+        {
+          "name": "SkipLinkTarget",
+          "type": "string?",
+          "isRequired": false,
+          "description": "The id the skip link targets and the main element carries. Null generates a unique id per shell instance, so two shells on one page never collide; set it when a host-side skip link or in-page anchor already points at a known id."
+        },
+        {
+          "name": "Title",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Brand title of the built-in top bar (usually the application name). Without it, and without any other bar content, the shell renders no header at all — an empty banner landmark is noise."
+        },
+        {
+          "name": "TopBar",
+          "type": "RenderFragment?",
+          "isRequired": false,
+          "description": "Custom top bar content, replacing the built-in bar. Rendered inside the shell's own header element, so the content must not render a second header landmark (a composed TmTopBar passes IsLandmark=\"false\")."
+        },
+        {
+          "name": "TopBarActions",
+          "type": "RenderFragment?",
+          "isRequired": false,
+          "description": "Actions of the built-in top bar, right-aligned (a theme switch, a command-palette trigger)."
+        },
+        {
+          "name": "User",
+          "type": "IUserInfo?",
+          "isRequired": false,
+          "description": "The signed-in user, rendered by the built-in top bar's account menu. Null renders no account surface."
+        },
+        {
+          "name": "UserMenuItems",
+          "type": "IReadOnlyList<UserMenuItem>?",
+          "isRequired": false,
+          "description": "Host entries of the built-in top bar's account menu; the built-in Profile / Settings / Sign out lines follow them."
+        },
+        {
+          "name": "Variant",
+          "type": "AppShellVariant",
+          "isRequired": false,
+          "default": "AppShellVariant.Inset",
+          "description": "Visual treatment of the frame. Inset (default) floats the content as a rounded card on the workspace background; Flat fills the frame edge to edge with a hairline divider."
+        },
+        {
+          "name": "WorkArea",
+          "type": "RenderFragment?",
+          "isRequired": false,
+          "description": "The resizable work area on the right of the content (a sources panel, a tool panel). Rendered only on a desktop or tablet layout while WorkAreaOpen is true; a phone layout presents it as a sheet in the plan's mobile phase."
+        },
+        {
+          "name": "WorkAreaLabel",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Heading of the work area region, which also names it for assistive technology. Null uses the localized \"Work area\" — name it after its purpose (\"Sources\", \"Activity\") when a page has more than one complementary region."
+        },
+        {
+          "name": "WorkAreaMaxWidth",
+          "type": "int",
+          "isRequired": false,
+          "default": "640",
+          "description": "Largest width, in CSS pixels, the work area can be resized to. A value below WorkAreaMinWidth throws ArgumentOutOfRangeException."
+        },
+        {
+          "name": "WorkAreaMinWidth",
+          "type": "int",
+          "isRequired": false,
+          "default": "280",
+          "description": "Smallest width, in CSS pixels, the work area can be resized to. Below 1 throws ArgumentOutOfRangeException — a work area narrower than a pixel is a host bug, not a preference."
+        },
+        {
+          "name": "WorkAreaOpen",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Whether the work area renders. Two-way with WorkAreaOpenChanged: with a handler the region renders its own close button (so a keyboard user can dismiss it without the host wiring a toggle) and the host echoes the close back.",
+          "default": "false"
+        },
+        {
+          "name": "WorkAreaOpenChanged",
+          "type": "EventCallback<bool>",
+          "isRequired": false,
+          "description": "Raised when the user closes the work area from its own close button. Without a handler the region renders no close button at all, so a host that renders its own toggle can leave this unset."
+        },
+        {
+          "name": "WorkAreaWidth",
+          "type": "int",
+          "isRequired": false,
+          "default": "420",
+          "description": "Width of the work area in CSS pixels. Two-way with WorkAreaWidthChanged: a user resize (pointer drag, keyboard on the separator) raises the callback with the new width, and a persisted width is restored through it too. The value is always bounded by WorkAreaMinWidth / WorkAreaMaxWidth."
+        },
+        {
+          "name": "WorkAreaWidthChanged",
+          "type": "EventCallback<int>",
+          "isRequired": false,
+          "description": "Raised when the user resizes the work area, and when a persisted width is restored on load."
+        }
+      ],
+      "cssClasses": [
+        "tm-app-shell",
+        "tm-app-shell__frame",
+        "tm-app-shell--inset",
+        "tm-app-shell--flat",
+        "tm-app-shell__skip-link",
+        "tm-app-shell__topbar",
+        "tm-app-shell__body",
+        "tm-app-shell__sidebar",
+        "tm-app-shell__sidebar--rail",
+        "tm-app-shell__nav-toggle",
+        "tm-app-shell__nav",
+        "tm-app-shell__nav-slot",
+        "tm-app-shell__main",
+        "tm-app-shell__resizer",
+        "tm-app-shell__work-area",
+        "tm-app-shell__work-area-header",
+        "tm-app-shell__work-area-title",
+        "tm-app-shell__work-area-close",
+        "tm-app-shell__work-area-body",
+        "tm-app-shell__overlay"
+      ],
+      "examples": [
+        {
+          "title": "Application frame with a built-in navigation and a resizable work area",
+          "code": "<TmAppShell Variant=\"AppShellVariant.Inset\"\n            Title=\"@brandName\"\n            NavSections=\"@navSections\"\n            TopBarActions=\"@(b => b.AddContent(0, actions))\"\n            @bind-SidebarCollapsed=\"sidebarCollapsed\"\n            @bind-WorkAreaOpen=\"sourcesOpen\"\n            @bind-WorkAreaWidth=\"sourcesWidth\"\n            WorkAreaLabel=\"Sources\"\n            PersistKey=\"my-app-shell\">\n    <ChildContent>@Body</ChildContent>\n    <WorkArea>@sources</WorkArea>\n</TmAppShell>"
+        },
+        {
+          "title": "Custom navigation surface and a custom top bar",
+          "code": "<TmAppShell NavItems=\"null\" TopBar=\"@(b => b.AddContent(0, customBar))\">\n    <Sidebar>\n        <MyOwnNavigation />\n    </Sidebar>\n    <ChildContent>@Body</ChildContent>\n</TmAppShell>"
+        }
+      ],
+      "usedAbstractions": [
+        {
+          "name": "ISidebarNavItem",
+          "description": "One entry of the built-in navigation",
+          "parameter": "NavItems"
+        },
+        {
+          "name": "SidebarNavSection",
+          "description": "A named group of navigation items",
+          "parameter": "NavSections"
+        },
+        {
+          "name": "IUserInfo",
+          "description": "Interface describing the signed-in user",
+          "parameter": "User"
+        },
+        {
+          "name": "UserMenuItem",
+          "description": "One entry of the account menu",
+          "parameter": "UserMenuItems"
+        },
+        {
+          "name": "TmLayoutBreakpoints",
+          "description": "The two widths that decide the container's layout mode",
+          "parameter": "Breakpoints"
+        }
+      ]
+    },
+    {
       "itemName": "TmBreadcrumbs",
       "kind": "Component",
       "category": "Layout",
@@ -22237,6 +22535,13 @@
           "description": "Optional header content (e.g. logo)."
         },
         {
+          "name": "IsLandmark",
+          "type": "bool",
+          "isRequired": false,
+          "default": "true",
+          "description": "When true (the default) the root is an aside element — a complementary landmark, which is what a sidebar next to the page content is. Pass false when the sidebar is composed into an application frame that owns the page landmarks (TmAppShell): the root then renders as a plain div and the nav inside keeps naming the menu, so the page never carries two complementary landmarks."
+        },
+        {
           "name": "Items",
           "type": "IReadOnlyList<ISidebarNavItem>",
           "isRequired": false,
@@ -22260,6 +22565,18 @@
           "type": "IReadOnlyList<SidebarNavSection>?",
           "isRequired": false,
           "description": "Optional named groups of navigation items, each rendered under its own visible heading (h2) that also names the group's list through aria-labelledby. Null (the default) keeps the single ungrouped list, so existing markup is unchanged."
+        },
+        {
+          "name": "ToggleAriaControls",
+          "type": "string?",
+          "isRequired": false,
+          "description": "The DOM id of the surface the toggle opens, rendered as aria-controls. Null (the default) renders no attribute: an expanded state with no identifiable target tells a screen reader nothing."
+        },
+        {
+          "name": "ToggleAriaExpanded",
+          "type": "bool?",
+          "isRequired": false,
+          "description": "When set, the toggle reports the state of the surface it opens through aria-expanded (true / false). Null (the default) renders no attribute — a plain collapse toggle is not a disclosure and has no surface of its own. A frame whose rail toggle opens an overlay drawer (TmAppShell) passes the drawer's open state; pair it with ToggleAriaControls."
         }
       ],
       "cssClasses": [
@@ -22695,6 +23012,13 @@
           "isRequired": false,
           "default": "\"Ctrl+K\"",
           "description": "The key chord printed in the command palette trigger (\"Ctrl+K\"). It is a label, not a keybinding — the host binds the shortcut. An empty string hides the hint and keeps the localized accessible name; what the trigger announces to assistive technology is CommandPaletteKeyShortcuts."
+        },
+        {
+          "name": "IsLandmark",
+          "type": "bool",
+          "isRequired": false,
+          "default": "true",
+          "description": "When true (the default) the root is a header element — a banner landmark, which is what the application bar is. Pass false when the bar is composed into an application frame that owns the page landmarks (TmAppShell): the root then renders as a plain div inside the frame's own header, so the page never carries a banner nested in a banner."
         },
         {
           "name": "MenuControlsId",
@@ -31839,6 +32163,10 @@
       "kind": "Css"
     },
     {
+      "path": "src/Tempo.Blazor/wwwroot/css/components/_app-shell.css",
+      "kind": "Css"
+    },
+    {
       "path": "src/Tempo.Blazor/wwwroot/css/components/_approval-card.css",
       "kind": "Css"
     },
@@ -32551,6 +32879,10 @@
       "kind": "JavaScript"
     },
     {
+      "path": "src/Tempo.Blazor/wwwroot/js/tm-panel-resize.js",
+      "kind": "JavaScript"
+    },
+    {
       "path": "src/Tempo.Blazor/wwwroot/js/tm-rtl.js",
       "kind": "JavaScript"
     },
@@ -32667,6 +32999,10 @@
       "kind": "JavaScript"
     },
     {
+      "path": "src/Tempo.Blazor/wwwroot/js/__tests__/tm-panel-resize.test.mjs",
+      "kind": "JavaScript"
+    },
+    {
       "path": "src/Tempo.Blazor/wwwroot/js/__tests__/tm-sheet.test.mjs",
       "kind": "JavaScript"
     },
@@ -32692,11 +33028,11 @@
     }
   ],
   "summary": {
-    "itemCount": 416,
-    "manualItemCount": 416,
-    "generatedItemCount": 408,
+    "itemCount": 418,
+    "manualItemCount": 418,
+    "generatedItemCount": 410,
     "generatedOnlyItemCount": 0,
-    "componentCount": 225,
-    "publicApiTypeCount": 183
+    "componentCount": 226,
+    "publicApiTypeCount": 184
   }
 }

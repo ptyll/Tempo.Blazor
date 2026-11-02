@@ -1,0 +1,21 @@
+{
+  "kind": "Enum",
+  "category": "Components",
+  "namespace": "Tempo.Blazor.Components.Layout",
+  "description": "The visual treatment of the TmAppShell frame: how the page content sits on the shell's workspace background.",
+  "packageId": "Tempo.Blazor",
+  "sourcePath": "src/Tempo.Blazor/Components/Layout/AppShellVariant.cs",
+  "documentationStatus": "documented",
+  "itemName": "AppShellVariant",
+  "members": [
+    {
+      "name": "Inset",
+      "description": "The content is a rounded card floating on the workspace background (the default): the frame reads as one surface with a gutter around it, like a desktop application window."
+    },
+    {
+      "name": "Flat",
+      "description": "The content fills the frame edge to edge, separated from the navigation by a hairline border only. The denser treatment for data-heavy applications."
+    }
+  ],
+  "usageExample": "<TmAppShell Variant=\"AppShellVariant.Flat\" Title=\"Acme\">…</TmAppShell>"
+}

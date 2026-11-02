@@ -22,6 +22,7 @@
 @import "components/_skeleton.css";
 
 /* 4. Layout */
+@import "components/_app-shell.css";
 @import "components/_sidebar-nav.css";
 @import "components/_topbar.css";
 @import "components/_breadcrumb.css";

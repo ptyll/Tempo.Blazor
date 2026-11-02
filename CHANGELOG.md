@@ -22,6 +22,50 @@
 > (Fáze 15b). Contracts: [docs/modeling-editor.md](docs/modeling-editor.md),
 > [docs/diagram-editor.md](docs/diagram-editor.md).
 
+### Application frame — `TmAppShell` (plan 5d396592, phase 3)
+
+The frame the earlier phases were preparation for: one component that renders the page's landmarks
+(a top bar, one named navigation column, the content and an optional resizable work area) and resolves
+its own layout from its **container** width. It composes `TmLayoutObserver`, `TmSidebar`, `TmTopBar`
+and a modal `TmDrawer` — no navigation, focus or sheet logic is copied. Contract:
+[docs/app-shell.md](docs/app-shell.md).
+
+- **`TmAppShell`** (`src/Tempo.Blazor/Components/Layout/TmAppShell.razor`) — `Variant`
+  (`AppShellVariant.Inset` / `Flat`), `LayoutMode` / `InitialMode` / `Breakpoints` (default 768 / 1200),
+  `NavItems` / `NavSections` / `Sidebar` / `SidebarHeader` / `SidebarFooter`, `SidebarCollapsed`
+  (two-way), `SidebarNavLabel`, `TopBar` / `Title` / `TopBarActions` / `User` / `UserMenuItems` /
+  `OnLogout`, `ChildContent`, `SkipLinkTarget`, `WorkArea`, `WorkAreaOpen` (two-way) /
+  `WorkAreaWidth` (two-way) / `WorkAreaMinWidth` / `WorkAreaMaxWidth` / `MinContentWidth` /
+  `WorkAreaLabel`, `PersistKey`, `Class`. Omitted top bar content renders no header; omitted navigation
+  renders no nav landmark — every default is the modest one.
+- **Desktop** docks the navigation column (collapsible to the icon rail) and the work area; **tablet**
+  renders the column as a rail and expands the full navigation into a modal overlay drawer (focus
+  trap, Escape, focus restore to the rail toggle), rendered as a SIBLING of the shell's CSS size
+  container so nothing clips it. The phone fallback keeps the rail until the plan's mobile phase.
+- **Resizable work area** — a `role="separator"` with `aria-valuenow` / `aria-valuemin` /
+  `aria-valuemax` / `aria-controls`, driven by the shared resize helper (pointer) and by Blazor
+  (arrows 16 px, Shift 64 px, Home/End, double-click reset). Every path clamps to the min/max AND keeps
+  the content at `MinContentWidth`, so `aria-valuemax` reports the width the user can really reach.
+  `PersistKey` stores only the user's width (with its host base) and collapse choice.
+- **Shared resize helper extracted** — `wwwroot/js/tm-panel-resize.js` (over `pointer-drag.js`) is now
+  the ONE panel-resize implementation: `clampWidth`, `attachResize` / `detachResize`, region
+  measurement and the prefixed best-effort storage. `tm-editor-shell.js` is a thin wrapper that pins
+  the editor's CSS variable, drag class, canvas selector and commit method, so `TmEditorShell` behaves
+  exactly as before (its own node + bUnit suites are unchanged and green); the C# clamp moved to the
+  shared `PanelResize` class (same `Clamp` / `TryParsePx` contract, same vectors).
+- **Additive on the primitives** — `TmSidebar.IsLandmark` and `TmTopBar.IsLandmark` (both default
+  `true`, i.e. today's `<aside>` / `<header>` root) let the frame own the page's landmarks without a
+  nested banner or a second complementary region. `TmSidebar.ToggleAriaExpanded` (`bool?`) and
+  `TmSidebar.ToggleAriaControls` (`string?`) are additive too (both default `null` = no attribute):
+  a rail whose toggle opens a surface elsewhere reports that surface's state and id, which is how the
+  tablet rail announces the navigation drawer. No other public API changed.
+- **No breaking change**: everything above is new or an opt-in parameter; the resource keys
+  (`TmAppShell_SkipToContent`, `_NavLabel`, `_WorkArea`, `_ResizeWorkArea`, `_CloseWorkArea`) are new,
+  and the CSS partial `_app-shell.css` ships on semantic tokens only.
+- **Known scope boundary (deliberate)**: the phone chrome (`MobileNav`: hamburger + drawer / bottom
+  navigation, work area as a sheet) is the plan's next phase — a mobile container renders the tablet
+  rail in the meantime, never a nav-less frame.
+
 ### Account menu — `TmUserMenu` (plan 5d396592, phase 2)
 
 The account surface of an application shell: avatar trigger, signed-in user card, the host's menu

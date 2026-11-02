@@ -414,7 +414,10 @@ public sealed class MarkupClassCoverageTests
             // Plan 10b3966f phase 2 (TmApprovalCard): the per-instance id prefix
             // ("tm-approval-card-{Guid…}" in TmApprovalCard.razor.cs) plus the interpolated risk and
             // state modifiers ($"tm-approval-card--risk-{…}", $"tm-approval-card--{…}") — 56 → 59.
-            ExpectedUnmeasurableStems: 62),
+            // Plan 5d396592 phase 3 (TmAppShell): the variant modifier ($"tm-app-shell--{Variant}") and
+            // the ONE per-instance id prefix every id of the shell shares
+            // ("tm-app-shell-{instanceId}-main|-work-area|…") add their two stems — 62 → 64.
+            ExpectedUnmeasurableStems: 64),
         new Scope("Signing", "Tempo.Blazor.Signing", UnstyledSigningMarkupClasses,
             MinRazorFiles: 28, MinMarkupClasses: 400, InheritsCoreCss: true,
             // Signing redesign phase 2 (B25): the runner's single step panel id

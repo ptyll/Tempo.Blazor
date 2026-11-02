@@ -6398,5 +6398,10 @@
   "TmUserMenu_ThemeToggle": "Thème sombre",
   "TmUserMenu_ExtraLabel": "Options du compte",
   "TmUserMenu_SignOut": "Se déconnecter",
-  "TmUserMenu_TriggerLabel": "{0} — menu utilisateur"
+  "TmUserMenu_TriggerLabel": "{0} — menu utilisateur",
+  "TmAppShell_SkipToContent": "Aller au contenu",
+  "TmAppShell_NavLabel": "Navigation principale",
+  "TmAppShell_WorkArea": "Espace de travail",
+  "TmAppShell_ResizeWorkArea": "Redimensionner l'espace de travail",
+  "TmAppShell_CloseWorkArea": "Fermer l'espace de travail"
 }

@@ -1,0 +1,210 @@
+@namespace Tempo.Blazor.Components.Layout
+@inherits Tempo.Blazor.Components.TmComponentBase
+@using Microsoft.JSInterop
+@using Tempo.Blazor.Abstractions.Layout
+@using Tempo.Blazor.Components.Feedback
+@using Tempo.Blazor.Components.Icons
+@implements IAsyncDisposable
+@inject IJSRuntime JS
+
+@* The application frame (plan 5d396592, phase 3). A container-owned composite over the existing
+   primitives: it resolves its own layout (TmLayoutObserver), so it works embedded at any width and a
+   test can force a mode. It never copies navigation, focus or sheet logic — the docked column and the
+   overlay drawer both render the same TmSidebar, and the overlay IS a modal TmDrawer (focus trap,
+   Escape, focus restore to the opener, top-layer promotion).
+
+   Landmarks: the frame owns the page's <header>, its one named <nav>, its <main> and the work
+   <aside> — each exactly once. The navigation column is a plain <div> and both primitives it composes
+   surrender their own landmark (TmSidebar.IsLandmark / TmTopBar.IsLandmark = false), so a screen
+   reader never meets a banner nested in a banner or two complementary regions.
+
+   Overlays: the frame is a CSS size container, so the drawer is a SIBLING of it — a fixed-position
+   overlay inside a container-type box would be clipped and pinned by that box. *@
+
+<TmLayoutObserver LayoutMode="LayoutMode"
+                  InitialMode="InitialMode"
+                  Breakpoints="EffectiveBreakpoints"
+                  ResolvedLayoutChanged="OnResolvedLayoutChanged"
+                  IsContainer="false"
+                  Class="@RootClasses"
+                  AdditionalAttributes="ShellAttributes">
+    <LayoutContent Context="shell">
+        <div class="tm-app-shell__frame tm-app-shell--@CssVariant"
+             data-region="frame"
+             data-variant="@CssVariant">
+            <a class="tm-app-shell__skip-link"
+               href="#@MainId"
+               data-testid="@TestId("app-shell-skip-link")">@Loc["TmAppShell_SkipToContent"]</a>
+
+            @if (HasTopBar)
+            {
+                @* The frame owns the banner landmark; the composed bar gives up its own header. *@
+                <header class="tm-app-shell__topbar"
+                        data-region="topbar"
+                        data-testid="@TestId("app-shell-topbar")">
+                    @if (TopBar is not null)
+                    {
+                        @TopBar
+                    }
+                    else
+                    {
+                        <TmTopBar IsLandmark="false"
+                                  BrandTitle="@Title"
+                                  ActionsContent="@TopBarActions"
+                                  User="@User"
+                                  UserMenuItems="@UserMenuItems"
+                                  OnLogout="@OnLogout" />
+                    }
+                </header>
+            }
+
+            <div class="tm-app-shell__body" data-region="body">
+                @if (HasNavModel)
+                {
+                    <div class="tm-app-shell__sidebar @(IsRail ? "tm-app-shell__sidebar--rail" : null)"
+                         data-region="sidebar"
+                         data-testid="@TestId("app-shell-sidebar")">
+                        @if (!IsRail)
+                        {
+                            @RenderNavigation(collapsed: CollapsedInEffect)
+                        }
+                        else if (Sidebar is null)
+                        {
+                            @* The built-in rail: TmSidebar's own toggle is the overlay's opener. *@
+                            @RenderBuiltInNavigation(collapsed: true)
+                        }
+                        else
+                        {
+                            @* A host rail has no toggle of its own, so the shell provides the opener. *@
+                            <button class="tm-app-shell__nav-toggle"
+                                    type="button"
+                                    data-testid="@TestId("app-shell-nav-toggle")"
+                                    aria-expanded="@(_navOverlayOpen ? "true" : "false")"
+                                    aria-controls="@(_navOverlayOpen ? _overlayId : null)"
+                                    aria-label="@NavigationName"
+                                    @onclick="OpenNavOverlay">
+                                <TmIcon Name="@IconNames.Menu" Size="IconSize.Sm" />
+                            </button>
+                        }
+                    </div>
+                }
+
+                <main id="@MainId"
+                      class="tm-app-shell__main"
+                      data-region="content"
+                      data-testid="@TestId("app-shell-main")"
+                      tabindex="-1"
+                      @ref="_content">@ChildContent</main>
+
+                @if (ShowWorkArea)
+                {
+                    <div class="tm-app-shell__resizer"
+                         role="separator"
+                         data-testid="@TestId("app-shell-work-area-resizer")"
+                         aria-orientation="vertical"
+                         aria-valuenow="@WorkAreaWidthPx.ToString(CultureInfo.InvariantCulture)"
+                         aria-valuemin="@EffectiveMinWidth.ToString(CultureInfo.InvariantCulture)"
+                         aria-valuemax="@ReachableMaxWidth.ToString(CultureInfo.InvariantCulture)"
+                         aria-controls="@_workAreaId"
+                         aria-label="@Loc["TmAppShell_ResizeWorkArea"]"
+                         title="@Loc["TmAppShell_ResizeWorkArea"]"
+                         tabindex="0"
+                         @onkeydown="OnSeparatorKeyAsync"
+                         @ondblclick="ResetWorkAreaWidthAsync"
+                         @ref="_resizer"></div>
+
+                    <aside id="@_workAreaId"
+                           class="tm-app-shell__work-area"
+                           data-region="work-area"
+                           data-testid="@TestId("app-shell-work-area")"
+                           aria-labelledby="@_workAreaTitleId"
+                           style="--tm-app-shell-work-area-width: @(WorkAreaWidthPx.ToString(CultureInfo.InvariantCulture))px"
+                           @ref="_workArea">
+                        <div class="tm-app-shell__work-area-header">
+                            <h2 class="tm-app-shell__work-area-title" id="@_workAreaTitleId">@WorkAreaName</h2>
+                            @if (WorkAreaOpenChanged.HasDelegate)
+                            {
+                                @* No close control without a handler: a button that cannot close
+                                   anything is worse than no button (the library's own rule for the
+                                   sign-out line). *@
+                                <button class="tm-app-shell__work-area-close"
+                                        type="button"
+                                        data-testid="@TestId("app-shell-work-area-close")"
+                                        aria-label="@Loc["TmAppShell_CloseWorkArea"]"
+                                        @onclick="CloseWorkAreaAsync">
+                                    <TmIcon Name="@IconNames.X" Size="IconSize.Sm" />
+                                </button>
+                            }
+                        </div>
+                        <div class="tm-app-shell__work-area-body">@WorkArea</div>
+                    </aside>
+                }
+            </div>
+        </div>
+
+        @if (IsRail && _navOverlayOpen && HasNavModel)
+        {
+            @* A modal drawer: focus enters it, Escape closes it, and the focus scope hands the focus
+               back to the rail toggle the user opened it from. It is a SIBLING of the size container. *@
+            <TmDrawer IsOpen="_navOverlayOpen"
+                      IsOpenChanged="OnNavOverlayOpenChanged"
+                      Position="DrawerPosition.Left"
+                      Modal="true"
+                      Width="var(--tm-app-shell-nav-width)"
+                      Title="@NavigationName"
+                      Class="tm-app-shell__overlay"
+                      LayoutMode="@shell.Resolved"
+                      CloseOnEscape="true"
+                      ShowOverlay="true"
+                      ShowCloseButton="true"
+                      AdditionalAttributes="OverlayAttributes">
+                <ChildContent>
+                    <div class="tm-app-shell__nav">@RenderNavigation(collapsed: false, insideOverlay: true)</div>
+                </ChildContent>
+            </TmDrawer>
+        }
+    </LayoutContent>
+</TmLayoutObserver>
+
+@code {
+    /// <summary>The overlay drawer root's attributes: its DOM id (the rail toggle's <c>aria-controls</c>) and its test id.</summary>
+    private Dictionary<string, object> OverlayAttributes => new()
+    {
+        ["id"] = _overlayId,
+        ["data-testid"] = TestId("app-shell-nav-overlay"),
+    };
+
+    /// <summary>
+    /// The navigation content in place: the host's <see cref="Sidebar"/> slot when one is set, the
+    /// built-in <c>TmSidebar</c> otherwise. Both the docked column and the overlay drawer render it,
+    /// so the same model drives every layout.
+    /// </summary>
+    /// <param name="collapsed">Whether the built-in sidebar renders as the icon rail.</param>
+    /// <param name="insideOverlay">
+    /// Whether the content is the overlay drawer's own body. The toggle there opens nothing — the
+    /// drawer is already open — so it reports no expanded state of its own.
+    /// </param>
+    private RenderFragment RenderNavigation(bool collapsed, bool insideOverlay = false) => Sidebar is null
+        ? RenderBuiltInNavigation(collapsed, insideOverlay)
+        : @<nav class="tm-app-shell__nav-slot" aria-label="@NavigationName">@Sidebar</nav>;
+
+    /// <summary>
+    /// The built-in navigation: <c>TmSidebar</c> over the shell's model, with the shell's own nav label
+    /// and its own test-id namespace. It surrenders the complementary landmark (the frame owns the
+    /// page's landmarks) but keeps the named <c>nav</c> inside. On the rail it is also the overlay's
+    /// opener, so its toggle reports the drawer's state and points at the drawer element.
+    /// </summary>
+    /// <param name="collapsed">Whether the sidebar renders as the icon rail.</param>
+    /// <param name="insideOverlay">Whether this renders the overlay drawer's own body.</param>
+    private RenderFragment RenderBuiltInNavigation(bool collapsed, bool insideOverlay = false) => @<TmSidebar IsLandmark="false"
+        Items="@EffectiveNavItems"
+        Sections="@NavSections"
+        Collapsed="@collapsed"
+        NavLabel="@NavigationName"
+        OnToggle="OnSidebarToggleAsync"
+        ToggleAriaExpanded="@(IsRail && !insideOverlay ? _navOverlayOpen : (bool?)null)"
+        ToggleAriaControls="@(IsRail && !insideOverlay && _navOverlayOpen ? _overlayId : null)"
+        Header="@SidebarHeader"
+        Footer="@SidebarFooter"
+        TestIdPrefix="@TestIdPrefix" />;
+}

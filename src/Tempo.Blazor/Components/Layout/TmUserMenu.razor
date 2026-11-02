@@ -231,8 +231,9 @@
     /// <c>OnClick</c> as a command, <c>Separator</c> as a group separator and <c>IsDanger</c> in the
     /// destructive style. Null renders no host entries.
     /// <para>
-    /// Give every command entry a unique <c>Id</c>: it is what <c>data-testid="user-menu-item-{id}"</c>
-    /// is built from, so two entries that share an id (or both leave it at the default empty string)
+    /// Give every command entry a unique <c>Id</c>: it is the suffix of the entry's
+    /// <c>data-testid</c> (<c>user-menu-item-{id}</c>), so two entries that share an id (or both leave
+    /// it at the default empty string)
     /// render fine but become indistinguishable to host tests and E2E selectors. Separators need no
     /// id at all.
     /// </para>

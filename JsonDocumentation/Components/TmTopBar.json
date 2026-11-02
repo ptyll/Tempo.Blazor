@@ -107,6 +107,13 @@
       "type": "string?",
       "isRequired": false,
       "description": "Additional CSS class for the root element."
+    },
+    {
+      "name": "IsLandmark",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "When true (the default) the root is a header element — a banner landmark, which is what the application bar is. Pass false when the bar is composed into an application frame that owns the page landmarks (TmAppShell): the root then renders as a plain div inside the frame's own header, so the page never carries a banner nested in a banner."
     }
   ],
   "cssClasses": [

@@ -12,9 +12,27 @@
    wrap, Home/End jump to the edges, Escape and Tab close and hand focus back to the trigger, and Tab
    keeps its native default (a render-time @onkeydown:preventDefault would swallow it too). *@
 
-<header class="tm-topbar @Class"
-        data-testid="@RootTestId("topbar")"
-        @attributes="AdditionalAttributes">
+@if (IsLandmark)
+{
+    <header class="@RootCss"
+            data-testid="@RootTestId("topbar")"
+            @attributes="AdditionalAttributes">
+        @Body
+    </header>
+}
+else
+{
+    @* A frame (TmAppShell) owns the page's header landmark: the bar keeps its rendered chrome but
+       an inner <header> would nest a banner inside the frame's own. *@
+    <div class="@RootCss"
+         data-testid="@RootTestId("topbar")"
+         @attributes="AdditionalAttributes">
+        @Body
+    </div>
+}
+
+@code {
+    private RenderFragment Body => @<text>
     @if (ShowMenuButton)
     {
         <button class="tm-topbar-menu-btn"
@@ -171,9 +189,7 @@
             </div>
         }
     </div>
-</header>
-
-@code {
+    </text>;
     private enum MenuEntryKind
     {
         Item,
@@ -262,11 +278,23 @@
     /// <summary>Fires when the user clicks the sign-out entry of the account menu.</summary>
     [Parameter] public EventCallback OnLogout { get; set; }
 
+    /// <summary>
+    /// When true (the default) the root is a <c>&lt;header&gt;</c> — a banner landmark, which is what
+    /// the application bar is. Pass <c>false</c> when the bar is composed into an application frame
+    /// that owns the page's landmarks (<c>TmAppShell</c>): the root then renders as a plain
+    /// <c>&lt;div&gt;</c> inside the frame's own <c>&lt;header&gt;</c>, so the page never carries a
+    /// banner nested in a banner.
+    /// </summary>
+    [Parameter] public bool IsLandmark { get; set; } = true;
+
     /// <summary>Additional CSS class for the root element.</summary>
     [Parameter] public string? Class { get; set; }
 
     /// <summary>Additional HTML attributes for the root element.</summary>
     [Parameter(CaptureUnmatchedValues = true)] public Dictionary<string, object>? AdditionalAttributes { get; set; }
+
+    /// <summary>The root's class list — identical for the <c>&lt;header&gt;</c> and the plain-wrapper form.</summary>
+    private string RootCss => string.IsNullOrWhiteSpace(Class) ? "tm-topbar" : $"tm-topbar {Class}";
 
     private string EffectiveUserMenuLabel
         => string.IsNullOrWhiteSpace(UserMenuLabel) ? Loc["TmTopBar_UserMenu"] : UserMenuLabel!;

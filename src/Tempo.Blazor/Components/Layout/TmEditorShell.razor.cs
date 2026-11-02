@@ -167,7 +167,7 @@ public partial class TmEditorShell
         else return;
 
         var canvas = await _shellJs.MeasureCanvasAsync(_main);
-        var width = (int)EditorShellResize.Clamp(requested, current, MinWidth(side), MaxWidth(side), canvas, MinCanvasWidth);
+        var width = (int)PanelResize.Clamp(requested, current, MinWidth(side), MaxWidth(side), canvas, MinCanvasWidth);
         await CommitWidthAsync(side, width);
     }
 
@@ -187,7 +187,7 @@ public partial class TmEditorShell
         if (panel == EditorShellPanel.None) return Task.CompletedTask;
         // The drag started from the RENDERED width (the tablet fit included), so the clamp must
         // too: growth is measured against what is on screen, not the wider host width.
-        var clamped = (int)EditorShellResize.Clamp(width, RenderedWidthPx(panel), MinWidth(panel), MaxWidth(panel), double.NaN, MinCanvasWidth);
+        var clamped = (int)PanelResize.Clamp(width, RenderedWidthPx(panel), MinWidth(panel), MaxWidth(panel), double.NaN, MinCanvasWidth);
         return InvokeAsync(() => CommitWidthAsync(panel, clamped));
     }
 
@@ -203,7 +203,7 @@ public partial class TmEditorShell
 
         // A non-pixel host width has no pixel value to compare with: any committed width is a change.
         var effective = side == EditorShellPanel.Left ? EffectiveLeftWidth : EffectiveRightWidth;
-        if (EditorShellResize.TryParsePx(effective, out _)
+        if (PanelResize.TryParsePx(effective, out _)
             && width == RenderedWidthPx(side) && TabletFit(side) is null)
         {
             // The fit was dropped: re-render so the panel shows the committed width, not the fit.
@@ -215,14 +215,14 @@ public partial class TmEditorShell
         {
             _userBaseLeft ??= LeftWidth;
             // Back on the width the host supplied: the override is gone, so nothing stays stored.
-            _userLeft = EditorShellResize.TryParsePx(_userBaseLeft, out var baseLeft) && baseLeft == width ? null : width;
+            _userLeft = PanelResize.TryParsePx(_userBaseLeft, out var baseLeft) && baseLeft == width ? null : width;
             if (_userLeft is null) _userBaseLeft = null;
             await LeftWidthChanged.InvokeAsync($"{width}px");
         }
         else
         {
             _userBaseRight ??= RightWidth;
-            _userRight = EditorShellResize.TryParsePx(_userBaseRight, out var baseRight) && baseRight == width ? null : width;
+            _userRight = PanelResize.TryParsePx(_userBaseRight, out var baseRight) && baseRight == width ? null : width;
             if (_userRight is null) _userBaseRight = null;
             await RightWidthChanged.InvokeAsync($"{width}px");
         }
