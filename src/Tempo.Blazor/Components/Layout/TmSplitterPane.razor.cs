@@ -64,13 +64,13 @@ public partial class TmSplitterPane : ComponentBase, IAsyncDisposable, IDisposab
 
     /// <summary>The pane size in whole pixels when it is known as a pixel length, else null.</summary>
     internal int? CurrentPx
-        => EditorShellResize.TryParsePx(_dragSize, out var dragPx) ? dragPx
-        : EditorShellResize.TryParsePx(Size, out var sizePx) ? sizePx
+        => PanelResize.TryParsePx(_dragSize, out var dragPx) ? dragPx
+        : PanelResize.TryParsePx(Size, out var sizePx) ? sizePx
         : null;
 
-    private int? MinPx => EditorShellResize.TryParsePx(MinSize, out var px) ? px : null;
+    private int? MinPx => PanelResize.TryParsePx(MinSize, out var px) ? px : null;
 
-    private int? MaxPx => EditorShellResize.TryParsePx(MaxSize, out var px) ? px : null;
+    private int? MaxPx => PanelResize.TryParsePx(MaxSize, out var px) ? px : null;
 
     // aria-valuenow is always emitted once the pane can be measured: a %-or-rem Size is measured
     // in the DOM after attach (AriaMeasured), so screen readers never meet a valueless separator.

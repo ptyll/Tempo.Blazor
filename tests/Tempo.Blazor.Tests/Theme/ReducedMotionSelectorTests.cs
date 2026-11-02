@@ -294,6 +294,7 @@ public sealed class ReducedMotionSelectorTests
     /// <summary>Split packages whose uncovered animated subjects are frozen in the baseline file.</summary>
     public static TheoryData<string> SplitPackagesEnforced => new()
     {
+        "Tempo.Blazor.AI",
         "Tempo.Blazor.DiagramEditor",
         "Tempo.Blazor.DocumentEditor",
         "Tempo.Blazor.EmailTemplates",

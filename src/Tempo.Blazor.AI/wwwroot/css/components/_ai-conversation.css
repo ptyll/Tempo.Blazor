@@ -1,0 +1,246 @@
+/* ── AI conversation ──────────────────────────────────────────────────────────────────────────
+   The transcript of an AI conversation: a scroll container, the windowed rows, the empty state with
+   suggestion prompts and the two floating pills (new messages, stop generating).
+
+   Every rule reads --tm-* tokens; there is no colour literal and no [data-theme] block here (dark mode
+   is tokens-dark.css's job). Nothing in this file animates or transitions — the streaming caret and the
+   thinking shimmer are owned by _ai-streaming.css / _ai-thinking.css — so the file needs no
+   prefers-reduced-motion block, and the scroll itself is smoothed by the JS module only when the reader's
+   motion preference allows it. */
+
+.tm-ai-conversation {
+    display: flex;
+    flex-direction: column;
+    block-size: 100%;
+    min-block-size: 0;
+    color: var(--tm-color-text);
+    font-family: var(--tm-font-sans);
+    font-size: var(--tm-font-size-sm);
+    line-height: var(--tm-line-height-normal);
+}
+
+/* The body is the positioning context of the floating pills, so an appearing control never moves the
+   content the reader is looking at. */
+.tm-ai-conversation__body {
+    position: relative;
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    min-block-size: 0;
+}
+
+/* The scroll container. It is focusable (tabindex=0) so a keyboard reader can scroll back through the
+   transcript, which is why it carries its own focus-visible ring. min-block-size: 0 is what lets the flex
+   child actually shrink and scroll instead of growing with its content. */
+.tm-ai-conversation__log {
+    flex: 1 1 auto;
+    min-block-size: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: var(--tm-space-4);
+    scrollbar-gutter: stable;
+}
+
+.tm-ai-conversation__log:focus-visible {
+    outline: 2px solid var(--tm-border-color-focus);
+    outline-offset: -2px;
+}
+
+.tm-ai-conversation__content {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-4);
+    min-block-size: 0;
+}
+
+/* "Load older messages" — a control at the top of the windowed transcript. */
+.tm-ai-conversation__load-older {
+    align-self: center;
+    min-block-size: var(--tm-space-8);
+    padding: var(--tm-space-1) var(--tm-space-3);
+    border: var(--tm-border-width) solid var(--tm-border-color);
+    border-radius: var(--tm-radius-full);
+    background-color: var(--tm-bg-surface);
+    color: var(--tm-color-text-secondary);
+    font: inherit;
+    font-size: var(--tm-font-size-xs);
+    cursor: pointer;
+}
+
+.tm-ai-conversation__load-older:hover {
+    background-color: var(--tm-bg-surface-secondary);
+    color: var(--tm-color-text);
+}
+
+.tm-ai-conversation__load-older:focus-visible {
+    outline: 2px solid var(--tm-border-color-focus);
+    outline-offset: 2px;
+}
+
+/* One rendered turn. The keyed wrapper is the anchor a host (and an E2E) addresses by data-message-id. */
+.tm-ai-conversation__message {
+    display: block;
+    min-inline-size: 0;
+}
+
+/* Empty state: heading, explanation and the host's prompts. */
+.tm-ai-conversation__empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--tm-space-3);
+    padding-block: var(--tm-space-8);
+    text-align: center;
+}
+
+.tm-ai-conversation__empty-title {
+    margin: 0;
+    color: var(--tm-color-text);
+    font-size: var(--tm-font-size-lg);
+    font-weight: var(--tm-font-weight-semibold);
+}
+
+.tm-ai-conversation__empty-text {
+    margin: 0;
+    max-inline-size: 36rem;
+    color: var(--tm-color-text-secondary);
+    font-size: var(--tm-font-size-sm);
+}
+
+.tm-ai-conversation__suggestions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: var(--tm-space-2);
+}
+
+.tm-ai-conversation__suggestion {
+    min-block-size: var(--tm-space-8);
+    padding: var(--tm-space-2) var(--tm-space-4);
+    border: var(--tm-border-width) solid var(--tm-border-color);
+    border-radius: var(--tm-radius-full);
+    background-color: var(--tm-bg-surface);
+    color: var(--tm-color-text);
+    font: inherit;
+    font-size: var(--tm-font-size-sm);
+    cursor: pointer;
+}
+
+.tm-ai-conversation__suggestion:hover {
+    background-color: var(--tm-bg-surface-secondary);
+}
+
+.tm-ai-conversation__suggestion:focus-visible {
+    outline: 2px solid var(--tm-border-color-focus);
+    outline-offset: 2px;
+}
+
+/* The pills float over the scroller: bottom-centred, out of the content flow. The bar itself is
+   pointer-transparent so it never swallows a click on the transcript behind it. */
+.tm-ai-conversation__overlay-bar {
+    position: absolute;
+    inset-inline: 0;
+    inset-block-end: var(--tm-space-4);
+    display: flex;
+    justify-content: center;
+    gap: var(--tm-space-2);
+    pointer-events: none;
+}
+
+.tm-ai-conversation__new-messages,
+.tm-ai-conversation__stop {
+    pointer-events: auto;
+    min-block-size: var(--tm-space-8);
+    padding: var(--tm-space-2) var(--tm-space-4);
+    border-radius: var(--tm-radius-full);
+    font: inherit;
+    font-size: var(--tm-font-size-sm);
+    cursor: pointer;
+    box-shadow: var(--tm-shadow-md);
+}
+
+.tm-ai-conversation__new-messages {
+    border: var(--tm-border-width) solid var(--tm-border-color);
+    background-color: var(--tm-bg-surface);
+    color: var(--tm-color-text);
+}
+
+.tm-ai-conversation__new-messages:hover {
+    background-color: var(--tm-bg-surface-secondary);
+}
+
+.tm-ai-conversation__stop {
+    border: var(--tm-border-width) solid var(--tm-color-primary);
+    background-color: var(--tm-color-primary);
+    color: var(--tm-color-on-primary);
+}
+
+.tm-ai-conversation__stop:hover {
+    border-color: var(--tm-color-primary-hover);
+    background-color: var(--tm-color-primary-hover);
+}
+
+.tm-ai-conversation__new-messages:focus-visible,
+.tm-ai-conversation__stop:focus-visible {
+    outline: 2px solid var(--tm-border-color-focus);
+    outline-offset: 2px;
+}
+
+/* 44 px floor for every thumb target on a coarse pointer. The pills keep their look; only the box grows. */
+@media (pointer: coarse) {
+    .tm-ai-conversation__load-older,
+    .tm-ai-conversation__suggestion,
+    .tm-ai-conversation__new-messages,
+    .tm-ai-conversation__stop {
+        min-block-size: var(--tm-touch-target);
+    }
+}
+
+/* Windows high contrast: the system palette replaces every token, so the surfaces and the ink are pinned
+   to the system colours and the focus rings (which forced-color-adjust: none would otherwise keep painting
+   with the theme token) ride Highlight — a Highlight-coloured LABEL over Canvas has no contrast guarantee,
+   so only the outline moves. */
+@media (forced-colors: active) {
+    .tm-ai-conversation,
+    .tm-ai-conversation__load-older,
+    .tm-ai-conversation__suggestion,
+    .tm-ai-conversation__new-messages,
+    .tm-ai-conversation__stop {
+        forced-color-adjust: none;
+        border-color: CanvasText;
+        background-color: Canvas;
+        color: CanvasText;
+    }
+
+    .tm-ai-conversation__stop {
+        border-color: Highlight;
+        background-color: Highlight;
+        color: HighlightText;
+    }
+
+    /* A hover rule is a class plus a pseudo-class, so it outranks the plain class selectors above and would
+       put the theme tokens back under the pointer — a --tm-color-primary-hover background under
+       HighlightText ink, a pair whose contrast nothing guarantees. These counterparts keep the system palette
+       winning; the Highlight border is the hover affordance that is left. */
+    .tm-ai-conversation__load-older:hover,
+    .tm-ai-conversation__suggestion:hover,
+    .tm-ai-conversation__new-messages:hover {
+        border-color: Highlight;
+        background-color: Canvas;
+        color: CanvasText;
+    }
+
+    .tm-ai-conversation__stop:hover {
+        border-color: Highlight;
+        background-color: Highlight;
+        color: HighlightText;
+    }
+
+    .tm-ai-conversation__log:focus-visible,
+    .tm-ai-conversation__load-older:focus-visible,
+    .tm-ai-conversation__suggestion:focus-visible,
+    .tm-ai-conversation__new-messages:focus-visible,
+    .tm-ai-conversation__stop:focus-visible {
+        outline-color: Highlight;
+    }
+}

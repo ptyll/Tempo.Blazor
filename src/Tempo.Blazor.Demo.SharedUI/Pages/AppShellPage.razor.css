@@ -1,0 +1,252 @@
+/* The /app-shell demo page (plan 5d396592, phase 6). Demo-scoped chrome only: the frame itself is
+   styled by the library's _app-shell.css, so every colour and size here is a --tm-* token and the
+   page has nothing to fix about the component's own presentation. */
+
+.app-shell-page {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-8);
+    min-inline-size: 0;
+}
+
+.app-shell-page__header {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-2);
+}
+
+.app-shell-page__header-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--tm-space-3);
+}
+
+.app-shell-page__header-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-3);
+}
+
+.app-shell-page__back-link {
+    color: var(--tm-text-link);
+    font-size: var(--tm-font-size-sm);
+    font-weight: var(--tm-font-weight-medium);
+}
+
+.app-shell-page__title {
+    margin: 0;
+    font-size: var(--tm-font-size-2xl);
+    font-weight: var(--tm-font-weight-bold);
+    color: var(--tm-text-primary);
+}
+
+.app-shell-page__intro,
+.app-shell-page__section-description,
+.app-shell-page__card-note,
+.app-shell-page__sources-intro {
+    margin: 0;
+    color: var(--tm-text-secondary);
+    max-inline-size: 52rem;
+}
+
+.app-shell-page__section {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-4);
+    min-inline-size: 0;
+}
+
+.app-shell-page__section-title {
+    margin: 0;
+    font-size: var(--tm-font-size-xl);
+    font-weight: var(--tm-font-weight-semibold);
+    color: var(--tm-text-primary);
+}
+
+.app-shell-page__controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--tm-space-4);
+    align-items: flex-end;
+}
+
+.app-shell-page__control {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--tm-space-2);
+    padding: var(--tm-space-2) var(--tm-space-3);
+    border: 1px solid var(--tm-border-color);
+    border-radius: var(--tm-radius-card);
+    background: var(--tm-bg-surface);
+}
+
+.app-shell-page__control-label {
+    font-size: var(--tm-font-size-sm);
+    font-weight: var(--tm-font-weight-medium);
+    color: var(--tm-text-secondary);
+}
+
+.app-shell-page__resolved {
+    font-size: var(--tm-font-size-sm);
+    color: var(--tm-text-secondary);
+}
+
+/* The stage is the "reservable container" of the demo: it can be narrower or wider than the demo
+   column (the width presets above set the viewport), so all three presentations are reachable at any
+   browser width. It scrolls instead of clipping — a clipped frame is a broken demo. */
+.app-shell-page__stage {
+    display: flex;
+    /* flex-start, never center: in a scroll container an oversized centred item overflows on the
+       START side too, which no scroll position can reach (the left edge of a wide frame would be
+       permanently cropped). */
+    justify-content: flex-start;
+    overflow: auto;
+    /* A fixed 60rem stage is taller than any phone viewport, so the frame's own footer sat off screen
+       inside a page that already scrolls. Cap the 60rem review height against the viewport minus the
+       demo chrome (the fixed 4rem phone header) instead. */
+    block-size: min(60rem, 100dvh - var(--tm-space-16));
+    padding: var(--tm-space-3);
+    border: 1px solid var(--tm-border-color);
+    border-radius: var(--tm-radius-card);
+    background: var(--tm-bg-workspace);
+}
+
+.app-shell-page__viewport {
+    flex: 0 0 auto;
+    block-size: 100%;
+    min-inline-size: 0;
+}
+
+.app-shell-page__content {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-4);
+    padding: var(--tm-space-4);
+    min-inline-size: 0;
+}
+
+.app-shell-page__content-title {
+    margin: 0;
+    font-size: var(--tm-font-size-lg);
+    font-weight: var(--tm-font-weight-semibold);
+    color: var(--tm-text-primary);
+}
+
+.app-shell-page__content-body {
+    margin: 0;
+    color: var(--tm-text-secondary);
+}
+
+.app-shell-page__topbar-note {
+    font-size: var(--tm-font-size-sm);
+    color: var(--tm-text-secondary);
+}
+
+.app-shell-page__brand {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-2);
+    font-weight: var(--tm-font-weight-semibold);
+    color: var(--tm-text-primary);
+}
+
+.app-shell-page__stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(7rem, 1fr));
+    gap: var(--tm-space-3);
+}
+
+.app-shell-page__stat {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-1);
+    padding: var(--tm-space-3);
+    border: 1px solid var(--tm-border-color);
+    border-radius: var(--tm-radius-card);
+    background: var(--tm-bg-surface);
+}
+
+.app-shell-page__stat-value {
+    font-size: var(--tm-font-size-xl);
+    font-weight: var(--tm-font-weight-bold);
+    color: var(--tm-text-primary);
+}
+
+.app-shell-page__stat-label {
+    font-size: var(--tm-font-size-sm);
+    color: var(--tm-text-secondary);
+}
+
+.app-shell-page__last-step,
+.app-shell-page__last-action {
+    margin: 0;
+    font-size: var(--tm-font-size-sm);
+    color: var(--tm-text-secondary);
+}
+
+.app-shell-page__grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
+    gap: var(--tm-space-4);
+    align-items: start;
+}
+
+.app-shell-page__card {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-3);
+    padding: var(--tm-space-4);
+    border: 1px solid var(--tm-border-color);
+    border-radius: var(--tm-radius-card);
+    background: var(--tm-bg-surface);
+    min-inline-size: 0;
+}
+
+.app-shell-page__card--wide {
+    grid-column: 1 / -1;
+}
+
+.app-shell-page__card-title {
+    margin: 0;
+    font-size: var(--tm-font-size-md);
+    font-weight: var(--tm-font-weight-semibold);
+    color: var(--tm-text-primary);
+}
+
+.app-shell-page__sources {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-3);
+    padding: var(--tm-space-3);
+}
+
+.app-shell-page__source-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-2);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.app-shell-page__source {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-2);
+    padding: var(--tm-space-2);
+    border: 1px solid var(--tm-border-color);
+    border-radius: var(--tm-radius-card);
+    color: var(--tm-text-primary);
+}
+
+/* Coarse pointers get a finger-sized control (the width presets are the non-drag alternative for
+   reviewing the frame's three presentations). */
+@media (pointer: coarse) {
+    .app-shell-page__control .tm-btn {
+        min-block-size: var(--tm-touch-target);
+        min-inline-size: var(--tm-touch-target);
+    }
+}

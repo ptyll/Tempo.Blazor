@@ -1,0 +1,170 @@
+@namespace Tempo.Blazor.Components.Approvals
+@inherits Tempo.Blazor.Components.TmComponentBase
+@using Tempo.Blazor.Abstractions.Models.Diffs
+@using Tempo.Blazor.Components.Icons
+@using Tempo.Blazor.Diff
+
+@* An inline comparison of two texts. Every change is a real <ins>/<del> pair preceded by a visually
+   hidden label, so the change never rests on colour alone; in Review mode each change additionally
+   carries a marker button that opens a non-modal popover with the two decisions. The popover is a
+   SIBLING of the marker inside the change span — the diff must stay one flowing text, and a wrapper
+   element per change would break the line. *@
+<div @ref="_rootElement"
+     class="@RootClass"
+     data-testid="@RootTestId("inline-diff")"
+     data-mode="@ModeName"
+     data-granularity="@GranularityName"
+     data-fallback="@FallbackName"
+     data-readonly="@(ReadOnly ? "true" : "false")"
+     role="group"
+     aria-label="@EffectiveAriaLabel"
+     aria-busy="@(_deciding ? "true" : null)"
+     tabindex="-1"
+     @attributes="AdditionalAttributes">
+
+    @if (IsReview && _result.Changes.Count > 0)
+    {
+        <div class="tm-inline-diff__toolbar" data-testid="@TestId("inline-diff-toolbar")">
+            <span class="tm-inline-diff__count" data-testid="@TestId("inline-diff-count")">@CountText</span>
+            <div class="tm-inline-diff__bulk">
+                <button type="button"
+                        class="tm-btn tm-btn-primary tm-btn-sm tm-inline-diff__action"
+                        data-testid="@TestId("inline-diff-accept-all")"
+                        disabled="@_deciding"
+                        @onclick="AcceptAllAsync">
+                    <TmIcon Name="@IconNames.Check" Size="IconSize.Xs" />
+                    <span class="tm-btn-label">@Loc["TmInlineDiff_AcceptAll"]</span>
+                </button>
+                <button type="button"
+                        class="tm-btn tm-btn-ghost tm-btn-sm tm-inline-diff__action"
+                        data-testid="@TestId("inline-diff-reject-all")"
+                        disabled="@_deciding"
+                        @onclick="RejectAllAsync">
+                    <TmIcon Name="@IconNames.X" Size="IconSize.Xs" />
+                    <span class="tm-btn-label">@Loc["TmInlineDiff_RejectAll"]</span>
+                </button>
+                @if (CanUndo)
+                {
+                    <button type="button"
+                            @ref="_undoElement"
+                            class="tm-btn tm-btn-ghost tm-btn-sm tm-inline-diff__action tm-inline-diff__undo"
+                            data-testid="@TestId("inline-diff-undo")"
+                            aria-label="@Loc["TmInlineDiff_UndoLabel"]"
+                            disabled="@_deciding"
+                            @onclick="UndoAsync">
+                        <TmIcon Name="@IconNames.RotateCcw" Size="IconSize.Xs" />
+                        <span class="tm-btn-label">@Loc["TmInlineDiff_Undo"]</span>
+                    </button>
+                }
+            </div>
+        </div>
+    }
+
+    @if (FallbackMessage is not null)
+    {
+        <p class="tm-inline-diff__fallback" data-testid="@TestId("inline-diff-fallback")" role="note">@FallbackMessage</p>
+    }
+
+    @if (ErrorMessage is not null)
+    {
+        @* A plain paragraph, never a second live region: the single polite region below carries the
+           message (role=alert would announce the same failure twice). *@
+        <p class="tm-inline-diff__error" data-testid="@TestId("inline-diff-error")">@ErrorMessage</p>
+    }
+
+    <div class="tm-inline-diff__content"
+         data-testid="@TestId("inline-diff-content")"
+         @onclick="HandleContentClick">
+        @foreach (var entry in _view)
+        {
+            @if (!entry.Hunk.IsChange)
+            {
+                <span class="tm-inline-diff__equal" data-testid="@TestId("inline-diff-equal")">@entry.Hunk.NewText</span>
+            }
+            else
+            {
+                var hunk = entry.Hunk;
+                var isOpen = _openHunkId == hunk.Id;
+                <span class="tm-inline-diff__change @ChangeModifier(hunk.Id)"
+                      data-testid="@TestId("inline-diff-change")"
+                      data-hunk-id="@hunk.Id"
+                      data-kind="@KindName(hunk.Kind)"
+                      data-state="@StateName(hunk.Id)">
+                    @if (hunk.Kind != TextDiffHunkKind.Insert)
+                    {
+                        <span class="tm-sr-only">@Loc["TmInlineDiff_Removed"]</span>
+                        <del class="tm-inline-diff__del" data-testid="@TestId("inline-diff-del")">@hunk.OldText</del>
+                    }
+                    @if (hunk.Kind != TextDiffHunkKind.Delete)
+                    {
+                        <span class="tm-sr-only">@Loc["TmInlineDiff_Inserted"]</span>
+                        <ins class="tm-inline-diff__ins" data-testid="@TestId("inline-diff-ins")">@hunk.NewText</ins>
+                    }
+
+                    @if (IsReview)
+                    {
+                        <button type="button"
+                                class="tm-inline-diff__marker"
+                                data-testid="@TestId("inline-diff-marker")"
+                                aria-haspopup="true"
+                                aria-expanded="@(isOpen ? "true" : "false")"
+                                aria-controls="@(isOpen ? PopoverId(hunk.Id) : null)"
+                                aria-label="@MarkerLabel(entry.ChangeIndex, hunk)"
+                                @ref="_markerRefs[hunk.Id]"
+                                @onclick="() => TogglePopover(hunk.Id)"
+                                @onclick:stopPropagation="true">
+                            <TmIcon Name="@IconNames.Pencil" Size="IconSize.Xs" />
+                        </button>
+
+                        @if (isOpen)
+                        {
+                            <span class="tm-inline-diff__popover"
+                                  id="@PopoverId(hunk.Id)"
+                                  role="group"
+                                  aria-label="@PopoverLabel(entry.ChangeIndex)"
+                                  data-testid="@TestId("inline-diff-popover")"
+                                  @onclick:stopPropagation="true"
+                                  @onkeydown="HandlePopoverKeyDown"
+                                  @onkeydown:stopPropagation="true">
+                                <button type="button"
+                                        @ref="_popoverAcceptElement"
+                                        class="tm-btn tm-btn-primary tm-btn-sm tm-inline-diff__popover-action"
+                                        data-testid="@TestId("inline-diff-accept")"
+                                        aria-keyshortcuts="@AcceptShortcuts"
+                                        disabled="@_deciding"
+                                        @onclick="() => DecideHunkAsync(hunk.Id, true)"
+                                        @onkeydown="args => HandlePopoverTab(args, isFirst: true, isLast: false)">
+                                    <span class="tm-btn-label">@Loc["TmInlineDiff_Accept"]</span>
+                                </button>
+                                <button type="button"
+                                        class="tm-btn tm-btn-ghost tm-btn-sm tm-inline-diff__popover-action"
+                                        data-testid="@TestId("inline-diff-reject")"
+                                        aria-keyshortcuts="@RejectShortcuts"
+                                        disabled="@_deciding"
+                                        @onclick="() => DecideHunkAsync(hunk.Id, false)"
+                                        @onkeydown="args => HandlePopoverTab(args, isFirst: false, isLast: true)">
+                                    <span class="tm-btn-label">@Loc["TmInlineDiff_Reject"]</span>
+                                </button>
+                                <span class="tm-inline-diff__hint">@Loc["TmInlineDiff_ShortcutsHint"]</span>
+                            </span>
+                        }
+                    }
+                </span>
+            }
+        }
+    </div>
+
+    @if (!HasChanges)
+    {
+        <p class="tm-inline-diff__no-changes" data-testid="@TestId("inline-diff-no-changes")">@Loc["TmInlineDiff_NoChanges"]</p>
+    }
+
+    @* ONE polite live region for the whole component: every result and every error is announced
+       here, and nothing else in the diff claims a live role. *@
+    <div class="tm-sr-only"
+         id="@AnnouncementId"
+         role="status"
+         aria-live="polite"
+         aria-atomic="true"
+         data-testid="@TestId("inline-diff-announcements")">@_announcement</div>
+</div>

@@ -29,6 +29,7 @@
   <!-- The XSS/mutation-XSS vector set is shared with the Abstractions test project, which runs the same
        list against the BCL ConservativeHtmlContentSanitizer: one list, two sanitizers, no drift. -->
   <ItemGroup>
+    <Compile Include="..\Shared\XssPayloads.cs" />
     <Compile Include="..\Shared\SanitizerXssVectors.cs" />
   </ItemGroup>
 

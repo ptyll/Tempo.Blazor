@@ -1,0 +1,10 @@
+{
+  "kind": "Class",
+  "category": "AI",
+  "namespace": "Tempo.Blazor.AI.Models",
+  "description": "One tool/function invocation of an answer with its live status, raw JSON arguments and result, timestamps, redaction flag and the elapsed Duration.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/AI/AiToolCall.cs",
+  "documentationStatus": "generated",
+  "itemName": "AiToolCall"
+}

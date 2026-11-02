@@ -1,0 +1,10 @@
+{
+  "kind": "Class",
+  "category": "AI",
+  "namespace": "Tempo.Blazor.AI.Models",
+  "description": "Base of the ordered parts of an AiMessage — AiTextPart, AiReasoningPart, AiToolCallPart and AiSourcesPart — so a message can interleave reasoning, tool calls and text in arrival order.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/AI/AiMessagePart.cs",
+  "documentationStatus": "generated",
+  "itemName": "AiMessagePart"
+}

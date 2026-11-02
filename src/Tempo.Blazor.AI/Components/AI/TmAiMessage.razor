@@ -1,0 +1,438 @@
+@namespace Tempo.Blazor.Components.AI
+@inherits Tempo.Blazor.Components.TmComponentBase
+@using System.Globalization
+@using Tempo.Blazor.AI.Markdown
+@using Tempo.Blazor.AI.Models
+@using Tempo.Blazor.Components.Icons
+@using Tempo.Blazor.Components.Overlay
+@inject IJSRuntime JS
+@implements IAsyncDisposable
+
+@* One turn of an AI conversation. The markdown itself is untrusted model output and is rendered ONLY
+   through TmMarkdownView (the safe pipeline); the block around it owns the role, the avatar, the source
+   cards, the follow-up chips and the action bar. Clipboard and speech are the two behaviours that need
+   the browser, and they are delegated to the package's ES module (no <script> tag, no eval). *@
+<article class="tm-ai-message tm-ai-message--@RoleModifier @Class"
+         data-testid="@RootTestId("ai-message")"
+         data-role="@RoleModifier"
+         data-status="@StatusModifier"
+         @attributes="AdditionalAttributes">
+    @if (ShowAvatar)
+    {
+        <div class="tm-ai-message__avatar" aria-hidden="true">
+            @if (AvatarTemplate is not null)
+            {
+                @AvatarTemplate
+            }
+            else
+            {
+                <TmIcon Name="@AvatarIcon" Size="IconSize.Sm" />
+            }
+        </div>
+    }
+
+    <div class="tm-ai-message__content">
+        <div @ref="_bodyRef"
+             class="tm-ai-message__body"
+             aria-busy="@(IsStreaming ? "true" : null)">
+            @if (Parts.Count == 0 && IsStreaming)
+            {
+                <p class="tm-ai-message__pending tm-ai-streaming">@Loc["TmAiMessage_Generating"]</p>
+            }
+            @for (var index = 0; index < Parts.Count; index++)
+            {
+                var part = Parts[index];
+                if (part is AiTextPart text)
+                {
+                    var streaming = IsStreaming && index == Parts.Count - 1;
+                    <TmMarkdownView Markdown="@text.Markdown"
+                                     Class="@(streaming ? "tm-ai-message__markdown tm-ai-streaming" : "tm-ai-message__markdown")"
+                                     OnCitationClick="HandleCitationClickAsync" />
+                }
+                else if (part is AiSourcesPart sourcesPart)
+                {
+                    if (ShowSources && sourcesPart.Sources.Count > 0)
+                    {
+                        <section class="tm-ai-message__sources" aria-label="@Loc["TmAiMessage_Sources"]">
+                            @for (var sourceIndex = 0; sourceIndex < sourcesPart.Sources.Count; sourceIndex++)
+                            {
+                                var source = sourcesPart.Sources[sourceIndex];
+                                var href = SafeLink(source.Url);
+                                <div class="tm-ai-message__source">
+                                    <span class="tm-ai-message__source-index" aria-hidden="true">@(sourceIndex + 1)</span>
+                                    <div class="tm-ai-message__source-body">
+                                        <span class="tm-ai-message__source-title">
+                                            @if (href is not null)
+                                            {
+                                                <a href="@href" target="_blank" rel="noopener noreferrer nofollow">@source.Title</a>
+                                            }
+                                            else
+                                            {
+                                                @source.Title
+                                            }
+                                        </span>
+                                        @if (!string.IsNullOrWhiteSpace(source.Domain))
+                                        {
+                                            <span class="tm-ai-message__source-domain">@source.Domain</span>
+                                        }
+                                        @if (!string.IsNullOrWhiteSpace(source.Snippet))
+                                        {
+                                            <p class="tm-ai-message__source-snippet">@source.Snippet</p>
+                                        }
+                                    </div>
+                                </div>
+                            }
+                        </section>
+                    }
+                }
+                else if (part is AiReasoningPart reasoning)
+                {
+                    @* The reasoning is the package's own panel: collapsed it reports what the thinking cost,
+                       expanded it lists the steps and the inspected sources. It counts up live while this
+                       turn is still streaming and the reasoning is the trailing part. *@
+                    <TmReasoningPanel Reasoning="@reasoning"
+                                      IsRunning="@(IsStreaming && index == Parts.Count - 1)" />
+                }
+                else if (part is AiToolCallPart)
+                {
+                    @* Consecutive calls are ONE run: three cards stacked on top of each other push the answer
+                       off the screen, while the run's summary line is what a reader scans. A single call
+                       renders as its own card — a one-item group would claim a run that is not there. Only
+                       the FIRST part of a run renders it, which is what ToolCallRunAt's index check does. *@
+                    var run = ToolCallRunAt(index);
+                    if (run is not null)
+                    {
+                        if (run.Count > 1)
+                        {
+                            <TmToolCallGroup ToolCalls="@run" OnRetry="OnToolCallRetry" />
+                        }
+                        else
+                        {
+                            <TmToolCallCard ToolCall="@run[0]" OnRetry="@RetryCallback(run[0])" />
+                        }
+                    }
+                }
+            }
+        </div>
+
+        @if (StatusModifier == "failed")
+        {
+            <div class="tm-ai-message__error" role="alert">
+                <TmIcon Name="@IconNames.AlertCircle" Size="IconSize.Sm" />
+                <span class="tm-ai-message__error-text">
+                    @(string.IsNullOrWhiteSpace(Message?.Error) ? Loc["TmAiMessage_Failed"] : Message!.Error)
+                </span>
+                @if (OnRetry.HasDelegate)
+                {
+                    <button type="button" class="tm-ai-message__retry" @onclick="RetryAsync">
+                        <TmIcon Name="@IconNames.Refresh" Size="IconSize.Sm" />
+                        <span>@Loc["TmAiMessage_Retry"]</span>
+                    </button>
+                }
+            </div>
+        }
+        else if (StatusModifier == "stopped")
+        {
+            <p class="tm-ai-message__state">@Loc["TmAiMessage_Stopped"]</p>
+        }
+
+        @if (ShowFollowUps && FollowUps.Count > 0)
+        {
+            <div class="tm-ai-message__follow-ups" role="group" aria-label="@Loc["TmAiMessage_FollowUps"]">
+                @foreach (var followUp in FollowUps)
+                {
+                    <button type="button" class="tm-ai-message__follow-up" @onclick="() => FollowUpAsync(followUp)">
+                        @followUp
+                    </button>
+                }
+            </div>
+        }
+
+        @if (ShowsVersionSwitcher)
+        {
+            <div class="tm-ai-message__versions" role="group" aria-label="@Loc["TmAiMessage_Versions"]">
+                <button type="button"
+                        class="tm-ai-message__version-button"
+                        data-tm-ai-action="version-prev"
+                        aria-label="@Loc["TmAiMessage_PreviousVersion"]"
+                        disabled="@(DisplayedVersionIndex <= 0)"
+                        @onclick="() => ChangeVersionAsync(-1)">
+                    <TmIcon Name="@IconNames.ChevronLeft" Size="IconSize.Sm" />
+                </button>
+                @* The visible "2/3" is the visual form only: a plain span is role=generic, so an aria-label
+                   on it is dropped by the accessible-name computation. The spoken form is real text in a
+                   visually hidden span, which every reader announces. *@
+                <span class="tm-ai-message__version-label" aria-hidden="true">
+                    @Loc["TmAiMessage_VersionShort", DisplayedVersionIndex + 1, VersionCount]
+                </span>
+                <span class="tm-sr-only">@Loc["TmAiMessage_Version", DisplayedVersionIndex + 1, VersionCount]</span>
+                <button type="button"
+                        class="tm-ai-message__version-button"
+                        data-tm-ai-action="version-next"
+                        aria-label="@Loc["TmAiMessage_NextVersion"]"
+                        disabled="@(DisplayedVersionIndex >= VersionCount - 1)"
+                        @onclick="() => ChangeVersionAsync(1)">
+                    <TmIcon Name="@IconNames.ChevronRight" Size="IconSize.Sm" />
+                </button>
+            </div>
+        }
+
+        @if (ShowActions && Message is not null && ActionsTemplate is not null)
+        {
+            @* A host template owns its own buttons AND its own keyboard model: rendering it inside a
+               role=toolbar would promise a roving tabindex this component cannot give it. *@
+            <div class="tm-ai-message__host-actions">@ActionsTemplate</div>
+        }
+        else if (ShowsActions)
+        {
+            <div class="tm-ai-message__actions"
+                 role="toolbar"
+                 aria-label="@Loc["TmAiMessage_Actions"]"
+                 aria-orientation="horizontal"
+                 @onkeydown="HandleActionsKeyDown">
+                <button @ref="_copyRef"
+                        type="button"
+                        class="tm-ai-message__action"
+                        data-tm-ai-action="copy"
+                        data-copied="@(_copied ? "true" : null)"
+                        tabindex="@TabIndexFor(ActionSlot.Copy)"
+                        aria-label="@Loc["TmAiMessage_Copy"]"
+                        @onfocus="() => SetRovingSlot(ActionSlot.Copy)"
+                        @onclick="CopyAsync">
+                    <TmIcon Name="@(_copied ? IconNames.Check : IconNames.Copy)" Size="IconSize.Sm" />
+                </button>
+
+                @if (CanRegenerate)
+                {
+                    <button @ref="_regenerateRef"
+                            type="button"
+                            class="tm-ai-message__action"
+                            data-tm-ai-action="regenerate"
+                            tabindex="@TabIndexFor(ActionSlot.Regenerate)"
+                            aria-label="@Loc["TmAiMessage_Regenerate"]"
+                            @onfocus="() => SetRovingSlot(ActionSlot.Regenerate)"
+                            @onclick="RegenerateAsync">
+                        <TmIcon Name="@IconNames.Refresh" Size="IconSize.Sm" />
+                    </button>
+                }
+
+                @if (CanReadAloud)
+                {
+                    <button @ref="_readAloudRef"
+                            type="button"
+                            class="tm-ai-message__action"
+                            data-tm-ai-action="read-aloud"
+                            tabindex="@TabIndexFor(ActionSlot.ReadAloud)"
+                            aria-label="@(_speaking ? Loc["TmAiMessage_StopReading"] : Loc["TmAiMessage_ReadAloud"])"
+                            aria-pressed="@(_speaking ? "true" : "false")"
+                            @onfocus="() => SetRovingSlot(ActionSlot.ReadAloud)"
+                            @onclick="ToggleReadAloudAsync">
+                        <TmIcon Name="@(_speaking ? IconNames.VolumeX : IconNames.Volume2)" Size="IconSize.Sm" />
+                    </button>
+                }
+
+                @if (CanFeedback)
+                {
+                    <button @ref="_upRef"
+                            type="button"
+                            class="tm-ai-message__action"
+                            data-tm-ai-action="feedback-up"
+                            tabindex="@TabIndexFor(ActionSlot.FeedbackUp)"
+                            aria-label="@Loc["TmAiMessage_FeedbackUp"]"
+                            aria-pressed="@(EffectiveFeedback?.Rating == AiFeedbackRating.Positive ? "true" : "false")"
+                            @onfocus="() => SetRovingSlot(ActionSlot.FeedbackUp)"
+                            @onclick="RatePositiveAsync">
+                        <TmIcon Name="@IconNames.ThumbsUp" Size="IconSize.Sm" />
+                    </button>
+                    <button @ref="_downRef"
+                            type="button"
+                            class="tm-ai-message__action"
+                            data-tm-ai-action="feedback-down"
+                            tabindex="@TabIndexFor(ActionSlot.FeedbackDown)"
+                            aria-label="@Loc["TmAiMessage_FeedbackDown"]"
+                            aria-pressed="@(EffectiveFeedback?.Rating == AiFeedbackRating.Negative ? "true" : "false")"
+                            @onfocus="() => SetRovingSlot(ActionSlot.FeedbackDown)"
+                            @onclick="RateNegativeAsync">
+                        <TmIcon Name="@IconNames.ThumbsDown" Size="IconSize.Sm" />
+                    </button>
+                }
+            </div>
+        }
+
+        @* One live region per message carries every asynchronous change of state: the copy
+           confirmation and the "generation stopped" transition. The visible labels below are only
+           read by a reader who is already there. *@
+        <div class="tm-sr-only" data-tm-ai-live role="status">@_liveAnnouncement</div>
+
+        @* The two popovers are SIBLINGS of the toolbar, never children: a keydown inside the reason
+           textarea must not travel through the roving-tabindex handler. Both move focus INTO
+           themselves from OnOpened (the only hook that runs after overlay.js showed the panel — a
+           focus move against a still-hidden popover is dropped), and both put it back where the
+           reader came from. *@
+        <TmOverlayPanel IsOpen="_previewOpen"
+                        IsOpenChanged="OnPreviewOpenChanged"
+                        OnOpened="FocusPreviewCloseAsync"
+                        OnDismissed="OnPreviewDismissedAsync"
+                        Anchor="_bodyRef"
+                        Role="dialog"
+                        Title="@Loc["TmAiMessage_SourcePreview"]"
+                        Placement="OverlayPlacement.Top"
+                        ConstrainHeight="true"
+                        Class="tm-ai-message__preview-panel"
+                        DataTestId="@TestId("ai-message-citation-preview")">
+            @if (_previewSource is { } preview)
+            {
+                var previewHref = SafeLink(preview.Url);
+                <div class="tm-ai-message__citation-preview">
+                    <div class="tm-ai-message__preview-header">
+                        <span class="tm-ai-message__preview-title">@preview.Title</span>
+                        <button @ref="_previewCloseRef"
+                                type="button"
+                                class="tm-ai-message__preview-close"
+                                aria-label="@Loc["Tm_Close"]"
+                                @onclick="ClosePreviewAsync">
+                            <TmIcon Name="@IconNames.X" Size="IconSize.Sm" />
+                        </button>
+                    </div>
+                    @if (!string.IsNullOrWhiteSpace(preview.Domain))
+                    {
+                        <span class="tm-ai-message__preview-domain">@preview.Domain</span>
+                    }
+                    @if (!string.IsNullOrWhiteSpace(preview.Snippet))
+                    {
+                        <p class="tm-ai-message__preview-snippet">@preview.Snippet</p>
+                    }
+                    @if (previewHref is not null)
+                    {
+                        <a class="tm-ai-message__preview-link"
+                           href="@previewHref"
+                           target="_blank"
+                           rel="noopener noreferrer nofollow"
+                           aria-label="@Loc["TmAiMessage_OpenSource"]">
+                            @Loc["TmAiMessage_OpenSource"]
+                        </a>
+                    }
+                </div>
+            }
+        </TmOverlayPanel>
+
+        <TmOverlayPanel IsOpen="_feedbackOpen"
+                        IsOpenChanged="OnFeedbackOpenChanged"
+                        OnOpened="FocusFeedbackInputAsync"
+                        OnDismissed="OnFeedbackDismissed"
+                        TrapFocus="true"
+                        Anchor="_downRef"
+                        Role="dialog"
+                        Title="@Loc["TmAiMessage_FeedbackTitle"]"
+                        Placement="OverlayPlacement.Top"
+                        ConstrainHeight="true"
+                        Class="tm-ai-message__feedback-panel"
+                        DataTestId="@TestId("ai-message-feedback")">
+            <div class="tm-ai-message__feedback">
+                <label class="tm-ai-message__feedback-label" for="@_feedbackInputId">@Loc["TmAiMessage_FeedbackReason"]</label>
+                <textarea @ref="_feedbackInputRef"
+                          id="@_feedbackInputId"
+                          class="tm-ai-message__feedback-input"
+                          rows="3"
+                          @bind="_feedbackReason"></textarea>
+                <div class="tm-ai-message__feedback-actions">
+                    <button type="button" class="tm-ai-message__feedback-cancel" @onclick="CancelFeedbackAsync">
+                        @Loc["Tm_Cancel"]
+                    </button>
+                    <button type="button" class="tm-ai-message__feedback-submit" @onclick="SubmitFeedbackAsync">
+                        @Loc["TmAiMessage_FeedbackSubmit"]
+                    </button>
+                </div>
+            </div>
+        </TmOverlayPanel>
+    </div>
+</article>
+
+@code {
+    // ── Roving tabindex ───────────────────────────────────────────────────────────────────────
+
+    private IReadOnlyList<ActionSlot> PresentSlots()
+    {
+        var slots = new List<ActionSlot>(5) { ActionSlot.Copy };
+        if (CanRegenerate)
+        {
+            slots.Add(ActionSlot.Regenerate);
+        }
+
+        if (CanReadAloud)
+        {
+            slots.Add(ActionSlot.ReadAloud);
+        }
+
+        if (CanFeedback)
+        {
+            slots.Add(ActionSlot.FeedbackUp);
+            slots.Add(ActionSlot.FeedbackDown);
+        }
+
+        return slots;
+    }
+
+    private ActionSlot EffectiveRovingSlot
+    {
+        get
+        {
+            var slots = PresentSlots();
+            return slots.Contains((ActionSlot)_rovingSlot) ? (ActionSlot)_rovingSlot : slots[0];
+        }
+    }
+
+    private string TabIndexFor(ActionSlot slot) => EffectiveRovingSlot == slot ? "0" : "-1";
+
+    private void SetRovingSlot(ActionSlot slot) => _rovingSlot = (int)slot;
+
+    private ElementReference ReferenceFor(ActionSlot slot) => slot switch
+    {
+        ActionSlot.Regenerate => _regenerateRef,
+        ActionSlot.ReadAloud => _readAloudRef,
+        ActionSlot.FeedbackUp => _upRef,
+        ActionSlot.FeedbackDown => _downRef,
+        _ => _copyRef,
+    };
+
+    /// <summary>
+    /// APG toolbar keyboard model: ArrowLeft/ArrowRight move the single tab stop (wrapping), Home/End jump
+    /// to the ends, and focus follows the tab stop through <see cref="ElementReference.FocusAsync"/>. Only
+    /// our own actions are roved, so a nested control keeps its own keys.
+    /// </summary>
+    private async Task HandleActionsKeyDown(KeyboardEventArgs args)
+    {
+        var slots = PresentSlots();
+        if (slots.Count == 0)
+        {
+            return;
+        }
+
+        var current = slots.ToList().IndexOf(EffectiveRovingSlot);
+        var target = args.Key switch
+        {
+            "ArrowRight" or "ArrowDown" => current < 0 ? 0 : (current + 1) % slots.Count,
+            "ArrowLeft" or "ArrowUp" => current < 0 ? slots.Count - 1 : (current - 1 + slots.Count) % slots.Count,
+            "Home" => 0,
+            "End" => slots.Count - 1,
+            _ => -1,
+        };
+
+        if (target < 0)
+        {
+            return;
+        }
+
+        var next = slots[target];
+        _rovingSlot = (int)next;
+        var reference = ReferenceFor(next);
+        try
+        {
+            await reference.FocusAsync();
+        }
+        catch (Exception exception) when (IsInteropFailure(exception))
+        {
+            // No interop (static rendering): the tab stop still moved, the focus move is best effort.
+        }
+    }
+}

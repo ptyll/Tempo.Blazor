@@ -1,0 +1,36 @@
+{
+  "kind": "RecordStruct",
+  "category": "Diff",
+  "namespace": "Tempo.Blazor.Diff",
+  "description": "A half-open span of one input text used by a TextDiffHunk. Offsets are CHARACTER offsets into the corresponding input (OldText for the old side, NewText for the new side), independent of the TextDiffGranularity: a word diff and a line diff both report character offsets, so a consumer can slice the original text — or scroll a viewer — without re-running the engine.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/Diff/TextRange.cs",
+  "documentationStatus": "generated",
+  "members": [
+    {
+      "name": "End",
+      "kind": "Property",
+      "type": "int",
+      "description": "Offset one past the last covered character."
+    },
+    {
+      "name": "IsEmpty",
+      "kind": "Property",
+      "type": "bool",
+      "description": "Whether the span covers no character at all."
+    },
+    {
+      "name": "Length",
+      "kind": "Property",
+      "type": "int",
+      "description": "Number of characters covered; 0 for the empty side of an insertion or deletion."
+    },
+    {
+      "name": "Start",
+      "kind": "Property",
+      "type": "int",
+      "description": "Zero-based offset of the first character covered by the span."
+    }
+  ],
+  "itemName": "TextRange"
+}

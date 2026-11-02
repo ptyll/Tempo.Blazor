@@ -1,9 +1,52 @@
 @namespace Tempo.Blazor.Components.Layout
+@inherits Tempo.Blazor.Components.TmComponentBase
 @using Tempo.Blazor.Interfaces
 @using Tempo.Blazor.Components.Icons
 @using Tempo.Blazor.Components.Avatars
 
-<header class="tm-topbar @Class" @attributes="AdditionalAttributes">
+@* The application header. Every addition is opt-in: without ShowMenuButton, CommandPaletteShortcut
+   and UserMenuItems the markup renders what it always did (bar the two hardcoded English labels,
+   which are now localized). The account dropdown is an APG menu button: the trigger advertises the
+   popup and its state, opens on ArrowDown/ArrowUp and takes the focus with it, the container carries
+   role=menu, the entries role=menuitem with tabindex=-1 (roving focus by keyboard), ArrowDown/ArrowUp
+   wrap, Home/End jump to the edges, Escape and Tab close and hand focus back to the trigger, and Tab
+   keeps its native default (a render-time @onkeydown:preventDefault would swallow it too). *@
+
+@if (IsLandmark)
+{
+    <header class="@RootCss"
+            data-testid="@RootTestId("topbar")"
+            @attributes="AdditionalAttributes">
+        @Body
+    </header>
+}
+else
+{
+    @* A frame (TmAppShell) owns the page's header landmark: the bar keeps its rendered chrome but
+       an inner <header> would nest a banner inside the frame's own. *@
+    <div class="@RootCss"
+         data-testid="@RootTestId("topbar")"
+         @attributes="AdditionalAttributes">
+        @Body
+    </div>
+}
+
+@code {
+    private RenderFragment Body => @<text>
+    @if (ShowMenuButton)
+    {
+        <button class="tm-topbar-menu-btn"
+                type="button"
+                id="@MenuButtonId"
+                data-testid="@TestId("topbar-menu-button")"
+                aria-label="@Loc["TmTopBar_MenuButton"]"
+                aria-expanded="@(MenuExpanded ? "true" : "false")"
+                aria-controls="@MenuControlsId"
+                @onclick="HandleMenuToggleAsync">
+            <TmIcon Name="@IconNames.Menu" Size="IconSize.Sm" />
+        </button>
+    }
+
     <div class="tm-topbar-brand">
         @if (BrandContent is not null)
         {
@@ -25,10 +68,15 @@
         {
             <button class="tm-topbar-search-trigger"
                     type="button"
+                    data-testid="@TestId("topbar-command-palette")"
                     aria-label="@Loc["TmTopBar_OpenCommandPalette"]"
+                    aria-keyshortcuts="@CommandPaletteKeyShortcutsAttribute"
                     @onclick="async () => await OnCommandPalette.InvokeAsync()">
                 <TmIcon Name="@IconNames.Search" Size="IconSize.Sm" />
-                <span class="tm-topbar-search-hint">⌘K</span>
+                @if (!string.IsNullOrEmpty(CommandPaletteShortcut))
+                {
+                    <span class="tm-topbar-search-hint">@CommandPaletteShortcut</span>
+                }
             </button>
         }
 
@@ -39,11 +87,17 @@
 
         @if (User is not null)
         {
-            <div class="tm-topbar-user">
-                <button class="tm-topbar-user-button"
+            <div class="tm-topbar-user" @onkeydown="HandleUserMenuKeyDownAsync">
+                <button @ref="_userButtonRef"
+                        class="tm-topbar-user-button"
                         type="button"
-                        aria-label="@Loc["TmTopBar_UserMenu"]"
-                        @onclick="ToggleUserMenu">
+                        data-testid="@TestId("topbar-user-button")"
+                        aria-haspopup="menu"
+                        aria-expanded="@(_userMenuOpen ? "true" : "false")"
+                        aria-label="@EffectiveUserMenuLabel"
+                        @onclick="ToggleUserMenu"
+                        @onkeydown="HandleUserButtonKeyDown"
+                        @onkeydown:stopPropagation="true">
                     <TmAvatar Src="@User.AvatarSrc" Name="@User.DisplayName" Size="AvatarSize.Sm" />
                     @if (!string.IsNullOrEmpty(User.DisplayName))
                     {
@@ -53,24 +107,106 @@
 
                 @if (_userMenuOpen)
                 {
-                    <div class="tm-topbar-user-menu">
-                        @if (OnLogout.HasDelegate)
+                    @* A click anywhere outside the menu closes it. This is a real element (not a
+                       document listener): it keeps the component JS-free, and the host page keeps
+                       its own click handling for the NEXT click. *@
+                    <div class="tm-topbar-user-backdrop"
+                         aria-hidden="true"
+                         data-testid="@TestId("topbar-user-menu-backdrop")"
+                         @onclick="CloseUserMenuAsync"></div>
+                    var entries = BuildEntries();
+                    var itemIndex = -1;
+                    <div class="tm-topbar-user-menu"
+                         role="menu"
+                         data-testid="@TestId("topbar-user-menu")"
+                         aria-label="@EffectiveUserMenuLabel">
+                        @foreach (var entry in entries)
                         {
-                            <button class="tm-topbar-user-menu-item tm-topbar-user-menu-logout"
-                                    type="button"
-                                    @onclick="async () => { _userMenuOpen = false; await OnLogout.InvokeAsync(); }">
-                                <TmIcon Name="@IconNames.LogOut" Size="IconSize.Sm" />
-                                Sign out
-                            </button>
+                            if (entry.Kind == MenuEntryKind.Separator)
+                            {
+                                @* role=separator already removes it from the accessibility tree;
+                                   aria-hidden on top of the role contradicts the role. *@
+                                <div class="tm-topbar-user-menu-separator" role="separator"></div>
+                                continue;
+                            }
+
+                            var index = ++itemIndex;
+                            var danger = entry.Item?.IsDanger == true;
+                            var css = danger
+                                ? "tm-topbar-user-menu-item tm-topbar-user-menu-item-danger"
+                                : "tm-topbar-user-menu-item";
+
+                            if (entry.Kind == MenuEntryKind.SignOut)
+                            {
+                                <button class="@css tm-topbar-user-menu-logout"
+                                        type="button"
+                                        role="menuitem"
+                                        tabindex="-1"
+                                        data-testid="@TestId("topbar-sign-out")"
+                                        @ref="_menuItemRefs[index]"
+                                        @onkeydown="args => HandleMenuEntryKeyDownAsync(args, index)"
+                                        @onclick="SignOutAsync">
+                                    <TmIcon Name="@IconNames.LogOut" Size="IconSize.Sm" />
+                                    <span>@Loc["TmTopBar_SignOut"]</span>
+                                </button>
+                            }
+                            else if (!string.IsNullOrEmpty(entry.Item!.Href))
+                            {
+                                <a class="@css"
+                                   role="menuitem"
+                                   tabindex="-1"
+                                   href="@entry.Item.Href"
+                                   data-testid="@TestId($"topbar-user-menu-item-{entry.Item.Id}")"
+                                   @ref="_menuItemRefs[index]"
+                                   @onkeydown="args => HandleMenuEntryKeyDownAsync(args, index)"
+                                   @onclick="CloseUserMenu">
+                                    @if (!string.IsNullOrEmpty(entry.Item.Icon))
+                                    {
+                                        <TmIcon Name="@entry.Item.Icon" Size="IconSize.Sm" />
+                                    }
+                                    <span>@entry.Item.Label</span>
+                                </a>
+                            }
+                            else
+                            {
+                                <button class="@css"
+                                        type="button"
+                                        role="menuitem"
+                                        tabindex="-1"
+                                        data-testid="@TestId($"topbar-user-menu-item-{entry.Item!.Id}")"
+                                        @ref="_menuItemRefs[index]"
+                                        @onkeydown="args => HandleMenuEntryKeyDownAsync(args, index)"
+                                        @onclick="async () => await NavigateEntryAsync(entry.Item)">
+                                    @if (!string.IsNullOrEmpty(entry.Item.Icon))
+                                    {
+                                        <TmIcon Name="@entry.Item.Icon" Size="IconSize.Sm" />
+                                    }
+                                    <span>@entry.Item.Label</span>
+                                </button>
+                            }
                         }
                     </div>
                 }
             </div>
         }
     </div>
-</header>
+    </text>;
+    private enum MenuEntryKind
+    {
+        Item,
+        Separator,
+        SignOut,
+    }
 
-@code {
+    private sealed record MenuEntry(MenuEntryKind Kind, UserMenuItem? Item);
+
+    private ElementReference _userButtonRef;
+    private ElementReference[] _menuItemRefs = [];
+    private int _menuItemCount;
+    private bool _userMenuOpen;
+    private bool _focusFirstOnRender;
+    private bool _focusLastOnRender;
+
     /// <summary>Brand title text (simple string).</summary>
     [Parameter] public string? BrandTitle { get; set; }
 
@@ -83,14 +219,82 @@
     /// <summary>Actions slot content (e.g. notification bell).</summary>
     [Parameter] public RenderFragment? ActionsContent { get; set; }
 
+    /// <summary>
+    /// Renders the navigation disclosure button that opens the host's navigation drawer (mobile
+    /// navigation, a collapsible rail). Default false: no button, the bar is unchanged.
+    /// </summary>
+    [Parameter] public bool ShowMenuButton { get; set; }
+
+    /// <summary>
+    /// Whether the navigation the menu button toggles is currently open — reported as
+    /// <c>aria-expanded</c> on the button. The host owns the state (this component never changes it).
+    /// </summary>
+    [Parameter] public bool MenuExpanded { get; set; }
+
+    /// <summary>Fires when the navigation disclosure button is clicked.</summary>
+    [Parameter] public EventCallback OnMenuToggle { get; set; }
+
+    /// <summary>
+    /// Id of the element the menu button controls (the host's navigation drawer), reported as
+    /// <c>aria-controls</c>. Null omits the attribute.
+    /// </summary>
+    [Parameter] public string? MenuControlsId { get; set; }
+
+    /// <summary>
+    /// The DOM id of the menu button itself. Null (the default) renders no <c>id</c> attribute, so
+    /// every existing host keeps its markup. A host that has to name this button from OUTSIDE the bar
+    /// — an application frame whose navigation drawer returns the focus to the opener it did not render
+    /// itself (<c>TmAppShell</c>) — passes an id here and points its restore target at it.
+    /// </summary>
+    [Parameter] public string? MenuButtonId { get; set; }
+
+    /// <summary>
+    /// The key chord printed in the command palette trigger ("Ctrl+K"). It is a label, not a
+    /// keybinding — the host binds the shortcut. An empty string hides the hint and keeps the
+    /// localized accessible name; what the trigger announces to assistive technology is
+    /// <see cref="CommandPaletteKeyShortcuts"/>.
+    /// </summary>
+    [Parameter] public string? CommandPaletteShortcut { get; set; } = "Ctrl+K";
+
+    /// <summary>
+    /// The <c>aria-keyshortcuts</c> value of the command palette trigger — the chord the host
+    /// actually binds, in the space-separated ARIA syntax. Defaults to <c>"Control+K Meta+K"</c>,
+    /// the chord the default hint documents; a host that rebinds the palette passes its own value
+    /// here so the announcement cannot contradict the printed hint. Null or empty omits the
+    /// attribute.
+    /// </summary>
+    [Parameter] public string? CommandPaletteKeyShortcuts { get; set; } = "Control+K Meta+K";
+
     /// <summary>Currently logged-in user. When set, renders user avatar and menu.</summary>
     [Parameter] public IUserInfo? User { get; set; }
+
+    /// <summary>
+    /// Entries of the account menu, above the built-in sign out. A <c>UserMenuItem</c> with
+    /// <c>Href</c> renders as a link, one with <c>OnClick</c> as a command, <c>Separator</c> as a
+    /// group separator and <c>IsDanger</c> in the destructive style. Null renders no host entries.
+    /// </summary>
+    [Parameter] public IReadOnlyList<UserMenuItem>? UserMenuItems { get; set; }
+
+    /// <summary>
+    /// Accessible name of the account button and of its menu. Null (the default) uses the localized
+    /// "User menu"; a host with more than one account surface names this one ("Signed-in account").
+    /// </summary>
+    [Parameter] public string? UserMenuLabel { get; set; }
 
     /// <summary>Fires when the command palette trigger is clicked.</summary>
     [Parameter] public EventCallback OnCommandPalette { get; set; }
 
-    /// <summary>Fires when the user clicks "Sign out".</summary>
+    /// <summary>Fires when the user clicks the sign-out entry of the account menu.</summary>
     [Parameter] public EventCallback OnLogout { get; set; }
+
+    /// <summary>
+    /// When true (the default) the root is a <c>&lt;header&gt;</c> — a banner landmark, which is what
+    /// the application bar is. Pass <c>false</c> when the bar is composed into an application frame
+    /// that owns the page's landmarks (<c>TmAppShell</c>): the root then renders as a plain
+    /// <c>&lt;div&gt;</c> inside the frame's own <c>&lt;header&gt;</c>, so the page never carries a
+    /// banner nested in a banner.
+    /// </summary>
+    [Parameter] public bool IsLandmark { get; set; } = true;
 
     /// <summary>Additional CSS class for the root element.</summary>
     [Parameter] public string? Class { get; set; }
@@ -98,7 +302,206 @@
     /// <summary>Additional HTML attributes for the root element.</summary>
     [Parameter(CaptureUnmatchedValues = true)] public Dictionary<string, object>? AdditionalAttributes { get; set; }
 
-    private bool _userMenuOpen;
+    /// <summary>The root's class list — identical for the <c>&lt;header&gt;</c> and the plain-wrapper form.</summary>
+    private string RootCss => string.IsNullOrWhiteSpace(Class) ? "tm-topbar" : $"tm-topbar {Class}";
 
-    private void ToggleUserMenu() => _userMenuOpen = !_userMenuOpen;
+    private string EffectiveUserMenuLabel
+        => string.IsNullOrWhiteSpace(UserMenuLabel) ? Loc["TmTopBar_UserMenu"] : UserMenuLabel!;
+
+    private string? CommandPaletteKeyShortcutsAttribute
+        => string.IsNullOrWhiteSpace(CommandPaletteKeyShortcuts) ? null : CommandPaletteKeyShortcuts;
+
+    /// <inheritdoc />
+    protected override void OnParametersSet()
+    {
+        // @ref writes by index, so the capture targets must exist before the render runs. Grow the
+        // array ONLY: re-creating it would wipe the references captured on an earlier render
+        // (Blazor captures a @ref when the element is inserted, not on every re-render).
+        var focusableCount = BuildEntries().Count(entry => entry.Kind != MenuEntryKind.Separator);
+        _menuItemCount = focusableCount;
+        if (_menuItemRefs.Length < focusableCount)
+        {
+            Array.Resize(ref _menuItemRefs, focusableCount);
+        }
+    }
+
+    /// <inheritdoc />
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        // The focus move has to wait for the menu to exist in the DOM; both flags are cleared first
+        // so a render caused by the focus call itself cannot focus again.
+        if (!_focusFirstOnRender && !_focusLastOnRender)
+        {
+            return;
+        }
+
+        var focusLast = _focusLastOnRender;
+        _focusFirstOnRender = false;
+        _focusLastOnRender = false;
+
+        var count = Math.Min(_menuItemCount, _menuItemRefs.Length);
+        if (!_userMenuOpen || count == 0)
+        {
+            return;
+        }
+
+        await _menuItemRefs[focusLast ? count - 1 : 0].FocusAsync();
+    }
+
+    private async Task HandleMenuToggleAsync() => await OnMenuToggle.InvokeAsync();
+
+    private void ToggleUserMenu()
+    {
+        if (_userMenuOpen)
+        {
+            _userMenuOpen = false;
+            return;
+        }
+
+        OpenUserMenu(focusLast: false);
+    }
+
+    /// <summary>
+    /// Opens the menu and takes the focus into it — a <c>role="menu"</c> that leaves the focus on its
+    /// trigger is announced and then inoperable, because assistive technology switches to menu
+    /// interaction mode and waits for arrow keys the trigger does not answer.
+    /// </summary>
+    private void OpenUserMenu(bool focusLast)
+    {
+        _userMenuOpen = true;
+        _focusLastOnRender = focusLast;
+        _focusFirstOnRender = !focusLast;
+    }
+
+    private void CloseUserMenu() => _userMenuOpen = false;
+
+    /// <summary>
+    /// Closes the menu and hands focus back to the trigger. Required wherever the close destroys the
+    /// focused element (the backdrop, Tab out) — otherwise focus falls to <c>&lt;body&gt;</c>.
+    /// </summary>
+    private async Task CloseUserMenuAsync()
+    {
+        _userMenuOpen = false;
+        await _userButtonRef.FocusAsync();
+    }
+
+    private async Task NavigateEntryAsync(UserMenuItem item)
+    {
+        _userMenuOpen = false;
+        if (item.OnClick is not null)
+        {
+            await item.OnClick();
+        }
+    }
+
+    private async Task SignOutAsync()
+    {
+        _userMenuOpen = false;
+        await OnLogout.InvokeAsync();
+    }
+
+    /// <summary>
+    /// Escape closes the menu and hands focus back to the button that opened it — the one keyboard
+    /// path a menu cannot leave to the browser. Tab is handled per entry (see
+    /// <see cref="HandleMenuEntryKeyDownAsync"/>), so the default tab order keeps working.
+    /// </summary>
+    private async Task HandleUserMenuKeyDownAsync(KeyboardEventArgs args)
+    {
+        if (!_userMenuOpen || args.Key is not ("Escape" or "Esc"))
+        {
+            return;
+        }
+
+        await CloseUserMenuAsync();
+    }
+
+    /// <summary>
+    /// The menu button's own arrow keys: ArrowDown opens and focuses the first entry, ArrowUp opens and
+    /// focuses the last. Enter and Space are deliberately absent — the native button already activates
+    /// itself (docs/keyboard-activation-convention.md), and emulating it would fire twice.
+    /// </summary>
+    private void HandleUserButtonKeyDown(KeyboardEventArgs args)
+    {
+        if (args.Key is not ("ArrowDown" or "ArrowUp"))
+        {
+            return;
+        }
+
+        OpenUserMenu(focusLast: args.Key == "ArrowUp");
+    }
+
+    /// <summary>
+    /// Roving focus inside the menu, per the APG menu button pattern: ArrowDown/ArrowUp step with
+    /// wraparound, Home/End jump to the edges. Tab closes the menu and returns focus to the trigger
+    /// from ANY entry, because the entries are not tab stops (<c>tabindex="-1"</c>) — the browser's
+    /// Tab leaves the menu wherever it stands, so the old first/last boundary no longer applies.
+    /// <para>
+    /// The page scroll that ArrowDown/ArrowUp/Home/End produce is accepted, exactly as
+    /// <c>TmTabs</c>, <c>TmRadioGroup</c> and <c>TmColorGradient</c> document: a render-time
+    /// <c>@onkeydown:preventDefault</c> cannot be per-key, and switching it on for every keydown
+    /// would swallow Tab and the entries' own native Enter/Space activation.
+    /// </para>
+    /// </summary>
+    private async Task HandleMenuEntryKeyDownAsync(KeyboardEventArgs args, int index)
+    {
+        if (!_userMenuOpen)
+        {
+            return;
+        }
+
+        if (args.Key == "Tab")
+        {
+            await CloseUserMenuAsync();
+            return;
+        }
+
+        var count = Math.Min(_menuItemCount, _menuItemRefs.Length);
+        if (count == 0)
+        {
+            return;
+        }
+
+        var target = args.Key switch
+        {
+            "ArrowDown" => (index + 1) % count,
+            "ArrowUp" => (index - 1 + count) % count,
+            "Home" => 0,
+            "End" => count - 1,
+            _ => -1,
+        };
+
+        if (target < 0)
+        {
+            return;
+        }
+
+        await _menuItemRefs[target].FocusAsync();
+    }
+
+    /// <summary>Host entries first, then — when a handler is bound — a separator and the localized sign out.</summary>
+    private List<MenuEntry> BuildEntries()
+    {
+        var entries = new List<MenuEntry>();
+        if (UserMenuItems is { Count: > 0 })
+        {
+            foreach (var item in UserMenuItems)
+            {
+                entries.Add(new MenuEntry(
+                    item.Separator ? MenuEntryKind.Separator : MenuEntryKind.Item,
+                    item));
+            }
+        }
+
+        if (OnLogout.HasDelegate)
+        {
+            if (entries.Count > 0)
+            {
+                entries.Add(new MenuEntry(MenuEntryKind.Separator, null));
+            }
+
+            entries.Add(new MenuEntry(MenuEntryKind.SignOut, null));
+        }
+
+        return entries;
+    }
 }

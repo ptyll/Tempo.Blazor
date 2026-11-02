@@ -1,0 +1,28 @@
+{
+  "itemName": "SidebarNavSection",
+  "kind": "Class",
+  "category": "Models",
+  "namespace": "Tempo.Blazor.Models",
+  "description": "A named group of navigation items, rendered by TmSidebar under one visible heading that also names the group's list through aria-labelledby.",
+  "properties": [
+    {
+      "name": "Title",
+      "type": "string",
+      "isRequired": true,
+      "description": "Heading text of the group. Rendered as the section heading and used as the accessible name of the group's list — keep it short (\"Main\", \"Administration\")."
+    },
+    {
+      "name": "Items",
+      "type": "IReadOnlyList<ISidebarNavItem>",
+      "isRequired": false,
+      "default": "[]",
+      "description": "Items of the group, in display order."
+    }
+  ],
+  "examples": [
+    {
+      "title": "Two navigation groups",
+      "code": "var sections = new List<SidebarNavSection>\n{\n    new(\"Main\", new List<ISidebarNavItem>\n    {\n        new SidebarNavItem { Id = \"home\", Label = \"Dashboard\", Icon = \"home\", Href = \"/\" },\n        new SidebarNavItem { Id = \"orders\", Label = \"Orders\", Icon = \"package\", Href = \"/orders\" }\n    }),\n    new(\"Administration\", new List<ISidebarNavItem>\n    {\n        new SidebarNavItem { Id = \"users\", Label = \"Users\", Icon = \"users\", Href = \"/users\" }\n    })\n};\n\n<TmSidebar Sections=\"sections\" AutoActive=\"true\" />"
+    }
+  ]
+}

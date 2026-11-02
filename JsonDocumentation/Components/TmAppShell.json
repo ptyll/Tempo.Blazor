@@ -1,0 +1,336 @@
+{
+  "itemName": "TmAppShell",
+  "kind": "Component",
+  "category": "Layout",
+  "description": "The application frame: one composite that renders the page's landmarks (a top bar, one named navigation column, the content and an optional resizable work area) and resolves its own layout from its container width. Desktop renders the docked navigation column; a tablet container renders it as an icon rail that expands into a modal overlay drawer; a phone container renders no column at all — a hamburger in the top bar opens the same drawer (MobileNav=Drawer, the default), or a TmBottomNavigation bar replaces the drawer entirely (MobileNav=BottomNavigation) — and the work area becomes a TmSidePanel bottom sheet, so a phone renders no resize separator. The shell never copies navigation, focus or sheet logic — it composes TmSidebar, TmTopBar, a modal TmDrawer, TmBottomNavigation and TmSidePanel.",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.Layout",
+    "@using Tempo.Blazor.Interfaces",
+    "@using Tempo.Blazor.Models"
+  ],
+  "parameters": [
+    {
+      "name": "Variant",
+      "type": "AppShellVariant",
+      "isRequired": false,
+      "default": "Inset",
+      "description": "Visual treatment of the frame. Inset (default) floats the content as a rounded card on the workspace background; Flat fills the frame edge to edge with a hairline divider."
+    },
+    {
+      "name": "LayoutMode",
+      "type": "TmLayoutMode",
+      "isRequired": false,
+      "default": "Auto",
+      "description": "The layout the shell renders. Auto (default) measures the shell's own root, so an application embedded at any width resolves a mode from that width and never from the viewport. A forced value never measures, so a test can render a mode without a DOM."
+    },
+    {
+      "name": "InitialMode",
+      "type": "TmLayoutMode",
+      "isRequired": false,
+      "default": "Desktop",
+      "description": "The layout rendered before the first measurement (static SSR, prerender, the first frame)."
+    },
+    {
+      "name": "Breakpoints",
+      "type": "TmLayoutBreakpoints?",
+      "isRequired": false,
+      "description": "Per-instance layout thresholds. Null uses the shell's own pair — mobile below 768px, desktop from 1200px, the room a frame with a docked navigation column and a work area needs. Only the markup branch moves: the stylesheet carries no width condition."
+    },
+    {
+      "name": "ResolvedLayoutChanged",
+      "type": "EventCallback<TmLayoutMode>",
+      "isRequired": false,
+      "description": "Raised when the resolved layout changes. The initial value is not a change. Never pair it with LayoutMode: it reports the resolved mode, and a two-way bind would pin that mode."
+    },
+    {
+      "name": "NavItems",
+      "type": "IReadOnlyList<ISidebarNavItem>?",
+      "isRequired": false,
+      "description": "Navigation items for the built-in sidebar, rendered by TmSidebar as one ungrouped list. Ignored when NavSections or Sidebar is set."
+    },
+    {
+      "name": "NavSections",
+      "type": "IReadOnlyList<SidebarNavSection>?",
+      "isRequired": false,
+      "description": "Named groups of navigation items for the built-in sidebar, each under its own visible heading. Takes precedence over NavItems (a shell shows one navigation model, never the same entries twice); ignored when Sidebar is set."
+    },
+    {
+      "name": "Sidebar",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "A custom navigation surface, replacing the built-in sidebar entirely. It is rendered inside the shell's navigation column on desktop, inside the overlay drawer on a tablet layout and inside the phone drawer (MobileNav = Drawer), so the same content is mounted at every width, wrapped in the shell's one named nav landmark — so the slot content must not render a nav of its own, and a custom rail that has to survive the 3.5rem column supplies its own collapsed rendering. In BottomNavigation mode a phone renders the bar instead: the slot is not mounted there. On a phone the drawer closes when the location changes (a link of the slot navigated), never on a bare click, so the slot's own controls keep working; a slot command that must dismiss the drawer without navigating calls CloseNavigationAsync."
+    },
+    {
+      "name": "SidebarHeader",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "Content above the navigation list (a logo, a workspace switcher) — rendered in the docked column and in both drawers. Built-in sidebar only."
+    },
+    {
+      "name": "SidebarFooter",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "Content below the navigation list (the signed-in account, a version stamp) — rendered in the docked column and in both drawers, so the account stays reachable on a phone. Built-in sidebar only."
+    },
+    {
+      "name": "SidebarCollapsed",
+      "type": "bool",
+      "isRequired": false,
+      "default": "false",
+      "description": "Whether the docked navigation column is collapsed to an icon rail. Two-way with SidebarCollapsedChanged. A tablet always renders the rail and expands the navigation into an overlay drawer instead, and a phone renders no column at all (its navigation lives in the drawer or the bottom bar), so the value only applies on a desktop layout."
+    },
+    {
+      "name": "SidebarCollapsedChanged",
+      "type": "EventCallback<bool>",
+      "isRequired": false,
+      "description": "Raised when the user collapses or expands the docked navigation column, and when a persisted collapsed state is restored on load."
+    },
+    {
+      "name": "SidebarNavLabel",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Accessible name of the navigation landmark and title of the tablet overlay drawer. Null uses the localized \"Main navigation\" — a shell that carries more than one navigation landmark names each one after its purpose."
+    },
+    {
+      "name": "MobileNav",
+      "type": "AppShellMobileNav",
+      "isRequired": false,
+      "default": "Drawer",
+      "description": "How a PHONE layout presents the navigation (a container narrower than the mobile threshold — 768px unless Breakpoints overrides it). Drawer (default) puts a hamburger in the top bar that opens the full navigation in a modal drawer; BottomNavigation renders a TmBottomNavigation bar and no drawer at all. Desktop and tablet are unaffected."
+    },
+    {
+      "name": "BottomNavItems",
+      "type": "IReadOnlyList<BottomNavItem>?",
+      "isRequired": false,
+      "description": "Entries of the phone bottom bar, used when MobileNav is BottomNavigation. Null (the default) derives one entry per top-level item of the navigation model (NavItems, or every section's items in order, ignoring sub-entries) — pass this when the bar needs its own labels, icons or a subset of the destinations (a bottom bar is comfortable up to about five)."
+    },
+    {
+      "name": "BottomNavItemClicked",
+      "type": "EventCallback<BottomNavItem>",
+      "isRequired": false,
+      "description": "Raised when the user taps an entry of the phone bottom bar, before the shell follows the entry's Href. A bar of links that never navigates is dead, so the shell always follows an Href; an entry without one is a command and only raises this."
+    },
+    {
+      "name": "ShowTopBarMenuButton",
+      "type": "bool?",
+      "isRequired": false,
+      "description": "Whether the top bar renders the navigation disclosure button that opens the phone drawer. Null (the default) decides from the layout: the button renders on a phone layout in Drawer mode while a navigation model exists, and never otherwise — a tablet's opener is the rail toggle, and in BottomNavigation mode the bar IS the navigation. Pass false when a custom TopBar carries its own opener, so the bar never shows two."
+    },
+    {
+      "name": "TopBar",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "Custom top bar content, replacing the built-in bar. Rendered inside the shell's own header element, so the content must not render a second header landmark (a composed TmTopBar passes IsLandmark=\"false\"). On a phone in Drawer mode the frame renders its own hamburger in front of the slot (opt out with ShowTopBarMenuButton=\"false\")."
+    },
+    {
+      "name": "Title",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Brand title of the built-in top bar (usually the application name). Without it, and without any other bar content, the shell renders no header at all — an empty banner landmark is noise. The one exception is a phone layout with a navigation model: the hamburger needs a bar to live in, so the frame renders one."
+    },
+    {
+      "name": "TopBarActions",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "Actions of the built-in top bar, right-aligned (a theme switch, a command-palette trigger)."
+    },
+    {
+      "name": "User",
+      "type": "IUserInfo?",
+      "isRequired": false,
+      "description": "The signed-in user, rendered by the built-in top bar's account menu. Null renders no account surface."
+    },
+    {
+      "name": "UserMenuItems",
+      "type": "IReadOnlyList<UserMenuItem>?",
+      "isRequired": false,
+      "description": "Host entries of the built-in top bar's account menu; the built-in Profile / Settings / Sign out lines follow them."
+    },
+    {
+      "name": "OnLogout",
+      "type": "EventCallback",
+      "isRequired": false,
+      "description": "Raised when the user picks the sign-out entry of the built-in top bar's account menu. Without a handler no sign-out line renders."
+    },
+    {
+      "name": "ChildContent",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "The page content, rendered inside the shell's main landmark. The skip link targets it."
+    },
+    {
+      "name": "SkipLinkTarget",
+      "type": "string?",
+      "isRequired": false,
+      "description": "The id the skip link targets and the main element carries. Null generates a unique id per shell instance, so two shells on one page never collide; set it when a host-side skip link or in-page anchor already points at a known id."
+    },
+    {
+      "name": "WorkArea",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "The resizable work area on the right of the content (a sources panel, a tool panel). Rendered as a docked, resizable column on a desktop or tablet layout while WorkAreaOpen is true; a phone layout presents the same content as a modal TmSidePanel bottom sheet, so a phone renders no resize separator. Nothing renders while it is closed."
+    },
+    {
+      "name": "WorkAreaOpen",
+      "type": "bool",
+      "isRequired": false,
+      "default": "false",
+      "description": "Whether the work area renders. Two-way with WorkAreaOpenChanged: with a handler the docked region renders its own close button (so a keyboard user can dismiss it without the host wiring a toggle) and the host echoes the close back. The phone sheet is always closable — a modal surface whose close does nothing would trap the user — and a host that does not bind this still gets a dismissable sheet, but cannot re-open a dismissed one by leaving WorkAreaOpen true: the value has to transition (false and then true again)."
+    },
+    {
+      "name": "WorkAreaOpenChanged",
+      "type": "EventCallback<bool>",
+      "isRequired": false,
+      "description": "Raised when the user closes the work area from its own close button. Without a handler the docked region renders no close button at all, so a host that renders its own toggle can leave this unset. The phone sheet is the exception — it always closes and reports the close here when the callback is bound."
+    },
+    {
+      "name": "WorkAreaWidth",
+      "type": "int",
+      "isRequired": false,
+      "default": "420",
+      "description": "Width of the work area in CSS pixels, used by the docked column (desktop and tablet). Two-way with WorkAreaWidthChanged: a user resize (pointer drag, keyboard on the separator) raises the callback with the new width, and a persisted width is restored through it too. The value is always bounded by WorkAreaMinWidth / WorkAreaMaxWidth."
+    },
+    {
+      "name": "WorkAreaWidthChanged",
+      "type": "EventCallback<int>",
+      "isRequired": false,
+      "description": "Raised when the user resizes the work area, and when a persisted width is restored on load."
+    },
+    {
+      "name": "WorkAreaMinWidth",
+      "type": "int",
+      "isRequired": false,
+      "default": "280",
+      "description": "Smallest width, in CSS pixels, the work area can be resized to. Below 1 throws ArgumentOutOfRangeException — a work area narrower than a pixel is a host bug, not a preference."
+    },
+    {
+      "name": "WorkAreaMaxWidth",
+      "type": "int",
+      "isRequired": false,
+      "default": "640",
+      "description": "Largest width, in CSS pixels, the work area can be resized to. A value below WorkAreaMinWidth throws ArgumentOutOfRangeException."
+    },
+    {
+      "name": "MinContentWidth",
+      "type": "int",
+      "isRequired": false,
+      "default": "480",
+      "description": "The content width, in CSS pixels, a resize never takes away: growing the work area stops where the content would drop below it. A negative value throws ArgumentOutOfRangeException."
+    },
+    {
+      "name": "WorkAreaLabel",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Heading of the work area region, which also names it for assistive technology. Null uses the localized \"Work area\" — name it after its purpose (\"Sources\", \"Activity\") when a page has more than one complementary region."
+    },
+    {
+      "name": "PersistKey",
+      "type": "string?",
+      "isRequired": false,
+      "description": "When set, the layout the user chose persists to (and restores from) localStorage under this key: the work-area width they resized (with the host width it was resized from, so a host that changes its own default invalidates it) and the navigation collapsed state. A restore is reported through WorkAreaWidthChanged / SidebarCollapsedChanged, since it counts as a user value. Null disables persistence."
+    },
+    {
+      "name": "Class",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Extra CSS classes for the shell root."
+    }
+  ],
+  "publicMethods": [
+    {
+      "name": "OpenNavigationAsync()",
+      "description": "Opens the navigation drawer — the surface a tablet rail toggle and a phone hamburger open. A host that carries its OWN opener (a custom TopBar with ShowTopBarMenuButton = false) drives the drawer through this method, so the navigation is never unreachable. It is a no-op on a desktop layout (the docked column is always visible), in BottomNavigation mode (the bar is the navigation) and while the drawer is already open."
+    },
+    {
+      "name": "CloseNavigationAsync()",
+      "description": "Closes the navigation drawer, whichever layout opened it. The focus scope inside the drawer hands the focus back to the opener. A no-op while the drawer is already closed."
+    }
+  ],
+  "cssClasses": [
+    "tm-app-shell",
+    "tm-app-shell__frame",
+    "tm-app-shell--inset",
+    "tm-app-shell--flat",
+    "tm-app-shell__skip-link",
+    "tm-app-shell__topbar",
+    "tm-app-shell__body",
+    "tm-app-shell__sidebar",
+    "tm-app-shell__sidebar--rail",
+    "tm-app-shell__nav-toggle",
+    "tm-app-shell__nav",
+    "tm-app-shell__nav-slot",
+    "tm-app-shell__main",
+    "tm-app-shell__resizer",
+    "tm-app-shell__work-area",
+    "tm-app-shell__work-area-header",
+    "tm-app-shell__work-area-title",
+    "tm-app-shell__work-area-close",
+    "tm-app-shell__work-area-body",
+    "tm-app-shell__overlay",
+    "tm-app-shell__overlay--mobile",
+    "tm-app-shell__menu-button",
+    "tm-app-shell__topbar--menu",
+    "tm-app-shell__topbar-content",
+    "tm-app-shell__bottom-nav",
+    "tm-bottom-nav--app-shell"
+  ],
+  "examples": [
+    {
+      "title": "Application frame with a built-in navigation and a resizable work area",
+      "code": "<TmAppShell Variant=\"AppShellVariant.Inset\"\n            Title=\"@brandName\"\n            NavSections=\"@navSections\"\n            TopBarActions=\"@(b => b.AddContent(0, actions))\"\n            @bind-SidebarCollapsed=\"sidebarCollapsed\"\n            @bind-WorkAreaOpen=\"sourcesOpen\"\n            @bind-WorkAreaWidth=\"sourcesWidth\"\n            WorkAreaLabel=\"Sources\"\n            PersistKey=\"my-app-shell\">\n    <ChildContent>@Body</ChildContent>\n    <WorkArea>@sources</WorkArea>\n</TmAppShell>"
+    },
+    {
+      "title": "Custom navigation surface and a custom top bar",
+      "code": "<TmAppShell NavItems=\"null\" TopBar=\"@(b => b.AddContent(0, customBar))\">\n    <Sidebar>\n        <MyOwnNavigation />\n    </Sidebar>\n    <ChildContent>@Body</ChildContent>\n</TmAppShell>"
+    },
+    {
+      "title": "Phone navigation as a hamburger + drawer (the default) and the account in the drawer",
+      "code": "<TmAppShell Title=\"Acme\"\n            NavSections=\"@navSections\"\n            @bind-WorkAreaOpen=\"sourcesOpen\"\n            WorkAreaLabel=\"Sources\">\n    <SidebarFooter>@userMenu</SidebarFooter>\n    <ChildContent>@Body</ChildContent>\n    <WorkArea>@sources</WorkArea>\n</TmAppShell>"
+    },
+    {
+      "title": "Phone navigation as a bottom bar (no drawer at all)",
+      "code": "<TmAppShell Title=\"Acme\"\n            MobileNav=\"AppShellMobileNav.BottomNavigation\"\n            NavItems=\"@topLevelItems\"\n            BottomNavItemClicked=\"@OnDestinationTapped\">\n    <ChildContent>@Body</ChildContent>\n</TmAppShell>"
+    },
+    {
+      "title": "A custom bar with its own opener drives the phone drawer",
+      "code": "<TmAppShell @ref=\"shell\" TopBar=\"@customBar\" ShowTopBarMenuButton=\"false\">\n    <ChildContent>@Body</ChildContent>\n</TmAppShell>\n\n<button type=\"button\" @onclick=\"() => shell.OpenNavigationAsync()\">Menu</button>"
+    }
+  ],
+  "usedAbstractions": [
+    {
+      "name": "ISidebarNavItem",
+      "description": "One entry of the built-in navigation",
+      "parameter": "NavItems"
+    },
+    {
+      "name": "SidebarNavSection",
+      "description": "A named group of navigation items",
+      "parameter": "NavSections"
+    },
+    {
+      "name": "IUserInfo",
+      "description": "Interface describing the signed-in user",
+      "parameter": "User"
+    },
+    {
+      "name": "UserMenuItem",
+      "description": "One entry of the account menu",
+      "parameter": "UserMenuItems"
+    },
+    {
+      "name": "TmLayoutBreakpoints",
+      "description": "The two widths that decide the container's layout mode",
+      "parameter": "Breakpoints"
+    },
+    {
+      "name": "AppShellMobileNav",
+      "description": "How a phone layout presents the navigation",
+      "parameter": "MobileNav"
+    },
+    {
+      "name": "BottomNavItem",
+      "description": "One entry of the phone bottom navigation bar",
+      "parameter": "BottomNavItems"
+    }
+  ]
+}

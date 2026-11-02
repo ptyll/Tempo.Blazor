@@ -34,6 +34,13 @@
   to   { background-position: 200% 0; }
 }
 
+/* The onboarding celebration: a short pop of the trophy, never a moving page. Neutralised by the
+   reduced-motion block below. */
+@keyframes tm-onboarding-celebration-pop {
+  from { opacity: 0; transform: scale(0.85); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
 /* ── Utility Classes ──────────────────────────────────────────── */
 
 .tm-animate-spin     { animation: tm-spin 1s linear infinite; }
@@ -78,6 +85,9 @@
   .tm-animate-pulse,
   .tm-animate-slide-in,
   .tm-animate-spin,
+  .tm-approval-card,
+  .tm-approval-card__collapse,
+  .tm-approval-card__spinner,
   .tm-attach-progress-bar,
   .tm-attach-upload-zone,
   .tm-attachment-delete,
@@ -225,6 +235,9 @@
   .tm-gauge__value,
   .tm-import-wizard__map-select,
   .tm-inline-edit-display,
+  .tm-inline-diff__change,
+  .tm-inline-diff__marker,
+  .tm-inline-diff__popover,
   .tm-input,
   .tm-kanban__card,
   .tm-kanban__drop-indicator,
@@ -280,6 +293,7 @@
   .tm-number-input,
   .tm-number-input__decrement,
   .tm-number-input__increment,
+  .tm-onboarding-checklist__celebration-icon,
   .tm-overlay-panel-sheet__done,
   .tm-page-btn,
   .tm-pagination-btn,
@@ -307,6 +321,9 @@
   .tm-range-slider__input,
   .tm-rating__star,
   .tm-reveal-on-hover,
+  .tm-review-queue__row,
+  .tm-review-queue__row-collapse,
+  .tm-review-queue__spinner,
   .tm-recurrence-editor__day,
   .tm-rich-editor-full,
   .tm-rich-editor-simple,
@@ -354,7 +371,7 @@
   .tm-select,
   .tm-sheet__panel,
   .tm-sidebar,
-  .tm-sidebar-nav-item,
+  .tm-sidebar-nav-link,
   .tm-sidebar-toggle,
   .tm-signature__canvas,
   .tm-signature__clear,
@@ -380,6 +397,8 @@
   .tm-stock-chart__point,
   .tm-stock-chart__volume,
   .tm-stock-chart__wick,
+  .tm-suggestion-card,
+  .tm-suggestion-card__collapse,
   .tm-tab,
   .tm-tag-chip-remove,
   .tm-tag-create-option,
@@ -399,6 +418,10 @@
   .tm-toolbar-more,
   .tm-tooltip__content,
   .tm-topbar-icon-btn,
+  .tm-topbar-menu-btn,
+  .tm-topbar-search-trigger,
+  .tm-topbar-user-button,
+  .tm-topbar-user-menu-item,
   .tm-tree-expand,
   .tm-tree-list-row,
   .tm-tree-list-toggle,
@@ -406,6 +429,8 @@
   .tm-tree-root-drop,
   .tm-upload-progress__action,
   .tm-upload-progress__bar,
+  .tm-user-menu__item,
+  .tm-user-menu__trigger,
   .tm-user-picker__clear,
   .tm-user-picker__result-item,
   .tm-validation-summary,

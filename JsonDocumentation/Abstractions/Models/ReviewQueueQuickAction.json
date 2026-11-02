@@ -1,0 +1,10 @@
+{
+  "kind": "Class",
+  "category": "Models",
+  "namespace": "Tempo.Blazor.Abstractions.Models.Reviews",
+  "description": "A host-defined button of a review queue row — the \"decision inbox\" variant, where an item is resolved with two purpose-named buttons (\"Approve & file\", \"Send back to the author\") instead of the built-in verbs. Activating one raises OnAction with QuickAction and this action's Id. Like every action it resolves the item only when the callback completes without throwing, and the localized result announced to screen readers uses Label as the verb.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/Models/Reviews/ReviewQueueQuickAction.cs",
+  "documentationStatus": "generated",
+  "itemName": "ReviewQueueQuickAction"
+}

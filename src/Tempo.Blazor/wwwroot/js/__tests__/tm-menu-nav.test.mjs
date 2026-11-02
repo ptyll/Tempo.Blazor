@@ -2,7 +2,7 @@
 // rules plus attach() against a stub menu, the way tm-editor-shell.test.mjs does it.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { nextIndex, typeaheadMatch, attach, detach, enabledItems, isAttached, focusFirst, __resetForTests } from '../tm-menu-nav.js';
+import { nextIndex, typeaheadMatch, attach, detach, enabledItems, isAttached, focusFirst, focusLast, __resetForTests } from '../tm-menu-nav.js';
 
 test.beforeEach(() => __resetForTests());
 
@@ -286,6 +286,38 @@ test('focusFirst does nothing when the menu is not open or has no enabled item',
     assert.equal(focusFirst(null), false);
     const menuEl = { querySelectorAll: () => [item('A', { disabled: true })] };
     assert.equal(focusFirst({ querySelector: () => menuEl }), false);
+});
+
+// ── focusLast: ArrowUp on a menu button opens onto the LAST item ──────────────────────────────
+
+test('focusLast focuses the last ENABLED item of the open menu inside the host', () => {
+    const items = [item('A'), item('B'), item('C', { disabled: true })];
+    const menuEl = { querySelectorAll: () => items };
+    const host = { querySelector: selector => (selector === '[role="menu"]' ? menuEl : null) };
+
+    assert.equal(focusLast(host), true);
+    assert.equal(items[1].focusCalls, 1, 'the natively disabled trailing item is skipped');
+    assert.equal(items[2].focusCalls, 0);
+});
+
+test('focusLast skips an aria-disabled trailing item but keeps it as the last-resort fallback', () => {
+    const items = [item('All'), item('Selected', { ariaDisabled: true })];
+    const menuEl = { querySelectorAll: () => items };
+    const host = { querySelector: selector => (selector === '[role="menu"]' ? menuEl : null) };
+
+    assert.equal(focusLast(host), true);
+    assert.equal(items[0].focusCalls, 1);
+
+    const onlyAriaDisabled = [item('Selected', { ariaDisabled: true })];
+    assert.equal(focusLast({ querySelector: () => ({ querySelectorAll: () => onlyAriaDisabled }) }), true);
+    assert.equal(onlyAriaDisabled[0].focusCalls, 1);
+});
+
+test('focusLast does nothing when the menu is not open or has no enabled item', () => {
+    assert.equal(focusLast({ querySelector: () => null }), false);
+    assert.equal(focusLast(null), false);
+    const menuEl = { querySelectorAll: () => [item('A', { disabled: true })] };
+    assert.equal(focusLast({ querySelector: () => menuEl }), false);
 });
 
 // ── H16c: Tab out of an open popover menu closes it ──────────────────────────────────────────

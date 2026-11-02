@@ -1,0 +1,10 @@
+{
+  "kind": "Enum",
+  "category": "Models",
+  "namespace": "Tempo.Blazor.Abstractions.Models.Approvals",
+  "description": "Lifecycle state of an approval request rendered by TmApprovalCard: Pending, Approved, Rejected, Expired or Cancelled. Pending is the only state in which the card offers its actions; every other state collapses it into a single result row.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/Models/Approvals/ApprovalState.cs",
+  "documentationStatus": "generated",
+  "itemName": "ApprovalState"
+}

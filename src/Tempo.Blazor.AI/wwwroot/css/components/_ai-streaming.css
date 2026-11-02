@@ -1,0 +1,65 @@
+/* ── Streaming primitives ─────────────────────────────────────────────────────────────────────
+   Shared by every AI component that renders text arriving from a model. Put .tm-ai-streaming on
+   the element whose text is still being written (an assistant message body, a markdown view, a
+   reasoning step); the marker adds the blinking caret after the last character and is removed when
+   the stream completes. Keeping it here — and not in a single component's stylesheet — means the
+   caret looks identical everywhere and the reduced-motion block below can never be forgotten by a
+   component that starts streaming later.
+
+   WHERE the caret sits is decided by the content: a stream rendered as inline text ends at the
+   element itself, so the caret is the element's own ::after, while a stream that already produced
+   block children (a markdown paragraph, list item or heading) ends after the LAST child — an
+   element-level ::after would paint in a box of its own below the content instead of after the
+   final character.
+
+   The caret paints with currentColor so it inherits the surrounding text colour in both themes;
+   no colour literal is declared and the dark theme needs no override. */
+
+.tm-ai-streaming:not(:has(> *))::after,
+.tm-ai-streaming > :is(p, li, h1, h2, h3, h4, h5, h6):last-child::after {
+    content: "";
+    display: inline-block;
+    inline-size: 0.5em;
+    block-size: 1em;
+    margin-inline-start: var(--tm-space-1);
+    vertical-align: text-bottom;
+    background-color: currentColor;
+    border-radius: var(--tm-radius-xs);
+}
+
+/* The blink is declared on the bare pseudo-element so ONE rule reaches every caret variant above,
+   whichever selector generated the box — that keeps the reduced-motion and forced-colors blocks to
+   a single subject instead of repeating the :has()/:is() list in each of them. */
+.tm-ai-streaming::after {
+    animation: tm-ai-caret-blink 1s step-end infinite;
+}
+
+/* A hard on/off blink: step-end holds each keyframe value, so the caret is opaque for the first
+   half of the cycle and invisible for the second. */
+@keyframes tm-ai-caret-blink {
+    0% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0;
+    }
+}
+
+/* Forced colors (Windows high contrast): the system replaces currentColor, so the caret asks for
+   the canvas text colour explicitly and opts out of the automatic adjustment. */
+@media (forced-colors: active) {
+    .tm-ai-streaming::after {
+        forced-color-adjust: none;
+        background-color: CanvasText;
+    }
+}
+
+/* Reduced motion: the caret still marks "text is arriving", it simply stops blinking — a caret
+   that disappears entirely would remove the only visual signal that the answer is unfinished. */
+@media (prefers-reduced-motion: reduce) {
+    .tm-ai-streaming::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+    }
+}

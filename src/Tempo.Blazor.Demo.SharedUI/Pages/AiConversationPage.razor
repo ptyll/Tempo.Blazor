@@ -1,0 +1,733 @@
+@page "/ai-conversation"
+@using System.Runtime.CompilerServices
+@using Tempo.Blazor.AI.Models
+@using Tempo.Blazor.AI.Services
+@using Tempo.Blazor.Components.AI
+@inject ITmLocalizer Loc
+
+<PageTitle>@Loc["TmDemo_AiConversation_Title"] - Tempo.Blazor</PageTitle>
+
+@* Demo-only chrome of this page. The conversation surface itself is styled by the package; these rules
+   only frame it (the card, the state list, the hostile-markdown caption) with the library's own tokens, so
+   the frame follows the light/dark theme without a second palette. *@
+<style>
+    .ai-demo-actions {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: var(--tm-space-3);
+    }
+
+    .ai-demo-button {
+        padding: var(--tm-space-2) var(--tm-space-4);
+        min-block-size: 2.75rem;
+        border: var(--tm-border-width) solid var(--tm-border-color);
+        border-radius: var(--tm-radius-md);
+        background: var(--tm-bg-surface);
+        color: var(--tm-text-primary);
+        font-size: var(--tm-font-size-sm);
+        font-weight: var(--tm-font-weight-medium);
+        cursor: pointer;
+    }
+
+    .ai-demo-button:hover {
+        border-color: var(--tm-color-primary);
+        color: var(--tm-color-primary);
+    }
+
+    .ai-demo-button:focus-visible {
+        /* The box shadow is the visible ring, the transparent outline is its fallback: Windows High Contrast
+           strips box shadows, so without an outline the reset button has no focus indicator there at all
+           (WCAG 2.4.7). The forced-colors block below repaints the outline in the system's colour. */
+        outline: 2px solid transparent;
+        outline-offset: 2px;
+        box-shadow: var(--tm-focus-ring);
+    }
+
+    .ai-demo-hint,
+    .ai-demo-submission,
+    .ai-demo-note {
+        margin: 0;
+        color: var(--tm-text-secondary);
+        font-size: var(--tm-font-size-sm);
+    }
+
+    .ai-demo-submission,
+    .ai-demo-note {
+        margin-block-start: var(--tm-space-3);
+        overflow-wrap: anywhere;
+    }
+
+    .ai-demo-conversation {
+        border: var(--tm-border-width) solid var(--tm-border-color);
+        border-radius: var(--tm-radius-lg);
+        background: var(--tm-bg-surface);
+        overflow: hidden;
+    }
+
+    .ai-demo-status {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+        gap: var(--tm-space-3);
+        margin: var(--tm-space-3) 0 0;
+        padding: var(--tm-space-3);
+        border: var(--tm-border-width) dashed var(--tm-border-color);
+        border-radius: var(--tm-radius-md);
+        font-size: var(--tm-font-size-sm);
+    }
+
+    .ai-demo-status__item dt {
+        color: var(--tm-text-secondary);
+    }
+
+    .ai-demo-status__item dd {
+        margin: 0;
+        font-weight: var(--tm-font-weight-semibold);
+    }
+
+    /* The demo layout keeps a sticky header; without a scroll margin an element screenshot (or an in-page
+       anchor) parks the section heading underneath it. */
+    .ai-demo-anchor {
+        scroll-margin-block-start: 5.5rem;
+    }
+
+    .ai-demo-subheading {
+        margin: 0 0 var(--tm-space-1);
+        font-size: var(--tm-font-size-base);
+        font-weight: var(--tm-font-weight-semibold);
+        color: var(--tm-text-primary);
+    }
+
+    /* High Contrast forces every colour to a system value, and a transparent outline is not exempt: without
+       this rule the ring above stays invisible where it is the ONLY focus indicator. */
+    @@media (forced-colors: active) {
+        .ai-demo-button:focus-visible {
+            outline-color: Highlight;
+        }
+    }
+</style>
+
+<div class="mb-8">
+    <h1 class="text-3xl font-bold text-slate-900 dark:text-white mb-2">
+        @Loc["TmDemo_AiConversation_Title"]
+    </h1>
+    <p class="text-slate-600 dark:text-slate-400">
+        @Loc["TmDemo_AiConversation_Intro"]
+    </p>
+</div>
+
+@* ── The conversation itself ─────────────────────────────────────────────────────────────── *@
+<section class="demo-section ai-demo-anchor" data-testid="ai-conversation-demo">
+    <div class="flex flex-wrap items-center gap-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">
+            @Loc["TmDemo_AiConversation_ConversationHeading"]
+        </h2>
+        <span class="px-2 py-0.5 text-xs font-medium bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 rounded-full">
+            @Loc["TmDemo_AiConversation_StreamingBadge"]
+        </span>
+    </div>
+
+    <div class="showcase-card">
+        <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">
+            @Loc["TmDemo_AiConversation_ConversationIntro"]
+        </p>
+
+        <div class="ai-demo-actions mb-3">
+            <button type="button"
+                    class="ai-demo-button"
+                    data-testid="ai-demo-reset"
+                    @onclick="ResetAsync">
+                @Loc["TmDemo_AiConversation_NewConversation"]
+            </button>
+            <span class="ai-demo-hint">@Loc["TmDemo_AiConversation_KeyboardHint"]</span>
+        </div>
+
+        <div class="ai-demo-conversation" data-testid="ai-demo-conversation-host">
+            <TmAiConversation @ref="_conversation"
+                              Messages="_messages"
+                              Suggestions="_suggestions"
+                              OnSuggestion="SendPromptAsync"
+                              Height="34rem">
+                <MessageTemplate Context="message">
+                    @* The host owns the per-turn actions: the built-in TmAiMessage renders the content and the
+                       page attaches regenerate (with versions), feedback, answer retry and tool-call retry to an
+                       ASSISTANT turn. A user turn gets only the shared behaviours — regenerating or rating the
+                       reader's own prompt is not an action that exists. *@
+                    @if (message.Role == AiMessageRole.Assistant)
+                    {
+                        <TmAiMessage Message="message"
+                                     OnRegenerate="() => RegenerateAsync(message)"
+                                     OnFeedback="feedback => HandleFeedbackAsync(message, feedback)"
+                                     OnRetry="() => RetryAnswerAsync(message)"
+                                     OnToolCallRetry="call => RetryToolCallAsync(message, call)"
+                                     OnCitationClick="HandleCitationClickAsync"
+                                     OnFollowUp="SendPromptAsync"
+                                     ActiveVersionIndexChanged="index => SetActiveVersion(message, index)" />
+                    }
+                    else
+                    {
+                        <TmAiMessage Message="message" OnCitationClick="HandleCitationClickAsync" />
+                    }
+                </MessageTemplate>
+            </TmAiConversation>
+
+            <TmAiComposer @bind-Text="_draft"
+                          IsGenerating="_isGenerating"
+                          OnSubmit="SubmitAsync"
+                          OnStop="StopGenerationAsync"
+                          Commands="_commands.Items"
+                          MentionProvider="_mentions"
+                          Models="_models"
+                          @bind-SelectedModel="_model"
+                          MaxAttachments="3"
+                          MaxFileSize="@(2 * 1024 * 1024)"
+                          Placeholder="@Loc["TmDemo_AiConversation_ComposerPlaceholder"]" />
+        </div>
+
+        <p class="ai-demo-submission" data-testid="ai-demo-submission">
+            @string.Format(
+                Loc["TmDemo_AiConversation_Submission"],
+                _lastSubmission.Text,
+                _lastSubmission.Model ?? Loc["TmDemo_AiConversation_None"],
+                _lastSubmission.Attachments,
+                _lastSubmission.Mentions,
+                _lastSubmission.Command ?? Loc["TmDemo_AiConversation_None"])
+        </p>
+
+        <dl class="ai-demo-status" data-testid="ai-demo-status" aria-label="@Loc["TmDemo_AiConversation_StatusHeading"]">
+            <div class="ai-demo-status__item">
+                <dt>@Loc["TmDemo_AiConversation_MessageCount"]</dt>
+                <dd data-testid="ai-demo-message-count">@_messages.Count</dd>
+            </div>
+            <div class="ai-demo-status__item">
+                <dt>@Loc["TmDemo_AiConversation_VersionCount"]</dt>
+                <dd data-testid="ai-demo-version-count">@VersionCount</dd>
+            </div>
+            <div class="ai-demo-status__item">
+                <dt>@Loc["TmDemo_AiConversation_FeedbackLabel"]</dt>
+                <dd data-testid="ai-demo-feedback">@FeedbackText</dd>
+            </div>
+            <div class="ai-demo-status__item">
+                <dt>@Loc["TmDemo_AiConversation_ToolRetries"]</dt>
+                <dd data-testid="ai-demo-tool-retries">@_toolCallRetries</dd>
+            </div>
+            <div class="ai-demo-status__item">
+                <dt>@Loc["TmDemo_AiConversation_CitationLabel"]</dt>
+                <dd data-testid="ai-demo-citation">@(_lastCitation ?? Loc["TmDemo_AiConversation_None"])</dd>
+            </div>
+            <div class="ai-demo-status__item">
+                <dt>@Loc["TmDemo_AiConversation_LastRetry"]</dt>
+                <dd data-testid="ai-demo-last-retry">@(_lastRetry ?? Loc["TmDemo_AiConversation_None"])</dd>
+            </div>
+        </dl>
+    </div>
+</section>
+
+@* ── The agent's permission request ─────────────────────────────────────────────────────── *@
+<PermissionRequestDemoSection />
+
+@* ── The standalone components ──────────────────────────────────────────────────────────── *@
+<section class="demo-section ai-demo-anchor" data-testid="ai-standalone-components">
+    <h2 class="text-lg font-semibold text-slate-900 dark:text-white mb-4">
+        @Loc["TmDemo_AiConversation_StandaloneHeading"]
+    </h2>
+    <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">
+        @Loc["TmDemo_AiConversation_StandaloneIntro"]
+    </p>
+
+    <div class="showcase-card" data-testid="ai-tool-call-states">
+        <h3 class="ai-demo-subheading">@Loc["TmDemo_AiConversation_ToolCallStatesHeading"]</h3>
+        <p class="text-sm text-slate-600 dark:text-slate-400 mb-3">
+            @Loc["TmDemo_AiConversation_ToolCallStatesIntro"]
+        </p>
+        @foreach (var call in AiConversationPageSamples.ToolCallStates)
+        {
+            <TmToolCallCard @key="call.Id"
+                            ToolCall="call"
+                            OnRetry="() => RetrySampleCallAsync(call)" />
+        }
+        <TmToolCallGroup ToolCalls="AiConversationPageSamples.ToolCallRun"
+                         OnRetry="RetrySampleCallAsync" />
+    </div>
+
+    <div class="showcase-card mt-4" data-testid="ai-thinking-demo">
+        <h3 class="ai-demo-subheading">@Loc["TmDemo_AiConversation_ThinkingHeading"]</h3>
+        <p class="text-sm text-slate-600 dark:text-slate-400 mb-3">
+            @Loc["TmDemo_AiConversation_ThinkingIntro"]
+        </p>
+        <div class="flex flex-wrap items-center gap-3">
+            <TmThinkingIndicator Phase="@Loc["TmDemo_AiConversation_ThinkingPhaseRunning"]" />
+            <TmThinkingIndicator Phase="@Loc["TmDemo_AiConversation_ThinkingPhaseDone"]" Completed="true" />
+        </div>
+    </div>
+
+    <div class="showcase-card mt-4" data-testid="ai-reasoning-demo">
+        <h3 class="ai-demo-subheading">@Loc["TmDemo_AiConversation_ReasoningHeading"]</h3>
+        <p class="text-sm text-slate-600 dark:text-slate-400 mb-3">
+            @Loc["TmDemo_AiConversation_ReasoningIntro"]
+        </p>
+        <TmReasoningPanel Reasoning="AiConversationPageSamples.Reasoning" />
+        <TmReasoningPanel Reasoning="AiConversationPageSamples.Reasoning" DefaultExpanded="true" />
+    </div>
+
+    <div class="showcase-card mt-4" data-testid="ai-markdown-xss">
+        <h3 class="ai-demo-subheading">@Loc["TmDemo_AiConversation_MarkdownHeading"]</h3>
+        <p class="text-sm text-slate-600 dark:text-slate-400 mb-3">
+            @Loc["TmDemo_AiConversation_MarkdownIntro"]
+        </p>
+        <TmMarkdownView Markdown="@AiConversationPageSamples.HostileMarkdown"
+                        OnCitationClick="HandleCitationClickAsync" />
+        <p class="ai-demo-note" data-testid="ai-markdown-xss-note">
+            @Loc["TmDemo_AiConversation_MarkdownSafeNote"]
+        </p>
+    </div>
+</section>
+
+@code {
+    /// <summary>How long one simulated token chunk takes, so the stream is watchable and stoppable.</summary>
+    private const int ChunkDelayMs = 40;
+
+    private const int ChunkWordCount = 5;
+
+    /// <summary>The blank line that separates two markdown blocks streamed into the same text part.</summary>
+    private const string BlockSeparator = "\n\n";
+
+    private readonly List<AiMessage> _messages = [];
+    private readonly DemoMentionProvider _mentions = new();
+    private readonly string[] _models = ["gpt-4o", "o3-mini", "tempo-local"];
+
+    private DemoSlashCommands _commands = null!;
+    private IReadOnlyList<string> _suggestions = [];
+
+    private TmAiConversation? _conversation;
+    private string? _draft;
+    private string? _model = "gpt-4o";
+    private bool _isGenerating;
+    private int _generation;
+    private int _toolCallRetries;
+    private string? _lastCitation;
+    private string? _lastRetry;
+    private AiFeedback? _feedback;
+    private LastSubmission _lastSubmission = LastSubmission.Empty;
+
+    /// <inheritdoc />
+    protected override void OnInitialized()
+    {
+        // The localizer is property-injected AFTER the constructor, so the localized demo data is built here.
+        _suggestions =
+        [
+            Loc["TmDemo_AiConversation_Suggestion1"],
+            Loc["TmDemo_AiConversation_Suggestion2"],
+            Loc["TmDemo_AiConversation_Suggestion3"],
+        ];
+
+        _commands = new DemoSlashCommands(Loc);
+    }
+
+    private int VersionCount => _messages.LastOrDefault(message => message.Role == AiMessageRole.Assistant)?.VersionCount ?? 0;
+
+    private string FeedbackText => _feedback?.Rating switch
+    {
+        AiFeedbackRating.Positive => Loc["TmDemo_AiConversation_FeedbackPositive"],
+        AiFeedbackRating.Negative => Loc["TmDemo_AiConversation_FeedbackNegative"],
+        _ => Loc["TmDemo_AiConversation_FeedbackNone"],
+    };
+
+    // ── Prompt handling ────────────────────────────────────────────────────────────────────
+
+    private async Task SendPromptAsync(string prompt)
+    {
+        if (_isGenerating || string.IsNullOrWhiteSpace(prompt))
+        {
+            return;
+        }
+
+        _messages.Add(new AiMessage(AiMessageRole.User, prompt.Trim()) { Status = AiMessageStatus.Completed });
+        await StreamAnswerAsync();
+    }
+
+    private async Task SubmitAsync(AiComposerSubmit submit)
+    {
+        _lastSubmission = new LastSubmission(
+            submit.Text,
+            submit.Model,
+            submit.Attachments.Count,
+            submit.Mentions.Count,
+            submit.Command?.Title);
+
+        await SendPromptAsync(submit.Text);
+    }
+
+    private async Task StreamAnswerAsync()
+    {
+        var answer = new AiMessage
+        {
+            Role = AiMessageRole.Assistant,
+            Status = AiMessageStatus.Pending,
+            Model = _model,
+        };
+
+        _messages.Add(answer);
+        _generation++;
+        _isGenerating = true;
+        _lastRetry = null;
+        StateHasChanged();
+
+        try
+        {
+            if (_conversation is not null)
+            {
+                await _conversation.StreamAsync(answer, GenerateDeltasAsync(_generation, answer));
+            }
+        }
+        finally
+        {
+            _isGenerating = false;
+            CompleteAnswer(answer);
+            StateHasChanged();
+        }
+    }
+
+    private async Task StopGenerationAsync()
+    {
+        if (_conversation is not null)
+        {
+            await _conversation.StopAsync();
+        }
+    }
+
+    private async Task RegenerateAsync(AiMessage message)
+    {
+        if (_isGenerating || message.Role != AiMessageRole.Assistant)
+        {
+            return;
+        }
+
+        // Archive the displayed generation, clear the live parts and stream the next one — the contract the
+        // version switcher relies on (the live parts are ALWAYS the last version).
+        message.Versions.Add(new AiMessageVersion(message.Parts));
+        message.Parts.Clear();
+        message.FollowUps.Clear();
+        message.Error = null;
+        message.Status = AiMessageStatus.Pending;
+        message.Feedback = null;
+        message.ActiveVersionIndex = message.VersionCount - 1;
+
+        _isGenerating = true;
+        _generation++;
+        StateHasChanged();
+
+        try
+        {
+            if (_conversation is not null)
+            {
+                await _conversation.StreamAsync(message, GenerateDeltasAsync(_generation, message));
+            }
+        }
+        finally
+        {
+            _isGenerating = false;
+            CompleteAnswer(message);
+            StateHasChanged();
+        }
+    }
+
+    /// <summary>What a host does once the answer finished: offer the follow-up questions of a completed turn.</summary>
+    private void CompleteAnswer(AiMessage answer)
+    {
+        if (answer.Status != AiMessageStatus.Completed)
+        {
+            return;
+        }
+
+        foreach (var followUp in AiConversationPageSamples.FollowUps(Loc))
+        {
+            if (!answer.FollowUps.Contains(followUp))
+            {
+                answer.FollowUps.Add(followUp);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Retry of a FAILED answer. The demo's generator never fails an answer, so this exists to bind
+    /// <c>TmAiMessage.OnRetry</c> (which renders the Retry control next to a failed turn) and routes it through
+    /// the same archive-and-stream path as Regenerate.
+    /// </summary>
+    private Task RetryAnswerAsync(AiMessage message) => RegenerateAsync(message);
+
+    private Task SetActiveVersion(AiMessage message, int index)
+    {
+        message.ActiveVersionIndex = index;
+        return InvokeAsync(StateHasChanged);
+    }
+
+    private Task HandleFeedbackAsync(AiMessage message, AiFeedback feedback)
+    {
+        message.Feedback = feedback;
+        _feedback = feedback;
+        return InvokeAsync(StateHasChanged);
+    }
+
+    private Task HandleCitationClickAsync(string sourceId)
+    {
+        _lastCitation = AiConversationPageSamples.Sources
+            .FirstOrDefault(source => string.Equals(source.Id, sourceId, StringComparison.Ordinal))?.Title
+            ?? sourceId;
+        return InvokeAsync(StateHasChanged);
+    }
+
+    private Task RetryToolCallAsync(AiMessage message, AiToolCall call)
+    {
+        call.Status = AiToolCallStatus.Succeeded;
+        call.Error = null;
+        call.ResultJson = """{"rows":3,"source":"usage-api"}""";
+        call.CompletedAt = DateTimeOffset.UtcNow;
+        _toolCallRetries++;
+        _lastRetry = call.Name;
+        return InvokeAsync(StateHasChanged);
+    }
+
+    private Task RetrySampleCallAsync(AiToolCall call)
+    {
+        call.Status = AiToolCallStatus.Succeeded;
+        call.Error = null;
+        call.ResultJson = """{"retried":true}""";
+        call.CompletedAt ??= DateTimeOffset.UtcNow;
+        _lastRetry = call.Name;
+        return InvokeAsync(StateHasChanged);
+    }
+
+    private Task ResetAsync()
+    {
+        _messages.Clear();
+        _generation = 0;
+        _toolCallRetries = 0;
+        _lastCitation = null;
+        _lastRetry = null;
+        _feedback = null;
+        _draft = null;
+        _lastSubmission = LastSubmission.Empty;
+        return InvokeAsync(StateHasChanged);
+    }
+
+    // ── The simulated stream ──────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// A local stand-in for a model call: reasoning steps, one successful and one failing tool call, the
+    /// answer blocks and the two cited sources, all delivered one delta at a time. The component applies each
+    /// delta through <c>AiMessageStreamApplier</c>, so the demo exercises the real streaming path.
+    /// </summary>
+    private async IAsyncEnumerable<AiStreamDelta> GenerateDeltasAsync(
+        int generation,
+        AiMessage answer,
+        [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    {
+        var reasoningStartedAt = DateTimeOffset.UtcNow;
+        foreach (var step in AiConversationPageSamples.ReasoningSteps)
+        {
+            await TickAsync(cancellationToken);
+            yield return new AiReasoningDelta { Text = step, NewStep = true };
+        }
+
+        // The host reports how long the model reasoned — the panel then swaps its live "Thinking" summary for
+        // what the thinking COST while the rest of the answer keeps streaming (the contract is the host's
+        // number, never a guess by the component).
+        if (answer.Parts.OfType<AiReasoningPart>().FirstOrDefault() is { DurationMs: null } reasoning)
+        {
+            reasoning.DurationMs = (DateTimeOffset.UtcNow - reasoningStartedAt).TotalMilliseconds;
+        }
+
+        // Call 1 — it succeeds, so its arguments and result sit behind the disclosure.
+        var searchId = $"search-{generation}";
+        await TickAsync(cancellationToken);
+        yield return new AiToolCallStartedDelta
+        {
+            // A tool display name is the label of the card, so the host localizes it like every other label.
+            ToolCall = new AiToolCall
+            {
+                Id = searchId,
+                Name = "search_docs",
+                DisplayName = Loc["TmDemo_AiConversation_Tool_SearchDocs"],
+            },
+        };
+        await TickAsync(cancellationToken);
+        yield return new AiToolCallUpdatedDelta
+        {
+            ToolCallId = searchId,
+            ArgumentsJson = """{"query":"tempo.blazor ai conversation","top":3}""",
+        };
+        await TickAsync(cancellationToken);
+        yield return new AiToolCallCompletedDelta
+        {
+            ToolCallId = searchId,
+            Status = AiToolCallStatus.Succeeded,
+            ResultJson = """{"hits":3,"took_ms":128}""",
+        };
+
+        foreach (var chunk in Chunk(AiConversationPageSamples.Intro(generation)))
+        {
+            await TickAsync(cancellationToken);
+            yield return new AiTextDelta { Text = chunk };
+        }
+
+        // Blocks of ONE text part must stay separated by a blank line: a table glued to the list above it (or a
+        // fence glued to the paragraph below it) stops being markdown.
+        yield return new AiTextDelta { Text = BlockSeparator };
+
+        foreach (var chunk in Chunk(AiConversationPageSamples.Table))
+        {
+            await TickAsync(cancellationToken);
+            yield return new AiTextDelta { Text = chunk };
+        }
+
+        // Call 2 — it fails; the page's OnToolCallRetry turns it into a success without restarting the answer.
+        var usageId = $"usage-{generation}";
+        await TickAsync(cancellationToken);
+        yield return new AiToolCallStartedDelta
+        {
+            ToolCall = new AiToolCall
+            {
+                Id = usageId,
+                Name = "fetch_usage",
+                DisplayName = Loc["TmDemo_AiConversation_Tool_FetchUsage"],
+            },
+        };
+        await TickAsync(cancellationToken);
+        yield return new AiToolCallUpdatedDelta
+        {
+            ToolCallId = usageId,
+            ArgumentsJson = """{"url":"https://usage.example.com"}""",
+            Status = AiToolCallStatus.Running,
+        };
+        await TickAsync(cancellationToken);
+        yield return new AiToolCallCompletedDelta
+        {
+            ToolCallId = usageId,
+            Status = AiToolCallStatus.Failed,
+            Error = "HTTP 503 from usage.example.com",
+        };
+
+        foreach (var chunk in Chunk(AiConversationPageSamples.Code))
+        {
+            await TickAsync(cancellationToken);
+            yield return new AiTextDelta { Text = chunk };
+        }
+
+        yield return new AiTextDelta { Text = BlockSeparator };
+
+        foreach (var chunk in Chunk(AiConversationPageSamples.Closing))
+        {
+            await TickAsync(cancellationToken);
+            yield return new AiTextDelta { Text = chunk };
+        }
+
+        // The sources arrive last, so their cards render under the answer and every chip resolves.
+        foreach (var source in AiConversationPageSamples.Sources)
+        {
+            await TickAsync(cancellationToken);
+            yield return new AiCitationAddedDelta { Source = source };
+        }
+
+        yield return new AiCompletedDelta();
+    }
+
+    private static Task TickAsync(CancellationToken cancellationToken)
+        => Task.Delay(ChunkDelayMs, cancellationToken);
+
+    /// <summary>
+    /// Splits an answer block into small text deltas so the transcript visibly streams. The split is
+    /// LOSSLESS: the separators between words are re-emitted at chunk boundaries too, otherwise two chunks
+    /// concatenate into "awaitconversation" and the markdown stops parsing (a fence would never close).
+    /// </summary>
+    private static IEnumerable<string> Chunk(string text)
+    {
+        var words = text.Split(' ');
+        var builder = new System.Text.StringBuilder();
+        var inChunk = 0;
+        for (var index = 0; index < words.Length; index++)
+        {
+            if (index > 0)
+            {
+                builder.Append(' ');
+            }
+
+            builder.Append(words[index]);
+            inChunk++;
+
+            if (inChunk >= ChunkWordCount && index < words.Length - 1)
+            {
+                yield return builder.ToString();
+                builder.Clear();
+                inChunk = 0;
+            }
+        }
+
+        if (builder.Length > 0)
+        {
+            yield return builder.ToString();
+        }
+    }
+
+    private sealed record LastSubmission(string Text, string? Model, int Attachments, int Mentions, string? Command)
+    {
+        internal static LastSubmission Empty { get; } = new(string.Empty, null, 0, 0, null);
+    }
+
+    /// <summary>The page's tiny mention index — three entities, searched in memory.</summary>
+    private sealed class DemoMentionProvider : IAiMentionProvider
+    {
+        private static readonly AiMentionItem[] Items =
+        [
+            new() { Id = "doc-conversation", Label = "ai-conversation.md", Kind = "document", Icon = "file-text", Description = "docs/ai-conversation.md" },
+            new() { Id = "doc-composer", Label = "ai-composer.md", Kind = "document", Icon = "file-text", Description = "docs/ai-composer.md" },
+            new() { Id = "person-ada", Label = "Ada Lovelace", Kind = "user", Icon = "user", Description = "Maintainer" },
+        ];
+
+        public Task<IReadOnlyList<AiMentionItem>> SearchAsync(string query, CancellationToken cancellationToken = default)
+        {
+            var matches = string.IsNullOrWhiteSpace(query)
+                ? Items
+                : Items.Where(item => item.Label.Contains(query, StringComparison.OrdinalIgnoreCase)).ToArray();
+            return Task.FromResult<IReadOnlyList<AiMentionItem>>(matches);
+        }
+    }
+
+    /// <summary>The page's slash commands: three templates the composer offers after a "/".</summary>
+    private sealed class DemoSlashCommands
+    {
+        internal DemoSlashCommands(ITmLocalizer loc)
+        {
+            // The ID is the stable token a host routes on. The TITLE is the label the "/" list shows (it is
+            // also what the composer filters on), so it is localized with the description. The PROMPT is the
+            // text that becomes the reader's draft — sample CONTENT of this demo, like the answer it produces,
+            // so it stays in English.
+            Items =
+            [
+                new AiSlashCommand
+                {
+                    Id = "summarise",
+                    Title = loc["TmDemo_AiConversation_Cmd_Summarise"],
+                    Description = loc["TmDemo_AiConversation_CommandSummarise"],
+                    Prompt = "Summarise this conversation in five bullets:\n",
+                },
+                new AiSlashCommand
+                {
+                    Id = "translate",
+                    Title = loc["TmDemo_AiConversation_Cmd_Translate"],
+                    Description = loc["TmDemo_AiConversation_CommandTranslate"],
+                    Prompt = "Translate the last answer into Czech:\n",
+                },
+                new AiSlashCommand
+                {
+                    Id = "metrics",
+                    Title = loc["TmDemo_AiConversation_Cmd_Metrics"],
+                    Description = loc["TmDemo_AiConversation_CommandMetrics"],
+                    Prompt = "Show the latency metrics as a table:\n",
+                },
+            ];
+        }
+
+        internal IReadOnlyList<AiSlashCommand> Items { get; }
+    }
+}

@@ -1,0 +1,180 @@
+@namespace Tempo.Blazor.Components.DataDisplay
+@inherits Tempo.Blazor.Components.TmComponentBase
+
+@* A setup guide / progress tracker: native checkboxes (no JS, no keydown emulation), APG
+   disclosure buttons per group, ONE polite live region and a celebration block instead of
+   confetti. Every user-visible string is localized; every colour/size is a --tm-* token.
+
+   Structure decision: the ungrouped steps render as a bare list (no disclosure), the named
+   groups render as a <div> per group with a header button and a body that stays in the DOM and is
+   hidden through the `hidden` attribute. Keeping the body mounted means aria-controls always
+   resolves and the checkbox state survives a collapse; `hidden` removes it from the accessibility
+   tree and the tab order. *@
+
+@if (!_dismissed)
+{
+    <section class="@RootClass"
+             data-testid="@RootTestId("onboarding-checklist")"
+             aria-labelledby="@(HasTitle ? TitleId : null)"
+             aria-label="@(HasTitle ? null : Loc["TmOnboardingChecklist_Label"])"
+             @attributes="AdditionalAttributes">
+        @if (HasTitle || Dismissible)
+        {
+            <div class="tm-onboarding-checklist__header">
+                @if (HasTitle)
+                {
+                    <div role="heading"
+                         aria-level="@EffectiveHeadingLevelText"
+                         class="tm-onboarding-checklist__title"
+                         id="@TitleId"
+                         data-testid="@TestId("onboarding-checklist-title")">@Title</div>
+                }
+                @if (Dismissible)
+                {
+                    <button type="button"
+                            class="tm-onboarding-checklist__dismiss"
+                            data-testid="@TestId("onboarding-checklist-dismiss")"
+                            aria-label="@Loc["TmOnboardingChecklist_Dismiss"]"
+                            @onclick="DismissAsync">
+                        <TmIcon Name="@IconNames.X" Size="IconSize.Sm" />
+                    </button>
+                }
+            </div>
+        }
+
+        @if (ShowProgress && HasTasks)
+        {
+            <div class="tm-onboarding-checklist__progress" data-testid="@TestId("onboarding-checklist-progress")">
+                @* The bar is named by its ROLE ("Progress" + its numbers); the counted sentence
+                   next to it carries the "3 of 7" text, so nothing is read twice. *@
+                <TmProgressBar Value="@ProgressPercentage"
+                               Max="100"
+                               Size="ProgressBarSize.Sm"
+                               aria-label="@Loc["TmOnboardingChecklist_ProgressLabel"]" />
+                <span class="tm-onboarding-checklist__progress-text"
+                      data-testid="@TestId("onboarding-checklist-progress-text")">@ProgressText</span>
+            </div>
+        }
+
+        @if (ShowCelebration && IsComplete)
+        {
+            @* Deliberately NOT a live region: the announcer below is the only announcement
+               channel, so a completion is announced exactly once. *@
+            <div class="tm-onboarding-checklist__celebration"
+                 data-testid="@TestId("onboarding-checklist-celebration")">
+                <span class="tm-onboarding-checklist__celebration-icon" aria-hidden="true">
+                    <TmIcon Name="@IconNames.Trophy" Size="IconSize.Lg" />
+                </span>
+                <div class="tm-onboarding-checklist__celebration-text">
+                    <p class="tm-onboarding-checklist__celebration-title">@CompletedTitleText</p>
+                    <p class="tm-onboarding-checklist__celebration-body">@CompletedTextText</p>
+                </div>
+            </div>
+        }
+
+        @if (!HasTasks)
+        {
+            <p class="tm-onboarding-checklist__empty"
+               data-testid="@TestId("onboarding-checklist-empty")">@Loc["TmOnboardingChecklist_Empty"]</p>
+        }
+        else
+        {
+            @* Groups are built ONCE per render: GroupHeader/GroupBodyId take the loop index so the
+               per-group test ids stay stable, and the ungrouped bucket keeps its document position. *@
+            var groups = GroupViews;
+            @for (var index = 0; index < groups.Count; index++)
+            {
+                var grp = groups[index];
+                @if (grp.Name is null)
+                {
+                    @TaskList(grp, index)
+                }
+                else
+                {
+                    <div class="tm-onboarding-checklist__group" @key="grp.Key">
+                        @GroupHeader(grp, index)
+                        <div class="tm-onboarding-checklist__group-body"
+                             id="@GroupBodyId(index)"
+                             data-testid="@TestId("onboarding-group-body-" + index)"
+                             hidden="@HiddenAttr(IsExpanded(grp))">
+                            @TaskList(grp, index)
+                        </div>
+                    </div>
+                }
+            }
+        }
+
+        @* The single polite live region of the checklist. It is mounted EMPTY on the first render
+           (a pre-filled live region can be announced as soon as it is registered) and only carries
+           the result of the user's own interaction. *@
+        <div class="tm-sr-only"
+             role="status"
+             aria-live="polite"
+             aria-atomic="true"
+             data-testid="@TestId("onboarding-checklist-announcer")">@_announcement</div>
+    </section>
+}
+
+@code {
+    private static string BoolText(bool value) => value ? "true" : "false";
+
+    /// <summary>
+    /// The <c>hidden</c> attribute value for a container: <c>null</c> removes the attribute and the
+    /// literal "hidden" adds it. Blazor would render <c>hidden="False"</c> for a bool expression —
+    /// and ANY value of the attribute hides the element.
+    /// </summary>
+    private static string? HiddenAttr(bool visible) => visible ? null : "hidden";
+
+    /// <summary>
+    /// One step of the checklist, as a list item. The POSITION (group index + index inside the group)
+    /// — not the step's Id — builds the DOM ids, so two ids that slug alike cannot collide.
+    /// </summary>
+    private RenderFragment TaskRow(OnboardingTask step, int groupIndex, int taskIndex)
+        => @<li class="@ItemClass(step)" data-testid="@TestId("onboarding-task-" + step.Id)">
+        <input type="checkbox"
+               class="tm-onboarding-checklist__checkbox"
+               id="@CheckboxId(groupIndex, taskIndex)"
+               checked="@step.IsDone"
+               aria-describedby="@(string.IsNullOrWhiteSpace(step.Description) ? null : DescriptionId(groupIndex, taskIndex))"
+               @onchange="() => ToggleTaskAsync(step)" />
+        <div class="tm-onboarding-checklist__body">
+            <label class="tm-onboarding-checklist__label" for="@CheckboxId(groupIndex, taskIndex)">
+                <span class="tm-onboarding-checklist__task-title">@step.Title</span>
+                @if (step.IsOptional)
+                {
+                    <span class="tm-onboarding-checklist__badge">@Loc["TmOnboardingChecklist_Optional"]</span>
+                }
+            </label>
+            @if (!string.IsNullOrWhiteSpace(step.Description))
+            {
+                <p class="tm-onboarding-checklist__description" id="@DescriptionId(groupIndex, taskIndex)">@step.Description</p>
+            }
+        </div>
+        @if (HasAction(step))
+        {
+            @if (step.OnAction is not null)
+            {
+                <button type="button"
+                        class="@ActionClass"
+                        data-testid="@TestId("onboarding-action-" + step.Id)"
+                        @onclick="() => RunActionAsync(step)">@step.ActionLabel</button>
+            }
+            else
+            {
+                @* Only an allow-listed href reaches the attribute: a javascript:/data: value is no
+                   target at all, so HasAction suppresses the action entirely. *@
+                <a class="@ActionClass"
+                   href="@SafeHref(step.ActionHref)"
+                   data-testid="@TestId("onboarding-action-" + step.Id)">@step.ActionLabel</a>
+            }
+        }
+    </li>;
+
+    /// <summary>The steps of one group, as a list.</summary>
+    private RenderFragment TaskList(OnboardingGroupView grp, int groupIndex) => @<ul class="tm-onboarding-checklist__list">
+        @for (var taskIndex = 0; taskIndex < grp.Tasks.Count; taskIndex++)
+        {
+            @TaskRow(grp.Tasks[taskIndex], groupIndex, taskIndex)
+        }
+    </ul>;
+}

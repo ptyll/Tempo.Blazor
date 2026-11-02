@@ -1,0 +1,10 @@
+{
+  "kind": "Enum",
+  "category": "AI",
+  "namespace": "Tempo.Blazor.AI.Models",
+  "description": "How long a permission the reader granted lasts: Once, ForDuration, Session or Always. TmPermissionRequest offers only the scopes its host lists in ScopeOptions, so an app that never wants to hand out a permanent permission simply does not offer Always.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/AI/Permissions/PermissionScope.cs",
+  "documentationStatus": "generated",
+  "itemName": "PermissionScope"
+}

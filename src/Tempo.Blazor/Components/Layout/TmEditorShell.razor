@@ -364,7 +364,7 @@
     {
         var text = side == EditorShellPanel.Left ? EffectiveLeftWidth : EffectiveRightWidth;
         // A non-pixel host width (rem, %) cannot be stepped from; the side's default is the origin.
-        return EditorShellResize.TryParsePx(text, out var px) ? px : side == EditorShellPanel.Left ? 280 : 320;
+        return PanelResize.TryParsePx(text, out var px) ? px : side == EditorShellPanel.Left ? 280 : 320;
     }
 
     /// <summary>The width the keyboard steps from: the width on screen — the tablet fit included —
@@ -375,7 +375,7 @@
         // host width, or the first key press would jump the panel.
         if (TabletFit(side) is { } fit) return fit;
         var text = side == EditorShellPanel.Left ? EffectiveLeftWidth : EffectiveRightWidth;
-        if (EditorShellResize.TryParsePx(text, out var px)) return px;
+        if (PanelResize.TryParsePx(text, out var px)) return px;
         _shellJs ??= new EditorShellInterop(JS);
         var measured = await _shellJs.MeasureWidthAsync(side == EditorShellPanel.Left ? _leftAside : _rightAside);
         return double.IsNaN(measured) ? CurrentWidthPx(side) : (int)measured;

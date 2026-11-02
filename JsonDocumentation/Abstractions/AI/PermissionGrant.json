@@ -1,0 +1,10 @@
+{
+  "kind": "Class",
+  "category": "AI",
+  "namespace": "Tempo.Blazor.AI.Models",
+  "description": "The permission the reader actually granted: a PermissionScope plus, for a scope that can run out, both ends of its window. The record is a value, so TmPermissionRequest can tell a re-rendered parameter from a new grant and cannot resurrect a revoked permission; a timed grant must name its ExpiresAt and a grant that never expires must not carry one.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/AI/Permissions/PermissionGrant.cs",
+  "documentationStatus": "generated",
+  "itemName": "PermissionGrant"
+}

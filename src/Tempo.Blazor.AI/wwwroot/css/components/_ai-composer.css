@@ -1,0 +1,364 @@
+/* ── AI composer ──────────────────────────────────────────────────────────────────────────────
+   The prompt composer of an AI conversation: the autosizing textarea, the send/stop slot, the
+   attachment chips and picker, the model select, the opt-in voice control and the suggestion
+   listbox shared by the "/" commands and the "@" mentions.
+
+   Every rule reads --tm-* tokens; there is no colour literal and no [data-theme] block here (dark
+   mode is tokens-dark.css's job). Nothing in this file animates or transitions — the suggestion
+   list appears instantly, so the file needs no prefers-reduced-motion block. The sticky narrow
+   layout adds the RUNTIME --tm-ai-composer-keyboard-inset knob (written only by the module while an
+   on-screen keyboard is open), whose default lives in the var() fallback so a host override keeps
+   cascading.
+
+   The root is a size container (container-name: tm-ai-composer) for its descendants, and the
+   suggestion list is positioned from the caret: the module writes --tm-ai-composer-caret-inline-start
+   and --tm-ai-composer-caret-block-end, and the fallbacks anchor the list to the composer corner
+   when no caret measurement ever arrived (a static render, a test). */
+
+.tm-ai-composer {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-2);
+    padding: var(--tm-space-3);
+    border: var(--tm-border-width) solid var(--tm-border-color);
+    border-radius: var(--tm-radius-lg);
+    background-color: var(--tm-bg-surface);
+    color: var(--tm-color-text);
+    font-family: var(--tm-font-sans);
+    font-size: var(--tm-font-size-sm);
+    line-height: var(--tm-line-height-normal);
+    container-type: inline-size;
+    container-name: tm-ai-composer;
+}
+
+/* Forced sticky at any width (the narrow layout is sticky on its own). z-index keeps the composer
+   above the transcript it rests on. */
+.tm-ai-composer--sticky {
+    position: sticky;
+    inset-block-end: var(--tm-ai-composer-keyboard-inset, 0px);
+    z-index: 1;
+}
+
+/* The prompt itself: the root owns the border, so the textarea is a borderless surface whose height
+   the module drives. max-block-size is the HARD cap — the module clamps the autosize to MaxRows, and
+   this keeps a mismatched row height from pushing the controls off screen. */
+.tm-ai-composer__input {
+    inline-size: 100%;
+    min-block-size: 2.75rem;
+    max-block-size: 12rem;
+    padding: var(--tm-space-1) var(--tm-space-1);
+    border: 0;
+    background-color: transparent;
+    color: var(--tm-color-text);
+    font: inherit;
+    line-height: var(--tm-line-height-normal);
+    resize: none;
+    overflow-y: hidden;
+}
+
+.tm-ai-composer__input::placeholder {
+    color: var(--tm-color-text-muted);
+}
+
+.tm-ai-composer__input:focus-visible {
+    outline: 2px solid var(--tm-border-color-focus);
+    outline-offset: 2px;
+    border-radius: var(--tm-radius-sm);
+}
+
+.tm-ai-composer__input:disabled {
+    color: var(--tm-color-text-disabled);
+    cursor: not-allowed;
+}
+
+/* The suggestion listbox. It floats above the caret (or above the composer when the module has not
+   measured one) so it never reflows the draft the reader is typing into. */
+.tm-ai-composer__suggestions {
+    position: absolute;
+    inset-inline-start: var(--tm-ai-composer-caret-inline-start, var(--tm-space-3));
+    inset-block-end: var(--tm-ai-composer-caret-block-end, 100%);
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    min-inline-size: 14rem;
+    max-inline-size: min(28rem, calc(100% - var(--tm-space-6)));
+    max-block-size: var(--tm-ai-composer-list-max-block-size, 15rem);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: var(--tm-space-1);
+    border: var(--tm-border-width) solid var(--tm-border-color);
+    border-radius: var(--tm-radius-md);
+    background-color: var(--tm-bg-elevated);
+    box-shadow: var(--tm-shadow-popover);
+}
+
+.tm-ai-composer__option {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-2);
+    min-block-size: 2.25rem;
+    padding: var(--tm-space-1) var(--tm-space-2);
+    border-radius: var(--tm-radius-sm);
+    color: var(--tm-color-text);
+    cursor: pointer;
+}
+
+.tm-ai-composer__option--active {
+    background-color: var(--tm-color-surface-hover);
+}
+
+.tm-ai-composer__option-icon {
+    display: inline-flex;
+    flex: 0 0 auto;
+    color: var(--tm-color-text-secondary);
+}
+
+.tm-ai-composer__option-text {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    min-inline-size: 0;
+}
+
+.tm-ai-composer__option-title {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-weight: var(--tm-font-weight-medium);
+}
+
+.tm-ai-composer__option-description {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--tm-color-text-muted);
+    font-size: var(--tm-font-size-xs);
+}
+
+/* Attachment chips. One row that wraps; a long file name truncates instead of pushing the Remove
+   control out of reach. */
+.tm-ai-composer__attachments {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--tm-space-2);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.tm-ai-composer__attachment {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--tm-space-1);
+    max-inline-size: 100%;
+    padding-inline-start: var(--tm-space-2);
+    border: var(--tm-border-width) solid var(--tm-border-color);
+    border-radius: var(--tm-radius-full);
+    background-color: var(--tm-bg-surface-secondary);
+}
+
+.tm-ai-composer__attachment-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--tm-color-text);
+}
+
+.tm-ai-composer__attachment-size {
+    flex: 0 0 auto;
+    color: var(--tm-color-text-muted);
+    font-size: var(--tm-font-size-xs);
+}
+
+.tm-ai-composer__remove {
+    flex: 0 0 auto;
+}
+
+/* The control row: the attachment picker sits on the leading edge, the actions on the trailing one. */
+.tm-ai-composer__toolbar {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-2);
+    min-block-size: 2.75rem;
+}
+
+/* The picker is a <label> around the visually clipped native input, so the whole square is clickable
+   and the input stays on the keyboard path (the focus ring is drawn on the label). */
+.tm-ai-composer__attach {
+    position: relative;
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    inline-size: 2.75rem;
+    block-size: 2.75rem;
+    margin-inline-end: auto;
+    border-radius: var(--tm-radius-md);
+    color: var(--tm-color-text-secondary);
+    cursor: pointer;
+}
+
+.tm-ai-composer__attach:hover {
+    background-color: var(--tm-bg-surface-secondary);
+    color: var(--tm-color-text);
+}
+
+.tm-ai-composer__attach:focus-within {
+    outline: 2px solid var(--tm-border-color-focus);
+    outline-offset: 2px;
+}
+
+.tm-ai-composer__file {
+    position: absolute;
+    inset: 0;
+    inline-size: 100%;
+    block-size: 100%;
+    margin: 0;
+    padding: 0;
+    opacity: 0;
+    cursor: pointer;
+}
+
+.tm-ai-composer__file:disabled {
+    cursor: not-allowed;
+}
+
+.tm-ai-composer__attach-icon {
+    display: inline-flex;
+    pointer-events: none;
+}
+
+.tm-ai-composer__model {
+    flex: 0 1 auto;
+    max-inline-size: 12rem;
+    min-block-size: 2.75rem;
+    padding-inline: var(--tm-space-2);
+    border: var(--tm-border-width) solid var(--tm-border-color-control);
+    border-radius: var(--tm-radius-md);
+    background-color: var(--tm-bg-surface);
+    color: var(--tm-color-text);
+    font: inherit;
+    font-size: var(--tm-font-size-xs);
+}
+
+.tm-ai-composer__model:focus-visible {
+    outline: 2px solid var(--tm-border-color-focus);
+    outline-offset: 2px;
+}
+
+.tm-ai-composer__model:disabled {
+    color: var(--tm-color-text-disabled);
+    cursor: not-allowed;
+}
+
+.tm-ai-composer__action {
+    flex: 0 0 auto;
+}
+
+/* The send slot: one span holds Send or Stop, so the swap keeps a single focus scope the component can
+   move the focus into (WCAG 2.4.3). No extra surface — the core TmButton variant paints both controls. */
+.tm-ai-composer__action-slot {
+    display: inline-flex;
+    flex: 0 0 auto;
+}
+
+.tm-ai-composer__send,
+.tm-ai-composer__stop {
+    flex: 0 0 auto;
+}
+
+/* The opt-in voice control: the button's own label is the accessible name, this mark is decorative. */
+.tm-ai-composer__voice .tm-ai-composer__mic {
+    inline-size: 1.25rem;
+    block-size: 1.25rem;
+}
+
+/* Listening is NOT only a colour: the danger token carries the meaning for a sighted reader, the inset
+   ring carries it for a forced palette and for a reader who cannot tell the two colours apart (WCAG 1.4.1).
+   currentColor keeps the ring on the control's own colour instead of inventing a second one. */
+.tm-ai-composer__voice[aria-pressed='true'] {
+    color: var(--tm-color-danger-text);
+    box-shadow: inset 0 0 0 2px currentColor;
+}
+
+.tm-ai-composer__mic {
+    display: block;
+}
+
+/* The one live region: the core tm-sr-only helper clips it, this rule keeps the empty paragraph from
+   contributing a line box of margin to the flex column. */
+.tm-ai-composer__announcement {
+    margin: 0;
+}
+
+/* A coarse pointer gets the 44 px floor on every control a thumb has to reach. */
+@media (pointer: coarse) {
+    .tm-ai-composer__option,
+    .tm-ai-composer__attach,
+    .tm-ai-composer__remove {
+        min-block-size: var(--tm-touch-target);
+    }
+
+    .tm-ai-composer__attach {
+        inline-size: var(--tm-touch-target);
+        block-size: var(--tm-touch-target);
+    }
+
+    .tm-ai-composer__action,
+    .tm-ai-composer__model {
+        min-block-size: var(--tm-touch-target);
+    }
+}
+
+/* Narrow (mobile) layout: the composer rests on the fold instead of scrolling away, and an open
+   on-screen keyboard lifts it through the RUNTIME inset knob. The root is the sticky subject, and a
+   container query cannot address its own container, so this branch is a viewport media query. */
+@media (width < 640px) {
+    .tm-ai-composer {
+        position: sticky;
+        inset-block-end: var(--tm-ai-composer-keyboard-inset, 0px);
+        z-index: 1;
+    }
+
+    .tm-ai-composer__model {
+        max-inline-size: 8rem;
+    }
+}
+
+/* Forced colours: the token palette is replaced, so the surfaces get system colours and the two states a
+   forced palette would otherwise lose — the active suggestion and the running microphone — are drawn with
+   Highlight. */
+@media (forced-colors: active) {
+    .tm-ai-composer {
+        border-color: CanvasText;
+    }
+
+    .tm-ai-composer__input {
+        color: CanvasText;
+    }
+
+    .tm-ai-composer__suggestions,
+    .tm-ai-composer__attachment {
+        border-color: CanvasText;
+    }
+
+    .tm-ai-composer__option {
+        border: 1px solid transparent;
+    }
+
+    .tm-ai-composer__option--active {
+        border-color: Highlight;
+        background-color: Highlight;
+        color: HighlightText;
+        forced-color-adjust: none;
+    }
+
+    .tm-ai-composer__attach {
+        border: 1px solid ButtonBorder;
+    }
+
+    .tm-ai-composer__voice[aria-pressed='true'] {
+        outline: 2px solid Highlight;
+    }
+}

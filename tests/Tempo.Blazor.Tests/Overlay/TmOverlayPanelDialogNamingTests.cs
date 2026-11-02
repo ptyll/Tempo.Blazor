@@ -5,8 +5,10 @@ using FluentAssertions;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
+using Tempo.Blazor.AI.Models;
 using Tempo.Blazor.Abstractions.Models;
 using Tempo.Blazor.Abstractions.Shared;
+using Tempo.Blazor.Components.AI;
 using Tempo.Blazor.Components.DataDisplay;
 using Tempo.Blazor.Components.Filters;
 using Tempo.Blazor.Components.DataTable;
@@ -183,6 +185,25 @@ public sealed class TmOverlayPanelDialogNamingTests : LocalizationTestBase
     private Dictionary<string, Func<IElement>> PanelRenderers() =>
         new(StringComparer.Ordinal)
         {
+            // The AI message's two dialog-role panels (source preview, feedback reason). The sweep needs
+            // ONE of them opened; the thumbs-down path is the one a host can reach without a citation,
+            // so it also proves the panel is named on a turn that cites nothing.
+            ["TmAiMessage"] = () =>
+            {
+                var message = new AiMessage
+                {
+                    Id = "naming-sweep",
+                    Role = AiMessageRole.Assistant,
+                    Status = AiMessageStatus.Completed,
+                };
+                message.Parts.Add(new AiTextPart("An answer."));
+
+                var cut = Render<TmAiMessage>(p => p
+                    .Add(c => c.Message, message)
+                    .Add(c => c.OnFeedback, (AiFeedback _) => { }));
+                cut.Find("[data-tm-ai-action=\"feedback-down\"]").Click();
+                return cut.Find("[role='dialog']");
+            },
             ["TmDataTable"] = () =>
             {
                 var cut = Render<TmDataTable<DialogPerson>>(p => p

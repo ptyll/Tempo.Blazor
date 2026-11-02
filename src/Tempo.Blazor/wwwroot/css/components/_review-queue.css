@@ -1,0 +1,387 @@
+/* ═══════════════════════════════════════════════════════
+   TmReviewQueue — the queue of items a human decides on
+   Contract: docs/review-queue.md
+   ═══════════════════════════════════════════════════════ */
+
+/* ── Base ──────────────────────────────────────────────── */
+.tm-review-queue {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-3);
+    min-inline-size: 0;
+    color: var(--tm-text-primary);
+    font-size: var(--tm-font-size-sm);
+    line-height: 1.5;
+}
+
+.tm-review-queue:focus-visible {
+    outline: 2px solid transparent;
+    box-shadow: var(--tm-focus-ring);
+}
+
+.tm-review-queue__tabs {
+    min-inline-size: 0;
+}
+
+/* The list is the default presentation; the modifier exists so a host can hook the mode in CSS
+   without reading the markup order. */
+.tm-review-queue--list {
+    gap: var(--tm-space-2);
+}
+
+/* A save is running: nothing may be started from the queue surface while it is. */
+.tm-review-queue--busy {
+    cursor: progress;
+}
+
+.tm-review-queue__hint {
+    margin: 0;
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-xs);
+}
+
+.tm-review-queue__alert {
+    display: block;
+}
+
+/* ── List ──────────────────────────────────────────────── */
+.tm-review-queue__list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-2);
+    min-inline-size: 0;
+}
+
+.tm-review-queue__row {
+    display: block;
+    padding: var(--tm-space-3);
+    background: var(--tm-bg-surface);
+    border: 1px solid var(--tm-border-color);
+    border-inline-start: 3px solid transparent;
+    border-radius: var(--tm-radius-card);
+    cursor: pointer;
+    transition:
+        background-color var(--tm-transition-normal),
+        border-color var(--tm-transition-normal);
+}
+
+.tm-review-queue__row:focus-visible {
+    outline: 2px solid transparent;
+    box-shadow: var(--tm-focus-ring);
+}
+
+/* The selected row is the one the arrow keys and the A/E/R/S shortcuts act on, so it needs a
+   visible state that is not the focus ring alone (the reader can tab away and back). */
+.tm-review-queue__row--active {
+    background: var(--tm-bg-surface-secondary);
+    border-inline-start-color: var(--tm-color-primary);
+}
+
+.tm-review-queue__row--handled {
+    background: var(--tm-bg-surface-secondary);
+    border-inline-start-color: var(--tm-color-success);
+    cursor: default;
+}
+
+.tm-review-queue__cell {
+    display: flex;
+    flex-direction: column;
+    min-inline-size: 0;
+}
+
+/* ── Collapse (height transition, no JS) ───────────────── */
+/* Both halves stay mounted so the height can animate; the inactive half is `inert`, which takes it
+   out of the tab order AND out of the accessibility tree. */
+.tm-review-queue__row-collapse {
+    display: grid;
+    grid-template-rows: 1fr;
+    visibility: visible;
+    transition: grid-template-rows var(--tm-transition-slow), visibility 0s;
+}
+
+.tm-review-queue__row-collapse[inert] {
+    grid-template-rows: 0fr;
+    visibility: hidden;
+    transition:
+        grid-template-rows var(--tm-transition-slow),
+        visibility 0s linear var(--tm-transition-slow);
+}
+
+.tm-review-queue__row-inner {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--tm-space-3);
+    flex-wrap: wrap;
+    min-block-size: 0;
+    overflow: hidden;
+}
+
+.tm-review-queue__row-inner--summary {
+    align-items: center;
+    gap: var(--tm-space-2);
+}
+
+.tm-review-queue__row-main {
+    display: flex;
+    flex: 1 1 12rem;
+    flex-direction: column;
+    gap: var(--tm-space-1);
+    min-inline-size: 0;
+}
+
+.tm-review-queue__row-heading {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-2);
+    flex-wrap: wrap;
+    min-inline-size: 0;
+}
+
+.tm-review-queue__row-title {
+    margin: 0;
+    font-size: var(--tm-font-size-md);
+    font-weight: var(--tm-font-weight-semibold);
+    color: var(--tm-text-primary);
+    overflow-wrap: anywhere;
+}
+
+.tm-review-queue__row-risk {
+    display: inline-flex;
+    flex-shrink: 0;
+}
+
+.tm-review-queue__row-subtitle {
+    margin: 0;
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-xs);
+    overflow-wrap: anywhere;
+}
+
+.tm-review-queue__row-content {
+    min-inline-size: 0;
+    color: var(--tm-text-secondary);
+}
+
+.tm-review-queue__row-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-2);
+    flex-wrap: wrap;
+    flex-shrink: 0;
+}
+
+.tm-review-queue__action {
+    gap: var(--tm-space-1-5);
+}
+
+/* ── Handled summary half ──────────────────────────────── */
+.tm-review-queue__row-icon {
+    display: inline-flex;
+    flex-shrink: 0;
+    color: var(--tm-color-success-text);
+}
+
+.tm-review-queue__row-result {
+    color: var(--tm-text-secondary);
+    font-weight: var(--tm-font-weight-medium);
+}
+
+/* ── Focus mode ────────────────────────────────────────── */
+.tm-review-queue__focus {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-3);
+    min-inline-size: 0;
+}
+
+.tm-review-queue__focus:focus-visible {
+    outline: 2px solid transparent;
+    box-shadow: var(--tm-focus-ring);
+}
+
+.tm-review-queue__focus-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--tm-space-2);
+    flex-wrap: wrap;
+}
+
+.tm-review-queue__position {
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-xs);
+    font-variant-numeric: tabular-nums;
+    font-weight: var(--tm-font-weight-medium);
+}
+
+.tm-review-queue__nav {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--tm-space-1);
+}
+
+.tm-review-queue__nav-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.tm-review-queue__nav-button:focus-visible {
+    outline: 2px solid transparent;
+    box-shadow: var(--tm-focus-ring);
+}
+
+.tm-review-queue__focus-card {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-2);
+    padding: var(--tm-space-4);
+    background: var(--tm-bg-surface);
+    border: 1px solid var(--tm-border-color);
+    border-radius: var(--tm-radius-card);
+    box-shadow: var(--tm-shadow-sm);
+    min-inline-size: 0;
+}
+
+.tm-review-queue__focus-title {
+    margin: 0;
+    font-size: var(--tm-font-size-lg);
+    font-weight: var(--tm-font-weight-semibold);
+    color: var(--tm-text-primary);
+    overflow-wrap: anywhere;
+}
+
+.tm-review-queue__handled {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--tm-space-1);
+    align-self: flex-start;
+    padding: var(--tm-space-1) var(--tm-space-2);
+    background: var(--tm-bg-surface-secondary);
+    border: 1px solid var(--tm-border-color);
+    border-radius: var(--tm-radius-md);
+    color: var(--tm-color-success-text);
+    font-size: var(--tm-font-size-xs);
+    font-weight: var(--tm-font-weight-medium);
+}
+
+.tm-review-queue__detail {
+    min-inline-size: 0;
+    padding: var(--tm-space-3);
+    background: var(--tm-bg-surface-secondary);
+    border: 1px solid var(--tm-border-color);
+    border-radius: var(--tm-radius-md);
+}
+
+.tm-review-queue__actions {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-2);
+    flex-wrap: wrap;
+}
+
+/* ── Busy spinner ──────────────────────────────────────── */
+/* A CSS-only spinner with no ARIA role: the queue's ONE live region may not grow a role=status
+   sibling from the busy indicator, so the container's aria-busy carries the state. */
+.tm-review-queue__spinner {
+    display: inline-block;
+    inline-size: 0.875em;
+    block-size: 0.875em;
+    border: 2px solid currentColor;
+    border-block-start-color: transparent;
+    border-radius: var(--tm-radius-full);
+    animation: tm-review-queue-spin 0.8s linear infinite;
+}
+
+@keyframes tm-review-queue-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* ── Loading skeleton ──────────────────────────────────── */
+.tm-review-queue__loading {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-2);
+}
+
+.tm-review-queue__skeleton {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-2);
+    padding: var(--tm-space-3);
+    background: var(--tm-bg-surface);
+    border: 1px solid var(--tm-border-color);
+    border-radius: var(--tm-radius-card);
+}
+
+/* ── Empty state ───────────────────────────────────────── */
+.tm-review-queue__empty {
+    display: block;
+    padding: var(--tm-space-4);
+    background: var(--tm-bg-surface);
+    border: 1px dashed var(--tm-border-color);
+    border-radius: var(--tm-radius-card);
+}
+
+/* ── Mobile ────────────────────────────────────────────── */
+.tm-review-queue--focus[data-layout="mobile"] .tm-review-queue__focus-card {
+    padding: var(--tm-space-3);
+}
+
+.tm-review-queue--focus[data-layout="mobile"] .tm-review-queue__focus-title {
+    font-size: var(--tm-font-size-md);
+}
+
+/* ── Coarse pointers: the actions are finger targets ───── */
+@media (pointer: coarse) {
+    .tm-review-queue__action,
+    .tm-review-queue__nav-button {
+        min-block-size: var(--tm-touch-target);
+        min-inline-size: var(--tm-touch-target);
+    }
+}
+
+/* ── Forced colors ─────────────────────────────────────── */
+/* No forced-color-adjust opt-out anywhere here, so the system palette applies; the box-shadow focus
+   ring is forced away by the UA, so every focus stop re-declares the system Highlight ring. */
+@media (forced-colors: active) {
+    .tm-review-queue__row,
+    .tm-review-queue__focus-card,
+    .tm-review-queue__detail,
+    .tm-review-queue__handled,
+    .tm-review-queue__skeleton,
+    .tm-review-queue__empty {
+        border-color: CanvasText;
+    }
+
+    .tm-review-queue__row--active {
+        border-color: Highlight;
+    }
+
+    .tm-review-queue:focus-visible,
+    .tm-review-queue__row:focus-visible,
+    .tm-review-queue__action:focus-visible,
+    .tm-review-queue__nav-button:focus-visible,
+    .tm-review-queue__focus:focus-visible {
+        outline: 2px solid Highlight;
+        outline-offset: 2px;
+        box-shadow: none;
+    }
+}
+
+/* ── Reduced motion ────────────────────────────────────── */
+/* The core enumeration in animations.css is the guard's source of truth; this local block keeps the
+   component's own sheet honest for a host that links it alone. */
+@media (prefers-reduced-motion: reduce) {
+    .tm-review-queue__row,
+    .tm-review-queue__row-collapse {
+        transition: none;
+    }
+
+    .tm-review-queue__spinner {
+        animation: none;
+    }
+}

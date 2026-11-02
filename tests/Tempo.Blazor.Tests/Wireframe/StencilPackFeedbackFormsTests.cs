@@ -40,7 +40,12 @@ public class StencilPackFeedbackFormsTests
         "TmColorPicker",
         "TmFlatColorPicker",
         "TmColorPalette",
-        "TmColorGradient"
+        "TmColorGradient",
+        "TmApprovalCard",
+        "TmReviewQueue",
+        "TmInlineDiff",
+        "TmSuggestionCard",
+        "TmPermissionRequest"
     ];
 
     public static TheoryData<string> FeedbackFormTypeData
@@ -57,7 +62,7 @@ public class StencilPackFeedbackFormsTests
     [Fact]
     public void FeedbackFormTypeList_CoversPlanScope()
     {
-        FeedbackFormTypes.Should().HaveCount(30);
+        FeedbackFormTypes.Should().HaveCount(35);
         FeedbackFormTypes.Should().Contain(["TmAlert", "TmProgressBar", "TmNotificationBell", "TmFormField", "TmColorGradient"]);
     }
 
@@ -119,6 +124,78 @@ public class StencilPackFeedbackFormsTests
 
         swatches.Count.Should().BeGreaterThanOrEqualTo(8);
         svg.Should().NotContain(">TmColorPalette<");
+    }
+
+    [Fact]
+    public async Task ApprovalCard_RendersTheRiskAccentBothActionsAndTheDeadline()
+    {
+        var high = await RenderAsync("TmApprovalCard", ("title", "Release the invoice"), ("risk", "high"));
+        high.Should().Contain(">Release the invoice<");
+        high.Should().Contain(">Approve<");
+        high.Should().Contain(">Reject<");
+        high.Should().Contain(">Expires in 04:00<");
+        high.Should().Contain("#ef4444", "a high-risk request gets the danger accent");
+
+        var low = await RenderAsync("TmApprovalCard", ("risk", "low"));
+        low.Should().Contain("#22c55e", "a low-risk request gets the success accent");
+
+        var quiet = await RenderAsync("TmApprovalCard", ("showCountdown", false));
+        quiet.Should().NotContain("Expires in");
+    }
+
+    [Fact]
+    public async Task ReviewQueue_RendersRowsWithRiskAndBothDecisions()
+    {
+        var list = await RenderAsync("TmReviewQueue", ("title", "My reviews"), ("itemCount", 3));
+        list.Should().Contain(">My reviews<");
+        list.Should().Contain(">Invoice #2041<");
+        list.Should().Contain(">High risk<");
+        list.Should().Contain(">Approve<");
+        list.Should().Contain(">Reject<");
+        list.Should().Contain("Items to review");
+        list.Should().NotContain(">TmReviewQueue<");
+
+        var focus = await RenderAsync("TmReviewQueue", ("mode", "focus"));
+        focus.Should().Contain(">Item 1 of 4<");
+        focus.Should().Contain(">Detail of the current item<");
+        focus.Should().NotContain("items to review", "focus mode is one item at a time");
+    }
+
+    [Fact]
+    public async Task InlineDiff_RendersBothSidesAndTheReviewActions()
+    {
+        var display = await RenderAsync("TmInlineDiff");
+        display.Should().Contain(">old wording<");
+        display.Should().Contain(">new wording<");
+        display.Should().NotContain(">Accept all<", "display mode has no decisions");
+
+        var review = await RenderAsync("TmInlineDiff", ("mode", "review"));
+        review.Should().Contain(">Changes: 2<");
+        review.Should().Contain(">Accept all<");
+        review.Should().Contain(">Reject all<");
+
+        var lines = await RenderAsync("TmInlineDiff", ("granularity", "lines"));
+        lines.Should().Contain("Whole lines are compared");
+        lines.Should().NotContain(">TmInlineDiff<");
+    }
+
+    [Fact]
+    public async Task SuggestionCard_RendersConfidenceRationaleAlternativesAndActions()
+    {
+        var svg = await RenderAsync("TmSuggestionCard", ("title", "Layout suggestion"), ("confidence", "high"));
+
+        svg.Should().Contain(">Layout suggestion<");
+        svg.Should().Contain(">Move the summary above the fold.<");
+        svg.Should().Contain(">Confidence:<");
+        svg.Should().Contain(">high<");
+        svg.Should().Contain(">Why this suggestion<");
+        svg.Should().Contain(">Accept<");
+        svg.Should().Contain(">Dismiss<");
+        svg.Should().NotContain(">TmSuggestionCard<");
+
+        var quiet = await RenderAsync("TmSuggestionCard", ("confidence", "none"), ("showRationale", false), ("alternatives", 0));
+        quiet.Should().NotContain(">Confidence:<");
+        quiet.Should().NotContain(">Why this suggestion<");
     }
 
     [Fact]

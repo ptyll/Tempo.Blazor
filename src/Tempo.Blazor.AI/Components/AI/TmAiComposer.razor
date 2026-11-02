@@ -1,0 +1,205 @@
+@namespace Tempo.Blazor.Components.AI
+@inherits Tempo.Blazor.Components.TmComponentBase
+@using Microsoft.AspNetCore.Components.Forms
+@using Tempo.Blazor.AI.Models
+@using Tempo.Blazor.Components.Buttons
+@using Tempo.Blazor.Components.Icons
+@inject IJSRuntime JS
+@implements IAsyncDisposable
+
+@* The prompt composer of an AI conversation: the autosizing prompt, the send/stop slot, attachments, the
+   model selector and the optional voice input, plus the suggestion listbox that the "/" slash commands and the
+   host's "@" mention provider feed.
+
+   The textarea is the combobox of that listbox: it keeps the DOM focus while the list is open (the APG
+   combobox pattern), so a screen reader hears the highlighted option through aria-activedescendant and never
+   loses the caret. The listbox is a sibling, positioned from the caret's own coordinates by the package's ES
+   module and flushed with the component's ONE polite live region for the announcements (attachment limits,
+   voice state, a failed mention query). *@
+<div class="tm-ai-composer @(Sticky ? "tm-ai-composer--sticky" : null) @Class"
+     data-testid="@RootTestId("ai-composer")"
+     data-generating="@(IsGenerating ? "true" : "false")"
+     @ref="_rootRef"
+     @attributes="AdditionalAttributes">
+    @if (ShowSuggestions)
+    {
+        @* The listbox is anchored to the caret through the two custom properties the module writes
+           (--tm-ai-composer-caret-inline-start / -block-end); without a measurement the stylesheet falls back
+           to the composer's own corner. *@
+        <div class="tm-ai-composer__suggestions"
+             id="@_suggestionsId"
+             role="listbox"
+             aria-label="@SuggestionLabel"
+             data-testid="@TestId("ai-composer-suggestions")"
+             @ref="_suggestionsRef">
+            @for (var index = 0; index < OptionCount; index++)
+            {
+                var optionIndex = index;
+                var active = index == ActiveIndex;
+                var optionIcon = OptionIcon(optionIndex);
+                <div id="@OptionId(optionIndex)"
+                     role="option"
+                     class="tm-ai-composer__option @(active ? "tm-ai-composer__option--active" : null)"
+                     aria-selected="@(active ? "true" : "false")"
+                     data-testid="@TestId("ai-composer-option")"
+                     @onmousedown:preventDefault="true"
+                     @onclick="() => SelectSuggestionAsync(optionIndex)">
+                    @if (!string.IsNullOrEmpty(optionIcon))
+                    {
+                        <span class="tm-ai-composer__option-icon" aria-hidden="true">
+                            <TmIcon Name="@optionIcon" Size="IconSize.Sm" />
+                        </span>
+                    }
+                    <span class="tm-ai-composer__option-text">
+                        <span class="tm-ai-composer__option-title">@OptionTitle(optionIndex)</span>
+                        @if (!string.IsNullOrEmpty(OptionDescription(optionIndex)))
+                        {
+                            <span class="tm-ai-composer__option-description">@OptionDescription(optionIndex)</span>
+                        }
+                    </span>
+                </div>
+            }
+        </div>
+    }
+
+    <textarea @ref="_textareaRef"
+              class="tm-ai-composer__input"
+              rows="1"
+              value="@Draft"
+              placeholder="@PlaceholderText"
+              aria-label="@LabelText"
+              aria-haspopup="listbox"
+              aria-autocomplete="list"
+              role="combobox"
+              aria-expanded="@(ShowSuggestions ? "true" : "false")"
+              aria-controls="@(ShowSuggestions ? _suggestionsId : null)"
+              aria-activedescendant="@ActiveOptionId"
+              disabled="@Disabled"
+              data-testid="@TestId("ai-composer-input")"
+              @oninput="OnInputAsync"
+              @onkeydown="OnKeyDownAsync"></textarea>
+
+    @if (EffectiveAttachments.Count > 0)
+    {
+        <ul class="tm-ai-composer__attachments"
+            aria-label="@Loc["TmAiComposer_Attachments"]"
+            data-testid="@TestId("ai-composer-attachments")">
+            @foreach (var attachment in EffectiveAttachments)
+            {
+                var item = attachment;
+                <li class="tm-ai-composer__attachment" data-testid="@TestId("ai-composer-attachment")">
+                    <span class="tm-ai-composer__attachment-name">@item.Name</span>
+                    <span class="tm-ai-composer__attachment-size">@FormatSize(item.SizeBytes)</span>
+                    <TmButton Variant="ButtonVariant.Ghost"
+                              Size="ButtonSize.Sm"
+                              Class="tm-ai-composer__remove"
+                              Icon="@IconNames.X"
+                              AriaLabel="@Loc["TmAiComposer_RemoveAttachment", item.Name]"
+                              data-testid="@TestId("ai-composer-remove-attachment")"
+                              OnClick="() => RemoveAttachmentAsync(item)" />
+                </li>
+            }
+        </ul>
+    }
+
+    <div class="tm-ai-composer__toolbar">
+        @if (EnableAttachments)
+        {
+            @* A <label> owns the native file input so the whole button area is the click target; the input
+               itself is visually clipped but stays focusable, which is what keeps the picker on the keyboard
+               path. Its aria-label is the accessible name of both. *@
+            <label class="tm-ai-composer__attach" data-testid="@TestId("ai-composer-attach")">
+                <InputFile class="tm-ai-composer__file"
+                           accept="@Accept"
+                           multiple
+                           disabled="@Disabled"
+                           aria-label="@Loc["TmAiComposer_Attach"]"
+                           OnChange="OnFilesSelectedAsync" />
+                <span class="tm-ai-composer__attach-icon" aria-hidden="true">
+                    <TmIcon Name="@IconNames.Paperclip" Size="IconSize.Sm" />
+                </span>
+            </label>
+        }
+
+        @if (ModelSelectorTemplate is not null)
+        {
+            @ModelSelectorTemplate
+        }
+        else if (ShowModelSelector)
+        {
+            <select class="tm-ai-composer__model"
+                    data-testid="@TestId("ai-composer-model")"
+                    aria-label="@Loc["TmAiComposer_Model"]"
+                    disabled="@Disabled"
+                    @onchange="OnModelChangedAsync">
+                @foreach (var model in ModelList)
+                {
+                    <option value="@model" selected="@(string.Equals(model, EffectiveModel, StringComparison.Ordinal))">@model</option>
+                }
+            </select>
+        }
+
+        @if (ShowVoiceButton)
+        {
+            @* TmIcon has no microphone glyph, so the opt-in voice control carries the package's own inline
+               mark (aria-hidden — the button's accessible name is the localized label). *@
+            <TmButton Variant="ButtonVariant.Ghost"
+                      Class="tm-ai-composer__action tm-ai-composer__voice"
+                      AriaLabel="@(IsListening ? Loc["TmAiComposer_VoiceStop"] : Loc["TmAiComposer_VoiceStart"])"
+                      aria-pressed="@(IsListening ? "true" : "false")"
+                      Disabled="@Disabled"
+                      data-testid="@TestId("ai-composer-voice")"
+                      OnClick="ToggleVoiceAsync">
+                <svg class="tm-ai-composer__mic"
+                     viewBox="0 0 24 24"
+                     fill="none"
+                     stroke="currentColor"
+                     stroke-width="2"
+                     stroke-linecap="round"
+                     stroke-linejoin="round"
+                     aria-hidden="true"
+                     focusable="false">
+                    <rect x="9" y="2" width="6" height="11" rx="3"></rect>
+                    <path d="M5 10a7 7 0 0 0 14 0"></path>
+                    <path d="M12 17v5"></path>
+                </svg>
+            </TmButton>
+        }
+
+        @* ONE control occupies the slot. The span is the slot's focus scope: when the swap removes the
+           control the reader just activated, the component moves the focus to the replacement (WCAG 2.4.3). *@
+        <span class="tm-ai-composer__action-slot" @ref="_actionSlotRef">
+            @if (IsGenerating)
+            {
+                @* A running generation offers Stop instead of a second Send. *@
+                <TmButton Variant="ButtonVariant.Secondary"
+                          Class="tm-ai-composer__action tm-ai-composer__stop"
+                          Icon="@IconNames.Stop"
+                          AriaLabel="@Loc["TmAiComposer_Stop"]"
+                          data-testid="@TestId("ai-composer-stop")"
+                          OnClick="OnStopClickAsync" />
+            }
+            else
+            {
+                <TmButton Variant="ButtonVariant.Primary"
+                          Class="tm-ai-composer__action tm-ai-composer__send"
+                          Icon="@IconNames.Send"
+                          AriaLabel="@Loc["TmAiComposer_Send"]"
+                          Disabled="@(!CanSubmit)"
+                          data-testid="@TestId("ai-composer-send")"
+                          OnClick="SubmitAsync" />
+            }
+        </span>
+    </div>
+
+    @* The component's ONE live region. The PARAGRAPH is persistent: assistive technology only announces a
+       change to a live region that is already in the accessibility tree, and a region re-created with its text
+       already filled in is often silent (WCAG 4.1.3). Repeating the same wording replaces the keyed CHILD
+       instead — inserting a new child into an existing region is announced. The region is NOT the prompt's
+       aria-describedby: a transient status must not become the prompt's permanent description. *@
+    <p class="tm-ai-composer__announcement tm-sr-only"
+       id="@_announcementId"
+       role="status"
+       aria-live="polite"
+       data-testid="@TestId("ai-composer-announcement")"><span @key="_announcementSequence">@_announcement</span></p>
+</div>

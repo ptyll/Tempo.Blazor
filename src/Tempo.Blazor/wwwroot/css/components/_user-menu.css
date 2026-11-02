@@ -1,0 +1,219 @@
+/* ═══════════════════════════════════════════════════════
+   TmUserMenu — the account menu of an application shell
+   ═══════════════════════════════════════════════════════ */
+
+/* The trigger is the anchor overlay.js positions the popup against, so the root only has to be
+   the containing block the trigger sits in. Every value is a semantic token: the dark theme
+   redefines the tokens, never this file. */
+
+.tm-user-menu {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+}
+
+.tm-user-menu__trigger {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--tm-space-2);
+    padding: var(--tm-space-1);
+    color: var(--tm-text-primary);
+    background: none;
+    border: 1px solid transparent;
+    border-radius: var(--tm-radius-md);
+    cursor: pointer;
+    transition: background-color var(--tm-transition-fast), border-color var(--tm-transition-fast);
+}
+
+.tm-user-menu__trigger:hover {
+    background-color: var(--tm-color-surface-hover);
+}
+
+.tm-user-menu__trigger:focus-visible {
+    outline: 2px solid transparent;
+    box-shadow: var(--tm-focus-ring);
+}
+
+.tm-user-menu__trigger-name {
+    max-width: 12rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: var(--tm-font-size-sm);
+    font-weight: var(--tm-font-weight-medium);
+    color: var(--tm-text-primary);
+}
+
+/* ── Popup (a TmOverlayPanel in the top layer) ─────────── */
+
+/* Sizing only: the reset (position/inset/padding) belongs to _overlay-panel.css, and the layout
+   lives on .tm-user-menu__body because the mobile sheet drops this class (the panel renders as
+   the drawer's content wrapper instead). */
+.tm-user-menu__panel {
+    min-width: 16rem;
+    max-width: 20rem;
+    /* ConstrainHeight (TmOverlayPanel) caps the height at the room on the resolved side; the
+       panel itself scrolls the list. No tooltip/flyout child can be clipped by the scroller —
+       the account menu has none. */
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: var(--tm-space-2);
+    background-color: var(--tm-bg-surface);
+    border: 1px solid var(--tm-border-color);
+    border-radius: var(--tm-radius-lg);
+    box-shadow: var(--tm-shadow-popover);
+}
+
+.tm-user-menu__body {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-1);
+    min-width: 0;
+}
+
+/* ── Account card ──────────────────────────────────────── */
+
+.tm-user-menu__card {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-3);
+    padding: var(--tm-space-2) var(--tm-space-3);
+}
+
+.tm-user-menu__card-identity {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.tm-user-menu__card-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: var(--tm-font-size-sm);
+    font-weight: var(--tm-font-weight-medium);
+    color: var(--tm-text-primary);
+}
+
+.tm-user-menu__card-email {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: var(--tm-font-size-xs);
+    color: var(--tm-text-secondary);
+}
+
+/* ── Profile completion ────────────────────────────────── */
+
+.tm-user-menu__completion {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-1);
+    padding: var(--tm-space-2) var(--tm-space-3);
+}
+
+.tm-user-menu__completion-text {
+    font-size: var(--tm-font-size-xs);
+    color: var(--tm-text-secondary);
+}
+
+/* ── Command entries ───────────────────────────────────── */
+
+.tm-user-menu__item {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-2);
+    width: 100%;
+    padding: var(--tm-space-2) var(--tm-space-3);
+    font-size: var(--tm-font-size-sm);
+    font-weight: var(--tm-font-weight-normal);
+    color: var(--tm-text-primary);
+    text-align: left;
+    text-decoration: none;
+    background: none;
+    border: none;
+    border-radius: var(--tm-radius-md);
+    cursor: pointer;
+    transition: background-color var(--tm-transition-fast), color var(--tm-transition-fast);
+}
+
+.tm-user-menu__item:hover {
+    background-color: var(--tm-color-surface-hover);
+}
+
+.tm-user-menu__item:focus-visible {
+    outline: 2px solid transparent;
+    box-shadow: var(--tm-focus-ring);
+}
+
+/* The destructive line is a colour cue only — it is never the single signal, the label says what
+   it does ("Delete account"). */
+.tm-user-menu__item--danger {
+    color: var(--tm-color-danger);
+}
+
+.tm-user-menu__item--danger:hover {
+    color: var(--tm-color-danger-hover);
+}
+
+/* The trailing state mark of the theme switch. Hidden rather than removed so the checked and
+   unchecked rows stay the same width (no layout jump on the toggle). */
+.tm-user-menu__item-check {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: auto;
+    color: var(--tm-color-primary);
+    visibility: hidden;
+}
+
+.tm-user-menu__item[data-checked="true"] .tm-user-menu__item-check {
+    visibility: visible;
+}
+
+.tm-user-menu__separator {
+    height: 1px;
+    margin: var(--tm-space-1) 0;
+    background-color: var(--tm-border-color);
+}
+
+/* The host's extra slot (a language switcher, a workspace switcher). It is a named group inside
+   the menu — a menu may only own menu items, separators and groups. */
+.tm-user-menu__extra {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-1);
+    padding: var(--tm-space-1) var(--tm-space-3) var(--tm-space-2);
+}
+
+/* ── Forced colors ─────────────────────────────────────── */
+
+@media (forced-colors: active) {
+    .tm-user-menu__trigger:focus-visible,
+    .tm-user-menu__item:focus-visible {
+        outline: 2px solid Highlight;
+        outline-offset: 2px;
+        box-shadow: none;
+    }
+
+    .tm-user-menu__panel {
+        border-color: CanvasText;
+    }
+
+    .tm-user-menu__item--danger {
+        color: LinkText;
+    }
+}
+
+/* ── Touch ─────────────────────────────────────────────── */
+
+@media (pointer: coarse) {
+    .tm-user-menu__trigger,
+    .tm-user-menu__item {
+        min-block-size: var(--tm-touch-target);
+    }
+
+    .tm-user-menu__item {
+        padding-block: var(--tm-space-2);
+    }
+}

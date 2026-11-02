@@ -1,0 +1,10 @@
+{
+  "kind": "Enum",
+  "category": "Models",
+  "namespace": "Tempo.Blazor.Abstractions.Models.Reviews",
+  "description": "Which button produced a ReviewQueueActionArgs<TItem>.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/Models/Reviews/ReviewQueueAction.cs",
+  "documentationStatus": "generated",
+  "itemName": "ReviewQueueAction"
+}

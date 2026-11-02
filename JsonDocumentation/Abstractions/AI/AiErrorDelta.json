@@ -1,0 +1,10 @@
+{
+  "kind": "Class",
+  "category": "AI",
+  "namespace": "Tempo.Blazor.AI.Models",
+  "description": "The stream failed: the message moves to Failed and carries the reason in AiMessage.Error.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/AI/AiStreamDelta.cs",
+  "documentationStatus": "generated",
+  "itemName": "AiErrorDelta"
+}

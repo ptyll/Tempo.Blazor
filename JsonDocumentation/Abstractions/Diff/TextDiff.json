@@ -1,0 +1,54 @@
+{
+  "kind": "Class",
+  "category": "Diff",
+  "namespace": "Tempo.Blazor.Diff",
+  "description": "The shared diff engine of the library: turns two texts into an ordered list of TextDiffHunk values that tile both inputs, so a caller can present the changes, accept or reject each of them and produce the resulting text through Apply. It is a pure, allocation-conscious and UI-free function of its arguments, safe to call from WebAssembly, Server and InteractiveAuto render modes as well as from a backend that never references Blazor. Both historical helpers — the word-level DocumentTextDiffHelper and the line-level TmTextLineDiff — delegate to it, so there is exactly one comparison algorithm in the library. A pathological input never throws and never blocks: above MaxTokens or MaxCells the comparison degrades to a coarser granularity and says so through Fallback.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/Diff/TextDiff.cs",
+  "documentationStatus": "generated",
+  "members": [
+    {
+      "name": "Lines",
+      "kind": "Method",
+      "type": "TextDiffResult",
+      "description": "Compares two texts at line granularity. Lines are split on \\n and every character (including a trailing \\r and the line breaks) stays inside the hunks, so the hunks tile both inputs; a mixed CRLF/LF pair therefore reports the affected lines as changed instead of silently normalizing them.",
+      "parameters": [
+        {
+          "name": "oldText",
+          "type": "string?"
+        },
+        {
+          "name": "newText",
+          "type": "string?"
+        },
+        {
+          "name": "options",
+          "type": "TextDiffOptions?",
+          "default": "null"
+        }
+      ]
+    },
+    {
+      "name": "Words",
+      "kind": "Method",
+      "type": "TextDiffResult",
+      "description": "Compares two texts at word granularity. A token is a word (including its combining marks and digits), a run of digits, or a single punctuation character; whitespace is not a token, so a re-flowed paragraph is not a change, and every hunk keeps the exact characters (including the whitespace between tokens) so that the hunks still tile the inputs.",
+      "parameters": [
+        {
+          "name": "oldText",
+          "type": "string?"
+        },
+        {
+          "name": "newText",
+          "type": "string?"
+        },
+        {
+          "name": "options",
+          "type": "TextDiffOptions?",
+          "default": "null"
+        }
+      ]
+    }
+  ],
+  "itemName": "TextDiff"
+}

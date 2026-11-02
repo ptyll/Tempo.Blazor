@@ -1,0 +1,191 @@
+{
+  "itemName": "TmAiComposer",
+  "kind": "Component",
+  "category": "AI",
+  "namespace": "Tempo.Blazor.Components.AI",
+  "packageId": "Tempo.Blazor.AI",
+  "sourcePath": "src/Tempo.Blazor.AI/Components/AI/TmAiComposer.razor",
+  "documentationStatus": "generated",
+  "description": "The prompt composer of an AI conversation: an autosizing textarea whose Enter sends and Shift+Enter inserts a new line (an IME composition never sends), a send slot that becomes Stop while a generation runs, attachment chips with MaxAttachments/MaxFileSize enforced against a localized message, a model selector (built-in or the host's own template), an opt-in voice input that renders only where the Web Speech API exists, and one suggestion listbox shared by the \"/\" slash commands and the host's \"@\" mention provider. The textarea is the combobox of that listbox (aria-expanded, aria-activedescendant, arrow keys, Enter, Escape) and keeps the DOM focus while the list is open, the caret position comes from the package's ES module ai-composer.js (which also owns the autosize and the IME guard), and every announcement goes through the component's single polite live region. OnSubmit carries the trimmed text, the attachments, the selected model, the mentions and the slash command; the draft is cleared only after the handler completed.",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.AI"
+  ],
+  "examples": [
+    {
+      "title": "Send a prompt and stop a running generation",
+      "code": "<TmAiComposer @ref=\"composer\"\n              @bind-Text=\"draft\"\n              IsGenerating=\"@generating\"\n              OnSubmit=\"@SendAsync\"\n              OnStop=\"@(() => generation?.Cancel())\" />\n\n@code {\n    private TmAiComposer composer = default!;\n    private string draft = string.Empty;\n    private bool generating;\n    private CancellationTokenSource? generation;\n\n    private async Task SendAsync(AiComposerSubmit submit)\n    {\n        generation = new CancellationTokenSource();\n        generating = true;\n        try\n        {\n            await client.AskAsync(submit.Text, submit.Attachments, submit.Model, generation.Token);\n        }\n        finally\n        {\n            generating = false;\n        }\n    }\n}"
+    },
+    {
+      "title": "Slash commands, mentions, attachments and a model select",
+      "code": "<TmAiComposer Commands=\"@commands\"\n              MentionProvider=\"@mentions\"\n              Models=\"@models\"\n              @bind-SelectedModel=\"model\"\n              MaxAttachments=\"3\"\n              MaxFileSize=\"@(5 * 1024 * 1024)\"\n              Accept=\"image/*,.pdf\"\n              OnSubmit=\"@SendAsync\" />\n\n@code {\n    private readonly List<AiSlashCommand> commands =\n    [\n        new() { Id = \"summarise\", Title = \"summarise\", Description = \"Summarise the thread\" },\n        new() { Id = \"translate\", Title = \"translate\", Description = \"Translate the thread\" },\n    ];\n\n    private readonly string[] models = [\"gpt-4o\", \"o3-mini\"];\n    private string? model = \"gpt-4o\";\n}"
+    },
+    {
+      "title": "Voice input and a host-owned model picker",
+      "code": "<TmAiComposer EnableVoiceInput=\"true\"\n              SpeechLanguage=\"cs-CZ\"\n              Sticky=\"true\"\n              TrackVirtualKeyboard=\"true\"\n              OnSubmit=\"@SendAsync\">\n    <ModelSelectorTemplate>\n        <MyModelPicker @bind-Model=\"model\" />\n    </ModelSelectorTemplate>\n</TmAiComposer>"
+    }
+  ],
+  "parameters": [
+    {
+      "name": "Text",
+      "type": "string?",
+      "isRequired": false,
+      "description": "The draft. Two-way bound: the component raises TextChanged on every edit and clears the draft after a successful submit. A host that reassigns the value to something the component did not type replaces the draft (the suggestion list closes and the recorded command/mentions are dropped); a host echoing the value it received is not a replacement."
+    },
+    {
+      "name": "TextChanged",
+      "type": "EventCallback<string?>",
+      "isRequired": false,
+      "description": "Raised with the draft on every edit and with an empty string after a successful submit."
+    },
+    {
+      "name": "Placeholder",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Placeholder of the prompt. Default null uses the localized \"Ask anything…\"."
+    },
+    {
+      "name": "AriaLabel",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Accessible name of the prompt. Default null uses the localized \"Message\". Set it when the page has several composers so a screen-reader user can tell them apart."
+    },
+    {
+      "name": "Disabled",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Disables the prompt, the picker, the voice control and the send/stop slot."
+    },
+    {
+      "name": "OnSubmit",
+      "type": "EventCallback<AiComposerSubmit>",
+      "isRequired": false,
+      "description": "Raised with the submitted prompt: the trimmed text, the attachments, the selected model, the mentions the draft references and the slash command it started from. The draft, the attachments and the recorded mentions are cleared only after the handler completed — a handler that throws keeps the reader's text. Without a bound handler the send control is not offered."
+    },
+    {
+      "name": "IsGenerating",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Whether a generation is running. The send slot renders the Stop control instead of Send while it is true, and Enter cannot start a second generation."
+    },
+    {
+      "name": "OnStop",
+      "type": "EventCallback",
+      "isRequired": false,
+      "description": "Raised when the reader activates the Stop control of a running generation."
+    },
+    {
+      "name": "Sticky",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Stick the composer to the bottom of its scroll container at every width. Default false — the narrow (mobile) layout is sticky on its own, this forces it in a wide container too."
+    },
+    {
+      "name": "MaxRows",
+      "type": "int",
+      "isRequired": false,
+      "description": "How many rows the prompt may grow to before it starts scrolling. Default 8. The module clamps the autosize to this row count, and a value of zero or less leaves the height uncapped."
+    },
+    {
+      "name": "EnableAttachments",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Offer the attachment picker and the chip list. Default true."
+    },
+    {
+      "name": "MaxAttachments",
+      "type": "int",
+      "isRequired": false,
+      "description": "How many files one prompt may carry. Default 5. A zero (or negative) value refuses every file with the localized \"at most 0 files\" message, which is how a host turns attachments off without removing the picker."
+    },
+    {
+      "name": "MaxFileSize",
+      "type": "long",
+      "isRequired": false,
+      "description": "The largest file the composer accepts, in bytes. Default 10 MB. Zero (or negative) disables the size check; the browser and the host's upload path remain responsible for what they will actually read."
+    },
+    {
+      "name": "Accept",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Accepted file types forwarded to the browser picker (for example \"image/*,.pdf\")."
+    },
+    {
+      "name": "Attachments",
+      "type": "IReadOnlyList<AiComposerAttachment>?",
+      "isRequired": false,
+      "description": "Attachments seeded by the host. A new list whose ids differ from the current chips replaces them; echoing the list the component raised through AttachmentsChanged is not a replacement."
+    },
+    {
+      "name": "AttachmentsChanged",
+      "type": "EventCallback<IReadOnlyList<AiComposerAttachment>>",
+      "isRequired": false,
+      "description": "Raised with every accepted attachment change (a pick, a removal, the post-submit clear)."
+    },
+    {
+      "name": "Commands",
+      "type": "IReadOnlyList<AiSlashCommand>?",
+      "isRequired": false,
+      "description": "Slash commands offered after the reader types \"/\". A command is filtered by its title (and its description); picking one inserts its Prompt (or \"/{Title}\") into the draft and the next submit carries it as AiComposerSubmit.Command."
+    },
+    {
+      "name": "MentionProvider",
+      "type": "IAiMentionProvider?",
+      "isRequired": false,
+      "description": "The source of the \"@\" mentions. The composer calls it with the typed query, debounced by MentionDebounce and cancelled as soon as the query changes or the list closes. Without a provider the \"@\" trigger does nothing."
+    },
+    {
+      "name": "MentionDebounce",
+      "type": "TimeSpan",
+      "isRequired": false,
+      "description": "Quiet period before a mention query is sent. Default 200 ms. Zero sends every keystroke, which is only reasonable for an in-memory provider."
+    },
+    {
+      "name": "Models",
+      "type": "IReadOnlyList<string>?",
+      "isRequired": false,
+      "description": "The models the reader may pick from. An empty (or null) list hides the built-in select unless ModelSelectorTemplate supplies a picker of its own."
+    },
+    {
+      "name": "SelectedModel",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Identifier of the model the draft targets, two-way bound through SelectedModelChanged. A host echoing the value it received is not a replacement."
+    },
+    {
+      "name": "SelectedModelChanged",
+      "type": "EventCallback<string?>",
+      "isRequired": false,
+      "description": "Raised with the model the reader picked in the built-in select."
+    },
+    {
+      "name": "ModelSelectorTemplate",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "Replaces the built-in model select with the host's own picker — a full model picker with descriptions, a provider switcher, … The host binds its own control to SelectedModel; the composer only carries the value into the submit."
+    },
+    {
+      "name": "EnableVoiceInput",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Offer the opt-in voice input. Default false: the control renders only when this is true AND the browser exposes the Web Speech API, so a browser without speech recognition never shows a dead button."
+    },
+    {
+      "name": "SpeechLanguage",
+      "type": "string?",
+      "isRequired": false,
+      "description": "BCP-47 language of the speech recognizer. Default null uses the document's language and then en-US."
+    },
+    {
+      "name": "TrackVirtualKeyboard",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Track the on-screen keyboard so a sticky composer stays above it (the iOS visualViewport pattern of TmChat.TrackVirtualKeyboard). Default false: no viewport listeners and no inline knob."
+    },
+    {
+      "name": "Class",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Additional CSS class(es) for the root element."
+    }
+  ]
+}

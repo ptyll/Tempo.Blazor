@@ -32,10 +32,15 @@
       "Tempo.Blazor.Abstractions.Interfaces",
       "Tempo.Blazor.Abstractions.Layout",
       "Tempo.Blazor.Abstractions.Models",
+      "Tempo.Blazor.Abstractions.Models.Approvals",
+      "Tempo.Blazor.Abstractions.Models.Diffs",
+      "Tempo.Blazor.Abstractions.Models.Reviews",
       "Tempo.Blazor.Abstractions.PivotTable",
       "Tempo.Blazor.Abstractions.Shared",
       "Tempo.Blazor.Abstractions.Wireframe.Export",
       "Tempo.Blazor.Abstractions.WorkItems",
+      "Tempo.Blazor.AI.Models",
+      "Tempo.Blazor.AI.Services",
       "Tempo.Blazor.Components.Diagram.Commands",
       "Tempo.Blazor.Components.Diagram.Models",
       "Tempo.Blazor.Components.Diagram.Serialization",
@@ -51,6 +56,7 @@
       "Tempo.Blazor.Components.Wireframe",
       "Tempo.Blazor.Components.Wireframe.Models",
       "Tempo.Blazor.Components.Wireframe.Stencil",
+      "Tempo.Blazor.Diff",
       "Tempo.Blazor.DocumentEditor.Interfaces",
       "Tempo.Blazor.DocumentEditor.Models",
       "Tempo.Blazor.DocumentEditor.Performance",
@@ -91,6 +97,758 @@
     ]
   },
   "items": [
+    {
+      "itemName": "AiCitationAddedDelta",
+      "kind": "Class",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.AI.Models",
+      "description": "The answer cited a source. The source id must be non-empty and a re-delivered id is ignored.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/AI/AiStreamDelta.cs",
+      "documentationStatus": "merged"
+    },
+    {
+      "itemName": "AiCompletedDelta",
+      "kind": "Class",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.AI.Models",
+      "description": "The model finished the answer; the message moves to Completed and late content deltas are ignored.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/AI/AiStreamDelta.cs",
+      "documentationStatus": "merged"
+    },
+    {
+      "itemName": "AiComposerAttachment",
+      "kind": "Class",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.AI.Models",
+      "description": "One file attached to a prompt: the metadata a submit contract needs (name, size in bytes, MIME type, optional URL) plus an opaque Content slot the host uses to keep the browser file, a stream or a blob handle. The composer never reads Content — it only enforces MaxAttachments and MaxFileSize on the metadata it can see and renders the chips.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/AI/AiComposerAttachment.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Content",
+          "kind": "Property",
+          "type": "object?",
+          "description": "Opaque host payload — typically the IBrowserFile the reader picked, or an already-open stream. The composer copies it into Attachments untouched and never inspects it."
+        },
+        {
+          "name": "ContentType",
+          "kind": "Property",
+          "type": "string?",
+          "description": "MIME content type when the browser reported one."
+        },
+        {
+          "name": "SizeBytes",
+          "kind": "Property",
+          "type": "long",
+          "description": "File size in bytes, as reported by the browser."
+        },
+        {
+          "name": "Url",
+          "kind": "Property",
+          "type": "string?",
+          "description": "Optional preview or download URL. A host that uploads the file immediately can point the chip at the stored asset instead of keeping the bytes."
+        }
+      ]
+    },
+    {
+      "itemName": "AiComposerSubmit",
+      "kind": "Class",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.AI.Models",
+      "description": "What a composer sends: the prompt text, the attachments the reader picked, the selected model, the mentions the draft references and the slash command it started from. A plain container so a backend can consume it without Blazor — the composer raises it through OnSubmit and clears the draft only after the handler completed.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/AI/AiComposerSubmit.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Attachments",
+          "kind": "Property",
+          "type": "IReadOnlyList<AiComposerAttachment>",
+          "description": "Attached files, in the order the reader added them. Never null."
+        },
+        {
+          "name": "Command",
+          "kind": "Property",
+          "type": "AiSlashCommand?",
+          "description": "The slash command the draft was started from, or null for a free-form prompt. The command stays recorded until the reader picks another one or the draft is sent."
+        },
+        {
+          "name": "Mentions",
+          "kind": "Property",
+          "type": "IReadOnlyList<AiMentionItem>",
+          "description": "Mentions the draft references, in insertion order. Never null."
+        },
+        {
+          "name": "Model",
+          "kind": "Property",
+          "type": "string?",
+          "description": "Identifier of the model the reader selected, or null when no picker was offered."
+        }
+      ]
+    },
+    {
+      "itemName": "AiErrorDelta",
+      "kind": "Class",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.AI.Models",
+      "description": "The stream failed: the message moves to Failed and carries the reason in AiMessage.Error.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/AI/AiStreamDelta.cs",
+      "documentationStatus": "merged"
+    },
+    {
+      "itemName": "AiFeedback",
+      "kind": "Class",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.AI.Models",
+      "description": "The reader's rating of an assistant answer (thumbs up or thumbs down) with the optional free-text reason typed after a negative rating, and the time it was cast. TmAiMessage raises it twice for a negative rating: once on the press, and once more with the reason when the reader submits it — the reason is always optional.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/AI/AiFeedback.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "CreatedAt",
+          "kind": "Property",
+          "type": "DateTimeOffset",
+          "description": "UTC time the rating was cast."
+        },
+        {
+          "name": "Rating",
+          "kind": "Property",
+          "type": "AiFeedbackRating",
+          "description": "The rating itself."
+        },
+        {
+          "name": "Reason",
+          "kind": "Property",
+          "type": "string?",
+          "description": "Free-text reason supplied after a negative rating, when the reader gave one."
+        }
+      ]
+    },
+    {
+      "itemName": "AiFeedbackRating",
+      "kind": "Enum",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.AI.Models",
+      "description": "How the reader rated an assistant answer — None (unrated), Positive (thumbs up) or Negative (thumbs down).",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/AI/AiFeedbackRating.cs",
+      "documentationStatus": "merged"
+    },
+    {
+      "itemName": "AiMentionItem",
+      "kind": "Class",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.AI.Models",
+      "description": "One mention a composer offers after the reader types \"@\" — a person, a document, a saved prompt, anything the host's IAiMentionProvider can search. Picking it inserts \"@{Label}\" into the draft and records the item on the next AiComposerSubmit; Kind, Icon and Description are presentation hints the suggestion list renders.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/AI/AiMentionItem.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Description",
+          "kind": "Property",
+          "type": "string?",
+          "description": "Optional second line rendered under the label in the suggestion list."
+        },
+        {
+          "name": "Icon",
+          "kind": "Property",
+          "type": "string?",
+          "description": "Optional icon name (an IconNames constant or a host-registered icon)."
+        },
+        {
+          "name": "Kind",
+          "kind": "Property",
+          "type": "string?",
+          "description": "Optional kind of the mentioned entity (\"user\", \"document\", …) shown as a hint."
+        }
+      ]
+    },
+    {
+      "itemName": "AiMessage",
+      "kind": "Class",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.AI.Models",
+      "description": "One turn of an AI conversation (user prompt or streamed assistant answer) built from ordered parts, with its lifecycle status, error, model, the cited sources, the reader's feedback, the follow-up suggestions and the superseded versions a Regenerate replaced (ActiveVersionIndex selects the rendered one; the live Parts are always the last version). Mutable by design because the delta stream grows it — fold deltas through AiMessageStreamApplier rather than editing parts by hand.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/AI/AiMessage.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "FindSource",
+          "kind": "Method",
+          "type": "AiSource?",
+          "description": "Finds a cited source by id in the active version, so a cite: chip can resolve its preview.",
+          "parameters": [
+            {
+              "name": "sourceId",
+              "type": "string?"
+            }
+          ]
+        },
+        {
+          "name": "ActiveText",
+          "kind": "Property",
+          "type": "string",
+          "description": "All text of the active version concatenated in part order (markdown, not plain text)."
+        },
+        {
+          "name": "ActiveVersionIndex",
+          "kind": "Property",
+          "type": "int?",
+          "description": "Zero-based index of the version the conversation displays, or null for the newest one. The last index (VersionCount - 1) selects the live Parts; an index outside the valid range is clamped through EffectiveVersionIndex, so a host that swaps the version list and the index in two renders never throws."
+        },
+        {
+          "name": "CreatedAt",
+          "kind": "Property",
+          "type": "DateTimeOffset",
+          "description": "UTC creation time."
+        },
+        {
+          "name": "Error",
+          "kind": "Property",
+          "type": "string?",
+          "description": "Failure reason when Status is Failed."
+        },
+        {
+          "name": "Feedback",
+          "kind": "Property",
+          "type": "AiFeedback?",
+          "description": "The reader's rating of the answer, or null while it is unrated."
+        },
+        {
+          "name": "FollowUps",
+          "kind": "Property",
+          "type": "IList<string>",
+          "description": "Suggested next questions rendered as follow-up chips under the answer."
+        },
+        {
+          "name": "Id",
+          "kind": "Property",
+          "type": "string",
+          "description": "Stable message identifier; the streaming API addresses messages by it."
+        },
+        {
+          "name": "Model",
+          "kind": "Property",
+          "type": "string?",
+          "description": "Model identifier that produced the answer, when the host reports one."
+        },
+        {
+          "name": "Parts",
+          "kind": "Property",
+          "type": "IList<AiMessagePart>",
+          "description": "Ordered parts of the message."
+        },
+        {
+          "name": "Role",
+          "kind": "Property",
+          "type": "AiMessageRole",
+          "description": "Who produced the turn."
+        },
+        {
+          "name": "Sources",
+          "kind": "Property",
+          "type": "IReadOnlyList<AiSource>",
+          "description": "Sources cited by the ACTIVE version — the contents of its trailing AiSourcesPart, or an empty list while nothing has been cited."
+        },
+        {
+          "name": "Status",
+          "kind": "Property",
+          "type": "AiMessageStatus",
+          "description": "Current lifecycle state."
+        },
+        {
+          "name": "Text",
+          "kind": "Property",
+          "type": "string",
+          "description": "All text of the live parts concatenated in part order (markdown, not plain text)."
+        },
+        {
+          "name": "VersionCount",
+          "kind": "Property",
+          "type": "int",
+          "description": "How many versions the message has, including the live Parts (always at least one)."
+        },
+        {
+          "name": "Versions",
+          "kind": "Property",
+          "type": "IList<AiMessageVersion>",
+          "description": "Superseded generations of the answer, oldest first. Parts always holds the LATEST generation, so the number of selectable versions is Versions's count plus one; a Regenerate handler appends the previous parts as an AiMessageVersion before it starts the new stream."
+        }
+      ]
+    },
+    {
+      "itemName": "AiMessagePart",
+      "kind": "Class",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.AI.Models",
+      "description": "Base of the ordered parts of an AiMessage — AiTextPart, AiReasoningPart, AiToolCallPart and AiSourcesPart — so a message can interleave reasoning, tool calls and text in arrival order.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/AI/AiMessagePart.cs",
+      "documentationStatus": "merged"
+    },
+    {
+      "itemName": "AiMessageRole",
+      "kind": "Enum",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.AI.Models",
+      "description": "Who produced an AiMessage: User, Assistant, System or Tool.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/AI/AiMessageRole.cs",
+      "documentationStatus": "merged"
+    },
+    {
+      "itemName": "AiMessageStatus",
+      "kind": "Enum",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.AI.Models",
+      "description": "Lifecycle of an AiMessage driven by the delta stream — Pending, Streaming, Completed, Stopped or Failed.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/AI/AiMessageStatus.cs",
+      "documentationStatus": "merged"
+    },
+    {
+      "itemName": "AiMessageStreamApplier",
+      "kind": "Class",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.AI.Services",
+      "description": "Applies one AiStreamDelta to an AiMessage and reports whether anything changed. Pure logic with no UI and no clock of its own (the caller passes the timestamp), so a WebAssembly host, a Server circuit and a unit test produce the same message; the boolean return lets a component skip a render for a no-op delta. A citation delta without a source or with an empty id is a no-op rather than an exception, and an error delta arriving after Completed or Stopped is ignored — a finished or stopped answer is never retroactively failed.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/AI/Services/AiMessageStreamApplier.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Apply",
+          "kind": "Method",
+          "type": "bool",
+          "description": "Applies one delta to message.",
+          "parameters": [
+            {
+              "name": "message",
+              "type": "AiMessage"
+            },
+            {
+              "name": "delta",
+              "type": "AiStreamDelta"
+            },
+            {
+              "name": "timestamp",
+              "type": "DateTimeOffset?",
+              "default": "null"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "itemName": "AiMessageVersion",
+      "kind": "Class",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.AI.Models",
+      "description": "One superseded generation of an AiMessage: the content a Regenerate replaced. A message keeps the live answer in its own Parts (always the last version) and the history here, so the version switcher can step between '1/3', '2/3' and '3/3' without copying the current answer into the history first. The parts are copied on construction, so a later stream delta never mutates a history entry.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/AI/AiMessageVersion.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "CreatedAt",
+          "kind": "Property",
+          "type": "DateTimeOffset",
+          "description": "UTC creation time of the generation."
+        },
+        {
+          "name": "Id",
+          "kind": "Property",
+          "type": "string",
+          "description": "Stable version identifier."
+        },
+        {
+          "name": "Model",
+          "kind": "Property",
+          "type": "string?",
+          "description": "Model identifier that produced this generation, when the host reports one."
+        },
+        {
+          "name": "Parts",
+          "kind": "Property",
+          "type": "IList<AiMessagePart>",
+          "description": "Ordered parts of this generation."
+        },
+        {
+          "name": "Text",
+          "kind": "Property",
+          "type": "string",
+          "description": "All text of the version concatenated in part order (markdown, not plain text)."
+        }
+      ]
+    },
+    {
+      "itemName": "AiReasoningDelta",
+      "kind": "Class",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.AI.Models",
+      "description": "A chunk of reasoning text, appended to the trailing reasoning step; NewStep starts a new step instead.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/AI/AiStreamDelta.cs",
+      "documentationStatus": "merged"
+    },
+    {
+      "itemName": "AiReasoningPart",
+      "kind": "Class",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.AI.Models",
+      "description": "Reasoning (\"thinking\") of an assistant message: ordered steps, the sources the model inspected and the elapsed time, so TmReasoningPanel can render it as one disclosure.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/AI/AiMessagePart.cs",
+      "documentationStatus": "merged"
+    },
+    {
+      "itemName": "AiSlashCommand",
+      "kind": "Class",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.AI.Models",
+      "description": "One slash command a composer offers after the reader types \"/\". A command is a prompt template: picking it inserts Prompt (or \"/{Title}\") into the draft and records the command on the next AiComposerSubmit, so the host knows which template the text belongs to. Optional Description, Icon and Prompt let a host present the command and control exactly what text it inserts.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/AI/AiSlashCommand.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Description",
+          "kind": "Property",
+          "type": "string?",
+          "description": "Optional one-line explanation rendered under the title."
+        },
+        {
+          "name": "Icon",
+          "kind": "Property",
+          "type": "string?",
+          "description": "Optional icon name (an IconNames constant or a host-registered icon)."
+        },
+        {
+          "name": "Prompt",
+          "kind": "Property",
+          "type": "string?",
+          "description": "Text inserted into the draft when the command is picked. Default null inserts /{Title} ; a host whose command needs no visible token (it is fully described by the command itself) passes an empty string."
+        }
+      ]
+    },
+    {
+      "itemName": "AiSource",
+      "kind": "Class",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.AI.Models",
+      "description": "One source an assistant answer cites: a stable Id the markdown cite: link points at plus the title, URL, snippet, icon and domain shown in the citation preview and the source cards.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/AI/AiSource.cs",
+      "documentationStatus": "merged"
+    },
+    {
+      "itemName": "AiSourcesPart",
+      "kind": "Class",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.AI.Models",
+      "description": "The sources cited by an answer, rendered as source cards. Add() deduplicates by source id, so a re-delivered citation never duplicates a card.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/AI/AiMessagePart.cs",
+      "documentationStatus": "merged"
+    },
+    {
+      "itemName": "AiStreamDelta",
+      "kind": "Class",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.AI.Models",
+      "description": "Base of one incremental step of an answer stream. The host supplies the model call as an IAsyncEnumerable<AiStreamDelta> and AiMessageStreamApplier folds each delta into the message it belongs to.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/AI/AiStreamDelta.cs",
+      "documentationStatus": "merged"
+    },
+    {
+      "itemName": "AiTextDelta",
+      "kind": "Class",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.AI.Models",
+      "description": "A chunk of answer text, appended to the trailing text part of the message.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/AI/AiStreamDelta.cs",
+      "documentationStatus": "merged"
+    },
+    {
+      "itemName": "AiTextPart",
+      "kind": "Class",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.AI.Models",
+      "description": "The markdown text of a message. Untrusted model output, so it is rendered through TmMarkdownView's safe pipeline; Append grows it as streamed chunks arrive.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/AI/AiMessagePart.cs",
+      "documentationStatus": "merged"
+    },
+    {
+      "itemName": "AiToolCall",
+      "kind": "Class",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.AI.Models",
+      "description": "One tool/function invocation of an answer with its live status, raw JSON arguments and result, timestamps, redaction flag and the elapsed Duration.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/AI/AiToolCall.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "CompletedAt",
+          "kind": "Property",
+          "type": "DateTimeOffset?",
+          "description": "UTC end of the execution, set by the completion delta."
+        },
+        {
+          "name": "Duration",
+          "kind": "Property",
+          "type": "TimeSpan?",
+          "description": "Elapsed execution time, or null while the call is still running."
+        },
+        {
+          "name": "IsRedacted",
+          "kind": "Property",
+          "type": "bool",
+          "description": "When true the arguments and result are hidden and the card renders a localized notice instead."
+        },
+        {
+          "name": "StartedAt",
+          "kind": "Property",
+          "type": "DateTimeOffset?",
+          "description": "UTC start of the execution, set by the start delta."
+        },
+        {
+          "name": "Status",
+          "kind": "Property",
+          "type": "AiToolCallStatus",
+          "description": "Current status."
+        }
+      ]
+    },
+    {
+      "itemName": "AiToolCallCompletedDelta",
+      "kind": "Class",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.AI.Models",
+      "description": "A tool call finished with a final status, result, failure reason and redaction flag; the first completion keeps its timestamp, so a re-delivered completion is a no-op.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/AI/AiStreamDelta.cs",
+      "documentationStatus": "merged"
+    },
+    {
+      "itemName": "AiToolCallPart",
+      "kind": "Class",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.AI.Models",
+      "description": "Wraps one AiToolCall as a message part, so tool calls appear in the position they were started.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/AI/AiMessagePart.cs",
+      "documentationStatus": "merged"
+    },
+    {
+      "itemName": "AiToolCallStartedDelta",
+      "kind": "Class",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.AI.Models",
+      "description": "The model started a tool call. The call's Id targets later updates and the completion, and a re-delivered start does not duplicate the part.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/AI/AiStreamDelta.cs",
+      "documentationStatus": "merged"
+    },
+    {
+      "itemName": "AiToolCallStatus",
+      "kind": "Enum",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.AI.Models",
+      "description": "Execution status of one tool call: Queued, Running, Succeeded, Failed or Cancelled.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/AI/AiToolCallStatus.cs",
+      "documentationStatus": "merged"
+    },
+    {
+      "itemName": "AiToolCallUpdatedDelta",
+      "kind": "Class",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.AI.Models",
+      "description": "Arguments, result, name or status of a running tool call changed. A call that was never started is created on the fly.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/AI/AiStreamDelta.cs",
+      "documentationStatus": "merged"
+    },
+    {
+      "itemName": "IAiMentionProvider",
+      "kind": "Interface",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.AI.Services",
+      "description": "Supplies the \"@\"-mention suggestions of a composer. The composer calls SearchAsync with the text the reader typed after the \"@\", debounced by MentionDebounce and with a cancellation token that is cancelled as soon as the query changes, the list closes or the component is disposed — so a slow search never repaints a stale list and a host can pass the token straight to its API call. The interface lives in Tempo.Blazor.Abstractions on purpose: a backend or an API client implements it without a Blazor reference. An exception is caught by the composer, which closes the list and announces a localized failure.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/AI/Services/IAiMentionProvider.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "SearchAsync",
+          "type": "Task<IReadOnlyList<AiMentionItem>> SearchAsync(string query, CancellationToken cancellationToken = default)",
+          "description": "Returns the mentions matching the text after the trigger (possibly empty, which asks for the default suggestions). An implementation must honour the cancellation token and should be cheap for short queries; an empty list closes the suggestion list."
+        }
+      ]
+    },
+    {
+      "itemName": "PermissionDecision",
+      "kind": "Record",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.AI.Models",
+      "description": "One answer to a permission request: the reader either granted a PermissionGrant or denied it. A granted decision always carries the grant it produced — the scope and the expiry the host has to persist — and a denial never does.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/AI/Permissions/PermissionDecision.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Allow",
+          "kind": "Method",
+          "type": "PermissionDecision",
+          "description": "Creates a decision that grants grant.",
+          "parameters": [
+            {
+              "name": "grant",
+              "type": "PermissionGrant"
+            },
+            {
+              "name": "decidedAt",
+              "type": "DateTimeOffset?",
+              "default": "null"
+            }
+          ]
+        },
+        {
+          "name": "Deny",
+          "kind": "Method",
+          "type": "PermissionDecision",
+          "description": "Creates a denial.",
+          "parameters": [
+            {
+              "name": "decidedAt",
+              "type": "DateTimeOffset?",
+              "default": "null"
+            }
+          ]
+        },
+        {
+          "name": "DecidedAt",
+          "kind": "Property",
+          "type": "DateTimeOffset?",
+          "description": "Moment of the decision, when the host knows it."
+        },
+        {
+          "name": "Grant",
+          "kind": "Property",
+          "type": "PermissionGrant?",
+          "description": "The granted permission, or null for a denial."
+        },
+        {
+          "name": "IsDenied",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Whether the reader denied the permission."
+        },
+        {
+          "name": "IsGranted",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Whether the reader granted the permission."
+        },
+        {
+          "name": "Scope",
+          "kind": "Property",
+          "type": "PermissionScope",
+          "description": "The scope of a granted decision, taken from its grant. A denial reports Once because it grants nothing at all — read IsDenied to tell the two apart."
+        }
+      ]
+    },
+    {
+      "itemName": "PermissionGrant",
+      "kind": "Record",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.AI.Models",
+      "description": "The permission the reader actually granted: a PermissionScope plus, for a scope that can run out, both ends of its window. The record is a value, so TmPermissionRequest can tell a re-rendered parameter from a new grant and cannot resurrect a revoked permission; a timed grant must name its ExpiresAt and a grant that never expires must not carry one.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/AI/Permissions/PermissionGrant.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "IsExpired",
+          "kind": "Method",
+          "type": "bool",
+          "description": "Whether the permission has run out at now.",
+          "parameters": [
+            {
+              "name": "now",
+              "type": "DateTimeOffset"
+            }
+          ]
+        },
+        {
+          "name": "Remaining",
+          "kind": "Method",
+          "type": "TimeSpan?",
+          "description": "Time left until the permission ends, never negative.",
+          "parameters": [
+            {
+              "name": "now",
+              "type": "DateTimeOffset"
+            }
+          ]
+        },
+        {
+          "name": "Duration",
+          "kind": "Property",
+          "type": "TimeSpan?",
+          "description": "The window the permission was granted for — ExpiresAt minus GrantedAt — or null when either end is unknown. This is what makes the granted row read \"Allowed for 1 h · 42 min left\" instead of only a countdown."
+        },
+        {
+          "name": "ExpiresAt",
+          "kind": "Property",
+          "type": "DateTimeOffset?",
+          "description": "Moment the permission ends, or null when it does not expire."
+        },
+        {
+          "name": "GrantedAt",
+          "kind": "Property",
+          "type": "DateTimeOffset?",
+          "description": "Moment the permission was granted, when the host records it."
+        },
+        {
+          "name": "Scope",
+          "kind": "Property",
+          "type": "PermissionScope",
+          "description": "How long the permission lasts."
+        }
+      ]
+    },
+    {
+      "itemName": "PermissionRequestState",
+      "kind": "Enum",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.AI.Models",
+      "description": "Lifecycle state of a permission request rendered by TmPermissionRequest: Pending, Granted, Denied or Expired. Pending is the only state that offers Allow and Deny; every other state collapses the request into a single result row.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/AI/Permissions/PermissionRequestState.cs",
+      "documentationStatus": "merged"
+    },
+    {
+      "itemName": "PermissionScope",
+      "kind": "Enum",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.AI.Models",
+      "description": "How long a permission the reader granted lasts: Once, ForDuration, Session or Always. TmPermissionRequest offers only the scopes its host lists in ScopeOptions, so an app that never wants to hand out a permanent permission simply does not offer Always.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/AI/Permissions/PermissionScope.cs",
+      "documentationStatus": "merged"
+    },
     {
       "itemName": "CsvColumnMapping",
       "kind": "Class",
@@ -2693,6 +3451,372 @@
       "packageId": "Tempo.Blazor.Abstractions",
       "sourcePath": "src/Tempo.Blazor.Abstractions/Diagram/Models/DiagramStencilTextStyle.cs",
       "documentationStatus": "merged"
+    },
+    {
+      "itemName": "TextDiff",
+      "kind": "Class",
+      "category": "Diff",
+      "namespace": "Tempo.Blazor.Diff",
+      "description": "The shared diff engine of the library: turns two texts into an ordered list of TextDiffHunk values that tile both inputs, so a caller can present the changes, accept or reject each of them and produce the resulting text through Apply. It is a pure, allocation-conscious and UI-free function of its arguments, safe to call from WebAssembly, Server and InteractiveAuto render modes as well as from a backend that never references Blazor. Both historical helpers — the word-level DocumentTextDiffHelper and the line-level TmTextLineDiff — delegate to it, so there is exactly one comparison algorithm in the library. A pathological input never throws and never blocks: above MaxTokens or MaxCells the comparison degrades to a coarser granularity and says so through Fallback.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Diff/TextDiff.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Lines",
+          "kind": "Method",
+          "type": "TextDiffResult",
+          "description": "Compares two texts at line granularity. Lines are split on \\n and every character (including a trailing \\r and the line breaks) stays inside the hunks, so the hunks tile both inputs; a mixed CRLF/LF pair therefore reports the affected lines as changed instead of silently normalizing them.",
+          "parameters": [
+            {
+              "name": "oldText",
+              "type": "string?"
+            },
+            {
+              "name": "newText",
+              "type": "string?"
+            },
+            {
+              "name": "options",
+              "type": "TextDiffOptions?",
+              "default": "null"
+            }
+          ]
+        },
+        {
+          "name": "Words",
+          "kind": "Method",
+          "type": "TextDiffResult",
+          "description": "Compares two texts at word granularity. A token is a word (including its combining marks and digits), a run of digits, or a single punctuation character; whitespace is not a token, so a re-flowed paragraph is not a change, and every hunk keeps the exact characters (including the whitespace between tokens) so that the hunks still tile the inputs.",
+          "parameters": [
+            {
+              "name": "oldText",
+              "type": "string?"
+            },
+            {
+              "name": "newText",
+              "type": "string?"
+            },
+            {
+              "name": "options",
+              "type": "TextDiffOptions?",
+              "default": "null"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "itemName": "TextDiffFallbackKind",
+      "kind": "Enum",
+      "category": "Diff",
+      "namespace": "Tempo.Blazor.Diff",
+      "description": "How far a TextDiffResult had to degrade to stay within the configured limits. A pathological input never throws — the comparison is coarsened instead and reports that it was, so a consumer can tell the reader the diff is approximate.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Diff/TextDiffFallbackKind.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "None",
+          "kind": "Field",
+          "type": "TextDiffFallbackKind",
+          "description": "The comparison ran at the requested granularity and within the limits."
+        },
+        {
+          "name": "LineLevel",
+          "kind": "Field",
+          "type": "TextDiffFallbackKind",
+          "description": "A word-level comparison exceeded MaxTokens or MaxCells, so the result describes whole lines instead."
+        },
+        {
+          "name": "SingleChange",
+          "kind": "Field",
+          "type": "TextDiffFallbackKind",
+          "description": "Even the line-level comparison exceeded the limits, so the result is a single change over the whole input (or a single Equal hunk when the inputs match)."
+        }
+      ]
+    },
+    {
+      "itemName": "TextDiffGranularity",
+      "kind": "Enum",
+      "category": "Diff",
+      "namespace": "Tempo.Blazor.Diff",
+      "description": "Unit a TextDiff comparison works on. Word level compares word, number and punctuation tokens (so a re-flowed paragraph is not a change); line level compares whole lines including their line break.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Diff/TextDiffGranularity.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Words",
+          "kind": "Field",
+          "type": "TextDiffGranularity",
+          "description": "Word, number and punctuation tokens. Whitespace is not a token of its own."
+        },
+        {
+          "name": "Lines",
+          "kind": "Field",
+          "type": "TextDiffGranularity",
+          "description": "Whole lines, so every difference is a whole-line insertion, deletion or replacement."
+        }
+      ]
+    },
+    {
+      "itemName": "TextDiffHunk",
+      "kind": "Class",
+      "category": "Diff",
+      "namespace": "Tempo.Blazor.Diff",
+      "description": "One contiguous piece of a TextDiffResult. The hunks of a result are ordered and tile both inputs: concatenating OldText over all hunks reproduces the old input exactly and concatenating NewText reproduces the new input exactly. That invariant is what lets a consumer accept an arbitrary subset of the changes and still get a valid text out of Apply.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Diff/TextDiffHunk.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Id",
+          "kind": "Property",
+          "type": "required string",
+          "description": "Deterministic identifier built from the kind and both offsets, for example replace-15-15. It stays the same across repeated runs over the same inputs, so an accepted-change set can be kept in a component's state across re-renders, and it is unique within a result."
+        },
+        {
+          "name": "IsChange",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Whether the hunk represents an actual change (anything but Equal)."
+        },
+        {
+          "name": "Kind",
+          "kind": "Property",
+          "type": "required TextDiffHunkKind",
+          "description": "What kind of piece this hunk is."
+        },
+        {
+          "name": "NewRange",
+          "kind": "Property",
+          "type": "required TextRange",
+          "description": "Span of the new input this hunk covers."
+        },
+        {
+          "name": "NewText",
+          "kind": "Property",
+          "type": "required string",
+          "description": "Exact text of the new input covered by this hunk (empty for Delete)."
+        },
+        {
+          "name": "NewUnitCount",
+          "kind": "Property",
+          "type": "required int",
+          "description": "How many comparison units of the new input the hunk covers."
+        },
+        {
+          "name": "OldRange",
+          "kind": "Property",
+          "type": "required TextRange",
+          "description": "Span of the old input this hunk covers."
+        },
+        {
+          "name": "OldText",
+          "kind": "Property",
+          "type": "required string",
+          "description": "Exact text of the old input covered by this hunk (empty for Insert). It may include the whitespace or line break that separates it from the next hunk, which is what keeps the hunks an exact tiling."
+        },
+        {
+          "name": "OldUnitCount",
+          "kind": "Property",
+          "type": "required int",
+          "description": "How many comparison units of the old input the hunk covers — word tokens for a word diff, lines for a line diff. A line-level renderer needs the count rather than the character span: a trailing empty line occupies no character at all, so the span cannot express it."
+        }
+      ]
+    },
+    {
+      "itemName": "TextDiffHunkKind",
+      "kind": "Enum",
+      "category": "Diff",
+      "namespace": "Tempo.Blazor.Diff",
+      "description": "Nature of a single TextDiffHunk. It drives both the rendering (inserted text, removed text) and the decision a consumer offers: a Replace hunk is one decision even though it covers both sides.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Diff/TextDiffHunkKind.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Equal",
+          "kind": "Field",
+          "type": "TextDiffHunkKind",
+          "description": "The text is present in both inputs; there is nothing to decide."
+        },
+        {
+          "name": "Insert",
+          "kind": "Field",
+          "type": "TextDiffHunkKind",
+          "description": "Text exists only in the new input, so OldText is empty."
+        },
+        {
+          "name": "Delete",
+          "kind": "Field",
+          "type": "TextDiffHunkKind",
+          "description": "Text exists only in the old input, so NewText is empty."
+        },
+        {
+          "name": "Replace",
+          "kind": "Field",
+          "type": "TextDiffHunkKind",
+          "description": "Old text was replaced by new text; both sides are accepted or rejected together."
+        }
+      ]
+    },
+    {
+      "itemName": "TextDiffOptions",
+      "kind": "Class",
+      "category": "Diff",
+      "namespace": "Tempo.Blazor.Diff",
+      "description": "Limits that keep a TextDiff comparison bounded. The defaults suit interactive review of prose and terminal-sized source files; a host that diffs very large documents on purpose can raise them, and a host that wants an early degradation can lower them.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Diff/TextDiffOptions.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "DefaultMaxCells",
+          "kind": "Field",
+          "type": "int",
+          "description": "Default value of MaxCells (4 000 000 cells ≈ 16 MB of table)."
+        },
+        {
+          "name": "DefaultMaxTokens",
+          "kind": "Field",
+          "type": "int",
+          "description": "Default value of MaxTokens."
+        },
+        {
+          "name": "Default",
+          "kind": "Property",
+          "type": "static TextDiffOptions",
+          "description": "Shared immutable instance used when a caller passes no options."
+        },
+        {
+          "name": "MaxCells",
+          "kind": "Property",
+          "type": "int",
+          "description": "Maximum number of cells in the longest-common-subsequence table built after stripping the common prefix and suffix — the real memory guard, because two very different inputs inside MaxTokens can still require a quadratic table. Exceeding it degrades exactly like MaxTokens does. Values below 1 are treated as 1. Defaults to DefaultMaxCells."
+        },
+        {
+          "name": "MaxTokens",
+          "kind": "Property",
+          "type": "int",
+          "description": "Maximum number of tokens (words or lines) per input before the comparison degrades: a word diff falls back to line level, a line diff to a single whole-text change. Values below 1 are treated as 1. Defaults to DefaultMaxTokens."
+        }
+      ]
+    },
+    {
+      "itemName": "TextDiffResult",
+      "kind": "Class",
+      "category": "Diff",
+      "namespace": "Tempo.Blazor.Diff",
+      "description": "Result of a TextDiff comparison: an ordered list of TextDiffHunk values that tiles both inputs, plus the operation that turns any subset of the changes into a text.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Diff/TextDiffResult.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Apply",
+          "kind": "Method",
+          "type": "string",
+          "description": "Builds the resulting text for a set of accepted hunk ids: every accepted hunk contributes NewText, every other hunk contributes OldText. Because the hunks tile both inputs, passing no id (or null) returns OldText character for character and passing every id (HunkIds) returns NewText character for character. Any mix in between returns a text where the rejected changes keep their old wording. Ids that do not belong to this result are ignored, so a stale accepted-change set cannot corrupt the output.",
+          "parameters": [
+            {
+              "name": "acceptedHunkIds",
+              "type": "IEnumerable<string>?"
+            }
+          ]
+        },
+        {
+          "name": "Changes",
+          "kind": "Property",
+          "type": "IReadOnlyList<TextDiffHunk>",
+          "description": "Only the hunks a consumer can accept or reject, in document order."
+        },
+        {
+          "name": "Fallback",
+          "kind": "Property",
+          "type": "TextDiffFallbackKind",
+          "description": "Whether and how far the comparison had to degrade to stay within the configured limits."
+        },
+        {
+          "name": "Granularity",
+          "kind": "Property",
+          "type": "TextDiffGranularity",
+          "description": "Granularity the result was actually produced at (may be coarser than requested, see Fallback)."
+        },
+        {
+          "name": "HasChanges",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Whether the two inputs differ at all."
+        },
+        {
+          "name": "HunkIds",
+          "kind": "Property",
+          "type": "IReadOnlyList<string>",
+          "description": "Ids of every hunk, in document order. Passing this collection to Apply accepts everything."
+        },
+        {
+          "name": "Hunks",
+          "kind": "Property",
+          "type": "IReadOnlyList<TextDiffHunk>",
+          "description": "Every hunk in document order — equal and changed pieces interleaved."
+        },
+        {
+          "name": "IsDegraded",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Whether the comparison degraded at all (Fallback is not None)."
+        },
+        {
+          "name": "NewText",
+          "kind": "Property",
+          "type": "string",
+          "description": "The new input the result describes (never null; a null argument is read as empty)."
+        },
+        {
+          "name": "OldText",
+          "kind": "Property",
+          "type": "string",
+          "description": "The old input the result describes (never null; a null argument is read as empty)."
+        }
+      ]
+    },
+    {
+      "itemName": "TextRange",
+      "kind": "RecordStruct",
+      "category": "Diff",
+      "namespace": "Tempo.Blazor.Diff",
+      "description": "A half-open span of one input text used by a TextDiffHunk. Offsets are CHARACTER offsets into the corresponding input (OldText for the old side, NewText for the new side), independent of the TextDiffGranularity: a word diff and a line diff both report character offsets, so a consumer can slice the original text — or scroll a viewer — without re-running the engine.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Diff/TextRange.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "End",
+          "kind": "Property",
+          "type": "int",
+          "description": "Offset one past the last covered character."
+        },
+        {
+          "name": "IsEmpty",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Whether the span covers no character at all."
+        },
+        {
+          "name": "Length",
+          "kind": "Property",
+          "type": "int",
+          "description": "Number of characters covered; 0 for the empty side of an insertion or deletion."
+        },
+        {
+          "name": "Start",
+          "kind": "Property",
+          "type": "int",
+          "description": "Zero-based offset of the first character covered by the span."
+        }
+      ]
     },
     {
       "itemName": "ApproximateDocumentTextMeasurer",
@@ -7698,7 +8822,7 @@
       "kind": "Class",
       "category": "Document Editor",
       "namespace": "Tempo.Blazor.DocumentEditor.Services",
-      "description": "Creates deterministic word-level diffs for document text.",
+      "description": "Creates deterministic word-level diffs for document text on top of the shared Tempo.Blazor.Diff.TextDiff engine, and extracts readable plain text from a document snapshot or a single block. Above the engine's DefaultMaxTokens / DefaultMaxCells limits the comparison degrades to line level and DocumentTextDiffResult.IsDegraded says so.",
       "packageId": "Tempo.Blazor.Abstractions",
       "sourcePath": "src/Tempo.Blazor.Abstractions/DocumentEditor/Services/DocumentTextDiffHelper.cs",
       "documentationStatus": "merged",
@@ -7707,7 +8831,7 @@
           "name": "Diff",
           "kind": "Method",
           "type": "DocumentTextDiffResult",
-          "description": "Diffs old and new text at word/punctuation level.",
+          "description": "Diffs old and new text at word/punctuation level and returns the ordered Unchanged/Removed/Added segments the document comparison renders.",
           "parameters": [
             {
               "name": "oldText",
@@ -7753,7 +8877,15 @@
       "description": "Result of a word-level text diff.",
       "packageId": "Tempo.Blazor.Abstractions",
       "sourcePath": "src/Tempo.Blazor.Abstractions/DocumentEditor/Models/DocumentTextDiff.cs",
-      "documentationStatus": "merged"
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "IsDegraded",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Whether the comparison had to degrade to stay within the engine's limits (TextDiffOptions.DefaultMaxTokens / DefaultMaxCells). A degraded diff is approximate: the segments describe whole lines instead of words, and an input that exceeds even the line limits yields the whole old text as one Removed segment followed by the whole new text as one Added segment. A consumer that surfaces a review decision should say the comparison is coarse instead of presenting it as a word-level result."
+        }
+      ]
     },
     {
       "itemName": "DocumentTextDiffSegment",
@@ -12645,6 +13777,68 @@
       "documentationStatus": "merged"
     },
     {
+      "itemName": "ApprovalDecision",
+      "kind": "Record",
+      "category": "Models",
+      "namespace": "Tempo.Blazor.Abstractions.Models.Approvals",
+      "description": "One human decision on an approval request: the outcome (Approved or Rejected), the optional note the decider wrote, who decided and when. TmApprovalCard hands it to OnDecision and leaves the Pending state only when the callback completes without throwing, so a failed save never looks like a decision.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Models/Approvals/ApprovalDecision.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "DecidedAt",
+          "kind": "Property",
+          "type": "DateTimeOffset?",
+          "description": "Moment of the decision, when the host knows it."
+        },
+        {
+          "name": "DecidedBy",
+          "kind": "Property",
+          "type": "string?",
+          "description": "Display name of the person who decided, when the host knows it."
+        },
+        {
+          "name": "IsApproved",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Whether the request was approved (the shorthand hosts branch on most often)."
+        },
+        {
+          "name": "Note",
+          "kind": "Property",
+          "type": "string?",
+          "description": "Note the decider wrote, or null when none was asked for or given."
+        },
+        {
+          "name": "State",
+          "kind": "Property",
+          "type": "ApprovalState",
+          "description": "Outcome of the decision: Approved or Rejected."
+        }
+      ]
+    },
+    {
+      "itemName": "ApprovalRisk",
+      "kind": "Enum",
+      "category": "Models",
+      "namespace": "Tempo.Blazor.Abstractions.Models.Approvals",
+      "description": "Risk level of an approval request, shown as a localized badge on TmApprovalCard: Low, Medium, High or Critical. The level drives the badge text and the card's accent, so the risk always arrives in words and the colour is only the second channel.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Models/Approvals/ApprovalRisk.cs",
+      "documentationStatus": "merged"
+    },
+    {
+      "itemName": "ApprovalState",
+      "kind": "Enum",
+      "category": "Models",
+      "namespace": "Tempo.Blazor.Abstractions.Models.Approvals",
+      "description": "Lifecycle state of an approval request rendered by TmApprovalCard: Pending, Approved, Rejected, Expired or Cancelled. Pending is the only state in which the card offers its actions; every other state collapses it into a single result row.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Models/Approvals/ApprovalState.cs",
+      "documentationStatus": "merged"
+    },
+    {
       "itemName": "AttachmentListContext<TMetadata>",
       "kind": "Class",
       "category": "Models",
@@ -16342,6 +17536,46 @@
       "documentationStatus": "merged"
     },
     {
+      "itemName": "InlineDiffDecision",
+      "kind": "Record",
+      "category": "Models",
+      "namespace": "Tempo.Blazor.Abstractions.Models.Diffs",
+      "description": "One human decision on a single change of a TmInlineDiff: the hunk id, whether it was accepted and the whole resulting text. TmInlineDiff hands it to OnDecision before the decision is applied, so a host can persist the decision and the resulting wording in one round trip and a failed save never looks like an accepted change.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Models/Diffs/InlineDiffDecision.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Accepted",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Whether the change was accepted (true) or rejected (false)."
+        },
+        {
+          "name": "HunkId",
+          "kind": "Property",
+          "type": "string",
+          "description": "Identifier of the decided change (the hunk's stable Id)."
+        },
+        {
+          "name": "Result",
+          "kind": "Property",
+          "type": "string",
+          "description": "The whole resulting text after the decision."
+        }
+      ]
+    },
+    {
+      "itemName": "InlineDiffMode",
+      "kind": "Enum",
+      "category": "Models",
+      "namespace": "Tempo.Blazor.Abstractions.Models.Diffs",
+      "description": "How TmInlineDiff presents the comparison of two texts: Display renders the changes only, Review adds one decision per change (marker button, popover Accept / Reject, bulk actions, one level of Undo). The mode is about the user interface only - both modes show exactly the same hunks and the same TextDiffResult.Apply output.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Models/Diffs/InlineDiffMode.cs",
+      "documentationStatus": "merged"
+    },
+    {
       "itemName": "InMemoryAuditLogProvider",
       "kind": "Class",
       "category": "Models",
@@ -17196,6 +18430,206 @@
       "documentationStatus": "merged"
     },
     {
+      "itemName": "ReviewQueueAction",
+      "kind": "Enum",
+      "category": "Models",
+      "namespace": "Tempo.Blazor.Abstractions.Models.Reviews",
+      "description": "Which button produced a ReviewQueueActionArgs<TItem>.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Models/Reviews/ReviewQueueAction.cs",
+      "documentationStatus": "merged"
+    },
+    {
+      "itemName": "ReviewQueueActionArgs<TItem>",
+      "kind": "Class",
+      "category": "Models",
+      "namespace": "Tempo.Blazor.Abstractions.Models.Reviews",
+      "description": "One raised decision of a review queue: which item, which verb, and — for a host-defined QuickAction — which quick action fired. TmReviewQueue<TItem> awaits the host's OnAction callback with these args and only resolves the item when it completes without throwing, so a failed save keeps the item pending and the queue usable.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Models/Reviews/ReviewQueueActionArgs.cs",
+      "documentationStatus": "merged",
+      "typeParameters": [
+        {
+          "name": "TItem",
+          "description": "Generic type parameter TItem."
+        }
+      ],
+      "members": [
+        {
+          "name": "Action",
+          "kind": "Property",
+          "type": "ReviewQueueAction",
+          "description": "Which verb fired."
+        },
+        {
+          "name": "AvailableActions",
+          "kind": "Property",
+          "type": "ReviewQueueActions",
+          "description": "The verb set the queue had enabled for this interaction."
+        },
+        {
+          "name": "IsApprove",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Whether the item was approved."
+        },
+        {
+          "name": "IsEdit",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Whether the item was marked as reviewed with changes."
+        },
+        {
+          "name": "IsQuickAction",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Whether a host-defined quick action fired."
+        },
+        {
+          "name": "IsReject",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Whether the item was rejected."
+        },
+        {
+          "name": "IsSkip",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Whether the item was deferred (still pending after the callback)."
+        },
+        {
+          "name": "Item",
+          "kind": "Property",
+          "type": "TItem",
+          "description": "The item the decision belongs to."
+        },
+        {
+          "name": "QuickActionId",
+          "kind": "Property",
+          "type": "string?",
+          "description": "The quick action's id when Action is QuickAction; otherwise null."
+        }
+      ]
+    },
+    {
+      "itemName": "ReviewQueueActions",
+      "kind": "Enum",
+      "category": "Models",
+      "namespace": "Tempo.Blazor.Abstractions.Models.Reviews",
+      "description": "The built-in decisions TmReviewQueue<TItem> offers for an item. A flagged set, so a host enables exactly the verbs its workflow has: a document queue usually offers Approve and Reject, a content queue adds Edit and Skip.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Models/Reviews/ReviewQueueActions.cs",
+      "documentationStatus": "merged"
+    },
+    {
+      "itemName": "ReviewQueueMode",
+      "kind": "Enum",
+      "category": "Models",
+      "namespace": "Tempo.Blazor.Abstractions.Models.Reviews",
+      "description": "How TmReviewQueue<TItem> presents the items it was given.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Models/Reviews/ReviewQueueMode.cs",
+      "documentationStatus": "merged"
+    },
+    {
+      "itemName": "ReviewQueueQuickAction",
+      "kind": "Class",
+      "category": "Models",
+      "namespace": "Tempo.Blazor.Abstractions.Models.Reviews",
+      "description": "A host-defined button of a review queue row — the \"decision inbox\" variant, where an item is resolved with two purpose-named buttons (\"Approve & file\", \"Send back to the author\") instead of the built-in verbs. Activating one raises OnAction with QuickAction and this action's Id. Like every action it resolves the item only when the callback completes without throwing, and the localized result announced to screen readers uses Label as the verb.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Models/Reviews/ReviewQueueQuickAction.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "AriaLabel",
+          "kind": "Property",
+          "type": "string?",
+          "description": "Accessible name override for the row button. When omitted the button is named by a localized \"<label>: <item title>\" template (WCAG 2.4.6 — a row of three identically named \"Approve\" buttons is indistinguishable in a screen reader's button list)."
+        },
+        {
+          "name": "Icon",
+          "kind": "Property",
+          "type": "string?",
+          "description": "Optional icon name (an IconNames value or a registered icon)."
+        },
+        {
+          "name": "Id",
+          "kind": "Property",
+          "type": "string",
+          "description": "Stable identity of the action, carried in QuickActionId. Required and unique within the queue."
+        },
+        {
+          "name": "Label",
+          "kind": "Property",
+          "type": "string",
+          "description": "The visible button label. Required — it is also the verb the live region announces."
+        },
+        {
+          "name": "Variant",
+          "kind": "Property",
+          "type": "ReviewQueueQuickActionVariant",
+          "description": "The button's visual weight. Default Secondary."
+        }
+      ]
+    },
+    {
+      "itemName": "ReviewQueueQuickActionVariant",
+      "kind": "Enum",
+      "category": "Models",
+      "namespace": "Tempo.Blazor.Abstractions.Models.Reviews",
+      "description": "The visual weight of a ReviewQueueQuickAction.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Models/Reviews/ReviewQueueQuickActionVariant.cs",
+      "documentationStatus": "merged"
+    },
+    {
+      "itemName": "ReviewQueueSort",
+      "kind": "Enum",
+      "category": "Models",
+      "namespace": "Tempo.Blazor.Abstractions.Models.Reviews",
+      "description": "The order TmReviewQueue<TItem> presents its items in. Sorting is stable: items with an equal rank keep the order the host supplied them in, so a re-render never shuffles rows.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Models/Reviews/ReviewQueueSort.cs",
+      "documentationStatus": "merged"
+    },
+    {
+      "itemName": "ReviewQueueTab",
+      "kind": "Class",
+      "category": "Models",
+      "namespace": "Tempo.Blazor.Abstractions.Models.Reviews",
+      "description": "One filter tab of a review queue: a stable id the host filters Items by, the visible title and an optional count shown as a badge. The queue renders the tab strip and raises ActiveTabIdChanged; it never filters the items itself, because only the host knows what \"Open\" or \"Needs my review\" means for its data. The count is the host's number for the SAME query, so it always agrees with the list the host passes back.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Models/Reviews/ReviewQueueTab.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Count",
+          "kind": "Property",
+          "type": "int?",
+          "description": "Optional badge count for this tab — normally the number of items the tab's query returns. Null renders no badge; zero renders \"0\" (an empty tab still reports its emptiness)."
+        },
+        {
+          "name": "Icon",
+          "kind": "Property",
+          "type": "string?",
+          "description": "Optional icon name (an IconNames value or a registered icon)."
+        },
+        {
+          "name": "Id",
+          "kind": "Property",
+          "type": "string",
+          "description": "Stable identity of the tab, used as the tab panel id. Required."
+        },
+        {
+          "name": "Title",
+          "kind": "Property",
+          "type": "string",
+          "description": "The visible tab label. Required."
+        }
+      ]
+    },
+    {
       "itemName": "SchedulerEventContext",
       "kind": "Class",
       "category": "Models",
@@ -17443,6 +18877,51 @@
         {
           "title": "Navigation structure",
           "code": "var navItems = new List<SidebarNavItem>\n{\n    new()\n    {\n        Id = \"dashboard\",\n        Text = \"Dashboard\",\n        Icon = \"dashboard\",\n        Href = \"/\"\n    },\n    new()\n    {\n        Id = \"products\",\n        Text = \"Products\",\n        Icon = \"box\",\n        Children = new()\n        {\n            new() { Id = \"list\", Text = \"List\", Href = \"/products\" },\n            new() { Id = \"categories\", Text = \"Categories\", Href = \"/categories\" }\n        }\n    },\n    new()\n    {\n        Id = \"messages\",\n        Text = \"Messages\",\n        Icon = \"mail\",\n        Href = \"/messages\",\n        Badge = \"3\",\n        BadgeColor = \"danger\"\n    }\n};\n\n<TmSidebar Items=\"@navItems\" />"
+        }
+      ]
+    },
+    {
+      "itemName": "SidebarNavSection",
+      "kind": "Record",
+      "category": "Models",
+      "namespace": "Tempo.Blazor.Models",
+      "description": "A named group of navigation items, rendered by TmSidebar under one visible heading that also names the group's list through aria-labelledby.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Models/SidebarNavSection.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Items",
+          "kind": "Property",
+          "type": "IReadOnlyList<ISidebarNavItem>",
+          "description": "Items of the group, in display order."
+        },
+        {
+          "name": "Title",
+          "kind": "Property",
+          "type": "string",
+          "description": "Heading text of the group. Rendered as the section heading and used as the accessible name of the group's list — keep it short (\"Main\", \"Administration\")."
+        }
+      ],
+      "properties": [
+        {
+          "name": "Title",
+          "type": "string",
+          "isRequired": true,
+          "description": "Heading text of the group. Rendered as the section heading and used as the accessible name of the group's list — keep it short (\"Main\", \"Administration\")."
+        },
+        {
+          "name": "Items",
+          "type": "IReadOnlyList<ISidebarNavItem>",
+          "isRequired": false,
+          "default": "[]",
+          "description": "Items of the group, in display order."
+        }
+      ],
+      "examples": [
+        {
+          "title": "Two navigation groups",
+          "code": "var sections = new List<SidebarNavSection>\n{\n    new(\"Main\", new List<ISidebarNavItem>\n    {\n        new SidebarNavItem { Id = \"home\", Label = \"Dashboard\", Icon = \"home\", Href = \"/\" },\n        new SidebarNavItem { Id = \"orders\", Label = \"Orders\", Icon = \"package\", Href = \"/orders\" }\n    }),\n    new(\"Administration\", new List<ISidebarNavItem>\n    {\n        new SidebarNavItem { Id = \"users\", Label = \"Users\", Icon = \"users\", Href = \"/users\" }\n    })\n};\n\n<TmSidebar Sections=\"sections\" AutoActive=\"true\" />"
         }
       ]
     },
@@ -19778,6 +21257,124 @@
         {
           "name": "TMetadata",
           "description": "Generic type parameter TMetadata."
+        }
+      ]
+    },
+    {
+      "itemName": "UserMenuItem",
+      "kind": "Record",
+      "category": "Models",
+      "namespace": "Tempo.Blazor.Models",
+      "description": "One entry of a user menu (the account dropdown of TmTopBar). An entry is a command (Href for navigation, OnClick otherwise), a destructive command (IsDanger) or a separator between groups (Separator).",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Models/UserMenuItem.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "CreateSeparator",
+          "kind": "Method",
+          "type": "UserMenuItem",
+          "description": "Creates a separator between groups of entries.",
+          "parameters": [
+            {
+              "name": "id",
+              "type": "string"
+            }
+          ]
+        },
+        {
+          "name": "Href",
+          "kind": "Property",
+          "type": "string?",
+          "description": "Navigation URL. When set the entry renders as a link; otherwise it is a button that raises OnClick."
+        },
+        {
+          "name": "Icon",
+          "kind": "Property",
+          "type": "string?",
+          "description": "Optional icon name from IconNames."
+        },
+        {
+          "name": "Id",
+          "kind": "Property",
+          "type": "string",
+          "description": "Stable identifier of the entry, unique inside one menu. It is what a consumer's test ids are built from (data-testid=\"user-menu-item-{Id}\" on TmUserMenu), so two entries that share an id become indistinguishable to host tests — rendering itself no longer depends on it."
+        },
+        {
+          "name": "IsDanger",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Renders the entry in the destructive style (a red label) — a signal that must not be the ONLY cue for screen readers; the label has to be self-explanatory."
+        },
+        {
+          "name": "Label",
+          "kind": "Property",
+          "type": "string",
+          "description": "Visible label; also the accessible name of the entry."
+        },
+        {
+          "name": "OnClick",
+          "kind": "Property",
+          "type": "Func<Task>?",
+          "description": "Callback of a command entry (ignored when Href is set). The menu closes BEFORE the callback runs and awaits it. A callback that changes the HOST's own state is responsible for the render (`StateHasChanged()`) — it is a delegate invoked by a child component, not a EventCallback owned by the host, so no automatic re-render follows. A callback that only calls a service (navigation, a toast, a save) needs nothing."
+        },
+        {
+          "name": "Separator",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Renders the entry as a separator line instead of a command; Label is ignored."
+        }
+      ],
+      "properties": [
+        {
+          "name": "Id",
+          "type": "string",
+          "isRequired": true,
+          "description": "Stable identifier of the entry, unique inside one menu (used for test ids and @key)."
+        },
+        {
+          "name": "Label",
+          "type": "string",
+          "isRequired": true,
+          "description": "Visible label; also the accessible name of the entry."
+        },
+        {
+          "name": "Icon",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Optional icon name from IconNames."
+        },
+        {
+          "name": "Href",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Navigation URL. When set the entry renders as a link; otherwise it is a button that raises OnClick."
+        },
+        {
+          "name": "OnClick",
+          "type": "Func<Task>?",
+          "isRequired": false,
+          "description": "Callback of a command entry (ignored when Href is set). The menu closes BEFORE the callback runs and awaits it. A callback that changes the HOST's own state is responsible for the render (StateHasChanged()) — it is a delegate invoked by a child component, not an EventCallback owned by the host, so no automatic re-render follows. A callback that only calls a service (navigation, a toast, a save) needs nothing."
+        },
+        {
+          "name": "IsDanger",
+          "type": "bool",
+          "isRequired": false,
+          "default": "false",
+          "description": "Renders the entry in the destructive style (a red label) — a signal that must not be the ONLY cue for screen readers; the label has to be self-explanatory."
+        },
+        {
+          "name": "Separator",
+          "type": "bool",
+          "isRequired": false,
+          "default": "false",
+          "description": "Renders the entry as a separator line instead of a command; Label is ignored."
+        }
+      ],
+      "examples": [
+        {
+          "title": "Account menu with a destructive entry",
+          "code": "var accountItems = new List<UserMenuItem>\n{\n    new(\"profile\", \"Your profile\", \"user\", \"/profile\"),\n    new(\"settings\", \"Account settings\", \"settings\", \"/settings\"),\n    UserMenuItem.CreateSeparator(\"sep-destructive\"),\n    new(\"delete\", \"Delete account\", \"trash\", onClick: DeleteAccountAsync, isDanger: true)\n};\n\n<TmTopBar User=\"currentUser\" UserMenuItems=\"accountItems\" OnLogout=\"HandleLogout\" />"
         }
       ]
     },
@@ -37982,11 +39579,11 @@
   ],
   "libraryExamples": [],
   "summary": {
-    "itemCount": 1516,
-    "manualItemCount": 1516,
-    "generatedItemCount": 1500,
+    "itemCount": 1572,
+    "manualItemCount": 1572,
+    "generatedItemCount": 1556,
     "generatedOnlyItemCount": 0,
     "componentCount": 0,
-    "publicApiTypeCount": 1500
+    "publicApiTypeCount": 1556
   }
 }

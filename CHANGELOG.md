@@ -38,6 +38,1136 @@
 > (Fáze 15b). Contracts: [docs/modeling-editor.md](docs/modeling-editor.md),
 > [docs/diagram-editor.md](docs/diagram-editor.md).
 
+### Demo, documentation and E2E — the app shell series (plan 5d396592, phase 6)
+
+The frame series ships with a real demo page and a browser-proven contract instead of a unit-tested
+API only.
+
+- **New demo page `/app-shell`** (`src/Tempo.Blazor.Demo.SharedUI/Pages/AppShellPage.razor`). The
+  live `TmAppShell` is embedded in a **width-controlled stage**: `Fit`, `Phone 375`, `Tablet 900` and
+  `Desktop 1280` buttons change the container the frame measures, so the docked desktop column, the
+  tablet rail with its overlay drawer and the phone drawer are all reviewable at one browser width —
+  no viewport resizing, and no drag-only control (WCAG 2.5.7). The page also demonstrates the
+  `Inset` / `Flat` variant switch, the sectioned navigation model, the `Sources` work area (closed
+  until the toggle opens it, so a phone never loads with a modal sheet over its content), the account
+  menu in `SidebarFooter` (profile completion + theme switch, and the same slot inside the phone
+  drawer) and an onboarding checklist inside `main`. The page takes the demo's full content width
+  (it hides the demo sidebar through the same stable `data-demo-shell` hooks the modeling editor page
+  uses) and carries its own theme switch and a link back to the component demos, so the desktop
+  preset fits without scrolling the stage.
+- **Standalone sections** for `TmUserMenu` (anchored popover, forced `MobilePresentation="Sheet"`
+  bottom sheet, avatar-only trigger) and for `TmOnboardingChecklist` (`List`, `Card` with
+  `CollapseCompletedGroups`, `Grid` tips panel, and a `Dismissible` guide the page brings back with a
+  new `Tasks` list identity).
+- **New E2E lane** `tests/Tempo.Blazor.E2E/AppShellE2ETests.cs` (WASM `:7106` and Server `:7107`):
+  work-area resize by pointer and by keyboard (`ArrowLeft`/`ArrowRight`, `Home`/`End`, the separator's
+  ARIA values), persistence of the resized width across a reload, the `SidebarCollapsed` round-trip,
+  the phone drawer (opener `aria-expanded`/`aria-controls`, focus into the drawer, Escape and the
+  chosen entry closing it, focus back on the hamburger), the account menu's APG keyboard contract
+  (ArrowDown/ArrowUp open-and-focus, Home/End, Escape restores focus) and its theme switch, a checklist
+  toggle with its single polite announcement, and a scoped axe scan (`wcag2a`/`wcag2aa`, critical and
+  serious) of the frame only. Light/dark reference screenshots at 375 / 900 / 1440 land in
+  `tests/Tempo.Blazor.E2E/TestResults/app-shell`.
+- **Demo strings are localized** in all four demo tables (`src/Tempo.Blazor.Demo.SharedUI/Resources/
+  DemoResources{,.cs,.sk,.fr}.json`) — no hardcoded page text, and the same keys the E2E specs assert.
+- **`MainLayout` stays the hand-written Tailwind shell.** Converting the demo's layout to `TmAppShell`
+  was evaluated and rejected for this release: the demo layout is the reference for the library's
+  Tailwind chrome and its stable hooks (the `data-demo-shell="sidebar"` / `"main"` / `"page-body"`
+  attributes that demo pages style against, the fixed mobile header, the sticky top bar) — a frame
+  conversion changes those selectors, and "the smoke E2E lane passes without selector changes" was the
+  agreed precondition. `TmAppShell` is therefore documented and demonstrated on its own page
+  ([docs/app-shell.md](docs/app-shell.md)) and stays opt-in for hosts. Revisit as a separate
+  demo-migration change if the shell's chrome is ever adopted by the demo for real.
+- **Docs and catalogues**: a *Demo page* section in [docs/app-shell.md](docs/app-shell.md) and
+  `TmAppShell` added to the Layout row of `AGENTS.md`; the JSON documentation overlays were regenerated
+  and `validate --fail-on-drift` reports no drift.
+- **No breaking change**: the phase adds a demo page, demo resources, documentation and E2E specs only —
+  no component parameter, default or markup changed.
+- **Review fixes** (code, architecture and UX review of this phase):
+  - The demo's checklist steps are **localized**, not English literals: `BuildTasks` is an instance
+    method reading `TmAppShellDemo_TaskConnect`, `…_TaskConnectDescription`, `…_TaskInvite`,
+    `…_TaskPlan`, `…_TaskPublish`, `…_GroupTeam` and `…_GroupGettingStarted` from all four demo tables,
+    because those steps render in five checklists and in the "last checked step" readout (a literal
+    switched a cs/sk/fr page back to English mid-guide).
+  - The account readout shows the **localized item label** instead of the raw item id ("Last account
+    action: orders" read a slug to a screen reader).
+  - Demo links are **relative** (`href="layout"`, `app-shell#app-shell-live`), so they follow
+    `<base href>` instead of breaking when the demo is hosted under a sub-path.
+  - The full-bleed override uses `width: auto` / `max-width: none` instead of `100vw`, which includes
+    the vertical scrollbar and grew a ~15 px horizontal scrollbar on a desktop browser (WCAG 1.4.10).
+  - The stage height moved from an inline `60rem` to the page stylesheet's
+    `min(60rem, 100dvh - var(--tm-space-16))`, so the frame fits a phone viewport instead of pushing
+    its own footer off screen.
+  - `TmOnboardingChecklist`'s **group title wraps** instead of being ellipsized: at the demo card's
+    ~317 px, "Getting started" was cut to "Getting star…". Visual fix only — classes, tokens and the
+    public API are untouched; the committed CSS bundle was regenerated.
+
+### Setup guide — `TmOnboardingChecklist` (plan 5d396592, phase 5)
+
+The onboarding checklist the frame series was missing: `TmOnboardingChecklist` (core, `DataDisplay`)
+renders a list of `OnboardingTask` steps with a counted progress line, APG disclosure groups, an
+opt-in call-to-action per step and a celebration state, in three presentations (`OnboardingChecklistLayout`
+`List` / `Card` / `Grid` — the grid is the tips panel). Contract:
+[docs/onboarding-checklist.md](docs/onboarding-checklist.md).
+
+- **Pure Blazor, no JavaScript.** Steps are native `<input type="checkbox">` elements associated with
+  their own `<label>`, group headers are native `<button>`s carrying `aria-expanded`/`aria-controls`,
+  and the whole component adds no key handling — exactly one activation per key press.
+- **The component writes `OnboardingTask.IsDone`** on the instance it was given before it raises
+  `OnTaskToggle`, so the checklist is usable without a bound handler; a new `Tasks` list identity is a
+  new run.
+- **One polite live region** announces a completed step, a reopened step and the overall completion
+  (one composed message each). The visible celebration block is not a live region and the group
+  disclosures announce nothing, so nothing is announced twice.
+- **`CollapseCompletedGroups` defaults to `false`** — a group that folds under the cursor hides the
+  work just finished. When it is enabled, the focus moves from the hidden checkbox to the collapsed
+  group's header instead of falling to the document body.
+- **`Dismissible` closes the checklist locally in every case** (`OnDismiss` is raised when bound), so a
+  host that never binds the callback is not stuck with a surface it cannot close; the host owns the
+  focus after it removes the component.
+- **Localized** in en/cs/sk/fr — including the counted progress sentence as a real plural family keyed
+  on the total (`"3 of 7 tasks done"`, "3 z 7 úkolů hotovo", "3 z 7 úloh hotovo", "3 sur 7 tâches
+  terminées") — plus a `_onboarding-checklist.css` sheet on semantic tokens with dark values from the
+  token layer, a forced-colours `Highlight` ring, 44 px coarse targets and a reduced-motion entry for
+  the celebration's pop.
+- **Wireframe citizen**: catalogued with the `onboarding-checklist` role and rendered by the built-in
+  stencil pack, so the MCP catalogue and the editor palette agree.
+- **Review round (code + UX)**: the checkbox/description/group-body DOM ids are built from a step's
+  **position** instead of a slug of its id (`a.b` and `a-b` can no longer collide and make a `<label>`
+  point at the neighbour's box; `OnboardingTask.Id` is the `data-testid` suffix only), an
+  `OnboardingTask.ActionHref` renders only for a relative URL or the `http`/`https`/`mailto` scheme
+  (`javascript:`, `data:`, `vbscript:` and protocol-relative `//host` values are rendered as no link at
+  all), the joined completion announcement moved into the resource
+  `TmOnboardingChecklist_AnnounceTaskDoneAllComplete` (`"{0}. {1}"`) so translators own the
+  punctuation, the dismiss button is a 32 px target on a fine pointer (above the 24 px minimum of
+  WCAG 2.5.8, unchanged 44 px on coarse pointers), the finished-group collapse no longer builds the
+  whole group projection to answer one question, and the docs gained the `OnDismiss` focus pattern
+  (`FocusAsync` on a page heading — the component cannot focus an element it does not render). No
+  public API change.
+- **No breaking change** — a new component plus a new model; nothing existing changed.
+
+### Application frame — `TmAppShell` phone presentation (plan 5d396592, phase 4)
+
+The phone layout the phase-3 notes deferred: a phone container renders **no navigation column at all**.
+`MobileNav` (`AppShellMobileNav`) decides what replaces it — a hamburger in the top bar that opens the
+full navigation in the same modal `TmDrawer` the tablet uses (`Drawer`, the default), or a
+`TmBottomNavigation` bar with no drawer at all (`BottomNavigation`). The work area stops being a dragged
+column on a phone and becomes a `TmSidePanel` bottom sheet, so a phone renders no resize separator.
+Contract: [docs/app-shell.md](docs/app-shell.md).
+
+- **`MobileNav` / `BottomNavItems` / `BottomNavItemClicked` / `ShowTopBarMenuButton`** — the phone
+  presentation of the frame. The drawer moves the focus in, closes on Escape, on its close button and
+  on **choosing an entry**, and hands the focus back to the hamburger the frame names through
+  `TmTopBar.MenuButtonId`; the `SidebarHeader` / `SidebarFooter` slots (the account) render inside it.
+  `BottomNavItems` defaults to entries derived from the navigation model (top-level items, sections in
+  order); a tap raises `BottomNavItemClicked` and follows the entry's `Href`.
+- **The bottom bar is a layout ROW of the frame**, not viewport-fixed chrome: the frame classifies its
+  own container, so a `position: fixed` bar would be pinned to (and clipped by) it and would cover the
+  content. `.tm-bottom-nav--app-shell` resets the standalone component's anchoring for the frame's copy;
+  `TmBottomNavigation` itself is unchanged.
+- **Only a chosen destination closes the phone drawer** — the drawer body is not one big close target.
+  The frame closes it from the built-in sidebar's report of the entry the user chose (the additive
+  `TmSidebar.OnItemSelected`, see below) and from `NavigationManager.LocationChanged` (which covers a
+  host `Sidebar` slot whose own links navigate). A tap on the workspace switcher in the header, the
+  account in the footer, a section heading, the drawer's padding or a slot control therefore no longer
+  unmounts the surface a menu is about to open in; a slot command that must dismiss the drawer without
+  navigating calls `CloseNavigationAsync()`.
+- **`WorkArea` as a phone sheet** — `TmSidePanel` (`Presentation="Sheet"`, `LayoutMode="Mobile"`,
+  titled by `WorkAreaLabel`). The sheet is always closable: a host that never binds `WorkAreaOpenChanged`
+  still gets a dismissable modal surface (it re-opens it by transitioning `WorkAreaOpen` — `false` then
+  `true` — or by binding the parameter). Safe-area insets, `--tm-touch-target` on every phone control
+  and the absence of a new animated subject in the frame's stylesheet are pinned by
+  `TmAppShellMobileCssTests`.
+- **Additive on the primitives** — `TmSidebar.ShowToggle` (`bool`, default `true`) drops the header
+  collapse toggle for a sidebar rendered inside an already-open drawer, `TmSidebar.OnItemSelected`
+  (`EventCallback<ISidebarNavItem>`, unbound by default) reports the entry a user chose without
+  preventing its navigation, and `TmTopBar.MenuButtonId` (`string?`, default `null` = no `id` attribute)
+  lets a surface the bar did not render name the opener. One new resource key: `TmAppShell_MenuButton`
+  (`en` / `cs` / `sk` / `fr`).
+- **No breaking change**: every new parameter is opt-in and the defaults reproduce the phase-3
+  behaviour — a desktop or tablet frame renders byte-identical markup (the hamburger, the bottom bar and
+  the sheet exist only on a phone layout), and the phone layout that used to fall back to the tablet rail
+  is the plan's declared scope boundary, not a shipped contract.
+
+### Application frame — `TmAppShell` (plan 5d396592, phase 3)
+
+The frame the earlier phases were preparation for: one component that renders the page's landmarks
+(a top bar, one named navigation column, the content and an optional resizable work area) and resolves
+its own layout from its **container** width. It composes `TmLayoutObserver`, `TmSidebar`, `TmTopBar`
+and a modal `TmDrawer` — no navigation, focus or sheet logic is copied. Contract:
+[docs/app-shell.md](docs/app-shell.md).
+
+- **`TmAppShell`** (`src/Tempo.Blazor/Components/Layout/TmAppShell.razor`) — `Variant`
+  (`AppShellVariant.Inset` / `Flat`), `LayoutMode` / `InitialMode` / `Breakpoints` (default 768 / 1200),
+  `NavItems` / `NavSections` / `Sidebar` / `SidebarHeader` / `SidebarFooter`, `SidebarCollapsed`
+  (two-way), `SidebarNavLabel`, `TopBar` / `Title` / `TopBarActions` / `User` / `UserMenuItems` /
+  `OnLogout`, `ChildContent`, `SkipLinkTarget`, `WorkArea`, `WorkAreaOpen` (two-way) /
+  `WorkAreaWidth` (two-way) / `WorkAreaMinWidth` / `WorkAreaMaxWidth` / `MinContentWidth` /
+  `WorkAreaLabel`, `PersistKey`, `Class`. Omitted top bar content renders no header; omitted navigation
+  renders no nav landmark — every default is the modest one.
+- **Desktop** docks the navigation column (collapsible to the icon rail) and the work area; **tablet**
+  renders the column as a rail and expands the full navigation into a modal overlay drawer (focus
+  trap, Escape, focus restore to the rail toggle), rendered as a SIBLING of the shell's CSS size
+  container so nothing clips it. The phone fallback keeps the rail until the plan's mobile phase.
+- **Resizable work area** — a `role="separator"` with `aria-valuenow` / `aria-valuemin` /
+  `aria-valuemax` / `aria-controls`, driven by the shared resize helper (pointer) and by Blazor
+  (arrows 16 px, Shift 64 px, Home/End, double-click reset). Every path clamps to the min/max AND keeps
+  the content at `MinContentWidth`, so `aria-valuemax` reports the width the user can really reach.
+  `PersistKey` stores only the user's width (with its host base) and collapse choice.
+- **Shared resize helper extracted** — `wwwroot/js/tm-panel-resize.js` (over `pointer-drag.js`) is now
+  the ONE panel-resize implementation: `clampWidth`, `attachResize` / `detachResize`, region
+  measurement and the prefixed best-effort storage. `tm-editor-shell.js` is a thin wrapper that pins
+  the editor's CSS variable, drag class, canvas selector and commit method, so `TmEditorShell` behaves
+  exactly as before (its own node + bUnit suites are unchanged and green); the C# clamp moved to the
+  shared `PanelResize` class (same `Clamp` / `TryParsePx` contract, same vectors).
+- **Additive on the primitives** — `TmSidebar.IsLandmark` and `TmTopBar.IsLandmark` (both default
+  `true`, i.e. today's `<aside>` / `<header>` root) let the frame own the page's landmarks without a
+  nested banner or a second complementary region. `TmSidebar.ToggleAriaExpanded` (`bool?`) and
+  `TmSidebar.ToggleAriaControls` (`string?`) are additive too (both default `null` = no attribute):
+  a rail whose toggle opens a surface elsewhere reports that surface's state and id, which is how the
+  tablet rail announces the navigation drawer. No other public API changed.
+- **No breaking change**: everything above is new or an opt-in parameter; the resource keys
+  (`TmAppShell_SkipToContent`, `_NavLabel`, `_WorkArea`, `_ResizeWorkArea`, `_CloseWorkArea`) are new,
+  and the CSS partial `_app-shell.css` ships on semantic tokens only.
+- **Known scope boundary (deliberate)**: the phone chrome (`MobileNav`: hamburger + drawer / bottom
+  navigation, work area as a sheet) shipped in the phase-4 entry above — a mobile container now renders
+  the phone presentation instead of the tablet rail.
+
+### Account menu — `TmUserMenu` (plan 5d396592, phase 2)
+
+The account surface of an application shell: avatar trigger, signed-in user card, the host's menu
+entries plus the built-in Profile / Settings / profile-completion / theme / sign-out lines, and an
+extra slot for a language or workspace switcher. **No breaking change** — the component, its CSS
+partial, the resource keys and the JSON documentation overlay are all new, and no existing component
+changed. `TmTopBar` keeps its own inline account menu (phase 1); `TmUserMenu` is the richer replacement
+a host opts into (wiring it into `TmTopBar` / `TmAppShell` belongs to the later phases of the plan).
+
+- **`TmUserMenu`** (`src/Tempo.Blazor/Components/Layout/TmUserMenu.razor`) — `User` (`IUserInfo?`),
+  `ShowUserName`, `Items` (`IReadOnlyList<UserMenuItem>`), `ProfileHref`, `SettingsHref`,
+  `ProfileCompletion` (0–100, clamped), `ProfileCompletionHref`, `OnProfileCompletion`,
+  `ShowThemeToggle`, `ExtraContent`, `OnItemSelected` (`EventCallback<UserMenuItem>`), `OnLogout`,
+  `AriaLabel`, `MobilePresentation`, `Class`. Every default is the modest one: no items, no card
+  without a user, no sign out without a handler, no theme switch unless asked for.
+- **APG menu button over `TmOverlayPanel`** — the popup is the core panel with `Role="menu"`, so the
+  shared `tm-menu-nav.js` engine owns the keyboard (ArrowDown/ArrowUp with wraparound, Home/End,
+  typeahead over the labels with diacritics folded, roving tabindex, Tab-out dismissal) and
+  overlay.js owns Escape / outside dismissal with its own focus restore. The component adds only the
+  opening focus: first entry for a click or ArrowDown, last entry for ArrowUp (new
+  `focusLast` export in `tm-menu-nav.js`, node-tested). Enter/Space stay native on the trigger.
+- **Choosing an entry** — `UserMenuItem.OnClick` (a plain `Func<Task>`) is awaited first, then
+  `OnItemSelected` is raised, so a host that stores the chosen command re-renders with its result;
+  the menu closes before either runs and focus returns to the trigger on the popover path (the mobile
+  sheet's drawer owns the restore). `Href` entries stay real links.
+- **Structure** — the card, the completion block and the `ExtraContent` slot render as named
+  `role="group"` sections (a `menu` may only own menu items, separators and groups), and the
+  "Complete your profile" call to action is a real `menuitem` — a plain button inside a menu is
+  unreachable in menu interaction mode. Rows are keyed by position (`item-{n}-{Id}`,
+  `host-sep-{n}`, `section-sep-{n}`), so two id-less host entries, two default separators or a
+  separator whose id is a number cannot produce the duplicate sibling `@key` that would throw for the
+  whole host; `UserMenuItem.Id` still drives `data-testid`, so it should be unique. The theme switch
+  keeps one icon in both states — the trailing checkmark is the state signal.
+- **Extra slot contract** — `ExtraContent` sits inside menu interaction mode, so every interactive
+  element in it has to be a real menu item (`menuitem` / `menuitemradio` / `menuitemcheckbox` with
+  `tabindex="-1"`). A plain button, a link without a menu role or a `<select>` (`TmSelect`) is
+  visible but keyboard-unreachable (WCAG 2.1.1); the docs page and the JSON example carry a
+  `menuitemradio` language switcher instead.
+- **Profile completion** — `ProfileCompletion` renders a `TmProgressBar` plus the localized
+  "Profile 40% complete" text and, under 100 %, the completion entry. The theme switch is a
+  `menuitemcheckbox` following `ThemeService.IsDark` (including a change made elsewhere) and is not
+  rendered at all when no `ThemeService` is registered.
+- **Mobile** — `MobilePresentation` defaults to `Auto`: a content-height bottom sheet on a mobile
+  viewport (titled with the localized "User menu"), the anchored popover otherwise.
+- **Tokens and a11y** — `_user-menu.css` reads semantic tokens only (dark theme needs no block),
+  every focus stop paints `--tm-focus-ring` with `outline: 2px solid transparent` plus a
+  `forced-colors` `Highlight` outline, every command reaches `--tm-touch-target` on a coarse pointer,
+  and both transitions are in the reduced-motion block. Contract:
+  [docs/user-menu.md](docs/user-menu.md).
+
+### AI permission requests — `TmPermissionRequest` (plan 10b3966f, phase 5)
+
+The agent's request for one concrete permission, in the AI split package: which tool, on which target,
+why, how risky — and the decision the reader gives (once, for a while, for the session, always) with a
+live countdown and a Revoke while the permission is in force. **No breaking change** — the component, the
+four Abstractions models, the CSS partial and the resource keys are all new; no existing API changed.
+
+- **`TmPermissionRequest`** (`src/Tempo.Blazor.AI/Components/AI/`) — `ToolName`, `ToolDisplayName`,
+  `Target`, `Reason`, `Risk` (`ApprovalRisk`), `ScopeOptions`, `DurationOptions`, `Grant` /
+  `GrantChanged` (`@bind-Grant`), `OnDecision` (`Func<PermissionDecision, Task>`), `OnRevoke`,
+  `EnableShortcuts`, `Class`, `AriaLabel`, plus the public `AllowAsync()` / `DenyAsync()` /
+  `RevokeAsync()`, `State` (`PermissionRequestState`), `CanDecide`, `IsBusy`, `CurrentGrant` and
+  `Announcement`. The request leaves `pending` only when `OnDecision` completes without throwing:
+  while it runs both actions are disabled and the request is `aria-busy`; when it throws, the
+  localized error is shown and the request stays decidable.
+- **Scopes** — the scope `radiogroup` is fed ONLY by `ScopeOptions` (in the host's order). `null`
+  offers `Once` / `ForDuration` / `Session` / `Always`; an explicitly empty (or entirely invalid) list
+  falls back to `Once`, so a host that filtered its scopes down to nothing never accidentally offers
+  "always". `ForDuration` reveals a second native `radiogroup` over `DurationOptions` (default 15
+  minutes and one hour; a non-positive value is ignored); the chosen duration becomes
+  `PermissionGrant.ExpiresAt = now + duration`. A denial collapses into its `Denied` row and raises NO
+  `GrantChanged` (it grants nothing); a grant raises the grant.
+- **Live countdown via `TimeProvider`** — the granted row reads "Allowed for 1 h · 42 min left"
+  (localized templates for hours / hours+minutes / minutes / seconds; `GrantedAt` supplies the window,
+  without it the row shows only "42 min left"). The timer is the package's existing `AiElapsedTicker`,
+  armed only while there is something to count and disarmed the moment the permission expires. When
+  `Grant.ExpiresAt` passes the state becomes `Expired`, the row loses Revoke, the expiry is announced
+  ONCE and `GrantChanged` reports a cleared grant — for the host a permission that ran out and one that
+  was withdrawn are the same fact. A deadline that passes while a revoke is still saving wins: the
+  request stays `Expired` (never back to `pending`) and the host hears the cleared grant exactly once.
+  `Revoke` raises `OnRevoke` (and clears the grant locally when the host wires no callback); a throwing
+  revoke keeps the grant and shows the error.
+- **Accessibility** — exactly ONE polite live region carries every announcement (granted, denied,
+  revoked, expired, error) and the ticking countdown is `aria-live="off"`; the risk is always spelled
+  out ("High risk") next to its colour; the scope and duration radios are native groups with a visible
+  `aria-labelledby` label and one tab stop each; the collapse (a JS-free `grid-template-rows` height
+  transition with the inactive half `inert`) moves focus to Revoke (else the group root,
+  `tabindex="-1"`), Revoke hands it back to Allow, and an expiry that removes a focused Revoke hands the
+  focus to the group root instead of letting the browser drop it to `<body>`; `Ctrl`/`⌘`+`Enter` allows and
+  `Ctrl`/`⌘`+`Backspace` denies (advertised through `aria-keyshortcuts` plus the visible keyboard hint,
+  removable with `EnableShortcuts="false"`); `:focus-visible` uses `--tm-focus-ring` with a
+  `forced-colors` `Highlight` outline on every focus stop; every control reaches `--tm-touch-target` on
+  a coarse pointer; the collapse transition is off under `prefers-reduced-motion`.
+- **Models** (`src/Tempo.Blazor.Abstractions/AI/Permissions/`, namespace `Tempo.Blazor.AI.Models`) —
+  `PermissionScope` (Once/ForDuration/Session/Always), the `PermissionGrant` record (`Scope`,
+  `ExpiresAt`, `GrantedAt`, `Duration`, `IsExpired(now)`, `Remaining(now)`; a timed grant must name its
+  expiry, `Once`/`Always` must not carry one, and an expiry before `GrantedAt` is refused), the
+  `PermissionDecision` record (`Allow(grant)` / `Deny()`; a grant is required for a grant and refused
+  for a denial) and `PermissionRequestState` (Pending/Granted/Denied/Expired).
+- **Localization** — 40 `TmPermissionRequest_*` keys in all four resource tables.
+- **Wireframe** — the request is a placeable stencil (`permission-request` role, `Feedback` category,
+  declarative render) with a built-in vocabulary entry, so "every component has a role" holds.
+- **Docs** — JSON overlays for the component and the four models, bundles regenerated,
+  `validate --fail-on-drift` clean; contract in [docs/permission-request.md](docs/permission-request.md).
+  The demo page and the E2E/screenshot lane belong to phase 6 of the plan (see below).
+
+### App shell groundwork — additive `TmSidebar` and `TmTopBar` extensions (plan 5d396592, phase 1)
+
+Contract: [docs/sidebar-and-topbar.md](docs/sidebar-and-topbar.md).
+
+The two navigation primitives the coming app shell composes gain the capabilities that used to force a host to
+wrap them. **No public parameter changed type, was removed, or changed its default**, so a page that renders
+`<TmSidebar Items="…" />` or `<TmTopBar BrandTitle="…" />` today is unchanged — apart from two now-localized
+labels (below). The hardcoded English strings are gone from both components: `HardcodedAriaLabelGuardTests`
+stays green and every new key exists in `TmResources{,.cs,.sk,.fr}.json` and in the test `MockTmLocalizer`.
+
+- **`TmSidebar.Sections`** (`IReadOnlyList<SidebarNavSection>?`, null = today's single list) renders named groups:
+  each group is an `h2.tm-sidebar-section-title` whose id names the group's `ul.tm-sidebar-nav-list` through
+  `aria-labelledby`, so a screen-reader user hears the group ("Main, list, 4 items") instead of one long list.
+  `Items` keeps rendering first and unlabelled, so both models can be combined. `SidebarNavSection` is a new
+  `Tempo.Blazor.Models` record (`Title`, `Items`).
+- **`TmSidebar.AutoActive`** (`bool`, default `false`) resolves the current page from the `NavigationManager` and
+  reports it as `aria-current="page"` on the link (the `tm-sidebar-nav-item-active` class follows). The
+  comparison is `SidebarNavMatchMode.Exact` (default — only the page itself) or `Prefix` (a parent entry for its
+  sub-pages, on a SEGMENT boundary: `/settings` matches `/settings/profile`, never `/settings-old`; the root `/`
+  entry stays exact in both modes). An explicit `IsActive` always wins, and the component subscribes to
+  `LocationChanged` only while `AutoActive` is on, so the default renders no subscription.
+- **`TmSidebar.NavLabel`** names the `<nav>` landmark; null uses the localized "Sidebar navigation". A host with a
+  second navigation landmark (a second rail, a section menu) must name this one — two identically named
+  navigation landmarks are one indistinguishable landmark.
+- **Collapsed rail** — an icon-only link now always carries its label as `aria-label` (the badge count is part of
+  it: the badge is not rendered in the collapsed state, and a count nobody can read is a lost notification) and,
+  with `CollapseTooltips` (default `true`), a `TmTooltip` with the same text. The tooltip has to escape the
+  3.5rem rail, and a scroll container clips on BOTH axes, so the component adds `tm-sidebar-tooltips` and the
+  stylesheet turns the rail's clipping off while it is set: **a collapsed rail therefore does not scroll**.
+  `CollapseTooltips="false"` drops the tooltip, keeps the accessible name and restores the vertical scroller.
+- **`TmTopBar.ShowMenuButton`** + `MenuExpanded` + `OnMenuToggle` + `MenuControlsId` — an opt-in navigation
+  disclosure button (`aria-label` renamed from localization, `aria-expanded` from `MenuExpanded`, `aria-controls`
+  from `MenuControlsId`). The host owns the drawer state; the component never changes it.
+- **`TmTopBar.CommandPaletteShortcut`** (`string?`, default `"Ctrl+K"`) is the chord printed in the palette
+  trigger (an empty string hides the hint); **`TmTopBar.CommandPaletteKeyShortcuts`** (`string?`, default
+  `"Control+K Meta+K"`) is the `aria-keyshortcuts` value, so a host that rebinds the palette announces the
+  chord it actually binds (null or empty omits the attribute). The trigger keeps its localized name.
+- **`TmTopBar.UserMenuItems`** (`IReadOnlyList<UserMenuItem>?`) renders host entries above the built-in sign out,
+  with `UserMenuItem` (new `Tempo.Blazor.Models` record: `Id`, `Label`, `Icon`, `Href` **or** `OnClick`,
+  `IsDanger`, `Separator`, plus `UserMenuItem.CreateSeparator(id)`). The account dropdown is now an APG
+  **menu button**: `aria-haspopup="menu"` + `aria-expanded` on the trigger, `role="menu"` with an accessible
+  name on the container, `role="menuitem"` with `tabindex="-1"` on every entry (so the menu is one roving
+  focus stop, not one per entry), `role="separator"` between groups (no `aria-hidden` — the role already
+  hides it). **Opening moves focus into the menu** (first entry; ArrowDown on the trigger opens at the first
+  entry, ArrowUp at the last), ArrowDown/ArrowUp step with wraparound, Home/End jump to the edges, and
+  Escape, Tab or Shift+Tab from ANY entry close the menu and return focus to the trigger; a backdrop click
+  does the same instead of dropping focus on `<body>`. Choosing an entry is the one close path that leaves
+  focus to navigation/command. `User`/`OnLogout` keep their meaning; `UserMenuLabel` overrides the accessible
+  name.
+- **Localization** — new keys `TmSidebar_NavLabel`, `TmSidebar_ItemLabelWithCount`, `TmTopBar_MenuButton`,
+  `TmTopBar_SignOut` (en/cs/sk/fr). The sidebar toggle reuses the existing `TmSidebar_CollapseMenu` /
+  `TmSidebar_ExpandMenu`.
+- **CSS** — `_sidebar-nav.css` now styles the real anchor (`tm-sidebar-nav-link`, previously unstyled markup: the
+  list item carried the link's padding/hover) and both stylesheets use semantic tokens only
+  (`--tm-color-surface-hover`, `--tm-text-tertiary`, …), `:focus-visible` with `--tm-focus-ring`, a
+  `forced-colors` `Highlight` ring (the current page included), `--tm-touch-target` on a coarse pointer, and
+  reduced-motion coverage for every new transition.
+- **Docs / demo / tests** — overlays for `TmSidebar`, `TmTopBar`, `SidebarNavSection`, `UserMenuItem` and the
+  `SidebarNavMatchMode` enum (bundles regenerated, `validate --fail-on-drift` clean); the `/layout` demo page
+  showcases the sectioned rail (with the current-page marker) and the top bar with a disclosure button and an
+  account menu; 87 bUnit tests (`TmSidebarTests`, the new `TmTopBarTests` and `LayoutPageChromeTests`) and the `LayoutChromeE2ETests` lane
+  cover headings, `aria-current`, the collapsed rail's names/tooltips, the disclosure button, every APG menu
+  keyboard path (open-focus, arrows with wraparound, Home/End, Escape and Tab focus return), the 44px coarse
+  targets and the dark theme.
+
+Behaviour notes for existing hosts (no API change):
+
+| Before | After |
+|---|---|
+| Sidebar toggle `aria-label="Expand sidebar"` / `"Collapse sidebar"` | localized `TmSidebar_ExpandMenu` / `TmSidebar_CollapseMenu` ("Expand menu" / "Collapse menu", cs "Rozbalit menu" / "Sbalit menu") |
+| Top bar sign out rendered the literal `Sign out` | localized `TmTopBar_SignOut` ("Sign out", cs "Odhlásit se") |
+| `nav.tm-sidebar-nav` had no accessible name | localized `aria-label` (override with `NavLabel`) |
+| A collapsed link had no accessible name at all | `aria-label` with the label (+ badge count) |
+| Command palette hint read `⌘K` | `Ctrl+K` by default — set `CommandPaletteShortcut="⌘K"` to keep the old text |
+| Account menu Tab-out closed only from the last (first) entry and could drop focus on `<body>` | Tab from any entry closes it and focus returns to the trigger; ArrowDown/ArrowUp/Home/End navigate the entries (the trigger's `aria-haspopup="menu"` now describes real menu behaviour) |
+
+### Human-in-the-loop demo, documentation and E2E (plan 10b3966f, phase 6)
+
+The phase that turns the four core decision surfaces and the agent's permission request into one
+runnable, documented and tested story. **No public API change** — demo pages, tests and docs only.
+
+- **Demo page `/human-in-the-loop`** (`src/Tempo.Blazor.Demo.SharedUI/Pages/HumanInTheLoopPage.razor`,
+  NavMenu entry "Human in the Loop") renders four sections, each a REAL component wired to a working
+  host: an approval card with a half-hour deadline, a 30-second Undo window and the keyboard path
+  (`Ctrl`/`⌘`+Enter approves, `Ctrl`/`⌘`+Backspace rejects) next to the request state, the recorded
+  decisions and the undone count; the twelve-item review queue in BOTH presentations (List and the
+  one-at-a-time Focus view with its "Item 3 of 12" counter) with `ReviewQueueActions.All`, the
+  A/E/R/S shortcuts, J/K and arrow navigation, auto-advance and a host-owned pending / reviewed /
+  last-decision readout; the inline diff of an "AI rewrite of one paragraph" with its three changes,
+  the per-change decisions, the bulk actions and the resulting text; and a suggestion card with a
+  72 % confidence, a rationale disclosure, two alternatives and an Undo window. The demo DATA (the two
+  paragraphs, the twelve invoices) lives in `HumanInTheLoopPageSamples`. Each section reports its state
+  in its OWN named `<dl>` ("Approval status" / "Review queue status" / "Suggestion status"), so a
+  screen-reader user listing the page's regions can tell the three readouts apart.
+- **Permission request section on `/ai-conversation`** (`PermissionRequestDemoSection`) — `web.search`
+  on a concrete target with a reason, the four scope radios plus the duration group, the countdown
+  row, Revoke, and the host's own "grant in force" / "revoked" readout.
+- **Localization** — 56 `TmDemo_HumanInTheLoop_*` keys and 9 `TmDemo_AiConversation_Permission*` keys
+  in all four demo tables (`DemoResources{,.cs,.sk,.fr}.json`); the pages render no hardcoded string
+  (a missing key fails the bUnit contract).
+- **Tests** — 18 bUnit cases (`HumanInTheLoopDemoPageTests`, `PermissionRequestDemoSectionTests`)
+  covering every section and every decision path, plus three CSS guards
+  (`HumanInTheLoopDemoPageCssTests`: semantic tokens and no raw palette step, the visible
+  `--tm-focus-ring` with a forced-colors `Highlight` outline, 44 px coarse-pointer targets, and no
+  animation of the page's own). 9 WASM Playwright specs
+  (`tests/Tempo.Blazor.E2E/Approvals/HumanInTheLoopE2ETests.cs`): keyboard approval + Undo, the live
+  countdown and the risk words, A/R/S with auto-advance plus the queue restart, the Focus
+  presentation, accepting 2 of 3 diff changes with the exact resulting text, permission grant/revoke
+  on the AI page, a scoped axe scan of the decided state (with the one-polite-live-region contract
+  per component) and the light/dark 1440 + 375 px screenshots under
+  `tests/Tempo.Blazor.E2E/__screenshots__/human-in-the-loop/`.
+- **Docs** — the AGENTS.md component categories gained the `Approvals` row (linking all five
+  contracts and the demo path).
+
+### Human-in-the-loop components — `TmApprovalCard` (plan 10b3966f, phase 2)
+
+The first human-in-the-loop component: a request for a human decision with a risk badge, details, a
+deadline countdown, Approve / Reject (optionally with a mandatory note), collapse into a result row
+and an Undo window. **No breaking change** — the component, the three Abstractions models, the CSS
+sheet and the resource keys are all new.
+
+- **`TmApprovalCard`** (`src/Tempo.Blazor/Components/Approvals/`) — `Title`, `Description`,
+  `Risk` (`ApprovalRisk`), `PreviewContent`, `Details` (rendered as a `<dl>`), `ExpiresAt`,
+  `RequireNoteOnReject`, `AllowNote`, `State` / `StateChanged` (controlled, `@bind-State`),
+  `DecidedBy`, `DecidedAt`, `DecisionNote`, `OnDecision` (`Func<ApprovalDecision, Task>`),
+  `UndoWindow`, `OnUndo` / `Undone`, `EnableShortcuts`, `Compact`, `Class`, `AriaLabel`, plus the
+  public `ApproveAsync()` / `RejectAsync()` / `UndoAsync()` and `CanDecide` / `Announcement`. The
+  card leaves `Pending` only when `OnDecision` completes without throwing: while it runs the actions
+  are disabled and the card is `aria-busy`; when it throws, a `TmAlert` shows the localized error
+  and the request stays decidable — unless the deadline passed while the save ran, in which case the
+  card expires (a request that ran out of time is not decidable) and the host hears exactly one
+  state transition.
+- **Countdown via `TimeProvider`** — `ExpiresAt` renders `mm:ss` (`h:mm:ss` above an hour) in a
+  `<time aria-live="off">`; the one-second timer (`ApprovalCountdownTicker`, the same shape as the
+  AI elapsed ticker) is armed ONLY while there is something to count and disarmed the moment there
+  is not, so a decided card never re-renders. One minute before the deadline the card announces it
+  once; when the deadline passes the state becomes `Expired`, the actions disable and the expiry is
+  announced. The countdown text is neutral and takes the danger colour only in the expired state, so
+  red keeps meaning urgent. A host-supplied `State="Expired"` behaves the same.
+- **Collapse and Undo** — a decided card collapses into a row that reads "Approved — {who}, {when}"
+  (localized template; "Unknown" when the host supplies no `DecidedBy`), with the decision timestamp
+  taken from `DecidedAt`, the decision itself, or the clock. With `UndoWindow` (and `OnUndo` /
+  `Undone` wired) the row offers Undo until the window elapses; Undo returns the card to `Pending`,
+  raises `StateChanged(Pending)` and runs `OnUndo`. The collapse is a CSS height transition
+  (`grid-template-rows` 1fr → 0fr) — no JS — and both halves stay mounted with the inactive one
+  `inert`, so the height can animate while the hidden half leaves the tab order and the
+  accessibility tree.
+- **Keyboard** — `Ctrl`/`⌘`+`Enter` approves and `Ctrl`/`⌘`+`Backspace` rejects, advertised through
+  `aria-keyshortcuts`, only while focus is inside the card, never while a decision is in flight and
+  never from inside the note field (its keys are fenced with `@onkeydown:stopPropagation`;
+  `Escape` clears the draft note). `EnableShortcuts="false"` removes the handlers and the
+  `aria-keyshortcuts` declarations.
+- **Accessibility** — exactly ONE polite live region carries every announcement (decision, expiry,
+  expiry warning, refused rejection, error, undo) and the ticking countdown is `aria-live="off"`;
+  the risk is a localized badge text ("High risk"), never colour alone; the group is named by
+  `Title` (`aria-label`, so no `aria-labelledby` can dangle into the collapsed half); the
+  `RequireNoteOnReject` refusal marks the field `aria-invalid` + `aria-describedby` and moves focus
+  to it; a decision moves focus to the surviving Undo (or the card root, `tabindex="-1"`) and Undo
+  moves it back to Approve; `:focus-visible` uses `--tm-focus-ring` with a `forced-colors` Highlight
+  ring on every focus stop; the coarse-pointer floor is `--tm-touch-target`; the collapse and the
+  busy spinner are covered by reduced-motion rules.
+- **Models** (`src/Tempo.Blazor.Abstractions/Models/Approvals/`, namespace
+  `Tempo.Blazor.Abstractions.Models.Approvals`) — `ApprovalRisk` (Low/Medium/High/Critical),
+  `ApprovalState` (Pending/Approved/Rejected/Expired/Cancelled) and the `ApprovalDecision` record
+  (`State`, `Note`, `DecidedBy`, `DecidedAt`, `IsApproved`, `Approve(…)` / `Reject(…)`; a state that
+  is not a decision is refused with `ArgumentOutOfRangeException`).
+- **Localization** — 25 `TmApprovalCard_*` keys in all four resource tables. **Wireframe** — the
+  card is a placeable stencil (`approval-card` role, `Feedback` category, declarative render) and its
+  role exists in the built-in UI-role vocabulary, so "every component has a role" holds.
+- **Docs** — JSON overlays for the component and the three models, bundles regenerated,
+  `validate --fail-on-drift` clean; contract in [docs/approval-card.md](docs/approval-card.md). The
+  demo page and the E2E/screenshot lane belong to phase 6 of the plan.
+
+### Human-in-the-loop components — `TmReviewQueue` (plan 10b3966f, phase 3)
+
+The queue of items a human has to decide on: risk/priority ordering, filter tabs with counts,
+per-row decisions, single-key shortcuts, and a one-at-a-time Focus mode. **No breaking change** —
+the component, the eight Abstractions models, the stylesheet and the resource keys are all new.
+
+- **`TmReviewQueue<TItem>`** (`src/Tempo.Blazor/Components/Approvals/`) — `Items`, `IdSelector`,
+  `TitleSelector`, `SubtitleSelector`, `RiskSelector`, `PrioritySelector`, `ItemTemplate`,
+  `DetailTemplate`, `EmptyContent`, `LoadingContent`, `IsLoading`, `Mode` (`ReviewQueueMode.List` /
+  `Focus`), `SortMode` (`ReviewQueueSort`), `Actions` (`ReviewQueueActions` flags), `QuickActions`,
+  `OnAction` (`Func<ReviewQueueActionArgs<TItem>, Task>`), `Tabs` / `ActiveTabId` /
+  `ActiveTabIdChanged`, `ActiveItemId` / `ActiveItemIdChanged`, `AutoAdvance`, `EnableShortcuts`,
+  `AriaLabel`, `TabsAriaLabel`, `Class`, `LayoutMode` / `InitialMode`, plus the public
+  `OrderedItems` / `PendingItems` / `PendingCount` / `HandledItemIds` / `ActiveItemKey` /
+  `ActiveItem` / `IsBusy` / `RaiseActionAsync(…)` / `ClearHandledAsync()`.
+- **Async decisions** — while `OnAction` runs the queue is `aria-busy` and every action button is
+  disabled; the item is resolved (and the selection advances) only when the callback completes
+  without throwing. A throw shows a localized `TmAlert`, announces the error and leaves the item
+  pending. Skip calls the callback but never resolves the item.
+- **Ordering** — `SortMode` is stable: risk descending then the highest priority (default), the
+  highest priority then risk, or the host's own order. `PrioritySelector` ranks a higher value first.
+- **Two ARIA patterns, chosen by content** — rows without buttons are an APG `listbox` (option rows,
+  `aria-selected`), rows with buttons switch to a `grid` (row → gridcell) because an `option` may not
+  contain interactive controls. One roving tab stop follows the selection; arrow keys, Home/End and
+  J/K move it together with real DOM focus, and the browser scrolls the newly focused row (or the
+  Focus detail) into view — never `preventScroll`, which would leave the focus ring below the fold
+  (WCAG 2.4.7). Resolved rows collapse into a result row (CSS height transition, inactive half
+  `inert`) and leave the pending sequence.
+- **Keyboard ownership is per surface** — the navigation/shortcut handler lives on the list body and
+  the Focus view, not on the queue root, so keys pressed on the inner `TmTabs` strip move the tab
+  selection only (they no longer approve or jump an item the reviewer never focused). `ItemTemplate`
+  and `DetailTemplate` are fenced by the component itself, so a text field inside a host template
+  keeps its arrows, `Home` and `End` even without the host's own `@onkeydown:stopPropagation` fence
+  (which stays supported as defence in depth).
+- **Decision-inbox variant** — `QuickActions` adds host-named buttons to the same group;
+  `Actions="ReviewQueueActions.None"` with two quick actions is the two-button inbox. A quick action
+  raises `Action = ReviewQueueAction.QuickAction` with its `QuickActionId`, and its label becomes the
+  announced verb. The descriptors (`ReviewQueueTab`, `ReviewQueueQuickAction`) are `init`-only, so a
+  host cannot mutate a tab count or a quick action mid-session by accident; an object initializer
+  keeps working unchanged.
+- **Accessibility** — ONE polite live region announces every result and error
+  ("Approved: Invoice #2042. Remaining: 3."); the busy indicator has no role (the root `aria-busy`
+  carries it) and the error alert is `role="group"`. Row buttons are named by their item
+  ("Approve: Invoice #2042", WCAG 2.4.6 with the visible verb inside the name, WCAG 2.5.3); the A/E/
+  R/S shortcuts are advertised through `aria-keyshortcuts`, can be switched off
+  (`EnableShortcuts="false"`, WCAG 2.1.4) and never fire from inside a templated text field. The
+  previous/next buttons advertise `K`/`J` the same way. Focus moves into the next item's detail after
+  a decision and returns to the next row in list mode; the mobile Focus mode reuses
+  `TmMobileActionBar` instead of a second tab-stop group; `:focus-visible` uses `--tm-focus-ring` with
+  a `forced-colors` Highlight ring on every focus stop; coarse pointers get `--tm-touch-target`; the
+  collapse and the busy spinner are covered by reduced-motion rules.
+- **Models** (`src/Tempo.Blazor.Abstractions/Models/Reviews/`, namespace
+  `Tempo.Blazor.Abstractions.Models.Reviews`) — `ReviewQueueMode`, `ReviewQueueSort`,
+  `ReviewQueueActions` (flags), `ReviewQueueAction`, `ReviewQueueActionArgs<TItem>`,
+  `ReviewQueueTab`, `ReviewQueueQuickAction` and `ReviewQueueQuickActionVariant`.
+- **Localization** — 32 `TmReviewQueue_*` keys in all four resource tables. **Wireframe** — the
+  queue is a placeable stencil (`review-queue` role, `Feedback` category, declarative render listing
+  rows, risk badges and both decisions) and its role exists in the built-in UI-role vocabulary.
+- **Docs** — JSON overlays for the component and the eight models, bundles regenerated,
+  `validate --fail-on-drift` clean; contract in [docs/review-queue.md](docs/review-queue.md). The
+  demo page and the E2E/screenshot lane belong to phase 6 of the plan.
+
+### Human-in-the-loop components — `TmInlineDiff` and `TmSuggestionCard` (plan 10b3966f, phase 4)
+
+Two more human-in-the-loop decisions: an inline comparison whose every change can be accepted or
+rejected, and a machine suggestion with a confidence band and alternatives. **No breaking change** —
+both components, the two new Abstractions models, the two CSS sheets, the wireframe entries and the
+resource keys are all new.
+
+- **`TmInlineDiff`** (`src/Tempo.Blazor/Components/Approvals/`) — renders the shared
+  `Tempo.Blazor.Diff` comparison as real `<ins>` / `<del>` elements, each side preceded by a visually
+  hidden "Inserted: " / "Removed: " label. `Mode` (`InlineDiffMode.Display` default, `Review`) decides
+  whether there are decisions; `ReadOnly` removes every decision surface even in `Review`
+  (`IsReview` is the effective, public switch). Review adds the toolbar (`Changes: N`, Accept all,
+  Reject all, Undo), one marker button per change that opens a non-modal Accept / Reject popover (with
+  the `A` / `R` shortcuts announced through `aria-keyshortcuts`, disableable via `EnableShortcuts`) and
+  one level of Undo. `AcceptedHunkIds` / `AcceptedHunkIdsChanged` are the two-way accepted set (change
+  ids only) and `ResultChanged` raises the exact `TextDiffResult.Apply` output; `OnDecision`
+  (`Func<InlineDiffDecision, Task>`) runs before a decision is applied, so a throw leaves the change
+  undecided with the localized error. `Options` tunes the engine limits; a degraded comparison renders
+  the coarser hunks, sets `data-fallback` and shows a localized note instead of throwing. Public API:
+  `IsReview`, `ResultText`, `AcceptedIds`, `CanUndo`, `Diff` (the `TextDiffResult` behind the
+  rendering), `Announcement`, `AcceptHunkAsync` / `RejectHunkAsync`, `AcceptAllAsync` /
+  `RejectAllAsync`, `UndoAsync`.
+  **Note for hosts that compute the result themselves:** the unchanged hunks belong to the applied set
+  (the separator between two changes lives in the hunk before it), so derive the wording from
+  `ResultChanged` / `ResultText` rather than calling `Apply` with the changed ids alone.
+- **`TmSuggestionCard`** (`src/Tempo.Blazor/Components/Approvals/`) — `Text` (required), optional
+  `Title`, `Confidence` (`double?` → a localized High / Medium / Low band, plus the percentage with
+  `ShowConfidencePercent`), `Rationale` behind a native `<details>` (a blank rationale removes the
+  disclosure), and `Alternatives` as a `radiogroup` two-way bound through `SelectedAlternative` /
+  `SelectedAlternativeChanged`. `OnAccept` (`Func<string, Task>`) receives the selected alternative or
+  `Text`; `OnDismiss` (`Func<Task>`) — both paired with the `Accepted` / `Dismissed` `EventCallback`s —
+  run while the card is `aria-busy` and the actions are disabled, and collapse the card only when they
+  complete without throwing. `UndoWindow` + `OnUndo` / `Undone` offer Undo on the accepted row
+  (`TimeProvider` clock); dismissal is not undoable. Public API: `IsBusy`, `CanDecide`,
+  `CurrentAlternative`, `Announcement`, `AcceptAsync`, `DismissAsync`, `UndoAsync`.
+- **Models** (`src/Tempo.Blazor.Abstractions/Models/Diffs/`, namespace
+  `Tempo.Blazor.Abstractions.Models.Diffs`) — `InlineDiffMode` and `InlineDiffDecision`.
+- **Localization** — `TmInlineDiff_*` (31 English / 35 Czech and Slovak / 33 French entries) and
+  `TmSuggestionCard_*` (18) in all four resource tables and both `MockTmLocalizer` maps. The two bulk
+  announcements are PLURAL families (`_One` / `_Other`, plus `_Few` / `_Many` in Czech and Slovak)
+  resolved through `Loc.Plural`, so a bulk decision over one change reads "1 change accepted." and
+  Czech's 2–4 form is the one its sentence needs; `TmInlineDiff_ChangesLabel` stays a neutral
+  "Changes: {0}" because a labelled count needs no grammatical form
+  ([localization-plurals.md](docs/localization-plurals.md)).
+- **Accessibility** — both components keep exactly ONE polite live region (the busy state and the
+  errors ride on it, never on a second `role="status"` / `role="alert"`); the inline diff moves focus
+  into its popover and restores it to the marker on Escape and on a decision; the popover also
+  dismisses on a `Tab` past its first / last stop and on a click on the diff text (the inner moves and
+  the marker keep it open), and its expanded marker takes `--tm-color-on-primary` as ink on the primary
+  fill; the suggestion card moves focus to Undo after an acceptance (or to the card root) and back to
+  Accept on undo; `forced-colors`
+  keeps a `Highlight` ring on every focus stop and the diff keeps its underline / strike-through as a
+  non-colour channel; coarse pointers get `--tm-touch-target`; both sheets have a reduced-motion block
+  and their animated subjects are in the `animations.css` enumeration.
+- **Wireframe** — `TmInlineDiff` (`inline-diff` role) and `TmSuggestionCard` (`suggestion-card` role)
+  are placeable stencils in the `Feedback` category with declarative renders and built-in vocabulary
+  entries; `StencilFormatSpecInvariantsTests` keeps the pack and the schemas in step.
+- **Docs** — JSON overlays for both components and both models, bundles regenerated,
+  `validate --fail-on-drift` clean; contracts in [docs/inline-diff.md](docs/inline-diff.md) and
+  [docs/suggestion-card.md](docs/suggestion-card.md). The demo page and the E2E/screenshot lane belong
+  to phase 6 of the plan.
+
+### Human-in-the-loop components — shared diff engine in `Tempo.Blazor.Abstractions` (plan 10b3966f, phase 1)
+
+The diff algorithms that existed twice (word level in `DocumentTextDiffHelper`, line level in
+`TmTextLineDiff`) now live in ONE UI-free engine, `Tempo.Blazor.Diff.TextDiff` in
+`Tempo.Blazor.Abstractions` (no Blazor reference, so a backend can diff too). Both historical
+helpers became delegating façades: their public API, their segment/line shape and their rendered
+output are unchanged. **No breaking change is introduced by this phase** — the only visible
+differences are documented below.
+
+- **`Tempo.Blazor.Diff` types** (`src/Tempo.Blazor.Abstractions/Diff/`) — `TextDiff.Words(…)` /
+  `TextDiff.Lines(…)` return a `TextDiffResult` whose `Hunks` **tile both inputs**: concatenating
+  `TextDiffHunk.OldText` over all hunks reproduces the old text and concatenating `NewText`
+  reproduces the new text, character for character. A hunk carries a deterministic `Id`
+  (`replace-15-15`), `Kind` (`Equal` / `Insert` / `Delete` / `Replace`), both texts, both
+  `TextRange` spans (character offsets) and the `OldUnitCount` / `NewUnitCount` (tokens or lines).
+  `TextDiffResult.Apply(acceptedHunkIds)` takes every accepted hunk from the new text and every
+  other hunk from the old one, so `Apply([])` returns the original text and
+  `Apply(result.HunkIds)` returns the new text — an arbitrary subset in between yields a valid
+  text where the rejected changes keep their old wording. `Changes` exposes only the hunks a
+  reviewer can decide on.
+- **Performance** — the longest-common-subsequence table is built only for the region between the
+  common prefix and the common suffix, so editing one word of a long document costs a table over
+  the changed neighbourhood instead of over the whole input. Above `TextDiffOptions.MaxTokens`
+  (default 20 000 tokens per input) or `TextDiffOptions.MaxCells` (default 4 000 000 table cells)
+  the comparison degrades instead of throwing: a word diff falls back to line level, a line diff to
+  a single whole-text change, reported through `TextDiffResult.Fallback`
+  (`None` / `LineLevel` / `SingleChange`) and `IsDegraded`.
+- **`DocumentTextDiffHelper.Diff`** keeps its `Unchanged` / `Removed` / `Added` segments and reads
+  the same for the same input (pinned by explicit goldens plus a frozen copy of the pre-extraction
+  algorithm compared over a corpus that includes punctuation, repeated whitespace, diacritics and
+  CRLF). **Visible difference for very large inputs:** above the token limit the segments now
+  describe whole lines rather than words, instead of the comparison allocating a quadratic table.
+  `DocumentTextDiffResult.IsDegraded` (new, additive, `init`-only) reports that the segments are
+  coarse, so a review UI can say the comparison is approximate instead of presenting a line-level
+  result as word-level.
+- **`TmTextLineDiff.Compute`** keeps its `TmFileVersionDiffLine` output, 1-based line numbers and
+  removed-then-added ordering, and still normalizes CRLF to LF. `TextDiff.Lines` itself compares the
+  text it is given, so a caller that wants the normalization has to apply it (the façade does).
+  **Visible difference for very large inputs:** above `DefaultMaxTokens` / `DefaultMaxCells` the
+  result is one block of removed lines followed by one block of added lines covering the whole
+  text, instead of an allocation of up to hundreds of millions of table cells.
+- **One tokenizer** — `DocumentTextDiffHelper` no longer carries its own copy of the word-token
+  regex: it re-joins hunk tokens through the engine's `DiffAlgorithm.TokenizeWords`, so the join can
+  never drift from the boundaries the engine computed.
+- **Documentation** — JSON overlays for the eight new public types under
+  `JsonDocumentation/Abstractions/Diff/`, with the enum values documented; the
+  `DocumentTextDiffHelper` and `TmTextLineDiff` overlays now name the shared engine. Bundles
+  regenerated; `validate --fail-on-drift` reports 0 generated-only items.
+
+### AI conversation package — demo page, documentation and E2E (plan 7f21f26b, phase 7)
+
+Wave 1 of the AI components gets its showcase and its regression net: the `/ai-conversation` demo page, the
+complete JSON documentation set and the E2E lane. **No public API changed in this phase** — the parameters,
+defaults, DOM hooks and resource keys are exactly the ones phases 1–6 shipped.
+
+- **Demo page `/ai-conversation`** (`src/Tempo.Blazor.Demo.SharedUI/Pages/AiConversationPage.razor`, nav entry
+  "AI Conversation") — a real `TmAiConversation` fed by an in-page `IAsyncEnumerable<AiStreamDelta>` generator
+  (no model is called): reasoning steps, one successful and one failing tool call (the failed card offers Retry
+  and the page counts the retries), a markdown table, a code block, two cited sources, follow-up chips and the
+  completion announcement, about 2 s per answer, so Stop, the streaming caret and the render throttle are all
+  visible. Per-turn actions come through the conversation's `MessageTemplate` — regenerate with the version
+  switcher, thumbs up/down, answer retry, tool-call retry, citation preview, follow-up chips — and only on an
+  ASSISTANT turn: regenerating or rating the reader's own prompt is not an action that exists. The composer on
+  the page carries three slash commands (`/summarise`, `/translate`, `/metrics`), an in-memory
+  `IAiMentionProvider`, `MaxAttachments=3` / `MaxFileSize=2 MB`, a model select and the localized
+  `data-testid="ai-demo-submission"` readout of what the last `AiComposerSubmit` carried.
+- **Standalone sections** — every tool-call state (queued, running, succeeded, failed, cancelled, redacted) plus
+  a grouped run of three, the thinking pill in both states, the reasoning panel collapsed and expanded, and a
+  hostile markdown sample (raw HTML, an `onerror` image, `javascript:` / `data:` / `vbscript:` links) that
+  renders nothing executable.
+- **Strings** — every label, heading, status, suggestion, tool display name and command title of the page is a
+  `TmDemo_AiConversation_*` key in all four demo tables (`DemoResources.json` + `.cs` / `.sk` / `.fr`), guarded
+  by `DemoResourceCompletenessTests`. The sample CONTENT — the simulated answer, the gallery's sample calls, the
+  command prompts and the JSON payloads — stays in English, like the sample data of every other demo page.
+- **Documentation** — the JSON overlays are complete for `Tempo.Blazor.AI` (the eight components plus
+  `AiMarkdownRenderer`, `AiMarkdownRenderOptions`, `AiMarkdownCodeBlockContext`, `AiMessageText` and
+  `AIServiceCollectionExtensions`) and for the AI contracts in `Tempo.Blazor.Abstractions`:
+  `validate --fail-on-drift` reports **0 generated-only items**, and regenerating `tempo-blazor-ai.json` /
+  `tempo-blazor-all.json` reproduces the committed bundles byte for byte.
+  [docs/ai-conversation.md](docs/ai-conversation.md) gained a "Demo" section.
+- **E2E + bUnit** — `tests/Tempo.Blazor.E2E/AI/AiConversationE2ETests.cs` (WASM @ 7106, plus
+  `AiConversationServerSmokeE2ETests` on the Server demo) proves the stream completes with the table, the code
+  block, both citation chips, the reasoning panel and the two tool-call cards; Retry turns the failed call
+  succeeded; Stop keeps the partial answer and marks the turn `stopped`; a citation chip opens the source
+  preview, the focus moves into it and Escape returns it to that chip; `/` opens the command listbox while the
+  textarea keeps the focus, Escape closes it, Shift+Enter keeps the line and Enter sends; axe-core finds no
+  critical/serious violation in the empty and the finished state, and the transcript stays the conversation's
+  only `aria-live` element. Screenshots of the light/dark 1440 px and the 375 px layouts land in
+  `tests/Tempo.Blazor.E2E/__screenshots__/ai-conversation/`. Server-side, `AiConversationDemoPageTests` pins the
+  same page (empty state with its suggestions, the streamed answer's parts, the failed-call retry, regeneration
+  with versions, feedback, the submit-and-clear path, every standalone section, the XSS sample and the
+  localized tool/command labels).
+- **Visual review fix** — `_markdown-view.css` restores the list markers of a rendered answer (`ul` →
+  disc/circle/square by nesting depth, `ol` → decimal); task lists keep their markerless look. **Consumers see
+  a styling change, not an API one**: where a host reset — Tailwind's Preflight (`ul, ol { list-style: none }`)
+  is the common one — had flattened a bulleted answer into indented paragraphs, the markers now come back. The
+  demo page also gives both sections a `scroll-margin-block-start` (an anchor or a screenshot never parks the
+  heading under the sticky header) and reports the reasoning duration once the answer finishes.
+- **Review follow-up** — the demo's reset button keeps a focus indicator in forced-colors mode
+  (`outline: 2px solid transparent`, repainted with `Highlight` by a `forced-colors` block, because High
+  Contrast drops the `box-shadow` ring), the demo status list reads `--tm-border-width` instead of a `1px`
+  literal, and two guards pin the result: `AiMarkdownViewCssTests` checks the list markers (including the
+  specificity of the task-list exception) and `AiConversationDemoPageCssTests` the focus fallback and the border
+  token.
+
+### AI conversation package — `TmAiComposer` prompt composer (plan 7f21f26b, phase 6)
+
+The prompt side of a conversation as a component: an autosizing textarea with a real IME guard, a send/stop
+slot, attachments with enforced limits, a slash-command and mention combobox, a model selector and an opt-in
+voice input. Contract: [docs/ai-composer.md](docs/ai-composer.md).
+
+- **`TmAiComposer`** (`Tempo.Blazor.Components.AI`) — `Text`/`TextChanged`, `OnSubmit`, `IsGenerating`, `OnStop`,
+  `Placeholder`, `AriaLabel`, `Disabled`, `Sticky`, `MaxRows`, `EnableAttachments`, `MaxAttachments`,
+  `MaxFileSize`, `Accept`, `Attachments`/`AttachmentsChanged`, `Commands`, `MentionProvider`, `MentionDebounce`,
+  `Models`, `SelectedModel`/`SelectedModelChanged`, `ModelSelectorTemplate`, `EnableVoiceInput`,
+  `SpeechLanguage`, `TrackVirtualKeyboard`, `Class` (+ the inherited `DataTestId` / `TestIdPrefix`); public
+  `SubmitAsync()`, `IsListening`, `CurrentAttachments`. The root carries `data-generating`; the stable hooks are
+  the `data-testid`s `ai-composer-input`, `-send`, `-stop`, `-attach`, `-voice`, `-model`, `-attachments`,
+  `-attachment`, `-remove-attachment`, `-suggestions`, `-option`, `-announcement`.
+- **Submit** — one submit runs at a time: while `OnSubmit` is in flight the Send control is already disabled
+  (`IsGenerating` is a parameter and does not move until the host re-renders), so a fast second Enter or a
+  double click is a no-op instead of a second generation. The post-submit clear compares against the snapshot
+  that was sent, so text typed, an attachment picked or a mention added while a slow handler ran survives for
+  the next prompt; a handler that throws keeps the draft.
+- **Keyboard** — Enter sends, Shift+Enter is a new line, Alt/Ctrl/⌘+Enter stay native, and an IME
+  composition-Enter never sends. The IME guard lives in the package's ES module `ai-composer.js` because a net8
+  `KeyboardEventArgs` has no `IsComposing` and Safari reports the commit-Enter as `keyCode 229`; the C#
+  `@onkeydown` handler is the pre-attach fallback and the single owner of the combobox keys, so exactly one
+  activation happens per press.
+- **Suggestions** — one listbox serves the `/` slash commands (`AiSlashCommand`) and the host's `@` mentions
+  (`IAiMentionProvider`). The textarea is the combobox (`aria-expanded`, `aria-controls` only while the listbox
+  is rendered, `aria-activedescendant`, arrow keys, Home/End, Enter, Escape, Tab) and keeps the DOM focus, so a
+  screen reader announces the highlighted option instead of moving the reader into a list. Mention queries are
+  debounced (`MentionDebounce`, on the injected `TimeProvider`) and cancelled on a query change, a close or a
+  dispose; a provider that throws closes the list with one localized announcement.
+- **Attachments** — `AiComposerAttachment` carries the metadata plus an opaque `Content` (the `IBrowserFile`),
+  so Abstractions keeps its zero-UI dependency. `MaxAttachments` and `MaxFileSize` are enforced before anything
+  reaches the host (the limit message is the plural family `TmAiComposer_TooManyAttachments_One/_Few/_Many/
+  _Other`, so the noun agrees with the count); an accepted batch raises `AttachmentsChanged` once; chips are
+  named by their file and the Remove control returns the focus to the prompt. After a successful submit the
+  composer drops exactly the chips it sent and keeps the files picked in the meantime.
+- **Model selector** — `Models` + `@bind-SelectedModel` render the built-in select; `ModelSelectorTemplate`
+  replaces it with the host's own picker and the selected id travels as `AiComposerSubmit.Model`.
+- **Voice** — opt-in (`EnableVoiceInput`, default `false`) and feature-detected, so a browser without the Web
+  Speech API never shows the control. Final transcripts are inserted at the caret; the session is released by
+  `stopSpeech`, by `detach` and by disabling the composer.
+- **Mobile** — the narrow layout is sticky on the composer's bottom edge (`Sticky="true"` forces it at any
+  width); `TrackVirtualKeyboard` adds the `visualViewport` tracker and the runtime
+  `--tm-ai-composer-keyboard-inset` knob (never declared by CSS, so a host override cascades), matching the
+  `TmChat.TrackVirtualKeyboard` pattern.
+- **Accessibility** — one polite live region for every announcement (attachment limits, voice state/failure,
+  a failed mention query) whose `role="status"` paragraph is persistent and only replaces its keyed child
+  span, so a repeated wording is announced again (WCAG 4.1.3) and the transient text is never the prompt's
+  `aria-describedby`; the send/stop swap moves the focus to the replacement control by probing the slot
+  before the render (`isFocusWithin`) and falling back to the prompt when the returning Send is disabled
+  (WCAG 2.4.3); forced-colors rules keep the surfaces, the active suggestion and the listening microphone
+  visible and the listening state also carries a non-colour ring (WCAG 1.4.1); the toolbar row shares one
+  2.75 rem target height and a coarse pointer gets the 44 px floor on every action; nothing in the composer
+  stylesheet animates.
+- **New Abstractions contracts** — `AiComposerSubmit`, `AiComposerAttachment`, `AiSlashCommand`,
+  `AiMentionItem` and `IAiMentionProvider` (`Tempo.Blazor.AI.Models` / `.Services`); backend-consumable with no
+  Blazor, Markdig or LLM SDK reference.
+- **Compatibility** — everything is additive: a new component, new models and a new stylesheet partial. No
+  existing component, parameter, CSS class or DOM changed.
+
+### AI conversation package — `TmAiConversation` and streaming (plan 7f21f26b, phase 5)
+
+The transcript of a conversation as a component: a scroll container that follows new content only while
+the reader is at the bottom, a windowed render of a long history, a stop affordance and the delta pump.
+Contract: [docs/ai-conversation.md](docs/ai-conversation.md).
+
+- **`TmAiConversation`** (`Tempo.Blazor.Components.AI`) — `Messages`, `MessageTemplate`, `Suggestions`,
+  `OnSuggestion`, `OnStop`, `RenderWindowSize`, `RenderWindowStep`, `RenderThrottle`, `ShowStop`,
+  `AutoScroll`, `Height`, `Class` (+ the inherited `DataTestId` / `TestIdPrefix`); public
+  `IsGenerating`, `StreamAsync(message, deltas, cancellationToken)` and `StopAsync()`. The root carries
+  `data-generating` (`true`/`false`), and every internal hook is a `data-testid`
+  (`ai-conversation-log` / `-empty` / `-suggestion` / `-load-older` / `-new-messages` / `-stop` /
+  `-announcement`).
+- **Streaming** — `StreamAsync` folds the host's `IAsyncEnumerable<AiStreamDelta>` into the turn the host
+  already appended (through `AiMessageStreamApplier`), throttles the renders to `RenderThrottle` (50 ms by
+  default) on the injected `TimeProvider` so a Server circuit is not re-rendered per token, always renders
+  once when the stream starts (the Stop affordance must not wait for the first token) and once when it
+  ends. The end of the stream IS the end of the answer — no trailing `AiCompletedDelta` is required; a
+  cancelled stream keeps the partial answer and marks it `Stopped` (a late token cannot resurrect it, and
+  a host's own cancellation does not echo into `OnStop`); a throwing stream marks it `Failed`, keeps the
+  exception message and rethrows. A second concurrent `StreamAsync` throws `InvalidOperationException`.
+  The clock is `Services.GetService<TimeProvider>() ?? TimeProvider.System` — the package never
+  registers one.
+- **Scrolling** — the package's ES module `_content/Tempo.Blazor.AI/js/ai-conversation.js` (`attach`,
+  `detach`, `isNearBottom`, `scrollToBottom`; imported through `IJSObjectReference`, no `<script>` tag and
+  no `eval`, null-safe entry points) reports the reader's scroll crossings AND a `ResizeObserver`
+  content resize back to the component. New content is followed only while the reader is within a 48 px
+  bottom band; a reader who scrolled back gets the "New messages" pill instead of a moving viewport, and
+  the pill floats over the scroller so it never reflows the text. Once the module has reported a
+  position, that report is the state of record — the geometry probe is only the fallback for a freshly
+  attached transcript, so a parent render costs no Blazor round-trip. `AutoScroll="false"` imports no
+  module at all (the host owns the scrolling surface), and a smooth scroll is requested only when the
+  system does not ask for reduced motion. The module never reports its **own** scrolling: following a
+  turn is a smooth `scrollToBottom` whose first frames are still far from the bottom (it starts where
+  the reader was while the content has already grown), and reporting them as a crossing told the
+  component to stop following a streaming answer. The scroll is marked and stays quiet until it lands
+  (`scrollend`, the landing frame, or a 500 ms fallback), while the first real gesture — `wheel`,
+  `touchstart`, `pointerdown`, `keydown` — releases the mark so a reader who takes over is still
+  reported; `detach` removes every listener and the pending release. Node tests:
+  `wwwroot/js/__tests__/ai-conversation.test.mjs` (`npm run test:ai`).
+- **Long conversations** — `RenderWindowSize` renders the contiguous tail and offers "Load older
+  messages" (`RenderWindowStep`); the window is a plain slice of the host's list, deliberately not
+  `<Virtualize>` (which would unmount rows the reader is looking at and break the anchors and focus).
+  The window follows appended turns until the reader pulls the older ones in, then grows at the bottom,
+  survives a parameter-only re-render, clamps a shrinking list and resets to the tail when the list
+  instance is replaced.
+- **Accessibility** — the transcript is the component's ONE live region: `role="log"`, `aria-live="polite"`,
+  `aria-atomic="false"` and `aria-relevant="additions"` (the default `additions text` would announce a
+  streaming answer token by token), `aria-busy` while a generation runs, and the completion note keyed by
+  an announcement sequence so a second completion replaces the node instead of silently rewriting the
+  text of an existing one. The transcript is `tabindex="0"` with its own `:focus-visible` ring (a scroll
+  container a keyboard reader cannot reach locks them out of every earlier turn), every control is a
+  native `<button>`, and every control the reader's own activation REMOVES hands the focus to the
+  transcript instead of `<body>` — "Load older messages" when the history is fully rendered, the "New
+  messages" pill when it dismisses itself and the "Stop generating" pill when the generation ends; a
+  programmatic `StopAsync` moves no focus, because nothing disappeared under the reader. Chips and pills
+  reach the 44 px `--tm-touch-target` floor on a coarse pointer; the forced-colors block pins the surfaces
+  to `Canvas`/`CanvasText`, gives the Stop pill the `Highlight`/`HighlightText` pair and rides
+  `Highlight` with the focus rings (a `Highlight`-coloured label over `Canvas` has no contrast
+  guarantee); the stylesheet declares no motion of its own, so scrolling is the only thing that animates
+  and the module drops the smooth behaviour under `prefers-reduced-motion`.
+- **Assets and strings** — `_content/Tempo.Blazor.AI/css/components/_ai-conversation.css` (imported by
+  the entry stylesheet, tokens only — no colour literal, no raw palette step, no `[data-theme]` block),
+  the ES module `js/ai-conversation.js`, and the keys `TmAiConversation_Transcript`, `_EmptyTitle`,
+  `_EmptyDescription`, `_Suggestions`, `_LoadOlder`, `_NewMessages`, `_Stop`, `_Completed` in en/cs/sk/fr
+  (+ `MockTmLocalizer`). No new registration: the module is imported lazily, so `AddTempoBlazorAI()` is
+  unchanged and a `TryAdd` registration is not needed.
+- **Verification** — `TmAiConversationTests` (transcript structure, the single live region, the turns
+  through `TmAiMessage`, the `MessageTemplate` override, the empty state with suggestions gated on the
+  handler, Czech labels, test-id prefixing, a static host without interop), `TmAiConversationStreamingTests`
+  (delta folding, end-of-stream completion, exactly one completion announcement, the throttle measured on
+  the component's OWN renders with a `FakeTimeProvider` — bUnit's `RenderCount` counts the whole subtree —
+  stop with `OnStop` and `IsGenerating`, host cancellation, a late-token guard, the failed stream and the
+  concurrent-stream rejection), `TmAiConversationScrollTests` (attach and first scroll, following only at
+  the bottom, the report-versus-probe precedence, the resize report, the pills, `AutoScroll="false"` and
+  detach on dispose), `TmAiConversationWindowTests` (the tail window, load-older stepping and clamping,
+  appends while expanded, a replaced list, a shrinking list, and that loading older turns does not jump to
+  the bottom), `TmAiConversationFocusTests` (the three focus hand-backs and the no-op for a programmatic
+  stop) and `TmAiConversationCssTests` (class coverage, the scroll container's own scroll/focus treatment,
+  the coarse-pointer floor, the forced-colors pair, a forced-colors counterpart for every `:hover` rule and
+  the "no motion in this file" guarantee). JSON documentation overlay for the component, regenerated
+  `tempo-blazor-ai.json` / `tempo-blazor-all.json`, `validate --fail-on-drift` clean.
+
+**No breaking changes** — a new component plus additive localization keys, CSS and one lazily imported ES
+module. A host that does not render `TmAiConversation` is unaffected, and no existing component's markup,
+parameters or defaults changed.
+
+### AI conversation package — tool calls and reasoning (plan 7f21f26b, phase 4)
+
+The parts of an AI turn that are not prose: a tool call, a run of tool calls, the "working…" pill and the
+reasoning panel. `TmAiMessage` now renders every part through one of these components instead of inline
+labels.
+
+- **`TmToolCallCard`** (`Tempo.Blazor.Components.AI`) — `ToolCall`, `DefaultExpanded`, `OnRetry`, `Class`
+  (+ the inherited `DataTestId` / `TestIdPrefix`). One row carries the status glyph, the tool name, the
+  localized status text (`TmToolCallCard_Status_*`) and the elapsed time; Copy, Retry and the details
+  disclosure are separate native buttons (no emulated key activation). `data-status` (`queued`/`running`/
+  `succeeded`/`failed`/`cancelled`) is the stable hook.
+- **`TmToolCallGroup`** — `ToolCalls`, `DefaultExpanded`, `OnRetry` (`EventCallback<AiToolCall>`),
+  `Class`. Consecutive calls collapse into one summary — "3 tools · 1 failed · 4.2 s", Czech "3 nástroje ·
+  1 selhal · 4,2 s" — through the new plural families `TmToolCallGroup_Tools_*` /
+  `TmToolCallGroup_Failed_*` and the shared duration formatter. The total duration appears only once every
+  call of the run has finished: a total that still grows is not a duration, and the running card carries
+  its own live counter.
+- **`TmThinkingIndicator`** — `Phase`, `Completed`, `Class`. The whole pill is ONE `role="status"` region;
+  a finished pill swaps the spinner for a check but keeps the last phase text.
+- **`TmReasoningPanel`** — `Reasoning`, `IsRunning`, `DefaultExpanded`, `ShowSources`, `Class`. Collapsed
+  it reports what the thinking cost ("Thought for 12.0 s"), expanded it lists the ordered steps and the
+  inspected sources; while the model is still reasoning the summary counts up live, shimmers and the
+  trailing step keeps the package's streaming caret.
+- **`TmAiMessage` integration** — `AiReasoningPart` renders through `TmReasoningPanel`, a single
+  `AiToolCallPart` renders as its own card, and a run of TWO OR MORE consecutive tool-call parts collapses
+  into one `TmToolCallGroup` (a text part ends the run). New parameter `OnToolCallRetry`
+  (`EventCallback<AiToolCall>`) forwards the failed call the reader asked to run again; the Retry buttons
+  render only when it is bound.
+- **Elapsed time is a fact, not an estimate** — both the card and the panel read `TimeProvider` from the
+  service provider (falling back to `TimeProvider.System`, never registering one), so a test drives them
+  with a `FakeTimeProvider`. The ticker is armed only while the work runs and disarmed the moment it
+  finishes; a finished call shows `CompletedAt - StartedAt`, and a failing call opens its own details so
+  the error is visible without a second interaction.
+- **Payloads are untrusted** — `AiJsonPrettyPrinter` (internal, `System.Text.Json` `JsonDocument` + an
+  indented `Utf8JsonWriter`) pretty-prints the arguments and the result; a payload that does not parse is
+  shown verbatim instead of dropped. A call with `AiToolCall.IsRedacted` renders a localized notice marked
+  with the lock glyph instead of the data and offers NO Copy, so a redacted payload has no path out of the
+  page. The formatting is cached on the payload strings, so the per-tick re-render of a streaming call does
+  not re-parse unchanged JSON.
+- **Accessibility** — exactly ONE live region per component: the card announces its status transition
+  ("Search: Done") and the copy confirmation through one sibling `role="status"`, the panel announces the
+  finished reasoning, the pill IS its own region. Disclosures are native buttons with `aria-expanded`;
+  `aria-controls` is emitted **only while the region it names is rendered**, so a collapsed card, run or
+  reasoning panel never carries a dangling id. Every action's accessible NAME carries the tool name
+  (`TmToolCallCard_CopyFor` "Copy details of {0}", `_DetailsFor` "Details of {0}", `_RetryFor` "Retry {0}")
+  — inside a grouped run the same three buttons repeat per card, and "Copy tool call" × N is not a usable
+  list of buttons (WCAG 2.4.6); the Retry button keeps the short visible verb, which the accessible name
+  still contains (WCAG 2.5.3), and it disables itself while the host's re-run is in flight so a double
+  click cannot fire `OnRetry` twice. The payload `<pre>` blocks are `tabindex="0"` so a long JSON stays
+  keyboard-scrollable, every control reaches the 44 px `--tm-touch-target` floor on a coarse pointer, both
+  stylesheets carry a forced-colors block (focus rings and active states ride the system `Highlight` colour
+  — a `Highlight`-coloured label over `Canvas` has no contrast guarantee — and the in-flight Retry, which
+  `forced-color-adjust: none` pins to `CanvasText` like every other button, switches to the system
+  `GrayText` so the disabled state survives the mode instead of looking enabled), and the shimmer/spinner
+  pair has its `prefers-reduced-motion` block — under reduce the text stays and only the motion goes
+  (`background-clip: text` is dropped so the label cannot vanish). The shimmer's gradient ENDS paint with
+  `--tm-color-text-secondary`, the same ink that fallback settles on: the ends are what the reader sees for
+  most of the sweep, so they cannot be the host-overridable muted alias. The spinner's two dimensions and
+  its stroke come from `--tm-space-4` / `--tm-border-width`, never from a hardcoded `1rem` / `2px`.
+- **Assets and strings** — `_content/Tempo.Blazor.AI/css/components/_ai-tool-call.css` and
+  `_ai-thinking.css` (imported by the entry stylesheet, tokens only — no colour literal, no raw palette
+  step, no `[data-theme]` block) and new keys `TmToolCallCard_*` (including the `_CopyFor` / `_DetailsFor` /
+  `_RetryFor` accessible-name templates), `TmToolCallGroup_*`, `TmThinkingIndicator_*`,
+  `TmReasoningPanel_*`, `TmAiDuration_*` in en/cs/sk/fr. No new JS: Copy reuses the existing
+  `ai-message.js` `copyText`.
+- **Verification** — `TmToolCallCardTests` (statuses, fake-clock ticking and stopping, disclosure wiring
+  including the absent-`aria-controls`-while-collapsed contract, pretty-printed and invalid JSON, a payload
+  arriving after the first render, redaction with its lock glyph, Copy including a refused clipboard write,
+  Retry gating and its in-flight disable, the accessible names carrying the tool name, the single live
+  region, Czech labels), `TmToolCallGroupTests` (summary segments, English and Czech
+  plural wording, omitted duration while running, collapse, retry forwarding), `TmThinkingIndicatorTests`,
+  `TmReasoningPanelTests`, `AiToolCallFormattingTests`, `TmToolCallCssTests` (class coverage, touch floor,
+  forced colors, the system-colour focus ring, the `GrayText` disabled Retry, the shimmer endpoints pinned to
+  the reduced-motion ink, the tokenised spinner, reduced-motion coverage), plus the
+  extended `TmAiMessageTests` (grouping rules, retry plumbing, the streaming reasoning state). JSON
+  documentation overlays for all four components,
+  regenerated `tempo-blazor-ai.json` / `tempo-blazor-all.json`, `validate --fail-on-drift` clean. The
+  code-behind moved to `TmAiMessage.razor.cs` to stay under the 1200-line ceiling; the roving action
+  toolbar's mechanism stays in the `.razor` file `ToolbarRoleGuardTests` scans. `TmOverlayPanelDialogNamingTests`
+  now registers the `TmAiMessage` renderer its sweep was missing, so the two dialog-role panels (source
+  preview, feedback reason) are actually measured for WCAG 4.1.2 instead of being reported unmeasurable.
+
+**No breaking changes** — new components, one additive `TmAiMessage` parameter and additive localization
+keys. A host that bound `Message` keeps the same rendered turn; the tool-call and reasoning parts now
+render richer content behind a disclosure instead of a one-line label.
+
+### AI conversation package — `TmAiMessage` (plan 7f21f26b, phase 3)
+
+One conversation turn as a component: the ordered parts through the safe markdown pipeline, citation
+chips with a source preview, source cards, follow-up chips and the action toolbar. Contract:
+[docs/ai-message.md](docs/ai-message.md).
+
+- **`TmAiMessage`** (`Tempo.Blazor.Components.AI`) — `Message`, `ShowAvatar`, `ShowActions`,
+  `ShowSources`, `ShowFollowUps`, `AvatarTemplate`, `ActionsTemplate`, `OnRegenerate`, `OnFeedback`,
+  `OnFollowUp`, `OnCitationClick`, `OnRetry`, `ActiveVersionIndexChanged`, `ReadAloud`, `Class`
+  (+ the inherited `DataTestId` / `TestIdPrefix`). The root carries the frozen `data-role`
+  (`user`/`assistant`/`system`/`tool`) and `data-status` (`pending`/`streaming`/`completed`/`stopped`/
+  `failed`) contract, and the user turn mirrors itself (`--user`, `flex-direction: row-reverse`) while
+  its text stays left-aligned.
+- **Actions** — copy sends the message's plain text (`AiMessageText.ToPlainText`, applied per text part,
+  no markdown markers) and announces "Copied" through a sibling `role="status"` live region; regenerate,
+  thumbs up/down and read-aloud render only when the host binds their handler (no dead buttons). A
+  negative rating is raised immediately and again with the optional reason; the reason popover is
+  dismissible and never required. Read aloud is opt-in (`ReadAloud`), feature-detected, and reports the
+  end of an utterance back so the toggle returns to "Read aloud" by itself.
+- **Model additions (Abstractions, still UI-free)** — `AiMessage.Versions` + `AiMessageVersion`,
+  `AiMessage.ActiveVersionIndex` (**nullable; `null` = the newest version**, out-of-range values clamp
+  through the new `EffectiveVersionIndex`), `AiMessage.ActiveParts` / `ActiveText`,
+  `AiMessage.Feedback` + `AiFeedback` / `AiFeedbackRating`, `AiMessage.FollowUps`. `AiMessage.Sources`,
+  `FindSource` and `ActiveText` follow the ACTIVE version; `Text` stays the live parts. The switcher
+  shows the reader's choice immediately and the host's own index wins on the next change.
+- **`AiMessageText.ToPlainText`** (`Tempo.Blazor.AI.Markdown`) — the plain-text projection behind copy
+  and speech: markers dropped, block structure kept (one line per paragraph, list item, code line and
+  table row), link/image targets never travel. It walks the SAME safe markdown pipeline as the
+  renderer.
+- **Accessibility** — the action bar is `role="toolbar"` with `aria-label`/`aria-orientation` and a
+  roving tabindex (one computed tab stop, Arrow Left/Right/Up/Down with wrapping, Home/End, focus
+  through `ElementReference.FocusAsync` — no second JS gesture module; see the decision
+  `AI-MESSAGE-ACTION-BAR-ROVING`); the version switcher is a separate `role="group"`; a failed turn is
+  a `role="alert"` block with Retry; the preview and reason popovers are the core `TmOverlayPanel`
+  (`role="dialog"`, named, Escape + outside-click, `ConstrainHeight`) rendered as SIBLINGS of the
+  toolbar so a keydown in the reason textarea never reaches the roving handler; every control reaches
+  the 44 px `--tm-touch-target` floor on a coarse pointer; a forced-colors block covers the surfaces.
+  **Focus order (review round)** — both popovers take focus INTO themselves from `OnOpened` (the
+  preview on its Close button, the reason form on its textarea) and the reason form is a real modal
+  dialog (`TrapFocus="true"`); closing hands focus back — the reason form restores the thumbs-down
+  button and moves the roving tab stop with it, the preview returns to the citation chip that opened
+  it (through the module's new `focusCitation`, because the chip lives in markdown-generated markup) —
+  while an outside click deliberately does not pull focus back. The copy button keeps a stable
+  accessible name (the confirmation travels through the live region) and the single live region now
+  also announces the streaming → stopped transition.
+- **Security** — the source-card and preview links pass through `AiMarkdownUrlPolicy`: a refused
+  scheme is plain text (never an `href`), a surviving link gets `target="_blank"` with
+  `rel="noopener noreferrer nofollow"`. Answer text still renders only through `TmMarkdownView`.
+- **Assets** — `_content/Tempo.Blazor.AI/css/components/_ai-message.css` (imported by the entry
+  stylesheet, tokens only, no animation of its own — the streaming caret stays the package's single
+  reduced-motion subject) and the ES module `_content/Tempo.Blazor.AI/js/ai-message.js`
+  (`copyText`, `isSpeechSupported`, `speak`, `stopSpeaking`; no `<script>` tag, no `unsafe-inline`).
+  New localization keys `TmAiMessage_*` in en/cs/sk/fr.
+- **Verification** — `TmAiMessageTests` (roles, parts order, states, citation preview, source cards,
+  follow-ups), `TmAiMessageActionsTests` (toolbar roving model, copy, regenerate, versions, feedback,
+  read aloud), `AiMessageVersioningTests`, `AiMessageTextTests` and `TmAiMessageCssTests` (class
+  coverage, touch floor, forced colors, no package animation), next to the existing package gates.
+- **Test-guard fix** — `ToolbarRoleGuardTests`' mechanism assertions had been dead code since a
+  scripted edit wrote literal `\n` instead of newlines, so the whole block sat inside one line
+  comment; it now runs through `ToolbarMechanismCheck` (per-mechanism findings) and is itself pinned
+  on a synthetic toolbar that claims the role and ships nothing. `TmAiMessage` is allow-listed with
+  the Blazor-owned mechanism, so the guard keeps rejecting a toolbar without one.
+
+**No breaking changes** — new package surface and additive model members only. `Tempo.Blazor.AI` is
+new in the unreleased 2.10.0, so no released consumer sees the model additions; a host that writes
+`AiMessage.ActiveVersionIndex` keeps the explicit index it sets, and leaving it `null` keeps showing
+the newest generation.
+
+**Post-hoc verification round** (`TmAiMessage`, same plan) — four defects found while re-reading the
+committed phase, fixed with tests and **no public API change**:
+
+- **Copy and Read aloud keep the block boundary between text parts.** Both used to flatten
+  `string.Concat(parts)` as ONE markdown document, so an answer with a tool call (or a reasoning panel)
+  between two prose blocks copied as "Let me look that up.It is 20 °C." — two blocks glued into one
+  sentence, with no space, let alone a paragraph break. The component now projects each `AiTextPart`
+  through `AiMessageText.ToPlainText` and joins the blocks with a blank line, which is what the reader
+  sees. Pinned by
+  `TmAiMessageActionsTests.Copy_KeepsTheBlockBoundaryBetweenTextPartsSeparatedByAToolCall`.
+- **The version count is announced as a phrase.** The switcher put `aria-label="Version 2 of 3"` on the
+  visible `<span>2/3</span>`. A span is `role="generic"`, which prohibits author-provided names, so the
+  label was dropped by the accessible-name computation and a screen reader read only "2/3". The visual
+  short form is now `aria-hidden` and the full phrase renders as real text in a `.tm-sr-only` span next
+  to it (the same utility the message's live region uses).
+- **`ReadAloud` toggled after the first render now offers the action.** The `speechSynthesis` feature
+  detect sat behind `if (!firstRender)`, so a host that turned the option on later (a reader preference,
+  a settings switch) never got the button — a permanently quieter component instead of a feature
+  detect. The probe now runs once, on whichever render first asks for it (`_speechProbed` still caps it
+  at one round trip).
+- **Forced colors: the system focus ring is restored inside every opted-out surface, and the user bubble
+  is no longer opted out.** `forced-color-adjust: none` INHERITS, so the version buttons, Retry, the
+  follow-up chip and the source card's link kept painting the theme token ring on a `Canvas` surface
+  (they now go back to `Highlight`, the rule `_markdown-view.css`, `_ai-tool-call.css` and
+  `_ai-thinking.css` already carried). The same inheritance made the user bubble's opt-out strip the
+  system palette from the markdown it carries — its paragraphs, links and headings kept the theme's own
+  text colour on a Canvas surface, i.e. dark text on black in a dark high-contrast scheme. The bubble
+  needs no opt-out at all: its author background is remapped to `Canvas` anyway. Pinned by
+  `TmAiMessageCssTests.ForcedColors_RestoreTheSystemFocusRingInsideTheOptedOutSurfaces` and
+  `..._TheUserBubbleDoesNotOptItsContentOutOfTheSystemPalette`.
+
+### AI conversation package — AI models and safe markdown (plan 7f21f26b, phase 2)
+
+The package's first real surface: the generic message/streaming contract in
+`Tempo.Blazor.Abstractions` and `TmMarkdownView`, the safe markdown renderer every AI component will
+render answers through. Contract: [docs/ai-markdown.md](docs/ai-markdown.md).
+
+- **Models (Abstractions, no UI dependency)** — `AiMessage`, the ordered parts
+  (`AiTextPart`, `AiReasoningPart`, `AiToolCallPart`, `AiSourcesPart`), `AiSource`, `AiToolCall` and
+  the `AiStreamDelta` hierarchy (`AiTextDelta`, `AiReasoningDelta`, `AiToolCallStarted/Updated/CompletedDelta`,
+  `AiCitationAddedDelta`, `AiCompletedDelta`, `AiErrorDelta`) live in `Tempo.Blazor.Abstractions`
+  (`Tempo.Blazor.AI.Models`), so a backend references the conversation records without Blazor or
+  Markdig. `AiMessageStreamApplier` (`Tempo.Blazor.AI.Services`) folds a delta stream into a message as
+  pure logic (the caller passes the timestamp) and reports whether anything changed; content that
+  arrives after a terminal state is ignored and a re-delivered control delta is a no-op.
+- **`TmMarkdownView`** (`Tempo.Blazor.Components.AI`) — `Markdown`, `CodeBlockTemplate`,
+  `OnCitationClick`, `Class`. Rendered HTML is cached against the last input, so a parent re-render
+  does not re-run Markdig.
+- **`AiMarkdownRenderer`** (`Tempo.Blazor.AI.Markdown`, registered by `AddTempoBlazorAI()` through
+  `TryAddSingleton`) — Markdig with raw HTML **disabled**, an explicit URL allowlist
+  (http/https/mailto/relative; every other scheme, a protocol-relative target and control-character
+  smuggling collapse to `#`), `target="_blank" rel="noopener noreferrer nofollow"` on every link and
+  autolink, absolute-http(s)-only images, `cite:<id>` links rendered as citation chips, escaped code
+  blocks with a copy affordance and a scrollable table wrapper. The extension set is built explicitly
+  instead of `UseAdvancedExtensions()`, so `UseGenericAttributes` (attribute/event-handler injection)
+  and the hosted-media embeds are not part of the pipeline.
+- **Assets** — `_content/Tempo.Blazor.AI/css/components/_markdown-view.css` (tokens only) and the
+  ES module `_content/Tempo.Blazor.AI/js/ai-markdown.js` (imported through `IJSObjectReference`, no
+  `<script>` tag, no CSP `unsafe-inline`) that delegates the citation chips and the code-block copy
+  button to the component. New localization keys `TmMarkdownView_*` (en/cs/sk/fr).
+- **Security tests** — the whole shared vector set is rendered as markdown, as a link target and as an
+  image target, plus a deterministic fuzz pass and a CSS token gate for the package stylesheet. The
+  payloads now live in `tests/Shared/XssPayloads.cs`, which has **no sanitizer dependency**, so
+  `Tempo.Blazor.Tests` links it without an `InternalsVisibleTo` into the email assemblies while the
+  email test projects keep the same bytes through `SanitizerXssVectors` (that file adds the
+  production-tokenizer assertions). A new assembly-level guard pins that the AI contracts live in the
+  UI-free `Tempo.Blazor.Abstractions` assembly.
+- **Review fixes (accessibility, contracts)** — the citation-chip hover painted `--tm-color-primary-50`,
+  a light-only palette step with no dark counterpart, so the label lost contrast in the dark theme; it
+  now mixes the semantic primary into `--tm-color-primary-subtle`, and
+  `AiMarkdownViewCssTests.PackageCss_UsesNoRawPaletteSteps` keeps raw palette steps out of the package.
+  The table wrapper is a keyboard focus stop and a **named region** (`TmMarkdownView_Table` in
+  en/cs/sk/fr, `AiMarkdownRenderOptions.TableLabel`), the code `<pre>` takes `tabindex="0"` with a
+  focus ring, the copy button announces through a **sibling** `role="status"` live region instead of
+  renaming itself, and both the copy button and a citation chip get the 44 px `--tm-touch-target` floor
+  on a coarse pointer. `CodeBlockTemplate` now documents that it must be a **stable reference** (cached
+  field / method group) and that the host escapes `context.Code` (`HtmlEncoder`), and the render cache
+  compares the delegate's `Method` and `Target` instead of the delegate instance. In
+  `AiMessageStreamApplier`, a citation delta without a source or with an empty id is a **no-op** (not an
+  exception) and an error delta after `Completed`/`Stopped` is ignored — the state machine is documented
+  on `Apply`. Decision `AI-MARKDOWN-COPY-DELEGATED` records why the citation chips and the copy button
+  are markup + ES-module delegation rather than Blazor components.
+- **Post-hoc verification fix (forced colors)** — the `forced-colors` block opts the code card and the
+  citation chip out of the system palette with `forced-color-adjust: none`, and that property is
+  **inherited**, so it opted their **focus ring** out too: the citation chip, the copy button and the
+  keyboard-scrollable `<pre>` (all three focus stops of an answer) kept painting the theme token ring on
+  a `Canvas` surface. All three now paint `outline-color: Highlight`, the same rule
+  `_ai-tool-call.css` and `_ai-thinking.css` already carry for their own controls, pinned by
+  `AiMarkdownViewCssTests.ForcedColors_RestoreTheSystemFocusRing`. The link and the table wrapper are
+  **not** opted out, so they keep following the system palette without a rule of their own.
+
+**No breaking changes** — new package surface only; nothing in the core library or an existing
+component changed. Hosts must load `_content/Tempo.Blazor.AI/css/tempo-blazor-ai.css` (already part of
+the 2.10.0 AI package setup) and call `AddTempoBlazorAI()`, which now also registers
+`AiMarkdownRenderer`.
+
+### AI conversation package — scaffolding (plan 7f21f26b, phase 1)
+
+New split package **`Tempo.Blazor.AI`** (`src/Tempo.Blazor.AI`, Razor SDK, net8.0/net9.0/net10.0)
+for AI conversation UI. Phase 1 lands the package skeleton only; the components
+(`TmMarkdownView`, `TmAiMessage`, `TmAiConversation`, `TmAiComposer`, `TmToolCallCard`,
+`TmThinkingIndicator`, `TmReasoningPanel`) arrive in the follow-up phases of the same plan and the
+demo page ships with them.
+
+- **Registration** — `AddTempoBlazorAI()` (`Tempo.Blazor.Configuration.AIServiceCollectionExtensions`)
+  calls `AddTempoBlazor()`, so it is idempotent next to an existing core registration.
+  `AddTempoBlazorAll()` now includes it.
+- **Package contract (planned)** — model and streaming contracts are planned for
+  `Tempo.Blazor.Abstractions` (`Tempo.Blazor.AI.Models` / `Tempo.Blazor.AI.Services`, Fáze 2 of the
+  same plan), which has zero UI dependencies, so a backend will be able to reference them without
+  Blazor; phase 1 ships neither. The package references **no LLM SDK and no PromptHelper**; the
+  host will supply the token stream. Markdig (BSD-2-Clause, pure managed, WebAssembly-safe) is
+  already the only third-party dependency and becomes the processor behind the planned safe
+  markdown pipeline.
+- **Static assets** — `_content/Tempo.Blazor.AI/css/tempo-blazor-ai.css` is an `@import` manifest;
+  the package ships no JS. The shared streaming caret (`.tm-ai-streaming`) and its
+  `prefers-reduced-motion` block live in `css/components/_ai-streaming.css`.
+- **Registration in the repo** — `TempoBlazor.slnx`, `eng/nuget-packages.txt`, `Tempo.Blazor.All`,
+  the test project, `JsonDocumentation/packages.json` (bundle `tempo-blazor-ai.json`), the
+  reduced-motion split-package sweep and all four demo hosts (WASM, Server, InteractiveAuto server
+  and client).
+
+**No breaking changes** — additive package, additive registration, no existing API touched. A host
+that already links the core stylesheet gains one more `<link>` for the new package when it adopts
+the AI components.
+
 ### Changed
 
 - **`TmRichEditorSimple` / `MentionAutocomplete`: the mention list is a listbox the editor owns.** The content surface is a combobox only while the picker is open. The editor owns the list id (`{editorId}-mentions`) and computes `aria-activedescendant` from its highlight, so the first open already names option 0 — the dropdown no longer mints the id. Options carry `aria-selected`. An empty `@` query keeps the list open; a query with no match stays open on `.tm-rte-mention-empty` (`role="option"`, `aria-disabled="true"`, its own id). Display names wrap (`overflow-wrap: anywhere`). New key `TmRichEditor_MentionList` names the listbox. `TmRichEditorFull` still renders the same list and now keeps a no-match query open too.

@@ -24,6 +24,19 @@ public sealed class LandmarkOwnershipTests
 {
     private static readonly TimeSpan RegexTimeout = TimeSpan.FromSeconds(5);
 
+    /// <summary>
+    /// Markup that IS a host layout: the application frame this guideline is written for. A shell that
+    /// renders <c>&lt;header&gt;</c>, one named <c>&lt;nav&gt;</c>, <c>&lt;main&gt;</c> and the work
+    /// <c>&lt;aside&gt;</c> exactly once is the thing a page's landmarks belong to, so it is the one
+    /// component allowed to emit <c>&lt;main&gt;</c> — and its own test
+    /// (<c>TmAppShellTests.Desktop_RendersThePageLandmarksExactlyOnce</c>) pins that it emits each
+    /// landmark once. A new entry here needs the same proof.
+    /// </summary>
+    private static readonly HashSet<string> LayoutOwnedMarkup = new(StringComparer.Ordinal)
+    {
+        "src/Tempo.Blazor/Components/Layout/TmAppShell.razor",
+    };
+
     private static readonly Regex MainElement =
         new(@"<\s*/?\s*main\b", RegexOptions.Compiled | RegexOptions.IgnoreCase, RegexTimeout);
 
@@ -49,9 +62,12 @@ public sealed class LandmarkOwnershipTests
                 RazorComment.Replace(File.ReadAllText(file), string.Empty),
                 string.Empty);
 
+            var relative = Path.GetRelativePath(FindRepositoryRoot(), file).Replace('\\', '/');
+            if (LayoutOwnedMarkup.Contains(relative)) continue;
+
             if (MainElement.IsMatch(markup))
             {
-                offenders.Add(Path.GetRelativePath(FindRepositoryRoot(), file));
+                offenders.Add(relative);
             }
         }
 

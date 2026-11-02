@@ -245,6 +245,23 @@ export function focusFirst(root) {
     return true;
 }
 
+/**
+ * Moves focus to the LAST menu item inside a host element — the mirror of {@link focusFirst} for a
+ * menu button opened with ArrowUp (APG: ArrowUp opens and places focus on the last item). Same
+ * enabled/aria-disabled rules as `focusFirst`, in reverse. Returns whether something was focused.
+ * @param {ParentNode|null} root the element that contains the open role=menu
+ */
+export function focusLast(root) {
+    const menu = root?.querySelector?.('[role="menu"]');
+    if (!menu) return false;
+    const items = enabledItems(menu);
+    if (items.length === 0) return false;
+    const last = [...items].reverse().find(el => el.getAttribute?.('aria-disabled') !== 'true')
+        ?? items[items.length - 1];
+    last.focus();
+    return true;
+}
+
 /** Test seam: forgets every registration. */
 export function __resetForTests() {
     attached = new WeakMap();

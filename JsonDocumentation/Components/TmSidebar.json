@@ -2,7 +2,7 @@
   "itemName": "TmSidebar",
   "kind": "Component",
   "category": "Layout",
-  "description": "Collapsible sidebar navigation with icon-only collapsed state, nested child items, badge counts, and optional header/footer slots.",
+  "description": "Collapsible sidebar navigation with icon-only collapsed state, optional named sections, nested child items, badge counts, a current-page marker, optional header/footer slots, an opt-out of the header collapse toggle (for a sidebar rendered inside an already-open drawer) and a selection callback a frame uses to close the surface the chosen entry was picked from.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Layout",
     "@using Tempo.Blazor.Interfaces"
@@ -13,7 +13,13 @@
       "type": "IReadOnlyList<ISidebarNavItem>",
       "isRequired": false,
       "default": "[]",
-      "description": "Navigation items to display."
+      "description": "Navigation items rendered as one ungrouped list, before any <see cref=\"Sections\"/>."
+    },
+    {
+      "name": "Sections",
+      "type": "IReadOnlyList<SidebarNavSection>?",
+      "isRequired": false,
+      "description": "Optional named groups of navigation items, each rendered under its own visible heading (h2) that also names the group's list through aria-labelledby. Null (the default) keeps the single ungrouped list, so existing markup is unchanged."
     },
     {
       "name": "Collapsed",
@@ -26,6 +32,38 @@
       "type": "EventCallback",
       "isRequired": false,
       "description": "Fires when the toggle button is clicked."
+    },
+    {
+      "name": "OnItemSelected",
+      "type": "EventCallback<ISidebarNavItem>",
+      "isRequired": false,
+      "description": "Raised when the user chooses an entry that points at a destination (a non-empty Href), with that entry. It is raised from the link's own click and never prevents the default, so navigation still happens — the callback only reports WHICH entry was chosen. Unbound by default, so every existing caller behaves exactly as before. A shell uses it to close the surface the entry was chosen from (an application frame closes its phone navigation drawer without sniffing clicks on its own header, footer or host slot content)."
+    },
+    {
+      "name": "NavLabel",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Accessible name of the navigation landmark. Null (the default) uses the localized \"Sidebar navigation\" — a host with more than one navigation landmark names this one after its purpose (\"Product navigation\")."
+    },
+    {
+      "name": "AutoActive",
+      "type": "bool",
+      "isRequired": false,
+      "description": "When true, an item is shown as the current page when its Href matches the current location, in addition to its own IsActive. Default false: the host decides, exactly as before."
+    },
+    {
+      "name": "AutoActiveMatchMode",
+      "type": "SidebarNavMatchMode",
+      "isRequired": false,
+      "default": "Exact",
+      "description": "How AutoActive compares paths. SidebarNavMatchMode.Exact (default) marks only the page itself; SidebarNavMatchMode.Prefix also marks a parent entry for its sub-pages on a segment boundary (the root \"/\" entry stays exact in both modes)."
+    },
+    {
+      "name": "CollapseTooltips",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "When true (the default) a COLLAPSED item renders a TmTooltip with its label, so the icon-only rail still tells a sighted user what an icon means. The accessible name is not optional: the link keeps its aria-label even with this turned off. Turning it off also keeps the collapsed nav a vertical scroll container, which a tooltip would need to escape."
     },
     {
       "name": "Header",
@@ -44,12 +82,39 @@
       "type": "string?",
       "isRequired": false,
       "description": "Additional CSS class for the root element."
+    },
+    {
+      "name": "IsLandmark",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "When true (the default) the root is an aside element — a complementary landmark, which is what a sidebar next to the page content is. Pass false when the sidebar is composed into an application frame that owns the page landmarks (TmAppShell): the root then renders as a plain div and the nav inside keeps naming the menu, so the page never carries two complementary landmarks."
+    },
+    {
+      "name": "ToggleAriaExpanded",
+      "type": "bool?",
+      "isRequired": false,
+      "description": "When set, the toggle reports the state of the surface it opens through aria-expanded (true / false). Null (the default) renders no attribute — a plain collapse toggle is not a disclosure and has no surface of its own. A frame whose rail toggle opens an overlay drawer (TmAppShell) passes the drawer's open state; pair it with ToggleAriaControls."
+    },
+    {
+      "name": "ToggleAriaControls",
+      "type": "string?",
+      "isRequired": false,
+      "description": "The DOM id of the surface the toggle opens, rendered as aria-controls. Null (the default) renders no attribute: an expanded state with no identifiable target tells a screen reader nothing."
+    },
+    {
+      "name": "ShowToggle",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "Whether the header renders the collapse/expand toggle. Default true — today's markup. Pass false where the sidebar is rendered INSIDE the surface its toggle would act on (a navigation drawer that is already open): there is no docked column to collapse there, and a chevron labelled \"Collapse menu\" that closes a drawer is a mislabelled control. The navigation itself, its headings and its links are unaffected."
     }
   ],
   "cssClasses": [
     "tm-sidebar",
     "tm-sidebar-collapsed",
     "tm-sidebar-expanded",
+    "tm-sidebar-tooltips",
     "tm-sidebar-header",
     "tm-sidebar-toggle",
     "tm-sidebar-nav",
@@ -61,19 +126,35 @@
     "tm-sidebar-nav-label",
     "tm-sidebar-nav-children",
     "tm-sidebar-badge",
-    "tm-sidebar-footer"
+    "tm-sidebar-section",
+    "tm-sidebar-section-title",
+    "tm-sidebar-footer",
+    "tm-sidebar-nav-tooltip"
   ],
   "usedAbstractions": [
     {
       "name": "SidebarNavItem",
       "description": "Model representing a navigation item in the sidebar",
       "parameter": "Items"
+    },
+    {
+      "name": "SidebarNavSection",
+      "description": "Model representing one named group of navigation items",
+      "parameter": "Sections"
     }
   ],
   "examples": [
     {
       "title": "Basic sidebar with navigation items",
       "code": "<TmSidebar Items=\"navItems\" Collapsed=\"sidebarCollapsed\" OnToggle=\"() => sidebarCollapsed = !sidebarCollapsed\">\n    <Header>\n        <img src=\"logo.svg\" alt=\"Logo\" />\n    </Header>\n</TmSidebar>"
+    },
+    {
+      "title": "Sectioned sidebar that follows the current page",
+      "code": "<TmSidebar Sections=\"sections\"\n           NavLabel=\"Product navigation\"\n           AutoActive=\"true\"\n           AutoActiveMatchMode=\"SidebarNavMatchMode.Prefix\"\n           Collapsed=\"railCollapsed\"\n           OnToggle=\"ToggleRail\" />"
+    },
+    {
+      "title": "Icon-only rail without tooltips (keeps the vertical scroller)",
+      "code": "<TmSidebar Items=\"navItems\" Collapsed=\"true\" CollapseTooltips=\"false\" />"
     }
   ]
 }

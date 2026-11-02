@@ -1,0 +1,208 @@
+@namespace Tempo.Blazor.Components.AI
+@inherits TmComponentBase
+@using System.Reflection
+@using Tempo.Blazor.AI.Markdown
+@inject AiMarkdownRenderer MarkdownRenderer
+@inject IJSRuntime JS
+@implements IAsyncDisposable
+
+@* Untrusted model output. The HTML is produced by AiMarkdownRenderer (Markdig with raw HTML disabled,
+   an explicit URL allowlist and a hardened link renderer), never by the host's markup. The two delegated
+   behaviours — the citation chips and the code-block copy button — are wired by the package's ES module,
+   because a citation can sit inside any inline element and a Blazor component cannot be placed there. *@
+<div @ref="_root"
+     class="tm-markdown-view @Class"
+     data-testid="@RootTestId("markdown-view")">
+    @if (_html.Length > 0)
+    {
+        @((MarkupString)_html)
+    }
+</div>
+
+@code {
+    private const string InteropModulePath = "./_content/Tempo.Blazor.AI/js/ai-markdown.js";
+
+    private ElementReference _root;
+    private IJSObjectReference? _module;
+    private DotNetObjectReference<TmMarkdownView>? _self;
+    private bool _attached;
+
+    private string _html = string.Empty;
+    private CacheKey _cacheKey;
+    private bool _hasCacheKey;
+
+    /// <summary>The seam the current render used; the cache key holds its Method/Target, not the delegate.</summary>
+    private Func<AiMarkdownCodeBlockContext, string>? _codeBlockTemplate;
+
+    /// <summary>
+    /// The markdown to render. It is untrusted model output: the component renders it through the safe
+    /// markdown pipeline (raw HTML disabled, http/https/mailto/relative allowlist, hardened links), so a
+    /// hostile answer cannot execute markup.
+    /// </summary>
+    [Parameter] public string? Markdown { get; set; }
+
+    /// <summary>
+    /// Optional host renderer for a code block, replacing the built-in <c>&lt;pre&gt;&lt;code&gt;</c> plus
+    /// copy affordance (for example with syntax-highlighted markup).
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// The returned HTML is trusted verbatim: the renderer writes it straight into the answer's markup, so
+    /// <b>the host owns escaping</b> — pass <see cref="AiMarkdownCodeBlockContext.Code"/> through
+    /// <see cref="System.Text.Encodings.Web.HtmlEncoder.Default"/> (or <c>Html.Encode</c> /
+    /// <c>WebUtility.HtmlEncode</c>) and never concatenate the raw code into the string. The surrounding
+    /// markdown pipeline cannot help here, because the whole block comes from this delegate.
+    /// </para>
+    /// <para>
+    /// Pass a <b>stable reference</b>: a cached field, a static method, or a method group — not an inline
+    /// lambda. The component caches its last render and compares this parameter by the delegate's
+    /// <c>Method</c> and <c>Target</c> (not by delegate instance), so a cached seam keeps a parent re-render
+    /// free while a lambda that captures a fresh closure object makes every render re-run Markdig.
+    /// </para>
+    /// </remarks>
+    [Parameter] public Func<AiMarkdownCodeBlockContext, string>? CodeBlockTemplate { get; set; }
+
+    /// <summary>
+    /// Raised with the source id when a citation chip is activated, so the host can open the source preview
+    /// (the chips are rendered for markdown links written as <c>[1](cite:&lt;sourceId&gt;)</c>).
+    /// </summary>
+    [Parameter] public EventCallback<string> OnCitationClick { get; set; }
+
+    /// <summary>Additional CSS class(es) for the root element.</summary>
+    [Parameter] public string? Class { get; set; }
+
+    /// <summary>
+    /// How often the markdown pipeline actually ran — the last input is cached, so a parent re-render with
+    /// unchanged text costs nothing. Exposed to the test assembly through <c>InternalsVisibleTo</c>.
+    /// </summary>
+    internal int RenderCount { get; private set; }
+
+    /// <inheritdoc />
+    protected override void OnParametersSet()
+    {
+        var key = new CacheKey(
+            Markdown ?? string.Empty,
+            Loc["TmMarkdownView_CopyCode"],
+            Loc["TmMarkdownView_CopyCodeLanguage"],
+            Loc["TmMarkdownView_Copied"],
+            Loc["TmMarkdownView_Citation"],
+            Loc["TmMarkdownView_Table"],
+            CodeBlockTemplate?.Method,
+            CodeBlockTemplate?.Target);
+
+        if (_hasCacheKey && key.Equals(_cacheKey))
+        {
+            return;
+        }
+
+        _cacheKey = key;
+        _hasCacheKey = true;
+        _codeBlockTemplate = CodeBlockTemplate;
+        RenderCount++;
+        _html = MarkdownRenderer.Render(key.Markdown, new AiMarkdownRenderOptions
+        {
+            CopyCodeLabel = key.CopyCodeLabel,
+            CopyCodeWithLanguageLabel = key.CopyCodeWithLanguageLabel,
+            CopiedLabel = key.CopiedLabel,
+            CitationLabelFormat = key.CitationLabelFormat,
+            TableLabel = key.TableLabel,
+            CodeBlockRenderer = _codeBlockTemplate,
+        });
+    }
+
+    /// <inheritdoc />
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_attached || !HasInteractiveContent())
+        {
+            return;
+        }
+
+        _attached = true;
+        try
+        {
+            _module = await JS.InvokeAsync<IJSObjectReference>("import", InteropModulePath);
+            _self = DotNetObjectReference.Create(this);
+            await _module.InvokeVoidAsync("attach", _root, _self);
+        }
+        catch (JSException)
+        {
+            // No interop (static rendering, or a host that strips the module): the markup stays readable,
+            // the chips and the copy button simply do nothing.
+        }
+        catch (InvalidOperationException)
+        {
+        }
+        catch (JSDisconnectedException)
+        {
+        }
+    }
+
+    /// <summary>
+    /// Raised by the page when a citation chip is activated; forwards the source id to
+    /// <see cref="OnCitationClick"/>.
+    /// </summary>
+    /// <param name="sourceId">The <c>data-source-id</c> of the activated chip.</param>
+    [JSInvokable]
+    public async Task HandleCitationClickAsync(string sourceId)
+    {
+        if (string.IsNullOrEmpty(sourceId))
+        {
+            return;
+        }
+
+        await OnCitationClick.InvokeAsync(sourceId);
+    }
+
+    /// <inheritdoc />
+    public async ValueTask DisposeAsync()
+    {
+        if (_module is not null)
+        {
+            try
+            {
+                await _module.InvokeVoidAsync("detach", _root);
+                await _module.DisposeAsync();
+            }
+            catch (JSDisconnectedException)
+            {
+            }
+            catch (JSException)
+            {
+            }
+            catch (InvalidOperationException)
+            {
+            }
+
+            _module = null;
+        }
+
+        _self?.Dispose();
+        _self = null;
+    }
+
+    private bool HasInteractiveContent()
+        => _html.Contains("data-source-id", StringComparison.Ordinal)
+            || _html.Contains("data-copy-code", StringComparison.Ordinal);
+
+    /// <summary>
+    /// Identity of the last render: the markdown, the localized labels and the code-block seam. A parent
+    /// render that changes none of them skips the markdown pipeline entirely.
+    /// </summary>
+    /// <remarks>
+    /// The seam is compared by <see cref="System.Reflection.MethodInfo"/> + <c>Target</c> rather than by
+    /// delegate instance: a method group or a cached field produces a new delegate object while still
+    /// pointing at the same method and receiver, and treating that as a change would re-run Markdig on
+    /// every parent render. An inline lambda over mutable state changes its Method/Target and correctly
+    /// misses the cache.
+    /// </remarks>
+    private readonly record struct CacheKey(
+        string Markdown,
+        string CopyCodeLabel,
+        string CopyCodeWithLanguageLabel,
+        string CopiedLabel,
+        string CitationLabelFormat,
+        string TableLabel,
+        MethodInfo? CodeBlockTemplateMethod,
+        object? CodeBlockTemplateTarget);
+}

@@ -206,6 +206,24 @@ internal static class ThemeCss
         RuleBlock.Matches(ComponentCss(stylesheet))
             .Select(rule => (Normalise(rule.Groups["selector"].Value), rule.Groups["body"].Value));
 
+    /// <summary>
+    /// The declarations of the rule whose selector is EXACTLY <paramref name="selector"/>, whitespace
+    /// normalised (<c>""</c> when there is no such rule). Matching is anchored on the block's opening brace,
+    /// so a nesting rule is never mistaken for its parent — the same "exact part, never a fragment" rule
+    /// <see cref="SelectorParts"/> relies on. The split packages' guards use it, because their stylesheets
+    /// live outside <c>src/Tempo.Blazor</c> and therefore outside <see cref="Rules"/>.
+    /// </summary>
+    public static string RuleDeclarations(string css, string selector)
+    {
+        var match = Regex.Match(
+            StripComments(css),
+            @"(?<![\w-])" + Regex.Escape(selector) + @"\s*\{([^{}]*)\}",
+            RegexOptions.Singleline,
+            RegexTimeout);
+
+        return match.Success ? Normalise(match.Groups[1].Value) : string.Empty;
+    }
+
     /// <summary>Whether a declaration body sets <paramref name="property"/> itself (not as a shorthand).</summary>
     public static bool Declares(string body, string property) =>
         body.Split(';').Any(declaration =>

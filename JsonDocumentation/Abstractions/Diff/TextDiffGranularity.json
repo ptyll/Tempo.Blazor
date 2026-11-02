@@ -1,0 +1,24 @@
+{
+  "kind": "Enum",
+  "category": "Diff",
+  "namespace": "Tempo.Blazor.Diff",
+  "description": "Unit a TextDiff comparison works on. Word level compares word, number and punctuation tokens (so a re-flowed paragraph is not a change); line level compares whole lines including their line break.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/Diff/TextDiffGranularity.cs",
+  "documentationStatus": "generated",
+  "members": [
+    {
+      "name": "Words",
+      "kind": "Field",
+      "type": "TextDiffGranularity",
+      "description": "Word, number and punctuation tokens. Whitespace is not a token of its own."
+    },
+    {
+      "name": "Lines",
+      "kind": "Field",
+      "type": "TextDiffGranularity",
+      "description": "Whole lines, so every difference is a whole-line insertion, deletion or replacement."
+    }
+  ],
+  "itemName": "TextDiffGranularity"
+}

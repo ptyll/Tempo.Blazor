@@ -1,0 +1,10 @@
+{
+  "kind": "Class",
+  "category": "AI",
+  "namespace": "Tempo.Blazor.AI.Models",
+  "description": "A tool call finished with a final status, result, failure reason and redaction flag; the first completion keeps its timestamp, so a re-delivered completion is a no-op.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/AI/AiStreamDelta.cs",
+  "documentationStatus": "generated",
+  "itemName": "AiToolCallCompletedDelta"
+}

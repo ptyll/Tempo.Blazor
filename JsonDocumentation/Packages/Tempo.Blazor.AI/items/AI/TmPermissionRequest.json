@@ -1,0 +1,119 @@
+{
+  "itemName": "TmPermissionRequest",
+  "kind": "Component",
+  "category": "AI",
+  "namespace": "Tempo.Blazor.Components.AI",
+  "description": "The agent's request for one concrete permission: the tool it wants to use, the target it wants to reach, why it needs it, a localized risk badge, the scopes the host is willing to offer, and an Allow / Deny decision with an optional duration. A decision collapses the request into a single result row; a granted permission keeps a live countdown driven by the injected TimeProvider and offers Revoke until it runs out. Exactly one polite live region carries every announcement, the ticking countdown is aria-live=off, and the collapse moves focus to the surviving control (Revoke, else the group root) while Revoke hands it back to Allow.",
+  "packageId": "Tempo.Blazor.AI",
+  "sourcePath": "src/Tempo.Blazor.AI/Components/AI/TmPermissionRequest.razor",
+  "documentationStatus": "generated",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.AI"
+  ],
+  "examples": [
+    {
+      "title": "Ask before the agent uses a tool",
+      "code": "<TmPermissionRequest ToolName=\"web.search\"\n                     ToolDisplayName=\"Web search\"\n                     Target=\"https://example.com/pricing\"\n                     Reason=\"The agent needs the current pricing page to answer.\"\n                     Risk=\"ApprovalRisk.Medium\"\n                     OnDecision=\"HandleDecisionAsync\" />"
+    },
+    {
+      "title": "Persist the grant and let the reader revoke it",
+      "code": "<TmPermissionRequest ToolName=\"mail.send\"\n                     Target=\"invoices@contoso.com\"\n                     @bind-Grant=\"grant\"\n                     OnDecision=\"SaveDecisionAsync\"\n                     OnRevoke=\"RevokeAsync\" />"
+    },
+    {
+      "title": "Offer only the modest scopes",
+      "code": "<TmPermissionRequest ToolName=\"files.read\"\n                     ScopeOptions=\"@(new[] { PermissionScope.Once, PermissionScope.ForDuration })\"\n                     DurationOptions=\"@(new[] { TimeSpan.FromMinutes(5), TimeSpan.FromMinutes(30) })\"\n                     OnDecision=\"HandleDecisionAsync\" />"
+    }
+  ],
+  "parameters": [
+    {
+      "name": "AdditionalAttributes",
+      "type": "Dictionary<string, object>?",
+      "isRequired": false,
+      "description": "Additional HTML attributes applied to the root element."
+    },
+    {
+      "name": "AriaLabel",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Accessible name of the group. Defaults to a localized \"Permission request\"."
+    },
+    {
+      "name": "Class",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Additional CSS classes for the root element."
+    },
+    {
+      "name": "DurationOptions",
+      "type": "IReadOnlyList<TimeSpan>?",
+      "isRequired": false,
+      "description": "The durations offered for PermissionScope.ForDuration, in the offered order. Default is 15 minutes and one hour; values that are zero or negative are ignored and an empty list falls back to the default, because a \"for a while\" permission always needs a length. To forbid the timed scope exclude it from ScopeOptions."
+    },
+    {
+      "name": "EnableShortcuts",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Whether the Ctrl/Cmd+Enter (allow) and Ctrl/Cmd+Backspace (deny) shortcuts are active while focus is inside the request, and whether the keyboard hint and aria-keyshortcuts are advertised. Default is true."
+    },
+    {
+      "name": "Grant",
+      "type": "PermissionGrant?",
+      "isRequired": false,
+      "description": "The permission currently in force. While this parameter is set the request renders its granted row with the remaining time and Revoke; once the grant's PermissionGrant.ExpiresAt passes, the row becomes expired and GrantChanged reports a cleared grant. A new request needs a new component instance (render it with @key)."
+    },
+    {
+      "name": "GrantChanged",
+      "type": "EventCallback<PermissionGrant?>",
+      "isRequired": false,
+      "description": "Raised with the grant a decision produced and with null when the permission is revoked or runs out. Use it with @bind-Grant."
+    },
+    {
+      "name": "OnDecision",
+      "type": "Func<PermissionDecision, Task>?",
+      "isRequired": false,
+      "description": "Callback that persists the decision. The request stays pending while it runs (both actions disabled, the request aria-busy); when it throws, the error is shown and the request stays decidable."
+    },
+    {
+      "name": "OnRevoke",
+      "type": "Func<Task>?",
+      "isRequired": false,
+      "description": "Callback invoked when the reader revokes a permission. A throw keeps the grant and shows the localized error; without a callback Revoke still clears the grant locally and reports the cleared grant through GrantChanged."
+    },
+    {
+      "name": "Reason",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Why the agent needs the permission, in the agent's own words. When omitted the reason row is not rendered."
+    },
+    {
+      "name": "Risk",
+      "type": "ApprovalRisk",
+      "isRequired": false,
+      "description": "Risk of the permission, shown as a localized badge. Default is ApprovalRisk.Low."
+    },
+    {
+      "name": "ScopeOptions",
+      "type": "IReadOnlyList<PermissionScope>?",
+      "isRequired": false,
+      "description": "The scopes the reader may pick from, in the offered order. Default is every scope (PermissionScope.Once, PermissionScope.ForDuration, PermissionScope.Session, PermissionScope.Always); an empty or all-invalid list falls back to PermissionScope.Once, so a request can always be answered. Excluding a scope here is how a host forbids it."
+    },
+    {
+      "name": "Target",
+      "type": "string?",
+      "isRequired": false,
+      "description": "The target of the call — a path, a URL, a mailbox or whatever the tool operates on. When omitted the target row is not rendered."
+    },
+    {
+      "name": "ToolDisplayName",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Human-readable name of the tool. When omitted the request is named by ToolName."
+    },
+    {
+      "name": "ToolName",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Technical name of the tool the agent wants to use (for example web.search), shown as code in the request details."
+    }
+  ]
+}

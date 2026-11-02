@@ -2,11 +2,14 @@ using Bunit;
 using FluentAssertions;
 using Microsoft.AspNetCore.Components.Forms;
 using Tempo.Blazor.Abstractions.Models;
+using Tempo.Blazor.Abstractions.Models.Diffs;
+using Tempo.Blazor.Components.Approvals;
 using Tempo.Blazor.Components.AuditLog;
 using Tempo.Blazor.Components.Chat;
 using Tempo.Blazor.Components.DocumentEditor;
 using Tempo.Blazor.Components.ImportExport;
 using Tempo.Blazor.Components.Modeling;
+using Tempo.Blazor.Diff;
 using Tempo.Blazor.Interfaces;
 using Tempo.Blazor.Modeling;
 using Tempo.Blazor.Models;
@@ -190,5 +193,72 @@ public class PluralAdoptionTests : LocalizationTestBase
 
         cut.Find(".tm-data-import__hint").TextContent.Trim()
             .Should().Be("… a ještě 2 chyby. Kompletní report je ke stažení níže.");
+    }
+
+    // ── Fáze 4: the TmInlineDiff bulk decision reads as a sentence ───────────────────────────────
+
+    /// <summary>
+    /// A diff with exactly <paramref name="changes"/> reviewable changes: the word "keep" between two
+    /// changes stays equal, so each rewrite is its OWN hunk instead of one merged replacement.
+    /// </summary>
+    private static (string OldText, string NewText) DiffWithChanges(int changes)
+    {
+        var words = new[] { "a", "b", "c", "d", "e", "f", "g" }.Take(changes).ToArray();
+        return (
+            string.Join(' ', words.Select(word => "keep " + word)),
+            string.Join(' ', words.Select(word => "keep " + word.ToUpperInvariant())));
+    }
+
+    private IRenderedComponent<TmInlineDiff> RenderReviewDiff(string oldText, string newText)
+        => Render<TmInlineDiff>(parameters =>
+        {
+            parameters.Add(diff => diff.OldText, oldText);
+            parameters.Add(diff => diff.NewText, newText);
+            parameters.Add(diff => diff.Mode, InlineDiffMode.Review);
+        });
+
+    [Theory]
+    [InlineData(1, "1 změna přijata.")]
+    [InlineData(2, "Všechny 2 změny přijaty.")]
+    [InlineData(3, "Všechny 3 změny přijaty.")]
+    [InlineData(5, "Všech 5 změn přijato.")]
+    [InlineData(7, "Všech 7 změn přijato.")]
+    public void Czech_bulk_accept_agrees_with_the_count(int changes, string expected)
+    {
+        UseCzechLocalization();
+
+        var (oldText, newText) = DiffWithChanges(changes);
+        var cut = RenderReviewDiff(oldText, newText);
+
+        cut.FindAll("[data-testid='inline-diff-change']").Should().HaveCount(changes,
+            "the fixture must produce exactly {0} reviewable changes", changes);
+
+        cut.Find("[data-testid='inline-diff-accept-all']").Click();
+
+        cut.Find("[data-testid='inline-diff-announcements']").TextContent.Trim().Should().Be(expected);
+    }
+
+    [Theory]
+    [InlineData(2, "Všechny 2 změny odmítnuty.")]
+    [InlineData(5, "Všech 5 změn odmítnuto.")]
+    public void Czech_bulk_reject_agrees_with_the_count(int changes, string expected)
+    {
+        UseCzechLocalization();
+
+        var (oldText, newText) = DiffWithChanges(changes);
+        var ids = TextDiff.Words(oldText, newText).Changes.Select(hunk => hunk.Id).ToList();
+        ids.Should().HaveCount(changes, "the fixture must produce exactly {0} reviewable changes", changes);
+
+        var cut = Render<TmInlineDiff>(parameters =>
+        {
+            parameters.Add(diff => diff.OldText, oldText);
+            parameters.Add(diff => diff.NewText, newText);
+            parameters.Add(diff => diff.Mode, InlineDiffMode.Review);
+            parameters.Add(diff => diff.AcceptedHunkIds, ids);
+        });
+
+        cut.Find("[data-testid='inline-diff-reject-all']").Click();
+
+        cut.Find("[data-testid='inline-diff-announcements']").TextContent.Trim().Should().Be(expected);
     }
 }

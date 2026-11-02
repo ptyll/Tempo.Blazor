@@ -1,0 +1,1121 @@
+{
+  "package": {
+    "packageId": "Tempo.Blazor.AI",
+    "title": "Tempo.Blazor.AI",
+    "description": "AI conversation components for Tempo.Blazor: a safe Markdig markdown view, messages with citations and feedback, a streaming conversation container, a composer and tool-call/reasoning panels. Generic contracts live in Tempo.Blazor.Abstractions, so no LLM SDK is referenced.",
+    "authors": "ptyll",
+    "targetFrameworks": [
+      "net8.0",
+      "net9.0",
+      "net10.0"
+    ],
+    "tags": "blazor;components;ai;llm;chat;streaming;markdown",
+    "repositoryUrl": "https://github.com/ptyll/Tempo.Blazor",
+    "projectUrl": "https://github.com/ptyll/Tempo.Blazor",
+    "installation": {
+      "nuget": [
+        "dotnet add package Tempo.Blazor.AI"
+      ]
+    },
+    "dependencies": [
+      {
+        "name": "Markdig",
+        "version": "1.5.1"
+      },
+      {
+        "name": "Microsoft.AspNetCore.Components.Web",
+        "version": "8.0.12"
+      },
+      {
+        "name": "Microsoft.AspNetCore.Components.Web",
+        "version": "9.0.3"
+      },
+      {
+        "name": "Microsoft.AspNetCore.Components.Web",
+        "version": "10.0.3"
+      }
+    ],
+    "projectReferences": [
+      "../Tempo.Blazor/Tempo.Blazor.csproj",
+      "../Tempo.Blazor.Abstractions/Tempo.Blazor.Abstractions.csproj"
+    ],
+    "namespaces": [
+      "Tempo.Blazor.AI.Markdown",
+      "Tempo.Blazor.Components.AI",
+      "Tempo.Blazor.Configuration"
+    ]
+  },
+  "gettingStarted": {
+    "title": "Tempo.Blazor.AI",
+    "overview": "AI conversation components for Tempo.Blazor: a safe Markdig markdown view, messages with citations and feedback, a streaming conversation container, a composer and tool-call/reasoning panels. Generic contracts live in Tempo.Blazor.Abstractions, so no LLM SDK is referenced.",
+    "targetFramework": "net8.0 / net9.0 / net10.0",
+    "installation": {
+      "nuget": [
+        "dotnet add package Tempo.Blazor.AI"
+      ]
+    },
+    "dependencies": [
+      {
+        "name": "Markdig",
+        "version": "1.5.1"
+      },
+      {
+        "name": "Microsoft.AspNetCore.Components.Web",
+        "version": "8.0.12"
+      },
+      {
+        "name": "Microsoft.AspNetCore.Components.Web",
+        "version": "9.0.3"
+      },
+      {
+        "name": "Microsoft.AspNetCore.Components.Web",
+        "version": "10.0.3"
+      }
+    ]
+  },
+  "items": [
+    {
+      "itemName": "TmAiComposer",
+      "kind": "Component",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.Components.AI",
+      "description": "The prompt composer of an AI conversation: an autosizing textarea whose Enter sends and Shift+Enter inserts a new line (an IME composition never sends), a send slot that becomes Stop while a generation runs, attachment chips with MaxAttachments/MaxFileSize enforced against a localized message, a model selector (built-in or the host's own template), an opt-in voice input that renders only where the Web Speech API exists, and one suggestion listbox shared by the \"/\" slash commands and the host's \"@\" mention provider. The textarea is the combobox of that listbox (aria-expanded, aria-activedescendant, arrow keys, Enter, Escape) and keeps the DOM focus while the list is open, the caret position comes from the package's ES module ai-composer.js (which also owns the autosize and the IME guard), and every announcement goes through the component's single polite live region. OnSubmit carries the trimmed text, the attachments, the selected model, the mentions and the slash command; the draft is cleared only after the handler completed.",
+      "packageId": "Tempo.Blazor.AI",
+      "sourcePath": "src/Tempo.Blazor.AI/Components/AI/TmAiComposer.razor",
+      "documentationStatus": "merged",
+      "requiredImports": [
+        "@using Tempo.Blazor.Components.AI"
+      ],
+      "parameters": [
+        {
+          "name": "Accept",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Accepted file types forwarded to the browser picker (for example \"image/*,.pdf\")."
+        },
+        {
+          "name": "AriaLabel",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Accessible name of the prompt. Default null uses the localized \"Message\". Set it when the page has several composers so a screen-reader user can tell them apart."
+        },
+        {
+          "name": "Attachments",
+          "type": "IReadOnlyList<AiComposerAttachment>?",
+          "isRequired": false,
+          "description": "Attachments seeded by the host. A new list whose ids differ from the current chips replaces them; echoing the list the component raised through AttachmentsChanged is not a replacement."
+        },
+        {
+          "name": "AttachmentsChanged",
+          "type": "EventCallback<IReadOnlyList<AiComposerAttachment>>",
+          "isRequired": false,
+          "description": "Raised with every accepted attachment change (a pick, a removal, the post-submit clear)."
+        },
+        {
+          "name": "Class",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Additional CSS class(es) for the root element."
+        },
+        {
+          "name": "Commands",
+          "type": "IReadOnlyList<AiSlashCommand>?",
+          "isRequired": false,
+          "description": "Slash commands offered after the reader types \"/\". A command is filtered by its title (and its description); picking one inserts its Prompt (or \"/{Title}\") into the draft and the next submit carries it as AiComposerSubmit.Command."
+        },
+        {
+          "name": "Disabled",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Disables the prompt, the picker, the voice control and the send/stop slot."
+        },
+        {
+          "name": "EnableAttachments",
+          "type": "bool",
+          "isRequired": false,
+          "default": "true",
+          "description": "Offer the attachment picker and the chip list. Default true."
+        },
+        {
+          "name": "EnableVoiceInput",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Offer the opt-in voice input. Default false: the control renders only when this is true AND the browser exposes the Web Speech API, so a browser without speech recognition never shows a dead button."
+        },
+        {
+          "name": "IsGenerating",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Whether a generation is running. The send slot renders the Stop control instead of Send while it is true, and Enter cannot start a second generation."
+        },
+        {
+          "name": "MaxAttachments",
+          "type": "int",
+          "isRequired": false,
+          "default": "5",
+          "description": "How many files one prompt may carry. Default 5. A zero (or negative) value refuses every file with the localized \"at most 0 files\" message, which is how a host turns attachments off without removing the picker."
+        },
+        {
+          "name": "MaxFileSize",
+          "type": "long",
+          "isRequired": false,
+          "default": "10L * 1024 * 1024",
+          "description": "The largest file the composer accepts, in bytes. Default 10 MB. Zero (or negative) disables the size check; the browser and the host's upload path remain responsible for what they will actually read."
+        },
+        {
+          "name": "MaxRows",
+          "type": "int",
+          "isRequired": false,
+          "default": "8",
+          "description": "How many rows the prompt may grow to before it starts scrolling. Default 8. The module clamps the autosize to this row count, and a value of zero or less leaves the height uncapped."
+        },
+        {
+          "name": "MentionDebounce",
+          "type": "TimeSpan",
+          "isRequired": false,
+          "default": "TimeSpan.FromMilliseconds(200)",
+          "description": "Quiet period before a mention query is sent. Default 200 ms. Zero sends every keystroke, which is only reasonable for an in-memory provider."
+        },
+        {
+          "name": "MentionProvider",
+          "type": "IAiMentionProvider?",
+          "isRequired": false,
+          "description": "The source of the \"@\" mentions. The composer calls it with the typed query, debounced by MentionDebounce and cancelled as soon as the query changes or the list closes. Without a provider the \"@\" trigger does nothing."
+        },
+        {
+          "name": "Models",
+          "type": "IReadOnlyList<string>?",
+          "isRequired": false,
+          "description": "The models the reader may pick from. An empty (or null) list hides the built-in select unless ModelSelectorTemplate supplies a picker of its own."
+        },
+        {
+          "name": "ModelSelectorTemplate",
+          "type": "RenderFragment?",
+          "isRequired": false,
+          "description": "Replaces the built-in model select with the host's own picker — a full model picker with descriptions, a provider switcher, … The host binds its own control to SelectedModel; the composer only carries the value into the submit."
+        },
+        {
+          "name": "OnStop",
+          "type": "EventCallback",
+          "isRequired": false,
+          "description": "Raised when the reader activates the Stop control of a running generation."
+        },
+        {
+          "name": "OnSubmit",
+          "type": "EventCallback<AiComposerSubmit>",
+          "isRequired": false,
+          "description": "Raised with the submitted prompt: the trimmed text, the attachments, the selected model, the mentions the draft references and the slash command it started from. The draft, the attachments and the recorded mentions are cleared only after the handler completed — a handler that throws keeps the reader's text. Without a bound handler the send control is not offered."
+        },
+        {
+          "name": "Placeholder",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Placeholder of the prompt. Default null uses the localized \"Ask anything…\"."
+        },
+        {
+          "name": "SelectedModel",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Identifier of the model the draft targets, two-way bound through SelectedModelChanged. A host echoing the value it received is not a replacement."
+        },
+        {
+          "name": "SelectedModelChanged",
+          "type": "EventCallback<string?>",
+          "isRequired": false,
+          "description": "Raised with the model the reader picked in the built-in select."
+        },
+        {
+          "name": "SpeechLanguage",
+          "type": "string?",
+          "isRequired": false,
+          "description": "BCP-47 language of the speech recognizer. Default null uses the document's language and then en-US."
+        },
+        {
+          "name": "Sticky",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Stick the composer to the bottom of its scroll container at every width. Default false — the narrow (mobile) layout is sticky on its own, this forces it in a wide container too."
+        },
+        {
+          "name": "Text",
+          "type": "string?",
+          "isRequired": false,
+          "description": "The draft. Two-way bound: the component raises TextChanged on every edit and clears the draft after a successful submit. A host that reassigns the value to something the component did not type replaces the draft (the suggestion list closes and the recorded command/mentions are dropped); a host echoing the value it received is not a replacement."
+        },
+        {
+          "name": "TextChanged",
+          "type": "EventCallback<string?>",
+          "isRequired": false,
+          "description": "Raised with the draft on every edit and with an empty string after a successful submit."
+        },
+        {
+          "name": "TrackVirtualKeyboard",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Track the on-screen keyboard so a sticky composer stays above it (the iOS visualViewport pattern of TmChat.TrackVirtualKeyboard). Default false: no viewport listeners and no inline knob."
+        }
+      ],
+      "examples": [
+        {
+          "title": "Send a prompt and stop a running generation",
+          "code": "<TmAiComposer @ref=\"composer\"\n              @bind-Text=\"draft\"\n              IsGenerating=\"@generating\"\n              OnSubmit=\"@SendAsync\"\n              OnStop=\"@(() => generation?.Cancel())\" />\n\n@code {\n    private TmAiComposer composer = default!;\n    private string draft = string.Empty;\n    private bool generating;\n    private CancellationTokenSource? generation;\n\n    private async Task SendAsync(AiComposerSubmit submit)\n    {\n        generation = new CancellationTokenSource();\n        generating = true;\n        try\n        {\n            await client.AskAsync(submit.Text, submit.Attachments, submit.Model, generation.Token);\n        }\n        finally\n        {\n            generating = false;\n        }\n    }\n}"
+        },
+        {
+          "title": "Slash commands, mentions, attachments and a model select",
+          "code": "<TmAiComposer Commands=\"@commands\"\n              MentionProvider=\"@mentions\"\n              Models=\"@models\"\n              @bind-SelectedModel=\"model\"\n              MaxAttachments=\"3\"\n              MaxFileSize=\"@(5 * 1024 * 1024)\"\n              Accept=\"image/*,.pdf\"\n              OnSubmit=\"@SendAsync\" />\n\n@code {\n    private readonly List<AiSlashCommand> commands =\n    [\n        new() { Id = \"summarise\", Title = \"summarise\", Description = \"Summarise the thread\" },\n        new() { Id = \"translate\", Title = \"translate\", Description = \"Translate the thread\" },\n    ];\n\n    private readonly string[] models = [\"gpt-4o\", \"o3-mini\"];\n    private string? model = \"gpt-4o\";\n}"
+        },
+        {
+          "title": "Voice input and a host-owned model picker",
+          "code": "<TmAiComposer EnableVoiceInput=\"true\"\n              SpeechLanguage=\"cs-CZ\"\n              Sticky=\"true\"\n              TrackVirtualKeyboard=\"true\"\n              OnSubmit=\"@SendAsync\">\n    <ModelSelectorTemplate>\n        <MyModelPicker @bind-Model=\"model\" />\n    </ModelSelectorTemplate>\n</TmAiComposer>"
+        }
+      ]
+    },
+    {
+      "itemName": "TmAiConversation",
+      "kind": "Component",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.Components.AI",
+      "description": "The transcript of an AI conversation plus the streaming machinery around it: a focusable role=log live region that renders the host's turns through TmAiMessage (or a host MessageTemplate), the empty state with the host's suggestion prompts, an optional render window for a very long history, the \"Load older messages\" control, the floating \"New messages\" and \"Stop generating\" pills, and the polite completion note. StreamAsync folds an IAsyncEnumerable<AiStreamDelta> into the message the host appended, throttles the renders through the injected TimeProvider (a Server circuit must not re-render per token), keeps the partial answer on Stop and marks the turn Completed, Stopped or Failed. Auto-scroll follows new content only while the reader is at the bottom — a detached reader gets the \"New messages\" pill instead of a moving viewport — and the scrolling surface is the package's ES module ai-conversation.js (scroll tracking plus a ResizeObserver on the content), so smooth scrolling follows prefers-reduced-motion.",
+      "packageId": "Tempo.Blazor.AI",
+      "sourcePath": "src/Tempo.Blazor.AI/Components/AI/TmAiConversation.razor",
+      "documentationStatus": "merged",
+      "requiredImports": [
+        "@using Tempo.Blazor.Components.AI"
+      ],
+      "parameters": [
+        {
+          "name": "AutoScroll",
+          "type": "bool",
+          "isRequired": false,
+          "default": "true",
+          "description": "Follow new content and offer the \"New messages\" affordance. Default true. When false the component imports no browser module at all and never scrolls — the host owns the scrolling surface."
+        },
+        {
+          "name": "Class",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Additional CSS class(es) for the root element."
+        },
+        {
+          "name": "Height",
+          "type": "string?",
+          "isRequired": false,
+          "description": "CSS length of the transcript (for example \"32rem\" or \"100%\"). Default null uses the stylesheet's height."
+        },
+        {
+          "name": "Messages",
+          "type": "IReadOnlyList<AiMessage>?",
+          "isRequired": false,
+          "description": "The turns of the conversation, oldest first. The host owns the list: append a turn before it starts streaming and the component renders it. Reassigning the property to a NEW list instance is treated as loading another conversation (the render window snaps to the newest turns); appending to the same instance keeps the window where the reader left it."
+        },
+        {
+          "name": "MessageTemplate",
+          "type": "RenderFragment<AiMessage>?",
+          "isRequired": false,
+          "description": "Replaces the built-in TmAiMessage of every turn. The template receives the message, so a host can attach its own per-turn actions (regenerate, feedback, retry) without the conversation re-declaring them."
+        },
+        {
+          "name": "OnStop",
+          "type": "EventCallback",
+          "isRequired": false,
+          "description": "Raised once after a running generation was stopped — by the built-in Stop control or by a host calling StopAsync(). The component cancels the token it handed to the stream itself, so this is a notification, not a request: a handler must not call StopAsync() again (it is a no-op, so it cannot loop)."
+        },
+        {
+          "name": "OnSuggestion",
+          "type": "EventCallback<string>",
+          "isRequired": false,
+          "description": "Raised with the text of an activated suggestion prompt. The chips render only while the conversation has no turn AND this handler is bound — a chip that raises nothing is not offered."
+        },
+        {
+          "name": "RenderThrottle",
+          "type": "TimeSpan",
+          "isRequired": false,
+          "default": "TimeSpan.FromMilliseconds(50)",
+          "description": "Minimum time between two renders of a streamed answer. Default 50 ms. A Server circuit re-rendering per token is a render storm, so deltas arriving faster than this interval are folded into the message but not painted; the stream always renders once when it starts and once when it ends. Zero or a negative value renders every applied delta."
+        },
+        {
+          "name": "RenderWindowSize",
+          "type": "int?",
+          "isRequired": false,
+          "description": "How many of the newest turns are rendered; null (the default) renders every turn. A window keeps a very long transcript's DOM small, renders the contiguous tail and grows upwards by RenderWindowStep through the \"Load older messages\" control. Values below 10 are raised to 10 — a two-row window is a teaser, not a conversation."
+        },
+        {
+          "name": "RenderWindowStep",
+          "type": "int",
+          "isRequired": false,
+          "default": "50",
+          "description": "How many turns one \"Load older messages\" activation adds. Default 50, raised to at least 10."
+        },
+        {
+          "name": "ShowStop",
+          "type": "bool",
+          "isRequired": false,
+          "default": "true",
+          "description": "Offer the built-in \"Stop generating\" control while a stream runs. Default true; a host that renders its own stop control (a composer, a toolbar) turns it off and calls StopAsync() itself."
+        },
+        {
+          "name": "Suggestions",
+          "type": "IReadOnlyList<string>?",
+          "isRequired": false,
+          "description": "Prompts offered by the empty state. They render only while the conversation has no turn AND OnSuggestion is bound."
+        }
+      ],
+      "examples": [
+        {
+          "title": "Stream an answer into the conversation",
+          "code": "<TmAiConversation @ref=\"conversation\" Messages=\"@messages\" />\n\n@code {\n    private TmAiConversation conversation = default!;\n    private readonly List<AiMessage> messages = new();\n\n    private async Task SendAsync(string prompt)\n    {\n        messages.Add(new AiMessage { Role = AiMessageRole.User, Parts = { new AiTextPart(prompt) } });\n        var answer = new AiMessage { Role = AiMessageRole.Assistant, Status = AiMessageStatus.Pending };\n        messages.Add(answer);\n        await conversation.StreamAsync(answer, client.StreamAsync(prompt));\n    }\n}"
+        },
+        {
+          "title": "Suggestion prompts on the empty state and a windowed long history",
+          "code": "<TmAiConversation @ref=\"conversation\"\n                 Messages=\"@messages\"\n                 Suggestions=\"@suggestions\"\n                 OnSuggestion=\"@(text => SendAsync(text))\"\n                 RenderWindowSize=\"50\"\n                 RenderWindowStep=\"25\"\n                 OnStop=\"@(() => composer.Reset())\"\n                 Height=\"32rem\" />"
+        },
+        {
+          "title": "Host-owned turns with host actions",
+          "code": "<TmAiConversation Messages=\"@messages\" ShowStop=\"false\">\n    <MessageTemplate Context=\"message\">\n        <TmAiMessage Message=\"message\" OnRegenerate=\"@(() => RegenerateAsync(message))\" />\n    </MessageTemplate>\n</TmAiConversation>"
+        }
+      ]
+    },
+    {
+      "itemName": "TmAiMessage",
+      "kind": "Component",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.Components.AI",
+      "description": "One turn of an AI conversation (a user prompt or the model's answer): the ordered parts rendered through the safe markdown view, the citation chips with a source preview, the source cards, the follow-up chips and the action toolbar (copy as plain text, regenerate with a version switcher, thumbs up/down with an optional reason, read aloud). A reasoning part renders through TmReasoningPanel (collapsed summary, live counter, steps and inspected sources) and consecutive tool-call parts collapse into one TmToolCallGroup (a single call renders as its own TmToolCallCard). The bubble mirrors itself for a user turn, and the three lifecycle states read differently: streaming streams with the package caret and marks the body busy, stopped shows a localized label, failed shows the error with Retry.",
+      "packageId": "Tempo.Blazor.AI",
+      "sourcePath": "src/Tempo.Blazor.AI/Components/AI/TmAiMessage.razor",
+      "documentationStatus": "merged",
+      "requiredImports": [
+        "@using Tempo.Blazor.Components.AI"
+      ],
+      "parameters": [
+        {
+          "name": "ActionsTemplate",
+          "type": "RenderFragment?",
+          "isRequired": false,
+          "description": "Replaces the whole built-in action toolbar with host actions. The built-in bar is a role=toolbar with a roving tabindex; a host template owns its own keyboard model, so it is rendered as plain content and must provide one if it renders more than one button."
+        },
+        {
+          "name": "ActiveVersionIndexChanged",
+          "type": "EventCallback<int>",
+          "isRequired": false,
+          "description": "Raised with the target zero-based version index when the reader steps through the regenerated versions. The component shows the chosen version immediately but never mutates AiMessage.ActiveVersionIndex: assign the index in the handler to persist the choice, and a host that changes the model's index itself wins over the reader's last step."
+        },
+        {
+          "name": "AvatarTemplate",
+          "type": "RenderFragment?",
+          "isRequired": false,
+          "description": "Replaces the default role glyph inside the avatar slot. The slot itself stays decorative (aria-hidden): the role is conveyed by the message's own accessible structure, so a host image here must not introduce a second name for the same turn."
+        },
+        {
+          "name": "Class",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Additional CSS class(es) for the root element."
+        },
+        {
+          "name": "Message",
+          "type": "AiMessage?",
+          "isRequired": true,
+          "description": "The message this block renders. Required: a null value renders an empty shell (the body is empty and no action is offered) instead of throwing, so a host can place the component before the first token arrives.",
+          "editorRequired": true
+        },
+        {
+          "name": "OnCitationClick",
+          "type": "EventCallback<string>",
+          "isRequired": false,
+          "description": "Raised with the source id when a citation chip is activated — after the built-in source preview opened, so a host can navigate away without losing the preview state it never sees."
+        },
+        {
+          "name": "OnFeedback",
+          "type": "EventCallback<AiFeedback>",
+          "isRequired": false,
+          "description": "Raised with the rating when the reader presses a thumb. A negative rating is raised immediately (thumbs up/down must never require an explanation) and raised a second time with AiFeedback.Reason when the reader submits the optional reason."
+        },
+        {
+          "name": "OnFollowUp",
+          "type": "EventCallback<string>",
+          "isRequired": false,
+          "description": "Raised with the suggestion text when a follow-up chip is activated."
+        },
+        {
+          "name": "OnRegenerate",
+          "type": "EventCallback",
+          "isRequired": false,
+          "description": "Raised when the reader asks for another generation of this answer. The action renders only when a handler is bound, so no host gets a button that does nothing."
+        },
+        {
+          "name": "OnRetry",
+          "type": "EventCallback",
+          "isRequired": false,
+          "description": "Raised when the reader asks to retry a failed generation."
+        },
+        {
+          "name": "OnToolCallRetry",
+          "type": "EventCallback<AiToolCall>",
+          "isRequired": false,
+          "description": "Raised with the tool call the reader asked to run again, from a failed call's Retry button — inside a single call's card or inside a grouped run. The buttons render only when a handler is bound, so no host gets a button that does nothing."
+        },
+        {
+          "name": "ReadAloud",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Offer the \"Read aloud\" action, which speaks the answer's plain text through the browser's speechSynthesis. Default false. The action is hidden when the browser has no speech synthesis (feature-detected on first render) — never a dead button."
+        },
+        {
+          "name": "ShowActions",
+          "type": "bool",
+          "isRequired": false,
+          "default": "true",
+          "description": "Render the action toolbar (copy, regenerate, read aloud, feedback). Default true; the bar itself is offered only for a finished turn (completed, stopped or failed), because there is nothing to copy, regenerate or rate while the answer is still arriving."
+        },
+        {
+          "name": "ShowAvatar",
+          "type": "bool",
+          "isRequired": false,
+          "default": "true",
+          "description": "Render the avatar slot (the role glyph, or AvatarTemplate). Default true."
+        },
+        {
+          "name": "ShowFollowUps",
+          "type": "bool",
+          "isRequired": false,
+          "default": "true",
+          "description": "Render the follow-up suggestions as chips under the answer. Default true."
+        },
+        {
+          "name": "ShowSources",
+          "type": "bool",
+          "isRequired": false,
+          "default": "true",
+          "description": "Render the cited sources as cards in part order. Default true."
+        }
+      ],
+      "examples": [
+        {
+          "title": "Render an assistant answer with actions",
+          "code": "<TmAiMessage Message=\"@answer\"\n             OnRegenerate=\"@(() => candidates.RegenerateAsync(answer.Id))\"\n             OnFeedback=\"@(feedback => client.RateAsync(answer.Id, feedback))\"\n             OnCitationClick=\"@(id => sourcePanel.Open(answer.FindSource(id)))\" />"
+        },
+        {
+          "title": "A regenerated answer with a version switcher, follow-ups and read-aloud",
+          "code": "<TmAiMessage Message=\"@answer\"\n             ReadAloud=\"true\"\n             OnFollowUp=\"@(text => composer.SubmitAsync(text))\"\n             ActiveVersionIndexChanged=\"@(index => answer.ActiveVersionIndex = index)\" />"
+        },
+        {
+          "title": "Replace the built-in actions with host buttons",
+          "code": "<TmAiMessage Message=\"@answer\">\n    <ActionsTemplate>\n        <button type=\"button\" @onclick=\"SaveAsync\">Save</button>\n    </ActionsTemplate>\n</TmAiMessage>"
+        }
+      ]
+    },
+    {
+      "itemName": "TmMarkdownView",
+      "kind": "Component",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.Components.AI",
+      "description": "Renders untrusted markdown (an AI answer, a tool result, a system note) through the package's safe pipeline: raw HTML is escaped instead of rendered, only http/https/mailto and relative link targets survive (everything else collapses to '#'), images are limited to absolute http(s), every link carries target=\"_blank\" rel=\"noopener noreferrer nofollow\", code blocks get a copy affordance and cite: links become citation chips that raise OnCitationClick. The rendered HTML is cached against the last input, so a parent re-render with unchanged text does not re-run Markdig.",
+      "packageId": "Tempo.Blazor.AI",
+      "sourcePath": "src/Tempo.Blazor.AI/Components/AI/TmMarkdownView.razor",
+      "documentationStatus": "merged",
+      "requiredImports": [
+        "@using Tempo.Blazor.Components.AI"
+      ],
+      "parameters": [
+        {
+          "name": "Class",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Additional CSS class(es) for the root element."
+        },
+        {
+          "name": "CodeBlockTemplate",
+          "type": "Func<AiMarkdownCodeBlockContext, string>?",
+          "isRequired": false,
+          "description": "Optional host renderer for a code block, replacing the built-in <pre><code> plus copy affordance (for example with syntax-highlighted markup). The returned HTML is trusted verbatim, so the host owns its escaping: pass context.Code through HtmlEncoder.Default.Encode. Pass a stable reference — a cached field, a static method or a method group — because the render cache compares the delegate's Method and Target, not the delegate instance."
+        },
+        {
+          "name": "Markdown",
+          "type": "string?",
+          "isRequired": false,
+          "description": "The markdown to render. It is untrusted model output: the component renders it through the safe markdown pipeline (raw HTML disabled, http/https/mailto/relative allowlist, hardened links), so a hostile answer cannot execute markup. Tables become a keyboard-reachable named region and code blocks get a keyboard-reachable scroller plus a copy button that announces through a live region."
+        },
+        {
+          "name": "OnCitationClick",
+          "type": "EventCallback<string>",
+          "isRequired": false,
+          "description": "Raised with the source id when a citation chip is activated, so the host can open the source preview (the chips are rendered for markdown links written as [1](cite:<sourceId>))."
+        }
+      ],
+      "examples": [
+        {
+          "title": "Render an assistant answer with citation clicks",
+          "code": "<TmMarkdownView Markdown=\"@message.Text\"\n                OnCitationClick=\"id => ShowSourcePreview(message.FindSource(id))\" />"
+        },
+        {
+          "title": "Replace the code-block markup with syntax highlighting",
+          "code": "<TmMarkdownView Markdown=\"@answer\"\n                CodeBlockTemplate=\"ctx => Highlighter.RenderHtml(ctx.Code, ctx.Language)\" />"
+        }
+      ]
+    },
+    {
+      "itemName": "TmPermissionRequest",
+      "kind": "Component",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.Components.AI",
+      "description": "The agent's request for one concrete permission: the tool it wants to use, the target it wants to reach, why it needs it, a localized risk badge, the scopes the host is willing to offer, and an Allow / Deny decision with an optional duration. A decision collapses the request into a single result row; a granted permission keeps a live countdown driven by the injected TimeProvider and offers Revoke until it runs out. Exactly one polite live region carries every announcement, the ticking countdown is aria-live=off, and the collapse moves focus to the surviving control (Revoke, else the group root) while Revoke hands it back to Allow.",
+      "packageId": "Tempo.Blazor.AI",
+      "sourcePath": "src/Tempo.Blazor.AI/Components/AI/TmPermissionRequest.razor",
+      "documentationStatus": "merged",
+      "requiredImports": [
+        "@using Tempo.Blazor.Components.AI"
+      ],
+      "parameters": [
+        {
+          "name": "AriaLabel",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Accessible name of the group. Defaults to a localized \"Permission request\"."
+        },
+        {
+          "name": "Class",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Additional CSS classes for the root element."
+        },
+        {
+          "name": "DurationOptions",
+          "type": "IReadOnlyList<TimeSpan>?",
+          "isRequired": false,
+          "description": "The durations offered for PermissionScope.ForDuration, in the offered order. Default is 15 minutes and one hour; values that are zero or negative are ignored and an empty list falls back to the default, because a \"for a while\" permission always needs a length. To forbid the timed scope exclude it from ScopeOptions."
+        },
+        {
+          "name": "EnableShortcuts",
+          "type": "bool",
+          "isRequired": false,
+          "default": "true",
+          "description": "Whether the Ctrl/Cmd+Enter (allow) and Ctrl/Cmd+Backspace (deny) shortcuts are active while focus is inside the request, and whether the keyboard hint and aria-keyshortcuts are advertised. Default is true."
+        },
+        {
+          "name": "Grant",
+          "type": "PermissionGrant?",
+          "isRequired": false,
+          "description": "The permission currently in force. While this parameter is set the request renders its granted row with the remaining time and Revoke; once the grant's PermissionGrant.ExpiresAt passes, the row becomes expired and GrantChanged reports a cleared grant. A new request needs a new component instance (render it with @key)."
+        },
+        {
+          "name": "GrantChanged",
+          "type": "EventCallback<PermissionGrant?>",
+          "isRequired": false,
+          "description": "Raised with the grant a decision produced and with null when the permission is revoked or runs out. Use it with @bind-Grant."
+        },
+        {
+          "name": "OnDecision",
+          "type": "Func<PermissionDecision, Task>?",
+          "isRequired": false,
+          "description": "Callback that persists the decision. The request stays pending while it runs (both actions disabled, the request aria-busy); when it throws, the error is shown and the request stays decidable."
+        },
+        {
+          "name": "OnRevoke",
+          "type": "Func<Task>?",
+          "isRequired": false,
+          "description": "Callback invoked when the reader revokes a permission. A throw keeps the grant and shows the localized error; without a callback Revoke still clears the grant locally and reports the cleared grant through GrantChanged."
+        },
+        {
+          "name": "Reason",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Why the agent needs the permission, in the agent's own words. When omitted the reason row is not rendered."
+        },
+        {
+          "name": "Risk",
+          "type": "ApprovalRisk",
+          "isRequired": false,
+          "default": "ApprovalRisk.Low",
+          "description": "Risk of the permission, shown as a localized badge. Default is ApprovalRisk.Low."
+        },
+        {
+          "name": "ScopeOptions",
+          "type": "IReadOnlyList<PermissionScope>?",
+          "isRequired": false,
+          "description": "The scopes the reader may pick from, in the offered order. Default is every scope (PermissionScope.Once, PermissionScope.ForDuration, PermissionScope.Session, PermissionScope.Always); an empty or all-invalid list falls back to PermissionScope.Once, so a request can always be answered. Excluding a scope here is how a host forbids it."
+        },
+        {
+          "name": "Target",
+          "type": "string?",
+          "isRequired": false,
+          "description": "The target of the call — a path, a URL, a mailbox or whatever the tool operates on. When omitted the target row is not rendered."
+        },
+        {
+          "name": "ToolDisplayName",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Human-readable name of the tool. When omitted the request is named by ToolName."
+        },
+        {
+          "name": "ToolName",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Technical name of the tool the agent wants to use (for example web.search), shown as code in the request details."
+        },
+        {
+          "name": "AdditionalAttributes",
+          "type": "Dictionary<string, object>?",
+          "isRequired": false,
+          "description": "Additional HTML attributes applied to the root element."
+        }
+      ],
+      "examples": [
+        {
+          "title": "Ask before the agent uses a tool",
+          "code": "<TmPermissionRequest ToolName=\"web.search\"\n                     ToolDisplayName=\"Web search\"\n                     Target=\"https://example.com/pricing\"\n                     Reason=\"The agent needs the current pricing page to answer.\"\n                     Risk=\"ApprovalRisk.Medium\"\n                     OnDecision=\"HandleDecisionAsync\" />"
+        },
+        {
+          "title": "Persist the grant and let the reader revoke it",
+          "code": "<TmPermissionRequest ToolName=\"mail.send\"\n                     Target=\"invoices@contoso.com\"\n                     @bind-Grant=\"grant\"\n                     OnDecision=\"SaveDecisionAsync\"\n                     OnRevoke=\"RevokeAsync\" />"
+        },
+        {
+          "title": "Offer only the modest scopes",
+          "code": "<TmPermissionRequest ToolName=\"files.read\"\n                     ScopeOptions=\"@(new[] { PermissionScope.Once, PermissionScope.ForDuration })\"\n                     DurationOptions=\"@(new[] { TimeSpan.FromMinutes(5), TimeSpan.FromMinutes(30) })\"\n                     OnDecision=\"HandleDecisionAsync\" />"
+        }
+      ]
+    },
+    {
+      "itemName": "TmReasoningPanel",
+      "kind": "Component",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.Components.AI",
+      "description": "The reasoning (\"thinking\") part of an AI turn as a disclosure: collapsed it reports what the thinking cost (\"Thought for 12.0 s\"), expanded it lists the ordered steps and the sources the model inspected. While the model is still reasoning the summary counts up live on the injected TimeProvider, shimmers and the trailing step keeps the package's streaming caret. Source links go through the package's URL allowlist, so a refused scheme renders as plain text instead of a dead link. The panel owns exactly one role=status live region and announces the finished reasoning — not every token.",
+      "packageId": "Tempo.Blazor.AI",
+      "sourcePath": "src/Tempo.Blazor.AI/Components/AI/TmReasoningPanel.razor",
+      "documentationStatus": "merged",
+      "requiredImports": [
+        "@using Tempo.Blazor.Components.AI"
+      ],
+      "parameters": [
+        {
+          "name": "Class",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Additional CSS class(es) for the root element."
+        },
+        {
+          "name": "DefaultExpanded",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Whether the body starts expanded. Default false — the collapsed summary is the point."
+        },
+        {
+          "name": "IsRunning",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Whether the model is still reasoning. Default false. While true the summary counts up live, shimmers and the trailing step carries the streaming caret; when the host flips it to false the panel settles on AiReasoningPart.DurationMs and announces the result."
+        },
+        {
+          "name": "Reasoning",
+          "type": "AiReasoningPart?",
+          "isRequired": true,
+          "description": "The reasoning part this panel renders. A null value renders nothing, so a host can bind a part list without a null check.",
+          "editorRequired": true
+        },
+        {
+          "name": "ShowSources",
+          "type": "bool",
+          "isRequired": false,
+          "default": "true",
+          "description": "Render the inspected sources under the steps. Default true."
+        }
+      ],
+      "examples": [
+        {
+          "title": "Render a finished reasoning part",
+          "code": "<TmReasoningPanel Reasoning=\"@reasoningPart\" />"
+        },
+        {
+          "title": "Keep the live state while the answer is still streaming",
+          "code": "<TmReasoningPanel Reasoning=\"@reasoningPart\"\n                  IsRunning=\"@(message.Status == AiMessageStatus.Streaming)\" />"
+        },
+        {
+          "title": "Open the steps immediately and hide the inspected sources",
+          "code": "<TmReasoningPanel Reasoning=\"@reasoningPart\" DefaultExpanded=\"true\" ShowSources=\"false\" />"
+        }
+      ]
+    },
+    {
+      "itemName": "TmThinkingIndicator",
+      "kind": "Component",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.Components.AI",
+      "description": "A small \"working…\" pill: the host's phase label with a shimmering gradient and a spinner while the agent works, a check and a still-readable label once it is done. The whole pill is ONE role=status live region, so a phase change is announced without a focus move and no second region competes with it. The shimmer and the spinner are the package's only motion besides the streaming caret and both stop under prefers-reduced-motion, where the phase text simply stays readable.",
+      "packageId": "Tempo.Blazor.AI",
+      "sourcePath": "src/Tempo.Blazor.AI/Components/AI/TmThinkingIndicator.razor",
+      "documentationStatus": "merged",
+      "requiredImports": [
+        "@using Tempo.Blazor.Components.AI"
+      ],
+      "parameters": [
+        {
+          "name": "Class",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Additional CSS class(es) for the root element."
+        },
+        {
+          "name": "Completed",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Whether the work finished. Default false. A completed pill swaps the spinner for a check and stops the shimmer, but keeps the last phase text — the reader still sees what was being done."
+        },
+        {
+          "name": "Phase",
+          "type": "string?",
+          "isRequired": false,
+          "description": "The current phase, in the host's own words (\"Searching the web\", \"Writing the summary\"). When it is empty the component falls back to the localized default label."
+        }
+      ],
+      "examples": [
+        {
+          "title": "Show what the agent is doing right now",
+          "code": "<TmThinkingIndicator Phase=\"@agent.CurrentPhase\" />"
+        },
+        {
+          "title": "Settle on a check when the work finished",
+          "code": "<TmThinkingIndicator Phase=\"Searching the web\" Completed=\"@done\" />"
+        }
+      ]
+    },
+    {
+      "itemName": "TmToolCallCard",
+      "kind": "Component",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.Components.AI",
+      "description": "One tool/function call of an AI turn: the state glyph, the tool name, the localized status and the elapsed time on one row, with Copy, Retry (a failed call only) and a details disclosure as separate native buttons. The disclosure pretty-prints the JSON arguments and result with two-space indentation and shows a payload that does not parse as its raw text instead of dropping it. A redacted call shows a localized notice instead of the payloads and offers no Copy. The elapsed time counts up live while the call runs on the injected TimeProvider, stops at the recorded duration when it finishes, and the card owns exactly one role=status live region for a status transition and the copy confirmation.",
+      "packageId": "Tempo.Blazor.AI",
+      "sourcePath": "src/Tempo.Blazor.AI/Components/AI/TmToolCallCard.razor",
+      "documentationStatus": "merged",
+      "requiredImports": [
+        "@using Tempo.Blazor.Components.AI"
+      ],
+      "parameters": [
+        {
+          "name": "Class",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Additional CSS class(es) for the root element."
+        },
+        {
+          "name": "DefaultExpanded",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Whether the arguments/result disclosure starts open. Default false. The value seeds the initial state only: after that the reader owns it, and a call that FAILS while on screen opens itself so the error is visible without a second interaction."
+        },
+        {
+          "name": "OnRetry",
+          "type": "EventCallback",
+          "isRequired": false,
+          "description": "Raised when the reader asks to run a failed call again. The Retry button renders only for a call in AiToolCallStatus.Failed with a bound handler — never a button that does nothing."
+        },
+        {
+          "name": "ToolCall",
+          "type": "AiToolCall?",
+          "isRequired": true,
+          "description": "The call this card renders. A null value renders nothing at all, so a host can bind a part list without a null check.",
+          "editorRequired": true
+        }
+      ],
+      "examples": [
+        {
+          "title": "Render one call and let the host run a failed one again",
+          "code": "<TmToolCallCard ToolCall=\"@call\"\n                 OnRetry=\"@(() => agent.RunToolCallAsync(call))\" />"
+        },
+        {
+          "title": "Open the arguments and result immediately",
+          "code": "<TmToolCallCard ToolCall=\"@call\" DefaultExpanded=\"true\" />"
+        }
+      ]
+    },
+    {
+      "itemName": "TmToolCallGroup",
+      "kind": "Component",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.Components.AI",
+      "description": "A run of consecutive tool calls collapsed into one summary line — \"3 tools · 1 failed · 4.2 s\" — whose disclosure renders one TmToolCallCard per call. The counts are localized through plural families, so Czech reads \"3 nástroje · 1 selhal\" and the duration uses the localizer's decimal separator (\"4,2 s\"). The total duration is shown only once every call of the run has finished: a total that is still growing is not a duration, and the running card carries its own live elapsed time. TmAiMessage groups a run of two or more consecutive tool-call parts and renders a single call as its own card.",
+      "packageId": "Tempo.Blazor.AI",
+      "sourcePath": "src/Tempo.Blazor.AI/Components/AI/TmToolCallGroup.razor",
+      "documentationStatus": "merged",
+      "requiredImports": [
+        "@using Tempo.Blazor.Components.AI"
+      ],
+      "parameters": [
+        {
+          "name": "Class",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Additional CSS class(es) for the root element."
+        },
+        {
+          "name": "DefaultExpanded",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Whether the run starts expanded. Default false: a long agent loop stays one tidy line."
+        },
+        {
+          "name": "OnRetry",
+          "type": "EventCallback<AiToolCall>",
+          "isRequired": false,
+          "description": "Raised with the call that failed when the reader asks to run it again; forwarded to every card in the run. The cards' Retry buttons render only when a handler is bound."
+        },
+        {
+          "name": "ToolCalls",
+          "type": "IReadOnlyList<AiToolCall>?",
+          "isRequired": true,
+          "description": "The calls of one run, in arrival order. An empty or null list renders nothing, so a host can bind a filtered list without branching.",
+          "editorRequired": true
+        }
+      ],
+      "examples": [
+        {
+          "title": "Collapse an agent loop into one line",
+          "code": "<TmToolCallGroup ToolCalls=\"@message.Parts.OfType<AiToolCallPart>().Select(part => part.ToolCall).ToList()\" />"
+        },
+        {
+          "title": "Start expanded and let the host retry a failed call of the run",
+          "code": "<TmToolCallGroup ToolCalls=\"@calls\"\n                  DefaultExpanded=\"true\"\n                  OnRetry=\"@(call => agent.RunToolCallAsync(call))\" />"
+        }
+      ]
+    },
+    {
+      "itemName": "AIServiceCollectionExtensions",
+      "kind": "Class",
+      "category": "Configuration",
+      "namespace": "Tempo.Blazor.Configuration",
+      "description": "Extension methods for registering the Tempo.Blazor AI component group.",
+      "packageId": "Tempo.Blazor.AI",
+      "sourcePath": "src/Tempo.Blazor.AI/Configuration/AIServiceCollectionExtensions.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "AddTempoBlazorAI",
+          "kind": "Method",
+          "type": "IServiceCollection",
+          "description": "Registers the services required by the AI conversation components. Also calls AddTempoBlazor(). The AI model and streaming contracts live in Tempo.Blazor.Abstractions (Tempo.Blazor.AI.Models / .Services), so no LLM SDK is pulled in; the only third-party dependency is Markdig, behind AiMarkdownRenderer.",
+          "parameters": [
+            {
+              "name": "services",
+              "type": "this IServiceCollection"
+            }
+          ]
+        }
+      ],
+      "examples": [
+        {
+          "title": "Register the services in Program.cs",
+          "code": "builder.Services.AddTempoBlazorAI();"
+        }
+      ]
+    },
+    {
+      "itemName": "AiMarkdownCodeBlockContext",
+      "kind": "Class",
+      "category": "Markdown",
+      "namespace": "Tempo.Blazor.AI.Markdown",
+      "description": "One code block handed to AiMarkdownRenderOptions.CodeBlockRenderer (the CodeBlockTemplate seam of TmMarkdownView): its index, its raw decoded code (the host escapes it) and the fence language.",
+      "packageId": "Tempo.Blazor.AI",
+      "sourcePath": "src/Tempo.Blazor.AI/Markdown/AiMarkdownCodeBlockContext.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Code",
+          "kind": "Property",
+          "type": "string",
+          "description": "The raw code, decoded and not HTML-escaped; the renderer must escape it."
+        },
+        {
+          "name": "Index",
+          "kind": "Property",
+          "type": "int",
+          "description": "Zero-based index of the code block in the document."
+        },
+        {
+          "name": "Language",
+          "kind": "Property",
+          "type": "string?",
+          "description": "The fence info string (csharp, json, …), or null for an indented block."
+        }
+      ]
+    },
+    {
+      "itemName": "AiMarkdownRenderer",
+      "kind": "Class",
+      "category": "Markdown",
+      "namespace": "Tempo.Blazor.AI.Markdown",
+      "description": "The safe markdown pipeline behind TmMarkdownView: Markdig with raw HTML disabled, an explicit URL allowlist (http/https/mailto plus relative targets, everything else collapses to '#'), images limited to absolute http(s), links hardened with target=\"_blank\" rel=\"noopener noreferrer nofollow\", code blocks with a copy affordance and a keyboard-reachable <pre>, tables wrapped in a keyboard-reachable named region and cite: links turned into citation chips. Registered by AddTempoBlazorAI() through TryAddSingleton, so a host may replace it with a subclass.",
+      "packageId": "Tempo.Blazor.AI",
+      "sourcePath": "src/Tempo.Blazor.AI/Markdown/AiMarkdownRenderer.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Render",
+          "kind": "Method",
+          "type": "string",
+          "description": "Renders untrusted markdown to safe HTML.",
+          "parameters": [
+            {
+              "name": "markdown",
+              "type": "string?"
+            },
+            {
+              "name": "options",
+              "type": "AiMarkdownRenderOptions?",
+              "default": "null"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "itemName": "AiMarkdownRenderOptions",
+      "kind": "Class",
+      "category": "Markdown",
+      "namespace": "Tempo.Blazor.AI.Markdown",
+      "description": "Localized labels and host seams for AiMarkdownRenderer — the code-block copy/copied labels, the citation chip's accessible name, the scrollable table region's name (TableLabel) and the optional CodeBlockRenderer that takes over a code block (for example with syntax-highlighted markup). The renderer never invents user-visible text: TmMarkdownView supplies every label from ITmLocalizer.",
+      "packageId": "Tempo.Blazor.AI",
+      "sourcePath": "src/Tempo.Blazor.AI/Markdown/AiMarkdownRenderOptions.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "CitationLabelFormat",
+          "kind": "Property",
+          "type": "string?",
+          "description": "Accessible name of a citation chip; {0} is the citation text, e.g. 1."
+        },
+        {
+          "name": "CodeBlockRenderer",
+          "kind": "Property",
+          "type": "Func<AiMarkdownCodeBlockContext, string>?",
+          "description": "Optional host renderer for a code block. When set, the built-in markup (including the copy affordance) is replaced by the returned HTML, which the renderer trusts verbatim — the host owns escaping and must treat its own output as trusted markup."
+        },
+        {
+          "name": "CopiedLabel",
+          "kind": "Property",
+          "type": "string?",
+          "description": "Accessible name and status text after the code was copied."
+        },
+        {
+          "name": "CopyCodeLabel",
+          "kind": "Property",
+          "type": "string?",
+          "description": "Accessible name of the copy button of a code block that has no language."
+        },
+        {
+          "name": "CopyCodeWithLanguageLabel",
+          "kind": "Property",
+          "type": "string?",
+          "description": "Accessible name of the copy button of a language-labelled code block; {0} is the language."
+        },
+        {
+          "name": "TableLabel",
+          "kind": "Property",
+          "type": "string?",
+          "description": "Accessible name of the scrollable table region. A table wider than the conversation column scrolls inside its wrapper, so the wrapper is a keyboard focus stop and a named role=\"region\"; with a null or empty label the wrapper keeps its focus stop but omits the role (an unnamed landmark cannot be identified in a screen reader's landmark list)."
+        }
+      ]
+    },
+    {
+      "itemName": "AiMessageText",
+      "kind": "Class",
+      "category": "Markdown",
+      "namespace": "Tempo.Blazor.AI.Markdown",
+      "description": "The plain-text projection of an AI answer (ToPlainText): markdown markers are dropped while the block structure survives, so a copied or spoken answer reads like the answer instead of like its source. Link and image targets never travel — only their label (or alt text) — and the walk runs over the same safe Markdig pipeline the renderer uses, so raw HTML stays literal text.",
+      "packageId": "Tempo.Blazor.AI",
+      "sourcePath": "src/Tempo.Blazor.AI/Markdown/AiMessageText.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "ToPlainText",
+          "kind": "Method",
+          "type": "string",
+          "description": "Projects untrusted markdown to readable plain text: one line per paragraph, list item (with a plain bullet or its number), code line and table row, blank lines between blocks, and '\\n' line endings. Null or whitespace projects to an empty string.",
+          "parameters": [
+            {
+              "name": "markdown",
+              "type": "string?"
+            }
+          ]
+        }
+      ],
+      "examples": [
+        {
+          "title": "Copy an answer as the reader sees it",
+          "code": "var plain = AiMessageText.ToPlainText(message.ActiveText);"
+        }
+      ]
+    }
+  ],
+  "libraryExamples": [],
+  "assets": [
+    {
+      "path": "src/Tempo.Blazor.AI/wwwroot/css/components/_ai-composer.css",
+      "kind": "Css"
+    },
+    {
+      "path": "src/Tempo.Blazor.AI/wwwroot/css/components/_ai-conversation.css",
+      "kind": "Css"
+    },
+    {
+      "path": "src/Tempo.Blazor.AI/wwwroot/css/components/_ai-message.css",
+      "kind": "Css"
+    },
+    {
+      "path": "src/Tempo.Blazor.AI/wwwroot/css/components/_ai-permission.css",
+      "kind": "Css"
+    },
+    {
+      "path": "src/Tempo.Blazor.AI/wwwroot/css/components/_ai-streaming.css",
+      "kind": "Css"
+    },
+    {
+      "path": "src/Tempo.Blazor.AI/wwwroot/css/components/_ai-thinking.css",
+      "kind": "Css"
+    },
+    {
+      "path": "src/Tempo.Blazor.AI/wwwroot/css/components/_ai-tool-call.css",
+      "kind": "Css"
+    },
+    {
+      "path": "src/Tempo.Blazor.AI/wwwroot/css/components/_markdown-view.css",
+      "kind": "Css"
+    },
+    {
+      "path": "src/Tempo.Blazor.AI/wwwroot/css/tempo-blazor-ai.css",
+      "kind": "Css"
+    },
+    {
+      "path": "src/Tempo.Blazor.AI/wwwroot/js/ai-composer.js",
+      "kind": "JavaScript"
+    },
+    {
+      "path": "src/Tempo.Blazor.AI/wwwroot/js/ai-conversation.js",
+      "kind": "JavaScript"
+    },
+    {
+      "path": "src/Tempo.Blazor.AI/wwwroot/js/ai-markdown.js",
+      "kind": "JavaScript"
+    },
+    {
+      "path": "src/Tempo.Blazor.AI/wwwroot/js/ai-message.js",
+      "kind": "JavaScript"
+    },
+    {
+      "path": "src/Tempo.Blazor.AI/wwwroot/js/__tests__/ai-composer.test.mjs",
+      "kind": "JavaScript"
+    },
+    {
+      "path": "src/Tempo.Blazor.AI/wwwroot/js/__tests__/ai-conversation.test.mjs",
+      "kind": "JavaScript"
+    }
+  ],
+  "summary": {
+    "itemCount": 14,
+    "manualItemCount": 14,
+    "generatedItemCount": 14,
+    "generatedOnlyItemCount": 0,
+    "componentCount": 9,
+    "publicApiTypeCount": 5
+  }
+}

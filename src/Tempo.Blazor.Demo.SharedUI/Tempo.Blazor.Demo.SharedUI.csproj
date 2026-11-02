@@ -43,6 +43,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Tempo.Blazor\Tempo.Blazor.csproj" />
+    <ProjectReference Include="..\Tempo.Blazor.AI\Tempo.Blazor.AI.csproj" />
     <ProjectReference Include="..\Tempo.Blazor.Codes\Tempo.Blazor.Codes.csproj" />
     <ProjectReference Include="..\Tempo.Blazor.Collaboration\Tempo.Blazor.Collaboration.csproj" />
     <ProjectReference Include="..\Tempo.Blazor.Proofing.LanguageTool\Tempo.Blazor.Proofing.LanguageTool.csproj" />

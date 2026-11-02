@@ -23,6 +23,7 @@ Optional packages:
 dotnet add package Tempo.Blazor.All              # Compatibility package: core + split feature packages
 dotnet add package Tempo.Blazor.Abstractions      # Interfaces only (for API/service projects)
 dotnet add package Tempo.Blazor.PdfViewer         # PDF.js powered PDF viewer
+dotnet add package Tempo.Blazor.AI                # AI conversation UI: safe markdown, messages, streaming, composer
 dotnet add package Tempo.Blazor.Codes             # QR code and barcode components
 dotnet add package Tempo.Blazor.DiagramEditor     # Diagram editor and diagram assets
 dotnet add package Tempo.Blazor.Wireframe         # Wireframe editor and wireframe assets

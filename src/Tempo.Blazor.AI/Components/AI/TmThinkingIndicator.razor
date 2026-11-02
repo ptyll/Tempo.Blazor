@@ -1,0 +1,61 @@
+@namespace Tempo.Blazor.Components.AI
+@inherits Tempo.Blazor.Components.TmComponentBase
+@using Tempo.Blazor.Components.Icons
+
+@* The small "working…" pill: a phase label that shimmers while the agent works and a check once it is
+   done. The whole pill is the polite live region (role=status), so a phase change is announced without a
+   focus move and there is no second region to compete with it. The shimmer and the spinner are the
+   package's only motion besides the streaming caret; both stop under prefers-reduced-motion, where the
+   phase text simply stays readable. *@
+<div class="tm-ai-thinking @Class"
+     role="status"
+     data-testid="@RootTestId("ai-thinking")"
+     data-completed="@(Completed ? "true" : null)"
+     @attributes="AdditionalAttributes">
+    @if (Completed)
+    {
+        <span class="tm-ai-thinking__check" aria-hidden="true">
+            <TmIcon Name="@IconNames.Check" Size="IconSize.Sm" />
+        </span>
+    }
+    else
+    {
+        <span class="tm-ai-thinking__spinner" aria-hidden="true"></span>
+    }
+    <span class="tm-ai-thinking__phase @(!Completed ? "tm-ai-shimmer" : null)">@PhaseText</span>
+</div>
+
+@code {
+    /// <summary>
+    /// The current phase, in the host's own words ("Searching the web", "Writing the summary"). When it is
+    /// empty the component falls back to the localized default label.
+    /// </summary>
+    [Parameter] public string? Phase { get; set; }
+
+    /// <summary>
+    /// Whether the work finished. Default false. A completed pill swaps the spinner for a check and stops
+    /// the shimmer, but keeps the last phase text — the reader still sees what was being done.
+    /// </summary>
+    [Parameter] public bool Completed { get; set; }
+
+    /// <summary>Additional CSS class(es) for the root element.</summary>
+    [Parameter] public string? Class { get; set; }
+
+    /// <summary>Additional HTML attributes applied to the root element.</summary>
+    [Parameter(CaptureUnmatchedValues = true)] public Dictionary<string, object>? AdditionalAttributes { get; set; }
+
+    private string PhaseText
+    {
+        get
+        {
+            if (!string.IsNullOrWhiteSpace(Phase))
+            {
+                return Phase!;
+            }
+
+            return Completed
+                ? Loc["TmThinkingIndicator_Completed"]
+                : Loc["TmThinkingIndicator_Thinking"];
+        }
+    }
+}

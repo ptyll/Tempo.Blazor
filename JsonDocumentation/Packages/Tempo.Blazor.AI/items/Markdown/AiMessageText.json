@@ -1,0 +1,23 @@
+{
+  "kind": "Class",
+  "category": "Markdown",
+  "namespace": "Tempo.Blazor.AI.Markdown",
+  "description": "The plain-text projection of an AI answer (ToPlainText): markdown markers are dropped while the block structure survives, so a copied or spoken answer reads like the answer instead of like its source. Link and image targets never travel — only their label (or alt text) — and the walk runs over the same safe Markdig pipeline the renderer uses, so raw HTML stays literal text.",
+  "packageId": "Tempo.Blazor.AI",
+  "sourcePath": "src/Tempo.Blazor.AI/Markdown/AiMessageText.cs",
+  "documentationStatus": "generated",
+  "itemName": "AiMessageText",
+  "members": [
+    {
+      "name": "ToPlainText",
+      "type": "string ToPlainText(string? markdown)",
+      "description": "Projects untrusted markdown to readable plain text: one line per paragraph, list item (with a plain bullet or its number), code line and table row, blank lines between blocks, and '\\n' line endings. Null or whitespace projects to an empty string."
+    }
+  ],
+  "examples": [
+    {
+      "title": "Copy an answer as the reader sees it",
+      "code": "var plain = AiMessageText.ToPlainText(message.ActiveText);"
+    }
+  ]
+}
