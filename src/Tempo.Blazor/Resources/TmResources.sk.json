@@ -687,6 +687,8 @@
   "TmActivityComments_DeleteConfirm": "Odstrániť tento komentár?",
   "TmActivityComments_Edited": "upravené",
   "TmActivityComments_Empty": "Zatiaľ žiadne komentáre",
+  "TmActivityComments_InternalBadge": "Interné",
+  "TmActivityComments_InternalBadgeTitle": "Viditeľné len interným používateľom",
   "TmActivityComments_SubmitComment": "Odoslať komentár",
   "TmActivityLog_AttachmentsTab": "Prílohy",
   "TmActivityLog_CommentsTab": "Komentáre",

@@ -209,6 +209,12 @@
   --tm-priority-high:          #fb923c;
   --tm-priority-highest:       var(--tm-color-danger);
 
+  /* Same expressions as tokens.css, repeated so a nested dark region recomputes them. */
+  --tm-comment-internal-bg:     var(--tm-color-warning-subtle);
+  --tm-comment-internal-accent: var(--tm-color-warning-strong);
+  --tm-comment-internal-inset:  calc(var(--tm-space-2) + var(--tm-space-1));
+  --tm-comment-badge-max-width: 16rem;
+
   /* Same expression as tokens.css, repeated so it recomputes in a nested dark region.
      -600 is the step white text clears 3:1 on; the dark primary step (-400) does not. */
   --tm-focus-ring-danger:      0 0 0 2px var(--tm-bg-surface), 0 0 0 4px var(--tm-color-danger);
@@ -402,6 +408,10 @@
   --tm-priority-medium:             #a16207;
   --tm-priority-high:               #c2410c;
   --tm-priority-highest:            var(--tm-color-danger);
+  --tm-comment-internal-bg:         var(--tm-color-warning-subtle);
+  --tm-comment-internal-accent:     var(--tm-color-warning-strong);
+  --tm-comment-internal-inset:      calc(var(--tm-space-2) + var(--tm-space-1));
+  --tm-comment-badge-max-width:     16rem;
   --tm-focus-ring-danger:           0 0 0 2px var(--tm-bg-surface), 0 0 0 4px var(--tm-color-danger);
   --tm-focus-ring-success:          0 0 0 2px var(--tm-bg-surface), 0 0 0 4px var(--tm-color-success-strong);
   --tm-picker-border-radius:        var(--tm-radius-md);

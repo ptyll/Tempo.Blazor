@@ -60,6 +60,15 @@ public class ActivityDemoPageTests : LocalizationTestBase
         items[1].QuerySelector(".tm-comment-delete-btn").Should().NotBeNull();
         items[2].QuerySelector(".tm-comment-edit-btn").Should().BeNull();
         items[2].QuerySelector(".tm-comment-delete-btn").Should().BeNull();
+
+        // The internal item carries exactly one consumer badge, and it is not the lock:
+        // Info tone + IconNames.Info, distinct from the warning Internal label.
+        var adminOnly = items[0].QuerySelector("[data-badge-tone='info']");
+        adminOnly.Should().NotBeNull();
+        adminOnly!.TextContent.Should().Contain("Admin only");
+        adminOnly.ClassList.Should().Contain("tm-badge-info");
+        adminOnly.InnerHtml.Should().Contain("circle cx=\"12\" cy=\"12\" r=\"10\"");
+        items[0].QuerySelectorAll(".tm-comment-badge").Should().ContainSingle();
     }
 
     [Fact]

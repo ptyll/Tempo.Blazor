@@ -295,6 +295,11 @@
             BodyFormat = TmCommentBodyFormat.Html,
             CreatedAt = DateTimeOffset.Now.AddHours(-3),
             EditedAt = DateTimeOffset.Now.AddHours(-2),
+            IsInternal = true,
+            Badges =
+            [
+                new TmCommentBadge { Text = "Admin only", Tone = TmCommentBadgeTone.Info, Icon = IconNames.Info, Title = "Visible to administrators" }
+            ],
             CanEdit = true,
             CanDelete = true
         },
@@ -305,6 +310,20 @@
             Author = new TmUserRef { Id = "bob", DisplayName = "Bob Carter" },
             Body = "Status page updated and subscribers notified at 21:45.",
             CreatedAt = DateTimeOffset.Now.AddMinutes(-90),
+            Badges =
+            [
+                new TmCommentBadge
+                {
+                    Text = "Waiting on the external vendor's change-advisory board before the maintenance window can be confirmed",
+                    Tone = TmCommentBadgeTone.Info,
+                    Title = "Long badge text wraps instead of overflowing the thread"
+                },
+                new TmCommentBadge { Text = "Status", Tone = TmCommentBadgeTone.Success },
+                new TmCommentBadge { Text = "Pinned", Tone = TmCommentBadgeTone.Accent },
+                new TmCommentBadge { Text = "Note", Tone = TmCommentBadgeTone.Neutral },
+                new TmCommentBadge { Text = "Review", Tone = TmCommentBadgeTone.Warning },
+                new TmCommentBadge { Text = "Blocked", Tone = TmCommentBadgeTone.Danger }
+            ],
             CanEdit = false,
             CanDelete = true
         },
@@ -313,7 +332,7 @@
             Id = "demo-c3",
             ThreadId = "demo-comments",
             Author = new TmUserRef { Id = "carol", DisplayName = "Carol Diaz" },
-            Body = "Read-only viewer — this comment exposes no edit or delete action.",
+            Body = "Read-only viewer — this comment exposes no edit or delete action and no badges.",
             CreatedAt = DateTimeOffset.Now.AddMinutes(-30)
         }
     ];

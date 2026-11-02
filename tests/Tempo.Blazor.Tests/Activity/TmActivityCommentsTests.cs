@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Components;
 using Tempo.Blazor.Abstractions.Shared;
 using Tempo.Blazor.Components.Activity;
 using Tempo.Blazor.Tests.Localization;
+using Tempo.Blazor.Tests.Theme;
 
 namespace Tempo.Blazor.Tests.Activity;
 
@@ -651,6 +652,148 @@ public class TmActivityCommentsTests : LocalizationTestBase
         cut.FindAll(".tm-comment-item").Count.Should().Be(2);
         cut.Instance.HasUnsavedDraft.Should().BeFalse();
         states.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void Comments_PublicEntry_HasNoInternalMarker_AndDataInternalFalse()
+    {
+        var cut = Render<TmActivityComments>(p => p
+            .Add(c => c.Comments, TwoComments()));
+
+        var item = cut.Find(".tm-comment-item");
+        item.GetAttribute("data-comment-id").Should().Be("c1");
+        item.GetAttribute("data-internal").Should().Be("false");
+        item.ClassList.Should().NotContain("tm-comment-item--internal");
+        cut.FindAll(".tm-comment-internal-label").Should().BeEmpty();
+        cut.FindAll(".tm-comment-badge").Should().BeEmpty();
+    }
+
+    [Fact]
+    public void Comments_InternalEntry_RendersLockLabel_AndKeepsTheBody()
+    {
+        var comments = TwoComments();
+        comments[0].IsInternal = true;
+
+        var cut = Render<TmActivityComments>(p => p
+            .Add(c => c.Comments, comments));
+
+        var item = cut.Find("[data-comment-id='c1']");
+        item.GetAttribute("data-internal").Should().Be("true");
+        item.ClassList.Should().Contain("tm-comment-item--internal");
+        item.TextContent.Should().Contain("Internal");
+        item.TextContent.Should().Contain("First comment");
+        var label = item.QuerySelector(".tm-comment-internal-label")!;
+        label.QuerySelector(".tm-icon").Should().NotBeNull();
+        label.InnerHtml.Should().Contain("M7 11V7a5 5 0 0 1 10 0v4", "the internal cue is IconNames.Lock, not EyeOff");
+        label.InnerHtml.Should().NotContain("M17.94 17.94", "EyeOff is not the internal cue");
+        label.HasAttribute("aria-label").Should().BeFalse("the visible label is the accessible name");
+        label.QuerySelector(".tm-sr-only")!.TextContent.Should().Be(": Visible only to internal users");
+        cut.Find("[data-comment-id='c2']").GetAttribute("data-internal").Should().Be("false");
+    }
+
+    [Fact]
+    public void Comments_NullBadges_RendersTheEntry_WithoutBadges()
+    {
+        var comments = TwoComments();
+        comments[0].Badges = null!;
+
+        var cut = Render<TmActivityComments>(p => p
+            .Add(c => c.Comments, comments));
+
+        cut.Find("[data-comment-id='c1']").TextContent.Should().Contain("First comment");
+        cut.FindAll(".tm-comment-badge").Should().BeEmpty();
+    }
+
+    [Fact]
+    public void Comments_Badges_RenderInMeta_WithToneAttribute_AndSkipInvalid()
+    {
+        var comments = TwoComments();
+        comments[1].Badges =
+        [
+            new TmCommentBadge { Text = "Blocked", Tone = TmCommentBadgeTone.Danger, Icon = "alert-circle", Title = "Waiting on vendor" },
+            new TmCommentBadge { Text = "   ", Tone = TmCommentBadgeTone.Info },
+            new TmCommentBadge { Text = "Done", Tone = TmCommentBadgeTone.Success },
+            new TmCommentBadge { Text = "Watch", Tone = TmCommentBadgeTone.Warning },
+            new TmCommentBadge { Text = "FYI", Tone = TmCommentBadgeTone.Info },
+            new TmCommentBadge { Text = "Pinned", Tone = TmCommentBadgeTone.Accent },
+            new TmCommentBadge { Text = "Note", Tone = TmCommentBadgeTone.Neutral }
+        ];
+
+        var cut = Render<TmActivityComments>(p => p
+            .Add(c => c.Comments, comments));
+
+        var meta = cut.Find("[data-comment-id='c2'] .tm-comment-meta");
+        var badges = meta.QuerySelectorAll(".tm-comment-badge");
+        badges.Should().HaveCount(6);
+        badges[0].GetAttribute("data-badge-tone").Should().Be("danger");
+        badges[0].ClassList.Should().Contain("tm-badge-danger");
+        badges[0].GetAttribute("title").Should().Be("Waiting on vendor");
+        badges[0].HasAttribute("aria-label").Should().BeFalse();
+        badges[0].QuerySelector(".tm-sr-only")!.TextContent.Should().Be(": Waiting on vendor");
+        badges[0].TextContent.Should().Contain("Blocked");
+        badges[1].GetAttribute("data-badge-tone").Should().Be("success");
+        badges[1].ClassList.Should().Contain("tm-badge-success");
+        badges[2].GetAttribute("data-badge-tone").Should().Be("warning");
+        badges[2].ClassList.Should().Contain("tm-badge-warning");
+        badges[3].GetAttribute("data-badge-tone").Should().Be("info");
+        badges[3].ClassList.Should().Contain("tm-badge-info");
+        badges[4].GetAttribute("data-badge-tone").Should().Be("accent");
+        badges[4].ClassList.Should().Contain("tm-badge-primary");
+        badges[5].GetAttribute("data-badge-tone").Should().Be("neutral");
+        badges[5].ClassList.Should().Contain("tm-badge-default");
+        cut.FindAll("[data-comment-id='c2'] [data-badge-tone]").Should().HaveCount(6);
+    }
+
+    [Fact]
+    public void Comments_InternalAndEdited_ShowsBothCues()
+    {
+        var comments = TwoComments();
+        comments[0].IsInternal = true;
+        comments[0].EditedAt = DateTimeOffset.Now.AddMinutes(-5);
+        comments[0].Badges = [new TmCommentBadge { Text = "Admin", Tone = TmCommentBadgeTone.Warning }];
+
+        var cut = Render<TmActivityComments>(p => p
+            .Add(c => c.Comments, comments));
+
+        var meta = cut.Find("[data-comment-id='c1'] .tm-comment-meta");
+        meta.QuerySelector(".tm-comment-edited").Should().NotBeNull();
+        meta.QuerySelector(".tm-comment-internal-label")!.TextContent.Should().Contain("Internal");
+        meta.QuerySelector(".tm-comment-internal-label")!.GetAttribute("title")
+            .Should().Be("Visible only to internal users");
+        meta.QuerySelector("[data-badge-tone='warning']").Should().NotBeNull();
+    }
+
+    [Fact]
+    public void Comments_InternalLabel_IsLocalizedInCzech()
+    {
+        UseCzechLocalization();
+        var comments = TwoComments();
+        comments[0].IsInternal = true;
+
+        var cut = Render<TmActivityComments>(p => p
+            .Add(c => c.Comments, comments));
+
+        var label = cut.Find(".tm-comment-internal-label");
+        label.TextContent.Should().Contain("Interní");
+        label.GetAttribute("title").Should().Be("Viditelné jen interním uživatelům");
+        label.QuerySelector(".tm-sr-only")!.TextContent.Should().Be(": Viditelné jen interním uživatelům");
+    }
+
+    [Fact]
+    public void ActivityCommentsCss_BadgeWidthAndInternalInset_ComeFromTokens()
+    {
+        var root = ThemeCss.RepositoryRoot().FullName;
+        var css = File.ReadAllText(Path.Combine(root, "src", "Tempo.Blazor", "wwwroot", "css", "components", "_activity-comments.css"));
+        var tokens = File.ReadAllText(Path.Combine(root, "src", "Tempo.Blazor", "wwwroot", "css", "tokens.css"));
+
+        css.Should().Contain("max-width: var(--tm-comment-badge-max-width)");
+        css.Should().NotContain("16rem");
+        css.Should().Contain("margin-inline-start: calc(-1 * var(--tm-comment-internal-inset))");
+        css.Should().Contain("IconNames.Lock");
+        tokens.Should().Contain("--tm-comment-badge-max-width:");
+        tokens.Should().Contain("--tm-comment-internal-inset:");
+        tokens.Should().MatchRegex(@"--tm-comment-internal-inset:\s*calc\(var\(--tm-space-2\) \+ var\(--tm-space-1\)\)");
+        tokens.Should().NotContain("--tm-comment-internal-fg");
     }
 
     private static TmCommentEntry Comment(

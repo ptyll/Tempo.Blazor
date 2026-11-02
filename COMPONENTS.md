@@ -6399,13 +6399,16 @@ Komentáře s přidáváním, editací a mazáním.
 | `tm-comments` | Kořenový kontejner |
 | `tm-comments-empty` | Prázdný stav |
 | `tm-comment-list` | Seznam komentářů |
-| `tm-comment-item` | Položka komentáře |
+| `tm-comment-item` | Položka komentáře (`data-comment-id`, `data-internal`) |
+| `tm-comment-item--internal` | Interní komentář (podbarvení + levý pruh) |
 | `tm-comment-avatar` | Avatar autora |
 | `tm-comment-body` | Tělo komentáře |
 | `tm-comment-meta` | Metadata |
 | `tm-comment-author` | Autor |
 | `tm-comment-time` | Čas |
 | `tm-comment-edited` | Indikátor editace |
+| `tm-comment-internal-label` | Štítek interního komentáře (`IconNames.Lock` + lokalizovaný text; jen při `IsInternal`) |
+| `tm-comment-badge` | Spotřebitelský štítek v `.tm-comment-meta` (`TmBadge`, `data-badge-tone`) |
 | `tm-comment-content` | Obsah komentáře |
 | `tm-comment-actions` | Akce |
 | `tm-comment-edit-btn` | Tlačítko editace |

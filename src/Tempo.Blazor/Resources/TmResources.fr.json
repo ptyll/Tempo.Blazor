@@ -687,6 +687,8 @@
   "TmActivityComments_DeleteConfirm": "Supprimer ce commentaire ?",
   "TmActivityComments_Edited": "modifié",
   "TmActivityComments_Empty": "Aucun commentaire pour le moment",
+  "TmActivityComments_InternalBadge": "Interne",
+  "TmActivityComments_InternalBadgeTitle": "Visible uniquement par les utilisateurs internes",
   "TmActivityComments_SubmitComment": "Publier le commentaire",
   "TmActivityLog_AttachmentsTab": "Pièces jointes",
   "TmActivityLog_CommentsTab": "Commentaires",

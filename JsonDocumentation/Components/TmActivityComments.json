@@ -2,7 +2,7 @@
   "itemName": "TmActivityComments",
   "kind": "Component",
   "category": "Activity",
-  "description": "Comment thread component with inline rich text editing via TmRichEditorSimple. Supports adding, editing, and deleting comments with author avatars, relative timestamps, and edit indicators. Communicates changes via EventCallbacks. Exposes a draft-guard surface: OnDraftChanged reports every TmCommentDraftState transition (editor open/closed, which comment is edited, whether unsaved content exists) with value-equality dedup, HasUnsavedDraft polls the same flag at any time, and DiscardDraftAsync closes the editor after the consumer's own confirmation.",
+  "description": "Comment thread component with inline rich text editing via TmRichEditorSimple. Supports adding, editing, and deleting comments with author avatars, relative timestamps, and edit indicators. Communicates changes via EventCallbacks. Exposes a draft-guard surface: OnDraftChanged reports every TmCommentDraftState transition (editor open/closed, which comment is edited, whether unsaved content exists) with value-equality dedup, HasUnsavedDraft polls the same flag at any time, and DiscardDraftAsync closes the editor after the consumer's own confirmation. Each comment item carries data-comment-id (the entry id) and data-internal=\"true|false\". An internal entry also gets tm-comment-item--internal and a lock TmBadge (IconNames.Lock plus the localized Internal label; the explanatory title is repeated in a tm-sr-only span, not an aria-label). Each rendered consumer badge carries data-badge-tone (neutral|info|success|warning|danger|accent) and, when Title is set, the same tm-sr-only \": {Title}\" pattern.",
   "requiredImports": [
     "@using Tempo.Blazor.Abstractions.Shared",
     "@using Tempo.Blazor.Components.Activity"
@@ -11,22 +11,26 @@
     {
       "name": "Comments",
       "type": "IReadOnlyList<TmCommentEntry>",
+      "description": "Comments to render. An entry with IsInternal is painted with the internal wash, IconNames.Lock and the localized Internal label; it is never hidden — the consumer or server filters visibility. Valid Badges render in the meta row as subtle pill TmBadges. A null Badges list is treated as empty. Defaults to an empty list.",
       "isRequired": false,
       "default": "[]"
     },
     {
       "name": "OnCommentAdded",
       "type": "EventCallback<string>",
+      "description": "Raised with the submitted HTML when the user posts a new comment.",
       "isRequired": false
     },
     {
       "name": "OnCommentDeleted",
       "type": "EventCallback<string>",
+      "description": "Raised with the comment id when the user deletes a comment.",
       "isRequired": false
     },
     {
       "name": "OnCommentEdited",
       "type": "EventCallback<(string Id, string Html)>",
+      "description": "Raised with the comment id and the new HTML when the user saves an edit.",
       "isRequired": false
     },
     {
@@ -38,6 +42,7 @@
     {
       "name": "ShowAddButton",
       "type": "bool",
+      "description": "Shows the Add comment button when no editor is open. Defaults to true.",
       "isRequired": false,
       "default": "true"
     }
@@ -66,17 +71,37 @@
       "description": "Whether the component currently holds an unsaved comment draft — the same value the OnDraftChanged HasUnsavedContent flag carries, read live from the current editor state so consumers can poll it at any time (e.g. before a refresh that would discard the draft). Read it on the component's dispatcher (an event handler or InvokeAsync) from background threads."
     }
   ],
+  "domAttributes": [
+    {
+      "name": "data-comment-id",
+      "element": "li.tm-comment-item",
+      "description": "The comment entry id. Present on every rendered item."
+    },
+    {
+      "name": "data-internal",
+      "element": "li.tm-comment-item",
+      "description": "\"true\" when the entry is internal, otherwise \"false\". Always present; never omitted."
+    },
+    {
+      "name": "data-badge-tone",
+      "element": ".tm-comment-badge",
+      "description": "Lower-cased TmCommentBadgeTone of a rendered consumer badge: neutral, info, success, warning, danger or accent. Not set on the internal lock badge."
+    }
+  ],
   "cssClasses": [
     "tm-comments",
     "tm-comments-empty",
     "tm-comment-list",
     "tm-comment-item",
+    "tm-comment-item--internal",
     "tm-comment-avatar",
     "tm-comment-body",
     "tm-comment-meta",
     "tm-comment-author",
     "tm-comment-time",
     "tm-comment-edited",
+    "tm-comment-internal-label",
+    "tm-comment-badge",
     "tm-comment-content",
     "tm-comment-actions",
     "tm-comment-editor",

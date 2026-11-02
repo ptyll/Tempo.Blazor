@@ -22,7 +22,8 @@
 
 .tm-comment-meta {
   display: flex;
-  align-items: baseline;
+  align-items: center;
+  flex-wrap: wrap;
   gap: var(--tm-space-2);
   margin-bottom: var(--tm-space-1);
 }
@@ -42,6 +43,28 @@
   font-size: var(--tm-font-size-xs);
   color: var(--tm-text-tertiary);
   font-style: italic;
+}
+
+/* Internal comments. Colour is not the only cue: IconNames.Lock and the localized
+   Internal badge always render with the wash. The component never hides the
+   comment — filtering is the consumer's job. No animation, so no reduced-motion rule.
+   The negative margin pulls the padded item (padding + accent bar) back onto the
+   thread's avatar column so an internal entry stays aligned with its neighbours. */
+.tm-comment-item--internal {
+  margin-inline-start: calc(-1 * var(--tm-comment-internal-inset));
+  padding: var(--tm-space-2);
+  border-radius: var(--tm-radius-md);
+  border-inline-start: var(--tm-space-1) solid var(--tm-comment-internal-accent);
+  background: var(--tm-comment-internal-bg);
+}
+
+.tm-comment-badge {
+  max-width: var(--tm-comment-badge-max-width);
+}
+
+.tm-comment-badge.tm-badge {
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .tm-comment-content {

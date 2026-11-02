@@ -94,6 +94,29 @@ public sealed partial class TokenContrastTests
     }
 
     /// <summary>
+    /// Internal-comment wash: body text on the wash holds AA, and the accent bar holds 3:1
+    /// against the surface. Measured in light and dark (the wash is a translucent warning mix).
+    /// </summary>
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void ActivityCommentInternalWash_HoldsContrast(bool dark)
+    {
+        var tokens = ThemeCss.TokenGraph(dark);
+        var wash = PaintedOnSurface("var(--tm-comment-internal-bg)", tokens);
+        var theme = dark ? "dark" : "light";
+
+        ThemeCss.Contrast(ThemeCss.ResolveColour("var(--tm-text-secondary)", tokens), wash)
+            .Should().BeGreaterThanOrEqualTo(4.5, "--tm-text-secondary on the internal wash ({0})", theme);
+        ThemeCss.Contrast(ThemeCss.ResolveColour("var(--tm-text-primary)", tokens), wash)
+            .Should().BeGreaterThanOrEqualTo(4.5, "--tm-text-primary on the internal wash ({0})", theme);
+        ThemeCss.Contrast(
+                ThemeCss.ResolveColour("var(--tm-comment-internal-accent)", tokens),
+                ThemeCss.ResolveColour("var(--tm-bg-surface)", tokens))
+            .Should().BeGreaterThanOrEqualTo(3, "--tm-comment-internal-accent vs --tm-bg-surface ({0})", theme);
+    }
+
+    /// <summary>
     /// The colour a fill paints over <c>--tm-bg-surface</c>: an <c>rgb(from …)</c> wash goes through
     /// <see cref="PaintedColour"/>, a literal <c>rgba()</c> wash (the dark danger / info subtle) is
     /// composited from its own channels, an opaque token resolves as is.

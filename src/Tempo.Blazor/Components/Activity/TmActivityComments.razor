@@ -20,7 +20,9 @@
             {
                 var c = comment;
                 var authorName = GetAuthorName(c);
-                <li class="tm-comment-item">
+                <li class="tm-comment-item@(c.IsInternal ? " tm-comment-item--internal" : "")"
+                    data-comment-id="@c.Id"
+                    data-internal="@(c.IsInternal ? "true" : "false")">
                     <div class="tm-comment-avatar">
                         @if (!string.IsNullOrEmpty(c.Author.AvatarUrl))
                         {
@@ -40,6 +42,40 @@
                             @if (c.EditedAt.HasValue)
                             {
                                 <span class="tm-comment-edited">(@Loc["TmActivityComments_Edited"])</span>
+                            }
+                            @if (c.IsInternal)
+                            {
+                                <TmBadge Variant="BadgeVariant.Warning"
+                                         Size="BadgeSize.Sm"
+                                         BadgeStyle="BadgeStyle.Subtle"
+                                         Pill="true"
+                                         Icon="@IconNames.Lock"
+                                         Class="tm-comment-internal-label"
+                                         title="@Loc["TmActivityComments_InternalBadgeTitle"]">
+                                    @Loc["TmActivityComments_InternalBadge"]<span class="tm-sr-only">: @Loc["TmActivityComments_InternalBadgeTitle"]</span>
+                                </TmBadge>
+                            }
+                            @foreach (var badge in c.Badges ?? [])
+                            {
+                                if (!badge.IsValid)
+                                {
+                                    continue;
+                                }
+
+                                var tone = badge.Tone.ToString().ToLowerInvariant();
+                                <TmBadge Variant="@MapBadgeVariant(badge.Tone)"
+                                         Size="BadgeSize.Sm"
+                                         BadgeStyle="BadgeStyle.Subtle"
+                                         Pill="true"
+                                         Icon="@badge.Icon"
+                                         Class="tm-comment-badge"
+                                         title="@badge.Title"
+                                         data-badge-tone="@tone">
+                                    @badge.Text@if (!string.IsNullOrWhiteSpace(badge.Title))
+                                    {
+                                        <span class="tm-sr-only">: @badge.Title</span>
+                                    }
+                                </TmBadge>
                             }
                         </div>
                         @if (_editingCommentId == c.Id)
@@ -130,10 +166,24 @@
 </div>
 
 @code {
+    /// <summary>
+    /// Comments to render. An entry with <see cref="TmCommentEntry.IsInternal"/> is painted with
+    /// the internal wash, <see cref="IconNames.Lock"/> and the localized "Internal" label; it is never hidden —
+    /// the consumer or server filters visibility. Valid <see cref="TmCommentEntry.Badges"/> render
+    /// in the meta row. Defaults to an empty list.
+    /// </summary>
     [Parameter] public IReadOnlyList<TmCommentEntry> Comments { get; set; } = [];
+
+    /// <summary>Raised with the submitted HTML when the user posts a new comment.</summary>
     [Parameter] public EventCallback<string> OnCommentAdded { get; set; }
+
+    /// <summary>Raised with the comment id when the user deletes a comment.</summary>
     [Parameter] public EventCallback<string> OnCommentDeleted { get; set; }
+
+    /// <summary>Raised with the comment id and the new HTML when the user saves an edit.</summary>
     [Parameter] public EventCallback<(string Id, string Html)> OnCommentEdited { get; set; }
+
+    /// <summary>Shows the Add comment button when no editor is open. Defaults to true.</summary>
     [Parameter] public bool ShowAddButton { get; set; } = true;
 
     /// <summary>
@@ -421,4 +471,19 @@
         => !string.IsNullOrWhiteSpace(comment.Author.DisplayName)
             ? comment.Author.DisplayName
             : comment.Author.Id;
+
+    /// <summary>
+    /// Maps a comment-badge tone onto <see cref="BadgeVariant"/>. Neutral → Default and
+    /// Accent → Primary: <c>TmBadge</c> has no Accent variant, and Primary is the library's
+    /// emphasis colour (not a status). The other tones match by name.
+    /// </summary>
+    private static BadgeVariant MapBadgeVariant(TmCommentBadgeTone tone) => tone switch
+    {
+        TmCommentBadgeTone.Info => BadgeVariant.Info,
+        TmCommentBadgeTone.Success => BadgeVariant.Success,
+        TmCommentBadgeTone.Warning => BadgeVariant.Warning,
+        TmCommentBadgeTone.Danger => BadgeVariant.Danger,
+        TmCommentBadgeTone.Accent => BadgeVariant.Primary,
+        _ => BadgeVariant.Default
+    };
 }

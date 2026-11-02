@@ -687,6 +687,8 @@
   "TmActivityComments_DeleteConfirm": "Delete this comment?",
   "TmActivityComments_Edited": "edited",
   "TmActivityComments_Empty": "No comments yet",
+  "TmActivityComments_InternalBadge": "Internal",
+  "TmActivityComments_InternalBadgeTitle": "Visible only to internal users",
   "TmActivityComments_SubmitComment": "Post comment",
   "TmActivityLog_AttachmentsTab": "Attachments",
   "TmActivityLog_CommentsTab": "Comments",
