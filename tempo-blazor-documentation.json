@@ -5990,6 +5990,43 @@
       ]
     },
     {
+      "itemName": "BreakdownPart",
+      "kind": "Class",
+      "category": "Components",
+      "namespace": "Tempo.Blazor.Components.DataDisplay",
+      "description": "One slice of a TmBreakdownCard: a label, its value and an optional colour. A part carries no callback — the card is a read-only summary, and a host that needs a drill-down puts a link next to the card.",
+      "packageId": "Tempo.Blazor",
+      "sourcePath": "src/Tempo.Blazor/Components/DataDisplay/BreakdownPart.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Color",
+          "kind": "Property",
+          "type": "string?",
+          "description": "Optional colour of the part, as a CSS colour value — a var(--tm-*) token reference, a hex literal, an rgb/hsl/oklch/color-mix function, or a named colour. It is written into the segment's and the row swatch's inline background-color, so it wins over the fallback token tone. A value that is not a CSS colour (a class name, or any payload carrying ;, {, } or url() emits no style and the part falls back to the rotating token tone. The same grammar TmStatCard.SubValueColor validates."
+        },
+        {
+          "name": "Id",
+          "kind": "Property",
+          "type": "string",
+          "description": "Stable identity of the part, rendered as data-part-id. It is never a DOM id: a host value is not a valid id, and a slug would collide (a.b vs a-b). It should be unique within one card, because it is the row identity of the reorder animation. Duplicate and empty ids are tolerated: the card derives a private row key for a row that does not own a unique id, so every row still renders, but such a row is not tracked across a reorder (its reorder is not animated)."
+        },
+        {
+          "name": "Label",
+          "kind": "Property",
+          "type": "string",
+          "description": "The part's name, rendered as the row header and never only as a colour legend."
+        },
+        {
+          "name": "Value",
+          "kind": "Property",
+          "type": "double",
+          "description": "The part's amount. It drives both the proportional strip and the percentage; a negative amount counts as zero for the share while the row itself stays visible, so the data is never silently dropped."
+        }
+      ],
+      "usageExample": "@code {\n    private readonly BreakdownPart[] parts =\n    [\n        new() { Id = \"direct\", Label = \"Direct\", Value = 4200, Color = \"var(--tm-color-primary)\" },\n        new() { Id = \"search\", Label = \"Search\", Value = 3100 }\n    ];\n}\n\n<TmBreakdownCard Title=\"Traffic by channel\" Parts=\"parts\" />"
+    },
+    {
       "itemName": "ButtonSize",
       "kind": "Enum",
       "category": "Components",
@@ -9593,6 +9630,88 @@
       "usageExample": "<TmStatCard Title=\"Churn\" Value=\"2,1 %\" Delta=\"-3\" TrendDirection=\"TrendDirection.Down\" PositiveIsGood=\"false\" />"
     },
     {
+      "itemName": "TrendItem",
+      "kind": "Class",
+      "category": "Components",
+      "namespace": "Tempo.Blazor.Components.DataDisplay",
+      "description": "One metric row of a TmTrendList: a label, its value, an optional change over the comparison period, an optional sparkline and an optional link target. The row is data, not behaviour — it carries no callbacks, so a host that needs a row action passes a safe Href and the row stays one native focus stop.",
+      "packageId": "Tempo.Blazor",
+      "sourcePath": "src/Tempo.Blazor/Components/DataDisplay/TrendItem.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Delta",
+          "kind": "Property",
+          "type": "double?",
+          "description": "The change over the comparison period in percent points, formatted with the culture's own percent convention. Null renders no change marker at all."
+        },
+        {
+          "name": "Href",
+          "kind": "Property",
+          "type": "string?",
+          "description": "Optional navigation target, rendered as one native <a> around the label. Only a relative URL and the http, https and mailto schemes render; a refused value (javascript:, data:, vbscript:, a protocol-relative //host, or a value carrying a control character a browser would strip before reading the scheme) means NO target at all rather than a rewritten link."
+        },
+        {
+          "name": "Id",
+          "kind": "Property",
+          "type": "string",
+          "description": "Stable identity of the row, rendered as data-item-id — never as a DOM id, because a host value is not a valid id (a.b and a-b would collide in a selector)."
+        },
+        {
+          "name": "Label",
+          "kind": "Property",
+          "type": "string",
+          "description": "The metric's name, rendered as the row's label (and as the link text when Href renders)."
+        },
+        {
+          "name": "NumericValue",
+          "kind": "Property",
+          "type": "double?",
+          "description": "The value as a NUMBER; when set it wins over Value and is formatted with the list's ValueFormat and Culture."
+        },
+        {
+          "name": "PositiveIsGood",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Whether a rise is the good outcome for THIS metric. It decides the tone only — never the direction word or the arrow — so a falling churn rate is painted as good news and still reads \"Decrease\"."
+        },
+        {
+          "name": "Sparkline",
+          "kind": "Property",
+          "type": "double[]?",
+          "description": "Optional mini chart of the metric's history, rendered through TmSparkline. Null renders nothing; the chart keeps its own accessible name, so it is a text alternative rather than a decorative squiggle."
+        },
+        {
+          "name": "Value",
+          "kind": "Property",
+          "type": "string?",
+          "description": "The host-formatted value, rendered verbatim (e.g. \"2.1 %\" or \"42\"). Ignored when NumericValue is set."
+        }
+      ],
+      "usageExample": "@code {\n    private readonly TrendItem[] rows =\n    [\n        new() { Id = \"revenue\", Label = \"Revenue\", NumericValue = 12450, Delta = 12.5, Sparkline = [8, 12, 10, 16], Href = \"reports/revenue\" },\n        new() { Id = \"churn\", Label = \"Churn\", Value = \"2.1 %\", Delta = -3, PositiveIsGood = false }\n    ];\n}\n\n<TmTrendList Title=\"Key metrics\" Items=\"rows\" />"
+    },
+    {
+      "itemName": "TrendListLayout",
+      "kind": "Enum",
+      "category": "Components",
+      "namespace": "Tempo.Blazor.Components.DataDisplay",
+      "description": "How TmTrendList presents its rows: the default compact semantic list, or a table with real column headers (which is what a wide host layout wants — the rows then line up with the metrics' numbers).",
+      "packageId": "Tempo.Blazor",
+      "sourcePath": "src/Tempo.Blazor/Components/DataDisplay/TrendListLayout.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "List",
+          "description": "One semantic <ul> row per metric. The default."
+        },
+        {
+          "name": "Table",
+          "description": "A <table> with a localized header row, a caption and a row header per metric."
+        }
+      ],
+      "usageExample": "<TmTrendList Layout=\"TrendListLayout.Table\" Items=\"metrics\" />"
+    },
+    {
       "itemName": "ViewColumnInfo",
       "kind": "Class",
       "category": "Components",
@@ -10336,6 +10455,181 @@
         {
           "title": "Outlined danger badge with icon",
           "code": "<TmBadge Variant=\"BadgeVariant.Danger\" BadgeStyle=\"BadgeStyle.Outline\" Icon=\"alert-circle\" Size=\"BadgeSize.Sm\">Critical</TmBadge>"
+        }
+      ]
+    },
+    {
+      "itemName": "TmBreakdownCard",
+      "kind": "Component",
+      "category": "Data Display",
+      "namespace": "Tempo.Blazor.Components.DataDisplay",
+      "description": "A breakdown of a whole: the total, a proportional strip and a table of the parts, biggest first. The rounded shares come from a largest-remainder split, so they add up to exactly 100 % (or to the parts' share of a bigger declared total, with an explicit \"Other\" row for the rest). The strip is decorative (aria-hidden) and the table is the accessible presentation, so nothing is announced twice. A period switcher is opt-in through PeriodOptions + Period, and a re-sorted order animates with a CSS-only FLIP transition that prefers-reduced-motion suppresses.",
+      "packageId": "Tempo.Blazor",
+      "sourcePath": "src/Tempo.Blazor/Components/DataDisplay/TmBreakdownCard.razor",
+      "documentationStatus": "merged",
+      "requiredImports": [
+        "@using Tempo.Blazor.Components.DataDisplay"
+      ],
+      "parameters": [
+        {
+          "name": "AnimateReorder",
+          "type": "bool",
+          "isRequired": false,
+          "default": "true",
+          "description": "Animates the rows into their new places when the sorted order changes (a FLIP: the component computes each moved row's shift, the row carries it as --tm-breakdown-card-row-shift and one keyframe animation slides it home — single render, no JavaScript). A row that did not move never animates, and a second reorder restarts the animation. prefers-reduced-motion: reduce clamps it to 0.01 ms regardless of this switch, and the table's order never depends on the animation."
+        },
+        {
+          "name": "AriaLabel",
+          "type": "string?",
+          "isRequired": false,
+          "description": "The accessible name used when no Title is rendered. Null means the localized default (\"Breakdown\")."
+        },
+        {
+          "name": "Class",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Additional CSS class(es) for the root element."
+        },
+        {
+          "name": "Culture",
+          "type": "CultureInfo?",
+          "isRequired": false,
+          "description": "The culture that formats the values and the shares. Null (the default) means the current culture at render time."
+        },
+        {
+          "name": "IsLoading",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Renders the loading placeholder: skeletons plus a visually hidden localized \"Loading breakdown\" text, with aria-busy=\"true\" on the root.",
+          "default": "false"
+        },
+        {
+          "name": "Parts",
+          "type": "IReadOnlyList<BreakdownPart>",
+          "isRequired": false,
+          "default": "[]",
+          "description": "The parts of the whole. The rows render biggest first (a stable sort, so equal values keep the host's order); a negative value counts as zero for the share while the row itself stays visible."
+        },
+        {
+          "name": "Period",
+          "type": "string?",
+          "isRequired": false,
+          "description": "The currently selected period (one of the PeriodOptions values), two-way bound with PeriodChanged."
+        },
+        {
+          "name": "PeriodChanged",
+          "type": "EventCallback<string?>",
+          "isRequired": false,
+          "description": "Fires with the newly selected period value. Bind it with @bind-Period."
+        },
+        {
+          "name": "PeriodLabel",
+          "type": "string?",
+          "isRequired": false,
+          "description": "The label above the period switcher. Null means the localized default (\"Period\") — the switcher is always named for a reader."
+        },
+        {
+          "name": "PeriodOptions",
+          "type": "IReadOnlyList<SelectOption<string>>",
+          "isRequired": false,
+          "default": "[]",
+          "description": "The periods a host can switch between, rendered as a single-choice segmented control when at least one option is supplied. The card does not interpret the values — it raises PeriodChanged and the host loads the matching data."
+        },
+        {
+          "name": "ShowBar",
+          "type": "bool",
+          "isRequired": false,
+          "default": "true",
+          "description": "Renders the proportional strip. It is aria-hidden in every case: the table carries the data."
+        },
+        {
+          "name": "ShowTotal",
+          "type": "bool",
+          "isRequired": false,
+          "default": "true",
+          "description": "Renders the total row above the strip."
+        },
+        {
+          "name": "Title",
+          "type": "string?",
+          "isRequired": false,
+          "description": "An optional heading above the card. It also NAMES the table (as its caption), so a reader hears what the numbers are a breakdown of."
+        },
+        {
+          "name": "Total",
+          "type": "double?",
+          "isRequired": false,
+          "description": "The declared whole the parts are a share of. Null (the default) means the parts' sum, which makes the rounded shares add up to exactly 100 %. A declared total bigger than the sum adds an explicit localized \"Other\" row and segment for the rest; a total below the sum cannot be the whole, so it is ignored and the sum is used — a breakdown never renders a share above 100 %."
+        },
+        {
+          "name": "ValueFormat",
+          "type": "string",
+          "isRequired": false,
+          "default": "\"N0\"",
+          "description": "The .NET numeric format string of every value (parts and the total). The share column is always a whole, culture-formatted percentage."
+        },
+        {
+          "name": "DataTestId",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Overrides the root data-testid; the default id is breakdown-card and TestIdPrefix namespaces it."
+        },
+        {
+          "name": "TestIdPrefix",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Namespaces every internal data-testid of this instance as \"{prefix}-{name}\", so several cards on one page stay targetable."
+        }
+      ],
+      "cssClasses": [
+        "tm-breakdown-card",
+        "tm-breakdown-card__title",
+        "tm-breakdown-card__period",
+        "tm-breakdown-card__total",
+        "tm-breakdown-card__total-label",
+        "tm-breakdown-card__total-value",
+        "tm-breakdown-card__bar",
+        "tm-breakdown-card__segment",
+        "tm-breakdown-card__segment--tone-1",
+        "tm-breakdown-card__segment--tone-2",
+        "tm-breakdown-card__segment--tone-3",
+        "tm-breakdown-card__segment--tone-4",
+        "tm-breakdown-card__segment--tone-5",
+        "tm-breakdown-card__segment--tone-6",
+        "tm-breakdown-card__segment--remainder",
+        "tm-breakdown-card__table",
+        "tm-breakdown-card__row",
+        "tm-breakdown-card__row--remainder",
+        "tm-breakdown-card__row--flip",
+        "tm-breakdown-card__label",
+        "tm-breakdown-card__swatch",
+        "tm-breakdown-card__swatch--tone-1",
+        "tm-breakdown-card__swatch--tone-2",
+        "tm-breakdown-card__swatch--tone-3",
+        "tm-breakdown-card__swatch--tone-4",
+        "tm-breakdown-card__swatch--tone-5",
+        "tm-breakdown-card__swatch--tone-6",
+        "tm-breakdown-card__value",
+        "tm-breakdown-card__share",
+        "tm-breakdown-card__empty",
+        "tm-breakdown-card__skeleton"
+      ],
+      "examples": [
+        {
+          "title": "Shares of the parts' sum",
+          "code": "<TmBreakdownCard Title=\"Traffic by channel\" Parts=\"@parts\" />"
+        },
+        {
+          "title": "A declared total with the explicit remainder",
+          "code": "<TmBreakdownCard Parts=\"@parts\" Total=\"12000\" />"
+        },
+        {
+          "title": "Period switcher, two-way bound",
+          "code": "<TmBreakdownCard Parts=\"@parts\"\n                 PeriodOptions=\"@periods\"\n                 @bind-Period=\"period\" />\n@code {\n    private string period = \"month\";\n    private readonly SelectOption<string>[] periods =\n    [\n        new(\"month\", \"This month\"),\n        new(\"week\", \"Last week\")\n    ];\n}"
+        },
+        {
+          "title": "Per-part colours from tokens",
+          "code": "@code {\n    private readonly BreakdownPart[] parts =\n    [\n        new() { Id = \"direct\", Label = \"Direct\", Value = 4200, Color = \"var(--tm-color-primary)\" },\n        new() { Id = \"search\", Label = \"Search\", Value = 3100, Color = \"var(--tm-category-2)\" }\n    ];\n}"
         }
       ]
     },
@@ -11759,6 +12053,148 @@
         {
           "title": "Loading placeholder",
           "code": "<TmStatCard Title=\"Revenue\" IsLoading=\"@isLoading\" Value=\"$45,231\" />"
+        }
+      ]
+    },
+    {
+      "itemName": "TmTrendList",
+      "kind": "Component",
+      "category": "Data Display",
+      "namespace": "Tempo.Blazor.Components.DataDisplay",
+      "description": "A compact list of metrics and their change over a period: one row per TrendItem, rendered as a semantic <ul> (the default) or as a table with real column headers. The delta is formatted with the culture's own percent convention, and the direction travels as an arrow icon, a tone class and a visually hidden word — colour is never the only carrier. Optional sparklines, per-row links, an empty state and a loading state complete the component.",
+      "packageId": "Tempo.Blazor",
+      "sourcePath": "src/Tempo.Blazor/Components/DataDisplay/TmTrendList.razor",
+      "documentationStatus": "merged",
+      "requiredImports": [
+        "@using Tempo.Blazor.Components.DataDisplay"
+      ],
+      "parameters": [
+        {
+          "name": "AriaLabel",
+          "type": "string?",
+          "isRequired": false,
+          "description": "The accessible name used when no Title is rendered. Null means the localized default (\"Trend list\")."
+        },
+        {
+          "name": "ChangeHeader",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Overrides the \"Change\" column header in the table layout. Null uses the localized default."
+        },
+        {
+          "name": "Class",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Additional CSS class(es) for the root element."
+        },
+        {
+          "name": "Culture",
+          "type": "CultureInfo?",
+          "isRequired": false,
+          "description": "The culture that formats the values and deltas. Null (the default) means the current culture at render time."
+        },
+        {
+          "name": "DeltaFormat",
+          "type": "string?",
+          "isRequired": false,
+          "description": "An explicit .NET numeric format string for a row's Delta. Null (the default) uses the culture's own percent convention (English +12.5%, Czech +12,5 %). A malformed format falls back to that convention instead of throwing out of a render."
+        },
+        {
+          "name": "IsLoading",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Renders the loading placeholder: skeletons plus a visually hidden localized \"Loading values\" text, with aria-busy=\"true\" on the root. No stale row stays on screen.",
+          "default": "false"
+        },
+        {
+          "name": "Items",
+          "type": "IReadOnlyList<TrendItem>",
+          "isRequired": false,
+          "default": "[]",
+          "description": "The metrics rendered, in the order the host supplied them (a trend is often chronological — the component never re-sorts). Null entries are skipped. Each TrendItem carries Id, Label, Value or NumericValue, Delta, PositiveIsGood, Sparkline and Href."
+        },
+        {
+          "name": "LabelHeader",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Overrides the \"Item\" column header in the table layout. Null uses the localized default."
+        },
+        {
+          "name": "Layout",
+          "type": "TrendListLayout",
+          "isRequired": false,
+          "default": "TrendListLayout.List",
+          "description": "How the rows present: List (the default semantic <ul>) or Table (a real <table> with localized column headers, a caption and a row header per metric)."
+        },
+        {
+          "name": "Title",
+          "type": "string?",
+          "isRequired": false,
+          "description": "An optional heading above the rows. It also NAMES the list through aria-labelledby (or the table's caption), so a reader hears what the rows are."
+        },
+        {
+          "name": "ValueFormat",
+          "type": "string",
+          "isRequired": false,
+          "default": "\"N0\"",
+          "description": "The .NET numeric format string of a row's NumericValue (default N0 — whole, group-separated numbers). A string Value is host-formatted and rendered verbatim."
+        },
+        {
+          "name": "ValueHeader",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Overrides the \"Value\" column header in the table layout. Null uses the localized default."
+        },
+        {
+          "name": "DataTestId",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Overrides the root data-testid; the default id is trend-list and TestIdPrefix namespaces it."
+        },
+        {
+          "name": "TestIdPrefix",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Namespaces every internal data-testid of this instance as \"{prefix}-{name}\", so several lists on one page stay targetable."
+        }
+      ],
+      "cssClasses": [
+        "tm-trend-list",
+        "tm-trend-list--table",
+        "tm-trend-list__title",
+        "tm-trend-list__items",
+        "tm-trend-list__item",
+        "tm-trend-list__label",
+        "tm-trend-list__link",
+        "tm-trend-list__value",
+        "tm-trend-list__trend",
+        "tm-trend-list__trend--positive",
+        "tm-trend-list__trend--negative",
+        "tm-trend-list__trend--neutral",
+        "tm-trend-list__delta",
+        "tm-trend-list__sparkline",
+        "tm-trend-list__table",
+        "tm-trend-list__row",
+        "tm-trend-list__change",
+        "tm-trend-list__empty",
+        "tm-trend-list__skeleton"
+      ],
+      "examples": [
+        {
+          "title": "Metrics with their change over the period",
+          "code": "<TmTrendList Title=\"Key metrics\" Items=\"@metrics\" DeltaFormat=\"null\" />"
+        },
+        {
+          "title": "A row that links to its report",
+          "code": "<TmTrendList Items=\"@rows\" />\n@code {\n    private readonly TrendItem[] rows =\n    [\n        new() { Id = \"revenue\", Label = \"Revenue\", NumericValue = 12450, Delta = 12.5, Href = \"reports/revenue\" }\n    ];\n}"
+        },
+        {
+          "title": "Table layout with host wording",
+          "code": "<TmTrendList Layout=\"TrendListLayout.Table\"\n             LabelHeader=\"Metric\" ValueHeader=\"Amount\" ChangeHeader=\"Delta\"\n             Items=\"@metrics\" />"
+        },
+        {
+          "title": "Loading state",
+          "code": "<TmTrendList Items=\"@metrics\" IsLoading=\"true\" />"
         }
       ]
     },
@@ -32990,6 +33426,10 @@
       "kind": "Css"
     },
     {
+      "path": "src/Tempo.Blazor/wwwroot/css/components/_breakdown-card.css",
+      "kind": "Css"
+    },
+    {
       "path": "src/Tempo.Blazor/wwwroot/css/components/_bulk-action-bar.css",
       "kind": "Css"
     },
@@ -33530,6 +33970,10 @@
       "kind": "Css"
     },
     {
+      "path": "src/Tempo.Blazor/wwwroot/css/components/_trend-list.css",
+      "kind": "Css"
+    },
+    {
       "path": "src/Tempo.Blazor/wwwroot/css/components/_user-menu.css",
       "kind": "Css"
     },
@@ -33831,11 +34275,11 @@
     }
   ],
   "summary": {
-    "itemCount": 424,
-    "manualItemCount": 424,
-    "generatedItemCount": 416,
+    "itemCount": 429,
+    "manualItemCount": 429,
+    "generatedItemCount": 421,
     "generatedOnlyItemCount": 0,
-    "componentCount": 228,
-    "publicApiTypeCount": 188
+    "componentCount": 230,
+    "publicApiTypeCount": 191
   }
 }

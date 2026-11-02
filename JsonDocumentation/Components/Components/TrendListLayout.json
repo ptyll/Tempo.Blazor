@@ -1,0 +1,21 @@
+{
+  "kind": "Enum",
+  "category": "Components",
+  "namespace": "Tempo.Blazor.Components.DataDisplay",
+  "description": "How TmTrendList presents its rows: the default compact semantic list, or a table with real column headers (which is what a wide host layout wants — the rows then line up with the metrics' numbers).",
+  "packageId": "Tempo.Blazor",
+  "sourcePath": "src/Tempo.Blazor/Components/DataDisplay/TrendListLayout.cs",
+  "documentationStatus": "documented",
+  "itemName": "TrendListLayout",
+  "members": [
+    {
+      "name": "List",
+      "description": "One semantic <ul> row per metric. The default."
+    },
+    {
+      "name": "Table",
+      "description": "A <table> with a localized header row, a caption and a row header per metric."
+    }
+  ],
+  "usageExample": "<TmTrendList Layout=\"TrendListLayout.Table\" Items=\"metrics\" />"
+}

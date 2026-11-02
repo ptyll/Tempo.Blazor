@@ -1,0 +1,138 @@
+{
+  "itemName": "TmTrendList",
+  "kind": "Component",
+  "category": "Data Display",
+  "description": "A compact list of metrics and their change over a period: one row per TrendItem, rendered as a semantic <ul> (the default) or as a table with real column headers. The delta is formatted with the culture's own percent convention, and the direction travels as an arrow icon, a tone class and a visually hidden word — colour is never the only carrier. Optional sparklines, per-row links, an empty state and a loading state complete the component.",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.DataDisplay"
+  ],
+  "parameters": [
+    {
+      "name": "Items",
+      "type": "IReadOnlyList<TrendItem>",
+      "isRequired": false,
+      "default": "[]",
+      "description": "The metrics rendered, in the order the host supplied them (a trend is often chronological — the component never re-sorts). Null entries are skipped. Each TrendItem carries Id, Label, Value or NumericValue, Delta, PositiveIsGood, Sparkline and Href."
+    },
+    {
+      "name": "IsLoading",
+      "type": "bool",
+      "isRequired": false,
+      "default": "false",
+      "description": "Renders the loading placeholder: skeletons plus a visually hidden localized \"Loading values\" text, with aria-busy=\"true\" on the root. No stale row stays on screen."
+    },
+    {
+      "name": "Layout",
+      "type": "TrendListLayout",
+      "isRequired": false,
+      "default": "List",
+      "description": "How the rows present: List (the default semantic <ul>) or Table (a real <table> with localized column headers, a caption and a row header per metric)."
+    },
+    {
+      "name": "Title",
+      "type": "string?",
+      "isRequired": false,
+      "description": "An optional heading above the rows. It also NAMES the list through aria-labelledby (or the table's caption), so a reader hears what the rows are."
+    },
+    {
+      "name": "AriaLabel",
+      "type": "string?",
+      "isRequired": false,
+      "description": "The accessible name used when no Title is rendered. Null means the localized default (\"Trend list\")."
+    },
+    {
+      "name": "DeltaFormat",
+      "type": "string?",
+      "isRequired": false,
+      "description": "An explicit .NET numeric format string for a row's Delta. Null (the default) uses the culture's own percent convention (English +12.5%, Czech +12,5 %). A malformed format falls back to that convention instead of throwing out of a render."
+    },
+    {
+      "name": "ValueFormat",
+      "type": "string",
+      "isRequired": false,
+      "default": "N0",
+      "description": "The .NET numeric format string of a row's NumericValue (default N0 — whole, group-separated numbers). A string Value is host-formatted and rendered verbatim."
+    },
+    {
+      "name": "Culture",
+      "type": "CultureInfo?",
+      "isRequired": false,
+      "description": "The culture that formats the values and deltas. Null (the default) means the current culture at render time."
+    },
+    {
+      "name": "LabelHeader",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Overrides the \"Item\" column header in the table layout. Null uses the localized default."
+    },
+    {
+      "name": "ValueHeader",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Overrides the \"Value\" column header in the table layout. Null uses the localized default."
+    },
+    {
+      "name": "ChangeHeader",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Overrides the \"Change\" column header in the table layout. Null uses the localized default."
+    },
+    {
+      "name": "Class",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Additional CSS class(es) for the root element."
+    },
+    {
+      "name": "DataTestId",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Overrides the root data-testid; the default id is trend-list and TestIdPrefix namespaces it."
+    },
+    {
+      "name": "TestIdPrefix",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Namespaces every internal data-testid of this instance as \"{prefix}-{name}\", so several lists on one page stay targetable."
+    }
+  ],
+  "cssClasses": [
+    "tm-trend-list",
+    "tm-trend-list--table",
+    "tm-trend-list__title",
+    "tm-trend-list__items",
+    "tm-trend-list__item",
+    "tm-trend-list__label",
+    "tm-trend-list__link",
+    "tm-trend-list__value",
+    "tm-trend-list__trend",
+    "tm-trend-list__trend--positive",
+    "tm-trend-list__trend--negative",
+    "tm-trend-list__trend--neutral",
+    "tm-trend-list__delta",
+    "tm-trend-list__sparkline",
+    "tm-trend-list__table",
+    "tm-trend-list__row",
+    "tm-trend-list__change",
+    "tm-trend-list__empty",
+    "tm-trend-list__skeleton"
+  ],
+  "examples": [
+    {
+      "title": "Metrics with their change over the period",
+      "code": "<TmTrendList Title=\"Key metrics\" Items=\"@metrics\" DeltaFormat=\"null\" />"
+    },
+    {
+      "title": "A row that links to its report",
+      "code": "<TmTrendList Items=\"@rows\" />\n@code {\n    private readonly TrendItem[] rows =\n    [\n        new() { Id = \"revenue\", Label = \"Revenue\", NumericValue = 12450, Delta = 12.5, Href = \"reports/revenue\" }\n    ];\n}"
+    },
+    {
+      "title": "Table layout with host wording",
+      "code": "<TmTrendList Layout=\"TrendListLayout.Table\"\n             LabelHeader=\"Metric\" ValueHeader=\"Amount\" ChangeHeader=\"Delta\"\n             Items=\"@metrics\" />"
+    },
+    {
+      "title": "Loading state",
+      "code": "<TmTrendList Items=\"@metrics\" IsLoading=\"true\" />"
+    }
+  ]
+}

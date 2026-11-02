@@ -1,0 +1,183 @@
+/* TmTrendList — a compact list of metrics and their change over a period.
+   Every colour, size and radius is a --tm-* token: the dark theme re-points the tokens, so there is
+   no [data-theme] block here. The list is data, not chrome — no animation, so no reduced-motion rule
+   is needed. */
+
+.tm-trend-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--tm-space-2);
+  color: var(--tm-text-primary);
+}
+
+.tm-trend-list__title {
+  margin: 0;
+  font-size: var(--tm-font-size-sm);
+  font-weight: var(--tm-font-weight-semibold);
+  color: var(--tm-text-secondary);
+}
+
+.tm-trend-list__items {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tm-trend-list__item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: var(--tm-space-1) var(--tm-space-3);
+  padding-block: var(--tm-space-2);
+  min-block-size: var(--tm-space-10);
+  border-block-end: 1px solid var(--tm-border-color);
+}
+
+.tm-trend-list__item:last-child {
+  border-block-end: 0;
+}
+
+.tm-trend-list__label {
+  min-inline-size: 0;
+  font-size: var(--tm-font-size-sm);
+  color: var(--tm-text-primary);
+  overflow-wrap: anywhere;
+}
+
+/* The one native target a row can carry. The focus indicator is the library's two-layer
+   --tm-focus-ring plus a transparent outline: forced-colors turns box-shadow off and then paints the
+   system Highlight colour on that outline, so the ring never disappears in high contrast. */
+.tm-trend-list__link {
+  border-radius: var(--tm-radius-sm);
+  color: var(--tm-text-link);
+  text-decoration: none;
+}
+
+.tm-trend-list__link:hover {
+  text-decoration: underline;
+}
+
+.tm-trend-list__link:focus-visible {
+  outline: 2px solid transparent;
+  box-shadow: var(--tm-focus-ring);
+}
+
+.tm-trend-list__value {
+  font-size: var(--tm-font-size-sm);
+  font-weight: var(--tm-font-weight-semibold);
+  font-variant-numeric: tabular-nums;
+  text-align: end;
+  color: var(--tm-text-primary);
+}
+
+/* Delta + direction. The tone is the OUTCOME (--positive = good news), which is why the class name
+   does not follow the arrow: a falling churn rate is green. */
+.tm-trend-list__trend {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--tm-space-1);
+  font-size: var(--tm-font-size-xs);
+  font-weight: var(--tm-font-weight-medium);
+}
+
+.tm-trend-list__trend--positive {
+  color: var(--tm-color-success-text);
+}
+
+.tm-trend-list__trend--negative {
+  color: var(--tm-color-danger-text);
+}
+
+.tm-trend-list__trend--neutral {
+  color: var(--tm-text-secondary);
+}
+
+.tm-trend-list__delta {
+  font-variant-numeric: tabular-nums;
+}
+
+/* The sparkline is the row's fourth grid item: it sits on the second line under the label, so the
+   value and the delta keep the first line to themselves at every width. */
+.tm-trend-list__sparkline {
+  grid-column: 1;
+  display: inline-flex;
+  inline-size: 4rem;
+  block-size: 1.5rem;
+  align-items: center;
+}
+
+/* Table layout: the same row content with real column headers, so the numbers line up. */
+.tm-trend-list__table {
+  inline-size: 100%;
+  border-collapse: collapse;
+  font-size: var(--tm-font-size-sm);
+}
+
+.tm-trend-list__table thead th {
+  padding: var(--tm-space-1) var(--tm-space-2);
+  border-block-end: 1px solid var(--tm-border-color);
+  color: var(--tm-text-secondary);
+  font-size: var(--tm-font-size-xs);
+  font-weight: var(--tm-font-weight-semibold);
+  text-align: start;
+}
+
+.tm-trend-list__table thead th:not(:first-child) {
+  text-align: end;
+}
+
+.tm-trend-list__row {
+  border-block-end: 1px solid var(--tm-border-color);
+}
+
+.tm-trend-list__row:last-child {
+  border-block-end: 0;
+}
+
+.tm-trend-list__row th,
+.tm-trend-list__row td {
+  padding: var(--tm-space-2);
+  vertical-align: middle;
+}
+
+.tm-trend-list__row .tm-trend-list__label {
+  font-weight: var(--tm-font-weight-medium);
+  text-align: start;
+}
+
+.tm-trend-list__change {
+  text-align: end;
+}
+
+.tm-trend-list__change .tm-trend-list__sparkline {
+  margin-inline-start: var(--tm-space-2);
+}
+
+.tm-trend-list__empty {
+  margin: 0;
+  padding: var(--tm-space-3) 0;
+  color: var(--tm-text-secondary);
+  font-size: var(--tm-font-size-sm);
+}
+
+.tm-trend-list__skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: var(--tm-space-2);
+}
+
+/* Coarse pointers get a full 44 px row target on the link, so a finger does not have to hit a
+   20 px line of text (WCAG 2.5.8). The row itself is taller than that already. */
+@media (pointer: coarse) {
+  .tm-trend-list__link {
+    display: inline-flex;
+    align-items: center;
+    min-block-size: var(--tm-touch-target);
+  }
+
+  .tm-trend-list__item {
+    min-block-size: var(--tm-touch-target);
+  }
+}

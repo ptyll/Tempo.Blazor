@@ -1,0 +1,61 @@
+{
+  "kind": "Class",
+  "category": "Components",
+  "namespace": "Tempo.Blazor.Components.DataDisplay",
+  "description": "One metric row of a TmTrendList: a label, its value, an optional change over the comparison period, an optional sparkline and an optional link target. The row is data, not behaviour — it carries no callbacks, so a host that needs a row action passes a safe Href and the row stays one native focus stop.",
+  "packageId": "Tempo.Blazor",
+  "sourcePath": "src/Tempo.Blazor/Components/DataDisplay/TrendItem.cs",
+  "documentationStatus": "documented",
+  "itemName": "TrendItem",
+  "members": [
+    {
+      "name": "Id",
+      "kind": "Property",
+      "type": "string",
+      "description": "Stable identity of the row, rendered as data-item-id — never as a DOM id, because a host value is not a valid id (a.b and a-b would collide in a selector)."
+    },
+    {
+      "name": "Label",
+      "kind": "Property",
+      "type": "string",
+      "description": "The metric's name, rendered as the row's label (and as the link text when Href renders)."
+    },
+    {
+      "name": "Value",
+      "kind": "Property",
+      "type": "string?",
+      "description": "The host-formatted value, rendered verbatim (e.g. \"2.1 %\" or \"42\"). Ignored when NumericValue is set."
+    },
+    {
+      "name": "NumericValue",
+      "kind": "Property",
+      "type": "double?",
+      "description": "The value as a NUMBER; when set it wins over Value and is formatted with the list's ValueFormat and Culture."
+    },
+    {
+      "name": "Delta",
+      "kind": "Property",
+      "type": "double?",
+      "description": "The change over the comparison period in percent points, formatted with the culture's own percent convention. Null renders no change marker at all."
+    },
+    {
+      "name": "PositiveIsGood",
+      "kind": "Property",
+      "type": "bool",
+      "description": "Whether a rise is the good outcome for THIS metric. It decides the tone only — never the direction word or the arrow — so a falling churn rate is painted as good news and still reads \"Decrease\"."
+    },
+    {
+      "name": "Sparkline",
+      "kind": "Property",
+      "type": "double[]?",
+      "description": "Optional mini chart of the metric's history, rendered through TmSparkline. Null renders nothing; the chart keeps its own accessible name, so it is a text alternative rather than a decorative squiggle."
+    },
+    {
+      "name": "Href",
+      "kind": "Property",
+      "type": "string?",
+      "description": "Optional navigation target, rendered as one native <a> around the label. Only a relative URL and the http, https and mailto schemes render; a refused value (javascript:, data:, vbscript:, a protocol-relative //host, or a value carrying a control character a browser would strip before reading the scheme) means NO target at all rather than a rewritten link."
+    }
+  ],
+  "usageExample": "@code {\n    private readonly TrendItem[] rows =\n    [\n        new() { Id = \"revenue\", Label = \"Revenue\", NumericValue = 12450, Delta = 12.5, Sparkline = [8, 12, 10, 16], Href = \"reports/revenue\" },\n        new() { Id = \"churn\", Label = \"Churn\", Value = \"2.1 %\", Delta = -3, PositiveIsGood = false }\n    ];\n}\n\n<TmTrendList Title=\"Key metrics\" Items=\"rows\" />"
+}

@@ -1,0 +1,139 @@
+@namespace Tempo.Blazor.Components.DataDisplay
+@inherits Tempo.Blazor.Components.TmComponentBase
+
+@* A breakdown of a whole: the total, a proportional strip and a table of the parts, biggest first.
+   The strip is DECORATIVE (aria-hidden) — the table is what a reader and a copy/paste get, so the
+   facts are never announced twice. The percentages come from a largest-remainder split, so the
+   rounded shares add up to 100 % (or to the parts' share of a bigger declared total, with an explicit
+   "Other" row for the rest). A host with a period switcher passes PeriodOptions + @bind-Period. *@
+<div class="@RootClass" data-testid="@RootTestId("breakdown-card")" aria-busy="@BusyAttribute">
+    @if (!string.IsNullOrEmpty(Title))
+    {
+        <h3 class="tm-breakdown-card__title" id="@TitleId">@Title</h3>
+    }
+    @if (_periodRadios.Count > 0)
+    {
+        <div class="tm-breakdown-card__period">
+            <TmRadioGroup T="string"
+                          Name="@PeriodGroupName"
+                          Label="@ResolvedPeriodLabel"
+                          Options="@_periodRadios"
+                          Value="@Period"
+                          ValueChanged="@OnPeriodChangedAsync"
+                          Layout="RadioLayout.Horizontal"
+                          Appearance="RadioAppearance.Segmented" />
+        </div>
+    }
+    @if (IsLoading)
+    {
+        <div class="tm-breakdown-card__skeleton">
+            <TmSkeleton Variant="SkeletonVariant.Text" Height="1.75rem" Width="45%" />
+            <TmSkeleton Variant="SkeletonVariant.Text" Height="0.75rem" Width="100%" />
+            <TmSkeleton Variant="SkeletonVariant.Text" Width="80%" />
+        </div><span class="tm-sr-only">@Loc["TmBreakdownCard_Loading"]</span>
+    }
+    else if (_shares.Count == 0)
+    {
+        <p class="tm-breakdown-card__empty">@Loc["TmBreakdownCard_Empty"]</p>
+    }
+    else
+    {
+        @if (ShowTotal)
+        {
+            <p class="tm-breakdown-card__total">
+                <span class="tm-breakdown-card__total-label">@Loc["TmBreakdownCard_TotalLabel"]</span>
+                <span class="tm-breakdown-card__total-value">@FormatValue(_total)</span>
+            </p>
+        }
+        @if (ShowBar && HasAnySegment)
+        {
+            <div class="tm-breakdown-card__bar" aria-hidden="true">
+                @foreach (var share in _shares)
+                {
+                    @if (share.Percent > 0)
+                    {
+                        <span class="@SegmentClass(share)" style="@SegmentStyle(share)"></span>
+                    }
+                }
+                @if (HasRemainder)
+                {
+                    <span class="tm-breakdown-card__segment tm-breakdown-card__segment--remainder"
+                          style="@RemainderStyle"></span>
+                }
+            </div>
+        }
+        <table class="tm-breakdown-card__table">
+            <caption class="tm-sr-only">@Caption</caption>
+            <thead>
+                <tr>
+                    <th scope="col">@Loc["TmBreakdownCard_ColumnLabel"]</th>
+                    <th scope="col">@Loc["TmBreakdownCard_ColumnValue"]</th>
+                    <th scope="col">@Loc["TmBreakdownCard_ColumnShare"]</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var share in _shares)
+                {
+                    <tr @key="KeyOf(share)" class="@RowClass(share)" style="@RowShiftStyle(share)"
+                        data-part-id="@share.Part.Id" data-testid="@TestId("breakdown-row")">
+                        <th scope="row" class="tm-breakdown-card__label">
+                            <span class="tm-breakdown-card__label-inner">
+                                <span class="@SwatchClass(share)" style="@SwatchStyle(share)" aria-hidden="true"></span>@share.Part.Label
+                            </span>
+                        </th>
+                        <td class="tm-breakdown-card__value">@FormatValue(share.Part.Value)</td>
+                        <td class="tm-breakdown-card__share">@FormatShare(share.Percent)</td>
+                    </tr>
+                }
+                @if (HasRemainder)
+                {
+                    <tr class="tm-breakdown-card__row tm-breakdown-card__row--remainder"
+                        data-testid="@TestId("breakdown-row")">
+                        <th scope="row" class="tm-breakdown-card__label">
+                            <span class="tm-breakdown-card__label-inner">
+                                <span class="tm-breakdown-card__swatch" aria-hidden="true"></span>@Loc["TmBreakdownCard_RemainderLabel"]
+                            </span>
+                        </th>
+                        <td class="tm-breakdown-card__value">@FormatValue(_remainderValue)</td>
+                        <td class="tm-breakdown-card__share">@FormatShare(_remainderPercent)</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+</div>
+
+@code {
+    /// <summary>The stable DOM id of the heading, used as the card's accessible name when a title is set.</summary>
+    private readonly string TitleId = $"tm-breakdown-card-{Guid.NewGuid():n}-title";
+
+    /// <summary>The radio group name shared by the period options of this instance.</summary>
+    private readonly string PeriodGroupName = $"tm-breakdown-period-{Guid.NewGuid():n}";
+
+    /// <summary>
+    /// The root classes: the base class plus the host's own. No layout modifier is needed — the card
+    /// is one column at every width.
+    /// </summary>
+    private string RootClass
+        => string.IsNullOrEmpty(Class) ? "tm-breakdown-card" : "tm-breakdown-card " + Class;
+
+    /// <summary>The value written into the root's <c>aria-busy</c> — <c>null</c> omits the attribute.</summary>
+    private string? BusyAttribute => IsLoading ? "true" : null;
+
+    /// <summary>The table caption: the title when there is one, otherwise the default name.</summary>
+    private string Caption => !string.IsNullOrEmpty(Title) ? Title : ResolvedDefaultName;
+
+    /// <summary>The name used when the host passes neither a title nor an aria label.</summary>
+    private string ResolvedDefaultName
+        => !string.IsNullOrWhiteSpace(AriaLabel) ? AriaLabel! : Loc["TmBreakdownCard_AriaLabel"];
+
+    /// <summary>The label above the period switcher: the host's override or the localized default.</summary>
+    private string ResolvedPeriodLabel
+        => string.IsNullOrWhiteSpace(PeriodLabel) ? Loc["TmBreakdownCard_PeriodLabel"] : PeriodLabel!;
+
+    /// <summary>Whether the card renders a remainder row (a declared total bigger than the parts' sum).</summary>
+    private bool HasRemainder => _remainderPercent > 0;
+
+    /// <summary>Whether any part has a non-zero share to paint.</summary>
+    private bool HasAnySegment => _shares.Any(share => share.Percent > 0);
+}

@@ -1,0 +1,263 @@
+@namespace Tempo.Blazor.Components.DataDisplay
+@inherits Tempo.Blazor.Components.TmComponentBase
+@using System.Globalization
+@using Tempo.Blazor.Components.Charts
+
+@* A compact list of metrics and their change over a period. The default layout is a semantic <ul>
+   (the list a reader meets), Layout=Table renders a real table with column headers when the host
+   wants the numbers to line up. Every row carries its delta as an arrow, a tone AND a visually
+   hidden direction word — colour is never the only carrier. *@
+<div class="@RootClass" data-testid="@RootTestId("trend-list")" aria-busy="@BusyAttribute">
+    @if (!string.IsNullOrEmpty(Title))
+    {
+        <h3 class="tm-trend-list__title" id="@TitleId">@Title</h3>
+    }
+    @if (IsLoading)
+    {
+        <div class="tm-trend-list__skeleton">
+            <TmSkeleton Variant="SkeletonVariant.Text" Height="1rem" Width="70%" />
+            <TmSkeleton Variant="SkeletonVariant.Text" Width="55%" />
+            <TmSkeleton Variant="SkeletonVariant.Text" Width="62%" />
+        </div><span class="tm-sr-only">@Loc["TmTrendList_Loading"]</span>
+    }
+    else if (VisibleItems.Count == 0)
+    {
+        <p class="tm-trend-list__empty">@Loc["TmTrendList_Empty"]</p>
+    }
+    else if (Layout == TrendListLayout.Table)
+    {
+        <table class="tm-trend-list__table">
+            <caption class="tm-sr-only">@Caption</caption>
+            <thead>
+                <tr>
+                    <th scope="col">@LabelHeaderText</th>
+                    <th scope="col">@ValueHeaderText</th>
+                    <th scope="col">@ChangeHeaderText</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in VisibleItems)
+                {
+                    <tr class="tm-trend-list__row" data-item-id="@item.Id" data-testid="@TestId("trend-item")">
+                        <th scope="row" class="tm-trend-list__label">@RowContent(item)</th>
+                        <td class="tm-trend-list__value">@FormatValue(item)</td>
+                        <td class="tm-trend-list__change">@RowTrend(item)</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+    else
+    {
+        <ul class="tm-trend-list__items" aria-labelledby="@ListLabelledBy" aria-label="@ListAriaLabel">
+            @foreach (var item in VisibleItems)
+            {
+                <li class="tm-trend-list__item" data-item-id="@item.Id" data-testid="@TestId("trend-item")">
+                    @RowContent(item)<span class="tm-trend-list__value">@FormatValue(item)</span>@RowTrend(item)
+                </li>
+            }
+        </ul>
+    }
+</div>
+
+@code {
+    /// <summary>
+    /// The metrics rendered, in the order the host supplied them (a trend is often chronological —
+    /// the component never re-sorts). Null entries are skipped rather than rendered as empty rows.
+    /// </summary>
+    [Parameter]
+    public IReadOnlyList<TrendItem> Items { get; set; } = [];
+
+    /// <summary>Renders the loading placeholder: skeletons plus a visually hidden localized "loading" text.</summary>
+    [Parameter]
+    public bool IsLoading { get; set; }
+
+    /// <summary>How the rows present. Default <see cref="TrendListLayout.List"/> (a semantic list).</summary>
+    [Parameter]
+    public TrendListLayout Layout { get; set; } = TrendListLayout.List;
+
+    /// <summary>
+    /// An optional heading above the rows. It also NAMES the list (through <c>aria-labelledby</c>),
+    /// so a reader hears "Key metrics, list, 3 items" instead of an unexplained group.
+    /// </summary>
+    [Parameter]
+    public string? Title { get; set; }
+
+    /// <summary>
+    /// The accessible name used when no <see cref="Title"/> is rendered. Null means the localized
+    /// default ("Trend list").
+    /// </summary>
+    [Parameter]
+    public string? AriaLabel { get; set; }
+
+    /// <summary>
+    /// An explicit .NET numeric format string for a row's <see cref="TrendItem.Delta"/>. Default
+    /// <see langword="null"/> = the culture's own percent convention (English <c>+12.5%</c>, Czech
+    /// <c>+12,5&nbsp;%</c>). A malformed format falls back to that same convention instead of
+    /// throwing out of a render.
+    /// </summary>
+    [Parameter]
+    public string? DeltaFormat { get; set; }
+
+    /// <summary>
+    /// The .NET numeric format string of a row's <see cref="TrendItem.NumericValue"/>. Default
+    /// <c>"N0"</c> (whole, group-separated numbers).
+    /// </summary>
+    [Parameter]
+    public string ValueFormat { get; set; } = "N0";
+
+    /// <summary>
+    /// The culture that formats the values and deltas. Default <see langword="null"/> = the current
+    /// culture at render time, so a ticker follows the request culture without being told.
+    /// </summary>
+    [Parameter]
+    public CultureInfo? Culture { get; set; }
+
+    /// <summary>Overrides the "item" column header in <see cref="TrendListLayout.Table"/>.</summary>
+    [Parameter]
+    public string? LabelHeader { get; set; }
+
+    /// <summary>Overrides the "value" column header in <see cref="TrendListLayout.Table"/>.</summary>
+    [Parameter]
+    public string? ValueHeader { get; set; }
+
+    /// <summary>Overrides the "change" column header in <see cref="TrendListLayout.Table"/>.</summary>
+    [Parameter]
+    public string? ChangeHeader { get; set; }
+
+    /// <summary>Additional CSS class(es) for the root element.</summary>
+    [Parameter]
+    public string? Class { get; set; }
+
+    /// <summary>The stable DOM id of the heading, used as the list's accessible name when a title is set.</summary>
+    private readonly string TitleId = $"tm-trend-list-{Guid.NewGuid():n}-title";
+
+    /// <summary>The culture the numeric parts are formatted with — the parameter when set, the current culture otherwise.</summary>
+    private CultureInfo EffectiveCulture => Culture ?? CultureInfo.CurrentCulture;
+
+    /// <summary>The metrics actually rendered: the host's list without null entries.</summary>
+    private IReadOnlyList<TrendItem> VisibleItems
+        => Items is null ? [] : [.. Items.Where(item => item is not null)];
+
+    /// <summary>
+    /// The root classes. Only the table layout adds a modifier, so the default list markup is the
+    /// plain base class a host can style without knowing the layout switch.
+    /// </summary>
+    private string RootClass
+    {
+        get
+        {
+            var classes = "tm-trend-list";
+            if (Layout == TrendListLayout.Table)
+            {
+                classes += " tm-trend-list--table";
+            }
+
+            if (!string.IsNullOrEmpty(Class))
+            {
+                classes += " " + Class;
+            }
+
+            return classes;
+        }
+    }
+
+    /// <summary>The value written into the root's <c>aria-busy</c> — <c>null</c> omits the attribute.</summary>
+    private string? BusyAttribute => IsLoading ? "true" : null;
+
+    /// <summary>The id of the heading the list is labelled by, or null when there is no heading.</summary>
+    private string? ListLabelledBy => string.IsNullOrEmpty(Title) ? null : TitleId;
+
+    /// <summary>The list's <c>aria-label</c> — only used when there is no visible heading to point at.</summary>
+    private string? ListAriaLabel
+        => string.IsNullOrEmpty(Title) ? ResolvedDefaultName : null;
+
+    /// <summary>The table caption: the title when there is one, otherwise the default name.</summary>
+    private string Caption => !string.IsNullOrEmpty(Title) ? Title : ResolvedDefaultName;
+
+    /// <summary>The name used when the host passes neither a title nor an aria label.</summary>
+    private string ResolvedDefaultName
+        => !string.IsNullOrWhiteSpace(AriaLabel) ? AriaLabel! : Loc["TmTrendList_AriaLabel"];
+
+    /// <summary>The rendered "item" column header: the host's override or the localized default.</summary>
+    private string LabelHeaderText => string.IsNullOrWhiteSpace(LabelHeader) ? Loc["TmTrendList_ColumnLabel"] : LabelHeader!;
+
+    /// <summary>The rendered "value" column header: the host's override or the localized default.</summary>
+    private string ValueHeaderText => string.IsNullOrWhiteSpace(ValueHeader) ? Loc["TmTrendList_ColumnValue"] : ValueHeader!;
+
+    /// <summary>The rendered "change" column header: the host's override or the localized default.</summary>
+    private string ChangeHeaderText => string.IsNullOrWhiteSpace(ChangeHeader) ? Loc["TmTrendList_ColumnChange"] : ChangeHeader!;
+
+    /// <summary>
+    /// The label of one row, and the only native target it can carry: a safe href renders an
+    /// <c>&lt;a&gt;</c>, a refused or missing one renders a plain span (one focus stop per row, never
+    /// a nested control).
+    /// </summary>
+    private RenderFragment<TrendItem> RowContent => item => @<text>
+        @{
+            var href = TrendDelta.SafeHref(item.Href);
+        }
+        @if (href is not null)
+        {
+            <a class="tm-trend-list__link tm-trend-list__label" href="@href">@item.Label</a>
+        }
+        else
+        {
+            <span class="tm-trend-list__label">@item.Label</span>
+        }
+    </text>;
+
+    /// <summary>
+    /// The change marker of one row: an arrow (decorative, <c>aria-hidden</c>), a visually hidden
+    /// direction word and the culture-formatted delta, followed by the optional sparkline. Renders
+    /// nothing when the row has no delta.
+    /// </summary>
+    private RenderFragment<TrendItem> RowTrend => item => @<text>
+        @{
+            var trend = TrendOf(item);
+        }
+        @if (trend is not null)
+        {
+            <span class="tm-trend-list__trend @TrendClass(trend.OutcomeClass)" data-trend="@trend.Slug"><TmIcon Name="@trend.Icon" Size="IconSize.Sm" /><span class="tm-sr-only">@Loc[trend.LabelKey]</span><span class="tm-trend-list__delta">@FormatDelta(item)</span></span>
+        }
+        @if (item.Sparkline is { Length: > 0 } data)
+        {
+            <span class="tm-trend-list__sparkline"><TmSparkline Data="@data" Height="24px" /></span>
+        }
+    </text>;
+
+    /// <summary>
+    /// The value a row shows: the numeric value formatted by the culture when it is set (it wins over
+    /// the string), otherwise the host-formatted string.
+    /// </summary>
+    /// <param name="item">The row.</param>
+    private string FormatValue(TrendItem item)
+        => item.NumericValue is { } numeric
+            ? numeric.ToString(string.IsNullOrWhiteSpace(ValueFormat) ? "N0" : ValueFormat, EffectiveCulture)
+            : item.Value ?? string.Empty;
+
+    /// <summary>
+    /// The row's change, formatted by the culture with the culture's own percent convention; a null
+    /// delta renders nothing, because a change of "unknown" is not a change of zero.
+    /// </summary>
+    /// <param name="item">The row.</param>
+    private string FormatDelta(TrendItem item)
+        => item.Delta is { } delta ? TrendDelta.Format(delta, DeltaFormat, EffectiveCulture) : string.Empty;
+
+    /// <summary>The marker a row renders, or null when the row has no delta (the auto direction needs one).</summary>
+    /// <param name="item">The row.</param>
+    private static TrendDelta.TrendMarker? TrendOf(TrendItem item)
+        => TrendDelta.Marker(item.Delta, TrendDirection.Auto, item.PositiveIsGood, "TmTrendList");
+
+    /// <summary>
+    /// The tone class of one marker — a full literal per tone, so the markup sweep can see every class
+    /// the component emits (an interpolated suffix would be unmeasurable by design).
+    /// </summary>
+    /// <param name="outcomeClass">The outcome slug (<c>positive</c>/<c>negative</c>/<c>neutral</c>).</param>
+    private static string TrendClass(string outcomeClass) => outcomeClass switch
+    {
+        "positive" => "tm-trend-list__trend--positive",
+        "negative" => "tm-trend-list__trend--negative",
+        _ => "tm-trend-list__trend--neutral"
+    };
+}

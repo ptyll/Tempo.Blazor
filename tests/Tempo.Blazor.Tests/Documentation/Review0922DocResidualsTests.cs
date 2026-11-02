@@ -29,11 +29,12 @@ public class Review0922DocResidualsTests
     /// <summary>
     /// N144: <c>TmStatCard.IsValidCssColor</c> accepts a deliberately narrower grammar than CSS
     /// Color 4 — the exclusion of hwb()/lab()/lch()/oklab() must be documented as a decision,
-    /// not an oversight.
+    /// not an oversight. The grammar moved to <c>CssColorValue</c> in 2.10.0 (plan ff043b2e
+    /// phase 2), so the guard follows the owning file; the wording is unchanged on purpose.
     /// </summary>
     [Fact]
     public void N144_SubValueColor_Documents_ExcludedColorFunctions()
-        => Read("src", "Tempo.Blazor", "Components", "DataDisplay", "TmStatCard.razor.cs")
+        => Read("src", "Tempo.Blazor", "Components", "DataDisplay", "CssColorValue.cs")
             .Should().Contain("deliberate, documented exclusion");
 
     /// <summary>

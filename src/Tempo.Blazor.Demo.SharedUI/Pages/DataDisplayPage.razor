@@ -107,6 +107,50 @@
     </div>
 </section>
 
+<!-- Trend list: compact metric rows with a culture-formatted delta (arrow + tone + hidden word),
+     an optional sparkline, a table layout and a loading state. -->
+<section class="demo-section">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">@Loc["TmDataDisplayDemo_TrendList"]</h2>
+        <span class="px-2 py-0.5 text-xs font-medium bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 rounded-full">@Loc["TmDataDisplayDemo_TrendListBadge"]</span>
+    </div>
+    <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">@Loc["TmDataDisplayDemo_TrendListHint"]</p>
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4" data-testid="trend-list-section">
+        <div class="showcase-card">
+            <TmTrendList Title="@Loc["TmDataDisplayDemo_TrendListTitle"]" Items="@_trendItems" />
+        </div>
+        <div class="showcase-card">
+            <TmTrendList Title="@Loc["TmDataDisplayDemo_TrendListTableTitle"]"
+                         Layout="TrendListLayout.Table"
+                         Items="@_trendItems" />
+        </div>
+        <div class="showcase-card">
+            <TmTrendList Title="@Loc["TmDataDisplayDemo_TrendListLoadingTitle"]"
+                         Items="@_trendItems"
+                         IsLoading="true" />
+        </div>
+    </div>
+</section>
+
+<!-- Breakdown card: the period switch drives the host data, so the rows re-order and the FLIP
+     transition runs; the declared-total card shows the explicit remainder row. -->
+<section class="demo-section">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">@Loc["TmDataDisplayDemo_BreakdownCard"]</h2>
+        <span class="px-2 py-0.5 text-xs font-medium bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 rounded-full">@Loc["TmDataDisplayDemo_BreakdownBadge"]</span>
+    </div>
+    <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">@Loc["TmDataDisplayDemo_BreakdownHint"]</p>
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4" data-testid="breakdown-card-section">
+        <TmBreakdownCard Title="@Loc["TmDataDisplayDemo_BreakdownTitle"]"
+                         Parts="@BreakdownParts"
+                         PeriodOptions="@_periodOptions"
+                         @bind-Period="_breakdownPeriod" />
+        <TmBreakdownCard Title="@Loc["TmDataDisplayDemo_BreakdownTotalTitle"]"
+                         Parts="@BreakdownParts"
+                         Total="12000" />
+    </div>
+</section>
+
 <!-- Cards -->
 <section class="demo-section">
     <div class="flex items-center space-x-2 mb-4">
@@ -355,6 +399,49 @@
     }
 
     private void OnSessionsClicked() => Toast.ShowInfo(Loc["TmDataDisplayDemo_SessionsToast"]);
+
+    // Trend list (2.10.0): the labels and values are host data; the delta format comes from the culture.
+    private readonly IReadOnlyList<TrendItem> _trendItems =
+    [
+        new() { Id = "revenue", Label = "Revenue", NumericValue = 12450, Delta = 12.5, Sparkline = [8, 12, 10, 16, 14, 20, 24] },
+        new() { Id = "churn", Label = "Churn", Value = "2.1 %", Delta = -3, PositiveIsGood = false },
+        new() { Id = "tickets", Label = "Open tickets", Value = "42", Delta = 0 },
+        new() { Id = "nps", Label = "NPS", Value = "61", Delta = 4.2, Href = "data-display" }
+    ];
+
+    // Breakdown card (2.10.0): the period switch changes the values, which re-sorts the rows — the
+    // visible proof that the FLIP reorder runs only when the ORDER changes.
+    private string _breakdownPeriod = "month";
+
+    private IReadOnlyList<SelectOption<string>> _periodOptions = [];
+
+    private IReadOnlyList<BreakdownPart> BreakdownParts => _breakdownPeriod == "week" ? WeekParts : MonthParts;
+
+    private static readonly IReadOnlyList<BreakdownPart> MonthParts =
+    [
+        new() { Id = "direct", Label = "Direct", Value = 4200 },
+        new() { Id = "search", Label = "Search", Value = 3100 },
+        new() { Id = "social", Label = "Social", Value = 1800 },
+        new() { Id = "email", Label = "E-mail", Value = 900 }
+    ];
+
+    private static readonly IReadOnlyList<BreakdownPart> WeekParts =
+    [
+        new() { Id = "direct", Label = "Direct", Value = 640 },
+        new() { Id = "search", Label = "Search", Value = 980 },
+        new() { Id = "social", Label = "Social", Value = 210 },
+        new() { Id = "email", Label = "E-mail", Value = 320 }
+    ];
+
+    /// <inheritdoc />
+    protected override void OnInitialized()
+    {
+        _periodOptions =
+        [
+            new SelectOption<string>("month", Loc["TmDataDisplayDemo_PeriodMonth"]),
+            new SelectOption<string>("week", Loc["TmDataDisplayDemo_PeriodWeek"])
+        ];
+    }
 
     // Change Diff
     private List<TmChangeInfo> _simpleChanges = new()

@@ -1,7 +1,6 @@
 using System.Globalization;
 using Microsoft.AspNetCore.Components;
 using Tempo.Blazor.Components.Charts;
-using Tempo.Blazor.Components.Icons;
 
 namespace Tempo.Blazor.Components.DataDisplay;
 
@@ -27,17 +26,6 @@ namespace Tempo.Blazor.Components.DataDisplay;
 /// </remarks>
 public partial class TmStatCard
 {
-    /// <summary>
-    /// The format the delta falls back to: a signed number with one optional decimal (<c>+12.5</c>).
-    /// The percent symbol and its spacing come from the culture afterwards, so English renders
-    /// <c>+12.5%</c> while Czech renders <c>+12,5&nbsp;%</c> — the same placement the culture's own
-    /// percent format uses.
-    /// </summary>
-    private const string SignedNumberFormat = "+0.#;-0.#;0.#";
-
-    /// <summary>The no-break space .NET's percent patterns put between the number and the symbol.</summary>
-    private const string NoBreakSpace = "\u00A0";
-
     /// <summary>
     /// The numeric change of the metric over the comparison period, in PERCENT POINTS: 12.5 renders
     /// as <c>+12,5 %</c>. Null (the default) renders no delta; the trend marker can still appear
@@ -238,47 +226,8 @@ public partial class TmStatCard
     }
 
     /// <summary>The trend marker to render, or null when the card has neither a delta nor a direction.</summary>
-    private TrendView? ResolvedTrend
-    {
-        get
-        {
-            TrendDirection? direction = TrendDirection != TrendDirection.Auto
-                ? TrendDirection
-                : Delta switch
-                {
-                    > 0 => TrendDirection.Up,
-                    < 0 => TrendDirection.Down,
-                    0 => TrendDirection.Flat,
-                    _ => null
-                };
-
-            if (direction is null)
-            {
-                return null;
-            }
-
-            var resolved = direction.Value;
-            var isGood = (resolved == TrendDirection.Up) == PositiveIsGood;
-            var outcome = resolved == TrendDirection.Flat ? "neutral" : isGood ? "positive" : "negative";
-
-            return new TrendView(
-                resolved,
-                resolved.ToString().ToLowerInvariant(),
-                resolved switch
-                {
-                    TrendDirection.Up => IconNames.ArrowUp,
-                    TrendDirection.Down => IconNames.ArrowDown,
-                    _ => IconNames.Minus
-                },
-                resolved switch
-                {
-                    TrendDirection.Up => "TmStatCard_TrendUp",
-                    TrendDirection.Down => "TmStatCard_TrendDown",
-                    _ => "TmStatCard_TrendFlat"
-                },
-                outcome);
-        }
-    }
+    private TrendDelta.TrendMarker? ResolvedTrend
+        => TrendDelta.Marker(Delta, TrendDirection, PositiveIsGood, "TmStatCard");
 
     /// <summary>
     /// Formats <see cref="Delta"/> for the current culture. With no <see cref="DeltaFormat"/> the
@@ -288,113 +237,17 @@ public partial class TmStatCard
     /// </summary>
     /// <param name="delta">The percentage delta.</param>
     private string FormatDelta(double delta)
-    {
-        if (!string.IsNullOrWhiteSpace(DeltaFormat))
-        {
-            try
-            {
-                return delta.ToString(DeltaFormat, EffectiveCulture);
-            }
-            catch (FormatException)
-            {
-                // Deliberate fall-through: the host's format is broken, the metric is not.
-            }
-        }
-
-        var number = delta.ToString(SignedNumberFormat, EffectiveCulture);
-
-        // .NET's percent patterns: 0 = "n %", 1 = "n%", 2 = "%n", 3 = "% n" (the space is a
-        // no-break space). Mirroring the culture instead of hardcoding " %" keeps a Czech delta
-        // typographically correct and an English one free of a stray gap.
-        return EffectiveCulture.NumberFormat.PercentPositivePattern switch
-        {
-            1 => number + "%",
-            2 => "%" + number,
-            3 => "%" + NoBreakSpace + number,
-            _ => number + NoBreakSpace + "%"
-        };
-    }
+        => TrendDelta.Format(delta, DeltaFormat, EffectiveCulture);
 
     /// <summary>Raises <see cref="OnClick"/> — the root button's only handler.</summary>
     private Task HandleClickAsync() => OnClick.InvokeAsync();
 
     /// <summary>
     /// The navigation target a host-supplied href may render, or null when it is not a safe link.
-    /// A relative URL and the <c>http</c>, <c>https</c> and <c>mailto</c> schemes are accepted;
-    /// everything else — <c>javascript:</c>, <c>data:</c>, <c>vbscript:</c> — is refused, and so is
-    /// a protocol-relative <c>//elsewhere.example</c> (technically relative, off-origin in practice).
+    /// The grammar (relative URL or the <c>http</c>/<c>https</c>/<c>mailto</c> schemes, control
+    /// characters refused outright) lives in <see cref="TrendDelta.SafeHref"/>, where
+    /// <see cref="TmTrendList"/> reads the same rules.
     /// </summary>
-    /// <remarks>
-    /// <para>
-    /// The scheme is parsed HERE, not by <see cref="Uri"/>: the WHATWG URL parser REMOVES ASCII tab, LF
-    /// and CR from a URL before it looks at the scheme, so <c>"java\tscript:alert(1)"</c> navigates
-    /// exactly like <c>"javascript:alert(1)"</c> while <c>Uri.TryCreate</c> reports the first one as
-    /// relative (<c>IsAbsoluteUri == false</c>) and an allow-list that trusts it hands the browser a
-    /// script URL. Any control character is therefore refused OUTRIGHT rather than stripped — the
-    /// stripped text can still spell a script URL, so rejecting is the only safe answer.
-    /// </para>
-    /// <para>
-    /// With no control characters left, a scheme is exactly "a colon before the first <c>/</c>,
-    /// <c>?</c> or <c>#</c>" (<c>docs/page:1</c> and <c>docs?next=b:c</c> are relative paths, not
-    /// schemes) and it has to be one of the three accepted names, compared case-insensitively because
-    /// schemes are.
-    /// </para>
-    /// </remarks>
     /// <param name="href">The candidate value.</param>
-    internal static string? SafeHref(string? href)
-    {
-        if (string.IsNullOrWhiteSpace(href))
-        {
-            return null;
-        }
-
-        var value = href.Trim();
-
-        // Refuse, never strip: see the remarks. A browser drops these characters and then reads the
-        // scheme, so their presence is the attack, not a formatting quirk.
-        foreach (var character in value)
-        {
-            if (char.IsControl(character))
-            {
-                return null;
-            }
-        }
-
-        if (value.StartsWith("//", StringComparison.Ordinal) || value.StartsWith("\\\\", StringComparison.Ordinal))
-        {
-            return null;
-        }
-
-        var colon = value.IndexOf(':');
-        var delimiter = value.IndexOfAny(['/', '?', '#']);
-        if (colon >= 0 && (delimiter < 0 || colon < delimiter))
-        {
-            return IsAcceptedScheme(value[..colon]) ? value : null;
-        }
-
-        return value;
-    }
-
-    /// <summary>Whether <paramref name="scheme"/> is one of the three schemes a card may navigate to.</summary>
-    /// <param name="scheme">The text before the first colon, already free of control characters.</param>
-    private static bool IsAcceptedScheme(string scheme)
-        => string.Equals(scheme, "http", StringComparison.OrdinalIgnoreCase)
-           || string.Equals(scheme, "https", StringComparison.OrdinalIgnoreCase)
-           || string.Equals(scheme, "mailto", StringComparison.OrdinalIgnoreCase);
-
-    /// <summary>
-    /// One rendered trend marker: the resolved direction, its icon, its visually hidden word key and
-    /// the outcome class (<c>positive</c>/<c>negative</c>/<c>neutral</c>).
-    /// </summary>
-    /// <param name="Direction">The resolved direction.</param>
-    /// <param name="Slug">The lower-case direction written into <c>data-trend</c>.</param>
-    /// <param name="Icon">The <see cref="IconNames"/> entry of the arrow.</param>
-    /// <param name="LabelKey">The resource key of the visually hidden direction word.</param>
-    /// <param name="OutcomeClass">The BEM modifier suffix for the trend's tone.</param>
-    internal sealed record TrendView(
-        TrendDirection Direction,
-        string Slug,
-        string Icon,
-        string LabelKey,
-        string OutcomeClass);
+    internal static string? SafeHref(string? href) => TrendDelta.SafeHref(href);
 }

@@ -24,6 +24,19 @@
   to   { opacity: 0; transform: translateY(-4px); }
 }
 
+@keyframes tm-breakdown-row-flip {
+  /* The FLIP reorder of TmBreakdownCard: the row starts where it was (the component computed the
+     shift in row units and wrote it into --tm-breakdown-card-row-shift) and slides home. One
+     render starts it, so no second paint is needed to sample the start position. */
+  from {
+    transform: translateY(var(--tm-breakdown-card-row-shift, 0));
+  }
+
+  to {
+    transform: none;
+  }
+}
+
 @keyframes tm-slide-in-right {
   from { opacity: 0; transform: translateX(1rem); }
   to   { opacity: 1; transform: translateX(0); }
@@ -97,6 +110,7 @@
   .tm-bottom-nav__button,
   .tm-bottom-nav__link,
   .tm-breadcrumb-link,
+  .tm-breakdown-card__row--flip,
   .tm-btn,
   .tm-bulk-action-bar,
   .tm-bulk-action-bar__clear,

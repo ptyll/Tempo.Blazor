@@ -1,0 +1,37 @@
+{
+  "kind": "Class",
+  "category": "Components",
+  "namespace": "Tempo.Blazor.Components.DataDisplay",
+  "description": "One slice of a TmBreakdownCard: a label, its value and an optional colour. A part carries no callback — the card is a read-only summary, and a host that needs a drill-down puts a link next to the card.",
+  "packageId": "Tempo.Blazor",
+  "sourcePath": "src/Tempo.Blazor/Components/DataDisplay/BreakdownPart.cs",
+  "documentationStatus": "documented",
+  "itemName": "BreakdownPart",
+  "members": [
+    {
+      "name": "Id",
+      "kind": "Property",
+      "type": "string",
+      "description": "Stable identity of the part, rendered as data-part-id. It is never a DOM id: a host value is not a valid id, and a slug would collide (a.b vs a-b). It should be unique within one card, because it is the row identity of the reorder animation. Duplicate and empty ids are tolerated: the card derives a private row key for a row that does not own a unique id, so every row still renders, but such a row is not tracked across a reorder (its reorder is not animated)."
+    },
+    {
+      "name": "Label",
+      "kind": "Property",
+      "type": "string",
+      "description": "The part's name, rendered as the row header and never only as a colour legend."
+    },
+    {
+      "name": "Value",
+      "kind": "Property",
+      "type": "double",
+      "description": "The part's amount. It drives both the proportional strip and the percentage; a negative amount counts as zero for the share while the row itself stays visible, so the data is never silently dropped."
+    },
+    {
+      "name": "Color",
+      "kind": "Property",
+      "type": "string?",
+      "description": "Optional colour of the part, as a CSS colour value — a var(--tm-*) token reference, a hex literal, an rgb/hsl/oklch/color-mix function, or a named colour. It is written into the segment's and the row swatch's inline background-color, so it wins over the fallback token tone. A value that is not a CSS colour (a class name, or any payload carrying ;, {, } or url() emits no style and the part falls back to the rotating token tone. The same grammar TmStatCard.SubValueColor validates."
+    }
+  ],
+  "usageExample": "@code {\n    private readonly BreakdownPart[] parts =\n    [\n        new() { Id = \"direct\", Label = \"Direct\", Value = 4200, Color = \"var(--tm-color-primary)\" },\n        new() { Id = \"search\", Label = \"Search\", Value = 3100 }\n    ];\n}\n\n<TmBreakdownCard Title=\"Traffic by channel\" Parts=\"parts\" />"
+}

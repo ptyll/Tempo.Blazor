@@ -143,6 +143,8 @@ public sealed class BuiltInComponentSchemas : IWireframeSchemaSource
             ["TmCard"] = ["card"],
             ["TmStatCard"] = ["stat-card"],
             ["TmAnimatedNumber"] = ["animated-number"],
+            ["TmTrendList"] = ["trend-list"],
+            ["TmBreakdownCard"] = ["breakdown-card"],
             ["TmBadge"] = ["badge"],
             ["TmChip"] = ["chip"],
             ["TmChipGroup"] = ["chip"],
@@ -1060,6 +1062,36 @@ public sealed class BuiltInComponentSchemas : IWireframeSchemaSource
                 P("prefix",   "Prefix",   PropType.String, "",         cat: "Content"),
                 P("suffix",   "Suffix",   PropType.String, "",         cat: "Content"),
                 P("announce", "Announce", PropType.Bool,   false,      cat: "Behavior"),
+            ]
+        };
+
+        yield return new WireframeComponentSchema
+        {
+            Type = "TmTrendList", Category = "Data Display", DisplayName = "Trend List",
+            DefaultWidth = 280, DefaultHeight = 180,
+            Props =
+            [
+                P("title",         "Title",         PropType.String, "Revenue signals", cat: "Content"),
+                P("layout",        "Layout",        PropType.Enum,   "list",            cat: "Appearance",
+                    opts: ["list", "table"]),
+                P("loading",       "Loading",       PropType.Bool,   false,             cat: "State"),
+                P("showDelta",     "Show Delta",    PropType.Bool,   true,              cat: "Content"),
+                P("showSparkline", "Show Sparkline", PropType.Bool,  false,             cat: "Appearance"),
+            ]
+        };
+
+        yield return new WireframeComponentSchema
+        {
+            Type = "TmBreakdownCard", Category = "Data Display", DisplayName = "Breakdown Card",
+            DefaultWidth = 280, DefaultHeight = 200,
+            Props =
+            [
+                P("title",     "Title",      PropType.String, "Traffic by channel", cat: "Content"),
+                P("total",     "Total",      PropType.Double, "",                   cat: "Content"),
+                P("showTotal", "Show Total", PropType.Bool,   true,                 cat: "Appearance"),
+                P("showBar",   "Show Bar",   PropType.Bool,   true,                 cat: "Appearance"),
+                P("showPeriod","Show Period",PropType.Bool,   false,                cat: "Appearance"),
+                P("loading",   "Loading",    PropType.Bool,   false,                cat: "State"),
             ]
         };
 

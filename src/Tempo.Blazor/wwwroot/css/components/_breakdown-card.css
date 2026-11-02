@@ -1,0 +1,204 @@
+/* TmBreakdownCard — a total, a proportional strip and a table of the parts.
+   The strip is DECORATIVE (aria-hidden in the markup); the table is the data. Every colour, size and
+   radius is a --tm-* token, so the dark theme re-points the tokens and there is no [data-theme] block
+   here. The only motion is the FLIP reorder, and it is suppressed for prefers-reduced-motion. */
+
+.tm-breakdown-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--tm-space-3);
+  padding: var(--tm-space-4);
+  background-color: var(--tm-bg-surface);
+  border: 1px solid var(--tm-border-color);
+  border-radius: var(--tm-radius-lg);
+  color: var(--tm-text-primary);
+}
+
+.tm-breakdown-card__title {
+  margin: 0;
+  font-size: var(--tm-font-size-sm);
+  font-weight: var(--tm-font-weight-semibold);
+  color: var(--tm-text-secondary);
+}
+
+.tm-breakdown-card__period {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--tm-space-2);
+}
+
+.tm-breakdown-card__total {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--tm-space-2);
+  margin: 0;
+}
+
+.tm-breakdown-card__total-label {
+  font-size: var(--tm-font-size-xs);
+  font-weight: var(--tm-font-weight-medium);
+  color: var(--tm-text-secondary);
+}
+
+.tm-breakdown-card__total-value {
+  font-size: var(--tm-font-size-2xl);
+  font-weight: var(--tm-font-weight-bold);
+  font-variant-numeric: tabular-nums;
+  line-height: var(--tm-line-height-tight);
+}
+
+/* The strip: one flex segment per share, sized by its own percentage. A zero-share part paints
+   nothing, and a declared total bigger than the parts adds an explicit remainder segment. */
+.tm-breakdown-card__bar {
+  display: flex;
+  overflow: hidden;
+  block-size: var(--tm-space-2);
+  border-radius: var(--tm-radius-sm);
+  background-color: var(--tm-bg-muted);
+}
+
+.tm-breakdown-card__segment {
+  flex-basis: 0;
+  min-inline-size: 0;
+  block-size: 100%;
+}
+
+.tm-breakdown-card__segment--tone-1 { background-color: var(--tm-category-1); }
+.tm-breakdown-card__segment--tone-2 { background-color: var(--tm-category-2); }
+.tm-breakdown-card__segment--tone-3 { background-color: var(--tm-category-3); }
+.tm-breakdown-card__segment--tone-4 { background-color: var(--tm-category-4); }
+.tm-breakdown-card__segment--tone-5 { background-color: var(--tm-category-5); }
+.tm-breakdown-card__segment--tone-6 { background-color: var(--tm-category-6); }
+
+.tm-breakdown-card__segment--remainder {
+  background-color: var(--tm-bg-muted);
+  border-inline-start: 1px solid var(--tm-border-color);
+}
+
+/* The table is the accessible presentation: real column headers, a row header per part and the
+   share as text. The strip above never repeats this data to a reader. */
+.tm-breakdown-card__table {
+  inline-size: 100%;
+  border-collapse: collapse;
+  font-size: var(--tm-font-size-sm);
+}
+
+.tm-breakdown-card__table thead th {
+  padding: var(--tm-space-1) var(--tm-space-2);
+  border-block-end: 1px solid var(--tm-border-color);
+  color: var(--tm-text-secondary);
+  font-size: var(--tm-font-size-xs);
+  font-weight: var(--tm-font-weight-semibold);
+  text-align: start;
+}
+
+.tm-breakdown-card__table thead th:not(:first-child) {
+  text-align: end;
+}
+
+.tm-breakdown-card__row {
+  border-block-end: 1px solid var(--tm-border-color);
+}
+
+.tm-breakdown-card__row:last-child {
+  border-block-end: 0;
+}
+
+.tm-breakdown-card__row th,
+.tm-breakdown-card__row td {
+  padding: var(--tm-space-2);
+  vertical-align: middle;
+}
+
+.tm-breakdown-card__row--remainder .tm-breakdown-card__label {
+  color: var(--tm-text-secondary);
+  font-weight: var(--tm-font-weight-normal);
+}
+
+/* The row header IS the table cell. A `display` other than the default would make the browser wrap
+   the th in an anonymous cell and drop the row-header role in WebKit/VoiceOver (and older Chromium),
+   which is the whole point of rendering the data as a table — so the flex layout lives on the inner
+   wrapper and the th keeps nothing but text properties. */
+.tm-breakdown-card__label {
+  font-weight: var(--tm-font-weight-medium);
+  text-align: start;
+  overflow-wrap: anywhere;
+}
+
+.tm-breakdown-card__label-inner {
+  display: flex;
+  align-items: center;
+  gap: var(--tm-space-2);
+  min-inline-size: 0;
+}
+
+.tm-breakdown-card__swatch {
+  flex: none;
+  inline-size: var(--tm-space-2);
+  block-size: var(--tm-space-2);
+  border-radius: var(--tm-radius-sm);
+  background-color: var(--tm-category-fallback);
+}
+
+.tm-breakdown-card__swatch--tone-1 { background-color: var(--tm-category-1); }
+.tm-breakdown-card__swatch--tone-2 { background-color: var(--tm-category-2); }
+.tm-breakdown-card__swatch--tone-3 { background-color: var(--tm-category-3); }
+.tm-breakdown-card__swatch--tone-4 { background-color: var(--tm-category-4); }
+.tm-breakdown-card__swatch--tone-5 { background-color: var(--tm-category-5); }
+.tm-breakdown-card__swatch--tone-6 { background-color: var(--tm-category-6); }
+
+.tm-breakdown-card__value {
+  font-variant-numeric: tabular-nums;
+  text-align: end;
+  white-space: nowrap;
+}
+
+.tm-breakdown-card__share {
+  font-variant-numeric: tabular-nums;
+  text-align: end;
+  white-space: nowrap;
+  color: var(--tm-text-secondary);
+}
+
+.tm-breakdown-card__empty {
+  margin: 0;
+  padding: var(--tm-space-3) 0;
+  color: var(--tm-text-secondary);
+  font-size: var(--tm-font-size-sm);
+}
+
+.tm-breakdown-card__skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: var(--tm-space-2);
+}
+
+/* ── FLIP reorder ───────────────────────────────────────────────────────
+   The component computes each moved row's shift in row units ("First"/"Last"/"Invert" in
+   BreakdownFlip) and writes it into the row's own --tm-breakdown-card-row-shift; this class runs the
+   "Play" as ONE keyframe animation. A single render therefore animates the row from its old place
+   home, with no second paint needed to sample the start and no JavaScript involved. A row that did
+   not move gets no class at all. Reduced motion is covered by the animation-duration clamp in
+   animations.css, which also enumerates this class. */
+.tm-breakdown-card__row--flip {
+  animation: tm-breakdown-row-flip var(--tm-transition-normal) both;
+}
+
+/* ── Forced colours ─────────────────────────────────────────────────────
+   The strip and the swatches are painted ONLY with background-color, which forced-colors mode
+   removes: the bar would become an empty box and the swatches would vanish. The table still carries
+   the data, but the card must not look broken, so the painted surfaces opt out of the substitution
+   and each keeps an edge in the system colour — the segment proportions stay readable. */
+@media (forced-colors: active) {
+  .tm-breakdown-card__bar,
+  .tm-breakdown-card__segment,
+  .tm-breakdown-card__swatch {
+    forced-color-adjust: none;
+  }
+
+  .tm-breakdown-card__bar {
+    border: 1px solid CanvasText;
+  }
+}

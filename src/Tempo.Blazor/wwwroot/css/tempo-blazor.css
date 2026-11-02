@@ -76,6 +76,8 @@
 @import "components/_card.css";
 @import "components/_stat-card.css";
 @import "components/_animated-number.css";
+@import "components/_trend-list.css";
+@import "components/_breakdown-card.css";
 @import "components/_avatar.css";
 @import "components/_empty-state.css";
 @import "components/_accordion.css";

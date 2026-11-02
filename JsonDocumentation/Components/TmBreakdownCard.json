@@ -1,0 +1,171 @@
+{
+  "itemName": "TmBreakdownCard",
+  "kind": "Component",
+  "category": "Data Display",
+  "description": "A breakdown of a whole: the total, a proportional strip and a table of the parts, biggest first. The rounded shares come from a largest-remainder split, so they add up to exactly 100 % (or to the parts' share of a bigger declared total, with an explicit \"Other\" row for the rest). The strip is decorative (aria-hidden) and the table is the accessible presentation, so nothing is announced twice. A period switcher is opt-in through PeriodOptions + Period, and a re-sorted order animates with a CSS-only FLIP transition that prefers-reduced-motion suppresses.",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.DataDisplay"
+  ],
+  "parameters": [
+    {
+      "name": "Parts",
+      "type": "IReadOnlyList<BreakdownPart>",
+      "isRequired": false,
+      "default": "[]",
+      "description": "The parts of the whole. The rows render biggest first (a stable sort, so equal values keep the host's order); a negative value counts as zero for the share while the row itself stays visible."
+    },
+    {
+      "name": "Title",
+      "type": "string?",
+      "isRequired": false,
+      "description": "An optional heading above the card. It also NAMES the table (as its caption), so a reader hears what the numbers are a breakdown of."
+    },
+    {
+      "name": "AriaLabel",
+      "type": "string?",
+      "isRequired": false,
+      "description": "The accessible name used when no Title is rendered. Null means the localized default (\"Breakdown\")."
+    },
+    {
+      "name": "Total",
+      "type": "double?",
+      "isRequired": false,
+      "description": "The declared whole the parts are a share of. Null (the default) means the parts' sum, which makes the rounded shares add up to exactly 100 %. A declared total bigger than the sum adds an explicit localized \"Other\" row and segment for the rest; a total below the sum cannot be the whole, so it is ignored and the sum is used — a breakdown never renders a share above 100 %."
+    },
+    {
+      "name": "ValueFormat",
+      "type": "string",
+      "isRequired": false,
+      "default": "N0",
+      "description": "The .NET numeric format string of every value (parts and the total). The share column is always a whole, culture-formatted percentage."
+    },
+    {
+      "name": "Culture",
+      "type": "CultureInfo?",
+      "isRequired": false,
+      "description": "The culture that formats the values and the shares. Null (the default) means the current culture at render time."
+    },
+    {
+      "name": "ShowTotal",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "Renders the total row above the strip."
+    },
+    {
+      "name": "ShowBar",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "Renders the proportional strip. It is aria-hidden in every case: the table carries the data."
+    },
+    {
+      "name": "AnimateReorder",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "Animates the rows into their new places when the sorted order changes (a FLIP: the component computes each moved row's shift, the row carries it as --tm-breakdown-card-row-shift and one keyframe animation slides it home — single render, no JavaScript). A row that did not move never animates, and a second reorder restarts the animation. prefers-reduced-motion: reduce clamps it to 0.01 ms regardless of this switch, and the table's order never depends on the animation."
+    },
+    {
+      "name": "IsLoading",
+      "type": "bool",
+      "isRequired": false,
+      "default": "false",
+      "description": "Renders the loading placeholder: skeletons plus a visually hidden localized \"Loading breakdown\" text, with aria-busy=\"true\" on the root."
+    },
+    {
+      "name": "PeriodOptions",
+      "type": "IReadOnlyList<SelectOption<string>>",
+      "isRequired": false,
+      "default": "[]",
+      "description": "The periods a host can switch between, rendered as a single-choice segmented control when at least one option is supplied. The card does not interpret the values — it raises PeriodChanged and the host loads the matching data."
+    },
+    {
+      "name": "Period",
+      "type": "string?",
+      "isRequired": false,
+      "description": "The currently selected period (one of the PeriodOptions values), two-way bound with PeriodChanged."
+    },
+    {
+      "name": "PeriodChanged",
+      "type": "EventCallback<string?>",
+      "isRequired": false,
+      "description": "Fires with the newly selected period value. Bind it with @bind-Period."
+    },
+    {
+      "name": "PeriodLabel",
+      "type": "string?",
+      "isRequired": false,
+      "description": "The label above the period switcher. Null means the localized default (\"Period\") — the switcher is always named for a reader."
+    },
+    {
+      "name": "Class",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Additional CSS class(es) for the root element."
+    },
+    {
+      "name": "DataTestId",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Overrides the root data-testid; the default id is breakdown-card and TestIdPrefix namespaces it."
+    },
+    {
+      "name": "TestIdPrefix",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Namespaces every internal data-testid of this instance as \"{prefix}-{name}\", so several cards on one page stay targetable."
+    }
+  ],
+  "cssClasses": [
+    "tm-breakdown-card",
+    "tm-breakdown-card__title",
+    "tm-breakdown-card__period",
+    "tm-breakdown-card__total",
+    "tm-breakdown-card__total-label",
+    "tm-breakdown-card__total-value",
+    "tm-breakdown-card__bar",
+    "tm-breakdown-card__segment",
+    "tm-breakdown-card__segment--tone-1",
+    "tm-breakdown-card__segment--tone-2",
+    "tm-breakdown-card__segment--tone-3",
+    "tm-breakdown-card__segment--tone-4",
+    "tm-breakdown-card__segment--tone-5",
+    "tm-breakdown-card__segment--tone-6",
+    "tm-breakdown-card__segment--remainder",
+    "tm-breakdown-card__table",
+    "tm-breakdown-card__row",
+    "tm-breakdown-card__row--remainder",
+    "tm-breakdown-card__row--flip",
+    "tm-breakdown-card__label",
+    "tm-breakdown-card__swatch",
+    "tm-breakdown-card__swatch--tone-1",
+    "tm-breakdown-card__swatch--tone-2",
+    "tm-breakdown-card__swatch--tone-3",
+    "tm-breakdown-card__swatch--tone-4",
+    "tm-breakdown-card__swatch--tone-5",
+    "tm-breakdown-card__swatch--tone-6",
+    "tm-breakdown-card__value",
+    "tm-breakdown-card__share",
+    "tm-breakdown-card__empty",
+    "tm-breakdown-card__skeleton"
+  ],
+  "examples": [
+    {
+      "title": "Shares of the parts' sum",
+      "code": "<TmBreakdownCard Title=\"Traffic by channel\" Parts=\"@parts\" />"
+    },
+    {
+      "title": "A declared total with the explicit remainder",
+      "code": "<TmBreakdownCard Parts=\"@parts\" Total=\"12000\" />"
+    },
+    {
+      "title": "Period switcher, two-way bound",
+      "code": "<TmBreakdownCard Parts=\"@parts\"\n                 PeriodOptions=\"@periods\"\n                 @bind-Period=\"period\" />\n@code {\n    private string period = \"month\";\n    private readonly SelectOption<string>[] periods =\n    [\n        new(\"month\", \"This month\"),\n        new(\"week\", \"Last week\")\n    ];\n}"
+    },
+    {
+      "title": "Per-part colours from tokens",
+      "code": "@code {\n    private readonly BreakdownPart[] parts =\n    [\n        new() { Id = \"direct\", Label = \"Direct\", Value = 4200, Color = \"var(--tm-color-primary)\" },\n        new() { Id = \"search\", Label = \"Search\", Value = 3100, Color = \"var(--tm-category-2)\" }\n    ];\n}"
+    }
+  ]
+}

@@ -84,8 +84,9 @@ public sealed class UiRoleVocabularyTests
         var vocabulary = new UiRoleVocabulary([new BuiltInUiRoleVocabularySource()]);
 
         vocabulary.GetAll().Should().HaveCountGreaterThanOrEqualTo(60);
-        // A sanity bound against runaway growth, not a contract: raised 120 -> 130 for `toolbar-button` (decision TOOLBAR-FILE-BUTTON).
-        vocabulary.GetAll().Should().HaveCountLessThanOrEqualTo(130);
+        // A sanity bound against runaway growth, not a contract: raised 120 -> 130 for `toolbar-button` (decision TOOLBAR-FILE-BUTTON),
+        // then 130 -> 132 for the data-display pair `trend-list` and `breakdown-card` (plan ff043b2e phase 2).
+        vocabulary.GetAll().Should().HaveCountLessThanOrEqualTo(132);
 
         vocabulary.Find("search-input")!.Slug.Should().Be("search-input");
         vocabulary.Find("TmDecimalInput")!.Slug.Should().Be("decimal-input");

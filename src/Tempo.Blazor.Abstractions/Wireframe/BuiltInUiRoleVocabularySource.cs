@@ -52,6 +52,8 @@ public sealed class BuiltInUiRoleVocabularySource : IUiRoleVocabularySource
         R("card", "Card", "Groups related content and actions.", "panel", "karta", "TmCard"),
         R("stat-card", "Stat card", "Highlights a key metric.", "metric card", "metricka karta", "TmStatCard"),
         R("animated-number", "Animated number", "Shows one metric as a number that counts up to its target value; a KPI read-out rather than a label.", "number ticker", "kpi value", "animated number", "pocitadlo cisla", "TmAnimatedNumber"),
+        R("trend-list", "Trend list", "Lists metrics and their change over a period, most often as a compact driver of a KPI.", "metric table", "change summary", "trend table", "prehled trendu", "zmena metrik", "TmTrendList"),
+        R("breakdown-card", "Breakdown card", "Shows how parts add up to a whole, with each part's share of the total.", "share breakdown", "composition card", "breakdown chart", "rozpad", "podil na celku", "TmBreakdownCard"),
         R("accordion", "Accordion", "Shows collapsible content sections.", "collapsible section", "rozbalovaci sekce", "TmAccordion", "TmAccordionItem"),
         R("empty-state", "Empty state", "Explains that no data or content is available.", "blank state", "prazdny stav", "TmEmptyState"),
         R("approval-card", "Approval card", "Asks a human to approve or reject a request, with its risk, deadline and note.", "approval request", "schvalovaci karta", "TmApprovalCard"),
