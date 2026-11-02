@@ -1,25 +1,34 @@
 @namespace Tempo.Blazor.Components.Layout
 @inherits Tempo.Blazor.Components.TmComponentBase
+@using Microsoft.AspNetCore.Components.Routing
 @using Microsoft.JSInterop
 @using Tempo.Blazor.Abstractions.Layout
 @using Tempo.Blazor.Components.Feedback
 @using Tempo.Blazor.Components.Icons
+@using Tempo.Blazor.Components.Navigation
 @implements IAsyncDisposable
 @inject IJSRuntime JS
+@inject NavigationManager Navigation
 
-@* The application frame (plan 5d396592, phase 3). A container-owned composite over the existing
+@* The application frame (plan 5d396592, phases 3 and 4). A container-owned composite over the existing
    primitives: it resolves its own layout (TmLayoutObserver), so it works embedded at any width and a
    test can force a mode. It never copies navigation, focus or sheet logic — the docked column and the
-   overlay drawer both render the same TmSidebar, and the overlay IS a modal TmDrawer (focus trap,
-   Escape, focus restore to the opener, top-layer promotion).
+   overlay drawer both render the same TmSidebar, the overlay IS a modal TmDrawer (focus trap, Escape,
+   focus restore to the opener, top-layer promotion), and the phone work area IS a TmSidePanel sheet.
 
    Landmarks: the frame owns the page's <header>, its one named <nav>, its <main> and the work
    <aside> — each exactly once. The navigation column is a plain <div> and both primitives it composes
    surrender their own landmark (TmSidebar.IsLandmark / TmTopBar.IsLandmark = false), so a screen
    reader never meets a banner nested in a banner or two complementary regions.
 
-   Overlays: the frame is a CSS size container, so the drawer is a SIBLING of it — a fixed-position
-   overlay inside a container-type box would be clipped and pinned by that box. *@
+   Layouts: desktop = docked column; tablet = icon rail + modal overlay drawer whose opener is the rail
+   toggle; phone = no column at all — a hamburger in the top bar opens the same drawer
+   (MobileNav=Drawer, the default) or the navigation is a TmBottomNavigation bar (MobileNav=
+   BottomNavigation) and no drawer exists. The work area is a docked resizable column on desktop and
+   tablet and a bottom sheet on a phone, so a phone renders no resize separator.
+
+   Overlays: the frame is a CSS size container, so the drawer and the sheet are SIBLINGS of it — a
+   fixed-position overlay inside a container-type box would be clipped and pinned by that box. *@
 
 <TmLayoutObserver LayoutMode="LayoutMode"
                   InitialMode="InitialMode"
@@ -31,7 +40,8 @@
     <LayoutContent Context="shell">
         <div class="tm-app-shell__frame tm-app-shell--@CssVariant"
              data-region="frame"
-             data-variant="@CssVariant">
+             data-variant="@CssVariant"
+             data-mobile-nav="@MobileNavCss">
             <a class="tm-app-shell__skip-link"
                href="#@MainId"
                data-testid="@TestId("app-shell-skip-link")">@Loc["TmAppShell_SkipToContent"]</a>
@@ -39,27 +49,53 @@
             @if (HasTopBar)
             {
                 @* The frame owns the banner landmark; the composed bar gives up its own header. *@
-                <header class="tm-app-shell__topbar"
+                <header class="tm-app-shell__topbar @(RendersMenuButton ? "tm-app-shell__topbar--menu" : null)"
                         data-region="topbar"
                         data-testid="@TestId("app-shell-topbar")">
                     @if (TopBar is not null)
                     {
-                        @TopBar
+                        @if (RendersMenuButton)
+                        {
+                            @* A host bar brings no opener of its own, so the frame renders one in front of
+                               it — a phone without it would have no way to reach the navigation. *@
+                            <button class="tm-app-shell__menu-button"
+                                    type="button"
+                                    id="@_menuButtonId"
+                                    data-testid="@TestId("app-shell-menu-button")"
+                                    aria-label="@Loc["TmAppShell_MenuButton"]"
+                                    aria-expanded="@(_navOverlayOpen ? "true" : "false")"
+                                    aria-controls="@(_navOverlayOpen ? _overlayId : null)"
+                                    @onclick="OpenNavOverlay">
+                                <TmIcon Name="@IconNames.Menu" Size="IconSize.Sm" />
+                            </button>
+                            <div class="tm-app-shell__topbar-content">@TopBar</div>
+                        }
+                        else
+                        {
+                            @TopBar
+                        }
                     }
                     else
                     {
+                        @* The built-in bar renders the phone hamburger itself, so the opener sits in the
+                           bar's own layout and reports the drawer it opens. *@
                         <TmTopBar IsLandmark="false"
                                   BrandTitle="@Title"
                                   ActionsContent="@TopBarActions"
                                   User="@User"
                                   UserMenuItems="@UserMenuItems"
-                                  OnLogout="@OnLogout" />
+                                  OnLogout="@OnLogout"
+                                  ShowMenuButton="@RendersMenuButton"
+                                  MenuButtonId="@(RendersMenuButton ? _menuButtonId : null)"
+                                  MenuExpanded="@_navOverlayOpen"
+                                  MenuControlsId="@(_navOverlayOpen ? _overlayId : null)"
+                                  OnMenuToggle="OpenNavOverlay" />
                     }
                 </header>
             }
 
             <div class="tm-app-shell__body" data-region="body">
-                @if (HasNavModel)
+                @if (HasNavModel && !IsMobile)
                 {
                     <div class="tm-app-shell__sidebar @(IsRail ? "tm-app-shell__sidebar--rail" : null)"
                          data-region="sidebar"
@@ -140,39 +176,91 @@
                     </aside>
                 }
             </div>
+
+            @if (ShowBottomNav)
+            {
+                @* A layout ROW of the frame, never viewport-fixed chrome: the frame classifies its own
+                   width, so the bar has to take part in the frame's flow. *@
+                <div class="tm-app-shell__bottom-nav"
+                     data-region="bottom-nav"
+                     data-testid="@TestId("app-shell-bottom-nav")">
+                    <TmBottomNavigation Items="EffectiveBottomNavItems"
+                                        SelectedItem="SelectedBottomNavItem"
+                                        OnItemClick="OnBottomNavItemClickAsync"
+                                        AdditionalCssClass="tm-bottom-nav--app-shell" />
+                </div>
+            }
         </div>
 
-        @if (IsRail && _navOverlayOpen && HasNavModel)
+        @if (HasNavOverlay && _navOverlayOpen)
         {
-            @* A modal drawer: focus enters it, Escape closes it, and the focus scope hands the focus
-               back to the rail toggle the user opened it from. It is a SIBLING of the size container. *@
+            @* A modal drawer: focus enters it, Escape closes it, and the focus scope hands the focus back
+               to the element the user opened it from (the rail toggle, or the phone hamburger named by
+               RestoreFocusTargetId). It is a SIBLING of the size container. On a PHONE the drawer hides
+               the sidebar's collapse toggle (there is no column to collapse) and closes when an entry is
+               chosen. *@
             <TmDrawer IsOpen="_navOverlayOpen"
                       IsOpenChanged="OnNavOverlayOpenChanged"
                       Position="DrawerPosition.Left"
                       Modal="true"
-                      Width="var(--tm-app-shell-nav-width)"
+                      Width="@NavOverlayWidth"
                       Title="@NavigationName"
-                      Class="tm-app-shell__overlay"
+                      Class="@NavOverlayClass"
                       LayoutMode="@shell.Resolved"
                       CloseOnEscape="true"
                       ShowOverlay="true"
                       ShowCloseButton="true"
+                      RestoreFocusTargetId="@(IsMobile ? _menuButtonId : null)"
                       AdditionalAttributes="OverlayAttributes">
                 <ChildContent>
+                    @* No click handler on this wrapper: it holds the header, the footer (the account), the
+                       section headings and any host slot content, and none of those is a destination. The
+                       drawer closes when one is actually CHOSEN (the built-in sidebar reports it) or when
+                       the location changes (a host slot link). *@
                     <div class="tm-app-shell__nav">@RenderNavigation(collapsed: false, insideOverlay: true)</div>
                 </ChildContent>
             </TmDrawer>
+        }
+
+        @if (HasWorkAreaContent && IsMobile)
+        {
+            @* A phone has no room for a dragged column: the same content is a modal bottom sheet, and its
+               own close button / Escape / backdrop all funnel through the panel's open callback. The sheet
+               is a SIBLING of the size container, like the drawer. *@
+            <TmSidePanel Presentation="SidePanelPresentation.Sheet"
+                         LayoutMode="TmLayoutMode.Mobile"
+                         Side="@SidePanelSide.Right"
+                         Open="ShowWorkAreaSheet"
+                         OpenChanged="OnWorkAreaSheetOpenChangedAsync"
+                         Title="@WorkAreaName"
+                         data-testid="@TestId("app-shell-work-area-sheet")">
+                <ChildContent>@WorkArea</ChildContent>
+            </TmSidePanel>
         }
     </LayoutContent>
 </TmLayoutObserver>
 
 @code {
-    /// <summary>The overlay drawer root's attributes: its DOM id (the rail toggle's <c>aria-controls</c>) and its test id.</summary>
+    /// <summary>The overlay drawer root's attributes: its DOM id (the opener's <c>aria-controls</c>) and its test id.</summary>
     private Dictionary<string, object> OverlayAttributes => new()
     {
         ["id"] = _overlayId,
         ["data-testid"] = TestId("app-shell-nav-overlay"),
     };
+
+    /// <summary>The drawer root's class list: the phone presentation adds its own modifier for the safe-area insets.</summary>
+    private string NavOverlayClass => IsMobile ? "tm-app-shell__overlay tm-app-shell__overlay--mobile" : "tm-app-shell__overlay";
+
+    /// <summary>
+    /// The drawer's width: the shell's navigation width on a tablet, but never more than 85% of a phone
+    /// viewport — a drawer that covers the whole screen hides the page it was opened from.
+    /// </summary>
+    private string NavOverlayWidth => IsMobile
+        ? "min(var(--tm-app-shell-nav-width), 85vw)"
+        : "var(--tm-app-shell-nav-width)";
+
+    /// <summary>The phone navigation mode as a stable data attribute, so host stylesheets and tests can key off it.</summary>
+    private string MobileNavCss => MobileNav == AppShellMobileNav.BottomNavigation ? "bottom-navigation" : "drawer";
 
     /// <summary>
     /// The navigation content in place: the host's <see cref="Sidebar"/> slot when one is set, the
@@ -182,7 +270,8 @@
     /// <param name="collapsed">Whether the built-in sidebar renders as the icon rail.</param>
     /// <param name="insideOverlay">
     /// Whether the content is the overlay drawer's own body. The toggle there opens nothing — the
-    /// drawer is already open — so it reports no expanded state of its own.
+    /// drawer is already open — so it reports no expanded state of its own, and on a phone the
+    /// collapse toggle is dropped entirely (a drawer has no column to collapse).
     /// </param>
     private RenderFragment RenderNavigation(bool collapsed, bool insideOverlay = false) => Sidebar is null
         ? RenderBuiltInNavigation(collapsed, insideOverlay)
@@ -202,9 +291,22 @@
         Collapsed="@collapsed"
         NavLabel="@NavigationName"
         OnToggle="OnSidebarToggleAsync"
+        OnItemSelected="@ItemSelectedCallback(insideOverlay)"
+        ShowToggle="@(!(IsMobile && insideOverlay))"
         ToggleAriaExpanded="@(IsRail && !insideOverlay ? _navOverlayOpen : (bool?)null)"
         ToggleAriaControls="@(IsRail && !insideOverlay && _navOverlayOpen ? _overlayId : null)"
         Header="@SidebarHeader"
         Footer="@SidebarFooter"
         TestIdPrefix="@TestIdPrefix" />;
+
+    /// <summary>
+    /// The callback the built-in sidebar reports a chosen entry to: bound ONLY in the phone drawer, where
+    /// choosing a destination closes the surface it was chosen from. The docked column and the tablet
+    /// drawer keep their existing behaviour, and an unbound callback adds no markup.
+    /// </summary>
+    /// <param name="insideOverlay">Whether the sidebar renders the overlay drawer's own body.</param>
+    private EventCallback<ISidebarNavItem> ItemSelectedCallback(bool insideOverlay)
+        => IsMobile && insideOverlay
+            ? EventCallback.Factory.Create<ISidebarNavItem>(this, OnNavItemSelectedAsync)
+            : default;
 }

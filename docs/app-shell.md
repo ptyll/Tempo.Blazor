@@ -4,8 +4,9 @@ The application frame: one composite that renders the page's landmarks — a top
 navigation column, the content and an optional resizable work area — and resolves its own layout from
 its **container** width. It composes the existing primitives instead of reimplementing them:
 `TmLayoutObserver` (measurement + cascaded `TmLayoutContext`), `TmSidebar` (navigation model,
-sections, `aria-current`, rail tooltips), `TmTopBar` (the bar chrome and its account menu) and a modal
-`TmDrawer` (the tablet navigation overlay, with its focus trap, Escape and focus restore).
+sections, `aria-current`, rail tooltips), `TmTopBar` (the bar chrome and its account menu), a modal
+`TmDrawer` (the tablet and phone navigation overlay, with its focus trap, Escape and focus restore),
+`TmBottomNavigation` (the phone bottom bar) and `TmSidePanel` (the phone work-area sheet).
 
 - Source: `src/Tempo.Blazor/Components/Layout/TmAppShell.razor` (+ `.razor.cs`, `.Parameters.razor.cs`)
 - Styles: `wwwroot/css/components/_app-shell.css`
@@ -14,6 +15,8 @@ sections, `aria-current`, rail tooltips), `TmTopBar` (the bar chrome and its acc
 - Demo: `/app-shell` (plan phase 6)
 - Tests: `tests/Tempo.Blazor.Tests/Layout/TmAppShellTests.cs`,
   `tests/Tempo.Blazor.Tests/Layout/TmAppShellWorkAreaTests.cs`,
+  `tests/Tempo.Blazor.Tests/Layout/TmAppShellMobileTests.cs`,
+  `tests/Tempo.Blazor.Tests/Layout/TmAppShellMobileCssTests.cs`,
   `src/Tempo.Blazor/wwwroot/js/__tests__/tm-panel-resize.test.mjs`
 
 ## Layouts
@@ -23,8 +26,8 @@ The frame classifies **its own width**, never the viewport, so it can be embedde
 | Layout | Navigation | Content | Work area |
 |---|---|---|---|
 | Desktop (≥ 1200 px by default) | docked `TmSidebar` column, collapsible to an icon rail | `main` | docked, right, resizable |
-| Tablet (768–1199 px) | icon rail; the full navigation opens in a **modal overlay drawer** | `main` | docked, right, resizable |
-| Phone (< 768 px, the plan's mobile phase) | the tablet rail is the fallback until the phone chrome ships | `main` | not docked (the plan's mobile phase presents it as a sheet) |
+| Tablet (768–1199 px) | icon rail; the full navigation opens in a **modal overlay drawer** (opener: the rail toggle) | `main` | docked, right, resizable |
+| Phone (< 768 px by default) | no column at all: a **hamburger in the top bar** opens the full navigation in a modal drawer (`MobileNav="Drawer"`, the default), or a **`TmBottomNavigation` bar** with no drawer (`MobileNav="BottomNavigation"`) | `main` | a **`TmSidePanel` bottom sheet**; **no resize separator** |
 
 `LayoutMode` pins a mode (a test renders one without a DOM) and `Breakpoints` overrides the pair
 (default `768` / `1200`). The stylesheet carries **no width condition**: only the markup branch moves,
@@ -41,19 +44,23 @@ so a per-instance pair can never disagree with a media query.
 | `ResolvedLayoutChanged` | `EventCallback<TmLayoutMode>` | — | Reports a resolved-mode change; never two-way bind it. |
 | `NavItems` | `IReadOnlyList<ISidebarNavItem>?` | `null` | The flat built-in navigation list. |
 | `NavSections` | `IReadOnlyList<SidebarNavSection>?` | `null` | Named groups under visible headings; **wins over `NavItems`**. |
-| `Sidebar` | `RenderFragment?` | `null` | A custom navigation surface; the frame wraps it in its one named `nav`. |
-| `SidebarHeader` / `SidebarFooter` | `RenderFragment?` | `null` | Logo / account slots of the built-in sidebar. |
+| `Sidebar` | `RenderFragment?` | `null` | A custom navigation surface; the frame wraps it in its one named `nav`. On a phone the drawer closes when the location changes, never on a bare click — a slot command that must dismiss it calls `CloseNavigationAsync()` (see *Only a chosen destination closes the phone drawer*). |
+| `SidebarHeader` / `SidebarFooter` | `RenderFragment?` | `null` | Logo / account slots of the built-in sidebar — rendered in the docked column **and in both drawers**, so the signed-in account stays reachable on a phone. |
 | `SidebarCollapsed` / `SidebarCollapsedChanged` | `bool` / `EventCallback<bool>` | `false` | The docked column's icon-rail state (desktop only). |
 | `SidebarNavLabel` | `string?` | `null` → "Main navigation" | Accessible name of the navigation landmark and title of the overlay drawer. |
-| `TopBar` | `RenderFragment?` | `null` | Custom bar content; rendered inside the frame's own `header`. |
-| `Title` | `string?` | `null` | Brand title of the built-in bar. Without any bar content the shell renders **no** header. |
+| `MobileNav` | `AppShellMobileNav` | `Drawer` | The phone presentation: `Drawer` (hamburger → modal drawer) or `BottomNavigation` (a `TmBottomNavigation` bar and no drawer). Desktop and tablet ignore it. |
+| `BottomNavItems` | `IReadOnlyList<BottomNavItem>?` | `null` → derived | Entries of the phone bottom bar. Null derives one entry per top-level navigation item (sections in order, sub-entries ignored). |
+| `BottomNavItemClicked` | `EventCallback<BottomNavItem>` | — | Raised when a bottom-bar entry is tapped, before the shell follows its `Href`. |
+| `ShowTopBarMenuButton` | `bool?` | `null` → auto | Whether the top bar renders the phone drawer's hamburger. Auto = a phone layout in `Drawer` mode while a navigation model exists. Pass `false` when a custom `TopBar` carries its own opener. |
+| `TopBar` | `RenderFragment?` | `null` | Custom bar content; rendered inside the frame's own `header`. On a phone in `Drawer` mode the frame renders its own hamburger in front of the slot (opt out with `ShowTopBarMenuButton="false"`). |
+| `Title` | `string?` | `null` | Brand title of the built-in bar. Without any bar content the shell renders **no** header — except on a phone with navigation, which needs a bar for its hamburger. |
 | `TopBarActions` | `RenderFragment?` | `null` | Right-aligned bar actions. |
 | `User` / `UserMenuItems` / `OnLogout` | `IUserInfo?` / `IReadOnlyList<UserMenuItem>?` / `EventCallback` | `null` | The built-in bar's account menu. |
 | `ChildContent` | `RenderFragment?` | `null` | The page content, inside `main`. |
 | `SkipLinkTarget` | `string?` | `null` → unique | The id the skip link targets and `main` carries. |
-| `WorkArea` | `RenderFragment?` | `null` | The right-hand region. |
-| `WorkAreaOpen` / `WorkAreaOpenChanged` | `bool` / `EventCallback<bool>` | `false` / — | Visibility. **With** a handler the region renders its own close button (which raises the callback) and moves the focus to the content when the host echoes the close; without one it renders no close control. |
-| `WorkAreaWidth` / `WorkAreaWidthChanged` | `int` / `EventCallback<int>` | `420` | Two-way width in CSS pixels. |
+| `WorkArea` | `RenderFragment?` | `null` | The right-hand region: a docked, resizable column on desktop and tablet, a modal `TmSidePanel` bottom sheet on a phone. |
+| `WorkAreaOpen` / `WorkAreaOpenChanged` | `bool` / `EventCallback<bool>` | `false` / — | Visibility. **With** a handler the docked region renders its own close button (which raises the callback) and moves the focus to the content when the host echoes the close; the phone sheet is **always** closable (see *The phone work-area sheet*). |
+| `WorkAreaWidth` / `WorkAreaWidthChanged` | `int` / `EventCallback<int>` | `420` | Two-way width in CSS pixels (desktop and tablet only). |
 | `WorkAreaMinWidth` / `WorkAreaMaxWidth` | `int` | `280` / `640` | The resize bounds (a max below the min throws). |
 | `MinContentWidth` | `int` | `480` | The content width a resize never takes away. |
 | `WorkAreaLabel` | `string?` | `null` → "Work area" | Heading of the region, which also names it. |
@@ -125,35 +132,128 @@ are swallowed: the shell keeps its parameter values.
 
 ## Tablet overlay
 
-On a tablet (and the phone fallback) the navigation column is the icon rail and the full navigation
-lives in a modal `TmDrawer`: the focus moves into the drawer, Escape and its close button close it, the
-page behind it is inert and the focus returns to the rail toggle that opened it. The drawer is a
-**sibling** of the frame, never a child: the frame is a CSS size container (`container-type:
-inline-size`), and a fixed-position overlay inside it would be clipped and pinned by it. The rail's
-opener is `TmSidebar`'s own toggle for the built-in navigation; a host `Sidebar` slot gets a
-shell-rendered toggle (`app-shell-nav-toggle`, with `aria-expanded` / `aria-controls`). The built-in
-rail toggle reports the SAME state through `TmSidebar.ToggleAriaExpanded` /
-`TmSidebar.ToggleAriaControls`: a tablet rail toggle opens the drawer, so it carries `aria-expanded`
-and points `aria-controls` at the drawer element while that drawer exists. The docked desktop column
-reports neither (it opens no surface), and neither does the copy inside the drawer (the drawer it sits
-in is already open).
+On a tablet the navigation column is the icon rail and the full navigation lives in a modal
+`TmDrawer`: the focus moves into the drawer, Escape and its close button close it, the page behind it is
+inert and the focus returns to the rail toggle that opened it. The drawer is a **sibling** of the
+frame, never a child: the frame is a CSS size container (`container-type: inline-size`), and a
+fixed-position overlay inside it would be clipped and pinned by it. The rail's opener is
+`TmSidebar`'s own toggle for the built-in navigation; a host `Sidebar` slot gets a shell-rendered
+toggle (`app-shell-nav-toggle`, with `aria-expanded` / `aria-controls`). The built-in rail toggle
+reports the SAME state through `TmSidebar.ToggleAriaExpanded` / `TmSidebar.ToggleAriaControls`: a
+tablet rail toggle opens the drawer, so it carries `aria-expanded` and points `aria-controls` at the
+drawer element while that drawer exists. The docked desktop column reports neither (it opens no
+surface), and neither does the copy inside the drawer (the drawer it sits in is already open).
+
+## Phone navigation
+
+A phone container renders **no navigation column at all** — neither the docked column nor the tablet
+rail. `MobileNav` (`AppShellMobileNav`) decides what replaces it:
+
+| `MobileNav` | Navigation on a phone |
+|---|---|
+| `Drawer` (default) | A **hamburger** in the top bar (`aria-label` from the resources, `aria-expanded`, `aria-controls` pointing at the drawer while it exists, `aria-controls` omitted while it does not) opens the SAME `TmDrawer` the tablet uses, with the full navigation, the `SidebarHeader` slot and the `SidebarFooter` slot (the signed-in account). Focus enters the drawer, Escape / the close button / **choosing an entry** close it, and the focus returns to the hamburger: the frame owns that button's id (`TmTopBar.MenuButtonId`) and passes it as the drawer's restore target. The drawer's width is `min(var(--tm-app-shell-nav-width), 85vw)` so it never covers the whole screen. |
+| `BottomNavigation` | A **`TmBottomNavigation` bar** at the bottom of the frame and **no drawer at all** — the top bar renders no hamburger, because a hamburger that opens nothing lies. Entries come from `BottomNavItems`, or are derived from the navigation model (one entry per top-level item, sections in order, sub-entries ignored). A tap raises `BottomNavItemClicked` and the frame follows the entry's `Href` — a bar of links that never navigates is dead. |
+
+### Only a chosen destination closes the phone drawer
+
+The drawer body is **not** one big close target. It holds the `SidebarHeader` slot (a workspace
+switcher), the `SidebarFooter` slot (the account / `TmUserMenu`), the section headings, empty padding
+and any host `Sidebar` slot content — dismissing on a tap there would unmount the surface a menu is
+about to open in. The frame therefore closes the phone drawer from exactly two signals:
+
+- **A chosen entry** — the built-in `TmSidebar` reports it through the additive, unbound-by-default
+  `TmSidebar.OnItemSelected` (`EventCallback<ISidebarNavItem>`), raised from the link's own click and
+  never preventing the default. This also covers choosing the page the user is already on, which
+  raises no location change at all. The frame binds it **only** to the copy inside the phone drawer, so
+  the docked column and the tablet drawer keep their previous behaviour.
+- **A location change** — `NavigationManager.LocationChanged` closes the phone drawer, which is what
+  covers a host `Sidebar` slot: its links navigate through their own markup, and the frame cannot see
+  what they were. It is phone-only too; a tablet drawer survives a route change exactly as before.
+
+A host `Sidebar` slot whose control should close the drawer **without** navigating (an action that
+switches workspace in place) calls `CloseNavigationAsync()` itself — the frame never guesses.
+
+```razor
+<TmAppShell @ref="shell" NavItems="@items" SidebarHeader="switcher" SidebarFooter="account" … />
+@code {
+    // A slot command that must dismiss the drawer but stay on the page.
+    private Task SwitchWorkspaceAsync(Workspace workspace) => shell!.CloseNavigationAsync();
+}
+```
+
+A phone frame with navigation but no bar content still renders a `<header>`: that is where the
+hamburger lives. A custom `TopBar` slot has no opener of its own, so the frame renders one **in front
+of** it (the header becomes a two-column row, `tm-app-shell__topbar--menu`); a bar that carries its own
+opener passes `ShowTopBarMenuButton="false"` and keeps the phase-3 markup, driving the drawer through
+`OpenNavigationAsync()` / `CloseNavigationAsync()` instead.
+
+The bottom bar is a **layout ROW** of the frame (`flex: 0 0 auto` after the body), not viewport-fixed
+chrome: the frame classifies its own container, so a `position: fixed` bar would be pinned to (and
+clipped by) the frame and would cover the content. Its own stylesheet's fixed positioning is therefore
+reset for the frame's copy (`.tm-bottom-nav--app-shell { position: static }`), while the standalone
+component keeps anchoring to the viewport.
+
+Inside the phone drawer the built-in sidebar drops its collapse toggle
+(`TmSidebar.ShowToggle="false"`): the drawer is already open and the chevron would be labelled
+"Collapse menu" while closing nothing it shows — the drawer's own close button is the way out. The
+tablet drawer keeps the toggle (phase-3 markup).
+
+### Public methods
+
+| Method | Behaviour |
+|---|---|
+| `OpenNavigationAsync()` | Opens the navigation drawer (the surface a tablet rail toggle and a phone hamburger open). A no-op on a desktop layout, in `BottomNavigation` mode and while it is already open. |
+| `CloseNavigationAsync()` | Closes it; the focus scope inside hands the focus back to the opener. Also the way a host `Sidebar` slot dismisses the phone drawer from its own control (the frame never guesses from a click). |
+
+```razor
+@* A custom bar with its own opener: the frame keeps the drawer, the bar keeps the button. *@
+<TmAppShell @ref="shell" TopBar="customBar" ShowTopBarMenuButton="false"> … </TmAppShell>
+<button type="button" @onclick="() => shell!.OpenNavigationAsync()">Menu</button>
+```
+
+## The phone work-area sheet
+
+`WorkArea` is a docked, resizable column on desktop and tablet and a modal **`TmSidePanel` bottom
+sheet** on a phone (`Presentation="Sheet"`, `LayoutMode="Mobile"`, titled by `WorkAreaLabel`). That is
+why a phone renders **no resize separator**: there is no column to drag. The sheet's close button,
+Escape, its backdrop and a swipe all funnel through the panel's open callback, and the frame closes the
+sheet in **every** case — a modal surface whose close does nothing would trap the user on a phone. A
+host that binds `@bind-WorkAreaOpen` hears about the close; a host that does not still gets a
+dismissable sheet, and its own `WorkAreaOpen` value decides again the next time it changes.
+
+**Re-opening a dismissed sheet without a handler**: a host that keeps `WorkAreaOpen="true"` and never
+binds `WorkAreaOpenChanged` cannot bring the sheet back by leaving the value alone — the frame
+remembers the dismissal until the parameter actually **transitions**, so the host sets `WorkAreaOpen`
+to `false` and then `true` again. Binding the parameter (the recommended shape) removes that
+round-trip: the close comes back as `false` and the host re-opens with `true`.
+
+```razor
+@* The recommended shape: the host owns the flag, the frame reports the close. *@
+<TmAppShell WorkArea="sources" @bind-WorkAreaOpen="showSources" … />
+```
 
 ## Accessibility notes
 
-- One polite live region is not needed: nothing in the frame announces on its own, and the only
-  transient surface (the overlay drawer) carries its own dialog semantics.
-- Focus-visible: every interactive part (skip link, rail toggle, close button, separator, `main`)
-  paints `--tm-focus-ring`, and under `forced-colors: active` it paints a 2 px `Highlight` ring. The
-  separator's hover / dragging highlight also switches to the system `Highlight` colour there: the
-  surface tokens collapse to `Canvas` in High Contrast, so the strip under the pointer would otherwise
-  be invisible.
+- One polite live region is not needed: nothing in the frame announces on its own, and the transient
+  surfaces (the overlay drawer, the work-area sheet) carry their own dialog semantics. There is no
+  second announcement of the same state.
+- Focus-visible: every interactive part (skip link, rail toggle, hamburger, bottom-bar entries, close
+  buttons, separator, `main`) paints `--tm-focus-ring`, and under `forced-colors: active` it paints a
+  2 px `Highlight` ring. The separator's hover / dragging highlight also switches to the system
+  `Highlight` colour there: the surface tokens collapse to `Canvas` in High Contrast, so the strip
+  under the pointer would otherwise be invisible. The frame's ring rules keep
+  `outline: 2px solid transparent` so the system colour paints under forced colors.
 - The skip link is hidden with `clip-path: inset(50%)` rather than an off-frame transform, so nothing
   paints over a host page above an embedded shell (see *Skip link*).
-- Coarse pointers get 44 px targets (`--tm-touch-target`) on the rail toggle and the work area's close
-  button, plus the widened separator hit area.
+- Coarse pointers get 44 px targets (`--tm-touch-target`) on the rail toggle, the hamburger, the
+  work-area close button and the bottom-bar entries, plus the widened separator hit area.
+- Safe-area insets: the top bar pads for `env(safe-area-inset-top)`, the bottom bar and the drawer's
+  navigation pad for `safe-area-inset-bottom` / `-left` / `-right`, so a notch or a home indicator
+  never covers the phone chrome.
 - No new transition or animation is declared by the frame's stylesheet, so the reduced-motion block
-  needs no entry; the overlay and the rail transitions it inherits are already covered by
-  `TmDrawer` / `TmSidebar`.
+  needs no entry; the overlay, the sheet and the rail transitions it inherits are already covered by
+  `TmDrawer` / `TmSidebar` / `TmBottomNavigation` (all three subjects are enumerated in
+  `animations.css`). A motion the frame ever adds has to join that block.
 
 ## Hosting notes
 
@@ -162,6 +262,10 @@ in is already open).
 - Two shells on one page: set `TestIdPrefix` so the generated `data-testid`s stay unique, and
   `SkipLinkTarget` so the two `main` ids cannot collide.
 - `PersistKey` must differ per shell — one key per frame.
+- A phone host gives the frame the navigation model, not a hamburger: `MobileNav="Drawer"` (default)
+  renders the opener itself, and `MobileNav="BottomNavigation"` needs no opener at all. A custom
+  `TopBar` that already carries its own opener passes `ShowTopBarMenuButton="false"` and calls
+  `OpenNavigationAsync()`.
 
 ## See also
 

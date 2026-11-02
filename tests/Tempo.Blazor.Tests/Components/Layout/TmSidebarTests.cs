@@ -3,6 +3,7 @@ using FluentAssertions;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
 using Tempo.Blazor.Components.Layout;
+using Tempo.Blazor.Interfaces;
 using Tempo.Blazor.Models;
 using Tempo.Blazor.Tests.Localization;
 
@@ -535,5 +536,89 @@ public class TmSidebarTests : LocalizationTestBase
 
         cut.Find("aside").ClassList.Should().Contain("tm-sidebar-tooltips",
             "an absolutely positioned tooltip cannot escape an overflow-clipped sidebar");
+    }
+
+    // ── Toggle chrome (additive) ────────────────────────────────────────────────
+
+    [Fact]
+    public void ShowToggle_Defaults_To_True_And_Renders_The_Toggle()
+    {
+        var cut = Render<TmSidebar>(p => p.Add(c => c.Items, SampleItems));
+
+        cut.Instance.ShowToggle.Should().BeTrue("the default keeps today's markup");
+        cut.FindAll(".tm-sidebar-toggle").Should().HaveCount(1);
+    }
+
+    [Fact]
+    public void ShowToggle_False_Removes_The_Collapse_Control()
+    {
+        // A drawer that is already open has no column to collapse: its own close button is the way out,
+        // and a chevron labelled "Collapse menu" that closes a drawer is a mislabelled control.
+        var cut = Render<TmSidebar>(p => p
+            .Add(c => c.Collapsed, false)
+            .Add(c => c.ShowToggle, false)
+            .Add(c => c.Items, SampleItems));
+
+        cut.FindAll(".tm-sidebar-toggle").Should().BeEmpty();
+        cut.Find("nav").Should().NotBeNull("the navigation itself stays — this is chrome, not the menu");
+    }
+
+    // ── OnItemSelected (additive, phase 4 review finding 1) ─────────────────────
+
+    [Fact]
+    public void OnItemSelected_Defaults_To_Unbound_So_Existing_Markup_Is_Unchanged()
+    {
+        var cut = Render<TmSidebar>(p => p.Add(c => c.Items, SampleItems));
+
+        cut.Instance.OnItemSelected.HasDelegate.Should().BeFalse(
+            "an unbound callback keeps today's behaviour for every existing caller");
+
+        // Nothing is raised and nothing throws: choosing an entry is still plain navigation.
+        cut.FindAll("a.tm-sidebar-nav-link")[0].Click();
+        cut.FindAll("nav").Should().HaveCount(1);
+    }
+
+    [Fact]
+    public void OnItemSelected_Raises_The_Chosen_Entry()
+    {
+        ISidebarNavItem? chosen = null;
+        var cut = Render<TmSidebar>(p => p
+            .Add(c => c.Items, SampleItems)
+            .Add(c => c.OnItemSelected,
+                EventCallback.Factory.Create<ISidebarNavItem>(this, item => chosen = item)));
+
+        cut.FindAll("a.tm-sidebar-nav-link")[1].Click();
+
+        chosen.Should().NotBeNull("the sidebar reports WHICH entry was chosen, so a host can react without guessing");
+        chosen!.Id.Should().Be("settings");
+    }
+
+    [Fact]
+    public void OnItemSelected_Is_Not_Raised_For_An_Entry_Without_A_Destination()
+    {
+        var raised = new List<ISidebarNavItem>();
+        var cut = Render<TmSidebar>(p => p
+            .Add(c => c.Items, new List<SidebarNavItem> { new() { Id = "command", Label = "Command" } })
+            .Add(c => c.OnItemSelected,
+                EventCallback.Factory.Create<ISidebarNavItem>(this, item => raised.Add(item))));
+
+        cut.Find("a.tm-sidebar-nav-link").Click();
+
+        raised.Should().BeEmpty("an entry with no Href navigates nowhere, so it is not a chosen destination");
+    }
+
+    [Fact]
+    public void OnItemSelected_Never_Prevents_The_Native_Navigation()
+    {
+        // The callback hangs off the anchor's own click (Enter on a focused link fires that click too), so
+        // the component adds no key handler of its own and the browser still follows the href.
+        var cut = Render<TmSidebar>(p => p
+            .Add(c => c.Items, SampleItems)
+            .Add(c => c.OnItemSelected,
+                EventCallback.Factory.Create<ISidebarNavItem>(this, _ => { })));
+
+        var link = cut.FindAll("a.tm-sidebar-nav-link")[0];
+        link.GetAttribute("href").Should().Be("/", "navigation still happens: the callback never prevents the default");
+        link.GetAttribute("onkeydown").Should().BeNull("one activation per key press — the link is already native");
     }
 }

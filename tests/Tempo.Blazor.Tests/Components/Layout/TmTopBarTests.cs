@@ -197,6 +197,20 @@ public class TmTopBarTests : LocalizationTestBase
         cut.Find(".tm-topbar-menu-btn").GetAttribute("aria-label").Should().Be("Nabídka navigace");
     }
 
+    [Fact]
+    public void MenuButtonId_Is_Opt_In_And_Gives_The_Opener_A_Stable_Id()
+    {
+        // A frame whose drawer hands the focus back to this button needs to name it by id — the opener
+        // is rendered here, not by the frame.
+        var plain = Render<TmTopBar>(p => p.Add(c => c.ShowMenuButton, true));
+        plain.Find(".tm-topbar-menu-btn").GetAttribute("id").Should().BeNull("no id without the parameter, so every existing host keeps its markup");
+
+        var named = Render<TmTopBar>(p => p
+            .Add(c => c.ShowMenuButton, true)
+            .Add(c => c.MenuButtonId, "app-menu-button"));
+        named.Find(".tm-topbar-menu-btn").GetAttribute("id").Should().Be("app-menu-button");
+    }
+
     // ── User menu ──────────────────────────────────────────────────────────────
 
     [Fact]

@@ -37,6 +37,7 @@ else
     {
         <button class="tm-topbar-menu-btn"
                 type="button"
+                id="@MenuButtonId"
                 data-testid="@TestId("topbar-menu-button")"
                 aria-label="@Loc["TmTopBar_MenuButton"]"
                 aria-expanded="@(MenuExpanded ? "true" : "false")"
@@ -238,6 +239,14 @@ else
     /// <c>aria-controls</c>. Null omits the attribute.
     /// </summary>
     [Parameter] public string? MenuControlsId { get; set; }
+
+    /// <summary>
+    /// The DOM id of the menu button itself. Null (the default) renders no <c>id</c> attribute, so
+    /// every existing host keeps its markup. A host that has to name this button from OUTSIDE the bar
+    /// — an application frame whose navigation drawer returns the focus to the opener it did not render
+    /// itself (<c>TmAppShell</c>) — passes an id here and points its restore target at it.
+    /// </summary>
+    [Parameter] public string? MenuButtonId { get; set; }
 
     /// <summary>
     /// The key chord printed in the command palette trigger ("Ctrl+K"). It is a label, not a

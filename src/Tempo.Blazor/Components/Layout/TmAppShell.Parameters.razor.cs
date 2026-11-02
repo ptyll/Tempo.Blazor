@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Components;
 using Tempo.Blazor.Abstractions.Layout;
+using Tempo.Blazor.Components.Navigation;
 using Tempo.Blazor.Interfaces;
 using Tempo.Blazor.Models;
 
@@ -59,23 +60,32 @@ public partial class TmAppShell
 
     /// <summary>
     /// A custom navigation surface, replacing the built-in sidebar entirely. It is rendered inside
-    /// the shell's navigation column on desktop and inside the overlay drawer on a tablet layout, so
-    /// the same content is mounted at both widths — a custom rail that has to survive the 3.5rem
-    /// column supplies its own collapsed rendering.
+    /// the shell's navigation column on desktop, inside the overlay drawer on a tablet layout and
+    /// inside the phone drawer (<see cref="MobileNav"/> = <see cref="AppShellMobileNav.Drawer"/>), so
+    /// the same content is mounted at every width — a custom rail that has to survive the 3.5rem
+    /// column supplies its own collapsed rendering. In <see cref="AppShellMobileNav.BottomNavigation"/>
+    /// mode a phone renders the bar instead: the slot is not mounted there.
+    /// <para>
+    /// On a phone the frame closes the drawer when the location changes (a link of the slot navigated),
+    /// never on a bare click, so the slot's own controls (an expander, a submenu trigger) keep working.
+    /// A slot that wants the drawer to close without navigating calls
+    /// <see cref="CloseNavigationAsync"/> itself.
+    /// </para>
     /// </summary>
     [Parameter] public RenderFragment? Sidebar { get; set; }
 
-    /// <summary>Content above the navigation list (a logo, a workspace switcher). A server-side rendering hazard is not introduced: it is a plain slot.</summary>
+    /// <summary>Content above the navigation list (a logo, a workspace switcher) — rendered in the docked column and in both drawers.</summary>
     [Parameter] public RenderFragment? SidebarHeader { get; set; }
 
-    /// <summary>Content below the navigation list (the signed-in account, a version stamp).</summary>
+    /// <summary>Content below the navigation list (the signed-in account, a version stamp) — rendered in the docked column and in both drawers, so the account stays reachable on a phone.</summary>
     [Parameter] public RenderFragment? SidebarFooter { get; set; }
 
     /// <summary>
     /// Whether the docked navigation column is collapsed to an icon rail. Two-way with
-    /// <see cref="SidebarCollapsedChanged"/>. A tablet (and the phone fallback) always renders the
-    /// rail and expands the navigation into an overlay drawer instead, so the value only applies on a
-    /// desktop layout.
+    /// <see cref="SidebarCollapsedChanged"/>. A tablet always renders the rail and expands the
+    /// navigation into an overlay drawer instead, and a phone renders no column at all (its
+    /// navigation lives in the drawer or the bottom bar), so the value only applies on a desktop
+    /// layout.
     /// </summary>
     [Parameter] public bool SidebarCollapsed { get; set; }
 
@@ -88,6 +98,44 @@ public partial class TmAppShell
     /// navigation landmark must name each one after its purpose.
     /// </summary>
     [Parameter] public string? SidebarNavLabel { get; set; }
+
+    // ── Phone presentation ──────────────────────────────────────────────────
+
+    /// <summary>
+    /// How a PHONE layout presents the navigation (a container narrower than the mobile threshold —
+    /// 768 px unless <see cref="Breakpoints"/> overrides it). <see cref="AppShellMobileNav.Drawer"/>
+    /// (default) puts a hamburger in the top bar that opens the full navigation in a modal drawer;
+    /// <see cref="AppShellMobileNav.BottomNavigation"/> renders a <c>TmBottomNavigation</c> bar and no
+    /// drawer at all. Desktop and tablet are unaffected.
+    /// </summary>
+    [Parameter] public AppShellMobileNav MobileNav { get; set; } = AppShellMobileNav.Drawer;
+
+    /// <summary>
+    /// Entries of the phone bottom bar, used when <see cref="MobileNav"/> is
+    /// <see cref="AppShellMobileNav.BottomNavigation"/>. Null (the default) derives one entry per
+    /// top-level item of the navigation model (<see cref="NavItems"/>, or every section's items in
+    /// order, ignoring sub-entries) — pass this when the bar needs its own labels, icons or a subset
+    /// of the destinations (a bottom bar is comfortable up to about five).
+    /// </summary>
+    [Parameter] public IReadOnlyList<BottomNavItem>? BottomNavItems { get; set; }
+
+    /// <summary>
+    /// Raised when the user taps an entry of the phone bottom bar, before the shell follows the
+    /// entry's <see cref="BottomNavItem.Href"/>. A bar of links that never navigates is dead, so the
+    /// shell always follows an <c>Href</c>; an entry without one is a command and only raises this.
+    /// </summary>
+    [Parameter] public EventCallback<BottomNavItem> BottomNavItemClicked { get; set; }
+
+    /// <summary>
+    /// Whether the top bar renders the navigation disclosure button that opens the phone drawer. Null
+    /// (the default) decides from the layout: the button renders on a phone layout in
+    /// <see cref="AppShellMobileNav.Drawer"/> mode while a navigation model exists, and never
+    /// otherwise — a tablet's opener is the rail toggle, and in
+    /// <see cref="AppShellMobileNav.BottomNavigation"/> mode the bar IS the navigation. Pass
+    /// <c>false</c> when a custom <see cref="TopBar"/> carries its own opener, so the bar never shows
+    /// two.
+    /// </summary>
+    [Parameter] public bool? ShowTopBarMenuButton { get; set; }
 
     // ── Top bar ─────────────────────────────────────────────────────────────
 
@@ -129,8 +177,9 @@ public partial class TmAppShell
 
     /// <summary>
     /// The resizable work area on the right of the content (a sources panel, a tool panel). Rendered
-    /// only on a desktop or tablet layout while <see cref="WorkAreaOpen"/> is true; a phone layout
-    /// (and the plan's mobile phase) presents it differently.
+    /// as a docked, resizable column on a desktop or tablet layout while <see cref="WorkAreaOpen"/> is
+    /// true; a phone layout presents the same content as a modal <c>TmSidePanel</c> bottom sheet, so a
+    /// phone renders no resize separator. Nothing renders while it is closed.
     /// </summary>
     [Parameter] public RenderFragment? WorkArea { get; set; }
 
@@ -138,13 +187,22 @@ public partial class TmAppShell
     /// Whether the work area renders. Two-way with <see cref="WorkAreaOpenChanged"/>: the region
     /// renders its own close button, so a keyboard user can dismiss it without the host wiring a
     /// toggle; the host opens it (`@bind-WorkAreaOpen`) and the shell reports the close back.
+    /// <para>
+    /// A host that does NOT bind <see cref="WorkAreaOpenChanged"/> keeps the last word but cannot
+    /// re-open a dismissed surface by leaving this <c>true</c>: a modal surface whose close is dropped
+    /// would trap the user, so the shell stops presenting it until the value actually transitions
+    /// (set it to <c>false</c> and then <c>true</c> again). Binding the parameter removes that
+    /// round-trip.
+    /// </para>
     /// </summary>
     [Parameter] public bool WorkAreaOpen { get; set; }
 
     /// <summary>
     /// Raised when the user closes the work area from its own close button. Without a handler the
-    /// region renders no close button at all — a control that cannot close anything is worse than no
-    /// control — so a host that renders its own toggle can leave this unset.
+    /// docked region renders no close button at all — a control that cannot close anything is worse
+    /// than no control — so a host that renders its own toggle can leave this unset. The phone sheet is
+    /// the exception: it always closes (see <see cref="WorkAreaOpen"/>), and without this handler the
+    /// host can bring it back only by toggling <see cref="WorkAreaOpen"/> off and on again.
     /// </summary>
     [Parameter] public EventCallback<bool> WorkAreaOpenChanged { get; set; }
 

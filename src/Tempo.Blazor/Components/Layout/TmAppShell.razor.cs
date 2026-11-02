@@ -1,7 +1,10 @@
+using System.Text;
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Routing;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.JSInterop;
 using Tempo.Blazor.Abstractions.Layout;
+using Tempo.Blazor.Components.Navigation;
 using Tempo.Blazor.Helpers;
 using Tempo.Blazor.Interfaces;
 
@@ -14,8 +17,11 @@ namespace Tempo.Blazor.Components.Layout;
 /// The application frame: a top bar, one named navigation column, the page content and an optional
 /// resizable work area, resolved from the shell's own container width. Desktop renders the docked
 /// column; a tablet container renders an icon rail whose full navigation opens in a modal overlay
-/// drawer. It composes <c>TmLayoutObserver</c>, <c>TmSidebar</c>, <c>TmTopBar</c> and <c>TmDrawer</c>
-/// instead of reimplementing navigation, focus or sheet behaviour, and it owns the page's
+/// drawer; a phone container renders no column at all — a hamburger in the top bar opens the same
+/// drawer, or a <c>TmBottomNavigation</c> bar replaces it — and presents the work area as a
+/// <c>TmSidePanel</c> bottom sheet. It composes <c>TmLayoutObserver</c>, <c>TmSidebar</c>,
+/// <c>TmTopBar</c>, <c>TmDrawer</c>, <c>TmBottomNavigation</c> and <c>TmSidePanel</c> instead of
+/// reimplementing navigation, focus or sheet behaviour, and it owns the page's
 /// <c>header</c> / <c>nav</c> / <c>main</c> / work-area <c>aside</c> landmarks exactly once.
 /// Contract: docs/app-shell.md.
 /// </summary>
@@ -27,6 +33,7 @@ public partial class TmAppShell
     private readonly string _workAreaId;
     private readonly string _workAreaTitleId;
     private readonly string _overlayId;
+    private readonly string _menuButtonId;
 
     /// <summary>Creates the shell and its per-instance DOM ids (one prefix, unique per instance).</summary>
     public TmAppShell()
@@ -34,6 +41,7 @@ public partial class TmAppShell
         _workAreaId = $"tm-app-shell-{_instanceId}-work-area";
         _workAreaTitleId = $"tm-app-shell-{_instanceId}-work-area-title";
         _overlayId = $"tm-app-shell-{_instanceId}-nav-overlay";
+        _menuButtonId = $"tm-app-shell-{_instanceId}-menu-button";
     }
 
     private ElementReference _content;
@@ -71,8 +79,23 @@ public partial class TmAppShell
     private int _widthParamSeen;
     private bool _widthInitialised;
 
-    // The tablet rail's overlay drawer. A layout that is not desktop always renders the rail.
+    // The navigation overlay. A tablet rail opens it, and so does the phone hamburger (Drawer mode);
+    // a desktop frame never renders it and a phone in BottomNavigation mode has no drawer at all.
     private bool _navOverlayOpen;
+
+    // The phone work-area sheet was dismissed by the user while the host still says WorkAreaOpen: the
+    // sheet must be closable even when the host does not bind WorkAreaOpenChanged (a modal surface that
+    // cannot close traps the user), and the host's own flag stays its decision.
+    private bool _workAreaDismissed;
+    private bool _workAreaOpenSeen;
+
+    // The phone bottom bar's entries. They are derived from the navigation model unless the host
+    // supplies them, and re-derived only when the model's content changes (a fresh list every render
+    // would break the bar's reference-identity selection).
+    private IReadOnlyList<BottomNavItem> _bottomItems = Array.Empty<BottomNavItem>();
+    private string? _bottomSignature;
+    private int _bottomActiveIndex = -1;
+    private int _bottomSelectedIndex = -1;
 
     private string? _loadedKey;
     private bool _focusContentAfterClose;
@@ -88,8 +111,32 @@ public partial class TmAppShell
     /// <summary>The layout in effect right now (never <see cref="TmLayoutMode.Auto"/>).</summary>
     private TmLayoutMode Resolved => TmLayout.Resolve(LayoutMode, Parent, _measured, InitialMode);
 
-    /// <summary>A tablet or phone container renders the navigation as a rail plus an overlay drawer.</summary>
-    private bool IsRail => Resolved != TmLayoutMode.Desktop;
+    /// <summary>A tablet container renders the navigation as a rail plus an overlay drawer.</summary>
+    private bool IsRail => Resolved == TmLayoutMode.Tablet;
+
+    /// <summary>A phone container renders no navigation column at all: its navigation is a drawer or a bottom bar.</summary>
+    private bool IsMobile => Resolved == TmLayoutMode.Mobile;
+
+    /// <summary>
+    /// The full navigation opens in a modal drawer: the tablet rail's presentation and the phone's
+    /// <see cref="AppShellMobileNav.Drawer"/> mode (the default). A phone in
+    /// <see cref="AppShellMobileNav.BottomNavigation"/> mode has no drawer — the bar IS the navigation.
+    /// </summary>
+    private bool ShowMobileDrawer => IsMobile && MobileNav == AppShellMobileNav.Drawer;
+
+    /// <summary>Whether a navigation surface (the drawer) exists at all on this layout.</summary>
+    private bool HasNavOverlay => HasNavModel && (ShowMobileDrawer || IsRail);
+
+    /// <summary>
+    /// Whether the top bar carries the hamburger. A phone drawer needs an opener the bar does not have
+    /// by itself; the tablet's opener is the rail toggle, and a desktop column opens nothing.
+    /// </summary>
+    private bool RendersMenuButton => ShowMobileDrawer && HasNavModel && ShowTopBarMenuButton != false;
+
+    /// <summary>The bottom bar renders on a phone in bottom-navigation mode, and only with entries to show.</summary>
+    private bool ShowBottomNav => IsMobile
+        && MobileNav == AppShellMobileNav.BottomNavigation
+        && EffectiveBottomNavItems.Count > 0;
 
     private string CssVariant => Variant == AppShellVariant.Flat ? "flat" : "inset";
 
@@ -129,15 +176,29 @@ public partial class TmAppShell
     private IReadOnlyList<ISidebarNavItem> EffectiveNavItems
         => NavSections is { Count: > 0 } ? Array.Empty<ISidebarNavItem>() : NavItems ?? Array.Empty<ISidebarNavItem>();
 
-    private bool HasTopBar => TopBar is not null || !string.IsNullOrWhiteSpace(Title) || TopBarActions is not null || User is not null;
+    private bool HasTopBar => TopBar is not null
+        || !string.IsNullOrWhiteSpace(Title)
+        || TopBarActions is not null
+        || User is not null
+        // A phone frame with navigation but no bar content still needs a bar: that is where the
+        // hamburger lives. Without it the phone would have no way to reach the navigation at all.
+        || RendersMenuButton;
 
     private bool HasWorkAreaContent => WorkArea is not null;
 
     /// <summary>
-    /// The work area is a docked column on a desktop or tablet layout. A phone layout has no room for
-    /// a dragged column (the plan's mobile phase presents it as a sheet).
+    /// The work area is a docked, resizable column on a desktop or tablet layout. A phone layout has no
+    /// room for a dragged column, so the same content is presented as a <c>TmSidePanel</c> bottom sheet
+    /// instead (and a phone renders no separator).
     /// </summary>
-    private bool ShowWorkArea => HasWorkAreaContent && WorkAreaOpen && Resolved != TmLayoutMode.Mobile;
+    private bool ShowWorkArea => HasWorkAreaContent && WorkAreaOpen && !IsMobile;
+
+    /// <summary>
+    /// Whether the phone work-area sheet is on screen: the host says the region is open and the user has
+    /// not dismissed it. The sheet is mounted even while closed (it renders nothing then), so the
+    /// presentation parameters stay stable across an open/close cycle.
+    /// </summary>
+    private bool ShowWorkAreaSheet => HasWorkAreaContent && IsMobile && WorkAreaOpen && !_workAreaDismissed;
 
     private int EffectiveMinWidth => Math.Max(1, WorkAreaMinWidth);
 
@@ -173,6 +234,17 @@ public partial class TmAppShell
 
     // ── Lifecycle ───────────────────────────────────────────────────────────
 
+    /// <summary>
+    /// Subscribes to the router: a navigation that started INSIDE the phone drawer has to close it, and
+    /// the router is the only reliable signal — the frame cannot tell from a bubbled click whether the
+    /// target was a destination, the account area in the footer or a host slot control.
+    /// </summary>
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        Navigation.LocationChanged += HandleLocationChanged;
+    }
+
     /// <inheritdoc />
     protected override async Task OnParametersSetAsync()
     {
@@ -195,12 +267,30 @@ public partial class TmAppShell
         var resolved = Resolved;
         if (_resolvedInitialised && resolved != _resolved)
         {
-            // The navigation overlay belongs to the rail presentation: leaving it closes it, so a
-            // desktop frame never shows a drawer over its docked column.
+            // The navigation overlay belongs to the rail and phone presentations: leaving them for a
+            // desktop layout closes it, so a desktop frame never shows a drawer over its docked column.
+            // Leaving the PHONE also forgets a sheet the user dismissed — the host's open flag decides
+            // again the next time the frame is that narrow.
             if (resolved == TmLayoutMode.Desktop) _navOverlayOpen = false;
+            if (resolved != TmLayoutMode.Mobile) _workAreaDismissed = false;
         }
         _resolved = resolved;
         _resolvedInitialised = true;
+
+        // A phone in bottom-navigation mode has no drawer at all: a stale open flag from the drawer
+        // mode must not resurrect one when the host switches modes.
+        if (IsMobile && MobileNav != AppShellMobileNav.Drawer) _navOverlayOpen = false;
+
+        // The host re-opened the region: a sheet the user once dismissed may show again.
+        if (WorkAreaOpen != _workAreaOpenSeen)
+        {
+            _workAreaOpenSeen = WorkAreaOpen;
+            _workAreaDismissed = false;
+        }
+
+        // The bottom bar's entries changed (a new model, in-place edits): rebuild them and hand the
+        // current entry back to the model instead of remembering a tap that may name nothing now.
+        SyncBottomNav();
 
         // The collapse shadow adopts a host value only when the host CHANGED it: a host that ignores
         // the callback must not have its stale value re-imposed over what the user just did.
@@ -308,10 +398,33 @@ public partial class TmAppShell
 
     private void OpenNavOverlay()
     {
-        if (_disposed || _navOverlayOpen) return;
+        if (_disposed || _navOverlayOpen || !HasNavOverlay) return;
         _navOverlayOpen = true;
         StateHasChanged();
     }
+
+    /// <summary>
+    /// Opens the navigation drawer — the surface a tablet rail toggle and a phone hamburger open. A
+    /// host that carries its OWN opener (a custom <see cref="TopBar"/> with
+    /// <see cref="ShowTopBarMenuButton"/> = <c>false</c>) drives the drawer through this method, so the
+    /// navigation is never unreachable. It is a no-op on a desktop layout (the docked column is always
+    /// visible), in <see cref="AppShellMobileNav.BottomNavigation"/> mode (the bar is the navigation)
+    /// and while the drawer is already open.
+    /// </summary>
+    /// <returns>A task that completes once the open has been applied.</returns>
+    public Task OpenNavigationAsync() => InvokeAsync(OpenNavOverlay);
+
+    /// <summary>
+    /// Closes the navigation drawer, whichever layout opened it. The focus scope inside the drawer
+    /// hands the focus back to the opener. A no-op while the drawer is already closed.
+    /// </summary>
+    /// <returns>A task that completes once the close has been applied.</returns>
+    public Task CloseNavigationAsync() => InvokeAsync(() =>
+    {
+        if (_disposed || !_navOverlayOpen) return;
+        _navOverlayOpen = false;
+        StateHasChanged();
+    });
 
     private Task OnNavOverlayOpenChanged(bool open)
     {
@@ -321,6 +434,149 @@ public partial class TmAppShell
         _navOverlayOpen = open;
         StateHasChanged();
         return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// A destination CHOSEN inside the phone drawer closes the drawer it was chosen from: the user asked
+    /// for a different page, and closing is what keeps the page usable right after the tap. Raised by the
+    /// built-in sidebar (<see cref="TmSidebar.OnItemSelected"/>), so a tap on the workspace switcher in the
+    /// header, the account in the footer, a section heading or any host slot content leaves the drawer open
+    /// — none of those is a destination. It also covers choosing the page the user is already on, which
+    /// raises no location change of its own.
+    /// </summary>
+    /// <param name="item">The entry the user chose.</param>
+    private Task OnNavItemSelectedAsync(ISidebarNavItem item)
+    {
+        _ = item;
+        return ClosePhoneDrawerAsync();
+    }
+
+    /// <summary>
+    /// The location changed: a link inside the phone drawer navigated (a host <see cref="Sidebar"/> slot's
+    /// own link, or a built-in entry whose click was already handled), so the surface it was chosen from
+    /// stops being useful. Phone-only by design — the tablet overlay keeps its phase-3 behaviour (Escape,
+    /// its close button, or the layout leaving the rail) and its slot content may host controls that must
+    /// not dismiss it.
+    /// </summary>
+    private void HandleLocationChanged(object? sender, LocationChangedEventArgs args)
+        => _ = InvokeAsync(ClosePhoneDrawerAsync);
+
+    /// <summary>
+    /// Closes the PHONE navigation drawer if it is open. Shared by the two signals that mean "a
+    /// destination was chosen": the sidebar's own report and a router location change.
+    /// </summary>
+    private Task ClosePhoneDrawerAsync()
+    {
+        if (_disposed || !ShowMobileDrawer || !_navOverlayOpen) return Task.CompletedTask;
+        _navOverlayOpen = false;
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    // ── Phone bottom navigation ─────────────────────────────────────────────
+
+    /// <summary>
+    /// The entries the phone bottom bar renders. The host's list wins; otherwise one entry per top-level
+    /// item of the navigation model (<see cref="NavSections"/> in order, or <see cref="NavItems"/>),
+    /// which is what makes <see cref="AppShellMobileNav.BottomNavigation"/> work without a second model.
+    /// </summary>
+    private IReadOnlyList<BottomNavItem> EffectiveBottomNavItems => _bottomItems;
+
+    /// <summary>
+    /// The bar's current entry: the one the user tapped, else the navigation model's current entry, else
+    /// none. The bar compares entries BY REFERENCE, so this hands back an instance out of the very list
+    /// it renders — a rebuilt list would highlight nothing.
+    /// </summary>
+    private BottomNavItem? SelectedBottomNavItem
+    {
+        get
+        {
+            var index = _bottomSelectedIndex >= 0 ? _bottomSelectedIndex : _bottomActiveIndex;
+            return index >= 0 && index < _bottomItems.Count ? _bottomItems[index] : null;
+        }
+    }
+
+    /// <summary>
+    /// Rebuilds the bottom bar's entries when — and only when — the model's CONTENT changed, so an
+    /// in-place edit is picked up while an unchanged model keeps the same list (and therefore the
+    /// user's selection). A changed model returns the current entry to the model's own active flag.
+    /// </summary>
+    private void SyncBottomNav()
+    {
+        var signature = BottomNavSignature();
+        if (string.Equals(signature, _bottomSignature, StringComparison.Ordinal)) return;
+
+        _bottomSignature = signature;
+        _bottomSelectedIndex = -1;
+
+        if (BottomNavItems is { Count: > 0 })
+        {
+            _bottomItems = BottomNavItems;
+            _bottomActiveIndex = -1;
+            return;
+        }
+
+        var items = new List<BottomNavItem>();
+        var active = -1;
+        foreach (var item in NavigationModelTopLevel())
+        {
+            if (string.IsNullOrWhiteSpace(item.Label)) continue;
+            if (active < 0 && item.IsActive) active = items.Count;
+            items.Add(new BottomNavItem { Text = item.Label, Icon = item.Icon, Href = item.Href });
+        }
+
+        _bottomItems = items;
+        _bottomActiveIndex = active;
+    }
+
+    private IEnumerable<ISidebarNavItem> NavigationModelTopLevel()
+        => NavSections is { Count: > 0 }
+            ? NavSections.SelectMany(section => section.Items ?? Array.Empty<ISidebarNavItem>())
+            : NavItems ?? Array.Empty<ISidebarNavItem>();
+
+    /// <summary>
+    /// A cheap value signature of everything the bar renders, so the entries survive an unchanged
+    /// re-render and follow an edited model. Identity is deliberately not used: a host page may rebuild
+    /// its item list on every render.
+    /// </summary>
+    private string BottomNavSignature()
+    {
+        var builder = new StringBuilder();
+        if (BottomNavItems is { Count: > 0 } hostItems)
+        {
+            builder.Append("host:");
+            foreach (var item in hostItems) AppendBarEntry(builder, item.Text, item.Icon, item.Href, item.Disabled, false);
+            return builder.ToString();
+        }
+
+        builder.Append("model:");
+        foreach (var item in NavigationModelTopLevel())
+            AppendBarEntry(builder, item.Label, item.Icon, item.Href, disabled: false, active: item.IsActive);
+        return builder.ToString();
+
+        static void AppendBarEntry(StringBuilder builder, string? text, string? icon, string? href, bool disabled, bool active)
+            => builder.Append(text).Append('|').Append(icon).Append('|').Append(href)
+                .Append('|').Append(disabled ? '1' : '0').Append('|').Append(active ? '1' : '0').Append('\n');
+    }
+
+    /// <summary>
+    /// A tap on a bottom-bar entry: the tapped entry becomes the current one, the host hears about it,
+    /// and — because a bar of links that never navigates is dead — the shell follows the entry's
+    /// <see cref="BottomNavItem.Href"/>. An entry without one is a command: the callback is the whole
+    /// behaviour.
+    /// </summary>
+    /// <param name="item">The activated entry, as it was rendered.</param>
+    private async Task OnBottomNavItemClickAsync(BottomNavItem item)
+    {
+        for (var index = 0; index < _bottomItems.Count; index++)
+        {
+            if (!ReferenceEquals(_bottomItems[index], item)) continue;
+            _bottomSelectedIndex = index;
+            break;
+        }
+
+        await BottomNavItemClicked.InvokeAsync(item);
+        if (!string.IsNullOrWhiteSpace(item.Href)) Navigation.NavigateTo(item.Href);
     }
 
     // ── Work area ───────────────────────────────────────────────────────────
@@ -391,6 +647,22 @@ public partial class TmAppShell
         if (!WorkAreaOpen) return;
         _focusContentAfterClose = true;
         await WorkAreaOpenChanged.InvokeAsync(false);
+    }
+
+    /// <summary>
+    /// The phone work-area SHEET closed (its close button, Escape, the backdrop or a swipe — every path
+    /// funnels through the panel's open callback). The sheet stops showing in any case: it is a modal
+    /// surface, and one whose close does nothing traps the user, so a host that never bound
+    /// <see cref="WorkAreaOpenChanged"/> still gets a dismissable sheet. The host hears about the close
+    /// when it listens, and its own flag decides again the next time it changes.
+    /// </summary>
+    /// <param name="open">Always <c>false</c>: the sheet never opens itself.</param>
+    private async Task OnWorkAreaSheetOpenChangedAsync(bool open)
+    {
+        // The sheet only ever reports a close — it is opened by the host's flag, never by itself.
+        if (!open) _workAreaDismissed = true;
+        StateHasChanged();
+        if (WorkAreaOpenChanged.HasDelegate) await WorkAreaOpenChanged.InvokeAsync(open);
     }
 
     /// <summary>
@@ -529,6 +801,7 @@ public partial class TmAppShell
     {
         if (_disposed) return;
         _disposed = true;
+        Navigation.LocationChanged -= HandleLocationChanged;
         if (_resizeJs is not null) await _resizeJs.DisposeAsync();
         _dotNetRef?.Dispose();
         _dotNetRef = null;

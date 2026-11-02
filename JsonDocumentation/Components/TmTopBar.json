@@ -59,6 +59,12 @@
       "description": "Id of the element the menu button controls (the host's navigation drawer), reported as aria-controls. Null omits the attribute."
     },
     {
+      "name": "MenuButtonId",
+      "type": "string?",
+      "isRequired": false,
+      "description": "The DOM id of the menu button itself. Null (the default) renders no id attribute, so every existing host keeps its markup. A host that has to name this button from OUTSIDE the bar — an application frame whose navigation drawer returns the focus to the opener it did not render itself (TmAppShell) — passes an id here and points its restore target at it."
+    },
+    {
       "name": "CommandPaletteShortcut",
       "type": "string?",
       "isRequired": false,

@@ -32,6 +32,8 @@ disclosure button and account menu.
 | `IsLandmark` | `bool` | `true` | Render the root as the `<aside>` complementary landmark. `false` renders a plain `<div>` (the `<nav>` keeps naming the menu) — for a frame that owns the page's landmarks. |
 | `ToggleAriaExpanded` | `bool?` | `null` | `aria-expanded` of the header toggle: whether the surface it opens is open. Null renders no attribute — a plain collapse toggle is not a disclosure and owns no surface. |
 | `ToggleAriaControls` | `string?` | `null` | `aria-controls` of the header toggle: the id of that surface. |
+| `ShowToggle` | `bool` | `true` | Render the header collapse/expand toggle. `false` drops the control but keeps the navigation — for a sidebar rendered INSIDE the surface its toggle would act on (an open navigation drawer). |
+| `OnItemSelected` | `EventCallback<ISidebarNavItem>` | — (unbound) | Raised when the user chooses an entry that has an `Href`, with that entry. Fires from the link's own click and never prevents the default, so navigation still happens. Unbound by default, so existing markup and behaviour are unchanged. |
 | `Class`, `AdditionalAttributes` | | | Forwarded to the root `<aside>` (a `<div>` with `IsLandmark="false"`). |
 
 `SidebarNavSection` is `Title` + `Items`; `ISidebarNavItem` supplies `Id`, `Label`, `Icon`, `Href`,
@@ -105,6 +107,20 @@ navigation overlay drawer instead of collapsing a column, so `TmAppShell` passes
 opt-in: a sidebar on its own never claims to control a surface it does not own, and the docked
 desktop column passes neither.
 
+`OnItemSelected` is the other half of that composition: the frame binds it ONLY to the copy inside the
+phone drawer, where choosing a destination closes the drawer it was chosen from. The callback reports
+*which* entry was chosen (so the host is not guessing from a bubbled click), it is unbound in the
+docked column and in the tablet drawer, and it never cancels the browser's navigation:
+
+```razor
+@* What TmAppShell does for the phone drawer only. *@
+<TmSidebar IsLandmark="false" Items="@items" OnItemSelected="OnNavItemSelectedAsync" />
+```
+
+```csharp
+private async Task OnNavItemSelectedAsync(ISidebarNavItem item) => await CloseNavigationAsync();
+```
+
 ### Accessibility summary
 
 - Landmark: `<nav aria-label="…">` named from `NavLabel` or the localization (`TmSidebar_NavLabel`).
@@ -129,6 +145,7 @@ desktop column passes neither.
 | `MenuExpanded` | `bool` | `false` | Reported as `aria-expanded`; the host owns the state. |
 | `OnMenuToggle` | `EventCallback` | — | Raised by the disclosure button. |
 | `MenuControlsId` | `string?` | `null` | `aria-controls` target (the drawer's id). |
+| `MenuButtonId` | `string?` | `null` | The menu button's own `id`, so a surface rendered elsewhere can hand the focus back to the opener it did not render. Null renders no id attribute. |
 | `CommandPaletteShortcut` | `string?` | `"Ctrl+K"` | Chord printed in the palette trigger; empty hides the hint. |
 | `CommandPaletteKeyShortcuts` | `string?` | `"Control+K Meta+K"` | `aria-keyshortcuts` value; pass the chord the host actually binds. |
 | `User` | `IUserInfo?` | `null` | Signed-in user (avatar + name + account menu). |

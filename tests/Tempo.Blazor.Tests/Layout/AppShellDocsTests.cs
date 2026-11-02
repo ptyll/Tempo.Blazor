@@ -81,4 +81,36 @@ public class AppShellDocsTests
             unreleased.Should().Contain(term, $"the unreleased changelog section must record {term}");
         }
     }
+
+    [Fact]
+    public void AppShellDoc_DocumentsThePhonePresentation()
+    {
+        var doc = Read("docs", "app-shell.md");
+
+        foreach (var term in new[]
+        {
+            "MobileNav", "AppShellMobileNav", "BottomNavigation", "BottomNavItems", "TmSidePanel",
+            "TmBottomNavigation", "ShowTopBarMenuButton", "BottomNavItemClicked", "hamburger",
+            "safe-area-inset", "--tm-touch-target", "ShowToggle", "MenuButtonId",
+            "position: static", "bottom sheet", "44",
+        })
+        {
+            doc.Should().Contain(term, $"docs/app-shell.md must document the phone presentation: {term}");
+        }
+    }
+
+    [Fact]
+    public void Changelog_RecordsThePhonePhase()
+    {
+        var changelog = Read("CHANGELOG.md");
+        var unreleased = changelog[..changelog.IndexOf("## 2.9.1 ", StringComparison.Ordinal)];
+
+        foreach (var term in new[]
+        {
+            "AppShellMobileNav", "BottomNavigation", "TmSidePanel", "safe-area", "No breaking change",
+        })
+        {
+            unreleased.Should().Contain(term, $"the unreleased changelog section must record the phone phase: {term}");
+        }
+    }
 }

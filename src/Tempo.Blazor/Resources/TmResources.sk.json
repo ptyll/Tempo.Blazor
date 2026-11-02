@@ -6449,5 +6449,6 @@
   "TmAppShell_NavLabel": "Hlavná navigácia",
   "TmAppShell_WorkArea": "Pracovná plocha",
   "TmAppShell_ResizeWorkArea": "Zmeniť šírku pracovnej plochy",
-  "TmAppShell_CloseWorkArea": "Zavrieť pracovnú plochu"
+  "TmAppShell_CloseWorkArea": "Zavrieť pracovnú plochu",
+  "TmAppShell_MenuButton": "Navigačná ponuka"
 }

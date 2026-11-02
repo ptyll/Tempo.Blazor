@@ -34,15 +34,18 @@ else
         {
             @Header
         }
-        <button class="tm-sidebar-toggle"
-                type="button"
-                data-testid="@TestId("sidebar-toggle")"
-                aria-label="@(Collapsed ? Loc["TmSidebar_ExpandMenu"] : Loc["TmSidebar_CollapseMenu"])"
-                aria-expanded="@ExpandedAttribute"
-                aria-controls="@ToggleAriaControls"
-                @onclick="HandleToggleAsync">
-            <TmIcon Name="@(Collapsed ? IconNames.ChevronRight : IconNames.ChevronLeft)" Size="IconSize.Sm" />
-        </button>
+        @if (ShowToggle)
+        {
+            <button class="tm-sidebar-toggle"
+                    type="button"
+                    data-testid="@TestId("sidebar-toggle")"
+                    aria-label="@(Collapsed ? Loc["TmSidebar_ExpandMenu"] : Loc["TmSidebar_CollapseMenu"])"
+                    aria-expanded="@ExpandedAttribute"
+                    aria-controls="@ToggleAriaControls"
+                    @onclick="HandleToggleAsync">
+                <TmIcon Name="@(Collapsed ? IconNames.ChevronRight : IconNames.ChevronLeft)" Size="IconSize.Sm" />
+            </button>
+        }
     </div>
 
     <nav class="tm-sidebar-nav" aria-label="@EffectiveNavLabel" data-testid="@TestId("sidebar-nav")">
@@ -103,6 +106,16 @@ else
     [Parameter] public EventCallback OnToggle { get; set; }
 
     /// <summary>
+    /// Fires when the user chooses an entry that points at a destination (a non-empty
+    /// <see cref="ISidebarNavItem.Href"/>), with that entry. It is raised from the link's own click and
+    /// never prevents the default, so navigation still happens — the callback only reports WHICH entry was
+    /// chosen. Unbound by default, so every existing caller behaves exactly as before. A shell uses it to
+    /// close the surface the entry was chosen from (an application frame closes its phone navigation
+    /// drawer without sniffing clicks on its own header, footer or host slot content).
+    /// </summary>
+    [Parameter] public EventCallback<ISidebarNavItem> OnItemSelected { get; set; }
+
+    /// <summary>
     /// Accessible name of the navigation landmark. Null (the default) uses the localized
     /// "Sidebar navigation" — a host with more than one navigation landmark names this one after
     /// its purpose ("Product navigation").
@@ -130,6 +143,15 @@ else
     /// keeps the collapsed nav a vertical scroll container, which a tooltip would need to escape.
     /// </summary>
     [Parameter] public bool CollapseTooltips { get; set; } = true;
+
+    /// <summary>
+    /// Whether the header renders the collapse/expand toggle. Default <c>true</c> — today's markup.
+    /// Pass <c>false</c> where the sidebar is rendered INSIDE the surface its toggle would act on (a
+    /// navigation drawer that is already open): there is no docked column to collapse there, and a
+    /// chevron labelled "Collapse menu" that closes a drawer is a mislabelled control. The navigation
+    /// itself, its headings and its links are unaffected.
+    /// </summary>
+    [Parameter] public bool ShowToggle { get; set; } = true;
 
     /// <summary>Optional header content (e.g. logo).</summary>
     [Parameter] public RenderFragment? Header { get; set; }
@@ -247,7 +269,8 @@ else
     private RenderFragment RenderLink(ISidebarNavItem item, bool isChild) => @<a href="@item.Href"
             class="tm-sidebar-nav-link @(isChild ? "tm-sidebar-nav-link-child" : null)"
             aria-label="@CollapsedName(item)"
-            aria-current="@(IsActive(item) ? "page" : null)">
+            aria-current="@(IsActive(item) ? "page" : null)"
+            @onclick="() => HandleItemSelectedAsync(item)">
         @if (!string.IsNullOrEmpty(item.Icon))
         {
             <TmIcon Name="@item.Icon" Size="@(isChild ? IconSize.Xs : IconSize.Sm)" />
@@ -327,4 +350,20 @@ else
     }
 
     private async Task HandleToggleAsync() => await OnToggle.InvokeAsync();
+
+    /// <summary>
+    /// Reports a chosen destination to <see cref="OnItemSelected"/>. An entry without an
+    /// <see cref="ISidebarNavItem.Href"/> is a command that navigates nowhere, so it is not a choice of
+    /// destination and raises nothing. The handler never cancels the browser's navigation.
+    /// </summary>
+    /// <param name="item">The entry whose link was activated.</param>
+    private async Task HandleItemSelectedAsync(ISidebarNavItem item)
+    {
+        if (string.IsNullOrWhiteSpace(item.Href) || !OnItemSelected.HasDelegate)
+        {
+            return;
+        }
+
+        await OnItemSelected.InvokeAsync(item);
+    }
 }

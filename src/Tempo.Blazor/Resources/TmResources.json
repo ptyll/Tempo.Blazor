@@ -6357,5 +6357,6 @@
   "TmAppShell_NavLabel": "Main navigation",
   "TmAppShell_WorkArea": "Work area",
   "TmAppShell_ResizeWorkArea": "Resize work area",
-  "TmAppShell_CloseWorkArea": "Close work area"
+  "TmAppShell_CloseWorkArea": "Close work area",
+  "TmAppShell_MenuButton": "Navigation menu"
 }

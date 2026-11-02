@@ -22,6 +22,49 @@
 > (Fáze 15b). Contracts: [docs/modeling-editor.md](docs/modeling-editor.md),
 > [docs/diagram-editor.md](docs/diagram-editor.md).
 
+### Application frame — `TmAppShell` phone presentation (plan 5d396592, phase 4)
+
+The phone layout the phase-3 notes deferred: a phone container renders **no navigation column at all**.
+`MobileNav` (`AppShellMobileNav`) decides what replaces it — a hamburger in the top bar that opens the
+full navigation in the same modal `TmDrawer` the tablet uses (`Drawer`, the default), or a
+`TmBottomNavigation` bar with no drawer at all (`BottomNavigation`). The work area stops being a dragged
+column on a phone and becomes a `TmSidePanel` bottom sheet, so a phone renders no resize separator.
+Contract: [docs/app-shell.md](docs/app-shell.md).
+
+- **`MobileNav` / `BottomNavItems` / `BottomNavItemClicked` / `ShowTopBarMenuButton`** — the phone
+  presentation of the frame. The drawer moves the focus in, closes on Escape, on its close button and
+  on **choosing an entry**, and hands the focus back to the hamburger the frame names through
+  `TmTopBar.MenuButtonId`; the `SidebarHeader` / `SidebarFooter` slots (the account) render inside it.
+  `BottomNavItems` defaults to entries derived from the navigation model (top-level items, sections in
+  order); a tap raises `BottomNavItemClicked` and follows the entry's `Href`.
+- **The bottom bar is a layout ROW of the frame**, not viewport-fixed chrome: the frame classifies its
+  own container, so a `position: fixed` bar would be pinned to (and clipped by) it and would cover the
+  content. `.tm-bottom-nav--app-shell` resets the standalone component's anchoring for the frame's copy;
+  `TmBottomNavigation` itself is unchanged.
+- **Only a chosen destination closes the phone drawer** — the drawer body is not one big close target.
+  The frame closes it from the built-in sidebar's report of the entry the user chose (the additive
+  `TmSidebar.OnItemSelected`, see below) and from `NavigationManager.LocationChanged` (which covers a
+  host `Sidebar` slot whose own links navigate). A tap on the workspace switcher in the header, the
+  account in the footer, a section heading, the drawer's padding or a slot control therefore no longer
+  unmounts the surface a menu is about to open in; a slot command that must dismiss the drawer without
+  navigating calls `CloseNavigationAsync()`.
+- **`WorkArea` as a phone sheet** — `TmSidePanel` (`Presentation="Sheet"`, `LayoutMode="Mobile"`,
+  titled by `WorkAreaLabel`). The sheet is always closable: a host that never binds `WorkAreaOpenChanged`
+  still gets a dismissable modal surface (it re-opens it by transitioning `WorkAreaOpen` — `false` then
+  `true` — or by binding the parameter). Safe-area insets, `--tm-touch-target` on every phone control
+  and the absence of a new animated subject in the frame's stylesheet are pinned by
+  `TmAppShellMobileCssTests`.
+- **Additive on the primitives** — `TmSidebar.ShowToggle` (`bool`, default `true`) drops the header
+  collapse toggle for a sidebar rendered inside an already-open drawer, `TmSidebar.OnItemSelected`
+  (`EventCallback<ISidebarNavItem>`, unbound by default) reports the entry a user chose without
+  preventing its navigation, and `TmTopBar.MenuButtonId` (`string?`, default `null` = no `id` attribute)
+  lets a surface the bar did not render name the opener. One new resource key: `TmAppShell_MenuButton`
+  (`en` / `cs` / `sk` / `fr`).
+- **No breaking change**: every new parameter is opt-in and the defaults reproduce the phase-3
+  behaviour — a desktop or tablet frame renders byte-identical markup (the hamburger, the bottom bar and
+  the sheet exist only on a phone layout), and the phone layout that used to fall back to the tablet rail
+  is the plan's declared scope boundary, not a shipped contract.
+
 ### Application frame — `TmAppShell` (plan 5d396592, phase 3)
 
 The frame the earlier phases were preparation for: one component that renders the page's landmarks
@@ -63,8 +106,8 @@ and a modal `TmDrawer` — no navigation, focus or sheet logic is copied. Contra
   (`TmAppShell_SkipToContent`, `_NavLabel`, `_WorkArea`, `_ResizeWorkArea`, `_CloseWorkArea`) are new,
   and the CSS partial `_app-shell.css` ships on semantic tokens only.
 - **Known scope boundary (deliberate)**: the phone chrome (`MobileNav`: hamburger + drawer / bottom
-  navigation, work area as a sheet) is the plan's next phase — a mobile container renders the tablet
-  rail in the meantime, never a nav-less frame.
+  navigation, work area as a sheet) shipped in the phase-4 entry above — a mobile container now renders
+  the phone presentation instead of the tablet rail.
 
 ### Account menu — `TmUserMenu` (plan 5d396592, phase 2)
 
