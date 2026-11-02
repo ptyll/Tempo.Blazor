@@ -1,0 +1,700 @@
+@namespace Tempo.Blazor.Components.Layout
+@inherits Tempo.Blazor.Components.TmComponentBase
+@using Tempo.Blazor.Components.Overlay
+@using Tempo.Blazor.Components.Avatars
+@using Tempo.Blazor.Components.Feedback
+@using Tempo.Blazor.Components.Icons
+@using Tempo.Blazor.Helpers
+@using Tempo.Blazor.Services
+@implements IAsyncDisposable
+@inject IServiceProvider Services
+@inject IJSRuntime JS
+
+@* The account menu of an application shell: an APG menu button whose popup is the core
+   TmOverlayPanel with Role="menu". The panel is what owns the menu keyboard — it attaches the
+   shared tm-menu-nav.js engine (ArrowDown/ArrowUp with wraparound, Home/End, typeahead with
+   diacritics folded, roving tabindex) and overlay.js dismisses on Escape and outside pointerdown,
+   refocusing the anchor itself. This component therefore adds NO second key implementation: it
+   only decides what the entries are, moves the opening focus (first entry for ArrowDown and a
+   click, last for ArrowUp) and closes on activation.
+
+   Structure of the popup: the user card, the profile-completion block and the host's extra slot
+   sit in role="group" wrappers, because a role="menu" may only own menuitem / menuitemcheckbox /
+   menuitemradio / separator / group children (axe aria-required-children). Every command is a
+   real menu item — including the "complete your profile" call to action, which as a plain button
+   inside the menu would be unreachable in menu interaction mode. *@
+
+<div @ref="_rootRef"
+     class="tm-user-menu @Class"
+     data-testid="@RootTestId("user-menu")"
+     @attributes="AdditionalAttributes">
+    <button @ref="_triggerRef"
+            class="tm-user-menu__trigger"
+            type="button"
+            data-testid="@TestId("user-menu-trigger")"
+            aria-haspopup="menu"
+            aria-expanded="@BoolText(_isOpen)"
+            aria-controls="@_panelId"
+            aria-label="@TriggerLabel"
+            @onclick="Toggle"
+            @onkeydown="HandleTriggerKeyDownAsync">
+        @if (User is not null)
+        {
+            @* Decorative: the button (or the card's name) already carries the name, so an alt text
+               here would be read twice. *@
+            <TmAvatar Src="@User.AvatarSrc" Name="@User.DisplayName" Alt="" Size="AvatarSize.Sm" />
+        }
+        @if (ShowUserName && !string.IsNullOrEmpty(User?.DisplayName))
+        {
+            <span class="tm-user-menu__trigger-name">@User!.DisplayName</span>
+        }
+    </button>
+
+    <TmOverlayPanel @ref="_overlay"
+                    Id="@_panelId"
+                    Anchor="_triggerRef"
+                    IsOpen="_isOpen"
+                    IsOpenChanged="SetOpen"
+                    Placement="OverlayPlacement.Bottom"
+                    Align="OverlayAlign.End"
+                    Offset="8"
+                    Role="menu"
+                    AriaLabel="@EffectiveLabel"
+                    Title="@EffectiveLabel"
+                    MobilePresentation="@MobilePresentation"
+                    OnOpened="HandleOpenedAsync"
+                    ConstrainHeight="true"
+                    Class="tm-user-menu__panel">
+        @* Presentational wrapper: a role="menu" may only own menuitem / menuitemcheckbox /
+               menuitemradio / separator / group children, and a generic div would be counted as one
+               of its children (axe aria-required-children). role="none" removes the wrapper from the
+               accessibility tree and hoists its contents to the menu. *@
+        <div class="tm-user-menu__body" role="none">
+            @if (User is not null)
+            {
+                <div class="tm-user-menu__card" role="group" aria-label="@Loc["TmUserMenu_UserCard"]">
+                    <TmAvatar Src="@User.AvatarSrc" Name="@User.DisplayName" Alt="" Size="AvatarSize.Lg" />
+                    <div class="tm-user-menu__card-identity">
+                        <span class="tm-user-menu__card-name">@User.DisplayName</span>
+                        @if (!string.IsNullOrEmpty(User.Email))
+                        {
+                            <span class="tm-user-menu__card-email">@User.Email</span>
+                        }
+                    </div>
+                </div>
+            }
+
+            @if (CompletionPercentage is int completion)
+            {
+                <div class="tm-user-menu__completion" role="group" aria-label="@Loc["TmUserMenu_ProfileCompletion"]">
+                    <TmProgressBar Value="@completion"
+                                   Max="100"
+                                   Size="ProgressBarSize.Sm"
+                                   aria-label="@Loc["TmUserMenu_ProfileCompletion"]" />
+                    <span class="tm-user-menu__completion-text">@Loc["TmUserMenu_ProfileCompletionText", completion]</span>
+                </div>
+            }
+
+            @foreach (var row in Rows)
+            {
+                @switch (row.Kind)
+                {
+                    case UserMenuRowKind.Separator:
+                        <div class="tm-user-menu__separator" role="separator" @key="row.Key"></div>
+                        break;
+
+                    case UserMenuRowKind.Extra:
+                        <div class="tm-user-menu__extra"
+                             role="group"
+                             aria-label="@Loc["TmUserMenu_ExtraLabel"]"
+                             @key="row.Key">
+                            @ExtraContent
+                        </div>
+                        break;
+
+                    case UserMenuRowKind.Theme:
+                        <button @key="row.Key"
+                                class="tm-user-menu__item"
+                                type="button"
+                                role="menuitemcheckbox"
+                                tabindex="-1"
+                                data-testid="@row.TestId"
+                                data-checked="@BoolText(IsDarkTheme)"
+                                aria-checked="@BoolText(IsDarkTheme)"
+                                @onclick="ToggleTheme">
+                            @* The icon never changes with the state: the label is "Dark theme" and the
+                               trailing checkmark is the single state signal. A sun next to a checked
+                               "Dark theme" row gave sighted users two contradicting signals. *@
+                            @RowIcon(row)
+                            <span>@row.Text</span>
+                            <span class="tm-user-menu__item-check" aria-hidden="true">
+                                <TmIcon Name="@IconNames.Check" Size="IconSize.Sm" />
+                            </span>
+                        </button>
+                        break;
+
+                    default:
+                        var danger = row.Item?.IsDanger == true;
+                        var itemCss = danger ? "tm-user-menu__item tm-user-menu__item--danger" : "tm-user-menu__item";
+                        if (!string.IsNullOrEmpty(row.Href))
+                        {
+                            <a @key="row.Key"
+                               class="@itemCss"
+                               role="menuitem"
+                               tabindex="-1"
+                               href="@row.Href"
+                               data-testid="@row.TestId"
+                               @onclick="() => HandleRowClickAsync(row)">
+                                @RowIcon(row)
+                                <span>@row.Text</span>
+                            </a>
+                        }
+                        else
+                        {
+                            <button @key="row.Key"
+                                    class="@itemCss"
+                                    type="button"
+                                    role="menuitem"
+                                    tabindex="-1"
+                                    data-testid="@row.TestId"
+                                    @onclick="() => HandleRowClickAsync(row)">
+                                @RowIcon(row)
+                                <span>@row.Text</span>
+                            </button>
+                        }
+                        break;
+                }
+            }
+        </div>
+    </TmOverlayPanel>
+</div>
+
+@code {
+    private enum UserMenuRowKind
+    {
+        Separator,
+        Item,
+        Profile,
+        Settings,
+        CompleteProfile,
+        Theme,
+        Extra,
+        SignOut,
+    }
+
+    /// <summary>One rendered line of the popup, built by <see cref="BuildRows"/>.</summary>
+    /// <param name="Key">
+    /// The <c>@key</c> of the row. Every row is a SIBLING of the body, so the keys of the three
+    /// shapes — built-in row id, <c>section-sep-{n}</c> and the host's <c>host-sep-{n}</c> /
+    /// <c>item-{n}-{id}</c> — must never coincide: a duplicate makes Blazor throw for the whole host.
+    /// </param>
+    /// <param name="Kind">What the line is.</param>
+    /// <param name="Item">The host entry of a <see cref="UserMenuRowKind.Item"/> line.</param>
+    /// <param name="Text">Visible label of a command line.</param>
+    /// <param name="Href">Navigation target, or null for a command.</param>
+    /// <param name="Icon">Optional icon name.</param>
+    /// <param name="TestId">The resolved <c>data-testid</c>.</param>
+    private sealed record UserMenuRow(
+        string Key,
+        UserMenuRowKind Kind,
+        UserMenuItem? Item = null,
+        string? Text = null,
+        string? Href = null,
+        string? Icon = null,
+        string? TestId = null);
+
+    private readonly string _panelId = $"tm-user-menu-panel-{Guid.NewGuid():n}";
+    private ElementReference _rootRef;
+    private ElementReference _triggerRef;
+    private TmOverlayPanel? _overlay;
+    private MenuNavInterop? _menuNav;
+    private ThemeService? _theme;
+    private bool _isOpen;
+    private bool _focusTriggerAfterClose;
+    private bool _focusLastOnOpen;
+    private bool _disposed;
+
+    /// <summary>
+    /// The signed-in user: the trigger shows the avatar (and the display name unless
+    /// <see cref="ShowUserName"/> is false), the popup shows the account card. Null renders no
+    /// avatar, no name and no card — the menu then offers only the entries (a host can present a
+    /// "sign in" action as an item).
+    /// </summary>
+    [Parameter] public IUserInfo? User { get; set; }
+
+    /// <summary>Whether the trigger prints the display name next to the avatar. Default true; false gives an avatar-only trigger whose accessible name is still <see cref="AriaLabel"/>.</summary>
+    [Parameter] public bool ShowUserName { get; set; } = true;
+
+    /// <summary>
+    /// Host entries of the popup, rendered above the built-in profile/settings/completion/theme and
+    /// sign-out lines. A <c>UserMenuItem</c> with <c>Href</c> renders as a link, one with
+    /// <c>OnClick</c> as a command, <c>Separator</c> as a group separator and <c>IsDanger</c> in the
+    /// destructive style. Null renders no host entries.
+    /// <para>
+    /// Give every command entry a unique <c>Id</c>: it is what <c>data-testid="user-menu-item-{id}"</c>
+    /// is built from, so two entries that share an id (or both leave it at the default empty string)
+    /// render fine but become indistinguishable to host tests and E2E selectors. Separators need no
+    /// id at all.
+    /// </para>
+    /// </summary>
+    [Parameter] public IReadOnlyList<UserMenuItem>? Items { get; set; }
+
+    /// <summary>
+    /// Target of the built-in, localized "Profile" entry. Null hides the entry: the library does not
+    /// invent an account route.
+    /// </summary>
+    [Parameter] public string? ProfileHref { get; set; }
+
+    /// <summary>Target of the built-in, localized "Settings" entry. Null hides the entry.</summary>
+    [Parameter] public string? SettingsHref { get; set; }
+
+    /// <summary>
+    /// Profile completion percentage (0–100, clamped). Null hides the block. When set, the popup
+    /// shows a <c>TmProgressBar</c> with the localized "Profile 40% complete" text above the entries;
+    /// give the block its action through <see cref="ProfileCompletionHref"/> or
+    /// <see cref="OnProfileCompletion"/>.
+    /// </summary>
+    [Parameter] public int? ProfileCompletion { get; set; }
+
+    /// <summary>
+    /// Target of the "Complete your profile" entry that renders while the completion is under 100 %.
+    /// Null with no <see cref="OnProfileCompletion"/> handler hides the entry. When both are given
+    /// the link wins: the entry navigates and the callback does not run (one action, not two).
+    /// </summary>
+    [Parameter] public string? ProfileCompletionHref { get; set; }
+
+    /// <summary>
+    /// Fires when the "Complete your profile" entry (a command, not a link) is chosen. The menu
+    /// closes first.
+    /// </summary>
+    [Parameter] public EventCallback OnProfileCompletion { get; set; }
+
+    /// <summary>
+    /// Renders a theme switch entry (<c>menuitemcheckbox</c>) bound to the ambient
+    /// <see cref="ThemeService"/>. Default false. Without a registered service the entry is not
+    /// rendered — there would be no theme to report or switch.
+    /// </summary>
+    [Parameter] public bool ShowThemeToggle { get; set; }
+
+    /// <summary>
+    /// Slot at the bottom of the popup, above the sign out — a language switcher, a workspace
+    /// switcher. Rendered inside a named <c>role="group"</c> (a menu may not own arbitrary
+    /// children).
+    /// <para>
+    /// The host owns the slot's semantics because the slot is inside menu interaction mode, and that
+    /// mode has one rule: <b>every interactive element in the slot must be a menu item</b> —
+    /// <c>role="menuitem"</c>, <c>menuitemradio</c> or <c>menuitemcheckbox</c> with
+    /// <c>tabindex="-1"</c>. Arrow keys only move between those roles and Tab dismisses the menu, so
+    /// a plain <c>&lt;button&gt;</c>, a <c>&lt;select&gt;</c> or a link without a menu role is
+    /// unreachable by keyboard (WCAG 2.1.1). No focusable control may sit between two entries
+    /// either. Use <c>Items</c> for commands and links, and this slot for a small set of state
+    /// entries such as a language switcher built from <c>menuitemradio</c> buttons.
+    /// </para>
+    /// </summary>
+    [Parameter] public RenderFragment? ExtraContent { get; set; }
+
+    /// <summary>
+    /// Fires after an entry of <see cref="Items"/> was chosen — AFTER the awaited
+    /// <c>UserMenuItem.OnClick</c>, so a host that stores the chosen command re-renders with its
+    /// result. Not raised for the built-in profile / settings / completion / theme / sign-out lines.
+    /// </summary>
+    [Parameter] public EventCallback<UserMenuItem> OnItemSelected { get; set; }
+
+    /// <summary>
+    /// Fires when the built-in sign-out entry is chosen. The entry renders only when this callback
+    /// is bound (the library never invents an authentication flow).
+    /// </summary>
+    [Parameter] public EventCallback OnLogout { get; set; }
+
+    /// <summary>
+    /// Accessible name of the trigger and of the popup. Null uses the localized "User menu"; a host
+    /// with more than one account surface names this one ("Signed-in account").
+    /// </summary>
+    [Parameter] public string? AriaLabel { get; set; }
+
+    /// <summary>
+    /// How the popup presents on a narrow viewport. Default <see cref="PanelPresentation.Auto"/>:
+    /// a content-height bottom sheet on a mobile viewport (the drawer owns focus and restore), the
+    /// anchored popover otherwise. A forced value renders that presentation without measuring.
+    /// </summary>
+    [Parameter] public PanelPresentation MobilePresentation { get; set; } = PanelPresentation.Auto;
+
+    /// <summary>Additional CSS class for the root element.</summary>
+    [Parameter] public string? Class { get; set; }
+
+    /// <summary>Additional HTML attributes for the root element.</summary>
+    [Parameter(CaptureUnmatchedValues = true)] public Dictionary<string, object>? AdditionalAttributes { get; set; }
+
+    private string EffectiveLabel => string.IsNullOrWhiteSpace(AriaLabel) ? Loc["TmUserMenu_Label"] : AriaLabel!;
+
+    /// <summary>
+    /// The trigger's accessible name. When the display name is VISIBLE it has to appear in the
+    /// accessible name too (WCAG 2.5.3 Label in Name — a speech user says what they see), so the
+    /// localized "{0} — user menu" template wraps it. An avatar-only trigger, or a host
+    /// <see cref="AriaLabel"/>, keeps the plain label.
+    /// </summary>
+    private string TriggerLabel
+        => !string.IsNullOrWhiteSpace(AriaLabel) ? AriaLabel!
+        : ShowUserName && !string.IsNullOrEmpty(User?.DisplayName)
+            ? Loc["TmUserMenu_TriggerLabel", User!.DisplayName]
+            : Loc["TmUserMenu_Label"];
+
+    /// <summary>The clamped completion percentage, or null when the block is off.</summary>
+    private int? CompletionPercentage => ProfileCompletion is int value ? Math.Clamp(value, 0, 100) : null;
+
+    private bool IsDarkTheme => _theme?.IsDark == true;
+
+    private bool HasCompletionAction
+        => CompletionPercentage is int percentage && percentage < 100
+           && (!string.IsNullOrEmpty(ProfileCompletionHref) || OnProfileCompletion.HasDelegate);
+
+    /// <summary>The lines of the popup, in render order (the card and the completion block are rendered separately, above them).</summary>
+    private IReadOnlyList<UserMenuRow> Rows => BuildRows();
+
+    /// <inheritdoc />
+    protected override void OnInitialized()
+    {
+        _theme = Services.GetService(typeof(ThemeService)) as ThemeService;
+        if (_theme is not null)
+        {
+            _theme.OnChanged += OnThemeChanged;
+        }
+    }
+
+    /// <inheritdoc />
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!_focusTriggerAfterClose)
+        {
+            return;
+        }
+
+        _focusTriggerAfterClose = false;
+        try
+        {
+            await _triggerRef.FocusAsync(preventScroll: true);
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or JSException)
+        {
+            // The trigger left the DOM with the close (a conditional host): nothing to focus.
+        }
+    }
+
+    private void OnThemeChanged()
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        _ = InvokeAsync(StateHasChanged);
+    }
+
+    private static string BoolText(bool value) => value ? "true" : "false";
+
+    private void Toggle()
+    {
+        if (_isOpen)
+        {
+            CloseMenu();
+            return;
+        }
+
+        _focusLastOnOpen = false;
+        _isOpen = true;
+    }
+
+    private void Open(bool focusLast)
+    {
+        _focusLastOnOpen = focusLast;
+        _isOpen = true;
+    }
+
+    /// <summary>Controlled open state reported by the panel (dismissals arrive here as <c>false</c>).</summary>
+    private void SetOpen(bool open) => _isOpen = open;
+
+    /// <summary>
+    /// Closes the popup. A command destroys the element that owns the focus, so focus has to go back
+    /// to the trigger — except in a sheet, where the drawer's own restore target already does it and
+    /// a second focus call would race it.
+    /// </summary>
+    private void CloseMenu()
+    {
+        _isOpen = false;
+        if (_overlay?.IsSheet != true)
+        {
+            _focusTriggerAfterClose = true;
+        }
+    }
+
+    /// <summary>
+    /// Hands the opening focus into the menu — a <c>role="menu"</c> that leaves the focus on its
+    /// trigger is announced and then inoperable, because assistive technology switches to menu
+    /// interaction mode and waits for arrow keys the trigger does not answer. A sheet is skipped:
+    /// <c>TmDrawer</c> moves focus to the first entry itself.
+    /// </summary>
+    private async Task HandleOpenedAsync()
+    {
+        var focusLast = _focusLastOnOpen;
+        _focusLastOnOpen = false;
+
+        if (_overlay?.IsSheet == true)
+        {
+            return;
+        }
+
+        await FocusEdgeAsync(focusLast);
+    }
+
+    /// <summary>
+    /// Moves the focus to the first or the last entry of the open menu. The one place that builds the
+    /// JS wrapper, and it refuses to build one after disposal — an <c>OnOpened</c> that arrives late
+    /// (a dismiss that already tore the popup down) would otherwise create an interop object nobody
+    /// disposes. The same guard runs in <c>TmDropdown</c>, <c>TmSplitButton</c> and <c>TmContextMenu</c>.
+    /// </summary>
+    private Task FocusEdgeAsync(bool last)
+    {
+        if (_disposed)
+        {
+            return Task.CompletedTask;
+        }
+
+        var menuNav = _menuNav ??= new MenuNavInterop(JS);
+        return last ? menuNav.FocusLastAsync(_rootRef) : menuNav.FocusFirstAsync(_rootRef);
+    }
+
+    /// <summary>
+    /// The trigger's own arrow keys open the menu onto the first (ArrowDown) or last (ArrowUp)
+    /// entry. Enter and Space are deliberately absent: the native button activates itself once
+    /// (docs/keyboard-activation-convention.md). The page scroll the arrows produce is accepted.
+    /// </summary>
+    private async Task HandleTriggerKeyDownAsync(KeyboardEventArgs args)
+    {
+        if (args.Key is not ("ArrowDown" or "ArrowUp"))
+        {
+            return;
+        }
+
+        var focusLast = args.Key == "ArrowUp";
+        if (!_isOpen)
+        {
+            Open(focusLast);
+            return;
+        }
+
+        await FocusEdgeAsync(focusLast);
+    }
+
+    private void ToggleTheme() => _theme?.Toggle();
+
+    private async Task HandleRowClickAsync(UserMenuRow row)
+    {
+        switch (row.Kind)
+        {
+            case UserMenuRowKind.CompleteProfile:
+                CloseMenu();
+                // A link entry navigates; the callback is the COMMAND form, so it must not also run
+                // (a host that sets both gets one action, not two).
+                if (string.IsNullOrEmpty(row.Href) && OnProfileCompletion.HasDelegate)
+                {
+                    await OnProfileCompletion.InvokeAsync();
+                }
+                break;
+
+            case UserMenuRowKind.SignOut:
+                CloseMenu();
+                await OnLogout.InvokeAsync();
+                break;
+
+            case UserMenuRowKind.Item:
+                CloseMenu();
+                if (row.Item is { } item)
+                {
+                    // The model contract: OnClick is ignored when Href is set (the entry navigates).
+                    if (item.OnClick is not null && string.IsNullOrEmpty(item.Href))
+                    {
+                        await item.OnClick();
+                    }
+
+                    if (OnItemSelected.HasDelegate)
+                    {
+                        await OnItemSelected.InvokeAsync(item);
+                    }
+                }
+                break;
+
+            default:
+                // A built-in navigation entry (profile / settings): nothing to invoke.
+                CloseMenu();
+                break;
+        }
+    }
+
+    /// <summary>
+    /// The popup's command lines: the built-in profile / settings entries, the host items, the
+    /// completion action, the theme switch, the extra slot and the sign out. Exactly one separator
+    /// sits between two non-empty sections; a host list that starts or ends with one does not double
+    /// it, and two consecutive host separators collapse into one.
+    /// </summary>
+    private List<UserMenuRow> BuildRows()
+    {
+        var sections = new List<List<UserMenuRow>>();
+
+        var builtIn = new List<UserMenuRow>();
+        if (!string.IsNullOrEmpty(ProfileHref))
+        {
+            builtIn.Add(new UserMenuRow("profile", UserMenuRowKind.Profile, Text: Loc["TmUserMenu_Profile"],
+                Href: ProfileHref, Icon: IconNames.User, TestId: TestId("user-menu-profile")));
+        }
+
+        if (!string.IsNullOrEmpty(SettingsHref))
+        {
+            builtIn.Add(new UserMenuRow("settings", UserMenuRowKind.Settings, Text: Loc["TmUserMenu_Settings"],
+                Href: SettingsHref, Icon: IconNames.Settings, TestId: TestId("user-menu-settings")));
+        }
+
+        sections.Add(builtIn);
+
+        if (Items is { Count: > 0 })
+        {
+            sections.Add(NormalizeHostItems(Items));
+        }
+
+        if (HasCompletionAction)
+        {
+            sections.Add(
+            [
+                new UserMenuRow("complete-profile", UserMenuRowKind.CompleteProfile,
+                    Text: Loc["TmUserMenu_CompleteProfile"],
+                    Href: ProfileCompletionHref,
+                    Icon: IconNames.ArrowRight,
+                    TestId: TestId("user-menu-complete-profile")),
+            ]);
+        }
+
+        if (ShowThemeToggle && _theme is not null)
+        {
+            sections.Add(
+            [
+                new UserMenuRow("theme", UserMenuRowKind.Theme, Text: Loc["TmUserMenu_ThemeToggle"],
+                    Icon: IconNames.Moon, TestId: TestId("user-menu-theme")),
+            ]);
+        }
+
+        if (ExtraContent is not null)
+        {
+            sections.Add([new UserMenuRow("extra", UserMenuRowKind.Extra)]);
+        }
+
+        if (OnLogout.HasDelegate)
+        {
+            sections.Add(
+            [
+                new UserMenuRow("sign-out", UserMenuRowKind.SignOut, Text: Loc["TmUserMenu_SignOut"],
+                    Icon: IconNames.LogOut, TestId: TestId("user-menu-sign-out")),
+            ]);
+        }
+
+        var rows = new List<UserMenuRow>();
+        for (var sectionIndex = 0; sectionIndex < sections.Count; sectionIndex++)
+        {
+            var section = sections[sectionIndex];
+            if (section.Count == 0)
+            {
+                continue;
+            }
+
+            if (rows.Count > 0)
+            {
+                // A key namespace of its own. All rows are SIBLINGS under one body, and Blazor throws
+                // "more than one sibling has the same @key value" on a duplicate — that would take
+                // down the whole host shell over a cosmetic slip, so no two key shapes may overlap.
+                rows.Add(new UserMenuRow($"section-sep-{sectionIndex}", UserMenuRowKind.Separator));
+            }
+
+            rows.AddRange(section);
+        }
+
+        return rows;
+    }
+
+    /// <summary>Maps the host entries, trimming edge separators and collapsing runs of them.</summary>
+    private List<UserMenuRow> NormalizeHostItems(IReadOnlyList<UserMenuItem> items)
+    {
+        var rows = new List<UserMenuRow>();
+        for (var index = 0; index < items.Count; index++)
+        {
+            var item = items[index];
+            if (item.Separator)
+            {
+                if (rows.Count > 0 && rows[^1].Kind != UserMenuRowKind.Separator)
+                {
+                    // Keyed by POSITION, not by Id: a separator id is optional, so two default
+                    // separators would both key "separator-" and throw.
+                    rows.Add(new UserMenuRow($"host-sep-{index}", UserMenuRowKind.Separator));
+                }
+
+                continue;
+            }
+
+            rows.Add(new UserMenuRow(
+                // Position AND id: the position keeps two Id-less (or same-id) entries of one list
+                // apart, the id keeps the key stable when a neighbour is inserted. TestId stays
+                // derived from the id alone so host selectors do not move with the position.
+                $"item-{index}-{item.Id}",
+                UserMenuRowKind.Item,
+                item,
+                Text: item.Label,
+                Href: item.Href,
+                Icon: item.Icon,
+                TestId: TestId($"user-menu-item-{item.Id}")));
+        }
+
+        while (rows.Count > 0 && rows[^1].Kind == UserMenuRowKind.Separator)
+        {
+            rows.RemoveAt(rows.Count - 1);
+        }
+
+        return rows;
+    }
+
+    private RenderFragment RowIcon(UserMenuRow row)
+    {
+        if (string.IsNullOrEmpty(row.Icon))
+        {
+            return static _ => { };
+        }
+
+        var icon = row.Icon!;
+        return builder =>
+        {
+            builder.OpenComponent<TmIcon>(0);
+            builder.AddAttribute(1, nameof(TmIcon.Name), icon);
+            builder.AddAttribute(2, nameof(TmIcon.Size), IconSize.Sm);
+            builder.CloseComponent();
+        };
+    }
+
+    /// <inheritdoc />
+    public async ValueTask DisposeAsync()
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        _disposed = true;
+        if (_theme is not null)
+        {
+            _theme.OnChanged -= OnThemeChanged;
+            _theme = null;
+        }
+
+        var menuNav = _menuNav;
+        _menuNav = null;
+        if (menuNav is not null)
+        {
+            await menuNav.DisposeAsync();
+        }
+    }
+}

@@ -6433,5 +6433,16 @@
   "TmPermissionRequest_AnnounceRevoked": "Povolenie odvolané.",
   "TmPermissionRequest_AnnounceExpired": "Platnosť povolenia vypršala.",
   "TmPermissionRequest_Error": "Rozhodnutie sa nepodarilo uložiť. Skúste to znova.",
-  "TmPermissionRequest_ShortcutsHint": "Klávesnica: Ctrl+Enter povolí, Ctrl+Backspace zamietne."
+  "TmPermissionRequest_ShortcutsHint": "Klávesnica: Ctrl+Enter povolí, Ctrl+Backspace zamietne.",
+  "TmUserMenu_Label": "Používateľské menu",
+  "TmUserMenu_UserCard": "Prihlásený účet",
+  "TmUserMenu_ProfileCompletion": "Vyplnenie profilu",
+  "TmUserMenu_ProfileCompletionText": "Profil je vyplnený na {0} %",
+  "TmUserMenu_CompleteProfile": "Dokončiť profil",
+  "TmUserMenu_Profile": "Profil",
+  "TmUserMenu_Settings": "Nastavenia",
+  "TmUserMenu_ThemeToggle": "Tmavá téma",
+  "TmUserMenu_ExtraLabel": "Možnosti účtu",
+  "TmUserMenu_SignOut": "Odhlásiť sa",
+  "TmUserMenu_TriggerLabel": "{0} — používateľské menu"
 }

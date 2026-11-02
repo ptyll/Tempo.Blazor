@@ -6341,5 +6341,16 @@
   "TmPermissionRequest_AnnounceRevoked": "Permission revoked.",
   "TmPermissionRequest_AnnounceExpired": "The permission has expired.",
   "TmPermissionRequest_Error": "The decision could not be saved. Try again.",
-  "TmPermissionRequest_ShortcutsHint": "Keyboard: Ctrl+Enter allows, Ctrl+Backspace denies."
+  "TmPermissionRequest_ShortcutsHint": "Keyboard: Ctrl+Enter allows, Ctrl+Backspace denies.",
+  "TmUserMenu_Label": "User menu",
+  "TmUserMenu_UserCard": "Signed-in account",
+  "TmUserMenu_ProfileCompletion": "Profile completion",
+  "TmUserMenu_ProfileCompletionText": "Profile {0}% complete",
+  "TmUserMenu_CompleteProfile": "Complete your profile",
+  "TmUserMenu_Profile": "Profile",
+  "TmUserMenu_Settings": "Settings",
+  "TmUserMenu_ThemeToggle": "Dark theme",
+  "TmUserMenu_ExtraLabel": "Account options",
+  "TmUserMenu_SignOut": "Sign out",
+  "TmUserMenu_TriggerLabel": "{0} — user menu"
 }

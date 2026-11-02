@@ -134,6 +134,7 @@
 @import "components/_tooltip.css";
 @import "components/_popover.css";
 @import "components/_overlay-panel.css";
+@import "components/_user-menu.css";
 
 /* 12. Files & Gallery */
 @import "components/_file-drop-zone.css";

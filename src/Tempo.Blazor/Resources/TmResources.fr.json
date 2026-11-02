@@ -6387,5 +6387,16 @@
   "TmPermissionRequest_AnnounceRevoked": "Autorisation révoquée.",
   "TmPermissionRequest_AnnounceExpired": "L'autorisation a expiré.",
   "TmPermissionRequest_Error": "La décision n'a pas pu être enregistrée. Réessayez.",
-  "TmPermissionRequest_ShortcutsHint": "Clavier : Ctrl+Entrée autorise, Ctrl+Retour arrière refuse."
+  "TmPermissionRequest_ShortcutsHint": "Clavier : Ctrl+Entrée autorise, Ctrl+Retour arrière refuse.",
+  "TmUserMenu_Label": "Menu utilisateur",
+  "TmUserMenu_UserCard": "Compte connecté",
+  "TmUserMenu_ProfileCompletion": "Complétion du profil",
+  "TmUserMenu_ProfileCompletionText": "Profil complété à {0} %",
+  "TmUserMenu_CompleteProfile": "Compléter votre profil",
+  "TmUserMenu_Profile": "Profil",
+  "TmUserMenu_Settings": "Paramètres",
+  "TmUserMenu_ThemeToggle": "Thème sombre",
+  "TmUserMenu_ExtraLabel": "Options du compte",
+  "TmUserMenu_SignOut": "Se déconnecter",
+  "TmUserMenu_TriggerLabel": "{0} — menu utilisateur"
 }

@@ -176,7 +176,7 @@ managed hosts instead, start the four apps above and set
 | Icons | `TmIcon`, `IconRegistry`, `IIconProvider`, `IconNames` |
 | ImportExport | `TmImportWizard`, `TmImportPreview`, `TmExportOptions` |
 | Inputs | `TmTextInput`, `TmTextArea`, `TmSelect`, `TmCheckbox`, `TmToggle`, `TmRadio`, `TmRadioGroup`, `TmSearchInput`, `TmPasswordStrengthIndicator`, `TmNumberInput`, `TmEntityPicker`, `TmExpressionEditor`, `TmMultiSelect` |
-| Layout | `TmSidebar`, `TmBreadcrumbs`, `TmTopBar`, `TmCommandPalette`, `TmDrawer`, `TmSection`, `TmKeyboardShortcutsHelp`, `TmDockManager`, `TmDockPane` |
+| Layout | `TmSidebar`, `TmBreadcrumbs`, `TmTopBar`, `TmUserMenu` (account menu: APG menu button over `TmOverlayPanel`, user card, host items, profile completion, theme switch, mobile bottom sheet — [docs/user-menu.md](docs/user-menu.md)), `TmCommandPalette`, `TmDrawer`, `TmSection`, `TmKeyboardShortcutsHelp`, `TmDockManager`, `TmDockPane` |
 | Navigation | `TmTabs`, `TmTabPanel`, `TmContextMenu`, `TmContextMenuItem` |
 | Notifications | `TmNotificationBell` (extended, per-item read, severity) |
 | Pickers | `TmDatePicker`, `TmDateRangePicker`, `TmDateTimePicker`, `TmDateTimeRangePicker`, `TmTimePicker`, `TmTimeRangePicker`, `TmCalendarView` |

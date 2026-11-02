@@ -21308,7 +21308,7 @@
           "name": "Id",
           "kind": "Property",
           "type": "string",
-          "description": "Stable identifier of the entry, unique inside one menu (used for test ids and @key)."
+          "description": "Stable identifier of the entry, unique inside one menu. It is what a consumer's test ids are built from (data-testid=\"user-menu-item-{Id}\" on TmUserMenu), so two entries that share an id become indistinguishable to host tests — rendering itself no longer depends on it."
         },
         {
           "name": "IsDanger",

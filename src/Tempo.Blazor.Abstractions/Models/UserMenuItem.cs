@@ -8,7 +8,11 @@ namespace Tempo.Blazor.Models;
 /// </summary>
 public sealed record UserMenuItem
 {
-    /// <summary>Stable identifier of the entry, unique inside one menu (used for test ids and @key).</summary>
+    /// <summary>
+    /// Stable identifier of the entry, unique inside one menu. It is what a consumer's test ids are
+    /// built from (<c>data-testid="user-menu-item-{Id}"</c> on <c>TmUserMenu</c>), so two entries that
+    /// share an id become indistinguishable to host tests — rendering itself no longer depends on it.
+    /// </summary>
     public string Id { get; init; } = string.Empty;
 
     /// <summary>Visible label; also the accessible name of the entry.</summary>
@@ -62,6 +66,6 @@ public sealed record UserMenuItem
     }
 
     /// <summary>Creates a separator between groups of entries.</summary>
-    /// <param name="id">Stable identifier of the separator, unique inside one menu.</param>
+    /// <param name="id">Optional identifier of the separator. A separator is keyed by its position, so it does not have to be unique.</param>
     public static UserMenuItem CreateSeparator(string id) => new() { Id = id, Separator = true };
 }

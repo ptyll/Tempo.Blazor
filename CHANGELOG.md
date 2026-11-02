@@ -22,6 +22,56 @@
 > (Fáze 15b). Contracts: [docs/modeling-editor.md](docs/modeling-editor.md),
 > [docs/diagram-editor.md](docs/diagram-editor.md).
 
+### Account menu — `TmUserMenu` (plan 5d396592, phase 2)
+
+The account surface of an application shell: avatar trigger, signed-in user card, the host's menu
+entries plus the built-in Profile / Settings / profile-completion / theme / sign-out lines, and an
+extra slot for a language or workspace switcher. **No breaking change** — the component, its CSS
+partial, the resource keys and the JSON documentation overlay are all new, and no existing component
+changed. `TmTopBar` keeps its own inline account menu (phase 1); `TmUserMenu` is the richer replacement
+a host opts into (wiring it into `TmTopBar` / `TmAppShell` belongs to the later phases of the plan).
+
+- **`TmUserMenu`** (`src/Tempo.Blazor/Components/Layout/TmUserMenu.razor`) — `User` (`IUserInfo?`),
+  `ShowUserName`, `Items` (`IReadOnlyList<UserMenuItem>`), `ProfileHref`, `SettingsHref`,
+  `ProfileCompletion` (0–100, clamped), `ProfileCompletionHref`, `OnProfileCompletion`,
+  `ShowThemeToggle`, `ExtraContent`, `OnItemSelected` (`EventCallback<UserMenuItem>`), `OnLogout`,
+  `AriaLabel`, `MobilePresentation`, `Class`. Every default is the modest one: no items, no card
+  without a user, no sign out without a handler, no theme switch unless asked for.
+- **APG menu button over `TmOverlayPanel`** — the popup is the core panel with `Role="menu"`, so the
+  shared `tm-menu-nav.js` engine owns the keyboard (ArrowDown/ArrowUp with wraparound, Home/End,
+  typeahead over the labels with diacritics folded, roving tabindex, Tab-out dismissal) and
+  overlay.js owns Escape / outside dismissal with its own focus restore. The component adds only the
+  opening focus: first entry for a click or ArrowDown, last entry for ArrowUp (new
+  `focusLast` export in `tm-menu-nav.js`, node-tested). Enter/Space stay native on the trigger.
+- **Choosing an entry** — `UserMenuItem.OnClick` (a plain `Func<Task>`) is awaited first, then
+  `OnItemSelected` is raised, so a host that stores the chosen command re-renders with its result;
+  the menu closes before either runs and focus returns to the trigger on the popover path (the mobile
+  sheet's drawer owns the restore). `Href` entries stay real links.
+- **Structure** — the card, the completion block and the `ExtraContent` slot render as named
+  `role="group"` sections (a `menu` may only own menu items, separators and groups), and the
+  "Complete your profile" call to action is a real `menuitem` — a plain button inside a menu is
+  unreachable in menu interaction mode. Rows are keyed by position (`item-{n}-{Id}`,
+  `host-sep-{n}`, `section-sep-{n}`), so two id-less host entries, two default separators or a
+  separator whose id is a number cannot produce the duplicate sibling `@key` that would throw for the
+  whole host; `UserMenuItem.Id` still drives `data-testid`, so it should be unique. The theme switch
+  keeps one icon in both states — the trailing checkmark is the state signal.
+- **Extra slot contract** — `ExtraContent` sits inside menu interaction mode, so every interactive
+  element in it has to be a real menu item (`menuitem` / `menuitemradio` / `menuitemcheckbox` with
+  `tabindex="-1"`). A plain button, a link without a menu role or a `<select>` (`TmSelect`) is
+  visible but keyboard-unreachable (WCAG 2.1.1); the docs page and the JSON example carry a
+  `menuitemradio` language switcher instead.
+- **Profile completion** — `ProfileCompletion` renders a `TmProgressBar` plus the localized
+  "Profile 40% complete" text and, under 100 %, the completion entry. The theme switch is a
+  `menuitemcheckbox` following `ThemeService.IsDark` (including a change made elsewhere) and is not
+  rendered at all when no `ThemeService` is registered.
+- **Mobile** — `MobilePresentation` defaults to `Auto`: a content-height bottom sheet on a mobile
+  viewport (titled with the localized "User menu"), the anchored popover otherwise.
+- **Tokens and a11y** — `_user-menu.css` reads semantic tokens only (dark theme needs no block),
+  every focus stop paints `--tm-focus-ring` with `outline: 2px solid transparent` plus a
+  `forced-colors` `Highlight` outline, every command reaches `--tm-touch-target` on a coarse pointer,
+  and both transitions are in the reduced-motion block. Contract:
+  [docs/user-menu.md](docs/user-menu.md).
+
 ### AI permission requests — `TmPermissionRequest` (plan 10b3966f, phase 5)
 
 The agent's request for one concrete permission, in the AI split package: which tool, on which target,

@@ -130,6 +130,16 @@ public sealed class OverlayPanelComputedStyleRegressionTests
         // owns only the surface; overlay.js owns position and stacking.
         new("TmFilterBuilder.razor", "tm-filter-builder-panel",
             "var(--tm-bg-surface)", "var(--tm-border-color)", "var(--tm-space-3)", null),
+        // TmUserMenu (plan 5d396592, Fáze 2): the account popup rides the shared panel and owns its
+        // surface/border/padding; the body layout lives on the inner .tm-user-menu__body because the
+        // mobile sheet drops this class (the panel is the drawer's content wrapper there).
+        new("TmUserMenu.razor", "tm-user-menu__panel",
+            "var(--tm-bg-surface)", "var(--tm-border-color)", "var(--tm-space-2)", null)
+        {
+            // The panel keeps a system-colour boundary under forced colors; the cascade model
+            // cannot read a media query, so that one selector is recorded here.
+            AllowedUnmodelled = [".tm-user-menu__panel  [@media (forced-colors:active)]"],
+        },
     ];
 
     private static IReadOnlyList<CssCascade.Element> PanelChain(string panelClass) =>
