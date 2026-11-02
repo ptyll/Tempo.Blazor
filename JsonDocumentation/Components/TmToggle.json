@@ -32,6 +32,12 @@
       "description": "Accessible name for the switch, rendered as aria-label on the inner input rather than on the wrapper. Use it when the switch must carry a name without any visible text of its own; it takes precedence over Label for the accessible name and does not render a visible span."
     },
     {
+      "name": "AriaDescribedBy",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Id of the element that describes the switch, rendered as aria-describedby on the inner input (role=switch). Use it for a hint that must not become a second accessible name. Null (the default) renders no attribute."
+    },
+    {
       "name": "AriaLabelledBy",
       "type": "string?",
       "isRequired": false,

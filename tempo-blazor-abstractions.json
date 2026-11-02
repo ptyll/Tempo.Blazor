@@ -29730,7 +29730,7 @@
       "kind": "Record",
       "category": "Shared",
       "namespace": "Tempo.Blazor.Abstractions.Shared",
-      "description": "Immutable snapshot of the comment editor draft state in TmActivityComments. Consumers build a dirty-guard from it (confirmation before discarding an in-progress comment). Carries state flags only — never the draft text itself; the text is delivered in OnCommentAdded/OnCommentEdited on submit. HasUnsavedContent: for a new comment it means non-empty content, for an edit it means the content differs from the original body.",
+      "description": "Immutable snapshot of the comment editor draft state in TmActivityComments. Consumers build a dirty-guard from it (confirmation before discarding an in-progress comment). Carries state flags only — never the draft text itself; the text is delivered in OnCommentAdded/OnCommentEdited on submit. HasUnsavedContent: for a new comment it means non-empty content, for an edit it means the content differs from the original body. IsInternal (optional, default false) is the new-comment composer's internal switch; it is not part of the dirty decision and resets on discard or submit. Always false while an existing comment is being edited.",
       "packageId": "Tempo.Blazor.Abstractions",
       "sourcePath": "src/Tempo.Blazor.Abstractions/Shared/TmCommentDraftState.cs",
       "documentationStatus": "merged",
@@ -29752,6 +29752,12 @@
           "kind": "Property",
           "type": "bool",
           "description": "true when a comment editor is visible — either the new-comment editor or the inline editor of an existing comment."
+        },
+        {
+          "name": "IsInternal",
+          "kind": "Property",
+          "type": "bool",
+          "description": "true when the new-comment composer's internal switch is on. Additive: existing three-argument constructions keep false. Not part of the dirty decision — a switch with no typed text is not an unsaved draft. Discarding the draft (cancel, successful submit, or DiscardDraftAsync) resets it to false. Always false while an existing comment is being edited; that editor has no switch."
         }
       ]
     },
@@ -29942,6 +29948,30 @@
           "kind": "Property",
           "type": "string",
           "description": "Emoji or compact reaction value."
+        }
+      ]
+    },
+    {
+      "itemName": "TmCommentSubmission",
+      "kind": "Record",
+      "category": "Shared",
+      "namespace": "Tempo.Blazor.Abstractions.Shared",
+      "description": "Payload of a newly posted comment from TmActivityComments, delivered by OnCommentSubmitted before OnCommentAdded. Html is the composer HTML; IsInternal is the composer switch at submit. The component does not hide the resulting comment.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Shared/TmCommentSubmission.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Html",
+          "kind": "Property",
+          "type": "string",
+          "description": "Submitted comment HTML, exactly as the composer held it."
+        },
+        {
+          "name": "IsInternal",
+          "kind": "Property",
+          "type": "bool",
+          "description": "true when the composer internal switch was on at submit. The component does not hide the resulting comment — the consumer decides visibility."
         }
       ]
     },
@@ -37952,11 +37982,11 @@
   ],
   "libraryExamples": [],
   "summary": {
-    "itemCount": 1515,
-    "manualItemCount": 1515,
-    "generatedItemCount": 1499,
+    "itemCount": 1516,
+    "manualItemCount": 1516,
+    "generatedItemCount": 1500,
     "generatedOnlyItemCount": 0,
     "componentCount": 0,
-    "publicApiTypeCount": 1499
+    "publicApiTypeCount": 1500
   }
 }

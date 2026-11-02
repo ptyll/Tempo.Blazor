@@ -48,7 +48,7 @@
 </section>
 
 <!-- Activity Comments (standalone + draft guard) -->
-<section class="demo-section" data-testid="activity-comments-section">
+<section id="activity-comments" class="demo-section" data-testid="activity-comments-section">
     <div class="flex items-center space-x-2 mb-4">
         <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Activity Comments</h2>
         <span class="px-2 py-0.5 text-xs font-medium bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-300 rounded-full">Standalone · Draft guard</span>
@@ -62,6 +62,9 @@
         Each comment also carries a host action (Unlock when internal, Lock when public, with a
         short visible label) that asks in a dialog before flipping internal / public — the
         component only paints the result. Making a comment public is the dangerous confirm.
+        The composer offers mentions (<code>@@</code> opens people from a local provider) and an
+        Internal switch. Posting with the switch on marks the new comment internal; the component
+        still shows it.
     </p>
 
     <div class="max-w-3xl">
@@ -74,6 +77,7 @@
             <span class="ml-2 font-mono" aria-hidden="true">editor-open=<span data-testid="activity-comments-draft-open">@FormatDraftFlag(_draftState.IsEditorOpen)</span></span>
             <span class="ml-3 font-mono" aria-hidden="true">editing=<span data-testid="activity-comments-draft-editing">@(_draftState.EditingCommentId ?? "none")</span></span>
             <span class="ml-3 font-mono" aria-hidden="true">unsaved=<span data-testid="activity-comments-draft-unsaved">@FormatDraftFlag(_draftState.HasUnsavedContent)</span></span>
+            <span class="ml-3 font-mono" aria-hidden="true">internal=<span data-testid="activity-comments-draft-internal">@FormatDraftFlag(_draftState.IsInternal)</span></span>
         </div>
 
         <div class="mb-4">
@@ -90,7 +94,11 @@
         <div class="showcase-card">
             <TmActivityComments @ref="_commentsComponent"
                                 Comments="@_standaloneComments"
+                                SupportsMentions="true"
+                                MentionProvider="@_mentionProvider"
+                                ShowInternalToggle="true"
                                 OnCommentAdded="@AddStandaloneComment"
+                                OnCommentSubmitted="@AddStandaloneSubmission"
                                 OnCommentEdited="@EditStandaloneComment"
                                 OnCommentDeleted="@DeleteStandaloneComment"
                                 OnDraftChanged="@HandleDraftChanged"
@@ -375,6 +383,18 @@
         return _commentsComponent?.DiscardDraftAsync() ?? Task.CompletedTask;
     }
 
+    private bool? _pendingSubmissionInternal;
+
+    /// <summary>
+    /// Fires before <see cref="AddStandaloneComment"/> (document order). Remembers the internal
+    /// flag so the HTML callback can stamp the new entry; the component does not hide it.
+    /// </summary>
+    private Task AddStandaloneSubmission(TmCommentSubmission submission)
+    {
+        _pendingSubmissionInternal = submission.IsInternal;
+        return Task.CompletedTask;
+    }
+
     private Task AddStandaloneComment(string html)
     {
         _standaloneComments.Add(new TmCommentEntry
@@ -385,9 +405,11 @@
             Body = html,
             BodyFormat = TmCommentBodyFormat.Html,
             CreatedAt = DateTimeOffset.Now,
+            IsInternal = _pendingSubmissionInternal == true,
             CanEdit = true,
             CanDelete = true
         });
+        _pendingSubmissionInternal = null;
         return Task.CompletedTask;
     }
 

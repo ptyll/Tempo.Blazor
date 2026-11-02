@@ -136,6 +136,9 @@ public partial class TmRichEditorFull
     /// <summary>Stable per-instance id of the content surface; the dialogs restore focus to it.</summary>
     private string _editorId { get; } = $"tm-rte-editor-{Guid.NewGuid().ToString("N")[..8]}";
 
+    /// <summary>Listbox id owned here so the dropdown does not mint a second one.</summary>
+    private string _mentionListId => $"{_editorId}-mentions";
+
     private List<string> _activeFormats = new();
     private bool _isEmpty = true;
     private int _charCount = 0;
@@ -542,7 +545,9 @@ public partial class TmRichEditorFull
         
         var users = await MentionProvider.SearchAsync(new TmPeopleQuery { SearchText = _mentionQuery, Take = 8 });
         _mentionUsers = users.Select(ToMentionUser).ToList();
-        _showMentionDropdown = _mentionUsers.Count > 0;
+        // A typed query with no match keeps the list open so the empty state is visible.
+        // An empty query with nobody to offer stays closed.
+        _showMentionDropdown = _mentionUsers.Count > 0 || !string.IsNullOrEmpty(_mentionQuery);
         await InvokeAsync(StateHasChanged);
     }
 
@@ -1052,7 +1057,7 @@ public partial class TmRichEditorFull
         _mentionQuery = query;
         var users = await MentionProvider.SearchAsync(new TmPeopleQuery { SearchText = query, Take = 8 });
         _mentionUsers = users.Select(ToMentionUser).ToList();
-        _showMentionDropdown = _mentionUsers.Count > 0;
+        _showMentionDropdown = _mentionUsers.Count > 0 || !string.IsNullOrEmpty(query);
         _highlightedMentionIndex = 0;
         await InvokeAsync(StateHasChanged);
     }

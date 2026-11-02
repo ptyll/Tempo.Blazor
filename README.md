@@ -486,10 +486,10 @@ See [Document Editor JS-Owned Runtime](docs/document-editor-js-owned-runtime.md)
 |-----------|-------------|
 | `TmActivityLog` | Tabbed activity view (Timeline / Comments / Attachments) |
 | `TmActivityTimeline` | Reverse-chronological activity feed |
-| `TmActivityComments` | Comment list with edit/delete, optional per-comment `CommentActions`, internal wash + badges, rich text editor |
+| `TmActivityComments` | Comment list with edit/delete, optional per-comment `CommentActions`, internal wash + badges, mention passthrough, optional internal composer switch, rich text editor |
 | `TmActivityAttachments` | Attachment list with chunked upload |
 | `TmRichEditorFull` | Full rich text editor (bold, italic, lists, tables, links, images, mentions) |
-| `TmRichEditorSimple` | Simplified rich text editor |
+| `TmRichEditorSimple` | Simplified rich text editor; mention list is a listbox the editor controls |
 
 ### Timeline
 | Component | Description |

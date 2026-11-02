@@ -29,6 +29,14 @@
   position: relative;
   flex: 1;
   min-height: 80px;
+  overflow: visible;
+}
+
+/* The picker is a child of the content wrapper, so it opens under the caret area
+   instead of covering the toolbar. The full editor keeps its own placement. */
+.tm-rich-editor-simple .tm-rte-mention-dropdown {
+  inset-inline-start: 0;
+  top: 100%;
 }
 
 .tm-rich-editor-simple .tm-rte-editor-content {

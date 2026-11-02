@@ -18,8 +18,34 @@
     {
       "name": "OnCommentAdded",
       "type": "EventCallback<string>",
-      "description": "Raised with the submitted HTML when the user posts a new comment.",
+      "description": "Raised with the submitted HTML when the user posts a new comment. Stays for hosts that only need the body. Prefer OnCommentSubmitted when the host must also know whether the composer was in internal mode — that callback fires first, then this one, with the same HTML. Both stay; neither replaces the other.",
       "isRequired": false
+    },
+    {
+      "name": "OnCommentSubmitted",
+      "type": "EventCallback<TmCommentSubmission>",
+      "description": "Raised when the user posts a NEW comment, before OnCommentAdded, with the HTML and the composer internal flag (TmCommentSubmission). Document order is fixed: this callback, then OnCommentAdded. An edit does not raise it. An effectively empty composer raises neither callback. When this callback has no delegate, only OnCommentAdded runs.",
+      "isRequired": false
+    },
+    {
+      "name": "SupportsMentions",
+      "type": "bool",
+      "description": "Passes mention autocomplete through to the new-comment composer and the inline editor. Without MentionProvider the editor stays off even when this is true — no exception, no empty picker. Defaults to false.",
+      "isRequired": false,
+      "default": "false"
+    },
+    {
+      "name": "MentionProvider",
+      "type": "ITmPeopleProvider?",
+      "description": "People source for the composer and inline-editor mention picker. Null (or SupportsMentions false) leaves autocomplete off.",
+      "isRequired": false
+    },
+    {
+      "name": "ShowInternalToggle",
+      "type": "bool",
+      "description": "Shows the internal switch (TmToggle, role=switch, localized TmActivityComments_InternalToggle) in the new-comment composer footer. Off by default. The inline editor never shows it. After a successful post, cancel, or DiscardDraftAsync the switch returns to off. It is disabled while the post is in flight. On paints tm-comment-editor--internal.",
+      "isRequired": false,
+      "default": "false"
     },
     {
       "name": "OnCommentDeleted",

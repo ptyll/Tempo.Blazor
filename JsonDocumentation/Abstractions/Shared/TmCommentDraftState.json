@@ -2,7 +2,7 @@
   "kind": "Record",
   "category": "Shared",
   "namespace": "Tempo.Blazor.Abstractions.Shared",
-  "description": "Immutable snapshot of the comment editor draft state in TmActivityComments. Consumers build a dirty-guard from it (confirmation before discarding an in-progress comment). Carries state flags only — never the draft text itself; the text is delivered in OnCommentAdded/OnCommentEdited on submit. HasUnsavedContent: for a new comment it means non-empty content, for an edit it means the content differs from the original body.",
+  "description": "Immutable snapshot of the comment editor draft state in TmActivityComments. Consumers build a dirty-guard from it (confirmation before discarding an in-progress comment). Carries state flags only — never the draft text itself; the text is delivered in OnCommentAdded/OnCommentEdited on submit. HasUnsavedContent: for a new comment it means non-empty content, for an edit it means the content differs from the original body. IsInternal (optional, default false) is the new-comment composer's internal switch; it is not part of the dirty decision and resets on discard or submit. Always false while an existing comment is being edited.",
   "packageId": "Tempo.Blazor.Abstractions",
   "sourcePath": "src/Tempo.Blazor.Abstractions/Shared/TmCommentDraftState.cs",
   "documentationStatus": "generated",

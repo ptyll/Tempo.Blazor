@@ -5,9 +5,9 @@
 .tm-rte-mention-dropdown {
   position: absolute;
   z-index: var(--tm-z-dropdown);
-  min-width: 240px;
-  max-width: 320px;
-  max-height: 240px;
+  min-width: min(240px, 100%);
+  max-width: min(20rem, 100%);
+  max-height: min(28rem, 70vh);
   overflow-y: auto;
   background: var(--tm-bg-surface);
   border: 1px solid var(--tm-border-color);
@@ -67,9 +67,7 @@
   font-size: var(--tm-font-size-sm);
   font-weight: var(--tm-font-weight-medium);
   color: var(--tm-text-primary);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  overflow-wrap: anywhere;
 }
 
 .tm-rte-mention-username {

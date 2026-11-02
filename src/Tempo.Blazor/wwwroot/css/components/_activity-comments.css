@@ -107,8 +107,22 @@
 
 .tm-comment-editor-actions {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--tm-space-2);
+}
+
+/* Composer in internal mode. Same tokens as an internal comment; the switch label
+   is the non-colour cue. No animation, so no reduced-motion rule. */
+.tm-comment-editor--internal {
+  padding: var(--tm-space-2);
+  border-radius: var(--tm-radius-md);
+  border-inline-start: var(--tm-space-1) solid var(--tm-comment-internal-accent);
+  background: var(--tm-comment-internal-bg);
+}
+
+.tm-comment-internal-toggle {
+  margin-inline-end: auto;
 }
 
 .tm-comments-add-btn { align-self: flex-start; }

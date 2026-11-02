@@ -485,7 +485,7 @@ Toast.Show("Saved!", ToastSeverity.Success);
 - Toolbar: bold, italic, underline, strikethrough, lists, headings, links, images, tables, video, find/replace
 - `MentionProvider`: `ITmPeopleProvider` — for @mention autocomplete
 
-**TmRichEditorSimple** — Simplified editor (bold, italic, lists only)
+**TmRichEditorSimple** — Simplified editor (bold, italic, lists only). With `SupportsMentions` the content surface is a combobox (`aria-controls` `{editorId}-mentions`, `aria-activedescendant` on the highlighted option). An empty `@` query keeps the list open; a query with no match shows a disabled option.
 
 ---
 
@@ -750,6 +750,8 @@ public interface IGalleryImage           { string Id; string? Url; string? Thumb
 public sealed class TmAttachment         { string Id; TmEntityRef EntityRef; string FileName; string? ContentType; long SizeBytes; string? Url; string? AssetId; TmUserRef? UploadedBy; DateTimeOffset UploadedAt; bool CanDelete; bool CanDownload; }
 public interface ITimelineEntry          { string Id; string EntryType; string AuthorName; string? AuthorAvatarUrl; DateTimeOffset CreatedAt; string? HtmlContent; string? PlainContent; bool IsInternal; IReadOnlyDictionary<string, string>? Metadata; }
 public sealed class TmCommentEntry       { string Id; TmUserRef Author; DateTimeOffset CreatedAt; DateTimeOffset? EditedAt; string Body; TmCommentBodyFormat BodyFormat; bool CanEdit; bool CanDelete; bool IsInternal; List<TmCommentBadge> Badges; }
+public sealed record TmCommentSubmission(string Html, bool IsInternal);
+public sealed record TmCommentDraftState(bool IsEditorOpen, string? EditingCommentId, bool HasUnsavedContent, bool IsInternal = false);
 public sealed class TmNotification       { string Id; string RecipientUserId; TmUserRef? Actor; string Type; string Title; string? Body; TmNotificationSeverity Severity; DateTimeOffset CreatedAt; DateTimeOffset? ReadAt; string? ActionUrl; TmEntityRef? EntityRef; }
 public sealed class TmUser               { public string Id { get; set; } = ""; public string DisplayName { get; set; } = ""; public string? UserName { get; set; } public string? AvatarUrl { get; set; } }
 public interface ITmPeopleProvider       { Task<IReadOnlyList<TmUser>> SearchAsync(TmPeopleQuery query, CancellationToken ct = default); }

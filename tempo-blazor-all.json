@@ -1017,6 +1017,12 @@
               "description": "Whether the autocomplete dropdown is visible."
             },
             {
+              "name": "ListId",
+              "type": "string?",
+              "isRequired": false,
+              "description": "Id of the listbox, owned by the editor ({editorId}-mentions) so aria-controls names a stable target. Empty falls back to a per-instance id."
+            },
+            {
               "name": "OnHighlightedIndexChanged",
               "type": "EventCallback<int>",
               "isRequired": false,
@@ -1057,7 +1063,7 @@
           "examples": [
             {
               "title": "Used internally by rich editors",
-              "code": "<MentionAutocomplete IsVisible=\"true\" Users=\"@users\" Query=\"@query\" HighlightedIndex=\"0\" OnUserSelected=\"HandleSelected\" OnHighlightedIndexChanged=\"HandleIndexChanged\" />"
+              "code": "<MentionAutocomplete IsVisible=\"true\" ListId=\"editor-mentions\" Users=\"@users\" Query=\"@query\" HighlightedIndex=\"0\" OnUserSelected=\"HandleSelected\" OnHighlightedIndexChanged=\"HandleIndexChanged\" />"
             }
           ]
         },
@@ -1264,10 +1270,16 @@
               "description": "Comments to render. An entry with IsInternal is painted with the internal wash, IconNames.Lock and the localized Internal label; it is never hidden — the consumer or server filters visibility. Valid Badges render in the meta row as subtle pill TmBadges. A null Badges list is treated as empty. Defaults to an empty list."
             },
             {
+              "name": "MentionProvider",
+              "type": "ITmPeopleProvider?",
+              "isRequired": false,
+              "description": "People source for the composer and inline-editor mention picker. Null (or SupportsMentions false) leaves autocomplete off."
+            },
+            {
               "name": "OnCommentAdded",
               "type": "EventCallback<string>",
               "isRequired": false,
-              "description": "Raised with the submitted HTML when the user posts a new comment."
+              "description": "Raised with the submitted HTML when the user posts a new comment. Stays for hosts that only need the body. Prefer OnCommentSubmitted when the host must also know whether the composer was in internal mode — that callback fires first, then this one, with the same HTML. Both stay; neither replaces the other."
             },
             {
               "name": "OnCommentDeleted",
@@ -1282,6 +1294,12 @@
               "description": "Raised with the comment id and the new HTML when the user saves an edit."
             },
             {
+              "name": "OnCommentSubmitted",
+              "type": "EventCallback<TmCommentSubmission>",
+              "isRequired": false,
+              "description": "Raised when the user posts a NEW comment, before OnCommentAdded, with the HTML and the composer internal flag (TmCommentSubmission). Document order is fixed: this callback, then OnCommentAdded. An edit does not raise it. An effectively empty composer raises neither callback. When this callback has no delegate, only OnCommentAdded runs."
+            },
+            {
               "name": "OnDraftChanged",
               "type": "EventCallback<TmCommentDraftState>",
               "isRequired": false,
@@ -1293,6 +1311,20 @@
               "isRequired": false,
               "default": "true",
               "description": "Shows the Add comment button when no editor is open. Defaults to true."
+            },
+            {
+              "name": "ShowInternalToggle",
+              "type": "bool",
+              "isRequired": false,
+              "description": "Shows the internal switch (TmToggle, role=switch, localized TmActivityComments_InternalToggle) in the new-comment composer footer. Off by default. The inline editor never shows it. After a successful post, cancel, or DiscardDraftAsync the switch returns to off. It is disabled while the post is in flight. On paints tm-comment-editor--internal.",
+              "default": "false"
+            },
+            {
+              "name": "SupportsMentions",
+              "type": "bool",
+              "isRequired": false,
+              "description": "Passes mention autocomplete through to the new-comment composer and the inline editor. Without MentionProvider the editor stays off even when this is true — no exception, no empty picker. Defaults to false.",
+              "default": "false"
             }
           ],
           "methods": [
@@ -19844,6 +19876,12 @@
             "@using Tempo.Blazor.Components.Inputs"
           ],
           "parameters": [
+            {
+              "name": "AriaDescribedBy",
+              "type": "string?",
+              "isRequired": false,
+              "description": "Id of the element that describes the switch, rendered as aria-describedby on the inner input (role=switch). Use it for a hint that must not become a second accessible name. Null (the default) renders no attribute."
+            },
             {
               "name": "AriaLabel",
               "type": "string?",
@@ -102582,7 +102620,7 @@
           "kind": "Record",
           "category": "Shared",
           "namespace": "Tempo.Blazor.Abstractions.Shared",
-          "description": "Immutable snapshot of the comment editor draft state in TmActivityComments. Consumers build a dirty-guard from it (confirmation before discarding an in-progress comment). Carries state flags only — never the draft text itself; the text is delivered in OnCommentAdded/OnCommentEdited on submit. HasUnsavedContent: for a new comment it means non-empty content, for an edit it means the content differs from the original body.",
+          "description": "Immutable snapshot of the comment editor draft state in TmActivityComments. Consumers build a dirty-guard from it (confirmation before discarding an in-progress comment). Carries state flags only — never the draft text itself; the text is delivered in OnCommentAdded/OnCommentEdited on submit. HasUnsavedContent: for a new comment it means non-empty content, for an edit it means the content differs from the original body. IsInternal (optional, default false) is the new-comment composer's internal switch; it is not part of the dirty decision and resets on discard or submit. Always false while an existing comment is being edited.",
           "packageId": "Tempo.Blazor.Abstractions",
           "sourcePath": "src/Tempo.Blazor.Abstractions/Shared/TmCommentDraftState.cs",
           "documentationStatus": "merged",
@@ -102604,6 +102642,12 @@
               "kind": "Property",
               "type": "bool",
               "description": "true when a comment editor is visible — either the new-comment editor or the inline editor of an existing comment."
+            },
+            {
+              "name": "IsInternal",
+              "kind": "Property",
+              "type": "bool",
+              "description": "true when the new-comment composer's internal switch is on. Additive: existing three-argument constructions keep false. Not part of the dirty decision — a switch with no typed text is not an unsaved draft. Discarding the draft (cancel, successful submit, or DiscardDraftAsync) resets it to false. Always false while an existing comment is being edited; that editor has no switch."
             }
           ]
         },
@@ -102794,6 +102838,30 @@
               "kind": "Property",
               "type": "string",
               "description": "Emoji or compact reaction value."
+            }
+          ]
+        },
+        {
+          "itemName": "TmCommentSubmission",
+          "kind": "Record",
+          "category": "Shared",
+          "namespace": "Tempo.Blazor.Abstractions.Shared",
+          "description": "Payload of a newly posted comment from TmActivityComments, delivered by OnCommentSubmitted before OnCommentAdded. Html is the composer HTML; IsInternal is the composer switch at submit. The component does not hide the resulting comment.",
+          "packageId": "Tempo.Blazor.Abstractions",
+          "sourcePath": "src/Tempo.Blazor.Abstractions/Shared/TmCommentSubmission.cs",
+          "documentationStatus": "merged",
+          "members": [
+            {
+              "name": "Html",
+              "kind": "Property",
+              "type": "string",
+              "description": "Submitted comment HTML, exactly as the composer held it."
+            },
+            {
+              "name": "IsInternal",
+              "kind": "Property",
+              "type": "bool",
+              "description": "true when the composer internal switch was on at submit. The component does not hide the resulting comment — the consumer decides visibility."
             }
           ]
         },
@@ -110804,12 +110872,12 @@
       ],
       "libraryExamples": [],
       "summary": {
-        "itemCount": 1515,
-        "manualItemCount": 1515,
-        "generatedItemCount": 1499,
+        "itemCount": 1516,
+        "manualItemCount": 1516,
+        "generatedItemCount": 1500,
         "generatedOnlyItemCount": 0,
         "componentCount": 0,
-        "publicApiTypeCount": 1499
+        "publicApiTypeCount": 1500
       }
     },
     {
@@ -127790,10 +127858,10 @@
   ],
   "summary": {
     "packageCount": 27,
-    "itemCount": 3385,
-    "manualItemCount": 3385,
+    "itemCount": 3386,
+    "manualItemCount": 3386,
     "generatedOnlyItemCount": 0,
     "componentCount": 514,
-    "publicApiTypeCount": 2819
+    "publicApiTypeCount": 2820
   }
 }

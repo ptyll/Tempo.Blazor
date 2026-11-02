@@ -28,5 +28,17 @@ namespace Tempo.Blazor.Abstractions.Shared;
 /// existing comment it means the content differs from the comment's original body — opening an
 /// edit without changing anything must not report an unsaved draft.
 /// </param>
-public sealed record TmCommentDraftState(bool IsEditorOpen, string? EditingCommentId, bool HasUnsavedContent)
+/// <param name="IsInternal">
+/// <see langword="true"/> when the new-comment composer's internal switch is on. Additive:
+/// existing three-argument constructions keep <see langword="false"/>. Not part of the dirty
+/// decision — a switch with no typed text is not an unsaved draft. Discarding the draft
+/// (cancel, successful submit, or <c>DiscardDraftAsync</c>) resets it to
+/// <see langword="false"/>. Always <see langword="false"/> while an existing comment is being
+/// edited; that editor has no switch.
+/// </param>
+public sealed record TmCommentDraftState(
+    bool IsEditorOpen,
+    string? EditingCommentId,
+    bool HasUnsavedContent,
+    bool IsInternal = false)
     : ITmDraftState;

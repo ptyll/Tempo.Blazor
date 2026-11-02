@@ -6415,6 +6415,9 @@ Komentáře s přidáváním, editací a mazáním.
 | `tm-comment-edit-btn` | Tlačítko editace |
 | `tm-comment-delete-btn` | Tlačítko smazání |
 | `tm-comment-editor` | Editor komentáře |
+| `tm-comment-editor--internal` | Composer v interním režimu (stejné tokeny jako interní komentář) |
+| `tm-comment-internal-toggle` | Přepínač Interní v patičce composeru (jen při `ShowInternalToggle`; ne v inline editaci) |
+| `tm-comment-internal-toggle-hint` | Skrytý popis přepínače (`aria-describedby`; id je per instance) |
 | `tm-comment-editor-actions` | Akce editoru |
 | `tm-comment-submit-btn` | Tlačítko odeslání |
 | `tm-comment-cancel-btn` | Tlačítko zrušení |
@@ -6425,10 +6428,14 @@ Komentáře s přidáváním, editací a mazáním.
 | Parametr | Typ | Výchozí | Popis |
 |----------|-----|---------|-------|
 | `Comments` | `IReadOnlyList<TmCommentEntry>` | `[]` | Komentáře |
-| `OnCommentAdded` | `EventCallback<string>` | — | Přidání |
+| `OnCommentAdded` | `EventCallback<string>` | — | Přidání (HTML). Zůstává; při novém komentáři se volá až po `OnCommentSubmitted` |
+| `OnCommentSubmitted` | `EventCallback<TmCommentSubmission>` | — | Nový komentář: HTML + `IsInternal`. Pořadí: tento callback, pak `OnCommentAdded`. Editace ho nevolá |
 | `OnCommentDeleted` | `EventCallback<string>` | — | Smazání |
 | `OnCommentEdited` | `EventCallback<(string Id, string NewText)>` | — | Editace |
 | `ShowAddButton` | `bool` | `true` | Zobrazit přidávání |
+| `SupportsMentions` | `bool` | `false` | Našeptávač zmínek v composeru i inline editaci; bez `MentionProvider` zůstane vypnutý |
+| `MentionProvider` | `ITmPeopleProvider?` | `null` | Zdroj lidí pro `@` |
+| `ShowInternalToggle` | `bool` | `false` | Přepínač Interní v composeru; po odeslání/zrušení se vrací na vypnuto |
 | `CommentActions` | `RenderFragment<TmCommentEntry>?` | `null` | Vlastní akce za Edit/Delete (tlačítko i dialog dodá konzument); skryté při inline editaci daného komentáře |
 | `Disabled` | `bool` | `false` | Zakáže přidávání komentářů |
 | `Class` | `string?` | `null` | Další CSS třídy |
@@ -6625,7 +6632,7 @@ Jednoduchý rich text editor (pro komentáře).
 | `ValueChanged` | `EventCallback<string>` | — | Změna |
 | `Placeholder` | `string?` | `null` | Placeholder |
 | `MaxLength` | `int?` | `null` | Max. znaků |
-| `SupportsMentions` | `bool` | `false` | @zmínky |
+| `SupportsMentions` | `bool` | `false` | @zmínky; otevřený listbox je `role=combobox` s `aria-controls` `{editorId}-mentions` |
 | `MentionProvider` | `IMentionDataProvider?` | `null` | Provider zmínek |
 | `SupportsTokens` | `bool` | `false` | Podpora tokenů/proměnných |
 | `TokenProvider` | `ITokenDataProvider?` | `null` | Provider tokenů |

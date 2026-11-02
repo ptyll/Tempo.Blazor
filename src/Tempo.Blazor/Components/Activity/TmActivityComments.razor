@@ -81,11 +81,16 @@
                         @if (_editingCommentId == c.Id)
                         {
                             <div class="tm-comment-editor">
-                                <TmRichEditorSimple @bind-Value="_editorContent"
-                                                    @bind-Value:after="NotifyDraftChangedAsync" />
+                                <TmRichEditorSimple @ref="_editEditor"
+                                                    @bind-Value="_editorContent"
+                                                    @bind-Value:after="NotifyDraftChangedAsync"
+                                                    IsDisabled="@_isSubmitting"
+                                                    SupportsMentions="@MentionsEnabled"
+                                                    MentionProvider="@MentionProvider" />
                                 <div class="tm-comment-editor-actions">
                                     <button class="tm-btn tm-btn-primary tm-btn-sm tm-comment-submit-btn"
                                             type="button"
+                                            disabled="@_isSubmitting"
                                             @onclick="() => SubmitEditAsync(c.Id)">
                                         @Loc["Tm_Save"]
                                     </button>
@@ -158,13 +163,32 @@
 
     @if (_showEditor && _editingCommentId is null)
     {
-        <div class="tm-comment-editor">
-            <TmRichEditorSimple @bind-Value="_editorContent"
+        <div class="tm-comment-editor@(_composerInternal ? " tm-comment-editor--internal" : "")">
+            <span class="tm-sr-only" role="status" aria-live="polite">@_composerLive</span>
+            <TmRichEditorSimple @ref="_composerEditor"
+                                @bind-Value="_editorContent"
                                 @bind-Value:after="NotifyDraftChangedAsync"
-                                Placeholder="@Loc["TmActivityComments_AddComment"]" />
+                                Placeholder="@Loc["TmActivityComments_AddComment"]"
+                                IsDisabled="@_isSubmitting"
+                                SupportsMentions="@MentionsEnabled"
+                                MentionProvider="@MentionProvider" />
             <div class="tm-comment-editor-actions">
+                @if (ShowInternalToggle)
+                {
+                    @* Native switch (role=switch on TmToggle's checkbox). Space flips it;
+                       no keydown emulation. The hint is the accessible description, not a
+                       second name. Colour is not the only cue: the label stays visible. *@
+                    <TmToggle Class="tm-comment-internal-toggle"
+                              Value="@_composerInternal"
+                              ValueChanged="SetComposerInternalAsync"
+                              Disabled="@_isSubmitting"
+                              Label="@Loc["TmActivityComments_InternalToggle"]"
+                              AriaDescribedBy="@_internalToggleHintId" />
+                    <span id="@_internalToggleHintId" class="tm-sr-only tm-comment-internal-toggle-hint">@Loc["TmActivityComments_InternalToggleHint"]</span>
+                }
                 <button class="tm-btn tm-btn-primary tm-btn-sm tm-comment-submit-btn"
                         type="button"
+                        disabled="@_isSubmitting"
                         @onclick="SubmitNewCommentAsync">
                     @Loc["TmActivityComments_SubmitComment"]
                 </button>
@@ -187,8 +211,43 @@
     /// </summary>
     [Parameter] public IReadOnlyList<TmCommentEntry> Comments { get; set; } = [];
 
-    /// <summary>Raised with the submitted HTML when the user posts a new comment.</summary>
+    /// <summary>
+    /// Raised with the submitted HTML when the user posts a new comment. Stays for hosts that
+    /// only need the body. Prefer <see cref="OnCommentSubmitted"/> when the host must also know
+    /// whether the composer was in internal mode — that callback fires first, then this one, with
+    /// the same HTML. Both stay; neither replaces the other.
+    /// </summary>
     [Parameter] public EventCallback<string> OnCommentAdded { get; set; }
+
+    /// <summary>
+    /// Raised when the user posts a NEW comment, before <see cref="OnCommentAdded"/>, with the
+    /// HTML and the composer internal flag. Document order is fixed: this callback, then
+    /// <see cref="OnCommentAdded"/>. An edit does not raise it — changing an existing comment's
+    /// visibility is the consumer's job (see <see cref="CommentActions"/>). An effectively empty
+    /// composer raises neither callback. When this callback has no delegate, only
+    /// <see cref="OnCommentAdded"/> runs.
+    /// </summary>
+    [Parameter] public EventCallback<TmCommentSubmission> OnCommentSubmitted { get; set; }
+
+    /// <summary>
+    /// Passes mention autocomplete through to the new-comment composer and the inline editor.
+    /// Without <see cref="MentionProvider"/> the editor stays off even when this is true — no
+    /// exception, no empty picker. Defaults to false.
+    /// </summary>
+    [Parameter] public bool SupportsMentions { get; set; }
+
+    /// <summary>
+    /// People source for the composer and inline-editor mention picker. Null (or
+    /// <see cref="SupportsMentions"/> false) leaves autocomplete off.
+    /// </summary>
+    [Parameter] public ITmPeopleProvider? MentionProvider { get; set; }
+
+    /// <summary>
+    /// Shows the internal switch in the new-comment composer footer. Off by default. The inline
+    /// editor never shows it. After a successful post, cancel, or <see cref="DiscardDraftAsync"/>
+    /// the switch returns to off. It is disabled while the post is in flight.
+    /// </summary>
+    [Parameter] public bool ShowInternalToggle { get; set; }
 
     /// <summary>Raised with the comment id when the user deletes a comment.</summary>
     [Parameter] public EventCallback<string> OnCommentDeleted { get; set; }
@@ -246,9 +305,21 @@
     /// </summary>
     [Parameter] public EventCallback<TmCommentDraftState> OnDraftChanged { get; set; }
 
+    /// <summary>Per-instance hint id — two composers on one page must not share it.</summary>
+    private readonly string _internalToggleHintId = "tm-comment-internal-hint-" + Guid.NewGuid().ToString("N")[..8];
+
     private bool _showEditor;
     private string? _editingCommentId;
     private string _editorContent = string.Empty;
+    private bool _composerInternal;
+    private bool _isSubmitting;
+    private string _composerLive = string.Empty;
+
+    /// <summary>Autocomplete is on only when the host asked for it AND supplied a provider.</summary>
+    private bool MentionsEnabled => SupportsMentions && MentionProvider is not null;
+
+    private TmRichEditorSimple? _composerEditor;
+    private TmRichEditorSimple? _editEditor;
 
     /// <summary>
     /// Body of the comment as it was when its edit started — the baseline for the
@@ -306,6 +377,8 @@
             _editingCommentId = null;
             _editorContent = string.Empty;
             _editorOriginalContent = string.Empty;
+            _composerInternal = false;
+            _composerLive = string.Empty;
             StateHasChanged();
             await NotifyDraftChangedAsync();
         });
@@ -385,7 +458,16 @@
         => new(
             _showEditor || _editingCommentId is not null,
             _editingCommentId,
-            HasUnsavedContent);
+            HasUnsavedContent,
+            _composerInternal && _editingCommentId is null);
+
+    private async Task SetComposerInternalAsync(bool value)
+    {
+        if (_isSubmitting) return;
+        _composerInternal = value;
+        _composerLive = value ? Loc["TmActivityComments_InternalModeOn"] : string.Empty;
+        await NotifyDraftChangedAsync();
+    }
 
     /// <summary>
     /// Notifies <see cref="OnDraftChanged"/> only when the draft state actually changed. The dedup
@@ -415,6 +497,8 @@
         _editingCommentId = null;
         _editorContent = string.Empty;
         _editorOriginalContent = string.Empty;
+        _composerInternal = false;
+        _composerLive = string.Empty;
         _showEditor = true;
         await NotifyDraftChangedAsync();
     }
@@ -424,6 +508,8 @@
         _showEditor = false;
         _editorContent = string.Empty;
         _editorOriginalContent = string.Empty;
+        _composerInternal = false;
+        _composerLive = string.Empty;
         await NotifyDraftChangedAsync();
     }
 
@@ -432,6 +518,8 @@
         // Only one draft at a time: both editors share _editorContent, so a new-comment
         // draft must not survive starting an edit of an existing comment.
         _showEditor = false;
+        _composerInternal = false;
+        _composerLive = string.Empty;
         _editingCommentId = comment.Id;
         _editorContent = comment.Body;
         _editorOriginalContent = comment.Body;
@@ -448,18 +536,48 @@
 
     private async Task SubmitNewCommentAsync()
     {
-        if (IsEffectivelyEmpty(_editorContent)) return;
-        await OnCommentAdded.InvokeAsync(_editorContent);
+        if (_isSubmitting || IsEffectivelyEmpty(_editorContent)) return;
+
+        var html = _editorContent;
+        var isInternal = _composerInternal;
+        _isSubmitting = true;
+        _composerLive = Loc["TmActivityComments_Submitting"];
+        StateHasChanged();
+        try
+        {
+            // Document order, pinned: OnCommentSubmitted, then OnCommentAdded. Same HTML.
+            if (OnCommentSubmitted.HasDelegate)
+            {
+                await OnCommentSubmitted.InvokeAsync(new TmCommentSubmission(html, isInternal));
+            }
+
+            await OnCommentAdded.InvokeAsync(html);
+        }
+        finally
+        {
+            _isSubmitting = false;
+        }
+
         // Closes through the shared CancelEditor, which emits the closed-editor state
-        // exactly once.
+        // exactly once and resets the internal switch.
         await CancelEditor();
     }
 
     private async Task SubmitEditAsync(string commentId)
     {
         // Deliberately IsNullOrWhiteSpace, not IsEffectivelyEmpty — the edit-submit guard stays unchanged to preserve existing edit behaviour.
-        if (string.IsNullOrWhiteSpace(_editorContent)) return;
-        await OnCommentEdited.InvokeAsync((commentId, _editorContent));
+        if (_isSubmitting || string.IsNullOrWhiteSpace(_editorContent)) return;
+        _isSubmitting = true;
+        StateHasChanged();
+        try
+        {
+            await OnCommentEdited.InvokeAsync((commentId, _editorContent));
+        }
+        finally
+        {
+            _isSubmitting = false;
+        }
+
         // Closes through the shared CancelEdit so the closed-editor state is reported
         // exactly once — a successful submit must clear the consumer's dirty flag.
         await CancelEdit();

@@ -9,6 +9,12 @@ public class DemoMentionProvider : TmPeopleProviderBase
 {
     private readonly List<TmUser> _users =
     [
+        new()
+        {
+            Id = "u6",
+            UserName = "alexandrina",
+            DisplayName = "Alexandrina Montgomery-Featherstone of the Western Reach"
+        },
         new() { Id = "u1", UserName = "alice", DisplayName = "Alice Johnson" },
         new() { Id = "u2", UserName = "bob", DisplayName = "Bob Smith", AvatarUrl = "https://i.pravatar.cc/150?u=1" },
         new() { Id = "u3", UserName = "charlie", DisplayName = "Charlie Brown" },

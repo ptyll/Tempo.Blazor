@@ -2,6 +2,7 @@ using System.Reflection;
 using Bunit;
 using FluentAssertions;
 using Microsoft.AspNetCore.Components;
+using NSubstitute;
 using Tempo.Blazor.Abstractions.Shared;
 using Tempo.Blazor.Components.Activity;
 using Tempo.Blazor.Tests.Localization;
@@ -894,6 +895,242 @@ public class TmActivityCommentsTests : LocalizationTestBase
         cut.FindAll(".tm-comment-item")[0].QuerySelector(".tm-comment-actions").Should().NotBeNull();
         cut.FindAll(".tm-comment-item")[1].QuerySelector(".tm-comment-actions").Should().BeNull();
         cut.FindAll(".tm-comment-actions__custom").Should().BeEmpty();
+    }
+
+    [Fact]
+    public void MentionProvider_PassedToComposerEditor()
+    {
+        var provider = Substitute.For<ITmPeopleProvider>();
+        var cut = Render<TmActivityComments>(p => p
+            .Add(c => c.Comments, TwoComments())
+            .Add(c => c.SupportsMentions, true)
+            .Add(c => c.MentionProvider, provider));
+
+        cut.Find(".tm-comments-add-btn").Click();
+
+        var editor = cut.FindComponent<TmRichEditorSimple>();
+        editor.Instance.SupportsMentions.Should().BeTrue();
+        editor.Instance.MentionProvider.Should().BeSameAs(provider);
+    }
+
+    [Fact]
+    public void MentionProvider_PassedToInlineEditEditor()
+    {
+        var provider = Substitute.For<ITmPeopleProvider>();
+        var cut = Render<TmActivityComments>(p => p
+            .Add(c => c.Comments, TwoComments())
+            .Add(c => c.SupportsMentions, true)
+            .Add(c => c.MentionProvider, provider));
+
+        cut.FindAll(".tm-comment-item")[0].QuerySelector(".tm-comment-edit-btn")!.Click();
+
+        var editor = cut.FindComponent<TmRichEditorSimple>();
+        editor.Instance.SupportsMentions.Should().BeTrue();
+        editor.Instance.MentionProvider.Should().BeSameAs(provider);
+    }
+
+    [Fact]
+    public void SupportsMentionsWithoutProvider_NoAutocomplete()
+    {
+        var cut = Render<TmActivityComments>(p => p
+            .Add(c => c.Comments, TwoComments())
+            .Add(c => c.SupportsMentions, true));
+
+        cut.Find(".tm-comments-add-btn").Click();
+
+        var editor = cut.FindComponent<TmRichEditorSimple>();
+        editor.Instance.SupportsMentions.Should().BeFalse("autocomplete stays off without a provider; no exception");
+        editor.Instance.MentionProvider.Should().BeNull();
+        cut.FindAll(".tm-rte-mention-dropdown").Should().BeEmpty();
+    }
+
+    [Fact]
+    public void InternalToggle_HiddenByDefault()
+    {
+        var cut = Render<TmActivityComments>(p => p
+            .Add(c => c.Comments, TwoComments()));
+
+        cut.Find(".tm-comments-add-btn").Click();
+
+        cut.FindAll(".tm-comment-internal-toggle").Should().BeEmpty();
+        cut.Find(".tm-comment-editor").ClassList.Should().NotContain("tm-comment-editor--internal");
+    }
+
+    [Fact]
+    public async Task InternalToggle_Submit_InvokesOnCommentSubmittedWithFlag_AndOnCommentAdded()
+    {
+        var order = new List<string>();
+        string? added = null;
+        TmCommentSubmission? submitted = null;
+        var cut = Render<TmActivityComments>(p => p
+            .Add(c => c.Comments, TwoComments())
+            .Add(c => c.ShowInternalToggle, true)
+            .Add(c => c.OnCommentAdded, EventCallback.Factory.Create<string>(this, html =>
+            {
+                order.Add("added");
+                added = html;
+            }))
+            .Add(c => c.OnCommentSubmitted, EventCallback.Factory.Create<TmCommentSubmission>(this, submission =>
+            {
+                order.Add("submitted");
+                submitted = submission;
+            })));
+
+        cut.Find(".tm-comments-add-btn").Click();
+        cut.Find(".tm-comment-internal-toggle input").Change(true);
+        await cut.InvokeAsync(() => cut.Instance.SetEditorContentForTestAsync("<p>Internal note</p>"));
+        cut.Find(".tm-comment-submit-btn").Click();
+
+        // Document order: OnCommentSubmitted, then OnCommentAdded, with the same HTML.
+        order.Should().Equal("submitted", "added");
+        added.Should().Be("<p>Internal note</p>");
+        submitted.Should().NotBeNull();
+        submitted!.Html.Should().Be(added);
+        submitted.IsInternal.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task InternalToggle_ResetAfterSubmit()
+    {
+        var cut = Render<TmActivityComments>(p => p
+            .Add(c => c.Comments, TwoComments())
+            .Add(c => c.ShowInternalToggle, true)
+            .Add(c => c.OnCommentAdded, EventCallback.Factory.Create<string>(this, _ => { })));
+
+        cut.Find(".tm-comments-add-btn").Click();
+        cut.Find(".tm-comment-internal-toggle input").Change(true);
+        await cut.InvokeAsync(() => cut.Instance.SetEditorContentForTestAsync("<p>once</p>"));
+        cut.Find(".tm-comment-submit-btn").Click();
+
+        cut.Find(".tm-comments-add-btn").Click();
+        cut.Find(".tm-comment-internal-toggle input").HasAttribute("checked").Should().BeFalse();
+        cut.Find(".tm-comment-editor").ClassList.Should().NotContain("tm-comment-editor--internal");
+    }
+
+    [Fact]
+    public async Task InternalToggle_DisabledWhileSubmitting()
+    {
+        IRenderedComponent<TmActivityComments> cut = null!;
+        cut = Render<TmActivityComments>(p => p
+            .Add(c => c.Comments, TwoComments())
+            .Add(c => c.ShowInternalToggle, true)
+            .Add(c => c.OnCommentAdded, EventCallback.Factory.Create<string>(this, _ =>
+            {
+                cut.Render();
+                cut.Find(".tm-comment-internal-toggle input").HasAttribute("disabled").Should().BeTrue();
+                cut.Find(".tm-comment-submit-btn").HasAttribute("disabled").Should().BeTrue();
+                return Task.CompletedTask;
+            })));
+
+        cut.Find(".tm-comments-add-btn").Click();
+        cut.Find(".tm-comment-internal-toggle input").Change(true);
+        await cut.InvokeAsync(() => cut.Instance.SetEditorContentForTestAsync("<p>slow</p>"));
+        cut.Find(".tm-comment-submit-btn").Click();
+    }
+
+    [Fact]
+    public void InternalToggle_NotShownInInlineEdit()
+    {
+        var cut = Render<TmActivityComments>(p => p
+            .Add(c => c.Comments, TwoComments())
+            .Add(c => c.ShowInternalToggle, true));
+
+        cut.FindAll(".tm-comment-item")[0].QuerySelector(".tm-comment-edit-btn")!.Click();
+
+        cut.FindAll(".tm-comment-editor").Should().ContainSingle();
+        cut.FindAll(".tm-comment-internal-toggle").Should().BeEmpty();
+    }
+
+    [Fact]
+    public void Composer_InternalMode_HasModifierClass()
+    {
+        var cut = Render<TmActivityComments>(p => p
+            .Add(c => c.Comments, TwoComments())
+            .Add(c => c.ShowInternalToggle, true));
+
+        cut.Find(".tm-comments-add-btn").Click();
+        cut.Find(".tm-comment-editor").ClassList.Should().NotContain("tm-comment-editor--internal");
+
+        cut.Find(".tm-comment-internal-toggle input").Change(true);
+
+        cut.Find(".tm-comment-editor").ClassList.Should().Contain("tm-comment-editor--internal");
+    }
+
+    [Fact]
+    public void InternalToggle_UsesLocalizedLabel_AndNativeSwitch()
+    {
+        var cut = Render<TmActivityComments>(p => p
+            .Add(c => c.Comments, TwoComments())
+            .Add(c => c.ShowInternalToggle, true));
+
+        cut.Find(".tm-comments-add-btn").Click();
+
+        var input = cut.Find(".tm-comment-internal-toggle input");
+        input.GetAttribute("type").Should().Be("checkbox");
+        input.GetAttribute("role").Should().Be("switch");
+        cut.Find(".tm-comment-internal-toggle").TextContent.Should().Contain("Internal");
+        cut.Markup.Should().Contain("Only internal users will see this comment.");
+    }
+
+    [Fact]
+    public void InternalToggle_HintId_IsPerInstance_AndDescribesTheSwitch()
+    {
+        var first = Render<TmActivityComments>(p => p
+            .Add(c => c.Comments, TwoComments())
+            .Add(c => c.ShowInternalToggle, true));
+        var second = Render<TmActivityComments>(p => p
+            .Add(c => c.Comments, TwoComments())
+            .Add(c => c.ShowInternalToggle, true));
+
+        first.Find(".tm-comments-add-btn").Click();
+        second.Find(".tm-comments-add-btn").Click();
+
+        var hintA = first.Find(".tm-comment-internal-toggle-hint");
+        var hintB = second.Find(".tm-comment-internal-toggle-hint");
+        hintA.Id.Should().NotBe("tm-comment-internal-toggle-hint");
+        hintA.Id.Should().NotBe(hintB.Id);
+        first.Find(".tm-comment-internal-toggle input").GetAttribute("aria-describedby").Should().Be(hintA.Id);
+    }
+
+    [Fact]
+    public async Task InlineEdit_Save_SetsSubmitting_SoASecondSaveIsIgnored()
+    {
+        var saves = 0;
+        var release = new TaskCompletionSource();
+        var cut = Render<TmActivityComments>(p => p
+            .Add(c => c.Comments, TwoComments())
+            .Add(c => c.OnCommentEdited, EventCallback.Factory.Create<(string Id, string Html)>(this, async _ =>
+            {
+                saves++;
+                await release.Task;
+            })));
+
+        cut.FindAll(".tm-comment-item")[0].QuerySelector(".tm-comment-edit-btn")!.Click();
+        var first = cut.InvokeAsync(() => cut.Find(".tm-comment-submit-btn").Click());
+        cut.Find(".tm-comment-submit-btn").Click();
+        release.SetResult();
+        await first;
+
+        saves.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task InternalToggle_DiscardDraft_ResetsSwitch()
+    {
+        var states = new List<TmCommentDraftState>();
+        var cut = Render<TmActivityComments>(p => p
+            .Add(c => c.Comments, TwoComments())
+            .Add(c => c.ShowInternalToggle, true)
+            .Add(c => c.OnDraftChanged, EventCallback.Factory.Create<TmCommentDraftState>(this, states.Add)));
+
+        cut.Find(".tm-comments-add-btn").Click();
+        cut.Find(".tm-comment-internal-toggle input").Change(true);
+
+        states.Should().Contain(new TmCommentDraftState(true, null, false, true));
+
+        await cut.InvokeAsync(() => cut.Instance.DiscardDraftAsync());
+
+        states.Last().Should().Be(new TmCommentDraftState(false, null, false, false));
     }
 
     [Fact]
