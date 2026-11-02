@@ -38,21 +38,21 @@
 
 .tm-notion-column-list__divider:hover,
 .tm-notion-column-list__divider--active {
-    background: var(--tm-border-hover, rgba(0,0,0,0.06));
+    background: var(--tm-border-hover);
 }
 
 .tm-notion-column-list__divider-grip {
     width:         2px;
     height:        32px;
     border-radius: 1px;
-    background:    var(--tm-border-default, #ddd);
+    background:    var(--tm-border-color);
     transition:    background var(--tm-notion-anim-fast, 120ms),
                    height     var(--tm-notion-anim-fast, 120ms);
 }
 
 .tm-notion-column-list__divider:hover .tm-notion-column-list__divider-grip,
 .tm-notion-column-list__divider--active .tm-notion-column-list__divider-grip {
-    background: var(--tm-color-primary, #6c63ff);
+    background: var(--tm-color-primary);
     height:     48px;
 }
 
@@ -68,9 +68,9 @@
     margin:          auto 0 auto 4px;
     padding:         0;
     background:      transparent;
-    border:          1px dashed var(--tm-border-default, #d8d8d8);
+    border:          1px dashed var(--tm-border-color);
     border-radius:   var(--tm-radius-sm, 4px);
-    color:           var(--tm-text-tertiary, #aaa);
+    color:           var(--tm-text-tertiary);
     cursor:          pointer;
     transition:      border-color var(--tm-notion-anim-fast, 120ms),
                      color        var(--tm-notion-anim-fast, 120ms),
@@ -78,9 +78,9 @@
 }
 
 .tm-notion-column-list__add-col:hover {
-    border-color: var(--tm-color-primary, #6c63ff);
-    color:        var(--tm-color-primary, #6c63ff);
-    background:   rgba(108, 99, 255, 0.05);
+    border-color: var(--tm-color-primary);
+    color:        var(--tm-color-primary);
+    background: color-mix(in srgb, var(--tm-color-primary) 5%, transparent);
 }
 
 @media (max-width: 640px) {

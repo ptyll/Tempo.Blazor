@@ -1,6 +1,7 @@
 using System.Globalization;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
+using Tempo.Blazor.Components.NotionEditor.Services;
 using Tempo.Blazor.NotionEditor.Enums;
 using Tempo.Blazor.NotionEditor.Interfaces;
 using Tempo.Blazor.NotionEditor.Models;
@@ -63,7 +64,7 @@ public partial class TmNotionDbListView : ComponentBase
                 if (val.Length == 0) return [];
                 var opt = sc.Groups.SelectMany(g => g.Options)
                     .FirstOrDefault(o => string.Equals(o.Name, val, StringComparison.OrdinalIgnoreCase));
-                return [(val, opt?.Color)];
+                return [(val, NotionColorTokens.OptionSolid(opt?.Color))];
             }
 
             case DatabaseFieldType.Select when field.Config is ISelectFieldConfig sel:
@@ -72,7 +73,7 @@ public partial class TmNotionDbListView : ComponentBase
                 if (val.Length == 0) return [];
                 var opt = sel.Options
                     .FirstOrDefault(o => string.Equals(o.Name, val, StringComparison.OrdinalIgnoreCase));
-                return [(val, opt?.Color)];
+                return [(val, NotionColorTokens.OptionSolid(opt?.Color))];
             }
 
             case DatabaseFieldType.MultiSelect when field.Config is ISelectFieldConfig msel:
@@ -90,7 +91,7 @@ public partial class TmNotionDbListView : ComponentBase
                     {
                         var opt = msel.Options.FirstOrDefault(o =>
                             string.Equals(o.Name, val, StringComparison.OrdinalIgnoreCase));
-                        return (val, opt?.Color);
+                        return (val, (string?)NotionColorTokens.OptionSolid(opt?.Color));
                     });
             }
 

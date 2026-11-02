@@ -1,0 +1,74 @@
+using Bunit;
+using FluentAssertions;
+using Microsoft.AspNetCore.Components.Web;
+using Tempo.Blazor.Components.NotionEditor.Services;
+using Tempo.Blazor.Components.NotionEditor.UI;
+using Tempo.Blazor.Tests.Localization;
+
+namespace Tempo.Blazor.Tests.Components.NotionEditor;
+
+/// <summary>
+/// The inline toolbar paints a swatch from the palette token but must hand
+/// <c>applyInlineColor</c> the allowlisted legacy hex — a CSS colour name is not a colour
+/// <c>execCommand</c> will keep across save and reload.
+/// </summary>
+public sealed class TmNotionInlineToolbarColorTests : LocalizationTestBase
+{
+    public TmNotionInlineToolbarColorTests()
+    {
+        UseCustomLocalization(new Dictionary<string, string>
+        {
+            ["TmNotionInlineToolbar_Label"] = "Format",
+            ["TmNotionInlineToolbar_Color"] = "Color",
+            ["TmNotionInlineToolbar_TextColor"] = "Text color",
+            ["TmNotionInlineToolbar_BgColor"] = "Background color",
+            ["TmNotionInlineToolbar_ColorDefault"] = "Default",
+            ["TmNotionInlineToolbar_ColorGray"] = "Gray",
+            ["TmNotionInlineToolbar_ColorBrown"] = "Brown",
+            ["TmNotionInlineToolbar_ColorOrange"] = "Orange",
+            ["TmNotionInlineToolbar_ColorYellow"] = "Yellow",
+            ["TmNotionInlineToolbar_ColorGreen"] = "Green",
+            ["TmNotionInlineToolbar_ColorBlue"] = "Blue",
+            ["TmNotionInlineToolbar_ColorPurple"] = "Purple",
+            ["TmNotionInlineToolbar_ColorPink"] = "Pink",
+            ["TmNotionInlineToolbar_ColorRed"] = "Red",
+        });
+    }
+
+    [Fact]
+    public void TextSwatch_SendsLegacyHex_NotThePaletteName()
+    {
+        var cut = Render<TmNotionInlineToolbar>(p => p.Add(x => x.Visible, true));
+        cut.Find("button[title='Color']").Click();
+
+        var brown = cut.FindAll(".tm-notion-inline-toolbar__color-swatch")
+            .First(button => button.GetAttribute("title") == "Brown"
+                && button.GetAttribute("style")?.Contains("--tm-notion-color-brown-bg") != true);
+        brown.GetAttribute("style").Should().Contain("var(--tm-notion-color-brown)");
+
+        var call = JSInterop.SetupVoid("tmNotionEditor.applyInlineColor", _ => true);
+        brown.Click(new MouseEventArgs());
+
+        var args = call.Invocations.Single().Arguments;
+        args[0].Should().Be("text");
+        args[1].Should().Be(NotionColorTokens.InlineHex("brown", false));
+        args[1]!.ToString().Should().StartWith("#");
+    }
+
+    [Fact]
+    public void BackgroundSwatch_SendsLegacyBackgroundHex()
+    {
+        var cut = Render<TmNotionInlineToolbar>(p => p.Add(x => x.Visible, true));
+        cut.Find("button[title='Color']").Click();
+
+        var brown = cut.FindAll(".tm-notion-inline-toolbar__color-swatch")
+            .First(button => button.GetAttribute("style")?.Contains("--tm-notion-color-brown-bg") == true);
+
+        var call = JSInterop.SetupVoid("tmNotionEditor.applyInlineColor", _ => true);
+        brown.Click(new MouseEventArgs());
+
+        var args = call.Invocations.Single().Arguments;
+        args[0].Should().Be("bg");
+        args[1].Should().Be(NotionColorTokens.InlineHex("brown", true));
+    }
+}

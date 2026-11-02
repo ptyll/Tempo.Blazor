@@ -190,7 +190,7 @@
 }
 
 .tm-notion-callout__icon:hover {
-    background: rgba(0, 0, 0, 0.06);
+    background: color-mix(in srgb, var(--tm-color-gray-900) 6%, transparent);
 }
 
 .tm-notion-callout__body {
@@ -206,7 +206,9 @@
     border:        1px solid var(--tm-notion-border-code);
     border-radius: var(--tm-radius-md);
     padding:       var(--tm-space-4);
-    overflow:      auto;
+    /* Horizontal overflow scrolls inside the textarea. A second scrollbar here
+       clips the last line behind the textarea's own bar. */
+    overflow:      visible;
 }
 
 .tm-notion-code-block__header {
@@ -407,7 +409,7 @@
     display:     block;
     width:       5px;
     height:      9px;
-    border:      2px solid #fff;
+    border:      2px solid var(--tm-color-on-primary-fixed);
     border-top:  none;
     border-left: none;
     transform:   rotate(45deg) translate(-1px, -1px);
@@ -498,7 +500,7 @@
     border:        1px solid var(--tm-color-gray-200);
     border-radius: var(--tm-radius-sm);
     padding:       1px 4px;
-    color:         #c0392b;
+    color: var(--tm-color-primary);
 }
 
 .tm-notion-editable a {
@@ -621,8 +623,8 @@ mark.tm-notion-comment-highlight {
 }
 
 mark.tm-notion-comment-highlight--active {
-    background:      var(--tm-notion-comment-highlight-active, rgba(255, 193, 7, 0.65));
-    box-shadow:      0 0 0 1px rgba(255, 193, 7, 0.4);
+    background:      var(--tm-notion-comment-highlight-active);
+    box-shadow:      0 0 0 1px var(--tm-notion-comment-highlight-active);
 }
 
 /* ── Block background colors ──────────────────────────────────── */
@@ -640,23 +642,23 @@ mark.tm-notion-comment-highlight--active {
 /* ── Block text colors ────────────────────────────────────────── */
 
 [data-color="red"]    .tm-notion-editable,
-[data-color="red"]    { color: var(--tm-notion-text-red); }
+[data-color="red"]    { color: var(--tm-notion-color-red); }
 [data-color="orange"] .tm-notion-editable,
-[data-color="orange"] { color: var(--tm-notion-text-orange); }
+[data-color="orange"] { color: var(--tm-notion-color-orange); }
 [data-color="yellow"] .tm-notion-editable,
-[data-color="yellow"] { color: var(--tm-notion-text-yellow); }
+[data-color="yellow"] { color: var(--tm-notion-color-yellow); }
 [data-color="green"]  .tm-notion-editable,
-[data-color="green"]  { color: var(--tm-notion-text-green); }
+[data-color="green"]  { color: var(--tm-notion-color-green); }
 [data-color="blue"]   .tm-notion-editable,
-[data-color="blue"]   { color: var(--tm-notion-text-blue); }
+[data-color="blue"]   { color: var(--tm-notion-color-blue); }
 [data-color="purple"] .tm-notion-editable,
-[data-color="purple"] { color: var(--tm-notion-text-purple); }
+[data-color="purple"] { color: var(--tm-notion-color-purple); }
 [data-color="pink"]   .tm-notion-editable,
-[data-color="pink"]   { color: var(--tm-notion-text-pink); }
+[data-color="pink"]   { color: var(--tm-notion-color-pink); }
 [data-color="gray"]   .tm-notion-editable,
-[data-color="gray"]   { color: var(--tm-notion-text-gray); }
+[data-color="gray"]   { color: var(--tm-notion-color-gray); }
 [data-color="brown"]  .tm-notion-editable,
-[data-color="brown"]  { color: var(--tm-notion-text-brown); }
+[data-color="brown"]  { color: var(--tm-notion-color-brown); }
 
 /* ── Small text mode ──────────────────────────────────────────── */
 
@@ -668,6 +670,67 @@ mark.tm-notion-comment-highlight--active {
 }
 
 /* ── Text alignment ───────────────────────────────────────────── */
+
+/* Status chips are injected into contenteditable HTML, so they cannot live in a
+   scoped sheet (Fáze 2 moved them out of TmNotionStatusPicker.razor.css). */
+.tm-notion-status,
+.tm-notion-status--gray {
+    --tm-status-bg: var(--tm-color-gray-100);
+    --tm-status-text: var(--tm-color-gray-800);
+    --tm-status-border: var(--tm-color-gray-200);
+}
+.tm-notion-status--blue {
+    --tm-status-bg: var(--tm-color-primary-100);
+    --tm-status-text: var(--tm-color-primary-800);
+    --tm-status-border: var(--tm-color-primary-200);
+}
+.tm-notion-status--green {
+    --tm-status-bg: var(--tm-color-success-subtle);
+    --tm-status-text: var(--tm-color-success-text);
+    --tm-status-border: var(--tm-color-success-soft-border);
+}
+.tm-notion-status--yellow {
+    --tm-status-bg: var(--tm-color-warning-subtle);
+    --tm-status-text: var(--tm-color-warning-text);
+    --tm-status-border: var(--tm-color-warning-soft-border);
+}
+.tm-notion-status--red {
+    --tm-status-bg: var(--tm-color-danger-subtle);
+    --tm-status-text: var(--tm-color-danger-text);
+    --tm-status-border: var(--tm-color-danger-soft-border);
+}
+.tm-notion-status--purple {
+    --tm-status-bg: var(--tm-notion-bg-purple);
+    --tm-status-text: var(--tm-notion-text-purple);
+    --tm-status-border: var(--tm-notion-text-purple);
+}
+.tm-notion-status {
+    --tm-notion-status-max-label-width: 24ch;
+    display: inline-flex;
+    align-items: baseline;
+    max-width: min(calc(var(--tm-space-16, 4rem) * 3), var(--tm-notion-status-max-label-width));
+    padding: calc(var(--tm-space-1) / 2) var(--tm-space-2);
+    border-radius: var(--tm-radius-full);
+    border: var(--tm-notion-border-width, 1px) solid var(--tm-status-border);
+    background: var(--tm-status-bg);
+    color: var(--tm-status-text);
+    font-size: 0.78em;
+    font-weight: var(--tm-font-weight-semibold);
+    line-height: 1.35;
+    text-transform: uppercase;
+    vertical-align: baseline;
+    white-space: nowrap;
+    user-select: none;
+    cursor: pointer;
+}
+.tm-notion-status__label {
+    display: block;
+    min-width: 0;
+    max-width: var(--tm-notion-status-max-label-width);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
 
 .tm-notion-align-left   { text-align: left; }
 .tm-notion-align-center { text-align: center; }

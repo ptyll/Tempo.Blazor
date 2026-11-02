@@ -36,7 +36,7 @@
 .tm-ns-space__current:hover,
 .tm-ns-space__option:hover,
 .tm-ns-space__overview-toggle:hover {
-    background: var(--tm-notion-bg-block-hover, rgba(0, 0, 0, .04));
+    background: var(--tm-notion-bg-block-hover);
 }
 
 .tm-ns-space__avatar,
@@ -48,7 +48,7 @@
     height: 28px;
     flex: 0 0 28px;
     border-radius: var(--tm-radius-md, 6px);
-    background: var(--tm-bg-muted, rgba(0, 0, 0, .06));
+    background: var(--tm-bg-muted);
     color: var(--tm-text-secondary);
     font-weight: 700;
     font-size: var(--tm-font-size-sm, .8125rem);
@@ -106,8 +106,8 @@
 }
 
 .tm-ns-space__option--selected {
-    background: var(--tm-color-primary-subtle, rgba(35, 131, 226, .1));
-    color: var(--tm-color-primary, #2383e2);
+    background: var(--tm-color-primary-subtle);
+    color: var(--tm-color-primary);
 }
 
 .tm-ns-space__overview-toggle {
@@ -135,7 +135,7 @@
 .tm-ns-space-card {
     border: 1px solid var(--tm-border-color);
     border-radius: var(--tm-radius-lg, 8px);
-    background: var(--tm-bg-page, #fff);
+    background: var(--tm-bg-page);
     padding: var(--tm-space-2, 8px);
 }
 
@@ -151,7 +151,7 @@
     min-width: 22px;
     padding: 1px 6px;
     border-radius: 999px;
-    background: var(--tm-bg-muted, rgba(0, 0, 0, .06));
+    background: var(--tm-bg-muted);
     color: var(--tm-text-tertiary);
     text-align: center;
     font-size: var(--tm-font-size-xs, .75rem);
@@ -173,7 +173,7 @@
     margin-top: var(--tm-space-2, 8px);
     border: 1px solid var(--tm-border-color);
     border-radius: var(--tm-radius-md, 6px);
-    background: var(--tm-bg-muted, rgba(0, 0, 0, .04));
+    background: var(--tm-bg-muted);
     color: var(--tm-text-primary);
     min-height: 34px;
     padding: var(--tm-space-1, 4px) var(--tm-space-2, 8px);
@@ -184,8 +184,8 @@
 }
 
 .tm-ns-space-card__move:hover:not(:disabled) {
-    border-color: var(--tm-color-primary, #2383e2);
-    color: var(--tm-color-primary, #2383e2);
+    border-color: var(--tm-color-primary);
+    color: var(--tm-color-primary);
 }
 
 .tm-ns-space-card__pages {
@@ -223,7 +223,7 @@
 }
 
 .tm-ns-space__error {
-    color: var(--tm-color-danger, #e03e3e);
+    color: var(--tm-color-danger);
 }
 
 .tm-ns-space__retry {
@@ -239,7 +239,7 @@
     width: 14px;
     height: 14px;
     border: 2px solid var(--tm-border-color);
-    border-top-color: var(--tm-color-primary, #2383e2);
+    border-top-color: var(--tm-color-primary);
     border-radius: 50%;
     animation: tm-ns-space-spin .8s linear infinite;
 }

@@ -357,6 +357,9 @@ window.tmNotionEditor = (function () {
     }
 
     function destroyBlock(element) {
+        // The resize watcher is keyed by the element, not by the block map: a preview toggle
+        // drops the textarea before destroyBlock runs, and an early return here would leak it.
+        _unwatchCodeResize(element);
         if (!element || !_blocks.has(element)) return;
         const s = _blocks.get(element);
         _offAll(s.listeners);
@@ -3227,7 +3230,52 @@ window.tmNotionEditor = (function () {
 
     function _autoResizeTextarea(ta) {
         ta.style.height = 'auto';
-        ta.style.height = ta.scrollHeight + 'px';
+        // scrollHeight excludes a horizontal scrollbar (overflow-x: auto on long lines);
+        // add the box's non-content height so the scrollbar never covers the last line.
+        const chrome = ta.offsetHeight - ta.clientHeight;
+        ta.style.height = (ta.scrollHeight + Math.max(0, chrome)) + 'px';
+        _syncCodeHighlight(ta);
+    }
+
+    function _syncCodeHighlight(ta) {
+        const pre = ta.parentElement?.querySelector(':scope > .tm-notion-code-block__highlight');
+        if (!pre) return;
+        pre.scrollTop = ta.scrollTop;
+        pre.scrollLeft = ta.scrollLeft;
+    }
+
+    const _codeResizeObservers = new WeakMap();
+
+    function _watchCodeResize(textarea) {
+        if (_codeResizeObservers.has(textarea)) return;
+        // Watch the editor box, not the textarea: the textarea's own height is what the
+        // callback writes, so observing it would loop. Only a width change can reveal a
+        // horizontal scrollbar, so a height-only entry is ignored.
+        const host = textarea.parentElement?.classList.contains('tm-notion-code-block__editor')
+            ? textarea.parentElement
+            : textarea;
+        let lastWidth = host.clientWidth;
+        const onResize = (entries) => {
+            const width = entries?.[0]?.contentRect?.width ?? host.clientWidth;
+            if (width === lastWidth) return;
+            lastWidth = width;
+            _autoResizeTextarea(textarea);
+        };
+        const observer = typeof ResizeObserver === 'function'
+            ? new ResizeObserver(onResize)
+            : null;
+        observer?.observe(host);
+        const onScroll = () => _syncCodeHighlight(textarea);
+        textarea.addEventListener('scroll', onScroll);
+        _codeResizeObservers.set(textarea, () => {
+            observer?.disconnect();
+            textarea.removeEventListener('scroll', onScroll);
+            _codeResizeObservers.delete(textarea);
+        });
+    }
+
+    function _unwatchCodeResize(textarea) {
+        _codeResizeObservers.get(textarea)?.();
     }
 
     function initCodeKeyboardHandler(textarea, dotNetRef) {
@@ -3273,6 +3321,7 @@ window.tmNotionEditor = (function () {
             _on(textarea, 'keydown', onKeyDown),
             _on(textarea, 'input',   onInput)
         );
+        _watchCodeResize(textarea);
     }
 
     function getCode(textarea) {
@@ -3282,6 +3331,7 @@ window.tmNotionEditor = (function () {
     function setCode(textarea, code) {
         if (!textarea) return;
         textarea.value = code ?? '';
+        _watchCodeResize(textarea);
         _autoResizeTextarea(textarea);
     }
 

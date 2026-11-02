@@ -2,9 +2,10 @@
 @using Tempo.Blazor.Components.Pickers
 @using Tempo.Blazor.NotionEditor.Interfaces
 @using Tempo.Blazor.NotionEditor.Enums
+@using Tempo.Blazor.Components.NotionEditor.Services
 
 <div class="@_rootClass"
-     data-bg="@Content?.BackgroundColor">
+     data-bg="@NotionColorTokens.Name(Content?.BackgroundColor)">
 
     <span class="tm-notion-todo__check-wrap" aria-hidden="true">
         <input class="tm-notion-todo__input"
@@ -28,7 +29,7 @@
         <div @key="ReadOnly"
              class="tm-notion-todo__text tm-notion-editable tm-notion-editable--readonly @_alignClass"
              contenteditable="false"
-             data-color="@Content?.TextColor">
+             data-color="@NotionColorTokens.Name(Content?.TextColor)">
             @((MarkupString)NotionHtmlSanitizer.SanitizeBlockContent(Content?.Html))
         </div>
     }
@@ -38,7 +39,7 @@
              class="tm-notion-todo__text tm-notion-editable @_alignClass"
              contenteditable="true"
              data-placeholder="@Placeholder"
-             data-color="@Content?.TextColor"
+             data-color="@NotionColorTokens.Name(Content?.TextColor)"
              spellcheck="true"
              @ref="_editableRef"
              @oninput="() => _dirty = true"

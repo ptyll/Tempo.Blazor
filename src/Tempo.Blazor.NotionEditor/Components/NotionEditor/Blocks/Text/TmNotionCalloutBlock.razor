@@ -1,11 +1,12 @@
 @namespace Tempo.Blazor.Components.NotionEditor.Blocks.Text
 @using Tempo.Blazor.NotionEditor.Interfaces
 @using Tempo.Blazor.NotionEditor.Enums
+@using Tempo.Blazor.Components.NotionEditor.Services
 @using Tempo.Blazor.Components.NotionEditor.Shared
 
 <div class="tm-notion-callout @_variantClass @_bgClass"
      data-variant="@_variantName"
-     data-bg="@Content?.BackgroundColor">
+     data-bg="@NotionColorTokens.Name(Content?.BackgroundColor)">
 
     <div class="tm-notion-callout__icon-wrap">
         <button class="tm-notion-callout__icon"
@@ -32,7 +33,7 @@
         <div @key="ReadOnly"
              class="tm-notion-callout__body tm-notion-editable tm-notion-editable--readonly @_alignClass"
              contenteditable="false"
-             data-color="@Content?.TextColor">
+             data-color="@NotionColorTokens.Name(Content?.TextColor)">
             @((MarkupString)NotionHtmlSanitizer.SanitizeBlockContent(Content?.Html))
         </div>
     }
@@ -42,7 +43,7 @@
              class="tm-notion-callout__body tm-notion-editable @_alignClass"
              contenteditable="true"
              data-placeholder="@Placeholder"
-             data-color="@Content?.TextColor"
+             data-color="@NotionColorTokens.Name(Content?.TextColor)"
              spellcheck="true"
              @ref="_editableRef"
              @oninput="() => _dirty = true"

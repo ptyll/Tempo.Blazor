@@ -25,18 +25,18 @@
     border: none;
     background: transparent;
     border-radius: 3px;
-    color: var(--tm-text-secondary, rgba(55,53,47,0.65));
+    color: var(--tm-text-secondary);
     cursor: pointer;
     transition: background 120ms ease, color 120ms ease;
 }
 
 .tm-notion-toggle__arrow:hover {
-    background: var(--tm-notion-interactive-hover, rgba(55,53,47,0.08));
+    background: var(--tm-notion-bg-block-hover);
     color: var(--tm-text-primary);
 }
 
 .tm-notion-toggle__arrow:focus-visible {
-    outline: 2px solid var(--tm-notion-interactive-focus, #2383e2);
+    outline: 2px solid var(--tm-focus-ring);
     outline-offset: 1px;
 }
 
@@ -56,7 +56,7 @@
     flex: 1;
     min-width: 0;
     outline: none;
-    line-height: var(--tm-notion-line-height, 1.6);
+    line-height: var(--tm-notion-text-line-height, 1.6);
     color: var(--tm-text-primary);
     font-weight: 500;
     word-break: break-word;
@@ -65,7 +65,7 @@
 
 .tm-notion-toggle__text:empty::before {
     content: attr(data-placeholder);
-    color: var(--tm-text-placeholder, rgba(55,53,47,0.35));
+    color: var(--tm-text-tertiary);
     pointer-events: none;
     font-weight: 400;
 }
@@ -99,25 +99,25 @@
 .tm-notion-toggle__text ::deep code {
     font-family: var(--tm-notion-font-mono, monospace);
     font-size: 0.875em;
-    background: var(--tm-notion-inline-code-bg, rgba(135,131,120,0.15));
+    background: var(--tm-notion-bg-code);
     border-radius: 3px;
     padding: 0.1em 0.35em;
 }
 
 .tm-notion-toggle__text ::deep a {
-    color: var(--tm-notion-link-color, #2e8bff);
+    color: var(--tm-notion-link-color);
     text-decoration: underline;
     text-underline-offset: 2px;
 }
 
 .tm-notion-toggle__text ::deep mark {
-    background: var(--tm-notion-highlight-bg, rgba(255,212,0,0.35));
+    background: var(--tm-notion-comment-highlight);
     border-radius: 2px;
     padding: 0 2px;
 }
 
 .tm-notion-toggle__text ::deep ::selection {
-    background: var(--tm-notion-selection-bg, rgba(35,131,226,0.28));
+    background: var(--tm-notion-selection-bg);
 }
 
 /* ── Children area ───────────────────────────────────────────────────────── */
@@ -130,7 +130,7 @@
 }
 
 .tm-notion-toggle--open .tm-notion-toggle__children {
-    border-left-color: var(--tm-notion-toggle-indent-line, rgba(55,53,47,0.09));
+    border-left-color: var(--tm-notion-border);
 }
 
 /* ── Children loading skeleton ───────────────────────────────────────────── */

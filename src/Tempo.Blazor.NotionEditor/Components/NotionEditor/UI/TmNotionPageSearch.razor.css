@@ -3,7 +3,7 @@
 .tm-nps-backdrop {
     position: fixed;
     inset: 0;
-    z-index: calc(var(--tm-z-overlay, 1060) - 1);
+    z-index: calc(var(--tm-z-overlay) - 1);
     background: var(--tm-bg-overlay);
     backdrop-filter: blur(2px);
     animation: tm-nps-fade-in var(--tm-transition-fast);
@@ -19,7 +19,7 @@
 .tm-nps {
     position: fixed;
     inset: 0;
-    z-index: var(--tm-z-overlay, 1060);
+    z-index: var(--tm-z-overlay);
     display: flex;
     align-items: flex-start;
     justify-content: center;
@@ -34,7 +34,7 @@
     display: flex;
     flex-direction: column;
     background: var(--tm-color-surface-elevated);
-    border: 1px solid var(--tm-color-border);
+    border: 1px solid var(--tm-border-color);
     border-radius: var(--tm-radius-lg);
     box-shadow: var(--tm-shadow-xl);
     overflow: hidden;
@@ -87,7 +87,7 @@
     min-height: 2rem;
     padding: var(--tm-space-1) var(--tm-space-2);
     background: transparent;
-    border: 1px solid var(--tm-color-border);
+    border: 1px solid var(--tm-border-color);
     border-radius: var(--tm-radius-sm);
     font-size: var(--tm-font-size-xs);
     color: var(--tm-text-secondary);
@@ -135,7 +135,7 @@
     min-height: 2.25rem;
     font-size: var(--tm-font-size-sm);
     padding: var(--tm-space-1) var(--tm-space-2);
-    border: 1px solid var(--tm-color-border);
+    border: 1px solid var(--tm-border-color);
     border-radius: var(--tm-radius-sm);
     background: var(--tm-color-surface-elevated);
     color: var(--tm-text-primary);
@@ -163,7 +163,7 @@
 
 .tm-nps__filter-clear:hover {
     background: var(--tm-color-surface-hover);
-    border-color: var(--tm-color-border);
+    border-color: var(--tm-border-color);
     color: var(--tm-text-primary);
 }
 
@@ -176,13 +176,13 @@
     overflow-y: auto;
     padding: var(--tm-space-2) 0;
     scrollbar-width: thin;
-    scrollbar-color: var(--tm-color-border) transparent;
+    scrollbar-color: var(--tm-border-color) transparent;
 }
 
 .tm-nps__results::-webkit-scrollbar { width: var(--tm-space-1); }
 
 .tm-nps__results::-webkit-scrollbar-thumb {
-    background: var(--tm-color-border);
+    background: var(--tm-border-color);
     border-radius: var(--tm-radius-xs);
 }
 
@@ -351,7 +351,7 @@
     height: 1.125rem;
     padding: 0 4px;
     background: var(--tm-color-surface-elevated);
-    border: 1px solid var(--tm-color-border);
+    border: 1px solid var(--tm-border-color);
     border-bottom-width: 2px;
     border-radius: var(--tm-radius-sm);
     font-size: var(--tm-font-size-xs);

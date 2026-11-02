@@ -1507,9 +1507,9 @@ public sealed class Eb1BaselineRenderer
             [
                 Cell("Discovery"),
                 Cell("Scope"),
-                Cell("Done", 1, 2, "rgba(34, 197, 94, 0.16)"),
+                Cell("Done", 1, 2, "green"),
                 Cell("Nora"),
-                Cell("Low", 1, 1, "rgba(34, 197, 94, 0.12)"),
+                Cell("Low", 1, 1, "green"),
                 Cell("Ship")
             ]
         });
@@ -1521,7 +1521,7 @@ public sealed class Eb1BaselineRenderer
                 Cell("API"),
                 Hidden(1, 2),
                 Cell("Ivan"),
-                Cell("Medium", 1, 1, "rgba(245, 158, 11, 0.16)"),
+                Cell("Medium", 1, 1, "yellow"),
                 Cell("Watch")
             ]
         });
@@ -1531,9 +1531,9 @@ public sealed class Eb1BaselineRenderer
             [
                 Cell("Launch"),
                 Cell("Comms"),
-                Cell("Blocked", 1, 1, "rgba(239, 68, 68, 0.14)"),
+                Cell("Blocked", 1, 1, "red"),
                 Cell("Sara"),
-                Cell("High", 1, 1, "rgba(239, 68, 68, 0.12)"),
+                Cell("High", 1, 1, "red"),
                 Cell("Escalate")
             ]
         });

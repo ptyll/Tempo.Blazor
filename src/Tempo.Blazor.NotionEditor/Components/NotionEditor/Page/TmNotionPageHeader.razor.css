@@ -38,8 +38,8 @@
 .tm-notion-header-cover__btn {
     font-size:       var(--tm-font-size-xs);
     font-weight:     var(--tm-font-weight-medium);
-    color:           rgba(255,255,255,0.92);
-    background:      rgba(0,0,0,0.35);
+    color: var(--tm-text-secondary);
+    background: color-mix(in srgb, var(--tm-color-gray-900) 35%, transparent);
     border:          none;
     border-radius:   var(--tm-radius-sm);
     padding:         4px var(--tm-space-2);
@@ -50,11 +50,11 @@
 }
 
 .tm-notion-header-cover__btn:hover {
-    background: rgba(0,0,0,0.55);
+    background: color-mix(in srgb, var(--tm-color-gray-900) 55%, transparent);
 }
 
 .tm-notion-header-cover__btn--remove:hover {
-    background: rgba(239,68,68,0.6);
+    background: color-mix(in srgb, var(--tm-color-danger) 60%, transparent);
 }
 
 .tm-notion-header-cover__drag-hint {
@@ -63,8 +63,8 @@
     left:            50%;
     transform:       translateX(-50%);
     font-size:       var(--tm-font-size-xs);
-    color:           rgba(255,255,255,0.88);
-    background:      rgba(0,0,0,0.3);
+    color: var(--tm-text-secondary);
+    background: color-mix(in srgb, var(--tm-color-gray-900) 30%, transparent);
     backdrop-filter: blur(4px);
     border-radius:   var(--tm-radius-sm);
     padding:         4px 10px;
@@ -83,19 +83,19 @@
 .tm-notion-cover-dialog-backdrop {
     position: fixed;
     inset:    0;
-    z-index:  var(--tm-notion-z-menu, 200);
+    z-index:  var(--tm-z-popover);
 }
 
 .tm-notion-cover-dialog {
     position:     absolute;
     top:          var(--tm-notion-cover-height, 200px);
     left:         var(--tm-notion-page-padding-x, 2rem);
-    z-index:      calc(var(--tm-notion-z-menu, 200) + 1);
+    z-index:      calc(var(--tm-z-popover) + 1);
     width:        clamp(280px, 380px, 90vw);
-    background:   var(--tm-notion-bg-menu, var(--tm-bg-surface));
+    background:   var(--tm-notion-bg-slash-menu, var(--tm-bg-surface));
     border:       1px solid var(--tm-notion-border, var(--tm-border-color));
     border-radius: var(--tm-radius-lg);
-    box-shadow:   var(--tm-notion-shadow-menu, var(--tm-shadow-lg));
+    box-shadow:   var(--tm-notion-menu-shadow, var(--tm-shadow-lg));
     overflow:     hidden;
 }
 
@@ -169,7 +169,7 @@
 }
 
 .tm-notion-cover-dialog__input:focus {
-    border-color: var(--tm-notion-interactive-focus, var(--tm-color-primary));
+    border-color: var(--tm-focus-ring, var(--tm-color-primary));
 }
 
 .tm-notion-cover-dialog__submit {
@@ -179,8 +179,8 @@
     border-radius: var(--tm-radius-sm);
     font-size:     var(--tm-font-size-sm);
     font-weight:   var(--tm-font-weight-medium);
-    background:    var(--tm-color-primary, #2563eb);
-    color:         #fff;
+    background:    var(--tm-color-primary-solid);
+    color:         var(--tm-color-on-primary-fixed);
     cursor:        pointer;
     white-space:   nowrap;
     transition:    opacity var(--tm-notion-anim-fast);
@@ -208,7 +208,7 @@
 }
 
 .tm-notion-cover-dialog__preset:hover {
-    border-color: var(--tm-notion-interactive-focus, var(--tm-color-primary));
+    border-color: var(--tm-focus-ring, var(--tm-color-primary));
     transform:    scale(1.1);
 }
 
@@ -354,7 +354,7 @@
     max-width: min(100%, 18rem);
     min-height: 26px;
     padding: 3px var(--tm-space-2);
-    border: 1px solid var(--tm-color-warning-border, var(--tm-color-warning));
+    border: 1px solid var(--tm-color-warning-soft-border, var(--tm-color-warning));
     border-radius: var(--tm-radius-full);
     background: var(--tm-color-warning-subtle, var(--tm-bg-muted));
     color: var(--tm-color-warning-text, var(--tm-text-primary));
@@ -454,21 +454,21 @@
 .tm-notion-emoji-picker-backdrop {
     position: fixed;
     inset:    0;
-    z-index:  var(--tm-notion-z-menu, 200);
+    z-index:  var(--tm-z-popover);
 }
 
 .tm-notion-emoji-picker {
     position:      absolute;
     left:          var(--tm-notion-page-padding-x, 2rem);
-    z-index:       calc(var(--tm-notion-z-menu, 200) + 1);
+    z-index:       calc(var(--tm-z-popover) + 1);
     width:         clamp(280px, 340px, 90vw);
     max-height:    440px;
     display:       flex;
     flex-direction: column;
-    background:    var(--tm-notion-bg-menu, var(--tm-bg-surface));
+    background:    var(--tm-notion-bg-slash-menu, var(--tm-bg-surface));
     border:        1px solid var(--tm-notion-border, var(--tm-border-color));
     border-radius: var(--tm-radius-lg);
-    box-shadow:    var(--tm-notion-shadow-menu, var(--tm-shadow-lg));
+    box-shadow:    var(--tm-notion-menu-shadow, var(--tm-shadow-lg));
     overflow:      hidden;
 }
 
@@ -496,7 +496,7 @@
 }
 
 .tm-notion-emoji-picker__search:focus {
-    border-color: var(--tm-notion-interactive-focus, var(--tm-color-primary));
+    border-color: var(--tm-focus-ring, var(--tm-color-primary));
 }
 
 .tm-notion-emoji-picker__remove {
@@ -513,7 +513,7 @@
 }
 
 .tm-notion-emoji-picker__remove:hover {
-    color:      var(--tm-color-danger, #ef4444);
+    color:      var(--tm-color-danger);
     background: var(--tm-notion-bg-block-hover);
 }
 

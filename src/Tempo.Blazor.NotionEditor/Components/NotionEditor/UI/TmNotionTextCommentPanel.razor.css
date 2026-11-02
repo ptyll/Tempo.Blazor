@@ -3,7 +3,7 @@
 .tm-ntcp-backdrop {
     position: fixed;
     inset: 0;
-    z-index: calc(var(--tm-z-popover, 1030) - 1);
+    z-index: calc(var(--tm-z-popover) - 1);
     background: transparent;
 }
 
@@ -11,17 +11,17 @@
 
 .tm-ntcp {
     position: fixed;
-    z-index: var(--tm-z-popover, 1030);
+    z-index: var(--tm-z-popover);
     width: 300px;
     max-height: 480px;
     display: flex;
     flex-direction: column;
-    background: var(--tm-bg-elevated, #fff);
-    border: 1px solid var(--tm-border, rgba(55,53,47,0.16));
+    background: var(--tm-bg-elevated);
+    border: 1px solid var(--tm-border-color);
     border-radius: 8px;
-    box-shadow: 0 8px 32px rgba(15,15,15,0.18), 0 0 0 1px rgba(15,15,15,0.04);
+    box-shadow: var(--tm-shadow-popover);
     font-size: 14px;
-    color: var(--tm-text-primary, rgb(55,53,47));
+    color: var(--tm-text-primary);
     overflow: hidden;
     animation: tm-ntcp-appear 90ms ease;
 }
@@ -39,7 +39,7 @@
     justify-content: space-between;
     gap: 8px;
     padding: 10px 12px 8px;
-    border-bottom: 1px solid var(--tm-border, rgba(55,53,47,0.09));
+    border-bottom: 1px solid var(--tm-border-color);
     flex-shrink: 0;
 }
 
@@ -52,15 +52,15 @@
     flex: 1;
     min-width: 0;
     padding: 5px 8px;
-    border-left: 3px solid var(--tm-yellow, #f5c842);
-    background: rgba(245,200,66,0.10);
+    border-left: 3px solid var(--tm-color-warning);
+    background: color-mix(in srgb, var(--tm-color-warning) 10%, transparent);
     border-radius: 0 4px 4px 0;
-    color: var(--tm-text-secondary, rgba(55,53,47,0.65));
+    color: var(--tm-text-secondary);
 }
 
 .tm-ntcp__highlight-preview svg {
     flex-shrink: 0;
-    color: var(--tm-yellow-dark, #c4a224);
+    color: var(--tm-color-warning-text);
     margin-top: 1px;
 }
 
@@ -68,7 +68,7 @@
     font-size: 12px;
     line-height: 1.4;
     font-style: italic;
-    color: var(--tm-text-secondary, rgba(55,53,47,0.65));
+    color: var(--tm-text-secondary);
     overflow: hidden;
     display: -webkit-box;
     -webkit-line-clamp: 2;
@@ -91,29 +91,29 @@
     align-items: center;
     gap: 4px;
     padding: 3px 7px;
-    border: 1px solid var(--tm-border, rgba(55,53,47,0.16));
+    border: 1px solid var(--tm-border-color);
     border-radius: 5px;
     background: transparent;
     font-size: 11.5px;
-    color: var(--tm-text-secondary, rgba(55,53,47,0.65));
+    color: var(--tm-text-secondary);
     cursor: pointer;
     transition: background 80ms, color 80ms, border-color 80ms;
     white-space: nowrap;
 }
 
 .tm-ntcp__resolve-btn:hover {
-    background: var(--tm-bg-hover, rgba(55,53,47,0.06));
-    color: var(--tm-text-primary, rgb(55,53,47));
-    border-color: var(--tm-border-strong, rgba(55,53,47,0.30));
+    background: var(--tm-color-surface-hover);
+    color: var(--tm-text-primary);
+    border-color: var(--tm-border-color-strong);
 }
 
 .tm-ntcp__resolve-btn--unresolve {
-    color: var(--tm-green, #2d9a5e);
-    border-color: rgba(45,154,94,0.35);
+    color: var(--tm-color-success);
+    border-color: color-mix(in srgb, var(--tm-color-success) 35%, transparent);
 }
 
 .tm-ntcp__resolve-btn--unresolve:hover {
-    background: rgba(45,154,94,0.08);
+    background: color-mix(in srgb, var(--tm-color-success) 8%, transparent);
 }
 
 /* ── Close button ──────────────────────────────────────────────────────────── */
@@ -127,14 +127,14 @@
     border: none;
     border-radius: 4px;
     background: transparent;
-    color: var(--tm-text-secondary, rgba(55,53,47,0.45));
+    color: var(--tm-text-secondary);
     cursor: pointer;
     transition: background 80ms, color 80ms;
 }
 
 .tm-ntcp__close-btn:hover {
-    background: var(--tm-bg-hover, rgba(55,53,47,0.06));
-    color: var(--tm-text-primary, rgb(55,53,47));
+    background: var(--tm-color-surface-hover);
+    color: var(--tm-text-primary);
 }
 
 /* ── Resolved banner ───────────────────────────────────────────────────────── */
@@ -144,11 +144,11 @@
     align-items: center;
     gap: 5px;
     padding: 7px 12px;
-    background: rgba(45,154,94,0.08);
-    color: var(--tm-green, #2d9a5e);
+    background: color-mix(in srgb, var(--tm-color-success) 8%, transparent);
+    color: var(--tm-color-success);
     font-size: 12px;
     font-weight: 500;
-    border-bottom: 1px solid rgba(45,154,94,0.15);
+    border-bottom: 1px solid color-mix(in srgb, var(--tm-color-success) 15%, transparent);
     flex-shrink: 0;
 }
 
@@ -166,7 +166,7 @@
 
 .tm-ntcp__thread::-webkit-scrollbar { width: 4px; }
 .tm-ntcp__thread::-webkit-scrollbar-thumb {
-    background: var(--tm-border, rgba(55,53,47,0.16));
+    background: var(--tm-border-color);
     border-radius: 2px;
 }
 
@@ -178,7 +178,7 @@
     gap: 7px;
     padding: 6px 0;
     font-size: 13px;
-    color: var(--tm-text-secondary, rgba(55,53,47,0.45));
+    color: var(--tm-text-secondary);
 }
 
 /* ── Spinner ───────────────────────────────────────────────────────────────── */
@@ -187,8 +187,8 @@
     display: inline-block;
     width: 13px;
     height: 13px;
-    border: 2px solid var(--tm-border, rgba(55,53,47,0.16));
-    border-top-color: var(--tm-text-secondary, rgba(55,53,47,0.45));
+    border: 2px solid var(--tm-border-color);
+    border-top-color: var(--tm-text-secondary);
     border-radius: 50%;
     animation: tm-ntcp-spin 0.6s linear infinite;
 }
@@ -214,7 +214,7 @@
 ::deep .tm-ntcp__entry-indent {
     flex-shrink: 0;
     width: 0;
-    border-left: 2px solid var(--tm-border, rgba(55,53,47,0.10));
+    border-left: 2px solid var(--tm-border-color);
     margin-right: 9px;
     align-self: stretch;
     min-height: 20px;
@@ -240,7 +240,7 @@
     height: 26px;
     border-radius: 50%;
     overflow: hidden;
-    background: var(--tm-accent, #2383e2);
+    background: var(--tm-color-primary);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -251,7 +251,7 @@
 ::deep .tm-ntcp__avatar-fallback {
     font-size: 11px;
     font-weight: 600;
-    color: #fff;
+    color: var(--tm-color-on-primary-fixed);
     line-height: 1;
 }
 
@@ -272,7 +272,7 @@
 ::deep .tm-ntcp__entry-author {
     font-size: 12.5px;
     font-weight: 600;
-    color: var(--tm-text-primary, rgb(55,53,47));
+    color: var(--tm-text-primary);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -280,7 +280,7 @@
 
 ::deep .tm-ntcp__entry-time {
     font-size: 11px;
-    color: var(--tm-text-secondary, rgba(55,53,47,0.45));
+    color: var(--tm-text-secondary);
     white-space: nowrap;
     flex-shrink: 0;
 }
@@ -288,13 +288,13 @@
 ::deep .tm-ntcp__entry-text {
     font-size: 13px;
     line-height: 1.5;
-    color: var(--tm-text-primary, rgb(55,53,47));
+    color: var(--tm-text-primary);
     word-break: break-word;
 }
 
 ::deep .tm-ntcp__entry-edited {
     font-size: 11px;
-    color: var(--tm-text-secondary, rgba(55,53,47,0.45));
+    color: var(--tm-text-secondary);
     font-style: italic;
 }
 
@@ -319,19 +319,19 @@
     border-radius: 4px;
     background: transparent;
     font-size: 11px;
-    color: var(--tm-text-secondary, rgba(55,53,47,0.55));
+    color: var(--tm-text-secondary);
     cursor: pointer;
     transition: background 80ms, color 80ms;
 }
 
 ::deep .tm-ntcp__entry-action:hover {
-    background: var(--tm-bg-hover, rgba(55,53,47,0.06));
-    color: var(--tm-text-primary, rgb(55,53,47));
+    background: var(--tm-color-surface-hover);
+    color: var(--tm-text-primary);
 }
 
 ::deep .tm-ntcp__entry-action--danger:hover {
-    background: rgba(235,87,87,0.08);
-    color: var(--tm-red, #eb5757);
+    background: color-mix(in srgb, var(--tm-color-danger) 8%, transparent);
+    color: var(--tm-color-danger);
 }
 
 /* ── Edit mode ─────────────────────────────────────────────────────────────── */
@@ -342,11 +342,11 @@
     width: 100%;
     box-sizing: border-box;
     padding: 5px 7px;
-    border: 1.5px solid var(--tm-accent, #2383e2);
+    border: 1.5px solid var(--tm-color-primary);
     border-radius: 4px;
-    background: var(--tm-bg-input, #fff);
+    background: var(--tm-bg-surface);
     font-size: 12.5px;
-    color: var(--tm-text-primary, rgb(55,53,47));
+    color: var(--tm-text-primary);
     resize: vertical;
     outline: none;
     font-family: inherit;
@@ -359,8 +359,8 @@
     padding: 3px 10px;
     border: none;
     border-radius: 4px;
-    background: var(--tm-accent, #2383e2);
-    color: #fff;
+    background: var(--tm-color-primary-solid);
+    color: var(--tm-color-on-primary-fixed);
     font-size: 11.5px;
     font-weight: 500;
     cursor: pointer;
@@ -370,23 +370,23 @@
 
 ::deep .tm-ntcp__edit-cancel {
     padding: 3px 10px;
-    border: 1px solid var(--tm-border, rgba(55,53,47,0.16));
+    border: 1px solid var(--tm-border-color);
     border-radius: 4px;
     background: transparent;
-    color: var(--tm-text-secondary, rgba(55,53,47,0.65));
+    color: var(--tm-text-secondary);
     font-size: 11.5px;
     cursor: pointer;
 }
 
-::deep .tm-ntcp__edit-cancel:hover { background: var(--tm-bg-hover); }
+::deep .tm-ntcp__edit-cancel:hover { background: var(--tm-color-surface-hover); }
 
 /* ── Inline reply ──────────────────────────────────────────────────────────── */
 
 ::deep .tm-ntcp__inline-reply {
     margin-top: 5px;
     padding: 8px;
-    background: var(--tm-bg-subtle, rgba(55,53,47,0.02));
-    border: 1px solid var(--tm-border, rgba(55,53,47,0.10));
+    background: var(--tm-bg-surface-secondary);
+    border: 1px solid var(--tm-border-color);
     border-radius: 6px;
     display: flex;
     flex-direction: column;
@@ -400,24 +400,24 @@
 
 ::deep .tm-ntcp__reply-cancel {
     padding: 4px 10px;
-    border: 1px solid var(--tm-border, rgba(55,53,47,0.16));
+    border: 1px solid var(--tm-border-color);
     border-radius: 5px;
     background: transparent;
-    color: var(--tm-text-secondary, rgba(55,53,47,0.65));
+    color: var(--tm-text-secondary);
     font-size: 12px;
     cursor: pointer;
     transition: background 80ms;
 }
 
 ::deep .tm-ntcp__reply-cancel:hover {
-    background: var(--tm-bg-hover, rgba(55,53,47,0.06));
+    background: var(--tm-color-surface-hover);
 }
 
 /* ── Reply ─────────────────────────────────────────────────────────────────── */
 
 ::deep .tm-ntcp__reply {
     flex-shrink: 0;
-    border-top: 1px solid var(--tm-border, rgba(55,53,47,0.09));
+    border-top: 1px solid var(--tm-border-color);
     padding: 9px 12px;
     display: flex;
     flex-direction: column;
@@ -428,11 +428,11 @@
     width: 100%;
     box-sizing: border-box;
     padding: 6px 8px;
-    border: 1.5px solid var(--tm-border, rgba(55,53,47,0.16));
+    border: 1.5px solid var(--tm-border-color);
     border-radius: 5px;
-    background: var(--tm-bg-input, #fff);
+    background: var(--tm-bg-surface);
     font-size: 13px;
-    color: var(--tm-text-primary, rgb(55,53,47));
+    color: var(--tm-text-primary);
     resize: none;
     outline: none;
     font-family: inherit;
@@ -440,10 +440,10 @@
     transition: border-color 100ms;
 }
 
-::deep .tm-ntcp__reply-input:focus { border-color: var(--tm-accent); }
+::deep .tm-ntcp__reply-input:focus { border-color: var(--tm-color-primary); }
 
 ::deep .tm-ntcp__reply-input::placeholder {
-    color: var(--tm-text-secondary, rgba(55,53,47,0.40));
+    color: var(--tm-text-secondary);
 }
 
 ::deep .tm-ntcp__reply-actions {
@@ -454,7 +454,7 @@
 
 ::deep .tm-ntcp__reply-hint {
     font-size: 11px;
-    color: var(--tm-text-secondary, rgba(55,53,47,0.40));
+    color: var(--tm-text-secondary);
 }
 
 ::deep .tm-ntcp__reply-send {
@@ -464,15 +464,15 @@
     padding: 4px 12px;
     border: none;
     border-radius: 5px;
-    background: var(--tm-accent, #2383e2);
-    color: #fff;
+    background: var(--tm-color-primary-solid);
+    color: var(--tm-color-on-primary-fixed);
     font-size: 12px;
     font-weight: 500;
     cursor: pointer;
     transition: opacity 80ms, background 80ms;
 }
 
-::deep .tm-ntcp__reply-send:hover:not(:disabled) { background: var(--tm-accent-hover); }
+::deep .tm-ntcp__reply-send:hover:not(:disabled) { background: var(--tm-color-primary-700); }
 ::deep .tm-ntcp__reply-send:disabled { opacity: 0.45; cursor: not-allowed; }
 
 /* ── Error ─────────────────────────────────────────────────────────────────── */
@@ -480,9 +480,9 @@
 .tm-ntcp__error {
     flex-shrink: 0;
     padding: 7px 12px;
-    background: rgba(235,87,87,0.08);
-    border-top: 1px solid rgba(235,87,87,0.15);
-    color: var(--tm-red, #eb5757);
+    background: color-mix(in srgb, var(--tm-color-danger) 8%, transparent);
+    border-top: 1px solid color-mix(in srgb, var(--tm-color-danger) 15%, transparent);
+    color: var(--tm-color-danger);
     font-size: 12px;
 }
 
@@ -491,10 +491,10 @@
 .tm-comment-quote {
     margin: 3px 0;
     padding: 5px 8px;
-    border-left: 3px solid var(--tm-accent, #2383e2);
-    background: var(--tm-bg-subtle, rgba(55,53,47,0.03));
+    border-left: 3px solid var(--tm-color-primary);
+    background: var(--tm-bg-surface-secondary);
     border-radius: 0 4px 4px 0;
-    color: var(--tm-text-secondary, rgba(55,53,47,0.75));
+    color: var(--tm-text-secondary);
     font-size: 12.5px;
     line-height: 1.5;
 }
@@ -502,26 +502,26 @@
 /* ── Active reply branch highlight ─────────────────────────────────────────── */
 
 ::deep .tm-ntcp__entry--replying .tm-ntcp__entry-indent {
-    border-left-color: var(--tm-accent, #2383e2);
+    border-left-color: var(--tm-color-primary);
     border-left-width: 3px;
 }
 
 ::deep .tm-ntcp__entry--replying .tm-ntcp__entry-content {
-    background: var(--tm-bg-hover, rgba(35,131,226,0.06));
+    background: var(--tm-color-surface-hover);
     border-radius: 6px;
 }
 
 /* ── Text highlight class (used on inline spans in blocks) ─────────────────── */
 
 ::deep .tm-text-comment-highlight {
-    background: rgba(245,200,66,0.35);
+    background: var(--tm-notion-comment-highlight);
     border-radius: 2px;
     cursor: pointer;
     transition: background 100ms;
 }
 
 ::deep .tm-text-comment-highlight:hover {
-    background: rgba(245,200,66,0.60);
+    background: var(--tm-notion-comment-highlight-active);
 }
 
 ::deep .tm-text-comment-highlight--resolved {
@@ -536,26 +536,26 @@
     align-items: center;
     gap: 5px;
     padding: 4px 8px;
-    border: 1px solid var(--tm-border, rgba(55,53,47,0.16));
+    border: 1px solid var(--tm-border-color);
     border-radius: 5px;
     background: transparent;
     font-size: 12px;
-    color: var(--tm-text-secondary, rgba(55,53,47,0.65));
+    color: var(--tm-text-secondary);
     cursor: pointer;
     transition: background 80ms, color 80ms, border-color 80ms;
 }
 
 .tm-ntcp__watch-btn:hover {
-    background: var(--tm-bg-hover, rgba(55,53,47,0.06));
-    color: var(--tm-text-primary, rgb(55,53,47));
-    border-color: var(--tm-border-strong, rgba(55,53,47,0.30));
+    background: var(--tm-color-surface-hover);
+    color: var(--tm-text-primary);
+    border-color: var(--tm-border-color-strong);
 }
 
 .tm-ntcp__watch-btn--watching {
-    color: var(--tm-accent, #2383e2);
-    border-color: rgba(35,131,226,0.35);
+    color: var(--tm-color-primary);
+    border-color: color-mix(in srgb, var(--tm-color-primary) 35%, transparent);
 }
 
 .tm-ntcp__watch-btn--watching:hover {
-    background: rgba(35,131,226,0.08);
+    background: color-mix(in srgb, var(--tm-color-primary) 8%, transparent);
 }

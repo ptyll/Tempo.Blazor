@@ -8,9 +8,15 @@
     min-height: 40px;
 }
 
-/* Click area below blocks → adds new paragraph */
+/* Click area below blocks → adds new paragraph. Inside a column the same area is
+   the drop target, so an empty column stays reachable (moved from TmNotionColumnBlock,
+   where scoped CSS never applied it). */
 .tm-notion-block-list__after {
     width:      100%;
     min-height: 60px;
     cursor:     text;
+}
+
+:global(.tm-notion-column) .tm-notion-block-list__after {
+    min-height: 40px;
 }

@@ -1,3 +1,4 @@
+@using Tempo.Blazor.Components.NotionEditor.Services
 @namespace Tempo.Blazor.Components.NotionEditor.Blocks.Text
 @using Tempo.Blazor.NotionEditor.Models
 
@@ -29,8 +30,8 @@
             <h1 @key="ReadOnly"
                 class="tm-notion-h1 tm-notion-editable tm-notion-editable--readonly @_alignClass @_bgClass"
                 contenteditable="false"
-                data-bg="@Content?.BackgroundColor"
-                data-color="@Content?.TextColor">
+                data-bg="@NotionColorTokens.Name(Content?.BackgroundColor)"
+                data-color="@NotionColorTokens.Name(Content?.TextColor)">
                 @((MarkupString)NotionHtmlSanitizer.SanitizeBlockContent(Content?.Html))
             </h1>
         }
@@ -40,8 +41,8 @@
                 class="tm-notion-h1 tm-notion-editable @_alignClass @_bgClass"
                 contenteditable="true"
                 data-placeholder="@Loc["TmNotionHeadingBlock_Placeholder"]"
-                data-bg="@Content?.BackgroundColor"
-                data-color="@Content?.TextColor"
+                data-bg="@NotionColorTokens.Name(Content?.BackgroundColor)"
+                data-color="@NotionColorTokens.Name(Content?.TextColor)"
                 spellcheck="true"
                 @ref="_editableRef"
                 @oninput="() => _dirty = true"
@@ -57,8 +58,8 @@
             <h2 @key="ReadOnly"
                 class="tm-notion-h2 tm-notion-editable tm-notion-editable--readonly @_alignClass @_bgClass"
                 contenteditable="false"
-                data-bg="@Content?.BackgroundColor"
-                data-color="@Content?.TextColor">
+                data-bg="@NotionColorTokens.Name(Content?.BackgroundColor)"
+                data-color="@NotionColorTokens.Name(Content?.TextColor)">
                 @((MarkupString)NotionHtmlSanitizer.SanitizeBlockContent(Content?.Html))
             </h2>
         }
@@ -68,8 +69,8 @@
                 class="tm-notion-h2 tm-notion-editable @_alignClass @_bgClass"
                 contenteditable="true"
                 data-placeholder="@Loc["TmNotionHeadingBlock_Placeholder"]"
-                data-bg="@Content?.BackgroundColor"
-                data-color="@Content?.TextColor"
+                data-bg="@NotionColorTokens.Name(Content?.BackgroundColor)"
+                data-color="@NotionColorTokens.Name(Content?.TextColor)"
                 spellcheck="true"
                 @ref="_editableRef"
                 @oninput="() => _dirty = true"
@@ -85,8 +86,8 @@
             <h3 @key="ReadOnly"
                 class="tm-notion-h3 tm-notion-editable tm-notion-editable--readonly @_alignClass @_bgClass"
                 contenteditable="false"
-                data-bg="@Content?.BackgroundColor"
-                data-color="@Content?.TextColor">
+                data-bg="@NotionColorTokens.Name(Content?.BackgroundColor)"
+                data-color="@NotionColorTokens.Name(Content?.TextColor)">
                 @((MarkupString)NotionHtmlSanitizer.SanitizeBlockContent(Content?.Html))
             </h3>
         }
@@ -96,8 +97,8 @@
                 class="tm-notion-h3 tm-notion-editable @_alignClass @_bgClass"
                 contenteditable="true"
                 data-placeholder="@Loc["TmNotionHeadingBlock_Placeholder"]"
-                data-bg="@Content?.BackgroundColor"
-                data-color="@Content?.TextColor"
+                data-bg="@NotionColorTokens.Name(Content?.BackgroundColor)"
+                data-color="@NotionColorTokens.Name(Content?.TextColor)"
                 spellcheck="true"
                 @ref="_editableRef"
                 @oninput="() => _dirty = true"

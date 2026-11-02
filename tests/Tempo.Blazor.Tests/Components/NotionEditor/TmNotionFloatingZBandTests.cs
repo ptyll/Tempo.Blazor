@@ -91,6 +91,7 @@ public sealed class TmNotionFloatingZBandTests
     [InlineData("UI/TmNotionBlockCommentPanel", 2)]
     [InlineData("UI/TmNotionTextCommentPanel", 2)]
     [InlineData("UI/TmNotionTokenDropdown", 2)]
+    [InlineData("UI/TmNotionStatusPicker", 2)]
     public void FloatingNotionSurfaces_SitOnThePopoverBand(string scopedCss, int zDeclarations)
     {
         var css = File.ReadAllText(Path.Combine(
@@ -128,6 +129,19 @@ public sealed class TmNotionFloatingZBandTests
         AnyLevel.Matches(css).Should().BeEmpty(
             $"{scopedCss}: its panel is a TmOverlayPanel — stacking is top-layer+overlay.js "
             + "territory; any own z-index here is a regression");
+    }
+
+    /// <summary>A dialog that covers the page rides the modal band, not a private number.</summary>
+    [Theory]
+    [InlineData("UI/TmNotionShortcutsPanel")]
+    public void DialogSurfaces_SitOnTheModalBand(string scopedCss)
+    {
+        var css = File.ReadAllText(Path.Combine(
+            FindRepositoryRoot(), "src", "Tempo.Blazor.NotionEditor",
+            "Components", "NotionEditor", $"{scopedCss}.razor.css"));
+
+        AnyLevel.Matches(css).Should().ContainSingle()
+            .Which.Groups[1].Value.Should().Contain("--tm-z-modal");
     }
 
     /// <summary>Full-screen take-overs ride the overlay band; their dialogs stack above it.</summary>

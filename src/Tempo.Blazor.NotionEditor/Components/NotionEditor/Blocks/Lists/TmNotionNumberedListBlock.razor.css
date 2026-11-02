@@ -16,10 +16,10 @@
     flex-shrink: 0;
     min-width: 1.6em;
     text-align: right;
-    color: var(--tm-text-secondary, rgba(55,53,47,0.65));
+    color: var(--tm-text-secondary);
     font-variant-numeric: tabular-nums;
     user-select: none;
-    line-height: var(--tm-notion-line-height, 1.6);
+    line-height: var(--tm-notion-text-line-height, 1.6);
     padding-right: 2px;
 }
 
@@ -34,7 +34,7 @@
     flex: 1;
     min-width: 0;
     outline: none;
-    line-height: var(--tm-notion-line-height, 1.6);
+    line-height: var(--tm-notion-text-line-height, 1.6);
     color: var(--tm-text-primary);
     word-break: break-word;
     overflow-wrap: break-word;
@@ -42,7 +42,7 @@
 
 .tm-notion-numbered__body:empty::before {
     content: attr(data-placeholder);
-    color: var(--tm-text-placeholder, rgba(55,53,47,0.35));
+    color: var(--tm-text-tertiary);
     pointer-events: none;
 }
 
@@ -75,23 +75,23 @@
 .tm-notion-numbered__body ::deep code {
     font-family: var(--tm-notion-font-mono, monospace);
     font-size: 0.875em;
-    background: var(--tm-notion-inline-code-bg, rgba(135,131,120,0.15));
+    background: var(--tm-notion-bg-code);
     border-radius: 3px;
     padding: 0.1em 0.35em;
 }
 
 .tm-notion-numbered__body ::deep a {
-    color: var(--tm-notion-link-color, #2e8bff);
+    color: var(--tm-notion-link-color);
     text-decoration: underline;
     text-underline-offset: 2px;
 }
 
 .tm-notion-numbered__body ::deep mark {
-    background: var(--tm-notion-highlight-bg, rgba(255,212,0,0.35));
+    background: var(--tm-notion-comment-highlight);
     border-radius: 2px;
     padding: 0 2px;
 }
 
 .tm-notion-numbered__body ::deep ::selection {
-    background: var(--tm-notion-selection-bg, rgba(35,131,226,0.28));
+    background: var(--tm-notion-selection-bg);
 }

@@ -13,7 +13,7 @@
     justify-content: space-between;
     gap: var(--tm-space-3);
     padding: var(--tm-space-4);
-    border-bottom: 1px solid var(--tm-color-border);
+    border-bottom: 1px solid var(--tm-border-color);
 }
 
 .tm-notion-analytics__title-wrap {
@@ -36,7 +36,7 @@
 
 .tm-notion-analytics__icon-btn,
 .tm-notion-analytics__retry {
-    border: 1px solid var(--tm-color-border);
+    border: 1px solid var(--tm-border-color);
     border-radius: var(--tm-radius-md);
     background: var(--tm-bg-surface);
     color: var(--tm-text-primary);
@@ -86,7 +86,7 @@
     width: 1rem;
     height: 1rem;
     border-radius: var(--tm-radius-full);
-    border: 2px solid var(--tm-color-border);
+    border: 2px solid var(--tm-border-color);
     border-top-color: var(--tm-color-primary);
     animation: tm-notion-analytics-spin 0.8s linear infinite;
 }
@@ -112,7 +112,7 @@
     gap: var(--tm-space-2);
     min-height: 5.25rem;
     padding: var(--tm-space-3);
-    border: 1px solid var(--tm-color-border);
+    border: 1px solid var(--tm-border-color);
     border-radius: var(--tm-radius-md);
     background: var(--tm-bg-surface-secondary);
 }
@@ -139,7 +139,7 @@
     flex-direction: column;
     gap: var(--tm-space-3);
     padding: var(--tm-space-3);
-    border: 1px solid var(--tm-color-border);
+    border: 1px solid var(--tm-border-color);
     border-radius: var(--tm-radius-md);
     background: var(--tm-bg-surface);
 }
@@ -174,7 +174,7 @@
 
 .tm-notion-analytics__empty {
     min-height: 7rem;
-    border: 1px dashed var(--tm-color-border);
+    border: 1px dashed var(--tm-border-color);
     border-radius: var(--tm-radius-md);
     background: var(--tm-bg-surface-secondary);
 }

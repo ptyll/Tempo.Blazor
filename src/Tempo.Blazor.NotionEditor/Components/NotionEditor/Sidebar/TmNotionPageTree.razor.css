@@ -1,7 +1,7 @@
 .tm-npt-empty {
     padding: 6px 12px;
     font-size: 12px;
-    color: var(--tm-color-text-secondary, #999);
+    color: var(--tm-text-secondary);
     font-style: italic;
 }
 
@@ -17,7 +17,7 @@
     gap: var(--tm-space-2);
     margin: var(--tm-space-2);
     padding: var(--tm-space-2);
-    border: 1px solid var(--tm-color-border);
+    border: 1px solid var(--tm-border-color);
     border-radius: var(--tm-radius-md);
     background: var(--tm-color-surface-elevated);
     box-shadow: var(--tm-shadow-sm);
@@ -28,7 +28,7 @@
     min-width: 0;
     font-size: var(--tm-font-size-sm);
     font-weight: var(--tm-font-weight-semibold);
-    color: var(--tm-color-text);
+    color: var(--tm-text-primary);
 }
 
 .tm-npt-bulk-toolbar__button {
@@ -36,11 +36,11 @@
     align-items: center;
     justify-content: center;
     min-height: 32px;
-    border: 1px solid var(--tm-color-border);
+    border: 1px solid var(--tm-border-color);
     border-radius: var(--tm-radius-sm);
     padding: 0 var(--tm-space-3);
     background: var(--tm-color-surface);
-    color: var(--tm-color-text);
+    color: var(--tm-text-primary);
     font-size: var(--tm-font-size-sm);
     text-align: center;
     white-space: normal;
@@ -59,7 +59,7 @@
 .tm-npt-bulk-panel {
     margin: var(--tm-space-2);
     padding: var(--tm-space-3);
-    border: 1px solid var(--tm-color-border);
+    border: 1px solid var(--tm-border-color);
     border-radius: var(--tm-radius-md);
     background: var(--tm-color-surface-elevated);
     box-shadow: var(--tm-shadow-md);
@@ -79,24 +79,24 @@
     border: 0;
     border-radius: var(--tm-radius-sm);
     background: transparent;
-    color: var(--tm-color-text-secondary);
+    color: var(--tm-text-secondary);
     cursor: pointer;
 }
 
 .tm-npt-bulk-panel__close:hover {
     background: var(--tm-color-surface-hover);
-    color: var(--tm-color-text);
+    color: var(--tm-text-primary);
 }
 
 .tm-npt-bulk-panel__search {
     width: 100%;
     min-height: 36px;
     margin-top: var(--tm-space-2);
-    border: 1px solid var(--tm-color-border);
+    border: 1px solid var(--tm-border-color);
     border-radius: var(--tm-radius-sm);
     padding: 0 var(--tm-space-3);
     background: var(--tm-color-surface);
-    color: var(--tm-color-text);
+    color: var(--tm-text-primary);
 }
 
 .tm-npt-bulk-panel__results {
@@ -114,7 +114,7 @@
     border-radius: var(--tm-radius-sm);
     padding: 0 var(--tm-space-2);
     background: transparent;
-    color: var(--tm-color-text);
+    color: var(--tm-text-primary);
     text-align: left;
     cursor: pointer;
 }
@@ -125,7 +125,7 @@
 
 .tm-npt-bulk-panel__message {
     margin: 0 0 var(--tm-space-3);
-    color: var(--tm-color-text);
+    color: var(--tm-text-primary);
 }
 
 .tm-npt-bulk-error {

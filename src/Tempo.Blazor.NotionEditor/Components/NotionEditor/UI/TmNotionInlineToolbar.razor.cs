@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Components;
 using Tempo.Blazor.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.JSInterop;
+using Tempo.Blazor.Components.NotionEditor.Services;
 using Tempo.Blazor.NotionEditor.Enums;
 
 namespace Tempo.Blazor.Components.NotionEditor.UI;
@@ -38,15 +39,15 @@ public partial class TmNotionInlineToolbar : TmComponentBase
     private static readonly (string Name, string? TextHex, string? BgHex)[] Colors =
     [
         ("default", null,      null),
-        ("gray",    "#9b9a97", "#ebeced"),
-        ("brown",   "#64473a", "#e9e5e3"),
-        ("orange",  "#d9730d", "#faebdd"),
-        ("yellow",  "#dfab01", "#fbf3db"),
-        ("green",   "#0f7b6c", "#ddedea"),
-        ("blue",    "#0b6e99", "#ddebf1"),
-        ("purple",  "#6940a5", "#eae4f2"),
-        ("pink",    "#ad1a72", "#f4dfeb"),
-        ("red",     "#e03e3e", "#fbe4e4"),
+        ("gray",    "gray",    "gray"),
+        ("brown",   "brown",   "brown"),
+        ("orange",  "orange",  "orange"),
+        ("yellow",  "yellow",  "yellow"),
+        ("green",   "green",   "green"),
+        ("blue",    "blue",    "blue"),
+        ("purple",  "purple",  "purple"),
+        ("pink",    "pink",    "pink"),
+        ("red",     "red",     "red"),
     ];
 
     private static readonly (BlockType Type, string NameKey)[] TurnIntoItems =
@@ -197,16 +198,18 @@ public partial class TmNotionInlineToolbar : TmComponentBase
         if (_showColorPanel) CloseOtherPanels(color: true);
     }
 
-    private async Task HandleTextColorAsync(string? hex)
+    private async Task HandleTextColorAsync(string? name)
     {
-        try { await JS.InvokeVoidAsync("tmNotionEditor.applyInlineColor", "text", hex); }
+        // The swatch paints from the token; execCommand only keeps a real colour, so the
+        // allowlisted legacy hex is the one value this call may send.
+        try { await JS.InvokeVoidAsync("tmNotionEditor.applyInlineColor", "text", NotionColorTokens.InlineHex(name, background: false)); }
         catch { }
         _showColorPanel = false;
     }
 
-    private async Task HandleBgColorAsync(string? hex)
+    private async Task HandleBgColorAsync(string? name)
     {
-        try { await JS.InvokeVoidAsync("tmNotionEditor.applyInlineColor", "bg", hex); }
+        try { await JS.InvokeVoidAsync("tmNotionEditor.applyInlineColor", "bg", NotionColorTokens.InlineHex(name, background: true)); }
         catch { }
         _showColorPanel = false;
     }

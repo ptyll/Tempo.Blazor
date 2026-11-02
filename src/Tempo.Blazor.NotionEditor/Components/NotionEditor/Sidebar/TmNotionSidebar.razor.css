@@ -18,7 +18,7 @@
 
 .tm-ns-resize-handle:hover,
 .tm-ns-resize-handle:active {
-    background: var(--tm-color-primary-subtle, rgba(35, 131, 226, 0.18));
+    background: var(--tm-color-primary-subtle);
 }
 
 /* ── Header ────────────────────────────────────────────────────── */
@@ -42,7 +42,7 @@
     padding:        6px var(--tm-space-2, 8px);
     border:         none;
     border-radius:  var(--tm-radius-md, 6px);
-    background:     var(--tm-notion-bg-block-hover, rgba(0,0,0,.04));
+    background:     var(--tm-notion-bg-block-hover);
     color:          var(--tm-text-secondary);
     font-size:      var(--tm-font-size-sm, .8125rem);
     cursor:         pointer;
@@ -52,7 +52,7 @@
 }
 
 .tm-ns-btn-search:hover {
-    background: var(--tm-bg-muted, rgba(0,0,0,.07));
+    background: var(--tm-bg-muted);
     color:      var(--tm-text-primary);
 }
 
@@ -76,7 +76,7 @@
     font-size:     .625rem;
     font-family:   var(--tm-font-mono, monospace);
     color:         var(--tm-text-tertiary);
-    background:    var(--tm-bg-page, #fff);
+    background:    var(--tm-bg-page);
     border:        1px solid var(--tm-border-color);
     border-radius: 3px;
     padding:       1px 4px;
@@ -104,7 +104,7 @@
 }
 
 .tm-ns-btn-new:hover:not(:disabled) {
-    background: var(--tm-notion-bg-block-hover, rgba(0,0,0,.04));
+    background: var(--tm-notion-bg-block-hover);
     color:      var(--tm-text-primary);
 }
 
@@ -127,7 +127,7 @@
 .tm-ns-content::-webkit-scrollbar       { width: 3px; }
 .tm-ns-content::-webkit-scrollbar-track  { background: transparent; }
 .tm-ns-content::-webkit-scrollbar-thumb  {
-    background:    rgba(0,0,0,.12);
+    background: color-mix(in srgb, var(--tm-color-gray-900) 12%, transparent);
     border-radius: 2px;
 }
 
@@ -146,12 +146,12 @@
 }
 
 .tm-ns-error {
-    color: var(--tm-color-danger, #e03e3e);
+    color: var(--tm-color-danger);
 }
 
 .tm-ns-error__retry {
     font-size:     var(--tm-font-size-xs, .75rem);
-    color:         var(--tm-color-primary, #2383e2);
+    color:         var(--tm-color-primary);
     background:    transparent;
     border:        1px solid var(--tm-border-color);
     border-radius: var(--tm-radius-md, 6px);
@@ -161,7 +161,7 @@
 }
 
 .tm-ns-error__retry:hover {
-    background: var(--tm-color-primary-subtle, rgba(35,131,226,.1));
+    background: var(--tm-color-primary-subtle);
 }
 
 /* ── Section ───────────────────────────────────────────────────── */
@@ -193,7 +193,7 @@
 
 .tm-ns-section__header:hover {
     color:      var(--tm-text-secondary);
-    background: var(--tm-notion-bg-block-hover, rgba(0,0,0,.04));
+    background: var(--tm-notion-bg-block-hover);
 }
 
 .tm-ns-section__chevron {
@@ -215,7 +215,7 @@
     font-size:     .625rem;
     font-weight:   var(--tm-font-weight-medium, 500);
     color:         var(--tm-text-tertiary);
-    background:    var(--tm-bg-muted, rgba(0,0,0,.06));
+    background:    var(--tm-bg-muted);
     border-radius: var(--tm-radius-full, 999px);
     padding:       1px 5px;
     flex-shrink:   0;
@@ -256,13 +256,13 @@
 }
 
 .tm-ns-page-item:hover {
-    background: var(--tm-notion-bg-block-hover, rgba(0,0,0,.04));
+    background: var(--tm-notion-bg-block-hover);
 }
 
 .tm-ns-page-item--active,
 .tm-ns-page-item--active:hover {
-    background:  var(--tm-color-primary-subtle, rgba(35,131,226,.1));
-    color:       var(--tm-color-primary, #2383e2);
+    background:  var(--tm-color-primary-subtle);
+    color:       var(--tm-color-primary);
     font-weight: var(--tm-font-weight-medium, 500);
 }
 
@@ -304,7 +304,7 @@
 }
 
 .tm-ns-page-item__action:hover {
-    background: var(--tm-bg-muted, rgba(0,0,0,.07));
+    background: var(--tm-bg-muted);
     color:      var(--tm-text-secondary);
 }
 
@@ -333,7 +333,7 @@
 }
 
 .tm-ns-trash__btn:hover {
-    background: var(--tm-notion-bg-block-hover, rgba(0,0,0,.04));
+    background: var(--tm-notion-bg-block-hover);
     color:      var(--tm-text-primary);
 }
 
@@ -341,7 +341,7 @@
     margin-left:   auto;
     font-size:     .625rem;
     color:         var(--tm-text-tertiary);
-    background:    var(--tm-bg-muted, rgba(0,0,0,.06));
+    background:    var(--tm-bg-muted);
     border-radius: var(--tm-radius-full, 999px);
     padding:       1px 5px;
     flex-shrink:   0;
@@ -407,7 +407,7 @@
 }
 
 .tm-ns-search__close:hover {
-    background: var(--tm-notion-bg-block-hover, rgba(0,0,0,.04));
+    background: var(--tm-notion-bg-block-hover);
     color:      var(--tm-text-primary);
 }
 
@@ -421,7 +421,7 @@
 .tm-ns-search__results::-webkit-scrollbar       { width: 3px; }
 .tm-ns-search__results::-webkit-scrollbar-track  { background: transparent; }
 .tm-ns-search__results::-webkit-scrollbar-thumb  {
-    background:    rgba(0,0,0,.12);
+    background: color-mix(in srgb, var(--tm-color-gray-900) 12%, transparent);
     border-radius: 2px;
 }
 
@@ -435,7 +435,7 @@
 }
 
 .tm-ns-search__status--error {
-    color: var(--tm-color-danger, #e03e3e);
+    color: var(--tm-color-danger);
 }
 
 .tm-ns-search__result {
@@ -449,7 +449,7 @@
     width:         14px;
     height:        14px;
     border:        2px solid var(--tm-border-color);
-    border-top-color: var(--tm-color-primary, #2383e2);
+    border-top-color: var(--tm-color-primary);
     border-radius: 50%;
     animation:     tm-ns-spin 0.7s linear infinite;
     flex-shrink:   0;

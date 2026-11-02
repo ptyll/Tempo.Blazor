@@ -26,7 +26,7 @@
     align-items: center;
     justify-content: center;
     height: 120px;
-    color: var(--tm-color-neutral-400, #9ca3af);
+    color: var(--tm-color-gray-400);
 }
 
 /* Overlay — vždy viditelný, obsahuje Edit tlačítko */
@@ -43,21 +43,21 @@
     align-items: center;
     gap: 4px;
     padding: 4px 10px;
-    background: var(--tm-color-surface, #fff);
-    border: 1px solid var(--tm-color-border, #e5e7eb);
+    background: var(--tm-color-surface);
+    border: 1px solid var(--tm-border-color);
     border-radius: 4px;
     font-size: 12px;
     font-weight: 500;
-    color: var(--tm-color-text, #111827);
+    color: var(--tm-text-primary);
     cursor: pointer;
-    box-shadow: 0 1px 4px rgba(0,0,0,.12);
+    box-shadow: var(--tm-shadow-sm);
     white-space: nowrap;
     opacity: 0.85;
     transition: opacity 0.15s;
 }
 
 .tm-notion-spreadsheet-block__edit-btn:hover {
-    background: var(--tm-color-surface-hover, #f9fafb);
+    background: var(--tm-color-surface-hover);
     opacity: 1;
 }
 
@@ -66,7 +66,7 @@
     width: 100%;
     margin-top: 4px;
     font-size: 13px;
-    color: var(--tm-color-text-muted, #6b7280);
+    color: var(--tm-color-text-muted);
     text-align: center;
     outline: none;
     min-height: 1.4em;
@@ -74,7 +74,7 @@
 
 .tm-notion-spreadsheet-block__caption:empty::before {
     content: attr(data-placeholder);
-    color: var(--tm-color-text-placeholder, #d1d5db);
+    color: var(--tm-text-tertiary);
     pointer-events: none;
 }
 
@@ -101,17 +101,17 @@
     align-items: center;
     justify-content: center;
     padding: 0 14px;
-    border: 1px dashed var(--tm-border-color, #d1d5db);
+    border: 1px dashed var(--tm-border-color);
     border-radius: 8px;
     background: transparent;
-    color: var(--tm-text-muted, #6b7280);
+    color: var(--tm-text-secondary);
     font-size: 13px;
     cursor: pointer;
 }
 
 .tm-notion-tempo-block__insert-existing:hover {
-    border-color: var(--tm-primary, #6366f1);
-    color: var(--tm-primary, #6366f1);
+    border-color: var(--tm-color-primary);
+    color: var(--tm-color-primary);
 }
 
 .tm-notion-tempo-block__not-found {
@@ -119,16 +119,16 @@
     align-items: center;
     gap: 12px;
     padding: 12px 16px;
-    border: 1px solid var(--tm-border-color, #e5e7eb);
+    border: 1px solid var(--tm-border-color);
     border-radius: 8px;
-    background: var(--tm-surface-2, #f9fafb);
-    color: var(--tm-text-muted, #6b7280);
+    background: var(--tm-bg-surface-secondary);
+    color: var(--tm-text-secondary);
     font-size: 14px;
 }
 
 .tm-notion-tempo-block__remove {
     padding: 4px 12px;
-    border: 1px solid var(--tm-border-color, #d1d5db);
+    border: 1px solid var(--tm-border-color);
     border-radius: 6px;
     background: transparent;
     cursor: pointer;

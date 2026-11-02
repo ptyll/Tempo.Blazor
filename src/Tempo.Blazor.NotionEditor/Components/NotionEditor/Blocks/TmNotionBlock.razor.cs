@@ -1344,7 +1344,7 @@ public partial class TmNotionBlock : ComponentBase
     };
 
     private static string BgClass(ITextBlockContent? c) =>
-        string.IsNullOrEmpty(c?.BackgroundColor) ? string.Empty : $"tm-notion-bg-{c.BackgroundColor}";
+        string.IsNullOrEmpty(c?.BackgroundColor) ? string.Empty : $"tm-notion-bg-{NotionColorTokens.Name(c.BackgroundColor)}";
 
     // ── Block content helpers ─────────────────────────────────────────────────
 

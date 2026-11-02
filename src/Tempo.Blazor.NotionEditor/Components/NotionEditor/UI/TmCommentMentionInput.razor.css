@@ -19,7 +19,7 @@
 
 .tm-comment-mention-dropdown__item:hover,
 .tm-comment-mention-dropdown__item--selected {
-    background: var(--tm-bg-hover, rgba(55,53,47,0.06));
+    background: var(--tm-color-surface-hover);
 }
 
 .tm-comment-mention-dropdown__avatar {
@@ -28,7 +28,7 @@
     height: 24px;
     border-radius: 50%;
     overflow: hidden;
-    background: var(--tm-accent, #2383e2);
+    background: var(--tm-color-primary-solid);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -43,7 +43,7 @@
 .tm-comment-mention-dropdown__avatar-fallback {
     font-size: 10px;
     font-weight: 600;
-    color: #fff;
+    color: var(--tm-color-on-primary-fixed);
     line-height: 1;
 }
 
@@ -56,10 +56,10 @@
 .tm-comment-mention-dropdown__name {
     font-size: 13px;
     font-weight: 500;
-    color: var(--tm-text-primary, rgb(55,53,47));
+    color: var(--tm-text-primary);
 }
 
 .tm-comment-mention-dropdown__email {
     font-size: 11px;
-    color: var(--tm-text-secondary, rgba(55,53,47,0.55));
+    color: var(--tm-text-secondary);
 }

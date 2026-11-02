@@ -1,9 +1,10 @@
 @namespace Tempo.Blazor.Components.NotionEditor.Blocks.Lists
 @using Tempo.Blazor.NotionEditor.Interfaces
 @using Tempo.Blazor.NotionEditor.Enums
+@using Tempo.Blazor.Components.NotionEditor.Services
 
 <div class="tm-notion-numbered @_bgClass"
-     data-bg="@Content?.BackgroundColor"
+     data-bg="@NotionColorTokens.Name(Content?.BackgroundColor)"
      data-indent="@(Content?.IndentLevel ?? 0)">
 
     <span class="tm-notion-numbered__number" aria-hidden="true">@_numberLabel</span>
@@ -13,7 +14,7 @@
         <div @key="ReadOnly"
              class="tm-notion-numbered__body tm-notion-editable tm-notion-editable--readonly @_alignClass"
              contenteditable="false"
-             data-color="@Content?.TextColor">
+             data-color="@NotionColorTokens.Name(Content?.TextColor)">
             @((MarkupString)NotionHtmlSanitizer.SanitizeBlockContent(Content?.Html))
         </div>
     }
@@ -23,7 +24,7 @@
              class="tm-notion-numbered__body tm-notion-editable @_alignClass"
              contenteditable="true"
              data-placeholder="@Placeholder"
-             data-color="@Content?.TextColor"
+             data-color="@NotionColorTokens.Name(Content?.TextColor)"
              spellcheck="true"
              @ref="_editableRef"
              @oninput="() => _dirty = true"

@@ -15,9 +15,9 @@
 .tm-page-reactions__pill,
 .tm-page-reactions__add,
 .tm-page-reactions__choice {
-    border: 1px solid var(--tm-color-border);
+    border: 1px solid var(--tm-border-color);
     background: var(--tm-color-surface);
-    color: var(--tm-color-text);
+    color: var(--tm-text-primary);
     cursor: pointer;
     transition: background var(--tm-transition-fast), border-color var(--tm-transition-fast), color var(--tm-transition-fast), box-shadow var(--tm-transition-fast);
 }
@@ -91,7 +91,7 @@
     gap: var(--tm-space-1);
     width: var(--tm-page-reactions-picker-width);
     padding: var(--tm-space-2);
-    border: 1px solid var(--tm-color-border);
+    border: 1px solid var(--tm-border-color);
     border-radius: var(--tm-radius-lg);
     background: var(--tm-color-surface);
     box-shadow: var(--tm-shadow-lg);

@@ -33,7 +33,7 @@
                     @onclick:preventDefault="true">
 
                 <span class="tm-notion-color-picker__swatch tm-notion-color-picker__swatch--text"
-                      style="@(capturedEntry.Hex is not null ? $"color:{capturedEntry.Hex};border-color:{capturedEntry.Hex}40" : "")"
+                      style="@(capturedEntry.Hex is not null ? $"color:var(--tm-notion-color-{capturedEntry.Hex})" : "")"
                       aria-hidden="true">
                     @if (capturedEntry.Hex is null)
                     {
@@ -76,7 +76,7 @@
                     @onclick:preventDefault="true">
 
                 <span class="tm-notion-color-picker__swatch tm-notion-color-picker__swatch--bg"
-                      style="@(capturedEntry.Hex is not null ? $"background:{capturedEntry.Hex};border-color:{capturedEntry.Hex}" : "")"
+                      style="@(capturedEntry.Hex is not null ? $"background:var(--tm-notion-color-{capturedEntry.Hex}-bg)" : "")"
                       aria-hidden="true">
                     @if (capturedEntry.Hex is null)
                     {

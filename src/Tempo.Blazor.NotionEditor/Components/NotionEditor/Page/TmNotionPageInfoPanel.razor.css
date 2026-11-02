@@ -19,10 +19,10 @@
     max-height: calc(100vh - var(--tm-space-4) * 2);
     overflow: auto;
     padding: var(--tm-space-4);
-    border: 1px solid var(--tm-color-border);
+    border: 1px solid var(--tm-border-color);
     border-radius: var(--tm-radius-lg);
     background: var(--tm-color-surface);
-    color: var(--tm-color-text);
+    color: var(--tm-text-primary);
     box-shadow: var(--tm-shadow-xl);
 }
 
@@ -65,9 +65,9 @@
 
 .tm-page-info__close:hover,
 .tm-page-info__close:focus-visible {
-    border-color: var(--tm-color-border);
+    border-color: var(--tm-border-color);
     background: var(--tm-color-surface-hover);
-    color: var(--tm-color-text);
+    color: var(--tm-text-primary);
     outline: none;
 }
 
@@ -100,7 +100,7 @@
     justify-content: space-between;
     gap: var(--tm-space-2);
     margin: 0;
-    color: var(--tm-color-text);
+    color: var(--tm-text-primary);
     font-size: var(--tm-font-size-sm);
 }
 

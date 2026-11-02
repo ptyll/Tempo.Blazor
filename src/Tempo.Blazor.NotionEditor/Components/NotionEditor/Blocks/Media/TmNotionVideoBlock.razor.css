@@ -36,7 +36,7 @@
     max-width:     100%;
     height:        auto;
     border-radius: var(--tm-radius-sm, 4px);
-    background:    #000;
+    background: var(--tm-color-primary);
 }
 
 /* ── Embed iframe (YouTube / Vimeo / Loom) ────────────────────── */
@@ -47,7 +47,7 @@
     padding-top:   56.25%; /* 16:9 */
     border-radius: var(--tm-radius-sm, 4px);
     overflow:      hidden;
-    background:    #000;
+    background: var(--tm-color-primary);
 }
 
 .tm-notion-video-block__embed {
@@ -68,7 +68,7 @@
     align-items:     center;
     gap:             6px;
     padding:         4px 6px;
-    background:      rgba(0, 0, 0, 0.65);
+    background: color-mix(in srgb, var(--tm-color-gray-900) 65%, transparent);
     border-radius:   var(--tm-radius-sm, 4px);
     opacity:         0;
     pointer-events:  none;

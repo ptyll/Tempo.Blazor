@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
+using Tempo.Blazor.Components.NotionEditor.Services;
 using Tempo.Blazor.NotionEditor.Models;
 
 namespace Tempo.Blazor.Components.NotionEditor.Blocks.Database.Cells;
@@ -67,14 +68,21 @@ public abstract class TmNotionDbCellBase : ComponentBase
 
     protected static string AvatarColor(string seed)
     {
-        var colors = new[]
+        // Stable across a name, but a token — a stored hex would pin the avatar off the theme.
+        var names = new[]
         {
-            "#3b82f6","#10b981","#f59e0b","#ef4444","#8b5cf6",
-            "#06b6d4","#f97316","#84cc16","#ec4899","#14b8a6"
+            "blue", "green", "yellow", "red", "purple",
+            "gray", "orange", "brown", "pink", "blue"
         };
-        var idx = Math.Abs(seed.GetHashCode()) % colors.Length;
-        return colors[idx];
+        var idx = Math.Abs(seed.GetHashCode()) % names.Length;
+        return NotionColorTokens.OptionSolid(names[idx]);
     }
+
+    /// <summary>A chip background: the option token, or the muted surface when the option has none.</summary>
+    protected static string ChipBackground(string? color) =>
+        string.IsNullOrEmpty(color)
+            ? "var(--tm-bg-muted)"
+            : NotionColorTokens.OptionSolid(color);
 
     protected static string Initials(string name)
     {

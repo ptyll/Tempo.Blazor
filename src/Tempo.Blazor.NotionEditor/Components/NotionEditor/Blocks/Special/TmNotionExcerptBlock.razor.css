@@ -7,7 +7,7 @@
     min-width: 0;
     max-width: 100%;
     padding: var(--tm-space-3) var(--tm-space-4);
-    border: 1px solid var(--tm-color-info-border, var(--tm-border-color));
+    border: 1px solid var(--tm-color-info-soft-border, var(--tm-border-color));
     border-radius: var(--tm-radius-md);
     background: var(--tm-bg-surface);
     box-shadow: inset 3px 0 0 var(--tm-color-info, var(--tm-color-primary));
@@ -27,7 +27,7 @@
     width: 26px;
     height: 26px;
     border-radius: var(--tm-radius-sm);
-    background: var(--tm-color-info-bg-subtle, var(--tm-color-primary-bg-subtle));
+    background: var(--tm-color-info-subtle, var(--tm-color-primary-bg-subtle));
     color: var(--tm-color-info, var(--tm-color-primary));
     flex: 0 0 auto;
 }

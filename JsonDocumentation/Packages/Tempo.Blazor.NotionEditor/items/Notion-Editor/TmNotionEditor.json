@@ -349,5 +349,9 @@
       "code": "@using Tempo.Blazor.NotionEditor.Enums\n\n@code {\n    // Rich-text description blocks only — multi-page blocks are removed automatically in SinglePageMode.\n    private static readonly IReadOnlySet<BlockType> DescriptionBlocks = new HashSet<BlockType>\n    {\n        BlockType.Paragraph, BlockType.Heading1, BlockType.Heading2, BlockType.Heading3,\n        BlockType.BulletList, BlockType.NumberedList, BlockType.TodoItem,\n        BlockType.Quote, BlockType.Callout, BlockType.Code, BlockType.Divider, BlockType.Image, BlockType.Table\n    };\n\n    void OpenElsewhere(string pageId) { /* host opens the linked page in a dialog / new tab */ }\n}\n\n<TmNotionEditor DataProvider=\"@DataProvider\"\n                AggregateProvider=\"@AggregateProvider\"\n                SinglePageMode=\"true\"\n                InitialPageId=\"@WorkItem.DescriptionPageId\"\n                AllowedBlockTypes=\"@DescriptionBlocks\"\n                OnPageNavigationRequested=\"OpenElsewhere\" />"
     }
   ],
+  "cssClasses": [
+    "tm-notion-editor"
+  ],
+  "notes": "The editor root carries the package tokens. Surfaces, text, borders and radii alias core tokens (--tm-bg-page, --tm-color-primary, --tm-border-color, --tm-radius-card) and recompute inside .tm-notion-editor, so a nested data-theme or indigo theme reaches them. The option and text palettes are --tm-notion-option-* and --tm-notion-color-*; their literals live only in _notion-variables.css and _notion-dark.css. A stored block colour is a palette name (gray, red, orange, yellow, green, blue, purple, pink, brown), and a document saved before 2.10.0 still renders because the legacy hex is mapped to that name.",
   "packageId": "Tempo.Blazor.NotionEditor"
 }

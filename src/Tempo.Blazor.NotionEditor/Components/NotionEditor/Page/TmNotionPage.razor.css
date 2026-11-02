@@ -89,7 +89,7 @@
     max-width: min(calc(var(--tm-space-16, 4rem) * 3), var(--tm-notion-status-max-label-width));
     padding: calc(var(--tm-space-1) / 2) var(--tm-space-2);
     border-radius: var(--tm-radius-full);
-    border: var(--tm-border-width-1, 1px) solid var(--tm-status-border);
+    border: var(--tm-notion-border-width, 1px) solid var(--tm-status-border);
     background: var(--tm-status-bg);
     color: var(--tm-status-text);
     font-size: 0.78em;
@@ -185,7 +185,7 @@
     border: var(--tm-border-width) solid var(--tm-color-warning);
     border-radius: var(--tm-radius-md);
     background: var(--tm-color-warning-subtle);
-    color: var(--tm-color-text);
+    color: var(--tm-text-primary);
     text-align: start;
 }
 
@@ -201,7 +201,7 @@
 
 .tm-notion-page__aggregate-conflict .tm-notion-load-error__retry {
     min-height: var(--tm-input-height-sm);
-    color: var(--tm-color-text);
+    color: var(--tm-text-primary);
     background: var(--tm-color-surface);
 }
 

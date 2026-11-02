@@ -11,10 +11,10 @@
 .tm-notion-pdf-block__container {
     display:        flex;
     flex-direction: column;
-    border:         1px solid var(--tm-border-subtle, #e8e8e8);
+    border:         1px solid var(--tm-color-border-subtle);
     border-radius:  var(--tm-radius-md, 6px);
     overflow:       hidden;
-    background:     var(--tm-surface-page, #fff);
+    background:     var(--tm-bg-page);
     resize:         vertical;
     min-height:     200px;
 }
@@ -31,5 +31,5 @@
     width: 100%;
     min-height: 100%;
     border: none;
-    background: var(--tm-surface-page, #fff);
+    background: var(--tm-bg-page);
 }

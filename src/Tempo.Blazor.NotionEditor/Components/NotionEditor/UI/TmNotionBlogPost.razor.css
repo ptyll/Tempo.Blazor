@@ -12,7 +12,7 @@
     justify-content: space-between;
     gap: var(--tm-space-3);
     padding: var(--tm-space-4);
-    border-bottom: 1px solid var(--tm-color-border);
+    border-bottom: 1px solid var(--tm-border-color);
 }
 
 .tm-notion-blog-post__title-wrap {

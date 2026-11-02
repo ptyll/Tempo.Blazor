@@ -1311,6 +1311,46 @@ findings table and the per-leg results) and the two perf runs
 
 ### Breaking / Migration
 
+- **Notion editor (phase 2): stored colours are palette names, not hex.** A text or background colour picked in the editor is now one of `gray`, `red`, `orange`, `yellow`, `green`, `blue`, `purple`, `pink`, `brown` (or null for the default). The swatch paints from `--tm-notion-color-{name}` and `--tm-notion-color-{name}-bg`, so dark mode and the indigo theme recompute it. A document saved before 2.10.0 still renders: `NotionColorTokens.Name` maps the legacy hex to the same name at render time, and nothing rewrites the stored JSON.
+
+  ```html
+  <!-- before: the picker stored a hex on the block -->
+  <span data-color="#e03e3e" data-bg="#fbe4e4">…</span>
+  <!-- after: the picker stores the palette name; the old hex still renders -->
+  <span data-color="red" data-bg="red">…</span>
+  ```
+
+  The accessible name of a swatch moved from `TmNotionColorPicker_{Color}` to `TmNotionColor_{Default|Gray|Brown|Orange|Yellow|Green|Blue|Purple|Pink|Red}` (en/cs/sk/fr). A host that overrode the old key for a swatch name must override the new one; the section headings `TmNotionColorPicker_TextColor` and `TmNotionColorPicker_BgColor` are unchanged.
+
+  **Inline text colour is a hex on the wire, a token on the swatch.** `document.execCommand` does not keep a CSS colour name, so the toolbar paints `var(--tm-notion-color-{name})` and sends the allowlisted legacy hex from `NotionColorTokens.InlineHex(name, background)`. A host that called `applyInlineColor` with `"brown"` must send that hex; the stored span is unchanged.
+
+  ```html
+  <!-- before: the toolbar handed execCommand the palette name, which the browser dropped -->
+  applyInlineColor('text', 'brown')
+  <!-- after: the swatch still paints the token; the call carries the one allowlisted hex -->
+  applyInlineColor('text', '#64473a')
+  ```
+
+  **Select, status and multi-select colours are option tokens.** A calendar event, a timeline bar and a list chip set `--event-color` / `--bar-color` / `--chip-color` to `var(--tm-notion-option-{name}-solid)` (a legacy hex maps through `NotionColorTokens.Name`; anything else is `var(--tm-color-primary)`). Chip text mixes that colour with `var(--tm-text-primary)`, not `var(--tm-bg-surface)`, so the ink stays AA in light mode. A table cell swatch stores the palette name and the cell paints `var(--tm-notion-color-{name}-bg)`.
+
+  **Token names.** Every package stylesheet reads a core token. The removed aliases and the core token that replaced each one:
+
+  | before | after |
+  |---|---|
+  | `--tm-accent` | `--tm-color-primary` |
+  | `--tm-border` | `--tm-border-color` |
+  | `--tm-text-2` | `--tm-text-secondary` |
+  | `--tm-bg-2` | `--tm-bg-surface-secondary` |
+  | `--tm-hover` | `--tm-color-surface-hover` |
+  | `--tm-primary` | `--tm-color-primary` |
+  | `--tm-green` | `--tm-color-success` |
+
+  A `z-index` no longer carries a numeric fallback (`var(--tm-z-popover, 200)`, `1040`, `1000`, `1060`): the core token is defined, and the fallback was a second, wrong band. The shortcuts panel rides `--tm-z-modal`; the status picker rides `--tm-z-popover`.
+
+  **Removed dead classes.** `.tm-notion-media-*` duplicates, the bookmark / embed / file-link / page-link copies that lived on the block sheet, the duplicated table rules and the status-chip CSS that had moved into the cell stylesheet. A host selecting those copies from the block sheet must use the component's own sheet.
+
+  **Package CSS reads core tokens.** Database views, comment panels, menus, dialogs and the editor shell no longer fall back to a hex or to the undefined `--tm-accent` / `--tm-border` / `--tm-text-2` aliases. The only literals left are the data palettes in `_notion-variables.css` and `_notion-dark.css`, and every `--tm-notion-*` alias whose chain reaches a themed token is redeclared on `.tm-notion-editor`, so a nested `data-theme` recomputes it. The DOM and every `data-testid` are unchanged.
+
 - **Notion editor (phase 1): behaviour and DOM.** Nothing was added to `INotionDatabaseProvider` or `INotionPublicShareProvider`.
 
   **Thread card body is a button.** The block-comment thread list item used to be a `div.tm-nbcp__thread-card` that also handled keydown, with nested resolve buttons. A button cannot contain a button, so the card stays a `div.tm-nbcp__thread-card` and its body is `button.tm-nbcp__thread-card__open`; the resolve actions stay a sibling `div.tm-nbcp__thread-card__actions`. Enter/Space selects the thread once, through the native button.
@@ -2828,6 +2868,8 @@ findings table and the per-leg results) and the two perf runs
       `IconNames.ShieldCheck`); `TmDocumentCommentItem` formats timestamps through the shared
       `SigningDateFormatter`.
 ### Fixed
+
+- **Notion editor: a code block's last line is no longer hidden behind the horizontal scrollbar.** A long line used to grow a scrollbar inside the textarea while the outer `.tm-notion-code-block` (`overflow: auto`) grew a second one, and `scrollHeight` did not include the bar, so the last line sat under it. The textarea now grows by its own scrollbar chrome, the outer block no longer scrolls, and the height is recomputed on window/container resize and after `setCode`.
 
 - **Signing: a palette or field drag no longer also draws on the page.** The palette session stops the press before the page surface's bubble listener, so a drag places or moves a field and does not start a selection box. `ButtonVariant.OutlinePrimary` is the Autodetect toolbar variant.
 - **Core: `TmContextMenuItem` keeps `OnClick` across the close render.** The item copies the callback, closes the parent, then invokes it, so a menu that unmounts on close still runs the action.

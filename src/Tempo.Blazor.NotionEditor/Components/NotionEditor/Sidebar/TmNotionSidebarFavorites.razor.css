@@ -9,7 +9,7 @@
     border: none;
     background: transparent;
     cursor: pointer;
-    color: var(--tm-color-text-secondary, #888);
+    color: var(--tm-text-secondary);
     font-size: 11px;
     font-weight: 600;
     text-transform: uppercase;
@@ -19,8 +19,8 @@
 }
 
 .tm-nsf-header:hover {
-    background: var(--tm-color-hover, rgba(0, 0, 0, 0.04));
-    color: var(--tm-color-text, #333);
+    background: var(--tm-color-surface-hover);
+    color: var(--tm-text-primary);
 }
 
 .tm-nsf-header__chevron {
@@ -41,8 +41,8 @@
 .tm-nsf-header__count {
     font-size: 10px;
     font-weight: 500;
-    color: var(--tm-color-text-secondary, #aaa);
-    background: var(--tm-color-border, rgba(0, 0, 0, 0.08));
+    color: var(--tm-text-secondary);
+    background: var(--tm-border-color);
     padding: 0 5px;
     border-radius: 9px;
     line-height: 16px;
@@ -60,7 +60,7 @@
 
 .tm-nsf-empty {
     padding: 5px 12px 8px 28px;
-    color: var(--tm-color-text-secondary);
+    color: var(--tm-text-secondary);
     font-size: 12px;
     font-style: italic;
     line-height: 1.45;
@@ -77,15 +77,15 @@
 }
 
 .tm-nsf-item:hover {
-    background: var(--tm-color-hover, rgba(0, 0, 0, 0.04));
+    background: var(--tm-color-surface-hover);
 }
 
 .tm-nsf-item--active {
-    background: var(--tm-color-selected, rgba(0, 0, 0, 0.07));
+    background: var(--tm-color-primary-subtle);
 }
 
 .tm-nsf-item--active:hover {
-    background: var(--tm-color-selected-hover, rgba(0, 0, 0, 0.1));
+    background: var(--tm-color-primary-subtle);
 }
 
 .tm-nsf-item--dragging {
@@ -93,7 +93,7 @@
 }
 
 .tm-nsf-item--drag-over {
-    border-top: 2px solid var(--tm-color-accent, #0066cc);
+    border-top: 2px solid var(--tm-color-primary);
 }
 
 /* ── Drag handle ─────────────────────────────────────────────────────────── */
@@ -107,7 +107,7 @@
     height: 28px;
     padding-left: 6px;
     cursor: grab;
-    color: var(--tm-color-text-secondary, #ccc);
+    color: var(--tm-text-secondary);
     opacity: 0;
     transition: opacity 0.15s;
 }
@@ -147,7 +147,7 @@
     flex: 1 1 0;
     min-width: 0;
     font-size: 13px;
-    color: var(--tm-color-text, #1a1a1a);
+    color: var(--tm-text-primary);
     overflow: hidden;
     white-space: nowrap;
     text-overflow: ellipsis;
@@ -167,7 +167,7 @@
     border: none;
     background: transparent;
     cursor: pointer;
-    color: var(--tm-color-text-secondary, #bbb);
+    color: var(--tm-text-secondary);
     border-radius: 3px;
     opacity: 0;
     transition: opacity 0.15s, background 0.1s, color 0.1s;
@@ -179,8 +179,8 @@
 }
 
 .tm-nsf-item__remove:hover {
-    background: var(--tm-color-hover, rgba(0, 0, 0, 0.07));
-    color: var(--tm-color-danger, #dc2626);
+    background: var(--tm-color-surface-hover);
+    color: var(--tm-color-danger);
 }
 
 @media (max-width: 1024px) {

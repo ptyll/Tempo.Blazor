@@ -3,21 +3,21 @@
 .tm-notion-emoji-picker-backdrop {
     position: fixed;
     inset: 0;
-    z-index: calc(var(--tm-z-popover, 1030) - 1);
+    z-index: calc(var(--tm-z-popover) - 1);
 }
 
 /* ── Panel ───────────────────────────────────────────────────────────────── */
 
 .tm-notion-emoji-picker {
     position: fixed;
-    z-index: var(--tm-z-popover, 1030);
+    z-index: var(--tm-z-popover);
     width: 352px;
     display: flex;
     flex-direction: column;
-    background: var(--tm-surface-overlay, #fff);
-    border: 1px solid var(--tm-border, rgba(55,53,47,.16));
+    background: var(--tm-color-white);
+    border: 1px solid var(--tm-border-color);
     border-radius: 10px;
-    box-shadow: 0 8px 28px rgba(0,0,0,.16), 0 2px 8px rgba(0,0,0,.08);
+    box-shadow: var(--tm-shadow-popover);
     overflow: hidden;
     animation: tm-emoji-picker-appear 90ms ease;
     transform-origin: top left;
@@ -35,7 +35,7 @@
     align-items: center;
     gap: 6px;
     padding: 10px 10px 8px;
-    border-bottom: 1px solid var(--tm-border, rgba(55,53,47,.09));
+    border-bottom: 1px solid var(--tm-border-color);
     flex-shrink: 0;
 }
 
@@ -44,7 +44,7 @@
     display: flex;
     align-items: center;
     gap: 6px;
-    background: var(--tm-hover, rgba(55,53,47,.06));
+    background: var(--tm-color-surface-hover);
     border: 1px solid transparent;
     border-radius: 6px;
     padding: 4px 8px;
@@ -52,12 +52,12 @@
 }
 
 .tm-notion-emoji-picker__search-wrap:focus-within {
-    background: var(--tm-surface-overlay, #fff);
-    border-color: var(--tm-primary, #2383e2);
+    background: var(--tm-color-white);
+    border-color: var(--tm-color-primary);
 }
 
 .tm-notion-emoji-picker__search-icon {
-    color: var(--tm-text-secondary, rgba(55,53,47,.4));
+    color: var(--tm-text-secondary);
     flex-shrink: 0;
 }
 
@@ -67,13 +67,13 @@
     outline: none;
     background: transparent;
     font-size: 13px;
-    color: var(--tm-text, rgba(55,53,47,.85));
+    color: var(--tm-text-primary);
     line-height: 1.4;
     min-width: 0;
 }
 
 .tm-notion-emoji-picker__search::placeholder {
-    color: var(--tm-text-secondary, rgba(55,53,47,.4));
+    color: var(--tm-text-secondary);
 }
 
 .tm-notion-emoji-picker__random {
@@ -92,7 +92,7 @@
 }
 
 .tm-notion-emoji-picker__random:hover {
-    background: var(--tm-hover, rgba(55,53,47,.08));
+    background: var(--tm-color-surface-hover);
     transform: rotate(15deg) scale(1.1);
 }
 
@@ -107,7 +107,7 @@
     align-items: center;
     gap: 1px;
     padding: 4px 8px;
-    border-bottom: 1px solid var(--tm-border, rgba(55,53,47,.09));
+    border-bottom: 1px solid var(--tm-border-color);
     overflow-x: auto;
     scrollbar-width: none;
     flex-shrink: 0;
@@ -134,13 +134,13 @@
 }
 
 .tm-notion-emoji-picker__tab:hover {
-    background: var(--tm-hover, rgba(55,53,47,.07));
+    background: var(--tm-color-surface-hover);
     opacity: 1;
     transform: scale(1.1);
 }
 
 .tm-notion-emoji-picker__tab--active {
-    background: var(--tm-hover, rgba(55,53,47,.09));
+    background: var(--tm-color-surface-hover);
     opacity: 1;
 }
 
@@ -152,7 +152,7 @@
     max-height: 280px;
     padding: 6px 6px 8px;
     scrollbar-width: thin;
-    scrollbar-color: var(--tm-border, rgba(55,53,47,.15)) transparent;
+    scrollbar-color: var(--tm-border-color) transparent;
 }
 
 .tm-notion-emoji-picker__scroll::-webkit-scrollbar {
@@ -160,7 +160,7 @@
 }
 
 .tm-notion-emoji-picker__scroll::-webkit-scrollbar-thumb {
-    background: var(--tm-border, rgba(55,53,47,.15));
+    background: var(--tm-border-color);
     border-radius: 2px;
 }
 
@@ -171,7 +171,7 @@
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: .07em;
-    color: var(--tm-text-secondary, rgba(55,53,47,.5));
+    color: var(--tm-text-secondary);
     padding: 6px 4px 3px;
     user-select: none;
 }
@@ -187,7 +187,7 @@
 .tm-notion-emoji-picker__grid--recent {
     margin-bottom: 8px;
     padding-bottom: 8px;
-    border-bottom: 1px solid var(--tm-border, rgba(55,53,47,.07));
+    border-bottom: 1px solid var(--tm-border-color);
 }
 
 .tm-notion-emoji-picker__emoji {
@@ -207,7 +207,7 @@
 }
 
 .tm-notion-emoji-picker__emoji:hover {
-    background: var(--tm-hover, rgba(55,53,47,.07));
+    background: var(--tm-color-surface-hover);
     transform: scale(1.2);
 }
 
@@ -220,6 +220,6 @@
 .tm-notion-emoji-picker__empty {
     text-align: center;
     font-size: 13px;
-    color: var(--tm-text-secondary, rgba(55,53,47,.45));
+    color: var(--tm-text-secondary);
     padding: 24px 0;
 }

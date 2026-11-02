@@ -1,133 +1,125 @@
 /* ═══════════════════════════════════════════════════════════════
    Tempo NotionEditor — Dark Mode Overrides
    Activated by [data-theme="dark"] or .tm-dark on a parent element.
-   Overrides _notion-variables.css tokens.
+   Only the data palettes are literals here. Every other surface rides a core
+   token, so indigo and dark propagate without a second palette.
    ═══════════════════════════════════════════════════════════════ */
 
 [data-theme="dark"] .tm-notion-editor,
 .tm-dark            .tm-notion-editor {
 
-    /* ── Surfaces ─────────────────────────────────────────────── */
-    --tm-notion-bg:                  #191919;
-    --tm-notion-bg-sidebar:          #111111;
-    --tm-notion-bg-sidebar-item-hover:  rgba(255, 255, 255, 0.04);
-    --tm-notion-bg-sidebar-item-active: rgba(96, 165, 250, 0.12);
-    --tm-notion-bg-block-hover:      rgba(255, 255, 255, 0.025);
-    --tm-notion-bg-block-selected:   rgba(96, 165, 250, 0.1);
-    --tm-notion-bg-handle:           rgba(255, 255, 255, 0.07);
-    --tm-notion-bg-code:             #1e1e1e;
-    --tm-notion-bg-callout:          rgba(255, 255, 255, 0.05);
-    --tm-notion-bg-toolbar:          #2d2d2d;
-    --tm-notion-bg-slash-menu:       #2d2d2d;
-    --tm-notion-bg-mention-menu:     #2d2d2d;
-    --tm-notion-bg-drag-ghost:       #2d2d2d;
+    /* ── Data palette: option chips, dark (AA on the wash and white on solid) ── */
+    --tm-notion-option-gray-wash:     #334155;
+    --tm-notion-option-gray-ink:     #e2e8f0;
+    --tm-notion-option-gray-swatch:  #475569;
+    --tm-notion-option-red-wash:      #4c1d1d;
+    --tm-notion-option-red-ink:      #fecaca;
+    --tm-notion-option-red-swatch:   #b91c1c;
+    --tm-notion-option-orange-wash:   #4a2810;
+    --tm-notion-option-orange-ink:   #fed7aa;
+    --tm-notion-option-orange-swatch: #c2410c;
+    --tm-notion-option-yellow-wash:   #3f3408;
+    --tm-notion-option-yellow-ink:   #fef08a;
+    --tm-notion-option-yellow-swatch: #a16207;
+    --tm-notion-option-green-wash:    #14331f;
+    --tm-notion-option-green-ink:    #bbf7d0;
+    --tm-notion-option-green-swatch: #15803d;
+    --tm-notion-option-blue-wash:     #1e3a5f;
+    --tm-notion-option-blue-ink:     #bfdbfe;
+    --tm-notion-option-blue-swatch:  #1d4ed8;
+    --tm-notion-option-purple-wash:   #3b1f6e;
+    --tm-notion-option-purple-ink:   #ddd6fe;
+    --tm-notion-option-purple-swatch: #6d28d9;
+    --tm-notion-option-pink-wash:     #4a1838;
+    --tm-notion-option-pink-ink:     #fbcfe8;
+    --tm-notion-option-pink-swatch:  #be185d;
+    --tm-notion-option-brown-wash:    #3f2a14;
+    --tm-notion-option-brown-ink:    #fde68a;
+    --tm-notion-option-brown-swatch: #b45309;
 
-    /* ── Block background color palette (dark-adjusted) ────────── */
-    --tm-notion-bg-red:              rgba(80, 30, 32, 0.6);
-    --tm-notion-bg-orange:           rgba(82, 50, 20, 0.6);
-    --tm-notion-bg-yellow:           rgba(80, 68, 10, 0.6);
-    --tm-notion-bg-green:            rgba(22, 60, 35, 0.6);
-    --tm-notion-bg-blue:             rgba(20, 48, 90, 0.6);
-    --tm-notion-bg-purple:           rgba(52, 28, 82, 0.6);
-    --tm-notion-bg-pink:             rgba(75, 20, 58, 0.6);
-    --tm-notion-bg-gray:             rgba(50, 50, 50, 0.6);
-    --tm-notion-bg-brown:            rgba(60, 38, 30, 0.6);
+    /* ── Data palette: text / highlight colours on the dark page (≥ 4.5:1) ── */
+    --tm-notion-option-text-gray-ink:    #cbd5e1;
+    --tm-notion-option-text-red-ink:     #fca5a5;
+    --tm-notion-option-text-orange-ink:  #fdba74;
+    --tm-notion-option-text-yellow-ink:  #fde047;
+    --tm-notion-option-text-green-ink:   #86efac;
+    --tm-notion-option-text-blue-ink:    #93c5fd;
+    --tm-notion-option-text-purple-ink:  #d8b4fe;
+    --tm-notion-option-text-pink-ink:    #f9a8d4;
+    --tm-notion-option-text-brown-ink:   #fcd34d;
+    --tm-notion-option-text-gray-wash:    #334155;
+    --tm-notion-option-text-red-wash:     #4c1d1d;
+    --tm-notion-option-text-orange-wash:  #4a2810;
+    --tm-notion-option-text-yellow-wash:  #3f3408;
+    --tm-notion-option-text-green-wash:   #14331f;
+    --tm-notion-option-text-blue-wash:    #1e3a5f;
+    --tm-notion-option-text-purple-wash:  #3b1f6e;
+    --tm-notion-option-text-pink-wash:    #4a1838;
+    --tm-notion-option-text-brown-wash:   #3f2a14;
 
-    /* ── Text color palette (brighter for dark bg) ─────────────── */
-    --tm-notion-text-red:            #ff7c73;
-    --tm-notion-text-orange:         #ffb347;
-    --tm-notion-text-yellow:         #ffd966;
-    --tm-notion-text-green:          #5eca7e;
-    --tm-notion-text-blue:           #62a8e5;
-    --tm-notion-text-purple:         #b98fe0;
-    --tm-notion-text-pink:           #f48abf;
-    --tm-notion-text-gray:           #a0a0a0;
-    --tm-notion-text-brown:          #c4956e;
-
-    /* ── Borders ──────────────────────────────────────────────── */
-    --tm-notion-border:              rgba(255, 255, 255, 0.09);
-    --tm-notion-border-quote:        rgba(255, 255, 255, 0.18);
-    --tm-notion-border-code:         rgba(255, 255, 255, 0.08);
-    --tm-notion-border-table:        rgba(255, 255, 255, 0.09);
-    --tm-notion-border-divider:      rgba(255, 255, 255, 0.1);
-
-    /* ── Interactive ──────────────────────────────────────────── */
-    --tm-notion-comment-highlight:   rgba(255, 212, 0, 0.22);
-    --tm-notion-comment-highlight-active: rgba(255, 193, 7, 0.55);
-    --tm-notion-selection-bg:        rgba(96, 165, 250, 0.18);
-    --tm-notion-focus-ring:          0 0 0 2px rgba(96, 165, 250, 0.45);
-}
-
-/* ── Code block token colors — dark ──────────────────────────── */
-
-[data-theme="dark"] .tm-notion-code-block,
-.tm-dark            .tm-notion-code-block {
-    background: var(--tm-notion-bg-code);
-    border-color: var(--tm-notion-border-code);
-}
-
-[data-theme="dark"] .tm-notion-editable code,
-.tm-dark            .tm-notion-editable code {
-    background:   rgba(255, 255, 255, 0.08);
-    border-color: rgba(255, 255, 255, 0.12);
-    color:        #ff8a7a;
-}
-
-/* ── Callout dark ─────────────────────────────────────────────── */
-
-[data-theme="dark"] .tm-notion-callout,
-.tm-dark            .tm-notion-callout {
-    background:   var(--tm-notion-bg-callout);
-    border-color: rgba(255, 255, 255, 0.08);
-}
-
-/* ── Todo checkbox dark ───────────────────────────────────────── */
-
-[data-theme="dark"] .tm-notion-todo__checkbox,
-.tm-dark            .tm-notion-todo__checkbox {
-    border-color: rgba(255, 255, 255, 0.25);
-}
-
-/* ── Toggle arrow dark ────────────────────────────────────────── */
-
-[data-theme="dark"] .tm-notion-toggle__arrow:hover,
-.tm-dark            .tm-notion-toggle__arrow:hover {
-    background: rgba(255, 255, 255, 0.06);
-}
-
-/* ── Toolbar / menus dark ─────────────────────────────────────── */
-
-[data-theme="dark"] .tm-notion-toolbar,
-.tm-dark            .tm-notion-toolbar,
-[data-theme="dark"] .tm-notion-slash-menu,
-.tm-dark            .tm-notion-slash-menu,
-[data-theme="dark"] .tm-notion-mention-menu,
-.tm-dark            .tm-notion-mention-menu {
-    background:   var(--tm-notion-bg-toolbar);
-    border-color: rgba(255, 255, 255, 0.1);
-}
-
-/* ── Sidebar dark ─────────────────────────────────────────────── */
-
-[data-theme="dark"] .tm-notion-sidebar,
-.tm-dark            .tm-notion-sidebar {
-    background:   var(--tm-notion-bg-sidebar);
-    border-color: var(--tm-notion-border);
-}
-
-[data-theme="dark"] .tm-notion-sidebar__item:hover,
-.tm-dark            .tm-notion-sidebar__item:hover {
-    background: var(--tm-notion-bg-sidebar-item-hover);
-}
-
-[data-theme="dark"] .tm-notion-sidebar__item--active,
-.tm-dark            .tm-notion-sidebar__item--active {
-    background: var(--tm-notion-bg-sidebar-item-active);
-}
-
-/* ── Drop indicator dark ──────────────────────────────────────── */
-
-[data-theme="dark"] .tm-notion-drop-indicator,
-.tm-dark            .tm-notion-drop-indicator {
-    background: var(--tm-color-primary-400);
+    /* The role names alias the literals above. Repeated here so a nested dark theme
+       recomputes them instead of keeping the light values from :root. */
+    --tm-notion-option-gray-bg: var(--tm-notion-option-gray-wash);
+    --tm-notion-option-gray-fg: var(--tm-notion-option-gray-ink);
+    --tm-notion-option-gray-solid: var(--tm-notion-option-gray-swatch);
+    --tm-notion-option-red-bg: var(--tm-notion-option-red-wash);
+    --tm-notion-option-red-fg: var(--tm-notion-option-red-ink);
+    --tm-notion-option-red-solid: var(--tm-notion-option-red-swatch);
+    --tm-notion-option-orange-bg: var(--tm-notion-option-orange-wash);
+    --tm-notion-option-orange-fg: var(--tm-notion-option-orange-ink);
+    --tm-notion-option-orange-solid: var(--tm-notion-option-orange-swatch);
+    --tm-notion-option-yellow-bg: var(--tm-notion-option-yellow-wash);
+    --tm-notion-option-yellow-fg: var(--tm-notion-option-yellow-ink);
+    --tm-notion-option-yellow-solid: var(--tm-notion-option-yellow-swatch);
+    --tm-notion-option-green-bg: var(--tm-notion-option-green-wash);
+    --tm-notion-option-green-fg: var(--tm-notion-option-green-ink);
+    --tm-notion-option-green-solid: var(--tm-notion-option-green-swatch);
+    --tm-notion-option-blue-bg: var(--tm-notion-option-blue-wash);
+    --tm-notion-option-blue-fg: var(--tm-notion-option-blue-ink);
+    --tm-notion-option-blue-solid: var(--tm-notion-option-blue-swatch);
+    --tm-notion-option-purple-bg: var(--tm-notion-option-purple-wash);
+    --tm-notion-option-purple-fg: var(--tm-notion-option-purple-ink);
+    --tm-notion-option-purple-solid: var(--tm-notion-option-purple-swatch);
+    --tm-notion-option-pink-bg: var(--tm-notion-option-pink-wash);
+    --tm-notion-option-pink-fg: var(--tm-notion-option-pink-ink);
+    --tm-notion-option-pink-solid: var(--tm-notion-option-pink-swatch);
+    --tm-notion-option-brown-bg: var(--tm-notion-option-brown-wash);
+    --tm-notion-option-brown-fg: var(--tm-notion-option-brown-ink);
+    --tm-notion-option-brown-solid: var(--tm-notion-option-brown-swatch);
+    --tm-notion-option-text-gray: var(--tm-notion-option-text-gray-ink);
+    --tm-notion-option-text-gray-bg: var(--tm-notion-option-text-gray-wash);
+    --tm-notion-color-gray: var(--tm-notion-option-text-gray-ink);
+    --tm-notion-color-gray-bg: var(--tm-notion-option-text-gray-wash);
+    --tm-notion-option-text-red: var(--tm-notion-option-text-red-ink);
+    --tm-notion-option-text-red-bg: var(--tm-notion-option-text-red-wash);
+    --tm-notion-color-red: var(--tm-notion-option-text-red-ink);
+    --tm-notion-color-red-bg: var(--tm-notion-option-text-red-wash);
+    --tm-notion-option-text-orange: var(--tm-notion-option-text-orange-ink);
+    --tm-notion-option-text-orange-bg: var(--tm-notion-option-text-orange-wash);
+    --tm-notion-color-orange: var(--tm-notion-option-text-orange-ink);
+    --tm-notion-color-orange-bg: var(--tm-notion-option-text-orange-wash);
+    --tm-notion-option-text-yellow: var(--tm-notion-option-text-yellow-ink);
+    --tm-notion-option-text-yellow-bg: var(--tm-notion-option-text-yellow-wash);
+    --tm-notion-color-yellow: var(--tm-notion-option-text-yellow-ink);
+    --tm-notion-color-yellow-bg: var(--tm-notion-option-text-yellow-wash);
+    --tm-notion-option-text-green: var(--tm-notion-option-text-green-ink);
+    --tm-notion-option-text-green-bg: var(--tm-notion-option-text-green-wash);
+    --tm-notion-color-green: var(--tm-notion-option-text-green-ink);
+    --tm-notion-color-green-bg: var(--tm-notion-option-text-green-wash);
+    --tm-notion-option-text-blue: var(--tm-notion-option-text-blue-ink);
+    --tm-notion-option-text-blue-bg: var(--tm-notion-option-text-blue-wash);
+    --tm-notion-color-blue: var(--tm-notion-option-text-blue-ink);
+    --tm-notion-color-blue-bg: var(--tm-notion-option-text-blue-wash);
+    --tm-notion-option-text-purple: var(--tm-notion-option-text-purple-ink);
+    --tm-notion-option-text-purple-bg: var(--tm-notion-option-text-purple-wash);
+    --tm-notion-color-purple: var(--tm-notion-option-text-purple-ink);
+    --tm-notion-color-purple-bg: var(--tm-notion-option-text-purple-wash);
+    --tm-notion-option-text-pink: var(--tm-notion-option-text-pink-ink);
+    --tm-notion-option-text-pink-bg: var(--tm-notion-option-text-pink-wash);
+    --tm-notion-color-pink: var(--tm-notion-option-text-pink-ink);
+    --tm-notion-color-pink-bg: var(--tm-notion-option-text-pink-wash);
+    --tm-notion-option-text-brown: var(--tm-notion-option-text-brown-ink);
+    --tm-notion-option-text-brown-bg: var(--tm-notion-option-text-brown-wash);
+    --tm-notion-color-brown: var(--tm-notion-option-text-brown-ink);
+    --tm-notion-color-brown-bg: var(--tm-notion-option-text-brown-wash);
 }

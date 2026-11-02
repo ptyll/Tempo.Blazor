@@ -44,7 +44,7 @@
 .tm-notion-sidebar::-webkit-scrollbar       { width: 4px; }
 .tm-notion-sidebar::-webkit-scrollbar-track  { background: transparent; }
 .tm-notion-sidebar::-webkit-scrollbar-thumb  {
-    background:    rgba(0, 0, 0, 0.15);
+    background: color-mix(in srgb, var(--tm-color-gray-900) 15%, transparent);
     border-radius: 2px;
 }
 
@@ -65,7 +65,7 @@
 .tm-notion-main::-webkit-scrollbar       { width: 6px; }
 .tm-notion-main::-webkit-scrollbar-track  { background: transparent; }
 .tm-notion-main::-webkit-scrollbar-thumb  {
-    background:    rgba(0, 0, 0, 0.12);
+    background: color-mix(in srgb, var(--tm-color-gray-900) 12%, transparent);
     border-radius: 3px;
 }
 
@@ -105,7 +105,7 @@
     min-height:    var(--tm-space-6);
     font-size:     var(--tm-font-size-xs);
     font-weight:   var(--tm-font-weight-medium);
-    line-height:   var(--tm-line-height-none, 1);
+    line-height:   1;
     color:         var(--tm-text-secondary);
     background:    var(--tm-bg-muted);
     border:        1px solid var(--tm-border-color);
@@ -127,7 +127,7 @@
     max-width: min(14rem, 32vw);
     min-height: 24px;
     padding: 2px var(--tm-space-2);
-    border: 1px solid var(--tm-color-warning-border, var(--tm-color-warning));
+    border: 1px solid var(--tm-color-warning-soft-border, var(--tm-color-warning));
     border-radius: var(--tm-radius-full);
     background: var(--tm-color-warning-subtle, var(--tm-bg-muted));
     color: var(--tm-color-warning-text, var(--tm-text-primary));
@@ -153,7 +153,7 @@
     width: min(40rem, calc(100% - var(--tm-space-8)));
     margin: var(--tm-space-10) auto;
     padding: var(--tm-space-5);
-    border: 1px solid var(--tm-color-border);
+    border: 1px solid var(--tm-border-color);
     border-radius: var(--tm-radius-lg);
     background: var(--tm-color-surface-elevated);
     color: var(--tm-text-primary);
@@ -290,7 +290,7 @@
     height: min(34rem, calc(100% - var(--tm-notion-topbar-height, 44px) - var(--tm-space-6)));
     min-height: 0;
     overflow: hidden;
-    border: 1px solid var(--tm-color-border);
+    border: 1px solid var(--tm-border-color);
     border-radius: var(--tm-radius-lg);
     background: var(--tm-color-surface-elevated);
     box-shadow: var(--tm-shadow-xl);
@@ -312,7 +312,7 @@
     height: min(36rem, calc(100% - var(--tm-notion-topbar-height, 44px) - var(--tm-space-6)));
     min-height: 0;
     overflow: hidden;
-    border: 1px solid var(--tm-color-border);
+    border: 1px solid var(--tm-border-color);
     border-radius: var(--tm-radius-lg);
     background: var(--tm-color-surface-elevated);
     box-shadow: var(--tm-shadow-xl);
@@ -370,7 +370,7 @@
     display:    none;
     position:   fixed;
     inset:      0;
-    background: rgba(0, 0, 0, 0.4);
+    background: var(--tm-bg-overlay);
     z-index:    calc(var(--tm-notion-z-context-menu, 800) - 10);
     backdrop-filter: blur(2px);
     -webkit-backdrop-filter: blur(2px);
@@ -418,7 +418,7 @@
         justify-content: center;
         width: 44px;
         height: 44px;
-        border: var(--tm-border-width) solid var(--tm-color-border);
+        border: var(--tm-border-width) solid var(--tm-border-color);
         border-radius: var(--tm-radius-md);
         background: var(--tm-color-surface);
         color: var(--tm-color-text-muted);
@@ -504,17 +504,9 @@
     }
 }
 
-/* ── Focus management — block focus ring ──────────────────────── */
-
-.tm-notion-block:focus-within > .tm-notion-block__content {
-    box-shadow: none;
-    outline:    none;
-}
-
-.tm-notion-editable:focus {
-    outline:    none;
-    box-shadow: none;
-}
+/* The focus-ring suppression that used to sit here never applied: both selectors
+   target classes this component does not render, so scoped CSS dropped them.
+   The ring stays (a11y). Removed in Fáze 2. */
 
 /* ── Loading state ────────────────────────────────────────────── */
 

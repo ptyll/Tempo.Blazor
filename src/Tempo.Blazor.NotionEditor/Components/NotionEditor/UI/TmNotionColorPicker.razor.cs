@@ -42,30 +42,30 @@ public partial class TmNotionColorPicker : ComponentBase
 
     private static readonly ColorEntry[] _textColors =
     [
-        new("TmNotionColorPicker_Default", null),
-        new("TmNotionColorPicker_Gray",    "#9b9a97"),
-        new("TmNotionColorPicker_Brown",   "#64473a"),
-        new("TmNotionColorPicker_Orange",  "#d9730d"),
-        new("TmNotionColorPicker_Yellow",  "#dfab01"),
-        new("TmNotionColorPicker_Green",   "#0f7b6c"),
-        new("TmNotionColorPicker_Blue",    "#0b6e99"),
-        new("TmNotionColorPicker_Purple",  "#6940a5"),
-        new("TmNotionColorPicker_Pink",    "#ad1a72"),
-        new("TmNotionColorPicker_Red",     "#e03e3e"),
+        new("TmNotionColor_Default", null),
+        new("TmNotionColor_Gray",    "gray"),
+        new("TmNotionColor_Brown",   "brown"),
+        new("TmNotionColor_Orange",  "orange"),
+        new("TmNotionColor_Yellow",  "yellow"),
+        new("TmNotionColor_Green",   "green"),
+        new("TmNotionColor_Blue",    "blue"),
+        new("TmNotionColor_Purple",  "purple"),
+        new("TmNotionColor_Pink",    "pink"),
+        new("TmNotionColor_Red",     "red"),
     ];
 
     private static readonly ColorEntry[] _bgColors =
     [
-        new("TmNotionColorPicker_Default",  null),
-        new("TmNotionColorPicker_GrayBg",   "#ebeced"),
-        new("TmNotionColorPicker_BrownBg",  "#e9e5e3"),
-        new("TmNotionColorPicker_OrangeBg", "#faebdd"),
-        new("TmNotionColorPicker_YellowBg", "#fbf3db"),
-        new("TmNotionColorPicker_GreenBg",  "#ddedea"),
-        new("TmNotionColorPicker_BlueBg",   "#ddebf1"),
-        new("TmNotionColorPicker_PurpleBg", "#eae4f2"),
-        new("TmNotionColorPicker_PinkBg",   "#f4dfeb"),
-        new("TmNotionColorPicker_RedBg",    "#fbe4e4"),
+        new("TmNotionColor_Default", null),
+        new("TmNotionColor_Gray",    "gray"),
+        new("TmNotionColor_Brown",   "brown"),
+        new("TmNotionColor_Orange",  "orange"),
+        new("TmNotionColor_Yellow",  "yellow"),
+        new("TmNotionColor_Green",   "green"),
+        new("TmNotionColor_Blue",    "blue"),
+        new("TmNotionColor_Purple",  "purple"),
+        new("TmNotionColor_Pink",    "pink"),
+        new("TmNotionColor_Red",     "red"),
     ];
 
     // ── State ─────────────────────────────────────────────────────────────────

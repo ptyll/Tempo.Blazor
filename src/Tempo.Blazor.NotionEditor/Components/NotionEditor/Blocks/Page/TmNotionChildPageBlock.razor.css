@@ -115,6 +115,6 @@
 }
 
 .tm-child-page__rename-input::placeholder {
-    color:      var(--tm-text-placeholder);
+    color:      var(--tm-text-tertiary);
     font-style: italic;
 }

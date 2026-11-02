@@ -131,10 +131,10 @@ textarea.tm-notion-code-block__content[readonly] {
     align-items:      center;
     gap:              4px;
     padding:          2px 8px;
-    border:           1px solid var(--tm-color-border, var(--tm-border-color, #e5e7eb));
+    border:           1px solid var(--tm-border-color);
     border-radius:    var(--tm-radius-sm, 0.25rem);
     background:       transparent;
-    color:            var(--tm-text-secondary, #6b7280);
+    color:            var(--tm-text-secondary);
     font-family:      var(--tm-notion-font-sans);
     font-size:        var(--tm-font-size-xs, 0.75rem);
     font-weight:      var(--tm-font-weight-medium, 500);
@@ -144,24 +144,24 @@ textarea.tm-notion-code-block__content[readonly] {
 }
 
 .tm-notion-code-block__preview-toggle:hover {
-    background-color: var(--tm-color-surface-hover, #f3f4f6);
-    color:            var(--tm-color-text, #1f2937);
+    background-color: var(--tm-color-surface-hover);
+    color:            var(--tm-text-primary);
 }
 
 .tm-notion-code-block__preview-toggle:focus-visible {
-    outline:          2px solid var(--tm-color-primary, #5470ef);
+    outline:          2px solid var(--tm-color-primary);
     outline-offset:   1px;
 }
 
 .tm-notion-code-block__preview-toggle--active {
-    background-color: var(--tm-color-primary-subtle, #eef2ff);
-    border-color:     var(--tm-color-primary, #5470ef);
-    color:            var(--tm-color-primary-text, #1e40af);
+    background-color: var(--tm-color-primary-subtle);
+    border-color:     var(--tm-color-primary);
+    color:            var(--tm-color-primary-text);
 }
 
 .tm-notion-code-block__preview {
     padding:     8px 0;
-    color:       var(--tm-color-text, #1f2937);
+    color:       var(--tm-text-primary);
     font-family: var(--tm-notion-font-sans);
     font-size:   var(--tm-font-size-sm, 0.875rem);
     line-height: var(--tm-line-height-normal, 1.5);
@@ -181,15 +181,14 @@ textarea.tm-notion-code-block__content[readonly] {
 
 .tm-notion-code-block__preview ::deep th,
 .tm-notion-code-block__preview ::deep td {
-    border:     1px solid var(--tm-color-border, var(--tm-border-color, #e3e3e3));
+    border:     1px solid var(--tm-border-color);
     padding:    6px 10px;
     text-align: left;
-    background: var(--tm-bg-surface, #fff);
+    background: var(--tm-bg-surface);
 }
 
-/* --tm-color-bg-subtle is not defined anywhere; without the chain the header stays light in dark mode. */
 .tm-notion-code-block__preview ::deep th {
-    background-color: var(--tm-color-bg-subtle, var(--tm-bg-surface-secondary, #f7f7f7));
+    background-color: var(--tm-bg-surface-secondary);
     font-weight:      var(--tm-font-weight-semibold, 600);
 }
 
@@ -201,17 +200,17 @@ textarea.tm-notion-code-block__content[readonly] {
 }
 
 .tm-notion-code-block__preview ::deep code {
-    font-family:      var(--tm-font-family-mono, ui-monospace, monospace);
-    background-color: var(--tm-color-bg-subtle, var(--tm-bg-surface-secondary, #f2f2f2));
+    font-family:      var(--tm-font-mono, ui-monospace, monospace);
+    background-color: var(--tm-bg-surface-secondary);
     border-radius:    3px;
     padding:          1px 4px;
 }
 
 .tm-notion-code-block__preview ::deep blockquote {
-    border-left: 3px solid var(--tm-color-border, var(--tm-border-color, #e3e3e3));
+    border-left: 3px solid var(--tm-border-color);
     margin:      8px 0;
     padding-left: 10px;
-    color:       var(--tm-color-text-muted, #6b7280);
+    color:       var(--tm-color-text-muted);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -226,28 +225,28 @@ textarea.tm-notion-code-block__content[readonly] {
 .tm-notion-code-block__code ::deep .token.comment,
 .tm-notion-code-block__code ::deep .token.prolog,
 .tm-notion-code-block__code ::deep .token.doctype,
-.tm-notion-code-block__code ::deep .token.cdata { color: var(--tm-color-text-muted, #6b7280); }
+.tm-notion-code-block__code ::deep .token.cdata { color: var(--tm-color-text-muted); }
 
 .tm-notion-code-block__code ::deep .token.punctuation { color: var(--tm-text-secondary); }
 
 .tm-notion-code-block__code ::deep .token.keyword,
 .tm-notion-code-block__code ::deep .token.selector,
 .tm-notion-code-block__code ::deep .token.important,
-.tm-notion-code-block__code ::deep .token.atrule { color: var(--tm-color-primary, #7c3aed); }
+.tm-notion-code-block__code ::deep .token.atrule { color: var(--tm-color-primary); }
 
 .tm-notion-code-block__code ::deep .token.string,
 .tm-notion-code-block__code ::deep .token.char,
 .tm-notion-code-block__code ::deep .token.attr-value,
-.tm-notion-code-block__code ::deep .token.regex { color: var(--tm-color-success, #15803d); }
+.tm-notion-code-block__code ::deep .token.regex { color: var(--tm-color-success); }
 
 .tm-notion-code-block__code ::deep .token.number,
 .tm-notion-code-block__code ::deep .token.boolean,
 .tm-notion-code-block__code ::deep .token.constant,
-.tm-notion-code-block__code ::deep .token.symbol { color: var(--tm-color-warning, #b45309); }
+.tm-notion-code-block__code ::deep .token.symbol { color: var(--tm-color-warning); }
 
 .tm-notion-code-block__code ::deep .token.function,
 .tm-notion-code-block__code ::deep .token.class-name,
-.tm-notion-code-block__code ::deep .token.tag { color: var(--tm-color-info, #1d4ed8); }
+.tm-notion-code-block__code ::deep .token.tag { color: var(--tm-color-info); }
 
 .tm-notion-code-block__code ::deep .token.operator,
 .tm-notion-code-block__code ::deep .token.entity,

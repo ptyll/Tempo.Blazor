@@ -6,10 +6,10 @@
 }
 
 .tm-npt-item--drag-over > .tm-npt-row {
-    outline: 2px dashed var(--tm-color-accent, #0066cc);
+    outline: 2px dashed var(--tm-color-primary);
     outline-offset: -2px;
     border-radius: 4px;
-    background: var(--tm-color-accent-ghost, rgba(0, 102, 204, 0.08));
+    background: var(--tm-color-primary-subtle);
 }
 
 /* ── Row ─────────────────────────────────────────────────────────────────── */
@@ -26,11 +26,11 @@
 }
 
 .tm-npt-row:hover {
-    background: var(--tm-color-hover, rgba(0, 0, 0, 0.04));
+    background: var(--tm-color-surface-hover);
 }
 
 .tm-npt-item--active > .tm-npt-row {
-    background: var(--tm-color-selected, rgba(0, 0, 0, 0.07));
+    background: var(--tm-color-primary-subtle);
     font-weight: 500;
 }
 
@@ -63,7 +63,7 @@
     border: none;
     background: transparent;
     cursor: pointer;
-    color: var(--tm-color-text-secondary, #999);
+    color: var(--tm-text-secondary);
     border-radius: 3px;
     opacity: 0;
     transition: opacity 0.15s, background 0.1s;
@@ -76,8 +76,8 @@
 }
 
 .tm-npt-toggle:hover {
-    background: var(--tm-color-hover, rgba(0, 0, 0, 0.06));
-    color: var(--tm-color-text, #333);
+    background: var(--tm-color-surface-hover);
+    color: var(--tm-text-primary);
 }
 
 /* ── Chevron ─────────────────────────────────────────────────────────────── */
@@ -109,7 +109,7 @@
     background: transparent;
     text-align: left;
     font-size: 13px;
-    color: var(--tm-color-text, #1a1a1a);
+    color: var(--tm-text-primary);
     cursor: pointer;
     overflow: hidden;
     white-space: nowrap;
@@ -117,7 +117,7 @@
 }
 
 .tm-npt-item--active > .tm-npt-row .tm-npt-title {
-    color: var(--tm-color-text, #1a1a1a);
+    color: var(--tm-text-primary);
 }
 
 /* ── Inline rename input ─────────────────────────────────────────────────── */
@@ -126,11 +126,11 @@
     flex: 1 1 0;
     min-width: 0;
     padding: 1px 4px;
-    border: 1px solid var(--tm-color-accent, #0066cc);
+    border: 1px solid var(--tm-color-primary);
     border-radius: 3px;
     font-size: 13px;
-    color: var(--tm-color-text, #1a1a1a);
-    background: var(--tm-color-surface, #fff);
+    color: var(--tm-text-primary);
+    background: var(--tm-color-surface);
     outline: none;
 }
 
@@ -161,14 +161,14 @@
     border: none;
     background: transparent;
     cursor: pointer;
-    color: var(--tm-color-text-secondary, #999);
+    color: var(--tm-text-secondary);
     border-radius: 3px;
     transition: background 0.1s, color 0.1s;
 }
 
 .tm-npt-btn:hover {
-    background: var(--tm-color-hover, rgba(0, 0, 0, 0.08));
-    color: var(--tm-color-text, #333);
+    background: var(--tm-color-surface-hover);
+    color: var(--tm-text-primary);
 }
 
 /* ── Children list ───────────────────────────────────────────────────────── */
@@ -185,7 +185,7 @@
     gap: 6px;
     padding: 4px 12px 4px 36px;
     font-size: 12px;
-    color: var(--tm-color-text-secondary, #999);
+    color: var(--tm-text-secondary);
 }
 
 /* ── Spinner ─────────────────────────────────────────────────────────────── */
@@ -210,20 +210,20 @@
 .tm-npt-backdrop {
     position: fixed;
     inset: 0;
-    z-index: calc(var(--tm-z-dropdown, 1000) - 1);
+    z-index: calc(var(--tm-z-dropdown) - 1);
 }
 
 /* ── Context menu panel ──────────────────────────────────────────────────── */
 
 .tm-npt-menu {
     position: fixed;
-    z-index: var(--tm-z-dropdown, 1000);
+    z-index: var(--tm-z-dropdown);
     min-width: 200px;
     max-width: 260px;
-    background: var(--tm-color-surface, #fff);
-    border: 1px solid var(--tm-color-border, rgba(0, 0, 0, 0.12));
+    background: var(--tm-color-surface);
+    border: 1px solid var(--tm-border-color);
     border-radius: 6px;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+    box-shadow: var(--tm-shadow-popover);
     padding: 4px;
     overflow: hidden;
 }
@@ -237,7 +237,7 @@
     border: none;
     background: transparent;
     font-size: 13px;
-    color: var(--tm-color-text, #1a1a1a);
+    color: var(--tm-text-primary);
     cursor: pointer;
     border-radius: 4px;
     text-align: left;
@@ -245,20 +245,20 @@
 }
 
 .tm-npt-menu__item:hover {
-    background: var(--tm-color-hover, rgba(0, 0, 0, 0.05));
+    background: var(--tm-color-surface-hover);
 }
 
 .tm-npt-menu__item--danger {
-    color: var(--tm-color-danger, #dc2626);
+    color: var(--tm-color-danger);
 }
 
 .tm-npt-menu__item--danger:hover {
-    background: var(--tm-color-danger-ghost, rgba(220, 38, 38, 0.08));
+    background: var(--tm-color-danger-subtle);
 }
 
 .tm-npt-menu__divider {
     border: none;
-    border-top: 1px solid var(--tm-color-border, rgba(0, 0, 0, 0.08));
+    border-top: 1px solid var(--tm-border-color);
     margin: 4px 0;
 }
 
@@ -277,7 +277,7 @@
 
 .tm-npt-menu__confirm-text {
     font-size: 13px;
-    color: var(--tm-color-text, #1a1a1a);
+    color: var(--tm-text-primary);
     margin: 0 0 10px;
 }
 
@@ -297,9 +297,9 @@
 }
 
 .tm-npt-menu__confirm-yes {
-    background: var(--tm-color-danger, #dc2626);
-    color: #fff;
-    border-color: var(--tm-color-danger, #dc2626);
+    background: var(--tm-color-danger);
+    color: var(--tm-color-on-primary-fixed);
+    border-color: var(--tm-color-danger);
 }
 
 .tm-npt-menu__confirm-yes:hover {
@@ -308,12 +308,12 @@
 
 .tm-npt-menu__confirm-no {
     background: transparent;
-    color: var(--tm-color-text-secondary, #666);
-    border-color: var(--tm-color-border, rgba(0, 0, 0, 0.15));
+    color: var(--tm-text-secondary);
+    border-color: var(--tm-border-color);
 }
 
 .tm-npt-menu__confirm-no:hover {
-    background: var(--tm-color-hover, rgba(0, 0, 0, 0.04));
+    background: var(--tm-color-surface-hover);
 }
 
 /* ── Move-to panel ───────────────────────────────────────────────────────── */
@@ -325,7 +325,7 @@
 .tm-npt-menu__moveto-title {
     font-size: 11px;
     font-weight: 600;
-    color: var(--tm-color-text-secondary, #888);
+    color: var(--tm-text-secondary);
     text-transform: uppercase;
     letter-spacing: 0.05em;
     margin: 0 0 6px;
@@ -336,17 +336,17 @@
     width: 100%;
     box-sizing: border-box;
     padding: 5px 8px;
-    border: 1px solid var(--tm-color-border, rgba(0, 0, 0, 0.15));
+    border: 1px solid var(--tm-border-color);
     border-radius: 4px;
     font-size: 13px;
-    color: var(--tm-color-text, #1a1a1a);
-    background: var(--tm-color-surface, #fff);
+    color: var(--tm-text-primary);
+    background: var(--tm-color-surface);
     outline: none;
     margin-bottom: 4px;
 }
 
 .tm-npt-menu__moveto-input:focus {
-    border-color: var(--tm-color-accent, #0066cc);
+    border-color: var(--tm-color-primary);
 }
 
 .tm-npt-menu__moveto-results {
@@ -363,7 +363,7 @@
     border: none;
     background: transparent;
     font-size: 13px;
-    color: var(--tm-color-text, #1a1a1a);
+    color: var(--tm-text-primary);
     cursor: pointer;
     border-radius: 4px;
     text-align: left;
@@ -374,5 +374,5 @@
 }
 
 .tm-npt-menu__moveto-item:hover {
-    background: var(--tm-color-hover, rgba(0, 0, 0, 0.05));
+    background: var(--tm-color-surface-hover);
 }

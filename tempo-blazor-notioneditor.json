@@ -580,6 +580,58 @@
       ]
     },
     {
+      "itemName": "NotionColorTokens",
+      "kind": "Class",
+      "category": "Components",
+      "namespace": "Tempo.Blazor.Components.NotionEditor.Services",
+      "description": "Maps a stored block colour onto the data-palette token names. A document saved before 2.10.0 stores the picker hex; a new document stores the colour name. Both render through --tm-notion-color-*, so the theme decides the colour.",
+      "packageId": "Tempo.Blazor.NotionEditor",
+      "sourcePath": "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/Services/NotionColorTokens.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "InlineHex",
+          "kind": "Method",
+          "type": "string?",
+          "description": "The one allowlisted legacy hex document.execCommand will keep. The toolbar paints the swatch from the token and sends this hex; null when the name is not on the palette.",
+          "parameters": [
+            {
+              "name": "name",
+              "type": "string?"
+            },
+            {
+              "name": "background",
+              "type": "bool"
+            }
+          ]
+        },
+        {
+          "name": "Name",
+          "kind": "Method",
+          "type": "string?",
+          "description": "Returns the palette name (gray, red, orange, yellow, green, blue, purple, pink, brown) for a legacy picker hex, or the stored value unchanged when it is already a name or unknown.",
+          "parameters": [
+            {
+              "name": "stored",
+              "type": "string?"
+            }
+          ]
+        },
+        {
+          "name": "OptionSolid",
+          "kind": "Method",
+          "type": "string",
+          "description": "The option chip token var(--tm-notion-option-{name}-solid) for a stored name or legacy hex, or var(--tm-color-primary) when the value is empty or unknown.",
+          "parameters": [
+            {
+              "name": "stored",
+              "type": "string?"
+            }
+          ]
+        }
+      ]
+    },
+    {
       "itemName": "NotionCommandStack",
       "kind": "Class",
       "category": "Components",
@@ -3338,7 +3390,7 @@
           "name": "SelectedTextColor",
           "type": "string?",
           "isRequired": false,
-          "description": "Currently active text-color hex, or null for default."
+          "description": "Currently active text colour as a palette name (gray, red, orange, yellow, green, blue, purple, pink, brown), or null for default. A hex stored before 2.10.0 is mapped to the same name."
         },
         {
           "name": "Top",
@@ -3350,7 +3402,11 @@
           "type": "bool",
           "isRequired": false
         }
-      ]
+      ],
+      "cssClasses": [
+        "tm-notion-color-picker"
+      ],
+      "notes": "Swatches paint from --tm-notion-color-{name} and --tm-notion-color-{name}-bg, never a hex. The accessible name of a swatch is TmNotionColor_{Default|Gray|Brown|Orange|Yellow|Green|Blue|Purple|Pink|Red}."
     },
     {
       "itemName": "TmNotionColumnBlock",
@@ -5789,7 +5845,11 @@
           "title": "Single-page mode — embed one page as a work-item description field",
           "code": "@using Tempo.Blazor.NotionEditor.Enums\n\n@code {\n    // Rich-text description blocks only — multi-page blocks are removed automatically in SinglePageMode.\n    private static readonly IReadOnlySet<BlockType> DescriptionBlocks = new HashSet<BlockType>\n    {\n        BlockType.Paragraph, BlockType.Heading1, BlockType.Heading2, BlockType.Heading3,\n        BlockType.BulletList, BlockType.NumberedList, BlockType.TodoItem,\n        BlockType.Quote, BlockType.Callout, BlockType.Code, BlockType.Divider, BlockType.Image, BlockType.Table\n    };\n\n    void OpenElsewhere(string pageId) { /* host opens the linked page in a dialog / new tab */ }\n}\n\n<TmNotionEditor DataProvider=\"@DataProvider\"\n                AggregateProvider=\"@AggregateProvider\"\n                SinglePageMode=\"true\"\n                InitialPageId=\"@WorkItem.DescriptionPageId\"\n                AllowedBlockTypes=\"@DescriptionBlocks\"\n                OnPageNavigationRequested=\"OpenElsewhere\" />"
         }
-      ]
+      ],
+      "cssClasses": [
+        "tm-notion-editor"
+      ],
+      "notes": "The editor root carries the package tokens. Surfaces, text, borders and radii alias core tokens (--tm-bg-page, --tm-color-primary, --tm-border-color, --tm-radius-card) and recompute inside .tm-notion-editor, so a nested data-theme or indigo theme reaches them. The option and text palettes are --tm-notion-option-* and --tm-notion-color-*; their literals live only in _notion-variables.css and _notion-dark.css. A stored block colour is a palette name (gray, red, orange, yellow, green, blue, purple, pink, brown), and a document saved before 2.10.0 still renders because the legacy hex is mapped to that name."
     },
     {
       "itemName": "TmNotionEmbedBlock",
@@ -9245,11 +9305,11 @@
     }
   ],
   "summary": {
-    "itemCount": 178,
-    "manualItemCount": 178,
-    "generatedItemCount": 177,
+    "itemCount": 179,
+    "manualItemCount": 179,
+    "generatedItemCount": 178,
     "generatedOnlyItemCount": 0,
     "componentCount": 132,
-    "publicApiTypeCount": 45
+    "publicApiTypeCount": 46
   }
 }

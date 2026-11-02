@@ -48,8 +48,12 @@
       "name": "SelectedTextColor",
       "type": "string?",
       "isRequired": false,
-      "description": "Currently active text-color hex, or null for default."
+      "description": "Currently active text colour as a palette name (gray, red, orange, yellow, green, blue, purple, pink, brown), or null for default. A hex stored before 2.10.0 is mapped to the same name."
     }
   ],
+  "cssClasses": [
+    "tm-notion-color-picker"
+  ],
+  "notes": "Swatches paint from --tm-notion-color-{name} and --tm-notion-color-{name}-bg, never a hex. The accessible name of a swatch is TmNotionColor_{Default|Gray|Brown|Orange|Yellow|Green|Blue|Purple|Pink|Red}.",
   "subcategory": "UI"
 }

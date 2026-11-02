@@ -207,6 +207,16 @@ public abstract class LocalizationTestBase : BunitContext
 
     protected static MockTmLocalizer BuildEnglishLocalizer() => new(new Dictionary<string, string>
     {
+        ["TmNotionColor_Blue"] = "Blue",
+        ["TmNotionColor_Brown"] = "Brown",
+        ["TmNotionColor_Default"] = "Default",
+        ["TmNotionColor_Gray"] = "Gray",
+        ["TmNotionColor_Green"] = "Green",
+        ["TmNotionColor_Orange"] = "Orange",
+        ["TmNotionColor_Pink"] = "Pink",
+        ["TmNotionColor_Purple"] = "Purple",
+        ["TmNotionColor_Red"] = "Red",
+        ["TmNotionColor_Yellow"] = "Yellow",
         ["TmNotionTableBlock_Redo"] = "Redo table change",
         ["TmNotionTableBlock_ConflictTitle"] = "Save conflict",
         ["TmNotionTableBlock_ConflictMessage"] = "The page changed elsewhere. Your table changes are still available locally.",
@@ -5320,6 +5330,16 @@ public abstract class LocalizationTestBase : BunitContext
 
     public static MockTmLocalizer BuildCzechLocalizer() => new(new Dictionary<string, string>
     {
+        ["TmNotionColor_Blue"] = "Modrá",
+        ["TmNotionColor_Brown"] = "Hnědá",
+        ["TmNotionColor_Default"] = "Výchozí",
+        ["TmNotionColor_Gray"] = "Šedá",
+        ["TmNotionColor_Green"] = "Zelená",
+        ["TmNotionColor_Orange"] = "Oranžová",
+        ["TmNotionColor_Pink"] = "Růžová",
+        ["TmNotionColor_Purple"] = "Fialová",
+        ["TmNotionColor_Red"] = "Červená",
+        ["TmNotionColor_Yellow"] = "Žlutá",
         ["TmNotionTableBlock_Redo"] = "Znovu provést změnu tabulky",
         ["TmNotionTableBlock_ConflictTitle"] = "Konflikt při ukládání",
         ["TmNotionTableBlock_ConflictMessage"] = "Stránka byla mezitím změněna. Vaše změny tabulky zůstávají dostupné lokálně.",

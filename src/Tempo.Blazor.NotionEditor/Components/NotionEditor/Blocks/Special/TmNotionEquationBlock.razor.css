@@ -106,7 +106,7 @@
 }
 
 .tm-notion-equation-block__input::placeholder {
-    color:      var(--tm-text-placeholder);
+    color:      var(--tm-text-tertiary);
     font-style: italic;
 }
 
@@ -215,7 +215,7 @@
 
 .tm-notion-equation-block__done-btn {
     background:   var(--tm-color-primary-600);
-    color:        #fff;
+    color:        var(--tm-color-on-primary-fixed);
     border-color: var(--tm-color-primary-600);
 }
 

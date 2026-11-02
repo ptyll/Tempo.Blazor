@@ -10,7 +10,7 @@
 }
 
 .tm-ndv::-webkit-scrollbar-thumb {
-    background: var(--tm-border, rgba(55,53,47,0.16));
+    background: var(--tm-border-color);
     border-radius: 3px;
 }
 
@@ -20,15 +20,15 @@
     justify-content: center;
     gap: 8px;
     min-height: 180px;
-    color: var(--tm-text-secondary, rgba(55,53,47,0.55));
+    color: var(--tm-text-secondary);
     font-size: 13px;
 }
 
 .tm-ndv__spinner {
     width: 14px;
     height: 14px;
-    border: 2px solid var(--tm-border, rgba(55,53,47,0.16));
-    border-top-color: var(--tm-text-secondary, rgba(55,53,47,0.45));
+    border: 2px solid var(--tm-border-color);
+    border-top-color: var(--tm-text-secondary);
     border-radius: 50%;
     animation: tm-ndv-spin 0.6s linear infinite;
 }
@@ -49,28 +49,28 @@
     padding: 12px;
     border: 1px solid transparent;
     border-radius: 7px;
-    background: var(--tm-bg-elevated, #fff);
-    box-shadow: 0 1px 1px rgba(15,15,15,0.02);
+    background: var(--tm-bg-elevated);
+    box-shadow: var(--tm-shadow-xs);
 }
 
 .tm-ndv__entry--added {
-    background: rgba(45,154,94,0.07);
-    border-color: rgba(45,154,94,0.24);
+    background: color-mix(in srgb, var(--tm-color-success) 7%, transparent);
+    border-color: color-mix(in srgb, var(--tm-color-success) 24%, transparent);
 }
 
 .tm-ndv__entry--removed {
-    background: rgba(235,87,87,0.07);
-    border-color: rgba(235,87,87,0.24);
+    background: color-mix(in srgb, var(--tm-color-danger) 7%, transparent);
+    border-color: color-mix(in srgb, var(--tm-color-danger) 24%, transparent);
 }
 
 .tm-ndv__entry--modified {
-    background: rgba(214,151,38,0.08);
-    border-color: rgba(214,151,38,0.30);
+    background: color-mix(in srgb, var(--tm-color-warning) 8%, transparent);
+    border-color: color-mix(in srgb, var(--tm-color-warning) 30%, transparent);
 }
 
 .tm-ndv__entry--moved {
-    background: rgba(35,131,226,0.06);
-    border-color: rgba(35,131,226,0.22);
+    background: color-mix(in srgb, var(--tm-color-primary) 6%, transparent);
+    border-color: color-mix(in srgb, var(--tm-color-primary) 22%, transparent);
 }
 
 .tm-ndv__indicator {
@@ -87,23 +87,23 @@
 }
 
 .tm-ndv__entry--added .tm-ndv__indicator {
-    color: var(--tm-green, #2d9a5e);
-    background: rgba(45,154,94,0.16);
+    color: var(--tm-color-success);
+    background: color-mix(in srgb, var(--tm-color-success) 16%, transparent);
 }
 
 .tm-ndv__entry--removed .tm-ndv__indicator {
-    color: var(--tm-red, #d64545);
-    background: rgba(235,87,87,0.16);
+    color: var(--tm-color-danger);
+    background: color-mix(in srgb, var(--tm-color-danger) 16%, transparent);
 }
 
 .tm-ndv__entry--modified .tm-ndv__indicator {
-    color: var(--tm-warning-text, #9a6b10);
-    background: rgba(214,151,38,0.18);
+    color: var(--tm-color-warning-text);
+    background: color-mix(in srgb, var(--tm-color-warning) 18%, transparent);
 }
 
 .tm-ndv__entry--moved .tm-ndv__indicator {
-    color: var(--tm-accent, #2383e2);
-    background: rgba(35,131,226,0.14);
+    color: var(--tm-color-primary);
+    background: color-mix(in srgb, var(--tm-color-primary) 14%, transparent);
 }
 
 .tm-ndv__entry-body,
@@ -135,12 +135,12 @@
     font-weight: 700;
     letter-spacing: 0.04em;
     text-transform: uppercase;
-    color: var(--tm-text-secondary, rgba(55,53,47,0.52));
+    color: var(--tm-text-secondary);
 }
 
 .tm-ndv__diff-name {
     font-size: 12px;
-    color: var(--tm-text-secondary, rgba(55,53,47,0.62));
+    color: var(--tm-text-secondary);
 }
 
 .tm-ndv__row {
@@ -154,11 +154,11 @@
     font-weight: 700;
     letter-spacing: 0.05em;
     text-transform: uppercase;
-    color: var(--tm-text-secondary, rgba(55,53,47,0.48));
+    color: var(--tm-text-secondary);
 }
 
 .tm-ndv__block {
-    color: var(--tm-text-primary, rgb(55,53,47));
+    color: var(--tm-text-primary);
     font-size: 13.5px;
     line-height: 1.55;
     overflow-wrap: anywhere;
@@ -168,7 +168,7 @@
     margin: 0;
     padding: 8px 10px;
     border-radius: 6px;
-    background: rgba(55,53,47,0.06);
+    background: color-mix(in srgb, var(--tm-color-gray-900) 6%, transparent);
     overflow-x: auto;
 }
 
@@ -189,13 +189,13 @@
     flex-direction: column;
     gap: 6px;
     padding: 10px;
-    border: 1px solid var(--tm-border, rgba(55,53,47,0.10));
+    border: 1px solid var(--tm-border-color);
     border-radius: 6px;
-    background: rgba(255,255,255,0.68);
+    background: color-mix(in srgb, var(--tm-color-white) 68%, transparent);
 }
 
 .tm-ndv__empty-pane {
-    color: var(--tm-text-secondary, rgba(55,53,47,0.42));
+    color: var(--tm-text-secondary);
     font-size: 13px;
     font-style: italic;
 }

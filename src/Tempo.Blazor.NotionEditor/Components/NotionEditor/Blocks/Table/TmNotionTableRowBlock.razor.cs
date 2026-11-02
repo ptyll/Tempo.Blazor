@@ -191,6 +191,15 @@ public partial class TmNotionTableRowBlock : ComponentBase, IAsyncDisposable
 
     private static void AddColorVariable(List<string> declarations, string name, string? value)
     {
+        // A swatch stores a palette name. The sanitizer only accepts a literal, so the name becomes
+        // the palette token here — a raw var() from content is still rejected.
+        var paint = NotionColorTokens.Name(value);
+        if (paint is not null && NotionColorTokens.InlineHex(paint, background: false) is not null)
+        {
+            declarations.Add($"{name}:var(--tm-notion-color-{paint.ToLowerInvariant()}-bg)");
+            return;
+        }
+
         if (NotionCssNormalizer.TryNormalizeColor(value, out var color) && color is not null)
         {
             declarations.Add($"{name}:{color}");

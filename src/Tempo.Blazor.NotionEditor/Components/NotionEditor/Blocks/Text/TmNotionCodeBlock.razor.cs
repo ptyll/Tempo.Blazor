@@ -148,6 +148,13 @@ public partial class TmNotionCodeBlock : TmComponentBase, IAsyncDisposable
 
         _previewVisible = !_previewVisible;
         _kbInitialized = false;
+        // The textarea is about to leave the DOM. Drop its watcher now — destroyBlock's
+        // early return cannot see an element that is no longer rendered.
+        if (_previewVisible && _textareaRef.Context is not null)
+        {
+            try { await JS.InvokeVoidAsync("tmNotionEditor.destroyBlock", _textareaRef); }
+            catch { /* SSR / test */ }
+        }
     }
 
     /// <summary>

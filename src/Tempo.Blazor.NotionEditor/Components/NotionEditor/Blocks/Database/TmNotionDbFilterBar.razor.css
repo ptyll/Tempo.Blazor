@@ -1,7 +1,7 @@
 /* ── Root ─────────────────────────────────────────────────────────────────── */
 .tm-dbfb {
-    border-bottom: 1px solid var(--tm-border, #e5e7eb);
-    background: var(--tm-bg-1, #fafafa);
+    border-bottom: 1px solid var(--tm-border-color);
+    background: var(--tm-bg-surface-secondary);
     animation: tm-dbfb-in 0.15s ease;
 }
 
@@ -16,7 +16,7 @@
     align-items: center;
     justify-content: space-between;
     padding: 9px 14px 7px;
-    border-bottom: 1px solid var(--tm-border, #e5e7eb);
+    border-bottom: 1px solid var(--tm-border-color);
 }
 
 .tm-dbfb__title {
@@ -24,7 +24,7 @@
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.06em;
-    color: var(--tm-text-2, #6b7280);
+    color: var(--tm-text-secondary);
 }
 
 .tm-dbfb__close {
@@ -37,21 +37,21 @@
     border: none;
     border-radius: 4px;
     background: transparent;
-    color: var(--tm-text-2, #9ca3af);
+    color: var(--tm-text-secondary);
     cursor: pointer;
     transition: background 0.12s, color 0.12s;
 }
 
 .tm-dbfb__close:hover {
-    background: var(--tm-bg-2, #f3f4f6);
-    color: var(--tm-text, #111827);
+    background: var(--tm-bg-surface-secondary);
+    color: var(--tm-text-primary);
 }
 
 /* ── Empty ──────────────────────────────────────────────────────────────── */
 .tm-dbfb__empty {
     padding: 14px 16px;
     font-size: 0.8125rem;
-    color: var(--tm-text-2, #9ca3af);
+    color: var(--tm-text-secondary);
     margin: 0;
 }
 
@@ -65,13 +65,13 @@
 
 .tm-dbfb__where-label {
     font-size: 0.75rem;
-    color: var(--tm-text-2, #6b7280);
+    color: var(--tm-text-secondary);
     min-width: 36px;
 }
 
 .tm-dbfb__logic-toggle {
     display: inline-flex;
-    border: 1px solid var(--tm-border, #d1d5db);
+    border: 1px solid var(--tm-border-color);
     border-radius: 5px;
     overflow: hidden;
 }
@@ -83,22 +83,22 @@
     background: none;
     border: none;
     cursor: pointer;
-    color: var(--tm-text-2, #6b7280);
+    color: var(--tm-text-secondary);
     transition: background 0.1s, color 0.1s;
 }
 
 .tm-dbfb__logic-btn + .tm-dbfb__logic-btn {
-    border-left: 1px solid var(--tm-border, #d1d5db);
+    border-left: 1px solid var(--tm-border-color);
 }
 
 .tm-dbfb__logic-btn--active {
-    background: var(--tm-accent, #3b82f6);
-    color: #fff;
+    background: var(--tm-color-primary-solid);
+    color: var(--tm-color-on-primary-fixed);
 }
 
 .tm-dbfb__logic-btn:not(.tm-dbfb__logic-btn--active):hover {
-    background: var(--tm-bg-2, #f3f4f6);
-    color: var(--tm-text, #111827);
+    background: var(--tm-bg-surface-secondary);
+    color: var(--tm-text-primary);
 }
 
 /* ── Condition row ──────────────────────────────────────────────────────── */
@@ -113,10 +113,10 @@
     height: 28px;
     padding: 0 6px;
     font-size: 0.8rem;
-    border: 1px solid var(--tm-border, #d1d5db);
+    border: 1px solid var(--tm-border-color);
     border-radius: 4px;
-    background: var(--tm-bg, #fff);
-    color: var(--tm-text, #111827);
+    background: var(--tm-bg-surface);
+    color: var(--tm-text-primary);
     cursor: pointer;
     flex-shrink: 0;
     transition: border-color 0.12s;
@@ -124,8 +124,8 @@
 
 .tm-dbfb__cond-select:focus {
     outline: none;
-    border-color: var(--tm-accent, #3b82f6);
-    box-shadow: 0 0 0 2px color-mix(in srgb, var(--tm-accent, #3b82f6) 15%, transparent);
+    border-color: var(--tm-color-primary);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--tm-color-primary) 15%, transparent);
 }
 
 .tm-dbfb__cond-select--field { min-width: 115px; max-width: 140px; }
@@ -137,17 +137,17 @@
     height: 28px;
     padding: 0 8px;
     font-size: 0.8rem;
-    border: 1px solid var(--tm-border, #d1d5db);
+    border: 1px solid var(--tm-border-color);
     border-radius: 4px;
-    background: var(--tm-bg, #fff);
-    color: var(--tm-text, #111827);
+    background: var(--tm-bg-surface);
+    color: var(--tm-text-primary);
     transition: border-color 0.12s;
 }
 
 .tm-dbfb__cond-value:focus {
     outline: none;
-    border-color: var(--tm-accent, #3b82f6);
-    box-shadow: 0 0 0 2px color-mix(in srgb, var(--tm-accent, #3b82f6) 15%, transparent);
+    border-color: var(--tm-color-primary);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--tm-color-primary) 15%, transparent);
 }
 
 .tm-dbfb__cond-remove {
@@ -161,22 +161,22 @@
     border: none;
     border-radius: 4px;
     background: transparent;
-    color: var(--tm-text-2, #9ca3af);
+    color: var(--tm-text-secondary);
     cursor: pointer;
     transition: background 0.12s, color 0.12s;
 }
 
 .tm-dbfb__cond-remove:hover {
-    background: color-mix(in srgb, var(--tm-danger, #ef4444) 10%, transparent);
-    color: var(--tm-danger, #ef4444);
+    background: color-mix(in srgb, var(--tm-color-danger) 10%, transparent);
+    color: var(--tm-color-danger);
 }
 
 /* ── Nested group ───────────────────────────────────────────────────────── */
 .tm-dbfb__group {
     margin: 6px 14px 4px;
-    border: 1px solid var(--tm-border, #e5e7eb);
+    border: 1px solid var(--tm-border-color);
     border-radius: 6px;
-    background: var(--tm-bg, #fff);
+    background: var(--tm-bg-surface);
 }
 
 .tm-dbfb__group-header {
@@ -184,7 +184,7 @@
     align-items: center;
     justify-content: space-between;
     padding: 6px 10px;
-    border-bottom: 1px solid var(--tm-border, #e5e7eb);
+    border-bottom: 1px solid var(--tm-border-color);
 }
 
 .tm-dbfb__group .tm-dbfb__cond {
@@ -202,14 +202,14 @@
     border: none;
     border-radius: 4px;
     background: transparent;
-    color: var(--tm-text-2, #9ca3af);
+    color: var(--tm-text-secondary);
     cursor: pointer;
     transition: background 0.12s, color 0.12s;
 }
 
 .tm-dbfb__group-remove:hover {
-    background: color-mix(in srgb, var(--tm-danger, #ef4444) 10%, transparent);
-    color: var(--tm-danger, #ef4444);
+    background: color-mix(in srgb, var(--tm-color-danger) 10%, transparent);
+    color: var(--tm-color-danger);
 }
 
 /* ── Footer ─────────────────────────────────────────────────────────────── */
@@ -219,7 +219,7 @@
     flex-wrap: wrap;
     gap: 4px;
     padding: 7px 14px 9px;
-    border-top: 1px solid var(--tm-border, #e5e7eb);
+    border-top: 1px solid var(--tm-border-color);
 }
 
 .tm-dbfb__add-btn {
@@ -229,17 +229,17 @@
     padding: 4px 10px;
     font-size: 0.8rem;
     background: transparent;
-    border: 1px solid var(--tm-border, #d1d5db);
+    border: 1px solid var(--tm-border-color);
     border-radius: 5px;
-    color: var(--tm-text-2, #6b7280);
+    color: var(--tm-text-secondary);
     cursor: pointer;
     transition: background 0.12s, color 0.12s, border-color 0.12s;
 }
 
 .tm-dbfb__add-btn:hover {
-    background: var(--tm-bg-2, #f3f4f6);
-    color: var(--tm-text, #111827);
-    border-color: var(--tm-text-3, #9ca3af);
+    background: var(--tm-bg-surface-secondary);
+    color: var(--tm-text-primary);
+    border-color: var(--tm-text-tertiary);
 }
 
 .tm-dbfb__add-btn--sm {
@@ -255,19 +255,19 @@
     background: transparent;
     border: none;
     border-radius: 5px;
-    color: var(--tm-danger, #ef4444);
+    color: var(--tm-color-danger);
     cursor: pointer;
     transition: background 0.12s;
 }
 
 .tm-dbfb__clear-btn:hover {
-    background: color-mix(in srgb, var(--tm-danger, #ef4444) 8%, transparent);
+    background: color-mix(in srgb, var(--tm-color-danger) 8%, transparent);
 }
 
 /* ── Disabled state ─────────────────────────────────────────────────────── */
 .tm-dbfb__cond-select:disabled,
 .tm-dbfb__cond-value:disabled {
-    background: var(--tm-bg-1, #f9fafb);
-    color: var(--tm-text-2, #9ca3af);
+    background: var(--tm-bg-surface-secondary);
+    color: var(--tm-text-secondary);
     cursor: default;
 }

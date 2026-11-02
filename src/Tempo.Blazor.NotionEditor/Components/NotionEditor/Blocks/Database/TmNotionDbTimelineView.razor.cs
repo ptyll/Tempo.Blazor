@@ -1,6 +1,7 @@
 using System.Globalization;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
+using Tempo.Blazor.Components.NotionEditor.Services;
 using Tempo.Blazor.NotionEditor.Enums;
 using Tempo.Blazor.NotionEditor.Interfaces;
 using Tempo.Blazor.NotionEditor.Models;
@@ -225,9 +226,9 @@ public partial class TmNotionDbTimelineView : ComponentBase
                 color = sel.Options
                     .FirstOrDefault(o => string.Equals(o.Name, val, StringComparison.OrdinalIgnoreCase))?.Color;
 
-            if (!string.IsNullOrEmpty(color)) return color;
+            if (!string.IsNullOrEmpty(color)) return NotionColorTokens.OptionSolid(color);
         }
-        return "var(--tm-primary, #2383e2)";
+        return NotionColorTokens.OptionSolid(null);
     }
 
     // ── Today marker ─────────────────────────────────────────────────────────

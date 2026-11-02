@@ -32,20 +32,12 @@
 /* ── Drop target highlight (used by drag-and-drop JS) ─────────── */
 
 .tm-notion-column.tm-dnd-over {
-    background:    rgba(108, 99, 255, 0.04);
+    background: color-mix(in srgb, var(--tm-color-primary) 4%, transparent);
     border-radius: var(--tm-radius-md, 6px);
-    outline:       2px dashed var(--tm-color-primary, #6c63ff);
+    outline:       2px dashed var(--tm-color-primary);
     outline-offset: -2px;
 }
 
-/* ── Block list inside column ─────────────────────────────────── */
-
-.tm-notion-column .tm-notion-block-list {
-    flex:      1;
-    min-height: 40px;
-}
-
-/* Minimal empty state affordance */
-.tm-notion-column .tm-notion-block-list__after {
-    min-height: 40px;
-}
+/* The empty-column drop target lives in TmNotionBlockList.razor.css. A rule for
+   .tm-notion-block-list__after here never applied (scoped to the wrong component),
+   so an empty column lost its drop area. */

@@ -65,9 +65,8 @@ public sealed class ScopedCssOwnershipTests
         findings.Count.Should().BeLessThanOrEqualTo(77,
             "growing past the hard ceiling is a code change, not a baseline edit");
 
-        findings.Should().NotBeEmpty(
-            "the baseline exists because Gantt/Notion/Modeling already have foreign classes; "
-            + "an empty scan means the heuristic stopped seeing them");
+        // Gantt, Notion and Modeling each removed their frozen rows. An empty scan is now the
+        // success state the baseline shrinks toward, not evidence that the heuristic broke.
 
         var regressions = findings
             .Where(finding => !baseline.Contains(finding.Key))
