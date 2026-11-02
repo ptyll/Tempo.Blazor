@@ -1,0 +1,29 @@
+{
+  "kind": "Enum",
+  "category": "Components",
+  "namespace": "Tempo.Blazor.Components.DataDisplay",
+  "description": "The direction of a metric's movement as a trend surface paints it — the FACT (did the number go up), never the verdict (was that good). TmStatCard's PositiveIsGood decides only the tone, so a falling churn rate is Down and good news at the same time.",
+  "packageId": "Tempo.Blazor",
+  "sourcePath": "src/Tempo.Blazor/Components/DataDisplay/TrendDirection.cs",
+  "documentationStatus": "documented",
+  "itemName": "TrendDirection",
+  "members": [
+    {
+      "name": "Auto",
+      "description": "Derive the direction from the sign of the delta (a positive delta is Up, a negative one Down, zero Flat). The default; when no delta is supplied either, no trend marker renders."
+    },
+    {
+      "name": "Up",
+      "description": "The metric rose, whatever the delta says — for a metric whose delta is unknown but whose direction is not."
+    },
+    {
+      "name": "Down",
+      "description": "The metric fell."
+    },
+    {
+      "name": "Flat",
+      "description": "The metric did not move. Painted as the neutral tone."
+    }
+  ],
+  "usageExample": "<TmStatCard Title=\"Churn\" Value=\"2,1 %\" Delta=\"-3\" TrendDirection=\"TrendDirection.Down\" PositiveIsGood=\"false\" />"
+}

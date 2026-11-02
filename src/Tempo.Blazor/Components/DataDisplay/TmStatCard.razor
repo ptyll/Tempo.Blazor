@@ -1,14 +1,37 @@
 @namespace Tempo.Blazor.Components.DataDisplay
+@inherits Tempo.Blazor.Components.TmComponentBase
+@using Tempo.Blazor.Components.Charts
 
-<div class="tm-stat-card">
-    <span class="tm-stat-value">@Value</span>
-    <span class="tm-stat-label">@Title</span>
-    @if (!string.IsNullOrEmpty(SubValue))
-    {
-        <span class="tm-stat-subvalue"
-              style="@(_validatedSubValueColor is not null ? $"--tm-stat-subvalue-color: {_validatedSubValueColor}" : null)">@SubValue</span>
-    }
-</div>
+@* A statistic card. The root is the whole target: a <button> when the host passes OnClick, an <a>
+   when it passes a SAFE Href, a plain <div> otherwise — one native focus stop, no JavaScript and no
+   nested control. Every 2.10.0 part (icon, delta trend, comparison label, sparkline, skeleton,
+   animated value) is opt-in, and the DEFAULT card still renders the 2.9.x markup byte for byte
+   (pinned by TmStatCardTests.WithoutNewParameters_RendersTheExactPreTwoTenMarkup).
+
+   CardBody is a template so the three roots share one body. Its indentation is LOAD-BEARING: the
+   whitespace between the value span and the label span is part of the legacy markup, so those two
+   lines sit at the same column they had inside the old <div>. Do not re-indent them. *@
+@if (OnClick.HasDelegate)
+{
+    <button type="button"
+            class="@CardClass"
+            data-testid="@RootTestId()"
+            aria-busy="@BusyAttribute"
+            @onclick="HandleClickAsync">@CardBody</button>
+}
+else if (EffectiveHref is { } safeHref)
+{
+    <a class="@CardClass"
+       href="@safeHref"
+       data-testid="@RootTestId()"
+       aria-busy="@BusyAttribute">@CardBody</a>
+}
+else
+{
+    <div class="@CardClass"
+         data-testid="@RootTestId()"
+         aria-busy="@BusyAttribute">@CardBody</div>
+}
 
 @code {
     /// <summary>Card label / metric name.</summary>
@@ -17,7 +40,7 @@
     /// <summary>Alias for Title.</summary>
     [Parameter] public string Label { get => Title; set => Title = value; }
 
-    /// <summary>Primary metric value (e.g. "1,234" or "$5,000").</summary>
+    /// <summary>Primary metric value (e.g. "1,234" or "$5,000"). Ignored when NumericValue is set.</summary>
     [Parameter] public string? Value { get; set; }
 
     /// <summary>Secondary value or trend indicator (e.g. "+12% this month").</summary>
@@ -77,4 +100,86 @@
 
         _validatedSubValueColor = ValidateSubValueColor();
     }
+
+    /// <summary>
+    /// The whitespace the pre-2.10.0 markup carried between the value span and the label span
+    /// (<c>"\n    "</c>, the source indent of that pair). It is emitted EXPLICITLY because the value
+    /// is now produced by an <c>@if</c>/<c>@else</c> chain and Razor trims the whitespace that follows
+    /// a code block — the default card has to stay byte-identical (see
+    /// <c>TmStatCardTests.WithoutNewParameters_RendersTheExactPreTwoTenMarkup</c>), so the separator
+    /// cannot depend on source formatting any more.
+    /// </summary>
+    private const string ValueLabelSeparator = "\n    ";
+
+    /// <summary>
+    /// The card's inner markup, shared by the three possible roots. The value/label pair carries the
+    /// legacy whitespace explicitly (see <see cref="ValueLabelSeparator"/>).
+    /// </summary>
+    private RenderFragment CardBody => @<text>
+    @if (!IsLoading && !string.IsNullOrEmpty(Icon))
+    {
+        <span class="tm-stat-card__icon" data-testid="@TestId("stat-card-icon")" aria-hidden="true">
+            <TmIcon Name="@Icon" Size="IconSize.Lg" />
+        </span>
+    }
+    @if (IsLoading)
+    {
+        <span class="tm-stat-card__skeletons" aria-hidden="true">
+            <TmSkeleton Variant="SkeletonVariant.Text" Height="1.75rem" Width="60%" />
+            <TmSkeleton Variant="SkeletonVariant.Text" Width="75%" />
+            <TmSkeleton Variant="SkeletonVariant.Text" Width="45%" />
+        </span><span class="tm-sr-only">@Loc["TmStatCard_Loading"]</span>
+    }
+    else if (HasNumericValue)
+    {
+        <span class="tm-stat-value"><TmAnimatedNumber Value="@NumericValue!.Value"
+                                                     Format="@ValueFormat"
+                                                     Culture="@Culture"
+                                                     Animate="@AnimateValue"
+                                                     Prefix="@ValuePrefix"
+                                                     Suffix="@ValueSuffix"
+                                                     DataTestId="@TestId("stat-card-value")" /></span>
+    }
+    else
+    {
+        <span class="tm-stat-value">@Value</span>
+    }
+    @ValueLabelSeparator<span class="tm-stat-label">@Title</span>
+    @if (!string.IsNullOrEmpty(SubValue))
+    {
+        <span class="tm-stat-subvalue"
+              style="@(_validatedSubValueColor is not null ? $"--tm-stat-subvalue-color: {_validatedSubValueColor}" : null)">@SubValue</span>
+    }
+    @if (!IsLoading && ResolvedTrend is { } trend)
+    {
+        <span class="tm-stat-card__trend tm-stat-card__trend--@trend.OutcomeClass"
+              data-trend="@trend.Slug"
+              data-testid="@TestId("stat-card-trend")">
+            <TmIcon Name="@trend.Icon" Size="IconSize.Sm" />
+            @* Colour is never the only carrier: the direction also travels as an arrow and as this
+               visually hidden word. *@
+            <span class="tm-sr-only">@Loc[trend.LabelKey]</span>
+            @if (Delta is { } delta)
+            {
+                <span class="tm-stat-card__delta">@FormatDelta(delta)</span>
+            }
+            @if (!string.IsNullOrEmpty(ComparisonLabel))
+            {
+                <span class="tm-stat-card__comparison">@ComparisonLabel</span>
+            }
+        </span>
+    }
+    @if (!IsLoading && Sparkline is { Length: > 0 })
+    {
+        @* A whole-card target builds its accessible name from its content, so the chart's own
+           role=img name ("… Sparkline") would be spliced into that name and read on every focus
+           stop. Next to a labelled value the chart is decoration, so an INTERACTIVE card hides the
+           subtree; a static card keeps the chart's role=img description. *@
+        <span class="tm-stat-card__sparkline"
+              data-testid="@TestId("stat-card-sparkline")"
+              aria-hidden="@(IsInteractive ? "true" : null)">
+            <TmSparkline Data="@Sparkline" Type="SparklineType.Line" Height="32px" />
+        </span>
+    }
+    </text>;
 }

@@ -6,6 +6,9 @@
   display: flex;
   flex-direction: column;
   gap: var(--tm-space-1);
+  /* The opt-in icon sits in the top corner; the default card has no positioned child, so this is a
+     no-op for it. */
+  position: relative;
 }
 
 /* Value / label / subvalue spans rendered by TmStatCard. Without these the three spans render as
@@ -46,3 +49,141 @@
 .tm-stat-card-trend  { font-size: var(--tm-font-size-xs); font-weight: var(--tm-font-weight-medium); margin-top: var(--tm-space-2); }
 .tm-stat-card-trend-up   { color: var(--tm-color-success-text); }
 .tm-stat-card-trend-down { color: var(--tm-color-danger-text); }
+
+/* ── The whole-card target (2.10.0, opt-in) ─────────────────────────────
+   Href renders an <a>, OnClick a <button>: one native focus stop and the platform's own
+   activation, never a click layer over a div. Both carry --interactive so the two resets and the
+   focus ring live in one place. */
+a.tm-stat-card,
+button.tm-stat-card {
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  inline-size: 100%;
+  cursor: pointer;
+}
+
+a.tm-stat-card {
+  text-decoration: none;
+}
+
+button.tm-stat-card {
+  appearance: none;
+}
+
+.tm-stat-card--interactive:focus-visible {
+  /* The library's one focus indicator is the two-layer --tm-focus-ring (a surface gap plus the
+     primary ring), which the dark theme re-points and which clears 3:1 against the card surface in
+     both themes. The transparent outline is not decoration: forced-colors forces box-shadow to none,
+     so a rule that only painted the ring would show no indicator at all there and the system colour
+     is then drawn on this outline. */
+  outline: 2px solid transparent;
+  box-shadow: var(--tm-focus-ring);
+}
+
+/* ── Opt-in KPI parts (2.10.0) ──────────────────────────────────────────
+   Nothing here is rendered by the default card, so none of it can change the 2.9.x look. */
+
+/* Decorative icon in the top corner: the label and value already name the card, so it is hidden
+   from assistive technology in the markup and only paints. */
+.tm-stat-card__icon {
+  position: absolute;
+  inset-block-start: var(--tm-space-4);
+  inset-inline-end: var(--tm-space-4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: 2.25rem;
+  block-size: 2.25rem;
+  border-radius: var(--tm-radius-md);
+  background-color: var(--tm-color-primary-subtle);
+  color: var(--tm-color-primary);
+  pointer-events: none;
+}
+
+/* The icon is OUT of the flow, so its box is reserved here: without the gutter a long title or a wide
+   value runs underneath it, which is a visual defect and a WCAG 1.4.10 Reflow one in a 375 px card or
+   a narrow grid track. The modifier is emitted only when the icon actually paints, so the default card
+   keeps the exact 2.9.x layout. */
+.tm-stat-card--has-icon .tm-stat-value,
+.tm-stat-card--has-icon .tm-stat-label {
+  padding-inline-end: calc(2.25rem + var(--tm-space-2));
+}
+
+/* Delta + direction + comparison. The tone is the OUTCOME (--positive = good news), which is why
+   the class name does not follow the arrow: a falling churn rate is green. */
+.tm-stat-card__trend {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--tm-space-1);
+  margin-block-start: var(--tm-space-2);
+  font-size: var(--tm-font-size-xs);
+  font-weight: var(--tm-font-weight-medium);
+}
+
+.tm-stat-card__trend--positive {
+  color: var(--tm-color-success-text);
+}
+
+.tm-stat-card__trend--negative {
+  color: var(--tm-color-danger-text);
+}
+
+.tm-stat-card__trend--neutral {
+  color: var(--tm-text-secondary);
+}
+
+.tm-stat-card__delta {
+  font-variant-numeric: tabular-nums;
+}
+
+.tm-stat-card__comparison {
+  color: var(--tm-text-secondary);
+  font-weight: var(--tm-font-weight-normal);
+}
+
+/* The mini chart. On a static card it keeps its own accessible name from TmSparkline; on an
+   interactive card the wrapper is aria-hidden (the target's name is built from its content), so the
+   box only reserves the height there so the card does not jump once the SVG arrives. */
+.tm-stat-card__sparkline {
+  display: block;
+  block-size: 32px;
+  margin-block-start: var(--tm-space-2);
+}
+
+/* Loading placeholder: three skeleton bars in the value slot. The label stays visible because it is
+   static information; the visually hidden "Loading" text (a plain .tm-sr-only span) is what tells a
+   reader that the numbers are on their way. */
+.tm-stat-card__skeletons {
+  display: flex;
+  flex-direction: column;
+  gap: var(--tm-space-2);
+  inline-size: 100%;
+}
+
+/* ── Forced colours ──────────────────────────────────────────────────────
+   System colours replace the tokens, so the ring and the icon chip need explicit colours. */
+@media (forced-colors: active) {
+  .tm-stat-card--interactive:focus-visible,
+  .tm-stat-card--interactive:focus {
+    outline: 2px solid Highlight;
+    outline-offset: 2px;
+    box-shadow: none;
+  }
+
+  .tm-stat-card__icon {
+    border: 1px solid CanvasText;
+    color: CanvasText;
+  }
+}
+
+/* ── Touch ───────────────────────────────────────────────────────────────
+   An interactive card is a whole-surface target, so it is far above 44 px in practice; the floor
+   makes the guarantee explicit and covers a card squeezed into a narrow grid track. */
+@media (pointer: coarse) {
+  a.tm-stat-card,
+  button.tm-stat-card {
+    min-block-size: var(--tm-touch-target);
+  }
+}

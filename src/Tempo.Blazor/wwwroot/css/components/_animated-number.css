@@ -1,0 +1,15 @@
+/* TmAnimatedNumber — the ticker's visual shell.
+   The motion itself is a requestAnimationFrame loop in tm-animated-number.js, not a CSS animation,
+   so there is deliberately nothing to add to animations.css: the reduce block only enumerates
+   animated/transition subjects and this component has none. What CSS DOES own here is digit width:
+   without tabular numerals the text reflows on every frame and the number jitters. */
+.tm-animated-number {
+  display: inline-flex;
+  align-items: baseline;
+  font-variant-numeric: tabular-nums;
+}
+
+.tm-animated-number__value,
+.tm-animated-number__reader {
+  font-variant-numeric: tabular-nums;
+}

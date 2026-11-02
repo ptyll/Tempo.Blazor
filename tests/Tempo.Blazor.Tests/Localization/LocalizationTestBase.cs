@@ -4603,6 +4603,10 @@ public abstract class LocalizationTestBase : BunitContext
         // StockChart, Sparkline, Gauge
         ["TmStockChart_AriaLabel"] = "Stock chart",
         ["TmSparkline_AriaLabel"] = "Sparkline chart",
+        ["TmStatCard_Loading"] = "Loading value",
+        ["TmStatCard_TrendUp"] = "Increase",
+        ["TmStatCard_TrendDown"] = "Decrease",
+        ["TmStatCard_TrendFlat"] = "No change",
         ["TmGauge_AriaLabel"] = "Gauge",
 
         // TmGantt Phase 4
@@ -9394,6 +9398,10 @@ public abstract class LocalizationTestBase : BunitContext
         // StockChart, Sparkline, Gauge
         ["TmStockChart_AriaLabel"] = "Akciový graf",
         ["TmSparkline_AriaLabel"] = "Mini graf",
+        ["TmStatCard_Loading"] = "Načítání hodnoty",
+        ["TmStatCard_TrendUp"] = "Nárůst",
+        ["TmStatCard_TrendDown"] = "Pokles",
+        ["TmStatCard_TrendFlat"] = "Bez změny",
         ["TmGauge_AriaLabel"] = "Měřidlo",
 
         // TmRating

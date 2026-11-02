@@ -51,6 +51,7 @@ public sealed class BuiltInUiRoleVocabularySource : IUiRoleVocabularySource
         R("chip", "Chip", "Displays a compact token or selected item.", "pill", "stitkovy prvek", "TmChip", "TmChipGroup"),
         R("card", "Card", "Groups related content and actions.", "panel", "karta", "TmCard"),
         R("stat-card", "Stat card", "Highlights a key metric.", "metric card", "metricka karta", "TmStatCard"),
+        R("animated-number", "Animated number", "Shows one metric as a number that counts up to its target value; a KPI read-out rather than a label.", "number ticker", "kpi value", "animated number", "pocitadlo cisla", "TmAnimatedNumber"),
         R("accordion", "Accordion", "Shows collapsible content sections.", "collapsible section", "rozbalovaci sekce", "TmAccordion", "TmAccordionItem"),
         R("empty-state", "Empty state", "Explains that no data or content is available.", "blank state", "prazdny stav", "TmEmptyState"),
         R("approval-card", "Approval card", "Asks a human to approve or reject a request, with its risk, deadline and note.", "approval request", "schvalovaci karta", "TmApprovalCard"),

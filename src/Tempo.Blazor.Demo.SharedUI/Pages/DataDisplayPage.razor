@@ -1,7 +1,9 @@
 @page "/data-display"
 @using Tempo.Blazor.Models
 @using Tempo.Blazor.Components.DataTable
+@using Tempo.Blazor.Interfaces
 @inject ToastService Toast
+@inject ITmLocalizer Loc
 <PageTitle>Data Display – Tempo.Blazor</PageTitle>
 
 <!-- Page Header -->
@@ -53,6 +55,55 @@
         <TmStatCard Value="98.5%" Label="Uptime" SubValue="+0.3% vs last month" SubValueColor="var(--tm-color-success-text)" />
         <TmStatCard Value="42" Label="Open Issues" />
         <TmStatCard Value="$124.5K" Label="Revenue" SubValue="↑ 18% MoM" SubValueColor="var(--tm-color-success-text)" />
+    </div>
+</section>
+
+<!-- KPI stat cards: the 2.10.0 additive surface. Delta + trend direction + comparison label,
+     decorative icon, sparkline, animated numeric value, loading skeleton. -->
+<section class="demo-section">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">@Loc["TmDataDisplayDemo_KpiCards"]</h2>
+        <span class="px-2 py-0.5 text-xs font-medium bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 rounded-full">@Loc["TmDataDisplayDemo_KpiBadge"]</span>
+    </div>
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4" data-testid="stat-cards-kpi">
+        <TmStatCard Title="Revenue" NumericValue="@_revenue" AnimateValue="@_animateRevenue" Delta="12.5"
+                    ComparisonLabel="vs. last month" Icon="trending-up" Sparkline="@_revenueTrend" />
+        <TmStatCard Title="Churn" NumericValue="2.1" ValueFormat="N1" ValueSuffix=" %" Delta="-3"
+                    PositiveIsGood="false" ComparisonLabel="vs. last month" Icon="user-minus" />
+        <TmStatCard Title="Open tickets" Value="42" Delta="0" ComparisonLabel="vs. last week" Icon="activity" />
+        <TmStatCard Title="Uptime" Value="99.9%" IsLoading="true" />
+    </div>
+</section>
+
+<!-- Whole-card targets: Href renders an <a>, OnClick a <button> — one native focus stop. -->
+<section class="demo-section">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">@Loc["TmDataDisplayDemo_InteractiveCards"]</h2>
+        <span class="px-2 py-0.5 text-xs font-medium bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 rounded-full">@Loc["TmDataDisplayDemo_InteractiveBadge"]</span>
+    </div>
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4" data-testid="stat-cards-interactive">
+        <TmStatCard Title="Active users" NumericValue="12345" Href="data-display" Icon="users" />
+        <TmStatCard Title="Sessions" Value="48,200" OnClick="@OnSessionsClicked" Icon="activity" />
+    </div>
+</section>
+
+<!-- Animated numbers: one accessible value, a ticker that retargets when the value changes. -->
+<section class="demo-section">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">@Loc["TmDataDisplayDemo_AnimatedNumbers"]</h2>
+        <span class="px-2 py-0.5 text-xs font-medium bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 rounded-full">@Loc["TmDataDisplayDemo_AnimatedBadge"]</span>
+    </div>
+    <div class="showcase-card" data-testid="animated-numbers">
+        <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">@Loc["TmDataDisplayDemo_AnimatedHint"]</p>
+        <div class="flex flex-wrap items-baseline gap-8 mb-4">
+            <TmAnimatedNumber Value="@_revenue" Format="N0" Class="text-3xl font-bold text-slate-900 dark:text-white" />
+            <TmAnimatedNumber Value="@_ratio" Format="P1" Class="text-2xl font-semibold text-primary-600 dark:text-primary-300" />
+            <TmAnimatedNumber Value="@_revenue" Format="N0" Prefix="$" Class="text-2xl font-semibold text-slate-700 dark:text-slate-200" />
+        </div>
+        <div class="flex flex-wrap gap-2">
+            <TmButton Variant="ButtonVariant.Primary" Size="ButtonSize.Sm" data-testid="animated-bump" OnClick="@BumpRevenue">@Loc["TmDataDisplayDemo_AnimatedBump"]</TmButton>
+            <TmButton Variant="ButtonVariant.Ghost" Size="ButtonSize.Sm" OnClick="@ResetRevenue">@Loc["TmDataDisplayDemo_AnimatedReset"]</TmButton>
+        </div>
     </div>
 </section>
 
@@ -284,6 +335,26 @@
 @code {
     private ListViewMode _mvlView = ListViewMode.Card;
     private string? _mvlClicked;
+
+    // KPI / animated number demo (2.10.0). The metric values are host data, not UI chrome.
+    private double _revenue = 12450;
+    private double _ratio = 0.125;
+    private bool _animateRevenue = true;
+    private readonly double[] _revenueTrend = [8, 12, 10, 16, 14, 20, 24];
+
+    private void BumpRevenue()
+    {
+        _revenue += 1000;
+        _ratio += 0.01;
+    }
+
+    private void ResetRevenue()
+    {
+        _revenue = 12450;
+        _ratio = 0.125;
+    }
+
+    private void OnSessionsClicked() => Toast.ShowInfo(Loc["TmDataDisplayDemo_SessionsToast"]);
 
     // Change Diff
     private List<TmChangeInfo> _simpleChanges = new()

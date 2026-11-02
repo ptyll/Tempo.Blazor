@@ -142,6 +142,7 @@ public sealed class BuiltInComponentSchemas : IWireframeSchemaSource
             ["TmText"] = ["text"],
             ["TmCard"] = ["card"],
             ["TmStatCard"] = ["stat-card"],
+            ["TmAnimatedNumber"] = ["animated-number"],
             ["TmBadge"] = ["badge"],
             ["TmChip"] = ["chip"],
             ["TmChipGroup"] = ["chip"],
@@ -1035,6 +1036,30 @@ public sealed class BuiltInComponentSchemas : IWireframeSchemaSource
                     opts: ["up","down","neutral"]),
                 P("subValue",      "Sub Value",       PropType.String, "",              cat: "Content"),
                 P("subValueColor", "Sub Value Color", PropType.String, "",              cat: "Appearance"),
+                P("delta",         "Delta",           PropType.Double, "",              cat: "Content"),
+                P("deltaFormat",   "Delta Format",    PropType.String, "",              cat: "Content"),
+                P("comparisonLabel", "Comparison Label", PropType.String, "vs. last month", cat: "Content"),
+                P("trend",         "Trend (override)",PropType.Enum,   "",              cat: "Appearance",
+                    opts: ["", "up", "down", "flat"]),
+                P("positiveIsGood","Positive Is Good", PropType.Bool,   true,            cat: "Appearance"),
+                P("icon",          "Icon",            PropType.Icon,   cat: "Content"),
+                P("sparkline",     "Sparkline",       PropType.Bool,   false,           cat: "Appearance"),
+                P("loading",       "Loading",         PropType.Bool,   false,           cat: "State"),
+                P("animateValue",  "Animate Value",   PropType.Bool,   false,           cat: "Behavior"),
+            ]
+        };
+
+        yield return new WireframeComponentSchema
+        {
+            Type = "TmAnimatedNumber", Category = "Data Display", DisplayName = "Animated Number",
+            DefaultWidth = 160, DefaultHeight = 64,
+            Props =
+            [
+                P("value",    "Value",    PropType.Double, 12450,      cat: "Content"),
+                P("format",   "Format",   PropType.String, "N0",       cat: "Content"),
+                P("prefix",   "Prefix",   PropType.String, "",         cat: "Content"),
+                P("suffix",   "Suffix",   PropType.String, "",         cat: "Content"),
+                P("announce", "Announce", PropType.Bool,   false,      cat: "Behavior"),
             ]
         };
 

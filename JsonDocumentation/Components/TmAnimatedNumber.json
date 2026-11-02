@@ -1,0 +1,106 @@
+{
+  "itemName": "TmAnimatedNumber",
+  "kind": "Component",
+  "category": "Data Display",
+  "description": "Renders one metric as a number that counts up to its target value. The FINAL formatted value is what the document contains — the animation only repaints that same text between frames — so a screen reader, a copy/paste and a host without JavaScript all get the exact number once. The ticker runs in a requestAnimationFrame loop (tm-animated-number.js) and is skipped entirely when the machine asks for reduced motion.",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.DataDisplay"
+  ],
+  "parameters": [
+    {
+      "name": "Value",
+      "type": "double",
+      "isRequired": true,
+      "description": "The numeric value to display. The rendered text is Value.ToString(Format, Culture) wrapped in Prefix/Suffix, so the number the reader receives is the culture-correct final value, never an intermediate frame."
+    },
+    {
+      "name": "Format",
+      "type": "string",
+      "isRequired": false,
+      "default": "N0",
+      "description": "The .NET numeric format string (default N0 — whole, group-separated numbers). It decides the final text and the shape of the intermediate frames: N/F/P/C and the custom 0/# patterns are mirrored by the ticker, while an unsupported format still animates and only its in-flight frames fall back to whole numbers. The last frame is always the exact string.Format result."
+    },
+    {
+      "name": "Culture",
+      "type": "CultureInfo?",
+      "isRequired": false,
+      "description": "The culture the number is formatted with. Null (the default) means the current culture at render time, so a ticker follows the request culture without being told."
+    },
+    {
+      "name": "Prefix",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Optional text before the number (a currency symbol, a sign). Host data — the component does not localize it."
+    },
+    {
+      "name": "Suffix",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Optional text after the number (for example \" %\"). Host data — the component does not localize it."
+    },
+    {
+      "name": "Duration",
+      "type": "int",
+      "isRequired": false,
+      "default": "600",
+      "description": "Length of the ticker in milliseconds (default 600), clamped to 0–10000. 0 means instant: no JavaScript module is imported at all."
+    },
+    {
+      "name": "StartValue",
+      "type": "double?",
+      "isRequired": false,
+      "description": "The value the very first frame starts from. Null (the default) means 0. Later value changes never return here: a change that lands mid-animation retargets the running loop from the number currently on screen."
+    },
+    {
+      "name": "Animate",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "Whether the ticker runs at all. False is a pure-Blazor path with no module import and no motion-preference probe — for static exports, tests, or a host that wants a still number. Reduced motion is honoured independently of this switch."
+    },
+    {
+      "name": "Announce",
+      "type": "bool",
+      "isRequired": false,
+      "default": "false",
+      "description": "Turns the accessible value into a polite, atomic live region so a changed number is announced once when it lands; the visual span then steps out of the accessibility tree, keeping the region the only text a reader meets. Default false: a page with many tickers must not become a chorus, and the value is readable without it."
+    },
+    {
+      "name": "Class",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Additional CSS class for the root element."
+    },
+    {
+      "name": "DataTestId",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Overrides the root data-testid; the default id is animated-number and TestIdPrefix namespaces it."
+    },
+    {
+      "name": "TestIdPrefix",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Namespaces the component's internal test ids as \"{prefix}-{name}\" so several instances on one page stay targetable."
+    }
+  ],
+  "cssClasses": [
+    "tm-animated-number",
+    "tm-animated-number__value",
+    "tm-animated-number__reader"
+  ],
+  "examples": [
+    {
+      "title": "KPI value that counts up",
+      "code": "<TmAnimatedNumber Value=\"12450\" Format=\"N0\" Suffix=\" users\" />"
+    },
+    {
+      "title": "Czech percentage with a one-decimal format",
+      "code": "<TmAnimatedNumber Value=\"0.125\" Format=\"P1\" Culture=\"@(new CultureInfo(\\\"cs-CZ\\\"))\" />"
+    },
+    {
+      "title": "Still number, announced once when it changes",
+      "code": "<TmAnimatedNumber Value=\"@Revenue\" Animate=\"false\" Announce=\"true\" />"
+    }
+  ]
+}

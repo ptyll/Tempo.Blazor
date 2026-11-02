@@ -2,7 +2,7 @@
   "itemName": "TmStatCard",
   "kind": "Component",
   "category": "Data Display",
-  "description": "Compact statistic display card showing a primary metric value, label, and optional secondary trend value with configurable color.",
+  "description": "Compact statistic card showing a primary metric value, label, and optional secondary trend value with configurable color. Since 2.10.0 the card also carries an opt-in KPI surface — a delta with its direction and comparison label, an icon, a sparkline, a loading skeleton, an animated numeric value and a whole-card link or button target — and every one of those parts is off by default, so the card without them renders exactly the markup it always did.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.DataDisplay"
   ],
@@ -25,7 +25,7 @@
       "name": "Value",
       "type": "string?",
       "isRequired": false,
-      "description": "Primary metric value (e.g. \"1,234\" or \"$5,000\")."
+      "description": "Primary metric value (e.g. \"1,234\" or \"$5,000\"). Ignored when NumericValue is set."
     },
     {
       "name": "SubValue",
@@ -38,10 +38,133 @@
       "type": "string?",
       "isRequired": false,
       "description": "Colour for the SubValue, as a CSS colour value — a var(--tm-*) token reference, a hex literal (#16a34a), an rgb/hsl/oklch/color-mix function, or a named colour (seagreen). Rendered as the element's own --tm-stat-subvalue-color custom property, which the base .tm-stat-subvalue rule resolves with var(--tm-stat-subvalue-color, var(--tm-text-secondary)): the parameter therefore ALWAYS wins over the default colour, no matter where the consumer's stylesheet sits in source order. Only meaningful together with SubValue: without it there is nothing to colour and the card REFUSES to render (see OnParametersSet)."
+    },
+    {
+      "name": "Delta",
+      "type": "double?",
+      "isRequired": false,
+      "description": "The metric's change over the comparison period in PERCENT POINTS: 12.5 renders as +12,5 % in Czech and +12.5% in English (the symbol and its spacing follow the culture's own percent pattern). Null (the default) renders no delta; the trend marker can still appear through TrendDirection. The value is formatted with DeltaFormat and Culture."
+    },
+    {
+      "name": "DeltaFormat",
+      "type": "string?",
+      "isRequired": false,
+      "description": "An explicit .NET numeric format string for Delta. Null (the default) uses the culture's percent convention; a malformed explicit format falls back to that convention instead of throwing out of a render."
+    },
+    {
+      "name": "TrendDirection",
+      "type": "TrendDirection",
+      "isRequired": false,
+      "default": "Auto",
+      "description": "The direction of the trend. Auto (the default) derives it from the sign of Delta; the explicit members exist for a metric whose delta is unknown but whose direction is not. Without a delta and with Auto no trend marker renders at all."
+    },
+    {
+      "name": "PositiveIsGood",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "Whether a rise is the good outcome. It decides the TONE only (the --positive/--negative class), never the direction word or the arrow: a metric where less is better (churn, latency, error rate) passes false and still reads \"Decrease\"."
+    },
+    {
+      "name": "ComparisonLabel",
+      "type": "string?",
+      "isRequired": false,
+      "description": "The comparison the delta is measured against, e.g. \"vs. last month\". Host data — the component does not localize it — rendered next to the delta; null renders nothing."
+    },
+    {
+      "name": "Icon",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Name of an icon (IconNames constants or a registry entry) rendered in the card's top corner. Decorative by design: the label and value already name the card, so the icon is aria-hidden. Setting it also puts tm-stat-card--has-icon on the root, which reserves the corner gutter on the value and the label (padding-inline-end: calc(2.25rem + var(--tm-space-2))) so a long title or a wide value never runs underneath the absolutely positioned icon. Null renders nothing; a loading card paints no icon and carries no modifier."
+    },
+    {
+      "name": "Sparkline",
+      "type": "double[]?",
+      "isRequired": false,
+      "description": "Optional sparkline data rendered as a mini chart under the metric (through TmSparkline). Null or empty renders nothing. On a static card the chart keeps its own accessible name from TmSparkline; on an interactive card (Href/OnClick) the wrapper is aria-hidden, because the target's accessible name is built from its content and the chart's role=img label would otherwise be spliced into it."
+    },
+    {
+      "name": "IsLoading",
+      "type": "bool",
+      "isRequired": false,
+      "default": "false",
+      "description": "Renders the card as a loading placeholder: three skeletons in place of the value plus a visually hidden localized \"Loading\" text, with aria-busy=\"true\" on the root. The label stays visible (it is static information) while the data-bearing parts are not rendered."
+    },
+    {
+      "name": "AnimateValue",
+      "type": "bool",
+      "isRequired": false,
+      "default": "false",
+      "description": "Animates NumericValue through TmAnimatedNumber. False (the default) is a pure-Blazor path with no JavaScript at all; reduced motion is honoured by TmAnimatedNumber independently of this switch."
+    },
+    {
+      "name": "NumericValue",
+      "type": "double?",
+      "isRequired": false,
+      "description": "The metric as a NUMBER, rendered through TmAnimatedNumber with ValueFormat and Culture. When set it wins over the string Value (a card cannot show two values); when null the string value renders as before."
+    },
+    {
+      "name": "ValueFormat",
+      "type": "string",
+      "isRequired": false,
+      "default": "N0",
+      "description": "The .NET numeric format string of NumericValue (default N0 — whole, group-separated numbers), matching TmAnimatedNumber.Format."
+    },
+    {
+      "name": "ValuePrefix",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Text placed before NumericValue (a currency symbol, a sign), forwarded to TmAnimatedNumber.Prefix. Host data — the component does not localize it. Ignored when the string Value supplies the value instead."
+    },
+    {
+      "name": "ValueSuffix",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Text placed after NumericValue (for example \" %\"), forwarded to TmAnimatedNumber.Suffix. Host data — the component does not localize it. Ignored when the string Value supplies the value instead."
+    },
+    {
+      "name": "Culture",
+      "type": "CultureInfo?",
+      "isRequired": false,
+      "description": "The culture that formats Delta and NumericValue. Null (the default) means the current culture at render time."
+    },
+    {
+      "name": "Href",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Turns the whole card into a link: the root becomes an <a class=\"tm-stat-card tm-stat-card--interactive\">, one native focus stop with the platform's focus and activation behaviour. Only a relative URL or the http, https and mailto schemes render. The scheme is parsed by the component, not by Uri, because a browser strips ASCII tab/LF/CR before reading the scheme: a value carrying ANY control character is refused outright, and a scheme is the text before the first /, ? or # for a case-insensitive match against the three accepted names. A refused value (javascript:, data:, vbscript:, protocol-relative //elsewhere, java\\tscript:) means NO target at all — the card falls back to the plain div rather than a link that lies about being one. OnClick wins when both are set."
+    },
+    {
+      "name": "OnClick",
+      "type": "EventCallback",
+      "isRequired": false,
+      "description": "Turns the whole card into a button: the root becomes a <button type=\"button\" class=\"tm-stat-card tm-stat-card--interactive\"> and this callback fires on click. Native Enter/Space activation applies (the component adds no key handling) and a nested interactive control is not allowed inside it."
+    },
+    {
+      "name": "DataTestId",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Overrides the root data-testid. The default card renders NO data-testid at all (that is part of the byte-identical legacy markup), so the attribute appears only when the host asks for it or sets TestIdPrefix."
+    },
+    {
+      "name": "TestIdPrefix",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Namespaces the card's opt-in internal test ids (stat-card-trend, stat-card-sparkline, stat-card-value, stat-card-icon)."
     }
   ],
   "cssClasses": [
     "tm-stat-card",
+    "tm-stat-card--interactive",
+    "tm-stat-card__icon",
+    "tm-stat-card__trend",
+    "tm-stat-card__trend--positive",
+    "tm-stat-card__trend--negative",
+    "tm-stat-card__trend--neutral",
+    "tm-stat-card__delta",
+    "tm-stat-card__comparison",
+    "tm-stat-card__sparkline",
+    "tm-stat-card__skeletons",
     "tm-stat-value",
     "tm-stat-label",
     "tm-stat-subvalue"
@@ -54,6 +177,18 @@
     {
       "title": "Simple stat card",
       "code": "<TmStatCard Label=\"Active Users\" Value=\"1,234\" />"
+    },
+    {
+      "title": "KPI card: animated value, delta, comparison and sparkline",
+      "code": "<TmStatCard Title=\"Revenue\"\n            NumericValue=\"@revenue\"\n            AnimateValue=\"true\"\n            Delta=\"12.5\"\n            ComparisonLabel=\"vs. last month\"\n            Icon=\"trending-up\"\n            Sparkline=\"@dailyRevenue\" />"
+    },
+    {
+      "title": "Metric where less is better, as a whole-card link",
+      "code": "<TmStatCard Title=\"Churn\"\n            NumericValue=\"2.1\"\n            ValueFormat=\"N1\"\n            ValueSuffix=\" %\"\n            Delta=\"-3\"\n            PositiveIsGood=\"false\"\n            Href=\"/reports/churn\" />"
+    },
+    {
+      "title": "Loading placeholder",
+      "code": "<TmStatCard Title=\"Revenue\" IsLoading=\"@isLoading\" Value=\"$45,231\" />"
     }
   ]
 }

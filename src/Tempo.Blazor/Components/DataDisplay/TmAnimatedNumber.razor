@@ -1,0 +1,20 @@
+@namespace Tempo.Blazor.Components.DataDisplay
+@inherits Tempo.Blazor.Components.TmComponentBase
+
+@* An odometer-style number. ONE node carries the value, so a reader and a copy/paste get the number
+   exactly once: the visual span holds the FINAL formatted text that Blazor renders, and the module
+   only repaints that same text between frames (it is not a live region, so a running ticker is never
+   announced). `Announce` is the only way to opt into a live region — and then the visual span steps
+   out of the accessibility tree so the single polite region is the only text a reader meets. *@
+<span class="@RootClass" data-testid="@RootTestId("animated-number")">
+    @if (Announce)
+    {
+        <span class="tm-animated-number__reader tm-sr-only"
+              role="status"
+              aria-live="polite"
+              aria-atomic="true">@ReaderText</span>
+    }
+    <span class="tm-animated-number__value"
+          aria-hidden="@(Announce ? "true" : null)"
+          @ref="_valueElement">@ReaderText</span>
+</span>
