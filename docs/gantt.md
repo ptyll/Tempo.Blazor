@@ -297,6 +297,8 @@ on a tablet or narrower one. With a sheet presentation **at most one right-hand 
 on a row or bar opens the sheet (a mouse click just selects; Enter opens it from the keyboard), and
 closing over a dirty draft asks first — "Discard changes?" / Discard / Keep editing.
 
+`TmGantt` does not forward the new comment parameters yet; only a standalone `TmGanttTaskPanel` exposes them.
+
 The other panels: History (the shared `TmGanttHistoryList`, and the drawer with Time travel /
 Rollback — `HistoryDrawerPlacement` `Component` (default, absolute inside the chart) or `Viewport`
 (the pre-redesign full-height panel); rollback asks for confirmation first), Notifications (with

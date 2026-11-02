@@ -33,6 +33,12 @@ public partial class TmGanttTaskPanel
     private string? _validationError;
     private string? _dependencyError;
     private string _newCommentText = string.Empty;
+
+    /// <summary>
+    /// Composer flag captured by <c>OnCommentSubmitted</c>, which fires before
+    /// <c>OnCommentAdded</c>. The HTML callback consumes it so the entry is posted once.
+    /// </summary>
+    private bool _pendingCommentInternal;
     private List<SelectOption<string?>> _parentOptions = [];
     private string? _currentTaskId;
     private TmWorkItemStatus _editStatus;
@@ -181,8 +187,20 @@ public partial class TmGanttTaskPanel
     /// <summary>Fires when the user removes an attachment (by attachment Id).</summary>
     [Parameter] public EventCallback<string> OnAttachmentRemoved { get; set; }
 
-    /// <summary>Fires when the user submits a new comment.</summary>
+    /// <summary>Fires when the user submits a new comment. The entry's <see cref="TmCommentEntry.IsInternal"/> is the composer flag when the host used the internal switch; the panel never hides internal comments.</summary>
     [Parameter] public EventCallback<TmCommentEntry> OnCommentAdded { get; set; }
+
+    /// <summary>Consumer actions rendered after the built-in Edit and Delete buttons of each task comment. Forwarded; the panel does not interpret the fragment.</summary>
+    [Parameter] public RenderFragment<TmCommentEntry>? CommentActions { get; set; }
+
+    /// <summary>Passes mention autocomplete through to the task comments. Without <see cref="MentionProvider"/> the editor stays off even when this is true. Defaults to false. Mention ids from <see cref="MentionProvider"/> are not preserved (HTML stripped; <c>Mentions</c> parsed from @word text).</summary>
+    [Parameter] public bool SupportsMentions { get; set; }
+
+    /// <summary>People source for the task-comment mention picker. Null (or <see cref="SupportsMentions"/> false) leaves autocomplete off.</summary>
+    [Parameter] public ITmPeopleProvider? MentionProvider { get; set; }
+
+    /// <summary>Shows the internal switch in the new-comment composer. Off by default. The panel never filters the resulting comment.</summary>
+    [Parameter] public bool ShowInternalToggle { get; set; }
 
     /// <summary>Fires when the user closes the panel via the close button.</summary>
     [Parameter] public EventCallback OnClose { get; set; }
@@ -591,12 +609,30 @@ public partial class TmGanttTaskPanel
         return new MarkupString(html);
     }
 
-    internal async Task AddCommentFromHtmlAsync(string html)
+    internal Task AddCommentFromHtmlAsync(string html)
+    {
+        var isInternal = _pendingCommentInternal;
+        _pendingCommentInternal = false;
+        return AddCommentCoreAsync(html, isInternal);
+    }
+
+    /// <summary>
+    /// Captures the composer flag. <c>TmActivityComments</c> raises this before
+    /// <c>OnCommentAdded</c>; the HTML callback posts the entry, so this must not post a second one.
+    /// </summary>
+    internal Task AddCommentFromSubmissionAsync(TmCommentSubmission submission)
+    {
+        _pendingCommentInternal = submission?.IsInternal ?? false;
+        return System.Threading.Tasks.Task.CompletedTask;
+    }
+
+    private async Task AddCommentCoreAsync(string html, bool isInternal)
     {
         if (Task is null || string.IsNullOrWhiteSpace(html)) return;
         var text = Regex.Replace(html, "<[^>]+>", string.Empty).Trim();
         if (string.IsNullOrWhiteSpace(text)) return;
         var comment = CreateCommentEntry(text);
+        comment.IsInternal = isInternal;
         await OnCommentAdded.InvokeAsync(comment);
     }
 

@@ -471,10 +471,20 @@ Toast.Show("Saved!", ToastSeverity.Success);
 ```razor
 <TmActivityLog EntityId="@entityId"
                TimelineEntries="entries"
-               CommentProvider="commentService"
-               AttachmentProvider="attachmentProvider" />
+               Comments="comments"
+               AttachmentProvider="attachmentProvider"
+               ShowInternalToggle="true"
+               SupportsMentions="true"
+               MentionProvider="people"
+               OnCommentSubmitted="HandleSubmitted"
+               OnCommentAdded="HandleAdded" />
 ```
 - Tabs: Timeline | Comments | Attachments
+- Comment tab forwards `CommentActions`, `SupportsMentions`, `MentionProvider`, `ShowInternalToggle`, `OnCommentSubmitted` (before `OnCommentAdded`). Defaults off. The log does not hide internal comments.
+
+**TmActivityComments** — comment list. `TmCommentEntry.IsInternal` paints the internal wash and lock badge; `Badges` (`TmCommentBadge` / `TmCommentBadgeTone`) render in the meta row. `CommentActions` is the host's button (and dialog). `OnCommentSubmitted` is `TmCommentSubmission(Html, IsInternal)` and fires before `OnCommentAdded`. The component never filters internal content.
+
+**TmGanttTaskPanel** — same five comment parameters, forwarded. Still raises one `OnCommentAdded(TmCommentEntry)`; `IsInternal` is the composer flag. Does not filter.
 
 **TmRichEditorFull** — Full rich text editor
 ```razor

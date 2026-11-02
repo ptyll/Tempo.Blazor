@@ -341,6 +341,11 @@
                 <div data-testid="@TestId("comment-list")">
                     <TmActivityComments Comments="GetCommentEntries()"
                                         OnCommentAdded="AddCommentFromHtmlAsync"
+                                        OnCommentSubmitted="AddCommentFromSubmissionAsync"
+                                        CommentActions="CommentActions"
+                                        SupportsMentions="SupportsMentions"
+                                        MentionProvider="MentionProvider"
+                                        ShowInternalToggle="ShowInternalToggle"
                                         ShowAddButton="true" />
                 </div>
             </section>

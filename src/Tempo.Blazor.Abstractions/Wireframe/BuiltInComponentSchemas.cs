@@ -2175,7 +2175,16 @@ public sealed class BuiltInComponentSchemas : IWireframeSchemaSource
         {
             Type = "TmActivityComments", Category = "Complex", DisplayName = "Activity Comments",
             DefaultWidth = 400, DefaultHeight = 320,
-            Props = [P("commentCount", "Comment Count", PropType.Int, 3, cat: "Appearance")]
+            Props =
+            [
+                P("commentCount", "Comment Count", PropType.Int, 3, cat: "Appearance"),
+                // FZE-5: the four host-visible states of the 2.10 comment surface. Defaults keep
+                // the pre-2.10 drawing (public rows, no badges, no custom action, composer off).
+                P("showInternalComment", "Internal Comment", PropType.Bool, false, cat: "State"),
+                P("showBadges", "Badges", PropType.Bool, false, cat: "State"),
+                P("showCustomActions", "Custom Actions", PropType.Bool, false, cat: "State"),
+                P("composerInternal", "Composer Internal", PropType.Bool, false, cat: "State"),
+            ]
         };
 
         yield return new WireframeComponentSchema

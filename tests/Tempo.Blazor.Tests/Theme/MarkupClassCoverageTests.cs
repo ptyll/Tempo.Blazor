@@ -107,6 +107,9 @@ public sealed class MarkupClassCoverageTests
         "tm-comment-cancel-btn",
         "tm-comment-delete-btn",
         "tm-comment-edit-btn",
+        // The internal-switch hint is a visually-hidden aria-describedby target (tm-sr-only
+        // carries the hiding). The class is the stable hook, so it stays rule-free.
+        "tm-comment-internal-toggle-hint",
         "tm-comment-submit-btn",
         "tm-currency-input",
         "tm-currency-input__amount",
@@ -455,7 +458,10 @@ public sealed class MarkupClassCoverageTests
             // id ("tm-chat-thread-{counter}" in TmChat.razor.cs) — 54 → 55.
             // FZE-7 (a11y review): the thread panel's aria-labelledby target (the title span) is
             // a third per-instance id ("tm-chat-thread-title-{counter}" in TmChat.razor.cs) — 55 → 56.
-            ExpectedUnmeasurableStems: 56),
+            // Comment surface 2.10.0: the internal modifiers are interpolated
+            // ($"tm-comment-item{...}", $"tm-comment-editor{...}"), so the sweep counts the two
+            // stems and cannot see the --internal suffix — 56 → 58.
+            ExpectedUnmeasurableStems: 58),
         new Scope("Signing", "Tempo.Blazor.Signing", UnstyledSigningMarkupClasses,
             MinRazorFiles: 28, MinMarkupClasses: 400, InheritsCoreCss: true,
             // Signing redesign phase 2 (B25): the runner's single step panel id

@@ -15,6 +15,8 @@
   - **DOM before:** `.tm-comment-actions` rendered whenever the comment was not being edited, even with no Edit and no Delete button.
   - **DOM after:** the row renders only when `CanEdit`, `CanDelete`, or `CommentActions` applies. When `CommentActions` is set, a `<span class="tm-comment-actions__custom">` follows the built-in buttons and contains the fragment. No new `data-*` attribute.
 - **Docs:** the stale `ICommentEntry` documentation overlay (the interface was removed in 2.0.0) is gone from the abstractions bundle, and `TmCommentReaction.IsValid` is documented as a property, not a field.
+- **Comment surface passthrough.** `TmActivityLog` and `TmGanttTaskPanel` already owned the comment callbacks, so `CommentActions`, `SupportsMentions`, `MentionProvider`, `ShowInternalToggle` and `OnCommentSubmitted` are forwarded. Defaults stay off. The log raises the host callbacks in the same order as `TmActivityComments`. The task panel still posts one `TmCommentEntry` through its existing `OnCommentAdded`; `IsInternal` on that entry is the composer flag captured from `OnCommentSubmitted` (that callback fires first and does not post a second entry). Neither host hides an internal comment. `TmGantt` does not forward the new comment parameters yet; only a standalone `TmGanttTaskPanel` exposes them.
+- **Wireframe:** `TmActivityComments` stencil states `showInternalComment`, `showBadges`, `showCustomActions`, `composerInternal` (all default false, so the pre-2.10 drawing is unchanged). Roles stay `list-view` and `text-area`.
 
 > 2.10.0 also ships every 2.9.1 entry below; when upgrading from 2.9.0 read both Breaking / Migration
 > sections.
@@ -178,6 +180,8 @@ findings table and the per-leg results) and the two perf runs
   ≤ +10 % budget is claimed.
 
 ### Breaking / Migration
+
+- **Comment surface (this release): no public-API break.** New parameters default off. Recorded DOM additions, not replacements: `data-comment-id` and `data-internal` on every `.tm-comment-item`; `tm-comment-item--internal` plus the lock badge when `IsInternal`; `data-badge-tone` pills when `Badges` has valid entries; `.tm-comment-actions__custom` when `CommentActions` is set; `.tm-comment-internal-toggle` and `tm-comment-editor--internal` when the composer switch is on. One behaviour change, already recorded above: an empty `.tm-comment-actions` row is no longer rendered when the comment has no edit, no delete and no `CommentActions`. `OnCommentAdded` is unchanged. `TmGantt` still raises `OnCommentAdded(TmCommentEntry)` once.
 
 - **Signing redesign — breaking-change index (phases 1–9).** The full before/after for each item
   lives in the entry linked below. Nothing in phase 10 changes a public contract.

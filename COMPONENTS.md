@@ -6371,8 +6371,13 @@ Kompletní panel aktivity entity (timeline + komentáře + přílohy).
 | `ShowTimeline` | `bool` | `true` | Zobrazit timeline |
 | `ShowComments` | `bool` | `true` | Zobrazit komentáře |
 | `ShowAttachments` | `bool` | `true` | Zobrazit přílohy |
-| `OnCommentAdded` | `EventCallback<string>` | — | Přidání komentáře |
+| `OnCommentAdded` | `EventCallback<string>` | — | Přidání komentáře (HTML). Předává se do `TmActivityComments`; při novém komentáři až po `OnCommentSubmitted` |
+| `OnCommentSubmitted` | `EventCallback<TmCommentSubmission>` | — | Nový komentář: HTML + příznak interního režimu. Log nic nefiltruje |
 | `OnCommentDeleted` | `EventCallback<string>` | — | Smazání komentáře |
+| `CommentActions` | `RenderFragment<TmCommentEntry>?` | `null` | Vlastní akce za Edit/Delete; předá se beze změny |
+| `SupportsMentions` | `bool` | `false` | Našeptávač zmínek na záložce komentářů; bez `MentionProvider` zůstane vypnutý |
+| `MentionProvider` | `ITmPeopleProvider?` | `null` | Zdroj lidí pro `@` |
+| `ShowInternalToggle` | `bool` | `false` | Přepínač Interní v composeru. Log interní komentář neskryje |
 | `Class` | `string?` | `null` | Další CSS třídy |
 | `AdditionalAttributes` | `Dictionary<string, object>?` | `null` | Další HTML atributy |
 

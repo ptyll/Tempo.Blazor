@@ -1433,6 +1433,12 @@
           "default": "[]"
         },
         {
+          "name": "CommentActions",
+          "type": "RenderFragment<TmCommentEntry>?",
+          "isRequired": false,
+          "description": "Consumer actions rendered after the built-in Edit and Delete buttons, once per comment. Forwarded; the log does not interpret the fragment."
+        },
+        {
           "name": "Comments",
           "type": "IReadOnlyList<TmCommentEntry>",
           "isRequired": false,
@@ -1455,14 +1461,28 @@
           "isRequired": false
         },
         {
+          "name": "MentionProvider",
+          "type": "ITmPeopleProvider?",
+          "isRequired": false,
+          "description": "People source for the comments-tab mention picker. Null (or SupportsMentions false) leaves autocomplete off."
+        },
+        {
           "name": "OnCommentAdded",
           "type": "EventCallback<string>",
-          "isRequired": false
+          "isRequired": false,
+          "description": "Raised with the submitted HTML when the user posts a new comment. Stays for hosts that only need the body; prefer OnCommentSubmitted when the internal flag matters. Forwarded to TmActivityComments."
         },
         {
           "name": "OnCommentDeleted",
           "type": "EventCallback<string>",
-          "isRequired": false
+          "isRequired": false,
+          "description": "Raised with the comment id when the user deletes a comment. Forwarded to TmActivityComments."
+        },
+        {
+          "name": "OnCommentSubmitted",
+          "type": "EventCallback<TmCommentSubmission>",
+          "isRequired": false,
+          "description": "Raised before OnCommentAdded with the HTML and the composer internal flag. Forwarded unchanged; the log does not interpret or filter internal comments."
         },
         {
           "name": "ShowAttachments",
@@ -1477,6 +1497,13 @@
           "default": "true"
         },
         {
+          "name": "ShowInternalToggle",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Shows the internal switch in the new-comment composer. Off by default. The log never hides the resulting comment — the consumer filters visibility.",
+          "default": "false"
+        },
+        {
           "name": "ShowTimeline",
           "type": "bool",
           "isRequired": false,
@@ -1487,6 +1514,13 @@
           "type": "bool",
           "isRequired": false,
           "description": "When true, the timeline tab renders a built-in search + type filter bar (default: false)."
+        },
+        {
+          "name": "SupportsMentions",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Passes mention autocomplete through to the comments tab. Without MentionProvider the editor stays off even when this is true. Defaults to false.",
+          "default": "false"
         },
         {
           "name": "TimelineDataProvider",
@@ -25700,6 +25734,12 @@
           "default": "false"
         },
         {
+          "name": "CommentActions",
+          "type": "RenderFragment<TmCommentEntry>?",
+          "isRequired": false,
+          "description": "Consumer actions rendered after the built-in Edit and Delete buttons of each task comment. Forwarded; the panel does not interpret the fragment."
+        },
+        {
           "name": "Dependencies",
           "type": "IReadOnlyList<GanttDependency>",
           "isRequired": false,
@@ -25719,6 +25759,12 @@
           "isRequired": false,
           "description": "When true the Progress section states that one of the task's assignees is over capacity (read-only).",
           "default": "false"
+        },
+        {
+          "name": "MentionProvider",
+          "type": "ITmPeopleProvider?",
+          "isRequired": false,
+          "description": "People source for the task-comment mention picker. Null (or SupportsMentions false) leaves autocomplete off."
         },
         {
           "name": "MobileReadOnly",
@@ -25755,7 +25801,7 @@
           "name": "OnCommentAdded",
           "type": "EventCallback<TmCommentEntry>",
           "isRequired": false,
-          "description": "Fires when the user submits a new comment."
+          "description": "Fires when the user submits a new comment. The entry's IsInternal is the composer flag when the host used the internal switch; the panel never hides internal comments."
         },
         {
           "name": "OnDependencyAdded",
@@ -25798,6 +25844,20 @@
           "type": "EventCallback<(string TaskId, GanttTimeLogEntry Entry)>",
           "isRequired": false,
           "description": "Fires when the user stops the timer (arg = taskId + completed log entry)."
+        },
+        {
+          "name": "ShowInternalToggle",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Shows the internal switch in the new-comment composer. Off by default. The panel never filters the resulting comment.",
+          "default": "false"
+        },
+        {
+          "name": "SupportsMentions",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Passes mention autocomplete through to the task comments. Without MentionProvider the editor stays off even when this is true. Defaults to false. Mention ids from MentionProvider are not preserved (HTML stripped; Mentions parsed from @word text).",
+          "default": "false"
         },
         {
           "name": "Tabbed",
