@@ -776,4 +776,32 @@ public class TmStatCardTests : LocalizationTestBase
                 entries.Add((logLevel, formatter(state, exception)));
         }
     }
+
+    [Fact]
+    public void KpiSparkline_IsPhrasingContent_SoAWholeCardButtonNeverNestsABlock()
+    {
+        var cut = Render<TmStatCard>(p => p
+            .Add(x => x.Title, "Revenue")
+            .Add(x => x.Value, "1")
+            .Add(x => x.Sparkline, new double[] { 1, 2, 3 })
+            .Add(x => x.OnClick, () => { }));
+
+        cut.Find(".tm-stat-card__sparkline .tm-sparkline").TagName.Should().Be("SPAN");
+        cut.Find(".tm-stat-card").TagName.Should().Be("BUTTON");
+    }
+
+    [Fact]
+    public void KpiSkeletons_ArePhrasingContent_SoAWholeCardButtonNeverNestsABlock()
+    {
+        var cut = Render<TmStatCard>(p => p
+            .Add(x => x.Title, "Revenue")
+            .Add(x => x.Value, "1")
+            .Add(x => x.IsLoading, true)
+            .Add(x => x.OnClick, () => { }));
+
+        var skeletons = cut.FindAll(".tm-stat-card__skeletons .tm-skeleton");
+        skeletons.Count.Should().Be(3);
+        skeletons.Should().OnlyContain(skeleton => skeleton.TagName == "SPAN");
+        cut.Find(".tm-stat-card").TagName.Should().Be("BUTTON");
+    }
 }

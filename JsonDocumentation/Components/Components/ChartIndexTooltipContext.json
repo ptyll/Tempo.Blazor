@@ -1,0 +1,37 @@
+{
+  "kind": "Record",
+  "category": "Components",
+  "namespace": "Tempo.Blazor.Components.Charts",
+  "description": "Context passed to an index tooltip (ChartTooltipMode.Index) — both to the built-in card and to any custom TooltipIndexTemplate. It describes one CATEGORY, not one point, so it carries every visible series at that index.",
+  "packageId": "Tempo.Blazor",
+  "sourcePath": "src/Tempo.Blazor/Components/Charts/ChartModels.cs",
+  "documentationStatus": "documented",
+  "itemName": "ChartIndexTooltipContext",
+  "members": [
+    {
+      "name": "Index",
+      "kind": "Property",
+      "type": "int",
+      "description": "Zero-based data index the crosshair stands on. On a time axis it is the index into ChartData.TimePoints, not the position of the tick on screen."
+    },
+    {
+      "name": "Label",
+      "kind": "Property",
+      "type": "string",
+      "description": "The category label — the matching entry of ChartData.Labels, or the culture-formatted timestamp on a time axis."
+    },
+    {
+      "name": "Series",
+      "kind": "Property",
+      "type": "IReadOnlyList<ChartIndexSeriesValue>",
+      "description": "One entry per visible series at that index, in dataset order. Series hidden through the interactive legend, NaN gaps and series shorter than the index are absent, so a template never renders an empty row."
+    },
+    {
+      "name": "Total",
+      "kind": "Property",
+      "type": "double",
+      "description": "Sum of every visible series value at the index (0 when no series is present). It is computed, not stored, so a template can show the category total without summing Series itself."
+    }
+  ],
+  "usageExample": "<TmChart Type=\"ChartType.StackedBar\" Data=\"costs\" TooltipMode=\"ChartTooltipMode.Index\">\n  <TooltipIndexTemplate Context=\"ctx\">\n    <strong>@ctx.Label</strong>\n    <span>@ctx.Total.ToString(\"N0\")</span>\n  </TooltipIndexTemplate>\n</TmChart>"
+}

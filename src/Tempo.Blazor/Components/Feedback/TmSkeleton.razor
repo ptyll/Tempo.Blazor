@@ -1,6 +1,13 @@
 @namespace Tempo.Blazor.Components.Feedback
 
-<div class="@CssClass @Class" style="@Style" @attributes="AdditionalAttributes"></div>
+@if (IsSpan)
+{
+    <span class="@CssClass @Class" style="@Style" @attributes="AdditionalAttributes"></span>
+}
+else
+{
+    <div class="@CssClass @Class" style="@Style" @attributes="AdditionalAttributes"></div>
+}
 
 @code {
     /// <summary>Shape variant. Defaults to Text.</summary>
@@ -14,6 +21,19 @@
 
     /// <summary>Additional CSS class.</summary>
     [Parameter] public string? Class { get; set; }
+
+    /// <summary>
+    /// Root element the skeleton renders as: <see cref="TmRootElement.Div"/> (default) or
+    /// <see cref="TmRootElement.Span"/>. A skeleton inside PHRASING content (a whole-card
+    /// <c>&lt;a&gt;</c>/<c>&lt;button&gt;</c> target such as <c>TmStatCard</c>) passes
+    /// <see cref="TmRootElement.Span"/> so no block element is nested in an inline one.
+    /// <see cref="TmRootElement.Div"/> keeps the historical markup, so a host that never sets the
+    /// parameter renders exactly what it rendered before; an undefined enum value falls back to
+    /// <c>div</c> as well.
+    /// </summary>
+    [Parameter] public TmRootElement Element { get; set; } = TmRootElement.Div;
+
+    private bool IsSpan => Element == TmRootElement.Span;
 
     [Parameter(CaptureUnmatchedValues = true)] public Dictionary<string, object>? AdditionalAttributes { get; set; }
 

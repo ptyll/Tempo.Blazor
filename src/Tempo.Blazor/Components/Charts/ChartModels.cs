@@ -134,3 +134,66 @@ public sealed record ChartTooltipContext(
     double Value,
     string DatasetLabel,
     string Color);
+
+/// <summary>
+/// How <see cref="TmChart"/> presents its tooltip.
+/// </summary>
+public enum ChartTooltipMode
+{
+    /// <summary>
+    /// One tooltip per hovered point, bar or slice (the default — pre-existing behaviour).
+    /// </summary>
+    Point,
+
+    /// <summary>
+    /// A crosshair tooltip: the whole plot is divided into one hover zone per category, a vertical
+    /// crosshair marks the active category and the tooltip lists every series at that index. The
+    /// arrow keys move the index once the chart has keyboard focus, Home/End jump to the first and
+    /// last index, Escape hides the tooltip, and a polite live region announces the whole index.
+    /// Supported by <see cref="ChartType.Line"/>, <see cref="ChartType.Area"/>,
+    /// <see cref="ChartType.Bar"/>, <see cref="ChartType.StackedBar"/> and
+    /// <see cref="ChartType.StackedArea"/>; any other chart type falls back to
+    /// <see cref="Point"/> so a mode the plot cannot honour is never silently half-applied.
+    /// </summary>
+    Index
+}
+
+/// <summary>
+/// One series' value at the shared index of an index tooltip (<see cref="ChartTooltipMode.Index"/>).
+/// </summary>
+/// <param name="DatasetIndex">Zero-based index of the series inside <see cref="ChartData.Datasets"/>.</param>
+/// <param name="Label">The series label (<see cref="ChartDataset.Label"/>).</param>
+/// <param name="Value">The series value at the index, in the data's own unit.</param>
+/// <param name="Color">The series colour, so a custom template can keep the legend's swatch.</param>
+public sealed record ChartIndexSeriesValue(int DatasetIndex, string Label, double Value, string Color);
+
+/// <summary>
+/// Context passed to an index tooltip (<see cref="ChartTooltipMode.Index"/>) — the default index
+/// tooltip and any custom <c>TooltipIndexTemplate</c>.
+/// </summary>
+/// <param name="Index">Zero-based data index the crosshair stands on.</param>
+/// <param name="Label">The category label (or the culture-formatted timestamp on a time axis).</param>
+/// <param name="Series">
+/// One entry per visible series at that index, in dataset order. Series hidden through the
+/// interactive legend and NaN values are absent, so a template never renders an empty row.
+/// </param>
+public sealed record ChartIndexTooltipContext(
+    int Index,
+    string Label,
+    IReadOnlyList<ChartIndexSeriesValue> Series)
+{
+    /// <summary>Sum of every visible series value at the index (0 with no series).</summary>
+    public double Total
+    {
+        get
+        {
+            double total = 0;
+            foreach (var series in Series)
+            {
+                total += series.Value;
+            }
+
+            return total;
+        }
+    }
+}

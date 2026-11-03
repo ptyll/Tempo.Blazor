@@ -460,7 +460,10 @@ public sealed class MarkupClassCoverageTests
             // Data-display phase 1 (plan ff043b2e): TmStatCard's trend tone is interpolated
             // ("tm-stat-card__trend--@trend.OutcomeClass"), so the sweep counts one more stem —
             // 67 → 68.
-            ExpectedUnmeasurableStems: 68),
+            // Charts phase 3 (plan ff043b2e): TmSparkline's keyboard-hint id is per instance
+            // ("tm-sparkline-hint-{counter}" in TmSparkline.razor.cs), so its prefix joined the
+            // scanned population — 68 → 69.
+            ExpectedUnmeasurableStems: 69),
         new Scope("Signing", "Tempo.Blazor.Signing", UnstyledSigningMarkupClasses,
             MinRazorFiles: 28, MinMarkupClasses: 400, InheritsCoreCss: true,
             // Signing redesign phase 2 (B25): the runner's single step panel id

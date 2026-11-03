@@ -39,6 +39,38 @@
       "name": "Class",
       "type": "string?",
       "isRequired": false
+    },
+    {
+      "name": "AriaLabel",
+      "type": "string?",
+      "isRequired": false
+    },
+    {
+      "name": "Color",
+      "type": "string?",
+      "isRequired": false
+    },
+    {
+      "name": "ShowMinMax",
+      "type": "bool",
+      "isRequired": false
+    },
+    {
+      "name": "ShowLastPoint",
+      "type": "bool",
+      "isRequired": false
+    },
+    {
+      "name": "ShowTooltip",
+      "type": "bool",
+      "isRequired": false
+    },
+    {
+      "name": "Element",
+      "type": "TmRootElement",
+      "isRequired": false,
+      "default": "TmRootElement.Div",
+      "description": "Root element of the sparkline box. TmRootElement.Div (default) keeps the historical <div>; TmRootElement.Span renders a phrasing <span> root and a phrasing subtree, for a sparkline inside a whole-card <a>/<button>."
     }
   ]
 }

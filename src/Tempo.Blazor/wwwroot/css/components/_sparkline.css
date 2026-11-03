@@ -1,6 +1,7 @@
 /* ── TmSparkline ─────────────────────────────────────────────────────── */
 
 .tm-sparkline {
+    position: relative;
     display: inline-flex;
     align-items: center;
     vertical-align: middle;
@@ -46,4 +47,101 @@
 
 .tm-sparkline__area {
     transition: opacity 0.2s ease;
+}
+
+/* ── Extras (plan ff043b2e, phase 3) ──
+   Everything textual lives in HTML over the stretched viewBox: `preserveAspectRatio="none"`
+   would distort SVG text, and the point markers would be squashed into ellipses. */
+
+/* The value markers of a Line sparkline (and of an Area sparkline once the tooltip is on). */
+.tm-sparkline__point {
+    transition: r 0.12s ease;
+}
+
+/* The active point is the one the tooltip describes: bigger AND ringed, so the change does not rely
+   on colour alone. */
+.tm-sparkline__point--active {
+    stroke: var(--tm-color-primary);
+    stroke-width: 1.5;
+}
+
+/* The active bar keeps full opacity while its neighbours fade — the halo mark of a bar sparkline. */
+.tm-sparkline__bar--active {
+    opacity: 1;
+    stroke: var(--tm-color-primary);
+    stroke-width: 1.5;
+}
+
+/* The last-value ring is decorative — the value is in the aria-label summary. */
+.tm-sparkline__last-point {
+    pointer-events: none;
+}
+
+/* min … max caption: a corner caption, never a second row, so it cannot change the host's box. */
+.tm-sparkline__minmax {
+    position: absolute;
+    inset-block-start: 0;
+    inset-inline-start: 0;
+    font-size: var(--tm-font-size-xs, 0.75rem);
+    line-height: 1;
+    color: var(--tm-text-tertiary);
+    font-variant-numeric: tabular-nums;
+    pointer-events: none;
+    white-space: nowrap;
+}
+
+/* ShowMinMax and ShowTooltip both pin a caption to the top edge — the min/max at the start, the value
+   card at the end — so in a narrow cell (a 390 px grid or table cell) they collide. The card carries
+   the urgent number, so the static caption steps aside while the card is rendered; `visibility` keeps
+   the box measured, so showing/hiding the card never reflows the host. */
+.tm-sparkline:has(.tm-sparkline__tooltip) .tm-sparkline__minmax {
+    visibility: hidden;
+}
+
+/* The hover/keyboard tooltip stays INSIDE the sparkline box: a bubble above it would be clipped by
+   the table cell or grid area a sparkline usually lives in. */
+.tm-sparkline__tooltip {
+    position: absolute;
+    inset-block-start: 0;
+    inset-inline-end: 0;
+    padding: 0 var(--tm-space-1, 0.25rem);
+    background-color: var(--tm-bg-surface);
+    border: 1px solid var(--tm-border-color);
+    border-radius: var(--tm-radius-sm);
+    box-shadow: var(--tm-shadow-sm);
+    font-size: var(--tm-font-size-xs, 0.75rem);
+    line-height: 1.4;
+    color: var(--tm-text-primary);
+    font-variant-numeric: tabular-nums;
+    pointer-events: none;
+    white-space: nowrap;
+}
+
+/* A focusable sparkline is a real tab stop, so it needs a real focus indicator: the library's
+   two-layer --tm-focus-ring over a transparent outline, which forced-colors repaints in the system
+   Highlight colour after it turns box-shadow off. */
+.tm-sparkline svg[tabindex='0']:focus-visible {
+    outline: 2px solid transparent;
+    outline-offset: 2px;
+    box-shadow: var(--tm-focus-ring);
+    border-radius: var(--tm-radius-sm);
+}
+
+@media (forced-colors: active) {
+    .tm-sparkline svg[tabindex='0']:focus-visible {
+        outline: 2px solid Highlight;
+    }
+
+    /* forced-colors drops background-color, so the tooltip would lose its plate and float over the
+       trend line: keep the surface and give it a system-colour edge. */
+    .tm-sparkline__tooltip {
+        forced-color-adjust: none;
+        border-color: CanvasText;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .tm-sparkline__point {
+        transition: none;
+    }
 }

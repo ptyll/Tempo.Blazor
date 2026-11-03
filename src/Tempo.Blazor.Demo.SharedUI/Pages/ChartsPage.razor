@@ -463,6 +463,70 @@
     </div>
 </section>
 
+<!-- Index tooltip (plan ff043b2e, phase 3) -->
+<section class="demo-section mb-8" data-testid="charts-demo-index-tooltip">
+    <h2 class="text-xl font-semibold text-slate-800 dark:text-slate-200 mb-2">@Loc["TmChartDemo_IndexTooltipTitle"]</h2>
+    <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">
+        @Loc["TmChartDemo_IndexTooltipDescription"]
+    </p>
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div class="showcase-card" data-testid="charts-demo-index-default">
+            <h3 class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-4">@Loc["TmChartDemo_IndexTooltipDefault"]</h3>
+            <TmChart Type="ChartType.Line" Data="IndexTooltipData" Height="320px"
+                     TooltipMode="ChartTooltipMode.Index" InteractiveLegend="true" />
+        </div>
+        <div class="showcase-card" data-testid="charts-demo-index-custom">
+            <h3 class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-4">@Loc["TmChartDemo_IndexTooltipCustom"]</h3>
+            <TmChart Type="ChartType.StackedBar" Data="IndexTooltipData" Height="320px"
+                     TooltipMode="ChartTooltipMode.Index">
+                <TooltipIndexTemplate Context="ctx">
+                    <span class="tm-chart__tooltip-label">@ctx.Label</span>
+                    @foreach (var series in ctx.Series)
+                    {
+                        <span class="tm-chart__tooltip-value">@series.Label: @series.Value.ToString("N0", CultureInfo.CurrentCulture)</span>
+                    }
+                    <span class="tm-chart__tooltip-value" data-testid="charts-demo-index-total">
+                        @Loc["TmChartDemo_IndexTooltipTotal", ctx.Total.ToString("N0", CultureInfo.CurrentCulture)]
+                    </span>
+                </TooltipIndexTemplate>
+            </TmChart>
+        </div>
+    </div>
+</section>
+
+<!-- Sparkline extras (plan ff043b2e, phase 3) -->
+<section class="demo-section mb-8" data-testid="charts-demo-sparkline-extras">
+    <h2 class="text-xl font-semibold text-slate-800 dark:text-slate-200 mb-2">@Loc["TmChartDemo_SparklineExtrasTitle"]</h2>
+    <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">
+        @Loc["TmChartDemo_SparklineExtrasDescription"]
+    </p>
+    @* A grid, not a wrapping flex row: four labels of different lengths wrapped into a ragged
+       second row with one lonely item. Two columns keep the pairs even at every width. *@
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-x-10 gap-y-4">
+        <div class="flex items-center gap-4" data-testid="charts-demo-sparkline-plain">
+            <span class="w-52 shrink-0 text-sm text-slate-600 dark:text-slate-400">@Loc["TmChartDemo_SparklinePlain"]</span>
+            <TmSparkline Data="_sparkData" Type="SparklineType.Line" Height="40px" Width="120px" />
+        </div>
+        <div class="flex items-center gap-4" data-testid="charts-demo-sparkline-minmax">
+            <span class="w-52 shrink-0 text-sm text-slate-600 dark:text-slate-400">@Loc["TmChartDemo_SparklineMinMax"]</span>
+            <TmSparkline Data="_sparkData" Type="SparklineType.Bar" Height="56px" Width="140px"
+                         ShowMinMax="true" />
+        </div>
+        <div class="flex items-center gap-4" data-testid="charts-demo-sparkline-last-point">
+            <span class="w-52 shrink-0 text-sm text-slate-600 dark:text-slate-400">@Loc["TmChartDemo_SparklineLastPoint"]</span>
+            <TmSparkline Data="_sparkData" Type="SparklineType.Area" Height="48px" Width="140px"
+                         Color="var(--tm-color-success)" ShowLastPoint="true" />
+        </div>
+        <div class="flex items-center gap-4" data-testid="charts-demo-sparkline-tooltip">
+            <span class="w-52 shrink-0 text-sm text-slate-600 dark:text-slate-400">@Loc["TmChartDemo_SparklineTooltip"]</span>
+            @* Both opt-ins at once: the min/max caption and the value card share the top edge, so the
+               caption hides while the card is up (the narrow-cell overlap the CSS rule prevents). *@
+            <TmSparkline Data="_sparkData" Type="SparklineType.Line" Height="44px" Width="160px"
+                         ShowMinMax="true" ShowTooltip="true" />
+        </div>
+    </div>
+</section>
+
 @code {
     private const int CalendarHeatmapDemoYear = 2026;
 
@@ -476,6 +540,38 @@
     private static readonly DateOnly _calendarHeatmapRangeEnd = new(CalendarHeatmapDemoYear, 3, 31);
     private static readonly IReadOnlyDictionary<DateOnly, decimal> _calendarHeatmapExpenses =
         CreateCalendarHeatmapExpenses();
+
+    /// <summary>
+    /// Two series with a shared category axis, the data the index tooltip reads. It is a FIELD, not a
+    /// per-access property: TmChart resets its tooltip/legend state when the Data INSTANCE changes, so
+    /// a property that allocates on every access would wipe the crosshair on any parent re-render.
+    /// </summary>
+    private ChartData _indexTooltipData = default!;
+
+    private ChartData IndexTooltipData
+    {
+        get => _indexTooltipData;
+    }
+
+    private ChartData CreateIndexTooltipData() => new()
+    {
+        Labels = ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
+        Datasets =
+        [
+            new ChartDataset
+            {
+                Label = Loc["TmChartDemo_IndexDatasetFilings"],
+                Values = [320, 410, 385, 470, 520, 495],
+                Color = "#2563eb"
+            },
+            new ChartDataset
+            {
+                Label = Loc["TmChartDemo_IndexDatasetRulings"],
+                Values = [180, 240, 205, 260, 300, 285],
+                Color = "#16a34a"
+            }
+        ]
+    };
 
     private ChartData WaterfallData => new()
     {
@@ -500,6 +596,7 @@
 
     protected override void OnInitialized()
     {
+        _indexTooltipData = CreateIndexTooltipData();
         _sankeyCashFlowData = CreateSankeyData(useCustomColors: false);
         _sankeyCustomColorsData = CreateSankeyData(useCustomColors: true);
     }

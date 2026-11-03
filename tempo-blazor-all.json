@@ -83,6 +83,7 @@
           "Tempo.Blazor.Components.Buttons",
           "Tempo.Blazor.Components.Charts",
           "Tempo.Blazor.Components.Chat",
+          "Tempo.Blazor.Components.Common",
           "Tempo.Blazor.Components.Compliance",
           "Tempo.Blazor.Components.Dashboard",
           "Tempo.Blazor.Components.DataDisplay",
@@ -4337,6 +4338,19 @@
               "description": "Time axis only: custom .NET date format string for the X-axis labels (e.g. \"yyyy-MM\"). Null picks the format automatically from the axis range (hours/days/months/years)."
             },
             {
+              "name": "TooltipIndexTemplate",
+              "type": "RenderFragment<ChartIndexTooltipContext>?",
+              "isRequired": false,
+              "description": "Optional custom content of the index tooltip (Index); when null the built-in card lists the category label and one color dot, series label and value per visible series. The context also carries Total."
+            },
+            {
+              "name": "TooltipMode",
+              "type": "ChartTooltipMode",
+              "isRequired": false,
+              "default": "ChartTooltipMode.Point",
+              "description": "How the chart presents its tooltip. Point (default) keeps the per-point tooltip; Index adds a category crosshair, a hover zone per index, an all-series tooltip, arrow-key navigation and one polite live region. Only the line/area/bar/stacked types honour Index; every other type falls back to Point."
+            },
+            {
               "name": "TooltipTemplate",
               "type": "RenderFragment<ChartTooltipContext>?",
               "isRequired": false,
@@ -4637,33 +4651,75 @@
           ],
           "parameters": [
             {
+              "name": "AriaLabel",
+              "type": "string?",
+              "isRequired": false,
+              "description": "Text alternative of the graphic. Null (default) builds a localized summary of the series — minimum, maximum and last value in the current culture — so a reader who cannot see the shape still gets the numbers. Pie ignores it no more than any other type: the summary describes the same series the slices are cut from."
+            },
+            {
               "name": "Class",
               "type": "string?",
-              "isRequired": false
+              "isRequired": false,
+              "description": "Additional CSS classes on the root element."
+            },
+            {
+              "name": "Color",
+              "type": "string?",
+              "isRequired": false,
+              "description": "Stroke/fill colour of a Line, Bar or Area sparkline (any CSS colour value, typically a var(--tm-*) token). Null (default) keeps the built-in blue, so existing hosts are unaffected. A Pie keeps its categorical palette and ignores this."
             },
             {
               "name": "Data",
               "type": "double[]",
               "isRequired": false,
-              "default": "[]"
+              "default": "[]",
+              "description": "The series to plot, in display order. An empty (or null) series renders the empty state."
+            },
+            {
+              "name": "Element",
+              "type": "TmRootElement",
+              "isRequired": false,
+              "default": "TmRootElement.Div",
+              "description": "Root element of the sparkline box. TmRootElement.Div (default) keeps the historical <div>; TmRootElement.Span renders a phrasing <span> root and a phrasing subtree, for a sparkline inside a whole-card <a>/<button>."
             },
             {
               "name": "Height",
               "type": "string?",
               "isRequired": false,
-              "default": "\"40px\""
+              "default": "\"40px\"",
+              "description": "CSS height of the sparkline box. Defaults to \"40px\"."
+            },
+            {
+              "name": "ShowLastPoint",
+              "type": "bool",
+              "isRequired": false,
+              "description": "Marks the final value with a ring, on Line and Area sparklines (a bar already ends visibly and a pie has no \"last\" slice). The marker is decorative — the value is in the AriaLabel summary. Default false."
+            },
+            {
+              "name": "ShowMinMax",
+              "type": "bool",
+              "isRequired": false,
+              "description": "Shows a small min … max caption in the sparkline's corner. It is aria-hidden — the same two numbers already live in AriaLabel's summary, so announcing them twice would be a duplicate. Default false."
+            },
+            {
+              "name": "ShowTooltip",
+              "type": "bool",
+              "isRequired": false,
+              "description": "Shows a tooltip for the hovered point or bar, and makes the graphic focusable so the arrow keys walk the points, Home/End jump to the first and last one and Escape hides the tooltip. The value is also announced through one polite live region. Pie sparklines ignore it. Default false (the pre-2.9.1 markup has no focus stop and no live region)."
             },
             {
               "name": "Type",
               "type": "SparklineType",
               "isRequired": false,
-              "default": "SparklineType.Line"
+              "default": "SparklineType.Line",
+              "description": "Which mini-chart to draw. Defaults to Line."
             },
             {
               "name": "Width",
               "type": "string?",
               "isRequired": false,
-              "default": "\"100%\""
+              "default": "\"100%\"",
+              "description": "CSS width of the sparkline box. Defaults to \"100%\"."
             }
           ]
         },
@@ -6213,6 +6269,80 @@
           "documentationStatus": "merged"
         },
         {
+          "itemName": "ChartIndexSeriesValue",
+          "kind": "Record",
+          "category": "Components",
+          "namespace": "Tempo.Blazor.Components.Charts",
+          "description": "One series' value at the shared index of an index tooltip (ChartTooltipMode.Index): which series it is, its label, its value and its color, so a custom TooltipIndexTemplate can keep the legend's swatch.",
+          "packageId": "Tempo.Blazor",
+          "sourcePath": "src/Tempo.Blazor/Components/Charts/ChartModels.cs",
+          "documentationStatus": "merged",
+          "members": [
+            {
+              "name": "DatasetIndex",
+              "kind": "Property",
+              "type": "int",
+              "description": "Zero-based index of the series inside ChartData.Datasets."
+            },
+            {
+              "name": "Label",
+              "kind": "Property",
+              "type": "string",
+              "description": "The series label (ChartDataset.Label), as the legend shows it."
+            },
+            {
+              "name": "Value",
+              "kind": "Property",
+              "type": "double",
+              "description": "The series value at the index, in the data's own unit. It is formatted by the caller, so a template can choose its own format."
+            },
+            {
+              "name": "Color",
+              "kind": "Property",
+              "type": "string",
+              "description": "The series color, so a custom template can keep the legend's swatch."
+            }
+          ],
+          "usageExample": "<TmChart Type=\"ChartType.Line\" Data=\"data\" TooltipMode=\"ChartTooltipMode.Index\">\n  <TooltipIndexTemplate Context=\"ctx\">\n    @foreach (var series in ctx.Series)\n    {\n      <span>@series.Label: @series.Value.ToString(\"N0\")</span>\n    }\n  </TooltipIndexTemplate>\n</TmChart>"
+        },
+        {
+          "itemName": "ChartIndexTooltipContext",
+          "kind": "Record",
+          "category": "Components",
+          "namespace": "Tempo.Blazor.Components.Charts",
+          "description": "Context passed to an index tooltip (ChartTooltipMode.Index) — both to the built-in card and to any custom TooltipIndexTemplate. It describes one CATEGORY, not one point, so it carries every visible series at that index.",
+          "packageId": "Tempo.Blazor",
+          "sourcePath": "src/Tempo.Blazor/Components/Charts/ChartModels.cs",
+          "documentationStatus": "merged",
+          "members": [
+            {
+              "name": "Index",
+              "kind": "Property",
+              "type": "int",
+              "description": "Zero-based data index the crosshair stands on. On a time axis it is the index into ChartData.TimePoints, not the position of the tick on screen."
+            },
+            {
+              "name": "Label",
+              "kind": "Property",
+              "type": "string",
+              "description": "The category label — the matching entry of ChartData.Labels, or the culture-formatted timestamp on a time axis."
+            },
+            {
+              "name": "Series",
+              "kind": "Property",
+              "type": "IReadOnlyList<ChartIndexSeriesValue>",
+              "description": "One entry per visible series at that index, in dataset order. Series hidden through the interactive legend, NaN gaps and series shorter than the index are absent, so a template never renders an empty row."
+            },
+            {
+              "name": "Total",
+              "kind": "Property",
+              "type": "double",
+              "description": "Sum of every visible series value at the index (0 when no series is present). It is computed, not stored, so a template can show the category total without summing Series itself."
+            }
+          ],
+          "usageExample": "<TmChart Type=\"ChartType.StackedBar\" Data=\"costs\" TooltipMode=\"ChartTooltipMode.Index\">\n  <TooltipIndexTemplate Context=\"ctx\">\n    <strong>@ctx.Label</strong>\n    <span>@ctx.Total.ToString(\"N0\")</span>\n  </TooltipIndexTemplate>\n</TmChart>"
+        },
+        {
           "itemName": "ChartSegment",
           "kind": "Record",
           "category": "Components",
@@ -6299,6 +6429,27 @@
               "description": "Resolved color of the hovered point or series."
             }
           ]
+        },
+        {
+          "itemName": "ChartTooltipMode",
+          "kind": "Enum",
+          "category": "Components",
+          "namespace": "Tempo.Blazor.Components.Charts",
+          "description": "How TmChart presents its tooltip: one card per hovered point (the pre-existing behaviour), or one crosshair card per CATEGORY that lists every series at that index and is reachable from the keyboard.",
+          "packageId": "Tempo.Blazor",
+          "sourcePath": "src/Tempo.Blazor/Components/Charts/ChartModels.cs",
+          "documentationStatus": "merged",
+          "members": [
+            {
+              "name": "Point",
+              "description": "One tooltip per hovered point, bar or slice. The default, so a chart that never sets TooltipMode renders exactly what it rendered before the mode existed."
+            },
+            {
+              "name": "Index",
+              "description": "A crosshair tooltip: the plot is divided into one full-height hover zone per category, a vertical crosshair marks the active category and the card lists every visible series at that index (color dot, series label, value). The chart becomes one tab stop: the arrow keys walk the indices, Home/End jump to the first and last one, Escape hides the card, and one polite live region announces the whole index. Honoured by Line, Area, Bar, StackedBar and StackedArea; every other chart type falls back to Point rather than rendering half a crosshair."
+            }
+          ],
+          "usageExample": "<TmChart Type=\"ChartType.Line\" Data=\"revenue\" TooltipMode=\"ChartTooltipMode.Index\" />"
         },
         {
           "itemName": "ChartTreeNode",
@@ -9215,6 +9366,27 @@
               "description": "Whether the search found results (Ok), found none (Empty), or failed transiently (Transient)."
             }
           ]
+        },
+        {
+          "itemName": "TmRootElement",
+          "kind": "Enum",
+          "category": "Components",
+          "namespace": "Tempo.Blazor.Components.Common",
+          "description": "The root HTML element a component renders. Div (the default) keeps a component's historical block root; Span promises a phrasing root and subtree, so the component may sit inside phrasing content such as a whole-card link or button.",
+          "packageId": "Tempo.Blazor",
+          "sourcePath": "src/Tempo.Blazor/Components/Common/TmRootElement.cs",
+          "documentationStatus": "merged",
+          "members": [
+            {
+              "name": "Div",
+              "description": "Renders a <div> — the historical root of TmSparkline and TmSkeleton, so a host that never sets Element renders exactly what it rendered before."
+            },
+            {
+              "name": "Span",
+              "description": "Renders a <span>, i.e. a phrasing root and a phrasing subtree. Use it when the component lives in a link, a button or another element that allows phrasing content only (the whole-card target of TmStatCard does)."
+            }
+          ],
+          "usageExample": "<TmSparkline Data=\"trend\" Element=\"TmRootElement.Span\" />"
         },
         {
           "itemName": "TmSchedulerMobileActionBar",
@@ -15351,6 +15523,13 @@
               "type": "string?",
               "isRequired": false,
               "description": "Additional CSS class."
+            },
+            {
+              "name": "Element",
+              "type": "TmRootElement",
+              "isRequired": false,
+              "default": "TmRootElement.Div",
+              "description": "Root element the skeleton renders as. TmRootElement.Div (default) keeps the historical <div>; TmRootElement.Span renders a phrasing root, for a skeleton inside a whole-card <a>/<button>."
             },
             {
               "name": "Height",
@@ -34277,12 +34456,12 @@
         }
       ],
       "summary": {
-        "itemCount": 429,
-        "manualItemCount": 429,
-        "generatedItemCount": 421,
+        "itemCount": 433,
+        "manualItemCount": 433,
+        "generatedItemCount": 425,
         "generatedOnlyItemCount": 0,
         "componentCount": 230,
-        "publicApiTypeCount": 191
+        "publicApiTypeCount": 195
       }
     },
     {
@@ -133258,10 +133437,10 @@
   ],
   "summary": {
     "packageCount": 28,
-    "itemCount": 3475,
-    "manualItemCount": 3475,
+    "itemCount": 3479,
+    "manualItemCount": 3479,
     "generatedOnlyItemCount": 0,
     "componentCount": 533,
-    "publicApiTypeCount": 2890
+    "publicApiTypeCount": 2894
   }
 }

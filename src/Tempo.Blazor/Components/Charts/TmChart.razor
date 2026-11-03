@@ -4,7 +4,9 @@
 
 <div class="tm-chart @(Animated ? "tm-chart--animated" : "") @Class"
      style="width: @Width; height: @Height;"
-     data-testid="@RootTestId("tm-chart")">
+     data-testid="@RootTestId("tm-chart")"
+     data-tooltip-mode="@TooltipMode.ToString().ToLowerInvariant()"
+     data-index-ordinal="@ActiveIndexOrdinal">
 
     @if (!HasRenderableData)
     {
@@ -17,10 +19,32 @@
              aria-label="@ChartAriaLabel"
              role="img"
              width="100%"
-             height="100%">
+             height="100%"
+             tabindex="@IndexTabIndex"
+             aria-keyshortcuts="@IndexKeyshortcuts"
+             aria-describedby="@IndexDescribedBy"
+             @onkeydown="HandleChartKeyDown"
+             @onblur="HandleChartBlur">
             @ChartContent
+            @IndexOverlayContent
             @TooltipContent
+            @IndexTooltipContent
         </svg>
+
+        @if (IndexTooltipActive)
+        {
+            @* The keyboard hint the focusable SVG points at, and the ONE live region of the chart:
+               the tooltip itself lives inside the role="img" SVG, so it is not exposed to a reader —
+               the announcement is the only text a screen reader meets. *@
+            <span class="tm-sr-only"
+                  id="@IndexHintId"
+                  data-testid="@TestId("chart-index-hint")">@Loc["TmChart_IndexKeyboardHint"]</span>
+            <span class="tm-sr-only"
+                  role="status"
+                  aria-live="polite"
+                  aria-atomic="true"
+                  data-testid="@TestId("chart-index-live")">@IndexLiveText</span>
+        }
 
         @if (ShowLegend && LegendItemList.Count > 0)
         {
@@ -148,7 +172,9 @@
            || Data is not null && Data.Datasets.Length > 0
               && (Data.Labels.Length > 0 || Data.TimePoints is { Length: > 0 });
 
-    private string ChartAriaLabel => $"{Type} chart";
+    // The type name stays as the data says it ("StackedBar"); only the noun is localized, so English
+    // output is byte-identical to the pre-2.9.1 hardcoded string.
+    private string ChartAriaLabel => string.Format(CultureInfo.CurrentCulture, Loc["TmChart_AriaLabel"], Type);
     private record LegendItem(string Label, string Color);
 
     // Hidden legend-item indices (meaning depends on per-value vs per-dataset legend).
@@ -168,6 +194,7 @@
         {
             _hidden.Clear();
             _tip = null;
+            ResetIndexState();
             _lastData = Data;
         }
     }
@@ -201,7 +228,8 @@
 
     private void ShowTip(int datasetIndex, int valueIndex, double anchorX, double anchorY)
     {
-        if (!ShowTooltip) return;
+        // Index mode owns the tooltip: a per-point card would fight the crosshair card.
+        if (!ShowTooltip || IndexTooltipActive) return;
         _tip = TipContext(datasetIndex, valueIndex);
         _tipX = anchorX;
         _tipY = anchorY;

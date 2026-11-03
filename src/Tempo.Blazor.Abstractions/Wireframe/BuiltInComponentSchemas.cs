@@ -2068,6 +2068,9 @@ public sealed class BuiltInComponentSchemas : IWireframeSchemaSource
                 P("type",       "Type",        PropType.Enum,   "bar",         cat: "Appearance",
                     opts: ["bar","horizontalBar","line","area","pie","donut","funnel","heatmap","treemap","stackedBar","stackedHorizontalBar","stackedArea"]),
                 P("dataPoints", "Data Points", PropType.Int,    6,             cat: "Appearance"),
+                P("showTooltip", "Show Tooltip", PropType.Bool, true,           cat: "Behavior"),
+                P("tooltipMode", "Tooltip Mode", PropType.Enum, "point",       cat: "Behavior",
+                    opts: ["point","index"]),
             ]
         };
 
@@ -2114,6 +2117,9 @@ public sealed class BuiltInComponentSchemas : IWireframeSchemaSource
                 P("type",  "Type",  PropType.Enum, "line", cat: "Appearance",
                     opts: ["line","area","bar"]),
                 P("color", "Color", PropType.Color, "#3b82f6", cat: "Appearance"),
+                P("showTooltip",   "Show Tooltip",    PropType.Bool, false, cat: "Behavior"),
+                P("showMinMax",    "Show Min Max",    PropType.Bool, false, cat: "Behavior"),
+                P("showLastPoint", "Show Last Point", PropType.Bool, false, cat: "Behavior"),
             ]
         };
 

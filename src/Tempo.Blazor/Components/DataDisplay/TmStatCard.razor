@@ -125,9 +125,10 @@ else
     @if (IsLoading)
     {
         <span class="tm-stat-card__skeletons" aria-hidden="true">
-            <TmSkeleton Variant="SkeletonVariant.Text" Height="1.75rem" Width="60%" />
-            <TmSkeleton Variant="SkeletonVariant.Text" Width="75%" />
-            <TmSkeleton Variant="SkeletonVariant.Text" Width="45%" />
+            @* Span, not div: the whole-card target is a <button>/<a>, which holds phrasing content only. *@
+            <TmSkeleton Element="TmRootElement.Span" Variant="SkeletonVariant.Text" Height="1.75rem" Width="60%" />
+            <TmSkeleton Element="TmRootElement.Span" Variant="SkeletonVariant.Text" Width="75%" />
+            <TmSkeleton Element="TmRootElement.Span" Variant="SkeletonVariant.Text" Width="45%" />
         </span><span class="tm-sr-only">@Loc["TmStatCard_Loading"]</span>
     }
     else if (HasNumericValue)
@@ -178,7 +179,7 @@ else
         <span class="tm-stat-card__sparkline"
               data-testid="@TestId("stat-card-sparkline")"
               aria-hidden="@(IsInteractive ? "true" : null)">
-            <TmSparkline Data="@Sparkline" Type="SparklineType.Line" Height="32px" />
+            <TmSparkline Data="@Sparkline" Type="SparklineType.Line" Height="32px" Element="TmRootElement.Span" />
         </span>
     }
     </text>;

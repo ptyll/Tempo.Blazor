@@ -84,6 +84,16 @@
       "description": "Shows a tooltip when hovering a bar, point or slice. Default true."
     },
     {
+      "name": "TooltipMode",
+      "type": "ChartTooltipMode",
+      "isRequired": false
+    },
+    {
+      "name": "TooltipIndexTemplate",
+      "type": "RenderFragment<ChartIndexTooltipContext>?",
+      "isRequired": false
+    },
+    {
       "name": "TooltipTemplate",
       "type": "RenderFragment<ChartTooltipContext>?",
       "isRequired": false,

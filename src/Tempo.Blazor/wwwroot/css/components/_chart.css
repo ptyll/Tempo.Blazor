@@ -242,6 +242,79 @@
     flex-shrink: 0;
 }
 
+/* ── Index tooltip mode (ChartTooltipMode.Index) ──
+   One transparent hit band per category paints ABOVE the marks, which is what lets a single zone
+   serve a whole category: the crosshair, the index dots and the card all read the same ordinal.
+   `pointer-events: all` is explicit because the band's fill is transparent — `visiblePainted` would
+   depend on how the browser treats a fully transparent fill. */
+
+.tm-chart__index-zones {
+    pointer-events: all;
+}
+
+.tm-chart__index-zone {
+    fill: transparent;
+    pointer-events: all;
+    cursor: crosshair;
+}
+
+.tm-chart__crosshair {
+    stroke: var(--tm-border-color-strong);
+    stroke-width: 1;
+    stroke-dasharray: 4, 4;
+    pointer-events: none;
+}
+
+.tm-chart__index-dot {
+    stroke: var(--tm-bg-surface);
+    stroke-width: 2;
+    pointer-events: none;
+}
+
+/* The index card is one row per series: dot · label · value, with the value pushed to the end so a
+   long series name cannot hide the number. */
+.tm-chart__tooltip--index {
+    inline-size: 100%;
+    gap: var(--tm-space-1);
+}
+
+.tm-chart__tooltip-series {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-1);
+    color: var(--tm-text-secondary);
+}
+
+.tm-chart__tooltip-series-label {
+    min-inline-size: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.tm-chart__tooltip-series-value {
+    margin-inline-start: auto;
+    padding-inline-start: var(--tm-space-2);
+    color: var(--tm-text-primary);
+    font-weight: var(--tm-font-weight-semibold);
+    font-variant-numeric: tabular-nums;
+}
+
+/* The focusable chart (index mode) is a real tab stop, so it needs a real focus indicator: the
+   library's two-layer --tm-focus-ring over a transparent outline, which forced-colors repaints in the
+   system Highlight colour after it turns box-shadow off. */
+.tm-chart svg[tabindex='0']:focus-visible {
+    outline: 2px solid transparent;
+    outline-offset: 2px;
+    box-shadow: var(--tm-focus-ring);
+    border-radius: var(--tm-radius-sm);
+}
+
+@media (forced-colors: active) {
+    .tm-chart svg[tabindex='0']:focus-visible {
+        outline: 2px solid Highlight;
+    }
+}
+
 @media (prefers-reduced-motion: reduce) {
     .tm-chart__legend-item--interactive {
         transition: none;

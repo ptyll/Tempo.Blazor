@@ -31,6 +31,13 @@
       "type": "string?",
       "isRequired": false,
       "description": "Additional CSS class."
+    },
+    {
+      "name": "Element",
+      "type": "TmRootElement",
+      "isRequired": false,
+      "default": "TmRootElement.Div",
+      "description": "Root element the skeleton renders as. TmRootElement.Div (default) keeps the historical <div>; TmRootElement.Span renders a phrasing root, for a skeleton inside a whole-card <a>/<button>."
     }
   ],
   "cssClasses": [

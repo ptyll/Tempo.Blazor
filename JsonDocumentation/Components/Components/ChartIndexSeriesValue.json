@@ -1,0 +1,37 @@
+{
+  "kind": "Record",
+  "category": "Components",
+  "namespace": "Tempo.Blazor.Components.Charts",
+  "description": "One series' value at the shared index of an index tooltip (ChartTooltipMode.Index): which series it is, its label, its value and its color, so a custom TooltipIndexTemplate can keep the legend's swatch.",
+  "packageId": "Tempo.Blazor",
+  "sourcePath": "src/Tempo.Blazor/Components/Charts/ChartModels.cs",
+  "documentationStatus": "documented",
+  "itemName": "ChartIndexSeriesValue",
+  "members": [
+    {
+      "name": "DatasetIndex",
+      "kind": "Property",
+      "type": "int",
+      "description": "Zero-based index of the series inside ChartData.Datasets."
+    },
+    {
+      "name": "Label",
+      "kind": "Property",
+      "type": "string",
+      "description": "The series label (ChartDataset.Label), as the legend shows it."
+    },
+    {
+      "name": "Value",
+      "kind": "Property",
+      "type": "double",
+      "description": "The series value at the index, in the data's own unit. It is formatted by the caller, so a template can choose its own format."
+    },
+    {
+      "name": "Color",
+      "kind": "Property",
+      "type": "string",
+      "description": "The series color, so a custom template can keep the legend's swatch."
+    }
+  ],
+  "usageExample": "<TmChart Type=\"ChartType.Line\" Data=\"data\" TooltipMode=\"ChartTooltipMode.Index\">\n  <TooltipIndexTemplate Context=\"ctx\">\n    @foreach (var series in ctx.Series)\n    {\n      <span>@series.Label: @series.Value.ToString(\"N0\")</span>\n    }\n  </TooltipIndexTemplate>\n</TmChart>"
+}

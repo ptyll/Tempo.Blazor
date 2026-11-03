@@ -1,0 +1,21 @@
+{
+  "kind": "Enum",
+  "category": "Components",
+  "namespace": "Tempo.Blazor.Components.Charts",
+  "description": "How TmChart presents its tooltip: one card per hovered point (the pre-existing behaviour), or one crosshair card per CATEGORY that lists every series at that index and is reachable from the keyboard.",
+  "packageId": "Tempo.Blazor",
+  "sourcePath": "src/Tempo.Blazor/Components/Charts/ChartModels.cs",
+  "documentationStatus": "documented",
+  "itemName": "ChartTooltipMode",
+  "members": [
+    {
+      "name": "Point",
+      "description": "One tooltip per hovered point, bar or slice. The default, so a chart that never sets TooltipMode renders exactly what it rendered before the mode existed."
+    },
+    {
+      "name": "Index",
+      "description": "A crosshair tooltip: the plot is divided into one full-height hover zone per category, a vertical crosshair marks the active category and the card lists every visible series at that index (color dot, series label, value). The chart becomes one tab stop: the arrow keys walk the indices, Home/End jump to the first and last one, Escape hides the card, and one polite live region announces the whole index. Honoured by Line, Area, Bar, StackedBar and StackedArea; every other chart type falls back to Point rather than rendering half a crosshair."
+    }
+  ],
+  "usageExample": "<TmChart Type=\"ChartType.Line\" Data=\"revenue\" TooltipMode=\"ChartTooltipMode.Index\" />"
+}

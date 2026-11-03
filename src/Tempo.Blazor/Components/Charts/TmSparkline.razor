@@ -1,17 +1,49 @@
 @namespace Tempo.Blazor.Components.Charts
+@inherits Tempo.Blazor.Components.TmComponentBase
 @using System.Globalization
 
-<div class="@CssClass" style="@WrapperStyle">
+@* A compact inline mini-chart. The padding-free viewBox is stretched to the host's box, so the
+   shape reads as a trend rather than as a chart: everything textual (min/max, the value tooltip)
+   lives OUTSIDE the SVG as HTML, where it keeps its font size and is not distorted by
+   preserveAspectRatio="none". *@
+@if (IsSpanRoot)
+{
+    <span class="@CssClass" style="@WrapperStyle">@SparklineBody</span>
+}
+else
+{
+    <div class="@CssClass" style="@WrapperStyle">@SparklineBody</div>
+}
+
+@code {
+    /// <summary>The sparkline's markup, shared by the two possible roots.</summary>
+    private RenderFragment SparklineBody => @<text>
     @if (Data is null || Data.Length == 0)
     {
-        <div class="tm-sparkline__empty">
-            <span>@Loc["Tm_NoResults"]</span>
-        </div>
+        @* The wrapper matches the root: a block <div> inside a phrasing <span> root would be the
+           very validity problem Element exists to solve. *@
+        @if (IsSpanRoot)
+        {
+            <span class="tm-sparkline__empty">
+                <span>@Loc["Tm_NoResults"]</span>
+            </span>
+        }
+        else
+        {
+            <div class="tm-sparkline__empty">
+                <span>@Loc["Tm_NoResults"]</span>
+            </div>
+        }
     }
     else
     {
         <svg viewBox="0 0 @SvgW @SvgH" preserveAspectRatio="none" width="100%" height="100%"
-             aria-label="@Loc["TmSparkline_AriaLabel"]" role="img">
+             aria-label="@ResolvedAriaLabel" role="img"
+             tabindex="@TooltipTabIndex"
+             aria-keyshortcuts="@TooltipKeyshortcuts"
+             aria-describedby="@TooltipDescribedBy"
+             @onkeydown="HandleKeyDown"
+             @onblur="ResetPoint">
             @if (Type == SparklineType.Line)
             {
                 @RenderLine
@@ -28,6 +60,32 @@
             {
                 @RenderPie
             }
+            @if (ShowLastPoint && Type is SparklineType.Line or SparklineType.Area)
+            {
+                @RenderLastPoint
+            }
         </svg>
+
+        @if (ShowMinMax)
+        {
+            @* The two numbers already live in the aria-label summary — announcing them again would be
+               a duplicate, so the visible caption stays out of the accessibility tree. *@
+            <span class="tm-sparkline__minmax" aria-hidden="true">@MinMaxText</span>
+        }
+
+        @if (TooltipEnabled)
+        {
+            @if (ActiveIndex >= 0)
+            {
+                <span class="tm-sparkline__tooltip" data-testid="@TestId("sparkline-tooltip")">@ActiveValueText</span>
+            }
+            <span class="tm-sr-only" id="@HintId">@Loc["TmSparkline_KeyboardHint"]</span>
+            <span class="tm-sr-only"
+                  role="status"
+                  aria-live="polite"
+                  aria-atomic="true"
+                  data-testid="@TestId("sparkline-live")">@LiveText</span>
+        }
     }
-</div>
+</text>;
+}

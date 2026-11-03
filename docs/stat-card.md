@@ -96,15 +96,13 @@ surface in both themes), the same ring from the system `Highlight` colour under 
 keeps an `outline: 2px solid transparent`, which is invisible normally and painted by the UA there), and
 a `min-block-size: var(--tm-touch-target)` floor on a coarse pointer.
 
-**Known limitation (HTML validity, not behaviour):** a `<button>`/`<a>` may only contain phrasing
-content, and two opt-in children render block elements — the loading branch's `TmSkeleton` (`<div>`) and
-`TmSparkline`'s root (`<div>`). The wrappers are `<span>`s, so the card's own markup is phrasing, but the
-nested `div`s are not, which makes `button.tm-stat-card` with `Sparkline`/`IsLoading` technically invalid
-HTML. Browsers render and activate it correctly, and `OnClick` still fires; the card cannot fix it alone
-without an element-name parameter on both child components, which is a change to their public surface and
-is tracked as a follow-up. Prefer `Href` (an `<a>` is far more forgiving) or a card without a sparkline
-when a validator or an HTML-aware pipeline is in the way. A nested **interactive** control is not
-supported in any case.
+**Phrasing content:** a `<button>`/`<a>` may only contain phrasing content, and two opt-in children
+default to block roots — the loading branch's `TmSkeleton` (`<div>`) and `TmSparkline` (`<div>`). The card
+therefore renders both with `Element="TmRootElement.Span"` (see [chart-tooltip.md](chart-tooltip.md) for
+the sparkline parameter), so a whole-card target holds phrasing content only and `button.tm-stat-card`
+with `Sparkline`/`IsLoading` is valid HTML. Both parameters default to `TmRootElement.Div`, so a
+standalone sparkline or skeleton is unchanged. A nested **interactive** control is still not supported in
+any case.
 
 ## CSS
 

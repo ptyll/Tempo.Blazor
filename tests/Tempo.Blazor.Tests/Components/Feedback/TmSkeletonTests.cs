@@ -1,5 +1,6 @@
 using Bunit;
 using FluentAssertions;
+using Tempo.Blazor.Components.Common;
 using Tempo.Blazor.Components.Feedback;
 using Tempo.Blazor.Tests.Localization;
 
@@ -19,6 +20,23 @@ public class TmSkeletonTests : LocalizationTestBase
         var cut = Render<TmSkeleton>();
 
         cut.Find("div").Should().NotBeNull();
+    }
+
+    [Fact]
+    public void TmSkeleton_Element_Span_Renders_APhrasingRoot()
+    {
+        var cut = Render<TmSkeleton>(p => p.Add(c => c.Element, TmRootElement.Span));
+
+        cut.FindAll("div").Count.Should().Be(0);
+        cut.Find("span.tm-skeleton").Should().NotBeNull();
+    }
+
+    [Fact]
+    public void TmSkeleton_Element_AnUndefinedValue_FallsBack_ToDiv()
+    {
+        var cut = Render<TmSkeleton>(p => p.Add(c => c.Element, (TmRootElement)99));
+
+        cut.Find("div.tm-skeleton").Should().NotBeNull();
     }
 
     [Fact]

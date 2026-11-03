@@ -230,6 +230,26 @@ internal static partial class TempoNativeRendererDefinitions
             }
         }
 
+        // Index tooltip mode: the sketch shows what the mode draws — one crosshair on a category and
+        // a card listing that category's series. A knob the canvas ignores is a knob that does nothing.
+        if (el.Props.GetBool("showTooltip", false)
+            && el.Props.GetString("tooltipMode", "point") == "index")
+        {
+            var crossX = chartX + chartW * 0.5;
+            sb.Append($"<line x1='{F(crossX)}' y1='{F(chartY)}' x2='{F(crossX)}' y2='{F(chartY + chartH)}' stroke='{ColorText}' stroke-width='1' stroke-dasharray='3,3'></line>");
+            var cardW = Math.Min(72.0, chartW - 8);
+            var cardH = 30.0;
+            var cardX = Math.Min(crossX + 6, chartX + chartW - cardW);
+            sb.Append(Rect(cardX, chartY + 4, cardW, cardH, "#ffffff", Border, 3));
+            sb.Append(Text("Jan", cardX + 5, chartY + 14, 8, ColorText, "start", "600"));
+            for (var row = 0; row < 2; row++)
+            {
+                var rowY = chartY + 19 + row * 7;
+                sb.Append(Rect(cardX + 5, rowY, 5, 5, fills[row % fills.Length], "none", 1));
+                sb.Append(Rect(cardX + 13, rowY, cardW - 22, 5, FillDark, "none", 1));
+            }
+        }
+
         if (showLegend)
         {
             var lx = el.W / 2 - dataPoints * 36 / 2;

@@ -1,0 +1,21 @@
+{
+  "kind": "Enum",
+  "category": "Components",
+  "namespace": "Tempo.Blazor.Components.Common",
+  "description": "The root HTML element a component renders. Div (the default) keeps a component's historical block root; Span promises a phrasing root and subtree, so the component may sit inside phrasing content such as a whole-card link or button.",
+  "packageId": "Tempo.Blazor",
+  "sourcePath": "src/Tempo.Blazor/Components/Common/TmRootElement.cs",
+  "documentationStatus": "documented",
+  "itemName": "TmRootElement",
+  "members": [
+    {
+      "name": "Div",
+      "description": "Renders a <div> — the historical root of TmSparkline and TmSkeleton, so a host that never sets Element renders exactly what it rendered before."
+    },
+    {
+      "name": "Span",
+      "description": "Renders a <span>, i.e. a phrasing root and a phrasing subtree. Use it when the component lives in a link, a button or another element that allows phrasing content only (the whole-card target of TmStatCard does)."
+    }
+  ],
+  "usageExample": "<TmSparkline Data=\"trend\" Element=\"TmRootElement.Span\" />"
+}
