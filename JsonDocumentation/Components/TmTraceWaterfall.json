@@ -1,0 +1,108 @@
+{
+  "itemName": "TmTraceWaterfall",
+  "kind": "Component",
+  "category": "Observability",
+  "namespace": "Tempo.Blazor.Components.Observability",
+  "packageId": "Tempo.Blazor",
+  "sourcePath": "src/Tempo.Blazor/Components/Observability/TmTraceWaterfall.razor",
+  "documentationStatus": "documented",
+  "description": "A generic span waterfall: one row per span of a trace, indented by its place in the parent tree, with a bar on a shared time axis, a duration and any host-declared metric columns. The surface is a div-based treegrid (role=treegrid with row/columnheader/gridcell children) with aria-level, aria-expanded and aria-selected per row, a roving tabindex, ←/→ collapse/expand (← also walks to the parent), ↑/↓/Home/End movement, and Enter/Space selection (Space activates on keyup, exactly like a native button). A bar's colour is never the only carrier of its kind: every row ships an icon plus a visually hidden kind name, an error carries an icon AND localized text, and the slowest LEAF span gets a localized badge. The span list is flat — the tree comes from ParentId, orphans attach under the root and a parent cycle is rejected and reported instead of throwing. Optional detail panel (DetailTemplate) sits to the right on a wide container and below it on a narrow one, decided by a container query on the component's own root. The treegrid is the single scroll owner in both axes: rows keep the full template (min-inline-size: max-content) and the grid scrolls sideways while its sticky header moves with them, so the overflow never reaches the page and the header never drifts away from its columns; a <640px container query tightens the track knobs. Zoom (+, −, reset — buttons and keyboard shortcuts), metric columns with per-subtree sums, virtualization above 200 rows and a live mode driven by an injectable TimeProvider.",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.Observability",
+    "@using Tempo.Blazor.Models"
+  ],
+  "parameters": [
+    {
+      "name": "Spans",
+      "type": "IReadOnlyList<TraceSpan>",
+      "isRequired": true,
+      "default": "[]",
+      "description": "The spans of the trace, as a FLAT list. The tree is built from TraceSpan.ParentId: a parent that names no supplied span attaches the span under the root as an orphan, and a parent cycle is rejected and reported by the layout (never thrown, never recursed into)."
+    },
+    {
+      "name": "Title",
+      "type": "string?",
+      "isRequired": false,
+      "description": "An optional heading above the waterfall. It also becomes the grid's accessible name when AriaLabel is not set."
+    },
+    {
+      "name": "AriaLabel",
+      "type": "string?",
+      "isRequired": false,
+      "description": "The accessible name of the treegrid. Null falls back to the title, then to the localized default (\"Trace waterfall\")."
+    },
+    {
+      "name": "SelectedSpanId",
+      "type": "string?",
+      "isRequired": false,
+      "description": "The selected span's id, two-way bound with SelectedSpanIdChanged (@bind-SelectedSpanId). The matching row carries aria-selected=\"true\" and the detail panel renders when DetailTemplate is supplied. Rows are selected by click, Enter or Space."
+    },
+    {
+      "name": "SelectedSpanIdChanged",
+      "type": "EventCallback<string?>",
+      "isRequired": false,
+      "description": "Fires with the newly selected span id. A click on a disclosure button toggles the subtree WITHOUT selecting the row, so the two actions stay separate."
+    },
+    {
+      "name": "DetailTemplate",
+      "type": "RenderFragment<TraceSpan>?",
+      "isRequired": false,
+      "description": "The detail panel of the selected span, placed to the RIGHT of the grid on a wide container and BELOW it on a narrow one. The placement is a container query on the component's own root, so a narrow card in a wide page still stacks (the viewport is never consulted)."
+    },
+    {
+      "name": "MetricColumns",
+      "type": "IReadOnlyList<TraceMetricColumn>",
+      "isRequired": false,
+      "default": "[]",
+      "description": "The numeric metric columns (key, label, .NET format string) rendered after the duration. A column whose key no span reports renders a dash, never a zero. A span with children also shows the subtree sum (Σ) with a localized accessible name, so \"this call\" and \"this call and everything under it\" are both visible."
+    },
+    {
+      "name": "Culture",
+      "type": "CultureInfo?",
+      "isRequired": false,
+      "description": "The culture that formats the durations, the axis ticks and the metric values. Null (the default) means the current culture at render time, so the waterfall follows the request culture without being told."
+    },
+    {
+      "name": "LiveMode",
+      "type": "bool",
+      "isRequired": false,
+      "default": "false",
+      "description": "When true the component redraws on every LiveTickInterval WHILE some span is still running, so its bar grows. A tick with nothing running redraws nothing and never writes to the live region."
+    },
+    {
+      "name": "LiveTickInterval",
+      "type": "TimeSpan",
+      "isRequired": false,
+      "default": "00:00:01",
+      "description": "The live-mode redraw interval. Default one second; a non-positive value falls back to one second, because a zero period would spin."
+    },
+    {
+      "name": "TimeProvider",
+      "type": "TimeProvider",
+      "isRequired": false,
+      "default": "TimeProvider.System",
+      "description": "The clock the component reads \"now\" from and schedules the live ticker with. Default TimeProvider.System; a host (and the tests) can pass a fake one — which is how the running bar's growth is proven without waiting."
+    },
+    {
+      "name": "MaxHeight",
+      "type": "string?",
+      "isRequired": false,
+      "default": "\"420px\"",
+      "description": "The maximum block size of the scrolling grid, as a CSS length. Default \"420px\"; an empty value leaves it to the stylesheet. The grid is the single scroll owner in both axes and its header sticks to the top of this area, so the header is counted in the height instead of scrolling away above the rows."
+    },
+    {
+      "name": "ShowZoom",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "Renders the zoom group: zoom in, zoom out and reset, as native buttons with localized aria-labels and aria-keyshortcuts. The keyboard equivalents (+, − and 0) work from any focused row; they are deliberately not handled on the component root, so typing + inside a host's DetailTemplate never zooms the trace."
+    },
+    {
+      "name": "Class",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Additional CSS class(es) for the root element."
+    }
+  ],
+  "usageExample": "<TmTraceWaterfall Spans=\"@spans\"\n                  Title=\"Agent run\"\n                  MetricColumns=\"@columns\"\n                  LiveMode=\"true\"\n                  @bind-SelectedSpanId=\"_selectedSpanId\">\n    <DetailTemplate Context=\"span\">\n        <h4>@span.Name</h4>\n        <p>@span.Status — @span.Kind</p>\n    </DetailTemplate>\n</TmTraceWaterfall>"
+}

@@ -132,6 +132,15 @@
   --tm-category-fallback: #818cf8; /* indigo-400 */
   --tm-category-tint: 20%;
 
+  /* Trace waterfall kinds — lifted to 400-tones so a bar and its kind glyph read on the dark
+     surface, exactly like the categorical palette above. Same hues as light. */
+  --tm-trace-llm: #a78bfa;    /* violet-400 */
+  --tm-trace-tool: #fbbf24;   /* amber-400 */
+  --tm-trace-agent: #60a5fa;  /* blue-400 */
+  --tm-trace-http: #34d399;   /* emerald-400 */
+  --tm-trace-db: #f472b6;     /* pink-400 */
+  --tm-trace-custom: #9ca3af; /* gray-400 */
+
   /* Neutral scale — inverted for dark mode */
   --tm-color-gray-50:        #1e293b;
   --tm-color-gray-100:       #334155;
@@ -368,6 +377,13 @@
   --tm-category-8:                  #14b8a6;
   --tm-category-fallback:           #6366f1;
   --tm-category-tint:               12%;
+
+  --tm-trace-llm:                  #7c3aed;
+  --tm-trace-tool:                 #b45309;
+  --tm-trace-agent:                #2563eb;
+  --tm-trace-http:                 #047857;
+  --tm-trace-db:                   #be185d;
+  --tm-trace-custom:               #4b5563;
   --tm-color-gray-50:               #f9fafb;
   --tm-color-gray-100:              #f3f4f6;
   --tm-color-gray-200:              #e5e7eb;

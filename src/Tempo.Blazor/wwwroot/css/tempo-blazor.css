@@ -79,6 +79,7 @@
 @import "components/_trend-list.css";
 @import "components/_breakdown-card.css";
 @import "components/_facet-filter.css";
+@import "components/_trace-waterfall.css";
 @import "components/_avatar.css";
 @import "components/_empty-state.css";
 @import "components/_accordion.css";

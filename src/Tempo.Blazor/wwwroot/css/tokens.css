@@ -102,6 +102,17 @@
      the 400-tones need a stronger mix against #1e293b to read as a tint (tokens-dark.css). */
   --tm-category-tint: 12%;
 
+  /* ── Trace waterfall kinds ──────────────────────────────────── */
+  /* One colour per TraceSpanKind. Painted on the waterfall bar and its icon glyph, always next to
+     the kind's icon AND a visually hidden kind name, so the colour is never the only carrier. The
+     600/700 tones hold 3:1 on the light surface (--tm-bg-surface); the dark theme lifts them. */
+  --tm-trace-llm: #7c3aed;    /* LLM call — violet-600 */
+  --tm-trace-tool: #b45309;   /* Tool call — amber-700 */
+  --tm-trace-agent: #2563eb;  /* Agent — blue-600 */
+  --tm-trace-http: #047857;   /* HTTP request — emerald-700 */
+  --tm-trace-db: #be185d;     /* Database query — pink-700 */
+  --tm-trace-custom: #4b5563; /* Custom — gray-600 */
+
   /* ── Neutrals ───────────────────────────────────────────────── */
   --tm-color-white:            #ffffff;
   --tm-color-gray-50:          #f9fafb;

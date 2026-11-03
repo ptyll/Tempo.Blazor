@@ -1,0 +1,66 @@
+{
+  "itemName": "TraceSpan",
+  "kind": "Record",
+  "category": "Models",
+  "namespace": "Tempo.Blazor.Models",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/Models/Observability/TraceSpan.cs",
+  "documentationStatus": "documented",
+  "description": "One span of a trace: a named, timed unit of work with an optional parent, an outcome and an optional bag of numeric metrics (tokens in/out, cost, …). Data only — the model carries no callbacks and no rendering hints, so a backend can build the exact objects the waterfall renders. A host supplies a FLAT list; the tree comes from ParentId: a blank ParentId is a root, a ParentId naming no supplied span is an ORPHAN attached under the root (never silently dropped), and a parent cycle is REJECTED — reported by the layout instead of throwing or recursing forever. Span ids must be unique; an empty id, and every span repeating an already-seen id, is ignored (the first occurrence wins).",
+  "members": [
+    {
+      "name": "Id",
+      "type": "string",
+      "isRequired": true,
+      "description": "The stable identity of the span within one trace, used for the parent links, the selection (@bind-SelectedSpanId) and the row keys. Required and unique; an empty id is ignored rather than rendered."
+    },
+    {
+      "name": "ParentId",
+      "type": "string?",
+      "isRequired": false,
+      "description": "The Id of the parent span, or null for a root. A value that names no supplied span makes the span an orphan (rendered under the root); a value that closes a cycle rejects the cycle instead of hanging the layout."
+    },
+    {
+      "name": "Name",
+      "type": "string",
+      "isRequired": true,
+      "description": "The human name of the span (\"gpt-4o completion\", \"search_web\", …). A blank name falls back to Id, so a row is never nameless."
+    },
+    {
+      "name": "Kind",
+      "type": "TraceSpanKind",
+      "isRequired": false,
+      "description": "What the span represents. Drives the row's icon, its --tm-trace-* colour and its visually hidden kind name. Default Custom."
+    },
+    {
+      "name": "StartedAt",
+      "type": "DateTimeOffset",
+      "isRequired": true,
+      "description": "The absolute start of the span on the trace clock. The axis starts at the earliest start of the whole trace."
+    },
+    {
+      "name": "EndedAt",
+      "type": "DateTimeOffset?",
+      "isRequired": false,
+      "description": "The absolute end of the span. Null means \"not finished yet\": the layout extends the bar to the caller-supplied \"now\", which is what makes a Running span grow in live mode. A value earlier than StartedAt is treated as a zero-length span, never as a negative bar."
+    },
+    {
+      "name": "Status",
+      "type": "TraceSpanStatus",
+      "isRequired": false,
+      "description": "The outcome of the span. Running is the only value that keeps the live ticker redrawing; Error renders an icon AND localized text, so the state never rides on colour alone. Default Ok."
+    },
+    {
+      "name": "Metrics",
+      "type": "IReadOnlyDictionary<string, double>",
+      "isRequired": false,
+      "description": "Numeric metrics of the span, keyed ordinally (tokens_in, tokens_out, cost, …). MetricColumns decides which keys are visible; the layout sums every key over each subtree, so a parent shows both its own value and its subtree total. Default: an empty, shared map wrapped in ReadOnlyDictionary, so a caller that casts it back to a dictionary gets a NotSupportedException instead of changing the default of every span."
+    },
+    {
+      "name": "Attributes",
+      "type": "IReadOnlyDictionary<string, string>",
+      "isRequired": false,
+      "description": "Free-form string attributes of the span (model name, tool version, HTTP status, …). The waterfall does not interpret them — they are for the host's DetailTemplate and for tooling that serialises the trace. Default: an empty, shared map wrapped in ReadOnlyDictionary, so a caller that casts it back to a dictionary gets a NotSupportedException instead of changing the default of every span."
+    }
+  ]
+}

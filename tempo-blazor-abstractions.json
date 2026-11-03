@@ -21221,6 +21221,178 @@
       ]
     },
     {
+      "itemName": "TraceMetricColumn",
+      "kind": "Record",
+      "category": "Models",
+      "namespace": "Tempo.Blazor.Models",
+      "description": "One numeric metric column of a trace waterfall (TmTraceWaterfall.MetricColumns): the key looked up in TraceSpan.Metrics, the header a reader sees and the .NET numeric format string the value is rendered with. A column whose key no span reports renders an empty cell rather than a zero, so \"not reported\" and \"reported as zero\" stay distinguishable.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Models/Observability/TraceMetricColumn.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Format",
+          "kind": "Property",
+          "type": "string?",
+          "description": "The .NET numeric format string (\"N0\", \"0.00\", \"P0\", …) applied with the component's culture. Null or blank means N0.",
+          "isRequired": false
+        },
+        {
+          "name": "Key",
+          "kind": "Property",
+          "type": "string",
+          "description": "The metric key, matched ORDINALLY against TraceSpan.Metrics. A column whose key no span carries renders an empty cell rather than a zero.",
+          "isRequired": true
+        },
+        {
+          "name": "Label",
+          "kind": "Property",
+          "type": "string",
+          "description": "The column header. A blank label falls back to Key.",
+          "isRequired": true
+        }
+      ]
+    },
+    {
+      "itemName": "TraceSpan",
+      "kind": "Record",
+      "category": "Models",
+      "namespace": "Tempo.Blazor.Models",
+      "description": "One span of a trace: a named, timed unit of work with an optional parent, an outcome and an optional bag of numeric metrics (tokens in/out, cost, …). Data only — the model carries no callbacks and no rendering hints, so a backend can build the exact objects the waterfall renders. A host supplies a FLAT list; the tree comes from ParentId: a blank ParentId is a root, a ParentId naming no supplied span is an ORPHAN attached under the root (never silently dropped), and a parent cycle is REJECTED — reported by the layout instead of throwing or recursing forever. Span ids must be unique; an empty id, and every span repeating an already-seen id, is ignored (the first occurrence wins).",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Models/Observability/TraceSpan.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Attributes",
+          "kind": "Property",
+          "type": "IReadOnlyDictionary<string, string>",
+          "description": "Free-form string attributes of the span (model name, tool version, HTTP status, …). The waterfall does not interpret them — they are for the host's DetailTemplate and for tooling that serialises the trace. Default: an empty, shared map wrapped in ReadOnlyDictionary, so a caller that casts it back to a dictionary gets a NotSupportedException instead of changing the default of every span.",
+          "isRequired": false
+        },
+        {
+          "name": "EndedAt",
+          "kind": "Property",
+          "type": "DateTimeOffset?",
+          "description": "The absolute end of the span. Null means \"not finished yet\": the layout extends the bar to the caller-supplied \"now\", which is what makes a Running span grow in live mode. A value earlier than StartedAt is treated as a zero-length span, never as a negative bar.",
+          "isRequired": false
+        },
+        {
+          "name": "Id",
+          "kind": "Property",
+          "type": "string",
+          "description": "The stable identity of the span within one trace, used for the parent links, the selection (@bind-SelectedSpanId) and the row keys. Required and unique; an empty id is ignored rather than rendered.",
+          "isRequired": true
+        },
+        {
+          "name": "Kind",
+          "kind": "Property",
+          "type": "TraceSpanKind",
+          "description": "What the span represents. Drives the row's icon, its --tm-trace-* colour and its visually hidden kind name. Default Custom.",
+          "isRequired": false
+        },
+        {
+          "name": "Metrics",
+          "kind": "Property",
+          "type": "IReadOnlyDictionary<string, double>",
+          "description": "Numeric metrics of the span, keyed ordinally (tokens_in, tokens_out, cost, …). MetricColumns decides which keys are visible; the layout sums every key over each subtree, so a parent shows both its own value and its subtree total. Default: an empty, shared map wrapped in ReadOnlyDictionary, so a caller that casts it back to a dictionary gets a NotSupportedException instead of changing the default of every span.",
+          "isRequired": false
+        },
+        {
+          "name": "Name",
+          "kind": "Property",
+          "type": "string",
+          "description": "The human name of the span (\"gpt-4o completion\", \"search_web\", …). A blank name falls back to Id, so a row is never nameless.",
+          "isRequired": true
+        },
+        {
+          "name": "ParentId",
+          "kind": "Property",
+          "type": "string?",
+          "description": "The Id of the parent span, or null for a root. A value that names no supplied span makes the span an orphan (rendered under the root); a value that closes a cycle rejects the cycle instead of hanging the layout.",
+          "isRequired": false
+        },
+        {
+          "name": "StartedAt",
+          "kind": "Property",
+          "type": "DateTimeOffset",
+          "description": "The absolute start of the span on the trace clock. The axis starts at the earliest start of the whole trace.",
+          "isRequired": true
+        },
+        {
+          "name": "Status",
+          "kind": "Property",
+          "type": "TraceSpanStatus",
+          "description": "The outcome of the span. Running is the only value that keeps the live ticker redrawing; Error renders an icon AND localized text, so the state never rides on colour alone. Default Ok.",
+          "isRequired": false
+        }
+      ]
+    },
+    {
+      "itemName": "TraceSpanKind",
+      "kind": "Enum",
+      "category": "Models",
+      "namespace": "Tempo.Blazor.Models",
+      "description": "What one TraceSpan represents in a distributed or agent trace. Presentation metadata: TmTraceWaterfall paints a distinct --tm-trace-* colour and an icon per value and always renders a visually hidden kind name next to them, so colour is never the only carrier. The layout maths does not branch on the kind.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Models/Observability/TraceSpanKind.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Llm",
+          "description": "A model / LLM call (prompt, completion or embedding)."
+        },
+        {
+          "name": "Tool",
+          "description": "A tool or function call made by the agent."
+        },
+        {
+          "name": "Agent",
+          "description": "An agent invocation, including a sub-agent of the root agent."
+        },
+        {
+          "name": "Http",
+          "description": "An outbound HTTP request."
+        },
+        {
+          "name": "Db",
+          "description": "A database query or transaction."
+        },
+        {
+          "name": "Custom",
+          "description": "Anything the host classifies itself."
+        }
+      ]
+    },
+    {
+      "itemName": "TraceSpanStatus",
+      "kind": "Enum",
+      "category": "Models",
+      "namespace": "Tempo.Blazor.Models",
+      "description": "The outcome of one TraceSpan. Running is the only value that keeps a span's bar growing: a running span has no EndedAt, so the layout extends it to the caller's \"now\". Every non-OK status renders with its own icon and localized text, so an error is never signalled by colour alone.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Models/Observability/TraceSpanStatus.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Ok",
+          "description": "The span completed successfully. No status chip is rendered."
+        },
+        {
+          "name": "Error",
+          "description": "The span failed. Rendered with an error icon, the localized \"Error\" text and the danger tone."
+        },
+        {
+          "name": "Running",
+          "description": "The span is still in flight; its bar extends to \"now\" and live mode keeps redrawing."
+        },
+        {
+          "name": "Cancelled",
+          "description": "The span was cancelled before it completed."
+        }
+      ]
+    },
+    {
       "itemName": "TreeDropEventArgs<TKey>",
       "kind": "Class",
       "category": "Models",
@@ -39726,11 +39898,11 @@
   ],
   "libraryExamples": [],
   "summary": {
-    "itemCount": 1576,
-    "manualItemCount": 1576,
-    "generatedItemCount": 1560,
+    "itemCount": 1580,
+    "manualItemCount": 1580,
+    "generatedItemCount": 1564,
     "generatedOnlyItemCount": 0,
     "componentCount": 0,
-    "publicApiTypeCount": 1560
+    "publicApiTypeCount": 1564
   }
 }

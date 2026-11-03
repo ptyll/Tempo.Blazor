@@ -102,6 +102,7 @@
           "Tempo.Blazor.Components.Ledger",
           "Tempo.Blazor.Components.Navigation",
           "Tempo.Blazor.Components.Notifications",
+          "Tempo.Blazor.Components.Observability",
           "Tempo.Blazor.Components.Overlay",
           "Tempo.Blazor.Components.Pickers",
           "Tempo.Blazor.Components.PivotTable",
@@ -25799,6 +25800,114 @@
           ]
         },
         {
+          "itemName": "TmTraceWaterfall",
+          "kind": "Component",
+          "category": "Observability",
+          "namespace": "Tempo.Blazor.Components.Observability",
+          "description": "A generic span waterfall: one row per span of a trace, indented by its place in the parent tree, with a bar on a shared time axis, a duration and any host-declared metric columns. The surface is a div-based treegrid (role=treegrid with row/columnheader/gridcell children) with aria-level, aria-expanded and aria-selected per row, a roving tabindex, ←/→ collapse/expand (← also walks to the parent), ↑/↓/Home/End movement, and Enter/Space selection (Space activates on keyup, exactly like a native button). A bar's colour is never the only carrier of its kind: every row ships an icon plus a visually hidden kind name, an error carries an icon AND localized text, and the slowest LEAF span gets a localized badge. The span list is flat — the tree comes from ParentId, orphans attach under the root and a parent cycle is rejected and reported instead of throwing. Optional detail panel (DetailTemplate) sits to the right on a wide container and below it on a narrow one, decided by a container query on the component's own root. The treegrid is the single scroll owner in both axes: rows keep the full template (min-inline-size: max-content) and the grid scrolls sideways while its sticky header moves with them, so the overflow never reaches the page and the header never drifts away from its columns; a <640px container query tightens the track knobs. Zoom (+, −, reset — buttons and keyboard shortcuts), metric columns with per-subtree sums, virtualization above 200 rows and a live mode driven by an injectable TimeProvider.",
+          "packageId": "Tempo.Blazor",
+          "sourcePath": "src/Tempo.Blazor/Components/Observability/TmTraceWaterfall.razor",
+          "documentationStatus": "merged",
+          "requiredImports": [
+            "@using Tempo.Blazor.Components.Observability",
+            "@using Tempo.Blazor.Models"
+          ],
+          "parameters": [
+            {
+              "name": "AriaLabel",
+              "type": "string?",
+              "isRequired": false,
+              "description": "The accessible name of the treegrid. Null falls back to the title, then to the localized default (\"Trace waterfall\")."
+            },
+            {
+              "name": "Class",
+              "type": "string?",
+              "isRequired": false,
+              "description": "Additional CSS class(es) for the root element."
+            },
+            {
+              "name": "Culture",
+              "type": "CultureInfo?",
+              "isRequired": false,
+              "description": "The culture that formats the durations, the axis ticks and the metric values. Null (the default) means the current culture at render time, so the waterfall follows the request culture without being told."
+            },
+            {
+              "name": "DetailTemplate",
+              "type": "RenderFragment<TraceSpan>?",
+              "isRequired": false,
+              "description": "The detail panel of the selected span, placed to the RIGHT of the grid on a wide container and BELOW it on a narrow one. The placement is a container query on the component's own root, so a narrow card in a wide page still stacks (the viewport is never consulted)."
+            },
+            {
+              "name": "LiveMode",
+              "type": "bool",
+              "isRequired": false,
+              "description": "When true the component redraws on every LiveTickInterval WHILE some span is still running, so its bar grows. A tick with nothing running redraws nothing and never writes to the live region.",
+              "default": "false"
+            },
+            {
+              "name": "LiveTickInterval",
+              "type": "TimeSpan",
+              "isRequired": false,
+              "default": "TimeSpan.FromSeconds(1)",
+              "description": "The live-mode redraw interval. Default one second; a non-positive value falls back to one second, because a zero period would spin."
+            },
+            {
+              "name": "MaxHeight",
+              "type": "string?",
+              "isRequired": false,
+              "default": "\"420px\"",
+              "description": "The maximum block size of the scrolling grid, as a CSS length. Default \"420px\"; an empty value leaves it to the stylesheet. The grid is the single scroll owner in both axes and its header sticks to the top of this area, so the header is counted in the height instead of scrolling away above the rows."
+            },
+            {
+              "name": "MetricColumns",
+              "type": "IReadOnlyList<TraceMetricColumn>",
+              "isRequired": false,
+              "default": "[]",
+              "description": "The numeric metric columns (key, label, .NET format string) rendered after the duration. A column whose key no span reports renders a dash, never a zero. A span with children also shows the subtree sum (Σ) with a localized accessible name, so \"this call\" and \"this call and everything under it\" are both visible."
+            },
+            {
+              "name": "SelectedSpanId",
+              "type": "string?",
+              "isRequired": false,
+              "description": "The selected span's id, two-way bound with SelectedSpanIdChanged (@bind-SelectedSpanId). The matching row carries aria-selected=\"true\" and the detail panel renders when DetailTemplate is supplied. Rows are selected by click, Enter or Space."
+            },
+            {
+              "name": "SelectedSpanIdChanged",
+              "type": "EventCallback<string?>",
+              "isRequired": false,
+              "description": "Fires with the newly selected span id. A click on a disclosure button toggles the subtree WITHOUT selecting the row, so the two actions stay separate."
+            },
+            {
+              "name": "ShowZoom",
+              "type": "bool",
+              "isRequired": false,
+              "default": "true",
+              "description": "Renders the zoom group: zoom in, zoom out and reset, as native buttons with localized aria-labels and aria-keyshortcuts. The keyboard equivalents (+, − and 0) work from any focused row; they are deliberately not handled on the component root, so typing + inside a host's DetailTemplate never zooms the trace."
+            },
+            {
+              "name": "Spans",
+              "type": "IReadOnlyList<TraceSpan>",
+              "isRequired": false,
+              "default": "[]",
+              "description": "The spans of the trace, as a FLAT list. The tree is built from TraceSpan.ParentId: a parent that names no supplied span attaches the span under the root as an orphan, and a parent cycle is rejected and reported by the layout (never thrown, never recursed into)."
+            },
+            {
+              "name": "TimeProvider",
+              "type": "TimeProvider",
+              "isRequired": false,
+              "default": "System.TimeProvider.System",
+              "description": "The clock the component reads \"now\" from and schedules the live ticker with. Default TimeProvider.System; a host (and the tests) can pass a fake one — which is how the running bar's growth is proven without waiting."
+            },
+            {
+              "name": "Title",
+              "type": "string?",
+              "isRequired": false,
+              "description": "An optional heading above the waterfall. It also becomes the grid's accessible name when AriaLabel is not set."
+            }
+          ],
+          "usageExample": "<TmTraceWaterfall Spans=\"@spans\"\n                  Title=\"Agent run\"\n                  MetricColumns=\"@columns\"\n                  LiveMode=\"true\"\n                  @bind-SelectedSpanId=\"_selectedSpanId\">\n    <DetailTemplate Context=\"span\">\n        <h4>@span.Name</h4>\n        <p>@span.Status — @span.Kind</p>\n    </DetailTemplate>\n</TmTraceWaterfall>"
+        },
+        {
           "itemName": "TmOverlayPanel",
           "kind": "Component",
           "category": "Overlay",
@@ -34440,6 +34549,10 @@
           "kind": "Css"
         },
         {
+          "path": "src/Tempo.Blazor/wwwroot/css/components/_trace-waterfall.css",
+          "kind": "Css"
+        },
+        {
           "path": "src/Tempo.Blazor/wwwroot/css/components/_tree-list.css",
           "kind": "Css"
         },
@@ -34628,6 +34741,10 @@
           "kind": "JavaScript"
         },
         {
+          "path": "src/Tempo.Blazor/wwwroot/js/tm-trace-waterfall.js",
+          "kind": "JavaScript"
+        },
+        {
           "path": "src/Tempo.Blazor/wwwroot/js/tm-user-zone.js",
           "kind": "JavaScript"
         },
@@ -34753,11 +34870,11 @@
         }
       ],
       "summary": {
-        "itemCount": 435,
-        "manualItemCount": 435,
-        "generatedItemCount": 427,
+        "itemCount": 436,
+        "manualItemCount": 436,
+        "generatedItemCount": 428,
         "generatedOnlyItemCount": 0,
-        "componentCount": 231,
+        "componentCount": 232,
         "publicApiTypeCount": 196
       }
     },
@@ -98378,6 +98495,178 @@
           ]
         },
         {
+          "itemName": "TraceMetricColumn",
+          "kind": "Record",
+          "category": "Models",
+          "namespace": "Tempo.Blazor.Models",
+          "description": "One numeric metric column of a trace waterfall (TmTraceWaterfall.MetricColumns): the key looked up in TraceSpan.Metrics, the header a reader sees and the .NET numeric format string the value is rendered with. A column whose key no span reports renders an empty cell rather than a zero, so \"not reported\" and \"reported as zero\" stay distinguishable.",
+          "packageId": "Tempo.Blazor.Abstractions",
+          "sourcePath": "src/Tempo.Blazor.Abstractions/Models/Observability/TraceMetricColumn.cs",
+          "documentationStatus": "merged",
+          "members": [
+            {
+              "name": "Format",
+              "kind": "Property",
+              "type": "string?",
+              "description": "The .NET numeric format string (\"N0\", \"0.00\", \"P0\", …) applied with the component's culture. Null or blank means N0.",
+              "isRequired": false
+            },
+            {
+              "name": "Key",
+              "kind": "Property",
+              "type": "string",
+              "description": "The metric key, matched ORDINALLY against TraceSpan.Metrics. A column whose key no span carries renders an empty cell rather than a zero.",
+              "isRequired": true
+            },
+            {
+              "name": "Label",
+              "kind": "Property",
+              "type": "string",
+              "description": "The column header. A blank label falls back to Key.",
+              "isRequired": true
+            }
+          ]
+        },
+        {
+          "itemName": "TraceSpan",
+          "kind": "Record",
+          "category": "Models",
+          "namespace": "Tempo.Blazor.Models",
+          "description": "One span of a trace: a named, timed unit of work with an optional parent, an outcome and an optional bag of numeric metrics (tokens in/out, cost, …). Data only — the model carries no callbacks and no rendering hints, so a backend can build the exact objects the waterfall renders. A host supplies a FLAT list; the tree comes from ParentId: a blank ParentId is a root, a ParentId naming no supplied span is an ORPHAN attached under the root (never silently dropped), and a parent cycle is REJECTED — reported by the layout instead of throwing or recursing forever. Span ids must be unique; an empty id, and every span repeating an already-seen id, is ignored (the first occurrence wins).",
+          "packageId": "Tempo.Blazor.Abstractions",
+          "sourcePath": "src/Tempo.Blazor.Abstractions/Models/Observability/TraceSpan.cs",
+          "documentationStatus": "merged",
+          "members": [
+            {
+              "name": "Attributes",
+              "kind": "Property",
+              "type": "IReadOnlyDictionary<string, string>",
+              "description": "Free-form string attributes of the span (model name, tool version, HTTP status, …). The waterfall does not interpret them — they are for the host's DetailTemplate and for tooling that serialises the trace. Default: an empty, shared map wrapped in ReadOnlyDictionary, so a caller that casts it back to a dictionary gets a NotSupportedException instead of changing the default of every span.",
+              "isRequired": false
+            },
+            {
+              "name": "EndedAt",
+              "kind": "Property",
+              "type": "DateTimeOffset?",
+              "description": "The absolute end of the span. Null means \"not finished yet\": the layout extends the bar to the caller-supplied \"now\", which is what makes a Running span grow in live mode. A value earlier than StartedAt is treated as a zero-length span, never as a negative bar.",
+              "isRequired": false
+            },
+            {
+              "name": "Id",
+              "kind": "Property",
+              "type": "string",
+              "description": "The stable identity of the span within one trace, used for the parent links, the selection (@bind-SelectedSpanId) and the row keys. Required and unique; an empty id is ignored rather than rendered.",
+              "isRequired": true
+            },
+            {
+              "name": "Kind",
+              "kind": "Property",
+              "type": "TraceSpanKind",
+              "description": "What the span represents. Drives the row's icon, its --tm-trace-* colour and its visually hidden kind name. Default Custom.",
+              "isRequired": false
+            },
+            {
+              "name": "Metrics",
+              "kind": "Property",
+              "type": "IReadOnlyDictionary<string, double>",
+              "description": "Numeric metrics of the span, keyed ordinally (tokens_in, tokens_out, cost, …). MetricColumns decides which keys are visible; the layout sums every key over each subtree, so a parent shows both its own value and its subtree total. Default: an empty, shared map wrapped in ReadOnlyDictionary, so a caller that casts it back to a dictionary gets a NotSupportedException instead of changing the default of every span.",
+              "isRequired": false
+            },
+            {
+              "name": "Name",
+              "kind": "Property",
+              "type": "string",
+              "description": "The human name of the span (\"gpt-4o completion\", \"search_web\", …). A blank name falls back to Id, so a row is never nameless.",
+              "isRequired": true
+            },
+            {
+              "name": "ParentId",
+              "kind": "Property",
+              "type": "string?",
+              "description": "The Id of the parent span, or null for a root. A value that names no supplied span makes the span an orphan (rendered under the root); a value that closes a cycle rejects the cycle instead of hanging the layout.",
+              "isRequired": false
+            },
+            {
+              "name": "StartedAt",
+              "kind": "Property",
+              "type": "DateTimeOffset",
+              "description": "The absolute start of the span on the trace clock. The axis starts at the earliest start of the whole trace.",
+              "isRequired": true
+            },
+            {
+              "name": "Status",
+              "kind": "Property",
+              "type": "TraceSpanStatus",
+              "description": "The outcome of the span. Running is the only value that keeps the live ticker redrawing; Error renders an icon AND localized text, so the state never rides on colour alone. Default Ok.",
+              "isRequired": false
+            }
+          ]
+        },
+        {
+          "itemName": "TraceSpanKind",
+          "kind": "Enum",
+          "category": "Models",
+          "namespace": "Tempo.Blazor.Models",
+          "description": "What one TraceSpan represents in a distributed or agent trace. Presentation metadata: TmTraceWaterfall paints a distinct --tm-trace-* colour and an icon per value and always renders a visually hidden kind name next to them, so colour is never the only carrier. The layout maths does not branch on the kind.",
+          "packageId": "Tempo.Blazor.Abstractions",
+          "sourcePath": "src/Tempo.Blazor.Abstractions/Models/Observability/TraceSpanKind.cs",
+          "documentationStatus": "merged",
+          "members": [
+            {
+              "name": "Llm",
+              "description": "A model / LLM call (prompt, completion or embedding)."
+            },
+            {
+              "name": "Tool",
+              "description": "A tool or function call made by the agent."
+            },
+            {
+              "name": "Agent",
+              "description": "An agent invocation, including a sub-agent of the root agent."
+            },
+            {
+              "name": "Http",
+              "description": "An outbound HTTP request."
+            },
+            {
+              "name": "Db",
+              "description": "A database query or transaction."
+            },
+            {
+              "name": "Custom",
+              "description": "Anything the host classifies itself."
+            }
+          ]
+        },
+        {
+          "itemName": "TraceSpanStatus",
+          "kind": "Enum",
+          "category": "Models",
+          "namespace": "Tempo.Blazor.Models",
+          "description": "The outcome of one TraceSpan. Running is the only value that keeps a span's bar growing: a running span has no EndedAt, so the layout extends it to the caller's \"now\". Every non-OK status renders with its own icon and localized text, so an error is never signalled by colour alone.",
+          "packageId": "Tempo.Blazor.Abstractions",
+          "sourcePath": "src/Tempo.Blazor.Abstractions/Models/Observability/TraceSpanStatus.cs",
+          "documentationStatus": "merged",
+          "members": [
+            {
+              "name": "Ok",
+              "description": "The span completed successfully. No status chip is rendered."
+            },
+            {
+              "name": "Error",
+              "description": "The span failed. Rendered with an error icon, the localized \"Error\" text and the danger tone."
+            },
+            {
+              "name": "Running",
+              "description": "The span is still in flight; its bar extends to \"now\" and live mode keeps redrawing."
+            },
+            {
+              "name": "Cancelled",
+              "description": "The span was cancelled before it completed."
+            }
+          ]
+        },
+        {
           "itemName": "TreeDropEventArgs<TKey>",
           "kind": "Class",
           "category": "Models",
@@ -116883,12 +117172,12 @@
       ],
       "libraryExamples": [],
       "summary": {
-        "itemCount": 1576,
-        "manualItemCount": 1576,
-        "generatedItemCount": 1560,
+        "itemCount": 1580,
+        "manualItemCount": 1580,
+        "generatedItemCount": 1564,
         "generatedOnlyItemCount": 0,
         "componentCount": 0,
-        "publicApiTypeCount": 1560
+        "publicApiTypeCount": 1564
       }
     },
     {
@@ -133881,10 +134170,10 @@
   ],
   "summary": {
     "packageCount": 28,
-    "itemCount": 3485,
-    "manualItemCount": 3485,
+    "itemCount": 3490,
+    "manualItemCount": 3490,
     "generatedOnlyItemCount": 0,
-    "componentCount": 534,
-    "publicApiTypeCount": 2899
+    "componentCount": 535,
+    "publicApiTypeCount": 2903
   }
 }

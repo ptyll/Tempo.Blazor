@@ -1,0 +1,36 @@
+{
+  "itemName": "TraceSpanKind",
+  "kind": "Enum",
+  "category": "Models",
+  "namespace": "Tempo.Blazor.Models",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/Models/Observability/TraceSpanKind.cs",
+  "documentationStatus": "documented",
+  "description": "What one TraceSpan represents in a distributed or agent trace. Presentation metadata: TmTraceWaterfall paints a distinct --tm-trace-* colour and an icon per value and always renders a visually hidden kind name next to them, so colour is never the only carrier. The layout maths does not branch on the kind.",
+  "members": [
+    {
+      "name": "Llm",
+      "description": "A model / LLM call (prompt, completion or embedding)."
+    },
+    {
+      "name": "Tool",
+      "description": "A tool or function call made by the agent."
+    },
+    {
+      "name": "Agent",
+      "description": "An agent invocation, including a sub-agent of the root agent."
+    },
+    {
+      "name": "Http",
+      "description": "An outbound HTTP request."
+    },
+    {
+      "name": "Db",
+      "description": "A database query or transaction."
+    },
+    {
+      "name": "Custom",
+      "description": "Anything the host classifies itself."
+    }
+  ]
+}

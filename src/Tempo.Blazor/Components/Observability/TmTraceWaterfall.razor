@@ -1,0 +1,257 @@
+@namespace Tempo.Blazor.Components.Observability
+@inherits Tempo.Blazor.Components.TmComponentBase
+@using Tempo.Blazor.Components.Icons
+@using Tempo.Blazor.Models
+
+@* A generic span waterfall: one row per span of a trace, indented by its place in the tree, with a
+   bar measured against a shared time axis, a duration and any host-supplied metric columns. The
+   surface is a div-based treegrid (role=treegrid + role=row/columnheader/gridcell) because a table
+   cannot host the absolute-positioned timeline cell cleanly; the roving tabindex, aria-level,
+   aria-expanded and aria-selected carry the tree semantics. The colour of a bar is never the only
+   carrier of its kind: every row ships an icon and a visually hidden kind name, and errors carry an
+   icon AND localized text. *@
+<div class="@RootClass" data-testid="@RootTestId("trace-waterfall")" style="@RootStyle">
+    @if (!string.IsNullOrEmpty(Title))
+    {
+        <h3 class="tm-trace-waterfall__title" id="@TitleId">@Title</h3>
+    }
+
+    <div class="tm-trace-waterfall__toolbar" role="group" aria-label="@Loc["TmTraceWaterfall_Actions"]">
+        <p class="tm-trace-waterfall__summary">@Summary</p>
+        @if (ShowZoom)
+        {
+            <div class="tm-trace-waterfall__zoom">
+                <button type="button"
+                        class="tm-trace-waterfall__zoom-btn"
+                        aria-label="@Loc["TmTraceWaterfall_ZoomOut"]"
+                        aria-keyshortcuts="-"
+                        disabled="@(!CanZoomOut)"
+                        data-testid="@TestId("trace-zoom-out")"
+                        @onclick="ZoomOutAsync">
+                    <TmIcon Name="@IconNames.ZoomOut" Size="IconSize.Sm" />
+                </button>
+                <span class="tm-trace-waterfall__window">@ZoomWindowText</span>
+                <button type="button"
+                        class="tm-trace-waterfall__zoom-btn"
+                        aria-label="@Loc["TmTraceWaterfall_ZoomIn"]"
+                        aria-keyshortcuts="Shift+="
+                        disabled="@(!CanZoomIn)"
+                        data-testid="@TestId("trace-zoom-in")"
+                        @onclick="ZoomInAsync">
+                    <TmIcon Name="@IconNames.ZoomIn" Size="IconSize.Sm" />
+                </button>
+                <button type="button"
+                        class="tm-trace-waterfall__zoom-btn tm-trace-waterfall__zoom-btn--reset"
+                        aria-label="@Loc["TmTraceWaterfall_ZoomReset"]"
+                        aria-keyshortcuts="0"
+                        disabled="@(!IsZoomed)"
+                        data-testid="@TestId("trace-zoom-reset")"
+                        @onclick="ZoomResetAsync">
+                    @Loc["TmTraceWaterfall_ZoomReset"]
+                </button>
+            </div>
+        }
+    </div>
+
+    <div class="tm-trace-waterfall__layout">
+        @* A treegrid may only contain rows, so an empty trace renders the localized empty state
+           INSTEAD of the grid — a paragraph parked inside the role="treegrid" element would be an
+           aria-required-children violation. *@
+        @if (_visibleRows.Count == 0)
+        {
+            <p class="tm-trace-waterfall__empty">@Loc["TmTraceWaterfall_Empty"]</p>
+        }
+        else
+        {
+            <div class="tm-trace-waterfall__grid"
+                 role="treegrid"
+                 aria-label="@ResolvedAriaLabel"
+                 aria-rowcount="@(_visibleRows.Count + 1)"
+                 aria-colcount="@(_metricColumns.Count + 3)"
+                 data-testid="@TestId("trace-grid")"
+                 style="@ScrollStyle"
+                 @ref="_gridRef"
+                 @onkeydown="HandleZoomKeyDownAsync">
+                <div class="tm-trace-waterfall__head" role="row">
+                    <div role="columnheader" class="tm-trace-waterfall__head-cell tm-trace-waterfall__head-cell--name">
+                        @Loc["TmTraceWaterfall_ColumnName"]
+                    </div>
+                    <div role="columnheader" class="tm-trace-waterfall__head-cell tm-trace-waterfall__head-cell--timeline">
+                        <span class="tm-sr-only">@Loc["TmTraceWaterfall_ColumnTimeline"]</span>
+                        <span class="tm-trace-waterfall__axis" aria-hidden="true">
+                            @foreach (var tick in _layout.Axis.Ticks)
+                            {
+                                <span class="tm-trace-waterfall__tick" style="@TickStyle(tick)">
+                                    <span class="tm-trace-waterfall__tick-mark"></span>
+                                    <span class="tm-trace-waterfall__tick-label">@AxisTickText(tick)</span>
+                                </span>
+                            }
+                        </span>
+                    </div>
+                    <div role="columnheader" class="tm-trace-waterfall__head-cell tm-trace-waterfall__head-cell--duration">
+                        @Loc["TmTraceWaterfall_ColumnDuration"]
+                    </div>
+                    @foreach (var column in _metricColumns)
+                    {
+                        <div role="columnheader"
+                             class="tm-trace-waterfall__head-cell tm-trace-waterfall__head-cell--metric"
+                             data-metric="@column.Key">
+                            @ResolvedColumnLabel(column)
+                        </div>
+                    }
+                </div>
+
+                @* The rows must be OWNED by the treegrid: a bare div between the grid and its rows
+                   breaks the accessibility-tree ownership (some AT then expose the rows outside the
+                   grid). A rowgroup is the ARIA-sanctioned intermediate, and it also owns the
+                   virtualizer's spacers in the >200-row branch. It is NOT a scroll container: the
+                   grid owns both scroll axes (a second, horizontal scroller inside it would let the
+                   header and the rows drift apart). *@
+                <div class="tm-trace-waterfall__scroll" role="rowgroup">
+                    @if (_visibleRows.Count > VirtualizeThreshold)
+                    {
+                        <Virtualize Items="_visibleRows"
+                                    ItemContent="RowTemplate"
+                                    OverscanCount="8"
+                                    ItemSize="32" />
+                    }
+                    else
+                    {
+                        @foreach (var row in _visibleRows)
+                        {
+                            @RowTemplate(row)
+                        }
+                    }
+                </div>
+            </div>
+
+            @if (DetailTemplate is not null && _selectedSpan is not null)
+            {
+                <div class="tm-trace-waterfall__detail"
+                     role="region"
+                     aria-label="@Loc["TmTraceWaterfall_Detail"]"
+                     data-testid="@TestId("trace-detail")">
+                    @DetailTemplate(_selectedSpan)
+                </div>
+            }
+        }
+    </div>
+
+    @* ONE polite live region for the whole component, and it is written only from a user action
+       (select, expand/collapse, zoom). A live tick never touches it: narrating every tick of a
+       running span would turn a screen reader into a metronome. *@
+    <span class="tm-sr-only" aria-live="polite" aria-atomic="true"
+          data-testid="@TestId("trace-announcer")">@_announcement</span>
+</div>
+
+@code {
+    /// <summary>The stable DOM id of the heading, used as the component's accessible name when a title is set.</summary>
+    private readonly string TitleId = $"tm-trace-waterfall-{Guid.NewGuid():n}-title";
+
+    /// <summary>
+    /// One treegrid row: the name cell (indent, disclosure, kind icon, name, hidden kind name, status
+    /// and the slowest/orphan labels), the decorative bar, the duration and one cell per metric column.
+    /// The same template renders in the plain loop and inside <see cref="Virtualize"/>.
+    /// </summary>
+    private RenderFragment<TraceWaterfallRow> RowTemplate => row => @<div class="@RowClass(row)"
+            role="row"
+            aria-level="@(row.Depth + 1)"
+            aria-expanded="@(row.HasChildren ? (IsCollapsed(row.Span.Id) ? "false" : "true") : null)"
+            aria-selected="@(IsSelected(row) ? "true" : null)"
+            tabindex="@(IsActive(row) ? 0 : -1)"
+            data-span-id="@row.Span.Id"
+            data-kind="@row.Span.Kind"
+            data-status="@row.Span.Status"
+            data-testid="@TestId("trace-row")"
+            @key="row.Span.Id"
+            @ref="_rowRefs[row.Index]"
+            @onclick="() => SelectAsync(row)"
+            @onfocus="() => _activeSpanId = row.Span.Id"
+            @onkeydown="args => HandleRowKeyDownAsync(row, args)"
+            @onkeyup="args => HandleRowKeyUpAsync(row, args)">
+        <div role="gridcell" class="tm-trace-waterfall__name" style="@IndentStyle(row)">
+            @if (row.HasChildren)
+            {
+                <button type="button"
+                        class="tm-trace-waterfall__toggle"
+                        aria-label="@ToggleLabel(row)"
+                        data-testid="@TestId("trace-toggle")"
+                        @onclick="() => ToggleAsync(row)"
+                        @onclick:stopPropagation="true"
+                        @onkeydown:stopPropagation="true"
+                        @onkeyup:stopPropagation="true">
+                    <TmIcon Name="@(IsCollapsed(row.Span.Id) ? IconNames.ChevronRight : IconNames.ChevronDown)" Size="IconSize.Sm" />
+                </button>
+            }
+            else
+            {
+                <span class="tm-trace-waterfall__toggle-spacer" aria-hidden="true"></span>
+            }
+            <span class="@KindIconClass(row.Span.Kind)" aria-hidden="true">
+                <TmIcon Name="@KindIcon(row.Span.Kind)" Size="IconSize.Sm" />
+            </span>
+            <span class="tm-trace-waterfall__label">@RowLabel(row)</span>
+            <span class="tm-sr-only">@KindLabel(row.Span.Kind)</span>
+            @if (row.Span.Status is TraceSpanStatus.Error or TraceSpanStatus.Cancelled or TraceSpanStatus.Running)
+            {
+                <span class="@StatusClass(row.Span.Status)" data-testid="@TestId("trace-status")">
+                    <TmIcon Name="@StatusIcon(row.Span.Status)" Size="IconSize.Sm" />
+                    @StatusLabel(row.Span.Status)
+                </span>
+            }
+            @if (row.IsSlowest)
+            {
+                <span class="tm-trace-waterfall__slowest" data-testid="@TestId("trace-slowest")">
+                    <TmIcon Name="@IconNames.Fire" Size="IconSize.Sm" />
+                    @Loc["TmTraceWaterfall_Slowest"]
+                </span>
+            }
+            @if (row.IsOrphan)
+            {
+                <span class="tm-trace-waterfall__orphan" data-testid="@TestId("trace-orphan")">@Loc["TmTraceWaterfall_Orphan"]</span>
+            }
+        </div>
+        <div role="gridcell" class="tm-trace-waterfall__timeline">
+            <span class="tm-trace-waterfall__track" aria-hidden="true">
+                @if (row.IsVisible)
+                {
+                    <span class="@BarClass(row.Span.Kind)" style="@BarStyle(row)"></span>
+                }
+            </span>
+        </div>
+        <div role="gridcell" class="tm-trace-waterfall__duration">@FormatDurationOf(row.Duration)</div>
+        @foreach (var column in _metricColumns)
+        {
+            <div role="gridcell" class="tm-trace-waterfall__metric" data-metric="@column.Key">
+                @MetricCell(row, column)
+            </div>
+        }
+    </div>;
+
+    /// <summary>
+    /// One metric cell: the span's OWN value in the column's format, plus — when the span has children
+    /// and the subtree total differs — the subtree sum behind a localized accessible name. A span that
+    /// does not report the key renders a dash (aria-hidden), never a zero, so "not reported" and
+    /// "reported as zero" stay distinguishable.
+    /// </summary>
+    private RenderFragment MetricCell(TraceWaterfallRow row, TraceMetricColumn column) => @<span class="tm-trace-waterfall__metric-cell">
+        @if (row.Span.Metrics.TryGetValue(column.Key, out var value))
+        {
+            <span class="tm-trace-waterfall__metric-value">@FormatMetric(value, column)</span>
+            @if (row.HasChildren
+                 && row.SubtreeMetrics.TryGetValue(column.Key, out var total)
+                 && total != value)
+            {
+                <span class="tm-trace-waterfall__metric-sum"
+                      aria-label="@Loc["TmTraceWaterfall_SubtreeTotal", FormatMetric(total, column)]">
+                    <span aria-hidden="true">Σ</span>
+                    <span aria-hidden="true">@FormatMetric(total, column)</span>
+                </span>
+            }
+        }
+        else
+        {
+            <span class="tm-trace-waterfall__metric-none" aria-hidden="true">—</span>
+        }
+    </span>;
+}

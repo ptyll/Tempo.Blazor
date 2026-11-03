@@ -1,0 +1,28 @@
+{
+  "itemName": "TraceSpanStatus",
+  "kind": "Enum",
+  "category": "Models",
+  "namespace": "Tempo.Blazor.Models",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/Models/Observability/TraceSpanStatus.cs",
+  "documentationStatus": "documented",
+  "description": "The outcome of one TraceSpan. Running is the only value that keeps a span's bar growing: a running span has no EndedAt, so the layout extends it to the caller's \"now\". Every non-OK status renders with its own icon and localized text, so an error is never signalled by colour alone.",
+  "members": [
+    {
+      "name": "Ok",
+      "description": "The span completed successfully. No status chip is rendered."
+    },
+    {
+      "name": "Error",
+      "description": "The span failed. Rendered with an error icon, the localized \"Error\" text and the danger tone."
+    },
+    {
+      "name": "Running",
+      "description": "The span is still in flight; its bar extends to \"now\" and live mode keeps redrawing."
+    },
+    {
+      "name": "Cancelled",
+      "description": "The span was cancelled before it completed."
+    }
+  ]
+}

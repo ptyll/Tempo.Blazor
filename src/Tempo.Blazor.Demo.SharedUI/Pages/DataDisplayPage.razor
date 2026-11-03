@@ -181,6 +181,51 @@
     </div>
 </section>
 
+
+<!-- Trace waterfall: a generated agent run with LLM, tool, HTTP and DB spans, one failed HTTP call
+     and a live mode that grows the running span through the injectable TimeProvider. Selecting a row
+     opens its detail (right of the grid on a wide container, below it on a narrow one). -->
+<section class="demo-section">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">@Loc["TmDataDisplayDemo_TraceWaterfall"]</h2>
+        <span class="px-2 py-0.5 text-xs font-medium bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 rounded-full">@Loc["TmDataDisplayDemo_TraceWaterfallBadge"]</span>
+    </div>
+    <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">@Loc["TmDataDisplayDemo_TraceWaterfallHint"]</p>
+    @* No extra card wrapper: the waterfall paints its own surface, and the extra padding of a
+       showcase card would push the component's own container below the 1024 px detail breakpoint. *@
+    <div data-testid="trace-waterfall-section">
+        <div class="flex flex-wrap gap-2 mb-3">
+            <TmButton Variant="ButtonVariant.Primary" Size="ButtonSize.Sm"
+                      data-testid="trace-live-toggle"
+                      OnClick="ToggleTraceLive">@(_traceLive ? Loc["TmDataDisplayDemo_TraceLiveStop"] : Loc["TmDataDisplayDemo_TraceLiveStart"])</TmButton>
+        </div>
+        <TmTraceWaterfall Spans="_traceSpans"
+                          Title="@Loc["TmDataDisplayDemo_TraceWaterfallTitle"]"
+                          MetricColumns="_traceColumns"
+                          LiveMode="_traceLive"
+                          LiveTickInterval="TimeSpan.FromMilliseconds(500)"
+                          @bind-SelectedSpanId="_traceSelectedId">
+            <DetailTemplate Context="span">
+                <h4 class="font-semibold text-sm">@span.Name</h4>
+                <dl class="text-xs mt-2 space-y-1" data-testid="trace-detail-content">
+                    <div class="flex gap-2">
+                        <dt class="text-slate-500 dark:text-slate-400">@Loc["TmDataDisplayDemo_TraceKind"]</dt>
+                        <dd>@span.Kind</dd>
+                    </div>
+                    <div class="flex gap-2">
+                        <dt class="text-slate-500 dark:text-slate-400">@Loc["TmDataDisplayDemo_TraceStatus"]</dt>
+                        <dd>@span.Status</dd>
+                    </div>
+                    <div class="flex gap-2">
+                        <dt class="text-slate-500 dark:text-slate-400">@Loc["TmDataDisplayDemo_TraceTokens"]</dt>
+                        <dd>@TraceTokens(span)</dd>
+                    </div>
+                </dl>
+            </DetailTemplate>
+        </TmTraceWaterfall>
+    </div>
+</section>
+
 <!-- Cards -->
 <section class="demo-section">
     <div class="flex items-center space-x-2 mb-4">
@@ -535,6 +580,89 @@
         new() { Id = "email", Label = "E-mail", Value = 320 }
     ];
 
+
+    // Trace waterfall (2.10.0): a generated agent run — the root span, its LLM and tool calls, the
+    // HTTP and DB leaves and one failed request. The list is FLAT; the component builds the tree from
+    // ParentId. The live mode re-supplies the running spans through the component's own ticker.
+    private IReadOnlyList<TraceSpan> _traceSpans = [];
+    private IReadOnlyList<TraceMetricColumn> _traceColumns = [];
+    private string? _traceSelectedId;
+    private bool _traceLive;
+
+    private void ToggleTraceLive()
+    {
+        _traceLive = !_traceLive;
+        _traceSpans = BuildTrace(DateTimeOffset.UtcNow, _traceLive);
+    }
+
+    private string TraceTokens(TraceSpan span)
+    {
+        var tokensIn = span.Metrics.TryGetValue("tokens_in", out var input) ? input : 0;
+        var tokensOut = span.Metrics.TryGetValue("tokens_out", out var output) ? output : 0;
+        return $"{tokensIn:N0} / {tokensOut:N0}";
+    }
+
+    /// <summary>
+    /// Builds the demo trace anchored at <paramref name="now"/>. With <paramref name="running"/> the
+    /// root and the last LLM call have no end, so the component's live ticker grows them.
+    /// </summary>
+    private static IReadOnlyList<TraceSpan> BuildTrace(DateTimeOffset now, bool running)
+    {
+        var start = now.AddMilliseconds(-1_240);
+        DateTimeOffset At(int offsetMs) => start.AddMilliseconds(offsetMs);
+
+        return
+        [
+            new()
+            {
+                Id = "run", Name = "agent run", Kind = TraceSpanKind.Agent, StartedAt = start,
+                EndedAt = running ? null : At(1_240),
+                Status = running ? TraceSpanStatus.Running : TraceSpanStatus.Ok,
+                Metrics = new Dictionary<string, double> { ["tokens_in"] = 1_820, ["tokens_out"] = 640, ["cost"] = 0.42 }
+            },
+            new()
+            {
+                Id = "plan", ParentId = "run", Name = "plan the task", Kind = TraceSpanKind.Llm,
+                StartedAt = At(0), EndedAt = At(260),
+                Metrics = new Dictionary<string, double> { ["tokens_in"] = 620, ["tokens_out"] = 180, ["cost"] = 0.11 }
+            },
+            new()
+            {
+                Id = "search", ParentId = "run", Name = "search_web", Kind = TraceSpanKind.Tool,
+                StartedAt = At(260), EndedAt = At(720),
+                Metrics = new Dictionary<string, double> { ["tokens_in"] = 240, ["tokens_out"] = 40 }
+            },
+            new()
+            {
+                Id = "search-http", ParentId = "search", Name = "GET /search", Kind = TraceSpanKind.Http,
+                StartedAt = At(280), EndedAt = At(640)
+            },
+            new()
+            {
+                Id = "lookup", ParentId = "run", Name = "lookup_customer", Kind = TraceSpanKind.Tool,
+                StartedAt = At(720), EndedAt = At(900)
+            },
+            new()
+            {
+                Id = "lookup-db", ParentId = "lookup", Name = "SELECT customers", Kind = TraceSpanKind.Db,
+                StartedAt = At(740), EndedAt = At(860)
+            },
+            new()
+            {
+                Id = "notify", ParentId = "run", Name = "POST /notify", Kind = TraceSpanKind.Http,
+                StartedAt = At(900), EndedAt = At(980), Status = TraceSpanStatus.Error,
+                Attributes = new Dictionary<string, string> { ["http.status"] = "503" }
+            },
+            new()
+            {
+                Id = "answer", ParentId = "run", Name = "compose answer", Kind = TraceSpanKind.Llm,
+                StartedAt = At(980), EndedAt = running ? null : At(1_240),
+                Status = running ? TraceSpanStatus.Running : TraceSpanStatus.Ok,
+                Metrics = new Dictionary<string, double> { ["tokens_in"] = 960, ["tokens_out"] = 420, ["cost"] = 0.31 }
+            }
+        ];
+    }
+
     /// <inheritdoc />
     protected override void OnInitialized()
     {
@@ -555,6 +683,16 @@
             ["category"] = new HashSet<string>(StringComparer.Ordinal) { "books" }
         };
         _facetAppliedCount = FacetResultCount;
+
+        // The metric column labels are UI chrome, so they come from the localizer, not from literals.
+        _traceColumns =
+        [
+            new TraceMetricColumn("tokens_in", Loc["TmDataDisplayDemo_TraceTokensIn"], "N0"),
+            new TraceMetricColumn("tokens_out", Loc["TmDataDisplayDemo_TraceTokensOut"], "N0"),
+            new TraceMetricColumn("cost", Loc["TmDataDisplayDemo_TraceCost"], "C2")
+        ];
+        _traceSpans = BuildTrace(DateTimeOffset.UtcNow, running: false);
+        _traceSelectedId = "answer";
     }
 
     // Change Diff

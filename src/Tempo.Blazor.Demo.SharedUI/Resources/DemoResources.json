@@ -680,5 +680,17 @@
   "TmDemo_ActivityComments_ToggleTitlePublic": "Make this comment internal?",
   "TmDemo_ActivityComments_ToggleMessageInternal": "Everyone who can open this thread will see the comment. Notifications already sent cannot be recalled.",
   "TmDemo_ActivityComments_ToggleMessagePublic": "Only privileged users should see an internal comment. The component does not hide it — your app must filter it. Notifications already sent cannot be recalled.",
-  "TmDemo_ActivityComments_ToggleConfirm": "Change visibility"
+  "TmDemo_ActivityComments_ToggleConfirm": "Change visibility",
+  "TmDataDisplayDemo_TraceWaterfall": "Trace Waterfall",
+  "TmDataDisplayDemo_TraceWaterfallBadge": "New",
+  "TmDataDisplayDemo_TraceWaterfallTitle": "Agent run — support triage",
+  "TmDataDisplayDemo_TraceWaterfallHint": "A generated agent trace: the root run, its LLM and tool calls and a failed HTTP request. Start the live trace to watch the running spans grow, and select a row to open its detail.",
+  "TmDataDisplayDemo_TraceLiveStart": "Start live trace",
+  "TmDataDisplayDemo_TraceLiveStop": "Stop live trace",
+  "TmDataDisplayDemo_TraceKind": "Kind",
+  "TmDataDisplayDemo_TraceStatus": "Status",
+  "TmDataDisplayDemo_TraceTokens": "Tokens in / out",
+  "TmDataDisplayDemo_TraceTokensIn": "Tokens in",
+  "TmDataDisplayDemo_TraceTokensOut": "Tokens out",
+  "TmDataDisplayDemo_TraceCost": "Cost"
 }

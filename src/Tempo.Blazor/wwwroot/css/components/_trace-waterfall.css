@@ -1,0 +1,496 @@
+/* TmTraceWaterfall — a span waterfall: one row per span, indented by its place in the tree, a bar on a
+   shared time axis, the duration and any metric columns. Every colour, size, radius and gap is a
+   --tm-* token, so the dark theme re-points the tokens and this file carries no [data-theme] block.
+   The only motion is the bar's width/offset transition while a running span grows; it is suppressed
+   for prefers-reduced-motion (animations.css) and the bars keep a border plus the selection a real
+   outline under forced-colors. */
+
+.tm-trace-waterfall {
+  /* The DETAIL panel's width on a wide container; a local knob, declared here so it always resolves. */
+  --tm-trace-waterfall-detail-width: 20rem;
+  /* The shared grid template. The component writes it inline because the metric-column count varies
+     per host; this declaration is the fallback for a bare render (name / timeline / duration). */
+  --tm-trace-waterfall-columns: minmax(11.25rem, 2fr) minmax(7.5rem, 3fr) 5.75rem;
+  /* Track sizes are KNOBS, not literals inside the template, so the narrow-container query below can
+     tighten the whole grid without the component writing a single pixel value. */
+  --tm-trace-waterfall-name-width: 11.25rem;
+  --tm-trace-waterfall-timeline-width: 7.5rem;
+  --tm-trace-waterfall-duration-width: 5.75rem;
+  --tm-trace-waterfall-metric-width: 5.25rem;
+  /* The template's total inline size. The component re-declares it inline with one term per metric
+     column it renders; this is the three-track fallback for a bare render. */
+  --tm-trace-waterfall-template-width: calc(
+    var(--tm-trace-waterfall-name-width) + var(--tm-trace-waterfall-timeline-width) +
+      var(--tm-trace-waterfall-duration-width) + 2 * var(--tm-space-2));
+  --tm-trace-waterfall-max-height: 26.25rem;
+
+  /* The component queries its OWN width for the detail-panel placement — never the viewport. */
+  container-type: inline-size;
+  container-name: tm-trace-waterfall;
+
+  display: flex;
+  flex-direction: column;
+  gap: var(--tm-space-3);
+  padding: var(--tm-space-4);
+  background-color: var(--tm-bg-surface);
+  border: 1px solid var(--tm-border-color);
+  border-radius: var(--tm-radius-lg);
+  color: var(--tm-text-primary);
+}
+
+.tm-trace-waterfall__title {
+  margin: 0;
+  font-size: var(--tm-font-size-sm);
+  font-weight: var(--tm-font-weight-semibold);
+  color: var(--tm-text-secondary);
+}
+
+/* ── toolbar ─────────────────────────────────────────────────── */
+
+.tm-trace-waterfall__toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--tm-space-2);
+}
+
+.tm-trace-waterfall__summary {
+  margin: 0;
+  font-size: var(--tm-font-size-xs);
+  color: var(--tm-text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.tm-trace-waterfall__zoom {
+  display: flex;
+  align-items: center;
+  gap: var(--tm-space-1);
+}
+
+.tm-trace-waterfall__zoom-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--tm-space-1);
+  min-block-size: var(--tm-space-6);
+  min-inline-size: var(--tm-space-6);
+  padding: 0 var(--tm-space-2);
+  font-size: var(--tm-font-size-xs);
+  color: var(--tm-text-secondary);
+  background-color: var(--tm-bg-surface-secondary);
+  border: 1px solid var(--tm-border-color);
+  border-radius: var(--tm-radius-sm);
+  cursor: pointer;
+}
+
+.tm-trace-waterfall__zoom-btn:hover:not(:disabled) {
+  color: var(--tm-text-primary);
+  border-color: var(--tm-border-color-control);
+}
+
+.tm-trace-waterfall__zoom-btn:disabled {
+  color: var(--tm-text-disabled);
+  cursor: default;
+}
+
+.tm-trace-waterfall__zoom-btn--reset {
+  font-weight: var(--tm-font-weight-medium);
+}
+
+.tm-trace-waterfall__window {
+  font-size: var(--tm-font-size-xs);
+  color: var(--tm-text-tertiary);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* ── layout: grid + optional detail panel ────────────────────── */
+
+.tm-trace-waterfall__layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--tm-space-3);
+}
+
+/* ONE scroll owner in each axis. The grid scrolls horizontally AND vertically, so the header and the
+   rows always share the same horizontal offset (a second, inner horizontal scroller is exactly how a
+   header and its rows drift apart); the header sticks to the top of this scrollport while the rows
+   move under it. `min-inline-size: 0` keeps the grid from forcing its contents' width onto the page:
+   the overflow stays INSIDE the grid, so a 390 px phone scrolls the grid, never the document. */
+.tm-trace-waterfall__grid {
+  min-inline-size: 0;
+  max-block-size: var(--tm-trace-waterfall-max-height);
+  overflow: auto;
+}
+
+/* A wide container puts the selected span's detail BESIDE the grid; a narrow one keeps it BELOW, in
+   the DOM order it already has. */
+@container tm-trace-waterfall (width >= 1024px) {
+  .tm-trace-waterfall__layout {
+    grid-template-columns: minmax(0, 1fr) var(--tm-trace-waterfall-detail-width);
+    align-items: start;
+  }
+
+  .tm-trace-waterfall__grid {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .tm-trace-waterfall__detail {
+    grid-column: 2;
+    grid-row: 1;
+    padding-inline-start: var(--tm-space-3);
+    border-inline-start: 1px solid var(--tm-border-color);
+  }
+}
+
+.tm-trace-waterfall__detail {
+  min-inline-size: 0;
+  font-size: var(--tm-font-size-sm);
+}
+
+/* ── treegrid: header, rows, cells ───────────────────────────── */
+
+.tm-trace-waterfall__head,
+.tm-trace-waterfall__row {
+  display: grid;
+  grid-template-columns: var(--tm-trace-waterfall-columns);
+  align-items: center;
+  gap: var(--tm-space-2);
+}
+
+/* The header and the rowgroup are SEPARATE grids from the rows they hold, so they line up only while
+   all of them have the same inline size. The rowgroup owns NO overflow of its own: `overflow-y: auto`
+   would need `overflow-x: visible`, which CSS computes to `auto`, turning it into a second horizontal
+   scroller whose rows the header would stop tracking. `--tm-trace-waterfall-template-width` (emitted by the
+   component from the same track knobs) is that size: content-sized boxes let one long span label make
+   one row wider than the next and the columns drift apart. `min-inline-size: 100%` lets a wide host
+   fill the grid, and the grid scrolls exactly the template's overflow on a phone. */
+.tm-trace-waterfall__head,
+.tm-trace-waterfall__scroll {
+  inline-size: var(--tm-trace-waterfall-template-width);
+  min-inline-size: 100%;
+}
+
+/* Sticky over the rows so the axis and the column labels stay visible while the trace scrolls; the
+   opaque background is what keeps the row text from showing through it. Sticky does not pin the
+   inline axis, so the header still follows every horizontal scroll exactly. */
+.tm-trace-waterfall__head {
+  position: sticky;
+  inset-block-start: 0;
+  z-index: 1;
+  padding: 0 var(--tm-space-2) var(--tm-space-1);
+  background-color: var(--tm-bg-surface);
+  border-block-end: 1px solid var(--tm-border-color);
+  font-size: var(--tm-font-size-xs);
+  font-weight: var(--tm-font-weight-medium);
+  color: var(--tm-text-secondary);
+}
+
+.tm-trace-waterfall__head-cell {
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tm-trace-waterfall__head-cell--name {
+  padding-inline-start: calc(var(--tm-space-5) + var(--tm-space-1));
+}
+
+.tm-trace-waterfall__head-cell--timeline {
+  position: relative;
+  block-size: var(--tm-space-8);
+  overflow: visible;
+}
+
+.tm-trace-waterfall__head-cell--duration,
+.tm-trace-waterfall__head-cell--metric {
+  text-align: end;
+}
+
+/* Phone-width container: the three fixed tracks are what overflow a 360–390 px viewport. Tightening
+   the KNOBS keeps the inline template (and its metric-column count) intact — only the sizes shrink.
+   The grid still scrolls if the metrics do not fit, which is why this is a tightening, not a
+   replacement: content is never clipped and every column stays reachable. */
+@container tm-trace-waterfall (width < 640px) {
+  .tm-trace-waterfall__grid {
+    --tm-trace-waterfall-name-width: 8rem;
+    --tm-trace-waterfall-timeline-width: 5rem;
+    --tm-trace-waterfall-duration-width: 4.5rem;
+    --tm-trace-waterfall-metric-width: 3.75rem;
+  }
+}
+
+.tm-trace-waterfall__empty {
+  margin: 0;
+  padding: var(--tm-space-4);
+  text-align: center;
+  font-size: var(--tm-font-size-sm);
+  color: var(--tm-text-secondary);
+}
+
+.tm-trace-waterfall__row {
+  padding: var(--tm-space-1) var(--tm-space-2);
+  border-block-end: 1px solid var(--tm-border-color);
+  border-radius: var(--tm-radius-sm);
+  font-size: var(--tm-font-size-sm);
+  cursor: pointer;
+}
+
+.tm-trace-waterfall__row:last-child {
+  border-block-end: 0;
+}
+
+.tm-trace-waterfall__row--selected {
+  background-color: var(--tm-color-primary-subtle);
+}
+
+.tm-trace-waterfall__row--error .tm-trace-waterfall__label {
+  color: var(--tm-color-danger-text);
+  font-weight: var(--tm-font-weight-medium);
+}
+
+.tm-trace-waterfall__row--slowest .tm-trace-waterfall__label {
+  font-weight: var(--tm-font-weight-semibold);
+}
+
+/* ── name cell ───────────────────────────────────────────────── */
+
+.tm-trace-waterfall__name {
+  display: flex;
+  align-items: center;
+  gap: var(--tm-space-1);
+  min-inline-size: 0;
+  padding-inline-start: calc(var(--tm-trace-waterfall-depth, 0) * var(--tm-space-3));
+}
+
+.tm-trace-waterfall__toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  min-inline-size: var(--tm-space-5);
+  min-block-size: var(--tm-space-5);
+  padding: 0;
+  color: var(--tm-text-secondary);
+  background: none;
+  border: 0;
+  border-radius: var(--tm-radius-sm);
+  cursor: pointer;
+}
+
+.tm-trace-waterfall__toggle-spacer {
+  display: block;
+  flex: 0 0 auto;
+  inline-size: var(--tm-space-5);
+}
+
+.tm-trace-waterfall__kind {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+}
+
+.tm-trace-waterfall__kind--llm { color: var(--tm-trace-llm); }
+.tm-trace-waterfall__kind--tool { color: var(--tm-trace-tool); }
+.tm-trace-waterfall__kind--agent { color: var(--tm-trace-agent); }
+.tm-trace-waterfall__kind--http { color: var(--tm-trace-http); }
+.tm-trace-waterfall__kind--db { color: var(--tm-trace-db); }
+.tm-trace-waterfall__kind--custom { color: var(--tm-trace-custom); }
+
+.tm-trace-waterfall__label {
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tm-trace-waterfall__status,
+.tm-trace-waterfall__slowest,
+.tm-trace-waterfall__orphan {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: var(--tm-space-1);
+  padding: 0 var(--tm-space-2);
+  font-size: var(--tm-font-size-xs);
+  border-radius: var(--tm-radius-sm);
+  white-space: nowrap;
+}
+
+.tm-trace-waterfall__status--error {
+  color: var(--tm-color-danger-text);
+  background-color: var(--tm-color-danger-subtle);
+}
+
+.tm-trace-waterfall__status--running {
+  color: var(--tm-color-info-text);
+  background-color: var(--tm-color-info-subtle);
+}
+
+.tm-trace-waterfall__status--cancelled {
+  color: var(--tm-text-secondary);
+  background-color: var(--tm-bg-muted);
+}
+
+.tm-trace-waterfall__slowest {
+  color: var(--tm-color-warning-text);
+  background-color: var(--tm-color-warning-subtle);
+}
+
+.tm-trace-waterfall__orphan {
+  color: var(--tm-text-secondary);
+  background-color: var(--tm-bg-surface-secondary);
+  border: 1px dashed var(--tm-border-color);
+}
+
+/* ── timeline: axis ticks + bar ──────────────────────────────── */
+
+.tm-trace-waterfall__timeline {
+  min-inline-size: 0;
+}
+
+.tm-trace-waterfall__axis {
+  position: absolute;
+  inset-block: 0;
+  inset-inline: 0;
+}
+
+.tm-trace-waterfall__tick {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: var(--tm-trace-waterfall-tick, 0%);
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+}
+
+.tm-trace-waterfall__tick-mark {
+  position: absolute;
+  inset-block: 0;
+  inline-size: 1px;
+  background-color: var(--tm-border-color);
+}
+
+.tm-trace-waterfall__tick-label {
+  position: relative;
+  font-size: var(--tm-font-size-xs);
+  color: var(--tm-text-tertiary);
+  font-variant-numeric: tabular-nums;
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+
+.tm-trace-waterfall__tick:first-child .tm-trace-waterfall__tick-label {
+  transform: none;
+}
+
+/* The last tick sits ON the right edge, so a centred label would spill into the duration column. */
+.tm-trace-waterfall__tick:last-child .tm-trace-waterfall__tick-label {
+  transform: translateX(-100%);
+}
+
+.tm-trace-waterfall__track {
+  position: relative;
+  display: block;
+  block-size: var(--tm-space-2);
+  background-color: var(--tm-bg-muted);
+  border-radius: var(--tm-radius-sm);
+}
+
+.tm-trace-waterfall__bar {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: var(--tm-trace-waterfall-offset, 0%);
+  inline-size: var(--tm-trace-waterfall-width, 0%);
+  min-inline-size: 2px;
+  border-radius: var(--tm-radius-sm);
+  transition:
+    inset-inline-start var(--tm-transition-fast),
+    inline-size var(--tm-transition-fast);
+}
+
+.tm-trace-waterfall__bar--llm { background-color: var(--tm-trace-llm); }
+.tm-trace-waterfall__bar--tool { background-color: var(--tm-trace-tool); }
+.tm-trace-waterfall__bar--agent { background-color: var(--tm-trace-agent); }
+.tm-trace-waterfall__bar--http { background-color: var(--tm-trace-http); }
+.tm-trace-waterfall__bar--db { background-color: var(--tm-trace-db); }
+.tm-trace-waterfall__bar--custom { background-color: var(--tm-trace-custom); }
+
+/* ── duration + metric cells ─────────────────────────────────── */
+
+.tm-trace-waterfall__duration,
+.tm-trace-waterfall__metric {
+  text-align: end;
+  font-variant-numeric: tabular-nums;
+  color: var(--tm-text-secondary);
+}
+
+.tm-trace-waterfall__metric-cell {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-end;
+  line-height: var(--tm-line-height-tight);
+}
+
+.tm-trace-waterfall__metric-value {
+  color: var(--tm-text-primary);
+}
+
+.tm-trace-waterfall__metric-sum {
+  display: inline-flex;
+  gap: var(--tm-space-1);
+  font-size: var(--tm-font-size-xs);
+  color: var(--tm-text-tertiary);
+}
+
+.tm-trace-waterfall__metric-none {
+  color: var(--tm-text-tertiary);
+}
+
+/* ── focus ────────────────────────────────────────────────────── */
+/* The two-layer ring carries 5.17:1 light / 5.75:1 dark; the transparent outline is what survives
+   forced-colors, where the UA forces box-shadow to none. */
+
+.tm-trace-waterfall__row:focus-visible,
+.tm-trace-waterfall__zoom-btn:focus-visible,
+.tm-trace-waterfall__toggle:focus-visible {
+  outline: 2px solid transparent;
+  outline-offset: 2px;
+  box-shadow: var(--tm-focus-ring);
+  border-radius: var(--tm-radius-sm);
+}
+
+/* ── forced colors ────────────────────────────────────────────── */
+/* In forced-colors the bar's fill is replaced by a system colour, so its SHAPE has to survive on its
+   own: every bar and its track keep a CanvasText border, and the selected row keeps a persistent
+   Highlight outline so selection is never signalled by the background alone. */
+
+@media (forced-colors: active) {
+  .tm-trace-waterfall {
+    border-color: CanvasText;
+  }
+
+  .tm-trace-waterfall__track,
+  .tm-trace-waterfall__bar {
+    border: 1px solid CanvasText;
+  }
+
+  .tm-trace-waterfall__row--selected {
+    outline: 2px solid Highlight;
+    outline-offset: -2px;
+  }
+
+  .tm-trace-waterfall__bar {
+    background-color: Canvas;
+  }
+
+  .tm-trace-waterfall__status,
+  .tm-trace-waterfall__slowest,
+  .tm-trace-waterfall__orphan {
+    border: 1px solid CanvasText;
+  }
+}

@@ -680,5 +680,17 @@
   "TmDemo_ActivityComments_ToggleTitlePublic": "Rendre ce commentaire interne ?",
   "TmDemo_ActivityComments_ToggleMessageInternal": "Toute personne qui ouvre ce fil verra le commentaire. Les notifications déjà envoyées ne peuvent pas être rappelées.",
   "TmDemo_ActivityComments_ToggleMessagePublic": "Seul un utilisateur privilégié devrait voir un commentaire interne. Le composant ne le masque pas — c'est à l'application de filtrer. Les notifications déjà envoyées ne peuvent pas être rappelées.",
-  "TmDemo_ActivityComments_ToggleConfirm": "Changer la visibilité"
+  "TmDemo_ActivityComments_ToggleConfirm": "Changer la visibilité",
+  "TmDataDisplayDemo_TraceWaterfall": "Cascade de trace",
+  "TmDataDisplayDemo_TraceWaterfallBadge": "Nouveau",
+  "TmDataDisplayDemo_TraceWaterfallTitle": "Exécution de l'agent — tri des demandes",
+  "TmDataDisplayDemo_TraceWaterfallHint": "Une trace d'agent générée : l'exécution racine, ses appels LLM et d'outils et une requête HTTP en échec. Lancez la trace en direct pour voir grandir les spans en cours, et sélectionnez une ligne pour ouvrir son détail.",
+  "TmDataDisplayDemo_TraceLiveStart": "Lancer la trace en direct",
+  "TmDataDisplayDemo_TraceLiveStop": "Arrêter la trace en direct",
+  "TmDataDisplayDemo_TraceKind": "Type",
+  "TmDataDisplayDemo_TraceStatus": "Statut",
+  "TmDataDisplayDemo_TraceTokens": "Jetons entrée / sortie",
+  "TmDataDisplayDemo_TraceTokensIn": "Jetons en entrée",
+  "TmDataDisplayDemo_TraceTokensOut": "Jetons en sortie",
+  "TmDataDisplayDemo_TraceCost": "Coût"
 }

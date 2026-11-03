@@ -1,0 +1,30 @@
+{
+  "itemName": "TraceMetricColumn",
+  "kind": "Record",
+  "category": "Models",
+  "namespace": "Tempo.Blazor.Models",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/Models/Observability/TraceMetricColumn.cs",
+  "documentationStatus": "documented",
+  "description": "One numeric metric column of a trace waterfall (TmTraceWaterfall.MetricColumns): the key looked up in TraceSpan.Metrics, the header a reader sees and the .NET numeric format string the value is rendered with. A column whose key no span reports renders an empty cell rather than a zero, so \"not reported\" and \"reported as zero\" stay distinguishable.",
+  "members": [
+    {
+      "name": "Key",
+      "type": "string",
+      "isRequired": true,
+      "description": "The metric key, matched ORDINALLY against TraceSpan.Metrics. A column whose key no span carries renders an empty cell rather than a zero."
+    },
+    {
+      "name": "Label",
+      "type": "string",
+      "isRequired": true,
+      "description": "The column header. A blank label falls back to Key."
+    },
+    {
+      "name": "Format",
+      "type": "string?",
+      "isRequired": false,
+      "description": "The .NET numeric format string (\"N0\", \"0.00\", \"P0\", …) applied with the component's culture. Null or blank means N0."
+    }
+  ]
+}

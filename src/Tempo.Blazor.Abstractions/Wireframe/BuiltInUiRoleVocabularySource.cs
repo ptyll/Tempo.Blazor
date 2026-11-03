@@ -123,6 +123,7 @@ public sealed class BuiltInUiRoleVocabularySource : IUiRoleVocabularySource
         R("image-gallery", "Image gallery", "Displays images in a browsable gallery.", "gallery", "galerie", "TmImageGallery", "TmLightbox"),
         R("filter-builder", "Filter builder", "Builds complex filter conditions.", "query builder", "tvorba filtru", "TmFilterBuilder"),
         R("facet-filter", "Facet filter", "Narrows a list through grouped options with result counts, presented as a popover or inline panel.", "filter menu", "faceted filter", "facet filter", "filtr faset", "fasetovy filtr", "TmFacetFilter"),
+        R("trace-waterfall", "Trace waterfall", "Shows the spans of a trace on one shared timeline, nested by their parent span, with the slowest span highlighted.", "span waterfall", "trace timeline", "latency waterfall", "vodopad trasovani", "casova osa spanu", "TmTraceWaterfall"),
         R("pdf-viewer", "PDF viewer", "Displays a PDF document.", "document viewer", "prohlizec pdf", "TmPdfViewer"),
         R("pdf-annotator", "PDF annotator", "Annotates a PDF document with highlights, comments, stamps, and drawings.", "document markup", "anotace pdf", "TmPdfAnnotator"),
         R("audit-log", "Audit log", "Displays a filterable, virtualized log of audit events with detail diffs.", "activity log", "auditni zaznam", "TmAuditLogViewer"),

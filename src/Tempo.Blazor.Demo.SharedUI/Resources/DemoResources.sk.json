@@ -680,5 +680,17 @@
   "TmDemo_ActivityComments_ToggleTitlePublic": "Označiť tento komentár ako interný?",
   "TmDemo_ActivityComments_ToggleMessageInternal": "Komentár uvidí každý, kto vlákno otvorí. Už odoslané notifikácie nemožno odvolať.",
   "TmDemo_ActivityComments_ToggleMessagePublic": "Interný komentár majú vidieť len privilegovaní používatelia. Komponenta ho neskrýva — filtrovanie je na aplikácii. Už odoslané notifikácie nemožno odvolať.",
-  "TmDemo_ActivityComments_ToggleConfirm": "Zmeniť viditeľnosť"
+  "TmDemo_ActivityComments_ToggleConfirm": "Zmeniť viditeľnosť",
+  "TmDataDisplayDemo_TraceWaterfall": "Vodopád trasovania",
+  "TmDataDisplayDemo_TraceWaterfallBadge": "Nové",
+  "TmDataDisplayDemo_TraceWaterfallTitle": "Beh agenta — triedenie požiadaviek",
+  "TmDataDisplayDemo_TraceWaterfallHint": "Vygenerovaná trasa agenta: koreňový beh, jeho volania LLM a nástrojov a zlyhaná HTTP požiadavka. Spustite živé trasovanie a sledujte, ako bežiace spany rastú; výberom riadku otvoríte jeho detail.",
+  "TmDataDisplayDemo_TraceLiveStart": "Spustiť živé trasovanie",
+  "TmDataDisplayDemo_TraceLiveStop": "Zastaviť živé trasovanie",
+  "TmDataDisplayDemo_TraceKind": "Druh",
+  "TmDataDisplayDemo_TraceStatus": "Stav",
+  "TmDataDisplayDemo_TraceTokens": "Tokeny dovnútra / von",
+  "TmDataDisplayDemo_TraceTokensIn": "Tokeny dovnútra",
+  "TmDataDisplayDemo_TraceTokensOut": "Tokeny von",
+  "TmDataDisplayDemo_TraceCost": "Cena"
 }

@@ -150,6 +150,7 @@ public sealed class BuiltInComponentSchemas : IWireframeSchemaSource
             ["TmChipGroup"] = ["chip"],
             ["TmFilterChip"] = ["chip", "filter-builder"],
             ["TmFacetFilter"] = ["facet-filter"],
+            ["TmTraceWaterfall"] = ["trace-waterfall"],
             ["TmAccordion"] = ["accordion"],
             ["TmAccordionItem"] = ["accordion"],
             ["TmEmptyState"] = ["empty-state"],
@@ -1142,6 +1143,20 @@ public sealed class BuiltInComponentSchemas : IWireframeSchemaSource
                 P("label",     "Label",     PropType.String, "Filter", cat: "Content"),
                 P("active",    "Active",    PropType.Bool,   true,     cat: "State"),
                 P("removable", "Removable", PropType.Bool,   true,     cat: "Behavior"),
+            ]
+        };
+
+        yield return new WireframeComponentSchema
+        {
+            Type = "TmTraceWaterfall", Category = "Data Display", DisplayName = "Trace Waterfall",
+            DefaultWidth = 420, DefaultHeight = 260,
+            Props =
+            [
+                P("title",       "Title",        PropType.String, "Trace", cat: "Content"),
+                P("expanded",    "Expanded",     PropType.Bool,   true,    cat: "State"),
+                P("showZoom",    "Show Zoom",    PropType.Bool,   true,    cat: "Appearance"),
+                P("showMetrics", "Show Metrics", PropType.Bool,   true,    cat: "Content"),
+                P("live",        "Live",         PropType.Bool,   false,   cat: "State"),
             ]
         };
 
