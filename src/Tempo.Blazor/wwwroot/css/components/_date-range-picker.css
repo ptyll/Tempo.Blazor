@@ -83,3 +83,95 @@
   color: var(--tm-color-primary);
   border-color: var(--tm-color-primary);
 }
+
+/* ── Comparison period (Fáze 5) ─────────────────────────────────────────────
+   The block states which second window the picker reports, and — in the Custom
+   mode — which of the two windows the calendars currently edit. */
+.tm-date-range-comparison {
+  display: flex;
+  flex-direction: column;
+  gap: var(--tm-space-2);
+  padding-bottom: var(--tm-space-3);
+  border-bottom: 1px solid var(--tm-border-color);
+}
+
+.tm-date-range-comparison__summary {
+  display: flex;
+  align-items: center;
+  gap: var(--tm-space-2);
+  flex-wrap: wrap;
+  font-size: var(--tm-font-size-xs);
+  color: var(--tm-text-secondary);
+}
+
+/* Repeats the calendar's comparison fill so the summary is visually tied to the
+   marked days; purely decorative — the adjacent words carry the meaning. */
+.tm-date-range-comparison__swatch {
+  flex: 0 0 auto;
+  width: var(--tm-space-3);
+  height: var(--tm-space-3);
+  border: 1px dashed var(--tm-cal-comparison-border);
+  border-radius: var(--tm-radius-sm);
+  background: var(--tm-cal-comparison-bg);
+}
+
+.tm-date-range-comparison__label {
+  font-weight: var(--tm-font-weight-semibold);
+  color: var(--tm-text-primary);
+}
+
+.tm-date-range-comparison__range {
+  font-variant-numeric: tabular-nums;
+}
+
+.tm-date-range-comparison__targets {
+  display: flex;
+  gap: var(--tm-space-1);
+}
+
+.tm-date-range-comparison__target {
+  min-height: var(--tm-space-6);
+  padding: var(--tm-space-1) var(--tm-space-3);
+  background: none;
+  border: 1px solid var(--tm-border-color);
+  border-radius: var(--tm-radius-full);
+  font-size: var(--tm-font-size-xs);
+  color: var(--tm-text-secondary);
+  cursor: pointer;
+  transition: background var(--tm-transition-fast), color var(--tm-transition-fast), border-color var(--tm-transition-fast);
+}
+.tm-date-range-comparison__target:hover {
+  background: var(--tm-color-primary-subtle);
+  color: var(--tm-color-primary);
+  border-color: var(--tm-color-primary);
+}
+.tm-date-range-comparison__target[aria-pressed="true"] {
+  background: var(--tm-color-primary-subtle);
+  border-color: var(--tm-color-primary);
+  color: var(--tm-color-primary-text);
+  font-weight: var(--tm-font-weight-semibold);
+}
+.tm-date-range-comparison__target:focus-visible {
+  outline: 2px solid transparent;
+  box-shadow: var(--tm-focus-ring);
+}
+/* Forced colors strip box-shadow, so the ring is re-stated as a system outline. */
+@media (forced-colors: active) {
+  .tm-date-range-comparison__target:focus-visible { outline: 2px solid Highlight; }
+  .tm-date-range-comparison__swatch { forced-color-adjust: none; border-color: CanvasText; }
+}
+
+.tm-date-range-trigger:has(.tm-date-range-trigger__comparison) {
+  flex-wrap: wrap;
+}
+
+.tm-date-range-trigger__comparison {
+  flex-basis: 100%;
+  font-size: var(--tm-font-size-xs);
+  color: var(--tm-text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+@media (pointer: coarse) {
+  .tm-date-range-comparison__target { min-height: var(--tm-touch-target); }
+}

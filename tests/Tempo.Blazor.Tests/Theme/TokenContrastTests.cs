@@ -476,6 +476,7 @@ public sealed partial class TokenContrastTests
             "--tm-bg-muted", "--tm-bg-page", "--tm-bg-surface", "--tm-bg-surface-secondary",
             "--tm-border-color", "--tm-border-color-control", "--tm-border-color-strong",
             "--tm-cal-range-bg",
+            "--tm-cal-comparison-border",
             // Phase 15b: the canvas backdrop is deliberately THEME-AWARE — light keeps the
             // paper-backdrop gray, dark rides the workspace tone so the white page floats on
             // a dark canvas (docs/diagram-editor.md, carry-forward F8 m5). Renamed to the

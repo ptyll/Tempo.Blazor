@@ -1,7 +1,11 @@
 @namespace Tempo.Blazor.Components.Pickers
 @using Tempo.Blazor.Models
 
-<div class="tm-date-range-picker @Class" @attributes="RootAttributes">
+<div class="tm-date-range-picker @Class"
+     data-comparison="@(HasComparison ? ComparisonSlug : null)"
+     data-comparison-start="@ComparisonStartAttribute"
+     data-comparison-end="@ComparisonEndAttribute"
+     @attributes="RootAttributes">
     @if (!string.IsNullOrEmpty(Label))
     {
         <label id="@_labelId" class="tm-picker-label" for="@_triggerId">@Label</label>
@@ -28,6 +32,12 @@
                     <span class="tm-picker-placeholder">@(Placeholder ?? Loc["TmDateRangePicker_From"])</span>
                 }
             </span>
+            @if (HasComparison)
+            {
+                @* Visible text inside the trigger has to be part of its accessible name
+                   (WCAG 2.5.3), so the comparison span carries an id TriggerLabelledBy lists. *@
+                <span id="@_comparisonId" class="tm-date-range-trigger__comparison">@ComparisonSummary</span>
+            }
             <span class="tm-date-picker-icon" aria-hidden="true">&#128197;</span>
         </button>
 
@@ -75,14 +85,53 @@
             </div>
         }
 
+        @if (HasComparison)
+        {
+            <div class="tm-date-range-comparison" data-comparison="@ComparisonSlug">
+                <div class="tm-date-range-comparison__summary">
+                    @* The swatch repeats the calendar's comparison fill; it is decorative because
+                       the label next to it says the same thing in words. *@
+                    <span class="tm-date-range-comparison__swatch" aria-hidden="true"></span>
+                    <span class="tm-date-range-comparison__label">@Loc["TmDateRangePicker_Comparison"]</span>
+                    <span class="tm-date-range-comparison__range">@ComparisonRangeText</span>
+                </div>
+
+                @if (IsCustomComparison)
+                {
+                    @* Custom is the one mode where the calendars have two possible subjects, so the
+                       reader must be able to see — and switch — which window a click edits. *@
+                    <div class="tm-date-range-comparison__targets"
+                         role="group"
+                         aria-label="@Loc["TmDateRangePicker_ComparisonTarget"]">
+                        <button type="button"
+                                class="tm-date-range-comparison__target"
+                                data-target="primary"
+                                aria-pressed="@(_editingComparison ? "false" : "true")"
+                                @onclick="() => SetEditingComparison(false)">
+                            @Loc["TmDateRangePicker_ComparisonPrimary"]
+                        </button>
+                        <button type="button"
+                                class="tm-date-range-comparison__target"
+                                data-target="comparison"
+                                aria-pressed="@(_editingComparison ? "true" : "false")"
+                                @onclick="() => SetEditingComparison(true)">
+                            @Loc["TmDateRangePicker_Comparison"]
+                        </button>
+                    </div>
+                }
+            </div>
+        }
+
         <div class="tm-date-range-calendars">
                 <!-- Left calendar: start month -->
                 <TmCalendarGrid DisplayYear="@_leftYear"
                                 DisplayMonth="@_leftMonth"
-                                SelectedDate="@_selectionStart"
+                                SelectedDate="@(_editingComparison ? _comparisonStart : _selectionStart)"
                                 RangeStart="@_selectionStart"
-                                RangeEnd="@(_hoverDate.HasValue && _selectionStart.HasValue && _hoverDate.Value >= _selectionStart.Value
-                                              ? _hoverDate : _selectionEnd)"
+                                RangeEnd="@PrimaryPreviewEnd"
+                                ComparisonStart="@ComparisonRangeStart"
+                                ComparisonEnd="@ComparisonPreviewEnd"
+                                ComparisonDescription="@ComparisonDescription"
                                 MinDate="@MinDate"
                                 MaxDate="@MaxDate"
                                 OnDateSelected="OnLeftDaySelected"
@@ -92,10 +141,12 @@
                 <!-- Right calendar: start+1 month -->
                 <TmCalendarGrid DisplayYear="@_rightYear"
                                 DisplayMonth="@_rightMonth"
-                                SelectedDate="@_selectionEnd"
+                                SelectedDate="@(_editingComparison ? _comparisonEnd : _selectionEnd)"
                                 RangeStart="@_selectionStart"
-                                RangeEnd="@(_hoverDate.HasValue && _selectionStart.HasValue && _hoverDate.Value >= _selectionStart.Value
-                                              ? _hoverDate : _selectionEnd)"
+                                RangeEnd="@PrimaryPreviewEnd"
+                                ComparisonStart="@ComparisonRangeStart"
+                                ComparisonEnd="@ComparisonPreviewEnd"
+                                ComparisonDescription="@ComparisonDescription"
                                 MinDate="@MinDate"
                                 MaxDate="@MaxDate"
                                 OnDateSelected="OnRightDaySelected"
@@ -114,24 +165,78 @@
 </div>
 
 @code {
+    /// <summary>The selected range. Start and end are inclusive; either may be null.</summary>
     [Parameter] public (DateOnly? Start, DateOnly? End) Value        { get; set; }
+
+    /// <summary>Raised whenever the reader changes the selected range.</summary>
     [Parameter] public EventCallback<(DateOnly? Start, DateOnly? End)> ValueChanged { get; set; }
+
+    /// <summary>Earliest selectable day. Null means no lower bound.</summary>
     [Parameter] public DateOnly?                  MinDate      { get; set; }
+
+    /// <summary>Latest selectable day. Null means no upper bound.</summary>
     [Parameter] public DateOnly?                  MaxDate      { get; set; }
+
+    /// <summary>Format used to render each end of the range. Defaults to <c>dd.MM.yyyy</c>.</summary>
     [Parameter] public string                     DateFormat   { get; set; } = "dd.MM.yyyy";
+
+    /// <summary>
+    /// Overrides the built-in preset row. Null (the default) uses the localized presets computed
+    /// from the injected <see cref="TimeProvider"/>.
+    /// </summary>
     [Parameter] public IReadOnlyList<DateRangePreset>? Presets  { get; set; }
+
+    /// <summary>Whether the preset row renders at all. Defaults to true.</summary>
     [Parameter] public bool                       ShowPresets  { get; set; } = true;
+
+    /// <summary>Disables the trigger and the clear button.</summary>
     [Parameter] public bool                       Disabled     { get; set; }
+
+    /// <summary>Text shown while no range is selected. Null means the localized "From".</summary>
     [Parameter] public string?                    Placeholder  { get; set; }
+
+    /// <summary>Visible label naming the trigger, and the picker's own accessible name.</summary>
     [Parameter] public string?                    Label        { get; set; }
+
+    /// <summary>Additional CSS classes on the component root.</summary>
     [Parameter] public string?                    Class        { get; set; }
+
+    /// <summary>
+    /// How the reported range is compared against a second period. <see cref="DateRangeComparison.None"/>
+    /// (the default) renders the pre-2.10 surface unchanged.
+    /// </summary>
+    [Parameter] public DateRangeComparison        Comparison   { get; set; }
+
+    /// <summary>
+    /// The comparison window. It is the source of truth for
+    /// <see cref="DateRangeComparison.Custom"/> (so a host can seed or reset it), and the derived
+    /// window for the two automatic modes is reported back through
+    /// <see cref="ComparisonRangeChanged"/>.
+    /// </summary>
+    [Parameter] public (DateOnly? Start, DateOnly? End) ComparisonRange { get; set; }
+
+    /// <summary>
+    /// Raised with the effective comparison window whenever it changes — for every mode, so a host
+    /// can query the compared period without re-deriving it. Clearing the primary range raises an
+    /// empty window; <see cref="DateRangeComparison.None"/> never raises.
+    /// </summary>
+    [Parameter] public EventCallback<(DateOnly? Start, DateOnly? End)> ComparisonRangeChanged { get; set; }
+
+    /// <summary>
+    /// Unmatched attributes: <c>aria-*</c> land on the trigger (which owns the popup), everything
+    /// else on the root.
+    /// </summary>
     [Parameter(CaptureUnmatchedValues = true)] public Dictionary<string, object>? AdditionalAttributes { get; set; }
 
     private bool      _isOpen;
+    // Identifies the current open/close state so a delayed auto-close scheduled by an older pick
+    // cannot act on a popup the reader has already toggled (see ScheduleAutoClose).
+    private int       _autoCloseToken;
     private ElementReference _triggerRef;
     private readonly string _labelId   = $"tm-date-range-label-{Guid.NewGuid():N}";
     private readonly string _triggerId = $"tm-date-range-trigger-{Guid.NewGuid():N}";
     private readonly string _valueId   = $"tm-date-range-value-{Guid.NewGuid():N}";
+    private readonly string _comparisonId = $"tm-date-range-comparison-{Guid.NewGuid():N}";
     private int       _leftYear, _leftMonth, _rightYear, _rightMonth;
     private DateOnly? _hoverDate;
     // Selection state: first click = start, second = end
@@ -139,15 +244,55 @@
     // Internal mirror of selection so calendar updates immediately without waiting for parent re-render
     private DateOnly? _selectionStart;
     private DateOnly? _selectionEnd;
+    // The Custom comparison window, mirrored the same way as the primary range
+    private bool      _awaitingComparisonEnd;
+    private DateOnly? _comparisonStart;
+    private DateOnly? _comparisonEnd;
+    private bool      _editingComparison;
     // Tracks the last Value we received from the parent to detect external changes
     private (DateOnly? Start, DateOnly? End) _lastReceivedValue = (null, null);
+    private (DateOnly? Start, DateOnly? End) _lastReceivedComparisonRange = (null, null);
+    // What we last told the host (or were told by it): only a CHANGE is worth a callback
+    private (DateOnly? Start, DateOnly? End) _lastNotifiedComparison = (null, null);
+    private IReadOnlyList<DateRangePreset>? _defaultPresets;
+    // The day _defaultPresets was built for, so the cache is both stable and self-refreshing.
+    private DateOnly? _presetsDay;
 
     /// <summary>
-    /// Accessible name = label + shown value/placeholder; without a <see cref="Label"/> the value
-    /// span alone names the trigger, identical to its text content.
+    /// Clock behind the built-in presets. Resolved through <see cref="IServiceProvider"/> so a
+    /// consumer that never registers a <see cref="TimeProvider"/> still gets
+    /// <see cref="TimeProvider.System"/> — a bare <c>[Inject] TimeProvider</c> would throw for
+    /// exactly those consumers. Tests register a FakeTimeProvider.
     /// </summary>
-    private string TriggerLabelledBy =>
-        string.IsNullOrEmpty(Label) ? _valueId : $"{_labelId} {_valueId}";
+    [Inject] private IServiceProvider Services { get; set; } = default!;
+
+    private TimeProvider Clock
+        => _clock ??= Services.GetService(typeof(TimeProvider)) as TimeProvider ?? TimeProvider.System;
+    private TimeProvider? _clock;
+
+    /// <summary>
+    /// Accessible name = label + shown value (and the comparison summary when one is on); without a
+    /// <see cref="Label"/> the value span alone names the trigger, identical to its text content.
+    /// </summary>
+    private string TriggerLabelledBy
+    {
+        get
+        {
+            var ids = new List<string>(3);
+            if (!string.IsNullOrEmpty(Label))
+            {
+                ids.Add(_labelId);
+            }
+
+            ids.Add(_valueId);
+            if (HasComparison)
+            {
+                ids.Add(_comparisonId);
+            }
+
+            return string.Join(' ', ids);
+        }
+    }
 
     /// <summary>Consumer <c>aria-*</c> attributes target the trigger; everything else the root.</summary>
     private IReadOnlyDictionary<string, object>? AriaAttributes =>
@@ -164,17 +309,146 @@
                 .Where(kv => !kv.Key.StartsWith("aria-", StringComparison.OrdinalIgnoreCase))
                 .ToDictionary(kv => kv.Key, kv => kv.Value);
 
-    private IReadOnlyList<DateRangePreset> EffectivePresets => Presets ?? DefaultPresets;
-    private static readonly IReadOnlyList<DateRangePreset> DefaultPresets =
-    [
-        DateRangePresets.Today,
-        DateRangePresets.LastWeek,
-        DateRangePresets.LastMonth,
-        DateRangePresets.LastQuarter,
-        DateRangePresets.ThisYear,
-    ];
+    /// <summary>Whether a comparison period is part of the surface at all.</summary>
+    private bool HasComparison => Comparison != DateRangeComparison.None;
 
-    protected override void OnParametersSet()
+    /// <summary>The stable <c>data-comparison</c> slug a test or a host can key off.</summary>
+    private string ComparisonSlug => Comparison switch
+    {
+        DateRangeComparison.PreviousPeriod => "previousPeriod",
+        DateRangeComparison.PreviousYear   => "previousYear",
+        DateRangeComparison.Custom         => "custom",
+        _                                  => "none",
+    };
+
+    private bool IsCustomComparison => Comparison == DateRangeComparison.Custom;
+
+    /// <summary>Only Custom gives the reader a second window to pick; the others are derived.</summary>
+    private (DateOnly? Start, DateOnly? End) EffectiveComparisonRange => Comparison switch
+    {
+        DateRangeComparison.PreviousPeriod => From(PreviousPeriodWindow()),
+        DateRangeComparison.PreviousYear   => From(PreviousYearWindow()),
+        DateRangeComparison.Custom         => (_comparisonStart, _comparisonEnd),
+        _                                  => (null, null),
+    };
+
+    private (DateOnly Start, DateOnly End)? PreviousPeriodWindow() =>
+        _selectionStart is { } start && _selectionEnd is { } end
+            ? DateRangeComparisonCalculator.PreviousPeriod(start, end)
+            : null;
+
+    private (DateOnly Start, DateOnly End)? PreviousYearWindow() =>
+        _selectionStart is { } start && _selectionEnd is { } end
+            ? DateRangeComparisonCalculator.PreviousYear(start, end)
+            : null;
+
+    private static (DateOnly? Start, DateOnly? End) From((DateOnly Start, DateOnly End)? window) =>
+        window is { } value ? (value.Start, value.End) : (null, null);
+
+    private DateOnly? ComparisonRangeStart => EffectiveComparisonRange.Start;
+
+    /// <summary>
+    /// The comparison window's hover preview. The preview belongs to whichever window the next
+    /// click edits, so the pointer never stretches the window the reader is not working on.
+    /// </summary>
+    private DateOnly? ComparisonPreviewEnd => _editingComparison
+        ? PreviewEnd(_comparisonStart, _comparisonEnd)
+        : EffectiveComparisonRange.End;
+
+    /// <summary>The primary window's end, including the historical first-click hover preview.</summary>
+    private DateOnly? PrimaryPreviewEnd => _editingComparison
+        ? _selectionEnd
+        : PreviewEnd(_selectionStart, _selectionEnd);
+
+    private DateOnly? PreviewEnd(DateOnly? start, DateOnly? end) =>
+        _hoverDate.HasValue && start.HasValue && _hoverDate.Value >= start.Value ? _hoverDate : end;
+
+    /// <summary>
+    /// The hidden text every comparison day is described by: the distinctive fill needs a textual
+    /// counterpart, and one description element per calendar is enough for all of its days.
+    /// </summary>
+    private string? ComparisonDescription
+    {
+        get
+        {
+            var (start, end) = EffectiveComparisonRange;
+            if (!start.HasValue || !end.HasValue)
+            {
+                return null;
+            }
+
+            return Loc["TmDateRangePicker_ComparisonRangeDescription",
+                        start.Value.ToString(DateFormat), end.Value.ToString(DateFormat)];
+        }
+    }
+
+    private string? ComparisonStartAttribute =>
+        HasComparison && EffectiveComparisonRange.Start.HasValue
+            ? EffectiveComparisonRange.Start.Value.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)
+            : null;
+
+    private string? ComparisonEndAttribute =>
+        HasComparison && EffectiveComparisonRange.End.HasValue
+            ? EffectiveComparisonRange.End.Value.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)
+            : null;
+
+    /// <summary>
+    /// The compared window in words for the popup, where a visible
+    /// <c>TmDateRangePicker_Comparison</c> label already names it: so the automatic modes carry
+    /// their own prefix (the window is the mode's output) and Custom stays bare dates.
+    /// </summary>
+    private string ComparisonRangeText
+    {
+        get
+        {
+            var (start, end) = EffectiveComparisonRange;
+            if (!start.HasValue && !end.HasValue)
+            {
+                return Loc["TmDateRangePicker_ComparisonEmpty"];
+            }
+
+            return Comparison switch
+            {
+                DateRangeComparison.PreviousPeriod =>
+                    Loc["TmDateRangePicker_ComparisonSummaryFormat",
+                        Loc["TmDateRangePicker_ComparisonPreviousPeriod"], FormatDate(start), FormatDate(end)],
+                DateRangeComparison.PreviousYear =>
+                    Loc["TmDateRangePicker_ComparisonSummaryFormat",
+                        Loc["TmDateRangePicker_ComparisonPreviousYear"], FormatDate(start), FormatDate(end)],
+                _ => Loc["TmDateRangePicker_ComparisonRangeFormat", FormatDate(start), FormatDate(end)],
+            };
+        }
+    }
+
+    /// <summary>
+    /// The trigger's one-line summary. The trigger shows the reported range and the compared one
+    /// back to back, so the summary ALWAYS says which window it is — unlike
+    /// <see cref="ComparisonRangeText"/>, which sits next to a visible label.
+    /// </summary>
+    private string ComparisonSummary
+    {
+        get
+        {
+            var (start, end) = EffectiveComparisonRange;
+            if (!start.HasValue && !end.HasValue)
+            {
+                return Loc["TmDateRangePicker_ComparisonEmpty"];
+            }
+
+            var prefix = Comparison switch
+            {
+                DateRangeComparison.PreviousPeriod => Loc["TmDateRangePicker_ComparisonPreviousPeriod"],
+                DateRangeComparison.PreviousYear => Loc["TmDateRangePicker_ComparisonPreviousYear"],
+                _ => Loc["TmDateRangePicker_Comparison"],
+            };
+
+            return Loc["TmDateRangePicker_ComparisonSummaryFormat", prefix, FormatDate(start), FormatDate(end)];
+        }
+    }
+
+    private IReadOnlyList<DateRangePreset> EffectivePresets => Presets ?? _defaultPresets ?? [];
+
+    protected override async Task OnParametersSetAsync()
     {
         // Only sync internal selection state when Value was externally changed (parent update / initial render)
         // Don't reset _awaitingEnd if we're waiting for the second date (Value.End is null but we have Value.Start)
@@ -202,12 +476,62 @@
                 _awaitingEnd = false;
             }
         }
+
+        if (ComparisonRange != _lastReceivedComparisonRange)
+        {
+            _lastReceivedComparisonRange = ComparisonRange;
+            _comparisonStart             = ComparisonRange.Start;
+            _comparisonEnd               = ComparisonRange.End;
+            _awaitingComparisonEnd       = false;
+            // A window the host HANDS us is not news we have to report back.
+            _lastNotifiedComparison = ComparisonRange;
+        }
+
+        if (!IsCustomComparison)
+        {
+            // Leaving Custom (or never being in it) must not leave the calendars pointed at a window
+            // the reader can no longer edit.
+            _editingComparison = false;
+        }
+
+        var today = DateOnly.FromDateTime(Clock.GetLocalNow().DateTime);
+        if (Presets is null && (_defaultPresets is null || _presetsDay != today))
+        {
+            // Cached per DAY: a parent re-render must not allocate a fresh preset row, while a picker
+            // left open across midnight still rolls over to the new day's presets.
+            _defaultPresets = DateRangePresets.Create(Clock, Loc);
+            _presetsDay     = today;
+        }
+
         ResetDisplayMonths();
+        await NotifyComparisonChangedAsync();
+    }
+
+    /// <summary>
+    /// Raises <see cref="ComparisonRangeChanged"/> once per actual change. A parent that binds the
+    /// callback and pushes the value back therefore cannot loop: the echo is equal to what we just
+    /// reported.
+    /// </summary>
+    private async Task NotifyComparisonChangedAsync()
+    {
+        if (!HasComparison || !ComparisonRangeChanged.HasDelegate)
+        {
+            return;
+        }
+
+        var effective = EffectiveComparisonRange;
+        if (effective == _lastNotifiedComparison)
+        {
+            return;
+        }
+
+        _lastNotifiedComparison = effective;
+        await ComparisonRangeChanged.InvokeAsync(effective);
     }
 
     private void ResetDisplayMonths()
     {
-        var pivot = _selectionStart ?? DateOnly.FromDateTime(DateTime.Today);
+        var pivot = _selectionStart ?? DateOnly.FromDateTime(Clock.GetLocalNow().DateTime);
         _leftYear   = pivot.Year;
         _leftMonth  = pivot.Month;
         var right = pivot.AddMonths(1);
@@ -217,17 +541,86 @@
 
     private void TogglePopup()
     {
-        if (!Disabled) _isOpen = !_isOpen;
+        if (!Disabled)
+        {
+            SetOpenState(!_isOpen);
+        }
     }
 
     private void ClosePopup()
     {
         _isOpen = false;
+        // A close invalidates any auto-close still in flight, so it can never shut a popup opened
+        // after it (see ScheduleAutoClose).
+        _autoCloseToken++;
+        // The Custom target is an occasional edit: a picker that reopens must go back to the main
+        // range instead of silently carrying on with the comparison window (WCAG 3.2 Predictable).
+        _editingComparison = false;
     }
 
-    private void SetOpen(bool open)
+    private void SetOpen(bool open) => SetOpenState(open);
+
+    private void SetOpenState(bool open)
     {
+        // Opening or closing supersedes any auto-close scheduled by an earlier pick: the reader is
+        // already looking at a different state, so a stale delay must not act on it.
+        _autoCloseToken++;
+
+        if (open)
+        {
+            CloseComparisonEditing();
+            // A reopen always comes back to the reported range's month instead of dropping the
+            // reader into the month they browsed during the previous visit (WCAG 3.2 Predictable).
+            ResetDisplayMonths();
+        }
+
         _isOpen = open;
+    }
+
+    /// <summary>
+    /// Closes the popup after the "look at your pick" delay that follows a completed range. The
+    /// close belongs to the pick that scheduled it: any open/close in the meantime bumps
+    /// <see cref="_autoCloseToken"/> and the stale close becomes a no-op, so a reader who reopens
+    /// the picker quickly does not have it shut under them.
+    /// </summary>
+    private void ScheduleAutoClose()
+    {
+        var token = _autoCloseToken;
+        _ = Task.Run(async () =>
+        {
+            await Task.Delay(300);
+            await InvokeAsync(() =>
+            {
+                if (token != _autoCloseToken)
+                {
+                    return;
+                }
+
+                ClosePopup();
+                StateHasChanged();
+            });
+        });
+    }
+
+    /// <summary>
+    /// Drops the "next click edits the comparison window" state. Every path that opens the popup runs
+    /// it, so a window the reader finished (or abandoned) never keeps owning the next click.
+    /// </summary>
+    private void CloseComparisonEditing()
+    {
+        _editingComparison = false;
+        _hoverDate         = null;
+    }
+
+    private void SetEditingComparison(bool editing)
+    {
+        if (!IsCustomComparison)
+        {
+            return;
+        }
+
+        _editingComparison = editing;
+        _hoverDate         = null;
     }
 
     private async Task OnLeftDaySelected(DateOnly d) => await HandleDaySelected(d);
@@ -235,6 +628,12 @@
 
     private async Task HandleDaySelected(DateOnly d)
     {
+        if (_editingComparison)
+        {
+            await HandleComparisonDaySelectedAsync(d);
+            return;
+        }
+
         if (!_awaitingEnd)
         {
             // First click → set start, clear end
@@ -243,6 +642,7 @@
             _selectionEnd   = null;
             _hoverDate      = null;
             await ValueChanged.InvokeAsync((d, null));
+            await NotifyComparisonChangedAsync();
         }
         else
         {
@@ -257,19 +657,53 @@
                 _selectionEnd   = null;
                 await ValueChanged.InvokeAsync((d, null));
                 _awaitingEnd = true;
+                await NotifyComparisonChangedAsync();
             }
             else
             {
                 _selectionEnd = d;
                 await ValueChanged.InvokeAsync((_selectionStart, d));
+                await NotifyComparisonChangedAsync();
                 // Close popup after brief delay so user can see the selection
-                _ = Task.Run(async () =>
-                {
-                    await Task.Delay(300);
-                    await InvokeAsync(() => { _isOpen = false; StateHasChanged(); });
-                });
+                ScheduleAutoClose();
             }
         }
+    }
+
+    /// <summary>
+    /// The Custom window's own two-click flow. It raises nothing through <see cref="ValueChanged"/>:
+    /// the reported range keeps its meaning and the compared window is a second fact.
+    /// </summary>
+    private async Task HandleComparisonDaySelectedAsync(DateOnly d)
+    {
+        if (!_awaitingComparisonEnd)
+        {
+            _awaitingComparisonEnd = true;
+            _comparisonStart       = d;
+            _comparisonEnd         = null;
+            _hoverDate             = null;
+            await NotifyComparisonChangedAsync();
+            return;
+        }
+
+        _awaitingComparisonEnd = false;
+        _hoverDate             = null;
+
+        if (_comparisonStart.HasValue && d < _comparisonStart.Value)
+        {
+            // Clicked before start → that day is the window's new start
+            _comparisonStart       = d;
+            _comparisonEnd         = null;
+            _awaitingComparisonEnd = true;
+            await NotifyComparisonChangedAsync();
+            return;
+        }
+
+        _comparisonEnd = d;
+        await NotifyComparisonChangedAsync();
+
+        // The window is complete: close exactly like the primary flow does.
+        ScheduleAutoClose();
     }
 
     private void OnDayHovered(DateOnly d) => _hoverDate = d;
@@ -296,11 +730,14 @@
 
     private async Task ClearRange()
     {
-        _awaitingEnd    = false;
-        _hoverDate      = null;
-        _selectionStart = null;
-        _selectionEnd   = null;
+        _awaitingEnd       = false;
+        _awaitingComparisonEnd = false;
+        _hoverDate         = null;
+        _selectionStart    = null;
+        _selectionEnd      = null;
         await ValueChanged.InvokeAsync((null, null));
+        // A derived window disappears with the range it was derived from — say so.
+        await NotifyComparisonChangedAsync();
     }
 
     private async Task ApplyPreset(DateRangePreset preset)
@@ -308,15 +745,27 @@
         _awaitingEnd    = false;
         _hoverDate      = null;
         _isOpen         = false;
+        // Same rule as ClosePopup: this close supersedes any auto-close still in flight.
+        _autoCloseToken++;
         _selectionStart = preset.Start;
         _selectionEnd   = preset.End;
         await ValueChanged.InvokeAsync((preset.Start, preset.End));
+        await NotifyComparisonChangedAsync();
     }
+
+    private string FormatDate(DateOnly? date) =>
+        date.HasValue
+            ? date.Value.ToString(DateFormat, CultureInfo.CurrentCulture)
+            : Loc["TmDateRangePicker_From"].ToString();
 
     private string FormatRange()
     {
-        var s = Value.Start.HasValue ? Value.Start.Value.ToString(DateFormat) : Loc["TmDateRangePicker_From"].ToString();
-        var e = Value.End.HasValue   ? Value.End.Value.ToString(DateFormat)   : Loc["TmDateRangePicker_To"].ToString();
+        var s = Value.Start.HasValue
+            ? Value.Start.Value.ToString(DateFormat, CultureInfo.CurrentCulture)
+            : Loc["TmDateRangePicker_From"].ToString();
+        var e = Value.End.HasValue
+            ? Value.End.Value.ToString(DateFormat, CultureInfo.CurrentCulture)
+            : Loc["TmDateRangePicker_To"].ToString();
         return $"{s} – {e}";
     }
 }

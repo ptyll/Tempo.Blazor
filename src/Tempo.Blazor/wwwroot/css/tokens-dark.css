@@ -223,6 +223,10 @@
   /* Dark in-range fill: primary-900 holds 9.45:1 (indigo 10.43:1) for --tm-text-primary;
      the light primary-100 measured 1.1:1. Same step as --tm-control-hover-fill. */
   --tm-cal-range-bg:           var(--tm-color-primary-900);
+  /* The compared window stays neutral here too; gray-200 is #475569 in this theme,
+     which holds >7:1 under --tm-text-primary, and gray-400 draws its edge. */
+  --tm-cal-comparison-bg:      var(--tm-color-gray-200);
+  --tm-cal-comparison-border:  var(--tm-color-gray-400);
   --tm-cal-selected-bg:        var(--tm-color-primary-600);
   --tm-cal-selected-fg:        var(--tm-color-white);
   --tm-calendar-view-today-bg:     var(--tm-color-primary-900);
@@ -416,6 +420,8 @@
   --tm-focus-ring-success:          0 0 0 2px var(--tm-bg-surface), 0 0 0 4px var(--tm-color-success-strong);
   --tm-picker-border-radius:        var(--tm-radius-md);
   --tm-cal-range-bg:                var(--tm-color-primary-100);
+  --tm-cal-comparison-bg:           var(--tm-color-gray-200);
+  --tm-cal-comparison-border:       var(--tm-color-gray-500);
   --tm-cal-selected-bg:             var(--tm-color-primary-600);
   --tm-cal-selected-fg:             var(--tm-color-white);
   --tm-calendar-view-today-bg:      var(--tm-color-primary-50);

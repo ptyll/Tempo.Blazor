@@ -2,7 +2,7 @@
   "itemName": "TmCalendarGrid",
   "kind": "Component",
   "category": "Pickers",
-  "description": "Reusable calendar month with day selection, range highlighting, today indicator, and month navigation. Used internally by TmDatePicker and TmDateRangePicker. The days are native buttons and the month navigation is its own pair of buttons, so the root carries no role=grid and the navigation carries no role=row. Every in-month day is its own tab stop (tabindex 0); other-month and disabled days are tabindex -1. There is no roving tabindex. A selected day, and a range start or end, is aria-pressed; today is aria-current=date; the accessible name is the long date. Weekday headers are generic cells; the abbreviation carries the full name as an abbr title.",
+  "description": "Reusable calendar month with day selection, range highlighting, today indicator, and month navigation. Used internally by TmDatePicker, TmDateRangePicker and TmCalendarView. The days are native buttons and the month navigation is its own pair of buttons, so the root carries no role=grid and the navigation carries no role=row. Every in-month day is its own tab stop (tabindex 0); other-month and disabled days are tabindex -1. There is no roving tabindex. A selected day, and a range start or end, is aria-pressed; today is aria-current=date; the accessible name is the long date. Weekday headers are generic cells; the abbreviation carries the full name as an abbr title. An optional compared (secondary) window paints with tm-cal-day--comparison-start/-end for its ends and tm-cal-day--comparison for its middle days, never overriding the reported range where the two overlap, and every compared day is aria-describedby'd by one visually hidden ComparisonDescription so the distinct fill is never the only signal.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Pickers"
   ],
@@ -63,6 +63,21 @@
       "name": "OnNavigate",
       "type": "EventCallback<(int Year, int Month)>",
       "isRequired": false
+    },
+    {
+      "name": "ComparisonStart",
+      "type": "DateOnly?",
+      "isRequired": false
+    },
+    {
+      "name": "ComparisonEnd",
+      "type": "DateOnly?",
+      "isRequired": false
+    },
+    {
+      "name": "ComparisonDescription",
+      "type": "string?",
+      "isRequired": false
     }
   ],
   "cssClasses": [
@@ -81,7 +96,10 @@
     "tm-cal-day--range-start",
     "tm-cal-day--range-end",
     "tm-cal-day--in-range",
-    "tm-cal-day--disabled"
+    "tm-cal-day--disabled",
+    "tm-cal-day--comparison",
+    "tm-cal-day--comparison-start",
+    "tm-cal-day--comparison-end"
   ],
   "examples": [
     {

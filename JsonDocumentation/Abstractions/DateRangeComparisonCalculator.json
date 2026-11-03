@@ -1,0 +1,10 @@
+{
+  "itemName": "DateRangeComparisonCalculator",
+  "kind": "Class",
+  "category": "Models",
+  "namespace": "Tempo.Blazor.Models",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/Models/DateRangeComparisonCalculator.cs",
+  "documentationStatus": "documented",
+  "description": "The comparison-window arithmetic behind PreviousPeriod and PreviousYear, public so a backend computes exactly the window the picker reports instead of re-deriving it: a report header and the query it drives must agree to the day. Both members accept a reversed range (a UI artefact) and normalize it, and never return an empty window."
+}

@@ -80,4 +80,19 @@
 .tm-cal-day--in-range      { background: var(--tm-cal-range-bg); border-radius: 0; }
 .tm-cal-day--range-start   { background: var(--tm-cal-selected-bg); color: var(--tm-cal-selected-fg); border-radius: var(--tm-radius-sm) 0 0 var(--tm-radius-sm); }
 .tm-cal-day--range-end     { background: var(--tm-cal-selected-bg); color: var(--tm-cal-selected-fg); border-radius: 0 var(--tm-radius-sm) var(--tm-radius-sm) 0; }
+/* A compared (secondary) window. It never borrows the primary wash and its ends keep the
+   base's transparent 2px border box, so marking a day never shifts the grid. A middle day's
+   fill is only ~1.2:1 against the light surface, so the span also carries a 2px underline-style
+   edge (an inset shadow — no extra box, no layout shift) and stays followable for a sighted
+   low-vision reader, not just for assistive technology (WCAG 1.4.11). */
+.tm-cal-day--comparison        { background: var(--tm-cal-comparison-bg); border-radius: 0; box-shadow: inset 0 -2px 0 var(--tm-cal-comparison-border); }
+.tm-cal-day--comparison-start  { background: var(--tm-cal-comparison-bg); border: 2px dashed var(--tm-cal-comparison-border); border-radius: var(--tm-radius-sm) 0 0 var(--tm-radius-sm); }
+.tm-cal-day--comparison-end    { background: var(--tm-cal-comparison-bg); border: 2px dashed var(--tm-cal-comparison-border); border-radius: 0 var(--tm-radius-sm) var(--tm-radius-sm) 0; }
+/* Forced colors drop the fills, so the compared window keeps a SHAPE difference: a dashed
+   system edge that the solid primary range never has. */
+@media (forced-colors: active) {
+  .tm-cal-day--comparison,
+  .tm-cal-day--comparison-start,
+  .tm-cal-day--comparison-end { border: 2px dashed CanvasText; }
+}
 .tm-cal-day--disabled      { opacity: var(--tm-cal-disabled-opacity); cursor: not-allowed; pointer-events: none; }

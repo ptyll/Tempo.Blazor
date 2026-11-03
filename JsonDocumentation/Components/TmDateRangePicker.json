@@ -2,7 +2,7 @@
   "itemName": "TmDateRangePicker",
   "kind": "Component",
   "category": "Pickers",
-  "description": "Date range picker with dual side-by-side calendars, range preset buttons (Today, Last Week, Last Month, etc.), hover highlighting, and a two-click start/end selection flow.",
+  "description": "Date range picker with dual side-by-side calendars, range preset buttons (Today, Last Week, Last Month, etc.), hover highlighting, and a two-click start/end selection flow. The built-in preset row is computed from the injected TimeProvider and labelled through ITmLocalizer, so a host that registers a clock (for example services.TryAddSingleton(TimeProvider.System), or a tenant/FakeTimeProvider) gets presets pinned to ITS today; a host that registers none falls back to TimeProvider.System. The optional comparison period (Comparison) reports a second window: PreviousPeriod derives the equally long window ending the day before the range, PreviousYear the same window one year earlier (a leap day clamps to the 28th) and Custom lets the reader pick the second window themselves through a 'period to edit' switch. The calendar marks the compared window with its own neutral fill and a dashed edge (never the primary wash) plus a visually hidden description every comparison day is aria-describedby'd by, and the trigger names the compared window in its visible text and its accessible name. ComparisonRangeChanged reports the effective window for every mode, only when it actually changes.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Pickers",
     "@using Tempo.Blazor.Models"
@@ -64,6 +64,21 @@
       "name": "Class",
       "type": "string?",
       "isRequired": false
+    },
+    {
+      "name": "Comparison",
+      "type": "DateRangeComparison",
+      "isRequired": false
+    },
+    {
+      "name": "ComparisonRange",
+      "type": "(DateOnly? Start, DateOnly? End)",
+      "isRequired": false
+    },
+    {
+      "name": "ComparisonRangeChanged",
+      "type": "EventCallback<(DateOnly? Start, DateOnly? End)>",
+      "isRequired": false
     }
   ],
   "cssClasses": [
@@ -77,7 +92,15 @@
     "tm-date-range-preset-btn",
     "tm-picker-label",
     "tm-picker-clear",
-    "tm-picker-placeholder"
+    "tm-picker-placeholder",
+    "tm-date-range-trigger__comparison",
+    "tm-date-range-comparison",
+    "tm-date-range-comparison__summary",
+    "tm-date-range-comparison__swatch",
+    "tm-date-range-comparison__label",
+    "tm-date-range-comparison__range",
+    "tm-date-range-comparison__targets",
+    "tm-date-range-comparison__target"
   ],
   "examples": [
     {
@@ -87,6 +110,10 @@
     {
       "title": "Date range picker with custom presets",
       "code": "<TmDateRangePicker @bind-Value=\"dateRange\"\n                   Label=\"Filter dates\"\n                   Presets=\"@customPresets\"\n                   MinDate=\"@(new DateOnly(2025, 1, 1))\"\n                   DateFormat=\"yyyy-MM-dd\" />"
+    },
+    {
+      "title": "Date range picker compared with the previous period",
+      "code": "<TmDateRangePicker @bind-Value=\"dateRange\"\n                   Label=\"Report period\"\n                   Comparison=\"DateRangeComparison.PreviousPeriod\"\n                   ComparisonRangeChanged=\"OnComparisonRangeChanged\" />"
     }
   ]
 }

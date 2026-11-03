@@ -14851,6 +14851,44 @@
       ]
     },
     {
+      "itemName": "DateRangeComparison",
+      "kind": "Enum",
+      "category": "Models",
+      "namespace": "Tempo.Blazor.Models",
+      "description": "How TmDateRangePicker derives the period its reported range is compared against: no comparison, the equally long period immediately before the selected one, the same period one year earlier (29 February clamped to 28 February), or a range the user picks.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Models/DateRangeComparison.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "None",
+          "description": "No comparison period is reported."
+        },
+        {
+          "name": "PreviousPeriod",
+          "description": "The equally long period immediately before the selected range."
+        },
+        {
+          "name": "PreviousYear",
+          "description": "The same calendar range one year earlier, with 29 February clamped to 28 February."
+        },
+        {
+          "name": "Custom",
+          "description": "The user picks the comparison range themselves."
+        }
+      ]
+    },
+    {
+      "itemName": "DateRangeComparisonCalculator",
+      "kind": "Class",
+      "category": "Models",
+      "namespace": "Tempo.Blazor.Models",
+      "description": "The comparison-window arithmetic behind PreviousPeriod and PreviousYear, public so a backend computes exactly the window the picker reports instead of re-deriving it: a report header and the query it drives must agree to the day. Both members accept a reversed range (a UI artefact) and normalize it, and never return an empty window.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Models/DateRangeComparisonCalculator.cs",
+      "documentationStatus": "merged"
+    },
+    {
       "itemName": "DateRangePreset",
       "kind": "Record",
       "category": "Models",
@@ -39688,11 +39726,11 @@
   ],
   "libraryExamples": [],
   "summary": {
-    "itemCount": 1574,
-    "manualItemCount": 1574,
-    "generatedItemCount": 1558,
+    "itemCount": 1576,
+    "manualItemCount": 1576,
+    "generatedItemCount": 1560,
     "generatedOnlyItemCount": 0,
     "componentCount": 0,
-    "publicApiTypeCount": 1558
+    "publicApiTypeCount": 1560
   }
 }

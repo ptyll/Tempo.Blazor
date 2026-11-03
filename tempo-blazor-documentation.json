@@ -26025,7 +26025,7 @@
       "kind": "Component",
       "category": "Pickers",
       "namespace": "Tempo.Blazor.Components.Pickers",
-      "description": "Reusable calendar month with day selection, range highlighting, today indicator, and month navigation. Used internally by TmDatePicker and TmDateRangePicker. The days are native buttons and the month navigation is its own pair of buttons, so the root carries no role=grid and the navigation carries no role=row. Every in-month day is its own tab stop (tabindex 0); other-month and disabled days are tabindex -1. There is no roving tabindex. A selected day, and a range start or end, is aria-pressed; today is aria-current=date; the accessible name is the long date. Weekday headers are generic cells; the abbreviation carries the full name as an abbr title.",
+      "description": "Reusable calendar month with day selection, range highlighting, today indicator, and month navigation. Used internally by TmDatePicker, TmDateRangePicker and TmCalendarView. The days are native buttons and the month navigation is its own pair of buttons, so the root carries no role=grid and the navigation carries no role=row. Every in-month day is its own tab stop (tabindex 0); other-month and disabled days are tabindex -1. There is no roving tabindex. A selected day, and a range start or end, is aria-pressed; today is aria-current=date; the accessible name is the long date. Weekday headers are generic cells; the abbreviation carries the full name as an abbr title. An optional compared (secondary) window paints with tm-cal-day--comparison-start/-end for its ends and tm-cal-day--comparison for its middle days, never overriding the reported range where the two overlap, and every compared day is aria-describedby'd by one visually hidden ComparisonDescription so the distinct fill is never the only signal.",
       "packageId": "Tempo.Blazor",
       "sourcePath": "src/Tempo.Blazor/Components/Pickers/TmCalendarGrid.razor",
       "documentationStatus": "merged",
@@ -26034,61 +26034,90 @@
       ],
       "parameters": [
         {
+          "name": "ComparisonDescription",
+          "type": "string?",
+          "isRequired": false,
+          "description": "The compared window in words (already localized and formatted by the caller). It renders as visually hidden text that every comparison day is `aria-describedby`-described by, so the distinct fill is never the only signal. Null renders no description."
+        },
+        {
+          "name": "ComparisonEnd",
+          "type": "DateOnly?",
+          "isRequired": false,
+          "description": "Inclusive end of the compared window; paints tm-cal-day--comparison-end, while its middle days paint tm-cal-day--comparison."
+        },
+        {
+          "name": "ComparisonStart",
+          "type": "DateOnly?",
+          "isRequired": false,
+          "description": "Inclusive start of a compared (secondary) window. It paints with tm-cal-day--comparison-start and never overrides the reported range where the two windows overlap. Null renders no comparison marking."
+        },
+        {
           "name": "DisplayMonth",
           "type": "int",
           "isRequired": false,
-          "default": "DateTime.Today.Month"
+          "default": "DateTime.Today.Month",
+          "description": "Month rendered (1–12). Defaults to the machine date's month."
         },
         {
           "name": "DisplayYear",
           "type": "int",
           "isRequired": false,
-          "default": "DateTime.Today.Year"
+          "default": "DateTime.Today.Year",
+          "description": "Year of the month rendered. Defaults to the machine date's year."
         },
         {
           "name": "HoverDate",
           "type": "DateOnly?",
-          "isRequired": false
+          "isRequired": false,
+          "description": "Day the pointer is over, for callers that paint the preview themselves."
         },
         {
           "name": "MaxDate",
           "type": "DateOnly?",
-          "isRequired": false
+          "isRequired": false,
+          "description": "Latest selectable day. Null means no upper bound."
         },
         {
           "name": "MinDate",
           "type": "DateOnly?",
-          "isRequired": false
+          "isRequired": false,
+          "description": "Earliest selectable day. Null means no lower bound."
         },
         {
           "name": "OnDateHovered",
           "type": "EventCallback<DateOnly>",
-          "isRequired": false
+          "isRequired": false,
+          "description": "Raised when the pointer enters a day."
         },
         {
           "name": "OnDateSelected",
           "type": "EventCallback<DateOnly>",
-          "isRequired": false
+          "isRequired": false,
+          "description": "Raised when a day is activated."
         },
         {
           "name": "OnNavigate",
           "type": "EventCallback<(int Year, int Month)>",
-          "isRequired": false
+          "isRequired": false,
+          "description": "Raised when the reader navigates to another month."
         },
         {
           "name": "RangeEnd",
           "type": "DateOnly?",
-          "isRequired": false
+          "isRequired": false,
+          "description": "Inclusive end of the reported range; painted as the range's solid end."
         },
         {
           "name": "RangeStart",
           "type": "DateOnly?",
-          "isRequired": false
+          "isRequired": false,
+          "description": "Inclusive start of the reported range; painted as the range's solid start."
         },
         {
           "name": "SelectedDate",
           "type": "DateOnly?",
-          "isRequired": false
+          "isRequired": false,
+          "description": "The day that carries the single-selection highlight, when the calendar is used alone."
         }
       ],
       "cssClasses": [
@@ -26107,7 +26136,10 @@
         "tm-cal-day--range-start",
         "tm-cal-day--range-end",
         "tm-cal-day--in-range",
-        "tm-cal-day--disabled"
+        "tm-cal-day--disabled",
+        "tm-cal-day--comparison",
+        "tm-cal-day--comparison-start",
+        "tm-cal-day--comparison-end"
       ],
       "examples": [
         {
@@ -26304,7 +26336,7 @@
       "kind": "Component",
       "category": "Pickers",
       "namespace": "Tempo.Blazor.Components.Pickers",
-      "description": "Date range picker with dual side-by-side calendars, range preset buttons (Today, Last Week, Last Month, etc.), hover highlighting, and a two-click start/end selection flow.",
+      "description": "Date range picker with dual side-by-side calendars, range preset buttons (Today, Last Week, Last Month, etc.), hover highlighting, and a two-click start/end selection flow. The built-in preset row is computed from the injected TimeProvider and labelled through ITmLocalizer, so a host that registers a clock (for example services.TryAddSingleton(TimeProvider.System), or a tenant/FakeTimeProvider) gets presets pinned to ITS today; a host that registers none falls back to TimeProvider.System. The optional comparison period (Comparison) reports a second window: PreviousPeriod derives the equally long window ending the day before the range, PreviousYear the same window one year earlier (a leap day clamps to the 28th) and Custom lets the reader pick the second window themselves through a 'period to edit' switch. The calendar marks the compared window with its own neutral fill and a dashed edge (never the primary wash) plus a visually hidden description every comparison day is aria-describedby'd by, and the trigger names the compared window in its visible text and its accessible name. ComparisonRangeChanged reports the effective window for every mode, only when it actually changes.",
       "packageId": "Tempo.Blazor",
       "sourcePath": "src/Tempo.Blazor/Components/Pickers/TmDateRangePicker.razor",
       "documentationStatus": "merged",
@@ -26316,59 +26348,88 @@
         {
           "name": "Class",
           "type": "string?",
-          "isRequired": false
+          "isRequired": false,
+          "description": "Additional CSS classes on the component root."
+        },
+        {
+          "name": "Comparison",
+          "type": "DateRangeComparison",
+          "isRequired": true,
+          "description": "How the reported range is compared against a second period. None (the default) renders the pre-2.10 surface unchanged."
+        },
+        {
+          "name": "ComparisonRange",
+          "type": "(DateOnly? Start, DateOnly? End)",
+          "isRequired": true,
+          "description": "The comparison window. It is the source of truth for Custom (so a host can seed or reset it), and the derived window for the two automatic modes is reported back through ComparisonRangeChanged."
+        },
+        {
+          "name": "ComparisonRangeChanged",
+          "type": "EventCallback<(DateOnly? Start, DateOnly? End)>",
+          "isRequired": false,
+          "description": "Raised with the effective comparison window whenever it changes — for every mode, so a host can query the compared period without re-deriving it. Clearing the primary range raises an empty window; None never raises."
         },
         {
           "name": "DateFormat",
           "type": "string",
           "isRequired": false,
-          "default": "\"dd.MM.yyyy\""
+          "default": "\"dd.MM.yyyy\"",
+          "description": "Format used to render each end of the range. Defaults to dd.MM.yyyy."
         },
         {
           "name": "Disabled",
           "type": "bool",
-          "isRequired": false
+          "isRequired": false,
+          "description": "Disables the trigger and the clear button."
         },
         {
           "name": "Label",
           "type": "string?",
-          "isRequired": false
+          "isRequired": false,
+          "description": "Visible label naming the trigger, and the picker's own accessible name."
         },
         {
           "name": "MaxDate",
           "type": "DateOnly?",
-          "isRequired": false
+          "isRequired": false,
+          "description": "Latest selectable day. Null means no upper bound."
         },
         {
           "name": "MinDate",
           "type": "DateOnly?",
-          "isRequired": false
+          "isRequired": false,
+          "description": "Earliest selectable day. Null means no lower bound."
         },
         {
           "name": "Placeholder",
           "type": "string?",
-          "isRequired": false
+          "isRequired": false,
+          "description": "Text shown while no range is selected. Null means the localized \"From\"."
         },
         {
           "name": "Presets",
           "type": "IReadOnlyList<DateRangePreset>?",
-          "isRequired": false
+          "isRequired": false,
+          "description": "Overrides the built-in preset row. Null (the default) uses the localized presets computed from the injected TimeProvider."
         },
         {
           "name": "ShowPresets",
           "type": "bool",
           "isRequired": false,
-          "default": "true"
+          "default": "true",
+          "description": "Whether the preset row renders at all. Defaults to true."
         },
         {
           "name": "Value",
           "type": "(DateOnly? Start, DateOnly? End)",
-          "isRequired": true
+          "isRequired": true,
+          "description": "The selected range. Start and end are inclusive; either may be null."
         },
         {
           "name": "ValueChanged",
           "type": "EventCallback<(DateOnly? Start, DateOnly? End)>",
-          "isRequired": false
+          "isRequired": false,
+          "description": "Raised whenever the reader changes the selected range."
         }
       ],
       "cssClasses": [
@@ -26382,7 +26443,15 @@
         "tm-date-range-preset-btn",
         "tm-picker-label",
         "tm-picker-clear",
-        "tm-picker-placeholder"
+        "tm-picker-placeholder",
+        "tm-date-range-trigger__comparison",
+        "tm-date-range-comparison",
+        "tm-date-range-comparison__summary",
+        "tm-date-range-comparison__swatch",
+        "tm-date-range-comparison__label",
+        "tm-date-range-comparison__range",
+        "tm-date-range-comparison__targets",
+        "tm-date-range-comparison__target"
       ],
       "examples": [
         {
@@ -26392,6 +26461,10 @@
         {
           "title": "Date range picker with custom presets",
           "code": "<TmDateRangePicker @bind-Value=\"dateRange\"\n                   Label=\"Filter dates\"\n                   Presets=\"@customPresets\"\n                   MinDate=\"@(new DateOnly(2025, 1, 1))\"\n                   DateFormat=\"yyyy-MM-dd\" />"
+        },
+        {
+          "title": "Date range picker compared with the previous period",
+          "code": "<TmDateRangePicker @bind-Value=\"dateRange\"\n                   Label=\"Report period\"\n                   Comparison=\"DateRangeComparison.PreviousPeriod\"\n                   ComparisonRangeChanged=\"OnComparisonRangeChanged\" />"
         }
       ]
     },

@@ -32,6 +32,14 @@
             var isStart    = RangeStart.HasValue  && d == RangeStart.Value;
             var isEnd      = RangeEnd.HasValue    && d == RangeEnd.Value;
             var inRange    = DateTimeHelpers.IsInRange(d, RangeStart, RangeEnd) && !isStart && !isEnd;
+            // The compared window paints with its own class so it never reads as the reported one;
+            // the reported range wins where the two overlap, because that is the fact being edited.
+            // Its ends are marked as soon as they exist, so a half-picked window is still visible.
+            var isComparedStart = ComparisonStart.HasValue && d == ComparisonStart.Value && !isStart && !isEnd;
+            var isComparedEnd   = ComparisonEnd.HasValue && d == ComparisonEnd.Value && !isStart && !isEnd
+                                  && !isComparedStart;
+            var isCompared = !isComparedStart && !isComparedEnd && !isStart && !isEnd && !inRange
+                             && DateTimeHelpers.IsInRange(d, ComparisonStart, ComparisonEnd);
             var disabled   = (MinDate.HasValue && d < MinDate.Value) ||
                              (MaxDate.HasValue && d > MaxDate.Value);
 
@@ -42,7 +50,12 @@
                 + (isStart    ? " tm-cal-day--range-start"  : "")
                 + (isEnd      ? " tm-cal-day--range-end"    : "")
                 + (inRange    ? " tm-cal-day--in-range"     : "")
+                + (isCompared ? " tm-cal-day--comparison"   : "")
+                + (isComparedStart ? " tm-cal-day--comparison-start" : "")
+                + (isComparedEnd   ? " tm-cal-day--comparison-end"   : "")
                 + (disabled   ? " tm-cal-day--disabled"     : "");
+
+            var compared = isCompared || isComparedStart || isComparedEnd;
 
             <button class="@css"
                     type="button"
@@ -52,31 +65,83 @@
                     aria-label="@d.ToString("D", CultureInfo.CurrentCulture)"
                     aria-pressed="@(isSelected || isStart || isEnd ? "true" : "false")"
                     aria-current="@(isToday ? "date" : null)"
+                    aria-describedby="@(compared && HasComparisonDescription ? _comparisonDescriptionId : null)"
                     @onclick="() => SelectDay(d)"
                     @onmouseover="() => HoverDay(d)">
                 @d.Day
             </button>
         }
     </div>
+
+    @* The compared window's textual counterpart: the fill alone would be the only carrier. One
+       description element per calendar serves every day in that window. *@
+    @if (HasComparisonDescription)
+    {
+        <span id="@_comparisonDescriptionId" class="tm-sr-only">@ComparisonDescription</span>
+    }
 </div>
 
 @code {
+    /// <summary>Year of the month rendered. Defaults to the machine date's year.</summary>
     [Parameter] public int      DisplayYear  { get; set; } = DateTime.Today.Year;
+
+    /// <summary>Month rendered (1–12). Defaults to the machine date's month.</summary>
     [Parameter] public int      DisplayMonth { get; set; } = DateTime.Today.Month;
+
+    /// <summary>The day that carries the single-selection highlight, when the calendar is used alone.</summary>
     [Parameter] public DateOnly? SelectedDate { get; set; }
+
+    /// <summary>Inclusive start of the reported range; painted as the range's solid start.</summary>
     [Parameter] public DateOnly? RangeStart   { get; set; }
+
+    /// <summary>Inclusive end of the reported range; painted as the range's solid end.</summary>
     [Parameter] public DateOnly? RangeEnd     { get; set; }
+
+    /// <summary>Day the pointer is over, for callers that paint the preview themselves.</summary>
     [Parameter] public DateOnly? HoverDate    { get; set; }
+
+    /// <summary>
+    /// Inclusive start of a compared (secondary) window. It paints with
+    /// <c>tm-cal-day--comparison-start</c> and never overrides the reported range where the two
+    /// windows overlap. Null renders no comparison marking.
+    /// </summary>
+    [Parameter] public DateOnly? ComparisonStart { get; set; }
+
+    /// <summary>
+    /// Inclusive end of the compared window; paints <c>tm-cal-day--comparison-end</c>, while its
+    /// middle days paint <c>tm-cal-day--comparison</c>.
+    /// </summary>
+    [Parameter] public DateOnly? ComparisonEnd   { get; set; }
+
+    /// <summary>
+    /// The compared window in words (already localized and formatted by the caller). It renders as
+    /// visually hidden text that every comparison day is `aria-describedby`-described by, so the
+    /// distinct fill is never the only signal. Null renders no description.
+    /// </summary>
+    [Parameter] public string?   ComparisonDescription { get; set; }
+
+    /// <summary>Earliest selectable day. Null means no lower bound.</summary>
     [Parameter] public DateOnly? MinDate      { get; set; }
+
+    /// <summary>Latest selectable day. Null means no upper bound.</summary>
     [Parameter] public DateOnly? MaxDate      { get; set; }
+
+    /// <summary>Raised when a day is activated.</summary>
     [Parameter] public EventCallback<DateOnly>             OnDateSelected { get; set; }
+
+    /// <summary>Raised when the pointer enters a day.</summary>
     [Parameter] public EventCallback<DateOnly>             OnDateHovered  { get; set; }
+
+    /// <summary>Raised when the reader navigates to another month.</summary>
     [Parameter] public EventCallback<(int Year, int Month)> OnNavigate    { get; set; }
 
+    private readonly string _comparisonDescriptionId = $"tm-cal-comparison-{Guid.NewGuid():N}";
     private IReadOnlyList<DateOnly> _days       = [];
     private IReadOnlyList<string>   _dayHeaders = [];
     private IReadOnlyList<string>   _dayHeaderNames = [];
     private string                  _monthName  = string.Empty;
+
+    private bool HasComparisonDescription => !string.IsNullOrEmpty(ComparisonDescription);
 
     protected override void OnParametersSet()
     {

@@ -1,0 +1,28 @@
+{
+  "itemName": "DateRangeComparison",
+  "kind": "Enum",
+  "category": "Models",
+  "namespace": "Tempo.Blazor.Models",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/Models/DateRangeComparison.cs",
+  "documentationStatus": "documented",
+  "description": "How TmDateRangePicker derives the period its reported range is compared against: no comparison, the equally long period immediately before the selected one, the same period one year earlier (29 February clamped to 28 February), or a range the user picks.",
+  "members": [
+    {
+      "name": "None",
+      "description": "No comparison period is reported."
+    },
+    {
+      "name": "PreviousPeriod",
+      "description": "The equally long period immediately before the selected range."
+    },
+    {
+      "name": "PreviousYear",
+      "description": "The same calendar range one year earlier, with 29 February clamped to 28 February."
+    },
+    {
+      "name": "Custom",
+      "description": "The user picks the comparison range themselves."
+    }
+  ]
+}

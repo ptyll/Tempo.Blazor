@@ -6609,5 +6609,14 @@
   "TmAppShell_WorkArea": "Pracovní plocha",
   "TmAppShell_ResizeWorkArea": "Změnit šířku pracovní plochy",
   "TmAppShell_CloseWorkArea": "Zavřít pracovní plochu",
-  "TmAppShell_MenuButton": "Navigační nabídka"
+  "TmAppShell_MenuButton": "Navigační nabídka",
+  "TmDateRangePicker_Comparison": "Srovnávané období",
+  "TmDateRangePicker_ComparisonPrimary": "Hlavní období",
+  "TmDateRangePicker_ComparisonTarget": "Období k úpravě",
+  "TmDateRangePicker_ComparisonPreviousPeriod": "Předchozí období",
+  "TmDateRangePicker_ComparisonPreviousYear": "Stejné období loni",
+  "TmDateRangePicker_ComparisonEmpty": "Nenastaveno",
+  "TmDateRangePicker_ComparisonRangeDescription": "Srovnávané období: {0} – {1}",
+  "TmDateRangePicker_ComparisonSummaryFormat": "{0}: {1} – {2}",
+  "TmDateRangePicker_ComparisonRangeFormat": "{0} – {1}"
 }
