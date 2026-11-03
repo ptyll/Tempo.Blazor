@@ -218,6 +218,23 @@ public sealed class TmOverlayPanelDialogNamingTests : LocalizationTestBase
                 cut.Find(".tm-data-table-cards-toolbar__filter").Click();
                 return cut.Find("[role='dialog']");
             },
+            // TmFacetFilter (plan ff043b2e, Fáze 4): the filter surface is a dialog-role popover named
+            // by its visible heading (AriaLabelledBy -> the panel title). The phone band composes the
+            // core drawer sheet instead, so the popover presentation is the site the sweep opens.
+            ["TmFacetFilter"] = () =>
+            {
+                var cut = Render<TmFacetFilter>(p => p.Add(c => c.Groups,
+                [
+                    new FacetGroup
+                    {
+                        Key = "status",
+                        Label = "Status",
+                        Options = [new FacetOption { Value = "open", Label = "Open", Count = 1 }],
+                    },
+                ]));
+                cut.Find("[data-testid='facet-filter-trigger']").Click();
+                return cut.Find("[role='dialog']");
+            },
             ["TmColumnPicker"] = () =>
             {
                 var cut = Render<TmColumnPicker>(p => p.Add(c => c.Columns,

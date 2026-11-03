@@ -7424,6 +7424,27 @@
       "documentationStatus": "merged"
     },
     {
+      "itemName": "FacetFilterPresentation",
+      "kind": "Enum",
+      "category": "Components",
+      "namespace": "Tempo.Blazor.Components.Filters",
+      "description": "How TmFacetFilter presents its groups: the default trigger with an overlay (anchored dialog popover on a wide layout, bottom sheet on a phone), or the groups inline in the page flow.",
+      "packageId": "Tempo.Blazor",
+      "sourcePath": "src/Tempo.Blazor/Components/Filters/FacetFilterPresentation.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Popover",
+          "description": "A trigger button opens the groups in an overlay: an anchored dialog popover on a wide layout, a bottom sheet on a mobile one. The default — the groups cost no page space until the user asks for them."
+        },
+        {
+          "name": "Inline",
+          "description": "The groups are rendered in the page flow, always visible, with no trigger and no overlay — for a filter sidebar where the groups ARE the content. The mobile sheet does not apply, because there is nothing to open."
+        }
+      ],
+      "usageExample": "<TmFacetFilter Presentation=\"FacetFilterPresentation.Inline\" Groups=\"@groups\" @bind-Selected=\"_selected\" />"
+    },
+    {
       "itemName": "FilterBuilderPresentation",
       "kind": "Enum",
       "category": "Components",
@@ -16605,6 +16626,199 @@
       ]
     },
     {
+      "itemName": "TmFacetFilter",
+      "kind": "Component",
+      "category": "Filters",
+      "namespace": "Tempo.Blazor.Components.Filters",
+      "description": "A faceted filter: labelled groups of checkbox options with result counts, a search box inside a long group, a \"show more\" truncation, the active filters as removable chips and a clear-all action. Two presentations — a trigger plus an overlay (an anchored dialog popover on a wide layout, a bottom sheet on a phone) or the groups inline in the page flow. The selection is two-way bound as a dictionary of group key to the set of selected values.",
+      "packageId": "Tempo.Blazor",
+      "sourcePath": "src/Tempo.Blazor/Components/Filters/TmFacetFilter.razor",
+      "documentationStatus": "merged",
+      "requiredImports": [
+        "@using Tempo.Blazor.Components.Filters",
+        "@using Tempo.Blazor.Models"
+      ],
+      "parameters": [
+        {
+          "name": "Class",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Additional CSS class(es) for the root element."
+        },
+        {
+          "name": "Culture",
+          "type": "CultureInfo?",
+          "isRequired": false,
+          "description": "The culture that formats the result counts. Null means the current culture at render time. It formats numbers only — the grammatical plural forms come from the localizer's UI culture."
+        },
+        {
+          "name": "Groups",
+          "type": "IReadOnlyList<FacetGroup>",
+          "isRequired": true,
+          "default": "[]",
+          "description": "The groups of the filter, rendered in the order supplied. Each FacetGroup carries Key, Label, Options, IsCollapsed (the INITIAL state), MaxVisible and SearchThreshold. A group with a blank Key is skipped, because its options could not be reported back.",
+          "editorRequired": true
+        },
+        {
+          "name": "InitialMode",
+          "type": "TmLayoutMode",
+          "isRequired": false,
+          "default": "TmLayoutMode.Desktop",
+          "description": "The layout rendered before the first measurement."
+        },
+        {
+          "name": "LayoutMode",
+          "type": "TmLayoutMode",
+          "isRequired": false,
+          "default": "TmLayoutMode.Auto",
+          "description": "The layout the presentation resolves from. Auto follows the viewport scope; a forced value never measures, so a host or a test can pin a phone presentation without a DOM."
+        },
+        {
+          "name": "MaxVisible",
+          "type": "int",
+          "isRequired": false,
+          "default": "6",
+          "description": "How many options a group renders before its \"Show {n} more\" button appears, when the group does not override it (FacetGroup.MaxVisible). A value of 0 or less renders every option."
+        },
+        {
+          "name": "OnApply",
+          "type": "EventCallback",
+          "isRequired": false,
+          "description": "Fires when the reader confirms the filters with the primary action of the popover or the sheet. The overlay closes first, so a host that reloads its data here never fights an open surface. Filters otherwise apply on every toggle — confirmation is a dismissal, not the only way to apply."
+        },
+        {
+          "name": "Presentation",
+          "type": "FacetFilterPresentation",
+          "isRequired": false,
+          "default": "FacetFilterPresentation.Popover",
+          "description": "Popover (the default): a trigger plus an anchored dialog popover on a wide layout and a bottom sheet on a mobile one. Inline: the groups in the page flow with no trigger, no overlay and no sheet."
+        },
+        {
+          "name": "ResolvedLayoutChanged",
+          "type": "EventCallback<TmLayoutMode>",
+          "isRequired": false,
+          "description": "Raised when the resolved layout changes. The initial value is not a change. Do not pair it with a two-way LayoutMode bind: it reports the resolved mode, and a bind would pin that mode."
+        },
+        {
+          "name": "ResultCount",
+          "type": "int?",
+          "isRequired": false,
+          "description": "The number of records the current selection leaves, when the host knows it. Supplying it turns the confirmation action into the primary \"Show {n} results\" button and makes the single polite live region announce the number when it changes. Null keeps the neutral \"Show results\" label and announces nothing."
+        },
+        {
+          "name": "SearchThreshold",
+          "type": "int",
+          "isRequired": false,
+          "default": "8",
+          "description": "How many options turn a group's own search box on, when the group does not override it (FacetGroup.SearchThreshold). The box appears at options.Count >= SearchThreshold. A value of 0 or less disables the search box everywhere."
+        },
+        {
+          "name": "Selected",
+          "type": "IReadOnlyDictionary<string, IReadOnlySet<string>>?",
+          "isRequired": false,
+          "description": "The current selection, keyed by group key and matched ORDINALLY. Two-way bound with SelectedChanged (@bind-Selected). A host key that matches no group is preserved untouched and rendered as a removable chip labelled with the raw value. A re-supplied reference never undoes what the reader picked (it cannot be told apart from an ordinary re-render), so a host that REFUSES a change must pass a NEW dictionary holding the selection it wants rendered."
+        },
+        {
+          "name": "SelectedChanged",
+          "type": "EventCallback<IReadOnlyDictionary<string, IReadOnlySet<string>>>",
+          "isRequired": false,
+          "description": "Fires with an IMMUTABLE snapshot of the whole selection after every toggle, chip removal and clear-all. The snapshot is a fresh dictionary of fresh sets; a group with nothing selected is omitted instead of shipping an empty set."
+        },
+        {
+          "name": "ShowActiveFilters",
+          "type": "bool",
+          "isRequired": false,
+          "default": "true",
+          "description": "Renders the active filters as removable chips below the trigger (or below the inline groups). The chips are the only place a value can be removed without opening the surface."
+        },
+        {
+          "name": "ShowClearAll",
+          "type": "bool",
+          "isRequired": false,
+          "default": "true",
+          "description": "Renders the clear-all action: once in the chip row of the page and once in the footer of the open surface (the modal surface makes the page one unreachable, so each presentation needs its own)."
+        },
+        {
+          "name": "ShowCounts",
+          "type": "bool",
+          "isRequired": false,
+          "default": "true",
+          "description": "Renders the result counts next to the option label and inside the checkbox's accessible name, so the number is never a visual-only fact."
+        },
+        {
+          "name": "Title",
+          "type": "string?",
+          "isRequired": false,
+          "description": "The heading of the filter surface: the popover's visible title (which also names the dialog), the sheet's header title and the inline heading. Null means the localized default (\"Filters\")."
+        },
+        {
+          "name": "TriggerLabel",
+          "type": "string?",
+          "isRequired": false,
+          "description": "The visible label of the trigger button. Null means the localized default (\"Filters\"). It is also the head of the trigger's accessible name once something is selected (\"Filters (selected: 2)\")."
+        },
+        {
+          "name": "DataTestId",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Overrides the root data-testid; the default id is facet-filter and TestIdPrefix namespaces it."
+        },
+        {
+          "name": "TestIdPrefix",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Namespaces every internal data-testid of this instance as \"{prefix}-{name}\", so several facet filters on one page stay targetable."
+        }
+      ],
+      "cssClasses": [
+        "tm-facet-filter",
+        "tm-facet-filter__trigger",
+        "tm-facet-filter__trigger-icon",
+        "tm-facet-filter__trigger-label",
+        "tm-facet-filter__trigger-count",
+        "tm-facet-filter__panel",
+        "tm-facet-filter__sheet",
+        "tm-facet-filter__title",
+        "tm-facet-filter__inline",
+        "tm-facet-filter__body",
+        "tm-facet-filter__group",
+        "tm-facet-filter__group-heading",
+        "tm-facet-filter__group-toggle",
+        "tm-facet-filter__group-label",
+        "tm-facet-filter__group-count",
+        "tm-facet-filter__chevron",
+        "tm-facet-filter__group-body",
+        "tm-facet-filter__search",
+        "tm-facet-filter__options",
+        "tm-facet-filter__option",
+        "tm-facet-filter__option-icon",
+        "tm-facet-filter__option-count",
+        "tm-facet-filter__show-more",
+        "tm-facet-filter__no-results",
+        "tm-facet-filter__empty",
+        "tm-facet-filter__footer",
+        "tm-facet-filter__panel-clear",
+        "tm-facet-filter__confirm",
+        "tm-facet-filter__chips",
+        "tm-facet-filter__chip",
+        "tm-facet-filter__clear"
+      ],
+      "examples": [
+        {
+          "title": "A faceted filter over a product list",
+          "code": "<TmFacetFilter Groups=\"@groups\" @bind-Selected=\"_selected\" ResultCount=\"@_resultCount\" OnApply=\"LoadAsync\" />\n@code {\n    private IReadOnlyDictionary<string, IReadOnlySet<string>>? _selected;\n    private int? _resultCount;\n\n    private readonly FacetGroup[] groups =\n    [\n        new()\n        {\n            Key = \"category\",\n            Label = \"Category\",\n            Options =\n            [\n                new() { Value = \"books\", Label = \"Books\", Count = 480 },\n                new() { Value = \"music\", Label = \"Music\", Count = 120 },\n                new() { Value = \"toys\", Label = \"Toys\", Count = 90, IsDisabled = true }\n            ]\n        },\n        new()\n        {\n            Key = \"status\",\n            Label = \"Status\",\n            SearchThreshold = 0, // a short list does not need a search box\n            Options = [new() { Value = \"in-stock\", Label = \"In stock\", Count = 61 }]\n        }\n    ];\n}"
+        },
+        {
+          "title": "Inline filter sidebar",
+          "code": "<TmFacetFilter Presentation=\"FacetFilterPresentation.Inline\"\n               Title=\"Refine\"\n               Groups=\"@groups\"\n               @bind-Selected=\"_selected\" />"
+        },
+        {
+          "title": "A PINNED group that starts collapsed",
+          "code": "<TmFacetFilter Groups=\"@groups\" @bind-Selected=\"_selected\" />\n@code {\n    private readonly FacetGroup[] groups =\n    [\n        new()\n        {\n            Key = \"brand\",\n            Label = \"Brand\",\n            IsCollapsed = true,   // the INITIAL state only; the reader owns it afterwards\n            MaxVisible = 3,       // three rows, then \"Show 12 more\"\n            Options = [ /* ... */ ]\n        }\n    ];\n}"
+        }
+      ]
+    },
+    {
       "itemName": "TmFilterBuilder",
       "kind": "Component",
       "category": "Filters",
@@ -16741,6 +16955,12 @@
           "type": "EventCallback<ActiveFilter>",
           "isRequired": false,
           "description": "Fires when the remove button is clicked."
+        },
+        {
+          "name": "RemoveButtonId",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Optional DOM id of the remove button. A host that removes a chip programmatically uses it to hand focus to the neighbouring chip's button, because the button that held focus leaves the DOM (WCAG 2.4.3). Null (the default) renders no id, leaving existing markup unchanged."
         }
       ],
       "cssClasses": [
@@ -33761,6 +33981,10 @@
       "kind": "Css"
     },
     {
+      "path": "src/Tempo.Blazor/wwwroot/css/components/_facet-filter.css",
+      "kind": "Css"
+    },
+    {
       "path": "src/Tempo.Blazor/wwwroot/css/components/_file-drop-zone.css",
       "kind": "Css"
     },
@@ -34454,11 +34678,11 @@
     }
   ],
   "summary": {
-    "itemCount": 433,
-    "manualItemCount": 433,
-    "generatedItemCount": 425,
+    "itemCount": 435,
+    "manualItemCount": 435,
+    "generatedItemCount": 427,
     "generatedOnlyItemCount": 0,
-    "componentCount": 230,
-    "publicApiTypeCount": 195
+    "componentCount": 231,
+    "publicApiTypeCount": 196
   }
 }

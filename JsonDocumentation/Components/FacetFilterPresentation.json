@@ -1,0 +1,21 @@
+{
+  "kind": "Enum",
+  "category": "Filters",
+  "namespace": "Tempo.Blazor.Components.Filters",
+  "description": "How TmFacetFilter presents its groups: the default trigger with an overlay (anchored dialog popover on a wide layout, bottom sheet on a phone), or the groups inline in the page flow.",
+  "packageId": "Tempo.Blazor",
+  "sourcePath": "src/Tempo.Blazor/Components/Filters/FacetFilterPresentation.cs",
+  "documentationStatus": "documented",
+  "itemName": "FacetFilterPresentation",
+  "members": [
+    {
+      "name": "Popover",
+      "description": "A trigger button opens the groups in an overlay: an anchored dialog popover on a wide layout, a bottom sheet on a mobile one. The default — the groups cost no page space until the user asks for them."
+    },
+    {
+      "name": "Inline",
+      "description": "The groups are rendered in the page flow, always visible, with no trigger and no overlay — for a filter sidebar where the groups ARE the content. The mobile sheet does not apply, because there is nothing to open."
+    }
+  ],
+  "usageExample": "<TmFacetFilter Presentation=\"FacetFilterPresentation.Inline\" Groups=\"@groups\" @bind-Selected=\"_selected\" />"
+}

@@ -1,0 +1,306 @@
+@namespace Tempo.Blazor.Components.Filters
+@inherits Tempo.Blazor.Components.TmComponentBase
+@using Tempo.Blazor.Abstractions.Layout
+@using Tempo.Blazor.Components.Icons
+@using Tempo.Blazor.Components.Inputs
+@using Tempo.Blazor.Components.Layout
+@using Tempo.Blazor.Components.Overlay
+@using Tempo.Blazor.Models
+
+@* A faceted filter: trigger + overlay (anchored dialog popover on a wide layout, bottom sheet on a
+   phone) or the groups inline in the page flow. The selection is the contract — the chips, the
+   counts and the surface are views of one internal state, and every gesture raises one immutable
+   snapshot through SelectedChanged.
+   The render is a projection of state only: no JS of its own, no second keyboard model (native
+   buttons and native checkboxes do the work), one polite live region for the result count. *@
+@if (NeedsProbe)
+{
+    @Probe
+}
+
+<div class="@RootClass"
+     data-testid="@RootTestId("facet-filter")"
+     data-presentation="@PresentationCss"
+     data-layout="@Context.CssModifier">
+
+    @if (Presentation == FacetFilterPresentation.Popover)
+    {
+        <button type="button"
+                @ref="_triggerRef"
+                id="@TriggerId"
+                class="tm-facet-filter__trigger"
+                data-testid="@TestId("facet-filter-trigger")"
+                aria-haspopup="dialog"
+                aria-expanded="@(_open ? "true" : "false")"
+                aria-controls="@(_open && !UseSheet ? PanelId : null)"
+                aria-label="@TriggerAriaLabel"
+                @onclick="ToggleOpenAsync">
+            <span class="tm-facet-filter__trigger-icon" aria-hidden="true">
+                <TmIcon Name="@IconNames.Filter" Size="IconSize.Sm" />
+            </span>
+            <span class="tm-facet-filter__trigger-label">@ResolvedTriggerLabel</span>
+            @if (ActiveCount > 0)
+            {
+                <span class="tm-facet-filter__trigger-count" aria-hidden="true">@ActiveCount</span>
+            }
+        </button>
+
+        @if (UseSheet)
+        {
+            @* The phone presentation: the same groups and footer inside the core bottom sheet. The
+               drawer owns the modality, the swipe, the Escape path and the focus restore to the
+               trigger; the confirm action lives in the sheet's own footer so it can say how many
+               results the filter leaves. *@
+            <TmDrawer IsOpen="_open"
+                      IsOpenChanged="SetOpenAsync"
+                      Position="DrawerPosition.Bottom"
+                      Modal="true"
+                      Title="@ResolvedTitle"
+                      AriaLabel="@ResolvedTitle"
+                      ShowCloseButton="true"
+                      CloseOnEscape="true"
+                      CloseOnOverlayClick="true"
+                      SwipeToDismiss="true"
+                      RestoreFocusTarget="_triggerRef"
+                      Class="tm-facet-filter__sheet"
+                      DataTestId="@TestId("facet-filter-sheet")">
+                <ChildContent>
+                    <div class="tm-facet-filter__body">
+                        @FacetBody
+                    </div>
+                </ChildContent>
+                <FooterContent>
+                    @FacetFooter
+                </FooterContent>
+            </TmDrawer>
+        }
+        else
+        {
+            @* TrapFocus makes this a real dialog: the background is inert, Tab stays inside, and
+               overlay.js restores focus to the trigger on Escape (CloseOnEscape is always true). *@
+            <TmOverlayPanel IsOpen="_open"
+                            IsOpenChanged="SetOpenAsync"
+                            Anchor="_triggerRef"
+                            Placement="OverlayPlacement.Bottom"
+                            Align="OverlayAlign.Start"
+                            Offset="6"
+                            Role="dialog"
+                            TrapFocus="true"
+                            Title="@ResolvedTitle"
+                            AriaLabelledBy="@PanelTitleId"
+                            ConstrainHeight="true"
+                            Class="tm-facet-filter__panel"
+                            AdditionalAttributes="PanelAttributes">
+                <h3 id="@PanelTitleId" class="tm-facet-filter__title">@ResolvedTitle</h3>
+                <div class="tm-facet-filter__body">
+                    @FacetBody
+                </div>
+                @FacetFooter
+            </TmOverlayPanel>
+        }
+    }
+    else
+    {
+        @* tabindex="-1" is the fallback home for focus when a removal empties the chip row: an inline
+           filter has no trigger, so the heading is the only stable landmark left (there is usually a
+           disclosure to land on instead, which is preferred). *@
+        <section class="tm-facet-filter__inline" aria-labelledby="@InlineTitleId">
+            <h3 id="@InlineTitleId" tabindex="-1" class="tm-facet-filter__title">@ResolvedTitle</h3>
+            <div class="tm-facet-filter__body">
+                @FacetBody
+            </div>
+        </section>
+    }
+
+    @{
+        // Once per render: the chip list drives both the "is there a row" test and the row itself.
+        var chips = BuildChips();
+    }
+    @if (ShowActiveFilters && chips.Count > 0)
+    {
+        @* Always on the page (and always reachable when no surface is open): the one place a value
+           can be removed without opening the filter. The wrappers are keyed by group+value, so a
+           removal keeps every surviving chip's DOM (no neighbour's remove button is recreated); the
+           ids stay positional, which is where the focus handoff lands. *@
+        <div class="tm-facet-filter__chips"
+             role="group"
+             data-testid="@TestId("facet-filter-chips")"
+             aria-label="@Loc["TmFacetFilter_ActiveFilters"]">
+            @for (var chipIndex = 0; chipIndex < chips.Count; chipIndex++)
+            {
+                var chip = chips[chipIndex];
+                var index = chipIndex;
+                <span class="tm-facet-filter__chip"
+                      @key="chip.GroupKey + '\u001f' + chip.Value"
+                      data-testid="@TestId("facet-filter-chip")"
+                      data-group-key="@chip.GroupKey"
+                      data-option-value="@chip.Value">
+                    <TmFilterChip Filter="@ToActiveFilter(chip)"
+                                  RemoveButtonId="@ChipRemoveId(index)"
+                                  OnRemove="@(_ => RemoveChipAsync(chip, index))"
+                                  OnEdit="@(_ => EditChipAsync(chip))" />
+                </span>
+            }
+            @if (ShowClearAll)
+            {
+                <button type="button"
+                        class="tm-facet-filter__clear"
+                        data-testid="@TestId("facet-filter-clear-all")"
+                        @onclick="ClearAllFromPageAsync">
+                    @Loc["TmFacetFilter_ClearAll"]
+                </button>
+            }
+        </div>
+    }
+
+    @* The ONE polite region. It carries the result count the host reports, because a number that
+       changes without a focus move has no other announcement path; the checkbox state and the
+       disclosure counts are announced natively and are never repeated here. *@
+    <p class="tm-sr-only" role="status" aria-live="polite">
+        <span @key="_liveSequence">@_liveMessage</span>
+    </p>
+</div>
+
+@code {
+    /// <summary>The panel's extra attributes — the panel element owns the internal test id.</summary>
+    private Dictionary<string, object> PanelAttributes => new()
+    {
+        ["data-testid"] = TestId("facet-filter-panel")
+    };
+
+    /// <summary>
+    /// The groups: one disclosure per group, each with an optional search box, the (truncated) option
+    /// list and the "show more" action. Shared verbatim by the popover, the sheet and the inline
+    /// presentation, so the three can never drift.
+    /// </summary>
+    private RenderFragment FacetBody => @<text>
+        @if (_groups.Count == 0)
+        {
+            <p class="tm-facet-filter__empty">@Loc["TmFacetFilter_Empty"]</p>
+        }
+        else
+        {
+            @for (var index = 0; index < _groups.Count; index++)
+            {
+                var group = _groups[index];
+                var expanded = IsExpanded(group);
+                var selectedCount = SelectedCount(group);
+                var toggleId = GroupToggleId(index);
+                var bodyId = GroupBodyId(index);
+                var options = VisibleOptions(group);
+                var hidden = HiddenCount(group);
+                <section class="tm-facet-filter__group"
+                         data-testid="@TestId("facet-filter-group")"
+                         data-group-key="@group.Key">
+                    <h4 class="tm-facet-filter__group-heading">
+                        <button type="button"
+                                id="@toggleId"
+                                class="tm-facet-filter__group-toggle"
+                                data-testid="@TestId("facet-filter-group-toggle")"
+                                aria-expanded="@(expanded ? "true" : "false")"
+                                aria-controls="@bodyId"
+                                aria-label="@GroupAriaLabel(group)"
+                                @onclick="() => ToggleGroupAsync(group)">
+                            <span class="tm-facet-filter__group-label">@LabelOf(group)</span>
+                            @if (selectedCount > 0)
+                            {
+                                <span class="tm-facet-filter__group-count" aria-hidden="true">@selectedCount</span>
+                            }
+                            <span class="tm-facet-filter__chevron" aria-hidden="true">
+                                <TmIcon Name="@IconNames.ChevronDown" Size="IconSize.Xs" />
+                            </span>
+                        </button>
+                    </h4>
+                    @if (expanded)
+                    {
+                        <div id="@bodyId"
+                             class="tm-facet-filter__group-body"
+                             role="group"
+                             aria-labelledby="@toggleId">
+                            @if (ShowSearch(group))
+                            {
+                                <div class="tm-facet-filter__search">
+                                    <TmSearchInput Value="@SearchText(group)"
+                                                   ValueChanged="@(value => SetSearchAsync(group, value))"
+                                                   Placeholder="@SearchPlaceholder(group)"
+                                                   data-testid="@TestId("facet-filter-search")" />
+                                </div>
+                            }
+                            @if (options.Count == 0)
+                            {
+                                <p class="tm-facet-filter__no-results">@Loc["TmFacetFilter_NoResults"]</p>
+                            }
+                            else
+                            {
+                                <ul class="tm-facet-filter__options">
+                                    @for (var optionIndex = 0; optionIndex < options.Count; optionIndex++)
+                                    {
+                                        var option = options[optionIndex];
+                                        <li class="tm-facet-filter__option"
+                                            data-testid="@TestId("facet-filter-option")"
+                                            data-option-value="@option.Value">
+                                            @if (!string.IsNullOrEmpty(option.Icon))
+                                            {
+                                                <span class="tm-facet-filter__option-icon" aria-hidden="true">
+                                                    <TmIcon Name="@option.Icon" Size="IconSize.Sm" />
+                                                </span>
+                                            }
+                                            @* The input's id is positional (group body + option index), so
+                                               "show more" can hand focus to the first option it revealed. *@
+                                            <TmCheckbox Value="@IsSelected(group, option)"
+                                                        ValueChanged="@(isChecked => ToggleOptionAsync(group, option, isChecked))"
+                                                        Label="@LabelOf(option)"
+                                                        Disabled="@option.IsDisabled"
+                                                        InputAttributes="@OptionInputAttributes(OptionAriaLabel(option), index, optionIndex)" />
+                                            @if (ShowCounts && option.Count.HasValue)
+                                            {
+                                                <span class="tm-facet-filter__option-count" aria-hidden="true">@FormatCount(option.Count.Value)</span>
+                                            }
+                                        </li>
+                                    }
+                                </ul>
+                            }
+                            @if (hidden > 0)
+                            {
+                                <button type="button"
+                                        class="tm-facet-filter__show-more"
+                                        data-testid="@TestId("facet-filter-show-more")"
+                                        @onclick="() => ShowAllAsync(group)">
+                                    @ShowMoreLabel(group)
+                                </button>
+                            }
+                        </div>
+                    }
+                </section>
+            }
+        }
+    </text>;
+
+    /// <summary>
+    /// The surface's footer: the clear-all shortcut (the chip row behind the modal surface is
+    /// unreachable while it is open) and the primary confirmation action. The clear action disables
+    /// itself once nothing is selected, so it hands focus to the confirmation before that happens;
+    /// the confirmation carries a DOM id for exactly that hand-off.
+    /// </summary>
+    private RenderFragment FacetFooter => @<text>
+        <div class="tm-facet-filter__footer">
+            @if (ShowClearAll)
+            {
+                <button type="button"
+                        class="tm-facet-filter__panel-clear"
+                        data-testid="@TestId("facet-filter-panel-clear-all")"
+                        disabled="@(!HasSelection)"
+                        @onclick="ClearAllFromPanelAsync">
+                    @Loc["TmFacetFilter_ClearAll"]
+                </button>
+            }
+            <button type="button"
+                    id="@ConfirmButtonId"
+                    class="tm-facet-filter__confirm"
+                    data-testid="@TestId("facet-filter-confirm")"
+                    @onclick="ApplyAsync">
+                @ConfirmLabel
+            </button>
+        </div>
+    </text>;
+}

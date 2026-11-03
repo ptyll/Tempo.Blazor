@@ -130,6 +130,10 @@ public sealed class OverlayPanelComputedStyleRegressionTests
         // owns only the surface; overlay.js owns position and stacking.
         new("TmFilterBuilder.razor", "tm-filter-builder-panel",
             "var(--tm-bg-surface)", "var(--tm-border-color)", "var(--tm-space-3)", null),
+        // TmFacetFilter (plan ff043b2e, Fáze 4): the filter surface is the shared dialog panel. Its
+        // surface/border/padding ride the tokens; the phone presentation is the core drawer sheet.
+        new("TmFacetFilter.razor", "tm-facet-filter__panel",
+            "var(--tm-bg-surface)", "var(--tm-border-color)", "var(--tm-space-3)", null),
         // TmUserMenu (plan 5d396592, Fáze 2): the account popup rides the shared panel and owns its
         // surface/border/padding; the body layout lives on the inner .tm-user-menu__body because the
         // mobile sheet drops this class (the panel is the drawer's content wrapper there).

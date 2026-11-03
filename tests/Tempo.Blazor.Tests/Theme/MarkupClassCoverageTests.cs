@@ -463,7 +463,10 @@ public sealed class MarkupClassCoverageTests
             // Charts phase 3 (plan ff043b2e): TmSparkline's keyboard-hint id is per instance
             // ("tm-sparkline-hint-{counter}" in TmSparkline.razor.cs), so its prefix joined the
             // scanned population — 68 → 69.
-            ExpectedUnmeasurableStems: 69),
+            // Facet filter phase 4 (plan ff043b2e): TmFacetFilter's whole DOM id prefix is one
+            // per-instance literal ("tm-facet-filter-{Guid…}" in TmFacetFilter.razor.cs); every
+            // group/body/option id is built from it by position — 69 → 70.
+            ExpectedUnmeasurableStems: 70),
         new Scope("Signing", "Tempo.Blazor.Signing", UnstyledSigningMarkupClasses,
             MinRazorFiles: 28, MinMarkupClasses: 400, InheritsCoreCss: true,
             // Signing redesign phase 2 (B25): the runner's single step panel id

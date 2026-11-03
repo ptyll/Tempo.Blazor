@@ -7,6 +7,7 @@
         <span class="tm-filter-chip-value">@Filter.DisplayValue</span>
     </span>
     <button type="button"
+            id="@RemoveButtonId"
             class="tm-filter-chip-remove"
             aria-label="@Loc["Tm_Remove"]"
             @onclick:stopPropagation="true"
@@ -24,6 +25,14 @@
 
     /// <summary>Fires when the chip body is clicked (to re-open edit UI).</summary>
     [Parameter] public EventCallback<ActiveFilter> OnEdit { get; set; }
+
+    /// <summary>
+    /// Optional DOM id of the remove button. A host that removes a chip programmatically uses it to
+    /// hand focus to the neighbouring chip's button — the button that held focus leaves the DOM, so
+    /// without this the focus falls to the page body (WCAG 2.4.3). Null (the default) renders no id,
+    /// leaving the markup of every existing consumer unchanged.
+    /// </summary>
+    [Parameter] public string? RemoveButtonId { get; set; }
 
     private async Task HandleRemoveClick() => await OnRemove.InvokeAsync(Filter);
     private async Task HandleChipClick()   => await OnEdit.InvokeAsync(Filter);

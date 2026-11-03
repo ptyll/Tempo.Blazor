@@ -16125,6 +16125,115 @@
       "documentationStatus": "merged"
     },
     {
+      "itemName": "FacetGroup",
+      "kind": "Record",
+      "category": "Models",
+      "namespace": "Tempo.Blazor.Models",
+      "description": "One group of a faceted filter: a labelled, collapsible set of FacetOptions whose selected values come back under Key in TmFacetFilter's selection dictionary. Data only — the component never re-sorts the options, never invents a count and never drops a value the host selected.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Models/FacetModels.cs",
+      "documentationStatus": "merged",
+      "properties": [
+        {
+          "name": "Key",
+          "type": "string",
+          "isRequired": true,
+          "description": "The programmatic key of the group — the dictionary key of the selection it owns. Keys are matched ORDINALLY; a group with an empty key is skipped, because its options could not be reported back."
+        },
+        {
+          "name": "Label",
+          "type": "string",
+          "isRequired": true,
+          "description": "The human-readable group label: the disclosure button's name and the prefix of every active-filter chip this group produces. A blank label falls back to Key."
+        },
+        {
+          "name": "Options",
+          "type": "IReadOnlyList<FacetOption>",
+          "isRequired": false,
+          "default": "[]",
+          "description": "The options of the group, rendered in the order supplied. Null entries and options without a value are skipped. Compared by REFERENCE by the record's generated equality, so two groups built separately from equal options are not equal by value — identify a group by Key."
+        },
+        {
+          "name": "IsCollapsed",
+          "type": "bool",
+          "isRequired": false,
+          "default": "false",
+          "description": "The INITIAL collapsed state. The user owns the state afterwards: flipping this value later does not re-collapse or re-expand a group the reader already touched."
+        },
+        {
+          "name": "MaxVisible",
+          "type": "int?",
+          "isRequired": false,
+          "description": "How many options the group shows before its \"Show {n} more\" button appears. Null uses the component's MaxVisible; 0 or less shows every option of this group."
+        },
+        {
+          "name": "SearchThreshold",
+          "type": "int?",
+          "isRequired": false,
+          "description": "How many options turn the group's own search box on. Null uses the component's SearchThreshold; 0 or less disables the search box for this group."
+        }
+      ],
+      "examples": [
+        {
+          "title": "A group with counts and an initial collapsed state",
+          "code": "new FacetGroup\n{\n    Key = \"category\",\n    Label = \"Category\",\n    IsCollapsed = true,\n    MaxVisible = 4,\n    Options =\n    [\n        new FacetOption { Value = \"books\", Label = \"Books\", Count = 480 },\n        new FacetOption { Value = \"music\", Label = \"Music\", Count = 120 }\n    ]\n}"
+        }
+      ]
+    },
+    {
+      "itemName": "FacetOption",
+      "kind": "Record",
+      "category": "Models",
+      "namespace": "Tempo.Blazor.Models",
+      "description": "One selectable value of a FacetGroup — the option row of a faceted filter. It carries the programmatic value the host filters on, the label a reader sees, an optional result count (what makes a facet a facet rather than a plain checkbox list), an optional decorative icon and IsDisabled for an option the current data cannot offer.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Models/FacetModels.cs",
+      "documentationStatus": "merged",
+      "properties": [
+        {
+          "name": "Value",
+          "type": "string",
+          "isRequired": true,
+          "description": "The programmatic value of the option, returned in its group's selection set. Values are matched ORDINALLY within a group; an empty value is ignored by the component."
+        },
+        {
+          "name": "Label",
+          "type": "string",
+          "isRequired": true,
+          "description": "The human-readable label — the option's accessible name together with the count, when one is supplied. A blank label falls back to Value, so an option is never nameless."
+        },
+        {
+          "name": "Count",
+          "type": "int?",
+          "isRequired": false,
+          "description": "The number of results this option would leave, shown next to the label and included in the checkbox's accessible name. Null renders no count at all — a host that does not know the counts must not invent them."
+        },
+        {
+          "name": "Icon",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Optional icon name resolved through the icon registry. Decorative: rendered aria-hidden, so the label stays the only carrier of meaning. An unknown name falls back to the generic icon."
+        },
+        {
+          "name": "IsDisabled",
+          "type": "bool",
+          "isRequired": false,
+          "default": "false",
+          "description": "Disables this option: it renders disabled (keeping its count visible) and cannot be toggled. An option that is ALREADY selected stays selected and keeps its removable chip — the component never silently drops a filter the user applied earlier."
+        }
+      ],
+      "examples": [
+        {
+          "title": "An option with a count and an icon",
+          "code": "new FacetOption { Value = \"books\", Label = \"Books\", Count = 480, Icon = IconNames.Book }"
+        },
+        {
+          "title": "An option the current data cannot offer",
+          "code": "new FacetOption { Value = \"toys\", Label = \"Toys\", Count = 0, IsDisabled = true }"
+        }
+      ]
+    },
+    {
       "itemName": "FileManagerItem",
       "kind": "Class",
       "category": "Models",
@@ -39579,11 +39688,11 @@
   ],
   "libraryExamples": [],
   "summary": {
-    "itemCount": 1572,
-    "manualItemCount": 1572,
-    "generatedItemCount": 1556,
+    "itemCount": 1574,
+    "manualItemCount": 1574,
+    "generatedItemCount": 1558,
     "generatedOnlyItemCount": 0,
     "componentCount": 0,
-    "publicApiTypeCount": 1556
+    "publicApiTypeCount": 1558
   }
 }

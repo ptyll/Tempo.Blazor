@@ -149,6 +149,7 @@ public sealed class BuiltInComponentSchemas : IWireframeSchemaSource
             ["TmChip"] = ["chip"],
             ["TmChipGroup"] = ["chip"],
             ["TmFilterChip"] = ["chip", "filter-builder"],
+            ["TmFacetFilter"] = ["facet-filter"],
             ["TmAccordion"] = ["accordion"],
             ["TmAccordionItem"] = ["accordion"],
             ["TmEmptyState"] = ["empty-state"],
@@ -1141,6 +1142,22 @@ public sealed class BuiltInComponentSchemas : IWireframeSchemaSource
                 P("label",     "Label",     PropType.String, "Filter", cat: "Content"),
                 P("active",    "Active",    PropType.Bool,   true,     cat: "State"),
                 P("removable", "Removable", PropType.Bool,   true,     cat: "Behavior"),
+            ]
+        };
+
+        yield return new WireframeComponentSchema
+        {
+            Type = "TmFacetFilter", Category = "Data Display", DisplayName = "Facet Filter",
+            DefaultWidth = 240, DefaultHeight = 220,
+            Props =
+            [
+                P("title",         "Title",          PropType.String, "Filters", cat: "Content"),
+                P("presentation",  "Presentation",   PropType.Enum,   "popover", cat: "Appearance",
+                    opts: ["popover", "inline"]),
+                P("showSearch",    "Show Search",    PropType.Bool,   true,      cat: "Appearance"),
+                P("showCounts",    "Show Counts",    PropType.Bool,   true,      cat: "Content"),
+                P("showChips",     "Show Active Filters", PropType.Bool, true,  cat: "Appearance"),
+                P("collapsed",     "Collapsed Group", PropType.Bool,  false,     cat: "State"),
             ]
         };
 

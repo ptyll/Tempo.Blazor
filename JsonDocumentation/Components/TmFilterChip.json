@@ -25,6 +25,12 @@
       "type": "EventCallback<ActiveFilter>",
       "isRequired": false,
       "description": "Fires when the chip body is clicked (to re-open edit UI)."
+    },
+    {
+      "name": "RemoveButtonId",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Optional DOM id of the remove button. A host that removes a chip programmatically uses it to hand focus to the neighbouring chip's button, because the button that held focus leaves the DOM (WCAG 2.4.3). Null (the default) renders no id, leaving existing markup unchanged."
     }
   ],
   "cssClasses": [

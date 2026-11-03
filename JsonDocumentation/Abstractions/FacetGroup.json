@@ -1,0 +1,53 @@
+{
+  "itemName": "FacetGroup",
+  "kind": "Class",
+  "category": "Models",
+  "namespace": "Tempo.Blazor.Models",
+  "description": "One group of a faceted filter: a labelled, collapsible set of FacetOptions whose selected values come back under Key in TmFacetFilter's selection dictionary. Data only — the component never re-sorts the options, never invents a count and never drops a value the host selected.",
+  "properties": [
+    {
+      "name": "Key",
+      "type": "string",
+      "isRequired": true,
+      "description": "The programmatic key of the group — the dictionary key of the selection it owns. Keys are matched ORDINALLY; a group with an empty key is skipped, because its options could not be reported back."
+    },
+    {
+      "name": "Label",
+      "type": "string",
+      "isRequired": true,
+      "description": "The human-readable group label: the disclosure button's name and the prefix of every active-filter chip this group produces. A blank label falls back to Key."
+    },
+    {
+      "name": "Options",
+      "type": "IReadOnlyList<FacetOption>",
+      "isRequired": false,
+      "default": "[]",
+      "description": "The options of the group, rendered in the order supplied. Null entries and options without a value are skipped. Compared by REFERENCE by the record's generated equality, so two groups built separately from equal options are not equal by value — identify a group by Key."
+    },
+    {
+      "name": "IsCollapsed",
+      "type": "bool",
+      "isRequired": false,
+      "default": "false",
+      "description": "The INITIAL collapsed state. The user owns the state afterwards: flipping this value later does not re-collapse or re-expand a group the reader already touched."
+    },
+    {
+      "name": "MaxVisible",
+      "type": "int?",
+      "isRequired": false,
+      "description": "How many options the group shows before its \"Show {n} more\" button appears. Null uses the component's MaxVisible; 0 or less shows every option of this group."
+    },
+    {
+      "name": "SearchThreshold",
+      "type": "int?",
+      "isRequired": false,
+      "description": "How many options turn the group's own search box on. Null uses the component's SearchThreshold; 0 or less disables the search box for this group."
+    }
+  ],
+  "examples": [
+    {
+      "title": "A group with counts and an initial collapsed state",
+      "code": "new FacetGroup\n{\n    Key = \"category\",\n    Label = \"Category\",\n    IsCollapsed = true,\n    MaxVisible = 4,\n    Options =\n    [\n        new FacetOption { Value = \"books\", Label = \"Books\", Count = 480 },\n        new FacetOption { Value = \"music\", Label = \"Music\", Count = 120 }\n    ]\n}"
+    }
+  ]
+}

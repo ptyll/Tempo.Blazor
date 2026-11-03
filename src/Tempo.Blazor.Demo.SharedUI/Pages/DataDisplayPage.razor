@@ -151,6 +151,36 @@
     </div>
 </section>
 
+
+<!-- Facet filter: grouped options with result counts, a search box inside the long group, a
+     truncation with "Show more", active filters as removable chips and a clear-all action. The
+     left card is the popover presentation (a bottom sheet on a phone), the right one is inline. -->
+<section class="demo-section">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">@Loc["TmDataDisplayDemo_FacetFilter"]</h2>
+        <span class="px-2 py-0.5 text-xs font-medium bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 rounded-full">@Loc["TmDataDisplayDemo_FacetFilterBadge"]</span>
+    </div>
+    <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">@Loc["TmDataDisplayDemo_FacetFilterHint"]</p>
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4" data-testid="facet-filter-section">
+        <div class="showcase-card">
+            <TmFacetFilter Groups="@_facetGroups"
+                           @bind-Selected="_facetSelection"
+                           ResultCount="@FacetResultCount"
+                           OnApply="ApplyFacetFilters" />
+            <p class="mt-3 text-sm text-slate-600 dark:text-slate-400" data-testid="facet-filter-applied">
+                @Loc["TmDataDisplayDemo_FacetFilterApplied", _facetAppliedCount, FacetSelectionSummary]
+            </p>
+        </div>
+        <div class="showcase-card">
+            <TmFacetFilter Presentation="FacetFilterPresentation.Inline"
+                           Title="@Loc["TmDataDisplayDemo_FacetFilterInlineTitle"]"
+                           Groups="@_facetGroups"
+                           @bind-Selected="_facetInlineSelection"
+                           ResultCount="@FacetResultCount" />
+        </div>
+    </div>
+</section>
+
 <!-- Cards -->
 <section class="demo-section">
     <div class="flex items-center space-x-2 mb-4">
@@ -377,6 +407,78 @@
 </section>
 
 @code {
+    // Facet filter (2.10.0): the counts belong to the HOST's data — the component only renders them.
+    // The result count is host-computed too, which is what turns the confirmation action into
+    // "Show {n} results" and what the polite live region announces when it changes.
+    private IReadOnlyDictionary<string, IReadOnlySet<string>>? _facetSelection;
+    private IReadOnlyDictionary<string, IReadOnlySet<string>>? _facetInlineSelection;
+    private int _facetAppliedCount;
+
+    /// <summary>What the popover's confirmation last reported — the demo's visible feedback.</summary>
+    private int FacetResultCount
+        => 1840 - (FacetSelectedCount(_facetSelection) * 210) - (FacetSelectedCount(_facetInlineSelection) * 90);
+
+    private string FacetSelectionSummary
+    {
+        get
+        {
+            var values = (_facetSelection ?? new Dictionary<string, IReadOnlySet<string>>())
+                .SelectMany(pair => pair.Value)
+                .ToList();
+            return values.Count == 0 ? Loc["TmDataDisplayDemo_FacetFilterNone"] : string.Join(", ", values);
+        }
+    }
+
+    private static int FacetSelectedCount(IReadOnlyDictionary<string, IReadOnlySet<string>>? selection)
+        => selection?.Sum(pair => pair.Value.Count) ?? 0;
+
+    private void ApplyFacetFilters() => _facetAppliedCount = FacetResultCount;
+
+    private readonly IReadOnlyList<FacetGroup> _facetGroups =
+    [
+        new()
+        {
+            Key = "status",
+            Label = "Status",
+            SearchThreshold = 0, // two options never need a search box
+            Options =
+            [
+                new() { Value = "active", Label = "Active", Count = 1_240, Icon = IconNames.Check },
+                new() { Value = "archived", Label = "Archived", Count = 420 },
+                new() { Value = "draft", Label = "Draft", Count = 96, IsDisabled = true }
+            ]
+        },
+        new()
+        {
+            Key = "category",
+            Label = "Category",
+            MaxVisible = 4,
+            SearchThreshold = 5, // the demo shows the in-group search without needing 8 options
+            IsCollapsed = false,
+            Options =
+            [
+                new() { Value = "electronics", Label = "Electronics", Count = 512 },
+                new() { Value = "books", Label = "Books", Count = 301 },
+                new() { Value = "garden", Label = "Garden", Count = 188 },
+                new() { Value = "toys", Label = "Toys", Count = 143 },
+                new() { Value = "clothing", Label = "Clothing", Count = 87 },
+                new() { Value = "music", Label = "Music", Count = 54 },
+                new() { Value = "sports", Label = "Sports", Count = 31 }
+            ]
+        },
+        new()
+        {
+            Key = "availability",
+            Label = "Availability",
+            IsCollapsed = true,
+            Options =
+            [
+                new() { Value = "in-stock", Label = "In stock", Count = 402 },
+                new() { Value = "preorder", Label = "Pre-order", Count = 118 }
+            ]
+        }
+    ];
+
     private ListViewMode _mvlView = ListViewMode.Card;
     private string? _mvlClicked;
 
@@ -441,6 +543,18 @@
             new SelectOption<string>("month", Loc["TmDataDisplayDemo_PeriodMonth"]),
             new SelectOption<string>("week", Loc["TmDataDisplayDemo_PeriodWeek"])
         ];
+
+        // The facet demo opens with one value picked in each surface, so the chips and the counts
+        // are visible on first paint instead of behind a click.
+        _facetSelection = new Dictionary<string, IReadOnlySet<string>>(StringComparer.Ordinal)
+        {
+            ["status"] = new HashSet<string>(StringComparer.Ordinal) { "active" }
+        };
+        _facetInlineSelection = new Dictionary<string, IReadOnlySet<string>>(StringComparer.Ordinal)
+        {
+            ["category"] = new HashSet<string>(StringComparer.Ordinal) { "books" }
+        };
+        _facetAppliedCount = FacetResultCount;
     }
 
     // Change Diff

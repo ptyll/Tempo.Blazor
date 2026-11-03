@@ -1,0 +1,382 @@
+/* TmFacetFilter — a faceted filter: groups of checkbox options with result counts, a per-group
+   search box, a "show more" truncation, active filters as removable chips and two presentations
+   (anchored dialog popover / phone bottom sheet, or inline in the page flow).
+
+   Every colour, size, radius and transition is a --tm-* token, so the dark theme re-points the
+   tokens and there is no [data-theme] block here. The only motion is the disclosure chevron, which
+   the reduced-motion block in animations.css switches off. */
+
+.tm-facet-filter {
+  display: flex;
+  flex-direction: column;
+  gap: var(--tm-space-2);
+  color: var(--tm-text-primary);
+  font-size: var(--tm-font-size-sm);
+}
+
+/* ---------- trigger ---------- */
+
+.tm-facet-filter__trigger {
+  /* The trigger is a flex ITEM of the column root, so without this it stretches to the full
+     width of the host card — a filter button that looks like a search field. */
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--tm-space-2);
+  min-block-size: var(--tm-touch-target);
+  padding-inline: var(--tm-space-3);
+  padding-block: var(--tm-space-1);
+  border: 1px solid var(--tm-border-color);
+  border-radius: var(--tm-radius-md);
+  background-color: var(--tm-bg-surface);
+  color: var(--tm-text-primary);
+  font: inherit;
+  font-weight: var(--tm-font-weight-medium);
+  cursor: pointer;
+}
+
+.tm-facet-filter__trigger:hover {
+  background-color: var(--tm-bg-muted);
+}
+
+.tm-facet-filter__trigger:focus-visible {
+  outline: 2px solid transparent;
+  box-shadow: var(--tm-focus-ring);
+}
+
+.tm-facet-filter__trigger-icon {
+  display: inline-flex;
+  flex: 0 0 auto;
+}
+
+.tm-facet-filter__trigger-label {
+  white-space: nowrap;
+}
+
+/* The count is a visible badge AND part of the trigger's accessible name ("Filters (selected: 2)"),
+   so the number is never colour- or shape-only. */
+.tm-facet-filter__trigger-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-inline-size: var(--tm-space-5);
+  padding-inline: var(--tm-space-1);
+  border-radius: var(--tm-radius-pill);
+  background-color: var(--tm-color-primary);
+  color: var(--tm-color-on-primary);
+  font-size: var(--tm-font-size-xs);
+  font-variant-numeric: tabular-nums;
+  line-height: var(--tm-line-height-tight);
+}
+
+/* ---------- the surface ---------- */
+
+.tm-facet-filter__panel {
+  /* A column so the heading and the footer stay put while the group list scrolls: overlay.js caps
+     the panel at the room available (`ConstrainHeight`), and a block panel would scroll the footer
+     out of reach instead of the body. */
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  inline-size: min(22rem, calc(100vw - 2 * var(--tm-space-4)));
+  padding: var(--tm-space-3);
+  /* The :where() reset in _overlay-panel.css has zero specificity, so the owning class has to
+     paint the surface itself — a transparent panel over the page is unreadable (N196). */
+  background-color: var(--tm-bg-surface);
+  border: 1px solid var(--tm-border-color);
+  border-radius: var(--tm-radius-lg);
+  box-shadow: var(--tm-shadow-md);
+}
+
+.tm-facet-filter__sheet {
+  /* The sheet's body and footer are the drawer's own slots; the class is a hook for a host that
+     wants to widen the sheet content, so it carries the padding the body relies on. */
+  padding: 0;
+}
+
+.tm-facet-filter__title {
+  margin: 0 0 var(--tm-space-2);
+  font-size: var(--tm-font-size-sm);
+  font-weight: var(--tm-font-weight-semibold);
+  color: var(--tm-text-secondary);
+}
+
+.tm-facet-filter__inline {
+  padding: var(--tm-space-3);
+  border: 1px solid var(--tm-border-color);
+  border-radius: var(--tm-radius-lg);
+  background-color: var(--tm-bg-surface);
+}
+
+.tm-facet-filter__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--tm-space-2);
+  overflow-y: auto;
+}
+
+/* Inside the constrained popover the body is the scroller: `min-block-size: 0` is what lets a
+   flex item shrink below its content height, and the footer keeps its own line. */
+.tm-facet-filter__panel > .tm-facet-filter__body {
+  flex: 1 1 auto;
+  min-block-size: 0;
+}
+
+/* ---------- one group ---------- */
+
+.tm-facet-filter__group {
+  border-block-end: 1px solid var(--tm-border-color);
+  padding-block-end: var(--tm-space-2);
+}
+
+.tm-facet-filter__group:last-child {
+  border-block-end: none;
+  padding-block-end: 0;
+}
+
+.tm-facet-filter__group-heading {
+  margin: 0;
+  font-size: inherit;
+  font-weight: inherit;
+}
+
+.tm-facet-filter__group-toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--tm-space-2);
+  inline-size: 100%;
+  min-block-size: var(--tm-touch-target);
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--tm-text-primary);
+  font: inherit;
+  font-weight: var(--tm-font-weight-medium);
+  text-align: start;
+  cursor: pointer;
+}
+
+.tm-facet-filter__group-toggle:focus-visible {
+  outline: 2px solid transparent;
+  box-shadow: var(--tm-focus-ring);
+  border-radius: var(--tm-radius-sm);
+}
+
+.tm-facet-filter__group-label {
+  flex: 1 1 auto;
+  min-inline-size: 0;
+  overflow-wrap: anywhere;
+}
+
+.tm-facet-filter__group-count {
+  flex: 0 0 auto;
+  color: var(--tm-text-secondary);
+  font-size: var(--tm-font-size-xs);
+  font-variant-numeric: tabular-nums;
+}
+
+.tm-facet-filter__chevron {
+  display: inline-flex;
+  flex: 0 0 auto;
+  color: var(--tm-text-secondary);
+  transition: transform var(--tm-transition-fast);
+}
+
+.tm-facet-filter__group-toggle[aria-expanded="true"] .tm-facet-filter__chevron {
+  transform: rotate(180deg);
+}
+
+.tm-facet-filter__group-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--tm-space-1);
+  padding-block-start: var(--tm-space-1);
+}
+
+.tm-facet-filter__search {
+  padding-block: var(--tm-space-1);
+}
+
+.tm-facet-filter__options {
+  display: flex;
+  flex-direction: column;
+  gap: var(--tm-space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tm-facet-filter__option {
+  display: flex;
+  align-items: center;
+  gap: var(--tm-space-2);
+  min-block-size: var(--tm-space-6);
+}
+
+.tm-facet-filter__option-icon {
+  display: inline-flex;
+  flex: 0 0 auto;
+  color: var(--tm-text-secondary);
+}
+
+.tm-facet-filter__option-count {
+  flex: 0 0 auto;
+  margin-inline-start: auto;
+  color: var(--tm-text-secondary);
+  font-size: var(--tm-font-size-xs);
+  font-variant-numeric: tabular-nums;
+}
+
+.tm-facet-filter__show-more {
+  align-self: flex-start;
+  padding: var(--tm-space-1) 0;
+  border: none;
+  background: none;
+  color: var(--tm-color-primary);
+  font: inherit;
+  font-size: var(--tm-font-size-xs);
+  cursor: pointer;
+}
+
+.tm-facet-filter__show-more:hover {
+  text-decoration: underline;
+}
+
+.tm-facet-filter__show-more:focus-visible {
+  outline: 2px solid transparent;
+  box-shadow: var(--tm-focus-ring);
+  border-radius: var(--tm-radius-sm);
+}
+
+.tm-facet-filter__no-results,
+.tm-facet-filter__empty {
+  margin: 0;
+  padding-block: var(--tm-space-2);
+  color: var(--tm-text-secondary);
+  font-size: var(--tm-font-size-xs);
+}
+
+/* ---------- footer of the surface ---------- */
+
+.tm-facet-filter__footer {
+  display: flex;
+  align-items: center;
+  gap: var(--tm-space-2);
+  justify-content: space-between;
+  padding-block-start: var(--tm-space-3);
+  margin-block-start: var(--tm-space-2);
+  border-block-start: 1px solid var(--tm-border-color);
+}
+
+.tm-facet-filter__panel-clear {
+  padding: var(--tm-space-1) 0;
+  border: none;
+  background: none;
+  color: var(--tm-color-primary);
+  font: inherit;
+  font-size: var(--tm-font-size-xs);
+  cursor: pointer;
+}
+
+.tm-facet-filter__panel-clear:disabled {
+  color: var(--tm-text-secondary);
+  cursor: default;
+}
+
+.tm-facet-filter__panel-clear:focus-visible {
+  outline: 2px solid transparent;
+  box-shadow: var(--tm-focus-ring);
+  border-radius: var(--tm-radius-sm);
+}
+
+.tm-facet-filter__confirm {
+  min-block-size: var(--tm-touch-target);
+  padding-inline: var(--tm-space-4);
+  border: 1px solid var(--tm-color-primary);
+  border-radius: var(--tm-radius-md);
+  background-color: var(--tm-color-primary);
+  color: var(--tm-color-on-primary);
+  font: inherit;
+  font-weight: var(--tm-font-weight-medium);
+  cursor: pointer;
+}
+
+.tm-facet-filter__confirm:hover {
+  background-color: var(--tm-color-primary-hover);
+}
+
+.tm-facet-filter__confirm:focus-visible {
+  outline: 2px solid transparent;
+  box-shadow: var(--tm-focus-ring);
+}
+
+/* ---------- active filters ---------- */
+
+.tm-facet-filter__chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--tm-space-2);
+}
+
+.tm-facet-filter__chip {
+  display: inline-flex;
+}
+
+.tm-facet-filter__clear {
+  padding: var(--tm-space-1) 0;
+  border: none;
+  background: none;
+  color: var(--tm-color-primary);
+  font: inherit;
+  font-size: var(--tm-font-size-xs);
+  cursor: pointer;
+}
+
+.tm-facet-filter__clear:hover {
+  text-decoration: underline;
+}
+
+.tm-facet-filter__clear:focus-visible {
+  outline: 2px solid transparent;
+  box-shadow: var(--tm-focus-ring);
+  border-radius: var(--tm-radius-sm);
+}
+
+/* ---------- coarse pointers ---------- */
+
+/* A finger needs a 44 px target: the trigger, the disclosure, the confirm action and the native
+   checkboxes grow, and the chip's remove button keeps its own touch target. */
+@media (pointer: coarse) {
+  .tm-facet-filter__option {
+    min-block-size: var(--tm-touch-target);
+  }
+
+  .tm-facet-filter__show-more,
+  .tm-facet-filter__panel-clear,
+  .tm-facet-filter__clear {
+    min-block-size: var(--tm-touch-target);
+  }
+}
+
+/* ---------- forced colours ---------- */
+
+/* Forced-colors mode replaces the painted badge and the confirm action's fill with system colours
+   and drops the box shadows the focus ring is made of. The count keeps its bytes through the
+   system CanvasText edge, and every focusable control gets the system Highlight ring back. */
+@media (forced-colors: active) {
+  .tm-facet-filter__trigger-count {
+    forced-color-adjust: none;
+    border: 1px solid CanvasText;
+  }
+
+  .tm-facet-filter__trigger:focus-visible,
+  .tm-facet-filter__group-toggle:focus-visible,
+  .tm-facet-filter__show-more:focus-visible,
+  .tm-facet-filter__panel-clear:focus-visible,
+  .tm-facet-filter__confirm:focus-visible,
+  .tm-facet-filter__clear:focus-visible {
+    outline: 2px solid Highlight;
+    outline-offset: 2px;
+  }
+}
