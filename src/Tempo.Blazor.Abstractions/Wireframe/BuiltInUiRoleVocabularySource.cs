@@ -53,6 +53,7 @@ public sealed class BuiltInUiRoleVocabularySource : IUiRoleVocabularySource
         R("stat-card", "Stat card", "Highlights a key metric.", "metric card", "metricka karta", "TmStatCard"),
         R("animated-number", "Animated number", "Shows one metric as a number that counts up to its target value; a KPI read-out rather than a label.", "number ticker", "kpi value", "animated number", "pocitadlo cisla", "TmAnimatedNumber"),
         R("trend-list", "Trend list", "Lists metrics and their change over a period, most often as a compact driver of a KPI.", "metric table", "change summary", "trend table", "prehled trendu", "zmena metrik", "TmTrendList"),
+        R("usage-meter", "Usage meter", "Shows how much of a quota or allowance is used, with a warning and a critical state.", "quota meter", "allowance gauge", "usage bar", "vycerpani kvoty", "usage meter", "TmUsageMeter"),
         R("breakdown-card", "Breakdown card", "Shows how parts add up to a whole, with each part's share of the total.", "share breakdown", "composition card", "breakdown chart", "rozpad", "podil na celku", "TmBreakdownCard"),
         R("accordion", "Accordion", "Shows collapsible content sections.", "collapsible section", "rozbalovaci sekce", "TmAccordion", "TmAccordionItem"),
         R("empty-state", "Empty state", "Explains that no data or content is available.", "blank state", "prazdny stav", "TmEmptyState"),

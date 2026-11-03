@@ -1,0 +1,37 @@
+{
+  "kind": "Class",
+  "category": "Components",
+  "namespace": "Tempo.Blazor.Components.DataDisplay",
+  "description": "One category of a TmUsageMeter: what a slice of the consumption was spent on. A category explains the meter — it never replaces the headline number, which stays the component's Used parameter. The usage a category does not account for becomes an explicit localized \"Other\" row, so the table never silently loses a number.",
+  "packageId": "Tempo.Blazor",
+  "sourcePath": "src/Tempo.Blazor/Components/DataDisplay/UsageCategory.cs",
+  "documentationStatus": "documented",
+  "itemName": "UsageCategory",
+  "members": [
+    {
+      "name": "Key",
+      "kind": "Property",
+      "type": "string",
+      "description": "The programmatic key of the category — matched ORDINALLY and rendered as data-category-key, never as a DOM id (a host value is not a valid id, and a slug would collide). A category with an empty key is skipped: it could not be told apart from another one, so its usage falls into the Other row."
+    },
+    {
+      "name": "Label",
+      "kind": "Property",
+      "type": "string",
+      "description": "The human-readable label, rendered as the row header of the category table. A blank label falls back to Key, so a category is never nameless for a reader."
+    },
+    {
+      "name": "Used",
+      "kind": "Property",
+      "type": "double",
+      "description": "How much of the quota this category consumed, in the meter's own unit. A negative amount counts as zero for the segment, the share and the row's cell (it reads 0), while the row itself stays visible, so a host's data is never silently dropped from the table."
+    },
+    {
+      "name": "Color",
+      "kind": "Property",
+      "type": "string?",
+      "description": "Optional colour of the category as a CSS colour value — a var(--tm-*) token reference, a hex literal, an rgb/hsl/oklch/color-mix function, or a named colour. It is written into the segment's and the row swatch's inline background-color, so it wins over the rotating fallback token tone. A value that is not a CSS colour (a class name, or any payload carrying ;, {, } or url() emits no style and the category falls back to the rotating token tone."
+    }
+  ],
+  "usageExample": "@code {\n    private readonly UsageCategory[] categories =\n    [\n        new() { Key = \"llm\", Label = \"LLM\", Used = 5500 },\n        new() { Key = \"tools\", Label = \"Tools\", Used = 2000, Color = \"var(--tm-color-info)\" }\n    ];\n}\n\n<TmUsageMeter Title=\"Monthly credits\" Used=\"7500\" Limit=\"10000\" Unit=\"credits\" Categories=\"categories\" />"
+}

@@ -87,8 +87,9 @@ public sealed class UiRoleVocabularyTests
         // A sanity bound against runaway growth, not a contract: raised 120 -> 130 for `toolbar-button` (decision TOOLBAR-FILE-BUTTON),
         // then 130 -> 132 for the data-display pair `trend-list` and `breakdown-card` (plan ff043b2e phase 2),
         // then 133 for `facet-filter` (plan ff043b2e phase 4),
-        // then 134 for `trace-waterfall` (plan ff043b2e phase 6).
-        vocabulary.GetAll().Should().HaveCountLessThanOrEqualTo(134);
+        // then 134 for `trace-waterfall` (plan ff043b2e phase 6),
+        // then 135 for `usage-meter` (plan ff043b2e phase 7).
+        vocabulary.GetAll().Should().HaveCountLessThanOrEqualTo(135);
 
         vocabulary.Find("search-input")!.Slug.Should().Be("search-input");
         vocabulary.Find("TmDecimalInput")!.Slug.Should().Be("decimal-input");

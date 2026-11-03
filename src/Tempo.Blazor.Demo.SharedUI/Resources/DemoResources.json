@@ -692,5 +692,15 @@
   "TmDataDisplayDemo_TraceTokens": "Tokens in / out",
   "TmDataDisplayDemo_TraceTokensIn": "Tokens in",
   "TmDataDisplayDemo_TraceTokensOut": "Tokens out",
-  "TmDataDisplayDemo_TraceCost": "Cost"
+  "TmDataDisplayDemo_TraceCost": "Cost",
+  "TmDataDisplayDemo_UsageMeter": "Usage Meter",
+  "TmDataDisplayDemo_UsageMeterBadge": "New",
+  "TmDataDisplayDemo_UsageMeterHint": "How much of a monthly credit quota is gone: the category breakdown, the reset date, the daily history and a call to action that only appears once the usage is near the limit.",
+  "TmDataDisplayDemo_UsageMeterTitle": "Monthly credits",
+  "TmDataDisplayDemo_UsageMeterUnit": "credits",
+  "TmDataDisplayDemo_UsageMeterAdd": "Use 1,500 credits",
+  "TmDataDisplayDemo_UsageMeterReset": "Reset usage",
+  "TmDataDisplayDemo_UsageMeterUpgrade": "Buy more credits",
+  "TmDataDisplayDemo_UsageMeterAdded": "1,500 credits used",
+  "TmDataDisplayDemo_UsageMeterResetDone": "Usage reset"
 }

@@ -1,0 +1,187 @@
+{
+  "itemName": "TmUsageMeter",
+  "kind": "Component",
+  "category": "Data Display",
+  "description": "How much of a quota is gone: one role=\"meter\" track with the used share of the limit, a visible title whose heading level is configurable, a culture-formatted readout, a warning and a critical state carried by an icon, a text and a colour, an over-limit reading, optional category segments with a real table, the reset date, a daily-usage sparkline, the NearLimitContent call to action and the compact presentation.",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.DataDisplay"
+  ],
+  "parameters": [
+    {
+      "name": "Used",
+      "type": "double",
+      "isRequired": false,
+      "default": "0",
+      "description": "The amount consumed, in the host's unit. This is the number the meter measures — a supplied Categories list only explains it. A negative value counts as zero; with a non-positive Limit nothing is measurable and the meter renders 0 of 0 instead of dividing by zero."
+    },
+    {
+      "name": "Limit",
+      "type": "double",
+      "isRequired": false,
+      "default": "100",
+      "description": "The quota the usage is measured against. Default 100 (a percentage meter). A value of 0 or less means the limit is UNKNOWN: nothing is measurable, the meter renders 0 of 0 and stays in the normal state."
+    },
+    {
+      "name": "Unit",
+      "type": "string?",
+      "isRequired": false,
+      "description": "The unit every amount is shown in (\"credits\", \"API calls\", \"GB\"). Null or blank renders bare numbers and drops the unit from the accessible value text. Host data, never localised by the component."
+    },
+    {
+      "name": "ValueFormat",
+      "type": "string",
+      "isRequired": false,
+      "default": "N0",
+      "description": "The .NET numeric format string of every amount (used, limit, over-limit and the category values). The percentage is always a whole culture-formatted percentage. A malformed format falls back to N0 instead of throwing out of a render."
+    },
+    {
+      "name": "ValueFormatter",
+      "type": "Func<double, string>?",
+      "isRequired": false,
+      "description": "Formats one amount instead of ValueFormat — for a unit whose own convention is not a plain number (a byte size, an abbreviated 7.5k). It is used everywhere an amount appears, including the accessible value text and the category table, so a reader and a screen reader never meet two different numbers."
+    },
+    {
+      "name": "Culture",
+      "type": "CultureInfo?",
+      "isRequired": false,
+      "description": "The culture that formats the amounts, the percentage and the reset date. Null (the default) means the current culture at render time."
+    },
+    {
+      "name": "WarningThreshold",
+      "type": "double",
+      "isRequired": false,
+      "default": "0.8",
+      "description": "The ratio of the limit (not a percentage) at which the meter turns to the warning state and the NearLimitContent slot appears. Default 0.8 (80 %). A negative value counts as 0 (warn immediately) and NaN falls back to the default; the state is checked critical-first, so a CriticalThreshold below this value still wins. An unknown limit (0 or less) keeps the meter normal whatever the thresholds say."
+    },
+    {
+      "name": "CriticalThreshold",
+      "type": "double",
+      "isRequired": false,
+      "default": "1.0",
+      "description": "The ratio of the limit at which the meter turns to the critical state. Default 1.0 — the limit itself. A negative value counts as 0 and NaN falls back to the default. Any usage above it is additionally reported as over the limit, with the exact excess in the host's unit."
+    },
+    {
+      "name": "ResetsAt",
+      "type": "DateTimeOffset?",
+      "isRequired": false,
+      "description": "When the quota resets, rendered as a localized \"Resets on {date}\" line in the culture's short date format. Null renders no line. The date is formatted with the value's own offset, so the day the host names is the day the reader sees."
+    },
+    {
+      "name": "DailyUsage",
+      "type": "double[]?",
+      "isRequired": false,
+      "description": "The usage of the last days, rendered as a bar sparkline under the meter. Null or empty renders nothing. The graphic carries a text alternative with the real numbers (minimum, maximum, last value)."
+    },
+    {
+      "name": "Categories",
+      "type": "IReadOnlyList<UsageCategory>",
+      "isRequired": false,
+      "default": "[]",
+      "description": "The categories that explain the consumption: segments inside the filled part of the track plus a real table (caption, column headers, a row header per category). A category with an empty key is skipped and its usage becomes an explicit localized \"Other\" row. Ignored by the compact presentation, where a breakdown without its numbers would be colour-only."
+    },
+    {
+      "name": "Compact",
+      "type": "bool",
+      "isRequired": false,
+      "default": "false",
+      "description": "Renders the compact presentation: the visible title, the track, the amount and the percentage with the state badge. The reset line, the daily sparkline and the category table are dropped. The title stays on screen as a plain label, because a compact bar without its label is unreadable when several sit side by side; the accessible name falls back from that title to AriaLabel and then to the localized default."
+    },
+    {
+      "name": "Title",
+      "type": "string?",
+      "isRequired": false,
+      "description": "An optional VISIBLE heading above the meter, which also NAMES the meter through aria-labelledby. The compact presentation renders the same text as a plain label instead of a heading. When set, it is the meter's only name — AriaLabel is not used on top of it."
+    },
+    {
+      "name": "HeadingLevel",
+      "type": "int",
+      "isRequired": false,
+      "default": "3",
+      "description": "The heading level of Title (2–6, clamped), so the meter sits under the right page heading instead of hard-coding an h3 into the outline. Default 3; the compact presentation renders a plain label and ignores this value."
+    },
+    {
+      "name": "AriaLabel",
+      "type": "string?",
+      "isRequired": false,
+      "description": "The accessible name used when no Title is rendered. Null means the localized default (\"Usage\")."
+    },
+    {
+      "name": "NearLimitContent",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "The call to action rendered while the usage is at or above the warning threshold (warning AND critical, never while normal) — typically a link to upgrade or buy more quota. The host supplies the control, so its focus and keyboard behaviour are its own."
+    },
+    {
+      "name": "Class",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Additional CSS class(es) for the root element."
+    },
+    {
+      "name": "DataTestId",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Overrides the root data-testid; the default id is usage-meter and TestIdPrefix namespaces it."
+    },
+    {
+      "name": "TestIdPrefix",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Namespaces every internal data-testid of this instance as \"{prefix}-{name}\", so several meters on one page stay targetable."
+    }
+  ],
+  "cssClasses": [
+    "tm-usage-meter",
+    "tm-usage-meter--compact",
+    "tm-usage-meter--warning",
+    "tm-usage-meter--critical",
+    "tm-usage-meter__title",
+    "tm-usage-meter__track",
+    "tm-usage-meter__fill",
+    "tm-usage-meter__segment",
+    "tm-usage-meter__segment--tone-1",
+    "tm-usage-meter__segment--tone-6",
+    "tm-usage-meter__segment--remainder",
+    "tm-usage-meter__readout",
+    "tm-usage-meter__amount",
+    "tm-usage-meter__percent",
+    "tm-usage-meter__state",
+    "tm-usage-meter__state-text",
+    "tm-usage-meter__over",
+    "tm-usage-meter__over-icon",
+    "tm-usage-meter__reset",
+    "tm-usage-meter__reset-icon",
+    "tm-usage-meter__daily",
+    "tm-usage-meter__sparkline",
+    "tm-usage-meter__cta",
+    "tm-usage-meter__table",
+    "tm-usage-meter__row",
+    "tm-usage-meter__row--other",
+    "tm-usage-meter__label",
+    "tm-usage-meter__label-inner",
+    "tm-usage-meter__swatch",
+    "tm-usage-meter__swatch--tone-1",
+    "tm-usage-meter__swatch--tone-6",
+    "tm-usage-meter__swatch--remainder",
+    "tm-usage-meter__value",
+    "tm-usage-meter__share"
+  ],
+  "examples": [
+    {
+      "title": "A quota meter with categories and a reset date",
+      "code": "<TmUsageMeter Title=\"Monthly credits\"\n              Used=\"7500\" Limit=\"10000\" Unit=\"credits\"\n              ResetsAt=\"@resetsAt\"\n              Categories=\"@categories\" />\n@code {\n    private readonly DateTimeOffset resetsAt = new(2026, 7, 1, 0, 0, 0, TimeSpan.Zero);\n    private readonly UsageCategory[] categories =\n    [\n        new() { Key = \"llm\", Label = \"LLM\", Used = 5500 },\n        new() { Key = \"tools\", Label = \"Tools\", Used = 2000, Color = \"var(--tm-color-info)\" }\n    ];\n}"
+    },
+    {
+      "title": "A near-limit meter with a call to action",
+      "code": "<TmUsageMeter Title=\"Seats\" Used=\"9\" Limit=\"10\"\n              WarningThreshold=\"0.8\" CriticalThreshold=\"1\">\n    <NearLimitContent>\n        <TmButton Variant=\"ButtonVariant.Primary\" Size=\"ButtonSize.Sm\"\n                  OnClick=\"Upgrade\">Buy more seats</TmButton>\n    </NearLimitContent>\n</TmUsageMeter>"
+    },
+    {
+      "title": "A compact meter for a card corner",
+      "code": "<TmUsageMeter Compact=\"true\" AriaLabel=\"Monthly credits\"\n              Used=\"8500\" Limit=\"10000\" />"
+    },
+    {
+      "title": "A custom amount format",
+      "code": "<TmUsageMeter Used=\"@bytes\" Limit=\"@quotaBytes\"\n              ValueFormatter=\"@FormatBytes\" />\n@code {\n    private static string FormatBytes(double value) => $\"{value / 1024d / 1024d:0.#} MB\";\n}"
+    }
+  ]
+}

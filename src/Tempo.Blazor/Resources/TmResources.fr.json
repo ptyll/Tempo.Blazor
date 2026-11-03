@@ -6603,5 +6603,22 @@
   "TmTraceWaterfall_StatusCancelled": "Annulé",
   "TmTraceWaterfall_UnitMs": "ms",
   "TmTraceWaterfall_UnitSeconds": "s",
-  "TmTraceWaterfall_UnitMinutes": "min"
+  "TmTraceWaterfall_UnitMinutes": "min",
+  "TmUsageMeter_AriaLabel": "Utilisation",
+  "TmUsageMeter_ValueOf": "{0} sur {1}",
+  "TmUsageMeter_AriaValueText": "{0} {1}, {2}",
+  "TmUsageMeter_AriaValueTextNoUnit": "{0}, {1}",
+  "TmUsageMeter_StateWarning": "Proche de la limite",
+  "TmUsageMeter_StateCritical": "Limite atteinte",
+  "TmUsageMeter_OverLimit": "Dépassement de {0}",
+  "TmUsageMeter_ResetsAt": "Réinitialisation le {0}",
+  "TmUsageMeter_DailyUsageSummary": "Utilisation quotidienne : minimum {0}, maximum {1}, dernière valeur {2}",
+  "TmUsageMeter_CategoryCaption": "Utilisation par catégorie",
+  "TmUsageMeter_CategoryColumn": "Catégorie",
+  "TmUsageMeter_UsedColumn": "Utilisé",
+  "TmUsageMeter_ShareColumn": "Part",
+  "TmUsageMeter_OtherCategory": "Autre",
+  "TmUsageMeter_AnnounceNormal": "L'utilisation est revenue dans la limite.",
+  "TmUsageMeter_AnnounceWarning": "L'utilisation approche de la limite.",
+  "TmUsageMeter_AnnounceCritical": "L'utilisation a atteint la limite."
 }

@@ -1,0 +1,298 @@
+/* TmUsageMeter — how much of a quota is gone.
+   The track is the role="meter" element; the fill and its segments are its presentational children.
+   Every colour, size and radius is a --tm-* token, so the dark theme re-points the tokens and there is
+   no [data-theme] block here. The only motion is the width transition of the fill, and it is
+   suppressed for prefers-reduced-motion (the class is enumerated in animations.css). */
+
+.tm-usage-meter {
+  display: flex;
+  flex-direction: column;
+  gap: var(--tm-space-2);
+  padding: var(--tm-space-4);
+  background-color: var(--tm-bg-surface);
+  border: 1px solid var(--tm-border-color);
+  border-radius: var(--tm-radius-lg);
+  color: var(--tm-text-primary);
+}
+
+.tm-usage-meter--compact {
+  gap: var(--tm-space-1);
+  padding: var(--tm-space-3);
+}
+
+.tm-usage-meter__title {
+  margin: 0;
+  font-size: var(--tm-font-size-sm);
+  font-weight: var(--tm-font-weight-semibold);
+  color: var(--tm-text-secondary);
+}
+
+/* The measured control. It owns the block size so the fill can only ever be its height; the fill's
+   inline size is the used share of the limit, written inline by the component. */
+.tm-usage-meter__track {
+  display: flex;
+  overflow: hidden;
+  inline-size: 100%;
+  block-size: var(--tm-space-2);
+  border-radius: var(--tm-radius-full);
+  background-color: var(--tm-bg-muted);
+}
+
+.tm-usage-meter--compact .tm-usage-meter__track {
+  block-size: var(--tm-space-1-5);
+}
+
+.tm-usage-meter__fill {
+  display: flex;
+  flex: none;
+  max-inline-size: 100%;
+  block-size: 100%;
+  overflow: hidden;
+  border-radius: inherit;
+  background-color: var(--tm-color-primary);
+  transition: inline-size var(--tm-transition-normal);
+}
+
+.tm-usage-meter--warning .tm-usage-meter__fill {
+  background-color: var(--tm-color-warning);
+}
+
+.tm-usage-meter--critical .tm-usage-meter__fill {
+  background-color: var(--tm-color-danger);
+}
+
+/* While the usage is warning or critical the strip can be fully covered by the category segments,
+   so the track carries a RING in the state colour as well — the verdict survives the breakdown, the
+   way the badge's word and icon already do. */
+.tm-usage-meter--warning .tm-usage-meter__track {
+  outline: 2px solid var(--tm-color-warning);
+  outline-offset: 1px;
+}
+
+.tm-usage-meter--critical .tm-usage-meter__track {
+  outline: 2px solid var(--tm-color-danger);
+  outline-offset: 1px;
+}
+
+.tm-usage-meter__segment {
+  flex: 0 0 auto;
+  min-inline-size: 0;
+  block-size: 100%;
+}
+
+.tm-usage-meter__segment--tone-1 { background-color: var(--tm-category-1); }
+.tm-usage-meter__segment--tone-2 { background-color: var(--tm-category-2); }
+.tm-usage-meter__segment--tone-3 { background-color: var(--tm-category-3); }
+.tm-usage-meter__segment--tone-4 { background-color: var(--tm-category-4); }
+.tm-usage-meter__segment--tone-5 { background-color: var(--tm-category-5); }
+.tm-usage-meter__segment--tone-6 { background-color: var(--tm-category-6); }
+
+/* Usage no category explains: a neutral band inside the fill, edged so it is not read as a gap. */
+.tm-usage-meter__segment--remainder {
+  background-color: var(--tm-bg-muted);
+  border-inline-start: 1px solid var(--tm-border-color-strong);
+}
+
+.tm-usage-meter__readout {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--tm-space-2);
+  margin: 0;
+  font-size: var(--tm-font-size-sm);
+}
+
+.tm-usage-meter__amount {
+  font-weight: var(--tm-font-weight-medium);
+  font-variant-numeric: tabular-nums;
+}
+
+.tm-usage-meter__percent {
+  color: var(--tm-text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+/* The state is an ICON plus a WORD plus a colour — the tone alone never carries the verdict. */
+.tm-usage-meter__state {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--tm-space-1);
+  margin-inline-start: auto;
+  font-size: var(--tm-font-size-xs);
+  font-weight: var(--tm-font-weight-semibold);
+}
+
+.tm-usage-meter__state svg {
+  inline-size: var(--tm-space-4);
+  block-size: var(--tm-space-4);
+}
+
+.tm-usage-meter__state-text {
+  color: var(--tm-text-primary);
+}
+
+.tm-usage-meter--warning .tm-usage-meter__state {
+  color: var(--tm-color-warning-text);
+}
+
+.tm-usage-meter--critical .tm-usage-meter__state {
+  color: var(--tm-color-danger-text);
+}
+
+.tm-usage-meter__reset,
+.tm-usage-meter__over {
+  display: flex;
+  align-items: center;
+  gap: var(--tm-space-1);
+  margin: 0;
+  font-size: var(--tm-font-size-xs);
+  color: var(--tm-text-secondary);
+}
+
+.tm-usage-meter__over {
+  color: var(--tm-color-danger-text);
+  font-weight: var(--tm-font-weight-medium);
+}
+
+.tm-usage-meter__reset-icon svg,
+.tm-usage-meter__over-icon svg {
+  inline-size: var(--tm-space-4);
+  block-size: var(--tm-space-4);
+}
+
+.tm-usage-meter__reset-icon,
+.tm-usage-meter__over-icon {
+  display: inline-flex;
+  flex: none;
+}
+
+.tm-usage-meter__daily {
+  inline-size: 100%;
+}
+
+.tm-usage-meter__sparkline {
+  inline-size: 100%;
+}
+
+.tm-usage-meter__cta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--tm-space-2);
+}
+
+/* The table is the accessible presentation of the categories: a caption, real column headers and a
+   row header per category. The strip above repeats none of it to a reader. */
+.tm-usage-meter__table {
+  inline-size: 100%;
+  border-collapse: collapse;
+  font-size: var(--tm-font-size-sm);
+}
+
+.tm-usage-meter__table thead th {
+  padding: var(--tm-space-1) var(--tm-space-2);
+  border-block-end: 1px solid var(--tm-border-color);
+  color: var(--tm-text-secondary);
+  font-size: var(--tm-font-size-xs);
+  font-weight: var(--tm-font-weight-semibold);
+  text-align: start;
+}
+
+.tm-usage-meter__table thead th:not(:first-child) {
+  text-align: end;
+}
+
+.tm-usage-meter__row {
+  border-block-end: 1px solid var(--tm-border-color);
+}
+
+.tm-usage-meter__row:last-child {
+  border-block-end: 0;
+}
+
+.tm-usage-meter__row th,
+.tm-usage-meter__row td {
+  padding: var(--tm-space-2);
+  vertical-align: middle;
+}
+
+.tm-usage-meter__row--other .tm-usage-meter__label {
+  color: var(--tm-text-secondary);
+  font-weight: var(--tm-font-weight-normal);
+}
+
+/* The row header IS the cell. A display other than the default would make the browser wrap the th in
+   an anonymous cell and drop the row-header role in WebKit/VoiceOver, so the flex layout lives on the
+   inner wrapper and the th keeps nothing but text properties. */
+.tm-usage-meter__label {
+  font-weight: var(--tm-font-weight-medium);
+  text-align: start;
+  overflow-wrap: anywhere;
+}
+
+.tm-usage-meter__label-inner {
+  display: flex;
+  align-items: center;
+  gap: var(--tm-space-2);
+  min-inline-size: 0;
+}
+
+.tm-usage-meter__swatch {
+  flex: none;
+  inline-size: var(--tm-space-2);
+  block-size: var(--tm-space-2);
+  border-radius: var(--tm-radius-sm);
+  background-color: var(--tm-category-fallback);
+}
+
+.tm-usage-meter__swatch--tone-1 { background-color: var(--tm-category-1); }
+.tm-usage-meter__swatch--tone-2 { background-color: var(--tm-category-2); }
+.tm-usage-meter__swatch--tone-3 { background-color: var(--tm-category-3); }
+.tm-usage-meter__swatch--tone-4 { background-color: var(--tm-category-4); }
+.tm-usage-meter__swatch--tone-5 { background-color: var(--tm-category-5); }
+.tm-usage-meter__swatch--tone-6 { background-color: var(--tm-category-6); }
+
+.tm-usage-meter__swatch--remainder {
+  background-color: var(--tm-bg-muted);
+  border: 1px solid var(--tm-border-color-strong);
+}
+
+.tm-usage-meter__value {
+  font-variant-numeric: tabular-nums;
+  text-align: end;
+  white-space: nowrap;
+}
+
+.tm-usage-meter__share {
+  font-variant-numeric: tabular-nums;
+  text-align: end;
+  white-space: nowrap;
+  color: var(--tm-text-secondary);
+}
+
+/* ── Forced colours ─────────────────────────────────────────────────────
+   The fill, the segments and the swatches are painted ONLY with background-color, which forced-colors
+   removes: the bar would become an empty box. The table still carries the data, but the meter must not
+   look broken, so the painted surfaces opt out of the substitution and the track keeps a system edge —
+   the filled share stays readable. */
+@media (forced-colors: active) {
+  .tm-usage-meter__track {
+    border: 1px solid CanvasText;
+  }
+
+  .tm-usage-meter__fill,
+  .tm-usage-meter__segment,
+  .tm-usage-meter__swatch {
+    forced-color-adjust: none;
+  }
+}
+
+/* ── Coarse pointers ────────────────────────────────────────────────────
+   The meter itself is not interactive, so there is no 44 px target to grow; the state badge and the
+   call to action stay comfortably tappable instead. */
+@media (pointer: coarse) {
+  .tm-usage-meter__state,
+  .tm-usage-meter__reset,
+  .tm-usage-meter__over {
+    font-size: var(--tm-font-size-sm);
+  }
+}

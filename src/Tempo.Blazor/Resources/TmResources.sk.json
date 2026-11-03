@@ -6652,5 +6652,22 @@
   "TmTraceWaterfall_StatusCancelled": "Zrušené",
   "TmTraceWaterfall_UnitMs": "ms",
   "TmTraceWaterfall_UnitSeconds": "s",
-  "TmTraceWaterfall_UnitMinutes": "min"
+  "TmTraceWaterfall_UnitMinutes": "min",
+  "TmUsageMeter_AriaLabel": "Využitie",
+  "TmUsageMeter_ValueOf": "{0} z {1}",
+  "TmUsageMeter_AriaValueText": "{0} {1}, {2}",
+  "TmUsageMeter_AriaValueTextNoUnit": "{0}, {1}",
+  "TmUsageMeter_StateWarning": "Blízko limitu",
+  "TmUsageMeter_StateCritical": "Limit dosiahnutý",
+  "TmUsageMeter_OverLimit": "Prekročené o {0}",
+  "TmUsageMeter_ResetsAt": "Obnoví sa {0}",
+  "TmUsageMeter_DailyUsageSummary": "Denné využitie: minimum {0}, maximum {1}, posledná hodnota {2}",
+  "TmUsageMeter_CategoryCaption": "Využitie podľa kategórií",
+  "TmUsageMeter_CategoryColumn": "Kategória",
+  "TmUsageMeter_UsedColumn": "Vyčerpané",
+  "TmUsageMeter_ShareColumn": "Podiel",
+  "TmUsageMeter_OtherCategory": "Ostatné",
+  "TmUsageMeter_AnnounceNormal": "Využitie je opäť v limite.",
+  "TmUsageMeter_AnnounceWarning": "Využitie je blízko limitu.",
+  "TmUsageMeter_AnnounceCritical": "Využitie dosiahlo limit."
 }

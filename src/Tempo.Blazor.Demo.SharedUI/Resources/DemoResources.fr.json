@@ -692,5 +692,15 @@
   "TmDataDisplayDemo_TraceTokens": "Jetons entrée / sortie",
   "TmDataDisplayDemo_TraceTokensIn": "Jetons en entrée",
   "TmDataDisplayDemo_TraceTokensOut": "Jetons en sortie",
-  "TmDataDisplayDemo_TraceCost": "Coût"
+  "TmDataDisplayDemo_TraceCost": "Coût",
+  "TmDataDisplayDemo_UsageMeter": "Compteur d'utilisation",
+  "TmDataDisplayDemo_UsageMeterBadge": "Nouveau",
+  "TmDataDisplayDemo_UsageMeterHint": "La part consommée d'un quota mensuel de crédits : la répartition par catégorie, la date de réinitialisation, l'historique quotidien et un appel à l'action qui n'apparaît qu'à l'approche de la limite.",
+  "TmDataDisplayDemo_UsageMeterTitle": "Crédits mensuels",
+  "TmDataDisplayDemo_UsageMeterUnit": "crédits",
+  "TmDataDisplayDemo_UsageMeterAdd": "Utiliser 1 500 crédits",
+  "TmDataDisplayDemo_UsageMeterReset": "Réinitialiser l'utilisation",
+  "TmDataDisplayDemo_UsageMeterUpgrade": "Acheter des crédits",
+  "TmDataDisplayDemo_UsageMeterAdded": "1 500 crédits utilisés",
+  "TmDataDisplayDemo_UsageMeterResetDone": "Utilisation réinitialisée"
 }

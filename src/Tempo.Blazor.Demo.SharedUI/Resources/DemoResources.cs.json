@@ -692,5 +692,15 @@
   "TmDataDisplayDemo_TraceTokens": "Tokeny dovnitř / ven",
   "TmDataDisplayDemo_TraceTokensIn": "Tokeny dovnitř",
   "TmDataDisplayDemo_TraceTokensOut": "Tokeny ven",
-  "TmDataDisplayDemo_TraceCost": "Cena"
+  "TmDataDisplayDemo_TraceCost": "Cena",
+  "TmDataDisplayDemo_UsageMeter": "Měřič využití",
+  "TmDataDisplayDemo_UsageMeterBadge": "Nové",
+  "TmDataDisplayDemo_UsageMeterHint": "Kolik z měsíční kvóty kreditů je vyčerpáno: rozpad podle kategorií, datum obnovení, denní historie a výzva k akci, která se objeví až u limitu.",
+  "TmDataDisplayDemo_UsageMeterTitle": "Měsíční kredity",
+  "TmDataDisplayDemo_UsageMeterUnit": "kreditů",
+  "TmDataDisplayDemo_UsageMeterAdd": "Vyčerpat 1 500 kreditů",
+  "TmDataDisplayDemo_UsageMeterReset": "Obnovit využití",
+  "TmDataDisplayDemo_UsageMeterUpgrade": "Dokoupit kredity",
+  "TmDataDisplayDemo_UsageMeterAdded": "Vyčerpáno 1 500 kreditů",
+  "TmDataDisplayDemo_UsageMeterResetDone": "Využití obnoveno"
 }

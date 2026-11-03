@@ -226,6 +226,54 @@
     </div>
 </section>
 
+<!-- Usage meter: how much of a monthly credit quota is gone. The buttons walk the meter through
+     the warning state (the NearLimitContent call to action appears), the critical state and the
+     over-limit reading, and back to a normal month. The compact meter beside it is the same data in
+     a card-corner presentation. -->
+<section class="demo-section">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">@Loc["TmDataDisplayDemo_UsageMeter"]</h2>
+        <span class="px-2 py-0.5 text-xs font-medium bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 rounded-full">@Loc["TmDataDisplayDemo_UsageMeterBadge"]</span>
+    </div>
+    <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">@Loc["TmDataDisplayDemo_UsageMeterHint"]</p>
+    <div data-testid="usage-meter-section" class="demo-grid demo-grid-2">
+        <div class="flex flex-col gap-3">
+            <TmUsageMeter Title="@Loc["TmDataDisplayDemo_UsageMeterTitle"]"
+                          Used="_usageUsed"
+                          Limit="_usageLimit"
+                          Unit="@Loc["TmDataDisplayDemo_UsageMeterUnit"]"
+                          ResetsAt="_usageResetsAt"
+                          Categories="_usageCategories"
+                          DailyUsage="_usageDaily">
+                <NearLimitContent>
+                    <TmButton Variant="ButtonVariant.Primary" Size="ButtonSize.Sm"
+                              data-testid="usage-meter-upgrade"
+                              OnClick="BuyMoreCredits">@Loc["TmDataDisplayDemo_UsageMeterUpgrade"]</TmButton>
+                </NearLimitContent>
+            </TmUsageMeter>
+            <div class="flex flex-wrap gap-2">
+                <TmButton Variant="ButtonVariant.Secondary" Size="ButtonSize.Sm"
+                          data-testid="usage-meter-add"
+                          OnClick="AddDemoUsage">@Loc["TmDataDisplayDemo_UsageMeterAdd"]</TmButton>
+                <TmButton Variant="ButtonVariant.Ghost" Size="ButtonSize.Sm"
+                          data-testid="usage-meter-reset"
+                          OnClick="ResetDemoUsage">@Loc["TmDataDisplayDemo_UsageMeterReset"]</TmButton>
+            </div>
+        </div>
+        @* items-start keeps the compact copy its own height instead of stretching it over the whole
+           grid row (the full meter on the left is much taller). The compact presentation keeps a
+           VISIBLE title (a sighted reader needs the label too), so the meter is named by it instead
+           of by an aria-label only. *@
+        <div class="flex items-start">
+            <TmUsageMeter Compact="true"
+                          Title="@Loc["TmDataDisplayDemo_UsageMeterTitle"]"
+                          Used="_usageUsed"
+                          Limit="_usageLimit"
+                          Unit="@Loc["TmDataDisplayDemo_UsageMeterUnit"]" />
+        </div>
+    </div>
+</section>
+
 <!-- Cards -->
 <section class="demo-section">
     <div class="flex items-center space-x-2 mb-4">
@@ -588,6 +636,42 @@
     private IReadOnlyList<TraceMetricColumn> _traceColumns = [];
     private string? _traceSelectedId;
     private bool _traceLive;
+
+
+    // Usage meter (2.10.0): a monthly credit quota. 8 200 of 10 000 starts in the warning state (the
+    // warning threshold is 80 %), so the call to action is visible on load; each click of
+    // "Use 1 500 credits" pushes the meter through critical and over the limit (which also grows the
+    // "Other" category row, because the categories no longer explain the extra usage). The daily
+    // array feeds the sparkline.
+    private const double DemoUsageLimit = 10_000;
+    private const double DemoUsageStart = 8_200;
+    private const double DemoUsageStep = 1_500;
+
+    private double _usageUsed = DemoUsageStart;
+    private double _usageLimit = DemoUsageLimit;
+    private readonly DateTimeOffset _usageResetsAt = new(2026, 7, 1, 0, 0, 0, TimeSpan.Zero);
+    private readonly double[] _usageDaily = [180, 420, 260, 640, 310, 880, 520];
+
+    private readonly IReadOnlyList<UsageCategory> _usageCategories =
+    [
+        new() { Key = "llm", Label = "LLM", Used = 5_500 },
+        new() { Key = "tools", Label = "Tools", Used = 1_400, Color = "var(--tm-color-info)" },
+        new() { Key = "storage", Label = "Storage", Used = 1_300 }
+    ];
+
+    private void AddDemoUsage()
+    {
+        _usageUsed = Math.Min(_usageUsed + DemoUsageStep, _usageLimit * 1.5);
+        Toast.ShowInfo(Loc["TmDataDisplayDemo_UsageMeterAdded"]);
+    }
+
+    private void ResetDemoUsage()
+    {
+        _usageUsed = DemoUsageStart;
+        Toast.ShowInfo(Loc["TmDataDisplayDemo_UsageMeterResetDone"]);
+    }
+
+    private void BuyMoreCredits() => Toast.ShowInfo(Loc["TmDataDisplayDemo_UsageMeterAdded"]);
 
     private void ToggleTraceLive()
     {

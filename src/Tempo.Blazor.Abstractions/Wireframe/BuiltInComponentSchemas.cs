@@ -151,6 +151,7 @@ public sealed class BuiltInComponentSchemas : IWireframeSchemaSource
             ["TmFilterChip"] = ["chip", "filter-builder"],
             ["TmFacetFilter"] = ["facet-filter"],
             ["TmTraceWaterfall"] = ["trace-waterfall"],
+            ["TmUsageMeter"] = ["usage-meter"],
             ["TmAccordion"] = ["accordion"],
             ["TmAccordionItem"] = ["accordion"],
             ["TmEmptyState"] = ["empty-state"],
@@ -1157,6 +1158,23 @@ public sealed class BuiltInComponentSchemas : IWireframeSchemaSource
                 P("showZoom",    "Show Zoom",    PropType.Bool,   true,    cat: "Appearance"),
                 P("showMetrics", "Show Metrics", PropType.Bool,   true,    cat: "Content"),
                 P("live",        "Live",         PropType.Bool,   false,   cat: "State"),
+            ]
+        };
+
+        yield return new WireframeComponentSchema
+        {
+            Type = "TmUsageMeter", Category = "Data Display", DisplayName = "Usage Meter",
+            DefaultWidth = 280, DefaultHeight = 200,
+            Props =
+            [
+                P("title",          "Title",           PropType.String, "Monthly credits", cat: "Content"),
+                P("used",           "Used",            PropType.Double, 7500,              cat: "Content"),
+                P("limit",          "Limit",           PropType.Double, 10000,             cat: "Content"),
+                P("unit",           "Unit",            PropType.String, "credits",         cat: "Content"),
+                P("showReset",      "Show Reset",      PropType.Bool,   false,             cat: "Content"),
+                P("showDaily",      "Show Daily",      PropType.Bool,   false,             cat: "Appearance"),
+                P("showCategories", "Show Categories", PropType.Bool,   true,              cat: "Content"),
+                P("compact",        "Compact",         PropType.Bool,   false,             cat: "Appearance"),
             ]
         };
 

@@ -1,0 +1,147 @@
+@namespace Tempo.Blazor.Components.DataDisplay
+@inherits Tempo.Blazor.Components.TmComponentBase
+@using System.Globalization
+@using Tempo.Blazor.Components.Charts
+
+@* How much of a quota is gone. The TRACK is the role="meter" element: it carries the machine-readable
+   value (aria-valuemin/valuemax/valuenow) and the culture-formatted aria-valuetext, so a reader meets
+   the number once, on the control, exactly like a native <meter> with a visible label. The visible
+   readout repeats the same amount for sighted users; the STATE text, the reset date, the over-limit
+   line and the category table hold information the meter value cannot, and the single polite live
+   region announces a THRESHOLD TRANSITION only (a fresh meter says nothing). *@
+<div class="@RootClass"
+     data-testid="@RootTestId("usage-meter")"
+     data-state="@StateSlug"
+     data-over-limit="@OverLimitAttribute">
+
+    @* The title is VISIBLE in both presentations: a compact meter without a label is a nameless bar the
+       moment two of them sit side by side. In the compact presentation it is a plain label (a span, not
+       a heading), and it still names the meter through aria-labelledby. *@
+    @if (HasTitle)
+    {
+        if (Compact)
+        {
+            <span class="tm-usage-meter__title" id="@TitleId">@Title</span>
+        }
+        else
+        {
+            @TitleHeading
+        }
+    }
+
+    <div class="tm-usage-meter__track"
+         role="meter"
+         aria-valuemin="0"
+         aria-valuemax="@Invariant(EffectiveLimit)"
+         aria-valuenow="@Invariant(EffectiveUsed)"
+         aria-valuetext="@ValueText"
+         aria-labelledby="@LabelledBy"
+         aria-label="@AriaLabelAttribute"
+         aria-describedby="@DescribedBy">
+        @* The fill and its category segments are decorative: the table below carries every label and
+           number, so the strip repeats nothing to a reader and needs no hover-only tooltip. *@
+        <div class="tm-usage-meter__fill" style="inline-size:@FillPercent%" aria-hidden="true">
+            @foreach (var segment in _segments)
+            {
+                <span class="@SegmentClass(segment)"
+                      style="@SegmentStyle(segment)"
+                      data-category-key="@segment.Key"></span>
+            }
+        </div>
+    </div>
+
+    <p class="tm-usage-meter__readout">
+        <span class="tm-usage-meter__amount">@AmountText</span>
+        <span class="tm-usage-meter__percent">@PercentText</span>
+        @if (State != UsageMeterState.Normal)
+        {
+            <span class="tm-usage-meter__state">
+                <TmIcon Name="@StateIcon" Size="IconSize.Sm" />
+                <span class="tm-usage-meter__state-text">@StateText</span>
+            </span>
+        }
+    </p>
+
+    @if (OverLimit)
+    {
+        <p class="tm-usage-meter__over" id="@OverId">
+            <span class="tm-usage-meter__over-icon"><TmIcon Name="@IconNames.AlertTriangle" Size="IconSize.Sm" /></span>
+            @OverLimitText
+        </p>
+    }
+
+    @if (!Compact && ResetsAt is { } resetsAt)
+    {
+        <p class="tm-usage-meter__reset" id="@ResetId">
+            <span class="tm-usage-meter__reset-icon"><TmIcon Name="@IconNames.Calendar" Size="IconSize.Sm" /></span>
+            @ResetText(resetsAt)
+        </p>
+    }
+
+    @if (State != UsageMeterState.Normal && NearLimitContent is not null)
+    {
+        <div class="tm-usage-meter__cta">@NearLimitContent</div>
+    }
+
+    @if (!Compact && HasDailyUsage)
+    {
+        <div class="tm-usage-meter__daily">
+            <TmSparkline Data="DailyUsage!"
+                         Type="SparklineType.Bar"
+                         Height="28px"
+                         AriaLabel="@DailyAriaLabel"
+                         Class="tm-usage-meter__sparkline" />
+        </div>
+    }
+
+    @if (!Compact && _rows.Count > 0)
+    {
+        <table class="tm-usage-meter__table">
+            <caption class="tm-sr-only">@Loc["TmUsageMeter_CategoryCaption"]</caption>
+            <thead>
+                <tr>
+                    <th scope="col">@Loc["TmUsageMeter_CategoryColumn"]</th>
+                    <th scope="col">@Loc["TmUsageMeter_UsedColumn"]</th>
+                    <th scope="col">@Loc["TmUsageMeter_ShareColumn"]</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var row in _rows)
+                {
+                    <tr class="@RowClass(row)">
+                        <th scope="row" class="tm-usage-meter__label">
+                            <span class="tm-usage-meter__label-inner">
+                                <span class="@SwatchClass(row)" style="@SwatchStyle(row)" aria-hidden="true"></span>@row.Label
+                            </span>
+                        </th>
+                        <td class="tm-usage-meter__value">@FormatAmount(row.Used)</td>
+                        <td class="tm-usage-meter__share">@FormatPercent(row.Share)</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+
+    <span class="tm-sr-only"
+          role="status"
+          aria-live="polite"
+          aria-atomic="true"
+          data-testid="@TestId("usage-meter-live")">@_announcement</span>
+</div>
+
+@code {
+    /// <summary>
+    /// The per-instance id prefix, kept in the markup part so every derived DOM id is unique on a page
+    /// with several meters. A host value is never used as an id.
+    /// </summary>
+    private readonly string _instanceId = Guid.NewGuid().ToString("n")[..8];
+
+    /// <summary>The DOM id of the rendered heading (the meter's <c>aria-labelledby</c> target).</summary>
+    private string TitleId => "tm-usage-meter-title-" + _instanceId;
+
+    /// <summary>The DOM id of the reset line (one of the meter's description targets).</summary>
+    private string ResetId => "tm-usage-meter-reset-" + _instanceId;
+
+    /// <summary>The DOM id of the over-limit line (one of the meter's description targets).</summary>
+    private string OverId => "tm-usage-meter-over-" + _instanceId;
+}
