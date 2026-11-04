@@ -90,8 +90,9 @@ public sealed class UiRoleVocabularyTests
         // then 134 for `trace-waterfall` (plan ff043b2e phase 6),
         // then 135 for `usage-meter` (plan ff043b2e phase 7),
         // then 136 for `segmented-control` (plan ff043b2e phase 8),
-        // then 137 for `agent-plan` (plan 3e96f6d8 phase 2).
-        vocabulary.GetAll().Should().HaveCountLessThanOrEqualTo(137);
+        // then 137 for `agent-plan` (plan 3e96f6d8 phase 2),
+        // then 139 for the agent-run pair `agent-run-tree` and `agent-monitor` (plan 3e96f6d8 phase 3).
+        vocabulary.GetAll().Should().HaveCountLessThanOrEqualTo(139);
 
         vocabulary.Find("search-input")!.Slug.Should().Be("search-input");
         vocabulary.Find("TmDecimalInput")!.Slug.Should().Be("decimal-input");

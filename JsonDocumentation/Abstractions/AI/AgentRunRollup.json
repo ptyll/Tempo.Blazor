@@ -1,0 +1,11 @@
+{
+  "kind": "Class",
+  "category": "AI",
+  "namespace": "Tempo.Blazor.AI.Models",
+  "description": "Subtree arithmetic over a flat AgentRunNode list: the cost, the tokens and the elapsed time of one node and everything under it. The helper is public and PURE, so the number a reader sees on the screen and the number a host computes elsewhere cannot drift. The input is untrusted: a duplicate id is read once, an unresolvable parent still counts under its own root, and a parent cycle cannot loop (every walk carries a visited set).",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/AI/AgentRunRollup.cs",
+  "documentationStatus": "generated",
+  "itemName": "AgentRunRollup",
+  "usageExample": "var row = AgentRunRollup.For(\"root\", nodes, timeProvider.GetUtcNow());\nvar all = AgentRunRollup.ForAll(nodes, timeProvider.GetUtcNow());\nvar rootCost = all[\"root\"].CostMicroUnits;"
+}

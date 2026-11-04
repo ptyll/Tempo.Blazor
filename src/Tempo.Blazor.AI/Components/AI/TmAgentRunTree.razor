@@ -1,0 +1,265 @@
+@namespace Tempo.Blazor.Components.AI
+@inherits Tempo.Blazor.Components.TmComponentBase
+@using Tempo.Blazor.AI.Models
+@using Tempo.Blazor.Components.Icons
+@using Tempo.Blazor.Components.Inputs
+
+@* The run of an agent as a tree. Every user-facing string comes from ITmLocalizer; the state of a row is
+   always the word next to its icon, never the colour alone, and the kind is spelled out for a screen reader
+   while its glyph stays decorative.
+
+   The run is a role="treegrid": a header row of columnheaders, a rowgroup of rows, one roving tab stop, and
+   the APG tree keys (↑/↓ move, → expands or walks into the first child, ← collapses or walks to the parent,
+   Home/End jump, Enter/Space select). A parent row shows its whole subtree's numbers and says so in its
+   accessible name — the visible Σ alone would be a private shorthand.
+
+   An empty (or filtered-empty) run renders a paragraph INSTEAD of the grid: a treegrid may only contain
+   rows, so the empty sentence must not live inside it. *@
+<section class="@RootClass"
+         data-testid="@RootTestId("agent-run-tree")"
+         data-filter="@FilterSlug"
+         @attributes="AdditionalAttributes">
+
+    <div class="tm-ai-agent-run-tree__header">
+        @if (ShowTitle)
+        {
+            @Heading
+        }
+        @if (ShowFilter)
+        {
+            <div class="tm-ai-agent-run-tree__filter" data-testid="@TestId("agent-run-tree-filter")">
+                <TmSegmentedControl TValue="AgentRunFilter"
+                                    Size="SegmentedControlSize.Sm"
+                                    Label="@Loc["TmAgentRunTree_FilterLabel"]"
+                                    Options="@FilterOptions"
+                                    Value="@_filter"
+                                    ValueChanged="OnFilterChangedAsync" />
+            </div>
+        }
+    </div>
+
+    <p class="tm-sr-only"
+       id="@InstructionsId"
+       data-testid="@TestId("agent-run-tree-instructions")">@Loc["TmAgentRunTree_Instructions"]</p>
+
+    @if (_layout.Rows.Count == 0)
+    {
+        @if (NodeList.Count > 0)
+        {
+            <p class="tm-ai-agent-run-tree__empty"
+               data-testid="@TestId("agent-run-tree-no-matches")">@Loc["TmAgentRunTree_NoMatches"]</p>
+        }
+        else if (EmptyContent is not null)
+        {
+            @EmptyContent
+        }
+        else
+        {
+            <p class="tm-ai-agent-run-tree__empty"
+               data-testid="@TestId("agent-run-tree-empty")">@Loc["TmAgentRunTree_Empty"]</p>
+        }
+    }
+    else
+    {
+        <div class="tm-ai-agent-run-tree__grid"
+             role="treegrid"
+             aria-label="@(GridAriaLabel ?? GridFallbackLabel)"
+             aria-labelledby="@GridLabelledBy"
+             aria-describedby="@InstructionsId"
+             aria-rowcount="@((_layout.Rows.Count + 1).ToString(System.Globalization.CultureInfo.InvariantCulture))"
+             aria-colcount="@ColumnCount.ToString(System.Globalization.CultureInfo.InvariantCulture)"
+             data-testid="@TestId("agent-run-tree-grid")"
+             @ref="_gridRef">
+            <div class="tm-ai-agent-run-tree__head" role="row">
+                <div role="columnheader"
+                     class="tm-ai-agent-run-tree__head-cell tm-ai-agent-run-tree__head-cell--name">@Loc["TmAgentRunTree_ColumnName"]</div>
+                <div role="columnheader"
+                     class="tm-ai-agent-run-tree__head-cell tm-ai-agent-run-tree__head-cell--status">@Loc["TmAgentRunTree_ColumnStatus"]</div>
+                @if (ShowModel)
+                {
+                    <div role="columnheader"
+                         class="tm-ai-agent-run-tree__head-cell tm-ai-agent-run-tree__head-cell--model">@Loc["TmAgentRunTree_ColumnModel"]</div>
+                }
+                @if (ShowTime)
+                {
+                    <div role="columnheader"
+                         class="tm-ai-agent-run-tree__head-cell tm-ai-agent-run-tree__head-cell--time">@Loc["TmAgentRunTree_ColumnTime"]</div>
+                }
+                @if (ShowCost)
+                {
+                    <div role="columnheader"
+                         class="tm-ai-agent-run-tree__head-cell tm-ai-agent-run-tree__head-cell--cost">@Loc["TmAgentRunTree_ColumnCost"]</div>
+                }
+                @if (ShowTokens)
+                {
+                    <div role="columnheader"
+                         class="tm-ai-agent-run-tree__head-cell tm-ai-agent-run-tree__head-cell--tokens">@Loc["TmAgentRunTree_ColumnTokens"]</div>
+                }
+            </div>
+
+            @* The rows must be OWNED by the treegrid: a bare div between the grid and its rows breaks the
+               accessibility-tree ownership. A rowgroup is the ARIA-sanctioned intermediate. *@
+            <div class="tm-ai-agent-run-tree__body" role="rowgroup">
+                @foreach (var row in _layout.Rows)
+                {
+                    <div class="tm-ai-agent-run-tree__row"
+                         role="row"
+                         aria-level="@row.Level.ToString(System.Globalization.CultureInfo.InvariantCulture)"
+                         aria-expanded="@(row.HasChildren ? (row.IsCollapsed ? "false" : "true") : null)"
+                         aria-selected="@(IsSelected(row) ? "true" : null)"
+                         tabindex="@(IsActive(row) ? 0 : -1)"
+                         data-node-id="@row.Node.Id"
+                         data-status="@StatusSlug(row.Node.Status)"
+                         data-kind="@KindSlug(row.Node.Kind)"
+                         data-testid="@TestId("agent-run-tree-row")"
+                         @key="row.Node.Id"
+                         @ref="_rowRefs[row.Node.Id]"
+                         @onclick="() => SelectAsync(row)"
+                         @onfocus="() => OnRowFocus(row.Node.Id)"
+                         @onkeydown="args => HandleRowKeyDownAsync(row, args)"
+                         @onkeyup="args => HandleRowKeyUpAsync(row, args)">
+                        <div role="gridcell"
+                             class="tm-ai-agent-run-tree__name"
+                             style="@IndentStyle(row)">
+                            @if (row.HasChildren)
+                            {
+                                @* The row itself carries aria-expanded and the ←/→ keys, so the glyph is a
+                                   decorative pointer target rather than a second tab stop. *@
+                                <button type="button"
+                                        class="tm-ai-agent-run-tree__toggle"
+                                        tabindex="-1"
+                                        aria-hidden="true"
+                                        aria-label="@ToggleLabel(row)"
+                                        data-testid="@TestId("agent-run-tree-toggle")"
+                                        @onclick="() => ToggleAsync(row)"
+                                        @onclick:stopPropagation="true"
+                                        @onkeydown:stopPropagation="true"
+                                        @onkeyup:stopPropagation="true">
+                                    <TmIcon Name="@(row.IsCollapsed ? IconNames.ChevronRight : IconNames.ChevronDown)" Size="IconSize.Sm" />
+                                </button>
+                            }
+                            else
+                            {
+                                <span class="tm-ai-agent-run-tree__toggle-spacer" aria-hidden="true"></span>
+                            }
+                            <span class="tm-ai-agent-run-tree__kind"
+                                  data-icon="@KindIcon(row.Node.Kind)"
+                                  aria-hidden="true">
+                                <TmIcon Name="@KindIcon(row.Node.Kind)" Size="IconSize.Sm" />
+                            </span>
+                            <span class="@LabelClass(row.Node)"
+                                  title="@TitleText(row.Node)"
+                                  data-placeholder="@(string.IsNullOrWhiteSpace(row.Node.Title) ? "true" : null)">@TitleText(row.Node)</span>
+                            <span class="tm-sr-only">@KindText(row.Node.Kind)</span>
+                            @if (row.IsOrphan)
+                            {
+                                <span class="tm-ai-agent-run-tree__orphan"
+                                      data-testid="@TestId("agent-run-tree-orphan")">@Loc["TmAgentRunTree_Orphan"]</span>
+                            }
+                        </div>
+
+                        @* A failed row keeps the word, and the failure REASON is the cell's accessible name:
+                           a second text column would make the name column unreadable, while the reason
+                           still reaches a screen reader (and the host's DetailTemplate shows it in full). *@
+                        <div role="gridcell"
+                             class="tm-ai-agent-run-tree__status"
+                             data-status="@StatusSlug(row.Node.Status)"
+                             data-has-error="@(string.IsNullOrWhiteSpace(row.Node.Error) ? null : "true")"
+                             aria-label="@StatusAriaLabel(row)">
+                            <span class="tm-ai-agent-run-tree__status-icon" aria-hidden="true">
+                                <TmIcon Name="@StatusIcon(row.Node.Status)" Size="IconSize.Sm" />
+                            </span>
+                            <span class="tm-ai-agent-run-tree__status-text">@StatusText(row.Node.Status)</span>
+                            @if (!string.IsNullOrWhiteSpace(row.Node.Error))
+                            {
+                                <span class="tm-ai-agent-run-tree__status-error" aria-hidden="true">
+                                    <TmIcon Name="@IconNames.AlertTriangle" Size="IconSize.Xs" />
+                                </span>
+                            }
+                        </div>
+
+                        @if (ShowModel)
+                        {
+                            <div role="gridcell"
+                                 class="tm-ai-agent-run-tree__model"
+                                 title="@(string.IsNullOrWhiteSpace(row.Node.Model) ? null : row.Node.Model)"
+                                 aria-label="@(string.IsNullOrWhiteSpace(row.Node.Model) ? Loc["TmAgentRunTree_NotReported"] : null)">@(string.IsNullOrWhiteSpace(row.Node.Model) ? "—" : row.Node.Model)</div>
+                        }
+
+                        @if (ShowTime)
+                        {
+                            @* The clock moves every second while a node runs, so it is never a live region. *@
+                            <div role="gridcell"
+                                 class="tm-ai-agent-run-tree__time"
+                                 aria-live="off"
+                                 data-rollup="@(row.IsSummary && HasTime(row) ? "true" : null)"
+                                 aria-label="@RollupLabel(row, TimeCell(row), HasTime(row))">
+                                @if (row.IsSummary && HasTime(row))
+                                {
+                                    <span class="tm-ai-agent-run-tree__sum" aria-hidden="true">Σ</span>
+                                }
+                                @TimeCell(row)
+                            </div>
+                        }
+
+                        @if (ShowCost)
+                        {
+                            <div role="gridcell"
+                                 class="tm-ai-agent-run-tree__cost"
+                                 data-rollup="@(row.IsSummary && HasCost(row) ? "true" : null)"
+                                 aria-label="@RollupLabel(row, CostCell(row), HasCost(row))">
+                                @if (row.IsSummary && HasCost(row))
+                                {
+                                    <span class="tm-ai-agent-run-tree__sum" aria-hidden="true">Σ</span>
+                                }
+                                @CostCell(row)
+                            </div>
+                        }
+
+                        @if (ShowTokens)
+                        {
+                            <div role="gridcell"
+                                 class="tm-ai-agent-run-tree__tokens"
+                                 data-rollup="@(row.IsSummary && HasTokens(row) ? "true" : null)"
+                                 aria-label="@RollupLabel(row, TokensCell(row), HasTokens(row))">
+                                @if (row.IsSummary && HasTokens(row))
+                                {
+                                    <span class="tm-ai-agent-run-tree__sum" aria-hidden="true">Σ</span>
+                                }
+                                @TokensCell(row)
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+
+        @if (DetailTemplate is not null && SelectedNode is { } selected)
+        {
+            <div class="tm-ai-agent-run-tree__detail"
+                 role="region"
+                 aria-label="@Loc["TmAgentRunTree_Detail"]"
+                 data-testid="@TestId("agent-run-tree-detail")">
+                @DetailTemplate(selected)
+            </div>
+        }
+    }
+
+    <div class="tm-sr-only"
+         role="status"
+         aria-live="polite"
+         aria-atomic="true"
+         data-testid="@TestId("agent-run-tree-announcement")">@_announcement</div>
+</section>
+
+@code {
+    /// <summary>The heading, built at the requested level without duplicating the markup six times.</summary>
+    private RenderFragment Heading => builder =>
+    {
+        builder.OpenElement(0, "h" + EffectiveHeadingLevel.ToString(System.Globalization.CultureInfo.InvariantCulture));
+        builder.AddAttribute(1, "class", "tm-ai-agent-run-tree__title");
+        builder.AddAttribute(2, "id", TitleId);
+        builder.AddContent(3, HeadingText);
+        builder.CloseElement();
+    };
+}

@@ -1,0 +1,11 @@
+{
+  "kind": "Class",
+  "category": "AI",
+  "namespace": "Tempo.Blazor.AI.Models",
+  "description": "Formats an agent run's cost. The model stores MICRO-UNITS (1,000,000 is 1.00 of the currency), the smallest unit an LLM bill is usually quoted in, so a run whose individual calls cost a fraction of a cent keeps its precision instead of rounding to zero. The default format is the culture's own currency, with the currency's own number of decimal places (two for USD, none for JPY); below one hundredth of a unit the formatter keeps six decimals, because a column of \"0.00\" is worse than no column.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/AI/AiCostFormatter.cs",
+  "documentationStatus": "generated",
+  "itemName": "AiCostFormatter",
+  "usageExample": "AiCostFormatter.Format(1_500_000, CultureInfo.GetCultureInfo(\"en-US\"));   // \"$1.50\"\nAiCostFormatter.Format(1_234, CultureInfo.GetCultureInfo(\"cs-CZ\"));       // \"0,001234 Kč\""
+}

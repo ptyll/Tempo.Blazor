@@ -1,0 +1,36 @@
+{
+  "kind": "Enum",
+  "category": "AI",
+  "namespace": "Tempo.Blazor.AI.Models",
+  "description": "What one step of an ongoing run is: the kind decides the glyph the monitor's timeline draws for it, and its localized name is always rendered for a screen reader.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/AI/AgentRunNodeKind.cs",
+  "documentationStatus": "generated",
+  "itemName": "AgentStepKind",
+  "members": [
+    {
+      "name": "Thinking",
+      "description": "The agent is reasoning; nothing is executed yet."
+    },
+    {
+      "name": "ToolCall",
+      "description": "The agent called a tool."
+    },
+    {
+      "name": "Message",
+      "description": "The agent produced a message for the reader."
+    },
+    {
+      "name": "Approval",
+      "description": "The step is waiting for a human decision."
+    },
+    {
+      "name": "Handoff",
+      "description": "The run handed over to another agent."
+    },
+    {
+      "name": "Result",
+      "description": "The step produced the run's result."
+    }
+  ]
+}

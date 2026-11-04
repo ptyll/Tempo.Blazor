@@ -1,0 +1,333 @@
+/* ═══════════════════════════════════════════════════════════════════════════════════════════════
+   TmAgentMonitor — one agent run, live: current step, clock, cost and the steps' timeline
+   Contract: docs/agent-monitor.md
+   Every rule reads a --tm-* design token (no colour literal, no raw palette step, no [data-theme]
+   block); the package's shared token gate is AiMarkdownViewCssTests and the component's own gate is
+   TmAgentRunComponentsCssTests.
+
+   The strip declares NO transition and NO animation on purpose: it redraws itself every second while
+   the run is going, so a moving surface would keep animating for the whole run (and the package's
+   reduced-motion enumeration stays exactly as it is).
+   ═══════════════════════════════════════════════════════════════════════════════════════════════ */
+
+.tm-ai-agent-monitor {
+    /* A grid or flex item must be allowed to be narrower than its content, or a phone page scrolls. */
+    min-inline-size: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-2);
+    padding: var(--tm-space-3) var(--tm-space-4);
+    border: var(--tm-border-width) solid var(--tm-border-color);
+    border-radius: var(--tm-radius-card);
+    background-color: var(--tm-bg-surface);
+    color: var(--tm-text-primary);
+    box-shadow: var(--tm-shadow-sm);
+    font-size: var(--tm-font-size-sm);
+    line-height: 1.5;
+}
+
+/* The folded strip is one bar: the metrics stay, the timeline and the approval slot need the room. */
+.tm-ai-agent-monitor--collapsed {
+    gap: 0;
+    padding-block: var(--tm-space-2);
+}
+
+/* ── Bar ─────────────────────────────────────────────────────────────────────────────────────── */
+
+.tm-ai-agent-monitor__bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--tm-space-2);
+}
+
+.tm-ai-agent-monitor__state {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--tm-space-1);
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-xs);
+    font-weight: var(--tm-font-weight-medium);
+}
+
+.tm-ai-agent-monitor__state-icon {
+    display: inline-flex;
+    align-items: center;
+}
+
+.tm-ai-agent-monitor__state-text {
+    white-space: nowrap;
+}
+
+/* The tone is a SECOND carrier: the state word is always next to the icon. */
+.tm-ai-agent-monitor__state[data-status="running"] {
+    color: var(--tm-color-primary-text);
+}
+
+.tm-ai-agent-monitor__state[data-status="done"] {
+    color: var(--tm-color-success-text);
+}
+
+.tm-ai-agent-monitor__state[data-status="failed"] {
+    color: var(--tm-color-danger-text);
+}
+
+.tm-ai-agent-monitor__heading {
+    display: flex;
+    /* Small enough that the state, the heading and the fold toggle share ONE row on a phone. */
+    flex: 1 1 9rem;
+    flex-direction: column;
+    min-inline-size: 0;
+}
+
+.tm-ai-agent-monitor__title {
+    margin: 0;
+    color: var(--tm-text-primary);
+    font-size: var(--tm-font-size-base);
+    font-weight: var(--tm-font-weight-semibold);
+    /* The run's own name is prose: on a 320 px strip it wraps instead of being cut to a dead ellipsis. */
+    overflow-wrap: anywhere;
+}
+
+.tm-ai-agent-monitor__headline {
+    margin: 0;
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-xs);
+}
+
+.tm-ai-agent-monitor__approval-marker {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--tm-space-1);
+    padding-inline: var(--tm-space-2);
+    padding-block: var(--tm-space-1);
+    border: var(--tm-border-width) solid var(--tm-border-color-control);
+    border-radius: var(--tm-radius-sm);
+    color: var(--tm-color-primary-text);
+    font-size: var(--tm-font-size-xs);
+    font-weight: var(--tm-font-weight-medium);
+}
+
+.tm-ai-agent-monitor__toggle {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    inline-size: 2rem;
+    block-size: 2rem;
+    padding: 0;
+    border: var(--tm-border-width) solid var(--tm-border-color);
+    border-radius: var(--tm-radius-md);
+    background-color: var(--tm-bg-surface);
+    color: var(--tm-text-secondary);
+    cursor: pointer;
+}
+
+.tm-ai-agent-monitor__toggle:hover {
+    background-color: var(--tm-bg-muted);
+}
+
+.tm-ai-agent-monitor__toggle:focus-visible {
+    outline: 2px solid var(--tm-color-primary);
+    outline-offset: 2px;
+}
+
+/* ── Metrics ─────────────────────────────────────────────────────────────────────────────────── */
+
+.tm-ai-agent-monitor__metrics {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--tm-space-3);
+    padding-block-start: var(--tm-space-2);
+    border-block-start: var(--tm-border-width) solid var(--tm-border-color);
+}
+
+.tm-ai-agent-monitor--collapsed .tm-ai-agent-monitor__metrics {
+    padding-block-start: 0;
+    border-block-start: 0;
+}
+
+.tm-ai-agent-monitor__metric {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    min-inline-size: 0;
+}
+
+.tm-ai-agent-monitor__metric--current {
+    flex: 1 1 12rem;
+}
+
+.tm-ai-agent-monitor__metric-label {
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-xs);
+}
+
+.tm-ai-agent-monitor__metric-value {
+    color: var(--tm-text-primary);
+    font-weight: var(--tm-font-weight-medium);
+    /* The current step is the metric the strip exists to show: it wraps (WCAG 1.4.10), it is never clipped. */
+    overflow-wrap: anywhere;
+}
+
+/* Elapsed and cost are SHORT values, so they keep one line with an ellipsis (the model does the same in its
+   own rule and carries its whole id in a title). The current step is prose and is deliberately absent from
+   this list. */
+.tm-ai-agent-monitor__metric--elapsed .tm-ai-agent-monitor__metric-value,
+.tm-ai-agent-monitor__metric--cost .tm-ai-agent-monitor__metric-value {
+    overflow: hidden;
+    font-variant-numeric: tabular-nums;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.tm-ai-agent-monitor__metric--model .tm-ai-agent-monitor__metric-value {
+    overflow: hidden;
+    font-family: var(--tm-font-mono);
+    font-size: var(--tm-font-size-xs);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* ── Approval slot ──────────────────────────────────────────────────────────────────────────── */
+
+.tm-ai-agent-monitor__approval {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--tm-space-2);
+    padding: var(--tm-space-3);
+    border: var(--tm-border-width) solid var(--tm-border-color-control);
+    border-radius: var(--tm-radius-md);
+    background-color: var(--tm-bg-surface-secondary);
+}
+
+/* ── Timeline ───────────────────────────────────────────────────────────────────────────────── */
+
+.tm-ai-agent-monitor__timeline {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    margin: 0;
+    margin-block-start: var(--tm-space-1);
+    padding: 0;
+    padding-block-start: var(--tm-space-2);
+    border-block-start: var(--tm-border-width) solid var(--tm-border-color);
+    list-style: none;
+}
+
+.tm-ai-agent-monitor__step {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-2);
+    min-block-size: 2rem;
+    padding-block: var(--tm-space-1);
+    border-block-end: var(--tm-border-width) solid transparent;
+}
+
+.tm-ai-agent-monitor__step:last-child {
+    border-block-end: 0;
+}
+
+.tm-ai-agent-monitor__step-icon {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    color: var(--tm-text-secondary);
+}
+
+.tm-ai-agent-monitor__step[data-kind="result"] .tm-ai-agent-monitor__step-icon {
+    color: var(--tm-color-success-text);
+}
+
+.tm-ai-agent-monitor__step[data-kind="approval"] .tm-ai-agent-monitor__step-icon {
+    color: var(--tm-color-primary-text);
+}
+
+/* The kind word is visually hidden by the core tm-sr-only helper; this hook marks it so a test can
+   read the word a screen reader gets. */
+.tm-ai-agent-monitor__step-kind {
+    white-space: nowrap;
+}
+
+.tm-ai-agent-monitor__step-body {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    min-inline-size: 0;
+}
+
+.tm-ai-agent-monitor__step-title {
+    color: var(--tm-text-primary);
+    /* A step title and its detail are prose: they wrap rather than ending in an ellipsis nothing reveals. */
+    overflow-wrap: anywhere;
+}
+
+.tm-ai-agent-monitor__step-detail {
+    color: var(--tm-text-secondary);
+    font-family: var(--tm-font-mono);
+    font-size: var(--tm-font-size-xs);
+    overflow-wrap: anywhere;
+}
+
+.tm-ai-agent-monitor__step-status {
+    flex: 0 0 auto;
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-xs);
+}
+
+.tm-ai-agent-monitor__step-status[data-status="done"] {
+    color: var(--tm-color-success-text);
+}
+
+.tm-ai-agent-monitor__step-status[data-status="failed"] {
+    color: var(--tm-color-danger-text);
+}
+
+.tm-ai-agent-monitor__step-status[data-status="running"] {
+    color: var(--tm-color-primary-text);
+}
+
+.tm-ai-agent-monitor__step-time {
+    flex: 0 0 auto;
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-xs);
+    font-variant-numeric: tabular-nums;
+    text-align: end;
+}
+
+.tm-ai-agent-monitor__empty {
+    margin: 0;
+    padding-block: var(--tm-space-2);
+    color: var(--tm-text-secondary);
+}
+
+/* ── Coarse pointer: the toggle and the rows reach the 44 px touch target ────────────────────── */
+
+@media (pointer: coarse) {
+    .tm-ai-agent-monitor__toggle {
+        inline-size: var(--tm-touch-target);
+        block-size: var(--tm-touch-target);
+    }
+
+    .tm-ai-agent-monitor__step {
+        min-block-size: var(--tm-touch-target);
+    }
+
+    /* A touch reader cannot hover a title, so the short metric values wrap as well on a coarse pointer. */
+    .tm-ai-agent-monitor__metric--elapsed .tm-ai-agent-monitor__metric-value,
+    .tm-ai-agent-monitor__metric--cost .tm-ai-agent-monitor__metric-value,
+    .tm-ai-agent-monitor__metric--model .tm-ai-agent-monitor__metric-value {
+        overflow-wrap: anywhere;
+        white-space: normal;
+    }
+}
+
+/* ── Forced colors: the system palette stays in charge ───────────────────────────────────────── */
+
+@media (forced-colors: active) {
+    /* The strip never opts out of the palette (no forced-color-adjust), so an icon, a state word and
+       the toggle keep their contrast; only the ring needs the system Highlight. */
+    .tm-ai-agent-monitor__toggle:focus-visible {
+        outline-color: Highlight;
+    }
+}

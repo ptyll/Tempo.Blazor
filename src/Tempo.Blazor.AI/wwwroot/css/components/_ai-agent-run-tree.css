@@ -1,0 +1,368 @@
+/* ═══════════════════════════════════════════════════════════════════════════════════════════════
+   TmAgentRunTree — the run of an agent as a treegrid
+   Contract: docs/agent-run-tree.md
+   Every rule reads a --tm-* design token (no colour literal, no raw palette step, no [data-theme]
+   block); the package's shared token gate is AiMarkdownViewCssTests and the component's own gate is
+   TmAgentRunComponentsCssTests.
+
+   The grid is a flex column that owns BOTH scroll axes: the header is a sticky flex row at the top of
+   that scrollport and every row is a flex row with the same cell widths, so the columns stay lined up
+   while a phone scrolls them sideways INSIDE the component (the page never does).
+
+   The tree declares NO transition and NO animation on purpose: it redraws itself every second while a
+   node runs, so a moving surface would keep animating for the whole run (and the package's
+   reduced-motion enumeration stays exactly as it is).
+   ═══════════════════════════════════════════════════════════════════════════════════════════════ */
+
+.tm-ai-agent-run-tree {
+    /* A host lays this card out in a grid or a flex row: without this the card's automatic minimum
+       width grows to the treegrid's 962 px content and the PAGE scrolls sideways instead of the grid. */
+    min-inline-size: 0;
+
+    /* Cell widths are knobs: a host or the narrow band retunes them without touching the markup. */
+    /* Every knob is DECLARED here (a var() that only ever carries a fallback is an undefined alias):
+       a host overrides a knob by restyling this root, and the tree's depth is written inline per row. */
+    --tm-agent-run-tree-max-height: 26rem;
+    --tm-agent-run-tree-depth: 0;
+    --tm-agent-run-tree-name-width: 12rem;
+    --tm-agent-run-tree-status-width: 6.5rem;
+    --tm-agent-run-tree-model-width: 6.5rem;
+    --tm-agent-run-tree-time-width: 4.5rem;
+    --tm-agent-run-tree-cost-width: 5.5rem;
+    --tm-agent-run-tree-tokens-width: 5rem;
+
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-3);
+    padding: var(--tm-space-4);
+    border: var(--tm-border-width) solid var(--tm-border-color);
+    border-radius: var(--tm-radius-card);
+    background-color: var(--tm-bg-surface);
+    color: var(--tm-text-primary);
+    box-shadow: var(--tm-shadow-sm);
+    font-size: var(--tm-font-size-sm);
+    line-height: 1.5;
+}
+
+/* ── Header ──────────────────────────────────────────────────────────────────────────────────── */
+
+.tm-ai-agent-run-tree__header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--tm-space-2);
+}
+
+.tm-ai-agent-run-tree__title {
+    margin: 0;
+    font-size: var(--tm-font-size-base);
+    font-weight: var(--tm-font-weight-semibold);
+    color: var(--tm-text-primary);
+}
+
+.tm-ai-agent-run-tree__filter {
+    min-inline-size: 0;
+}
+
+.tm-ai-agent-run-tree__empty {
+    margin: 0;
+    padding-block: var(--tm-space-3);
+    color: var(--tm-text-secondary);
+}
+
+/* ── The grid: one scroll owner in both axes, with a sticky header ───────────────────────────── */
+
+.tm-ai-agent-run-tree__grid {
+    display: flex;
+    flex-direction: column;
+    /* The grid is a flex ITEM of the tree root and its rows are wider than a phone: without this the
+       item's automatic minimum width grows to its content (the card then overflows the page instead of
+       scrolling inside the component). */
+    min-inline-size: 0;
+    max-block-size: var(--tm-agent-run-tree-max-height);
+    overflow: auto;
+    border: var(--tm-border-width) solid var(--tm-border-color);
+    border-radius: var(--tm-radius-md);
+    background-color: var(--tm-bg-surface);
+}
+
+.tm-ai-agent-run-tree__head {
+    position: sticky;
+    inset-block-start: 0;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-2);
+    min-inline-size: max-content;
+    padding-inline: var(--tm-space-1);
+    border-block-end: var(--tm-border-width) solid var(--tm-border-color);
+    background-color: var(--tm-bg-surface-secondary);
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-xs);
+    font-weight: var(--tm-font-weight-semibold);
+}
+
+.tm-ai-agent-run-tree__head-cell,
+.tm-ai-agent-run-tree__row > [role="gridcell"] {
+    padding-block: var(--tm-space-1);
+    padding-inline: var(--tm-space-2);
+}
+
+.tm-ai-agent-run-tree__head-cell--name,
+.tm-ai-agent-run-tree__name {
+    flex: 1 1 auto;
+    min-inline-size: var(--tm-agent-run-tree-name-width);
+}
+
+.tm-ai-agent-run-tree__head-cell--status,
+.tm-ai-agent-run-tree__status {
+    flex: 0 0 var(--tm-agent-run-tree-status-width);
+}
+
+.tm-ai-agent-run-tree__head-cell--model,
+.tm-ai-agent-run-tree__model {
+    flex: 0 0 var(--tm-agent-run-tree-model-width);
+}
+
+.tm-ai-agent-run-tree__head-cell--time,
+.tm-ai-agent-run-tree__time {
+    flex: 0 0 var(--tm-agent-run-tree-time-width);
+}
+
+.tm-ai-agent-run-tree__head-cell--cost,
+.tm-ai-agent-run-tree__cost {
+    flex: 0 0 var(--tm-agent-run-tree-cost-width);
+}
+
+.tm-ai-agent-run-tree__head-cell--tokens,
+.tm-ai-agent-run-tree__tokens {
+    flex: 0 0 var(--tm-agent-run-tree-tokens-width);
+}
+
+.tm-ai-agent-run-tree__head-cell--time,
+.tm-ai-agent-run-tree__head-cell--cost,
+.tm-ai-agent-run-tree__head-cell--tokens,
+.tm-ai-agent-run-tree__time,
+.tm-ai-agent-run-tree__cost,
+.tm-ai-agent-run-tree__tokens {
+    text-align: end;
+}
+
+.tm-ai-agent-run-tree__body {
+    display: flex;
+    flex-direction: column;
+    min-inline-size: max-content;
+}
+
+/* ── Rows ────────────────────────────────────────────────────────────────────────────────────── */
+
+.tm-ai-agent-run-tree__row {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-2);
+    min-block-size: 2.25rem;
+    min-inline-size: max-content;
+    border-block-end: var(--tm-border-width) solid var(--tm-border-color);
+    color: var(--tm-text-primary);
+    cursor: default;
+}
+
+.tm-ai-agent-run-tree__row:last-child {
+    border-block-end: 0;
+}
+
+.tm-ai-agent-run-tree__row:hover {
+    background-color: var(--tm-bg-muted);
+}
+
+.tm-ai-agent-run-tree__row[aria-selected="true"] {
+    background-color: var(--tm-color-primary-subtle);
+    box-shadow: inset 3px 0 0 var(--tm-color-primary);
+}
+
+/* An INSET outline, because the row lives in a scroller: an outward ring is clipped exactly where it is
+   needed. forced-colors re-points it at the system Highlight. */
+.tm-ai-agent-run-tree__row:focus-visible {
+    outline: 2px solid var(--tm-color-primary);
+    outline-offset: -2px;
+}
+
+.tm-ai-agent-run-tree__name {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-2);
+    padding-inline-start: calc(var(--tm-agent-run-tree-depth, 0) * var(--tm-space-4) + var(--tm-space-2));
+    min-inline-size: var(--tm-agent-run-tree-name-width);
+}
+
+.tm-ai-agent-run-tree__toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    inline-size: 1.5rem;
+    block-size: 1.5rem;
+    padding: 0;
+    border: 0;
+    border-radius: var(--tm-radius-sm);
+    background: transparent;
+    color: var(--tm-text-secondary);
+    cursor: pointer;
+}
+
+.tm-ai-agent-run-tree__toggle:hover {
+    background-color: var(--tm-bg-surface-secondary);
+}
+
+.tm-ai-agent-run-tree__toggle:focus-visible {
+    outline: 2px solid var(--tm-color-primary);
+    outline-offset: 2px;
+}
+
+.tm-ai-agent-run-tree__toggle-spacer {
+    display: inline-block;
+    inline-size: 1.5rem;
+    flex: 0 0 1.5rem;
+}
+
+.tm-ai-agent-run-tree__kind {
+    display: inline-flex;
+    align-items: center;
+    color: var(--tm-text-secondary);
+}
+
+.tm-ai-agent-run-tree__label {
+    flex: 1 1 auto;
+    min-inline-size: 0;
+    overflow: hidden;
+    color: var(--tm-text-primary);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.tm-ai-agent-run-tree__label--placeholder {
+    color: var(--tm-text-secondary);
+    font-style: italic;
+}
+
+.tm-ai-agent-run-tree__orphan {
+    flex: 0 0 auto;
+    padding-inline: var(--tm-space-1);
+    border: var(--tm-border-width) solid var(--tm-border-color);
+    border-radius: var(--tm-radius-sm);
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-xs);
+}
+
+/* A failed row's warning glyph: the failure REASON is the status cell's accessible name (and the host's
+   detail panel), so the grid never grows a second, unreadable text column for it. */
+.tm-ai-agent-run-tree__status-error {
+    display: inline-flex;
+    align-items: center;
+    color: var(--tm-color-danger-text);
+}
+
+/* ── Metric cells ────────────────────────────────────────────────────────────────────────────── */
+
+.tm-ai-agent-run-tree__status {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-1);
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-xs);
+    font-weight: var(--tm-font-weight-medium);
+}
+
+.tm-ai-agent-run-tree__status-icon {
+    display: inline-flex;
+    align-items: center;
+}
+
+.tm-ai-agent-run-tree__status-text {
+    white-space: nowrap;
+}
+
+/* The tone is a SECOND carrier: the word is always next to the icon. */
+.tm-ai-agent-run-tree__status[data-status="done"] {
+    color: var(--tm-color-success-text);
+}
+
+.tm-ai-agent-run-tree__status[data-status="failed"] {
+    color: var(--tm-color-danger-text);
+}
+
+.tm-ai-agent-run-tree__status[data-status="running"] {
+    color: var(--tm-color-primary-text);
+}
+
+.tm-ai-agent-run-tree__model {
+    overflow: hidden;
+    color: var(--tm-text-secondary);
+    font-family: var(--tm-font-mono);
+    font-size: var(--tm-font-size-xs);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.tm-ai-agent-run-tree__time,
+.tm-ai-agent-run-tree__cost,
+.tm-ai-agent-run-tree__tokens {
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-xs);
+    font-variant-numeric: tabular-nums;
+    text-align: end;
+    white-space: nowrap;
+}
+
+.tm-ai-agent-run-tree__sum {
+    margin-inline-end: var(--tm-space-1);
+    color: var(--tm-text-secondary);
+}
+
+/* ── Detail ──────────────────────────────────────────────────────────────────────────────────── */
+
+.tm-ai-agent-run-tree__detail {
+    margin-block-start: var(--tm-space-1);
+    padding: var(--tm-space-3);
+    border: var(--tm-border-width) dashed var(--tm-border-color);
+    border-radius: var(--tm-radius-md);
+    background-color: var(--tm-bg-surface-secondary);
+}
+
+/* ── Coarse pointer: every pointer target reaches the 44 px touch target ─────────────────────── */
+
+@media (pointer: coarse) {
+    .tm-ai-agent-run-tree__row {
+        min-block-size: var(--tm-touch-target);
+    }
+
+    .tm-ai-agent-run-tree__toggle {
+        inline-size: var(--tm-touch-target);
+        block-size: var(--tm-touch-target);
+    }
+
+    .tm-ai-agent-run-tree__toggle-spacer {
+        inline-size: var(--tm-touch-target);
+        flex-basis: var(--tm-touch-target);
+    }
+
+    .tm-ai-agent-run-tree__label {
+        white-space: normal;
+    }
+}
+
+/* ── Forced colors: the system palette stays in charge ───────────────────────────────────────── */
+
+@media (forced-colors: active) {
+    /* Every ring is the system one; the component never opts out of the palette (no
+       forced-color-adjust), so an icon, a status word and a selected row all keep their contrast. */
+    .tm-ai-agent-run-tree__row:focus-visible,
+    .tm-ai-agent-run-tree__toggle:focus-visible {
+        outline-color: Highlight;
+    }
+
+    .tm-ai-agent-run-tree__row[aria-selected="true"] {
+        outline: 2px solid Highlight;
+        outline-offset: -2px;
+    }
+}

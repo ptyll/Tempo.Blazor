@@ -684,15 +684,7 @@ public partial class TmAgentPlan : TmComponentBase, IDisposable
     /// </summary>
     /// <param name="value">The duration to format; a negative value reads as zero.</param>
     /// <returns>The duration as <c>m:ss</c> or <c>h:mm:ss</c>.</returns>
-    internal static string FormatClock(TimeSpan value)
-    {
-        var span = value < TimeSpan.Zero ? TimeSpan.Zero : value;
-
-        return span.TotalHours >= 1
-            ? string.Create(CultureInfo.InvariantCulture,
-                $"{(int)span.TotalHours}:{span.Minutes:00}:{span.Seconds:00}")
-            : string.Create(CultureInfo.InvariantCulture, $"{span.Minutes}:{span.Seconds:00}");
-    }
+    internal static string FormatClock(TimeSpan value) => AiClockFormatter.FormatClock(value);
 
     private void PruneTitleRefs(IReadOnlyList<AgentPlanStep> steps)
     {

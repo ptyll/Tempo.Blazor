@@ -1,0 +1,11 @@
+{
+  "kind": "Class",
+  "category": "AI",
+  "namespace": "Tempo.Blazor.AI.Models",
+  "description": "A number of an agent run summed over one node's whole subtree (the node itself included) — what a parent row of TmAgentRunTree shows. Every value keeps the not-reported contract: a value no node of the subtree reports is null, never zero, so \"reports no cost\" and \"cost nothing\" stay distinguishable.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/AI/AgentRunRollupResult.cs",
+  "documentationStatus": "generated",
+  "itemName": "AgentRunRollupResult",
+  "usageExample": "var rollup = AgentRunRollup.For(\"root\", nodes, now);\nConsole.WriteLine($\"{rollup.NodeCount} nodes, {rollup.DescendantCount} sub-agents, cost {rollup.CostMicroUnits}, tokens {rollup.Tokens}, time {rollup.Duration}\");"
+}

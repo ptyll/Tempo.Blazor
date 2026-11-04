@@ -1,0 +1,32 @@
+{
+  "kind": "Enum",
+  "category": "AI",
+  "namespace": "Tempo.Blazor.AI.Models",
+  "description": "What one node of an agent run represents. The kind drives the row's decorative icon, which is always paired with the state in words.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/AI/AgentRunNodeKind.cs",
+  "documentationStatus": "generated",
+  "itemName": "AgentRunNodeKind",
+  "members": [
+    {
+      "name": "Agent",
+      "description": "The agent that owns the run (usually the root node)."
+    },
+    {
+      "name": "SubAgent",
+      "description": "A delegated sub-agent the parent started."
+    },
+    {
+      "name": "Tool",
+      "description": "A tool call the agent made."
+    },
+    {
+      "name": "Approval",
+      "description": "A human approval the run is waiting for."
+    },
+    {
+      "name": "Step",
+      "description": "A plain step of the run that is neither an agent nor a tool call."
+    }
+  ]
+}

@@ -1,0 +1,200 @@
+@namespace Tempo.Blazor.Components.AI
+@inherits Tempo.Blazor.Components.TmComponentBase
+@using Tempo.Blazor.AI.Models
+@using Tempo.Blazor.Components.Icons
+
+@* One agent run, live. The strip answers four questions at a glance — what it is doing now, how long it has
+   been going, what it has cost and how it got here — and folds into a single bar that keeps the essentials.
+
+   Every state is an icon AND a word. The clock is aria-live="off" (a value that changes every second would
+   talk over everything else); the component's single polite region carries the fold/unfold announcement
+   only. The toggle is a native button with aria-expanded, so one key press activates exactly once. *@
+<section class="@RootClass"
+         role="region"
+         aria-labelledby="@(ShowTitle ? TitleId : null)"
+         aria-label="@(ShowTitle ? null : RegionAriaLabel)"
+         aria-describedby="@HeadlineId"
+         data-status="@StatusSlug(Status)"
+         data-collapsed="@(IsCollapsed ? "true" : "false")"
+         data-testid="@RootTestId("agent-run-monitor")"
+         @attributes="AdditionalAttributes">
+
+    <div class="tm-ai-agent-monitor__bar">
+        <span class="tm-ai-agent-monitor__state"
+              data-status="@StatusSlug(Status)"
+              data-testid="@TestId("agent-run-monitor-state")">
+            <span class="tm-ai-agent-monitor__state-icon" aria-hidden="true">
+                <TmIcon Name="@StatusIcon(Status)" Size="IconSize.Sm" />
+            </span>
+            <span class="tm-ai-agent-monitor__state-text">@StatusText</span>
+        </span>
+
+        <div class="tm-ai-agent-monitor__heading">
+            @if (ShowTitle)
+            {
+                @Heading
+            }
+            <p class="tm-ai-agent-monitor__headline"
+               id="@HeadlineId"
+               data-testid="@TestId("agent-run-monitor-headline")">@HeadlineText</p>
+        </div>
+
+        @if (PendingApproval is not null && IsCollapsed)
+        {
+            @* The slot itself needs the room the bar does not have — but a pending decision is the one
+               thing a collapsed strip must never hide, so the bar says it is waiting. *@
+            <span class="tm-ai-agent-monitor__approval-marker"
+                  data-testid="@TestId("agent-run-monitor-approval-marker")">
+                <TmIcon Name="@IconNames.ShieldCheck" Size="IconSize.Sm" />
+                <span>@Loc["TmAgentMonitor_PendingApproval"]</span>
+            </span>
+        }
+
+        @if (AllowCollapse)
+        {
+            <button type="button"
+                    class="tm-ai-agent-monitor__toggle"
+                    data-testid="@TestId("agent-run-monitor-toggle")"
+                    aria-expanded="@(IsCollapsed ? "false" : "true")"
+                    aria-label="@ToggleLabel()"
+                    @onclick="ToggleAsync">
+                <TmIcon Name="@(IsCollapsed ? IconNames.ChevronDown : IconNames.ChevronUp)" Size="IconSize.Sm" />
+            </button>
+        }
+    </div>
+
+    <div class="tm-ai-agent-monitor__metrics">
+        <div class="tm-ai-agent-monitor__metric tm-ai-agent-monitor__metric--current">
+            <span class="tm-ai-agent-monitor__metric-label">@Loc["TmAgentMonitor_CurrentStep"]</span>
+            <span class="tm-ai-agent-monitor__metric-value"
+                  data-testid="@TestId("agent-run-monitor-current")">@CurrentStepTitle</span>
+        </div>
+
+        @if (ShowElapsed)
+        {
+            <div class="tm-ai-agent-monitor__metric tm-ai-agent-monitor__metric--elapsed">
+                <span class="tm-ai-agent-monitor__metric-label">@Loc["TmAgentMonitor_Elapsed"]</span>
+                @* A value that changes every second is never a live region. *@
+                <time class="tm-ai-agent-monitor__metric-value"
+                      datetime="@IsoEnd"
+                      aria-live="off"
+                      data-testid="@TestId("agent-run-monitor-elapsed")">@ElapsedText</time>
+            </div>
+        }
+
+        @if (ShowCost)
+        {
+            <div class="tm-ai-agent-monitor__metric tm-ai-agent-monitor__metric--cost">
+                <span class="tm-ai-agent-monitor__metric-label">@Loc["TmAgentMonitor_Cost"]</span>
+                <span class="tm-ai-agent-monitor__metric-value"
+                      data-testid="@TestId("agent-run-monitor-cost")">@CostText</span>
+            </div>
+        }
+
+        @if (ShowModel && !string.IsNullOrWhiteSpace(Model))
+        {
+            <div class="tm-ai-agent-monitor__metric tm-ai-agent-monitor__metric--model">
+                <span class="tm-ai-agent-monitor__metric-label">@Loc["TmAgentMonitor_Model"]</span>
+                <span class="tm-ai-agent-monitor__metric-value"
+                      title="@Model"
+                      data-testid="@TestId("agent-run-monitor-model")">@Model</span>
+            </div>
+        }
+    </div>
+
+    @if (!IsCollapsed && PendingApproval is not null)
+    {
+        <div class="tm-ai-agent-monitor__approval"
+             role="group"
+             aria-label="@Loc["TmAgentMonitor_PendingApproval"]"
+             data-testid="@TestId("agent-run-monitor-approval")">
+            @PendingApproval
+        </div>
+    }
+
+    @* A folded bar is a complete surface: the timeline is the one part that needs the room. *@
+    @if (!IsCollapsed && ShowTimeline)
+    {
+        @if (StepList.Count == 0)
+        {
+            @if (EmptyContent is not null)
+            {
+                @EmptyContent
+            }
+            else
+            {
+                <p class="tm-ai-agent-monitor__empty"
+                   data-testid="@TestId("agent-run-monitor-empty")">@Loc["TmAgentMonitor_Empty"]</p>
+            }
+        }
+        else
+        {
+            <ol class="tm-ai-agent-monitor__timeline"
+                aria-label="@Loc["TmAgentMonitor_Timeline"]"
+                data-testid="@TestId("agent-run-monitor-timeline")">
+                @foreach (var step in StepList)
+                {
+                    <li class="tm-ai-agent-monitor__step"
+                        data-kind="@KindSlug(step.Kind)"
+                        data-status="@StatusSlug(step.Status)"
+                        data-testid="@TestId("agent-run-monitor-step")"
+                        @key="step.Id">
+                        <span class="tm-ai-agent-monitor__step-icon"
+                              data-icon="@KindIcon(step.Kind)"
+                              aria-hidden="true">
+                            <TmIcon Name="@KindIcon(step.Kind)" Size="IconSize.Sm" />
+                        </span>
+                        <span class="tm-ai-agent-monitor__step-kind tm-sr-only">@KindText(step.Kind)</span>
+                        <div class="tm-ai-agent-monitor__step-body">
+                            <span class="tm-ai-agent-monitor__step-title">@StepTitle(step)</span>
+                            @if (!string.IsNullOrWhiteSpace(step.Detail))
+                            {
+                                <span class="tm-ai-agent-monitor__step-detail">@step.Detail</span>
+                            }
+                        </div>
+                        <span class="tm-ai-agent-monitor__step-status"
+                              data-status="@StatusSlug(step.Status)">@StepStatusText(step.Status)</span>
+                        @if (step.Elapsed(_now) is not null)
+                        {
+                            <time class="tm-ai-agent-monitor__step-time"
+                                  aria-live="off">@StepTime(step)</time>
+                        }
+                    </li>
+                }
+            </ol>
+        }
+    }
+
+    <div class="tm-sr-only"
+         role="status"
+         aria-live="polite"
+         aria-atomic="true"
+         data-testid="@TestId("agent-run-monitor-announcement")">@_announcement</div>
+</section>
+
+@code {
+    private string HeadlineId => _id + "-headline";
+
+    /// <summary>The ISO-8601 end of the run's window, for the <c>datetime</c> attribute of its clock.</summary>
+    private string? IsoEnd
+        => (CompletedAt ?? StartedAt)?.ToString("o", System.Globalization.CultureInfo.InvariantCulture);
+
+    /// <summary>The heading, built at the requested level without duplicating the markup six times.</summary>
+    private RenderFragment Heading => builder =>
+    {
+        builder.OpenElement(0, "h" + EffectiveHeadingLevel.ToString(System.Globalization.CultureInfo.InvariantCulture));
+        builder.AddAttribute(1, "class", "tm-ai-agent-monitor__title");
+        builder.AddAttribute(2, "id", TitleId);
+        builder.AddContent(3, HeadingText);
+        builder.CloseElement();
+    };
+
+    private string StepStatusText(AgentStepStatus status) => status switch
+    {
+        AgentStepStatus.Running => Loc["TmAgentRun_StatusRunning"],
+        AgentStepStatus.Done => Loc["TmAgentRun_StatusDone"],
+        AgentStepStatus.Failed => Loc["TmAgentRun_StatusFailed"],
+        AgentStepStatus.Skipped => Loc["TmAgentRun_StatusSkipped"],
+        _ => Loc["TmAgentRun_StatusPending"],
+    };
+}

@@ -1,0 +1,170 @@
+{
+  "itemName": "TmAgentMonitor",
+  "kind": "Component",
+  "category": "AI",
+  "namespace": "Tempo.Blazor.Components.AI",
+  "description": "One agent run, live: what it is doing right now, how long it has been going, what it has cost, and the timeline of the steps that got it here. The strip answers those four questions without opening anything — the current step, a clock that ticks only while the run is running, the cost so far and the steps' timeline with a glyph and a hidden kind word per step. A host that supplies PendingApproval gets its decision surface in its own named region between the metrics and the timeline; an approval that appears is also announced in the component's polite live region. Collapsed folds the strip into one status bar that keeps the essentials and drops the timeline; a pending decision is never hidden by the fold. The run title, the current step and the step text wrap at narrow widths while only the short elapsed/cost/model values keep one line, so the strip reflows at 320 px. The monitor renders the snapshot it is given and never polls anything.",
+  "packageId": "Tempo.Blazor.AI",
+  "sourcePath": "src/Tempo.Blazor.AI/Components/AI/TmAgentMonitor.razor",
+  "documentationStatus": "documented",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.AI",
+    "@using Tempo.Blazor.AI.Models"
+  ],
+  "examples": [
+    {
+      "title": "Watch a run with a decision waiting",
+      "code": "<TmAgentMonitor Steps=\"@steps\"\n                Status=\"@status\"\n                StartedAt=\"@startedAt\"\n                CompletedAt=\"@completedAt\"\n                CostMicroUnits=\"@cost\"\n                Model=\"gpt-4o\"\n                Title=\"Nightly reconciliation\"\n                @bind-Collapsed=\"collapsed\">\n    <PendingApproval>\n        <TmButton Variant=\"ButtonVariant.Primary\" OnClick=\"ApproveAsync\">Approve</TmButton>\n    </PendingApproval>\n</TmAgentMonitor>"
+    },
+    {
+      "title": "The folded bar (the host keeps control of the fold)",
+      "code": "<TmAgentMonitor Steps=\"@steps\" Status=\"AgentStepStatus.Running\" Collapsed=\"true\" PendingApproval=\"@approval\" />"
+    }
+  ],
+  "parameters": [
+    {
+      "name": "Steps",
+      "type": "IReadOnlyList<AgentMonitorStep>?",
+      "isRequired": false,
+      "description": "The steps of the run so far, oldest first. The current step is the last Running one, or the last step when nothing runs. Null or empty renders the localized empty sentence in place of the timeline; the header still shows the run's state."
+    },
+    {
+      "name": "Title",
+      "type": "string?",
+      "isRequired": false,
+      "description": "The heading above the strip. Null renders the localized default (\"Agent run\"). The heading also names the whole region."
+    },
+    {
+      "name": "ShowTitle",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Whether the heading is rendered. Default true; the region still keeps its accessible name either way."
+    },
+    {
+      "name": "HeadingLevel",
+      "type": "int",
+      "isRequired": false,
+      "description": "The heading level of the rendered title, clamped to 2–6. Default 3."
+    },
+    {
+      "name": "Status",
+      "type": "AgentStepStatus",
+      "isRequired": false,
+      "description": "The state of the whole run: it drives the state word and icon in the bar, the headline sentence and the live clock. Default AgentStepStatus.Running."
+    },
+    {
+      "name": "StartedAt",
+      "type": "DateTimeOffset?",
+      "isRequired": false,
+      "description": "When the run started, from the host's clock. Null renders no clock at all (rather than an invented one)."
+    },
+    {
+      "name": "CompletedAt",
+      "type": "DateTimeOffset?",
+      "isRequired": false,
+      "description": "When the run finished. Null while it is still running; a finished run stops its clock and keeps its recorded duration."
+    },
+    {
+      "name": "CostMicroUnits",
+      "type": "long?",
+      "isRequired": false,
+      "description": "What the run has cost so far, in MICRO-UNITS (1,000,000 is 1.00 of the currency). Null renders the cost metric with an em dash, so an unreported cost never reads as free."
+    },
+    {
+      "name": "Model",
+      "type": "string?",
+      "isRequired": false,
+      "description": "The model the run is using (an id or a display name). Null hides the model metric."
+    },
+    {
+      "name": "PendingApproval",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "The host's decision surface for a pending approval — an approve/reject pair, a link, a short form. It renders in its own role=\"group\" named by the localized \"Waiting for your approval\", between the metrics and the timeline. Null renders no approval region at all."
+    },
+    {
+      "name": "Collapsed",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Whether the strip is folded into its status bar, two-way bound with CollapsedChanged. Default false. The bar keeps the state, the title, the current step, the clock, the cost and a pending-approval marker; the timeline and the approval slot need the room. A host that pins the parameter keeps control."
+    },
+    {
+      "name": "CollapsedChanged",
+      "type": "EventCallback<bool>",
+      "isRequired": false,
+      "description": "Fires with the new collapsed state when the reader presses the toggle."
+    },
+    {
+      "name": "AllowCollapse",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Whether the strip may be folded at all. Default true. false removes the toggle and keeps the strip expanded even when Collapsed is pinned true — a bar a host cannot reopen is not a feature."
+    },
+    {
+      "name": "ShowTimeline",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Whether the steps' timeline is rendered. Default true."
+    },
+    {
+      "name": "ShowElapsed",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Whether the elapsed-time metric is rendered. Default true."
+    },
+    {
+      "name": "ShowCost",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Whether the cost metric is rendered. Default true."
+    },
+    {
+      "name": "ShowModel",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Whether the model metric is rendered (it is hidden anyway when Model is null). Default true."
+    },
+    {
+      "name": "IconResolver",
+      "type": "Func<AgentStepKind, string>?",
+      "isRequired": false,
+      "description": "Maps a step's AgentStepKind to an icon name. Null uses the component's own mapping (thinking → a spark, a tool call → a terminal, an approval → a shield, …). The kind's WORD is always rendered for a screen reader, so an override never removes the only copy of the information."
+    },
+    {
+      "name": "CostFormatter",
+      "type": "Func<long, string>?",
+      "isRequired": false,
+      "description": "Formats the run's cost given in MICRO-UNITS. Null uses AiCostFormatter with Culture — the culture's own currency."
+    },
+    {
+      "name": "Culture",
+      "type": "CultureInfo?",
+      "isRequired": false,
+      "description": "The culture that formats the cost. Null (the default) means the current culture at render time. The clock-style duration is not localized on purpose."
+    },
+    {
+      "name": "TimeProvider",
+      "type": "TimeProvider?",
+      "isRequired": false,
+      "description": "The clock the live timer reads and schedules from. Null (the default) uses the registered TimeProvider and falls back to System."
+    },
+    {
+      "name": "EmptyContent",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "Rendered instead of the localized \"No steps yet.\" when Steps is empty."
+    },
+    {
+      "name": "AriaLabel",
+      "type": "string?",
+      "isRequired": false,
+      "description": "The accessible name of the strip when ShowTitle is false. Defaults to the localized \"Agent monitor\"."
+    },
+    {
+      "name": "Class",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Additional CSS class(es) for the root element."
+    }
+  ]
+}

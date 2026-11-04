@@ -98,6 +98,79 @@
   },
   "items": [
     {
+      "itemName": "AgentMonitorStep",
+      "kind": "Record",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.AI.Models",
+      "description": "One step of an ongoing agent run, as TmAgentMonitor draws it on its timeline: what the agent did, how it ended and when. The monitor keeps the run's TOTALS on its own parameters rather than on the steps, because a step that reported its own cost would force every host to keep a running sum in two places.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/AI/AgentMonitorStep.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Elapsed",
+          "kind": "Method",
+          "type": "TimeSpan?",
+          "description": "How much time the step has consumed at now: its recorded Duration once it finished, otherwise the time since StartedAt — never negative.",
+          "parameters": [
+            {
+              "name": "now",
+              "type": "DateTimeOffset"
+            }
+          ]
+        },
+        {
+          "name": "CompletedAt",
+          "kind": "Property",
+          "type": "DateTimeOffset?",
+          "description": "When the step finished. Null on a step that is still running (or never started)."
+        },
+        {
+          "name": "Detail",
+          "kind": "Property",
+          "type": "string?",
+          "description": "A short line under the title (the tool name, the recipient, the decision). Null renders no detail line."
+        },
+        {
+          "name": "Id",
+          "kind": "Property",
+          "type": "string",
+          "description": "Stable identity of the step. Never empty: a missing id is generated at construction."
+        },
+        {
+          "name": "IsFinished",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Whether the step reached a terminal state (Done, Failed or Skipped)."
+        },
+        {
+          "name": "Kind",
+          "kind": "Property",
+          "type": "AgentStepKind",
+          "description": "What kind of step this is; the timeline draws its icon (or the host's IconResolver result) and the localized kind as a visually hidden word. Default Thinking."
+        },
+        {
+          "name": "StartedAt",
+          "kind": "Property",
+          "type": "DateTimeOffset?",
+          "description": "When the step started, from the host's clock. Null means the monitor cannot time it."
+        },
+        {
+          "name": "Status",
+          "kind": "Property",
+          "type": "AgentStepStatus",
+          "description": "Current state of the step. Default Pending."
+        },
+        {
+          "name": "Title",
+          "kind": "Property",
+          "type": "string",
+          "description": "What the step did, as the reader should see it."
+        }
+      ],
+      "usageExample": "var step = new AgentMonitorStep(\"Call the ledger API\", \"s2\")\n{\n    Kind = AgentStepKind.ToolCall,\n    Status = AgentStepStatus.Running,\n    Detail = \"ledger.read\",\n    StartedAt = TimeProvider.System.GetUtcNow(),\n};"
+    },
+    {
       "itemName": "AgentPlanEdit",
       "kind": "Record",
       "category": "AI",
@@ -352,6 +425,283 @@
       "usageExample": "var step = new AgentPlanStep(\"Draft the outline\", \"step-1\") { Status = AgentStepStatus.Running, StartedAt = TimeProvider.System.GetUtcNow() };\nvar done = step with { Status = AgentStepStatus.Done, CompletedAt = TimeProvider.System.GetUtcNow() };"
     },
     {
+      "itemName": "AgentRunFilter",
+      "kind": "Enum",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.AI.Models",
+      "description": "The show-only filter of an agent run tree. The filter never breaks the tree: a row survives when it matches the filter OR when a surviving descendant needs it as its ancestor, so filtering to Failed still shows the chain that led to the failure.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/AI/AgentRunFilter.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "All",
+          "description": "Every node of the run."
+        },
+        {
+          "name": "Running",
+          "description": "Running nodes, plus their ancestors."
+        },
+        {
+          "name": "Failed",
+          "description": "Failed nodes, plus their ancestors."
+        }
+      ]
+    },
+    {
+      "itemName": "AgentRunNode",
+      "kind": "Record",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.AI.Models",
+      "description": "One node of an agent run: an agent, a delegated sub-agent, a tool call or a step, its live state and the numbers the run is watched by. The list a host passes to TmAgentRunTree is FLAT and the tree comes from ParentId: a node whose parent names no supplied node is an orphan attached under the root, and a parent cycle is rejected and reported. The record is a VALUE; Timestamps are the only source of a duration.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/AI/AgentRunNode.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Elapsed",
+          "kind": "Method",
+          "type": "TimeSpan?",
+          "description": "How much time the node has consumed at now: its recorded Duration once it finished, otherwise the time since StartedAt — never negative, so a clock that moved backwards cannot paint \"-0:03\".",
+          "parameters": [
+            {
+              "name": "now",
+              "type": "DateTimeOffset"
+            }
+          ]
+        },
+        {
+          "name": "CompletedAt",
+          "kind": "Property",
+          "type": "DateTimeOffset?",
+          "description": "When the node finished. Null on a node that is still running (or never started)."
+        },
+        {
+          "name": "CostMicroUnits",
+          "kind": "Property",
+          "type": "long?",
+          "description": "What the node cost, in MICRO-UNITS of the host's currency: one million micro-units is 1.00. The tree renders it through AiCostFormatter (or the host's own formatter) and sums it over the subtree for a parent row. Null means \"not reported\" and is never treated as a zero."
+        },
+        {
+          "name": "Error",
+          "kind": "Property",
+          "type": "string?",
+          "description": "The failure reason of a Failed node, in the agent's own words. The row keeps the state word and carries the reason as its status cell's accessible name (so the grid grows no second text column); a host shows the full text in its own detail panel."
+        },
+        {
+          "name": "Id",
+          "kind": "Property",
+          "type": "string",
+          "description": "Stable identity of the node. Never empty: a missing id is generated at construction."
+        },
+        {
+          "name": "IsFinished",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Whether the node reached a terminal state (Done, Failed or Skipped)."
+        },
+        {
+          "name": "Kind",
+          "kind": "Property",
+          "type": "AgentRunNodeKind",
+          "description": "What the node is. Default Agent; decides the row's decorative icon, which is always paired with the state in words."
+        },
+        {
+          "name": "Model",
+          "kind": "Property",
+          "type": "string?",
+          "description": "The model the node ran on (a model id or a display name). Null renders an em dash in the model column, so \"not reported\" never looks like a model called \"\"."
+        },
+        {
+          "name": "ParentId",
+          "kind": "Property",
+          "type": "string?",
+          "description": "The Id of the node this one hangs under. Null or whitespace makes the node a ROOT; a parent id that names no supplied node makes it an orphan root (reported by the layout, never dropped)."
+        },
+        {
+          "name": "StartedAt",
+          "kind": "Property",
+          "type": "DateTimeOffset?",
+          "description": "When the node started, from the host's clock. Null means the tree cannot time it."
+        },
+        {
+          "name": "Status",
+          "kind": "Property",
+          "type": "AgentStepStatus",
+          "description": "Current execution state. Default Pending."
+        },
+        {
+          "name": "Title",
+          "kind": "Property",
+          "type": "string",
+          "description": "What the node does, as the reader should see it."
+        },
+        {
+          "name": "Tokens",
+          "kind": "Property",
+          "type": "long?",
+          "description": "How many tokens the node consumed, summed over the subtree for a parent row. Null means \"not reported\" and is never treated as a zero."
+        }
+      ],
+      "usageExample": "var node = new AgentRunNode(\"Look up the ledger\", \"lookup\")\n{\n    ParentId = \"planner\",\n    Kind = AgentRunNodeKind.Tool,\n    Status = AgentStepStatus.Running,\n    Model = \"gpt-4o-mini\",\n    StartedAt = TimeProvider.System.GetUtcNow(),\n    CostMicroUnits = 250_000,\n    Tokens = 100,\n};\nvar finished = node with { Status = AgentStepStatus.Done, CompletedAt = TimeProvider.System.GetUtcNow() };"
+    },
+    {
+      "itemName": "AgentRunNodeKind",
+      "kind": "Enum",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.AI.Models",
+      "description": "What one node of an agent run represents. The kind drives the row's decorative icon, which is always paired with the state in words.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/AI/AgentRunNodeKind.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Agent",
+          "description": "The agent that owns the run (usually the root node)."
+        },
+        {
+          "name": "SubAgent",
+          "description": "A delegated sub-agent the parent started."
+        },
+        {
+          "name": "Tool",
+          "description": "A tool call the agent made."
+        },
+        {
+          "name": "Approval",
+          "description": "A human approval the run is waiting for."
+        },
+        {
+          "name": "Step",
+          "description": "A plain step of the run that is neither an agent nor a tool call."
+        }
+      ]
+    },
+    {
+      "itemName": "AgentRunRollup",
+      "kind": "Class",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.AI.Models",
+      "description": "Subtree arithmetic over a flat AgentRunNode list: the cost, the tokens and the elapsed time of one node and everything under it. The helper is public and PURE, so the number a reader sees on the screen and the number a host computes elsewhere cannot drift. The input is untrusted: a duplicate id is read once, an unresolvable parent still counts under its own root, and a parent cycle cannot loop (every walk carries a visited set).",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/AI/AgentRunRollup.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "For",
+          "kind": "Method",
+          "type": "AgentRunRollupResult",
+          "description": "The roll-up of one node: its own numbers plus every descendant reachable through ParentId, each node counted once.",
+          "parameters": [
+            {
+              "name": "nodeId",
+              "type": "string"
+            },
+            {
+              "name": "nodes",
+              "type": "IEnumerable<AgentRunNode>"
+            },
+            {
+              "name": "now",
+              "type": "DateTimeOffset"
+            }
+          ]
+        }
+      ],
+      "usageExample": "var row = AgentRunRollup.For(\"root\", nodes, timeProvider.GetUtcNow());\nvar all = AgentRunRollup.ForAll(nodes, timeProvider.GetUtcNow());\nvar rootCost = all[\"root\"].CostMicroUnits;"
+    },
+    {
+      "itemName": "AgentRunRollupResult",
+      "kind": "Record",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.AI.Models",
+      "description": "A number of an agent run summed over one node's whole subtree (the node itself included) — what a parent row of TmAgentRunTree shows. Every value keeps the not-reported contract: a value no node of the subtree reports is null, never zero, so \"reports no cost\" and \"cost nothing\" stay distinguishable.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/AI/AgentRunRollupResult.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "CostMicroUnits",
+          "kind": "Property",
+          "type": "long?",
+          "description": "Sum of the reported costs, in micro-units. Null when no node reports a cost."
+        },
+        {
+          "name": "DescendantCount",
+          "kind": "Property",
+          "type": "int",
+          "description": "How many nodes hang BELOW the node (NodeCount minus the node itself)."
+        },
+        {
+          "name": "Duration",
+          "kind": "Property",
+          "type": "TimeSpan?",
+          "description": "Sum of the subtree's elapsed times: the recorded duration of a finished node and the time from its start to the caller's \"now\" for a running one. Null when no node carries a start."
+        },
+        {
+          "name": "Empty",
+          "kind": "Property",
+          "type": "static AgentRunRollupResult",
+          "description": "An empty roll-up: no node, nothing reported."
+        },
+        {
+          "name": "IsSummary",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Whether the roll-up covers at least one descendant, i.e. whether the window shows a summary rather than the node's own numbers."
+        },
+        {
+          "name": "NodeCount",
+          "kind": "Property",
+          "type": "int",
+          "description": "How many nodes the roll-up covers, the node itself included."
+        },
+        {
+          "name": "Tokens",
+          "kind": "Property",
+          "type": "long?",
+          "description": "Sum of the reported token counts. Null when no node reports tokens."
+        }
+      ],
+      "usageExample": "var rollup = AgentRunRollup.For(\"root\", nodes, now);\nConsole.WriteLine($\"{rollup.NodeCount} nodes, {rollup.DescendantCount} sub-agents, cost {rollup.CostMicroUnits}, tokens {rollup.Tokens}, time {rollup.Duration}\");"
+    },
+    {
+      "itemName": "AgentStepKind",
+      "kind": "Enum",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.AI.Models",
+      "description": "What one step of an ongoing run is: the kind decides the glyph the monitor's timeline draws for it, and its localized name is always rendered for a screen reader.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/AI/AgentRunNodeKind.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Thinking",
+          "description": "The agent is reasoning; nothing is executed yet."
+        },
+        {
+          "name": "ToolCall",
+          "description": "The agent called a tool."
+        },
+        {
+          "name": "Message",
+          "description": "The agent produced a message for the reader."
+        },
+        {
+          "name": "Approval",
+          "description": "The step is waiting for a human decision."
+        },
+        {
+          "name": "Handoff",
+          "description": "The run handed over to another agent."
+        },
+        {
+          "name": "Result",
+          "description": "The step produced the run's result."
+        }
+      ]
+    },
+    {
       "itemName": "AgentStepStatus",
       "kind": "Enum",
       "category": "AI",
@@ -474,6 +824,48 @@
           "description": "Identifier of the model the reader selected, or null when no picker was offered."
         }
       ]
+    },
+    {
+      "itemName": "AiCostFormatter",
+      "kind": "Class",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.AI.Models",
+      "description": "Formats an agent run's cost. The model stores MICRO-UNITS (1,000,000 is 1.00 of the currency), the smallest unit an LLM bill is usually quoted in, so a run whose individual calls cost a fraction of a cent keeps its precision instead of rounding to zero. The default format is the culture's own currency, with the currency's own number of decimal places (two for USD, none for JPY); below one hundredth of a unit the formatter keeps six decimals, because a column of \"0.00\" is worse than no column.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/AI/AiCostFormatter.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "MicroUnitsPerUnit",
+          "kind": "Field",
+          "type": "long",
+          "description": "How many micro-units make one whole unit of the currency."
+        },
+        {
+          "name": "PreciseDecimals",
+          "kind": "Field",
+          "type": "int",
+          "description": "Decimal places kept for an amount below one hundredth of a unit (the micro-unit precision)."
+        },
+        {
+          "name": "Format",
+          "kind": "Method",
+          "type": "string",
+          "description": "Formats microUnits as a currency amount in provider's culture.",
+          "parameters": [
+            {
+              "name": "microUnits",
+              "type": "long"
+            },
+            {
+              "name": "provider",
+              "type": "IFormatProvider?",
+              "default": "null"
+            }
+          ]
+        }
+      ],
+      "usageExample": "AiCostFormatter.Format(1_500_000, CultureInfo.GetCultureInfo(\"en-US\"));   // \"$1.50\"\nAiCostFormatter.Format(1_234, CultureInfo.GetCultureInfo(\"cs-CZ\"));       // \"0,001234 Kč\""
     },
     {
       "itemName": "AiErrorDelta",
@@ -40184,11 +40576,11 @@
   ],
   "libraryExamples": [],
   "summary": {
-    "itemCount": 1585,
-    "manualItemCount": 1585,
-    "generatedItemCount": 1569,
+    "itemCount": 1593,
+    "manualItemCount": 1593,
+    "generatedItemCount": 1577,
     "generatedOnlyItemCount": 0,
     "componentCount": 0,
-    "publicApiTypeCount": 1569
+    "publicApiTypeCount": 1577
   }
 }

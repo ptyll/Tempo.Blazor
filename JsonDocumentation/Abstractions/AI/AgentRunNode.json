@@ -1,0 +1,11 @@
+{
+  "kind": "Class",
+  "category": "AI",
+  "namespace": "Tempo.Blazor.AI.Models",
+  "description": "One node of an agent run: an agent, a delegated sub-agent, a tool call or a step, its live state and the numbers the run is watched by. The list a host passes to TmAgentRunTree is FLAT and the tree comes from ParentId: a node whose parent names no supplied node is an orphan attached under the root, and a parent cycle is rejected and reported. The record is a VALUE; Timestamps are the only source of a duration.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/AI/AgentRunNode.cs",
+  "documentationStatus": "generated",
+  "itemName": "AgentRunNode",
+  "usageExample": "var node = new AgentRunNode(\"Look up the ledger\", \"lookup\")\n{\n    ParentId = \"planner\",\n    Kind = AgentRunNodeKind.Tool,\n    Status = AgentStepStatus.Running,\n    Model = \"gpt-4o-mini\",\n    StartedAt = TimeProvider.System.GetUtcNow(),\n    CostMicroUnits = 250_000,\n    Tokens = 100,\n};\nvar finished = node with { Status = AgentStepStatus.Done, CompletedAt = TimeProvider.System.GetUtcNow() };"
+}

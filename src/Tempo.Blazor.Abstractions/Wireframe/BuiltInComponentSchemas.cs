@@ -166,6 +166,8 @@ public sealed class BuiltInComponentSchemas : IWireframeSchemaSource
             ["TmSuggestionCard"] = ["suggestion-card"],
             ["TmPermissionRequest"] = ["permission-request"],
             ["TmAgentPlan"] = ["agent-plan"],
+            ["TmAgentRunTree"] = ["agent-run-tree"],
+            ["TmAgentMonitor"] = ["agent-monitor"],
             ["TmMultiViewList"] = ["list-view"],
             ["TmDataTable"] = ["data-table"],
             ["TmPagination"] = ["pagination"],
@@ -1350,6 +1352,39 @@ public sealed class BuiltInComponentSchemas : IWireframeSchemaSource
                     opts: ["review", "running"]),
                 P("showSummary", "Show Summary", PropType.Bool,   true,    cat: "Appearance"),
                 P("showAddStep", "Show Add Step", PropType.Bool,  true,    cat: "Appearance"),
+            ]
+        };
+
+        yield return new WireframeComponentSchema
+        {
+            Type = "TmAgentRunTree", Category = "AI", DisplayName = "Agent Run Tree",
+            DefaultWidth = 560, DefaultHeight = 280,
+            Props =
+            [
+                P("title",      "Title",       PropType.String, "Agent run", cat: "Content"),
+                P("nodes",      "Nodes",       PropType.StringList, new[] { "Reconciliation agent", "Plan the run", "Look up the ledger", "Write the summary" }, cat: "Content"),
+                P("filter",     "Filter",      PropType.Enum,   "all", cat: "Behavior",
+                    opts: ["all", "running", "failed"]),
+                P("showModel",  "Show Model",  PropType.Bool,   true, cat: "Appearance"),
+                P("showTime",   "Show Time",   PropType.Bool,   true, cat: "Appearance"),
+                P("showCost",   "Show Cost",   PropType.Bool,   true, cat: "Appearance"),
+                P("showTokens", "Show Tokens", PropType.Bool,   true, cat: "Appearance"),
+            ]
+        };
+
+        yield return new WireframeComponentSchema
+        {
+            Type = "TmAgentMonitor", Category = "AI", DisplayName = "Agent Monitor",
+            DefaultWidth = 480, DefaultHeight = 220,
+            Props =
+            [
+                P("title",        "Title",         PropType.String, "Agent run", cat: "Content"),
+                P("steps",        "Steps",         PropType.StringList, new[] { "Think about the ledger", "Call the ledger API", "Ask for approval" }, cat: "Content"),
+                P("state",        "State",         PropType.Enum,   "running", cat: "Behavior",
+                    opts: ["running", "done", "failed", "pending"]),
+                P("showTimeline", "Show Timeline", PropType.Bool,   true, cat: "Appearance"),
+                P("showCost",     "Show Cost",     PropType.Bool,   true, cat: "Appearance"),
+                P("collapsed",    "Collapsed",     PropType.Bool,   false, cat: "Behavior"),
             ]
         };
 

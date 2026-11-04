@@ -1,0 +1,534 @@
+@page "/agent-run"
+@using System.Globalization
+@using Microsoft.Extensions.DependencyInjection
+@using Tempo.Blazor.AI.Models
+@using Tempo.Blazor.Components.AI
+@inject ITmLocalizer Loc
+@inject IServiceProvider Services
+
+<PageTitle>@Loc["TmAgentRunDemo_PageTitle"] – Tempo.Blazor</PageTitle>
+
+<div class="mb-8" data-testid="agent-run-page-header">
+    <h1 class="text-3xl font-bold text-slate-900 dark:text-white mb-2">@Loc["TmAgentRunDemo_PageTitle"]</h1>
+    <p class="text-slate-600 dark:text-slate-400">@Loc["TmAgentRunDemo_PageDescription"]</p>
+</div>
+
+@* The tree: a flat node list becomes a treegrid. A parent row shows its whole subtree's numbers (marked as a
+   summary), the failed lookup keeps its ancestors visible under the filter, and the host owns the selection
+   plus the detail template — the page never reaches into the component's view state. *@
+<section class="demo-section mb-8" data-testid="agent-run-tree-section">
+    <div class="flex flex-wrap items-center gap-3 mb-2">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">@Loc["TmAgentRunDemo_TreeTitle"]</h2>
+        <span class="text-sm text-slate-600 dark:text-slate-400"
+              data-testid="agent-run-selected-readout">
+            @SelectedReadout
+        </span>
+    </div>
+    <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">@Loc["TmAgentRunDemo_TreeHint"]</p>
+
+    <div class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_18rem]">
+        <TmAgentRunTree Nodes="_nodes"
+                        SelectedNodeId="@_selectedNodeId"
+                        SelectedNodeIdChanged="OnNodeSelected"
+                        Title="@Loc["TmAgentRunDemo_TreeRunTitle"]"
+                        Culture="@CultureInfo.CurrentCulture"
+                        CostFormatter="FormatCost"
+                        DataTestId="agent-run-tree">
+            <DetailTemplate Context="node">
+                <div data-testid="agent-run-node-detail" data-node-id="@node.Id">
+                    <h3 class="text-sm font-semibold text-slate-900 dark:text-white mb-2">@DetailHeading(node)</h3>
+                    <dl class="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
+                        <dt class="text-slate-500 dark:text-slate-400">@Loc["TmAgentRunDemo_DetailKind"]</dt>
+                        <dd class="text-slate-800 dark:text-slate-200" data-testid="agent-run-detail-kind">@KindText(node.Kind)</dd>
+                        <dt class="text-slate-500 dark:text-slate-400">@Loc["TmAgentRunDemo_DetailStatus"]</dt>
+                        <dd class="text-slate-800 dark:text-slate-200" data-testid="agent-run-detail-status">@StatusText(node.Status)</dd>
+                        <dt class="text-slate-500 dark:text-slate-400">@Loc["TmAgentRunDemo_DetailModel"]</dt>
+                        <dd class="text-slate-800 dark:text-slate-200" data-testid="agent-run-detail-model">@(node.Model ?? "—")</dd>
+                        <dt class="text-slate-500 dark:text-slate-400">@Loc["TmAgentRunDemo_DetailCost"]</dt>
+                        <dd class="text-slate-800 dark:text-slate-200" data-testid="agent-run-detail-cost">@Cost(node.CostMicroUnits)</dd>
+                        <dt class="text-slate-500 dark:text-slate-400">@Loc["TmAgentRunDemo_DetailTokens"]</dt>
+                        <dd class="text-slate-800 dark:text-slate-200" data-testid="agent-run-detail-tokens">@Tokens(node.Tokens)</dd>
+                        <dt class="text-slate-500 dark:text-slate-400">@Loc["TmAgentRunDemo_DetailTotal"]</dt>
+                        <dd class="text-slate-800 dark:text-slate-200" data-testid="agent-run-detail-total">@SubtreeTotal(node)</dd>
+                    </dl>
+                    @if (!string.IsNullOrWhiteSpace(node.Error))
+                    {
+                        <p class="mt-2 text-sm text-red-600 dark:text-red-400" data-testid="agent-run-detail-error">@node.Error</p>
+                    }
+                </div>
+            </DetailTemplate>
+        </TmAgentRunTree>
+
+        <div class="flex flex-col gap-3" data-testid="agent-run-tree-controls">
+            <h3 class="text-sm font-semibold text-slate-900 dark:text-white">@Loc["TmAgentRunDemo_TreeControlsTitle"]</h3>
+            <p class="text-xs text-slate-500 dark:text-slate-400">@Loc["TmAgentRunDemo_KeyboardHint"]</p>
+            <div class="flex flex-wrap gap-2">
+                <TmButton Variant="ButtonVariant.Secondary" Size="ButtonSize.Sm"
+                          data-testid="agent-run-advance" OnClick="AdvanceRun">@Loc["TmAgentRunDemo_Advance"]</TmButton>
+                <TmButton Variant="ButtonVariant.Ghost" Size="ButtonSize.Sm"
+                          data-testid="agent-run-reset" OnClick="ResetRun">@Loc["TmAgentRunDemo_Reset"]</TmButton>
+            </div>
+            <p class="text-xs text-slate-500 dark:text-slate-400" data-testid="agent-run-advance-readout">
+                @AdvanceReadout
+            </p>
+        </div>
+    </div>
+</section>
+
+@* The monitor: the same run watched live. The clock ticks only while the run is running, the approval slot is
+   the host's own decision surface, and the toggle folds the strip into one bar. *@
+<section class="demo-section mb-8" data-testid="agent-run-monitor-section">
+    <h2 class="text-lg font-semibold text-slate-900 dark:text-white mb-2">@Loc["TmAgentRunDemo_MonitorTitle"]</h2>
+    <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">@Loc["TmAgentRunDemo_MonitorHint"]</p>
+
+    <div class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_18rem]">
+        <TmAgentMonitor Steps="_steps"
+                        Status="_status"
+                        StartedAt="@_startedAt"
+                        CompletedAt="@_completedAt"
+                        CostMicroUnits="_cost"
+                        Model="gpt-4o"
+                        Title="@Loc["TmAgentRunDemo_MonitorRunTitle"]"
+                        Collapsed="@_collapsed"
+                        CollapsedChanged="OnCollapsedChanged"
+                        Culture="@CultureInfo.CurrentCulture"
+                        CostFormatter="FormatCost"
+                        PendingApproval="@(_approvalPending ? ApprovalFragment : null)"
+                        DataTestId="agent-run-monitor" />
+
+        <div class="flex flex-col gap-3" data-testid="agent-run-monitor-controls">
+            <h3 class="text-sm font-semibold text-slate-900 dark:text-white">@Loc["TmAgentRunDemo_MonitorControlsTitle"]</h3>
+            <p class="text-sm text-slate-700 dark:text-slate-300" data-testid="agent-run-decision">@DecisionReadout</p>
+            <div class="flex flex-wrap gap-2">
+                <TmButton Variant="ButtonVariant.Secondary" Size="ButtonSize.Sm"
+                          data-testid="agent-run-complete-step" OnClick="CompleteStep">@Loc["TmAgentRunDemo_CompleteStep"]</TmButton>
+                <TmButton Variant="ButtonVariant.Secondary" Size="ButtonSize.Sm"
+                          data-testid="agent-run-fail-step" OnClick="FailStep">@Loc["TmAgentRunDemo_FailStep"]</TmButton>
+                <TmButton Variant="ButtonVariant.Ghost" Size="ButtonSize.Sm"
+                          data-testid="agent-run-ask-approval" OnClick="AskApproval">@Loc["TmAgentRunDemo_AskApproval"]</TmButton>
+                <TmButton Variant="ButtonVariant.Ghost" Size="ButtonSize.Sm"
+                          data-testid="agent-run-reset-run" OnClick="ResetMonitor">@Loc["TmAgentRunDemo_ResetRun"]</TmButton>
+            </div>
+            <p class="text-xs text-slate-500 dark:text-slate-400">@Loc["TmAgentRunDemo_CollapsedHint"]</p>
+        </div>
+    </div>
+</section>
+
+@* A folded strip with a decision waiting: the bar keeps the essentials and says that an approval is pending,
+   so a reader never has to unfold it to discover the run is blocked on them. *@
+<section class="demo-section mb-8" data-testid="agent-run-collapsed-section">
+    <h2 class="text-lg font-semibold text-slate-900 dark:text-white mb-2">@Loc["TmAgentRunDemo_CollapsedTitle"]</h2>
+    <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">@Loc["TmAgentRunDemo_CollapsedBody"]</p>
+
+    <TmAgentMonitor Steps="_collapsedSteps"
+                    Status="AgentStepStatus.Running"
+                    StartedAt="@_collapsedStartedAt"
+                    CostMicroUnits="840000"
+                    Model="gpt-4o-mini"
+                    Title="@Loc["TmAgentRunDemo_CollapsedRunTitle"]"
+                    Collapsed="true"
+                    Culture="@CultureInfo.CurrentCulture"
+                    CostFormatter="FormatCost"
+                    DataTestId="agent-run-monitor-collapsed">
+        <PendingApproval>
+            <span class="text-sm text-slate-800 dark:text-slate-200">@Loc["TmAgentRunDemo_ApprovalQuestion"]</span>
+        </PendingApproval>
+    </TmAgentMonitor>
+</section>
+
+@* A malformed run: a node whose parent is not in the list is an orphan under the root (marked), and a parent
+   cycle is rejected instead of hanging the grid. *@
+<section class="demo-section mb-8" data-testid="agent-run-edge-section">
+    <h2 class="text-lg font-semibold text-slate-900 dark:text-white mb-2">@Loc["TmAgentRunDemo_EdgeTitle"]</h2>
+    <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">@Loc["TmAgentRunDemo_EdgeHint"]</p>
+
+    <TmAgentRunTree Nodes="_edgeNodes"
+                    ShowFilter="false"
+                    ShowTitle="false"
+                    AriaLabel="@Loc["TmAgentRunDemo_EdgeLabel"]"
+                    DataTestId="agent-run-tree-edge" />
+</section>
+
+@code {
+    private TimeProvider? _clock;
+    private TimeProvider Clock => _clock ??= Services.GetService(typeof(TimeProvider)) as TimeProvider
+        ?? TimeProvider.System;
+
+    private IReadOnlyList<AgentRunNode> _nodes = [];
+    private IReadOnlyList<AgentRunNode> _edgeNodes = [];
+    private IReadOnlyList<AgentMonitorStep> _steps = [];
+    private IReadOnlyList<AgentMonitorStep> _collapsedSteps = [];
+
+    private string? _selectedNodeId;
+    private string? _advanceNote;
+    private string? _decision;
+
+    private AgentStepStatus _status = AgentStepStatus.Running;
+    private DateTimeOffset _startedAt;
+    private DateTimeOffset _collapsedStartedAt;
+    private DateTimeOffset? _completedAt;
+    private long? _cost;
+    private bool _collapsed;
+    private bool _approvalPending;
+    private int _advanceIndex;
+
+    protected override void OnInitialized()
+    {
+        ResetRun();
+        ResetMonitor();
+        _collapsedStartedAt = Clock.GetUtcNow() - TimeSpan.FromSeconds(41);
+        _collapsedSteps =
+        [
+            new AgentMonitorStep(Loc["TmAgentRunDemo_StepPlan"], "collapsed-1")
+            {
+                Kind = AgentStepKind.Thinking,
+                Status = AgentStepStatus.Done,
+                StartedAt = _collapsedStartedAt,
+                CompletedAt = _collapsedStartedAt.AddSeconds(4),
+            },
+            new AgentMonitorStep(Loc["TmAgentRunDemo_StepLookup"], "collapsed-2")
+            {
+                Kind = AgentStepKind.ToolCall,
+                Status = AgentStepStatus.Running,
+                StartedAt = _collapsedStartedAt.AddSeconds(4),
+                Detail = "ledger.read",
+            },
+        ];
+
+        _edgeNodes =
+        [
+            new AgentRunNode(Loc["TmAgentRunDemo_EdgeRoot"], "edge-root") { Status = AgentStepStatus.Running },
+            new AgentRunNode(Loc["TmAgentRunDemo_EdgeChild"], "edge-child")
+            {
+                ParentId = "edge-root",
+                Kind = AgentRunNodeKind.Tool,
+                Status = AgentStepStatus.Done,
+            },
+            new AgentRunNode(Loc["TmAgentRunDemo_EdgeOrphan"], "edge-orphan")
+            {
+                ParentId = "not-in-the-run",
+                Status = AgentStepStatus.Done,
+            },
+            new AgentRunNode(Loc["TmAgentRunDemo_EdgeCycleA"], "edge-cycle-a") { ParentId = "edge-cycle-b" },
+            new AgentRunNode(Loc["TmAgentRunDemo_EdgeCycleB"], "edge-cycle-b") { ParentId = "edge-cycle-a" },
+        ];
+    }
+
+    private void ResetRun()
+    {
+        var start = Clock.GetUtcNow() - TimeSpan.FromSeconds(75);
+        _nodes =
+        [
+            new AgentRunNode(Loc["TmAgentRunDemo_RunRoot"], "root")
+            {
+                Kind = AgentRunNodeKind.Agent,
+                Status = AgentStepStatus.Running,
+                Model = "gpt-4o",
+                StartedAt = start,
+                CostMicroUnits = 1_000_000,
+                Tokens = 1_000,
+            },
+            new AgentRunNode(Loc["TmAgentRunDemo_RunPlanner"], "planner")
+            {
+                ParentId = "root",
+                Kind = AgentRunNodeKind.SubAgent,
+                Status = AgentStepStatus.Done,
+                Model = "gpt-4o",
+                StartedAt = start.AddSeconds(2),
+                CompletedAt = start.AddSeconds(12),
+                CostMicroUnits = 500_000,
+                Tokens = 400,
+            },
+            new AgentRunNode(Loc["TmAgentRunDemo_RunLookup"], "lookup")
+            {
+                ParentId = "planner",
+                Kind = AgentRunNodeKind.Tool,
+                Status = AgentStepStatus.Failed,
+                Model = "gpt-4o-mini",
+                StartedAt = start.AddSeconds(12),
+                CompletedAt = start.AddSeconds(19),
+                CostMicroUnits = 250_000,
+                Tokens = 100,
+                Error = Loc["TmAgentRunDemo_RunLookupError"],
+            },
+            new AgentRunNode(Loc["TmAgentRunDemo_RunWriter"], "writer")
+            {
+                ParentId = "root",
+                Kind = AgentRunNodeKind.Step,
+                Status = AgentStepStatus.Pending,
+                Model = "gpt-4o",
+                CostMicroUnits = 750_000,
+                Tokens = 600,
+            },
+        ];
+
+        _advanceIndex = 0;
+        _advanceNote = null;
+        _selectedNodeId = "root";
+    }
+
+    /// <summary>
+    /// The host's own decision surface, handed to the monitor as a fragment. It is null while no decision is
+    /// pending, so the component renders NO approval region at all instead of an empty one.
+    /// </summary>
+    private RenderFragment ApprovalFragment => @<text>
+        <span class="text-sm text-slate-800 dark:text-slate-200 mr-2">@Loc["TmAgentRunDemo_ApprovalQuestion"]</span>
+        <TmButton Variant="ButtonVariant.Primary" Size="ButtonSize.Sm"
+                  data-testid="agent-run-approve" OnClick="Approve">@Loc["TmAgentRunDemo_Approve"]</TmButton>
+        <TmButton Variant="ButtonVariant.Ghost" Size="ButtonSize.Sm"
+                  data-testid="agent-run-reject" OnClick="Reject">@Loc["TmAgentRunDemo_Reject"]</TmButton>
+    </text>;
+
+    private void ResetMonitor()
+    {
+        var start = Clock.GetUtcNow();
+        _startedAt = start;
+        _completedAt = null;
+        _status = AgentStepStatus.Running;
+        _approvalPending = true;
+        _collapsed = false;
+        _decision = null;
+        _cost = 120_000;
+        _steps =
+        [
+            Step("monitor-1", Loc["TmAgentRunDemo_StepPlan"], AgentStepKind.Thinking, AgentStepStatus.Done,
+                start, start.AddSeconds(3)),
+            Step("monitor-2", Loc["TmAgentRunDemo_StepLookup"], AgentStepKind.ToolCall, AgentStepStatus.Running,
+                start.AddSeconds(3), null, "ledger.read"),
+            Step("monitor-3", Loc["TmAgentRunDemo_StepApproval"], AgentStepKind.Approval, AgentStepStatus.Pending),
+        ];
+    }
+
+    private AgentMonitorStep Step(
+        string id,
+        string title,
+        AgentStepKind kind,
+        AgentStepStatus status,
+        DateTimeOffset? startedAt = null,
+        DateTimeOffset? completedAt = null,
+        string? detail = null)
+        => new(title, id)
+        {
+            Kind = kind,
+            Status = status,
+            StartedAt = startedAt,
+            CompletedAt = completedAt,
+            Detail = detail,
+        };
+
+    private void OnNodeSelected(string? nodeId)
+    {
+        _selectedNodeId = nodeId;
+    }
+
+    private void AdvanceRun()
+    {
+        var now = Clock.GetUtcNow();
+        var list = _nodes.ToList();
+
+        switch (_advanceIndex++)
+        {
+            case 0:
+                Replace(list, "lookup", node => node with
+                {
+                    Status = AgentStepStatus.Running,
+                    CompletedAt = null,
+                    Error = null,
+                });
+                _advanceNote = Loc["TmAgentRunDemo_AdvanceRetried"];
+                break;
+
+            case 1:
+                Replace(list, "lookup", node => node with
+                {
+                    Status = AgentStepStatus.Done,
+                    CompletedAt = now,
+                });
+                _advanceNote = Loc["TmAgentRunDemo_AdvanceLookupDone"];
+                break;
+
+            default:
+                Replace(list, "writer", node => node with
+                {
+                    Status = AgentStepStatus.Running,
+                    StartedAt = now,
+                });
+                Replace(list, "root", node => node with
+                {
+                    Status = AgentStepStatus.Done,
+                    CompletedAt = now,
+                });
+                _advanceNote = Loc["TmAgentRunDemo_AdvanceFinished"];
+                _advanceIndex = 0;
+                break;
+        }
+
+        _nodes = list;
+    }
+
+    private static void Replace(List<AgentRunNode> nodes, string id, Func<AgentRunNode, AgentRunNode> update)
+    {
+        var index = nodes.FindIndex(node => string.Equals(node.Id, id, StringComparison.Ordinal));
+        if (index >= 0)
+        {
+            nodes[index] = update(nodes[index]);
+        }
+    }
+
+    private void CompleteStep()
+    {
+        var now = Clock.GetUtcNow();
+        var list = _steps.ToList();
+
+        // The current step is the running one; when nothing runs yet, the first queued step starts and
+        // finishes in the same click, so the demo can walk the run to its end.
+        var current = list.FindIndex(step => step.Status == AgentStepStatus.Running);
+        if (current < 0)
+        {
+            current = list.FindIndex(step => step.Status == AgentStepStatus.Pending);
+        }
+
+        if (current >= 0)
+        {
+            list[current] = list[current] with
+            {
+                Status = AgentStepStatus.Done,
+                CompletedAt = now,
+                StartedAt = list[current].StartedAt ?? now,
+            };
+        }
+
+        // ...and the next queued step becomes the current one, so the strip never shows "no step yet" while
+        // the run is still going.
+        if (!list.Any(step => step.Status == AgentStepStatus.Running))
+        {
+            var next = list.FindIndex(step => step.Status == AgentStepStatus.Pending);
+            if (next >= 0)
+            {
+                list[next] = list[next] with { Status = AgentStepStatus.Running, StartedAt = now };
+            }
+        }
+
+        _cost = (_cost ?? 0) + 60_000;
+        _approvalPending = false;
+
+        if (list.All(step => step.IsFinished))
+        {
+            _status = AgentStepStatus.Done;
+            _completedAt = now;
+        }
+
+        _steps = list;
+        _decision = Loc["TmAgentRunDemo_StepCompleted"];
+    }
+
+    private void FailStep()
+    {
+        var now = Clock.GetUtcNow();
+        var list = _steps.ToList();
+        var running = list.FindIndex(step => step.Status == AgentStepStatus.Running);
+
+        if (running >= 0)
+        {
+            list[running] = list[running] with
+            {
+                Status = AgentStepStatus.Failed,
+                CompletedAt = now,
+                StartedAt = list[running].StartedAt ?? now,
+            };
+        }
+
+        _approvalPending = false;
+        _status = AgentStepStatus.Failed;
+        _completedAt = now;
+        _steps = list;
+        _decision = Loc["TmAgentRunDemo_StepFailed"];
+    }
+
+    private void AskApproval()
+    {
+        _approvalPending = true;
+        _status = AgentStepStatus.Running;
+        _completedAt = null;
+        _decision = null;
+    }
+
+    private void Approve()
+    {
+        _approvalPending = false;
+        _decision = Loc["TmAgentRunDemo_Approved"];
+    }
+
+    private void Reject()
+    {
+        _approvalPending = false;
+        _decision = Loc["TmAgentRunDemo_Rejected"];
+    }
+
+    private void OnCollapsedChanged(bool collapsed) => _collapsed = collapsed;
+
+    private AgentRunNode? SelectedNode => _selectedNodeId is { } id
+        ? _nodes.FirstOrDefault(node => string.Equals(node.Id, id, StringComparison.Ordinal))
+        : null;
+
+    private string SelectedReadout => SelectedNode is { } node
+        ? Loc["TmAgentRunDemo_Selected", node.Title]
+        : Loc["TmAgentRunDemo_NoSelection"];
+
+    private string AdvanceReadout => _advanceNote ?? Loc["TmAgentRunDemo_NoAdvance"];
+
+    private string DecisionReadout => _decision ?? Loc["TmAgentRunDemo_NoDecision"];
+
+    private string DetailHeading(AgentRunNode node)
+        => Loc["TmAgentRunDemo_DetailHeading", node.Title];
+
+    private string KindText(AgentRunNodeKind kind) => kind switch
+    {
+        AgentRunNodeKind.SubAgent => Loc["TmAgentRunNodeKind_SubAgent"],
+        AgentRunNodeKind.Tool => Loc["TmAgentRunNodeKind_Tool"],
+        AgentRunNodeKind.Approval => Loc["TmAgentRunNodeKind_Approval"],
+        AgentRunNodeKind.Step => Loc["TmAgentRunNodeKind_Step"],
+        _ => Loc["TmAgentRunNodeKind_Agent"],
+    };
+
+    private string StatusText(AgentStepStatus status) => status switch
+    {
+        AgentStepStatus.Running => Loc["TmAgentRun_StatusRunning"],
+        AgentStepStatus.Done => Loc["TmAgentRun_StatusDone"],
+        AgentStepStatus.Failed => Loc["TmAgentRun_StatusFailed"],
+        AgentStepStatus.Skipped => Loc["TmAgentRun_StatusSkipped"],
+        _ => Loc["TmAgentRun_StatusPending"],
+    };
+
+    /// <summary>
+    /// The demo's own cost presentation: the browser keeps the invariant culture, whose currency symbol is
+    /// the generic "¤", so the symbol AND its side come from two localized keys (a translator is never
+    /// stuck with the English order) and the amount from the current culture.
+    /// </summary>
+    private string FormatCost(long microUnits)
+    {
+        var units = microUnits / 1_000_000m;
+        var decimals = units != 0m && Math.Abs(units) < 0.01m ? 6 : 2;
+        var amount = units.ToString("N" + decimals.ToString(CultureInfo.InvariantCulture), CultureInfo.CurrentCulture);
+
+        return Loc["TmAgentRunDemo_CurrencyPrefix"] + amount + Loc["TmAgentRunDemo_CurrencySuffix"];
+    }
+
+    private string Cost(long? microUnits)
+        => microUnits is { } value ? FormatCost(value) : "—";
+
+    private string Tokens(long? tokens)
+        => tokens is { } value ? value.ToString("N0", CultureInfo.CurrentCulture) : "—";
+
+    /// <summary>
+    /// The public <see cref="AgentRunRollup"/> is what a host uses outside the grid — the demo proves the
+    /// row and the panel cannot drift because both come from the same helper.
+    /// </summary>
+    private string SubtreeTotal(AgentRunNode node)
+    {
+        var rollup = AgentRunRollup.For(node.Id, _nodes, Clock.GetUtcNow());
+
+        return Loc["TmAgentRunDemo_Total", rollup.DescendantCount.ToString(CultureInfo.CurrentCulture),
+            Cost(rollup.CostMicroUnits)];
+    }
+}

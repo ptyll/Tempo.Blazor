@@ -1,0 +1,24 @@
+{
+  "kind": "Enum",
+  "category": "AI",
+  "namespace": "Tempo.Blazor.AI.Models",
+  "description": "The show-only filter of an agent run tree. The filter never breaks the tree: a row survives when it matches the filter OR when a surviving descendant needs it as its ancestor, so filtering to Failed still shows the chain that led to the failure.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/AI/AgentRunFilter.cs",
+  "documentationStatus": "generated",
+  "itemName": "AgentRunFilter",
+  "members": [
+    {
+      "name": "All",
+      "description": "Every node of the run."
+    },
+    {
+      "name": "Running",
+      "description": "Running nodes, plus their ancestors."
+    },
+    {
+      "name": "Failed",
+      "description": "Failed nodes, plus their ancestors."
+    }
+  ]
+}

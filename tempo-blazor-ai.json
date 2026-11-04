@@ -75,6 +75,184 @@
   },
   "items": [
     {
+      "itemName": "TmAgentMonitor",
+      "kind": "Component",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.Components.AI",
+      "description": "One agent run, live: what it is doing right now, how long it has been going, what it has cost, and the timeline of the steps that got it here. The strip answers those four questions without opening anything — the current step, a clock that ticks only while the run is running, the cost so far and the steps' timeline with a glyph and a hidden kind word per step. A host that supplies PendingApproval gets its decision surface in its own named region between the metrics and the timeline; an approval that appears is also announced in the component's polite live region. Collapsed folds the strip into one status bar that keeps the essentials and drops the timeline; a pending decision is never hidden by the fold. The run title, the current step and the step text wrap at narrow widths while only the short elapsed/cost/model values keep one line, so the strip reflows at 320 px. The monitor renders the snapshot it is given and never polls anything.",
+      "packageId": "Tempo.Blazor.AI",
+      "sourcePath": "src/Tempo.Blazor.AI/Components/AI/TmAgentMonitor.razor",
+      "documentationStatus": "merged",
+      "requiredImports": [
+        "@using Tempo.Blazor.AI.Models",
+        "@using Tempo.Blazor.Components.AI"
+      ],
+      "parameters": [
+        {
+          "name": "AllowCollapse",
+          "type": "bool",
+          "isRequired": false,
+          "default": "true",
+          "description": "Whether the strip may be folded at all. Default true. false removes the toggle and keeps the strip expanded even when Collapsed is pinned true — a bar a host cannot reopen is not a feature."
+        },
+        {
+          "name": "AriaLabel",
+          "type": "string?",
+          "isRequired": false,
+          "description": "The accessible name of the strip when ShowTitle is false. Defaults to the localized \"Agent monitor\"."
+        },
+        {
+          "name": "Class",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Additional CSS class(es) for the root element."
+        },
+        {
+          "name": "Collapsed",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Whether the strip is folded into its status bar, two-way bound with CollapsedChanged. Default false. The bar keeps the state, the title, the current step, the clock, the cost and a pending-approval marker; the timeline and the approval slot need the room. A host that pins the parameter keeps control."
+        },
+        {
+          "name": "CollapsedChanged",
+          "type": "EventCallback<bool>",
+          "isRequired": false,
+          "description": "Fires with the new collapsed state when the reader presses the toggle."
+        },
+        {
+          "name": "CompletedAt",
+          "type": "DateTimeOffset?",
+          "isRequired": false,
+          "description": "When the run finished. Null while it is still running; a finished run stops its clock and keeps its recorded duration."
+        },
+        {
+          "name": "CostFormatter",
+          "type": "Func<long, string>?",
+          "isRequired": false,
+          "description": "Formats the run's cost given in MICRO-UNITS. Null uses AiCostFormatter with Culture — the culture's own currency."
+        },
+        {
+          "name": "CostMicroUnits",
+          "type": "long?",
+          "isRequired": false,
+          "description": "What the run has cost so far, in MICRO-UNITS (1,000,000 is 1.00 of the currency). Null renders the cost metric with an em dash, so an unreported cost never reads as free."
+        },
+        {
+          "name": "Culture",
+          "type": "CultureInfo?",
+          "isRequired": false,
+          "description": "The culture that formats the cost. Null (the default) means the current culture at render time. The clock-style duration is not localized on purpose."
+        },
+        {
+          "name": "EmptyContent",
+          "type": "RenderFragment?",
+          "isRequired": false,
+          "description": "Rendered instead of the localized \"No steps yet.\" when Steps is empty."
+        },
+        {
+          "name": "HeadingLevel",
+          "type": "int",
+          "isRequired": false,
+          "default": "3",
+          "description": "The heading level of the rendered title, clamped to 2–6. Default 3."
+        },
+        {
+          "name": "IconResolver",
+          "type": "Func<AgentStepKind, string>?",
+          "isRequired": false,
+          "description": "Maps a step's AgentStepKind to an icon name. Null uses the component's own mapping (thinking → a spark, a tool call → a terminal, an approval → a shield, …). The kind's WORD is always rendered for a screen reader, so an override never removes the only copy of the information."
+        },
+        {
+          "name": "Model",
+          "type": "string?",
+          "isRequired": false,
+          "description": "The model the run is using (an id or a display name). Null hides the model metric."
+        },
+        {
+          "name": "PendingApproval",
+          "type": "RenderFragment?",
+          "isRequired": false,
+          "description": "The host's decision surface for a pending approval — an approve/reject pair, a link, a short form. It renders in its own role=\"group\" named by the localized \"Waiting for your approval\", between the metrics and the timeline. Null renders no approval region at all."
+        },
+        {
+          "name": "ShowCost",
+          "type": "bool",
+          "isRequired": false,
+          "default": "true",
+          "description": "Whether the cost metric is rendered. Default true."
+        },
+        {
+          "name": "ShowElapsed",
+          "type": "bool",
+          "isRequired": false,
+          "default": "true",
+          "description": "Whether the elapsed-time metric is rendered. Default true."
+        },
+        {
+          "name": "ShowModel",
+          "type": "bool",
+          "isRequired": false,
+          "default": "true",
+          "description": "Whether the model metric is rendered (it is hidden anyway when Model is null). Default true."
+        },
+        {
+          "name": "ShowTimeline",
+          "type": "bool",
+          "isRequired": false,
+          "default": "true",
+          "description": "Whether the steps' timeline is rendered. Default true."
+        },
+        {
+          "name": "ShowTitle",
+          "type": "bool",
+          "isRequired": false,
+          "default": "true",
+          "description": "Whether the heading is rendered. Default true; the region still keeps its accessible name either way."
+        },
+        {
+          "name": "StartedAt",
+          "type": "DateTimeOffset?",
+          "isRequired": false,
+          "description": "When the run started, from the host's clock. Null renders no clock at all (rather than an invented one)."
+        },
+        {
+          "name": "Status",
+          "type": "AgentStepStatus",
+          "isRequired": false,
+          "default": "AgentStepStatus.Running",
+          "description": "The state of the whole run: it drives the state word and icon in the bar, the headline sentence and the live clock. Default AgentStepStatus.Running."
+        },
+        {
+          "name": "Steps",
+          "type": "IReadOnlyList<AgentMonitorStep>?",
+          "isRequired": false,
+          "description": "The steps of the run so far, oldest first. The current step is the last Running one, or the last step when nothing runs. Null or empty renders the localized empty sentence in place of the timeline; the header still shows the run's state."
+        },
+        {
+          "name": "TimeProvider",
+          "type": "TimeProvider?",
+          "isRequired": false,
+          "description": "The clock the live timer reads and schedules from. Null (the default) uses the registered TimeProvider and falls back to System."
+        },
+        {
+          "name": "Title",
+          "type": "string?",
+          "isRequired": false,
+          "description": "The heading above the strip. Null renders the localized default (\"Agent run\"). The heading also names the whole region."
+        }
+      ],
+      "examples": [
+        {
+          "title": "Watch a run with a decision waiting",
+          "code": "<TmAgentMonitor Steps=\"@steps\"\n                Status=\"@status\"\n                StartedAt=\"@startedAt\"\n                CompletedAt=\"@completedAt\"\n                CostMicroUnits=\"@cost\"\n                Model=\"gpt-4o\"\n                Title=\"Nightly reconciliation\"\n                @bind-Collapsed=\"collapsed\">\n    <PendingApproval>\n        <TmButton Variant=\"ButtonVariant.Primary\" OnClick=\"ApproveAsync\">Approve</TmButton>\n    </PendingApproval>\n</TmAgentMonitor>"
+        },
+        {
+          "title": "The folded bar (the host keeps control of the fold)",
+          "code": "<TmAgentMonitor Steps=\"@steps\" Status=\"AgentStepStatus.Running\" Collapsed=\"true\" PendingApproval=\"@approval\" />"
+        }
+      ]
+    },
+    {
       "itemName": "TmAgentPlan",
       "kind": "Component",
       "category": "AI",
@@ -190,6 +368,164 @@
         {
           "title": "Read-only review that may only be approved",
           "code": "<TmAgentPlan Steps=\"@steps\" AllowEditing=\"false\" OnApprove=\"ApproveAsync\" />"
+        }
+      ]
+    },
+    {
+      "itemName": "TmAgentRunTree",
+      "kind": "Component",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.Components.AI",
+      "description": "The run of an agent as a treegrid: one row per agent, sub-agent, tool call or step, with the state, the model, the elapsed time, the cost and the tokens of each — and, on a parent row, the total of everything under it (marked as a summary and named in full for a screen reader). The nodes are a FLAT list and the tree comes from AgentRunNode.ParentId: an orphan hangs under the root and is marked, a parent cycle is rejected instead of hanging the grid, and a duplicate id is read once. The component never mutates Nodes: it renders the host's snapshot and owns only the reader's view state (the filter, the collapsed rows and the selection when the host does not bind it). The surface is a role=\"treegrid\" with one roving tab stop, APG tree keys, Enter/Space selecting, and one polite live region for its own events. A name or model cell clipped to one line inside the grid carries its whole text in a title, so a host that renders no DetailTemplate still has a full-text path.",
+      "packageId": "Tempo.Blazor.AI",
+      "sourcePath": "src/Tempo.Blazor.AI/Components/AI/TmAgentRunTree.razor",
+      "documentationStatus": "merged",
+      "requiredImports": [
+        "@using Tempo.Blazor.AI.Models",
+        "@using Tempo.Blazor.Components.AI"
+      ],
+      "parameters": [
+        {
+          "name": "AriaLabel",
+          "type": "string?",
+          "isRequired": false,
+          "description": "The accessible name of the treegrid. Null names it by the rendered heading — so the name a reader hears is the one they see — and, without a heading, by the localized \"Agent run tree\"."
+        },
+        {
+          "name": "Class",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Additional CSS class(es) for the root element."
+        },
+        {
+          "name": "CostFormatter",
+          "type": "Func<long, string>?",
+          "isRequired": false,
+          "description": "Formats a cost given in MICRO-UNITS (1,000,000 is 1.00 of the currency). Null uses AiCostFormatter with Culture — the culture's own currency, with micro-unit precision below one hundredth of a unit."
+        },
+        {
+          "name": "Culture",
+          "type": "CultureInfo?",
+          "isRequired": false,
+          "description": "The culture that formats the costs and the token counts. Null (the default) means the current culture at render time. The durations are clock-style (m:ss) on purpose and are not localized."
+        },
+        {
+          "name": "DetailTemplate",
+          "type": "RenderFragment<AgentRunNode>?",
+          "isRequired": false,
+          "description": "The detail panel of the selected node, rendered in a named region below the grid. Null renders no detail panel — the grid alone is a complete surface."
+        },
+        {
+          "name": "EmptyContent",
+          "type": "RenderFragment?",
+          "isRequired": false,
+          "description": "Rendered instead of the localized \"No nodes yet.\" when Nodes is null or empty. The component's instructions and its live region stay rendered either way."
+        },
+        {
+          "name": "HeadingLevel",
+          "type": "int",
+          "isRequired": false,
+          "default": "3",
+          "description": "The heading level of the rendered title, clamped to 2–6. Default 3."
+        },
+        {
+          "name": "Nodes",
+          "type": "IReadOnlyList<AgentRunNode>?",
+          "isRequired": false,
+          "description": "The run, as a flat list. The tree is built from AgentRunNode.ParentId; the component never mutates this list. Null or empty renders EmptyContent or the localized empty sentence instead of an empty treegrid."
+        },
+        {
+          "name": "SelectedNodeId",
+          "type": "string?",
+          "isRequired": false,
+          "description": "The selected node's id, two-way bound with SelectedNodeIdChanged (@bind-SelectedNodeId). The matching row carries aria-selected=\"true\" and the detail region renders when DetailTemplate is supplied. A host may keep the component uncontrolled: the reader's selection is then internal and still renders the detail."
+        },
+        {
+          "name": "SelectedNodeIdChanged",
+          "type": "EventCallback<string?>",
+          "isRequired": false,
+          "description": "Fires with the newly selected node id (a row click, Enter or Space)."
+        },
+        {
+          "name": "ShowCost",
+          "type": "bool",
+          "isRequired": false,
+          "default": "true",
+          "description": "Whether the cost column is rendered. Default true."
+        },
+        {
+          "name": "ShowFilter",
+          "type": "bool",
+          "isRequired": false,
+          "default": "true",
+          "description": "Whether the \"show only\" control is rendered. Default true; the filter still applies when the host pins ShowOnly without the control."
+        },
+        {
+          "name": "ShowModel",
+          "type": "bool",
+          "isRequired": false,
+          "default": "true",
+          "description": "Whether the model column is rendered. Default true."
+        },
+        {
+          "name": "ShowOnly",
+          "type": "AgentRunFilter",
+          "isRequired": false,
+          "default": "AgentRunFilter.All",
+          "description": "Which nodes the reader wants to see, two-way bound with ShowOnlyChanged (the built-in \"show only\" control raises it). The filter keeps the ancestors of every row it keeps. Default AgentRunFilter.All."
+        },
+        {
+          "name": "ShowOnlyChanged",
+          "type": "EventCallback<AgentRunFilter>",
+          "isRequired": false,
+          "description": "Fires when the reader picks another value of the \"show only\" control."
+        },
+        {
+          "name": "ShowTime",
+          "type": "bool",
+          "isRequired": false,
+          "default": "true",
+          "description": "Whether the elapsed-time column is rendered. Default true."
+        },
+        {
+          "name": "ShowTitle",
+          "type": "bool",
+          "isRequired": false,
+          "default": "true",
+          "description": "Whether the heading is rendered. Default true; set false when the host page already provides one. The grid stays named through AriaLabel or the localized default."
+        },
+        {
+          "name": "ShowTokens",
+          "type": "bool",
+          "isRequired": false,
+          "default": "true",
+          "description": "Whether the tokens column is rendered. Default true."
+        },
+        {
+          "name": "TimeProvider",
+          "type": "TimeProvider?",
+          "isRequired": false,
+          "description": "The clock the live timers read and schedule from. Null (the default) uses the registered TimeProvider and falls back to System — the parameter exists for a host (and a test) that wants a different clock than the app-wide one."
+        },
+        {
+          "name": "Title",
+          "type": "string?",
+          "isRequired": false,
+          "description": "An optional heading above the grid. It also becomes the grid's accessible name when AriaLabel is not set."
+        }
+      ],
+      "examples": [
+        {
+          "title": "A run with a host-owned selection and detail panel",
+          "code": "<TmAgentRunTree Nodes=\"@nodes\"\n                @bind-SelectedNodeId=\"selectedId\"\n                Title=\"Nightly reconciliation\">\n    <DetailTemplate Context=\"node\">\n        <p>@node.Title — @node.Model</p>\n    </DetailTemplate>\n</TmAgentRunTree>\n\n@code {\n    private string? selectedId;\n    private IReadOnlyList<AgentRunNode> nodes = [\n        new(\"Reconciliation agent\", \"root\") { Status = AgentStepStatus.Running, Model = \"gpt-4o\" },\n        new(\"Look up the ledger\", \"lookup\")\n        {\n            ParentId = \"root\",\n            Kind = AgentRunNodeKind.Tool,\n            Status = AgentStepStatus.Failed,\n            Error = \"The ledger API answered 503.\",\n        },\n    ];\n}"
+        },
+        {
+          "title": "Only the running nodes, plus their ancestors",
+          "code": "<TmAgentRunTree Nodes=\"@nodes\" ShowOnly=\"AgentRunFilter.Running\" ShowOnlyChanged=\"OnFilterChanged\" />"
+        },
+        {
+          "title": "The model and token columns only",
+          "code": "<TmAgentRunTree Nodes=\"@nodes\" ShowTime=\"false\" ShowCost=\"false\" ShowTokens=\"false\" />"
         }
       ]
     },
@@ -1169,7 +1505,15 @@
   "libraryExamples": [],
   "assets": [
     {
+      "path": "src/Tempo.Blazor.AI/wwwroot/css/components/_ai-agent-monitor.css",
+      "kind": "Css"
+    },
+    {
       "path": "src/Tempo.Blazor.AI/wwwroot/css/components/_ai-agent-plan.css",
+      "kind": "Css"
+    },
+    {
+      "path": "src/Tempo.Blazor.AI/wwwroot/css/components/_ai-agent-run-tree.css",
       "kind": "Css"
     },
     {
@@ -1225,20 +1569,28 @@
       "kind": "JavaScript"
     },
     {
+      "path": "src/Tempo.Blazor.AI/wwwroot/js/tm-agent-run-tree.js",
+      "kind": "JavaScript"
+    },
+    {
       "path": "src/Tempo.Blazor.AI/wwwroot/js/__tests__/ai-composer.test.mjs",
       "kind": "JavaScript"
     },
     {
       "path": "src/Tempo.Blazor.AI/wwwroot/js/__tests__/ai-conversation.test.mjs",
       "kind": "JavaScript"
+    },
+    {
+      "path": "src/Tempo.Blazor.AI/wwwroot/js/__tests__/tm-agent-run-tree.test.mjs",
+      "kind": "JavaScript"
     }
   ],
   "summary": {
-    "itemCount": 15,
-    "manualItemCount": 15,
-    "generatedItemCount": 15,
+    "itemCount": 17,
+    "manualItemCount": 17,
+    "generatedItemCount": 17,
     "generatedOnlyItemCount": 0,
-    "componentCount": 10,
+    "componentCount": 12,
     "publicApiTypeCount": 5
   }
 }
