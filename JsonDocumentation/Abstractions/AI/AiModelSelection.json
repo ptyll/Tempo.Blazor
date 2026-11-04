@@ -1,0 +1,11 @@
+{
+  "kind": "Class",
+  "category": "AI",
+  "namespace": "Tempo.Blazor.AI.Models",
+  "description": "What the user chose in TmModelPicker: which model, whether extended thinking is on and which reasoning-effort level is set — the whole two-way bound value (@bind-Selection). The record is a VALUE: the picker raises a new instance on every change (a pick of a DIFFERENT model resets the reasoning options to that model's defaults, a re-pick of the SAME model keeps them), so a host can store it as-is and compare it with ==. Null means \"nothing chosen yet\". A programmatic switch through ForModel keeps the reasoning options verbatim — see its remarks; use new AiModelSelection(modelId) for the picker's reset semantics.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/AI/AiModelSelection.cs",
+  "documentationStatus": "generated",
+  "itemName": "AiModelSelection",
+  "usageExample": "private AiModelSelection? selection = new(\"gpt-4o\");\n\nprivate void OnSelection(AiModelSelection? value)\n    => selection = value;\n\n// A pick of the same model keeps the reader's reasoning options:\nvar same = selection! with { ExtendedThinking = true, EffortLevel = \"high\" };"
+}

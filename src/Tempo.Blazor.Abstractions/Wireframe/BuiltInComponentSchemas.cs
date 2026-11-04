@@ -168,6 +168,7 @@ public sealed class BuiltInComponentSchemas : IWireframeSchemaSource
             ["TmAgentPlan"] = ["agent-plan"],
             ["TmAgentRunTree"] = ["agent-run-tree"],
             ["TmAgentMonitor"] = ["agent-monitor"],
+            ["TmModelPicker"] = ["model-picker"],
             ["TmMultiViewList"] = ["list-view"],
             ["TmDataTable"] = ["data-table"],
             ["TmPagination"] = ["pagination"],
@@ -1385,6 +1386,22 @@ public sealed class BuiltInComponentSchemas : IWireframeSchemaSource
                 P("showTimeline", "Show Timeline", PropType.Bool,   true, cat: "Appearance"),
                 P("showCost",     "Show Cost",     PropType.Bool,   true, cat: "Appearance"),
                 P("collapsed",    "Collapsed",     PropType.Bool,   false, cat: "Behavior"),
+            ]
+        };
+
+        yield return new WireframeComponentSchema
+        {
+            Type = "TmModelPicker", Category = "AI", DisplayName = "Model Picker",
+            DefaultWidth = 320, DefaultHeight = 210,
+            Props =
+            [
+                P("title",       "Title",        PropType.String, "Choose a model", cat: "Content"),
+                P("models",      "Models",       PropType.StringList, new[] { "GPT-4o", "Claude 3.5 Sonnet", "GPT-4o mini" }, cat: "Content"),
+                P("groupBy",     "Group By",     PropType.Enum,   "provider", cat: "Behavior",
+                    opts: ["provider", "family", "none"]),
+                P("showSearch",  "Show Search",  PropType.Bool,   true, cat: "Appearance"),
+                P("showMetrics", "Show Metrics", PropType.Bool,   true, cat: "Appearance"),
+                P("showTags",    "Show Tags",    PropType.Bool,   true, cat: "Appearance"),
             ]
         };
 

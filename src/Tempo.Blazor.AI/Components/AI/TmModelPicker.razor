@@ -1,0 +1,339 @@
+@namespace Tempo.Blazor.Components.AI
+@inherits Tempo.Blazor.Components.TmComponentBase
+@using Tempo.Blazor.AI.Models
+@using Tempo.Blazor.Components.DataDisplay
+@using Tempo.Blazor.Components.Inputs
+@using Tempo.Blazor.Components.Overlay
+@using Tempo.Blazor.Abstractions.Layout
+
+@* The model picker: a trigger that names the chosen model plus its state tags, and a popup listbox of the
+   host's catalogue. Every user-facing string comes from ITmLocalizer; a model's own name, provider,
+   capabilities and effort labels are the HOST's data and are rendered as text.
+
+   The popup is a TmOverlayPanel, so a phone gets the same panel as a bottom sheet instead of a popover that
+   would be clipped by the page. The reasoning options of the SELECTED model sit ABOVE the list and never
+   inside a role="option" — an option is a leaf of the listbox and may not contain a switch or a radio. *@
+<div class="tm-model-picker @Class"
+     data-testid="@RootTestId("model-picker")"
+     data-open="@(_isOpen ? "true" : "false")"
+     data-group-by="@GroupBySlug"
+     data-selected-model="@_selection?.ModelId"
+     role="group"
+     aria-label="@(AriaLabel ?? Loc["TmModelPicker_AriaLabel"])"
+     @attributes="AdditionalAttributes">
+
+    <button type="button"
+            class="tm-model-picker__trigger"
+            data-testid="@TestId("model-picker-trigger")"
+            aria-haspopup="listbox"
+            aria-expanded="@(_isOpen ? "true" : "false")"
+            aria-controls="@(_isOpen ? ListId : null)"
+            aria-label="@HostAriaLabel"
+            aria-describedby="@TriggerDescriptionIds"
+            disabled="@Disabled"
+            @ref="_triggerRef"
+            @onpointerdown="OnTriggerPointerDown"
+            @onclick="OnTriggerClick"
+            @onkeydown="OnTriggerKeyDownAsync">
+        @* No aria-label by default: the trigger is named by its own visible text, so the provider line and
+           every state tag (deprecated, extended thinking, effort) stay audible. The visually hidden prefix
+           keeps the field's context without replacing that text. *@
+        @if (_selection is not null)
+        {
+            <span class="tm-sr-only" data-testid="@TestId("model-picker-trigger-label")">@Loc["TmModelPicker_TriggerLabel", string.Empty]</span>
+        }
+        <span class="tm-model-picker__trigger-main">
+            @if (SelectedModel is { } model)
+            {
+                <span class="tm-model-picker__trigger-name" data-testid="@TestId("model-picker-trigger-name")">@model.Name</span>
+                @if (!string.IsNullOrWhiteSpace(model.Provider))
+                {
+                    <span class="tm-model-picker__trigger-provider" data-testid="@TestId("model-picker-trigger-provider")">@model.Provider</span>
+                }
+            }
+            else if (!string.IsNullOrEmpty(_selection?.ModelId))
+            {
+                <span class="tm-model-picker__trigger-name" data-testid="@TestId("model-picker-trigger-name")">@_selection.ModelId</span>
+            }
+            else
+            {
+                <span class="tm-model-picker__placeholder" data-testid="@TestId("model-picker-trigger-name")">@Loc["TmModelPicker_TriggerEmpty"]</span>
+            }
+        </span>
+
+        @if (TriggerTags.Count > 0)
+        {
+            <span class="tm-model-picker__trigger-tags"
+                  id="@TagsId"
+                  data-testid="@TestId("model-picker-trigger-tags")">
+                @foreach (var tag in TriggerTags)
+                {
+                    @if (tag.IsDeprecated)
+                    {
+                        <span class="tm-model-picker__chip tm-model-picker__chip--deprecated"
+                              data-testid="@TestId("model-picker-trigger-deprecated")">@tag.Text</span>
+                    }
+                    else
+                    {
+                        <span class="tm-model-picker__chip">@tag.Text</span>
+                    }
+                }
+            </span>
+        }
+
+        <span class="tm-model-picker__chevron" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                 stroke-linecap="round" stroke-linejoin="round" width="16" height="16">
+                <polyline points="6 9 12 15 18 9"/>
+            </svg>
+        </span>
+    </button>
+
+    <p class="tm-sr-only" id="@InstructionsId" data-testid="@TestId("model-picker-instructions")">@Loc["TmModelPicker_Instructions"]</p>
+
+    <TmOverlayPanel @ref="_panel"
+                    IsOpen="_isOpen"
+                    IsOpenChanged="OnOpenChangedAsync"
+                    OnOpened="OnPanelOpened"
+                    ResolvedLayoutChanged="OnPanelLayoutResolved"
+                    Anchor="_triggerRef"
+                    Placement="OverlayPlacement.Bottom"
+                    Align="OverlayAlign.Start"
+                    Offset="4"
+                    ConstrainHeight="true"
+                    CloseOnEscape="true"
+                    CloseOnOutsidePointerDown="true"
+                    Role="@null"
+                    Title="@PanelTitle"
+                    SheetTitle="@PanelTitle"
+                    SheetInitialFocusSelector="@SheetFocusSelector"
+                    MobilePresentation="MobilePresentation"
+                    LayoutMode="LayoutMode"
+                    Class="tm-model-picker__panel">
+        <div class="tm-model-picker__body">
+            @if (ShowBodyTitle)
+            {
+                <p class="tm-model-picker__title" data-testid="@TestId("model-picker-title")">@PanelTitle</p>
+            }
+
+            @if (ShowReasoningOptions)
+            {
+                <div class="tm-model-picker__options"
+                     data-testid="@TestId("model-picker-options")"
+                     role="group"
+                     aria-labelledby="@OptionsTitleId">
+                    <p class="tm-model-picker__options-title" id="@OptionsTitleId">@Loc["TmModelPicker_OptionsTitle"]</p>
+                    @if (ShowExtendedThinking && SelectedModel is { SupportsExtendedThinking: true })
+                    {
+                        <TmToggle Value="SelectedExtendedThinking"
+                                  ValueChanged="OnExtendedThinkingChangedAsync"
+                                  Label="@Loc["TmModelPicker_ExtendedThinking"]"
+                                  Disabled="@Disabled"
+                                  Class="tm-model-picker__thinking"
+                                  data-testid="@TestId("model-picker-thinking")" />
+                    }
+                    @if (ShowEffort && EffortOptions.Count > 0)
+                    {
+                        <TmSegmentedControl TValue="string?"
+                                            Options="EffortOptions"
+                                            Value="@SelectedEffort"
+                                            ValueChanged="OnEffortChangedAsync"
+                                            Label="@Loc["TmModelPicker_Effort"]"
+                                            Size="SegmentedControlSize.Sm"
+                                            Role="SegmentedControlRole.RadioGroup"
+                                            Disabled="@Disabled"
+                                            TestIdPrefix="@TestIdPrefix"
+                                            DataTestId="@TestId("model-picker-effort")"
+                                            Class="tm-model-picker__effort" />
+                    }
+                </div>
+            }
+
+            @if (ShowSearch)
+            {
+                <div class="tm-model-picker__search">
+                    <input type="text"
+                           class="tm-model-picker__search-input"
+                           data-testid="@TestId("model-picker-search")"
+                           @ref="_searchRef"
+                           value="@_searchText"
+                           role="combobox"
+                           aria-autocomplete="list"
+                           aria-expanded="true"
+                           aria-controls="@ListId"
+                           aria-activedescendant="@ActiveOptionId"
+                           aria-label="@Loc["TmModelPicker_SearchLabel"]"
+                           placeholder="@(SearchPlaceholder ?? Loc["TmModelPicker_SearchPlaceholder"])"
+                           @oninput="OnSearchInputAsync"
+                           @onkeydown="OnSearchKeyDownAsync"
+                           @onclick:stopPropagation="true" />
+                </div>
+            }
+
+            <div class="tm-model-picker__list"
+                 id="@ListId"
+                 data-testid="@TestId("model-picker-list")"
+                 role="listbox"
+                 aria-label="@Loc["TmModelPicker_ListLabel"]"
+                 tabindex="@(ShowSearch ? "-1" : "0")"
+                 aria-activedescendant="@(ShowSearch ? null : ActiveOptionId)"
+                 @ref="_listRef"
+                 @onkeydown="OnListKeyDownAsync"
+                 @onkeyup="OnListKeyUpAsync">
+                @if (_visible.Count == 0)
+                {
+                    <div class="tm-model-picker__empty" data-testid="@TestId("model-picker-empty")">@EmptyText</div>
+                }
+                else
+                {
+                    var rowIndex = 0;
+                    @foreach (var group in _groups)
+                    {
+                        @if (group.Title is null)
+                        {
+                            @foreach (var model in group.Models)
+                            {
+                                @RenderOption(model, rowIndex++)
+                            }
+                        }
+                        else
+                        {
+                            <div class="tm-model-picker__group"
+                                 data-testid="@TestId("model-picker-group")"
+                                 role="group"
+                                 aria-labelledby="@group.Id">
+                                <div class="tm-model-picker__group-header"
+                                     id="@group.Id"
+                                     data-testid="@TestId("model-picker-group-header")"
+                                     role="presentation">@group.Title</div>
+                                @foreach (var model in group.Models)
+                                {
+                                    @RenderOption(model, rowIndex++)
+                                }
+                            </div>
+                        }
+                    }
+                }
+            </div>
+
+            @if (Estimate is { } estimate)
+            {
+                <p class="tm-model-picker__estimate" data-testid="@TestId("model-picker-estimate")">@Loc["TmModelPicker_EstimatedCost", estimate]</p>
+            }
+        </div>
+    </TmOverlayPanel>
+
+    @* The component's ONE polite live region: a pick, a reasoning change and a search result count are
+       announced here and nowhere else (the list itself is not live, and no option is a status). *@
+    <p class="tm-sr-only"
+       role="status"
+       aria-live="polite"
+       data-testid="@TestId("model-picker-announcement")">@AnnouncementText</p>
+</div>
+
+@{
+    // One option row. The option is a LEAF of the listbox: it carries no focusable child, so a screen
+    // reader walking the list meets plain options and the reasoning controls stay in their own block above.
+    RenderFragment RenderOption(AiModelInfo model, int index) =>
+        @<div class="@OptionClass(model, index)"
+              id="@OptionId(index)"
+              role="option"
+              aria-selected="@SelectedText(model)"
+              data-testid="@TestId("model-picker-option")"
+              data-model-id="@model.Id"
+              data-active="@((index == _activeIndex).ToString().ToLowerInvariant())"
+              @key="model.Id"
+              @onclick="() => SelectAsync(model)">
+            <span class="tm-model-picker__option-main">
+                <span class="tm-model-picker__option-name" data-testid="@TestId("model-picker-option-name")">
+                    <TmHighlightedText Text="@model.Name" Query="@_searchText" />
+                </span>
+                @if (!string.IsNullOrWhiteSpace(model.Provider) || !string.IsNullOrWhiteSpace(model.Family))
+                {
+                    <span class="tm-model-picker__option-meta">
+                        @if (!string.IsNullOrWhiteSpace(model.Provider))
+                        {
+                            <span class="tm-model-picker__option-provider">@model.Provider</span>
+                        }
+                        @if (!string.IsNullOrWhiteSpace(model.Provider) && !string.IsNullOrWhiteSpace(model.Family))
+                        {
+                            <span class="tm-model-picker__separator" aria-hidden="true">·</span>
+                        }
+                        @if (!string.IsNullOrWhiteSpace(model.Family))
+                        {
+                            <span class="tm-model-picker__option-family">@model.Family</span>
+                        }
+                        @if (model.IsDeprecated)
+                        {
+                            <span class="tm-model-picker__chip tm-model-picker__chip--deprecated"
+                                  data-testid="@TestId("model-picker-option-deprecated")">@Loc["TmModelPicker_Deprecated"]</span>
+                        }
+                    </span>
+                }
+                else if (model.IsDeprecated)
+                {
+                    <span class="tm-model-picker__option-meta">
+                        <span class="tm-model-picker__chip tm-model-picker__chip--deprecated"
+                              data-testid="@TestId("model-picker-option-deprecated")">@Loc["TmModelPicker_Deprecated"]</span>
+                    </span>
+                }
+                @if (!string.IsNullOrWhiteSpace(model.Description))
+                {
+                    <span class="tm-model-picker__option-description">@model.Description</span>
+                }
+                @if (ShowCapabilities && Capabilities(model).Count > 0)
+                {
+                    <span class="tm-model-picker__capabilities" data-testid="@TestId("model-picker-option-capabilities")">
+                        @foreach (var capability in Capabilities(model))
+                        {
+                            <span class="tm-model-picker__capability">@capability</span>
+                        }
+                    </span>
+                }
+            </span>
+
+            <span class="tm-model-picker__metrics">
+                @if (ShowSpeed && model.SpeedScore is { } speed)
+                {
+                    <span class="tm-model-picker__metric" data-testid="@TestId("model-picker-option-speed")">
+                        <span class="tm-model-picker__bar" aria-hidden="true">
+                            <span class="tm-model-picker__bar-fill" style="@BarStyle(ScoreFraction(speed))"></span>
+                        </span>
+                        <span class="tm-model-picker__metric-text">@Loc["TmModelPicker_Speed", ScoreText(speed)]</span>
+                    </span>
+                }
+                @if (ShowQuality && model.QualityScore is { } quality)
+                {
+                    <span class="tm-model-picker__metric" data-testid="@TestId("model-picker-option-quality")">
+                        <span class="tm-model-picker__bar" aria-hidden="true">
+                            <span class="tm-model-picker__bar-fill" style="@BarStyle(ScoreFraction(quality))"></span>
+                        </span>
+                        <span class="tm-model-picker__metric-text">@Loc["TmModelPicker_Quality", ScoreText(quality)]</span>
+                    </span>
+                }
+                @if (ShowPrice && model.InputPricePerMillion is { } price)
+                {
+                    <span class="tm-model-picker__metric" data-testid="@TestId("model-picker-option-price")">
+                        <span class="tm-model-picker__bar" aria-hidden="true">
+                            <span class="tm-model-picker__bar-fill" style="@BarStyle(PriceFraction(price))"></span>
+                        </span>
+                        <span class="tm-model-picker__metric-text">@Loc["TmModelPicker_PricePerMillion", Money(price)]</span>
+                    </span>
+                }
+                @if (ShowContextWindow && model.ContextWindow is int window and > 0)
+                {
+                    <span class="tm-model-picker__context" data-testid="@TestId("model-picker-option-context")">@Loc["TmModelPicker_ContextWindow", ShortTokens(window)]</span>
+                }
+            </span>
+
+            @if (IsSelected(model))
+            {
+                <span class="tm-model-picker__check" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                         stroke-linecap="round" stroke-linejoin="round" width="16" height="16">
+                        <polyline points="20 6 9 17 4 12"/>
+                    </svg>
+                </span>
+            }
+        </div>;
+}

@@ -1,0 +1,342 @@
+@page "/model-picker"
+@using System.Globalization
+@using Tempo.Blazor.AI.Models
+@using Tempo.Blazor.Components.AI
+@inject ITmLocalizer Loc
+
+<PageTitle>@Loc["TmModelPickerDemo_PageTitle"] – Tempo.Blazor</PageTitle>
+
+<div class="mb-8" data-testid="model-picker-page-header">
+    <h1 class="text-3xl font-bold text-slate-900 dark:text-white mb-2">@Loc["TmModelPickerDemo_PageTitle"]</h1>
+    <p class="text-slate-600 dark:text-slate-400">@Loc["TmModelPickerDemo_PageDescription"]</p>
+</div>
+
+@* The picker at full strength: the trigger names the choice, the popup compares the catalogue on speed,
+   quality, price and context, the selected model's reasoning options sit above the list, and the estimate
+   prices the next prompt. The page owns the selection and formats money with its OWN demo currency, because
+   the demo hosts run the invariant culture (where a library currency format paints "¤"). *@
+<section class="demo-section mb-8" data-testid="model-picker-basic-section">
+    <h2 class="text-lg font-semibold text-slate-900 dark:text-white mb-2">@Loc["TmModelPickerDemo_BasicTitle"]</h2>
+    <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">@Loc["TmModelPickerDemo_BasicHint"]</p>
+
+    <div class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
+        <TmModelPicker Models="_catalogue"
+                       Selection="_selection"
+                       SelectionChanged="OnSelectionChanged"
+                       EstimatedPromptTokens="100000"
+                       Title="@Loc["TmModelPickerDemo_PopupTitle"]"
+                       PriceFormatter="FormatPrice"
+                       DataTestId="model-picker-basic" />
+
+        <div class="flex flex-col gap-3" data-testid="model-picker-basic-readout-panel">
+            <h3 class="text-sm font-semibold text-slate-900 dark:text-white">@Loc["TmModelPickerDemo_SelectionTitle"]</h3>
+            <p class="text-sm text-slate-700 dark:text-slate-300"
+               data-testid="model-picker-selection-readout">@SelectionReadout</p>
+            <p class="text-xs text-slate-500 dark:text-slate-400"
+               data-testid="model-picker-selection-model">@(_selection?.ModelId ?? Loc["TmModelPickerDemo_NotSet"])</p>
+            <div class="flex flex-wrap gap-2">
+                <TmButton Variant="ButtonVariant.Secondary" Size="ButtonSize.Sm"
+                          data-testid="model-picker-preset-claude" OnClick="PresetClaude">
+                    @Loc["TmModelPickerDemo_PresetClaude"]
+                </TmButton>
+                <TmButton Variant="ButtonVariant.Ghost" Size="ButtonSize.Sm"
+                          data-testid="model-picker-reset" OnClick="ResetSelection">
+                    @Loc["TmModelPickerDemo_Reset"]
+                </TmButton>
+            </div>
+        </div>
+    </div>
+</section>
+
+@* Two variants of the same catalogue: grouped by family (the schema's other grouping), and a compact
+   picker for a toolbar — no search field (the listbox then owns the type-ahead), no capability chips and no
+   quality bar. *@
+<section class="demo-section mb-8" data-testid="model-picker-variants-section">
+    <h2 class="text-lg font-semibold text-slate-900 dark:text-white mb-2">@Loc["TmModelPickerDemo_VariantsTitle"]</h2>
+    <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">@Loc["TmModelPickerDemo_VariantsHint"]</p>
+
+    <div class="grid gap-6 md:grid-cols-2">
+        <div>
+            <h3 class="text-sm font-semibold text-slate-900 dark:text-white mb-2">@Loc["TmModelPickerDemo_FamilyTitle"]</h3>
+            <TmModelPicker Models="_catalogue"
+                           GroupBy="AiModelGroupBy.Family"
+                           Selection="_familySelection"
+                           SelectionChanged="OnFamilySelectionChanged"
+                           PriceFormatter="FormatPrice"
+                           DataTestId="model-picker-family" />
+        </div>
+        <div>
+            <h3 class="text-sm font-semibold text-slate-900 dark:text-white mb-2">@Loc["TmModelPickerDemo_CompactTitle"]</h3>
+            <TmModelPicker Models="_catalogue"
+                           ShowSearch="false"
+                           ShowCapabilities="false"
+                           ShowQuality="false"
+                           ShowEffort="false"
+                           Selection="_compactSelection"
+                           SelectionChanged="OnCompactSelectionChanged"
+                           PriceFormatter="FormatPrice"
+                           DataTestId="model-picker-compact" />
+        </div>
+    </div>
+</section>
+
+@* CloseOnSelect=false: the list stays open while the reader compares, and every raised selection lands in
+   the page's own log — the contract a host persists. *@
+<section class="demo-section mb-8" data-testid="model-picker-events-section">
+    <h2 class="text-lg font-semibold text-slate-900 dark:text-white mb-2">@Loc["TmModelPickerDemo_EventsTitle"]</h2>
+    <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">@Loc["TmModelPickerDemo_EventsHint"]</p>
+
+    <div class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
+        <TmModelPicker Models="_catalogue"
+                       CloseOnSelect="false"
+                       Selection="_compareSelection"
+                       SelectionChanged="OnCompareSelectionChanged"
+                       PriceFormatter="FormatPrice"
+                       DataTestId="model-picker-events" />
+
+        <div>
+            <h3 class="text-sm font-semibold text-slate-900 dark:text-white mb-2">@Loc["TmModelPickerDemo_EventsLogTitle"]</h3>
+            @if (_events.Count == 0)
+            {
+                <p class="text-sm text-slate-500 dark:text-slate-400" data-testid="model-picker-events-empty">@Loc["TmModelPickerDemo_EventsEmpty"]</p>
+            }
+            else
+            {
+                <ol class="flex flex-col gap-1 text-sm text-slate-700 dark:text-slate-300"
+                    data-testid="model-picker-events-log">
+                    @foreach (var entry in _events)
+                    {
+                        <li data-testid="model-picker-events-entry">@entry</li>
+                    }
+                </ol>
+            }
+        </div>
+    </div>
+</section>
+
+@* Edge cases in one row: no catalogue, a disabled picker, a selection on a deprecated model, a selection
+   whose model is no longer in the catalogue, and a host-owned price vocabulary (credits). *@
+<section class="demo-section mb-8" data-testid="model-picker-edge-section">
+    <h2 class="text-lg font-semibold text-slate-900 dark:text-white mb-2">@Loc["TmModelPickerDemo_EdgeTitle"]</h2>
+    <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">@Loc["TmModelPickerDemo_EdgeHint"]</p>
+
+    <div class="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+        <div>
+            <h3 class="text-sm font-semibold text-slate-900 dark:text-white mb-2">@Loc["TmModelPickerDemo_EdgeEmptyTitle"]</h3>
+            <p class="text-xs text-slate-500 dark:text-slate-400 mb-2">@Loc["TmModelPickerDemo_EdgeEmptyHint"]</p>
+            <TmModelPicker Models="_emptyCatalogue"
+                           PriceFormatter="FormatPrice"
+                           DataTestId="model-picker-empty" />
+        </div>
+        <div>
+            <h3 class="text-sm font-semibold text-slate-900 dark:text-white mb-2">@Loc["TmModelPickerDemo_EdgeDisabledTitle"]</h3>
+            <p class="text-xs text-slate-500 dark:text-slate-400 mb-2">@Loc["TmModelPickerDemo_EdgeDisabledHint"]</p>
+            <TmModelPicker Models="_catalogue"
+                           Disabled="true"
+                           Selection="_selection"
+                           PriceFormatter="FormatPrice"
+                           DataTestId="model-picker-disabled" />
+        </div>
+        <div>
+            <h3 class="text-sm font-semibold text-slate-900 dark:text-white mb-2">@Loc["TmModelPickerDemo_EdgeDeprecatedTitle"]</h3>
+            <p class="text-xs text-slate-500 dark:text-slate-400 mb-2">@Loc["TmModelPickerDemo_EdgeDeprecatedHint"]</p>
+            <TmModelPicker Models="_catalogue"
+                           Selection="_deprecatedSelection"
+                           SelectionChanged="OnDeprecatedSelectionChanged"
+                           PriceFormatter="FormatPrice"
+                           DataTestId="model-picker-deprecated" />
+        </div>
+        <div>
+            <h3 class="text-sm font-semibold text-slate-900 dark:text-white mb-2">@Loc["TmModelPickerDemo_EdgeMissingTitle"]</h3>
+            <p class="text-xs text-slate-500 dark:text-slate-400 mb-2">@Loc["TmModelPickerDemo_EdgeMissingHint"]</p>
+            <TmModelPicker Models="_catalogue"
+                           Selection="_missingSelection"
+                           PriceFormatter="FormatPrice"
+                           DataTestId="model-picker-missing" />
+        </div>
+        <div>
+            <h3 class="text-sm font-semibold text-slate-900 dark:text-white mb-2">@Loc["TmModelPickerDemo_EdgeFormatterTitle"]</h3>
+            <p class="text-xs text-slate-500 dark:text-slate-400 mb-2">@Loc["TmModelPickerDemo_EdgeFormatterHint"]</p>
+            <TmModelPicker Models="_catalogue"
+                           Selection="_creditSelection"
+                           SelectionChanged="OnCreditSelectionChanged"
+                           EstimatedPromptTokens="100000"
+                           PriceFormatter="FormatCredits"
+                           DataTestId="model-picker-credits" />
+        </div>
+    </div>
+</section>
+
+@code {
+    private readonly IReadOnlyList<AiModelInfo> _emptyCatalogue = [];
+
+    private IReadOnlyList<AiModelInfo> _catalogue = [];
+    private AiModelSelection? _selection;
+    private AiModelSelection? _familySelection;
+    private AiModelSelection? _compactSelection;
+    private AiModelSelection? _compareSelection;
+    private AiModelSelection? _deprecatedSelection;
+    private AiModelSelection? _missingSelection;
+    private AiModelSelection? _creditSelection;
+    private readonly List<string> _events = [];
+
+    protected override void OnInitialized()
+    {
+        _catalogue =
+        [
+            new AiModelInfo("gpt-4o", "GPT-4o")
+            {
+                Provider = "OpenAI",
+                Family = "GPT-4",
+                Description = Loc["TmModelPickerDemo_ModelFlagship"],
+                ContextWindow = 128_000,
+                SpeedScore = 4,
+                QualityScore = 5,
+                InputPricePerMillion = 3m,
+                OutputPricePerMillion = 15m,
+                Capabilities = ["vision", "tools", "json"],
+                EffortLevels = Effort("low", "medium", "high"),
+                SupportsExtendedThinking = true,
+            },
+            new AiModelInfo("gpt-4o-mini", "GPT-4o mini")
+            {
+                Provider = "OpenAI",
+                Family = "GPT-4",
+                ContextWindow = 128_000,
+                SpeedScore = 5,
+                QualityScore = 3,
+                InputPricePerMillion = 0.15m,
+                Capabilities = ["tools"],
+            },
+            new AiModelInfo("claude-3-5-sonnet", "Claude 3.5 Sonnet")
+            {
+                Provider = "Anthropic",
+                Family = "Claude 3.5",
+                ContextWindow = 200_000,
+                SpeedScore = 3,
+                QualityScore = 5,
+                InputPricePerMillion = 3m,
+                Capabilities = ["vision", "tools"],
+                EffortLevels = Effort("low", "high"),
+                SupportsExtendedThinking = true,
+            },
+            new AiModelInfo("local-8b", "Local 8B")
+            {
+                Family = "Open weights",
+                ContextWindow = 32_000,
+                SpeedScore = 5,
+                QualityScore = 2,
+                InputPricePerMillion = 0m,
+                Capabilities = ["offline"],
+            },
+            new AiModelInfo("legacy-text", "Legacy Text")
+            {
+                Family = "Legacy",
+                Description = Loc["TmModelPickerDemo_ModelLegacy"],
+                IsDeprecated = true,
+            },
+        ];
+
+        _selection = new AiModelSelection("gpt-4o");
+        _familySelection = new AiModelSelection("gpt-4o-mini");
+        _compactSelection = new AiModelSelection("claude-3-5-sonnet");
+        _deprecatedSelection = new AiModelSelection("legacy-text");
+        _missingSelection = new AiModelSelection("retired-model");
+        _creditSelection = new AiModelSelection("gpt-4o");
+    }
+
+    private static AiModelEffortLevel[] Effort(params string[] ids)
+        => ids.Select(id => new AiModelEffortLevel(id, char.ToUpperInvariant(id[0]) + id[1..])).ToArray();
+
+    private string SelectionReadout => _selection is { } selection
+        ? Loc["TmModelPickerDemo_Readout", NameOf(selection.ModelId), OnOff(selection.ExtendedThinking), EffortOf(selection)]
+        : Loc["TmModelPickerDemo_SelectionEmpty"];
+
+    private string NameOf(string modelId)
+        => _catalogue.FirstOrDefault(model => model.Id == modelId)?.Name ?? modelId;
+
+    private string OnOff(bool value) => Loc[value ? "TmModelPickerDemo_On" : "TmModelPickerDemo_Off"];
+
+    private string EffortOf(AiModelSelection selection)
+    {
+        if (string.IsNullOrWhiteSpace(selection.EffortLevel))
+        {
+            return Loc["TmModelPickerDemo_NotSet"];
+        }
+
+        var label = _catalogue
+            .FirstOrDefault(model => model.Id == selection.ModelId)?
+            .EffortLevels?
+            .FirstOrDefault(level => level.Id == selection.EffortLevel)?.Label;
+
+        return label ?? selection.EffortLevel!;
+    }
+
+    private string FormatPrice(decimal amount)
+        => Loc["TmModelPickerDemo_CurrencyPrefix"]
+           + amount.ToString("N2", CultureInfo.CurrentCulture)
+           + Loc["TmModelPickerDemo_CurrencySuffix"];
+
+    private string FormatCredits(decimal amount)
+        => (amount * 100).ToString("N0", CultureInfo.CurrentCulture) + Loc["TmModelPickerDemo_CreditSuffix"];
+
+    private void OnSelectionChanged(AiModelSelection? selection)
+    {
+        _selection = selection;
+        StateHasChanged();
+    }
+
+    private void OnFamilySelectionChanged(AiModelSelection? selection)
+    {
+        _familySelection = selection;
+        StateHasChanged();
+    }
+
+    private void OnCompactSelectionChanged(AiModelSelection? selection)
+    {
+        _compactSelection = selection;
+        StateHasChanged();
+    }
+
+    private void OnDeprecatedSelectionChanged(AiModelSelection? selection)
+    {
+        _deprecatedSelection = selection;
+        StateHasChanged();
+    }
+
+    private void OnCreditSelectionChanged(AiModelSelection? selection)
+    {
+        _creditSelection = selection;
+        StateHasChanged();
+    }
+
+    private void OnCompareSelectionChanged(AiModelSelection? selection)
+    {
+        _compareSelection = selection;
+        if (selection is null)
+        {
+            return;
+        }
+
+        _events.Insert(0, Loc["TmModelPickerDemo_EventLine", NameOf(selection.ModelId),
+            OnOff(selection.ExtendedThinking), EffortOf(selection)]);
+        if (_events.Count > 5)
+        {
+            _events.RemoveAt(_events.Count - 1);
+        }
+
+        StateHasChanged();
+    }
+
+    private void PresetClaude()
+    {
+        _selection = new AiModelSelection("claude-3-5-sonnet") { ExtendedThinking = true, EffortLevel = "high" };
+        StateHasChanged();
+    }
+
+    private void ResetSelection()
+    {
+        _selection = null;
+        StateHasChanged();
+    }
+}

@@ -1,0 +1,461 @@
+/* TmModelPicker — the model trigger and its listbox popup / bottom sheet.
+   Every rule reads --tm-* design tokens; there is no colour literal and no [data-theme] block, and the
+   surface declares NO motion of its own (it is a comparison surface that the reader may keep open while a
+   run streams behind it). The bars are decorative pictures of the text next to them. */
+
+.tm-model-picker {
+    /* Local knobs, declared here so the strict token audit can resolve every var() below. */
+    --tm-model-picker-panel-width: 26rem;
+    --tm-model-picker-bar-track: var(--tm-bg-muted);
+    --tm-model-picker-bar-fill: var(--tm-color-primary);
+    --tm-model-picker-row-hover: var(--tm-bg-muted);
+    --tm-model-picker-row-active: var(--tm-color-primary-subtle);
+    --tm-model-picker-bar: 0%;
+
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    inline-size: 100%;
+    min-inline-size: 0;
+    max-inline-size: 100%;
+    color: var(--tm-color-text);
+    font-size: var(--tm-font-size-sm);
+    line-height: var(--tm-line-height-normal);
+}
+
+/* ── Trigger ─────────────────────────────────────────────────────────────── */
+
+.tm-model-picker__trigger {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-2);
+    inline-size: 100%;
+    min-block-size: var(--tm-touch-target);
+    padding: var(--tm-space-1-5) var(--tm-space-3);
+    border: 1px solid var(--tm-border-color-control);
+    border-radius: var(--tm-radius-control);
+    background: var(--tm-bg-surface);
+    color: inherit;
+    font: inherit;
+    text-align: start;
+    cursor: pointer;
+}
+
+.tm-model-picker__trigger:hover {
+    background: var(--tm-color-surface-hover);
+}
+
+.tm-model-picker__trigger:focus-visible {
+    outline: 2px solid var(--tm-border-color-focus);
+    outline-offset: 2px;
+}
+
+.tm-model-picker__trigger:disabled {
+    color: var(--tm-color-text-disabled);
+    cursor: not-allowed;
+}
+
+.tm-model-picker__trigger-main {
+    display: flex;
+    flex-direction: column;
+    min-inline-size: 0;
+    flex: 1 1 auto;
+}
+
+.tm-model-picker__trigger-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-weight: var(--tm-font-weight-semibold);
+}
+
+.tm-model-picker__trigger-provider {
+    color: var(--tm-color-text-secondary);
+    font-size: var(--tm-font-size-sm);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.tm-model-picker__placeholder {
+    color: var(--tm-color-text-secondary);
+    font-weight: var(--tm-font-weight-normal);
+}
+
+.tm-model-picker__trigger-tags {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-1);
+    flex: 0 1 auto;
+    min-inline-size: 0;
+    flex-wrap: wrap;
+}
+
+.tm-model-picker__chevron {
+    flex: 0 0 auto;
+    display: inline-flex;
+    color: var(--tm-color-text-secondary);
+}
+
+.tm-model-picker__trigger:disabled .tm-model-picker__chevron {
+    color: var(--tm-color-text-disabled);
+}
+
+/* ── Chips ───────────────────────────────────────────────────────────────── */
+
+.tm-model-picker__chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 0 var(--tm-space-1-5);
+    border: 1px solid var(--tm-border-color);
+    border-radius: var(--tm-radius-pill);
+    background: var(--tm-bg-muted);
+    color: var(--tm-color-text-secondary);
+    font-size: var(--tm-font-size-sm);
+    line-height: var(--tm-line-height-snug);
+    white-space: nowrap;
+}
+
+.tm-model-picker__chip--deprecated {
+    border-color: var(--tm-color-warning-soft-border);
+    background: var(--tm-color-warning-bg-subtle);
+    color: var(--tm-color-warning-text);
+}
+
+/* ── Panel ───────────────────────────────────────────────────────────────── */
+
+/* The core TmOverlayPanel reset is transparent by design (a consumer always paints its own panel), so the
+   picker owns its surface: without this card the page below showed THROUGH the popup. */
+.tm-model-picker__panel {
+    inline-size: min(var(--tm-model-picker-panel-width), calc(100vw - 2 * var(--tm-space-4)));
+    max-block-size: calc(100dvh - 2 * var(--tm-space-4));
+    overflow: auto;
+    border: 1px solid var(--tm-border-color);
+    border-radius: var(--tm-radius-card);
+    background: var(--tm-bg-surface);
+    box-shadow: var(--tm-shadow-popover);
+    color: var(--tm-color-text);
+}
+
+.tm-model-picker__body {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-2);
+    min-inline-size: 0;
+    padding: var(--tm-space-3);
+    color: var(--tm-color-text);
+    font-size: var(--tm-font-size-sm);
+}
+
+.tm-model-picker__title {
+    margin: 0;
+    font-weight: var(--tm-font-weight-semibold);
+    color: var(--tm-color-text);
+}
+
+/* ── Reasoning options of the selected model ─────────────────────────────── */
+
+.tm-model-picker__options {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-2);
+    padding: var(--tm-space-2);
+    border: 1px solid var(--tm-border-color);
+    border-radius: var(--tm-radius-md);
+    background: var(--tm-bg-surface-secondary);
+}
+
+.tm-model-picker__options-title {
+    margin: 0;
+    color: var(--tm-color-text-secondary);
+    font-size: var(--tm-font-size-sm);
+    font-weight: var(--tm-font-weight-medium);
+}
+
+.tm-model-picker__thinking {
+    align-self: flex-start;
+}
+
+.tm-model-picker__effort {
+    min-inline-size: 0;
+}
+
+/* ── Search ──────────────────────────────────────────────────────────────── */
+
+.tm-model-picker__search {
+    display: flex;
+}
+
+.tm-model-picker__search-input {
+    inline-size: 100%;
+    min-block-size: var(--tm-touch-target);
+    padding: var(--tm-space-1-5) var(--tm-space-3);
+    border: 1px solid var(--tm-border-color-control);
+    border-radius: var(--tm-radius-control);
+    background: var(--tm-bg-surface);
+    color: var(--tm-color-text);
+    font: inherit;
+}
+
+.tm-model-picker__search-input::placeholder {
+    color: var(--tm-color-text-subtle);
+}
+
+.tm-model-picker__search-input:focus-visible {
+    outline: 2px solid var(--tm-border-color-focus);
+    outline-offset: 2px;
+}
+
+/* ── List ────────────────────────────────────────────────────────────────── */
+
+.tm-model-picker__list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-1);
+    max-block-size: 22rem;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: var(--tm-space-1);
+    border-radius: var(--tm-radius-md);
+}
+
+.tm-model-picker__list:focus-visible {
+    outline: 2px solid var(--tm-border-color-focus);
+    outline-offset: -2px;
+}
+
+.tm-model-picker__empty {
+    padding: var(--tm-space-3);
+    color: var(--tm-color-text-secondary);
+    text-align: center;
+}
+
+.tm-model-picker__group {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-1);
+}
+
+.tm-model-picker__group-header {
+    padding: var(--tm-space-1) var(--tm-space-2);
+    color: var(--tm-color-text-secondary);
+    font-size: var(--tm-font-size-sm);
+    font-weight: var(--tm-font-weight-semibold);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+/* ── Option row ──────────────────────────────────────────────────────────── */
+
+.tm-model-picker__option {
+    position: relative;
+    display: flex;
+    align-items: flex-start;
+    gap: var(--tm-space-2);
+    /* Room for the absolutely positioned check, so the mark never squeezes the name column. */
+    padding: var(--tm-space-2);
+    padding-inline-end: var(--tm-space-8);
+    border: 1px solid transparent;
+    border-radius: var(--tm-radius-md);
+    cursor: pointer;
+}
+
+.tm-model-picker__option:hover {
+    background: var(--tm-model-picker-row-hover);
+}
+
+.tm-model-picker__option--active {
+    background: var(--tm-model-picker-row-active);
+    border-color: var(--tm-border-color-focus);
+}
+
+.tm-model-picker__option--selected {
+    border-color: var(--tm-color-primary);
+}
+
+.tm-model-picker__option--deprecated {
+    border-style: dashed;
+}
+
+.tm-model-picker__option-main {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-0-5);
+    flex: 1 1 auto;
+    min-inline-size: 0;
+}
+
+.tm-model-picker__option-name {
+    color: var(--tm-color-text);
+    font-weight: var(--tm-font-weight-semibold);
+    overflow-wrap: anywhere;
+}
+
+.tm-model-picker__option-meta {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--tm-space-1);
+    color: var(--tm-color-text-secondary);
+    font-size: var(--tm-font-size-sm);
+}
+
+.tm-model-picker__option-provider,
+.tm-model-picker__option-family {
+    color: var(--tm-color-text-secondary);
+}
+
+.tm-model-picker__separator {
+    color: var(--tm-color-text-subtle);
+}
+
+.tm-model-picker__option-description {
+    color: var(--tm-color-text-secondary);
+    overflow-wrap: anywhere;
+}
+
+.tm-model-picker__capabilities {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--tm-space-1);
+    margin-block-start: var(--tm-space-0-5);
+}
+
+.tm-model-picker__capability {
+    padding: 0 var(--tm-space-1-5);
+    border: 1px solid var(--tm-border-color);
+    border-radius: var(--tm-radius-pill);
+    background: var(--tm-bg-surface-secondary);
+    color: var(--tm-color-text-secondary);
+    font-size: var(--tm-font-size-sm);
+    white-space: nowrap;
+}
+
+/* ── Metric bars ─────────────────────────────────────────────────────────── */
+
+.tm-model-picker__metrics {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-1);
+    flex: 0 0 auto;
+    inline-size: 10rem;
+    max-inline-size: 52%;
+}
+
+.tm-model-picker__metric {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--tm-space-1-5);
+}
+
+.tm-model-picker__bar {
+    flex: 0 0 auto;
+    inline-size: 2.5rem;
+    block-size: 0.375rem;
+    border-radius: var(--tm-radius-pill);
+    background: var(--tm-model-picker-bar-track);
+    overflow: hidden;
+}
+
+.tm-model-picker__bar-fill {
+    display: block;
+    block-size: 100%;
+    inline-size: var(--tm-model-picker-bar, 0%);
+    border-radius: inherit;
+    background: var(--tm-model-picker-bar-fill);
+}
+
+.tm-model-picker__metric-text {
+    color: var(--tm-color-text-secondary);
+    font-size: var(--tm-font-size-sm);
+    /* A price ("$0.15 / 1M input") is longer than the bar's column on a phone; wrapping it keeps the
+       whole comparison inside the card instead of spilling past its edge. */
+    white-space: normal;
+    overflow-wrap: anywhere;
+    min-inline-size: 0;
+}
+
+.tm-model-picker__context {
+    color: var(--tm-color-text-secondary);
+    font-size: var(--tm-font-size-sm);
+    white-space: nowrap;
+}
+
+.tm-model-picker__check {
+    position: absolute;
+    inset-block-start: var(--tm-space-2);
+    inset-inline-end: var(--tm-space-2);
+    display: inline-flex;
+    color: var(--tm-color-primary);
+}
+
+/* ── Estimate ────────────────────────────────────────────────────────────── */
+
+.tm-model-picker__estimate {
+    margin: 0;
+    padding-block-start: var(--tm-space-1);
+    border-block-start: 1px solid var(--tm-border-color);
+    color: var(--tm-color-text-secondary);
+    font-size: var(--tm-font-size-sm);
+}
+
+/* ── Coarse pointers ─────────────────────────────────────────────────────── */
+
+@media (pointer: coarse) {
+    .tm-model-picker__option {
+        min-block-size: var(--tm-touch-target);
+        flex-wrap: wrap;
+    }
+
+    /* A finger gets the name and the prose across the full row, with the comparison bars underneath —
+       the same information, none of it behind a sideways scroll or an ellipsis. */
+    .tm-model-picker__option-main {
+        flex-basis: 100%;
+    }
+
+    .tm-model-picker__metrics {
+        flex-direction: row;
+        flex-wrap: wrap;
+        inline-size: 100%;
+        max-inline-size: 100%;
+    }
+
+    .tm-model-picker__metric {
+        flex: 1 1 7.5rem;
+    }
+}
+
+/* ── Forced colors ──────────────────────────────────────────────────────── */
+
+@media (forced-colors: active) {
+    .tm-model-picker__trigger:focus-visible,
+    .tm-model-picker__search-input:focus-visible,
+    .tm-model-picker__list:focus-visible {
+        outline-color: Highlight;
+    }
+
+    /* The selected row's primary-coloured border is replaced by a system colour, which made it look exactly
+       like every other row and left the tiny check as the only mark. SelectedItem + 2 px survives forced
+       colors; the highlighted row keeps a separate outline so the two states stay distinguishable. */
+    .tm-model-picker__option--selected {
+        border-color: SelectedItem;
+        border-width: 2px;
+    }
+
+    .tm-model-picker__option--active {
+        border-color: Highlight;
+        outline: 2px solid Highlight;
+    }
+
+    /* A track and a fill that are both background-only collapse into the same system colour, so the bar
+       shows neither its length nor its value. Outline the track and repaint the fill explicitly. */
+    .tm-model-picker__bar {
+        border: 1px solid CanvasText;
+    }
+
+    .tm-model-picker__bar-fill {
+        background: CanvasText;
+        forced-color-adjust: none;
+    }
+}

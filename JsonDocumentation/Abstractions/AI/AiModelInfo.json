@@ -1,0 +1,11 @@
+{
+  "kind": "Class",
+  "category": "AI",
+  "namespace": "Tempo.Blazor.AI.Models",
+  "description": "One model a host offers in TmModelPicker: its identity, its price per million tokens, the size of its context window, the relative speed and quality scores the picker draws as bars, its capabilities and the reasoning options it supports. The record is GENERIC on purpose — it is a snapshot of the host's own catalogue, not a binding to a provider SDK. Every non-identity property is optional: an unreported context window, score or price renders nothing at all, never a zero.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/AI/AiModelInfo.cs",
+  "documentationStatus": "generated",
+  "itemName": "AiModelInfo",
+  "usageExample": "var model = new AiModelInfo(\"gpt-4o\", \"GPT-4o\")\n{\n    Provider = \"OpenAI\",\n    Family = \"GPT-4\",\n    ContextWindow = 128_000,\n    SpeedScore = 4,\n    QualityScore = 5,\n    InputPricePerMillion = 3m,\n    Capabilities = [\"vision\", \"tools\"],\n    EffortLevels = [new AiModelEffortLevel(\"low\"), new AiModelEffortLevel(\"high\")],\n    SupportsExtendedThinking = true,\n};"
+}

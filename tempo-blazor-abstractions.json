@@ -1167,6 +1167,207 @@
       ]
     },
     {
+      "itemName": "AiModelEffortLevel",
+      "kind": "Record",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.AI.Models",
+      "description": "One reasoning-effort level a model offers (\"low\", \"medium\", \"high\" — whatever the host's vocabulary is). The level is a VALUE the host hands over, not a closed enum: effort vocabularies differ per provider and change with every model generation. Label carries the host's own wording while the stable Id is what AiModelSelection.EffortLevel stores and what the host persists.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/AI/AiModelEffortLevel.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Id",
+          "kind": "Property",
+          "type": "string",
+          "description": "Stable identity of the level (e.g. \"high\"). Never null; may be empty, and an empty id means the level cannot be selected."
+        },
+        {
+          "name": "Label",
+          "kind": "Property",
+          "type": "string",
+          "description": "The level as the reader should see it. Never null or blank: it falls back to Id."
+        }
+      ],
+      "usageExample": "var levels = new[]\n{\n    new AiModelEffortLevel(\"low\", \"Low effort\"),\n    new AiModelEffortLevel(\"high\", \"High effort\"),\n};\nvar model = new AiModelInfo(\"gpt-4o\", \"GPT-4o\") { EffortLevels = levels, SupportsExtendedThinking = true };"
+    },
+    {
+      "itemName": "AiModelGroupBy",
+      "kind": "Enum",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.AI.Models",
+      "description": "How TmModelPicker groups its list. Grouping is a reading aid, never a filter: every supplied model stays reachable in exactly one group, and a model that does not report the property the list is grouped by lands in the localized Other group instead of disappearing.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/AI/AiModelGroupBy.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "None",
+          "description": "One flat list, no group headers."
+        },
+        {
+          "name": "Provider",
+          "description": "Grouped by AiModelInfo.Provider — the vendor or gateway the model is called through. The default."
+        },
+        {
+          "name": "Family",
+          "description": "Grouped by AiModelInfo.Family — the model generation or line (\"GPT-4\", \"Claude 3.5\")."
+        }
+      ]
+    },
+    {
+      "itemName": "AiModelInfo",
+      "kind": "Record",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.AI.Models",
+      "description": "One model a host offers in TmModelPicker: its identity, its price per million tokens, the size of its context window, the relative speed and quality scores the picker draws as bars, its capabilities and the reasoning options it supports. The record is GENERIC on purpose — it is a snapshot of the host's own catalogue, not a binding to a provider SDK. Every non-identity property is optional: an unreported context window, score or price renders nothing at all, never a zero.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/AI/AiModelInfo.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "CachedInputPricePerMillion",
+          "kind": "Property",
+          "type": "decimal?",
+          "description": "Price of one million CACHED INPUT tokens, in the host's currency. Informational: carried for the host's own use (persistence, the host's own UI); the built-in row does not render it. Null means \"not reported\"."
+        },
+        {
+          "name": "Capabilities",
+          "kind": "Property",
+          "type": "IReadOnlyList<string>?",
+          "description": "What the model can do (\"vision\", \"tools\", \"json\"), as the reader should see it — the host supplies its own wording and the picker renders each entry as a text chip. Null or empty renders no chips; blank entries are dropped instead of painting an empty pill."
+        },
+        {
+          "name": "ContextWindow",
+          "kind": "Property",
+          "type": "int?",
+          "description": "How many tokens the model can hold in one conversation, in TOKENS. Null means \"not reported\" and renders no context-window chip; a reported value renders as a short form (\"200k\", \"1M\") captioned as a context window (\"200k context\"). The row carries no full-precision number."
+        },
+        {
+          "name": "Description",
+          "kind": "Property",
+          "type": "string?",
+          "description": "An optional one-line explanation of what the model is good at. Null renders no description."
+        },
+        {
+          "name": "EffortLevels",
+          "kind": "Property",
+          "type": "IReadOnlyList<AiModelEffortLevel>?",
+          "description": "The reasoning-effort levels the model offers, in the order they should be presented (usually cheapest first). Null or empty means the model has no effort control and the picker renders none; a selection that stores an effort level for such a model keeps the stored value untouched — the host owns the meaning."
+        },
+        {
+          "name": "Family",
+          "kind": "Property",
+          "type": "string?",
+          "description": "The model generation or line (\"GPT-4\", \"Claude 3.5\"). Null means the catalogue does not report one; Family then puts the model in the localized \"Other\" group."
+        },
+        {
+          "name": "HasEffortLevels",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Whether the model offers the reasoning-effort control (it reports at least one level with a usable id)."
+        },
+        {
+          "name": "Id",
+          "kind": "Property",
+          "type": "string",
+          "description": "Stable identity of the model, sent to the provider. Never empty: a missing id is generated at construction."
+        },
+        {
+          "name": "InputPricePerMillion",
+          "kind": "Property",
+          "type": "decimal?",
+          "description": "Price of one million INPUT tokens, in the host's currency. Null means \"not reported\" and renders no price bar or value. The picker never treats an unknown price as free."
+        },
+        {
+          "name": "IsDeprecated",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Whether the catalogue marks the model as deprecated. A deprecated model is still selectable (a host may have it pinned in an existing conversation) but its row and the trigger carry the localized \"Deprecated\" chip, so the choice is never silent."
+        },
+        {
+          "name": "Name",
+          "kind": "Property",
+          "type": "string",
+          "description": "The model as the reader should see it. Never blank: it falls back to Id."
+        },
+        {
+          "name": "OutputPricePerMillion",
+          "kind": "Property",
+          "type": "decimal?",
+          "description": "Price of one million OUTPUT tokens, in the host's currency. Informational: carried for the host's own use (persistence, the host's own UI); the built-in row does not render it — the price bar and its per-million value describe the INPUT price. Null means \"not reported\"."
+        },
+        {
+          "name": "Provider",
+          "kind": "Property",
+          "type": "string?",
+          "description": "The vendor or gateway the model is called through (\"OpenAI\", \"Anthropic\", \"Azure\"). Null means the catalogue does not distinguish providers; Provider then puts the model in the localized \"Other\" group, and the row renders no provider line."
+        },
+        {
+          "name": "QualityScore",
+          "kind": "Property",
+          "type": "double?",
+          "description": "The catalogue's relative quality score on a 0–5 scale (5 is the strongest model the host knows). Null means \"not reported\" and renders no quality bar. The picker clamps the value into 0–5 and draws the bar on that absolute 0–5 scale."
+        },
+        {
+          "name": "SpeedScore",
+          "kind": "Property",
+          "type": "double?",
+          "description": "The catalogue's relative speed score on a 0–5 scale (5 is the fastest model the host knows). Null means \"not reported\" and renders no speed bar. The picker clamps the value into 0–5 and draws the bar on that absolute 0–5 scale."
+        },
+        {
+          "name": "SupportsExtendedThinking",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Whether the model accepts an \"extended thinking\" switch. Default false, so a host never gets a toggle its model does not support. The switch is rendered for the SELECTED model only."
+        }
+      ],
+      "usageExample": "var model = new AiModelInfo(\"gpt-4o\", \"GPT-4o\")\n{\n    Provider = \"OpenAI\",\n    Family = \"GPT-4\",\n    ContextWindow = 128_000,\n    SpeedScore = 4,\n    QualityScore = 5,\n    InputPricePerMillion = 3m,\n    Capabilities = [\"vision\", \"tools\"],\n    EffortLevels = [new AiModelEffortLevel(\"low\"), new AiModelEffortLevel(\"high\")],\n    SupportsExtendedThinking = true,\n};"
+    },
+    {
+      "itemName": "AiModelSelection",
+      "kind": "Record",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.AI.Models",
+      "description": "What the user chose in TmModelPicker: which model, whether extended thinking is on and which reasoning-effort level is set — the whole two-way bound value (@bind-Selection). The record is a VALUE: the picker raises a new instance on every change (a pick of a DIFFERENT model resets the reasoning options to that model's defaults, a re-pick of the SAME model keeps them), so a host can store it as-is and compare it with ==. Null means \"nothing chosen yet\". A programmatic switch through ForModel keeps the reasoning options verbatim — see its remarks; use new AiModelSelection(modelId) for the picker's reset semantics.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/AI/AiModelSelection.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "ForModel",
+          "kind": "Method",
+          "type": "AiModelSelection",
+          "description": "Creates a copy of this selection for another model, keeping the reasoning options.",
+          "parameters": [
+            {
+              "name": "modelId",
+              "type": "string"
+            }
+          ]
+        },
+        {
+          "name": "EffortLevel",
+          "kind": "Property",
+          "type": "string?",
+          "description": "The Id of the chosen effort level, or null for the model's default (the provider's own default, which the host does not need to name). The picker never invents a level: an id the selected model does not offer is kept as-is and shown as unselected."
+        },
+        {
+          "name": "ExtendedThinking",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Whether the user turned extended thinking on. Default false — a model that supports it starts with the cheaper setting and the reader opts in."
+        },
+        {
+          "name": "ModelId",
+          "kind": "Property",
+          "type": "string",
+          "description": "The Id of the chosen model. Never null; empty when the selection was constructed without one."
+        }
+      ],
+      "usageExample": "private AiModelSelection? selection = new(\"gpt-4o\");\n\nprivate void OnSelection(AiModelSelection? value)\n    => selection = value;\n\n// A pick of the same model keeps the reader's reasoning options:\nvar same = selection! with { ExtendedThinking = true, EffortLevel = \"high\" };"
+    },
+    {
       "itemName": "AiReasoningDelta",
       "kind": "Class",
       "category": "AI",
@@ -40576,11 +40777,11 @@
   ],
   "libraryExamples": [],
   "summary": {
-    "itemCount": 1593,
-    "manualItemCount": 1593,
-    "generatedItemCount": 1577,
+    "itemCount": 1597,
+    "manualItemCount": 1597,
+    "generatedItemCount": 1581,
     "generatedOnlyItemCount": 0,
     "componentCount": 0,
-    "publicApiTypeCount": 1577
+    "publicApiTypeCount": 1581
   }
 }

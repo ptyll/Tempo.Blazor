@@ -1,0 +1,11 @@
+{
+  "kind": "Class",
+  "category": "AI",
+  "namespace": "Tempo.Blazor.AI.Models",
+  "description": "One reasoning-effort level a model offers (\"low\", \"medium\", \"high\" — whatever the host's vocabulary is). The level is a VALUE the host hands over, not a closed enum: effort vocabularies differ per provider and change with every model generation. Label carries the host's own wording while the stable Id is what AiModelSelection.EffortLevel stores and what the host persists.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/AI/AiModelEffortLevel.cs",
+  "documentationStatus": "generated",
+  "itemName": "AiModelEffortLevel",
+  "usageExample": "var levels = new[]\n{\n    new AiModelEffortLevel(\"low\", \"Low effort\"),\n    new AiModelEffortLevel(\"high\", \"High effort\"),\n};\nvar model = new AiModelInfo(\"gpt-4o\", \"GPT-4o\") { EffortLevels = levels, SupportsExtendedThinking = true };"
+}

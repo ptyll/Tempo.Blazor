@@ -1,0 +1,24 @@
+{
+  "kind": "Enum",
+  "category": "AI",
+  "namespace": "Tempo.Blazor.AI.Models",
+  "description": "How TmModelPicker groups its list. Grouping is a reading aid, never a filter: every supplied model stays reachable in exactly one group, and a model that does not report the property the list is grouped by lands in the localized Other group instead of disappearing.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/AI/AiModelGroupBy.cs",
+  "documentationStatus": "generated",
+  "itemName": "AiModelGroupBy",
+  "members": [
+    {
+      "name": "None",
+      "description": "One flat list, no group headers."
+    },
+    {
+      "name": "Provider",
+      "description": "Grouped by AiModelInfo.Provider — the vendor or gateway the model is called through. The default."
+    },
+    {
+      "name": "Family",
+      "description": "Grouped by AiModelInfo.Family — the model generation or line (\"GPT-4\", \"Claude 3.5\")."
+    }
+  ]
+}
