@@ -30,9 +30,12 @@ public static class DemoClockServiceCollectionExtensions
     {
         ArgumentNullException.ThrowIfNull(services);
 
-        // TryAdd, not Add: the WASM demo registers a real scoped clock (its ?now= pinned instance), and a
-        // second descriptor would silently replace it depending on registration order.
-        services.TryAddScoped(_ => TimeProvider.System);
+        // A SINGLETON fallback: TimeProvider.System is stateless, and .NET 10 Kestrel's singleton
+        // PinnedBlockMemoryPoolFactory resolves TimeProvider itself — a scoped registration makes the Demo
+        // Server refuse to start ("Cannot consume scoped service 'System.TimeProvider' from singleton").
+        // TryAdd, not Add: the WASM demo registers its own ?now= pinned clock, and a second descriptor would
+        // silently replace it depending on registration order.
+        services.TryAddSingleton(_ => TimeProvider.System);
         return services;
     }
 }

@@ -1,0 +1,822 @@
+@page "/ai-agents"
+@implements IDisposable
+@using System.Globalization
+@using Tempo.Blazor.Abstractions.Models.Approvals
+@using Tempo.Blazor.AI.Models
+@using Tempo.Blazor.Components.AI
+@using Tempo.Blazor.Components.Approvals
+@inject TimeProvider Clock
+@inject ITmLocalizer Loc
+
+@* ONE demo page for the whole AI package: the plan is reviewed (and edited) and then RUN as a controlled
+   simulation, the same run is watched in the tree and in the monitor (which asks for a real approval through
+   the core TmApprovalCard), the model is picked from a FICTIONAL catalogue, the context window is measured in
+   all three presentations and the prompt library assembles a prompt from a template. The page owns every piece
+   of state: the components only report intent. *@
+<PageTitle>@Loc["TmAiAgentsDemo_PageTitle"] – Tempo.Blazor</PageTitle>
+
+<div class="mb-8" data-testid="ai-agents-page-header">
+    <h1 class="text-3xl font-bold text-slate-900 dark:text-white mb-2">@Loc["TmAiAgentsDemo_PageTitle"]</h1>
+    <p class="text-slate-600 dark:text-slate-400">@Loc["TmAiAgentsDemo_PageDescription"]</p>
+    <div role="note"
+         class="mt-3 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-100"
+         data-testid="ai-agents-demo-notice">
+        @Loc["TmAiAgentsDemo_DemoNotice"]
+    </div>
+</div>
+
+@* ---------------------------------------------------------------------------------------------------------
+   The plan: reviewed and edited first, then watched while it runs. The page applies every edit the component
+   proposes (the component never mutates the list) and drives the simulated run from the injected clock, so the
+   whole walk is reproducible with a fake TimeProvider in tests. One step fails on purpose and offers Retry. *@
+<section class="demo-section mb-8" data-testid="ai-agents-plan-section">
+    <h2 class="text-lg font-semibold text-slate-900 dark:text-white mb-2">@Loc["TmAiAgentsDemo_PlanTitle"]</h2>
+    @* The hint NAMES the two buttons the reader is told to press, so it formats their real labels
+       (TmAgentPlan_Run / TmAgentPlan_RetryFrom): a translated sentence that keeps an English button name
+       describes a control the user cannot find. *@
+    <p class="text-sm text-slate-600 dark:text-slate-400 mb-4" data-testid="ai-agents-plan-hint">
+        @Loc["TmAiAgentsDemo_PlanHint", Loc["TmAgentPlan_Run"], Loc["TmAgentPlan_RetryFrom"]]
+    </p>
+
+    <div class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
+        <div>
+            @if (_showReview)
+            {
+                <TmAgentPlan Steps="_reviewSteps"
+                             OnPlanChanged="OnPlanChanged"
+                             OnApprove="ApprovePlan"
+                             OnRun="StartRun"
+                             Title="@Loc["TmAiAgentsDemo_PlanComponentTitle"]"
+                             DataTestId="ai-agents-plan" />
+            }
+            else
+            {
+                <TmAgentPlan Steps="_runSteps"
+                             Mode="AgentPlanMode.Running"
+                             OnRetryFrom="RetryFrom"
+                             Title="@Loc["TmAiAgentsDemo_PlanComponentTitle"]"
+                             DataTestId="ai-agents-plan-run" />
+            }
+        </div>
+
+        <aside class="flex flex-col gap-3" data-testid="ai-agents-plan-side">
+            <h3 class="text-sm font-semibold text-slate-900 dark:text-white">@Loc["TmAiAgentsDemo_PlanSideTitle"]</h3>
+            @* The run state changes with no user action (a step fails, an approval is requested, the run
+               finishes), so it is a polite status region. The monitor already announces its own steps; the
+               page's "failed → Retry" instruction had no announcement path at all. The decision line below
+               stays plain: the same change announced twice is noise. *@
+            <p class="text-sm text-slate-700 dark:text-slate-300"
+               role="status"
+               aria-live="polite"
+               data-testid="ai-agents-run-state">@RunStateText</p>
+            <p class="text-sm text-slate-700 dark:text-slate-300" data-testid="ai-agents-plan-last-edit">@LastEditText</p>
+            <p class="text-sm text-slate-700 dark:text-slate-300" data-testid="ai-agents-plan-decision">@DecisionText</p>
+            <p class="text-xs text-slate-500 dark:text-slate-400" data-testid="ai-agents-plan-keyboard-hint">
+                @Loc["TmAiAgentsDemo_PlanKeyboardHint", Loc["TmAgentPlan_RetryFrom"]]
+            </p>
+            <TmButton Variant="ButtonVariant.Ghost" Size="ButtonSize.Sm"
+                      data-testid="ai-agents-reset" OnClick="ResetScenario">@Loc["TmAiAgentsDemo_Reset"]</TmButton>
+        </aside>
+    </div>
+</section>
+
+@* ---------------------------------------------------------------------------------------------------------
+   The run as a tree: a root, THREE sub-agents and their tool calls. The root rolls its whole subtree up, the
+   failed matcher keeps its ancestors visible under the filter, and selecting a row fills the page's detail. *@
+<section class="demo-section mb-8" data-testid="ai-agents-tree-section">
+    <h2 class="text-lg font-semibold text-slate-900 dark:text-white mb-2">@Loc["TmAiAgentsDemo_TreeTitle"]</h2>
+    <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">@Loc["TmAiAgentsDemo_TreeHint"]</p>
+
+    @* The treegrid gets the FULL content width: its six metric columns are wider than a 20 rem side
+       column would leave, and a clipped Tokens column is a number a reader cannot see. The selection
+       read-out and the keyboard hint sit above the grid instead. *@
+    <p class="text-sm text-slate-700 dark:text-slate-300" data-testid="ai-agents-tree-selected">@SelectedReadout</p>
+    <p class="text-xs text-slate-500 dark:text-slate-400 mb-4">@Loc["TmAgentRunDemo_KeyboardHint"]</p>
+
+    <TmAgentRunTree Nodes="_runNodes"
+                    SelectedNodeId="_selectedNodeId"
+                    SelectedNodeIdChanged="OnNodeSelected"
+                    Title="@Loc["TmAiAgentsDemo_TreeRunTitle"]"
+                    Culture="@CultureInfo.CurrentCulture"
+                    CostFormatter="FormatCost"
+                    DataTestId="ai-agents-tree">
+        <DetailTemplate Context="node">
+            <div data-testid="ai-agents-tree-detail" data-node-id="@node.Id">
+                <h3 class="text-sm font-semibold text-slate-900 dark:text-white mb-2">@node.Title</h3>
+                <dl class="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
+                    <dt class="text-slate-500 dark:text-slate-400">@Loc["TmAgentRunDemo_DetailKind"]</dt>
+                    <dd class="text-slate-800 dark:text-slate-200" data-testid="ai-agents-tree-detail-kind">@KindText(node.Kind)</dd>
+                    <dt class="text-slate-500 dark:text-slate-400">@Loc["TmAgentRunDemo_DetailStatus"]</dt>
+                    <dd class="text-slate-800 dark:text-slate-200" data-testid="ai-agents-tree-detail-status">@StatusText(node.Status)</dd>
+                    <dt class="text-slate-500 dark:text-slate-400">@Loc["TmAgentRunDemo_DetailCost"]</dt>
+                    <dd class="text-slate-800 dark:text-slate-200">@Cost(node.CostMicroUnits)</dd>
+                    <dt class="text-slate-500 dark:text-slate-400">@Loc["TmAgentRunDemo_DetailTotal"]</dt>
+                    <dd class="text-slate-800 dark:text-slate-200" data-testid="ai-agents-tree-detail-total">@SubtreeTotal(node)</dd>
+                </dl>
+                @if (!string.IsNullOrWhiteSpace(node.Error))
+                {
+                    <p class="mt-2 text-sm text-red-600 dark:text-red-400">@node.Error</p>
+                }
+            </div>
+        </DetailTemplate>
+    </TmAgentRunTree>
+</section>
+
+@* ---------------------------------------------------------------------------------------------------------
+   The same run in the live monitor. When the run reaches its last step it PAUSES and asks for a decision: the
+   host's own TmApprovalCard sits in the monitor's PendingApproval slot. Approving resumes the run; rejecting
+   skips the step and finishes the run. *@
+<section class="demo-section mb-8" data-testid="ai-agents-monitor-section">
+    <h2 class="text-lg font-semibold text-slate-900 dark:text-white mb-2">@Loc["TmAiAgentsDemo_MonitorTitle"]</h2>
+    <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">@Loc["TmAiAgentsDemo_MonitorHint"]</p>
+
+    <div class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
+        <TmAgentMonitor Steps="@MonitorSteps"
+                        Status="_runStatus"
+                        StartedAt="@_runStartedAt"
+                        CompletedAt="@_runCompletedAt"
+                        CostMicroUnits="@(_cost > 0 ? _cost : null)"
+                        Model="@SelectedModelName"
+                        Title="@Loc["TmAiAgentsDemo_MonitorRunTitle"]"
+                        Culture="@CultureInfo.CurrentCulture"
+                        CostFormatter="FormatCost"
+                        PendingApproval="@(_approvalPending ? ApprovalFragment : null)"
+                        DataTestId="ai-agents-monitor" />
+
+        <aside class="flex flex-col gap-3" data-testid="ai-agents-monitor-side">
+            <h3 class="text-sm font-semibold text-slate-900 dark:text-white">@Loc["TmAiAgentsDemo_MonitorSideTitle"]</h3>
+            <p class="text-sm text-slate-700 dark:text-slate-300" data-testid="ai-agents-monitor-decision">@ApprovalText</p>
+            <p class="text-xs text-slate-500 dark:text-slate-400" data-testid="ai-agents-monitor-hint-note">
+                @Loc["TmAiAgentsDemo_MonitorHintNote", Loc["TmApprovalCard_Approve"], Loc["TmApprovalCard_Reject"]]
+            </p>
+        </aside>
+    </div>
+</section>
+
+@* ---------------------------------------------------------------------------------------------------------
+   The model catalogue — six FICTIONAL models with invented prices, marked as demo data above the picker. The
+   page reads the whole AiModelSelection and the monitor's Model metric follows it. *@
+<section class="demo-section mb-8" data-testid="ai-agents-models-section">
+    <h2 class="text-lg font-semibold text-slate-900 dark:text-white mb-2">@Loc["TmAiAgentsDemo_ModelsTitle"]</h2>
+    <p class="text-sm text-slate-600 dark:text-slate-400 mb-1">@Loc["TmAiAgentsDemo_ModelsHint"]</p>
+    <p class="text-xs text-slate-500 dark:text-slate-400 mb-4" data-testid="ai-agents-models-notice">
+        @Loc["TmAiAgentsDemo_ModelsFictional"]
+    </p>
+
+    <div class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
+        <TmModelPicker Models="_models"
+                       Selection="_selection"
+                       SelectionChanged="OnSelectionChanged"
+                       EstimatedPromptTokens="100000"
+                       Title="@Loc["TmAiAgentsDemo_ModelsPopupTitle"]"
+                       PriceFormatter="FormatPrice"
+                       DataTestId="ai-agents-model-picker" />
+
+        <aside class="flex flex-col gap-3" data-testid="ai-agents-models-side">
+            <h3 class="text-sm font-semibold text-slate-900 dark:text-white">@Loc["TmModelPickerDemo_SelectionTitle"]</h3>
+            <p class="text-sm text-slate-700 dark:text-slate-300"
+               data-testid="ai-agents-model-selection">@SelectionReadout</p>
+            <p class="text-xs text-slate-500 dark:text-slate-400">@Loc["TmAiAgentsDemo_ModelsKeyboardHint"]</p>
+        </aside>
+    </div>
+</section>
+
+@* ---------------------------------------------------------------------------------------------------------
+   The context window in ALL THREE presentations over ONE snapshot. Every variant binds the same handlers, so a
+   removal or a compaction is offered everywhere and the page applies what the panel reports. *@
+<section class="demo-section mb-8" data-testid="ai-agents-context-section">
+    <h2 class="text-lg font-semibold text-slate-900 dark:text-white mb-2">@Loc["TmAiAgentsDemo_ContextTitle"]</h2>
+    <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">@Loc["TmAiAgentsDemo_ContextHint"]</p>
+
+    <p class="text-sm text-slate-700 dark:text-slate-300 mb-1" data-testid="ai-agents-context-readout">@ContextReadout</p>
+    <p class="text-xs text-slate-500 dark:text-slate-400 mb-4" data-testid="ai-agents-context-log">@ContextLogText</p>
+
+    <div class="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+        <div>
+            <h3 class="text-sm font-semibold text-slate-900 dark:text-white mb-2">@Loc["TmContextUsageDemo_BasicTitle"]</h3>
+            <TmContextUsage Snapshot="_context"
+                            Title="@Loc["TmContextUsageDemo_PanelTitle"]"
+                            OnRemoveItem="RemoveAsync"
+                            OnCompact="CompactAsync"
+                            DataTestId="ai-agents-context-bar" />
+        </div>
+        <div>
+            <h3 class="text-sm font-semibold text-slate-900 dark:text-white mb-2">@Loc["TmContextUsageDemo_GridTitle"]</h3>
+            <TmContextUsage Snapshot="_context"
+                            Variant="ContextUsageVariant.Grid"
+                            Title="@Loc["TmContextUsageDemo_PanelTitle"]"
+                            OnRemoveItem="RemoveAsync"
+                            OnCompact="CompactAsync"
+                            DataTestId="ai-agents-context-grid" />
+        </div>
+        <div>
+            <h3 class="text-sm font-semibold text-slate-900 dark:text-white mb-2">@Loc["TmContextUsageDemo_TreemapTitle"]</h3>
+            <TmContextUsage Snapshot="_context"
+                            Variant="ContextUsageVariant.Treemap"
+                            Title="@Loc["TmContextUsageDemo_PanelTitle"]"
+                            OnRemoveItem="RemoveAsync"
+                            OnCompact="CompactAsync"
+                            DataTestId="ai-agents-context-treemap" />
+        </div>
+    </div>
+    <div class="mt-4">
+        <TmButton Variant="ButtonVariant.Ghost" Size="ButtonSize.Sm"
+                  data-testid="ai-agents-context-reset" OnClick="ResetContext">@Loc["TmAiAgentsDemo_ContextReset"]</TmButton>
+    </div>
+</section>
+
+@* ---------------------------------------------------------------------------------------------------------
+   The prompt library: five templates, the selected template's generated form and the live preview. "Use" hands
+   the assembled prompt to the page, which shows the exact text a host would send. *@
+<section class="demo-section mb-8" data-testid="ai-agents-prompts-section">
+    <h2 class="text-lg font-semibold text-slate-900 dark:text-white mb-2">@Loc["TmAiAgentsDemo_PromptsTitle"]</h2>
+    <p class="text-sm text-slate-600 dark:text-slate-400 mb-4" data-testid="ai-agents-prompts-hint">
+        @Loc["TmAiAgentsDemo_PromptsHint", Loc["TmPromptLibrary_Use"]]
+    </p>
+
+    <div class="grid gap-6 2xl:grid-cols-[minmax(0,1fr)_22rem]">
+        <TmPromptLibrary Templates="_templates"
+                         SelectedTemplateId="_templateId"
+                         SelectedTemplateIdChanged="OnTemplateSelected"
+                         Values="_values"
+                         ValuesChanged="OnValuesChanged"
+                         OnUse="OnUse"
+                         Title="@Loc["TmAiAgentsDemo_PromptsLibraryTitle"]"
+                         DataTestId="ai-agents-prompts" />
+
+        <aside class="flex flex-col gap-3" data-testid="ai-agents-prompts-side">
+            <h3 class="text-sm font-semibold text-slate-900 dark:text-white">@Loc["TmAiAgentsDemo_UsedTitle"]</h3>
+            @if (_usedPrompt is null)
+            {
+                <p class="text-sm text-slate-500 dark:text-slate-400" data-testid="ai-agents-used-empty">@Loc["TmAiAgentsDemo_UsedEmpty"]</p>
+            }
+            else
+            {
+                <p class="text-sm text-slate-700 dark:text-slate-300" data-testid="ai-agents-used-template">
+                    @Loc["TmAiAgentsDemo_UsedLine", _usedTemplateTitle]
+                </p>
+                <pre class="whitespace-pre-wrap break-words rounded-lg bg-slate-100 p-3 text-sm text-slate-800 dark:bg-slate-800 dark:text-slate-100"
+                     data-testid="ai-agents-used-prompt">@_usedPrompt</pre>
+            }
+            <p class="text-xs text-slate-500 dark:text-slate-400">@Loc["TmAiAgentsDemo_UsedHint"]</p>
+        </aside>
+    </div>
+</section>
+
+@code {
+    private TimeProvider _clock = TimeProvider.System;
+    private ITimer? _timer;
+
+    private IReadOnlyList<AiModelInfo> _models = [];
+    private IReadOnlyList<PromptTemplate> _templates = [];
+    private IReadOnlyList<AgentRunNode> _runNodes = [];
+    private IReadOnlyList<AgentPlanStep> _reviewSteps = [];
+    private IReadOnlyList<AgentPlanStep> _runSteps = [];
+    private ContextUsageSnapshot _context = new();
+    private IReadOnlyDictionary<string, string?>? _values;
+
+    private AiModelSelection? _selection;
+    private AgentPlanEdit? _lastEdit;
+    private string? _planDecision;
+    private string? _runStateKey = "TmAiAgentsDemo_StateReview";
+    private string? _selectedNodeId;
+    private string? _templateId;
+    private string? _usedPrompt;
+    private string? _usedTemplateTitle;
+    private string? _contextLogKey;
+    private string? _approvalDecision;
+
+    private bool _showReview = true;
+    private bool _failureInjected;
+    private bool _approvalPending;
+    private ApprovalState _approvalState = ApprovalState.Pending;
+    private DateTimeOffset? _approvalExpiresAt;
+    private AgentStepStatus _runStatus = AgentStepStatus.Pending;
+    private DateTimeOffset? _runStartedAt;
+    private DateTimeOffset? _runCompletedAt;
+    private long _cost;
+
+    /// <summary>The page's copy of the localizer, in the shape the sample-data builders take.</summary>
+    private string Key(string key) => Loc[key];
+
+    protected override void OnInitialized()
+    {
+        // Every demo host registers the clock (AddTempoDemoClock), and the page drives its simulated run
+        // from it: a test replaces it with a FakeTimeProvider and the whole walk becomes deterministic.
+        _clock = Clock;
+
+        ResetScenario();
+        ResetContext();
+
+        _models = AiAgentsPageSamples.Models(Key);
+        _selection = new AiModelSelection("aurora-pro");
+        _templates = AiAgentsPageSamples.Templates(Key);
+        _templateId = "release-notes";
+        _values = AiAgentsPageSamples.InitialValues(Key);
+    }
+
+    /// <summary>
+    /// The simulated run's state sentence. It is derived from the state KEYS rather than stored as literal text,
+    /// so switching the demo's language re-localizes the page instead of freezing the old language in a field.
+    /// </summary>
+    private string RunStateText => _runStateKey switch
+    {
+        "TmAiAgentsDemo_StateRunning" => Loc[_runStateKey,
+            DoneCount.ToString(CultureInfo.CurrentCulture),
+            _runSteps.Count.ToString(CultureInfo.CurrentCulture)],
+        "TmAiAgentsDemo_StateFailed" => Loc[_runStateKey,
+            FailedStepTitle ?? string.Empty,
+            _runSteps.FirstOrDefault(step => step.Status == AgentStepStatus.Failed)?.Error ?? string.Empty],
+        "TmAiAgentsDemo_StateDone" => Loc[_runStateKey,
+            _runSteps.Count.ToString(CultureInfo.CurrentCulture)],
+        _ => Loc[_runStateKey ?? "TmAiAgentsDemo_StateReview"],
+    };
+
+    private string LastEditText => _lastEdit switch
+    {
+        null => Loc["TmAiAgentsDemo_NoEdit"],
+        { Kind: AgentPlanEditKind.Rename } edit when edit.Title is not null
+            => Loc["TmAiAgentsDemo_EditRename", Position(edit.Index), edit.Title],
+        { Kind: AgentPlanEditKind.Add } edit => Loc["TmAiAgentsDemo_EditAdd", Position(edit.Index)],
+        { Kind: AgentPlanEditKind.Remove } edit => Loc["TmAiAgentsDemo_EditRemove", Position(edit.Index)],
+        { Kind: AgentPlanEditKind.Reorder } edit
+            => Loc["TmAiAgentsDemo_EditReorder", Position(edit.FromIndex ?? 0), Position(edit.ToIndex ?? 0)],
+        _ => Loc["TmAiAgentsDemo_NoEdit"],
+    };
+
+    private string DecisionText => _planDecision switch
+    {
+        "approved" => Loc["TmAiAgentsDemo_PlanApproved", Loc["TmAgentPlan_Approve"]],
+        null => Loc["TmAiAgentsDemo_NoDecision"],
+        _ => Loc["TmAiAgentsDemo_NoDecision"],
+    };
+
+    private int DoneCount => _runSteps.Count(step => step.Status == AgentStepStatus.Done);
+
+    private string? FailedStepTitle =>
+        _runSteps.FirstOrDefault(step => step.Status == AgentStepStatus.Failed)?.Title;
+
+    private string SelectedReadout => _selectedNodeId is { } id
+        ? _runNodes.FirstOrDefault(node => string.Equals(node.Id, id, StringComparison.Ordinal)) is { } node
+            ? Loc["TmAgentRunDemo_Selected", node.Title]
+            : Loc["TmAgentRunDemo_NoSelection"]
+        : Loc["TmAgentRunDemo_NoSelection"];
+
+    /// <summary>The live monitor's steps, mapped from the SAME plan the run drives.</summary>
+    private IReadOnlyList<AgentMonitorStep> MonitorSteps => _runSteps
+        .Select((step, index) => new AgentMonitorStep(step.Title, step.Id)
+        {
+            Kind = index switch
+            {
+                0 => AgentStepKind.Thinking,
+                1 => AgentStepKind.ToolCall,
+                2 => AgentStepKind.Result,
+                _ => AgentStepKind.Approval,
+            },
+            Status = step.Status,
+            StartedAt = step.StartedAt,
+            CompletedAt = step.CompletedAt,
+            Detail = index switch
+            {
+                0 => "invoices.read",
+                1 => "ledger.match",
+                2 => "ledger.reconcile",
+                _ => "report.publish",
+            },
+        })
+        .ToList();
+
+    private string SelectedModelName => _selection is { } selection
+        ? _models.FirstOrDefault(model => model.Id == selection.ModelId)?.Name ?? selection.ModelId
+        : Loc["TmModelPickerDemo_NotSet"];
+
+    private string SelectionReadout => _selection is { } selection
+        ? Loc["TmModelPickerDemo_Readout", SelectedModelName, OnOff(selection.ExtendedThinking), EffortOf(selection)]
+        : Loc["TmModelPickerDemo_SelectionEmpty"];
+
+    private string ApprovalText => _approvalDecision switch
+    {
+        "approved" => Loc["TmAiAgentsDemo_ApprovalApproved", Loc["TmApprovalCard_Approve"]],
+        "rejected" => Loc["TmAiAgentsDemo_ApprovalRejected", Loc["TmApprovalCard_Reject"]],
+        _ when _approvalPending => Loc["TmAiAgentsDemo_ApprovalPending"],
+        _ => Loc["TmAiAgentsDemo_ApprovalWaiting"],
+    };
+
+    private string ContextReadout
+    {
+        get
+        {
+            var culture = CultureInfo.CurrentCulture;
+            var percent = ContextUsageMath.BudgetPercent(_context) is { } value
+                ? (value / 100d).ToString("P0", culture)
+                : Loc["TmContextUsageDemo_NoBudget"];
+
+            return string.Format(
+                culture,
+                Loc["TmContextUsageDemo_Readout"],
+                ContextUsageMath.UsedTokens(_context).ToString("N0", culture),
+                _context.BudgetTokens.ToString("N0", culture),
+                percent,
+                (_context.Sections?.Count ?? 0).ToString("N0", culture));
+        }
+    }
+
+    private string ContextLogText => _contextLogKey is null
+        ? Loc["TmContextUsageDemo_LogEmpty"]
+        : _contextLogKey;
+
+    /// <summary>The host's decision surface, handed to the monitor as a fragment. Null when nothing is pending.</summary>
+    private RenderFragment ApprovalFragment => @<text>
+        <TmApprovalCard Title="@Loc["TmAiAgentsDemo_ApprovalTitle"]"
+                        Description="@Loc["TmAiAgentsDemo_ApprovalDescription"]"
+                        Risk="ApprovalRisk.High"
+                        Details="_approvalDetails"
+                        ExpiresAt="_approvalExpiresAt"
+                        State="_approvalState"
+                        DecidedBy="@Loc["TmAiAgentsDemo_ApprovalDecider"]"
+                        AllowNote="false"
+                        OnDecision="DecideAsync" />
+    </text>;
+
+    private IReadOnlyList<KeyValuePair<string, string>> _approvalDetails = [];
+
+    private Task OnPlanChanged(IReadOnlyList<AgentPlanStep> steps, AgentPlanEdit edit)
+    {
+        // The component only proposes: this page owns the list. OnPlanChanged is a plain delegate, so the page
+        // has to repaint itself after storing the change.
+        _reviewSteps = steps.ToList();
+        _lastEdit = edit;
+        _planDecision = null;
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    private void ApprovePlan() => _planDecision = "approved";
+
+    private void StartRun()
+    {
+        var now = _clock.GetUtcNow();
+
+        _showReview = false;
+        _failureInjected = false;
+        _approvalPending = false;
+        _approvalState = ApprovalState.Pending;
+        _approvalDecision = null;
+        _cost = 0;
+        _runStartedAt = now;
+        _runCompletedAt = null;
+        _runStatus = AgentStepStatus.Running;
+        _runStateKey = "TmAiAgentsDemo_StateRunning";
+        _runSteps = _reviewSteps
+            .Select(step => step with
+            {
+                Status = AgentStepStatus.Pending,
+                StartedAt = (DateTimeOffset?)null,
+                CompletedAt = (DateTimeOffset?)null,
+                Error = null,
+            })
+            .ToList();
+
+        var first = _runSteps[0] with { Status = AgentStepStatus.Running, StartedAt = now };
+        _runSteps = Replace(_runSteps, 0, first);
+        StartTimer();
+    }
+
+    private void StartTimer()
+    {
+        StopTimer();
+        _timer = _clock.CreateTimer(
+            _ => _ = InvokeAsync(TickAsync),
+            null,
+            TimeSpan.FromSeconds(1.2),
+            TimeSpan.FromSeconds(1.2));
+    }
+
+    private void StopTimer()
+    {
+        _timer?.Dispose();
+        _timer = null;
+    }
+
+    /// <summary>
+    /// One tick of the simulated run: the running step completes and the next one starts. The MATCHER (the second
+    /// step) fails the first time it runs, so the reader is offered Retry; the LAST step is gated by the approval
+    /// card, so the run pauses until a human decides.
+    /// </summary>
+    private async Task TickAsync()
+    {
+        if (_showReview)
+        {
+            StopTimer();
+            return;
+        }
+
+        var list = _runSteps.ToList();
+        var running = list.FindIndex(step => step.Status == AgentStepStatus.Running);
+        if (running < 0)
+        {
+            StopTimer();
+            return;
+        }
+
+        var now = _clock.GetUtcNow();
+
+        if (running == 1 && !_failureInjected)
+        {
+            _failureInjected = true;
+            list[running] = list[running] with
+            {
+                Status = AgentStepStatus.Failed,
+                CompletedAt = now,
+                Error = Loc["TmAiAgentsDemo_StepError"],
+            };
+            _runSteps = list;
+            _runStatus = AgentStepStatus.Failed;
+            _runCompletedAt = now;
+            _runStateKey = "TmAiAgentsDemo_StateFailed";
+            StopTimer();
+            await InvokeAsync(StateHasChanged);
+            return;
+        }
+
+        list[running] = list[running] with { Status = AgentStepStatus.Done, CompletedAt = now };
+        _cost += 250_000;
+
+        var next = list.FindIndex(step => step.Status == AgentStepStatus.Pending);
+        if (next < 0)
+        {
+            _runStatus = AgentStepStatus.Done;
+            _runCompletedAt = now;
+            _runStateKey = "TmAiAgentsDemo_StateDone";
+            StopTimer();
+        }
+        else if (next == list.Count - 1)
+        {
+            // The last step needs a human decision: pause here and hand the decision to the approval card.
+            _approvalPending = true;
+            _approvalState = ApprovalState.Pending;
+            _approvalExpiresAt = now.AddMinutes(30);
+            _approvalDetails = BuildApprovalDetails();
+            _runStateKey = "TmAiAgentsDemo_StateApproval";
+            StopTimer();
+        }
+        else
+        {
+            list[next] = list[next] with { Status = AgentStepStatus.Running, StartedAt = now };
+            _runStateKey = "TmAiAgentsDemo_StateRunning";
+        }
+
+        _runSteps = list;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private static List<AgentPlanStep> Replace(IReadOnlyList<AgentPlanStep> steps, int index, AgentPlanStep step)
+    {
+        var list = steps.ToList();
+        list[index] = step;
+        return list;
+    }
+
+    /// <summary>Retry from the failed step: it runs again and the timer resumes.</summary>
+    private void RetryFrom(AgentPlanStep step)
+    {
+        var list = _runSteps.ToList();
+        var index = list.FindIndex(candidate => candidate.Id == step.Id);
+        if (index < 0)
+        {
+            return;
+        }
+
+        list[index] = list[index] with
+        {
+            Status = AgentStepStatus.Running,
+            StartedAt = _clock.GetUtcNow(),
+            CompletedAt = null,
+            Error = null,
+        };
+
+        _runSteps = list;
+        _runStatus = AgentStepStatus.Running;
+        _runCompletedAt = null;
+        _runStateKey = "TmAiAgentsDemo_StateRunning";
+        StartTimer();
+    }
+
+    private Task DecideAsync(ApprovalDecision decision)
+    {
+        _approvalState = decision.State;
+        _approvalPending = false;
+        _approvalDecision = decision.IsApproved ? "approved" : "rejected";
+
+        var list = _runSteps.ToList();
+        var last = list.Count - 1;
+
+        if (decision.IsApproved)
+        {
+            list[last] = list[last] with { Status = AgentStepStatus.Running, StartedAt = _clock.GetUtcNow() };
+            _runSteps = list;
+            _runStatus = AgentStepStatus.Running;
+            _runCompletedAt = null;
+            _runStateKey = "TmAiAgentsDemo_StateRunning";
+            StartTimer();
+        }
+        else
+        {
+            var now = _clock.GetUtcNow();
+            list[last] = list[last] with { Status = AgentStepStatus.Skipped, CompletedAt = now };
+            _runSteps = list;
+            _runStatus = AgentStepStatus.Skipped;
+            _runCompletedAt = now;
+            _runStateKey = "TmAiAgentsDemo_StateRejected";
+            StopTimer();
+        }
+
+        return InvokeAsync(StateHasChanged);
+    }
+
+    private IReadOnlyList<KeyValuePair<string, string>> BuildApprovalDetails() =>
+    [
+        new(Loc["TmAiAgentsDemo_ApprovalToolLabel"], "report.publish"),
+        new(Loc["TmAiAgentsDemo_ApprovalTargetLabel"], "#ledger-2026-10"),
+    ];
+
+    /// <summary>Starts the whole walk over: the plan returns to review, the run to its start and the timer stops.</summary>
+    private void ResetScenario()
+    {
+        StopTimer();
+
+        _showReview = true;
+        _failureInjected = false;
+        _approvalPending = false;
+        _approvalState = ApprovalState.Pending;
+        _approvalDecision = null;
+        _runStatus = AgentStepStatus.Pending;
+        _runStartedAt = null;
+        _runCompletedAt = null;
+        _cost = 0;
+        _runStateKey = "TmAiAgentsDemo_StateReview";
+        _reviewSteps = AiAgentsPageSamples.ReviewSteps(Key).ToList();
+        _runSteps = _reviewSteps
+            .Select(step => step with { Status = AgentStepStatus.Pending })
+            .ToList();
+        _runNodes = AiAgentsPageSamples.RunNodes(Key, _clock.GetUtcNow());
+        _selectedNodeId = "root";
+        _lastEdit = null;
+        _planDecision = null;
+    }
+
+    private void OnSelectionChanged(AiModelSelection? selection)
+    {
+        _selection = selection;
+        StateHasChanged();
+    }
+
+    private void OnNodeSelected(string? nodeId)
+    {
+        _selectedNodeId = nodeId;
+    }
+
+    private void OnTemplateSelected(string? templateId)
+    {
+        _templateId = templateId;
+    }
+
+    private void OnValuesChanged(IReadOnlyDictionary<string, string?> values) => _values = values;
+
+    private void OnUse(PromptTemplateUse use)
+    {
+        _usedPrompt = use.Prompt;
+        _usedTemplateTitle = use.Title;
+    }
+
+    /// <summary>Applies a removal the panel reported: the section, or one of its entries.</summary>
+    private Task RemoveAsync(ContextUsageRemoval removal)
+    {
+        var sections = _context.Sections ?? [];
+
+        if (removal.Item is null)
+        {
+            _context = _context with
+            {
+                Sections = sections.Where(section => section.Key != removal.SectionKey).ToList(),
+            };
+            _contextLogKey = Loc["TmContextUsageDemo_LogRemovedSection", removal.SectionLabel];
+        }
+        else
+        {
+            var item = removal.Item;
+            _context = _context with
+            {
+                Sections = sections.Select(section => section.Key != removal.SectionKey
+                    ? section
+                    : section with
+                    {
+                        Items = (section.Items ?? []).Where(entry => entry.Id != item.Id).ToList(),
+                        Tokens = Math.Max(0, section.Tokens - item.Tokens),
+                    }).ToList(),
+            };
+            _contextLogKey = Loc["TmContextUsageDemo_LogRemovedItem", item.Label, removal.SectionLabel];
+        }
+
+        return Task.CompletedTask;
+    }
+
+    /// <summary>Applies a compaction: every optional section is summarised down to a fifth of its tokens.</summary>
+    private Task CompactAsync()
+    {
+        var sections = _context.Sections ?? [];
+        _context = _context with
+        {
+            Sections = sections.Select(section => ContextUsageMath.IsCompactable(section)
+                ? section with
+                {
+                    IsSummarized = true,
+                    Items = null,
+                    Tokens = (int)Math.Ceiling(ContextUsageMath.TokensOf(section) * 0.2),
+                }
+                : section).ToList(),
+        };
+        _contextLogKey = Loc["TmContextUsageDemo_LogCompacted"];
+        return Task.CompletedTask;
+    }
+
+    private void ResetContext()
+    {
+        _context = AiAgentsPageSamples.Context();
+        _contextLogKey = null;
+    }
+
+    private string OnOff(bool value) => Loc[value ? "TmModelPickerDemo_On" : "TmModelPickerDemo_Off"];
+
+    /// <summary>
+    /// The demo's own money vocabulary: the browser keeps the invariant culture, whose currency symbol is the
+    /// generic "¤", so the symbol comes from the same localized key pair the run pages use.
+    /// </summary>
+    private string FormatPrice(decimal amount)
+        => Loc["TmAgentRunDemo_CurrencyPrefix"]
+           + amount.ToString("N2", CultureInfo.CurrentCulture)
+           + Loc["TmAgentRunDemo_CurrencySuffix"];
+
+    private string EffortOf(AiModelSelection selection)
+    {
+        if (string.IsNullOrWhiteSpace(selection.EffortLevel))
+        {
+            return Loc["TmModelPickerDemo_NotSet"];
+        }
+
+        var label = _models
+            .FirstOrDefault(model => model.Id == selection.ModelId)?
+            .EffortLevels?
+            .FirstOrDefault(level => level.Id == selection.EffortLevel)?.Label;
+
+        return label ?? selection.EffortLevel!;
+    }
+
+    private string KindText(AgentRunNodeKind kind) => kind switch
+    {
+        AgentRunNodeKind.SubAgent => Loc["TmAgentRunNodeKind_SubAgent"],
+        AgentRunNodeKind.Tool => Loc["TmAgentRunNodeKind_Tool"],
+        AgentRunNodeKind.Approval => Loc["TmAgentRunNodeKind_Approval"],
+        AgentRunNodeKind.Step => Loc["TmAgentRunNodeKind_Step"],
+        _ => Loc["TmAgentRunNodeKind_Agent"],
+    };
+
+    private string StatusText(AgentStepStatus status) => status switch
+    {
+        AgentStepStatus.Running => Loc["TmAgentRun_StatusRunning"],
+        AgentStepStatus.Done => Loc["TmAgentRun_StatusDone"],
+        AgentStepStatus.Failed => Loc["TmAgentRun_StatusFailed"],
+        AgentStepStatus.Skipped => Loc["TmAgentRun_StatusSkipped"],
+        _ => Loc["TmAgentRun_StatusPending"],
+    };
+
+    /// <summary>
+    /// The demo's own cost presentation: the browser keeps the invariant culture, whose currency symbol is the
+    /// generic "¤", so the symbol AND its side come from two localized keys and the amount from the current
+    /// culture.
+    /// </summary>
+    private string FormatCost(long microUnits)
+    {
+        var units = microUnits / 1_000_000m;
+        var decimals = units != 0m && Math.Abs(units) < 0.01m ? 6 : 2;
+        var amount = units.ToString("N" + decimals.ToString(CultureInfo.InvariantCulture), CultureInfo.CurrentCulture);
+
+        return Loc["TmAgentRunDemo_CurrencyPrefix"] + amount + Loc["TmAgentRunDemo_CurrencySuffix"];
+    }
+
+    private string Cost(long? microUnits) => microUnits is { } value ? FormatCost(value) : "—";
+
+    private string SubtreeTotal(AgentRunNode node)
+    {
+        var rollup = AgentRunRollup.For(node.Id, _runNodes, _clock.GetUtcNow());
+
+        return Loc["TmAgentRunDemo_Total",
+            rollup.DescendantCount.ToString(CultureInfo.CurrentCulture),
+            Cost(rollup.CostMicroUnits)];
+    }
+
+    private static string Position(int index)
+        => (index + 1).ToString(CultureInfo.CurrentCulture);
+
+    public void Dispose() => StopTimer();
+}

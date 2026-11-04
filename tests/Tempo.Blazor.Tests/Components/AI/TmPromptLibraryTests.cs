@@ -230,6 +230,18 @@ public class TmPromptLibraryTests : LocalizationTestBase
     // ── Search and categories ────────────────────────────────────────────────
 
     [Fact]
+    public void TheSearchFieldStartsEmpty_AndCarriesTheLocalizedPlaceholder()
+    {
+        var cut = RenderLibrary();
+
+        var input = Search(cut);
+        // A string parameter written as Value="_searchText" without @ is a LITERAL in Razor: the field then
+        // paints its own name. Only a real browser screenshot exposed it, so pin the rendered value here.
+        input.GetAttribute("value").Should().BeNullOrEmpty();
+        input.GetAttribute("placeholder").Should().Be("Search templates");
+    }
+
+    [Fact]
     public void Search_FiltersByTitle_IgnoringCaseAndAccents()
     {
         var cut = RenderLibrary();

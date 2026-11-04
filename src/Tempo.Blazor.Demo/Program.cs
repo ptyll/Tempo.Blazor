@@ -28,8 +28,11 @@ builder.RootComponents.Add<HeadOutlet>("head::after");
 builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) });
 
 // A pinned clock is demo-only and only answers ?now=. The library never reads it; the scheduler's
-// now indicator does, so an E2E can assert the line for a known instant in two zones.
-builder.Services.AddScoped<TimeProvider>(sp =>
+// now indicator does, so an E2E can assert the line for a known instant in two zones. SINGLETON, like the
+// fallback every other host gets from AddTempoDemoClock: the pinned instant is fixed when the app starts,
+// so nothing depends on a per-scope instance (and the WASM app must keep matching the Server fallback's
+// lifetime if the hosts are ever unified).
+builder.Services.AddSingleton<TimeProvider>(sp =>
 {
     var navigation = sp.GetRequiredService<NavigationManager>();
     return DemoPinnedClock.TryRead(navigation.ToAbsoluteUri(navigation.Uri).Query, out var pinned)
