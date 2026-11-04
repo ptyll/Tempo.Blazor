@@ -1420,6 +1420,142 @@
       ]
     },
     {
+      "itemName": "TmPromptLibrary",
+      "kind": "Component",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.Components.AI",
+      "description": "A library of prompt templates: the list on the left, the picked template's variables and the assembled prompt on the right; on a phone the pick drills down to the detail with a Back action that returns the focus to the row. The placeholders ({{variable}}) are found and substituted by PromptTemplateParser, so the component owns no parsing and no evaluation and what the preview shows is exactly what OnUse hands the host. A template without an explicit Variables declaration gets one field per placeholder; a template that declares them is authoritative for label, description, default, required flag, kind and select options. The assembly is always previewed, including the parts that are still empty: an unfilled variable renders as its literal placeholder plus a localized \"Unfilled\" marker, so a hole is never silent. Use is offered only with a bound OnUse and is ARIA-disabled (aria-disabled=\"true\", so it stays in the tab order) while the prompt is incomplete: pressing it says what is missing instead of doing nothing, and an incomplete prompt never reaches the host. The component is transport-agnostic and owns no persistence; editing is opt-in through OnCreate/OnEdit/OnDelete (a button renders only when its callback is bound). Copy writes the assembled prompt with the browser clipboard and announces the result in the component's ONE polite live region, which also carries the validation summary — the fields themselves expose their error text through aria-describedby, so nothing is said twice.",
+      "packageId": "Tempo.Blazor.AI",
+      "sourcePath": "src/Tempo.Blazor.AI/Components/AI/TmPromptLibrary.razor",
+      "documentationStatus": "merged",
+      "requiredImports": [
+        "@using Tempo.Blazor.AI.Models",
+        "@using Tempo.Blazor.Components.AI"
+      ],
+      "parameters": [
+        {
+          "name": "Class",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Additional CSS class(es) for the root element."
+        },
+        {
+          "name": "HeadingLevel",
+          "type": "int",
+          "isRequired": false,
+          "default": "3",
+          "description": "The heading's level in the page outline, clamped to 2–6. Default 3. The detail's title renders one level below it (also clamped), so the two panes nest in the outline."
+        },
+        {
+          "name": "InitialMode",
+          "type": "TmLayoutMode",
+          "isRequired": false,
+          "default": "TmLayoutMode.Desktop",
+          "description": "The mode rendered before the first measurement (static SSR, prerender, the first frame). Default TmLayoutMode.Desktop; a cascaded app-level context still wins."
+        },
+        {
+          "name": "LayoutMode",
+          "type": "TmLayoutMode",
+          "isRequired": false,
+          "default": "TmLayoutMode.Auto",
+          "description": "The layout the presentation resolves from. TmLayoutMode.Auto (the default) measures the component's own container; a forced value never measures, so a test or a host can pin desktop, tablet or the phone drill-down without a DOM."
+        },
+        {
+          "name": "OnCreate",
+          "type": "EventCallback",
+          "isRequired": false,
+          "description": "Raised when the reader asks for a new template. Not bound (the default) means the \"New template\" action is not rendered. The host owns the editor and the list."
+        },
+        {
+          "name": "OnDelete",
+          "type": "EventCallback<PromptTemplate>",
+          "isRequired": false,
+          "description": "Raised with the selected template when the reader asks to delete it. Not bound (the default) means no Delete action is rendered."
+        },
+        {
+          "name": "OnEdit",
+          "type": "EventCallback<PromptTemplate>",
+          "isRequired": false,
+          "description": "Raised with the selected template when the reader asks to edit it. Not bound (the default) means no Edit action is rendered."
+        },
+        {
+          "name": "OnUse",
+          "type": "EventCallback<PromptTemplateUse>",
+          "isRequired": false,
+          "description": "Raised when the reader presses Use on a COMPLETE prompt. Not bound (the default) means the action is not rendered at all. The payload carries the assembled prompt, the template it came from and the effective values (the reader's input plus every default that stood in for an empty field)."
+        },
+        {
+          "name": "SearchPlaceholder",
+          "type": "string?",
+          "isRequired": false,
+          "description": "The search field's placeholder, and its accessible name. Null (the default) uses the localized \"Search templates\"."
+        },
+        {
+          "name": "SelectedTemplateId",
+          "type": "string?",
+          "isRequired": false,
+          "description": "The id of the template shown in the detail, two-way bound with SelectedTemplateIdChanged. Null (the default) makes the component select the first template, so the detail pane is never empty; the selection it made is reported, so a host binding stays in sync. An id that names no template is ignored."
+        },
+        {
+          "name": "SelectedTemplateIdChanged",
+          "type": "EventCallback<string?>",
+          "isRequired": false,
+          "description": "Raised when the selection changes — a row picked by the reader, or the initial selection the component made. The value is the PromptTemplate.Id (null when the library is empty)."
+        },
+        {
+          "name": "ShowTitle",
+          "type": "bool",
+          "isRequired": false,
+          "default": "true",
+          "description": "Whether the heading is rendered. Default true; the root keeps its name either way."
+        },
+        {
+          "name": "Templates",
+          "type": "IReadOnlyList<PromptTemplate>?",
+          "isRequired": false,
+          "description": "The templates to show, in the host's order. Null is treated as an empty library (the localized empty state). The component never mutates the list: editing is reported through OnCreate, OnEdit and OnDelete and the host replaces the list."
+        },
+        {
+          "name": "Title",
+          "type": "string?",
+          "isRequired": false,
+          "description": "The visible heading. Null (the default) uses the localized \"Prompt library\", so the surface is always named; the same text names the root group. A whitespace-only value counts as null."
+        },
+        {
+          "name": "Values",
+          "type": "IReadOnlyDictionary<string, string?>?",
+          "isRequired": false,
+          "description": "The draft values by variable name, two-way bound with ValuesChanged. A host can pre-fill the fields (and persist a draft) by setting it; the component reports every edit and every reset as a fresh snapshot. A null/whitespace value counts as empty, exactly like the parser treats it. A name the selected template does not declare is ignored by the assembly."
+        },
+        {
+          "name": "ValuesChanged",
+          "type": "EventCallback<IReadOnlyDictionary<string, string?>>",
+          "isRequired": false,
+          "description": "Raised with a snapshot of the draft values after every edit, and after the component resets them when the selection changes."
+        },
+        {
+          "name": "AdditionalAttributes",
+          "type": "Dictionary<string, object>?",
+          "isRequired": false,
+          "description": "Additional HTML attributes applied to the root element."
+        }
+      ],
+      "examples": [
+        {
+          "title": "A library with a draft and a use handler",
+          "code": "<TmPromptLibrary Templates=\"@templates\"\n                @bind-SelectedTemplateId=\"selectedId\"\n                @bind-Values=\"values\"\n                OnUse=\"OnUseAsync\"\n                OnCreate=\"CreateAsync\"\n                OnEdit=\"EditAsync\"\n                OnDelete=\"DeleteAsync\" />\n\n@code {\n    private IReadOnlyList<PromptTemplate> templates =\n    [\n        new PromptTemplate(\"brief\", \"Brief a topic\", \"Write a brief about {{topic}} for {{audience}}.\")\n        {\n            Category = \"Writing\",\n            Variables =\n            [\n                new PromptVariable(\"topic\", \"Topic\"),\n                new PromptVariable(\"audience\", \"Audience\") { IsRequired = false, DefaultValue = \"general readers\" },\n            ],\n        },\n        new PromptTemplate(\"review\", \"Review a change\", \"Review this diff:\\n{{diff}}\")\n        {\n            Category = \"Engineering\",\n            Variables = [new PromptVariable(\"diff\", \"Diff\") { Kind = PromptVariableKind.Multiline }],\n        },\n    ];\n\n    private string? selectedId;\n    private IReadOnlyDictionary<string, string?>? values;\n\n    private Task OnUseAsync(PromptTemplateUse use) => composer.SetDraftAsync(use.Prompt);\n\n    private Task CreateAsync() => openEditorAsync(null);\n\n    private Task EditAsync(PromptTemplate template) => openEditorAsync(template);\n\n    private Task DeleteAsync(PromptTemplate template) => repository.DeleteAsync(template.Id);\n}"
+        },
+        {
+          "title": "Read-only picker with no editing and no Use",
+          "code": "<TmPromptLibrary Templates=\"@templates\"\n                Title=\"@Loc[\"Chat_PromptLibrary\"]\"\n                HeadingLevel=\"2\" />"
+        },
+        {
+          "title": "The phone drill-down pinned for a test or a constrained host",
+          "code": "<TmPromptLibrary Templates=\"@templates\" LayoutMode=\"TmLayoutMode.Mobile\" OnUse=\"OnUseAsync\" />"
+        }
+      ]
+    },
+    {
       "itemName": "TmReasoningPanel",
       "kind": "Component",
       "category": "AI",
@@ -1830,6 +1966,10 @@
       "kind": "Css"
     },
     {
+      "path": "src/Tempo.Blazor.AI/wwwroot/css/components/_ai-prompt-library.css",
+      "kind": "Css"
+    },
+    {
       "path": "src/Tempo.Blazor.AI/wwwroot/css/components/_ai-streaming.css",
       "kind": "Css"
     },
@@ -1883,11 +2023,11 @@
     }
   ],
   "summary": {
-    "itemCount": 19,
-    "manualItemCount": 19,
-    "generatedItemCount": 19,
+    "itemCount": 20,
+    "manualItemCount": 20,
+    "generatedItemCount": 20,
     "generatedOnlyItemCount": 0,
-    "componentCount": 14,
+    "componentCount": 15,
     "publicApiTypeCount": 5
   }
 }

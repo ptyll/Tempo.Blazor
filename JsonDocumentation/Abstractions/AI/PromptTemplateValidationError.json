@@ -1,0 +1,10 @@
+{
+  "kind": "Record",
+  "category": "AI",
+  "namespace": "Tempo.Blazor.AI.Models",
+  "description": "One reason an assembled prompt is incomplete: which variable and what is wrong with it. The parser reports the facts; the prompt library turns them into a localized, visible field error and a single live-region sentence.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/AI/PromptTemplateValidationError.cs",
+  "documentationStatus": "generated",
+  "itemName": "PromptTemplateValidationError"
+}

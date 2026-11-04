@@ -1,0 +1,24 @@
+{
+  "kind": "Enum",
+  "category": "AI",
+  "namespace": "Tempo.Blazor.AI.Models",
+  "description": "How a PromptVariable is filled in: one line of text, several lines, or one value out of the list the template author declared in Options. The kind selects the INPUT the prompt library renders — a text box, a text area or a select — and nothing else: the parser substitutes the value as text in every kind and never evaluates it.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/AI/PromptVariableKind.cs",
+  "documentationStatus": "generated",
+  "itemName": "PromptVariableKind",
+  "members": [
+    {
+      "name": "Text",
+      "description": "A single line of text. The default."
+    },
+    {
+      "name": "Multiline",
+      "description": "Several lines of text — a brief, an example, a body of source material."
+    },
+    {
+      "name": "Select",
+      "description": "One value out of Options; a value outside the list is reported as a validation error rather than substituted silently."
+    }
+  ]
+}

@@ -2054,6 +2054,388 @@
       "documentationStatus": "merged"
     },
     {
+      "itemName": "PromptTemplate",
+      "kind": "Record",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.AI.Models",
+      "description": "One reusable prompt: the body (text with {{variable}} placeholders), the metadata a reader picks it out of a library by, and — optionally — the explicit declaration of its variables. The record is the host's data: it carries no culture, no provider and no evaluation, because PromptTemplateParser assembles the body through plain text substitution and every value the reader types is text too. A template is picked by Id, so the id has to be stable and unique inside the library. Variables is the declaration that WINS; when it is null or empty the variables are derived from the body's placeholders.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/AI/PromptTemplate.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Body",
+          "kind": "Property",
+          "type": "string",
+          "description": "The prompt body: text with {{variable}} placeholders. {{{{ and }}}} are the escaped braces, so a body can show a literal placeholder."
+        },
+        {
+          "name": "Category",
+          "kind": "Property",
+          "type": "string?",
+          "description": "The category the library groups the template under — the host's own vocabulary, rendered verbatim (the component never translates a host's category and never invents one). Null (or whitespace) puts the template in the library's \"Uncategorised\" group, which only renders the name when the library has at least one such template."
+        },
+        {
+          "name": "Description",
+          "kind": "Property",
+          "type": "string?",
+          "description": "What the template is for, rendered under its title in the list and in the detail. Null renders no description."
+        },
+        {
+          "name": "Id",
+          "kind": "Property",
+          "type": "string",
+          "description": "Stable identity inside the library. Never empty: a missing id is generated at construction, so a template always has a key and a host always has something to persist."
+        },
+        {
+          "name": "Title",
+          "kind": "Property",
+          "type": "string",
+          "description": "The title a reader picks the template by. Rendered as text."
+        },
+        {
+          "name": "Variables",
+          "kind": "Property",
+          "type": "IReadOnlyList<PromptVariable>?",
+          "description": "The explicit variable declaration, or null/empty to derive one from the body. When set it is authoritative: the label, description, default, required flag, kind and options of a declared variable are what the reader sees, and a placeholder the declaration does not name is literal text."
+        }
+      ],
+      "usageExample": "var template = new PromptTemplate(\"brief\", \"Brief a topic\", \"Write a brief about {{topic}} for {{audience}}.\")\n{\n    Category = \"Writing\",\n    Description = \"Turns a topic into a short brief.\",\n    Variables =\n    [\n        new PromptVariable(\"topic\", \"Topic\"),\n        new PromptVariable(\"audience\", \"Audience\") { IsRequired = false, DefaultValue = \"general readers\" },\n    ],\n};"
+    },
+    {
+      "itemName": "PromptTemplateBuildResult",
+      "kind": "Record",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.AI.Models",
+      "description": "The result of assembling a PromptTemplate: the resolved variables, the runs the preview renders, the substituted prompt, the effective values and every reason the prompt is incomplete. The assembly is ALWAYS produced, even when it is invalid — the preview shows the prompt with its unfilled placeholders left in, so the reader sees exactly what is missing. ToUse refuses an invalid result, so an incomplete prompt can never reach a host by accident.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/AI/PromptTemplateBuildResult.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "ErrorFor",
+          "kind": "Method",
+          "type": "PromptTemplateValidationError?",
+          "description": "The first validation error of a variable, or null when that variable is fine.",
+          "parameters": [
+            {
+              "name": "variableName",
+              "type": "string"
+            }
+          ]
+        },
+        {
+          "name": "ToUse",
+          "kind": "Method",
+          "type": "PromptTemplateUse",
+          "description": "Turns a valid assembly into the payload of \"Use\". Invalid assemblies are refused: an incomplete prompt is a bug in the caller, never something a host should receive.",
+          "parameters": [
+            {
+              "name": "template",
+              "type": "PromptTemplate"
+            }
+          ]
+        },
+        {
+          "name": "Errors",
+          "kind": "Property",
+          "type": "IReadOnlyList<PromptTemplateValidationError>",
+          "description": "Every reason the prompt is incomplete, in variable order. Empty when the prompt is valid."
+        },
+        {
+          "name": "IsValid",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Whether the prompt is complete — no Errors and therefore safe to hand to a host."
+        },
+        {
+          "name": "Prompt",
+          "kind": "Property",
+          "type": "string",
+          "description": "The assembled prompt: literal text with every variable substituted. An unfilled variable is left as its literal placeholder {{name}} rather than replaced with an empty string."
+        },
+        {
+          "name": "Segments",
+          "kind": "Property",
+          "type": "IReadOnlyList<PromptTemplateSegment>",
+          "description": "The assembled prompt as runs, in reading order. Concatenating Text yields Prompt exactly."
+        },
+        {
+          "name": "Values",
+          "kind": "Property",
+          "type": "IReadOnlyDictionary<string, string?>",
+          "description": "The effective values by variable name: the supplied value, or the template's default when the field was left empty. A variable with neither is absent from the dictionary. A value for a name the template does not declare is ignored."
+        },
+        {
+          "name": "Variables",
+          "kind": "Property",
+          "type": "IReadOnlyList<PromptVariable>",
+          "description": "The variables the assembly used — the template's declared ones, or the ones derived from its body. In declaration (or first-appearance) order."
+        }
+      ],
+      "usageExample": "var result = PromptTemplateParser.Build(template, values);\nif (result.IsValid)\n{\n    var use = result.ToUse(template);\n    await SendAsync(use.Prompt);\n}\nelse\n{\n    foreach (var error in result.Errors)\n    {\n        Console.WriteLine($\"{error.VariableName}: {error.Kind}\");\n    }\n}"
+    },
+    {
+      "itemName": "PromptTemplateParser",
+      "kind": "Class",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.AI.Models",
+      "description": "The pure assembly engine of a prompt library: finds the {{variable}} placeholders of a PromptTemplate and substitutes values into its body. The parser is deliberately small and boring — it substitutes TEXT and nothing else: {{1 + 2}} is not an expression (it is literal text, because it is not a variable name), a value that happens to contain {{name}} is never re-expanded, and no culture, path, JSON or template engine is involved. A placeholder the template does not declare is literal text too, so an explicit Variables declaration is authoritative. Two escapes let a body SHOW a placeholder instead of filling one: {{{{ renders {{ and }}}} renders }}. The assembly is always produced — a prompt with an unfilled required variable keeps the literal placeholder — and the reasons it is incomplete travel next to it as Errors. The parser owns no wording and no localization.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/AI/PromptTemplateParser.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "ExtractVariables",
+          "kind": "Method",
+          "type": "IReadOnlyList<PromptVariable>",
+          "description": "The variables a body spells, in order of first appearance, one per distinct name (a repeated placeholder is the same variable). Each derived variable is required, single-line and labelled by its name — the shape a template without an explicit declaration gets.",
+          "parameters": [
+            {
+              "name": "body",
+              "type": "string?"
+            }
+          ]
+        },
+        {
+          "name": "ResolveVariables",
+          "kind": "Method",
+          "type": "IReadOnlyList<PromptVariable>",
+          "description": "The variables an assembly uses: the template's own declaration when it has one, otherwise the ones derived from its body. The declaration WINS entirely — a placeholder it does not name is literal text.",
+          "parameters": [
+            {
+              "name": "template",
+              "type": "PromptTemplate"
+            }
+          ]
+        }
+      ],
+      "usageExample": "var result = PromptTemplateParser.Build(template, new Dictionary<string, string?>\n{\n    [\"topic\"] = \"Quantum taxes\",\n});\n\n// The preview and the payload come from the same pass.\nvar prompt = result.Prompt;\nvar use = result.IsValid ? result.ToUse(template) : null;"
+    },
+    {
+      "itemName": "PromptTemplateSegment",
+      "kind": "Record",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.AI.Models",
+      "description": "One run of an assembled prompt: literal text, or a substituted variable. The live preview renders Text and marks the variable runs, so what the reader previews and what \"Use\" sends are the same string, produced by the same pass. A variable run with no value renders the literal placeholder {{name}} and reports IsEmpty, which is how the preview shows a hole instead of hiding it.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/AI/PromptTemplateSegment.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Variable",
+          "kind": "Method",
+          "type": "PromptTemplateSegment",
+          "description": "Creates a variable segment.",
+          "parameters": [
+            {
+              "name": "name",
+              "type": "string"
+            },
+            {
+              "name": "text",
+              "type": "string"
+            },
+            {
+              "name": "isEmpty",
+              "type": "bool"
+            }
+          ]
+        },
+        {
+          "name": "IsEmpty",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Whether the variable run has NO value — the run then renders the literal placeholder. An optional variable left empty is reported the same way as a required one: the preview shows the hole, and only the required case is also a validation error."
+        },
+        {
+          "name": "IsVariable",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Whether this run is a variable (a placeholder the template declares)."
+        },
+        {
+          "name": "Text",
+          "kind": "Property",
+          "type": "string",
+          "description": "The rendered text of this run: literal text, the substituted value, or the literal placeholder {{name}} when the variable has no value."
+        },
+        {
+          "name": "VariableName",
+          "kind": "Property",
+          "type": "string?",
+          "description": "The variable this run stands for, or null for literal text (including an escaped {{)."
+        }
+      ],
+      "usageExample": "foreach (var segment in result.Segments)\n{\n    Console.WriteLine(segment.IsVariable\n        ? $\"[{segment.VariableName}] {segment.Text}\"\n        : segment.Text);\n}"
+    },
+    {
+      "itemName": "PromptTemplateUse",
+      "kind": "Record",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.AI.Models",
+      "description": "What the prompt library hands its host when the reader presses Use: the template that was picked, the prompt assembled from the values, and those effective values (the reader's input plus every default that stood in for an empty field). The host stores or sends it — the component never sends anything itself.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/AI/PromptTemplateUse.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Prompt",
+          "kind": "Property",
+          "type": "string",
+          "description": "The assembled prompt — the text the reader previewed, with every variable substituted."
+        },
+        {
+          "name": "TemplateId",
+          "kind": "Property",
+          "type": "string",
+          "description": "The Id of the template that produced the prompt."
+        },
+        {
+          "name": "Title",
+          "kind": "Property",
+          "type": "string",
+          "description": "The Title, so a host can label what it received without a lookup."
+        },
+        {
+          "name": "Values",
+          "kind": "Property",
+          "type": "IReadOnlyDictionary<string, string>",
+          "description": "The effective values by variable name: the reader's input, plus the default used for an empty field. A variable with neither is absent (and made the assembly invalid, so it never reaches a host)."
+        }
+      ],
+      "usageExample": "private Task OnUseAsync(PromptTemplateUse use)\n{\n    // use.Prompt is the text the reader previewed; use.Values are the effective variable values.\n    return composer.SetDraftAsync(use.Prompt);\n}"
+    },
+    {
+      "itemName": "PromptTemplateValidationError",
+      "kind": "Record",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.AI.Models",
+      "description": "One reason an assembled prompt is incomplete: which variable and what is wrong with it. The parser reports the facts; the prompt library turns them into a localized, visible field error and a single live-region sentence.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/AI/PromptTemplateValidationError.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Kind",
+          "kind": "Property",
+          "type": "PromptTemplateValidationErrorKind",
+          "description": "What is wrong with the variable."
+        },
+        {
+          "name": "VariableName",
+          "kind": "Property",
+          "type": "string",
+          "description": "The variable the error belongs to, matched against Name."
+        }
+      ]
+    },
+    {
+      "itemName": "PromptTemplateValidationErrorKind",
+      "kind": "Enum",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.AI.Models",
+      "description": "Why an assembled prompt is not valid. The prompt library maps the kind to its own localized message, so the parser (which owns no localization) can report the fact without owning the wording.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/AI/PromptTemplateValidationErrorKind.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "MissingRequired",
+          "description": "A required variable has neither a value nor a default, so its placeholder could not be replaced."
+        },
+        {
+          "name": "NotAnOption",
+          "description": "A Select variable was given a value that is not one of its Options. The value is still substituted; the host is told it is not an offered option."
+        }
+      ]
+    },
+    {
+      "itemName": "PromptVariable",
+      "kind": "Record",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.AI.Models",
+      "description": "One variable of a prompt template: the placeholder the body spells as {{name}}, and the form the prompt library renders for it. The declaration is OPTIONAL — a template that declares no variables gets one derived variable per placeholder found in the body (its name as the label, required, a single line of text). When a template DOES declare them, the declared label, description, default, required flag, kind and options are what the reader sees, and a placeholder the declaration does not name stays literal text. A value is TEXT and is never evaluated: an empty field falls back to DefaultValue, and a required variable with neither makes the assembly invalid, so a prompt never reaches a host with a hole in it.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/AI/PromptVariable.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "DefaultValue",
+          "kind": "Property",
+          "type": "string?",
+          "description": "The value used when the reader leaves the field empty. Null (the default) means there is no default; a whitespace-only default counts as no default, because a prompt made of spaces is not a filled prompt."
+        },
+        {
+          "name": "Description",
+          "kind": "Property",
+          "type": "string?",
+          "description": "Optional help text rendered under the field, in the host's own words."
+        },
+        {
+          "name": "DisplayLabel",
+          "kind": "Property",
+          "type": "string",
+          "description": "The label the reader sees: Label when it has one, otherwise Name."
+        },
+        {
+          "name": "IsRequired",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Whether the variable has to be filled in. Default true: a placeholder the author wrote has to be replaced. An optional variable that stays empty is left in the prompt as its literal placeholder and does not make the assembly invalid."
+        },
+        {
+          "name": "Kind",
+          "kind": "Property",
+          "type": "PromptVariableKind",
+          "description": "Which input the prompt library renders. Default Text. With Select the Options list is the offered set and a value outside it is a validation error."
+        },
+        {
+          "name": "Label",
+          "kind": "Property",
+          "type": "string?",
+          "description": "The visible label of the field. Null (or whitespace) falls back to Name, so a derived variable is still labelled by something the reader recognises."
+        },
+        {
+          "name": "Name",
+          "kind": "Property",
+          "type": "string",
+          "description": "The placeholder name, without the braces. Matched against the body ordinally (case-sensitive)."
+        },
+        {
+          "name": "Options",
+          "kind": "Property",
+          "type": "IReadOnlyList<string>?",
+          "description": "The values a Select variable offers. Null or empty means the select has nothing to offer and no value can satisfy it, so the prompt library renders a text field instead. The values are shown verbatim (they are the host's data), and matching is ordinal."
+        }
+      ],
+      "usageExample": "var variables = new PromptVariable[]\n{\n    new(\"topic\", \"Topic\"),\n    new(\"audience\", \"Audience\") { IsRequired = false, DefaultValue = \"general readers\" },\n    new(\"tone\", \"Tone\") { Kind = PromptVariableKind.Select, Options = [\"formal\", \"casual\"], DefaultValue = \"formal\" },\n};"
+    },
+    {
+      "itemName": "PromptVariableKind",
+      "kind": "Enum",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.AI.Models",
+      "description": "How a PromptVariable is filled in: one line of text, several lines, or one value out of the list the template author declared in Options. The kind selects the INPUT the prompt library renders — a text box, a text area or a select — and nothing else: the parser substitutes the value as text in every kind and never evaluates it.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/AI/PromptVariableKind.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Text",
+          "description": "A single line of text. The default."
+        },
+        {
+          "name": "Multiline",
+          "description": "Several lines of text — a brief, an example, a body of source material."
+        },
+        {
+          "name": "Select",
+          "description": "One value out of Options; a value outside the list is reported as a validation error rather than substituted silently."
+        }
+      ]
+    },
+    {
       "itemName": "CsvColumnMapping",
       "kind": "Class",
       "category": "Diagram",
@@ -41102,11 +41484,11 @@
   ],
   "libraryExamples": [],
   "summary": {
-    "itemCount": 1604,
-    "manualItemCount": 1604,
-    "generatedItemCount": 1588,
+    "itemCount": 1613,
+    "manualItemCount": 1613,
+    "generatedItemCount": 1597,
     "generatedOnlyItemCount": 0,
     "componentCount": 0,
-    "publicApiTypeCount": 1588
+    "publicApiTypeCount": 1597
   }
 }

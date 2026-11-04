@@ -1,0 +1,11 @@
+{
+  "kind": "Class",
+  "category": "AI",
+  "namespace": "Tempo.Blazor.AI.Models",
+  "description": "The pure assembly engine of a prompt library: finds the {{variable}} placeholders of a PromptTemplate and substitutes values into its body. The parser is deliberately small and boring — it substitutes TEXT and nothing else: {{1 + 2}} is not an expression (it is literal text, because it is not a variable name), a value that happens to contain {{name}} is never re-expanded, and no culture, path, JSON or template engine is involved. A placeholder the template does not declare is literal text too, so an explicit Variables declaration is authoritative. Two escapes let a body SHOW a placeholder instead of filling one: {{{{ renders {{ and }}}} renders }}. The assembly is always produced — a prompt with an unfilled required variable keeps the literal placeholder — and the reasons it is incomplete travel next to it as Errors. The parser owns no wording and no localization.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/AI/PromptTemplateParser.cs",
+  "documentationStatus": "generated",
+  "itemName": "PromptTemplateParser",
+  "usageExample": "var result = PromptTemplateParser.Build(template, new Dictionary<string, string?>\n{\n    [\"topic\"] = \"Quantum taxes\",\n});\n\n// The preview and the payload come from the same pass.\nvar prompt = result.Prompt;\nvar use = result.IsValid ? result.ToUse(template) : null;"
+}

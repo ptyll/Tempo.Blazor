@@ -1,0 +1,11 @@
+{
+  "kind": "Record",
+  "category": "AI",
+  "namespace": "Tempo.Blazor.AI.Models",
+  "description": "The result of assembling a PromptTemplate: the resolved variables, the runs the preview renders, the substituted prompt, the effective values and every reason the prompt is incomplete. The assembly is ALWAYS produced, even when it is invalid — the preview shows the prompt with its unfilled placeholders left in, so the reader sees exactly what is missing. ToUse refuses an invalid result, so an incomplete prompt can never reach a host by accident.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/AI/PromptTemplateBuildResult.cs",
+  "documentationStatus": "generated",
+  "itemName": "PromptTemplateBuildResult",
+  "usageExample": "var result = PromptTemplateParser.Build(template, values);\nif (result.IsValid)\n{\n    var use = result.ToUse(template);\n    await SendAsync(use.Prompt);\n}\nelse\n{\n    foreach (var error in result.Errors)\n    {\n        Console.WriteLine($\"{error.VariableName}: {error.Kind}\");\n    }\n}"
+}

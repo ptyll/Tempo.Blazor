@@ -1,0 +1,11 @@
+{
+  "kind": "Record",
+  "category": "AI",
+  "namespace": "Tempo.Blazor.AI.Models",
+  "description": "What the prompt library hands its host when the reader presses Use: the template that was picked, the prompt assembled from the values, and those effective values (the reader's input plus every default that stood in for an empty field). The host stores or sends it — the component never sends anything itself.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/AI/PromptTemplateUse.cs",
+  "documentationStatus": "generated",
+  "itemName": "PromptTemplateUse",
+  "usageExample": "private Task OnUseAsync(PromptTemplateUse use)\n{\n    // use.Prompt is the text the reader previewed; use.Values are the effective variable values.\n    return composer.SetDraftAsync(use.Prompt);\n}"
+}

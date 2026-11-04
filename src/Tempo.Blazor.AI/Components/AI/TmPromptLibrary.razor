@@ -1,0 +1,241 @@
+@namespace Tempo.Blazor.Components.AI
+@inherits Tempo.Blazor.Components.TmComponentBase
+@inject IJSRuntime JS
+@using Tempo.Blazor.AI.Models
+@using Tempo.Blazor.Abstractions.Layout
+@using Tempo.Blazor.Components.Buttons
+@using Tempo.Blazor.Components.Forms
+@using Tempo.Blazor.Components.Icons
+@using Tempo.Blazor.Components.Inputs
+@using Tempo.Blazor.Components.Layout
+@using Tempo.Blazor.Models
+
+@* A library of prompt templates. The list is the left pane on a wide layout and the whole surface on a phone
+   (picking a row opens the detail as a drill-down). The detail is a form generated from the template's variables
+   and a live preview of the assembled prompt: what the preview shows is exactly what "Use" hands the host, because
+   both come from the same PromptTemplateParser pass. The component owns no string parsing, no transport and no
+   evaluation — it reports intent through OnUse / OnCreate / OnEdit / OnDelete and the host does the work. *@
+<TmLayoutObserver LayoutMode="LayoutMode" InitialMode="InitialMode" ResolvedLayoutChanged="OnLayoutResolved">
+    <LayoutContent Context="ctx">
+        <div @ref="_rootRef"
+             class="@RootClass"
+             data-testid="@RootTestId("prompt-library")"
+             data-layout="@ctx.CssModifier"
+             role="group"
+             aria-label="@EffectiveName"
+             tabindex="-1"
+             @attributes="AdditionalAttributes">
+
+            @if (HasTitle)
+            {
+                @TitleHeading
+            }
+
+            @if (!HasTemplates)
+            {
+                <p class="tm-prompt-library__empty" data-testid="@TestId("prompt-library-empty")">
+                    @Loc["TmPromptLibrary_Empty"]
+                </p>
+            }
+            else
+            {
+                <div class="tm-prompt-library__toolbar">
+                    <TmSearchInput Class="tm-prompt-library__search"
+                                   Value="_searchText"
+                                   ValueChanged="OnSearchAsync"
+                                   Placeholder="@(SearchPlaceholder ?? Loc["TmPromptLibrary_SearchPlaceholder"])"
+                                   AdditionalAttributes="SearchAttributes" />
+                    @if (_categoryOptions.Count > 1)
+                    {
+                        <TmSegmentedControl TValue="string"
+                                            Class="tm-prompt-library__categories"
+                                            DataTestId="@TestId("prompt-library-categories")"
+                                            Options="_categoryOptions"
+                                            Value="_category"
+                                            ValueChanged="OnCategoryAsync"
+                                            Label="@Loc["TmPromptLibrary_CategoryLabel"]"
+                                            Size="SegmentedControlSize.Sm" />
+                    }
+                </div>
+
+                var mobile = ctx.Resolved == TmLayoutMode.Mobile;
+                var showList = !mobile || !_drilldown;
+                var showDetail = SelectedTemplate is not null && (!mobile || _drilldown);
+                <div class="tm-prompt-library__body">
+                    @if (showList)
+                    {
+                        <div class="tm-prompt-library__panel tm-prompt-library__panel--list">
+                            @if (_visible.Count == 0)
+                            {
+                                <p class="tm-prompt-library__no-results"
+                                   data-testid="@TestId("prompt-library-no-results")">@NoResultsText</p>
+                            }
+                            else
+                            {
+                                <ul class="tm-prompt-library__list"
+                                    role="list"
+                                    aria-label="@Loc["TmPromptLibrary_ListLabel"]"
+                                    data-testid="@TestId("prompt-library-list")">
+                                    @foreach (var template in _visible)
+                                    {
+                                        var templateId = template.Id;
+                                        <li class="tm-prompt-library__item" @key="templateId">
+                                            <button type="button"
+                                                    class="tm-prompt-library__row"
+                                                    data-testid="@TestId("prompt-library-template")"
+                                                    data-template-id="@templateId"
+                                                    aria-current="@(IsSelected(template) ? "true" : null)"
+                                                    @ref="_rowRefs[templateId]"
+                                                    @onclick="() => OpenAsync(template)">
+                                                <span class="tm-prompt-library__row-main">
+                                                    <span class="tm-prompt-library__row-title">@template.Title</span>
+                                                    <span class="tm-prompt-library__row-category">@CategoryText(template)</span>
+                                                    @if (!string.IsNullOrWhiteSpace(template.Description))
+                                                    {
+                                                        <span class="tm-prompt-library__row-description">@template.Description</span>
+                                                    }
+                                                </span>
+                                                <span class="tm-prompt-library__row-chevron" aria-hidden="true">
+                                                    <TmIcon Name="@IconNames.ChevronRight" Size="IconSize.Sm" />
+                                                </span>
+                                            </button>
+                                        </li>
+                                    }
+                                </ul>
+                            }
+                        </div>
+                    }
+
+                    @if (showDetail)
+                    {
+                        @DetailBody(mobile)
+                    }
+                    else if (!mobile)
+                    {
+                        <div class="tm-prompt-library__panel tm-prompt-library__panel--detail">
+                            <p class="tm-prompt-library__detail-empty"
+                               data-testid="@TestId("prompt-library-detail-empty")">@Loc["TmPromptLibrary_SelectTemplate"]</p>
+                        </div>
+                    }
+                </div>
+            }
+
+            @* ONE polite live region for the whole component: a copy result and the validation summary are
+               announced here and nowhere else. The region itself is persistent — a node inserted with its text
+               already rendered is frequently not announced — and only the keyed child is replaced, so an
+               identical sentence still reaches a screen reader. *@
+            <p class="tm-sr-only"
+               role="status"
+               aria-live="polite"
+               aria-atomic="true"
+               data-testid="@TestId("prompt-library-announcement")"><span @key="_announcementSequence">@_announcement</span></p>
+        </div>
+    </LayoutContent>
+</TmLayoutObserver>
+
+@code {
+    /// <summary>The right pane: the picked template as a form plus the live preview and the actions.</summary>
+    /// <param name="mobile">Whether the pane is the phone drill-down (so it carries a Back action).</param>
+    private RenderFragment DetailBody(bool mobile) => @<section class="tm-prompt-library__detail"
+                                                               data-testid="@TestId("prompt-library-detail")"
+                                                               aria-labelledby="@DetailTitleId">
+        @if (mobile)
+        {
+            @* The visible text IS the accessible name — repeating it in an aria-label only risks drifting from it. *@
+            <button type="button"
+                    class="tm-prompt-library__back"
+                    data-testid="@TestId("prompt-library-back")"
+                    @ref="_backRef"
+                    @onclick="BackToListAsync">
+                <TmIcon Name="@IconNames.ArrowLeft" Size="IconSize.Sm" />
+                <span class="tm-prompt-library__row-title">@Loc["TmPromptLibrary_Back"]</span>
+            </button>
+        }
+
+        @DetailHeading
+
+        <p class="tm-prompt-library__detail-category">@CategoryText(SelectedTemplate!)</p>
+
+        @if (!string.IsNullOrWhiteSpace(SelectedTemplate!.Description))
+        {
+            <p class="tm-prompt-library__detail-description">@SelectedTemplate.Description</p>
+        }
+
+        @if (_result.Variables.Count > 0)
+        {
+            <div class="tm-prompt-library__variables"
+                 role="group"
+                 aria-label="@Loc["TmPromptLibrary_Variables"]">
+                @foreach (var variable in _result.Variables)
+                {
+                    @VariableField(variable)
+                }
+            </div>
+        }
+
+        <div class="tm-prompt-library__preview"
+             role="group"
+             aria-labelledby="@PreviewLabelId"
+             data-testid="@TestId("prompt-library-preview")">
+            <p class="tm-prompt-library__preview-label" id="@PreviewLabelId">@Loc["TmPromptLibrary_Preview"]</p>
+            <pre class="tm-prompt-library__preview-body">@PreviewBody</pre>
+        </div>
+
+        @if (ValidationSummary is { } summary)
+        {
+            <p class="tm-prompt-library__validation"
+               id="@ValidationSummaryId"
+               data-testid="@TestId("prompt-library-validation")">@summary</p>
+        }
+
+        <div class="tm-prompt-library__actions">
+            @if (OnUse.HasDelegate)
+            {
+                @* ARIA-disabled, not the native attribute: a natively disabled button leaves the tab order, so a
+                   keyboard user tabbing past it never hears why Use is unavailable. The action stays reachable,
+                   pressing it turns the form "attempted" (the summary appears, described here and announced in the
+                   one live region) and UseAsync refuses to send an incomplete prompt. *@
+                <TmButton Class="tm-prompt-library__use"
+                          data-testid="@TestId("prompt-library-use")"
+                          Variant="ButtonVariant.Primary"
+                          Icon="@IconNames.Check"
+                          aria-disabled="@(_result.IsValid ? null : "true")"
+                          aria-describedby="@UseDescriptionId"
+                          OnClick="UseAsync">@Loc["TmPromptLibrary_Use"]</TmButton>
+            }
+
+            <TmButton Class="tm-prompt-library__copy"
+                      data-testid="@TestId("prompt-library-copy")"
+                      Variant="ButtonVariant.Secondary"
+                      Icon="@IconNames.Copy"
+                      OnClick="CopyAsync">@Loc["TmPromptLibrary_Copy"]</TmButton>
+
+            @if (OnCreate.HasDelegate)
+            {
+                <TmButton Class="tm-prompt-library__create"
+                          data-testid="@TestId("prompt-library-create")"
+                          Variant="ButtonVariant.Ghost"
+                          Icon="@IconNames.Plus"
+                          OnClick="CreateAsync">@Loc["TmPromptLibrary_Create"]</TmButton>
+            }
+
+            @if (OnEdit.HasDelegate)
+            {
+                <TmButton Class="tm-prompt-library__edit"
+                          data-testid="@TestId("prompt-library-edit")"
+                          Variant="ButtonVariant.Ghost"
+                          Icon="@IconNames.Edit"
+                          OnClick="EditAsync">@Loc["TmPromptLibrary_Edit"]</TmButton>
+            }
+
+            @if (OnDelete.HasDelegate)
+            {
+                <TmButton Class="tm-prompt-library__delete"
+                          data-testid="@TestId("prompt-library-delete")"
+                          Variant="ButtonVariant.Danger"
+                          Icon="@IconNames.Trash"
+                          OnClick="DeleteAsync">@Loc["TmPromptLibrary_Delete"]</TmButton>
+            }
+        </div>
+    </section>;
+}

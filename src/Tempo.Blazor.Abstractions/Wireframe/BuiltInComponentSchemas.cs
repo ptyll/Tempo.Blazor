@@ -170,6 +170,7 @@ public sealed class BuiltInComponentSchemas : IWireframeSchemaSource
             ["TmAgentMonitor"] = ["agent-monitor"],
             ["TmModelPicker"] = ["model-picker"],
             ["TmContextUsage"] = ["context-usage"],
+            ["TmPromptLibrary"] = ["prompt-library"],
             ["TmMultiViewList"] = ["list-view"],
             ["TmDataTable"] = ["data-table"],
             ["TmPagination"] = ["pagination"],
@@ -1419,6 +1420,21 @@ public sealed class BuiltInComponentSchemas : IWireframeSchemaSource
                 P("budget",      "Budget",       PropType.Int,    16000, cat: "Content"),
                 P("showTags",    "Show Tags",    PropType.Bool,   true, cat: "Appearance"),
                 P("showCompact", "Show Compact", PropType.Bool,   true, cat: "Appearance"),
+            ]
+        };
+
+        yield return new WireframeComponentSchema
+        {
+            Type = "TmPromptLibrary", Category = "AI", DisplayName = "Prompt Library",
+            DefaultWidth = 720, DefaultHeight = 420,
+            Props =
+            [
+                P("title",       "Title",        PropType.String, "Prompt library", cat: "Content"),
+                P("templates",   "Templates",    PropType.StringList, new[] { "Brief a topic", "Review a change", "Uvítání" }, cat: "Content"),
+                P("categories",  "Categories",   PropType.StringList, new[] { "Writing", "Engineering" }, cat: "Content"),
+                P("showSearch",  "Show Search",  PropType.Bool,   true, cat: "Appearance"),
+                P("showPreview", "Show Preview", PropType.Bool,   true, cat: "Appearance"),
+                P("showActions", "Show Actions", PropType.Bool,   true, cat: "Appearance"),
             ]
         };
 

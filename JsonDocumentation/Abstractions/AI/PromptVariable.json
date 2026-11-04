@@ -1,0 +1,11 @@
+{
+  "kind": "Record",
+  "category": "AI",
+  "namespace": "Tempo.Blazor.AI.Models",
+  "description": "One variable of a prompt template: the placeholder the body spells as {{name}}, and the form the prompt library renders for it. The declaration is OPTIONAL — a template that declares no variables gets one derived variable per placeholder found in the body (its name as the label, required, a single line of text). When a template DOES declare them, the declared label, description, default, required flag, kind and options are what the reader sees, and a placeholder the declaration does not name stays literal text. A value is TEXT and is never evaluated: an empty field falls back to DefaultValue, and a required variable with neither makes the assembly invalid, so a prompt never reaches a host with a hole in it.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/AI/PromptVariable.cs",
+  "documentationStatus": "generated",
+  "itemName": "PromptVariable",
+  "usageExample": "var variables = new PromptVariable[]\n{\n    new(\"topic\", \"Topic\"),\n    new(\"audience\", \"Audience\") { IsRequired = false, DefaultValue = \"general readers\" },\n    new(\"tone\", \"Tone\") { Kind = PromptVariableKind.Select, Options = [\"formal\", \"casual\"], DefaultValue = \"formal\" },\n};"
+}

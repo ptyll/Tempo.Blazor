@@ -1,0 +1,431 @@
+/* A library of prompt templates — TmPromptLibrary (Tempo.Blazor.AI).
+   Every rule reads --tm-* design tokens; the component-local knobs are DECLARED on the root so a host can re-point
+   one surface without touching the package, and the dark theme follows from the semantic tokens (there is no
+   [data-theme] block here). The surface declares NO motion: the preview re-renders on every keystroke, so a
+   transition would animate the text the reader is typing. */
+
+.tm-prompt-library {
+    /* Component-local knobs (declared here, read below). */
+    --tm-prompt-library-row-bg: var(--tm-color-surface);
+    --tm-prompt-library-row-hover-bg: var(--tm-color-surface-hover);
+    --tm-prompt-library-row-selected-bg: var(--tm-color-primary-bg-subtle);
+    --tm-prompt-library-row-selected-border: var(--tm-color-primary-soft-border);
+    --tm-prompt-library-token-bg: var(--tm-color-primary-bg-subtle);
+    --tm-prompt-library-token-fg: var(--tm-color-primary-text);
+    --tm-prompt-library-token-border: var(--tm-color-primary-soft-border);
+    --tm-prompt-library-token-empty-bg: var(--tm-color-warning-bg-subtle);
+    --tm-prompt-library-token-empty-fg: var(--tm-color-warning-text);
+    --tm-prompt-library-token-empty-border: var(--tm-color-warning-soft-border);
+    --tm-prompt-library-preview-bg: var(--tm-color-surface-muted);
+    --tm-prompt-library-panel-min-width: 17rem;
+    --tm-prompt-library-list-max-block-size: 32rem;
+
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-3);
+    /* A component root inside a host's grid/flex item otherwise grows to its content and is clipped. */
+    min-inline-size: 0;
+    padding: var(--tm-space-3);
+    background: var(--tm-color-surface);
+    border: 1px solid var(--tm-border-color);
+    border-radius: var(--tm-radius-card);
+    color: var(--tm-color-text);
+    font-size: var(--tm-font-size-sm);
+}
+
+.tm-prompt-library:focus-visible {
+    outline: 2px solid var(--tm-color-primary);
+    outline-offset: 2px;
+}
+
+.tm-prompt-library__title {
+    margin: 0;
+    color: var(--tm-color-text);
+    font-size: var(--tm-font-size-md);
+    font-weight: var(--tm-font-weight-semibold);
+    line-height: var(--tm-line-height-tight);
+}
+
+/* ── Search and categories ──────────────────────────────────────────────── */
+
+.tm-prompt-library__toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: var(--tm-space-2);
+    min-inline-size: 0;
+}
+
+.tm-prompt-library__search {
+    flex: 1 1 14rem;
+    min-inline-size: 0;
+}
+
+.tm-prompt-library__categories {
+    flex: 0 1 auto;
+    min-inline-size: 0;
+    max-inline-size: 100%;
+}
+
+/* ── The two panes ──────────────────────────────────────────────────────── */
+
+.tm-prompt-library__body {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--tm-prompt-library-panel-min-width)), 1fr));
+    gap: var(--tm-space-3);
+    align-items: start;
+    min-inline-size: 0;
+}
+
+.tm-prompt-library__panel {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-2);
+    min-inline-size: 0;
+}
+
+.tm-prompt-library__panel--list {
+    min-inline-size: 0;
+}
+
+.tm-prompt-library__panel--detail {
+    min-inline-size: 0;
+}
+
+.tm-prompt-library__empty,
+.tm-prompt-library__no-results,
+.tm-prompt-library__detail-empty {
+    margin: 0;
+    padding: var(--tm-space-3);
+    color: var(--tm-color-text-secondary);
+    background: var(--tm-color-surface-muted);
+    border: 1px dashed var(--tm-border-color);
+    border-radius: var(--tm-radius-control);
+    overflow-wrap: anywhere;
+}
+
+/* ── The template list ──────────────────────────────────────────────────── */
+
+.tm-prompt-library__list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-1);
+    max-block-size: var(--tm-prompt-library-list-max-block-size);
+    margin: 0;
+    padding: 0;
+    overflow: auto;
+    list-style: none;
+}
+
+.tm-prompt-library__item {
+    min-inline-size: 0;
+}
+
+.tm-prompt-library__row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: "main chevron";
+    align-items: center;
+    gap: var(--tm-space-2);
+    inline-size: 100%;
+    margin: 0;
+    padding: var(--tm-space-2) var(--tm-space-3);
+    background: var(--tm-prompt-library-row-bg);
+    border: 1px solid transparent;
+    border-radius: var(--tm-radius-control);
+    color: var(--tm-color-text);
+    font: inherit;
+    text-align: start;
+    cursor: pointer;
+}
+
+.tm-prompt-library__row:hover {
+    background: var(--tm-prompt-library-row-hover-bg);
+}
+
+.tm-prompt-library__row[aria-current="true"] {
+    background: var(--tm-prompt-library-row-selected-bg);
+    border-color: var(--tm-prompt-library-row-selected-border);
+}
+
+.tm-prompt-library__row:focus-visible {
+    outline: 2px solid var(--tm-color-primary);
+    outline-offset: 2px;
+}
+
+.tm-prompt-library__row-main {
+    grid-area: main;
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-0-5);
+    min-inline-size: 0;
+}
+
+.tm-prompt-library__row-title {
+    color: inherit;
+    font-weight: var(--tm-font-weight-medium);
+    /* A host-supplied title is the whole point of the row, so it wraps at 320 px instead of truncating. */
+    overflow-wrap: anywhere;
+}
+
+.tm-prompt-library__row-category {
+    color: var(--tm-color-text-secondary);
+    font-size: var(--tm-font-size-xs);
+    overflow-wrap: anywhere;
+}
+
+.tm-prompt-library__row-description {
+    color: var(--tm-color-text-secondary);
+    font-size: var(--tm-font-size-xs);
+    overflow-wrap: anywhere;
+}
+
+.tm-prompt-library__row-chevron {
+    grid-area: chevron;
+    display: inline-flex;
+    align-items: center;
+    color: var(--tm-color-text-secondary);
+}
+
+/* ── The detail ─────────────────────────────────────────────────────────── */
+
+.tm-prompt-library__detail {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-2);
+    min-inline-size: 0;
+    padding: var(--tm-space-3);
+    background: var(--tm-color-surface);
+    border: 1px solid var(--tm-border-color);
+    border-radius: var(--tm-radius-card);
+}
+
+.tm-prompt-library__back {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--tm-space-1);
+    align-self: flex-start;
+    margin: 0;
+    padding: var(--tm-space-1) var(--tm-space-2);
+    background: var(--tm-color-surface-muted);
+    border: 1px solid var(--tm-border-color);
+    border-radius: var(--tm-radius-control);
+    color: var(--tm-color-text);
+    font: inherit;
+    text-align: start;
+    cursor: pointer;
+}
+
+.tm-prompt-library__back:focus-visible {
+    outline: 2px solid var(--tm-color-primary);
+    outline-offset: 2px;
+}
+
+.tm-prompt-library__detail-title {
+    margin: 0;
+    color: var(--tm-color-text);
+    font-size: var(--tm-font-size-md);
+    font-weight: var(--tm-font-weight-semibold);
+    line-height: var(--tm-line-height-tight);
+    overflow-wrap: anywhere;
+}
+
+.tm-prompt-library__detail-category {
+    margin: 0;
+    color: var(--tm-color-text-secondary);
+    font-size: var(--tm-font-size-xs);
+}
+
+.tm-prompt-library__detail-description {
+    margin: 0;
+    color: var(--tm-color-text-secondary);
+    overflow-wrap: anywhere;
+}
+
+.tm-prompt-library__variables {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-2);
+    min-inline-size: 0;
+}
+
+.tm-prompt-library__field {
+    min-inline-size: 0;
+}
+
+/* ── The live preview ───────────────────────────────────────────────────── */
+
+.tm-prompt-library__preview {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-1);
+    min-inline-size: 0;
+}
+
+/* Upright case on purpose: an uppercase transform distorts the Czech and Slovak diacritics these strings are
+   translated into, and the design system has no letter-spacing token to space it out again. */
+.tm-prompt-library__preview-label {
+    margin: 0;
+    color: var(--tm-color-text-secondary);
+    font-size: var(--tm-font-size-xs);
+    font-weight: var(--tm-font-weight-medium);
+}
+
+.tm-prompt-library__preview-body {
+    margin: 0;
+    padding: var(--tm-space-2);
+    max-block-size: 20rem;
+    overflow: auto;
+    background: var(--tm-prompt-library-preview-bg);
+    border: 1px solid var(--tm-border-color);
+    border-radius: var(--tm-radius-control);
+    color: var(--tm-color-text);
+    font-family: var(--tm-font-mono);
+    font-size: var(--tm-font-size-xs);
+    /* A prompt's own line breaks and spacing are part of it. */
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+.tm-prompt-library__token {
+    padding-inline: var(--tm-space-0-5);
+    background: var(--tm-prompt-library-token-bg);
+    border: 1px solid var(--tm-prompt-library-token-border);
+    border-radius: var(--tm-radius-xs);
+    color: var(--tm-prompt-library-token-fg);
+    font-weight: var(--tm-font-weight-medium);
+}
+
+/* Declared AFTER the base token rule: the empty modifier has the same specificity and must win. */
+.tm-prompt-library__token--empty {
+    background: var(--tm-prompt-library-token-empty-bg);
+    border-color: var(--tm-prompt-library-token-empty-border);
+    border-style: dashed;
+    color: var(--tm-prompt-library-token-empty-fg);
+}
+
+/* ── Validation and actions ─────────────────────────────────────────────── */
+
+.tm-prompt-library__validation {
+    margin: 0;
+    padding: var(--tm-space-2);
+    background: var(--tm-color-warning-bg-subtle);
+    border: 1px solid var(--tm-color-warning-soft-border);
+    border-radius: var(--tm-radius-control);
+    color: var(--tm-color-warning-text);
+    overflow-wrap: anywhere;
+}
+
+.tm-prompt-library__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--tm-space-2);
+}
+
+.tm-prompt-library__use,
+.tm-prompt-library__copy,
+.tm-prompt-library__create,
+.tm-prompt-library__edit,
+.tm-prompt-library__delete {
+    flex: 0 0 auto;
+}
+
+/* Use is ARIA-disabled rather than natively disabled, so it stays in the tab order and can explain itself when it
+   is pressed. A pointer user gets the same story from the cursor before they click. */
+.tm-prompt-library__use[aria-disabled="true"] {
+    cursor: not-allowed;
+}
+
+/* ── A coarse pointer ───────────────────────────────────────────────────── */
+
+@media (pointer: coarse) {
+    .tm-prompt-library__row {
+        grid-template-columns: minmax(0, 1fr) auto;
+        grid-template-areas: "main chevron";
+        min-block-size: var(--tm-touch-target);
+    }
+
+    .tm-prompt-library__back {
+        min-block-size: var(--tm-touch-target);
+        min-inline-size: var(--tm-touch-target);
+    }
+
+    .tm-prompt-library__use,
+    .tm-prompt-library__copy,
+    .tm-prompt-library__create,
+    .tm-prompt-library__edit,
+    .tm-prompt-library__delete {
+        min-block-size: var(--tm-touch-target);
+        min-inline-size: var(--tm-touch-target);
+    }
+
+    .tm-prompt-library__actions {
+        flex-direction: column;
+        align-items: stretch;
+    }
+}
+
+/* ── Forced colours ─────────────────────────────────────────────────────── */
+
+@media (forced-colors: active) {
+    .tm-prompt-library:focus-visible {
+        outline: 2px solid Highlight;
+        outline-color: Highlight;
+    }
+
+    .tm-prompt-library__row:focus-visible {
+        outline: 2px solid Highlight;
+        outline-color: Highlight;
+    }
+
+    .tm-prompt-library__back:focus-visible {
+        outline: 2px solid Highlight;
+        outline-color: Highlight;
+    }
+
+    .tm-prompt-library__use:focus-visible {
+        outline: 2px solid Highlight;
+        outline-color: Highlight;
+    }
+
+    .tm-prompt-library__copy:focus-visible {
+        outline: 2px solid Highlight;
+        outline-color: Highlight;
+    }
+
+    .tm-prompt-library__create:focus-visible {
+        outline: 2px solid Highlight;
+        outline-color: Highlight;
+    }
+
+    .tm-prompt-library__edit:focus-visible {
+        outline: 2px solid Highlight;
+        outline-color: Highlight;
+    }
+
+    .tm-prompt-library__delete:focus-visible {
+        outline: 2px solid Highlight;
+        outline-color: Highlight;
+    }
+
+    /* A variable mark is painted with a background ONLY, so a forced-colours palette collapses it into one system
+       colour and a filled token becomes indistinguishable from the prompt text. Opting the fills out keeps them;
+       the empty token also keeps its dashed border, so "still missing" is not a colour-only cue. */
+    .tm-prompt-library__token {
+        background: var(--tm-prompt-library-token-bg);
+        border-color: var(--tm-prompt-library-token-border);
+        color: var(--tm-prompt-library-token-fg);
+        forced-color-adjust: none;
+    }
+
+    .tm-prompt-library__token--empty {
+        background: var(--tm-prompt-library-token-empty-bg);
+        border-color: var(--tm-prompt-library-token-empty-border);
+        color: var(--tm-prompt-library-token-empty-fg);
+    }
+
+    .tm-prompt-library__row[aria-current="true"],
+    .tm-prompt-library__validation {
+        border-color: CanvasText;
+    }
+}

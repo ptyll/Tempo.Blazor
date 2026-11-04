@@ -1,0 +1,11 @@
+{
+  "kind": "Record",
+  "category": "AI",
+  "namespace": "Tempo.Blazor.AI.Models",
+  "description": "One reusable prompt: the body (text with {{variable}} placeholders), the metadata a reader picks it out of a library by, and — optionally — the explicit declaration of its variables. The record is the host's data: it carries no culture, no provider and no evaluation, because PromptTemplateParser assembles the body through plain text substitution and every value the reader types is text too. A template is picked by Id, so the id has to be stable and unique inside the library. Variables is the declaration that WINS; when it is null or empty the variables are derived from the body's placeholders.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/AI/PromptTemplate.cs",
+  "documentationStatus": "generated",
+  "itemName": "PromptTemplate",
+  "usageExample": "var template = new PromptTemplate(\"brief\", \"Brief a topic\", \"Write a brief about {{topic}} for {{audience}}.\")\n{\n    Category = \"Writing\",\n    Description = \"Turns a topic into a short brief.\",\n    Variables =\n    [\n        new PromptVariable(\"topic\", \"Topic\"),\n        new PromptVariable(\"audience\", \"Audience\") { IsRequired = false, DefaultValue = \"general readers\" },\n    ],\n};"
+}

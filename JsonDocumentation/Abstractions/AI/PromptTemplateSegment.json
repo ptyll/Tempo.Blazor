@@ -1,0 +1,11 @@
+{
+  "kind": "Record",
+  "category": "AI",
+  "namespace": "Tempo.Blazor.AI.Models",
+  "description": "One run of an assembled prompt: literal text, or a substituted variable. The live preview renders Text and marks the variable runs, so what the reader previews and what \"Use\" sends are the same string, produced by the same pass. A variable run with no value renders the literal placeholder {{name}} and reports IsEmpty, which is how the preview shows a hole instead of hiding it.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/AI/PromptTemplateSegment.cs",
+  "documentationStatus": "generated",
+  "itemName": "PromptTemplateSegment",
+  "usageExample": "foreach (var segment in result.Segments)\n{\n    Console.WriteLine(segment.IsVariable\n        ? $\"[{segment.VariableName}] {segment.Text}\"\n        : segment.Text);\n}"
+}
