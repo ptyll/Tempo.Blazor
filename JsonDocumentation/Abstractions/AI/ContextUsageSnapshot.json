@@ -1,0 +1,11 @@
+{
+  "kind": "Class",
+  "category": "AI",
+  "namespace": "Tempo.Blazor.AI.Models",
+  "description": "A snapshot of one context window: the budget it is measured against, the sections it is made of and the share of the prompt the provider served from its cache. It is a SNAPSHOT — TmContextUsage never mutates it and never polls anything, so a host pushes a new instance as the conversation grows (SignalR, polling, a server-side channel). BudgetTokens of 0 or less means the budget is UNKNOWN: nothing is measurable, so the component reports the used amount with no percentage, claims no over-budget verdict and divides by nothing.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/AI/ContextUsageSnapshot.cs",
+  "documentationStatus": "generated",
+  "itemName": "ContextUsageSnapshot",
+  "usageExample": "var snapshot = new ContextUsageSnapshot\n{\n    BudgetTokens = 16_000,\n    CacheHit = 0.62,\n    Sections =\n    [\n        new(\"system\", \"System prompt\") { Kind = ContextUsageKind.System, Tokens = 1_200, IsRequired = true },\n        new(\"chat\", \"Chat history\") { Kind = ContextUsageKind.Chat, Tokens = 6_000 },\n    ],\n};\n\nvar used = ContextUsageMath.UsedTokens(snapshot);\nvar percent = ContextUsageMath.BudgetPercent(snapshot);"
+}

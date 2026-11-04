@@ -1560,6 +1560,331 @@
       "documentationStatus": "merged"
     },
     {
+      "itemName": "ContextUsageItem",
+      "kind": "Record",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.AI.Models",
+      "description": "One entry inside a ContextUsageSection — a single tool definition, an attached file, one tool result — so a reader can see what the tokens of a section actually are and (when the host allows it) drop one entry without dropping the whole section. The item is the host's data: Label is rendered as text and never localised, and Tokens is counted as reported (a negative value counts as nothing). An item is a BREAKDOWN of its section: when the section reports its own total the items are the detail of that total, never a second measurement.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/AI/ContextUsageItem.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "CanRemove",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Whether the reader may drop this entry on its own. Default false — a component offers the Remove action for an item only when the host says the item is removable (and a removal handler is bound), so an entry whose loss would break the conversation is never offered as removable by accident."
+        },
+        {
+          "name": "Id",
+          "kind": "Property",
+          "type": "string",
+          "description": "Stable identifier of the entry inside its section, used as the DOM key and by the removal report."
+        },
+        {
+          "name": "Label",
+          "kind": "Property",
+          "type": "string",
+          "description": "The reader-facing name of the entry (the tool name, the file name, the call id)."
+        },
+        {
+          "name": "Tokens",
+          "kind": "Property",
+          "type": "int",
+          "description": "How many tokens the entry occupies. Default 0; a negative value counts as nothing. It is only the section's total when the section itself reports none."
+        }
+      ],
+      "usageExample": "var items = new ContextUsageItem[]\n{\n    new(\"search\", \"Web search\") { Tokens = 500, CanRemove = true },\n    new(\"code\", \"Code interpreter\") { Tokens = 300 },\n};"
+    },
+    {
+      "itemName": "ContextUsageKind",
+      "kind": "Enum",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.AI.Models",
+      "description": "What a section of the context window holds. The kind selects the section's TONE (its own --tm-context-usage-* knob on the component root) and nothing else — the label stays the host's word for the section, so a host is free to call the Files section \"Attachments\". Other is the default, so a section that names no kind still paints a stable, distinct tone instead of falling through to a missing one.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/AI/ContextUsageKind.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Other",
+          "description": "A section the host did not classify (the default)."
+        },
+        {
+          "name": "System",
+          "description": "The system prompt and the standing instructions of the conversation."
+        },
+        {
+          "name": "Tools",
+          "description": "The tool / function definitions offered to the model."
+        },
+        {
+          "name": "Memory",
+          "description": "Long-term memory, retrieved facts or a project knowledge base."
+        },
+        {
+          "name": "Files",
+          "description": "Attached files, documents or images."
+        },
+        {
+          "name": "Chat",
+          "description": "The conversation so far (the reader's turns and the model's answers)."
+        },
+        {
+          "name": "Results",
+          "description": "Tool results and other returned payloads."
+        }
+      ]
+    },
+    {
+      "itemName": "ContextUsageMath",
+      "kind": "Class",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.AI.Models",
+      "description": "The arithmetic of a ContextUsageSnapshot: what a section contributes, what the whole context measures, how the rounded shares stay honest, whether the budget is exceeded and which sections a compaction can actually drop. Nothing here touches markup, so the five decisions that are easy to get wrong are testable on their own — and a host computing the same numbers elsewhere cannot drift from the component. Shares uses the largest-remainder method, so the rounded percentages add up to exactly 100 (or keep the plain floors when the entries do not account for the whole total).",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/AI/ContextUsageMath.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "BudgetPercent",
+          "kind": "Method",
+          "type": "int?",
+          "description": "The used share of the budget as a whole percentage, rounded away from zero. It is deliberately NOT clamped: an over-budget context reads as 115 %, not as a rounded 100 % that hides the overflow.",
+          "parameters": [
+            {
+              "name": "snapshot",
+              "type": "ContextUsageSnapshot?"
+            }
+          ]
+        },
+        {
+          "name": "IsCompactable",
+          "kind": "Method",
+          "type": "bool",
+          "description": "Whether a section can be dropped by a compaction: it must carry tokens, be OPTIONAL (not IsRequired), and be neither already summarised nor already omitted.",
+          "parameters": [
+            {
+              "name": "section",
+              "type": "ContextUsageSection?"
+            }
+          ]
+        },
+        {
+          "name": "IsOverBudget",
+          "kind": "Method",
+          "type": "bool",
+          "description": "Whether the context is over its budget. Being exactly AT the budget is full, not over — and an unknown budget (zero or less) can never be exceeded, so no threshold claims a verdict for a 0-of-0 context.",
+          "parameters": [
+            {
+              "name": "snapshot",
+              "type": "ContextUsageSnapshot?"
+            }
+          ]
+        },
+        {
+          "name": "Shares",
+          "kind": "Method",
+          "type": "int[]",
+          "description": "The whole percentages of total each entry contributes, rounded with the LARGEST-REMAINDER method so the returned shares add up to exactly 100 (or to the plain floors when the entries do not account for the whole). Rounding each entry on its own leaves 33 % / 33 % / 33 % for three equal parts, which reads as a missing percent.",
+          "parameters": [
+            {
+              "name": "tokens",
+              "type": "IReadOnlyList<int>"
+            },
+            {
+              "name": "total",
+              "type": "int"
+            }
+          ]
+        },
+        {
+          "name": "TokensOf",
+          "kind": "Method",
+          "type": "int",
+          "description": "How many tokens one section contributes. The host's Tokens is authoritative; only when it reports nothing (zero or less) do the section's Items add up to the measurement. Negative numbers count as nothing — a negative token count is a data defect, not a credit — and so does a null item.",
+          "parameters": [
+            {
+              "name": "section",
+              "type": "ContextUsageSection?"
+            }
+          ]
+        },
+        {
+          "name": "UsedTokens",
+          "kind": "Method",
+          "type": "int",
+          "description": "The whole context window in use: the sum of every section's contribution.",
+          "parameters": [
+            {
+              "name": "snapshot",
+              "type": "ContextUsageSnapshot?"
+            }
+          ]
+        }
+      ],
+      "usageExample": "var used = ContextUsageMath.UsedTokens(snapshot);          // 14 000\nvar percent = ContextUsageMath.BudgetPercent(snapshot);    // 88, null when the budget is unknown\nvar over = ContextUsageMath.IsOverBudget(snapshot);        // false at exactly 100 %\nvar shares = ContextUsageMath.Shares([1_200, 800, 6_000], used);  // 9, 6, 43 … sums to 100\nvar compactable = ContextUsageMath.IsCompactable(snapshot);"
+    },
+    {
+      "itemName": "ContextUsageRemoval",
+      "kind": "Record",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.AI.Models",
+      "description": "A removal the reader asked for, reported by TmContextUsage.OnRemoveItem. The component never edits the snapshot it renders: it says WHAT the reader wants gone and the host decides whether and how to apply it (drop the section, summarise it, re-request the prompt with the entry removed). Item tells the two shapes apart: a null item is a SECTION removal (the whole ContextUsageSection named by SectionKey), a non-null item is a single ENTRY of that section. IsSection answers the same question in one word.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/AI/ContextUsageRemoval.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "IsSection",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Whether the removal targets the whole section (no single entry)."
+        },
+        {
+          "name": "Item",
+          "kind": "Property",
+          "type": "ContextUsageItem?",
+          "description": "The single entry to drop, or null when the whole section is the target."
+        },
+        {
+          "name": "SectionKey",
+          "kind": "Property",
+          "type": "required string",
+          "description": "The Key of the section the reader acted on."
+        },
+        {
+          "name": "SectionLabel",
+          "kind": "Property",
+          "type": "required string",
+          "description": "The label of that section as it was rendered, so a host can name it without a lookup."
+        }
+      ],
+      "usageExample": "private Task OnRemoveAsync(ContextUsageRemoval removal)\n{\n    // Item is null: the reader wants the whole section gone.\n    // Otherwise it names the single entry inside that section.\n    return removal.IsSection ? DropSectionAsync(removal.SectionKey) : DropItemAsync(removal);\n}"
+    },
+    {
+      "itemName": "ContextUsageSection",
+      "kind": "Record",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.AI.Models",
+      "description": "One part of a context window — the system prompt, the tool definitions, the memory, the attachments, the conversation, the tool results — with how many tokens it occupies, whether it is required, whether the provider has already summarised or dropped it, and the entries it is made of. Tokens is the section's authoritative total; when it reports nothing the section's tokens are the sum of what its Items report (see ContextUsageMath.TokensOf). The three state words are independent facts, not one enum: a summarised section can still be required, and an omitted section still keeps its row so the reader can see what is no longer being sent.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/AI/ContextUsageSection.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "CanRemove",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Whether the whole section may be dropped by the reader. Default false. A section with items can be removable as a whole AND have removable items; the section-level action removes the section, the item-level action removes one entry."
+        },
+        {
+          "name": "IsOmitted",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Whether the content of this section was dropped from the request (omitted). Default false. The row and its tokens stay visible — an omitted section is exactly what a reader needs to see — and the localized \"Omitted\" word marks it."
+        },
+        {
+          "name": "IsRequired",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Whether the section cannot be dropped from the prompt (the system prompt, the tool contract). Default false. A required section is never offered a Remove action and never counts as compactable."
+        },
+        {
+          "name": "IsSummarized",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Whether this section stands for content the provider has already summarised. Default false. The component shows the localized \"Summarized\" word next to the section and treats it as no longer compactable."
+        },
+        {
+          "name": "Items",
+          "kind": "Property",
+          "type": "IReadOnlyList<ContextUsageItem>?",
+          "description": "The entries the section is made of, in the host's order. Default null (the section is not broken down). A non-empty list renders a disclosure that expands the section into its items."
+        },
+        {
+          "name": "Key",
+          "kind": "Property",
+          "type": "string",
+          "description": "Stable identifier of the section (the DOM key, the expansion state and the removal report all use it)."
+        },
+        {
+          "name": "Kind",
+          "kind": "Property",
+          "type": "ContextUsageKind",
+          "description": "The kind of content the section holds. Default Other. It selects the section's tone only — the label stays the host's wording."
+        },
+        {
+          "name": "Label",
+          "kind": "Property",
+          "type": "string",
+          "description": "The reader-facing name of the section, rendered as text and never localised by the library."
+        },
+        {
+          "name": "Tokens",
+          "kind": "Property",
+          "type": "int",
+          "description": "How many tokens the section occupies. Default 0; a negative value counts as nothing. When this is 0 and Items report tokens, those are the section's measurement instead."
+        }
+      ],
+      "usageExample": "var sections = new ContextUsageSection[]\n{\n    new(\"system\", \"System prompt\") { Kind = ContextUsageKind.System, Tokens = 1_200, IsRequired = true },\n    new(\"files\", \"Files\")\n    {\n        Kind = ContextUsageKind.Files,\n        Tokens = 5_000,\n        CanRemove = true,\n        Items = [new ContextUsageItem(\"contract\", \"Contract.pdf\") { Tokens = 4_000, CanRemove = true }],\n    },\n    new(\"results\", \"Tool results\") { Kind = ContextUsageKind.Results, Tokens = 600, IsOmitted = true },\n};"
+    },
+    {
+      "itemName": "ContextUsageSnapshot",
+      "kind": "Record",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.AI.Models",
+      "description": "A snapshot of one context window: the budget it is measured against, the sections it is made of and the share of the prompt the provider served from its cache. It is a SNAPSHOT — TmContextUsage never mutates it and never polls anything, so a host pushes a new instance as the conversation grows (SignalR, polling, a server-side channel). BudgetTokens of 0 or less means the budget is UNKNOWN: nothing is measurable, so the component reports the used amount with no percentage, claims no over-budget verdict and divides by nothing.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/AI/ContextUsageSnapshot.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "BudgetTokens",
+          "kind": "Property",
+          "type": "int",
+          "description": "The context window the usage is measured against, in tokens. Default 0 (unknown) — no percentage is claimed and no over-budget verdict is possible."
+        },
+        {
+          "name": "CacheHit",
+          "kind": "Property",
+          "type": "double?",
+          "description": "The share of the prompt the provider served from its cache, as a fraction between 0 and 1 (0.62 = 62 %). Default null — not reported, so no badge is rendered. The value is clamped into the range; a host with tokens instead of a ratio divides them itself."
+        },
+        {
+          "name": "Sections",
+          "kind": "Property",
+          "type": "IReadOnlyList<ContextUsageSection>?",
+          "description": "The parts of the context window, in the host's reading order. Default null or empty renders the component's localized empty state. The order is preserved everywhere: the bar, the grid, the treemap and the legend."
+        }
+      ],
+      "usageExample": "var snapshot = new ContextUsageSnapshot\n{\n    BudgetTokens = 16_000,\n    CacheHit = 0.62,\n    Sections =\n    [\n        new(\"system\", \"System prompt\") { Kind = ContextUsageKind.System, Tokens = 1_200, IsRequired = true },\n        new(\"chat\", \"Chat history\") { Kind = ContextUsageKind.Chat, Tokens = 6_000 },\n    ],\n};\n\nvar used = ContextUsageMath.UsedTokens(snapshot);\nvar percent = ContextUsageMath.BudgetPercent(snapshot);"
+    },
+    {
+      "itemName": "ContextUsageVariant",
+      "kind": "Enum",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.AI.Models",
+      "description": "How TmContextUsage presents the context window: Bar (one stacked horizontal bar, the default), Grid (a hundred cells, one per percent of the budget, so the free headroom is visible) or Treemap (the sections as areas, through the core TmChart). The presentation only changes the PICTURE: the legend table, the meter and the empty state are identical in every variant, so a host can switch it per layout without losing a fact or a control.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/AI/ContextUsageVariant.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Bar",
+          "description": "One stacked bar whose segments are the sections. The default."
+        },
+        {
+          "name": "Grid",
+          "description": "A hundred cells, one per percent of the budget; used cells carry the tone of their section."
+        },
+        {
+          "name": "Treemap",
+          "description": "A treemap of the sections (and their items) drawn by the core TmChart."
+        }
+      ]
+    },
+    {
       "itemName": "IAiMentionProvider",
       "kind": "Interface",
       "category": "AI",
@@ -40777,11 +41102,11 @@
   ],
   "libraryExamples": [],
   "summary": {
-    "itemCount": 1597,
-    "manualItemCount": 1597,
-    "generatedItemCount": 1581,
+    "itemCount": 1604,
+    "manualItemCount": 1604,
+    "generatedItemCount": 1588,
     "generatedOnlyItemCount": 0,
     "componentCount": 0,
-    "publicApiTypeCount": 1581
+    "publicApiTypeCount": 1588
   }
 }

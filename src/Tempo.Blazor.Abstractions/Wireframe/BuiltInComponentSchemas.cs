@@ -169,6 +169,7 @@ public sealed class BuiltInComponentSchemas : IWireframeSchemaSource
             ["TmAgentRunTree"] = ["agent-run-tree"],
             ["TmAgentMonitor"] = ["agent-monitor"],
             ["TmModelPicker"] = ["model-picker"],
+            ["TmContextUsage"] = ["context-usage"],
             ["TmMultiViewList"] = ["list-view"],
             ["TmDataTable"] = ["data-table"],
             ["TmPagination"] = ["pagination"],
@@ -1402,6 +1403,22 @@ public sealed class BuiltInComponentSchemas : IWireframeSchemaSource
                 P("showSearch",  "Show Search",  PropType.Bool,   true, cat: "Appearance"),
                 P("showMetrics", "Show Metrics", PropType.Bool,   true, cat: "Appearance"),
                 P("showTags",    "Show Tags",    PropType.Bool,   true, cat: "Appearance"),
+            ]
+        };
+
+        yield return new WireframeComponentSchema
+        {
+            Type = "TmContextUsage", Category = "AI", DisplayName = "Context Usage",
+            DefaultWidth = 360, DefaultHeight = 300,
+            Props =
+            [
+                P("title",       "Title",        PropType.String, "Context window", cat: "Content"),
+                P("sections",    "Sections",     PropType.StringList, new[] { "System prompt", "Tools", "Memory", "Files", "Chat history", "Tool results" }, cat: "Content"),
+                P("variant",     "Variant",      PropType.Enum,   "bar", cat: "Appearance",
+                    opts: ["bar", "grid", "treemap"]),
+                P("budget",      "Budget",       PropType.Int,    16000, cat: "Content"),
+                P("showTags",    "Show Tags",    PropType.Bool,   true, cat: "Appearance"),
+                P("showCompact", "Show Compact", PropType.Bool,   true, cat: "Appearance"),
             ]
         };
 

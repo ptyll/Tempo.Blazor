@@ -1,0 +1,241 @@
+@namespace Tempo.Blazor.Components.AI
+@inherits Tempo.Blazor.Components.TmComponentBase
+@using System.Globalization
+@using Tempo.Blazor.AI.Models
+@using Tempo.Blazor.Components.Charts
+@using Tempo.Blazor.Components.Icons
+
+@* What a context window is made of. The PICTURE (a stacked bar, a hundred-cell grid or a treemap) is
+   decorative: the legend table below it is the representation a reader and a copy/paste get, and it is the
+   only place the Remove / expand controls live. The meter is the one control that carries the machine value and
+   the localized value text, so the visible readout above it is sighted-only duplication of the same sentence.
+   The component never polls anything - a host pushes a new Snapshot as the conversation grows. *@
+<div class="@RootClass"
+     data-testid="@RootTestId("context-usage")"
+     data-variant="@VariantSlug"
+     data-over-budget="@OverBudgetAttribute"
+     role="group"
+     aria-label="@ResolvedName"
+     tabindex="-1"
+     @ref="_rootRef"
+     @attributes="AdditionalAttributes">
+
+    @if (!HasContent)
+    {
+        <p class="tm-context-usage__empty" data-testid="@TestId("context-usage-empty")">@Loc["TmContextUsage_Empty"]</p>
+    }
+    else
+    {
+        @if (HasTitle)
+        {
+            @TitleHeading
+        }
+
+        @* The sighted summary. It repeats the meter's own value on purpose and is hidden from assistive
+           technology, so the number is heard ONCE, from the meter. *@
+        <p class="tm-context-usage__readout" aria-hidden="true">
+            <span class="tm-context-usage__amount">@AmountText</span>
+            @if (PercentText is { } percent)
+            {
+                <span class="tm-context-usage__percent">@percent</span>
+            }
+        </p>
+
+        @if (_cachePercent is { } cache)
+        {
+            <p class="tm-context-usage__cache" id="@CacheId" data-testid="@TestId("context-usage-cache")">
+                <span class="tm-context-usage__cache-icon"><TmIcon Name="@IconNames.Refresh" Size="IconSize.Sm" /></span>
+                <span class="tm-context-usage__cache-text">@CacheText(cache)</span>
+            </p>
+        }
+
+        @if (_over)
+        {
+            <p class="tm-context-usage__over-budget" id="@OverId" data-testid="@TestId("context-usage-over-budget")">
+                <span class="tm-context-usage__over-icon"><TmIcon Name="@IconNames.AlertTriangle" Size="IconSize.Sm" /></span>
+                <span class="tm-context-usage__over-text">@OverText</span>
+            </p>
+        }
+
+        @* The measuring surface. In the treemap presentation the picture is the chart, so the meter steps
+           aside as a visually hidden element: the value must exist in EVERY presentation. *@
+        <div class="@MeterClass"
+             data-testid="@TestId("context-usage-meter")"
+             role="meter"
+             aria-valuemin="0"
+             aria-valuemax="@Invariant(_budget)"
+             aria-valuenow="@Invariant(MeterValueNow)"
+             aria-valuetext="@ValueText"
+             aria-labelledby="@MeterLabelledBy"
+             aria-label="@MeterAriaLabel"
+             aria-describedby="@MeterDescribedBy">
+            @if (Variant == ContextUsageVariant.Bar)
+            {
+                <div class="tm-context-usage__bar" aria-hidden="true">
+                    @foreach (var segment in _segments)
+                    {
+                        @if (segment.Tokens <= 0)
+                        {
+                            continue;
+                        }
+
+                        <span class="@SegmentClass(segment)"
+                              style="@SegmentStyle(segment)"
+                              data-section-key="@segment.Key"
+                              data-kind="@segment.Kind"
+                              data-share="@Invariant(segment.Share)"></span>
+                    }
+                </div>
+            }
+            else if (Variant == ContextUsageVariant.Grid)
+            {
+                <div class="tm-context-usage__grid" aria-hidden="true">
+                    @foreach (var cell in _cells)
+                    {
+                        <span class="@CellClass(cell)"
+                              data-testid="@TestId("context-usage-cell")"
+                              data-cell-index="@Invariant(cell.Index)"
+                              data-section-key="@cell.SectionKey"
+                              @onmouseover="() => Highlight(cell.SectionKey)"
+                              @onmouseout="() => ClearHighlight(cell.SectionKey)"></span>
+                    }
+                </div>
+            }
+        </div>
+
+        @if (Variant == ContextUsageVariant.Treemap)
+        {
+            <div class="tm-context-usage__treemap"
+                 data-testid="@TestId("context-usage-treemap")"
+                 aria-hidden="true">
+                <TmChart Type="ChartType.Treemap"
+                         Data="_chartData"
+                         TreeNodes="_treeNodes"
+                         Height="100%"
+                         ShowLegend="false"
+                         ShowValues="true"
+                         Animated="false" />
+            </div>
+        }
+
+        <table class="tm-context-usage__table">
+            <caption class="tm-sr-only">@Caption</caption>
+            <thead>
+                <tr>
+                    <th scope="col">@Loc["TmContextUsage_ColumnSection"]</th>
+                    <th scope="col">@Loc["TmContextUsage_ColumnTokens"]</th>
+                    <th scope="col">@Loc["TmContextUsage_ColumnShare"]</th>
+                    <th scope="col"><span class="tm-sr-only">@Loc["TmContextUsage_ColumnActions"]</span></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var row in _rows)
+                {
+                    var expanded = IsExpanded(row);
+                    <tr class="@RowClass(row)"
+                        data-section-key="@row.Section.Key"
+                        data-testid="@TestId("context-usage-row")">
+                        <th scope="row" class="tm-context-usage__section">
+                            <span class="tm-context-usage__section-inner">
+                            <span class="@SwatchClass(row)" aria-hidden="true"></span>
+                            @if (row.Items.Count > 0)
+                            {
+                                <button type="button"
+                                        class="tm-context-usage__toggle"
+                                        data-testid="@TestId("context-usage-toggle")"
+                                        aria-expanded="@(expanded ? "true" : "false")"
+                                        aria-controls="@(expanded ? row.DetailId : null)"
+                                        @ref="_sectionRefs[row.Section.Key]"
+                                        @onclick="() => ToggleSection(row.Section.Key)"
+                                        @onfocusin="() => Highlight(row.Section.Key)"
+                                        @onfocusout="() => ClearHighlight(row.Section.Key)">
+                                    <span class="tm-context-usage__label">@row.Section.Label</span>
+                                    <span class="tm-context-usage__count">@Loc.Plural("TmContextUsage_ItemCount", row.Items.Count)</span>
+                                    @foreach (var tag in TagsOf(row.Section))
+                                    {
+                                        <span class="@TagClass(tag.Modifier)">@tag.Text</span>
+                                    }
+                                </button>
+                            }
+                            else
+                            {
+                                <span class="tm-context-usage__label">@row.Section.Label</span>
+                                @foreach (var tag in TagsOf(row.Section))
+                                {
+                                    <span class="@TagClass(tag.Modifier)">@tag.Text</span>
+                                }
+                            }
+                            </span>
+                        </th>
+                        <td class="tm-context-usage__tokens">@FormatTokens(row.Tokens)</td>
+                        <td class="tm-context-usage__share">@ShareText(row)</td>
+                        <td class="tm-context-usage__actions">
+                            @if (CanRemove(row.Section))
+                            {
+                                <button type="button"
+                                        class="tm-context-usage__remove"
+                                        data-testid="@TestId("context-usage-remove-section")"
+                                        aria-label="@Loc["TmContextUsage_Remove", row.Section.Label]"
+                                        @onfocusin="() => Highlight(row.Section.Key)"
+                                        @onfocusout="() => ClearHighlight(row.Section.Key)"
+                                        @onclick="() => RemoveSectionAsync(row)">
+                                    <TmIcon Name="@IconNames.Trash" Size="IconSize.Sm" />
+                                </button>
+                            }
+                        </td>
+                    </tr>
+                    @if (expanded && row.Items.Count > 0)
+                    {
+                        <tr class="tm-context-usage__detail" id="@row.DetailId">
+                            <td class="tm-context-usage__detail-cell" colspan="4">
+                                <ul class="tm-context-usage__items">
+                                    @foreach (var item in row.Items)
+                                    {
+                                        <li class="tm-context-usage__item" data-item-id="@item.Id">
+                                            <span class="tm-context-usage__item-label">@item.Label</span>
+                                            <span class="tm-context-usage__item-tokens">@FormatTokens(Math.Max(item.Tokens, 0))</span>
+                                            @if (item.CanRemove && OnRemoveItem.HasDelegate)
+                                            {
+                                                <button type="button"
+                                                        class="tm-context-usage__item-remove"
+                                                        data-testid="@TestId("context-usage-remove-item")"
+                                                        aria-label="@Loc["TmContextUsage_Remove", item.Label]"
+                                                        @onfocusin="() => Highlight(row.Section.Key)"
+                                                        @onfocusout="() => ClearHighlight(row.Section.Key)"
+                                                        @onclick="() => RemoveItemAsync(row, item)">
+                                                    <TmIcon Name="@IconNames.X" Size="IconSize.Sm" />
+                                                </button>
+                                            }
+                                        </li>
+                                    }
+                                </ul>
+                            </td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+
+        @if (OnCompact.HasDelegate)
+        {
+            <div class="tm-context-usage__actions-bar">
+                <button type="button"
+                        class="tm-context-usage__compact"
+                        data-testid="@TestId("context-usage-compact")"
+                        disabled="@(!CanCompact)"
+                        @onclick="CompactAsync">
+                    <TmIcon Name="@IconNames.Minimize2" Size="IconSize.Sm" />
+                    <span class="tm-context-usage__compact-text">@Loc["TmContextUsage_Compact"]</span>
+                </button>
+            </div>
+        }
+    }
+
+    @* The component's ONE polite live region: it speaks only when the context CROSSES its budget, so a page
+       load stays silent and a polling host does not repeat itself. *@
+    <span class="tm-sr-only"
+          role="status"
+          aria-live="polite"
+          aria-atomic="true"
+          data-testid="@TestId("context-usage-announcement")">@AnnouncementText</span>
+</div>

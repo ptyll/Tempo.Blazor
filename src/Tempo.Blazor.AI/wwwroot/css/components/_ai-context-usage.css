@@ -1,0 +1,514 @@
+/* What a context window is made of — TmContextUsage (Tempo.Blazor.AI).
+   Every rule reads --tm-* design tokens; the per-kind tones are component-local knobs DECLARED on the root, so a
+   host can re-point one section without touching the package. The surface declares NO motion: a usage panel that
+   is refreshed by a polling host must not flicker, so there is nothing here for a reduced-motion block to cover. */
+
+.tm-context-usage {
+    --tm-context-usage-system: var(--tm-color-primary);
+    --tm-context-usage-tools: var(--tm-color-info);
+    --tm-context-usage-memory: var(--tm-color-secondary);
+    --tm-context-usage-files: var(--tm-color-success);
+    --tm-context-usage-chat: var(--tm-color-warning);
+    --tm-context-usage-results: var(--tm-color-danger);
+    --tm-context-usage-other: var(--tm-color-secondary);
+    --tm-context-usage-tone: var(--tm-context-usage-other);
+    --tm-context-usage-bar-block-size: 0.75rem;
+    --tm-context-usage-cell-size: 0.5rem;
+    --tm-context-usage-cell-gap: 2px;
+    --tm-context-usage-treemap-block-size: 16rem;
+    --tm-context-usage-swatch-size: 0.625rem;
+
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-2);
+    min-inline-size: 0;
+    padding: var(--tm-space-3);
+    background: var(--tm-color-surface);
+    border: 1px solid var(--tm-border-color);
+    border-radius: var(--tm-radius-card);
+    color: var(--tm-color-text);
+    font-size: var(--tm-font-size-sm);
+}
+
+.tm-context-usage:focus-visible {
+    outline: 2px solid var(--tm-color-primary);
+    outline-offset: 2px;
+}
+
+.tm-context-usage--over-budget {
+    border-color: var(--tm-color-danger-soft-border);
+}
+
+/* ── Heading and the sighted summary ─────────────────────────────────────── */
+
+.tm-context-usage__title {
+    margin: 0;
+    color: var(--tm-color-text);
+    font-size: var(--tm-font-size-md);
+    font-weight: var(--tm-font-weight-semibold);
+    line-height: var(--tm-line-height-tight);
+}
+
+.tm-context-usage__readout {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: var(--tm-space-2);
+    margin: 0;
+    color: var(--tm-color-text-secondary);
+    font-variant-numeric: tabular-nums;
+}
+
+.tm-context-usage__amount {
+    font-weight: var(--tm-font-weight-medium);
+}
+
+.tm-context-usage__percent {
+    color: var(--tm-color-text);
+    font-weight: var(--tm-font-weight-semibold);
+}
+
+/* ── Cache hit and the over-budget line ──────────────────────────────────── */
+
+.tm-context-usage__cache,
+.tm-context-usage__over-budget {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-1);
+    margin: 0;
+    font-size: var(--tm-font-size-xs);
+}
+
+.tm-context-usage__cache {
+    color: var(--tm-color-text-secondary);
+}
+
+.tm-context-usage__cache-icon,
+.tm-context-usage__over-icon {
+    display: inline-flex;
+    flex: 0 0 auto;
+}
+
+.tm-context-usage__cache-text,
+.tm-context-usage__over-text {
+    min-inline-size: 0;
+    overflow-wrap: anywhere;
+}
+
+.tm-context-usage__over-budget {
+    color: var(--tm-color-danger-text);
+    font-weight: var(--tm-font-weight-medium);
+}
+
+/* ── The meter and its pictures ──────────────────────────────────────────── */
+
+.tm-context-usage__meter {
+    display: block;
+    min-inline-size: 0;
+}
+
+.tm-context-usage__meter--sr {
+    margin: 0;
+}
+
+.tm-context-usage__bar {
+    display: flex;
+    inline-size: 100%;
+    block-size: var(--tm-context-usage-bar-block-size);
+    overflow: hidden;
+    background: var(--tm-color-surface-muted);
+    border-radius: var(--tm-radius-full);
+}
+
+.tm-context-usage__segment {
+    flex: 0 0 auto;
+    block-size: 100%;
+    background: var(--tm-context-usage-tone, var(--tm-context-usage-other));
+}
+
+.tm-context-usage__segment--system,
+.tm-context-usage__cell--system,
+.tm-context-usage__swatch--system {
+    --tm-context-usage-tone: var(--tm-context-usage-system);
+}
+
+.tm-context-usage__segment--tools,
+.tm-context-usage__cell--tools,
+.tm-context-usage__swatch--tools {
+    --tm-context-usage-tone: var(--tm-context-usage-tools);
+}
+
+.tm-context-usage__segment--memory,
+.tm-context-usage__cell--memory,
+.tm-context-usage__swatch--memory {
+    --tm-context-usage-tone: var(--tm-context-usage-memory);
+}
+
+.tm-context-usage__segment--files,
+.tm-context-usage__cell--files,
+.tm-context-usage__swatch--files {
+    --tm-context-usage-tone: var(--tm-context-usage-files);
+}
+
+.tm-context-usage__segment--chat,
+.tm-context-usage__cell--chat,
+.tm-context-usage__swatch--chat {
+    --tm-context-usage-tone: var(--tm-context-usage-chat);
+}
+
+.tm-context-usage__segment--results,
+.tm-context-usage__cell--results,
+.tm-context-usage__swatch--results {
+    --tm-context-usage-tone: var(--tm-context-usage-results);
+}
+
+.tm-context-usage__segment--other,
+.tm-context-usage__cell--other,
+.tm-context-usage__swatch--other {
+    --tm-context-usage-tone: var(--tm-context-usage-other);
+}
+
+/* The highlight is shared by BOTH paths — a hovered grid cell and a focused legend row mark the same section —
+   and it is a ring rather than a tone, so it never hides which tone the section has. */
+.tm-context-usage__segment--highlight {
+    box-shadow: inset 0 0 0 2px var(--tm-color-text);
+}
+
+.tm-context-usage__grid {
+    display: grid;
+    grid-template-columns: repeat(10, 1fr);
+    gap: var(--tm-context-usage-cell-gap);
+    inline-size: 100%;
+}
+
+.tm-context-usage__cell {
+    block-size: var(--tm-context-usage-cell-size);
+    background: var(--tm-context-usage-tone, var(--tm-color-surface-muted));
+    border-radius: 1px;
+}
+
+.tm-context-usage__cell--empty {
+    background: var(--tm-color-surface-muted);
+}
+
+.tm-context-usage__cell--used {
+    border-radius: 1px;
+}
+
+.tm-context-usage__cell--highlight {
+    box-shadow: inset 0 0 0 2px var(--tm-color-text);
+}
+
+.tm-context-usage__treemap {
+    block-size: var(--tm-context-usage-treemap-block-size);
+    min-inline-size: 0;
+}
+
+/* ── The legend table ───────────────────────────────────────────────────── */
+
+.tm-context-usage__table {
+    inline-size: 100%;
+    border-collapse: collapse;
+    text-align: start;
+}
+
+.tm-context-usage__table thead th {
+    padding-block-end: var(--tm-space-1);
+    border-block-end: 1px solid var(--tm-border-color);
+    color: var(--tm-color-text-secondary);
+    font-size: var(--tm-font-size-xs);
+    font-weight: var(--tm-font-weight-medium);
+    text-align: start;
+}
+
+.tm-context-usage__row > th,
+.tm-context-usage__row > td {
+    padding-block: var(--tm-space-1);
+    vertical-align: top;
+}
+
+.tm-context-usage__row--highlight > th,
+.tm-context-usage__row--highlight > td {
+    background: var(--tm-color-surface-hover);
+}
+
+/* The row header stays a TABLE CELL: making the <th> a flex container takes it out of the table layout and
+   the browser wraps it in an anonymous cell whose width collapses to the content's minimum (a 74 px label
+   column on a 375 px phone). The flex row therefore lives in an inner span. */
+.tm-context-usage__section {
+    font-weight: var(--tm-font-weight-normal);
+    text-align: start;
+    vertical-align: top;
+}
+
+.tm-context-usage__section-inner {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--tm-space-1);
+    min-inline-size: 0;
+}
+
+.tm-context-usage__swatch {
+    flex: 0 0 auto;
+    inline-size: var(--tm-context-usage-swatch-size);
+    block-size: var(--tm-context-usage-swatch-size);
+    border-radius: var(--tm-radius-full);
+    background: var(--tm-context-usage-tone, var(--tm-context-usage-other));
+}
+
+.tm-context-usage__swatch--highlight {
+    box-shadow: 0 0 0 2px var(--tm-color-text);
+}
+
+.tm-context-usage__label {
+    min-inline-size: 0;
+    overflow-wrap: anywhere;
+}
+
+.tm-context-usage__toggle {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--tm-space-1);
+    min-block-size: var(--tm-space-6);
+    padding: 0;
+    background: none;
+    border: 0;
+    color: inherit;
+    font: inherit;
+    text-align: start;
+    cursor: pointer;
+}
+
+.tm-context-usage__toggle:focus-visible,
+.tm-context-usage__remove:focus-visible,
+.tm-context-usage__item-remove:focus-visible,
+.tm-context-usage__compact:focus-visible {
+    outline: 2px solid var(--tm-color-primary);
+    outline-offset: 2px;
+}
+
+.tm-context-usage__count {
+    color: var(--tm-color-text-secondary);
+    font-size: var(--tm-font-size-xs);
+}
+
+.tm-context-usage__tag {
+    padding-inline: var(--tm-space-1);
+    border: 1px solid var(--tm-border-color);
+    border-radius: var(--tm-radius-full);
+    color: var(--tm-color-text-secondary);
+    font-size: var(--tm-font-size-xs);
+    white-space: nowrap;
+}
+
+.tm-context-usage__tag--required {
+    border-color: var(--tm-color-primary-soft-border);
+    color: var(--tm-color-primary-text);
+}
+
+.tm-context-usage__tag--summarized {
+    border-color: var(--tm-color-warning-soft-border);
+    color: var(--tm-color-warning-text);
+}
+
+.tm-context-usage__tag--omitted {
+    border-color: var(--tm-color-danger-soft-border);
+    color: var(--tm-color-danger-text);
+}
+
+.tm-context-usage__tokens,
+.tm-context-usage__share {
+    padding-inline-start: var(--tm-space-2);
+    font-variant-numeric: tabular-nums;
+    text-align: end;
+    white-space: nowrap;
+}
+
+.tm-context-usage__table thead th:not(:first-child) {
+    padding-inline-start: var(--tm-space-2);
+}
+
+.tm-context-usage__actions {
+    inline-size: 1px;
+    white-space: nowrap;
+}
+
+.tm-context-usage__remove,
+.tm-context-usage__item-remove {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-inline-size: var(--tm-space-6);
+    min-block-size: var(--tm-space-6);
+    padding: 0;
+    background: none;
+    border: 0;
+    border-radius: var(--tm-radius-sm);
+    color: var(--tm-color-text-secondary);
+    cursor: pointer;
+}
+
+.tm-context-usage__remove:hover,
+.tm-context-usage__item-remove:hover {
+    color: var(--tm-color-danger-text);
+}
+
+/* ── The expanded entry list ────────────────────────────────────────────── */
+
+.tm-context-usage__detail {
+    border-block-end: 1px solid var(--tm-border-color);
+}
+
+.tm-context-usage__detail-cell {
+    padding-block: 0 var(--tm-space-2);
+    padding-inline-start: var(--tm-space-4);
+}
+
+.tm-context-usage__items {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-1);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.tm-context-usage__item {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--tm-space-2);
+}
+
+.tm-context-usage__item-label {
+    min-inline-size: 0;
+    overflow-wrap: anywhere;
+    color: var(--tm-color-text-secondary);
+}
+
+.tm-context-usage__item-tokens {
+    margin-inline-start: auto;
+    color: var(--tm-color-text-secondary);
+    font-variant-numeric: tabular-nums;
+}
+
+/* ── The compaction action ──────────────────────────────────────────────── */
+
+.tm-context-usage__actions-bar {
+    display: flex;
+    justify-content: flex-end;
+}
+
+.tm-context-usage__compact {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--tm-space-1);
+    min-block-size: var(--tm-space-8);
+    padding-inline: var(--tm-space-3);
+    background: var(--tm-color-surface-secondary);
+    border: 1px solid var(--tm-border-color);
+    border-radius: var(--tm-radius-md);
+    color: var(--tm-color-text);
+    font: inherit;
+    cursor: pointer;
+}
+
+.tm-context-usage__compact:disabled {
+    color: var(--tm-color-text-disabled);
+    cursor: not-allowed;
+}
+
+.tm-context-usage__compact-text {
+    white-space: nowrap;
+}
+
+/* ── Empty state ────────────────────────────────────────────────────────── */
+
+.tm-context-usage__empty {
+    margin: 0;
+    color: var(--tm-color-text-secondary);
+}
+
+/* ── Coarse pointers ─────────────────────────────────────────────────────── */
+
+@media (pointer: coarse) {
+    .tm-context-usage__toggle,
+    .tm-context-usage__remove,
+    .tm-context-usage__item-remove,
+    .tm-context-usage__compact {
+        min-block-size: var(--tm-touch-target);
+    }
+
+    .tm-context-usage__remove,
+    .tm-context-usage__item-remove {
+        min-inline-size: var(--tm-touch-target);
+    }
+
+    .tm-context-usage__item {
+        min-block-size: var(--tm-touch-target);
+    }
+
+    .tm-context-usage__item-label {
+        flex: 1 1 auto;
+        min-inline-size: 0;
+    }
+}
+
+/* ── Forced colors ──────────────────────────────────────────────────────── */
+
+@media (forced-colors: active) {
+    .tm-context-usage:focus-visible {
+        outline: 2px solid Highlight;
+        outline-color: Highlight;
+    }
+
+    .tm-context-usage__toggle:focus-visible {
+        outline: 2px solid Highlight;
+        outline-color: Highlight;
+    }
+
+    .tm-context-usage__remove:focus-visible {
+        outline: 2px solid Highlight;
+        outline-color: Highlight;
+    }
+
+    .tm-context-usage__item-remove:focus-visible {
+        outline: 2px solid Highlight;
+        outline-color: Highlight;
+    }
+
+    .tm-context-usage__compact:focus-visible {
+        outline: 2px solid Highlight;
+        outline-color: Highlight;
+    }
+
+    /* A tone-coded segment, cell and swatch are painted with a background ONLY, so a forced-colours palette
+       collapses them into one system colour and the bar shows neither its parts nor its length. Opting those
+       fills out keeps the distinction; the track and the free cells get a system border so the extents survive. */
+    .tm-context-usage__segment {
+        forced-color-adjust: none;
+    }
+
+    .tm-context-usage__cell--used {
+        forced-color-adjust: none;
+    }
+
+    .tm-context-usage__swatch {
+        forced-color-adjust: none;
+    }
+
+    .tm-context-usage__bar {
+        border: 1px solid CanvasText;
+    }
+
+    .tm-context-usage__cell--empty {
+        border: 1px solid CanvasText;
+    }
+
+    .tm-context-usage--over-budget {
+        border-color: CanvasText;
+        border-width: 2px;
+    }
+}

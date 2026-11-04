@@ -1,0 +1,24 @@
+{
+  "kind": "Enum",
+  "category": "AI",
+  "namespace": "Tempo.Blazor.AI.Models",
+  "description": "How TmContextUsage presents the context window: Bar (one stacked horizontal bar, the default), Grid (a hundred cells, one per percent of the budget, so the free headroom is visible) or Treemap (the sections as areas, through the core TmChart). The presentation only changes the PICTURE: the legend table, the meter and the empty state are identical in every variant, so a host can switch it per layout without losing a fact or a control.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/AI/ContextUsageVariant.cs",
+  "documentationStatus": "generated",
+  "itemName": "ContextUsageVariant",
+  "members": [
+    {
+      "name": "Bar",
+      "description": "One stacked bar whose segments are the sections. The default."
+    },
+    {
+      "name": "Grid",
+      "description": "A hundred cells, one per percent of the budget; used cells carry the tone of their section."
+    },
+    {
+      "name": "Treemap",
+      "description": "A treemap of the sections (and their items) drawn by the core TmChart."
+    }
+  ]
+}

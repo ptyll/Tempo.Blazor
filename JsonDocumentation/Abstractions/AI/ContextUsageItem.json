@@ -1,0 +1,11 @@
+{
+  "kind": "Class",
+  "category": "AI",
+  "namespace": "Tempo.Blazor.AI.Models",
+  "description": "One entry inside a ContextUsageSection — a single tool definition, an attached file, one tool result — so a reader can see what the tokens of a section actually are and (when the host allows it) drop one entry without dropping the whole section. The item is the host's data: Label is rendered as text and never localised, and Tokens is counted as reported (a negative value counts as nothing). An item is a BREAKDOWN of its section: when the section reports its own total the items are the detail of that total, never a second measurement.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/AI/ContextUsageItem.cs",
+  "documentationStatus": "generated",
+  "itemName": "ContextUsageItem",
+  "usageExample": "var items = new ContextUsageItem[]\n{\n    new(\"search\", \"Web search\") { Tokens = 500, CanRemove = true },\n    new(\"code\", \"Code interpreter\") { Tokens = 300 },\n};"
+}

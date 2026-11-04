@@ -1,0 +1,11 @@
+{
+  "kind": "Class",
+  "category": "AI",
+  "namespace": "Tempo.Blazor.AI.Models",
+  "description": "One part of a context window — the system prompt, the tool definitions, the memory, the attachments, the conversation, the tool results — with how many tokens it occupies, whether it is required, whether the provider has already summarised or dropped it, and the entries it is made of. Tokens is the section's authoritative total; when it reports nothing the section's tokens are the sum of what its Items report (see ContextUsageMath.TokensOf). The three state words are independent facts, not one enum: a summarised section can still be required, and an omitted section still keeps its row so the reader can see what is no longer being sent.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/AI/ContextUsageSection.cs",
+  "documentationStatus": "generated",
+  "itemName": "ContextUsageSection",
+  "usageExample": "var sections = new ContextUsageSection[]\n{\n    new(\"system\", \"System prompt\") { Kind = ContextUsageKind.System, Tokens = 1_200, IsRequired = true },\n    new(\"files\", \"Files\")\n    {\n        Kind = ContextUsageKind.Files,\n        Tokens = 5_000,\n        CanRemove = true,\n        Items = [new ContextUsageItem(\"contract\", \"Contract.pdf\") { Tokens = 4_000, CanRemove = true }],\n    },\n    new(\"results\", \"Tool results\") { Kind = ContextUsageKind.Results, Tokens = 600, IsOmitted = true },\n};"
+}

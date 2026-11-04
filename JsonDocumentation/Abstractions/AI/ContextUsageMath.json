@@ -1,0 +1,11 @@
+{
+  "kind": "Class",
+  "category": "AI",
+  "namespace": "Tempo.Blazor.AI.Models",
+  "description": "The arithmetic of a ContextUsageSnapshot: what a section contributes, what the whole context measures, how the rounded shares stay honest, whether the budget is exceeded and which sections a compaction can actually drop. Nothing here touches markup, so the five decisions that are easy to get wrong are testable on their own — and a host computing the same numbers elsewhere cannot drift from the component. Shares uses the largest-remainder method, so the rounded percentages add up to exactly 100 (or keep the plain floors when the entries do not account for the whole total).",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/AI/ContextUsageMath.cs",
+  "documentationStatus": "generated",
+  "itemName": "ContextUsageMath",
+  "usageExample": "var used = ContextUsageMath.UsedTokens(snapshot);          // 14 000\nvar percent = ContextUsageMath.BudgetPercent(snapshot);    // 88, null when the budget is unknown\nvar over = ContextUsageMath.IsOverBudget(snapshot);        // false at exactly 100 %\nvar shares = ContextUsageMath.Shares([1_200, 800, 6_000], used);  // 9, 6, 43 … sums to 100\nvar compactable = ContextUsageMath.IsCompactable(snapshot);"
+}

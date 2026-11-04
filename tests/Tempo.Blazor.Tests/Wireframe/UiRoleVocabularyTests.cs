@@ -92,8 +92,9 @@ public sealed class UiRoleVocabularyTests
         // then 136 for `segmented-control` (plan ff043b2e phase 8),
         // then 137 for `agent-plan` (plan 3e96f6d8 phase 2),
         // then 139 for the agent-run pair `agent-run-tree` and `agent-monitor` (plan 3e96f6d8 phase 3),
-        // then 140 for `model-picker` (plan 3e96f6d8 phase 4).
-        vocabulary.GetAll().Should().HaveCountLessThanOrEqualTo(140);
+        // then 140 for `model-picker` (plan 3e96f6d8 phase 4),
+        // then 141 for `context-usage` (plan 3e96f6d8 phase 5).
+        vocabulary.GetAll().Should().HaveCountLessThanOrEqualTo(141);
 
         vocabulary.Find("search-input")!.Slug.Should().Be("search-input");
         vocabulary.Find("TmDecimalInput")!.Slug.Should().Be("decimal-input");

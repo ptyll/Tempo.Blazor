@@ -1,0 +1,11 @@
+{
+  "kind": "Class",
+  "category": "AI",
+  "namespace": "Tempo.Blazor.AI.Models",
+  "description": "A removal the reader asked for, reported by TmContextUsage.OnRemoveItem. The component never edits the snapshot it renders: it says WHAT the reader wants gone and the host decides whether and how to apply it (drop the section, summarise it, re-request the prompt with the entry removed). Item tells the two shapes apart: a null item is a SECTION removal (the whole ContextUsageSection named by SectionKey), a non-null item is a single ENTRY of that section. IsSection answers the same question in one word.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/AI/ContextUsageRemoval.cs",
+  "documentationStatus": "generated",
+  "itemName": "ContextUsageRemoval",
+  "usageExample": "private Task OnRemoveAsync(ContextUsageRemoval removal)\n{\n    // Item is null: the reader wants the whole section gone.\n    // Otherwise it names the single entry inside that section.\n    return removal.IsSection ? DropSectionAsync(removal.SectionKey) : DropItemAsync(removal);\n}"
+}

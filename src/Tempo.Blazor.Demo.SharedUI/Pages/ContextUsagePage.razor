@@ -1,0 +1,284 @@
+@page "/context-usage"
+@using System.Globalization
+@using Tempo.Blazor.AI.Models
+@using Tempo.Blazor.Components.AI
+@using Tempo.Blazor.Components.Buttons
+@inject ITmLocalizer Loc
+
+<PageTitle>@Loc["TmContextUsageDemo_PageTitle"] – Tempo.Blazor</PageTitle>
+
+<div class="mb-8" data-testid="context-usage-page-header">
+    <h1 class="text-3xl font-bold text-slate-900 dark:text-white mb-2">@Loc["TmContextUsageDemo_PageTitle"]</h1>
+    <p class="text-slate-600 dark:text-slate-400">@Loc["TmContextUsageDemo_PageDescription"]</p>
+</div>
+
+@* The panel at full strength. The page owns the snapshot: every removal and the compaction are applied HERE, so
+   the component stays the controlled surface it is documented to be (it reports the intent and never edits the
+   data). "New turn" grows the conversation past the budget, which is what the panel's one live region announces. *@
+<section class="demo-section mb-8" data-testid="context-usage-basic-section">
+    <h2 class="text-lg font-semibold text-slate-900 dark:text-white mb-2">@Loc["TmContextUsageDemo_BasicTitle"]</h2>
+    <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">@Loc["TmContextUsageDemo_BasicHint"]</p>
+
+    <div class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
+        <TmContextUsage Snapshot="_snapshot"
+                        Title="@Loc["TmContextUsageDemo_PanelTitle"]"
+                        OnRemoveItem="RemoveAsync"
+                        OnCompact="CompactAsync"
+                        DataTestId="context-usage-basic" />
+
+        <div class="flex flex-col gap-3" data-testid="context-usage-readout-panel">
+            <h3 class="text-sm font-semibold text-slate-900 dark:text-white">@Loc["TmContextUsageDemo_ReadoutTitle"]</h3>
+            <p class="text-sm text-slate-700 dark:text-slate-300" data-testid="context-usage-readout">@ReadoutText</p>
+            <div class="flex flex-wrap gap-2">
+                <TmButton Variant="ButtonVariant.Primary" Size="ButtonSize.Sm"
+                          data-testid="context-usage-turn" OnClick="AddTurn">
+                    @Loc["TmContextUsageDemo_NewTurn"]
+                </TmButton>
+                <TmButton Variant="ButtonVariant.Ghost" Size="ButtonSize.Sm"
+                          data-testid="context-usage-reset" OnClick="Reset">
+                    @Loc["TmContextUsageDemo_Reset"]
+                </TmButton>
+            </div>
+            <h3 class="text-sm font-semibold text-slate-900 dark:text-white mt-2">@Loc["TmContextUsageDemo_LogTitle"]</h3>
+            @if (_log.Count == 0)
+            {
+                <p class="text-xs text-slate-500 dark:text-slate-400" data-testid="context-usage-log-empty">@Loc["TmContextUsageDemo_LogEmpty"]</p>
+            }
+            else
+            {
+                <ul class="flex flex-col gap-1 text-xs text-slate-600 dark:text-slate-400"
+                    data-testid="context-usage-log">
+                    @foreach (var entry in _log)
+                    {
+                        <li data-testid="context-usage-log-entry">@entry</li>
+                    }
+                </ul>
+            }
+        </div>
+    </div>
+</section>
+
+@* The same snapshot in the other two presentations: the grid shows the free headroom, the treemap shows the
+   sections as areas. The legend, the meter and the actions are identical in all three. *@
+<section class="demo-section mb-8" data-testid="context-usage-variants-section">
+    <h2 class="text-lg font-semibold text-slate-900 dark:text-white mb-2">@Loc["TmContextUsageDemo_VariantsTitle"]</h2>
+    <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">@Loc["TmContextUsageDemo_VariantsHint"]</p>
+
+    <div class="grid gap-6 md:grid-cols-2">
+        <div>
+            <h3 class="text-sm font-semibold text-slate-900 dark:text-white mb-2">@Loc["TmContextUsageDemo_GridTitle"]</h3>
+            <TmContextUsage Snapshot="_snapshot"
+                            Variant="ContextUsageVariant.Grid"
+                            Title="@Loc["TmContextUsageDemo_PanelTitle"]"
+                            DataTestId="context-usage-grid" />
+        </div>
+        <div>
+            <h3 class="text-sm font-semibold text-slate-900 dark:text-white mb-2">@Loc["TmContextUsageDemo_TreemapTitle"]</h3>
+            <TmContextUsage Snapshot="_snapshot"
+                            Variant="ContextUsageVariant.Treemap"
+                            Title="@Loc["TmContextUsageDemo_PanelTitle"]"
+                            DataTestId="context-usage-treemap" />
+        </div>
+    </div>
+</section>
+
+@* The edge states: nothing reported, over budget, an unknown context window and a snapshot with no cache
+   measurement. Each card is the component with nothing but the snapshot it is given. *@
+<section class="demo-section mb-8" data-testid="context-usage-edge-section">
+    <h2 class="text-lg font-semibold text-slate-900 dark:text-white mb-2">@Loc["TmContextUsageDemo_EdgeTitle"]</h2>
+    <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">@Loc["TmContextUsageDemo_EdgeHint"]</p>
+
+    <div class="grid gap-6 md:grid-cols-2">
+        <div>
+            <h3 class="text-sm font-semibold text-slate-900 dark:text-white mb-2">@Loc["TmContextUsageDemo_EdgeEmptyTitle"]</h3>
+            <p class="text-xs text-slate-500 dark:text-slate-400 mb-2">@Loc["TmContextUsageDemo_EdgeEmptyHint"]</p>
+            <TmContextUsage DataTestId="context-usage-edge-empty" />
+        </div>
+        <div>
+            <h3 class="text-sm font-semibold text-slate-900 dark:text-white mb-2">@Loc["TmContextUsageDemo_EdgeOverTitle"]</h3>
+            <p class="text-xs text-slate-500 dark:text-slate-400 mb-2">@Loc["TmContextUsageDemo_EdgeOverHint"]</p>
+            <TmContextUsage Snapshot="_overBudget" DataTestId="context-usage-edge-over" />
+        </div>
+        <div>
+            <h3 class="text-sm font-semibold text-slate-900 dark:text-white mb-2">@Loc["TmContextUsageDemo_EdgeUnknownTitle"]</h3>
+            <p class="text-xs text-slate-500 dark:text-slate-400 mb-2">@Loc["TmContextUsageDemo_EdgeUnknownHint"]</p>
+            <TmContextUsage Snapshot="_unknownBudget" DataTestId="context-usage-edge-unknown" />
+        </div>
+        <div>
+            <h3 class="text-sm font-semibold text-slate-900 dark:text-white mb-2">@Loc["TmContextUsageDemo_EdgeNoCacheTitle"]</h3>
+            <p class="text-xs text-slate-500 dark:text-slate-400 mb-2">@Loc["TmContextUsageDemo_EdgeNoCacheHint"]</p>
+            <TmContextUsage Snapshot="_noCache" DataTestId="context-usage-edge-no-cache" />
+        </div>
+    </div>
+</section>
+
+@code {
+    /// <summary>The live snapshot the reader edits through the panel's own actions.</summary>
+    private ContextUsageSnapshot _snapshot = BuildInitial();
+
+    /// <summary>A small window that is already over its budget.</summary>
+    private ContextUsageSnapshot _overBudget = new()
+    {
+        BudgetTokens = 8_000,
+        Sections =
+        [
+            new("system", "System prompt") { Kind = ContextUsageKind.System, Tokens = 1_200, IsRequired = true },
+            new("chat", "Chat history") { Kind = ContextUsageKind.Chat, Tokens = 7_400 },
+        ],
+    };
+
+    /// <summary>A snapshot whose model reports no context window.</summary>
+    private ContextUsageSnapshot _unknownBudget = new()
+    {
+        Sections =
+        [
+            new("system", "System prompt") { Kind = ContextUsageKind.System, Tokens = 900, IsRequired = true },
+            new("files", "Files") { Kind = ContextUsageKind.Files, Tokens = 2_600 },
+        ],
+    };
+
+    /// <summary>A snapshot with no cache measurement at all.</summary>
+    private ContextUsageSnapshot _noCache = new()
+    {
+        BudgetTokens = 32_000,
+        Sections =
+        [
+            new("memory", "Memory") { Kind = ContextUsageKind.Memory, Tokens = 1_800 },
+            new("chat", "Chat history") { Kind = ContextUsageKind.Chat, Tokens = 4_200 },
+        ],
+    };
+
+    /// <summary>The removal and compaction log, newest first.</summary>
+    private readonly List<string> _log = [];
+
+    /// <summary>
+    /// The six sections of a working conversation, 14 000 tokens of a 16 000-token budget with a 62 % cache hit.
+    /// </summary>
+    private static ContextUsageSnapshot BuildInitial() => new()
+    {
+        BudgetTokens = 16_000,
+        CacheHit = 0.62,
+        Sections =
+        [
+            new("system", "System prompt") { Kind = ContextUsageKind.System, Tokens = 1_200, IsRequired = true },
+            new("tools", "Tools")
+            {
+                Kind = ContextUsageKind.Tools,
+                Tokens = 800,
+                CanRemove = true,
+                Items =
+                [
+                    new("search", "Web search") { Tokens = 500, CanRemove = true },
+                    new("code", "Code interpreter") { Tokens = 300, CanRemove = true },
+                ],
+            },
+            new("memory", "Memory") { Kind = ContextUsageKind.Memory, Tokens = 400, IsSummarized = true },
+            new("files", "Files")
+            {
+                Kind = ContextUsageKind.Files,
+                Tokens = 5_000,
+                CanRemove = true,
+                Items =
+                [
+                    new("contract", "Contract.pdf") { Tokens = 4_000, CanRemove = true },
+                    new("report", "Report.pdf") { Tokens = 1_000 },
+                ],
+            },
+            new("chat", "Chat history") { Kind = ContextUsageKind.Chat, Tokens = 6_000 },
+            new("results", "Tool results") { Kind = ContextUsageKind.Results, Tokens = 600, IsOmitted = true },
+        ],
+    };
+
+    /// <summary>The page's own read-out: the numbers the panel measures, computed with the same public helper.</summary>
+    private string ReadoutText
+    {
+        get
+        {
+            var culture = CultureInfo.CurrentCulture;
+            var percent = ContextUsageMath.BudgetPercent(_snapshot) is { } value
+                ? (value / 100d).ToString("P0", culture)
+                : Loc["TmContextUsageDemo_NoBudget"];
+
+            return string.Format(
+                culture,
+                Loc["TmContextUsageDemo_Readout"],
+                ContextUsageMath.UsedTokens(_snapshot).ToString("N0", culture),
+                _snapshot.BudgetTokens.ToString("N0", culture),
+                percent,
+                (_snapshot.Sections?.Count ?? 0).ToString("N0", culture));
+        }
+    }
+
+    /// <summary>Applies a removal the panel reported: the section, or one of its entries.</summary>
+    private Task RemoveAsync(ContextUsageRemoval removal)
+    {
+        var sections = _snapshot.Sections ?? [];
+
+        if (removal.Item is null)
+        {
+            _snapshot = _snapshot with
+            {
+                Sections = sections.Where(section => section.Key != removal.SectionKey).ToList(),
+            };
+            _log.Insert(0, Loc["TmContextUsageDemo_LogRemovedSection", removal.SectionLabel]);
+        }
+        else
+        {
+            var item = removal.Item;
+            _snapshot = _snapshot with
+            {
+                Sections = sections.Select(section => section.Key != removal.SectionKey
+                    ? section
+                    : section with
+                    {
+                        Items = (section.Items ?? []).Where(entry => entry.Id != item.Id).ToList(),
+                        Tokens = Math.Max(0, section.Tokens - item.Tokens),
+                    }).ToList(),
+            };
+            _log.Insert(0, Loc["TmContextUsageDemo_LogRemovedItem", item.Label, removal.SectionLabel]);
+        }
+
+        return Task.CompletedTask;
+    }
+
+    /// <summary>Applies a compaction: every optional section is summarised down to a fifth of its tokens.</summary>
+    private Task CompactAsync()
+    {
+        var sections = _snapshot.Sections ?? [];
+        _snapshot = _snapshot with
+        {
+            Sections = sections.Select(section => ContextUsageMath.IsCompactable(section)
+                ? section with
+                {
+                    IsSummarized = true,
+                    Items = null,
+                    Tokens = (int)Math.Ceiling(ContextUsageMath.TokensOf(section) * 0.2),
+                }
+                : section).ToList(),
+        };
+        _log.Insert(0, Loc["TmContextUsageDemo_LogCompacted"]);
+        return Task.CompletedTask;
+    }
+
+    /// <summary>Simulates the next conversation turn, which pushes the context past its budget.</summary>
+    private Task AddTurn()
+    {
+        var sections = _snapshot.Sections ?? [];
+        _snapshot = _snapshot with
+        {
+            Sections = sections.Select(section => section.Key == "chat"
+                ? section with { Tokens = section.Tokens + 2_500 }
+                : section).ToList(),
+        };
+        _log.Insert(0, Loc["TmContextUsageDemo_LogTurn"]);
+        return Task.CompletedTask;
+    }
+
+    /// <summary>Restores the initial snapshot and empties the log.</summary>
+    private Task Reset()
+    {
+        _snapshot = BuildInitial();
+        _log.Clear();
+        return Task.CompletedTask;
+    }
+}

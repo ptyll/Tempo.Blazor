@@ -1,0 +1,40 @@
+{
+  "kind": "Enum",
+  "category": "AI",
+  "namespace": "Tempo.Blazor.AI.Models",
+  "description": "What a section of the context window holds. The kind selects the section's TONE (its own --tm-context-usage-* knob on the component root) and nothing else — the label stays the host's word for the section, so a host is free to call the Files section \"Attachments\". Other is the default, so a section that names no kind still paints a stable, distinct tone instead of falling through to a missing one.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/AI/ContextUsageKind.cs",
+  "documentationStatus": "generated",
+  "itemName": "ContextUsageKind",
+  "members": [
+    {
+      "name": "Other",
+      "description": "A section the host did not classify (the default)."
+    },
+    {
+      "name": "System",
+      "description": "The system prompt and the standing instructions of the conversation."
+    },
+    {
+      "name": "Tools",
+      "description": "The tool / function definitions offered to the model."
+    },
+    {
+      "name": "Memory",
+      "description": "Long-term memory, retrieved facts or a project knowledge base."
+    },
+    {
+      "name": "Files",
+      "description": "Attached files, documents or images."
+    },
+    {
+      "name": "Chat",
+      "description": "The conversation so far (the reader's turns and the model's answers)."
+    },
+    {
+      "name": "Results",
+      "description": "Tool results and other returned payloads."
+    }
+  ]
+}

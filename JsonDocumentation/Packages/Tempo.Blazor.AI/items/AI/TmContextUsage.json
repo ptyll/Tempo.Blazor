@@ -1,0 +1,94 @@
+{
+  "itemName": "TmContextUsage",
+  "kind": "Component",
+  "category": "AI",
+  "namespace": "Tempo.Blazor.Components.AI",
+  "description": "What a context window is made of: the system prompt, the tools, the memory, the files, the conversation and the tool results, measured against the model's budget. The presentation (Variant) changes only the PICTURE — one stacked bar (the default), a hundred cells over the budget so the free headroom is visible, or the core TmChart treemap. Every picture is decorative (aria-hidden); the legend table under it is the representation a reader, a screen reader and a copy/paste get, and it carries the label, the tokens, the whole percentage and the localized Required / Summarized / Omitted words of every section — never a colour-only cue. The total is a single role=\"meter\" element carrying the invariant machine values and a localized aria-valuetext, so the amount is heard once (the visible read-out above it is sighted-only duplication). The percentages of the sections come from the largest-remainder split (ContextUsageMath.Shares), so they add up to exactly 100 %; a section with tokens whose rounded share is zero reads \"< 1 %\" and still paints a visible sliver. A section with Items expands into its entries through a native disclosure button, and a removable section or entry offers the localized Remove action. The component NEVER edits the snapshot: it reports the reader's intent through OnRemoveItem (the whole section when ContextUsageRemoval.Item is null, one entry otherwise) and OnCompact, and the host decides what to do; because the pressed control can disappear with the removal, the focus is handed back to the section's own disclosure button — or to the component root when that is gone too. The component is transport-agnostic and declares no motion at all: it renders the snapshot it is given and never polls. The ONE polite live region announces a budget CROSSING only, so a page load stays silent.",
+  "packageId": "Tempo.Blazor.AI",
+  "sourcePath": "src/Tempo.Blazor.AI/Components/AI/TmContextUsage.razor",
+  "documentationStatus": "documented",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.AI",
+    "@using Tempo.Blazor.AI.Models"
+  ],
+  "examples": [
+    {
+      "title": "A context window a host measures",
+      "code": "<TmContextUsage Snapshot=\"@snapshot\"\n                Title=\"Context window\"\n                OnRemoveItem=\"OnRemoveAsync\"\n                OnCompact=\"CompactAsync\" />\n\n@code {\n    private ContextUsageSnapshot snapshot = new()\n    {\n        BudgetTokens = 16_000,\n        CacheHit = 0.62,\n        Sections =\n        [\n            new(\"system\", \"System prompt\") { Kind = ContextUsageKind.System, Tokens = 1_200, IsRequired = true },\n            new(\"files\", \"Files\")\n            {\n                Kind = ContextUsageKind.Files,\n                Tokens = 5_000,\n                CanRemove = true,\n                Items = [new ContextUsageItem(\"contract\", \"Contract.pdf\") { Tokens = 4_000, CanRemove = true }],\n            },\n            new(\"chat\", \"Chat history\") { Kind = ContextUsageKind.Chat, Tokens = 6_000 },\n        ],\n    };\n\n    private Task OnRemoveAsync(ContextUsageRemoval removal)\n    {\n        // removal.Item is null for a whole section, otherwise it names the single entry.\n        return Task.CompletedTask;\n    }\n\n    private Task CompactAsync() => Task.CompletedTask;\n}"
+    },
+    {
+      "title": "The budget as a hundred-cell grid",
+      "code": "<TmContextUsage Snapshot=\"@snapshot\" Variant=\"ContextUsageVariant.Grid\" />"
+    },
+    {
+      "title": "A treemap of the same snapshot",
+      "code": "<TmContextUsage Snapshot=\"@snapshot\" Variant=\"ContextUsageVariant.Treemap\" />"
+    },
+    {
+      "title": "Read-only, with a host-supplied name and culture",
+      "code": "<TmContextUsage Snapshot=\"@snapshot\"\n                ShowTitle=\"false\"\n                AriaLabel=\"@Loc[\"Chat_WorkingMemory\"]\"\n                Culture=\"@CultureInfo.GetCultureInfo(\"cs-CZ\")\" />"
+    }
+  ],
+  "parameters": [
+    {
+      "name": "Snapshot",
+      "type": "ContextUsageSnapshot?",
+      "isRequired": false,
+      "description": "The snapshot to render — the budget, the sections and the cache-hit share. Null (or a snapshot with no sections) renders the localized empty state instead of an empty chart. The component never mutates it and never polls: a host pushes a new instance as the conversation grows."
+    },
+    {
+      "name": "Variant",
+      "type": "ContextUsageVariant",
+      "isRequired": false,
+      "description": "How the context is presented. Default ContextUsageVariant.Bar (one stacked bar); the grid shows a hundred cells over the budget and the treemap draws the sections through the core TmChart. The legend table, the meter and the empty state are identical in every variant."
+    },
+    {
+      "name": "OnRemoveItem",
+      "type": "EventCallback<ContextUsageRemoval>",
+      "isRequired": false,
+      "description": "Raised when the reader asks to drop something: something reported by a section with ContextUsageSection.CanRemove (the whole section — ContextUsageRemoval.Item is null) or an entry with ContextUsageItem.CanRemove. The action is rendered only when this callback is bound, so a read-only host offers no removal at all."
+    },
+    {
+      "name": "OnCompact",
+      "type": "EventCallback",
+      "isRequired": false,
+      "description": "Raised when the reader asks for a compaction (summarise the optional parts). The action is rendered only when this callback is bound, and it is DISABLED while no section can be compacted (ContextUsageMath.IsCompactable), so a button is never offered that would do nothing."
+    },
+    {
+      "name": "Title",
+      "type": "string?",
+      "isRequired": false,
+      "description": "The visible heading of the panel and, through aria-labelledby, the name of the meter. Null renders no heading; the panel and the meter are then named by AriaLabel or the localized default."
+    },
+    {
+      "name": "ShowTitle",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Whether the heading is rendered. Default true; a host that already titles the card passes false and keeps naming the meter by AriaLabel or the localized default."
+    },
+    {
+      "name": "HeadingLevel",
+      "type": "int",
+      "isRequired": false,
+      "description": "The heading's level in the page outline, clamped to 2–6. Default 3. The heading is only rendered when Title is set and ShowTitle is true."
+    },
+    {
+      "name": "AriaLabel",
+      "type": "string?",
+      "isRequired": false,
+      "description": "The accessible name used when no visible heading names the panel, and the panel root's name. Null falls back to the localized \"Context usage\". A rendered Title always wins for the meter, so one control never carries two names."
+    },
+    {
+      "name": "Culture",
+      "type": "CultureInfo?",
+      "isRequired": false,
+      "description": "The culture that formats the token counts and the percentages. Null means the current culture at render time. The machine-readable attributes (aria-valuenow / aria-valuemax) are always invariant — a culture's group separator would change the value a screen reader reads."
+    },
+    {
+      "name": "Class",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Additional CSS class(es) for the root element."
+    }
+  ]
+}
