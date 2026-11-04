@@ -108,6 +108,10 @@ builder.Services.AddTempoBlazor();
 // else falls through to the library's TmResources. The Client (WASM) side registers the same
 // decorator in its own Program.cs.
 builder.Services.AddTempoDemoLocalizer();
+
+// The shared demo pages read the clock (the /trace-waterfall run is anchored on it); a host that pins
+// it — the WASM demo's ?now= clock — registers its own before this TryAdd, so it keeps winning.
+builder.Services.AddTempoDemoClock();
 builder.Services.AddScoped<Tempo.Blazor.Demo.SharedUI.Layout.ColorThemeState>();
 builder.Services.AddTempoBlazorPdfViewer();
 builder.Services.AddTempoBlazorCodes();

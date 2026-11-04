@@ -1,0 +1,466 @@
+@page "/analytics-kit"
+@using System.Globalization
+@using Tempo.Blazor.Components.Charts
+@inject ToastService Toast
+@inject ITmLocalizer Loc
+
+<PageTitle>@Loc["TmAnalyticsKitDemo_PageTitle"] – Tempo.Blazor</PageTitle>
+
+<div class="mb-8" data-testid="analytics-kit-header">
+    <h1 class="text-3xl font-bold text-slate-900 dark:text-white mb-2">@Loc["TmAnalyticsKitDemo_PageTitle"]</h1>
+    <p class="text-slate-600 dark:text-slate-400">@Loc["TmAnalyticsKitDemo_PageDescription"]</p>
+</div>
+
+@* Reporting period (TmDateRangePicker with a comparison window) and the chart granularity tray. Both
+   drive every number below: the KPIs, the trend rows, the chart and the breakdown all read the SAME
+   two windows, so a reader never compares figures measured over different spans. *@
+<section class="demo-section mb-8" data-testid="analytics-kit-range">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">@Loc["TmAnalyticsKitDemo_RangeTitle"]</h2>
+        <span class="px-2 py-0.5 text-xs font-medium bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 rounded-full">@Loc["TmAnalyticsKitDemo_RangeBadge"]</span>
+    </div>
+    <div class="showcase-card grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+        <div class="flex flex-col gap-2" data-testid="analytics-kit-picker">
+            @* DateFormat="d" is the reader's own short-date pattern, the SAME one the comparison window
+               below is spelled with: the picker's dd.MM.yyyy default would put a Czech-style period next to
+               a culture-formatted comparison line on one card. *@
+            <TmDateRangePicker Label="@Loc["TmAnalyticsKitDemo_RangeLabel"]"
+                               Value="_range"
+                               ValueChanged="OnRangeChanged"
+                               Comparison="DateRangeComparison.PreviousPeriod"
+                               ComparisonRange="_comparison"
+                               ComparisonRangeChanged="OnComparisonRangeChanged"
+                               DateFormat="d"
+                               ShowPresets="true" />
+        </div>
+        <div class="flex flex-col gap-2" data-testid="analytics-kit-granularity">
+            <TmSegmentedControl TValue="string"
+                                Label="@Loc["TmAnalyticsKitDemo_Granularity"]"
+                                Options="_granularityOptions"
+                                Value="@_granularity"
+                                ValueChanged="OnGranularityChanged"
+                                DataTestId="analytics-kit-granularity-tray" />
+            <p class="text-xs text-slate-500 dark:text-slate-400" data-testid="analytics-kit-buckets">
+                @Loc["TmAnalyticsKitDemo_BucketSummary", _chartLabels.Length.ToString("N0", CultureInfo.CurrentCulture)]
+            </p>
+        </div>
+        <div class="flex flex-col gap-2">
+            <div class="text-sm text-slate-600 dark:text-slate-400" data-testid="analytics-kit-comparison">
+                <span class="font-medium text-slate-700 dark:text-slate-300">@Loc["TmAnalyticsKitDemo_ComparisonTitle"]</span>
+                <div data-testid="analytics-kit-comparison-window">
+                    @* The reader's own short-date pattern: English reads "9/12/2026", French "12/09/2026".
+                       A fixed dd.MM.yyyy would hand every reader a Czech-style date. *@
+                    @ComparisonStart.ToString("d", CultureInfo.CurrentCulture) – @ComparisonEnd.ToString("d", CultureInfo.CurrentCulture)
+                </div>
+                <div class="text-xs" data-testid="analytics-kit-comparison-days">
+                    @Loc["TmAnalyticsKitDemo_ComparisonDays", WindowDays.ToString("N0", CultureInfo.CurrentCulture)]
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+@* KPI row: the same four figures a reporting header shows, each with its change against the comparison
+   window, a sparkline of the current window and an animated numeric value. *@
+<section class="demo-section mb-8" data-testid="analytics-kit-kpis">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">@Loc["TmAnalyticsKitDemo_KpiTitle"]</h2>
+        <span class="px-2 py-0.5 text-xs font-medium bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 rounded-full">@Loc["TmAnalyticsKitDemo_KpiBadge"]</span>
+    </div>
+    <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">@Loc["TmAnalyticsKitDemo_KpiHint"]</p>
+    <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+        <TmStatCard Title="@Loc["TmAnalyticsKitDemo_MetricRevenue"]"
+                    NumericValue="_currentTotals.Revenue"
+                    ValueFormat="N0"
+                    ValuePrefix="@Loc["TmAnalyticsKitDemo_CurrencyPrefix"]"
+                    ValueSuffix="@Loc["TmAnalyticsKitDemo_CurrencySuffix"]"
+                    AnimateValue="true"
+                    Delta="RevenueDelta"
+                    ComparisonLabel="@Loc["TmAnalyticsKitDemo_ComparisonLabel"]"
+                    Icon="@IconNames.TrendingUp"
+                    Sparkline="_revenueSparkline" />
+        <TmStatCard Title="@Loc["TmAnalyticsKitDemo_MetricOrders"]"
+                    NumericValue="_currentTotals.OrderCount"
+                    ValueFormat="N0"
+                    AnimateValue="true"
+                    Delta="OrdersDelta"
+                    ComparisonLabel="@Loc["TmAnalyticsKitDemo_ComparisonLabel"]"
+                    Icon="@IconNames.Package"
+                    Sparkline="_ordersSparkline" />
+        <TmStatCard Title="@Loc["TmAnalyticsKitDemo_MetricAverageOrderValue"]"
+                    NumericValue="_currentTotals.AverageOrderValue"
+                    ValueFormat="N2"
+                    ValuePrefix="@Loc["TmAnalyticsKitDemo_CurrencyPrefix"]"
+                    ValueSuffix="@Loc["TmAnalyticsKitDemo_CurrencySuffix"]"
+                    Delta="AverageDelta"
+                    ComparisonLabel="@Loc["TmAnalyticsKitDemo_ComparisonLabel"]"
+                    Icon="@IconNames.Wallet"
+                    Sparkline="_averageSparkline" />
+        <TmStatCard Title="@Loc["TmAnalyticsKitDemo_MetricRefundRate"]"
+                    Value="@RefundRateText"
+                    Delta="RefundDelta"
+                    PositiveIsGood="false"
+                    ComparisonLabel="@Loc["TmAnalyticsKitDemo_ComparisonLabel"]"
+                    Icon="@IconNames.RotateCcw"
+                    Sparkline="_refundSparkline" />
+    </div>
+</section>
+
+<div class="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-8">
+    @* Change summary: revenue, orders, average order value and refund rate of the filtered set. *@
+    <section class="demo-section" data-testid="analytics-kit-trend">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white mb-2">@Loc["TmAnalyticsKitDemo_TrendTitle"]</h2>
+        <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">@Loc["TmAnalyticsKitDemo_TrendHint"]</p>
+        <div class="showcase-card">
+            <TmTrendList Items="_trendItems"
+                         Layout="TrendListLayout.Table"
+                         Title="@Loc["TmAnalyticsKitDemo_TrendTableTitle"]"
+                         ValueHeader="@Loc["TmAnalyticsKitDemo_TrendValueHeader"]"
+                         ChangeHeader="@Loc["TmAnalyticsKitDemo_TrendChangeHeader"]" />
+        </div>
+    </section>
+
+    @* The whole in parts: the same window split by channel. The switcher flips between the current window
+       and its comparison window, which re-sorts the rows (the card animates that reorder with CSS only). *@
+    <section class="demo-section" data-testid="analytics-kit-breakdown">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white mb-2">@Loc["TmAnalyticsKitDemo_BreakdownTitle"]</h2>
+        <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">@Loc["TmAnalyticsKitDemo_BreakdownHint"]</p>
+        <div class="showcase-card">
+            <TmBreakdownCard Parts="_breakdownParts"
+                             Title="@Loc["TmAnalyticsKitDemo_BreakdownCardTitle"]"
+                             ValueFormat="N0"
+                             PeriodOptions="_breakdownPeriods"
+                             Period="@_breakdownPeriod"
+                             PeriodChanged="OnBreakdownPeriodChanged"
+                             PeriodLabel="@Loc["TmAnalyticsKitDemo_BreakdownPeriodLabel"]"
+                             DataTestId="analytics-kit-breakdown-card" />
+        </div>
+    </section>
+</div>
+
+@* One tab stop, arrow keys walk the buckets, the card lists both series — the comparison is read as a
+   line pair rather than from two separate charts. The plot sits in a FIGURE named by the section's own
+   heading: its SVG only says "Line chart", so the heading is what tells a reader WHICH line chart. *@
+<section class="demo-section mb-8" data-testid="analytics-kit-chart">
+    <h2 id="analytics-kit-chart-title" class="text-lg font-semibold text-slate-900 dark:text-white mb-2">@Loc["TmAnalyticsKitDemo_ChartTitle"]</h2>
+    <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">@Loc["TmAnalyticsKitDemo_ChartHint"]</p>
+    <figure class="showcase-card m-0" aria-labelledby="analytics-kit-chart-title">
+        <TmChart Type="ChartType.Line"
+                 Data="_chartData"
+                 Height="320px"
+                 TooltipMode="ChartTooltipMode.Index"
+                 InteractiveLegend="true" />
+    </figure>
+</section>
+
+<div class="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-8">
+    @* Faceted filter over the order history. The counts are HOST-computed (the standard rule: an option's
+       count applies every OTHER group's selection), ResultCount opts into the confirmation step, and the
+       applied filters are removable chips the component renders itself. *@
+    <section class="demo-section" data-testid="analytics-kit-facets">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white mb-2">@Loc["TmAnalyticsKitDemo_FacetsTitle"]</h2>
+        <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">@Loc["TmAnalyticsKitDemo_FacetsHint"]</p>
+        <div class="showcase-card flex flex-col gap-4">
+            <TmFacetFilter Groups="_facetGroups"
+                           Selected="_selection"
+                           SelectedChanged="OnSelectionChanged"
+                           Presentation="FacetFilterPresentation.Popover"
+                           ResultCount="ResultCount"
+                           OnApply="ApplyFacets"
+                           TriggerLabel="@Loc["TmAnalyticsKitDemo_FacetsTrigger"]"
+                           Title="@Loc["TmAnalyticsKitDemo_FacetsPanelTitle"]" />
+            <p class="text-sm text-slate-600 dark:text-slate-400" data-testid="analytics-kit-facet-result">
+                @Loc["TmAnalyticsKitDemo_FacetsResult", _currentTotals.OrderCount.ToString("N0", CultureInfo.CurrentCulture)]
+            </p>
+            <p class="text-sm text-slate-600 dark:text-slate-400" data-testid="analytics-kit-facet-applied">
+                @Loc["TmAnalyticsKitDemo_FacetsApplied", _appliedCount.ToString("N0", CultureInfo.CurrentCulture)]
+            </p>
+        </div>
+    </section>
+
+    @* How much of the monthly credit quota is gone — the reporting page's quota companion. *@
+    <section class="demo-section" data-testid="analytics-kit-usage">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white mb-2">@Loc["TmAnalyticsKitDemo_UsageTitle"]</h2>
+        <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">@Loc["TmAnalyticsKitDemo_UsageHint"]</p>
+        <div class="showcase-card flex flex-col gap-4">
+            <TmUsageMeter Used="_usageUsed"
+                          Limit="_usageLimit"
+                          Unit="@Loc["TmAnalyticsKitDemo_UsageUnit"]"
+                          Title="@Loc["TmAnalyticsKitDemo_UsageMeterTitle"]"
+                          HeadingLevel="3"
+                          ResetsAt="_usageResetsAt"
+                          DailyUsage="_usageDaily"
+                          Categories="_usageCategories">
+                <NearLimitContent>
+                    <TmButton Variant="ButtonVariant.Primary" Size="ButtonSize.Sm" OnClick="BuyMoreCredits">
+                        @Loc["TmAnalyticsKitDemo_UsageUpgrade"]
+                    </TmButton>
+                </NearLimitContent>
+            </TmUsageMeter>
+            <div class="flex flex-wrap gap-2">
+                <TmButton Variant="ButtonVariant.Secondary" Size="ButtonSize.Sm" OnClick="AddDemoUsage"
+                          data-testid="analytics-kit-usage-add">
+                    @Loc["TmAnalyticsKitDemo_UsageAdd"]
+                </TmButton>
+                <TmButton Variant="ButtonVariant.Ghost" Size="ButtonSize.Sm" OnClick="ResetDemoUsage"
+                          data-testid="analytics-kit-usage-reset">
+                    @Loc["TmAnalyticsKitDemo_UsageReset"]
+                </TmButton>
+            </div>
+        </div>
+    </section>
+</div>
+
+@code {
+    private (DateOnly? Start, DateOnly? End) _range = AnalyticsKitPageSamples.DefaultWindow();
+    private (DateOnly? Start, DateOnly? End) _comparison;
+
+    private string _granularity = "week";
+    private IReadOnlyList<SegmentedOption<string>> _granularityOptions = [];
+
+    private string? _breakdownPeriod = "current";
+    private IReadOnlyList<SelectOption<string>> _breakdownPeriods = [];
+
+    private IReadOnlyDictionary<string, IReadOnlySet<string>>? _selection;
+    private int _appliedCount;
+
+    private IReadOnlyList<KitOrder> _currentOrders = [];
+    private IReadOnlyList<KitOrder> _previousOrders = [];
+    private KitTotals _currentTotals = new(0, 0, 0, 0);
+    private KitTotals _previousTotals = new(0, 0, 0, 0);
+    private double[] _revenueSparkline = [];
+    private double[] _ordersSparkline = [];
+    private double[] _averageSparkline = [];
+    private double[] _refundSparkline = [];
+    private string[] _chartLabels = [];
+    private ChartData _chartData = new() { Labels = [], Datasets = [] };
+    private IReadOnlyList<TrendItem> _trendItems = [];
+    private IReadOnlyList<BreakdownPart> _breakdownParts = [];
+    private IReadOnlyList<FacetGroup> _facetGroups = [];
+
+    private const double UsageLimit = 10_000;
+    private const double UsageStart = 8_200;
+    private const double UsageStep = 1_500;
+
+    private double _usageUsed = UsageStart;
+    private readonly double _usageLimit = UsageLimit;
+    private readonly DateTimeOffset _usageResetsAt = new(DateTime.Today.AddDays(21));
+    private readonly double[] _usageDaily = [180, 420, 260, 640, 310, 880, 520];
+    private IReadOnlyList<UsageCategory> _usageCategories = [];
+
+    /// <summary>The first day of the reported window (a cleared picker falls back to the default window).</summary>
+    private DateOnly RangeStart => _range.Start ?? AnalyticsKitPageSamples.DefaultWindow().Start;
+
+    /// <summary>The last day of the reported window.</summary>
+    private DateOnly RangeEnd
+    {
+        get
+        {
+            var end = _range.End ?? AnalyticsKitPageSamples.DefaultWindow().End;
+            return end < RangeStart ? RangeStart : end;
+        }
+    }
+
+    /// <summary>
+    /// The first day of the comparison window: whatever the picker reported, or — for the two derived modes —
+    /// the same arithmetic the picker itself applies, so the page and the picker can never disagree.
+    /// </summary>
+    private DateOnly ComparisonStart => _comparison.Start ?? DateRangeComparisonCalculator.PreviousPeriod(RangeStart, RangeEnd).Start;
+
+    /// <summary>The last day of the comparison window.</summary>
+    private DateOnly ComparisonEnd => _comparison.End ?? DateRangeComparisonCalculator.PreviousPeriod(RangeStart, RangeEnd).End;
+
+    /// <summary>The length of the reported window in days.</summary>
+    private int WindowDays => RangeEnd.DayNumber - RangeStart.DayNumber + 1;
+
+    /// <summary>The reported window's revenue change against the comparison window.</summary>
+    private double? RevenueDelta => AnalyticsKitPageSamples.Delta(_currentTotals.Revenue, _previousTotals.Revenue);
+
+    /// <summary>The reported window's order-count change.</summary>
+    private double? OrdersDelta => AnalyticsKitPageSamples.Delta(_currentTotals.OrderCount, _previousTotals.OrderCount);
+
+    /// <summary>The reported window's average-order-value change.</summary>
+    private double? AverageDelta => AnalyticsKitPageSamples.Delta(_currentTotals.AverageOrderValue, _previousTotals.AverageOrderValue);
+
+    /// <summary>The reported window's refund-rate change (a falling rate is the good outcome).</summary>
+    private double? RefundDelta => AnalyticsKitPageSamples.Delta(_currentTotals.RefundRate, _previousTotals.RefundRate);
+
+    /// <summary>The refund rate as the culture formats a percentage-handed figure.</summary>
+    private string RefundRateText => (_currentTotals.RefundRate * 100).ToString("N1", CultureInfo.CurrentCulture) + " %";
+
+    /// <summary>How many orders the current facet selection leaves — what the confirmation step reports.</summary>
+    private int ResultCount => _currentTotals.OrderCount;
+
+    /// <summary>The chart granularity the tray currently selects.</summary>
+    private KitGranularity Granularity => _granularity switch
+    {
+        "day" => KitGranularity.Day,
+        "month" => KitGranularity.Month,
+        _ => KitGranularity.Week,
+    };
+
+    /// <summary>Recomputes every projection from the one selection and the two windows.</summary>
+    private void Recalculate()
+    {
+        var filtered = AnalyticsKitPageSamples.Filter(AnalyticsKitPageSamples.Orders, _selection);
+        _currentOrders = AnalyticsKitPageSamples.InWindow(filtered, RangeStart, RangeEnd);
+        _previousOrders = AnalyticsKitPageSamples.InWindow(filtered, ComparisonStart, ComparisonEnd);
+        _currentTotals = AnalyticsKitPageSamples.Totals(_currentOrders);
+        _previousTotals = AnalyticsKitPageSamples.Totals(_previousOrders);
+
+        // The sparklines are cut into a dozen points regardless of the range length, so a KPI card keeps the
+        // same shape whether the reader picked a week or a year.
+        _revenueSparkline = AnalyticsKitPageSamples.BucketSeries(
+            _currentOrders, RangeStart, RangeEnd, 12, AnalyticsKitPageSamples.RevenueOf);
+        _ordersSparkline = AnalyticsKitPageSamples.BucketSeries(
+            _currentOrders, RangeStart, RangeEnd, 12, slice => slice.Count);
+        _averageSparkline = AnalyticsKitPageSamples.BucketSeries(
+            _currentOrders, RangeStart, RangeEnd, 12, slice => AnalyticsKitPageSamples.Totals(slice).AverageOrderValue);
+        _refundSparkline = AnalyticsKitPageSamples.BucketSeries(
+            _currentOrders, RangeStart, RangeEnd, 12, slice => Math.Round(AnalyticsKitPageSamples.Totals(slice).RefundRate * 100, 2));
+
+        var chart = AnalyticsKitPageSamples.BuildChart(
+            _currentOrders,
+            _previousOrders,
+            RangeStart,
+            RangeEnd,
+            ComparisonStart,
+            ComparisonEnd,
+            Granularity,
+            CultureInfo.CurrentCulture,
+            Loc["TmAnalyticsKitDemo_ChartCurrent"],
+            Loc["TmAnalyticsKitDemo_ChartComparison"]);
+        _chartData = chart;
+        _chartLabels = chart.Labels;
+
+        _trendItems = AnalyticsKitPageSamples.BuildTrendItems(
+            _currentOrders,
+            _previousOrders,
+            RangeStart,
+            RangeEnd,
+            7,
+            MetricLabel,
+            CultureInfo.CurrentCulture);
+
+        _breakdownParts = AnalyticsKitPageSamples.BuildBreakdown(
+            _breakdownPeriod == "comparison" ? _previousOrders : _currentOrders,
+            ChannelLabel);
+
+        _facetGroups = AnalyticsKitPageSamples.BuildFacetGroups(
+            AnalyticsKitPageSamples.Orders,
+            _selection,
+            GroupLabel,
+            OptionLabel);
+    }
+
+    /// <summary>The localized caption of a metric key of the trend list.</summary>
+    private string MetricLabel(string key) => key switch
+    {
+        "revenue" => Loc["TmAnalyticsKitDemo_MetricRevenue"],
+        "orders" => Loc["TmAnalyticsKitDemo_MetricOrders"],
+        "average-order-value" => Loc["TmAnalyticsKitDemo_MetricAverageOrderValue"],
+        "refund-rate" => Loc["TmAnalyticsKitDemo_MetricRefundRate"],
+        _ => key,
+    };
+
+    /// <summary>The localized caption of a channel slug (the breakdown rows and the facet options share it).</summary>
+    private string ChannelLabel(string channel) => OptionLabel("channel", channel);
+
+    /// <summary>The localized caption of a facet group key.</summary>
+    private string GroupLabel(string group) => Loc["TmAnalyticsKitDemo_Group_" + group];
+
+    /// <summary>The localized caption of one facet option.</summary>
+    private string OptionLabel(string group, string value) => Loc["TmAnalyticsKitDemo_Option_" + group + "_" + value];
+
+    /// <summary>Reacts to a picker range change: the comparison window is re-derived by the picker.</summary>
+    /// <param name="range">The new reported range.</param>
+    private void OnRangeChanged((DateOnly? Start, DateOnly? End) range)
+    {
+        _range = range;
+        Recalculate();
+    }
+
+    /// <summary>Reacts to the picker's report of the derived comparison window.</summary>
+    /// <param name="range">The comparison window the picker computed.</param>
+    private void OnComparisonRangeChanged((DateOnly? Start, DateOnly? End) range)
+    {
+        if (range.Start == _comparison.Start && range.End == _comparison.End)
+        {
+            return;
+        }
+
+        _comparison = range;
+        Recalculate();
+    }
+
+    /// <summary>Reacts to the granularity tray: the chart and the bucket summary are re-projected.</summary>
+    /// <param name="granularity">The newly selected granularity slug.</param>
+    private void OnGranularityChanged(string? granularity)
+    {
+        _granularity = granularity ?? "week";
+        Recalculate();
+    }
+
+    /// <summary>Reacts to the breakdown switcher: the rows flip to the other window.</summary>
+    /// <param name="period">The newly selected window slug.</param>
+    private void OnBreakdownPeriodChanged(string? period)
+    {
+        _breakdownPeriod = period ?? "current";
+        Recalculate();
+    }
+
+    /// <summary>Reacts to a facet gesture: every projection follows the new selection.</summary>
+    /// <param name="selection">The immutable snapshot the component raised.</param>
+    private void OnSelectionChanged(IReadOnlyDictionary<string, IReadOnlySet<string>> selection)
+    {
+        _selection = selection;
+        Recalculate();
+    }
+
+    /// <summary>Records the confirmed result count (the confirmation step's action).</summary>
+    private void ApplyFacets() => _appliedCount = ResultCount;
+
+    /// <summary>Spends another slab of the monthly quota so the meter walks through warning and critical.</summary>
+    private void AddDemoUsage()
+    {
+        _usageUsed = Math.Min(_usageUsed + UsageStep, UsageLimit * 1.5);
+        Toast.ShowInfo(Loc["TmAnalyticsKitDemo_UsageAdded"]);
+    }
+
+    /// <summary>Puts the quota back to the demo's starting state.</summary>
+    private void ResetDemoUsage()
+    {
+        _usageUsed = UsageStart;
+        Toast.ShowInfo(Loc["TmAnalyticsKitDemo_UsageResetDone"]);
+    }
+
+    /// <summary>The near-limit call to action of the meter.</summary>
+    private void BuyMoreCredits() => Toast.ShowInfo(Loc["TmAnalyticsKitDemo_UsageAdded"]);
+
+    /// <inheritdoc />
+    protected override void OnInitialized()
+    {
+        _granularityOptions =
+        [
+            new SegmentedOption<string> { Label = Loc["TmAnalyticsKitDemo_Granularity_day"], Value = "day" },
+            new SegmentedOption<string> { Label = Loc["TmAnalyticsKitDemo_Granularity_week"], Value = "week" },
+            new SegmentedOption<string> { Label = Loc["TmAnalyticsKitDemo_Granularity_month"], Value = "month" },
+        ];
+
+        _breakdownPeriods =
+        [
+            new SelectOption<string>("current", Loc["TmAnalyticsKitDemo_BreakdownCurrent"]),
+            new SelectOption<string>("comparison", Loc["TmAnalyticsKitDemo_BreakdownComparison"]),
+        ];
+
+        _usageCategories =
+        [
+            new UsageCategory { Key = "llm", Label = Loc["TmAnalyticsKitDemo_UsageCategory_llm"], Used = 5_500 },
+            new UsageCategory { Key = "tools", Label = Loc["TmAnalyticsKitDemo_UsageCategory_tools"], Used = 1_400, Color = "var(--tm-color-info)" },
+            new UsageCategory { Key = "storage", Label = Loc["TmAnalyticsKitDemo_UsageCategory_storage"], Used = 1_300 },
+        ];
+
+        Recalculate();
+        _appliedCount = ResultCount;
+    }
+}

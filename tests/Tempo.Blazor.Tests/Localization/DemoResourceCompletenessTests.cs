@@ -147,6 +147,33 @@ public class DemoResourceCompletenessTests
             string.Join("\n", regrown));
     }
 
+    [Fact]
+    public void Analytics_kit_currency_side_comes_from_the_translation_not_from_the_markup()
+    {
+        // The demo data is in US dollars for every language, but the SYMBOL'S SIDE is a typographic
+        // convention: English writes it in front of the amount, Czech, Slovak and French behind it.
+        // Both halves are therefore translated, so no translator is stuck with the English order and
+        // the page has no literal "$" to fall back on.
+        const string PrefixKey = "TmAnalyticsKitDemo_CurrencyPrefix";
+        const string SuffixKey = "TmAnalyticsKitDemo_CurrencySuffix";
+
+        foreach (var language in new[] { "en", "cs", "sk", "fr" })
+        {
+            DemoTables[language].Should().ContainKey(PrefixKey).And.ContainKey(SuffixKey);
+        }
+
+        DemoTables["en"][PrefixKey].Should().Be("$", "English puts the symbol in front of the amount");
+        DemoTables["en"][SuffixKey].Should().BeEmpty();
+
+        foreach (var language in new[] { "cs", "sk", "fr" })
+        {
+            DemoTables[language][PrefixKey].Should().BeEmpty(
+                "{0} writes the amount first", language);
+            DemoTables[language][SuffixKey].Should().StartWith(" ").And.Contain("$",
+                "{0} puts the symbol behind the amount, separated by a space", language);
+        }
+    }
+
     private static bool SamePlaceholders(string english, string translated)
     {
         static string[] Extract(string text)

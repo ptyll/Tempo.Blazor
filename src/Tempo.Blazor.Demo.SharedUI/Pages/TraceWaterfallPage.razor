@@ -1,0 +1,159 @@
+@page "/trace-waterfall"
+@using System.Globalization
+@inject ITmLocalizer Loc
+@inject TimeProvider Time
+
+<PageTitle>@Loc["TmTraceWaterfallDemo_PageTitle"] – Tempo.Blazor</PageTitle>
+
+<div class="mb-8" data-testid="trace-page-header">
+    <h1 class="text-3xl font-bold text-slate-900 dark:text-white mb-2">@Loc["TmTraceWaterfallDemo_PageTitle"]</h1>
+    <p class="text-slate-600 dark:text-slate-400">@Loc["TmTraceWaterfallDemo_PageDescription"]</p>
+</div>
+
+@* One agent run of ~150 spans: the treegrid is the single scroll owner, the detail panel sits beside it on a
+   wide container and below it on a narrow one, and the live toggle keeps the running bars growing through the
+   component's own TimeProvider-driven ticker. *@
+<section class="demo-section mb-8" data-testid="trace-page-run" >
+    <div class="flex flex-wrap items-center gap-3 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">@Loc["TmTraceWaterfallDemo_RunTitle"]</h2>
+        <span class="px-2 py-0.5 text-xs font-medium bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 rounded-full">@Loc["TmTraceWaterfallDemo_RunBadge"]</span>
+        <span class="text-sm text-slate-600 dark:text-slate-400" data-testid="trace-page-summary">
+            @Loc["TmTraceWaterfallDemo_Summary", _spans.Count.ToString("N0", CultureInfo.CurrentCulture), ErrorCount.ToString("N0", CultureInfo.CurrentCulture)]
+        </span>
+        <TmButton Variant="ButtonVariant.Secondary" Size="ButtonSize.Sm" OnClick="ToggleLive"
+                  data-testid="trace-page-live">
+            @(Live ? Loc["TmTraceWaterfallDemo_LiveStop"] : Loc["TmTraceWaterfallDemo_LiveStart"])
+        </TmButton>
+        <span class="text-xs text-slate-500 dark:text-slate-400" data-testid="trace-page-live-state"
+              data-live="@(Live ? "true" : "false")">
+            @(Live ? Loc["TmTraceWaterfallDemo_LiveOn"] : Loc["TmTraceWaterfallDemo_LiveOff"])
+        </span>
+    </div>
+    <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">@Loc["TmTraceWaterfallDemo_Hint"]</p>
+
+    <TmTraceWaterfall Spans="_spans"
+                      Title="@Loc["TmTraceWaterfallDemo_TraceTitle"]"
+                      MetricColumns="_columns"
+                      SelectedSpanId="@_selectedSpanId"
+                      SelectedSpanIdChanged="OnSpanSelected"
+                      LiveMode="Live"
+                      TimeProvider="Time"
+                      MaxHeight="520px"
+                      DataTestId="trace-page-waterfall">
+        <DetailTemplate Context="span">
+            <div class="flex flex-col gap-3 text-sm" data-testid="trace-page-detail"
+                 data-span-id="@span.Id">
+                <div class="font-semibold text-slate-900 dark:text-white">@span.Name</div>
+                <dl class="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 m-0">
+                    <dt class="text-slate-500 dark:text-slate-400">@Loc["TmTraceWaterfallDemo_DetailKind"]</dt>
+                    <dd class="m-0" data-testid="trace-page-detail-kind">@KindLabel(span.Kind)</dd>
+                    <dt class="text-slate-500 dark:text-slate-400">@Loc["TmTraceWaterfallDemo_DetailStatus"]</dt>
+                    <dd class="m-0" data-testid="trace-page-detail-status">@StatusLabel(span.Status)</dd>
+                    <dt class="text-slate-500 dark:text-slate-400">@Loc["TmTraceWaterfallDemo_DetailDuration"]</dt>
+                    <dd class="m-0" data-testid="trace-page-detail-duration">@Duration(span)</dd>
+                    <dt class="text-slate-500 dark:text-slate-400">@Loc["TmTraceWaterfallDemo_DetailStarted"]</dt>
+                    <dd class="m-0">@span.StartedAt.ToString("HH:mm:ss.fff", CultureInfo.CurrentCulture)</dd>
+                    <dt class="text-slate-500 dark:text-slate-400">@Loc["TmTraceWaterfallDemo_DetailEnded"]</dt>
+                    <dd class="m-0">@(span.EndedAt?.ToString("HH:mm:ss.fff", CultureInfo.CurrentCulture) ?? Loc["TmTraceWaterfallDemo_DetailRunning"])</dd>
+                </dl>
+
+                @if (span.Attributes.Count > 0)
+                {
+                    <table class="w-full text-left border-collapse" data-testid="trace-page-detail-attributes">
+                        <caption class="text-left text-slate-500 dark:text-slate-400 pb-1">@Loc["TmTraceWaterfallDemo_DetailAttributes"]</caption>
+                        <tbody>
+                            @foreach (var entry in span.Attributes.OrderBy(pair => pair.Key, StringComparer.Ordinal))
+                            {
+                                <tr>
+                                    <th scope="row" class="pr-4 font-medium text-slate-600 dark:text-slate-300">@entry.Key</th>
+                                    <td class="text-slate-600 dark:text-slate-300">@entry.Value</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                }
+
+                @if (span.Metrics.Count > 0)
+                {
+                    <table class="w-full text-left border-collapse" data-testid="trace-page-detail-metrics">
+                        <caption class="text-left text-slate-500 dark:text-slate-400 pb-1">@Loc["TmTraceWaterfallDemo_DetailMetrics"]</caption>
+                        <tbody>
+                            @foreach (var metric in span.Metrics.OrderBy(pair => pair.Key, StringComparer.Ordinal))
+                            {
+                                <tr>
+                                    <th scope="row" class="pr-4 font-medium text-slate-600 dark:text-slate-300">@MetricLabel(metric.Key)</th>
+                                    <td class="text-slate-600 dark:text-slate-300">@FormatMetric(metric.Key, metric.Value)</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                }
+            </div>
+        </DetailTemplate>
+    </TmTraceWaterfall>
+</section>
+
+@code {
+    private IReadOnlyList<TraceSpan> _spans = [];
+    private IReadOnlyList<TraceMetricColumn> _columns = [];
+    private string? _selectedSpanId;
+    private bool _live;
+
+    /// <summary>Whether the simulated run is still going (the live ticker only redraws while a span runs).</summary>
+    private bool Live => _live;
+
+    /// <summary>How many spans of the current trace failed.</summary>
+    private int ErrorCount => _spans.Count(span => span.Status == TraceSpanStatus.Error);
+
+    /// <summary>Switches between the finished run and a run whose tail is still going.</summary>
+    private void ToggleLive()
+    {
+        _live = !_live;
+        _spans = TraceWaterfallPageSamples.BuildTrace(Time.GetUtcNow(), _live);
+
+        // The selection follows the run: while the answer is still streaming it is the interesting span.
+        _selectedSpanId = _live ? "answer" : "notify";
+    }
+
+    /// <summary>Records the row the reader selected.</summary>
+    /// <param name="spanId">The selected span id, or null when the selection was cleared.</param>
+    private void OnSpanSelected(string? spanId) => _selectedSpanId = spanId;
+
+    /// <summary>The localized name of a span kind.</summary>
+    private string KindLabel(TraceSpanKind kind) => Loc["TmTraceWaterfallDemo_Kind_" + kind.ToString().ToLowerInvariant()];
+
+    /// <summary>The localized name of a span status.</summary>
+    private string StatusLabel(TraceSpanStatus status) => Loc["TmTraceWaterfallDemo_Status_" + status.ToString().ToLowerInvariant()];
+
+    /// <summary>The localized name of a metric key.</summary>
+    private string MetricLabel(string key) => Loc["TmTraceWaterfallDemo_Metric_" + key];
+
+    /// <summary>The span's duration, from its own timestamps (a running span measures to now).</summary>
+    private string Duration(TraceSpan span)
+    {
+        var end = span.EndedAt ?? Time.GetUtcNow();
+        var elapsed = end - span.StartedAt;
+        return elapsed.TotalMilliseconds < 1_000
+            ? elapsed.TotalMilliseconds.ToString("N0", CultureInfo.CurrentCulture) + " ms"
+            : elapsed.TotalSeconds.ToString("N2", CultureInfo.CurrentCulture) + " s";
+    }
+
+    /// <summary>
+    /// Formats one metric value: tokens are counts, cost is money with two decimals. The currency itself
+    /// lives in the metric's localized LABEL, because the demo's culture is neutral and a <c>"C"</c> format
+    /// would print the generic currency sign instead of a symbol.
+    /// </summary>
+    private string FormatMetric(string key, double value) => key switch
+    {
+        "cost" => value.ToString("N2", CultureInfo.CurrentCulture),
+        _ => value.ToString("N0", CultureInfo.CurrentCulture),
+    };
+
+    /// <inheritdoc />
+    protected override void OnInitialized()
+    {
+        _columns = TraceWaterfallPageSamples.MetricColumns(key => Loc["TmTraceWaterfallDemo_Column_" + key]);
+        _spans = TraceWaterfallPageSamples.BuildTrace(Time.GetUtcNow(), running: false);
+        _selectedSpanId = "notify";
+    }
+}
