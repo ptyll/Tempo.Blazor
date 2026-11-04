@@ -1,0 +1,266 @@
+@page "/agent-plan"
+@using Tempo.Blazor.AI.Models
+@using Tempo.Blazor.Components.AI
+@inject IServiceProvider Services
+@inject ITmLocalizer Loc
+
+<PageTitle>@Loc["TmAgentPlanDemo_PageTitle"] – Tempo.Blazor</PageTitle>
+
+<div class="mb-8" data-testid="agent-plan-page-header">
+    <h1 class="text-3xl font-bold text-slate-900 dark:text-white mb-2">@Loc["TmAgentPlanDemo_PageTitle"]</h1>
+    <p class="text-slate-600 dark:text-slate-400">@Loc["TmAgentPlanDemo_PageDescription"]</p>
+</div>
+
+@* The review surface: every edit is reported to THIS page, which is the only owner of the list. The read-out
+   beside the plan shows which operation arrived with which index, so the controlled contract is observable
+   instead of implied. *@
+<section class="demo-section mb-8" data-testid="agent-plan-review-section">
+    <h2 class="text-lg font-semibold text-slate-900 dark:text-white mb-2">@Loc["TmAgentPlanDemo_ReviewTitle"]</h2>
+    <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">@Loc["TmAgentPlanDemo_ReviewHint"]</p>
+
+    <div class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_18rem]">
+        <TmAgentPlan Steps="_reviewSteps"
+                     OnPlanChanged="ApplyReviewEditAsync"
+                     OnApprove="ApproveAsync"
+                     OnRun="RunAsync"
+                     Title="@Loc["TmAgentPlanDemo_ReviewPlanTitle"]"
+                     DataTestId="agent-plan-review" />
+
+        <div class="flex flex-col gap-3" data-testid="agent-plan-review-readout">
+            <h3 class="text-sm font-semibold text-slate-900 dark:text-white">@Loc["TmAgentPlanDemo_ReadoutTitle"]</h3>
+            <p class="text-sm text-slate-700 dark:text-slate-300"
+               data-testid="agent-plan-last-edit"
+               data-kind="@(_lastEdit?.Kind.ToString() ?? "none")"
+               data-index="@(_lastEdit?.Index.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "-1")">
+                @LastEditText
+            </p>
+            <p class="text-sm text-slate-700 dark:text-slate-300" data-testid="agent-plan-decision">
+                @DecisionText
+            </p>
+            <p class="text-xs text-slate-500 dark:text-slate-400">@Loc["TmAgentPlanDemo_KeyboardHint"]</p>
+            <TmButton Variant="ButtonVariant.Secondary" Size="ButtonSize.Sm"
+                      data-testid="agent-plan-reset"
+                      OnClick="ResetReview">@Loc["TmAgentPlanDemo_Reset"]</TmButton>
+        </div>
+    </div>
+</section>
+
+@* The running surface: a plan mid-run with four finished steps, one running (its clock ticks live), one
+   failed with the error and one still waiting. The buttons simulate the run so a reader can watch the shape
+   change without a backend. *@
+<section class="demo-section mb-8" data-testid="agent-plan-running-section">
+    <h2 class="text-lg font-semibold text-slate-900 dark:text-white mb-2">@Loc["TmAgentPlanDemo_RunningTitle"]</h2>
+    <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">@Loc["TmAgentPlanDemo_RunningHint"]</p>
+
+    <div class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_18rem]">
+        <TmAgentPlan Steps="_runSteps"
+                     Mode="AgentPlanMode.Running"
+                     OnRetryFrom="RetryAsync"
+                     Title="@Loc["TmAgentPlanDemo_RunningPlanTitle"]"
+                     DataTestId="agent-plan-running" />
+
+        <div class="flex flex-col gap-3" data-testid="agent-plan-run-readout">
+            <h3 class="text-sm font-semibold text-slate-900 dark:text-white">@Loc["TmAgentPlanDemo_RunReadoutTitle"]</h3>
+            <p class="text-sm text-slate-700 dark:text-slate-300" data-testid="agent-plan-retried">
+                @RetriedText
+            </p>
+            <div class="flex flex-wrap gap-2">
+                <TmButton Variant="ButtonVariant.Secondary" Size="ButtonSize.Sm"
+                          data-testid="agent-plan-complete-step"
+                          OnClick="CompleteRunningStep">@Loc["TmAgentPlanDemo_CompleteStep"]</TmButton>
+                <TmButton Variant="ButtonVariant.Secondary" Size="ButtonSize.Sm"
+                          data-testid="agent-plan-fail-step"
+                          OnClick="FailRunningStep">@Loc["TmAgentPlanDemo_FailStep"]</TmButton>
+                <TmButton Variant="ButtonVariant.Ghost" Size="ButtonSize.Sm"
+                          data-testid="agent-plan-reset-run"
+                          OnClick="ResetRun">@Loc["TmAgentPlanDemo_ResetRun"]</TmButton>
+            </div>
+            <p class="text-xs text-slate-500 dark:text-slate-400">@Loc["TmAgentPlanDemo_RunningHintNote"]</p>
+        </div>
+    </div>
+</section>
+
+@* A review that may only be read and approved: the same rows, no edit action and no add row. *@
+<section class="demo-section mb-8" data-testid="agent-plan-readonly-section">
+    <h2 class="text-lg font-semibold text-slate-900 dark:text-white mb-2">@Loc["TmAgentPlanDemo_ReadOnlyTitle"]</h2>
+    <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">@Loc["TmAgentPlanDemo_ReadOnlyHint"]</p>
+
+    <TmAgentPlan Steps="_lockedSteps"
+                 AllowEditing="false"
+                 ShowTitle="false"
+                 OnApprove="ApproveAsync"
+                 AriaLabel="@Loc["TmAgentPlanDemo_LockedLabel"]"
+                 DataTestId="agent-plan-locked" />
+</section>
+
+@code {
+    private static readonly TimeSpan TotalRun = TimeSpan.FromSeconds(84);
+
+    private TimeProvider? _clock;
+
+    private TimeProvider Clock => _clock ??= Services.GetService(typeof(TimeProvider)) as TimeProvider
+        ?? TimeProvider.System;
+
+    private List<AgentPlanStep> _reviewSteps = [];
+    private List<AgentPlanStep> _runSteps = [];
+    private IReadOnlyList<AgentPlanStep> _lockedSteps = [];
+    private AgentPlanEdit? _lastEdit;
+    private string? _decision;
+    private string? _retriedStepTitle;
+
+    protected override void OnInitialized()
+    {
+        ResetReview();
+        ResetRun();
+        _lockedSteps =
+        [
+            new AgentPlanStep(Loc["TmAgentPlanDemo_LockedStep1"], "locked-1") { Status = AgentStepStatus.Done },
+            new AgentPlanStep(Loc["TmAgentPlanDemo_LockedStep2"], "locked-2") { Status = AgentStepStatus.Done },
+            new AgentPlanStep(Loc["TmAgentPlanDemo_LockedStep3"], "locked-3"),
+        ];
+    }
+
+    private string LastEditText => _lastEdit switch
+    {
+        null => Loc["TmAgentPlanDemo_NoEdit"],
+        { Kind: AgentPlanEditKind.Rename } edit when edit.Title is not null
+            => Loc["TmAgentPlanDemo_EditRename", Position(edit.Index), edit.Title],
+        { Kind: AgentPlanEditKind.Add } edit
+            => Loc["TmAgentPlanDemo_EditAdd", Position(edit.Index)],
+        { Kind: AgentPlanEditKind.Remove } edit
+            => Loc["TmAgentPlanDemo_EditRemove", Position(edit.Index)],
+        { Kind: AgentPlanEditKind.Reorder } edit
+            => Loc["TmAgentPlanDemo_EditReorder", Position(edit.FromIndex ?? 0), Position(edit.ToIndex ?? 0)],
+        _ => Loc["TmAgentPlanDemo_NoEdit"],
+    };
+
+    private string DecisionText => _decision switch
+    {
+        "approved" => Loc["TmAgentPlanDemo_Approved"],
+        "run" => Loc["TmAgentPlanDemo_Started"],
+        _ => Loc["TmAgentPlanDemo_NoDecision"],
+    };
+
+    private string RetriedText => _retriedStepTitle is null
+        ? Loc["TmAgentPlanDemo_NoRetry"]
+        : Loc["TmAgentPlanDemo_Retried", _retriedStepTitle];
+
+    private static string Position(int index)
+        => (index + 1).ToString(System.Globalization.CultureInfo.CurrentCulture);
+
+    private Task ApplyReviewEditAsync(IReadOnlyList<AgentPlanStep> steps, AgentPlanEdit edit)
+    {
+        // The host owns the plan: it stores the list the component proposed and records what changed.
+        _reviewSteps = steps.ToList();
+        _lastEdit = edit;
+        _decision = null;
+
+        // OnPlanChanged is a plain delegate, so nothing re-renders this page for us: an EventCallback would
+        // have done it, a Func does not.
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    private void ApproveAsync() => _decision = "approved";
+
+    private void RunAsync() => _decision = "run";
+
+    private void ResetReview()
+    {
+        _reviewSteps =
+        [
+            new AgentPlanStep(Loc["TmAgentPlanDemo_ReviewStep1"], "review-1"),
+            new AgentPlanStep(Loc["TmAgentPlanDemo_ReviewStep2"], "review-2"),
+            new AgentPlanStep(Loc["TmAgentPlanDemo_ReviewStep3"], "review-3"),
+            new AgentPlanStep(Loc["TmAgentPlanDemo_ReviewStep4"], "review-4"),
+        ];
+        _lastEdit = null;
+        _decision = null;
+    }
+
+    private void ResetRun()
+    {
+        var start = Clock.GetUtcNow() - TotalRun;
+
+        _runSteps =
+        [
+            Timed("run-1", Loc["TmAgentPlanDemo_RunStep1"], start, TimeSpan.FromSeconds(20), AgentStepStatus.Done),
+            Timed("run-2", Loc["TmAgentPlanDemo_RunStep2"], start + TimeSpan.FromSeconds(20), TimeSpan.FromSeconds(20), AgentStepStatus.Done),
+            Timed("run-3", Loc["TmAgentPlanDemo_RunStep3"], start + TimeSpan.FromSeconds(40), TimeSpan.FromSeconds(24), AgentStepStatus.Done),
+            Timed("run-4", Loc["TmAgentPlanDemo_RunStep4"], start + TimeSpan.FromSeconds(64), TimeSpan.FromSeconds(20), AgentStepStatus.Done),
+            new AgentPlanStep(Loc["TmAgentPlanDemo_RunStep5"], "run-5")
+            {
+                Status = AgentStepStatus.Running,
+                StartedAt = Clock.GetUtcNow(),
+            },
+            new AgentPlanStep(Loc["TmAgentPlanDemo_RunStep6"], "run-6")
+            {
+                Status = AgentStepStatus.Failed,
+                StartedAt = Clock.GetUtcNow(),
+                CompletedAt = Clock.GetUtcNow(),
+                Error = Loc["TmAgentPlanDemo_RunStep6Error"],
+            },
+            new AgentPlanStep(Loc["TmAgentPlanDemo_RunStep7"], "run-7"),
+        ];
+
+        _retriedStepTitle = null;
+    }
+
+    private static AgentPlanStep Timed(
+        string id, string title, DateTimeOffset startedAt, TimeSpan duration, AgentStepStatus status)
+        => new(title, id) { Status = status, StartedAt = startedAt, CompletedAt = startedAt + duration };
+
+    private void CompleteRunningStep()
+    {
+        var index = _runSteps.FindIndex(step => step.Status == AgentStepStatus.Running);
+        if (index < 0)
+        {
+            return;
+        }
+
+        var now = Clock.GetUtcNow();
+        _runSteps[index] = _runSteps[index] with { Status = AgentStepStatus.Done, CompletedAt = now };
+
+        // The next waiting step takes over, so the live timer always has something to count.
+        var next = _runSteps.FindIndex(step => step.Status == AgentStepStatus.Pending);
+        if (next >= 0)
+        {
+            _runSteps[next] = _runSteps[next] with { Status = AgentStepStatus.Running, StartedAt = now };
+        }
+    }
+
+    private void FailRunningStep()
+    {
+        var index = _runSteps.FindIndex(step => step.Status == AgentStepStatus.Running);
+        if (index < 0)
+        {
+            return;
+        }
+
+        _runSteps[index] = _runSteps[index] with
+        {
+            Status = AgentStepStatus.Failed,
+            CompletedAt = Clock.GetUtcNow(),
+            Error = Loc["TmAgentPlanDemo_RunStepError"],
+        };
+    }
+
+    private void RetryAsync(AgentPlanStep step)
+    {
+        _retriedStepTitle = step.Title;
+
+        var index = _runSteps.FindIndex(candidate => candidate.Id == step.Id);
+        if (index < 0)
+        {
+            return;
+        }
+
+        _runSteps[index] = step with
+        {
+            Status = AgentStepStatus.Running,
+            StartedAt = Clock.GetUtcNow(),
+            CompletedAt = null,
+            Error = null,
+        };
+    }
+}

@@ -1,0 +1,309 @@
+@namespace Tempo.Blazor.Components.AI
+@inherits Tempo.Blazor.Components.TmComponentBase
+@using Tempo.Blazor.AI.Models
+@using Tempo.Blazor.Components.DataDisplay
+@using Tempo.Blazor.Components.Icons
+
+@* The agent's plan of steps. Every user-facing string comes from ITmLocalizer; the state of a step is always
+   the word next to its icon, never the colour alone. The rows ARE a TmSortableList, so the reorder gesture,
+   its keyboard model, its tap alternative and its announcement are the core list's, not a second
+   implementation — and the plan's own live region therefore never talks about a move.
+
+   Review mode renders the editable surface; Running mode renders the same rows with plain titles, no edit
+   action and no plan action, plus the live timer of a running step and Retry on a failed one. *@
+<section @ref="_rootElement"
+         class="@RootClass"
+         data-testid="@RootTestId("agent-plan")"
+         data-mode="@ModeName"
+         data-editable="@(CanEdit ? "true" : "false")"
+         role="group"
+         tabindex="-1"
+         aria-label="@(GroupAriaLabel ?? GroupFallbackLabel)"
+         aria-labelledby="@GroupLabelledBy"
+         aria-describedby="@InstructionsId"
+         @attributes="AdditionalAttributes">
+
+    <div class="tm-ai-agent-plan__header">
+        <div class="tm-ai-agent-plan__heading">
+            @if (ShowTitle)
+            {
+                @Heading
+            }
+            @if (ShowSummary)
+            {
+                @* Not a live region: the total moves every second while a step runs, and a summary that talks
+                   every second is noise. The single announcement channel is the region at the bottom. *@
+                <p class="tm-ai-agent-plan__summary"
+                   data-testid="@TestId("agent-plan-summary")"
+                   aria-live="off">@SummaryText</p>
+            }
+        </div>
+
+        @if (!IsRunning && (OnApprove.HasDelegate || OnRun.HasDelegate))
+        {
+            <div class="tm-ai-agent-plan__actions">
+                @if (OnApprove.HasDelegate)
+                {
+                    <button type="button"
+                            class="tm-btn tm-btn-secondary tm-btn-sm tm-ai-agent-plan__action"
+                            data-testid="@TestId("agent-plan-approve")"
+                            @onclick="ApproveAsync">
+                        <TmIcon Name="@IconNames.Check" Size="IconSize.Xs" />
+                        <span class="tm-btn-label">@Loc["TmAgentPlan_Approve"]</span>
+                    </button>
+                }
+                @if (OnRun.HasDelegate)
+                {
+                    <button type="button"
+                            class="tm-btn tm-btn-primary tm-btn-sm tm-ai-agent-plan__action"
+                            data-testid="@TestId("agent-plan-run")"
+                            @onclick="RunAsync">
+                        <TmIcon Name="@IconNames.Play" Size="IconSize.Xs" />
+                        <span class="tm-btn-label">@Loc["TmAgentPlan_Run"]</span>
+                    </button>
+                }
+            </div>
+        }
+    </div>
+
+    <p class="tm-sr-only"
+       id="@InstructionsId"
+       data-testid="@TestId("agent-plan-instructions")">@Loc["TmAgentPlan_Instructions"]</p>
+
+    <TmSortableList Items="StepList"
+                    KeySelector="@(step => step.Id)"
+                    ItemLabelSelector="@(step => TitleText(step))"
+                    OnReorder="OnStepReorderedAsync"
+                    Disabled="@(!CanEdit)"
+                    ShowMoveMenu="@CanEdit"
+                    AriaLabel="@ListLabel"
+                    TestIdPrefix="@TestIdPrefix"
+                    DataTestId="@TestId("agent-plan-list")">
+        <ItemTemplate Context="step">
+            @{ var index = IndexOf(step.Id); }
+            <div class="tm-ai-agent-plan__step"
+                 data-testid="@TestId("agent-plan-step")"
+                 data-step-id="@step.Id"
+                 data-status="@StatusSlug(step.Status)">
+                @* The number is the visual order; a screen reader already hears the list position, so the
+                   badge is decorative rather than a second, stuttering ordinal. *@
+                <span class="tm-ai-agent-plan__index"
+                      data-testid="@TestId("agent-plan-step-index")"
+                      aria-hidden="true">@PositionText(index)</span>
+
+                <span class="tm-ai-agent-plan__status"
+                      data-status="@StatusSlug(step.Status)"
+                      data-testid="@TestId("agent-plan-step-status")">
+                    <TmIcon Name="@StatusIcon(step.Status)" Size="IconSize.Sm" />
+                    <span class="tm-ai-agent-plan__status-text">@StatusText(step.Status)</span>
+                </span>
+
+                <div class="tm-ai-agent-plan__body">
+                    @if (IsEditing(step))
+                    {
+                        <div class="tm-ai-agent-plan__rename-editor">
+                            @* A refused empty title is not only announced: the field is marked invalid and
+                               the reason is rendered under it, so a sighted reader gets the same message. *@
+                            <input class="tm-ai-agent-plan__rename"
+                                   @ref="_renameInput"
+                                   type="text"
+                                   value="@_renameDraft"
+                                   aria-label="@Loc["TmAgentPlan_RenameLabel", PositionText(index)]"
+                                   aria-invalid="@(_renameError ? "true" : null)"
+                                   aria-describedby="@(_renameError ? RenameErrorId : null)"
+                                   data-testid="@TestId("agent-plan-step-rename")"
+                                   @oninput="OnRenameInput"
+                                   @onkeydown="OnRenameKeyDownAsync"
+                                   @onkeydown:stopPropagation="true" />
+                            <button type="button"
+                                    class="tm-btn tm-btn-primary tm-btn-sm tm-ai-agent-plan__action"
+                                    data-testid="@TestId("agent-plan-step-rename-save")"
+                                    aria-label="@Loc["TmAgentPlan_RenameSave"]"
+                                    @onclick="CommitRenameAsync">
+                                <TmIcon Name="@IconNames.Check" Size="IconSize.Xs" />
+                            </button>
+                            <button type="button"
+                                    class="tm-btn tm-btn-ghost tm-btn-sm tm-ai-agent-plan__action"
+                                    data-testid="@TestId("agent-plan-step-rename-cancel")"
+                                    aria-label="@Loc["TmAgentPlan_RenameCancel"]"
+                                    @onclick="CancelRename">
+                                <TmIcon Name="@IconNames.X" Size="IconSize.Xs" />
+                            </button>
+                            @if (_renameError)
+                            {
+                                <p class="tm-ai-agent-plan__rename-error"
+                                   id="@RenameErrorId"
+                                   data-testid="@TestId("agent-plan-step-rename-error")">@Loc["TmAgentPlan_TitleRequired"]</p>
+                            }
+                        </div>
+                    }
+                    else if (IsStepEditable(step))
+                    {
+                        <button type="button"
+                                @ref="_titleRefs[step.Id]"
+                                class="tm-ai-agent-plan__title-button"
+                                id="@TitleElementId(step)"
+                                data-testid="@TestId("agent-plan-step-title")"
+                                aria-label="@Loc["TmAgentPlan_RenameTitle", PositionText(index), TitleText(step)]"
+                                @onclick="() => BeginRename(index)"
+                                @onkeydown="args => OnTitleKeyDownAsync(index, args)">
+                            <span class="@TitleTextClass(step)">@TitleText(step)</span>
+                            <TmIcon Name="@IconNames.Pencil" Size="IconSize.Xs" />
+                        </button>
+                    }
+                    else
+                    {
+                        <span class="@TitleTextClass(step)"
+                              id="@TitleElementId(step)"
+                              data-testid="@TestId("agent-plan-step-title")">@TitleText(step)</span>
+                    }
+
+                    @if (!string.IsNullOrWhiteSpace(step.Description))
+                    {
+                        <p class="tm-ai-agent-plan__description"
+                           data-testid="@TestId("agent-plan-step-description")">@step.Description</p>
+                    }
+
+                    @if (!string.IsNullOrWhiteSpace(step.Error))
+                    {
+                        <p class="tm-ai-agent-plan__error"
+                           data-testid="@TestId("agent-plan-step-error")">
+                            <TmIcon Name="@IconNames.AlertTriangle" Size="IconSize.Xs" />
+                            <span>@step.Error</span>
+                        </p>
+                    }
+                </div>
+
+                @if (step.Elapsed(_now) is { } elapsed)
+                {
+                    @* A value that changes every second is never a live region; the running step's time is
+                       announced by the status word, not by its clock. *@
+                    <time class="tm-ai-agent-plan__time"
+                          datetime="@Iso(step)"
+                          aria-live="off"
+                          data-testid="@TestId("agent-plan-step-time")">@FormatClock(elapsed)</time>
+                }
+
+                @if (IsStepEditable(step) || step.Status == AgentStepStatus.Failed)
+                {
+                    <div class="tm-ai-agent-plan__step-actions">
+                        @if (IsStepEditable(step))
+                        {
+                            <button type="button"
+                                    class="tm-ai-agent-plan__action tm-ai-agent-plan__action--icon"
+                                    data-testid="@TestId("agent-plan-step-add")"
+                                    aria-label="@Loc["TmAgentPlan_AddStepBelow", PositionText(index)]"
+                                    @onclick="() => AddStepAsync(index + 1)">
+                                <TmIcon Name="@IconNames.Plus" Size="IconSize.Sm" />
+                            </button>
+                            <button type="button"
+                                    class="tm-ai-agent-plan__action tm-ai-agent-plan__action--icon"
+                                    data-testid="@TestId("agent-plan-step-remove")"
+                                    aria-label="@Loc["TmAgentPlan_RemoveStep", PositionText(index)]"
+                                    @onclick="() => RemoveStepAsync(index)">
+                                <TmIcon Name="@IconNames.Trash" Size="IconSize.Sm" />
+                            </button>
+                        }
+                        @if (step.Status == AgentStepStatus.Failed && OnRetryFrom.HasDelegate)
+                        {
+                            @* Named by its visible words and described by the step's own title: the accessible
+                               name a speech-control user sees is the one they can say (WCAG 2.5.3), and the
+                               description still tells them which step the Retry belongs to. *@
+                            <button type="button"
+                                    class="tm-ai-agent-plan__retry"
+                                    data-testid="@TestId("agent-plan-step-retry")"
+                                    aria-describedby="@RetryDescriptionId(step)"
+                                    @onclick="() => RetryAsync(step)">
+                                <TmIcon Name="@IconNames.RotateCcw" Size="IconSize.Sm" />
+                                <span>@Loc["TmAgentPlan_RetryFrom"]</span>
+                            </button>
+                        }
+                    </div>
+                }
+            </div>
+        </ItemTemplate>
+        <EmptyContent>
+            @if (EmptyContent is not null)
+            {
+                @EmptyContent
+            }
+            else
+            {
+                <p class="tm-ai-agent-plan__empty"
+                   data-testid="@TestId("agent-plan-empty")">@Loc["TmAgentPlan_Empty"]</p>
+            }
+        </EmptyContent>
+    </TmSortableList>
+
+    @if (CanEdit)
+    {
+        <div class="tm-ai-agent-plan__footer">
+            <button type="button"
+                    @ref="_addActionElement"
+                    class="tm-btn tm-btn-secondary tm-btn-sm tm-ai-agent-plan__action"
+                    data-testid="@TestId("agent-plan-add")"
+                    @onclick="() => AddStepAsync(StepList.Count)">
+                <TmIcon Name="@IconNames.Plus" Size="IconSize.Xs" />
+                <span class="tm-btn-label">@Loc["TmAgentPlan_AddStep"]</span>
+            </button>
+        </div>
+    }
+
+    @if (_pendingUndo is { } undo)
+    {
+        @* Removal is confirmed THROUGH Undo instead of a modal: the step is gone at once, the strip names it
+           (by title — the number it had no longer points at a visible row) and every other edit retires the
+           offer. *@
+        <div class="tm-ai-agent-plan__undo" data-testid="@TestId("agent-plan-undo")">
+            <span class="tm-ai-agent-plan__undo-text">@Loc["TmAgentPlan_Removed", (undo.Index + 1).ToString(System.Globalization.CultureInfo.CurrentCulture), TitleText(undo.Step)]</span>
+            <button type="button"
+                    class="tm-btn tm-btn-ghost tm-btn-sm tm-ai-agent-plan__action"
+                    data-testid="@TestId("agent-plan-undo-button")"
+                    aria-label="@Loc["TmAgentPlan_UndoRemoveLabel", (undo.Index + 1).ToString(System.Globalization.CultureInfo.CurrentCulture)]"
+                    @onclick="UndoRemoveAsync">
+                <TmIcon Name="@IconNames.Undo2" Size="IconSize.Xs" />
+                <span class="tm-btn-label">@Loc["TmAgentPlan_UndoRemove"]</span>
+            </button>
+        </div>
+    }
+
+    <div class="tm-sr-only"
+         role="status"
+         aria-live="polite"
+         aria-atomic="true"
+         data-testid="@TestId("agent-plan-announcement")">@_announcement</div>
+</section>
+
+@code {
+    /// <summary>The root, so an empty plan can still take the focus after the last row is removed.</summary>
+    private ElementReference _rootElement;
+
+    /// <summary>The heading, built at the requested level without duplicating the markup six times.</summary>
+    private RenderFragment Heading => builder =>
+    {
+        builder.OpenElement(0, "h" + EffectiveHeadingLevel.ToString(System.Globalization.CultureInfo.InvariantCulture));
+        builder.AddAttribute(1, "class", "tm-ai-agent-plan__title");
+        builder.AddAttribute(2, "id", TitleId);
+        builder.AddContent(3, HeadingText);
+        builder.CloseElement();
+    };
+
+    /// <summary>The ISO-8601 form of the step's window, for the <c>datetime</c> attribute of its time.</summary>
+    private static string? Iso(AgentPlanStep step)
+        => (step.CompletedAt ?? step.StartedAt)?.ToString("o", System.Globalization.CultureInfo.InvariantCulture);
+
+    /// <summary>
+    /// F2 opens the inline editor — the standard "rename" key, advertised in the plan's hidden instructions.
+    /// Enter and Space are deliberately NOT handled here: they belong to the native button (and to the row's
+    /// grab, when the row itself has the focus), so one key press activates exactly once.
+    /// </summary>
+    private Task OnTitleKeyDownAsync(int index, KeyboardEventArgs args)
+    {
+        if (args.Key == "F2")
+        {
+            BeginRename(index);
+        }
+
+        return Task.CompletedTask;
+    }
+}

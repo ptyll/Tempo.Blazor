@@ -1,0 +1,11 @@
+{
+  "kind": "Class",
+  "category": "AI",
+  "namespace": "Tempo.Blazor.AI.Models",
+  "description": "One edit of an agent plan, reported next to the whole new step list by TmAgentPlan.OnPlanChanged: OnPlanChanged(IReadOnlyList<AgentPlanStep> steps, AgentPlanEdit edit). The list is authoritative — a host that keeps the steps applies it and is done. The edit answers the questions a list cannot: WHICH operation the reader performed, at WHICH position, and (for a removal) the removed step itself, so an undo does not have to diff two snapshots. The factories Rename / Add / Remove / Reorder are the only way to build one.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/AI/AgentPlanEdit.cs",
+  "documentationStatus": "generated",
+  "itemName": "AgentPlanEdit",
+  "usageExample": "private Task ApplyAsync(IReadOnlyList<AgentPlanStep> next, AgentPlanEdit edit)\n{\n    switch (edit.Kind)\n    {\n        case AgentPlanEditKind.Remove:\n            _removed = edit.Step; // keep it for the host's own undo\n            break;\n        case AgentPlanEditKind.Rename:\n            _log.WriteLine($\"{edit.StepId} -> {edit.Title}\");\n            break;\n    }\n\n    _steps = next;\n    return Task.CompletedTask;\n}"
+}

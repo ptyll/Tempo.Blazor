@@ -1,0 +1,14 @@
+{
+  "kind": "Enum",
+  "category": "AI",
+  "namespace": "Tempo.Blazor.AI.Models",
+  "description": "What TmAgentPlan may show and edit: the reviewable plan before a run, or the read-only plan of a run in progress. The mode is a switch of SHAPE, not only of permissions — a Review plan offers renaming, adding, removing and reordering plus the Approve / Run actions, while a Running plan renders the same rows read-only and adds the live timer, the failure and the Retry action.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/AI/AgentPlanMode.cs",
+  "documentationStatus": "generated",
+  "itemName": "AgentPlanMode",
+  "members": [
+    { "name": "Review", "description": "The plan is being reviewed; every edit path and every plan action is available." },
+    { "name": "Running", "description": "The plan is running; the rows are read-only and only a failed step still offers Retry." }
+  ]
+}

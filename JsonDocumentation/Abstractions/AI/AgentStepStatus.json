@@ -1,0 +1,17 @@
+{
+  "kind": "Enum",
+  "category": "AI",
+  "namespace": "Tempo.Blazor.AI.Models",
+  "description": "Execution state of one AgentPlanStep. The state decides what TmAgentPlan paints (an icon plus the state in words) and which actions a step offers: a Failed step offers \"Retry from this step\", a Running one counts its live elapsed time, and a Skipped one is a terminal state that is neither a success nor a failure.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/AI/AgentStepStatus.cs",
+  "documentationStatus": "generated",
+  "itemName": "AgentStepStatus",
+  "members": [
+    { "name": "Pending", "description": "Queued but not started." },
+    { "name": "Running", "description": "Executing right now; the plan counts its elapsed time from StartedAt until CompletedAt is set." },
+    { "name": "Done", "description": "Finished successfully." },
+    { "name": "Failed", "description": "Finished with an error; the step's Error carries the reason and the row offers Retry." },
+    { "name": "Skipped", "description": "Deliberately skipped — a terminal state that neither succeeded nor failed." }
+  ]
+}

@@ -75,6 +75,125 @@
   },
   "items": [
     {
+      "itemName": "TmAgentPlan",
+      "kind": "Component",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.Components.AI",
+      "description": "The agent's plan of steps: what it intends to do, reviewed and edited before the run and watched while it runs. In Review mode a step can be renamed inline (F2 or a click on its title, Enter saves, Escape cancels), added below a row or at the end, removed with an Undo strip, and reordered through the core TmSortableList. In Running mode the same rows are read-only, a running step counts its live elapsed time from the injected TimeProvider, the summary adds the plan total (\"4 of 7 done · 1:24\"), and a failed step shows its error and offers \"Retry from this step\". The component never mutates Steps: every edit raises OnPlanChanged(newSteps, edit) and the host applies it.",
+      "packageId": "Tempo.Blazor.AI",
+      "sourcePath": "src/Tempo.Blazor.AI/Components/AI/TmAgentPlan.razor",
+      "documentationStatus": "merged",
+      "requiredImports": [
+        "@using Tempo.Blazor.AI.Models",
+        "@using Tempo.Blazor.Components.AI"
+      ],
+      "parameters": [
+        {
+          "name": "AllowEditing",
+          "type": "bool",
+          "isRequired": false,
+          "default": "true",
+          "description": "Whether the plan may be edited at all. Default true — and only meaningful in AgentPlanMode.Review, because a running plan is read-only regardless. Set false for a review that may only be read and approved."
+        },
+        {
+          "name": "AriaLabel",
+          "type": "string?",
+          "isRequired": false,
+          "description": "The accessible name of the plan. Null names it by the rendered heading — so the name a reader hears is the one they see — and, without a heading, by the localized \"Agent plan\"."
+        },
+        {
+          "name": "Class",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Additional CSS classes for the root element."
+        },
+        {
+          "name": "EmptyContent",
+          "type": "RenderFragment?",
+          "isRequired": false,
+          "description": "Rendered instead of the localized \"No steps yet.\" when Steps is null or empty. The plan's instructions and its live region stay rendered either way."
+        },
+        {
+          "name": "HeadingLevel",
+          "type": "int",
+          "isRequired": false,
+          "default": "3",
+          "description": "The heading level of the rendered title, clamped to 2–6. Default 3, so the plan can sit under any page outline; the level has no effect when ShowTitle is false."
+        },
+        {
+          "name": "Mode",
+          "type": "AgentPlanMode",
+          "isRequired": false,
+          "default": "AgentPlanMode.Review",
+          "description": "Whether the plan is being reviewed or is running. Default AgentPlanMode.Review. A Running plan is read-only — no rename, no add, no remove, no reorder and no Approve / Run — but it keeps the live timer of a running step, the summary, a failed step's error and its Retry action."
+        },
+        {
+          "name": "OnApprove",
+          "type": "EventCallback",
+          "isRequired": false,
+          "description": "Raised when the reader approves the plan. The action is rendered only when this callback is bound, so a plan without a host decision has no dead button. Review mode only."
+        },
+        {
+          "name": "OnPlanChanged",
+          "type": "Func<IReadOnlyList<AgentPlanStep>, AgentPlanEdit, Task>?",
+          "isRequired": false,
+          "description": "Raised once per edit with the WHOLE proposed step list and the AgentPlanEdit that produced it. The component does not apply the edit itself; the host stores the list and the next render shows it. Not raised for a rename that changed nothing, for a refused empty title, or for a reorder that did not move a row."
+        },
+        {
+          "name": "OnRetryFrom",
+          "type": "EventCallback<AgentPlanStep>",
+          "isRequired": false,
+          "description": "Raised with the failed step whose Retry the reader chose: the host restarts the run FROM that step (the steps before it keep their state). Available in both modes, because a failure is reported while the run is going."
+        },
+        {
+          "name": "OnRun",
+          "type": "EventCallback",
+          "isRequired": false,
+          "description": "Raised when the reader starts the run. Rendered only when this callback is bound. Review mode only — a running plan offers no second start."
+        },
+        {
+          "name": "ShowSummary",
+          "type": "bool",
+          "isRequired": false,
+          "default": "true",
+          "description": "Whether the \"4 of 7 done · 1:24\" summary is rendered next to the title. Default true; the summary is the only place the plan's whole progress and total elapsed time are stated."
+        },
+        {
+          "name": "ShowTitle",
+          "type": "bool",
+          "isRequired": false,
+          "default": "true",
+          "description": "Whether the heading is rendered. Default true; set false when the host page already provides the section heading. The plan stays named through AriaLabel either way."
+        },
+        {
+          "name": "Steps",
+          "type": "IReadOnlyList<AgentPlanStep>?",
+          "isRequired": false,
+          "description": "The plan, in display order. The component renders exactly this list (plus the inline rename editor) and never writes back to it: every edit is reported through OnPlanChanged, so a host that ignores the callback keeps the plan it passed. Null renders the empty state."
+        },
+        {
+          "name": "Title",
+          "type": "string?",
+          "isRequired": false,
+          "description": "The heading above the plan. Null renders the localized default (\"Plan\"). The heading is not rendered when ShowTitle is false."
+        }
+      ],
+      "examples": [
+        {
+          "title": "Review a plan and start the run",
+          "code": "<TmAgentPlan Steps=\"@steps\"\n             OnPlanChanged=\"ApplyAsync\"\n             OnApprove=\"ApproveAsync\"\n             OnRun=\"RunAsync\" />\n\n@code {\n    private IReadOnlyList<AgentPlanStep> steps = [\n        new(\"Draft the outline\"),\n        new(\"Confirm the sources\"),\n        new(\"Publish the summary\"),\n    ];\n\n    private Task ApplyAsync(IReadOnlyList<AgentPlanStep> next, AgentPlanEdit edit)\n    {\n        steps = next; // the host owns the plan; the component only proposes\n        return Task.CompletedTask;\n    }\n}"
+        },
+        {
+          "title": "Watch the run, with a retry from the failed step",
+          "code": "<TmAgentPlan Steps=\"@run\"\n             Mode=\"AgentPlanMode.Running\"\n             OnRetryFrom=\"RetryAsync\" />"
+        },
+        {
+          "title": "Read-only review that may only be approved",
+          "code": "<TmAgentPlan Steps=\"@steps\" AllowEditing=\"false\" OnApprove=\"ApproveAsync\" />"
+        }
+      ]
+    },
+    {
       "itemName": "TmAiComposer",
       "kind": "Component",
       "category": "AI",
@@ -1050,6 +1169,10 @@
   "libraryExamples": [],
   "assets": [
     {
+      "path": "src/Tempo.Blazor.AI/wwwroot/css/components/_ai-agent-plan.css",
+      "kind": "Css"
+    },
+    {
       "path": "src/Tempo.Blazor.AI/wwwroot/css/components/_ai-composer.css",
       "kind": "Css"
     },
@@ -1111,11 +1234,11 @@
     }
   ],
   "summary": {
-    "itemCount": 14,
-    "manualItemCount": 14,
-    "generatedItemCount": 14,
+    "itemCount": 15,
+    "manualItemCount": 15,
+    "generatedItemCount": 15,
     "generatedOnlyItemCount": 0,
-    "componentCount": 9,
+    "componentCount": 10,
     "publicApiTypeCount": 5
   }
 }

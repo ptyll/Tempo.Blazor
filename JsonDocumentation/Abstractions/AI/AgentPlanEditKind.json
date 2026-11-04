@@ -1,0 +1,16 @@
+{
+  "kind": "Enum",
+  "category": "AI",
+  "namespace": "Tempo.Blazor.AI.Models",
+  "description": "Which edit TmAgentPlan turned into the new step list it reports through OnPlanChanged. A host that persists or logs plan changes reads this instead of diffing two snapshots.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/AI/AgentPlanEditKind.cs",
+  "documentationStatus": "generated",
+  "itemName": "AgentPlanEditKind",
+  "members": [
+    { "name": "Rename", "description": "An existing step's Title changed." },
+    { "name": "Add", "description": "A step was inserted at AgentPlanEdit.Index." },
+    { "name": "Remove", "description": "The step at AgentPlanEdit.Index was removed; the removed step rides in AgentPlanEdit.Step, so the host can undo it." },
+    { "name": "Reorder", "description": "A step moved from AgentPlanEdit.FromIndex to AgentPlanEdit.ToIndex." }
+  ]
+}

@@ -165,6 +165,7 @@ public sealed class BuiltInComponentSchemas : IWireframeSchemaSource
             ["TmInlineDiff"] = ["inline-diff"],
             ["TmSuggestionCard"] = ["suggestion-card"],
             ["TmPermissionRequest"] = ["permission-request"],
+            ["TmAgentPlan"] = ["agent-plan"],
             ["TmMultiViewList"] = ["list-view"],
             ["TmDataTable"] = ["data-table"],
             ["TmPagination"] = ["pagination"],
@@ -1334,6 +1335,21 @@ public sealed class BuiltInComponentSchemas : IWireframeSchemaSource
                 P("scope",      "Scope",       PropType.Enum,   "for-duration",                   cat: "Appearance",
                     opts: ["once", "for-duration", "session", "always"]),
                 P("showReason", "Show Reason", PropType.Bool,   true,                             cat: "Appearance"),
+            ]
+        };
+
+        yield return new WireframeComponentSchema
+        {
+            Type = "TmAgentPlan", Category = "AI", DisplayName = "Agent Plan",
+            DefaultWidth = 400, DefaultHeight = 260,
+            Props =
+            [
+                P("title",       "Title",        PropType.String, "Plan", cat: "Content"),
+                P("steps",       "Steps",        PropType.StringList, new[] { "Draft the outline", "Confirm the sources", "Review with the team", "Publish the summary" }, cat: "Content"),
+                P("mode",        "Mode",         PropType.Enum,   "review", cat: "Behavior",
+                    opts: ["review", "running"]),
+                P("showSummary", "Show Summary", PropType.Bool,   true,    cat: "Appearance"),
+                P("showAddStep", "Show Add Step", PropType.Bool,  true,    cat: "Appearance"),
             ]
         };
 

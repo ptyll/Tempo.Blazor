@@ -63,6 +63,7 @@ public sealed class BuiltInUiRoleVocabularySource : IUiRoleVocabularySource
         R("inline-diff", "Inline diff", "Compares two texts inline and lets a human accept or reject each change.", "text diff", "porovnani textu", "TmInlineDiff"),
         R("suggestion-card", "Suggestion card", "Presents one machine suggestion with its confidence, rationale and alternatives for a human to accept or dismiss.", "recommendation", "smart recommendation", "navrh", "TmSuggestionCard"),
         R("permission-request", "Permission request", "Asks a human to allow an agent to use one tool on one target, for a chosen scope and duration.", "permission", "consent prompt", "opravneni", "TmPermissionRequest"),
+        R("agent-plan", "Agent plan", "Lists the steps an agent intends to run and the state of each one, so a human reviews the plan before the run and follows it while it runs.", "step plan", "review plan", "plan kroku", "agent plan", "TmAgentPlan"),
         R("onboarding-checklist", "Onboarding checklist", "Guides a user through the steps of setting up the product, with progress, grouped steps and a celebration once every required step is done.", "setup guide", "progress tracker", "checklist", "seznam kroku", "TmOnboardingChecklist"),
         R("diff-view", "Diff view", "Shows differences between two values or versions.", "change diff", "porovnani zmen", "TmChangeDiff"),
         R("kanban-board", "Kanban board", "Shows work items in draggable columns.", "kanban", "kanban tabule", "TmKanbanBoard"),

@@ -1,0 +1,407 @@
+/* ═══════════════════════════════════════════════════════════════════════════════════════════════
+   TmAgentPlan — the agent's plan of steps, reviewed before a run and watched while it runs
+   Contract: docs/agent-plan.md
+   Every rule reads a --tm-* design token (no colour literal, no raw palette step, no [data-theme]
+   block); the package's shared token gate is AiMarkdownViewCssTests. The plan declares NO
+   transition and NO animation on purpose: it redraws itself every second while a step runs, so a
+   moving surface would keep animating for the whole run (and the package's reduced-motion
+   enumeration stays exactly as it is).
+   ═══════════════════════════════════════════════════════════════════════════════════════════════ */
+
+.tm-ai-agent-plan {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-3);
+    padding: var(--tm-space-4);
+    border: var(--tm-border-width) solid var(--tm-border-color);
+    border-radius: var(--tm-radius-card);
+    background-color: var(--tm-bg-surface);
+    color: var(--tm-text-primary);
+    box-shadow: var(--tm-shadow-sm);
+    font-size: var(--tm-font-size-sm);
+    line-height: 1.5;
+}
+
+.tm-ai-agent-plan:focus-visible {
+    outline: 2px solid transparent;
+    outline-offset: 2px;
+    box-shadow: var(--tm-focus-ring);
+}
+
+/* A running plan is a live surface: the accent edge says so without moving. */
+.tm-ai-agent-plan--running {
+    border-inline-start: 3px solid var(--tm-color-primary);
+}
+
+/* ── Header ──────────────────────────────────────────────────────────────────────────────────── */
+
+.tm-ai-agent-plan__header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--tm-space-2) var(--tm-space-4);
+}
+
+.tm-ai-agent-plan__heading {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-1);
+    min-inline-size: 0;
+}
+
+.tm-ai-agent-plan__title {
+    margin: 0;
+    font-size: var(--tm-font-size-base);
+    font-weight: var(--tm-font-weight-semibold);
+    color: var(--tm-text-primary);
+}
+
+.tm-ai-agent-plan__summary {
+    margin: 0;
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-xs);
+    font-variant-numeric: tabular-nums;
+}
+
+.tm-ai-agent-plan__actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--tm-space-2);
+}
+
+/* ── Steps ───────────────────────────────────────────────────────────────────────────────────── */
+
+.tm-ai-agent-plan__step {
+    display: grid;
+    grid-template-columns: auto auto minmax(0, 1fr) auto auto;
+    align-items: start;
+    gap: var(--tm-space-2) var(--tm-space-3);
+}
+
+.tm-ai-agent-plan__index {
+    min-inline-size: 1.5rem;
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-xs);
+    font-variant-numeric: tabular-nums;
+    text-align: end;
+    padding-block-start: 2px;
+}
+
+.tm-ai-agent-plan__status {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--tm-space-1);
+    padding-block-start: 1px;
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-xs);
+    white-space: nowrap;
+}
+
+/* The word is the primary carrier; the colour only reinforces it. */
+.tm-ai-agent-plan__status[data-status="running"] {
+    color: var(--tm-color-primary-text);
+}
+
+.tm-ai-agent-plan__status[data-status="done"] {
+    color: var(--tm-color-success-text);
+}
+
+.tm-ai-agent-plan__status[data-status="failed"] {
+    color: var(--tm-color-danger-text);
+}
+
+.tm-ai-agent-plan__status[data-status="pending"],
+.tm-ai-agent-plan__status[data-status="skipped"] {
+    color: var(--tm-text-secondary);
+}
+
+.tm-ai-agent-plan__status-text {
+    font-weight: var(--tm-font-weight-medium);
+}
+
+.tm-ai-agent-plan__body {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-1);
+    min-inline-size: 0;
+}
+
+.tm-ai-agent-plan__title-text {
+    color: var(--tm-text-primary);
+    font-weight: var(--tm-font-weight-medium);
+    overflow-wrap: anywhere;
+}
+
+/* A step the host passed without a title: the fallback word is a stand-in, not a name the plan owns. */
+.tm-ai-agent-plan__title-text--placeholder {
+    color: var(--tm-text-secondary);
+    font-style: italic;
+}
+
+.tm-ai-agent-plan__title-button {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--tm-space-2);
+    min-block-size: 2rem;
+    padding: var(--tm-space-1) var(--tm-space-2);
+    border: var(--tm-border-width) solid transparent;
+    border-radius: var(--tm-radius-md);
+    background: none;
+    color: var(--tm-text-primary);
+    font: inherit;
+    font-weight: var(--tm-font-weight-medium);
+    text-align: start;
+    cursor: text;
+}
+
+.tm-ai-agent-plan__title-button:hover {
+    border-color: var(--tm-border-color);
+    background-color: var(--tm-bg-surface-secondary);
+}
+
+.tm-ai-agent-plan__title-button:focus-visible {
+    outline: 2px solid var(--tm-color-primary);
+    outline-offset: 2px;
+}
+
+.tm-ai-agent-plan__description {
+    margin: 0;
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-xs);
+    overflow-wrap: anywhere;
+}
+
+.tm-ai-agent-plan__error {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--tm-space-1);
+    margin: 0;
+    padding: var(--tm-space-1) var(--tm-space-2);
+    border-inline-start: 3px solid var(--tm-color-danger);
+    border-radius: var(--tm-radius-sm);
+    background-color: var(--tm-color-danger-subtle);
+    color: var(--tm-color-danger-text);
+    font-size: var(--tm-font-size-xs);
+    overflow-wrap: anywhere;
+}
+
+.tm-ai-agent-plan__time {
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-xs);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+/* ── Actions ────────────────────────────────────────────────────────────────────────────────── */
+
+.tm-ai-agent-plan__action {
+    min-block-size: 2rem;
+}
+
+.tm-ai-agent-plan__action--icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    inline-size: 2rem;
+    padding: 0;
+    border: var(--tm-border-width) solid var(--tm-border-color);
+    border-radius: var(--tm-radius-md);
+    background-color: var(--tm-bg-surface);
+    color: var(--tm-text-secondary);
+    cursor: pointer;
+}
+
+.tm-ai-agent-plan__action--icon:hover {
+    border-color: var(--tm-color-primary);
+    color: var(--tm-color-primary-text);
+}
+
+.tm-ai-agent-plan__action--icon:focus-visible,
+.tm-ai-agent-plan__retry:focus-visible,
+.tm-ai-agent-plan__action:focus-visible {
+    outline: 2px solid var(--tm-color-primary);
+    outline-offset: 2px;
+}
+
+.tm-ai-agent-plan__step-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: var(--tm-space-1);
+}
+
+.tm-ai-agent-plan__retry {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--tm-space-1);
+    min-block-size: 2rem;
+    padding: var(--tm-space-1) var(--tm-space-2);
+    border: var(--tm-border-width) solid var(--tm-color-danger);
+    border-radius: var(--tm-radius-md);
+    background-color: var(--tm-bg-surface);
+    color: var(--tm-color-danger-text);
+    font: inherit;
+    font-size: var(--tm-font-size-xs);
+    font-weight: var(--tm-font-weight-medium);
+    cursor: pointer;
+}
+
+.tm-ai-agent-plan__retry:hover {
+    background-color: var(--tm-color-danger-subtle);
+}
+
+/* ── Rename editor ──────────────────────────────────────────────────────────────────────────── */
+
+.tm-ai-agent-plan__rename-editor {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--tm-space-1);
+}
+
+.tm-ai-agent-plan__rename {
+    flex: 1 1 auto;
+    min-inline-size: 0;
+    min-block-size: 2rem;
+    padding: var(--tm-space-1) var(--tm-space-2);
+    border: var(--tm-border-width) solid var(--tm-border-color-control);
+    border-radius: var(--tm-radius-md);
+    background-color: var(--tm-bg-surface);
+    color: var(--tm-text-primary);
+    font: inherit;
+    font-weight: var(--tm-font-weight-medium);
+}
+
+/* A refused empty title: the field carries the invalid state, not just the announcement. */
+.tm-ai-agent-plan__rename[aria-invalid="true"] {
+    border-color: var(--tm-color-danger);
+}
+
+.tm-ai-agent-plan__rename:focus-visible {
+    outline: 2px solid var(--tm-color-primary);
+    outline-offset: 1px;
+}
+
+/* The reason the save was refused, on screen under the field (WCAG 3.3.1). It wraps to its own line so
+   the field and its two buttons keep one row. */
+.tm-ai-agent-plan__rename-error {
+    flex: 1 0 100%;
+    margin: 0;
+    color: var(--tm-color-danger-text);
+    font-size: var(--tm-font-size-xs);
+}
+
+/* ── Footer and the undo strip ──────────────────────────────────────────────────────────────── */
+
+.tm-ai-agent-plan__footer {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-2);
+}
+
+.tm-ai-agent-plan__undo {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--tm-space-2);
+    padding: var(--tm-space-2) var(--tm-space-3);
+    border: var(--tm-border-width) solid var(--tm-border-color);
+    border-radius: var(--tm-radius-md);
+    background-color: var(--tm-bg-surface-secondary);
+}
+
+.tm-ai-agent-plan__undo-text {
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-xs);
+}
+
+.tm-ai-agent-plan__empty {
+    margin: 0;
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-xs);
+}
+
+/* ── Touch ──────────────────────────────────────────────────────────────────────────────────── */
+
+@media (pointer: coarse) {
+    .tm-ai-agent-plan__action,
+    .tm-ai-agent-plan__action--icon,
+    .tm-ai-agent-plan__retry,
+    .tm-ai-agent-plan__title-button,
+    .tm-ai-agent-plan__rename {
+        min-block-size: var(--tm-touch-target);
+    }
+
+    .tm-ai-agent-plan__action--icon {
+        inline-size: var(--tm-touch-target);
+    }
+
+    /* Two bands: the state line (number, state, elapsed) and the body, with the actions below. The
+       desktop columns cannot share a 375 px row without squeezing the title into a sliver, and an
+       auto-placed body would land in the index column exactly that way. */
+    .tm-ai-agent-plan__step {
+        grid-template-columns: auto minmax(0, 1fr) auto;
+        grid-template-areas:
+            "index status time"
+            "body body body"
+            "actions actions actions";
+    }
+
+    .tm-ai-agent-plan__index {
+        grid-area: index;
+        min-inline-size: 1.25rem;
+        text-align: start;
+    }
+
+    .tm-ai-agent-plan__status {
+        grid-area: status;
+    }
+
+    .tm-ai-agent-plan__time {
+        grid-area: time;
+    }
+
+    .tm-ai-agent-plan__body {
+        grid-area: body;
+    }
+
+    .tm-ai-agent-plan__step-actions {
+        grid-area: actions;
+        justify-content: flex-start;
+    }
+}
+
+/* ── High contrast ──────────────────────────────────────────────────────────────────────────── */
+
+@media (forced-colors: active) {
+    .tm-ai-agent-plan {
+        border-color: CanvasText;
+    }
+
+    .tm-ai-agent-plan__action:focus-visible,
+    .tm-ai-agent-plan__action--icon:focus-visible,
+    .tm-ai-agent-plan__title-button:focus-visible,
+    .tm-ai-agent-plan__rename:focus-visible,
+    .tm-ai-agent-plan__retry:focus-visible {
+        outline: 2px solid Highlight;
+        outline-offset: 2px;
+        outline-color: Highlight;
+    }
+
+    /* The error wash is a colour-only cue once the palette collapses, so the block keeps an edge. */
+    .tm-ai-agent-plan__error {
+        border: var(--tm-border-width) solid CanvasText;
+        border-inline-start-width: 3px;
+    }
+
+    .tm-ai-agent-plan__action--icon,
+    .tm-ai-agent-plan__retry,
+    .tm-ai-agent-plan__rename,
+    /* The invalid field keeps a system-colour edge instead of collapsing into the danger wash. */
+    .tm-ai-agent-plan__rename[aria-invalid="true"] {
+        border-color: CanvasText;
+    }
+}

@@ -1,0 +1,11 @@
+{
+  "kind": "Class",
+  "category": "AI",
+  "namespace": "Tempo.Blazor.AI.Models",
+  "description": "One step of an agent plan: what the agent intends to do, its live execution state and the timestamps the plan turns into durations. The record is a VALUE — a host composes the plan, hands it to TmAgentPlan and replaces a step with `step with { … }` when the run moves on. Timestamps are the only source of a duration: Duration needs both ends, and a Running step elapses from StartedAt to the \"now\" the caller passes (the plan reads it from its injected TimeProvider), never to the wall clock.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/AI/AgentPlanStep.cs",
+  "documentationStatus": "generated",
+  "itemName": "AgentPlanStep",
+  "usageExample": "var step = new AgentPlanStep(\"Draft the outline\", \"step-1\") { Status = AgentStepStatus.Running, StartedAt = TimeProvider.System.GetUtcNow() };\nvar done = step with { Status = AgentStepStatus.Done, CompletedAt = TimeProvider.System.GetUtcNow() };"
+}

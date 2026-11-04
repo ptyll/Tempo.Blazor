@@ -38062,6 +38062,125 @@
       },
       "items": [
         {
+          "itemName": "TmAgentPlan",
+          "kind": "Component",
+          "category": "AI",
+          "namespace": "Tempo.Blazor.Components.AI",
+          "description": "The agent's plan of steps: what it intends to do, reviewed and edited before the run and watched while it runs. In Review mode a step can be renamed inline (F2 or a click on its title, Enter saves, Escape cancels), added below a row or at the end, removed with an Undo strip, and reordered through the core TmSortableList. In Running mode the same rows are read-only, a running step counts its live elapsed time from the injected TimeProvider, the summary adds the plan total (\"4 of 7 done · 1:24\"), and a failed step shows its error and offers \"Retry from this step\". The component never mutates Steps: every edit raises OnPlanChanged(newSteps, edit) and the host applies it.",
+          "packageId": "Tempo.Blazor.AI",
+          "sourcePath": "src/Tempo.Blazor.AI/Components/AI/TmAgentPlan.razor",
+          "documentationStatus": "merged",
+          "requiredImports": [
+            "@using Tempo.Blazor.AI.Models",
+            "@using Tempo.Blazor.Components.AI"
+          ],
+          "parameters": [
+            {
+              "name": "AllowEditing",
+              "type": "bool",
+              "isRequired": false,
+              "default": "true",
+              "description": "Whether the plan may be edited at all. Default true — and only meaningful in AgentPlanMode.Review, because a running plan is read-only regardless. Set false for a review that may only be read and approved."
+            },
+            {
+              "name": "AriaLabel",
+              "type": "string?",
+              "isRequired": false,
+              "description": "The accessible name of the plan. Null names it by the rendered heading — so the name a reader hears is the one they see — and, without a heading, by the localized \"Agent plan\"."
+            },
+            {
+              "name": "Class",
+              "type": "string?",
+              "isRequired": false,
+              "description": "Additional CSS classes for the root element."
+            },
+            {
+              "name": "EmptyContent",
+              "type": "RenderFragment?",
+              "isRequired": false,
+              "description": "Rendered instead of the localized \"No steps yet.\" when Steps is null or empty. The plan's instructions and its live region stay rendered either way."
+            },
+            {
+              "name": "HeadingLevel",
+              "type": "int",
+              "isRequired": false,
+              "default": "3",
+              "description": "The heading level of the rendered title, clamped to 2–6. Default 3, so the plan can sit under any page outline; the level has no effect when ShowTitle is false."
+            },
+            {
+              "name": "Mode",
+              "type": "AgentPlanMode",
+              "isRequired": false,
+              "default": "AgentPlanMode.Review",
+              "description": "Whether the plan is being reviewed or is running. Default AgentPlanMode.Review. A Running plan is read-only — no rename, no add, no remove, no reorder and no Approve / Run — but it keeps the live timer of a running step, the summary, a failed step's error and its Retry action."
+            },
+            {
+              "name": "OnApprove",
+              "type": "EventCallback",
+              "isRequired": false,
+              "description": "Raised when the reader approves the plan. The action is rendered only when this callback is bound, so a plan without a host decision has no dead button. Review mode only."
+            },
+            {
+              "name": "OnPlanChanged",
+              "type": "Func<IReadOnlyList<AgentPlanStep>, AgentPlanEdit, Task>?",
+              "isRequired": false,
+              "description": "Raised once per edit with the WHOLE proposed step list and the AgentPlanEdit that produced it. The component does not apply the edit itself; the host stores the list and the next render shows it. Not raised for a rename that changed nothing, for a refused empty title, or for a reorder that did not move a row."
+            },
+            {
+              "name": "OnRetryFrom",
+              "type": "EventCallback<AgentPlanStep>",
+              "isRequired": false,
+              "description": "Raised with the failed step whose Retry the reader chose: the host restarts the run FROM that step (the steps before it keep their state). Available in both modes, because a failure is reported while the run is going."
+            },
+            {
+              "name": "OnRun",
+              "type": "EventCallback",
+              "isRequired": false,
+              "description": "Raised when the reader starts the run. Rendered only when this callback is bound. Review mode only — a running plan offers no second start."
+            },
+            {
+              "name": "ShowSummary",
+              "type": "bool",
+              "isRequired": false,
+              "default": "true",
+              "description": "Whether the \"4 of 7 done · 1:24\" summary is rendered next to the title. Default true; the summary is the only place the plan's whole progress and total elapsed time are stated."
+            },
+            {
+              "name": "ShowTitle",
+              "type": "bool",
+              "isRequired": false,
+              "default": "true",
+              "description": "Whether the heading is rendered. Default true; set false when the host page already provides the section heading. The plan stays named through AriaLabel either way."
+            },
+            {
+              "name": "Steps",
+              "type": "IReadOnlyList<AgentPlanStep>?",
+              "isRequired": false,
+              "description": "The plan, in display order. The component renders exactly this list (plus the inline rename editor) and never writes back to it: every edit is reported through OnPlanChanged, so a host that ignores the callback keeps the plan it passed. Null renders the empty state."
+            },
+            {
+              "name": "Title",
+              "type": "string?",
+              "isRequired": false,
+              "description": "The heading above the plan. Null renders the localized default (\"Plan\"). The heading is not rendered when ShowTitle is false."
+            }
+          ],
+          "examples": [
+            {
+              "title": "Review a plan and start the run",
+              "code": "<TmAgentPlan Steps=\"@steps\"\n             OnPlanChanged=\"ApplyAsync\"\n             OnApprove=\"ApproveAsync\"\n             OnRun=\"RunAsync\" />\n\n@code {\n    private IReadOnlyList<AgentPlanStep> steps = [\n        new(\"Draft the outline\"),\n        new(\"Confirm the sources\"),\n        new(\"Publish the summary\"),\n    ];\n\n    private Task ApplyAsync(IReadOnlyList<AgentPlanStep> next, AgentPlanEdit edit)\n    {\n        steps = next; // the host owns the plan; the component only proposes\n        return Task.CompletedTask;\n    }\n}"
+            },
+            {
+              "title": "Watch the run, with a retry from the failed step",
+              "code": "<TmAgentPlan Steps=\"@run\"\n             Mode=\"AgentPlanMode.Running\"\n             OnRetryFrom=\"RetryAsync\" />"
+            },
+            {
+              "title": "Read-only review that may only be approved",
+              "code": "<TmAgentPlan Steps=\"@steps\" AllowEditing=\"false\" OnApprove=\"ApproveAsync\" />"
+            }
+          ]
+        },
+        {
           "itemName": "TmAiComposer",
           "kind": "Component",
           "category": "AI",
@@ -39037,6 +39156,10 @@
       "libraryExamples": [],
       "assets": [
         {
+          "path": "src/Tempo.Blazor.AI/wwwroot/css/components/_ai-agent-plan.css",
+          "kind": "Css"
+        },
+        {
           "path": "src/Tempo.Blazor.AI/wwwroot/css/components/_ai-composer.css",
           "kind": "Css"
         },
@@ -39098,11 +39221,11 @@
         }
       ],
       "summary": {
-        "itemCount": 14,
-        "manualItemCount": 14,
-        "generatedItemCount": 14,
+        "itemCount": 15,
+        "manualItemCount": 15,
+        "generatedItemCount": 15,
         "generatedOnlyItemCount": 0,
-        "componentCount": 9,
+        "componentCount": 10,
         "publicApiTypeCount": 5
       }
     },
@@ -78185,6 +78308,292 @@
         ]
       },
       "items": [
+        {
+          "itemName": "AgentPlanEdit",
+          "kind": "Record",
+          "category": "AI",
+          "namespace": "Tempo.Blazor.AI.Models",
+          "description": "One edit of an agent plan, reported next to the whole new step list by TmAgentPlan.OnPlanChanged: OnPlanChanged(IReadOnlyList<AgentPlanStep> steps, AgentPlanEdit edit). The list is authoritative — a host that keeps the steps applies it and is done. The edit answers the questions a list cannot: WHICH operation the reader performed, at WHICH position, and (for a removal) the removed step itself, so an undo does not have to diff two snapshots. The factories Rename / Add / Remove / Reorder are the only way to build one.",
+          "packageId": "Tempo.Blazor.Abstractions",
+          "sourcePath": "src/Tempo.Blazor.Abstractions/AI/AgentPlanEdit.cs",
+          "documentationStatus": "merged",
+          "members": [
+            {
+              "name": "Add",
+              "kind": "Method",
+              "type": "AgentPlanEdit",
+              "description": "A step was inserted at index.",
+              "parameters": [
+                {
+                  "name": "index",
+                  "type": "int"
+                },
+                {
+                  "name": "step",
+                  "type": "AgentPlanStep"
+                }
+              ]
+            },
+            {
+              "name": "Remove",
+              "kind": "Method",
+              "type": "AgentPlanEdit",
+              "description": "The step at index was removed.",
+              "parameters": [
+                {
+                  "name": "index",
+                  "type": "int"
+                },
+                {
+                  "name": "step",
+                  "type": "AgentPlanStep"
+                }
+              ]
+            },
+            {
+              "name": "Rename",
+              "kind": "Method",
+              "type": "AgentPlanEdit",
+              "description": "An existing step's title changed.",
+              "parameters": [
+                {
+                  "name": "index",
+                  "type": "int"
+                },
+                {
+                  "name": "stepId",
+                  "type": "string"
+                },
+                {
+                  "name": "title",
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "name": "Reorder",
+              "kind": "Method",
+              "type": "AgentPlanEdit",
+              "description": "The step at fromIndex moved to toIndex.",
+              "parameters": [
+                {
+                  "name": "fromIndex",
+                  "type": "int"
+                },
+                {
+                  "name": "toIndex",
+                  "type": "int"
+                },
+                {
+                  "name": "stepId",
+                  "type": "string"
+                }
+              ]
+            },
+            {
+              "name": "FromIndex",
+              "kind": "Property",
+              "type": "int?",
+              "description": "The index the step moved from; set for Reorder only."
+            },
+            {
+              "name": "Index",
+              "kind": "Property",
+              "type": "int",
+              "description": "The zero-based position the edit concerns in the NEW list: the renamed row, the insertion point of an added step, the hole a removed step left behind, or the new position of a reordered one."
+            },
+            {
+              "name": "Kind",
+              "kind": "Property",
+              "type": "AgentPlanEditKind",
+              "description": "Which operation the reader performed."
+            },
+            {
+              "name": "Step",
+              "kind": "Property",
+              "type": "AgentPlanStep?",
+              "description": "The step itself: the inserted one for Add (which is also how an undo of a removal comes back) and the removed one for Remove."
+            },
+            {
+              "name": "StepId",
+              "kind": "Property",
+              "type": "string?",
+              "description": "The Id of the step the edit concerns."
+            },
+            {
+              "name": "Title",
+              "kind": "Property",
+              "type": "string?",
+              "description": "The new title; set for Rename only."
+            },
+            {
+              "name": "ToIndex",
+              "kind": "Property",
+              "type": "int?",
+              "description": "The index the step moved to; set for Reorder only."
+            }
+          ],
+          "usageExample": "private Task ApplyAsync(IReadOnlyList<AgentPlanStep> next, AgentPlanEdit edit)\n{\n    switch (edit.Kind)\n    {\n        case AgentPlanEditKind.Remove:\n            _removed = edit.Step; // keep it for the host's own undo\n            break;\n        case AgentPlanEditKind.Rename:\n            _log.WriteLine($\"{edit.StepId} -> {edit.Title}\");\n            break;\n    }\n\n    _steps = next;\n    return Task.CompletedTask;\n}"
+        },
+        {
+          "itemName": "AgentPlanEditKind",
+          "kind": "Enum",
+          "category": "AI",
+          "namespace": "Tempo.Blazor.AI.Models",
+          "description": "Which edit TmAgentPlan turned into the new step list it reports through OnPlanChanged. A host that persists or logs plan changes reads this instead of diffing two snapshots.",
+          "packageId": "Tempo.Blazor.Abstractions",
+          "sourcePath": "src/Tempo.Blazor.Abstractions/AI/AgentPlanEditKind.cs",
+          "documentationStatus": "merged",
+          "members": [
+            {
+              "name": "Rename",
+              "description": "An existing step's Title changed."
+            },
+            {
+              "name": "Add",
+              "description": "A step was inserted at AgentPlanEdit.Index."
+            },
+            {
+              "name": "Remove",
+              "description": "The step at AgentPlanEdit.Index was removed; the removed step rides in AgentPlanEdit.Step, so the host can undo it."
+            },
+            {
+              "name": "Reorder",
+              "description": "A step moved from AgentPlanEdit.FromIndex to AgentPlanEdit.ToIndex."
+            }
+          ]
+        },
+        {
+          "itemName": "AgentPlanMode",
+          "kind": "Enum",
+          "category": "AI",
+          "namespace": "Tempo.Blazor.AI.Models",
+          "description": "What TmAgentPlan may show and edit: the reviewable plan before a run, or the read-only plan of a run in progress. The mode is a switch of SHAPE, not only of permissions — a Review plan offers renaming, adding, removing and reordering plus the Approve / Run actions, while a Running plan renders the same rows read-only and adds the live timer, the failure and the Retry action.",
+          "packageId": "Tempo.Blazor.Abstractions",
+          "sourcePath": "src/Tempo.Blazor.Abstractions/AI/AgentPlanMode.cs",
+          "documentationStatus": "merged",
+          "members": [
+            {
+              "name": "Review",
+              "description": "The plan is being reviewed; every edit path and every plan action is available."
+            },
+            {
+              "name": "Running",
+              "description": "The plan is running; the rows are read-only and only a failed step still offers Retry."
+            }
+          ]
+        },
+        {
+          "itemName": "AgentPlanStep",
+          "kind": "Record",
+          "category": "AI",
+          "namespace": "Tempo.Blazor.AI.Models",
+          "description": "One step of an agent plan: what the agent intends to do, its live execution state and the timestamps the plan turns into durations. The record is a VALUE — a host composes the plan, hands it to TmAgentPlan and replaces a step with `step with { … }` when the run moves on. Timestamps are the only source of a duration: Duration needs both ends, and a Running step elapses from StartedAt to the \"now\" the caller passes (the plan reads it from its injected TimeProvider), never to the wall clock.",
+          "packageId": "Tempo.Blazor.Abstractions",
+          "sourcePath": "src/Tempo.Blazor.Abstractions/AI/AgentPlanStep.cs",
+          "documentationStatus": "merged",
+          "members": [
+            {
+              "name": "Elapsed",
+              "kind": "Method",
+              "type": "TimeSpan?",
+              "description": "How much time the step has consumed at now: its recorded Duration once it finished, otherwise the time since StartedAt — never negative, so a clock that moved backwards cannot paint \"-0:03\".",
+              "parameters": [
+                {
+                  "name": "now",
+                  "type": "DateTimeOffset"
+                }
+              ]
+            },
+            {
+              "name": "CompletedAt",
+              "kind": "Property",
+              "type": "DateTimeOffset?",
+              "description": "When the step finished. Null on a step that is still running (or never started)."
+            },
+            {
+              "name": "Description",
+              "kind": "Property",
+              "type": "string?",
+              "description": "Longer explanation of the step, rendered under the title. Null renders no description."
+            },
+            {
+              "name": "Error",
+              "kind": "Property",
+              "type": "string?",
+              "description": "The failure reason of an Failed step, in the agent's own words. The plan renders it under the title and offers \"Retry from this step\"."
+            },
+            {
+              "name": "Id",
+              "kind": "Property",
+              "type": "string",
+              "description": "Stable identity of the step. Never empty: a missing id is generated at construction, so the plan always has a key and a host always has something to persist."
+            },
+            {
+              "name": "IsEditable",
+              "kind": "Property",
+              "type": "bool",
+              "description": "Whether the reader may rename this step, add a step below it or remove it while the plan is in Review. Default true; set false for a step the plan did not author (imported from a template, produced by the agent and pinned), so the row keeps its content but offers no edit action. The mode still wins: a running plan is read-only for every step."
+            },
+            {
+              "name": "IsFinished",
+              "kind": "Property",
+              "type": "bool",
+              "description": "Whether the step reached a terminal state (Done, Failed or Skipped)."
+            },
+            {
+              "name": "StartedAt",
+              "kind": "Property",
+              "type": "DateTimeOffset?",
+              "description": "When the step started, from the host's clock. Null means the plan cannot time it."
+            },
+            {
+              "name": "Status",
+              "kind": "Property",
+              "type": "AgentStepStatus",
+              "description": "Current execution state. Default Pending."
+            },
+            {
+              "name": "Title",
+              "kind": "Property",
+              "type": "string",
+              "description": "What the step does, as the reader should see it."
+            }
+          ],
+          "usageExample": "var step = new AgentPlanStep(\"Draft the outline\", \"step-1\") { Status = AgentStepStatus.Running, StartedAt = TimeProvider.System.GetUtcNow() };\nvar done = step with { Status = AgentStepStatus.Done, CompletedAt = TimeProvider.System.GetUtcNow() };"
+        },
+        {
+          "itemName": "AgentStepStatus",
+          "kind": "Enum",
+          "category": "AI",
+          "namespace": "Tempo.Blazor.AI.Models",
+          "description": "Execution state of one AgentPlanStep. The state decides what TmAgentPlan paints (an icon plus the state in words) and which actions a step offers: a Failed step offers \"Retry from this step\", a Running one counts its live elapsed time, and a Skipped one is a terminal state that is neither a success nor a failure.",
+          "packageId": "Tempo.Blazor.Abstractions",
+          "sourcePath": "src/Tempo.Blazor.Abstractions/AI/AgentStepStatus.cs",
+          "documentationStatus": "merged",
+          "members": [
+            {
+              "name": "Pending",
+              "description": "Queued but not started."
+            },
+            {
+              "name": "Running",
+              "description": "Executing right now; the plan counts its elapsed time from StartedAt until CompletedAt is set."
+            },
+            {
+              "name": "Done",
+              "description": "Finished successfully."
+            },
+            {
+              "name": "Failed",
+              "description": "Finished with an error; the step's Error carries the reason and the row offers Retry."
+            },
+            {
+              "name": "Skipped",
+              "description": "Deliberately skipped — a terminal state that neither succeeded nor failed."
+            }
+          ]
+        },
         {
           "itemName": "AiCitationAddedDelta",
           "kind": "Class",
@@ -117986,12 +118395,12 @@
       ],
       "libraryExamples": [],
       "summary": {
-        "itemCount": 1580,
-        "manualItemCount": 1580,
-        "generatedItemCount": 1564,
+        "itemCount": 1585,
+        "manualItemCount": 1585,
+        "generatedItemCount": 1569,
         "generatedOnlyItemCount": 0,
         "componentCount": 0,
-        "publicApiTypeCount": 1564
+        "publicApiTypeCount": 1569
       }
     },
     {
@@ -134984,10 +135393,10 @@
   ],
   "summary": {
     "packageCount": 28,
-    "itemCount": 3501,
-    "manualItemCount": 3501,
+    "itemCount": 3507,
+    "manualItemCount": 3507,
     "generatedOnlyItemCount": 0,
-    "componentCount": 539,
-    "publicApiTypeCount": 2910
+    "componentCount": 540,
+    "publicApiTypeCount": 2915
   }
 }
