@@ -2,6 +2,7 @@
 @using Tempo.Blazor.Demo.Shared
 @using Tempo.Blazor.Components.Inputs
 @using Tempo.Blazor.Components.Forms
+@inject ITmLocalizer Loc
 @inject ToastService Toast
 @inject IJSRuntime JS
 <PageTitle>Form Inputs – Tempo.Blazor</PageTitle>
@@ -232,6 +233,49 @@
                            ShowConfirmButton="true"
                            @bind-Values="_selectedMax"
                            HelpText="You can select at most 2 items." />
+        </div>
+    </div>
+</section>
+
+<!-- Match highlighting and inline create (plan ff043b2e phase 8): both are OPT-IN. The left card marks the
+     typed term inside every matching row and offers a create row as the LAST option when nothing matches
+     exactly; the right card is the same contract on a single-value combobox. -->
+<section class="demo-section">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">@Loc["TmFormsDemo_MatchHighlight"]</h2>
+        <span class="px-2 py-0.5 text-xs font-medium bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 rounded-full">@Loc["TmFormsDemo_MatchHighlightBadge"]</span>
+    </div>
+    <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">@Loc["TmFormsDemo_MatchHighlightHint"]</p>
+    <div class="demo-grid demo-grid-2" data-testid="combobox-highlight-section">
+        <div class="showcase-card">
+            <h3 class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-4">@Loc["TmFormsDemo_MatchHighlight"]</h3>
+            <TmMultiSelect TItem="SelectOption<string>" TValue="string"
+                           Label="@Loc["TmFormsDemo_MatchHighlightBadge"]"
+                           Items="_cityOptions"
+                           DisplayField="@(o => o.Label)"
+                           ValueField="@(o => o.Value)"
+                           HighlightMatches="true"
+                           AllowCreate="true"
+                           OnCreate="CreateCityAsync"
+                           ShowCheckBox="true"
+                           @bind-Values="_selectedCities"
+                           Placeholder="@Loc["TmFormsDemo_MatchHighlightBadge"]" />
+            @* Creating is HOST-reported: this polite status line is the announcement the component cannot make
+               for itself, and CreateCityAsync selects the new value so the chip reflects the result too. *@
+            <p class="mt-3 text-sm text-slate-600 dark:text-slate-400" aria-live="polite" data-testid="combobox-create-result">
+                @(string.IsNullOrEmpty(_createdCity)
+                    ? Loc["TmFormsDemo_MatchHighlightEmpty"]
+                    : Loc["TmFormsDemo_MatchHighlightCreate", _createdCity])
+            </p>
+        </div>
+        <div class="showcase-card">
+            <h3 class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-4">Filterable dropdown</h3>
+            <TmFilterableDropdown TItem="SelectOption<string>" TValue="string"
+                                  Items="_techOptions"
+                                  DisplayField="@(o => o.Label)"
+                                  HighlightMatches="true"
+                                  @bind-Value="_highlightedTech"
+                                  Placeholder="Select technologies..." />
         </div>
     </div>
 </section>
@@ -960,6 +1004,42 @@
     private IReadOnlyList<string> _selectedTech = [];
     private IReadOnlyList<string> _selectedDelimiter = [];
     private IReadOnlyList<string> _selectedMax = [];
+
+    // Match highlighting / inline create demo (plan ff043b2e phase 8). The create handler is the HOST's:
+    // the component only reports the typed text, so the new option has to be added to the list here.
+    private readonly List<SelectOption<string>> _cityOptions =
+    [
+        SelectOption<string>.From("praha", "Praha"),
+        SelectOption<string>.From("brno", "Brno"),
+        SelectOption<string>.From("usti", "Ústí nad Labem"),
+        SelectOption<string>.From("plzen", "Plzeň")
+    ];
+
+    private IReadOnlyList<string> _selectedCities = [];
+    private string? _createdCity;
+    private SelectOption<string>? _highlightedTech;
+
+    private Task CreateCityAsync(string text)
+    {
+        _createdCity = text;
+
+        // Host-owned de-duplication: with an Items list the component already hides the create row for an
+        // exact match, but a provider may hold items it has not returned, so a host resolves the text to an
+        // existing option first (shown here by label).
+        var existing = _cityOptions.FirstOrDefault(
+            option => string.Equals(option.Label, text, StringComparison.OrdinalIgnoreCase));
+        var city = existing ?? SelectOption<string>.From(text.ToLowerInvariant(), text);
+        if (existing is null)
+        {
+            _cityOptions.Add(city);
+        }
+
+        // Creating is host-reported: the popup closes and focus returns to the trigger, so the markup's
+        // aria-live status line is what ANNOUNCES the result; selecting the value makes the chip reflect it
+        // in the control itself (the component renders no live region for the selection).
+        _selectedCities = [.. _selectedCities.Where(value => value != city.Value), city.Value];
+        return Task.CompletedTask;
+    }
 
     private static readonly List<SelectOption<string>> _fruitOptions =
     [

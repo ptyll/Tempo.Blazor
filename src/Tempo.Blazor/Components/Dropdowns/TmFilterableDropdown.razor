@@ -105,6 +105,11 @@
                             {
                                 @ItemTemplate(item)
                             }
+                            else if (HighlightMatches)
+                            {
+                                <TmHighlightedText Text="@GetDisplayText(item)" Query="@_filterText"
+                                                   AccentInsensitive="@AccentInsensitiveFilter" />
+                            }
                             else
                             {
                                 @GetDisplayText(item)
@@ -132,6 +137,14 @@
 
     /// <summary>Field selector for display text.</summary>
     [Parameter] public Func<TItem, string>? DisplayField { get; set; }
+
+    /// <summary>
+    /// Wraps the part of each option's display text that matches the filter in
+    /// <c>&lt;mark&gt;</c> so a reader sees where the term hit. Default <c>false</c> — the option renders
+    /// exactly the text it rendered before. The match ignores casing (and diacritics when
+    /// <see cref="AccentInsensitiveFilter"/> is on) and never changes the option's accessible name.
+    /// </summary>
+    [Parameter] public bool HighlightMatches { get; set; }
 
     /// <summary>Field selector for item key (used for @key).</summary>
     [Parameter] public Func<TItem, object>? IdField { get; set; }

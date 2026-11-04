@@ -87,7 +87,14 @@
                              aria-selected="@(IsSelected(recentValue) ? "true" : "false")"
                              @onclick="@(() => SelectItem(item))"
                              @onclick:preventDefault="true">
-                            @DisplaySelector(item)
+                            @if (HighlightMatches)
+                            {
+                                <TmHighlightedText Text="@DisplaySelector(item)" Query="@_searchText" />
+                            }
+                            else
+                            {
+                                @DisplaySelector(item)
+                            }
                         </div>
                     }
                 </div>
@@ -101,7 +108,14 @@
                      aria-selected="@(IsSelected(itemValue) ? "true" : "false")"
                      @onclick="@(() => SelectItem(item))"
                      @onclick:preventDefault="true">
-                    @DisplaySelector(item)
+                    @if (HighlightMatches)
+                    {
+                        <TmHighlightedText Text="@DisplaySelector(item)" Query="@_searchText" />
+                    }
+                    else
+                    {
+                        @DisplaySelector(item)
+                    }
                 </div>
             }
 
@@ -197,6 +211,14 @@
 
     /// <summary>Minimum characters before search triggers.</summary>
     [Parameter] public int MinSearchLength { get; set; } = 2;
+
+    /// <summary>
+    /// Wraps the part of each result's display text that matches the typed search in <c>&lt;mark&gt;</c> so
+    /// a reader sees where the term hit. Default <c>false</c>, so the results render the plain display text
+    /// they always rendered. The match ignores casing and diacritics and never changes the option's
+    /// accessible name.
+    /// </summary>
+    [Parameter] public bool HighlightMatches { get; set; }
 
     /// <summary>Debounce delay in ms.</summary>
     [Parameter] public int Debounce { get; set; } = 300;

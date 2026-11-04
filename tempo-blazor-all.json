@@ -8830,6 +8830,113 @@
           ]
         },
         {
+          "itemName": "SegmentedControlRole",
+          "kind": "Enum",
+          "category": "Components",
+          "namespace": "Tempo.Blazor.Components.Inputs",
+          "description": "The ARIA pattern a TmSegmentedControl exposes. The visual design is identical in both cases — what the control MEANS decides.",
+          "packageId": "Tempo.Blazor",
+          "sourcePath": "src/Tempo.Blazor/Components/Inputs/SegmentedControlRole.cs",
+          "documentationStatus": "merged",
+          "members": [
+            {
+              "name": "RadioGroup",
+              "description": "The segments pick one VALUE out of a set: a radiogroup of radio options with aria-checked and a roving tabindex (the APG radio-group pattern). The default."
+            },
+            {
+              "name": "Tabs",
+              "description": "The segments switch which CONTENT is shown: a tablist of tabs with aria-selected and aria-controls pointing at the host's panel. The host owns the panels and their role=\"tabpanel\" wrapper."
+            }
+          ],
+          "usageExample": "<TmSegmentedControl TValue=\"string\" Role=\"SegmentedControlRole.Tabs\" Options=\"tabs\" @bind-Value=\"mode\" />"
+        },
+        {
+          "itemName": "SegmentedControlSize",
+          "kind": "Enum",
+          "category": "Components",
+          "namespace": "Tempo.Blazor.Components.Inputs",
+          "description": "The height of a TmSegmentedControl tray. Sm and Md mirror the input heights so the tray lines up with the fields next to it; Lg is the roomiest control. On a coarse pointer every size grows to the 44 px touch target.",
+          "packageId": "Tempo.Blazor",
+          "sourcePath": "src/Tempo.Blazor/Components/Inputs/SegmentedControlSize.cs",
+          "documentationStatus": "merged",
+          "members": [
+            {
+              "name": "Sm",
+              "description": "Compact: 32 px, the small input height. Wants the small font size."
+            },
+            {
+              "name": "Md",
+              "description": "Default: 38 px, the medium input height."
+            },
+            {
+              "name": "Lg",
+              "description": "Roomy: 44 px, the large input height — the same block size a finger needs."
+            }
+          ],
+          "usageExample": "<TmSegmentedControl TValue=\"string\" Size=\"SegmentedControlSize.Sm\" Options=\"periods\" @bind-Value=\"period\" />"
+        },
+        {
+          "itemName": "SegmentedOption<TValue>",
+          "kind": "Record",
+          "category": "Components",
+          "namespace": "Tempo.Blazor.Components.Inputs",
+          "description": "One segment of a TmSegmentedControl: the label a reader sees and the value the control reports, plus the optional icon, count, badge, disabled state and tab-panel id. A count and a badge are ordinary text inside the option, so they are part of the segment's accessible name — a screen reader reads \"Inbox 12\" rather than an unlabelled 12.",
+          "packageId": "Tempo.Blazor",
+          "sourcePath": "src/Tempo.Blazor/Components/Inputs/SegmentedOption.cs",
+          "documentationStatus": "merged",
+          "typeParameters": [
+            {
+              "name": "TValue",
+              "description": "Generic type parameter TValue."
+            }
+          ],
+          "members": [
+            {
+              "name": "Badge",
+              "kind": "Property",
+              "type": "string?",
+              "description": "Optional short badge shown after the label for a state word the host owns (\"New\", \"Beta\"). It is text, not a colour-only cue, and stays inside the segment's accessible name."
+            },
+            {
+              "name": "Count",
+              "kind": "Property",
+              "type": "int?",
+              "description": "Optional count shown as a small numeric suffix (\"Inbox 12\"). It is data, not decoration: it renders as text and stays inside the segment's accessible name. Null renders no count."
+            },
+            {
+              "name": "Icon",
+              "kind": "Property",
+              "type": "string?",
+              "description": "Optional icon name (see IconNames) shown before the label. The icon is decorative and always aria-hidden: it never carries the only copy of the label."
+            },
+            {
+              "name": "IsDisabled",
+              "kind": "Property",
+              "type": "bool",
+              "description": "When true the segment cannot be selected and is skipped by the arrow keys, Home and End. A disabled segment still renders, because removing it would renumber every neighbour and move the selection under the reader's finger."
+            },
+            {
+              "name": "Label",
+              "kind": "Property",
+              "type": "string",
+              "description": "The visible label of the segment, rendered as text (never as markup) and used verbatim as the option's accessible name."
+            },
+            {
+              "name": "PanelId",
+              "kind": "Property",
+              "type": "string?",
+              "description": "Id of the panel this segment owns, used only with Role=Tabs: it becomes the tab's aria-controls. Null falls back to TmSegmentedControl.PanelId, and with neither the tab carries no aria-controls at all."
+            },
+            {
+              "name": "Value",
+              "kind": "Property",
+              "type": "TValue",
+              "description": "The value this segment reports through TmSegmentedControl.Value. Compared with EqualityComparer<TValue>.Default, so a record or an enum works as naturally as a string."
+            }
+          ],
+          "usageExample": "@code {\n    private readonly IReadOnlyList<SegmentedOption<string>> views =\n    [\n        new() { Label = \"All\", Value = \"all\", Count = 128 },\n        new() { Label = \"Mine\", Value = \"mine\", Badge = \"New\", Icon = \"user\" },\n        new() { Label = \"Archive\", Value = \"archive\", IsDisabled = true }\n    ];\n}\n\n<TmSegmentedControl TValue=\"string\" AriaLabel=\"Inbox view\" Options=\"views\" @bind-Value=\"view\" />"
+        },
+        {
           "itemName": "SidebarNavMatchMode",
           "kind": "Enum",
           "category": "Components",
@@ -11229,6 +11336,67 @@
               "code": "<TmEmptyState Title=\"No items yet\" />"
             }
           ]
+        },
+        {
+          "itemName": "TmHighlightedText",
+          "kind": "Component",
+          "category": "Data Display",
+          "namespace": "Tempo.Blazor.Components.DataDisplay",
+          "description": "Renders text with every occurrence of a search term wrapped in <mark class=\"tm-highlighted-text__match\">, so a reader of a combobox row sees WHERE the term hit instead of re-reading the row. It renders a FRAGMENT — no wrapper element — because the call sites are option rows, table cells and picker lines that already own their box and their typography; the rendered text is exactly the text that was passed in, so a copy/paste and the accessible name both get the original string. The query is matched LITERALLY, never as a regular expression (a metacharacter matches itself instead of throwing or matching everything), case-insensitively by default and — unless AccentInsensitive is off — ignoring diacritics on BOTH sides, so \"usti\" finds \"Ústí\" and the marked run is the original accented text. A null, empty or whitespace-only query renders the text unchanged, which makes the component safe to render while the user is still typing.",
+          "packageId": "Tempo.Blazor",
+          "sourcePath": "src/Tempo.Blazor/Components/DataDisplay/TmHighlightedText.razor",
+          "documentationStatus": "merged",
+          "requiredImports": [
+            "@using Tempo.Blazor.Components.DataDisplay"
+          ],
+          "parameters": [
+            {
+              "name": "AccentInsensitive",
+              "type": "bool",
+              "isRequired": false,
+              "default": "true",
+              "description": "When true (the default), diacritics are ignored on both sides: \"usti\" matches \"Ústí\" and \"Ústí\" matches \"Usti\". The marked run is always the original text. Turn it off when the distinction between \"s\" and \"š\" carries meaning for the host's data."
+            },
+            {
+              "name": "CaseSensitive",
+              "type": "bool",
+              "isRequired": false,
+              "description": "When true, casing matters. Default false — a search box that required the exact casing of the data would be unusable.",
+              "default": "false"
+            },
+            {
+              "name": "MatchClass",
+              "type": "string?",
+              "isRequired": false,
+              "description": "Extra class(es) added to every <mark>, on top of the component's own tm-highlighted-text__match — for a host that wants a different tone inside its own row."
+            },
+            {
+              "name": "Query",
+              "type": "string?",
+              "isRequired": false,
+              "description": "The term to highlight, matched literally. Null, empty or whitespace-only means 'no match' and the text renders unchanged; leading and trailing whitespace is trimmed before matching, so a trailing space in a live filter does not stop the highlight."
+            },
+            {
+              "name": "Text",
+              "type": "string?",
+              "isRequired": false,
+              "description": "The text to render. Rendered as text — never interpreted as markup, so a host value containing < or & is shown, not executed."
+            }
+          ],
+          "cssClasses": [
+            "tm-highlighted-text__match"
+          ],
+          "examples": [
+            {
+              "title": "Inside a search-result row",
+              "code": "<li>@DisplaySelector(user)</li>\n@* … becomes … *@\n<li><TmHighlightedText Text=\"@DisplaySelector(user)\" Query=\"@searchTerm\" /></li>"
+            },
+            {
+              "title": "Case-sensitive matching without diacritics folding",
+              "code": "<TmHighlightedText Text=\"@code\" Query=\"@typed\" CaseSensitive=\"true\" AccentInsensitive=\"false\" />"
+            }
+          ],
+          "notes": "A presentation detail of a search, not a live region: it never announces anything. The combobox that owns the list already announces the search state, and a per-row announcement would be noise. The component is used by TmMultiSelect, TmFilterableDropdown, TmEntityPicker and TmUserPicker behind their opt-in HighlightMatches parameter."
         },
         {
           "itemName": "TmKanbanBoard",
@@ -14528,6 +14696,13 @@
               "type": "string?",
               "isRequired": false,
               "description": "Placeholder for the filter input. When null, falls back to the localized default."
+            },
+            {
+              "name": "HighlightMatches",
+              "type": "bool",
+              "isRequired": false,
+              "description": "Wraps the part of each option's display text that matches the filter in <mark> so a reader sees where the term hit. Default false — the option renders exactly the text it rendered before. The match ignores casing (and diacritics when AccentInsensitiveFilter is on) and never changes the option's accessible name.",
+              "default": "false"
             },
             {
               "name": "IdField",
@@ -19824,6 +19999,13 @@
               "description": "Error message."
             },
             {
+              "name": "HighlightMatches",
+              "type": "bool",
+              "isRequired": false,
+              "description": "Wraps the part of each result's display text that matches the typed search in <mark> so a reader sees where the term hit. Default false, so the results render the plain display text they always rendered. The match ignores casing and diacritics and never changes the option's accessible name.",
+              "default": "false"
+            },
+            {
               "name": "Label",
               "type": "string?",
               "isRequired": false,
@@ -20386,6 +20568,13 @@
           ],
           "parameters": [
             {
+              "name": "AllowCreate",
+              "type": "bool",
+              "isRequired": false,
+              "description": "Adds a \"Create “{text}”\" row at the END of the option list whenever the filter text matches no option exactly (ignoring case and surrounding whitespace). Default false. The row is the LAST role=option of the same listbox, reached with ArrowDown past the results (it becomes the aria-activedescendant and paints the same --focused style, so a sighted keyboard user sees the highlight move onto it) and picked with Enter. Picking it raises OnCreate and closes the popup; the component never fabricates an item — the host adds it to Items (or through its provider) and decides whether to select it. With a DataProvider the exact-match check only sees the loaded page, so the host must still de-duplicate in OnCreate.",
+              "default": "false"
+            },
+            {
               "name": "AllowFiltering",
               "type": "bool",
               "isRequired": false,
@@ -20506,6 +20695,13 @@
               "description": "Hides already-selected items from the dropdown."
             },
             {
+              "name": "HighlightMatches",
+              "type": "bool",
+              "isRequired": false,
+              "description": "Wraps the part of every option's display text that matches the filter in <mark>, so a reader sees WHERE the term hit. Default false, so an existing multi-select keeps rendering plain text. The match ignores casing and diacritics (\"usti\" highlights \"Ústí\") and never changes the option's accessible name, which stays the whole display text.",
+              "default": "false"
+            },
+            {
               "name": "Id",
               "type": "string",
               "isRequired": false,
@@ -20581,6 +20777,12 @@
               "type": "EventCallback",
               "isRequired": false,
               "description": "Fires when the dropdown closes."
+            },
+            {
+              "name": "OnCreate",
+              "type": "EventCallback<string>",
+              "isRequired": false,
+              "description": "Fires with the trimmed filter text when the user picks the create row. Only reachable while AllowCreate is true. The HOST owns the result: the popup closes, the filter clears and focus returns to the trigger, so nothing confirms the action — the component renders no live region for the selection. Announce the outcome from this handler through the host's own polite live region (a status line or a toast) and select the new value so the control's visible state matches it; the live region is what guarantees the result is heard."
             },
             {
               "name": "OnFiltering",
@@ -20682,6 +20884,7 @@
             "tm-multiselect__option--selected",
             "tm-multiselect__option--focused",
             "tm-multiselect__option--disabled",
+            "tm-multiselect__option--create",
             "tm-multiselect__option-checkbox",
             "tm-multiselect__option-checkbox--checked",
             "tm-multiselect__option-text",
@@ -21506,6 +21709,138 @@
               "code": "<TmSearchInput @bind-Value=\"filter\" DebounceMs=\"300\" Placeholder=\"Filter records...\" />"
             }
           ]
+        },
+        {
+          "itemName": "TmSegmentedControl",
+          "kind": "Component",
+          "category": "Inputs",
+          "namespace": "Tempo.Blazor.Components.Inputs",
+          "description": "A value out of a small set, drawn as one segmented tray with a sliding highlight. Use it where a plain TmSelect would bury an always-visible choice behind a click and a radio group would be too tall for the space. Which ARIA pattern it exposes is the host's decision: Role=RadioGroup (the default) makes it a radiogroup of radio options with aria-checked, Role=Tabs makes it a tablist of tabs whose aria-controls points at the host's panels. Both use a roving tabindex — exactly one segment is in the tab order, the arrow keys move the focus and the selection together (wrapping, skipping disabled segments), Home and End jump to the first and last ENABLED segment, and the native buttons own Enter and Space so a key press activates exactly once. The tray is the horizontal scroll container, and the focus indicator is an inset outline because an ancestor with overflow clips a box-shadow ring. The sliding highlight is measured in the browser and written as a transform on a decorative aria-hidden strip; prefers-reduced-motion removes the travel, and without JavaScript the strip is never claimed and the selected segment paints its own surface instead.",
+          "packageId": "Tempo.Blazor",
+          "sourcePath": "src/Tempo.Blazor/Components/Inputs/TmSegmentedControl.razor",
+          "documentationStatus": "merged",
+          "requiredImports": [
+            "@using Tempo.Blazor.Components.Inputs"
+          ],
+          "typeParameters": [
+            {
+              "name": "TValue",
+              "description": "Generic type parameter TValue."
+            }
+          ],
+          "parameters": [
+            {
+              "name": "AriaLabel",
+              "type": "string?",
+              "isRequired": false,
+              "description": "The accessible name used when no Label is rendered. Null means the localized default ('Options'). Ignored when AriaLabelledBy is set."
+            },
+            {
+              "name": "AriaLabelledBy",
+              "type": "string?",
+              "isRequired": false,
+              "description": "Id of an element outside this control that names it (a page heading, a legend). Wins over Label and AriaLabel."
+            },
+            {
+              "name": "Class",
+              "type": "string?",
+              "isRequired": false,
+              "description": "Additional CSS class(es) for the root element."
+            },
+            {
+              "name": "Disabled",
+              "type": "bool",
+              "isRequired": false,
+              "description": "Disables the whole control: every segment renders disabled (native disabled plus aria-disabled), no segment is a tab stop, and nothing is raised.",
+              "default": "false"
+            },
+            {
+              "name": "FullWidth",
+              "type": "bool",
+              "isRequired": false,
+              "description": "Stretches the tray to the full width of its container and shares that width equally between the segments. Default false — the tray hugs its content and scrolls when it runs out of room.",
+              "default": "false"
+            },
+            {
+              "name": "Label",
+              "type": "string?",
+              "isRequired": false,
+              "description": "An optional VISIBLE label above the tray, which also names the group through aria-labelledby — the name a screen reader reads is the name a reader sees. Do not add an AriaLabel on top of it (WCAG 2.5.3). A whitespace-only label counts as no label."
+            },
+            {
+              "name": "Options",
+              "type": "IReadOnlyList<SegmentedOption<TValue>>",
+              "isRequired": false,
+              "default": "[]",
+              "description": "The segments, in reading order. An empty list renders nothing at all — a tray with no options is not a control. A disabled segment still renders and stays in place, because removing it would renumber every neighbour and move the selection under the reader's finger."
+            },
+            {
+              "name": "PanelId",
+              "type": "string?",
+              "isRequired": false,
+              "description": "Id of the panel the tabs control, applied to every tab that does not name its own SegmentedOption.PanelId. Only used with Role=Tabs; with no known id a tab carries no aria-controls at all, because an idref to a missing element is worse than none."
+            },
+            {
+              "name": "Role",
+              "type": "SegmentedControlRole",
+              "isRequired": false,
+              "default": "SegmentedControlRole.RadioGroup",
+              "description": "Which ARIA pattern the segments expose. RadioGroup (the default) for a value, Tabs when the segments switch which content is shown (the host then owns the panels and passes PanelId or SegmentedOption.PanelId). The visual design is identical; what the control MEANS decides."
+            },
+            {
+              "name": "Size",
+              "type": "SegmentedControlSize",
+              "isRequired": false,
+              "default": "SegmentedControlSize.Md",
+              "description": "The tray height: Sm (32 px, the small input height), Md (38 px, the default) or Lg (44 px). Sm and Md line the tray up with the fields next to it; on a coarse pointer every size grows to the 44 px touch target."
+            },
+            {
+              "name": "Value",
+              "type": "TValue?",
+              "isRequired": false,
+              "description": "The selected value, two-way bound with ValueChanged. Compared with EqualityComparer<TValue>.Default, so a record or an enum works as naturally as a string. A value that is not among the segments renders no selection (the first enabled segment stays the tab stop); null means 'nothing selected' rather than 'the segment whose value is null'."
+            },
+            {
+              "name": "ValueChanged",
+              "type": "EventCallback<TValue?>",
+              "isRequired": false,
+              "description": "Fires when the user picks a different segment, with the new value. Re-selecting the current value raises nothing, so a two-way binding cannot loop."
+            }
+          ],
+          "cssClasses": [
+            "tm-segmented",
+            "tm-segmented--sm",
+            "tm-segmented--md",
+            "tm-segmented--lg",
+            "tm-segmented--full-width",
+            "tm-segmented--disabled",
+            "tm-segmented--tabs",
+            "tm-segmented__label",
+            "tm-segmented__track",
+            "tm-segmented__indicator",
+            "tm-segmented__option",
+            "tm-segmented__option--selected",
+            "tm-segmented__option--disabled",
+            "tm-segmented__option-label",
+            "tm-segmented__icon",
+            "tm-segmented__count",
+            "tm-segmented__badge"
+          ],
+          "examples": [
+            {
+              "title": "Period switcher bound to a value",
+              "code": "@code {\n    private string? period = \"month\";\n\n    private readonly IReadOnlyList<SegmentedOption<string>> periods =\n    [\n        new() { Label = \"Month\", Value = \"month\" },\n        new() { Label = \"Week\", Value = \"week\" },\n        new() { Label = \"Day\", Value = \"day\" }\n    ];\n}\n\n<TmSegmentedControl TValue=\"string\" Label=\"Period\"\n                    Options=\"periods\" @bind-Value=\"period\" />"
+            },
+            {
+              "title": "View switcher with counts and a disabled segment",
+              "code": "<TmSegmentedControl TValue=\"string\" AriaLabel=\"Inbox\" Size=\"SegmentedControlSize.Sm\"\n                    @bind-Value=\"view\"\n                    Options=\"new[]\n                    {\n                        new SegmentedOption<string> { Label = \"All\", Value = \"all\", Count = 128 },\n                        new SegmentedOption<string> { Label = \"Mine\", Value = \"mine\", Count = 12 },\n                        new SegmentedOption<string> { Label = \"Archive\", Value = \"archive\", IsDisabled = true }\n                    }\" />"
+            },
+            {
+              "title": "Tab semantics over host-owned panels",
+              "code": "<TmSegmentedControl TValue=\"string\" Role=\"SegmentedControlRole.Tabs\"\n                    Label=\"Preview mode\" @bind-Value=\"mode\"\n                    Options=\"tabs\" />\n\n@if (mode == \"preview\")\n{\n    <div role=\"tabpanel\" id=\"preview-panel\" aria-labelledby=\"preview-tab\">…</div>\n}"
+            }
+          ],
+          "notes": "The control renders no live region: the selection is announced by the option's own aria-checked / aria-selected state, and a second announcement per change would be noise. The tray is the horizontal scroller, so a long segment set scrolls instead of clipping the last segment; the segment the keyboard moved to is focused, which scrolls it into view."
         },
         {
           "itemName": "TmSelect",
@@ -22679,6 +23014,13 @@
               "type": "bool",
               "isRequired": false,
               "description": "Lifts the results list out of the normal flow so an ancestor with overflow: auto — a modal body, a scrolling form column — cannot clip it or scroll it away from its input. The list is then positioned against the input by script, flipping above it when there is not enough room below. Off by default: it costs a JS module import, and a picker that is not inside a scroll container does not need it."
+            },
+            {
+              "name": "HighlightMatches",
+              "type": "bool",
+              "isRequired": false,
+              "description": "Wraps the part of each result's display name that matches the search term in <mark> so a reader sees where the term hit. Default false, so a result row keeps rendering its avatar, its full display name and its login exactly as before. The match ignores casing and diacritics and never changes the option's accessible name.",
+              "default": "false"
             },
             {
               "name": "Id",
@@ -34445,6 +34787,10 @@
           "kind": "Css"
         },
         {
+          "path": "src/Tempo.Blazor/wwwroot/css/components/_highlighted-text.css",
+          "kind": "Css"
+        },
+        {
           "path": "src/Tempo.Blazor/wwwroot/css/components/_icon.css",
           "kind": "Css"
         },
@@ -34662,6 +35008,10 @@
         },
         {
           "path": "src/Tempo.Blazor/wwwroot/css/components/_section.css",
+          "kind": "Css"
+        },
+        {
+          "path": "src/Tempo.Blazor/wwwroot/css/components/_segmented-control.css",
           "kind": "Css"
         },
         {
@@ -35102,12 +35452,12 @@
         }
       ],
       "summary": {
-        "itemCount": 438,
-        "manualItemCount": 438,
-        "generatedItemCount": 430,
+        "itemCount": 443,
+        "manualItemCount": 443,
+        "generatedItemCount": 435,
         "generatedOnlyItemCount": 0,
-        "componentCount": 233,
-        "publicApiTypeCount": 197
+        "componentCount": 235,
+        "publicApiTypeCount": 200
       }
     },
     {
@@ -134402,10 +134752,10 @@
   ],
   "summary": {
     "packageCount": 28,
-    "itemCount": 3492,
-    "manualItemCount": 3492,
+    "itemCount": 3497,
+    "manualItemCount": 3497,
     "generatedOnlyItemCount": 0,
-    "componentCount": 536,
-    "publicApiTypeCount": 2904
+    "componentCount": 538,
+    "publicApiTypeCount": 2907
   }
 }

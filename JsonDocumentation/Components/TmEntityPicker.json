@@ -97,6 +97,13 @@
       "description": "Minimum characters before search triggers."
     },
     {
+      "name": "HighlightMatches",
+      "type": "bool",
+      "isRequired": false,
+      "default": "false",
+      "description": "Wraps the part of each result's display text that matches the typed search in <mark> so a reader sees where the term hit. Default false, so the results render the plain display text they always rendered. The match ignores casing and diacritics and never changes the option's accessible name."
+    },
+    {
       "name": "Debounce",
       "type": "int",
       "isRequired": false,

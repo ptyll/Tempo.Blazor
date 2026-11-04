@@ -11,7 +11,7 @@ namespace Tempo.Blazor.Components.Inputs;
 /// A multi-select dropdown component supporting both client-side and server-side data.
 /// Allows users to select multiple values with search and filtering capabilities.
 /// </summary>
-public partial class TmMultiSelect<TItem, TValue>
+public partial class TmMultiSelect<TItem, TValue> : TmComponentBase
 {
     // ── Data Binding ──────────────────────────────────────────────
 
@@ -168,6 +168,15 @@ public partial class TmMultiSelect<TItem, TValue>
     /// <summary>Debounce delay in ms for server-side filtering. Default: 300.</summary>
     [Parameter] public int Debounce { get; set; } = 300;
 
+    /// <summary>
+    /// Wraps the part of every option's display text that matches the filter in
+    /// <c>&lt;mark&gt;</c>, so a reader sees WHERE the term hit. Default <c>false</c> — an existing
+    /// multi-select keeps rendering plain text, and the highlight costs a component per option. The match
+    /// ignores casing and diacritics ("usti" highlights "Ústí") and never changes the option's accessible
+    /// name, which stays the whole display text.
+    /// </summary>
+    [Parameter] public bool HighlightMatches { get; set; }
+
     // ── Selection Behavior ───────────────────────────────────────
 
     /// <summary>Maximum selectable items. 0 = unlimited.</summary>
@@ -187,6 +196,36 @@ public partial class TmMultiSelect<TItem, TValue>
 
     /// <summary>Shows checkboxes next to items.</summary>
     [Parameter] public bool ShowCheckBox { get; set; }
+
+    /// <summary>
+    /// Adds a "Create “{text}”" row at the END of the option list whenever the filter text matches no
+    /// option exactly (ignoring case and surrounding whitespace). Default <c>false</c>, so an existing
+    /// multi-select offers exactly the options it was given. Picking the row raises
+    /// <see cref="OnCreate"/> and closes the popup; the component does NOT invent an item — the host adds
+    /// it to <see cref="Items"/> (or through its provider) and decides whether to select it.
+    /// <para>
+    /// With a <see cref="DataProvider"/> the "already exists" check can only see the items the provider
+    /// has loaded, and those may be filtered on the server: an item that exists but was not returned
+    /// still gets a create row. The host must therefore de-duplicate in <see cref="OnCreate"/> —
+    /// resolve the typed text to the existing item and select that instead of creating a duplicate.
+    /// </para>
+    /// </summary>
+    [Parameter] public bool AllowCreate { get; set; }
+
+    /// <summary>
+    /// Fires with the trimmed filter text when the user picks the create row. Only reachable while
+    /// <see cref="AllowCreate"/> is <c>true</c>.
+    /// <para>
+    /// The HOST owns the result: whether an item is created, and what it is. Picking the row closes the
+    /// popup, clears the filter and returns focus to the trigger, so the new option is not on screen and
+    /// nothing announces it — the component renders no live region for the selection. Announce the outcome
+    /// from this handler through the host's own polite live region (a status line or a toast), and select
+    /// the new value so the control's visible state matches it; the live region is what guarantees a screen
+    /// reader hears the result. Also de-duplicate when a <see cref="DataProvider"/> is in use, because the
+    /// component cannot know every item the server holds.
+    /// </para>
+    /// </summary>
+    [Parameter] public EventCallback<string> OnCreate { get; set; }
 
     // ── Templates ────────────────────────────────────────────────
 
@@ -311,18 +350,39 @@ public partial class TmMultiSelect<TItem, TValue>
     private bool IsMaxReached => MaxSelectionCount > 0 && Values.Count >= MaxSelectionCount;
 
     // aria-activedescendant target for the currently-highlighted option. The
-    // option ids are generated in RenderOption as "{Id}-opt-{visible index}".
+    // option ids are generated in RenderOption as "{Id}-opt-{visible index}"; the
+    // create row, when it is offered, is the one option past the visible list.
     private string? ActiveOptionId =>
-        HasListbox && _focusedIndex >= 0 && _focusedIndex < VisibleCount
-            ? $"{Id}-opt-{_focusedIndex}"
+        HasListbox && _focusedIndex >= 0
+            ? (_focusedIndex < VisibleCount
+                ? $"{Id}-opt-{_focusedIndex}"
+                : (_focusedIndex == VisibleCount && CanCreate ? $"{Id}-opt-create" : null))
             : null;
+
+    /// <summary>The trimmed filter text the create row would use.</summary>
+    private string CreateText => _filterText.Trim();
+
+    /// <summary>
+    /// Whether the create row is offered: opt-in, enabled, and only for text that no option already
+    /// spells out exactly — a row that duplicates an existing option is noise, not a shortcut.
+    /// With a provider the comparison only covers the loaded page, so the host still de-duplicates in
+    /// <see cref="OnCreate"/>; see <see cref="AllowCreate"/>.
+    /// </summary>
+    private bool CanCreate => AllowCreate
+        && !Disabled
+        && CreateText.Length > 0
+        && !SourceItems.Any(item => string.Equals(DisplayField(item), CreateText, StringComparison.OrdinalIgnoreCase));
+
+    /// <summary>The option source before any filtering — the create row must not be offered for an item
+    /// that the current filter merely hides.</summary>
+    private IEnumerable<TItem> SourceItems => DataProvider is not null ? _providerItems : Items;
 
     /// <summary>
     /// The options container exists only while options render. Every idref that names it
     /// (aria-controls, aria-activedescendant) is omitted otherwise, so a closed, empty,
     /// loading or error popup never points at an id that is not in the document.
     /// </summary>
-    private bool HasListbox => _isOpen && !_isLoading && !_hasError && VisibleCount > 0;
+    private bool HasListbox => _isOpen && !_isLoading && !_hasError && (VisibleCount > 0 || CanCreate);
 
     private int VisibleCount => GetVisibleItems().Count();
 
@@ -387,8 +447,7 @@ public partial class TmMultiSelect<TItem, TValue>
 
     private IEnumerable<TItem> GetVisibleItems()
     {
-        var source = DataProvider is not null ? _providerItems : Items;
-        IEnumerable<TItem> items = source;
+        IEnumerable<TItem> items = SourceItems;
 
         // Client-side text filter
         if (DataProvider is null && !string.IsNullOrWhiteSpace(_filterText))
@@ -611,7 +670,7 @@ public partial class TmMultiSelect<TItem, TValue>
             // the anchor itself, and SetOpenFromJsAsync invokes OnClose — a bubbling case could
             // never run (dead-branch sweep, N169 follow-up).
             case "ArrowDown":
-                _focusedIndex = Math.Min(_focusedIndex + 1, items.Count - 1);
+                _focusedIndex = Math.Min(_focusedIndex + 1, items.Count - 1 + (CanCreate ? 1 : 0));
                 break;
             case "ArrowUp":
                 _focusedIndex = Math.Max(_focusedIndex - 1, 0);
@@ -631,8 +690,34 @@ public partial class TmMultiSelect<TItem, TValue>
     // toggling belongs on the filter input — the only intended Enter origin.
     private async Task HandleFilterKeyDownAsync(KeyboardEventArgs e)
     {
+        if (e.Key != "Enter") return;
+
         var items = GetVisibleItems().ToList();
-        if (e.Key == "Enter" && _focusedIndex >= 0 && _focusedIndex < items.Count)
+        if (_focusedIndex >= 0 && _focusedIndex < items.Count)
+        {
             await ToggleItemAsync(items[_focusedIndex]);
+        }
+        else if (_focusedIndex == items.Count && CanCreate)
+        {
+            await CreateOptionAsync();
+        }
+    }
+
+    /// <summary>
+    /// Picks the create row: closes the popup, clears the filter and hands the typed text to the host. The
+    /// component never fabricates a <typeparamref name="TItem"/> — it does not know how to build one from a
+    /// string, and a made-up value would be a lie in the host's data.
+    /// </summary>
+    private async Task CreateOptionAsync()
+    {
+        if (!CanCreate) return;
+
+        var text = CreateText;
+        _isOpen = false;
+        _filterText = string.Empty;
+        _focusedIndex = -1;
+        _focusTriggerAfterClose = true;
+        await OnCreate.InvokeAsync(text);
+        await OnClose.InvokeAsync();
     }
 }

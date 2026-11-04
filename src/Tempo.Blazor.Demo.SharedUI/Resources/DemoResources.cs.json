@@ -702,5 +702,19 @@
   "TmDataDisplayDemo_UsageMeterReset": "Obnovit využití",
   "TmDataDisplayDemo_UsageMeterUpgrade": "Dokoupit kredity",
   "TmDataDisplayDemo_UsageMeterAdded": "Vyčerpáno 1 500 kreditů",
-  "TmDataDisplayDemo_UsageMeterResetDone": "Využití obnoveno"
+  "TmDataDisplayDemo_UsageMeterResetDone": "Využití obnoveno",
+  "TmDataDisplayDemo_Segmented": "Segmentový přepínač",
+  "TmDataDisplayDemo_SegmentedBadge": "Hodnota / Záložky",
+  "TmDataDisplayDemo_SegmentedHint": "Jedna hodnota z malé množiny. Karty vlevo si drží radio sémantiku (šipky přepínají volbu, jeden segment je tab stop); karta vpravo je tablist, jehož vybraná záložka odkazuje na panel pod ním. Úzká kopie se posouvá do strany, místo aby poslední segment ořízla.",
+  "TmDataDisplayDemo_SegmentedPeriod": "Období",
+  "TmDataDisplayDemo_SegmentedSizes": "Velikosti segmentů",
+  "TmDataDisplayDemo_SegmentedViews": "Zobrazení",
+  "TmDataDisplayDemo_SegmentedSelected": "Vybráno: {0}",
+  "TmDataDisplayDemo_SegmentedPanel": "Panel {0}. Každá záložka přepínače na tuto oblast odkazuje přes aria-controls.",
+  "TmDataDisplayDemo_SegmentedOverflow": "Přetékající sada segmentů",
+  "TmFormsDemo_MatchHighlight": "Zvýraznění shody a vytvoření položky",
+  "TmFormsDemo_MatchHighlightBadge": "Combobox",
+  "TmFormsDemo_MatchHighlightHint": "Obě chování jsou volitelná: HighlightMatches zvýrazní hledaný výraz v odpovídajících řádcích a AllowCreate nabídne řádek pro vytvoření jako POSLEDNÍ položku, když nic neodpovídá přesně. Pište a uvidíte to; ArrowDown a Enter řádek vytvoření vybere.",
+  "TmFormsDemo_MatchHighlightCreate": "Vytvořeno: {0}",
+  "TmFormsDemo_MatchHighlightEmpty": "Zatím nic nevytvořeno."
 }

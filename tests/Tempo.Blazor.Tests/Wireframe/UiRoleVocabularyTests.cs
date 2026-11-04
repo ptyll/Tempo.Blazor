@@ -88,8 +88,9 @@ public sealed class UiRoleVocabularyTests
         // then 130 -> 132 for the data-display pair `trend-list` and `breakdown-card` (plan ff043b2e phase 2),
         // then 133 for `facet-filter` (plan ff043b2e phase 4),
         // then 134 for `trace-waterfall` (plan ff043b2e phase 6),
-        // then 135 for `usage-meter` (plan ff043b2e phase 7).
-        vocabulary.GetAll().Should().HaveCountLessThanOrEqualTo(135);
+        // then 135 for `usage-meter` (plan ff043b2e phase 7),
+        // then 136 for `segmented-control` (plan ff043b2e phase 8).
+        vocabulary.GetAll().Should().HaveCountLessThanOrEqualTo(136);
 
         vocabulary.Find("search-input")!.Slug.Should().Be("search-input");
         vocabulary.Find("TmDecimalInput")!.Slug.Should().Be("decimal-input");

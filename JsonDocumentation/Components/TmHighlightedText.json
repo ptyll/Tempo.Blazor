@@ -1,0 +1,57 @@
+{
+  "itemName": "TmHighlightedText",
+  "kind": "Component",
+  "category": "Data Display",
+  "description": "Renders text with every occurrence of a search term wrapped in <mark class=\"tm-highlighted-text__match\">, so a reader of a combobox row sees WHERE the term hit instead of re-reading the row. It renders a FRAGMENT — no wrapper element — because the call sites are option rows, table cells and picker lines that already own their box and their typography; the rendered text is exactly the text that was passed in, so a copy/paste and the accessible name both get the original string. The query is matched LITERALLY, never as a regular expression (a metacharacter matches itself instead of throwing or matching everything), case-insensitively by default and — unless AccentInsensitive is off — ignoring diacritics on BOTH sides, so \"usti\" finds \"Ústí\" and the marked run is the original accented text. A null, empty or whitespace-only query renders the text unchanged, which makes the component safe to render while the user is still typing.",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.DataDisplay"
+  ],
+  "parameters": [
+    {
+      "name": "Text",
+      "type": "string?",
+      "isRequired": false,
+      "description": "The text to render. Rendered as text — never interpreted as markup, so a host value containing < or & is shown, not executed."
+    },
+    {
+      "name": "Query",
+      "type": "string?",
+      "isRequired": false,
+      "description": "The term to highlight, matched literally. Null, empty or whitespace-only means 'no match' and the text renders unchanged; leading and trailing whitespace is trimmed before matching, so a trailing space in a live filter does not stop the highlight."
+    },
+    {
+      "name": "CaseSensitive",
+      "type": "bool",
+      "isRequired": false,
+      "default": "false",
+      "description": "When true, casing matters. Default false — a search box that required the exact casing of the data would be unusable."
+    },
+    {
+      "name": "AccentInsensitive",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "When true (the default), diacritics are ignored on both sides: \"usti\" matches \"Ústí\" and \"Ústí\" matches \"Usti\". The marked run is always the original text. Turn it off when the distinction between \"s\" and \"š\" carries meaning for the host's data."
+    },
+    {
+      "name": "MatchClass",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Extra class(es) added to every <mark>, on top of the component's own tm-highlighted-text__match — for a host that wants a different tone inside its own row."
+    }
+  ],
+  "cssClasses": [
+    "tm-highlighted-text__match"
+  ],
+  "examples": [
+    {
+      "title": "Inside a search-result row",
+      "code": "<li>@DisplaySelector(user)</li>\n@* … becomes … *@\n<li><TmHighlightedText Text=\"@DisplaySelector(user)\" Query=\"@searchTerm\" /></li>"
+    },
+    {
+      "title": "Case-sensitive matching without diacritics folding",
+      "code": "<TmHighlightedText Text=\"@code\" Query=\"@typed\" CaseSensitive=\"true\" AccentInsensitive=\"false\" />"
+    }
+  ],
+  "notes": "A presentation detail of a search, not a live region: it never announces anything. The combobox that owns the list already announces the search state, and a per-row announcement would be noise. The component is used by TmMultiSelect, TmFilterableDropdown, TmEntityPicker and TmUserPicker behind their opt-in HighlightMatches parameter."
+}

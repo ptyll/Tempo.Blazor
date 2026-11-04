@@ -1,0 +1,25 @@
+{
+  "kind": "Enum",
+  "category": "Components",
+  "namespace": "Tempo.Blazor.Components.Inputs",
+  "description": "The height of a TmSegmentedControl tray. Sm and Md mirror the input heights so the tray lines up with the fields next to it; Lg is the roomiest control. On a coarse pointer every size grows to the 44 px touch target.",
+  "packageId": "Tempo.Blazor",
+  "sourcePath": "src/Tempo.Blazor/Components/Inputs/SegmentedControlSize.cs",
+  "documentationStatus": "documented",
+  "itemName": "SegmentedControlSize",
+  "members": [
+    {
+      "name": "Sm",
+      "description": "Compact: 32 px, the small input height. Wants the small font size."
+    },
+    {
+      "name": "Md",
+      "description": "Default: 38 px, the medium input height."
+    },
+    {
+      "name": "Lg",
+      "description": "Roomy: 44 px, the large input height — the same block size a finger needs."
+    }
+  ],
+  "usageExample": "<TmSegmentedControl TValue=\"string\" Size=\"SegmentedControlSize.Sm\" Options=\"periods\" @bind-Value=\"period\" />"
+}

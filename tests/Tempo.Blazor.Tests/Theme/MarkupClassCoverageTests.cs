@@ -466,7 +466,10 @@ public sealed class MarkupClassCoverageTests
             // Facet filter phase 4 (plan ff043b2e): TmFacetFilter's whole DOM id prefix is one
             // per-instance literal ("tm-facet-filter-{Guid…}" in TmFacetFilter.razor.cs); every
             // group/body/option id is built from it by position — 69 → 70.
-            ExpectedUnmeasurableStems: 70),
+            // Segmented control phase 8 (plan ff043b2e): TmSegmentedControl's per-instance id prefix is
+            // one literal ("tm-segmented-{Guid…}" in TmSegmentedControl.razor.cs) that every option id is
+            // built from by position — 70 → 71.
+            ExpectedUnmeasurableStems: 71),
         new Scope("Signing", "Tempo.Blazor.Signing", UnstyledSigningMarkupClasses,
             MinRazorFiles: 28, MinMarkupClasses: 400, InheritsCoreCss: true,
             // Signing redesign phase 2 (B25): the runner's single step panel id

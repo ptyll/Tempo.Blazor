@@ -11,17 +11,17 @@
     {
         <h3 class="tm-breakdown-card__title" id="@TitleId">@Title</h3>
     }
-    @if (_periodRadios.Count > 0)
+    @if (_periodSegments.Count > 0)
     {
+        @* The period switcher is the segmented control, not a row of buttons: the periods are one value
+           out of a set, so the control keeps radio semantics (arrows move the choice, one tab stop). *@
         <div class="tm-breakdown-card__period">
-            <TmRadioGroup T="string"
-                          Name="@PeriodGroupName"
-                          Label="@ResolvedPeriodLabel"
-                          Options="@_periodRadios"
-                          Value="@Period"
-                          ValueChanged="@OnPeriodChangedAsync"
-                          Layout="RadioLayout.Horizontal"
-                          Appearance="RadioAppearance.Segmented" />
+            <TmSegmentedControl TValue="string"
+                                Size="SegmentedControlSize.Sm"
+                                Label="@ResolvedPeriodLabel"
+                                Options="@_periodSegments"
+                                Value="@Period"
+                                ValueChanged="@OnPeriodChangedAsync" />
         </div>
     }
     @if (IsLoading)
@@ -106,9 +106,6 @@
 @code {
     /// <summary>The stable DOM id of the heading, used as the card's accessible name when a title is set.</summary>
     private readonly string TitleId = $"tm-breakdown-card-{Guid.NewGuid():n}-title";
-
-    /// <summary>The radio group name shared by the period options of this instance.</summary>
-    private readonly string PeriodGroupName = $"tm-breakdown-period-{Guid.NewGuid():n}";
 
     /// <summary>
     /// The root classes: the base class plus the host's own. No layout modifier is needed — the card

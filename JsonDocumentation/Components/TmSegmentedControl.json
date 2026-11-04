@@ -1,0 +1,122 @@
+{
+  "itemName": "TmSegmentedControl",
+  "kind": "Component",
+  "category": "Inputs",
+  "description": "A value out of a small set, drawn as one segmented tray with a sliding highlight. Use it where a plain TmSelect would bury an always-visible choice behind a click and a radio group would be too tall for the space. Which ARIA pattern it exposes is the host's decision: Role=RadioGroup (the default) makes it a radiogroup of radio options with aria-checked, Role=Tabs makes it a tablist of tabs whose aria-controls points at the host's panels. Both use a roving tabindex — exactly one segment is in the tab order, the arrow keys move the focus and the selection together (wrapping, skipping disabled segments), Home and End jump to the first and last ENABLED segment, and the native buttons own Enter and Space so a key press activates exactly once. The tray is the horizontal scroll container, and the focus indicator is an inset outline because an ancestor with overflow clips a box-shadow ring. The sliding highlight is measured in the browser and written as a transform on a decorative aria-hidden strip; prefers-reduced-motion removes the travel, and without JavaScript the strip is never claimed and the selected segment paints its own surface instead.",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.Inputs"
+  ],
+  "parameters": [
+    {
+      "name": "Options",
+      "type": "IReadOnlyList<SegmentedOption<TValue>>",
+      "isRequired": false,
+      "default": "[]",
+      "description": "The segments, in reading order. An empty list renders nothing at all — a tray with no options is not a control. A disabled segment still renders and stays in place, because removing it would renumber every neighbour and move the selection under the reader's finger."
+    },
+    {
+      "name": "Value",
+      "type": "TValue?",
+      "isRequired": false,
+      "description": "The selected value, two-way bound with ValueChanged. Compared with EqualityComparer<TValue>.Default, so a record or an enum works as naturally as a string. A value that is not among the segments renders no selection (the first enabled segment stays the tab stop); null means 'nothing selected' rather than 'the segment whose value is null'."
+    },
+    {
+      "name": "ValueChanged",
+      "type": "EventCallback<TValue?>",
+      "isRequired": false,
+      "description": "Fires when the user picks a different segment, with the new value. Re-selecting the current value raises nothing, so a two-way binding cannot loop."
+    },
+    {
+      "name": "Size",
+      "type": "SegmentedControlSize",
+      "isRequired": false,
+      "default": "Md",
+      "description": "The tray height: Sm (32 px, the small input height), Md (38 px, the default) or Lg (44 px). Sm and Md line the tray up with the fields next to it; on a coarse pointer every size grows to the 44 px touch target."
+    },
+    {
+      "name": "FullWidth",
+      "type": "bool",
+      "isRequired": false,
+      "default": "false",
+      "description": "Stretches the tray to the full width of its container and shares that width equally between the segments. Default false — the tray hugs its content and scrolls when it runs out of room."
+    },
+    {
+      "name": "Role",
+      "type": "SegmentedControlRole",
+      "isRequired": false,
+      "default": "RadioGroup",
+      "description": "Which ARIA pattern the segments expose. RadioGroup (the default) for a value, Tabs when the segments switch which content is shown (the host then owns the panels and passes PanelId or SegmentedOption.PanelId). The visual design is identical; what the control MEANS decides."
+    },
+    {
+      "name": "Class",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Additional CSS class(es) for the root element."
+    },
+    {
+      "name": "Disabled",
+      "type": "bool",
+      "isRequired": false,
+      "default": "false",
+      "description": "Disables the whole control: every segment renders disabled (native disabled plus aria-disabled), no segment is a tab stop, and nothing is raised."
+    },
+    {
+      "name": "Label",
+      "type": "string?",
+      "isRequired": false,
+      "description": "An optional VISIBLE label above the tray, which also names the group through aria-labelledby — the name a screen reader reads is the name a reader sees. Do not add an AriaLabel on top of it (WCAG 2.5.3). A whitespace-only label counts as no label."
+    },
+    {
+      "name": "AriaLabel",
+      "type": "string?",
+      "isRequired": false,
+      "description": "The accessible name used when no Label is rendered. Null means the localized default ('Options'). Ignored when AriaLabelledBy is set."
+    },
+    {
+      "name": "AriaLabelledBy",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Id of an element outside this control that names it (a page heading, a legend). Wins over Label and AriaLabel."
+    },
+    {
+      "name": "PanelId",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Id of the panel the tabs control, applied to every tab that does not name its own SegmentedOption.PanelId. Only used with Role=Tabs; with no known id a tab carries no aria-controls at all, because an idref to a missing element is worse than none."
+    }
+  ],
+  "cssClasses": [
+    "tm-segmented",
+    "tm-segmented--sm",
+    "tm-segmented--md",
+    "tm-segmented--lg",
+    "tm-segmented--full-width",
+    "tm-segmented--disabled",
+    "tm-segmented--tabs",
+    "tm-segmented__label",
+    "tm-segmented__track",
+    "tm-segmented__indicator",
+    "tm-segmented__option",
+    "tm-segmented__option--selected",
+    "tm-segmented__option--disabled",
+    "tm-segmented__option-label",
+    "tm-segmented__icon",
+    "tm-segmented__count",
+    "tm-segmented__badge"
+  ],
+  "examples": [
+    {
+      "title": "Period switcher bound to a value",
+      "code": "@code {\n    private string? period = \"month\";\n\n    private readonly IReadOnlyList<SegmentedOption<string>> periods =\n    [\n        new() { Label = \"Month\", Value = \"month\" },\n        new() { Label = \"Week\", Value = \"week\" },\n        new() { Label = \"Day\", Value = \"day\" }\n    ];\n}\n\n<TmSegmentedControl TValue=\"string\" Label=\"Period\"\n                    Options=\"periods\" @bind-Value=\"period\" />"
+    },
+    {
+      "title": "View switcher with counts and a disabled segment",
+      "code": "<TmSegmentedControl TValue=\"string\" AriaLabel=\"Inbox\" Size=\"SegmentedControlSize.Sm\"\n                    @bind-Value=\"view\"\n                    Options=\"new[]\n                    {\n                        new SegmentedOption<string> { Label = \"All\", Value = \"all\", Count = 128 },\n                        new SegmentedOption<string> { Label = \"Mine\", Value = \"mine\", Count = 12 },\n                        new SegmentedOption<string> { Label = \"Archive\", Value = \"archive\", IsDisabled = true }\n                    }\" />"
+    },
+    {
+      "title": "Tab semantics over host-owned panels",
+      "code": "<TmSegmentedControl TValue=\"string\" Role=\"SegmentedControlRole.Tabs\"\n                    Label=\"Preview mode\" @bind-Value=\"mode\"\n                    Options=\"tabs\" />\n\n@if (mode == \"preview\")\n{\n    <div role=\"tabpanel\" id=\"preview-panel\" aria-labelledby=\"preview-tab\">…</div>\n}"
+    }
+  ],
+  "notes": "The control renders no live region: the selection is announced by the option's own aria-checked / aria-selected state, and a second announcement per change would be noise. The tray is the horizontal scroller, so a long segment set scrolls instead of clipping the last segment; the segment the keyboard moved to is focused, which scrolls it into view."
+}

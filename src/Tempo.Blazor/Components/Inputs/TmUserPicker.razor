@@ -143,7 +143,16 @@
                             else
                             {
                                 <TmAvatar Name="@AvatarName(user)" Src="@AvatarSrc(user)" Size="AvatarSize.Xs" />
-                                <span class="tm-user-picker__result-display">@DisplaySelector(user)</span>
+                                <span class="tm-user-picker__result-display">
+                                    @if (HighlightMatches)
+                                    {
+                                        <TmHighlightedText Text="@DisplaySelector(user)" Query="@_searchTerm" />
+                                    }
+                                    else
+                                    {
+                                        @DisplaySelector(user)
+                                    }
+                                </span>
                                 <span class="tm-user-picker__result-login">[@ValueSelector(user)]</span>
                             }
                         </li>
@@ -259,6 +268,14 @@
 
     /// <summary>Overrides rendering of a single result item. Defaults to avatar + display + [login].</summary>
     [Parameter] public RenderFragment<TUser>? ItemTemplate { get; set; }
+
+    /// <summary>
+    /// Wraps the part of each result's display name that matches the search term in <c>&lt;mark&gt;</c> so a
+    /// reader sees where the term hit. Default <c>false</c>, so a result row keeps rendering its avatar, its
+    /// full display name and its login exactly as before. The match ignores casing and diacritics and never
+    /// changes the option's accessible name.
+    /// </summary>
+    [Parameter] public bool HighlightMatches { get; set; }
 
     /// <summary>Overrides the no-results message.</summary>
     [Parameter] public RenderFragment? EmptyTemplate { get; set; }

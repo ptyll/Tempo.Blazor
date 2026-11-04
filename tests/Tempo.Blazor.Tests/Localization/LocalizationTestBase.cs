@@ -1120,6 +1120,8 @@ public abstract class LocalizationTestBase : BunitContext
 
         // TmMultiSelect
         ["TmMultiSelect_ConfirmButton"] = "Done",
+        ["TmMultiSelect_CreateOption"] = "Create \"{0}\"",
+        ["TmSegmentedControl_DefaultLabel"] = "Options",
         ["TmMultiSelect_SelectedCount"] = "{0} selected",
 
         // TmFilterBuilder operators
@@ -5680,6 +5682,8 @@ public abstract class LocalizationTestBase : BunitContext
         ["TmDialog_PromptPlaceholder"] = "Zadejte hodnotu…",
         ["Tm_Done"]        = "Hotovo",
         ["TmMultiSelect_ConfirmButton"] = "Hotovo",
+        ["TmMultiSelect_CreateOption"] = "Vytvořit „{0}“",
+        ["TmSegmentedControl_DefaultLabel"] = "Možnosti",
         ["TmMultiSelect_SelectedCount"] = "{0} vybráno",
         ["TmOverlayPanel_SheetFallback"] = "Nabídka",
         ["TmMobileActionBar_AriaLabel"] = "Panel akcí",

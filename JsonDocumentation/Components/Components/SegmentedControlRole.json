@@ -1,0 +1,21 @@
+{
+  "kind": "Enum",
+  "category": "Components",
+  "namespace": "Tempo.Blazor.Components.Inputs",
+  "description": "The ARIA pattern a TmSegmentedControl exposes. The visual design is identical in both cases — what the control MEANS decides.",
+  "packageId": "Tempo.Blazor",
+  "sourcePath": "src/Tempo.Blazor/Components/Inputs/SegmentedControlRole.cs",
+  "documentationStatus": "documented",
+  "itemName": "SegmentedControlRole",
+  "members": [
+    {
+      "name": "RadioGroup",
+      "description": "The segments pick one VALUE out of a set: a radiogroup of radio options with aria-checked and a roving tabindex (the APG radio-group pattern). The default."
+    },
+    {
+      "name": "Tabs",
+      "description": "The segments switch which CONTENT is shown: a tablist of tabs with aria-selected and aria-controls pointing at the host's panel. The host owns the panels and their role=\"tabpanel\" wrapper."
+    }
+  ],
+  "usageExample": "<TmSegmentedControl TValue=\"string\" Role=\"SegmentedControlRole.Tabs\" Options=\"tabs\" @bind-Value=\"mode\" />"
+}

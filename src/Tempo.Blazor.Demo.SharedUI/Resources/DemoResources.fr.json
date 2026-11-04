@@ -702,5 +702,19 @@
   "TmDataDisplayDemo_UsageMeterReset": "Réinitialiser l'utilisation",
   "TmDataDisplayDemo_UsageMeterUpgrade": "Acheter des crédits",
   "TmDataDisplayDemo_UsageMeterAdded": "1 500 crédits utilisés",
-  "TmDataDisplayDemo_UsageMeterResetDone": "Utilisation réinitialisée"
+  "TmDataDisplayDemo_UsageMeterResetDone": "Utilisation réinitialisée",
+  "TmDataDisplayDemo_Segmented": "Contrôle segmenté",
+  "TmDataDisplayDemo_SegmentedBadge": "Valeur / Onglets",
+  "TmDataDisplayDemo_SegmentedHint": "Une valeur parmi un petit ensemble. Les cartes de gauche gardent la sémantique radio (les flèches changent le choix, un seul segment est dans l'ordre de tabulation) ; la carte de droite est une tablist dont l'onglet sélectionné pointe vers le panneau en dessous. La copie étroite défile horizontalement au lieu de couper son dernier segment.",
+  "TmDataDisplayDemo_SegmentedPeriod": "Période",
+  "TmDataDisplayDemo_SegmentedSizes": "Tailles de segment",
+  "TmDataDisplayDemo_SegmentedViews": "Vue",
+  "TmDataDisplayDemo_SegmentedSelected": "Sélectionné : {0}",
+  "TmDataDisplayDemo_SegmentedPanel": "Panneau {0}. Chaque onglet du sélecteur pointe vers cette région avec aria-controls.",
+  "TmDataDisplayDemo_SegmentedOverflow": "Jeu de segments débordant",
+  "TmFormsDemo_MatchHighlight": "Surlignage des correspondances et création en ligne",
+  "TmFormsDemo_MatchHighlightBadge": "Combobox",
+  "TmFormsDemo_MatchHighlightHint": "Les deux comportements sont optionnels : HighlightMatches encadre le terme saisi dans les lignes correspondantes et AllowCreate propose une ligne de création en DERNIÈRE position quand rien ne correspond exactement. Tapez pour le voir ; ArrowDown puis Entrée choisissent la ligne de création.",
+  "TmFormsDemo_MatchHighlightCreate": "Créé : {0}",
+  "TmFormsDemo_MatchHighlightEmpty": "Rien de créé pour l'instant."
 }

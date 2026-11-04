@@ -1,0 +1,55 @@
+{
+  "kind": "Class",
+  "category": "Components",
+  "namespace": "Tempo.Blazor.Components.Inputs",
+  "description": "One segment of a TmSegmentedControl: the label a reader sees and the value the control reports, plus the optional icon, count, badge, disabled state and tab-panel id. A count and a badge are ordinary text inside the option, so they are part of the segment's accessible name — a screen reader reads \"Inbox 12\" rather than an unlabelled 12.",
+  "packageId": "Tempo.Blazor",
+  "sourcePath": "src/Tempo.Blazor/Components/Inputs/SegmentedOption.cs",
+  "documentationStatus": "documented",
+  "itemName": "SegmentedOption",
+  "members": [
+    {
+      "name": "Label",
+      "kind": "Property",
+      "type": "string",
+      "description": "The visible label of the segment, rendered as text (never as markup) and used verbatim as the option's accessible name."
+    },
+    {
+      "name": "Value",
+      "kind": "Property",
+      "type": "TValue",
+      "description": "The value this segment reports through TmSegmentedControl.Value. Compared with EqualityComparer<TValue>.Default, so a record or an enum works as naturally as a string."
+    },
+    {
+      "name": "Icon",
+      "kind": "Property",
+      "type": "string?",
+      "description": "Optional icon name (see IconNames) shown before the label. The icon is decorative and always aria-hidden: it never carries the only copy of the label."
+    },
+    {
+      "name": "Count",
+      "kind": "Property",
+      "type": "int?",
+      "description": "Optional count shown as a small numeric suffix (\"Inbox 12\"). It is data, not decoration: it renders as text and stays inside the segment's accessible name. Null renders no count."
+    },
+    {
+      "name": "Badge",
+      "kind": "Property",
+      "type": "string?",
+      "description": "Optional short badge shown after the label for a state word the host owns (\"New\", \"Beta\"). It is text, not a colour-only cue, and stays inside the segment's accessible name."
+    },
+    {
+      "name": "IsDisabled",
+      "kind": "Property",
+      "type": "bool",
+      "description": "When true the segment cannot be selected and is skipped by the arrow keys, Home and End. A disabled segment still renders, because removing it would renumber every neighbour and move the selection under the reader's finger."
+    },
+    {
+      "name": "PanelId",
+      "kind": "Property",
+      "type": "string?",
+      "description": "Id of the panel this segment owns, used only with Role=Tabs: it becomes the tab's aria-controls. Null falls back to TmSegmentedControl.PanelId, and with neither the tab carries no aria-controls at all."
+    }
+  ],
+  "usageExample": "@code {\n    private readonly IReadOnlyList<SegmentedOption<string>> views =\n    [\n        new() { Label = \"All\", Value = \"all\", Count = 128 },\n        new() { Label = \"Mine\", Value = \"mine\", Badge = \"New\", Icon = \"user\" },\n        new() { Label = \"Archive\", Value = \"archive\", IsDisabled = true }\n    ];\n}\n\n<TmSegmentedControl TValue=\"string\" AriaLabel=\"Inbox view\" Options=\"views\" @bind-Value=\"view\" />"
+}

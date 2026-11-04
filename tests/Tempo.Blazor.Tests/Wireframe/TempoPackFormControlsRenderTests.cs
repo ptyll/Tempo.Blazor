@@ -54,6 +54,9 @@ public class TempoPackFormControlsRenderTests
             Add(data, "TmCheckbox", [("label", "Accepted"), ("checked", true)], "Accepted");
             Add(data, "TmRadio", [("label", "Option A"), ("checked", true)], "Option A");
             Add(data, "TmRadioGroup", [("label", "Choice"), ("options", new[] { "One", "Two" })], "Choice", "One", "Two");
+            Add(data, "TmSegmentedControl",
+                [("label", "Period"), ("options", new[] { "Day", "Week" }), ("active", 0), ("sizeVariant", "Md"), ("badge", "New")],
+                "Period", "Day", "Week", "New");
             Add(data, "TmToggle", [("label", "Enabled"), ("checked", true)], "Enabled");
             Add(data, "TmToggleSection", [("label", "Advanced"), ("expanded", true)], "Advanced");
             Add(data, "TmSelect", [("label", "Country"), ("placeholder", "Choose country")], "Country", "Choose country");
@@ -90,7 +93,7 @@ public class TempoPackFormControlsRenderTests
     [Fact]
     public void FormControlTypeList_CoversCompleteSchemaCategories()
     {
-        FormControlTypes.Should().HaveCount(44);
+        FormControlTypes.Should().HaveCount(45);
         FormControlTypes.Should().Contain(["TmButton", "TmTextInput", "TmQueryInput", "TmDecimalInput", "TmDatePicker", "TmTagPicker", "TmDropdownItem"]);
     }
 

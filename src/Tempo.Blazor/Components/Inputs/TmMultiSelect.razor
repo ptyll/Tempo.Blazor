@@ -4,6 +4,7 @@
 @using Tempo.Blazor.Models
 @typeparam TItem
 @typeparam TValue
+@inherits Tempo.Blazor.Components.TmComponentBase
 
 <div class="tm-input-wrapper @Class" @attributes="AdditionalAttributes">
     @if (!HideLabel && !string.IsNullOrEmpty(Label))
@@ -188,7 +189,7 @@
             else
             {
                 var visibleItems = GetVisibleItems().ToList();
-                @if (visibleItems.Count == 0)
+                @if (visibleItems.Count == 0 && !CanCreate)
                 {
                     @if (NoRecordsTemplate is not null)
                     {
@@ -235,6 +236,25 @@
                             {
                                 @RenderOption(visibleItems[i], i)
                             }
+                        }
+                        @* The create row is the LAST option of the same listbox — never a control outside it,
+                           because a screen reader walking the list must meet the same choices a pointer does.
+                           It is reached by ArrowDown past the results and picked with Enter. *@
+                        @if (CanCreate)
+                        {
+                            @* The row takes the SAME focused style as a regular option: aria-activedescendant
+                               alone moves the highlight only for a screen reader, so without this class a
+                               sighted keyboard user sees the highlight leave the list exactly where Enter
+                               is about to create. visibleItems.Count is the index ArrowDown reaches next. *@
+                            <div class="tm-multiselect__option tm-multiselect__option--create @(visibleItems.Count == _focusedIndex ? "tm-multiselect__option--focused" : "")"
+                                 id="@(Id + "-opt-create")"
+                                 role="option"
+                                 aria-selected="false"
+                                 data-testid="@TestId("multiselect-create-option")"
+                                 @onclick:stopPropagation="true"
+                                 @onclick="CreateOptionAsync">
+                                <span class="tm-multiselect__option-text">@Loc["TmMultiSelect_CreateOption", CreateText]</span>
+                            </div>
                         }
                     </div>
                 }
@@ -294,7 +314,16 @@
             }
             else
             {
-                <span class="tm-multiselect__option-text">@DisplayField(item)</span>
+                <span class="tm-multiselect__option-text">
+                    @if (HighlightMatches)
+                    {
+                        <TmHighlightedText Text="@DisplayField(item)" Query="@_filterText" />
+                    }
+                    else
+                    {
+                        @DisplayField(item)
+                    }
+                </span>
             }
         </div>;
 }

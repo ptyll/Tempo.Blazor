@@ -262,11 +262,13 @@ public class TmBreakdownCardTests : LocalizationTestBase
 
         var period = cut.Find(".tm-breakdown-card__period");
         period.Should().NotBeNull();
-        cut.FindAll(".tm-breakdown-card__period input[type='radio']").Should().HaveCount(2);
-        cut.Find(".tm-breakdown-card__period .tm-radio-group-label").TextContent.Trim().Should().Be("Period",
+        period.QuerySelector("[role='radiogroup']").Should().NotBeNull(
+            "the periods are one value out of a set, so the switcher keeps radio semantics");
+        cut.FindAll(".tm-breakdown-card__period [role='radio']").Should().HaveCount(2);
+        cut.Find(".tm-breakdown-card__period .tm-segmented__label").TextContent.Trim().Should().Be("Period",
             "the switcher is named for a reader, not only by convention");
 
-        cut.FindAll(".tm-breakdown-card__period input[type='radio']")[1].Change();
+        cut.FindAll(".tm-breakdown-card__period [role='radio']")[1].Click();
 
         changed.Should().Be("week");
     }

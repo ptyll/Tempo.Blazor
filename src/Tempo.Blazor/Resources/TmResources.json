@@ -3244,6 +3244,8 @@
   "TmMultiColumnComboBox_RemoveItem": "Remove {0}",
   "TmMultiSelect_ClearAll": "Clear selection",
   "TmMultiSelect_ConfirmButton": "Done",
+  "TmMultiSelect_CreateOption": "Create \"{0}\"",
+  "TmSegmentedControl_DefaultLabel": "Options",
   "TmMultiSelect_DeselectAll": "Deselect all",
   "TmMultiSelect_Error": "Failed to load options",
   "TmMultiSelect_Loading": "Loading...",

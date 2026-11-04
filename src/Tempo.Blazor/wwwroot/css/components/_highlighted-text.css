@@ -1,0 +1,22 @@
+/* TmHighlightedText — the matched slice of a search result row.
+   A <mark> is the right element: it means "this run is relevant to the current context", which is exactly
+   what a search hit is. The browser's default yellow is replaced by the theme's subtle accent so the row
+   keeps its own typography, and the text colour is inherited so the surrounding row still decides contrast.
+
+   The highlight is NOT the only carrier of the information: the whole text is still there and the term is
+   still readable — the mark only says where it is. Under forced colors the UA drops the background, so the
+   system Highlight pair is re-declared for the same reason. */
+
+.tm-highlighted-text__match {
+  border-radius: var(--tm-radius-sm);
+  background-color: var(--tm-color-primary-subtle);
+  color: inherit;
+}
+
+@media (forced-colors: active) {
+  .tm-highlighted-text__match {
+    background-color: Highlight;
+    color: HighlightText;
+    forced-color-adjust: none;
+  }
+}

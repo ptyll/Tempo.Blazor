@@ -1,0 +1,66 @@
+@namespace Tempo.Blazor.Components.Inputs
+@using Microsoft.AspNetCore.Components.Web
+@using Tempo.Blazor.Components.Icons
+@inherits Tempo.Blazor.Components.TmComponentBase
+@typeparam TValue
+@inject IJSRuntime JS
+
+@* A value out of a small set, drawn as one tray with a sliding highlight. Which ARIA pattern the tray
+   exposes is the host's decision (Role): a radiogroup when the segments pick a value, a tablist when
+   they switch content. The tray is the scroll container — many segments in a narrow column scroll
+   instead of clipping — and the indicator is its absolutely positioned child, so it travels with the
+   scrolled content instead of drifting away from it. Without JavaScript the indicator is never claimed
+   (no data-tm-indicator attribute) and the selected segment paints its own background: the fallback is
+   the COMPONENT's own paint, not a broken half-measure. *@
+@if (Options.Count > 0)
+{
+    <div class="@RootClass" data-testid="@RootTestId("segmented-control")">
+        @if (HasLabel)
+        {
+            <span class="tm-segmented__label" id="@LabelId">@Label</span>
+        }
+        <div class="@GroupClass"
+             role="@GroupRole"
+             id="@GroupId"
+             aria-label="@GroupAriaLabel"
+             aria-labelledby="@GroupLabelledBy"
+             aria-orientation="horizontal"
+             aria-disabled="@(Disabled ? "true" : null)"
+             @ref="_groupRef">
+            <span class="tm-segmented__indicator" aria-hidden="true"></span>
+            @for (var index = 0; index < Options.Count; index++)
+            {
+                var option = Options[index];
+                var optionIndex = index;
+                <button type="button"
+                        class="@OptionClass(option)"
+                        role="@OptionRole"
+                        id="@OptionId(optionIndex)"
+                        data-value="@OptionValueAttribute(option)"
+                        data-testid="@TestId("segmented-option")"
+                        aria-checked="@OptionChecked(option)"
+                        aria-selected="@OptionSelected(option)"
+                        aria-controls="@OptionControls(option)"
+                        aria-disabled="@(IsOptionDisabled(option) ? "true" : null)"
+                        tabindex="@(IsTabStop(optionIndex) ? "0" : "-1")"
+                        disabled="@IsOptionDisabled(option)"
+                        @onclick="() => SelectAsync(option)"
+                        @onkeydown="HandleKeyDownAsync">
+                    @if (!string.IsNullOrEmpty(option.Icon))
+                    {
+                        <TmIcon Name="@option.Icon" Size="IconSize.Sm" Class="tm-segmented__icon" />
+                    }
+                    <span class="tm-segmented__option-label">@option.Label</span>
+                    @if (option.Count is int count)
+                    {
+                        <span class="tm-segmented__count">@count.ToString(CultureInfo.CurrentCulture)</span>
+                    }
+                    @if (!string.IsNullOrEmpty(option.Badge))
+                    {
+                        <span class="tm-segmented__badge">@option.Badge</span>
+                    }
+                </button>
+            }
+        </div>
+    </div>
+}

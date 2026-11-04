@@ -215,6 +215,26 @@
       "description": "Shows checkboxes next to items."
     },
     {
+      "name": "HighlightMatches",
+      "type": "bool",
+      "isRequired": false,
+      "default": "false",
+      "description": "Wraps the part of every option's display text that matches the filter in <mark>, so a reader sees WHERE the term hit. Default false, so an existing multi-select keeps rendering plain text. The match ignores casing and diacritics (\"usti\" highlights \"Ústí\") and never changes the option's accessible name, which stays the whole display text."
+    },
+    {
+      "name": "AllowCreate",
+      "type": "bool",
+      "isRequired": false,
+      "default": "false",
+      "description": "Adds a \"Create “{text}”\" row at the END of the option list whenever the filter text matches no option exactly (ignoring case and surrounding whitespace). Default false. The row is the LAST role=option of the same listbox, reached with ArrowDown past the results (it becomes the aria-activedescendant and paints the same --focused style, so a sighted keyboard user sees the highlight move onto it) and picked with Enter. Picking it raises OnCreate and closes the popup; the component never fabricates an item — the host adds it to Items (or through its provider) and decides whether to select it. With a DataProvider the exact-match check only sees the loaded page, so the host must still de-duplicate in OnCreate."
+    },
+    {
+      "name": "OnCreate",
+      "type": "EventCallback<string>",
+      "isRequired": false,
+      "description": "Fires with the trimmed filter text when the user picks the create row. Only reachable while AllowCreate is true. The HOST owns the result: the popup closes, the filter clears and focus returns to the trigger, so nothing confirms the action — the component renders no live region for the selection. Announce the outcome from this handler through the host's own polite live region (a status line or a toast) and select the new value so the control's visible state matches it; the live region is what guarantees the result is heard."
+    },
+    {
       "name": "ItemTemplate",
       "type": "RenderFragment<TItem>?",
       "isRequired": false,
@@ -305,6 +325,7 @@
     "tm-multiselect__option--selected",
     "tm-multiselect__option--focused",
     "tm-multiselect__option--disabled",
+    "tm-multiselect__option--create",
     "tm-multiselect__option-checkbox",
     "tm-multiselect__option-checkbox--checked",
     "tm-multiselect__option-text",

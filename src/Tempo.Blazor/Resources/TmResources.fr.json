@@ -3269,6 +3269,8 @@
   "TmMultiColumnComboBox_RemoveItem": "Supprimer {0}",
   "TmMultiSelect_ClearAll": "Effacer la sélection",
   "TmMultiSelect_ConfirmButton": "Terminé",
+  "TmMultiSelect_CreateOption": "Créer « {0} »",
+  "TmSegmentedControl_DefaultLabel": "Options",
   "TmMultiSelect_DeselectAll": "Tout désélectionner",
   "TmMultiSelect_Error": "Impossible de charger les options",
   "TmMultiSelect_Loading": "Chargement...",

@@ -702,5 +702,19 @@
   "TmDataDisplayDemo_UsageMeterReset": "Reset usage",
   "TmDataDisplayDemo_UsageMeterUpgrade": "Buy more credits",
   "TmDataDisplayDemo_UsageMeterAdded": "1,500 credits used",
-  "TmDataDisplayDemo_UsageMeterResetDone": "Usage reset"
+  "TmDataDisplayDemo_UsageMeterResetDone": "Usage reset",
+  "TmDataDisplayDemo_Segmented": "Segmented control",
+  "TmDataDisplayDemo_SegmentedBadge": "Value / Tabs",
+  "TmDataDisplayDemo_SegmentedHint": "One value out of a small set. The left cards keep radio semantics (arrows move the choice, one segment is the tab stop); the right card is a tablist whose selected tab points at the panel below it. The narrow copy scrolls sideways instead of clipping its last segment.",
+  "TmDataDisplayDemo_SegmentedPeriod": "Period",
+  "TmDataDisplayDemo_SegmentedSizes": "Segment sizes",
+  "TmDataDisplayDemo_SegmentedViews": "View",
+  "TmDataDisplayDemo_SegmentedSelected": "Selected: {0}",
+  "TmDataDisplayDemo_SegmentedPanel": "The {0} panel. Every tab of the switcher points at this region with aria-controls.",
+  "TmDataDisplayDemo_SegmentedOverflow": "Overflowing segment set",
+  "TmFormsDemo_MatchHighlight": "Match highlighting and inline create",
+  "TmFormsDemo_MatchHighlightBadge": "Combobox",
+  "TmFormsDemo_MatchHighlightHint": "Both behaviours are opt-in: HighlightMatches wraps the typed term in the matching rows, and AllowCreate offers a create row as the LAST option when nothing matches exactly. Type to see it; press ArrowDown and Enter to pick the create row.",
+  "TmFormsDemo_MatchHighlightCreate": "Created: {0}",
+  "TmFormsDemo_MatchHighlightEmpty": "Nothing created yet."
 }

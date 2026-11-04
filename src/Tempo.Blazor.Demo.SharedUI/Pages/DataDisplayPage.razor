@@ -499,7 +499,90 @@
     </div>
 </section>
 
+<!-- Segmented control (plan ff043b2e phase 8): one value out of a small set, drawn as a tray. The left
+     cards are the radio semantics (a period, three sizes); the right card is the tab semantics, where the
+     segments switch the panel below them. The narrow card is deliberately too narrow for its five
+     segments, so the tray scrolls instead of clipping the last one. -->
+<section class="demo-section">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">@Loc["TmDataDisplayDemo_Segmented"]</h2>
+        <span class="px-2 py-0.5 text-xs font-medium bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 rounded-full">@Loc["TmDataDisplayDemo_SegmentedBadge"]</span>
+    </div>
+    <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">@Loc["TmDataDisplayDemo_SegmentedHint"]</p>
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4" data-testid="segmented-control-section">
+        <div class="showcase-card flex flex-col gap-4">
+            <TmSegmentedControl TValue="string"
+                                Label="@Loc["TmDataDisplayDemo_SegmentedPeriod"]"
+                                Options="_segmentedPeriods"
+                                @bind-Value="_segmentedPeriod"
+                                DataTestId="segmented-period" />
+            <p class="text-sm text-slate-600 dark:text-slate-400" data-testid="segmented-period-value">
+                @Loc["TmDataDisplayDemo_SegmentedSelected", _segmentedPeriod ?? "—"]
+            </p>
+            <div class="flex flex-col gap-2" data-testid="segmented-sizes">
+                <TmSegmentedControl TValue="string" Size="SegmentedControlSize.Sm" AriaLabel="@Loc["TmDataDisplayDemo_SegmentedSizes"]"
+                                    Options="_segmentedPeriods" @bind-Value="_segmentedSmall" />
+                <TmSegmentedControl TValue="string" Size="SegmentedControlSize.Md" AriaLabel="@Loc["TmDataDisplayDemo_SegmentedSizes"]"
+                                    Options="_segmentedPeriods" @bind-Value="_segmentedMedium" />
+                <TmSegmentedControl TValue="string" Size="SegmentedControlSize.Lg" AriaLabel="@Loc["TmDataDisplayDemo_SegmentedSizes"]"
+                                    Options="_segmentedPeriods" @bind-Value="_segmentedLarge" />
+            </div>
+        </div>
+        <div class="showcase-card flex flex-col gap-3">
+            <TmSegmentedControl TValue="string"
+                                Role="SegmentedControlRole.Tabs"
+                                Label="@Loc["TmDataDisplayDemo_SegmentedViews"]"
+                                Options="_segmentedViews"
+                                PanelId="segmented-demo-panel"
+                                @bind-Value="_segmentedView"
+                                DataTestId="segmented-tabs" />
+            <div id="segmented-demo-panel" role="tabpanel" aria-label="@Loc["TmDataDisplayDemo_SegmentedViews"]"
+                 class="rounded-lg border border-slate-200 dark:border-slate-700 p-4 text-sm text-slate-600 dark:text-slate-300"
+                 data-testid="segmented-tab-panel">
+                @Loc["TmDataDisplayDemo_SegmentedPanel", _segmentedView ?? "—"]
+            </div>
+            <div class="w-56 max-w-full" data-testid="segmented-overflow">
+                <TmSegmentedControl TValue="string" Size="SegmentedControlSize.Sm"
+                                    AriaLabel="@Loc["TmDataDisplayDemo_SegmentedOverflow"]"
+                                    Options="_segmentedLong" @bind-Value="_segmentedLongValue" />
+            </div>
+        </div>
+    </div>
+</section>
+
 @code {
+    // Segmented control (plan ff043b2e phase 8): a value out of a small set. The three size copies share
+    // one option list, and the tabs copy drives ONE panel whose id every tab points at with aria-controls.
+    private readonly IReadOnlyList<SegmentedOption<string>> _segmentedPeriods =
+    [
+        new() { Label = "Day", Value = "day" },
+        new() { Label = "Week", Value = "week" },
+        new() { Label = "Month", Value = "month", Count = 12 }
+    ];
+
+    private readonly IReadOnlyList<SegmentedOption<string>> _segmentedViews =
+    [
+        new() { Label = "Chart", Value = "chart" },
+        new() { Label = "Table", Value = "table" },
+        new() { Label = "Raw", Value = "raw", Badge = "Beta", IsDisabled = true }
+    ];
+
+    private readonly IReadOnlyList<SegmentedOption<string>> _segmentedLong =
+    [
+        new() { Label = "Overview", Value = "overview" },
+        new() { Label = "Activity", Value = "activity" },
+        new() { Label = "Audience", Value = "audience" },
+        new() { Label = "Retention", Value = "retention" },
+        new() { Label = "Revenue", Value = "revenue" }
+    ];
+
+    private string? _segmentedPeriod = "week";
+    private string? _segmentedSmall = "day";
+    private string? _segmentedMedium = "week";
+    private string? _segmentedLarge = "month";
+    private string? _segmentedView = "chart";
+    private string? _segmentedLongValue = "overview";
+
     // Facet filter (2.10.0): the counts belong to the HOST's data — the component only renders them.
     // The result count is host-computed too, which is what turns the confirmation action into
     // "Show {n} results" and what the polite live region announces when it changes.

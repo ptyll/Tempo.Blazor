@@ -250,6 +250,7 @@ public sealed class BuiltInComponentSchemas : IWireframeSchemaSource
             ["TmToggleSection"] = ["toggle", "section"],
             ["TmSelect"] = ["select"],
             ["TmMultiSelect"] = ["multi-select"],
+            ["TmSegmentedControl"] = ["segmented-control"],
             ["TmCascadingSelect"] = ["cascading-select"],
             ["TmFilterableDropdown"] = ["dropdown", "search-input"],
             ["TmEntityPicker"] = ["entity-picker"],
@@ -657,6 +658,23 @@ public sealed class BuiltInComponentSchemas : IWireframeSchemaSource
                 P("clearable",   "Clearable",   PropType.Bool,   false,              cat: "Behavior"),
                 P("required",    "Required",    PropType.Bool,   false,              cat: "Behavior"),
                 P("disabled",    "Disabled",    PropType.Bool,   false,              cat: "Behavior"),
+            ]
+        };
+
+        yield return new WireframeComponentSchema
+        {
+            Type = "TmSegmentedControl", Category = "Inputs", DisplayName = "Segmented Control",
+            DefaultWidth = 240, DefaultHeight = 36,
+            Props =
+            [
+                P("label",       "Label",          PropType.String,     "Period", cat: "Content"),
+                P("options",     "Options",        PropType.StringList,          cat: "Content"),
+                P("active",      "Selected index", PropType.Int,        0,        cat: "Behavior"),
+                P("sizeVariant", "Size",           PropType.Enum,       "Md",     cat: "Appearance",
+                    opts: ["Sm", "Md", "Lg"]),
+                P("showCount",   "Show count",     PropType.Bool,       false,    cat: "Appearance"),
+                P("badge",       "Badge",          PropType.String,     string.Empty, cat: "Content"),
+                P("disabled",    "Disabled",       PropType.Bool,       false,    cat: "Behavior"),
             ]
         };
 

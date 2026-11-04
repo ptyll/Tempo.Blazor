@@ -24,6 +24,7 @@ public sealed class BuiltInUiRoleVocabularySource : IUiRoleVocabularySource
         R("checkbox", "Checkbox", "Captures an independent boolean choice.", "check box", "zaskrtavatko", "TmCheckbox"),
         R("radio", "Radio", "Captures one choice inside an exclusive option group.", "radio button", "prepinac volby", "TmRadio"),
         R("radio-group", "Radio group", "Groups exclusive radio choices.", "option group", "skupina voleb", "TmRadioGroup"),
+        R("segmented-control", "Segmented control", "Picks one value out of a small set, drawn as a single segmented tray.", "segment control", "segmented buttons", "prepinac segmentu", "segmentovany prepinac", "TmSegmentedControl"),
         R("toggle", "Toggle", "Switches a setting between on and off.", "switch", "prepinac", "TmToggle", "TmSwitch"),
         R("segmented-control", "Segmented control", "Switches between a small set of mutually exclusive modes.", "segments", "prepinac segmentu", "TmSegmentedControl"),
         R("select", "Select", "Chooses one value from a list.", "select box", "vyber", "TmSelect"),

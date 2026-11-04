@@ -59,7 +59,8 @@ public class DataDisplayPageTrendSectionTests : DemoPageLocalizationTestBase
         card.QuerySelectorAll(".tm-breakdown-card__segment").Length.Should().BeGreaterThanOrEqualTo(3);
         card.QuerySelectorAll("table.tm-breakdown-card__table tbody tr").Length.Should()
             .BeGreaterThanOrEqualTo(3);
-        card.QuerySelectorAll(".tm-breakdown-card__period input[type='radio']").Length.Should().Be(2);
+        card.QuerySelectorAll(".tm-breakdown-card__period [role='radio']").Length.Should().Be(2,
+            "the period switcher is the segmented control, so the periods are radios of one group");
     }
 
     [Fact]
@@ -74,7 +75,7 @@ public class DataDisplayPageTrendSectionTests : DemoPageLocalizationTestBase
 
         // "Last week" is the second period; the demo swaps the values so another channel leads.
         cut.Find("[data-testid='breakdown-card-section'] .tm-breakdown-card__period")
-            .QuerySelectorAll("input[type='radio']")[1].Change();
+            .QuerySelectorAll("[role='radio']")[1].Click();
 
         cut.WaitForAssertion(() => FirstLabel().Should().NotBe(before,
             "the period switch drives the host data, so the biggest channel changes"));

@@ -271,7 +271,23 @@
     white-space: nowrap;
 }
 
+/* The opt-in create row: a separator + the accent tone, so it reads as an ACTION at the end of the
+   list rather than as one more value. It is still a role=option of the same listbox.
+
+   The tone is --tm-color-primary-TEXT, not the raw --tm-color-primary: the row is keyboard-focusable and
+   the :hover/--focused states behind it paint --tm-bg-muted, where the raw primary step measures 4.07:1
+   on the dark theme — below WCAG AA for the row's text. The primary-ink token is 7.92:1 light and
+   5.74:1 dark on that panel (and still the primary family), so the accent survives without a state-specific
+   override that would repaint the label on focus. Pinned by MultiSelectCreateOptionContrastTests. */
+.tm-multiselect__option--create {
+    margin-block-start: var(--tm-space-1);
+    border-block-start: 1px solid var(--tm-border-color);
+    color: var(--tm-color-primary-text);
+    font-weight: var(--tm-font-weight-medium);
+}
+
 /* ── Checkbox in option ──────────────────────────────── */
+
 .tm-multiselect__option-checkbox {
     display: inline-flex;
     align-items: center;

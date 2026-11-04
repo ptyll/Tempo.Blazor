@@ -148,6 +148,13 @@
       "description": "Overrides rendering of a single result item. Defaults to TmAvatar + display + [login]."
     },
     {
+      "name": "HighlightMatches",
+      "type": "bool",
+      "isRequired": false,
+      "default": "false",
+      "description": "Wraps the part of each result's display name that matches the search term in <mark> so a reader sees where the term hit. Default false, so a result row keeps rendering its avatar, its full display name and its login exactly as before. The match ignores casing and diacritics and never changes the option's accessible name."
+    },
+    {
       "name": "EmptyTemplate",
       "type": "RenderFragment?",
       "isRequired": false,

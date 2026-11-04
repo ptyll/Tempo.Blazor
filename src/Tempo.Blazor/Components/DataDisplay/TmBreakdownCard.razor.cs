@@ -27,7 +27,7 @@ public partial class TmBreakdownCard : TmComponentBase
     private int _remainderPercent;
 
     /// <summary>The period options mapped once per parameter set.</summary>
-    private List<RadioOption<string>> _periodRadios = [];
+    private List<SegmentedOption<string>> _periodSegments = [];
 
     /// <summary>
     /// The unique row key of every share of the current render, keyed by share REFERENCE — a
@@ -167,9 +167,15 @@ public partial class TmBreakdownCard : TmComponentBase
         _remainderValue = result.RemainderValue;
         _remainderPercent = result.RemainderPercent;
 
-        _periodRadios = (PeriodOptions ?? [])
+        _periodSegments = (PeriodOptions ?? [])
             .Where(option => option is not null)
-            .Select(option => new RadioOption<string>(option.Label, option.Value))
+            .Select(option => new SegmentedOption<string>
+            {
+                Label = option.Label,
+                Value = option.Value,
+                IsDisabled = option.IsDisabled,
+                Icon = option.Icon
+            })
             .ToList();
 
         var order = BuildRowKeys(_shares);

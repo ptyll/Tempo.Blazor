@@ -59,6 +59,7 @@
 @import "components/_entity-picker.css";
 @import "components/_multi-column-combobox.css";
 @import "components/_multiselect.css";
+@import "components/_segmented-control.css";
 @import "components/_dynamic-form.css";
 @import "components/_expression-editor.css";
 @import "components/_code-editor.css";
@@ -81,6 +82,7 @@
 @import "components/_facet-filter.css";
 @import "components/_trace-waterfall.css";
 @import "components/_usage-meter.css";
+@import "components/_highlighted-text.css";
 @import "components/_avatar.css";
 @import "components/_empty-state.css";
 @import "components/_accordion.css";

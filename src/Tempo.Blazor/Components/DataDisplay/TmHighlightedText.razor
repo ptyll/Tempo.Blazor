@@ -1,0 +1,29 @@
+@namespace Tempo.Blazor.Components.DataDisplay
+
+@* Renders text with the parts that match a search term wrapped in <mark>. It has NO root element on
+   purpose: the call sites are an option row, a table cell or a picker line that already owns its box and
+   its typography, and an extra wrapper would either break the flex layout or force every caller to undo the
+   component's styling. What is rendered is exactly the text the host passed, cut into plain and matched
+   runs — a copy/paste gets the original string, and the accessible name does not grow a second copy of it.
+   The query is literal text, never a pattern (see HighlightedTextMatcher). *@
+@if (!string.IsNullOrEmpty(Text))
+{
+    if (Segments.Count == 1 && !Segments[0].IsMatch)
+    {
+        @Text
+    }
+    else
+    {
+        foreach (var segment in Segments)
+        {
+            if (segment.IsMatch)
+            {
+                <mark class="@MatchCssClass">@segment.Text</mark>
+            }
+            else
+            {
+                @segment.Text
+            }
+        }
+    }
+}

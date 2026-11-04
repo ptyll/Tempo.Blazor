@@ -3294,6 +3294,8 @@
   "TmMultiColumnComboBox_RemoveItem": "Odebrat {0}",
   "TmMultiSelect_ClearAll": "Vymazat výběr",
   "TmMultiSelect_ConfirmButton": "Hotovo",
+  "TmMultiSelect_CreateOption": "Vytvořit „{0}“",
+  "TmSegmentedControl_DefaultLabel": "Možnosti",
   "TmMultiSelect_DeselectAll": "Zrušit výběr",
   "TmMultiSelect_Error": "Nepodařilo se načíst možnosti",
   "TmMultiSelect_Loading": "Načítání...",
