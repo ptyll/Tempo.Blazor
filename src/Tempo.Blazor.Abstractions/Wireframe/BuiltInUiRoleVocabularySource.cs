@@ -66,6 +66,7 @@ public sealed class BuiltInUiRoleVocabularySource : IUiRoleVocabularySource
         R("onboarding-checklist", "Onboarding checklist", "Guides a user through the steps of setting up the product, with progress, grouped steps and a celebration once every required step is done.", "setup guide", "progress tracker", "checklist", "seznam kroku", "TmOnboardingChecklist"),
         R("diff-view", "Diff view", "Shows differences between two values or versions.", "change diff", "porovnani zmen", "TmChangeDiff"),
         R("kanban-board", "Kanban board", "Shows work items in draggable columns.", "kanban", "kanban tabule", "TmKanbanBoard"),
+        R("sortable-list", "Sortable list", "Lists rows the reader can reorder by dragging, by keyboard or from a move menu.", "reorderable list", "drag list", "sortable list", "raditelny seznam", "presunitelny seznam", "TmSortableList"),
         R("list-view", "List view", "Displays records as a list or multiple saved views.", "multi view list", "seznam", "TmMultiViewList", "TmEmailItemList"),
         R("data-table", "Data table", "Displays tabular records with data operations.", "data grid", "grid", "tabulka dat", "TmDataTable", "TmDataGrid"),
         R("pagination", "Pagination", "Moves through pages of data.", "pager", "strankovani", "TmPagination"),

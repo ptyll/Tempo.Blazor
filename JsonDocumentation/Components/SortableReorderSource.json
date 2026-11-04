@@ -1,0 +1,25 @@
+{
+  "kind": "Enum",
+  "category": "Components",
+  "namespace": "Tempo.Blazor.Components.DataDisplay",
+  "description": "How a committed reorder of a TmSortableList was performed. A host that has to announce, log or undo the change differently per input method reads this instead of guessing from the delta.",
+  "packageId": "Tempo.Blazor",
+  "sourcePath": "src/Tempo.Blazor/Components/DataDisplay/SortableReorderArgs.cs",
+  "documentationStatus": "documented",
+  "itemName": "SortableReorderSource",
+  "members": [
+    {
+      "name": "Pointer",
+      "description": "The shared pointer drag: mouse, pen, or a touch long-press. Reported once per released gesture by the module, never while the pointer is still moving."
+    },
+    {
+      "name": "Keyboard",
+      "description": "A keyboard move: the grab → arrows → drop sequence, or the Alt+arrow shortcut that commits one step without grabbing."
+    },
+    {
+      "name": "Menu",
+      "description": "The per-row move menu — the tap and mouse alternative to dragging (WCAG 2.5.7). A deliberate command, so a host may treat it as one."
+    }
+  ],
+  "usageExample": "<TmSortableList Items=\"@rows\" OnReorder=\"@(args => Log(args.Source, args.FromIndex, args.ToIndex))\" />"
+}

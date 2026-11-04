@@ -9022,6 +9022,83 @@
       "documentationStatus": "merged"
     },
     {
+      "itemName": "SortableHandleMode",
+      "kind": "Enum",
+      "category": "Components",
+      "namespace": "Tempo.Blazor.Components.DataDisplay",
+      "description": "Which part of a row starts a pointer drag. The keyboard grip is the row itself in both shapes — the mode only decides how much of the row a POINTER may grab.",
+      "packageId": "Tempo.Blazor",
+      "sourcePath": "src/Tempo.Blazor/Components/DataDisplay/SortableHandleMode.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Handle",
+          "description": "Only the dedicated drag handle starts the drag (the default). The rest of the row keeps its own clicks, links and inputs, which is what a row with actions needs. The handle is a decorative pointer affordance: it carries tabindex=-1 and aria-hidden, so a reader never meets a second tab stop per row."
+        },
+        {
+          "name": "WholeItem",
+          "description": "The whole row is the drag surface and the row is also the gesture element the module delegates from. A touch press has to be held for 400 ms before the drag starts, so a tap, a long-press menu and a page scroll keep working. Use it for plain rows that hold no interactive content of their own."
+        }
+      ],
+      "usageExample": "<TmSortableList Items=\"@rows\" HandleMode=\"SortableHandleMode.WholeItem\" OnReorder=\"@OnReordered\" />"
+    },
+    {
+      "itemName": "SortableReorderArgs",
+      "kind": "Class",
+      "category": "Components",
+      "namespace": "Tempo.Blazor.Components.DataDisplay",
+      "description": "One committed reorder of a TmSortableList: the item at FromIndex of the host's own Items list belongs at ToIndex. The component never mutates the host's list — it raises exactly one of these per committed gesture and then renders the order the host reports, so a half-applied order can never be displayed.",
+      "packageId": "Tempo.Blazor",
+      "sourcePath": "src/Tempo.Blazor/Components/DataDisplay/SortableReorderArgs.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "FromIndex",
+          "kind": "Property",
+          "type": "int",
+          "description": "The zero-based index of the moved item in the host's Items list. The move starts here."
+        },
+        {
+          "name": "ToIndex",
+          "kind": "Property",
+          "type": "int",
+          "description": "The zero-based index the item belongs at after the move. Applying RemoveAt(FromIndex) followed by Insert(ToIndex, item) reproduces the gesture exactly, because every intermediate keyboard step is an adjacent swap of the same row."
+        },
+        {
+          "name": "Source",
+          "kind": "Property",
+          "type": "SortableReorderSource",
+          "description": "Which input method committed the move: Pointer, Keyboard or Menu."
+        }
+      ],
+      "usageExample": "@code {\n    private void OnReordered(SortableReorderArgs args)\n    {\n        var list = items.ToList();\n        var moved = list[args.FromIndex];\n        list.RemoveAt(args.FromIndex);\n        list.Insert(args.ToIndex, moved);\n        items = list;\n    }\n}"
+    },
+    {
+      "itemName": "SortableReorderSource",
+      "kind": "Enum",
+      "category": "Components",
+      "namespace": "Tempo.Blazor.Components.DataDisplay",
+      "description": "How a committed reorder of a TmSortableList was performed. A host that has to announce, log or undo the change differently per input method reads this instead of guessing from the delta.",
+      "packageId": "Tempo.Blazor",
+      "sourcePath": "src/Tempo.Blazor/Components/DataDisplay/SortableReorderArgs.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Pointer",
+          "description": "The shared pointer drag: mouse, pen, or a touch long-press. Reported once per released gesture by the module, never while the pointer is still moving."
+        },
+        {
+          "name": "Keyboard",
+          "description": "A keyboard move: the grab → arrows → drop sequence, or the Alt+arrow shortcut that commits one step without grabbing."
+        },
+        {
+          "name": "Menu",
+          "description": "The per-row move menu — the tap and mouse alternative to dragging (WCAG 2.5.7). A deliberate command, so a host may treat it as one."
+        }
+      ],
+      "usageExample": "<TmSortableList Items=\"@rows\" OnReorder=\"@(args => Log(args.Source, args.FromIndex, args.ToIndex))\" />"
+    },
+    {
       "itemName": "SparklineType",
       "kind": "Enum",
       "category": "Components",
@@ -12255,6 +12332,149 @@
           "title": "The tips-panel presentation",
           "code": "<TmOnboardingChecklist Tasks=\"Tips\"\n                      Layout=\"OnboardingChecklistLayout.Grid\"\n                      Title=\"Tips\"\n                      ShowProgress=\"false\" />"
         }
+      ]
+    },
+    {
+      "itemName": "TmSortableList",
+      "kind": "Component",
+      "category": "Data Display",
+      "namespace": "Tempo.Blazor.Components.DataDisplay",
+      "description": "A generic list whose rows the reader can reorder: by pointer (through the shared pointer-drag helper), by keyboard, or from a per-row move menu that is the tap alternative WCAG 2.5.7 requires. The component never mutates the host's list — every committed move raises OnReorder with the indexes of the host's own Items, and the next render shows the order the host reports. While a keyboard move is in progress the rows are painted in the PENDING order, so the row visibly travels before it is committed; Escape or a release without a change paints the host's order again. Accessible model: role=list of role=listitem rows, each naming itself a localized \"sortable item\" and pointing at the hidden keyboard instructions; the row is the single focus stop of its pair (the decorative handle is tabindex=-1 + aria-hidden), Enter/Space grabs it, the arrows move it, Enter/Space drops it, Escape cancels, Tab cancels and leaves the list (never a keyboard trap), Alt+arrow moves one position without grabbing, and ONE polite live region narrates every step. Controls inside ItemTemplate keep their own keys.",
+      "packageId": "Tempo.Blazor",
+      "sourcePath": "src/Tempo.Blazor/Components/DataDisplay/TmSortableList.razor",
+      "documentationStatus": "merged",
+      "requiredImports": [
+        "@using Tempo.Blazor.Components.DataDisplay"
+      ],
+      "typeParameters": [
+        {
+          "name": "TItem",
+          "description": "Generic type parameter TItem."
+        }
+      ],
+      "parameters": [
+        {
+          "name": "AriaLabel",
+          "type": "string?",
+          "isRequired": false,
+          "description": "The accessible name of the list. Null uses the localized default (\"Sortable list\")."
+        },
+        {
+          "name": "Class",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Additional CSS class(es) for the root element."
+        },
+        {
+          "name": "Disabled",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Disables every reorder path at once: the rows are no longer focusable, the pointer drag is not attached, no move menu is rendered and nothing is announced. The rows still render, so a read-only view keeps its content and its accessible structure.",
+          "default": "false"
+        },
+        {
+          "name": "EmptyContent",
+          "type": "RenderFragment?",
+          "isRequired": false,
+          "description": "Rendered instead of the localized default (\"No items to reorder.\") when Items is null or empty. The hidden instructions and the live region stay rendered either way, so the list never loses its explanation."
+        },
+        {
+          "name": "HandleMode",
+          "type": "SortableHandleMode",
+          "isRequired": false,
+          "default": "SortableHandleMode.Handle",
+          "description": "Which part of a row starts a pointer drag. Handle (the default) attaches the drag to the decorative grip, so the rest of the row stays interactive; WholeItem makes the row itself the drag surface and requires a 400 ms touch long-press, so a tap and a page scroll still work. The keyboard grip is the row in both modes."
+        },
+        {
+          "name": "ItemLabelSelector",
+          "type": "Func<TItem, string>?",
+          "isRequired": false,
+          "description": "The word the live region and the move menu use to name a row (\"Approve the plan moved to position 2 of 5\"). Null falls back to the item itself when TItem is a string, then to the localized \"Item {n}\" with the row's position. The KeySelector is deliberately not a fallback: a database key read aloud (\"3f2a… picked up\") names nothing a person can recognise, and the menu trigger would carry it too."
+        },
+        {
+          "name": "Items",
+          "type": "IReadOnlyList<TItem>?",
+          "isRequired": false,
+          "description": "The rows, in display order. The component renders exactly this order plus any pending keyboard move and never writes back to the list, so OnReorder is the only way a reorder becomes permanent. Null or empty renders EmptyContent (or the localized default) and keeps the instructions and the live region in place."
+        },
+        {
+          "name": "ItemTemplate",
+          "type": "RenderFragment<TItem>?",
+          "isRequired": false,
+          "description": "The content of one row, rendered inside the row's labelled content element. Null renders ToString() of the item. Focusable content is allowed: the content element is fenced with @onkeydown:stopPropagation / @onkeyup:stopPropagation, so a link, input or button in the template keeps its own keys instead of grabbing the row, and in HandleMode=Handle the pointer drag starts on the decorative handle."
+        },
+        {
+          "name": "KeySelector",
+          "type": "Func<TItem, object>?",
+          "isRequired": false,
+          "description": "The stable identity of one row, used both for Blazor's @key — a reordered row keeps its DOM node and any child component instance instead of being re-created in place — and for the row's data-sortable-key attribute. Null falls back to the row's index, which is stable only while the order is stable, so a host that reorders should always supply this. Keys must be unique: if the selector repeats one, every row falls back to its index (a keyed diff throws on a duplicate sibling key, so a mistaken selector degrades to an unkeyed list instead of failing the render)."
+        },
+        {
+          "name": "OnReorder",
+          "type": "EventCallback<SortableReorderArgs>",
+          "isRequired": false,
+          "description": "Raised exactly once per committed move with the indexes of the host's Items list (FromIndex, ToIndex and the Source that committed it). Not raised when nothing moved: a grab that returned to its start, an Alt+arrow at the boundary, or a disabled list. The component does not reorder the list itself — the host applies the move and re-renders."
+        },
+        {
+          "name": "ShowMoveMenu",
+          "type": "bool",
+          "isRequired": false,
+          "default": "true",
+          "description": "Renders the per-row move menu (Move up / Move down / Move to top / Move to bottom) that is the tap and mouse alternative to dragging. Set false only when the rows already offer their own reorder commands — a list without the menu and without a pointer has no way to reorder at all."
+        },
+        {
+          "name": "DataTestId",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Overrides the root data-testid; the default id is sortable-list and TestIdPrefix namespaces it."
+        },
+        {
+          "name": "TestIdPrefix",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Namespaces every internal data-testid of this instance as \"{prefix}-{name}\", so several sortable lists on one page stay targetable."
+        }
+      ],
+      "methods": [
+        {
+          "name": "OnSortableReorderCommitted",
+          "signature": "Task OnSortableReorderCommitted(int fromIndex, int toIndex)",
+          "description": "The single commit path of the pointer drag (called from the module once per released gesture). Runs OnReorder with Source=Pointer. Not meant to be called by hosts — use OnReorder for the host side."
+        }
+      ],
+      "cssClasses": [
+        "tm-sortable-list",
+        "tm-sortable-list--disabled",
+        "tm-sortable-list--whole-item",
+        "tm-sortable-list__items",
+        "tm-sortable-list__item",
+        "tm-sortable-list__item--grabbed",
+        "tm-sortable-list__item--dragging",
+        "tm-sortable-list__handle",
+        "tm-sortable-list__content",
+        "tm-sortable-list__actions",
+        "tm-sortable-list__move",
+        "tm-sortable-list__move-trigger",
+        "tm-sortable-list__empty"
+      ],
+      "examples": [
+        {
+          "title": "A plan whose steps the reader can reorder",
+          "code": "<TmSortableList Items=\"@steps\"\n                KeySelector=\"@(step => step.Id)\"\n                ItemLabelSelector=\"@(step => step.Title)\"\n                OnReorder=\"@OnStepReordered\"\n                AriaLabel=\"Plan steps\">\n    <ItemTemplate Context=\"step\">\n        <div class=\"flex flex-col\">\n            <span class=\"font-medium\">@step.Title</span>\n            <span class=\"text-xs opacity-70\">@step.Description</span>\n        </div>\n    </ItemTemplate>\n</TmSortableList>\n@code {\n    private IReadOnlyList<PlanStep> steps = [ /* ... */ ];\n\n    private void OnStepReordered(SortableReorderArgs args)\n    {\n        // The component never mutates the list: apply the single move yourself.\n        var list = steps.ToList();\n        var moved = list[args.FromIndex];\n        list.RemoveAt(args.FromIndex);\n        list.Insert(args.ToIndex, moved);\n        steps = list;\n    }\n}"
+        },
+        {
+          "title": "A whole-row drag list with a read-only switch",
+          "code": "<TmSortableList Items=\"@columns\"\n                HandleMode=\"SortableHandleMode.WholeItem\"\n                Disabled=\"@viewOnly\"\n                KeySelector=\"@(column => column.Name)\"\n                OnReorder=\"@OnColumnReordered\" />"
+        },
+        {
+          "title": "An empty list with the host's own wording",
+          "code": "<TmSortableList Items=\"@drafts\" KeySelector=\"@(draft => draft.Id)\">\n    <EmptyContent>\n        <p class=\"text-sm opacity-70\">Nothing queued yet — add a step to start.</p>\n    </EmptyContent>\n</TmSortableList>"
+        }
+      ],
+      "notes": [
+        "One reorder at a time: while a row is grabbed it owns the keyboard — the module stops the default action of the reorder keys on the row itself, Tab cancels the grab and moves the focus out, and Escape cancels the move, so a grab is never a keyboard trap (WCAG 2.1.2).",
+        "The pointer path rides the shared pointer-drag.js and pointer-gesture.js helpers — the module owns only the list geometry and the single commit, never a second gesture implementation.",
+        "Reduced motion suppresses the row transition in animations.css, so a reader who asked for less motion sees the rows snap instead of slide."
       ]
     },
     {
@@ -35037,6 +35257,10 @@
       "kind": "Css"
     },
     {
+      "path": "src/Tempo.Blazor/wwwroot/css/components/_sortable-list.css",
+      "kind": "Css"
+    },
+    {
       "path": "src/Tempo.Blazor/wwwroot/css/components/_sparkline.css",
       "kind": "Css"
     },
@@ -35309,6 +35533,10 @@
       "kind": "JavaScript"
     },
     {
+      "path": "src/Tempo.Blazor/wwwroot/js/tm-sortable.js",
+      "kind": "JavaScript"
+    },
+    {
       "path": "src/Tempo.Blazor/wwwroot/js/tm-splitter.js",
       "kind": "JavaScript"
     },
@@ -35429,6 +35657,10 @@
       "kind": "JavaScript"
     },
     {
+      "path": "src/Tempo.Blazor/wwwroot/js/__tests__/tm-sortable.test.mjs",
+      "kind": "JavaScript"
+    },
+    {
       "path": "src/Tempo.Blazor/wwwroot/js/__tests__/tm-splitter.test.mjs",
       "kind": "JavaScript"
     },
@@ -35450,11 +35682,11 @@
     }
   ],
   "summary": {
-    "itemCount": 443,
-    "manualItemCount": 443,
-    "generatedItemCount": 435,
+    "itemCount": 447,
+    "manualItemCount": 447,
+    "generatedItemCount": 439,
     "generatedOnlyItemCount": 0,
-    "componentCount": 235,
-    "publicApiTypeCount": 200
+    "componentCount": 236,
+    "publicApiTypeCount": 203
   }
 }

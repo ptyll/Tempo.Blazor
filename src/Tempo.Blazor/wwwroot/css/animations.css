@@ -394,6 +394,8 @@
   .tm-signature__canvas,
   .tm-signature__clear,
   .tm-skeleton,
+  .tm-sortable-list__item,
+  .tm-sortable-list__move-trigger,
   .tm-slider--vertical,
   .tm-slider__fill,
   .tm-slider__input,

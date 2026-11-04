@@ -1,0 +1,150 @@
+@namespace Tempo.Blazor.Components.DataDisplay
+@inherits Tempo.Blazor.Components.TmComponentBase
+@typeparam TItem
+
+@* A list a reader can reorder. The root is a generic div, so the hidden instructions and the single
+   live region can sit OUTSIDE the role="list" element: a <p> inside a <ul> is invalid markup, and a
+   live region inside the list would be announced as part of its contents.
+
+   The ROW is the keyboard grip in both HandleMode shapes: a non-native focusable that emulates
+   Enter (keydown, Enter's repeat guarded) and Space (keyup, where a native button fires its click)
+   per docs/keyboard-activation-convention.md. The page-scroll guard while a row is grabbed lives in
+   tm-sortable.js, because it has to exclude Tab at event time (a render-time preventDefault bool
+   cannot), and the row's content is fenced from the row's own handlers so a control in ItemTemplate
+   keeps its keys. The decorative handle button carries tabindex="-1" + aria-hidden: it is the
+   pointer affordance only, never a second tab stop. *@
+<div class="@RootClass"
+     data-testid="@RootTestId("sortable-list")"
+     data-disabled="@(Disabled ? "true" : "false")"
+     data-grabbed="@(GrabbedIndex is null ? "false" : "true")">
+
+    <p class="tm-sr-only" id="@InstructionsId">@Loc["TmSortableList_Instructions"]</p>
+
+    <ul @ref="_listRef"
+        class="tm-sortable-list__items"
+        role="list"
+        aria-label="@EffectiveLabel"
+        aria-describedby="@InstructionsId"
+        data-tm-sortable-root>
+        @foreach (var row in Entries)
+        {
+            var entry = row;
+            <li class="@ItemClass(entry)"
+                @key="entry.Key"
+                role="listitem"
+                tabindex="@(Disabled ? null : "0")"
+                aria-roledescription="@Loc["TmSortableList_ItemRoleDescription"]"
+                aria-labelledby="@ContentId(entry)"
+                aria-describedby="@InstructionsId"
+                data-sortable-key="@entry.KeyText"
+                data-sortable-source-index="@Invariant(entry.SourceIndex)"
+                data-grabbed="@(GrabbedIndex == entry.SourceIndex ? "true" : "false")"
+                data-tm-sortable-item
+                data-tm-sortable-grip="@(IsWholeItem ? string.Empty : null)"
+                @onkeydown="args => OnItemKeyDownAsync(entry, args)"
+                @onkeyup="args => OnItemKeyUpAsync(entry, args)">
+
+                @if (!IsWholeItem && !Disabled)
+                {
+                    @* Decorative: the drag starts here with a pointer, while the keyboard grip is the
+                       row itself — two tab stops per row would make a plan of ten steps a maze. A
+                       read-only list drops it entirely: a grip that cannot move anything is a false
+                       affordance. *@
+                    <button type="button"
+                            class="tm-sortable-list__handle"
+                            tabindex="-1"
+                            aria-hidden="true"
+                            data-tm-sortable-handle>
+                        <TmIcon Name="@IconNames.GripVertical" Size="IconSize.Sm" />
+                    </button>
+                }
+
+                @* The content belongs to the host: a link, an input or a button in ItemTemplate gets
+                   its own keys and nothing else. The row's emulating handlers sit on the <li>, which
+                   is the event target when the ROW itself has focus, so the grab still works. *@
+                <div class="tm-sortable-list__content" id="@ContentId(entry)"
+                     @onkeydown:stopPropagation="true"
+                     @onkeyup:stopPropagation="true">
+                    @if (ItemTemplate is not null)
+                    {
+                        @ItemTemplate(entry.Item)
+                    }
+                    else
+                    {
+                        @entry.Item?.ToString()
+                    }
+                </div>
+
+                @if (ShowMoveMenu && !Disabled)
+                {
+                    @* The tap alternative (WCAG 2.5.7). The fence keeps the menu's own Enter, Space,
+                       arrows and Escape away from the row's emulating handler. *@
+                    <div class="tm-sortable-list__actions"
+                         @onkeydown:stopPropagation="true"
+                         @onkeyup:stopPropagation="true">
+                        <TmContextMenu Class="tm-sortable-list__move">
+                            <Trigger>
+                                <span class="tm-sortable-list__move-trigger">
+                                    <TmIcon Name="@IconNames.MoreVertical" Size="IconSize.Sm" />
+                                    <span class="tm-sr-only">@Loc["TmSortableList_MoveItem", entry.Label]</span>
+                                </span>
+                            </Trigger>
+                            <ChildContent>
+                                <TmContextMenuItem Label="@Loc["TmSortableList_MoveUp"]"
+                                                   Icon="@IconNames.ArrowUp"
+                                                   Disabled="@entry.IsFirst"
+                                                   OnClick="@(() => MoveFromMenuAsync(entry, MoveCommand.Up))" />
+                                <TmContextMenuItem Label="@Loc["TmSortableList_MoveDown"]"
+                                                   Icon="@IconNames.ArrowDown"
+                                                   Disabled="@entry.IsLast"
+                                                   OnClick="@(() => MoveFromMenuAsync(entry, MoveCommand.Down))" />
+                                <TmContextMenuItem Label="@Loc["TmSortableList_MoveToTop"]"
+                                                   Icon="@IconNames.ArrowUpFromLine"
+                                                   Disabled="@entry.IsFirst"
+                                                   OnClick="@(() => MoveFromMenuAsync(entry, MoveCommand.Top))" />
+                                <TmContextMenuItem Label="@Loc["TmSortableList_MoveToBottom"]"
+                                                   Icon="@IconNames.ArrowDownToLine"
+                                                   Disabled="@entry.IsLast"
+                                                   OnClick="@(() => MoveFromMenuAsync(entry, MoveCommand.Bottom))" />
+                            </ChildContent>
+                        </TmContextMenu>
+                    </div>
+                }
+            </li>
+        }
+    </ul>
+
+    @if (IsEmpty)
+    {
+        @if (EmptyContent is not null)
+        {
+            @EmptyContent
+        }
+        else
+        {
+            <p class="tm-sortable-list__empty">@Loc["TmSortableList_Empty"]</p>
+        }
+    }
+
+    @* One polite region for the whole list: the grab, every step, the drop and the cancel each
+       replace this text, so a reader hears the move once instead of once per row. *@
+    <span class="tm-sr-only"
+          role="status"
+          aria-live="polite"
+          aria-atomic="true"
+          data-testid="@TestId("sortable-list-status")">@_announcement</span>
+</div>
+
+@code {
+    /// <summary>
+    /// The per-instance id prefix, kept here (not in the .razor.cs) so the derived DOM ids are unique
+    /// on a page with several lists. A host value is never used as an id.
+    /// </summary>
+    private readonly string _instanceId = Guid.NewGuid().ToString("n")[..8];
+
+    /// <summary>The DOM id of the hidden keyboard instructions.</summary>
+    private string InstructionsId => "tm-sortable-list-instructions-" + _instanceId;
+
+    /// <summary>The DOM id of one row's content — the row's <c>aria-labelledby</c> target.</summary>
+    private string ContentId(SortableEntry entry) => $"tm-sortable-list-content-{_instanceId}-{entry.SourceIndex}";
+}

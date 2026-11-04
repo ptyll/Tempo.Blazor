@@ -1,0 +1,21 @@
+{
+  "kind": "Enum",
+  "category": "Components",
+  "namespace": "Tempo.Blazor.Components.DataDisplay",
+  "description": "Which part of a row starts a pointer drag. The keyboard grip is the row itself in both shapes — the mode only decides how much of the row a POINTER may grab.",
+  "packageId": "Tempo.Blazor",
+  "sourcePath": "src/Tempo.Blazor/Components/DataDisplay/SortableHandleMode.cs",
+  "documentationStatus": "documented",
+  "itemName": "SortableHandleMode",
+  "members": [
+    {
+      "name": "Handle",
+      "description": "Only the dedicated drag handle starts the drag (the default). The rest of the row keeps its own clicks, links and inputs, which is what a row with actions needs. The handle is a decorative pointer affordance: it carries tabindex=-1 and aria-hidden, so a reader never meets a second tab stop per row."
+    },
+    {
+      "name": "WholeItem",
+      "description": "The whole row is the drag surface and the row is also the gesture element the module delegates from. A touch press has to be held for 400 ms before the drag starts, so a tap, a long-press menu and a page scroll keep working. Use it for plain rows that hold no interactive content of their own."
+    }
+  ],
+  "usageExample": "<TmSortableList Items=\"@rows\" HandleMode=\"SortableHandleMode.WholeItem\" OnReorder=\"@OnReordered\" />"
+}

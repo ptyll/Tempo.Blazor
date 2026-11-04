@@ -6573,5 +6573,21 @@
   "TmUsageMeter_OtherCategory": "Other",
   "TmUsageMeter_AnnounceNormal": "Usage is back within the limit.",
   "TmUsageMeter_AnnounceWarning": "Usage is near the limit.",
-  "TmUsageMeter_AnnounceCritical": "Usage has reached the limit."
+  "TmUsageMeter_AnnounceCritical": "Usage has reached the limit.",
+  "TmSortableList_Label": "Sortable list",
+  "TmSortableList_ItemRoleDescription": "sortable item",
+  "TmSortableList_Instructions": "Press Enter or Space to pick up a row, use the arrow keys to move it, Enter or Space to drop it, Escape to cancel and Tab to leave the list without moving it. Alt with an arrow key moves a row one position without picking it up.",
+  "TmSortableList_ItemLabel": "Item {0}",
+  "TmSortableList_MoveItem": "Move {0}",
+  "TmSortableList_MoveUp": "Move up",
+  "TmSortableList_MoveDown": "Move down",
+  "TmSortableList_MoveToTop": "Move to top",
+  "TmSortableList_MoveToBottom": "Move to bottom",
+  "TmSortableList_PickedUp": "{0} picked up. Position {1} of {2}.",
+  "TmSortableList_Moved": "{0} moved to position {1} of {2}.",
+  "TmSortableList_Dropped": "{0} dropped at position {1} of {2}.",
+  "TmSortableList_Cancelled": "Move cancelled. {0} stays at position {1} of {2}.",
+  "TmSortableList_AtFirst": "{0} is already first.",
+  "TmSortableList_AtLast": "{0} is already last.",
+  "TmSortableList_Empty": "No items to reorder."
 }

@@ -1,0 +1,188 @@
+@page "/sortable-list"
+@using System.Globalization
+@inject ITmLocalizer Loc
+
+<PageTitle>@Loc["TmSortableListDemo_PageTitle"] – Tempo.Blazor</PageTitle>
+
+<div class="mb-8" data-testid="sortable-page-header">
+    <h1 class="text-3xl font-bold text-slate-900 dark:text-white mb-2">@Loc["TmSortableListDemo_PageTitle"]</h1>
+    <p class="text-slate-600 dark:text-slate-400">@Loc["TmSortableListDemo_PageDescription"]</p>
+</div>
+
+@* The main list: the pointer drag starts on the grip, the keyboard grip is the ROW itself (Enter/Space
+   picks the row up, the arrows move it, Enter/Space drops it, Escape rolls back) and the per-row menu is
+   the tap alternative. The order read-out beside the list makes every path observable. *@
+<section class="demo-section mb-8" data-testid="sortable-basic-section">
+    <div class="flex flex-wrap items-center gap-3 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">@Loc["TmSortableListDemo_BasicTitle"]</h2>
+        <span class="px-2 py-0.5 text-xs font-medium bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 rounded-full">@Loc["TmSortableListDemo_BasicBadge"]</span>
+    </div>
+    <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">@Loc["TmSortableListDemo_BasicHint"]</p>
+
+    <div class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_18rem]">
+        <TmSortableList Items="_steps"
+                        KeySelector="@(step => step.Id)"
+                        ItemLabelSelector="@(step => step.Title)"
+                        OnReorder="OnStepReordered"
+                        AriaLabel="@Loc["TmSortableListDemo_ListLabel"]"
+                        DataTestId="sortable-basic">
+            <ItemTemplate Context="step">
+                <div class="flex flex-col" data-testid="sortable-step">
+                    <span class="font-medium text-slate-900 dark:text-white" data-testid="sortable-step-title">@step.Title</span>
+                    <span class="text-xs text-slate-500 dark:text-slate-400">@Loc["TmSortableListDemo_StepHint", step.Ordinal]</span>
+                </div>
+            </ItemTemplate>
+        </TmSortableList>
+
+        <div class="flex flex-col gap-3" data-testid="sortable-readout">
+            <h3 class="text-sm font-semibold text-slate-900 dark:text-white">@Loc["TmSortableListDemo_OrderTitle"]</h3>
+            <ol class="m-0 ps-5 text-sm text-slate-700 dark:text-slate-300" data-testid="sortable-order">
+                @foreach (var step in _steps)
+                {
+                    <li data-testid="sortable-order-item">@step.Title</li>
+                }
+            </ol>
+            <p class="text-xs text-slate-500 dark:text-slate-400" data-testid="sortable-last-move" data-source="@(_lastMoveSource?.ToString() ?? "none")">
+                @LastMoveText
+            </p>
+            <TmButton Variant="ButtonVariant.Secondary" Size="ButtonSize.Sm"
+                      data-testid="sortable-reset"
+                      OnClick="ResetSteps">@Loc["TmSortableListDemo_Reset"]</TmButton>
+            <p class="text-xs text-slate-500 dark:text-slate-400">@Loc["TmSortableListDemo_KeyboardHint"]</p>
+        </div>
+    </div>
+</section>
+
+@* The two other shapes: the whole row as the drag surface (a 400 ms touch hold keeps tap and scroll
+   working) and a read-only list, which keeps its rows and its structure but offers no reorder path. *@
+<section class="demo-section mb-8" data-testid="sortable-modes-section">
+    <h2 class="text-lg font-semibold text-slate-900 dark:text-white mb-2">@Loc["TmSortableListDemo_ModesTitle"]</h2>
+    <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">@Loc["TmSortableListDemo_ModesHint"]</p>
+
+    <div class="grid gap-6 lg:grid-cols-2">
+        <div class="flex flex-col gap-2">
+            <h3 class="text-sm font-semibold text-slate-900 dark:text-white">@Loc["TmSortableListDemo_WholeItemTitle"]</h3>
+            <TmSortableList Items="_labels"
+                            HandleMode="SortableHandleMode.WholeItem"
+                            ShowMoveMenu="false"
+                            KeySelector="@(label => label.Id)"
+                            ItemLabelSelector="@(label => label.Title)"
+                            OnReorder="OnLabelReordered"
+                            AriaLabel="@Loc["TmSortableListDemo_WholeItemLabel"]"
+                            DataTestId="sortable-whole-item">
+                <ItemTemplate Context="label">
+                    <span class="text-sm" data-testid="sortable-label-title">@label.Title</span>
+                </ItemTemplate>
+            </TmSortableList>
+            <p class="text-xs text-slate-500 dark:text-slate-400" data-testid="sortable-whole-order">
+                @string.Join(" · ", _labels.Select(label => label.Title))
+            </p>
+        </div>
+
+        <div class="flex flex-col gap-2">
+            <h3 class="text-sm font-semibold text-slate-900 dark:text-white">@Loc["TmSortableListDemo_ReadOnlyTitle"]</h3>
+            <TmSortableList Items="_labels"
+                            Disabled="true"
+                            KeySelector="@(label => label.Id)"
+                            ItemLabelSelector="@(label => label.Title)"
+                            AriaLabel="@Loc["TmSortableListDemo_ReadOnlyLabel"]"
+                            DataTestId="sortable-readonly">
+                <ItemTemplate Context="label">
+                    <span class="text-sm">@label.Title</span>
+                </ItemTemplate>
+            </TmSortableList>
+            <p class="text-xs text-slate-500 dark:text-slate-400">@Loc["TmSortableListDemo_ReadOnlyHint"]</p>
+        </div>
+    </div>
+</section>
+
+@* The empty state keeps the instructions and the live region, so a list that has nothing to order still
+   explains itself instead of rendering a bare frame. *@
+<section class="demo-section" data-testid="sortable-empty-section">
+    <h2 class="text-lg font-semibold text-slate-900 dark:text-white mb-2">@Loc["TmSortableListDemo_EmptyTitle"]</h2>
+    <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">@Loc["TmSortableListDemo_EmptyHint"]</p>
+    <TmSortableList Items="Array.Empty<DemoSortableStep>()"
+                    AriaLabel="@Loc["TmSortableListDemo_EmptyLabel"]"
+                    DataTestId="sortable-empty">
+        <EmptyContent>
+            <p class="text-sm text-slate-500 dark:text-slate-400 m-0" data-testid="sortable-empty-slot">
+                @Loc["TmSortableListDemo_EmptySlot"]
+            </p>
+        </EmptyContent>
+    </TmSortableList>
+</section>
+
+@code {
+    /// <summary>One demo row: a stable id, the visible title and the ordinal it started at.</summary>
+    public sealed record DemoSortableStep(string Id, string Title, string Ordinal);
+
+    private static IReadOnlyList<DemoSortableStep> InitialSteps(ITmLocalizer loc) =>
+    [
+        new("draft", loc["TmSortableListDemo_Step1"], "1"),
+        new("sources", loc["TmSortableListDemo_Step2"], "2"),
+        new("review", loc["TmSortableListDemo_Step3"], "3"),
+        new("publish", loc["TmSortableListDemo_Step4"], "4")
+    ];
+
+    private IReadOnlyList<DemoSortableStep> _steps = [];
+
+    private IReadOnlyList<DemoSortableStep> _labels = [];
+
+    private SortableReorderSource? _lastMoveSource;
+
+    private (int From, int To)? _lastMove;
+
+    protected override void OnInitialized()
+    {
+        _steps = InitialSteps(Loc);
+        _labels =
+        [
+            new("alpha", Loc["TmSortableListDemo_Label1"], "1"),
+            new("bravo", Loc["TmSortableListDemo_Label2"], "2"),
+            new("charlie", Loc["TmSortableListDemo_Label3"], "3")
+        ];
+    }
+
+    private string LastMoveText => _lastMove is { } move && _lastMoveSource is { } source
+        ? Loc["TmSortableListDemo_LastMove",
+            (move.From + 1).ToString(CultureInfo.CurrentCulture),
+            (move.To + 1).ToString(CultureInfo.CurrentCulture),
+            Loc[source switch
+            {
+                SortableReorderSource.Pointer => "TmSortableListDemo_SourcePointer",
+                SortableReorderSource.Menu => "TmSortableListDemo_SourceMenu",
+                _ => "TmSortableListDemo_SourceKeyboard"
+            }]]
+        : Loc["TmSortableListDemo_NoMove"];
+
+    private void OnStepReordered(SortableReorderArgs args)
+    {
+        _steps = Move(_steps, args);
+        _lastMove = (args.FromIndex, args.ToIndex);
+        _lastMoveSource = args.Source;
+    }
+
+    private void OnLabelReordered(SortableReorderArgs args) => _labels = Move(_labels, args);
+
+    private static IReadOnlyList<DemoSortableStep> Move(IReadOnlyList<DemoSortableStep> items, SortableReorderArgs args)
+    {
+        if (args.FromIndex < 0 || args.FromIndex >= items.Count
+            || args.ToIndex < 0 || args.ToIndex >= items.Count || args.FromIndex == args.ToIndex)
+        {
+            return items;
+        }
+
+        var list = items.ToList();
+        var moved = list[args.FromIndex];
+        list.RemoveAt(args.FromIndex);
+        list.Insert(args.ToIndex, moved);
+        return list;
+    }
+
+    private void ResetSteps()
+    {
+        _steps = InitialSteps(Loc);
+        _lastMove = null;
+        _lastMoveSource = null;
+    }
+}

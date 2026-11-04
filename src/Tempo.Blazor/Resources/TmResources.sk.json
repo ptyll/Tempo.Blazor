@@ -6671,5 +6671,21 @@
   "TmUsageMeter_OtherCategory": "Ostatné",
   "TmUsageMeter_AnnounceNormal": "Využitie je opäť v limite.",
   "TmUsageMeter_AnnounceWarning": "Využitie je blízko limitu.",
-  "TmUsageMeter_AnnounceCritical": "Využitie dosiahlo limit."
+  "TmUsageMeter_AnnounceCritical": "Využitie dosiahlo limit.",
+  "TmSortableList_Label": "Zoznam na presunutie",
+  "TmSortableList_ItemRoleDescription": "presunuteľná položka",
+  "TmSortableList_Instructions": "Stlačte Enter alebo medzerník na uchopenie riadku, šípkami ho presuňte, Enter alebo medzerník ho vloží, Escape presun zruší a Tab opustí zoznam bez presunu. Alt so šípkou presunie riadok o jednu pozíciu bez uchopenia.",
+  "TmSortableList_ItemLabel": "Položka {0}",
+  "TmSortableList_MoveItem": "Presunúť {0}",
+  "TmSortableList_MoveUp": "Posunúť nahor",
+  "TmSortableList_MoveDown": "Posunúť nadol",
+  "TmSortableList_MoveToTop": "Posunúť na začiatok",
+  "TmSortableList_MoveToBottom": "Posunúť na koniec",
+  "TmSortableList_PickedUp": "Uchopenie: {0}. Pozícia {1} z {2}.",
+  "TmSortableList_Moved": "Presun: {0}, pozícia {1} z {2}.",
+  "TmSortableList_Dropped": "Vloženie: {0}, pozícia {1} z {2}.",
+  "TmSortableList_Cancelled": "Presun zrušený: {0} zostáva na pozícii {1} z {2}.",
+  "TmSortableList_AtFirst": "{0}: už na začiatku.",
+  "TmSortableList_AtLast": "{0}: už na konci.",
+  "TmSortableList_Empty": "Žiadne položky na presunutie."
 }

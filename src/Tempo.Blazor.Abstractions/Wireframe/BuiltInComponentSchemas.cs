@@ -77,6 +77,7 @@ public sealed class BuiltInComponentSchemas : IWireframeSchemaSource
             ["TmGauge"] = ["gauge"],
             ["TmStockChart"] = ["chart"],
             ["TmKanbanBoard"] = ["kanban-board"],
+            ["TmSortableList"] = ["sortable-list"],
             ["TmPivotTable"] = ["data-table", "chart"],
             ["TmGantt"] = ["scheduler", "timeline"],
             ["TmWorkflowDesignerCanvas"] = ["diagram-editor"],
@@ -1355,6 +1356,21 @@ public sealed class BuiltInComponentSchemas : IWireframeSchemaSource
             [
                 P("columns",      "Columns",       PropType.StringList, cat: "Content"),
                 P("showAddCard",  "Show Add Card", PropType.Bool, true, cat: "Appearance"),
+            ]
+        };
+
+        yield return new WireframeComponentSchema
+        {
+            Type = "TmSortableList", Category = "Data Display", DisplayName = "Sortable List",
+            DefaultWidth = 320, DefaultHeight = 240,
+            Props =
+            [
+                P("title",      "Title",      PropType.String, "Plan steps", cat: "Content"),
+                P("rows",       "Rows",       PropType.StringList, new[] { "Draft the outline", "Confirm the sources", "Publish the summary" }, cat: "Content"),
+                P("handleMode", "Handle Mode", PropType.Enum,  "handle",  cat: "Behavior",
+                    opts: ["handle", "whole-item"]),
+                P("showMoveMenu", "Show Move Menu", PropType.Bool, true, cat: "Appearance"),
+                P("disabled",   "Disabled",   PropType.Bool,   false,     cat: "State"),
             ]
         };
 

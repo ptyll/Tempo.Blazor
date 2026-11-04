@@ -1,0 +1,204 @@
+/* TmSortableList — a list a reader can reorder.
+   Every colour, radius, space and duration is a --tm-* token, so the dark theme re-points the tokens and
+   there is no [data-theme] block here.
+
+   The ROW is the focus stop in both handle modes, so its focus indicator is an INSET outline: a list that
+   scrolls inside a pane would clip an outward ring exactly where it is needed, which is worse than a ring
+   that sits on the row's own edge. The handle button is pointer-only (tabindex="-1" + aria-hidden), so it
+   carries no focus style at all — the keyboard path never lands on it.
+
+   While a pointer drag is live the module paints the lifted row and shifts its siblings with a transform.
+   The transition is on the item itself, and animations.css suppresses it under prefers-reduced-motion, so
+   the rows snap instead of sliding for a reader who asked for less motion. */
+
+.tm-sortable-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--tm-space-2);
+  min-inline-size: 0;
+  font-family: var(--tm-font-sans);
+}
+
+.tm-sortable-list__items {
+  display: flex;
+  flex-direction: column;
+  gap: var(--tm-space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tm-sortable-list__item {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--tm-space-2);
+  padding: var(--tm-space-2) var(--tm-space-3);
+  border: 1px solid var(--tm-border-color);
+  border-radius: var(--tm-radius-control);
+  background-color: var(--tm-bg-surface);
+  color: var(--tm-text-primary);
+  font-size: var(--tm-font-size-sm);
+  line-height: var(--tm-line-height-normal);
+  transition:
+    transform var(--tm-transition-fast),
+    box-shadow var(--tm-transition-fast),
+    border-color var(--tm-transition-fast),
+    background-color var(--tm-transition-fast);
+}
+
+.tm-sortable-list__item:focus-visible {
+  outline: 2px solid var(--tm-color-primary);
+  outline-offset: -2px;
+}
+
+/* The grabbed row wears a PRIMARY edge rather than a colour fill: the fill would fight the focus ring
+   that is also on this row, and the edge survives a dark theme unchanged. */
+.tm-sortable-list__item--grabbed {
+  border-color: var(--tm-color-primary);
+  background-color: var(--tm-bg-muted);
+  box-shadow: var(--tm-shadow-sm);
+}
+
+/* The row under the pointer. z-index lifts it over its shifted siblings; the module owns the transform. */
+.tm-sortable-list__item--dragging {
+  z-index: 2;
+  border-color: var(--tm-color-primary);
+  box-shadow: var(--tm-shadow-lg);
+  cursor: grabbing;
+}
+
+/* Whole-item mode: the row itself is the drag surface, so it advertises the gesture. A touch press has
+   to be held before the drag starts (the module passes 400 ms), which is why native scrolling survives. */
+.tm-sortable-list--whole-item .tm-sortable-list__item {
+  cursor: grab;
+}
+
+.tm-sortable-list__handle {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  inline-size: var(--tm-space-6);
+  block-size: var(--tm-space-6);
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--tm-radius-sm);
+  background-color: transparent;
+  color: var(--tm-text-secondary);
+  cursor: grab;
+  /* The handle is a dedicated drag target, so it claims the touch gesture instead of scrolling the page.
+     pointer-drag.js reads this through the element's own style (touchAction: null in the module). */
+  touch-action: none;
+}
+
+.tm-sortable-list__handle:hover {
+  background-color: var(--tm-bg-muted);
+  color: var(--tm-text-primary);
+}
+
+.tm-sortable-list__content {
+  flex: 1 1 auto;
+  min-inline-size: 0;
+  overflow-wrap: anywhere;
+}
+
+.tm-sortable-list__actions {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  margin-inline-start: auto;
+}
+
+.tm-sortable-list__move {
+  display: inline-flex;
+}
+
+.tm-sortable-list__move-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: var(--tm-space-6);
+  block-size: var(--tm-space-6);
+  border-radius: var(--tm-radius-sm);
+  color: var(--tm-text-secondary);
+  transition:
+    color var(--tm-transition-fast),
+    background-color var(--tm-transition-fast);
+}
+
+/* The menu's own wrapper is a foreign element (.tm-context-menu__trigger): this stylesheet does not
+   restyle it, it styles ITS OWN glyph through the wrapper's hover and focus-within state, so the
+   context menu keeps sole ownership of its trigger. */
+.tm-sortable-list__move:hover .tm-sortable-list__move-trigger,
+.tm-sortable-list__move:focus-within .tm-sortable-list__move-trigger {
+  background-color: var(--tm-bg-muted);
+  color: var(--tm-text-primary);
+}
+
+.tm-sortable-list__empty {
+  margin: 0;
+  padding: var(--tm-space-4);
+  border: 1px dashed var(--tm-border-color);
+  border-radius: var(--tm-radius-control);
+  color: var(--tm-text-secondary);
+  font-size: var(--tm-font-size-sm);
+  text-align: center;
+}
+
+/* A read-only list still reads as a list: the rows keep their content and their structure, they just stop
+   advertising a gesture they no longer have. */
+.tm-sortable-list--disabled .tm-sortable-list__item,
+.tm-sortable-list--disabled .tm-sortable-list__handle {
+  cursor: default;
+}
+
+.tm-sortable-list--disabled .tm-sortable-list__handle {
+  color: var(--tm-text-tertiary);
+}
+
+/* Coarse pointers cannot hit a 24 px icon reliably, so the pointer-only handle grows to the shared touch
+   target. The row follows below for the same reason (a row with a visible handle or menu is a tap target
+   in its own right); a read-only row is not a tap target at all, so its smaller box is not a failure. */
+@media (pointer: coarse) {
+  .tm-sortable-list__handle {
+    inline-size: var(--tm-touch-target);
+    block-size: var(--tm-touch-target);
+  }
+
+  /* The move menu is a TAP target on a phone, so it grows with the handle: a 24 px glyph is below the
+     44 px floor and the menu is the only reorder path a finger has without holding the row. */
+  .tm-sortable-list__move-trigger {
+    inline-size: var(--tm-touch-target);
+    block-size: var(--tm-touch-target);
+  }
+
+  .tm-sortable-list__item {
+    min-block-size: var(--tm-touch-target);
+    align-items: center;
+  }
+}
+
+/* Forced colors: the system palette stays in charge (there is no forced-color-adjust opt-out), so the
+   row's border keeps following its hover and disabled state. The token colours that carry the grabbed and
+   lifted states are dropped by that palette, so both states are re-declared as an outline and the focused
+   row keeps a real ring. */
+@media (forced-colors: active) {
+  .tm-sortable-list__item--grabbed,
+  .tm-sortable-list__item--dragging {
+    outline: 2px solid Highlight;
+    outline-offset: -2px;
+  }
+
+  .tm-sortable-list__item:focus-visible {
+    outline: 2px solid Highlight;
+    outline-offset: -2px;
+  }
+
+  /* The two icon affordances are painted with currentColor, so name the system colour explicitly. */
+  .tm-sortable-list__handle,
+  .tm-sortable-list__move-trigger {
+    color: ButtonText;
+  }
+}

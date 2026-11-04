@@ -6622,5 +6622,21 @@
   "TmUsageMeter_OtherCategory": "Autre",
   "TmUsageMeter_AnnounceNormal": "L'utilisation est revenue dans la limite.",
   "TmUsageMeter_AnnounceWarning": "L'utilisation approche de la limite.",
-  "TmUsageMeter_AnnounceCritical": "L'utilisation a atteint la limite."
+  "TmUsageMeter_AnnounceCritical": "L'utilisation a atteint la limite.",
+  "TmSortableList_Label": "Liste réordonnable",
+  "TmSortableList_ItemRoleDescription": "élément réordonnable",
+  "TmSortableList_Instructions": "Appuyez sur Entrée ou sur la barre d'espace pour saisir une ligne, utilisez les flèches pour la déplacer, Entrée ou la barre d'espace pour la déposer, Échap pour annuler et Tab pour quitter la liste sans la déplacer. Alt avec une flèche déplace une ligne d'une position sans la saisir.",
+  "TmSortableList_ItemLabel": "Élément {0}",
+  "TmSortableList_MoveItem": "Déplacer {0}",
+  "TmSortableList_MoveUp": "Déplacer vers le haut",
+  "TmSortableList_MoveDown": "Déplacer vers le bas",
+  "TmSortableList_MoveToTop": "Déplacer en premier",
+  "TmSortableList_MoveToBottom": "Déplacer en dernier",
+  "TmSortableList_PickedUp": "Saisie : {0}. Position {1} sur {2}.",
+  "TmSortableList_Moved": "Déplacé : {0}, position {1} sur {2}.",
+  "TmSortableList_Dropped": "Déposé : {0}, position {1} sur {2}.",
+  "TmSortableList_Cancelled": "Déplacement annulé : {0} reste à la position {1} sur {2}.",
+  "TmSortableList_AtFirst": "{0} : déjà en première position.",
+  "TmSortableList_AtLast": "{0} : déjà en dernière position.",
+  "TmSortableList_Empty": "Aucun élément à réordonner."
 }

@@ -1,0 +1,31 @@
+{
+  "kind": "Class",
+  "category": "Components",
+  "namespace": "Tempo.Blazor.Components.DataDisplay",
+  "description": "One committed reorder of a TmSortableList: the item at FromIndex of the host's own Items list belongs at ToIndex. The component never mutates the host's list — it raises exactly one of these per committed gesture and then renders the order the host reports, so a half-applied order can never be displayed.",
+  "packageId": "Tempo.Blazor",
+  "sourcePath": "src/Tempo.Blazor/Components/DataDisplay/SortableReorderArgs.cs",
+  "documentationStatus": "documented",
+  "itemName": "SortableReorderArgs",
+  "members": [
+    {
+      "name": "FromIndex",
+      "kind": "Property",
+      "type": "int",
+      "description": "The zero-based index of the moved item in the host's Items list. The move starts here."
+    },
+    {
+      "name": "ToIndex",
+      "kind": "Property",
+      "type": "int",
+      "description": "The zero-based index the item belongs at after the move. Applying RemoveAt(FromIndex) followed by Insert(ToIndex, item) reproduces the gesture exactly, because every intermediate keyboard step is an adjacent swap of the same row."
+    },
+    {
+      "name": "Source",
+      "kind": "Property",
+      "type": "SortableReorderSource",
+      "description": "Which input method committed the move: Pointer, Keyboard or Menu."
+    }
+  ],
+  "usageExample": "@code {\n    private void OnReordered(SortableReorderArgs args)\n    {\n        var list = items.ToList();\n        var moved = list[args.FromIndex];\n        list.RemoveAt(args.FromIndex);\n        list.Insert(args.ToIndex, moved);\n        items = list;\n    }\n}"
+}

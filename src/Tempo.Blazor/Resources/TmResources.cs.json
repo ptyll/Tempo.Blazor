@@ -6671,5 +6671,21 @@
   "TmUsageMeter_OtherCategory": "Ostatní",
   "TmUsageMeter_AnnounceNormal": "Využití je zpět v limitu.",
   "TmUsageMeter_AnnounceWarning": "Využití je blízko limitu.",
-  "TmUsageMeter_AnnounceCritical": "Využití dosáhlo limitu."
+  "TmUsageMeter_AnnounceCritical": "Využití dosáhlo limitu.",
+  "TmSortableList_Label": "Seznam k přesunutí",
+  "TmSortableList_ItemRoleDescription": "přesunutelná položka",
+  "TmSortableList_Instructions": "Stiskněte Enter nebo mezerník pro uchopení řádku, šipkami jej přesuňte, Enter nebo mezerník jej vloží, Escape přesun zruší a Tab opustí seznam bez přesunu. Alt se šipkou přesune řádek o jednu pozici bez uchopení.",
+  "TmSortableList_ItemLabel": "Položka {0}",
+  "TmSortableList_MoveItem": "Přesunout {0}",
+  "TmSortableList_MoveUp": "Posunout nahoru",
+  "TmSortableList_MoveDown": "Posunout dolů",
+  "TmSortableList_MoveToTop": "Posunout na začátek",
+  "TmSortableList_MoveToBottom": "Posunout na konec",
+  "TmSortableList_PickedUp": "Uchopeno: {0}. Pozice {1} z {2}.",
+  "TmSortableList_Moved": "Přesunuto: {0}, pozice {1} z {2}.",
+  "TmSortableList_Dropped": "Vloženo: {0}, pozice {1} z {2}.",
+  "TmSortableList_Cancelled": "Přesun zrušen: {0} zůstává na pozici {1} z {2}.",
+  "TmSortableList_AtFirst": "{0}: již na začátku.",
+  "TmSortableList_AtLast": "{0}: již na konci.",
+  "TmSortableList_Empty": "Žádné položky k přesunutí."
 }
