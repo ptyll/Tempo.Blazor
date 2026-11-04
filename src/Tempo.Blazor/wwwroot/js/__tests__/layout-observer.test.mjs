@@ -172,3 +172,24 @@ test('observe re-registered with new thresholds reclassifies the same width', as
 
     assert.deepEqual(dotnet.calls.map(call => call.args[0]), ['tablet', 'tablet', 'mobile']);
 });
+
+// A 0-size content box is transient (viewport re-emulation during a fullPage screenshot, print
+// preview, hidden→shown), not a real mobile container: classifying it would remount the editor
+// canvas and lose every open piece of UI state.
+test('a degenerate 0-width record keeps the last resolved mode', async () => {
+    __resetForTests();
+    const instances = installFakeResizeObserver();
+    const dotnet = dotNet();
+
+    await observe(element('shell'), dotnet, 'shell', { initialWidth: 1440, breakpoints });
+
+    instances[0].emit(0);
+    instances[0].emit(0.5);
+    assert.deepEqual(dotnet.calls, [
+        { name: 'OnLayoutModeChanged', args: ['desktop'] },
+    ], 'degenerate widths must not report a mode');
+
+    instances[0].emit(390);
+    assert.deepEqual(dotnet.calls.at(-1), { name: 'OnLayoutModeChanged', args: ['mobile'] },
+        'a real width still reports after the transient');
+});

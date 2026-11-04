@@ -10,6 +10,8 @@
          data-page-id="@Page.Id"
          @ref="_pageRef">
 
+<CascadingValue Value="UiState" Name="TmNotionPageUiState" IsFixed="true">
+
     @* ── Page settings button (top-right corner) ────────────────────────────── *@
     @if (!ReadOnly || Page.IsLocked)
     {
@@ -165,6 +167,8 @@
         }
 
     </div>
+
+</CascadingValue>
 
 </article>
 

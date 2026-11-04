@@ -74,7 +74,7 @@
 
                 <div class="@cls"
                      role="gridcell"
-                     data-testid="notion-db-calendar-cell"
+                     data-testid="@TestId("notion-db-calendar-cell")"
                      aria-label="@date.ToString("d MMMM yyyy")"
                      @ondragover:preventDefault="true"
                      @ondragenter:preventDefault="true"
@@ -97,7 +97,7 @@
                         var title      = GetPrimaryValue(rec);
 
                         <div class="tm-dbcal__event @(isDragging ? "tm-dbcal__event--dragging" : "")"
-                             data-testid="notion-db-calendar-event"
+                             data-testid="@TestId("notion-db-calendar-event")"
                              style="--event-color: @eventColor"
                              draggable="@(!ReadOnly ? "true" : "false")"
                              role="button"

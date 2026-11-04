@@ -1,4 +1,5 @@
 @namespace Tempo.Blazor.Components.NotionEditor.Blocks.Database
+@inherits Tempo.Blazor.Components.TmComponentBase
 @using Tempo.Blazor.NotionEditor.Models
 @using Tempo.Blazor.NotionEditor.Interfaces
 @using Tempo.Blazor.NotionEditor.Enums
@@ -21,7 +22,7 @@
                 <div class="tm-dbg__card"
                      role="button"
                      tabindex="0"
-                     data-testid="notion-db-gallery-card"
+                     data-testid="@TestId("notion-db-gallery-card")"
                      @key="rec.Id"
                      @onclick="() => HandleCardClickAsync(rec)"
                      @onkeydown="e => HandleCardKeyAsync(e, rec)">

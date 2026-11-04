@@ -44,7 +44,7 @@ public class TmNotionStatusPickerTests : LocalizationTestBase
             .Add(x => x.InitialLabel, "DONE")
             .Add(x => x.InitialColor, NotionStatusColor.Green));
 
-        cut.Find(".tm-notion-status-picker").GetAttribute("style").Should().Contain("top:120px");
+        cut.Find(".tm-notion-floating-menu__anchor").GetAttribute("style").Should().Contain("top:120px");
         cut.Find(".tm-notion-status").ClassList.Should().Contain("tm-notion-status--green");
         cut.Find(".tm-notion-status__label").TextContent.Should().Be("DONE");
     }

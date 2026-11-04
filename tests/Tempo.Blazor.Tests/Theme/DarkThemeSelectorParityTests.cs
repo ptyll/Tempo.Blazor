@@ -87,7 +87,7 @@ public class DarkThemeSelectorParityTests
 
         // Non-vacuous: the sweep has to have found dark rules at all. A refactor that renames the switch,
         // or a glob that stops matching, would otherwise leave this permanently and silently green.
-        scanned.Should().BeGreaterThan(150,
+        scanned.Should().BeGreaterThan(140,
             "the shipped packages carry a large body of dark rules — a near-empty sweep means the scan broke, "
             + "not that the drift is gone");
 

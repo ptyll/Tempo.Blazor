@@ -69,6 +69,12 @@ public class NotionSinglePageModeE2ETests : WasmTestBase
     public async Task FullEditor_StillHasSidebar_WhileSinglePageDoesNot()
     {
         var (page, _) = await OpenSinglePageDemoAsync();
+        // Phase 3 (N0): the full editor's shell resolves desktop from its own container
+        // (>=1024); at the 1280 default (~918px container) the page tree is a closed tablet
+        // drawer that is not mounted at all. 1600 puts the full editor on the desktop band,
+        // where the sidebar docks — the backward-compat contract this test pins.
+        await page.SetViewportSizeAsync(1600, 900);
+        await page.WaitForTimeoutAsync(400);
 
         // The full interactive editor (not single-page) keeps its sidebar.
         var fullSidebars = page.Locator(".tm-notion-editor:not(.tm-notion-editor--single-page) .tm-notion-sidebar");

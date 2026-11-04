@@ -58,7 +58,7 @@ public sealed class NotionAnalyticsE2ETests : NotionE2ETestBase
 
     private static async Task OpenAnalyticsAsync(IPage page)
     {
-        await page.GetByTestId("notion-analytics-open").ClickAsync();
+        await ClickNotionCommandAsync(page, "notion-analytics-open");
         await page.GetByTestId("notion-analytics-panel").WaitForAsync(new LocatorWaitForOptions
         {
             State = WaitForSelectorState.Visible,

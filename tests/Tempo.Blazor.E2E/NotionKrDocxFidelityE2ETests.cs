@@ -75,10 +75,12 @@ public sealed class NotionKrDocxFidelityE2ETests : NotionE2ETestBase
                 await page.Locator(".tm-notion-sidebar-toggle").First
                     .EvaluateAsync("element => element.click()");
             }
-            await page.Locator(".tm-notion-sidebar--hidden").First.WaitForAsync(
+            // Phase 3 (N0): closing the drawer unmounts the page tree — wait for the visible
+            // sidebar to detach instead of the removed phase-2 --hidden class.
+            await page.Locator(".tm-notion-sidebar--visible").First.WaitForAsync(
                 new LocatorWaitForOptions
                 {
-                    State = WaitForSelectorState.Attached,
+                    State = WaitForSelectorState.Detached,
                     Timeout = 5_000
                 });
         }

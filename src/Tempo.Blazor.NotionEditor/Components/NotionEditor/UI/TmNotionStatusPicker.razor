@@ -1,17 +1,18 @@
 @namespace Tempo.Blazor.Components.NotionEditor.UI
 @using Tempo.Blazor.NotionEditor.Enums
+@using Tempo.Blazor.Components.Overlay
 
-@if (Visible)
-{
-    <div class="tm-notion-status-picker-backdrop" @onclick="HandleBackdropClickAsync" aria-hidden="true"></div>
-
-    <div class="tm-notion-status-picker"
-         role="dialog"
-         aria-label="@Loc["Notion_Status_Insert"]"
-         style="top:@(_top)px;left:@(_left)px"
-         @ref="_pickerRef"
-         @onkeydown="HandleKeyDownAsync"
-         @onkeydown:stopPropagation="true">
+<TmNotionFloatingMenu IsOpen="Visible"
+                      LayoutMode="LayoutMode"
+                      Top="Top"
+                      Left="Left"
+                      Placement="OverlayPlacement.Bottom"
+                      Role="dialog"
+                      Title="@Loc["Notion_Status_Insert"]"
+                      AriaLabel="@Loc["Notion_Status_Insert"]"
+                      Class="tm-notion-status-picker"
+                      OnClose="HandleBackdropClickAsync">
+    <div class="tm-notion-status-picker__body" @onkeydown="HandleKeyDownAsync" @onkeydown:stopPropagation="true">
 
         <input class="tm-notion-status-picker__input"
                type="text"
@@ -52,4 +53,4 @@
             @Loc["Notion_Status_Insert"]
         </button>
     </div>
-}
+</TmNotionFloatingMenu>

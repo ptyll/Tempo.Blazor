@@ -25,6 +25,10 @@ public class NotionNavBlocksE2ETests : WasmTestBase
 
         var context = await CreateContextAsync();
         var page = await context.NewPageAsync();
+        // Phase 3 (N0): the shell resolves desktop from its own container (>=1024); the 1280
+        // default leaves ~918px (tablet) where the page tree is a closed drawer and the sidebar
+        // search button is not rendered. 1600 keeps the editor on the desktop band.
+        await page.SetViewportSizeAsync(1600, 900);
         await page.GotoAsync($"{BaseUrl}/notion-editor");
         await WaitForAppReadyAsync(page);
         await page.WaitForSelectorAsync(".tm-notion-editor", new PageWaitForSelectorOptions { Timeout = 30000 });

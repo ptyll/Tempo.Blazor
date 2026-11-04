@@ -29,6 +29,17 @@ public partial class TmNotionPublicPage : TmComponentBase
     private bool _loading;
     private string? _loadedToken;
     private PublicShareDto? _share;
+    private string? _pageTitle;
+    private string? _pageIconEmoji;
+    private string? _pageIconImageUrl;
+
+    private Task OnEditorPageChanged(INotionPage page)
+    {
+        _pageTitle = page.Title;
+        _pageIconEmoji = page.IconEmoji;
+        _pageIconImageUrl = page.IconImageUrl;
+        return Task.CompletedTask;
+    }
 
     protected override async Task OnParametersSetAsync()
     {

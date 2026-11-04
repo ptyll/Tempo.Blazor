@@ -2786,6 +2786,8 @@ public sealed class BuiltInComponentSchemas : IWireframeSchemaSource
             [
                 P("title",       "Title",        PropType.String, "Page Title", cat: "Content"),
                 P("showSidebar", "Show Sidebar", PropType.Bool,   true,         cat: "Appearance"),
+                P("layoutMode",  "Layout Mode",  PropType.String, "Auto",       cat: "Appearance"),
+                P("chrome",      "Chrome",       PropType.String, "Full",       cat: "Appearance"),
             ]
         };
 

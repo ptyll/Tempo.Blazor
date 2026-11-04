@@ -1,19 +1,19 @@
 @namespace Tempo.Blazor.Components.NotionEditor.UI
 @inherits Tempo.Blazor.Components.TmComponentBase
 @using Tempo.Blazor.NotionEditor.Enums
+@using Tempo.Blazor.Components.Overlay
 
-@if (Visible)
-{
-    @* ── Transparent backdrop — click outside to close ────────────────────── *@
-    <div class="tm-notion-slash-backdrop" @onclick="HandleBackdropClickAsync" aria-hidden="true"></div>
-
-    @* ── Menu card ─────────────────────────────────────────────────────────── *@
-    <div class="tm-notion-slash"
-         role="dialog"
-         aria-label="@Loc["TmNotionSlashMenu_SearchPlaceholder"]"
-         style="top:@(_top)px;left:@(_left)px"
-         @ref="_menuRef"
-         @onkeydown:stopPropagation="true">
+<TmNotionFloatingMenu IsOpen="Visible"
+                      LayoutMode="LayoutMode"
+                      Top="Top"
+                      Left="Left"
+                      Placement="OverlayPlacement.Bottom"
+                      Role="dialog"
+                      Title="@Loc["TmNotionSlashMenu_Title"]"
+                      AriaLabel="@Loc["TmNotionSlashMenu_SearchPlaceholder"]"
+                      Class="tm-notion-slash"
+                      OnClose="HandleBackdropClickAsync">
+    <div class="tm-notion-slash__body" @onkeydown:stopPropagation="true">
 
         @* ── Search input ──────────────────────────────────────────────────── *@
         <div class="tm-notion-slash__search">
@@ -101,4 +101,4 @@
             }
         </div>
     </div>
-}
+</TmNotionFloatingMenu>

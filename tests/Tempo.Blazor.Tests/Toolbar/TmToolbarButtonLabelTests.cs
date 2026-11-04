@@ -161,6 +161,19 @@ public class TmToolbarButtonLabelTests : LocalizationTestBase
             @"\.tm-toolbar-divider:[^{]*\{[^}]*display:\s*none",
             "display:none would feed back into the measurement");
     }
+
+    [Fact]
+    public void CollapsedItem_IsParkedUnderTheVisibleButtons_SoItNeverStealsClicks()
+    {
+        // The collapsed copy stays in the DOM (measurable width for the fit) but must not sit in
+        // the hit-test tree: without a negative z-index it overlapped the pinned button next to it
+        // and swallowed its clicks (Notion phase-3 review, tablet band).
+        var css = File.ReadAllText(Path.Combine(RepoRoot(), "src", "Tempo.Blazor", "wwwroot", "css", "components", "_toolbar.css"));
+
+        css.Should().MatchRegex(
+            @"\.tm-toolbar-item--collapsed\s*\{[^}]*z-index:\s*-1",
+            "the collapsed wrapper is parked at the inline start UNDER the visible buttons");
+    }
     [Fact]
     public void Ribbon_LabelBelowTiles_AreRoomyAndDividersSpanTheTileHeight()
     {

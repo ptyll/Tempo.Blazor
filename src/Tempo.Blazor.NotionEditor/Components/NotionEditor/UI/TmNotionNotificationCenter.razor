@@ -187,14 +187,23 @@
 
     private async void OnNotificationsChanged()
     {
-        await InvokeAsync(async () =>
+        // Provider change events can race disposal; an exception escaping an async void handler is
+        // unhandled and takes the whole circuit down, so the refresh is fenced.
+        try
         {
-            _hasNew = true;
-            await RefreshUnreadCountAsync(forceRender: false);
-            if (_isOpen)
-                await LoadNotificationsAsync();
-            StateHasChanged();
-        });
+            await InvokeAsync(async () =>
+            {
+                _hasNew = true;
+                await RefreshUnreadCountAsync(forceRender: false);
+                if (_isOpen)
+                    await LoadNotificationsAsync();
+                StateHasChanged();
+            });
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or JSException or JSDisconnectedException or ObjectDisposedException)
+        {
+            // Mid-dispose; the next poll re-syncs the unread count.
+        }
     }
 
     private async Task ToggleAsync()

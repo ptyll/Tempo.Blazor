@@ -1,16 +1,14 @@
-/* ── Backdrop ─────────────────────────────────────────────────────────────── */
-.tm-notion-slash-backdrop {
+/* Virtual anchor — the core overlay positions against this zero-size pin. */
+.tm-notion-slash__anchor {
     position: fixed;
-    inset: 0;
-    /* N5: popover-band tokens — the backdrop sits one step under the anchored menu card. */
-    z-index: calc(var(--tm-z-popover) - 1);
-    background: transparent;
+    width: 0;
+    height: 0;
+    pointer-events: none;
 }
 
-/* ── Menu card ────────────────────────────────────────────────────────────── */
-.tm-notion-slash {
-    position: fixed;
-    z-index: var(--tm-z-popover);
+/* The card surface lives on the body the component renders itself: the panel root is a child
+   component, so a scoped rule never reaches it and the menu grew to its full content height. */
+.tm-notion-slash__body {
     width: 320px;
     max-height: 400px;
     display: flex;
@@ -24,6 +22,10 @@
     color: var(--tm-text-primary);
     animation: tm-slash-appear 80ms ease;
 }
+
+/* (The sheet-presentation reset — width/border/shadow off — lives in the package global
+   stylesheet _notion-floating-menus.css: a scoped rule can never reach the core sheet
+   content ancestor, N5.) */
 
 @keyframes tm-slash-appear {
     from { opacity: 0; transform: translateY(-4px); }

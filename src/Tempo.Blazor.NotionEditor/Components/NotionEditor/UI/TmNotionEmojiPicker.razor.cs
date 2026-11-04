@@ -1,4 +1,6 @@
+using System.Globalization;
 using Microsoft.AspNetCore.Components;
+using Tempo.Blazor.Abstractions.Layout;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.JSInterop;
 
@@ -21,6 +23,9 @@ public partial class TmNotionEmojiPicker : ComponentBase
 
     /// <summary>Raised when the picker is dismissed without a selection.</summary>
     [Parameter] public EventCallback OnClosed { get; set; }
+
+    /// <summary>Forced layout. Mobile presents the menu as the core sheet.</summary>
+    [Parameter] public TmLayoutMode LayoutMode { get; set; } = TmLayoutMode.Auto;
 
     // ── Static tab definitions ────────────────────────────────────────────────
 
@@ -51,8 +56,6 @@ public partial class TmNotionEmojiPicker : ComponentBase
     private string              _query          = string.Empty;
     private EmojiCategory       _activeCategory = EmojiCategory.Smileys;
     private bool                _isSearching;
-    private double              _top;
-    private double              _left;
     private bool                _wasVisible;
     private bool                _needsFocus;
 
@@ -61,7 +64,6 @@ public partial class TmNotionEmojiPicker : ComponentBase
     private IReadOnlyList<EmojiEntry> _categoryEmojis = EmojiData.All
         .Where(e => e.Category == EmojiCategory.Smileys).ToList();
 
-    private ElementReference _pickerRef;
     private ElementReference _searchRef;
     private ElementReference _scrollRef;
 
@@ -73,8 +75,6 @@ public partial class TmNotionEmojiPicker : ComponentBase
     {
         if (Visible && !_wasVisible)
         {
-            _top            = Top;
-            _left           = Left;
             _query          = string.Empty;
             _isSearching    = false;
             _activeCategory = EmojiCategory.Smileys;
@@ -98,7 +98,6 @@ public partial class TmNotionEmojiPicker : ComponentBase
             try
             {
                 await _searchRef.FocusAsync();
-                await JS.InvokeVoidAsync("tmNotionEditor.adjustEmojiPickerPosition", _pickerRef);
             }
             catch { /* SSR / test */ }
         }
@@ -170,6 +169,10 @@ public partial class TmNotionEmojiPicker : ComponentBase
         if (e.Key == "Escape")
             await OnClosed.InvokeAsync();
     }
+
+    // The search input stops keydown propagation so typing does not reach the editor, which also
+    // swallows Escape before the body handler above can see it. Close here, on the focused input.
+    private Task HandleSearchKeyDownAsync(KeyboardEventArgs e) => HandleKeyDownAsync(e);
 
     // ── Recently used (localStorage) ─────────────────────────────────────────
 

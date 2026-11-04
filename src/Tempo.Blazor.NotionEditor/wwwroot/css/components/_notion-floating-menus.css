@@ -67,3 +67,26 @@
 .tm-notion-ai--panel {
     width: min(32rem, calc(100vw - var(--tm-space-4)));
 }
+
+/* ── N5: floating-menu bodies inside the core bottom sheet ───────────────────
+   TmNotionFloatingMenu renders the consumer body as a child of its own wrapper inside
+   the core sheet content. The consumer bodies carry the popover card chrome (fixed
+   width, border/radius/shadow) through their SCOPED rules, and a scoped rule can never
+   reach up into the sheet-content ancestor — so the sheet reset lives here, in the
+   global stylesheet, keyed off .tm-overlay-panel-sheet__content (present only in the
+   sheet presentation). The core overlay deliberately does NOT forward Class onto the
+   sheet content (the popover root keeps it). */
+
+.tm-overlay-panel-sheet__content > .tm-notion-floating-menu__body > .tm-notion-slash__body,
+.tm-overlay-panel-sheet__content > .tm-notion-floating-menu__body > .tm-notion-color-picker__body,
+.tm-overlay-panel-sheet__content > .tm-notion-floating-menu__body > .tm-notion-emoji-picker__body,
+.tm-overlay-panel-sheet__content > .tm-notion-floating-menu__body > .tm-notion-status-picker__body,
+.tm-overlay-panel-sheet__content > .tm-notion-floating-menu__body > .tm-notion-token-dropdown__body,
+.tm-overlay-panel-sheet__content > .tm-notion-floating-menu__body > .tm-notion-type-switcher__body {
+    width: 100%;
+    max-width: 100%;
+    max-height: none;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+}

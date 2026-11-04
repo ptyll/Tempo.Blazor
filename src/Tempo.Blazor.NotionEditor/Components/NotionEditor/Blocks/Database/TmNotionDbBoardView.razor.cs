@@ -8,7 +8,7 @@ using Tempo.Blazor.NotionEditor.Models;
 
 namespace Tempo.Blazor.Components.NotionEditor.Blocks.Database;
 
-public partial class TmNotionDbBoardView : IAsyncDisposable
+public partial class TmNotionDbBoardView : TmComponentBase, IAsyncDisposable
 {
     [Inject] private IJSRuntime JS { get; set; } = default!;
 

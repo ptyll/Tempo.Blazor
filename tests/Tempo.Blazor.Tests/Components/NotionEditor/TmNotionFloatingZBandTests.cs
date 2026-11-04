@@ -83,15 +83,8 @@ public sealed class TmNotionFloatingZBandTests
     [Theory]
     // anchored surface only — no click-capture backdrop
     [InlineData("UI/TmNotionInlineToolbar", 1)]
-    // backdrop + panel pairs
-    [InlineData("UI/TmNotionSlashMenu", 2)]
-    [InlineData("UI/TmNotionBlockTypeSwitcher", 2)]
-    [InlineData("UI/TmNotionColorPicker", 2)]
-    [InlineData("UI/TmNotionEmojiPicker", 2)]
     [InlineData("UI/TmNotionBlockCommentPanel", 2)]
     [InlineData("UI/TmNotionTextCommentPanel", 2)]
-    [InlineData("UI/TmNotionTokenDropdown", 2)]
-    [InlineData("UI/TmNotionStatusPicker", 2)]
     public void FloatingNotionSurfaces_SitOnThePopoverBand(string scopedCss, int zDeclarations)
     {
         var css = File.ReadAllText(Path.Combine(
@@ -120,6 +113,12 @@ public sealed class TmNotionFloatingZBandTests
     [InlineData("UI/TmNotionAiMenu")]
     [InlineData("UI/TmNotionMentionMenu")]
     [InlineData("UI/TmCommentMentionInput")]
+    [InlineData("UI/TmNotionSlashMenu")]
+    [InlineData("UI/TmNotionBlockTypeSwitcher")]
+    [InlineData("UI/TmNotionColorPicker")]
+    [InlineData("UI/TmNotionEmojiPicker")]
+    [InlineData("UI/TmNotionTokenDropdown")]
+    [InlineData("UI/TmNotionStatusPicker")]
     public void OverlayHostedSurfaces_DeclareNoOwnZIndex(string scopedCss)
     {
         var css = CssComment.Replace(File.ReadAllText(Path.Combine(

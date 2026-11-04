@@ -85,6 +85,21 @@ public sealed class NotionEditorContext
     public Func<Task>?                     OpenTemplateGallery      { get; init; }
 
     /// <summary>
+    /// Page-level actions (add block, comments, page settings) the rendered
+    /// <see cref="Page.TmNotionPage"/> registers for chrome above it — the mobile action bar
+    /// invokes these instead of duplicating page logic. Preserved across <c>BuildContext</c>
+    /// rebuilds; populated by the page itself.
+    /// </summary>
+    internal NotionPageActions? PageActions { get; set; }
+
+    /// <summary>
+    /// Raised by the page right after it (re)registers <see cref="PageActions"/> — the editor
+    /// re-renders the chrome (the mobile bar) so the new actions appear without waiting for the
+    /// next editor-owned state change.
+    /// </summary>
+    internal Func<Task>? PageActionsChanged { get; set; }
+
+    /// <summary>
     /// Raised when a block type is converted (e.g. via slash menu or toolbar).
     /// Nested components such as column blocks subscribe to keep their local
     /// child cache in sync with the remote store.

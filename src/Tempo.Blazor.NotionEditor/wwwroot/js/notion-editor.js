@@ -2624,82 +2624,6 @@ window.tmNotionEditor = (function () {
         element.style.left = `${nextLeft}px`;
     }
 
-    function adjustSlashMenuPosition(menuEl) {
-        if (!menuEl) return;
-
-        const vw        = window.innerWidth;
-        const vh        = window.innerHeight;
-        const margin    = 8;
-        const anchorGap = 28;
-
-        menuEl.style.maxHeight = '';
-
-        const initialRect = menuEl.getBoundingClientRect();
-        const anchorTop   = Number.parseFloat(menuEl.style.top) || initialRect.top || margin;
-        let top           = anchorTop;
-        let left          = Number.parseFloat(menuEl.style.left) || initialRect.left || margin;
-        const height      = Math.min(initialRect.height || 0, vh - (margin * 2));
-        const below       = Math.max(96, vh - anchorTop - margin);
-        const above       = Math.max(96, anchorTop - margin - anchorGap);
-        let maxHeight     = Math.min(height, below);
-
-        if (anchorTop + height > vh - margin && above > below) {
-            maxHeight = Math.min(height, above);
-            top = Math.max(margin, anchorTop - maxHeight - anchorGap);
-        } else if (anchorTop + height > vh - margin) {
-            top = Math.max(margin, vh - margin - maxHeight);
-        }
-
-        if (initialRect.right > vw - margin) {
-            left = vw - initialRect.width - margin;
-        }
-
-        top = Math.max(margin, top);
-        left = Math.max(margin, left);
-        maxHeight = Math.max(96, Math.min(maxHeight, vh - top - margin));
-
-        const listEl = menuEl.querySelector('.tm-nmm__list, .tm-notion-token-dropdown__list');
-        if (listEl) {
-            menuEl.style.maxHeight = `${maxHeight}px`;
-            menuEl.style.setProperty('--tm-floating-menu-max-height', `${maxHeight}px`);
-
-            const chromeHeight = Array.from(menuEl.children)
-                .filter(child => child !== listEl)
-                .reduce((total, child) => total + child.getBoundingClientRect().height, 0);
-            const listMaxHeight = Math.max(64, maxHeight - chromeHeight);
-            listEl.style.maxHeight = `${listMaxHeight}px`;
-            listEl.style.overflowY = 'auto';
-        } else {
-            menuEl.style.maxHeight = '';
-            menuEl.style.removeProperty('--tm-floating-menu-max-height');
-        }
-
-        menuEl.style.top = `${top}px`;
-        menuEl.style.left = `${left}px`;
-        menuEl.style.setProperty('--tm-nmm-anchor-top', `${top}px`);
-    }
-
-    // 47.1
-    function adjustTypeSwitcherPosition(panelEl) {
-        if (!panelEl) return;
-        const rect   = panelEl.getBoundingClientRect();
-        const vw     = window.innerWidth;
-        const vh     = window.innerHeight;
-        const margin = 8;
-
-        let top  = parseFloat(panelEl.style.top)  || 0;
-        let left = parseFloat(panelEl.style.left) || 0;
-
-        if (rect.bottom > vh - margin) {
-            top = top - rect.height - 4;
-            panelEl.style.top = Math.max(margin, top) + 'px';
-        }
-        if (rect.right > vw - margin) {
-            left = vw - rect.width - margin;
-            panelEl.style.left = Math.max(margin, left) + 'px';
-        }
-    }
-
     // 46.1
     function getRecentEmojis() {
         try {
@@ -2714,47 +2638,6 @@ window.tmNotionEditor = (function () {
             recent.unshift(emoji);
             localStorage.setItem('tm-notion-emoji-recent', JSON.stringify(recent.slice(0, 16)));
         } catch { }
-    }
-
-    function adjustEmojiPickerPosition(pickerEl) {
-        if (!pickerEl) return;
-        const rect   = pickerEl.getBoundingClientRect();
-        const vw     = window.innerWidth;
-        const vh     = window.innerHeight;
-        const margin = 8;
-
-        let top  = parseFloat(pickerEl.style.top)  || 0;
-        let left = parseFloat(pickerEl.style.left) || 0;
-
-        if (rect.bottom > vh - margin) {
-            top = top - rect.height - 4;
-            pickerEl.style.top = Math.max(margin, top) + 'px';
-        }
-        if (rect.right > vw - margin) {
-            left = vw - rect.width - margin;
-            pickerEl.style.left = Math.max(margin, left) + 'px';
-        }
-    }
-
-    // 45.1
-    function adjustColorPickerPosition(pickerEl) {
-        if (!pickerEl) return;
-        const rect   = pickerEl.getBoundingClientRect();
-        const vw     = window.innerWidth;
-        const vh     = window.innerHeight;
-        const margin = 8;
-
-        let top  = parseFloat(pickerEl.style.top)  || 0;
-        let left = parseFloat(pickerEl.style.left) || 0;
-
-        if (rect.bottom > vh - margin) {
-            top = top - rect.height - 4;
-            pickerEl.style.top = Math.max(margin, top) + 'px';
-        }
-        if (rect.right > vw - margin) {
-            left = vw - rect.width - margin;
-            pickerEl.style.left = Math.max(margin, left) + 'px';
-        }
     }
 
     function scrollSlashItemIntoView(listEl, flatIndex) {
@@ -3518,11 +3401,6 @@ window.tmNotionEditor = (function () {
         setTimeout(() => block.classList.remove('tm-notion-block--highlight-flash'), 1200);
     }
 
-    function isNarrowViewport(maxWidth) {
-        const width = Number(maxWidth) || 1024;
-        return window.matchMedia(`(max-width: ${width}px)`).matches;
-    }
-
     // ── Public API ─────────────────────────────────────────────────────────────
     return {
         // 26.1
@@ -3556,7 +3434,7 @@ window.tmNotionEditor = (function () {
         initColumnResize, destroyColumnResize,
         // 26.9
         scrollToBlock, initSmoothScrollSpy, destroyScrollSpy,
-        scrollToFirstUnresolvedComment, isNarrowViewport,
+        scrollToFirstUnresolvedComment,
         // 91.1
         updateCollabCursors, clearCollabCursors,
         registerShortcuts, unregisterShortcuts,
@@ -3576,7 +3454,7 @@ window.tmNotionEditor = (function () {
         replaceActiveStatusChip, cancelStatusEdit,
         insertMentionChip, cancelMentionTrigger,
         insertNotionToken, replaceNotionToken, cancelTokenTrigger, cancelChipEdit,
-        adjustSlashMenuPosition, scrollSlashItemIntoView,
+        scrollSlashItemIntoView,
         // 44.1
         initSelectionWatcher, destroySelectionWatcher,
         hasSelectionWatcher, notifySelectionChanged, forceInlineToolbarForSelection,
@@ -3585,11 +3463,8 @@ window.tmNotionEditor = (function () {
         insertInlineMath, adjustInlineToolbarPosition,
         getSelectedText, replaceSavedSelectionWithHtml,
         // 45.1
-        adjustColorPickerPosition,
         // 46.1
-        getRecentEmojis, addRecentEmoji, adjustEmojiPickerPosition,
-        // 47.1
-        adjustTypeSwitcherPosition,
+        getRecentEmojis, addRecentEmoji,
         // 80.1
         initSidebarResize, destroySidebarResize,
         // 87.1

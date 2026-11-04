@@ -71,7 +71,7 @@ public sealed class NotionAuditLogE2ETests : NotionE2ETestBase
 
     private static async Task OpenAuditAsync(IPage page)
     {
-        await page.GetByTestId("notion-audit-open").ClickAsync();
+        await ClickNotionCommandAsync(page, "notion-audit-open");
         await page.GetByTestId("notion-audit-panel").WaitForAsync(new LocatorWaitForOptions
         {
             State = WaitForSelectorState.Visible,

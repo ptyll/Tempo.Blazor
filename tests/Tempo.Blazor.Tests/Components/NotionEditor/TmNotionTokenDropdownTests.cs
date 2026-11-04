@@ -156,8 +156,12 @@ public class TmNotionTokenDropdownTests : LocalizationTestBase
 
         await cut.InvokeAsync(() => Task.CompletedTask);
 
-        var backdrop = cut.Find(".tm-notion-token-backdrop");
-        await backdrop.ClickAsync(new MouseEventArgs());
+        // The backdrop dismissal is the core overlay's OnDismissed → the shared floating menu's
+        // OnClose → the dropdown's OnClosed.
+        var menu = cut.FindComponent<TmNotionFloatingMenu>();
+        await cut.InvokeAsync(() => menu.Instance.GetType()
+            .GetMethod("OnDismissed", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!
+            .Invoke(menu.Instance, ["backdrop"]));
 
         closedFired.Should().BeTrue();
     }

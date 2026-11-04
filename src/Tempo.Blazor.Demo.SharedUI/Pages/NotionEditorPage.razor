@@ -44,6 +44,14 @@
 
 <PageTitle>Notion Editor – Tempo.Blazor</PageTitle>
 
+<style>
+    /* The demo shell's sticky top bar would cover the embedded editor's chrome and intercept its
+       clicks once the page scrolls. On this page the bar goes static (it scrolls away with the
+       content) — the same data-demo-shell hook the modeling editor page uses. This replaces the
+       E2E init-script hack that hid the bar from the tests. */
+    .demo-shell:has(.notion-editor-demo) [data-demo-shell="main"] > .sticky { position: static; }
+</style>
+
 <!-- Page Header -->
 <div class="mb-8">
     <h1 class="text-3xl font-bold text-slate-900 dark:text-white mb-2">Notion Editor</h1>
@@ -53,7 +61,7 @@
 </div>
 
 <!-- ═══ Interactive editor ═══════════════════════════════════════════════════ -->
-<section class="demo-section mb-6">
+<section class="demo-section mb-6 notion-editor-demo">
     <div class="flex flex-wrap items-center justify-between gap-3 mb-3">
         <div>
             <h2 class="text-xl font-semibold text-slate-800 dark:text-slate-200">Interactive Editor</h2>
@@ -87,7 +95,12 @@
     }
     else if (_currentPage != null)
     {
-        <div style="height: 600px; border: 1px solid var(--tm-color-border); border-radius: var(--tm-radius-lg); overflow: hidden; background: var(--tm-bg-surface);">
+        @* ?stage=<px> pins the interactive editor to a fixed width — the responsive-shell E2E proves
+           the editor classifies from its OWN container (mobile at a 1440 viewport when the host
+           column is narrow), not from the viewport. The height stays viewport-independent on
+           purpose: a 100dvh calc feeds back into the page height and breaks Playwright fullPage
+           baseline captures (elements never settle while the viewport is temporarily resized). *@
+        <div style="height: min(900px, 60rem); min-height: 640px; border: 1px solid var(--tm-color-border); border-radius: var(--tm-radius-lg); overflow: hidden; background: var(--tm-bg-surface); @StageWidthStyle">
             <TmNotionEditor @key="_editorRefreshKey"
                             DataProvider="@DataProvider"
                             AggregateProvider="@AggregateProvider"
@@ -1236,6 +1249,15 @@
 
         return null;
     }
+
+    /// <summary>
+    /// <c>?stage=&lt;px&gt;</c> pins the interactive editor to a fixed width so the responsive-shell
+    /// E2E can prove the editor classifies from its own container on a desktop viewport.
+    /// </summary>
+    private string? StageWidthStyle =>
+        int.TryParse(GetQueryValue("stage"), out var width) && width >= 240
+            ? $"width: min(100%, {width}px); margin-inline: auto;"
+            : null;
 
     private async Task<(string Key, string DisplayName, string? ColorClass)?> CreateTokenAsync(string query)
     {

@@ -1,4 +1,5 @@
 @namespace Tempo.Blazor.Components.NotionEditor.Blocks.Database
+@inherits Tempo.Blazor.Components.TmComponentBase
 @using Tempo.Blazor.NotionEditor.Models
 @using Tempo.Blazor.NotionEditor.Interfaces
 @using Tempo.Blazor.NotionEditor.Enums
@@ -102,7 +103,7 @@
                     <div class="tm-dbt__sidebar-row"
                          role="button"
                          tabindex="0"
-                         data-testid="notion-db-timeline-bar"
+                         data-testid="@TestId("notion-db-timeline-bar")"
                          @onclick="() => OnRecordClicked.InvokeAsync(rec)"
                          @onkeydown="e => HandleItemKeyAsync(e, rec)">
                         <span class="tm-dbt__sidebar-name">@GetPrimaryValue(rec)</span>

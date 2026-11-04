@@ -216,6 +216,33 @@
       "description": "Show the left navigation sidebar."
     },
     {
+      "name": "LayoutMode",
+      "type": "TmLayoutMode",
+      "isRequired": false,
+      "default": "Auto",
+      "description": "How the editor decides its responsive layout. Auto measures the editor's own container (desktop ≥1024, tablet 640–1023, mobile <640). A forced value pins the layout for a host or a test and is cascaded into the page, the menus and the database blocks."
+    },
+    {
+      "name": "Chrome",
+      "type": "NotionEditorChrome",
+      "isRequired": false,
+      "default": "Full",
+      "description": "How much chrome the editor renders. Full is today's editor. Minimal hides shortcuts, the bell, mode toggles and badges. None renders the page only."
+    },
+    {
+      "name": "InspectorContent",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "Host slot for a page inspector, rendered through TmSidePanel on the right. Null renders no right region — the editor does not invent inspector content."
+    },
+    {
+      "name": "ShellPanelPresentation",
+      "type": "NotionShellPanelPresentation",
+      "isRequired": false,
+      "default": "Overlay",
+      "description": "How the Tasks / Blog / Analytics / Audit shell panels present themselves. Overlay (default) rides the core TmSidePanel — docked next to the page on a desktop layout, a side sheet on a tablet layout and a full-height sheet on a mobile layout — while the page stays mounted. Main replaces the page in the main region. At most one shell panel is open at a time either way."
+    },
+    {
       "name": "SinglePageMode",
       "type": "bool",
       "isRequired": false,

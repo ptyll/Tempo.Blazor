@@ -150,11 +150,24 @@
 
 /* ── Color panel ─────────────────────────────────────────────────────────── */
 
-.tm-notion-inline-toolbar__color-panel {
+::deep .tm-notion-inline-toolbar__color-panel {
     display: flex;
     flex-direction: column;
     gap: 4px;
     padding: 4px 2px;
+    background: var(--tm-notion-bg-slash-menu, var(--tm-bg-surface));
+    border: 1px solid var(--tm-notion-border, var(--tm-border-color));
+    border-radius: var(--tm-radius-md);
+    box-shadow: var(--tm-notion-menu-shadow, var(--tm-shadow-lg));
+}
+
+/* Sheet presentation: the core sheet content renders in place of the popover root, still
+   inside the toolbar scope, so a ::deep rule reaches it — strip the card chrome the
+   popover root would have carried. */
+::deep .tm-overlay-panel-sheet__content {
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
 }
 
 .tm-notion-inline-toolbar__color-row-label {
@@ -289,7 +302,7 @@
         width: min(180px, 48vw);
     }
 
-    .tm-notion-inline-toolbar__color-panel {
+    ::deep .tm-notion-inline-toolbar__color-panel {
         width: min(300px, calc(100vw - 2rem));
     }
 

@@ -3,13 +3,10 @@
 @using Tempo.Blazor.NotionEditor.Models
 
 <section class="tm-notion-blog tm-notion-blog-panel @Class" aria-label="@Loc["Notion_Blog_Title"]" data-testid="@TestId("notion-blog-panel")">
-    <header class="tm-notion-blog__header">
-        <div class="tm-notion-blog__title-wrap">
-            <h2 class="tm-notion-blog__title">@Loc["Notion_Blog_Title"]</h2>
-            <span class="tm-notion-blog__count" aria-live="polite">@Loc["Notion_Blog_Count", _totalCount]</span>
-        </div>
-
-        <div class="tm-notion-blog__actions">
+    <TmNotionPanelHeader Title="@Loc["Notion_Blog_Title"]"
+                         Subtitle="@Loc["Notion_Blog_Count", _totalCount]"
+                         OnClosed="OnClosed">
+        <Actions>
             <button type="button"
                     class="tm-notion-blog__new"
                     data-testid="@TestId("notion-blog-new")"
@@ -17,18 +14,8 @@
                     @onclick="CreatePostAsync">
                 @Loc["Notion_Blog_New"]
             </button>
-
-            <button type="button"
-                    class="tm-notion-blog__icon-btn"
-                    title="@Loc["Tm_Close"]"
-                    aria-label="@Loc["Tm_Close"]"
-                    @onclick="() => OnClosed.InvokeAsync()">
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-                    <path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
-                </svg>
-            </button>
-        </div>
-    </header>
+        </Actions>
+    </TmNotionPanelHeader>
 
     @if (_isLoading)
     {

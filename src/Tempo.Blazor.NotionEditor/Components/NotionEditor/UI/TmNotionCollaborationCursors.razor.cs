@@ -83,12 +83,21 @@ public partial class TmNotionCollaborationCursors : ComponentBase, IAsyncDisposa
 
     private async void HandleCursorMoved(CollaboratorCursor cursor)
     {
-        _cursors[cursor.UserId] = cursor;
-        await InvokeAsync(async () =>
+        // Event-handler signature: an exception escaping an async void handler is unhandled and
+        // takes the whole circuit down, so the render + JS push is fenced.
+        try
         {
-            StateHasChanged();
-            await PushCursorsToJsAsync();
-        });
+            _cursors[cursor.UserId] = cursor;
+            await InvokeAsync(async () =>
+            {
+                StateHasChanged();
+                await PushCursorsToJsAsync();
+            });
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or JSException or JSDisconnectedException or ObjectDisposedException)
+        {
+            // The pill bar is mid-dispose; the next page load re-subscribes.
+        }
     }
 
     private async Task PushCursorsToJsAsync()

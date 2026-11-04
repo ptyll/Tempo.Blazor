@@ -43,7 +43,12 @@ function sharedObserver() {
             const entry = tracked.get(record.target);
             if (!entry) continue;
             const width = record.contentRect?.width;
-            if (typeof width === 'number') report(entry, width);
+            // Ignore degenerate widths: while the viewport is re-emulated (Playwright fullPage
+            // capture, print preview, a hidden→shown transition) Chromium reports transient 0-size
+            // content boxes. Classifying one would flip the whole shell to mobile — the editor
+            // canvas remounts and every open piece of UI state is lost. Keep the last good mode.
+            if (typeof width !== 'number' || width < 1) continue;
+            report(entry, width);
         }
     });
     return shared;

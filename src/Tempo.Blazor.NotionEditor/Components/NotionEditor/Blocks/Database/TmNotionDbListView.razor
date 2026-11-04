@@ -1,4 +1,5 @@
 @namespace Tempo.Blazor.Components.NotionEditor.Blocks.Database
+@inherits Tempo.Blazor.Components.TmComponentBase
 @using Tempo.Blazor.NotionEditor.Models
 @using Tempo.Blazor.NotionEditor.Interfaces
 @using Tempo.Blazor.NotionEditor.Enums
@@ -36,7 +37,7 @@
             <div class="tm-dblv__row"
                  role="listitem"
                  tabindex="0"
-                 data-testid="notion-db-list-row"
+                 data-testid="@TestId("notion-db-list-row")"
                  @key="rec.Id"
                  @onclick="() => HandleRowClickAsync(rec)"
                  @onkeydown="e => HandleRowKeyAsync(e, rec)">

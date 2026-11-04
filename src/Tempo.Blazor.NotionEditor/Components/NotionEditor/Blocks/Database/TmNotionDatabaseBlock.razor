@@ -1,4 +1,5 @@
 @namespace Tempo.Blazor.Components.NotionEditor.Blocks.Database
+@inherits Tempo.Blazor.Components.TmComponentBase
 @using Tempo.Blazor.NotionEditor.Enums
 @using Tempo.Blazor.NotionEditor.Models
 @using Tempo.Blazor.NotionEditor.Interfaces
@@ -192,7 +193,7 @@
                 {
                     <button class="tm-db__view-tab @(_activeViewId == v.Id ? "tm-db__view-tab--active" : "")"
                             role="tab"
-                            data-testid="notion-db-view-tab"
+                            data-testid="@TestId("notion-db-view-tab")"
                             aria-selected="@(_activeViewId == v.Id)"
                             type="button"
                             @onclick="() => SetActiveViewAsync(v.Id)"

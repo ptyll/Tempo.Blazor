@@ -23195,6 +23195,13 @@
           "description": "Id of the host element (typically the opener button) focus returns to when the SHEET presentation closes — via Escape, the header close, the backdrop, a swipe or the host setting Open to false. Null keeps the focus scope default."
         },
         {
+          "name": "ShowHeader",
+          "type": "bool",
+          "isRequired": false,
+          "default": "true",
+          "description": "The host's own chrome carries the title/close (e.g. a panel that renders its own header): opt out of the built-in header row. When false the sheet renders no header and no drawer close button (the host content owns its own), and the panel falls back to the localized default accessible name."
+        },
+        {
           "name": "Side",
           "type": "SidePanelSide",
           "isRequired": false,

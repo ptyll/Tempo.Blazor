@@ -15,7 +15,7 @@
 
             <div class="tm-dbb__col @(isTarget ? "tm-dbb__col--target" : "")"
                  data-group-value="@gv"
-                 data-testid="notion-db-board-group">
+                 data-testid="@TestId("notion-db-board-group")">
 
                 @* ── Column header ───────────────────────────── *@
                 <div class="tm-dbb__col-header">
@@ -51,7 +51,7 @@
 
                         <div class="tm-dbb__card @(isDraggingThis ? "tm-dbb__card--dragging" : "")"
                              draggable="@(!ReadOnly ? "true" : "false")"
-                             data-testid="notion-db-board-card"
+                             data-testid="@TestId("notion-db-board-card")"
                              data-record-id="@rec.Id"
                              data-from-group="@gv"
                              role="button"

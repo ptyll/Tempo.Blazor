@@ -23197,6 +23197,13 @@
               "description": "Id of the host element (typically the opener button) focus returns to when the SHEET presentation closes — via Escape, the header close, the backdrop, a swipe or the host setting Open to false. Null keeps the focus scope default."
             },
             {
+              "name": "ShowHeader",
+              "type": "bool",
+              "isRequired": false,
+              "default": "true",
+              "description": "The host's own chrome carries the title/close (e.g. a panel that renders its own header): opt out of the built-in header row. When false the sheet renders no header and no drawer close button (the host content owns its own), and the panel falls back to the localized default accessible name."
+            },
+            {
               "name": "Side",
               "type": "SidePanelSide",
               "isRequired": false,
@@ -64039,6 +64046,16 @@
           "documentationStatus": "merged"
         },
         {
+          "itemName": "NotionEditorChrome",
+          "kind": "Enum",
+          "category": "Components",
+          "namespace": "Tempo.Blazor.Components.NotionEditor",
+          "description": "How much chrome TmNotionEditor renders around the page.",
+          "packageId": "Tempo.Blazor.NotionEditor",
+          "sourcePath": "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/NotionEditorChrome.cs",
+          "documentationStatus": "merged"
+        },
+        {
           "itemName": "NotionEditorContext",
           "kind": "Class",
           "category": "Components",
@@ -64601,6 +64618,16 @@
               "code": "// raw markup is encoded, unsafe schemes lose the link\nNotionMarkdownImporter.InlineMarkdownToHtml(\"<img src=x onerror=alert(1)>\");\n// → \"&lt;img src=x onerror=alert(1)&gt;\"\n\nNotionMarkdownImporter.InlineMarkdownToHtml(\"[click](javascript:alert(1))\");\n// → \"click\"   (no <a href>)\n\nNotionMarkdownImporter.InlineMarkdownToHtml(\"[ok](https://example.test)\");\n// → \"<a href=\\\"https://example.test\\\">ok</a>\""
             }
           ]
+        },
+        {
+          "itemName": "NotionShellPanelPresentation",
+          "kind": "Enum",
+          "category": "Components",
+          "namespace": "Tempo.Blazor.Components.NotionEditor",
+          "description": "How the Tasks / Blog / Analytics / Audit shell panels present themselves (see TmNotionEditor.ShellPanelPresentation).",
+          "packageId": "Tempo.Blazor.NotionEditor",
+          "sourcePath": "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/NotionShellPanelPresentation.cs",
+          "documentationStatus": "merged"
         },
         {
           "itemName": "NotionShortcutCatalog",
@@ -65964,6 +65991,13 @@
               "isRequired": true
             },
             {
+              "name": "LayoutMode",
+              "type": "TmLayoutMode",
+              "isRequired": false,
+              "default": "TmLayoutMode.Auto",
+              "description": "Forced layout. Mobile presents the switcher as the core sheet."
+            },
+            {
               "name": "Left",
               "type": "double",
               "isRequired": false
@@ -66607,6 +66641,13 @@
             "@using Tempo.Blazor.Components.NotionEditor.UI"
           ],
           "parameters": [
+            {
+              "name": "LayoutMode",
+              "type": "TmLayoutMode",
+              "isRequired": false,
+              "default": "TmLayoutMode.Auto",
+              "description": "Forced layout. Mobile presents the picker as the core sheet."
+            },
             {
               "name": "Left",
               "type": "double",
@@ -68792,6 +68833,13 @@
               "description": "Enables bookmark blocks that fetch Open Graph metadata from URLs."
             },
             {
+              "name": "Chrome",
+              "type": "NotionEditorChrome",
+              "isRequired": false,
+              "default": "NotionEditorChrome.Full",
+              "description": "How much chrome the editor renders. Full is today's editor. Minimal hides shortcuts, the bell, mode toggles and badges. None renders the page only."
+            },
+            {
               "name": "Class",
               "type": "string?",
               "isRequired": false,
@@ -68877,6 +68925,19 @@
               "description": "Page ID to open on first render. Supports @bind-InitialPageId."
             },
             {
+              "name": "InspectorContent",
+              "type": "RenderFragment?",
+              "isRequired": false,
+              "description": "Host slot for a page inspector, rendered through TmSidePanel on the right. Null renders no right region — the editor does not invent inspector content."
+            },
+            {
+              "name": "LayoutMode",
+              "type": "TmLayoutMode",
+              "isRequired": false,
+              "default": "TmLayoutMode.Auto",
+              "description": "How the editor decides its responsive layout. Auto measures the editor's own container (desktop ≥1024, tablet 640–1023, mobile <640). A forced value pins the layout for a host or a test and is cascaded into the page, the menus and the database blocks."
+            },
+            {
               "name": "MediaLibraryProvider",
               "type": "INotionMediaLibraryProvider?",
               "isRequired": false,
@@ -68943,6 +69004,13 @@
               "type": "INotionSearchProvider?",
               "isRequired": false,
               "description": "Enables the Ctrl+P full-screen page search dialog and [[ page link autocomplete."
+            },
+            {
+              "name": "ShellPanelPresentation",
+              "type": "NotionShellPanelPresentation",
+              "isRequired": false,
+              "default": "NotionShellPanelPresentation.Overlay",
+              "description": "How the Tasks / Blog / Analytics / Audit shell panels present themselves. Overlay (default) rides the core TmSidePanel — docked next to the page on a desktop layout, a side sheet on a tablet layout and a full-height sheet on a mobile layout — while the page stays mounted. Main replaces the page in the main region. At most one shell panel is open at a time either way."
             },
             {
               "name": "ShowSidebar",
@@ -69180,6 +69248,13 @@
               "description": "Shared variant: shows the Remove action that raises OnRemoved."
             },
             {
+              "name": "LayoutMode",
+              "type": "TmLayoutMode",
+              "isRequired": false,
+              "default": "Auto",
+              "description": "Forced layout. Mobile presents the picker as the core sheet."
+            },
+            {
               "name": "Visible",
               "type": "bool",
               "isRequired": false,
@@ -69386,6 +69461,103 @@
               "name": "ReadOnly",
               "type": "bool",
               "isRequired": false
+            }
+          ]
+        },
+        {
+          "itemName": "TmNotionFloatingMenu",
+          "kind": "Component",
+          "category": "Notion Editor",
+          "subcategory": "UI / Shared",
+          "namespace": "Tempo.Blazor.Components.NotionEditor.UI",
+          "description": "The one floating menu of the Notion package. Desktop is an anchored popover; mobile is the core sheet. Title and footer render only in the sheet.",
+          "packageId": "Tempo.Blazor.NotionEditor",
+          "sourcePath": "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/UI/Shared/TmNotionFloatingMenu.razor",
+          "documentationStatus": "merged",
+          "requiredImports": [
+            "@using Tempo.Blazor.Components.NotionEditor.UI"
+          ],
+          "parameters": [
+            {
+              "name": "AriaLabel",
+              "type": "string?",
+              "isRequired": false,
+              "description": "The accessible name of the desktop popover. Defaults to Title (a desktop popover with no title needs an explicit value to stay a named dialog)."
+            },
+            {
+              "name": "ChildContent",
+              "type": "RenderFragment?",
+              "isRequired": false,
+              "description": "The menu body."
+            },
+            {
+              "name": "Class",
+              "type": "string?",
+              "isRequired": false,
+              "description": "Extra CSS classes for the core overlay panel root."
+            },
+            {
+              "name": "Footer",
+              "type": "RenderFragment?",
+              "isRequired": false,
+              "description": "Sheet-only footer."
+            },
+            {
+              "name": "IsOpen",
+              "type": "bool",
+              "isRequired": false,
+              "description": "Whether the menu is open."
+            },
+            {
+              "name": "IsOpenChanged",
+              "type": "EventCallback<bool>",
+              "isRequired": false,
+              "description": "Raised when the core overlay changes the open state."
+            },
+            {
+              "name": "LayoutMode",
+              "type": "TmLayoutMode",
+              "isRequired": false,
+              "default": "TmLayoutMode.Auto",
+              "description": "Forced layout. Auto reads the cascaded context."
+            },
+            {
+              "name": "Left",
+              "type": "double?",
+              "isRequired": false,
+              "description": "See Top. Null anchors the menu where it renders in the DOM flow."
+            },
+            {
+              "name": "OnClose",
+              "type": "EventCallback",
+              "isRequired": false,
+              "description": "Raised by Escape, an outside click and the sheet's Close button."
+            },
+            {
+              "name": "Placement",
+              "type": "OverlayPlacement",
+              "isRequired": false,
+              "default": "OverlayPlacement.Bottom",
+              "description": "The edge the popover opens from. The sheet presentation ignores it."
+            },
+            {
+              "name": "Role",
+              "type": "string",
+              "isRequired": false,
+              "default": "\"menu\"",
+              "description": "The ARIA role of the panel (a dialog or a listbox menu)."
+            },
+            {
+              "name": "Title",
+              "type": "string?",
+              "isRequired": false,
+              "description": "The sheet title. A desktop popover renders none."
+            },
+            {
+              "name": "Top",
+              "type": "double?",
+              "isRequired": false,
+              "description": "Viewport anchor coordinate of the zero-size anchor (a caret or a measured trigger)."
             }
           ]
         },
@@ -70652,6 +70824,54 @@
           ]
         },
         {
+          "itemName": "TmNotionPanelHeader",
+          "kind": "Component",
+          "category": "Notion Editor",
+          "subcategory": "UI / Shared",
+          "namespace": "Tempo.Blazor.Components.NotionEditor.UI",
+          "description": "The one header of a Notion shell panel: title, optional subtitle, actions and close.",
+          "packageId": "Tempo.Blazor.NotionEditor",
+          "sourcePath": "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/UI/Shared/TmNotionPanelHeader.razor",
+          "documentationStatus": "merged",
+          "requiredImports": [
+            "@using Tempo.Blazor.Components.NotionEditor.UI"
+          ],
+          "parameters": [
+            {
+              "name": "Actions",
+              "type": "RenderFragment?",
+              "isRequired": false,
+              "description": "Host actions rendered before the close button."
+            },
+            {
+              "name": "Class",
+              "type": "string?",
+              "isRequired": false,
+              "description": "Additional CSS class."
+            },
+            {
+              "name": "OnClosed",
+              "type": "EventCallback",
+              "isRequired": false,
+              "description": "Raised by the close button and by Escape."
+            },
+            {
+              "name": "Subtitle",
+              "type": "string?",
+              "isRequired": false,
+              "description": "Optional subtitle under the title."
+            },
+            {
+              "name": "Title",
+              "type": "string",
+              "isRequired": true,
+              "default": "\"\"",
+              "description": "The panel title. Rendered as an h2.",
+              "editorRequired": true
+            }
+          ]
+        },
+        {
           "itemName": "TmNotionPdfBlock",
           "kind": "Component",
           "category": "Notion Editor",
@@ -70728,8 +70948,7 @@
               "name": "CommentProvider",
               "type": "ITmCommentProvider?",
               "isRequired": false,
-              "description": "Optional comments provider enabled only when the public share allows comments.",
-              "editorRequired": true
+              "description": "Optional comments provider enabled only when the public share allows comments."
             },
             {
               "name": "DataProvider",
@@ -71117,6 +71336,13 @@
           ],
           "parameters": [
             {
+              "name": "LayoutMode",
+              "type": "TmLayoutMode",
+              "isRequired": false,
+              "default": "TmLayoutMode.Auto",
+              "description": "Forced layout. Mobile presents the menu as the core sheet."
+            },
+            {
               "name": "Left",
               "type": "double",
               "isRequired": false
@@ -71307,6 +71533,13 @@
               "type": "string?",
               "isRequired": false,
               "description": "Initial label used when opening the picker for an existing chip."
+            },
+            {
+              "name": "LayoutMode",
+              "type": "TmLayoutMode",
+              "isRequired": false,
+              "default": "TmLayoutMode.Auto",
+              "description": "Forced layout. Mobile presents the picker as the core sheet."
             },
             {
               "name": "Left",
@@ -72253,6 +72486,13 @@
               "description": "Pre-selects the item matching this key when the dropdown opens."
             },
             {
+              "name": "LayoutMode",
+              "type": "TmLayoutMode",
+              "isRequired": false,
+              "default": "TmLayoutMode.Auto",
+              "description": "Forced layout. Mobile presents the menu as the core sheet."
+            },
+            {
               "name": "Left",
               "type": "double",
               "isRequired": false
@@ -72549,12 +72789,12 @@
         }
       ],
       "summary": {
-        "itemCount": 179,
-        "manualItemCount": 179,
-        "generatedItemCount": 178,
+        "itemCount": 183,
+        "manualItemCount": 183,
+        "generatedItemCount": 182,
         "generatedOnlyItemCount": 0,
-        "componentCount": 132,
-        "publicApiTypeCount": 46
+        "componentCount": 134,
+        "publicApiTypeCount": 48
       }
     },
     {
@@ -133302,10 +133542,10 @@
   ],
   "summary": {
     "packageCount": 28,
-    "itemCount": 3474,
-    "manualItemCount": 3474,
+    "itemCount": 3478,
+    "manualItemCount": 3478,
     "generatedOnlyItemCount": 0,
-    "componentCount": 534,
-    "publicApiTypeCount": 2888
+    "componentCount": 536,
+    "publicApiTypeCount": 2890
   }
 }

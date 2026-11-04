@@ -188,9 +188,7 @@ public class UnconstrainedClassOwnershipTests
 
         // NotionEditor's dark skin restyles the typography file's blocks — background Overrides on
         // the callout/code-block classes and on code itself, all inside the notion regions.
-        ".tm-notion-callout Tempo.Blazor.NotionEditor/_notion-dark.css|Tempo.Blazor.NotionEditor/_notion-typography.css",
-        ".tm-notion-code-block Tempo.Blazor.NotionEditor/_notion-dark.css|Tempo.Blazor.NotionEditor/_notion-typography.css",
-        "code Tempo.Blazor.NotionEditor/_notion-dark.css|Tempo.Blazor.NotionEditor/_notion-typography.css",
+        ".tm-notion-editor Tempo.Blazor.NotionEditor/_notion-dark.css|Tempo.Blazor.NotionEditor/_notion-variables.css",
 
         // Round 5: the label span ships as display: contents in _button.css (geometry-neutral), and
         // the sheet footer opts into truncation by blockifying it (display: block; min-width: 0;

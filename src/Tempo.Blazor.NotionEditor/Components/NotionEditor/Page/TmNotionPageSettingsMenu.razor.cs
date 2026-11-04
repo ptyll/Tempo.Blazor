@@ -20,6 +20,10 @@ public partial class TmNotionPageSettingsMenu : TmComponentBase, IAsyncDisposabl
 
     [CascadingParameter] private NotionEditorContext Context { get; set; } = default!;
 
+    /// <summary>Page UI state: an open request from chrome (the mobile action bar) opens this menu.</summary>
+    [CascadingParameter(Name = "TmNotionPageUiState")]
+    private NotionPageUiState? UiState { get; set; }
+
     // ── Parameters ───────────────────────────────────────────────────────────
 
     [Parameter, EditorRequired] public INotionPage Page { get; set; } = default!;
@@ -83,6 +87,23 @@ public partial class TmNotionPageSettingsMenu : TmComponentBase, IAsyncDisposabl
     private InputFile?       _importFileRef;
 
     // ── Toggle / open ──────────────────────────────────────────────────────────
+
+    protected override void OnInitialized()
+    {
+        if (UiState is not null)
+            UiState.SettingsMenuRequested += OnSettingsMenuRequested;
+    }
+
+    private Task OnSettingsMenuRequested()
+    {
+        if (ReadOnly && !Page.IsLocked) return Task.CompletedTask;
+        if (!_open)
+            _open = true;
+        _moveQuery = string.Empty;
+        _movePages = [];
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
 
     private async Task ToggleMenuAsync()
     {
@@ -573,6 +594,8 @@ public partial class TmNotionPageSettingsMenu : TmComponentBase, IAsyncDisposabl
 
     public ValueTask DisposeAsync()
     {
+        if (UiState is not null)
+            UiState.SettingsMenuRequested -= OnSettingsMenuRequested;
         _moveDebounceCts?.Cancel();
         _moveDebounceCts?.Dispose();
         _toastCts.Cancel();

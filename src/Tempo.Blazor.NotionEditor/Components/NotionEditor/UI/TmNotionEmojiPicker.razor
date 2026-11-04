@@ -1,20 +1,17 @@
 @namespace Tempo.Blazor.Components.NotionEditor.UI
+@using Tempo.Blazor.Components.Overlay
 
-@if (Visible)
-{
-    @* ── Backdrop ────────────────────────────────────────────────────────────── *@
-    <div class="tm-notion-emoji-picker-backdrop"
-         @onclick="HandleBackdropClickAsync"
-         aria-hidden="true"></div>
-
-    @* ── Panel ───────────────────────────────────────────────────────────────── *@
-    <div class="tm-notion-emoji-picker"
-         role="dialog"
-         aria-label="@Loc["TmNotionEmojiPicker_SearchPlaceholder"]"
-         style="top:@(_top)px;left:@(_left)px"
-         @ref="_pickerRef"
-         @onkeydown="HandleKeyDownAsync"
-         @onmousedown:preventDefault="true">
+<TmNotionFloatingMenu IsOpen="Visible"
+                      LayoutMode="LayoutMode"
+                      Top="Top"
+                      Left="Left"
+                      Placement="OverlayPlacement.Bottom"
+                      Role="dialog"
+                      Title="@Loc["TmNotionEmojiPicker_Title"]"
+                      AriaLabel="@Loc["TmNotionEmojiPicker_SearchPlaceholder"]"
+                      Class="tm-notion-emoji-picker"
+                      OnClose="HandleBackdropClickAsync">
+    <div class="tm-notion-emoji-picker__body" @onkeydown="HandleKeyDownAsync" @onmousedown:preventDefault="true">
 
         @* ── Top bar: search + random ─────────────────────────────────────────── *@
         <div class="tm-notion-emoji-picker__top">
@@ -33,6 +30,7 @@
                        @ref="_searchRef"
                        @oninput="HandleQueryInputAsync"
                        @onmousedown:stopPropagation="true"
+                       @onkeydown="HandleSearchKeyDownAsync"
                        @onkeydown:stopPropagation="true" />
             </div>
             <button class="tm-notion-emoji-picker__random"
@@ -136,4 +134,4 @@
         </div>
 
     </div>
-}
+</TmNotionFloatingMenu>

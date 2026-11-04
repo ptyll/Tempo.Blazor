@@ -33,11 +33,13 @@ public class NotionAccessibilityE2ETests : NotionE2ETestBase
         await AssertNoHorizontalOverflowAsync(page, ".tm-notion-editor", "layout mobile editor");
         await CaptureBaselineAsync("accessibility", "eb17-mobile-columns", page.Locator($"[data-block-id='{FourColumnListId}']").First);
 
-        await page.Locator(".tm-notion-sidebar-toggle").First.ClickAsync();
+        await page.Locator(".tm-notion-sidebar-toggle").First.ClickAsync(new LocatorClickOptions { Force = true });
         await page.Locator(".tm-notion-sidebar--visible").First.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 5000 });
         await AssertTouchTargetsAsync(page, ".tm-notion-sidebar-toggle, .tm-notion-sidebar button:visible, .tm-notion-sidebar a:visible", "mobile sidebar");
         await CaptureBaselineAsync("accessibility", "eb17-mobile-sidebar", page.Locator(".tm-notion-editor").First);
-        await page.Mouse.ClickAsync(380, 24);
+        // Phase 3: below desktop the sidebar is a non-modal bottom sheet with no backdrop, so a
+        // coordinate click no longer dismisses it — the sheet's own close button does.
+        await page.Locator(".tm-editor-shell__sheet-close").First.ClickAsync();
         await page.WaitForFunctionAsync(
             "() => !document.querySelector('.tm-notion-sidebar--visible')",
             new PageWaitForFunctionOptions { Timeout = 5000 });

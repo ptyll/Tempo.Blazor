@@ -1,17 +1,17 @@
 @namespace Tempo.Blazor.Components.NotionEditor.UI
+@using Tempo.Blazor.Components.Overlay
 
-@if (Visible)
-{
-    @* ── Transparent backdrop — click outside to close ──────────────────────── *@
-    <div class="tm-notion-token-backdrop" @onclick="HandleBackdropClickAsync" aria-hidden="true"></div>
-
-    @* ── Dropdown card ────────────────────────────────────────────────────────── *@
-    <div class="tm-notion-token-dropdown"
-         role="dialog"
-         aria-label="@Loc["TmNotionTokenDropdown_Label"]"
-         style="@MenuStyle"
-         @ref="_menuRef"
-         @onkeydown:stopPropagation="true">
+<TmNotionFloatingMenu IsOpen="Visible"
+                      LayoutMode="LayoutMode"
+                      Top="Top"
+                      Left="Left"
+                      Placement="OverlayPlacement.Bottom"
+                      Role="dialog"
+                      Title="@Loc["TmNotionTokenDropdown_Label"]"
+                      AriaLabel="@Loc["TmNotionTokenDropdown_Label"]"
+                      Class="tm-notion-token-dropdown"
+                      OnClose="HandleBackdropClickAsync">
+    <div class="tm-notion-token-dropdown__body" @onkeydown:stopPropagation="true">
 
         @* ── Search input ──────────────────────────────────────────────────────── *@
         <div class="tm-notion-token-dropdown__search">
@@ -97,4 +97,4 @@
             </div>
         }
     </div>
-}
+</TmNotionFloatingMenu>

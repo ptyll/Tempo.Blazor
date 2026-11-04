@@ -24,13 +24,13 @@ public class NotionBlockConversionE2ETests : NotionE2ETestBase
         var blockId = await TypeIntoFirstParagraphAsync(page, "unsaved heading text");
         var block = Block(page, blockId);
 
-        await TurnIntoAsync(page, "Heading 1");
+        await TurnIntoAsync(page, block, "Heading 1");
         await block.Locator(".tm-notion-heading--h1").First.WaitForAsync(Visible());
         StringAssert.Contains(await block.InnerTextAsync(), "unsaved heading text");
         await CaptureBaselineAsync("block-conversion", "heading1-keeps-text", block);
 
         // H1 -> H2, again without blurring.
-        await TurnIntoAsync(page, "Heading 2");
+        await TurnIntoAsync(page, block, "Heading 2");
         await block.Locator(".tm-notion-heading--h2").First.WaitForAsync(Visible());
         StringAssert.Contains(await block.InnerTextAsync(), "unsaved heading text");
 
@@ -45,7 +45,7 @@ public class NotionBlockConversionE2ETests : NotionE2ETestBase
         var page = await OpenNotionEditorAsync();
         var blockId = await TypeIntoFirstParagraphAsync(page, "abcdef");
 
-        await TurnIntoAsync(page, "Heading 3");
+        await TurnIntoAsync(page, Block(page, blockId), "Heading 3");
         await Block(page, blockId).Locator(".tm-notion-heading--h3").First.WaitForAsync(Visible());
 
         var caret = await page.EvaluateAsync<int>(
@@ -103,12 +103,12 @@ public class NotionBlockConversionE2ETests : NotionE2ETestBase
         var blockId = await TypeIntoFirstParagraphAsync(page, "toggle parent");
         var block = Block(page, blockId);
 
-        await TurnIntoAsync(page, "Toggle");
+        await TurnIntoAsync(page, block, "Toggle");
         await block.Locator(".tm-notion-toggle").First.WaitForAsync(Visible());
 
         var blocksBefore = await page.Locator("[data-block-id]").CountAsync();
 
-        await TurnIntoAsync(page, "Text");
+        await TurnIntoAsync(page, block, "Text");
         await page.WaitForTimeoutAsync(800);
 
         Assert.AreEqual(0, await block.Locator(".tm-notion-toggle").CountAsync(), "The toggle must be gone.");
@@ -129,17 +129,17 @@ public class NotionBlockConversionE2ETests : NotionE2ETestBase
         var blockId = await TypeIntoFirstParagraphAsync(page, "callout body");
         var block = Block(page, blockId);
 
-        await TurnIntoAsync(page, "Callout");
+        await TurnIntoAsync(page, block, "Callout");
         var callout = block.Locator(".tm-notion-callout").First;
         await callout.WaitForAsync(Visible());
         StringAssert.Contains(await callout.InnerTextAsync(), "💡", "A fresh callout must get the default icon.");
         await CaptureBaselineAsync("block-conversion", "callout-default-icon", block);
 
-        await TurnIntoAsync(page, "Text");
+        await TurnIntoAsync(page, block, "Text");
         await page.WaitForTimeoutAsync(600);
         Assert.AreEqual(0, await block.Locator(".tm-notion-callout").CountAsync(), "The callout must be gone.");
 
-        await TurnIntoAsync(page, "Callout");
+        await TurnIntoAsync(page, block, "Callout");
         var back = block.Locator(".tm-notion-callout").First;
         await back.WaitForAsync(Visible());
         var text = await back.InnerTextAsync();
@@ -218,10 +218,21 @@ public class NotionBlockConversionE2ETests : NotionE2ETestBase
     }
 
     /// <summary>Opens the inline toolbar's Turn-into panel and picks an entry, without blurring the block.</summary>
-    private static async Task TurnIntoAsync(IPage page, string itemLabel)
+    private static async Task TurnIntoAsync(IPage page, ILocator block, string itemLabel)
     {
+        // Focus can be lost to <body> between conversions (baseline captures resize the
+        // viewport, which some Chromium builds answer by dropping focus). Re-establish it
+        // in the block's editable before selecting, like a user would.
+        await block.Locator("[contenteditable='true']").First.ClickAsync();
         await page.Keyboard.PressAsync("Control+A");
-        await page.Locator(".tm-notion-inline-toolbar").First.WaitForAsync(Visible());
+        try
+        {
+            await page.Locator(".tm-notion-inline-toolbar").First.WaitForAsync(Visible());
+        }
+        catch (TimeoutException ex)
+        {
+            throw new TimeoutException($"Turn-into '{itemLabel}': the inline toolbar did not appear after Ctrl+A.", ex);
+        }
 
         await page.Locator("button[title='Turn into']").First.ClickAsync();
         var item = page.Locator(".tm-notion-inline-toolbar__turninto-item")

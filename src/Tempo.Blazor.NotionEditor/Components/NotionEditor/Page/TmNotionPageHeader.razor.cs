@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.JSInterop;
+using Tempo.Blazor.Abstractions.Layout;
 using Tempo.Blazor.Components.NotionEditor.Services;
 using Tempo.Blazor.NotionEditor.Interfaces;
 using Tempo.Blazor.NotionEditor.Models;
@@ -21,6 +22,9 @@ public partial class TmNotionPageHeader : ComponentBase, IDisposable
 
     [CascadingParameter]
     private NotionEditorContext Context { get; set; } = default!;
+
+    [CascadingParameter]
+    private TmLayoutContext? Layout { get; set; }
 
     // ── Parameters ───────────────────────────────────────────────────────────
 
@@ -61,6 +65,9 @@ public partial class TmNotionPageHeader : ComponentBase, IDisposable
     private ElementReference _titleRef;
     private ElementReference _descRef;
     private ElementReference _coverRef;
+    private ElementReference _iconTriggerRef;
+
+    private TmLayoutMode LayoutMode => Layout?.Resolved ?? TmLayoutMode.Auto;
 
     private DotNetObjectReference<TmNotionPageHeader>? _coverDragRef;
 
@@ -226,6 +233,50 @@ public partial class TmNotionPageHeader : ComponentBase, IDisposable
             _showCoverDialog = false;
             _emojiSearch     = string.Empty;
             await LoadRecentEmojisAsync();
+        }
+    }
+
+    private void HandleIconPickerKey(KeyboardEventArgs e)
+    {
+        if (e.Key != "Escape")
+            return;
+
+        // type="text" does not swallow Escape the way type="search" does, but stop it here
+        // anyway: the overlay owns the close, and a bubbling Escape must not reach the editor.
+        CloseIconPicker();
+    }
+
+    private Task OnIconPickerOpenChanged(bool open)
+    {
+        if (!open)
+            CloseIconPicker();
+        return Task.CompletedTask;
+    }
+
+    private Task OnIconPickerDismissed(string? _)
+    {
+        CloseIconPicker();
+        return Task.CompletedTask;
+    }
+
+    private void CloseIconPicker()
+    {
+        if (!_showIconPicker)
+            return;
+
+        _showIconPicker = false;
+        _ = RestoreIconTriggerFocusAsync();
+    }
+
+    private async Task RestoreIconTriggerFocusAsync()
+    {
+        try
+        {
+            await _iconTriggerRef.FocusAsync();
+        }
+        catch
+        {
+            // SSR / disposed trigger.
         }
     }
 

@@ -1,21 +1,18 @@
 @namespace Tempo.Blazor.Components.NotionEditor.UI
 @using Tempo.Blazor.NotionEditor.Enums
+@using Tempo.Blazor.Components.Overlay
 
-@if (Visible)
-{
-    @* ── Backdrop ────────────────────────────────────────────────────────────── *@
-    <div class="tm-notion-type-switcher-backdrop"
-         @onclick="HandleBackdropClickAsync"
-         aria-hidden="true"></div>
-
-    @* ── Panel ───────────────────────────────────────────────────────────────── *@
-    <div class="tm-notion-type-switcher"
-         role="listbox"
-         aria-label="@Loc["TmNotionBlockContextMenu_TurnInto"]"
-         style="top:@(_top)px;left:@(_left)px"
-         @ref="_panelRef"
-         @onkeydown="HandleKeyDownAsync"
-         @onmousedown:preventDefault="true">
+<TmNotionFloatingMenu IsOpen="Visible"
+                      LayoutMode="LayoutMode"
+                      Top="Top"
+                      Left="Left"
+                      Placement="OverlayPlacement.Bottom"
+                      Role="listbox"
+                      Title="@Loc["TmNotionBlockContextMenu_TurnInto"]"
+                      AriaLabel="@Loc["TmNotionBlockContextMenu_TurnInto"]"
+                      Class="tm-notion-type-switcher"
+                      OnClose="HandleBackdropClickAsync">
+    <div class="tm-notion-type-switcher__body" @onkeydown="HandleKeyDownAsync" @onmousedown:preventDefault="true">
 
         @{ var flatIndex = 0; }
         @foreach (var group in _groups)
@@ -68,4 +65,4 @@
         }
 
     </div>
-}
+</TmNotionFloatingMenu>

@@ -1,4 +1,6 @@
+using System.Globalization;
 using Microsoft.AspNetCore.Components;
+using Tempo.Blazor.Abstractions.Layout;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.JSInterop;
 
@@ -33,6 +35,9 @@ public partial class TmNotionColorPicker : ComponentBase
 
     /// <summary>Raised when the picker is dismissed without a selection.</summary>
     [Parameter] public EventCallback OnClosed { get; set; }
+
+    /// <summary>Forced layout. Mobile presents the menu as the core sheet.</summary>
+    [Parameter] public TmLayoutMode LayoutMode { get; set; } = TmLayoutMode.Auto;
 
     // ── Internal model ────────────────────────────────────────────────────────
 
@@ -70,35 +75,7 @@ public partial class TmNotionColorPicker : ComponentBase
 
     // ── State ─────────────────────────────────────────────────────────────────
 
-    private double _top;
-    private double _left;
     private bool   _wasVisible;
-
-    private ElementReference _pickerRef;
-
-    // ── Lifecycle ─────────────────────────────────────────────────────────────
-
-    protected override void OnParametersSet()
-    {
-        if (Visible && !_wasVisible)
-        {
-            _top  = Top;
-            _left = Left;
-        }
-        _wasVisible = Visible;
-    }
-
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (Visible)
-        {
-            try
-            {
-                await JS.InvokeVoidAsync("tmNotionEditor.adjustColorPickerPosition", _pickerRef);
-            }
-            catch { /* SSR / test */ }
-        }
-    }
 
     // ── Handlers ──────────────────────────────────────────────────────────────
 

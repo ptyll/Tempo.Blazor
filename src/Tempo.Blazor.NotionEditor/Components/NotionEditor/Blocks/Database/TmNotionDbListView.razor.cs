@@ -8,7 +8,7 @@ using Tempo.Blazor.NotionEditor.Models;
 
 namespace Tempo.Blazor.Components.NotionEditor.Blocks.Database;
 
-public partial class TmNotionDbListView : ComponentBase
+public partial class TmNotionDbListView : TmComponentBase
 {
     // ── Parameters ───────────────────────────────────────────────────────────
 

@@ -1,0 +1,10 @@
+{
+  "kind": "Enum",
+  "category": "Components",
+  "namespace": "Tempo.Blazor.Components.NotionEditor",
+  "description": "How the Tasks / Blog / Analytics / Audit shell panels present themselves (see TmNotionEditor.ShellPanelPresentation).",
+  "packageId": "Tempo.Blazor.NotionEditor",
+  "sourcePath": "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/NotionShellPanelPresentation.cs",
+  "documentationStatus": "generated",
+  "itemName": "NotionShellPanelPresentation"
+}

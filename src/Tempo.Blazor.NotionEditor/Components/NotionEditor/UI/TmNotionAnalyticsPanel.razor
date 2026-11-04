@@ -3,22 +3,9 @@
 @using Tempo.Blazor.NotionEditor.Models
 
 <section class="tm-notion-analytics tm-notion-analytics-panel @Class" aria-label="@Loc["Notion_Analytics_Title"]" data-testid="@TestId("notion-analytics-panel")">
-    <header class="tm-notion-analytics__header">
-        <div class="tm-notion-analytics__title-wrap">
-            <h2 class="tm-notion-analytics__title">@Loc["Notion_Analytics_Title"]</h2>
-            <span class="tm-notion-analytics__subtitle">@Loc["Notion_Analytics_Subtitle"]</span>
-        </div>
-
-        <button type="button"
-                class="tm-notion-analytics__icon-btn"
-                title="@Loc["Tm_Close"]"
-                aria-label="@Loc["Tm_Close"]"
-                @onclick="() => OnClosed.InvokeAsync()">
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-                <path d="M4 4l8 8M12 4L4 12" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
-            </svg>
-        </button>
-    </header>
+    <TmNotionPanelHeader Title="@Loc["Notion_Analytics_Title"]"
+                         Subtitle="@Loc["Notion_Analytics_Subtitle"]"
+                         OnClosed="OnClosed" />
 
     @if (_isLoading)
     {

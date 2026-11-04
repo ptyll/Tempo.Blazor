@@ -179,6 +179,9 @@
 /* ── Top breadcrumb / header bar ──────────────────────────────── */
 
 .tm-notion-topbar {
+    /* The bar's own surface, read by the toolbar overflow fade (see ::after below) so the fade
+       dissolves into the SAME colour in both themes instead of a hard black edge. */
+    --tm-notion-topbar-bg: var(--tm-notion-bg, var(--tm-bg-page));
     position:      sticky;
     top:           0;
     z-index:       var(--tm-notion-z-block-handle, 10);
@@ -187,7 +190,7 @@
     gap:           var(--tm-space-2);
     height:        var(--tm-notion-header-height, 2.75rem);
     padding-inline: var(--tm-space-4);
-    background:    var(--tm-notion-bg, var(--tm-bg-page));
+    background:    var(--tm-notion-topbar-bg);
     border-bottom: 1px solid transparent;
     transition:    border-color var(--tm-notion-anim-fast, 120ms ease),
                    background var(--tm-notion-anim-fast, 120ms ease);
@@ -198,6 +201,40 @@
     background:          var(--tm-notion-bg, var(--tm-bg-page));
     backdrop-filter:     blur(8px);
     -webkit-backdrop-filter: blur(8px);
+}
+
+/* The toolbar must fill the topbar. As a flex child with the default `0 1 auto` it shrinks to a
+   single button, so its overflow measurement collapses everything and the More button overlaps the
+   pinned sidebar toggle — a mobile tap then opens More instead of the page-tree drawer. */
+.tm-notion-topbar ::deep .tm-notion-topbar__toolbar {
+    flex: 1 1 auto;
+    min-width: 0;
+    /* The core toolbar paints --tm-bg-surface, a different dark slate than the topbar's
+       --tm-bg-page: inside this bar it read as a separate dark block, and through the overflow
+       fade's transparent lead it showed as a smudge behind "⋯" at the tablet band. Paint the
+       bar's own token instead: one surface, and the fade dissolves into the SAME colour. */
+    background: var(--tm-notion-topbar-bg);
+    border-bottom: none;
+}
+
+/* Overflow fade at the inline end: a button the fit leaves in More dissolves into the bar's
+   surface instead of clipping hard (in dark mode the hard clip read as a black block). The
+   gradient is built from the bar's own background token, so it tracks the theme. */
+.tm-notion-topbar ::deep .tm-notion-topbar__toolbar::after {
+    content:        "";
+    position:       absolute;
+    inset-block:    0;
+    inset-inline-end: 0;
+    width:          var(--tm-space-10);
+    background:     linear-gradient(to right, transparent, var(--tm-notion-topbar-bg));
+    pointer-events: none;
+}
+
+/* The More trigger rides on top of the fade and keeps the bar's surface behind its own box. */
+.tm-notion-topbar ::deep .tm-toolbar-more {
+    position:   relative;
+    z-index:    1;
+    background: var(--tm-notion-topbar-bg);
 }
 
 /* ── Sidebar toggle button ────────────────────────────────────── */
@@ -214,6 +251,9 @@
     color:         var(--tm-text-secondary);
     cursor:        pointer;
     flex-shrink:   0;
+    position:      relative;
+    z-index:       2;
+    scroll-margin-block-start: 4.5rem;
     transition:    background var(--tm-notion-anim-fast, 120ms ease),
                    color var(--tm-notion-anim-fast, 120ms ease);
 }
@@ -223,8 +263,44 @@
     color:      var(--tm-text-primary);
 }
 
-.tm-notion-sidebar-close {
-    display: none;
+/* ── Sidebar bar (desktop): the "Navigation" heading + the collapse control ── */
+
+.tm-notion-sidebar__bar {
+    display:         flex;
+    align-items:     center;
+    justify-content: space-between;
+    gap:             var(--tm-space-2);
+    padding:         var(--tm-space-2) var(--tm-space-3);
+    flex-shrink:     0;
+}
+
+.tm-notion-sidebar__heading {
+    margin:      0;
+    font-size:   var(--tm-font-size-xs);
+    font-weight: var(--tm-font-weight-semibold);
+    color:       var(--tm-text-secondary);
+}
+
+.tm-notion-sidebar-collapse {
+    display:         inline-flex;
+    align-items:     center;
+    justify-content: center;
+    width:           var(--tm-space-7);
+    height:          var(--tm-space-7);
+    border:          none;
+    border-radius:   var(--tm-radius-md);
+    background:      transparent;
+    color:           var(--tm-text-secondary);
+    cursor:          pointer;
+    flex-shrink:     0;
+    transition:      background var(--tm-notion-anim-fast, 120ms ease),
+                     color var(--tm-notion-anim-fast, 120ms ease);
+}
+
+.tm-notion-sidebar-collapse:hover,
+.tm-notion-sidebar-collapse:focus-visible {
+    background: var(--tm-notion-bg-block-hover);
+    color:      var(--tm-text-primary);
 }
 
 .tm-notion-topbar__tasks {
@@ -328,6 +404,32 @@
     min-width: 0;
 }
 
+/* Overlay presentation: the panel body rides the core TmSidePanel (docked aside / side sheet /
+   full-height sheet). No own surface — the core chrome (title, ×, Esc, focus return) is the shell. */
+::deep .tm-notion-shell-panel--overlay .tm-notion-shell-panel__body {
+    display:        flex;
+    flex-direction: column;
+    height:         100%;
+    min-height:     0;
+    overflow:       hidden;
+}
+
+::deep .tm-notion-shell-panel--overlay .tm-notion-shell-panel__body--wide {
+    width: min(52rem, 100%);
+}
+
+/* The overlay DOCKED aside is a child component's root: the single-segment .tm-notion-shell-panel
+   rule above never matches it (scoped attribute), so the desktop panel collapsed to its content
+   height. ::deep carries the geometry through; the sheet presentation (tm-side-panel-sheet) is
+   untouched — the drawer owns it. */
+::deep .tm-side-panel--docked.tm-notion-shell-panel--overlay {
+    position: absolute;
+    top:      calc(var(--tm-notion-topbar-height, 44px) + var(--tm-space-2));
+    right:    var(--tm-space-4);
+    z-index:  var(--tm-z-dropdown);
+    height:   min(36rem, calc(100% - var(--tm-notion-topbar-height, 44px) - var(--tm-space-6)));
+}
+
 .tm-notion-editor--reading,
 .tm-notion-editor--presentation {
     background: var(--tm-bg-page);
@@ -336,6 +438,18 @@
 .tm-notion-editor--reading .tm-notion-main,
 .tm-notion-editor--presentation .tm-notion-main {
     width: 100%;
+}
+
+/* Phase 3: the page wrapper class moved into TmNotionPage, so the width caps are set as
+   inherited custom properties on .tm-notion-main (local markup) instead of the dead
+   .tm-notion-page-wrapper rules below — the page content reads these vars. */
+.tm-notion-editor--reading .tm-notion-main {
+    --tm-notion-page-max-width: 760px;
+    --tm-notion-page-padding-x: clamp(1.5rem, 4vw, 3rem);
+}
+
+.tm-notion-editor--presentation .tm-notion-main {
+    --tm-notion-page-max-width: 1024px;
 }
 
 .tm-notion-editor--reading .tm-notion-page-wrapper {
@@ -352,84 +466,73 @@
     padding-right: clamp(1.5rem, 4vw, 3rem);
 }
 
-.tm-notion-editor--presentation {
-    position: fixed;
-    inset: 0;
-    z-index: var(--tm-z-modal);
-}
-
-.tm-notion-editor--presentation .tm-notion-page-wrapper {
-    max-width: min(64rem, calc(100% - var(--tm-space-8)));
-    min-height: calc(100vh - var(--tm-notion-topbar-height, 44px));
-    padding-top: var(--tm-space-10);
-}
-
-/* ── Sidebar overlay (mobile) ─────────────────────────────────── */
-
-.tm-notion-sidebar-overlay {
-    display:    none;
-    position:   fixed;
-    inset:      0;
-    background: var(--tm-bg-overlay);
-    z-index:    calc(var(--tm-notion-z-context-menu, 800) - 10);
-    backdrop-filter: blur(2px);
-    -webkit-backdrop-filter: blur(2px);
-}
+/* Phase 3: fullscreen presentation is a root-modifier rule — the root is now the
+   TmEditorShell root (a child component), where a scoped single-segment selector can never
+   match. It lives in the global tempo-blazor-notion-editor.css instead. The old
+   .tm-notion-page-wrapper rules below targeted an element that no longer exists. */
 
 /* ── Responsive breakpoints ───────────────────────────────────── */
 
-/* ≤ 1024px — sidebar becomes a slide-over panel */
+/* Below desktop the shell presents the sidebar as a drawer of the editor, not the viewport.
+   The absolute overlay geometry is TABLET-only: on mobile the sidebar renders inside the shell's
+   bottom sheet (.tm-editor-shell__sheet), where it must flow in the sheet content — a second
+   absolute layer would position against the sheet and clip. */
+.tm-notion-editor--tablet .tm-notion-sidebar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    z-index: var(--tm-z-drawer);
+    box-shadow: var(--tm-shadow-xl);
+    width: var(--tm-notion-sidebar-width, 260px);
+}
+
+/* The mobile sheet owns the surface: the sidebar fills it in flow, no shadow of its own. */
+.tm-editor-shell__sheet .tm-notion-sidebar {
+    position: static;
+    width: 100%;
+    box-shadow: none;
+}
+
+/* The mobile drawer is absolutely positioned in the editor root (inset-block above): the root
+   fills its HOST (height: 100% from the base rule), so the drawer spans the visible editor area
+   and never scrolls away. A 100dvh override was tried here and reverted: it escapes a fixed-height
+   host container AND feeds back into the page height (the sized root answers the viewport), which
+   breaks Playwright fullPage baseline captures at mobile widths. */
+
+/* On the mobile band the page H1 already carries the title: the topbar copy goes away and
+   its space goes to the tools (review: a duplicated, truncated title was unreadable at 390). */
+.tm-notion-editor--mobile .tm-notion-topbar__title {
+    display: none;
+}
+
 @media (max-width: 1024px) {
     .tm-notion-sidebar {
-        position:   fixed;
-        top:        0;
-        left:       0;
-        bottom:     0;
-        z-index:    calc(var(--tm-notion-z-context-menu, 800) - 5);
-        transform:  translateX(-100%);
+        z-index: var(--tm-z-drawer);
         box-shadow: var(--tm-shadow-xl);
-        width:      var(--tm-notion-sidebar-width, 260px) !important;
+        width: var(--tm-notion-sidebar-width, 260px) !important;
+    }
+
+    /* Inside the mobile sheet the drawer width yields to the sheet (the !important above is
+       the tablet drawer geometry). */
+    .tm-editor-shell__sheet .tm-notion-sidebar {
+        width: 100% !important;
+        box-shadow: none;
     }
 
     .tm-notion-sidebar--visible {
         transform: translateX(0);
     }
 
-    .tm-notion-sidebar--visible ~ .tm-notion-sidebar-overlay {
-        display: block;
-    }
-
     .tm-notion-main {
         width: 100%;
     }
 
-    .tm-notion-sidebar-toggle {
+    /* The toggle is a child-component button, so the scope attribute never lands on it; ::deep carries
+       the 44px touch target through to the rendered button. */
+    ::deep .tm-notion-sidebar-toggle {
         width:  44px;
         height: 44px;
-    }
-
-    .tm-notion-sidebar-close {
-        position: absolute;
-        top: var(--tm-space-2);
-        right: var(--tm-space-2);
-        z-index: 1;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        width: 44px;
-        height: 44px;
-        border: var(--tm-border-width) solid var(--tm-border-color);
-        border-radius: var(--tm-radius-md);
-        background: var(--tm-color-surface);
-        color: var(--tm-color-text-muted);
-        box-shadow: var(--tm-shadow-md);
-        cursor: pointer;
-    }
-
-    .tm-notion-sidebar-close:hover,
-    .tm-notion-sidebar-close:focus-visible {
-        border-color: var(--tm-color-primary);
-        color: var(--tm-color-primary);
     }
 
     .tm-notion-topbar__tasks {
@@ -440,6 +543,17 @@
     .tm-notion-topbar__tool {
         width: 44px;
         height: 44px;
+    }
+}
+
+/* Coarse pointers (touch tablets above the 1024 breakpoint too): the topbar icons keep a
+   finger-sized hit area regardless of the viewport width. */
+@media (pointer: coarse) {
+    ::deep .tm-notion-sidebar-toggle,
+    .tm-notion-topbar__tool,
+    .tm-notion-topbar__tasks {
+        min-width:  var(--tm-touch-target);
+        min-height: var(--tm-touch-target);
     }
 }
 
@@ -581,7 +695,11 @@
     overflow:      hidden;
     text-overflow: ellipsis;
     white-space:   nowrap;
-    min-width:     0;
+    /* Never collapse below a readable "Untitled" fragment — min-width: 0 alone ellipsized the
+       title away to nothing on narrow bars. */
+    min-width:     8ch;
+    max-width:     100%;
+    flex-shrink:   1;
 }
 
 .tm-notion-topbar__spacer {

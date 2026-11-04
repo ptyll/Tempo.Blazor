@@ -1,17 +1,17 @@
-/* ── Backdrop ─────────────────────────────────────────────────────────────── */
-
-.tm-notion-emoji-picker-backdrop {
+/* Virtual anchor — zero-size pin at the caret the overlay positions against. */
+.tm-notion-emoji-picker__anchor {
     position: fixed;
-    inset: 0;
-    z-index: calc(var(--tm-z-popover) - 1);
+    width: 0;
+    height: 0;
+    pointer-events: none;
 }
 
-/* ── Panel ───────────────────────────────────────────────────────────────── */
-
-.tm-notion-emoji-picker {
-    position: fixed;
-    z-index: var(--tm-z-popover);
+/* Panel surface lives on the component's own body — the only element rendered in both the
+   popover and the sheet presentation (the overlay root is a child component, N325/N5). The
+   sheet-presentation reset is in the package global _notion-floating-menus.css. */
+.tm-notion-emoji-picker__body {
     width: 352px;
+    max-width: calc(100vw - var(--tm-space-4));
     display: flex;
     flex-direction: column;
     background: var(--tm-color-white);

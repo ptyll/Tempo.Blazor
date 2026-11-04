@@ -449,27 +449,27 @@
     color:      var(--tm-text-primary);
 }
 
-/* ── Emoji picker ─────────────────────────────────────────────── */
+/* ── Emoji picker — panel surface rides on TmOverlayPanel ──────── */
 
-.tm-notion-emoji-picker-backdrop {
-    position: fixed;
-    inset:    0;
-    z-index:  var(--tm-z-popover);
+::deep .tm-notion-emoji-picker {
+    width:          clamp(280px, 340px, 90vw);
+    max-height:     440px;
+    display:        flex;
+    flex-direction: column;
+    background:     var(--tm-notion-bg-slash-menu, var(--tm-bg-surface));
+    border:         1px solid var(--tm-notion-border, var(--tm-border-color));
+    border-radius:  var(--tm-radius-lg);
+    box-shadow:     var(--tm-notion-menu-shadow, var(--tm-shadow-lg));
+    overflow:       hidden;
 }
 
-.tm-notion-emoji-picker {
-    position:      absolute;
-    left:          var(--tm-notion-page-padding-x, 2rem);
-    z-index:       calc(var(--tm-z-popover) + 1);
-    width:         clamp(280px, 340px, 90vw);
-    max-height:    440px;
-    display:       flex;
+/* (Sheet reset: package global _notion-floating-menus.css, N5.) */
+
+.tm-notion-emoji-picker__panel {
+    display:        flex;
     flex-direction: column;
-    background:    var(--tm-notion-bg-slash-menu, var(--tm-bg-surface));
-    border:        1px solid var(--tm-notion-border, var(--tm-border-color));
-    border-radius: var(--tm-radius-lg);
-    box-shadow:    var(--tm-notion-menu-shadow, var(--tm-shadow-lg));
-    overflow:      hidden;
+    min-height:     0;
+    max-height:     440px;
 }
 
 .tm-notion-emoji-picker__header {

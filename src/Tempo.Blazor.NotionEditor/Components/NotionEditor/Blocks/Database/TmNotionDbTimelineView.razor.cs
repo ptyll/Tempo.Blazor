@@ -8,7 +8,7 @@ using Tempo.Blazor.NotionEditor.Models;
 
 namespace Tempo.Blazor.Components.NotionEditor.Blocks.Database;
 
-public partial class TmNotionDbTimelineView : ComponentBase
+public partial class TmNotionDbTimelineView : TmComponentBase
 {
     private enum TimelineZoom { Day, Week, Month }
     private enum DragMode    { None, MoveBar, ResizeBar }

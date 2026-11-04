@@ -2,22 +2,9 @@
 @using Tempo.Blazor.Abstractions.WorkItems
 
 <section class="tm-my-tasks @Class" aria-label="@Loc["Notion_Tasks_Title"]">
-    <header class="tm-my-tasks__header">
-        <div class="tm-my-tasks__title-wrap">
-            <h2 class="tm-my-tasks__title">@Loc["Notion_Tasks_Title"]</h2>
-            <span class="tm-my-tasks__count" aria-live="polite">@Loc["Notion_Tasks_Count", _visibleTasks.Count]</span>
-        </div>
-
-        <button type="button"
-                class="tm-my-tasks__icon-btn"
-                title="@Loc["Tm_Close"]"
-                aria-label="@Loc["Tm_Close"]"
-                @onclick="() => OnClosed.InvokeAsync()">
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-                <path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
-            </svg>
-        </button>
-    </header>
+    <TmNotionPanelHeader Title="@Loc["Notion_Tasks_Title"]"
+                         Subtitle="@Loc["Notion_Tasks_Count", _visibleTasks.Count]"
+                         OnClosed="OnClosed" />
 
     <div class="tm-my-tasks__filters" aria-label="@Loc["Notion_Tasks_Filters"]">
         <div class="tm-my-tasks__segment" role="group" aria-label="@Loc["Notion_Tasks_Filter_Assignee"]">

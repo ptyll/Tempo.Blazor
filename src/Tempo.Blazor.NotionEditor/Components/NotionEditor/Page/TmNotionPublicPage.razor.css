@@ -1,5 +1,5 @@
 .tm-npp {
-    min-height: 100vh;
+    min-height: 100dvh;
     display: flex;
     flex-direction: column;
     background: var(--tm-bg-surface);
@@ -16,35 +16,90 @@
     background: var(--tm-bg-surface);
 }
 
-.tm-npp__header h1 {
-    margin: 0;
-    font-size: var(--tm-font-size-xl);
-    font-weight: var(--tm-font-weight-semibold);
+.tm-npp__heading {
+    display:     flex;
+    align-items: center;
+    gap:         var(--tm-space-2);
+    min-width:   0;
+    flex:        1 1 auto;
 }
 
-.tm-npp__header p {
-    margin: var(--tm-space-1) 0 0;
-    color: var(--tm-text-secondary);
+.tm-npp__icon {
+    flex-shrink: 0;
+    font-size:   var(--tm-font-size-xl);
+    line-height: 1;
+}
+
+.tm-npp__icon--image {
+    width:         var(--tm-space-6);
+    height:        var(--tm-space-6);
+    border-radius: var(--tm-radius-sm);
+    object-fit:    cover;
+}
+
+.tm-npp__title {
+    margin:        0;
+    font-size:     var(--tm-font-size-xl);
+    font-weight:   var(--tm-font-weight-semibold);
+    white-space:   nowrap;
+    overflow:      hidden;
+    text-overflow: ellipsis;
+    min-width:     0;
+}
+
+.tm-npp__shared {
+    flex-shrink:   0;
+    padding:       2px var(--tm-space-2);
+    border-radius: var(--tm-radius-full);
+    background:    var(--tm-color-primary-subtle);
+    color:         var(--tm-color-primary);
+    font-size:     var(--tm-font-size-xs);
+    font-weight:   var(--tm-font-weight-medium);
+    white-space:   nowrap;
+}
+
+.tm-npp__meta {
+    display:        flex;
+    flex-direction: column;
+    align-items:    flex-end;
+    gap:            var(--tm-space-1);
+    flex:           0 0 auto;
+}
+
+.tm-npp__meta p {
+    margin:    0;
+    color:     var(--tm-text-secondary);
     font-size: var(--tm-font-size-sm);
 }
 
 .tm-npp__expires {
-    flex: 0 0 auto;
-    padding: var(--tm-space-1) var(--tm-space-3);
-    border: 1px solid var(--tm-border-color);
-    border-radius: var(--tm-radius-full);
-    background: var(--tm-bg-muted);
-    color: var(--tm-text-secondary);
-    font-size: var(--tm-font-size-sm);
+    display:        inline-flex;
+    align-items:    center;
+    gap:            var(--tm-space-1);
+    padding:        var(--tm-space-1) var(--tm-space-3);
+    border:         1px solid var(--tm-border-color);
+    border-radius:  var(--tm-radius-full);
+    background:     var(--tm-bg-muted);
+    color:          var(--tm-text-secondary);
+    font-size:      var(--tm-font-size-sm);
+    white-space:    nowrap;
 }
 
 .tm-npp__editor {
     flex: 1 1 auto;
     min-height: 0;
+    display: flex;
+    flex-direction: column;
 }
 
-.tm-npp__editor-inner {
-    height: calc(100vh - 82px);
+/* The editor root is TmEditorShell's root — a CHILD component — so a plain scoped rule can never
+   match it; ::deep reaches it through the .tm-npp ancestor. Flex column chain: the shell fills
+   the editor region (its block-size is 100%) instead of collapsing to the stage minimum and
+   clipping the page at narrow widths. */
+::deep .tm-npp__editor-inner {
+    flex: 1 1 auto;
+    width: 100%;
+    min-height: min(60vh, 32rem);
 }
 
 .tm-npp__state {
@@ -92,11 +147,11 @@
 
 @media (max-width: 640px) {
     .tm-npp__header {
-        align-items: flex-start;
-        flex-direction: column;
+        align-items: center;
+        gap: var(--tm-space-2);
     }
 
-    .tm-npp__editor-inner {
-        height: calc(100vh - 126px);
+    .tm-npp__meta p {
+        display: none;
     }
 }

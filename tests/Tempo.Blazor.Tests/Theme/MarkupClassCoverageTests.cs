@@ -356,7 +356,10 @@ public sealed class MarkupClassCoverageTests
         "tm-notion-diagram-edit-modal__missing",
         "tm-notion-editable--readonly",
         "tm-notion-editor--single-page",
+        "tm-notion-floating-menu",
+        "tm-notion-floating-menu__footer",
         "tm-notion-inline-toolbar__btn--color",
+        "tm-notion-inspector",
         "tm-notion-inline-toolbar__turn-icon",
         "tm-notion-media-upload-zone--audio",
         "tm-notion-media-upload-zone--diagram",
@@ -367,17 +370,18 @@ public sealed class MarkupClassCoverageTests
         "tm-notion-media-upload-zone--video",
         "tm-notion-media-upload-zone--wireframe",
         "tm-notion-notifications",
-        "tm-notion-presentation-toggle",
-        "tm-notion-reading-exit",
-        "tm-notion-reading-toggle",
+        "tm-notion-panel-header__actions",
+        "tm-notion-shell-panel--main",
         // Notion redesign phase 1: the shell's duplicate audit-panel close button is gone (its
         // class was the shell-panel close modifier), so the entry was struck off. The panel
         // closes through its own button.
         "tm-notion-skeleton--rect",
+        // Phase 3 re-review (N5): the consumer card surface moved from the orphaned
+        // ::deep overlay-root rules onto the component's own __body divs (reachable in both
+        // the popover and the sheet), so those entries were struck off.
         "tm-notion-spreadsheet-block__missing",
         "tm-notion-spreadsheet-edit-modal__btn--discard",
         "tm-notion-spreadsheet-edit-modal__missing",
-        "tm-notion-topbar__shortcuts",
         "tm-notion-wireframe-edit-modal__missing",
         "tm-npsd__status--disabled",
         "tm-nsf",

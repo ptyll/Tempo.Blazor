@@ -515,10 +515,12 @@ public class NotionFormattingE2ETests : WasmTestBase
         await OpenInlineToolbarForSelectorAsync(page, "[data-block-id='eb400000-0000-0000-0000-000000000003'] .tm-notion-paragraph");
         var colorButton = page.Locator(".tm-notion-inline-toolbar button[title='Color']").First;
         await colorButton.EvaluateAsync("el => el.click()");
-        var panel = page.Locator(".tm-notion-inline-toolbar__color-panel").First;
-        await panel.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 5000 });
+        // At 460 px the color panel presents as the core bottom sheet: the consumer class rides the
+        // popover root only (the core overlay never forwards Class onto the sheet content), so the
+        // swatch itself is the stable hook in both presentations.
+        var blueSwatch = page.Locator(".tm-notion-inline-toolbar__color-swatch[title='Blue']").First;
+        await blueSwatch.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 5000 });
 
-        var blueSwatch = panel.Locator("button[title='Blue']").First;
         await blueSwatch.HoverAsync();
         await blueSwatch.FocusAsync();
         await AssertWithinViewportAsync(page.Locator(".tm-notion-inline-toolbar").First, "EB4 color panel");

@@ -96,7 +96,7 @@ public sealed class NotionPublicShareE2ETests : NotionE2ETestBase
     private static async Task OpenShareDialogAsync(IPage page)
     {
         await page.Locator(".tm-npsm-trigger").First.ClickAsync();
-        await page.GetByTestId("notion-share-open").ClickAsync();
+        await page.Locator(".tm-npsm").GetByTestId("notion-share-open").ClickAsync();
         await page.GetByTestId("notion-share-dialog").WaitForAsync(new LocatorWaitForOptions
         {
             State = WaitForSelectorState.Visible,

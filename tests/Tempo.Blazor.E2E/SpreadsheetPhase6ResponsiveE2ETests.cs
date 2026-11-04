@@ -406,8 +406,13 @@ public partial class SpreadsheetE2ETests
             catch { /* the API may be unreachable or its certificate untrusted; the spec then runs on live state */ }
         }
 
+        // Phase 3 (N0): the editor shell REMOUNTS the whole canvas when the layout crosses into
+        // the mobile band (desktop/tablet and mobile render different shell branches), which
+        // tears down any open block UI such as this modal. Open the modal after the phone
+        // viewport is set — the spec verifies the modal's phone chrome and footer, not
+        // band-crossing survival of canvas state.
         var page = await CreatePageAsync();
-        await page.SetViewportSizeAsync(Phase6DesktopWidth, 1000);
+        await page.SetViewportSizeAsync(390, 844);
         await GotoAppReadyAsync(page, $"{BaseUrl}/notion-editor");
         await page.WaitForSelectorAsync(".tm-notion-editor", new() { Timeout = 30_000 });
         await page.WaitForTimeoutAsync(2000);
@@ -426,12 +431,12 @@ public partial class SpreadsheetE2ETests
         await modal.Locator(".tm-notion-spreadsheet-edit-modal__btn--primary").First
             .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 30_000 });
 
-        // The modal is the measured container, not the viewport: narrowing the page is what a phone does
-        // to this fullscreen surface (the spreadsheet itself resolves its chrome from the modal's width).
-        await page.SetViewportSizeAsync(390, 844);
+        // The modal is the measured container, not the viewport: the spreadsheet resolves its
+        // chrome from the modal's width.
         await AssertNotionModalIsPhoneAtAsync(page, modal, viewportHeight: 844);
 
         // …and at 568x320 (landscape phone) the footer must still be inside the viewport.
+        // Both sizes sit inside the mobile band, so the canvas (and the modal) survives.
         await page.SetViewportSizeAsync(568, 320);
         await AssertNotionModalIsPhoneAtAsync(page, modal, viewportHeight: 320);
 

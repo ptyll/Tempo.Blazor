@@ -16,6 +16,7 @@ using Tempo.Blazor.Components.Inputs;
 using Tempo.Blazor.Components.Notifications;
 using Tempo.Blazor.Components.Files;
 using Tempo.Blazor.Components.NotionEditor.Services;
+using Tempo.Blazor.Components.NotionEditor.Page;
 using Tempo.Blazor.Components.NotionEditor.UI;
 using Tempo.Blazor.Components.Overlay;
 using Tempo.Blazor.Components.Pickers;
@@ -233,6 +234,37 @@ public sealed class TmOverlayPanelDialogNamingTests : LocalizationTestBase
                 cut.Find(".tm-notification-bell__button").Click();
                 return cut.Find("[role='dialog']");
             },
+            ["TmNotionSlashMenu"] = () =>
+            {
+                var cut = Render<TmNotionSlashMenu>(p => p.Add(c => c.Visible, true));
+                return cut.Find("[role='dialog']");
+            },
+            ["TmNotionColorPicker"] = () =>
+            {
+                var cut = Render<TmNotionColorPicker>(p => p.Add(c => c.Visible, true));
+                return cut.Find("[role='dialog']");
+            },
+            ["TmNotionEmojiPicker"] = () =>
+            {
+                var cut = Render<TmNotionEmojiPicker>(p => p.Add(c => c.Visible, true));
+                return cut.Find("[role='dialog']");
+            },
+            ["TmNotionStatusPicker"] = () =>
+            {
+                var cut = Render<TmNotionStatusPicker>(p => p.Add(c => c.Visible, true));
+                return cut.Find("[role='dialog']");
+            },
+            ["TmNotionTokenDropdown"] = () =>
+            {
+                var cut = Render<TmNotionTokenDropdown>(p => p
+                    .Add(c => c.Visible, true)
+                    .AddCascadingValue(new NotionEditorContext
+                    {
+                        DataProvider = Substitute.For<INotionDataProvider>(),
+                        BlockService = Substitute.For<INotionEditorBlockService>(),
+                    }));
+                return cut.Find("[role='dialog']");
+            },
             ["TmNotionNotificationCenter"] = () =>
             {
                 var cut = Render<TmNotionNotificationCenter>(p => p
@@ -350,6 +382,32 @@ public sealed class TmOverlayPanelDialogNamingTests : LocalizationTestBase
             {
                 var cut = Render<TmPdfAnnotator>(p => p.Add(c => c.Url, "https://example.com/naming-sweep.pdf"));
                 cut.Find(".tm-pdf-annotator__color-trigger").Click();
+                return cut.Find("[role='dialog']");
+            },
+            // Fáze 3 (N5): the page header's emoji picker rides the core overlay (Role="dialog",
+            // named through AriaLabel) — the page icon trigger opens it.
+            ["TmNotionPageHeader"] = () =>
+            {
+                var cut = Render<TmNotionPageHeader>(p => p
+                    .Add(c => c.Page, new NotionPage
+                    {
+                        Id = Guid.NewGuid(),
+                        Title = "Naming sweep",
+                        IconEmoji = "\U0001F4C4",
+                    })
+                    .AddCascadingValue(new NotionEditorContext()));
+                cut.Find(".tm-notion-header-icon").Click();
+                return cut.Find("[role='dialog']");
+            },
+            // Fáze 3 (N5): the inline toolbar's color panel rides the core overlay (Role="dialog",
+            // named through AriaLabel) — the color trigger opens it.
+            ["TmNotionInlineToolbar"] = () =>
+            {
+                var cut = Render<TmNotionInlineToolbar>(p => p
+                    .Add(c => c.Visible, true)
+                    .Add(c => c.Top, 100)
+                    .Add(c => c.Left, 200));
+                cut.Find(".tm-notion-inline-toolbar__btn--color").Click();
                 return cut.Find("[role='dialog']");
             },
         };

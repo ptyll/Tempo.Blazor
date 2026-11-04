@@ -5,6 +5,18 @@
 @import "components/_notion-notifications.css";
 @import "components/_notion-floating-menus.css";
 
+/* Phase 3 (N0): the editor root is the TmEditorShell root — a CHILD component — so scoped
+   single-segment selectors for the root modifier classes (.tm-notion-editor--presentation)
+   can never match it (the scope id belongs to TmEditorShell). Root-modifier rules that must
+   paint the editor root itself live here, in the package global stylesheet. */
+
+/* Presentation mode overlays the viewport. */
+.tm-notion-editor--presentation {
+    position: fixed;
+    inset: 0;
+    z-index: var(--tm-z-modal);
+}
+
 /* The shared thread view is a layout-neutral wrapper: the panel's list stays the flex parent. */
 .tm-notion-comment-thread {
     display: contents;
@@ -263,6 +275,7 @@
   .tm-notion-code-block__lang-select,
   .tm-notion-code-block__preview-toggle,
   .tm-notion-color-picker,
+  .tm-notion-color-picker__body,
   .tm-notion-color-picker__check,
   .tm-notion-color-picker__item,
   .tm-notion-color-picker__swatch,
@@ -290,6 +303,7 @@
   .tm-notion-embed-block__input-zone,
   .tm-notion-embed-block__overlay,
   .tm-notion-emoji-picker,
+  .tm-notion-emoji-picker__body,
   .tm-notion-emoji-picker__btn,
   .tm-notion-emoji-picker__emoji,
   .tm-notion-emoji-picker__random,
@@ -335,9 +349,11 @@
   .tm-notion-quote a,
   .tm-notion-resize-handle,
   .tm-notion-sidebar,
+  .tm-notion-sidebar-collapse,
   .tm-notion-sidebar-toggle,
   .tm-notion-skeleton,
   .tm-notion-slash,
+  .tm-notion-slash__body,
   .tm-notion-slash__item,
   .tm-notion-slash__item-icon,
   .tm-notion-spreadsheet-block__edit-btn,
@@ -370,6 +386,7 @@
   .tm-notion-topbar__tasks,
   .tm-notion-topbar__tool,
   .tm-notion-type-switcher,
+  .tm-notion-type-switcher__body,
   .tm-notion-type-switcher__item,
   .tm-notion-type-switcher__item-icon,
   .tm-notion-video-block__overlay,

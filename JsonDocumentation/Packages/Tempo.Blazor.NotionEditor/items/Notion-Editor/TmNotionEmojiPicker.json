@@ -36,6 +36,13 @@
       "description": "Shared variant: shows the Remove action that raises OnRemoved."
     },
     {
+      "name": "LayoutMode",
+      "type": "TmLayoutMode",
+      "isRequired": false,
+      "default": "Auto",
+      "description": "Forced layout. Mobile presents the picker as the core sheet."
+    },
+    {
       "name": "Visible",
       "type": "bool",
       "isRequired": false,

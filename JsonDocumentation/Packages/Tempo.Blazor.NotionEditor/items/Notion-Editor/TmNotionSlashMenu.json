@@ -45,6 +45,13 @@
       "description": "Raised when the user selects a block type."
     },
     {
+      "name": "LayoutMode",
+      "type": "TmLayoutMode",
+      "isRequired": false,
+      "default": "Auto",
+      "description": "Forced layout. Mobile presents the menu as the core sheet."
+    },
+    {
       "name": "OnSlashItemSelected",
       "type": "EventCallback<SlashMenuItem>",
       "isRequired": false,

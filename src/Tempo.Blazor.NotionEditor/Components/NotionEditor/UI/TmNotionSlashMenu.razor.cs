@@ -1,4 +1,6 @@
+using System.Globalization;
 using Microsoft.AspNetCore.Components;
+using Tempo.Blazor.Abstractions.Layout;
 using Tempo.Blazor.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.JSInterop;
@@ -33,15 +35,16 @@ public partial class TmNotionSlashMenu : TmComponentBase
     /// <summary>Raised when the user selects the AI assistant action.</summary>
     [Parameter] public EventCallback OnAISelected { get; set; }
 
-    /// <summary>Raised when the user dismisses the menu (Escape / backdrop click).</summary>
+    /// <summary>Raised when the user dismisses the menu (Escape / outside click).</summary>
     [Parameter] public EventCallback OnClosed { get; set; }
+
+    /// <summary>Forced layout. Mobile presents the menu as the core sheet.</summary>
+    [Parameter] public TmLayoutMode LayoutMode { get; set; } = TmLayoutMode.Auto;
 
     // ── State ────────────────────────────────────────────────────────────────
 
     private string   _query         = string.Empty;
     private int      _selectedIndex;
-    private double   _top;
-    private double   _left;
     private bool     _wasVisible;
     private bool     _needsFocus;
 
@@ -50,7 +53,6 @@ public partial class TmNotionSlashMenu : TmComponentBase
     private int _totalItems;
     private bool _showAiItem;
 
-    private ElementReference _menuRef;
     private ElementReference _inputRef;
     private ElementReference _listRef;
 
@@ -66,8 +68,6 @@ public partial class TmNotionSlashMenu : TmComponentBase
             // Menu just opened — reset state
             _query         = string.Empty;
             _selectedIndex = 0;
-            _top           = Top;
-            _left          = Left;
             _needsFocus    = true;
 
             await LoadRecentAsync();
@@ -93,7 +93,6 @@ public partial class TmNotionSlashMenu : TmComponentBase
                 // that can refocus the block's editable after this call — focusMenuInput
                 // re-asserts across the next frames so the search box keeps the typing target.
                 await JS.InvokeVoidAsync("tmNotionEditor.focusMenuInput", _inputRef);
-                await JS.InvokeVoidAsync("tmNotionEditor.adjustSlashMenuPosition", _menuRef);
             }
             catch { /* SSR / test */ }
         }

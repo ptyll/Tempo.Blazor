@@ -25,14 +25,28 @@
     else
     {
         <header class="tm-npp__header">
-            <div>
-                <h1>@Loc["Notion_Share_PublicPage"]</h1>
-                <p>@Loc["Notion_Share_ReadOnlyNotice"]</p>
+            <div class="tm-npp__heading">
+                @if (!string.IsNullOrEmpty(_pageIconEmoji))
+                {
+                    <span class="tm-npp__icon" aria-hidden="true">@_pageIconEmoji</span>
+                }
+                else if (!string.IsNullOrEmpty(_pageIconImageUrl))
+                {
+                    <img class="tm-npp__icon tm-npp__icon--image" src="@_pageIconImageUrl" alt="" aria-hidden="true" />
+                }
+                <h1 class="tm-npp__title">@(string.IsNullOrWhiteSpace(_pageTitle) ? Loc["Notion_Share_PublicPage"] : _pageTitle)</h1>
+                <span class="tm-npp__shared" data-testid="@TestId("notion-public-shared")">@Loc["TmNotionPublicPage_SharedLabel"]</span>
             </div>
-            @if (_share.ExpiresAt is not null)
-            {
-                <span class="tm-npp__expires">@Loc["Notion_Share_ExpiresOn", _share.ExpiresAt.Value.ToLocalTime().ToString("d")]</span>
-            }
+            <div class="tm-npp__meta">
+                <p>@Loc["Notion_Share_ReadOnlyNotice"]</p>
+                @if (_share.ExpiresAt is not null)
+                {
+                    <span class="tm-npp__expires">
+                        <TmIcon Name="@IconNames.Calendar" Size="IconSize.Sm" />
+                        @Loc["Notion_Share_ExpiresOn", _share.ExpiresAt.Value.ToLocalTime().ToString("d")]
+                    </span>
+                }
+            </div>
         </header>
 
         <div class="tm-npp__editor">
@@ -42,7 +56,9 @@
                             InitialPageId="@_share.PageId.ToString("D")"
                             ShowSidebar="false"
                             ReadOnly="@true"
+                            Chrome="NotionEditorChrome.Minimal"
                             CurrentUserId="anonymous"
+                            OnPageChanged="OnEditorPageChanged"
                             Class="tm-npp__editor-inner tm-notion-editor--locked" />
         </div>
     }

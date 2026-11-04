@@ -263,7 +263,7 @@ public sealed class NotionPhase1BaselineScreenshots : NotionE2ETestBase
         var page = await OpenNotionEditorAsync();
         await page.SetViewportSizeAsync(1440, 900);
 
-        await page.GetByTestId("notion-audit-open").ClickAsync();
+        await ClickNotionCommandAsync(page, "notion-audit-open");
         var audit = page.GetByTestId("notion-audit-panel");
         await audit.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10000 });
         await ShotAsync(page, "notion-panels", "audit-panel-light", audit);
@@ -272,7 +272,7 @@ public sealed class NotionPhase1BaselineScreenshots : NotionE2ETestBase
         await SetThemeAsync(page, "light");
         await CloseByButtonAsync(audit);
 
-        await page.GetByTestId("notion-analytics-open").ClickAsync();
+        await ClickNotionCommandAsync(page, "notion-analytics-open");
         var analytics = page.GetByTestId("notion-analytics-panel");
         await analytics.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10000 });
         await ShotAsync(page, "notion-panels", "analytics-panel-light", analytics);

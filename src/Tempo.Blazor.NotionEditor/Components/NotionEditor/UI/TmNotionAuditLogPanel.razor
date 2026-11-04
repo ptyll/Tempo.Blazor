@@ -3,22 +3,12 @@
 @using Tempo.Blazor.Abstractions.Shared
 
 <section class="tm-notion-audit @Class" aria-label="@Loc["Notion_Audit_Title"]" data-testid="@TestId("notion-audit-panel")">
-    <header class="tm-notion-audit__header">
-        <div class="tm-notion-audit__title-wrap">
-            <h2 class="tm-notion-audit__title">@Loc["Notion_Audit_Title"]</h2>
+    <TmNotionPanelHeader Title="@Loc["Notion_Audit_Title"]"
+                         OnClosed="OnClosed">
+        <Actions>
             <span class="tm-notion-audit__subtitle" data-testid="@TestId("notion-audit-count")">@Loc["Notion_Audit_Count", _result.TotalCount]</span>
-        </div>
-
-        <button type="button"
-                class="tm-notion-audit__icon-btn"
-                title="@Loc["Tm_Close"]"
-                aria-label="@Loc["Tm_Close"]"
-                @onclick="() => OnClosed.InvokeAsync()">
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-                <path d="M4 4l8 8M12 4L4 12" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
-            </svg>
-        </button>
-    </header>
+        </Actions>
+    </TmNotionPanelHeader>
 
     <div class="tm-notion-audit__filters" aria-label="@Loc["Notion_Audit_Filter"]">
         <label class="tm-notion-audit__field">

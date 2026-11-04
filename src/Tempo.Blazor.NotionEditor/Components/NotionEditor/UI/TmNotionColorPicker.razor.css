@@ -1,16 +1,15 @@
-/* ── Backdrop ─────────────────────────────────────────────────────────────── */
-
-.tm-notion-color-picker-backdrop {
+/* Virtual anchor — zero-size pin at the caret the overlay positions against. */
+.tm-notion-color-picker__anchor {
     position: fixed;
-    inset: 0;
-    z-index: calc(var(--tm-z-popover) - 1);
+    width: 0;
+    height: 0;
+    pointer-events: none;
 }
 
-/* ── Panel ───────────────────────────────────────────────────────────────── */
-
-.tm-notion-color-picker {
-    position: fixed;
-    z-index: var(--tm-z-popover);
+/* Panel surface lives on the component's own body — the only element rendered in both the
+   popover and the sheet presentation (the overlay root is a child component, N325/N5). The
+   sheet-presentation reset is in the package global _notion-floating-menus.css. */
+.tm-notion-color-picker__body {
     min-width: 210px;
     padding: 6px 4px;
     background: var(--tm-color-white);

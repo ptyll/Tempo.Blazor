@@ -22,6 +22,11 @@ public class NotionSidebarE2ETests : WasmTestBase
 
         var context = await CreateContextAsync();
         var page    = await context.NewPageAsync();
+        // Phase 3 (N0): the shell resolves desktop from its own container (>=1024). The demo
+        // chrome leaves only ~918px at the 1280 default, which is the tablet band — the page
+        // tree is a closed overlay drawer there. 1600 keeps the editor on the desktop band so
+        // the sidebar is docked and visible, as these tests assert.
+        await page.SetViewportSizeAsync(1600, 900);
         await page.GotoAsync($"{BaseUrl}/notion-editor");
         await WaitForAppReadyAsync(page);
         await page.WaitForSelectorAsync(".tm-notion-editor", new PageWaitForSelectorOptions { Timeout = 30000 });
@@ -231,7 +236,7 @@ public class NotionSidebarRecoveryE2ETests : NotionE2ETestBase
     [Description("EB11 captures deep tree, desktop collapsed, mobile slide-over, and empty navigation baselines.")]
     public async Task EB11_SidebarNavigationStates_AreCaptured()
     {
-        await SetViewportAsync(1366, 768);
+        await SetViewportAsync(1600, 900);
         await OpenNotionEditorAsync();
         await SeedSidebarDeepPageAsync();
         await ExpandAllVisibleTreeNodesAsync();
@@ -242,8 +247,10 @@ public class NotionSidebarRecoveryE2ETests : NotionE2ETestBase
         await CaptureBaselineAsync(Area, "deep-tree-desktop", Sidebar);
 
         await Page.Locator(".tm-notion-sidebar-toggle").First.ClickAsync();
-        await Page.Locator(".tm-notion-sidebar--hidden").First
-            .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Attached, Timeout = 10000 });
+        // Phase 3 (N0): the shell UNMOUNTS a closed desktop panel — the page tree leaves the DOM
+        // and the shell's rail toggle offers the expand affordance. No --hidden class exists.
+        await Page.Locator(".tm-notion-sidebar").First
+            .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Detached, Timeout = 10000 });
         await AssertNoHorizontalOverflowAsync();
         await CaptureBaselineAsync(Area, "desktop-collapsed", Editor);
 
@@ -251,12 +258,13 @@ public class NotionSidebarRecoveryE2ETests : NotionE2ETestBase
         await OpenNotionEditorAsync();
         await SeedSidebarDeepPageAsync();
         await ShowMobileSidebarAsync();
-        await Page.Locator(".tm-notion-sidebar-overlay").First
+        // Phase 3 (N0): the open drawer is the shell's sheet; the page tree carries --visible.
+        await Page.Locator(".tm-notion-sidebar--visible").First
             .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10000 });
         await AssertNoHorizontalOverflowAsync();
         await CaptureBaselineAsync(Area, "mobile-slide-over", Editor);
 
-        await SetViewportAsync(1366, 768);
+        await SetViewportAsync(1600, 900);
         await OpenNotionEditorAsync();
         await SeedSidebarEmptyPageAsync();
         await Page.Locator(".tm-nsf-empty").First.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10000 });
@@ -270,7 +278,7 @@ public class NotionSidebarRecoveryE2ETests : NotionE2ETestBase
     [Description("EB11 captures empty trash, populated trash, and restore/permanent-delete states.")]
     public async Task EB11_TrashStatesAndActions_AreCaptured()
     {
-        await SetViewportAsync(1366, 768);
+        await SetViewportAsync(1600, 900);
         await OpenNotionEditorAsync();
         await SeedSidebarDeepPageAsync();
         await OpenTrashAsync();
@@ -311,7 +319,7 @@ public class NotionSidebarRecoveryE2ETests : NotionE2ETestBase
     [Description("EB11 captures the tree after a page is drag-reparented under another page.")]
     public async Task EB11_DragMoveReparentedState_IsCaptured()
     {
-        await SetViewportAsync(1366, 768);
+        await SetViewportAsync(1600, 900);
         await OpenNotionEditorAsync();
         await SeedSidebarDeepPageAsync();
 
@@ -346,7 +354,8 @@ public class NotionSidebarRecoveryE2ETests : NotionE2ETestBase
 
     private async Task ShowMobileSidebarAsync()
     {
-        var isVisible = await Sidebar.EvaluateAsync<bool>("el => el.classList.contains('tm-notion-sidebar--visible')");
+        // Phase 3 (N0): a closed panel is unmounted, so "visible" is "mounted with --visible".
+        var isVisible = await Page.Locator(".tm-notion-sidebar--visible").CountAsync() > 0;
         if (!isVisible)
             await Page.Locator(".tm-notion-sidebar-toggle").First.ClickAsync();
 

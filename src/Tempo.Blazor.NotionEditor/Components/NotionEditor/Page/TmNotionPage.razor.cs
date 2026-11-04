@@ -139,6 +139,7 @@ public partial class TmNotionPage : ComponentBase, IAsyncDisposable
     private double _slashMenuTop;
     private double _slashMenuLeft;
     private string _slashBlockId = string.Empty;
+    private NotionPageActions? _pageActions;
 
     // ── Inline status picker state ───────────────────────────────────────────
 
@@ -211,6 +212,23 @@ public partial class TmNotionPage : ComponentBase, IAsyncDisposable
     {
         Context.BlockCreated = HandleExternalBlockCreatedAsync;
 
+        // The mobile action bar (rendered by the editor above this page) invokes the page's own
+        // handlers through the cascaded context — the page stays the single owner of its menus.
+        // Registered once per page: re-raising on every parameter set would loop the chrome
+        // (each raise re-renders the editor, which re-sets parameters on the page).
+        _pageActions ??= new NotionPageActions
+        {
+            AddBlock         = OpenSlashFromActionAsync,
+            OpenComments     = OpenCommentsFromActionAsync,
+            OpenPageSettings = () => UiState.RequestSettingsMenuAsync(),
+        };
+        if (!ReferenceEquals(Context.PageActions, _pageActions))
+        {
+            Context.PageActions = _pageActions;
+            if (Context.PageActionsChanged is not null)
+                await Context.PageActionsChanged();
+        }
+
         if (!ReferenceEquals(Page, _lastPage))
         {
             _lastPage = Page;
@@ -227,8 +245,17 @@ public partial class TmNotionPage : ComponentBase, IAsyncDisposable
 
     private async void OnRemoteBlockChanged(BlockChange _)
     {
-        // Remote edit arrived — reload all blocks for the page (last-write-wins)
-        await InvokeAsync(RefreshAsync);
+        // Remote edit arrived — reload all blocks for the page (last-write-wins). Event-handler
+        // signature: an exception escaping an async void handler is unhandled and takes the whole
+        // circuit down, so the reload is fenced.
+        try
+        {
+            await InvokeAsync(RefreshAsync);
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or JSException or JSDisconnectedException or ObjectDisposedException)
+        {
+            // The page is mid-dispose or the runtime is gone — the next navigation re-subscribes.
+        }
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -782,7 +809,17 @@ public partial class TmNotionPage : ComponentBase, IAsyncDisposable
             _blocks = [.._blocks];
             StateHasChanged();
 
-            await RestoreCaretAsync(converted.Id.ToString(), caretOffset);
+            // The queued render replaces the source editable with the converted block's DOM;
+            // restoring the caret before that patch lands focuses the old node, and focus dies
+            // on <body> when the patch removes it (Turn-into then loses the keyboard). Yield so
+            // the batch applies first, then restore into the new editable.
+            await Task.Yield();
+            // Clicking a toolbar entry collapses the DOM selection before the caret is captured,
+            // so caretOffset can be null even though the user's context is the block. Restoring
+            // nothing leaves focus on the unmounted toolbar button and the keyboard dies on
+            // <body> — fall back to focusing the converted block at the end of its text
+            // (setCaretOffset clamps a past-end offset to the block's end).
+            await RestoreCaretAsync(converted.Id.ToString(), caretOffset ?? int.MaxValue);
         }
         catch
         {
@@ -1252,6 +1289,54 @@ public partial class TmNotionPage : ComponentBase, IAsyncDisposable
     };
 
     // ── Slash menu handlers ───────────────────────────────────────────────────
+
+    /// <summary>Shared UI state cascaded to the page chrome (the settings menu open request).</summary>
+    private NotionPageUiState UiState { get; } = new();
+
+    /// <summary>
+    /// The AddBlock page action: opens the slash menu anchored below the focused (or last) block,
+    /// creating a paragraph first when the page is empty.
+    /// </summary>
+    private async Task OpenSlashFromActionAsync()
+    {
+        if (ReadOnly) return;
+
+        var target = _activeBlockId is { } active && _blocks.Exists(b => b.Id == active)
+            ? _blocks.First(b => b.Id == active)
+            : _blocks.LastOrDefault();
+        if (target is null)
+        {
+            await AddBlockAsync(BlockType.Paragraph);
+            target = _blocks.LastOrDefault();
+            if (target is null) return;
+        }
+
+        _slashBlockId = target.Id.ToString();
+        _slashMenuTop = 120;
+        _slashMenuLeft = 120;
+        try
+        {
+            var rect = await JS.InvokeAsync<DomRect>("tmNotionEditor.getBlockBoundingRect", _slashBlockId);
+            if (rect is not null)
+            {
+                _slashMenuTop = rect.Top + rect.Height;
+                _slashMenuLeft = rect.Left;
+            }
+        }
+        catch { /* SSR / test — the defaults anchor the menu */ }
+
+        _slashMenuVisible = true;
+        StateHasChanged();
+    }
+
+    /// <summary>The Comments page action: expands the page comments panel.</summary>
+    private Task OpenCommentsFromActionAsync()
+    {
+        if (Context.CommentProvider is null) return Task.CompletedTask;
+        _pageCommentExpanded = true;
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
 
     private Task HandleSlashMenuOpenedAsync((string BlockId, double Top, double Left) args)
     {

@@ -11,8 +11,11 @@ namespace Tempo.Blazor.E2E;
 public abstract class NotionE2ETestBase : WasmTestBase
 {
     private IPage? _page;
-    private int _viewportWidth = 1280;
-    private int _viewportHeight = 720;
+    // 1600, not 1280: the demo app shell consumes ~280px, and the editor classifies its OWN
+    // container (desktop from 1024). 1280 left the shell on the tablet overlay, so the page tree
+    // was a closed drawer and Secondary tools were collapsed.
+    private int _viewportWidth = 1600;
+    private int _viewportHeight = 900;
 
     protected IPage Page => _page ?? throw new InvalidOperationException("OpenNotionEditorAsync must be called before using the page.");
 
@@ -798,6 +801,34 @@ public abstract class NotionE2ETestBase : WasmTestBase
         {
             await _page.SetViewportSizeAsync(width, height);
         }
+    }
+
+    /// <summary>
+    /// Clicks a Notion toolbar command whether it is on the bar or has left into "More"
+    /// (phase 3: tablet/mobile tools are OverflowOnly; a narrow desktop bar collapses Secondary).
+    /// A collapsed copy keeps <c>data-testid</c> but is inert; the menu entry carries
+    /// <c>data-menu-testid</c>. An OverflowOnly entry owns <c>data-testid</c> inside the menu.
+    /// </summary>
+    protected static async Task ClickNotionCommandAsync(IPage page, string testId)
+    {
+        var onBar = page.Locator(
+            $".tm-notion-topbar [data-testid='{testId}']:not(.tm-toolbar-item--collapsed)").First;
+        if (await onBar.CountAsync() > 0 && await onBar.IsVisibleAsync())
+        {
+            await onBar.ClickAsync();
+            return;
+        }
+
+        var more = page.Locator(".tm-notion-topbar .tm-toolbar-more").First;
+        await more.ClickAsync(new LocatorClickOptions { Force = true });
+        var entry = page.Locator(
+            $"[data-menu-testid='{testId}'], .tm-toolbar-more__menu [data-testid='{testId}']").First;
+        await entry.WaitForAsync(new LocatorWaitForOptions
+        {
+            State = WaitForSelectorState.Visible,
+            Timeout = 5000
+        });
+        await entry.ClickAsync();
     }
 
     protected async Task InvokeSeedAsync(string methodName)

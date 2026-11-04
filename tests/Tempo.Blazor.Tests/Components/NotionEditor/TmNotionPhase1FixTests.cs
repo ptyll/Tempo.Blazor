@@ -167,7 +167,7 @@ public class TmNotionPhase1FixTests : LocalizationTestBase
             .Add(x => x.ActivityProvider, provider)
             .Add(x => x.OnClosed, EventCallback.Factory.Create(this, () => closed = true)));
 
-        cut.Find(".tm-notion-audit__icon-btn").Click();
+        cut.Find(".tm-notion-panel-header__close").Click();
         closed.Should().BeTrue();
     }
 

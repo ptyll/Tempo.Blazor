@@ -6,7 +6,7 @@ using Tempo.Blazor.NotionEditor.Models;
 
 namespace Tempo.Blazor.Components.NotionEditor.Blocks.Database;
 
-public partial class TmNotionDbGalleryView : ComponentBase
+public partial class TmNotionDbGalleryView : TmComponentBase
 {
     // ── Parameters ───────────────────────────────────────────────────────────
 

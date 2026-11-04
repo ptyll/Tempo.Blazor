@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Components;
+using Tempo.Blazor.Abstractions.Layout;
 using Tempo.Blazor.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.JSInterop;
@@ -31,6 +32,10 @@ public partial class TmNotionInlineToolbar : TmComponentBase
     [Parameter] public EventCallback<string>        OnComment     { get; set; }
     [Parameter] public EventCallback                OnAI          { get; set; }
     [Parameter] public bool                         ShowAI        { get; set; }
+
+    [CascadingParameter] private TmLayoutContext? Layout { get; set; }
+
+    private TmLayoutMode LayoutMode => Layout?.Resolved ?? TmLayoutMode.Auto;
     [Parameter] public string?                      BlockId       { get; set; }
     [Parameter] public object?                      DotNetRef     { get; set; }
 
@@ -80,6 +85,7 @@ public partial class TmNotionInlineToolbar : TmComponentBase
 
     private ElementReference _toolbarRef;
     private ElementReference _linkInputRef;
+    private ElementReference _colorTriggerRef;
 
     // ── Lifecycle ────────────────────────────────────────────────────────────
 
@@ -196,6 +202,13 @@ public partial class TmNotionInlineToolbar : TmComponentBase
     {
         _showColorPanel = !_showColorPanel;
         if (_showColorPanel) CloseOtherPanels(color: true);
+    }
+
+    private Task OnColorPanelOpenChanged(bool open)
+    {
+        if (!open)
+            _showColorPanel = false;
+        return Task.CompletedTask;
     }
 
     private async Task HandleTextColorAsync(string? name)

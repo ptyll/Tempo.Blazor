@@ -1,20 +1,17 @@
 @namespace Tempo.Blazor.Components.NotionEditor.UI
+@using Tempo.Blazor.Components.Overlay
 
-@if (Visible)
-{
-    @* ── Transparent backdrop — click outside to close ────────────────────── *@
-    <div class="tm-notion-color-picker-backdrop"
-         @onclick="HandleBackdropClickAsync"
-         aria-hidden="true"></div>
-
-    @* ── Color picker panel ────────────────────────────────────────────────── *@
-    <div class="tm-notion-color-picker"
-         role="dialog"
-         aria-label="@Loc["TmNotionColorPicker_TextColor"]"
-         style="top:@(_top)px;left:@(_left)px"
-         @ref="_pickerRef"
-         @onkeydown="HandleKeyDownAsync"
-         @onmousedown:preventDefault="true">
+<TmNotionFloatingMenu IsOpen="Visible"
+                      LayoutMode="LayoutMode"
+                      Top="Top"
+                      Left="Left"
+                      Placement="OverlayPlacement.Bottom"
+                      Role="dialog"
+                      Title="@Loc["TmNotionColorPicker_TextColor"]"
+                      AriaLabel="@Loc["TmNotionColorPicker_TextColor"]"
+                      Class="tm-notion-color-picker"
+                      OnClose="HandleBackdropClickAsync">
+    <div class="tm-notion-color-picker__body" @onkeydown="HandleKeyDownAsync" @onmousedown:preventDefault="true">
 
         @* ── Text colors section ───────────────────────────────────────────── *@
         <div class="tm-notion-color-picker__section-label" role="presentation">
@@ -28,6 +25,7 @@
             <button class="tm-notion-color-picker__item @(isSelected ? "tm-notion-color-picker__item--selected" : "")"
                     role="option"
                     aria-selected="@isSelected"
+                    aria-label="@Loc[capturedEntry.NameKey]"
                     title="@Loc[capturedEntry.NameKey]"
                     @onclick="() => HandleTextColorAsync(capturedEntry.Hex)"
                     @onclick:preventDefault="true">
@@ -71,6 +69,7 @@
             <button class="tm-notion-color-picker__item @(isSelected ? "tm-notion-color-picker__item--selected" : "")"
                     role="option"
                     aria-selected="@isSelected"
+                    aria-label="@Loc[capturedEntry.NameKey]"
                     title="@Loc[capturedEntry.NameKey]"
                     @onclick="() => HandleBgColorAsync(capturedEntry.Hex)"
                     @onclick:preventDefault="true">
@@ -97,4 +96,4 @@
         }
 
     </div>
-}
+</TmNotionFloatingMenu>

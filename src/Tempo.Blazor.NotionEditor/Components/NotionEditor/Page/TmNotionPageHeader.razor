@@ -1,6 +1,7 @@
 @namespace Tempo.Blazor.Components.NotionEditor.Page
 @using Tempo.Blazor.NotionEditor.Interfaces
 @using Tempo.Blazor.Components.NotionEditor.Services
+@using Tempo.Blazor.Components.Overlay
 
 @* ── Cover image ─────────────────────────────────────────────────────────── *@
 @if (!string.IsNullOrEmpty(Page.CoverImageUrl))
@@ -101,6 +102,7 @@
     {
         <button class="tm-notion-header-icon tm-notion-header-icon--emoji"
                 type="button"
+                @ref="_iconTriggerRef"
                 disabled="@ReadOnly"
                 aria-label="@Loc["TmNotionPage_IconLabel"]"
                 title="@Loc["TmNotionPage_IconLabel"]"
@@ -112,6 +114,7 @@
     {
         <button class="tm-notion-header-icon tm-notion-header-icon--image"
                 type="button"
+                @ref="_iconTriggerRef"
                 disabled="@ReadOnly"
                 aria-label="@Loc["TmNotionPage_IconLabel"]"
                 @onclick="ToggleIconPickerAsync">
@@ -125,7 +128,7 @@
         <div class="tm-notion-header-meta__add-row">
             @if (string.IsNullOrEmpty(Page.IconEmoji) && string.IsNullOrEmpty(Page.IconImageUrl))
             {
-                <button class="tm-notion-header-meta__add-btn" type="button" @onclick="ToggleIconPickerAsync">
+                <button class="tm-notion-header-meta__add-btn" type="button" @ref="_iconTriggerRef" @onclick="ToggleIconPickerAsync">
                     @Loc["TmNotionPage_AddIcon"]
                 </button>
             }
@@ -215,28 +218,40 @@
 
 </div>
 
-@* ── Emoji picker ──────────────────────────────────────────────────────────── *@
+@* ── Emoji picker — core overlay so Escape closes it and focus returns to the trigger. *@
 @if (_showIconPicker && !ReadOnly)
 {
-    <div class="tm-notion-emoji-picker"
-         role="dialog"
-         aria-label="@Loc["TmNotionPageHeader_EmojiPickerTitle"]"
-         aria-modal="true">
+    <TmOverlayPanel Anchor="_iconTriggerRef"
+                    IsOpen="true"
+                    IsOpenChanged="OnIconPickerOpenChanged"
+                    LayoutMode="LayoutMode"
+                    MobilePresentation="PanelPresentation.Auto"
+                    Placement="OverlayPlacement.Bottom"
+                    Align="OverlayAlign.Start"
+                    Role="dialog"
+                    AriaLabel="@Loc["TmNotionPageHeader_EmojiPickerTitle"]"
+                    SheetTitle="@Loc["TmNotionPageHeader_EmojiPickerTitle"]"
+                    SheetInitialFocusSelector=".tm-notion-emoji-picker__search"
+                    Class="tm-notion-emoji-picker"
+                    OnDismissed="OnIconPickerDismissed">
+    <div class="tm-notion-emoji-picker__panel">
         <div class="tm-notion-emoji-picker__header">
             <input class="tm-notion-emoji-picker__search"
-                   type="search"
+                   type="text"
+                   autocomplete="off"
                    aria-label="@Loc["TmNotionPageHeader_EmojiSearch"]"
                    placeholder="@Loc["TmNotionPageHeader_EmojiSearch"]"
                    @bind="_emojiSearch"
                    @bind:event="oninput"
-                   autofocus />
+                   @onkeydown="HandleIconPickerKey"
+                   @onkeydown:stopPropagation="true" />
             <button class="tm-notion-emoji-picker__remove"
                     type="button"
                     @onclick="RemoveIconAsync">
                 @Loc["TmNotionPageHeader_RemoveIcon"]
             </button>
         </div>
-        <div class="tm-notion-emoji-picker__body">
+        <div class="tm-notion-emoji-picker__body" @onkeydown="HandleIconPickerKey" @onkeydown:stopPropagation="true">
             @if (_recentEmojis.Count > 0 && string.IsNullOrWhiteSpace(_emojiSearch))
             {
                 <div class="tm-notion-emoji-picker__category tm-notion-emoji-picker__category--recent">
@@ -276,8 +291,5 @@
             }
         </div>
     </div>
-    <div class="tm-notion-emoji-picker-backdrop"
-         aria-hidden="true"
-         @onclick="() => _showIconPicker = false">
-    </div>
+    </TmOverlayPanel>
 }
