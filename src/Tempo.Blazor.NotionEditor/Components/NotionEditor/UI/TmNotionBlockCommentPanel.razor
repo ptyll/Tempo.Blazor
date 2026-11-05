@@ -3,21 +3,64 @@
 @using Tempo.Blazor.Components.NotionEditor.Models
 @using Tempo.Blazor.Components.NotionEditor.Services
 @using Tempo.Blazor.Components.Feedback
+@using Tempo.Blazor.Components.Overlay
+@using Tempo.Blazor.Components.Buttons
 @using Tempo.Blazor.Components.Icons
 
-@* ── Backdrop ────────────────────────────────────────────────────────────── *@
+@* ── Phase 4 (NO1): CommentPresentation decides the surface. Dialog (or Auto on a narrow /
+     mobile layout) rides the core TmModal — visible title, footer "Close", Escape, focus return.
+     Auto on a desktop layout keeps the anchored popover bubble — no own backdrop, no z-index,
+     no false aria-modal. ── *@
 @if (Visible)
 {
-    <div class="tm-nbcp-backdrop" @onclick="CloseAsync" aria-hidden="true"></div>
+    @if (UseDialog)
+    {
+        <TmModal Show="true"
+                 OnClose="CloseAsync"
+                 Title="@DialogTitle"
+                 Size="ModalSize.Large"
+                 MobilePresentation="MobilePresentation.Auto"
+                 Class="tm-nbcp-dialog">
+            <ChildContent>@CardContent</ChildContent>
+            <Footer>
+                <TmButton Variant="ButtonVariant.Primary" OnClick="CloseAsync">@Loc["Tm_Close"]</TmButton>
+            </Footer>
+        </TmModal>
+    }
+    else
+    {
+        @* Phase 4 review: a fixed zero-size anchor span at the bubble position lets the core
+           TmOverlayPanel promote the bubble into the browser top layer (Escape, outside click,
+           anchor tracking) — no host-computed fixed card, no own backdrop or z-index. *@
+        <span class="tm-nbcp-anchor"
+              style="position:fixed;top:@(_top)px;left:@(_left)px;width:0;height:0"
+              aria-hidden="true"
+              @ref="_anchorRef"></span>
+        <TmOverlayPanel Anchor="_anchorRef"
+                        IsOpen="true"
+                        Role="dialog"
+                        AriaLabel="@Loc["TmNotionBlockComment_PanelLabel"]"
+                        Placement="OverlayPlacement.Bottom"
+                        Align="OverlayAlign.Start"
+                        Offset="0"
+                        Class="tm-nbcp-popover"
+                        OnDismissed="CloseAsync">
+            @CardContent
+        </TmOverlayPanel>
+    }
+}
 
-    @* ── Panel card ──────────────────────────────────────────────────────────── *@
-    <div class="tm-nbcp"
-         role="dialog"
-         aria-label="@Loc["TmNotionBlockComment_PanelLabel"]"
-         aria-modal="true"
-         style="top:@(_top)px;left:@(_left)px"
-         @onkeydown:stopPropagation="true"
-         @ref="_panelRef">
+@code {
+    /// <summary>The anchored popover card — the single content definition for both surfaces. The
+    /// dialog role and accessible name live on the surface that hosts the card: the core
+    /// TmFocusScope of the TmModal (UseDialog) or the TmOverlayPanel popover — never both.</summary>
+    private RenderFragment CardContent => __builder =>
+    {
+        <div class="tm-nbcp @(IsSplit ? "tm-nbcp--split" : "") @(UseDialog ? "tm-nbcp--in-dialog" : "tm-nbcp--popover")"
+             role="@(UseDialog ? null : "dialog")"
+             aria-label="@(UseDialog ? null : Loc["TmNotionBlockComment_PanelLabel"])"
+             @onkeydown:stopPropagation="true"
+             @ref="_panelRef">
 
         @* ── Header ────────────────────────────────────────────────────────── *@
         <div class="tm-nbcp__header">
@@ -46,14 +89,19 @@
             }
             else if (_isCreatingNewThread)
             {
-                <button class="tm-nbcp__back-btn"
-                        type="button"
-                        aria-label="@Loc["Tm_Back"]"
-                        @onclick="BackToThreadList">
-                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
-                        <path d="M10 2L4 7l6 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                </button>
+                @* With zero threads there is no list to go back to — the back affordance would
+                   strand the user on an empty sheet (UX review of the phase-4 mobile capture). *@
+                @if (!IsSplit && _comments.Count > 0)
+                {
+                    <button class="tm-nbcp__back-btn"
+                            type="button"
+                            aria-label="@Loc["Tm_Back"]"
+                            @onclick="BackToThreadList">
+                        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+                            <path d="M10 2L4 7l6 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </button>
+                }
                 <span class="tm-nbcp__header-title">@Loc["TmNotionBlockComment_NewThread"]</span>
                 <div class="tm-nbcp__header-actions">
                     <button class="tm-nbcp__close-btn"
@@ -68,14 +116,17 @@
             }
             else if (IsThreadDetail)
             {
-                <button class="tm-nbcp__back-btn"
-                        type="button"
-                        aria-label="@Loc["Tm_Back"]"
-                        @onclick="BackToThreadList">
-                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
-                        <path d="M10 2L4 7l6 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                </button>
+                @if (!IsSplit)
+                {
+                    <button class="tm-nbcp__back-btn"
+                            type="button"
+                            aria-label="@Loc["Tm_Back"]"
+                            @onclick="BackToThreadList">
+                        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+                            <path d="M10 2L4 7l6 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </button>
+                }
                 <span class="tm-nbcp__header-title">@Loc["TmNotionBlockComment_ThreadDetail"]</span>
                 <div class="tm-nbcp__header-actions">
                     @if (_selectedComment is not null)
@@ -165,8 +216,8 @@
             }
         </div>
 
-        @* ── Thread list ───────────────────────────────────────────────────── *@
-        @if (IsThreadList)
+        @* ── Thread list (also pinned next to the detail in the split dialog) ── *@
+        @if (IsThreadList || (IsSplit && _selectedComment is not null))
         {
             <div class="tm-nbcp__thread-list" role="list" aria-label="@Loc["TmNotionBlockComment_ThreadList"]">
                 @foreach (var comment in _comments.OrderBy(c => c.IsResolved()).ThenByDescending(c => c.LastActivityAt()))
@@ -350,7 +401,8 @@
             <div class="tm-nbcp__error" role="alert">@_error</div>
         }
 
-    </div>
+        </div>
+    };
 }
 
 

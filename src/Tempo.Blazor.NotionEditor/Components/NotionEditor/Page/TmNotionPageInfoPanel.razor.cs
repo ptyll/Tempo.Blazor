@@ -1,5 +1,6 @@
 using System.Globalization;
 using Microsoft.AspNetCore.Components;
+using Tempo.Blazor.Abstractions.Layout;
 using Tempo.Blazor.Abstractions.Shared;
 using Tempo.Blazor.Components.NotionEditor.Services;
 using Tempo.Blazor.NotionEditor.Interfaces;
@@ -10,6 +11,10 @@ namespace Tempo.Blazor.Components.NotionEditor.Page;
 public partial class TmNotionPageInfoPanel : ComponentBase
 {
     [CascadingParameter] private NotionEditorContext Context { get; set; } = default!;
+
+    [CascadingParameter] private TmLayoutContext? Layout { get; set; }
+
+    private TmLayoutMode LayoutMode => Layout?.Resolved ?? TmLayoutMode.Auto;
 
     /// <summary>The page whose metadata should be displayed.</summary>
     [Parameter, EditorRequired]
@@ -30,6 +35,7 @@ public partial class TmNotionPageInfoPanel : ComponentBase
     private PageStats _stats = PageStats.Empty;
     private PageAnalyticsDto? _analytics;
     private IReadOnlyDictionary<string, string> _userDisplayNames = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+    private IReadOnlyDictionary<string, TmUser> _resolvedUsers = new Dictionary<string, TmUser>(StringComparer.OrdinalIgnoreCase);
     private Guid _loadedPageId;
     private IReadOnlyList<IPageBlock>? _loadedBlocksReference;
     private bool _wasVisible;
@@ -62,7 +68,9 @@ public partial class TmNotionPageInfoPanel : ComponentBase
 
         _stats = PageStats.Calculate(fragments);
         _analytics = null;
-        _userDisplayNames = await ResolveUserDisplayNamesAsync(Page.CreatedByUserId, Page.LastEditedByUserId);
+        var resolution = await ResolveUsersAsync(Page.CreatedByUserId, Page.LastEditedByUserId);
+        _userDisplayNames = resolution.DisplayNames;
+        _resolvedUsers    = resolution.Users;
 
         if (Context.AnalyticsProvider is null)
             return;
@@ -124,11 +132,25 @@ public partial class TmNotionPageInfoPanel : ComponentBase
             : Loc["Notion_PageInfo_UnknownUser"];
     }
 
-    private async Task<IReadOnlyDictionary<string, string>> ResolveUserDisplayNamesAsync(params string?[] userIds)
+    private string ResolveUserName(string? userId)
+        => !string.IsNullOrWhiteSpace(userId)
+        && _resolvedUsers.TryGetValue(userId.Trim(), out var user)
+        && !string.IsNullOrWhiteSpace(user.DisplayName)
+            ? user.DisplayName
+            : FormatUser(userId);
+
+    private string? ResolveUserAvatar(string? userId)
+        => !string.IsNullOrWhiteSpace(userId)
+        && _resolvedUsers.TryGetValue(userId.Trim(), out var user)
+            ? user.AvatarUrl
+            : null;
+
+    private async Task<(IReadOnlyDictionary<string, string> DisplayNames, IReadOnlyDictionary<string, TmUser> Users)> ResolveUsersAsync(params string?[] userIds)
     {
-        var result = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        var names = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        var users = new Dictionary<string, TmUser>(StringComparer.OrdinalIgnoreCase);
         if (Context.MentionProvider is null)
-            return result;
+            return (names, users);
 
         foreach (var userId in userIds.Select(id => id?.Trim()).Where(id => !string.IsNullOrWhiteSpace(id)).Distinct(StringComparer.OrdinalIgnoreCase))
         {
@@ -137,15 +159,16 @@ public partial class TmNotionPageInfoPanel : ComponentBase
                 var match = await Context.MentionProvider.GetByIdAsync(userId!);
                 if (match is null)
                 {
-                    var users = await Context.MentionProvider.SearchAsync(new TmPeopleQuery { SearchText = userId, Take = 8 });
-                    match = users.FirstOrDefault(user =>
+                    var found = await Context.MentionProvider.SearchAsync(new TmPeopleQuery { SearchText = userId, Take = 8 });
+                    match = found.FirstOrDefault(user =>
                         string.Equals(user.Id, userId, StringComparison.OrdinalIgnoreCase) ||
                         string.Equals(user.UserName, userId, StringComparison.OrdinalIgnoreCase));
                 }
 
                 if (match is not null && !string.IsNullOrWhiteSpace(match.DisplayName))
                 {
-                    result[userId!] = match.DisplayName;
+                    names[userId!] = match.DisplayName;
+                    users[userId!] = match;
                 }
             }
             catch
@@ -153,7 +176,7 @@ public partial class TmNotionPageInfoPanel : ComponentBase
             }
         }
 
-        return result;
+        return (names, users);
     }
 
     private static string FormatDate(DateTime date)

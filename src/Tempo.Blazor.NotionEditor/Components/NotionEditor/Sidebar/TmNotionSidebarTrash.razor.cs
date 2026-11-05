@@ -30,6 +30,9 @@ public partial class TmNotionSidebarTrash : ComponentBase
 
     private HashSet<Guid> _pendingDelete = [];
 
+    /// <summary>Ancestor breadcrumb per trashed page (joined " / "), resolved from the loaded tree.</summary>
+    private readonly Dictionary<Guid, string> _parentPaths = [];
+
     // ── Computed ──────────────────────────────────────────────────────────────
 
     private IReadOnlyList<INotionPage> FilteredItems =>
@@ -44,9 +47,6 @@ public partial class TmNotionSidebarTrash : ComponentBase
         string.IsNullOrWhiteSpace(page.Title)
             ? Loc["TmNotionSidebarTrash_Untitled"]
             : page.Title;
-
-    private string GetIcon(INotionPage page) =>
-        string.IsNullOrEmpty(page.IconEmoji) ? "📄" : page.IconEmoji;
 
     private string GetDeletedAt(INotionPage page)
     {
@@ -66,6 +66,45 @@ public partial class TmNotionSidebarTrash : ComponentBase
     }
 
     private bool IsConfirming(Guid id) => _pendingDelete.Contains(id);
+
+    private string GetParentPath(INotionPage page)
+        => _parentPaths.TryGetValue(page.Id, out var path) ? path : string.Empty;
+
+    private async Task<IReadOnlyDictionary<Guid, string>> ResolveParentPathsAsync(IReadOnlyList<INotionPage> items)
+    {
+        var paths = new Dictionary<Guid, string>();
+        foreach (var item in items)
+        {
+            var segments = new List<string>();
+            var seen = new HashSet<Guid> { item.Id };
+            var parentId = item.ParentId?.ToString("D");
+            while (!string.IsNullOrEmpty(parentId) && Guid.TryParse(parentId, out var parentGuid) && seen.Add(parentGuid))
+            {
+                INotionPage? parent;
+                try
+                {
+                    parent = await Context.DataProvider.GetPageAsync(parentGuid.ToString("D"));
+                }
+                catch
+                {
+                    break;
+                }
+
+                if (parent is null)
+                    break;
+
+                segments.Insert(0, string.IsNullOrWhiteSpace(parent.Title)
+                    ? Loc["TmNotionSidebarTrash_Untitled"].ToString()
+                    : parent.Title);
+                parentId = parent.ParentId?.ToString("D");
+            }
+
+            if (segments.Count > 0)
+                paths[item.Id] = string.Join(" / ", segments);
+        }
+
+        return paths;
+    }
 
     // ── Lifecycle ─────────────────────────────────────────────────────────────
 
@@ -100,6 +139,9 @@ public partial class TmNotionSidebarTrash : ComponentBase
             _allItems  = result
                 .OrderByDescending(p => p.DeletedAt ?? DateTime.MinValue)
                 .ToList();
+            _parentPaths.Clear();
+            foreach (var (id, path) in await ResolveParentPathsAsync(_allItems))
+                _parentPaths[id] = path;
         }
         catch
         {

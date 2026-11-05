@@ -65,7 +65,6 @@ public partial class TmNotionPageHeader : ComponentBase, IDisposable
     private ElementReference _titleRef;
     private ElementReference _descRef;
     private ElementReference _coverRef;
-    private ElementReference _iconTriggerRef;
 
     private TmLayoutMode LayoutMode => Layout?.Resolved ?? TmLayoutMode.Auto;
 
@@ -138,10 +137,16 @@ public partial class TmNotionPageHeader : ComponentBase, IDisposable
         _showCoverDialog = !_showCoverDialog;
         if (_showCoverDialog)
         {
-            _showIconPicker = false;
-            _coverUrlInput  = IsCssGradient(Page.CoverImageUrl) ? string.Empty : Page.CoverImageUrl ?? string.Empty;
+            _showIconPicker  = false;
+            _coverUrlInput   = IsCssGradient(Page.CoverImageUrl) ? string.Empty : Page.CoverImageUrl ?? string.Empty;
         }
     }
+
+    private void CloseCoverDialog() => _showCoverDialog = false;
+
+    private bool IsCurrentPreset(CoverPreset preset)
+        => !string.IsNullOrEmpty(Page.CoverImageUrl)
+        && string.Equals(Page.CoverImageUrl, preset.Background, StringComparison.Ordinal);
 
     private async Task SaveCoverUrlAsync()
     {
@@ -161,8 +166,9 @@ public partial class TmNotionPageHeader : ComponentBase, IDisposable
 
     private async Task OnCoverUrlKeyDown(KeyboardEventArgs e)
     {
-        if (e.Key == "Enter")        await SaveCoverUrlAsync();
-        else if (e.Key == "Escape") _showCoverDialog = false;
+        // Enter submits; Escape is owned by the TmModal focus trap (document-level, closes from
+        // any element) and must not be swallowed here.
+        if (e.Key == "Enter") await SaveCoverUrlAsync();
     }
 
     private async Task ApplyCoverPresetAsync(CoverPreset preset)
@@ -236,49 +242,11 @@ public partial class TmNotionPageHeader : ComponentBase, IDisposable
         }
     }
 
-    private void HandleIconPickerKey(KeyboardEventArgs e)
-    {
-        if (e.Key != "Escape")
-            return;
-
-        // type="text" does not swallow Escape the way type="search" does, but stop it here
-        // anyway: the overlay owns the close, and a bubbling Escape must not reach the editor.
-        CloseIconPicker();
-    }
-
-    private Task OnIconPickerOpenChanged(bool open)
-    {
-        if (!open)
-            CloseIconPicker();
-        return Task.CompletedTask;
-    }
-
-    private Task OnIconPickerDismissed(string? _)
-    {
-        CloseIconPicker();
-        return Task.CompletedTask;
-    }
-
-    private void CloseIconPicker()
-    {
-        if (!_showIconPicker)
-            return;
-
-        _showIconPicker = false;
-        _ = RestoreIconTriggerFocusAsync();
-    }
-
-    private async Task RestoreIconTriggerFocusAsync()
-    {
-        try
-        {
-            await _iconTriggerRef.FocusAsync();
-        }
-        catch
-        {
-            // SSR / disposed trigger.
-        }
-    }
+    /// <summary>
+    /// Closes the picker. The TmModal that hosts it owns the trigger focus restore
+    /// (<c>NoteOpenerOnMount</c>), so no explicit focus move happens here.
+    /// </summary>
+    private void CloseIconPicker() => _showIconPicker = false;
 
     private async Task SelectEmojiAsync(string emoji)
     {

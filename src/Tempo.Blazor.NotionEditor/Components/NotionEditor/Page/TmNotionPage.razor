@@ -271,6 +271,7 @@
                            Top="@_blockCommentTop"
                            Left="@_blockCommentLeft"
                            StartInNewThreadMode="@_blockCommentStartInNewThreadMode"
+                           Presentation="@(Context.CommentPresentation)"
                            OnClosed="HandleBlockCommentClosedAsync"
                            OnCountChanged="async _ => await HandleBlockCommentCountChangedAsync(_blockCommentBlockId)" />
 
@@ -283,6 +284,7 @@
                           HighlightedText="@_textCommentHighlight"
                           Top="@_textCommentTop"
                           Left="@_textCommentLeft"
+                          Presentation="@(Context.CommentPresentation)"
                           OnClosed="HandleTextCommentClosedAsync"
                           OnResolved="HandleTextCommentResolvedAsync"
                           OnCountChanged="_ => StateHasChanged()" />

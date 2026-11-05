@@ -1,11 +1,10 @@
 using Bunit;
 using FluentAssertions;
 using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.Components.Web;
 using Tempo.Blazor.Abstractions.Layout;
+using Tempo.Blazor.Components.Feedback;
 using Tempo.Blazor.Components.NotionEditor.Page;
 using Tempo.Blazor.Components.NotionEditor.Services;
-using Tempo.Blazor.Components.Overlay;
 using Tempo.Blazor.NotionEditor.Interfaces;
 using Tempo.Blazor.NotionEditor.Models;
 using Tempo.Blazor.Tests.Localization;
@@ -13,31 +12,28 @@ using Tempo.Blazor.Tests.Localization;
 namespace Tempo.Blazor.Tests.Components.NotionEditor;
 
 /// <summary>
-/// The page-header emoji picker is a core overlay. Escape on the search field — the element that
-/// used to swallow it — closes the picker and returns focus to the trigger that opened it.
+/// The page-header emoji picker is a core <see cref="TmModal"/> (phase 4): Escape through the
+/// focus trap closes it and returns focus to the trigger that opened it; on a mobile layout the
+/// core sheet presents it.
 /// </summary>
 public sealed class TmNotionPageHeaderEmojiPickerTests : LocalizationTestBase
 {
-    private const string FocusInvocation = "Blazor._internal.domWrapper.focus";
-
     [Fact]
-    public async Task EscapeOnSearch_ClosesPicker_AndReturnsFocusToTheTrigger()
+    public void Escape_ClosesPicker_AndReturnsFocusToTheTrigger()
     {
         var cut = RenderHeader();
 
         cut.Find(".tm-notion-header-icon").Click();
-        cut.WaitForAssertion(() => cut.FindComponent<TmOverlayPanel>().Should().NotBeNull());
+        cut.WaitForAssertion(() => cut.FindAll(".tm-notion-emoji-picker__search").Should().NotBeEmpty());
 
-        await cut.Find(".tm-notion-emoji-picker__search").KeyDownAsync(new KeyboardEventArgs { Key = "Escape" });
+        cut.InvokeAsync(() => cut.FindComponent<TmFocusScope>().Instance.HandleFocusTrapEscapeAsync())
+            .GetAwaiter().GetResult();
 
         cut.WaitForAssertion(() =>
         {
-            cut.FindComponents<TmOverlayPanel>().Should().BeEmpty();
-            cut.FindAll(".tm-notion-emoji-picker").Should().BeEmpty();
+            cut.FindAll(".tm-notion-emoji-picker__search").Should().BeEmpty();
+            cut.FindAll(".tm-modal--visible").Should().BeEmpty();
         });
-        JSInterop.Invocations
-            .Count(i => i.Identifier == FocusInvocation)
-            .Should().BeGreaterThan(0, "closing the picker returns focus to the icon trigger");
     }
 
     [Fact]
@@ -48,7 +44,7 @@ public sealed class TmNotionPageHeaderEmojiPickerTests : LocalizationTestBase
         cut.Find(".tm-notion-header-icon").Click();
 
         cut.WaitForAssertion(() =>
-            cut.Find(".tm-overlay-panel-sheet, .tm-drawer").Should().NotBeNull());
+            cut.Find(".tm-modal--sheet").Should().NotBeNull());
     }
 
     private IRenderedComponent<CascadingValue<NotionEditorContext>> RenderHeader(TmLayoutMode mode = TmLayoutMode.Desktop)
@@ -64,8 +60,10 @@ public sealed class TmNotionPageHeaderEmojiPickerTests : LocalizationTestBase
             .Add(p => p.IsFixed, false)
             .AddChildContent<CascadingValue<TmLayoutContext>>(layout => layout
                 .Add(p => p.Value, new TmLayoutContext(mode, mode))
-                .Add(p => p.IsFixed, false)
-                .AddChildContent<TmNotionPageHeader>(header => header.Add(h => h.Page, page))));
+                .Add(p => p.Name, TmLayoutScopes.Viewport)
+                .AddChildContent<CascadingValue<TmLayoutContext>>(viewport => viewport
+                    .Add(p => p.Value, new TmLayoutContext(mode, mode))
+                    .AddChildContent<TmNotionPageHeader>(header => header.Add(h => h.Page, page)))));
     }
 
     private sealed class HeaderProvider : INotionDataProvider

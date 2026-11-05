@@ -1,64 +1,19 @@
-/* ── Field Editor Panel ─────────────────────────────────────────────────── */
+/* ── Field Editor ───────────────────────────────────────────────────────────
+   Phase 4 (DB-3): the dialog chrome rides the core TmModal — this stylesheet keeps the content
+   styles only (no card chrome, no own backdrop, no z-index). */
 
 .tm-dbfe {
     display:        flex;
     flex-direction: column;
     gap:            0;
-    width:          320px;
-    max-height:     70vh;
-    overflow-y:     auto;
-    background:     var(--tm-bg-surface);
-    border:         1px solid var(--tm-border-color);
-    border-radius:  10px;
-    box-shadow: var(--tm-shadow-popover);
     font-size:      0.8125rem;
     color:          var(--tm-text-primary);
-    animation:      tm-dbfe-slide-in .13s ease;
 }
-
-@keyframes tm-dbfe-slide-in {
-    from { opacity: 0; transform: translateY(-6px) scale(.98); }
-    to   { opacity: 1; transform: none; }
-}
-
-/* ── Header ─────────────────────────────────────────────────────────────── */
-
-.tm-dbfe__header {
-    display:         flex;
-    align-items:     center;
-    justify-content: space-between;
-    padding:         12px 14px 8px;
-    border-bottom:   1px solid var(--tm-border-color);
-    flex-shrink:     0;
-}
-
-.tm-dbfe__title {
-    font-weight: 600;
-    font-size:   0.75rem;
-    text-transform: uppercase;
-    letter-spacing: .04em;
-    color:          var(--tm-text-secondary);
-}
-
-.tm-dbfe__close {
-    display:         flex;
-    align-items:     center;
-    justify-content: center;
-    width:           22px;
-    height:          22px;
-    border:          none;
-    background:      none;
-    border-radius:   5px;
-    cursor:          pointer;
-    color:           var(--tm-text-secondary);
-    transition:      background .12s, color .12s;
-}
-.tm-dbfe__close:hover { background: var(--tm-color-surface-hover); color: var(--tm-text-primary); }
 
 /* ── Sections ───────────────────────────────────────────────────────────── */
 
 .tm-dbfe__section {
-    padding:       10px 14px;
+    padding:       10px 0;
     border-bottom: 1px solid var(--tm-color-border-subtle);
     display:       flex;
     flex-direction: column;
@@ -352,16 +307,14 @@
     color:       var(--tm-text-secondary);
 }
 
-/* ── Footer ─────────────────────────────────────────────────────────────── */
+/* ── Footer (inside the TmModal footer fragment) ──────────────────────────── */
 
 .tm-dbfe__footer {
     display:         flex;
     align-items:     center;
     justify-content: space-between;
     gap:             8px;
-    padding:         10px 14px 12px;
-    border-top:      1px solid var(--tm-border-color);
-    flex-shrink:     0;
+    width:           100%;
 }
 
 .tm-dbfe__footer-danger {
@@ -370,44 +323,45 @@
     gap:         4px;
 }
 
-.tm-dbfe__btn {
+.tm-dbfe__footer-right {
+    display:     flex;
+    align-items: center;
+    gap:         8px;
+    margin-left: auto;
+}
+
+/* ── Option reorder (non-drag alternative) ─────────────────────────────── */
+
+.tm-dbfe__opt-reorder {
+    display:        flex;
+    flex-direction: column;
+    gap:            2px;
+    flex-shrink:    0;
+}
+
+.tm-dbfe__opt-up,
+.tm-dbfe__opt-down {
     display:         inline-flex;
     align-items:     center;
-    gap:             5px;
-    padding:         5px 11px;
-    border-radius:   6px;
-    font-size:       0.8125rem;
-    font-weight:     500;
-    cursor:          pointer;
+    justify-content: center;
+    width:           22px;
+    height:          16px;
+    padding:         0;
     border:          none;
-    transition:      background .12s, color .12s, box-shadow .12s;
+    border-radius:   4px;
+    background:      transparent;
+    color:           var(--tm-text-secondary);
+    cursor:          pointer;
 }
 
-.tm-dbfe__btn--primary {
-    background: var(--tm-color-primary-solid);
-    color:      var(--tm-color-on-primary-fixed);
-}
-.tm-dbfe__btn--primary:hover {
-    background: color-mix(in srgb, var(--tm-color-primary) 85%, var(--tm-color-gray-900));
-    box-shadow: 0 2px 6px color-mix(in srgb, var(--tm-color-primary) 40%, transparent);
-}
-
-.tm-dbfe__btn--ghost {
-    background: none;
-    color:      var(--tm-text-secondary);
-    border:     1px solid var(--tm-border-color);
-}
-.tm-dbfe__btn--ghost:hover {
+.tm-dbfe__opt-up:hover:not(:disabled),
+.tm-dbfe__opt-down:hover:not(:disabled) {
     background: var(--tm-color-surface-hover);
     color:      var(--tm-text-primary);
 }
 
-.tm-dbfe__btn--danger {
-    background: none;
-    color: var(--tm-color-danger);
-    border:     1px solid var(--tm-color-primary);
-}
-.tm-dbfe__btn--danger:hover {
-    background: var(--tm-color-danger-subtle);
-    border-color: var(--tm-color-danger);
+.tm-dbfe__opt-up:disabled,
+.tm-dbfe__opt-down:disabled {
+    opacity: 0.35;
+    cursor:  default;
 }

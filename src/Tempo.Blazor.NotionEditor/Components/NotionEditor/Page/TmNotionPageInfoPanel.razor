@@ -1,65 +1,88 @@
 @namespace Tempo.Blazor.Components.NotionEditor.Page
 @using Tempo.Blazor.NotionEditor.Interfaces
+@using Tempo.Blazor.Components.Avatars
+@using Tempo.Blazor.Components.Buttons
+@using Tempo.Blazor.Components.Feedback
+@using Tempo.Blazor.Components.Icons
 
-@if (Visible)
-{
-    <div class="tm-page-info-backdrop" aria-hidden="true" @onclick="CloseAsync"></div>
-    <aside class="tm-page-info"
-           role="dialog"
-           aria-modal="true"
-           aria-label="@Loc["Notion_PageInfo_Title"]"
-           data-page-info-panel>
-        <header class="tm-page-info__header">
-            <div>
-                <h2 class="tm-page-info__title">@Loc["Notion_PageInfo_Title"]</h2>
-                <p class="tm-page-info__subtitle">@Page.Title</p>
-            </div>
-            <button class="tm-page-info__close"
-                    type="button"
-                    aria-label="@Loc["Tm_Close"]"
-                    title="@Loc["Tm_Close"]"
-                    @onclick="CloseAsync">
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-                    <path d="M3 3l10 10M13 3L3 13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-                </svg>
-            </button>
-        </header>
+@* Phase 4 (N1): the page-info panel rides the core TmModal — a visible title, ×, Escape,
+   focus return and a "Close" footer. No own backdrop or z-index. *@
+<TmModal Show="Visible"
+         OnClose="CloseAsync"
+         Title="@Loc["Notion_PageInfo_Title"]"
+         Subtitle="@Page.Title"
+         Size="ModalSize.Small"
+         MobilePresentation="MobilePresentation.Auto"
+         LayoutMode="LayoutMode"
+         data-page-info-panel>
+    <ChildContent>
+        <div class="tm-page-info">
+            <section class="tm-page-info__section" aria-label="@Loc["Notion_PageInfo_Title"]">
+                <dl class="tm-page-info__facts">
+                    <div class="tm-page-info__fact tm-page-info__created">
+                        <dt>
+                            <TmIcon Name="@IconNames.Calendar" Size="IconSize.Xs" />
+                            @Loc["Notion_PageInfo_Created"]
+                        </dt>
+                        <dd>
+                            <span class="tm-page-info__user">
+                                <TmAvatar Name="@ResolveUserName(Page.CreatedByUserId)"
+                                          Src="@ResolveUserAvatar(Page.CreatedByUserId)"
+                                          Alt="@ResolveUserName(Page.CreatedByUserId)"
+                                          Size="AvatarSize.Xs" />
+                                @FormatUser(Page.CreatedByUserId)
+                            </span>
+                            <time datetime="@Page.CreatedAt.ToString("O")">@FormatDate(Page.CreatedAt)</time>
+                        </dd>
+                    </div>
+                    <div class="tm-page-info__fact tm-page-info__last-edited">
+                        <dt>
+                            <TmIcon Name="@IconNames.Clock" Size="IconSize.Xs" />
+                            @Loc["Notion_PageInfo_LastEdited"]
+                        </dt>
+                        <dd>
+                            <span class="tm-page-info__user">
+                                <TmAvatar Name="@ResolveUserName(Page.LastEditedByUserId)"
+                                          Src="@ResolveUserAvatar(Page.LastEditedByUserId)"
+                                          Alt="@ResolveUserName(Page.LastEditedByUserId)"
+                                          Size="AvatarSize.Xs" />
+                                @FormatUser(Page.LastEditedByUserId)
+                            </span>
+                            <time datetime="@Page.LastEditedAt.ToString("O")">@FormatDate(Page.LastEditedAt)</time>
+                        </dd>
+                    </div>
+                </dl>
+            </section>
 
-        <section class="tm-page-info__section" aria-label="@Loc["Notion_PageInfo_Title"]">
-            <dl class="tm-page-info__facts">
-                <div class="tm-page-info__fact tm-page-info__created">
-                    <dt>@Loc["Notion_PageInfo_Created"]</dt>
-                    <dd>
-                        <span class="tm-page-info__user">@FormatUser(Page.CreatedByUserId)</span>
-                        <time datetime="@Page.CreatedAt.ToString("O")">@FormatDate(Page.CreatedAt)</time>
-                    </dd>
+            <section class="tm-page-info__metrics" aria-label="@Loc["Notion_PageInfo_Words"]">
+                <div class="tm-page-info__metric tm-page-info__words">
+                    <span class="tm-page-info__metric-label">
+                        <TmIcon Name="@IconNames.FileText" Size="IconSize.Xs" />
+                        @Loc["Notion_PageInfo_Words"]
+                    </span>
+                    <strong class="tm-page-info__metric-value">@_stats.WordCount.ToString("N0")</strong>
                 </div>
-                <div class="tm-page-info__fact tm-page-info__last-edited">
-                    <dt>@Loc["Notion_PageInfo_LastEdited"]</dt>
-                    <dd>
-                        <span class="tm-page-info__user">@FormatUser(Page.LastEditedByUserId)</span>
-                        <time datetime="@Page.LastEditedAt.ToString("O")">@FormatDate(Page.LastEditedAt)</time>
-                    </dd>
+                <div class="tm-page-info__metric tm-page-info__reading-time">
+                    <span class="tm-page-info__metric-label">
+                        <TmIcon Name="@IconNames.Clock" Size="IconSize.Xs" />
+                        @Loc["Notion_PageInfo_ReadingTime"]
+                    </span>
+                    <strong class="tm-page-info__metric-value">@string.Format(Loc["Notion_PageInfo_Minutes"], _stats.ReadingTimeMinutes)</strong>
                 </div>
-            </dl>
-        </section>
-
-        <section class="tm-page-info__metrics" aria-label="@Loc["Notion_PageInfo_Words"]">
-            <div class="tm-page-info__metric tm-page-info__words">
-                <span class="tm-page-info__metric-label">@Loc["Notion_PageInfo_Words"]</span>
-                <strong class="tm-page-info__metric-value">@_stats.WordCount.ToString("N0")</strong>
-            </div>
-            <div class="tm-page-info__metric tm-page-info__reading-time">
-                <span class="tm-page-info__metric-label">@Loc["Notion_PageInfo_ReadingTime"]</span>
-                <strong class="tm-page-info__metric-value">@string.Format(Loc["Notion_PageInfo_Minutes"], _stats.ReadingTimeMinutes)</strong>
-            </div>
-            @if (_analytics is not null)
-            {
-                <div class="tm-page-info__metric tm-page-info__views">
-                    <span class="tm-page-info__metric-label">@Loc["Notion_PageInfo_Views"]</span>
-                    <strong class="tm-page-info__metric-value">@_analytics.Views.ToString("N0")</strong>
-                </div>
-            }
-        </section>
-    </aside>
-}
+                @if (_analytics is not null)
+                {
+                    <div class="tm-page-info__metric tm-page-info__views">
+                        <span class="tm-page-info__metric-label">
+                            <TmIcon Name="@IconNames.Eye" Size="IconSize.Xs" />
+                            @Loc["Notion_PageInfo_Views"]
+                        </span>
+                        <strong class="tm-page-info__metric-value">@_analytics.Views.ToString("N0")</strong>
+                    </div>
+                }
+            </section>
+        </div>
+    </ChildContent>
+    <Footer>
+        <TmButton Variant="ButtonVariant.Primary" OnClick="CloseAsync">@Loc["Tm_Close"]</TmButton>
+    </Footer>
+</TmModal>

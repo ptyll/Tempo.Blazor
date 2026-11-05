@@ -547,6 +547,57 @@ public partial class TmNotionDatabaseBlock : TmComponentBase
 
     // ── Fields panel ─────────────────────────────────────────────────────────
 
+    private ElementReference _fieldsTrigger;
+    private ElementReference _filterTrigger;
+    private ElementReference _sortTrigger;
+    private ElementReference _groupTrigger;
+
+    // The anchored overlay panels close through IsOpenChanged / OnDismissed (outside pointer,
+    // Escape) — both funnel into the same close path as the toggle.
+
+    private void OnFieldsPanelOpenChanged(bool open)
+    {
+        if (!open) _showFieldsPanel = false;
+    }
+
+    private Task OnFieldsPanelDismissed(string? _) { _showFieldsPanel = false; return Task.CompletedTask; }
+
+    /// <summary>The sticky "Done" action of the Properties panel — the explicit close path
+    /// (Q9 autosave: leaving confirms nothing, it just closes, like the sheet header Done).</summary>
+    private async Task CloseFieldsPanelAsync()
+    {
+        _showFieldsPanel = false;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private void OnFilterPanelOpenChanged(bool open)
+    {
+        if (!open) _showFilterPanel = false;
+    }
+
+    private Task OnFilterPanelDismissed(string? _) { _showFilterPanel = false; return Task.CompletedTask; }
+
+    private void OnSortPanelOpenChanged(bool open)
+    {
+        if (!open) _showSortPanel = false;
+    }
+
+    private Task OnSortPanelDismissed(string? _) { _showSortPanel = false; return Task.CompletedTask; }
+
+    private void OnGroupPanelOpenChanged(bool open)
+    {
+        if (!open) _showGroupPanel = false;
+    }
+
+    private Task OnGroupPanelDismissed(string? _) { _showGroupPanel = false; return Task.CompletedTask; }
+
+    private void OnTemplateMenuOpenChanged(bool open)
+    {
+        if (!open) _showTemplateMenu = false;
+    }
+
+    private Task OnTemplateMenuDismissed(string? _) { _showTemplateMenu = false; return Task.CompletedTask; }
+
     private void ToggleFieldsPanel()
     {
         _showFieldsPanel = !_showFieldsPanel;

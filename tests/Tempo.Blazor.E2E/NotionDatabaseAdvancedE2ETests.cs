@@ -292,8 +292,11 @@ public class NotionDatabaseAdvancedE2ETests : WasmTestBase
 
         if (statusRowCount > 0)
         {
-            var toggle = statusRow.Locator(".tm-db__field-toggle");
-            await toggle.ClickAsync(new LocatorClickOptions { Force = true });
+            // The popover is a promoted top-layer surface — dispatch the click in the DOM (the
+            // same approach the sticky table cells use), Playwright's hit-test sees the overlay
+            // geometry as outside the viewport.
+            var toggle = statusRow.Locator("[role='switch']");
+            await toggle.EvaluateAsync("el => el.click()");
             await page.WaitForTimeoutAsync(800);
 
             // Close panel by clicking Properties again
@@ -332,11 +335,11 @@ public class NotionDatabaseAdvancedE2ETests : WasmTestBase
         if (await statusRow.CountAsync() > 0)
         {
             // Toggle off
-            await statusRow.Locator(".tm-db__field-toggle").ClickAsync(new LocatorClickOptions { Force = true });
+            await statusRow.Locator("[role='switch']").EvaluateAsync("el => el.click()");
             await page.WaitForTimeoutAsync(600);
 
             // Toggle on again
-            await statusRow.Locator(".tm-db__field-toggle").ClickAsync(new LocatorClickOptions { Force = true });
+            await statusRow.Locator("[role='switch']").EvaluateAsync("el => el.click()");
             await page.WaitForTimeoutAsync(800);
         }
 
@@ -446,7 +449,7 @@ public class NotionDatabaseAdvancedE2ETests : WasmTestBase
         // Open import/export dialog
         await ClickToolbarButtonAsync(db, "Import");
 
-        var importExportOverlay = page.Locator(".tm-dbie__overlay");
+        var importExportOverlay = page.Locator(".tm-modal-overlay:has(.tm-dbie)");
         await importExportOverlay.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 8000 });
 
         // Switch to Export tab
@@ -463,7 +466,7 @@ public class NotionDatabaseAdvancedE2ETests : WasmTestBase
         await exportBody.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 5000 });
 
         // Click the primary export button and wait for download
-        var primaryBtn = page.Locator(".tm-dbie__primary-btn");
+        var primaryBtn = page.Locator(".tm-modal-footer .tm-btn-primary").Last;
         await primaryBtn.WaitForAsync(new LocatorWaitForOptions { Timeout = 5000 });
 
         var download = await page.RunAndWaitForDownloadAsync(async () =>

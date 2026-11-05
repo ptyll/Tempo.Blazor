@@ -348,6 +348,11 @@ public sealed class MarkupClassCoverageTests
         "tm-cbl__state--prompt",
         "tm-child-page__icon",
         "tm-db__panel--fields",
+        // Phase 4 review batch A: the comment popover anchors are zero-size inline-styled spans
+        // (position/size ride the style attribute; the TmOverlayPanel positions against them) —
+        // they carry a class only as a stable selector hook.
+        "tm-nbcp-anchor",
+        "tm-ntcp-anchor",
         "tm-ndv__block--after",
         "tm-ndv__empty",
         "tm-ndv__pane--after",
@@ -483,7 +488,11 @@ public sealed class MarkupClassCoverageTests
             // label's `for` target the first phase-7 pass missed) — 16 → 17.
             ExpectedUnmeasurableStems: 17),
         new Scope("NotionEditor", "Tempo.Blazor.NotionEditor", UnstyledNotionMarkupClasses,
-            MinRazorFiles: 125, MinMarkupClasses: 1900, InheritsCoreCss: true,
+            // Phase 4 (dialog unification) net-removed literal classes — the cover dialog, the
+            // page-info panel, the three DB overlays and both comment-panel backdrops shed their
+            // inline card chrome in favour of the core TmModal/TmOverlayPanel surfaces
+            // (~1 995 → ~1 866).
+            MinRazorFiles: 125, MinMarkupClasses: 1800, InheritsCoreCss: true,
             // Notion redesign phase 1: the field editor and the import/export dialog suffix their
             // ids so two instances on one page no longer collide ("tm-dbfe-{name}-{guid}",
             // "tm-dbie-file-{guid}", "tm-dbie-view-{guid}"). The sweep sees the three stems and

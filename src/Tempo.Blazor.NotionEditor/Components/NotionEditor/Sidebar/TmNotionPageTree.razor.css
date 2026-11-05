@@ -56,42 +56,12 @@
     color: var(--tm-color-danger);
 }
 
-.tm-npt-bulk-panel {
-    margin: var(--tm-space-2);
-    padding: var(--tm-space-3);
-    border: 1px solid var(--tm-border-color);
-    border-radius: var(--tm-radius-md);
-    background: var(--tm-color-surface-elevated);
-    box-shadow: var(--tm-shadow-md);
-}
-
-.tm-npt-bulk-panel__header,
-.tm-npt-bulk-panel__actions {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: var(--tm-space-2);
-}
-
-.tm-npt-bulk-panel__close {
-    width: 32px;
-    height: 32px;
-    border: 0;
-    border-radius: var(--tm-radius-sm);
-    background: transparent;
-    color: var(--tm-text-secondary);
-    cursor: pointer;
-}
-
-.tm-npt-bulk-panel__close:hover {
-    background: var(--tm-color-surface-hover);
-    color: var(--tm-text-primary);
-}
+/* Phase 4: the picker chrome rides the core TmModal — content styles only (no card chrome, no
+   own backdrop, no z-index). */
 
 .tm-npt-bulk-panel__search {
     width: 100%;
-    min-height: 36px;
-    margin-top: var(--tm-space-2);
+    min-height: 40px;
     border: 1px solid var(--tm-border-color);
     border-radius: var(--tm-radius-sm);
     padding: 0 var(--tm-space-3);
@@ -100,16 +70,61 @@
 }
 
 .tm-npt-bulk-panel__results {
-    display: grid;
+    display: flex;
+    flex-direction: column;
     gap: var(--tm-space-1);
     margin-top: var(--tm-space-2);
+    max-height: min(50vh, 26rem);
+    overflow: auto;
+}
+
+.tm-npt-bulk-panel__row {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-1);
+}
+
+.tm-npt-bulk-panel__expand {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 28px;
+    width: 28px;
+    height: 32px;
+    border: 0;
+    border-radius: var(--tm-radius-sm);
+    background: transparent;
+    color: var(--tm-text-secondary);
+    cursor: pointer;
+    transition: transform var(--tm-notion-anim-fast, 120ms);
+}
+
+.tm-npt-bulk-panel__expand--open {
+    transform: rotate(90deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .tm-npt-bulk-panel__expand {
+        transition: none;
+    }
+}
+
+.tm-npt-bulk-panel__expand--spacer {
+    visibility: hidden;
+    pointer-events: none;
+}
+
+.tm-npt-bulk-panel__expand:hover {
+    background: var(--tm-color-surface-hover);
+    color: var(--tm-text-primary);
 }
 
 .tm-npt-bulk-panel__result {
+    flex: 1;
     display: flex;
     align-items: center;
     gap: var(--tm-space-2);
-    min-height: 34px;
+    min-height: 40px;
     border: 0;
     border-radius: var(--tm-radius-sm);
     padding: 0 var(--tm-space-2);
@@ -123,9 +138,9 @@
     background: var(--tm-color-surface-hover);
 }
 
-.tm-npt-bulk-panel__message {
-    margin: 0 0 var(--tm-space-3);
-    color: var(--tm-text-primary);
+.tm-npt-bulk-panel__result[aria-selected="true"] {
+    background: var(--tm-color-primary-subtle, var(--tm-color-surface-hover));
+    color: var(--tm-color-primary);
 }
 
 .tm-npt-bulk-error {

@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.JSInterop;
+using Tempo.Blazor.Abstractions.Layout;
 using Tempo.Blazor.Abstractions.Shared;
 using Tempo.Blazor.Components.NotionEditor.Models;
 using Tempo.Blazor.Components.NotionEditor.Services;
@@ -55,6 +56,9 @@ public partial class TmNotionBlockCommentPanel : ComponentBase, IDisposable, ITm
 
     [CascadingParameter] private NotionEditorContext Context { get; set; } = default!;
 
+    /// <summary>The viewport layout scope — resolves <see cref="NotionCommentPresentation.Auto"/>.</summary>
+    [CascadingParameter] private TmLayoutContext? Layout { get; set; }
+
     // ── Parameters ───────────────────────────────────────────────────────────
 
     /// <summary>
@@ -67,6 +71,15 @@ public partial class TmNotionBlockCommentPanel : ComponentBase, IDisposable, ITm
     [Parameter] public double Top      { get; set; }
     [Parameter] public double Left     { get; set; }
     [Parameter] public bool   StartInNewThreadMode { get; set; }
+
+    /// <summary>
+    /// How the panel presents (NO1). <see cref="NotionCommentPresentation.Auto"/> (the default)
+    /// keeps the anchored popover on a desktop layout and opens the core modal / sheet on a
+    /// touch or narrow (tablet / mobile) layout; <see cref="NotionCommentPresentation.Popover"/>
+    /// pins the popover; <see cref="NotionCommentPresentation.Dialog"/> always opens the modal.
+    /// The host passes <c>TmNotionEditor.CommentPresentation</c> through the editor context.
+    /// </summary>
+    [Parameter] public NotionCommentPresentation Presentation { get; set; } = NotionCommentPresentation.Auto;
 
     [Parameter] public EventCallback          OnClosed        { get; set; }
     [Parameter] public EventCallback<int>     OnCountChanged  { get; set; }
@@ -125,6 +138,10 @@ public partial class TmNotionBlockCommentPanel : ComponentBase, IDisposable, ITm
     private TmNotionCommentDraftState _lastDraftState = new(false, false, false, null, false);
 
     private ElementReference _panelRef;
+
+    /// <summary>The fixed zero-size anchor at the bubble position — the popover-mode
+    /// <c>TmOverlayPanel</c> positions against it and returns focus to it on dismissal.</summary>
+    private ElementReference _anchorRef;
     private int _composerReset;
     private int _inlineReset;
     private DotNetObjectReference<TmNotionBlockCommentPanel>? _dotNetRef;
@@ -136,6 +153,24 @@ public partial class TmNotionBlockCommentPanel : ComponentBase, IDisposable, ITm
 
     private bool IsThreadList => !_isCreatingNewThread && _selectedComment is null && _comments.Count > 1;
     private bool IsThreadDetail => !_isCreatingNewThread && _selectedComment is not null;
+
+    // ── Presentation (NO1) ────────────────────────────────────────────────────
+
+    private bool IsNarrowLayout => Layout?.IsMobile == true || Layout?.IsTablet == true;
+
+    /// <summary>Auto resolves per layout: popover bubble on desktop, core modal/sheet on a touch
+    /// or narrow (tablet / mobile) layout.</summary>
+    private bool UseDialog => Presentation switch
+    {
+        NotionCommentPresentation.Dialog  => true,
+        NotionCommentPresentation.Popover => false,
+        _                                  => IsNarrowLayout,
+    };
+
+    /// <summary>Two or more threads in a dialog on a wide layout render master/detail side by side.</summary>
+    private bool IsSplit => UseDialog && _comments.Count > 1 && !IsNarrowLayout;
+
+    private string DialogTitle => string.Format(Loc["TmNotionComment_BlockDialogTitle"], _comments.Count);
 
     // ── Lifecycle ─────────────────────────────────────────────────────────────
 

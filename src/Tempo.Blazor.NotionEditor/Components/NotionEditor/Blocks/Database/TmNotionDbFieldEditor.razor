@@ -2,18 +2,20 @@
 @using Tempo.Blazor.NotionEditor.Enums
 @using Tempo.Blazor.NotionEditor.Models
 @using Tempo.Blazor.NotionEditor.Interfaces
+@using Tempo.Blazor.Components.Buttons
+@using Tempo.Blazor.Components.Feedback
+@using Tempo.Blazor.Components.Icons
 
-<div class="tm-dbfe" role="dialog" aria-label="@Loc["TmNotionDbFieldEditor_Title"]">
-
-    @* ── Header ──────────────────────────────────────────────────────────── *@
-    <div class="tm-dbfe__header">
-        <span class="tm-dbfe__title">@Loc["TmNotionDbFieldEditor_Title"]</span>
-        <button class="tm-dbfe__close" type="button" @onclick="OnClose" title="@Loc["TmNotionDbFieldEditor_Close"]">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                <path d="M18 6 6 18M6 6l12 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-            </svg>
-        </button>
-    </div>
+@* Phase 4 (DB-3): the field editor rides the core TmModal — visible title, ×, Escape, focus
+   return, fixed footer (duplicate/delete separated left, close + save right). No own backdrop
+   or z-index; a narrow viewport presents it as the core sheet. *@
+<TmModal Show="Show"
+         OnClose="OnClose"
+         Title="@Loc["TmNotionDbFieldEditor_Title"]"
+         Size="ModalSize.Small"
+         MobilePresentation="MobilePresentation.Auto">
+    <ChildContent>
+        <div class="tm-dbfe">
 
     @* ── Name & type ─────────────────────────────────────────────────────── *@
     <div class="tm-dbfe__section">
@@ -89,19 +91,45 @@
                                    type="text"
                                    value="@o.Name"
                                    @oninput="e => o.Name = e.Value?.ToString() ?? string.Empty" />
+                            <div class="tm-dbfe__opt-reorder" role="group" aria-label="@Loc["TmNotionDbFieldEditor_Options"]">
+                                @* Non-drag alternative to DnD (WCAG 2.5.7): ↑/↓ reorders the option. *@
+                                <button class="tm-dbfe__opt-up"
+                                        type="button"
+                                        disabled="@(_options.IndexOf(o) == 0)"
+                                        title="@Loc["TmNotionDbFieldEditor_MoveOptionUp"]"
+                                        aria-label="@Loc["TmNotionDbFieldEditor_MoveOptionUp"]"
+                                        @onclick="() => MoveOption(o, -1)">
+                                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                        <path d="M18 15l-6-6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                    </svg>
+                                </button>
+                                <button class="tm-dbfe__opt-down"
+                                        type="button"
+                                        disabled="@(_options.IndexOf(o) == _options.Count - 1)"
+                                        title="@Loc["TmNotionDbFieldEditor_MoveOptionDown"]"
+                                        aria-label="@Loc["TmNotionDbFieldEditor_MoveOptionDown"]"
+                                        @onclick="() => MoveOption(o, 1)">
+                                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                        <path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                    </svg>
+                                </button>
+                            </div>
                             <div class="tm-dbfe__color-dots">
                                 @foreach (var c in SelectColors)
                                 {
                                     var cc = c;
                                     <button class="tm-dbfe__color-dot tm-dbfe__color-dot--@cc @(o.Color == cc ? "tm-dbfe__color-dot--active" : "")"
                                             type="button"
-                                            title="@cc"
+                                            title="@ColorLabel(cc)"
+                                            aria-label="@ColorLabel(cc)"
+                                            aria-pressed="@(o.Color == cc)"
                                             @onclick="() => o.Color = cc"></button>
                                 }
                             </div>
                             <button class="tm-dbfe__opt-remove"
                                     type="button"
                                     title="@Loc["TmNotionDbFieldEditor_RemoveOption"]"
+                                    aria-label="@Loc["TmNotionDbFieldEditor_RemoveOption"]"
                                     @onclick="() => RemoveOption(o)">
                                 <svg width="10" height="10" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                                     <path d="M18 6 6 18M6 6l12 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
@@ -322,53 +350,46 @@
         </div>
     }
 
-    @* ── Footer ───────────────────────────────────────────────────────────── *@
-    <div class="tm-dbfe__footer">
+        </div>
+    </ChildContent>
+    <Footer>
         @if (!ReadOnly)
         {
-            <div class="tm-dbfe__footer-danger">
-                <button class="tm-dbfe__btn tm-dbfe__btn--ghost"
-                        type="button"
-                        title="@Loc["TmNotionDbFieldEditor_Duplicate"]"
-                        @onclick="DuplicateAsync">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                        <rect x="9" y="9" width="13" height="13" rx="2" stroke="currentColor" stroke-width="1.5"/>
-                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-                    </svg>
-                    @Loc["TmNotionDbFieldEditor_Duplicate"]
-                </button>
+            <div class="tm-dbfe__footer">
+                <div class="tm-dbfe__footer-danger">
+                    <TmButton Variant="ButtonVariant.Ghost"
+                              Class="tm-dbfe__btn-duplicate"
+                              OnClick="DuplicateAsync">
+                        @Loc["TmNotionDbFieldEditor_Duplicate"]
+                    </TmButton>
 
-                @if (!Field.IsPrimary)
-                {
-                    <button class="tm-dbfe__btn tm-dbfe__btn--danger"
-                            type="button"
-                            title="@Loc["TmNotionDbFieldEditor_Delete"]"
-                            @onclick="DeleteAsync">
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                            <polyline points="3 6 5 6 21 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-                            <path d="M19 6l-1 14H6L5 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                            <path d="M10 11v6M14 11v6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-                            <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" stroke="currentColor" stroke-width="1.5"/>
-                        </svg>
-                        @Loc["TmNotionDbFieldEditor_Delete"]
-                    </button>
-                }
+                    @* The destructive action sits separated from the confirm group (G8). *@
+                    @if (!Field.IsPrimary)
+                    {
+                        <TmButton Variant="ButtonVariant.Danger"
+                                  Class="tm-dbfe__btn-delete"
+                                  OnClick="DeleteAsync">
+                            @Loc["TmNotionDbFieldEditor_Delete"]
+                        </TmButton>
+                    }
+                </div>
+                <div class="tm-dbfe__footer-right">
+                    <TmButton Variant="ButtonVariant.Ghost"
+                              Class="tm-dbfe__btn-close"
+                              OnClick="OnClose">
+                        @Loc["TmNotionDbFieldEditor_Close"]
+                    </TmButton>
+                    <TmButton Variant="ButtonVariant.Primary"
+                              Class="tm-dbfe__btn-save"
+                              OnClick="SaveAsync">
+                        @Loc["TmNotionDbFieldEditor_Save"]
+                    </TmButton>
+                </div>
             </div>
-
-            <button class="tm-dbfe__btn tm-dbfe__btn--primary"
-                    type="button"
-                    @onclick="SaveAsync">
-                @Loc["TmNotionDbFieldEditor_Save"]
-            </button>
         }
         else
         {
-            <button class="tm-dbfe__btn tm-dbfe__btn--primary"
-                    type="button"
-                    @onclick="OnClose">
-                @Loc["TmNotionDbFieldEditor_Close"]
-            </button>
+            <TmButton Variant="ButtonVariant.Primary" OnClick="OnClose">@Loc["TmNotionDb_Done"]</TmButton>
         }
-    </div>
-
-</div>
+    </Footer>
+</TmModal>

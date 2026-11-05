@@ -89,7 +89,12 @@
 /* ── Scrollable content area ─────────────────────────────────────────────── */
 
 .tm-nst-content {
-    flex: 1 1 0;
+    flex: 1 1 auto;
+    min-height: 0;
+    /* In a content-sized host (the mobile drawer sheet sizes to its content) a plain flex:1
+       scroll area collapses to zero — the cap keeps the list usable and scrollable there,
+       while a definite-height host (desktop dock) still drives the height. */
+    max-height: min(60dvh, 32rem);
     overflow-y: auto;
     overflow-x: hidden;
     padding: 4px 0 8px;
@@ -182,14 +187,18 @@
     padding: 0;
 }
 
-/* ── Item ────────────────────────────────────────────────────────────────── */
+/* ── Item — card rows (phase 4) ────────────────────────────────────────────── */
 
 .tm-nst-item {
     display: flex;
     align-items: flex-start;
+    flex-wrap: wrap;
     gap: 8px;
-    padding: 7px 10px;
-    border-bottom: 1px solid var(--tm-border-color);
+    margin: 6px 8px;
+    padding: 10px;
+    border: 1px solid var(--tm-border-color);
+    border-radius: var(--tm-radius-md);
+    background: var(--tm-bg-surface);
     transition: background 0.1s;
 }
 
@@ -208,6 +217,9 @@
     font-size: 16px;
     line-height: 1.4;
     margin-top: 1px;
+    color: var(--tm-text-secondary);
+    display: inline-flex;
+    align-items: center;
 }
 
 .tm-nst-item__body {
@@ -227,6 +239,14 @@
     line-height: 1.4;
 }
 
+.tm-nst-item__path {
+    font-size: 11px;
+    color: var(--tm-text-secondary);
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
 .tm-nst-item__date {
     font-size: 11px;
     color: var(--tm-text-secondary);
@@ -235,7 +255,9 @@
     text-overflow: ellipsis;
 }
 
-/* ── Item action buttons (Restore / Delete permanently) ──────────────────── */
+/* ── Item action buttons (Restore / Delete permanently) ────────────────────
+   Permanently visible on coarse pointers (no hover there); fine pointers keep the
+   hover/focus reveal so the cards stay quiet. */
 
 .tm-nst-item__actions {
     display: flex;
@@ -255,8 +277,10 @@
     display: flex;
     align-items: center;
     gap: 4px;
+    /* 32px on a fine pointer — the pre-review 28px clipped below the WCAG 2.5.8 minimum. */
+    min-height: 32px;
     padding: 3px 7px;
-    border-radius: 4px;
+    border-radius: var(--tm-radius-sm);
     font-size: 11px;
     font-weight: 500;
     cursor: pointer;
@@ -308,10 +332,28 @@
     gap: 6px;
 }
 
+.tm-nst-item__confirm-no {
+    flex: 1;
+    min-height: 32px;
+    padding: 4px 8px;
+    border-radius: var(--tm-radius-sm);
+    font-size: 12px;
+    cursor: pointer;
+    border: 1px solid var(--tm-border-color);
+    background: transparent;
+    color: var(--tm-text-secondary);
+    transition: background 0.1s;
+}
+
+.tm-nst-item__confirm-no:hover {
+    background: var(--tm-color-surface-hover);
+}
+
 .tm-nst-item__confirm-yes {
     flex: 1;
+    min-height: 32px;
     padding: 4px 8px;
-    border-radius: 4px;
+    border-radius: var(--tm-radius-sm);
     font-size: 12px;
     font-weight: 500;
     cursor: pointer;
@@ -325,24 +367,14 @@
     opacity: 0.88;
 }
 
-.tm-nst-item__confirm-no {
-    flex: 1;
-    padding: 4px 8px;
-    border-radius: 4px;
-    font-size: 12px;
-    cursor: pointer;
-    border: 1px solid var(--tm-border-color);
-    background: transparent;
-    color: var(--tm-text-secondary);
-    transition: background 0.1s;
-}
-
-.tm-nst-item__confirm-no:hover {
-    background: var(--tm-color-surface-hover);
-}
-
-@media (hover: none) {
+@media (hover: none), (pointer: coarse) {
     .tm-nst-item__actions {
         opacity: 1;
+    }
+
+    .tm-nst-item__btn,
+    .tm-nst-item__confirm-no,
+    .tm-nst-item__confirm-yes {
+        min-height: 44px;
     }
 }

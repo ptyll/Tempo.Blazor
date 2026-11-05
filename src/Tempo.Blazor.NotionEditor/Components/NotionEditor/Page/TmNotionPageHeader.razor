@@ -2,6 +2,8 @@
 @using Tempo.Blazor.NotionEditor.Interfaces
 @using Tempo.Blazor.Components.NotionEditor.Services
 @using Tempo.Blazor.Components.Overlay
+@using Tempo.Blazor.Components.Feedback
+@using Tempo.Blazor.Components.Buttons
 
 @* ── Cover image ─────────────────────────────────────────────────────────── *@
 @if (!string.IsNullOrEmpty(Page.CoverImageUrl))
@@ -37,23 +39,15 @@
     </div>
 }
 
-@* ── Cover dialog ─────────────────────────────────────────────────────────── *@
-@if (_showCoverDialog && !ReadOnly)
-{
-    <div class="tm-notion-cover-dialog" role="dialog"
-         aria-label="@Loc["TmNotionPageHeader_CoverDialogTitle"]"
-         aria-modal="true">
-        <div class="tm-notion-cover-dialog__header">
-            <span class="tm-notion-cover-dialog__title">@Loc["TmNotionPageHeader_CoverDialogTitle"]</span>
-            <button type="button"
-                    class="tm-notion-cover-dialog__close"
-                    aria-label="@Loc["Tm_Close"]"
-                    @onclick="() => _showCoverDialog = false">
-                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
-                    <path d="M2 2l10 10M12 2L2 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-                </svg>
-            </button>
-        </div>
+@* ── Cover dialog — core TmModal (phase 4): visible title, ×, Escape, focus return. *@
+<TmModal Show="_showCoverDialog"
+         OnClose="CloseCoverDialog"
+         Title="@Loc["TmNotionPageHeader_CoverDialogTitle"]"
+         Size="ModalSize.Small"
+         MobilePresentation="MobilePresentation.Auto"
+         LayoutMode="LayoutMode"
+         InitialFocusSelector="#tm-notion-cover-url">
+    <ChildContent>
         <div class="tm-notion-cover-dialog__body">
             <label class="tm-notion-cover-dialog__label" for="tm-notion-cover-url">@Loc["TmNotionPageHeader_CoverUrl"]</label>
             <div class="tm-notion-cover-dialog__input-row">
@@ -64,12 +58,6 @@
                        @bind="_coverUrlInput"
                        @bind:event="oninput"
                        @onkeydown="OnCoverUrlKeyDown" />
-                <button class="tm-notion-cover-dialog__submit"
-                        type="button"
-                        disabled="@string.IsNullOrWhiteSpace(_coverUrlInput)"
-                        @onclick="SaveCoverUrlAsync">
-                    @Loc["TmNotionPageHeader_SetCover"]
-                </button>
             </div>
             <p class="tm-notion-cover-dialog__label">@Loc["TmNotionPageHeader_CoverPresets"]</p>
             <div class="tm-notion-cover-dialog__presets"
@@ -77,22 +65,32 @@
                  aria-label="@Loc["TmNotionPageHeader_CoverPresets"]">
                 @foreach (var preset in _coverPresets)
                 {
-                    <button class="tm-notion-cover-dialog__preset"
+                    var isCurrent = IsCurrentPreset(preset);
+                    <button class="tm-notion-cover-dialog__preset @(isCurrent ? "tm-notion-cover-dialog__preset--current" : "")"
                             type="button"
                             title="@preset.Label"
                             aria-label="@preset.Label"
+                            aria-pressed="@(isCurrent ? "true" : "false")"
                             style="background:@preset.Background"
                             @onclick="() => ApplyCoverPresetAsync(preset)">
+                        @if (isCurrent)
+                        {
+                            <span class="tm-notion-cover-dialog__preset-check" aria-hidden="true">✓</span>
+                        }
                     </button>
                 }
             </div>
         </div>
-    </div>
-    <div class="tm-notion-cover-dialog-backdrop"
-         aria-hidden="true"
-         @onclick="() => _showCoverDialog = false">
-    </div>
-}
+    </ChildContent>
+    <Footer>
+        <TmButton Variant="ButtonVariant.Ghost" OnClick="CloseCoverDialog">@Loc["Tm_Cancel"]</TmButton>
+        <TmButton Variant="ButtonVariant.Primary"
+                  Disabled="@string.IsNullOrWhiteSpace(_coverUrlInput)"
+                  OnClick="SaveCoverUrlAsync">
+            @Loc["TmNotionPageHeader_SetCover"]
+        </TmButton>
+    </Footer>
+</TmModal>
 
 @* ── Page meta (icon + title + description) ───────────────────────────────── *@
 <div class="tm-notion-header-meta @(Page.CoverImageUrl is not null ? "tm-notion-header-meta--with-cover" : "")">
@@ -102,7 +100,6 @@
     {
         <button class="tm-notion-header-icon tm-notion-header-icon--emoji"
                 type="button"
-                @ref="_iconTriggerRef"
                 disabled="@ReadOnly"
                 aria-label="@Loc["TmNotionPage_IconLabel"]"
                 title="@Loc["TmNotionPage_IconLabel"]"
@@ -114,7 +111,6 @@
     {
         <button class="tm-notion-header-icon tm-notion-header-icon--image"
                 type="button"
-                @ref="_iconTriggerRef"
                 disabled="@ReadOnly"
                 aria-label="@Loc["TmNotionPage_IconLabel"]"
                 @onclick="ToggleIconPickerAsync">
@@ -128,7 +124,7 @@
         <div class="tm-notion-header-meta__add-row">
             @if (string.IsNullOrEmpty(Page.IconEmoji) && string.IsNullOrEmpty(Page.IconImageUrl))
             {
-                <button class="tm-notion-header-meta__add-btn" type="button" @ref="_iconTriggerRef" @onclick="ToggleIconPickerAsync">
+                <button class="tm-notion-header-meta__add-btn" type="button" @onclick="ToggleIconPickerAsync">
                     @Loc["TmNotionPage_AddIcon"]
                 </button>
             }
@@ -218,78 +214,73 @@
 
 </div>
 
-@* ── Emoji picker — core overlay so Escape closes it and focus returns to the trigger. *@
+@* ── Emoji picker — core TmModal (phase 4): titled, × closes, Escape handled by the focus trap,
+   focus returns to the icon trigger. On a mobile layout the core sheet presents it. *@
 @if (_showIconPicker && !ReadOnly)
 {
-    <TmOverlayPanel Anchor="_iconTriggerRef"
-                    IsOpen="true"
-                    IsOpenChanged="OnIconPickerOpenChanged"
-                    LayoutMode="LayoutMode"
-                    MobilePresentation="PanelPresentation.Auto"
-                    Placement="OverlayPlacement.Bottom"
-                    Align="OverlayAlign.Start"
-                    Role="dialog"
-                    AriaLabel="@Loc["TmNotionPageHeader_EmojiPickerTitle"]"
-                    SheetTitle="@Loc["TmNotionPageHeader_EmojiPickerTitle"]"
-                    SheetInitialFocusSelector=".tm-notion-emoji-picker__search"
-                    Class="tm-notion-emoji-picker"
-                    OnDismissed="OnIconPickerDismissed">
-    <div class="tm-notion-emoji-picker__panel">
-        <div class="tm-notion-emoji-picker__header">
-            <input class="tm-notion-emoji-picker__search"
-                   type="text"
-                   autocomplete="off"
-                   aria-label="@Loc["TmNotionPageHeader_EmojiSearch"]"
-                   placeholder="@Loc["TmNotionPageHeader_EmojiSearch"]"
-                   @bind="_emojiSearch"
-                   @bind:event="oninput"
-                   @onkeydown="HandleIconPickerKey"
-                   @onkeydown:stopPropagation="true" />
-            <button class="tm-notion-emoji-picker__remove"
-                    type="button"
-                    @onclick="RemoveIconAsync">
-                @Loc["TmNotionPageHeader_RemoveIcon"]
-            </button>
-        </div>
-        <div class="tm-notion-emoji-picker__body" @onkeydown="HandleIconPickerKey" @onkeydown:stopPropagation="true">
-            @if (_recentEmojis.Count > 0 && string.IsNullOrWhiteSpace(_emojiSearch))
-            {
-                <div class="tm-notion-emoji-picker__category tm-notion-emoji-picker__category--recent">
-                    <div class="tm-notion-emoji-picker__category-label">@Loc["TmNotionEmojiPicker_RecentlyUsed"]</div>
-                    <div class="tm-notion-emoji-picker__grid">
-                        @foreach (var recent in _recentEmojis)
-                        {
-                            var captured = recent;
-                            <button class="tm-notion-emoji-picker__btn"
-                                    type="button"
-                                    title="@captured"
-                                    aria-label="@captured"
-                                    @onclick="() => SelectEmojiAsync(captured)">
-                                @captured
-                            </button>
-                        }
-                    </div>
+    <TmModal Show="true"
+             OnClose="CloseIconPicker"
+             Title="@Loc["TmNotionPageHeader_EmojiPickerTitle"]"
+             Size="ModalSize.Small"
+             MobilePresentation="MobilePresentation.Auto"
+             LayoutMode="LayoutMode"
+             InitialFocusSelector=".tm-notion-emoji-picker__search">
+        <ChildContent>
+            <div class="tm-notion-emoji-picker__panel">
+                <div class="tm-notion-emoji-picker__header">
+                    <input class="tm-notion-emoji-picker__search"
+                           type="text"
+                           autocomplete="off"
+                           aria-label="@Loc["TmNotionPageHeader_EmojiSearch"]"
+                           placeholder="@Loc["TmNotionPageHeader_EmojiSearch"]"
+                           @bind="_emojiSearch"
+                           @bind:event="oninput" />
+                    <button class="tm-notion-emoji-picker__remove"
+                            type="button"
+                            @onclick="RemoveIconAsync">
+                        @Loc["TmNotionPageHeader_RemoveIcon"]
+                    </button>
                 </div>
-            }
-            @foreach (var cat in FilteredCategories)
-            {
-                <div class="tm-notion-emoji-picker__category">
-                    <div class="tm-notion-emoji-picker__category-label">@cat.Name</div>
-                    <div class="tm-notion-emoji-picker__grid">
-                        @foreach (var emoji in cat.Emojis)
-                        {
-                            <button class="tm-notion-emoji-picker__btn"
-                                    type="button"
-                                    title="@emoji.Name"
-                                    aria-label="@emoji.Name"
-                                    @onclick="() => SelectEmojiAsync(emoji.Char)">
-                                @emoji.Char
-                            </button>
-                        }
-                    </div>
+                <div class="tm-notion-emoji-picker__body">
+                    @if (_recentEmojis.Count > 0 && string.IsNullOrWhiteSpace(_emojiSearch))
+                    {
+                        <div class="tm-notion-emoji-picker__category tm-notion-emoji-picker__category--recent">
+                            <div class="tm-notion-emoji-picker__category-label">@Loc["TmNotionEmojiPicker_RecentlyUsed"]</div>
+                            <div class="tm-notion-emoji-picker__grid">
+                                @foreach (var recent in _recentEmojis)
+                                {
+                                    var captured = recent;
+                                    <button class="tm-notion-emoji-picker__btn"
+                                            type="button"
+                                            title="@captured"
+                                            aria-label="@captured"
+                                            @onclick="() => SelectEmojiAsync(captured)">
+                                        @captured
+                                    </button>
+                                }
+                            </div>
+                        </div>
+                    }
+                    @foreach (var cat in FilteredCategories)
+                    {
+                        <div class="tm-notion-emoji-picker__category">
+                            <div class="tm-notion-emoji-picker__category-label">@cat.Name</div>
+                            <div class="tm-notion-emoji-picker__grid">
+                                @foreach (var emoji in cat.Emojis)
+                                {
+                                    <button class="tm-notion-emoji-picker__btn"
+                                            type="button"
+                                            title="@emoji.Name"
+                                            aria-label="@emoji.Name"
+                                            @onclick="() => SelectEmojiAsync(emoji.Char)">
+                                        @emoji.Char
+                                    </button>
+                                }
+                            </div>
+                        </div>
+                    }
                 </div>
-            }
-        </div>
-    </div>
-    </TmOverlayPanel>
+            </div>
+        </ChildContent>
+    </TmModal>
 }

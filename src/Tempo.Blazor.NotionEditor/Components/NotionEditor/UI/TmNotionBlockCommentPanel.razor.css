@@ -1,17 +1,10 @@
-/* ── Backdrop ──────────────────────────────────────────────────────────────── */
-
-.tm-nbcp-backdrop {
-    position: fixed;
-    inset: 0;
-    z-index: calc(var(--tm-z-popover) - 1);
-    background: transparent;
-}
+/* Phase 4 (NO1): no own backdrop and no z-index — the popover bubble rides the core
+   TmOverlayPanel (browser top layer, positioned by overlay.js against the zero-size anchor); the
+   dialog/sheet surface is the core TmModal. */
 
 /* ── Panel card ────────────────────────────────────────────────────────────── */
 
 .tm-nbcp {
-    position: fixed;
-    z-index: var(--tm-z-popover);
     width: 320px;
     max-height: 520px;
     display: flex;
@@ -23,12 +16,59 @@
     font-size: 14px;
     color: var(--tm-text-primary);
     overflow: hidden;
-    animation: tm-nbcp-appear 90ms ease;
 }
 
-@keyframes tm-nbcp-appear {
-    from { opacity: 0; transform: translateY(-6px) scale(0.97); }
-    to   { opacity: 1; transform: translateY(0)    scale(1);    }
+/* Inside the TmOverlayPanel popover the panel root paints the chrome (its own background/border/
+   shadow) — the card keeps only the sizing. The popover root carries TmOverlayPanel's scope, so
+   the card carries a modifier class instead of a descendant selector. */
+.tm-nbcp--popover {
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+}
+
+/* Inside the core TmModal the card fills the body (the popover's fixed positioning and chrome
+   move to the dialog surface); on a wide dialog with 2+ threads it becomes the master/detail
+   grid. The card carries the panel's scope attribute, so plain scoped rules reach it. */
+
+.tm-nbcp--in-dialog {
+    position: static;
+    width: 100%;
+    max-height: none;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+}
+
+/* The TmModal header already carries the title and the × — the card's own close button would
+   duplicate it (the back/navigation buttons stay). */
+.tm-nbcp--in-dialog .tm-nbcp__close-btn {
+    display: none;
+}
+
+.tm-nbcp--in-dialog.tm-nbcp--split {
+    display: grid;
+    grid-template-columns: minmax(240px, 0.9fr) minmax(0, 1.4fr);
+    gap: 0;
+    align-items: start;
+}
+
+.tm-nbcp--in-dialog.tm-nbcp--split .tm-nbcp__thread-list {
+    border-right: 1px solid var(--tm-border-color);
+    max-height: min(60vh, 32rem);
+    overflow-y: auto;
+}
+
+@media (max-width: 719px) {
+    .tm-nbcp--in-dialog.tm-nbcp--split {
+        grid-template-columns: 1fr;
+    }
+
+    .tm-nbcp--in-dialog.tm-nbcp--split .tm-nbcp__thread-list {
+        border-right: 0;
+        border-bottom: 1px solid var(--tm-border-color);
+    }
 }
 
 /* ── Header ────────────────────────────────────────────────────────────────── */
@@ -763,9 +803,25 @@
     background: var(--tm-color-primary-700);
 }
 
+/* Disabled primary: core disabled surfaces, not opacity on the primary colour — at 45 % the
+   blue still reads as an actionable button, worst in dark mode. */
 ::deep .tm-nbcp__reply-send:disabled {
-    opacity: 0.45;
+    background: var(--tm-bg-muted);
+    color: var(--tm-text-disabled);
+    opacity: 1;
     cursor: not-allowed;
+}
+
+/* Coarse pointers: no Ctrl+Enter on a touch keyboard — drop the hint and grow the submit to
+   the 44px touch target. */
+@media (pointer: coarse) {
+    ::deep .tm-nbcp__reply-hint {
+        display: none;
+    }
+
+    ::deep .tm-nbcp__reply-send {
+        min-height: 44px;
+    }
 }
 
 /* ── Mention highlight ─────────────────────────────────────────────────────── */

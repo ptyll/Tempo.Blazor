@@ -3401,6 +3401,23 @@ window.tmNotionEditor = (function () {
         setTimeout(() => block.classList.remove('tm-notion-block--highlight-flash'), 1200);
     }
 
+    // ── Nested Escape ownership (phase 4 code review) ──────────────────────────
+    // A database cell editor (.tm-dbc--editing) is a plain fixed popup, NOT a
+    // TmOverlayPanel — overlay.js never tracks it, so its Escape reaches the
+    // document-capture focus trap of the enclosing core dialog (the record
+    // detail). The trap's .NET invocation is delivered after the cell's Blazor
+    // cancel handler ran (which already flipped CloseOnEscape back to true), so
+    // one physical Escape would cancel the cell AND close the dialog. Mark the
+    // key consumed in the window-capture phase — tm-focus-trap skips an Escape
+    // carrying tmEscapeHandled, exactly like an overlay.js-dismissed panel.
+    // (The slash / mention / token menus are TmOverlayPanels — overlay.js
+    // already consumes their Escape; this covers the remaining non-overlay
+    // editing surfaces.)
+    window.addEventListener('keydown', function (e) {
+        if (e.key !== 'Escape' || !e.target || !e.target.closest) return;
+        if (e.target.closest('.tm-dbc--editing')) e.tmEscapeHandled = true;
+    }, true);
+
     // ── Public API ─────────────────────────────────────────────────────────────
     return {
         // 26.1

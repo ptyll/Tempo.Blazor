@@ -1140,6 +1140,10 @@ public static class NotionEditorEndpoints
                             dataStore.SeedE2ESidebarTrashNavigation();
                             blockStore.SeedE2EEmptyPage();
                             break;
+                        case "seedSidebarTrashChildPage":
+                            dataStore.SeedE2ESidebarTrashChildPage();
+                            blockStore.SeedE2EEmptyPage();
+                            break;
                         case "seedPageInfoPage":
                             dataStore.SeedE2EPageInfoPage();
                             blockStore.SeedE2EPageInfoLikePage();

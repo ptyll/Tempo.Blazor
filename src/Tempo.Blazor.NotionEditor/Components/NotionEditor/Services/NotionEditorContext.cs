@@ -78,6 +78,13 @@ public sealed class NotionEditorContext
     /// <summary>Raised by the sidebar space switcher when the active space changes.</summary>
     public Func<string?, Task>?            SelectSpace              { get; init; }
 
+    /// <summary>
+    /// How the block / text comment panels present (NO1): <c>Popover</c> keeps the anchored
+    /// bubble, <c>Dialog</c> the core modal, <c>Auto</c> (the default) resolves per layout.
+    /// Set from <c>TmNotionEditor.CommentPresentation</c>.
+    /// </summary>
+    public NotionCommentPresentation CommentPresentation { get; init; } = NotionCommentPresentation.Auto;
+
     /// <summary>Raised after the active page is moved to another space.</summary>
     public Func<string, Task>?             CurrentPageMovedToSpace  { get; init; }
 

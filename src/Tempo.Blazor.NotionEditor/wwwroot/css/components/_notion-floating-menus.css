@@ -68,6 +68,22 @@
     width: min(32rem, calc(100vw - var(--tm-space-4)));
 }
 
+/* ── Phase 4 (NO1): comment popover panel roots (TmNotionBlockCommentPanel /
+   TmNotionTextCommentPanel) — anchored at the bubble position through a zero-size fixed
+   anchor span; the card inside keeps only sizing. ── */
+
+.tm-nbcp-popover,
+.tm-ntcp-popover {
+    display: flex;
+    flex-direction: column;
+    max-height: min(520px, calc(100vh - var(--tm-space-4)));
+    background: var(--tm-bg-elevated);
+    border: 1px solid var(--tm-border-color);
+    border-radius: 8px;
+    box-shadow: var(--tm-shadow-popover);
+    overflow: hidden;
+}
+
 /* ── N5: floating-menu bodies inside the core bottom sheet ───────────────────
    TmNotionFloatingMenu renders the consumer body as a child of its own wrapper inside
    the core sheet content. The consumer bodies carry the popover card chrome (fixed

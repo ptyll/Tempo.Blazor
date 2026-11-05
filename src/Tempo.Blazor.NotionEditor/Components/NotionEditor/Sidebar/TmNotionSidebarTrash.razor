@@ -99,10 +99,32 @@
                         <li class="tm-nst-item @(isConfirming ? "tm-nst-item--confirming" : "")"
                             role="listitem">
 
-                            <span class="tm-nst-item__icon" aria-hidden="true">@GetIcon(capturedPage)</span>
+                            <span class="tm-nst-item__icon" aria-hidden="true">
+                                @if (string.IsNullOrEmpty(capturedPage.IconEmoji))
+                                {
+                                    @* Lucide "file-text" — an icon, not a letter fallback. *@
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+                                         stroke="currentColor" stroke-width="1.5" stroke-linecap="round"
+                                         stroke-linejoin="round">
+                                        <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z"/>
+                                        <path d="M14 2v4a2 2 0 0 0 2 2h4"/>
+                                        <path d="M10 9H8"/>
+                                        <path d="M16 13H8"/>
+                                        <path d="M16 17H8"/>
+                                    </svg>
+                                }
+                                else
+                                {
+                                    @capturedPage.IconEmoji
+                                }
+                            </span>
 
                             <div class="tm-nst-item__body">
                                 <span class="tm-nst-item__title">@GetTitle(capturedPage)</span>
+                                @if (!string.IsNullOrEmpty(GetParentPath(capturedPage)))
+                                {
+                                    <span class="tm-nst-item__path">@GetParentPath(capturedPage)</span>
+                                }
                                 <time class="tm-nst-item__date"
                                       datetime="@(capturedPage.DeletedAt?.ToString("yyyy-MM-ddTHH:mm:ssZ") ?? "")">
                                     @GetDeletedAt(capturedPage)
@@ -111,21 +133,22 @@
 
                             @if (isConfirming)
                             {
+                                @* Phase 4: secondary first, destructive separated last. *@
                                 <div class="tm-nst-item__confirm" role="alertdialog"
                                      aria-label="@Loc["TmNotionSidebarTrash_DeleteConfirm"]">
                                     <span class="tm-nst-item__confirm-text">
                                         @Loc["TmNotionSidebarTrash_DeleteConfirm"]
                                     </span>
                                     <div class="tm-nst-item__confirm-actions">
-                                        <button class="tm-nst-item__confirm-yes"
-                                                type="button"
-                                                @onclick="() => ConfirmPermanentDeleteAsync(capturedPage)">
-                                            @Loc["TmNotionSidebarTrash_DeleteYes"]
-                                        </button>
                                         <button class="tm-nst-item__confirm-no"
                                                 type="button"
                                                 @onclick="() => CancelDeleteConfirm(capturedPage.Id)">
                                             @Loc["TmNotionSidebarTrash_DeleteNo"]
+                                        </button>
+                                        <button class="tm-nst-item__confirm-yes"
+                                                type="button"
+                                                @onclick="() => ConfirmPermanentDeleteAsync(capturedPage)">
+                                            @Loc["TmNotionSidebarTrash_DeleteYes"]
                                         </button>
                                     </div>
                                 </div>

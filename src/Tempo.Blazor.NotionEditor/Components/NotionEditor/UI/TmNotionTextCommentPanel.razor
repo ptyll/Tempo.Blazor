@@ -3,31 +3,83 @@
 @using Tempo.Blazor.Components.NotionEditor.Models
 @using Tempo.Blazor.Components.NotionEditor.Services
 @using Tempo.Blazor.Components.Feedback
+@using Tempo.Blazor.Components.Overlay
+@using Tempo.Blazor.Components.Buttons
 
-@* ── Backdrop ────────────────────────────────────────────────────────────── *@
+@* ── Phase 4 (NO1): CommentPresentation decides the surface — core TmModal for Dialog (or Auto
+     on a narrow/mobile layout), the anchored popover otherwise. The dialog shows the whole quote
+     (clamped to four lines with a "Show full quote" toggle). ── *@
 @if (Visible)
 {
-    <div class="tm-ntcp-backdrop" @onclick="CloseAsync" aria-hidden="true"></div>
+    @if (UseDialog)
+    {
+        <TmModal Show="true"
+                 OnClose="CloseAsync"
+                 Title="@Loc["TmNotionComment_TextDialogTitle"]"
+                 Size="ModalSize.Small"
+                 MobilePresentation="MobilePresentation.Auto"
+                 Class="tm-ntcp-dialog">
+            <ChildContent>@CardContent</ChildContent>
+            <Footer>
+                <TmButton Variant="ButtonVariant.Primary" OnClick="CloseAsync">@Loc["Tm_Close"]</TmButton>
+            </Footer>
+        </TmModal>
+    }
+    else
+    {
+        @* Phase 4 review: a fixed zero-size anchor span at the bubble position lets the core
+           TmOverlayPanel promote the bubble into the browser top layer (Escape, outside click,
+           anchor tracking) — no host-computed fixed card, no own backdrop or z-index. *@
+        <span class="tm-ntcp-anchor"
+              style="position:fixed;top:@(_top)px;left:@(_left)px;width:0;height:0"
+              aria-hidden="true"
+              @ref="_anchorRef"></span>
+        <TmOverlayPanel Anchor="_anchorRef"
+                        IsOpen="true"
+                        Role="dialog"
+                        AriaLabel="@Loc["TmNotionTextComment_PanelLabel"]"
+                        Placement="OverlayPlacement.Bottom"
+                        Align="OverlayAlign.Start"
+                        Offset="0"
+                        Class="tm-ntcp-popover"
+                        OnDismissed="CloseAsync">
+            @CardContent
+        </TmOverlayPanel>
+    }
+}
 
-    @* ── Popover card ────────────────────────────────────────────────────────── *@
-    <div class="tm-ntcp"
-         role="dialog"
-         aria-label="@Loc["TmNotionTextComment_PanelLabel"]"
-         aria-modal="true"
-         style="top:@(_top)px;left:@(_left)px"
-         @onkeydown:stopPropagation="true"
-         @ref="_panelRef">
+@code {
+    /// <summary>The panel card — the single content definition for both surfaces. The dialog role
+    /// and accessible name live on the surface that hosts the card: the TmFocusScope of the
+    /// TmModal (UseDialog) or the TmOverlayPanel popover — never both.</summary>
+    private RenderFragment CardContent => __builder =>
+    {
+        <div class="tm-ntcp @(UseDialog ? "tm-ntcp--in-dialog" : "tm-ntcp--popover")"
+             role="@(UseDialog ? null : "dialog")"
+             aria-label="@(UseDialog ? null : Loc["TmNotionTextComment_PanelLabel"])"
+             @onkeydown:stopPropagation="true"
+             @ref="_panelRef">
 
         @* ── Header ──────────────────────────────────────────────────────── *@
         <div class="tm-ntcp__header">
             @* Highlighted text preview *@
             @if (!string.IsNullOrEmpty(HighlightedText))
             {
-                <div class="tm-ntcp__highlight-preview" aria-label="@Loc["TmNotionTextComment_HighlightedText"]">
+                <div class="tm-ntcp__highlight-preview @(_quoteExpanded ? "tm-ntcp__highlight-preview--expanded" : "")"
+                     aria-label="@Loc["TmNotionTextComment_HighlightedText"]">
                     <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
                         <path d="M2 9l2-2 5-5 1 1-5 5-2 2H2V9z" fill="currentColor" opacity=".6"/>
                     </svg>
-                    <span class="tm-ntcp__highlight-snippet">@TruncateText(HighlightedText, 60)</span>
+                    <span class="tm-ntcp__highlight-snippet">@QuoteText</span>
+                    @if (UseDialog && HighlightedText.Length > QuoteClampLength)
+                    {
+                        <button class="tm-ntcp__quote-toggle"
+                                type="button"
+                                aria-expanded="@(_quoteExpanded ? "true" : "false")"
+                                @onclick="() => _quoteExpanded = !_quoteExpanded">
+                            @Loc["TmNotionComment_ShowFullQuote"]
+                        </button>
+                    }
                 </div>
             }
             <div class="tm-ntcp__header-actions">
@@ -184,7 +236,8 @@
             <div class="tm-ntcp__error" role="alert">@_error</div>
         }
 
-    </div>
+        </div>
+    };
 }
 
 

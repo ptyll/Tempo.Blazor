@@ -51,6 +51,13 @@
       "name": "OnClose",
       "type": "EventCallback",
       "isRequired": false
+    },
+    {
+      "name": "Show",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "Whether the dialog is open. Defaults to true — the host renders the component only while the dialog is shown (inside the core TmModal since phase 4)."
     }
   ],
   "subcategory": "Blocks / Database"

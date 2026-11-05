@@ -177,7 +177,7 @@ public sealed class NotionPhase3ShellScreenshots : NotionE2ETestBase
         // onto the sheet content, so on the mobile band the core sheet class is the surface hook.
         await ShotIfAsync(page, ".tm-notion-emoji-picker, .tm-notion-emoji-picker__panel, .tm-overlay-panel-sheet", "notion-menus", $"emoji-{band}-{theme}");
         await DismissAsync(page);
-        if (await page.Locator(".tm-notion-emoji-picker").CountAsync() > 0)
+        if (await page.Locator(".tm-notion-emoji-picker__panel").CountAsync() > 0)
         {
             await page.Keyboard.PressAsync("Escape");
             await page.WaitForTimeoutAsync(200);

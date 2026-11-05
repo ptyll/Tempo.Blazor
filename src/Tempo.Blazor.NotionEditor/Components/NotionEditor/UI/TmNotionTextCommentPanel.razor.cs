@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.JSInterop;
+using Tempo.Blazor.Abstractions.Layout;
 using Tempo.Blazor.Abstractions.Shared;
 using Tempo.Blazor.Components.NotionEditor.Models;
 using Tempo.Blazor.Components.NotionEditor.Services;
@@ -56,6 +57,9 @@ public partial class TmNotionTextCommentPanel : ComponentBase, IDisposable, ITmD
 
     [CascadingParameter] private NotionEditorContext Context { get; set; } = default!;
 
+    /// <summary>The viewport layout scope — resolves <see cref="NotionCommentPresentation.Auto"/>.</summary>
+    [CascadingParameter] private TmLayoutContext? Layout { get; set; }
+
     // ── Parameters ───────────────────────────────────────────────────────────
 
     /// <summary>
@@ -71,6 +75,11 @@ public partial class TmNotionTextCommentPanel : ComponentBase, IDisposable, ITmD
     [Parameter] public string HighlightedText { get; set; } = string.Empty;
     [Parameter] public double Top             { get; set; }
     [Parameter] public double Left            { get; set; }
+
+    /// <summary>
+    /// How the panel presents (NO1) — see <see cref="TmNotionBlockCommentPanel.Presentation"/>.
+    /// </summary>
+    [Parameter] public NotionCommentPresentation Presentation { get; set; } = NotionCommentPresentation.Auto;
 
     [Parameter] public EventCallback          OnClosed        { get; set; }
     [Parameter] public EventCallback          OnResolved      { get; set; }
@@ -107,6 +116,10 @@ public partial class TmNotionTextCommentPanel : ComponentBase, IDisposable, ITmD
     private bool           _mentionHandlerAttached;
     private string         _activeCommentId = string.Empty;
     private ElementReference _panelRef;
+
+    /// <summary>The fixed zero-size anchor at the bubble position — the popover-mode
+    /// <c>TmOverlayPanel</c> positions against it and returns focus to it on dismissal.</summary>
+    private ElementReference _anchorRef;
     private DotNetObjectReference<TmNotionTextCommentPanel>? _dotNetRef;
 
     private string?        _editingEntryId;
@@ -649,6 +662,25 @@ public partial class TmNotionTextCommentPanel : ComponentBase, IDisposable, ITmD
 
     private static string TruncateText(string text, int maxLen)
         => text.Length <= maxLen ? text : text[..maxLen] + "…";
+
+    // ── Presentation (NO1) ────────────────────────────────────────────────────
+
+    /// <summary>Auto resolves per layout: popover bubble on desktop, core modal/sheet on a touch
+    /// or narrow (tablet / mobile) layout.</summary>
+    private bool UseDialog => Presentation switch
+    {
+        NotionCommentPresentation.Dialog  => true,
+        NotionCommentPresentation.Popover => false,
+        _                                  => Layout?.IsMobile == true || Layout?.IsTablet == true,
+    };
+
+    /// <summary>Length beyond which the dialog quote clamps (with a "Show full quote" toggle).</summary>
+    private const int QuoteClampLength = 140;
+
+    private bool _quoteExpanded;
+
+    /// <summary>The popover truncates the quote; the dialog shows it whole.</summary>
+    private string QuoteText => UseDialog ? HighlightedText : TruncateText(HighlightedText, 60);
 
     private static string StripHtml(string html)
     {

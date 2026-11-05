@@ -78,65 +78,14 @@
     opacity: 1;
 }
 
-/* ── Cover dialog ─────────────────────────────────────────────── */
-
-.tm-notion-cover-dialog-backdrop {
-    position: fixed;
-    inset:    0;
-    z-index:  var(--tm-z-popover);
-}
-
-.tm-notion-cover-dialog {
-    position:     absolute;
-    top:          var(--tm-notion-cover-height, 200px);
-    left:         var(--tm-notion-page-padding-x, 2rem);
-    z-index:      calc(var(--tm-z-popover) + 1);
-    width:        clamp(280px, 380px, 90vw);
-    background:   var(--tm-notion-bg-slash-menu, var(--tm-bg-surface));
-    border:       1px solid var(--tm-notion-border, var(--tm-border-color));
-    border-radius: var(--tm-radius-lg);
-    box-shadow:   var(--tm-notion-menu-shadow, var(--tm-shadow-lg));
-    overflow:     hidden;
-}
-
-.tm-notion-cover-dialog__header {
-    display:     flex;
-    align-items: center;
-    padding:     var(--tm-space-3) var(--tm-space-4);
-    border-bottom: 1px solid var(--tm-notion-border, var(--tm-border-color));
-}
-
-.tm-notion-cover-dialog__title {
-    flex:        1;
-    font-size:   var(--tm-font-size-sm);
-    font-weight: var(--tm-font-weight-semibold);
-    color:       var(--tm-text-primary);
-}
-
-.tm-notion-cover-dialog__close {
-    display:         flex;
-    align-items:     center;
-    justify-content: center;
-    width:           24px;
-    height:          24px;
-    border:          none;
-    background:      transparent;
-    color:           var(--tm-text-tertiary);
-    border-radius:   var(--tm-radius-sm);
-    cursor:          pointer;
-    transition:      background var(--tm-notion-anim-fast), color var(--tm-notion-anim-fast);
-}
-
-.tm-notion-cover-dialog__close:hover {
-    background: var(--tm-notion-bg-block-hover);
-    color:      var(--tm-text-primary);
-}
+/* ── Cover dialog ───────────────────────────────────────────────
+   Phase 4: the dialog chrome rides the core TmModal — the stylesheet keeps only the content
+   styles (no own backdrop, no positioning, no z-index). */
 
 .tm-notion-cover-dialog__body {
-    padding: var(--tm-space-4);
     display: flex;
     flex-direction: column;
-    gap:     var(--tm-space-3);
+    gap: var(--tm-space-3);
 }
 
 .tm-notion-cover-dialog__label {
@@ -172,44 +121,47 @@
     border-color: var(--tm-focus-ring, var(--tm-color-primary));
 }
 
-.tm-notion-cover-dialog__submit {
-    height:        32px;
-    padding:       0 var(--tm-space-3);
-    border:        none;
-    border-radius: var(--tm-radius-sm);
-    font-size:     var(--tm-font-size-sm);
-    font-weight:   var(--tm-font-weight-medium);
-    background:    var(--tm-color-primary-solid);
-    color:         var(--tm-color-on-primary-fixed);
-    cursor:        pointer;
-    white-space:   nowrap;
-    transition:    opacity var(--tm-notion-anim-fast);
-}
-
-.tm-notion-cover-dialog__submit:disabled {
-    opacity: 0.45;
-    cursor:  not-allowed;
+/* Disabled primary in the cover footer: core disabled surfaces, not opacity on the primary
+   colour — a 50 % blue still reads as an actionable button, worst in dark mode (UX review). */
+.tm-modal-footer .tm-btn-primary:disabled {
+    background: var(--tm-bg-muted);
+    color: var(--tm-text-disabled);
+    opacity: 1;
 }
 
 .tm-notion-cover-dialog__presets {
-    display:   flex;
-    flex-wrap: wrap;
-    gap:       var(--tm-space-2);
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(44px, 1fr));
+    gap: var(--tm-space-2);
 }
 
 .tm-notion-cover-dialog__preset {
-    width:         36px;
-    height:        36px;
+    position:      relative;
+    height:        44px;
     border:        2px solid transparent;
     border-radius: var(--tm-radius-sm);
     cursor:        pointer;
     transition:    border-color var(--tm-notion-anim-fast), transform var(--tm-notion-anim-fast);
-    flex-shrink:   0;
 }
 
 .tm-notion-cover-dialog__preset:hover {
     border-color: var(--tm-focus-ring, var(--tm-color-primary));
-    transform:    scale(1.1);
+    transform:    scale(1.05);
+}
+
+.tm-notion-cover-dialog__preset--current {
+    border-color: var(--tm-focus-ring, var(--tm-color-primary));
+}
+
+.tm-notion-cover-dialog__preset-check {
+    position:   absolute;
+    inset:      0;
+    display:    flex;
+    align-items: center;
+    justify-content: center;
+    color:      var(--tm-color-on-primary-fixed);
+    font-size:  var(--tm-font-size-sm);
+    text-shadow: 0 0 2px var(--tm-notion-bg-slash-menu, var(--tm-bg-surface));
 }
 
 /* ── Page meta ────────────────────────────────────────────────── */
@@ -449,9 +401,9 @@
     color:      var(--tm-text-primary);
 }
 
-/* ── Emoji picker — panel surface rides on TmOverlayPanel ──────── */
+/* ── Emoji picker — content surface inside the core TmModal (phase 4) ── */
 
-::deep .tm-notion-emoji-picker {
+.tm-notion-emoji-picker__panel {
     width:          clamp(280px, 340px, 90vw);
     max-height:     440px;
     display:        flex;
@@ -461,15 +413,19 @@
     border-radius:  var(--tm-radius-lg);
     box-shadow:     var(--tm-notion-menu-shadow, var(--tm-shadow-lg));
     overflow:       hidden;
+    min-height:     0;
 }
 
-/* (Sheet reset: package global _notion-floating-menus.css, N5.) */
+/* Sheet reset: inside the core TmModal sheet presentation the chrome moves to the sheet itself.
+   The panel carries this component's scope attribute in both surfaces, so a plain scoped rule
+   reaches it. */
 
-.tm-notion-emoji-picker__panel {
-    display:        flex;
-    flex-direction: column;
-    min-height:     0;
-    max-height:     440px;
+.tm-modal--sheet .tm-notion-emoji-picker__panel {
+    width:         100%;
+    max-height:    none;
+    border:        0;
+    border-radius: 0;
+    box-shadow:    none;
 }
 
 .tm-notion-emoji-picker__header {

@@ -29,6 +29,7 @@ public class MockNotionDataStore
     public static readonly Guid SidebarDeepRiskRegisterId = Guid.Parse("eb110000-0000-0000-0000-000000000004");
     public static readonly Guid SidebarTrashLegacyDraftId = Guid.Parse("eb110000-0000-0000-0000-000000000101");
     public static readonly Guid SidebarTrashRetiredSpecId = Guid.Parse("eb110000-0000-0000-0000-000000000102");
+    public static readonly Guid SidebarTrashOrphanedChildId = Guid.Parse("eb110000-0000-0000-0000-000000000103");
 
     private void InitializeMockData()
     {
@@ -797,6 +798,43 @@ public class MockNotionDataStore
         _pages[SidebarTrashRetiredSpecId].LastEditedAt = deletedAt.AddMinutes(8);
         _pages[SidebarTrashRetiredSpecId].IsDeleted = true;
         _pages[SidebarTrashRetiredSpecId].DeletedAt = deletedAt.AddMinutes(8);
+    }
+
+    public void SeedE2ESidebarTrashChildPage()
+    {
+        _pages.Clear();
+        _spaces.Clear();
+        SeedSpace("eb11");
+
+        var created = new DateTime(2026, 3, 3, 9, 0, 0, DateTimeKind.Utc);
+        var deletedAt = new DateTime(2026, 3, 5, 11, 30, 0, DateTimeKind.Utc);
+
+        _pages[Page1Id] = CreateSeedPage(Page1Id, null, "EB11 Trash Workspace", "Active page used while the trash panel is open.", "eb11", "ada", "Ada Lovelace", "grace", "Grace Hopper");
+        _pages[Page1Id].IconEmoji = "T";
+        _pages[Page1Id].CreatedAt = created;
+        _pages[Page1Id].LastEditedAt = created.AddHours(4);
+
+        // The surviving parent — the trashed child renders its breadcrumb ("EB11 Active Reference").
+        _pages[Page2Id] = CreateSeedPage(Page2Id, null, "EB11 Active Reference", "Parent page that keeps the trashed child's path resolvable.", "eb11", "grace", "Grace Hopper", "grace", "Grace Hopper");
+        _pages[Page2Id].IconEmoji = "A";
+        _pages[Page2Id].CreatedAt = created.AddMinutes(10);
+        _pages[Page2Id].LastEditedAt = created.AddHours(3);
+
+        // A deleted child with NO icon (the trash row falls back to the lucide file-text glyph)
+        // and a deleted root page without a path, for contrast.
+        _pages[SidebarTrashOrphanedChildId] = CreateSeedPage(SidebarTrashOrphanedChildId, Page2Id, "EB11 Orphaned Child Page", "Deleted child page used for the trash path and icon-fallback capture.", "eb11", "bob", "Bob Stone", "bob", "Bob Stone");
+        _pages[SidebarTrashOrphanedChildId].IconEmoji = string.Empty;
+        _pages[SidebarTrashOrphanedChildId].CreatedAt = created.AddMinutes(20);
+        _pages[SidebarTrashOrphanedChildId].LastEditedAt = deletedAt;
+        _pages[SidebarTrashOrphanedChildId].IsDeleted = true;
+        _pages[SidebarTrashOrphanedChildId].DeletedAt = deletedAt;
+
+        _pages[SidebarTrashLegacyDraftId] = CreateSeedPage(SidebarTrashLegacyDraftId, null, "EB11 Legacy Draft", "Deleted draft used for trash restore testing.", "eb11", "bob", "Bob Stone", "bob", "Bob Stone");
+        _pages[SidebarTrashLegacyDraftId].IconEmoji = string.Empty;
+        _pages[SidebarTrashLegacyDraftId].CreatedAt = created.AddMinutes(25);
+        _pages[SidebarTrashLegacyDraftId].LastEditedAt = deletedAt.AddMinutes(4);
+        _pages[SidebarTrashLegacyDraftId].IsDeleted = true;
+        _pages[SidebarTrashLegacyDraftId].DeletedAt = deletedAt.AddMinutes(4);
     }
 
     public void SeedE2ESimplePage(string title, string? description = null)

@@ -337,7 +337,8 @@ public class NotionDatabaseBasicE2ETests : WasmTestBase
 
         await OpenFirstRecordDetailAsync(page, db);
 
-        var modal = page.Locator(".tm-dbrd__modal");
+        // Phase 4: the record detail rides the core TmModal — the visible overlay hosts .tm-dbrd.
+        var modal = page.Locator(".tm-modal-overlay:has(.tm-dbrd)");
         await modal.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 8000 });
         Assert.IsTrue(await modal.IsVisibleAsync(), "Record detail modal should open after clicking the row spacer");
 
@@ -353,11 +354,11 @@ public class NotionDatabaseBasicE2ETests : WasmTestBase
 
         await OpenFirstRecordDetailAsync(page, db);
 
-        var modal = page.Locator(".tm-dbrd__modal");
+        var modal = page.Locator(".tm-modal-overlay:has(.tm-dbrd)");
         await modal.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 8000 });
 
         // Close it
-        var closeBtn = page.Locator(".tm-dbrd__close-btn");
+        var closeBtn = page.Locator(".tm-modal-close");
         await closeBtn.ClickAsync();
         await page.WaitForTimeoutAsync(600);
 
@@ -365,5 +366,44 @@ public class NotionDatabaseBasicE2ETests : WasmTestBase
         Assert.IsFalse(await modal.IsVisibleAsync(), "Record detail modal should be hidden after clicking Close");
 
         await TakeScreenshotAsync(page, "db_record_detail_close");
+    }
+
+    [TestMethod]
+    [Description("Escape while a property cell edits cancels the cell only — the record detail dialog stays open; the next Escape closes it")]
+    public async Task Database_RecordDetail_NestedEscape_KeepsTheDialogOpen()
+    {
+        var page = await OpenNotionEditorAsync();
+        var db = await NavigateToDatabaseBlockAsync(page);
+
+        await OpenFirstRecordDetailAsync(page, db);
+
+        var modal = page.Locator(".tm-modal-overlay:has(.tm-dbrd)");
+        await modal.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 8000 });
+
+        // Enter cell edit mode (the nested surface). Escape belongs to the cell: it cancels the
+        // edit and must NOT close the host dialog. The cell editors are plain fixed popups (not
+        // TmOverlayPanels), so notion-editor.js marks their Escape tmEscapeHandled in the
+        // window-capture phase — tm-focus-trap skips a marked key, exactly like an
+        // overlay.js-dismissed slash/mention menu.
+        var propValue = page.Locator(".tm-dbrd__prop-value").First;
+        await propValue.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 8000 });
+        await propValue.EvaluateAsync("el => el.click()");
+        await page.WaitForTimeoutAsync(600);
+        Assert.AreEqual(1, await page.Locator(".tm-dbrd__prop-row--editing").CountAsync(),
+            "A property cell should be in edit mode before Escape");
+        Assert.IsTrue(await modal.IsVisibleAsync(), "Record detail should be open before Escape");
+
+        await page.Keyboard.PressAsync("Escape");
+        await page.WaitForTimeoutAsync(800);
+
+        // The cell edit is cancelled AND the dialog survives the same physical Escape.
+        Assert.AreEqual(0, await page.Locator(".tm-dbrd__prop-row--editing").CountAsync(),
+            "Escape should cancel the cell edit");
+        Assert.IsTrue(await modal.IsVisibleAsync(),
+            "The record detail dialog must stay open when Escape cancels the nested cell edit");
+
+        // The NEXT Escape (no nested surface open) closes the dialog itself.
+        await page.Keyboard.PressAsync("Escape");
+        await modal.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Hidden, Timeout = 5000 });
     }
 }

@@ -15,14 +15,18 @@ using Tempo.Blazor.Components.DataTable;
 using Tempo.Blazor.Components.Inputs;
 using Tempo.Blazor.Components.Notifications;
 using Tempo.Blazor.Components.Files;
+using Tempo.Blazor.Components.NotionEditor;
 using Tempo.Blazor.Components.NotionEditor.Services;
 using Tempo.Blazor.Components.NotionEditor.Page;
 using Tempo.Blazor.Components.NotionEditor.UI;
+using Tempo.Blazor.Components.NotionEditor.Blocks.Database;
 using Tempo.Blazor.Components.Overlay;
 using Tempo.Blazor.Components.Pickers;
 using Tempo.Blazor.Components.Spreadsheet;
 using Tempo.Blazor.Interfaces;
+using Tempo.Blazor.NotionEditor.Enums;
 using Tempo.Blazor.NotionEditor.Interfaces;
+using Tempo.Blazor.NotionEditor.Models;
 using Tempo.Blazor.Models;
 using Tempo.Blazor.Services;
 using Tempo.Blazor.Tests.Localization;
@@ -48,6 +52,7 @@ public sealed class TmOverlayPanelDialogNamingTests : LocalizationTestBase
     {
         Services.AddSingleton<ITmNotificationService>(new InMemoryNotificationStore());
         Services.AddSingleton<NavigationManager>(new FakeNavManager());
+        Services.AddScoped<Tempo.Blazor.NotionEditor.Helpers.CommentNotificationOrchestrator>();
     }
 
     [Fact]
@@ -239,6 +244,25 @@ public sealed class TmOverlayPanelDialogNamingTests : LocalizationTestBase
                 var cut = Render<TmNotionSlashMenu>(p => p.Add(c => c.Visible, true));
                 return cut.Find("[role='dialog']");
             },
+            // Phase 4 review batch A (P3, NO1): the comment popovers ride the core overlay panel
+            // (Role="dialog", AriaLabel) — Popover pins the bubble at every layout.
+            ["TmNotionBlockCommentPanel"] = () =>
+            {
+                var cut = Render<TmNotionBlockCommentPanel>(p => p
+                    .Add(c => c.Visible, true)
+                    .Add(c => c.Presentation, NotionCommentPresentation.Popover)
+                    .AddCascadingValue(new NotionEditorContext()));
+                return cut.Find(".tm-nbcp-popover");
+            },
+            ["TmNotionTextCommentPanel"] = () =>
+            {
+                var cut = Render<TmNotionTextCommentPanel>(p => p
+                    .Add(c => c.Visible, true)
+                    .Add(c => c.Presentation, NotionCommentPresentation.Popover)
+                    .Add(c => c.HighlightedText, "Quoted text")
+                    .AddCascadingValue(new NotionEditorContext()));
+                return cut.Find(".tm-ntcp-popover");
+            },
             ["TmNotionColorPicker"] = () =>
             {
                 var cut = Render<TmNotionColorPicker>(p => p.Add(c => c.Visible, true));
@@ -263,6 +287,47 @@ public sealed class TmOverlayPanelDialogNamingTests : LocalizationTestBase
                         DataProvider = Substitute.For<INotionDataProvider>(),
                         BlockService = Substitute.For<INotionEditorBlockService>(),
                     }));
+                return cut.Find("[role='dialog']");
+            },
+            // Phase 4 (DB-3): the database block's five anchored panels (properties / filter /
+            // sort / group / template menu) all carry aria-labels; the renderer opens the
+            // properties panel as the representative surface.
+            ["TmNotionDatabaseBlock"] = () =>
+            {
+                var dbProvider = Substitute.For<INotionDatabaseProvider>();
+                dbProvider.GetFieldsAsync(Arg.Any<string>())
+                    .Returns(new IDatabaseField[]
+                    {
+                        new DatabaseField { Id = Guid.NewGuid(), Name = "Name", Type = DatabaseFieldType.Text, IsPrimary = true },
+                    });
+                dbProvider.GetViewsAsync(Arg.Any<string>())
+                    .Returns(new IDatabaseView[]
+                    {
+                        new DatabaseViewStub { Id = Guid.NewGuid(), Name = "All", Type = DatabaseViewType.Table },
+                    });
+                dbProvider.GetRecordsAsync(Arg.Any<string>(), Arg.Any<INotionDatabaseFilter?>(),
+                        Arg.Any<IEnumerable<NotionDatabaseSort>?>(), Arg.Any<NotionDatabaseGrouping?>(),
+                        Arg.Any<int>(), Arg.Any<int>())
+                    .Returns(new Tempo.Blazor.NotionEditor.Models.PagedResult<IDatabaseRecord>
+                    {
+                        Items = [], TotalCount = 0, Page = 1, PageSize = 50
+                    });
+
+                var cut = Render<TmNotionDatabaseBlock>(p => p
+                    .Add(c => c.Block, new PageBlock
+                    {
+                        Id = Guid.NewGuid(),
+                        Type = BlockType.InlineDatabase,
+                        Content = new InlineDatabaseBlockContent { DatabaseId = Guid.NewGuid() }
+                    })
+                    .AddCascadingValue(new NotionEditorContext
+                    {
+                        DataProvider = Substitute.For<INotionDataProvider>(),
+                        BlockService = Substitute.For<INotionEditorBlockService>(),
+                        DatabaseProvider = dbProvider
+                    }));
+                cut.WaitForAssertion(() => cut.FindAll("[data-testid=notion-db-view-tab]").Should().NotBeEmpty());
+                cut.Find(".tm-db__tool-btn[data-tool='properties']").Click();
                 return cut.Find("[role='dialog']");
             },
             ["TmNotionNotificationCenter"] = () =>
@@ -431,6 +496,18 @@ public sealed class TmOverlayPanelDialogNamingTests : LocalizationTestBase
         }
 
         protected override void NavigateToCore(string uri, bool forceLoad) { }
+    }
+
+    private sealed class DatabaseViewStub : IDatabaseView
+    {
+        public Guid Id { get; init; }
+        public string Name { get; init; } = string.Empty;
+        public DatabaseViewType Type { get; init; }
+        public INotionDatabaseFilter? Filter => null;
+        public IReadOnlyList<NotionDatabaseSort> Sorts => [];
+        public NotionDatabaseGrouping? Grouping => null;
+        public IReadOnlyList<Guid> VisibleFieldIds => [];
+        public IDatabaseViewConfig? Config => null;
     }
 }
 

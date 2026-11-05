@@ -83,7 +83,7 @@ public sealed class NotionPhase1BaselineScreenshots : NotionE2ETestBase
             State = WaitForSelectorState.Visible,
             Timeout = 30000
         });
-        await page.Locator(".tm-dbrd__modal").WaitForAsync(new LocatorWaitForOptions
+        await page.Locator(".tm-modal-overlay:has(.tm-dbrd)").First.WaitForAsync(new LocatorWaitForOptions
         {
             State = WaitForSelectorState.Hidden,
             Timeout = 5000
@@ -153,7 +153,7 @@ public sealed class NotionPhase1BaselineScreenshots : NotionE2ETestBase
         await page.Locator(".tm-dbt__row").First.WaitForAsync(new LocatorWaitForOptions { Timeout = 10000 });
 
         await page.Locator(".tm-dbt__cell--spacer").First.EvaluateAsync("el => el.click()");
-        var modal = page.Locator(".tm-dbrd__modal");
+        var modal = page.Locator(".tm-modal-overlay:has(.tm-dbrd)");
         await modal.WaitForAsync(new LocatorWaitForOptions { Timeout = 10000 });
         await page.GetByTestId("notion-db-record-delete").ClickAsync();
         var confirm = page.Locator(".tm-dialog").Last;

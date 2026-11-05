@@ -163,8 +163,13 @@ public sealed class NotionPhase2ThemeScreenshots : NotionE2ETestBase
         var pageComments = page.Locator(".tm-npcp").First;
         if (await pageComments.CountAsync() > 0)
         {
-            await page.Locator(".tm-nbcp__close-btn").First.ClickAsync();
-            await page.Locator(".tm-nbcp-backdrop").WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Hidden, Timeout = 5000 });
+            // Phase 4: overlay.js owns Escape for the anchored popover — it may already be closed.
+            if (await panel.IsVisibleAsync())
+            {
+                await page.Locator(".tm-nbcp__close-btn").First.ClickAsync();
+                // Phase 4: the popover has no own backdrop anymore — wait for the panel itself to hide.
+                await page.Locator(".tm-nbcp").WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Hidden, Timeout = 5000 });
+            }
             await pageComments.ScrollIntoViewIfNeededAsync();
             var toggle = pageComments.Locator(".tm-npcp__toggle").First;
             if (await toggle.CountAsync() > 0 && await toggle.GetAttributeAsync("aria-expanded") != "true")

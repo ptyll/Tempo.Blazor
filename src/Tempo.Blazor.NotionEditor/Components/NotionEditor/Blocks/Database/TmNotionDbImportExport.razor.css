@@ -2,108 +2,28 @@
    TmNotionDbImportExport  (prefix: tm-dbie__)
    ═══════════════════════════════════════════════════════════════════════════ */
 
-/* ── Overlay ────────────────────────────────────────────────────────────── */
 
-.tm-dbie__overlay {
-    position: fixed;
-    inset: 0;
-    z-index: var(--tm-z-modal);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: var(--tm-bg-overlay);
-    backdrop-filter: blur(2px);
-    animation: tm-dbie-fade 0.15s ease;
-}
+/* Phase 4 (DB-3): the dialog chrome rides the core TmModal — content styles only
+   (no own overlay, no toolbar, no z-index). */
 
-@keyframes tm-dbie-fade {
-    from { opacity: 0; }
-    to   { opacity: 1; }
-}
-
-/* ── Modal ──────────────────────────────────────────────────────────────── */
-
-.tm-dbie__modal {
-    position: relative;
-    width: min(680px, 96vw);
-    max-height: 90vh;
-    background: var(--tm-bg-surface);
-    border: 1px solid var(--tm-border-color);
-    border-radius: 10px;
-    box-shadow: var(--tm-shadow-popover);
-    display: flex;
+.tm-dbie {
+    display:        flex;
     flex-direction: column;
-    overflow: hidden;
-    animation: tm-dbie-slide 0.18s cubic-bezier(.22, 1, .36, 1);
+    min-height:     0;
 }
 
-@keyframes tm-dbie-slide {
-    from { opacity: 0; transform: translateY(12px) scale(0.98); }
-    to   { opacity: 1; transform: translateY(0) scale(1); }
-}
-
-/* ── Toolbar ────────────────────────────────────────────────────────────── */
-
-.tm-dbie__toolbar {
-    display: flex;
-    align-items: center;
+.tm-dbie__footer {
+    display:         flex;
+    align-items:     center;
     justify-content: space-between;
-    gap: 12px;
-    padding: 10px 16px;
-    border-bottom: 1px solid var(--tm-border-color);
-    background: var(--tm-surface-secondary);
-    flex-shrink: 0;
+    gap:             var(--tm-space-2);
+    width:           100%;
 }
 
-.tm-dbie__breadcrumb {
-    display: flex;
+.tm-dbie__footer-main {
+    display:     flex;
     align-items: center;
-    gap: 5px;
-    min-width: 0;
-    flex: 1;
-}
-
-.tm-dbie__bc-db {
-    font-size: 12px;
-    font-weight: 500;
-    color: var(--tm-text-secondary);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: 160px;
-}
-
-.tm-dbie__bc-sep {
-    color: var(--tm-text-tertiary);
-    flex-shrink: 0;
-    font-size: 12px;
-}
-
-.tm-dbie__bc-title {
-    font-size: 12px;
-    font-weight: 600;
-    color: var(--tm-text-primary);
-    white-space: nowrap;
-}
-
-.tm-dbie__close-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 28px;
-    height: 28px;
-    border: none;
-    border-radius: 5px;
-    background: transparent;
-    color: var(--tm-text-secondary);
-    cursor: pointer;
-    flex-shrink: 0;
-    transition: background 0.12s, color 0.12s;
-}
-
-.tm-dbie__close-btn:hover {
-    background: var(--tm-color-surface-hover);
-    color: var(--tm-text-primary);
+    gap:         var(--tm-space-2);
 }
 
 /* ── Tabs ───────────────────────────────────────────────────────────────── */
@@ -378,40 +298,70 @@
     font-style: italic;
 }
 
-/* ── Map footer ─────────────────────────────────────────────────────────── */
+/* ── The import/export primary actions live in the TmModal footer (phase 4). ── */
 
-.tm-dbie__map-footer {
-    display: flex;
-    justify-content: flex-end;
-    flex-shrink: 0;
-    padding-top: 4px;
+/* ── Choose file (large target on every layout) ─────────────────────────── */
+
+.tm-dbie__choose-file {
+    display:       inline-flex;
+    align-items:   center;
+    min-height:    44px;
+    padding:       0 var(--tm-space-5);
+    border-radius: var(--tm-radius-md);
+    background:    var(--tm-color-primary-solid);
+    color:         var(--tm-color-on-primary-fixed);
+    font-size:     var(--tm-font-size-sm);
+    font-weight:   var(--tm-font-weight-medium);
 }
 
-/* ── Primary button ─────────────────────────────────────────────────────── */
-
-.tm-dbie__primary-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 8px 18px;
-    border: none;
-    border-radius: 6px;
-    background: var(--tm-color-primary-solid);
-    color: var(--tm-color-on-primary-fixed);
-    font-size: 13px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: background 0.12s, opacity 0.12s;
-    white-space: nowrap;
+.tm-dbie__file-input:focus-visible + .tm-dbie__drop-label .tm-dbie__choose-file {
+    outline: 2px solid var(--tm-focus-ring, var(--tm-color-primary));
+    outline-offset: 2px;
 }
 
-.tm-dbie__primary-btn:hover:not(:disabled) {
-    background: color-mix(in srgb, var(--tm-color-primary) 88%, var(--tm-text-primary));
-}
+/* ── Mobile: the mapping rows stack as cards under 600 px ───────────────── */
 
-.tm-dbie__primary-btn:disabled {
-    opacity: 0.45;
-    cursor: not-allowed;
+@media (max-width: 600px) {
+    .tm-dbie__map-wrap {
+        border: 0;
+        overflow: visible;
+    }
+
+    .tm-dbie__map-table,
+    .tm-dbie__map-table tbody,
+    .tm-dbie__map-table tr,
+    .tm-dbie__map-table td {
+        display: block;
+        width: 100%;
+    }
+
+    .tm-dbie__map-table thead {
+        display: none;
+    }
+
+    .tm-dbie__map-table tbody tr.tm-dbie__map-row,
+    .tm-dbie__map-table tbody tr {
+        margin-bottom: var(--tm-space-3);
+        padding: var(--tm-space-3);
+        border: 1px solid var(--tm-border-color);
+        border-radius: var(--tm-radius-md);
+        background: var(--tm-bg-surface);
+    }
+
+    .tm-dbie__map-col-name {
+        max-width: none;
+        padding: 0 0 var(--tm-space-1);
+    }
+
+    .tm-dbie__map-field {
+        width: auto;
+        padding: 0 0 var(--tm-space-1);
+    }
+
+    .tm-dbie__map-preview {
+        max-width: none;
+        padding: 0;
+    }
 }
 
 /* ── Export tab ─────────────────────────────────────────────────────────── */

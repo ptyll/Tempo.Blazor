@@ -1,17 +1,10 @@
-/* ── Backdrop ──────────────────────────────────────────────────────────────── */
+/* Phase 4 (NO1): no own backdrop and no z-index — the popover bubble rides the core
+   TmOverlayPanel (browser top layer, positioned by overlay.js against the zero-size anchor); the
+   dialog/sheet surface is the core TmModal. */
 
-.tm-ntcp-backdrop {
-    position: fixed;
-    inset: 0;
-    z-index: calc(var(--tm-z-popover) - 1);
-    background: transparent;
-}
-
-/* ── Popover card ──────────────────────────────────────────────────────────── */
+/* ── Panel card ──────────────────────────────────────────────────────────── */
 
 .tm-ntcp {
-    position: fixed;
-    z-index: var(--tm-z-popover);
     width: 300px;
     max-height: 480px;
     display: flex;
@@ -23,12 +16,32 @@
     font-size: 14px;
     color: var(--tm-text-primary);
     overflow: hidden;
-    animation: tm-ntcp-appear 90ms ease;
 }
 
-@keyframes tm-ntcp-appear {
-    from { opacity: 0; transform: translateY(-6px) scale(0.97); }
-    to   { opacity: 1; transform: translateY(0)    scale(1);    }
+/* Inside the TmOverlayPanel popover the panel root paints the chrome — the card keeps only the
+   sizing (the popover root carries TmOverlayPanel's scope, so this is a modifier class). */
+.tm-ntcp--popover {
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+}
+
+/* Inside the core TmModal the card fills the body (scoped — the card carries this component's
+   scope attribute in both surfaces). */
+
+.tm-ntcp--in-dialog {
+    position: static;
+    width: 100%;
+    max-height: none;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+}
+
+/* The TmModal header owns the × in the dialog surface. */
+.tm-ntcp--in-dialog .tm-ntcp__close-btn {
+    display: none;
 }
 
 /* ── Header ────────────────────────────────────────────────────────────────── */
@@ -73,6 +86,31 @@
     display: -webkit-box;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
+}
+
+/* Dialog: the whole quote, clamped to four lines until expanded. */
+
+.tm-ntcp--in-dialog .tm-ntcp__highlight-snippet {
+    -webkit-line-clamp: 4;
+}
+
+.tm-ntcp--in-dialog .tm-ntcp__highlight-preview--expanded .tm-ntcp__highlight-snippet {
+    -webkit-line-clamp: unset;
+    display: block;
+}
+
+.tm-ntcp__quote-toggle {
+    flex-shrink: 0;
+    align-self: flex-start;
+    border: none;
+    background: transparent;
+    padding: 0;
+    font-size: 12px;
+    color: var(--tm-color-primary);
+    cursor: pointer;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    white-space: nowrap;
 }
 
 /* ── Header actions ────────────────────────────────────────────────────────── */
@@ -157,7 +195,7 @@
 .tm-ntcp__thread {
     flex: 1;
     overflow-y: auto;
-    padding: 10px 12px;
+    padding: var(--tm-space-3) var(--tm-space-4);
     display: flex;
     flex-direction: column;
     gap: 12px;
@@ -179,6 +217,14 @@
     padding: 6px 0;
     font-size: 13px;
     color: var(--tm-text-secondary);
+}
+
+/* Empty state: centred with breathing room — the bare status line read as a layout defect
+   in the popover when a highlighted passage had no comments yet. */
+.tm-ntcp__status--empty {
+    justify-content: center;
+    padding: var(--tm-space-6) var(--tm-space-4);
+    text-align: center;
 }
 
 /* ── Spinner ───────────────────────────────────────────────────────────────── */
@@ -473,7 +519,21 @@
 }
 
 ::deep .tm-ntcp__reply-send:hover:not(:disabled) { background: var(--tm-color-primary-700); }
-::deep .tm-ntcp__reply-send:disabled { opacity: 0.45; cursor: not-allowed; }
+
+/* Disabled primary: core disabled surfaces, not opacity on the primary colour (see tm-nbcp). */
+::deep .tm-ntcp__reply-send:disabled {
+    background: var(--tm-bg-muted);
+    color: var(--tm-text-disabled);
+    opacity: 1;
+    cursor: not-allowed;
+}
+
+/* Coarse pointers: no Ctrl+Enter hint, 44px submit target (see tm-nbcp). */
+@media (pointer: coarse) {
+    ::deep .tm-ntcp__reply-hint { display: none; }
+
+    ::deep .tm-ntcp__reply-send { min-height: 44px; }
+}
 
 /* ── Error ─────────────────────────────────────────────────────────────────── */
 

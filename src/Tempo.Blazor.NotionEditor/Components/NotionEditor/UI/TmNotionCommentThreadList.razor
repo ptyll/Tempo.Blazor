@@ -15,7 +15,9 @@
     }
     else if (Empty)
     {
-        <div class="@StatusClass">@EmptyText</div>
+        @* The --empty modifier lets a panel centre/pad the empty state without touching the
+           inline loading status that shares the base class. *@
+        <div class="@StatusClass @StatusClass--empty">@EmptyText</div>
     }
     else
     {

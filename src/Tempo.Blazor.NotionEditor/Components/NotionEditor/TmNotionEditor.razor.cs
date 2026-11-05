@@ -152,6 +152,15 @@ public partial class TmNotionEditor : TmComponentBase, IAsyncDisposable
     /// </summary>
     [Parameter] public NotionShellPanelPresentation ShellPanelPresentation { get; set; } = NotionShellPanelPresentation.Overlay;
 
+    /// <summary>
+    /// How the block / text comment panels present (NO1). <see cref="NotionCommentPresentation.Auto"/>
+    /// (the default) keeps the anchored popover bubble on a desktop layout and opens the core
+    /// modal / sheet on touch and narrow containers; <see cref="NotionCommentPresentation.Popover"/>
+    /// pins the bubble at every layout; <see cref="NotionCommentPresentation.Dialog"/> always opens
+    /// the modal.
+    /// </summary>
+    [Parameter] public NotionCommentPresentation CommentPresentation { get; set; } = NotionCommentPresentation.Auto;
+
     /// <summary>Additional CSS class on the root element.</summary>
     [Parameter] public string? Class { get; set; }
 
@@ -1061,6 +1070,7 @@ public partial class TmNotionEditor : TmComponentBase, IAsyncDisposable
         TokenProvider               = TokenProvider,
         AllowedBlockTypes           = AllowedBlockTypes,
         DeniedBlockTypes            = SinglePageMode ? SinglePageDeniedBlockTypes : null,
+        CommentPresentation         = CommentPresentation,
         PageActions                 = _context?.PageActions,
         PageActionsChanged          = NotifyPageActionsChanged,
         NavigateTo                  = pageId => NavigateToPageAsync(pageId),

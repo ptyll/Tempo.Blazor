@@ -20,6 +20,10 @@ public partial class TmNotionDbTemplateEditor : ComponentBase
     [Parameter] public string   DatabaseName { get; set; } = string.Empty;
     [Parameter] public bool     ReadOnly     { get; set; }
 
+    /// <summary>Whether the editor dialog is open. Defaults to <c>true</c> — the host renders the
+    /// component only while a template is being edited.</summary>
+    [Parameter] public bool Show { get; set; } = true;
+
     [Parameter] public EventCallback                             OnClose          { get; set; }
     [Parameter] public EventCallback<IDatabaseRecordTemplate>   OnTemplateSaved  { get; set; }
 
@@ -86,6 +90,19 @@ public partial class TmNotionDbTemplateEditor : ComponentBase
     private async Task CommitNameAsync()
     {
         await SaveAsync();
+    }
+
+    /// <summary>
+    /// The single close path (×, Escape, the footer button): commits a pending name edit BEFORE
+    /// raising <see cref="OnClose"/>, so a name typed but never blurred (Escape does not blur)
+    /// still reaches the provider and <see cref="OnTemplateSaved"/>.
+    /// </summary>
+    private async Task HandleCloseAsync()
+    {
+        if (!ReadOnly && !string.Equals(_nameBuffer, Template.Name, StringComparison.Ordinal))
+            await CommitNameAsync();
+
+        await OnClose.InvokeAsync();
     }
 
     // ── Block handlers (all local — no provider) ──────────────────────────────

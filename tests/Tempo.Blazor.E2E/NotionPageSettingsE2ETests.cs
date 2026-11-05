@@ -323,7 +323,7 @@ public class NotionPageSettingsRecoveryE2ETests : NotionE2ETestBase
         await WaitForTitleAsync("EB12 Page Settings");
 
         await page.Locator(".tm-notion-header-icon").First.ClickAsync();
-        var picker = page.Locator(".tm-notion-emoji-picker").First;
+        var picker = page.Locator(".tm-notion-emoji-picker__panel").First;
         await picker.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10000 });
         await picker.Locator(".tm-notion-emoji-picker__btn[title='rocket']").First.ClickAsync();
         await Assertions.Expect(page.Locator(".tm-notion-header-icon").First).ToContainTextAsync("🚀");
@@ -333,7 +333,7 @@ public class NotionPageSettingsRecoveryE2ETests : NotionE2ETestBase
         await Assertions.Expect(picker.Locator(".tm-notion-emoji-picker__category--recent").First).ToBeVisibleAsync();
         await Assertions.Expect(picker.Locator(".tm-notion-emoji-picker__category--recent .tm-notion-emoji-picker__btn").First)
             .ToContainTextAsync("🚀");
-        await AssertNoHorizontalOverflowAsync(page, ".tm-notion-emoji-picker", "EB12 emoji picker recent");
+        await AssertNoHorizontalOverflowAsync(page, ".tm-notion-emoji-picker__panel", "EB12 emoji picker recent");
         await CaptureBaselineAsync("page-settings", "emoji-picker-recent", picker);
     }
 

@@ -243,6 +243,13 @@
       "description": "How the Tasks / Blog / Analytics / Audit shell panels present themselves. Overlay (default) rides the core TmSidePanel — docked next to the page on a desktop layout, a side sheet on a tablet layout and a full-height sheet on a mobile layout — while the page stays mounted. Main replaces the page in the main region. At most one shell panel is open at a time either way."
     },
     {
+      "name": "CommentPresentation",
+      "type": "NotionCommentPresentation",
+      "isRequired": false,
+      "default": "Auto",
+      "description": "How the block / text comment panels present (NO1). Auto (the default) keeps the anchored popover bubble on a desktop layout and opens the core modal / sheet on touch and narrow containers; Popover pins the bubble at every layout; Dialog always opens the modal."
+    },
+    {
       "name": "SinglePageMode",
       "type": "bool",
       "isRequired": false,

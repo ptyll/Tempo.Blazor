@@ -64006,6 +64006,16 @@
           ]
         },
         {
+          "itemName": "NotionCommentPresentation",
+          "kind": "Enum",
+          "category": "Components",
+          "namespace": "Tempo.Blazor.Components.NotionEditor",
+          "description": "How the block / text comment panels present (see TmNotionEditor.CommentPresentation): Popover keeps the anchored bubble at every layout, Dialog always renders the core TmModal (centred dialog on desktop, sheet on mobile), Auto (the default) follows the layout — popover on a desktop layout, dialog / sheet on touch and narrow containers.",
+          "packageId": "Tempo.Blazor.NotionEditor",
+          "sourcePath": "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/NotionCommentPresentation.cs",
+          "documentationStatus": "merged"
+        },
+        {
           "itemName": "NotionDiffViewMode",
           "kind": "Enum",
           "category": "Components",
@@ -64170,6 +64180,12 @@
               "kind": "Property",
               "type": "NotionCollaborationSync?",
               "description": "Active collaboration sync service (null when CollaborationProvider is absent)."
+            },
+            {
+              "name": "CommentPresentation",
+              "kind": "Property",
+              "type": "NotionCommentPresentation",
+              "description": "How the block / text comment panels present (NO1): Popover keeps the anchored bubble, Dialog the core modal, Auto (the default) resolves per layout. Set from TmNotionEditor.CommentPresentation."
             },
             {
               "name": "CommentProvider",
@@ -65630,6 +65646,13 @@
               "name": "OnMentionClicked",
               "type": "EventCallback<string>",
               "isRequired": false
+            },
+            {
+              "name": "Presentation",
+              "type": "NotionCommentPresentation",
+              "isRequired": false,
+              "default": "NotionCommentPresentation.Auto",
+              "description": "How the panel presents (NO1). Auto (the default) keeps the anchored popover bubble on a desktop layout and opens the core TmModal / sheet on a narrow (mobile) layout; Popover pins the bubble; Dialog always opens the modal. The host passes TmNotionEditor.CommentPresentation through the editor context."
             },
             {
               "name": "StartInNewThreadMode",
@@ -67965,6 +67988,13 @@
               "name": "ReadOnly",
               "type": "bool",
               "isRequired": false
+            },
+            {
+              "name": "Show",
+              "type": "bool",
+              "isRequired": false,
+              "default": "true",
+              "description": "Whether the editor dialog is open. Defaults to true — the host renders the component only while editing (inside the core TmModal since phase 4)."
             }
           ]
         },
@@ -68173,6 +68203,13 @@
               "isRequired": false
             },
             {
+              "name": "Show",
+              "type": "bool",
+              "isRequired": false,
+              "default": "true",
+              "description": "Whether the dialog is open. Defaults to true — the host renders the component only while the dialog is shown (inside the core TmModal since phase 4)."
+            },
+            {
               "name": "Views",
               "type": "IReadOnlyList<IDatabaseView>",
               "isRequired": true,
@@ -68291,6 +68328,13 @@
               "type": "IDatabaseRecord",
               "isRequired": true,
               "editorRequired": true
+            },
+            {
+              "name": "Show",
+              "type": "bool",
+              "isRequired": false,
+              "default": "true",
+              "description": "Whether the detail dialog is open. Defaults to true — the host renders the component only while a record is open (inside the core TmModal since phase 4)."
             }
           ]
         },
@@ -68488,6 +68532,13 @@
               "name": "ReadOnly",
               "type": "bool",
               "isRequired": false
+            },
+            {
+              "name": "Show",
+              "type": "bool",
+              "isRequired": false,
+              "default": "true",
+              "description": "Whether the editor dialog is open. Defaults to true — the host renders the component only while a template is being edited (inside the core TmModal since phase 4)."
             },
             {
               "name": "Template",
@@ -68850,6 +68901,13 @@
               "type": "INotionCollaborationProvider?",
               "isRequired": false,
               "description": "Enables real-time collaboration — live cursor presence and remote block sync."
+            },
+            {
+              "name": "CommentPresentation",
+              "type": "NotionCommentPresentation",
+              "isRequired": false,
+              "default": "NotionCommentPresentation.Auto",
+              "description": "How the block / text comment panels present (NO1). Auto (the default) keeps the anchored popover bubble on a desktop layout and opens the core modal / sheet on touch and narrow containers; Popover pins the bubble at every layout; Dialog always opens the modal."
             },
             {
               "name": "CommentProvider",
@@ -72214,6 +72272,13 @@
               "isRequired": false
             },
             {
+              "name": "Presentation",
+              "type": "NotionCommentPresentation",
+              "isRequired": false,
+              "default": "NotionCommentPresentation.Auto",
+              "description": "How the panel presents (NO1) — see TmNotionBlockCommentPanel.Presentation. In the dialog the whole quote renders (clamped to four lines with a Show full quote toggle); the popover truncates it."
+            },
+            {
               "name": "StartOffset",
               "type": "int",
               "isRequired": false
@@ -72789,12 +72854,12 @@
         }
       ],
       "summary": {
-        "itemCount": 183,
-        "manualItemCount": 183,
-        "generatedItemCount": 182,
+        "itemCount": 184,
+        "manualItemCount": 184,
+        "generatedItemCount": 183,
         "generatedOnlyItemCount": 0,
         "componentCount": 134,
-        "publicApiTypeCount": 48
+        "publicApiTypeCount": 49
       }
     },
     {
@@ -133542,10 +133607,10 @@
   ],
   "summary": {
     "packageCount": 28,
-    "itemCount": 3478,
-    "manualItemCount": 3478,
+    "itemCount": 3479,
+    "manualItemCount": 3479,
     "generatedOnlyItemCount": 0,
     "componentCount": 536,
-    "publicApiTypeCount": 2890
+    "publicApiTypeCount": 2891
   }
 }

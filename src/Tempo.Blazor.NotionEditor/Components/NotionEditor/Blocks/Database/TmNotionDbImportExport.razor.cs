@@ -27,6 +27,11 @@ public partial class TmNotionDbImportExport : ComponentBase
     [Parameter, EditorRequired] public IReadOnlyList<IDatabaseView>   Views         { get; set; } = [];
     [Parameter]                 public string                         DatabaseName  { get; set; } = string.Empty;
     [Parameter]                 public bool                           ReadOnly      { get; set; }
+
+    /// <summary>Whether the dialog is open. Defaults to <c>true</c> — the host renders the
+    /// component only while the dialog is shown.</summary>
+    [Parameter]                 public bool                           Show          { get; set; } = true;
+
     [Parameter]                 public EventCallback                  OnImported    { get; set; }
     [Parameter]                 public EventCallback                  OnClose       { get; set; }
 

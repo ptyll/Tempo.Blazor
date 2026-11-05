@@ -137,6 +137,7 @@
                             CurrentUserId="@CurrentUserId"
                             CurrentUserGroupIds="@CurrentUserGroupIds"
                             ReadOnly="@IsQueryFlagEnabled("readonly")"
+                            CommentPresentation="CommentPresentationForQuery"
                             InitialPageId="@_currentPage.Id.ToString()"
                             ShowSidebar="true"
                             OnCreateTokenRequested="@CreateTokenAsync"
@@ -1078,6 +1079,7 @@
         "seedSearchPage",
         "seedSidebarDeepPage",
         "seedSidebarEmptyPage",
+        "seedSidebarTrashChildPage",
         "seedSidebarTrashPage",
         "seedSmartLinksPage",
         "seedSpacesPage",
@@ -1214,6 +1216,18 @@
     private bool IsQueryFlagEnabled(string key)
         => GetQueryValue(key) is { } value &&
            (string.IsNullOrWhiteSpace(value) || bool.TryParse(value, out var parsed) && parsed);
+
+    /// <summary>
+    /// <c>?comments=dialog|popover|auto</c> pins the block / text comment presentation for the
+    /// phase-4 dialog E2E (the default <c>Auto</c> follows the layout).
+    /// </summary>
+    private NotionCommentPresentation CommentPresentationForQuery
+        => GetQueryValue("comments")?.ToLowerInvariant() switch
+        {
+            "dialog" => NotionCommentPresentation.Dialog,
+            "popover" => NotionCommentPresentation.Popover,
+            _ => NotionCommentPresentation.Auto,
+        };
 
     private string CurrentUserId => GetQueryValue("user") switch
     {

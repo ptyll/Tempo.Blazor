@@ -56,6 +56,13 @@
       "name": "OnOpenAsPage",
       "type": "EventCallback<IDatabaseRecord>",
       "isRequired": false
+    },
+    {
+      "name": "Show",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "Whether the detail dialog is open. Defaults to true — the host renders the component only while a record is open (inside the core TmModal since phase 4)."
     }
   ],
   "subcategory": "Blocks / Database"

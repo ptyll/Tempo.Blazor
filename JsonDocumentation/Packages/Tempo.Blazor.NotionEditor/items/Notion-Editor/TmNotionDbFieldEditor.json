@@ -49,6 +49,13 @@
       "name": "OnClose",
       "type": "EventCallback",
       "isRequired": false
+    },
+    {
+      "name": "Show",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "Whether the editor dialog is open. Defaults to true — the host renders the component only while editing (inside the core TmModal since phase 4)."
     }
   ],
   "subcategory": "Blocks / Database"

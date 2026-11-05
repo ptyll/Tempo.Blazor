@@ -287,33 +287,6 @@
     color: var(--tm-text-primary);
 }
 
-/* ── Floating menu (fixed, escapes overflow) ────────────────────────────── */
-.tm-db__floatmenu-backdrop {
-    position: fixed;
-    inset: 0;
-    z-index: calc(var(--tm-z-dropdown) - 1);
-}
-
-.tm-db__floatmenu {
-    position: fixed;
-    z-index: var(--tm-z-dropdown);
-    background: var(--tm-bg-surface);
-    border: 1px solid var(--tm-border-color);
-    border-radius: 8px;
-    box-shadow: var(--tm-shadow-popover);
-    padding: 4px;
-    min-width: 180px;
-    display: flex;
-    flex-direction: column;
-    gap: 1px;
-    animation: tm-db-ctx-in 0.12s ease;
-}
-
-@keyframes tm-db-ctx-in {
-    from { opacity: 0; transform: translateY(-4px) scale(0.97); }
-    to   { opacity: 1; transform: translateY(0) scale(1); }
-}
-
 /* ── Inline rename input ────────────────────────────────────────────────── */
 .tm-db__view-tab-rename {
     border: none;
@@ -342,24 +315,26 @@
     flex-shrink: 0;
 }
 
-/* ── Panels ─────────────────────────────────────────────────────────────── */
+/* ── Panels (phase 4: content of anchored TmOverlayPanel popovers / sheets) ── */
 .tm-db__panel {
-    border-bottom: 1px solid var(--tm-border-color);
-    background: var(--tm-bg-surface-secondary);
-    padding: 10px 14px 12px;
-    animation: tm-db-panel-in 0.15s ease;
-}
-
-@keyframes tm-db-panel-in {
-    from { opacity: 0; transform: translateY(-4px); }
-    to   { opacity: 1; transform: translateY(0); }
+    display: flex;
+    flex-direction: column;
+    min-width: 15rem;
 }
 
 .tm-db__panel-header {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     justify-content: space-between;
+    gap: var(--tm-space-3);
     margin-bottom: 8px;
+}
+
+.tm-db__panel-headings {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
 }
 
 .tm-db__panel-title {
@@ -370,9 +345,15 @@
     color: var(--tm-text-secondary);
 }
 
+.tm-db__panel-subtitle {
+    font-size: 0.75rem;
+    color: var(--tm-text-tertiary);
+}
+
 .tm-db__panel-actions {
     display: flex;
     gap: 8px;
+    flex-shrink: 0;
 }
 
 .tm-db__panel-link {
@@ -387,6 +368,22 @@
 }
 
 .tm-db__panel-link:hover { opacity: 0.8; }
+
+/* Sticky "Done" action of the Properties panel (Q9 autosave — closes without confirming). */
+.tm-db__panel-done {
+    margin-top: 8px;
+    padding: 7px 12px;
+    border: none;
+    border-radius: var(--tm-radius-sm, 6px);
+    background: var(--tm-color-primary-solid);
+    color: var(--tm-color-on-primary-fixed);
+    font-size: 0.8125rem;
+    font-weight: 500;
+    cursor: pointer;
+    align-self: stretch;
+}
+
+.tm-db__panel-done:hover { opacity: 0.9; }
 
 .tm-db__panel-empty {
     font-size: 0.8125rem;
@@ -406,6 +403,11 @@
 
 .tm-db__field-row:hover { background: var(--tm-bg-surface-secondary); }
 
+.tm-db__field-row--primary {
+    cursor: default;
+    color: var(--tm-text-secondary);
+}
+
 .tm-db__field-icon {
     display: inline-flex;
     color: var(--tm-text-secondary);
@@ -418,23 +420,43 @@
     color: var(--tm-text-primary);
 }
 
-.tm-db__field-toggle {
-    accent-color: var(--tm-color-primary);
-    width: 14px;
-    height: 14px;
-    cursor: pointer;
+.tm-db__field-row--primary .tm-db__field-name {
+    color: var(--tm-text-secondary);
+}
+
+.tm-db__field-lock {
+    display: inline-flex;
+    color: var(--tm-text-tertiary);
+    flex-shrink: 0;
+}
+
+/* ── Floating menus (phase 4: no own backdrop z-band, no z-index claims) ── */
+.tm-db__floatmenu-backdrop {
+    position: fixed;
+    inset: 0;
+}
+
+.tm-db__floatmenu {
+    position: fixed;
+    background: var(--tm-bg-surface);
+    border: 1px solid var(--tm-border-color);
+    border-radius: 8px;
+    box-shadow: var(--tm-shadow-popover);
+    padding: 4px;
+    min-width: 180px;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
 }
 
 /* ── Block context menu ─────────────────────────────────────────────────── */
 .tm-db__ctx-backdrop {
     position: fixed;
     inset: 0;
-    z-index: calc(var(--tm-z-dropdown) - 1);
 }
 
 .tm-db__ctx-menu {
     position: fixed;
-    z-index: var(--tm-z-dropdown);
     background: var(--tm-bg-surface);
     border: 1px solid var(--tm-border-color);
     border-radius: 8px;
@@ -444,7 +466,6 @@
     display: flex;
     flex-direction: column;
     gap: 1px;
-    animation: tm-db-ctx-in 0.12s ease;
 }
 
 .tm-db__ctx-item {

@@ -2,114 +2,12 @@
    TmNotionDbTemplateEditor  (prefix: tm-dbte__)
    ═══════════════════════════════════════════════ */
 
-/* ── Overlay ─────────────────────────────────── */
-.tm-dbte__overlay {
-    position: fixed;
-    inset: 0;
-    z-index: var(--tm-z-modal);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: var(--tm-bg-overlay);
-    backdrop-filter: blur(2px);
-    animation: tm-dbte-fade-in 0.15s ease;
-}
+/* Phase 4 (DB-3): the dialog chrome rides the core TmModal — content styles only
+   (no own overlay, no toolbar, no z-index). */
 
-@keyframes tm-dbte-fade-in {
-    from { opacity: 0; }
-    to   { opacity: 1; }
-}
-
-/* ── Modal panel ─────────────────────────────── */
-.tm-dbte__modal {
-    position: relative;
-    width: min(780px, 96vw);
-    max-height: 90vh;
-    background: var(--tm-bg-surface);
-    border: 1px solid var(--tm-border-color);
-    border-radius: 10px;
-    box-shadow: var(--tm-shadow-popover);
-    display: flex;
+.tm-dbte {
+    display:        flex;
     flex-direction: column;
-    overflow: hidden;
-    animation: tm-dbte-slide-in 0.18s cubic-bezier(.22,1,.36,1);
-}
-
-@keyframes tm-dbte-slide-in {
-    from { opacity: 0; transform: translateY(12px) scale(0.98); }
-    to   { opacity: 1; transform: translateY(0) scale(1); }
-}
-
-/* ── Toolbar ─────────────────────────────────── */
-.tm-dbte__toolbar {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    padding: 10px 16px;
-    border-bottom: 1px solid var(--tm-border-color);
-    background: var(--tm-surface-secondary);
-    flex-shrink: 0;
-}
-
-.tm-dbte__breadcrumb {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    min-width: 0;
-    flex: 1;
-}
-
-.tm-dbte__breadcrumb-db,
-.tm-dbte__breadcrumb-label {
-    font-size: 12px;
-    font-weight: 500;
-    color: var(--tm-text-secondary);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: 140px;
-}
-
-.tm-dbte__breadcrumb-sep {
-    color: var(--tm-text-tertiary);
-    flex-shrink: 0;
-}
-
-.tm-dbte__breadcrumb-name {
-    font-size: 12px;
-    font-weight: 600;
-    color: var(--tm-text-primary);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: 200px;
-}
-
-.tm-dbte__toolbar-actions {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    flex-shrink: 0;
-}
-
-.tm-dbte__close-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 28px;
-    height: 28px;
-    border: none;
-    border-radius: 5px;
-    background: transparent;
-    color: var(--tm-text-secondary);
-    cursor: pointer;
-    transition: background 0.12s, color 0.12s;
-}
-
-.tm-dbte__close-btn:hover {
-    background: var(--tm-color-surface-hover);
-    color: var(--tm-text-primary);
 }
 
 /* ── Template badge ──────────────────────────── */
@@ -244,4 +142,9 @@
 .tm-dbte__content {
     flex: 1;
     min-height: 80px;
+}
+
+@media (max-width: 600px) {
+    .tm-dbte__prop-row { flex-direction: column; gap: 0; }
+    .tm-dbte__prop-label { width: auto; min-width: 0; max-width: none; padding-bottom: 0; }
 }

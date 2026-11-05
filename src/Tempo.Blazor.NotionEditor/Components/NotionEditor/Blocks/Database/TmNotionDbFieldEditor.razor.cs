@@ -13,6 +13,10 @@ public partial class TmNotionDbFieldEditor : ComponentBase
     [Parameter, EditorRequired] public IReadOnlyList<IDatabaseField> Fields  { get; set; } = [];
     [Parameter] public bool ReadOnly { get; set; }
 
+    /// <summary>Whether the editor dialog is open. Defaults to <c>true</c> — the host renders the
+    /// component only while editing, and tests render it directly.</summary>
+    [Parameter] public bool Show { get; set; } = true;
+
     [Parameter] public EventCallback<IDatabaseField> OnFieldChanged    { get; set; }
     [Parameter] public EventCallback<IDatabaseField> OnFieldDuplicated { get; set; }
     [Parameter] public EventCallback<Guid>           OnFieldDeleted    { get; set; }
@@ -129,6 +133,37 @@ public partial class TmNotionDbFieldEditor : ComponentBase
         => _options.Add(new OptionRowModel(Guid.NewGuid().ToString(), string.Empty, "gray"));
 
     private void RemoveOption(OptionRowModel opt) => _options.Remove(opt);
+
+    /// <summary>Non-drag alternative to the DnD reorder (WCAG 2.5.7): moves the option by delta.</summary>
+    private void MoveOption(OptionRowModel opt, int delta)
+    {
+        var index = _options.IndexOf(opt);
+        var target = index + delta;
+        if (index < 0 || target < 0 || target >= _options.Count)
+            return;
+        _options.RemoveAt(index);
+        _options.Insert(target, opt);
+    }
+
+    /// <summary>Localized select-option color name (key per color).</summary>
+    private string ColorLabel(string color)
+    {
+        var key = $"TmNotionDbFieldEditor_Color_{color switch
+        {
+            "gray" => "Gray",
+            "red" => "Red",
+            "orange" => "Orange",
+            "yellow" => "Yellow",
+            "green" => "Green",
+            "blue" => "Blue",
+            "purple" => "Purple",
+            "pink" => "Pink",
+            "brown" => "Brown",
+            _ => color,
+        }}";
+        var label = Loc[key];
+        return string.IsNullOrEmpty(label) ? color : label;
+    }
 
     private void StartDrag(OptionRowModel opt)  => _dragging = opt;
     private void SetDragOver(OptionRowModel opt) => _dragOver = opt;

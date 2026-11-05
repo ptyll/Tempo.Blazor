@@ -21,6 +21,10 @@ public partial class TmNotionDbRecordDetail
     [Parameter] public string   DatabaseName { get; set; } = string.Empty;
     [Parameter] public bool     ReadOnly     { get; set; }
 
+    /// <summary>Whether the detail dialog is open. Defaults to <c>true</c> — the host renders the
+    /// component only while a record is open, and tests render it directly.</summary>
+    [Parameter] public bool Show { get; set; } = true;
+
     [Parameter] public EventCallback                  OnClose         { get; set; }
     [Parameter] public EventCallback<IDatabaseRecord> OnRecordUpdated { get; set; }
     [Parameter] public EventCallback<IDatabaseRecord> OnOpenAsPage    { get; set; }
@@ -110,6 +114,23 @@ public partial class TmNotionDbRecordDetail
         if (tf is null) return;
         _localFields[tf.Id.ToString()] = _titleBuffer;
         await SaveAsync();
+    }
+
+    /// <summary>
+    /// The single close path (×, Escape, the footer button): commits a pending title edit BEFORE
+    /// raising <see cref="OnClose"/>, so a title typed but never blurred (Escape does not blur)
+    /// still reaches the provider and <see cref="OnRecordUpdated"/>.
+    /// </summary>
+    private async Task HandleCloseAsync()
+    {
+        if (!ReadOnly && PrimaryField is { } primary)
+        {
+            var saved = _localFields.TryGetValue(primary.Id.ToString(), out var v) && v is string s ? s : string.Empty;
+            if (!string.Equals(saved, _titleBuffer, StringComparison.Ordinal))
+                await CommitTitleAsync();
+        }
+
+        await OnClose.InvokeAsync();
     }
 
     private async Task HandleCellCommitAsync(IDatabaseField field, object? value)
