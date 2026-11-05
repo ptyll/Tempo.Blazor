@@ -1,0 +1,145 @@
+{
+  "itemName": "TmAutonomyDial",
+  "kind": "Component",
+  "category": "AI",
+  "description": "How much an agent may do on its own: the stops the host declares, the grade the reader picked, the ceiling a plan imposes and the limits somebody else enforces. The surface is a CONTROL, not a read-out: a real role=\"slider\" with one tab stop (arrow keys step one grade, Home and End reach the ends of what is ALLOWED) or a segmented radio group in which every grade is its own target, plus a pair of native step buttons as the pointer alternative (WCAG 2.5.7). The value is exposed as an invariant number AND as a localized value text, so a screen reader hears \"Ask when risky\" instead of \"1\"; a change at or above ConfirmAbove asks first, and the confirmation keeps the focus (Escape cancels, the focus returns to the slider). The component reports every change through ValueChanged and never writes to the host's state; the grade it shows is its own copy, so the reader sees the change before the round-trip, and a host that re-renders the SAME value cannot undo the reader's pick. ONE polite live region announces a committed change — the confirmation does not get a second region, because its message is already in front of the reader.",
+  "packageId": "Tempo.Blazor.AI",
+  "namespace": "Tempo.Blazor.Components.AI",
+  "sourcePath": "src/Tempo.Blazor.AI/Components/AI/TmAutonomyDial.razor",
+  "documentationStatus": "documented",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.AI"
+  ],
+  "parameters": [
+    {
+      "name": "Class",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Additional CSS class(es) for the root element."
+    },
+    {
+      "name": "ConfirmAbove",
+      "type": "int?",
+      "isRequired": false,
+      "description": "The grade at or above which a change asks for confirmation. Null (the default) commits every change at once; a change is held until the reader confirms it and Escape cancels without reporting anything."
+    },
+    {
+      "name": "HeadingLevel",
+      "type": "int",
+      "isRequired": false,
+      "default": "3",
+      "description": "The heading level of the rendered title, clamped to 2–6. Default 3."
+    },
+    {
+      "name": "Levels",
+      "type": "IReadOnlyList<AutonomyLevel>?",
+      "isRequired": false,
+      "description": "The grades of autonomy, in any order: they are rendered in ascending Value order and a duplicate value is kept once. Null or empty renders the three localized defaults (ask first / ask when risky / act freely)."
+    },
+    {
+      "name": "Locks",
+      "type": "IReadOnlyList<AutonomyLock>?",
+      "isRequired": false,
+      "description": "The limits the reader cannot lift, each naming its action and (when known) who enforces it and why. Null or empty renders no limits section. Locks are FACTS about the surface, never controls."
+    },
+    {
+      "name": "MaxAllowed",
+      "type": "int?",
+      "isRequired": false,
+      "description": "The highest grade a plan allows, as a Value. Null (the default) allows every declared stop. The stops above it still render — marked unavailable — and the surface prints an explanation instead of silently refusing the key."
+    },
+    {
+      "name": "MaxAllowedReason",
+      "type": "string?",
+      "isRequired": false,
+      "description": "The host's own explanation of MaxAllowed. Null renders the localized default (\"Your plan does not allow a higher level.\")."
+    },
+    {
+      "name": "Presentation",
+      "type": "AutonomyDialPresentation",
+      "isRequired": true,
+      "description": "How the stops are presented. Default Dial; applies to this render only and is owned by the host. An unknown value falls back to the dial."
+    },
+    {
+      "name": "ShowTitle",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "Whether the heading is rendered. Default true."
+    },
+    {
+      "name": "Title",
+      "type": "string?",
+      "isRequired": false,
+      "description": "The heading above the surface. Null renders the localized default (\"Autonomy\"); the heading also names the slider, so the name a reader hears is the one they see."
+    },
+    {
+      "name": "Value",
+      "type": "int",
+      "isRequired": false,
+      "description": "The grade the reader picked, two-way bound with ValueChanged (@bind-Value). A value that is not one of the stops, or one above MaxAllowed, renders the nearest allowed stop; the surface never changes the host's value behind its back, so the next change reports an allowed grade."
+    },
+    {
+      "name": "ValueChanged",
+      "type": "EventCallback<int>",
+      "isRequired": false,
+      "description": "Fires with the newly committed grade."
+    }
+  ],
+  "cssClasses": [
+    "tm-ai-autonomy",
+    "tm-ai-autonomy--segmented",
+    "tm-ai-autonomy__header",
+    "tm-ai-autonomy__title",
+    "tm-ai-autonomy__readout",
+    "tm-ai-autonomy__current",
+    "tm-ai-autonomy__position",
+    "tm-ai-autonomy__description",
+    "tm-ai-autonomy__dial",
+    "tm-ai-autonomy__control",
+    "tm-ai-autonomy__rail",
+    "tm-ai-autonomy__fill",
+    "tm-ai-autonomy__stop",
+    "tm-ai-autonomy__stop-dot",
+    "tm-ai-autonomy__stop-label",
+    "tm-ai-autonomy__step",
+    "tm-ai-autonomy__segmented",
+    "tm-ai-autonomy__limit",
+    "tm-ai-autonomy__limit-reason",
+    "tm-ai-autonomy__locks",
+    "tm-ai-autonomy__locks-title",
+    "tm-ai-autonomy__lock",
+    "tm-ai-autonomy__lock-icon",
+    "tm-ai-autonomy__lock-action",
+    "tm-ai-autonomy__lock-source",
+    "tm-ai-autonomy__lock-reason",
+    "tm-ai-autonomy__confirm",
+    "tm-ai-autonomy__confirm-message",
+    "tm-ai-autonomy__confirm-actions",
+    "tm-ai-autonomy__confirm-accept",
+    "tm-ai-autonomy__confirm-cancel"
+  ],
+  "examples": [
+    {
+      "title": "The slider a reader steps with the keyboard",
+      "code": "<TmAutonomyDial Levels=\"_levels\"\n                @bind-Value=\"_value\"\n                MaxAllowed=\"2\"\n                ConfirmAbove=\"2\" />\n\n@code {\n    private IReadOnlyList<AutonomyLevel> _levels =\n    [\n        new(0) { Label = \"Observe\", Description = \"The agent proposes and waits.\" },\n        new(1) { Label = \"Assist\", Description = \"Reversible work runs on its own.\" },\n        new(2) { Label = \"Act\", Description = \"The agent finishes the task alone.\" },\n    ];\n    private int _value = 1;\n}"
+    },
+    {
+      "title": "The enforced limits a tenant and an administrator add",
+      "code": "<TmAutonomyDial @bind-Value=\"_value\"\n                Locks=\"_locks\" />\n\n@code {\n    private int _value = 1;\n    private IReadOnlyList<AutonomyLock> _locks =\n    [\n        new(\"Send external email\")\n        {\n            Source = \"Tenant policy\",\n            Reason = \"Outbound mail needs a human sign-off.\",\n        },\n    ];\n}"
+    },
+    {
+      "title": "The segmented presentation, one target per grade",
+      "code": "<TmAutonomyDial @bind-Value=\"_value\"\n                Presentation=\"AutonomyDialPresentation.Segmented\"\n                MaxAllowed=\"1\" />"
+    }
+  ],
+  "notes": [
+    "The dial is a real role=\"slider\": aria-valuenow carries the invariant grade and aria-valuetext carries its localized label, so a screen reader hears \"Ask when risky\" instead of \"1\".",
+    "ArrowRight/ArrowUp and ArrowLeft/ArrowDown move one grade, Home and End jump to the ends of what is ALLOWED, and a key past an end changes nothing (nothing is announced).",
+    "The two native step buttons sit BESIDE the slider and are the pointer alternative (WCAG 2.5.7); they disable themselves at the ends.",
+    "MaxAllowed still renders the stops above the ceiling, marked unavailable, and prints a localized explanation instead of silently refusing the key.",
+    "ConfirmAbove holds a change in a group whose message names the grade; the focus moves to the confirm button, Escape cancels and the focus returns to the slider (WCAG 2.4.3).",
+    "A change is part of a real time axis: the fill reads the --tm-autonomy-progress custom property the component writes and prefers-reduced-motion removes its travel.",
+    "ONE polite live region announces a committed grade; the confirmation needs no second region because its message is already in front of the reader."
+  ]
+}

@@ -55,16 +55,17 @@ public class AiAgentsPageTests : DemoPageLocalizationTestBase
             .KeyDown(new KeyboardEventArgs { Key = key }));
 
     [Fact]
-    public void ThePageRendersItsTwelveSectionsWithoutRawKeys()
+    public void ThePageRendersItsFourteenSectionsWithoutRawKeys()
     {
         var cut = RenderPage();
 
-        cut.FindAll("section.demo-section").Should().HaveCount(12);
+        cut.FindAll("section.demo-section").Should().HaveCount(14);
         foreach (var section in new[]
                  {
                      "ai-agents-plan-section", "ai-agents-tree-section", "ai-agents-lanes-section",
                      "ai-agents-graph-section", "ai-agents-fan-out-section", "ai-agents-attempts-section",
                      "ai-agents-handoff-section", "ai-agents-fallback-section",
+                     "ai-agents-autonomy-section", "ai-agents-memory-section",
                      "ai-agents-monitor-section", "ai-agents-models-section",
                      "ai-agents-context-section", "ai-agents-prompts-section",
                  })
@@ -600,6 +601,128 @@ public class AiAgentsPageTests : DemoPageLocalizationTestBase
             Section(cut, "ai-agents-fallback")
                 .QuerySelectorAll("[data-testid='fallback-chain-editor-row']").Should().HaveCount(2);
         }, TimeSpan.FromSeconds(10));
+    }
+
+    /// <summary>
+    /// The autonomy section is a real choice: the arrows move the grade, a grade at the ceiling asks first, Escape drops
+    /// the change, and the page records the grade it actually received. The locks the tenant enforces are listed beside
+    /// the dial with their source.
+    /// </summary>
+    [Fact]
+    public void TheAutonomySection_WalksTheGrades_AndThePageRecordsTheChoice()
+    {
+        RegisterClock();
+        var cut = RenderPage();
+        var autonomy = Section(cut, "ai-agents-autonomy");
+
+        autonomy.QuerySelectorAll("[data-testid='autonomy-dial-stop']").Should().HaveCount(4);
+        autonomy.QuerySelector("[data-testid='autonomy-current']")!.TextContent.Should().Be("Assist");
+        Text(cut, "ai-agents-autonomy-log").Should().Be("Nothing received yet.");
+
+        var track = autonomy.QuerySelector("[data-testid='autonomy-dial-track']")!;
+        track.KeyDown(new KeyboardEventArgs { Key = "ArrowRight" });
+        cut.WaitForAssertion(() =>
+        {
+            Section(cut, "ai-agents-autonomy").QuerySelector("[data-testid='autonomy-confirm']").Should().NotBeNull(
+                "a grade at the threshold asks before it is committed");
+        }, TimeSpan.FromSeconds(10));
+
+        Section(cut, "ai-agents-autonomy").QuerySelector("[data-testid='autonomy-confirm-cancel']")!.Click();
+        cut.WaitForAssertion(() =>
+        {
+            Section(cut, "ai-agents-autonomy").QuerySelectorAll("[data-testid='autonomy-confirm']").Should().BeEmpty();
+            Text(cut, "ai-agents-autonomy-log").Should().Be("Nothing received yet.",
+                "a cancelled change is never reported to the page");
+        }, TimeSpan.FromSeconds(10));
+
+        Section(cut, "ai-agents-autonomy").QuerySelector("[data-testid='autonomy-dial-track']")!
+            .KeyDown(new KeyboardEventArgs { Key = "ArrowRight" });
+        Section(cut, "ai-agents-autonomy").QuerySelector("[data-testid='autonomy-confirm-accept']")!.Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            Text(cut, "ai-agents-autonomy-log").Should().Be("The page received: Autonomy level: Act");
+            Section(cut, "ai-agents-autonomy").QuerySelector("[data-testid='autonomy-current']")!.TextContent
+                .Should().Be("Act");
+        }, TimeSpan.FromSeconds(10));
+
+        var locks = Section(cut, "ai-agents-autonomy").QuerySelectorAll("[data-testid='autonomy-lock']");
+        locks.Should().HaveCount(2);
+        locks[0].QuerySelector("[data-testid='autonomy-lock-source']")!.TextContent
+            .Should().Be("Enforced by Tenant policy");
+        Section(cut, "ai-agents-autonomy").QuerySelector("[data-testid='autonomy-limit']")!.TextContent
+            .Should().Contain("Act", "Autopilot is above the plan's ceiling");
+        Text(cut, "ai-agents-autonomy").Should().NotContain("TmAutonomyDial_");
+
+        Section(cut, "ai-agents-autonomy-presentation").QuerySelectorAll("button")[1].Click();
+        cut.WaitForAssertion(() => Section(cut, "ai-agents-autonomy").GetAttribute("data-presentation")
+            .Should().Be("segmented", "the page owns the presentation"), TimeSpan.FromSeconds(10));
+    }
+
+    /// <summary>
+    /// The memory section is the page's own store: pausing a memory changes the page's list, the render shows it, and the
+    /// log names what the page received. Editing commits in the component and reaches the page; a removal waits for the
+    /// undo window, and Undo puts the memory back without the page ever hearing about it.
+    /// </summary>
+    [Fact]
+    public void TheMemorySection_EditsPausesAndUndoes_AndThePageOwnsTheStore()
+    {
+        var clock = RegisterClock();
+        var cut = RenderPage();
+        var memory = Section(cut, "ai-agents-memory");
+
+        memory.QuerySelectorAll("[data-testid='memory-item']").Should().HaveCount(6);
+        memory.QuerySelectorAll("[data-testid='memory-group']").Should().HaveCount(3);
+        Text(cut, "ai-agents-memory-log").Should().Be("Nothing received yet.");
+
+        var units = "[data-testid='ai-agents-memory'] [data-testid='memory-item'][data-item-id='mem-units']";
+        cut.Find(units + " [data-testid='memory-item-pause']").Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            cut.Find(units).GetAttribute("data-status").Should().Be("paused");
+            Text(cut, "ai-agents-memory-log").Should()
+                .Be("The page received: Pause – Prefers metric units and 24-hour time.");
+        }, TimeSpan.FromSeconds(10));
+
+        cut.Find(units + " [data-testid='memory-item-edit']").Click();
+        cut.Find(units + " [data-testid='memory-item-edit-box']").Input("Prefers metric units only.");
+        cut.Find(units + " [data-testid='memory-item-edit-box']")
+            .KeyDown(new KeyboardEventArgs { Key = "Enter" });
+
+        cut.WaitForAssertion(() =>
+        {
+            cut.Find(units + " [data-testid='memory-item-text']").TextContent
+                .Should().Be("Prefers metric units only.");
+            Text(cut, "ai-agents-memory-log").Should()
+                .Be("The page received: Edit – Prefers metric units only.");
+        }, TimeSpan.FromSeconds(10));
+
+        cut.Find(units + " [data-testid='memory-item-forget']").Click();
+
+        cut.WaitForAssertion(() => cut.FindAll(units).Should().BeEmpty());
+        cut.Find("[data-testid='ai-agents-memory'] [data-testid='memory-undo-action']").Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            cut.Find(units).Should().NotBeNull("the undo window puts the memory back");
+            Text(cut, "ai-agents-memory-log").Should()
+                .Be("The page received: Edit – Prefers metric units only.",
+                    "an undone removal is never reported to the page");
+        }, TimeSpan.FromSeconds(10));
+
+        // The review row is the agent's proposal: approving it is the page's change.
+        var tone = "[data-testid='ai-agents-memory'] [data-testid='memory-item'][data-item-id='mem-tone']";
+        cut.Find(tone + " [data-testid='memory-item-approve']").Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            cut.Find(tone).GetAttribute("data-status").Should().Be("active");
+            Text(cut, "ai-agents-memory-log").Should().Contain("Approve");
+        }, TimeSpan.FromSeconds(10));
+
+        clock.Advance(TimeSpan.FromSeconds(1));
+        Text(cut, "ai-agents-memory").Should().NotContain("TmMemoryPanel_");
     }
 
     [Fact]

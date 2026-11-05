@@ -1,0 +1,11 @@
+{
+  "kind": "Enum",
+  "category": "AI",
+  "namespace": "Tempo.Blazor.AI.Models",
+  "description": "What the agent is allowed to do with one stored fact. The state is always painted as a localized word plus an icon; the tone is a third, redundant cue. A forgotten memory stays in the list only while its undo window is open, and a memory the agent proposed is PendingReview until a human accepts or rejects it.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/AI/Agents/MemoryItemStatus.cs",
+  "documentationStatus": "documented",
+  "itemName": "MemoryItemStatus",
+  "usageExample": "var paused = new MemoryItem(\"m-1\", \"Preferences\", \"Prefers metric units.\")\n{\n    Status = MemoryItemStatus.Paused,\n};"
+}

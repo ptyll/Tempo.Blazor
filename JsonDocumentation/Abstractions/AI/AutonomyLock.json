@@ -1,0 +1,46 @@
+{
+  "kind": "Record",
+  "category": "AI",
+  "namespace": "Tempo.Blazor.AI.Models",
+  "description": "A limit on one action that the surface cannot lift, enforced by somebody other than the reader: a tenant policy, an administrator, the host application itself. A lock always names the action it pins and, when the enforcing party is known, WHO enforces it and WHY. The autonomy dial is not allowed to change a lock — it lists it next to the value so the reader knows why a grade is capped; a lock without a source would be an unexplained disabled control, and one without a reason is printed as the bare fact it is.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/AI/Agents/AutonomyLock.cs",
+  "documentationStatus": "documented",
+  "members": [
+    {
+      "name": "ActionLabel",
+      "kind": "Property",
+      "type": "string",
+      "description": "The action the limit applies to, in the host's words (\"Send external email\", \"Delete a file\"). It is a LABEL, not an id: the surface prints it and never parses it."
+    },
+    {
+      "name": "HasReason",
+      "kind": "Property",
+      "type": "bool",
+      "description": "Whether the lock carries a reason worth printing."
+    },
+    {
+      "name": "HasSource",
+      "kind": "Property",
+      "type": "bool",
+      "description": "Whether the enforcing party is known."
+    },
+    {
+      "name": "Reason",
+      "kind": "Property",
+      "type": "string?",
+      "description": "Why the limit exists, in the host's own words. Null or empty renders no reason line."
+    },
+    {
+      "name": "Source",
+      "kind": "Property",
+      "type": "string",
+      "description": "Who enforces the limit (\"Tenant policy\", \"Compliance profile\", \"Workspace administrator\"). Empty renders no \"enforced by\" line instead of a line with a blank source."
+    }
+  ],
+  "itemName": "AutonomyLock",
+  "usageExample": "var lockItem = new AutonomyLock(\"Send external email\")\n{\n    Source = \"Tenant policy\",\n    Reason = \"Outbound mail needs a human sign-off.\",\n};",
+  "notes": [
+    "A blank Source prints no \"enforced by\" line instead of a line with a blank source, and a null Reason prints no reason."
+  ]
+}

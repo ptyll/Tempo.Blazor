@@ -1175,5 +1175,14 @@
   "TmAiAgentsDemo_FallbackModeLabel": "Présentation",
   "TmAiAgentsDemo_FallbackRun": "Exécution",
   "TmAiAgentsDemo_FallbackEdit": "Modifier la chaîne",
-  "TmAiAgentsDemo_FallbackChainLog": "Chaîne : {0}"
+  "TmAiAgentsDemo_FallbackChainLog": "Chaîne : {0}",
+  "TmAiAgentsDemo_AutonomyTitle": "Autonomie",
+  "TmAiAgentsDemo_AutonomyHint": "Ce que l'agent peut faire seul : un changement au-dessus du dernier niveau demande confirmation et les limites imposées par le tenant accompagnent le choix.",
+  "TmAiAgentsDemo_AutonomyPresentationLabel": "Présentation",
+  "TmAiAgentsDemo_AutonomyDial": "Cadran",
+  "TmAiAgentsDemo_AutonomySegmented": "Segments",
+  "TmAiAgentsDemo_MemoryTitle": "Mémoire",
+  "TmAiAgentsDemo_MemoryHint": "Ce que l'agent retient de l'espace de travail : modifiez un fait, mettez-le en pause, oubliez-le (avec annulation) ou validez ce qu'il a proposé.",
+  "TmAiAgentsDemo_Received": "La page a reçu : {0}",
+  "TmAiAgentsDemo_NoEvent": "Rien n'a encore été reçu."
 }

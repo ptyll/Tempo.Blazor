@@ -660,6 +660,94 @@ internal static class AiAgentsPageSamples
             ["focus"] = loc("TmAiAgentsDemo_FocusFeatures"),
         };
 
+    /// <summary>
+    /// The four grades of autonomy the page's dial offers, from the most supervised to the least. The labels and the
+    /// descriptions are host data (the demo's sample content), the way every other sample on this page is.
+    /// </summary>
+    internal static IReadOnlyList<AutonomyLevel> AutonomyLevels() =>
+    [
+        new(0)
+        {
+            Label = "Observe",
+            Description = "The agent proposes what it would do and waits for approval.",
+        },
+        new(1)
+        {
+            Label = "Assist",
+            Description = "The agent does reversible work on its own and asks before anything else.",
+        },
+        new(2)
+        {
+            Label = "Act",
+            Description = "The agent finishes the task and posts a summary when it is done.",
+        },
+        new(3)
+        {
+            Label = "Autopilot",
+            Description = "The agent picks its own tasks from the queue and only reports failures.",
+        },
+    ];
+
+    /// <summary>The limits a tenant and a workspace administrator enforce, with their reasons.</summary>
+    internal static IReadOnlyList<AutonomyLock> AutonomyLocks() =>
+    [
+        new("Send external email")
+        {
+            Source = "Tenant policy",
+            Reason = "Outbound mail needs a human sign-off.",
+        },
+        new("Delete a workspace")
+        {
+            Source = "Workspace administrator",
+        },
+    ];
+
+    /// <summary>
+    /// What the agent remembers about the workspace: three categories, one paused fact, one the agent proposed and one
+    /// the host already considers forgotten, so every status and every action has something to act on.
+    /// </summary>
+    internal static IReadOnlyList<MemoryItem> Memories(DateTimeOffset now) =>
+    [
+        new("mem-units", "Preferences", "Prefers metric units and 24-hour time.")
+        {
+            Confidence = 0.94,
+            Source = "Support ticket #4211",
+            CreatedAt = now.AddDays(-42),
+            UpdatedAt = now.AddDays(-3),
+        },
+        new("mem-zone", "Preferences", "Works in the CET time zone.")
+        {
+            Status = MemoryItemStatus.Paused,
+            Confidence = 0.72,
+            CreatedAt = now.AddDays(-28),
+        },
+        new("mem-approval", "Security", "Never sends invoices to a new address without approval.")
+        {
+            Confidence = 0.99,
+            Source = "Conversation 4f2a",
+            CreatedAt = now.AddDays(-14),
+            UpdatedAt = now.AddDays(-1),
+        },
+        new("mem-report", "People", "Reports to Dana Král and reviews the ledger on Mondays.")
+        {
+            Confidence = 0.61,
+            CreatedAt = now.AddDays(-9),
+        },
+        new("mem-tone", "Preferences", "Prefers short, factual status updates.")
+        {
+            Status = MemoryItemStatus.PendingReview,
+            Confidence = 0.55,
+            Source = "Conversation 9c17",
+            CreatedAt = now.AddHours(-6),
+        },
+        new("mem-legacy", "People", "Used to be the owner of the reconciliation project.")
+        {
+            Status = MemoryItemStatus.Forgotten,
+            CreatedAt = now.AddDays(-120),
+            UpdatedAt = now.AddDays(-60),
+        },
+    ];
+
     /// <summary>The effort levels of a model, labelled in the page's language.</summary>
     private static AiModelEffortLevel[] Effort(Func<string, string> loc, params string[] ids)
         => ids.Select(id => new AiModelEffortLevel(id, loc($"TmAiAgentsDemo_Effort{char.ToUpperInvariant(id[0])}{id[1..]}"))).ToArray();

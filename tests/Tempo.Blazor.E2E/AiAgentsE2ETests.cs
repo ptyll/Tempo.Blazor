@@ -22,6 +22,8 @@ public abstract class AiAgentsE2EBase : PlaywrightTestBase
     protected const string AttemptsSection = "[data-testid='ai-agents-attempts-section']";
     protected const string HandoffSection = "[data-testid='ai-agents-handoff-section']";
     protected const string FallbackSection = "[data-testid='ai-agents-fallback-section']";
+    protected const string AutonomySection = "[data-testid='ai-agents-autonomy-section']";
+    protected const string MemorySection = "[data-testid='ai-agents-memory-section']";
     protected const string MonitorSection = "[data-testid='ai-agents-monitor-section']";
     protected const string ModelsSection = "[data-testid='ai-agents-models-section']";
     protected const string ContextSection = "[data-testid='ai-agents-context-section']";
@@ -65,6 +67,11 @@ public abstract class AiAgentsE2EBase : PlaywrightTestBase
 
     protected static async Task<string> TextAsync(IPage page, string testId)
         => ((await page.Locator($"[data-testid='{testId}']").TextContentAsync()) ?? string.Empty).Trim();
+
+    /// <summary>The text of an element nested under another test id, trimmed.</summary>
+    protected static async Task<string> TextAsync(IPage page, string rootTestId, string testId)
+        => ((await page.Locator($"[data-testid='{rootTestId}'] [data-testid='{testId}']").TextContentAsync())
+            ?? string.Empty).Trim();
 
     protected async Task<IPage> OpenAsync(int width = 1440, int height = 1100, bool coarsePointer = false,
         bool reduceMotion = false)
@@ -147,9 +154,23 @@ public abstract class AiAgentsE2EBase : PlaywrightTestBase
                         runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa'] },
                         resultTypes: ['violations']
                     });
+                    const describe = (node) => {
+                        const el = document.querySelector(node.target.join(' '));
+                        if (!el) return node.target.join(' ');
+                        const style = getComputedStyle(el);
+                        let background = '';
+                        let walker = el;
+                        while (walker && (!background || background === 'rgba(0, 0, 0, 0)')) {
+                            background = getComputedStyle(walker).backgroundColor;
+                            walker = walker.parentElement;
+                        }
+                        // The pair is what a reader sees: a colour the scan reports without its background is a
+                        // number nobody can act on.
+                        return node.target.join(' ') + ' [' + style.color + ' on ' + background + ']';
+                    };
                     return result.violations
                         .filter(v => v.impact === 'critical' || v.impact === 'serious')
-                        .map(v => `${v.impact}: ${v.id} - ${v.help} (${v.nodes.map(n => n.target.join(' ')).slice(0, 4).join('; ')})`);
+                        .map(v => `${v.impact}: ${v.id} - ${v.help} (${v.nodes.map(n => v.id === 'color-contrast' ? describe(n) : n.target.join(' ')).slice(0, 4).join('; ')})`);
                 }
                 """,
                 $"[data-testid='{testId}']");
@@ -697,6 +718,186 @@ public class AiAgentsE2ETests : AiAgentsE2EBase
         await AssertNoSeriousAxeViolationsAsync(page, "ai-agents-fallback-section");
     }
 
+    /// <summary>
+    /// The autonomy dial is a real slider in the browser: the arrows step it, a grade at the threshold opens the
+    /// confirmation, Escape drops the change AND leaves the focus on the slider, and only the confirmed one reaches the
+    /// page. The plan's ceiling still shows the grade it does not allow, with the tenant's locks beside it.
+    /// </summary>
+    [TestMethod]
+    public async Task TheAutonomyDialStepsByKeyboard_AndTheConfirmationGuardsTheChange()
+    {
+        var page = await OpenAsync();
+        await ScrollToSection(page, AutonomySection);
+
+        var dial = page.Locator("[data-testid='ai-agents-autonomy']");
+        var slider = dial.Locator("[data-testid='autonomy-dial-track']");
+        Assert.AreEqual("slider", await slider.GetAttributeAsync("role"));
+        Assert.AreEqual("1", await slider.GetAttributeAsync("aria-valuenow"));
+        Assert.AreEqual("Assist", await slider.GetAttributeAsync("aria-valuetext"),
+            "the value text is the grade, not its number");
+        Assert.AreEqual("2", await slider.GetAttributeAsync("aria-valuemax"),
+            "the ceiling lowers the maximum the slider may reach");
+        Assert.AreEqual("Nothing received yet.", await TextAsync(page, "ai-agents-autonomy-log"));
+
+        await slider.FocusAsync();
+        await page.Keyboard.PressAsync("ArrowRight");
+        await dial.Locator("[data-testid='autonomy-confirm']")
+            .WaitForAsync(new LocatorWaitForOptions { Timeout = 10000 });
+        StringAssert.Contains(await TextAsync(page, "ai-agents-autonomy", "autonomy-confirm-message"),
+            "Act", "the confirmation names the grade it is about to commit");
+        Assert.AreEqual("1", await slider.GetAttributeAsync("aria-valuenow"),
+            "the grade is not committed before the reader confirms");
+
+        await page.Keyboard.PressAsync("Escape");
+        await page.WaitForTimeoutAsync(250);
+        Assert.AreEqual(0, await dial.Locator("[data-testid='autonomy-confirm']").CountAsync());
+        Assert.AreEqual("slider",
+            await page.EvaluateAsync<string>("() => document.activeElement?.getAttribute('role') ?? 'none'"),
+            "the focus came back to the slider the confirmation took it from");
+        Assert.AreEqual("Nothing received yet.", await TextAsync(page, "ai-agents-autonomy-log"),
+            "a cancelled change never reaches the page");
+
+        await ShootAsync(page, "ai-agents-autonomy-light-1440");
+        await AssertNoSeriousAxeViolationsAsync(page, "ai-agents-autonomy-section");
+
+        // The screenshot helper blurs the active element, so the slider is focused again before the next key press.
+        await slider.FocusAsync();
+        await page.Keyboard.PressAsync("ArrowRight");
+        await dial.Locator("[data-testid='autonomy-confirm-accept']")
+            .WaitForAsync(new LocatorWaitForOptions { Timeout = 10000 });
+        await ShootAsync(page, "ai-agents-autonomy-confirm-light-1440");
+        await dial.Locator("[data-testid='autonomy-confirm-accept']").ClickAsync();
+
+        await page.WaitForFunctionAsync(
+            "() => document.querySelector(\"[data-testid='ai-agents-autonomy-log']\")?.textContent?.includes('Act')",
+            new PageWaitForFunctionOptions { Timeout = 10000 });
+        Assert.AreEqual("2", await slider.GetAttributeAsync("aria-valuenow"));
+        Assert.AreEqual("Act", await TextAsync(page, "ai-agents-autonomy", "autonomy-current"));
+
+        var limit = await TextAsync(page, "ai-agents-autonomy", "autonomy-limit");
+        StringAssert.Contains(limit, "Act", "the ceiling names the highest grade the plan still allows");
+        Assert.AreEqual(2, await dial.Locator("[data-testid='autonomy-lock']").CountAsync());
+        StringAssert.Contains(
+            await dial.Locator("[data-testid='autonomy-lock-source']").First.TextContentAsync() ?? string.Empty,
+            "Enforced by Tenant policy");
+        Assert.AreEqual("true",
+            await dial.Locator("[data-testid='autonomy-lock-icon']").First.GetAttributeAsync("aria-hidden"));
+
+        await ToggleThemeAsync(page);
+        await ScrollToSection(page, AutonomySection);
+        await ShootAsync(page, "ai-agents-autonomy-confirmed-dark-1440");
+        await AssertNoSeriousAxeViolationsAsync(page, "ai-agents-autonomy-section");
+    }
+
+    /// <summary>
+    /// The memory panel is the page's store: pausing a row changes the page's list, an Enter-committed edit reaches the
+    /// page, a removal keeps its undo window (Undo brings the row back and the page never hears about it) and approving
+    /// the agent's proposal turns it active. The empty search state is honest, and the phone keeps the card inside 375 px.
+    /// </summary>
+    [TestMethod]
+    public async Task TheMemoryPanelEditsPausesAndUndoes_AndThePageOwnsTheStore()
+    {
+        var page = await OpenAsync();
+        await ScrollToSection(page, MemorySection);
+
+        var panel = page.Locator("[data-testid='ai-agents-memory']");
+        Assert.AreEqual(6, await panel.Locator("[data-testid='memory-item']").CountAsync());
+        Assert.AreEqual(3, await panel.Locator("[data-testid='memory-group']").CountAsync());
+        Assert.AreEqual("Nothing received yet.", await TextAsync(page, "ai-agents-memory-log"));
+
+        var units = "[data-testid='ai-agents-memory'] [data-testid='memory-item'][data-item-id='mem-units']";
+        await page.Locator(units + " [data-testid='memory-item-pause']").ClickAsync();
+        await page.WaitForFunctionAsync(
+            "() => document.querySelector(\"[data-testid='ai-agents-memory'] [data-item-id='mem-units']\")?.dataset.status === 'paused'",
+            new PageWaitForFunctionOptions { Timeout = 10000 });
+        StringAssert.Contains(await TextAsync(page, "ai-agents-memory-log"), "Pause");
+
+        // A Blazor-bound textarea is driven by real key events, not by FillAsync.
+        await page.Locator(units + " [data-testid='memory-item-edit']").ClickAsync();
+        var box = page.Locator(units + " [data-testid='memory-item-edit-box']");
+        await box.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
+        await box.ClickAsync();
+        await page.Keyboard.PressAsync("Control+A");
+        await page.Keyboard.TypeAsync("Prefers metric units only.");
+        await page.WaitForTimeoutAsync(250);
+        Assert.AreEqual("Prefers metric units only.", await box.InputValueAsync(),
+            "the textarea carries the draft the reader typed");
+        await page.Keyboard.PressAsync("Enter");
+        await page.WaitForTimeoutAsync(300);
+        await ShootAsync(page, "ai-agents-memory-edit-light-1440");
+        await page.WaitForFunctionAsync(
+            "() => document.querySelector(\"[data-testid='ai-agents-memory'] [data-item-id='mem-units'] [data-testid='memory-item-text']\")?.textContent?.includes('only.')",
+            new PageWaitForFunctionOptions { Timeout = 10000 });
+        StringAssert.Contains(await TextAsync(page, "ai-agents-memory-log"), "Prefers metric units only.");
+
+        await page.Locator(units + " [data-testid='memory-item-forget']").ClickAsync();
+        await page.WaitForSelectorAsync("[data-testid='ai-agents-memory'] [data-testid='memory-undo']",
+            new PageWaitForSelectorOptions { Timeout = 10000 });
+        Assert.AreEqual(0, await page.Locator(units).CountAsync(), "the row leaves at once");
+        await ShootAsync(page, "ai-agents-memory-undo-light-1440");
+
+        await page.Locator("[data-testid='ai-agents-memory'] [data-testid='memory-undo-action']").ClickAsync();
+        await page.WaitForSelectorAsync(units, new PageWaitForSelectorOptions { Timeout = 10000 });
+        Assert.IsFalse((await TextAsync(page, "ai-agents-memory-log")).Contains("Forget", StringComparison.Ordinal),
+            "an undone removal is never reported to the page");
+
+        var tone = "[data-testid='ai-agents-memory'] [data-testid='memory-item'][data-item-id='mem-tone']";
+        await page.Locator(tone + " [data-testid='memory-item-approve']").ClickAsync();
+        await page.WaitForFunctionAsync(
+            "() => document.querySelector(\"[data-testid='ai-agents-memory'] [data-item-id='mem-tone']\")?.dataset.status === 'active'",
+            new PageWaitForFunctionOptions { Timeout = 10000 });
+
+        // The master switch turns storage off but keeps what is known readable.
+        await panel.Locator("[data-testid='memory-enabled'] .tm-toggle-label").ClickAsync();
+        await page.WaitForFunctionAsync(
+            "() => document.querySelector(\"[data-testid='ai-agents-memory']\")?.dataset.enabled === 'false'",
+            new PageWaitForFunctionOptions { Timeout = 10000 });
+        Assert.AreEqual(0, await page.Locator("[data-testid='ai-agents-memory'] [data-testid='memory-item-pause']")
+            .CountAsync(), "no action is offered while memory is off");
+        Assert.AreEqual(6, await page.Locator("[data-testid='ai-agents-memory'] [data-testid='memory-item']")
+            .CountAsync(), "the undone memory and the approved one stay, and nothing was lost");
+        await panel.Locator("[data-testid='memory-enabled'] .tm-toggle-label").ClickAsync();
+        await page.WaitForFunctionAsync(
+            "() => document.querySelector(\"[data-testid='ai-agents-memory']\")?.dataset.enabled === 'true'",
+            new PageWaitForFunctionOptions { Timeout = 10000 });
+
+        // The search is a view: a hit narrows the rows and the empty state says so.
+        await page.Locator("[data-testid='ai-agents-memory'] [data-testid='memory-search']").ClickAsync();
+        await page.Keyboard.TypeAsync("zzz");
+        await page.WaitForFunctionAsync(
+            "() => document.querySelector(\"[data-testid='ai-agents-memory'] [data-testid='memory-empty']\")?.textContent?.includes('No memory matches')",
+            new PageWaitForFunctionOptions { Timeout = 10000 });
+        await ShootAsync(page, "ai-agents-memory-search-empty-light-1440");
+        await page.Locator("[data-testid='ai-agents-memory'] [data-testid='memory-search']").ClickAsync();
+        await page.Keyboard.PressAsync("Control+A");
+        await page.Keyboard.PressAsync("Backspace");
+        await page.WaitForTimeoutAsync(300);
+
+        await ShootAsync(page, "ai-agents-memory-light-1440");
+        await AssertNoSeriousAxeViolationsAsync(page, "ai-agents-memory-section");
+
+        await ToggleThemeAsync(page);
+        await ScrollToSection(page, MemorySection);
+        await ShootAsync(page, "ai-agents-memory-dark-1440");
+        await AssertNoSeriousAxeViolationsAsync(page, "ai-agents-memory-section");
+
+        // A phone keeps the whole card inside 375 px and every row action at the 44 px touch size.
+        var phone = await OpenAsync(375, 812, coarsePointer: true);
+        await ScrollToSection(phone, MemorySection);
+        var box375 = await phone.Locator("[data-testid='ai-agents-memory']").BoundingBoxAsync();
+        Assert.IsNotNull(box375);
+        Assert.IsTrue(box375!.Width <= 375, $"the memory card fits a 375 px phone (width {box375.Width})");
+        var actionBox = await phone.Locator("[data-testid='ai-agents-memory'] [data-testid='memory-item-pause']")
+            .First.BoundingBoxAsync();
+        Assert.IsNotNull(actionBox);
+        Assert.IsTrue(actionBox!.Height >= 44, $"a row action keeps a touch target (height {actionBox.Height})");
+        var stepBox = await phone.Locator("[data-testid='ai-agents-autonomy'] [data-testid='autonomy-dial-higher']")
+            .BoundingBoxAsync();
+        Assert.IsNotNull(stepBox);
+        Assert.IsTrue(stepBox!.Height >= 44, $"a dial step button keeps a touch target (height {stepBox.Height})");
+        await ShootAsync(phone, "ai-agents-memory-phone-375");
+    }
+
     [TestMethod]
     public async Task ThePromptLibraryFillsATemplate_AndUseHandsItOver()
     {
@@ -764,7 +965,7 @@ public class AiAgentsE2ETests : AiAgentsE2EBase
         foreach (var section in new[]
                  {
                      PlanSection, TreeSection, LanesSection, GraphSection, FanOutSection, AttemptsSection,
-                     HandoffSection, FallbackSection,
+                     HandoffSection, FallbackSection, AutonomySection, MemorySection,
                      MonitorSection, ModelsSection, ContextSection, PromptsSection,
                  })
         {
@@ -798,6 +999,7 @@ public class AiAgentsE2ETests : AiAgentsE2EBase
             "ai-agents-plan-section", "ai-agents-tree-section", "ai-agents-lanes-section",
             "ai-agents-graph-section", "ai-agents-fan-out-section", "ai-agents-attempts-section",
             "ai-agents-handoff-section", "ai-agents-fallback-section",
+            "ai-agents-autonomy-section", "ai-agents-memory-section",
             "ai-agents-monitor-section", "ai-agents-models-section",
             "ai-agents-context-section", "ai-agents-prompts-section");
     }
@@ -853,6 +1055,12 @@ public class AiAgentsE2ETests : AiAgentsE2EBase
         await ScrollToSection(desktop, FallbackSection);
         await ShootAsync(desktop, "ai-agents-fallback-idle-light-1440");
 
+        await ScrollToSection(desktop, AutonomySection);
+        await ShootAsync(desktop, "ai-agents-autonomy-idle-light-1440");
+
+        await ScrollToSection(desktop, MemorySection);
+        await ShootAsync(desktop, "ai-agents-memory-idle-light-1440");
+
         await ScrollToSection(desktop, MonitorSection);
         await ShootAsync(desktop, "ai-agents-monitor-light-1440");
 
@@ -876,6 +1084,10 @@ public class AiAgentsE2ETests : AiAgentsE2EBase
         await ShootAsync(desktop, "ai-agents-handoff-dark-1440-sweep");
         await ScrollToSection(desktop, FallbackSection);
         await ShootAsync(desktop, "ai-agents-fallback-dark-1440");
+        await ScrollToSection(desktop, AutonomySection);
+        await ShootAsync(desktop, "ai-agents-autonomy-dark-1440");
+        await ScrollToSection(desktop, MemorySection);
+        await ShootAsync(desktop, "ai-agents-memory-dark-1440");
         await ScrollToSection(desktop, ContextSection);
         await ShootAsync(desktop, "ai-agents-context-dark-1440");
         await ScrollToSection(desktop, PromptsSection);
@@ -890,6 +1102,10 @@ public class AiAgentsE2ETests : AiAgentsE2EBase
         await ShootAsync(phone, "ai-agents-handoff-phone-375");
         await ScrollToSection(phone, FallbackSection);
         await ShootAsync(phone, "ai-agents-fallback-phone-375");
+        await ScrollToSection(phone, AutonomySection);
+        await ShootAsync(phone, "ai-agents-autonomy-phone-375");
+        await ScrollToSection(phone, MemorySection);
+        await ShootAsync(phone, "ai-agents-memory-phone-375");
         await ScrollToSection(phone, MonitorSection);
         await ShootAsync(phone, "ai-agents-monitor-phone-375");
         await ScrollToSection(phone, ContextSection);
@@ -926,6 +1142,7 @@ public class AiAgentsServerSmokeE2ETests : AiAgentsE2EBase
             "ai-agents-plan-section", "ai-agents-tree-section", "ai-agents-lanes-section",
             "ai-agents-fan-out-section", "ai-agents-attempts-section",
             "ai-agents-handoff-section", "ai-agents-fallback-section",
+            "ai-agents-autonomy-section", "ai-agents-memory-section",
             "ai-agents-monitor-section", "ai-agents-context-section", "ai-agents-prompts-section");
     }
 }

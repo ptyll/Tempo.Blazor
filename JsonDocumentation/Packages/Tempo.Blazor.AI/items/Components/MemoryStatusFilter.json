@@ -1,0 +1,11 @@
+{
+  "kind": "Enum",
+  "category": "Components",
+  "namespace": "Tempo.Blazor.Components.AI",
+  "description": "Which memories a TmMemoryPanel shows. The filter is a VIEW, never a change: it only narrows the rows on screen and never reports anything to the host. All shows every stored memory, including the forgotten ones whose undo window is still open, so a reader can find a fact they just removed.",
+  "packageId": "Tempo.Blazor.AI",
+  "sourcePath": "src/Tempo.Blazor.AI/Components/AI/MemoryStatusFilter.cs",
+  "documentationStatus": "documented",
+  "itemName": "MemoryStatusFilter",
+  "usageExample": "<TmMemoryPanel Items=\"_items\" @bind-StatusFilter=\"_filter\" />"
+}

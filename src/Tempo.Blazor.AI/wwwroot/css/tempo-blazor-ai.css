@@ -24,3 +24,5 @@
 @import "components/_ai-parallel-attempts.css";
 @import "components/_ai-agent-handoff.css";
 @import "components/_ai-fallback-chain.css";
+@import "components/_ai-autonomy-dial.css";
+@import "components/_ai-memory-panel.css";

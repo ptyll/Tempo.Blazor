@@ -177,6 +177,8 @@ public sealed class BuiltInComponentSchemas : IWireframeSchemaSource
             ["TmParallelAttempts"] = ["parallel-attempts"],
             ["TmAgentHandoff"] = ["agent-handoff"],
             ["TmFallbackChain"] = ["fallback-chain"],
+            ["TmAutonomyDial"] = ["autonomy-dial"],
+            ["TmMemoryPanel"] = ["memory-panel"],
             ["TmPromptLibrary"] = ["prompt-library"],
             ["TmMultiViewList"] = ["list-view"],
             ["TmDataTable"] = ["data-table"],
@@ -1501,6 +1503,40 @@ public sealed class BuiltInComponentSchemas : IWireframeSchemaSource
                     opts: ["pin", "fallback", "auto"]),
                 P("viewMode", "View Mode", PropType.Enum,   "flow", cat: "Behavior",
                     opts: ["flow", "table"]),
+            ]
+        };
+
+        yield return new WireframeComponentSchema
+        {
+            Type = "TmAutonomyDial", Category = "AI", DisplayName = "Autonomy Dial",
+            DefaultWidth = 360, DefaultHeight = 220,
+            Props =
+            [
+                P("title",        "Title",        PropType.String, "Autonomy", cat: "Content"),
+                P("levels",       "Levels",       PropType.StringList,
+                    new[] { "Ask first", "Ask when risky", "Act freely" }, cat: "Content"),
+                P("value",        "Value",        PropType.Int,    1, cat: "Behavior"),
+                P("maxAllowed",   "Max Allowed",  PropType.Int,    2, cat: "Behavior"),
+                P("presentation", "Presentation", PropType.Enum,   "dial", cat: "Appearance",
+                    opts: ["dial", "segmented"]),
+                P("locks",        "Locks",        PropType.StringList,
+                    new[] { "Send external email", "Delete a file" }, cat: "Content"),
+            ]
+        };
+
+        yield return new WireframeComponentSchema
+        {
+            Type = "TmMemoryPanel", Category = "AI", DisplayName = "Memory Panel",
+            DefaultWidth = 420, DefaultHeight = 260,
+            Props =
+            [
+                P("title",    "Title",    PropType.String, "Memory", cat: "Content"),
+                P("memories", "Memories", PropType.StringList,
+                    new[] { "Prefers metric units", "Works in the CET time zone", "Reports to Dana Kral" },
+                    cat: "Content"),
+                P("enabled",  "Enabled",  PropType.Bool,   true, cat: "Behavior"),
+                P("filter",   "Filter",   PropType.Enum,   "all", cat: "Behavior",
+                    opts: ["all", "active", "paused", "pending-review", "forgotten"]),
             ]
         };
 

@@ -2406,6 +2406,98 @@
       "usageExample": "new AttemptVote(\"Grader\") { Outcome = AttemptVoteOutcome.Reject, Rationale = \"Drops the second half\" };"
     },
     {
+      "itemName": "AutonomyLevel",
+      "kind": "Record",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.AI.Models",
+      "description": "One stop of an autonomy dial: the numeric grade, the label a reader sees and the sentence that says what the agent may do at that stop. The record is a VALUE the host composes — no component mutates it. Value is the key a host persists and the ceiling it compares against (a plan's MaxAllowed, a tenant's lock), while the stops are rendered in ascending Value order; the label and the description come from the host's own wording or from the component's localized defaults when the host supplies no levels at all.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/AI/Agents/AutonomyLevel.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Description",
+          "kind": "Property",
+          "type": "string",
+          "description": "What the agent may do at this grade, in the host's own words. Empty renders no description line at all rather than an empty paragraph."
+        },
+        {
+          "name": "HasDescription",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Whether the host supplied a description for this stop."
+        },
+        {
+          "name": "HasLabel",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Whether the host supplied a label for this stop."
+        },
+        {
+          "name": "Label",
+          "kind": "Property",
+          "type": "string",
+          "description": "The grade as the reader should see it (\"Ask first\", \"Ask when risky\", \"Act freely\"). Empty renders the component's own localized fallback for the stop's position, so no stop is ever blank."
+        },
+        {
+          "name": "Value",
+          "kind": "Property",
+          "type": "int",
+          "description": "The numeric grade of the stop, and the key a ceiling or a persisted setting compares against."
+        }
+      ],
+      "usageExample": "var level = new AutonomyLevel(1)\n{\n    Label = \"Ask when risky\",\n    Description = \"Risky actions wait for your approval.\",\n};",
+      "notes": [
+        "The stops are rendered in ascending Value order and a duplicate value is kept once; Value is the key a persisted setting and a hard ceiling refer to."
+      ]
+    },
+    {
+      "itemName": "AutonomyLock",
+      "kind": "Record",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.AI.Models",
+      "description": "A limit on one action that the surface cannot lift, enforced by somebody other than the reader: a tenant policy, an administrator, the host application itself. A lock always names the action it pins and, when the enforcing party is known, WHO enforces it and WHY. The autonomy dial is not allowed to change a lock — it lists it next to the value so the reader knows why a grade is capped; a lock without a source would be an unexplained disabled control, and one without a reason is printed as the bare fact it is.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/AI/Agents/AutonomyLock.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "ActionLabel",
+          "kind": "Property",
+          "type": "string",
+          "description": "The action the limit applies to, in the host's words (\"Send external email\", \"Delete a file\"). It is a LABEL, not an id: the surface prints it and never parses it."
+        },
+        {
+          "name": "HasReason",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Whether the lock carries a reason worth printing."
+        },
+        {
+          "name": "HasSource",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Whether the enforcing party is known."
+        },
+        {
+          "name": "Reason",
+          "kind": "Property",
+          "type": "string?",
+          "description": "Why the limit exists, in the host's own words. Null or empty renders no reason line."
+        },
+        {
+          "name": "Source",
+          "kind": "Property",
+          "type": "string",
+          "description": "Who enforces the limit (\"Tenant policy\", \"Compliance profile\", \"Workspace administrator\"). Empty renders no \"enforced by\" line instead of a line with a blank source."
+        }
+      ],
+      "usageExample": "var lockItem = new AutonomyLock(\"Send external email\")\n{\n    Source = \"Tenant policy\",\n    Reason = \"Outbound mail needs a human sign-off.\",\n};",
+      "notes": [
+        "A blank Source prints no \"enforced by\" line instead of a line with a blank source, and a null Reason prints no reason."
+      ]
+    },
+    {
       "itemName": "ContextUsageItem",
       "kind": "Record",
       "category": "AI",
@@ -3625,6 +3717,219 @@
           "description": "Returns the mentions matching the text after the trigger (possibly empty, which asks for the default suggestions). An implementation must honour the cancellation token and should be cheap for short queries; an empty list closes the suggestion list."
         }
       ]
+    },
+    {
+      "itemName": "MemoryBulkAction",
+      "kind": "Enum",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.AI.Models",
+      "description": "An action the reader applied to a SELECTION of memories at once. A bulk action is ONE request carrying many memories; the surface reports it once through OnBulkAction instead of firing the single-row callback per row, so a host can save, pause or forget the selection in one round-trip.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/AI/Agents/MemoryBulkAction.cs",
+      "documentationStatus": "merged",
+      "usageExample": "var request = new MemoryBulkActionRequest(selection, MemoryBulkAction.Pause);"
+    },
+    {
+      "itemName": "MemoryBulkActionRequest",
+      "kind": "Record",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.AI.Models",
+      "description": "One bulk request the reader made about a selection of memories: WHICH memories and WHAT to do with them. The request holds a SNAPSHOT of the selection (the list is copied at construction), so a host that mutates its own collection while the request is in flight still receives exactly what the reader acted on. The surface reports the request and never applies it to the host's data.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/AI/Agents/MemoryBulkActionRequest.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Action",
+          "kind": "Property",
+          "type": "MemoryBulkAction",
+          "description": "What the reader asked to do with the selection."
+        },
+        {
+          "name": "Count",
+          "kind": "Property",
+          "type": "int",
+          "description": "How many memories the request covers."
+        },
+        {
+          "name": "Items",
+          "kind": "Property",
+          "type": "IReadOnlyList<MemoryItem>",
+          "description": "The selected memories, copied at construction."
+        }
+      ],
+      "usageExample": "var request = new MemoryBulkActionRequest(selection, MemoryBulkAction.Forget);\n// request.Items is a COPY of the selection, in the order the reader saw it.",
+      "notes": [
+        "The list is copied at construction, so a host that mutates its own collection while the request is in flight still receives exactly what the reader acted on."
+      ]
+    },
+    {
+      "itemName": "MemoryItem",
+      "kind": "Record",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.AI.Models",
+      "description": "One fact an agent remembers: what it is, which category it belongs to, how sure the agent is, where it came from and when it changed. The record is a VALUE: the host recomposes it with item with { … } when the reader edits or pauses it, and no component mutates the instance it was given. Id is REQUIRED and is the identity every surface keys on and the value an action reports (a blank value throws ArgumentException, because an id invented at construction would change on every rebuild); Category is what groups the rows, so a memory the host left uncategorised is grouped under the surface's own localized \"Uncategorized\" heading instead of a blank one. Nothing is invented: an unmeasured Confidence or a missing Source prints nothing at all, and a confidence outside 0…1 is not a ratio the surface can turn into a percentage.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/AI/Agents/MemoryItem.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Category",
+          "kind": "Property",
+          "type": "string",
+          "description": "The category the memory is grouped under. Kept verbatim (whitespace and all); blank means \"no category\" and the surface renders its own localized group name, so every uncategorised memory shares one group."
+        },
+        {
+          "name": "Confidence",
+          "kind": "Property",
+          "type": "double?",
+          "description": "How sure the agent is, as a RATIO in 0…1 (0.82 renders \"82 %\"). Null, negative, above one, or NaN means \"not measured\" and renders no confidence at all instead of a made-up zero."
+        },
+        {
+          "name": "CreatedAt",
+          "kind": "Property",
+          "type": "DateTimeOffset",
+          "description": "When the memory was first stored, in the host's timeline."
+        },
+        {
+          "name": "HasBeenUpdated",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Whether the memory was edited after it was stored."
+        },
+        {
+          "name": "HasCategory",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Whether the host gave the memory a category with actual text."
+        },
+        {
+          "name": "HasConfidence",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Whether the host reported a usable confidence (a value inside 0…1)."
+        },
+        {
+          "name": "HasKnownStatus",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Whether Status is one of the declared states (a cast integer may not be)."
+        },
+        {
+          "name": "HasSource",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Whether the memory came from a source worth printing."
+        },
+        {
+          "name": "Id",
+          "kind": "Property",
+          "type": "string",
+          "description": "Stable identity of the memory, in the host's store — the key every surface selects, edits and undoes by. Never empty: a blank value is REJECTED at construction with ArgumentException, because an id invented at construction would change on every rebuild and silently drop the row's state."
+        },
+        {
+          "name": "IsActive",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Whether the memory is stored and in use by the agent."
+        },
+        {
+          "name": "IsForgotten",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Whether the memory has been forgotten (it is kept in the list only while an undo is still possible)."
+        },
+        {
+          "name": "IsPaused",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Whether the memory is kept but not used."
+        },
+        {
+          "name": "IsPendingReview",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Whether the agent proposed the memory and is waiting for a human decision."
+        },
+        {
+          "name": "Source",
+          "kind": "Property",
+          "type": "string?",
+          "description": "Where the memory came from (\"Support ticket #4211\", \"Conversation 4f2a\", \"Manual entry\"), in the host's own words. Null or blank renders no source line."
+        },
+        {
+          "name": "Status",
+          "kind": "Property",
+          "type": "MemoryItemStatus",
+          "description": "What the agent is allowed to do with the memory. Default Active — an unclassified memory is a normal stored fact, never \"forgotten\"; painted as a WORD plus an icon, never as a colour alone."
+        },
+        {
+          "name": "Text",
+          "kind": "Property",
+          "type": "string",
+          "description": "The fact itself, verbatim. A whitespace-only text reads as empty."
+        },
+        {
+          "name": "UpdatedAt",
+          "kind": "Property",
+          "type": "DateTimeOffset?",
+          "description": "When the memory last changed, or null when it never did. Null renders no \"updated\" line rather than a timestamp the host never recorded."
+        }
+      ],
+      "usageExample": "var memory = new MemoryItem(\"m-1\", \"Preferences\", \"Prefers metric units.\")\n{\n    Confidence = 0.94,\n    Source = \"Support ticket #4211\",\n    CreatedAt = DateTimeOffset.UtcNow,\n};\n\nmemory.HasConfidence.Should().BeTrue();",
+      "notes": [
+        "An unclassified memory is Active, never Forgotten; a Confidence outside 0…1 (or NaN) counts as not measured, and a blank Category means \"no category\" (ONE localized group)."
+      ]
+    },
+    {
+      "itemName": "MemoryItemStatus",
+      "kind": "Enum",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.AI.Models",
+      "description": "What the agent is allowed to do with one stored fact. The state is always painted as a localized word plus an icon; the tone is a third, redundant cue. A forgotten memory stays in the list only while its undo window is open, and a memory the agent proposed is PendingReview until a human accepts or rejects it.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/AI/Agents/MemoryItemStatus.cs",
+      "documentationStatus": "merged",
+      "usageExample": "var paused = new MemoryItem(\"m-1\", \"Preferences\", \"Prefers metric units.\")\n{\n    Status = MemoryItemStatus.Paused,\n};"
+    },
+    {
+      "itemName": "MemoryReview",
+      "kind": "Record",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.AI.Models",
+      "description": "One review decision the reader made about a memory the agent proposed: WHICH memory and WHAT was decided. The surface reports the decision and never applies it to the host's data — OnReview is the host's contract, and the panel keeps its own copy of the outcome only so the reader sees the row change before the store answers.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/AI/Agents/MemoryReview.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Decision",
+          "kind": "Property",
+          "type": "MemoryReviewDecision",
+          "description": "What the reader decided about it."
+        },
+        {
+          "name": "Item",
+          "kind": "Property",
+          "type": "MemoryItem",
+          "description": "The memory under review."
+        }
+      ],
+      "usageExample": "var review = new MemoryReview(item, MemoryReviewDecision.Approve);",
+      "notes": [
+        "The component reports the decision and never writes the host's store."
+      ]
+    },
+    {
+      "itemName": "MemoryReviewDecision",
+      "kind": "Enum",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.AI.Models",
+      "description": "The human decision on a memory the agent proposed.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/AI/Agents/MemoryReviewDecision.cs",
+      "documentationStatus": "merged",
+      "usageExample": "var review = new MemoryReview(item, MemoryReviewDecision.Approve);"
     },
     {
       "itemName": "ParallelAttempt",
@@ -43336,11 +43641,11 @@
   ],
   "libraryExamples": [],
   "summary": {
-    "itemCount": 1644,
-    "manualItemCount": 1644,
-    "generatedItemCount": 1628,
+    "itemCount": 1652,
+    "manualItemCount": 1652,
+    "generatedItemCount": 1636,
     "generatedOnlyItemCount": 0,
     "componentCount": 0,
-    "publicApiTypeCount": 1628
+    "publicApiTypeCount": 1636
   }
 }

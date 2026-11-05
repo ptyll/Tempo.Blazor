@@ -1,0 +1,34 @@
+{
+  "kind": "Record",
+  "category": "AI",
+  "namespace": "Tempo.Blazor.AI.Models",
+  "description": "One bulk request the reader made about a selection of memories: WHICH memories and WHAT to do with them. The request holds a SNAPSHOT of the selection (the list is copied at construction), so a host that mutates its own collection while the request is in flight still receives exactly what the reader acted on. The surface reports the request and never applies it to the host's data.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/AI/Agents/MemoryBulkActionRequest.cs",
+  "documentationStatus": "documented",
+  "members": [
+    {
+      "name": "Action",
+      "kind": "Property",
+      "type": "MemoryBulkAction",
+      "description": "What the reader asked to do with the selection."
+    },
+    {
+      "name": "Count",
+      "kind": "Property",
+      "type": "int",
+      "description": "How many memories the request covers."
+    },
+    {
+      "name": "Items",
+      "kind": "Property",
+      "type": "IReadOnlyList<MemoryItem>",
+      "description": "The selected memories, copied at construction."
+    }
+  ],
+  "itemName": "MemoryBulkActionRequest",
+  "usageExample": "var request = new MemoryBulkActionRequest(selection, MemoryBulkAction.Forget);\n// request.Items is a COPY of the selection, in the order the reader saw it.",
+  "notes": [
+    "The list is copied at construction, so a host that mutates its own collection while the request is in flight still receives exactly what the reader acted on."
+  ]
+}

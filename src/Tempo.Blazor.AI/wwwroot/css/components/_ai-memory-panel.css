@@ -1,0 +1,601 @@
+/* ═══════════════════════════════════════════════════════════════════════════════════════════════
+   TmMemoryPanel — what an agent remembers: category groups with counts, the master switch, the rows
+   with their status, the inline edit, the undo window and the bulk actions
+   Contract: docs/memory-panel.md
+   Every rule reads a --tm-* design token (no colour literal, no raw palette step, no [data-theme]
+   block); the package's shared token gate is AiMarkdownViewCssTests and the component's own gate is
+   TmMemoryPanelCssTests.
+
+   Nothing in this file animates or transitions: every state is a WORD plus an icon and a tone, and a
+   state that only moves is a state a reader can miss. A remembered fact disappears at once because
+   the undo window, not an animation, is what makes the removal safe.
+   ═══════════════════════════════════════════════════════════════════════════════════════════════ */
+
+.tm-ai-memory {
+    /* A host lays this card out in a grid or a flex row: without this the card's automatic minimum
+       width grows to its content and the PAGE scrolls sideways instead of the card. */
+    min-inline-size: 0;
+
+    /* The status colour is ONE knob a row/status modifier SETS and the base rule READS, so source
+       order can never decide a state's colour. The word and the icon carry the state too. */
+    --tm-memory-status-ink: var(--tm-text-secondary);
+    --tm-memory-status-fill: var(--tm-bg-surface-secondary);
+    --tm-memory-status-border: var(--tm-border-color);
+    --tm-memory-row-border: var(--tm-border-color);
+    --tm-memory-gap: var(--tm-space-2);
+
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-3);
+    padding: var(--tm-space-4);
+    border: var(--tm-border-width) solid var(--tm-border-color);
+    border-radius: var(--tm-radius-card);
+    background-color: var(--tm-bg-surface);
+    color: var(--tm-text-primary);
+    box-shadow: var(--tm-shadow-sm);
+    font-size: var(--tm-font-size-sm);
+    line-height: var(--tm-line-height-normal);
+}
+
+/* ── Header, the master switch and the off note ──────────────────────────────────────────── */
+
+.tm-ai-memory__header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--tm-space-3);
+}
+
+.tm-ai-memory__title {
+    margin: 0;
+    font-size: var(--tm-font-size-base);
+    font-weight: var(--tm-font-weight-semibold);
+}
+
+.tm-ai-memory__switch {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-1);
+    min-inline-size: 0;
+    max-inline-size: 22rem;
+}
+
+.tm-ai-memory__hint {
+    margin: 0;
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-xs);
+    overflow-wrap: anywhere;
+}
+
+/* Memory off: what is already known stays readable, and every row drops out of the actionable look. */
+.tm-ai-memory--off .tm-ai-memory__item {
+    background-color: var(--tm-bg-surface-secondary);
+}
+
+.tm-ai-memory__off-note {
+    margin: 0;
+    padding: var(--tm-space-2) var(--tm-space-3);
+    border-inline-start: calc(var(--tm-border-width) * 3) solid var(--tm-color-warning);
+    border-radius: var(--tm-radius-control);
+    background-color: var(--tm-color-warning-subtle);
+    color: var(--tm-color-warning-text);
+    overflow-wrap: anywhere;
+}
+
+/* ── Toolbar: search and the status filter ───────────────────────────────────────────────── */
+
+.tm-ai-memory__toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: var(--tm-space-2);
+}
+
+.tm-ai-memory__search {
+    flex: 1 1 14rem;
+    min-inline-size: 0;
+    block-size: var(--tm-input-height-md);
+    padding-inline: var(--tm-space-2);
+    border: var(--tm-border-width) solid var(--tm-border-color-control);
+    border-radius: var(--tm-radius-control);
+    background-color: var(--tm-bg-surface);
+    color: var(--tm-text-primary);
+    font-size: var(--tm-font-size-sm);
+}
+
+.tm-ai-memory__search:focus-visible {
+    outline: var(--tm-border-width) solid var(--tm-border-color-focus);
+    outline-offset: var(--tm-space-1);
+}
+
+.tm-ai-memory__filter {
+    flex: 0 1 auto;
+    min-inline-size: 0;
+}
+
+/* ── The bulk bar ────────────────────────────────────────────────────────────────────────── */
+
+.tm-ai-memory__bulk {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--tm-space-2);
+    padding: var(--tm-space-2) var(--tm-space-3);
+    border: var(--tm-border-width) solid var(--tm-color-primary-soft-border);
+    border-radius: var(--tm-radius-control);
+    background-color: var(--tm-color-primary-subtle);
+}
+
+.tm-ai-memory__bulk-count {
+    font-weight: var(--tm-font-weight-semibold);
+    color: var(--tm-color-primary-text);
+}
+
+.tm-ai-memory__bulk-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--tm-space-1);
+    margin-inline-start: auto;
+}
+
+.tm-ai-memory__bulk-action {
+    min-block-size: var(--tm-space-6);
+    padding-inline: var(--tm-space-2);
+    border: var(--tm-border-width) solid var(--tm-border-color);
+    border-radius: var(--tm-radius-control);
+    background-color: var(--tm-bg-surface);
+    color: var(--tm-text-primary);
+    font-size: var(--tm-font-size-xs);
+    cursor: pointer;
+}
+
+.tm-ai-memory__bulk-action:hover:not(:disabled) {
+    background-color: var(--tm-color-surface-hover);
+}
+
+.tm-ai-memory__bulk-action:focus-visible {
+    outline: var(--tm-border-width) solid var(--tm-border-color-focus);
+    outline-offset: var(--tm-space-1);
+}
+
+.tm-ai-memory__bulk-action:disabled {
+    color: var(--tm-color-text-disabled);
+    cursor: not-allowed;
+}
+
+/* ── The groups ──────────────────────────────────────────────────────────────────────────── */
+
+.tm-ai-memory__groups {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-3);
+}
+
+.tm-ai-memory__group {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-1);
+    min-inline-size: 0;
+}
+
+.tm-ai-memory__group-head {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-2);
+    padding-block: var(--tm-space-1);
+    border-block-end: var(--tm-border-width) solid var(--tm-border-color);
+}
+
+.tm-ai-memory__group-title {
+    flex: 1 1 auto;
+    min-inline-size: 0;
+    margin: 0;
+    font-size: var(--tm-font-size-xs);
+}
+
+.tm-ai-memory__group-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--tm-space-2);
+    inline-size: 100%;
+    min-block-size: var(--tm-space-6);
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--tm-text-primary);
+    font: inherit;
+    font-weight: var(--tm-font-weight-semibold);
+    text-align: start;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    cursor: pointer;
+}
+
+.tm-ai-memory__group-toggle:focus-visible {
+    outline: var(--tm-border-width) solid var(--tm-border-color-focus);
+    outline-offset: var(--tm-space-1);
+}
+
+.tm-ai-memory__group-chevron {
+    display: inline-flex;
+    flex: 0 0 auto;
+    color: var(--tm-text-secondary);
+}
+
+.tm-ai-memory__group-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.tm-ai-memory__group-count {
+    margin-inline-start: auto;
+    padding: 0 var(--tm-space-2);
+    border: var(--tm-border-width) solid var(--tm-border-color);
+    border-radius: var(--tm-radius-pill);
+    background-color: var(--tm-bg-surface-secondary);
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-xs);
+    font-weight: var(--tm-font-weight-normal);
+    letter-spacing: normal;
+}
+
+.tm-ai-memory__group-select {
+    flex: 0 0 auto;
+    inline-size: var(--tm-space-4);
+    block-size: var(--tm-space-4);
+    accent-color: var(--tm-color-primary);
+}
+
+.tm-ai-memory__group-select:focus-visible {
+    outline: var(--tm-border-width) solid var(--tm-border-color-focus);
+    outline-offset: var(--tm-space-1);
+}
+
+.tm-ai-memory__list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-memory-gap);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+/* ── A row ───────────────────────────────────────────────────────────────────────────────── */
+
+.tm-ai-memory__item {
+    display: flex;
+    /* A narrow card stacks the row's actions under the fact instead of squeezing the fact into a
+       column of single words. */
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: var(--tm-space-2);
+    min-inline-size: 0;
+    padding: var(--tm-space-2) var(--tm-space-3);
+    border: var(--tm-border-width) solid var(--tm-memory-row-border);
+    border-radius: var(--tm-radius-control);
+    background-color: var(--tm-bg-surface);
+}
+
+.tm-ai-memory__item[data-status="forgotten"] {
+    /* The removal is already reported; the row is a RECORD of it, so it stays readable and wears a
+       second, non-colour cue on top of the "Forgotten" word. The strike goes on the FACT only — a
+       struck-through status chip reads as a struck-through state. */
+    --tm-memory-row-border: var(--tm-memory-status-border);
+    background-color: var(--tm-bg-surface-secondary);
+}
+
+.tm-ai-memory__item[data-status="forgotten"] .tm-ai-memory__text {
+    text-decoration: line-through;
+}
+
+.tm-ai-memory__select-hit,
+.tm-ai-memory__group-select-hit {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    min-inline-size: var(--tm-space-6);
+    min-block-size: var(--tm-space-6);
+    cursor: pointer;
+}
+
+.tm-ai-memory__select {
+    flex: 0 0 auto;
+    inline-size: var(--tm-space-4);
+    block-size: var(--tm-space-4);
+    margin-block-start: var(--tm-space-1);
+    accent-color: var(--tm-color-primary);
+}
+
+.tm-ai-memory__select:focus-visible {
+    outline: var(--tm-border-width) solid var(--tm-border-color-focus);
+    outline-offset: var(--tm-space-1);
+}
+
+.tm-ai-memory__body {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-1);
+    flex: 1 1 14rem;
+    min-inline-size: 0;
+}
+
+.tm-ai-memory__text {
+    margin: 0;
+    overflow-wrap: anywhere;
+}
+
+.tm-ai-memory__edit-box {
+    inline-size: 100%;
+    min-block-size: calc(var(--tm-space-6) * 2);
+    padding: var(--tm-space-2);
+    border: var(--tm-border-width) solid var(--tm-border-color-control);
+    border-radius: var(--tm-radius-control);
+    background-color: var(--tm-bg-surface);
+    color: var(--tm-text-primary);
+    font: inherit;
+    resize: vertical;
+}
+
+.tm-ai-memory__edit-box:focus-visible {
+    outline: var(--tm-border-width) solid var(--tm-border-color-focus);
+    outline-offset: var(--tm-space-1);
+}
+
+.tm-ai-memory__edit-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--tm-space-2);
+}
+
+.tm-ai-memory__save,
+.tm-ai-memory__cancel {
+    min-block-size: var(--tm-space-6);
+    padding-inline: var(--tm-space-3);
+    border: var(--tm-border-width) solid var(--tm-border-color);
+    border-radius: var(--tm-radius-control);
+    font-size: var(--tm-font-size-xs);
+    cursor: pointer;
+}
+
+.tm-ai-memory__save {
+    background-color: var(--tm-color-primary);
+    border-color: var(--tm-color-primary);
+    color: var(--tm-color-on-primary);
+}
+
+.tm-ai-memory__cancel {
+    background-color: var(--tm-bg-surface);
+    color: var(--tm-text-primary);
+}
+
+.tm-ai-memory__save:focus-visible,
+.tm-ai-memory__cancel:focus-visible {
+    outline: var(--tm-border-width) solid var(--tm-border-color-focus);
+    outline-offset: var(--tm-space-1);
+}
+
+/* ── The meta line and its status chip ───────────────────────────────────────────────────── */
+
+.tm-ai-memory__meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: var(--tm-space-1) var(--tm-space-2);
+    margin: 0;
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-xs);
+}
+
+.tm-ai-memory__status {
+    display: inline-flex;
+    align-items: baseline;
+    gap: var(--tm-space-1);
+    padding: 0 var(--tm-space-2);
+    border: var(--tm-border-width) solid var(--tm-memory-status-border);
+    border-radius: var(--tm-radius-pill);
+    background-color: var(--tm-memory-status-fill);
+    color: var(--tm-memory-status-ink);
+    font-weight: var(--tm-font-weight-medium);
+}
+
+.tm-ai-memory__status-icon {
+    display: inline-flex;
+    align-self: center;
+}
+
+.tm-ai-memory__status-text {
+    white-space: nowrap;
+}
+
+.tm-ai-memory__status[data-status="active"] {
+    --tm-memory-status-ink: var(--tm-color-success-text);
+    --tm-memory-status-fill: var(--tm-color-success-subtle);
+    --tm-memory-status-border: var(--tm-color-success-soft-border);
+}
+
+.tm-ai-memory__status[data-status="paused"] {
+    --tm-memory-status-ink: var(--tm-color-warning-text);
+    --tm-memory-status-fill: var(--tm-color-warning-subtle);
+    --tm-memory-status-border: var(--tm-color-warning-soft-border);
+}
+
+.tm-ai-memory__status[data-status="pending-review"] {
+    --tm-memory-status-ink: var(--tm-color-primary-text);
+    --tm-memory-status-fill: var(--tm-color-primary-subtle);
+    --tm-memory-status-border: var(--tm-color-primary-soft-border);
+}
+
+.tm-ai-memory__status[data-status="forgotten"] {
+    --tm-memory-status-ink: var(--tm-color-danger-text);
+    --tm-memory-status-fill: var(--tm-color-danger-subtle);
+    --tm-memory-status-border: var(--tm-color-danger-soft-border);
+}
+
+.tm-ai-memory__confidence,
+.tm-ai-memory__source,
+.tm-ai-memory__updated {
+    overflow-wrap: anywhere;
+}
+
+/* ── The row actions ─────────────────────────────────────────────────────────────────────── */
+
+.tm-ai-memory__actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--tm-space-1);
+    flex: 0 0 auto;
+    margin-inline-start: auto;
+}
+
+.tm-ai-memory__action {
+    min-block-size: var(--tm-space-6);
+    padding-inline: var(--tm-space-2);
+    border: var(--tm-border-width) solid var(--tm-border-color);
+    border-radius: var(--tm-radius-control);
+    background-color: var(--tm-bg-surface);
+    color: var(--tm-text-primary);
+    font-size: var(--tm-font-size-xs);
+    cursor: pointer;
+}
+
+.tm-ai-memory__action:hover:not(:disabled) {
+    background-color: var(--tm-color-surface-hover);
+}
+
+.tm-ai-memory__action:focus-visible {
+    outline: var(--tm-border-width) solid var(--tm-border-color-focus);
+    outline-offset: var(--tm-space-1);
+}
+
+.tm-ai-memory__action:disabled {
+    color: var(--tm-color-text-disabled);
+    cursor: not-allowed;
+}
+
+.tm-ai-memory__action--danger {
+    border-color: var(--tm-color-danger-soft-border);
+    color: var(--tm-color-danger-text);
+}
+
+.tm-ai-memory__busy {
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-xs);
+}
+
+/* ── The empty state, the error and the undo window ──────────────────────────────────────── */
+
+.tm-ai-memory__empty {
+    margin: 0;
+    padding: var(--tm-space-4);
+    border: var(--tm-border-width) dashed var(--tm-border-color);
+    border-radius: var(--tm-radius-control);
+    color: var(--tm-text-secondary);
+    text-align: center;
+    overflow-wrap: anywhere;
+}
+
+.tm-ai-memory__error {
+    margin: 0;
+    padding: var(--tm-space-2) var(--tm-space-3);
+    border-inline-start: calc(var(--tm-border-width) * 3) solid var(--tm-color-danger);
+    border-radius: var(--tm-radius-control);
+    background-color: var(--tm-color-danger-subtle);
+    color: var(--tm-color-danger-text);
+    overflow-wrap: anywhere;
+}
+
+.tm-ai-memory__undo {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--tm-space-2);
+    padding: var(--tm-space-2) var(--tm-space-3);
+    border: var(--tm-border-width) solid var(--tm-border-color-strong);
+    border-radius: var(--tm-radius-control);
+    background-color: var(--tm-bg-surface-secondary);
+}
+
+.tm-ai-memory__undo-text {
+    flex: 1 1 12rem;
+    min-inline-size: 0;
+    overflow-wrap: anywhere;
+}
+
+.tm-ai-memory__undo-action {
+    min-block-size: var(--tm-space-6);
+    padding-inline: var(--tm-space-2);
+    border: var(--tm-border-width) solid var(--tm-border-color);
+    border-radius: var(--tm-radius-control);
+    background-color: var(--tm-bg-surface);
+    color: var(--tm-text-primary);
+    font-size: var(--tm-font-size-xs);
+    font-weight: var(--tm-font-weight-semibold);
+    cursor: pointer;
+}
+
+.tm-ai-memory__undo-action:focus-visible {
+    outline: var(--tm-border-width) solid var(--tm-border-color-focus);
+    outline-offset: var(--tm-space-1);
+}
+
+.tm-ai-memory__undo-timer {
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-xs);
+    font-variant-numeric: tabular-nums;
+}
+
+/* ── Coarse pointer: every pressable target is thumb-sized ──────────────────────────────── */
+
+@media (pointer: coarse) {
+    .tm-ai-memory__action,
+    .tm-ai-memory__bulk-action,
+    .tm-ai-memory__save,
+    .tm-ai-memory__cancel,
+    .tm-ai-memory__undo-action,
+    .tm-ai-memory__group-toggle,
+    .tm-ai-memory__search {
+        min-block-size: var(--tm-touch-target);
+    }
+
+    /* The visible box keeps its size; the LABEL around it is the 44 px target. */
+    .tm-ai-memory__select-hit,
+    .tm-ai-memory__group-select-hit {
+        min-inline-size: var(--tm-touch-target);
+        min-block-size: var(--tm-touch-target);
+    }
+}
+
+/* ── Forced colors: the system palette owns every colour ─────────────────────────────────── */
+
+@media (forced-colors: active) {
+    .tm-ai-memory__action:focus-visible,
+    .tm-ai-memory__bulk-action:focus-visible,
+    .tm-ai-memory__group-toggle:focus-visible,
+    .tm-ai-memory__edit-box:focus-visible,
+    .tm-ai-memory__search:focus-visible,
+    .tm-ai-memory__undo-action:focus-visible,
+    .tm-ai-memory__save:focus-visible,
+    .tm-ai-memory__cancel:focus-visible,
+    .tm-ai-memory__select:focus-visible,
+    .tm-ai-memory__group-select:focus-visible {
+        outline: 3px solid Highlight;
+    }
+
+    .tm-ai-memory__item,
+    .tm-ai-memory__status,
+    .tm-ai-memory__undo,
+    .tm-ai-memory__group-head {
+        border-color: CanvasText;
+    }
+
+    .tm-ai-memory__off-note,
+    .tm-ai-memory__error,
+    .tm-ai-memory__bulk {
+        color: CanvasText;
+        border-color: CanvasText;
+    }
+}

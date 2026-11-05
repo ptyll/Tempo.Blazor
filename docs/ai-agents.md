@@ -299,6 +299,22 @@ editor a host opens over the chain — reorder through the shared `TmSortableLis
 and pick the resolution policy — reporting every change through `@bind-Chain` and `@bind-Policy`. Its contract is
 [fallback-chain.md](fallback-chain.md).
 
+## The autonomy and the memory: `TmAutonomyDial` and `TmMemoryPanel`
+
+`TmAutonomyDial` is how MUCH the agent may do alone: the grades the host declares, the grade the reader picked, the
+ceiling a plan imposes (`MaxAllowed`, whose higher stops still render — marked unavailable — next to an explanation) and
+the limits somebody ELSE enforces (`Locks`, each with its source and its reason). It is a real `role="slider"` with one
+tab stop, arrow stepping, Home/End inside the ALLOWED range, a localized `aria-valuetext`, native step buttons as the
+pointer alternative, and a segmented radio group as the other presentation. A change at or above `ConfirmAbove` asks
+first, and the confirmation keeps the focus. Its contract is [autonomy-dial.md](autonomy-dial.md).
+
+`TmMemoryPanel` is WHAT the agent remembers: stored facts grouped by category with counts, the master switch, an inline
+edit (Enter commits, Escape rolls back, the focus returns to the Edit button), pause and resume, a removal that is only
+final when its undo window closes, the review of what the agent proposed, a search and a status filter, and bulk actions
+over a selection that is pruned to what the reader can actually see. Every callback is awaited: a slow one puts the row
+in a busy state, a failing one prints and announces a localized error and changes nothing. Its contract is
+[memory-panel.md](memory-panel.md).
+
 ## Related pages
 
 - [TmAgentGraph](agent-graph.md) — the same run as a network of agents, tools and resources.
@@ -306,6 +322,8 @@ and pick the resolution policy — reporting every change through `@bind-Chain` 
 - [TmParallelAttempts](parallel-attempts.md) — several attempts at one task, with scores, votes and a confirmed winner.
 - [TmAgentHandoff](agent-handoff.md) — the run handed from agent to agent, with what travelled and what was lost.
 - [TmFallbackChain](fallback-chain.md) — the models tried for one request, ending in the answer, plus the chain editor.
+- [TmAutonomyDial](autonomy-dial.md) — how much the agent may do alone, with the ceiling and the enforced limits.
+- [TmMemoryPanel](memory-panel.md) — what the agent remembers, with review, an undo window and bulk actions.
 - [TmAgentLanes](agent-lanes.md), [TmAgentPlan](agent-plan.md), [TmAgentRunTree](agent-run-tree.md), [TmAgentMonitor](agent-monitor.md),
   [TmPermissionRequest](permission-request.md) — the run-side surfaces that these visualizations compose with.
 - [TmTraceWaterfall](trace-waterfall.md) — the span view of one agent's work.

@@ -1734,6 +1734,151 @@
       ]
     },
     {
+      "itemName": "TmAutonomyDial",
+      "kind": "Component",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.Components.AI",
+      "description": "How much an agent may do on its own: the stops the host declares, the grade the reader picked, the ceiling a plan imposes and the limits somebody else enforces. The surface is a CONTROL, not a read-out: a real role=\"slider\" with one tab stop (arrow keys step one grade, Home and End reach the ends of what is ALLOWED) or a segmented radio group in which every grade is its own target, plus a pair of native step buttons as the pointer alternative (WCAG 2.5.7). The value is exposed as an invariant number AND as a localized value text, so a screen reader hears \"Ask when risky\" instead of \"1\"; a change at or above ConfirmAbove asks first, and the confirmation keeps the focus (Escape cancels, the focus returns to the slider). The component reports every change through ValueChanged and never writes to the host's state; the grade it shows is its own copy, so the reader sees the change before the round-trip, and a host that re-renders the SAME value cannot undo the reader's pick. ONE polite live region announces a committed change — the confirmation does not get a second region, because its message is already in front of the reader.",
+      "packageId": "Tempo.Blazor.AI",
+      "sourcePath": "src/Tempo.Blazor.AI/Components/AI/TmAutonomyDial.razor",
+      "documentationStatus": "merged",
+      "requiredImports": [
+        "@using Tempo.Blazor.Components.AI"
+      ],
+      "parameters": [
+        {
+          "name": "Class",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Additional CSS class(es) for the root element."
+        },
+        {
+          "name": "ConfirmAbove",
+          "type": "int?",
+          "isRequired": false,
+          "description": "The grade at or above which a change asks for confirmation. Null (the default) commits every change at once; a change is held until the reader confirms it and Escape cancels without reporting anything."
+        },
+        {
+          "name": "HeadingLevel",
+          "type": "int",
+          "isRequired": false,
+          "default": "3",
+          "description": "The heading level of the rendered title, clamped to 2–6. Default 3."
+        },
+        {
+          "name": "Levels",
+          "type": "IReadOnlyList<AutonomyLevel>?",
+          "isRequired": false,
+          "description": "The grades of autonomy, in any order: they are rendered in ascending Value order and a duplicate value is kept once. Null or empty renders the three localized defaults (ask first / ask when risky / act freely)."
+        },
+        {
+          "name": "Locks",
+          "type": "IReadOnlyList<AutonomyLock>?",
+          "isRequired": false,
+          "description": "The limits the reader cannot lift, each naming its action and (when known) who enforces it and why. Null or empty renders no limits section. Locks are FACTS about the surface, never controls."
+        },
+        {
+          "name": "MaxAllowed",
+          "type": "int?",
+          "isRequired": false,
+          "description": "The highest grade a plan allows, as a Value. Null (the default) allows every declared stop. The stops above it still render — marked unavailable — and the surface prints an explanation instead of silently refusing the key."
+        },
+        {
+          "name": "MaxAllowedReason",
+          "type": "string?",
+          "isRequired": false,
+          "description": "The host's own explanation of MaxAllowed. Null renders the localized default (\"Your plan does not allow a higher level.\")."
+        },
+        {
+          "name": "Presentation",
+          "type": "AutonomyDialPresentation",
+          "isRequired": true,
+          "description": "How the stops are presented. Default Dial; applies to this render only and is owned by the host. An unknown value falls back to the dial."
+        },
+        {
+          "name": "ShowTitle",
+          "type": "bool",
+          "isRequired": false,
+          "default": "true",
+          "description": "Whether the heading is rendered. Default true."
+        },
+        {
+          "name": "Title",
+          "type": "string?",
+          "isRequired": false,
+          "description": "The heading above the surface. Null renders the localized default (\"Autonomy\"); the heading also names the slider, so the name a reader hears is the one they see."
+        },
+        {
+          "name": "Value",
+          "type": "int",
+          "isRequired": false,
+          "description": "The grade the reader picked, two-way bound with ValueChanged (@bind-Value). A value that is not one of the stops, or one above MaxAllowed, renders the nearest allowed stop; the surface never changes the host's value behind its back, so the next change reports an allowed grade."
+        },
+        {
+          "name": "ValueChanged",
+          "type": "EventCallback<int>",
+          "isRequired": false,
+          "description": "Fires with the newly committed grade."
+        }
+      ],
+      "cssClasses": [
+        "tm-ai-autonomy",
+        "tm-ai-autonomy--segmented",
+        "tm-ai-autonomy__header",
+        "tm-ai-autonomy__title",
+        "tm-ai-autonomy__readout",
+        "tm-ai-autonomy__current",
+        "tm-ai-autonomy__position",
+        "tm-ai-autonomy__description",
+        "tm-ai-autonomy__dial",
+        "tm-ai-autonomy__control",
+        "tm-ai-autonomy__rail",
+        "tm-ai-autonomy__fill",
+        "tm-ai-autonomy__stop",
+        "tm-ai-autonomy__stop-dot",
+        "tm-ai-autonomy__stop-label",
+        "tm-ai-autonomy__step",
+        "tm-ai-autonomy__segmented",
+        "tm-ai-autonomy__limit",
+        "tm-ai-autonomy__limit-reason",
+        "tm-ai-autonomy__locks",
+        "tm-ai-autonomy__locks-title",
+        "tm-ai-autonomy__lock",
+        "tm-ai-autonomy__lock-icon",
+        "tm-ai-autonomy__lock-action",
+        "tm-ai-autonomy__lock-source",
+        "tm-ai-autonomy__lock-reason",
+        "tm-ai-autonomy__confirm",
+        "tm-ai-autonomy__confirm-message",
+        "tm-ai-autonomy__confirm-actions",
+        "tm-ai-autonomy__confirm-accept",
+        "tm-ai-autonomy__confirm-cancel"
+      ],
+      "examples": [
+        {
+          "title": "The slider a reader steps with the keyboard",
+          "code": "<TmAutonomyDial Levels=\"_levels\"\n                @bind-Value=\"_value\"\n                MaxAllowed=\"2\"\n                ConfirmAbove=\"2\" />\n\n@code {\n    private IReadOnlyList<AutonomyLevel> _levels =\n    [\n        new(0) { Label = \"Observe\", Description = \"The agent proposes and waits.\" },\n        new(1) { Label = \"Assist\", Description = \"Reversible work runs on its own.\" },\n        new(2) { Label = \"Act\", Description = \"The agent finishes the task alone.\" },\n    ];\n    private int _value = 1;\n}"
+        },
+        {
+          "title": "The enforced limits a tenant and an administrator add",
+          "code": "<TmAutonomyDial @bind-Value=\"_value\"\n                Locks=\"_locks\" />\n\n@code {\n    private int _value = 1;\n    private IReadOnlyList<AutonomyLock> _locks =\n    [\n        new(\"Send external email\")\n        {\n            Source = \"Tenant policy\",\n            Reason = \"Outbound mail needs a human sign-off.\",\n        },\n    ];\n}"
+        },
+        {
+          "title": "The segmented presentation, one target per grade",
+          "code": "<TmAutonomyDial @bind-Value=\"_value\"\n                Presentation=\"AutonomyDialPresentation.Segmented\"\n                MaxAllowed=\"1\" />"
+        }
+      ],
+      "notes": [
+        "The dial is a real role=\"slider\": aria-valuenow carries the invariant grade and aria-valuetext carries its localized label, so a screen reader hears \"Ask when risky\" instead of \"1\".",
+        "ArrowRight/ArrowUp and ArrowLeft/ArrowDown move one grade, Home and End jump to the ends of what is ALLOWED, and a key past an end changes nothing (nothing is announced).",
+        "The two native step buttons sit BESIDE the slider and are the pointer alternative (WCAG 2.5.7); they disable themselves at the ends.",
+        "MaxAllowed still renders the stops above the ceiling, marked unavailable, and prints a localized explanation instead of silently refusing the key.",
+        "ConfirmAbove holds a change in a group whose message names the grade; the focus moves to the confirm button, Escape cancels and the focus returns to the slider (WCAG 2.4.3).",
+        "A change is part of a real time axis: the fill reads the --tm-autonomy-progress custom property the component writes and prefers-reduced-motion removes its travel.",
+        "ONE polite live region announces a committed grade; the confirmation needs no second region because its message is already in front of the reader."
+      ]
+    },
+    {
       "itemName": "TmContextUsage",
       "kind": "Component",
       "category": "AI",
@@ -2242,6 +2387,244 @@
           "title": "Replace the code-block markup with syntax highlighting",
           "code": "<TmMarkdownView Markdown=\"@answer\"\n                CodeBlockTemplate=\"ctx => Highlighter.RenderHtml(ctx.Code, ctx.Language)\" />"
         }
+      ]
+    },
+    {
+      "itemName": "TmMemoryPanel",
+      "kind": "Component",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.Components.AI",
+      "description": "What an agent remembers: the stored facts grouped by category, a master switch, an inline edit, pause and resume, a removal that can be undone, the review of what the agent proposed, a search and a status filter, and bulk actions over a selection. The surface renders the snapshot it is given and keeps its own copy of what it reported, so the reader sees an edit, a pause or a removal before the host's round-trip — and a host that re-renders the SAME switch or filter value cannot undo the reader's pick. A failed callback prints a localized error and changes nothing; a slow one puts the row in a busy state and disables its actions instead of letting a second press double the request. Accessibility: every state is a WORD plus an icon (the tone is the third, redundant cue), a group is a real disclosure whose native button keeps the focus, an edit commits on Enter and rolls back on Escape with the focus handed back into the saved row (a focused button would be activated again by the remaining Enter key sequence), every target reaches the 44 px touch size on a coarse pointer, and the surface owns exactly ONE polite live region — the error text is visible next to the rows and is announced through that same region, never through a second one.",
+      "packageId": "Tempo.Blazor.AI",
+      "sourcePath": "src/Tempo.Blazor.AI/Components/AI/TmMemoryPanel.razor",
+      "documentationStatus": "merged",
+      "requiredImports": [
+        "@using Tempo.Blazor.Components.AI"
+      ],
+      "parameters": [
+        {
+          "name": "Class",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Additional CSS class(es) for the root element."
+        },
+        {
+          "name": "CollapsedCategories",
+          "type": "IReadOnlyList<string>?",
+          "isRequired": false,
+          "description": "The categories whose groups are folded, two-way bound with CollapsedCategoriesChanged. Null (the default) starts every group open."
+        },
+        {
+          "name": "CollapsedCategoriesChanged",
+          "type": "EventCallback<IReadOnlyList<string>>",
+          "isRequired": false,
+          "description": "Fires with the new list of folded categories when a reader folds or unfolds one."
+        },
+        {
+          "name": "Culture",
+          "type": "CultureInfo?",
+          "isRequired": false,
+          "description": "The culture that formats the confidence, the timestamps and the undo countdown. Null (the default) means the current culture at render time."
+        },
+        {
+          "name": "Enabled",
+          "type": "bool",
+          "isRequired": false,
+          "default": "true",
+          "description": "Whether the agent may store and use memories at all, two-way bound with EnabledChanged (@bind-Enabled). Default true. While it is off the panel still lists what is already known — without any action — and says that nothing is being stored."
+        },
+        {
+          "name": "EnabledChanged",
+          "type": "EventCallback<bool>",
+          "isRequired": false,
+          "description": "Fires with the new switch state."
+        },
+        {
+          "name": "FilterText",
+          "type": "string?",
+          "isRequired": false,
+          "description": "The search text, two-way bound with FilterTextChanged (@bind-FilterText). It narrows the rows by the memory's text, its category and its source; the empty string shows everything."
+        },
+        {
+          "name": "FilterTextChanged",
+          "type": "EventCallback<string>",
+          "isRequired": false,
+          "description": "Fires with the new search text."
+        },
+        {
+          "name": "ForgetMode",
+          "type": "MemoryForgetMode",
+          "isRequired": true,
+          "description": "How a removal is reported. Default UndoWindow, so a memory is only forgotten after the reader can no longer take the removal back."
+        },
+        {
+          "name": "HeadingLevel",
+          "type": "int",
+          "isRequired": false,
+          "default": "3",
+          "description": "The heading level of the rendered title and the group headings, clamped to 2–6. Default 3."
+        },
+        {
+          "name": "Items",
+          "type": "IReadOnlyList<MemoryItem>?",
+          "isRequired": false,
+          "description": "The memories to show. Null or empty renders the localized empty state, and a null entry inside the list is skipped. The component never mutates the list: it keeps its own copy of what it reported and drops that copy when the host supplies a new instance of the same memory."
+        },
+        {
+          "name": "OnBulkAction",
+          "type": "EventCallback<MemoryBulkActionRequest>",
+          "isRequired": false,
+          "description": "Fires ONCE with the whole selection when the reader applies a bulk action. A bulk removal reports through this callback only — it does not fire OnForget per row."
+        },
+        {
+          "name": "OnEdit",
+          "type": "EventCallback<MemoryItem>",
+          "isRequired": false,
+          "description": "Fires with the edited memory (the same id and the new text) when the reader commits an inline edit. The host applies the change; the panel shows its own copy of the new text until the host supplies a new instance."
+        },
+        {
+          "name": "OnForget",
+          "type": "EventCallback<MemoryItem>",
+          "isRequired": false,
+          "description": "Fires when a removal becomes final: at once in Immediate, and when the undo window closes in UndoWindow. A restored removal never fires it."
+        },
+        {
+          "name": "OnPause",
+          "type": "EventCallback<MemoryItem>",
+          "isRequired": false,
+          "description": "Fires when the reader pauses a memory (it stays stored but is not used)."
+        },
+        {
+          "name": "OnResume",
+          "type": "EventCallback<MemoryItem>",
+          "isRequired": false,
+          "description": "Fires when the reader resumes a paused memory."
+        },
+        {
+          "name": "OnReview",
+          "type": "EventCallback<MemoryReview>",
+          "isRequired": false,
+          "description": "Fires with the reader's decision about a memory the agent proposed."
+        },
+        {
+          "name": "Selectable",
+          "type": "bool",
+          "isRequired": false,
+          "default": "true",
+          "description": "Whether every row carries a selection checkbox and the bulk bar offers its actions. Default true; a read-mostly host sets it to false."
+        },
+        {
+          "name": "ShowTitle",
+          "type": "bool",
+          "isRequired": false,
+          "default": "true",
+          "description": "Whether the heading is rendered. Default true."
+        },
+        {
+          "name": "StatusFilter",
+          "type": "MemoryStatusFilter",
+          "isRequired": true,
+          "description": "Which states the panel shows, two-way bound with StatusFilterChanged (@bind-StatusFilter). Default All; the filter is a VIEW and never reports anything to the host."
+        },
+        {
+          "name": "StatusFilterChanged",
+          "type": "EventCallback<MemoryStatusFilter>",
+          "isRequired": false,
+          "description": "Fires with the new status filter."
+        },
+        {
+          "name": "TimeProvider",
+          "type": "TimeProvider?",
+          "isRequired": false,
+          "description": "The clock behind the undo countdown. Null (the default) resolves the host's registered TimeProvider and falls back to System, so a test controls the window without sleeping."
+        },
+        {
+          "name": "Title",
+          "type": "string?",
+          "isRequired": false,
+          "description": "The heading above the surface. Null renders the localized default (\"Memory\")."
+        },
+        {
+          "name": "UndoWindow",
+          "type": "TimeSpan",
+          "isRequired": false,
+          "default": "TimeSpan.FromSeconds(5)",
+          "description": "How long the undo window stays open in UndoWindow. Default five seconds; a zero (or negative) window behaves like Immediate, because a window nobody can reach would silently lose the memory."
+        }
+      ],
+      "cssClasses": [
+        "tm-ai-memory",
+        "tm-ai-memory--off",
+        "tm-ai-memory__header",
+        "tm-ai-memory__title",
+        "tm-ai-memory__switch",
+        "tm-ai-memory__hint",
+        "tm-ai-memory__off-note",
+        "tm-ai-memory__toolbar",
+        "tm-ai-memory__search",
+        "tm-ai-memory__filter",
+        "tm-ai-memory__bulk",
+        "tm-ai-memory__bulk-count",
+        "tm-ai-memory__bulk-actions",
+        "tm-ai-memory__bulk-action",
+        "tm-ai-memory__groups",
+        "tm-ai-memory__group",
+        "tm-ai-memory__group-head",
+        "tm-ai-memory__group-title",
+        "tm-ai-memory__group-toggle",
+        "tm-ai-memory__group-chevron",
+        "tm-ai-memory__group-name",
+        "tm-ai-memory__group-count",
+        "tm-ai-memory__group-select",
+        "tm-ai-memory__list",
+        "tm-ai-memory__item",
+        "tm-ai-memory__select",
+        "tm-ai-memory__body",
+        "tm-ai-memory__text",
+        "tm-ai-memory__edit-box",
+        "tm-ai-memory__edit-actions",
+        "tm-ai-memory__save",
+        "tm-ai-memory__cancel",
+        "tm-ai-memory__meta",
+        "tm-ai-memory__status",
+        "tm-ai-memory__status-icon",
+        "tm-ai-memory__status-text",
+        "tm-ai-memory__confidence",
+        "tm-ai-memory__source",
+        "tm-ai-memory__updated",
+        "tm-ai-memory__actions",
+        "tm-ai-memory__action",
+        "tm-ai-memory__action--danger",
+        "tm-ai-memory__busy",
+        "tm-ai-memory__empty",
+        "tm-ai-memory__error",
+        "tm-ai-memory__undo",
+        "tm-ai-memory__undo-text",
+        "tm-ai-memory__undo-action",
+        "tm-ai-memory__undo-timer"
+      ],
+      "examples": [
+        {
+          "title": "The panel over the host's own store",
+          "code": "<TmMemoryPanel Items=\"_items\"\n               @bind-Enabled=\"_enabled\"\n               @bind-FilterText=\"_filter\"\n               OnEdit=\"OnEdit\"\n               OnPause=\"OnPause\"\n               OnResume=\"OnResume\"\n               OnForget=\"OnForget\"\n               OnReview=\"OnReview\"\n               OnBulkAction=\"OnBulk\" />\n\n@code {\n    private IReadOnlyList<MemoryItem> _items = [];\n    private bool _enabled = true;\n    private string _filter = string.Empty;\n\n    // The host applies every report to its own store and hands the panel a NEW instance.\n    private Task OnPause(MemoryItem item)\n    {\n        _items = [.. _items.Select(memory => memory.Id == item.Id\n            ? memory with { Status = MemoryItemStatus.Paused }\n            : memory)];\n        return Task.CompletedTask;\n    }\n}"
+        },
+        {
+          "title": "Forgetting immediately, when the host already confirms elsewhere",
+          "code": "<TmMemoryPanel Items=\"_items\"\n               ForgetMode=\"MemoryForgetMode.Immediate\"\n               OnForget=\"OnForget\" />"
+        },
+        {
+          "title": "A read-only panel that still shows what is known",
+          "code": "<TmMemoryPanel Items=\"_items\"\n               Enabled=\"@false\"\n               Selectable=\"false\" />"
+        }
+      ],
+      "notes": [
+        "The panel keeps its own copy of what it reported, so an edit, a pause or a removal is visible before the host round-trip; a NEW instance of the same memory from the host replaces that copy.",
+        "A removal is final only when the undo window closes (ForgetMode=UndoWindow): Undo puts the row back and the host is never told, and a zero-length window behaves like Immediate.",
+        "One undo window at a time: opening a second one reports the previous removal immediately, so nothing is lost silently.",
+        "A bulk action is ONE request through OnBulkAction with a COPY of the selection; a bulk removal does not fire OnForget per row, and a selection the filter hides is pruned.",
+        "A callback that throws prints a localized error next to the rows, announces it through the same live region and changes nothing; a slow one disables the row actions with a \"Saving…\" note.",
+        "Enter commits an edit and Escape rolls it back; the focus moves into the saved row and back to the Edit button on a cancel (WCAG 2.4.3).",
+        "Every status is a WORD plus an icon, a group is a real disclosure on a native button, and the partial animates nothing."
       ]
     },
     {
@@ -3150,6 +3533,17 @@
       ]
     },
     {
+      "itemName": "AutonomyDialPresentation",
+      "kind": "Enum",
+      "category": "Components",
+      "namespace": "Tempo.Blazor.Components.AI",
+      "description": "How a TmAutonomyDial presents the stops of autonomy. Dial is a real role=\"slider\" with one tab stop, arrow-key stepping and Home/End, plus a pair of native step buttons as the pointer alternative (WCAG 2.5.7). Segmented is a radio group in which every stop is its own target, which is what a form or a touch-first dialog usually wants.",
+      "packageId": "Tempo.Blazor.AI",
+      "sourcePath": "src/Tempo.Blazor.AI/Components/AI/AutonomyDialPresentation.cs",
+      "documentationStatus": "merged",
+      "usageExample": "<TmAutonomyDial @bind-Value=\"_value\" Presentation=\"AutonomyDialPresentation.Segmented\" />"
+    },
+    {
       "itemName": "FallbackChainMode",
       "kind": "Enum",
       "category": "Components",
@@ -3193,6 +3587,28 @@
       "sourcePath": "src/Tempo.Blazor.AI/Components/AI/HandoffOrientation.cs",
       "documentationStatus": "merged",
       "usageExample": "<TmAgentHandoff Steps=\"_steps\" Orientation=\"HandoffOrientation.Horizontal\" />"
+    },
+    {
+      "itemName": "MemoryForgetMode",
+      "kind": "Enum",
+      "category": "Components",
+      "namespace": "Tempo.Blazor.Components.AI",
+      "description": "How a TmMemoryPanel reports a forgotten memory to its host. UndoWindow (the default) removes the row at once but tells the host only when the undo window closes — losing a fact by mistake is the one action a mismatch between the reader and the store should not cause. Immediate reports the removal at once and offers no undo, which is what a host with its own confirmation flow wants.",
+      "packageId": "Tempo.Blazor.AI",
+      "sourcePath": "src/Tempo.Blazor.AI/Components/AI/MemoryForgetMode.cs",
+      "documentationStatus": "merged",
+      "usageExample": "<TmMemoryPanel Items=\"_items\" ForgetMode=\"MemoryForgetMode.Immediate\" OnForget=\"OnForget\" />"
+    },
+    {
+      "itemName": "MemoryStatusFilter",
+      "kind": "Enum",
+      "category": "Components",
+      "namespace": "Tempo.Blazor.Components.AI",
+      "description": "Which memories a TmMemoryPanel shows. The filter is a VIEW, never a change: it only narrows the rows on screen and never reports anything to the host. All shows every stored memory, including the forgotten ones whose undo window is still open, so a reader can find a fact they just removed.",
+      "packageId": "Tempo.Blazor.AI",
+      "sourcePath": "src/Tempo.Blazor.AI/Components/AI/MemoryStatusFilter.cs",
+      "documentationStatus": "merged",
+      "usageExample": "<TmMemoryPanel Items=\"_items\" @bind-StatusFilter=\"_filter\" />"
     },
     {
       "itemName": "AIServiceCollectionExtensions",
@@ -3393,6 +3809,10 @@
       "kind": "Css"
     },
     {
+      "path": "src/Tempo.Blazor.AI/wwwroot/css/components/_ai-autonomy-dial.css",
+      "kind": "Css"
+    },
+    {
       "path": "src/Tempo.Blazor.AI/wwwroot/css/components/_ai-composer.css",
       "kind": "Css"
     },
@@ -3410,6 +3830,10 @@
     },
     {
       "path": "src/Tempo.Blazor.AI/wwwroot/css/components/_ai-fan-out-grid.css",
+      "kind": "Css"
+    },
+    {
+      "path": "src/Tempo.Blazor.AI/wwwroot/css/components/_ai-memory-panel.css",
       "kind": "Css"
     },
     {
@@ -3502,11 +3926,11 @@
     }
   ],
   "summary": {
-    "itemCount": 36,
-    "manualItemCount": 36,
-    "generatedItemCount": 36,
+    "itemCount": 41,
+    "manualItemCount": 41,
+    "generatedItemCount": 41,
     "generatedOnlyItemCount": 0,
-    "componentCount": 22,
-    "publicApiTypeCount": 14
+    "componentCount": 24,
+    "publicApiTypeCount": 17
   }
 }

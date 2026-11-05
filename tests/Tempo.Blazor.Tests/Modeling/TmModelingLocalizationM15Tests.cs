@@ -193,6 +193,10 @@ public sealed class TmModelingLocalizationM15Tests : LocalizationTestBase
             // viewpoint select, which renders once a notation is selected.
             .Add(p => p.NotationKey, "bpmn"));
 
+        // The editor loads on the REAL clock (MinimumLoadingDelayMilliseconds == 150 ms) and only then re-renders, while
+        // bUnit's default wait is one second. Under the suite's parallel collections a saturated thread pool can delay
+        // that continuation past the default, which made this test flake between runs; a generous timeout keeps the
+        // assertion honest without depending on how busy the machine is (the sibling test below controls a fake clock).
         cut.WaitForAssertion(() =>
         {
             var markup = cut.Markup;
@@ -208,7 +212,7 @@ public sealed class TmModelingLocalizationM15Tests : LocalizationTestBase
             markup.Should().NotContain("Diagram preview");
             markup.Should().NotContain("Generate diagram");
             markup.Should().NotContain("Viewpoint");
-        });
+        }, TimeSpan.FromSeconds(10));
     }
 
     [Fact]

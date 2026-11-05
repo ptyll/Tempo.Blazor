@@ -1,0 +1,46 @@
+{
+  "kind": "Record",
+  "category": "AI",
+  "namespace": "Tempo.Blazor.AI.Models",
+  "description": "One stop of an autonomy dial: the numeric grade, the label a reader sees and the sentence that says what the agent may do at that stop. The record is a VALUE the host composes — no component mutates it. Value is the key a host persists and the ceiling it compares against (a plan's MaxAllowed, a tenant's lock), while the stops are rendered in ascending Value order; the label and the description come from the host's own wording or from the component's localized defaults when the host supplies no levels at all.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/AI/Agents/AutonomyLevel.cs",
+  "documentationStatus": "documented",
+  "members": [
+    {
+      "name": "Description",
+      "kind": "Property",
+      "type": "string",
+      "description": "What the agent may do at this grade, in the host's own words. Empty renders no description line at all rather than an empty paragraph."
+    },
+    {
+      "name": "HasDescription",
+      "kind": "Property",
+      "type": "bool",
+      "description": "Whether the host supplied a description for this stop."
+    },
+    {
+      "name": "HasLabel",
+      "kind": "Property",
+      "type": "bool",
+      "description": "Whether the host supplied a label for this stop."
+    },
+    {
+      "name": "Label",
+      "kind": "Property",
+      "type": "string",
+      "description": "The grade as the reader should see it (\"Ask first\", \"Ask when risky\", \"Act freely\"). Empty renders the component's own localized fallback for the stop's position, so no stop is ever blank."
+    },
+    {
+      "name": "Value",
+      "kind": "Property",
+      "type": "int",
+      "description": "The numeric grade of the stop, and the key a ceiling or a persisted setting compares against."
+    }
+  ],
+  "itemName": "AutonomyLevel",
+  "usageExample": "var level = new AutonomyLevel(1)\n{\n    Label = \"Ask when risky\",\n    Description = \"Risky actions wait for your approval.\",\n};",
+  "notes": [
+    "The stops are rendered in ascending Value order and a duplicate value is kept once; Value is the key a persisted setting and a hard ceiling refer to."
+  ]
+}

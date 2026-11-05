@@ -1,0 +1,11 @@
+{
+  "kind": "Enum",
+  "category": "AI",
+  "namespace": "Tempo.Blazor.AI.Models",
+  "description": "The human decision on a memory the agent proposed.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/AI/Agents/MemoryReviewDecision.cs",
+  "documentationStatus": "documented",
+  "itemName": "MemoryReviewDecision",
+  "usageExample": "var review = new MemoryReview(item, MemoryReviewDecision.Approve);"
+}

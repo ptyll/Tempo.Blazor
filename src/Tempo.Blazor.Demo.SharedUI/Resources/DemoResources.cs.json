@@ -1175,5 +1175,14 @@
   "TmAiAgentsDemo_FallbackModeLabel": "Zobrazení",
   "TmAiAgentsDemo_FallbackRun": "Běh",
   "TmAiAgentsDemo_FallbackEdit": "Upravit řetěz",
-  "TmAiAgentsDemo_FallbackChainLog": "Řetěz: {0}"
+  "TmAiAgentsDemo_FallbackChainLog": "Řetěz: {0}",
+  "TmAiAgentsDemo_AutonomyTitle": "Míra autonomie",
+  "TmAiAgentsDemo_AutonomyHint": "Co si agent smí dovolit sám: změna nad poslední úrovní se nejdřív potvrzuje a omezení, která vynucuje tenant, stojí vedle volby.",
+  "TmAiAgentsDemo_AutonomyPresentationLabel": "Zobrazení",
+  "TmAiAgentsDemo_AutonomyDial": "Ciferník",
+  "TmAiAgentsDemo_AutonomySegmented": "Segmenty",
+  "TmAiAgentsDemo_MemoryTitle": "Paměť",
+  "TmAiAgentsDemo_MemoryHint": "Co si agent pamatuje o pracovním prostoru: fakt upravíte, pozastavíte, zapomenete (s možností vrátit) nebo zkontrolujete, co agent navrhl.",
+  "TmAiAgentsDemo_Received": "Stránka obdržela: {0}",
+  "TmAiAgentsDemo_NoEvent": "Zatím nic nedorazilo."
 }

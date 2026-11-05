@@ -1175,5 +1175,14 @@
   "TmAiAgentsDemo_FallbackModeLabel": "Zobrazenie",
   "TmAiAgentsDemo_FallbackRun": "Beh",
   "TmAiAgentsDemo_FallbackEdit": "Upraviť reťaz",
-  "TmAiAgentsDemo_FallbackChainLog": "Reťaz: {0}"
+  "TmAiAgentsDemo_FallbackChainLog": "Reťaz: {0}",
+  "TmAiAgentsDemo_AutonomyTitle": "Miera autonómie",
+  "TmAiAgentsDemo_AutonomyHint": "Čo si agent smie dovoliť sám: zmena nad poslednou úrovňou sa najprv potvrdzuje a obmedzenia, ktoré vynucuje tenant, stoja vedľa voľby.",
+  "TmAiAgentsDemo_AutonomyPresentationLabel": "Zobrazenie",
+  "TmAiAgentsDemo_AutonomyDial": "Ciferník",
+  "TmAiAgentsDemo_AutonomySegmented": "Segmenty",
+  "TmAiAgentsDemo_MemoryTitle": "Pamäť",
+  "TmAiAgentsDemo_MemoryHint": "Čo si agent pamätá o pracovnom priestore: fakt upravíte, pozastavíte, zabudnete (s možnosťou vrátiť) alebo skontrolujete, čo agent navrhol.",
+  "TmAiAgentsDemo_Received": "Stránka prijala: {0}",
+  "TmAiAgentsDemo_NoEvent": "Zatiaľ nič neprišlo."
 }

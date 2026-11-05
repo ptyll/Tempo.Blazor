@@ -1,0 +1,11 @@
+{
+  "kind": "Enum",
+  "category": "AI",
+  "namespace": "Tempo.Blazor.AI.Models",
+  "description": "An action the reader applied to a SELECTION of memories at once. A bulk action is ONE request carrying many memories; the surface reports it once through OnBulkAction instead of firing the single-row callback per row, so a host can save, pause or forget the selection in one round-trip.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/AI/Agents/MemoryBulkAction.cs",
+  "documentationStatus": "documented",
+  "itemName": "MemoryBulkAction",
+  "usageExample": "var request = new MemoryBulkActionRequest(selection, MemoryBulkAction.Pause);"
+}

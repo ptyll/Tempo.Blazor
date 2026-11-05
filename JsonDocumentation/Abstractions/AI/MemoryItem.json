@@ -1,0 +1,118 @@
+{
+  "kind": "Record",
+  "category": "AI",
+  "namespace": "Tempo.Blazor.AI.Models",
+  "description": "One fact an agent remembers: what it is, which category it belongs to, how sure the agent is, where it came from and when it changed. The record is a VALUE: the host recomposes it with item with { … } when the reader edits or pauses it, and no component mutates the instance it was given. Id is REQUIRED and is the identity every surface keys on and the value an action reports (a blank value throws ArgumentException, because an id invented at construction would change on every rebuild); Category is what groups the rows, so a memory the host left uncategorised is grouped under the surface's own localized \"Uncategorized\" heading instead of a blank one. Nothing is invented: an unmeasured Confidence or a missing Source prints nothing at all, and a confidence outside 0…1 is not a ratio the surface can turn into a percentage.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/AI/Agents/MemoryItem.cs",
+  "documentationStatus": "documented",
+  "members": [
+    {
+      "name": "Category",
+      "kind": "Property",
+      "type": "string",
+      "description": "The category the memory is grouped under. Kept verbatim (whitespace and all); blank means \"no category\" and the surface renders its own localized group name, so every uncategorised memory shares one group."
+    },
+    {
+      "name": "Confidence",
+      "kind": "Property",
+      "type": "double?",
+      "description": "How sure the agent is, as a RATIO in 0…1 (0.82 renders \"82 %\"). Null, negative, above one, or NaN means \"not measured\" and renders no confidence at all instead of a made-up zero."
+    },
+    {
+      "name": "CreatedAt",
+      "kind": "Property",
+      "type": "DateTimeOffset",
+      "description": "When the memory was first stored, in the host's timeline."
+    },
+    {
+      "name": "HasBeenUpdated",
+      "kind": "Property",
+      "type": "bool",
+      "description": "Whether the memory was edited after it was stored."
+    },
+    {
+      "name": "HasCategory",
+      "kind": "Property",
+      "type": "bool",
+      "description": "Whether the host gave the memory a category with actual text."
+    },
+    {
+      "name": "HasConfidence",
+      "kind": "Property",
+      "type": "bool",
+      "description": "Whether the host reported a usable confidence (a value inside 0…1)."
+    },
+    {
+      "name": "HasKnownStatus",
+      "kind": "Property",
+      "type": "bool",
+      "description": "Whether Status is one of the declared states (a cast integer may not be)."
+    },
+    {
+      "name": "HasSource",
+      "kind": "Property",
+      "type": "bool",
+      "description": "Whether the memory came from a source worth printing."
+    },
+    {
+      "name": "Id",
+      "kind": "Property",
+      "type": "string",
+      "description": "Stable identity of the memory, in the host's store — the key every surface selects, edits and undoes by. Never empty: a blank value is REJECTED at construction with ArgumentException, because an id invented at construction would change on every rebuild and silently drop the row's state."
+    },
+    {
+      "name": "IsActive",
+      "kind": "Property",
+      "type": "bool",
+      "description": "Whether the memory is stored and in use by the agent."
+    },
+    {
+      "name": "IsForgotten",
+      "kind": "Property",
+      "type": "bool",
+      "description": "Whether the memory has been forgotten (it is kept in the list only while an undo is still possible)."
+    },
+    {
+      "name": "IsPaused",
+      "kind": "Property",
+      "type": "bool",
+      "description": "Whether the memory is kept but not used."
+    },
+    {
+      "name": "IsPendingReview",
+      "kind": "Property",
+      "type": "bool",
+      "description": "Whether the agent proposed the memory and is waiting for a human decision."
+    },
+    {
+      "name": "Source",
+      "kind": "Property",
+      "type": "string?",
+      "description": "Where the memory came from (\"Support ticket #4211\", \"Conversation 4f2a\", \"Manual entry\"), in the host's own words. Null or blank renders no source line."
+    },
+    {
+      "name": "Status",
+      "kind": "Property",
+      "type": "MemoryItemStatus",
+      "description": "What the agent is allowed to do with the memory. Default Active — an unclassified memory is a normal stored fact, never \"forgotten\"; painted as a WORD plus an icon, never as a colour alone."
+    },
+    {
+      "name": "Text",
+      "kind": "Property",
+      "type": "string",
+      "description": "The fact itself, verbatim. A whitespace-only text reads as empty."
+    },
+    {
+      "name": "UpdatedAt",
+      "kind": "Property",
+      "type": "DateTimeOffset?",
+      "description": "When the memory last changed, or null when it never did. Null renders no \"updated\" line rather than a timestamp the host never recorded."
+    }
+  ],
+  "itemName": "MemoryItem",
+  "usageExample": "var memory = new MemoryItem(\"m-1\", \"Preferences\", \"Prefers metric units.\")\n{\n    Confidence = 0.94,\n    Source = \"Support ticket #4211\",\n    CreatedAt = DateTimeOffset.UtcNow,\n};\n\nmemory.HasConfidence.Should().BeTrue();",
+  "notes": [
+    "An unclassified memory is Active, never Forgotten; a Confidence outside 0…1 (or NaN) counts as not measured, and a blank Category means \"no category\" (ONE localized group)."
+  ]
+}

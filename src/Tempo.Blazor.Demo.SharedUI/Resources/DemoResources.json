@@ -1175,5 +1175,14 @@
   "TmAiAgentsDemo_FallbackModeLabel": "Presentation",
   "TmAiAgentsDemo_FallbackRun": "Run",
   "TmAiAgentsDemo_FallbackEdit": "Edit chain",
-  "TmAiAgentsDemo_FallbackChainLog": "Chain: {0}"
+  "TmAiAgentsDemo_FallbackChainLog": "Chain: {0}",
+  "TmAiAgentsDemo_AutonomyTitle": "Autonomy",
+  "TmAiAgentsDemo_AutonomyHint": "How much the agent may do on its own: a change above the last grade asks first, and the limits a tenant enforces sit beside the choice.",
+  "TmAiAgentsDemo_AutonomyPresentationLabel": "Presentation",
+  "TmAiAgentsDemo_AutonomyDial": "Dial",
+  "TmAiAgentsDemo_AutonomySegmented": "Segments",
+  "TmAiAgentsDemo_MemoryTitle": "Memory",
+  "TmAiAgentsDemo_MemoryHint": "What the agent remembers about the workspace: edit a fact, pause it, forget it (with an undo window) or review what the agent proposed.",
+  "TmAiAgentsDemo_Received": "The page received: {0}",
+  "TmAiAgentsDemo_NoEvent": "Nothing received yet."
 }

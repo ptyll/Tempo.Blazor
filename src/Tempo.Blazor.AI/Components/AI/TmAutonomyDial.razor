@@ -1,0 +1,188 @@
+@namespace Tempo.Blazor.Components.AI
+@inherits Tempo.Blazor.Components.TmComponentBase
+@using System.Globalization
+@using Tempo.Blazor.AI.Models
+@using Tempo.Blazor.Components.Icons
+@using Tempo.Blazor.Components.Inputs
+
+@* How much the agent may do on its own. The dial is ONE tab stop with a real slider role: the arrows step one grade, Home
+   and End reach the ends of what the ALLOWED range offers, and the two native step buttons are the pointer alternative
+   (WCAG 2.5.7) — they sit BESIDE the slider, never inside it, so the slider owns no interactive descendants. The
+   segmented presentation swaps the slider for a radio group in which every grade is its own target.
+
+   The stops above a ceiling still render, marked unavailable, and a line under the track says why: a control that simply
+   refuses a key without a word reads as broken. The limits section lists what somebody else enforces, with its source and
+   its reason. ONE polite live region announces a committed grade; the confirmation is a group whose message the reader
+   already has in front of them, so it needs no second region. *@
+<section class="@RootClass"
+         data-testid="@RootTestId("autonomy-dial")"
+         data-presentation="@PresentationSlug"
+         data-value="@_value.ToString(CultureInfo.InvariantCulture)"
+         data-confirming="@(_pendingConfirmation is not null ? "true" : "false")"
+         @attributes="AdditionalAttributes">
+
+    <div class="tm-ai-autonomy__header">
+        @if (ShowTitle)
+        {
+            @SurfaceTitle
+        }
+
+        <p class="tm-ai-autonomy__readout">
+            <span class="tm-ai-autonomy__current" data-testid="@TestId("autonomy-current")">@CurrentLabel</span>
+            <span class="tm-ai-autonomy__position" data-testid="@TestId("autonomy-current-position")">@PositionText</span>
+        </p>
+    </div>
+
+    @if (HasDescription)
+    {
+        <p class="tm-ai-autonomy__description" id="@DescriptionId" data-testid="@TestId("autonomy-current-description")">@CurrentDescription</p>
+    }
+
+    @if (IsSegmented)
+    {
+        <div class="tm-ai-autonomy__segmented" data-testid="@TestId("autonomy-segmented")">
+            <TmSegmentedControl TValue="int"
+                                Label="@SliderLabel"
+                                Options="SegmentOptions"
+                                Value="@_value"
+                                ValueChanged="OnSegmentChangedAsync" />
+        </div>
+    }
+    else
+    {
+        <div class="tm-ai-autonomy__dial" data-testid="@TestId("autonomy-dial")">
+            <button type="button"
+                    class="tm-ai-autonomy__step"
+                    data-testid="@TestId("autonomy-dial-lower")"
+                    aria-label="@Loc["TmAutonomyDial_Lower"]"
+                    aria-disabled="@(!CanStepDown ? "true" : null)"
+                    @onclick="() => StepAsync(-1)">
+                <TmIcon Name="@IconNames.ChevronLeft" Size="IconSize.Sm" />
+            </button>
+
+            <div class="tm-ai-autonomy__control"
+                 role="slider"
+                 tabindex="0"
+                 @ref="_slider"
+                 aria-valuemin="@LowestValue.ToString(CultureInfo.InvariantCulture)"
+                 aria-valuemax="@HighestAvailableValue.ToString(CultureInfo.InvariantCulture)"
+                 aria-valuenow="@_value.ToString(CultureInfo.InvariantCulture)"
+                 aria-valuetext="@CurrentLabel"
+                 aria-labelledby="@(ShowTitle ? TitleId : null)"
+                 aria-label="@(ShowTitle ? null : SliderLabel)"
+                 aria-describedby="@(HasDescription ? DescriptionId : null)"
+                 data-testid="@TestId("autonomy-dial-track")"
+                 @onkeydown="OnSliderKeyDownAsync">
+                <div class="tm-ai-autonomy__rail" aria-hidden="true">
+                    <span class="tm-ai-autonomy__fill" style="@FillStyle"></span>
+                    @foreach (var level in _levels)
+                    {
+                        <span class="tm-ai-autonomy__stop"
+                              data-testid="@TestId("autonomy-dial-stop")"
+                              data-available="@(IsAvailable(level) ? "true" : "false")"
+                              data-active="@(level.Value == _value ? "true" : "false")"
+                              data-first="@(level == _levels[0] ? "true" : null)"
+                              data-last="@(level == _levels[^1] ? "true" : null)"
+                              data-tone="@StopTone(level)"
+                              style="@StopPositionStyle(level)">
+                            <span class="tm-ai-autonomy__stop-dot"></span>
+                            <span class="tm-ai-autonomy__stop-label">@AutonomyPresentation.LevelLabel(Loc, level, PositionOf(level))</span>
+                        </span>
+                    }
+                </div>
+            </div>
+
+            <button type="button"
+                    class="tm-ai-autonomy__step"
+                    data-testid="@TestId("autonomy-dial-higher")"
+                    aria-label="@Loc["TmAutonomyDial_Higher"]"
+                    aria-disabled="@(!CanStepUp ? "true" : null)"
+                    @onclick="() => StepAsync(1)">
+                <TmIcon Name="@IconNames.ChevronRight" Size="IconSize.Sm" />
+            </button>
+        </div>
+    }
+
+    @if (HasCeiling)
+    {
+        <p class="tm-ai-autonomy__limit" data-testid="@TestId("autonomy-limit")">
+            @Loc["TmAutonomyDial_Limit", CeilingLabel]
+        </p>
+        <p class="tm-ai-autonomy__limit-reason" data-testid="@TestId("autonomy-limit-reason")">@CeilingReason</p>
+    }
+
+    @if (_pendingConfirmation is int proposed)
+    {
+        <div class="tm-ai-autonomy__confirm"
+             role="group"
+             aria-labelledby="@ConfirmMessageId"
+             data-testid="@TestId("autonomy-confirm")"
+             @onkeydown="OnConfirmKeyDownAsync">
+            <p class="tm-ai-autonomy__confirm-message"
+               id="@ConfirmMessageId"
+               data-testid="@TestId("autonomy-confirm-message")">@ConfirmationMessage(proposed)</p>
+            <div class="tm-ai-autonomy__confirm-actions">
+                <button type="button"
+                        class="tm-ai-autonomy__confirm-accept"
+                        data-testid="@TestId("autonomy-confirm-accept")"
+                        @ref="_confirmAccept"
+                        @onclick="OnConfirmAcceptAsync">@Loc["TmAutonomyDial_ConfirmAccept"]</button>
+                <button type="button"
+                        class="tm-ai-autonomy__confirm-cancel"
+                        data-testid="@TestId("autonomy-confirm-cancel")"
+                        @onclick="OnConfirmCancelAsync">@Loc["TmAutonomyDial_ConfirmCancel"]</button>
+            </div>
+        </div>
+    }
+
+    @if (VisibleLocks.Count > 0)
+    {
+        <p class="tm-ai-autonomy__locks-title">@Loc["TmAutonomyDial_LocksLabel"]</p>
+        <ul class="tm-ai-autonomy__locks"
+            aria-label="@Loc["TmAutonomyDial_LocksLabel"]"
+            data-testid="@TestId("autonomy-locks")">
+            @foreach (var lockItem in VisibleLocks)
+            {
+                <li class="tm-ai-autonomy__lock"
+                    data-testid="@TestId("autonomy-lock")"
+                    data-source="@lockItem.Source">
+                    <span class="tm-ai-autonomy__lock-icon"
+                          data-testid="@TestId("autonomy-lock-icon")"
+                          aria-hidden="true">
+                        <TmIcon Name="@IconNames.Lock" Size="IconSize.Xs" />
+                    </span>
+                    <span class="tm-ai-autonomy__lock-action" data-testid="@TestId("autonomy-lock-action")">@lockItem.ActionLabel</span>
+                    @if (lockItem.HasSource)
+                    {
+                        <span class="tm-ai-autonomy__lock-source" data-testid="@TestId("autonomy-lock-source")">
+                            @Loc["TmAutonomyDial_LockedBy", lockItem.Source]
+                        </span>
+                    }
+                    @if (lockItem.HasReason)
+                    {
+                        <span class="tm-ai-autonomy__lock-reason" data-testid="@TestId("autonomy-lock-reason")">@lockItem.Reason</span>
+                    }
+                </li>
+            }
+        </ul>
+    }
+
+    <div class="tm-sr-only"
+         role="status"
+         aria-live="polite"
+         aria-atomic="true"
+         data-testid="@TestId("autonomy-announcement")">@_announcement</div>
+</section>
+
+@code {
+    /// <summary>The surface heading, built at the requested level without duplicating the markup six times.</summary>
+    private RenderFragment SurfaceTitle => builder =>
+    {
+        builder.OpenElement(0, "h" + EffectiveHeadingLevel.ToString(CultureInfo.InvariantCulture));
+        builder.AddAttribute(1, "class", "tm-ai-autonomy__title");
+        builder.AddAttribute(2, "id", TitleId);
+        builder.AddAttribute(3, "data-testid", TestId("autonomy-title"));
+        builder.AddContent(4, HeadingText);
+        builder.CloseElement();
+    };
+}

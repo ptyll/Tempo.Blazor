@@ -1,0 +1,407 @@
+/* ═══════════════════════════════════════════════════════════════════════════════════════════════
+   TmAutonomyDial — how much an agent may do on its own: the stops, the ceiling a plan imposes and
+   the limits somebody else enforces
+   Contract: docs/autonomy-dial.md
+   Every rule reads a --tm-* design token (no colour literal, no raw palette step, no [data-theme]
+   block); the package's shared token gate is AiMarkdownViewCssTests and the component's own gate is
+   TmAutonomyDialCssTests.
+
+   The only movement in this file is the track fill's travel, and a reader who asked for less motion
+   gets the new value without it. Nothing pulses: a grade is a value, not a decoration.
+   ═══════════════════════════════════════════════════════════════════════════════════════════════ */
+
+.tm-ai-autonomy {
+    /* A host lays this card out in a grid or a flex row: without this the card's automatic minimum
+       width grows to its content and the PAGE scrolls sideways instead of the card. */
+    min-inline-size: 0;
+
+    /* Every knob is DECLARED here (a var() that only ever carries a fallback is an undefined alias):
+       a host overrides one by restyling this root. The component writes --tm-autonomy-progress as a
+       percentage; this file never repeats that number. */
+    --tm-autonomy-track-fill: var(--tm-color-primary);
+    --tm-autonomy-track-rest: var(--tm-border-color);
+    --tm-autonomy-tone: var(--tm-border-color-strong);
+    --tm-autonomy-tone-ink: var(--tm-text-secondary);
+    --tm-autonomy-progress: 0%;
+    --tm-autonomy-stop-size: var(--tm-space-2);
+    --tm-autonomy-gap: var(--tm-space-2);
+
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-3);
+    padding: var(--tm-space-4);
+    border: var(--tm-border-width) solid var(--tm-border-color);
+    border-radius: var(--tm-radius-card);
+    background-color: var(--tm-bg-surface);
+    color: var(--tm-text-primary);
+    box-shadow: var(--tm-shadow-sm);
+    font-size: var(--tm-font-size-sm);
+    line-height: var(--tm-line-height-normal);
+}
+
+/* ── Header and the read-out ──────────────────────────────────────────────────────────────── */
+
+.tm-ai-autonomy__header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--tm-space-2);
+}
+
+.tm-ai-autonomy__title {
+    margin: 0;
+    font-size: var(--tm-font-size-base);
+    font-weight: var(--tm-font-weight-semibold);
+}
+
+.tm-ai-autonomy__readout {
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: var(--tm-space-2);
+    margin: 0;
+}
+
+.tm-ai-autonomy__current {
+    padding: 0 var(--tm-space-2);
+    border: var(--tm-border-width) solid var(--tm-border-color);
+    border-radius: var(--tm-radius-pill);
+    background-color: var(--tm-color-primary-subtle);
+    color: var(--tm-color-primary-text);
+    font-size: var(--tm-font-size-xs);
+    font-weight: var(--tm-font-weight-semibold);
+}
+
+.tm-ai-autonomy__position {
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-xs);
+}
+
+.tm-ai-autonomy__description {
+    margin: 0;
+    color: var(--tm-text-secondary);
+    overflow-wrap: anywhere;
+}
+
+/* ── The dial: two native step buttons around ONE slider ──────────────────────────────────── */
+
+.tm-ai-autonomy__dial {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-autonomy-gap);
+}
+
+.tm-ai-autonomy__step {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    min-block-size: var(--tm-space-6);
+    min-inline-size: var(--tm-space-6);
+    padding: 0;
+    border: var(--tm-border-width) solid var(--tm-border-color);
+    border-radius: var(--tm-radius-control);
+    background-color: var(--tm-bg-surface-secondary);
+    color: var(--tm-text-primary);
+    cursor: pointer;
+}
+
+/* An end of the range is marked with aria-disabled instead of the disabled attribute: a natively disabled button that
+   the reader just pressed loses the focus to the body, while an aria-disabled one stays focusable and simply does
+   nothing (WCAG 2.4.3 keeps the reader's place). */
+.tm-ai-autonomy__step:hover:not([aria-disabled="true"]) {
+    background-color: var(--tm-color-surface-hover);
+}
+
+.tm-ai-autonomy__step[aria-disabled="true"] {
+    color: var(--tm-color-text-disabled);
+    cursor: not-allowed;
+}
+
+.tm-ai-autonomy__step:focus-visible {
+    outline: var(--tm-border-width) solid var(--tm-border-color-focus);
+    outline-offset: var(--tm-space-1);
+}
+
+/* The slider itself: ONE tab stop, and its only children are decorative. */
+.tm-ai-autonomy__control {
+    position: relative;
+    flex: 1 1 auto;
+    min-inline-size: 0;
+    padding-block: var(--tm-space-5) var(--tm-space-4);
+    padding-inline: var(--tm-space-1);
+    border-radius: var(--tm-radius-control);
+    cursor: pointer;
+}
+
+.tm-ai-autonomy__control:focus-visible {
+    outline: var(--tm-border-width) solid var(--tm-border-color-focus);
+    outline-offset: var(--tm-space-1);
+}
+
+.tm-ai-autonomy__rail {
+    position: relative;
+    display: block;
+    block-size: var(--tm-space-1);
+    border-radius: var(--tm-radius-pill);
+    background-color: var(--tm-autonomy-track-rest);
+}
+
+.tm-ai-autonomy__fill {
+    position: absolute;
+    inset-block: 0;
+    inset-inline-start: 0;
+    inline-size: var(--tm-autonomy-progress);
+    border-radius: var(--tm-radius-pill);
+    background-color: var(--tm-autonomy-track-fill);
+    transition: inline-size var(--tm-transition-fast);
+}
+
+/* A stop is a DOT and a LABEL; the label is what makes the grade readable at a glance, and it is
+   aria-hidden because the slider already announces the CURRENT grade as its value text. */
+.tm-ai-autonomy__stop {
+    position: absolute;
+    inset-block-start: 50%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--tm-space-1);
+    transform: translate(-50%, -50%);
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-xs);
+    white-space: nowrap;
+}
+
+.tm-ai-autonomy__stop-dot {
+    display: block;
+    inline-size: var(--tm-autonomy-stop-size);
+    block-size: var(--tm-autonomy-stop-size);
+    border: var(--tm-border-width) solid var(--tm-autonomy-track-rest);
+    border-radius: var(--tm-radius-pill);
+    background-color: var(--tm-bg-surface);
+}
+
+.tm-ai-autonomy__stop-label {
+    /* The label sits BELOW the rail and is centred ON its dot, so "Autopilot" reads as that stop's name. */
+    position: absolute;
+    inset-block-start: calc(var(--tm-autonomy-stop-size) + var(--tm-space-1));
+    inset-inline-start: 50%;
+    transform: translateX(-50%);
+    max-inline-size: 9rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: var(--tm-font-size-xs);
+}
+
+/* An unavailable stop is MARKED by its dashed dot, its dimmed label and the ceiling sentence under the dial —
+   its label stays at readable contrast, because a grade the reader cannot read is not an explanation. */
+/* The first and the last label grow INWARD, so neither runs under a step button. */
+.tm-ai-autonomy__stop[data-first="true"] .tm-ai-autonomy__stop-label {
+    inset-inline-start: 0;
+    transform: none;
+}
+
+.tm-ai-autonomy__stop[data-last="true"] .tm-ai-autonomy__stop-label {
+    inset-inline-start: 100%;
+    transform: translateX(-100%);
+}
+
+.tm-ai-autonomy__stop[data-available="false"] {
+    color: var(--tm-text-secondary);
+    text-decoration: line-through;
+}
+
+.tm-ai-autonomy__stop[data-available="false"] .tm-ai-autonomy__stop-dot {
+    border-style: dashed;
+    border-color: var(--tm-text-secondary);
+}
+
+.tm-ai-autonomy__stop[data-active="true"] .tm-ai-autonomy__stop-dot {
+    border-color: var(--tm-autonomy-track-fill);
+    background-color: var(--tm-autonomy-track-fill);
+}
+
+.tm-ai-autonomy__stop[data-tone="free"][data-active="true"] .tm-ai-autonomy__stop-dot {
+    border-color: var(--tm-color-warning);
+    background-color: var(--tm-color-warning);
+}
+
+/* ── The segmented presentation ───────────────────────────────────────────────────────────── */
+
+.tm-ai-autonomy__segmented {
+    min-inline-size: 0;
+}
+
+/* ── The ceiling ──────────────────────────────────────────────────────────────────────────── */
+
+.tm-ai-autonomy__limit {
+    margin: 0;
+    padding: var(--tm-space-2) var(--tm-space-3);
+    border-inline-start: calc(var(--tm-border-width) * 3) solid var(--tm-autonomy-tone);
+    border-radius: var(--tm-radius-control);
+    background-color: var(--tm-color-warning-subtle);
+    color: var(--tm-color-warning-text);
+    overflow-wrap: anywhere;
+}
+
+.tm-ai-autonomy__limit-reason {
+    margin: 0;
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-xs);
+    overflow-wrap: anywhere;
+}
+
+/* ── The enforced limits ──────────────────────────────────────────────────────────────────── */
+
+.tm-ai-autonomy__locks-title {
+    margin: 0;
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-xs);
+    font-weight: var(--tm-font-weight-semibold);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.tm-ai-autonomy__locks {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-1);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.tm-ai-autonomy__lock {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: var(--tm-space-2);
+    padding: var(--tm-space-2);
+    border: var(--tm-border-width) solid var(--tm-border-color);
+    border-radius: var(--tm-radius-control);
+    background-color: var(--tm-bg-surface-secondary);
+}
+
+.tm-ai-autonomy__lock-icon {
+    display: inline-flex;
+    color: var(--tm-autonomy-tone-ink);
+}
+
+.tm-ai-autonomy__lock-action {
+    font-weight: var(--tm-font-weight-medium);
+    overflow-wrap: anywhere;
+}
+
+.tm-ai-autonomy__lock-source {
+    color: var(--tm-color-danger-text);
+    font-size: var(--tm-font-size-xs);
+}
+
+.tm-ai-autonomy__lock-reason {
+    flex-basis: 100%;
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-xs);
+    overflow-wrap: anywhere;
+}
+
+/* ── The confirmation ─────────────────────────────────────────────────────────────────────── */
+
+.tm-ai-autonomy__confirm {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-2);
+    padding: var(--tm-space-3);
+    border: var(--tm-border-width) solid var(--tm-border-color-strong);
+    border-radius: var(--tm-radius-control);
+    background-color: var(--tm-bg-surface-secondary);
+}
+
+.tm-ai-autonomy__confirm-message {
+    margin: 0;
+    overflow-wrap: anywhere;
+}
+
+.tm-ai-autonomy__confirm-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--tm-space-2);
+}
+
+.tm-ai-autonomy__confirm-accept,
+.tm-ai-autonomy__confirm-cancel {
+    min-block-size: var(--tm-space-6);
+    padding-inline: var(--tm-space-3);
+    border: var(--tm-border-width) solid var(--tm-border-color);
+    border-radius: var(--tm-radius-control);
+    font-size: var(--tm-font-size-sm);
+    cursor: pointer;
+}
+
+.tm-ai-autonomy__confirm-accept {
+    background-color: var(--tm-color-primary);
+    color: var(--tm-color-on-primary);
+    border-color: var(--tm-color-primary);
+}
+
+.tm-ai-autonomy__confirm-cancel {
+    background-color: var(--tm-bg-surface);
+    color: var(--tm-text-primary);
+}
+
+.tm-ai-autonomy__confirm-accept:focus-visible,
+.tm-ai-autonomy__confirm-cancel:focus-visible {
+    outline: var(--tm-border-width) solid var(--tm-border-color-focus);
+    outline-offset: var(--tm-space-1);
+}
+
+/* ── Coarse pointer: every pressable target is a thumb-sized square ──────────────────────── */
+
+@media (pointer: coarse) {
+    .tm-ai-autonomy__step,
+    .tm-ai-autonomy__confirm-accept,
+    .tm-ai-autonomy__confirm-cancel {
+        min-block-size: var(--tm-touch-target);
+        min-inline-size: var(--tm-touch-target);
+    }
+
+    .tm-ai-autonomy__control {
+        padding-block: var(--tm-space-6);
+    }
+}
+
+/* ── Reduced motion: the fill's travel only ──────────────────────────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+    .tm-ai-autonomy__fill {
+        transition: none;
+    }
+}
+
+/* ── Forced colors: the system palette owns every colour ─────────────────────────────────── */
+
+@media (forced-colors: active) {
+    .tm-ai-autonomy__control:focus-visible,
+    .tm-ai-autonomy__step:focus-visible,
+    .tm-ai-autonomy__confirm-accept:focus-visible,
+    .tm-ai-autonomy__confirm-cancel:focus-visible {
+        outline: 3px solid Highlight;
+    }
+
+    .tm-ai-autonomy__rail,
+    .tm-ai-autonomy__stop-dot,
+    .tm-ai-autonomy__lock,
+    .tm-ai-autonomy__confirm {
+        border-color: CanvasText;
+    }
+
+    .tm-ai-autonomy__fill,
+    .tm-ai-autonomy__stop[data-active="true"] .tm-ai-autonomy__stop-dot {
+        background-color: Highlight;
+    }
+
+    .tm-ai-autonomy__lock-source,
+    .tm-ai-autonomy__limit {
+        color: CanvasText;
+    }
+}

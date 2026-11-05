@@ -1,0 +1,28 @@
+{
+  "kind": "Record",
+  "category": "AI",
+  "namespace": "Tempo.Blazor.AI.Models",
+  "description": "One review decision the reader made about a memory the agent proposed: WHICH memory and WHAT was decided. The surface reports the decision and never applies it to the host's data — OnReview is the host's contract, and the panel keeps its own copy of the outcome only so the reader sees the row change before the store answers.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/AI/Agents/MemoryReview.cs",
+  "documentationStatus": "documented",
+  "members": [
+    {
+      "name": "Decision",
+      "kind": "Property",
+      "type": "MemoryReviewDecision",
+      "description": "What the reader decided about it."
+    },
+    {
+      "name": "Item",
+      "kind": "Property",
+      "type": "MemoryItem",
+      "description": "The memory under review."
+    }
+  ],
+  "itemName": "MemoryReview",
+  "usageExample": "var review = new MemoryReview(item, MemoryReviewDecision.Approve);",
+  "notes": [
+    "The component reports the decision and never writes the host's store."
+  ]
+}

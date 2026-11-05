@@ -1,0 +1,322 @@
+@namespace Tempo.Blazor.Components.AI
+@inherits Tempo.Blazor.Components.TmComponentBase
+@implements IAsyncDisposable
+@using System.Globalization
+@using Tempo.Blazor.AI.Models
+@using Tempo.Blazor.Components.Icons
+@using Tempo.Blazor.Components.Inputs
+
+@* What the agent remembers. The panel is a list of DISCLOSURE groups — a native button per category, so the focus never
+   leaves it — with a count, an optional select-all, and one row per memory. A row states its status as a WORD plus an
+   icon (the tone is the third cue), and while the reader edits it the text becomes a textarea that commits on Enter and
+   rolls back on Escape. The master switch turns storage off but keeps what is already known readable.
+
+   A removal leaves the row out at once and opens ONE undo window; the host is told when that window closes (or at once in
+   Immediate mode), never before the reader can take it back. Disposing the panel (navigation) closes the window the reader
+   can no longer reach and still reports the removal. Exactly one polite live region announces every change,
+   including a failure — the visible error text is printed beside the rows. *@
+<section class="@RootClass"
+         data-testid="@RootTestId("memory-panel")"
+         data-enabled="@(_enabled ? "true" : "false")"
+         data-busy="@(IsBusy ? "true" : "false")"
+         aria-busy="@(IsBusy ? "true" : null)"
+         @attributes="AdditionalAttributes">
+
+    <div class="tm-ai-memory__header">
+        @if (ShowTitle)
+        {
+            @SurfaceTitle
+        }
+
+        <div class="tm-ai-memory__switch">
+            <TmToggle Value="_enabled"
+                      Label="@Loc["TmMemoryPanel_EnabledLabel"]"
+                      AriaDescribedBy="@EnabledHintId"
+                      ValueChanged="OnEnabledChangedAsync"
+                      data-testid="@TestId("memory-enabled")" />
+            <p class="tm-ai-memory__hint" id="@EnabledHintId">@Loc["TmMemoryPanel_EnabledHint"]</p>
+        </div>
+    </div>
+
+    @if (!_enabled)
+    {
+        <p class="tm-ai-memory__off-note" data-testid="@TestId("memory-off-note")">@Loc["TmMemoryPanel_OffNote"]</p>
+    }
+
+    <div class="tm-ai-memory__toolbar">
+        <input type="search"
+               class="tm-ai-memory__search"
+               data-testid="@TestId("memory-search")"
+               aria-label="@Loc["TmMemoryPanel_SearchLabel"]"
+               placeholder="@Loc["TmMemoryPanel_SearchPlaceholder"]"
+               value="@_filterText"
+               @oninput="OnSearchInputAsync" />
+
+        <div class="tm-ai-memory__filter" data-testid="@TestId("memory-status-filter")">
+            <TmSegmentedControl TValue="string"
+                                Size="SegmentedControlSize.Sm"
+                                Label="@Loc["TmMemoryPanel_FilterLabel"]"
+                                Options="FilterOptions"
+                                Value="@CurrentFilterSlug"
+                                ValueChanged="OnStatusFilterChangedAsync" />
+        </div>
+    </div>
+
+    @if (_enabled && Selectable && _selected.Count > 0)
+    {
+        <div class="tm-ai-memory__bulk"
+             role="group"
+             aria-label="@Loc["TmMemoryPanel_BulkLabel"]"
+             data-testid="@TestId("memory-bulk")">
+            <span class="tm-ai-memory__bulk-count" data-testid="@TestId("memory-bulk-count")">
+                @Loc["TmMemoryPanel_Selected", _selected.Count.ToString(FormatCulture)]
+            </span>
+            <div class="tm-ai-memory__bulk-actions">
+                <button type="button"
+                        class="tm-ai-memory__bulk-action"
+                        data-testid="@TestId("memory-bulk-pause")"
+                        disabled="@_bulkBusy"
+                        @onclick="() => RunBulkAsync(MemoryBulkAction.Pause)">@Loc["TmMemoryPanel_BulkPause"]</button>
+                <button type="button"
+                        class="tm-ai-memory__bulk-action"
+                        data-testid="@TestId("memory-bulk-resume")"
+                        disabled="@_bulkBusy"
+                        @onclick="() => RunBulkAsync(MemoryBulkAction.Resume)">@Loc["TmMemoryPanel_BulkResume"]</button>
+                <button type="button"
+                        class="tm-ai-memory__bulk-action"
+                        data-testid="@TestId("memory-bulk-forget")"
+                        disabled="@_bulkBusy"
+                        @onclick="() => RunBulkAsync(MemoryBulkAction.Forget)">@Loc["TmMemoryPanel_BulkForget"]</button>
+                <button type="button"
+                        class="tm-ai-memory__bulk-action"
+                        data-testid="@TestId("memory-bulk-clear")"
+                        @onclick="ClearSelection">@Loc["TmMemoryPanel_BulkClear"]</button>
+            </div>
+        </div>
+    }
+
+    @if (ErrorText is not null)
+    {
+        <p class="tm-ai-memory__error" id="@ErrorId" data-testid="@TestId("memory-error")">@ErrorText</p>
+    }
+
+    @if (IsEmpty)
+    {
+        <p class="tm-ai-memory__empty" data-testid="@TestId("memory-empty")">@EmptyText</p>
+    }
+    else
+    {
+        <div class="tm-ai-memory__groups">
+            @for (var groupIndex = 0; groupIndex < Groups.Count; groupIndex++)
+            {
+                var group = Groups[groupIndex];
+                var bodyId = GroupBodyId(groupIndex);
+                var collapsed = IsCollapsed(group.Key);
+
+                <section class="tm-ai-memory__group" data-testid="@TestId("memory-group")" data-category="@group.Key">
+                    <div class="tm-ai-memory__group-head">
+                        <div class="tm-ai-memory__group-title" role="heading" aria-level="@GroupHeadingLevel">
+                            <button type="button"
+                                    class="tm-ai-memory__group-toggle"
+                                    data-testid="@TestId("memory-group-toggle")"
+                                    aria-expanded="@(collapsed ? "false" : "true")"
+                                    aria-controls="@(collapsed ? null : bodyId)"
+                                    @onclick="() => ToggleGroupAsync(group.Key)">
+                                <span class="tm-ai-memory__group-chevron" aria-hidden="true">
+                                    <TmIcon Name="@(collapsed ? IconNames.ChevronRight : IconNames.ChevronDown)" Size="IconSize.Xs" />
+                                </span>
+                                <span class="tm-ai-memory__group-name">@group.Name</span>
+                                <span class="tm-ai-memory__group-count" data-testid="@TestId("memory-group-count")">@group.Items.Count.ToString(FormatCulture)</span>
+                            </button>
+                        </div>
+
+                        @if (_enabled && Selectable)
+                        {
+                            @* The LABEL is the 44 px touch target; the box itself stays the size a reader expects. *@
+                            <label class="tm-ai-memory__group-select-hit">
+                                <input type="checkbox"
+                                       class="tm-ai-memory__group-select"
+                                       data-testid="@TestId("memory-group-select")"
+                                       aria-label="@SelectGroupLabel(group)"
+                                       checked="@IsGroupFullySelected(group)"
+                                       @onchange="args => ToggleGroupSelection(group, args.Value is bool selected && selected)" />
+                            </label>
+                        }
+                    </div>
+
+                    @if (!collapsed)
+                    {
+                        <ul class="tm-ai-memory__list" id="@bodyId">
+                            @foreach (var item in group.Items)
+                            {
+                                var editing = _editingId == item.Id;
+                                var busy = IsRowBusy(item.Id);
+                                var slug = MemoryPresentation.StatusSlug(item.Status);
+
+                                <li class="tm-ai-memory__item"
+                                    tabindex="-1"
+                                    @ref="_rowRefs[item.Id]"
+                                    data-testid="@TestId("memory-item")"
+                                    data-item-id="@item.Id"
+                                    data-status="@slug"
+                                    data-category="@item.Category">
+
+                                    @if (_enabled && Selectable)
+                                    {
+                                        <label class="tm-ai-memory__select-hit">
+                                            <input type="checkbox"
+                                                   class="tm-ai-memory__select"
+                                                   data-testid="@TestId("memory-item-select")"
+                                                   aria-label="@SelectItemLabel(item)"
+                                                   checked="@_selected.Contains(item.Id)"
+                                                   @onchange="args => ToggleSelection(item.Id, args.Value is bool selected && selected)" />
+                                        </label>
+                                    }
+
+                                    <div class="tm-ai-memory__body">
+                                        @if (editing)
+                                        {
+                                            <textarea class="tm-ai-memory__edit-box"
+                                                      data-testid="@TestId("memory-item-edit-box")"
+                                                      aria-label="@Loc["TmMemoryPanel_EditLabel"]"
+                                                      @ref="_editBox"
+                                                      @oninput="OnDraftInputAsync"
+                                                      @onkeydown="OnEditKeyDownAsync">@_draft</textarea>
+                                            <div class="tm-ai-memory__edit-actions">
+                                                <button type="button"
+                                                        class="tm-ai-memory__save"
+                                                        data-testid="@TestId("memory-item-save")"
+                                                        @onclick="CommitEditAsync">@Loc["TmMemoryPanel_Save"]</button>
+                                                <button type="button"
+                                                        class="tm-ai-memory__cancel"
+                                                        data-testid="@TestId("memory-item-cancel")"
+                                                        @onclick="CancelEdit">@Loc["TmMemoryPanel_Cancel"]</button>
+                                            </div>
+                                        }
+                                        else
+                                        {
+                                            <p class="tm-ai-memory__text" data-testid="@TestId("memory-item-text")">@item.Text</p>
+                                        }
+
+                                        <p class="tm-ai-memory__meta">
+                                            <span class="tm-ai-memory__status" data-status="@slug" data-testid="@TestId("memory-item-status")">
+                                                <span class="tm-ai-memory__status-icon"
+                                                      data-testid="@TestId("memory-item-status-icon")"
+                                                      aria-hidden="true">
+                                                    <TmIcon Name="@MemoryPresentation.StatusIcon(item.Status)" Size="IconSize.Xs" />
+                                                </span>
+                                                <span class="tm-ai-memory__status-text">@MemoryPresentation.StatusText(Loc, item.Status)</span>
+                                            </span>
+
+                                            @if (item.HasConfidence)
+                                            {
+                                                <span class="tm-ai-memory__confidence" data-testid="@TestId("memory-item-confidence")">@ConfidenceText(item)</span>
+                                            }
+
+                                            @if (item.HasSource)
+                                            {
+                                                <span class="tm-ai-memory__source" data-testid="@TestId("memory-item-source")">@SourceText(item)</span>
+                                            }
+
+                                            @if (item.UpdatedAt is not null)
+                                            {
+                                                <span class="tm-ai-memory__updated" data-testid="@TestId("memory-item-updated")">@UpdatedText(item)</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="tm-ai-memory__updated" data-testid="@TestId("memory-item-created")">@CreatedText(item)</span>
+                                            }
+                                        </p>
+                                    </div>
+
+                                    @if (_enabled && !editing)
+                                    {
+                                        <div class="tm-ai-memory__actions">
+                                            <button type="button"
+                                                    class="tm-ai-memory__action"
+                                                    data-testid="@TestId("memory-item-edit")"
+                                                    aria-label="@RowActionLabel("TmMemoryPanel_EditLabel", item)"
+                                                    disabled="@busy"
+                                                    @ref="_editButtons[item.Id]"
+                                                    @onclick="() => BeginEditAsync(item)">@Loc["TmMemoryPanel_Edit"]</button>
+
+                                            @if (item.IsPendingReview)
+                                            {
+                                                <button type="button"
+                                                        class="tm-ai-memory__action"
+                                                        data-testid="@TestId("memory-item-approve")"
+                                                        aria-label="@RowActionLabel("TmMemoryPanel_Approve", item)"
+                                                        disabled="@busy"
+                                                        @onclick="() => ReviewAsync(item, MemoryReviewDecision.Approve)">@Loc["TmMemoryPanel_Approve"]</button>
+                                                <button type="button"
+                                                        class="tm-ai-memory__action"
+                                                        data-testid="@TestId("memory-item-reject")"
+                                                        aria-label="@RowActionLabel("TmMemoryPanel_Reject", item)"
+                                                        disabled="@busy"
+                                                        @onclick="() => ReviewAsync(item, MemoryReviewDecision.Reject)">@Loc["TmMemoryPanel_Reject"]</button>
+                                            }
+                                            else
+                                            {
+                                                <button type="button"
+                                                        class="tm-ai-memory__action"
+                                                        data-testid="@TestId("memory-item-pause")"
+                                                        aria-label="@RowActionLabel(item.IsPaused ? "TmMemoryPanel_Resume" : "TmMemoryPanel_Pause", item)"
+                                                        disabled="@busy"
+                                                        @onclick="() => item.IsPaused ? ResumeAsync(item) : PauseAsync(item)">
+                                                    @(item.IsPaused ? Loc["TmMemoryPanel_Resume"] : Loc["TmMemoryPanel_Pause"])
+                                                </button>
+                                            }
+
+                                            <button type="button"
+                                                    class="tm-ai-memory__action tm-ai-memory__action--danger"
+                                                    data-testid="@TestId("memory-item-forget")"
+                                                    aria-label="@RowActionLabel("TmMemoryPanel_Forget", item)"
+                                                    disabled="@busy"
+                                                    @onclick="() => ForgetAsync(item)">@Loc["TmMemoryPanel_Forget"]</button>
+
+                                            @if (busy)
+                                            {
+                                                <span class="tm-ai-memory__busy" data-testid="@TestId("memory-item-busy")">@Loc["TmMemoryPanel_Busy"]</span>
+                                            }
+                                        </div>
+                                    }
+                                </li>
+                            }
+                        </ul>
+                    }
+                </section>
+            }
+        </div>
+    }
+
+    @if (_pendingForget is not null)
+    {
+        <div class="tm-ai-memory__undo" data-testid="@TestId("memory-undo")">
+            <span class="tm-ai-memory__undo-text" data-testid="@TestId("memory-undo-text")">@UndoText</span>
+            <button type="button"
+                    class="tm-ai-memory__undo-action"
+                    data-testid="@TestId("memory-undo-action")"
+                    @onclick="UndoForgetAsync">@Loc["TmMemoryPanel_UndoAction"]</button>
+            <span class="tm-ai-memory__undo-timer" data-testid="@TestId("memory-undo-timer")">@UndoTimerText</span>
+        </div>
+    }
+
+    <div class="tm-sr-only"
+         role="status"
+         aria-live="polite"
+         aria-atomic="true"
+         data-testid="@TestId("memory-announcement")">@_announcement</div>
+</section>
+
+@code {
+    /// <summary>The surface heading, built at the requested level without duplicating the markup six times.</summary>
+    private RenderFragment SurfaceTitle => builder =>
+    {
+        builder.OpenElement(0, "h" + EffectiveHeadingLevel.ToString(CultureInfo.InvariantCulture));
+        builder.AddAttribute(1, "class", "tm-ai-memory__title");
+        builder.AddAttribute(2, "id", TitleId);
+        builder.AddAttribute(3, "data-testid", TestId("memory-title"));
+        builder.AddContent(4, HeadingText);
+        builder.CloseElement();
+    };
+}

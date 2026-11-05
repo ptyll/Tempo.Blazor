@@ -1,0 +1,11 @@
+{
+  "kind": "Enum",
+  "category": "Components",
+  "namespace": "Tempo.Blazor.Components.AI",
+  "description": "How a TmAutonomyDial presents the stops of autonomy. Dial is a real role=\"slider\" with one tab stop, arrow-key stepping and Home/End, plus a pair of native step buttons as the pointer alternative (WCAG 2.5.7). Segmented is a radio group in which every stop is its own target, which is what a form or a touch-first dialog usually wants.",
+  "packageId": "Tempo.Blazor.AI",
+  "sourcePath": "src/Tempo.Blazor.AI/Components/AI/AutonomyDialPresentation.cs",
+  "documentationStatus": "documented",
+  "itemName": "AutonomyDialPresentation",
+  "usageExample": "<TmAutonomyDial @bind-Value=\"_value\" Presentation=\"AutonomyDialPresentation.Segmented\" />"
+}

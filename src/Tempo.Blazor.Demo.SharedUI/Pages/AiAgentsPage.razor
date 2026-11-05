@@ -227,7 +227,9 @@
         <ContentTemplate Context="attempt">
             @* The attempt's SUBMITTED body is host data, exactly like the votes' rationales: the component never
                localizes it and only places it inside the attempt's own column. *@
-            <pre class="text-xs text-slate-700 dark:text-slate-300 whitespace-pre-wrap mb-0"
+            @* The demo's global `pre` rule paints a dark block, so the SUBMITTED body keeps the light ink that
+               block expects (a slate-700 body on slate-800 was unreadable and failed the contrast scan). *@
+            <pre class="text-xs text-slate-100 whitespace-pre-wrap mb-0"
                  data-testid="ai-agents-attempt-body"
                  data-attempt-id="@attempt.Id">@AiAgentsPageSamples.AttemptBody(attempt.Id)</pre>
         </ContentTemplate>
@@ -289,6 +291,65 @@
                      Title="@Loc["TmAiAgentsDemo_FallbackTitle"]"
                      Culture="@CultureInfo.CurrentCulture"
                      DataTestId="ai-agents-fallback" />
+</section>
+
+@* ---------------------------------------------------------------------------------------------------------
+   How much the agent may do on its own. The page owns the presentation and the grade; the ceiling and the
+   tenant's locks are host data, so a change above "Assist" really asks for confirmation and "Autopilot" is
+   offered but unavailable. *@
+<section class="demo-section mb-8" data-testid="ai-agents-autonomy-section">
+    <h2 class="text-lg font-semibold text-slate-900 dark:text-white mb-2">@Loc["TmAiAgentsDemo_AutonomyTitle"]</h2>
+    <p class="text-sm text-slate-600 dark:text-slate-400 mb-2">@Loc["TmAiAgentsDemo_AutonomyHint"]</p>
+
+    <div class="mb-3 flex flex-wrap items-center gap-3">
+        <div data-testid="ai-agents-autonomy-presentation">
+            <TmSegmentedControl TValue="AutonomyDialPresentation"
+                                Size="SegmentedControlSize.Sm"
+                                Label="@Loc["TmAiAgentsDemo_AutonomyPresentationLabel"]"
+                                Options="AutonomyPresentationOptions"
+                                Value="_autonomyPresentation"
+                                ValueChanged="OnAutonomyPresentationChanged" />
+        </div>
+        <p class="text-sm text-slate-700 dark:text-slate-300 mb-0"
+           data-testid="ai-agents-autonomy-log">@AutonomyText</p>
+    </div>
+
+    <TmAutonomyDial Levels="_autonomyLevels"
+                    Value="_autonomyValue"
+                    ValueChanged="OnAutonomyChanged"
+                    Presentation="_autonomyPresentation"
+                    Locks="_autonomyLocks"
+                    MaxAllowed="2"
+                    ConfirmAbove="2"
+                    Title="@Loc["TmAiAgentsDemo_AutonomyTitle"]"
+                    DataTestId="ai-agents-autonomy" />
+</section>
+
+@* ---------------------------------------------------------------------------------------------------------
+   What the agent remembers. The page is the STORE: every callback is applied to the page's own list, so an
+   edit, a pause, a review decision and a removal are real data changes — and the removal only becomes one when
+   the component's undo window closes. *@
+<section class="demo-section mb-8" data-testid="ai-agents-memory-section">
+    <h2 class="text-lg font-semibold text-slate-900 dark:text-white mb-2">@Loc["TmAiAgentsDemo_MemoryTitle"]</h2>
+    <p class="text-sm text-slate-600 dark:text-slate-400 mb-2">@Loc["TmAiAgentsDemo_MemoryHint"]</p>
+
+    <p class="text-sm text-slate-700 dark:text-slate-300 mb-3" data-testid="ai-agents-memory-log">@MemoryText</p>
+
+    <TmMemoryPanel Items="_memories"
+                   Enabled="_memoryEnabled"
+                   EnabledChanged="OnMemoryEnabledChanged"
+                   FilterText="@_memoryFilter"
+                   FilterTextChanged="OnMemoryFilterChanged"
+                   OnEdit="OnMemoryEdited"
+                   OnPause="OnMemoryPaused"
+                   OnResume="OnMemoryResumed"
+                   OnForget="OnMemoryForgotten"
+                   OnReview="OnMemoryReviewed"
+                   OnBulkAction="OnMemoryBulk"
+                   UndoWindow="TimeSpan.FromSeconds(10)"
+                   Title="@Loc["TmAiAgentsDemo_MemoryTitle"]"
+                   Culture="@CultureInfo.CurrentCulture"
+                   DataTestId="ai-agents-memory" />
 </section>
 
 @* ---------------------------------------------------------------------------------------------------------
@@ -451,6 +512,16 @@
     private IReadOnlyList<ParallelAttempt> _attempts = [];
     private IReadOnlyList<HandoffStep> _handoffSteps = [];
     private HandoffOrientation _handoffOrientation = HandoffOrientation.Vertical;
+    private IReadOnlyList<AutonomyLevel> _autonomyLevels = [];
+    private IReadOnlyList<AutonomyLock> _autonomyLocks = [];
+    private AutonomyDialPresentation _autonomyPresentation = AutonomyDialPresentation.Dial;
+    private int _autonomyValue = 1;
+    private string? _autonomyLoggedLabel;
+    private IReadOnlyList<MemoryItem> _memories = [];
+    private bool _memoryEnabled = true;
+    private string _memoryFilter = string.Empty;
+    private string? _memoryLogKey;
+    private string? _memoryLogValue;
     private IReadOnlyList<FallbackAttempt> _fallbackAttempts = [];
     private IReadOnlyList<FallbackChainEntry>? _fallbackChain;
     private FallbackResolutionPolicy _fallbackPolicy = FallbackResolutionPolicy.Fallback;
@@ -504,6 +575,9 @@
         _attempts = AiAgentsPageSamples.Attempts();
         _handoffSteps = AiAgentsPageSamples.HandoffSteps(_clock.GetUtcNow());
         _fallbackAttempts = AiAgentsPageSamples.FallbackAttempts(_clock.GetUtcNow());
+        _autonomyLevels = AiAgentsPageSamples.AutonomyLevels();
+        _autonomyLocks = AiAgentsPageSamples.AutonomyLocks();
+        _memories = AiAgentsPageSamples.Memories(_clock.GetUtcNow());
         _bestAttemptId = "draft-b";
         _selection = new AiModelSelection("aurora-pro");
         _templates = AiAgentsPageSamples.Templates(Key);
@@ -711,6 +785,135 @@
         ?? [.. _fallbackAttempts.Select(attempt => new FallbackChainEntry(attempt.ModelId, attempt.Label))];
 
     /// <summary>The chain the page would fall back through, as one line: the edit the reader made is visible here.</summary>
+    /// <summary>The two presentations of the autonomy dial: the slider, or one segment per grade.</summary>
+    private IReadOnlyList<SegmentedOption<AutonomyDialPresentation>> AutonomyPresentationOptions =>
+        _autonomyPresentationOptions ??=
+        [
+            new() { Label = Loc["TmAiAgentsDemo_AutonomyDial"], Value = AutonomyDialPresentation.Dial },
+            new() { Label = Loc["TmAiAgentsDemo_AutonomySegmented"], Value = AutonomyDialPresentation.Segmented },
+        ];
+
+    private IReadOnlyList<SegmentedOption<AutonomyDialPresentation>>? _autonomyPresentationOptions;
+
+    /// <summary>The grade the page's dial currently reports, by its label.</summary>
+    private string AutonomyLevelLabel
+        => _autonomyLevels.FirstOrDefault(level => level.Value == _autonomyValue)?.Label ?? string.Empty;
+
+    /// <summary>The last autonomy change the page received, or an honest "nothing yet".</summary>
+    private string AutonomyText => _autonomyLoggedLabel is null
+        ? Loc["TmAiAgentsDemo_NoEvent"]
+        : Loc["TmAiAgentsDemo_Received", Loc["TmAutonomyDial_Announce", _autonomyLoggedLabel]];
+
+    /// <summary>The last memory change the page received, or an honest "nothing yet".</summary>
+    private string MemoryText => _memoryLogKey is null
+        ? Loc["TmAiAgentsDemo_NoEvent"]
+        : Loc["TmAiAgentsDemo_Received",
+            Loc[_memoryLogKey] + (_memoryLogValue is null ? string.Empty : " – " + _memoryLogValue)];
+
+    private void OnAutonomyPresentationChanged(AutonomyDialPresentation presentation)
+        => _autonomyPresentation = presentation;
+
+    /// <summary>The page owns the grade: the dial reports it and the page keeps it.</summary>
+    private Task OnAutonomyChanged(int value)
+    {
+        _autonomyValue = value;
+        _autonomyLoggedLabel = _autonomyLevels.FirstOrDefault(level => level.Value == value)?.Label;
+        return Task.CompletedTask;
+    }
+
+    private Task OnMemoryEnabledChanged(bool enabled)
+    {
+        _memoryEnabled = enabled;
+        _memoryLogKey = enabled ? "TmMemoryPanel_AnnounceEnabled" : "TmMemoryPanel_AnnounceDisabled";
+        _memoryLogValue = null;
+        return Task.CompletedTask;
+    }
+
+    private Task OnMemoryFilterChanged(string filter)
+    {
+        _memoryFilter = filter;
+        return Task.CompletedTask;
+    }
+
+    private Task OnMemoryEdited(MemoryItem item)
+    {
+        Replace(item);
+        _memoryLogKey = "TmMemoryPanel_Edit";
+        _memoryLogValue = item.Text;
+        return Task.CompletedTask;
+    }
+
+    private Task OnMemoryPaused(MemoryItem item)
+    {
+        Replace(item with { Status = MemoryItemStatus.Paused });
+        _memoryLogKey = "TmMemoryPanel_Pause";
+        _memoryLogValue = item.Text;
+        return Task.CompletedTask;
+    }
+
+    private Task OnMemoryResumed(MemoryItem item)
+    {
+        Replace(item with { Status = MemoryItemStatus.Active });
+        _memoryLogKey = "TmMemoryPanel_Resume";
+        _memoryLogValue = item.Text;
+        return Task.CompletedTask;
+    }
+
+    private Task OnMemoryForgotten(MemoryItem item)
+    {
+        _memories = [.. _memories.Where(memory => memory.Id != item.Id)];
+        _memoryLogKey = "TmMemoryPanel_Forget";
+        _memoryLogValue = item.Text;
+        return Task.CompletedTask;
+    }
+
+    private Task OnMemoryReviewed(MemoryReview review)
+    {
+        Replace(review.Item with
+        {
+            Status = review.Decision == MemoryReviewDecision.Approve
+                ? MemoryItemStatus.Active
+                : MemoryItemStatus.Forgotten,
+        });
+        _memoryLogKey = review.Decision == MemoryReviewDecision.Approve
+            ? "TmMemoryPanel_Approve"
+            : "TmMemoryPanel_Reject";
+        _memoryLogValue = review.Item.Text;
+        return Task.CompletedTask;
+    }
+
+    private Task OnMemoryBulk(MemoryBulkActionRequest request)
+    {
+        foreach (var item in request.Items)
+        {
+            switch (request.Action)
+            {
+                case MemoryBulkAction.Pause:
+                    Replace(item with { Status = MemoryItemStatus.Paused });
+                    break;
+                case MemoryBulkAction.Resume:
+                    Replace(item with { Status = MemoryItemStatus.Active });
+                    break;
+                default:
+                    _memories = [.. _memories.Where(memory => memory.Id != item.Id)];
+                    break;
+            }
+        }
+
+        _memoryLogKey = request.Action switch
+        {
+            MemoryBulkAction.Pause => "TmMemoryPanel_BulkPause",
+            MemoryBulkAction.Resume => "TmMemoryPanel_BulkResume",
+            _ => "TmMemoryPanel_BulkForget",
+        };
+        _memoryLogValue = "\u00d7 " + request.Count.ToString(CultureInfo.CurrentCulture);
+        return Task.CompletedTask;
+    }
+
+    /// <summary>Swaps one memory for the page's new version of it (a NEW instance, which is what the panel watches).</summary>
+    private void Replace(MemoryItem item)
+        => _memories = [.. _memories.Select(memory => memory.Id == item.Id ? item : memory)];
+
     private string FallbackChainText => Loc["TmAiAgentsDemo_FallbackChainLog",
         string.Join(" → ", FallbackChain.Select(entry => entry.DisplayName))];
 

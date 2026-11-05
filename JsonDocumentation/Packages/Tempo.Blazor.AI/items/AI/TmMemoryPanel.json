@@ -1,0 +1,238 @@
+{
+  "itemName": "TmMemoryPanel",
+  "kind": "Component",
+  "category": "AI",
+  "description": "What an agent remembers: the stored facts grouped by category, a master switch, an inline edit, pause and resume, a removal that can be undone, the review of what the agent proposed, a search and a status filter, and bulk actions over a selection. The surface renders the snapshot it is given and keeps its own copy of what it reported, so the reader sees an edit, a pause or a removal before the host's round-trip — and a host that re-renders the SAME switch or filter value cannot undo the reader's pick. A failed callback prints a localized error and changes nothing; a slow one puts the row in a busy state and disables its actions instead of letting a second press double the request. Accessibility: every state is a WORD plus an icon (the tone is the third, redundant cue), a group is a real disclosure whose native button keeps the focus, an edit commits on Enter and rolls back on Escape with the focus handed back into the saved row (a focused button would be activated again by the remaining Enter key sequence), every target reaches the 44 px touch size on a coarse pointer, and the surface owns exactly ONE polite live region — the error text is visible next to the rows and is announced through that same region, never through a second one.",
+  "packageId": "Tempo.Blazor.AI",
+  "namespace": "Tempo.Blazor.Components.AI",
+  "sourcePath": "src/Tempo.Blazor.AI/Components/AI/TmMemoryPanel.razor",
+  "documentationStatus": "documented",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.AI"
+  ],
+  "parameters": [
+    {
+      "name": "Class",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Additional CSS class(es) for the root element."
+    },
+    {
+      "name": "CollapsedCategories",
+      "type": "IReadOnlyList<string>?",
+      "isRequired": false,
+      "description": "The categories whose groups are folded, two-way bound with CollapsedCategoriesChanged. Null (the default) starts every group open."
+    },
+    {
+      "name": "CollapsedCategoriesChanged",
+      "type": "EventCallback<IReadOnlyList<string>>",
+      "isRequired": false,
+      "description": "Fires with the new list of folded categories when a reader folds or unfolds one."
+    },
+    {
+      "name": "Culture",
+      "type": "CultureInfo?",
+      "isRequired": false,
+      "description": "The culture that formats the confidence, the timestamps and the undo countdown. Null (the default) means the current culture at render time."
+    },
+    {
+      "name": "Enabled",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "Whether the agent may store and use memories at all, two-way bound with EnabledChanged (@bind-Enabled). Default true. While it is off the panel still lists what is already known — without any action — and says that nothing is being stored."
+    },
+    {
+      "name": "EnabledChanged",
+      "type": "EventCallback<bool>",
+      "isRequired": false,
+      "description": "Fires with the new switch state."
+    },
+    {
+      "name": "FilterText",
+      "type": "string?",
+      "isRequired": false,
+      "description": "The search text, two-way bound with FilterTextChanged (@bind-FilterText). It narrows the rows by the memory's text, its category and its source; the empty string shows everything."
+    },
+    {
+      "name": "FilterTextChanged",
+      "type": "EventCallback<string>",
+      "isRequired": false,
+      "description": "Fires with the new search text."
+    },
+    {
+      "name": "ForgetMode",
+      "type": "MemoryForgetMode",
+      "isRequired": true,
+      "description": "How a removal is reported. Default UndoWindow, so a memory is only forgotten after the reader can no longer take the removal back."
+    },
+    {
+      "name": "HeadingLevel",
+      "type": "int",
+      "isRequired": false,
+      "default": "3",
+      "description": "The heading level of the rendered title and the group headings, clamped to 2–6. Default 3."
+    },
+    {
+      "name": "Items",
+      "type": "IReadOnlyList<MemoryItem>?",
+      "isRequired": false,
+      "description": "The memories to show. Null or empty renders the localized empty state, and a null entry inside the list is skipped. The component never mutates the list: it keeps its own copy of what it reported and drops that copy when the host supplies a new instance of the same memory."
+    },
+    {
+      "name": "OnBulkAction",
+      "type": "EventCallback<MemoryBulkActionRequest>",
+      "isRequired": false,
+      "description": "Fires ONCE with the whole selection when the reader applies a bulk action. A bulk removal reports through this callback only — it does not fire OnForget per row."
+    },
+    {
+      "name": "OnEdit",
+      "type": "EventCallback<MemoryItem>",
+      "isRequired": false,
+      "description": "Fires with the edited memory (the same id and the new text) when the reader commits an inline edit. The host applies the change; the panel shows its own copy of the new text until the host supplies a new instance."
+    },
+    {
+      "name": "OnForget",
+      "type": "EventCallback<MemoryItem>",
+      "isRequired": false,
+      "description": "Fires when a removal becomes final: at once in Immediate, and when the undo window closes in UndoWindow. A restored removal never fires it."
+    },
+    {
+      "name": "OnPause",
+      "type": "EventCallback<MemoryItem>",
+      "isRequired": false,
+      "description": "Fires when the reader pauses a memory (it stays stored but is not used)."
+    },
+    {
+      "name": "OnResume",
+      "type": "EventCallback<MemoryItem>",
+      "isRequired": false,
+      "description": "Fires when the reader resumes a paused memory."
+    },
+    {
+      "name": "OnReview",
+      "type": "EventCallback<MemoryReview>",
+      "isRequired": false,
+      "description": "Fires with the reader's decision about a memory the agent proposed."
+    },
+    {
+      "name": "Selectable",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "Whether every row carries a selection checkbox and the bulk bar offers its actions. Default true; a read-mostly host sets it to false."
+    },
+    {
+      "name": "ShowTitle",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "Whether the heading is rendered. Default true."
+    },
+    {
+      "name": "StatusFilter",
+      "type": "MemoryStatusFilter",
+      "isRequired": true,
+      "description": "Which states the panel shows, two-way bound with StatusFilterChanged (@bind-StatusFilter). Default All; the filter is a VIEW and never reports anything to the host."
+    },
+    {
+      "name": "StatusFilterChanged",
+      "type": "EventCallback<MemoryStatusFilter>",
+      "isRequired": false,
+      "description": "Fires with the new status filter."
+    },
+    {
+      "name": "TimeProvider",
+      "type": "TimeProvider?",
+      "isRequired": false,
+      "description": "The clock behind the undo countdown. Null (the default) resolves the host's registered TimeProvider and falls back to System, so a test controls the window without sleeping."
+    },
+    {
+      "name": "Title",
+      "type": "string?",
+      "isRequired": false,
+      "description": "The heading above the surface. Null renders the localized default (\"Memory\")."
+    },
+    {
+      "name": "UndoWindow",
+      "type": "TimeSpan",
+      "isRequired": false,
+      "default": "TimeSpan.FromSeconds(5)",
+      "description": "How long the undo window stays open in UndoWindow. Default five seconds; a zero (or negative) window behaves like Immediate, because a window nobody can reach would silently lose the memory."
+    }
+  ],
+  "cssClasses": [
+    "tm-ai-memory",
+    "tm-ai-memory--off",
+    "tm-ai-memory__header",
+    "tm-ai-memory__title",
+    "tm-ai-memory__switch",
+    "tm-ai-memory__hint",
+    "tm-ai-memory__off-note",
+    "tm-ai-memory__toolbar",
+    "tm-ai-memory__search",
+    "tm-ai-memory__filter",
+    "tm-ai-memory__bulk",
+    "tm-ai-memory__bulk-count",
+    "tm-ai-memory__bulk-actions",
+    "tm-ai-memory__bulk-action",
+    "tm-ai-memory__groups",
+    "tm-ai-memory__group",
+    "tm-ai-memory__group-head",
+    "tm-ai-memory__group-title",
+    "tm-ai-memory__group-toggle",
+    "tm-ai-memory__group-chevron",
+    "tm-ai-memory__group-name",
+    "tm-ai-memory__group-count",
+    "tm-ai-memory__group-select",
+    "tm-ai-memory__list",
+    "tm-ai-memory__item",
+    "tm-ai-memory__select",
+    "tm-ai-memory__body",
+    "tm-ai-memory__text",
+    "tm-ai-memory__edit-box",
+    "tm-ai-memory__edit-actions",
+    "tm-ai-memory__save",
+    "tm-ai-memory__cancel",
+    "tm-ai-memory__meta",
+    "tm-ai-memory__status",
+    "tm-ai-memory__status-icon",
+    "tm-ai-memory__status-text",
+    "tm-ai-memory__confidence",
+    "tm-ai-memory__source",
+    "tm-ai-memory__updated",
+    "tm-ai-memory__actions",
+    "tm-ai-memory__action",
+    "tm-ai-memory__action--danger",
+    "tm-ai-memory__busy",
+    "tm-ai-memory__empty",
+    "tm-ai-memory__error",
+    "tm-ai-memory__undo",
+    "tm-ai-memory__undo-text",
+    "tm-ai-memory__undo-action",
+    "tm-ai-memory__undo-timer"
+  ],
+  "examples": [
+    {
+      "title": "The panel over the host's own store",
+      "code": "<TmMemoryPanel Items=\"_items\"\n               @bind-Enabled=\"_enabled\"\n               @bind-FilterText=\"_filter\"\n               OnEdit=\"OnEdit\"\n               OnPause=\"OnPause\"\n               OnResume=\"OnResume\"\n               OnForget=\"OnForget\"\n               OnReview=\"OnReview\"\n               OnBulkAction=\"OnBulk\" />\n\n@code {\n    private IReadOnlyList<MemoryItem> _items = [];\n    private bool _enabled = true;\n    private string _filter = string.Empty;\n\n    // The host applies every report to its own store and hands the panel a NEW instance.\n    private Task OnPause(MemoryItem item)\n    {\n        _items = [.. _items.Select(memory => memory.Id == item.Id\n            ? memory with { Status = MemoryItemStatus.Paused }\n            : memory)];\n        return Task.CompletedTask;\n    }\n}"
+    },
+    {
+      "title": "Forgetting immediately, when the host already confirms elsewhere",
+      "code": "<TmMemoryPanel Items=\"_items\"\n               ForgetMode=\"MemoryForgetMode.Immediate\"\n               OnForget=\"OnForget\" />"
+    },
+    {
+      "title": "A read-only panel that still shows what is known",
+      "code": "<TmMemoryPanel Items=\"_items\"\n               Enabled=\"@false\"\n               Selectable=\"false\" />"
+    }
+  ],
+  "notes": [
+    "The panel keeps its own copy of what it reported, so an edit, a pause or a removal is visible before the host round-trip; a NEW instance of the same memory from the host replaces that copy.",
+    "A removal is final only when the undo window closes (ForgetMode=UndoWindow): Undo puts the row back and the host is never told, and a zero-length window behaves like Immediate.",
+    "One undo window at a time: opening a second one reports the previous removal immediately, so nothing is lost silently.",
+    "A bulk action is ONE request through OnBulkAction with a COPY of the selection; a bulk removal does not fire OnForget per row, and a selection the filter hides is pruned.",
+    "A callback that throws prints a localized error next to the rows, announces it through the same live region and changes nothing; a slow one disables the row actions with a \"Saving…\" note.",
+    "Enter commits an edit and Escape rolls it back; the focus moves into the saved row and back to the Edit button on a cancel (WCAG 2.4.3).",
+    "Every status is a WORD plus an icon, a group is a real disclosure on a native button, and the partial animates nothing."
+  ]
+}
