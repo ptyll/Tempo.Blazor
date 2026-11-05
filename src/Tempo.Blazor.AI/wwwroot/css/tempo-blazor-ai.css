@@ -20,3 +20,5 @@
 @import "components/_ai-model-picker.css";
 @import "components/_ai-context-usage.css";
 @import "components/_ai-prompt-library.css";
+@import "components/_ai-fan-out-grid.css";
+@import "components/_ai-parallel-attempts.css";

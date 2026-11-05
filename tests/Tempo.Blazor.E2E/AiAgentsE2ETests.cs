@@ -18,6 +18,8 @@ public abstract class AiAgentsE2EBase : PlaywrightTestBase
     protected const string TreeSection = "[data-testid='ai-agents-tree-section']";
     protected const string LanesSection = "[data-testid='ai-agents-lanes-section']";
     protected const string GraphSection = "[data-testid='ai-agents-graph-section']";
+    protected const string FanOutSection = "[data-testid='ai-agents-fan-out-section']";
+    protected const string AttemptsSection = "[data-testid='ai-agents-attempts-section']";
     protected const string MonitorSection = "[data-testid='ai-agents-monitor-section']";
     protected const string ModelsSection = "[data-testid='ai-agents-models-section']";
     protected const string ContextSection = "[data-testid='ai-agents-context-section']";
@@ -455,6 +457,120 @@ public class AiAgentsE2ETests : AiAgentsE2EBase
         await ShootAsync(page, "ai-agents-graph-table-light-1440");
     }
 
+    /// <summary>
+    /// The fan-out is a real APG grid and the retry really re-queues: the arrow keys move the DOM focus between tiles,
+    /// the detail follows the focused tile, the page's own handler re-queues the failed unit, and the attempts compare
+    /// three drafts whose winner is picked with the native radio and only recorded after the confirmation.
+    /// </summary>
+    [TestMethod]
+    public async Task TheFanOutGridWalksByKeyboard_AndTheAttemptsConfirmAWinner()
+    {
+        var page = await OpenAsync();
+        await ScrollToSection(page, FanOutSection);
+
+        var grid = page.Locator("[data-testid='ai-agents-fan-out']");
+        Assert.AreEqual(18, await grid.Locator("[data-testid='fan-out-tile']").CountAsync());
+
+        // ONE tab stop: the first tile owns the roving tabindex.
+        var first = grid.Locator("[data-testid='fan-out-tile'][data-task-id='unit-01']");
+        Assert.AreEqual("0", await first.GetAttributeAsync("tabindex"),
+            "the roving tab stop starts on the first tile");
+
+        await first.FocusAsync();
+        await page.Keyboard.PressAsync("ArrowRight");
+        await page.WaitForTimeoutAsync(250);
+
+        Assert.AreEqual("unit-02",
+            await page.EvaluateAsync<string>("() => document.activeElement?.dataset.taskId ?? 'none'"),
+            "ArrowRight moved the DOM focus onto the next tile");
+        await page.WaitForSelectorAsync("[data-testid='ai-agents-fan-out'] [data-testid='fan-out-detail']",
+            new PageWaitForSelectorOptions { Timeout = 10000 });
+
+        // Ctrl+End crosses the whole grid (a windowed grid mounts the tile the focus jumps to).
+        await page.Keyboard.PressAsync("Control+End");
+        await page.WaitForTimeoutAsync(300);
+        Assert.AreEqual("unit-18",
+            await page.EvaluateAsync<string>("() => document.activeElement?.dataset.taskId ?? 'none'"),
+            "Ctrl+End moved the focus to the last tile, which the window had to mount");
+
+        // The retry is the PAGE's handler: the failed unit goes back to the queue.
+        var failed = grid.Locator("[data-testid='fan-out-tile'][data-status='failed']");
+        Assert.AreEqual(1, await failed.CountAsync(), "exactly one unit failed on purpose");
+        await failed.ClickAsync();
+        await grid.Locator("[data-testid='fan-out-detail-retry']").ClickAsync();
+
+        await page.WaitForFunctionAsync(
+            "() => document.querySelector('[data-testid=\"ai-agents-fan-out-log\"]')?.textContent?.includes('re-queued')",
+            new PageWaitForFunctionOptions { Timeout = 10000 });
+        Assert.AreEqual(0, await grid.Locator("[data-testid='fan-out-tile'][data-status='failed']").CountAsync(),
+            "the page re-queued the failed unit");
+
+        await ShootAsync(page, "ai-agents-fan-out-light-1440");
+
+        // The filter narrows the grid and announces the count.
+        await grid.Locator("[data-testid='fan-out-filter'][data-filter='running']").ClickAsync();
+        await page.WaitForTimeoutAsync(300);
+        Assert.AreEqual(3, await grid.Locator("[data-testid='fan-out-tile']").CountAsync(),
+            "the running filter shows the three units still in flight");
+        StringAssert.Contains(
+            await grid.Locator("[data-testid='fan-out-announcement']").TextContentAsync() ?? string.Empty,
+            "Showing 3 of 18",
+            "the filter change is announced once");
+        await grid.Locator("[data-testid='fan-out-filter'][data-filter='all']").ClickAsync();
+        await page.WaitForTimeoutAsync(200);
+
+        // The attempts: three drafts, Draft B best, a two-step winner.
+        await ScrollToSection(page, AttemptsSection);
+        var attempts = page.Locator("[data-testid='ai-agents-attempts']");
+        Assert.AreEqual(3, await attempts.Locator("[data-testid='parallel-attempt']").CountAsync());
+        Assert.AreEqual("draft-b",
+            await attempts.Locator("[data-testid='parallel-attempt'][data-best='true']")
+                .GetAttributeAsync("data-attempt-id"),
+            "the highest score is marked best");
+
+        await attempts.Locator("[data-testid='parallel-attempt-radio'][data-attempt-id='draft-a']").CheckAsync();
+        await page.WaitForSelectorAsync("[data-testid='ai-agents-attempts'] [data-testid='parallel-attempts-confirm']",
+            new PageWaitForSelectorOptions { Timeout = 10000 });
+        Assert.AreEqual("No winner chosen yet.", await TextAsync(page, "ai-agents-attempts-log"),
+            "choosing is not confirming");
+
+        await attempts.Locator("[data-testid='parallel-attempts-confirm-yes']").ClickAsync();
+        await page.WaitForFunctionAsync(
+            "() => document.querySelector('[data-testid=\"ai-agents-attempts-log\"]')?.textContent?.includes('accepted')",
+            new PageWaitForFunctionOptions { Timeout = 10000 });
+        Assert.AreEqual("draft-a",
+            await attempts.Locator("[data-testid='parallel-attempt'][data-selected='true']")
+                .GetAttributeAsync("data-attempt-id"));
+
+        // The cancel path really reverts the radio IN THE BROWSER: a controlled `checked` attribute only sets the
+        // default checkedness, so the surface re-mounts the inputs when a pick is dropped.
+        var radioA = attempts.Locator("[data-testid='parallel-attempt-radio'][data-attempt-id='draft-a']");
+        var radioC = attempts.Locator("[data-testid='parallel-attempt-radio'][data-attempt-id='draft-c']");
+        await radioC.CheckAsync();
+        await attempts.Locator("[data-testid='parallel-attempts-confirm-no']").ClickAsync();
+        await page.WaitForTimeoutAsync(400);
+        Assert.IsFalse(await radioC.IsCheckedAsync(), "the dropped pick is no longer checked");
+        Assert.IsTrue(await radioA.IsCheckedAsync(), "the confirmed winner is the checked radio again");
+
+        var votes = attempts.Locator("[data-testid='parallel-attempt'][data-attempt-id='draft-b']")
+            .Locator("[data-testid='parallel-attempt-votes-toggle']");
+        await votes.ClickAsync();
+        await page.WaitForSelectorAsync(
+            "[data-testid='ai-agents-attempts'] [data-testid='parallel-attempt-vote-rationale']",
+            new PageWaitForSelectorOptions { Timeout = 10000 });
+
+        await ShootAsync(page, "ai-agents-attempts-light-1440");
+
+        await AssertNoSeriousAxeViolationsAsync(page, "ai-agents-fan-out-section", "ai-agents-attempts-section");
+
+        await ToggleThemeAsync(page);
+        await ScrollToSection(page, FanOutSection);
+        await AssertNoSeriousAxeViolationsAsync(page, "ai-agents-fan-out-section", "ai-agents-attempts-section");
+        await ShootAsync(page, "ai-agents-fan-out-dark-1440");
+        await ScrollToSection(page, AttemptsSection);
+        await ShootAsync(page, "ai-agents-attempts-dark-1440");
+    }
+
     [TestMethod]
     public async Task ThePromptLibraryFillsATemplate_AndUseHandsItOver()
     {
@@ -521,8 +637,8 @@ public class AiAgentsE2ETests : AiAgentsE2EBase
 
         foreach (var section in new[]
                  {
-                     PlanSection, TreeSection, LanesSection, GraphSection, MonitorSection, ModelsSection, ContextSection,
-                     PromptsSection,
+                     PlanSection, TreeSection, LanesSection, GraphSection, FanOutSection, AttemptsSection,
+                     MonitorSection, ModelsSection, ContextSection, PromptsSection,
                  })
         {
             await ScrollToSection(page, section);
@@ -553,7 +669,8 @@ public class AiAgentsE2ETests : AiAgentsE2EBase
 
         await AssertNoSeriousAxeViolationsAsync(page,
             "ai-agents-plan-section", "ai-agents-tree-section", "ai-agents-lanes-section",
-            "ai-agents-graph-section", "ai-agents-monitor-section", "ai-agents-models-section",
+            "ai-agents-graph-section", "ai-agents-fan-out-section", "ai-agents-attempts-section",
+            "ai-agents-monitor-section", "ai-agents-models-section",
             "ai-agents-context-section", "ai-agents-prompts-section");
     }
 
@@ -665,6 +782,7 @@ public class AiAgentsServerSmokeE2ETests : AiAgentsE2EBase
 
         await AssertNoSeriousAxeViolationsAsync(page,
             "ai-agents-plan-section", "ai-agents-tree-section", "ai-agents-lanes-section",
+            "ai-agents-fan-out-section", "ai-agents-attempts-section",
             "ai-agents-monitor-section", "ai-agents-context-section", "ai-agents-prompts-section");
     }
 }

@@ -1,0 +1,69 @@
+{
+  "itemName": "ParallelAttempt",
+  "kind": "Record",
+  "category": "AI",
+  "namespace": "Tempo.Blazor.AI.Models",
+  "description": "One of several attempts at the SAME piece of work, shown beside its rivals so a reader can compare them and pick a winner: what it is called, the state it ended in, the score it earned, the votes recorded on it and its own summary. The record is a VALUE and carries no state of its own: the winner is either named by the host (BestAttemptId on the surface) or derived from the highest Score by ParallelAttemptRanking. A component never mutates an attempt and never invents a score. The attempt's own body is deliberately NOT part of the model: a surface renders it through a template, so a diff, a document, a code block or plain prose all fit without the library knowing what an attempt contains.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/AI/Agents/ParallelAttempt.cs",
+  "documentationStatus": "documented",
+  "usageExample": "var attempt = new ParallelAttempt(\"draft-b\", \"Draft B\")\n{\n    Status = AgentActivityStatus.Succeeded,\n    Score = 0.93,\n    Votes = [new AttemptVote(\"Reviewer\") { Outcome = AttemptVoteOutcome.Approve, Rationale = \"Covers the edge case\" }],\n};",
+  "members": [
+    {
+      "name": "Abstentions",
+      "description": "How many voters abstained (including a score-only vote)."
+    },
+    {
+      "name": "Approvals",
+      "description": "How many voters approved the attempt."
+    },
+    {
+      "name": "HasLabel",
+      "description": "Whether the host supplied a label."
+    },
+    {
+      "name": "HasRationales",
+      "description": "Whether at least one voter explained their verdict."
+    },
+    {
+      "name": "HasScore",
+      "description": "Whether a usable score was supplied (a non-finite value counts as none)."
+    },
+    {
+      "name": "HasSummary",
+      "description": "Whether the host supplied a summary worth printing."
+    },
+    {
+      "name": "HasVotes",
+      "description": "Whether at least one vote was recorded."
+    },
+    {
+      "name": "Id",
+      "description": "Stable identity of the attempt. Never empty: a missing id is generated at construction."
+    },
+    {
+      "name": "Label",
+      "description": "What distinguishes this attempt. Empty renders the surface's own numbered fallback."
+    },
+    {
+      "name": "Rejections",
+      "description": "How many voters rejected the attempt."
+    },
+    {
+      "name": "Score",
+      "description": "The score the host (or a grader) gave the attempt, on the host's own scale. null means \"not scored\", not zero; the ranking ignores an unscored attempt unless the host names it explicitly."
+    },
+    {
+      "name": "Status",
+      "description": "The state the attempt ended in. Default Idle; painted as an icon, a localized word and a tone, and an attempt that is still running or failed can never win a comparison by accident."
+    },
+    {
+      "name": "Summary",
+      "description": "The attempt's own short summary — what it would be chosen FOR. Empty renders none; the full body comes from the surface's content template."
+    },
+    {
+      "name": "VoteCount",
+      "description": "How many votes the attempt carries."
+    }
+  ]
+}

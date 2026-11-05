@@ -1157,5 +1157,12 @@
   "TmAiAgentsDemo_GraphLedger": "Grand livre",
   "TmAiAgentsDemo_GraphSearch": "Recherche web",
   "TmAiAgentsDemo_GraphCode": "Interpréteur de code",
-  "TmAiAgentsDemo_GraphGroupCore": "Agents principaux"
+  "TmAiAgentsDemo_GraphGroupCore": "Agents principaux",
+  "TmAiAgentsDemo_FanOutTitle": "Répartition des tâches",
+  "TmAiAgentsDemo_FanOutHint": "Dix-huit unités de travail sur quatre agents : une a échoué et peut être relancée, deux attendent un agent et les autres sont terminées ou en cours. Les comptes à rebours sont réels et la relance est gérée par la page elle-même.",
+  "TmAiAgentsDemo_FanOutRetried": "La page a remis {0} en file.",
+  "TmAiAgentsDemo_ParallelTitle": "Tentatives parallèles",
+  "TmAiAgentsDemo_ParallelHint": "Trois tentatives sur la même tâche avec les votes recueillis par chacune. Choisissez un gagnant, confirmez et la page enregistre le résultat.",
+  "TmAiAgentsDemo_ParallelChosen": "La page a retenu {0} comme résultat.",
+  "TmAiAgentsDemo_ParallelNothingChosen": "Aucun gagnant choisi pour l'instant."
 }

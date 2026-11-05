@@ -39660,6 +39660,197 @@
           ]
         },
         {
+          "itemName": "TmFanOutGrid",
+          "kind": "Component",
+          "category": "AI",
+          "namespace": "Tempo.Blazor.Components.AI",
+          "description": "An orchestrator's fan-out as ONE card: a summary line (how much finished, what it cost, when it should be over) and a grid of tiles — one tile per unit of work, with its worker, its state, its attempt count and a live countdown to its estimate. The surface renders the task list it is given and never polls or mutates anything: the host owns the data and the transport, the component owns its view. The injected TimeProvider drives the countdown AND the ticker that repaints it, so a test with a fake clock closes a second without sleeping and a finished fan-out arms no timer at all. The grid is an APG grid: ONE tab stop (a roving tabindex), the arrow keys walk the tiles in reading order, Home/End stay inside the current row and Ctrl+Home/Ctrl+End jump across the whole grid, PageUp/PageDown jump a page of rows. A tile is a native <button>, so Enter and Space activate it exactly once with no emulation (docs/keyboard-activation-convention.md). A state is never carried by colour alone: the tile paints an icon, a localized WORD and a tone. The detail follows the tile the reader focused (or pointed at) and carries the Retry and Cancel actions — the same actions a host would put on a row menu, reachable without a pointer. Hundreds of tasks mount a bounded window of tiles while the grid still declares its full aria-rowcount and every mounted row keeps its real aria-rowindex, so what a screen reader counts is the grid, not the window.",
+          "packageId": "Tempo.Blazor.AI",
+          "sourcePath": "src/Tempo.Blazor.AI/Components/AI/TmFanOutGrid.razor",
+          "documentationStatus": "merged",
+          "requiredImports": [
+            "@using Tempo.Blazor.AI.Models",
+            "@using Tempo.Blazor.Components.AI"
+          ],
+          "parameters": [
+            {
+              "name": "Class",
+              "type": "string?",
+              "isRequired": false,
+              "description": "Additional CSS class(es) for the root element."
+            },
+            {
+              "name": "Columns",
+              "type": "int",
+              "isRequired": false,
+              "default": "DefaultColumns",
+              "description": "How many tiles sit on one grid row, clamped to 1–8. Default 4. The value is also written onto the root as --tm-fan-out-columns, so the stylesheet lays the rows out with the same number the C# window uses."
+            },
+            {
+              "name": "Compact",
+              "type": "bool",
+              "isRequired": false,
+              "description": "Whether the compact presentation is used: a tile keeps its label, its state word and its attempt badge and drops the countdown and the worker line. Default false. The grid keys, the detail and the actions are unchanged — compact hides information, never a way to act."
+            },
+            {
+              "name": "CostFormatter",
+              "type": "Func<long, string>?",
+              "isRequired": false,
+              "description": "Formats a cost given in MICRO-UNITS (1,000,000 is 1.00 of the currency). Null uses AiCostFormatter with Culture — the culture's own currency, with micro-unit precision below one hundredth of a unit. A host with a credit price model overrides it."
+            },
+            {
+              "name": "Culture",
+              "type": "CultureInfo?",
+              "isRequired": false,
+              "description": "The culture that formats the costs and the clock times. Null (the default) means the current culture at render time. The countdowns are clock-style (m:ss) on purpose and are not localized."
+            },
+            {
+              "name": "Filter",
+              "type": "FanOutFilter",
+              "isRequired": false,
+              "default": "FanOutFilter.All",
+              "description": "The state filter, two-way bound with FilterChanged (@bind-Filter). Default All. A host that pins it keeps control: the reader's pick reports the change and the next render from the host decides."
+            },
+            {
+              "name": "FilterChanged",
+              "type": "EventCallback<FanOutFilter>",
+              "isRequired": false,
+              "description": "Fires with the new filter when the reader picks one in the filter bar."
+            },
+            {
+              "name": "HeadingLevel",
+              "type": "int",
+              "isRequired": false,
+              "default": "3",
+              "description": "The heading level of the rendered title, clamped to 2–6. Default 3."
+            },
+            {
+              "name": "OnCancel",
+              "type": "EventCallback<FanOutTask>",
+              "isRequired": false,
+              "description": "Raised when the reader asks to cancel a task — the action lives in the tile's detail and is offered only while CanCancel holds. The component does not change the task."
+            },
+            {
+              "name": "OnRetry",
+              "type": "EventCallback<FanOutTask>",
+              "isRequired": false,
+              "description": "Raised when the reader asks for a retry of a failed task — the action lives in the tile's detail and is offered only while CanRetry holds. The component does not change the task: the host owns the data and re-renders with the retried value."
+            },
+            {
+              "name": "ShowFilter",
+              "type": "bool",
+              "isRequired": false,
+              "default": "true",
+              "description": "Whether the state filter bar is rendered. Default true."
+            },
+            {
+              "name": "ShowSummary",
+              "type": "bool",
+              "isRequired": false,
+              "default": "true",
+              "description": "Whether the summary line is rendered. Default true. It carries the finished / running / failed counts, the total of the priced tasks and the estimate of the last active one."
+            },
+            {
+              "name": "ShowTitle",
+              "type": "bool",
+              "isRequired": false,
+              "default": "true",
+              "description": "Whether the heading is rendered. Default true."
+            },
+            {
+              "name": "Tasks",
+              "type": "IReadOnlyList<FanOutTask>?",
+              "isRequired": false,
+              "description": "The units of work the orchestrator split the job into. Each tile is one entry; the summary counts the same list. Null or empty renders the localized empty state. The component never mutates the list and never reorders it — the grid paints the host's order, because that order is the host's own progress."
+            },
+            {
+              "name": "TimeProvider",
+              "type": "TimeProvider?",
+              "isRequired": false,
+              "description": "The clock the countdowns and the repaint ticker read. Null uses the container's TimeProvider and falls back to System — the host's clock always wins over the machine's."
+            },
+            {
+              "name": "Title",
+              "type": "string?",
+              "isRequired": false,
+              "description": "The heading above the surface. Null renders the localized default (\"Fan-out\"); the heading also names the card, so the name a reader hears is the one they see."
+            },
+            {
+              "name": "VisibleTaskLimit",
+              "type": "int",
+              "isRequired": false,
+              "default": "DefaultVisibleTaskLimit",
+              "description": "How many tiles may be mounted at once. Default 60; 0 (or a negative value) mounts the whole filtered list. Above the limit the grid mounts a window of whole rows that follows the focused tile, while aria-rowcount keeps declaring the filtered total — hundreds of tasks stay scrollable and cheap."
+            }
+          ],
+          "cssClasses": [
+            "tm-ai-fan-out",
+            "tm-ai-fan-out--compact",
+            "tm-ai-fan-out__header",
+            "tm-ai-fan-out__title",
+            "tm-ai-fan-out__summary",
+            "tm-ai-fan-out__stats",
+            "tm-ai-fan-out__stat",
+            "tm-ai-fan-out__stat-label",
+            "tm-ai-fan-out__stat-value",
+            "tm-ai-fan-out__filters",
+            "tm-ai-fan-out__filter",
+            "tm-ai-fan-out__filter--active",
+            "tm-ai-fan-out__filter-label",
+            "tm-ai-fan-out__filter-count",
+            "tm-ai-fan-out__empty",
+            "tm-ai-fan-out__grid",
+            "tm-ai-fan-out__row",
+            "tm-ai-fan-out__cell",
+            "tm-ai-fan-out__tile",
+            "tm-ai-fan-out__tile--idle",
+            "tm-ai-fan-out__tile--queued",
+            "tm-ai-fan-out__tile--running",
+            "tm-ai-fan-out__tile--approval",
+            "tm-ai-fan-out__tile--succeeded",
+            "tm-ai-fan-out__tile--failed",
+            "tm-ai-fan-out__tile--cancelled",
+            "tm-ai-fan-out__tile-avatar",
+            "tm-ai-fan-out__tile-initials",
+            "tm-ai-fan-out__tile-text",
+            "tm-ai-fan-out__tile-label",
+            "tm-ai-fan-out__tile-meta",
+            "tm-ai-fan-out__tile-state",
+            "tm-ai-fan-out__tile-state-icon",
+            "tm-ai-fan-out__tile-state-text",
+            "tm-ai-fan-out__tile-eta",
+            "tm-ai-fan-out__tile-worker",
+            "tm-ai-fan-out__badge",
+            "tm-ai-fan-out__detail",
+            "tm-ai-fan-out__detail-head",
+            "tm-ai-fan-out__detail-title",
+            "tm-ai-fan-out__detail-state",
+            "tm-ai-fan-out__detail-state-icon",
+            "tm-ai-fan-out__detail-state-text",
+            "tm-ai-fan-out__detail-facts",
+            "tm-ai-fan-out__detail-error",
+            "tm-ai-fan-out__detail-actions",
+            "tm-ai-fan-out__action",
+            "tm-ai-fan-out__action--danger"
+          ],
+          "examples": [
+            {
+              "title": "A fan-out a host feeds from its queue",
+              "code": "@* The page owns the tasks and the transport; the surface paints them and reports intent. *@\n<TmFanOutGrid Tasks=\"_tasks\"\n              Title=\"Reconcile 40 invoices\"\n              Columns=\"4\"\n              @bind-Filter=\"_filter\"\n              OnRetry=\"RetryAsync\"\n              OnCancel=\"CancelAsync\" />\n\n@code {\n    private IReadOnlyList<FanOutTask> _tasks = [];\n    private FanOutFilter _filter = FanOutFilter.All;\n\n    private Task RetryAsync(FanOutTask task)\n    {\n        _tasks = [.. _tasks.Select(t => t.Id == task.Id\n            ? t with { Status = AgentActivityStatus.Queued, Attempt = t.Attempt + 1, Error = null }\n            : t)];\n        return Task.CompletedTask;\n    }\n\n    private Task CancelAsync(FanOutTask task)\n    {\n        _tasks = [.. _tasks.Select(t => t.Id == task.Id\n            ? t with { Status = AgentActivityStatus.Cancelled }\n            : t)];\n        return Task.CompletedTask;\n    }\n}"
+            },
+            {
+              "title": "The tasks a host builds",
+              "code": "var task = new FanOutTask(\"region-7\", \"Region 7\")\n{\n    Status = AgentActivityStatus.Running,\n    Worker = new AgentRef(\"Fetcher\", \"w-1\") { ColorIndex = 1 },\n    Attempt = 2,\n    MaxAttempts = 3,\n    StartedAt = now.AddMinutes(-2),\n    EstimatedEndAt = now.AddSeconds(42),\n    CostMicroUnits = 120_000,\n};\n\n// \"Attempt 2/3\", a live 0:42 countdown, and a Retry once it fails."
+            }
+          ],
+          "notes": [
+            "The surface renders the snapshot it is given; it never polls, fetches or mutates a task.",
+            "The injected TimeProvider drives the countdown and the repaint ticker: a test with a fake clock closes a second without sleeping, and a finished fan-out arms no timer.",
+            "Columns is the layout authority: the C# window and the stylesheet read the same number, so a host that needs fewer tiles on a phone binds Columns rather than relying on a container query.",
+            "One polite live region announces a filter change, a moved focus and a retry or cancel request; the tiles themselves are native buttons with one roving tab stop."
+          ]
+        },
+        {
           "itemName": "TmMarkdownView",
           "kind": "Component",
           "category": "AI",
@@ -39898,6 +40089,159 @@
               "title": "Comparing without closing the list",
               "code": "<TmModelPicker Models=\"@models\" CloseOnSelect=\"false\" SelectionChanged=\"OnSelection\" />\n\n@code {\n    private void OnSelection(AiModelSelection? value)\n    {\n        // Every change lands here, including the reasoning options of the selected model.\n    }\n}"
             }
+          ]
+        },
+        {
+          "itemName": "TmParallelAttempts",
+          "kind": "Component",
+          "category": "AI",
+          "namespace": "Tempo.Blazor.Components.AI",
+          "description": "Several attempts at the SAME piece of work, side by side: one column per attempt with its state, its score, its own summary, the body the host renders and the votes it collected — and a winner the reader picks and confirms. The surface renders the attempts it is given and never mutates them and never invents a score: the best attempt is the host's explicit pick (BestAttemptId) when it names one, otherwise ParallelAttemptRanking resolves the highest score, so the column badge, the comparison table and a test can never disagree. Picking a winner is deliberately TWO steps. The native radios of one shared name are the choice — the arrow keys walk them natively, with no key emulation — and a pick asks for confirmation before OnSelect fires, so a stray arrow key can never replace a recorded result. The confirmation lives in a named group, the pick is announced once through the surface's ONE polite live region, and the focus returns to the radio that opened the question. The columns are a horizontal scroll-snap track: a narrow container turns them into a carousel with no JavaScript and no second layout engine. The comparison table below repeats every number as text, which is the surface a screen reader or a phone reads.",
+          "packageId": "Tempo.Blazor.AI",
+          "sourcePath": "src/Tempo.Blazor.AI/Components/AI/TmParallelAttempts.razor",
+          "documentationStatus": "merged",
+          "requiredImports": [
+            "@using Tempo.Blazor.AI.Models",
+            "@using Tempo.Blazor.Components.AI"
+          ],
+          "parameters": [
+            {
+              "name": "Attempts",
+              "type": "IReadOnlyList<ParallelAttempt>?",
+              "isRequired": false,
+              "description": "The attempts to compare, in the host's own order. Each one is a column and a row of the comparison table; the surface never reorders them, so the host's order stays the reader's order. Null or empty renders the localized empty state."
+            },
+            {
+              "name": "BestAttemptId",
+              "type": "string?",
+              "isRequired": false,
+              "description": "The host's explicit pick of the best attempt. When it names one of Attempts that attempt wears the \"Best\" mark whatever its score; when it names nothing (or something absent) the highest score decides. Null by default."
+            },
+            {
+              "name": "Class",
+              "type": "string?",
+              "isRequired": false,
+              "description": "Additional CSS class(es) for the root element."
+            },
+            {
+              "name": "ConfirmSelection",
+              "type": "bool",
+              "isRequired": false,
+              "default": "true",
+              "description": "Whether a pick asks for confirmation before it becomes the winner. Default true — the safe default, so a stray arrow key inside the radio group cannot replace a recorded result. A host that wants a one-step choice passes false and the pick raises OnSelect immediately."
+            },
+            {
+              "name": "ContentTemplate",
+              "type": "RenderFragment<ParallelAttempt>?",
+              "isRequired": false,
+              "description": "The host's own body for one attempt — a diff, a document, a code block, plain prose. Rendered inside that attempt's column, so every body stays bound to its own attempt. Null renders no body."
+            },
+            {
+              "name": "Culture",
+              "type": "CultureInfo?",
+              "isRequired": false,
+              "description": "The culture that formats the scores. Null (the default) means the current culture at render time. It never rescales a score: the host's scale is the host's."
+            },
+            {
+              "name": "HeadingLevel",
+              "type": "int",
+              "isRequired": false,
+              "default": "3",
+              "description": "The heading level of the rendered title, clamped to 2–6. Default 3."
+            },
+            {
+              "name": "OnSelect",
+              "type": "EventCallback<string>",
+              "isRequired": false,
+              "description": "Raised with the attempt id once the reader CONFIRMED it as the result. A host that only needs the value can bind SelectedAttemptId instead; this callback is the command channel (record the winner, start the next step)."
+            },
+            {
+              "name": "SelectedAttemptId",
+              "type": "string?",
+              "isRequired": false,
+              "description": "The confirmed winner, two-way bound with SelectedAttemptIdChanged (@bind-SelectedAttemptId). Its radio is checked and its column carries the \"Chosen\" mark. A host that BINDS it delegates the decision: the reader's confirmation reports the change and the next render from the host decides. A host that only PINS it (a value without SelectedAttemptIdChanged) keeps control: the confirmed pick is shown until the host renders again, and then the pinned value is restored. A host that sets neither keeps the reader's pick."
+            },
+            {
+              "name": "SelectedAttemptIdChanged",
+              "type": "EventCallback<string?>",
+              "isRequired": false,
+              "description": "Fires with the newly confirmed winner (never a merely picked one)."
+            },
+            {
+              "name": "ShowComparison",
+              "type": "bool",
+              "isRequired": false,
+              "default": "true",
+              "description": "Whether the comparison table is rendered. Default true — it is the text alternative of the columns (the same numbers as a table), so a host hides it only when it renders its own."
+            },
+            {
+              "name": "ShowTitle",
+              "type": "bool",
+              "isRequired": false,
+              "default": "true",
+              "description": "Whether the heading is rendered. Default true."
+            },
+            {
+              "name": "Title",
+              "type": "string?",
+              "isRequired": false,
+              "description": "The heading above the surface. Null renders the localized default (\"Parallel attempts\")."
+            }
+          ],
+          "cssClasses": [
+            "tm-ai-parallel-attempts",
+            "tm-ai-parallel-attempts__title",
+            "tm-ai-parallel-attempts__empty",
+            "tm-ai-parallel-attempts__track",
+            "tm-ai-parallel-attempts__attempt",
+            "tm-ai-parallel-attempts__attempt--best",
+            "tm-ai-parallel-attempts__attempt--chosen",
+            "tm-ai-parallel-attempts__attempt-head",
+            "tm-ai-parallel-attempts__attempt-label",
+            "tm-ai-parallel-attempts__best",
+            "tm-ai-parallel-attempts__best-icon",
+            "tm-ai-parallel-attempts__chosen",
+            "tm-ai-parallel-attempts__metrics",
+            "tm-ai-parallel-attempts__metric",
+            "tm-ai-parallel-attempts__metric-label",
+            "tm-ai-parallel-attempts__state",
+            "tm-ai-parallel-attempts__state-icon",
+            "tm-ai-parallel-attempts__score",
+            "tm-ai-parallel-attempts__summary",
+            "tm-ai-parallel-attempts__body",
+            "tm-ai-parallel-attempts__votes-toggle",
+            "tm-ai-parallel-attempts__votes",
+            "tm-ai-parallel-attempts__vote-list",
+            "tm-ai-parallel-attempts__vote",
+            "tm-ai-parallel-attempts__vote-head",
+            "tm-ai-parallel-attempts__vote-voter",
+            "tm-ai-parallel-attempts__vote-outcome",
+            "tm-ai-parallel-attempts__vote-score",
+            "tm-ai-parallel-attempts__vote-rationale",
+            "tm-ai-parallel-attempts__no-votes",
+            "tm-ai-parallel-attempts__radio",
+            "tm-ai-parallel-attempts__confirm",
+            "tm-ai-parallel-attempts__confirm-question",
+            "tm-ai-parallel-attempts__confirm-actions",
+            "tm-ai-parallel-attempts__action",
+            "tm-ai-parallel-attempts__action--primary",
+            "tm-ai-parallel-attempts__table"
+          ],
+          "examples": [
+            {
+              "title": "Three drafts with a confirmed winner",
+              "code": "<TmParallelAttempts Attempts=\"_attempts\"\n                     BestAttemptId=\"_bestId\"\n                     @bind-SelectedAttemptId=\"_winnerId\"\n                     OnSelect=\"AcceptAsync\"\n                     Title=\"Three drafts\">\n    <ContentTemplate Context=\"attempt\">\n        <pre>@attempt.Summary</pre>\n    </ContentTemplate>\n</TmParallelAttempts>\n\n@code {\n    private IReadOnlyList<ParallelAttempt> _attempts = [];\n    private string? _bestId;\n    private string? _winnerId;\n\n    private Task AcceptAsync(string attemptId) => RecordWinnerAsync(attemptId);\n}"
+            },
+            {
+              "title": "The attempts and their votes",
+              "code": "var attempt = new ParallelAttempt(\"draft-b\", \"Draft B\")\n{\n    Status = AgentActivityStatus.Succeeded,\n    Score = 0.93,\n    Summary = \"Covers the edge case and the empty list\",\n    Votes =\n    [\n        new AttemptVote(\"Reviewer\") { Outcome = AttemptVoteOutcome.Approve, Score = 0.9, Rationale = \"Covers the edge case\" },\n        new AttemptVote(\"Grader\") { Score = 0.96 },\n    ],\n};\n\n// The highest score wins unless the host names a winner through BestAttemptId."
+            }
+          ],
+          "notes": [
+            "Picking a winner is a two-step action: the native radios choose and a confirmation raises OnSelect, so a stray arrow key cannot replace a recorded result.",
+            "The best attempt is the host's BestAttemptId when it names one, otherwise the highest score (ParallelAttemptRanking.Best).",
+            "The columns are a horizontal scroll-snap track: under 40rem of the component's own container they become a carousel with no JavaScript.",
+            "One polite live region announces the pending choice, the confirmed winner and a cancelled pick; the focus returns to the radio that opened the question."
           ]
         },
         {
@@ -40450,6 +40794,18 @@
           ]
         },
         {
+          "itemName": "FanOutFilter",
+          "kind": "Enum",
+          "category": "Components",
+          "namespace": "Tempo.Blazor.Components.AI",
+          "description": "Which slice of a fan-out a TmFanOutGrid shows: everything, or only the tasks in one state. The filter is a single choice and its members mirror AgentActivityStatus, so a host never maps between two vocabularies.",
+          "packageId": "Tempo.Blazor.AI",
+          "sourcePath": "src/Tempo.Blazor.AI/Components/AI/FanOutFilter.cs",
+          "documentationStatus": "merged",
+          "members": [],
+          "usageExample": "<TmFanOutGrid Tasks=\"_tasks\" @bind-Filter=\"_filter\" />\n\n@code {\n    private FanOutFilter _filter = FanOutFilter.Failed;\n}"
+        },
+        {
           "itemName": "AIServiceCollectionExtensions",
           "kind": "Class",
           "category": "Configuration",
@@ -40656,11 +41012,19 @@
           "kind": "Css"
         },
         {
+          "path": "src/Tempo.Blazor.AI/wwwroot/css/components/_ai-fan-out-grid.css",
+          "kind": "Css"
+        },
+        {
           "path": "src/Tempo.Blazor.AI/wwwroot/css/components/_ai-message.css",
           "kind": "Css"
         },
         {
           "path": "src/Tempo.Blazor.AI/wwwroot/css/components/_ai-model-picker.css",
+          "kind": "Css"
+        },
+        {
+          "path": "src/Tempo.Blazor.AI/wwwroot/css/components/_ai-parallel-attempts.css",
           "kind": "Css"
         },
         {
@@ -40741,12 +41105,12 @@
         }
       ],
       "summary": {
-        "itemCount": 27,
-        "manualItemCount": 27,
-        "generatedItemCount": 27,
+        "itemCount": 30,
+        "manualItemCount": 30,
+        "generatedItemCount": 30,
         "generatedOnlyItemCount": 0,
-        "componentCount": 18,
-        "publicApiTypeCount": 9
+        "componentCount": 20,
+        "publicApiTypeCount": 10
       }
     },
     {
@@ -82052,6 +82416,91 @@
           "documentationStatus": "merged"
         },
         {
+          "itemName": "AttemptVote",
+          "kind": "Record",
+          "category": "AI",
+          "namespace": "Tempo.Blazor.AI.Models",
+          "description": "One voter's verdict on one parallel attempt: who voted, what they decided, the score they gave it and why. The rationale is the reason a reader opens the votes at all, so it is kept as free text and printed verbatim — the surface never parses it and never invents one. Outcome is a claim of its own: a score without a verdict (the common \"grader gave 0.82\") is legal and lands on Abstain. By is the optional shared identity (AgentRef): when it is set the surface paints the voter's palette slot and initials, the same identity it paints in the lanes and in the graph.",
+          "packageId": "Tempo.Blazor.Abstractions",
+          "sourcePath": "src/Tempo.Blazor.Abstractions/AI/Agents/AttemptVote.cs",
+          "documentationStatus": "merged",
+          "members": [
+            {
+              "name": "By",
+              "kind": "Property",
+              "type": "AgentRef?",
+              "description": "The voter's identity when the host has one, or null. Setting it paints the agent's palette slot, initials and (when Voter is empty) its name."
+            },
+            {
+              "name": "ColorToken",
+              "kind": "Property",
+              "type": "string",
+              "description": "The palette token of the voter's identity, or an empty string when no identity is set."
+            },
+            {
+              "name": "DisplayName",
+              "kind": "Property",
+              "type": "string",
+              "description": "The name a surface prints: Voter, or the identity's name when the voter is unnamed."
+            },
+            {
+              "name": "HasRationale",
+              "kind": "Property",
+              "type": "bool",
+              "description": "Whether the vote carries a rationale worth opening."
+            },
+            {
+              "name": "HasScore",
+              "kind": "Property",
+              "type": "bool",
+              "description": "Whether the vote carries a score."
+            },
+            {
+              "name": "Initials",
+              "kind": "Property",
+              "type": "string",
+              "description": "The initials an avatar paints: the identity's own initials, else the initials of the vote's name."
+            },
+            {
+              "name": "Outcome",
+              "kind": "Property",
+              "type": "AttemptVoteOutcome",
+              "description": "What the voter decided. Default Abstain, so a score-only vote is never read as an approval."
+            },
+            {
+              "name": "Rationale",
+              "kind": "Property",
+              "type": "string?",
+              "description": "Why the voter decided so, in the voter's own words. Empty renders no rationale, and the surface never invents one."
+            },
+            {
+              "name": "Score",
+              "kind": "Property",
+              "type": "double?",
+              "description": "The score the voter gave the attempt, on the host's own scale (0–1, 0–10, a percentage). null means \"no score\", not zero; the surface prints the number with the host's culture and never rescales it."
+            },
+            {
+              "name": "Voter",
+              "kind": "Property",
+              "type": "string",
+              "description": "The voter's name as the host wants it read. Empty renders the surface's own fallback."
+            }
+          ],
+          "usageExample": "var vote = new AttemptVote(\"Grader\")\n{\n    Outcome = AttemptVoteOutcome.Approve,\n    Score = 0.96,\n    Rationale = \"Matches the expected output on all three cases\",\n};"
+        },
+        {
+          "itemName": "AttemptVoteOutcome",
+          "kind": "Enum",
+          "category": "AI",
+          "namespace": "Tempo.Blazor.AI.Models",
+          "description": "What one voter decided about a parallel attempt. Abstain is the default (0) on purpose: a vote whose outcome the host did not set must not silently count as an approval, because an attempt's ranking is computed from these values.",
+          "packageId": "Tempo.Blazor.Abstractions",
+          "sourcePath": "src/Tempo.Blazor.Abstractions/AI/Agents/AttemptVoteOutcome.cs",
+          "documentationStatus": "merged",
+          "members": [],
+          "usageExample": "new AttemptVote(\"Grader\") { Outcome = AttemptVoteOutcome.Reject, Rationale = \"Drops the second half\" };"
+        },
+        {
           "itemName": "ContextUsageItem",
           "kind": "Record",
           "category": "AI",
@@ -82377,6 +82826,332 @@
           ]
         },
         {
+          "itemName": "FanOutSummary",
+          "kind": "Record",
+          "category": "AI",
+          "namespace": "Tempo.Blazor.AI.Models",
+          "description": "The roll-up a fan-out surface prints above its tiles: how many units of work finished, are still running or failed, what the whole fan-out has cost so far and when it is expected to be over. A pure VALUE computed from a task list (Create), so the header, the detail surface and a test read the same numbers — a component never recomputes a summary inline. It is a snapshot: it carries no clock, and the live countdown is RemainingAt measured by the caller. The cost is the SUM of the tasks the host priced; a task without a price contributes nothing and HasCost stays false when NO task carries one, so a surface hides the money line instead of claiming the run was free.",
+          "packageId": "Tempo.Blazor.Abstractions",
+          "sourcePath": "src/Tempo.Blazor.Abstractions/AI/Agents/FanOutSummary.cs",
+          "documentationStatus": "merged",
+          "members": [
+            {
+              "name": "Create",
+              "kind": "Method",
+              "type": "FanOutSummary",
+              "description": "Rolls a task list up. The order of the list is irrelevant to every number; a null list counts as empty, so a component never has to null-check the host's data.",
+              "parameters": [
+                {
+                  "name": "tasks",
+                  "type": "IEnumerable<FanOutTask>?"
+                }
+              ]
+            },
+            {
+              "name": "RemainingAt",
+              "kind": "Method",
+              "type": "TimeSpan?",
+              "description": "The time left until the last active task's estimate, measured on the caller's clock, or null when there is nothing to count (complete, or no estimate). An estimate in the past reads as zero, never as a negative duration.",
+              "parameters": [
+                {
+                  "name": "now",
+                  "type": "DateTimeOffset"
+                }
+              ]
+            },
+            {
+              "name": "Active",
+              "kind": "Property",
+              "type": "int",
+              "description": "How many tasks still hold a worker (queued, running or waiting for a decision)."
+            },
+            {
+              "name": "Cancelled",
+              "kind": "Property",
+              "type": "int",
+              "description": "How many tasks were cancelled."
+            },
+            {
+              "name": "EstimatedEndAt",
+              "kind": "Property",
+              "type": "DateTimeOffset?",
+              "description": "The LATEST estimate among the ACTIVE tasks, or null when no active task carries one. A finished task's estimate is ignored: the fan-out cannot end later because of work that is already over."
+            },
+            {
+              "name": "Failed",
+              "kind": "Property",
+              "type": "int",
+              "description": "How many tasks failed (a failed task may still be retried)."
+            },
+            {
+              "name": "Finished",
+              "kind": "Property",
+              "type": "int",
+              "description": "How many tasks reached a terminal state (succeeded, failed or cancelled)."
+            },
+            {
+              "name": "HasCost",
+              "kind": "Property",
+              "type": "bool",
+              "description": "Whether at least one task carried a price — false means \"not priced\", not \"free\"."
+            },
+            {
+              "name": "HasEstimate",
+              "kind": "Property",
+              "type": "bool",
+              "description": "Whether the fan-out still has work AND at least one estimate to count down."
+            },
+            {
+              "name": "HasFailures",
+              "kind": "Property",
+              "type": "bool",
+              "description": "Whether the fan-out ended with at least one failed task that was never recovered."
+            },
+            {
+              "name": "Idle",
+              "kind": "Property",
+              "type": "int",
+              "description": "How many tasks are neither running nor finished (an unknown state counts as waiting)."
+            },
+            {
+              "name": "IsComplete",
+              "kind": "Property",
+              "type": "bool",
+              "description": "Whether there is nothing left to wait for: a non-empty fan-out with no active task."
+            },
+            {
+              "name": "Progress",
+              "kind": "Property",
+              "type": "double",
+              "description": "The share of tasks that reached a terminal state, from 0 to 1; an empty fan-out reports 0 instead of a division by zero."
+            },
+            {
+              "name": "Queued",
+              "kind": "Property",
+              "type": "int",
+              "description": "How many tasks are queued and not yet picked up by a worker."
+            },
+            {
+              "name": "Running",
+              "kind": "Property",
+              "type": "int",
+              "description": "How many tasks are running right now."
+            },
+            {
+              "name": "Succeeded",
+              "kind": "Property",
+              "type": "int",
+              "description": "How many tasks succeeded."
+            },
+            {
+              "name": "Total",
+              "kind": "Property",
+              "type": "int",
+              "description": "How many tasks the summary counted. Zero is a legal, empty fan-out."
+            },
+            {
+              "name": "TotalCostMicroUnits",
+              "kind": "Property",
+              "type": "long",
+              "description": "The sum of the priced tasks, in MICRO-UNITS (1,000,000 is 1.00 of the currency)."
+            },
+            {
+              "name": "WaitingForApproval",
+              "kind": "Property",
+              "type": "int",
+              "description": "How many tasks are waiting for a human decision."
+            }
+          ],
+          "usageExample": "var summary = FanOutSummary.Create(tasks);\n\nsummary.Finished;                       // 12\nsummary.RemainingAt(clock.GetUtcNow()); // the live time to the last active estimate\nsummary.TotalCostMicroUnits;            // the sum of the priced tasks, in micro-units"
+        },
+        {
+          "itemName": "FanOutTask",
+          "kind": "Record",
+          "category": "AI",
+          "namespace": "Tempo.Blazor.AI.Models",
+          "description": "One unit of work an orchestrator split across N workers, as a fan-out surface draws it: the worker it is assigned to, how far it got, how many attempts it took, when it should end, what it cost and — when it failed — why. The record is a VALUE: a host recomposes it with task with { … } when the work moves on, and no component mutates it. EstimatedEndAt is an ESTIMATE, never a fact: a surface turns it into a live countdown against its own clock, and a finished task keeps its recorded times untouched. Nothing here carries colour or words: the state is the shared AgentActivityStatus (one icon, one tone and one localized word for every agent surface) and the identity is the shared AgentRef, so a worker paints the same palette slot here as it does in the lanes and in the graph.",
+          "packageId": "Tempo.Blazor.Abstractions",
+          "sourcePath": "src/Tempo.Blazor.Abstractions/AI/Agents/FanOutTask.cs",
+          "documentationStatus": "merged",
+          "members": [
+            {
+              "name": "IsOverdueAt",
+              "kind": "Method",
+              "type": "bool",
+              "description": "Whether the estimate has already passed on the caller's clock — the state a surface paints as \"overdue\" instead of a countdown that would sit at zero forever.",
+              "parameters": [
+                {
+                  "name": "now",
+                  "type": "DateTimeOffset"
+                }
+              ]
+            },
+            {
+              "name": "RemainingAt",
+              "kind": "Method",
+              "type": "TimeSpan?",
+              "description": "The time left until EstimatedEndAt, measured on the caller's clock — or null when the host gave no estimate or the task no longer counts as active. An estimate in the past reads as zero (the task is overdue), never as a negative duration.",
+              "parameters": [
+                {
+                  "name": "now",
+                  "type": "DateTimeOffset"
+                }
+              ]
+            },
+            {
+              "name": "Attempt",
+              "kind": "Property",
+              "type": "int",
+              "description": "Which attempt is running (or failed), 1-based. Default 1. A value below 1 is READ as 1 by every derived member and by the surface, because \"attempt 0 of 3\" is not a state a run can be in."
+            },
+            {
+              "name": "CanCancel",
+              "kind": "Property",
+              "type": "bool",
+              "description": "Whether a cancel is offered: the task is queued, running or waiting for a decision. A finished task has nothing left to stop."
+            },
+            {
+              "name": "CanRetry",
+              "kind": "Property",
+              "type": "bool",
+              "description": "Whether a retry is offered: the task FAILED and its retries are not used up. A running task cannot be retried (it can be cancelled instead) and a succeeded one has nothing to retry."
+            },
+            {
+              "name": "ColorToken",
+              "kind": "Property",
+              "type": "string",
+              "description": "The agent palette token the avatar paints with, or an empty string when no Worker is set. Always a declared --tm-agent-color-{0..7} token when it is not empty."
+            },
+            {
+              "name": "CostMicroUnits",
+              "kind": "Property",
+              "type": "long?",
+              "description": "What the task has cost so far, in MICRO-UNITS (1,000,000 is 1.00 of the currency) — the unit AiCostFormatter and the agent-run surfaces already use, so one run never mixes two money shapes. null means \"the host does not price this task\"; it is not zero."
+            },
+            {
+              "name": "EffectiveAttempt",
+              "kind": "Property",
+              "type": "int",
+              "description": "The attempt as a surface reads it: never below 1."
+            },
+            {
+              "name": "Error",
+              "kind": "Property",
+              "type": "string?",
+              "description": "Why the task failed, in the host's own words (a message, a rejection reason). Empty renders no error; the surface prints it verbatim and never parses it."
+            },
+            {
+              "name": "EstimatedEndAt",
+              "kind": "Property",
+              "type": "DateTimeOffset?",
+              "description": "The host's estimate of when the task will finish, or null when it has none. A surface turns it into a live countdown against its own clock and NEVER treats it as a recorded end; a task in a finished state ignores it entirely."
+            },
+            {
+              "name": "HasAttemptLimit",
+              "kind": "Property",
+              "type": "bool",
+              "description": "Whether the host declared an attempt limit at all (a non-positive limit counts as none)."
+            },
+            {
+              "name": "HasCost",
+              "kind": "Property",
+              "type": "bool",
+              "description": "Whether the host priced the task at all (false is \"no price\", not \"free\")."
+            },
+            {
+              "name": "HasError",
+              "kind": "Property",
+              "type": "bool",
+              "description": "Whether the task carries an error message worth printing."
+            },
+            {
+              "name": "HasLabel",
+              "kind": "Property",
+              "type": "bool",
+              "description": "Whether the host supplied a label. A surface paints its own localized fallback when it is false."
+            },
+            {
+              "name": "HasWorker",
+              "kind": "Property",
+              "type": "bool",
+              "description": "Whether the host named the worker in any way."
+            },
+            {
+              "name": "Id",
+              "kind": "Property",
+              "type": "string",
+              "description": "Stable identity of the task. Never empty: a missing id is generated at construction."
+            },
+            {
+              "name": "Initials",
+              "kind": "Property",
+              "type": "string",
+              "description": "The initials the tile's avatar paints: the worker's own initials when Worker is set, the initials of Label otherwise, and \"?\" when there is no name at all."
+            },
+            {
+              "name": "IsActive",
+              "kind": "Property",
+              "type": "bool",
+              "description": "Whether the task still holds a worker (queued, running or waiting for a decision)."
+            },
+            {
+              "name": "IsFinished",
+              "kind": "Property",
+              "type": "bool",
+              "description": "Whether the task reached a terminal state (succeeded, failed or cancelled)."
+            },
+            {
+              "name": "Label",
+              "kind": "Property",
+              "type": "string",
+              "description": "The unit of work, as the host wants it read. Empty renders the surface's own fallback."
+            },
+            {
+              "name": "MaxAttempts",
+              "kind": "Property",
+              "type": "int?",
+              "description": "How many attempts the host allows, or null when it has no limit. A limit of zero or less is read as \"no limit\", so a host that forgets to set it never blocks a retry."
+            },
+            {
+              "name": "RetryExhausted",
+              "kind": "Property",
+              "type": "bool",
+              "description": "Whether the retries are used up: an attempt limit exists and the task already reached it. A task without a limit is never exhausted."
+            },
+            {
+              "name": "StartedAt",
+              "kind": "Property",
+              "type": "DateTimeOffset?",
+              "description": "When the task started, or null while it is still waiting for a worker."
+            },
+            {
+              "name": "Status",
+              "kind": "Property",
+              "type": "AgentActivityStatus",
+              "description": "What the task is doing right now. Default Idle; painted as an icon, a localized word AND a tone, never as a colour alone."
+            },
+            {
+              "name": "Worker",
+              "kind": "Property",
+              "type": "AgentRef?",
+              "description": "The identity of the worker running the task, or null when the host tracks workers by id only. Setting it makes the surface paint the worker's palette slot, initials and name."
+            },
+            {
+              "name": "WorkerId",
+              "kind": "Property",
+              "type": "string?",
+              "description": "The worker's id as a plain string, for a host whose workers are not AgentRefs. The surface paints it as text; Worker wins when both are set, because it carries the whole identity."
+            },
+            {
+              "name": "WorkerName",
+              "kind": "Property",
+              "type": "string",
+              "description": "The worker's name for a surface to print: the agent's name, else WorkerId."
+            }
+          ],
+          "usageExample": "var task = new FanOutTask(\"region-7\", \"Region 7\")\n{\n    Status = AgentActivityStatus.Running,\n    Attempt = 2,\n    MaxAttempts = 3,\n    EstimatedEndAt = now.AddSeconds(42),\n    CostMicroUnits = 120_000,\n};"
+        },
+        {
           "itemName": "IAiMentionProvider",
           "kind": "Interface",
           "category": "AI",
@@ -82392,6 +83167,133 @@
               "description": "Returns the mentions matching the text after the trigger (possibly empty, which asks for the default suggestions). An implementation must honour the cancellation token and should be cheap for short queries; an empty list closes the suggestion list."
             }
           ]
+        },
+        {
+          "itemName": "ParallelAttempt",
+          "kind": "Record",
+          "category": "AI",
+          "namespace": "Tempo.Blazor.AI.Models",
+          "description": "One of several attempts at the SAME piece of work, shown beside its rivals so a reader can compare them and pick a winner: what it is called, the state it ended in, the score it earned, the votes recorded on it and its own summary. The record is a VALUE and carries no state of its own: the winner is either named by the host (BestAttemptId on the surface) or derived from the highest Score by ParallelAttemptRanking. A component never mutates an attempt and never invents a score. The attempt's own body is deliberately NOT part of the model: a surface renders it through a template, so a diff, a document, a code block or plain prose all fit without the library knowing what an attempt contains.",
+          "packageId": "Tempo.Blazor.Abstractions",
+          "sourcePath": "src/Tempo.Blazor.Abstractions/AI/Agents/ParallelAttempt.cs",
+          "documentationStatus": "merged",
+          "members": [
+            {
+              "name": "Abstentions",
+              "kind": "Property",
+              "type": "int",
+              "description": "How many voters abstained (including a score-only vote)."
+            },
+            {
+              "name": "Approvals",
+              "kind": "Property",
+              "type": "int",
+              "description": "How many voters approved the attempt."
+            },
+            {
+              "name": "HasLabel",
+              "kind": "Property",
+              "type": "bool",
+              "description": "Whether the host supplied a label."
+            },
+            {
+              "name": "HasRationales",
+              "kind": "Property",
+              "type": "bool",
+              "description": "Whether at least one voter explained their verdict."
+            },
+            {
+              "name": "HasScore",
+              "kind": "Property",
+              "type": "bool",
+              "description": "Whether a usable score was supplied (a non-finite value counts as none)."
+            },
+            {
+              "name": "HasSummary",
+              "kind": "Property",
+              "type": "bool",
+              "description": "Whether the host supplied a summary worth printing."
+            },
+            {
+              "name": "HasVotes",
+              "kind": "Property",
+              "type": "bool",
+              "description": "Whether at least one vote was recorded."
+            },
+            {
+              "name": "Id",
+              "kind": "Property",
+              "type": "string",
+              "description": "Stable identity of the attempt. Never empty: a missing id is generated at construction."
+            },
+            {
+              "name": "Label",
+              "kind": "Property",
+              "type": "string",
+              "description": "What distinguishes this attempt. Empty renders the surface's own numbered fallback."
+            },
+            {
+              "name": "Rejections",
+              "kind": "Property",
+              "type": "int",
+              "description": "How many voters rejected the attempt."
+            },
+            {
+              "name": "Score",
+              "kind": "Property",
+              "type": "double?",
+              "description": "The score the host (or a grader) gave the attempt, on the host's own scale. null means \"not scored\", not zero; the ranking ignores an unscored attempt unless the host names it explicitly."
+            },
+            {
+              "name": "Status",
+              "kind": "Property",
+              "type": "AgentActivityStatus",
+              "description": "The state the attempt ended in. Default Idle; painted as an icon, a localized word and a tone, and an attempt that is still running or failed can never win a comparison by accident."
+            },
+            {
+              "name": "Summary",
+              "kind": "Property",
+              "type": "string?",
+              "description": "The attempt's own short summary — what it would be chosen FOR. Empty renders none; the full body comes from the surface's content template."
+            },
+            {
+              "name": "VoteCount",
+              "kind": "Property",
+              "type": "int",
+              "description": "How many votes the attempt carries."
+            }
+          ],
+          "usageExample": "var attempt = new ParallelAttempt(\"draft-b\", \"Draft B\")\n{\n    Status = AgentActivityStatus.Succeeded,\n    Score = 0.93,\n    Votes = [new AttemptVote(\"Reviewer\") { Outcome = AttemptVoteOutcome.Approve, Rationale = \"Covers the edge case\" }],\n};"
+        },
+        {
+          "itemName": "ParallelAttemptRanking",
+          "kind": "Class",
+          "category": "AI",
+          "namespace": "Tempo.Blazor.AI.Models",
+          "description": "Which of several parallel attempts is the best one: the host's explicit pick when it names one, otherwise the highest score that is actually a score. The rule is one pure function so the column surface, its comparison table and a test can never disagree about who won. It is deliberately conservative: an unscored attempt never wins on a comparison scale nobody set (its null is \"not scored\", not \"zero\"), an attempt still running never wins over a finished one with the same score, and a named attempt wins even when it has no score — the host may know something the numbers do not.",
+          "packageId": "Tempo.Blazor.Abstractions",
+          "sourcePath": "src/Tempo.Blazor.Abstractions/AI/Agents/ParallelAttemptRanking.cs",
+          "documentationStatus": "merged",
+          "members": [
+            {
+              "name": "Best",
+              "kind": "Method",
+              "type": "ParallelAttempt?",
+              "description": "Resolves the best attempt out of attempts.",
+              "parameters": [
+                {
+                  "name": "attempts",
+                  "type": "IReadOnlyList<ParallelAttempt>?"
+                },
+                {
+                  "name": "bestAttemptId",
+                  "type": "string?",
+                  "default": "null"
+                }
+              ]
+            }
+          ],
+          "usageExample": "var best = ParallelAttemptRanking.Best(attempts);          // highest score\nvar picked = ParallelAttemptRanking.Best(attempts, \"c\");     // the host's pick wins\nvar ordered = ParallelAttemptRanking.Order(attempts);        // best first, the rest stable"
         },
         {
           "itemName": "PermissionDecision",
@@ -121976,12 +122878,12 @@
       ],
       "libraryExamples": [],
       "summary": {
-        "itemCount": 1629,
-        "manualItemCount": 1629,
-        "generatedItemCount": 1613,
+        "itemCount": 1635,
+        "manualItemCount": 1635,
+        "generatedItemCount": 1619,
         "generatedOnlyItemCount": 0,
         "componentCount": 0,
-        "publicApiTypeCount": 1613
+        "publicApiTypeCount": 1619
       }
     },
     {
@@ -138974,10 +139876,10 @@
   ],
   "summary": {
     "packageCount": 28,
-    "itemCount": 3563,
-    "manualItemCount": 3563,
+    "itemCount": 3572,
+    "manualItemCount": 3572,
     "generatedOnlyItemCount": 0,
-    "componentCount": 548,
-    "publicApiTypeCount": 2963
+    "componentCount": 550,
+    "publicApiTypeCount": 2970
   }
 }

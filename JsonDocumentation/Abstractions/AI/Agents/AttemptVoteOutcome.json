@@ -1,0 +1,12 @@
+{
+  "itemName": "AttemptVoteOutcome",
+  "kind": "Enum",
+  "category": "AI",
+  "namespace": "Tempo.Blazor.AI.Models",
+  "description": "What one voter decided about a parallel attempt. Abstain is the default (0) on purpose: a vote whose outcome the host did not set must not silently count as an approval, because an attempt's ranking is computed from these values.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/AI/Agents/AttemptVoteOutcome.cs",
+  "documentationStatus": "documented",
+  "usageExample": "new AttemptVote(\"Grader\") { Outcome = AttemptVoteOutcome.Reject, Rationale = \"Drops the second half\" };",
+  "members": []
+}

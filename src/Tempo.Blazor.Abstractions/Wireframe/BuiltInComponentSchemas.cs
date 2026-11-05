@@ -173,6 +173,8 @@ public sealed class BuiltInComponentSchemas : IWireframeSchemaSource
             ["TmAgentBadge"] = ["agent-badge"],
             ["TmAgentLanes"] = ["agent-lanes"],
             ["TmAgentGraph"] = ["agent-graph"],
+            ["TmFanOutGrid"] = ["fan-out-grid"],
+            ["TmParallelAttempts"] = ["parallel-attempts"],
             ["TmPromptLibrary"] = ["prompt-library"],
             ["TmMultiViewList"] = ["list-view"],
             ["TmDataTable"] = ["data-table"],
@@ -1435,6 +1437,35 @@ public sealed class BuiltInComponentSchemas : IWireframeSchemaSource
                 P("viewMode", "View",      PropType.Enum,   "graph", cat: "Behavior",
                     opts: ["graph", "table"]),
                 P("showZoom", "Show Zoom", PropType.Bool,   true, cat: "Appearance"),
+            ]
+        };
+
+        yield return new WireframeComponentSchema
+        {
+            Type = "TmFanOutGrid", Category = "AI", DisplayName = "Fan-out Grid",
+            DefaultWidth = 640, DefaultHeight = 300,
+            Props =
+            [
+                P("title",   "Title",   PropType.String, "Fan-out", cat: "Content"),
+                P("tasks",   "Tasks",   PropType.StringList, new[] { "Region A", "Region B", "Region C", "Region D" }, cat: "Content"),
+                P("columns", "Columns", PropType.Int, 4, cat: "Layout"),
+                P("filter",  "Filter",  PropType.Enum,   "all", cat: "Behavior",
+                    opts: ["all", "queued", "running", "approval", "succeeded", "failed", "cancelled"]),
+                P("compact", "Compact", PropType.Bool,   false, cat: "Appearance"),
+            ]
+        };
+
+        yield return new WireframeComponentSchema
+        {
+            Type = "TmParallelAttempts", Category = "AI", DisplayName = "Parallel Attempts",
+            DefaultWidth = 720, DefaultHeight = 320,
+            Props =
+            [
+                P("title",             "Title",          PropType.String, "Parallel attempts", cat: "Content"),
+                P("attempts",          "Attempts",       PropType.StringList, new[] { "Draft A", "Draft B", "Draft C" }, cat: "Content"),
+                P("bestAttemptId",     "Best Attempt",   PropType.String, "Draft B", cat: "Content"),
+                P("confirmSelection",  "Confirm Choice", PropType.Bool,   true, cat: "Behavior"),
+                P("showComparison",    "Show Comparison", PropType.Bool,  true, cat: "Appearance"),
             ]
         };
 

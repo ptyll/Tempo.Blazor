@@ -1,0 +1,235 @@
+@namespace Tempo.Blazor.Components.AI
+@inherits Tempo.Blazor.Components.TmComponentBase
+@using System.Globalization
+@using Tempo.Blazor.AI.Models
+@using Tempo.Blazor.Components.Icons
+
+@* Several attempts at the SAME task, side by side: a column per attempt with its state, its score, its own summary,
+   its body (a host template) and the votes it collected, with the best attempt marked by an icon AND a word.
+
+   Picking a winner is a TWO-STEP action: the native radios of one shared name are the choice (so the arrow keys walk
+   them for free), a pick asks for confirmation in a named group and only the confirmation raises OnSelect — an
+   accidental arrow key can never replace a result. The focus returns to the radio that opened the question.
+
+   The columns are a horizontal scroll-snap track, so a narrow container turns them into a carousel with no
+   JavaScript. The comparison table below repeats every number as text, which is what a screen reader or a phone
+   reads. *@
+<section class="@RootClass"
+         data-testid="@RootTestId("parallel-attempts")"
+         data-selected="@(_selectedId ?? string.Empty)"
+         @attributes="AdditionalAttributes">
+
+    @if (ShowTitle)
+    {
+        @Heading
+    }
+
+    <p class="tm-sr-only" id="@InstructionsId" data-testid="@TestId("parallel-attempts-instructions")">@Loc["TmParallelAttempts_Instructions"]</p>
+
+    @if (AttemptList.Count == 0)
+    {
+        <p class="tm-ai-parallel-attempts__empty" data-testid="@TestId("parallel-attempts-empty")">@Loc["TmParallelAttempts_Empty"]</p>
+    }
+    else
+    {
+        <div class="tm-ai-parallel-attempts__track"
+             role="group"
+             aria-label="@Loc["TmParallelAttempts_RadioGroupLabel"]"
+             aria-describedby="@InstructionsId"
+             data-testid="@TestId("parallel-attempts-track")">
+            @foreach (var attempt in AttemptList)
+            {
+                var handle = RadioHandleFor(attempt.Id);
+                var votesExpanded = _expandedVotes.Contains(attempt.Id);
+                <div class="@ColumnClass(attempt)"
+                     role="group"
+                     aria-label="@ColumnAriaLabel(attempt)"
+                     data-attempt-id="@attempt.Id"
+                     data-status="@AgentStatusPresentation.Tone(attempt.Status)"
+                     data-best="@(IsBest(attempt) ? "true" : null)"
+                     data-selected="@(IsChosen(attempt) ? "true" : null)"
+                     data-testid="@TestId("parallel-attempt")"
+                     @key="attempt.Id">
+                    <div class="tm-ai-parallel-attempts__attempt-head">
+                        @* A native radio is the choice: the arrow keys walk the group for free. The @key carries the
+                           RADIO VERSION so a cancelled pick re-mounts the input — a controlled `checked` attribute
+                           only sets the DEFAULT checkedness, so an input the reader already clicked would otherwise
+                           keep showing the pick that was dropped. *@
+                        <input type="radio"
+                               class="tm-ai-parallel-attempts__radio"
+                               name="@GroupName"
+                               value="@attempt.Id"
+                               checked="@IsChecked(attempt)"
+                               aria-label="@ChooseLabel(attempt)"
+                               data-attempt-id="@attempt.Id"
+                               data-testid="@TestId("parallel-attempt-radio")"
+                               @key="@RadioKey(attempt)"
+                               @ref="handle.Ref"
+                               @onchange="() => ChooseAsync(attempt.Id)" />
+                        <span class="tm-ai-parallel-attempts__attempt-label"
+                              data-testid="@TestId("parallel-attempt-label")">@AttemptLabel(attempt)</span>
+                        @if (IsBest(attempt))
+                        {
+                            <span class="tm-ai-parallel-attempts__best" data-testid="@TestId("parallel-attempt-best")">
+                                <span class="tm-ai-parallel-attempts__best-icon" aria-hidden="true">
+                                    <TmIcon Name="@IconNames.Award" Size="IconSize.Xs" />
+                                </span>
+                                <span>@Loc["TmParallelAttempts_Best"]</span>
+                            </span>
+                        }
+                        @if (IsChosen(attempt))
+                        {
+                            <span class="tm-ai-parallel-attempts__chosen"
+                                  data-testid="@TestId("parallel-attempt-chosen")">@Loc["TmParallelAttempts_Chosen"]</span>
+                        }
+                    </div>
+
+                    <div class="tm-ai-parallel-attempts__metrics">
+                        <span class="tm-ai-parallel-attempts__metric">
+                            <span class="tm-ai-parallel-attempts__metric-label">@Loc["TmParallelAttempts_ColumnState"]</span>
+                            <span class="tm-ai-parallel-attempts__state"
+                                  data-testid="@TestId("parallel-attempt-state")">
+                                <span class="tm-ai-parallel-attempts__state-icon" aria-hidden="true">
+                                    <TmIcon Name="@AgentStatusPresentation.Icon(attempt.Status)" Size="IconSize.Xs" />
+                                </span>
+                                <span>@AgentStatusPresentation.Text(Loc, attempt.Status)</span>
+                            </span>
+                        </span>
+                        <span class="tm-ai-parallel-attempts__metric">
+                            <span class="tm-ai-parallel-attempts__metric-label">@Loc["TmParallelAttempts_ColumnScore"]</span>
+                            <span class="tm-ai-parallel-attempts__score"
+                                  data-testid="@TestId("parallel-attempt-score")">@ScoreText(attempt)</span>
+                        </span>
+                    </div>
+
+                    @if (attempt.HasSummary)
+                    {
+                        <p class="tm-ai-parallel-attempts__summary"
+                           data-testid="@TestId("parallel-attempt-summary")">@attempt.Summary</p>
+                    }
+
+                    @if (ContentTemplate is not null)
+                    {
+                        <div class="tm-ai-parallel-attempts__body"
+                             data-testid="@TestId("parallel-attempt-content")">@ContentTemplate(attempt)</div>
+                    }
+
+                    <button type="button"
+                            class="tm-ai-parallel-attempts__votes-toggle"
+                            aria-expanded="@(votesExpanded ? "true" : "false")"
+                            aria-controls="@(votesExpanded ? VotesId(attempt) : null)"
+                            data-testid="@TestId("parallel-attempt-votes-toggle")"
+                            @onclick="() => ToggleVotesAsync(attempt.Id)">
+                        @Loc["TmParallelAttempts_Votes", attempt.VoteCount.ToString(CultureInfo.CurrentCulture)]
+                    </button>
+
+                    @if (votesExpanded)
+                    {
+                        <div class="tm-ai-parallel-attempts__votes"
+                             id="@VotesId(attempt)"
+                             data-testid="@TestId("parallel-attempt-votes")">
+                            @if (attempt.HasVotes)
+                            {
+                                <ul class="tm-ai-parallel-attempts__vote-list">
+                                    @foreach (var vote in attempt.Votes)
+                                    {
+                                        <li class="tm-ai-parallel-attempts__vote"
+                                            data-testid="@TestId("parallel-attempt-vote")">
+                                            <span class="tm-ai-parallel-attempts__vote-head">
+                                                <span class="tm-ai-parallel-attempts__vote-voter">@VoterName(vote)</span>
+                                                <span class="tm-ai-parallel-attempts__vote-outcome">@OutcomeText(vote.Outcome)</span>
+                                                @if (vote.HasScore)
+                                                {
+                                                    <span class="tm-ai-parallel-attempts__vote-score">@Loc["TmParallelAttempts_Score", FormatScore(vote.Score)]</span>
+                                                }
+                                            </span>
+                                            @if (vote.HasRationale)
+                                            {
+                                                <span class="tm-ai-parallel-attempts__vote-rationale"
+                                                      data-testid="@TestId("parallel-attempt-vote-rationale")">@vote.Rationale</span>
+                                            }
+                                        </li>
+                                    }
+                                </ul>
+                            }
+                            else
+                            {
+                                <p class="tm-ai-parallel-attempts__no-votes">@Loc["TmParallelAttempts_NoVotes"]</p>
+                            }
+                        </div>
+                    }
+
+                </div>
+            }
+        </div>
+
+        @if (PendingAttempt is { } pending)
+        {
+            <div class="tm-ai-parallel-attempts__confirm"
+                 role="group"
+                 aria-labelledby="@ConfirmQuestionId"
+                 data-testid="@TestId("parallel-attempts-confirm")">
+                <p class="tm-ai-parallel-attempts__confirm-question" id="@ConfirmQuestionId">
+                    @Loc["TmParallelAttempts_ConfirmQuestion", AttemptLabel(pending)]
+                </p>
+                <div class="tm-ai-parallel-attempts__confirm-actions">
+                    <button type="button"
+                            class="tm-ai-parallel-attempts__action tm-ai-parallel-attempts__action--primary"
+                            data-testid="@TestId("parallel-attempts-confirm-yes")"
+                            @onclick="ConfirmAsync">@Loc["TmParallelAttempts_Confirm"]</button>
+                    <button type="button"
+                            class="tm-ai-parallel-attempts__action"
+                            data-testid="@TestId("parallel-attempts-confirm-no")"
+                            @onclick="CancelAsync">@Loc["TmParallelAttempts_ConfirmCancel"]</button>
+                </div>
+            </div>
+        }
+
+        @if (ShowComparison)
+        {
+            <table class="tm-ai-parallel-attempts__table" data-testid="@TestId("parallel-attempts-table")">
+                <caption>@Loc["TmParallelAttempts_ComparisonCaption"]</caption>
+                <thead>
+                    <tr>
+                        <th scope="col">@Loc["TmParallelAttempts_ColumnAttempt"]</th>
+                        <th scope="col">@Loc["TmParallelAttempts_ColumnState"]</th>
+                        <th scope="col">@Loc["TmParallelAttempts_ColumnScore"]</th>
+                        <th scope="col">@Loc["TmParallelAttempts_ColumnVotes"]</th>
+                        <th scope="col">@Loc["TmParallelAttempts_ColumnBest"]</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var attempt in AttemptList)
+                    {
+                        <tr data-attempt-id="@attempt.Id">
+                            <th scope="row">@AttemptLabel(attempt)</th>
+                            <td>@AgentStatusPresentation.Text(Loc, attempt.Status)</td>
+                            <td>@ScoreText(attempt)</td>
+                            <td>@attempt.VoteCount.ToString(CultureInfo.CurrentCulture)</td>
+                            <td data-testid="@TestId("parallel-attempts-table-best")">@(IsBest(attempt) ? Loc["TmParallelAttempts_Yes"] : Loc["TmParallelAttempts_No"])</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    }
+
+    <div class="tm-sr-only"
+         role="status"
+         aria-live="polite"
+         aria-atomic="true"
+         data-testid="@TestId("parallel-attempts-announcement")">@_announcement</div>
+</section>
+
+@code {
+    /// <summary>The heading, built at the requested level without duplicating the markup six times.</summary>
+    private RenderFragment Heading => builder =>
+    {
+        builder.OpenElement(0, "h" + EffectiveHeadingLevel.ToString(CultureInfo.InvariantCulture));
+        builder.AddAttribute(1, "class", "tm-ai-parallel-attempts__title");
+        builder.AddAttribute(2, "id", TitleId);
+        builder.AddAttribute(3, "data-testid", TestId("parallel-attempts-title"));
+        builder.AddContent(4, HeadingText);
+        builder.CloseElement();
+    };
+}

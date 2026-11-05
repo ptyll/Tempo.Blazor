@@ -1,0 +1,473 @@
+/* ═══════════════════════════════════════════════════════════════════════════════════════════════
+   TmFanOutGrid — an orchestrator's fan-out: a summary line plus a grid of work tiles
+   Contract: docs/fan-out-grid.md
+   Every rule reads a --tm-* design token (no colour literal, no raw palette step, no [data-theme]
+   block); the package's shared token gate is AiMarkdownViewCssTests and the component's own gate is
+   TmFanOutGridCssTests.
+
+   Nothing in this file animates: the countdown is TEXT that the component repaints on its own clock,
+   and a tile has no transition, so this partial needs no prefers-reduced-motion block and cannot
+   smuggle movement past one.
+   ═══════════════════════════════════════════════════════════════════════════════════════════════ */
+
+.tm-ai-fan-out {
+    /* A host lays this card out in a grid or a flex row: without this the card's automatic minimum
+       width grows to the grid's content and the PAGE scrolls sideways instead of the grid. */
+    min-inline-size: 0;
+
+    /* Every knob is DECLARED here (a var() that only ever carries a fallback is an undefined alias):
+       a host overrides one by restyling this root. The component writes --tm-fan-out-columns inline
+       from its Columns parameter, so the C# window and the stylesheet read ONE number; the declaration
+       below is only the fallback for a host that loads the partial without the component. */
+    --tm-fan-out-columns: 4;
+    --tm-fan-out-gap: var(--tm-space-2);
+    --tm-fan-out-tile-min-inline-size: 9rem;
+    --tm-fan-out-tile-fill: var(--tm-bg-surface);
+    --tm-fan-out-tile-border: var(--tm-border-color);
+    --tm-fan-out-tile-tone: var(--tm-border-color-strong);
+    --tm-fan-out-tile-avatar: var(--tm-bg-surface-secondary);
+    --tm-fan-out-tile-avatar-ink: var(--tm-text-secondary);
+
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-3);
+    padding: var(--tm-space-4);
+    border: var(--tm-border-width) solid var(--tm-border-color);
+    border-radius: var(--tm-radius-card);
+    background-color: var(--tm-bg-surface);
+    color: var(--tm-text-primary);
+    box-shadow: var(--tm-shadow-sm);
+    font-size: var(--tm-font-size-sm);
+    line-height: 1.5;
+}
+
+/* ── Header and summary ──────────────────────────────────────────────────────────────────────── */
+
+.tm-ai-fan-out__header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--tm-space-3);
+}
+
+.tm-ai-fan-out__title {
+    margin: 0;
+    font-size: var(--tm-font-size-base);
+    font-weight: var(--tm-font-weight-semibold);
+}
+
+.tm-ai-fan-out__summary {
+    min-inline-size: 0;
+}
+
+.tm-ai-fan-out__stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--tm-space-4);
+    margin: 0;
+}
+
+.tm-ai-fan-out__stat {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-1);
+}
+
+.tm-ai-fan-out__stat-label {
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-xs);
+    line-height: 1.2;
+}
+
+.tm-ai-fan-out__stat-value {
+    margin: 0;
+    font-size: var(--tm-font-size-md);
+    font-weight: var(--tm-font-weight-semibold);
+    font-variant-numeric: tabular-nums;
+}
+
+/* ── The state filter ────────────────────────────────────────────────────────────────────────── */
+
+.tm-ai-fan-out__filters {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: var(--tm-space-1);
+    min-inline-size: 0;
+    overflow-x: auto;
+}
+
+.tm-ai-fan-out__filter {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--tm-space-1);
+    flex: 0 0 auto;
+    padding: var(--tm-space-1) var(--tm-space-2);
+    border: var(--tm-border-width) solid var(--tm-border-color);
+    border-radius: var(--tm-radius-pill);
+    background-color: var(--tm-bg-surface);
+    color: var(--tm-text-secondary);
+    font: inherit;
+    font-size: var(--tm-font-size-xs);
+    cursor: pointer;
+}
+
+.tm-ai-fan-out__filter:hover {
+    background-color: var(--tm-color-surface-hover);
+    color: var(--tm-text-primary);
+}
+
+/* A filter chip is a real button, so it owes the same focus ring the tiles and the actions paint — the browser's
+   default outline is not this surface's contract (the forced-colors block later hands the ring to Highlight). */
+.tm-ai-fan-out__filter:focus-visible {
+    outline: 2px solid var(--tm-border-color-focus);
+    outline-offset: 2px;
+}
+
+/* The active filter is a pressed toggle: the surface, the border and the ink all move, so the state
+   survives a high-contrast palette (see the forced-colors block at the end of this file). */
+.tm-ai-fan-out__filter--active {
+    border-color: var(--tm-color-primary);
+    background-color: var(--tm-color-primary-subtle);
+    color: var(--tm-color-primary-text);
+    font-weight: var(--tm-font-weight-semibold);
+}
+
+.tm-ai-fan-out__filter-label {
+    white-space: nowrap;
+}
+
+.tm-ai-fan-out__filter-count {
+    color: var(--tm-text-secondary);
+    font-variant-numeric: tabular-nums;
+}
+
+.tm-ai-fan-out__filter--active .tm-ai-fan-out__filter-count {
+    color: var(--tm-color-primary-text);
+}
+
+/* ── The grid ───────────────────────────────────────────────────────────────────────────────── */
+
+.tm-ai-fan-out__grid {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-fan-out-gap);
+    min-inline-size: 0;
+
+    /* The grid is the ONE scroll owner of the surface: a narrow container scrolls its tiles inside the
+       card instead of scrolling the page sideways. */
+    overflow-x: auto;
+}
+
+.tm-ai-fan-out__row {
+    display: flex;
+    gap: var(--tm-fan-out-gap);
+    min-inline-size: 0;
+}
+
+/* Every cell is EXACTLY the same width in every row, so a partly filled last row lines up with the
+   ones above it. The tile keeps a usable minimum on a narrow container and the grid scrolls. */
+.tm-ai-fan-out__cell {
+    flex: 0 0 max(
+        var(--tm-fan-out-tile-min-inline-size),
+        calc((100% - (var(--tm-fan-out-columns) - 1) * var(--tm-fan-out-gap)) / var(--tm-fan-out-columns)));
+    min-inline-size: 0;
+}
+
+/* The tile is a native button: it needs the font, the box and the cursor of one. */
+.tm-ai-fan-out__tile {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: start;
+    gap: var(--tm-space-2);
+    inline-size: 100%;
+    block-size: 100%;
+    min-block-size: var(--tm-space-12);
+    padding: var(--tm-space-2);
+    border: var(--tm-border-width) solid var(--tm-fan-out-tile-border);
+    border-inline-start: 3px solid var(--tm-fan-out-tile-tone);
+    border-radius: var(--tm-radius-control);
+    background-color: var(--tm-fan-out-tile-fill);
+    color: var(--tm-text-primary);
+    font-family: var(--tm-font-sans);
+    font-size: var(--tm-font-size-xs);
+    text-align: start;
+    box-sizing: border-box;
+    cursor: pointer;
+}
+
+.tm-ai-fan-out__tile:hover {
+    background-color: var(--tm-color-surface-hover);
+}
+
+.tm-ai-fan-out__tile:focus-visible {
+    outline: 2px solid var(--tm-border-color-focus);
+    outline-offset: 2px;
+}
+
+/* One tone knob per state; the base rule above READS it, so source order can never decide a colour. */
+.tm-ai-fan-out__tile--idle {
+    --tm-fan-out-tile-tone: var(--tm-border-color-strong);
+}
+
+.tm-ai-fan-out__tile--queued {
+    --tm-fan-out-tile-tone: var(--tm-color-info);
+}
+
+.tm-ai-fan-out__tile--running {
+    --tm-fan-out-tile-tone: var(--tm-color-primary);
+}
+
+.tm-ai-fan-out__tile--approval {
+    --tm-fan-out-tile-tone: var(--tm-color-warning);
+}
+
+.tm-ai-fan-out__tile--succeeded {
+    --tm-fan-out-tile-tone: var(--tm-color-success);
+}
+
+.tm-ai-fan-out__tile--failed {
+    --tm-fan-out-tile-tone: var(--tm-color-danger);
+}
+
+.tm-ai-fan-out__tile--cancelled {
+    --tm-fan-out-tile-tone: var(--tm-border-color-strong);
+    background-color: var(--tm-bg-surface-secondary);
+}
+
+.tm-ai-fan-out__tile-avatar {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    inline-size: var(--tm-space-5);
+    block-size: var(--tm-space-5);
+    border-radius: var(--tm-radius-full);
+    background-color: var(--tm-fan-out-tile-avatar);
+    color: var(--tm-fan-out-tile-avatar-ink);
+    font-size: var(--tm-font-size-xs);
+    font-weight: var(--tm-font-weight-semibold);
+}
+
+/* The avatar colour is written INLINE by the component from the worker's own palette token
+   (var(--tm-agent-color-{0..7})), so the eight slots cannot drift from the one palette definition and a
+   tile without an AgentRef keeps the neutral avatar the root declares. */
+
+.tm-ai-fan-out__tile-initials {
+    line-height: 1;
+}
+
+.tm-ai-fan-out__tile-text {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-1);
+    min-inline-size: 0;
+}
+
+.tm-ai-fan-out__tile-label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: var(--tm-font-size-sm);
+    font-weight: var(--tm-font-weight-medium);
+}
+
+.tm-ai-fan-out__tile-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--tm-space-1) var(--tm-space-2);
+    color: var(--tm-text-secondary);
+}
+
+.tm-ai-fan-out__tile-state {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--tm-space-1);
+}
+
+.tm-ai-fan-out__tile-state-icon {
+    display: inline-flex;
+}
+
+.tm-ai-fan-out__tile-state-text {
+    white-space: nowrap;
+}
+
+.tm-ai-fan-out__tile-eta,
+.tm-ai-fan-out__tile-worker {
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+/* The retry badge is a word ("Attempt 2/3"), so a reader who cannot see the tile's tone still knows the
+   work is on its third try. */
+.tm-ai-fan-out__badge {
+    padding: 0 var(--tm-space-1);
+    border: var(--tm-border-width) solid var(--tm-border-color);
+    border-radius: var(--tm-radius-pill);
+    background-color: var(--tm-bg-surface-secondary);
+    color: var(--tm-text-secondary);
+    font-size: calc(var(--tm-font-size-xs) * 0.92);
+    white-space: nowrap;
+}
+
+.tm-ai-fan-out--compact .tm-ai-fan-out__tile {
+    min-block-size: var(--tm-space-8);
+    padding: var(--tm-space-1) var(--tm-space-2);
+}
+
+/* ── The detail ─────────────────────────────────────────────────────────────────────────────── */
+
+.tm-ai-fan-out__detail {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-2);
+    padding: var(--tm-space-3);
+    border: var(--tm-border-width) solid var(--tm-border-color);
+    border-radius: var(--tm-radius-control);
+    background-color: var(--tm-bg-surface-secondary);
+}
+
+.tm-ai-fan-out__detail-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--tm-space-2);
+}
+
+.tm-ai-fan-out__detail-title {
+    margin: 0;
+    font-size: var(--tm-font-size-sm);
+    font-weight: var(--tm-font-weight-semibold);
+}
+
+.tm-ai-fan-out__detail-state {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--tm-space-1);
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-xs);
+}
+
+.tm-ai-fan-out__detail-state-icon {
+    display: inline-flex;
+}
+
+.tm-ai-fan-out__detail-state-text {
+    white-space: nowrap;
+}
+
+.tm-ai-fan-out__detail-facts {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: var(--tm-space-1) var(--tm-space-3);
+    margin: 0;
+    font-size: var(--tm-font-size-xs);
+}
+
+.tm-ai-fan-out__detail-facts dt {
+    color: var(--tm-text-secondary);
+}
+
+.tm-ai-fan-out__detail-facts dd {
+    margin: 0;
+    color: var(--tm-text-primary);
+    overflow-wrap: anywhere;
+}
+
+.tm-ai-fan-out__detail-error {
+    color: var(--tm-color-danger-text);
+}
+
+.tm-ai-fan-out__detail-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--tm-space-2);
+}
+
+.tm-ai-fan-out__action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-block-size: var(--tm-space-8);
+    padding: var(--tm-space-1) var(--tm-space-3);
+    border: var(--tm-border-width) solid var(--tm-border-color);
+    border-radius: var(--tm-radius-control);
+    background-color: var(--tm-bg-surface);
+    color: var(--tm-text-primary);
+    font: inherit;
+    font-size: var(--tm-font-size-sm);
+    cursor: pointer;
+}
+
+.tm-ai-fan-out__action:hover {
+    background-color: var(--tm-color-surface-hover);
+}
+
+.tm-ai-fan-out__action--danger {
+    border-color: var(--tm-color-danger);
+    color: var(--tm-color-danger-text);
+}
+
+.tm-ai-fan-out__action--danger:hover {
+    background-color: var(--tm-color-danger-soft);
+}
+
+.tm-ai-fan-out__action:focus-visible {
+    outline: 2px solid var(--tm-border-color-focus);
+    outline-offset: 2px;
+}
+
+/* ── Empty state ────────────────────────────────────────────────────────────────────────────── */
+
+.tm-ai-fan-out__empty {
+    margin: 0;
+    padding: var(--tm-space-4);
+    border: var(--tm-border-width) dashed var(--tm-border-color);
+    border-radius: var(--tm-radius-control);
+    color: var(--tm-text-secondary);
+    text-align: center;
+}
+
+/* ── A coarse pointer grows every target to the touch target ─────────────────────────────────── */
+
+@media (pointer: coarse) {
+    .tm-ai-fan-out__filter,
+    .tm-ai-fan-out__action {
+        min-block-size: var(--tm-touch-target);
+    }
+
+    .tm-ai-fan-out__tile {
+        min-block-size: var(--tm-touch-target);
+    }
+}
+
+/* ── Forced colors: the system palette owns the surface ─────────────────────────────────────── */
+
+@media (forced-colors: active) {
+    /* The tone rail is a colour-only carrier; high contrast removes colour, so the border stays visible
+       and the STATE IS STILL SPELLED OUT by the tile's state word (and its icon). */
+    .tm-ai-fan-out__tile,
+    .tm-ai-fan-out__filter,
+    .tm-ai-fan-out__action {
+        border-color: CanvasText;
+    }
+
+    .tm-ai-fan-out__filter--active {
+        border-color: Highlight;
+        color: Highlight;
+    }
+
+    .tm-ai-fan-out__tile:focus-visible,
+    .tm-ai-fan-out__filter:focus-visible,
+    .tm-ai-fan-out__action:focus-visible {
+        outline: 3px solid Highlight;
+        outline-offset: 2px;
+    }
+
+    .tm-ai-fan-out__tile--failed .tm-ai-fan-out__tile-state-icon,
+    .tm-ai-fan-out__detail-error {
+        color: CanvasText;
+    }
+}

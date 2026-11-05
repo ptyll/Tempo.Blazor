@@ -267,9 +267,27 @@ canvas is an SVG `role="group"` whose nodes are native buttons (one roving tab s
 connections), and the View switcher carries every connection and every node as plain tables. Its full contract —
 models, layout rules, pulses, accessibility, CSS and the package's JS module — is [agent-graph.md](agent-graph.md).
 
+## The split of the work: `TmFanOutGrid` and `TmParallelAttempts`
+
+`TmFanOutGrid` is the OTHER direction of the same orchestration: one job split across N workers, drawn as a summary
+line plus a grid of tiles — a worker per tile, its state as an icon, a word and a tone, the attempt count, a live
+countdown to the estimate and a detail card carrying Retry and Cancel. It is a `role="grid"` with ONE roving tab stop
+(arrows walk the tiles, Home/End stay in the row, Ctrl+Home/End cross the grid, PageUp/PageDown jump ten rows), it
+mounts a bounded window of rows for a few hundred tasks while still declaring the full `aria-rowcount`, and it has no
+live data of its own: the host owns the list and the transport, the component owns the view and the clock. Its contract
+is [fan-out-grid.md](fan-out-grid.md).
+
+`TmParallelAttempts` compares several attempts at the SAME task: a column per attempt with its state, its score, its own
+body and the votes it collected, the best one marked (the host's `BestAttemptId` first, the highest score otherwise) and
+a winner the reader picks with the native radios and CONFIRMS — the two-step choice is what keeps a stray arrow key from
+replacing a recorded result, and the confirmation hands the focus back to the radio. Its contract is
+[parallel-attempts.md](parallel-attempts.md).
+
 ## Related pages
 
 - [TmAgentGraph](agent-graph.md) — the same run as a network of agents, tools and resources.
+- [TmFanOutGrid](fan-out-grid.md) — the work split across N workers, with attempts, countdowns and a summary.
+- [TmParallelAttempts](parallel-attempts.md) — several attempts at one task, with scores, votes and a confirmed winner.
 - [TmAgentLanes](agent-lanes.md), [TmAgentPlan](agent-plan.md), [TmAgentRunTree](agent-run-tree.md), [TmAgentMonitor](agent-monitor.md),
   [TmPermissionRequest](permission-request.md) — the run-side surfaces that these visualizations compose with.
 - [TmTraceWaterfall](trace-waterfall.md) — the span view of one agent's work.

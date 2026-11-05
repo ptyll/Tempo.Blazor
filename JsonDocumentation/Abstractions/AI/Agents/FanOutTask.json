@@ -1,0 +1,121 @@
+{
+  "itemName": "FanOutTask",
+  "kind": "Record",
+  "category": "AI",
+  "namespace": "Tempo.Blazor.AI.Models",
+  "description": "One unit of work an orchestrator split across N workers, as a fan-out surface draws it: the worker it is assigned to, how far it got, how many attempts it took, when it should end, what it cost and — when it failed — why. The record is a VALUE: a host recomposes it with task with { … } when the work moves on, and no component mutates it. EstimatedEndAt is an ESTIMATE, never a fact: a surface turns it into a live countdown against its own clock, and a finished task keeps its recorded times untouched. Nothing here carries colour or words: the state is the shared AgentActivityStatus (one icon, one tone and one localized word for every agent surface) and the identity is the shared AgentRef, so a worker paints the same palette slot here as it does in the lanes and in the graph.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/AI/Agents/FanOutTask.cs",
+  "documentationStatus": "documented",
+  "usageExample": "var task = new FanOutTask(\"region-7\", \"Region 7\")\n{\n    Status = AgentActivityStatus.Running,\n    Attempt = 2,\n    MaxAttempts = 3,\n    EstimatedEndAt = now.AddSeconds(42),\n    CostMicroUnits = 120_000,\n};",
+  "members": [
+    {
+      "name": "IsOverdueAt",
+      "description": "Whether the estimate has already passed on the caller's clock — the state a surface paints as \"overdue\" instead of a countdown that would sit at zero forever."
+    },
+    {
+      "name": "RemainingAt",
+      "description": "The time left until EstimatedEndAt, measured on the caller's clock — or null when the host gave no estimate or the task no longer counts as active. An estimate in the past reads as zero (the task is overdue), never as a negative duration."
+    },
+    {
+      "name": "Attempt",
+      "description": "Which attempt is running (or failed), 1-based. Default 1. A value below 1 is READ as 1 by every derived member and by the surface, because \"attempt 0 of 3\" is not a state a run can be in."
+    },
+    {
+      "name": "CanCancel",
+      "description": "Whether a cancel is offered: the task is queued, running or waiting for a decision. A finished task has nothing left to stop."
+    },
+    {
+      "name": "CanRetry",
+      "description": "Whether a retry is offered: the task FAILED and its retries are not used up. A running task cannot be retried (it can be cancelled instead) and a succeeded one has nothing to retry."
+    },
+    {
+      "name": "ColorToken",
+      "description": "The agent palette token the avatar paints with, or an empty string when no Worker is set. Always a declared --tm-agent-color-{0..7} token when it is not empty."
+    },
+    {
+      "name": "CostMicroUnits",
+      "description": "What the task has cost so far, in MICRO-UNITS (1,000,000 is 1.00 of the currency) — the unit AiCostFormatter and the agent-run surfaces already use, so one run never mixes two money shapes. null means \"the host does not price this task\"; it is not zero."
+    },
+    {
+      "name": "EffectiveAttempt",
+      "description": "The attempt as a surface reads it: never below 1."
+    },
+    {
+      "name": "Error",
+      "description": "Why the task failed, in the host's own words (a message, a rejection reason). Empty renders no error; the surface prints it verbatim and never parses it."
+    },
+    {
+      "name": "EstimatedEndAt",
+      "description": "The host's estimate of when the task will finish, or null when it has none. A surface turns it into a live countdown against its own clock and NEVER treats it as a recorded end; a task in a finished state ignores it entirely."
+    },
+    {
+      "name": "HasAttemptLimit",
+      "description": "Whether the host declared an attempt limit at all (a non-positive limit counts as none)."
+    },
+    {
+      "name": "HasCost",
+      "description": "Whether the host priced the task at all (false is \"no price\", not \"free\")."
+    },
+    {
+      "name": "HasError",
+      "description": "Whether the task carries an error message worth printing."
+    },
+    {
+      "name": "HasLabel",
+      "description": "Whether the host supplied a label. A surface paints its own localized fallback when it is false."
+    },
+    {
+      "name": "HasWorker",
+      "description": "Whether the host named the worker in any way."
+    },
+    {
+      "name": "Id",
+      "description": "Stable identity of the task. Never empty: a missing id is generated at construction."
+    },
+    {
+      "name": "Initials",
+      "description": "The initials the tile's avatar paints: the worker's own initials when Worker is set, the initials of Label otherwise, and \"?\" when there is no name at all."
+    },
+    {
+      "name": "IsActive",
+      "description": "Whether the task still holds a worker (queued, running or waiting for a decision)."
+    },
+    {
+      "name": "IsFinished",
+      "description": "Whether the task reached a terminal state (succeeded, failed or cancelled)."
+    },
+    {
+      "name": "Label",
+      "description": "The unit of work, as the host wants it read. Empty renders the surface's own fallback."
+    },
+    {
+      "name": "MaxAttempts",
+      "description": "How many attempts the host allows, or null when it has no limit. A limit of zero or less is read as \"no limit\", so a host that forgets to set it never blocks a retry."
+    },
+    {
+      "name": "RetryExhausted",
+      "description": "Whether the retries are used up: an attempt limit exists and the task already reached it. A task without a limit is never exhausted."
+    },
+    {
+      "name": "StartedAt",
+      "description": "When the task started, or null while it is still waiting for a worker."
+    },
+    {
+      "name": "Status",
+      "description": "What the task is doing right now. Default Idle; painted as an icon, a localized word AND a tone, never as a colour alone."
+    },
+    {
+      "name": "Worker",
+      "description": "The identity of the worker running the task, or null when the host tracks workers by id only. Setting it makes the surface paint the worker's palette slot, initials and name."
+    },
+    {
+      "name": "WorkerId",
+      "description": "The worker's id as a plain string, for a host whose workers are not AgentRefs. The surface paints it as text; Worker wins when both are set, because it carries the whole identity."
+    },
+    {
+      "name": "WorkerName",
+      "description": "The worker's name for a surface to print: the agent's name, else WorkerId."
+    }
+  ]
+}

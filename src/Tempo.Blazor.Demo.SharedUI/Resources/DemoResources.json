@@ -1157,5 +1157,12 @@
   "TmAiAgentsDemo_GraphLedger": "Ledger",
   "TmAiAgentsDemo_GraphSearch": "Web search",
   "TmAiAgentsDemo_GraphCode": "Code interpreter",
-  "TmAiAgentsDemo_GraphGroupCore": "Core agents"
+  "TmAiAgentsDemo_GraphGroupCore": "Core agents",
+  "TmAiAgentsDemo_FanOutTitle": "Fan-out",
+  "TmAiAgentsDemo_FanOutHint": "Eighteen units of work across four workers: one has failed and can be retried, two are still waiting for a worker and the rest are done or running. The countdowns are live and the retry is the page's own handler.",
+  "TmAiAgentsDemo_FanOutRetried": "The page re-queued {0}.",
+  "TmAiAgentsDemo_ParallelTitle": "Parallel attempts",
+  "TmAiAgentsDemo_ParallelHint": "Three attempts at the same task with the votes each one collected. Choose a winner, confirm it and the page records the result.",
+  "TmAiAgentsDemo_ParallelChosen": "The page accepted {0} as the result.",
+  "TmAiAgentsDemo_ParallelNothingChosen": "No winner chosen yet."
 }

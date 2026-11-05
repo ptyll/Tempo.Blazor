@@ -1,0 +1,89 @@
+{
+  "itemName": "FanOutSummary",
+  "kind": "Record",
+  "category": "AI",
+  "namespace": "Tempo.Blazor.AI.Models",
+  "description": "The roll-up a fan-out surface prints above its tiles: how many units of work finished, are still running or failed, what the whole fan-out has cost so far and when it is expected to be over. A pure VALUE computed from a task list (Create), so the header, the detail surface and a test read the same numbers — a component never recomputes a summary inline. It is a snapshot: it carries no clock, and the live countdown is RemainingAt measured by the caller. The cost is the SUM of the tasks the host priced; a task without a price contributes nothing and HasCost stays false when NO task carries one, so a surface hides the money line instead of claiming the run was free.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/AI/Agents/FanOutSummary.cs",
+  "documentationStatus": "documented",
+  "usageExample": "var summary = FanOutSummary.Create(tasks);\n\nsummary.Finished;                       // 12\nsummary.RemainingAt(clock.GetUtcNow()); // the live time to the last active estimate\nsummary.TotalCostMicroUnits;            // the sum of the priced tasks, in micro-units",
+  "members": [
+    {
+      "name": "Create",
+      "description": "Rolls a task list up. The order of the list is irrelevant to every number; a null list counts as empty, so a component never has to null-check the host's data."
+    },
+    {
+      "name": "RemainingAt",
+      "description": "The time left until the last active task's estimate, measured on the caller's clock, or null when there is nothing to count (complete, or no estimate). An estimate in the past reads as zero, never as a negative duration."
+    },
+    {
+      "name": "Active",
+      "description": "How many tasks still hold a worker (queued, running or waiting for a decision)."
+    },
+    {
+      "name": "Cancelled",
+      "description": "How many tasks were cancelled."
+    },
+    {
+      "name": "EstimatedEndAt",
+      "description": "The LATEST estimate among the ACTIVE tasks, or null when no active task carries one. A finished task's estimate is ignored: the fan-out cannot end later because of work that is already over."
+    },
+    {
+      "name": "Failed",
+      "description": "How many tasks failed (a failed task may still be retried)."
+    },
+    {
+      "name": "Finished",
+      "description": "How many tasks reached a terminal state (succeeded, failed or cancelled)."
+    },
+    {
+      "name": "HasCost",
+      "description": "Whether at least one task carried a price — false means \"not priced\", not \"free\"."
+    },
+    {
+      "name": "HasEstimate",
+      "description": "Whether the fan-out still has work AND at least one estimate to count down."
+    },
+    {
+      "name": "HasFailures",
+      "description": "Whether the fan-out ended with at least one failed task that was never recovered."
+    },
+    {
+      "name": "Idle",
+      "description": "How many tasks are neither running nor finished (an unknown state counts as waiting)."
+    },
+    {
+      "name": "IsComplete",
+      "description": "Whether there is nothing left to wait for: a non-empty fan-out with no active task."
+    },
+    {
+      "name": "Progress",
+      "description": "The share of tasks that reached a terminal state, from 0 to 1; an empty fan-out reports 0 instead of a division by zero."
+    },
+    {
+      "name": "Queued",
+      "description": "How many tasks are queued and not yet picked up by a worker."
+    },
+    {
+      "name": "Running",
+      "description": "How many tasks are running right now."
+    },
+    {
+      "name": "Succeeded",
+      "description": "How many tasks succeeded."
+    },
+    {
+      "name": "Total",
+      "description": "How many tasks the summary counted. Zero is a legal, empty fan-out."
+    },
+    {
+      "name": "TotalCostMicroUnits",
+      "description": "The sum of the priced tasks, in MICRO-UNITS (1,000,000 is 1.00 of the currency)."
+    },
+    {
+      "name": "WaitingForApproval",
+      "description": "How many tasks are waiting for a human decision."
+    }
+  ]
+}

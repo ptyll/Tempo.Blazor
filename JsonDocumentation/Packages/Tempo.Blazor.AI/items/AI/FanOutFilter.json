@@ -1,0 +1,12 @@
+{
+  "itemName": "FanOutFilter",
+  "kind": "Enum",
+  "category": "Components",
+  "namespace": "Tempo.Blazor.Components.AI",
+  "description": "Which slice of a fan-out a TmFanOutGrid shows: everything, or only the tasks in one state. The filter is a single choice and its members mirror AgentActivityStatus, so a host never maps between two vocabularies.",
+  "packageId": "Tempo.Blazor.AI",
+  "sourcePath": "src/Tempo.Blazor.AI/Components/AI/FanOutFilter.cs",
+  "documentationStatus": "documented",
+  "members": [],
+  "usageExample": "<TmFanOutGrid Tasks=\"_tasks\" @bind-Filter=\"_filter\" />\n\n@code {\n    private FanOutFilter _filter = FanOutFilter.Failed;\n}"
+}

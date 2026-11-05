@@ -1,0 +1,17 @@
+{
+  "itemName": "ParallelAttemptRanking",
+  "kind": "Class",
+  "category": "AI",
+  "namespace": "Tempo.Blazor.AI.Models",
+  "description": "Which of several parallel attempts is the best one: the host's explicit pick when it names one, otherwise the highest score that is actually a score. The rule is one pure function so the column surface, its comparison table and a test can never disagree about who won. It is deliberately conservative: an unscored attempt never wins on a comparison scale nobody set (its null is \"not scored\", not \"zero\"), an attempt still running never wins over a finished one with the same score, and a named attempt wins even when it has no score — the host may know something the numbers do not.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/AI/Agents/ParallelAttemptRanking.cs",
+  "documentationStatus": "documented",
+  "usageExample": "var best = ParallelAttemptRanking.Best(attempts);          // highest score\nvar picked = ParallelAttemptRanking.Best(attempts, \"c\");     // the host's pick wins\nvar ordered = ParallelAttemptRanking.Order(attempts);        // best first, the rest stable",
+  "members": [
+    {
+      "name": "Best",
+      "description": "Resolves the best attempt out of attempts."
+    }
+  ]
+}

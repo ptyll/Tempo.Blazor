@@ -1,0 +1,184 @@
+{
+  "itemName": "TmFanOutGrid",
+  "kind": "Component",
+  "category": "AI",
+  "namespace": "Tempo.Blazor.Components.AI",
+  "description": "An orchestrator's fan-out as ONE card: a summary line (how much finished, what it cost, when it should be over) and a grid of tiles — one tile per unit of work, with its worker, its state, its attempt count and a live countdown to its estimate. The surface renders the task list it is given and never polls or mutates anything: the host owns the data and the transport, the component owns its view. The injected TimeProvider drives the countdown AND the ticker that repaints it, so a test with a fake clock closes a second without sleeping and a finished fan-out arms no timer at all. The grid is an APG grid: ONE tab stop (a roving tabindex), the arrow keys walk the tiles in reading order, Home/End stay inside the current row and Ctrl+Home/Ctrl+End jump across the whole grid, PageUp/PageDown jump a page of rows. A tile is a native <button>, so Enter and Space activate it exactly once with no emulation (docs/keyboard-activation-convention.md). A state is never carried by colour alone: the tile paints an icon, a localized WORD and a tone. The detail follows the tile the reader focused (or pointed at) and carries the Retry and Cancel actions — the same actions a host would put on a row menu, reachable without a pointer. Hundreds of tasks mount a bounded window of tiles while the grid still declares its full aria-rowcount and every mounted row keeps its real aria-rowindex, so what a screen reader counts is the grid, not the window.",
+  "packageId": "Tempo.Blazor.AI",
+  "sourcePath": "src/Tempo.Blazor.AI/Components/AI/TmFanOutGrid.razor",
+  "documentationStatus": "documented",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.AI",
+    "@using Tempo.Blazor.AI.Models"
+  ],
+  "parameters": [
+    {
+      "name": "Class",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Additional CSS class(es) for the root element."
+    },
+    {
+      "name": "Columns",
+      "type": "int",
+      "isRequired": false,
+      "description": "How many tiles sit on one grid row, clamped to 1–8. Default 4. The value is also written onto the root as --tm-fan-out-columns, so the stylesheet lays the rows out with the same number the C# window uses."
+    },
+    {
+      "name": "Compact",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Whether the compact presentation is used: a tile keeps its label, its state word and its attempt badge and drops the countdown and the worker line. Default false. The grid keys, the detail and the actions are unchanged — compact hides information, never a way to act."
+    },
+    {
+      "name": "CostFormatter",
+      "type": "Func<long, string>?",
+      "isRequired": false,
+      "description": "Formats a cost given in MICRO-UNITS (1,000,000 is 1.00 of the currency). Null uses AiCostFormatter with Culture — the culture's own currency, with micro-unit precision below one hundredth of a unit. A host with a credit price model overrides it."
+    },
+    {
+      "name": "Culture",
+      "type": "CultureInfo?",
+      "isRequired": false,
+      "description": "The culture that formats the costs and the clock times. Null (the default) means the current culture at render time. The countdowns are clock-style (m:ss) on purpose and are not localized."
+    },
+    {
+      "name": "Filter",
+      "type": "FanOutFilter",
+      "isRequired": false,
+      "description": "The state filter, two-way bound with FilterChanged (@bind-Filter). Default All. A host that pins it keeps control: the reader's pick reports the change and the next render from the host decides."
+    },
+    {
+      "name": "FilterChanged",
+      "type": "EventCallback<FanOutFilter>",
+      "isRequired": false,
+      "description": "Fires with the new filter when the reader picks one in the filter bar."
+    },
+    {
+      "name": "HeadingLevel",
+      "type": "int",
+      "isRequired": false,
+      "description": "The heading level of the rendered title, clamped to 2–6. Default 3."
+    },
+    {
+      "name": "OnCancel",
+      "type": "EventCallback<FanOutTask>",
+      "isRequired": false,
+      "description": "Raised when the reader asks to cancel a task — the action lives in the tile's detail and is offered only while CanCancel holds. The component does not change the task."
+    },
+    {
+      "name": "OnRetry",
+      "type": "EventCallback<FanOutTask>",
+      "isRequired": false,
+      "description": "Raised when the reader asks for a retry of a failed task — the action lives in the tile's detail and is offered only while CanRetry holds. The component does not change the task: the host owns the data and re-renders with the retried value."
+    },
+    {
+      "name": "ShowFilter",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Whether the state filter bar is rendered. Default true."
+    },
+    {
+      "name": "ShowSummary",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Whether the summary line is rendered. Default true. It carries the finished / running / failed counts, the total of the priced tasks and the estimate of the last active one."
+    },
+    {
+      "name": "ShowTitle",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Whether the heading is rendered. Default true."
+    },
+    {
+      "name": "Tasks",
+      "type": "IReadOnlyList<FanOutTask>?",
+      "isRequired": false,
+      "description": "The units of work the orchestrator split the job into. Each tile is one entry; the summary counts the same list. Null or empty renders the localized empty state. The component never mutates the list and never reorders it — the grid paints the host's order, because that order is the host's own progress."
+    },
+    {
+      "name": "TimeProvider",
+      "type": "TimeProvider?",
+      "isRequired": false,
+      "description": "The clock the countdowns and the repaint ticker read. Null uses the container's TimeProvider and falls back to System — the host's clock always wins over the machine's."
+    },
+    {
+      "name": "Title",
+      "type": "string?",
+      "isRequired": false,
+      "description": "The heading above the surface. Null renders the localized default (\"Fan-out\"); the heading also names the card, so the name a reader hears is the one they see."
+    },
+    {
+      "name": "VisibleTaskLimit",
+      "type": "int",
+      "isRequired": false,
+      "description": "How many tiles may be mounted at once. Default 60; 0 (or a negative value) mounts the whole filtered list. Above the limit the grid mounts a window of whole rows that follows the focused tile, while aria-rowcount keeps declaring the filtered total — hundreds of tasks stay scrollable and cheap."
+    }
+  ],
+  "cssClasses": [
+    "tm-ai-fan-out",
+    "tm-ai-fan-out--compact",
+    "tm-ai-fan-out__header",
+    "tm-ai-fan-out__title",
+    "tm-ai-fan-out__summary",
+    "tm-ai-fan-out__stats",
+    "tm-ai-fan-out__stat",
+    "tm-ai-fan-out__stat-label",
+    "tm-ai-fan-out__stat-value",
+    "tm-ai-fan-out__filters",
+    "tm-ai-fan-out__filter",
+    "tm-ai-fan-out__filter--active",
+    "tm-ai-fan-out__filter-label",
+    "tm-ai-fan-out__filter-count",
+    "tm-ai-fan-out__empty",
+    "tm-ai-fan-out__grid",
+    "tm-ai-fan-out__row",
+    "tm-ai-fan-out__cell",
+    "tm-ai-fan-out__tile",
+    "tm-ai-fan-out__tile--idle",
+    "tm-ai-fan-out__tile--queued",
+    "tm-ai-fan-out__tile--running",
+    "tm-ai-fan-out__tile--approval",
+    "tm-ai-fan-out__tile--succeeded",
+    "tm-ai-fan-out__tile--failed",
+    "tm-ai-fan-out__tile--cancelled",
+    "tm-ai-fan-out__tile-avatar",
+    "tm-ai-fan-out__tile-initials",
+    "tm-ai-fan-out__tile-text",
+    "tm-ai-fan-out__tile-label",
+    "tm-ai-fan-out__tile-meta",
+    "tm-ai-fan-out__tile-state",
+    "tm-ai-fan-out__tile-state-icon",
+    "tm-ai-fan-out__tile-state-text",
+    "tm-ai-fan-out__tile-eta",
+    "tm-ai-fan-out__tile-worker",
+    "tm-ai-fan-out__badge",
+    "tm-ai-fan-out__detail",
+    "tm-ai-fan-out__detail-head",
+    "tm-ai-fan-out__detail-title",
+    "tm-ai-fan-out__detail-state",
+    "tm-ai-fan-out__detail-state-icon",
+    "tm-ai-fan-out__detail-state-text",
+    "tm-ai-fan-out__detail-facts",
+    "tm-ai-fan-out__detail-error",
+    "tm-ai-fan-out__detail-actions",
+    "tm-ai-fan-out__action",
+    "tm-ai-fan-out__action--danger"
+  ],
+  "examples": [
+    {
+      "title": "A fan-out a host feeds from its queue",
+      "code": "@* The page owns the tasks and the transport; the surface paints them and reports intent. *@\n<TmFanOutGrid Tasks=\"_tasks\"\n              Title=\"Reconcile 40 invoices\"\n              Columns=\"4\"\n              @bind-Filter=\"_filter\"\n              OnRetry=\"RetryAsync\"\n              OnCancel=\"CancelAsync\" />\n\n@code {\n    private IReadOnlyList<FanOutTask> _tasks = [];\n    private FanOutFilter _filter = FanOutFilter.All;\n\n    private Task RetryAsync(FanOutTask task)\n    {\n        _tasks = [.. _tasks.Select(t => t.Id == task.Id\n            ? t with { Status = AgentActivityStatus.Queued, Attempt = t.Attempt + 1, Error = null }\n            : t)];\n        return Task.CompletedTask;\n    }\n\n    private Task CancelAsync(FanOutTask task)\n    {\n        _tasks = [.. _tasks.Select(t => t.Id == task.Id\n            ? t with { Status = AgentActivityStatus.Cancelled }\n            : t)];\n        return Task.CompletedTask;\n    }\n}"
+    },
+    {
+      "title": "The tasks a host builds",
+      "code": "var task = new FanOutTask(\"region-7\", \"Region 7\")\n{\n    Status = AgentActivityStatus.Running,\n    Worker = new AgentRef(\"Fetcher\", \"w-1\") { ColorIndex = 1 },\n    Attempt = 2,\n    MaxAttempts = 3,\n    StartedAt = now.AddMinutes(-2),\n    EstimatedEndAt = now.AddSeconds(42),\n    CostMicroUnits = 120_000,\n};\n\n// \"Attempt 2/3\", a live 0:42 countdown, and a Retry once it fails."
+    }
+  ],
+  "notes": [
+    "The surface renders the snapshot it is given; it never polls, fetches or mutates a task.",
+    "The injected TimeProvider drives the countdown and the repaint ticker: a test with a fake clock closes a second without sleeping, and a finished fan-out arms no timer.",
+    "Columns is the layout authority: the C# window and the stylesheet read the same number, so a host that needs fewer tiles on a phone binds Columns rather than relying on a container query.",
+    "One polite live region announces a filter change, a moved focus and a retry or cancel request; the tiles themselves are native buttons with one roving tab stop."
+  ]
+}

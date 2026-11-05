@@ -190,6 +190,51 @@
 </section>
 
 @* ---------------------------------------------------------------------------------------------------------
+   The same run SPLIT: eighteen units of work across four workers. The page owns the task list, so the Retry a
+   reader asks for in a tile's detail is the page's own handler re-queuing the unit — not a decoration. *@
+<section class="demo-section mb-8" data-testid="ai-agents-fan-out-section">
+    <h2 class="text-lg font-semibold text-slate-900 dark:text-white mb-2">@Loc["TmAiAgentsDemo_FanOutTitle"]</h2>
+    <p class="text-sm text-slate-600 dark:text-slate-400 mb-2">@Loc["TmAiAgentsDemo_FanOutHint"]</p>
+    <p class="text-sm text-slate-700 dark:text-slate-300 mb-3"
+       data-testid="ai-agents-fan-out-log">@FanOutLogText</p>
+
+    <TmFanOutGrid Tasks="_fanOutTasks"
+                  @bind-Filter="_fanOutFilter"
+                  Title="@Loc["TmAiAgentsDemo_FanOutTitle"]"
+                  TimeProvider="_clock"
+                  Culture="@CultureInfo.CurrentCulture"
+                  CostFormatter="FormatCost"
+                  OnRetry="RetryFanOutTask"
+                  DataTestId="ai-agents-fan-out" />
+</section>
+
+@* ---------------------------------------------------------------------------------------------------------
+   The same task attempted three ways. The page owns the attempts and only RECORDS the winner the component
+   reports after the reader confirmed it. *@
+<section class="demo-section mb-8" data-testid="ai-agents-attempts-section">
+    <h2 class="text-lg font-semibold text-slate-900 dark:text-white mb-2">@Loc["TmAiAgentsDemo_ParallelTitle"]</h2>
+    <p class="text-sm text-slate-600 dark:text-slate-400 mb-2">@Loc["TmAiAgentsDemo_ParallelHint"]</p>
+    <p class="text-sm text-slate-700 dark:text-slate-300 mb-3"
+       data-testid="ai-agents-attempts-log">@AttemptLogText</p>
+
+    <TmParallelAttempts Attempts="_attempts"
+                        BestAttemptId="_bestAttemptId"
+                        @bind-SelectedAttemptId="_attemptWinnerId"
+                        OnSelect="AcceptAttempt"
+                        Title="@Loc["TmAiAgentsDemo_ParallelTitle"]"
+                        Culture="@CultureInfo.CurrentCulture"
+                        DataTestId="ai-agents-attempts">
+        <ContentTemplate Context="attempt">
+            @* The attempt's SUBMITTED body is host data, exactly like the votes' rationales: the component never
+               localizes it and only places it inside the attempt's own column. *@
+            <pre class="text-xs text-slate-700 dark:text-slate-300 whitespace-pre-wrap mb-0"
+                 data-testid="ai-agents-attempt-body"
+                 data-attempt-id="@attempt.Id">@AiAgentsPageSamples.AttemptBody(attempt.Id)</pre>
+        </ContentTemplate>
+    </TmParallelAttempts>
+</section>
+
+@* ---------------------------------------------------------------------------------------------------------
    The same run in the live monitor. When the run reaches its last step it PAUSES and asks for a decision: the
    host's own TmApprovalCard sits in the monitor's PendingApproval slot. Approving resumes the run; rejecting
    skips the step and finishes the run. *@
@@ -343,6 +388,13 @@
     private IReadOnlyList<AgentGraphCall> _graphCalls = [];
     private long _graphSequence;
     private string? _graphNodeId;
+    private IReadOnlyList<FanOutTask> _fanOutTasks = [];
+    private FanOutFilter _fanOutFilter = FanOutFilter.All;
+    private string? _fanOutRetriedId;
+    private IReadOnlyList<ParallelAttempt> _attempts = [];
+    private string? _bestAttemptId;
+    private string? _attemptWinnerId;
+    private string? _attemptChosenId;
     private IReadOnlyList<AgentPlanStep> _reviewSteps = [];
     private IReadOnlyList<AgentPlanStep> _runSteps = [];
     private ContextUsageSnapshot _context = new();
@@ -385,6 +437,9 @@
         _lanes = AiAgentsPageSamples.LanesSnapshot(Key, _clock.GetUtcNow());
         _graph = AiAgentsPageSamples.GraphSnapshot(Key, _clock.GetUtcNow());
         _graphSequence = _graph.Sequence;
+        _fanOutTasks = AiAgentsPageSamples.FanOutTasks(_clock.GetUtcNow());
+        _attempts = AiAgentsPageSamples.Attempts();
+        _bestAttemptId = "draft-b";
         _selection = new AiModelSelection("aurora-pro");
         _templates = AiAgentsPageSamples.Templates(Key);
         _templateId = "release-notes";
@@ -486,6 +541,68 @@
         : Loc["TmAiAgentsDemo_LanesNoSelection"];
 
     /// <summary>The selection read-out of the graph: the node's name, or the localized "nothing selected" sentence.</summary>
+    /// <summary>
+    /// The fan-out's log line: the page's reaction to the retry the reader asked for, or an empty line before one.
+    /// It is derived from the task list rather than stored as text, so switching language re-localizes it.
+    /// </summary>
+    private string FanOutLogText => _fanOutRetriedId is { } id && FindFanOutTask(id) is { } task
+        ? Loc["TmAiAgentsDemo_FanOutRetried", FanOutLabel(task)]
+        : string.Empty;
+
+    /// <summary>The attempts' log line: which draft the page recorded as the result.</summary>
+    private string AttemptLogText => _attemptChosenId is { } id
+        ? Loc["TmAiAgentsDemo_ParallelChosen", AttemptLabel(id)]
+        : Loc["TmAiAgentsDemo_ParallelNothingChosen"];
+
+    /// <summary>A unit of work's label, or the localized fallback when the host left it empty.</summary>
+    private string FanOutLabel(FanOutTask task)
+        => task.HasLabel ? task.Label : Loc["TmFanOutGrid_TileFallback"];
+
+    private FanOutTask? FindFanOutTask(string id)
+        => _fanOutTasks.FirstOrDefault(task => string.Equals(task.Id, id, StringComparison.Ordinal));
+
+    /// <summary>An attempt's label, or the localized numbered fallback.</summary>
+    private string AttemptLabel(string id)
+    {
+        var index = _attempts
+            .Select((attempt, position) => (attempt, position))
+            .FirstOrDefault(entry => string.Equals(entry.attempt.Id, id, StringComparison.Ordinal));
+
+        if (index.attempt is null)
+        {
+            return id;
+        }
+
+        return index.attempt.HasLabel
+            ? index.attempt.Label
+            : Loc["TmParallelAttempts_AttemptFallback", (index.position + 1).ToString(CultureInfo.CurrentCulture)];
+    }
+
+    /// <summary>
+    /// The page's retry handler: the unit of work goes back to the queue with one more attempt, so the tile the
+    /// reader acted on really changes state (the component never mutates a task).
+    /// </summary>
+    private void RetryFanOutTask(FanOutTask task)
+    {
+        _fanOutRetriedId = task.Id;
+        _fanOutTasks =
+        [
+            .. _fanOutTasks.Select(current => string.Equals(current.Id, task.Id, StringComparison.Ordinal)
+                ? current with
+                {
+                    Status = AgentActivityStatus.Queued,
+                    Attempt = current.EffectiveAttempt + 1,
+                    Error = null,
+                    StartedAt = null,
+                    EstimatedEndAt = _clock.GetUtcNow().AddMinutes(1),
+                }
+                : current),
+        ];
+    }
+
+    /// <summary>The page's winner handler: it only records what the component reports after the confirmation.</summary>
+    private void AcceptAttempt(string attemptId) => _attemptChosenId = attemptId;
+
     private string GraphSelectedText => _graphNodeId is { } id
         ? GraphNodeName(_graph.Nodes.FirstOrDefault(node => string.Equals(node.Id, id, StringComparison.Ordinal)))
         : Loc["TmAiAgentsDemo_GraphNoSelection"];

@@ -1,0 +1,400 @@
+/* ═══════════════════════════════════════════════════════════════════════════════════════════════
+   TmParallelAttempts — several attempts at the same task, side by side, with a winner to confirm
+   Contract: docs/parallel-attempts.md
+   Every rule reads a --tm-* design token (no colour literal, no raw palette step, no [data-theme]
+   block); the package's shared token gate is AiMarkdownViewCssTests and the component's own gate is
+   TmParallelAttemptsCssTests.
+
+   The columns are a horizontal track that turns into a scroll-snap CAROUSEL under 640 px (TmBreakpoints.Sm) of
+   the component's own container (a container query, never the viewport), so a phone gets one card at a time
+   with no JavaScript. Nothing here animates: there is no transition and no keyframe, so the partial
+   needs no prefers-reduced-motion block and cannot smuggle movement past one.
+   ═══════════════════════════════════════════════════════════════════════════════════════════════ */
+
+.tm-ai-parallel-attempts {
+    /* The carousel breakpoint is measured on THIS component, not on the window: two surfaces in one row
+       (a desktop split view) each decide for themselves. */
+    container-type: inline-size;
+    container-name: tm-ai-parallel-attempts;
+    min-inline-size: 0;
+
+    /* Every knob is DECLARED here (a var() that only ever carries a fallback is an undefined alias). */
+    --tm-parallel-attempts-gap: var(--tm-space-3);
+    --tm-parallel-attempts-column-min-inline-size: 16rem;
+    --tm-parallel-attempts-best-tone: var(--tm-color-success);
+    --tm-parallel-attempts-chosen-border: var(--tm-color-primary);
+
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-3);
+    padding: var(--tm-space-4);
+    border: var(--tm-border-width) solid var(--tm-border-color);
+    border-radius: var(--tm-radius-card);
+    background-color: var(--tm-bg-surface);
+    color: var(--tm-text-primary);
+    box-shadow: var(--tm-shadow-sm);
+    font-size: var(--tm-font-size-sm);
+    line-height: 1.5;
+}
+
+.tm-ai-parallel-attempts__title {
+    margin: 0;
+    font-size: var(--tm-font-size-base);
+    font-weight: var(--tm-font-weight-semibold);
+}
+
+.tm-ai-parallel-attempts__empty {
+    margin: 0;
+    padding: var(--tm-space-4);
+    border: var(--tm-border-width) dashed var(--tm-border-color);
+    border-radius: var(--tm-radius-control);
+    color: var(--tm-text-secondary);
+    text-align: center;
+}
+
+/* ── The columns ────────────────────────────────────────────────────────────────────────────── */
+
+.tm-ai-parallel-attempts__track {
+    display: flex;
+    gap: var(--tm-parallel-attempts-gap);
+    min-inline-size: 0;
+    overflow-x: auto;
+}
+
+.tm-ai-parallel-attempts__attempt {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-2);
+    flex: 1 1 0;
+    min-inline-size: var(--tm-parallel-attempts-column-min-inline-size);
+    padding: var(--tm-space-3);
+    border: var(--tm-border-width) solid var(--tm-border-color);
+    border-radius: var(--tm-radius-control);
+    background-color: var(--tm-bg-surface);
+}
+
+/* The best attempt reads as one: a coloured rail AND a word ("Best"), never the colour alone. */
+.tm-ai-parallel-attempts__attempt--best {
+    border-color: var(--tm-parallel-attempts-best-tone);
+    box-shadow: inset 0 0 0 1px var(--tm-parallel-attempts-best-tone);
+}
+
+.tm-ai-parallel-attempts__attempt--chosen {
+    border-color: var(--tm-parallel-attempts-chosen-border);
+    background-color: var(--tm-color-primary-subtle);
+}
+
+.tm-ai-parallel-attempts__attempt-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--tm-space-2);
+}
+
+.tm-ai-parallel-attempts__attempt-label {
+    font-size: var(--tm-font-size-sm);
+    font-weight: var(--tm-font-weight-semibold);
+    overflow-wrap: anywhere;
+}
+
+.tm-ai-parallel-attempts__best,
+.tm-ai-parallel-attempts__chosen {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--tm-space-1);
+    padding: 0 var(--tm-space-2);
+    border: var(--tm-border-width) solid var(--tm-border-color);
+    border-radius: var(--tm-radius-pill);
+    font-size: var(--tm-font-size-xs);
+    white-space: nowrap;
+}
+
+.tm-ai-parallel-attempts__best {
+    border-color: var(--tm-parallel-attempts-best-tone);
+    color: var(--tm-color-success-text);
+}
+
+.tm-ai-parallel-attempts__best-icon {
+    display: inline-flex;
+}
+
+.tm-ai-parallel-attempts__chosen {
+    border-color: var(--tm-parallel-attempts-chosen-border);
+    color: var(--tm-color-primary-text);
+    font-weight: var(--tm-font-weight-semibold);
+}
+
+.tm-ai-parallel-attempts__metrics {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--tm-space-2) var(--tm-space-4);
+}
+
+.tm-ai-parallel-attempts__metric {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-1);
+}
+
+.tm-ai-parallel-attempts__metric-label {
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-xs);
+}
+
+.tm-ai-parallel-attempts__state {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--tm-space-1);
+    font-size: var(--tm-font-size-xs);
+}
+
+.tm-ai-parallel-attempts__state-icon {
+    display: inline-flex;
+}
+
+.tm-ai-parallel-attempts__score {
+    font-variant-numeric: tabular-nums;
+    font-weight: var(--tm-font-weight-semibold);
+}
+
+.tm-ai-parallel-attempts__summary {
+    margin: 0;
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-xs);
+}
+
+.tm-ai-parallel-attempts__body {
+    min-inline-size: 0;
+    overflow-wrap: anywhere;
+}
+
+/* ── Votes ──────────────────────────────────────────────────────────────────────────────────── */
+
+.tm-ai-parallel-attempts__votes-toggle {
+    align-self: flex-start;
+    padding: var(--tm-space-1) var(--tm-space-2);
+    border: var(--tm-border-width) solid var(--tm-border-color);
+    border-radius: var(--tm-radius-pill);
+    background-color: var(--tm-bg-surface-secondary);
+    color: var(--tm-text-primary);
+    font: inherit;
+    font-size: var(--tm-font-size-xs);
+    cursor: pointer;
+}
+
+.tm-ai-parallel-attempts__votes-toggle:hover {
+    background-color: var(--tm-color-surface-hover);
+}
+
+.tm-ai-parallel-attempts__votes-toggle:focus-visible,
+.tm-ai-parallel-attempts__radio:focus-visible,
+.tm-ai-parallel-attempts__action:focus-visible {
+    outline: 2px solid var(--tm-border-color-focus);
+    outline-offset: 2px;
+}
+
+.tm-ai-parallel-attempts__votes {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-2);
+    min-inline-size: 0;
+}
+
+.tm-ai-parallel-attempts__vote-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-2);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.tm-ai-parallel-attempts__vote {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-1);
+    padding-inline-start: var(--tm-space-2);
+    border-inline-start: 2px solid var(--tm-border-color);
+    font-size: var(--tm-font-size-xs);
+}
+
+.tm-ai-parallel-attempts__vote-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--tm-space-2);
+}
+
+.tm-ai-parallel-attempts__vote-voter {
+    font-weight: var(--tm-font-weight-semibold);
+}
+
+.tm-ai-parallel-attempts__vote-outcome,
+.tm-ai-parallel-attempts__vote-score {
+    color: var(--tm-text-secondary);
+    font-variant-numeric: tabular-nums;
+}
+
+.tm-ai-parallel-attempts__vote-rationale {
+    color: var(--tm-text-primary);
+    overflow-wrap: anywhere;
+}
+
+.tm-ai-parallel-attempts__no-votes {
+    margin: 0;
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-xs);
+}
+
+/* ── The choice ─────────────────────────────────────────────────────────────────────────────── */
+
+/* The radio is the real control (native arrow-key walking inside the group), so it carries its own
+   target: 20 px next to its column's text and the full touch target on a coarse pointer. */
+.tm-ai-parallel-attempts__radio {
+    inline-size: 1.25rem;
+    block-size: 1.25rem;
+    margin: 0;
+    cursor: pointer;
+}
+
+.tm-ai-parallel-attempts__confirm {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--tm-space-2);
+    padding: var(--tm-space-2) var(--tm-space-3);
+    border: var(--tm-border-width) solid var(--tm-border-color-focus);
+    border-radius: var(--tm-radius-control);
+    background-color: var(--tm-bg-surface-secondary);
+}
+
+.tm-ai-parallel-attempts__confirm-question {
+    margin: 0;
+    font-size: var(--tm-font-size-sm);
+    font-weight: var(--tm-font-weight-medium);
+}
+
+.tm-ai-parallel-attempts__confirm-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--tm-space-2);
+}
+
+.tm-ai-parallel-attempts__action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-block-size: var(--tm-space-8);
+    padding: var(--tm-space-1) var(--tm-space-3);
+    border: var(--tm-border-width) solid var(--tm-border-color);
+    border-radius: var(--tm-radius-control);
+    background-color: var(--tm-bg-surface);
+    color: var(--tm-text-primary);
+    font: inherit;
+    font-size: var(--tm-font-size-sm);
+    cursor: pointer;
+}
+
+.tm-ai-parallel-attempts__action:hover {
+    background-color: var(--tm-color-surface-hover);
+}
+
+.tm-ai-parallel-attempts__action--primary {
+    border-color: var(--tm-color-primary);
+    background-color: var(--tm-color-primary);
+    color: var(--tm-color-on-primary);
+}
+
+.tm-ai-parallel-attempts__action--primary:hover {
+    background-color: var(--tm-color-primary-hover);
+}
+
+/* ── The comparison table ───────────────────────────────────────────────────────────────────── */
+
+.tm-ai-parallel-attempts__table {
+    inline-size: 100%;
+    border-collapse: collapse;
+    font-size: var(--tm-font-size-sm);
+}
+
+.tm-ai-parallel-attempts__table caption {
+    padding-block-end: var(--tm-space-2);
+    text-align: start;
+    font-size: var(--tm-font-size-xs);
+    color: var(--tm-text-secondary);
+}
+
+.tm-ai-parallel-attempts__table th,
+.tm-ai-parallel-attempts__table td {
+    padding: var(--tm-space-1) var(--tm-space-2);
+    border-block-end: var(--tm-border-width) solid var(--tm-border-color);
+    text-align: start;
+    vertical-align: top;
+}
+
+.tm-ai-parallel-attempts__table thead th {
+    color: var(--tm-text-secondary);
+    font-weight: var(--tm-font-weight-semibold);
+}
+
+.tm-ai-parallel-attempts__table tbody th {
+    font-weight: var(--tm-font-weight-medium);
+}
+
+/* ── A narrow container turns the columns into a carousel ───────────────────────────────────── */
+
+@container tm-ai-parallel-attempts (width <= 640px) {
+    .tm-ai-parallel-attempts__track {
+        scroll-snap-type: x mandatory;
+    }
+
+    .tm-ai-parallel-attempts__attempt {
+        flex: 0 0 86%;
+        scroll-snap-align: start;
+    }
+}
+
+/* ── A coarse pointer grows every target to the touch target ─────────────────────────────────── */
+
+@media (pointer: coarse) {
+    .tm-ai-parallel-attempts__radio {
+        inline-size: var(--tm-touch-target);
+        block-size: var(--tm-touch-target);
+    }
+
+    .tm-ai-parallel-attempts__votes-toggle,
+    .tm-ai-parallel-attempts__action {
+        min-block-size: var(--tm-touch-target);
+    }
+}
+
+/* ── Forced colors: the system palette owns the surface ─────────────────────────────────────── */
+
+@media (forced-colors: active) {
+    .tm-ai-parallel-attempts__attempt,
+    .tm-ai-parallel-attempts__confirm,
+    .tm-ai-parallel-attempts__votes-toggle,
+    .tm-ai-parallel-attempts__action,
+    .tm-ai-parallel-attempts__best,
+    .tm-ai-parallel-attempts__chosen {
+        border-color: CanvasText;
+    }
+
+    /* The best attempt keeps a mark high contrast cannot remove, and the chosen one a different one, so
+       selection never looks like the focus ring. */
+    .tm-ai-parallel-attempts__attempt--best {
+        border: 2px solid CanvasText;
+    }
+
+    .tm-ai-parallel-attempts__attempt--chosen {
+        border: 2px solid Highlight;
+    }
+
+    .tm-ai-parallel-attempts__votes-toggle:focus-visible,
+    .tm-ai-parallel-attempts__radio:focus-visible,
+    .tm-ai-parallel-attempts__action:focus-visible {
+        outline: 3px solid Highlight;
+        outline-offset: 2px;
+    }
+}

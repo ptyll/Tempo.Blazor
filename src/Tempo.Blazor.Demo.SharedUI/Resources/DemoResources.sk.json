@@ -1157,5 +1157,12 @@
   "TmAiAgentsDemo_GraphLedger": "Kniha",
   "TmAiAgentsDemo_GraphSearch": "Webové hľadanie",
   "TmAiAgentsDemo_GraphCode": "Interpret kódu",
-  "TmAiAgentsDemo_GraphGroupCore": "Kľúčoví agenti"
+  "TmAiAgentsDemo_GraphGroupCore": "Kľúčoví agenti",
+  "TmAiAgentsDemo_FanOutTitle": "Rozvetvenie práce",
+  "TmAiAgentsDemo_FanOutHint": "Osemnásť jednotiek práce na štyroch workeroch: jedna zlyhala a dá sa skúsiť znova, dve čakajú na voľného workera a ostatné sú hotové alebo bežia. Odpočty sú živé a nový pokus spracúva samotná stránka.",
+  "TmAiAgentsDemo_FanOutRetried": "Stránka zaradila {0} znova do frontu.",
+  "TmAiAgentsDemo_ParallelTitle": "Paralelné pokusy",
+  "TmAiAgentsDemo_ParallelHint": "Tri pokusy o rovnakú úlohu a hlasy, ktoré každý získal. Vyberte víťaza, potvrďte a stránka výsledok zaznamená.",
+  "TmAiAgentsDemo_ParallelChosen": "Stránka prijala {0} ako výsledok.",
+  "TmAiAgentsDemo_ParallelNothingChosen": "Zatiaľ nie je vybraný víťaz."
 }

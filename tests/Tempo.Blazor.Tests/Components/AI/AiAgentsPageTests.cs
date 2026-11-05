@@ -55,15 +55,16 @@ public class AiAgentsPageTests : DemoPageLocalizationTestBase
             .KeyDown(new KeyboardEventArgs { Key = key }));
 
     [Fact]
-    public void ThePageRendersItsSevenSectionsWithoutRawKeys()
+    public void ThePageRendersItsNineSectionsWithoutRawKeys()
     {
         var cut = RenderPage();
 
-        cut.FindAll("section.demo-section").Should().HaveCount(8);
+        cut.FindAll("section.demo-section").Should().HaveCount(10);
         foreach (var section in new[]
                  {
                      "ai-agents-plan-section", "ai-agents-tree-section", "ai-agents-lanes-section",
-                     "ai-agents-graph-section", "ai-agents-monitor-section", "ai-agents-models-section",
+                     "ai-agents-graph-section", "ai-agents-fan-out-section", "ai-agents-attempts-section",
+                     "ai-agents-monitor-section", "ai-agents-models-section",
                      "ai-agents-context-section", "ai-agents-prompts-section",
                  })
         {
@@ -477,6 +478,67 @@ public class AiAgentsPageTests : DemoPageLocalizationTestBase
 
         cut.WaitForAssertion(() => Text(cut, "ai-agents-plan-decision")
             .Should().Be("The page received Approve plan."));
+    }
+
+    /// <summary>
+    /// The fan-out section is the SAME run split across four workers, and the retry a reader asks for in a tile's
+    /// detail is the PAGE's handler: the unit goes back to the queue with one more attempt, so the component's
+    /// callback is proven to reach a host that really reacts.
+    /// </summary>
+    [Fact]
+    public void TheFanOutGridRetriesAFailedUnit_ThroughThePagesOwnHandler()
+    {
+        var cut = RenderPage();
+
+        var tiles = cut.FindAll("[data-testid='ai-agents-fan-out'] [data-testid='fan-out-tile']");
+        tiles.Should().HaveCount(18);
+        cut.Find("[data-testid='ai-agents-fan-out'] [data-testid='fan-out-summary-succeeded']")
+            .TextContent.Trim().Should().Be("12");
+
+        cut.Find("[data-testid='ai-agents-fan-out'] [data-testid='fan-out-tile'][data-status='failed']").Click();
+        cut.WaitForAssertion(
+            () => cut.FindAll("[data-testid='ai-agents-fan-out'] [data-testid='fan-out-detail']")
+                .Should().ContainSingle(),
+            TimeSpan.FromSeconds(10));
+
+        cut.Find("[data-testid='ai-agents-fan-out'] [data-testid='fan-out-detail-retry']").Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            Text(cut, "ai-agents-fan-out-log").Should().Be("The page re-queued Invoice batch 16.");
+            cut.FindAll("[data-testid='ai-agents-fan-out'] [data-testid='fan-out-tile'][data-status='failed']")
+                .Should().BeEmpty("the page re-queued the failed unit");
+            cut.Find("[data-testid='ai-agents-fan-out'] [data-testid='fan-out-tile'][data-task-id='unit-16']")
+                .GetAttribute("data-status").Should().Be("queued");
+        }, TimeSpan.FromSeconds(10));
+    }
+
+    /// <summary>
+    /// The attempts section compares three drafts and the page records ONLY the winner the component reports after the
+    /// reader confirmed it — the two-step choice is what keeps a stray arrow key from replacing a result.
+    /// </summary>
+    [Fact]
+    public void TheAttemptsConfirmAWinner_AndThePageRecordsIt()
+    {
+        var cut = RenderPage();
+
+        cut.FindAll("[data-testid='ai-agents-attempts'] [data-testid='parallel-attempt']").Should().HaveCount(3);
+        Text(cut, "ai-agents-attempts-log").Should().Be("No winner chosen yet.");
+        cut.Find("[data-testid='ai-agents-attempts'] [data-testid='parallel-attempt'][data-best='true']")
+            .GetAttribute("data-attempt-id").Should().Be("draft-b", "the highest score is the best attempt");
+
+        cut.Find("[data-testid='ai-agents-attempts'] [data-testid='parallel-attempt-radio'][data-attempt-id='draft-a']")
+            .Change(true);
+        Text(cut, "ai-agents-attempts-log").Should().Be("No winner chosen yet.",
+            "choosing is not confirming");
+
+        cut.Find("[data-testid='ai-agents-attempts'] [data-testid='parallel-attempts-confirm-yes']").Click();
+
+        cut.WaitForAssertion(
+            () => Text(cut, "ai-agents-attempts-log").Should().Be("The page accepted Draft A as the result."),
+            TimeSpan.FromSeconds(10));
+        cut.Find("[data-testid='ai-agents-attempts'] [data-testid='parallel-attempt'][data-selected='true']")
+            .GetAttribute("data-attempt-id").Should().Be("draft-a");
     }
 
     [Fact]

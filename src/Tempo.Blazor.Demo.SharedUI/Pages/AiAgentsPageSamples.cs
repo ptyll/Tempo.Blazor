@@ -437,6 +437,128 @@ internal static class AiAgentsPageSamples
         },
     ];
 
+    /// <summary>
+    /// The fan-out of the <c>/ai-agents</c> demo: eighteen units of work across four workers — twelve done, three
+    /// running (with a live estimate), two still queued and ONE that failed and can be retried, which is the tile
+    /// the page's own handler re-queues.
+    /// </summary>
+    internal static IReadOnlyList<FanOutTask> FanOutTasks(DateTimeOffset now)
+    {
+        var workers = new[]
+        {
+            new AgentRef("Fetcher", "w-fetch") { Role = "Worker", ColorIndex = 1 },
+            new AgentRef("Parser", "w-parse") { Role = "Worker", ColorIndex = 4 },
+            new AgentRef("Matcher", "w-match") { Role = "Worker", ColorIndex = 2 },
+            new AgentRef("Writer", "w-write") { Role = "Worker", ColorIndex = 5 },
+        };
+
+        var tasks = new List<FanOutTask>(18);
+        for (var index = 0; index < 18; index++)
+        {
+            var worker = workers[index % workers.Length];
+            var estimate = now.AddSeconds(40 + (index * 25));
+            var status = index switch
+            {
+                < 12 => AgentActivityStatus.Succeeded,
+                < 15 => AgentActivityStatus.Running,
+                15 => AgentActivityStatus.Failed,
+                _ => AgentActivityStatus.Queued,
+            };
+
+            tasks.Add(new FanOutTask($"unit-{index + 1:00}", $"Invoice batch {index + 1:00}")
+            {
+                Status = status,
+                Worker = index < 17 ? worker : null,
+                Attempt = index == 15 ? 1 : 1 + (index % 2 == 0 ? 0 : 1),
+                MaxAttempts = 3,
+                StartedAt = status == AgentActivityStatus.Queued ? null : now.AddMinutes(-3),
+                EstimatedEndAt = status is AgentActivityStatus.Running or AgentActivityStatus.Failed ? estimate : null,
+                CostMicroUnits = status == AgentActivityStatus.Succeeded ? 45_000 + (index * 1_500) : null,
+                Error = status == AgentActivityStatus.Failed
+                    ? "Provider rate limit — retry with backoff"
+                    : null,
+            });
+        }
+
+        return tasks;
+    }
+
+    /// <summary>
+    /// The parallel attempts of the <c>/ai-agents</c> demo: three drafts at the same task, scored and voted on. Draft B
+    /// carries the highest score and two approvals, so it is the best attempt; the page still records only what the
+    /// reader confirms.
+    /// </summary>
+    internal static IReadOnlyList<ParallelAttempt> Attempts() =>
+    [
+        new ParallelAttempt("draft-a", "Draft A")
+        {
+            Status = AgentActivityStatus.Succeeded,
+            Score = 0.61,
+            Summary = "Names the three failing batches but omits the retry window.",
+            Votes =
+            [
+                new AttemptVote("Reviewer")
+                {
+                    Outcome = AttemptVoteOutcome.Approve,
+                    Score = 0.6,
+                    Rationale = "Readable, but the retry window is missing.",
+                },
+            ],
+        },
+        new ParallelAttempt("draft-b", "Draft B")
+        {
+            Status = AgentActivityStatus.Succeeded,
+            Score = 0.93,
+            Summary = "Covers the three failing batches, the retry window and the write-off rule.",
+            Votes =
+            [
+                new AttemptVote("Reviewer")
+                {
+                    By = new AgentRef("Reviewer", "reviewer") { ColorIndex = 3 },
+                    Outcome = AttemptVoteOutcome.Approve,
+                    Score = 0.9,
+                    Rationale = "Names every batch and states the window.",
+                },
+                new AttemptVote("Grader")
+                {
+                    Outcome = AttemptVoteOutcome.Approve,
+                    Score = 0.96,
+                    Rationale = "Matches the expected output on all three cases.",
+                },
+            ],
+        },
+        new ParallelAttempt("draft-c", "Draft C")
+        {
+            Status = AgentActivityStatus.Succeeded,
+            Score = 0.42,
+            Summary = "Summarises one batch and drops the rest.",
+            Votes =
+            [
+                new AttemptVote("Reviewer")
+                {
+                    Outcome = AttemptVoteOutcome.Reject,
+                    Score = 0.4,
+                    Rationale = "Two of the three batches are missing.",
+                },
+            ],
+        },
+    ];
+
+    /// <summary>
+    /// The submitted body of one demo draft — sample DATA (like the votes' rationales), rendered through the
+    /// component's content slot so the page shows three DISTINCT attempts rather than the same summary twice.
+    /// </summary>
+    internal static string AttemptBody(string attemptId) => attemptId switch
+    {
+        "draft-a" =>
+            "Batch 4821: retried once, then matched.\nBatches 4822 and 4830: listed as unresolved, no retry window stated.",
+        "draft-b" =>
+            "Batch 4821: matched after one retry (4 min).\nBatch 4822: matched after two retries (9 min).\nBatch 4830: written off under the 2 % materiality rule.",
+        "draft-c" =>
+            "Batch 4821: unresolved.\nThe remaining batches are not mentioned.",
+        _ => string.Empty,
+    };
+
     /// <summary>The initial draft values of the template the page opens on.</summary>
     internal static IReadOnlyDictionary<string, string?> InitialValues(Func<string, string> loc)
         => new Dictionary<string, string?>(StringComparer.Ordinal)

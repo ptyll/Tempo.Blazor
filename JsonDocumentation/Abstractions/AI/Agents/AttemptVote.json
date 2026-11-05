@@ -1,0 +1,53 @@
+{
+  "itemName": "AttemptVote",
+  "kind": "Record",
+  "category": "AI",
+  "namespace": "Tempo.Blazor.AI.Models",
+  "description": "One voter's verdict on one parallel attempt: who voted, what they decided, the score they gave it and why. The rationale is the reason a reader opens the votes at all, so it is kept as free text and printed verbatim — the surface never parses it and never invents one. Outcome is a claim of its own: a score without a verdict (the common \"grader gave 0.82\") is legal and lands on Abstain. By is the optional shared identity (AgentRef): when it is set the surface paints the voter's palette slot and initials, the same identity it paints in the lanes and in the graph.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/AI/Agents/AttemptVote.cs",
+  "documentationStatus": "documented",
+  "usageExample": "var vote = new AttemptVote(\"Grader\")\n{\n    Outcome = AttemptVoteOutcome.Approve,\n    Score = 0.96,\n    Rationale = \"Matches the expected output on all three cases\",\n};",
+  "members": [
+    {
+      "name": "By",
+      "description": "The voter's identity when the host has one, or null. Setting it paints the agent's palette slot, initials and (when Voter is empty) its name."
+    },
+    {
+      "name": "ColorToken",
+      "description": "The palette token of the voter's identity, or an empty string when no identity is set."
+    },
+    {
+      "name": "DisplayName",
+      "description": "The name a surface prints: Voter, or the identity's name when the voter is unnamed."
+    },
+    {
+      "name": "HasRationale",
+      "description": "Whether the vote carries a rationale worth opening."
+    },
+    {
+      "name": "HasScore",
+      "description": "Whether the vote carries a score."
+    },
+    {
+      "name": "Initials",
+      "description": "The initials an avatar paints: the identity's own initials, else the initials of the vote's name."
+    },
+    {
+      "name": "Outcome",
+      "description": "What the voter decided. Default Abstain, so a score-only vote is never read as an approval."
+    },
+    {
+      "name": "Rationale",
+      "description": "Why the voter decided so, in the voter's own words. Empty renders no rationale, and the surface never invents one."
+    },
+    {
+      "name": "Score",
+      "description": "The score the voter gave the attempt, on the host's own scale (0–1, 0–10, a percentage). null means \"no score\", not zero; the surface prints the number with the host's culture and never rescales it."
+    },
+    {
+      "name": "Voter",
+      "description": "The voter's name as the host wants it read. Empty renders the surface's own fallback."
+    }
+  ]
+}
