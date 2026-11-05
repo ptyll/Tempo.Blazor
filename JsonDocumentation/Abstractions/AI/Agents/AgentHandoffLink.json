@@ -1,0 +1,19 @@
+{
+  "kind": "Record",
+  "category": "AI",
+  "namespace": "Tempo.Blazor.AI.Models",
+  "description": "One handover between two agents, as a lane surface draws it: an arrow from the work that was handed over (or from the source agent's lane at that moment) to the target agent's lane. FromBlockId and FromAgentId are two ways to name the same source: a block id anchors the arrow at the end of the finished block (the accurate picture), while an agent id anchors it at At on that agent's lane (enough when the host does not model which block was handed over). When both are supplied the block wins and the agent is the fallback for a block the snapshot does not contain. A link that names neither source cannot be drawn, and a layout counts it as unresolved instead of guessing.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/AI/Agents/AgentHandoffLink.cs",
+  "documentationStatus": "documented",
+  "itemName": "AgentHandoffLink",
+  "usageExample": "<TmAgentLanes Snapshot=\"@(new AgentLanesSnapshot\n{\n    Agents = [new AgentRef(\"Planner\", \"planner\"), new AgentRef(\"Writer\", \"writer\")],\n    Blocks = [/* … */],\n    Handoffs =\n    [\n        new AgentHandoffLink(\"writer\", DateTimeOffset.UtcNow) { FromBlockId = \"b1\", Label = \"Plan ready\" },\n        new AgentHandoffLink(\"planner\", DateTimeOffset.UtcNow) { FromAgentId = \"writer\" },\n    ],\n})\" />",
+  "members": [
+    { "name": "FromBlockId", "description": "The id of the block that was handed over, or null when the host only knows the source agent. Takes precedence over FromAgentId for the arrow's anchor." },
+    { "name": "FromAgentId", "description": "The id of the agent that handed the work over, or null when only FromBlockId is known. Used as the fallback when the named block is not in the snapshot." },
+    { "name": "ToAgentId", "description": "The agent the work was handed to. Always required — an arrow needs a target; a link whose target names no lane is counted as unresolved." },
+    { "name": "At", "description": "When the handoff happened. The arrow ends on the target lane at this instant (clamped into the drawn range)." },
+    { "name": "Label", "description": "What was handed over, in the host's own words. Null renders no label; the table alternative shows the attribute's own placeholder." },
+    { "name": "HasSource", "description": "Whether the link names a source at all. A link that does not is skipped by every layout — it cannot be drawn." }
+  ]
+}

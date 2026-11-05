@@ -1,0 +1,18 @@
+{
+  "kind": "Record",
+  "category": "AI",
+  "namespace": "Tempo.Blazor.AI.Models",
+  "description": "One applied change to a lane surface, with the monotonic Sequence the shared live contract needs. The shape is deliberately concrete rather than generic: TmAgentLanes applies these events to the snapshot it renders through AgentEventStream<TEvent>, so a host only has to build one small record per change regardless of its transport (a SignalR hub, a one-second poll, a server-sent event stream). A batch may arrive more than once — the stream drops what was already applied — so the host never de-duplicates itself. The payload of the kind decides what happens: BlockUpserted carries Block, BlockRemoved carries BlockId, HandoffAdded carries Handoff; a missing payload makes the event a no-op instead of an error.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/AI/Agents/AgentLaneEvent.cs",
+  "documentationStatus": "documented",
+  "itemName": "AgentLaneEvent",
+  "usageExample": "IReadOnlyList<AgentLaneEvent> batch =\n[\n    new AgentLaneEvent(43) { Block = finishedBlock },\n    new AgentLaneEvent(44) { Kind = AgentLaneEventKind.HandoffAdded, Handoff = handoff },\n    new AgentLaneEvent(45) { Kind = AgentLaneEventKind.BlockRemoved, BlockId = \"b7\" },\n];\n\n// The host streams the batch; the component sorts it, drops what it already has and reports a hole:\n<TmAgentLanes Snapshot=\"_snapshot\" Events=\"_batch\" OnGapDetected=\"ReloadAsync\" />",
+  "members": [
+    { "name": "Sequence", "description": "The event's position in the run's change log; it must grow by ONE per applied change, because the shared stream treats \"the last applied sequence plus one\" as its definition of contiguity and rejects a batch with a hole rather than papering over it." },
+    { "name": "Kind", "description": "What the event does. Default BlockUpserted." },
+    { "name": "Block", "description": "The block an upsert carries. Null makes BlockUpserted a no-op." },
+    { "name": "BlockId", "description": "The id a removal addresses. Null makes BlockRemoved a no-op; an id no block carries is a no-op too." },
+    { "name": "Handoff", "description": "The link a handoff adds. Null makes HandoffAdded a no-op; the same link delivered twice is recorded once." }
+  ]
+}

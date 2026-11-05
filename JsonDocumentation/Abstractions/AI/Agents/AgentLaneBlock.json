@@ -1,0 +1,23 @@
+{
+  "kind": "Record",
+  "category": "AI",
+  "namespace": "Tempo.Blazor.AI.Models",
+  "description": "One piece of work an agent did (or is still doing), as a lane surface draws it: the agent it belongs to, when it started, when it ended, what happened and — optionally — the review verdict it carries. The record is a VALUE: a host recomposes it with `block with { … }` when a block finishes or its state changes, and no component mutates it. End is null while the block is still open — a running block has no recorded end, so a surface draws it up to its own \"now\" instead of inventing a duration. An End EARLIER than Start is clamped to Start by EndAt (and by every layout and formatter), because a negative duration is never meaningful. Nothing here carries colour: the lane palette slot belongs to the agent (AgentRef.ColorIndex), so two blocks of one agent can never disagree about their identity. A blank Id is generated at construction, exactly like AgentRef's, so a list built in a loop still renders; a host that wants a stable selection supplies its own id.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/AI/Agents/AgentLaneBlock.cs",
+  "documentationStatus": "documented",
+  "itemName": "AgentLaneBlock",
+  "usageExample": "var block = new AgentLaneBlock(\"b1\", \"planner\", DateTimeOffset.UtcNow, \"Plan the release\")\n{\n    End = DateTimeOffset.UtcNow.AddMinutes(8),\n    Status = AgentActivityStatus.Succeeded,\n    Kind = AgentLaneBlockKind.Task,\n    Marker = AgentLaneBlockMarker.Approval,\n};\n\n// A block that is still running: no End, drawn up to the surface's \"now\".\nvar running = block with { Id = \"b2\", End = null, Status = AgentActivityStatus.Running, Marker = null };",
+  "members": [
+    { "name": "Id", "description": "Stable identity of the block — the value a selection reports and the key an incremental event addresses. Never empty: a missing id is generated at construction." },
+    { "name": "AgentId", "description": "The id of the agent the block belongs to; AgentRef.Id names it on the snapshot." },
+    { "name": "Start", "description": "When the work started, on the host's clock." },
+    { "name": "End", "description": "When the work ended, or null while it is still open. A surface draws an open block up to its own \"now\" and marks it as running, so a live lane never shows a block that stops before the current moment." },
+    { "name": "Status", "description": "The block's own state. Default Idle; an unknown value renders no state word on the surface (the localized \"Unknown state\" instead), so a stale contract cannot paint a wrong verdict." },
+    { "name": "Label", "description": "What the work was, as the host wants it read. Empty renders no visible text — the surface falls back to the kind's word, and the accessible name still names the kind." },
+    { "name": "Kind", "description": "What kind of work the block represents. Default Task; painted as a decorative glyph plus a localized word." },
+    { "name": "Marker", "description": "The review verdict the block carries, or null when it carries none. null is not the same as a neutral marker, so a component draws nothing rather than a placeholder." },
+    { "name": "IsOpen", "description": "Whether the block is still open, i.e. End is null." },
+    { "name": "EndAt", "description": "The end a surface paints for the block: End when it is recorded, otherwise the supplied \"now\". An end before Start is clamped to Start, so a caller can never derive a negative duration from a block." }
+  ]
+}

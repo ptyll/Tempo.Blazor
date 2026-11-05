@@ -16,6 +16,7 @@ public abstract class AiAgentsE2EBase : PlaywrightTestBase
 {
     protected const string PlanSection = "[data-testid='ai-agents-plan-section']";
     protected const string TreeSection = "[data-testid='ai-agents-tree-section']";
+    protected const string LanesSection = "[data-testid='ai-agents-lanes-section']";
     protected const string MonitorSection = "[data-testid='ai-agents-monitor-section']";
     protected const string ModelsSection = "[data-testid='ai-agents-models-section']";
     protected const string ContextSection = "[data-testid='ai-agents-context-section']";
@@ -338,6 +339,56 @@ public class AiAgentsE2ETests : AiAgentsE2EBase
     }
 
     [TestMethod]
+    public async Task TheLanesSelectABlockByKeyboard_AndTheTableCarriesTheSameData()
+    {
+        var page = await OpenAsync();
+        await ScrollToSection(page, LanesSection);
+
+        var lanes = page.Locator("[data-testid='ai-agents-lanes']");
+        Assert.AreEqual(4, await lanes.Locator("[data-testid='agent-lanes-lane']").CountAsync());
+        Assert.AreEqual(7, await lanes.Locator("[data-testid='agent-lanes-block']").CountAsync());
+        Assert.AreEqual(4, await lanes.Locator("[data-testid='agent-lanes-handoff']").CountAsync());
+        Assert.IsTrue(await lanes.Locator("[data-testid='agent-lanes-now']").CountAsync() == 1,
+            "a block is still running, so the live now line is painted");
+
+        // A block is a native button: focus it and press Enter, exactly like a reader.
+        var block = lanes.Locator("[data-testid='agent-lanes-block'][data-block-id='b-match']");
+        await block.FocusAsync();
+        await page.Keyboard.PressAsync("Enter");
+        await page.WaitForSelectorAsync("[data-testid='ai-agents-lanes-detail']",
+            new PageWaitForSelectorOptions { Timeout = 10000 });
+
+        StringAssert.Contains(await TextAsync(page, "ai-agents-lanes-selected"), "Match invoices to lines");
+        Assert.AreEqual("true", await block.GetAttributeAsync("aria-pressed"));
+
+        // Fit to width measures the real scrollport in the browser and lands on a scale that hides no part of the run.
+        await lanes.Locator("[data-testid='agent-lanes-zoom-fit']").ClickAsync();
+        await page.WaitForTimeoutAsync(400);
+        var zoom = (await lanes.Locator("[data-testid='agent-lanes-zoom-value']").TextContentAsync())?.Trim() ?? string.Empty;
+        StringAssert.Contains(zoom, "%");
+        Assert.IsTrue(
+            await lanes.Locator("[data-testid='agent-lanes-viewport']")
+                .EvaluateAsync<bool>("el => el.scrollWidth <= el.clientWidth + 2"),
+            "fit to width makes the whole run fit the scrollport (zoom " + zoom + ")");
+
+        await ShootAsync(page, "ai-agents-lanes-light-1440");
+
+        // The text alternative carries exactly the same blocks and handoffs.
+        await lanes.Locator("[data-testid='agent-lanes-view'] button")
+            .Filter(new LocatorFilterOptions { HasTextString = "Table" })
+            .ClickAsync();
+        await page.WaitForSelectorAsync("[data-testid='ai-agents-lanes'] [data-testid='agent-lanes-table-row']",
+            new PageWaitForSelectorOptions { Timeout = 10000 });
+
+        Assert.AreEqual(7, await lanes.Locator("[data-testid='agent-lanes-table-row']").CountAsync());
+        Assert.AreEqual(4, await lanes.Locator("[data-testid='agent-lanes-handoff-row']").CountAsync());
+        Assert.AreEqual(0, await lanes.Locator("[data-testid='agent-lanes-block']").CountAsync(),
+            "the table replaces the drawing instead of duplicating it");
+
+        await ShootAsync(page, "ai-agents-lanes-table-light-1440");
+    }
+
+    [TestMethod]
     public async Task ThePromptLibraryFillsATemplate_AndUseHandsItOver()
     {
         var page = await OpenAsync();
@@ -403,7 +454,7 @@ public class AiAgentsE2ETests : AiAgentsE2EBase
 
         foreach (var section in new[]
                  {
-                     PlanSection, TreeSection, MonitorSection, ModelsSection, ContextSection, PromptsSection,
+                     PlanSection, TreeSection, LanesSection, MonitorSection, ModelsSection, ContextSection, PromptsSection,
                  })
         {
             await ScrollToSection(page, section);
@@ -433,8 +484,9 @@ public class AiAgentsE2ETests : AiAgentsE2EBase
         var page = await OpenAsync();
 
         await AssertNoSeriousAxeViolationsAsync(page,
-            "ai-agents-plan-section", "ai-agents-tree-section", "ai-agents-monitor-section",
-            "ai-agents-models-section", "ai-agents-context-section", "ai-agents-prompts-section");
+            "ai-agents-plan-section", "ai-agents-tree-section", "ai-agents-lanes-section",
+            "ai-agents-monitor-section", "ai-agents-models-section", "ai-agents-context-section",
+            "ai-agents-prompts-section");
     }
 
     [TestMethod]
@@ -447,6 +499,9 @@ public class AiAgentsE2ETests : AiAgentsE2EBase
 
         await ScrollToSection(desktop, TreeSection);
         await ShootAsync(desktop, "ai-agents-tree-light-1440");
+
+        await ScrollToSection(desktop, LanesSection);
+        await ShootAsync(desktop, "ai-agents-lanes-idle-light-1440");
 
         await ScrollToSection(desktop, MonitorSection);
         await ShootAsync(desktop, "ai-agents-monitor-light-1440");
@@ -463,12 +518,16 @@ public class AiAgentsE2ETests : AiAgentsE2EBase
         await ToggleThemeAsync(desktop);
         await ScrollToSection(desktop, PlanSection);
         await ShootAsync(desktop, "ai-agents-plan-dark-1440");
+        await ScrollToSection(desktop, LanesSection);
+        await ShootAsync(desktop, "ai-agents-lanes-dark-1440");
         await ScrollToSection(desktop, ContextSection);
         await ShootAsync(desktop, "ai-agents-context-dark-1440");
         await ScrollToSection(desktop, PromptsSection);
         await ShootAsync(desktop, "ai-agents-prompts-dark-1440");
 
         var phone = await OpenAsync(375, 812, coarsePointer: true);
+        await ScrollToSection(phone, LanesSection);
+        await ShootAsync(phone, "ai-agents-lanes-phone-375");
         await ScrollToSection(phone, MonitorSection);
         await ShootAsync(phone, "ai-agents-monitor-phone-375");
         await ScrollToSection(phone, ContextSection);
@@ -502,7 +561,7 @@ public class AiAgentsServerSmokeE2ETests : AiAgentsE2EBase
         var page = await OpenAsync();
 
         await AssertNoSeriousAxeViolationsAsync(page,
-            "ai-agents-plan-section", "ai-agents-tree-section", "ai-agents-monitor-section",
-            "ai-agents-context-section", "ai-agents-prompts-section");
+            "ai-agents-plan-section", "ai-agents-tree-section", "ai-agents-lanes-section",
+            "ai-agents-monitor-section", "ai-agents-context-section", "ai-agents-prompts-section");
     }
 }

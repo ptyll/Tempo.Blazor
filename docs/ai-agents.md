@@ -249,9 +249,18 @@ The family is built against one accessibility contract, because every surface re
 - **Focus management.** A surface that opens a detail panel or a sheet moves the focus into it, returns it to the
   control that opened it on close, and never leaves the focus on a control that disappeared.
 
+## The run in time: `TmAgentLanes`
+
+`TmAgentLanes` draws the same run as lanes on one shared time axis — a block per piece of work, the review verdict a
+block carries, handoff arrows between the lanes and the current moment as a vertical line. It is the first surface
+built on the live contract above: the host passes a snapshot plus an event tail, the component applies the tail through
+`AgentEventStream` (reporting a hole with `OnGapDetected`), throttles the paint with `AgentRenderThrottle` and keeps the
+timeline from being the only way to read the data (a table view carries the same blocks and handoffs). Its full
+contract — models, layout rules, zoom, accessibility, CSS — is [agent-lanes.md](agent-lanes.md).
+
 ## Related pages
 
-- [TmAgentPlan](agent-plan.md), [TmAgentRunTree](agent-run-tree.md), [TmAgentMonitor](agent-monitor.md),
+- [TmAgentLanes](agent-lanes.md), [TmAgentPlan](agent-plan.md), [TmAgentRunTree](agent-run-tree.md), [TmAgentMonitor](agent-monitor.md),
   [TmPermissionRequest](permission-request.md) — the run-side surfaces that these visualizations compose with.
 - [TmTraceWaterfall](trace-waterfall.md) — the span view of one agent's work.
 - [TmModelPicker](model-picker.md) — which model an agent runs on.

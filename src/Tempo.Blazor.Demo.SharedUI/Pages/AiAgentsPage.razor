@@ -123,6 +123,36 @@
 </section>
 
 @* ---------------------------------------------------------------------------------------------------------
+   The same run on a shared time axis: one lane per agent, a block per activity, handoff arrows, the approval verdict
+   on the block that carries it and the current moment as a live line. The page owns the snapshot and the selection;
+   the table view is the text alternative and carries exactly the same blocks and handoffs. *@
+<section class="demo-section mb-8" data-testid="ai-agents-lanes-section">
+    <h2 class="text-lg font-semibold text-slate-900 dark:text-white mb-2">@Loc["TmAiAgentsDemo_LanesTitle"]</h2>
+    <p class="text-sm text-slate-600 dark:text-slate-400 mb-2">@Loc["TmAiAgentsDemo_LanesHint"]</p>
+    <p class="text-sm text-slate-700 dark:text-slate-300 mb-4" data-testid="ai-agents-lanes-selected">@LanesSelectedText</p>
+
+    <TmAgentLanes Snapshot="_lanes"
+                  @bind-SelectedBlockId="_laneBlockId"
+                  Title="@Loc["TmAiAgentsDemo_LanesRunTitle"]"
+                  Culture="@CultureInfo.CurrentCulture"
+                  DataTestId="ai-agents-lanes">
+        <DetailTemplate Context="block">
+            <div data-testid="ai-agents-lanes-detail" data-block-id="@block.Id">
+                <h3 class="text-sm font-semibold text-slate-900 dark:text-white mb-2">@block.Label</h3>
+                <dl class="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
+                    <dt class="text-slate-500 dark:text-slate-400">@Loc["TmAgentRunDemo_DetailKind"]</dt>
+                    <dd class="text-slate-800 dark:text-slate-200" data-testid="ai-agents-lanes-detail-kind">@block.Kind</dd>
+                    <dt class="text-slate-500 dark:text-slate-400">@Loc["TmAgentRunDemo_DetailStatus"]</dt>
+                    <dd class="text-slate-800 dark:text-slate-200" data-testid="ai-agents-lanes-detail-status">@block.Status</dd>
+                    <dt class="text-slate-500 dark:text-slate-400">@Loc["TmAgentLanes_TimeAxisLabel"]</dt>
+                    <dd class="text-slate-800 dark:text-slate-200">@LanesBlockSpan(block)</dd>
+                </dl>
+            </div>
+        </DetailTemplate>
+    </TmAgentLanes>
+</section>
+
+@* ---------------------------------------------------------------------------------------------------------
    The same run in the live monitor. When the run reaches its last step it PAUSES and asks for a decision: the
    host's own TmApprovalCard sits in the monitor's PendingApproval slot. Approving resumes the run; rejecting
    skips the step and finishes the run. *@
@@ -270,6 +300,8 @@
     private IReadOnlyList<AiModelInfo> _models = [];
     private IReadOnlyList<PromptTemplate> _templates = [];
     private IReadOnlyList<AgentRunNode> _runNodes = [];
+    private AgentLanesSnapshot _lanes = new();
+    private string? _laneBlockId;
     private IReadOnlyList<AgentPlanStep> _reviewSteps = [];
     private IReadOnlyList<AgentPlanStep> _runSteps = [];
     private ContextUsageSnapshot _context = new();
@@ -309,6 +341,7 @@
         ResetContext();
 
         _models = AiAgentsPageSamples.Models(Key);
+        _lanes = AiAgentsPageSamples.LanesSnapshot(Key, _clock.GetUtcNow());
         _selection = new AiModelSelection("aurora-pro");
         _templates = AiAgentsPageSamples.Templates(Key);
         _templateId = "release-notes";
@@ -401,6 +434,25 @@
         _ when _approvalPending => Loc["TmAiAgentsDemo_ApprovalPending"],
         _ => Loc["TmAiAgentsDemo_ApprovalWaiting"],
     };
+
+    /// <summary>The selection read-out: the block's own label, or the localized "nothing selected" sentence.</summary>
+    private string LanesSelectedText => _laneBlockId is { } id
+        ? _lanes.Blocks.FirstOrDefault(block => string.Equals(block.Id, id, StringComparison.Ordinal)) is { } block
+            ? Loc["TmAiAgentsDemo_LanesSelected", block.Label]
+            : Loc["TmAiAgentsDemo_LanesNoSelection"]
+        : Loc["TmAiAgentsDemo_LanesNoSelection"];
+
+    /// <summary>The block's painted span, with the localized "now" word for a block that is still running.</summary>
+    private string LanesBlockSpan(AgentLaneBlock block)
+    {
+        var culture = CultureInfo.CurrentCulture;
+        var start = block.Start.ToLocalTime().ToString("t", culture);
+        var end = block.End is { } recorded
+            ? recorded.ToLocalTime().ToString("t", culture)
+            : Loc["TmAgentLanes_Now"];
+
+        return Loc["TmAgentLanes_TimeRange", start, end];
+    }
 
     private string ContextReadout
     {

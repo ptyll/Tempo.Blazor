@@ -193,6 +193,300 @@
       "usageExample": "private AgentEventStream<RunEvent> _events = new(evt => evt.Sequence);\n\n// A snapshot arrives (initial load, reload, or the repair after a gap):\n_events = new AgentEventStream<RunEvent>(evt => evt.Sequence, snapshot.Sequence);\nSnapshots = snapshot.Blocks;\n\n// A hub callback and a poll both land here; only NEW events come back, in sequence order:\nvar applied = _events.Apply(batch);\nif (applied.Count > 0)\n{\n    Snapshot = Snapshot.Apply(applied);   // the host's own reducer\n    _throttle.ShouldRender();\n}\n\n// The stream told the host to reload (HasGap / GapDetected):\n_events.GapDetected += missing => _ = ReloadSnapshotAsync(missing);"
     },
     {
+      "itemName": "AgentHandoffLink",
+      "kind": "Record",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.AI.Models",
+      "description": "One handover between two agents, as a lane surface draws it: an arrow from the work that was handed over (or from the source agent's lane at that moment) to the target agent's lane. FromBlockId and FromAgentId are two ways to name the same source: a block id anchors the arrow at the end of the finished block (the accurate picture), while an agent id anchors it at At on that agent's lane (enough when the host does not model which block was handed over). When both are supplied the block wins and the agent is the fallback for a block the snapshot does not contain. A link that names neither source cannot be drawn, and a layout counts it as unresolved instead of guessing.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/AI/Agents/AgentHandoffLink.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "At",
+          "kind": "Property",
+          "type": "DateTimeOffset",
+          "description": "When the handoff happened. The arrow ends on the target lane at this instant (clamped into the drawn range)."
+        },
+        {
+          "name": "FromAgentId",
+          "kind": "Property",
+          "type": "string?",
+          "description": "The id of the agent that handed the work over, or null when only FromBlockId is known. Used as the fallback when the named block is not in the snapshot."
+        },
+        {
+          "name": "FromBlockId",
+          "kind": "Property",
+          "type": "string?",
+          "description": "The id of the block that was handed over, or null when the host only knows the source agent. Takes precedence over FromAgentId for the arrow's anchor."
+        },
+        {
+          "name": "HasSource",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Whether the link names a source at all. A link that does not is skipped by every layout — it cannot be drawn."
+        },
+        {
+          "name": "Label",
+          "kind": "Property",
+          "type": "string?",
+          "description": "What was handed over, in the host's own words. Null renders no label; the table alternative shows the attribute's own placeholder."
+        },
+        {
+          "name": "ToAgentId",
+          "kind": "Property",
+          "type": "string",
+          "description": "The agent the work was handed to. Always required — an arrow needs a target; a link whose target names no lane is counted as unresolved."
+        }
+      ],
+      "usageExample": "<TmAgentLanes Snapshot=\"@(new AgentLanesSnapshot\n{\n    Agents = [new AgentRef(\"Planner\", \"planner\"), new AgentRef(\"Writer\", \"writer\")],\n    Blocks = [/* … */],\n    Handoffs =\n    [\n        new AgentHandoffLink(\"writer\", DateTimeOffset.UtcNow) { FromBlockId = \"b1\", Label = \"Plan ready\" },\n        new AgentHandoffLink(\"planner\", DateTimeOffset.UtcNow) { FromAgentId = \"writer\" },\n    ],\n})\" />"
+    },
+    {
+      "itemName": "AgentLaneBlock",
+      "kind": "Record",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.AI.Models",
+      "description": "One piece of work an agent did (or is still doing), as a lane surface draws it: the agent it belongs to, when it started, when it ended, what happened and — optionally — the review verdict it carries. The record is a VALUE: a host recomposes it with `block with { … }` when a block finishes or its state changes, and no component mutates it. End is null while the block is still open — a running block has no recorded end, so a surface draws it up to its own \"now\" instead of inventing a duration. An End EARLIER than Start is clamped to Start by EndAt (and by every layout and formatter), because a negative duration is never meaningful. Nothing here carries colour: the lane palette slot belongs to the agent (AgentRef.ColorIndex), so two blocks of one agent can never disagree about their identity. A blank Id is generated at construction, exactly like AgentRef's, so a list built in a loop still renders; a host that wants a stable selection supplies its own id.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/AI/Agents/AgentLaneBlock.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "EndAt",
+          "kind": "Method",
+          "type": "DateTimeOffset",
+          "description": "The end a surface paints for the block: End when it is recorded, otherwise the supplied \"now\". An end before Start is clamped to Start, so a caller can never derive a negative duration from a block.",
+          "parameters": [
+            {
+              "name": "now",
+              "type": "DateTimeOffset"
+            }
+          ]
+        },
+        {
+          "name": "AgentId",
+          "kind": "Property",
+          "type": "string",
+          "description": "The id of the agent the block belongs to; AgentRef.Id names it on the snapshot."
+        },
+        {
+          "name": "End",
+          "kind": "Property",
+          "type": "DateTimeOffset?",
+          "description": "When the work ended, or null while it is still open. A surface draws an open block up to its own \"now\" and marks it as running, so a live lane never shows a block that stops before the current moment."
+        },
+        {
+          "name": "Id",
+          "kind": "Property",
+          "type": "string",
+          "description": "Stable identity of the block — the value a selection reports and the key an incremental event addresses. Never empty: a missing id is generated at construction."
+        },
+        {
+          "name": "IsOpen",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Whether the block is still open, i.e. End is null."
+        },
+        {
+          "name": "Kind",
+          "kind": "Property",
+          "type": "AgentLaneBlockKind",
+          "description": "What kind of work the block represents. Default Task; painted as a decorative glyph plus a localized word."
+        },
+        {
+          "name": "Label",
+          "kind": "Property",
+          "type": "string",
+          "description": "What the work was, as the host wants it read. Empty renders no visible text — the surface falls back to the kind's word, and the accessible name still names the kind."
+        },
+        {
+          "name": "Marker",
+          "kind": "Property",
+          "type": "AgentLaneBlockMarker?",
+          "description": "The review verdict the block carries, or null when it carries none. null is not the same as a neutral marker, so a component draws nothing rather than a placeholder."
+        },
+        {
+          "name": "Start",
+          "kind": "Property",
+          "type": "DateTimeOffset",
+          "description": "When the work started, on the host's clock."
+        },
+        {
+          "name": "Status",
+          "kind": "Property",
+          "type": "AgentActivityStatus",
+          "description": "The block's own state. Default Idle; an unknown value renders no state word on the surface (the localized \"Unknown state\" instead), so a stale contract cannot paint a wrong verdict."
+        }
+      ],
+      "usageExample": "var block = new AgentLaneBlock(\"b1\", \"planner\", DateTimeOffset.UtcNow, \"Plan the release\")\n{\n    End = DateTimeOffset.UtcNow.AddMinutes(8),\n    Status = AgentActivityStatus.Succeeded,\n    Kind = AgentLaneBlockKind.Task,\n    Marker = AgentLaneBlockMarker.Approval,\n};\n\n// A block that is still running: no End, drawn up to the surface's \"now\".\nvar running = block with { Id = \"b2\", End = null, Status = AgentActivityStatus.Running, Marker = null };"
+    },
+    {
+      "itemName": "AgentLaneBlockKind",
+      "kind": "Enum",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.AI.Models",
+      "description": "What one block on an agent lane represents, in the one vocabulary every lane surface shares. The kind is always painted twice — a decorative glyph and a localized WORD — because an icon alone is not information a screen-reader reader can use. The set is deliberately small and transport-neutral: a host maps its own vocabulary (a plan step, a tool call, a room message, a review gate, a delegation) onto these five values and TmAgentLanes stays backend-free. An unknown value (a member from a newer backend) renders the neutral glyph and the Task word, so a stale contract can never paint a wrong kind.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/AI/Agents/AgentLaneBlockKind.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Task",
+          "description": "A piece of work assigned to the agent — a plan step, a turn, a task. The default."
+        },
+        {
+          "name": "Tool",
+          "description": "A tool call the agent made (a lookup, a write, a command)."
+        },
+        {
+          "name": "Message",
+          "description": "A message the agent produced or received."
+        },
+        {
+          "name": "Review",
+          "description": "A review or approval gate — the block a reader usually has to act on."
+        },
+        {
+          "name": "Handoff",
+          "description": "A transfer of the work to another agent; the lane surface draws it with a handoff arrow."
+        }
+      ]
+    },
+    {
+      "itemName": "AgentLaneBlockMarker",
+      "kind": "Enum",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.AI.Models",
+      "description": "The outcome badge a block may carry — the verdict a review left on the work, not the block's own state. A marker is always painted as an icon AND a localized word, never as a colour alone (WCAG 1.4.1). The value is nullable on AgentLaneBlock.Marker: null means \"no verdict yet\", which is not the same as any member of this enum, so a component renders no marker at all rather than a neutral one.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/AI/Agents/AgentLaneBlockMarker.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Approval",
+          "description": "The work was approved."
+        },
+        {
+          "name": "ChangesRequested",
+          "description": "A reviewer asked for changes; the work is not done yet."
+        },
+        {
+          "name": "Review",
+          "description": "The block is under review and no verdict exists yet."
+        }
+      ]
+    },
+    {
+      "itemName": "AgentLaneEvent",
+      "kind": "Record",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.AI.Models",
+      "description": "One applied change to a lane surface, with the monotonic Sequence the shared live contract needs. The shape is deliberately concrete rather than generic: TmAgentLanes applies these events to the snapshot it renders through AgentEventStream<TEvent>, so a host only has to build one small record per change regardless of its transport (a SignalR hub, a one-second poll, a server-sent event stream). A batch may arrive more than once — the stream drops what was already applied — so the host never de-duplicates itself. The payload of the kind decides what happens: BlockUpserted carries Block, BlockRemoved carries BlockId, HandoffAdded carries Handoff; a missing payload makes the event a no-op instead of an error.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/AI/Agents/AgentLaneEvent.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Block",
+          "kind": "Property",
+          "type": "AgentLaneBlock?",
+          "description": "The block an upsert carries. Null makes BlockUpserted a no-op."
+        },
+        {
+          "name": "BlockId",
+          "kind": "Property",
+          "type": "string?",
+          "description": "The id a removal addresses. Null makes BlockRemoved a no-op; an id no block carries is a no-op too."
+        },
+        {
+          "name": "Handoff",
+          "kind": "Property",
+          "type": "AgentHandoffLink?",
+          "description": "The link a handoff adds. Null makes HandoffAdded a no-op; the same link delivered twice is recorded once."
+        },
+        {
+          "name": "Kind",
+          "kind": "Property",
+          "type": "AgentLaneEventKind",
+          "description": "What the event does. Default BlockUpserted."
+        },
+        {
+          "name": "Sequence",
+          "kind": "Property",
+          "type": "long",
+          "description": "The event's position in the run's change log; it must grow by ONE per applied change, because the shared stream treats \"the last applied sequence plus one\" as its definition of contiguity and rejects a batch with a hole rather than papering over it."
+        }
+      ],
+      "usageExample": "IReadOnlyList<AgentLaneEvent> batch =\n[\n    new AgentLaneEvent(43) { Block = finishedBlock },\n    new AgentLaneEvent(44) { Kind = AgentLaneEventKind.HandoffAdded, Handoff = handoff },\n    new AgentLaneEvent(45) { Kind = AgentLaneEventKind.BlockRemoved, BlockId = \"b7\" },\n];\n\n// The host streams the batch; the component sorts it, drops what it already has and reports a hole:\n<TmAgentLanes Snapshot=\"_snapshot\" Events=\"_batch\" OnGapDetected=\"ReloadAsync\" />"
+    },
+    {
+      "itemName": "AgentLaneEventKind",
+      "kind": "Enum",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.AI.Models",
+      "description": "What one incremental AgentLaneEvent does to a lane snapshot. Three verbs describe a live run: a block appears or changes (an upsert, so a start and a later completion are the same operation), a block disappears, or a handoff is recorded. The reducer (AgentLanesSnapshot.Apply) applies them to a new value and never edits the snapshot it was given.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/AI/Agents/AgentLaneEventKind.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "BlockUpserted",
+          "description": "Adds the block, or replaces the block with the same AgentLaneBlock.Id in place (its position in the list is kept)."
+        },
+        {
+          "name": "BlockRemoved",
+          "description": "Removes the block named by AgentLaneEvent.BlockId; an unknown id is a no-op."
+        },
+        {
+          "name": "HandoffAdded",
+          "description": "Records the handoff, unless the same link is already present."
+        }
+      ]
+    },
+    {
+      "itemName": "AgentLanesSnapshot",
+      "kind": "Record",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.AI.Models",
+      "description": "The COMPLETE state of a multi-agent run at one moment: the agents taking part, the work each of them did and the handoffs between them — plus the Sequence the snapshot includes. A snapshot is what a lane surface renders; it never polls and never mutates. A deep link, a reload and the repair after a gap all produce a new snapshot and the surface simply draws it, which is why Apply returns a NEW value instead of editing this one. The sequence is the number the event stream re-bases on: everything up to it is already contained here. All three lists may be empty and a null list is normalised to an empty one, so a component never has to null-check the host's data. A block whose agent the snapshot does not declare still renders (a lane is appended, named through the localized fallback), because dropping a host's work would make the surface lie by omission.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/AI/Agents/AgentLanesSnapshot.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Apply",
+          "kind": "Method",
+          "type": "AgentLanesSnapshot",
+          "description": "Folds an incremental batch into this snapshot and returns the result as a NEW value; this instance is never modified. The batch is expected to be the tail the shared AgentEventStream accepted, so no ordering or de-duplication happens here — that is the stream's job, once, for every surface. Sequence is NOT changed: it describes the snapshot that was loaded, not the events applied on top of it.",
+          "parameters": [
+            {
+              "name": "events",
+              "type": "IEnumerable<AgentLaneEvent>?"
+            }
+          ]
+        },
+        {
+          "name": "Sequence",
+          "kind": "Property",
+          "type": "long",
+          "description": "The sequence this snapshot includes — the baseline an event stream starts from. Zero (the default) means the host does not track sequences for snapshots, which is legal: the stream then starts without a baseline and accepts the run's first event."
+        },
+        {
+          "name": "Agents",
+          "description": "The agents taking part, in the order the lanes are drawn. An agent declared here keeps its position even when it has no work; empty is legal (an empty run)."
+        },
+        {
+          "name": "Blocks",
+          "description": "The work blocks of the run, in any order — a layout orders them by time and ignores a duplicate id after the first. A block whose agent is not declared still renders, in a lane appended after the declared ones, so a run is never silently incomplete."
+        },
+        {
+          "name": "Handoffs",
+          "description": "The handoffs between agents. A link that cannot be resolved to two lanes is skipped by a layout and counted (UnresolvedHandoffCount) instead of guessed; the table alternative still lists every link."
+        }
+      ],
+      "usageExample": "var snapshot = new AgentLanesSnapshot\n{\n    Sequence = 42,\n    Agents = [planner, writer],\n    Blocks = blocks,\n    Handoffs = handoffs,\n};\n\n// A reload (or the repair after a gap) is simply a new value with a newer sequence:\n_snapshot = await api.GetSessionSnapshotAsync();\n\n// The incremental tail the stream accepted is folded into a new view value:\n_view = snapshot.Apply(appliedEvents);"
+    },
+    {
       "itemName": "AgentMonitorStep",
       "kind": "Record",
       "category": "AI",
@@ -41709,11 +42003,11 @@
   ],
   "libraryExamples": [],
   "summary": {
-    "itemCount": 1617,
-    "manualItemCount": 1617,
-    "generatedItemCount": 1601,
+    "itemCount": 1624,
+    "manualItemCount": 1624,
+    "generatedItemCount": 1608,
     "generatedOnlyItemCount": 0,
     "componentCount": 0,
-    "publicApiTypeCount": 1601
+    "publicApiTypeCount": 1608
   }
 }

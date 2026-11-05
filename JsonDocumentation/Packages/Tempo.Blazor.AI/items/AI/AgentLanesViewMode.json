@@ -1,0 +1,14 @@
+{
+  "itemName": "AgentLanesViewMode",
+  "kind": "Enum",
+  "category": "Components",
+  "namespace": "Tempo.Blazor.Components.AI",
+  "description": "How TmAgentLanes presents a run: Timeline is the graphical surface (one lane per agent on a shared time axis, a block per piece of work, handoff arrows and the now line), Table is the text alternative carrying exactly the same blocks and handoffs as plain tables. The timeline is never the only way to read the run — a screen reader, a keyboard-only reader or a narrow phone switches to Table without losing a fact.",
+  "packageId": "Tempo.Blazor.AI",
+  "sourcePath": "src/Tempo.Blazor.AI/Components/AI/AgentLanesViewMode.cs",
+  "documentationStatus": "documented",
+  "members": [
+    { "name": "Timeline", "description": "The default: one lane per agent, a native button per block (Tab moves between them, Enter selects), dashed handoff connectors and the vertical now line. Scrolls sideways inside the component and zooms with the +/−/fit buttons or a pinch/ctrl+wheel gesture." },
+    { "name": "Table", "description": "The text alternative: every block as a row (agent, activity, kind, start, end, state, marker) plus a second table of the handoffs. The same data without the geometry, reachable by keyboard and read by a screen reader; the row action selects a block exactly as the timeline does." }
+  ]
+}

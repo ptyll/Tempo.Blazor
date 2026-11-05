@@ -4,6 +4,7 @@ using FluentAssertions;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Time.Testing;
+using Tempo.Blazor.Components.AI;
 using Tempo.Blazor.Demo.SharedUI.Pages;
 using Tempo.Blazor.Tests.Localization;
 using Xunit;
@@ -58,11 +59,12 @@ public class AiAgentsPageTests : DemoPageLocalizationTestBase
     {
         var cut = RenderPage();
 
-        cut.FindAll("section.demo-section").Should().HaveCount(6);
+        cut.FindAll("section.demo-section").Should().HaveCount(7);
         foreach (var section in new[]
                  {
-                     "ai-agents-plan-section", "ai-agents-tree-section", "ai-agents-monitor-section",
-                     "ai-agents-models-section", "ai-agents-context-section", "ai-agents-prompts-section",
+                     "ai-agents-plan-section", "ai-agents-tree-section", "ai-agents-lanes-section",
+                     "ai-agents-monitor-section", "ai-agents-models-section", "ai-agents-context-section",
+                     "ai-agents-prompts-section",
                  })
         {
             Section(cut, section).TextContent.Should().NotContain("[Tm");
@@ -70,6 +72,51 @@ public class AiAgentsPageTests : DemoPageLocalizationTestBase
 
         Text(cut, "ai-agents-demo-notice").Should().Contain("Demo data",
             "the page must label its invented data");
+    }
+
+    [Fact]
+    public void TheLanesSection_RendersFourLanes_AndSelectsABlockIntoTheHostDetail()
+    {
+        RegisterClock();
+        var cut = RenderPage();
+        var lanes = Section(cut, "ai-agents-lanes");
+
+        lanes.QuerySelectorAll("[data-testid='agent-lanes-lane']").Should().HaveCount(4);
+        lanes.QuerySelectorAll("[data-testid='agent-lanes-block']").Should().HaveCount(7);
+        lanes.QuerySelectorAll("[data-testid='agent-lanes-handoff']").Should().HaveCount(4);
+        lanes.QuerySelectorAll("[data-testid='agent-lanes-block-marker']").Should().NotBeEmpty(
+            "the sample carries an approval and a changes-requested verdict");
+
+        Text(cut, "ai-agents-lanes-selected").Should().Contain("No block selected");
+        cut.FindComponents<TmAgentLanes>().Single().Instance.Layout.Lanes
+            .Should().OnlyContain(lane => lane.Rows.Count == 1,
+                "the sample's work never overlaps inside one lane");
+
+        cut.Find("[data-testid='ai-agents-lanes'] [data-testid='agent-lanes-block'][data-block-id='b-match']").Click();
+
+        cut.WaitForAssertion(() => Text(cut, "ai-agents-lanes-selected")
+            .Should().Contain("Match invoices to lines"));
+        var detail = cut.Find("[data-testid='ai-agents-lanes-detail']");
+        detail.Should().NotBeNull("the page owns the detail surface and the component only reports the selection");
+        detail.TextContent.Should().NotContain("TmAgentLanes_",
+            "the format key the span is built from is localized, never painted raw");
+    }
+
+    [Fact]
+    public void TheLanesSection_SwitchesToTheTable_WithTheSameData()
+    {
+        RegisterClock();
+        var cut = RenderPage();
+
+        var tableOption = Section(cut, "ai-agents-lanes")
+            .QuerySelectorAll("[data-testid='agent-lanes-view'] button")
+            .Single(button => button.TextContent.Trim() == "Table");
+        tableOption.Click();
+
+        cut.WaitForAssertion(() => Section(cut, "ai-agents-lanes")
+            .QuerySelectorAll("[data-testid='agent-lanes-table-row']").Should().HaveCount(7));
+        Section(cut, "ai-agents-lanes")
+            .QuerySelectorAll("[data-testid='agent-lanes-handoff-row']").Should().HaveCount(4);
     }
 
     [Fact]

@@ -1,0 +1,18 @@
+{
+  "kind": "Record",
+  "category": "AI",
+  "namespace": "Tempo.Blazor.AI.Models",
+  "description": "The COMPLETE state of a multi-agent run at one moment: the agents taking part, the work each of them did and the handoffs between them — plus the Sequence the snapshot includes. A snapshot is what a lane surface renders; it never polls and never mutates. A deep link, a reload and the repair after a gap all produce a new snapshot and the surface simply draws it, which is why Apply returns a NEW value instead of editing this one. The sequence is the number the event stream re-bases on: everything up to it is already contained here. All three lists may be empty and a null list is normalised to an empty one, so a component never has to null-check the host's data. A block whose agent the snapshot does not declare still renders (a lane is appended, named through the localized fallback), because dropping a host's work would make the surface lie by omission.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/AI/Agents/AgentLanesSnapshot.cs",
+  "documentationStatus": "documented",
+  "itemName": "AgentLanesSnapshot",
+  "usageExample": "var snapshot = new AgentLanesSnapshot\n{\n    Sequence = 42,\n    Agents = [planner, writer],\n    Blocks = blocks,\n    Handoffs = handoffs,\n};\n\n// A reload (or the repair after a gap) is simply a new value with a newer sequence:\n_snapshot = await api.GetSessionSnapshotAsync();\n\n// The incremental tail the stream accepted is folded into a new view value:\n_view = snapshot.Apply(appliedEvents);",
+  "members": [
+    { "name": "Sequence", "description": "The sequence this snapshot includes — the baseline an event stream starts from. Zero (the default) means the host does not track sequences for snapshots, which is legal: the stream then starts without a baseline and accepts the run's first event." },
+    { "name": "Agents", "description": "The agents taking part, in the order the lanes are drawn. An agent declared here keeps its position even when it has no work; empty is legal (an empty run)." },
+    { "name": "Blocks", "description": "The work blocks of the run, in any order — a layout orders them by time and ignores a duplicate id after the first. A block whose agent is not declared still renders, in a lane appended after the declared ones, so a run is never silently incomplete." },
+    { "name": "Handoffs", "description": "The handoffs between agents. A link that cannot be resolved to two lanes is skipped by a layout and counted (UnresolvedHandoffCount) instead of guessed; the table alternative still lists every link." },
+    { "name": "Apply", "description": "Folds an incremental batch into this snapshot and returns the result as a NEW value; this instance is never modified. The batch is expected to be the tail the shared AgentEventStream accepted, so no ordering or de-duplication happens here — that is the stream's job, once, for every surface. Sequence is NOT changed: it describes the snapshot that was loaded, not the events applied on top of it." }
+  ]
+}

@@ -1,0 +1,271 @@
+{
+  "itemName": "TmAgentLanes",
+  "kind": "Component",
+  "category": "AI",
+  "namespace": "Tempo.Blazor.Components.AI",
+  "description": "A multi-agent run as one LANE per agent on a shared time axis (default 600 px per hour — ten pixels per minute, the scale an agent run is read at): a block per piece of work, the review verdict a block carries (an icon AND a localized word), handoff arrows between the lanes and the current moment as a vertical line. The surface renders the SNAPSHOT it is given plus the incremental events the host streams in, and never polls, fetches or mutates anything: the host owns the transport and the component owns its view. The injected TimeProvider drives both the live now line and the paint throttle, so a test with a fake clock controls the whole surface. The layout is pure C# (AgentLanesLayout): the range is derived from the blocks (an open block reaches now), padded and aligned to a nice tick step from a fixed ladder, overlapping work inside one lane is stacked into sub-rows instead of covering itself, a block whose agent the snapshot does not declare still gets a lane (appended, with the localized fallback name) so a run is never silently incomplete, and an unresolvable handoff is counted instead of guessed. The timeline is never the only way to read the run: the View switcher renders the SAME layout as two plain tables, every block is a native button named by its visible activity FIRST and then by its agent, kind, time, state and marker, and the component owns exactly ONE polite live region (a selection, a zoom change and a stream hole). Events go through the shared AgentEventStream: ordered, idempotent and contiguous, so a batch with a hole is rejected whole, reported to the host (OnGapDetected) and announced instead of painting stale data. The paint gate (AgentRenderThrottle, 100 ms by default) collapses a burst of events into one trailing paint while the STATE absorbs every event. The surface declares no transition and no animation.",
+  "packageId": "Tempo.Blazor.AI",
+  "sourcePath": "src/Tempo.Blazor.AI/Components/AI/TmAgentLanes.razor",
+  "documentationStatus": "documented",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.AI",
+    "@using Tempo.Blazor.AI.Models"
+  ],
+  "parameters": [
+    {
+      "name": "Snapshot",
+      "type": "AgentLanesSnapshot?",
+      "isRequired": false,
+      "description": "The COMPLETE state of the run at one moment: the agents, their work blocks and the handoffs between them, plus the sequence the snapshot includes. The component never mutates it. Null renders the localized empty state (the surface is usable before the host's first load lands)."
+    },
+    {
+      "name": "Events",
+      "type": "IReadOnlyList<AgentLaneEvent>?",
+      "isRequired": false,
+      "description": "The incremental events applied ON TOP of Snapshot, in any order. The shared AgentEventStream sorts them, drops what was already applied and rejects a batch with a hole (raising OnGapDetected), so a host may pass the same batch twice, or a cumulative list, without de-duplicating itself. Null means the snapshot is all there is."
+    },
+    {
+      "name": "OnGapDetected",
+      "type": "EventCallback<long>",
+      "isRequired": false,
+      "description": "Raised once per batch that contains a HOLE — with the first sequence the stream does not have. The documented repair is the host's own: load a new snapshot and pass it (with its sequence) as Snapshot."
+    },
+    {
+      "name": "Title",
+      "type": "string?",
+      "isRequired": false,
+      "description": "The heading above the surface. Null renders the localized default (\"Agent lanes\")."
+    },
+    {
+      "name": "ShowTitle",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "Whether the heading is rendered. Default true."
+    },
+    {
+      "name": "HeadingLevel",
+      "type": "int",
+      "isRequired": false,
+      "default": "3",
+      "description": "The heading level of the rendered title, clamped to 2–6. Default 3."
+    },
+    {
+      "name": "ViewMode",
+      "type": "AgentLanesViewMode",
+      "isRequired": false,
+      "default": "Timeline",
+      "description": "Which presentation is shown, two-way bound with ViewModeChanged. Default Timeline; Table is the text alternative with exactly the same data."
+    },
+    {
+      "name": "ViewModeChanged",
+      "type": "EventCallback<AgentLanesViewMode>",
+      "isRequired": false,
+      "description": "Fires with the new presentation when the reader uses the View switcher."
+    },
+    {
+      "name": "SelectedBlockId",
+      "type": "string?",
+      "isRequired": false,
+      "description": "The selected block's id, two-way bound with SelectedBlockIdChanged (@bind-SelectedBlockId). The matching block carries aria-pressed=\"true\"; with DetailTemplate set the block's detail renders in a named region below the surface."
+    },
+    {
+      "name": "SelectedBlockIdChanged",
+      "type": "EventCallback<string?>",
+      "isRequired": false,
+      "description": "Fires with the new selected block id when the reader selects a block (a null value clears it)."
+    },
+    {
+      "name": "DetailTemplate",
+      "type": "RenderFragment<AgentLaneBlock>?",
+      "isRequired": false,
+      "description": "The host's detail surface for the selected block — the full activity text, links, actions. Rendered in a role=\"region\" named by the localized \"Block detail\". Null renders no detail at all."
+    },
+    {
+      "name": "ShowZoom",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "Whether the zoom controls are rendered (timeline only). Default true. They are the WCAG 2.5.7 alternative to the pinch/ctrl+wheel gesture, so a host is expected to keep them unless its own chrome zooms."
+    },
+    {
+      "name": "PixelsPerHour",
+      "type": "double",
+      "isRequired": false,
+      "default": "600",
+      "description": "The horizontal scale in PIXELS PER HOUR, two-way bound with PixelsPerHourChanged. Default 600 — ten pixels per minute, the scale an agent run is read at. The value is clamped into MinPixelsPerHour–MaxPixelsPerHour; a host that pins it keeps control (the reader's zoom reports the change and the next render from the host decides)."
+    },
+    {
+      "name": "PixelsPerHourChanged",
+      "type": "EventCallback<double>",
+      "isRequired": false,
+      "description": "Fires with the new scale when the reader zooms (a button, \"fit\", or a pinch/ctrl+wheel gesture)."
+    },
+    {
+      "name": "MinPixelsPerHour",
+      "type": "double",
+      "isRequired": false,
+      "default": "24",
+      "description": "The narrowest allowed scale in pixels per hour. Default 24."
+    },
+    {
+      "name": "MaxPixelsPerHour",
+      "type": "double",
+      "isRequired": false,
+      "default": "2400",
+      "description": "The widest allowed scale in pixels per hour. Default 2400."
+    },
+    {
+      "name": "RowHeight",
+      "type": "double",
+      "isRequired": false,
+      "default": "48",
+      "description": "The height of one sub-row of a lane in pixels. Default 48, which leaves a 44 px block — the coarse-pointer target — inside every sub-row."
+    },
+    {
+      "name": "LabelWidth",
+      "type": "double",
+      "isRequired": false,
+      "default": "176",
+      "description": "The width of the sticky agent column in pixels. Default 176. It is a parameter rather than a stylesheet-only value because \"fit to width\" subtracts it from the room the reader has."
+    },
+    {
+      "name": "ShowNowLine",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "Whether the vertical \"now\" line is painted (timeline only). Default true."
+    },
+    {
+      "name": "ShowHandoffs",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "Whether the handoff arrows are painted (timeline only). Default true; the table keeps them either way."
+    },
+    {
+      "name": "Culture",
+      "type": "CultureInfo?",
+      "isRequired": false,
+      "description": "The culture the axis, the block timestamps and the table format in. Null uses CultureInfo.CurrentCulture. It never changes the values, only their shape."
+    },
+    {
+      "name": "TimeProvider",
+      "type": "TimeProvider?",
+      "isRequired": false,
+      "description": "The clock the \"now\" line and the paint throttle measure on. Null uses the container's TimeProvider and falls back to TimeProvider.System — the host's clock always wins over the machine's."
+    },
+    {
+      "name": "RenderThrottle",
+      "type": "TimeSpan?",
+      "isRequired": false,
+      "description": "The paint-gate window for event-driven updates. Null uses the shared AgentRenderThrottle.DefaultInterval (100 ms); TimeSpan.Zero paints every batch. The STATE is never throttled, only the paint."
+    },
+    {
+      "name": "Class",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Additional CSS class(es) for the root element."
+    },
+    {
+      "name": "AdditionalAttributes",
+      "type": "Dictionary<string, object>?",
+      "isRequired": false,
+      "description": "Additional HTML attributes applied to the root element."
+    },
+    {
+      "name": "DataTestId",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Overrides the root data-testid (default \"agent-lanes\", namespaced by TestIdPrefix)."
+    },
+    {
+      "name": "TestIdPrefix",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Namespaces every internal data-testid of this instance, so several lanes surfaces on one page stay targetable."
+    }
+  ],
+  "cssClasses": [
+    "tm-ai-agent-lanes",
+    "tm-ai-agent-lanes__header",
+    "tm-ai-agent-lanes__title",
+    "tm-ai-agent-lanes__toolbar",
+    "tm-ai-agent-lanes__view",
+    "tm-ai-agent-lanes__zoom",
+    "tm-ai-agent-lanes__zoom-button",
+    "tm-ai-agent-lanes__zoom-button--fit",
+    "tm-ai-agent-lanes__zoom-value",
+    "tm-ai-agent-lanes__empty",
+    "tm-ai-agent-lanes__viewport",
+    "tm-ai-agent-lanes__canvas",
+    "tm-ai-agent-lanes__axis",
+    "tm-ai-agent-lanes__axis-label",
+    "tm-ai-agent-lanes__axis-track",
+    "tm-ai-agent-lanes__tick",
+    "tm-ai-agent-lanes__tick--end",
+    "tm-ai-agent-lanes__tick-label",
+    "tm-ai-agent-lanes__lanes",
+    "tm-ai-agent-lanes__handoffs",
+    "tm-ai-agent-lanes__handoff",
+    "tm-ai-agent-lanes__arrow-head",
+    "tm-ai-agent-lanes__lane",
+    "tm-ai-agent-lanes__lane-head",
+    "tm-ai-agent-lanes__lane-status",
+    "tm-ai-agent-lanes__lane-status--idle",
+    "tm-ai-agent-lanes__lane-status--queued",
+    "tm-ai-agent-lanes__lane-status--running",
+    "tm-ai-agent-lanes__lane-status--approval",
+    "tm-ai-agent-lanes__lane-status--succeeded",
+    "tm-ai-agent-lanes__lane-status--failed",
+    "tm-ai-agent-lanes__lane-status--cancelled",
+    "tm-ai-agent-lanes__lane-status-icon",
+    "tm-ai-agent-lanes__lane-status-text",
+    "tm-ai-agent-lanes__lane-track",
+    "tm-ai-agent-lanes__block",
+    "tm-ai-agent-lanes__block--idle",
+    "tm-ai-agent-lanes__block--queued",
+    "tm-ai-agent-lanes__block--running",
+    "tm-ai-agent-lanes__block--approval",
+    "tm-ai-agent-lanes__block--succeeded",
+    "tm-ai-agent-lanes__block--failed",
+    "tm-ai-agent-lanes__block--cancelled",
+    "tm-ai-agent-lanes__block--open",
+    "tm-ai-agent-lanes__block--selected",
+    "tm-ai-agent-lanes__block-kind",
+    "tm-ai-agent-lanes__block-label",
+    "tm-ai-agent-lanes__block-status",
+    "tm-ai-agent-lanes__block-marker",
+    "tm-ai-agent-lanes__block-marker-icon",
+    "tm-ai-agent-lanes__block-marker-text",
+    "tm-ai-agent-lanes__marker",
+    "tm-ai-agent-lanes__marker-icon",
+    "tm-ai-agent-lanes__marker-text",
+    "tm-ai-agent-lanes__marker--approval",
+    "tm-ai-agent-lanes__marker--changes-requested",
+    "tm-ai-agent-lanes__marker--review",
+    "tm-ai-agent-lanes__now",
+    "tm-ai-agent-lanes__now--end",
+    "tm-ai-agent-lanes__now-label",
+    "tm-ai-agent-lanes__tables",
+    "tm-ai-agent-lanes__table",
+    "tm-ai-agent-lanes__table-activity",
+    "tm-ai-agent-lanes__table-select",
+    "tm-ai-agent-lanes__detail"
+  ],
+  "examples": [
+    {
+      "title": "A live run with handoffs and a selected block",
+      "code": "@* The page owns the snapshot and the transport; the component owns its view. *@\n<TmAgentLanes Snapshot=\"_snapshot\"\n              Events=\"_events\"\n              OnGapDetected=\"ReloadAsync\"\n              @bind-SelectedBlockId=\"_selectedBlockId\"\n              Title=\"Release run\">\n    <DetailTemplate Context=\"block\">\n        <h3>@block.Label</h3>\n        <p>@block.Status · @block.Start.ToString(\"t\")</p>\n    </DetailTemplate>\n</TmAgentLanes>\n\n@code {\n    private AgentLanesSnapshot _snapshot = new();\n    private IReadOnlyList<AgentLaneEvent> _events = [];\n    private string? _selectedBlockId;\n\n    private Task ReloadAsync(long missingSequence) => LoadSnapshotAsync(missingSequence);\n}"
+    },
+    {
+      "title": "A pinned table view and a pinned scale",
+      "code": "<TmAgentLanes Snapshot=\"_snapshot\"\n              ViewMode=\"AgentLanesViewMode.Table\"\n              PixelsPerHour=\"240\"\n              ShowNowLine=\"false\" />"
+    },
+    {
+      "title": "The snapshot a host builds",
+      "code": "var planner = new AgentRef(\"Planner\", \"planner\") { ColorIndex = 0 };\nvar writer = new AgentRef(\"Writer\", \"writer\") { ColorIndex = 1 };\n\nvar snapshot = new AgentLanesSnapshot\n{\n    Sequence = 42,\n    Agents = [planner, writer],\n    Blocks =\n    [\n        new AgentLaneBlock(\"b1\", \"planner\", startedAt, \"Plan the release\")\n        {\n            End = startedAt.AddMinutes(8),\n            Status = AgentActivityStatus.Succeeded,\n            Kind = AgentLaneBlockKind.Task,\n            Marker = AgentLaneBlockMarker.Approval,\n        },\n        new AgentLaneBlock(\"b2\", \"writer\", startedAt.AddMinutes(9), \"Write the notes\")\n        {\n            Status = AgentActivityStatus.Running,\n            Kind = AgentLaneBlockKind.Tool,\n        },\n    ],\n    Handoffs =\n    [\n        new AgentHandoffLink(\"writer\", startedAt.AddMinutes(9))\n        {\n            FromBlockId = \"b1\",\n            Label = \"Plan ready\",\n        },\n    ],\n};"
+    }
+  ],
+  "notes": "Geometry: the timeline is the ONE horizontal scrollport (overflow-x auto, overflow-y hidden) and the agent column and the time axis are sticky, so a phone never scrolls the page sideways. \"Very short block\" + coarse pointer: the block is widened to the 44 px touch target visually, while its axis position and the table's exact timestamps stay authoritative. \"Fit to width\" measures the scrollport through the package's tm-agent-lanes.js module (the same module that imports the CORE pointer-gesture.js helper for pinch/ctrl+wheel) and keeps the current zoom when nothing can be measured (prerender, no JavaScript), so it never jumps to a guess. A host that pins ViewMode, SelectedBlockId or PixelsPerHour keeps control: the reader's change is reported and the next render from the host decides. The component declares no transition and no animation — a live run repaints while it streams, so a moving surface would animate for the whole run."
+}

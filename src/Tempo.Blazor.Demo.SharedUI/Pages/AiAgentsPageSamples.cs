@@ -14,6 +14,67 @@ namespace Tempo.Blazor.Demo.SharedUI.Pages;
 /// </remarks>
 internal static class AiAgentsPageSamples
 {
+    /// <summary>
+    /// The same run as a LANE view: four agents, their work blocks and the handoffs between them. One block is still
+    /// OPEN (no end) so the surface's live "now" line and its ticking are visible, and one carries an approval marker
+    /// so the verdict chip renders in the sketch.
+    /// </summary>
+    internal static AgentLanesSnapshot LanesSnapshot(Func<string, string> loc, DateTimeOffset now)
+    {
+        AgentLaneBlock Block(
+            string id,
+            string agentId,
+            int startMinutes,
+            int? endMinutes,
+            AgentLaneBlockKind kind,
+            AgentActivityStatus status,
+            string label,
+            AgentLaneBlockMarker? marker = null)
+            => new(id, agentId, now.AddMinutes(startMinutes), label)
+            {
+                End = endMinutes is { } end ? now.AddMinutes(end) : null,
+                Kind = kind,
+                Status = status,
+                Marker = marker,
+            };
+
+        return new AgentLanesSnapshot
+        {
+            Sequence = 7,
+            Agents =
+            [
+                new AgentRef("Planner", "planner") { Role = "Orchestrator", ColorIndex = 0 },
+                new AgentRef("Retriever", "retriever") { Role = "Worker", ColorIndex = 1 },
+                new AgentRef("Reconciler", "reconciler") { Role = "Worker", ColorIndex = 2 },
+                new AgentRef("Reviewer", "reviewer") { Role = "Reviewer", ColorIndex = 3 },
+            ],
+            Blocks =
+            [
+                Block("b-plan", "planner", -40, -30, AgentLaneBlockKind.Task, AgentActivityStatus.Succeeded,
+                    "Plan the reconciliation", AgentLaneBlockMarker.Approval),
+                Block("b-fetch", "retriever", -31, -18, AgentLaneBlockKind.Tool, AgentActivityStatus.Succeeded,
+                    "Pull the ledger exports"),
+                Block("b-match", "retriever", -17, -6, AgentLaneBlockKind.Message, AgentActivityStatus.Succeeded,
+                    "Match invoices to lines"),
+                Block("b-diff", "reconciler", -18, -4, AgentLaneBlockKind.Task, AgentActivityStatus.Failed,
+                    "Reconcile the differences", AgentLaneBlockMarker.ChangesRequested),
+                Block("b-review", "reviewer", -5, 0, AgentLaneBlockKind.Review, AgentActivityStatus.WaitingForApproval,
+                    "Approve the write-off", AgentLaneBlockMarker.Review),
+                Block("b-write", "reconciler", -3, null, AgentLaneBlockKind.Tool, AgentActivityStatus.Running,
+                    "Write the adjustment"),
+                Block("b-summary", "planner", 0, 4, AgentLaneBlockKind.Task, AgentActivityStatus.Queued,
+                    "Summarise for the room"),
+            ],
+            Handoffs =
+            [
+                new AgentHandoffLink("retriever", now.AddMinutes(-30)) { FromBlockId = "b-plan", Label = "Plan ready" },
+                new AgentHandoffLink("reconciler", now.AddMinutes(-18)) { FromAgentId = "retriever" },
+                new AgentHandoffLink("reviewer", now.AddMinutes(-4)) { FromBlockId = "b-diff" },
+                new AgentHandoffLink("reconciler", now.AddMinutes(1)) { FromAgentId = "reviewer", Label = "Approved" },
+            ],
+        };
+    }
+
     /// <summary>The four steps of the reviewed plan, in display order.</summary>
     internal static IReadOnlyList<AgentPlanStep> ReviewSteps(Func<string, string> loc) =>
     [

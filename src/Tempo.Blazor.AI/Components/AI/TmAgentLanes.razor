@@ -1,0 +1,343 @@
+@namespace Tempo.Blazor.Components.AI
+@inherits Tempo.Blazor.Components.TmComponentBase
+@using System.Globalization
+@using Tempo.Blazor.AI.Models
+@using Tempo.Blazor.Components.Icons
+@using Tempo.Blazor.Components.Inputs
+
+@* A multi-agent run as one lane per agent on a shared time axis: a block per piece of work, handoff arrows between
+   the lanes, the review verdict a block carries as an icon AND a word, and the current moment as a vertical line.
+
+   The drawing is deliberately split: the connectors and the "now" line are SVG (a line has no text), every block is a
+   native HTML <button> (text, focus, Enter/Space and a 44 px tap target for free). A block is never the only way to
+   read the run: the View switcher renders the SAME layout as two plain tables, reachable by keyboard and read by a
+   screen reader, and the timeline itself exposes every block with a localized accessible name that starts with the
+   activity the block shows (so a voice-control user can say it) and then carries the agent, the kind, the time, the
+   state and the marker.
+
+   ONE polite live region announces a selection, a zoom change and a stream gap; the blocks carry aria-pressed (not a
+   live region), the ticking "now" line is decorative and nothing in the component is an aria-live island. *@
+<section class="@RootClass"
+         style="@RootStyle"
+         data-testid="@RootTestId("agent-lanes")"
+         data-view="@ViewModeSlug"
+         data-zoom="@ZoomPercent.ToString(CultureInfo.InvariantCulture)"
+         @attributes="AdditionalAttributes">
+
+    <div class="tm-ai-agent-lanes__header">
+        @if (ShowTitle)
+        {
+            @Heading
+        }
+        <div class="tm-ai-agent-lanes__toolbar">
+            <div class="tm-ai-agent-lanes__view" data-testid="@TestId("agent-lanes-view")">
+                <TmSegmentedControl TValue="AgentLanesViewMode"
+                                    Size="SegmentedControlSize.Sm"
+                                    Label="@Loc["TmAgentLanes_ViewLabel"]"
+                                    Options="@ViewOptions"
+                                    Value="@_viewMode"
+                                    ValueChanged="OnViewModeChangedAsync" />
+            </div>
+            @if (_viewMode == AgentLanesViewMode.Timeline && ShowZoom)
+            {
+                <div class="tm-ai-agent-lanes__zoom"
+                     role="group"
+                     aria-label="@Loc["TmAgentLanes_ZoomGroup"]"
+                     data-testid="@TestId("agent-lanes-zoom")">
+                    <button type="button"
+                            class="tm-ai-agent-lanes__zoom-button"
+                            aria-label="@Loc["TmAgentLanes_ZoomOut"]"
+                            title="@Loc["TmAgentLanes_ZoomOut"]"
+                            data-testid="@TestId("agent-lanes-zoom-out")"
+                            @onclick="ZoomOutAsync">
+                        <TmIcon Name="@IconNames.Minus" Size="IconSize.Sm" />
+                    </button>
+                    <span class="tm-ai-agent-lanes__zoom-value"
+                          aria-hidden="true"
+                          data-testid="@TestId("agent-lanes-zoom-value")">@ZoomPercentText</span>
+                    <button type="button"
+                            class="tm-ai-agent-lanes__zoom-button"
+                            aria-label="@Loc["TmAgentLanes_ZoomIn"]"
+                            title="@Loc["TmAgentLanes_ZoomIn"]"
+                            data-testid="@TestId("agent-lanes-zoom-in")"
+                            @onclick="ZoomInAsync">
+                        <TmIcon Name="@IconNames.Plus" Size="IconSize.Sm" />
+                    </button>
+                    <button type="button"
+                            class="tm-ai-agent-lanes__zoom-button tm-ai-agent-lanes__zoom-button--fit"
+                            aria-label="@Loc["TmAgentLanes_ZoomFit"]"
+                            title="@Loc["TmAgentLanes_ZoomFit"]"
+                            data-testid="@TestId("agent-lanes-zoom-fit")"
+                            @onclick="FitToViewAsync">
+                        <TmIcon Name="@IconNames.Maximize2" Size="IconSize.Sm" />
+                    </button>
+                </div>
+            }
+        </div>
+    </div>
+
+    <p class="tm-sr-only" id="@InstructionsId" data-testid="@TestId("agent-lanes-instructions")">@Loc["TmAgentLanes_Instructions"]</p>
+
+    @if (Layout.IsEmpty)
+    {
+        <p class="tm-ai-agent-lanes__empty" data-testid="@TestId("agent-lanes-empty")">@Loc["TmAgentLanes_Empty"]</p>
+    }
+    else if (_viewMode == AgentLanesViewMode.Table)
+    {
+        <div class="tm-ai-agent-lanes__tables" data-testid="@TestId("agent-lanes-table")">
+            <table class="tm-ai-agent-lanes__table">
+                <caption>@Loc["TmAgentLanes_BlocksCaption"]</caption>
+                <thead>
+                    <tr>
+                        <th scope="col">@Loc["TmAgentLanes_ColumnAgent"]</th>
+                        <th scope="col">@Loc["TmAgentLanes_ColumnActivity"]</th>
+                        <th scope="col">@Loc["TmAgentLanes_ColumnKind"]</th>
+                        <th scope="col">@Loc["TmAgentLanes_ColumnStart"]</th>
+                        <th scope="col">@Loc["TmAgentLanes_ColumnEnd"]</th>
+                        <th scope="col">@Loc["TmAgentLanes_ColumnStatus"]</th>
+                        <th scope="col">@Loc["TmAgentLanes_ColumnMarker"]</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var placement in Layout.Blocks)
+                    {
+                        <tr data-block-id="@placement.Block.Id"
+                            data-status="@StatusSlug(placement.Block)"
+                            data-marker="@MarkerSlug(placement.Block)"
+                            data-testid="@TestId("agent-lanes-table-row")">
+                            <td>@LaneAgentName(placement.LaneIndex)</td>
+                            <th scope="row" class="tm-ai-agent-lanes__table-activity">
+                                <button type="button"
+                                        class="tm-ai-agent-lanes__table-select"
+                                        aria-pressed="@(IsSelected(placement.Block.Id) ? "true" : "false")"
+                                        data-testid="@TestId("agent-lanes-table-select")"
+                                        @onclick="() => SelectBlockAsync(placement.Block.Id)">
+                                    @BlockText(placement.Block)
+                                </button>
+                            </th>
+                            <td>@AgentLanePresentation.KindText(Loc, placement.Block.Kind)</td>
+                            <td>@Instant(placement.Block.Start)</td>
+                            <td>@(placement.Block.End is { } end ? Instant(end) : Loc["TmAgentLanes_Now"])</td>
+                            <td>@StatusText(placement.Block.Status)</td>
+                            <td>
+                                @if (placement.Block.Marker is { } marker && AgentLanePresentation.IsKnownMarker(marker))
+                                {
+                                    <span class="tm-ai-agent-lanes__marker tm-ai-agent-lanes__marker--@AgentLanePresentation.MarkerSlug(marker)">
+                                        <span class="tm-ai-agent-lanes__marker-icon" aria-hidden="true">
+                                            <TmIcon Name="@AgentLanePresentation.MarkerIcon(marker)" Size="IconSize.Xs" />
+                                        </span>
+                                        <span class="tm-ai-agent-lanes__marker-text">@AgentLanePresentation.MarkerText(Loc, marker)</span>
+                                    </span>
+                                }
+                                else
+                                {
+                                    @Loc["TmAgentLanes_NoMarker"]
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+
+            <table class="tm-ai-agent-lanes__table" data-testid="@TestId("agent-lanes-handoffs-table")">
+                <caption>@Loc["TmAgentLanes_HandoffsCaption"]</caption>
+                <thead>
+                    <tr>
+                        <th scope="col">@Loc["TmAgentLanes_ColumnFrom"]</th>
+                        <th scope="col">@Loc["TmAgentLanes_ColumnTo"]</th>
+                        <th scope="col">@Loc["TmAgentLanes_ColumnAt"]</th>
+                        <th scope="col">@Loc["TmAgentLanes_ColumnHandoff"]</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (View.Handoffs.Count == 0)
+                    {
+                        <tr>
+                            <td colspan="4" data-testid="@TestId("agent-lanes-no-handoffs")">@Loc["TmAgentLanes_NoHandoffs"]</td>
+                        </tr>
+                    }
+                    else
+                    {
+                        @foreach (var handoff in View.Handoffs)
+                        {
+                            <tr data-testid="@TestId("agent-lanes-handoff-row")">
+                                <td>@HandoffFromText(handoff)</td>
+                                <td>@HandoffToText(handoff)</td>
+                                <td>@Instant(handoff.At)</td>
+                                <td>@(string.IsNullOrWhiteSpace(handoff.Label) ? Loc["TmAgentLanes_NoMarker"] : handoff.Label)</td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+    else
+    {
+        <div class="tm-ai-agent-lanes__viewport"
+             tabindex="0"
+             role="group"
+             aria-label="@Loc["TmAgentLanes_TimelineLabel"]"
+             aria-describedby="@InstructionsId"
+             data-testid="@TestId("agent-lanes-viewport")"
+             @ref="_viewportRef">
+            <div class="tm-ai-agent-lanes__canvas" style="@CanvasStyle">
+                <div class="tm-ai-agent-lanes__axis">
+                    <div class="tm-ai-agent-lanes__axis-label" aria-hidden="true">@Loc["TmAgentLanes_TimeAxisLabel"]</div>
+                    <div class="tm-ai-agent-lanes__axis-track" style="inline-size:@WidthText">
+                        @* The LAST tick sits exactly on the aligned end of the range, so its label is flipped to the
+                           left of its line: a label that stuck out would add a scrollbar the surface never wants
+                           (and that fit-to-width had just removed). *@
+                        @for (var index = 0; index < Layout.Ticks.Count; index++)
+                        {
+                            var tick = Layout.Ticks[index];
+                            <span class="tm-ai-agent-lanes__tick @(index == Layout.Ticks.Count - 1 ? "tm-ai-agent-lanes__tick--end" : string.Empty)"
+                                  style="inset-inline-start:@Px(tick.OffsetPx)"
+                                  data-testid="@TestId("agent-lanes-tick")">
+                                <span class="tm-ai-agent-lanes__tick-label">@TickText(tick)</span>
+                            </span>
+                        }
+                    </div>
+                </div>
+
+                <div class="tm-ai-agent-lanes__lanes">
+                    @if (ShowHandoffs && Layout.Handoffs.Count > 0)
+                    {
+                        <svg class="tm-ai-agent-lanes__handoffs"
+                             width="@WidthValue"
+                             height="@HeightValue"
+                             aria-hidden="true"
+                             focusable="false"
+                             data-testid="@TestId("agent-lanes-handoffs")">
+                            <defs>
+                                <marker id="@ArrowMarkerId"
+                                        viewBox="0 0 8 8"
+                                        refX="7"
+                                        refY="4"
+                                        markerWidth="6"
+                                        markerHeight="6"
+                                        orient="auto-start-reverse">
+                                    <path d="M 0 0 L 8 4 L 0 8 z" class="tm-ai-agent-lanes__arrow-head" />
+                                </marker>
+                            </defs>
+                            @foreach (var line in Layout.Handoffs)
+                            {
+                                <polyline class="tm-ai-agent-lanes__handoff"
+                                          points="@Points(line)"
+                                          marker-end="@($"url(#{ArrowMarkerId})")"
+                                          data-handoff-to="@line.Link.ToAgentId"
+                                          data-testid="@TestId("agent-lanes-handoff")"
+                                          @key="@($"{line.Link.FromBlockId}|{line.Link.FromAgentId}|{line.Link.ToAgentId}|{line.Link.At:O}")" />
+                            }
+                        </svg>
+                    }
+
+                    @foreach (var lane in Layout.Lanes)
+                    {
+                        <div class="tm-ai-agent-lanes__lane"
+                             data-agent-id="@lane.Agent.Id"
+                             data-testid="@TestId("agent-lanes-lane")">
+                            <div class="tm-ai-agent-lanes__lane-head" data-testid="@TestId("agent-lanes-lane-head")">
+                                @* The badge names the agent; the state sits on its own line, so a long state word
+                                   ("Waiting for approval") never squeezes the agent's name into a letter column. *@
+                                <TmAgentBadge Agent="@lane.Agent" ShowStatus="false" Size="AgentBadgeSize.Sm" />
+                                @if (LaneStatus(lane) is { } laneStatus)
+                                {
+                                    <span class="tm-ai-agent-lanes__lane-status tm-ai-agent-lanes__lane-status--@AgentStatusPresentation.Tone(laneStatus)"
+                                          data-status="@AgentStatusPresentation.Tone(laneStatus)"
+                                          data-testid="@TestId("agent-lanes-lane-status")">
+                                        <span class="tm-ai-agent-lanes__lane-status-icon" aria-hidden="true">
+                                            <TmIcon Name="@AgentStatusPresentation.Icon(laneStatus)" Size="IconSize.Xs" />
+                                        </span>
+                                        <span class="tm-ai-agent-lanes__lane-status-text">@AgentStatusPresentation.Text(Loc, laneStatus)</span>
+                                    </span>
+                                }
+                            </div>
+                            <div class="tm-ai-agent-lanes__lane-track"
+                                 style="block-size:@Px(lane.HeightPx);inline-size:@WidthText"
+                                 data-testid="@TestId("agent-lanes-lane-track")">
+                                @foreach (var placement in lane.Blocks)
+                                {
+                                    <button type="button"
+                                            class="@BlockClass(placement)"
+                                            style="@BlockStyle(placement)"
+                                            aria-label="@BlockAriaLabel(placement)"
+                                            aria-pressed="@(IsSelected(placement.Block.Id) ? "true" : "false")"
+                                            title="@BlockTitle(placement.Block)"
+                                            data-block-id="@placement.Block.Id"
+                                            data-status="@StatusSlug(placement.Block)"
+                                            data-kind="@AgentLanePresentation.KindSlug(placement.Block.Kind)"
+                                            data-marker="@MarkerSlug(placement.Block)"
+                                            data-open="@(placement.Block.IsOpen ? "true" : null)"
+                                            data-testid="@TestId("agent-lanes-block")"
+                                            @key="placement.Block.Id"
+                                            @onclick="() => SelectBlockAsync(placement.Block.Id)">
+                                        <span class="tm-ai-agent-lanes__block-kind" aria-hidden="true">
+                                            <TmIcon Name="@AgentLanePresentation.KindIcon(placement.Block.Kind)" Size="IconSize.Xs" />
+                                        </span>
+                                        <span class="tm-ai-agent-lanes__block-label">@BlockText(placement.Block)</span>
+                                        @if (placement.Block.Status is { } status && AgentStatusPresentation.IsKnown(status))
+                                        {
+                                            <span class="tm-ai-agent-lanes__block-status" aria-hidden="true">
+                                                <TmIcon Name="@AgentStatusPresentation.Icon(status)" Size="IconSize.Xs" />
+                                            </span>
+                                        }
+                                        @if (placement.Block.Marker is { } marker && AgentLanePresentation.IsKnownMarker(marker))
+                                        {
+                                            <span class="tm-ai-agent-lanes__block-marker tm-ai-agent-lanes__marker--@AgentLanePresentation.MarkerSlug(marker)"
+                                                  title="@AgentLanePresentation.MarkerText(Loc, marker)"
+                                                  data-testid="@TestId("agent-lanes-block-marker")">
+                                                <span class="tm-ai-agent-lanes__block-marker-icon" aria-hidden="true">
+                                                    <TmIcon Name="@AgentLanePresentation.MarkerIcon(marker)" Size="IconSize.Xs" />
+                                                </span>
+                                                <span class="tm-ai-agent-lanes__block-marker-text">@AgentLanePresentation.MarkerText(Loc, marker)</span>
+                                            </span>
+                                        }
+                                    </button>
+                                }
+                            </div>
+                        </div>
+                    }
+
+                    @if (ShowNowLine && Layout.HasNowLine)
+                    {
+                        <div class="tm-ai-agent-lanes__now @NowClass"
+                             aria-hidden="true"
+                             style="inset-inline-start:@NowOffsetText"
+                             data-testid="@TestId("agent-lanes-now")">
+                            <span class="tm-ai-agent-lanes__now-label">@Loc["TmAgentLanes_Now"]</span>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    }
+
+    @if (DetailTemplate is not null && SelectedBlock is { } selectedBlock)
+    {
+        <div class="tm-ai-agent-lanes__detail"
+             role="region"
+             aria-label="@Loc["TmAgentLanes_Detail"]"
+             data-testid="@TestId("agent-lanes-detail")">
+            @DetailTemplate(selectedBlock)
+        </div>
+    }
+
+    <div class="tm-sr-only"
+         role="status"
+         aria-live="polite"
+         aria-atomic="true"
+         data-testid="@TestId("agent-lanes-announcement")">@_announcement</div>
+</section>
+
+@code {
+    /// <summary>The heading, built at the requested level without duplicating the markup six times.</summary>
+    private RenderFragment Heading => builder =>
+    {
+        builder.OpenElement(0, "h" + EffectiveHeadingLevel.ToString(CultureInfo.InvariantCulture));
+        builder.AddAttribute(1, "class", "tm-ai-agent-lanes__title");
+        builder.AddAttribute(2, "id", TitleId);
+        builder.AddContent(3, HeadingText);
+        builder.CloseElement();
+    };
+}

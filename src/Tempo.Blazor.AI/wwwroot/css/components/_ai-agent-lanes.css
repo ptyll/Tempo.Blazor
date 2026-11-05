@@ -1,0 +1,588 @@
+/* ═══════════════════════════════════════════════════════════════════════════════════════════════
+   TmAgentLanes — a multi-agent run as one lane per agent on a shared time axis
+   Contract: docs/agent-lanes.md
+   Every rule reads a --tm-* design token (no colour literal, no raw palette step, no [data-theme]
+   block); the package's shared token gate is AiMarkdownViewCssTests and the component's own gate is
+   TmAgentLanesCssTests.
+
+   The surface declares NO transition and NO animation: a live run repaints while it streams, so a
+   moving timeline would keep animating for the whole run (and the package's reduced-motion
+   enumeration stays exactly as it is). The only motion a reader can cause — scrolling — is native.
+   ═══════════════════════════════════════════════════════════════════════════════════════════════ */
+
+.tm-ai-agent-lanes {
+    /* A host lays this card out in a grid or a flex row: without this the card's automatic minimum
+       width grows to the timeline's content and the PAGE scrolls sideways instead of the viewport. */
+    min-inline-size: 0;
+
+    /* Every knob is DECLARED here (a var() that only ever carries a fallback is an undefined alias):
+       a host overrides one by restyling this root, and the component writes the two geometry knobs
+       inline from its parameters. */
+    --tm-agent-lanes-label-width: 11rem;
+    --tm-agent-lanes-row-height: 3rem;
+    --tm-agent-lanes-axis-height: 2rem;
+    --tm-agent-lanes-block-fill: var(--tm-bg-surface-secondary);
+    --tm-agent-lanes-block-border: var(--tm-border-color);
+    --tm-agent-lanes-block-tone: var(--tm-border-color-strong);
+    --tm-agent-lanes-handoff: var(--tm-text-secondary);
+    --tm-agent-lanes-now: var(--tm-color-primary);
+    --tm-agent-lanes-status-tone: var(--tm-text-secondary);
+
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-3);
+    padding: var(--tm-space-4);
+    border: var(--tm-border-width) solid var(--tm-border-color);
+    border-radius: var(--tm-radius-card);
+    background-color: var(--tm-bg-surface);
+    color: var(--tm-text-primary);
+    box-shadow: var(--tm-shadow-sm);
+    font-size: var(--tm-font-size-sm);
+    line-height: 1.5;
+}
+
+/* ── Header ──────────────────────────────────────────────────────────────────────────────────── */
+
+.tm-ai-agent-lanes__header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--tm-space-2);
+}
+
+.tm-ai-agent-lanes__title {
+    margin: 0;
+    font-size: var(--tm-font-size-base);
+    font-weight: var(--tm-font-weight-semibold);
+}
+
+.tm-ai-agent-lanes__toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--tm-space-2);
+}
+
+.tm-ai-agent-lanes__view {
+    display: flex;
+    min-inline-size: 0;
+}
+
+.tm-ai-agent-lanes__zoom {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--tm-space-1);
+}
+
+.tm-ai-agent-lanes__zoom-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    inline-size: 2rem;
+    block-size: 2rem;
+    padding: 0;
+    border: var(--tm-border-width) solid var(--tm-border-color-control);
+    border-radius: var(--tm-radius-control);
+    background-color: var(--tm-bg-surface);
+    color: var(--tm-text-primary);
+    cursor: pointer;
+}
+
+.tm-ai-agent-lanes__zoom-button:hover {
+    background-color: var(--tm-bg-surface-secondary);
+}
+
+.tm-ai-agent-lanes__zoom-button:focus-visible {
+    outline: 2px solid var(--tm-border-color-focus);
+    outline-offset: 2px;
+}
+
+.tm-ai-agent-lanes__zoom-button--fit {
+    inline-size: 2.25rem;
+}
+
+.tm-ai-agent-lanes__zoom-value {
+    min-inline-size: 3.5rem;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+    color: var(--tm-text-secondary);
+}
+
+.tm-ai-agent-lanes__empty {
+    margin: 0;
+    padding: var(--tm-space-6) var(--tm-space-4);
+    text-align: center;
+    color: var(--tm-text-muted);
+}
+
+/* ── The timeline: one scrollport in the inline axis only ────────────────────────────────────── */
+
+.tm-ai-agent-lanes__viewport {
+    min-inline-size: 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+    border: var(--tm-border-width) solid var(--tm-border-color);
+    border-radius: var(--tm-radius-md);
+    background-color: var(--tm-bg-surface);
+}
+
+/* The scrollport is a tab stop so a keyboard reader can scroll the timelines with the arrow keys; its
+   ring is INSET because a scroller clips an outward one. */
+.tm-ai-agent-lanes__viewport:focus-visible {
+    outline: 2px solid var(--tm-border-color-focus);
+    outline-offset: -2px;
+}
+
+.tm-ai-agent-lanes__canvas {
+    display: flex;
+    flex-direction: column;
+}
+
+/* ── Time axis ───────────────────────────────────────────────────────────────────────────────── */
+
+.tm-ai-agent-lanes__axis {
+    display: grid;
+    grid-template-columns: var(--tm-agent-lanes-label-width) auto;
+    border-block-end: var(--tm-border-width) solid var(--tm-border-color);
+}
+
+.tm-ai-agent-lanes__axis-label {
+    position: sticky;
+    inset-inline-start: 0;
+    z-index: 4;
+    display: flex;
+    align-items: center;
+    padding-inline: var(--tm-space-2);
+    border-inline-end: var(--tm-border-width) solid var(--tm-border-color);
+    background-color: var(--tm-bg-surface-secondary);
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-xs);
+    font-weight: var(--tm-font-weight-semibold);
+}
+
+.tm-ai-agent-lanes__axis-track {
+    position: relative;
+    block-size: var(--tm-agent-lanes-axis-height);
+}
+
+.tm-ai-agent-lanes__tick {
+    position: absolute;
+    inset-block: 0;
+    border-inline-start: var(--tm-border-width) solid var(--tm-border-color);
+    pointer-events: none;
+}
+
+.tm-ai-agent-lanes__tick--end .tm-ai-agent-lanes__tick-label {
+    inset-inline-start: auto;
+    inset-inline-end: var(--tm-space-1);
+}
+
+.tm-ai-agent-lanes__tick-label {
+    position: absolute;
+    inset-block-start: var(--tm-space-1);
+    inset-inline-start: var(--tm-space-1);
+    color: var(--tm-text-muted);
+    font-size: var(--tm-font-size-xs);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+/* ── Lanes ───────────────────────────────────────────────────────────────────────────────────── */
+
+.tm-ai-agent-lanes__lanes {
+    position: relative;
+}
+
+.tm-ai-agent-lanes__handoffs {
+    position: absolute;
+    inset-block-start: 0;
+    inset-inline-start: var(--tm-agent-lanes-label-width);
+    z-index: 1;
+    overflow: visible;
+    pointer-events: none;
+}
+
+.tm-ai-agent-lanes__handoff {
+    fill: none;
+    stroke: var(--tm-agent-lanes-handoff);
+    stroke-width: 1.5;
+    stroke-dasharray: 5 3;
+}
+
+.tm-ai-agent-lanes__arrow-head {
+    fill: var(--tm-agent-lanes-handoff);
+    stroke: none;
+}
+
+.tm-ai-agent-lanes__lane {
+    display: grid;
+    grid-template-columns: var(--tm-agent-lanes-label-width) auto;
+    border-block-start: var(--tm-border-width) solid var(--tm-border-color);
+}
+
+.tm-ai-agent-lanes__lane-head {
+    position: sticky;
+    inset-inline-start: 0;
+    z-index: 3;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--tm-space-1);
+    min-inline-size: 0;
+    padding: var(--tm-space-2);
+    border-inline-end: var(--tm-border-width) solid var(--tm-border-color);
+    background-color: var(--tm-bg-surface);
+}
+
+/* The badge keeps the agent's name on ONE readable line: the state lives on the line below, so a long state word
+   can never squeeze the name into a column of single letters. */
+.tm-ai-agent-lanes__lane-head .tm-agent-badge {
+    max-inline-size: 100%;
+    min-inline-size: 0;
+}
+
+.tm-ai-agent-lanes__lane-head .tm-agent-badge__name {
+    min-inline-size: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.tm-ai-agent-lanes__lane-status {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--tm-space-1);
+    max-inline-size: 100%;
+    color: var(--tm-agent-lanes-status-tone);
+    font-size: var(--tm-font-size-xs);
+}
+
+.tm-ai-agent-lanes__lane-status-text {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.tm-ai-agent-lanes__lane-status-icon {
+    display: inline-flex;
+    flex: 0 0 auto;
+}
+
+/* State tones: a modifier SETS the knob, the base rule above READS it. */
+.tm-ai-agent-lanes__lane-status--idle {
+    --tm-agent-lanes-status-tone: var(--tm-text-muted);
+}
+
+.tm-ai-agent-lanes__lane-status--queued {
+    --tm-agent-lanes-status-tone: var(--tm-color-info-text);
+}
+
+.tm-ai-agent-lanes__lane-status--running {
+    --tm-agent-lanes-status-tone: var(--tm-color-primary-text);
+}
+
+.tm-ai-agent-lanes__lane-status--approval {
+    --tm-agent-lanes-status-tone: var(--tm-color-warning-text);
+}
+
+.tm-ai-agent-lanes__lane-status--succeeded {
+    --tm-agent-lanes-status-tone: var(--tm-color-success-text);
+}
+
+.tm-ai-agent-lanes__lane-status--failed {
+    --tm-agent-lanes-status-tone: var(--tm-color-danger-text);
+}
+
+.tm-ai-agent-lanes__lane-status--cancelled {
+    --tm-agent-lanes-status-tone: var(--tm-text-disabled);
+}
+
+.tm-ai-agent-lanes__lane-track {
+    position: relative;
+    min-inline-size: 0;
+}
+
+/* ── Blocks: native buttons, positioned by the layout ────────────────────────────────────────── */
+
+.tm-ai-agent-lanes__block {
+    position: absolute;
+    inset-block-start: 0;
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-1);
+    block-size: calc(var(--tm-agent-lanes-row-height) - 0.25rem);
+    margin-block-start: 0.125rem;
+    padding-inline: var(--tm-space-1-5);
+    overflow: hidden;
+    border: var(--tm-border-width) solid var(--tm-agent-lanes-block-border);
+    border-inline-start: 3px solid var(--tm-agent-lanes-block-tone);
+    border-radius: var(--tm-radius-sm);
+    background-color: var(--tm-agent-lanes-block-fill);
+    color: var(--tm-text-primary);
+    font: inherit;
+    text-align: start;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.tm-ai-agent-lanes__block:focus-visible {
+    outline: 2px solid var(--tm-border-color-focus);
+    outline-offset: -2px;
+}
+
+/* The state tones are KNOBS the modifiers SET and the base rules READ (with a fallback), so source
+   order cannot decide a colour; every tone is also carried by an icon and a word. */
+.tm-ai-agent-lanes__block--idle {
+    --tm-agent-lanes-block-tone: var(--tm-text-muted);
+    --tm-agent-lanes-block-fill: var(--tm-bg-surface-secondary);
+}
+
+.tm-ai-agent-lanes__block--queued {
+    --tm-agent-lanes-block-tone: var(--tm-color-info);
+    --tm-agent-lanes-block-fill: var(--tm-color-info-subtle);
+}
+
+.tm-ai-agent-lanes__block--running {
+    --tm-agent-lanes-block-tone: var(--tm-color-primary);
+    --tm-agent-lanes-block-fill: var(--tm-color-primary-subtle);
+}
+
+.tm-ai-agent-lanes__block--approval {
+    --tm-agent-lanes-block-tone: var(--tm-color-warning);
+    --tm-agent-lanes-block-fill: var(--tm-color-warning-bg-subtle);
+}
+
+.tm-ai-agent-lanes__block--succeeded {
+    --tm-agent-lanes-block-tone: var(--tm-color-success);
+    --tm-agent-lanes-block-fill: var(--tm-color-success-subtle);
+}
+
+.tm-ai-agent-lanes__block--failed {
+    --tm-agent-lanes-block-tone: var(--tm-color-danger);
+    --tm-agent-lanes-block-fill: var(--tm-color-danger-subtle);
+}
+
+.tm-ai-agent-lanes__block--cancelled {
+    --tm-agent-lanes-block-tone: var(--tm-text-disabled);
+    --tm-agent-lanes-block-fill: var(--tm-bg-surface-secondary);
+}
+
+/* An open (still running) block has no recorded end yet: a dashed trailing edge says so without motion. */
+.tm-ai-agent-lanes__block--open {
+    border-inline-end-style: dashed;
+}
+
+.tm-ai-agent-lanes__block--selected,
+.tm-ai-agent-lanes__block[aria-pressed="true"] {
+    outline: 2px solid var(--tm-border-color-focus);
+    outline-offset: -2px;
+    --tm-agent-lanes-block-fill: var(--tm-bg-surface);
+}
+
+.tm-ai-agent-lanes__block-kind {
+    display: inline-flex;
+    flex: 0 0 auto;
+    color: var(--tm-text-secondary);
+}
+
+.tm-ai-agent-lanes__block-label {
+    flex: 1 1 auto;
+    min-inline-size: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.tm-ai-agent-lanes__block-status {
+    display: inline-flex;
+    flex: 0 0 auto;
+    color: var(--tm-agent-lanes-block-tone);
+}
+
+.tm-ai-agent-lanes__block-marker,
+.tm-ai-agent-lanes__marker {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: var(--tm-space-1);
+    padding-inline: var(--tm-space-1);
+    border-radius: var(--tm-radius-full);
+    background-color: var(--tm-bg-surface);
+    font-size: var(--tm-font-size-xs);
+}
+
+.tm-ai-agent-lanes__block-marker-icon,
+.tm-ai-agent-lanes__marker-icon {
+    display: inline-flex;
+}
+
+/* The marker tones come after their base rules, so the base rule cannot win the cascade. */
+.tm-ai-agent-lanes__marker--approval {
+    color: var(--tm-color-success-text);
+}
+
+.tm-ai-agent-lanes__marker--changes-requested {
+    color: var(--tm-color-danger-text);
+}
+
+.tm-ai-agent-lanes__marker--review {
+    color: var(--tm-color-info-text);
+}
+
+.tm-ai-agent-lanes__block-marker-text,
+.tm-ai-agent-lanes__marker-text {
+    white-space: nowrap;
+}
+
+/* ── "Now" ───────────────────────────────────────────────────────────────────────────────────── */
+
+.tm-ai-agent-lanes__now {
+    position: absolute;
+    inset-block: 0;
+    z-index: 2;
+    inline-size: 2px;
+    background-color: var(--tm-agent-lanes-now);
+    pointer-events: none;
+}
+
+.tm-ai-agent-lanes__now--end .tm-ai-agent-lanes__now-label {
+    inset-inline-start: auto;
+    inset-inline-end: var(--tm-space-1);
+}
+
+.tm-ai-agent-lanes__now-label {
+    position: absolute;
+    inset-block-start: 0;
+    inset-inline-start: var(--tm-space-1);
+    padding-inline: var(--tm-space-1);
+    border-radius: var(--tm-radius-sm);
+    background-color: var(--tm-bg-surface);
+    color: var(--tm-color-primary-text);
+    font-size: var(--tm-font-size-xs);
+    font-weight: var(--tm-font-weight-semibold);
+    white-space: nowrap;
+}
+
+/* ── Table alternative ──────────────────────────────────────────────────────────────────────── */
+
+.tm-ai-agent-lanes__tables {
+    display: grid;
+    gap: var(--tm-space-4);
+    min-inline-size: 0;
+    overflow-x: auto;
+}
+
+.tm-ai-agent-lanes__table {
+    inline-size: 100%;
+    border-collapse: collapse;
+    font-size: var(--tm-font-size-sm);
+}
+
+.tm-ai-agent-lanes__table caption {
+    padding-block-end: var(--tm-space-2);
+    text-align: start;
+    font-weight: var(--tm-font-weight-semibold);
+    color: var(--tm-text-primary);
+}
+
+.tm-ai-agent-lanes__table th,
+.tm-ai-agent-lanes__table td {
+    padding: var(--tm-space-1-5) var(--tm-space-2);
+    border-block-end: var(--tm-border-width) solid var(--tm-border-color);
+    text-align: start;
+    vertical-align: top;
+}
+
+.tm-ai-agent-lanes__table thead th {
+    background-color: var(--tm-bg-surface-secondary);
+    font-weight: var(--tm-font-weight-semibold);
+    white-space: nowrap;
+}
+
+.tm-ai-agent-lanes__table-activity {
+    font-weight: var(--tm-font-weight-normal);
+}
+
+.tm-ai-agent-lanes__table-select {
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--tm-text-link);
+    font: inherit;
+    text-align: start;
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+.tm-ai-agent-lanes__table-select:focus-visible {
+    outline: 2px solid var(--tm-border-color-focus);
+    outline-offset: 2px;
+}
+
+/* ── Detail slot ───────────────────────────────────────────────────────────────────────────── */
+
+.tm-ai-agent-lanes__detail {
+    padding: var(--tm-space-3);
+    border: var(--tm-border-width) solid var(--tm-border-color);
+    border-radius: var(--tm-radius-md);
+    background-color: var(--tm-bg-surface-secondary);
+    color: var(--tm-text-primary);
+}
+
+/* ── Coarse pointer: every pointer target reaches the 44 px touch target ─────────────────────── */
+
+@media (pointer: coarse) {
+    .tm-ai-agent-lanes__zoom-button {
+        inline-size: var(--tm-touch-target);
+        block-size: var(--tm-touch-target);
+    }
+
+    .tm-ai-agent-lanes__table-select {
+        min-block-size: var(--tm-touch-target);
+    }
+
+    /* A very short block stays a 44 px tap target: its axis position still comes from the layout and the
+       table carries the exact times, so widening the box never hides information. */
+    .tm-ai-agent-lanes__block {
+        min-inline-size: var(--tm-touch-target);
+    }
+
+    .tm-ai-agent-lanes__lane-head {
+        padding-block: var(--tm-space-3);
+    }
+}
+
+/* ── Forced colors: the system palette stays in charge ──────────────────────────────────────── */
+
+@media (forced-colors: active) {
+    .tm-ai-agent-lanes__zoom-button:focus-visible,
+    .tm-ai-agent-lanes__block:focus-visible,
+    .tm-ai-agent-lanes__table-select:focus-visible,
+    .tm-ai-agent-lanes__viewport:focus-visible {
+        outline-color: Highlight;
+    }
+
+    /* A tone border collapses into the system colour, so every block keeps a visible edge and the picked
+       block keeps its ring in the system Highlight colour. */
+    .tm-ai-agent-lanes__block {
+        border-color: CanvasText;
+    }
+
+    .tm-ai-agent-lanes__block--selected,
+.tm-ai-agent-lanes__block[aria-pressed="true"] {
+        outline: 2px solid Highlight;
+        outline-offset: -2px;
+    }
+
+    .tm-ai-agent-lanes__handoff {
+        stroke: CanvasText;
+    }
+
+    .tm-ai-agent-lanes__arrow-head {
+        fill: CanvasText;
+    }
+
+    .tm-ai-agent-lanes__now {
+        background-color: Highlight;
+    }
+}

@@ -1,0 +1,15 @@
+{
+  "kind": "Enum",
+  "category": "AI",
+  "namespace": "Tempo.Blazor.AI.Models",
+  "description": "What one incremental AgentLaneEvent does to a lane snapshot. Three verbs describe a live run: a block appears or changes (an upsert, so a start and a later completion are the same operation), a block disappears, or a handoff is recorded. The reducer (AgentLanesSnapshot.Apply) applies them to a new value and never edits the snapshot it was given.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/AI/Agents/AgentLaneEventKind.cs",
+  "documentationStatus": "documented",
+  "itemName": "AgentLaneEventKind",
+  "members": [
+    { "name": "BlockUpserted", "description": "Adds the block, or replaces the block with the same AgentLaneBlock.Id in place (its position in the list is kept)." },
+    { "name": "BlockRemoved", "description": "Removes the block named by AgentLaneEvent.BlockId; an unknown id is a no-op." },
+    { "name": "HandoffAdded", "description": "Records the handoff, unless the same link is already present." }
+  ]
+}

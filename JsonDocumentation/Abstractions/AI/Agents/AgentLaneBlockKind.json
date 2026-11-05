@@ -1,0 +1,17 @@
+{
+  "kind": "Enum",
+  "category": "AI",
+  "namespace": "Tempo.Blazor.AI.Models",
+  "description": "What one block on an agent lane represents, in the one vocabulary every lane surface shares. The kind is always painted twice — a decorative glyph and a localized WORD — because an icon alone is not information a screen-reader reader can use. The set is deliberately small and transport-neutral: a host maps its own vocabulary (a plan step, a tool call, a room message, a review gate, a delegation) onto these five values and TmAgentLanes stays backend-free. An unknown value (a member from a newer backend) renders the neutral glyph and the Task word, so a stale contract can never paint a wrong kind.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/AI/Agents/AgentLaneBlockKind.cs",
+  "documentationStatus": "documented",
+  "itemName": "AgentLaneBlockKind",
+  "members": [
+    { "name": "Task", "description": "A piece of work assigned to the agent — a plan step, a turn, a task. The default." },
+    { "name": "Tool", "description": "A tool call the agent made (a lookup, a write, a command)." },
+    { "name": "Message", "description": "A message the agent produced or received." },
+    { "name": "Review", "description": "A review or approval gate — the block a reader usually has to act on." },
+    { "name": "Handoff", "description": "A transfer of the work to another agent; the lane surface draws it with a handoff arrow." }
+  ]
+}

@@ -171,6 +171,7 @@ public sealed class BuiltInComponentSchemas : IWireframeSchemaSource
             ["TmModelPicker"] = ["model-picker"],
             ["TmContextUsage"] = ["context-usage"],
             ["TmAgentBadge"] = ["agent-badge"],
+            ["TmAgentLanes"] = ["agent-lanes"],
             ["TmPromptLibrary"] = ["prompt-library"],
             ["TmMultiViewList"] = ["list-view"],
             ["TmDataTable"] = ["data-table"],
@@ -1404,6 +1405,21 @@ public sealed class BuiltInComponentSchemas : IWireframeSchemaSource
                     opts: ["idle", "queued", "running", "approval", "succeeded", "failed", "cancelled"]),
                 P("showName",   "Show Name",   PropType.Bool,   true,           cat: "Appearance"),
                 P("showStatus", "Show Status", PropType.Bool,   true,           cat: "Appearance"),
+            ]
+        };
+
+        yield return new WireframeComponentSchema
+        {
+            Type = "TmAgentLanes", Category = "AI", DisplayName = "Agent Lanes",
+            DefaultWidth = 640, DefaultHeight = 260,
+            Props =
+            [
+                P("title",       "Title",        PropType.String, "Agent lanes", cat: "Content"),
+                P("blocks",      "Blocks",       PropType.StringList, new[] { "Plan the release", "Deploy the build", "Review the diff" }, cat: "Content"),
+                P("viewMode",    "View",         PropType.Enum,   "timeline", cat: "Behavior",
+                    opts: ["timeline", "table"]),
+                P("showNowLine", "Show Now Line", PropType.Bool,  true, cat: "Appearance"),
+                P("showZoom",    "Show Zoom",    PropType.Bool,   true, cat: "Appearance"),
             ]
         };
 
