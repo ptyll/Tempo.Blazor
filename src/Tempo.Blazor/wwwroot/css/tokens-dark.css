@@ -141,6 +141,18 @@
   --tm-trace-db: #f472b6;     /* pink-400 */
   --tm-trace-custom: #9ca3af; /* gray-400 */
 
+  /* Agent palette — lifted to 300-tones so the initials avatar keeps its 4.5:1 against the dark ink
+     (--tm-agent-color-ink) exactly as it does in light. Same hues as the light 700-tones. */
+  --tm-agent-color-0: #93c5fd; /* blue-300 */
+  --tm-agent-color-1: #c4b5fd; /* violet-300 */
+  --tm-agent-color-2: #f9a8d4; /* pink-300 */
+  --tm-agent-color-3: #fca5a5; /* red-300 */
+  --tm-agent-color-4: #fcd34d; /* amber-300 */
+  --tm-agent-color-5: #6ee7b7; /* emerald-300 */
+  --tm-agent-color-6: #5eead4; /* teal-300 */
+  --tm-agent-color-7: #cbd5e1; /* slate-300 */
+  --tm-agent-color-ink: var(--tm-text-inverse);
+
   /* Neutral scale — inverted for dark mode */
   --tm-color-gray-50:        #1e293b;
   --tm-color-gray-100:       #334155;
@@ -384,6 +396,16 @@
   --tm-trace-http:                 #047857;
   --tm-trace-db:                   #be185d;
   --tm-trace-custom:               #4b5563;
+
+  --tm-agent-color-0:              #1d4ed8;
+  --tm-agent-color-1:              #6d28d9;
+  --tm-agent-color-2:              #be185d;
+  --tm-agent-color-3:              #b91c1c;
+  --tm-agent-color-4:              #b45309;
+  --tm-agent-color-5:              #047857;
+  --tm-agent-color-6:              #0f766e;
+  --tm-agent-color-7:              #334155;
+  --tm-agent-color-ink:            var(--tm-text-inverse);
   --tm-color-gray-50:               #f9fafb;
   --tm-color-gray-100:              #f3f4f6;
   --tm-color-gray-200:              #e5e7eb;

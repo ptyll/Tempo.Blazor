@@ -1,0 +1,108 @@
+{
+  "itemName": "TmAgentBadge",
+  "kind": "Component",
+  "category": "AI",
+  "namespace": "Tempo.Blazor.Components.AI",
+  "description": "The shared agent identity line: the agent's initials (or its picture) on the agent's palette colour, the name, and — when the host reports one — the activity state as an icon, a WORD and a tone. Every agent visualization (lanes, graph, fan-out, handoff, presence roster) renders this component, so an agent looks the same wherever it appears and its state is never colour-only information (WCAG 1.4.1). The colour comes from AgentRef.ColorIndex, which is normalised into the eight-slot palette --tm-agent-color-0 … --tm-agent-color-7; the ink painted on it is --tm-agent-color-ink, whose AA (4.5:1) contrast against every slot is measured in both themes by AgentColorTokenTests. The picture is host data: AgentRef.AvatarUrl is loaded only when it is an absolute http(s) source (the package's image allowlist, the same rule the markdown pipeline applies to images) and a refused target falls back to the initials instead of becoming a live source or a broken image. The badge is NOT a live region, carries no aria-live and never moves (no transition, no animation): the surface that owns the run has exactly one announcement channel, and a pulsing badge would become a second one while re-introducing motion that prefers-reduced-motion would have to cover. Naming: with the name visible the badge has no aria-label at all — the visible text IS the accessible name (WCAG 2.5.3); with ShowName=false the composed avatar becomes one role=\"img\" graphic named by the agent and, when one is rendered, its state, because an aria-label on a role-less span is ignored by assistive technology. An unknown state value renders no chip, so a stale contract can never paint a wrong verdict, and a whitespace name renders the localized \"Unnamed agent\" fallback instead of an empty gap.",
+  "packageId": "Tempo.Blazor.AI",
+  "sourcePath": "src/Tempo.Blazor.AI/Components/AI/TmAgentBadge.razor",
+  "documentationStatus": "documented",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.AI",
+    "@using Tempo.Blazor.AI.Models"
+  ],
+  "parameters": [
+    {
+      "name": "Agent",
+      "type": "AgentRef?",
+      "isRequired": false,
+      "description": "The agent to show. Null renders nothing at all — a surface that has not loaded its snapshot yet must not paint an anonymous avatar. The record is a VALUE: a host recomposes it with `agent with { … }`."
+    },
+    {
+      "name": "Status",
+      "type": "AgentActivityStatus?",
+      "isRequired": false,
+      "description": "What the agent is doing right now. Null (the default) renders no state chip at all, which is not the same as Idle. A value the component cannot name (an enum member from a newer backend) also renders no chip, so a stale contract can never paint a wrong verdict."
+    },
+    {
+      "name": "ShowName",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "Whether the agent's name is rendered next to the avatar. Default true. With false the badge becomes one labelled graphic (role=\"img\") named by the agent and its state."
+    },
+    {
+      "name": "ShowStatus",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "Whether the state chip is rendered when Status is set. Default true. Turning it off is how a dense surface (a graph node, an attempt tile) keeps the state on its own row instead of inside the badge."
+    },
+    {
+      "name": "Size",
+      "type": "AgentBadgeSize",
+      "isRequired": false,
+      "default": "Md",
+      "description": "Avatar and text size: Sm (20 px), Md (24 px, the default) or Lg (32 px). The size sets one component knob, so the initials cannot drift from the circle that contains them."
+    },
+    {
+      "name": "Class",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Additional CSS class(es) for the root element."
+    },
+    {
+      "name": "AdditionalAttributes",
+      "type": "Dictionary<string, object>?",
+      "isRequired": false,
+      "description": "Additional HTML attributes applied to the root element."
+    },
+    {
+      "name": "DataTestId",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Overrides the root data-testid (default \"agent-badge\", namespaced by TestIdPrefix)."
+    },
+    {
+      "name": "TestIdPrefix",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Namespaces every internal data-testid of this instance, so several badges on one page stay targetable."
+    }
+  ],
+  "cssClasses": [
+    "tm-agent-badge",
+    "tm-agent-badge--sm",
+    "tm-agent-badge--md",
+    "tm-agent-badge--lg",
+    "tm-agent-badge__avatar",
+    "tm-agent-badge__image",
+    "tm-agent-badge__initials",
+    "tm-agent-badge__name",
+    "tm-agent-badge__status",
+    "tm-agent-badge__status-icon",
+    "tm-agent-badge__status-text",
+    "tm-agent-badge__status--idle",
+    "tm-agent-badge__status--queued",
+    "tm-agent-badge__status--running",
+    "tm-agent-badge__status--approval",
+    "tm-agent-badge__status--succeeded",
+    "tm-agent-badge__status--failed",
+    "tm-agent-badge__status--cancelled"
+  ],
+  "examples": [
+    {
+      "title": "A running agent in a lane header",
+      "code": "<TmAgentBadge Agent=\"planner\" Status=\"AgentActivityStatus.Running\" />\n\n@code {\n    private readonly AgentRef planner = new(\"Planner\", \"agent-planner\")\n    {\n        Role = \"Orchestrator\",\n        ColorIndex = 0,\n    };\n}"
+    },
+    {
+      "title": "An avatar-only badge inside a graph node or a table cell",
+      "code": "<TmAgentBadge Agent=\"reviewer\"\n              ShowName=\"false\"\n              Size=\"AgentBadgeSize.Sm\"\n              Status=\"AgentActivityStatus.WaitingForApproval\" />"
+    },
+    {
+      "title": "The colour comes from the palette slot, not from the host",
+      "code": "@* Eight distinct slots — a host that counts past eight wraps instead of inventing a colour. *@\n<TmAgentBadge Agent=\"@Colorised(planner, 0)\" ShowStatus=\"false\" />\n<TmAgentBadge Agent=\"@Colorised(reviewer, 1)\" ShowStatus=\"false\" />\n\n@code {\n    private readonly AgentRef planner = new(\"Planner\", \"agent-planner\");\n    private readonly AgentRef reviewer = new(\"Reviewer\", \"agent-reviewer\");\n\n    // AgentRef.ColorIndex is normalised into the eight-slot palette on assignment.\n    private static AgentRef Colorised(AgentRef agent, int index) => agent with { ColorIndex = index };\n}"
+    }
+  ],
+  "notes": "The badge is deliberately not interactive: it renders no button, no tab stop and no drag surface, so WCAG 2.5.7's non-drag alternative and the 44 px coarse-pointer target do not apply to it — a host that makes a whole row clickable keeps that obligation on its own row. Its CSS declares no transition or animation, which keeps the package's reduced-motion enumeration unchanged; a future animated subject has to add its own prefers-reduced-motion block. Under Windows high contrast the avatar opts out of the system palette (forced-color-adjust: none) so the eight agent fills stay distinguishable and keeps a CanvasText border for the circle's edge."
+}

@@ -1,0 +1,18 @@
+{
+  "kind": "Class",
+  "category": "AI",
+  "namespace": "Tempo.Blazor.AI.Models",
+  "description": "The render gate every live agent visualization shares: at most one paint per Interval (100 ms by default), measured on an injected TimeProvider. A hub pushing ten events per second would otherwise paint ten renders per second per component, and on Blazor Server every one of them is a circuit round trip on top of the DOM work; the gate collapses that burst into one paint per window while the component's state keeps absorbing every event — the STATE is never throttled, only the paint, so a snapshot read at any moment is complete. An interval of zero (or a negative one, normalised to zero) is the documented way to opt out of throttling entirely. The class owns one timestamp and no clock of its own, so a test drives it with FakeTimeProvider and a host may pin it to the same clock its data uses. It is NOT thread-safe, unlike AgentEventStream: one timestamp is read and written with no gate, so two threads calling ShouldRender at the same moment can both be answered true for one window. An instance therefore belongs to the component that owns it and is called from that component's renderer context (inside InvokeAsync on Blazor Server, or on the dispatcher in WASM), which is where a render is decided anyway; a host feeding one instance from two threads needs its own lock.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/AI/Agents/AgentRenderThrottle.cs",
+  "documentationStatus": "documented",
+  "itemName": "AgentRenderThrottle",
+  "usageExample": "private readonly AgentRenderThrottle _throttle = new(Clock);\n\nprivate void OnEvent(RunEvent evt)\n{\n    Snapshot = Snapshot.Apply(evt);\n    if (_throttle.ShouldRender())\n    {\n        StateHasChanged();\n    }\n}\n\n// A host that repainted for its own reason must not wait out the previous window:\n_throttle.Reset();",
+  "members": [
+    { "name": "DefaultInterval", "description": "The shared default window: ten events per second collapse into one paint." },
+    { "name": "Interval", "description": "The effective window. Zero means every call paints (the host opted out of throttling)." },
+    { "name": "ShouldRender", "description": "Whether the component may paint now. A true answer OPENS a new window, so a caller asks once per event and paints when the answer is true. Call it from the component's renderer context: the throttle is not thread-safe." },
+    { "name": "DelayUntilNextRender", "description": "How long a caller scheduling a trailing paint has to wait for the current window to close. Zero means the stream may paint immediately; the value never goes negative, so a clock that jumped cannot produce a negative delay." },
+    { "name": "Reset", "description": "Forgets the last paint, so the next ShouldRender answers true. A host that repainted for its own reason (a snapshot reload) calls this instead of leaving its next event held back by the previous window." }
+  ]
+}

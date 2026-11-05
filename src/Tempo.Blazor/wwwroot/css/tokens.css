@@ -113,6 +113,27 @@
   --tm-trace-db: #be185d;     /* Database query — pink-700 */
   --tm-trace-custom: #4b5563; /* Custom — gray-600 */
 
+  /* ── Agent palette ──────────────────────────────────────────── */
+  /* One colour per agent, for the initials avatar (TmAgentBadge) and the lanes/graph/presence
+     cursors that name an agent. AgentRef.ColorIndex indexes this family (0..7, normalised), so
+     eight DISTINCT slots are the contract: two agents in one visualization must never share one.
+     Light uses 700-tones under the white --tm-agent-color-ink; the dark theme lifts them to
+     300-tones under the dark ink (tokens-dark.css). Both pairs hold WCAG AA (4.5:1) for the
+     initials — measured by AgentColorTokenTests, never assumed. */
+  --tm-agent-color-0: #1d4ed8; /* blue-700 */
+  --tm-agent-color-1: #6d28d9; /* violet-700 */
+  --tm-agent-color-2: #be185d; /* pink-700 */
+  --tm-agent-color-3: #b91c1c; /* red-700 */
+  --tm-agent-color-4: #b45309; /* amber-700 */
+  --tm-agent-color-5: #047857; /* emerald-700 */
+  --tm-agent-color-6: #0f766e; /* teal-700 */
+  --tm-agent-color-7: #334155; /* slate-700 */
+  /* The ink painted ON a palette fill: the theme's inverse, white in light and near-black in dark.
+     tokens-dark.css restates the same var() expression — a custom property substitutes its var()
+     where it is DECLARED, so a family declared only on :root would hand dark elements the light
+     value (the 910c84fe trap TokenContrastTests documents). */
+  --tm-agent-color-ink: var(--tm-text-inverse);
+
   /* ── Neutrals ───────────────────────────────────────────────── */
   --tm-color-white:            #ffffff;
   --tm-color-gray-50:          #f9fafb;

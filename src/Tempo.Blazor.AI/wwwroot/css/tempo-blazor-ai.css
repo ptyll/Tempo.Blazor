@@ -11,6 +11,7 @@
 @import "components/_ai-composer.css";
 @import "components/_markdown-view.css";
 @import "components/_ai-permission.css";
+@import "components/_ai-agent-badge.css";
 @import "components/_ai-agent-plan.css";
 @import "components/_ai-agent-run-tree.css";
 @import "components/_ai-agent-monitor.css";

@@ -1,0 +1,179 @@
+/* ═══════════════════════════════════════════════════════════════════════════════════════════════
+   TmAgentBadge — the shared agent identity line: avatar/initials + palette colour + name + state
+   Contract: docs/ai-agents.md
+   Every rule reads a --tm-* design token (no colour literal, no raw palette step, no [data-theme]
+   block); the package's shared token gate is AiMarkdownViewCssTests and the badge's own gate is
+   TmAgentBadgeCssTests.
+
+   NO transition and NO animation on purpose: an agent's state is carried by an icon, a WORD and a
+   tone, so nothing has to move for the badge to be readable — and the package's reduced-motion
+   enumeration stays exactly as it is.
+
+   Two component-local knobs live on the root, both with a fallback to a DECLARED token so an instance
+   that the host never styled still paints a real colour:
+     --tm-agent-badge-color       the agent's palette fill (written by the component from AgentRef.ColorIndex)
+     --tm-agent-badge-avatar-size the avatar circle, set by the size modifiers
+   The state tone travels through three further knobs (--tm-agent-badge-status-*) that the tone
+   modifiers SET and the base rule READS: with both rules at the same specificity, a value declared
+   twice would be decided by source order — this way it cannot be.
+   ═══════════════════════════════════════════════════════════════════════════════════════════════ */
+
+.tm-agent-badge {
+    --tm-agent-badge-color: var(--tm-agent-color-0);
+    --tm-agent-badge-avatar-size: var(--tm-space-6);
+
+    display: inline-flex;
+    align-items: center;
+    gap: var(--tm-space-2);
+    min-inline-size: 0;
+    max-inline-size: 100%;
+    color: var(--tm-text-primary);
+    font-size: var(--tm-font-size-sm);
+    line-height: var(--tm-line-height-tight);
+    vertical-align: middle;
+}
+
+.tm-agent-badge--sm {
+    --tm-agent-badge-avatar-size: var(--tm-space-5);
+    gap: var(--tm-space-1);
+    font-size: var(--tm-font-size-xs);
+}
+
+.tm-agent-badge--md {
+    --tm-agent-badge-avatar-size: var(--tm-space-6);
+}
+
+.tm-agent-badge--lg {
+    --tm-agent-badge-avatar-size: var(--tm-space-8);
+    font-size: var(--tm-font-size-md);
+}
+
+/* ── Avatar ──────────────────────────────────────────────────────────────────────────────────── */
+
+.tm-agent-badge__avatar {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    inline-size: var(--tm-agent-badge-avatar-size);
+    block-size: var(--tm-agent-badge-avatar-size);
+    overflow: hidden;
+    border: var(--tm-border-width) solid transparent;
+    border-radius: var(--tm-radius-full);
+    background-color: var(--tm-agent-badge-color, var(--tm-agent-color-0));
+    /* The ink half of the AA pair AgentColorTokenTests measures — never currentColor: it would follow
+       the page and could put light initials on a light fill. */
+    color: var(--tm-agent-color-ink);
+}
+
+.tm-agent-badge__initials {
+    /* Proportional to the circle, so the three sizes cannot drift apart. */
+    font-size: calc(var(--tm-agent-badge-avatar-size) * 0.42);
+    font-weight: var(--tm-font-weight-semibold);
+    line-height: 1;
+    /* Two glyphs of a Czech or an emoji name must not push the circle wider than itself. */
+    white-space: nowrap;
+    text-align: center;
+}
+
+.tm-agent-badge__image {
+    inline-size: 100%;
+    block-size: 100%;
+    object-fit: cover;
+}
+
+/* ── Name ────────────────────────────────────────────────────────────────────────────────────── */
+
+.tm-agent-badge__name {
+    min-inline-size: 0;
+    /* Wrap rather than ellipsis: a lane header must not hide which agent it is. */
+    overflow-wrap: anywhere;
+    font-weight: var(--tm-font-weight-medium);
+    color: var(--tm-text-primary);
+}
+
+/* ── State chip ──────────────────────────────────────────────────────────────────────────────── */
+
+.tm-agent-badge__status {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: var(--tm-space-1);
+    min-inline-size: 0;
+    padding-inline: var(--tm-space-2);
+    padding-block: var(--tm-space-0-5);
+    border: var(--tm-border-width) solid var(--tm-agent-badge-status-border, var(--tm-border-color));
+    border-radius: var(--tm-radius-full);
+    background-color: var(--tm-agent-badge-status-bg, var(--tm-bg-surface-secondary));
+    color: var(--tm-agent-badge-status-fg, var(--tm-text-secondary));
+    font-size: var(--tm-font-size-xs);
+    font-weight: var(--tm-font-weight-medium);
+    white-space: nowrap;
+}
+
+.tm-agent-badge__status-icon {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+}
+
+.tm-agent-badge__status-text {
+    min-inline-size: 0;
+}
+
+/* Neutral — nothing moves and nothing is waiting: the base rule's defaults ARE this tone, declared
+   here as well so the CSS hook exists and a host can re-tone one of the two without the other. */
+.tm-agent-badge__status--idle,
+.tm-agent-badge__status--cancelled {
+    --tm-agent-badge-status-bg: var(--tm-bg-surface-secondary);
+    --tm-agent-badge-status-fg: var(--tm-text-secondary);
+    --tm-agent-badge-status-border: var(--tm-border-color);
+}
+
+/* Waiting its turn: informational, not an alarm. */
+.tm-agent-badge__status--queued {
+    --tm-agent-badge-status-bg: var(--tm-color-info-subtle);
+    --tm-agent-badge-status-fg: var(--tm-color-info-text);
+    --tm-agent-badge-status-border: var(--tm-color-info-soft-border);
+}
+
+/* Working now. */
+.tm-agent-badge__status--running {
+    --tm-agent-badge-status-bg: var(--tm-color-primary-subtle);
+    --tm-agent-badge-status-fg: var(--tm-color-primary-text);
+    --tm-agent-badge-status-border: var(--tm-color-primary-soft-border);
+}
+
+/* The only tone that asks the reader to act, so it gets the attention colour. */
+.tm-agent-badge__status--approval {
+    --tm-agent-badge-status-bg: var(--tm-color-warning-subtle);
+    --tm-agent-badge-status-fg: var(--tm-color-warning-text);
+    --tm-agent-badge-status-border: var(--tm-color-warning-soft-border);
+}
+
+.tm-agent-badge__status--succeeded {
+    --tm-agent-badge-status-bg: var(--tm-color-success-subtle);
+    --tm-agent-badge-status-fg: var(--tm-color-success-text);
+    --tm-agent-badge-status-border: var(--tm-color-success-soft-border);
+}
+
+.tm-agent-badge__status--failed {
+    --tm-agent-badge-status-bg: var(--tm-color-danger-subtle);
+    --tm-agent-badge-status-fg: var(--tm-color-danger-text);
+    --tm-agent-badge-status-border: var(--tm-color-danger-soft-border);
+}
+
+/* ── Forced colours (Windows high contrast) ───────────────────────────────────────────────────
+   Every background collapses to one Canvas colour there, so the eight agent fills would become
+   indistinguishable from each other AND from the page. The avatar therefore opts OUT of the system
+   palette and keeps its own fill and ink (which AgentColorTokenTests proves AA in both themes),
+   while the border — which the system would otherwise pin to the (invisible) page background —
+   takes CanvasText so the circle still has an edge. */
+@media (forced-colors: active) {
+    .tm-agent-badge__avatar {
+        forced-color-adjust: none;
+        border-color: CanvasText;
+        background-color: var(--tm-agent-badge-color, var(--tm-agent-color-0));
+        color: var(--tm-agent-color-ink);
+    }
+}

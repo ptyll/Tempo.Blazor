@@ -1,0 +1,24 @@
+{
+  "kind": "Record",
+  "category": "AI",
+  "namespace": "Tempo.Blazor.AI.Models",
+  "description": "One agent as every agent visualization names it: Id (the stable identity a host keys its data by and a selection reports), Name (the display text a reader sees), the optional Role and AvatarUrl, and ColorIndex (the slot in the eight-colour agent palette). The record is a VALUE — a host recomposes it with `agent with { … }` when a name or a colour changes, and no component mutates it. It carries no state: activity belongs to a block, a node or a tile (an agent can be idle in one lane and running in another), so the same AgentRef is reused across the run. ColorIndex is normalised into 0..7 on assignment, so it always names a declared --tm-agent-color-{n} token; ColourToken returns that token name and Initials returns the one or two letters the avatar paints when there is no picture (a single word gives one letter, a name with no letter at all gives '?').",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/AI/Agents/AgentRef.cs",
+  "documentationStatus": "documented",
+  "itemName": "AgentRef",
+  "usageExample": "var planner = new AgentRef(\"Planner\", \"agent-planner\") { Role = \"Orchestrator\", ColorIndex = 0 };\nvar reviewer = new AgentRef(\"Reviewer\", \"agent-reviewer\") { Role = \"Reviewer\", ColorIndex = 1 };\n\n<TmAgentBadge Agent=\"planner\" Status=\"AgentActivityStatus.Running\" />\n<TmAgentBadge Agent=\"reviewer\" ShowName=\"false\" Status=\"AgentActivityStatus.WaitingForApproval\" />",
+  "members": [
+    { "name": "PaletteSize", "description": "How many slots the agent palette has: eight (--tm-agent-color-0 … --tm-agent-color-7). Two agents in one visualization must never share a colour, which is what fixes the size." },
+    { "name": "Id", "description": "Stable identity of the agent. Never empty: a missing id is generated at construction, so two agents with the same name are still two agents." },
+    { "name": "Name", "description": "The display name, as the host wants it read. Empty when the host supplied no name; a component renders its own localized fallback instead of an empty gap." },
+    { "name": "Role", "description": "What the agent is for — \"Orchestrator\", \"Reviewer\", \"Worker\" — in the host's own words. Null renders no role line, which is not the same as an empty one." },
+    { "name": "AvatarUrl", "description": "An absolute URL of the agent's picture. Null renders Initials on the palette colour. A component loads it only when it is an absolute http(s) source (the package's image allowlist) and falls back to Initials for anything else, because the picture is host data and a refused target must never become a live source. Components render the picture as a decorative image, because the agent's name is always next to it." },
+    { "name": "ColorIndex", "description": "The slot in the agent palette. Any integer is accepted and normalised into 0..7 (wrapping, negatives included), so a host counting its agents past eight still lands on a declared token instead of an undeclared custom property that resolves to nothing." },
+    { "name": "HasName", "description": "Whether the host supplied a name; a component renders its localized fallback when it is false." },
+    { "name": "Initials", "description": "The one or two letters the avatar paints when there is no picture: the first letter of the first and of the last word (\"Data analyst\" → \"DA\", \"Bedřich Novák\" → \"BN\"), a single letter for a single word, and \"?\" when the name has no letter at all. Whole text elements are kept, so diacritics and surrogate pairs never render half a glyph." },
+    { "name": "ColorToken", "description": "The custom property ColorIndex points at, without the var() wrapper — e.g. --tm-agent-color-3. Always one of the declared palette tokens." },
+    { "name": "PaletteToken", "description": "The palette token of a slot, normalised the same way ColorIndex is." },
+    { "name": "NormalizeColorIndex", "description": "Wraps any integer into 0..7, negatives included." }
+  ]
+}

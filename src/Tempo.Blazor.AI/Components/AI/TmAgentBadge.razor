@@ -1,0 +1,124 @@
+@namespace Tempo.Blazor.Components.AI
+@inherits Tempo.Blazor.Components.TmComponentBase
+@using System.Globalization
+@using Tempo.Blazor.AI.Markdown
+@using Tempo.Blazor.AI.Models
+@using Tempo.Blazor.Components.Icons
+
+@* The shared agent identity line: initials (or the host's picture) on the agent's palette colour, the name, and —
+   when the host reports one — the activity state as an icon, a WORD and a tone. Every agent visualization
+   (lanes, graph, fan-out, handoff, presence roster) renders this component, so an agent looks the same wherever
+   it appears and the state is never colour-only information.
+
+   The badge is NOT a live region, carries no aria-live and never moves (no transition, no animation): the surface
+   that owns the run has exactly one announcement channel, and a badge that pulsed would become a second one while
+   re-introducing motion that prefers-reduced-motion would have to cover.
+
+   Naming: with the name visible the badge has no aria-label at all — the visible text IS the accessible name
+   (WCAG 2.5.3). With ShowName=false the composed avatar becomes one role="img" graphic named by the agent AND its
+   state, because an aria-label on a role-less span is ignored by assistive technology. *@
+@if (Agent is { } agent)
+{
+    <span class="tm-agent-badge tm-agent-badge--@SizeSlug @Class"
+          data-testid="@RootTestId("agent-badge")"
+          data-agent-id="@agent.Id"
+          data-agent-color="@agent.ColorIndex.ToString(CultureInfo.InvariantCulture)"
+          data-status="@StatusName"
+          style="@ColorStyle"
+          role="@(ShowName ? null : "img")"
+          aria-label="@(ShowName ? null : AccessibleName)"
+          @attributes="AdditionalAttributes">
+        <span class="tm-agent-badge__avatar" aria-hidden="true">
+            @if (AvatarSrc is { } avatarSrc)
+            {
+                <img class="tm-agent-badge__image" src="@avatarSrc" alt="" />
+            }
+            else
+            {
+                <span class="tm-agent-badge__initials">@agent.Initials</span>
+            }
+        </span>
+        @if (ShowName)
+        {
+            <span class="tm-agent-badge__name">@DisplayName</span>
+        }
+        @if (Status is { } status && ShowStatus && AgentStatusPresentation.IsKnown(status))
+        {
+            <span class="tm-agent-badge__status tm-agent-badge__status--@(AgentStatusPresentation.Tone(status))">
+                <span class="tm-agent-badge__status-icon" aria-hidden="true">
+                    <TmIcon Name="@AgentStatusPresentation.Icon(status)" Size="IconSize.Xs" />
+                </span>
+                <span class="tm-agent-badge__status-text">@AgentStatusPresentation.Text(Loc, status)</span>
+            </span>
+        }
+    </span>
+}
+
+@code {
+    /// <summary>
+    /// The agent to show. Null renders nothing at all — a surface that has not loaded its snapshot yet must not
+    /// paint an anonymous avatar. The record is a VALUE: a host recomposes it with <c>agent with { … }</c>.
+    /// </summary>
+    [Parameter] public AgentRef? Agent { get; set; }
+
+    /// <summary>
+    /// What the agent is doing right now. Null (the default) renders no state chip at all, which is not the same as
+    /// <see cref="AgentActivityStatus.Idle"/>. A value the component cannot name (an enum member from a newer
+    /// backend) also renders no chip, so a stale contract can never paint a wrong verdict.
+    /// </summary>
+    [Parameter] public AgentActivityStatus? Status { get; set; }
+
+    /// <summary>Whether the agent's name is rendered next to the avatar. Default true.</summary>
+    [Parameter] public bool ShowName { get; set; } = true;
+
+    /// <summary>
+    /// Whether the state chip is rendered when <see cref="Status"/> is set. Default true. Turning it off is how a
+    /// dense surface (a graph node, an attempt tile) keeps the state on its own row instead of inside the badge.
+    /// </summary>
+    [Parameter] public bool ShowStatus { get; set; } = true;
+
+    /// <summary>Avatar and text size. Default <see cref="AgentBadgeSize.Md"/>.</summary>
+    [Parameter] public AgentBadgeSize Size { get; set; } = AgentBadgeSize.Md;
+
+    /// <summary>Additional CSS class(es) for the root element.</summary>
+    [Parameter] public string? Class { get; set; }
+
+    /// <summary>Additional HTML attributes applied to the root element.</summary>
+    [Parameter(CaptureUnmatchedValues = true)] public Dictionary<string, object>? AdditionalAttributes { get; set; }
+
+    /// <summary>The name the reader sees, with the localized fallback for an agent the host never named.</summary>
+    private string DisplayName => Agent is { HasName: true } agent ? agent.Name : Loc["TmAgentBadge_NameFallback"];
+
+    /// <summary>The palette token of the agent's slot, written into the component-local fill knob.</summary>
+    private string ColorStyle => $"--tm-agent-badge-color: var({Agent!.ColorToken});";
+
+    /// <summary>
+    /// The avatar URL the markup may actually load, or null when the host supplied none or one the package's image
+    /// allowlist refuses. An agent's picture is host data, so it goes through the same absolute-<c>http(s)</c> rule
+    /// the markdown pipeline applies to images rather than straight into <c>src</c>; a refused target falls back to
+    /// the initials, never to a live source or a broken image.
+    /// </summary>
+    private string? AvatarSrc
+        => Agent is { AvatarUrl: { } url } && AiMarkdownUrlPolicy.IsSafeImageUrl(url) ? url.Trim() : null;
+
+    /// <summary>The size modifier slug; an unknown value renders the default density.</summary>
+    private string SizeSlug => Size switch
+    {
+        AgentBadgeSize.Sm => "sm",
+        AgentBadgeSize.Lg => "lg",
+        _ => "md",
+    };
+
+    /// <summary>The stable <c>data-status</c> hook, or null when there is no nameable state.</summary>
+    private string? StatusName
+        => Status is { } status && ShowStatus && AgentStatusPresentation.IsKnown(status) ? status.ToString() : null;
+
+    /// <summary>
+    /// The accessible name of an avatar-only badge: the agent and, when it is rendered, its state. With the name
+    /// visible this value is unused (the visible text is the name).
+    /// </summary>
+    private string AccessibleName
+        => Status is { } status && ShowStatus && AgentStatusPresentation.IsKnown(status)
+            ? Loc["TmAgentBadge_AriaLabel", DisplayName, AgentStatusPresentation.Text(Loc, status)]
+            : DisplayName;
+}

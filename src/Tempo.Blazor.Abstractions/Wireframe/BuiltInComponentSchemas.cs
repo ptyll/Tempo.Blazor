@@ -170,6 +170,7 @@ public sealed class BuiltInComponentSchemas : IWireframeSchemaSource
             ["TmAgentMonitor"] = ["agent-monitor"],
             ["TmModelPicker"] = ["model-picker"],
             ["TmContextUsage"] = ["context-usage"],
+            ["TmAgentBadge"] = ["agent-badge"],
             ["TmPromptLibrary"] = ["prompt-library"],
             ["TmMultiViewList"] = ["list-view"],
             ["TmDataTable"] = ["data-table"],
@@ -1388,6 +1389,21 @@ public sealed class BuiltInComponentSchemas : IWireframeSchemaSource
                 P("showTimeline", "Show Timeline", PropType.Bool,   true, cat: "Appearance"),
                 P("showCost",     "Show Cost",     PropType.Bool,   true, cat: "Appearance"),
                 P("collapsed",    "Collapsed",     PropType.Bool,   false, cat: "Behavior"),
+            ]
+        };
+
+        yield return new WireframeComponentSchema
+        {
+            Type = "TmAgentBadge", Category = "AI", DisplayName = "Agent Badge",
+            DefaultWidth = 180, DefaultHeight = 24,
+            Props =
+            [
+                P("initials",   "Initials",    PropType.String, "DA",           cat: "Content"),
+                P("name",       "Name",        PropType.String, "Data analyst", cat: "Content"),
+                P("status",     "Status",      PropType.Enum,   "running",      cat: "Content",
+                    opts: ["idle", "queued", "running", "approval", "succeeded", "failed", "cancelled"]),
+                P("showName",   "Show Name",   PropType.Bool,   true,           cat: "Appearance"),
+                P("showStatus", "Show Status", PropType.Bool,   true,           cat: "Appearance"),
             ]
         };
 

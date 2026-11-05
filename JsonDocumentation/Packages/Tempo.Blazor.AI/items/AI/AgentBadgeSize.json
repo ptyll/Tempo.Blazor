@@ -1,0 +1,15 @@
+{
+  "kind": "Enum",
+  "category": "Components",
+  "namespace": "Tempo.Blazor.Components.AI",
+  "description": "How big a TmAgentBadge renders. The size scales the avatar circle and the text together, so a lane header and a fan-out tile pick the density their surface needs without either of them hard-coding a pixel size. An unknown value renders the default (Md) density.",
+  "packageId": "Tempo.Blazor.AI",
+  "sourcePath": "src/Tempo.Blazor.AI/Components/AI/AgentBadgeSize.cs",
+  "documentationStatus": "documented",
+  "itemName": "AgentBadgeSize",
+  "members": [
+    { "name": "Sm", "description": "Compact — the density of a table row or a graph node label (20 px avatar)." },
+    { "name": "Md", "description": "The default — a lane header, a card title (24 px avatar)." },
+    { "name": "Lg", "description": "Prominent — the agent in focus, a detail header (32 px avatar)." }
+  ]
+}

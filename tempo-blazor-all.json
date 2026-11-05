@@ -38062,6 +38062,114 @@
       },
       "items": [
         {
+          "itemName": "TmAgentBadge",
+          "kind": "Component",
+          "category": "AI",
+          "namespace": "Tempo.Blazor.Components.AI",
+          "description": "The shared agent identity line: the agent's initials (or its picture) on the agent's palette colour, the name, and — when the host reports one — the activity state as an icon, a WORD and a tone. Every agent visualization (lanes, graph, fan-out, handoff, presence roster) renders this component, so an agent looks the same wherever it appears and its state is never colour-only information (WCAG 1.4.1). The colour comes from AgentRef.ColorIndex, which is normalised into the eight-slot palette --tm-agent-color-0 … --tm-agent-color-7; the ink painted on it is --tm-agent-color-ink, whose AA (4.5:1) contrast against every slot is measured in both themes by AgentColorTokenTests. The picture is host data: AgentRef.AvatarUrl is loaded only when it is an absolute http(s) source (the package's image allowlist, the same rule the markdown pipeline applies to images) and a refused target falls back to the initials instead of becoming a live source or a broken image. The badge is NOT a live region, carries no aria-live and never moves (no transition, no animation): the surface that owns the run has exactly one announcement channel, and a pulsing badge would become a second one while re-introducing motion that prefers-reduced-motion would have to cover. Naming: with the name visible the badge has no aria-label at all — the visible text IS the accessible name (WCAG 2.5.3); with ShowName=false the composed avatar becomes one role=\"img\" graphic named by the agent and, when one is rendered, its state, because an aria-label on a role-less span is ignored by assistive technology. An unknown state value renders no chip, so a stale contract can never paint a wrong verdict, and a whitespace name renders the localized \"Unnamed agent\" fallback instead of an empty gap.",
+          "packageId": "Tempo.Blazor.AI",
+          "sourcePath": "src/Tempo.Blazor.AI/Components/AI/TmAgentBadge.razor",
+          "documentationStatus": "merged",
+          "requiredImports": [
+            "@using Tempo.Blazor.AI.Models",
+            "@using Tempo.Blazor.Components.AI"
+          ],
+          "parameters": [
+            {
+              "name": "Agent",
+              "type": "AgentRef?",
+              "isRequired": false,
+              "description": "The agent to show. Null renders nothing at all — a surface that has not loaded its snapshot yet must not paint an anonymous avatar. The record is a VALUE: a host recomposes it with `agent with { … }`."
+            },
+            {
+              "name": "Class",
+              "type": "string?",
+              "isRequired": false,
+              "description": "Additional CSS class(es) for the root element."
+            },
+            {
+              "name": "ShowName",
+              "type": "bool",
+              "isRequired": false,
+              "default": "true",
+              "description": "Whether the agent's name is rendered next to the avatar. Default true. With false the badge becomes one labelled graphic (role=\"img\") named by the agent and its state."
+            },
+            {
+              "name": "ShowStatus",
+              "type": "bool",
+              "isRequired": false,
+              "default": "true",
+              "description": "Whether the state chip is rendered when Status is set. Default true. Turning it off is how a dense surface (a graph node, an attempt tile) keeps the state on its own row instead of inside the badge."
+            },
+            {
+              "name": "Size",
+              "type": "AgentBadgeSize",
+              "isRequired": false,
+              "default": "AgentBadgeSize.Md",
+              "description": "Avatar and text size: Sm (20 px), Md (24 px, the default) or Lg (32 px). The size sets one component knob, so the initials cannot drift from the circle that contains them."
+            },
+            {
+              "name": "Status",
+              "type": "AgentActivityStatus?",
+              "isRequired": false,
+              "description": "What the agent is doing right now. Null (the default) renders no state chip at all, which is not the same as Idle. A value the component cannot name (an enum member from a newer backend) also renders no chip, so a stale contract can never paint a wrong verdict."
+            },
+            {
+              "name": "AdditionalAttributes",
+              "type": "Dictionary<string, object>?",
+              "isRequired": false,
+              "description": "Additional HTML attributes applied to the root element."
+            },
+            {
+              "name": "DataTestId",
+              "type": "string?",
+              "isRequired": false,
+              "description": "Overrides the root data-testid (default \"agent-badge\", namespaced by TestIdPrefix)."
+            },
+            {
+              "name": "TestIdPrefix",
+              "type": "string?",
+              "isRequired": false,
+              "description": "Namespaces every internal data-testid of this instance, so several badges on one page stay targetable."
+            }
+          ],
+          "cssClasses": [
+            "tm-agent-badge",
+            "tm-agent-badge--sm",
+            "tm-agent-badge--md",
+            "tm-agent-badge--lg",
+            "tm-agent-badge__avatar",
+            "tm-agent-badge__image",
+            "tm-agent-badge__initials",
+            "tm-agent-badge__name",
+            "tm-agent-badge__status",
+            "tm-agent-badge__status-icon",
+            "tm-agent-badge__status-text",
+            "tm-agent-badge__status--idle",
+            "tm-agent-badge__status--queued",
+            "tm-agent-badge__status--running",
+            "tm-agent-badge__status--approval",
+            "tm-agent-badge__status--succeeded",
+            "tm-agent-badge__status--failed",
+            "tm-agent-badge__status--cancelled"
+          ],
+          "examples": [
+            {
+              "title": "A running agent in a lane header",
+              "code": "<TmAgentBadge Agent=\"planner\" Status=\"AgentActivityStatus.Running\" />\n\n@code {\n    private readonly AgentRef planner = new(\"Planner\", \"agent-planner\")\n    {\n        Role = \"Orchestrator\",\n        ColorIndex = 0,\n    };\n}"
+            },
+            {
+              "title": "An avatar-only badge inside a graph node or a table cell",
+              "code": "<TmAgentBadge Agent=\"reviewer\"\n              ShowName=\"false\"\n              Size=\"AgentBadgeSize.Sm\"\n              Status=\"AgentActivityStatus.WaitingForApproval\" />"
+            },
+            {
+              "title": "The colour comes from the palette slot, not from the host",
+              "code": "@* Eight distinct slots — a host that counts past eight wraps instead of inventing a colour. *@\n<TmAgentBadge Agent=\"@Colorised(planner, 0)\" ShowStatus=\"false\" />\n<TmAgentBadge Agent=\"@Colorised(reviewer, 1)\" ShowStatus=\"false\" />\n\n@code {\n    private readonly AgentRef planner = new(\"Planner\", \"agent-planner\");\n    private readonly AgentRef reviewer = new(\"Reviewer\", \"agent-reviewer\");\n\n    // AgentRef.ColorIndex is normalised into the eight-slot palette on assignment.\n    private static AgentRef Colorised(AgentRef agent, int index) => agent with { ColorIndex = index };\n}"
+            }
+          ],
+          "notes": "The badge is deliberately not interactive: it renders no button, no tab stop and no drag surface, so WCAG 2.5.7's non-drag alternative and the 44 px coarse-pointer target do not apply to it — a host that makes a whole row clickable keeps that obligation on its own row. Its CSS declares no transition or animation, which keeps the package's reduced-motion enumeration unchanged; a future animated subject has to add its own prefers-reduced-motion block. Under Windows high contrast the avatar opts out of the system palette (forced-color-adjust: none) so the eight agent fills stay distinguishable and keeps a CanvasText border for the circle's edge."
+        },
+        {
           "itemName": "TmAgentMonitor",
           "kind": "Component",
           "category": "AI",
@@ -39747,6 +39855,30 @@
           ]
         },
         {
+          "itemName": "AgentBadgeSize",
+          "kind": "Enum",
+          "category": "Components",
+          "namespace": "Tempo.Blazor.Components.AI",
+          "description": "How big a TmAgentBadge renders. The size scales the avatar circle and the text together, so a lane header and a fan-out tile pick the density their surface needs without either of them hard-coding a pixel size. An unknown value renders the default (Md) density.",
+          "packageId": "Tempo.Blazor.AI",
+          "sourcePath": "src/Tempo.Blazor.AI/Components/AI/AgentBadgeSize.cs",
+          "documentationStatus": "merged",
+          "members": [
+            {
+              "name": "Sm",
+              "description": "Compact — the density of a table row or a graph node label (20 px avatar)."
+            },
+            {
+              "name": "Md",
+              "description": "The default — a lane header, a card title (24 px avatar)."
+            },
+            {
+              "name": "Lg",
+              "description": "Prominent — the agent in focus, a detail header (32 px avatar)."
+            }
+          ]
+        },
+        {
           "itemName": "AIServiceCollectionExtensions",
           "kind": "Class",
           "category": "Configuration",
@@ -39917,6 +40049,10 @@
       "libraryExamples": [],
       "assets": [
         {
+          "path": "src/Tempo.Blazor.AI/wwwroot/css/components/_ai-agent-badge.css",
+          "kind": "Css"
+        },
+        {
           "path": "src/Tempo.Blazor.AI/wwwroot/css/components/_ai-agent-monitor.css",
           "kind": "Css"
         },
@@ -40010,12 +40146,12 @@
         }
       ],
       "summary": {
-        "itemCount": 20,
-        "manualItemCount": 20,
-        "generatedItemCount": 20,
+        "itemCount": 22,
+        "manualItemCount": 22,
+        "generatedItemCount": 22,
         "generatedOnlyItemCount": 0,
-        "componentCount": 15,
-        "publicApiTypeCount": 5
+        "componentCount": 16,
+        "publicApiTypeCount": 6
       }
     },
     {
@@ -79098,6 +79234,101 @@
       },
       "items": [
         {
+          "itemName": "AgentActivityStatus",
+          "kind": "Enum",
+          "category": "AI",
+          "namespace": "Tempo.Blazor.AI.Models",
+          "description": "What an agent is doing right now, in the one vocabulary every agent visualization shares. The state is always painted three ways at once — a tone colour, an icon and a localized WORD — because a colour alone is not information a colour-blind or screen-reader reader can use (WCAG 1.4.1); the icon and the word come from the AI package's shared AgentStatusPresentation mapping, so a lane, a graph node and a fan-out tile cannot disagree about what \"running\" looks like. The set is transport-neutral: a host maps its own backend vocabulary (a queued turn, a leased attempt, a permission wait, a finished run) onto these seven values and the visualizations stay backend-free.",
+          "packageId": "Tempo.Blazor.Abstractions",
+          "sourcePath": "src/Tempo.Blazor.Abstractions/AI/Agents/AgentActivityStatus.cs",
+          "documentationStatus": "merged",
+          "members": [
+            {
+              "name": "Idle",
+              "description": "The agent exists but has nothing to do. The neutral state, and the one an unknown backend value falls back to."
+            },
+            {
+              "name": "Queued",
+              "description": "Work is assigned to the agent and it has not started yet — a turn in the queue, a task waiting for a free slot."
+            },
+            {
+              "name": "Running",
+              "description": "The agent is working right now. The only state whose duration is still growing."
+            },
+            {
+              "name": "WaitingForApproval",
+              "description": "The agent stopped and is waiting for a human decision (an approval, a permission grant, a review verdict). Painted in the attention tone, because nothing moves until the reader acts."
+            },
+            {
+              "name": "Succeeded",
+              "description": "The agent finished its work successfully. A terminal state."
+            },
+            {
+              "name": "Failed",
+              "description": "The agent failed. A terminal state; the failure reason belongs to the host's own data."
+            },
+            {
+              "name": "Cancelled",
+              "description": "The agent was stopped before it finished. Terminal, and neither a success nor a failure."
+            }
+          ]
+        },
+        {
+          "itemName": "AgentEventStream<TEvent>",
+          "kind": "Class",
+          "category": "AI",
+          "namespace": "Tempo.Blazor.AI.Models",
+          "description": "Turns the incremental events a host receives — from a SignalR hub, a one-second poll, an IAsyncEnumerable, a server-sent event stream — into the ONE strictly ordered tail an agent visualization may apply on top of its snapshot. The contract is a snapshot PLUS events, never a live collection: the component owns its view of the data and the host owns the transport, so this shared class is where de-duplication and hole detection live once instead of in eleven components. Ordered: Apply sorts a batch by the sequence selector, so a page merge cannot apply a block before the event that opened it. Idempotent: an event whose sequence was already applied is dropped, so the same batch genuinely arriving twice after a hub reconnect changes nothing. Contiguous: a hole is never papered over — when a sequence is missing the WHOLE batch is rejected, HasGap turns true and GapDetected is raised once with the first sequence the stream does not have, so the applied tail is always a contiguous run and the host's repair (reload the snapshot, or resend the missing range) is exact. Transport-neutral: nothing reads the clock, awaits, or knows what an event means. Thread-safe: a hub callback and a polling loop may feed the same stream; the one callback that runs OUTSIDE the gate is GapDetected, so a handler may wait for another thread to repair the stream instead of deadlocking against the applying one. A stream starts with no baseline (LastSequence is null), so the first batch may begin at 0, at 1 or at whatever number the backend restarted from; ResetToSnapshot installs the baseline of a reloaded snapshot and is also the documented repair after a gap.",
+          "packageId": "Tempo.Blazor.Abstractions",
+          "sourcePath": "src/Tempo.Blazor.Abstractions/AI/Agents/AgentEventStream.cs",
+          "documentationStatus": "merged",
+          "typeParameters": [
+            {
+              "name": "TEvent",
+              "description": "Generic type parameter TEvent."
+            }
+          ],
+          "members": [
+            {
+              "name": "Apply",
+              "kind": "Method",
+              "type": "IReadOnlyList<TEvent>",
+              "description": "Applies an incremental batch and returns exactly the events that are NEW, in sequence order. Nothing is returned for an already applied event, for an older one, or for any event of a batch that contains a hole, so a caller appends the returned tail to its snapshot and never de-duplicates itself.",
+              "parameters": [
+                {
+                  "name": "events",
+                  "type": "IEnumerable<TEvent>"
+                }
+              ]
+            },
+            {
+              "name": "ResetToSnapshot",
+              "kind": "Method",
+              "type": "void",
+              "description": "Re-bases the stream on a reloaded snapshot: everything up to the supplied sequence is treated as already applied and the gap is cleared. Moving the baseline BACKWARDS is legal and is how a snapshot taken before the last events replays them.",
+              "parameters": [
+                {
+                  "name": "sequence",
+                  "type": "long"
+                }
+              ]
+            },
+            {
+              "name": "LastSequence",
+              "description": "The sequence of the last applied event, or null when nothing has been applied to a stream without a snapshot baseline yet. A host compares it with its snapshot's own sequence to decide whether the two are in sync."
+            },
+            {
+              "name": "HasGap",
+              "description": "Whether the LAST Apply call found a hole. True means the host must reload the snapshot before the component can be trusted; the next batch that applies something, or ResetToSnapshot, clears it."
+            },
+            {
+              "name": "GapDetected",
+              "description": "Raised once per batch that contains a hole, with the first sequence the stream does not have. Invoked synchronously on the applying thread AFTER the stream's gate is released, so a handler may call ResetToSnapshot, Apply or LastSequence — including from another thread it waits for — without deadlocking the stream. HasGap is already true when the handler starts, but the state it describes is not pinned: another feed may repair the hole while it runs."
+            }
+          ],
+          "usageExample": "private AgentEventStream<RunEvent> _events = new(evt => evt.Sequence);\n\n// A snapshot arrives (initial load, reload, or the repair after a gap):\n_events = new AgentEventStream<RunEvent>(evt => evt.Sequence, snapshot.Sequence);\nSnapshots = snapshot.Blocks;\n\n// A hub callback and a poll both land here; only NEW events come back, in sequence order:\nvar applied = _events.Apply(batch);\nif (applied.Count > 0)\n{\n    Snapshot = Snapshot.Apply(applied);   // the host's own reducer\n    _throttle.ShouldRender();\n}\n\n// The stream told the host to reload (HasGap / GapDetected):\n_events.GapDetected += missing => _ = ReloadSnapshotAsync(missing);"
+        },
+        {
           "itemName": "AgentMonitorStep",
           "kind": "Record",
           "category": "AI",
@@ -79423,6 +79654,136 @@
             }
           ],
           "usageExample": "var step = new AgentPlanStep(\"Draft the outline\", \"step-1\") { Status = AgentStepStatus.Running, StartedAt = TimeProvider.System.GetUtcNow() };\nvar done = step with { Status = AgentStepStatus.Done, CompletedAt = TimeProvider.System.GetUtcNow() };"
+        },
+        {
+          "itemName": "AgentRef",
+          "kind": "Record",
+          "category": "AI",
+          "namespace": "Tempo.Blazor.AI.Models",
+          "description": "One agent as every agent visualization names it: Id (the stable identity a host keys its data by and a selection reports), Name (the display text a reader sees), the optional Role and AvatarUrl, and ColorIndex (the slot in the eight-colour agent palette). The record is a VALUE — a host recomposes it with `agent with { … }` when a name or a colour changes, and no component mutates it. It carries no state: activity belongs to a block, a node or a tile (an agent can be idle in one lane and running in another), so the same AgentRef is reused across the run. ColorIndex is normalised into 0..7 on assignment, so it always names a declared --tm-agent-color-{n} token; ColourToken returns that token name and Initials returns the one or two letters the avatar paints when there is no picture (a single word gives one letter, a name with no letter at all gives '?').",
+          "packageId": "Tempo.Blazor.Abstractions",
+          "sourcePath": "src/Tempo.Blazor.Abstractions/AI/Agents/AgentRef.cs",
+          "documentationStatus": "merged",
+          "members": [
+            {
+              "name": "PaletteSize",
+              "kind": "Field",
+              "type": "int",
+              "description": "How many slots the agent palette has: eight (--tm-agent-color-0 … --tm-agent-color-7). Two agents in one visualization must never share a colour, which is what fixes the size."
+            },
+            {
+              "name": "NormalizeColorIndex",
+              "kind": "Method",
+              "type": "int",
+              "description": "Wraps any integer into 0..7, negatives included.",
+              "parameters": [
+                {
+                  "name": "colorIndex",
+                  "type": "int"
+                }
+              ]
+            },
+            {
+              "name": "PaletteToken",
+              "kind": "Method",
+              "type": "string",
+              "description": "The palette token of a slot, normalised the same way ColorIndex is.",
+              "parameters": [
+                {
+                  "name": "colorIndex",
+                  "type": "int"
+                }
+              ]
+            },
+            {
+              "name": "AvatarUrl",
+              "kind": "Property",
+              "type": "string?",
+              "description": "An absolute URL of the agent's picture. Null renders Initials on the palette colour. A component loads it only when it is an absolute http(s) source (the package's image allowlist) and falls back to Initials for anything else, because the picture is host data and a refused target must never become a live source. Components render the picture as a decorative image, because the agent's name is always next to it."
+            },
+            {
+              "name": "ColorToken",
+              "kind": "Property",
+              "type": "string",
+              "description": "The custom property ColorIndex points at, without the var() wrapper — e.g. --tm-agent-color-3. Always one of the declared palette tokens."
+            },
+            {
+              "name": "HasName",
+              "kind": "Property",
+              "type": "bool",
+              "description": "Whether the host supplied a name; a component renders its localized fallback when it is false."
+            },
+            {
+              "name": "Id",
+              "kind": "Property",
+              "type": "string",
+              "description": "Stable identity of the agent. Never empty: a missing id is generated at construction, so two agents with the same name are still two agents."
+            },
+            {
+              "name": "Name",
+              "kind": "Property",
+              "type": "string",
+              "description": "The display name, as the host wants it read. Empty when the host supplied no name; a component renders its own localized fallback instead of an empty gap."
+            },
+            {
+              "name": "Role",
+              "kind": "Property",
+              "type": "string?",
+              "description": "What the agent is for — \"Orchestrator\", \"Reviewer\", \"Worker\" — in the host's own words. Null renders no role line, which is not the same as an empty one."
+            },
+            {
+              "name": "ColorIndex",
+              "description": "The slot in the agent palette. Any integer is accepted and normalised into 0..7 (wrapping, negatives included), so a host counting its agents past eight still lands on a declared token instead of an undeclared custom property that resolves to nothing."
+            },
+            {
+              "name": "Initials",
+              "description": "The one or two letters the avatar paints when there is no picture: the first letter of the first and of the last word (\"Data analyst\" → \"DA\", \"Bedřich Novák\" → \"BN\"), a single letter for a single word, and \"?\" when the name has no letter at all. Whole text elements are kept, so diacritics and surrogate pairs never render half a glyph."
+            }
+          ],
+          "usageExample": "var planner = new AgentRef(\"Planner\", \"agent-planner\") { Role = \"Orchestrator\", ColorIndex = 0 };\nvar reviewer = new AgentRef(\"Reviewer\", \"agent-reviewer\") { Role = \"Reviewer\", ColorIndex = 1 };\n\n<TmAgentBadge Agent=\"planner\" Status=\"AgentActivityStatus.Running\" />\n<TmAgentBadge Agent=\"reviewer\" ShowName=\"false\" Status=\"AgentActivityStatus.WaitingForApproval\" />"
+        },
+        {
+          "itemName": "AgentRenderThrottle",
+          "kind": "Class",
+          "category": "AI",
+          "namespace": "Tempo.Blazor.AI.Models",
+          "description": "The render gate every live agent visualization shares: at most one paint per Interval (100 ms by default), measured on an injected TimeProvider. A hub pushing ten events per second would otherwise paint ten renders per second per component, and on Blazor Server every one of them is a circuit round trip on top of the DOM work; the gate collapses that burst into one paint per window while the component's state keeps absorbing every event — the STATE is never throttled, only the paint, so a snapshot read at any moment is complete. An interval of zero (or a negative one, normalised to zero) is the documented way to opt out of throttling entirely. The class owns one timestamp and no clock of its own, so a test drives it with FakeTimeProvider and a host may pin it to the same clock its data uses. It is NOT thread-safe, unlike AgentEventStream: one timestamp is read and written with no gate, so two threads calling ShouldRender at the same moment can both be answered true for one window. An instance therefore belongs to the component that owns it and is called from that component's renderer context (inside InvokeAsync on Blazor Server, or on the dispatcher in WASM), which is where a render is decided anyway; a host feeding one instance from two threads needs its own lock.",
+          "packageId": "Tempo.Blazor.Abstractions",
+          "sourcePath": "src/Tempo.Blazor.Abstractions/AI/Agents/AgentRenderThrottle.cs",
+          "documentationStatus": "merged",
+          "members": [
+            {
+              "name": "DefaultInterval",
+              "kind": "Field",
+              "type": "TimeSpan",
+              "description": "The shared default window: ten events per second collapse into one paint."
+            },
+            {
+              "name": "DelayUntilNextRender",
+              "kind": "Method",
+              "type": "TimeSpan",
+              "description": "How long a caller scheduling a trailing paint has to wait for the current window to close. Zero means the stream may paint immediately; the value never goes negative, so a clock that jumped cannot produce a negative delay."
+            },
+            {
+              "name": "Reset",
+              "kind": "Method",
+              "type": "void",
+              "description": "Forgets the last paint, so the next ShouldRender answers true. A host that repainted for its own reason (a snapshot reload) calls this instead of leaving its next event held back by the previous window."
+            },
+            {
+              "name": "ShouldRender",
+              "kind": "Method",
+              "type": "bool",
+              "description": "Whether the component may paint now. A true answer OPENS a new window, so a caller asks once per event and paints when the answer is true. Call it from the component's renderer context: the throttle is not thread-safe."
+            },
+            {
+              "name": "Interval",
+              "kind": "Property",
+              "type": "TimeSpan",
+              "description": "The effective window. Zero means every call paints (the host opted out of throttling)."
+            }
+          ],
+          "usageExample": "private readonly AgentRenderThrottle _throttle = new(Clock);\n\nprivate void OnEvent(RunEvent evt)\n{\n    Snapshot = Snapshot.Apply(evt);\n    if (_throttle.ShouldRender())\n    {\n        StateHasChanged();\n    }\n}\n\n// A host that repainted for its own reason must not wait out the previous window:\n_throttle.Reset();"
         },
         {
           "itemName": "AgentRunFilter",
@@ -120484,12 +120845,12 @@
       ],
       "libraryExamples": [],
       "summary": {
-        "itemCount": 1613,
-        "manualItemCount": 1613,
-        "generatedItemCount": 1597,
+        "itemCount": 1617,
+        "manualItemCount": 1617,
+        "generatedItemCount": 1601,
         "generatedOnlyItemCount": 0,
         "componentCount": 0,
-        "publicApiTypeCount": 1597
+        "publicApiTypeCount": 1601
       }
     },
     {
@@ -137482,10 +137843,10 @@
   ],
   "summary": {
     "packageCount": 28,
-    "itemCount": 3540,
-    "manualItemCount": 3540,
+    "itemCount": 3546,
+    "manualItemCount": 3546,
     "generatedOnlyItemCount": 0,
-    "componentCount": 545,
-    "publicApiTypeCount": 2943
+    "componentCount": 546,
+    "publicApiTypeCount": 2948
   }
 }

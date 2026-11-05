@@ -98,6 +98,101 @@
   },
   "items": [
     {
+      "itemName": "AgentActivityStatus",
+      "kind": "Enum",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.AI.Models",
+      "description": "What an agent is doing right now, in the one vocabulary every agent visualization shares. The state is always painted three ways at once — a tone colour, an icon and a localized WORD — because a colour alone is not information a colour-blind or screen-reader reader can use (WCAG 1.4.1); the icon and the word come from the AI package's shared AgentStatusPresentation mapping, so a lane, a graph node and a fan-out tile cannot disagree about what \"running\" looks like. The set is transport-neutral: a host maps its own backend vocabulary (a queued turn, a leased attempt, a permission wait, a finished run) onto these seven values and the visualizations stay backend-free.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/AI/Agents/AgentActivityStatus.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Idle",
+          "description": "The agent exists but has nothing to do. The neutral state, and the one an unknown backend value falls back to."
+        },
+        {
+          "name": "Queued",
+          "description": "Work is assigned to the agent and it has not started yet — a turn in the queue, a task waiting for a free slot."
+        },
+        {
+          "name": "Running",
+          "description": "The agent is working right now. The only state whose duration is still growing."
+        },
+        {
+          "name": "WaitingForApproval",
+          "description": "The agent stopped and is waiting for a human decision (an approval, a permission grant, a review verdict). Painted in the attention tone, because nothing moves until the reader acts."
+        },
+        {
+          "name": "Succeeded",
+          "description": "The agent finished its work successfully. A terminal state."
+        },
+        {
+          "name": "Failed",
+          "description": "The agent failed. A terminal state; the failure reason belongs to the host's own data."
+        },
+        {
+          "name": "Cancelled",
+          "description": "The agent was stopped before it finished. Terminal, and neither a success nor a failure."
+        }
+      ]
+    },
+    {
+      "itemName": "AgentEventStream<TEvent>",
+      "kind": "Class",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.AI.Models",
+      "description": "Turns the incremental events a host receives — from a SignalR hub, a one-second poll, an IAsyncEnumerable, a server-sent event stream — into the ONE strictly ordered tail an agent visualization may apply on top of its snapshot. The contract is a snapshot PLUS events, never a live collection: the component owns its view of the data and the host owns the transport, so this shared class is where de-duplication and hole detection live once instead of in eleven components. Ordered: Apply sorts a batch by the sequence selector, so a page merge cannot apply a block before the event that opened it. Idempotent: an event whose sequence was already applied is dropped, so the same batch genuinely arriving twice after a hub reconnect changes nothing. Contiguous: a hole is never papered over — when a sequence is missing the WHOLE batch is rejected, HasGap turns true and GapDetected is raised once with the first sequence the stream does not have, so the applied tail is always a contiguous run and the host's repair (reload the snapshot, or resend the missing range) is exact. Transport-neutral: nothing reads the clock, awaits, or knows what an event means. Thread-safe: a hub callback and a polling loop may feed the same stream; the one callback that runs OUTSIDE the gate is GapDetected, so a handler may wait for another thread to repair the stream instead of deadlocking against the applying one. A stream starts with no baseline (LastSequence is null), so the first batch may begin at 0, at 1 or at whatever number the backend restarted from; ResetToSnapshot installs the baseline of a reloaded snapshot and is also the documented repair after a gap.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/AI/Agents/AgentEventStream.cs",
+      "documentationStatus": "merged",
+      "typeParameters": [
+        {
+          "name": "TEvent",
+          "description": "Generic type parameter TEvent."
+        }
+      ],
+      "members": [
+        {
+          "name": "Apply",
+          "kind": "Method",
+          "type": "IReadOnlyList<TEvent>",
+          "description": "Applies an incremental batch and returns exactly the events that are NEW, in sequence order. Nothing is returned for an already applied event, for an older one, or for any event of a batch that contains a hole, so a caller appends the returned tail to its snapshot and never de-duplicates itself.",
+          "parameters": [
+            {
+              "name": "events",
+              "type": "IEnumerable<TEvent>"
+            }
+          ]
+        },
+        {
+          "name": "ResetToSnapshot",
+          "kind": "Method",
+          "type": "void",
+          "description": "Re-bases the stream on a reloaded snapshot: everything up to the supplied sequence is treated as already applied and the gap is cleared. Moving the baseline BACKWARDS is legal and is how a snapshot taken before the last events replays them.",
+          "parameters": [
+            {
+              "name": "sequence",
+              "type": "long"
+            }
+          ]
+        },
+        {
+          "name": "LastSequence",
+          "description": "The sequence of the last applied event, or null when nothing has been applied to a stream without a snapshot baseline yet. A host compares it with its snapshot's own sequence to decide whether the two are in sync."
+        },
+        {
+          "name": "HasGap",
+          "description": "Whether the LAST Apply call found a hole. True means the host must reload the snapshot before the component can be trusted; the next batch that applies something, or ResetToSnapshot, clears it."
+        },
+        {
+          "name": "GapDetected",
+          "description": "Raised once per batch that contains a hole, with the first sequence the stream does not have. Invoked synchronously on the applying thread AFTER the stream's gate is released, so a handler may call ResetToSnapshot, Apply or LastSequence — including from another thread it waits for — without deadlocking the stream. HasGap is already true when the handler starts, but the state it describes is not pinned: another feed may repair the hole while it runs."
+        }
+      ],
+      "usageExample": "private AgentEventStream<RunEvent> _events = new(evt => evt.Sequence);\n\n// A snapshot arrives (initial load, reload, or the repair after a gap):\n_events = new AgentEventStream<RunEvent>(evt => evt.Sequence, snapshot.Sequence);\nSnapshots = snapshot.Blocks;\n\n// A hub callback and a poll both land here; only NEW events come back, in sequence order:\nvar applied = _events.Apply(batch);\nif (applied.Count > 0)\n{\n    Snapshot = Snapshot.Apply(applied);   // the host's own reducer\n    _throttle.ShouldRender();\n}\n\n// The stream told the host to reload (HasGap / GapDetected):\n_events.GapDetected += missing => _ = ReloadSnapshotAsync(missing);"
+    },
+    {
       "itemName": "AgentMonitorStep",
       "kind": "Record",
       "category": "AI",
@@ -423,6 +518,136 @@
         }
       ],
       "usageExample": "var step = new AgentPlanStep(\"Draft the outline\", \"step-1\") { Status = AgentStepStatus.Running, StartedAt = TimeProvider.System.GetUtcNow() };\nvar done = step with { Status = AgentStepStatus.Done, CompletedAt = TimeProvider.System.GetUtcNow() };"
+    },
+    {
+      "itemName": "AgentRef",
+      "kind": "Record",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.AI.Models",
+      "description": "One agent as every agent visualization names it: Id (the stable identity a host keys its data by and a selection reports), Name (the display text a reader sees), the optional Role and AvatarUrl, and ColorIndex (the slot in the eight-colour agent palette). The record is a VALUE — a host recomposes it with `agent with { … }` when a name or a colour changes, and no component mutates it. It carries no state: activity belongs to a block, a node or a tile (an agent can be idle in one lane and running in another), so the same AgentRef is reused across the run. ColorIndex is normalised into 0..7 on assignment, so it always names a declared --tm-agent-color-{n} token; ColourToken returns that token name and Initials returns the one or two letters the avatar paints when there is no picture (a single word gives one letter, a name with no letter at all gives '?').",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/AI/Agents/AgentRef.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "PaletteSize",
+          "kind": "Field",
+          "type": "int",
+          "description": "How many slots the agent palette has: eight (--tm-agent-color-0 … --tm-agent-color-7). Two agents in one visualization must never share a colour, which is what fixes the size."
+        },
+        {
+          "name": "NormalizeColorIndex",
+          "kind": "Method",
+          "type": "int",
+          "description": "Wraps any integer into 0..7, negatives included.",
+          "parameters": [
+            {
+              "name": "colorIndex",
+              "type": "int"
+            }
+          ]
+        },
+        {
+          "name": "PaletteToken",
+          "kind": "Method",
+          "type": "string",
+          "description": "The palette token of a slot, normalised the same way ColorIndex is.",
+          "parameters": [
+            {
+              "name": "colorIndex",
+              "type": "int"
+            }
+          ]
+        },
+        {
+          "name": "AvatarUrl",
+          "kind": "Property",
+          "type": "string?",
+          "description": "An absolute URL of the agent's picture. Null renders Initials on the palette colour. A component loads it only when it is an absolute http(s) source (the package's image allowlist) and falls back to Initials for anything else, because the picture is host data and a refused target must never become a live source. Components render the picture as a decorative image, because the agent's name is always next to it."
+        },
+        {
+          "name": "ColorToken",
+          "kind": "Property",
+          "type": "string",
+          "description": "The custom property ColorIndex points at, without the var() wrapper — e.g. --tm-agent-color-3. Always one of the declared palette tokens."
+        },
+        {
+          "name": "HasName",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Whether the host supplied a name; a component renders its localized fallback when it is false."
+        },
+        {
+          "name": "Id",
+          "kind": "Property",
+          "type": "string",
+          "description": "Stable identity of the agent. Never empty: a missing id is generated at construction, so two agents with the same name are still two agents."
+        },
+        {
+          "name": "Name",
+          "kind": "Property",
+          "type": "string",
+          "description": "The display name, as the host wants it read. Empty when the host supplied no name; a component renders its own localized fallback instead of an empty gap."
+        },
+        {
+          "name": "Role",
+          "kind": "Property",
+          "type": "string?",
+          "description": "What the agent is for — \"Orchestrator\", \"Reviewer\", \"Worker\" — in the host's own words. Null renders no role line, which is not the same as an empty one."
+        },
+        {
+          "name": "ColorIndex",
+          "description": "The slot in the agent palette. Any integer is accepted and normalised into 0..7 (wrapping, negatives included), so a host counting its agents past eight still lands on a declared token instead of an undeclared custom property that resolves to nothing."
+        },
+        {
+          "name": "Initials",
+          "description": "The one or two letters the avatar paints when there is no picture: the first letter of the first and of the last word (\"Data analyst\" → \"DA\", \"Bedřich Novák\" → \"BN\"), a single letter for a single word, and \"?\" when the name has no letter at all. Whole text elements are kept, so diacritics and surrogate pairs never render half a glyph."
+        }
+      ],
+      "usageExample": "var planner = new AgentRef(\"Planner\", \"agent-planner\") { Role = \"Orchestrator\", ColorIndex = 0 };\nvar reviewer = new AgentRef(\"Reviewer\", \"agent-reviewer\") { Role = \"Reviewer\", ColorIndex = 1 };\n\n<TmAgentBadge Agent=\"planner\" Status=\"AgentActivityStatus.Running\" />\n<TmAgentBadge Agent=\"reviewer\" ShowName=\"false\" Status=\"AgentActivityStatus.WaitingForApproval\" />"
+    },
+    {
+      "itemName": "AgentRenderThrottle",
+      "kind": "Class",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.AI.Models",
+      "description": "The render gate every live agent visualization shares: at most one paint per Interval (100 ms by default), measured on an injected TimeProvider. A hub pushing ten events per second would otherwise paint ten renders per second per component, and on Blazor Server every one of them is a circuit round trip on top of the DOM work; the gate collapses that burst into one paint per window while the component's state keeps absorbing every event — the STATE is never throttled, only the paint, so a snapshot read at any moment is complete. An interval of zero (or a negative one, normalised to zero) is the documented way to opt out of throttling entirely. The class owns one timestamp and no clock of its own, so a test drives it with FakeTimeProvider and a host may pin it to the same clock its data uses. It is NOT thread-safe, unlike AgentEventStream: one timestamp is read and written with no gate, so two threads calling ShouldRender at the same moment can both be answered true for one window. An instance therefore belongs to the component that owns it and is called from that component's renderer context (inside InvokeAsync on Blazor Server, or on the dispatcher in WASM), which is where a render is decided anyway; a host feeding one instance from two threads needs its own lock.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/AI/Agents/AgentRenderThrottle.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "DefaultInterval",
+          "kind": "Field",
+          "type": "TimeSpan",
+          "description": "The shared default window: ten events per second collapse into one paint."
+        },
+        {
+          "name": "DelayUntilNextRender",
+          "kind": "Method",
+          "type": "TimeSpan",
+          "description": "How long a caller scheduling a trailing paint has to wait for the current window to close. Zero means the stream may paint immediately; the value never goes negative, so a clock that jumped cannot produce a negative delay."
+        },
+        {
+          "name": "Reset",
+          "kind": "Method",
+          "type": "void",
+          "description": "Forgets the last paint, so the next ShouldRender answers true. A host that repainted for its own reason (a snapshot reload) calls this instead of leaving its next event held back by the previous window."
+        },
+        {
+          "name": "ShouldRender",
+          "kind": "Method",
+          "type": "bool",
+          "description": "Whether the component may paint now. A true answer OPENS a new window, so a caller asks once per event and paints when the answer is true. Call it from the component's renderer context: the throttle is not thread-safe."
+        },
+        {
+          "name": "Interval",
+          "kind": "Property",
+          "type": "TimeSpan",
+          "description": "The effective window. Zero means every call paints (the host opted out of throttling)."
+        }
+      ],
+      "usageExample": "private readonly AgentRenderThrottle _throttle = new(Clock);\n\nprivate void OnEvent(RunEvent evt)\n{\n    Snapshot = Snapshot.Apply(evt);\n    if (_throttle.ShouldRender())\n    {\n        StateHasChanged();\n    }\n}\n\n// A host that repainted for its own reason must not wait out the previous window:\n_throttle.Reset();"
     },
     {
       "itemName": "AgentRunFilter",
@@ -41484,11 +41709,11 @@
   ],
   "libraryExamples": [],
   "summary": {
-    "itemCount": 1613,
-    "manualItemCount": 1613,
-    "generatedItemCount": 1597,
+    "itemCount": 1617,
+    "manualItemCount": 1617,
+    "generatedItemCount": 1601,
     "generatedOnlyItemCount": 0,
     "componentCount": 0,
-    "publicApiTypeCount": 1597
+    "publicApiTypeCount": 1601
   }
 }
