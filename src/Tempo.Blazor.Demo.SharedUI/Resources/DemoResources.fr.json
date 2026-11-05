@@ -1164,5 +1164,16 @@
   "TmAiAgentsDemo_ParallelTitle": "Tentatives parallèles",
   "TmAiAgentsDemo_ParallelHint": "Trois tentatives sur la même tâche avec les votes recueillis par chacune. Choisissez un gagnant, confirmez et la page enregistre le résultat.",
   "TmAiAgentsDemo_ParallelChosen": "La page a retenu {0} comme résultat.",
-  "TmAiAgentsDemo_ParallelNothingChosen": "Aucun gagnant choisi pour l'instant."
+  "TmAiAgentsDemo_ParallelNothingChosen": "Aucun gagnant choisi pour l'instant.",
+  "TmAiAgentsDemo_HandoffTitle": "Chaîne de passations",
+  "TmAiAgentsDemo_HandoffHint": "La même exécution transmise d'agent en agent : ce que chaque passation a transporté, ce qu'elle a perdu et pourquoi.",
+  "TmAiAgentsDemo_HandoffOrientationLabel": "Sens de la chaîne",
+  "TmAiAgentsDemo_HandoffVertical": "Vertical",
+  "TmAiAgentsDemo_HandoffHorizontal": "Horizontal",
+  "TmAiAgentsDemo_FallbackTitle": "Chaîne de repli",
+  "TmAiAgentsDemo_FallbackHint": "Les modèles essayés pour une requête, dans l'ordre : lequel a répondu, lequel a échoué et pourquoi, et l'ordre dans lequel cette page basculerait.",
+  "TmAiAgentsDemo_FallbackModeLabel": "Présentation",
+  "TmAiAgentsDemo_FallbackRun": "Exécution",
+  "TmAiAgentsDemo_FallbackEdit": "Modifier la chaîne",
+  "TmAiAgentsDemo_FallbackChainLog": "Chaîne : {0}"
 }

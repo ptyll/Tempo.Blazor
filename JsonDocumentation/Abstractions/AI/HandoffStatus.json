@@ -1,0 +1,11 @@
+{
+  "itemName": "HandoffStatus",
+  "kind": "Enum",
+  "category": "AI",
+  "namespace": "Tempo.Blazor.AI.Models",
+  "description": "How far one handoff in a chain has got — whether the receiving agent has taken the work over. Pending is the default (0) on purpose: a step a host has not classified yet must never read as accepted, because \"the work is now someone else's\" is a claim about a run, not a decoration.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/AI/Agents/HandoffStatus.cs",
+  "documentationStatus": "documented",
+  "usageExample": "var step = new HandoffStep(\"step-1\", \"Handing the run over\")\n{\n    Status = HandoffStatus.Pending, // the receiving agent has not answered yet\n};"
+}

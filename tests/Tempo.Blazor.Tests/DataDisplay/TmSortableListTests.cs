@@ -594,6 +594,72 @@ public class TmSortableListTests : LocalizationTestBase
             "a read-only list still explains itself");
     }
 
+    // ---------- FocusItemAsync (the host's focus hand-back) ----------
+
+    /// <summary>
+    /// How bUnit surfaces an <c>ElementReference.FocusAsync</c>. The focused reference's
+    /// <see cref="ElementReference.Id"/> is compared to the row's <c>blazor:elementReference</c>
+    /// attribute, so a fact can prove WHICH row took the focus and not merely that some focus call
+    /// happened.
+    /// </summary>
+    private const string FocusInvocation = "Blazor._internal.domWrapper.focus";
+
+    [Fact]
+    public async Task FocusItemAsync_FocusesTheRowAtThatIndex()
+    {
+        var cut = RenderDefault();
+
+        var expected = Item(cut, 1).GetAttribute("blazor:elementReference");
+        (await cut.InvokeAsync(() => cut.Instance.FocusItemAsync(1).AsTask())).Should().BeTrue();
+
+        var focus = JSInterop.Invocations[FocusInvocation].Should().ContainSingle().Subject;
+        ((ElementReference)focus.Arguments[0]).Id.Should().Be(expected, "the row the host asked for takes the focus");
+    }
+
+    [Fact]
+    public async Task FocusItemAsync_FollowsTheRow_NotThePosition_AfterTheHostReorders()
+    {
+        var cut = RenderDefault();
+        var bravo = Item(cut, 1).GetAttribute("blazor:elementReference");
+
+        // The host applies the move itself: Bravo becomes the FIRST row and its DOM element is reused
+        // through the @key, so a reference captured once per position would now point at Alpha.
+        cut.Render(p =>
+        {
+            p.Add(c => c.Items, new[] { Rows()[1], Rows()[0], Rows()[2] });
+            p.Add(c => c.KeySelector, (Func<Row, object>)(row => row.Id));
+            p.Add(c => c.ItemLabelSelector, (Func<Row, string>)(row => row.Title));
+            p.Add(c => c.ItemTemplate, TitleTemplate());
+        });
+
+        (await cut.InvokeAsync(() => cut.Instance.FocusItemAsync(0).AsTask())).Should().BeTrue();
+
+        var focus = JSInterop.Invocations[FocusInvocation].Should().ContainSingle().Subject;
+        ((ElementReference)focus.Arguments[0]).Id.Should().Be(bravo,
+            "the row now painted first is the one the caller names, whatever its element id");
+    }
+
+    [Theory]
+    [InlineData(-1)]
+    [InlineData(3)]
+    public async Task FocusItemAsync_ReportsFalse_ForAnIndexOutsideTheList(int index)
+    {
+        var cut = RenderDefault();
+
+        (await cut.InvokeAsync(() => cut.Instance.FocusItemAsync(index).AsTask())).Should().BeFalse();
+        JSInterop.Invocations[FocusInvocation].Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task FocusItemAsync_ReportsFalse_WhenTheListIsReadOnly()
+    {
+        var cut = RenderDefault(p => p.Add(c => c.Disabled, true));
+
+        (await cut.InvokeAsync(() => cut.Instance.FocusItemAsync(0).AsTask())).Should().BeFalse(
+            "a read-only row is not a tab stop, so moving the focus there would be a trap");
+        JSInterop.Invocations[FocusInvocation].Should().BeEmpty();
+    }
+
     // ---------- empty, template, test ids ----------
 
     [Fact]

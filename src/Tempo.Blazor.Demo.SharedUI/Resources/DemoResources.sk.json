@@ -1164,5 +1164,16 @@
   "TmAiAgentsDemo_ParallelTitle": "Paralelné pokusy",
   "TmAiAgentsDemo_ParallelHint": "Tri pokusy o rovnakú úlohu a hlasy, ktoré každý získal. Vyberte víťaza, potvrďte a stránka výsledok zaznamená.",
   "TmAiAgentsDemo_ParallelChosen": "Stránka prijala {0} ako výsledok.",
-  "TmAiAgentsDemo_ParallelNothingChosen": "Zatiaľ nie je vybraný víťaz."
+  "TmAiAgentsDemo_ParallelNothingChosen": "Zatiaľ nie je vybraný víťaz.",
+  "TmAiAgentsDemo_HandoffTitle": "Reťaz odovzdaní",
+  "TmAiAgentsDemo_HandoffHint": "Ten istý beh odovzdávaný medzi agentmi: čo každé odovzdanie nieslo, čo stratilo a prečo.",
+  "TmAiAgentsDemo_HandoffOrientationLabel": "Smer reťaze",
+  "TmAiAgentsDemo_HandoffVertical": "Zvisle",
+  "TmAiAgentsDemo_HandoffHorizontal": "Vodorovne",
+  "TmAiAgentsDemo_FallbackTitle": "Reťaz záložných modelov",
+  "TmAiAgentsDemo_FallbackHint": "Modely skúšané pre jednu požiadavku v poradí: ktorý odpovedal, ktorý zlyhal a prečo, a v akom poradí by sa stránka skúšala ďalej.",
+  "TmAiAgentsDemo_FallbackModeLabel": "Zobrazenie",
+  "TmAiAgentsDemo_FallbackRun": "Beh",
+  "TmAiAgentsDemo_FallbackEdit": "Upraviť reťaz",
+  "TmAiAgentsDemo_FallbackChainLog": "Reťaz: {0}"
 }

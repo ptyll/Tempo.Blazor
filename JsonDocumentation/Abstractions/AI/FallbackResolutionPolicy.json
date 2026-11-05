@@ -1,0 +1,11 @@
+{
+  "itemName": "FallbackResolutionPolicy",
+  "kind": "Enum",
+  "category": "AI",
+  "namespace": "Tempo.Blazor.AI.Models",
+  "description": "How a host resolves which model answers when a chain offers more than one — the rule the chain FOLLOWS, which is a different fact from the order of the chain itself. Pin is the default (0) on purpose: an unset policy must not silently fall back to another model, because switching models mid-run is a decision a host has to make explicitly. The surface paints the policy as a word, never as a colour, so a reader can tell a pinned single model from an ordered fallback.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/AI/Agents/FallbackResolutionPolicy.cs",
+  "documentationStatus": "documented",
+  "usageExample": "var chain = new[] { new FallbackChainEntry(\"gpt-4o\", \"GPT-4o\") };\nvar policy = FallbackResolutionPolicy.Pin; // nothing falls back until the host says so"
+}

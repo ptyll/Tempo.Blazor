@@ -1,0 +1,174 @@
+{
+  "itemName": "TmFallbackChain",
+  "kind": "Component",
+  "category": "AI",
+  "description": "The models tried for ONE request, in the order they were tried, as a flow that ends in an Answer node — every attempt with its result, the reason it failed or was skipped, how long it took and when — plus an edit mode in which a reader reorders the chain, adds a model from the host's catalogue and removes one. The surface renders the run it is given and never polls or mutates the host's data: in the RUN view it only reads Attempts, and in the EDIT view it keeps its own working copy of Chain and reports every change through ChainChanged (a reorder through the shared TmSortableList, which supplies the pointer drag AND its keyboard and menu alternatives, WCAG 2.5.7). Accessibility: every attempt is a labelled node of an ordered list, its result is an ICON plus a localized WORD plus a tone (colour is never the only carrier), a failure or a skip always prints its reason, and the decorative arrows are aria-hidden because the list already carries the order. The table view carries exactly the same facts without the geometry, so a screen-reader, keyboard-only or phone reader loses nothing. ONE polite live region speaks only when the reader adds or removes a model — a reorder is narrated by the sortable list itself, so nothing is announced twice.",
+  "packageId": "Tempo.Blazor.AI",
+  "namespace": "Tempo.Blazor.Components.AI",
+  "sourcePath": "src/Tempo.Blazor.AI/Components/AI/TmFallbackChain.razor",
+  "documentationStatus": "documented",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.AI"
+  ],
+  "parameters": [
+    {
+      "name": "Attempts",
+      "type": "IReadOnlyList<FallbackAttempt>?",
+      "isRequired": false,
+      "description": "The attempts, in the order they were tried. Each entry is one node of the flow; null or empty renders the localized empty state, and a null entry inside the list is skipped. The component never mutates the list."
+    },
+    {
+      "name": "AvailableModels",
+      "type": "IReadOnlyList<AiModelInfo>?",
+      "isRequired": false,
+      "description": "The host's model catalogue, from which the editor offers what is NOT already in the chain. Null or empty renders the localized \"no models are available\" note and a disabled Add button."
+    },
+    {
+      "name": "Chain",
+      "type": "IReadOnlyList<FallbackChainEntry>?",
+      "isRequired": false,
+      "description": "The models in fallback order, two-way bound with ChainChanged (@bind-Chain). Null (the default) derives the chain from Attempts, which is what an editor opened over a finished run shows. A pinned list is copied, never mutated: the reader's reorder reports a NEW list through ChainChanged."
+    },
+    {
+      "name": "ChainChanged",
+      "type": "EventCallback<IReadOnlyList<FallbackChainEntry>>",
+      "isRequired": false,
+      "description": "Fires with the new chain whenever the reader reorders, adds or removes a model."
+    },
+    {
+      "name": "Class",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Additional CSS class(es) for the root element."
+    },
+    {
+      "name": "Culture",
+      "type": "CultureInfo?",
+      "isRequired": false,
+      "description": "The culture that formats the latencies and the attempt times. Null (the default) means the current culture at render time."
+    },
+    {
+      "name": "HeadingLevel",
+      "type": "int",
+      "isRequired": false,
+      "default": "3",
+      "description": "The heading level of the rendered title, clamped to 2–6. Default 3."
+    },
+    {
+      "name": "Mode",
+      "type": "FallbackChainMode",
+      "isRequired": false,
+      "default": "FallbackChainMode.View",
+      "description": "Whether the surface reports the run or edits the chain. Default View. The host owns this switch (it is not two-way): the component never changes it on its own."
+    },
+    {
+      "name": "Policy",
+      "type": "FallbackResolutionPolicy",
+      "isRequired": false,
+      "default": "FallbackResolutionPolicy.Pin",
+      "description": "The rule the chain follows, two-way bound with PolicyChanged (@bind-Policy). Default Pin, so an unset policy never falls back to another model by accident. The editor offers the three policies as a segmented radio group; the run view reports the value as a word."
+    },
+    {
+      "name": "PolicyChanged",
+      "type": "EventCallback<FallbackResolutionPolicy>",
+      "isRequired": false,
+      "description": "Fires with the new policy when the reader picks one in the editor."
+    },
+    {
+      "name": "ShowPolicy",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "Whether the policy is shown at all. Default true — the run view prints it as a read-out and the editor offers the radio group."
+    },
+    {
+      "name": "ShowTitle",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "Whether the heading is rendered. Default true."
+    },
+    {
+      "name": "Title",
+      "type": "string?",
+      "isRequired": false,
+      "description": "The heading above the surface. Null renders the localized default (\"Fallback chain\"); the heading also names the surface, so the name a reader hears is the one they see."
+    },
+    {
+      "name": "ViewMode",
+      "type": "FallbackChainViewMode",
+      "isRequired": false,
+      "default": "FallbackChainViewMode.Flow",
+      "description": "The run presentation, two-way bound with ViewModeChanged (@bind-ViewMode). Default Flow. It applies to the run view; the editor has its own presentation."
+    },
+    {
+      "name": "ViewModeChanged",
+      "type": "EventCallback<FallbackChainViewMode>",
+      "isRequired": false,
+      "description": "Fires with the new presentation when the reader uses the View switcher."
+    }
+  ],
+  "cssClasses": [
+    "tm-ai-fallback",
+    "tm-ai-fallback--edit",
+    "tm-ai-fallback__header",
+    "tm-ai-fallback__title",
+    "tm-ai-fallback__view",
+    "tm-ai-fallback__policy",
+    "tm-ai-fallback__policy-label",
+    "tm-ai-fallback__policy-value",
+    "tm-ai-fallback__flow",
+    "tm-ai-fallback__node",
+    "tm-ai-fallback__node-head",
+    "tm-ai-fallback__node-position",
+    "tm-ai-fallback__node-label",
+    "tm-ai-fallback__node-state",
+    "tm-ai-fallback__node-state-icon",
+    "tm-ai-fallback__node-state-text",
+    "tm-ai-fallback__node-reason",
+    "tm-ai-fallback__node-reason-label",
+    "tm-ai-fallback__node-reason-text",
+    "tm-ai-fallback__node-facts",
+    "tm-ai-fallback__arrow",
+    "tm-ai-fallback__answer-arrow",
+    "tm-ai-fallback__answer",
+    "tm-ai-fallback__answer-icon",
+    "tm-ai-fallback__answer-text",
+    "tm-ai-fallback__answer-label",
+    "tm-ai-fallback__answer-model",
+    "tm-ai-fallback__editor",
+    "tm-ai-fallback__editor-hint",
+    "tm-ai-fallback__editor-empty",
+    "tm-ai-fallback__editor-list",
+    "tm-ai-fallback__editor-row",
+    "tm-ai-fallback__editor-row-label",
+    "tm-ai-fallback__editor-row-id",
+    "tm-ai-fallback__editor-remove",
+    "tm-ai-fallback__editor-add",
+    "tm-ai-fallback__editor-add-label",
+    "tm-ai-fallback__editor-select",
+    "tm-ai-fallback__editor-add-button",
+    "tm-ai-fallback__editor-note",
+    "tm-ai-fallback__editor-policy",
+    "tm-ai-fallback__table",
+    "tm-ai-fallback__empty"
+  ],
+  "examples": [
+    {
+      "title": "A run a host reports, and the editor over the same chain",
+      "code": "@* Mode is the host's switch: the run view reports, the editor edits. *@\n<TmFallbackChain Attempts=\"_attempts\"\n                Mode=\"@(editing ? FallbackChainMode.Edit : FallbackChainMode.View)\"\n                Chain=\"_chain\"\n                ChainChanged=\"OnChainChanged\"\n                AvailableModels=\"_models\"\n                @bind-Policy=\"_policy\" />\n\n@code {\n    private IReadOnlyList<FallbackAttempt> _attempts = [];\n    private IReadOnlyList<FallbackChainEntry>? _chain;\n    private IReadOnlyList<AiModelInfo> _models = [];\n    private FallbackResolutionPolicy _policy = FallbackResolutionPolicy.Fallback;\n\n    private Task OnChainChanged(IReadOnlyList<FallbackChainEntry> chain)\n    {\n        _chain = chain; // persist the new order\n        return Task.CompletedTask;\n    }\n}"
+    },
+    {
+      "title": "The attempts a host recorded",
+      "code": "var attempts = new[]\n{\n    new FallbackAttempt(\"gpt-4o\") { Label = \"GPT-4o\", Status = FallbackAttemptStatus.Failed, FailureReason = \"Provider rate limit\", LatencyMs = 1200 },\n    new FallbackAttempt(\"claude-3-5\") { Label = \"Claude 3.5 Sonnet\", Status = FallbackAttemptStatus.Skipped, FailureReason = \"No vision support\" },\n    new FallbackAttempt(\"gpt-4o-mini\") { Label = \"GPT-4o mini\", Status = FallbackAttemptStatus.Succeeded, LatencyMs = 640 },\n};\n\n// The third attempt answers: the flow branches to \"Answered by GPT-4o mini\"."
+    }
+  ],
+  "notes": [
+    "The run view only reads Attempts; the editor keeps its own copy of Chain and reports every change through ChainChanged (never mutating the host list).",
+    "The editor reorders through the shared TmSortableList, so the pointer drag, the keyboard grab/move/drop and the per-row move menu all work (WCAG 2.5.7).",
+    "Adding is limited to AvailableModels that are not already in the chain; removing and reordering keep the chain a sequence of distinct models.",
+    "ONE polite live region announces an add and a remove; a reorder is narrated by the sortable list itself, so nothing is announced twice.",
+    "The table view (ViewMode=Table) carries every attempt, result, reason, latency and time as text — the flow is never the only way to read the run.",
+    "An unmeasured latency is never invented: the flow omits it and the table says \"not measured\"."
+  ]
+}

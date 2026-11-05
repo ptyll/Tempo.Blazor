@@ -12440,6 +12440,11 @@
           "name": "OnSortableReorderCommitted",
           "signature": "Task OnSortableReorderCommitted(int fromIndex, int toIndex)",
           "description": "The single commit path of the pointer drag (called from the module once per released gesture). Runs OnReorder with Source=Pointer. Not meant to be called by hosts — use OnReorder for the host side."
+        },
+        {
+          "name": "FocusItemAsync",
+          "signature": "ValueTask<bool> FocusItemAsync(int index)",
+          "description": "Moves keyboard focus to the row at index of Items — the same index OnReorder reports, not a painted position. A host uses it for the focus hand-back after the control the reader was on is removed with its row (WCAG 2.4.3), so the reader lands on the row that took the removed one's place instead of on the document body. Returns whether a focus call was made: false means there was nothing to focus (the index is outside the list, the list is Disabled — a read-only row is not a tab stop — or no element was captured for that row yet)."
         }
       ],
       "cssClasses": [

@@ -1164,5 +1164,16 @@
   "TmAiAgentsDemo_ParallelTitle": "Parallel attempts",
   "TmAiAgentsDemo_ParallelHint": "Three attempts at the same task with the votes each one collected. Choose a winner, confirm it and the page records the result.",
   "TmAiAgentsDemo_ParallelChosen": "The page accepted {0} as the result.",
-  "TmAiAgentsDemo_ParallelNothingChosen": "No winner chosen yet."
+  "TmAiAgentsDemo_ParallelNothingChosen": "No winner chosen yet.",
+  "TmAiAgentsDemo_HandoffTitle": "Handoff chain",
+  "TmAiAgentsDemo_HandoffHint": "The same run passed from agent to agent: what each handoff carried, what it dropped and why.",
+  "TmAiAgentsDemo_HandoffOrientationLabel": "Chain direction",
+  "TmAiAgentsDemo_HandoffVertical": "Vertical",
+  "TmAiAgentsDemo_HandoffHorizontal": "Horizontal",
+  "TmAiAgentsDemo_FallbackTitle": "Fallback chain",
+  "TmAiAgentsDemo_FallbackHint": "The models tried for one request, in order: which one answered, which failed and why, and the order this page would fall back through.",
+  "TmAiAgentsDemo_FallbackModeLabel": "Presentation",
+  "TmAiAgentsDemo_FallbackRun": "Run",
+  "TmAiAgentsDemo_FallbackEdit": "Edit chain",
+  "TmAiAgentsDemo_FallbackChainLog": "Chain: {0}"
 }

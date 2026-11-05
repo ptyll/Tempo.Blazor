@@ -1,0 +1,11 @@
+{
+  "itemName": "FallbackChainMode",
+  "kind": "Enum",
+  "category": "Components",
+  "namespace": "Tempo.Blazor.Components.AI",
+  "description": "How TmFallbackChain is presented. View reports the run the host handed over; Edit lets a reader change the chain — its order, its members and the resolution policy — and reports every change through the binding, never by mutating the host's list.",
+  "packageId": "Tempo.Blazor.AI",
+  "sourcePath": "src/Tempo.Blazor.AI/Components/AI/FallbackChainMode.cs",
+  "documentationStatus": "documented",
+  "usageExample": "<TmFallbackChain Attempts=\"_attempts\" Mode=\"@(editing ? FallbackChainMode.Edit : FallbackChainMode.View)\" />"
+}

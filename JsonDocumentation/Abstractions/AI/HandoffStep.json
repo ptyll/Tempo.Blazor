@@ -1,0 +1,157 @@
+{
+  "itemName": "HandoffStep",
+  "kind": "Record",
+  "category": "AI",
+  "namespace": "Tempo.Blazor.AI.Models",
+  "description": "One step of an agent-to-agent handoff chain: who handed the work to whom, when, what it said about it, what travelled and what was lost, and how far the receiving agent got. The record is a VALUE: a host recomposes it with step with { … } when the receiving agent accepts or finishes the work, and no component mutates it. Both agent identities are the shared AgentRef, so a step paints the same initials, name and palette slot every other agent surface uses; a host that tracks agents by id only supplies FromAgentId / ToAgentId and the surface prints the id. The step deliberately does not decide what \"lost\" costs: the two item lists are the host's truth and LostCount / LossRate are the arithmetic a surface and a caller share, so a summary can never disagree with the lists it summarises.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/AI/Agents/HandoffStep.cs",
+  "documentationStatus": "documented",
+  "members": [
+    {
+      "name": "At",
+      "kind": "Property",
+      "type": "DateTimeOffset?",
+      "description": "When the handoff happened, or null while it is still pending."
+    },
+    {
+      "name": "FromAgent",
+      "kind": "Property",
+      "type": "AgentRef?",
+      "description": "The agent that handed the work over, or null when the host tracks agents by id only. Setting it makes the surface paint the agent's initials, name and palette slot."
+    },
+    {
+      "name": "FromAgentId",
+      "kind": "Property",
+      "type": "string?",
+      "description": "The handing-over agent's id as a plain string, for a host whose agents are not AgentRefs. FromAgent wins when both are set, because it carries the whole identity."
+    },
+    {
+      "name": "FromColorToken",
+      "kind": "Property",
+      "type": "string",
+      "description": "The agent palette token the handing-over agent's avatar paints with, or an empty string when no FromAgent is set. Always a declared --tm-agent-color-{0..7} token when it is not empty."
+    },
+    {
+      "name": "FromName",
+      "kind": "Property",
+      "type": "string",
+      "description": "The handing-over agent's name for a surface to print: the agent's name, else the raw id."
+    },
+    {
+      "name": "HasFrom",
+      "kind": "Property",
+      "type": "bool",
+      "description": "Whether the host named the handing-over agent in any way."
+    },
+    {
+      "name": "HasKnownStatus",
+      "kind": "Property",
+      "type": "bool",
+      "description": "Whether Status is one of the declared states (a cast integer may not be)."
+    },
+    {
+      "name": "HasLosses",
+      "kind": "Property",
+      "type": "bool",
+      "description": "Whether anything was lost in this step — the fact the surface paints first."
+    },
+    {
+      "name": "HasSummary",
+      "kind": "Property",
+      "type": "bool",
+      "description": "Whether the host supplied a summary worth printing."
+    },
+    {
+      "name": "HasTo",
+      "kind": "Property",
+      "type": "bool",
+      "description": "Whether the host named the receiving agent in any way."
+    },
+    {
+      "name": "Id",
+      "kind": "Property",
+      "type": "string",
+      "description": "Stable identity of the step. Never empty: a missing id is generated at construction."
+    },
+    {
+      "name": "IsPending",
+      "kind": "Property",
+      "type": "bool",
+      "description": "Whether the handoff is still waiting for the receiving agent."
+    },
+    {
+      "name": "IsRejected",
+      "kind": "Property",
+      "type": "bool",
+      "description": "Whether the receiving agent refused the work."
+    },
+    {
+      "name": "IsSettled",
+      "kind": "Property",
+      "type": "bool",
+      "description": "Whether the handoff was answered (accepted or completed)."
+    },
+    {
+      "name": "ItemCount",
+      "kind": "Property",
+      "type": "int",
+      "description": "How many items the step tried to hand over (passed plus lost)."
+    },
+    {
+      "name": "LossRate",
+      "kind": "Property",
+      "type": "double",
+      "description": "How much of what the step carried was lost, from 0 to 1, or 0 when it carried nothing (there is no loss rate without a whole)."
+    },
+    {
+      "name": "LostCount",
+      "kind": "Property",
+      "type": "int",
+      "description": "How many items never arrived."
+    },
+    {
+      "name": "PassedCount",
+      "kind": "Property",
+      "type": "int",
+      "description": "How many items reached the next agent."
+    },
+    {
+      "name": "Status",
+      "kind": "Property",
+      "type": "HandoffStatus",
+      "description": "How far the handoff has got. Default Pending; painted as an icon, a localized word AND a tone, never as a colour alone."
+    },
+    {
+      "name": "Summary",
+      "kind": "Property",
+      "type": "string",
+      "description": "What the handing-over agent said about the work. Empty renders the surface's own fallback."
+    },
+    {
+      "name": "ToAgent",
+      "kind": "Property",
+      "type": "AgentRef?",
+      "description": "The agent that received the work, or null when the host tracks agents by id only."
+    },
+    {
+      "name": "ToAgentId",
+      "kind": "Property",
+      "type": "string?",
+      "description": "The receiving agent's id as a plain string. ToAgent wins when both are set."
+    },
+    {
+      "name": "ToColorToken",
+      "kind": "Property",
+      "type": "string",
+      "description": "The receiving agent's palette token, or an empty string when no ToAgent is set."
+    },
+    {
+      "name": "ToName",
+      "kind": "Property",
+      "type": "string",
+      "description": "The receiving agent's name for a surface to print: the agent's name, else the raw id."
+    }
+  ],
+  "usageExample": "var step = new HandoffStep(\"step-2\", \"The matcher takes over the invoice run\")\n{\n    FromAgent = new AgentRef(\"Fetcher\", \"w-1\") { ColorIndex = 1 },\n    ToAgent = new AgentRef(\"Matcher\", \"w-2\") { ColorIndex = 4 },\n    At = DateTimeOffset.UtcNow,\n    Status = HandoffStatus.Accepted,\n    PassedItems = [new HandoffItem(\"invoice schema\", HandoffItemKind.Artifact)],\n    LostItems = [new HandoffItem(\"conversation history\").Lost(\"the context window was full\")],\n};\n\n// \"1 passed on · 1 lost\" and the loss keeps its reason."
+}

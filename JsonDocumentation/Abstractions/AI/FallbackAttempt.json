@@ -1,0 +1,115 @@
+{
+  "itemName": "FallbackAttempt",
+  "kind": "Record",
+  "category": "AI",
+  "namespace": "Tempo.Blazor.AI.Models",
+  "description": "One model tried in a fallback chain: which model it was, how the attempt ended, why it failed or was skipped, how long it took and when it ran. The record is a VALUE: a host recomposes it with attempt with { … } as the chain walks on, and no component mutates it. ModelId is the identity the host's own catalogue uses (the same id an AiModelInfo carries), so an attempt can be matched to the model that was picked; the surface never needs the catalogue to paint an attempt. A failure or a skip is only ever painted together with its REASON and a localized word: a red branch on a diagram is not an explanation (WCAG 1.4.1), and an attempt that reports no latency simply shows no latency rather than a zero the host never measured.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/AI/Agents/FallbackAttempt.cs",
+  "documentationStatus": "documented",
+  "members": [
+    {
+      "name": "At",
+      "kind": "Property",
+      "type": "DateTimeOffset?",
+      "description": "When the attempt ran, or null when the host does not record it."
+    },
+    {
+      "name": "DisplayName",
+      "kind": "Property",
+      "type": "string",
+      "description": "The name a surface prints: Label when the host supplied one, else ModelId."
+    },
+    {
+      "name": "Failed",
+      "kind": "Property",
+      "type": "bool",
+      "description": "Whether the attempt ran and failed."
+    },
+    {
+      "name": "FailureReason",
+      "kind": "Property",
+      "type": "string?",
+      "description": "Why the attempt failed or was skipped, in the host's own words (\"rate limited\", \"no vision support\", \"budget exhausted\"). Empty renders no reason; the surface prints it verbatim and never parses it."
+    },
+    {
+      "name": "HasFailureReason",
+      "kind": "Property",
+      "type": "bool",
+      "description": "Whether the attempt carries a reason worth printing."
+    },
+    {
+      "name": "HasKnownStatus",
+      "kind": "Property",
+      "type": "bool",
+      "description": "Whether Status is one of the declared states (a cast integer may not be)."
+    },
+    {
+      "name": "HasLabel",
+      "kind": "Property",
+      "type": "bool",
+      "description": "Whether the host supplied a label for the model."
+    },
+    {
+      "name": "HasLatency",
+      "kind": "Property",
+      "type": "bool",
+      "description": "Whether the host measured a usable latency (a missing or negative value counts as none)."
+    },
+    {
+      "name": "IsPassive",
+      "kind": "Property",
+      "type": "bool",
+      "description": "Whether the attempt is a passive outcome (not tried or skipped) — the states in which nothing was spent and the chain simply moved on."
+    },
+    {
+      "name": "Label",
+      "kind": "Property",
+      "type": "string",
+      "description": "The model as the reader should see it, when the host's catalogue names it differently from the id. Empty falls back to ModelId, so no attempt is ever blank."
+    },
+    {
+      "name": "Latency",
+      "kind": "Property",
+      "type": "TimeSpan?",
+      "description": "The measured latency as a duration, or null when the host did not measure one."
+    },
+    {
+      "name": "LatencyMs",
+      "kind": "Property",
+      "type": "long?",
+      "description": "How long the attempt took, in MILLISECONDS, or null when the host did not measure it. A negative value reads as \"not measured\" too — a duration below zero is not a fact a surface can print."
+    },
+    {
+      "name": "ModelId",
+      "kind": "Property",
+      "type": "string",
+      "description": "Stable identity of the model that was tried. Never empty: a missing id is generated at construction."
+    },
+    {
+      "name": "NotTried",
+      "kind": "Property",
+      "type": "bool",
+      "description": "Whether the attempt never ran."
+    },
+    {
+      "name": "Skipped",
+      "kind": "Property",
+      "type": "bool",
+      "description": "Whether the attempt was deliberately not made."
+    },
+    {
+      "name": "Status",
+      "kind": "Property",
+      "type": "FallbackAttemptStatus",
+      "description": "How the attempt ended. Default NotTried; painted as an icon, a localized word AND a tone, never as a colour alone."
+    },
+    {
+      "name": "Succeeded",
+      "kind": "Property",
+      "type": "bool",
+      "description": "Whether the attempt produced the answer."
+    }
+  ],
+  "usageExample": "var attempt = new FallbackAttempt(\"gpt-4o\")\n{\n    Label = \"GPT-4o\",\n    Status = FallbackAttemptStatus.Failed,\n    FailureReason = \"Provider rate limit\",\n    LatencyMs = 1200,\n    At = DateTimeOffset.UtcNow,\n};\n\n// A failed branch keeps its reason and its measured latency."
+}

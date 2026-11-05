@@ -419,6 +419,164 @@
       "notes": "Keyboard: the node is a NATIVE <button> inside a <foreignObject>, so Enter and Space activate it exactly once with no emulation, and the roving tabindex keeps the whole graph ONE tab stop while the scrollport stays tabindex=-1 (programmatically focusable, never a second stop in front of the nodes). ARROW keys move along the actual EDGES (the neighbour furthest in that direction wins, then the cross-axis distance, then the painting order) and never along the declaration order; Home/End jump to the first and the last node. The page scroll an ARROW may produce is accepted rather than suppressed — a render-time @onkeydown:preventDefault cannot be per-key and would swallow Tab and the button's own native activation (the same decision TmTabs and TmTopBar document). Focus: a selected node the host removes clears the selection and hands the focus back to the viewport instead of dropping the reader onto the body. Pointer: panning is NATIVE scrolling of the viewport (a mouse, a wheel, a scrollbar and the keyboard all work), and the package's tm-agent-graph.js only imports the CORE pointer-gesture.js helper for pinch/ctrl+wheel zoom plus the two-finger pan delta — there is no second drag implementation and no <script> tag. Pulses: a call lights its edge up for PulseDuration on the injected TimeProvider (the same value is written onto the root as --tm-agent-graph-pulse-duration, so the CSS animation and the timer share one length), at most MaxPulses at a time (the newest win), and the ONE animated subject has a prefers-reduced-motion block that removes the movement while keeping a dashed, Highlight-toned highlight. Fit-to-view measures the scrollport (the same module) and keeps the current zoom when nothing can be measured (prerender, no JavaScript), so it never jumps to a guess. High contrast: forced-colors hands the curves, the group boxes and the arrow heads (an SVG fill the system palette does not remap) to CanvasText, selection and approval to a Highlight BORDER and focus to its own thicker OUTLINE, so a focused node is never mistaken for a selected one (WCAG 2.4.7), and every dim is dropped (opacity 1) instead of lowering system-colour contrast. A dimmed node is a TOKEN change rather than an opacity, because it is still an active button whose label has to keep its contrast. Every user-facing string (including the accessible names of the nodes, the table headings and the zoom read-out) comes from ITmLocalizer."
     },
     {
+      "itemName": "TmAgentHandoff",
+      "kind": "Component",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.Components.AI",
+      "description": "A run handed from agent to agent as ONE chain: a labelled step per handoff — who handed what to whom, when, how the receiving agent answered — with the things that travelled and the things that were lost (and why) behind a Details button on every step, plus a chain-wide loss summary that names what the run actually dropped. The surface renders the steps it is given and never polls or mutates anything: the host owns the handoff data and the transport, the component owns its view. The step ordering is the host's own chain order — the component never reorders, filters or invents a step. Accessibility: the chain is an ordered list of labelled steps, every status and every item kind is an ICON plus a localized WORD plus a tone (colour is never the only carrier, WCAG 1.4.1), and the passed/lost lists live in a region a native <button> opens and closes with aria-expanded and aria-controls — no key emulation anywhere (docs/keyboard-activation-convention.md). The table view carries exactly the same facts without the geometry, so a screen-reader, keyboard-only or phone reader loses nothing. ONE polite live region speaks only when a step the reader was on disappears from the host's data and the focus has to move.",
+      "packageId": "Tempo.Blazor.AI",
+      "sourcePath": "src/Tempo.Blazor.AI/Components/AI/TmAgentHandoff.razor",
+      "documentationStatus": "merged",
+      "requiredImports": [
+        "@using Tempo.Blazor.Components.AI"
+      ],
+      "parameters": [
+        {
+          "name": "Class",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Additional CSS class(es) for the root element."
+        },
+        {
+          "name": "Culture",
+          "type": "CultureInfo?",
+          "isRequired": false,
+          "description": "The culture that formats the handoff times. Null (the default) means the current culture at render time."
+        },
+        {
+          "name": "ExpandedStepIds",
+          "type": "IReadOnlyList<string>?",
+          "isRequired": false,
+          "description": "The ids of the steps whose detail is open, two-way bound with ExpandedStepIdsChanged. Null (the default) means EVERY step is open, because the passed and lost lists are the reason to look at a chain at all; an empty list closes them all. A host that pins the list keeps control: the reader's toggle reports the new set and the next render decides."
+        },
+        {
+          "name": "ExpandedStepIdsChanged",
+          "type": "EventCallback<IReadOnlyList<string>?>",
+          "isRequired": false,
+          "description": "Fires with the new expanded set when the reader opens or closes a step's detail."
+        },
+        {
+          "name": "HeadingLevel",
+          "type": "int",
+          "isRequired": false,
+          "default": "3",
+          "description": "The heading level of the rendered title, clamped to 2–6. Default 3."
+        },
+        {
+          "name": "Orientation",
+          "type": "HandoffOrientation",
+          "isRequired": false,
+          "default": "HandoffOrientation.Vertical",
+          "description": "Which way the chain runs. Default Vertical. The orientation is a layout hook on the root — both values render the same ordered list, so nothing is lost when a narrow card turns the chain on its side."
+        },
+        {
+          "name": "ShowSummary",
+          "type": "bool",
+          "isRequired": false,
+          "default": "true",
+          "description": "Whether the summary block is rendered. Default true. It carries the settled / total handoff count, the passed and lost totals, the loss rate and whether anything is still pending."
+        },
+        {
+          "name": "ShowTitle",
+          "type": "bool",
+          "isRequired": false,
+          "default": "true",
+          "description": "Whether the heading is rendered. Default true."
+        },
+        {
+          "name": "Steps",
+          "type": "IReadOnlyList<HandoffStep>?",
+          "isRequired": false,
+          "description": "The handoffs, in chain order. Each entry is one step; null or empty renders the localized empty state, and a null entry inside the list is skipped. The component never mutates or reorders the list."
+        },
+        {
+          "name": "Title",
+          "type": "string?",
+          "isRequired": false,
+          "description": "The heading above the surface. Null renders the localized default (\"Agent handoffs\"); the heading also names the surface, so the name a reader hears is the one they see."
+        },
+        {
+          "name": "ViewMode",
+          "type": "AgentHandoffViewMode",
+          "isRequired": false,
+          "default": "AgentHandoffViewMode.Chain",
+          "description": "The presentation, two-way bound with ViewModeChanged (@bind-ViewMode). Default Chain. Table renders the same steps as one table, which is the text alternative of the chain."
+        },
+        {
+          "name": "ViewModeChanged",
+          "type": "EventCallback<AgentHandoffViewMode>",
+          "isRequired": false,
+          "description": "Fires with the new presentation when the reader uses the View switcher."
+        }
+      ],
+      "cssClasses": [
+        "tm-ai-handoff",
+        "tm-ai-handoff--vertical",
+        "tm-ai-handoff--horizontal",
+        "tm-ai-handoff__header",
+        "tm-ai-handoff__title",
+        "tm-ai-handoff__view",
+        "tm-ai-handoff__summary",
+        "tm-ai-handoff__stats",
+        "tm-ai-handoff__stat",
+        "tm-ai-handoff__stat-label",
+        "tm-ai-handoff__stat-value",
+        "tm-ai-handoff__summary-state",
+        "tm-ai-handoff__empty",
+        "tm-ai-handoff__table",
+        "tm-ai-handoff__chain",
+        "tm-ai-handoff__step",
+        "tm-ai-handoff__step-head",
+        "tm-ai-handoff__index",
+        "tm-ai-handoff__step-title",
+        "tm-ai-handoff__status",
+        "tm-ai-handoff__status-icon",
+        "tm-ai-handoff__status-text",
+        "tm-ai-handoff__route",
+        "tm-ai-handoff__agent",
+        "tm-ai-handoff__agent-name",
+        "tm-ai-handoff__route-arrow",
+        "tm-ai-handoff__at",
+        "tm-ai-handoff__step-summary",
+        "tm-ai-handoff__toggle",
+        "tm-ai-handoff__toggle-text",
+        "tm-ai-handoff__toggle-icon",
+        "tm-ai-handoff__detail",
+        "tm-ai-handoff__group",
+        "tm-ai-handoff__group--lost",
+        "tm-ai-handoff__group-title",
+        "tm-ai-handoff__group-icon",
+        "tm-ai-handoff__group-text",
+        "tm-ai-handoff__group-empty",
+        "tm-ai-handoff__items",
+        "tm-ai-handoff__item",
+        "tm-ai-handoff__item--lost",
+        "tm-ai-handoff__item-icon",
+        "tm-ai-handoff__item-label",
+        "tm-ai-handoff__item-kind",
+        "tm-ai-handoff__item-reason",
+        "tm-ai-handoff__connector",
+        "tm-ai-handoff__lost-summary"
+      ],
+      "examples": [
+        {
+          "title": "A chain a host feeds from its own handoffs",
+          "code": "@* The page owns the handoff data and the transport; the surface paints it and reports intent. *@\n<TmAgentHandoff Steps=\"_steps\"\n               Title=\"Invoice run handoffs\"\n               @bind-ViewMode=\"_view\"\n               @bind-ExpandedStepIds=\"_expanded\" />\n\n@code {\n    private IReadOnlyList<HandoffStep> _steps = [];\n    private AgentHandoffViewMode _view = AgentHandoffViewMode.Chain;\n    private IReadOnlyList<string>? _expanded;\n}"
+        },
+        {
+          "title": "The steps a host builds",
+          "code": "var step = new HandoffStep(\"step-2\", \"The matcher takes over the invoice run\")\n{\n    FromAgent = new AgentRef(\"Fetcher\", \"w-1\") { ColorIndex = 1 },\n    ToAgent = new AgentRef(\"Matcher\", \"w-2\") { ColorIndex = 4 },\n    At = now,\n    Status = HandoffStatus.Accepted,\n    PassedItems = [new HandoffItem(\"invoice schema\", HandoffItemKind.Artifact)],\n    LostItems = [new HandoffItem(\"conversation history\").Lost(\"the context window was full\")],\n};\n\n// Two steps in the chain render \"2/3 handoffs · 3 passed on · 1 lost · 25 %\"."
+        }
+      ],
+      "notes": [
+        "The surface renders the steps it is given; it never polls, fetches or mutates a handoff.",
+        "A state and an item kind are always an icon AND a localized word AND a tone, never a colour alone (WCAG 1.4.1).",
+        "The passed and lost lists live in a region a native button opens and closes (aria-expanded + aria-controls); ExpandedStepIds = null opens every step, an empty list closes them all.",
+        "The table view (ViewMode=Table) carries every step, item label and loss reason as text — the chain is never the only way to read the data.",
+        "One polite live region speaks only when a step the reader was on disappears from the host data and the focus has to move."
+      ]
+    },
+    {
       "itemName": "TmAgentLanes",
       "kind": "Component",
       "category": "AI",
@@ -1673,6 +1831,180 @@
       ]
     },
     {
+      "itemName": "TmFallbackChain",
+      "kind": "Component",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.Components.AI",
+      "description": "The models tried for ONE request, in the order they were tried, as a flow that ends in an Answer node — every attempt with its result, the reason it failed or was skipped, how long it took and when — plus an edit mode in which a reader reorders the chain, adds a model from the host's catalogue and removes one. The surface renders the run it is given and never polls or mutates the host's data: in the RUN view it only reads Attempts, and in the EDIT view it keeps its own working copy of Chain and reports every change through ChainChanged (a reorder through the shared TmSortableList, which supplies the pointer drag AND its keyboard and menu alternatives, WCAG 2.5.7). Accessibility: every attempt is a labelled node of an ordered list, its result is an ICON plus a localized WORD plus a tone (colour is never the only carrier), a failure or a skip always prints its reason, and the decorative arrows are aria-hidden because the list already carries the order. The table view carries exactly the same facts without the geometry, so a screen-reader, keyboard-only or phone reader loses nothing. ONE polite live region speaks only when the reader adds or removes a model — a reorder is narrated by the sortable list itself, so nothing is announced twice.",
+      "packageId": "Tempo.Blazor.AI",
+      "sourcePath": "src/Tempo.Blazor.AI/Components/AI/TmFallbackChain.razor",
+      "documentationStatus": "merged",
+      "requiredImports": [
+        "@using Tempo.Blazor.Components.AI"
+      ],
+      "parameters": [
+        {
+          "name": "Attempts",
+          "type": "IReadOnlyList<FallbackAttempt>?",
+          "isRequired": false,
+          "description": "The attempts, in the order they were tried. Each entry is one node of the flow; null or empty renders the localized empty state, and a null entry inside the list is skipped. The component never mutates the list."
+        },
+        {
+          "name": "AvailableModels",
+          "type": "IReadOnlyList<AiModelInfo>?",
+          "isRequired": false,
+          "description": "The host's model catalogue, from which the editor offers what is NOT already in the chain. Null or empty renders the localized \"no models are available\" note and a disabled Add button."
+        },
+        {
+          "name": "Chain",
+          "type": "IReadOnlyList<FallbackChainEntry>?",
+          "isRequired": false,
+          "description": "The models in fallback order, two-way bound with ChainChanged (@bind-Chain). Null (the default) derives the chain from Attempts, which is what an editor opened over a finished run shows. A pinned list is copied, never mutated: the reader's reorder reports a NEW list through ChainChanged."
+        },
+        {
+          "name": "ChainChanged",
+          "type": "EventCallback<IReadOnlyList<FallbackChainEntry>>",
+          "isRequired": false,
+          "description": "Fires with the new chain whenever the reader reorders, adds or removes a model."
+        },
+        {
+          "name": "Class",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Additional CSS class(es) for the root element."
+        },
+        {
+          "name": "Culture",
+          "type": "CultureInfo?",
+          "isRequired": false,
+          "description": "The culture that formats the latencies and the attempt times. Null (the default) means the current culture at render time."
+        },
+        {
+          "name": "HeadingLevel",
+          "type": "int",
+          "isRequired": false,
+          "default": "3",
+          "description": "The heading level of the rendered title, clamped to 2–6. Default 3."
+        },
+        {
+          "name": "Mode",
+          "type": "FallbackChainMode",
+          "isRequired": false,
+          "default": "FallbackChainMode.View",
+          "description": "Whether the surface reports the run or edits the chain. Default View. The host owns this switch (it is not two-way): the component never changes it on its own."
+        },
+        {
+          "name": "Policy",
+          "type": "FallbackResolutionPolicy",
+          "isRequired": false,
+          "default": "FallbackResolutionPolicy.Pin",
+          "description": "The rule the chain follows, two-way bound with PolicyChanged (@bind-Policy). Default Pin, so an unset policy never falls back to another model by accident. The editor offers the three policies as a segmented radio group; the run view reports the value as a word."
+        },
+        {
+          "name": "PolicyChanged",
+          "type": "EventCallback<FallbackResolutionPolicy>",
+          "isRequired": false,
+          "description": "Fires with the new policy when the reader picks one in the editor."
+        },
+        {
+          "name": "ShowPolicy",
+          "type": "bool",
+          "isRequired": false,
+          "default": "true",
+          "description": "Whether the policy is shown at all. Default true — the run view prints it as a read-out and the editor offers the radio group."
+        },
+        {
+          "name": "ShowTitle",
+          "type": "bool",
+          "isRequired": false,
+          "default": "true",
+          "description": "Whether the heading is rendered. Default true."
+        },
+        {
+          "name": "Title",
+          "type": "string?",
+          "isRequired": false,
+          "description": "The heading above the surface. Null renders the localized default (\"Fallback chain\"); the heading also names the surface, so the name a reader hears is the one they see."
+        },
+        {
+          "name": "ViewMode",
+          "type": "FallbackChainViewMode",
+          "isRequired": false,
+          "default": "FallbackChainViewMode.Flow",
+          "description": "The run presentation, two-way bound with ViewModeChanged (@bind-ViewMode). Default Flow. It applies to the run view; the editor has its own presentation."
+        },
+        {
+          "name": "ViewModeChanged",
+          "type": "EventCallback<FallbackChainViewMode>",
+          "isRequired": false,
+          "description": "Fires with the new presentation when the reader uses the View switcher."
+        }
+      ],
+      "cssClasses": [
+        "tm-ai-fallback",
+        "tm-ai-fallback--edit",
+        "tm-ai-fallback__header",
+        "tm-ai-fallback__title",
+        "tm-ai-fallback__view",
+        "tm-ai-fallback__policy",
+        "tm-ai-fallback__policy-label",
+        "tm-ai-fallback__policy-value",
+        "tm-ai-fallback__flow",
+        "tm-ai-fallback__node",
+        "tm-ai-fallback__node-head",
+        "tm-ai-fallback__node-position",
+        "tm-ai-fallback__node-label",
+        "tm-ai-fallback__node-state",
+        "tm-ai-fallback__node-state-icon",
+        "tm-ai-fallback__node-state-text",
+        "tm-ai-fallback__node-reason",
+        "tm-ai-fallback__node-reason-label",
+        "tm-ai-fallback__node-reason-text",
+        "tm-ai-fallback__node-facts",
+        "tm-ai-fallback__arrow",
+        "tm-ai-fallback__answer-arrow",
+        "tm-ai-fallback__answer",
+        "tm-ai-fallback__answer-icon",
+        "tm-ai-fallback__answer-text",
+        "tm-ai-fallback__answer-label",
+        "tm-ai-fallback__answer-model",
+        "tm-ai-fallback__editor",
+        "tm-ai-fallback__editor-hint",
+        "tm-ai-fallback__editor-empty",
+        "tm-ai-fallback__editor-list",
+        "tm-ai-fallback__editor-row",
+        "tm-ai-fallback__editor-row-label",
+        "tm-ai-fallback__editor-row-id",
+        "tm-ai-fallback__editor-remove",
+        "tm-ai-fallback__editor-add",
+        "tm-ai-fallback__editor-add-label",
+        "tm-ai-fallback__editor-select",
+        "tm-ai-fallback__editor-add-button",
+        "tm-ai-fallback__editor-note",
+        "tm-ai-fallback__editor-policy",
+        "tm-ai-fallback__table",
+        "tm-ai-fallback__empty"
+      ],
+      "examples": [
+        {
+          "title": "A run a host reports, and the editor over the same chain",
+          "code": "@* Mode is the host's switch: the run view reports, the editor edits. *@\n<TmFallbackChain Attempts=\"_attempts\"\n                Mode=\"@(editing ? FallbackChainMode.Edit : FallbackChainMode.View)\"\n                Chain=\"_chain\"\n                ChainChanged=\"OnChainChanged\"\n                AvailableModels=\"_models\"\n                @bind-Policy=\"_policy\" />\n\n@code {\n    private IReadOnlyList<FallbackAttempt> _attempts = [];\n    private IReadOnlyList<FallbackChainEntry>? _chain;\n    private IReadOnlyList<AiModelInfo> _models = [];\n    private FallbackResolutionPolicy _policy = FallbackResolutionPolicy.Fallback;\n\n    private Task OnChainChanged(IReadOnlyList<FallbackChainEntry> chain)\n    {\n        _chain = chain; // persist the new order\n        return Task.CompletedTask;\n    }\n}"
+        },
+        {
+          "title": "The attempts a host recorded",
+          "code": "var attempts = new[]\n{\n    new FallbackAttempt(\"gpt-4o\") { Label = \"GPT-4o\", Status = FallbackAttemptStatus.Failed, FailureReason = \"Provider rate limit\", LatencyMs = 1200 },\n    new FallbackAttempt(\"claude-3-5\") { Label = \"Claude 3.5 Sonnet\", Status = FallbackAttemptStatus.Skipped, FailureReason = \"No vision support\" },\n    new FallbackAttempt(\"gpt-4o-mini\") { Label = \"GPT-4o mini\", Status = FallbackAttemptStatus.Succeeded, LatencyMs = 640 },\n};\n\n// The third attempt answers: the flow branches to \"Answered by GPT-4o mini\"."
+        }
+      ],
+      "notes": [
+        "The run view only reads Attempts; the editor keeps its own copy of Chain and reports every change through ChainChanged (never mutating the host list).",
+        "The editor reorders through the shared TmSortableList, so the pointer drag, the keyboard grab/move/drop and the per-row move menu all work (WCAG 2.5.7).",
+        "Adding is limited to AvailableModels that are not already in the chain; removing and reordering keep the chain a sequence of distinct models.",
+        "ONE polite live region announces an add and a remove; a reorder is narrated by the sortable list itself, so nothing is announced twice.",
+        "The table view (ViewMode=Table) carries every attempt, result, reason, latency and time as text — the flow is never the only way to read the run.",
+        "An unmeasured latency is never invented: the flow omits it and the table says \"not measured\"."
+      ]
+    },
+    {
       "itemName": "TmFanOutGrid",
       "kind": "Component",
       "category": "AI",
@@ -2787,6 +3119,17 @@
       ]
     },
     {
+      "itemName": "AgentHandoffViewMode",
+      "kind": "Enum",
+      "category": "Components",
+      "namespace": "Tempo.Blazor.Components.AI",
+      "description": "How TmAgentHandoff presents a chain. Both presentations render the SAME steps; the chain view is never the only way to read the data (WCAG 1.1.1 / 1.4.1), because a reader who cannot follow the arrows — with a screen reader, a keyboard only, or a narrow phone — gets every step, every passed item and every loss as a plain table.",
+      "packageId": "Tempo.Blazor.AI",
+      "sourcePath": "src/Tempo.Blazor.AI/Components/AI/AgentHandoffViewMode.cs",
+      "documentationStatus": "merged",
+      "usageExample": "<TmAgentHandoff Steps=\"_steps\" @bind-ViewMode=\"_view\" />\n\n@code {\n    private AgentHandoffViewMode _view = AgentHandoffViewMode.Chain;\n}"
+    },
+    {
       "itemName": "AgentLanesViewMode",
       "kind": "Enum",
       "category": "Components",
@@ -2807,6 +3150,28 @@
       ]
     },
     {
+      "itemName": "FallbackChainMode",
+      "kind": "Enum",
+      "category": "Components",
+      "namespace": "Tempo.Blazor.Components.AI",
+      "description": "How TmFallbackChain is presented. View reports the run the host handed over; Edit lets a reader change the chain — its order, its members and the resolution policy — and reports every change through the binding, never by mutating the host's list.",
+      "packageId": "Tempo.Blazor.AI",
+      "sourcePath": "src/Tempo.Blazor.AI/Components/AI/FallbackChainMode.cs",
+      "documentationStatus": "merged",
+      "usageExample": "<TmFallbackChain Attempts=\"_attempts\" Mode=\"@(editing ? FallbackChainMode.Edit : FallbackChainMode.View)\" />"
+    },
+    {
+      "itemName": "FallbackChainViewMode",
+      "kind": "Enum",
+      "category": "Components",
+      "namespace": "Tempo.Blazor.Components.AI",
+      "description": "How TmFallbackChain presents the run. Both presentations render the SAME attempts; the flow is never the only way to read the data (WCAG 1.1.1 / 1.4.1), because a reader who cannot follow the arrows — with a screen reader, a keyboard only, or a narrow phone — gets every attempt, its result, its reason and its latency as a plain table.",
+      "packageId": "Tempo.Blazor.AI",
+      "sourcePath": "src/Tempo.Blazor.AI/Components/AI/FallbackChainViewMode.cs",
+      "documentationStatus": "merged",
+      "usageExample": "<TmFallbackChain Attempts=\"_attempts\" @bind-ViewMode=\"_view\" />\n\n@code {\n    private FallbackChainViewMode _view = FallbackChainViewMode.Flow;\n}"
+    },
+    {
       "itemName": "FanOutFilter",
       "kind": "Enum",
       "category": "Components",
@@ -2817,6 +3182,17 @@
       "documentationStatus": "merged",
       "members": [],
       "usageExample": "<TmFanOutGrid Tasks=\"_tasks\" @bind-Filter=\"_filter\" />\n\n@code {\n    private FanOutFilter _filter = FanOutFilter.Failed;\n}"
+    },
+    {
+      "itemName": "HandoffOrientation",
+      "kind": "Enum",
+      "category": "Components",
+      "namespace": "Tempo.Blazor.Components.AI",
+      "description": "How TmAgentHandoff lays its chain out. The two orientations render the SAME ordered list — vertical by default, horizontal for a handoff shown along a toolbar or a wide card — so a reader loses no fact and no test has to know two markups.",
+      "packageId": "Tempo.Blazor.AI",
+      "sourcePath": "src/Tempo.Blazor.AI/Components/AI/HandoffOrientation.cs",
+      "documentationStatus": "merged",
+      "usageExample": "<TmAgentHandoff Steps=\"_steps\" Orientation=\"HandoffOrientation.Horizontal\" />"
     },
     {
       "itemName": "AIServiceCollectionExtensions",
@@ -2997,6 +3373,10 @@
       "kind": "Css"
     },
     {
+      "path": "src/Tempo.Blazor.AI/wwwroot/css/components/_ai-agent-handoff.css",
+      "kind": "Css"
+    },
+    {
       "path": "src/Tempo.Blazor.AI/wwwroot/css/components/_ai-agent-lanes.css",
       "kind": "Css"
     },
@@ -3022,6 +3402,10 @@
     },
     {
       "path": "src/Tempo.Blazor.AI/wwwroot/css/components/_ai-conversation.css",
+      "kind": "Css"
+    },
+    {
+      "path": "src/Tempo.Blazor.AI/wwwroot/css/components/_ai-fallback-chain.css",
       "kind": "Css"
     },
     {
@@ -3118,11 +3502,11 @@
     }
   ],
   "summary": {
-    "itemCount": 30,
-    "manualItemCount": 30,
-    "generatedItemCount": 30,
+    "itemCount": 36,
+    "manualItemCount": 36,
+    "generatedItemCount": 36,
     "generatedOnlyItemCount": 0,
-    "componentCount": 20,
-    "publicApiTypeCount": 10
+    "componentCount": 22,
+    "publicApiTypeCount": 14
   }
 }

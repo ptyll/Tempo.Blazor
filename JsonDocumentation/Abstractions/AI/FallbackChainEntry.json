@@ -1,0 +1,49 @@
+{
+  "itemName": "FallbackChainEntry",
+  "kind": "Record",
+  "category": "AI",
+  "namespace": "Tempo.Blazor.AI.Models",
+  "description": "One model in the ORDERED chain a host falls back through: the model's identity plus the name the reader should see. The record is a VALUE and the chain is an ordered list of these, so a reorder is a new list rather than a mutation. It deliberately carries no score, price or capability: a chain is a sequence of choices, and the facts that drive the choice live in the host's AiModelInfo catalogue.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/AI/Agents/FallbackChainEntry.cs",
+  "documentationStatus": "documented",
+  "members": [
+    {
+      "name": "FromModel",
+      "kind": "Method",
+      "type": "FallbackChainEntry?",
+      "description": "Builds an entry from a catalogue model, so a host that offers AvailableModels can add one to its chain without copying the identity by hand.",
+      "parameters": [
+        {
+          "name": "model",
+          "type": "AiModelInfo?"
+        }
+      ]
+    },
+    {
+      "name": "DisplayName",
+      "kind": "Property",
+      "type": "string",
+      "description": "The name a surface prints: Label when the host supplied one, else ModelId."
+    },
+    {
+      "name": "HasLabel",
+      "kind": "Property",
+      "type": "bool",
+      "description": "Whether the host supplied a label for the model."
+    },
+    {
+      "name": "Label",
+      "kind": "Property",
+      "type": "string",
+      "description": "The model as the reader should see it. Empty falls back to ModelId."
+    },
+    {
+      "name": "ModelId",
+      "kind": "Property",
+      "type": "string",
+      "description": "Stable identity of the model in the chain. Never empty: a missing id is generated at construction."
+    }
+  ],
+  "usageExample": "var chain = new[]\n{\n    new FallbackChainEntry(\"gpt-4o\", \"GPT-4o\"),\n    FallbackChainEntry.FromModel(new AiModelInfo(\"gpt-4o-mini\", \"GPT-4o mini\"))!,\n};"
+}

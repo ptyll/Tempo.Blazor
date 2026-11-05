@@ -20,6 +20,8 @@ public abstract class AiAgentsE2EBase : PlaywrightTestBase
     protected const string GraphSection = "[data-testid='ai-agents-graph-section']";
     protected const string FanOutSection = "[data-testid='ai-agents-fan-out-section']";
     protected const string AttemptsSection = "[data-testid='ai-agents-attempts-section']";
+    protected const string HandoffSection = "[data-testid='ai-agents-handoff-section']";
+    protected const string FallbackSection = "[data-testid='ai-agents-fallback-section']";
     protected const string MonitorSection = "[data-testid='ai-agents-monitor-section']";
     protected const string ModelsSection = "[data-testid='ai-agents-models-section']";
     protected const string ContextSection = "[data-testid='ai-agents-context-section']";
@@ -571,6 +573,130 @@ public class AiAgentsE2ETests : AiAgentsE2EBase
         await ShootAsync(page, "ai-agents-attempts-dark-1440");
     }
 
+    /// <summary>
+    /// The handoff chain is a real disclosure: the Details button is a native button reached with Tab, Enter and Space
+    /// open and close it IN THE BROWSER (one activation per press), the lost items keep their reasons, the chain-wide
+    /// sentence names what was dropped, and the page's direction switch really turns the chain on its side.
+    /// </summary>
+    [TestMethod]
+    public async Task TheHandoffChainOpensByKeyboard_AndThePageTurnsItSideways()
+    {
+        var page = await OpenAsync();
+        await ScrollToSection(page, HandoffSection);
+
+        var handoff = page.Locator("[data-testid='ai-agents-handoff']");
+        Assert.AreEqual(3, await handoff.Locator("[data-testid='agent-handoff-step']").CountAsync());
+        Assert.AreEqual("vertical", await handoff.GetAttributeAsync("data-orientation"));
+
+        var toggle = handoff.Locator("[data-testid='agent-handoff-step-toggle']").First;
+        await toggle.FocusAsync();
+        Assert.IsTrue(await toggle.EvaluateAsync<bool>("el => el === document.activeElement"),
+            "the Details button is a native button and takes the focus");
+        Assert.AreEqual("true", await toggle.GetAttributeAsync("aria-expanded"),
+            "every step starts open — the two lists are the reason to look at a chain");
+
+        await page.Keyboard.PressAsync("Enter");
+        await page.WaitForTimeoutAsync(300);
+        Assert.AreEqual("false", await toggle.GetAttributeAsync("aria-expanded"),
+            "Enter activated the native button exactly once");
+        Assert.AreEqual(0,
+            await handoff.Locator("[data-testid='agent-handoff-step'][data-step-id='h-fetch']")
+                .Locator("[data-testid='agent-handoff-step-detail']").CountAsync(),
+            "the collapsed region is not in the DOM, so aria-controls points at nothing while it is closed");
+
+        await page.Keyboard.PressAsync("Space");
+        await page.WaitForTimeoutAsync(300);
+        Assert.AreEqual("true", await toggle.GetAttributeAsync("aria-expanded"),
+            "Space re-opens it — no key is emulated twice");
+
+        var lost = handoff.Locator("[data-testid='agent-handoff-step'][data-step-id='h-fetch']")
+            .Locator("[data-testid='agent-handoff-lost-item']");
+        Assert.AreEqual(1, await lost.CountAsync());
+        StringAssert.Contains(await lost.First.TextContentAsync() ?? string.Empty, "Conversation history");
+        StringAssert.Contains(await lost.First.TextContentAsync() ?? string.Empty, "context window was full",
+            "a lost item keeps the reason it never arrived");
+        StringAssert.Contains(await handoff.Locator("[data-testid='agent-handoff-lost-summary']").TextContentAsync()
+            ?? string.Empty, "Lost across the chain");
+
+        await ShootAsync(page, "ai-agents-handoff-light-1440");
+        await AssertNoSeriousAxeViolationsAsync(page, "ai-agents-handoff-section");
+
+        // The page owns the direction; the reader's pick really lays the same list across the surface.
+        await page.Locator("[data-testid='ai-agents-handoff-orientation'] button").Nth(1).ClickAsync();
+        await page.WaitForFunctionAsync(
+            "() => document.querySelector(\"[data-testid='ai-agents-handoff']\")?.dataset.orientation === 'horizontal'",
+            new PageWaitForFunctionOptions { Timeout = 10000 });
+        Assert.AreEqual(3, await handoff.Locator("[data-testid='agent-handoff-step']").CountAsync(),
+            "the horizontal chain reads the same three steps");
+        await ShootAsync(page, "ai-agents-handoff-horizontal-light-1440");
+        await AssertNoSeriousAxeViolationsAsync(page, "ai-agents-handoff-section");
+
+        await ToggleThemeAsync(page);
+        await ScrollToSection(page, HandoffSection);
+        await ShootAsync(page, "ai-agents-handoff-dark-1440");
+        await AssertNoSeriousAxeViolationsAsync(page, "ai-agents-handoff-section");
+    }
+
+    /// <summary>
+    /// The fallback chain answers, switches to its table, and the EDITOR over the same chain really reorders it: the
+    /// keyboard grab/move/drop of the shared sortable list reaches the page, which records the new order — and a
+    /// reorder is announced once, by the list, not twice.
+    /// </summary>
+    [TestMethod]
+    public async Task TheFallbackChainAnswers_AndTheEditorReordersTheChain()
+    {
+        var page = await OpenAsync();
+        await ScrollToSection(page, FallbackSection);
+
+        var fallback = page.Locator("[data-testid='ai-agents-fallback']");
+        Assert.AreEqual(3, await fallback.Locator("[data-testid='fallback-chain-node']").CountAsync());
+        Assert.AreEqual("Answered by Nimbus 2",
+            await fallback.Locator("[data-testid='fallback-chain-answer-model']").TextContentAsync(),
+            "the first successful attempt ends the chain");
+        Assert.AreEqual("Chain: Atlas Large → Aurora Pro → Nimbus 2",
+            await TextAsync(page, "ai-agents-fallback-log"));
+
+        // The text alternative carries the same attempts.
+        await fallback.Locator("[data-testid='fallback-chain-view'] button").Nth(1).ClickAsync();
+        await page.WaitForSelectorAsync("[data-testid='ai-agents-fallback'] [data-testid='fallback-chain-table-row']",
+            new PageWaitForSelectorOptions { Timeout = 10000 });
+        Assert.AreEqual(3, await fallback.Locator("[data-testid='fallback-chain-table-row']").CountAsync());
+        Assert.AreEqual(0, await fallback.Locator("[data-testid='fallback-chain-node']").CountAsync(),
+            "the table replaces the flow instead of duplicating it");
+        await ShootAsync(page, "ai-agents-fallback-table-light-1440");
+
+        // Back to the flow, then the editor.
+        await fallback.Locator("[data-testid='fallback-chain-view'] button").Nth(0).ClickAsync();
+        await page.WaitForSelectorAsync("[data-testid='ai-agents-fallback'] [data-testid='fallback-chain-node']",
+            new PageWaitForSelectorOptions { Timeout = 10000 });
+        await ShootAsync(page, "ai-agents-fallback-light-1440");
+
+        await page.Locator("[data-testid='ai-agents-fallback-mode'] button").Nth(1).ClickAsync();
+        await page.WaitForSelectorAsync("[data-testid='ai-agents-fallback'] [data-testid='fallback-chain-editor-row']",
+            new PageWaitForSelectorOptions { Timeout = 10000 });
+        Assert.AreEqual(3, await fallback.Locator("[data-testid='fallback-chain-editor-row']").CountAsync());
+
+        // The shared sortable list's keyboard model: grab the first row, move it down one place and drop it.
+        var firstRow = fallback.Locator("[data-testid='fallback-chain-sortable'] [data-tm-sortable-item]").First;
+        await firstRow.FocusAsync();
+        await page.Keyboard.PressAsync("Enter");
+        await page.WaitForTimeoutAsync(200);
+        await page.Keyboard.PressAsync("ArrowDown");
+        await page.WaitForTimeoutAsync(200);
+        await page.Keyboard.PressAsync("Enter");
+        await page.WaitForFunctionAsync(
+            "() => document.querySelector(\"[data-testid='ai-agents-fallback-log']\")?.textContent?.includes('Aurora Pro → Atlas Large')",
+            new PageWaitForFunctionOptions { Timeout = 10000 });
+
+        await ShootAsync(page, "ai-agents-fallback-editor-light-1440");
+        await AssertNoSeriousAxeViolationsAsync(page, "ai-agents-fallback-section");
+
+        await ToggleThemeAsync(page);
+        await ScrollToSection(page, FallbackSection);
+        await ShootAsync(page, "ai-agents-fallback-editor-dark-1440");
+        await AssertNoSeriousAxeViolationsAsync(page, "ai-agents-fallback-section");
+    }
+
     [TestMethod]
     public async Task ThePromptLibraryFillsATemplate_AndUseHandsItOver()
     {
@@ -638,6 +764,7 @@ public class AiAgentsE2ETests : AiAgentsE2EBase
         foreach (var section in new[]
                  {
                      PlanSection, TreeSection, LanesSection, GraphSection, FanOutSection, AttemptsSection,
+                     HandoffSection, FallbackSection,
                      MonitorSection, ModelsSection, ContextSection, PromptsSection,
                  })
         {
@@ -670,6 +797,7 @@ public class AiAgentsE2ETests : AiAgentsE2EBase
         await AssertNoSeriousAxeViolationsAsync(page,
             "ai-agents-plan-section", "ai-agents-tree-section", "ai-agents-lanes-section",
             "ai-agents-graph-section", "ai-agents-fan-out-section", "ai-agents-attempts-section",
+            "ai-agents-handoff-section", "ai-agents-fallback-section",
             "ai-agents-monitor-section", "ai-agents-models-section",
             "ai-agents-context-section", "ai-agents-prompts-section");
     }
@@ -719,6 +847,12 @@ public class AiAgentsE2ETests : AiAgentsE2EBase
         await ScrollToSection(desktop, GraphSection);
         await ShootAsync(desktop, "ai-agents-graph-idle-light-1440");
 
+        await ScrollToSection(desktop, HandoffSection);
+        await ShootAsync(desktop, "ai-agents-handoff-idle-light-1440");
+
+        await ScrollToSection(desktop, FallbackSection);
+        await ShootAsync(desktop, "ai-agents-fallback-idle-light-1440");
+
         await ScrollToSection(desktop, MonitorSection);
         await ShootAsync(desktop, "ai-agents-monitor-light-1440");
 
@@ -738,6 +872,10 @@ public class AiAgentsE2ETests : AiAgentsE2EBase
         await ShootAsync(desktop, "ai-agents-lanes-dark-1440");
         await ScrollToSection(desktop, GraphSection);
         await ShootAsync(desktop, "ai-agents-graph-dark-1440");
+        await ScrollToSection(desktop, HandoffSection);
+        await ShootAsync(desktop, "ai-agents-handoff-dark-1440-sweep");
+        await ScrollToSection(desktop, FallbackSection);
+        await ShootAsync(desktop, "ai-agents-fallback-dark-1440");
         await ScrollToSection(desktop, ContextSection);
         await ShootAsync(desktop, "ai-agents-context-dark-1440");
         await ScrollToSection(desktop, PromptsSection);
@@ -748,6 +886,10 @@ public class AiAgentsE2ETests : AiAgentsE2EBase
         await ShootAsync(phone, "ai-agents-lanes-phone-375");
         await ScrollToSection(phone, GraphSection);
         await ShootAsync(phone, "ai-agents-graph-phone-375");
+        await ScrollToSection(phone, HandoffSection);
+        await ShootAsync(phone, "ai-agents-handoff-phone-375");
+        await ScrollToSection(phone, FallbackSection);
+        await ShootAsync(phone, "ai-agents-fallback-phone-375");
         await ScrollToSection(phone, MonitorSection);
         await ShootAsync(phone, "ai-agents-monitor-phone-375");
         await ScrollToSection(phone, ContextSection);
@@ -783,6 +925,7 @@ public class AiAgentsServerSmokeE2ETests : AiAgentsE2EBase
         await AssertNoSeriousAxeViolationsAsync(page,
             "ai-agents-plan-section", "ai-agents-tree-section", "ai-agents-lanes-section",
             "ai-agents-fan-out-section", "ai-agents-attempts-section",
+            "ai-agents-handoff-section", "ai-agents-fallback-section",
             "ai-agents-monitor-section", "ai-agents-context-section", "ai-agents-prompts-section");
     }
 }

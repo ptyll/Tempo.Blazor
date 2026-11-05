@@ -1,0 +1,11 @@
+{
+  "itemName": "HandoffItemKind",
+  "kind": "Enum",
+  "category": "AI",
+  "namespace": "Tempo.Blazor.AI.Models",
+  "description": "What kind of thing one agent handed to the next — the coarse label a handoff surface paints beside an item so a reader can tell a shared instruction from a dropped tool. The vocabulary is deliberately small and transport-neutral: a host maps its own payload (a system prompt, a tool catalogue, a file, a scratchpad) onto one of these five kinds, and the surface renders the kind as a localized word plus an icon. Context is the default because a piece of conversation is the most common thing a handoff carries.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/AI/Agents/HandoffItemKind.cs",
+  "documentationStatus": "documented",
+  "usageExample": "var item = new HandoffItem(\"the buyer's deadline\", HandoffItemKind.Memory);"
+}

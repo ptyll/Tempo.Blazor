@@ -31,6 +31,7 @@
             var entry = row;
             <li class="@ItemClass(entry)"
                 @key="entry.Key"
+                @ref="HandleFor(entry).Ref"
                 role="listitem"
                 tabindex="@(Disabled ? null : "0")"
                 aria-roledescription="@Loc["TmSortableList_ItemRoleDescription"]"

@@ -1,0 +1,61 @@
+{
+  "itemName": "HandoffItem",
+  "kind": "Record",
+  "category": "AI",
+  "namespace": "Tempo.Blazor.AI.Models",
+  "description": "One thing that travelled across a handoff — or did not: what it was, what kind of thing it is, and (for an item that was lost) why it never reached the next agent. The record is a VALUE: the same type describes what a step passed on and what it lost, so a host builds one list of PassedItems and one of LostItems and the surface renders both from the same shape. Reason is only read on a LOST item; on a passed one it is ignored (a passed item does not need an excuse). Nothing here carries colour: the kind is an enum the surface turns into an icon and a localized word, and the lost/passed distinction is carried by the LIST an item lives in plus an icon and a word, never by a tone alone (WCAG 1.4.1).",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/AI/Agents/HandoffItem.cs",
+  "documentationStatus": "documented",
+  "members": [
+    {
+      "name": "Lost",
+      "kind": "Method",
+      "type": "HandoffItem",
+      "description": "Copies the item as a LOST one: the same label and kind plus the reason it never arrived. A host builds a LostItems list from the items it wanted to pass with this helper.",
+      "parameters": [
+        {
+          "name": "reason",
+          "type": "string?"
+        }
+      ]
+    },
+    {
+      "name": "HasKnownKind",
+      "kind": "Property",
+      "type": "bool",
+      "description": "Whether Kind is one of the declared kinds (a cast integer may not be)."
+    },
+    {
+      "name": "HasLabel",
+      "kind": "Property",
+      "type": "bool",
+      "description": "Whether the host supplied a label worth printing."
+    },
+    {
+      "name": "HasReason",
+      "kind": "Property",
+      "type": "bool",
+      "description": "Whether the item carries a reason worth printing (only a lost item renders it)."
+    },
+    {
+      "name": "Kind",
+      "kind": "Property",
+      "type": "HandoffItemKind",
+      "description": "Which kind of thing it is; painted as an icon AND a localized word."
+    },
+    {
+      "name": "Label",
+      "kind": "Property",
+      "type": "string",
+      "description": "What was handed over, as the host wants it read. Empty renders the surface's own fallback."
+    },
+    {
+      "name": "Reason",
+      "kind": "Property",
+      "type": "string?",
+      "description": "Why this item never reached the next agent (\"the context window was full\", \"the tool was not granted\"). Only read on a LOST item; empty renders no reason. A passed item keeps whatever the host stored and the surface ignores it."
+    }
+  ],
+  "usageExample": "var passed = new HandoffItem(\"invoice schema\", HandoffItemKind.Artifact);\nvar lost = passed.Lost(\"the file exceeded the upload limit\");\n\n// The kind paints an icon and a word; the reason is only read on a lost item."
+}

@@ -235,6 +235,63 @@
 </section>
 
 @* ---------------------------------------------------------------------------------------------------------
+   The same work passed from agent to agent. The page owns the direction switch, so the component's Orientation
+   parameter is driven by a host rather than shown once, and the two lists inside every step are the reason the
+   surface exists: what the next agent actually received, and what never made it. *@
+<section class="demo-section mb-8" data-testid="ai-agents-handoff-section">
+    <h2 class="text-lg font-semibold text-slate-900 dark:text-white mb-2">@Loc["TmAiAgentsDemo_HandoffTitle"]</h2>
+    <p class="text-sm text-slate-600 dark:text-slate-400 mb-2">@Loc["TmAiAgentsDemo_HandoffHint"]</p>
+
+    <div class="mb-3 flex flex-wrap items-center gap-3" data-testid="ai-agents-handoff-orientation">
+        <TmSegmentedControl TValue="HandoffOrientation"
+                            Size="SegmentedControlSize.Sm"
+                            Label="@Loc["TmAiAgentsDemo_HandoffOrientationLabel"]"
+                            Options="HandoffOrientationOptions"
+                            Value="_handoffOrientation"
+                            ValueChanged="OnHandoffOrientationChanged" />
+    </div>
+
+    <TmAgentHandoff Steps="_handoffSteps"
+                    Orientation="_handoffOrientation"
+                    Title="@Loc["TmAiAgentsDemo_HandoffTitle"]"
+                    Culture="@CultureInfo.CurrentCulture"
+                    DataTestId="ai-agents-handoff" />
+</section>
+
+@* ---------------------------------------------------------------------------------------------------------
+   The models tried for ONE request, in order, and the chain this page would fall back through. The page owns
+   the mode (run versus editor), the policy and the chain, so an edit in the component is the page's own data
+   change — not a decoration. *@
+<section class="demo-section mb-8" data-testid="ai-agents-fallback-section">
+    <h2 class="text-lg font-semibold text-slate-900 dark:text-white mb-2">@Loc["TmAiAgentsDemo_FallbackTitle"]</h2>
+    <p class="text-sm text-slate-600 dark:text-slate-400 mb-2">@Loc["TmAiAgentsDemo_FallbackHint"]</p>
+
+    <div class="mb-3 flex flex-wrap items-center gap-3">
+        <div data-testid="ai-agents-fallback-mode">
+            <TmSegmentedControl TValue="FallbackChainMode"
+                                Size="SegmentedControlSize.Sm"
+                                Label="@Loc["TmAiAgentsDemo_FallbackModeLabel"]"
+                                Options="FallbackModeOptions"
+                                Value="_fallbackMode"
+                                ValueChanged="OnFallbackModeChanged" />
+        </div>
+        <p class="text-sm text-slate-700 dark:text-slate-300 mb-0"
+           data-testid="ai-agents-fallback-log">@FallbackChainText</p>
+    </div>
+
+    <TmFallbackChain Attempts="_fallbackAttempts"
+                     Mode="_fallbackMode"
+                     Chain="_fallbackChain"
+                     ChainChanged="OnFallbackChainChanged"
+                     AvailableModels="_models"
+                     Policy="_fallbackPolicy"
+                     PolicyChanged="OnFallbackPolicyChanged"
+                     Title="@Loc["TmAiAgentsDemo_FallbackTitle"]"
+                     Culture="@CultureInfo.CurrentCulture"
+                     DataTestId="ai-agents-fallback" />
+</section>
+
+@* ---------------------------------------------------------------------------------------------------------
    The same run in the live monitor. When the run reaches its last step it PAUSES and asks for a decision: the
    host's own TmApprovalCard sits in the monitor's PendingApproval slot. Approving resumes the run; rejecting
    skips the step and finishes the run. *@
@@ -392,6 +449,12 @@
     private FanOutFilter _fanOutFilter = FanOutFilter.All;
     private string? _fanOutRetriedId;
     private IReadOnlyList<ParallelAttempt> _attempts = [];
+    private IReadOnlyList<HandoffStep> _handoffSteps = [];
+    private HandoffOrientation _handoffOrientation = HandoffOrientation.Vertical;
+    private IReadOnlyList<FallbackAttempt> _fallbackAttempts = [];
+    private IReadOnlyList<FallbackChainEntry>? _fallbackChain;
+    private FallbackResolutionPolicy _fallbackPolicy = FallbackResolutionPolicy.Fallback;
+    private FallbackChainMode _fallbackMode = FallbackChainMode.View;
     private string? _bestAttemptId;
     private string? _attemptWinnerId;
     private string? _attemptChosenId;
@@ -439,6 +502,8 @@
         _graphSequence = _graph.Sequence;
         _fanOutTasks = AiAgentsPageSamples.FanOutTasks(_clock.GetUtcNow());
         _attempts = AiAgentsPageSamples.Attempts();
+        _handoffSteps = AiAgentsPageSamples.HandoffSteps(_clock.GetUtcNow());
+        _fallbackAttempts = AiAgentsPageSamples.FallbackAttempts(_clock.GetUtcNow());
         _bestAttemptId = "draft-b";
         _selection = new AiModelSelection("aurora-pro");
         _templates = AiAgentsPageSamples.Templates(Key);
@@ -602,6 +667,52 @@
 
     /// <summary>The page's winner handler: it only records what the component reports after the confirmation.</summary>
     private void AcceptAttempt(string attemptId) => _attemptChosenId = attemptId;
+
+    // ── Handoff and fallback ─────────────────────────────────────────────────
+
+    /// <summary>The two directions the handoff chain can be laid out in.</summary>
+    private IReadOnlyList<SegmentedOption<HandoffOrientation>> HandoffOrientationOptions => _handoffOrientationOptions
+        ??= [
+            new() { Label = Loc["TmAiAgentsDemo_HandoffVertical"], Value = HandoffOrientation.Vertical },
+            new() { Label = Loc["TmAiAgentsDemo_HandoffHorizontal"], Value = HandoffOrientation.Horizontal },
+        ];
+
+    /// <summary>The two presentations of the fallback surface: the recorded run, or the editor over the chain.</summary>
+    private IReadOnlyList<SegmentedOption<FallbackChainMode>> FallbackModeOptions => _fallbackModeOptions
+        ??= [
+            new() { Label = Loc["TmAiAgentsDemo_FallbackRun"], Value = FallbackChainMode.View },
+            new() { Label = Loc["TmAiAgentsDemo_FallbackEdit"], Value = FallbackChainMode.Edit },
+        ];
+
+    private IReadOnlyList<SegmentedOption<HandoffOrientation>>? _handoffOrientationOptions;
+    private IReadOnlyList<SegmentedOption<FallbackChainMode>>? _fallbackModeOptions;
+
+    /// <summary>The page owns the direction; the component only reports it.</summary>
+    private void OnHandoffOrientationChanged(HandoffOrientation orientation) => _handoffOrientation = orientation;
+
+    /// <summary>The page owns whether the fallback surface reports the run or edits the chain.</summary>
+    private void OnFallbackModeChanged(FallbackChainMode mode) => _fallbackMode = mode;
+
+    /// <summary>The page owns the policy; a pick in the editor comes back here.</summary>
+    private void OnFallbackPolicyChanged(FallbackResolutionPolicy policy) => _fallbackPolicy = policy;
+
+    /// <summary>
+    /// The page RECORDS the chain the editor reports — it never reorders a list the component handed back. Until the
+    /// reader edits anything the page has no chain of its own and the component derives one from the run.
+    /// </summary>
+    private Task OnFallbackChainChanged(IReadOnlyList<FallbackChainEntry> chain)
+    {
+        _fallbackChain = chain;
+        return Task.CompletedTask;
+    }
+
+    /// <summary>The chain as the page reads it: the edited one, or the one the run implies.</summary>
+    private IReadOnlyList<FallbackChainEntry> FallbackChain => _fallbackChain
+        ?? [.. _fallbackAttempts.Select(attempt => new FallbackChainEntry(attempt.ModelId, attempt.Label))];
+
+    /// <summary>The chain the page would fall back through, as one line: the edit the reader made is visible here.</summary>
+    private string FallbackChainText => Loc["TmAiAgentsDemo_FallbackChainLog",
+        string.Join(" → ", FallbackChain.Select(entry => entry.DisplayName))];
 
     private string GraphSelectedText => _graphNodeId is { } id
         ? GraphNodeName(_graph.Nodes.FirstOrDefault(node => string.Equals(node.Id, id, StringComparison.Ordinal)))

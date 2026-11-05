@@ -1,0 +1,158 @@
+{
+  "itemName": "TmAgentHandoff",
+  "kind": "Component",
+  "category": "AI",
+  "description": "A run handed from agent to agent as ONE chain: a labelled step per handoff — who handed what to whom, when, how the receiving agent answered — with the things that travelled and the things that were lost (and why) behind a Details button on every step, plus a chain-wide loss summary that names what the run actually dropped. The surface renders the steps it is given and never polls or mutates anything: the host owns the handoff data and the transport, the component owns its view. The step ordering is the host's own chain order — the component never reorders, filters or invents a step. Accessibility: the chain is an ordered list of labelled steps, every status and every item kind is an ICON plus a localized WORD plus a tone (colour is never the only carrier, WCAG 1.4.1), and the passed/lost lists live in a region a native <button> opens and closes with aria-expanded and aria-controls — no key emulation anywhere (docs/keyboard-activation-convention.md). The table view carries exactly the same facts without the geometry, so a screen-reader, keyboard-only or phone reader loses nothing. ONE polite live region speaks only when a step the reader was on disappears from the host's data and the focus has to move.",
+  "packageId": "Tempo.Blazor.AI",
+  "namespace": "Tempo.Blazor.Components.AI",
+  "sourcePath": "src/Tempo.Blazor.AI/Components/AI/TmAgentHandoff.razor",
+  "documentationStatus": "documented",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.AI"
+  ],
+  "parameters": [
+    {
+      "name": "Class",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Additional CSS class(es) for the root element."
+    },
+    {
+      "name": "Culture",
+      "type": "CultureInfo?",
+      "isRequired": false,
+      "description": "The culture that formats the handoff times. Null (the default) means the current culture at render time."
+    },
+    {
+      "name": "ExpandedStepIds",
+      "type": "IReadOnlyList<string>?",
+      "isRequired": false,
+      "description": "The ids of the steps whose detail is open, two-way bound with ExpandedStepIdsChanged. Null (the default) means EVERY step is open, because the passed and lost lists are the reason to look at a chain at all; an empty list closes them all. A host that pins the list keeps control: the reader's toggle reports the new set and the next render decides."
+    },
+    {
+      "name": "ExpandedStepIdsChanged",
+      "type": "EventCallback<IReadOnlyList<string>?>",
+      "isRequired": false,
+      "description": "Fires with the new expanded set when the reader opens or closes a step's detail."
+    },
+    {
+      "name": "HeadingLevel",
+      "type": "int",
+      "isRequired": false,
+      "default": "3",
+      "description": "The heading level of the rendered title, clamped to 2–6. Default 3."
+    },
+    {
+      "name": "Orientation",
+      "type": "HandoffOrientation",
+      "isRequired": false,
+      "default": "HandoffOrientation.Vertical",
+      "description": "Which way the chain runs. Default Vertical. The orientation is a layout hook on the root — both values render the same ordered list, so nothing is lost when a narrow card turns the chain on its side."
+    },
+    {
+      "name": "ShowSummary",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "Whether the summary block is rendered. Default true. It carries the settled / total handoff count, the passed and lost totals, the loss rate and whether anything is still pending."
+    },
+    {
+      "name": "ShowTitle",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "Whether the heading is rendered. Default true."
+    },
+    {
+      "name": "Steps",
+      "type": "IReadOnlyList<HandoffStep>?",
+      "isRequired": false,
+      "description": "The handoffs, in chain order. Each entry is one step; null or empty renders the localized empty state, and a null entry inside the list is skipped. The component never mutates or reorders the list."
+    },
+    {
+      "name": "Title",
+      "type": "string?",
+      "isRequired": false,
+      "description": "The heading above the surface. Null renders the localized default (\"Agent handoffs\"); the heading also names the surface, so the name a reader hears is the one they see."
+    },
+    {
+      "name": "ViewMode",
+      "type": "AgentHandoffViewMode",
+      "isRequired": false,
+      "default": "AgentHandoffViewMode.Chain",
+      "description": "The presentation, two-way bound with ViewModeChanged (@bind-ViewMode). Default Chain. Table renders the same steps as one table, which is the text alternative of the chain."
+    },
+    {
+      "name": "ViewModeChanged",
+      "type": "EventCallback<AgentHandoffViewMode>",
+      "isRequired": false,
+      "description": "Fires with the new presentation when the reader uses the View switcher."
+    }
+  ],
+  "cssClasses": [
+    "tm-ai-handoff",
+    "tm-ai-handoff--vertical",
+    "tm-ai-handoff--horizontal",
+    "tm-ai-handoff__header",
+    "tm-ai-handoff__title",
+    "tm-ai-handoff__view",
+    "tm-ai-handoff__summary",
+    "tm-ai-handoff__stats",
+    "tm-ai-handoff__stat",
+    "tm-ai-handoff__stat-label",
+    "tm-ai-handoff__stat-value",
+    "tm-ai-handoff__summary-state",
+    "tm-ai-handoff__empty",
+    "tm-ai-handoff__table",
+    "tm-ai-handoff__chain",
+    "tm-ai-handoff__step",
+    "tm-ai-handoff__step-head",
+    "tm-ai-handoff__index",
+    "tm-ai-handoff__step-title",
+    "tm-ai-handoff__status",
+    "tm-ai-handoff__status-icon",
+    "tm-ai-handoff__status-text",
+    "tm-ai-handoff__route",
+    "tm-ai-handoff__agent",
+    "tm-ai-handoff__agent-name",
+    "tm-ai-handoff__route-arrow",
+    "tm-ai-handoff__at",
+    "tm-ai-handoff__step-summary",
+    "tm-ai-handoff__toggle",
+    "tm-ai-handoff__toggle-text",
+    "tm-ai-handoff__toggle-icon",
+    "tm-ai-handoff__detail",
+    "tm-ai-handoff__group",
+    "tm-ai-handoff__group--lost",
+    "tm-ai-handoff__group-title",
+    "tm-ai-handoff__group-icon",
+    "tm-ai-handoff__group-text",
+    "tm-ai-handoff__group-empty",
+    "tm-ai-handoff__items",
+    "tm-ai-handoff__item",
+    "tm-ai-handoff__item--lost",
+    "tm-ai-handoff__item-icon",
+    "tm-ai-handoff__item-label",
+    "tm-ai-handoff__item-kind",
+    "tm-ai-handoff__item-reason",
+    "tm-ai-handoff__connector",
+    "tm-ai-handoff__lost-summary"
+  ],
+  "examples": [
+    {
+      "title": "A chain a host feeds from its own handoffs",
+      "code": "@* The page owns the handoff data and the transport; the surface paints it and reports intent. *@\n<TmAgentHandoff Steps=\"_steps\"\n               Title=\"Invoice run handoffs\"\n               @bind-ViewMode=\"_view\"\n               @bind-ExpandedStepIds=\"_expanded\" />\n\n@code {\n    private IReadOnlyList<HandoffStep> _steps = [];\n    private AgentHandoffViewMode _view = AgentHandoffViewMode.Chain;\n    private IReadOnlyList<string>? _expanded;\n}"
+    },
+    {
+      "title": "The steps a host builds",
+      "code": "var step = new HandoffStep(\"step-2\", \"The matcher takes over the invoice run\")\n{\n    FromAgent = new AgentRef(\"Fetcher\", \"w-1\") { ColorIndex = 1 },\n    ToAgent = new AgentRef(\"Matcher\", \"w-2\") { ColorIndex = 4 },\n    At = now,\n    Status = HandoffStatus.Accepted,\n    PassedItems = [new HandoffItem(\"invoice schema\", HandoffItemKind.Artifact)],\n    LostItems = [new HandoffItem(\"conversation history\").Lost(\"the context window was full\")],\n};\n\n// Two steps in the chain render \"2/3 handoffs · 3 passed on · 1 lost · 25 %\"."
+    }
+  ],
+  "notes": [
+    "The surface renders the steps it is given; it never polls, fetches or mutates a handoff.",
+    "A state and an item kind are always an icon AND a localized word AND a tone, never a colour alone (WCAG 1.4.1).",
+    "The passed and lost lists live in a region a native button opens and closes (aria-expanded + aria-controls); ExpandedStepIds = null opens every step, an empty list closes them all.",
+    "The table view (ViewMode=Table) carries every step, item label and loss reason as text — the chain is never the only way to read the data.",
+    "One polite live region speaks only when a step the reader was on disappears from the host data and the focus has to move."
+  ]
+}

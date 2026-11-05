@@ -175,6 +175,8 @@ public sealed class BuiltInComponentSchemas : IWireframeSchemaSource
             ["TmAgentGraph"] = ["agent-graph"],
             ["TmFanOutGrid"] = ["fan-out-grid"],
             ["TmParallelAttempts"] = ["parallel-attempts"],
+            ["TmAgentHandoff"] = ["agent-handoff"],
+            ["TmFallbackChain"] = ["fallback-chain"],
             ["TmPromptLibrary"] = ["prompt-library"],
             ["TmMultiViewList"] = ["list-view"],
             ["TmDataTable"] = ["data-table"],
@@ -1466,6 +1468,39 @@ public sealed class BuiltInComponentSchemas : IWireframeSchemaSource
                 P("bestAttemptId",     "Best Attempt",   PropType.String, "Draft B", cat: "Content"),
                 P("confirmSelection",  "Confirm Choice", PropType.Bool,   true, cat: "Behavior"),
                 P("showComparison",    "Show Comparison", PropType.Bool,  true, cat: "Appearance"),
+            ]
+        };
+
+        yield return new WireframeComponentSchema
+        {
+            Type = "TmAgentHandoff", Category = "AI", DisplayName = "Agent Handoff",
+            DefaultWidth = 640, DefaultHeight = 380,
+            Props =
+            [
+                P("title",       "Title",       PropType.String, "Agent handoffs", cat: "Content"),
+                P("steps",       "Steps",       PropType.StringList,
+                    new[] { "Fetcher hands the run to Matcher", "Matcher hands it to Writer" }, cat: "Content"),
+                P("orientation", "Orientation", PropType.Enum,   "vertical", cat: "Layout",
+                    opts: ["vertical", "horizontal"]),
+                P("viewMode",    "View Mode",   PropType.Enum,   "chain", cat: "Behavior",
+                    opts: ["chain", "table"]),
+                P("showSummary", "Show Summary", PropType.Bool,  true, cat: "Appearance"),
+            ]
+        };
+
+        yield return new WireframeComponentSchema
+        {
+            Type = "TmFallbackChain", Category = "AI", DisplayName = "Fallback Chain",
+            DefaultWidth = 620, DefaultHeight = 320,
+            Props =
+            [
+                P("title",    "Title",     PropType.String, "Fallback chain", cat: "Content"),
+                P("attempts", "Attempts",  PropType.StringList,
+                    new[] { "GPT-4o", "Claude 3.5 Sonnet", "GPT-4o mini" }, cat: "Content"),
+                P("policy",   "Policy",    PropType.Enum,   "fallback", cat: "Behavior",
+                    opts: ["pin", "fallback", "auto"]),
+                P("viewMode", "View Mode", PropType.Enum,   "flow", cat: "Behavior",
+                    opts: ["flow", "table"]),
             ]
         };
 

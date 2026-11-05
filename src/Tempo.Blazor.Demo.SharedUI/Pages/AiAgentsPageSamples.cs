@@ -545,6 +545,98 @@ internal static class AiAgentsPageSamples
     ];
 
     /// <summary>
+    /// The handoff chain of the <c>/ai-agents</c> demo: the same reconciliation run handed over three times. The first
+    /// step is completed and lost the conversation history, the second is accepted and lost nothing, and the third is
+    /// still PENDING and lost two pieces — so the summary line, the acceptance chip and the loss summary all carry a
+    /// different value.
+    /// </summary>
+    internal static IReadOnlyList<HandoffStep> HandoffSteps(DateTimeOffset now) =>
+    [
+        new("h-fetch", "Fetcher hands the parsed ledger to the matcher")
+        {
+            FromAgent = new AgentRef("Fetcher", "w-fetch") { Role = "Worker", ColorIndex = 1 },
+            ToAgent = new AgentRef("Matcher", "w-match") { Role = "Worker", ColorIndex = 4 },
+            At = now.AddMinutes(-34),
+            Status = HandoffStatus.Completed,
+            PassedItems =
+            [
+                new HandoffItem("The task statement", HandoffItemKind.Context),
+                new HandoffItem("Invoice schema", HandoffItemKind.Artifact),
+            ],
+            LostItems =
+            [
+                new HandoffItem("Conversation history", HandoffItemKind.Context)
+                {
+                    Reason = "The context window was full",
+                },
+            ],
+        },
+        new("h-match", "Matcher hands the matched lines to the writer")
+        {
+            FromAgent = new AgentRef("Matcher", "w-match") { Role = "Worker", ColorIndex = 4 },
+            ToAgent = new AgentRef("Writer", "w-write") { Role = "Worker", ColorIndex = 5 },
+            At = now.AddMinutes(-12),
+            Status = HandoffStatus.Accepted,
+            PassedItems =
+            [
+                new HandoffItem("Matched lines", HandoffItemKind.Artifact),
+                new HandoffItem("The write-off rule", HandoffItemKind.Instruction),
+                new HandoffItem("The ledger reader", HandoffItemKind.Tool),
+            ],
+        },
+        new("h-write", "Writer asks the reviewer to approve the write-off")
+        {
+            FromAgent = new AgentRef("Writer", "w-write") { Role = "Worker", ColorIndex = 5 },
+            ToAgent = new AgentRef("Reviewer", "reviewer") { Role = "Reviewer", ColorIndex = 3 },
+            At = now.AddMinutes(-2),
+            Status = HandoffStatus.Pending,
+            PassedItems = [new HandoffItem("The adjustment draft", HandoffItemKind.Artifact)],
+            LostItems =
+            [
+                new HandoffItem("The buyer's deadline", HandoffItemKind.Memory)
+                {
+                    Reason = "It was never recorded",
+                },
+                new HandoffItem("The materiality threshold", HandoffItemKind.Instruction)
+                {
+                    Reason = "The instruction was truncated",
+                },
+            ],
+        },
+    ];
+
+    /// <summary>
+    /// The fallback run of the <c>/ai-agents</c> demo: the strong model was rate limited, the second was skipped because
+    /// it cannot read the scanned invoice, and the third answered — with one attempt that measured no latency, so the
+    /// surface has to state that instead of inventing a zero.
+    /// </summary>
+    internal static IReadOnlyList<FallbackAttempt> FallbackAttempts(DateTimeOffset now) =>
+    [
+        new("atlas-large")
+        {
+            Label = "Atlas Large",
+            Status = FallbackAttemptStatus.Failed,
+            FailureReason = "Provider rate limit (429)",
+            LatencyMs = 1200,
+            At = now.AddMinutes(-6),
+        },
+        new("aurora-pro")
+        {
+            Label = "Aurora Pro",
+            Status = FallbackAttemptStatus.Skipped,
+            FailureReason = "The model cannot read the scanned invoice",
+            At = now.AddMinutes(-6),
+        },
+        new("nimbus-2")
+        {
+            Label = "Nimbus 2",
+            Status = FallbackAttemptStatus.Succeeded,
+            LatencyMs = 640,
+            At = now.AddMinutes(-5),
+        },
+    ];
+
+    /// <summary>
     /// The submitted body of one demo draft — sample DATA (like the votes' rationales), rendered through the
     /// component's content slot so the page shows three DISTINCT attempts rather than the same summary twice.
     /// </summary>

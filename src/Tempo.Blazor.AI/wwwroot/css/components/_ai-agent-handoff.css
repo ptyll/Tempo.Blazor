@@ -1,0 +1,568 @@
+/* ═══════════════════════════════════════════════════════════════════════════════════════════════
+   TmAgentHandoff — a run handed from agent to agent: one labelled step per handoff with its route,
+   its acceptance state, the items it passed on and the items it lost (and why)
+   Contract: docs/agent-handoff.md
+   Every rule reads a --tm-* design token (no colour literal, no raw palette step, no [data-theme]
+   block); the package's shared token gate is AiMarkdownViewCssTests and the component's own gate is
+   TmAgentHandoffCssTests.
+
+   Nothing in this file animates or transitions: the details region is opened by a native button and a
+   step's state is TEXT plus an icon, so this partial has no subject a prefers-reduced-motion block
+   would have to remove — and it cannot smuggle movement past one.
+   ═══════════════════════════════════════════════════════════════════════════════════════════════ */
+
+.tm-ai-handoff {
+    /* A host lays this card out in a grid or a flex row: without this the card's automatic minimum
+       width grows to its content and the PAGE scrolls sideways instead of the card. */
+    min-inline-size: 0;
+
+    /* Every knob is DECLARED here (a var() that only ever carries a fallback is an undefined alias):
+       a host overrides one by restyling this root. The step modifier SETS --tm-handoff-step-tone and
+       the base rule READS it, so source order can never decide a state's colour. */
+    --tm-handoff-step-fill: var(--tm-bg-surface);
+    --tm-handoff-step-border: var(--tm-border-color);
+    --tm-handoff-step-tone: var(--tm-border-color-strong);
+    --tm-handoff-status-ink: var(--tm-color-warning-text);
+    --tm-handoff-status-fill: var(--tm-color-warning-soft);
+    --tm-handoff-status-border: var(--tm-color-warning-soft-border);
+    --tm-handoff-group-fill: var(--tm-bg-surface-secondary);
+    --tm-handoff-group-border: var(--tm-border-color);
+    --tm-handoff-lost-ink: var(--tm-color-danger-text);
+    --tm-handoff-lost-fill: var(--tm-color-danger-soft);
+    --tm-handoff-lost-border: var(--tm-color-danger-soft-border);
+    --tm-handoff-gap: var(--tm-space-2);
+    --tm-handoff-step-min-inline-size: 15rem;
+    --tm-handoff-connector-size: 1.5rem;
+
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-3);
+    padding: var(--tm-space-4);
+    border: var(--tm-border-width) solid var(--tm-border-color);
+    border-radius: var(--tm-radius-card);
+    background-color: var(--tm-bg-surface);
+    color: var(--tm-text-primary);
+    box-shadow: var(--tm-shadow-sm);
+    font-size: var(--tm-font-size-sm);
+    line-height: var(--tm-line-height-normal);
+}
+
+/* ── Header and summary ──────────────────────────────────────────────────────────────────────── */
+
+.tm-ai-handoff__header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--tm-space-3);
+}
+
+.tm-ai-handoff__title {
+    margin: 0;
+    font-size: var(--tm-font-size-base);
+    font-weight: var(--tm-font-weight-semibold);
+}
+
+.tm-ai-handoff__view {
+    min-inline-size: 0;
+}
+
+.tm-ai-handoff__summary {
+    min-inline-size: 0;
+    padding: var(--tm-space-2) var(--tm-space-3);
+    border: var(--tm-border-width) solid var(--tm-border-color);
+    border-radius: var(--tm-radius-control);
+    background-color: var(--tm-bg-surface-secondary);
+}
+
+.tm-ai-handoff__stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--tm-space-4);
+    margin: 0;
+}
+
+.tm-ai-handoff__stat {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-0-5);
+    min-inline-size: 0;
+}
+
+.tm-ai-handoff__stat-label {
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-xs);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.tm-ai-handoff__stat-value {
+    margin: 0;
+    color: var(--tm-text-primary);
+    font-size: var(--tm-font-size-base);
+    font-weight: var(--tm-font-weight-semibold);
+    font-variant-numeric: tabular-nums;
+}
+
+.tm-ai-handoff__summary-state {
+    margin: var(--tm-space-2) 0 0;
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-xs);
+}
+
+/* ── The chain ──────────────────────────────────────────────────────────────────────────────── */
+
+.tm-ai-handoff__chain {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-1);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.tm-ai-handoff__step {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-handoff-gap);
+    padding: var(--tm-space-3);
+    /* The rail REPEATS the state the chip spells out in a word; it is never the only carrier. */
+    border: var(--tm-border-width) solid var(--tm-handoff-step-border);
+    border-inline-start: calc(var(--tm-border-width) * 3) solid var(--tm-handoff-step-tone);
+    border-radius: var(--tm-radius-control);
+    background-color: var(--tm-handoff-step-fill);
+}
+
+.tm-ai-handoff__step--pending {
+    --tm-handoff-step-tone: var(--tm-color-warning);
+}
+
+.tm-ai-handoff__step--accepted {
+    --tm-handoff-step-tone: var(--tm-color-info);
+}
+
+.tm-ai-handoff__step--rejected {
+    --tm-handoff-step-tone: var(--tm-color-danger);
+}
+
+.tm-ai-handoff__step--completed {
+    --tm-handoff-step-tone: var(--tm-color-success);
+}
+
+.tm-ai-handoff__step-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--tm-space-2);
+}
+
+.tm-ai-handoff__index {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-inline-size: 1.5rem;
+    block-size: 1.5rem;
+    border-radius: var(--tm-radius-full);
+    background-color: var(--tm-bg-surface-secondary);
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-xs);
+    font-variant-numeric: tabular-nums;
+}
+
+.tm-ai-handoff__step-title {
+    margin: 0;
+    font-size: var(--tm-font-size-sm);
+    font-weight: var(--tm-font-weight-semibold);
+}
+
+.tm-ai-handoff__status {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--tm-space-1);
+    padding: 0 var(--tm-space-2);
+    border: var(--tm-border-width) solid var(--tm-handoff-status-border);
+    border-radius: var(--tm-radius-pill);
+    background-color: var(--tm-handoff-status-fill);
+    color: var(--tm-handoff-status-ink);
+    font-size: var(--tm-font-size-xs);
+    font-weight: var(--tm-font-weight-medium);
+}
+
+.tm-ai-handoff__status[data-status="accepted"] {
+    --tm-handoff-status-ink: var(--tm-color-info-text);
+    --tm-handoff-status-fill: var(--tm-color-info-subtle);
+    --tm-handoff-status-border: var(--tm-color-info-soft-border);
+}
+
+.tm-ai-handoff__status[data-status="rejected"] {
+    --tm-handoff-status-ink: var(--tm-color-danger-text);
+    --tm-handoff-status-fill: var(--tm-color-danger-soft);
+    --tm-handoff-status-border: var(--tm-color-danger-soft-border);
+}
+
+.tm-ai-handoff__status[data-status="completed"] {
+    --tm-handoff-status-ink: var(--tm-color-success-text);
+    --tm-handoff-status-fill: var(--tm-color-success-soft);
+    --tm-handoff-status-border: var(--tm-color-success-soft-border);
+}
+
+.tm-ai-handoff__status-icon {
+    display: inline-flex;
+    flex: none;
+}
+
+.tm-ai-handoff__status-text {
+    white-space: nowrap;
+}
+
+.tm-ai-handoff__route {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--tm-space-2);
+    min-inline-size: 0;
+}
+
+.tm-ai-handoff__agent {
+    display: inline-flex;
+    align-items: center;
+    min-inline-size: 0;
+}
+
+.tm-ai-handoff__agent-name {
+    font-weight: var(--tm-font-weight-medium);
+}
+
+.tm-ai-handoff__route-arrow {
+    display: inline-flex;
+    flex: none;
+    color: var(--tm-text-secondary);
+}
+
+.tm-ai-handoff__route-arrow svg {
+    stroke: currentColor;
+    fill: none;
+    stroke-width: 1.5;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.tm-ai-handoff__at {
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-xs);
+    font-variant-numeric: tabular-nums;
+}
+
+.tm-ai-handoff__step-summary {
+    margin: 0;
+    color: var(--tm-text-primary);
+}
+
+/* ── The details toggle ────────────────────────────────────────────────────────────────────── */
+
+.tm-ai-handoff__toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--tm-space-1);
+    align-self: flex-start;
+    min-block-size: var(--tm-input-height-sm);
+    padding: 0 var(--tm-space-2);
+    border: var(--tm-border-width) solid var(--tm-border-color-control);
+    border-radius: var(--tm-radius-control);
+    background-color: var(--tm-bg-surface);
+    color: var(--tm-text-primary);
+    font-size: var(--tm-font-size-xs);
+    font-weight: var(--tm-font-weight-medium);
+    cursor: pointer;
+}
+
+.tm-ai-handoff__toggle:hover {
+    background-color: var(--tm-color-surface-hover);
+}
+
+.tm-ai-handoff__toggle:focus-visible {
+    outline: 2px solid var(--tm-border-color-focus);
+    outline-offset: 2px;
+}
+
+.tm-ai-handoff__toggle-text {
+    min-inline-size: 0;
+    white-space: nowrap;
+}
+
+.tm-ai-handoff__toggle-icon {
+    display: inline-flex;
+    flex: none;
+}
+
+/* ── The detail: what was passed on and what was lost ─────────────────────────────────────── */
+
+.tm-ai-handoff__detail {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-2);
+    padding-block-start: var(--tm-space-2);
+    border-block-start: var(--tm-border-width) dashed var(--tm-border-color);
+}
+
+.tm-ai-handoff__group {
+    padding: var(--tm-space-2) var(--tm-space-3);
+    border: var(--tm-border-width) solid var(--tm-handoff-group-border);
+    border-radius: var(--tm-radius-control);
+    background-color: var(--tm-handoff-group-fill);
+}
+
+/* A LOST group on a step that lost NOTHING keeps the neutral wash: tinting "nothing was lost" in the
+   danger colour would be a colour-only verdict on an empty list. */
+.tm-ai-handoff__step[data-has-losses="true"] .tm-ai-handoff__group--lost {
+    --tm-handoff-group-fill: var(--tm-color-danger-soft);
+    --tm-handoff-group-border: var(--tm-color-danger-soft-border);
+}
+
+/* Neutral until the step actually lost something: the tint is a verdict, not a decoration. */
+.tm-ai-handoff__group--lost {
+    --tm-handoff-group-fill: var(--tm-bg-surface-secondary);
+    --tm-handoff-group-border: var(--tm-border-color);
+}
+
+.tm-ai-handoff__group-title {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-1);
+    margin: 0 0 var(--tm-space-1);
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-xs);
+    font-weight: var(--tm-font-weight-semibold);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.tm-ai-handoff__group-icon {
+    display: inline-flex;
+    flex: none;
+}
+
+.tm-ai-handoff__group-text {
+    min-inline-size: 0;
+}
+
+.tm-ai-handoff__group-empty {
+    margin: 0;
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-xs);
+    font-style: italic;
+}
+
+.tm-ai-handoff__items {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-1);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.tm-ai-handoff__item {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: var(--tm-space-2);
+    min-inline-size: 0;
+}
+
+.tm-ai-handoff__item--lost {
+    color: var(--tm-handoff-lost-ink);
+}
+
+.tm-ai-handoff__item-icon {
+    display: inline-flex;
+    flex: none;
+    align-self: center;
+    color: var(--tm-text-secondary);
+}
+
+.tm-ai-handoff__item--lost .tm-ai-handoff__item-icon {
+    color: var(--tm-handoff-lost-ink);
+}
+
+.tm-ai-handoff__item-label {
+    min-inline-size: 0;
+    overflow-wrap: anywhere;
+}
+
+.tm-ai-handoff__item-kind {
+    padding: 0 var(--tm-space-1);
+    border: var(--tm-border-width) solid var(--tm-border-color);
+    border-radius: var(--tm-radius-sm);
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-xs);
+    white-space: nowrap;
+}
+
+.tm-ai-handoff__item-reason {
+    flex-basis: 100%;
+    color: var(--tm-handoff-lost-ink);
+    font-size: var(--tm-font-size-xs);
+}
+
+/* ── The arrow between two steps ───────────────────────────────────────────────────────────── */
+
+.tm-ai-handoff__connector {
+    display: flex;
+    justify-content: center;
+    padding-block: var(--tm-space-1);
+    /* The arrow is decorative, but an invisible one is a lie about the flow: it keeps the readable
+       muted ink in both themes. */
+    color: var(--tm-text-secondary);
+}
+
+.tm-ai-handoff__connector svg {
+    block-size: var(--tm-handoff-connector-size);
+    inline-size: auto;
+}
+
+.tm-ai-handoff__connector svg path {
+    stroke: currentColor;
+    fill: none;
+    stroke-width: 1.5;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+/* ── Orientation: ONE list, laid down or across ────────────────────────────────────────────── */
+
+.tm-ai-handoff--vertical .tm-ai-handoff__chain {
+    flex-direction: column;
+}
+
+.tm-ai-handoff--horizontal .tm-ai-handoff__chain {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: stretch;
+    /* The gap is wide enough for the arrow that joins two steps: the connector is positioned INTO it. */
+    gap: var(--tm-space-6);
+}
+
+.tm-ai-handoff--horizontal .tm-ai-handoff__step {
+    position: relative;
+    flex: 1 1 var(--tm-handoff-step-min-inline-size);
+}
+
+/* In a row the connector cannot sit under the card: it is lifted out of the card's flow into the gap,
+   centred on the card's edge, so the arrow points at the NEXT step. It stays decorative (aria-hidden)
+   and the ordered list still carries the sequence. */
+.tm-ai-handoff--horizontal .tm-ai-handoff__connector {
+    position: absolute;
+    inset-block-start: 50%;
+    inset-inline-end: calc(-1 * var(--tm-space-6));
+    inline-size: var(--tm-space-6);
+    block-size: var(--tm-handoff-connector-size);
+    padding: 0;
+    translate: 0 -50%;
+}
+
+/* The portrait arrow turns into a landscape one INSIDE its own box, so it cannot overlap the steps. */
+.tm-ai-handoff--horizontal .tm-ai-handoff__connector svg {
+    transform: rotate(-90deg);
+}
+
+/* ── The chain-wide loss summary ──────────────────────────────────────────────────────────── */
+
+.tm-ai-handoff__lost-summary {
+    margin: 0;
+    padding-block-start: var(--tm-space-2);
+    border-block-start: var(--tm-border-width) solid var(--tm-border-color);
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-xs);
+}
+
+.tm-ai-handoff__lost-summary[data-has-losses="true"] {
+    color: var(--tm-handoff-lost-ink);
+    font-weight: var(--tm-font-weight-medium);
+}
+
+/* ── The table alternative ────────────────────────────────────────────────────────────────── */
+
+.tm-ai-handoff__table {
+    inline-size: 100%;
+    border-collapse: collapse;
+    font-size: var(--tm-font-size-xs);
+}
+
+.tm-ai-handoff__table caption {
+    padding-block-end: var(--tm-space-2);
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-xs);
+    text-align: start;
+}
+
+.tm-ai-handoff__table th,
+.tm-ai-handoff__table td {
+    padding: var(--tm-space-2);
+    border-block-end: var(--tm-border-width) solid var(--tm-border-color);
+    text-align: start;
+    vertical-align: top;
+    overflow-wrap: anywhere;
+}
+
+.tm-ai-handoff__table thead th {
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-xs);
+    font-weight: var(--tm-font-weight-semibold);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+}
+
+.tm-ai-handoff__table tbody th {
+    font-weight: var(--tm-font-weight-semibold);
+    white-space: nowrap;
+}
+
+/* ── Empty state ──────────────────────────────────────────────────────────────────────────── */
+
+.tm-ai-handoff__empty {
+    margin: 0;
+    padding: var(--tm-space-4);
+    border: var(--tm-border-width) dashed var(--tm-border-color);
+    border-radius: var(--tm-radius-control);
+    color: var(--tm-text-secondary);
+    text-align: center;
+}
+
+/* ── A coarse pointer grows every target to the touch target ───────────────────────────────── */
+
+@media (pointer: coarse) {
+    .tm-ai-handoff__toggle {
+        min-block-size: var(--tm-touch-target);
+    }
+}
+
+/* ── Forced colors: the system palette owns the surface ───────────────────────────────────── */
+
+@media (forced-colors: active) {
+    .tm-ai-handoff__step,
+    .tm-ai-handoff__group,
+    .tm-ai-handoff__toggle,
+    .tm-ai-handoff__status,
+    .tm-ai-handoff__item-kind,
+    .tm-ai-handoff__table th,
+    .tm-ai-handoff__table td {
+        border-color: CanvasText;
+    }
+
+    /* A tinted fill and a tone rail collapse under high contrast; the WORD and the icon carry the
+       state, so the chip keeps only a system border and the text stays readable. */
+    .tm-ai-handoff__status,
+    .tm-ai-handoff__item--lost,
+    .tm-ai-handoff__item-reason,
+    .tm-ai-handoff__lost-summary {
+        color: CanvasText;
+        background-color: Canvas;
+    }
+
+    .tm-ai-handoff__toggle:focus-visible {
+        outline: 3px solid Highlight;
+        outline-offset: 2px;
+    }
+}

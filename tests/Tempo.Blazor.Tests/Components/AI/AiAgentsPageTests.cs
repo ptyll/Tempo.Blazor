@@ -55,15 +55,16 @@ public class AiAgentsPageTests : DemoPageLocalizationTestBase
             .KeyDown(new KeyboardEventArgs { Key = key }));
 
     [Fact]
-    public void ThePageRendersItsNineSectionsWithoutRawKeys()
+    public void ThePageRendersItsTwelveSectionsWithoutRawKeys()
     {
         var cut = RenderPage();
 
-        cut.FindAll("section.demo-section").Should().HaveCount(10);
+        cut.FindAll("section.demo-section").Should().HaveCount(12);
         foreach (var section in new[]
                  {
                      "ai-agents-plan-section", "ai-agents-tree-section", "ai-agents-lanes-section",
                      "ai-agents-graph-section", "ai-agents-fan-out-section", "ai-agents-attempts-section",
+                     "ai-agents-handoff-section", "ai-agents-fallback-section",
                      "ai-agents-monitor-section", "ai-agents-models-section",
                      "ai-agents-context-section", "ai-agents-prompts-section",
                  })
@@ -539,6 +540,66 @@ public class AiAgentsPageTests : DemoPageLocalizationTestBase
             TimeSpan.FromSeconds(10));
         cut.Find("[data-testid='ai-agents-attempts'] [data-testid='parallel-attempt'][data-selected='true']")
             .GetAttribute("data-attempt-id").Should().Be("draft-a");
+    }
+
+    /// <summary>
+    /// The handoff section is the SAME run passed from agent to agent: three handoffs whose passed and lost lists are
+    /// the page's sample data, and the DIRECTION switch is the page's own state driving the component's
+    /// <c>Orientation</c> parameter (the host owns the choice; the component only reports it).
+    /// </summary>
+    [Fact]
+    public void TheHandoffSection_RendersTheChain_AndThePageDrivesTheDirection()
+    {
+        RegisterClock();
+        var cut = RenderPage();
+        var handoff = Section(cut, "ai-agents-handoff");
+
+        handoff.QuerySelectorAll("[data-testid='agent-handoff-step']").Should().HaveCount(3);
+        handoff.QuerySelectorAll("[data-testid='agent-handoff-passed-item']").Should().HaveCount(6);
+        handoff.QuerySelectorAll("[data-testid='agent-handoff-lost-item']").Should().HaveCount(3,
+            "one handoff lost one item and the pending one lost two");
+        handoff.QuerySelector("[data-testid='agent-handoff-lost-summary']")!.TextContent
+            .Should().Contain("Conversation history", "the chain-wide sentence names what was dropped");
+        handoff.GetAttribute("data-orientation").Should().Be("vertical");
+
+        Section(cut, "ai-agents-handoff-orientation").QuerySelectorAll("button")[1].Click();
+
+        cut.WaitForAssertion(() => Section(cut, "ai-agents-handoff").GetAttribute("data-orientation")
+            .Should().Be("horizontal", "the page's own state moved the surface"));
+    }
+
+    /// <summary>
+    /// The fallback section reports the recorded run, and the page's Run | Edit switch opens the editor over the SAME
+    /// chain: the page RECORDS what the editor reports, so removing a model is the page's own data change and the log
+    /// line proves it.
+    /// </summary>
+    [Fact]
+    public void TheFallbackSection_SwitchesToTheEditor_AndThePageRecordsTheChain()
+    {
+        RegisterClock();
+        var cut = RenderPage();
+        var fallback = Section(cut, "ai-agents-fallback");
+
+        fallback.QuerySelectorAll("[data-testid='fallback-chain-node']").Should().HaveCount(3);
+        fallback.QuerySelector("[data-testid='fallback-chain-answer-model']")!.TextContent
+            .Should().Be("Answered by Nimbus 2", "the first successful attempt names the answer");
+        Text(cut, "ai-agents-fallback-log").Should().Be("Chain: Atlas Large → Aurora Pro → Nimbus 2");
+        Text(cut, "ai-agents-fallback").Should().NotContain("TmFallbackChain_");
+
+        Section(cut, "ai-agents-fallback-mode").QuerySelectorAll("button")[1].Click();
+
+        cut.WaitForAssertion(() => Section(cut, "ai-agents-fallback")
+            .QuerySelectorAll("[data-testid='fallback-chain-editor-row']").Should().HaveCount(3),
+            TimeSpan.FromSeconds(10));
+
+        Section(cut, "ai-agents-fallback").QuerySelectorAll("[data-testid='fallback-chain-editor-remove']")[1].Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            Text(cut, "ai-agents-fallback-log").Should().Be("Chain: Atlas Large → Nimbus 2");
+            Section(cut, "ai-agents-fallback")
+                .QuerySelectorAll("[data-testid='fallback-chain-editor-row']").Should().HaveCount(2);
+        }, TimeSpan.FromSeconds(10));
     }
 
     [Fact]

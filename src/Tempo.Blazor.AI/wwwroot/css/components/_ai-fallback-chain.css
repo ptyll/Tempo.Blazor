@@ -1,0 +1,553 @@
+/* ═══════════════════════════════════════════════════════════════════════════════════════════════
+   TmFallbackChain — the models tried for one request, in order, ending in the Answer node; plus the
+   chain editor (sortable list, add from the catalogue, remove, resolution policy)
+   Contract: docs/fallback-chain.md
+   Every rule reads a --tm-* design token (no colour literal, no raw palette step, no [data-theme]
+   block); the package's shared token gate is AiMarkdownViewCssTests and the component's own gate is
+   TmFallbackChainCssTests.
+
+   Nothing in this file animates or transitions: a result is TEXT plus an icon, the arrows are static
+   SVG and the editor's drag belongs to the shared sortable list, so this partial has no subject a
+   prefers-reduced-motion block would have to remove.
+   ═══════════════════════════════════════════════════════════════════════════════════════════════ */
+
+.tm-ai-fallback {
+    /* A host lays this card out in a grid or a flex row: without this the card's automatic minimum
+       width grows to its content and the PAGE scrolls sideways instead of the card. */
+    min-inline-size: 0;
+
+    /* Every knob is DECLARED here (a var() that only ever carries a fallback is an undefined alias):
+       a host overrides one by restyling this root. A node modifier SETS --tm-fallback-node-tone and
+       the base rule READS it, so source order can never decide a result's colour. */
+    --tm-fallback-node-fill: var(--tm-bg-surface);
+    --tm-fallback-node-border: var(--tm-border-color);
+    --tm-fallback-node-tone: var(--tm-border-color-strong);
+    --tm-fallback-status-ink: var(--tm-text-secondary);
+    --tm-fallback-status-fill: var(--tm-bg-surface-secondary);
+    --tm-fallback-status-border: var(--tm-border-color);
+    --tm-fallback-answer-fill: var(--tm-bg-surface-secondary);
+    --tm-fallback-answer-border: var(--tm-border-color);
+    --tm-fallback-answer-ink: var(--tm-text-secondary);
+    --tm-fallback-arrow-ink: var(--tm-border-color-strong);
+    --tm-fallback-arrow-size: 1.5rem;
+    --tm-fallback-gap: var(--tm-space-2);
+
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-3);
+    padding: var(--tm-space-4);
+    border: var(--tm-border-width) solid var(--tm-border-color);
+    border-radius: var(--tm-radius-card);
+    background-color: var(--tm-bg-surface);
+    color: var(--tm-text-primary);
+    box-shadow: var(--tm-shadow-sm);
+    font-size: var(--tm-font-size-sm);
+    line-height: var(--tm-line-height-normal);
+}
+
+/* ── Header, view switcher and the policy read-out ─────────────────────────────────────────── */
+
+/* ── Modes: the run view keeps the tighter rhythm, the editor gives its rows more room ─────── */
+
+.tm-ai-fallback--edit {
+    --tm-fallback-gap: var(--tm-space-3);
+}
+
+.tm-ai-fallback__header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--tm-space-3);
+}
+
+.tm-ai-fallback__title {
+    margin: 0;
+    font-size: var(--tm-font-size-base);
+    font-weight: var(--tm-font-weight-semibold);
+}
+
+.tm-ai-fallback__view {
+    min-inline-size: 0;
+}
+
+.tm-ai-fallback__policy {
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: var(--tm-space-2);
+    margin: 0;
+}
+
+.tm-ai-fallback__policy-label {
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-xs);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.tm-ai-fallback__policy-value {
+    padding: 0 var(--tm-space-2);
+    border: var(--tm-border-width) solid var(--tm-border-color);
+    border-radius: var(--tm-radius-pill);
+    background-color: var(--tm-bg-surface-secondary);
+    color: var(--tm-text-primary);
+    font-size: var(--tm-font-size-xs);
+    font-weight: var(--tm-font-weight-medium);
+}
+
+/* ── The flow ──────────────────────────────────────────────────────────────────────────────── */
+
+.tm-ai-fallback__flow {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-1);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.tm-ai-fallback__node {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-fallback-gap);
+    padding: var(--tm-space-3);
+    /* The rail REPEATS the result the chip spells out in a word; it is never the only carrier. */
+    border: var(--tm-border-width) solid var(--tm-fallback-node-border);
+    border-inline-start: calc(var(--tm-border-width) * 3) solid var(--tm-fallback-node-tone);
+    border-radius: var(--tm-radius-control);
+    background-color: var(--tm-fallback-node-fill);
+}
+
+.tm-ai-fallback__node--not-tried {
+    --tm-fallback-node-tone: var(--tm-border-color-strong);
+}
+
+.tm-ai-fallback__node--skipped {
+    --tm-fallback-node-tone: var(--tm-color-warning);
+}
+
+.tm-ai-fallback__node--failed {
+    --tm-fallback-node-tone: var(--tm-color-danger);
+}
+
+.tm-ai-fallback__node--succeeded {
+    --tm-fallback-node-tone: var(--tm-color-success);
+}
+
+.tm-ai-fallback__node-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--tm-space-2);
+}
+
+.tm-ai-fallback__node-position {
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-xs);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+}
+
+.tm-ai-fallback__node-label {
+    min-inline-size: 0;
+    overflow-wrap: anywhere;
+    font-weight: var(--tm-font-weight-semibold);
+}
+
+.tm-ai-fallback__node-state {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--tm-space-1);
+    padding: 0 var(--tm-space-2);
+    border: var(--tm-border-width) solid var(--tm-fallback-status-border);
+    border-radius: var(--tm-radius-pill);
+    background-color: var(--tm-fallback-status-fill);
+    color: var(--tm-fallback-status-ink);
+    font-size: var(--tm-font-size-xs);
+    font-weight: var(--tm-font-weight-medium);
+}
+
+.tm-ai-fallback__node-state[data-status="skipped"] {
+    --tm-fallback-status-ink: var(--tm-color-warning-text);
+    --tm-fallback-status-fill: var(--tm-color-warning-soft);
+    --tm-fallback-status-border: var(--tm-color-warning-soft-border);
+}
+
+.tm-ai-fallback__node-state[data-status="failed"] {
+    --tm-fallback-status-ink: var(--tm-color-danger-text);
+    --tm-fallback-status-fill: var(--tm-color-danger-soft);
+    --tm-fallback-status-border: var(--tm-color-danger-soft-border);
+}
+
+.tm-ai-fallback__node-state[data-status="succeeded"] {
+    --tm-fallback-status-ink: var(--tm-color-success-text);
+    --tm-fallback-status-fill: var(--tm-color-success-soft);
+    --tm-fallback-status-border: var(--tm-color-success-soft-border);
+}
+
+.tm-ai-fallback__node-state-icon {
+    display: inline-flex;
+    flex: none;
+}
+
+.tm-ai-fallback__node-state-text {
+    white-space: nowrap;
+}
+
+.tm-ai-fallback__node-reason {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--tm-space-1);
+    margin: 0;
+    color: var(--tm-color-danger-text);
+    font-size: var(--tm-font-size-xs);
+}
+
+.tm-ai-fallback__node-reason-label {
+    font-weight: var(--tm-font-weight-semibold);
+}
+
+.tm-ai-fallback__node-reason-text {
+    min-inline-size: 0;
+    overflow-wrap: anywhere;
+}
+
+.tm-ai-fallback__node-facts {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: var(--tm-space-1) var(--tm-space-3);
+    margin: 0;
+    font-size: var(--tm-font-size-xs);
+}
+
+.tm-ai-fallback__node-facts dt {
+    color: var(--tm-text-secondary);
+}
+
+.tm-ai-fallback__node-facts dd {
+    margin: 0;
+    margin-inline-end: var(--tm-space-1);
+    font-variant-numeric: tabular-nums;
+}
+
+/* ── The arrows and the Answer node ───────────────────────────────────────────────────────── */
+
+.tm-ai-fallback__arrow,
+.tm-ai-fallback__answer-arrow {
+    display: flex;
+    justify-content: center;
+    padding-block: var(--tm-space-1);
+    color: var(--tm-fallback-arrow-ink);
+}
+
+.tm-ai-fallback__arrow svg,
+.tm-ai-fallback__answer-arrow svg {
+    block-size: var(--tm-fallback-arrow-size);
+    inline-size: auto;
+}
+
+.tm-ai-fallback__arrow svg path,
+.tm-ai-fallback__answer-arrow svg path {
+    stroke: currentColor;
+    fill: none;
+    stroke-width: 1.5;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.tm-ai-fallback__answer-arrow[data-success="true"] {
+    color: var(--tm-color-success);
+}
+
+.tm-ai-fallback__answer {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-2);
+    padding: var(--tm-space-3);
+    border: var(--tm-border-width) solid var(--tm-fallback-answer-border);
+    border-radius: var(--tm-radius-control);
+    background-color: var(--tm-fallback-answer-fill);
+}
+
+.tm-ai-fallback__answer[data-answered="true"] {
+    --tm-fallback-answer-fill: var(--tm-color-success-soft);
+    --tm-fallback-answer-border: var(--tm-color-success-soft-border);
+    --tm-fallback-answer-ink: var(--tm-color-success-text);
+}
+
+.tm-ai-fallback__answer-icon {
+    display: inline-flex;
+    flex: none;
+    color: var(--tm-fallback-answer-ink);
+}
+
+.tm-ai-fallback__answer-text {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-0-5);
+    min-inline-size: 0;
+}
+
+.tm-ai-fallback__answer-label {
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-xs);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.tm-ai-fallback__answer-model {
+    color: var(--tm-text-primary);
+    font-weight: var(--tm-font-weight-semibold);
+    overflow-wrap: anywhere;
+}
+
+.tm-ai-fallback__answer[data-answered="false"] .tm-ai-fallback__answer-model {
+    color: var(--tm-text-secondary);
+    font-weight: var(--tm-font-weight-normal);
+}
+
+/* ── The editor ───────────────────────────────────────────────────────────────────────────── */
+
+.tm-ai-fallback__editor {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-3);
+}
+
+.tm-ai-fallback__editor-hint {
+    margin: 0;
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-xs);
+}
+
+.tm-ai-fallback__editor-empty {
+    margin: 0;
+    padding: var(--tm-space-3);
+    border: var(--tm-border-width) dashed var(--tm-border-color);
+    border-radius: var(--tm-radius-control);
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-xs);
+    text-align: center;
+}
+
+.tm-ai-fallback__editor-list {
+    min-inline-size: 0;
+}
+
+.tm-ai-fallback__editor-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--tm-space-2);
+    min-inline-size: 0;
+}
+
+.tm-ai-fallback__editor-row-label {
+    min-inline-size: 0;
+    overflow-wrap: anywhere;
+    font-weight: var(--tm-font-weight-medium);
+}
+
+.tm-ai-fallback__editor-row-id {
+    color: var(--tm-text-secondary);
+    font-family: var(--tm-font-mono);
+    font-size: var(--tm-font-size-xs);
+    overflow-wrap: anywhere;
+}
+
+.tm-ai-fallback__editor-remove {
+    margin-inline-start: auto;
+    min-block-size: var(--tm-input-height-xs);
+    padding: 0 var(--tm-space-2);
+    border: var(--tm-border-width) solid var(--tm-color-danger-soft-border);
+    border-radius: var(--tm-radius-control);
+    background-color: var(--tm-bg-surface);
+    color: var(--tm-color-danger-text);
+    font-size: var(--tm-font-size-xs);
+    font-weight: var(--tm-font-weight-medium);
+    cursor: pointer;
+}
+
+.tm-ai-fallback__editor-remove:hover {
+    background-color: var(--tm-color-danger-soft);
+}
+
+.tm-ai-fallback__editor-remove:focus-visible {
+    outline: 2px solid var(--tm-border-color-focus);
+    outline-offset: 2px;
+}
+
+.tm-ai-fallback__editor-add {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--tm-space-2);
+}
+
+.tm-ai-fallback__editor-add-label {
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-xs);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.tm-ai-fallback__editor-select {
+    min-inline-size: 8rem;
+    min-block-size: var(--tm-input-height-sm);
+    padding: 0 var(--tm-space-2);
+    border: var(--tm-border-width) solid var(--tm-border-color-control);
+    border-radius: var(--tm-radius-control);
+    background-color: var(--tm-bg-surface);
+    color: var(--tm-text-primary);
+    font-family: inherit;
+    font-size: var(--tm-font-size-sm);
+}
+
+.tm-ai-fallback__editor-select:focus-visible {
+    outline: 2px solid var(--tm-border-color-focus);
+    outline-offset: 2px;
+}
+
+.tm-ai-fallback__editor-select:disabled {
+    color: var(--tm-text-secondary);
+    cursor: not-allowed;
+}
+
+.tm-ai-fallback__editor-add-button {
+    min-block-size: var(--tm-input-height-sm);
+    padding: 0 var(--tm-space-3);
+    border: var(--tm-border-width) solid var(--tm-color-primary);
+    border-radius: var(--tm-radius-control);
+    background-color: var(--tm-color-primary);
+    color: var(--tm-color-on-primary);
+    font-size: var(--tm-font-size-sm);
+    font-weight: var(--tm-font-weight-medium);
+    cursor: pointer;
+}
+
+.tm-ai-fallback__editor-add-button:hover {
+    background-color: var(--tm-color-primary-hover);
+}
+
+.tm-ai-fallback__editor-add-button:disabled {
+    border-color: var(--tm-border-color);
+    background-color: var(--tm-bg-surface-secondary);
+    color: var(--tm-text-secondary);
+    cursor: not-allowed;
+}
+
+.tm-ai-fallback__editor-add-button:focus-visible {
+    outline: 2px solid var(--tm-border-color-focus);
+    outline-offset: 2px;
+}
+
+.tm-ai-fallback__editor-note {
+    flex-basis: 100%;
+    margin: 0;
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-xs);
+}
+
+.tm-ai-fallback__editor-policy {
+    min-inline-size: 0;
+}
+
+/* ── The table alternative ────────────────────────────────────────────────────────────────── */
+
+.tm-ai-fallback__table {
+    inline-size: 100%;
+    border-collapse: collapse;
+    font-size: var(--tm-font-size-xs);
+}
+
+.tm-ai-fallback__table caption {
+    padding-block-end: var(--tm-space-2);
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-xs);
+    text-align: start;
+}
+
+.tm-ai-fallback__table th,
+.tm-ai-fallback__table td {
+    padding: var(--tm-space-2);
+    border-block-end: var(--tm-border-width) solid var(--tm-border-color);
+    text-align: start;
+    vertical-align: top;
+    overflow-wrap: anywhere;
+}
+
+.tm-ai-fallback__table thead th {
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-xs);
+    font-weight: var(--tm-font-weight-semibold);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+}
+
+.tm-ai-fallback__table tbody th {
+    font-weight: var(--tm-font-weight-semibold);
+}
+
+/* ── Empty state ──────────────────────────────────────────────────────────────────────────── */
+
+.tm-ai-fallback__empty {
+    margin: 0;
+    padding: var(--tm-space-4);
+    border: var(--tm-border-width) dashed var(--tm-border-color);
+    border-radius: var(--tm-radius-control);
+    color: var(--tm-text-secondary);
+    text-align: center;
+}
+
+/* ── A coarse pointer grows every target to the touch target ───────────────────────────────── */
+
+@media (pointer: coarse) {
+    .tm-ai-fallback__editor-remove,
+    .tm-ai-fallback__editor-add-button {
+        min-block-size: var(--tm-touch-target);
+    }
+
+    .tm-ai-fallback__editor-select {
+        min-block-size: var(--tm-touch-target);
+    }
+}
+
+/* ── Forced colors: the system palette owns the surface ───────────────────────────────────── */
+
+@media (forced-colors: active) {
+    .tm-ai-fallback__node,
+    .tm-ai-fallback__answer,
+    .tm-ai-fallback__node-state,
+    .tm-ai-fallback__policy-value,
+    .tm-ai-fallback__editor-select,
+    .tm-ai-fallback__editor-remove,
+    .tm-ai-fallback__editor-add-button,
+    .tm-ai-fallback__table th,
+    .tm-ai-fallback__table td {
+        border-color: CanvasText;
+    }
+
+    /* A tinted fill and a tone rail collapse under high contrast; the WORD and the icon carry the
+       result, so the chip keeps only a system border and the text stays readable. */
+    .tm-ai-fallback__node-state,
+    .tm-ai-fallback__answer,
+    .tm-ai-fallback__node-reason {
+        color: CanvasText;
+        background-color: Canvas;
+    }
+
+    .tm-ai-fallback__editor-remove:focus-visible,
+    .tm-ai-fallback__editor-select:focus-visible,
+    .tm-ai-fallback__editor-add-button:focus-visible {
+        outline: 3px solid Highlight;
+        outline-offset: 2px;
+    }
+
+    .tm-ai-fallback__answer-arrow[data-success="true"] {
+        color: Highlight;
+    }
+}

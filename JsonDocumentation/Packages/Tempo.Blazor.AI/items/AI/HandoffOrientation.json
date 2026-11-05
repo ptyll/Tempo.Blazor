@@ -1,0 +1,11 @@
+{
+  "itemName": "HandoffOrientation",
+  "kind": "Enum",
+  "category": "Components",
+  "namespace": "Tempo.Blazor.Components.AI",
+  "description": "How TmAgentHandoff lays its chain out. The two orientations render the SAME ordered list — vertical by default, horizontal for a handoff shown along a toolbar or a wide card — so a reader loses no fact and no test has to know two markups.",
+  "packageId": "Tempo.Blazor.AI",
+  "sourcePath": "src/Tempo.Blazor.AI/Components/AI/HandoffOrientation.cs",
+  "documentationStatus": "documented",
+  "usageExample": "<TmAgentHandoff Steps=\"_steps\" Orientation=\"HandoffOrientation.Horizontal\" />"
+}

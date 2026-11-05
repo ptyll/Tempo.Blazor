@@ -1,0 +1,11 @@
+{
+  "itemName": "AgentHandoffViewMode",
+  "kind": "Enum",
+  "category": "Components",
+  "namespace": "Tempo.Blazor.Components.AI",
+  "description": "How TmAgentHandoff presents a chain. Both presentations render the SAME steps; the chain view is never the only way to read the data (WCAG 1.1.1 / 1.4.1), because a reader who cannot follow the arrows — with a screen reader, a keyboard only, or a narrow phone — gets every step, every passed item and every loss as a plain table.",
+  "packageId": "Tempo.Blazor.AI",
+  "sourcePath": "src/Tempo.Blazor.AI/Components/AI/AgentHandoffViewMode.cs",
+  "documentationStatus": "documented",
+  "usageExample": "<TmAgentHandoff Steps=\"_steps\" @bind-ViewMode=\"_view\" />\n\n@code {\n    private AgentHandoffViewMode _view = AgentHandoffViewMode.Chain;\n}"
+}

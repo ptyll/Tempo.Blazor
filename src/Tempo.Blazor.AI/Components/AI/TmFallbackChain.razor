@@ -1,0 +1,281 @@
+@namespace Tempo.Blazor.Components.AI
+@inherits Tempo.Blazor.Components.TmComponentBase
+@using System.Globalization
+@using Tempo.Blazor.AI.Models
+@using Tempo.Blazor.Components.DataDisplay
+@using Tempo.Blazor.Components.Icons
+@using Tempo.Blazor.Components.Inputs
+
+@* The models tried for ONE request, in order: a node per attempt with its result as an icon, a word and a tone, the
+   reason a failed or skipped attempt never answered, its latency and its time — joined by decorative SVG arrows and
+   ending in the Answer node the first successful attempt branches to. The edit mode swaps the flow for the chain
+   editor: the shared TmSortableList (drag + keyboard + move menu), add-from-catalogue and remove, plus the policy.
+
+   The arrows only repeat the order the ordered list already carries, so they are aria-hidden. ONE polite live region
+   announces an add and a remove; a reorder is narrated by the sortable list itself. *@
+<section class="@RootClass"
+         data-testid="@RootTestId("fallback-chain")"
+         data-mode="@(IsEdit ? "edit" : "view")"
+         data-view="@ViewSlug"
+         @attributes="AdditionalAttributes">
+
+    <div class="tm-ai-fallback__header">
+        @if (ShowTitle)
+        {
+            @SurfaceTitle
+        }
+
+        @if (!IsEdit && !IsEmpty)
+        {
+            <div class="tm-ai-fallback__view" data-testid="@TestId("fallback-chain-view")">
+                <TmSegmentedControl TValue="FallbackChainViewMode"
+                                    Size="SegmentedControlSize.Sm"
+                                    Label="@Loc["TmFallbackChain_ViewLabel"]"
+                                    Options="ViewOptions"
+                                    Value="@_viewMode"
+                                    ValueChanged="OnViewModeChangedAsync" />
+            </div>
+        }
+
+        @if (ShowPolicy && !IsEdit && !IsEmpty)
+        {
+            <p class="tm-ai-fallback__policy" data-policy="@PolicySlug">
+                <span class="tm-ai-fallback__policy-label" data-testid="@TestId("fallback-chain-policy-label")">@Loc["TmFallbackChain_PolicyLabel"]</span>
+                <span class="tm-ai-fallback__policy-value" data-testid="@TestId("fallback-chain-policy")">@PolicyText</span>
+            </p>
+        }
+    </div>
+
+    @if (IsEdit)
+    {
+        <div class="tm-ai-fallback__editor" data-testid="@TestId("fallback-chain-editor")">
+            @* The hint is the LAST resort for the focus hand-back: with no row and a disabled Add control it is
+               the only thing left to land on, so it is reachable programmatically (never a tab stop). *@
+            <p class="tm-ai-fallback__editor-hint"
+               id="@EditorHintId"
+               tabindex="-1"
+               @ref="_editorHint"
+               data-testid="@TestId("fallback-chain-editor-hint")">@Loc["TmFallbackChain_EditorHint"]</p>
+
+            @if (ChainEntries.Count == 0)
+            {
+                <p class="tm-ai-fallback__editor-empty" data-testid="@TestId("fallback-chain-editor-empty")">@Loc["TmFallbackChain_ChainEmpty"]</p>
+            }
+            else
+            {
+                <div class="tm-ai-fallback__editor-list"
+                     aria-describedby="@EditorHintId"
+                     data-testid="@TestId("fallback-chain-sortable")">
+                    <TmSortableList @ref="_sortable"
+                                    TItem="FallbackChainEntry"
+                                    Items="_chain"
+                                    AriaLabel="@Loc["TmFallbackChain_EditorListLabel"]"
+                                    KeySelector="entry => entry.ModelId"
+                                    ItemLabelSelector="entry => entry.DisplayName"
+                                    OnReorder="ReorderAsync">
+                        <ItemTemplate Context="entry">
+                            <span class="tm-ai-fallback__editor-row"
+                                  data-testid="@TestId("fallback-chain-editor-row")"
+                                  data-model-id="@entry.ModelId">
+                                <span class="tm-ai-fallback__editor-row-label">@entry.DisplayName</span>
+                                <span class="tm-ai-fallback__editor-row-id">@entry.ModelId</span>
+                                <button type="button"
+                                        class="tm-ai-fallback__editor-remove"
+                                        aria-label="@Loc["TmFallbackChain_RemoveNamed", entry.DisplayName]"
+                                        data-testid="@TestId("fallback-chain-editor-remove")"
+                                        @onclick="() => RemoveAsync(entry)">@Loc["TmFallbackChain_Remove"]</button>
+                            </span>
+                        </ItemTemplate>
+                    </TmSortableList>
+                </div>
+            }
+
+            <div class="tm-ai-fallback__editor-add">
+                <label class="tm-ai-fallback__editor-add-label" for="@AddSelectId">@Loc["TmFallbackChain_AddLabel"]</label>
+                <select id="@AddSelectId"
+                        class="tm-ai-fallback__editor-select"
+                        @ref="_addSelect"
+                        data-testid="@TestId("fallback-chain-editor-add")"
+                        disabled="@(!CanAdd)"
+                        @bind="_selectedModelId">
+                    @foreach (var model in _addable)
+                    {
+                        <option value="@model.Id">@model.Name</option>
+                    }
+                </select>
+                <button type="button"
+                        class="tm-ai-fallback__editor-add-button"
+                        data-testid="@TestId("fallback-chain-editor-add-button")"
+                        disabled="@(!CanAdd)"
+                        @onclick="AddSelectedAsync">@Loc["TmFallbackChain_AddButton"]</button>
+
+                @if (!CanAdd)
+                {
+                    <p class="tm-ai-fallback__editor-note" data-testid="@TestId("fallback-chain-editor-note")">@AddNote</p>
+                }
+            </div>
+
+            @if (ShowPolicy)
+            {
+                <div class="tm-ai-fallback__editor-policy" data-testid="@TestId("fallback-chain-editor-policy")">
+                    @* An INSTRUCTION, not the run view's noun phrase: the same words twice would make the editor read
+                       as a second read-out instead of a choice the reader can change. *@
+                    <TmSegmentedControl TValue="FallbackResolutionPolicy"
+                                        Size="SegmentedControlSize.Sm"
+                                        Label="@Loc["TmFallbackChain_PolicyEditLabel"]"
+                                        Options="PolicyOptions"
+                                        Value="@_policy"
+                                        ValueChanged="OnPolicyChangedAsync" />
+                </div>
+            }
+        </div>
+    }
+    else if (IsEmpty)
+    {
+        <p class="tm-ai-fallback__empty" data-testid="@TestId("fallback-chain-empty")">@Loc["TmFallbackChain_Empty"]</p>
+    }
+    else if (EffectiveViewMode == FallbackChainViewMode.Table)
+    {
+        @* The text alternative: the same attempts, results, reasons and latencies without the geometry. *@
+        <table class="tm-ai-fallback__table" data-testid="@TestId("fallback-chain-table")">
+            <caption>@Loc["TmFallbackChain_TableCaption"]</caption>
+            <thead>
+                <tr>
+                    <th scope="col">@Loc["TmFallbackChain_TablePosition"]</th>
+                    <th scope="col">@Loc["TmFallbackChain_TableModel"]</th>
+                    <th scope="col">@Loc["TmFallbackChain_TableStatus"]</th>
+                    <th scope="col">@Loc["TmFallbackChain_TableReason"]</th>
+                    <th scope="col">@Loc["TmFallbackChain_TableLatency"]</th>
+                    <th scope="col">@Loc["TmFallbackChain_TableAt"]</th>
+                </tr>
+            </thead>
+            <tbody>
+                @for (var index = 0; index < _attempts.Count; index++)
+                {
+                    var attempt = _attempts[index];
+                    <tr data-testid="@TestId("fallback-chain-table-row")" data-model-id="@attempt.ModelId">
+                        <td>@PositionText(index + 1)</td>
+                        <th scope="row">@attempt.DisplayName</th>
+                        <td>@FallbackPresentation.StatusText(Loc, attempt.Status)</td>
+                        <td>@(attempt.HasFailureReason ? attempt.FailureReason : Loc["TmAgentHandoff_None"])</td>
+                        <td>@TableLatencyText(attempt)</td>
+                        <td>@TableTimeText(attempt)</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+    else
+    {
+        <p class="tm-sr-only" id="@InstructionsId" data-testid="@TestId("fallback-chain-instructions")">@Loc["TmFallbackChain_Instructions"]</p>
+
+        <ol class="tm-ai-fallback__flow"
+            role="list"
+            aria-label="@Loc["TmFallbackChain_FlowLabel"]"
+            aria-describedby="@InstructionsId"
+            data-testid="@TestId("fallback-chain-flow")">
+            @for (var index = 0; index < _attempts.Count; index++)
+            {
+                var attempt = _attempts[index];
+                var position = index + 1;
+                var last = index == _attempts.Count - 1;
+
+                <li class="tm-ai-fallback__node tm-ai-fallback__node--@FallbackPresentation.StatusTone(attempt.Status)"
+                    role="listitem"
+                    data-model-id="@attempt.ModelId"
+                    data-status="@FallbackPresentation.StatusTone(attempt.Status)"
+                    data-position="@position.ToString(CultureInfo.InvariantCulture)"
+                    data-testid="@TestId("fallback-chain-node")">
+                    <div class="tm-ai-fallback__node-head">
+                        <span class="tm-ai-fallback__node-position" data-testid="@TestId("fallback-chain-node-position")">@PositionText(position)</span>
+                        <span class="tm-ai-fallback__node-label" data-testid="@TestId("fallback-chain-node-label")">@attempt.DisplayName</span>
+                        <span class="tm-ai-fallback__node-state"
+                              data-status="@FallbackPresentation.StatusTone(attempt.Status)"
+                              data-testid="@TestId("fallback-chain-node-status")">
+                            <span class="tm-ai-fallback__node-state-icon" aria-hidden="true">
+                                <TmIcon Name="@FallbackPresentation.StatusIcon(attempt.Status)" Size="IconSize.Xs" />
+                            </span>
+                            <span class="tm-ai-fallback__node-state-text">@FallbackPresentation.StatusText(Loc, attempt.Status)</span>
+                        </span>
+                    </div>
+
+                    @if (attempt.HasFailureReason)
+                    {
+                        <p class="tm-ai-fallback__node-reason" data-testid="@TestId("fallback-chain-node-reason")">
+                            <span class="tm-ai-fallback__node-reason-label">@Loc["TmFallbackChain_Reason"]</span>
+                            <span class="tm-ai-fallback__node-reason-text">@attempt.FailureReason</span>
+                        </p>
+                    }
+
+                    @if (attempt.HasLatency || attempt.At is not null)
+                    {
+                        <dl class="tm-ai-fallback__node-facts">
+                            @if (attempt.HasLatency)
+                            {
+                                <dt>@Loc["TmFallbackChain_Latency"]</dt>
+                                <dd data-testid="@TestId("fallback-chain-node-latency")">@LatencyText(attempt)</dd>
+                            }
+                            @if (attempt.At is { } at)
+                            {
+                                <dt>@Loc["TmFallbackChain_At"]</dt>
+                                <dd data-testid="@TestId("fallback-chain-node-at")">@TimeText(at)</dd>
+                            }
+                        </dl>
+                    }
+
+                    @if (!last)
+                    {
+                        <span class="tm-ai-fallback__arrow" aria-hidden="true" data-testid="@TestId("fallback-chain-arrow")">
+                            <svg viewBox="0 0 12 24" width="12" height="24" focusable="false">
+                                <path d="M6 0 V19" />
+                                <path d="M1 14 L6 20 L11 14" />
+                            </svg>
+                        </span>
+                    }
+                </li>
+            }
+        </ol>
+
+        @* The branch every attempt above was trying to reach: the successful one, or an honest empty answer. *@
+        <span class="tm-ai-fallback__answer-arrow"
+              aria-hidden="true"
+              data-success="@(HasAnswer ? "true" : "false")"
+              data-testid="@TestId("fallback-chain-answer-arrow")">
+            <svg viewBox="0 0 12 24" width="12" height="24" focusable="false">
+                <path d="M6 0 V19" />
+                <path d="M1 14 L6 20 L11 14" />
+            </svg>
+        </span>
+
+        <div class="tm-ai-fallback__answer"
+             data-answered="@(HasAnswer ? "true" : "false")"
+             data-testid="@TestId("fallback-chain-answer")">
+            <span class="tm-ai-fallback__answer-icon" aria-hidden="true">
+                <TmIcon Name="@(HasAnswer ? IconNames.CheckCircle : IconNames.Circle)" Size="IconSize.Sm" />
+            </span>
+            <span class="tm-ai-fallback__answer-text">
+                <span class="tm-ai-fallback__answer-label">@Loc["TmFallbackChain_AnswerLabel"]</span>
+                <span class="tm-ai-fallback__answer-model" data-testid="@TestId("fallback-chain-answer-model")">@AnswerText</span>
+            </span>
+        </div>
+    }
+
+    <div class="tm-sr-only"
+         role="status"
+         aria-live="polite"
+         aria-atomic="true"
+         data-testid="@TestId("fallback-chain-announcement")">@_announcement</div>
+</section>
+
+@code {
+    /// <summary>The surface heading, built at the requested level without duplicating the markup six times.</summary>
+    private RenderFragment SurfaceTitle => builder =>
+    {
+        builder.OpenElement(0, "h" + EffectiveHeadingLevel.ToString(CultureInfo.InvariantCulture));
+        builder.AddAttribute(1, "class", "tm-ai-fallback__title");
+        builder.AddAttribute(2, "id", TitleId);
+        builder.AddAttribute(3, "data-testid", TestId("fallback-chain-title"));
+        builder.AddContent(4, HeadingText);
+        builder.CloseElement();
+    };
+}

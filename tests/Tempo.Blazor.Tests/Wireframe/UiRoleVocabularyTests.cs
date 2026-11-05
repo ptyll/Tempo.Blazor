@@ -96,7 +96,8 @@ public sealed class UiRoleVocabularyTests
         // then 141 for `context-usage` (plan 3e96f6d8 phase 5),
         // then 142 for `prompt-library` (plan 3e96f6d8 phase 6),
         // then 143 for `agent-badge` (plan d67b33af phase 1).
-        vocabulary.GetAll().Should().HaveCountLessThanOrEqualTo(147); // + fan-out-grid, parallel-attempts (plan d67b33af, phase 4)
+        // then 147 for `fan-out-grid` and `parallel-attempts` (plan d67b33af phase 4).
+        vocabulary.GetAll().Should().HaveCountLessThanOrEqualTo(149); // + agent-handoff, fallback-chain (plan d67b33af, phase 5)
 
         vocabulary.Find("search-input")!.Slug.Should().Be("search-input");
         vocabulary.Find("TmDecimalInput")!.Slug.Should().Be("decimal-input");

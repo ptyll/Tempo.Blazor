@@ -283,11 +283,29 @@ a winner the reader picks with the native radios and CONFIRMS — the two-step c
 replacing a recorded result, and the confirmation hands the focus back to the radio. Its contract is
 [parallel-attempts.md](parallel-attempts.md).
 
+## The handover and the fallback: `TmAgentHandoff` and `TmFallbackChain`
+
+`TmAgentHandoff` is what happens BETWEEN agents: a run handed over as a chain of labelled steps — who handed what to
+whom and when, how the receiving agent answered, and, behind a native Details button, the two lists that matter: what
+the next agent received and what was lost, with the reason for every loss. Each step's state and each item's kind is an
+icon AND a word AND a tone, the chain is a real ordered list whose arrows are decorative, the table view carries every
+step and every loss reason as text, and ONE polite live region speaks only when a step the reader was on disappears and
+the focus has to move. Its contract is [agent-handoff.md](agent-handoff.md).
+
+`TmFallbackChain` is which MODEL answered: the attempts in the order they were tried, each with its result, the reason
+it failed or was skipped and its measured latency, joined by decorative arrows and ending in the Answer node the first
+successful attempt branches to (an unanswered chain says so instead of tinting the node). The same component carries the
+editor a host opens over the chain — reorder through the shared `TmSortableList`, add from the host's catalogue, remove,
+and pick the resolution policy — reporting every change through `@bind-Chain` and `@bind-Policy`. Its contract is
+[fallback-chain.md](fallback-chain.md).
+
 ## Related pages
 
 - [TmAgentGraph](agent-graph.md) — the same run as a network of agents, tools and resources.
 - [TmFanOutGrid](fan-out-grid.md) — the work split across N workers, with attempts, countdowns and a summary.
 - [TmParallelAttempts](parallel-attempts.md) — several attempts at one task, with scores, votes and a confirmed winner.
+- [TmAgentHandoff](agent-handoff.md) — the run handed from agent to agent, with what travelled and what was lost.
+- [TmFallbackChain](fallback-chain.md) — the models tried for one request, ending in the answer, plus the chain editor.
 - [TmAgentLanes](agent-lanes.md), [TmAgentPlan](agent-plan.md), [TmAgentRunTree](agent-run-tree.md), [TmAgentMonitor](agent-monitor.md),
   [TmPermissionRequest](permission-request.md) — the run-side surfaces that these visualizations compose with.
 - [TmTraceWaterfall](trace-waterfall.md) — the span view of one agent's work.

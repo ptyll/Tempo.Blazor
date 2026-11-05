@@ -1,0 +1,332 @@
+@namespace Tempo.Blazor.Components.AI
+@inherits Tempo.Blazor.Components.TmComponentBase
+@using System.Globalization
+@using Tempo.Blazor.AI.Models
+@using Tempo.Blazor.Components.Icons
+@using Tempo.Blazor.Components.Inputs
+
+@* A run handed from agent to agent as ONE chain: a labelled step per handoff with its route (from → to), the time it
+   happened, how the receiving agent answered, and — behind a native Details button — the two lists that matter: what
+   was passed on and what was lost, with the reason for every loss. A chain-wide sentence below names what the run
+   actually dropped.
+
+   Every state and every item kind is an ICON plus a WORD plus a tone (never colour alone). The chain is a real ordered
+   list, so the sequence survives a screen reader; the arrows merely repeat it and are aria-hidden. ONE polite live
+   region speaks only when a step the reader was on disappears from the host's data and the focus has to move. *@
+<section class="@RootClass"
+         data-testid="@RootTestId("agent-handoff")"
+         data-orientation="@OrientationSlug"
+         data-view="@ViewSlug"
+         @attributes="AdditionalAttributes">
+
+    <div class="tm-ai-handoff__header">
+        @if (ShowTitle)
+        {
+            @SurfaceTitle
+        }
+
+        @if (ShowBody)
+        {
+            <div class="tm-ai-handoff__view" data-testid="@TestId("agent-handoff-view")">
+                <TmSegmentedControl TValue="AgentHandoffViewMode"
+                                    Size="SegmentedControlSize.Sm"
+                                    Label="@Loc["TmAgentHandoff_ViewLabel"]"
+                                    Options="ViewOptions"
+                                    Value="@_viewMode"
+                                    ValueChanged="OnViewModeChangedAsync" />
+            </div>
+        }
+    </div>
+
+    @if (ShowSummary && ShowBody)
+    {
+        @* The roll-up sits in a named group (a dl may not be named) so a reader can jump straight to it. *@
+        <div class="tm-ai-handoff__summary"
+             role="group"
+             aria-label="@Loc["TmAgentHandoff_SummaryLabel"]"
+             data-testid="@TestId("agent-handoff-summary")">
+            <dl class="tm-ai-handoff__stats">
+                <div class="tm-ai-handoff__stat">
+                    <dt class="tm-ai-handoff__stat-label">@Loc["TmAgentHandoff_SummarySteps"]</dt>
+                    <dd class="tm-ai-handoff__stat-value" data-testid="@TestId("agent-handoff-summary-steps")">@StepsValue</dd>
+                </div>
+                <div class="tm-ai-handoff__stat">
+                    <dt class="tm-ai-handoff__stat-label">@Loc["TmAgentHandoff_SummaryPassed"]</dt>
+                    <dd class="tm-ai-handoff__stat-value" data-testid="@TestId("agent-handoff-summary-passed")">@SummaryData.PassedItems</dd>
+                </div>
+                <div class="tm-ai-handoff__stat">
+                    <dt class="tm-ai-handoff__stat-label">@Loc["TmAgentHandoff_SummaryLost"]</dt>
+                    <dd class="tm-ai-handoff__stat-value" data-testid="@TestId("agent-handoff-summary-lost")">@SummaryData.LostItems</dd>
+                </div>
+                <div class="tm-ai-handoff__stat">
+                    <dt class="tm-ai-handoff__stat-label">@Loc["TmAgentHandoff_SummaryLossRate"]</dt>
+                    <dd class="tm-ai-handoff__stat-value" data-testid="@TestId("agent-handoff-summary-rate")">@LossRateValue</dd>
+                </div>
+            </dl>
+            <p class="tm-ai-handoff__summary-state" data-testid="@TestId("agent-handoff-summary-state")">@StateValue</p>
+        </div>
+    }
+
+    @if (IsEmpty)
+    {
+        <p class="tm-ai-handoff__empty" data-testid="@TestId("agent-handoff-empty")">@Loc["TmAgentHandoff_Empty"]</p>
+    }
+    else if (_viewMode == AgentHandoffViewMode.Table)
+    {
+        @* The text alternative: the same steps, routes, states, item labels and loss reasons without the geometry. *@
+        <table class="tm-ai-handoff__table" data-testid="@TestId("agent-handoff-table")">
+            <caption>@Loc["TmAgentHandoff_TableCaption"]</caption>
+            <thead>
+                <tr>
+                    <th scope="col">@Loc["TmAgentHandoff_TableStep"]</th>
+                    <th scope="col">@Loc["TmAgentHandoff_TableFrom"]</th>
+                    <th scope="col">@Loc["TmAgentHandoff_TableTo"]</th>
+                    <th scope="col">@Loc["TmAgentHandoff_TableAt"]</th>
+                    <th scope="col">@Loc["TmAgentHandoff_TableStatus"]</th>
+                    <th scope="col">@Loc["TmAgentHandoff_TablePassed"]</th>
+                    <th scope="col">@Loc["TmAgentHandoff_TableLost"]</th>
+                </tr>
+            </thead>
+            <tbody>
+                @for (var index = 0; index < _steps.Count; index++)
+                {
+                    var step = _steps[index];
+                    var position = index + 1;
+                    <tr data-testid="@TestId("agent-handoff-table-row")" data-step-id="@step.Id">
+                        <th scope="row">@StepName(position)</th>
+                        <td>@FromText(step)</td>
+                        <td>@ToText(step)</td>
+                        <td>@(step.At is { } at ? TimeText(at) : Loc["TmAgentHandoff_None"])</td>
+                        <td>@HandoffPresentation.StatusText(Loc, step.Status)</td>
+                        <td>@PassedText(step)</td>
+                        <td>@LostText(step)</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+    else
+    {
+        <p class="tm-sr-only" id="@InstructionsId" data-testid="@TestId("agent-handoff-instructions")">@Loc["TmAgentHandoff_Instructions"]</p>
+
+        <ol class="tm-ai-handoff__chain"
+            role="list"
+            aria-label="@Loc["TmAgentHandoff_ChainLabel"]"
+            aria-describedby="@InstructionsId"
+            data-testid="@TestId("agent-handoff-chain")">
+            @for (var index = 0; index < _steps.Count; index++)
+            {
+                var step = _steps[index];
+                var position = index + 1;
+                var expanded = IsExpanded(step.Id);
+                var detailId = DetailIdOf(position);
+                var handle = HandleFor(step.Id);
+                var last = index == _steps.Count - 1;
+
+                <li class="tm-ai-handoff__step tm-ai-handoff__step--@HandoffPresentation.StatusTone(step.Status)"
+                    role="listitem"
+                    data-step-id="@step.Id"
+                    data-status="@HandoffPresentation.StatusTone(step.Status)"
+                    data-has-losses="@(step.HasLosses ? "true" : "false")"
+                    data-testid="@TestId("agent-handoff-step")">
+                    <div class="tm-ai-handoff__step-head">
+                        <span class="tm-ai-handoff__index" aria-hidden="true">@position</span>
+                        @StepTitle(position)
+                        <span class="tm-ai-handoff__status"
+                              data-status="@HandoffPresentation.StatusTone(step.Status)"
+                              data-testid="@TestId("agent-handoff-step-status")">
+                            <span class="tm-ai-handoff__status-icon" aria-hidden="true">
+                                <TmIcon Name="@HandoffPresentation.StatusIcon(step.Status)" Size="IconSize.Xs" />
+                            </span>
+                            <span class="tm-ai-handoff__status-text">@HandoffPresentation.StatusText(Loc, step.Status)</span>
+                        </span>
+                    </div>
+
+                    <div class="tm-ai-handoff__route" data-testid="@TestId("agent-handoff-step-route")">
+                        <span class="tm-ai-handoff__agent" data-testid="@TestId("agent-handoff-step-from")">
+                            @if (step.FromAgent is { } from)
+                            {
+                                <TmAgentBadge Agent="from" ShowStatus="false" Size="AgentBadgeSize.Sm" />
+                            }
+                            else
+                            {
+                                <span class="tm-ai-handoff__agent-name">@FromText(step)</span>
+                            }
+                        </span>
+                        <span class="tm-ai-handoff__route-arrow" aria-hidden="true">
+                            <svg viewBox="0 0 16 8" width="16" height="8" focusable="false">
+                                <path d="M0 4 H13" />
+                                <path d="M10 1 L14 4 L10 7" />
+                            </svg>
+                        </span>
+                        <span class="tm-ai-handoff__agent" data-testid="@TestId("agent-handoff-step-to")">
+                            @if (step.ToAgent is { } to)
+                            {
+                                <TmAgentBadge Agent="to" ShowStatus="false" Size="AgentBadgeSize.Sm" />
+                            }
+                            else
+                            {
+                                <span class="tm-ai-handoff__agent-name">@ToText(step)</span>
+                            }
+                        </span>
+                        @if (step.At is { } at)
+                        {
+                            <span class="tm-ai-handoff__at" data-testid="@TestId("agent-handoff-step-at")">@TimeText(at)</span>
+                        }
+                    </div>
+
+                    <p class="tm-ai-handoff__step-summary" data-testid="@TestId("agent-handoff-step-summary")">@SummaryText(step)</p>
+
+                    <button type="button"
+                            class="tm-ai-handoff__toggle"
+                            aria-expanded="@(expanded ? "true" : "false")"
+                            aria-controls="@(expanded ? detailId : null)"
+                            aria-label="@Loc["TmAgentHandoff_DetailsNamed", StepName(position)]"
+                            data-testid="@TestId("agent-handoff-step-toggle")"
+                            @ref="handle.Ref"
+                            @onfocus="() => OnToggleFocused(step.Id)"
+                            @onclick="() => ToggleAsync(step)">
+                        <span class="tm-ai-handoff__toggle-text">@Loc["TmAgentHandoff_Details"]</span>
+                        <span class="tm-ai-handoff__toggle-icon" aria-hidden="true">
+                            <TmIcon Name="@(expanded ? IconNames.ChevronUp : IconNames.ChevronDown)" Size="IconSize.Xs" />
+                        </span>
+                    </button>
+
+                    @if (expanded)
+                    {
+                        <div class="tm-ai-handoff__detail"
+                             id="@detailId"
+                             data-testid="@TestId("agent-handoff-step-detail")">
+                            <div class="tm-ai-handoff__group"
+                                 role="group"
+                                 aria-label="@Loc["TmAgentHandoff_Passed"]">
+                                <p class="tm-ai-handoff__group-title" aria-hidden="true">
+                                    <span class="tm-ai-handoff__group-icon">
+                                        <TmIcon Name="@IconNames.CheckCircle" Size="IconSize.Xs" />
+                                    </span>
+                                    <span class="tm-ai-handoff__group-text">@Loc["TmAgentHandoff_Passed"]</span>
+                                </p>
+                                @if (step.PassedCount == 0)
+                                {
+                                    <p class="tm-ai-handoff__group-empty" data-testid="@TestId("agent-handoff-passed-empty")">@Loc["TmAgentHandoff_NoPassed"]</p>
+                                }
+                                else
+                                {
+                                    <ul class="tm-ai-handoff__items" role="list">
+                                        @foreach (var item in step.PassedItems)
+                                        {
+                                            if (item is null)
+                                            {
+                                                continue;
+                                            }
+
+                                            <li class="tm-ai-handoff__item"
+                                                role="listitem"
+                                                data-kind="@HandoffPresentation.KindSlug(item.Kind)"
+                                                data-testid="@TestId("agent-handoff-passed-item")">
+                                                <span class="tm-ai-handoff__item-icon" aria-hidden="true">
+                                                    <TmIcon Name="@HandoffPresentation.KindIcon(item.Kind)" Size="IconSize.Xs" />
+                                                </span>
+                                                <span class="tm-ai-handoff__item-label">@ItemLabel(item)</span>
+                                                <span class="tm-ai-handoff__item-kind">@ItemKindText(item)</span>
+                                            </li>
+                                        }
+                                    </ul>
+                                }
+                            </div>
+
+                            <div class="tm-ai-handoff__group tm-ai-handoff__group--lost"
+                                 role="group"
+                                 aria-label="@Loc["TmAgentHandoff_Lost"]">
+                                <p class="tm-ai-handoff__group-title" aria-hidden="true">
+                                    <span class="tm-ai-handoff__group-icon">
+                                        <TmIcon Name="@IconNames.AlertTriangle" Size="IconSize.Xs" />
+                                    </span>
+                                    <span class="tm-ai-handoff__group-text">@Loc["TmAgentHandoff_Lost"]</span>
+                                </p>
+                                @if (step.LostCount == 0)
+                                {
+                                    <p class="tm-ai-handoff__group-empty" data-testid="@TestId("agent-handoff-lost-empty")">@Loc["TmAgentHandoff_NoLost"]</p>
+                                }
+                                else
+                                {
+                                    <ul class="tm-ai-handoff__items" role="list">
+                                        @foreach (var item in step.LostItems)
+                                        {
+                                            if (item is null)
+                                            {
+                                                continue;
+                                            }
+
+                                            <li class="tm-ai-handoff__item tm-ai-handoff__item--lost"
+                                                role="listitem"
+                                                data-kind="@HandoffPresentation.KindSlug(item.Kind)"
+                                                data-testid="@TestId("agent-handoff-lost-item")">
+                                                <span class="tm-ai-handoff__item-icon" aria-hidden="true">
+                                                    <TmIcon Name="@HandoffPresentation.KindIcon(item.Kind)" Size="IconSize.Xs" />
+                                                </span>
+                                                <span class="tm-ai-handoff__item-label">@ItemLabel(item)</span>
+                                                <span class="tm-ai-handoff__item-kind">@ItemKindText(item)</span>
+                                                @if (item.HasReason)
+                                                {
+                                                    <span class="tm-ai-handoff__item-reason"
+                                                          data-testid="@TestId("agent-handoff-lost-reason")">@Loc["TmAgentHandoff_LostReason", item.Reason]</span>
+                                                }
+                                            </li>
+                                        }
+                                    </ul>
+                                }
+                            </div>
+                        </div>
+                    }
+
+                    @if (!last)
+                    {
+                        <span class="tm-ai-handoff__connector" aria-hidden="true" data-testid="@TestId("agent-handoff-connector")">
+                            <svg viewBox="0 0 12 24" width="12" height="24" focusable="false">
+                                <path d="M6 0 V19" />
+                                <path d="M1 14 L6 20 L11 14" />
+                            </svg>
+                        </span>
+                    }
+                </li>
+            }
+        </ol>
+    }
+
+    @if (ShowBody)
+    {
+        <p class="tm-ai-handoff__lost-summary"
+           data-testid="@TestId("agent-handoff-lost-summary")"
+           data-has-losses="@(SummaryData.HasLosses ? "true" : "false")">@LostSummaryText</p>
+    }
+
+    <div class="tm-sr-only"
+         role="status"
+         aria-live="polite"
+         aria-atomic="true"
+         data-testid="@TestId("agent-handoff-announcement")">@_announcement</div>
+</section>
+
+@code {
+    /// <summary>The surface heading, built at the requested level without duplicating the markup six times.</summary>
+    private RenderFragment SurfaceTitle => builder =>
+    {
+        builder.OpenElement(0, "h" + EffectiveHeadingLevel.ToString(CultureInfo.InvariantCulture));
+        builder.AddAttribute(1, "class", "tm-ai-handoff__title");
+        builder.AddAttribute(2, "id", TitleId);
+        builder.AddAttribute(3, "data-testid", TestId("agent-handoff-title"));
+        builder.AddContent(4, HeadingText);
+        builder.CloseElement();
+    };
+
+    /// <summary>One step's heading, built at <see cref="StepHeadingLevel"/> (one below the surface heading).</summary>
+    private RenderFragment StepTitle(int position) => builder =>
+    {
+        builder.OpenElement(0, "h" + StepHeadingLevel.ToString(CultureInfo.InvariantCulture));
+        builder.AddAttribute(1, "class", "tm-ai-handoff__step-title");
+        builder.AddAttribute(2, "data-testid", TestId("agent-handoff-step-title"));
+        builder.AddContent(3, StepName(position));
+        builder.CloseElement();
+    };
+}

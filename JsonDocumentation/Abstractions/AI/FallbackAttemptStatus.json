@@ -1,0 +1,11 @@
+{
+  "itemName": "FallbackAttemptStatus",
+  "kind": "Enum",
+  "category": "AI",
+  "namespace": "Tempo.Blazor.AI.Models",
+  "description": "What became of one model in a fallback chain — the outcome a fallback surface paints per attempt. NotTried is the default (0) on purpose: an attempt a host has not classified yet must never read as skipped or succeeded, because both are claims about a run that cost money. The values are ordered from the least to the most consequential so a caller can compare them.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/AI/Agents/FallbackAttemptStatus.cs",
+  "documentationStatus": "documented",
+  "usageExample": "var attempt = new FallbackAttempt(\"gpt-4o-mini\")\n{\n    Status = FallbackAttemptStatus.Succeeded, // the chain ends here\n};"
+}

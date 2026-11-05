@@ -58,6 +58,15 @@ Models: `SortableReorderArgs` (`FromIndex`, `ToIndex`, `Source`), `SortableReord
 `OnSortableReorderCommitted(int fromIndex, int toIndex)` is the `[JSInvokable]` the pointer module calls;
 it is public only because JS must reach it, and it runs the same commit path as the keyboard side.
 
+`FocusItemAsync(int index)` moves the keyboard focus to the row at `index` of `Items` — the same index
+`OnReorder` reports, not a painted position — and returns whether a focus call was made. A host calls it for
+the focus hand-back WCAG 2.4.3 requires when the control a reader was on is deleted with its row (a
+`TmFallbackChain` editor does exactly this): the row that took the removed one's place receives the focus
+instead of the document body. It returns `false` when there is nothing to focus — the index is outside the
+list, the list is `Disabled` (a read-only row is not a tab stop), or the element has not been captured yet.
+The reference is kept per row KEY, so a host that applies the move itself and re-renders still focuses the
+row it named, not whichever row moved into that position.
+
 ## Applying the move
 
 `RemoveAt(FromIndex)` + `Insert(ToIndex, item)` reproduces the gesture exactly, because every intermediate

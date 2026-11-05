@@ -1164,5 +1164,16 @@
   "TmAiAgentsDemo_ParallelTitle": "Paralelní pokusy",
   "TmAiAgentsDemo_ParallelHint": "Tři pokusy o stejný úkol a hlasy, které každý získal. Vyberte vítěze, potvrďte a stránka výsledek zaznamená.",
   "TmAiAgentsDemo_ParallelChosen": "Stránka přijala {0} jako výsledek.",
-  "TmAiAgentsDemo_ParallelNothingChosen": "Zatím není vybrán vítěz."
+  "TmAiAgentsDemo_ParallelNothingChosen": "Zatím není vybrán vítěz.",
+  "TmAiAgentsDemo_HandoffTitle": "Řetěz předání",
+  "TmAiAgentsDemo_HandoffHint": "Stejný běh předávaný mezi agenty: co každé předání neslo, co ztratilo a proč.",
+  "TmAiAgentsDemo_HandoffOrientationLabel": "Směr řetězu",
+  "TmAiAgentsDemo_HandoffVertical": "Svisle",
+  "TmAiAgentsDemo_HandoffHorizontal": "Vodorovně",
+  "TmAiAgentsDemo_FallbackTitle": "Řetěz záložních modelů",
+  "TmAiAgentsDemo_FallbackHint": "Modely zkoušené pro jeden požadavek v pořadí: který odpověděl, který selhal a proč, a v jakém pořadí by se stránka zkoušela dál.",
+  "TmAiAgentsDemo_FallbackModeLabel": "Zobrazení",
+  "TmAiAgentsDemo_FallbackRun": "Běh",
+  "TmAiAgentsDemo_FallbackEdit": "Upravit řetěz",
+  "TmAiAgentsDemo_FallbackChainLog": "Řetěz: {0}"
 }

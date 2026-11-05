@@ -1,0 +1,127 @@
+{
+  "itemName": "HandoffChainSummary",
+  "kind": "Record",
+  "category": "AI",
+  "namespace": "Tempo.Blazor.AI.Models",
+  "description": "The roll-up of a whole handoff chain: how many steps there were and how many were settled, how much travelled, how much was lost, which step lost the most and which pieces of information were dropped anywhere in the chain. The record is derived, never stored by a host: Create folds the same HandoffStep list the surface renders, so the summary line and the per-step lists can never disagree. Every member is arithmetic over that list — no wording, no colour, no culture — because the words belong to the localizer and the tones to the stylesheet.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/AI/Agents/HandoffChainSummary.cs",
+  "documentationStatus": "documented",
+  "members": [
+    {
+      "name": "Create",
+      "kind": "Method",
+      "type": "HandoffChainSummary",
+      "description": "Folds a chain into its roll-up. Nulls inside the list are skipped, so a host that built the list from an optional query still gets a summary instead of a crash.",
+      "parameters": [
+        {
+          "name": "steps",
+          "type": "IReadOnlyList<HandoffStep>?"
+        }
+      ]
+    },
+    {
+      "name": "AcceptedCount",
+      "kind": "Property",
+      "type": "int",
+      "description": "How many steps the receiving agent accepted."
+    },
+    {
+      "name": "CompletedCount",
+      "kind": "Property",
+      "type": "int",
+      "description": "How many steps the receiving agent completed."
+    },
+    {
+      "name": "Empty",
+      "kind": "Property",
+      "type": "static HandoffChainSummary",
+      "description": "The roll-up of an empty chain: no steps, nothing passed and nothing lost."
+    },
+    {
+      "name": "HasLosses",
+      "kind": "Property",
+      "type": "bool",
+      "description": "Whether any step lost anything."
+    },
+    {
+      "name": "HasPending",
+      "kind": "Property",
+      "type": "bool",
+      "description": "Whether at least one step still waits for the receiving agent."
+    },
+    {
+      "name": "HasSteps",
+      "kind": "Property",
+      "type": "bool",
+      "description": "Whether the chain has steps at all."
+    },
+    {
+      "name": "IsComplete",
+      "kind": "Property",
+      "type": "bool",
+      "description": "Whether the chain is finished: it has steps and every one of them is completed."
+    },
+    {
+      "name": "ItemCount",
+      "kind": "Property",
+      "type": "int",
+      "description": "How many items the chain tried to hand over (passed plus lost)."
+    },
+    {
+      "name": "LossRate",
+      "kind": "Property",
+      "type": "double",
+      "description": "The share of the carried items that was lost, from 0 to 1, or 0 when the chain carried nothing (a loss rate needs a whole to be a rate of)."
+    },
+    {
+      "name": "LostItems",
+      "kind": "Property",
+      "type": "int",
+      "description": "How many items were lost across the whole chain (the sum over every step)."
+    },
+    {
+      "name": "LostLabels",
+      "kind": "Property",
+      "type": "IReadOnlyList<string>",
+      "description": "The labels of everything lost anywhere in the chain, de-duplicated case-insensitively and kept in the order the steps declared them — \"what the run actually dropped\", as opposed to how many pieces."
+    },
+    {
+      "name": "PassedItems",
+      "kind": "Property",
+      "type": "int",
+      "description": "How many items travelled across the whole chain (the sum over every step)."
+    },
+    {
+      "name": "PendingCount",
+      "kind": "Property",
+      "type": "int",
+      "description": "How many steps are still waiting for the receiving agent."
+    },
+    {
+      "name": "RejectedCount",
+      "kind": "Property",
+      "type": "int",
+      "description": "How many steps the receiving agent refused."
+    },
+    {
+      "name": "SettledCount",
+      "kind": "Property",
+      "type": "int",
+      "description": "How many steps were answered, whether accepted or completed."
+    },
+    {
+      "name": "StepCount",
+      "kind": "Property",
+      "type": "int",
+      "description": "How many steps the chain has."
+    },
+    {
+      "name": "WorstStepId",
+      "kind": "Property",
+      "type": "string?",
+      "description": "The identity of the step that lost the most items — the FIRST such step when several tie — or null when nothing was lost at all. A surface uses it to point at the damage; the step's own list carries the detail."
+    }
+  ],
+  "usageExample": "var summary = HandoffChainSummary.Create(steps);\n\n// summary.SettledCount, summary.LostItems, summary.LossRate, summary.LostLabels\n// and summary.WorstStepId are the numbers the surface prints."
+}

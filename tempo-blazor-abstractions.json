@@ -2731,6 +2731,192 @@
       ]
     },
     {
+      "itemName": "FallbackAttempt",
+      "kind": "Record",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.AI.Models",
+      "description": "One model tried in a fallback chain: which model it was, how the attempt ended, why it failed or was skipped, how long it took and when it ran. The record is a VALUE: a host recomposes it with attempt with { … } as the chain walks on, and no component mutates it. ModelId is the identity the host's own catalogue uses (the same id an AiModelInfo carries), so an attempt can be matched to the model that was picked; the surface never needs the catalogue to paint an attempt. A failure or a skip is only ever painted together with its REASON and a localized word: a red branch on a diagram is not an explanation (WCAG 1.4.1), and an attempt that reports no latency simply shows no latency rather than a zero the host never measured.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/AI/Agents/FallbackAttempt.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "At",
+          "kind": "Property",
+          "type": "DateTimeOffset?",
+          "description": "When the attempt ran, or null when the host does not record it."
+        },
+        {
+          "name": "DisplayName",
+          "kind": "Property",
+          "type": "string",
+          "description": "The name a surface prints: Label when the host supplied one, else ModelId."
+        },
+        {
+          "name": "Failed",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Whether the attempt ran and failed."
+        },
+        {
+          "name": "FailureReason",
+          "kind": "Property",
+          "type": "string?",
+          "description": "Why the attempt failed or was skipped, in the host's own words (\"rate limited\", \"no vision support\", \"budget exhausted\"). Empty renders no reason; the surface prints it verbatim and never parses it."
+        },
+        {
+          "name": "HasFailureReason",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Whether the attempt carries a reason worth printing."
+        },
+        {
+          "name": "HasKnownStatus",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Whether Status is one of the declared states (a cast integer may not be)."
+        },
+        {
+          "name": "HasLabel",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Whether the host supplied a label for the model."
+        },
+        {
+          "name": "HasLatency",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Whether the host measured a usable latency (a missing or negative value counts as none)."
+        },
+        {
+          "name": "IsPassive",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Whether the attempt is a passive outcome (not tried or skipped) — the states in which nothing was spent and the chain simply moved on."
+        },
+        {
+          "name": "Label",
+          "kind": "Property",
+          "type": "string",
+          "description": "The model as the reader should see it, when the host's catalogue names it differently from the id. Empty falls back to ModelId, so no attempt is ever blank."
+        },
+        {
+          "name": "Latency",
+          "kind": "Property",
+          "type": "TimeSpan?",
+          "description": "The measured latency as a duration, or null when the host did not measure one."
+        },
+        {
+          "name": "LatencyMs",
+          "kind": "Property",
+          "type": "long?",
+          "description": "How long the attempt took, in MILLISECONDS, or null when the host did not measure it. A negative value reads as \"not measured\" too — a duration below zero is not a fact a surface can print."
+        },
+        {
+          "name": "ModelId",
+          "kind": "Property",
+          "type": "string",
+          "description": "Stable identity of the model that was tried. Never empty: a missing id is generated at construction."
+        },
+        {
+          "name": "NotTried",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Whether the attempt never ran."
+        },
+        {
+          "name": "Skipped",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Whether the attempt was deliberately not made."
+        },
+        {
+          "name": "Status",
+          "kind": "Property",
+          "type": "FallbackAttemptStatus",
+          "description": "How the attempt ended. Default NotTried; painted as an icon, a localized word AND a tone, never as a colour alone."
+        },
+        {
+          "name": "Succeeded",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Whether the attempt produced the answer."
+        }
+      ],
+      "usageExample": "var attempt = new FallbackAttempt(\"gpt-4o\")\n{\n    Label = \"GPT-4o\",\n    Status = FallbackAttemptStatus.Failed,\n    FailureReason = \"Provider rate limit\",\n    LatencyMs = 1200,\n    At = DateTimeOffset.UtcNow,\n};\n\n// A failed branch keeps its reason and its measured latency."
+    },
+    {
+      "itemName": "FallbackAttemptStatus",
+      "kind": "Enum",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.AI.Models",
+      "description": "What became of one model in a fallback chain — the outcome a fallback surface paints per attempt. NotTried is the default (0) on purpose: an attempt a host has not classified yet must never read as skipped or succeeded, because both are claims about a run that cost money. The values are ordered from the least to the most consequential so a caller can compare them.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/AI/Agents/FallbackAttemptStatus.cs",
+      "documentationStatus": "merged",
+      "usageExample": "var attempt = new FallbackAttempt(\"gpt-4o-mini\")\n{\n    Status = FallbackAttemptStatus.Succeeded, // the chain ends here\n};"
+    },
+    {
+      "itemName": "FallbackChainEntry",
+      "kind": "Record",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.AI.Models",
+      "description": "One model in the ORDERED chain a host falls back through: the model's identity plus the name the reader should see. The record is a VALUE and the chain is an ordered list of these, so a reorder is a new list rather than a mutation. It deliberately carries no score, price or capability: a chain is a sequence of choices, and the facts that drive the choice live in the host's AiModelInfo catalogue.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/AI/Agents/FallbackChainEntry.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "FromModel",
+          "kind": "Method",
+          "type": "FallbackChainEntry?",
+          "description": "Builds an entry from a catalogue model, so a host that offers AvailableModels can add one to its chain without copying the identity by hand.",
+          "parameters": [
+            {
+              "name": "model",
+              "type": "AiModelInfo?"
+            }
+          ]
+        },
+        {
+          "name": "DisplayName",
+          "kind": "Property",
+          "type": "string",
+          "description": "The name a surface prints: Label when the host supplied one, else ModelId."
+        },
+        {
+          "name": "HasLabel",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Whether the host supplied a label for the model."
+        },
+        {
+          "name": "Label",
+          "kind": "Property",
+          "type": "string",
+          "description": "The model as the reader should see it. Empty falls back to ModelId."
+        },
+        {
+          "name": "ModelId",
+          "kind": "Property",
+          "type": "string",
+          "description": "Stable identity of the model in the chain. Never empty: a missing id is generated at construction."
+        }
+      ],
+      "usageExample": "var chain = new[]\n{\n    new FallbackChainEntry(\"gpt-4o\", \"GPT-4o\"),\n    FallbackChainEntry.FromModel(new AiModelInfo(\"gpt-4o-mini\", \"GPT-4o mini\"))!,\n};"
+    },
+    {
+      "itemName": "FallbackResolutionPolicy",
+      "kind": "Enum",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.AI.Models",
+      "description": "How a host resolves which model answers when a chain offers more than one — the rule the chain FOLLOWS, which is a different fact from the order of the chain itself. Pin is the default (0) on purpose: an unset policy must not silently fall back to another model, because switching models mid-run is a decision a host has to make explicitly. The surface paints the policy as a word, never as a colour, so a reader can tell a pinned single model from an ordered fallback.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/AI/Agents/FallbackResolutionPolicy.cs",
+      "documentationStatus": "merged",
+      "usageExample": "var chain = new[] { new FallbackChainEntry(\"gpt-4o\", \"GPT-4o\") };\nvar policy = FallbackResolutionPolicy.Pin; // nothing falls back until the host says so"
+    },
+    {
       "itemName": "FanOutSummary",
       "kind": "Record",
       "category": "AI",
@@ -3055,6 +3241,373 @@
         }
       ],
       "usageExample": "var task = new FanOutTask(\"region-7\", \"Region 7\")\n{\n    Status = AgentActivityStatus.Running,\n    Attempt = 2,\n    MaxAttempts = 3,\n    EstimatedEndAt = now.AddSeconds(42),\n    CostMicroUnits = 120_000,\n};"
+    },
+    {
+      "itemName": "HandoffChainSummary",
+      "kind": "Record",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.AI.Models",
+      "description": "The roll-up of a whole handoff chain: how many steps there were and how many were settled, how much travelled, how much was lost, which step lost the most and which pieces of information were dropped anywhere in the chain. The record is derived, never stored by a host: Create folds the same HandoffStep list the surface renders, so the summary line and the per-step lists can never disagree. Every member is arithmetic over that list — no wording, no colour, no culture — because the words belong to the localizer and the tones to the stylesheet.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/AI/Agents/HandoffChainSummary.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Create",
+          "kind": "Method",
+          "type": "HandoffChainSummary",
+          "description": "Folds a chain into its roll-up. Nulls inside the list are skipped, so a host that built the list from an optional query still gets a summary instead of a crash.",
+          "parameters": [
+            {
+              "name": "steps",
+              "type": "IReadOnlyList<HandoffStep>?"
+            }
+          ]
+        },
+        {
+          "name": "AcceptedCount",
+          "kind": "Property",
+          "type": "int",
+          "description": "How many steps the receiving agent accepted."
+        },
+        {
+          "name": "CompletedCount",
+          "kind": "Property",
+          "type": "int",
+          "description": "How many steps the receiving agent completed."
+        },
+        {
+          "name": "Empty",
+          "kind": "Property",
+          "type": "static HandoffChainSummary",
+          "description": "The roll-up of an empty chain: no steps, nothing passed and nothing lost."
+        },
+        {
+          "name": "HasLosses",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Whether any step lost anything."
+        },
+        {
+          "name": "HasPending",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Whether at least one step still waits for the receiving agent."
+        },
+        {
+          "name": "HasSteps",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Whether the chain has steps at all."
+        },
+        {
+          "name": "IsComplete",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Whether the chain is finished: it has steps and every one of them is completed."
+        },
+        {
+          "name": "ItemCount",
+          "kind": "Property",
+          "type": "int",
+          "description": "How many items the chain tried to hand over (passed plus lost)."
+        },
+        {
+          "name": "LossRate",
+          "kind": "Property",
+          "type": "double",
+          "description": "The share of the carried items that was lost, from 0 to 1, or 0 when the chain carried nothing (a loss rate needs a whole to be a rate of)."
+        },
+        {
+          "name": "LostItems",
+          "kind": "Property",
+          "type": "int",
+          "description": "How many items were lost across the whole chain (the sum over every step)."
+        },
+        {
+          "name": "LostLabels",
+          "kind": "Property",
+          "type": "IReadOnlyList<string>",
+          "description": "The labels of everything lost anywhere in the chain, de-duplicated case-insensitively and kept in the order the steps declared them — \"what the run actually dropped\", as opposed to how many pieces."
+        },
+        {
+          "name": "PassedItems",
+          "kind": "Property",
+          "type": "int",
+          "description": "How many items travelled across the whole chain (the sum over every step)."
+        },
+        {
+          "name": "PendingCount",
+          "kind": "Property",
+          "type": "int",
+          "description": "How many steps are still waiting for the receiving agent."
+        },
+        {
+          "name": "RejectedCount",
+          "kind": "Property",
+          "type": "int",
+          "description": "How many steps the receiving agent refused."
+        },
+        {
+          "name": "SettledCount",
+          "kind": "Property",
+          "type": "int",
+          "description": "How many steps were answered, whether accepted or completed."
+        },
+        {
+          "name": "StepCount",
+          "kind": "Property",
+          "type": "int",
+          "description": "How many steps the chain has."
+        },
+        {
+          "name": "WorstStepId",
+          "kind": "Property",
+          "type": "string?",
+          "description": "The identity of the step that lost the most items — the FIRST such step when several tie — or null when nothing was lost at all. A surface uses it to point at the damage; the step's own list carries the detail."
+        }
+      ],
+      "usageExample": "var summary = HandoffChainSummary.Create(steps);\n\n// summary.SettledCount, summary.LostItems, summary.LossRate, summary.LostLabels\n// and summary.WorstStepId are the numbers the surface prints."
+    },
+    {
+      "itemName": "HandoffItem",
+      "kind": "Record",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.AI.Models",
+      "description": "One thing that travelled across a handoff — or did not: what it was, what kind of thing it is, and (for an item that was lost) why it never reached the next agent. The record is a VALUE: the same type describes what a step passed on and what it lost, so a host builds one list of PassedItems and one of LostItems and the surface renders both from the same shape. Reason is only read on a LOST item; on a passed one it is ignored (a passed item does not need an excuse). Nothing here carries colour: the kind is an enum the surface turns into an icon and a localized word, and the lost/passed distinction is carried by the LIST an item lives in plus an icon and a word, never by a tone alone (WCAG 1.4.1).",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/AI/Agents/HandoffItem.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Lost",
+          "kind": "Method",
+          "type": "HandoffItem",
+          "description": "Copies the item as a LOST one: the same label and kind plus the reason it never arrived. A host builds a LostItems list from the items it wanted to pass with this helper.",
+          "parameters": [
+            {
+              "name": "reason",
+              "type": "string?"
+            }
+          ]
+        },
+        {
+          "name": "HasKnownKind",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Whether Kind is one of the declared kinds (a cast integer may not be)."
+        },
+        {
+          "name": "HasLabel",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Whether the host supplied a label worth printing."
+        },
+        {
+          "name": "HasReason",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Whether the item carries a reason worth printing (only a lost item renders it)."
+        },
+        {
+          "name": "Kind",
+          "kind": "Property",
+          "type": "HandoffItemKind",
+          "description": "Which kind of thing it is; painted as an icon AND a localized word."
+        },
+        {
+          "name": "Label",
+          "kind": "Property",
+          "type": "string",
+          "description": "What was handed over, as the host wants it read. Empty renders the surface's own fallback."
+        },
+        {
+          "name": "Reason",
+          "kind": "Property",
+          "type": "string?",
+          "description": "Why this item never reached the next agent (\"the context window was full\", \"the tool was not granted\"). Only read on a LOST item; empty renders no reason. A passed item keeps whatever the host stored and the surface ignores it."
+        }
+      ],
+      "usageExample": "var passed = new HandoffItem(\"invoice schema\", HandoffItemKind.Artifact);\nvar lost = passed.Lost(\"the file exceeded the upload limit\");\n\n// The kind paints an icon and a word; the reason is only read on a lost item."
+    },
+    {
+      "itemName": "HandoffItemKind",
+      "kind": "Enum",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.AI.Models",
+      "description": "What kind of thing one agent handed to the next — the coarse label a handoff surface paints beside an item so a reader can tell a shared instruction from a dropped tool. The vocabulary is deliberately small and transport-neutral: a host maps its own payload (a system prompt, a tool catalogue, a file, a scratchpad) onto one of these five kinds, and the surface renders the kind as a localized word plus an icon. Context is the default because a piece of conversation is the most common thing a handoff carries.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/AI/Agents/HandoffItemKind.cs",
+      "documentationStatus": "merged",
+      "usageExample": "var item = new HandoffItem(\"the buyer's deadline\", HandoffItemKind.Memory);"
+    },
+    {
+      "itemName": "HandoffStatus",
+      "kind": "Enum",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.AI.Models",
+      "description": "How far one handoff in a chain has got — whether the receiving agent has taken the work over. Pending is the default (0) on purpose: a step a host has not classified yet must never read as accepted, because \"the work is now someone else's\" is a claim about a run, not a decoration.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/AI/Agents/HandoffStatus.cs",
+      "documentationStatus": "merged",
+      "usageExample": "var step = new HandoffStep(\"step-1\", \"Handing the run over\")\n{\n    Status = HandoffStatus.Pending, // the receiving agent has not answered yet\n};"
+    },
+    {
+      "itemName": "HandoffStep",
+      "kind": "Record",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.AI.Models",
+      "description": "One step of an agent-to-agent handoff chain: who handed the work to whom, when, what it said about it, what travelled and what was lost, and how far the receiving agent got. The record is a VALUE: a host recomposes it with step with { … } when the receiving agent accepts or finishes the work, and no component mutates it. Both agent identities are the shared AgentRef, so a step paints the same initials, name and palette slot every other agent surface uses; a host that tracks agents by id only supplies FromAgentId / ToAgentId and the surface prints the id. The step deliberately does not decide what \"lost\" costs: the two item lists are the host's truth and LostCount / LossRate are the arithmetic a surface and a caller share, so a summary can never disagree with the lists it summarises.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/AI/Agents/HandoffStep.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "At",
+          "kind": "Property",
+          "type": "DateTimeOffset?",
+          "description": "When the handoff happened, or null while it is still pending."
+        },
+        {
+          "name": "FromAgent",
+          "kind": "Property",
+          "type": "AgentRef?",
+          "description": "The agent that handed the work over, or null when the host tracks agents by id only. Setting it makes the surface paint the agent's initials, name and palette slot."
+        },
+        {
+          "name": "FromAgentId",
+          "kind": "Property",
+          "type": "string?",
+          "description": "The handing-over agent's id as a plain string, for a host whose agents are not AgentRefs. FromAgent wins when both are set, because it carries the whole identity."
+        },
+        {
+          "name": "FromColorToken",
+          "kind": "Property",
+          "type": "string",
+          "description": "The agent palette token the handing-over agent's avatar paints with, or an empty string when no FromAgent is set. Always a declared --tm-agent-color-{0..7} token when it is not empty."
+        },
+        {
+          "name": "FromName",
+          "kind": "Property",
+          "type": "string",
+          "description": "The handing-over agent's name for a surface to print: the agent's name, else the raw id."
+        },
+        {
+          "name": "HasFrom",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Whether the host named the handing-over agent in any way."
+        },
+        {
+          "name": "HasKnownStatus",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Whether Status is one of the declared states (a cast integer may not be)."
+        },
+        {
+          "name": "HasLosses",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Whether anything was lost in this step — the fact the surface paints first."
+        },
+        {
+          "name": "HasSummary",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Whether the host supplied a summary worth printing."
+        },
+        {
+          "name": "HasTo",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Whether the host named the receiving agent in any way."
+        },
+        {
+          "name": "Id",
+          "kind": "Property",
+          "type": "string",
+          "description": "Stable identity of the step. Never empty: a missing id is generated at construction."
+        },
+        {
+          "name": "IsPending",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Whether the handoff is still waiting for the receiving agent."
+        },
+        {
+          "name": "IsRejected",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Whether the receiving agent refused the work."
+        },
+        {
+          "name": "IsSettled",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Whether the handoff was answered (accepted or completed)."
+        },
+        {
+          "name": "ItemCount",
+          "kind": "Property",
+          "type": "int",
+          "description": "How many items the step tried to hand over (passed plus lost)."
+        },
+        {
+          "name": "LossRate",
+          "kind": "Property",
+          "type": "double",
+          "description": "How much of what the step carried was lost, from 0 to 1, or 0 when it carried nothing (there is no loss rate without a whole)."
+        },
+        {
+          "name": "LostCount",
+          "kind": "Property",
+          "type": "int",
+          "description": "How many items never arrived."
+        },
+        {
+          "name": "PassedCount",
+          "kind": "Property",
+          "type": "int",
+          "description": "How many items reached the next agent."
+        },
+        {
+          "name": "Status",
+          "kind": "Property",
+          "type": "HandoffStatus",
+          "description": "How far the handoff has got. Default Pending; painted as an icon, a localized word AND a tone, never as a colour alone."
+        },
+        {
+          "name": "Summary",
+          "kind": "Property",
+          "type": "string",
+          "description": "What the handing-over agent said about the work. Empty renders the surface's own fallback."
+        },
+        {
+          "name": "ToAgent",
+          "kind": "Property",
+          "type": "AgentRef?",
+          "description": "The agent that received the work, or null when the host tracks agents by id only."
+        },
+        {
+          "name": "ToAgentId",
+          "kind": "Property",
+          "type": "string?",
+          "description": "The receiving agent's id as a plain string. ToAgent wins when both are set."
+        },
+        {
+          "name": "ToColorToken",
+          "kind": "Property",
+          "type": "string",
+          "description": "The receiving agent's palette token, or an empty string when no ToAgent is set."
+        },
+        {
+          "name": "ToName",
+          "kind": "Property",
+          "type": "string",
+          "description": "The receiving agent's name for a surface to print: the agent's name, else the raw id."
+        }
+      ],
+      "usageExample": "var step = new HandoffStep(\"step-2\", \"The matcher takes over the invoice run\")\n{\n    FromAgent = new AgentRef(\"Fetcher\", \"w-1\") { ColorIndex = 1 },\n    ToAgent = new AgentRef(\"Matcher\", \"w-2\") { ColorIndex = 4 },\n    At = DateTimeOffset.UtcNow,\n    Status = HandoffStatus.Accepted,\n    PassedItems = [new HandoffItem(\"invoice schema\", HandoffItemKind.Artifact)],\n    LostItems = [new HandoffItem(\"conversation history\").Lost(\"the context window was full\")],\n};\n\n// \"1 passed on · 1 lost\" and the loss keeps its reason."
     },
     {
       "itemName": "IAiMentionProvider",
@@ -42783,11 +43336,11 @@
   ],
   "libraryExamples": [],
   "summary": {
-    "itemCount": 1635,
-    "manualItemCount": 1635,
-    "generatedItemCount": 1619,
+    "itemCount": 1644,
+    "manualItemCount": 1644,
+    "generatedItemCount": 1628,
     "generatedOnlyItemCount": 0,
     "componentCount": 0,
-    "publicApiTypeCount": 1619
+    "publicApiTypeCount": 1628
   }
 }

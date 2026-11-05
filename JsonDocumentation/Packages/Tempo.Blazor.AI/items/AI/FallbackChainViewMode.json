@@ -1,0 +1,11 @@
+{
+  "itemName": "FallbackChainViewMode",
+  "kind": "Enum",
+  "category": "Components",
+  "namespace": "Tempo.Blazor.Components.AI",
+  "description": "How TmFallbackChain presents the run. Both presentations render the SAME attempts; the flow is never the only way to read the data (WCAG 1.1.1 / 1.4.1), because a reader who cannot follow the arrows — with a screen reader, a keyboard only, or a narrow phone — gets every attempt, its result, its reason and its latency as a plain table.",
+  "packageId": "Tempo.Blazor.AI",
+  "sourcePath": "src/Tempo.Blazor.AI/Components/AI/FallbackChainViewMode.cs",
+  "documentationStatus": "documented",
+  "usageExample": "<TmFallbackChain Attempts=\"_attempts\" @bind-ViewMode=\"_view\" />\n\n@code {\n    private FallbackChainViewMode _view = FallbackChainViewMode.Flow;\n}"
+}

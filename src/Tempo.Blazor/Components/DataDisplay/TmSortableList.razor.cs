@@ -119,6 +119,9 @@ public partial class TmSortableList<TItem> : TmComponentBase, IAsyncDisposable
     private DotNetObjectReference<TmSortableList<TItem>>? _dotnetRef;
     // A bare unique value on purpose: the markup-class sweep counts quoted, component-prefixed stems.
     private readonly string _registrationId = Guid.NewGuid().ToString("N");
+    // One element reference per ROW KEY, never per position: a host that reorders its own list keeps
+    // both the DOM node and the reference, so a focus hand-back still names the row the caller meant.
+    private readonly Dictionary<string, RowHandle> _rowHandles = [];
     private string? _attachedSignature;
     private string _announcement = string.Empty;
     private bool _announcementMarker;
@@ -177,6 +180,16 @@ public partial class TmSortableList<TItem> : TmComponentBase, IAsyncDisposable
         public bool IsLast => Position >= Count - 1;
     }
 
+    /// <summary>
+    /// The captured element of one row. The capture target is this box, resolved per row KEY, so the
+    /// reference survives a host reorder (the DOM node is moved, not re-created) and a re-render that
+    /// does not re-run the capture cannot bind the reference to the wrong row.
+    /// </summary>
+    private sealed class RowHandle
+    {
+        internal ElementReference Ref;
+    }
+
     /// <inheritdoc />
     protected override void OnParametersSet()
     {
@@ -201,6 +214,119 @@ public partial class TmSortableList<TItem> : TmComponentBase, IAsyncDisposable
         }
 
         Rebuild();
+        PruneHandles();
+    }
+
+    // ---------- focus (the host's hand-back after a row it was on disappears) ----------
+
+    /// <summary>
+    /// Moves keyboard focus to the row at <paramref name="index"/> of <see cref="Items"/> — the same
+    /// index <see cref="OnReorder"/> reports, not a painted position. A host uses it to keep a
+    /// keyboard or screen-reader reader in place when the control they were on is removed with its
+    /// row (WCAG 2.4.3): the row that took the removed one's place receives the focus instead of the
+    /// document body.
+    /// <para>
+    /// Returns whether a focus call was made. <see langword="false"/> means there was nothing to focus
+    /// — the index is outside the list, the list is <see cref="Disabled"/> (a read-only row is not a
+    /// tab stop, so moving the focus there would strand it), or no element was captured for that row
+    /// yet (before the first render).
+    /// </para>
+    /// </summary>
+    /// <param name="index">The row's index in <see cref="Items"/>.</param>
+    /// <returns>A task that completes with whether the row was focused.</returns>
+    public ValueTask<bool> FocusItemAsync(int index)
+    {
+        if (Disabled)
+        {
+            return ValueTask.FromResult(false);
+        }
+
+        var key = KeyAt(index);
+        if (key is null || !_rowHandles.TryGetValue(key, out var handle) || handle.Ref.Id is null)
+        {
+            return ValueTask.FromResult(false);
+        }
+
+        return FocusRowAsync(handle.Ref);
+    }
+
+    /// <summary>
+    /// The reference box of one row, created on first use and kept for as long as the row is in the
+    /// list. The capture writes into the box, so a re-render that reuses the DOM node cannot bind the
+    /// element to another row.
+    /// </summary>
+    /// <param name="entry">The row being rendered.</param>
+    /// <returns>The row's reference box.</returns>
+    private RowHandle HandleFor(SortableEntry entry)
+    {
+        if (!_rowHandles.TryGetValue(entry.KeyText, out var handle))
+        {
+            handle = new RowHandle();
+            _rowHandles[entry.KeyText] = handle;
+        }
+
+        return handle;
+    }
+
+    /// <summary>Drops the reference boxes of rows the host removed, so a long-lived list cannot grow.</summary>
+    private void PruneHandles()
+    {
+        if (_rowHandles.Count == 0)
+        {
+            return;
+        }
+
+        var live = new HashSet<string>(_entries.Select(entry => entry.KeyText), StringComparer.Ordinal);
+        List<string>? stale = null;
+        foreach (var key in _rowHandles.Keys)
+        {
+            if (!live.Contains(key))
+            {
+                (stale ??= []).Add(key);
+            }
+        }
+
+        if (stale is null)
+        {
+            return;
+        }
+
+        foreach (var key in stale)
+        {
+            _rowHandles.Remove(key);
+        }
+    }
+
+    /// <summary>The <c>@key</c> text of the row the host addresses by its <see cref="Items"/> index.</summary>
+    /// <param name="index">The row's index in <see cref="Items"/>.</param>
+    /// <returns>The row's key text, or null when no rendered row has that index.</returns>
+    private string? KeyAt(int index)
+    {
+        foreach (var entry in _entries)
+        {
+            if (entry.SourceIndex == index)
+            {
+                return entry.KeyText;
+            }
+        }
+
+        return null;
+    }
+
+    private static async ValueTask<bool> FocusRowAsync(ElementReference row)
+    {
+        try
+        {
+            await row.FocusAsync();
+            return true;
+        }
+        catch (Exception exception) when (exception is JSException or JSDisconnectedException
+            or InvalidOperationException or NotSupportedException or ObjectDisposedException or ArgumentException)
+        {
+            // No JavaScript, or the row is no longer in the DOM: the reader can still Tab to it, so a
+            // failed hand-back must never surface as an unhandled exception.
+            return false;
+        }
     }
 
     // ---------- keyboard (the non-drag alternative, WCAG 2.5.7) ----------
