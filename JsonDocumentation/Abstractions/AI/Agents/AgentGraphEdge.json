@@ -1,0 +1,41 @@
+{
+  "itemName": "AgentGraphEdge",
+  "kind": "Record",
+  "category": "AI",
+  "namespace": "Tempo.Blazor.AI.Models",
+  "description": "One connection of an agent graph: who called whom, how often and when it happened last. The record is a VALUE — an AgentGraphCall event folds into it through AgentGraphSnapshot.Apply, which returns a new snapshot instead of editing this edge. CallCount is what the surface turns into a THICKNESS on a log scale, so a quiet connection stays visible instead of disappearing next to a busy one, and LastCallAt is what it prints. Nothing here carries colour: the direction of the flow is painted by the edge itself and the identity by the two nodes it connects.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/AI/Agents/AgentGraphEdge.cs",
+  "documentationStatus": "documented",
+  "usageExample": "var edge = new AgentGraphEdge(\"e-search\", \"planner\", \"search\")\n{\n    CallCount = 3,\n    LastCallAt = now.AddSeconds(-12),\n    IsActive = true,\n};",
+  "members": [
+    {
+      "name": "Id",
+      "description": "Stable identity of the edge — the value an AgentGraphCall addresses. Never empty: a missing id is generated at construction."
+    },
+    {
+      "name": "From",
+      "description": "The id of the node the call starts at."
+    },
+    {
+      "name": "To",
+      "description": "The id of the node the call goes to. Equal to From is a self loop — one agent calling itself — which the layout paints beside the node instead of dropping."
+    },
+    {
+      "name": "CallCount",
+      "description": "How many calls this connection carried. Any negative value is clamped to zero on assignment, so an edge only ever grows and a thickness can never be derived from a negative number. Zero paints the thinnest width."
+    },
+    {
+      "name": "LastCallAt",
+      "description": "When the newest call was recorded, or null when the host does not track it. A surface prints it when it is set and the localized \"never\" otherwise."
+    },
+    {
+      "name": "IsActive",
+      "description": "Whether the connection is active right now (a call is in flight, the tool is being held). Default false; a surface paints an active edge with its accent, an inactive one without."
+    },
+    {
+      "name": "IsSelfLoop",
+      "description": "Whether the edge starts and ends at the same node."
+    }
+  ]
+}

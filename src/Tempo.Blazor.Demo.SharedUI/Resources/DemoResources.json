@@ -1144,5 +1144,18 @@
   "TmAiAgentsDemo_FocusPerformance": "performance",
   "TmAiAgentsDemo_ToneFriendly": "friendly",
   "TmAiAgentsDemo_ToneFormal": "formal",
-  "TmAiAgentsDemo_ApprovalPending": "The run is waiting for your decision."
+  "TmAiAgentsDemo_ApprovalPending": "The run is waiting for your decision.",
+  "TmAiAgentsDemo_GraphTitle": "The same run as a network",
+  "TmAiAgentsDemo_GraphHint": "Agents, the tools they call and the ledger they read as one network. The arrow keys walk a connection, Home and End jump to the first and last node, Enter selects a node and the View switch carries the same numbers as two tables.",
+  "TmAiAgentsDemo_GraphRunTitle": "Reconciliation network",
+  "TmAiAgentsDemo_GraphSelected": "Selected: {0}",
+  "TmAiAgentsDemo_GraphNoSelection": "No node is selected.",
+  "TmAiAgentsDemo_GraphCall": "Simulate a call",
+  "TmAiAgentsDemo_GraphCallLog": "Calls this page pushed: {0}",
+  "TmAiAgentsDemo_GraphDetailCalls": "Calls on this node",
+  "TmAiAgentsDemo_GraphHuman": "Dana (requester)",
+  "TmAiAgentsDemo_GraphLedger": "Ledger",
+  "TmAiAgentsDemo_GraphSearch": "Web search",
+  "TmAiAgentsDemo_GraphCode": "Code interpreter",
+  "TmAiAgentsDemo_GraphGroupCore": "Core agents"
 }

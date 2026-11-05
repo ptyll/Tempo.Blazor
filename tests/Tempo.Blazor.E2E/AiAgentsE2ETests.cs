@@ -17,6 +17,7 @@ public abstract class AiAgentsE2EBase : PlaywrightTestBase
     protected const string PlanSection = "[data-testid='ai-agents-plan-section']";
     protected const string TreeSection = "[data-testid='ai-agents-tree-section']";
     protected const string LanesSection = "[data-testid='ai-agents-lanes-section']";
+    protected const string GraphSection = "[data-testid='ai-agents-graph-section']";
     protected const string MonitorSection = "[data-testid='ai-agents-monitor-section']";
     protected const string ModelsSection = "[data-testid='ai-agents-models-section']";
     protected const string ContextSection = "[data-testid='ai-agents-context-section']";
@@ -389,6 +390,72 @@ public class AiAgentsE2ETests : AiAgentsE2EBase
     }
 
     [TestMethod]
+    public async Task TheGraphWalksItsConnectionsByKeyboard_AndTheTableCarriesTheSameNumbers()
+    {
+        var page = await OpenAsync();
+        await ScrollToSection(page, GraphSection);
+
+        var graph = page.Locator("[data-testid='ai-agents-graph']");
+        Assert.AreEqual(7, await graph.Locator("[data-testid='agent-graph-node']").CountAsync(),
+            "the human, three agents, the ledger and two tools");
+        Assert.AreEqual(6, await graph.Locator("[data-testid='agent-graph-edge']").CountAsync());
+        Assert.AreEqual(1, await graph.Locator("[data-testid='agent-graph-group']").CountAsync(),
+            "the two core agents are grouped");
+
+        // The graph is ONE tab stop: the first node in painting order owns it.
+        var human = graph.Locator("[data-testid='agent-graph-node'][data-node-id='human']");
+        Assert.AreEqual("0", await human.GetAttributeAsync("tabindex"),
+            "the roving tab stop starts on the first node");
+
+        await human.FocusAsync();
+        await page.Keyboard.PressAsync("ArrowRight");
+        await page.WaitForTimeoutAsync(200);
+
+        Assert.AreEqual("planner", await page.EvaluateAsync<string>(
+                "() => document.activeElement?.dataset.nodeId ?? document.activeElement?.tagName ?? 'none'"),
+            "the arrow moved the DOM focus onto the connected node");
+
+        var planner = graph.Locator("[data-testid='agent-graph-node'][data-node-id='planner']");
+        Assert.AreEqual("0", await planner.GetAttributeAsync("tabindex"),
+            "ArrowRight walks the CONNECTION from the human to the planner");
+        Assert.AreEqual("-1", await human.GetAttributeAsync("tabindex"));
+
+        // Enter is the button's own activation — the component never emulates it.
+        await page.Keyboard.PressAsync("Enter");
+        await page.WaitForSelectorAsync("[data-testid='ai-agents-graph-detail']",
+            new PageWaitForSelectorOptions { Timeout = 10000 });
+        StringAssert.Contains(await TextAsync(page, "ai-agents-graph-selected"), "Planner");
+        Assert.AreEqual("true", await planner.GetAttributeAsync("aria-pressed"));
+
+        // The page pushes a REAL AgentGraphCall: the edge thickens and the node's name counts it.
+        var search = graph.Locator("[data-testid='agent-graph-node'][data-node-id='search']");
+        StringAssert.Contains(await search.GetAttributeAsync("aria-label") ?? string.Empty, "Calls: 3");
+
+        await page.Locator("[data-testid='ai-agents-graph-call']").ClickAsync();
+        await page.WaitForTimeoutAsync(400);
+
+        StringAssert.Contains(await TextAsync(page, "ai-agents-graph-call-log"), "1");
+        StringAssert.Contains(await search.GetAttributeAsync("aria-label") ?? string.Empty, "Calls: 4",
+            "the component folded the call the page pushed into its edge");
+
+        await ShootAsync(page, "ai-agents-graph-light-1440");
+
+        // The text alternative carries every connection and every node with the same numbers.
+        await graph.Locator("[data-testid='agent-graph-view'] button")
+            .Filter(new LocatorFilterOptions { HasTextString = "Table" })
+            .ClickAsync();
+        await page.WaitForSelectorAsync("[data-testid='ai-agents-graph'] [data-testid='agent-graph-table-row']",
+            new PageWaitForSelectorOptions { Timeout = 10000 });
+
+        Assert.AreEqual(6, await graph.Locator("[data-testid='agent-graph-table-row']").CountAsync());
+        Assert.AreEqual(7, await graph.Locator("[data-testid='agent-graph-node-row']").CountAsync());
+        Assert.AreEqual(0, await graph.Locator("[data-testid='agent-graph-node']").CountAsync(),
+            "the table replaces the drawing instead of duplicating it");
+
+        await ShootAsync(page, "ai-agents-graph-table-light-1440");
+    }
+
+    [TestMethod]
     public async Task ThePromptLibraryFillsATemplate_AndUseHandsItOver()
     {
         var page = await OpenAsync();
@@ -454,7 +521,8 @@ public class AiAgentsE2ETests : AiAgentsE2EBase
 
         foreach (var section in new[]
                  {
-                     PlanSection, TreeSection, LanesSection, MonitorSection, ModelsSection, ContextSection, PromptsSection,
+                     PlanSection, TreeSection, LanesSection, GraphSection, MonitorSection, ModelsSection, ContextSection,
+                     PromptsSection,
                  })
         {
             await ScrollToSection(page, section);
@@ -485,8 +553,36 @@ public class AiAgentsE2ETests : AiAgentsE2EBase
 
         await AssertNoSeriousAxeViolationsAsync(page,
             "ai-agents-plan-section", "ai-agents-tree-section", "ai-agents-lanes-section",
-            "ai-agents-monitor-section", "ai-agents-models-section", "ai-agents-context-section",
-            "ai-agents-prompts-section");
+            "ai-agents-graph-section", "ai-agents-monitor-section", "ai-agents-models-section",
+            "ai-agents-context-section", "ai-agents-prompts-section");
+    }
+
+    /// <summary>
+    /// The dimmed neighbourhood is still readable in BOTH themes: selecting a node dims everything that is not one
+    /// connection away, and that dim is a TOKEN change instead of an opacity, so the same scoped axe scan that passes
+    /// on the resting graph also passes with the selection painted (WCAG 1.4.3, worst in dark mode).
+    /// </summary>
+    [TestMethod]
+    public async Task TheSelectedGraphPassesAScopedAxeScan_InBothThemes()
+    {
+        var page = await OpenAsync();
+        await ScrollToSection(page, GraphSection);
+
+        await page.Locator("[data-testid='agent-graph-node'][data-node-id='planner']").ClickAsync();
+        await page.WaitForSelectorAsync("[data-testid='ai-agents-graph-detail']",
+            new PageWaitForSelectorOptions { Timeout = 10000 });
+
+        var dimmed = page.Locator("[data-testid='agent-graph-node'].tm-ai-agent-graph__node--dimmed");
+        Assert.IsTrue(await dimmed.CountAsync() > 0,
+            "a selection dims the nodes that are not one connection away, which is the state under review");
+
+        await AssertNoSeriousAxeViolationsAsync(page, "ai-agents-graph-section");
+        await ShootAsync(page, "ai-agents-graph-selected-light-1440");
+
+        await ToggleThemeAsync(page);
+        await ScrollToSection(page, GraphSection);
+        await AssertNoSeriousAxeViolationsAsync(page, "ai-agents-graph-section");
+        await ShootAsync(page, "ai-agents-graph-selected-dark-1440");
     }
 
     [TestMethod]
@@ -502,6 +598,9 @@ public class AiAgentsE2ETests : AiAgentsE2EBase
 
         await ScrollToSection(desktop, LanesSection);
         await ShootAsync(desktop, "ai-agents-lanes-idle-light-1440");
+
+        await ScrollToSection(desktop, GraphSection);
+        await ShootAsync(desktop, "ai-agents-graph-idle-light-1440");
 
         await ScrollToSection(desktop, MonitorSection);
         await ShootAsync(desktop, "ai-agents-monitor-light-1440");
@@ -520,6 +619,8 @@ public class AiAgentsE2ETests : AiAgentsE2EBase
         await ShootAsync(desktop, "ai-agents-plan-dark-1440");
         await ScrollToSection(desktop, LanesSection);
         await ShootAsync(desktop, "ai-agents-lanes-dark-1440");
+        await ScrollToSection(desktop, GraphSection);
+        await ShootAsync(desktop, "ai-agents-graph-dark-1440");
         await ScrollToSection(desktop, ContextSection);
         await ShootAsync(desktop, "ai-agents-context-dark-1440");
         await ScrollToSection(desktop, PromptsSection);
@@ -528,6 +629,8 @@ public class AiAgentsE2ETests : AiAgentsE2EBase
         var phone = await OpenAsync(375, 812, coarsePointer: true);
         await ScrollToSection(phone, LanesSection);
         await ShootAsync(phone, "ai-agents-lanes-phone-375");
+        await ScrollToSection(phone, GraphSection);
+        await ShootAsync(phone, "ai-agents-graph-phone-375");
         await ScrollToSection(phone, MonitorSection);
         await ShootAsync(phone, "ai-agents-monitor-phone-375");
         await ScrollToSection(phone, ContextSection);

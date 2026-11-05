@@ -1,0 +1,28 @@
+{
+  "itemName": "AgentGraphNodeKind",
+  "kind": "Enum",
+  "category": "AI",
+  "namespace": "Tempo.Blazor.AI.Models",
+  "description": "What a node of an agent graph IS. The kind decides the node's COLUMN in the layered layout (a human asks on the left, an agent answers, a resource it reads follows and a tool it calls stands on the right), its glyph, its stable data-kind hook and its localized word — which is why the member order is part of the contract. The set is deliberately small and transport-neutral: a host maps its own backend vocabulary (a participant role, a tool-server key, a document store, the human in the loop) onto these four values.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/AI/Agents/AgentGraphNodeKind.cs",
+  "documentationStatus": "documented",
+  "members": [
+    {
+      "name": "Agent",
+      "description": "The agent that acts — a participant, a role, a runtime agent. Painted in the middle-left column, with the agent palette slot of AgentGraphNode.Agent when the host supplied one."
+    },
+    {
+      "name": "Tool",
+      "description": "A tool the agent called (a tool server, a function, an MCP server). Painted to the RIGHT of the agent, because an agent-to-tool edge is what a call looks like."
+    },
+    {
+      "name": "Resource",
+      "description": "A resource an agent read or wrote (a document, a table, a ledger, a memory store). Painted between the agent column and the tool column."
+    },
+    {
+      "name": "Human",
+      "description": "The human in the loop — the person who asked, approved or is being waited for. Painted to the LEFT of the agents, because the request comes from there."
+    }
+  ]
+}

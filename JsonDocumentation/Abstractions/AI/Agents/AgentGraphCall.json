@@ -1,0 +1,29 @@
+{
+  "itemName": "AgentGraphCall",
+  "kind": "Record",
+  "category": "AI",
+  "namespace": "Tempo.Blazor.AI.Models",
+  "description": "One applied call in an agent graph, with the monotonic Sequence the shared live contract needs. The event is deliberately tiny: a host that learns \"the planner called the web search again\" sends an edge id and a sequence, and the surface folds it into the edge (a thicker stroke, a fresh last-called time) and pulses the edge once. That is exactly what a tool-authorization feed produces, whatever its transport (a hub, a one-second poll, a server-sent event stream). A batch may arrive more than once — the shared stream drops what was already applied — so the host never de-duplicates itself.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/AI/Agents/AgentGraphCall.cs",
+  "documentationStatus": "documented",
+  "usageExample": "IReadOnlyList<AgentGraphCall> batch =\n[\n    new AgentGraphCall(43) { EdgeId = \"e-search\", At = DateTimeOffset.UtcNow },\n    new AgentGraphCall(44) { EdgeId = \"e-search\", Count = 5 },   // a page of identical calls\n];\n\n<TmAgentGraph Snapshot=\"_snapshot\" Events=\"_batch\" OnGapDetected=\"ReloadAsync\" />",
+  "members": [
+    {
+      "name": "Sequence",
+      "description": "The event's position in the run's change log; it must grow by ONE per applied change, because the shared stream treats \"the last applied sequence plus one\" as its definition of contiguity and rejects a batch with a hole rather than papering over it."
+    },
+    {
+      "name": "EdgeId",
+      "description": "The id of the AgentGraphEdge the call travelled along. A null, blank or unknown id is IGNORED by the fold — an edge is never invented from a call, because its two endpoints would be guesses."
+    },
+    {
+      "name": "At",
+      "description": "When the call happened, or null when the host does not stamp it. An older instant than the one the edge already carries is never written back, so \"last called\" cannot move backwards."
+    },
+    {
+      "name": "Count",
+      "description": "How many calls this one event reports. Default 1, which is what a per-call feed sends; a batched feed may report a page of identical calls at once. A negative value is clamped to zero, so an edge never shrinks."
+    }
+  ]
+}

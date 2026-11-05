@@ -1,0 +1,588 @@
+/* ═══════════════════════════════════════════════════════════════════════════════════════════════
+   TmAgentGraph — agents, tools, resources and the human in the loop as one drawn network
+   Contract: docs/agent-graph.md
+   Every rule reads a --tm-* design token (no colour literal, no raw palette step, no [data-theme]
+   block); the package's shared token gate is AiMarkdownViewCssTests and the component's own gate is
+   TmAgentGraphCssTests.
+
+   The only animated subject is the edge PULSE (a call arriving). It is declared here, once, and its
+   prefers-reduced-motion block at the end of this file turns the movement off while keeping the
+   highlight — the whole point of a pulse is that a reader who asked for less motion still sees that
+   something happened.
+   ═══════════════════════════════════════════════════════════════════════════════════════════════ */
+
+.tm-ai-agent-graph {
+    /* A host lays this card out in a grid or a flex row: without this the card's automatic minimum
+       width grows to the drawing's content and the PAGE scrolls sideways instead of the viewport. */
+    min-inline-size: 0;
+
+    /* Every knob is DECLARED here (a var() that only ever carries a fallback is an undefined alias):
+       a host overrides one by restyling this root. */
+    --tm-agent-graph-node-fill: var(--tm-bg-surface);
+    --tm-agent-graph-node-border: var(--tm-border-color);
+    --tm-agent-graph-node-tone: var(--tm-border-color-strong);
+    --tm-agent-graph-node-avatar: var(--tm-bg-surface-secondary);
+    --tm-agent-graph-node-avatar-ink: var(--tm-text-secondary);
+    --tm-agent-graph-edge: var(--tm-text-muted);
+    --tm-agent-graph-edge-active: var(--tm-color-primary);
+    --tm-agent-graph-edge-pulse: var(--tm-color-primary);
+    --tm-agent-graph-edge-selected: var(--tm-color-primary-text);
+    --tm-agent-graph-group-fill: var(--tm-bg-surface-secondary);
+    --tm-agent-graph-group-border: var(--tm-border-color);
+    --tm-agent-graph-max-block-size: 30rem;
+    /* The pulse window. The component writes PulseDuration onto this root inline, so the animation and the .NET
+       timer that removes the class read ONE value; this declaration is only the fallback for a host that loads the
+       partial without the component. */
+    --tm-agent-graph-pulse-duration: 600ms;
+
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-3);
+    padding: var(--tm-space-4);
+    border: var(--tm-border-width) solid var(--tm-border-color);
+    border-radius: var(--tm-radius-card);
+    background-color: var(--tm-bg-surface);
+    color: var(--tm-text-primary);
+    box-shadow: var(--tm-shadow-sm);
+    font-size: var(--tm-font-size-sm);
+    line-height: 1.5;
+}
+
+/* ── Header ──────────────────────────────────────────────────────────────────────────────────── */
+
+.tm-ai-agent-graph__header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--tm-space-2);
+}
+
+.tm-ai-agent-graph__title {
+    margin: 0;
+    font-size: var(--tm-font-size-base);
+    font-weight: var(--tm-font-weight-semibold);
+}
+
+.tm-ai-agent-graph__toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--tm-space-2);
+}
+
+.tm-ai-agent-graph__view {
+    display: inline-flex;
+}
+
+.tm-ai-agent-graph__zoom {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--tm-space-1);
+    padding: var(--tm-space-1);
+    border: var(--tm-border-width) solid var(--tm-border-color);
+    border-radius: var(--tm-radius-control);
+    background-color: var(--tm-bg-surface-secondary);
+}
+
+.tm-ai-agent-graph__zoom-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    inline-size: 1.875rem;
+    block-size: 1.875rem;
+    padding: 0;
+    border: 0;
+    border-radius: var(--tm-radius-sm);
+    background: none;
+    color: var(--tm-text-secondary);
+    cursor: pointer;
+}
+
+.tm-ai-agent-graph__zoom-button:hover {
+    background-color: var(--tm-bg-surface);
+    color: var(--tm-text-primary);
+}
+
+.tm-ai-agent-graph__zoom-button:focus-visible {
+    outline: 2px solid var(--tm-border-color-focus);
+    outline-offset: 2px;
+    color: var(--tm-text-primary);
+}
+
+/* The fit action ends the group: a hairline and a little air separate it from the − / + pair it does
+   not belong to. */
+.tm-ai-agent-graph__zoom-button--fit {
+    margin-inline-start: var(--tm-space-1);
+    border-inline-start: var(--tm-border-width) solid var(--tm-border-color);
+    color: var(--tm-text-link);
+}
+
+.tm-ai-agent-graph__zoom-value {
+    min-inline-size: 3.5rem;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+    font-size: var(--tm-font-size-xs);
+    color: var(--tm-text-secondary);
+}
+
+.tm-ai-agent-graph__empty {
+    margin: 0;
+    padding: var(--tm-space-6) var(--tm-space-4);
+    border: var(--tm-border-width) dashed var(--tm-border-color);
+    border-radius: var(--tm-radius-md);
+    text-align: center;
+    color: var(--tm-text-secondary);
+}
+
+/* ── The drawing ─────────────────────────────────────────────────────────────────────────────── */
+
+.tm-ai-agent-graph__viewport {
+    /* The drawing is the ONE thing that scrolls sideways, inside its own box: the page never does.
+       Panning is native scrolling, so a mouse, a wheel, a scrollbar and the keyboard all work with
+       no second drag implementation. */
+    overflow: auto;
+    max-block-size: var(--tm-agent-graph-max-block-size);
+    border: var(--tm-border-width) solid var(--tm-border-color);
+    border-radius: var(--tm-radius-md);
+    background-color: var(--tm-bg-surface-secondary);
+    overscroll-behavior: contain;
+    min-inline-size: 0;
+    scrollbar-gutter: stable;
+}
+
+.tm-ai-agent-graph__viewport:focus-visible {
+    outline: 2px solid var(--tm-border-color-focus);
+    outline-offset: -2px;
+}
+
+.tm-ai-agent-graph__canvas {
+    display: block;
+    /* The canvas is scaled from its intrinsic size through a viewBox, so it must never be stretched
+       by a host's flex/grid rule. */
+    max-inline-size: none;
+}
+
+/* ── Groups ──────────────────────────────────────────────────────────────────────────────────── */
+
+/* The group boxes are decoration: without this a box would capture the click a reader meant for the
+   canvas (or for a node the box overlaps). */
+.tm-ai-agent-graph__groups,
+.tm-ai-agent-graph__group {
+    pointer-events: none;
+}
+
+.tm-ai-agent-graph__group-box {
+    fill: var(--tm-agent-graph-group-fill);
+    stroke: var(--tm-agent-graph-group-border);
+    stroke-width: 1;
+    stroke-dasharray: 4 4;
+}
+
+.tm-ai-agent-graph__group-label {
+    overflow: hidden;
+    color: var(--tm-text-secondary);
+    font-family: var(--tm-font-sans);
+    font-size: var(--tm-font-size-xs);
+    font-weight: var(--tm-font-weight-semibold);
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+/* ── Edges ───────────────────────────────────────────────────────────────────────────────────── */
+
+/* A connection is painted, not clicked: the nodes carry the interaction, so a stray click on a curve
+   must reach the canvas instead of stopping on the path. */
+.tm-ai-agent-graph__edges {
+    pointer-events: none;
+}
+
+.tm-ai-agent-graph__edge {
+    fill: none;
+    stroke: var(--tm-agent-graph-edge);
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.tm-ai-agent-graph__edge--active {
+    stroke: var(--tm-agent-graph-edge-active);
+}
+
+.tm-ai-agent-graph__edge--back {
+    stroke-dasharray: 6 4;
+}
+
+.tm-ai-agent-graph__edge--highlighted {
+    stroke: var(--tm-agent-graph-edge-selected);
+}
+
+.tm-ai-agent-graph__edge--dimmed {
+    opacity: 0.25;
+}
+
+/* The ONE animated subject of this surface: a call arriving. The stroke WIDTH stays the call-count
+   width the component computed — this rule only touches the colour. */
+.tm-ai-agent-graph__edge--pulse {
+    stroke: var(--tm-agent-graph-edge-pulse);
+    animation: tm-agent-graph-pulse var(--tm-agent-graph-pulse-duration) ease-out;
+}
+
+@keyframes tm-agent-graph-pulse {
+    0% {
+        stroke-opacity: 1;
+        stroke-dasharray: 0.1 14;
+        stroke-dashoffset: 0;
+    }
+
+    100% {
+        stroke-opacity: 1;
+        stroke-dasharray: 0.1 14;
+        stroke-dashoffset: -42;
+    }
+}
+
+.tm-ai-agent-graph__arrow-head {
+    fill: var(--tm-agent-graph-edge);
+}
+
+/* ── Nodes ───────────────────────────────────────────────────────────────────────────────────── */
+
+/* A node is native HTML inside a <foreignObject>, so it is a real button: native Enter/Space activation,
+   a real focus ring, wrapped text and a 44 px target with no emulation anywhere. The <g> around it only
+   carries the placement transform. */
+.tm-ai-agent-graph__node-body {
+    margin: 0;
+    padding: 0;
+    inline-size: 100%;
+    block-size: 100%;
+}
+
+.tm-ai-agent-graph__node {
+    /* The state tone is ONE knob a modifier SETS and the base rule READS, so a rule declared later can
+       never silently decide the colour. */
+    --tm-agent-graph-node-tone: var(--tm-border-color-strong);
+
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-areas:
+        "avatar text"
+        "state state";
+    align-items: center;
+    column-gap: var(--tm-space-2);
+    row-gap: 1px;
+    box-sizing: border-box;
+    margin: 0;
+    padding: var(--tm-space-1-5) var(--tm-space-2);
+    border: var(--tm-border-width) solid var(--tm-agent-graph-node-border);
+    border-inline-start: 4px solid var(--tm-agent-graph-node-tone);
+    border-radius: var(--tm-radius-md);
+    background-color: var(--tm-agent-graph-node-fill);
+    color: var(--tm-text-primary);
+    font-family: var(--tm-font-sans);
+    font-size: var(--tm-font-size-xs);
+    line-height: 1.25;
+    text-align: start;
+    cursor: pointer;
+}
+
+.tm-ai-agent-graph__node:hover {
+    border-color: var(--tm-border-color-strong);
+    border-inline-start-color: var(--tm-agent-graph-node-tone);
+}
+
+.tm-ai-agent-graph__node:focus-visible {
+    outline: 2px solid var(--tm-border-color-focus);
+    outline-offset: 2px;
+}
+
+.tm-ai-agent-graph__node--idle {
+    --tm-agent-graph-node-tone: var(--tm-border-color-strong);
+}
+
+.tm-ai-agent-graph__node--queued {
+    --tm-agent-graph-node-tone: var(--tm-color-info);
+}
+
+.tm-ai-agent-graph__node--running {
+    --tm-agent-graph-node-tone: var(--tm-color-primary);
+}
+
+.tm-ai-agent-graph__node--approval {
+    --tm-agent-graph-node-tone: var(--tm-color-warning);
+}
+
+.tm-ai-agent-graph__node--succeeded {
+    --tm-agent-graph-node-tone: var(--tm-color-success);
+}
+
+.tm-ai-agent-graph__node--failed {
+    --tm-agent-graph-node-tone: var(--tm-color-danger);
+}
+
+.tm-ai-agent-graph__node--cancelled {
+    --tm-agent-graph-node-tone: var(--tm-text-disabled);
+}
+
+/* A node that needs the reader is painted, not just tinted: the whole border takes the attention tone and
+   the state row spells the state out (an icon AND a word — a colour alone is not information). */
+.tm-ai-agent-graph__node--approval {
+    border-color: var(--tm-color-warning);
+}
+
+.tm-ai-agent-graph__node--failed {
+    border-color: var(--tm-color-danger);
+}
+
+.tm-ai-agent-graph__node-avatar {
+    grid-area: avatar;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    inline-size: 1.75rem;
+    block-size: 1.75rem;
+    border-radius: var(--tm-radius-full);
+    background-color: var(--tm-agent-graph-node-avatar);
+    color: var(--tm-agent-graph-node-avatar-ink);
+    font-weight: var(--tm-font-weight-semibold);
+    font-size: var(--tm-font-size-xs);
+}
+
+.tm-ai-agent-graph__node-initials {
+    font-size: var(--tm-font-size-xs);
+    font-weight: var(--tm-font-weight-semibold);
+    line-height: 1;
+}
+
+.tm-ai-agent-graph__node-kind-icon {
+    display: inline-flex;
+    color: var(--tm-agent-graph-node-avatar-ink);
+}
+
+.tm-ai-agent-graph__node-text {
+    grid-area: text;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    min-inline-size: 0;
+}
+
+.tm-ai-agent-graph__node-label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.tm-ai-agent-graph__node-state {
+    /* The state row owns the full node width: "Waiting for approval" is the longest word pair a node prints, and a
+       row squeezed beside the avatar ellipsized it. */
+    grid-area: state;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--tm-space-1);
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-xs);
+}
+
+.tm-ai-agent-graph__node-state-icon {
+    display: inline-flex;
+}
+
+.tm-ai-agent-graph__node-state-text {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* The eight agent palette slots. A tool, a resource and a human carry no data-color, so they keep the
+   neutral avatar the root declares — painting them in an agent's colour would claim an identity they do
+   not have. */
+.tm-ai-agent-graph__node[data-color="0"] { --tm-agent-graph-node-avatar: var(--tm-agent-color-0); --tm-agent-graph-node-avatar-ink: var(--tm-agent-color-ink); }
+.tm-ai-agent-graph__node[data-color="1"] { --tm-agent-graph-node-avatar: var(--tm-agent-color-1); --tm-agent-graph-node-avatar-ink: var(--tm-agent-color-ink); }
+.tm-ai-agent-graph__node[data-color="2"] { --tm-agent-graph-node-avatar: var(--tm-agent-color-2); --tm-agent-graph-node-avatar-ink: var(--tm-agent-color-ink); }
+.tm-ai-agent-graph__node[data-color="3"] { --tm-agent-graph-node-avatar: var(--tm-agent-color-3); --tm-agent-graph-node-avatar-ink: var(--tm-agent-color-ink); }
+.tm-ai-agent-graph__node[data-color="4"] { --tm-agent-graph-node-avatar: var(--tm-agent-color-4); --tm-agent-graph-node-avatar-ink: var(--tm-agent-color-ink); }
+.tm-ai-agent-graph__node[data-color="5"] { --tm-agent-graph-node-avatar: var(--tm-agent-color-5); --tm-agent-graph-node-avatar-ink: var(--tm-agent-color-ink); }
+.tm-ai-agent-graph__node[data-color="6"] { --tm-agent-graph-node-avatar: var(--tm-agent-color-6); --tm-agent-graph-node-avatar-ink: var(--tm-agent-color-ink); }
+.tm-ai-agent-graph__node[data-color="7"] { --tm-agent-graph-node-avatar: var(--tm-agent-color-7); --tm-agent-graph-node-avatar-ink: var(--tm-agent-color-ink); }
+
+.tm-ai-agent-graph__node--pinned {
+    border-style: dashed;
+}
+
+.tm-ai-agent-graph__node--selected {
+    border-color: var(--tm-color-primary);
+    border-inline-start-color: var(--tm-agent-graph-node-tone);
+    box-shadow: inset 0 0 0 1px var(--tm-color-primary);
+}
+
+.tm-ai-agent-graph__node--neighbor {
+    border-color: var(--tm-color-primary-text);
+    border-inline-start-color: var(--tm-agent-graph-node-tone);
+}
+
+/* Dimming is a TOKEN change, not an opacity: a dimmed node is still a focusable, ACTIVE button, so its label and its
+   state word keep their own contrast (an opacity would push both well below 4.5:1, worst in dark mode). Only the
+   decorative avatar steps back. */
+.tm-ai-agent-graph__node--dimmed {
+    background-color: var(--tm-bg-surface-secondary);
+    border-color: var(--tm-border-color);
+}
+
+.tm-ai-agent-graph__node--dimmed .tm-ai-agent-graph__node-avatar {
+    opacity: 0.7;
+}
+
+/* ── The text alternative ────────────────────────────────────────────────────────────────────── */
+
+.tm-ai-agent-graph__tables {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-4);
+    min-inline-size: 0;
+    overflow-x: auto;
+}
+
+.tm-ai-agent-graph__table {
+    inline-size: 100%;
+    border-collapse: collapse;
+    font-size: var(--tm-font-size-sm);
+}
+
+.tm-ai-agent-graph__table caption {
+    padding-block-end: var(--tm-space-2);
+    text-align: start;
+    font-size: var(--tm-font-size-xs);
+    color: var(--tm-text-secondary);
+}
+
+.tm-ai-agent-graph__table th,
+.tm-ai-agent-graph__table td {
+    padding: var(--tm-space-1-5) var(--tm-space-2);
+    border-block-end: var(--tm-border-width) solid var(--tm-border-color);
+    text-align: start;
+    vertical-align: top;
+}
+
+.tm-ai-agent-graph__table th {
+    font-weight: var(--tm-font-weight-semibold);
+    color: var(--tm-text-secondary);
+}
+
+.tm-ai-agent-graph__table-node {
+    /* A <th> stays a TABLE CELL: the flex row lives in the button inside it, so the label column
+       cannot collapse to its content minimum. */
+    text-align: start;
+}
+
+.tm-ai-agent-graph__table-select {
+    display: inline-flex;
+    align-items: center;
+    min-block-size: var(--tm-touch-target);
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--tm-text-link);
+    font: inherit;
+    text-align: start;
+    cursor: pointer;
+    text-decoration: underline;
+}
+
+.tm-ai-agent-graph__table-select:focus-visible {
+    outline: 2px solid var(--tm-border-color-focus);
+    outline-offset: 2px;
+}
+
+.tm-ai-agent-graph__detail {
+    padding: var(--tm-space-3);
+    border: var(--tm-border-width) solid var(--tm-border-color);
+    border-radius: var(--tm-radius-md);
+    background-color: var(--tm-bg-surface-secondary);
+}
+
+/* ── Touch ───────────────────────────────────────────────────────────────────────────────────── */
+
+@media (pointer: coarse) {
+    .tm-ai-agent-graph__zoom-button {
+        inline-size: var(--tm-touch-target);
+        block-size: var(--tm-touch-target);
+    }
+
+    .tm-ai-agent-graph__table-select {
+        min-block-size: var(--tm-touch-target);
+    }
+}
+
+/* ── High contrast ──────────────────────────────────────────────────────────────────────────── */
+
+@media (forced-colors: active) {
+    .tm-ai-agent-graph__zoom-button:focus-visible,
+    .tm-ai-agent-graph__table-select:focus-visible,
+    .tm-ai-agent-graph__viewport:focus-visible,
+    .tm-ai-agent-graph__node:focus-visible {
+        outline-color: Highlight;
+    }
+
+    .tm-ai-agent-graph__group-box {
+        stroke: CanvasText;
+    }
+
+    /* A tone border collapses under high contrast, so the selected and the attention nodes keep a Highlight mark — a
+       fill alone would disappear with the system palette. A BORDER, never an outline: the outline is the focus ring
+       (WCAG 2.4.7), so a selected node and a focused one must never wear the same mark. */
+    .tm-ai-agent-graph__node[aria-pressed="true"],
+    .tm-ai-agent-graph__node--approval {
+        border: 2px solid Highlight;
+        outline: none;
+    }
+
+    /* Focus is the ONE state that owns the outline, painted thicker than any border, so a focused SELECTED node still
+       reads as focused. Declared after the selected rule, which clears the outline. */
+    .tm-ai-agent-graph__node:focus-visible {
+        outline: 3px solid Highlight;
+        outline-offset: 3px;
+    }
+
+    .tm-ai-agent-graph__edge {
+        stroke: CanvasText;
+    }
+
+    /* An SVG fill is not remapped by the system palette: left on the muted token the arrow head would fade out of its
+       own curve, so it keeps the CanvasText of the connection it ends. */
+    .tm-ai-agent-graph__arrow-head {
+        fill: CanvasText;
+    }
+
+    .tm-ai-agent-graph__edge--highlighted {
+        stroke: Highlight;
+    }
+
+    /* Opacity over system colours lowers contrast unpredictably, so every dim is dropped here. */
+    .tm-ai-agent-graph__edge--dimmed {
+        opacity: 1;
+    }
+
+    .tm-ai-agent-graph__node--dimmed,
+    .tm-ai-agent-graph__node--dimmed .tm-ai-agent-graph__node-avatar {
+        opacity: 1;
+    }
+
+    .tm-ai-agent-graph__edge--pulse {
+        stroke: Highlight;
+    }
+}
+
+/* ── Reduced motion ────────────────────────────────────────────────────────────────────────── */
+
+/* A pulse is the exception, not the default: a reader who asked for less motion still has to SEE
+   that a call happened, so the movement is replaced by a still Highlight-toned stroke. */
+@media (prefers-reduced-motion: reduce) {
+    .tm-ai-agent-graph__edge--pulse {
+        animation: none;
+        stroke: var(--tm-agent-graph-edge-pulse);
+        stroke-dasharray: 6 3;
+        stroke-opacity: 1;
+    }
+}

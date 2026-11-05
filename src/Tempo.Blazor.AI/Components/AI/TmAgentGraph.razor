@@ -1,0 +1,330 @@
+@namespace Tempo.Blazor.Components.AI
+@inherits Tempo.Blazor.Components.TmComponentBase
+@using System.Globalization
+@using Tempo.Blazor.AI.Models
+@using Tempo.Blazor.Components.Icons
+@using Tempo.Blazor.Components.Inputs
+
+@* Agents, tools, resources and the human in the loop as ONE drawn network: a box per node in the column its kind
+   belongs to, a curve per connection whose thickness is how often it was called and a short pulse on the curve every
+   time a new call arrives.
+
+   The drawing is deliberately split: the connections, the group boxes and the node boxes are SVG (a curve has no
+   text), while every node is a FOCUSABLE group with a composed accessible name (role="button", a roving tabindex and
+   the ARROW keys walking the real connections). A graph is never the only way to read the run: the View switcher
+   renders the SAME data as two plain tables — every connection with its call count, and every node with its state.
+
+   ONE polite live region announces a selection, a zoom change, a lost selection and a stream gap; the nodes carry
+   aria-pressed (not a live region) and nothing in the component is a second aria-live island. *@
+<section class="@RootClass"
+         data-testid="@RootTestId("agent-graph")"
+         data-view="@ViewSlug"
+         data-zoom="@ZoomPercent.ToString(CultureInfo.InvariantCulture)"
+         style="@PulseDurationStyle"
+         @attributes="AdditionalAttributes">
+
+    <div class="tm-ai-agent-graph__header">
+        @if (ShowTitle)
+        {
+            @Heading
+        }
+        <div class="tm-ai-agent-graph__toolbar">
+            <div class="tm-ai-agent-graph__view" data-testid="@TestId("agent-graph-view")">
+                <TmSegmentedControl TValue="AgentGraphViewMode"
+                                    Size="SegmentedControlSize.Sm"
+                                    Label="@Loc["TmAgentGraph_ViewLabel"]"
+                                    Options="@ViewOptions"
+                                    Value="@_viewMode"
+                                    ValueChanged="OnViewModeChangedAsync" />
+            </div>
+            @if (_viewMode == AgentGraphViewMode.Graph && ShowZoom)
+            {
+                <div class="tm-ai-agent-graph__zoom"
+                     role="group"
+                     aria-label="@Loc["TmAgentGraph_ZoomGroup"]"
+                     data-testid="@TestId("agent-graph-zoom")">
+                    <button type="button"
+                            class="tm-ai-agent-graph__zoom-button"
+                            aria-label="@Loc["TmAgentGraph_ZoomOut"]"
+                            title="@Loc["TmAgentGraph_ZoomOut"]"
+                            data-testid="@TestId("agent-graph-zoom-out")"
+                            @onclick="ZoomOutAsync">
+                        <TmIcon Name="@IconNames.Minus" Size="IconSize.Sm" />
+                    </button>
+                    <span class="tm-ai-agent-graph__zoom-value"
+                          aria-hidden="true"
+                          data-testid="@TestId("agent-graph-zoom-value")">@ZoomPercentText</span>
+                    <button type="button"
+                            class="tm-ai-agent-graph__zoom-button"
+                            aria-label="@Loc["TmAgentGraph_ZoomIn"]"
+                            title="@Loc["TmAgentGraph_ZoomIn"]"
+                            data-testid="@TestId("agent-graph-zoom-in")"
+                            @onclick="ZoomInAsync">
+                        <TmIcon Name="@IconNames.Plus" Size="IconSize.Sm" />
+                    </button>
+                    <button type="button"
+                            class="tm-ai-agent-graph__zoom-button tm-ai-agent-graph__zoom-button--fit"
+                            aria-label="@Loc["TmAgentGraph_ZoomFit"]"
+                            title="@Loc["TmAgentGraph_ZoomFit"]"
+                            data-testid="@TestId("agent-graph-zoom-fit")"
+                            @onclick="FitToViewAsync">
+                        <TmIcon Name="@IconNames.Maximize2" Size="IconSize.Sm" />
+                    </button>
+                </div>
+            }
+        </div>
+    </div>
+
+    <p class="tm-sr-only" id="@InstructionsId" data-testid="@TestId("agent-graph-instructions")">@Loc["TmAgentGraph_Instructions"]</p>
+
+    @if (Layout.IsEmpty)
+    {
+        <p class="tm-ai-agent-graph__empty" data-testid="@TestId("agent-graph-empty")">@Loc["TmAgentGraph_Empty"]</p>
+    }
+    else if (_viewMode == AgentGraphViewMode.Table)
+    {
+        <div class="tm-ai-agent-graph__tables" data-testid="@TestId("agent-graph-table-body")">
+            <table class="tm-ai-agent-graph__table" data-testid="@TestId("agent-graph-table")">
+                <caption>@Loc["TmAgentGraph_ConnectionsCaption"]</caption>
+                <thead>
+                    <tr>
+                        <th scope="col">@Loc["TmAgentGraph_ColumnFrom"]</th>
+                        <th scope="col">@Loc["TmAgentGraph_ColumnTo"]</th>
+                        <th scope="col">@Loc["TmAgentGraph_ColumnKind"]</th>
+                        <th scope="col">@Loc["TmAgentGraph_ColumnCalls"]</th>
+                        <th scope="col">@Loc["TmAgentGraph_ColumnLastCall"]</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var edge in View.Edges)
+                    {
+                        <tr data-edge-id="@edge.Id" data-testid="@TestId("agent-graph-table-row")">
+                            <td>@NodeName(edge.From)</td>
+                            <td>@NodeName(edge.To)</td>
+                            <td>@TableKindOf(edge.To)</td>
+                            <td>@edge.CallCount.ToString(CultureInfo.CurrentCulture)</td>
+                            <td>@LastCallText(edge)</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+
+            <table class="tm-ai-agent-graph__table" data-testid="@TestId("agent-graph-nodes-table")">
+                <caption>@Loc["TmAgentGraph_NodesCaption"]</caption>
+                <thead>
+                    <tr>
+                        <th scope="col">@Loc["TmAgentGraph_ColumnNode"]</th>
+                        <th scope="col">@Loc["TmAgentGraph_ColumnKind"]</th>
+                        <th scope="col">@Loc["TmAgentGraph_ColumnState"]</th>
+                        <th scope="col">@Loc["TmAgentGraph_ColumnCalls"]</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var node in View.Nodes)
+                    {
+                        <tr data-node-id="@node.Id" data-testid="@TestId("agent-graph-node-row")">
+                            <th scope="row" class="tm-ai-agent-graph__table-node">
+                                <button type="button"
+                                        class="tm-ai-agent-graph__table-select"
+                                        aria-pressed="@(IsSelected(node.Id) ? "true" : "false")"
+                                        data-testid="@TestId("agent-graph-node-select")"
+                                        @onclick="() => SelectNodeAsync(node.Id)">
+                                    @NodeLabel(node)
+                                </button>
+                            </th>
+                            <td>@KindText(node.Kind)</td>
+                            <td>@StateText(node.Status)</td>
+                            <td>@CallsOf(node.Id).ToString(CultureInfo.CurrentCulture)</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+    else
+    {
+        @* The scrollport is the ONE labelled group; the nodes' roving tabindex is the graph's only tab stop, so the
+           scrollport is programmatic only (a lost selection hands the focus back to it). The <svg> inside it is a
+           plain container: a second role="group" with the same name and instructions would be announced twice and
+           would put a tab stop in front of the graph. *@
+        <div class="tm-ai-agent-graph__viewport"
+             tabindex="@ViewportTabIndex"
+             role="group"
+             aria-label="@Loc["TmAgentGraph_GraphLabel"]"
+             aria-describedby="@InstructionsId"
+             data-testid="@TestId("agent-graph-viewport")"
+             @ref="_viewportRef">
+            <svg class="tm-ai-agent-graph__canvas"
+                 width="@CanvasWidth"
+                 height="@CanvasHeight"
+                 viewBox="@ViewBox"
+                 data-testid="@TestId("agent-graph-canvas")">
+                <defs>
+                    @* `markerUnits="userSpaceOnUse"` keeps the arrow the SAME size on a thin and on a busy
+                       connection: the default (strokeWidth) scales the head with the line, so the busiest edge of a
+                       graph grew a 40 px triangle. *@
+                    <marker id="@ArrowMarkerId"
+                            viewBox="0 0 8 8"
+                            refX="7"
+                            refY="4"
+                            markerWidth="11"
+                            markerHeight="11"
+                            markerUnits="userSpaceOnUse"
+                            orient="auto-start-reverse">
+                        <path d="M 0 0 L 8 4 L 0 8 z" class="tm-ai-agent-graph__arrow-head" />
+                    </marker>
+                </defs>
+
+                @if (Layout.Groups.Count > 0)
+                {
+                    <g class="tm-ai-agent-graph__groups">
+                        @foreach (var group in Layout.Groups)
+                        {
+                            <g class="tm-ai-agent-graph__group"
+                               data-group="@group.Group"
+                               data-testid="@TestId("agent-graph-group")"
+                               @key="group.Group">
+                                <rect class="tm-ai-agent-graph__group-box"
+                                      x="@Px(group.X)"
+                                      y="@Px(group.Y)"
+                                      width="@Px(group.WidthPx)"
+                                      height="@Px(group.HeightPx)"
+                                      rx="14" />
+                                @* The label is HTML inside a foreignObject: an SVG <text> cannot be written in a
+                                   Razor code block (it is the <text> pseudo-element there), and HTML keeps the
+                                   label's own font tokens instead of an SVG presentation attribute. *@
+                                <foreignObject x="@Px(group.X + 8)"
+                                               y="@Px(group.Y + 4)"
+                                               width="@Px(Math.Max(1, group.WidthPx - 16))"
+                                               height="16">
+                                    <div xmlns="http://www.w3.org/1999/xhtml" class="tm-ai-agent-graph__group-label">@group.Group</div>
+                                </foreignObject>
+                            </g>
+                        }
+                    </g>
+                }
+
+                @* The connections are decoration for a screen reader: the node names carry the call counts and the
+                   table view lists every connection with its numbers, so nothing here is announced. *@
+                <g class="tm-ai-agent-graph__edges" aria-hidden="true">
+                    @foreach (var edge in Layout.Edges)
+                    {
+                        <path class="@EdgeClass(edge)"
+                              d="@edge.Path"
+                              stroke-width="@Number(edge.StrokeWidthPx)"
+                              marker-end="@($"url(#{ArrowMarkerId})")"
+                              data-edge-id="@edge.Edge.Id"
+                              data-from="@edge.Edge.From"
+                              data-to="@edge.Edge.To"
+                              data-calls="@edge.Edge.CallCount.ToString(CultureInfo.InvariantCulture)"
+                              data-pulse="@(IsPulsing(edge.Edge.Id) ? "true" : null)"
+                              data-testid="@TestId("agent-graph-edge")"
+                              @key="edge.Edge.Id" />
+                    }
+                </g>
+
+                <g>
+                    @foreach (var handle in _handles)
+                    {
+                        var placement = handle.Placement;
+                        var node = placement.Node;
+                        var lines = LabelLines(node);
+                        @* The box is native HTML inside a foreignObject (the DiagramEditor's proven pattern): a
+                           node carries wrapped text, a real <button> (native Enter/Space activation, a real focus
+                           ring, a 44 px target) and the TmIcon components, none of which SVG text can offer. The
+                           foreignObject is 3 px larger than the box on every side, so the focus ring is never
+                           clipped by its default overflow. *@
+                        <g transform="@NodeTransform(placement)"
+                           data-node-frame="@node.Id"
+                           @key="node.Id">
+                            <foreignObject x="-3" y="-3"
+                                           width="@Px(placement.WidthPx + 6)"
+                                           height="@Px(placement.HeightPx + 6)">
+                                <div xmlns="http://www.w3.org/1999/xhtml" class="tm-ai-agent-graph__node-body">
+                                    <button type="button"
+                                            class="@NodeClass(placement)"
+                                            tabindex="@(IsActive(placement) ? "0" : "-1")"
+                                            style="inline-size:@Px(placement.WidthPx);block-size:@Px(placement.HeightPx);"
+                                            aria-label="@NodeAriaLabel(placement)"
+                                            aria-pressed="@(IsSelected(node.Id) ? "true" : "false")"
+                                            title="@NodeTitle(placement)"
+                                            data-node-id="@node.Id"
+                                            data-kind="@AgentGraphPresentation.KindSlug(node.Kind)"
+                                            data-color="@ColorOf(node)"
+                                            data-status="@StatusSlug(node.Status)"
+                                            data-pinned="@(placement.IsPinned ? "true" : null)"
+                                            data-testid="@TestId("agent-graph-node")"
+                                            @ref="handle.Ref"
+                                            @onclick="() => SelectNodeAsync(node.Id)"
+                                            @onkeydown="args => OnNodeKeyDownAsync(placement, args)"
+                                            @onfocus="() => OnNodeFocused(node.Id)">
+                                        <span class="tm-ai-agent-graph__node-avatar" aria-hidden="true">
+                                            @if (node.Kind == AgentGraphNodeKind.Agent)
+                                            {
+                                                <span class="tm-ai-agent-graph__node-initials">@node.Initials</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="tm-ai-agent-graph__node-kind-icon">
+                                                    <TmIcon Name="@AgentGraphPresentation.KindIcon(node.Kind)" Size="IconSize.Xs" />
+                                                </span>
+                                            }
+                                        </span>
+                                        <span class="tm-ai-agent-graph__node-text">
+                                            @foreach (var line in lines)
+                                            {
+                                                <span class="tm-ai-agent-graph__node-label">@line</span>
+                                            }
+                                            <span class="tm-ai-agent-graph__node-state">
+                                                <span class="tm-ai-agent-graph__node-state-icon" aria-hidden="true">
+                                                    <TmIcon Name="@AgentStatusPresentation.Icon(node.Status)" Size="IconSize.Xs" />
+                                                </span>
+                                                <span class="tm-ai-agent-graph__node-state-text">@StateText(node.Status)</span>
+                                            </span>
+                                        </span>
+                                    </button>
+                                </div>
+                            </foreignObject>
+                        </g>
+                    }
+                </g>
+            </svg>
+        </div>
+    }
+
+    @if (DetailTemplate is not null && SelectedNode is { } selectedNode)
+    {
+        <div class="tm-ai-agent-graph__detail"
+             role="region"
+             aria-label="@Loc["TmAgentGraph_Detail"]"
+             data-testid="@TestId("agent-graph-detail")">
+            @DetailTemplate(selectedNode)
+        </div>
+    }
+
+    <div class="tm-sr-only"
+         role="status"
+         aria-live="polite"
+         aria-atomic="true"
+         data-testid="@TestId("agent-graph-announcement")">@_announcement</div>
+</section>
+
+@code {
+    /// <summary>The heading, built at the requested level without duplicating the markup six times.</summary>
+    private RenderFragment Heading => builder =>
+    {
+        builder.OpenElement(0, "h" + EffectiveHeadingLevel.ToString(CultureInfo.InvariantCulture));
+        builder.AddAttribute(1, "class", "tm-ai-agent-graph__title");
+        builder.AddAttribute(2, "id", TitleId);
+        builder.AddAttribute(3, "data-testid", TestId("agent-graph-title"));
+        builder.AddContent(4, HeadingText);
+        builder.CloseElement();
+    };
+
+    /// <summary>
+    /// The localized kind word of the node a connection points at — or an explicit "not in this graph" for an edge
+    /// whose endpoint the snapshot does not contain (a state the drawing reports but cannot paint).
+    /// </summary>
+    private string TableKindOf(string nodeId)
+        => FindNode(nodeId) is { } node ? KindText(node.Kind) : Loc["TmAgentGraph_NodeMissing"];
+}

@@ -1144,5 +1144,18 @@
   "TmAiAgentsDemo_FocusPerformance": "performance",
   "TmAiAgentsDemo_ToneFriendly": "amical",
   "TmAiAgentsDemo_ToneFormal": "formel",
-  "TmAiAgentsDemo_ApprovalPending": "L'exécution attend votre décision."
+  "TmAiAgentsDemo_ApprovalPending": "L'exécution attend votre décision.",
+  "TmAiAgentsDemo_GraphTitle": "La même exécution en réseau",
+  "TmAiAgentsDemo_GraphHint": "Les agents, les outils qu’ils appellent et le grand livre qu’ils lisent comme un seul réseau. Les flèches parcourent une connexion, Home et End vont au premier et au dernier nœud, Entrée sélectionne un nœud et le commutateur d’affichage porte les mêmes nombres que deux tableaux.",
+  "TmAiAgentsDemo_GraphRunTitle": "Réseau de rapprochement",
+  "TmAiAgentsDemo_GraphSelected": "Sélection : {0}",
+  "TmAiAgentsDemo_GraphNoSelection": "Aucun nœud n’est sélectionné.",
+  "TmAiAgentsDemo_GraphCall": "Simuler un appel",
+  "TmAiAgentsDemo_GraphCallLog": "Appels envoyés par la page : {0}",
+  "TmAiAgentsDemo_GraphDetailCalls": "Appels sur ce nœud",
+  "TmAiAgentsDemo_GraphHuman": "Dana (demandeuse)",
+  "TmAiAgentsDemo_GraphLedger": "Grand livre",
+  "TmAiAgentsDemo_GraphSearch": "Recherche web",
+  "TmAiAgentsDemo_GraphCode": "Interpréteur de code",
+  "TmAiAgentsDemo_GraphGroupCore": "Agents principaux"
 }

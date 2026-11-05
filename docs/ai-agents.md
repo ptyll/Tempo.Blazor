@@ -258,8 +258,18 @@ built on the live contract above: the host passes a snapshot plus an event tail,
 timeline from being the only way to read the data (a table view carries the same blocks and handoffs). Its full
 contract — models, layout rules, zoom, accessibility, CSS — is [agent-lanes.md](agent-lanes.md).
 
+## The network: `TmAgentGraph`
+
+`TmAgentGraph` draws the SAME agents as a network: a box per agent, tool, resource and human in the column its kind
+belongs to, a curve per connection whose thickness is how often it was called, and a short pulse on the curve every
+time a new `AgentGraphCall` arrives. Its layout is pure C# (`AgentGraphLayout`, deterministic and unit-tested), the
+canvas is an SVG `role="group"` whose nodes are native buttons (one roving tab stop, ARROW keys walking the real
+connections), and the View switcher carries every connection and every node as plain tables. Its full contract —
+models, layout rules, pulses, accessibility, CSS and the package's JS module — is [agent-graph.md](agent-graph.md).
+
 ## Related pages
 
+- [TmAgentGraph](agent-graph.md) — the same run as a network of agents, tools and resources.
 - [TmAgentLanes](agent-lanes.md), [TmAgentPlan](agent-plan.md), [TmAgentRunTree](agent-run-tree.md), [TmAgentMonitor](agent-monitor.md),
   [TmPermissionRequest](permission-request.md) — the run-side surfaces that these visualizations compose with.
 - [TmTraceWaterfall](trace-waterfall.md) — the span view of one agent's work.

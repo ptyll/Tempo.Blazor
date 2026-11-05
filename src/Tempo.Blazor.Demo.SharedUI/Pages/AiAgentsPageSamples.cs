@@ -75,6 +75,55 @@ internal static class AiAgentsPageSamples
         };
     }
 
+    /// <summary>
+    /// The SAME run as a NETWORK: a human, the agents that act, the ledger they read and the two tools they call, with
+    /// the call counts and the one node waiting for a decision. The call counts are the ones the lane view shows for
+    /// the same work, so the two surfaces never disagree about the run.
+    /// </summary>
+    internal static AgentGraphSnapshot GraphSnapshot(Func<string, string> loc, DateTimeOffset now)
+    {
+        AgentGraphNode Node(string id, string label, AgentGraphNodeKind kind, AgentActivityStatus status,
+            string? group = null, int color = 0)
+            => new(id, label)
+            {
+                Kind = kind,
+                Status = status,
+                Group = group,
+                Agent = kind == AgentGraphNodeKind.Agent
+                    ? new AgentRef(label, id) { ColorIndex = color }
+                    : null,
+            };
+
+        return new AgentGraphSnapshot
+        {
+            Sequence = 20,
+            Nodes =
+            [
+                Node("human", loc("TmAiAgentsDemo_GraphHuman"), AgentGraphNodeKind.Human, AgentActivityStatus.Idle),
+                Node("planner", "Planner", AgentGraphNodeKind.Agent, AgentActivityStatus.Running,
+                    group: loc("TmAiAgentsDemo_GraphGroupCore"), color: 0),
+                Node("reconciler", "Reconciler", AgentGraphNodeKind.Agent, AgentActivityStatus.WaitingForApproval,
+                    group: loc("TmAiAgentsDemo_GraphGroupCore"), color: 1),
+                Node("reviewer", "Reviewer", AgentGraphNodeKind.Agent, AgentActivityStatus.Succeeded, color: 2),
+                Node("ledger", loc("TmAiAgentsDemo_GraphLedger"), AgentGraphNodeKind.Resource, AgentActivityStatus.Idle),
+                Node("search", loc("TmAiAgentsDemo_GraphSearch"), AgentGraphNodeKind.Tool, AgentActivityStatus.Succeeded),
+                Node("code", loc("TmAiAgentsDemo_GraphCode"), AgentGraphNodeKind.Tool, AgentActivityStatus.Idle),
+            ],
+            Edges =
+            [
+                new AgentGraphEdge("g-ask", "human", "planner") { CallCount = 1, LastCallAt = now.AddMinutes(-42) },
+                new AgentGraphEdge("g-search", "planner", "search")
+                {
+                    CallCount = 3, LastCallAt = now.AddMinutes(-31), IsActive = true,
+                },
+                new AgentGraphEdge("g-leger", "planner", "ledger") { CallCount = 12, LastCallAt = now.AddMinutes(-18) },
+                new AgentGraphEdge("g-delegate", "planner", "reconciler") { CallCount = 1, LastCallAt = now.AddMinutes(-17) },
+                new AgentGraphEdge("g-code", "reconciler", "code") { CallCount = 5, LastCallAt = now.AddMinutes(-4) },
+                new AgentGraphEdge("g-review", "reviewer", "ledger") { CallCount = 2, LastCallAt = now.AddMinutes(-6) },
+            ],
+        };
+    }
+
     /// <summary>The four steps of the reviewed plan, in display order.</summary>
     internal static IReadOnlyList<AgentPlanStep> ReviewSteps(Func<string, string> loc) =>
     [

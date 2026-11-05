@@ -153,6 +153,43 @@
 </section>
 
 @* ---------------------------------------------------------------------------------------------------------
+   The same run as a NETWORK: the human who asked, the agents, the ledger and the two tools, with the call counts of
+   the lane view above. The page owns the snapshot, the selection and the calls it pushes, so the pulse a reader sees
+   is the component applying a real AgentGraphCall event — not a decoration. *@
+<section class="demo-section mb-8" data-testid="ai-agents-graph-section">
+    <h2 class="text-lg font-semibold text-slate-900 dark:text-white mb-2">@Loc["TmAiAgentsDemo_GraphTitle"]</h2>
+    <p class="text-sm text-slate-600 dark:text-slate-400 mb-2">@Loc["TmAiAgentsDemo_GraphHint"]</p>
+    <div class="flex flex-wrap items-center gap-3 mb-3">
+        <TmButton Variant="ButtonVariant.Secondary" Size="ButtonSize.Sm"
+                  data-testid="ai-agents-graph-call" OnClick="SimulateGraphCall">@Loc["TmAiAgentsDemo_GraphCall"]</TmButton>
+        <p class="text-sm text-slate-700 dark:text-slate-300" data-testid="ai-agents-graph-call-log">@GraphCallText</p>
+        <p class="text-sm text-slate-700 dark:text-slate-300" data-testid="ai-agents-graph-selected">@GraphSelectedText</p>
+    </div>
+
+    <TmAgentGraph Snapshot="_graph"
+                  Events="_graphCalls"
+                  @bind-SelectedNodeId="_graphNodeId"
+                  Title="@Loc["TmAiAgentsDemo_GraphRunTitle"]"
+                  TimeProvider="_clock"
+                  Culture="@CultureInfo.CurrentCulture"
+                  DataTestId="ai-agents-graph">
+        <DetailTemplate Context="node">
+            <div data-testid="ai-agents-graph-detail" data-node-id="@node.Id">
+                <h3 class="text-sm font-semibold text-slate-900 dark:text-white mb-2">@GraphNodeName(node)</h3>
+                <dl class="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
+                    <dt class="text-slate-500 dark:text-slate-400">@Loc["TmAgentRunDemo_DetailKind"]</dt>
+                    <dd class="text-slate-800 dark:text-slate-200" data-testid="ai-agents-graph-detail-kind">@node.Kind</dd>
+                    <dt class="text-slate-500 dark:text-slate-400">@Loc["TmAgentRunDemo_DetailStatus"]</dt>
+                    <dd class="text-slate-800 dark:text-slate-200" data-testid="ai-agents-graph-detail-status">@node.Status</dd>
+                    <dt class="text-slate-500 dark:text-slate-400">@Loc["TmAiAgentsDemo_GraphDetailCalls"]</dt>
+                    <dd class="text-slate-800 dark:text-slate-200" data-testid="ai-agents-graph-detail-calls">@GraphCallsOf(node.Id)</dd>
+                </dl>
+            </div>
+        </DetailTemplate>
+    </TmAgentGraph>
+</section>
+
+@* ---------------------------------------------------------------------------------------------------------
    The same run in the live monitor. When the run reaches its last step it PAUSES and asks for a decision: the
    host's own TmApprovalCard sits in the monitor's PendingApproval slot. Approving resumes the run; rejecting
    skips the step and finishes the run. *@
@@ -302,6 +339,10 @@
     private IReadOnlyList<AgentRunNode> _runNodes = [];
     private AgentLanesSnapshot _lanes = new();
     private string? _laneBlockId;
+    private AgentGraphSnapshot _graph = new();
+    private IReadOnlyList<AgentGraphCall> _graphCalls = [];
+    private long _graphSequence;
+    private string? _graphNodeId;
     private IReadOnlyList<AgentPlanStep> _reviewSteps = [];
     private IReadOnlyList<AgentPlanStep> _runSteps = [];
     private ContextUsageSnapshot _context = new();
@@ -342,6 +383,8 @@
 
         _models = AiAgentsPageSamples.Models(Key);
         _lanes = AiAgentsPageSamples.LanesSnapshot(Key, _clock.GetUtcNow());
+        _graph = AiAgentsPageSamples.GraphSnapshot(Key, _clock.GetUtcNow());
+        _graphSequence = _graph.Sequence;
         _selection = new AiModelSelection("aurora-pro");
         _templates = AiAgentsPageSamples.Templates(Key);
         _templateId = "release-notes";
@@ -441,6 +484,47 @@
             ? Loc["TmAiAgentsDemo_LanesSelected", block.Label]
             : Loc["TmAiAgentsDemo_LanesNoSelection"]
         : Loc["TmAiAgentsDemo_LanesNoSelection"];
+
+    /// <summary>The selection read-out of the graph: the node's name, or the localized "nothing selected" sentence.</summary>
+    private string GraphSelectedText => _graphNodeId is { } id
+        ? GraphNodeName(_graph.Nodes.FirstOrDefault(node => string.Equals(node.Id, id, StringComparison.Ordinal)))
+        : Loc["TmAiAgentsDemo_GraphNoSelection"];
+
+    /// <summary>The number of calls the page pushed into the graph, so a reader sees the host driving the stream.</summary>
+    private string GraphCallText
+        => Loc["TmAiAgentsDemo_GraphCallLog", _graphCalls.Count.ToString(CultureInfo.CurrentCulture)];
+
+    /// <summary>A node's display name: its label, its agent's name, or the localized kind word.</summary>
+    private string GraphNodeName(AgentGraphNode? node)
+        => node is null
+            ? Loc["TmAiAgentsDemo_GraphNoSelection"]
+            : node.HasLabel
+                ? node.Label
+                : node.Agent is { HasName: true } agent
+                    ? agent.Name
+                    : node.Kind.ToString();
+
+    /// <summary>
+    /// The number of calls on a node's connections — the same rule the component applies, so the detail panel and the
+    /// node's accessible name cannot disagree.
+    /// </summary>
+    private int GraphCallsOf(string nodeId)
+        => _graph.Edges
+            .Where(edge => string.Equals(edge.From, nodeId, StringComparison.Ordinal)
+                           || string.Equals(edge.To, nodeId, StringComparison.Ordinal))
+            .Sum(edge => edge.CallCount);
+
+    /// <summary>
+    /// Pushes ONE real <see cref="AgentGraphCall"/> into the graph, cycling the three busiest connections: the
+    /// component folds it into its view (the stroke thickens, the last-call time moves) and pulses the edge.
+    /// </summary>
+    private void SimulateGraphCall()
+    {
+        var edges = new[] { "g-search", "g-leger", "g-code" };
+        var edgeId = edges[_graphCalls.Count % edges.Length];
+
+        _graphCalls = [.. _graphCalls, new AgentGraphCall(++_graphSequence) { EdgeId = edgeId, At = _clock.GetUtcNow() }];
+    }
 
     /// <summary>The block's painted span, with the localized "now" word for a block that is still running.</summary>
     private string LanesBlockSpan(AgentLaneBlock block)

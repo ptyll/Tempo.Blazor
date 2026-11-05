@@ -193,6 +193,234 @@
       "usageExample": "private AgentEventStream<RunEvent> _events = new(evt => evt.Sequence);\n\n// A snapshot arrives (initial load, reload, or the repair after a gap):\n_events = new AgentEventStream<RunEvent>(evt => evt.Sequence, snapshot.Sequence);\nSnapshots = snapshot.Blocks;\n\n// A hub callback and a poll both land here; only NEW events come back, in sequence order:\nvar applied = _events.Apply(batch);\nif (applied.Count > 0)\n{\n    Snapshot = Snapshot.Apply(applied);   // the host's own reducer\n    _throttle.ShouldRender();\n}\n\n// The stream told the host to reload (HasGap / GapDetected):\n_events.GapDetected += missing => _ = ReloadSnapshotAsync(missing);"
     },
     {
+      "itemName": "AgentGraphCall",
+      "kind": "Record",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.AI.Models",
+      "description": "One applied call in an agent graph, with the monotonic Sequence the shared live contract needs. The event is deliberately tiny: a host that learns \"the planner called the web search again\" sends an edge id and a sequence, and the surface folds it into the edge (a thicker stroke, a fresh last-called time) and pulses the edge once. That is exactly what a tool-authorization feed produces, whatever its transport (a hub, a one-second poll, a server-sent event stream). A batch may arrive more than once — the shared stream drops what was already applied — so the host never de-duplicates itself.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/AI/Agents/AgentGraphCall.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "At",
+          "kind": "Property",
+          "type": "DateTimeOffset?",
+          "description": "When the call happened, or null when the host does not stamp it. An older instant than the one the edge already carries is never written back, so \"last called\" cannot move backwards."
+        },
+        {
+          "name": "EdgeId",
+          "kind": "Property",
+          "type": "string?",
+          "description": "The id of the AgentGraphEdge the call travelled along. A null, blank or unknown id is IGNORED by the fold — an edge is never invented from a call, because its two endpoints would be guesses."
+        },
+        {
+          "name": "Sequence",
+          "kind": "Property",
+          "type": "long",
+          "description": "The event's position in the run's change log; it must grow by ONE per applied change, because the shared stream treats \"the last applied sequence plus one\" as its definition of contiguity and rejects a batch with a hole rather than papering over it."
+        },
+        {
+          "name": "Count",
+          "description": "How many calls this one event reports. Default 1, which is what a per-call feed sends; a batched feed may report a page of identical calls at once. A negative value is clamped to zero, so an edge never shrinks."
+        }
+      ],
+      "usageExample": "IReadOnlyList<AgentGraphCall> batch =\n[\n    new AgentGraphCall(43) { EdgeId = \"e-search\", At = DateTimeOffset.UtcNow },\n    new AgentGraphCall(44) { EdgeId = \"e-search\", Count = 5 },   // a page of identical calls\n];\n\n<TmAgentGraph Snapshot=\"_snapshot\" Events=\"_batch\" OnGapDetected=\"ReloadAsync\" />"
+    },
+    {
+      "itemName": "AgentGraphEdge",
+      "kind": "Record",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.AI.Models",
+      "description": "One connection of an agent graph: who called whom, how often and when it happened last. The record is a VALUE — an AgentGraphCall event folds into it through AgentGraphSnapshot.Apply, which returns a new snapshot instead of editing this edge. CallCount is what the surface turns into a THICKNESS on a log scale, so a quiet connection stays visible instead of disappearing next to a busy one, and LastCallAt is what it prints. Nothing here carries colour: the direction of the flow is painted by the edge itself and the identity by the two nodes it connects.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/AI/Agents/AgentGraphEdge.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "From",
+          "kind": "Property",
+          "type": "string",
+          "description": "The id of the node the call starts at."
+        },
+        {
+          "name": "Id",
+          "kind": "Property",
+          "type": "string",
+          "description": "Stable identity of the edge — the value an AgentGraphCall addresses. Never empty: a missing id is generated at construction."
+        },
+        {
+          "name": "IsActive",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Whether the connection is active right now (a call is in flight, the tool is being held). Default false; a surface paints an active edge with its accent, an inactive one without."
+        },
+        {
+          "name": "IsSelfLoop",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Whether the edge starts and ends at the same node."
+        },
+        {
+          "name": "LastCallAt",
+          "kind": "Property",
+          "type": "DateTimeOffset?",
+          "description": "When the newest call was recorded, or null when the host does not track it. A surface prints it when it is set and the localized \"never\" otherwise."
+        },
+        {
+          "name": "To",
+          "kind": "Property",
+          "type": "string",
+          "description": "The id of the node the call goes to. Equal to From is a self loop — one agent calling itself — which the layout paints beside the node instead of dropping."
+        },
+        {
+          "name": "CallCount",
+          "description": "How many calls this connection carried. Any negative value is clamped to zero on assignment, so an edge only ever grows and a thickness can never be derived from a negative number. Zero paints the thinnest width."
+        }
+      ],
+      "usageExample": "var edge = new AgentGraphEdge(\"e-search\", \"planner\", \"search\")\n{\n    CallCount = 3,\n    LastCallAt = now.AddSeconds(-12),\n    IsActive = true,\n};"
+    },
+    {
+      "itemName": "AgentGraphNode",
+      "kind": "Record",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.AI.Models",
+      "description": "One node of an agent graph: an agent, a tool, a resource or a human, with the state it is in right now and the optional group it belongs to. The record is a VALUE — a host recomposes it with `node with { … }` and no component mutates it. Id is what an AgentGraphEdge addresses and what a selection reports; a blank id is generated at construction, so a graph built in a loop still renders. Agent is how an AGENT node borrows the shared identity contract (its palette slot and its initials); a tool, a resource and a human carry none, because painting them in an agent's colour would claim an identity they do not have.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/AI/Agents/AgentGraphNode.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Agent",
+          "kind": "Property",
+          "type": "AgentRef?",
+          "description": "The identity of the agent an AGENT node stands for, or null. Setting it makes the node paint the agent's palette slot and initials (and its name, when Label is empty); a tool, a resource and a human leave it null, because they are not in the agent palette."
+        },
+        {
+          "name": "ColorToken",
+          "kind": "Property",
+          "type": "string",
+          "description": "The agent palette token the node paints its avatar with, or an empty string when the node is not an agent."
+        },
+        {
+          "name": "DisplayName",
+          "kind": "Property",
+          "type": "string",
+          "description": "The name a surface prints: Label, or the agent's name when the label is empty."
+        },
+        {
+          "name": "Group",
+          "kind": "Property",
+          "type": "string?",
+          "description": "The group the node belongs to, or null for an ungrouped node. Members of one group are laid out as one contiguous run inside their column and get ONE labelled box around them; a null group never joins a box."
+        },
+        {
+          "name": "HasLabel",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Whether the host supplied a label. A surface paints its own localized fallback when it is false."
+        },
+        {
+          "name": "Id",
+          "kind": "Property",
+          "type": "string",
+          "description": "Stable identity of the node — the key an edge addresses and the value a selection reports. Never empty: a missing id is generated at construction."
+        },
+        {
+          "name": "Initials",
+          "kind": "Property",
+          "type": "string",
+          "description": "The one or two letters the node's avatar paints: the agent's own initials when Agent is set, the initials of Label otherwise, and \"?\" when there is no name at all. Diacritics and surrogate pairs are kept as whole text elements."
+        },
+        {
+          "name": "Kind",
+          "kind": "Property",
+          "type": "AgentGraphNodeKind",
+          "description": "What the node is. Default Agent; the kind decides its column, its glyph and its word."
+        },
+        {
+          "name": "Label",
+          "kind": "Property",
+          "type": "string",
+          "description": "The display name, as the host wants it read. Empty when the host supplied none, and the surface then paints its own localized fallback."
+        },
+        {
+          "name": "Status",
+          "kind": "Property",
+          "type": "AgentActivityStatus",
+          "description": "What the node is doing right now. Default Idle. Painted as a tone, an icon AND a localized word, never as a colour alone; WaitingForApproval is the state the surface highlights, because nothing moves until the reader acts."
+        }
+      ],
+      "usageExample": "var planner = new AgentGraphNode(\"planner\", \"Planner\")\n{\n    Kind = AgentGraphNodeKind.Agent,\n    Status = AgentActivityStatus.Running,\n    Group = \"Core\",\n    Agent = new AgentRef(\"Planner\", \"planner\") { ColorIndex = 0 },\n};\n\nvar search = new AgentGraphNode(\"search\", \"Web search\") { Kind = AgentGraphNodeKind.Tool };"
+    },
+    {
+      "itemName": "AgentGraphNodeKind",
+      "kind": "Enum",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.AI.Models",
+      "description": "What a node of an agent graph IS. The kind decides the node's COLUMN in the layered layout (a human asks on the left, an agent answers, a resource it reads follows and a tool it calls stands on the right), its glyph, its stable data-kind hook and its localized word — which is why the member order is part of the contract. The set is deliberately small and transport-neutral: a host maps its own backend vocabulary (a participant role, a tool-server key, a document store, the human in the loop) onto these four values.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/AI/Agents/AgentGraphNodeKind.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Agent",
+          "description": "The agent that acts — a participant, a role, a runtime agent. Painted in the middle-left column, with the agent palette slot of AgentGraphNode.Agent when the host supplied one."
+        },
+        {
+          "name": "Tool",
+          "description": "A tool the agent called (a tool server, a function, an MCP server). Painted to the RIGHT of the agent, because an agent-to-tool edge is what a call looks like."
+        },
+        {
+          "name": "Resource",
+          "description": "A resource an agent read or wrote (a document, a table, a ledger, a memory store). Painted between the agent column and the tool column."
+        },
+        {
+          "name": "Human",
+          "description": "The human in the loop — the person who asked, approved or is being waited for. Painted to the LEFT of the agents, because the request comes from there."
+        }
+      ]
+    },
+    {
+      "itemName": "AgentGraphSnapshot",
+      "kind": "Record",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.AI.Models",
+      "description": "The COMPLETE state of an agent graph at one moment: the nodes (agents, tools, resources, the human), the connections between them and the call counts each connection carried — plus the Sequence the snapshot includes. A snapshot is what a graph surface renders; it never polls and never mutates. A deep link, a reload and the repair after a gap all produce a new snapshot and the surface simply draws it, which is why Apply returns a NEW value instead of editing this one. Both lists may be empty and a null list is normalised to an empty one, so a component never has to null-check the host's data.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/AI/Agents/AgentGraphSnapshot.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Apply",
+          "kind": "Method",
+          "type": "AgentGraphSnapshot",
+          "description": "Folds an incremental batch of calls into this snapshot and returns the result as a NEW value; this instance is never modified. Each call ADDS its Count to the addressed edge, marks it active and moves its LastCallAt forward (never back). A call naming an edge the snapshot does not have is ignored, because an edge cannot be invented from one endpoint pair. A batch that changes nothing returns THIS instance, so a host can compare by reference.",
+          "parameters": [
+            {
+              "name": "calls",
+              "type": "IEnumerable<AgentGraphCall>?"
+            }
+          ]
+        },
+        {
+          "name": "Sequence",
+          "kind": "Property",
+          "type": "long",
+          "description": "The sequence this snapshot includes — the baseline an event stream starts from. Zero (the default) means the host does not track sequences for snapshots, which is legal: the stream then starts without a baseline and accepts the run's first event."
+        },
+        {
+          "name": "Nodes",
+          "description": "The nodes of the graph, in the order the layout starts from. Empty is legal (an empty graph)."
+        },
+        {
+          "name": "Edges",
+          "description": "The connections between nodes, in any order. An edge naming a node the snapshot does not contain is COUNTED by the layout and never drawn, because its geometry would be a guess."
+        }
+      ],
+      "usageExample": "var snapshot = new AgentGraphSnapshot\n{\n    Sequence = 42,\n    Nodes =\n    [\n        new AgentGraphNode(\"planner\", \"Planner\") { Kind = AgentGraphNodeKind.Agent },\n        new AgentGraphNode(\"search\", \"Web search\") { Kind = AgentGraphNodeKind.Tool },\n    ],\n    Edges = [new AgentGraphEdge(\"e1\", \"planner\", \"search\") { CallCount = 2 }],\n};\n\n// The repair after a gap is the host's own: load a snapshot and hand it over with its sequence.\nsnapshot = snapshot.Apply(acceptedCalls);"
+    },
+    {
       "itemName": "AgentHandoffLink",
       "kind": "Record",
       "category": "AI",
@@ -830,6 +1058,18 @@
           "description": "How many slots the agent palette has: eight (--tm-agent-color-0 … --tm-agent-color-7). Two agents in one visualization must never share a colour, which is what fixes the size."
         },
         {
+          "name": "InitialsOf",
+          "kind": "Method",
+          "type": "string",
+          "description": "The initials rule, shared with every surface that paints an avatar for something that is not an AgentRef (an agent graph's tool, resource or human node, for instance): the first letter of the first word and of the last word, a single letter for a single word, and \"?\" when the name has no letter at all.",
+          "parameters": [
+            {
+              "name": "name",
+              "type": "string?"
+            }
+          ]
+        },
+        {
           "name": "NormalizeColorIndex",
           "kind": "Method",
           "type": "int",
@@ -878,6 +1118,12 @@
           "description": "Stable identity of the agent. Never empty: a missing id is generated at construction, so two agents with the same name are still two agents."
         },
         {
+          "name": "Initials",
+          "kind": "Property",
+          "type": "string",
+          "description": "The one or two letters the avatar paints when there is no picture: the first letter of the first and of the last word (\"Data analyst\" → \"DA\", \"Bedřich Novák\" → \"BN\"), a single letter for a single word, and \"?\" when the name has no letter at all. Whole text elements are kept, so diacritics and surrogate pairs never render half a glyph."
+        },
+        {
           "name": "Name",
           "kind": "Property",
           "type": "string",
@@ -892,10 +1138,6 @@
         {
           "name": "ColorIndex",
           "description": "The slot in the agent palette. Any integer is accepted and normalised into 0..7 (wrapping, negatives included), so a host counting its agents past eight still lands on a declared token instead of an undeclared custom property that resolves to nothing."
-        },
-        {
-          "name": "Initials",
-          "description": "The one or two letters the avatar paints when there is no picture: the first letter of the first and of the last word (\"Data analyst\" → \"DA\", \"Bedřich Novák\" → \"BN\"), a single letter for a single word, and \"?\" when the name has no letter at all. Whole text elements are kept, so diacritics and surrogate pairs never render half a glyph."
         }
       ],
       "usageExample": "var planner = new AgentRef(\"Planner\", \"agent-planner\") { Role = \"Orchestrator\", ColorIndex = 0 };\nvar reviewer = new AgentRef(\"Reviewer\", \"agent-reviewer\") { Role = \"Reviewer\", ColorIndex = 1 };\n\n<TmAgentBadge Agent=\"planner\" Status=\"AgentActivityStatus.Running\" />\n<TmAgentBadge Agent=\"reviewer\" ShowName=\"false\" Status=\"AgentActivityStatus.WaitingForApproval\" />"
@@ -42003,11 +42245,11 @@
   ],
   "libraryExamples": [],
   "summary": {
-    "itemCount": 1624,
-    "manualItemCount": 1624,
-    "generatedItemCount": 1608,
+    "itemCount": 1629,
+    "manualItemCount": 1629,
+    "generatedItemCount": 1613,
     "generatedOnlyItemCount": 0,
     "componentCount": 0,
-    "publicApiTypeCount": 1608
+    "publicApiTypeCount": 1613
   }
 }

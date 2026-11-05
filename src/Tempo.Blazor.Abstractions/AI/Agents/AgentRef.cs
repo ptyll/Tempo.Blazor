@@ -77,24 +77,31 @@ public sealed record AgentRef
     /// <c>"?"</c> when the name has no letter at all — an avatar must never be an empty circle. Diacritics and
     /// surrogate pairs are kept as whole text elements, so a Czech or an emoji name cannot render half a glyph.
     /// </summary>
-    public string Initials
+    public string Initials => InitialsOf(Name);
+
+    /// <summary>
+    /// The initials rule, shared with every surface that paints an avatar for something that is not an
+    /// <see cref="AgentRef"/> (an agent graph's tool, resource or human node, for instance): the first letter of the
+    /// first word and of the last word, a single letter for a single word, and <c>"?"</c> when the name has no letter
+    /// at all.
+    /// </summary>
+    /// <param name="name">The name to abbreviate. Null or whitespace yields <c>"?"</c>.</param>
+    /// <returns>One or two text elements, never an empty string.</returns>
+    public static string InitialsOf(string? name)
     {
-        get
+        var words = (name ?? string.Empty).Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
+        if (words.Length == 0)
         {
-            var words = Name.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
-            if (words.Length == 0)
-            {
-                return "?";
-            }
-
-            var first = FirstTextElement(words[0]);
-            if (words.Length == 1)
-            {
-                return first;
-            }
-
-            return first + FirstTextElement(words[^1]);
+            return "?";
         }
+
+        var first = FirstTextElement(words[0]);
+        if (words.Length == 1)
+        {
+            return first;
+        }
+
+        return first + FirstTextElement(words[^1]);
     }
 
     /// <summary>

@@ -172,6 +172,7 @@ public sealed class BuiltInComponentSchemas : IWireframeSchemaSource
             ["TmContextUsage"] = ["context-usage"],
             ["TmAgentBadge"] = ["agent-badge"],
             ["TmAgentLanes"] = ["agent-lanes"],
+            ["TmAgentGraph"] = ["agent-graph"],
             ["TmPromptLibrary"] = ["prompt-library"],
             ["TmMultiViewList"] = ["list-view"],
             ["TmDataTable"] = ["data-table"],
@@ -1420,6 +1421,20 @@ public sealed class BuiltInComponentSchemas : IWireframeSchemaSource
                     opts: ["timeline", "table"]),
                 P("showNowLine", "Show Now Line", PropType.Bool,  true, cat: "Appearance"),
                 P("showZoom",    "Show Zoom",    PropType.Bool,   true, cat: "Appearance"),
+            ]
+        };
+
+        yield return new WireframeComponentSchema
+        {
+            Type = "TmAgentGraph", Category = "AI", DisplayName = "Agent Graph",
+            DefaultWidth = 640, DefaultHeight = 320,
+            Props =
+            [
+                P("title",    "Title",     PropType.String, "Agent graph", cat: "Content"),
+                P("nodes",    "Nodes",     PropType.StringList, new[] { "Web search", "Ledger", "Code interpreter" }, cat: "Content"),
+                P("viewMode", "View",      PropType.Enum,   "graph", cat: "Behavior",
+                    opts: ["graph", "table"]),
+                P("showZoom", "Show Zoom", PropType.Bool,   true, cat: "Appearance"),
             ]
         };
 

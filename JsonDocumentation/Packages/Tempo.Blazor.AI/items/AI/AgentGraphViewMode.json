@@ -1,0 +1,20 @@
+{
+  "itemName": "AgentGraphViewMode",
+  "kind": "Enum",
+  "category": "Components",
+  "namespace": "Tempo.Blazor.Components.AI",
+  "description": "How TmAgentGraph presents the same graph: Graph is the drawn network (a box per node in the column its kind belongs to, a curve per connection whose thickness is its call count, a short pulse per call), Table is the text alternative carrying exactly the same data as two plain tables (every connection with its count and last call, and every node with its kind, state and calls). The drawing is never the only way to read the graph — a screen reader, a keyboard-only reader or a narrow phone switches to Table without losing a fact.",
+  "packageId": "Tempo.Blazor.AI",
+  "sourcePath": "src/Tempo.Blazor.AI/Components/AI/AgentGraphViewMode.cs",
+  "documentationStatus": "documented",
+  "members": [
+    {
+      "name": "Graph",
+      "description": "The default: an SVG scene whose nodes are native buttons (one roving tab stop, ARROW keys walking the real connections, Home/End on the edges), an SVG curve per connection, dashed back edges routed below the boxes, and the group boxes around their members. Scrolls inside its own viewport and zooms with the +/−/fit buttons or a pinch/ctrl+wheel gesture."
+    },
+    {
+      "name": "Table",
+      "description": "The text alternative: one table of every connection (from, to, kind, calls, last call) and one of every node (name, kind, state, calls). The same data without the geometry, reachable by keyboard and read by a screen reader; the node row action selects a node exactly as the drawing does."
+    }
+  ]
+}

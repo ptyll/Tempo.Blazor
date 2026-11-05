@@ -38170,6 +38170,242 @@
           "notes": "The badge is deliberately not interactive: it renders no button, no tab stop and no drag surface, so WCAG 2.5.7's non-drag alternative and the 44 px coarse-pointer target do not apply to it — a host that makes a whole row clickable keeps that obligation on its own row. Its CSS declares no transition or animation, which keeps the package's reduced-motion enumeration unchanged; a future animated subject has to add its own prefers-reduced-motion block. Under Windows high contrast the avatar opts out of the system palette (forced-color-adjust: none) so the eight agent fills stay distinguishable and keeps a CanvasText border for the circle's edge."
         },
         {
+          "itemName": "TmAgentGraph",
+          "kind": "Component",
+          "category": "AI",
+          "namespace": "Tempo.Blazor.Components.AI",
+          "description": "Agents, the tools they call, the resources they read and the human in the loop as ONE drawn network: a box per node in the column its kind belongs to, a curve per connection whose thickness is how often it was called, and a short pulse on the curve every time a new call arrives. The surface renders the SNAPSHOT it is given plus the incremental calls the host streams in, and never polls, fetches or mutates anything: the host owns the transport and the component owns its view. The injected TimeProvider drives both the pulse window and the paint throttle, so a test with a fake clock controls the whole surface. The layout is pure C# (AgentGraphLayout): columns follow the node kind (human, agent, resource, tool) and are then tightened so every edge points forward, a cycle is broken deterministically and its closing edge is routed BELOW the boxes, rows inside a column are ordered by a barycenter heuristic so the curves stop crossing, members of a group stay in one contiguous run, and the stroke width is a LOG scale over the call count so a quiet connection stays visible beside a busy one. A host may pin a node exactly (NodePositions) and the canvas grows to contain it. The drawing is never the only way to read the graph: the scrollport (a div, the ONE role=group, named by the localized \"Agent graph\" and described by its instructions) wraps a plain unlabelled SVG whose nodes are native BUTTONS (one roving tab stop, ARROW keys walking the real connections, Home/End on the edges, Enter/Space activating natively), and the View switcher renders the SAME data as two plain tables. Exactly ONE polite live region announces a selection, a zoom change, a lost selection and a stream hole; the only animated subject is the call pulse and its prefers-reduced-motion block keeps a still highlight instead of the movement.",
+          "packageId": "Tempo.Blazor.AI",
+          "sourcePath": "src/Tempo.Blazor.AI/Components/AI/TmAgentGraph.razor",
+          "documentationStatus": "merged",
+          "requiredImports": [
+            "@using Tempo.Blazor.AI.Models",
+            "@using Tempo.Blazor.Components.AI"
+          ],
+          "parameters": [
+            {
+              "name": "Class",
+              "type": "string?",
+              "isRequired": false,
+              "description": "Additional CSS class(es) for the root element."
+            },
+            {
+              "name": "Culture",
+              "type": "CultureInfo?",
+              "isRequired": false,
+              "description": "The culture the \"last call\" time formats in. Null uses CultureInfo.CurrentCulture. It never changes the values, only their shape."
+            },
+            {
+              "name": "DetailTemplate",
+              "type": "RenderFragment<AgentGraphNode>?",
+              "isRequired": false,
+              "description": "The host's detail surface for the selected node — the full label, the call numbers, links, actions. Rendered in a role=region named by the localized \"Node detail\". Null renders no detail at all."
+            },
+            {
+              "name": "Events",
+              "type": "IReadOnlyList<AgentGraphCall>?",
+              "isRequired": false,
+              "description": "The incremental calls applied ON TOP of Snapshot, in any order. The shared AgentEventStream sorts them, drops what was already applied and rejects a batch with a hole (raising OnGapDetected), so a host may pass the same batch twice, or a cumulative list, without de-duplicating itself. Null means the snapshot is all there is."
+            },
+            {
+              "name": "HeadingLevel",
+              "type": "int",
+              "isRequired": false,
+              "default": "3",
+              "description": "The heading level of the rendered title, clamped to 2-6. Default 3."
+            },
+            {
+              "name": "MaxPulses",
+              "type": "int",
+              "isRequired": false,
+              "default": "6",
+              "description": "How many edges may pulse at once. Default 6. A burst of calls from a fan-out agent must not light up the whole picture, so only the NEWEST pulses survive: an older one is retired as soon as the cap is exceeded."
+            },
+            {
+              "name": "MaxZoom",
+              "type": "double",
+              "isRequired": false,
+              "default": "2.5",
+              "description": "The largest allowed scale. Default 2.5 (250 %)."
+            },
+            {
+              "name": "MinZoom",
+              "type": "double",
+              "isRequired": false,
+              "default": "0.5",
+              "description": "The smallest allowed scale. Default 0.5 (50 %)."
+            },
+            {
+              "name": "NodePositions",
+              "type": "IReadOnlyDictionary<string, AgentGraphPosition>?",
+              "isRequired": false,
+              "description": "The nodes the HOST pinned, by node id (a hand-placed sketch, a restored layout). A pinned node keeps its exact coordinate and the canvas grows to contain it; everything else is still laid out around it. Null pins nothing."
+            },
+            {
+              "name": "OnGapDetected",
+              "type": "EventCallback<long>",
+              "isRequired": false,
+              "description": "Raised once per batch that contains a HOLE — with the first sequence the stream does not have. The documented repair is the host's own: load a new snapshot and pass it (with its sequence) as Snapshot."
+            },
+            {
+              "name": "PulseDuration",
+              "type": "TimeSpan",
+              "isRequired": false,
+              "default": "TimeSpan.FromMilliseconds(600)",
+              "description": "How long one pulse stays on its edge. Default 600 ms. The highlight is removed by a timer on the injected TimeProvider, so a fake clock closes it without sleeping; under prefers-reduced-motion the same window keeps a STILL highlight instead of the animation. The value is also written onto the root as --tm-agent-graph-pulse-duration, so the CSS animation and the timer share ONE length and a host that changes this parameter never has to restyle the knob."
+            },
+            {
+              "name": "RenderThrottle",
+              "type": "TimeSpan?",
+              "isRequired": false,
+              "description": "The paint-gate window for event-driven updates. Null uses the shared AgentRenderThrottle.DefaultInterval (100 ms); TimeSpan.Zero paints every batch. The STATE is never throttled, only the paint."
+            },
+            {
+              "name": "SelectedNodeId",
+              "type": "string?",
+              "isRequired": false,
+              "description": "The selected node's id, two-way bound with SelectedNodeIdChanged (@bind-SelectedNodeId). The matching node carries aria-pressed=\"true\" and its neighbours are highlighted; with DetailTemplate set the node's detail renders in a named region below the surface."
+            },
+            {
+              "name": "SelectedNodeIdChanged",
+              "type": "EventCallback<string?>",
+              "isRequired": false,
+              "description": "Fires with the new selected node id when the reader selects a node (a null value clears it)."
+            },
+            {
+              "name": "ShowTitle",
+              "type": "bool",
+              "isRequired": false,
+              "default": "true",
+              "description": "Whether the heading is rendered. Default true."
+            },
+            {
+              "name": "ShowZoom",
+              "type": "bool",
+              "isRequired": false,
+              "default": "true",
+              "description": "Whether the zoom controls are rendered. Default true. They are the WCAG 2.5.7 alternative to the pinch gesture, so a host is expected to keep them unless its own chrome zooms."
+            },
+            {
+              "name": "Snapshot",
+              "type": "AgentGraphSnapshot?",
+              "isRequired": false,
+              "description": "The COMPLETE state of the graph at one moment: the nodes, the connections between them and the calls each connection carried, plus the sequence the snapshot includes. The component never mutates it. Null renders the localized empty state (the surface is usable before the host's first load lands)."
+            },
+            {
+              "name": "TimeProvider",
+              "type": "TimeProvider?",
+              "isRequired": false,
+              "description": "The clock the pulse window and the paint throttle measure on. Null uses the container's TimeProvider and falls back to TimeProvider.System — the host's clock always wins over the machine's."
+            },
+            {
+              "name": "Title",
+              "type": "string?",
+              "isRequired": false,
+              "description": "The heading above the surface. Null renders the localized default (\"Agent graph\"); the heading also names the drawing, so the name a reader hears is the one they see."
+            },
+            {
+              "name": "ViewMode",
+              "type": "AgentGraphViewMode",
+              "isRequired": false,
+              "default": "AgentGraphViewMode.Graph",
+              "description": "Which presentation is shown, two-way bound with ViewModeChanged. Default Graph; Table is the text alternative with exactly the same data."
+            },
+            {
+              "name": "ViewModeChanged",
+              "type": "EventCallback<AgentGraphViewMode>",
+              "isRequired": false,
+              "description": "Fires with the new presentation when the reader uses the View switcher."
+            },
+            {
+              "name": "Zoom",
+              "type": "double",
+              "isRequired": false,
+              "default": "1",
+              "description": "The scale of the drawing, two-way bound with ZoomChanged. Default 1 (100 %), clamped into MinZoom-MaxZoom. A host that pins it keeps control: the reader's zoom reports the change and the next render from the host decides."
+            },
+            {
+              "name": "ZoomChanged",
+              "type": "EventCallback<double>",
+              "isRequired": false,
+              "description": "Fires with the new scale when the reader zooms (a button, \"fit\", or a pinch/ctrl+wheel gesture)."
+            },
+            {
+              "name": "AdditionalAttributes",
+              "type": "Dictionary<string, object>?",
+              "isRequired": false,
+              "description": "Additional HTML attributes applied to the root element."
+            }
+          ],
+          "cssClasses": [
+            "tm-ai-agent-graph",
+            "tm-ai-agent-graph__header",
+            "tm-ai-agent-graph__title",
+            "tm-ai-agent-graph__toolbar",
+            "tm-ai-agent-graph__view",
+            "tm-ai-agent-graph__zoom",
+            "tm-ai-agent-graph__zoom-button",
+            "tm-ai-agent-graph__zoom-button--fit",
+            "tm-ai-agent-graph__zoom-value",
+            "tm-ai-agent-graph__empty",
+            "tm-ai-agent-graph__tables",
+            "tm-ai-agent-graph__table",
+            "tm-ai-agent-graph__table-node",
+            "tm-ai-agent-graph__table-select",
+            "tm-ai-agent-graph__detail",
+            "tm-ai-agent-graph__viewport",
+            "tm-ai-agent-graph__canvas",
+            "tm-ai-agent-graph__groups",
+            "tm-ai-agent-graph__group",
+            "tm-ai-agent-graph__group-box",
+            "tm-ai-agent-graph__group-label",
+            "tm-ai-agent-graph__edges",
+            "tm-ai-agent-graph__edge",
+            "tm-ai-agent-graph__edge--back",
+            "tm-ai-agent-graph__edge--active",
+            "tm-ai-agent-graph__edge--pulse",
+            "tm-ai-agent-graph__edge--highlighted",
+            "tm-ai-agent-graph__edge--dimmed",
+            "tm-ai-agent-graph__arrow-head",
+            "tm-ai-agent-graph__node",
+            "tm-ai-agent-graph__node--idle",
+            "tm-ai-agent-graph__node--queued",
+            "tm-ai-agent-graph__node--running",
+            "tm-ai-agent-graph__node--approval",
+            "tm-ai-agent-graph__node--succeeded",
+            "tm-ai-agent-graph__node--failed",
+            "tm-ai-agent-graph__node--cancelled",
+            "tm-ai-agent-graph__node--pinned",
+            "tm-ai-agent-graph__node--selected",
+            "tm-ai-agent-graph__node--neighbor",
+            "tm-ai-agent-graph__node--dimmed",
+            "tm-ai-agent-graph__node-body",
+            "tm-ai-agent-graph__node-avatar",
+            "tm-ai-agent-graph__node-initials",
+            "tm-ai-agent-graph__node-kind-icon",
+            "tm-ai-agent-graph__node-text",
+            "tm-ai-agent-graph__node-label",
+            "tm-ai-agent-graph__node-state",
+            "tm-ai-agent-graph__node-state-icon",
+            "tm-ai-agent-graph__node-state-text"
+          ],
+          "examples": [
+            {
+              "title": "A live graph with a selected node and a detail panel",
+              "code": "@* The page owns the snapshot and the transport; the component owns its view. *@\n<TmAgentGraph Snapshot=\"_snapshot\"\n              Events=\"_calls\"\n              OnGapDetected=\"ReloadAsync\"\n              @bind-SelectedNodeId=\"_selectedNodeId\"\n              Title=\"Reconciliation run\">\n    <DetailTemplate Context=\"node\">\n        <h3>@node.Label</h3>\n        <p>@node.Kind · @node.Status</p>\n    </DetailTemplate>\n</TmAgentGraph>\n\n@code {\n    private AgentGraphSnapshot _snapshot = new();\n    private IReadOnlyList<AgentGraphCall> _calls = [];\n    private string? _selectedNodeId;\n\n    private Task ReloadAsync(long missingSequence) => LoadSnapshotAsync(missingSequence);\n}"
+            },
+            {
+              "title": "The snapshot a host builds",
+              "code": "var planner = new AgentGraphNode(\"planner\", \"Planner\")\n{\n    Kind = AgentGraphNodeKind.Agent,\n    Status = AgentActivityStatus.Running,\n    Group = \"Core\",\n    Agent = new AgentRef(\"Planner\", \"planner\") { ColorIndex = 0 },\n};\n\nvar search = new AgentGraphNode(\"search\", \"Web search\")\n{\n    Kind = AgentGraphNodeKind.Tool,\n    Status = AgentActivityStatus.Succeeded,\n};\n\nvar snapshot = new AgentGraphSnapshot\n{\n    Sequence = 42,\n    Nodes = [planner, search, new AgentGraphNode(\"ledger\", \"Ledger\") { Kind = AgentGraphNodeKind.Resource }],\n    Edges = [new AgentGraphEdge(\"e-search\", \"planner\", \"search\") { CallCount = 3, IsActive = true }],\n};"
+            },
+            {
+              "title": "A pinned layout, the text alternative and a restored scale",
+              "code": "<!-- Restore a hand-placed sketch: the pinned nodes keep their exact coordinates. -->\n<TmAgentGraph Snapshot=\"_snapshot\"\n              NodePositions=\"_positions\"\n              Zoom=\"1.5\" />\n\n@code {\n    private readonly IReadOnlyDictionary<string, AgentGraphPosition> _positions =\n        new Dictionary<string, AgentGraphPosition>(StringComparer.Ordinal)\n        {\n            [\"planner\"] = new AgentGraphPosition(60, 40),\n            [\"search\"] = new AgentGraphPosition(420, 120),\n        };\n}\n\n<!-- The same data as text, for a screen reader or a narrow phone. -->\n<TmAgentGraph Snapshot=\"_snapshot\" ViewMode=\"AgentGraphViewMode.Table\" />"
+            }
+          ],
+          "notes": "Keyboard: the node is a NATIVE <button> inside a <foreignObject>, so Enter and Space activate it exactly once with no emulation, and the roving tabindex keeps the whole graph ONE tab stop while the scrollport stays tabindex=-1 (programmatically focusable, never a second stop in front of the nodes). ARROW keys move along the actual EDGES (the neighbour furthest in that direction wins, then the cross-axis distance, then the painting order) and never along the declaration order; Home/End jump to the first and the last node. The page scroll an ARROW may produce is accepted rather than suppressed — a render-time @onkeydown:preventDefault cannot be per-key and would swallow Tab and the button's own native activation (the same decision TmTabs and TmTopBar document). Focus: a selected node the host removes clears the selection and hands the focus back to the viewport instead of dropping the reader onto the body. Pointer: panning is NATIVE scrolling of the viewport (a mouse, a wheel, a scrollbar and the keyboard all work), and the package's tm-agent-graph.js only imports the CORE pointer-gesture.js helper for pinch/ctrl+wheel zoom plus the two-finger pan delta — there is no second drag implementation and no <script> tag. Pulses: a call lights its edge up for PulseDuration on the injected TimeProvider (the same value is written onto the root as --tm-agent-graph-pulse-duration, so the CSS animation and the timer share one length), at most MaxPulses at a time (the newest win), and the ONE animated subject has a prefers-reduced-motion block that removes the movement while keeping a dashed, Highlight-toned highlight. Fit-to-view measures the scrollport (the same module) and keeps the current zoom when nothing can be measured (prerender, no JavaScript), so it never jumps to a guess. High contrast: forced-colors hands the curves, the group boxes and the arrow heads (an SVG fill the system palette does not remap) to CanvasText, selection and approval to a Highlight BORDER and focus to its own thicker OUTLINE, so a focused node is never mistaken for a selected one (WCAG 2.4.7), and every dim is dropped (opacity 1) instead of lowering system-colour contrast. A dimmed node is a TOKEN change rather than an opacity, because it is still an active button whose label has to keep its contrast. Every user-facing string (including the accessible names of the nodes, the table headings and the zoom read-out) comes from ITmLocalizer."
+        },
+        {
           "itemName": "TmAgentLanes",
           "kind": "Component",
           "category": "AI",
@@ -40150,6 +40386,50 @@
           ]
         },
         {
+          "itemName": "AgentGraphPosition",
+          "kind": "Record",
+          "category": "Components",
+          "namespace": "Tempo.Blazor.Components.AI",
+          "description": "A fixed point of an agent graph's canvas, in pixels from the canvas's top-left corner — the type a host uses to pin a node exactly where it wants it through TmAgentGraph.NodePositions. Pinning is the escape hatch for a surface whose node order matters to the reader (a hand-placed architecture sketch, a restored layout): a pinned node keeps its exact coordinate and everything else is still laid out around it, and the canvas grows so the pinned box is never cut off.",
+          "packageId": "Tempo.Blazor.AI",
+          "sourcePath": "src/Tempo.Blazor.AI/Components/AI/AgentGraphPosition.cs",
+          "documentationStatus": "merged",
+          "members": [
+            {
+              "name": "X",
+              "kind": "Property",
+              "type": "double",
+              "description": "Distance in pixels from the canvas's left edge; never negative (a negative or non-finite value is stored as zero)."
+            },
+            {
+              "name": "Y",
+              "kind": "Property",
+              "type": "double",
+              "description": "Distance in pixels from the canvas's top edge; never negative (a negative or non-finite value is stored as zero)."
+            }
+          ]
+        },
+        {
+          "itemName": "AgentGraphViewMode",
+          "kind": "Enum",
+          "category": "Components",
+          "namespace": "Tempo.Blazor.Components.AI",
+          "description": "How TmAgentGraph presents the same graph: Graph is the drawn network (a box per node in the column its kind belongs to, a curve per connection whose thickness is its call count, a short pulse per call), Table is the text alternative carrying exactly the same data as two plain tables (every connection with its count and last call, and every node with its kind, state and calls). The drawing is never the only way to read the graph — a screen reader, a keyboard-only reader or a narrow phone switches to Table without losing a fact.",
+          "packageId": "Tempo.Blazor.AI",
+          "sourcePath": "src/Tempo.Blazor.AI/Components/AI/AgentGraphViewMode.cs",
+          "documentationStatus": "merged",
+          "members": [
+            {
+              "name": "Graph",
+              "description": "The default: an SVG scene whose nodes are native buttons (one roving tab stop, ARROW keys walking the real connections, Home/End on the edges), an SVG curve per connection, dashed back edges routed below the boxes, and the group boxes around their members. Scrolls inside its own viewport and zooms with the +/−/fit buttons or a pinch/ctrl+wheel gesture."
+            },
+            {
+              "name": "Table",
+              "description": "The text alternative: one table of every connection (from, to, kind, calls, last call) and one of every node (name, kind, state, calls). The same data without the geometry, reachable by keyboard and read by a screen reader; the node row action selects a node exactly as the drawing does."
+            }
+          ]
+        },
+        {
           "itemName": "AgentLanesViewMode",
           "kind": "Enum",
           "category": "Components",
@@ -40344,6 +40624,10 @@
           "kind": "Css"
         },
         {
+          "path": "src/Tempo.Blazor.AI/wwwroot/css/components/_ai-agent-graph.css",
+          "kind": "Css"
+        },
+        {
           "path": "src/Tempo.Blazor.AI/wwwroot/css/components/_ai-agent-lanes.css",
           "kind": "Css"
         },
@@ -40424,6 +40708,10 @@
           "kind": "JavaScript"
         },
         {
+          "path": "src/Tempo.Blazor.AI/wwwroot/js/tm-agent-graph.js",
+          "kind": "JavaScript"
+        },
+        {
           "path": "src/Tempo.Blazor.AI/wwwroot/js/tm-agent-lanes.js",
           "kind": "JavaScript"
         },
@@ -40440,6 +40728,10 @@
           "kind": "JavaScript"
         },
         {
+          "path": "src/Tempo.Blazor.AI/wwwroot/js/__tests__/tm-agent-graph.test.mjs",
+          "kind": "JavaScript"
+        },
+        {
           "path": "src/Tempo.Blazor.AI/wwwroot/js/__tests__/tm-agent-lanes.test.mjs",
           "kind": "JavaScript"
         },
@@ -40449,12 +40741,12 @@
         }
       ],
       "summary": {
-        "itemCount": 24,
-        "manualItemCount": 24,
-        "generatedItemCount": 24,
+        "itemCount": 27,
+        "manualItemCount": 27,
+        "generatedItemCount": 27,
         "generatedOnlyItemCount": 0,
-        "componentCount": 17,
-        "publicApiTypeCount": 7
+        "componentCount": 18,
+        "publicApiTypeCount": 9
       }
     },
     {
@@ -79632,6 +79924,234 @@
           "usageExample": "private AgentEventStream<RunEvent> _events = new(evt => evt.Sequence);\n\n// A snapshot arrives (initial load, reload, or the repair after a gap):\n_events = new AgentEventStream<RunEvent>(evt => evt.Sequence, snapshot.Sequence);\nSnapshots = snapshot.Blocks;\n\n// A hub callback and a poll both land here; only NEW events come back, in sequence order:\nvar applied = _events.Apply(batch);\nif (applied.Count > 0)\n{\n    Snapshot = Snapshot.Apply(applied);   // the host's own reducer\n    _throttle.ShouldRender();\n}\n\n// The stream told the host to reload (HasGap / GapDetected):\n_events.GapDetected += missing => _ = ReloadSnapshotAsync(missing);"
         },
         {
+          "itemName": "AgentGraphCall",
+          "kind": "Record",
+          "category": "AI",
+          "namespace": "Tempo.Blazor.AI.Models",
+          "description": "One applied call in an agent graph, with the monotonic Sequence the shared live contract needs. The event is deliberately tiny: a host that learns \"the planner called the web search again\" sends an edge id and a sequence, and the surface folds it into the edge (a thicker stroke, a fresh last-called time) and pulses the edge once. That is exactly what a tool-authorization feed produces, whatever its transport (a hub, a one-second poll, a server-sent event stream). A batch may arrive more than once — the shared stream drops what was already applied — so the host never de-duplicates itself.",
+          "packageId": "Tempo.Blazor.Abstractions",
+          "sourcePath": "src/Tempo.Blazor.Abstractions/AI/Agents/AgentGraphCall.cs",
+          "documentationStatus": "merged",
+          "members": [
+            {
+              "name": "At",
+              "kind": "Property",
+              "type": "DateTimeOffset?",
+              "description": "When the call happened, or null when the host does not stamp it. An older instant than the one the edge already carries is never written back, so \"last called\" cannot move backwards."
+            },
+            {
+              "name": "EdgeId",
+              "kind": "Property",
+              "type": "string?",
+              "description": "The id of the AgentGraphEdge the call travelled along. A null, blank or unknown id is IGNORED by the fold — an edge is never invented from a call, because its two endpoints would be guesses."
+            },
+            {
+              "name": "Sequence",
+              "kind": "Property",
+              "type": "long",
+              "description": "The event's position in the run's change log; it must grow by ONE per applied change, because the shared stream treats \"the last applied sequence plus one\" as its definition of contiguity and rejects a batch with a hole rather than papering over it."
+            },
+            {
+              "name": "Count",
+              "description": "How many calls this one event reports. Default 1, which is what a per-call feed sends; a batched feed may report a page of identical calls at once. A negative value is clamped to zero, so an edge never shrinks."
+            }
+          ],
+          "usageExample": "IReadOnlyList<AgentGraphCall> batch =\n[\n    new AgentGraphCall(43) { EdgeId = \"e-search\", At = DateTimeOffset.UtcNow },\n    new AgentGraphCall(44) { EdgeId = \"e-search\", Count = 5 },   // a page of identical calls\n];\n\n<TmAgentGraph Snapshot=\"_snapshot\" Events=\"_batch\" OnGapDetected=\"ReloadAsync\" />"
+        },
+        {
+          "itemName": "AgentGraphEdge",
+          "kind": "Record",
+          "category": "AI",
+          "namespace": "Tempo.Blazor.AI.Models",
+          "description": "One connection of an agent graph: who called whom, how often and when it happened last. The record is a VALUE — an AgentGraphCall event folds into it through AgentGraphSnapshot.Apply, which returns a new snapshot instead of editing this edge. CallCount is what the surface turns into a THICKNESS on a log scale, so a quiet connection stays visible instead of disappearing next to a busy one, and LastCallAt is what it prints. Nothing here carries colour: the direction of the flow is painted by the edge itself and the identity by the two nodes it connects.",
+          "packageId": "Tempo.Blazor.Abstractions",
+          "sourcePath": "src/Tempo.Blazor.Abstractions/AI/Agents/AgentGraphEdge.cs",
+          "documentationStatus": "merged",
+          "members": [
+            {
+              "name": "From",
+              "kind": "Property",
+              "type": "string",
+              "description": "The id of the node the call starts at."
+            },
+            {
+              "name": "Id",
+              "kind": "Property",
+              "type": "string",
+              "description": "Stable identity of the edge — the value an AgentGraphCall addresses. Never empty: a missing id is generated at construction."
+            },
+            {
+              "name": "IsActive",
+              "kind": "Property",
+              "type": "bool",
+              "description": "Whether the connection is active right now (a call is in flight, the tool is being held). Default false; a surface paints an active edge with its accent, an inactive one without."
+            },
+            {
+              "name": "IsSelfLoop",
+              "kind": "Property",
+              "type": "bool",
+              "description": "Whether the edge starts and ends at the same node."
+            },
+            {
+              "name": "LastCallAt",
+              "kind": "Property",
+              "type": "DateTimeOffset?",
+              "description": "When the newest call was recorded, or null when the host does not track it. A surface prints it when it is set and the localized \"never\" otherwise."
+            },
+            {
+              "name": "To",
+              "kind": "Property",
+              "type": "string",
+              "description": "The id of the node the call goes to. Equal to From is a self loop — one agent calling itself — which the layout paints beside the node instead of dropping."
+            },
+            {
+              "name": "CallCount",
+              "description": "How many calls this connection carried. Any negative value is clamped to zero on assignment, so an edge only ever grows and a thickness can never be derived from a negative number. Zero paints the thinnest width."
+            }
+          ],
+          "usageExample": "var edge = new AgentGraphEdge(\"e-search\", \"planner\", \"search\")\n{\n    CallCount = 3,\n    LastCallAt = now.AddSeconds(-12),\n    IsActive = true,\n};"
+        },
+        {
+          "itemName": "AgentGraphNode",
+          "kind": "Record",
+          "category": "AI",
+          "namespace": "Tempo.Blazor.AI.Models",
+          "description": "One node of an agent graph: an agent, a tool, a resource or a human, with the state it is in right now and the optional group it belongs to. The record is a VALUE — a host recomposes it with `node with { … }` and no component mutates it. Id is what an AgentGraphEdge addresses and what a selection reports; a blank id is generated at construction, so a graph built in a loop still renders. Agent is how an AGENT node borrows the shared identity contract (its palette slot and its initials); a tool, a resource and a human carry none, because painting them in an agent's colour would claim an identity they do not have.",
+          "packageId": "Tempo.Blazor.Abstractions",
+          "sourcePath": "src/Tempo.Blazor.Abstractions/AI/Agents/AgentGraphNode.cs",
+          "documentationStatus": "merged",
+          "members": [
+            {
+              "name": "Agent",
+              "kind": "Property",
+              "type": "AgentRef?",
+              "description": "The identity of the agent an AGENT node stands for, or null. Setting it makes the node paint the agent's palette slot and initials (and its name, when Label is empty); a tool, a resource and a human leave it null, because they are not in the agent palette."
+            },
+            {
+              "name": "ColorToken",
+              "kind": "Property",
+              "type": "string",
+              "description": "The agent palette token the node paints its avatar with, or an empty string when the node is not an agent."
+            },
+            {
+              "name": "DisplayName",
+              "kind": "Property",
+              "type": "string",
+              "description": "The name a surface prints: Label, or the agent's name when the label is empty."
+            },
+            {
+              "name": "Group",
+              "kind": "Property",
+              "type": "string?",
+              "description": "The group the node belongs to, or null for an ungrouped node. Members of one group are laid out as one contiguous run inside their column and get ONE labelled box around them; a null group never joins a box."
+            },
+            {
+              "name": "HasLabel",
+              "kind": "Property",
+              "type": "bool",
+              "description": "Whether the host supplied a label. A surface paints its own localized fallback when it is false."
+            },
+            {
+              "name": "Id",
+              "kind": "Property",
+              "type": "string",
+              "description": "Stable identity of the node — the key an edge addresses and the value a selection reports. Never empty: a missing id is generated at construction."
+            },
+            {
+              "name": "Initials",
+              "kind": "Property",
+              "type": "string",
+              "description": "The one or two letters the node's avatar paints: the agent's own initials when Agent is set, the initials of Label otherwise, and \"?\" when there is no name at all. Diacritics and surrogate pairs are kept as whole text elements."
+            },
+            {
+              "name": "Kind",
+              "kind": "Property",
+              "type": "AgentGraphNodeKind",
+              "description": "What the node is. Default Agent; the kind decides its column, its glyph and its word."
+            },
+            {
+              "name": "Label",
+              "kind": "Property",
+              "type": "string",
+              "description": "The display name, as the host wants it read. Empty when the host supplied none, and the surface then paints its own localized fallback."
+            },
+            {
+              "name": "Status",
+              "kind": "Property",
+              "type": "AgentActivityStatus",
+              "description": "What the node is doing right now. Default Idle. Painted as a tone, an icon AND a localized word, never as a colour alone; WaitingForApproval is the state the surface highlights, because nothing moves until the reader acts."
+            }
+          ],
+          "usageExample": "var planner = new AgentGraphNode(\"planner\", \"Planner\")\n{\n    Kind = AgentGraphNodeKind.Agent,\n    Status = AgentActivityStatus.Running,\n    Group = \"Core\",\n    Agent = new AgentRef(\"Planner\", \"planner\") { ColorIndex = 0 },\n};\n\nvar search = new AgentGraphNode(\"search\", \"Web search\") { Kind = AgentGraphNodeKind.Tool };"
+        },
+        {
+          "itemName": "AgentGraphNodeKind",
+          "kind": "Enum",
+          "category": "AI",
+          "namespace": "Tempo.Blazor.AI.Models",
+          "description": "What a node of an agent graph IS. The kind decides the node's COLUMN in the layered layout (a human asks on the left, an agent answers, a resource it reads follows and a tool it calls stands on the right), its glyph, its stable data-kind hook and its localized word — which is why the member order is part of the contract. The set is deliberately small and transport-neutral: a host maps its own backend vocabulary (a participant role, a tool-server key, a document store, the human in the loop) onto these four values.",
+          "packageId": "Tempo.Blazor.Abstractions",
+          "sourcePath": "src/Tempo.Blazor.Abstractions/AI/Agents/AgentGraphNodeKind.cs",
+          "documentationStatus": "merged",
+          "members": [
+            {
+              "name": "Agent",
+              "description": "The agent that acts — a participant, a role, a runtime agent. Painted in the middle-left column, with the agent palette slot of AgentGraphNode.Agent when the host supplied one."
+            },
+            {
+              "name": "Tool",
+              "description": "A tool the agent called (a tool server, a function, an MCP server). Painted to the RIGHT of the agent, because an agent-to-tool edge is what a call looks like."
+            },
+            {
+              "name": "Resource",
+              "description": "A resource an agent read or wrote (a document, a table, a ledger, a memory store). Painted between the agent column and the tool column."
+            },
+            {
+              "name": "Human",
+              "description": "The human in the loop — the person who asked, approved or is being waited for. Painted to the LEFT of the agents, because the request comes from there."
+            }
+          ]
+        },
+        {
+          "itemName": "AgentGraphSnapshot",
+          "kind": "Record",
+          "category": "AI",
+          "namespace": "Tempo.Blazor.AI.Models",
+          "description": "The COMPLETE state of an agent graph at one moment: the nodes (agents, tools, resources, the human), the connections between them and the call counts each connection carried — plus the Sequence the snapshot includes. A snapshot is what a graph surface renders; it never polls and never mutates. A deep link, a reload and the repair after a gap all produce a new snapshot and the surface simply draws it, which is why Apply returns a NEW value instead of editing this one. Both lists may be empty and a null list is normalised to an empty one, so a component never has to null-check the host's data.",
+          "packageId": "Tempo.Blazor.Abstractions",
+          "sourcePath": "src/Tempo.Blazor.Abstractions/AI/Agents/AgentGraphSnapshot.cs",
+          "documentationStatus": "merged",
+          "members": [
+            {
+              "name": "Apply",
+              "kind": "Method",
+              "type": "AgentGraphSnapshot",
+              "description": "Folds an incremental batch of calls into this snapshot and returns the result as a NEW value; this instance is never modified. Each call ADDS its Count to the addressed edge, marks it active and moves its LastCallAt forward (never back). A call naming an edge the snapshot does not have is ignored, because an edge cannot be invented from one endpoint pair. A batch that changes nothing returns THIS instance, so a host can compare by reference.",
+              "parameters": [
+                {
+                  "name": "calls",
+                  "type": "IEnumerable<AgentGraphCall>?"
+                }
+              ]
+            },
+            {
+              "name": "Sequence",
+              "kind": "Property",
+              "type": "long",
+              "description": "The sequence this snapshot includes — the baseline an event stream starts from. Zero (the default) means the host does not track sequences for snapshots, which is legal: the stream then starts without a baseline and accepts the run's first event."
+            },
+            {
+              "name": "Nodes",
+              "description": "The nodes of the graph, in the order the layout starts from. Empty is legal (an empty graph)."
+            },
+            {
+              "name": "Edges",
+              "description": "The connections between nodes, in any order. An edge naming a node the snapshot does not contain is COUNTED by the layout and never drawn, because its geometry would be a guess."
+            }
+          ],
+          "usageExample": "var snapshot = new AgentGraphSnapshot\n{\n    Sequence = 42,\n    Nodes =\n    [\n        new AgentGraphNode(\"planner\", \"Planner\") { Kind = AgentGraphNodeKind.Agent },\n        new AgentGraphNode(\"search\", \"Web search\") { Kind = AgentGraphNodeKind.Tool },\n    ],\n    Edges = [new AgentGraphEdge(\"e1\", \"planner\", \"search\") { CallCount = 2 }],\n};\n\n// The repair after a gap is the host's own: load a snapshot and hand it over with its sequence.\nsnapshot = snapshot.Apply(acceptedCalls);"
+        },
+        {
           "itemName": "AgentHandoffLink",
           "kind": "Record",
           "category": "AI",
@@ -80269,6 +80789,18 @@
               "description": "How many slots the agent palette has: eight (--tm-agent-color-0 … --tm-agent-color-7). Two agents in one visualization must never share a colour, which is what fixes the size."
             },
             {
+              "name": "InitialsOf",
+              "kind": "Method",
+              "type": "string",
+              "description": "The initials rule, shared with every surface that paints an avatar for something that is not an AgentRef (an agent graph's tool, resource or human node, for instance): the first letter of the first word and of the last word, a single letter for a single word, and \"?\" when the name has no letter at all.",
+              "parameters": [
+                {
+                  "name": "name",
+                  "type": "string?"
+                }
+              ]
+            },
+            {
               "name": "NormalizeColorIndex",
               "kind": "Method",
               "type": "int",
@@ -80317,6 +80849,12 @@
               "description": "Stable identity of the agent. Never empty: a missing id is generated at construction, so two agents with the same name are still two agents."
             },
             {
+              "name": "Initials",
+              "kind": "Property",
+              "type": "string",
+              "description": "The one or two letters the avatar paints when there is no picture: the first letter of the first and of the last word (\"Data analyst\" → \"DA\", \"Bedřich Novák\" → \"BN\"), a single letter for a single word, and \"?\" when the name has no letter at all. Whole text elements are kept, so diacritics and surrogate pairs never render half a glyph."
+            },
+            {
               "name": "Name",
               "kind": "Property",
               "type": "string",
@@ -80331,10 +80869,6 @@
             {
               "name": "ColorIndex",
               "description": "The slot in the agent palette. Any integer is accepted and normalised into 0..7 (wrapping, negatives included), so a host counting its agents past eight still lands on a declared token instead of an undeclared custom property that resolves to nothing."
-            },
-            {
-              "name": "Initials",
-              "description": "The one or two letters the avatar paints when there is no picture: the first letter of the first and of the last word (\"Data analyst\" → \"DA\", \"Bedřich Novák\" → \"BN\"), a single letter for a single word, and \"?\" when the name has no letter at all. Whole text elements are kept, so diacritics and surrogate pairs never render half a glyph."
             }
           ],
           "usageExample": "var planner = new AgentRef(\"Planner\", \"agent-planner\") { Role = \"Orchestrator\", ColorIndex = 0 };\nvar reviewer = new AgentRef(\"Reviewer\", \"agent-reviewer\") { Role = \"Reviewer\", ColorIndex = 1 };\n\n<TmAgentBadge Agent=\"planner\" Status=\"AgentActivityStatus.Running\" />\n<TmAgentBadge Agent=\"reviewer\" ShowName=\"false\" Status=\"AgentActivityStatus.WaitingForApproval\" />"
@@ -121442,12 +121976,12 @@
       ],
       "libraryExamples": [],
       "summary": {
-        "itemCount": 1624,
-        "manualItemCount": 1624,
-        "generatedItemCount": 1608,
+        "itemCount": 1629,
+        "manualItemCount": 1629,
+        "generatedItemCount": 1613,
         "generatedOnlyItemCount": 0,
         "componentCount": 0,
-        "publicApiTypeCount": 1608
+        "publicApiTypeCount": 1613
       }
     },
     {
@@ -138440,10 +138974,10 @@
   ],
   "summary": {
     "packageCount": 28,
-    "itemCount": 3555,
-    "manualItemCount": 3555,
+    "itemCount": 3563,
+    "manualItemCount": 3563,
     "generatedOnlyItemCount": 0,
-    "componentCount": 547,
-    "publicApiTypeCount": 2956
+    "componentCount": 548,
+    "publicApiTypeCount": 2963
   }
 }

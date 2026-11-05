@@ -59,12 +59,12 @@ public class AiAgentsPageTests : DemoPageLocalizationTestBase
     {
         var cut = RenderPage();
 
-        cut.FindAll("section.demo-section").Should().HaveCount(7);
+        cut.FindAll("section.demo-section").Should().HaveCount(8);
         foreach (var section in new[]
                  {
                      "ai-agents-plan-section", "ai-agents-tree-section", "ai-agents-lanes-section",
-                     "ai-agents-monitor-section", "ai-agents-models-section", "ai-agents-context-section",
-                     "ai-agents-prompts-section",
+                     "ai-agents-graph-section", "ai-agents-monitor-section", "ai-agents-models-section",
+                     "ai-agents-context-section", "ai-agents-prompts-section",
                  })
         {
             Section(cut, section).TextContent.Should().NotContain("[Tm");
@@ -117,6 +117,58 @@ public class AiAgentsPageTests : DemoPageLocalizationTestBase
             .QuerySelectorAll("[data-testid='agent-lanes-table-row']").Should().HaveCount(7));
         Section(cut, "ai-agents-lanes")
             .QuerySelectorAll("[data-testid='agent-lanes-handoff-row']").Should().HaveCount(4);
+    }
+
+    [Fact]
+    public void TheGraphSection_RendersTheNetwork_AndSelectsANodeIntoTheHostDetail()
+    {
+        RegisterClock();
+        var cut = RenderPage();
+        var graph = Section(cut, "ai-agents-graph");
+
+        graph.QuerySelectorAll("[data-testid='agent-graph-node']").Should().HaveCount(7,
+            "the human, three agents, the ledger and two tools");
+        graph.QuerySelectorAll("[data-testid='agent-graph-edge']").Should().HaveCount(6);
+        graph.QuerySelectorAll("[data-testid='agent-graph-group']").Should().ContainSingle(
+            "the sample groups the two core agents");
+
+        Text(cut, "ai-agents-graph-selected").Should().Contain("No node is selected");
+
+        cut.Find("[data-testid='ai-agents-graph'] [data-testid='agent-graph-node'][data-node-id='reconciler']").Click();
+
+        cut.WaitForAssertion(() => Text(cut, "ai-agents-graph-selected").Should().Contain("Reconciler"));
+        var detail = cut.Find("[data-testid='ai-agents-graph-detail']");
+        detail.GetAttribute("data-node-id").Should().Be("reconciler");
+        detail.TextContent.Should().NotContain("TmAgentGraph_",
+            "every sentence the detail prints is localized, never a raw key");
+        Section(cut, "ai-agents-graph")
+            .QuerySelector("[data-testid='agent-graph-node'][data-node-id='reconciler'] " +
+                           ".tm-ai-agent-graph__node-state-text")!
+            .TextContent.Should().Contain("Waiting for approval",
+                "the node that needs the reader spells its state out with a word, not only a tone");
+    }
+
+    [Fact]
+    public void TheGraphSection_AppliesTheCallThePagePushes()
+    {
+        var clock = RegisterClock();
+        var cut = RenderPage();
+
+        var before = Section(cut, "ai-agents-graph");
+        before.QuerySelector("[data-testid='agent-graph-node'][data-node-id='ledger']")!
+            .GetAttribute("aria-label").Should().Contain("Calls: 14");
+
+        Text(cut, "ai-agents-graph-call-log").Should().Contain("0");
+
+        cut.Find("[data-testid='ai-agents-graph-call']").Click();
+
+        // An event-only update is PAINT-gated, so the trailing paint closes the window on the page's own clock.
+        clock.Advance(TimeSpan.FromMilliseconds(200));
+        cut.WaitForAssertion(() => Text(cut, "ai-agents-graph-call-log").Should().Contain("1"));
+        Section(cut, "ai-agents-graph")
+            .QuerySelector("[data-testid='agent-graph-node'][data-node-id='search']")!
+            .GetAttribute("aria-label").Should().Contain("Calls: 4",
+                "the page pushed a real AgentGraphCall and the component folded it into the edge");
     }
 
     [Fact]

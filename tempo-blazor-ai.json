@@ -183,6 +183,242 @@
       "notes": "The badge is deliberately not interactive: it renders no button, no tab stop and no drag surface, so WCAG 2.5.7's non-drag alternative and the 44 px coarse-pointer target do not apply to it — a host that makes a whole row clickable keeps that obligation on its own row. Its CSS declares no transition or animation, which keeps the package's reduced-motion enumeration unchanged; a future animated subject has to add its own prefers-reduced-motion block. Under Windows high contrast the avatar opts out of the system palette (forced-color-adjust: none) so the eight agent fills stay distinguishable and keeps a CanvasText border for the circle's edge."
     },
     {
+      "itemName": "TmAgentGraph",
+      "kind": "Component",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.Components.AI",
+      "description": "Agents, the tools they call, the resources they read and the human in the loop as ONE drawn network: a box per node in the column its kind belongs to, a curve per connection whose thickness is how often it was called, and a short pulse on the curve every time a new call arrives. The surface renders the SNAPSHOT it is given plus the incremental calls the host streams in, and never polls, fetches or mutates anything: the host owns the transport and the component owns its view. The injected TimeProvider drives both the pulse window and the paint throttle, so a test with a fake clock controls the whole surface. The layout is pure C# (AgentGraphLayout): columns follow the node kind (human, agent, resource, tool) and are then tightened so every edge points forward, a cycle is broken deterministically and its closing edge is routed BELOW the boxes, rows inside a column are ordered by a barycenter heuristic so the curves stop crossing, members of a group stay in one contiguous run, and the stroke width is a LOG scale over the call count so a quiet connection stays visible beside a busy one. A host may pin a node exactly (NodePositions) and the canvas grows to contain it. The drawing is never the only way to read the graph: the scrollport (a div, the ONE role=group, named by the localized \"Agent graph\" and described by its instructions) wraps a plain unlabelled SVG whose nodes are native BUTTONS (one roving tab stop, ARROW keys walking the real connections, Home/End on the edges, Enter/Space activating natively), and the View switcher renders the SAME data as two plain tables. Exactly ONE polite live region announces a selection, a zoom change, a lost selection and a stream hole; the only animated subject is the call pulse and its prefers-reduced-motion block keeps a still highlight instead of the movement.",
+      "packageId": "Tempo.Blazor.AI",
+      "sourcePath": "src/Tempo.Blazor.AI/Components/AI/TmAgentGraph.razor",
+      "documentationStatus": "merged",
+      "requiredImports": [
+        "@using Tempo.Blazor.AI.Models",
+        "@using Tempo.Blazor.Components.AI"
+      ],
+      "parameters": [
+        {
+          "name": "Class",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Additional CSS class(es) for the root element."
+        },
+        {
+          "name": "Culture",
+          "type": "CultureInfo?",
+          "isRequired": false,
+          "description": "The culture the \"last call\" time formats in. Null uses CultureInfo.CurrentCulture. It never changes the values, only their shape."
+        },
+        {
+          "name": "DetailTemplate",
+          "type": "RenderFragment<AgentGraphNode>?",
+          "isRequired": false,
+          "description": "The host's detail surface for the selected node — the full label, the call numbers, links, actions. Rendered in a role=region named by the localized \"Node detail\". Null renders no detail at all."
+        },
+        {
+          "name": "Events",
+          "type": "IReadOnlyList<AgentGraphCall>?",
+          "isRequired": false,
+          "description": "The incremental calls applied ON TOP of Snapshot, in any order. The shared AgentEventStream sorts them, drops what was already applied and rejects a batch with a hole (raising OnGapDetected), so a host may pass the same batch twice, or a cumulative list, without de-duplicating itself. Null means the snapshot is all there is."
+        },
+        {
+          "name": "HeadingLevel",
+          "type": "int",
+          "isRequired": false,
+          "default": "3",
+          "description": "The heading level of the rendered title, clamped to 2-6. Default 3."
+        },
+        {
+          "name": "MaxPulses",
+          "type": "int",
+          "isRequired": false,
+          "default": "6",
+          "description": "How many edges may pulse at once. Default 6. A burst of calls from a fan-out agent must not light up the whole picture, so only the NEWEST pulses survive: an older one is retired as soon as the cap is exceeded."
+        },
+        {
+          "name": "MaxZoom",
+          "type": "double",
+          "isRequired": false,
+          "default": "2.5",
+          "description": "The largest allowed scale. Default 2.5 (250 %)."
+        },
+        {
+          "name": "MinZoom",
+          "type": "double",
+          "isRequired": false,
+          "default": "0.5",
+          "description": "The smallest allowed scale. Default 0.5 (50 %)."
+        },
+        {
+          "name": "NodePositions",
+          "type": "IReadOnlyDictionary<string, AgentGraphPosition>?",
+          "isRequired": false,
+          "description": "The nodes the HOST pinned, by node id (a hand-placed sketch, a restored layout). A pinned node keeps its exact coordinate and the canvas grows to contain it; everything else is still laid out around it. Null pins nothing."
+        },
+        {
+          "name": "OnGapDetected",
+          "type": "EventCallback<long>",
+          "isRequired": false,
+          "description": "Raised once per batch that contains a HOLE — with the first sequence the stream does not have. The documented repair is the host's own: load a new snapshot and pass it (with its sequence) as Snapshot."
+        },
+        {
+          "name": "PulseDuration",
+          "type": "TimeSpan",
+          "isRequired": false,
+          "default": "TimeSpan.FromMilliseconds(600)",
+          "description": "How long one pulse stays on its edge. Default 600 ms. The highlight is removed by a timer on the injected TimeProvider, so a fake clock closes it without sleeping; under prefers-reduced-motion the same window keeps a STILL highlight instead of the animation. The value is also written onto the root as --tm-agent-graph-pulse-duration, so the CSS animation and the timer share ONE length and a host that changes this parameter never has to restyle the knob."
+        },
+        {
+          "name": "RenderThrottle",
+          "type": "TimeSpan?",
+          "isRequired": false,
+          "description": "The paint-gate window for event-driven updates. Null uses the shared AgentRenderThrottle.DefaultInterval (100 ms); TimeSpan.Zero paints every batch. The STATE is never throttled, only the paint."
+        },
+        {
+          "name": "SelectedNodeId",
+          "type": "string?",
+          "isRequired": false,
+          "description": "The selected node's id, two-way bound with SelectedNodeIdChanged (@bind-SelectedNodeId). The matching node carries aria-pressed=\"true\" and its neighbours are highlighted; with DetailTemplate set the node's detail renders in a named region below the surface."
+        },
+        {
+          "name": "SelectedNodeIdChanged",
+          "type": "EventCallback<string?>",
+          "isRequired": false,
+          "description": "Fires with the new selected node id when the reader selects a node (a null value clears it)."
+        },
+        {
+          "name": "ShowTitle",
+          "type": "bool",
+          "isRequired": false,
+          "default": "true",
+          "description": "Whether the heading is rendered. Default true."
+        },
+        {
+          "name": "ShowZoom",
+          "type": "bool",
+          "isRequired": false,
+          "default": "true",
+          "description": "Whether the zoom controls are rendered. Default true. They are the WCAG 2.5.7 alternative to the pinch gesture, so a host is expected to keep them unless its own chrome zooms."
+        },
+        {
+          "name": "Snapshot",
+          "type": "AgentGraphSnapshot?",
+          "isRequired": false,
+          "description": "The COMPLETE state of the graph at one moment: the nodes, the connections between them and the calls each connection carried, plus the sequence the snapshot includes. The component never mutates it. Null renders the localized empty state (the surface is usable before the host's first load lands)."
+        },
+        {
+          "name": "TimeProvider",
+          "type": "TimeProvider?",
+          "isRequired": false,
+          "description": "The clock the pulse window and the paint throttle measure on. Null uses the container's TimeProvider and falls back to TimeProvider.System — the host's clock always wins over the machine's."
+        },
+        {
+          "name": "Title",
+          "type": "string?",
+          "isRequired": false,
+          "description": "The heading above the surface. Null renders the localized default (\"Agent graph\"); the heading also names the drawing, so the name a reader hears is the one they see."
+        },
+        {
+          "name": "ViewMode",
+          "type": "AgentGraphViewMode",
+          "isRequired": false,
+          "default": "AgentGraphViewMode.Graph",
+          "description": "Which presentation is shown, two-way bound with ViewModeChanged. Default Graph; Table is the text alternative with exactly the same data."
+        },
+        {
+          "name": "ViewModeChanged",
+          "type": "EventCallback<AgentGraphViewMode>",
+          "isRequired": false,
+          "description": "Fires with the new presentation when the reader uses the View switcher."
+        },
+        {
+          "name": "Zoom",
+          "type": "double",
+          "isRequired": false,
+          "default": "1",
+          "description": "The scale of the drawing, two-way bound with ZoomChanged. Default 1 (100 %), clamped into MinZoom-MaxZoom. A host that pins it keeps control: the reader's zoom reports the change and the next render from the host decides."
+        },
+        {
+          "name": "ZoomChanged",
+          "type": "EventCallback<double>",
+          "isRequired": false,
+          "description": "Fires with the new scale when the reader zooms (a button, \"fit\", or a pinch/ctrl+wheel gesture)."
+        },
+        {
+          "name": "AdditionalAttributes",
+          "type": "Dictionary<string, object>?",
+          "isRequired": false,
+          "description": "Additional HTML attributes applied to the root element."
+        }
+      ],
+      "cssClasses": [
+        "tm-ai-agent-graph",
+        "tm-ai-agent-graph__header",
+        "tm-ai-agent-graph__title",
+        "tm-ai-agent-graph__toolbar",
+        "tm-ai-agent-graph__view",
+        "tm-ai-agent-graph__zoom",
+        "tm-ai-agent-graph__zoom-button",
+        "tm-ai-agent-graph__zoom-button--fit",
+        "tm-ai-agent-graph__zoom-value",
+        "tm-ai-agent-graph__empty",
+        "tm-ai-agent-graph__tables",
+        "tm-ai-agent-graph__table",
+        "tm-ai-agent-graph__table-node",
+        "tm-ai-agent-graph__table-select",
+        "tm-ai-agent-graph__detail",
+        "tm-ai-agent-graph__viewport",
+        "tm-ai-agent-graph__canvas",
+        "tm-ai-agent-graph__groups",
+        "tm-ai-agent-graph__group",
+        "tm-ai-agent-graph__group-box",
+        "tm-ai-agent-graph__group-label",
+        "tm-ai-agent-graph__edges",
+        "tm-ai-agent-graph__edge",
+        "tm-ai-agent-graph__edge--back",
+        "tm-ai-agent-graph__edge--active",
+        "tm-ai-agent-graph__edge--pulse",
+        "tm-ai-agent-graph__edge--highlighted",
+        "tm-ai-agent-graph__edge--dimmed",
+        "tm-ai-agent-graph__arrow-head",
+        "tm-ai-agent-graph__node",
+        "tm-ai-agent-graph__node--idle",
+        "tm-ai-agent-graph__node--queued",
+        "tm-ai-agent-graph__node--running",
+        "tm-ai-agent-graph__node--approval",
+        "tm-ai-agent-graph__node--succeeded",
+        "tm-ai-agent-graph__node--failed",
+        "tm-ai-agent-graph__node--cancelled",
+        "tm-ai-agent-graph__node--pinned",
+        "tm-ai-agent-graph__node--selected",
+        "tm-ai-agent-graph__node--neighbor",
+        "tm-ai-agent-graph__node--dimmed",
+        "tm-ai-agent-graph__node-body",
+        "tm-ai-agent-graph__node-avatar",
+        "tm-ai-agent-graph__node-initials",
+        "tm-ai-agent-graph__node-kind-icon",
+        "tm-ai-agent-graph__node-text",
+        "tm-ai-agent-graph__node-label",
+        "tm-ai-agent-graph__node-state",
+        "tm-ai-agent-graph__node-state-icon",
+        "tm-ai-agent-graph__node-state-text"
+      ],
+      "examples": [
+        {
+          "title": "A live graph with a selected node and a detail panel",
+          "code": "@* The page owns the snapshot and the transport; the component owns its view. *@\n<TmAgentGraph Snapshot=\"_snapshot\"\n              Events=\"_calls\"\n              OnGapDetected=\"ReloadAsync\"\n              @bind-SelectedNodeId=\"_selectedNodeId\"\n              Title=\"Reconciliation run\">\n    <DetailTemplate Context=\"node\">\n        <h3>@node.Label</h3>\n        <p>@node.Kind · @node.Status</p>\n    </DetailTemplate>\n</TmAgentGraph>\n\n@code {\n    private AgentGraphSnapshot _snapshot = new();\n    private IReadOnlyList<AgentGraphCall> _calls = [];\n    private string? _selectedNodeId;\n\n    private Task ReloadAsync(long missingSequence) => LoadSnapshotAsync(missingSequence);\n}"
+        },
+        {
+          "title": "The snapshot a host builds",
+          "code": "var planner = new AgentGraphNode(\"planner\", \"Planner\")\n{\n    Kind = AgentGraphNodeKind.Agent,\n    Status = AgentActivityStatus.Running,\n    Group = \"Core\",\n    Agent = new AgentRef(\"Planner\", \"planner\") { ColorIndex = 0 },\n};\n\nvar search = new AgentGraphNode(\"search\", \"Web search\")\n{\n    Kind = AgentGraphNodeKind.Tool,\n    Status = AgentActivityStatus.Succeeded,\n};\n\nvar snapshot = new AgentGraphSnapshot\n{\n    Sequence = 42,\n    Nodes = [planner, search, new AgentGraphNode(\"ledger\", \"Ledger\") { Kind = AgentGraphNodeKind.Resource }],\n    Edges = [new AgentGraphEdge(\"e-search\", \"planner\", \"search\") { CallCount = 3, IsActive = true }],\n};"
+        },
+        {
+          "title": "A pinned layout, the text alternative and a restored scale",
+          "code": "<!-- Restore a hand-placed sketch: the pinned nodes keep their exact coordinates. -->\n<TmAgentGraph Snapshot=\"_snapshot\"\n              NodePositions=\"_positions\"\n              Zoom=\"1.5\" />\n\n@code {\n    private readonly IReadOnlyDictionary<string, AgentGraphPosition> _positions =\n        new Dictionary<string, AgentGraphPosition>(StringComparer.Ordinal)\n        {\n            [\"planner\"] = new AgentGraphPosition(60, 40),\n            [\"search\"] = new AgentGraphPosition(420, 120),\n        };\n}\n\n<!-- The same data as text, for a screen reader or a narrow phone. -->\n<TmAgentGraph Snapshot=\"_snapshot\" ViewMode=\"AgentGraphViewMode.Table\" />"
+        }
+      ],
+      "notes": "Keyboard: the node is a NATIVE <button> inside a <foreignObject>, so Enter and Space activate it exactly once with no emulation, and the roving tabindex keeps the whole graph ONE tab stop while the scrollport stays tabindex=-1 (programmatically focusable, never a second stop in front of the nodes). ARROW keys move along the actual EDGES (the neighbour furthest in that direction wins, then the cross-axis distance, then the painting order) and never along the declaration order; Home/End jump to the first and the last node. The page scroll an ARROW may produce is accepted rather than suppressed — a render-time @onkeydown:preventDefault cannot be per-key and would swallow Tab and the button's own native activation (the same decision TmTabs and TmTopBar document). Focus: a selected node the host removes clears the selection and hands the focus back to the viewport instead of dropping the reader onto the body. Pointer: panning is NATIVE scrolling of the viewport (a mouse, a wheel, a scrollbar and the keyboard all work), and the package's tm-agent-graph.js only imports the CORE pointer-gesture.js helper for pinch/ctrl+wheel zoom plus the two-finger pan delta — there is no second drag implementation and no <script> tag. Pulses: a call lights its edge up for PulseDuration on the injected TimeProvider (the same value is written onto the root as --tm-agent-graph-pulse-duration, so the CSS animation and the timer share one length), at most MaxPulses at a time (the newest win), and the ONE animated subject has a prefers-reduced-motion block that removes the movement while keeping a dashed, Highlight-toned highlight. Fit-to-view measures the scrollport (the same module) and keeps the current zoom when nothing can be measured (prerender, no JavaScript), so it never jumps to a guess. High contrast: forced-colors hands the curves, the group boxes and the arrow heads (an SVG fill the system palette does not remap) to CanvasText, selection and approval to a Highlight BORDER and focus to its own thicker OUTLINE, so a focused node is never mistaken for a selected one (WCAG 2.4.7), and every dim is dropped (opacity 1) instead of lowering system-colour contrast. A dimmed node is a TOKEN change rather than an opacity, because it is still an active button whose label has to keep its contrast. Every user-facing string (including the accessible names of the nodes, the table headings and the zoom read-out) comes from ITmLocalizer."
+    },
+    {
       "itemName": "TmAgentLanes",
       "kind": "Component",
       "category": "AI",
@@ -2163,6 +2399,50 @@
       ]
     },
     {
+      "itemName": "AgentGraphPosition",
+      "kind": "Record",
+      "category": "Components",
+      "namespace": "Tempo.Blazor.Components.AI",
+      "description": "A fixed point of an agent graph's canvas, in pixels from the canvas's top-left corner — the type a host uses to pin a node exactly where it wants it through TmAgentGraph.NodePositions. Pinning is the escape hatch for a surface whose node order matters to the reader (a hand-placed architecture sketch, a restored layout): a pinned node keeps its exact coordinate and everything else is still laid out around it, and the canvas grows so the pinned box is never cut off.",
+      "packageId": "Tempo.Blazor.AI",
+      "sourcePath": "src/Tempo.Blazor.AI/Components/AI/AgentGraphPosition.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "X",
+          "kind": "Property",
+          "type": "double",
+          "description": "Distance in pixels from the canvas's left edge; never negative (a negative or non-finite value is stored as zero)."
+        },
+        {
+          "name": "Y",
+          "kind": "Property",
+          "type": "double",
+          "description": "Distance in pixels from the canvas's top edge; never negative (a negative or non-finite value is stored as zero)."
+        }
+      ]
+    },
+    {
+      "itemName": "AgentGraphViewMode",
+      "kind": "Enum",
+      "category": "Components",
+      "namespace": "Tempo.Blazor.Components.AI",
+      "description": "How TmAgentGraph presents the same graph: Graph is the drawn network (a box per node in the column its kind belongs to, a curve per connection whose thickness is its call count, a short pulse per call), Table is the text alternative carrying exactly the same data as two plain tables (every connection with its count and last call, and every node with its kind, state and calls). The drawing is never the only way to read the graph — a screen reader, a keyboard-only reader or a narrow phone switches to Table without losing a fact.",
+      "packageId": "Tempo.Blazor.AI",
+      "sourcePath": "src/Tempo.Blazor.AI/Components/AI/AgentGraphViewMode.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Graph",
+          "description": "The default: an SVG scene whose nodes are native buttons (one roving tab stop, ARROW keys walking the real connections, Home/End on the edges), an SVG curve per connection, dashed back edges routed below the boxes, and the group boxes around their members. Scrolls inside its own viewport and zooms with the +/−/fit buttons or a pinch/ctrl+wheel gesture."
+        },
+        {
+          "name": "Table",
+          "description": "The text alternative: one table of every connection (from, to, kind, calls, last call) and one of every node (name, kind, state, calls). The same data without the geometry, reachable by keyboard and read by a screen reader; the node row action selects a node exactly as the drawing does."
+        }
+      ]
+    },
+    {
       "itemName": "AgentLanesViewMode",
       "kind": "Enum",
       "category": "Components",
@@ -2357,6 +2637,10 @@
       "kind": "Css"
     },
     {
+      "path": "src/Tempo.Blazor.AI/wwwroot/css/components/_ai-agent-graph.css",
+      "kind": "Css"
+    },
+    {
       "path": "src/Tempo.Blazor.AI/wwwroot/css/components/_ai-agent-lanes.css",
       "kind": "Css"
     },
@@ -2437,6 +2721,10 @@
       "kind": "JavaScript"
     },
     {
+      "path": "src/Tempo.Blazor.AI/wwwroot/js/tm-agent-graph.js",
+      "kind": "JavaScript"
+    },
+    {
       "path": "src/Tempo.Blazor.AI/wwwroot/js/tm-agent-lanes.js",
       "kind": "JavaScript"
     },
@@ -2453,6 +2741,10 @@
       "kind": "JavaScript"
     },
     {
+      "path": "src/Tempo.Blazor.AI/wwwroot/js/__tests__/tm-agent-graph.test.mjs",
+      "kind": "JavaScript"
+    },
+    {
       "path": "src/Tempo.Blazor.AI/wwwroot/js/__tests__/tm-agent-lanes.test.mjs",
       "kind": "JavaScript"
     },
@@ -2462,11 +2754,11 @@
     }
   ],
   "summary": {
-    "itemCount": 24,
-    "manualItemCount": 24,
-    "generatedItemCount": 24,
+    "itemCount": 27,
+    "manualItemCount": 27,
+    "generatedItemCount": 27,
     "generatedOnlyItemCount": 0,
-    "componentCount": 17,
-    "publicApiTypeCount": 7
+    "componentCount": 18,
+    "publicApiTypeCount": 9
   }
 }

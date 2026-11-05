@@ -1144,5 +1144,18 @@
   "TmAiAgentsDemo_FocusPerformance": "výkon",
   "TmAiAgentsDemo_ToneFriendly": "přátelský",
   "TmAiAgentsDemo_ToneFormal": "formální",
-  "TmAiAgentsDemo_ApprovalPending": "Běh čeká na vaše rozhodnutí."
+  "TmAiAgentsDemo_ApprovalPending": "Běh čeká na vaše rozhodnutí.",
+  "TmAiAgentsDemo_GraphTitle": "Stejný běh jako síť",
+  "TmAiAgentsDemo_GraphHint": "Agenti, nástroje, které volají, a kniha, kterou čtou, jako jedna síť. Šipky vás posunou po spojení, Home a End na první a poslední uzel, Enter uzel vybere a přepínač Zobrazení nese stejná čísla jako dvě tabulky.",
+  "TmAiAgentsDemo_GraphRunTitle": "Síť rekonciliace",
+  "TmAiAgentsDemo_GraphSelected": "Vybráno: {0}",
+  "TmAiAgentsDemo_GraphNoSelection": "Není vybrán žádný uzel.",
+  "TmAiAgentsDemo_GraphCall": "Simulovat volání",
+  "TmAiAgentsDemo_GraphCallLog": "Volání odeslaná stránkou: {0}",
+  "TmAiAgentsDemo_GraphDetailCalls": "Volání na tomto uzlu",
+  "TmAiAgentsDemo_GraphHuman": "Dana (zadavatelka)",
+  "TmAiAgentsDemo_GraphLedger": "Kniha",
+  "TmAiAgentsDemo_GraphSearch": "Webové hledání",
+  "TmAiAgentsDemo_GraphCode": "Interpret kódu",
+  "TmAiAgentsDemo_GraphGroupCore": "Klíčoví agenti"
 }

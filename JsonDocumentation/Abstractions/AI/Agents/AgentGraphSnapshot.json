@@ -1,0 +1,29 @@
+{
+  "itemName": "AgentGraphSnapshot",
+  "kind": "Record",
+  "category": "AI",
+  "namespace": "Tempo.Blazor.AI.Models",
+  "description": "The COMPLETE state of an agent graph at one moment: the nodes (agents, tools, resources, the human), the connections between them and the call counts each connection carried — plus the Sequence the snapshot includes. A snapshot is what a graph surface renders; it never polls and never mutates. A deep link, a reload and the repair after a gap all produce a new snapshot and the surface simply draws it, which is why Apply returns a NEW value instead of editing this one. Both lists may be empty and a null list is normalised to an empty one, so a component never has to null-check the host's data.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/AI/Agents/AgentGraphSnapshot.cs",
+  "documentationStatus": "documented",
+  "usageExample": "var snapshot = new AgentGraphSnapshot\n{\n    Sequence = 42,\n    Nodes =\n    [\n        new AgentGraphNode(\"planner\", \"Planner\") { Kind = AgentGraphNodeKind.Agent },\n        new AgentGraphNode(\"search\", \"Web search\") { Kind = AgentGraphNodeKind.Tool },\n    ],\n    Edges = [new AgentGraphEdge(\"e1\", \"planner\", \"search\") { CallCount = 2 }],\n};\n\n// The repair after a gap is the host's own: load a snapshot and hand it over with its sequence.\nsnapshot = snapshot.Apply(acceptedCalls);",
+  "members": [
+    {
+      "name": "Sequence",
+      "description": "The sequence this snapshot includes — the baseline an event stream starts from. Zero (the default) means the host does not track sequences for snapshots, which is legal: the stream then starts without a baseline and accepts the run's first event."
+    },
+    {
+      "name": "Nodes",
+      "description": "The nodes of the graph, in the order the layout starts from. Empty is legal (an empty graph)."
+    },
+    {
+      "name": "Edges",
+      "description": "The connections between nodes, in any order. An edge naming a node the snapshot does not contain is COUNTED by the layout and never drawn, because its geometry would be a guess."
+    },
+    {
+      "name": "Apply",
+      "description": "Folds an incremental batch of calls into this snapshot and returns the result as a NEW value; this instance is never modified. Each call ADDS its Count to the addressed edge, marks it active and moves its LastCallAt forward (never back). A call naming an edge the snapshot does not have is ignored, because an edge cannot be invented from one endpoint pair. A batch that changes nothing returns THIS instance, so a host can compare by reference."
+    }
+  ]
+}

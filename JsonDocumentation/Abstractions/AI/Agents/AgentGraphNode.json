@@ -1,0 +1,53 @@
+{
+  "itemName": "AgentGraphNode",
+  "kind": "Record",
+  "category": "AI",
+  "namespace": "Tempo.Blazor.AI.Models",
+  "description": "One node of an agent graph: an agent, a tool, a resource or a human, with the state it is in right now and the optional group it belongs to. The record is a VALUE — a host recomposes it with `node with { … }` and no component mutates it. Id is what an AgentGraphEdge addresses and what a selection reports; a blank id is generated at construction, so a graph built in a loop still renders. Agent is how an AGENT node borrows the shared identity contract (its palette slot and its initials); a tool, a resource and a human carry none, because painting them in an agent's colour would claim an identity they do not have.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/AI/Agents/AgentGraphNode.cs",
+  "documentationStatus": "documented",
+  "usageExample": "var planner = new AgentGraphNode(\"planner\", \"Planner\")\n{\n    Kind = AgentGraphNodeKind.Agent,\n    Status = AgentActivityStatus.Running,\n    Group = \"Core\",\n    Agent = new AgentRef(\"Planner\", \"planner\") { ColorIndex = 0 },\n};\n\nvar search = new AgentGraphNode(\"search\", \"Web search\") { Kind = AgentGraphNodeKind.Tool };",
+  "members": [
+    {
+      "name": "Id",
+      "description": "Stable identity of the node — the key an edge addresses and the value a selection reports. Never empty: a missing id is generated at construction."
+    },
+    {
+      "name": "Label",
+      "description": "The display name, as the host wants it read. Empty when the host supplied none, and the surface then paints its own localized fallback."
+    },
+    {
+      "name": "Kind",
+      "description": "What the node is. Default Agent; the kind decides its column, its glyph and its word."
+    },
+    {
+      "name": "Status",
+      "description": "What the node is doing right now. Default Idle. Painted as a tone, an icon AND a localized word, never as a colour alone; WaitingForApproval is the state the surface highlights, because nothing moves until the reader acts."
+    },
+    {
+      "name": "Group",
+      "description": "The group the node belongs to, or null for an ungrouped node. Members of one group are laid out as one contiguous run inside their column and get ONE labelled box around them; a null group never joins a box."
+    },
+    {
+      "name": "Agent",
+      "description": "The identity of the agent an AGENT node stands for, or null. Setting it makes the node paint the agent's palette slot and initials (and its name, when Label is empty); a tool, a resource and a human leave it null, because they are not in the agent palette."
+    },
+    {
+      "name": "HasLabel",
+      "description": "Whether the host supplied a label. A surface paints its own localized fallback when it is false."
+    },
+    {
+      "name": "Initials",
+      "description": "The one or two letters the node's avatar paints: the agent's own initials when Agent is set, the initials of Label otherwise, and \"?\" when there is no name at all. Diacritics and surrogate pairs are kept as whole text elements."
+    },
+    {
+      "name": "ColorToken",
+      "description": "The agent palette token the node paints its avatar with, or an empty string when the node is not an agent."
+    },
+    {
+      "name": "DisplayName",
+      "description": "The name a surface prints: Label, or the agent's name when the label is empty."
+    }
+  ]
+}
