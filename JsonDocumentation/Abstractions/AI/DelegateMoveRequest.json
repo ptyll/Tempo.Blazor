@@ -1,0 +1,54 @@
+{
+  "kind": "Record",
+  "category": "AI",
+  "namespace": "Tempo.Blazor.AI.Models",
+  "description": "One committed move of a task on a delegate board: the task, the agent it came from and the agent it went to. The board raises at most ONE of these per reader action and changes nothing itself — the host applies the move to its own data and re-renders. The same record describes an assignment (From null, To set), a return to the backlog (To null) and a hand-over between two agents (both set), so a host that only cares about \"who holds it now\" reads AssigneeId and ignores the rest.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/AI/Agents/DelegateMoveRequest.cs",
+  "documentationStatus": "documented",
+  "members": [
+    {
+      "name": "AssigneeId",
+      "kind": "Property",
+      "type": "string?",
+      "description": "The agent id the host should store on the task now, or null for the backlog."
+    },
+    {
+      "name": "From",
+      "kind": "Property",
+      "type": "DelegateAgent?",
+      "description": "The agent the task came from, or null when it came from the backlog."
+    },
+    {
+      "name": "IsAssignment",
+      "kind": "Property",
+      "type": "bool",
+      "description": "Whether the task was handed to an agent (from the backlog or from another agent)."
+    },
+    {
+      "name": "IsHandover",
+      "kind": "Property",
+      "type": "bool",
+      "description": "Whether the task moved between two DIFFERENT agents. A \"move\" to the agent that already holds it is not a change and the board never reports one."
+    },
+    {
+      "name": "IsUnassignment",
+      "kind": "Property",
+      "type": "bool",
+      "description": "Whether the task went back to the backlog."
+    },
+    {
+      "name": "Task",
+      "kind": "Property",
+      "type": "DelegateTask",
+      "description": "The task that moved, as the host supplied it."
+    },
+    {
+      "name": "To",
+      "kind": "Property",
+      "type": "DelegateAgent?",
+      "description": "The agent that holds the task now, or null when it went back to the backlog."
+    }
+  ],
+  "itemName": "DelegateMoveRequest"
+}

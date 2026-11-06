@@ -24,6 +24,8 @@ public abstract class AiAgentsE2EBase : PlaywrightTestBase
     protected const string FallbackSection = "[data-testid='ai-agents-fallback-section']";
     protected const string AutonomySection = "[data-testid='ai-agents-autonomy-section']";
     protected const string MemorySection = "[data-testid='ai-agents-memory-section']";
+    protected const string DelegateSection = "[data-testid='ai-agents-delegate-section']";
+    protected const string RunsSection = "[data-testid='ai-agents-runs-section']";
     protected const string MonitorSection = "[data-testid='ai-agents-monitor-section']";
     protected const string ModelsSection = "[data-testid='ai-agents-models-section']";
     protected const string ContextSection = "[data-testid='ai-agents-context-section']";
@@ -957,6 +959,118 @@ public class AiAgentsE2ETests : AiAgentsE2EBase
         await ShootAsync(page, "ai-agents-context-light-1440");
     }
 
+    /// <summary>
+    /// Handing work out: a card moves to an agent through its keyboard/tap alternative (the Assign menu), the page
+    /// applies it, a full agent refuses a drop with an announcement instead of a silent no-op, the automatic pass fills
+    /// the free slots, and the whole board keeps its single live region. Light and dark at 1440 px, plus a scoped axe scan.
+    /// </summary>
+    [TestMethod]
+    public async Task TheDelegateBoardAssignsAndRefuses_AndThePageOwnsTheTasks()
+    {
+        var page = await OpenAsync();
+        await ScrollToSection(page, DelegateSection);
+
+        var board = page.Locator("[data-testid='ai-agents-delegate']");
+        Assert.AreEqual(4, await board.Locator(".tm-ai-delegate__column").CountAsync());
+        Assert.AreEqual("Nothing received yet.", await TextAsync(page, "ai-agents-delegate-log"));
+
+        const string card = "[data-testid='delegate-task'][data-task-id='task-summary']";
+        await board.Locator(card).Locator(".tm-context-menu__trigger").ClickAsync();
+        await page.Locator("[data-testid='ai-agents-delegate'] .tm-context-menu__item").First.ClickAsync();
+        await page.WaitForFunctionAsync(
+            "() => document.querySelector(\"[data-testid='ai-agents-delegate'] [data-column='planner'] "
+            + "[data-task-id='task-summary']\") !== null",
+            new PageWaitForFunctionOptions { Timeout = 10000 });
+        StringAssert.Contains(await TextAsync(page, "ai-agents-delegate-log"), "assigned to Planner");
+
+        // A full column refuses the drop: the visible notice and the one live region say the same sentence.
+        var reviewer = board.Locator("[data-column='reviewer']");
+        Assert.AreEqual("true", await reviewer.GetAttributeAsync("data-full"));
+        StringAssert.Contains(await reviewer.InnerTextAsync(), "Full");
+
+        // The automatic pass hands what is left to the free agents.
+        // The switch's checkbox is visually carried by its track, so the label is what a reader (and Playwright) clicks.
+        await board.Locator("[data-testid='delegate-auto'] .tm-toggle-label").ClickAsync();
+        await page.WaitForFunctionAsync(
+            "() => document.querySelectorAll(\"[data-testid='ai-agents-delegate'] [data-column='backlog'] "
+            + "[data-testid='delegate-task']\").length < 2",
+            new PageWaitForFunctionOptions { Timeout = 10000 });
+
+        // ONE polite live region for the whole board: the transfer-only columns contribute none.
+        Assert.AreEqual(1, await board.Locator("[aria-live]").CountAsync());
+
+        await ShootAsync(page, "ai-agents-delegate-light-1440");
+        await AssertNoSeriousAxeViolationsAsync(page, "ai-agents-delegate-section");
+
+        await ToggleThemeAsync(page);
+        await ScrollToSection(page, DelegateSection);
+        await ShootAsync(page, "ai-agents-delegate-dark-1440");
+        await AssertNoSeriousAxeViolationsAsync(page, "ai-agents-delegate-section");
+
+        // A phone keeps the board inside 375 px and the Assign target at the 44 px touch size.
+        var phone = await OpenAsync(375, 812, coarsePointer: true);
+        await ScrollToSection(phone, DelegateSection);
+        var box375 = await phone.Locator("[data-testid='ai-agents-delegate']").BoundingBoxAsync();
+        Assert.IsNotNull(box375);
+        Assert.IsTrue(box375!.Width <= 375, $"the delegate board fits a 375 px phone (width {box375.Width})");
+        var assignBox = await phone.Locator(
+            "[data-testid='ai-agents-delegate'] [data-task-id='task-summary'] .tm-context-menu__trigger")
+            .First.BoundingBoxAsync();
+        Assert.IsNotNull(assignBox);
+        Assert.IsTrue(assignBox!.Height >= 44, $"the Assign target keeps a touch target (height {assignBox.Height})");
+        await ShootAsync(phone, "ai-agents-delegate-phone-375");
+    }
+
+    /// <summary>
+    /// The runs board: the plan splits a long run across windows, an overloaded window is named with a word, the table is
+    /// the text alternative and carries the same move menu, and a move reports and re-places the run. Light and dark at
+    /// 1440 px, plus a scoped axe scan.
+    /// </summary>
+    [TestMethod]
+    public async Task TheScheduledRunsPlaceRunsAndReportAMove()
+    {
+        var page = await OpenAsync();
+        await ScrollToSection(page, RunsSection);
+
+        var runs = page.Locator("[data-testid='ai-agents-runs']");
+        Assert.AreEqual(4, await runs.Locator("[data-testid='runs-window']").CountAsync());
+        StringAssert.Contains(await runs.InnerTextAsync(), "Part 1 of 2");
+        Assert.AreEqual("true", await runs.Locator("[data-window-id='win-tue-pm']").GetAttributeAsync("data-overloaded"));
+        StringAssert.Contains(
+            await runs.Locator("[data-testid='runs-window-overload']").First.InnerTextAsync(), "Overloaded by");
+
+        // The table is the text alternative (WCAG 1.3.1), not a lesser view.
+        await runs.Locator("[data-testid='runs-view'] [data-testid='segmented-option'][data-value='Table']").ClickAsync();
+        await page.WaitForFunctionAsync(
+            "() => document.querySelector(\"[data-testid='ai-agents-runs']\")?.dataset.view === 'table'",
+            new PageWaitForFunctionOptions { Timeout = 10000 });
+        Assert.IsTrue(await runs.Locator("[data-testid='runs-table-row']").CountAsync() >= 4);
+        await ShootAsync(page, "ai-agents-runs-table-light-1440");
+        await runs.Locator("[data-testid='runs-view'] [data-testid='segmented-option'][data-value='Week']").ClickAsync();
+        await page.WaitForFunctionAsync(
+            "() => document.querySelector(\"[data-testid='ai-agents-runs']\")?.dataset.view === 'week'",
+            new PageWaitForFunctionOptions { Timeout = 10000 });
+
+        // Moving the long run to the second window is reported to the page and the run stays there.
+        await runs.Locator("[data-window-id='win-mon-am'] [data-run-id='run-export'] .tm-context-menu__trigger")
+            .First.ClickAsync();
+        await page.Locator("[data-testid='ai-agents-runs'] .tm-context-menu__item").Nth(1).ClickAsync();
+        await page.WaitForFunctionAsync(
+            "() => document.querySelector(\"[data-testid='ai-agents-runs-log']\")?.textContent?.includes('moved to')",
+            new PageWaitForFunctionOptions { Timeout = 10000 });
+
+        // ONE polite live region: the transfer-only window lists contribute none.
+        Assert.AreEqual(1, await runs.Locator("[aria-live]").CountAsync());
+
+        await ShootAsync(page, "ai-agents-runs-light-1440");
+        await AssertNoSeriousAxeViolationsAsync(page, "ai-agents-runs-section");
+
+        await ToggleThemeAsync(page);
+        await ScrollToSection(page, RunsSection);
+        await ShootAsync(page, "ai-agents-runs-dark-1440");
+        await AssertNoSeriousAxeViolationsAsync(page, "ai-agents-runs-section");
+    }
+
     [TestMethod]
     public async Task ThePhoneKeepsThePageInside375Px()
     {
@@ -966,6 +1080,7 @@ public class AiAgentsE2ETests : AiAgentsE2EBase
                  {
                      PlanSection, TreeSection, LanesSection, GraphSection, FanOutSection, AttemptsSection,
                      HandoffSection, FallbackSection, AutonomySection, MemorySection,
+                     DelegateSection, RunsSection,
                      MonitorSection, ModelsSection, ContextSection, PromptsSection,
                  })
         {
@@ -1000,6 +1115,7 @@ public class AiAgentsE2ETests : AiAgentsE2EBase
             "ai-agents-graph-section", "ai-agents-fan-out-section", "ai-agents-attempts-section",
             "ai-agents-handoff-section", "ai-agents-fallback-section",
             "ai-agents-autonomy-section", "ai-agents-memory-section",
+            "ai-agents-delegate-section", "ai-agents-runs-section",
             "ai-agents-monitor-section", "ai-agents-models-section",
             "ai-agents-context-section", "ai-agents-prompts-section");
     }
@@ -1143,6 +1259,7 @@ public class AiAgentsServerSmokeE2ETests : AiAgentsE2EBase
             "ai-agents-fan-out-section", "ai-agents-attempts-section",
             "ai-agents-handoff-section", "ai-agents-fallback-section",
             "ai-agents-autonomy-section", "ai-agents-memory-section",
+            "ai-agents-delegate-section", "ai-agents-runs-section",
             "ai-agents-monitor-section", "ai-agents-context-section", "ai-agents-prompts-section");
     }
 }

@@ -147,6 +147,15 @@
   text-align: center;
 }
 
+/* An EMPTY list of a GROUP still has to be a drop target: a grouped list keeps its registration with the
+   sortable module while it has no rows (so an empty board column can receive the first card), and the
+   module resolves which list the pointer is over from that list element's own rect. A collapsed <ul>
+   would report a zero-height box and could never be hit, so an empty grouped list keeps one touch target
+   of height. A standalone list has no sibling to receive a row from, so its empty state is untouched. */
+.tm-sortable-list[data-group] .tm-sortable-list__items--empty {
+  min-block-size: var(--tm-touch-target);
+}
+
 /* A read-only list still reads as a list: the rows keep their content and their structure, they just stop
    advertising a gesture they no longer have. */
 .tm-sortable-list--disabled .tm-sortable-list__item,
@@ -180,11 +189,27 @@
   }
 }
 
+/* A list another list's row would land in (a cross-list drag). The mark is drawn on the row container the
+   module adds the modifier to, never on the component root, so the list's own outer spacing is untouched. */
+.tm-sortable-list__items.tm-sortable-list--drop-target {
+  outline: 2px dashed var(--tm-border-color-focus);
+  outline-offset: var(--tm-space-1);
+  border-radius: var(--tm-radius-control);
+  background-color: var(--tm-bg-surface-secondary);
+}
+
+/* The handle of a transfer-only list is still the pointer affordance (the keyboard path lives in the host's
+   own per-row menu), so it keeps its size and its grab cursor. */
+
 /* Forced colors: the system palette stays in charge (there is no forced-color-adjust opt-out), so the
    row's border keeps following its hover and disabled state. The token colours that carry the grabbed and
    lifted states are dropped by that palette, so both states are re-declared as an outline and the focused
    row keeps a real ring. */
 @media (forced-colors: active) {
+  .tm-sortable-list__items.tm-sortable-list--drop-target {
+    outline: 2px dashed Highlight;
+  }
+
   .tm-sortable-list__item--grabbed,
   .tm-sortable-list__item--dragging {
     outline: 2px solid Highlight;

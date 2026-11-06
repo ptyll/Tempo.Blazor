@@ -1,0 +1,48 @@
+{
+  "kind": "Record",
+  "category": "AI",
+  "namespace": "Tempo.Blazor.AI.Models",
+  "description": "One slice of a scheduled run's work: how many units of it sit in one window, and which part of the window's time they occupy. A run longer than a window is SPLIT, and each slice is one of these — so a \"3 h batch\" over three one-hour windows reads as three slices of the same run instead of a run that magically appears three times. The record is a VALUE the planner and the host both produce; Units is what the window's capacity gives up.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/AI/Agents/RunSegment.cs",
+  "documentationStatus": "documented",
+  "members": [
+    {
+      "name": "Duration",
+      "kind": "Property",
+      "type": "TimeSpan",
+      "description": "How long the slice lasts, or Zero when it ends before it starts."
+    },
+    {
+      "name": "EffectiveUnits",
+      "kind": "Property",
+      "type": "int",
+      "description": "The units the slice actually covers: never below zero."
+    },
+    {
+      "name": "End",
+      "kind": "Property",
+      "type": "DateTimeOffset",
+      "description": "When the slice ends."
+    },
+    {
+      "name": "Start",
+      "kind": "Property",
+      "type": "DateTimeOffset",
+      "description": "When the slice starts, in the host's timeline."
+    },
+    {
+      "name": "Units",
+      "kind": "Property",
+      "type": "int",
+      "description": "How many units of the run this slice covers. A negative value reads as zero."
+    },
+    {
+      "name": "WindowId",
+      "kind": "Property",
+      "type": "string",
+      "description": "The id of the window the slice sits in."
+    }
+  ],
+  "itemName": "RunSegment"
+}

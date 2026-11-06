@@ -31,8 +31,10 @@ internal sealed class SortableListInterop : IAsyncDisposable
     /// <param name="root">The <c>role="list"</c> element the module delegates from.</param>
     /// <param name="dotnet">Receives <c>OnSortableReorderCommitted</c> once per committed drag.</param>
     /// <param name="handleMode">"handle" or "whole-item".</param>
+    /// <param name="group">The cross-list drag group, or an empty string for a standalone list.</param>
+    /// <param name="listId">How the host recognises this list inside its group.</param>
     public async Task AttachAsync<T>(string id, ElementReference root, DotNetObjectReference<T> dotnet,
-        string handleMode) where T : class
+        string handleMode, string group = "", string? listId = null) where T : class
     {
         try
         {
@@ -42,7 +44,8 @@ internal sealed class SortableListInterop : IAsyncDisposable
             }
 
             _attached.Add(id);
-            await _lazy.TryInvokeVoidAsync("attachSortable", root, dotnet, id, handleMode);
+            await _lazy.TryInvokeVoidAsync("attachSortable", root, dotnet, id, handleMode,
+                new { group, listId = listId ?? id });
         }
         catch (Exception ex) when (IsBenign(ex))
         {

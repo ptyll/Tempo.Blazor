@@ -16,16 +16,22 @@
 <div class="@RootClass"
      data-testid="@RootTestId("sortable-list")"
      data-disabled="@(Disabled ? "true" : "false")"
-     data-grabbed="@(GrabbedIndex is null ? "false" : "true")">
+     data-grabbed="@(GrabbedIndex is null ? "false" : "true")"
+     data-group="@(string.IsNullOrWhiteSpace(Group) ? null : Group)"
+     data-list-id="@EffectiveListId">
 
-    <p class="tm-sr-only" id="@InstructionsId">@Loc["TmSortableList_Instructions"]</p>
+    <p class="tm-sr-only" id="@InstructionsId">@(IsLocalReorderEnabled
+        ? Loc["TmSortableList_Instructions"]
+        : Loc["TmSortableList_InstructionsTransfer"])</p>
 
     <ul @ref="_listRef"
-        class="tm-sortable-list__items"
+        class="@ItemsClass"
         role="list"
         aria-label="@EffectiveLabel"
         aria-describedby="@InstructionsId"
-        data-tm-sortable-root>
+        data-tm-sortable-root
+        data-sortable-group="@(string.IsNullOrWhiteSpace(Group) ? null : Group)"
+        data-sortable-list-id="@EffectiveListId">
         @foreach (var row in Entries)
         {
             var entry = row;
@@ -33,10 +39,10 @@
                 @key="entry.Key"
                 @ref="HandleFor(entry).Ref"
                 role="listitem"
-                tabindex="@(Disabled ? null : "0")"
-                aria-roledescription="@Loc["TmSortableList_ItemRoleDescription"]"
+                tabindex="@(IsLocalReorderEnabled ? "0" : null)"
+                aria-roledescription="@(IsLocalReorderEnabled ? Loc["TmSortableList_ItemRoleDescription"] : null)"
                 aria-labelledby="@ContentId(entry)"
-                aria-describedby="@InstructionsId"
+                aria-describedby="@(IsLocalReorderEnabled ? InstructionsId : null)"
                 data-sortable-key="@entry.KeyText"
                 data-sortable-source-index="@Invariant(entry.SourceIndex)"
                 data-grabbed="@(GrabbedIndex == entry.SourceIndex ? "true" : "false")"
@@ -76,7 +82,7 @@
                     }
                 </div>
 
-                @if (ShowMoveMenu && !Disabled)
+                @if (ShowMoveMenu && IsLocalReorderEnabled)
                 {
                     @* The tap alternative (WCAG 2.5.7). The fence keeps the menu's own Enter, Space,
                        arrows and Escape away from the row's emulating handler. *@
@@ -128,12 +134,18 @@
     }
 
     @* One polite region for the whole list: the grab, every step, the drop and the cancel each
-       replace this text, so a reader hears the move once instead of once per row. *@
-    <span class="tm-sr-only"
-          role="status"
-          aria-live="polite"
-          aria-atomic="true"
-          data-testid="@TestId("sortable-list-status")">@_announcement</span>
+       replace this text, so a reader hears the move once instead of once per row. A TRANSFER-ONLY list
+       renders NO region at all: it announces nothing by design (the host owns the sentence, because only
+       it knows whether the drop was accepted), and a silent live region on every column of a board would
+       be several regions where the accessibility contract allows exactly one. *@
+    @if (AllowLocalReorder)
+    {
+        <span class="tm-sr-only"
+              role="status"
+              aria-live="polite"
+              aria-atomic="true"
+              data-testid="@TestId("sortable-list-status")">@_announcement</span>
+    }
 </div>
 
 @code {
@@ -142,6 +154,15 @@
     /// on a page with several lists. A host value is never used as an id.
     /// </summary>
     private readonly string _instanceId = Guid.NewGuid().ToString("n")[..8];
+
+    /// <summary>
+    /// The class of the <c>data-tm-sortable-root</c> list. An EMPTY list carries a modifier that keeps a
+    /// non-zero hit box: a grouped list stays registered while it has no rows (so it can receive a dropped
+    /// row), and the module resolves the drop target from the list element's own rect.
+    /// </summary>
+    private string ItemsClass => IsEmpty
+        ? "tm-sortable-list__items tm-sortable-list__items--empty"
+        : "tm-sortable-list__items";
 
     /// <summary>The DOM id of the hidden keyboard instructions.</summary>
     private string InstructionsId => "tm-sortable-list-instructions-" + _instanceId;

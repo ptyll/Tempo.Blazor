@@ -9099,6 +9099,54 @@
       "usageExample": "<TmSortableList Items=\"@rows\" OnReorder=\"@(args => Log(args.Source, args.FromIndex, args.ToIndex))\" />"
     },
     {
+      "itemName": "SortableTransferArgs",
+      "kind": "Class",
+      "category": "Components",
+      "namespace": "Tempo.Blazor.Components.DataDisplay",
+      "description": "Describes one committed CROSS-LIST move of a TmSortableList<TItem>: the row at FromIndex of the SOURCE list (the component that raised the callback) was dropped into the list identified by ToListId at position ToIndex. Raised on the SOURCE list through OnTransfer, because that is the component that owns the moved row and can name it. The component never moves anything itself: the host removes the row from the source collection, inserts it into the target collection and re-renders — and it owns whatever announcement the move deserves, since only the host knows whether the drop was accepted (a full capacity, a read-only board) or refused. Two lists join the same drag group through the same non-empty Group value; ListId is how a host recognises the target inside its handler. ToIndex is the insertion slot the pointer resolved over the target's CURRENT rows, so rows.Count means \"after the last row\" — a host with no meaningful order inside the target (a board column) simply ignores it.",
+      "packageId": "Tempo.Blazor",
+      "sourcePath": "src/Tempo.Blazor/Components/DataDisplay/SortableTransferArgs.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "FromIndex",
+          "kind": "Property",
+          "type": "int",
+          "description": "The zero-based index of the moved row in the source list's items."
+        },
+        {
+          "name": "FromListId",
+          "kind": "Property",
+          "type": "string?",
+          "description": "The ListId of the list the row came from (the raising component's own id)."
+        },
+        {
+          "name": "Source",
+          "kind": "Property",
+          "type": "SortableReorderSource",
+          "description": "Which input method committed the move. A transfer only ever comes from the pointer."
+        },
+        {
+          "name": "ToIndex",
+          "kind": "Property",
+          "type": "int",
+          "description": "The insertion slot over the target list's rows at the moment of the release. Equal to the target row count when the row was dropped below the last one, so a host that cares about order can insert without an extra clamp."
+        },
+        {
+          "name": "ToListId",
+          "kind": "Property",
+          "type": "string?",
+          "description": "The ListId of the list the row was dropped into."
+        }
+      ],
+      "usageExample": "<TmSortableList TItem=\"Row\"\n                Items=\"Backlog\"\n                Group=\"board\"\n                ListId=\"backlog\"\n                AllowLocalReorder=\"false\"\n                OnTransfer=\"OnTransfer\" />",
+      "notes": [
+        "Raised on the SOURCE list (the component that owns the moved row); the host removes the row from its own collection, inserts it into the target collection and re-renders.",
+        "The component announces nothing for a transfer: only the host knows whether the drop was accepted (a column at full capacity, a read-only board), so the surface keeps ONE polite live region.",
+        "ToIndex is the insertion slot over the target's CURRENT rows, so a value equal to the target row count means \"after the last row\"."
+      ]
+    },
+    {
       "itemName": "SparklineType",
       "kind": "Enum",
       "category": "Components",
@@ -12354,6 +12402,13 @@
       ],
       "parameters": [
         {
+          "name": "AllowLocalReorder",
+          "type": "bool",
+          "isRequired": false,
+          "default": "true",
+          "description": "Whether the reader may reorder the rows INSIDE this list. Default true. A host that only wants transfers between lists (a board whose column order means nothing) sets false: the keyboard grab/drop model and the per-row move menu are then not offered at all — a row that could be moved within its list but has nowhere to go would announce a change the host ignores — and the rows stop being tab stops while the pointer drag (and its cross-list transfers) keeps working. Such a list also renders no live region of its own. The host is then responsible for a per-row alternative."
+        },
+        {
           "name": "AriaLabel",
           "type": "string?",
           "isRequired": false,
@@ -12377,6 +12432,12 @@
           "type": "RenderFragment?",
           "isRequired": false,
           "description": "Rendered instead of the localized default (\"No items to reorder.\") when Items is null or empty. The hidden instructions and the live region stay rendered either way, so the list never loses its explanation."
+        },
+        {
+          "name": "Group",
+          "type": "string?",
+          "isRequired": false,
+          "description": "The cross-list drag group this list belongs to. Two lists that pass the SAME non-empty value accept each other's rows: a row dragged out of one and dropped over the other is reported as OnTransfer instead of a reorder. Null (the default) keeps the list on its own, exactly as before this parameter existed. The gesture itself is unchanged — the same sortable module over the shared drag helper; the group only tells it which sibling lists the pointer may leave the row in, and the module marks the list it would drop into with tm-sortable-list--drop-target."
         },
         {
           "name": "HandleMode",
@@ -12410,10 +12471,22 @@
           "description": "The stable identity of one row, used both for Blazor's @key — a reordered row keeps its DOM node and any child component instance instead of being re-created in place — and for the row's data-sortable-key attribute. Null falls back to the row's index, which is stable only while the order is stable, so a host that reorders should always supply this. Keys must be unique: if the selector repeats one, every row falls back to its index (a keyed diff throws on a duplicate sibling key, so a mistaken selector degrades to an unkeyed list instead of failing the render)."
         },
         {
+          "name": "ListId",
+          "type": "string?",
+          "isRequired": false,
+          "description": "How the host recognises THIS list inside its Group — the value reported as SortableTransferArgs.ToListId when a row is dropped here, and as SortableTransferArgs.FromListId when one of this list's rows leaves. Null falls back to the component's own instance key, which is stable for the lifetime of the instance but meaningless to a host, so a group of lists a host has to tell apart should always set it."
+        },
+        {
           "name": "OnReorder",
           "type": "EventCallback<SortableReorderArgs>",
           "isRequired": false,
           "description": "Raised exactly once per committed move with the indexes of the host's Items list (FromIndex, ToIndex and the Source that committed it). Not raised when nothing moved: a grab that returned to its start, an Alt+arrow at the boundary, or a disabled list. The component does not reorder the list itself — the host applies the move and re-renders."
+        },
+        {
+          "name": "OnTransfer",
+          "type": "EventCallback<SortableTransferArgs>",
+          "isRequired": false,
+          "description": "Raised when a row of THIS list is dropped into ANOTHER list of the same Group. The component reports the move and changes nothing — the host removes the row from its own source collection, inserts it into the target one and re-renders. The component does NOT announce a transfer on its own live region: only the host knows whether the drop was accepted (a column at full capacity refuses it, for instance) and what the move is called, so the host owns that announcement and the surface keeps ONE polite region."
         },
         {
           "name": "ShowMoveMenu",
@@ -12460,7 +12533,8 @@
         "tm-sortable-list__actions",
         "tm-sortable-list__move",
         "tm-sortable-list__move-trigger",
-        "tm-sortable-list__empty"
+        "tm-sortable-list__empty",
+        "tm-sortable-list--drop-target"
       ],
       "examples": [
         {
@@ -12479,7 +12553,8 @@
       "notes": [
         "One reorder at a time: while a row is grabbed it owns the keyboard — the module stops the default action of the reorder keys on the row itself, Tab cancels the grab and moves the focus out, and Escape cancels the move, so a grab is never a keyboard trap (WCAG 2.1.2).",
         "The pointer path rides the shared pointer-drag.js and pointer-gesture.js helpers — the module owns only the list geometry and the single commit, never a second gesture implementation.",
-        "Reduced motion suppresses the row transition in animations.css, so a reader who asked for less motion sees the rows snap instead of slide."
+        "Reduced motion suppresses the row transition in animations.css, so a reader who asked for less motion sees the rows snap instead of slide.",
+        "A transfer is reported ONCE, on the SOURCE list, and the component announces nothing for it: only the host knows whether the drop was accepted and what the move is called. A transfer-only list (AllowLocalReorder=false) therefore renders no live region of its own, so a grouped surface keeps ONE polite region."
       ]
     },
     {
@@ -35687,11 +35762,11 @@
     }
   ],
   "summary": {
-    "itemCount": 447,
-    "manualItemCount": 447,
-    "generatedItemCount": 439,
+    "itemCount": 448,
+    "manualItemCount": 448,
+    "generatedItemCount": 440,
     "generatedOnlyItemCount": 0,
     "componentCount": 236,
-    "publicApiTypeCount": 203
+    "publicApiTypeCount": 204
   }
 }

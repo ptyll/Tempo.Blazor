@@ -1,0 +1,10 @@
+{
+  "kind": "Enum",
+  "category": "AI",
+  "namespace": "Tempo.Blazor.AI.Models",
+  "description": "How urgent a delegated task is, as the board paints and orders it. The words are the surface's own (the model carries no text), so the same value reads \"High\" in English and \"Vysoká\" in Czech. A host that has no priority scale for its tasks leaves Priority null: an INVENTED Normal would claim a judgement nobody made, and the board would then sort by a value the host never stored.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/AI/Agents/DelegateTaskPriority.cs",
+  "documentationStatus": "documented",
+  "itemName": "DelegateTaskPriority"
+}

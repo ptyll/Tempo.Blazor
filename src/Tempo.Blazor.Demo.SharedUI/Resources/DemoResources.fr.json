@@ -1184,5 +1184,9 @@
   "TmAiAgentsDemo_MemoryTitle": "Mémoire",
   "TmAiAgentsDemo_MemoryHint": "Ce que l'agent retient de l'espace de travail : modifiez un fait, mettez-le en pause, oubliez-le (avec annulation) ou validez ce qu'il a proposé.",
   "TmAiAgentsDemo_Received": "La page a reçu : {0}",
-  "TmAiAgentsDemo_NoEvent": "Rien n'a encore été reçu."
+  "TmAiAgentsDemo_NoEvent": "Rien n'a encore été reçu.",
+  "TmAiAgentsDemo_DelegateTitle": "Tableau de délégation",
+  "TmAiAgentsDemo_DelegateHint": "Le travail en attente d'attribution : faites glisser une carte sur un agent (ou ouvrez son menu Attribuer) et regardez la passe automatique remplir les places libres. Un agent complet refuse le dépôt et explique pourquoi.",
+  "TmAiAgentsDemo_RunsTitle": "Exécutions planifiées",
+  "TmAiAgentsDemo_RunsHint": "Des exécutions placées dans les fenêtres du planificateur : la capacité de chaque fenêtre, ce que l'hôte a déjà engagé, une exécution répartie sur deux fenêtres et une fenêtre que l'hôte a surchargée."
 }

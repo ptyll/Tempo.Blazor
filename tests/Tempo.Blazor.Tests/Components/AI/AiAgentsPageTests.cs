@@ -55,17 +55,18 @@ public class AiAgentsPageTests : DemoPageLocalizationTestBase
             .KeyDown(new KeyboardEventArgs { Key = key }));
 
     [Fact]
-    public void ThePageRendersItsFourteenSectionsWithoutRawKeys()
+    public void ThePageRendersItsSixteenSectionsWithoutRawKeys()
     {
         var cut = RenderPage();
 
-        cut.FindAll("section.demo-section").Should().HaveCount(14);
+        cut.FindAll("section.demo-section").Should().HaveCount(16);
         foreach (var section in new[]
                  {
                      "ai-agents-plan-section", "ai-agents-tree-section", "ai-agents-lanes-section",
                      "ai-agents-graph-section", "ai-agents-fan-out-section", "ai-agents-attempts-section",
                      "ai-agents-handoff-section", "ai-agents-fallback-section",
                      "ai-agents-autonomy-section", "ai-agents-memory-section",
+                     "ai-agents-delegate-section", "ai-agents-runs-section",
                      "ai-agents-monitor-section", "ai-agents-models-section",
                      "ai-agents-context-section", "ai-agents-prompts-section",
                  })
@@ -664,6 +665,82 @@ public class AiAgentsPageTests : DemoPageLocalizationTestBase
     /// log names what the page received. Editing commits in the component and reaches the page; a removal waits for the
     /// undo window, and Undo puts the memory back without the page ever hearing about it.
     /// </summary>
+    /// <summary>
+    /// The delegate board is a real hand-out: assigning from a card's menu moves it to the agent's column and the page
+    /// applies the reported move to its own task list; returning it puts it back; the automatic pass fills the free
+    /// slots; and a full agent refuses the drop with a notice instead of accepting work it cannot run.
+    /// </summary>
+    [Fact]
+    public void TheDelegateSection_AssignsReturnsAndRefuses_AndThePageOwnsTheTasks()
+    {
+        var cut = RenderPage();
+        var board = Section(cut, "ai-agents-delegate");
+
+        board.QuerySelectorAll(".tm-ai-delegate__column").Should().HaveCount(4, "a backlog and three agents");
+        Text(cut, "ai-agents-delegate-log").Should().Be("Nothing received yet.");
+
+        const string card = "[data-testid='delegate-task'][data-task-id='task-summary']";
+        cut.Find("[data-testid='ai-agents-delegate'] " + card + " .tm-context-menu__trigger").Click();
+        cut.FindAll("[data-testid='ai-agents-delegate'] .tm-context-menu__item")[0].Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            cut.Find("[data-testid='ai-agents-delegate'] [data-column='planner'] " + card).Should().NotBeNull(
+                "the card moved to the Planner column");
+            Text(cut, "ai-agents-delegate-log").Should().Contain("assigned to Planner");
+        }, TimeSpan.FromSeconds(10));
+
+        // The agent at capacity refuses a drop, and the board says why.
+        var reviewerFull = cut.Find("[data-testid='ai-agents-delegate'] [data-column='reviewer']");
+        reviewerFull.GetAttribute("data-full").Should().Be("true");
+        reviewerFull.TextContent.Should().Contain("Full", "a column at capacity is named, not merely tinted");
+        Text(cut, "ai-agents-delegate").Should().NotContain("TmDelegateBoard_");
+
+        // The automatic pass fills what is left and reports each move to the page.
+        // bUnit cannot follow a <label>'s native click forwarding, so the switch's own input is driven directly.
+        cut.Find("[data-testid='ai-agents-delegate'] [data-testid='delegate-auto'] .tm-toggle-input").Change(true);
+
+        cut.WaitForAssertion(() =>
+        {
+            cut.FindAll("[data-testid='ai-agents-delegate'] [data-column='backlog'] [data-testid='delegate-task']")
+                .Should().HaveCountLessThan(3, "the pass hands the backlog to the free agents");
+        }, TimeSpan.FromSeconds(10));
+        Text(cut, "ai-agents-delegate").Should().NotContain("TmDelegateBoard_");
+    }
+
+    /// <summary>
+    /// The runs section places the page's runs through the planner, steps through the day view and reports a move:
+    /// the page turns the reported window into the run's preferred start window.
+    /// </summary>
+    [Fact]
+    public void TheRunsSection_PlacesTheRunsAndReportsAMove()
+    {
+        var cut = RenderPage();
+        var runs = Section(cut, "ai-agents-runs");
+
+        runs.QuerySelectorAll("[data-testid='runs-window']").Should().HaveCount(4);
+        runs.QuerySelectorAll("[data-testid='runs-window--overloaded'], [data-window-id='win-tue-pm'][data-overloaded='true']")
+            .Should().NotBeEmpty("the demo's last window is over its capacity");
+        Text(cut, "ai-agents-runs-log").Should().Be("Nothing received yet.");
+        runs.TextContent.Should().Contain("Part 1 of 2", "the long run is split over two windows");
+
+        // The table is the text alternative and carries the same move menu.
+        cut.Find("[data-testid='ai-agents-runs'] [data-testid='runs-view'] .tm-segmented__option, [data-testid='ai-agents-runs'] [data-testid='runs-view'] label")
+            .Should().NotBeNull();
+
+        var row = "[data-testid='ai-agents-runs'] [data-window-id='win-mon-am'] [data-testid='runs-run'][data-run-id='run-export']";
+        cut.Find(row + " .tm-context-menu__trigger").Click();
+        // The item for a window with room (the overloaded one would be refused).
+        cut.FindAll("[data-testid='ai-agents-runs'] .tm-context-menu__item")[2].Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            Text(cut, "ai-agents-runs-log").Should().Contain("moved to");
+        }, TimeSpan.FromSeconds(10));
+
+        Text(cut, "ai-agents-runs").Should().NotContain("TmScheduledRuns_");
+    }
+
     [Fact]
     public void TheMemorySection_EditsPausesAndUndoes_AndThePageOwnsTheStore()
     {

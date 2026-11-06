@@ -1,0 +1,572 @@
+/* ═══════════════════════════════════════════════════════════════════════════════════════════════
+   TmScheduledRuns — runs placed into the scheduler's windows: the week/day board with its capacity bars
+   and the table alternative
+   Contract: docs/scheduled-runs.md
+   Every rule reads a --tm-* design token (no colour literal, no raw palette step, no [data-theme]
+   block); the package's shared token gate is AiMarkdownViewCssTests and the component's own gate is
+   TmScheduledRunsCssTests.
+
+   The capacity bar is decorative (aria-hidden): every number it draws is also a sentence in the window
+   header, so the picture is the SECOND cue. A run's colour comes from the shared agent palette written
+   into --tm-runs-run-color, so the same run is recognisable in every window and in the table.
+
+   Nothing in this file animates or transitions: a bar that slid into place would be motion without
+   information, and an overloaded window has to be readable in a screenshot.
+   ═══════════════════════════════════════════════════════════════════════════════════════════════ */
+
+.tm-ai-runs {
+    /* A host lays the surface out in a grid or a flex row: without this the automatic minimum width
+       grows to its content and the PAGE scrolls sideways instead of the surface. */
+    min-inline-size: 0;
+    /* The runtime knobs the component writes into an element's inline style. The declared defaults are the
+       values for an element the module has not painted yet; the inline style always outranks them. */
+    --tm-runs-run-color: var(--tm-color-primary);
+    --tm-runs-slice-start: 0%;
+    --tm-runs-slice-size: 0%;
+    --tm-runs-slice-color: var(--tm-color-primary);
+    --tm-runs-status-ink: var(--tm-text-secondary);
+    --tm-runs-status-fill: var(--tm-bg-surface-secondary);
+    --tm-runs-status-border: var(--tm-border-color);
+
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-3);
+    padding: var(--tm-space-4);
+    border: var(--tm-border-width) solid var(--tm-border-color);
+    border-radius: var(--tm-radius-card);
+    background-color: var(--tm-bg-surface);
+    color: var(--tm-text-primary);
+    box-shadow: var(--tm-shadow-sm);
+    font-size: var(--tm-font-size-sm);
+    line-height: var(--tm-line-height-normal);
+}
+
+/* ── Header, summary, the view switcher and the day buttons ──────────────────────────────── */
+
+.tm-ai-runs__header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: var(--tm-space-2) var(--tm-space-3);
+}
+
+.tm-ai-runs__title {
+    flex: 1 1 100%;
+    margin: 0;
+    font-size: var(--tm-font-size-base);
+    font-weight: var(--tm-font-weight-semibold);
+}
+
+.tm-ai-runs__summary {
+    flex: 1 1 14rem;
+    margin: 0;
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-xs);
+    font-variant-numeric: tabular-nums;
+    overflow-wrap: anywhere;
+}
+
+.tm-ai-runs__view {
+    flex: 0 1 auto;
+    min-inline-size: 0;
+}
+
+.tm-ai-runs__day-nav {
+    display: flex;
+    flex: 0 1 auto;
+    align-items: center;
+    gap: var(--tm-space-1);
+    min-inline-size: 0;
+}
+
+.tm-ai-runs__day-step {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-inline-size: var(--tm-space-6);
+    min-block-size: var(--tm-space-6);
+    padding: 0;
+    border: var(--tm-border-width) solid var(--tm-border-color-control);
+    border-radius: var(--tm-radius-control);
+    background-color: var(--tm-bg-surface);
+    color: var(--tm-text-primary);
+    cursor: pointer;
+}
+
+.tm-ai-runs__day-step:hover {
+    background-color: var(--tm-bg-surface-secondary);
+}
+
+.tm-ai-runs__day-step:focus-visible {
+    outline: var(--tm-border-width) solid var(--tm-border-color-focus);
+    outline-offset: var(--tm-space-1);
+}
+
+.tm-ai-runs__day-step[aria-disabled='true'] {
+    color: var(--tm-text-disabled);
+    cursor: default;
+}
+
+.tm-ai-runs__current-day {
+    margin: 0;
+    font-size: var(--tm-font-size-xs);
+    font-weight: var(--tm-font-weight-semibold);
+    white-space: nowrap;
+}
+
+.tm-ai-runs__instructions {
+    margin: 0;
+    padding: var(--tm-space-2) var(--tm-space-3);
+    border: 1px dashed var(--tm-border-color);
+    border-radius: var(--tm-radius-control);
+    background-color: var(--tm-bg-surface-secondary);
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-xs);
+    overflow-wrap: anywhere;
+}
+
+/* A refused move: the run stays where it was and the surface says why, in a line and in the live region. */
+.tm-ai-runs__notice {
+    margin: 0;
+    padding: var(--tm-space-2) var(--tm-space-3);
+    border-inline-start: calc(var(--tm-border-width) * 3) solid var(--tm-color-warning);
+    border-radius: var(--tm-radius-control);
+    background-color: var(--tm-color-warning-subtle);
+    color: var(--tm-color-warning-text);
+    font-size: var(--tm-font-size-xs);
+    overflow-wrap: anywhere;
+}
+
+.tm-ai-runs__empty {
+    margin: 0;
+    padding: var(--tm-space-4);
+    border: 1px dashed var(--tm-border-color);
+    border-radius: var(--tm-radius-control);
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-sm);
+    text-align: center;
+}
+
+/* ── The board: a day, its windows ───────────────────────────────────────────────────────── */
+
+.tm-ai-runs__board {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-3);
+    min-inline-size: 0;
+}
+
+.tm-ai-runs__day {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-2);
+    min-inline-size: 0;
+}
+
+.tm-ai-runs__day-title {
+    margin: 0;
+    padding-block-end: var(--tm-space-1);
+    border-block-end: var(--tm-border-width) solid var(--tm-border-color);
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-xs);
+    font-weight: var(--tm-font-weight-semibold);
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+}
+
+/* The view modifiers are real: the day view gives each window more room and the week view separates the days. */
+.tm-ai-runs--day .tm-ai-runs__windows {
+    grid-template-columns: repeat(auto-fill, minmax(20rem, 1fr));
+}
+
+.tm-ai-runs--week .tm-ai-runs__day + .tm-ai-runs__day {
+    margin-block-start: var(--tm-space-1);
+}
+
+.tm-ai-runs--table .tm-ai-runs__table {
+    min-inline-size: 100%;
+}
+
+.tm-ai-runs__windows {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
+    gap: var(--tm-space-3);
+    align-items: start;
+    min-inline-size: 0;
+}
+
+.tm-ai-runs__window {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-2);
+    min-inline-size: 0;
+    padding: var(--tm-space-3);
+    border: var(--tm-border-width) solid var(--tm-border-color);
+    border-radius: var(--tm-radius-card);
+    background-color: var(--tm-bg-surface-secondary);
+}
+
+/* An overloaded window is a FACT about the host's own commitments, so it gets the danger tone plus the
+   word and the icon in its header — never a colour on its own. */
+.tm-ai-runs__window--overloaded {
+    border-color: var(--tm-color-danger);
+}
+
+.tm-ai-runs__window--full {
+    border-color: var(--tm-color-warning);
+}
+
+.tm-ai-runs__window-head {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-1);
+    min-inline-size: 0;
+}
+
+.tm-ai-runs__window-title {
+    margin: 0;
+    font-size: var(--tm-font-size-sm);
+    font-weight: var(--tm-font-weight-semibold);
+    font-variant-numeric: tabular-nums;
+}
+
+.tm-ai-runs__window-meta {
+    margin: 0;
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-xs);
+    font-variant-numeric: tabular-nums;
+}
+
+/* The capacity bar: a track, the host's committed fill and one slice per placed run. Purely decorative. */
+.tm-ai-runs__bar {
+    position: relative;
+    display: block;
+    block-size: var(--tm-space-2);
+    margin-block: var(--tm-space-1);
+    border: var(--tm-border-width) solid var(--tm-border-color);
+    border-radius: var(--tm-radius-full);
+    background-color: var(--tm-bg-surface);
+    overflow: hidden;
+}
+
+.tm-ai-runs__bar-committed {
+    position: absolute;
+    inset-block: 0;
+    inset-inline-start: 0;
+    inline-size: var(--tm-runs-slice-size, 0%);
+    background-color: var(--tm-bg-muted);
+}
+
+/* An overloaded window's committed fill carries the danger tone as a SECOND cue on top of the word: the bar is
+   decorative, so this only agrees with the "Overloaded by …" line and the icon. */
+.tm-ai-runs__window--overloaded .tm-ai-runs__bar-committed {
+    background-color: var(--tm-color-danger);
+}
+
+.tm-ai-runs__bar-slice {
+    position: absolute;
+    inset-block: 0;
+    inset-inline-start: var(--tm-runs-slice-start, 0%);
+    inline-size: var(--tm-runs-slice-size, 0%);
+    min-inline-size: var(--tm-border-width);
+    background-color: var(--tm-runs-slice-color, var(--tm-color-primary));
+}
+
+.tm-ai-runs__overload,
+.tm-ai-runs__full,
+.tm-ai-runs__free {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-1);
+    margin: 0;
+    font-size: var(--tm-font-size-xs);
+    font-variant-numeric: tabular-nums;
+    overflow-wrap: anywhere;
+}
+
+.tm-ai-runs__overload {
+    color: var(--tm-color-danger-text);
+    font-weight: var(--tm-font-weight-semibold);
+}
+
+.tm-ai-runs__full {
+    color: var(--tm-color-warning-text);
+    font-weight: var(--tm-font-weight-semibold);
+}
+
+.tm-ai-runs__free {
+    color: var(--tm-text-secondary);
+}
+
+.tm-ai-runs__overload-icon,
+.tm-ai-runs__full-icon {
+    display: inline-flex;
+    flex: none;
+}
+
+.tm-ai-runs__overload-text,
+.tm-ai-runs__full-text,
+.tm-ai-runs__status-text {
+    overflow-wrap: anywhere;
+}
+
+/* ── A run row inside a window ───────────────────────────────────────────────────────────── */
+
+.tm-ai-runs__run {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: var(--tm-space-2);
+    min-inline-size: 0;
+    flex: 1 1 auto;
+}
+
+.tm-ai-runs__run-dot {
+    flex: none;
+    inline-size: var(--tm-space-2);
+    block-size: var(--tm-space-2);
+    margin-block-start: var(--tm-space-1);
+    border-radius: var(--tm-radius-full);
+    background-color: var(--tm-runs-run-color);
+}
+
+.tm-ai-runs__run-body {
+    display: flex;
+    flex: 1 1 8rem;
+    flex-direction: column;
+    gap: var(--tm-space-1);
+    min-inline-size: 0;
+}
+
+.tm-ai-runs__run-title {
+    font-weight: var(--tm-font-weight-semibold);
+    overflow-wrap: anywhere;
+}
+
+.tm-ai-runs__run-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--tm-space-2);
+    min-inline-size: 0;
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-xs);
+}
+
+.tm-ai-runs__status {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    gap: var(--tm-space-1);
+    padding-inline: var(--tm-space-2);
+    border: var(--tm-border-width) solid var(--tm-runs-status-border);
+    border-radius: var(--tm-radius-full);
+    background-color: var(--tm-runs-status-fill);
+    color: var(--tm-runs-status-ink);
+    white-space: nowrap;
+}
+
+.tm-ai-runs__status--planned {
+    --tm-runs-status-ink: var(--tm-text-secondary);
+    --tm-runs-status-fill: var(--tm-bg-surface);
+}
+
+.tm-ai-runs__status--running {
+    --tm-runs-status-ink: var(--tm-color-info-text);
+    --tm-runs-status-fill: var(--tm-color-info-subtle);
+    --tm-runs-status-border: var(--tm-color-info-soft-border);
+}
+
+.tm-ai-runs__status--succeeded {
+    --tm-runs-status-ink: var(--tm-color-success-text);
+    --tm-runs-status-fill: var(--tm-color-success-subtle);
+    --tm-runs-status-border: var(--tm-color-success-soft-border);
+}
+
+.tm-ai-runs__status--failed {
+    --tm-runs-status-ink: var(--tm-color-danger-text);
+    --tm-runs-status-fill: var(--tm-color-danger-subtle);
+    --tm-runs-status-border: var(--tm-color-danger-soft-border);
+}
+
+.tm-ai-runs__status--paused {
+    --tm-runs-status-ink: var(--tm-color-warning-text);
+    --tm-runs-status-fill: var(--tm-color-warning-subtle);
+    --tm-runs-status-border: var(--tm-color-warning-soft-border);
+}
+
+.tm-ai-runs__status-icon {
+    display: inline-flex;
+    flex: none;
+}
+
+.tm-ai-runs__units,
+.tm-ai-runs__part {
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+.tm-ai-runs__part {
+    padding-inline: var(--tm-space-1);
+    border: var(--tm-border-width) solid var(--tm-border-color);
+    border-radius: var(--tm-radius-full);
+    background-color: var(--tm-bg-surface);
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-xs);
+}
+
+.tm-ai-runs__run-actions {
+    display: flex;
+    flex: none;
+    align-items: center;
+    margin-inline-start: auto;
+}
+
+/* The move menu is the keyboard and tap alternative to dragging (WCAG 2.5.7). */
+.tm-ai-runs__move,
+.tm-ai-runs__move-trigger {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-inline-size: var(--tm-space-6);
+    min-block-size: var(--tm-space-6);
+    border-radius: var(--tm-radius-control);
+    color: var(--tm-text-secondary);
+    cursor: pointer;
+}
+
+.tm-ai-runs__move-trigger:hover {
+    color: var(--tm-text-primary);
+}
+
+.tm-ai-runs__move:focus-within,
+.tm-ai-runs__move-trigger:focus-visible {
+    outline: var(--tm-border-width) solid var(--tm-border-color-focus);
+    outline-offset: var(--tm-space-1);
+}
+
+/* ── The table alternative ──────────────────────────────────────────────────────────────── */
+
+.tm-ai-runs__table-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-2);
+    min-inline-size: 0;
+    overflow-x: auto;
+}
+
+.tm-ai-runs__table {
+    inline-size: 100%;
+    border-collapse: collapse;
+    font-size: var(--tm-font-size-sm);
+}
+
+.tm-ai-runs__caption {
+    padding-block-end: var(--tm-space-2);
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-xs);
+    text-align: start;
+    caption-side: top;
+}
+
+.tm-ai-runs__table th,
+.tm-ai-runs__table td {
+    padding: var(--tm-space-2);
+    border-block-end: var(--tm-border-width) solid var(--tm-border-color);
+    text-align: start;
+    vertical-align: top;
+}
+
+.tm-ai-runs__table thead th {
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-xs);
+    font-weight: var(--tm-font-weight-semibold);
+    white-space: nowrap;
+}
+
+.tm-ai-runs__cell {
+    overflow-wrap: anywhere;
+}
+
+.tm-ai-runs__cell--run {
+    font-weight: var(--tm-font-weight-semibold);
+}
+
+.tm-ai-runs__cell--actions {
+    text-align: end;
+    white-space: nowrap;
+}
+
+.tm-ai-runs__row {
+    border-block-end: var(--tm-border-width) solid var(--tm-border-color);
+}
+
+.tm-ai-runs__row--unplaced {
+    background-color: var(--tm-color-danger-subtle);
+    color: var(--tm-color-danger-text);
+}
+
+/* A coarse pointer raises both the day buttons and the per-run menu to the shared touch target. */
+@media (pointer: coarse) {
+    .tm-ai-runs__day-step,
+    .tm-ai-runs__move,
+    .tm-ai-runs__move-trigger {
+        min-inline-size: var(--tm-touch-target);
+        min-block-size: var(--tm-touch-target);
+    }
+}
+
+/* Forced colors: the system palette stays in charge, so the toned chips, the bar and the overloaded
+   frame hand their colours to CanvasText/Canvas and every focus ring becomes a Highlight outline. */
+@media (forced-colors: active) {
+    .tm-ai-runs__window,
+    .tm-ai-runs__window--overloaded,
+    .tm-ai-runs__window--full,
+    .tm-ai-runs__status,
+    .tm-ai-runs__part,
+    .tm-ai-runs__instructions,
+    .tm-ai-runs__notice,
+    .tm-ai-runs__empty,
+    .tm-ai-runs__bar {
+        border-color: CanvasText;
+        background-color: Canvas;
+        color: CanvasText;
+    }
+
+    /* An overloaded window's committed fill carries the danger tone as a SECOND cue on top of the word: the bar is
+   decorative, so this only agrees with the "Overloaded by …" line and the icon. */
+.tm-ai-runs__window--overloaded .tm-ai-runs__bar-committed {
+    background-color: var(--tm-color-danger);
+}
+
+.tm-ai-runs__bar-slice {
+        background-color: Highlight;
+        forced-color-adjust: none;
+    }
+
+    .tm-ai-runs__bar-committed {
+        background-color: CanvasText;
+    }
+
+    .tm-ai-runs__run-dot {
+        background-color: CanvasText;
+    }
+
+    .tm-ai-runs__overload,
+    .tm-ai-runs__full,
+    .tm-ai-runs__free,
+    .tm-ai-runs__notice,
+    .tm-ai-runs__row {
+    border-block-end: var(--tm-border-width) solid var(--tm-border-color);
+}
+
+.tm-ai-runs__row--unplaced {
+        color: CanvasText;
+    }
+
+    .tm-ai-runs__day-step:focus-visible,
+    .tm-ai-runs__move:focus-within,
+    .tm-ai-runs__move-trigger:focus-visible {
+        outline: 2px solid Highlight;
+    }
+}

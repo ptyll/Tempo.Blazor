@@ -1,0 +1,48 @@
+{
+  "kind": "Class",
+  "category": "Components",
+  "namespace": "Tempo.Blazor.Components.DataDisplay",
+  "description": "Describes one committed CROSS-LIST move of a TmSortableList<TItem>: the row at FromIndex of the SOURCE list (the component that raised the callback) was dropped into the list identified by ToListId at position ToIndex. Raised on the SOURCE list through OnTransfer, because that is the component that owns the moved row and can name it. The component never moves anything itself: the host removes the row from the source collection, inserts it into the target collection and re-renders — and it owns whatever announcement the move deserves, since only the host knows whether the drop was accepted (a full capacity, a read-only board) or refused. Two lists join the same drag group through the same non-empty Group value; ListId is how a host recognises the target inside its handler. ToIndex is the insertion slot the pointer resolved over the target's CURRENT rows, so rows.Count means \"after the last row\" — a host with no meaningful order inside the target (a board column) simply ignores it.",
+  "packageId": "Tempo.Blazor",
+  "sourcePath": "src/Tempo.Blazor/Components/DataDisplay/SortableTransferArgs.cs",
+  "documentationStatus": "documented",
+  "members": [
+    {
+      "name": "FromIndex",
+      "kind": "Property",
+      "type": "int",
+      "description": "The zero-based index of the moved row in the source list's items."
+    },
+    {
+      "name": "FromListId",
+      "kind": "Property",
+      "type": "string?",
+      "description": "The ListId of the list the row came from (the raising component's own id)."
+    },
+    {
+      "name": "Source",
+      "kind": "Property",
+      "type": "SortableReorderSource",
+      "description": "Which input method committed the move. A transfer only ever comes from the pointer."
+    },
+    {
+      "name": "ToIndex",
+      "kind": "Property",
+      "type": "int",
+      "description": "The insertion slot over the target list's rows at the moment of the release. Equal to the target row count when the row was dropped below the last one, so a host that cares about order can insert without an extra clamp."
+    },
+    {
+      "name": "ToListId",
+      "kind": "Property",
+      "type": "string?",
+      "description": "The ListId of the list the row was dropped into."
+    }
+  ],
+  "itemName": "SortableTransferArgs",
+  "usageExample": "<TmSortableList TItem=\"Row\"\n                Items=\"Backlog\"\n                Group=\"board\"\n                ListId=\"backlog\"\n                AllowLocalReorder=\"false\"\n                OnTransfer=\"OnTransfer\" />",
+  "notes": [
+    "Raised on the SOURCE list (the component that owns the moved row); the host removes the row from its own collection, inserts it into the target collection and re-renders.",
+    "The component announces nothing for a transfer: only the host knows whether the drop was accepted (a column at full capacity, a read-only board), so the surface keeps ONE polite live region.",
+    "ToIndex is the insertion slot over the target's CURRENT rows, so a value equal to the target row count means \"after the last row\"."
+  ]
+}

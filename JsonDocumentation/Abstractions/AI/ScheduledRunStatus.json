@@ -1,0 +1,10 @@
+{
+  "kind": "Enum",
+  "category": "AI",
+  "namespace": "Tempo.Blazor.AI.Models",
+  "description": "How a scheduled run is doing. The board paints it as a WORD plus an icon, never as a colour alone, and the same value also decides whether the run still competes for window capacity (only Planned and Running do).",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/AI/Agents/ScheduledRunStatus.cs",
+  "documentationStatus": "documented",
+  "itemName": "ScheduledRunStatus"
+}

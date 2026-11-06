@@ -26,3 +26,5 @@
 @import "components/_ai-fallback-chain.css";
 @import "components/_ai-autonomy-dial.css";
 @import "components/_ai-memory-panel.css";
+@import "components/_ai-delegate-board.css";
+@import "components/_ai-scheduled-runs.css";

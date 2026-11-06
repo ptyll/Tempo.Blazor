@@ -1184,5 +1184,9 @@
   "TmAiAgentsDemo_MemoryTitle": "Memory",
   "TmAiAgentsDemo_MemoryHint": "What the agent remembers about the workspace: edit a fact, pause it, forget it (with an undo window) or review what the agent proposed.",
   "TmAiAgentsDemo_Received": "The page received: {0}",
-  "TmAiAgentsDemo_NoEvent": "Nothing received yet."
+  "TmAiAgentsDemo_NoEvent": "Nothing received yet.",
+  "TmAiAgentsDemo_DelegateTitle": "Delegate board",
+  "TmAiAgentsDemo_DelegateHint": "Work waiting to be handed out: drag a card onto an agent (or use its Assign menu), and watch the automatic pass fill the free slots. An agent at capacity refuses the drop and says why.",
+  "TmAiAgentsDemo_RunsTitle": "Scheduled runs",
+  "TmAiAgentsDemo_RunsHint": "Runs placed into the scheduler's windows: the capacity each window offers, what the host has already committed, a run split across two windows and one window the host over-committed."
 }

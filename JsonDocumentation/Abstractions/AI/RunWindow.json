@@ -1,0 +1,114 @@
+{
+  "kind": "Record",
+  "category": "AI",
+  "namespace": "Tempo.Blazor.AI.Models",
+  "description": "One window a scheduler may place work in — \"Monday 09:00–12:00, 60 units\" — with the capacity it offers and the load the host has already committed to it. The record is a VALUE: the host recomposes it with window with { … }. Capacity is the amount of work the window accepts and Used the amount already taken by work the board does not show (other schedules, reservations, the host's own backlog), so a window can be FULL or even OVERLOADED before the board places anything in it. Both are reported as words plus an icon, never as a colour alone. Nothing is invented: a window whose End is not after its Start offers no time at all (the planner skips it, and the surface never divides by its length), a negative Capacity reads as zero and a negative Used as zero. A blank Id is REJECTED at construction, because the run segments and the reader's own placement are keyed by it.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/AI/Agents/RunWindow.cs",
+  "documentationStatus": "documented",
+  "members": [
+    {
+      "name": "Contains",
+      "kind": "Method",
+      "type": "bool",
+      "description": "Whether instant falls inside the window. The end is EXCLUSIVE: a run starting exactly when a window closes belongs to the next one, which is what makes two adjacent windows partition the timeline rather than overlap by an instant.",
+      "parameters": [
+        {
+          "name": "instant",
+          "type": "DateTimeOffset"
+        }
+      ]
+    },
+    {
+      "name": "Available",
+      "kind": "Property",
+      "type": "int",
+      "description": "The units still free for the board, never negative (an overloaded window offers nothing)."
+    },
+    {
+      "name": "Capacity",
+      "kind": "Property",
+      "type": "int",
+      "description": "How much work the window accepts. A negative value reads as zero through EffectiveCapacity."
+    },
+    {
+      "name": "Day",
+      "kind": "Property",
+      "type": "DateOnly",
+      "description": "The day the window belongs to, in its own offset. A window that starts at 22:00 belongs to the day it starts on; a window that starts before midnight and ends after it is still that day's window."
+    },
+    {
+      "name": "Duration",
+      "kind": "Property",
+      "type": "TimeSpan",
+      "description": "How long the window offers, or Zero when it closes before it opens."
+    },
+    {
+      "name": "EffectiveCapacity",
+      "kind": "Property",
+      "type": "int",
+      "description": "The capacity the planner actually uses: the host's value, never below zero."
+    },
+    {
+      "name": "EffectiveUsed",
+      "kind": "Property",
+      "type": "int",
+      "description": "The committed load the planner actually uses: the host's value, never below zero."
+    },
+    {
+      "name": "End",
+      "kind": "Property",
+      "type": "DateTimeOffset",
+      "description": "When the window closes."
+    },
+    {
+      "name": "HasDuration",
+      "kind": "Property",
+      "type": "bool",
+      "description": "Whether the window offers any time at all."
+    },
+    {
+      "name": "Id",
+      "kind": "Property",
+      "type": "string",
+      "description": "Stable identity of the window. Never empty: construction rejects a blank value."
+    },
+    {
+      "name": "IsFull",
+      "kind": "Property",
+      "type": "bool",
+      "description": "Whether the host's committed work already fills the window exactly (or beyond)."
+    },
+    {
+      "name": "IsOverloaded",
+      "kind": "Property",
+      "type": "bool",
+      "description": "Whether the host has committed more work than the window accepts."
+    },
+    {
+      "name": "Overflow",
+      "kind": "Property",
+      "type": "int",
+      "description": "How many units the window is over its capacity by (zero when it is not overloaded)."
+    },
+    {
+      "name": "Start",
+      "kind": "Property",
+      "type": "DateTimeOffset",
+      "description": "When the window opens."
+    },
+    {
+      "name": "Used",
+      "kind": "Property",
+      "type": "int",
+      "description": "How much capacity the host has already committed to work this surface does not show."
+    },
+    {
+      "name": "Utilization",
+      "kind": "Property",
+      "type": "double",
+      "description": "The share of the capacity that is already committed, in 0…1 (0 for a window with no capacity)."
+    }
+  ],
+  "itemName": "RunWindow"
+}

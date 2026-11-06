@@ -1,0 +1,170 @@
+{
+  "itemName": "TmScheduledRuns",
+  "kind": "Component",
+  "category": "AI",
+  "description": "Runs placed into the windows a scheduler offers: a week (or one day) of capacity bars, each bar showing what the host has already committed and where every run sits, with a run moved to another window by pointer drag or by its own menu. The placement is COMPUTED, never drawn by hand: RunWindowPlanner distributes each run's units over the windows that still have room, splits a run that does not fit in one window, fills the gaps between runs and reports the units that fit nowhere. The bar next to the plan is painted from the same segments, so the picture and the numbers cannot disagree. The surface keeps the reader's own placements (the window a run was dragged to) and drops them the moment the host supplies a NEW instance of that run, so a host that re-renders the same snapshot cannot undo the move and a host that accepts it is never fought by a stale overlay. Every move is reported once through OnMove. Accessibility: a window states its committed load, its free room and — when the host committed more than it accepts — an OVERLOADED line with an icon and a word, never a colour alone. The pointer drag is the shared tm-sortable.js over pointer-drag.js (through TmSortableList's group support) and every run's menu lists the windows, so nothing is drag-only (WCAG 2.5.7). Table is the text alternative and the surface owns exactly ONE polite live region.",
+  "packageId": "Tempo.Blazor.AI",
+  "namespace": "Tempo.Blazor.Components.AI",
+  "sourcePath": "src/Tempo.Blazor.AI/Components/AI/TmScheduledRuns.razor",
+  "documentationStatus": "documented",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.AI"
+  ],
+  "parameters": [
+    {
+      "name": "AriaLabel",
+      "type": "string?",
+      "isRequired": false,
+      "description": "The accessible name of the schedule area. Null uses the localized default (\"Scheduled runs\")."
+    },
+    {
+      "name": "Class",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Additional CSS class(es) for the root element."
+    },
+    {
+      "name": "HeadingLevel",
+      "type": "int",
+      "isRequired": false,
+      "default": "3",
+      "description": "The heading level of the rendered title, clamped to 2–6. Default 3."
+    },
+    {
+      "name": "OnMove",
+      "type": "EventCallback<ScheduledRunMoveRequest>",
+      "isRequired": false,
+      "description": "Raised once per committed move of a run to another window. The surface keeps the reader's pick until the host supplies a new instance of the run, so the run visibly stays where it was dropped."
+    },
+    {
+      "name": "Runs",
+      "type": "IReadOnlyList<ScheduledRun>?",
+      "isRequired": false,
+      "description": "The runs to place, in the order they compete for capacity (which is also the order the plan fills the gaps in). Null or empty renders the localized \"no runs\" state and empty windows."
+    },
+    {
+      "name": "SelectedDay",
+      "type": "DateOnly?",
+      "isRequired": false,
+      "description": "The day Day shows, two-way bound with SelectedDayChanged. Null (the default) shows the first day that has windows; the day buttons move it inside the range the windows cover."
+    },
+    {
+      "name": "SelectedDayChanged",
+      "type": "EventCallback<DateOnly>",
+      "isRequired": false,
+      "description": "Fires with the new selected day."
+    },
+    {
+      "name": "ShowTitle",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "Whether the heading is rendered. Default true."
+    },
+    {
+      "name": "Title",
+      "type": "string?",
+      "isRequired": false,
+      "description": "The heading above the surface. Null renders the localized default (\"Scheduled runs\")."
+    },
+    {
+      "name": "ViewMode",
+      "type": "RunViewMode",
+      "isRequired": true,
+      "description": "Which presentation is shown, two-way bound with ViewModeChanged (@bind-ViewMode). Default Week; the reader's pick wins until the host MOVES the parameter."
+    },
+    {
+      "name": "ViewModeChanged",
+      "type": "EventCallback<RunViewMode>",
+      "isRequired": false,
+      "description": "Fires with the new view."
+    },
+    {
+      "name": "Windows",
+      "type": "IReadOnlyList<RunWindow>?",
+      "isRequired": false,
+      "description": "The windows the scheduler offers, in any order (they are rendered in their own time order). Null or empty renders the localized empty state. A window that closes before it opens, or that accepts no units, is skipped by the planner and not rendered at all."
+    }
+  ],
+  "cssClasses": [
+    "tm-ai-runs",
+    "tm-ai-runs--week",
+    "tm-ai-runs--day",
+    "tm-ai-runs--table",
+    "tm-ai-runs__header",
+    "tm-ai-runs__title",
+    "tm-ai-runs__summary",
+    "tm-ai-runs__view",
+    "tm-ai-runs__day-nav",
+    "tm-ai-runs__day-step",
+    "tm-ai-runs__current-day",
+    "tm-ai-runs__instructions",
+    "tm-ai-runs__notice",
+    "tm-ai-runs__empty",
+    "tm-ai-runs__board",
+    "tm-ai-runs__day",
+    "tm-ai-runs__day-title",
+    "tm-ai-runs__windows",
+    "tm-ai-runs__window",
+    "tm-ai-runs__window--overloaded",
+    "tm-ai-runs__window--full",
+    "tm-ai-runs__window-head",
+    "tm-ai-runs__window-title",
+    "tm-ai-runs__window-meta",
+    "tm-ai-runs__bar",
+    "tm-ai-runs__bar-committed",
+    "tm-ai-runs__bar-slice",
+    "tm-ai-runs__overload",
+    "tm-ai-runs__overload-icon",
+    "tm-ai-runs__overload-text",
+    "tm-ai-runs__full",
+    "tm-ai-runs__full-icon",
+    "tm-ai-runs__full-text",
+    "tm-ai-runs__free",
+    "tm-ai-runs__run",
+    "tm-ai-runs__run-dot",
+    "tm-ai-runs__run-body",
+    "tm-ai-runs__run-title",
+    "tm-ai-runs__run-meta",
+    "tm-ai-runs__status",
+    "tm-ai-runs__status--planned",
+    "tm-ai-runs__status--running",
+    "tm-ai-runs__status--succeeded",
+    "tm-ai-runs__status--failed",
+    "tm-ai-runs__status--paused",
+    "tm-ai-runs__status-icon",
+    "tm-ai-runs__status-text",
+    "tm-ai-runs__units",
+    "tm-ai-runs__part",
+    "tm-ai-runs__run-actions",
+    "tm-ai-runs__move",
+    "tm-ai-runs__move-trigger",
+    "tm-ai-runs__table-wrap",
+    "tm-ai-runs__table",
+    "tm-ai-runs__caption",
+    "tm-ai-runs__row",
+    "tm-ai-runs__row--unplaced",
+    "tm-ai-runs__cell",
+    "tm-ai-runs__cell--run",
+    "tm-ai-runs__cell--actions"
+  ],
+  "examples": [
+    {
+      "title": "A week of windows with the runs placed by the planner",
+      "code": "<TmScheduledRuns Windows=\"_windows\"\n                Runs=\"_runs\"\n                @bind-ViewMode=\"_view\"\n                OnMove=\"OnMove\" />",
+      "description": "The host supplies the supply windows and the runs; RunWindowPlanner distributes the units, splits a run that does not fit in one window and reports the units that fit nowhere."
+    },
+    {
+      "title": "A window the host already committed",
+      "code": "new RunWindow(\"mon-am\", mondayAtNine, mondayAtTwelve, capacity: 4, used: 3)",
+      "description": "Used is the host's committed load: it is taken out of the supply before anything is planned, and a window whose Used exceeds its Capacity is rendered as overloaded with an icon and a word."
+    }
+  ],
+  "notes": [
+    "The placement is COMPUTED, never drawn by hand: the capacity bar and the rows are painted from the same segments, so the picture and the numbers cannot disagree.",
+    "The surface keeps the reader's own placements and drops them the moment the host supplies a NEW instance of that run; a host that re-renders the same snapshot cannot undo the move.",
+    "A move to a window that has no room for even the first slice is REFUSED with a notice and an announcement instead of being reported: the surface never claims a placement the plan did not make.",
+    "RunViewMode.Table is the text alternative (WCAG 1.3.1) and carries the same move menu, so the table is as operable as the board.",
+    "The pointer drag is the shared tm-sortable.js over pointer-drag.js through TmSortableList's Group; the windows are transfer-only lists and every run's menu lists every window, so nothing is drag-only (WCAG 2.5.7)."
+  ]
+}

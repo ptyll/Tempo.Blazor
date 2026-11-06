@@ -1,0 +1,338 @@
+@namespace Tempo.Blazor.Components.AI
+@inherits Tempo.Blazor.Components.TmComponentBase
+@using System.Globalization
+@using Tempo.Blazor.AI.Models
+@using Tempo.Blazor.Components.DataDisplay
+@using Tempo.Blazor.Components.Icons
+@using Tempo.Blazor.Components.Inputs
+@using Tempo.Blazor.Components.Navigation
+
+@* Work handed out to agents: one backlog column and one column per agent, every task a row a reader can move.
+   The ONE gesture is the shared tm-sortable module over pointer-drag.js, driven through TmSortableList's Group —
+   this component writes no drag of its own. Every row also carries an Assign menu, which is the keyboard and tap
+   alternative (WCAG 2.5.7) AND the only keyboard path: the columns are transfer-only lists (AllowLocalReorder=false),
+   because the order of cards inside a column means nothing and a keyboard grab that reorders nothing would announce a
+   change the host ignores.
+
+   Capacity is the HOST's: an agent whose ActiveCount reached its MaxConcurrency is full, says so with a word and an
+   icon, and REFUSES a drop with an announcement instead of accepting work it cannot run.
+
+   ONE polite live region announces every committed move (and every refusal). A refusal is also painted in the
+   notice line, so a reader who missed the announcement still sees why the card stayed where it was. *@
+<section class="@RootClass"
+         data-testid="@RootTestId("delegate-board")"
+         data-unassigned="@Invariant(BacklogTasks.Count)"
+         data-agents="@Invariant(AgentColumns.Count)"
+         data-auto="@(_autoState ? "true" : "false")"
+         @attributes="AdditionalAttributes">
+
+    <div class="tm-ai-delegate__header">
+        @if (ShowTitle)
+        {
+            @SurfaceTitle
+        }
+
+        <p class="tm-ai-delegate__summary" data-testid="@TestId("delegate-summary")">@SummaryText</p>
+
+        <div class="tm-ai-delegate__auto">
+            <TmToggle Value="_autoState"
+                      Label="@Loc["TmDelegateBoard_AutoLabel"]"
+                      AriaDescribedBy="@AutoHintId"
+                      ValueChanged="OnAutoAssignChangedAsync"
+                      data-testid="@TestId("delegate-auto")" />
+            <p class="tm-ai-delegate__hint" id="@AutoHintId">@Loc["TmDelegateBoard_AutoHint"]</p>
+        </div>
+    </div>
+
+    <p class="tm-ai-delegate__instructions" id="@InstructionsId">@Loc["TmDelegateBoard_Instructions"]</p>
+
+    @if (_notice is { Length: > 0 })
+    {
+        <p class="tm-ai-delegate__notice" data-testid="@TestId("delegate-notice")">@_notice</p>
+    }
+
+    <div class="tm-ai-delegate__board"
+         role="group"
+         aria-label="@EffectiveLabel"
+         aria-describedby="@InstructionsId"
+         data-testid="@TestId("delegate-columns")">
+
+        <section class="tm-ai-delegate__column tm-ai-delegate__column--backlog"
+                 data-column="backlog"
+                 aria-labelledby="@BacklogTitleId">
+            <header class="tm-ai-delegate__column-head">
+                @BacklogTitle
+                <p class="tm-ai-delegate__column-meta" data-testid="@TestId("delegate-backlog-count")">
+                    @Loc["TmDelegateBoard_BacklogCount", Count(BacklogTasks.Count)]
+                </p>
+            </header>
+
+            <TmSortableList TItem="DelegateTask"
+                            Items="BacklogTasks"
+                            Group="@DragGroup"
+                            ListId="@BacklogListId"
+                            AllowLocalReorder="false"
+                            ShowMoveMenu="false"
+                            AriaLabel="@Loc["TmDelegateBoard_BacklogTitle"]"
+                            KeySelector="TaskKey"
+                            ItemLabelSelector="TaskLabel"
+                            OnTransfer="OnTransferAsync"
+                            DataTestId="@TestId("delegate-backlog-list")">
+                <ItemTemplate Context="task">
+                    @TaskRow(task, null)
+                </ItemTemplate>
+                <EmptyContent>
+                    <p class="tm-ai-delegate__empty" data-testid="@TestId("delegate-backlog-empty")">
+                        @Loc["TmDelegateBoard_EmptyBacklog"]
+                    </p>
+                </EmptyContent>
+            </TmSortableList>
+        </section>
+
+        @foreach (var column in Columns)
+        {
+            var agent = column.Agent;
+            var columnTasks = column.Tasks;
+            <section class="tm-ai-delegate__column tm-ai-delegate__column--agent@(agent.IsFull ? " tm-ai-delegate__column--full" : string.Empty)"
+                     data-column="@agent.Id"
+                     data-agent-id="@agent.Id"
+                     data-full="@(agent.IsFull ? "true" : "false")"
+                     data-preview="@(_previewAgentId == agent.Id ? "true" : "false")"
+                     aria-labelledby="@ColumnTitleId(agent)"
+                     @onmouseenter="() => OnAgentPreviewEnter(agent)"
+                     @onmouseleave="() => OnAgentPreviewLeaveAsync(agent)"
+                     @onfocusin="() => OnAgentPreviewEnter(agent)"
+                     @onfocusout="() => OnAgentPreviewLeaveAsync(agent)">
+                <header class="tm-ai-delegate__column-head">
+                    @AgentTitle(agent)
+
+                    <p class="tm-ai-delegate__column-meta" data-testid="@TestId("delegate-agent-capacity")">
+                        <span class="tm-ai-delegate__capacity">@DelegatePresentation.CapacityText(Loc, agent)</span>
+                        <span class="tm-ai-delegate__separator" aria-hidden="true">·</span>
+                        <span class="tm-ai-delegate__queued">@Loc["TmDelegateBoard_AgentCount", Count(columnTasks.Count)]</span>
+                    </p>
+
+                    <p class="tm-ai-delegate__availability"
+                       data-testid="@TestId("delegate-agent-preview")"
+                       data-state="@PreviewState(agent)"
+                       data-estimate="@(PreviewFor(agent).UsesEstimate ? "true" : "false")">@PreviewText(agent)</p>
+
+                    @if (agent.IsFull)
+                    {
+                        <p class="tm-ai-delegate__full">
+                            <span class="tm-ai-delegate__full-icon" aria-hidden="true">
+                                <TmIcon Name="@IconNames.Ban" Size="IconSize.Xs" />
+                            </span>
+                            <span class="tm-ai-delegate__full-text">@Loc["TmDelegateBoard_Full"]</span>
+                        </p>
+                    }
+                </header>
+
+                <TmSortableList TItem="DelegateTask"
+                                Items="columnTasks"
+                                Group="@DragGroup"
+                                ListId="@agent.Id"
+                                AllowLocalReorder="false"
+                                ShowMoveMenu="false"
+                                AriaLabel="@AgentListLabel(agent)"
+                                KeySelector="TaskKey"
+                                ItemLabelSelector="TaskLabel"
+                                OnTransfer="OnTransferAsync"
+                                DataTestId="@TestId("delegate-agent-list")">
+                    <ItemTemplate Context="task">
+                        @TaskRow(task, agent)
+                    </ItemTemplate>
+                    <EmptyContent>
+                        <p class="tm-ai-delegate__empty" data-testid="@TestId("delegate-agent-empty")">
+                            @Loc["TmDelegateBoard_EmptyAgent"]
+                        </p>
+                    </EmptyContent>
+                </TmSortableList>
+            </section>
+        }
+
+        @if (AgentColumns.Count == 0)
+        {
+            <p class="tm-ai-delegate__empty tm-ai-delegate__empty--agents" data-testid="@TestId("delegate-agents-empty")">
+                @Loc["TmDelegateBoard_EmptyAgents"]
+            </p>
+        }
+    </div>
+
+    <div class="tm-sr-only"
+         role="status"
+         aria-live="polite"
+         aria-atomic="true"
+         data-testid="@TestId("delegate-announcement")">@_announcement</div>
+</section>
+
+@code {
+    /// <summary>
+    /// The surface heading. Razor cannot build a dynamic element NAME (&lt;h@Level&gt; is not a thing), so the
+    /// heading is composed here at the requested level — the same approach TmAutonomyDial uses.
+    /// </summary>
+    private RenderFragment SurfaceTitle => Heading(EffectiveHeadingLevel, "tm-ai-delegate__title", TitleId,
+        TestId("delegate-title"), builder => builder.AddContent(0, HeadingText));
+
+    /// <summary>The backlog column's heading.</summary>
+    private RenderFragment BacklogTitle => Heading(ColumnHeadingLevel, "tm-ai-delegate__column-title", BacklogTitleId,
+        TestId("delegate-backlog-title"), builder => builder.AddContent(0, Loc["TmDelegateBoard_BacklogTitle"]));
+
+    /// <summary>One agent column's heading: the shared agent badge, at the column heading level.</summary>
+    private RenderFragment AgentTitle(DelegateAgent agent) => Heading(ColumnHeadingLevel,
+        "tm-ai-delegate__column-title", ColumnTitleId(agent), TestId("delegate-agent-title"), builder =>
+        {
+            builder.OpenComponent<TmAgentBadge>(0);
+            builder.AddAttribute(1, "Agent", agent.Agent);
+            builder.AddAttribute(2, "ShowStatus", false);
+            builder.AddAttribute(3, "Size", AgentBadgeSize.Sm);
+            builder.CloseComponent();
+        });
+
+    /// <summary>One heading element at the requested level, clamped into the range a sectioning element allows.</summary>
+    private static RenderFragment Heading(int level, string cssClass, string id, string? testId, RenderFragment content)
+        => builder =>
+        {
+            builder.OpenElement(0, "h" + Math.Clamp(level, 2, 6).ToString(CultureInfo.InvariantCulture));
+            builder.AddAttribute(1, "class", cssClass);
+            builder.AddAttribute(2, "id", id);
+            if (testId is not null)
+            {
+                builder.AddAttribute(3, "data-testid", testId);
+            }
+
+            builder.AddContent(4, content);
+            builder.CloseElement();
+        };
+
+    /// <summary>
+    /// One task card: its title, its grade and its estimate, plus the Assign menu that is the keyboard and tap
+    /// alternative to dragging. <paramref name="agent"/> is the column the card sits in (null in the backlog), which
+    /// only decides whether the menu also offers a way back to the backlog.
+    /// </summary>
+    private RenderFragment TaskRow(DelegateTask task, DelegateAgent? agent) => builder =>
+    {
+        var sequence = 0;
+        builder.OpenElement(sequence++, "div");
+        builder.AddAttribute(sequence++, "class", "tm-ai-delegate__task");
+        builder.AddAttribute(sequence++, "data-testid", TestId("delegate-task"));
+        builder.AddAttribute(sequence++, "data-task-id", task.Id);
+        builder.AddAttribute(sequence++, "data-assigned", task.IsAssigned ? "true" : "false");
+        builder.AddAttribute(sequence++, "data-priority", DelegatePresentation.PrioritySlug(task.Priority));
+        builder.AddAttribute(sequence++, "onmouseenter",
+            EventCallback.Factory.Create(this, () => PreviewTask(task)));
+        builder.AddAttribute(sequence++, "onfocusin",
+            EventCallback.Factory.Create(this, () => PreviewTask(task)));
+
+        builder.OpenElement(sequence++, "div");
+        builder.AddAttribute(sequence++, "class", "tm-ai-delegate__task-head");
+
+        builder.OpenElement(sequence++, "span");
+        builder.AddAttribute(sequence++, "class", "tm-ai-delegate__task-title");
+        builder.AddAttribute(sequence++, "data-testid", TestId("delegate-task-title"));
+        builder.AddContent(sequence++, TitleOf(task));
+        builder.CloseElement();
+
+        if (task.HasPriority)
+        {
+            builder.OpenElement(sequence++, "span");
+            builder.AddAttribute(sequence++, "class",
+                "tm-ai-delegate__priority tm-ai-delegate__priority--" + DelegatePresentation.PrioritySlug(task.Priority));
+            builder.AddAttribute(sequence++, "data-testid", TestId("delegate-task-priority"));
+            builder.OpenElement(sequence++, "span");
+            builder.AddAttribute(sequence++, "class", "tm-ai-delegate__priority-icon");
+            builder.AddAttribute(sequence++, "aria-hidden", "true");
+            builder.OpenComponent<TmIcon>(sequence++);
+            builder.AddAttribute(sequence++, "Name", IconNames.Flag);
+            builder.AddAttribute(sequence++, "Size", IconSize.Xs);
+            builder.CloseComponent();
+            builder.CloseElement();
+            builder.OpenElement(sequence++, "span");
+            builder.AddAttribute(sequence++, "class", "tm-ai-delegate__priority-text");
+            builder.AddContent(sequence++, DelegatePresentation.PriorityLabel(Loc, task.Priority));
+            builder.CloseElement();
+            builder.CloseElement();
+        }
+
+        builder.CloseElement();
+
+        var estimate = DelegatePresentation.EstimateText(Loc, task);
+        if (estimate.Length > 0)
+        {
+            builder.OpenElement(sequence++, "p");
+            builder.AddAttribute(sequence++, "class", "tm-ai-delegate__task-meta");
+            builder.AddAttribute(sequence++, "data-testid", TestId("delegate-task-estimate"));
+            builder.OpenElement(sequence++, "span");
+            builder.AddAttribute(sequence++, "class", "tm-ai-delegate__task-icon");
+            builder.AddAttribute(sequence++, "aria-hidden", "true");
+            builder.OpenComponent<TmIcon>(sequence++);
+            builder.AddAttribute(sequence++, "Name", IconNames.Clock);
+            builder.AddAttribute(sequence++, "Size", IconSize.Xs);
+            builder.CloseComponent();
+            builder.CloseElement();
+            builder.OpenElement(sequence++, "span");
+            builder.AddContent(sequence++, estimate);
+            builder.CloseElement();
+            builder.CloseElement();
+        }
+
+        builder.OpenElement(sequence++, "div");
+        builder.AddAttribute(sequence++, "class", "tm-ai-delegate__task-actions");
+        builder.OpenComponent<TmContextMenu>(sequence++);
+        builder.AddAttribute(sequence++, "Class", "tm-ai-delegate__assign");
+        builder.AddAttribute(sequence++, "Trigger", AssignTrigger(task));
+        builder.AddAttribute(sequence++, "ChildContent", AssignMenu(task, agent));
+        builder.CloseComponent();
+        builder.CloseElement();
+
+        builder.CloseElement();
+    };
+
+    /// <summary>The decorative trigger of the Assign menu; the wrapper the menu renders is the tab stop and the name.</summary>
+    private RenderFragment AssignTrigger(DelegateTask task) => builder =>
+    {
+        builder.OpenElement(0, "span");
+        builder.AddAttribute(1, "class", "tm-ai-delegate__assign-trigger");
+        builder.AddAttribute(2, "data-testid", TestId("delegate-task-assign"));
+        builder.OpenComponent<TmIcon>(3);
+        builder.AddAttribute(4, "Name", IconNames.UserPlus);
+        builder.AddAttribute(5, "Size", IconSize.Sm);
+        builder.CloseComponent();
+        builder.OpenElement(6, "span");
+        builder.AddAttribute(7, "class", "tm-sr-only");
+        builder.AddContent(8, Loc["TmDelegateBoard_Assign", TitleOf(task)]);
+        builder.CloseElement();
+        builder.CloseElement();
+    };
+
+    /// <summary>
+    /// One item per agent — disabled, with "(full)" in its name, when the agent has no room — plus the way back to the
+    /// backlog for an assigned card. This menu is the ONLY keyboard path, so a full agent is named as full instead of
+    /// disappearing.
+    /// </summary>
+    private RenderFragment AssignMenu(DelegateTask task, DelegateAgent? agent) => builder =>
+    {
+        var sequence = 0;
+        foreach (var target in AgentColumns)
+        {
+            var candidate = target;
+            builder.OpenComponent<TmContextMenuItem>(sequence++);
+            builder.AddAttribute(sequence++, "Label", AssignOptionLabel(candidate));
+            builder.AddAttribute(sequence++, "Icon", IconNames.UserPlus);
+            builder.AddAttribute(sequence++, "Disabled",
+                candidate.IsFull || string.Equals(candidate.Id, agent?.Id, StringComparison.Ordinal));
+            builder.AddAttribute(sequence++, "OnClick",
+                EventCallback.Factory.Create(this, () => AssignFromMenuAsync(task, candidate)));
+            builder.CloseComponent();
+        }
+
+        if (agent is not null)
+        {
+            builder.OpenComponent<TmContextMenuItem>(sequence++);
+            builder.AddAttribute(sequence++, "Label", Loc["TmDelegateBoard_Unassign"]);
+            builder.AddAttribute(sequence++, "Icon", IconNames.Package);
+            builder.AddAttribute(sequence++, "OnClick", EventCallback.Factory.Create(this, () => UnassignAsync(task)));
+            builder.CloseComponent();
+        }
+    };
+}

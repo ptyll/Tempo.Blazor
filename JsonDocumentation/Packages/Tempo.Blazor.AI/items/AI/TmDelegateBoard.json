@@ -1,0 +1,150 @@
+{
+  "itemName": "TmDelegateBoard",
+  "kind": "Component",
+  "category": "AI",
+  "description": "Work handed out to agents: a backlog column and one column per agent, where a task moves by pointer drag, by the per-card Assign menu, or by the automatic pass that hands each unassigned task to the first free agent. Every card states what it is and what it costs (title, priority word, estimate) and every column states the HOST's capacity facts (ActiveCount of MaxConcurrency, how many cards it holds, and until when the agent is busy). A column at capacity is painted as full — a word plus an icon — and REFUSES a drop with an announcement instead of quietly accepting work it cannot run. The board never mutates the host's lists. It keeps its own copy of what the reader moved (the target agent per task) and drops that copy the moment the host supplies a NEW instance of the task, so a host that re-renders the same snapshot cannot undo the reader's move and a host that accepts it is never fought by a stale overlay. Every move is reported once through OnAssign or OnUnassign. Accessibility: the pointer drag is the shared tm-sortable.js over pointer-drag.js (through TmSortableList's group support — this component writes no gesture), and every card's Assign menu is the keyboard and tap alternative, so nothing is drag-only (WCAG 2.5.7). Every state is a word plus an icon, the occupied-until preview is driven by focus as well as by hover, and the surface owns exactly ONE polite live region.",
+  "packageId": "Tempo.Blazor.AI",
+  "namespace": "Tempo.Blazor.Components.AI",
+  "sourcePath": "src/Tempo.Blazor.AI/Components/AI/TmDelegateBoard.razor",
+  "documentationStatus": "documented",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.AI"
+  ],
+  "parameters": [
+    {
+      "name": "Agents",
+      "type": "IReadOnlyList<DelegateAgent>?",
+      "isRequired": false,
+      "description": "The agents, one column each, in the order they should be read (and in the order the automatic pass offers them). Null or empty shows the backlog alone plus a note that there are no agents."
+    },
+    {
+      "name": "AriaLabel",
+      "type": "string?",
+      "isRequired": false,
+      "description": "The accessible name of the column area. Null uses the localized default (\"Delegate board\")."
+    },
+    {
+      "name": "AutoAssign",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Whether the automatic pass runs, two-way bound with AutoAssignChanged (@bind-AutoAssign). While it is on, every unassigned task is handed to the first free agent — the one that becomes free first, per DelegateAutoAssigner — and each such move is reported through OnAssign. A task the reader puts BACK in the backlog stays there until the switch is turned off and on again, so the pass never fights the reader."
+    },
+    {
+      "name": "AutoAssignChanged",
+      "type": "EventCallback<bool>",
+      "isRequired": false,
+      "description": "Fires with the new switch state."
+    },
+    {
+      "name": "Class",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Additional CSS class(es) for the root element."
+    },
+    {
+      "name": "HeadingLevel",
+      "type": "int",
+      "isRequired": false,
+      "default": "3",
+      "description": "The heading level of the rendered title, clamped to 2–6. Default 3."
+    },
+    {
+      "name": "OnAssign",
+      "type": "EventCallback<DelegateMoveRequest>",
+      "isRequired": false,
+      "description": "Raised once per committed move that puts a task on an agent (from the backlog or from another agent)."
+    },
+    {
+      "name": "OnUnassign",
+      "type": "EventCallback<DelegateMoveRequest>",
+      "isRequired": false,
+      "description": "Raised once per committed move that returns a task to the backlog."
+    },
+    {
+      "name": "ShowTitle",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "Whether the heading is rendered. Default true."
+    },
+    {
+      "name": "Tasks",
+      "type": "IReadOnlyList<DelegateTask>?",
+      "isRequired": false,
+      "description": "The tasks to show, assigned or not. Null renders an empty backlog and no cards; a null entry inside the list is skipped. A task whose AssignedAgentId names an agent the board does not have stays in the backlog, so nothing can disappear."
+    },
+    {
+      "name": "TimeProvider",
+      "type": "TimeProvider?",
+      "isRequired": false,
+      "description": "The clock the occupied-until preview reads. Null takes the injected TimeProvider and falls back to System, so a test can pin the projection."
+    },
+    {
+      "name": "Title",
+      "type": "string?",
+      "isRequired": false,
+      "description": "The heading above the board. Null renders the localized default (\"Delegate board\")."
+    }
+  ],
+  "cssClasses": [
+    "tm-ai-delegate",
+    "tm-ai-delegate__header",
+    "tm-ai-delegate__title",
+    "tm-ai-delegate__summary",
+    "tm-ai-delegate__auto",
+    "tm-ai-delegate__hint",
+    "tm-ai-delegate__instructions",
+    "tm-ai-delegate__notice",
+    "tm-ai-delegate__board",
+    "tm-ai-delegate__column",
+    "tm-ai-delegate__column--backlog",
+    "tm-ai-delegate__column--agent",
+    "tm-ai-delegate__column--full",
+    "tm-ai-delegate__column-head",
+    "tm-ai-delegate__column-title",
+    "tm-ai-delegate__column-meta",
+    "tm-ai-delegate__capacity",
+    "tm-ai-delegate__separator",
+    "tm-ai-delegate__queued",
+    "tm-ai-delegate__availability",
+    "tm-ai-delegate__full",
+    "tm-ai-delegate__full-icon",
+    "tm-ai-delegate__full-text",
+    "tm-ai-delegate__task",
+    "tm-ai-delegate__task-head",
+    "tm-ai-delegate__task-title",
+    "tm-ai-delegate__priority",
+    "tm-ai-delegate__priority--low",
+    "tm-ai-delegate__priority--normal",
+    "tm-ai-delegate__priority--high",
+    "tm-ai-delegate__priority--urgent",
+    "tm-ai-delegate__priority-icon",
+    "tm-ai-delegate__priority-text",
+    "tm-ai-delegate__task-meta",
+    "tm-ai-delegate__task-icon",
+    "tm-ai-delegate__task-actions",
+    "tm-ai-delegate__assign",
+    "tm-ai-delegate__assign-trigger",
+    "tm-ai-delegate__empty",
+    "tm-ai-delegate__empty--agents"
+  ],
+  "examples": [
+    {
+      "title": "A board over the host's own tasks and agents",
+      "code": "<TmDelegateBoard Tasks=\"_tasks\"\n                 Agents=\"_agents\"\n                 @bind-AutoAssign=\"_autoAssign\"\n                 OnAssign=\"OnAssign\"\n                 OnUnassign=\"OnUnassign\" />",
+      "description": "The host supplies the tasks and the agent columns and applies every reported move to its own data. The board shows the reader's move at once and drops its copy when the host supplies a new instance of the task."
+    },
+    {
+      "title": "A board that refuses work for a busy agent",
+      "code": "var agents = new[]\n{\n    new DelegateAgent(new AgentRef(\"Planner\", \"planner\")) { MaxConcurrency = 2, ActiveCount = 2 },\n};",
+      "description": "Capacity is the HOST's: ActiveCount against MaxConcurrency. An agent at capacity renders the full word and refuses a drop with an announcement."
+    }
+  ],
+  "notes": [
+    "The board never mutates Tasks: it keeps its own copy of what the reader moved and drops that copy when the host supplies a NEW instance of the task, so a re-render of the same snapshot cannot undo the reader's move.",
+    "Capacity is decided by the host's ActiveCount and MaxConcurrency and never by how many cards a column shows: an agent at capacity refuses a drop and says so, in the visible notice line and in the ONE polite live region.",
+    "The pointer drag is the shared tm-sortable.js over pointer-drag.js, driven through TmSortableList's Group: the columns are transfer-only lists (AllowLocalReorder=false), so nothing announces an order inside a column.",
+    "Every card carries an Assign menu, which is the keyboard and tap alternative (WCAG 2.5.7) and the only keyboard path; a full agent is named as full instead of being hidden.",
+    "The occupied-until preview is driven by focus as well as by hover, because a preview that needs a mouse is not available to everybody."
+  ]
+}

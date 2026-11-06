@@ -748,6 +748,99 @@ internal static class AiAgentsPageSamples
         },
     ];
 
+    /// <summary>
+    /// The three agents a delegate board shows: one with two slots and work in flight, one with a single slot busy for
+    /// another hour, and one whose single slot is already taken — so the full state, the occupied-until preview and the
+    /// auto pass all have something to decide about.
+    /// </summary>
+    internal static IReadOnlyList<DelegateAgent> DelegateAgents(DateTimeOffset now) =>
+    [
+        new(new AgentRef("Planner", "planner") { Role = "Orchestrator", ColorIndex = 0 })
+        {
+            MaxConcurrency = 2,
+            ActiveCount = 1,
+            BusyUntil = now.AddMinutes(40),
+        },
+        new(new AgentRef("Writer", "writer") { Role = "Worker", ColorIndex = 1 })
+        {
+            MaxConcurrency = 1,
+            BusyUntil = now.AddHours(1),
+        },
+        new(new AgentRef("Reviewer", "reviewer") { Role = "Reviewer", ColorIndex = 2 })
+        {
+            MaxConcurrency = 1,
+            ActiveCount = 1,
+        },
+    ];
+
+    /// <summary>
+    /// The work waiting to be handed out: three unassigned tasks with different grades and estimates, and three already
+    /// on an agent, so the backlog, the columns and every card state have something to show.
+    /// </summary>
+    internal static IReadOnlyList<DelegateTask> DelegateTasks() =>
+    [
+        new("task-summary", "Draft the release summary")
+        {
+            Priority = DelegateTaskPriority.Urgent,
+            EstimatedDuration = TimeSpan.FromMinutes(45),
+        },
+        new("task-invoices", "Collect the open invoices")
+        {
+            Priority = DelegateTaskPriority.High,
+            EstimatedDuration = TimeSpan.FromMinutes(30),
+        },
+        new("task-notes", "Summarize yesterday's stand-up")
+        {
+            EstimatedDuration = TimeSpan.FromMinutes(15),
+        },
+        new("task-audit", "Audit the permission matrix")
+        {
+            Priority = DelegateTaskPriority.Normal,
+            EstimatedDuration = TimeSpan.FromHours(2),
+            AssignedAgentId = "planner",
+        },
+        new("task-changelog", "Write the changelog entry")
+        {
+            Priority = DelegateTaskPriority.Low,
+            EstimatedDuration = TimeSpan.FromMinutes(20),
+            AssignedAgentId = "writer",
+        },
+        new("task-review", "Review the draft against the brief")
+        {
+            Priority = DelegateTaskPriority.High,
+            EstimatedDuration = TimeSpan.FromMinutes(25),
+            AssignedAgentId = "reviewer",
+        },
+    ];
+
+    /// <summary>
+    /// The scheduler's supply: four windows across two days, one of them with the host's own commitment close to its
+    /// capacity and one already over it, so the capacity bar, the free line and the overload all render.
+    /// </summary>
+    internal static IReadOnlyList<RunWindow> RunWindows(DateTimeOffset now)
+    {
+        var monday = new DateTimeOffset(now.Year, now.Month, now.Day, 9, 0, 0, now.Offset);
+        return
+        [
+            new("win-mon-am", monday, monday.AddHours(3), capacity: 6, used: 1),
+            new("win-mon-pm", monday.AddHours(4), monday.AddHours(7), capacity: 6, used: 2),
+            new("win-tue-am", monday.AddDays(1), monday.AddDays(1).AddHours(3), capacity: 6, used: 1),
+            new("win-tue-pm", monday.AddDays(1).AddHours(4), monday.AddDays(1).AddHours(6), capacity: 4, used: 5),
+        ];
+    }
+
+    /// <summary>
+    /// The runs competing for that supply: a long one that has to be split, one already running, one finished and one
+    /// short enough to fill a gap.
+    /// </summary>
+    internal static IReadOnlyList<ScheduledRun> ScheduledRuns() =>
+    [
+        new("run-export", "Nightly export") { EstimatedUnits = 6 },
+        new("run-invoices", "Invoice batch") { EstimatedUnits = 3, Status = ScheduledRunStatus.Running },
+        new("run-report", "Weekly report") { EstimatedUnits = 2, Status = ScheduledRunStatus.Succeeded },
+        new("run-cleanup", "Cache cleanup") { EstimatedUnits = 1 },
+    ];
+
     /// <summary>The effort levels of a model, labelled in the page's language.</summary>
     private static AiModelEffortLevel[] Effort(Func<string, string> loc, params string[] ids)
         => ids.Select(id => new AiModelEffortLevel(id, loc($"TmAiAgentsDemo_Effort{char.ToUpperInvariant(id[0])}{id[1..]}"))).ToArray();

@@ -79,7 +79,9 @@ change differently (`Pointer` never fires while the pointer is still moving).
 The **row** is the focus stop in both handle modes — one tab stop per row, never two. It is a
 `role="listitem"` with `tabindex="0"`, `aria-roledescription` = the localized "sortable item", and
 `aria-describedby` pointing at the visually hidden instructions. Its accessible name comes from
-`aria-labelledby` → the row's content element, so the menu trigger's label never bleeds into it.
+`aria-labelledby` → the row's content element, so the menu trigger's label never bleeds into it. (A
+transfer-only or read-only list renders its rows without the tab stop, the role description and the
+per-row description — see [Accessibility](#accessibility).)
 
 | Key | Effect |
 |---|---|
@@ -129,7 +131,12 @@ list-specific part:
 * Blazor is told **once**, on release: `OnSortableReorderCommitted(from, to)`. Nothing writes component
   state while the pointer moves, so a 200-row list does not re-render per pointer event.
 * Every cancel path restores the inline styles **verbatim** and reports nothing.
-* `detachSortable(id)` removes the registration; the component detaches when it turns `Disabled` or empty.
+* `detachSortable(id)` removes the registration; the component detaches when it turns `Disabled`, and when it is
+  **empty and standalone**. An empty list that belongs to a `Group` stays attached: the module builds the drop
+  targets of a cross-list drag from its own registry, so a detached empty column could never receive the first
+  row. Such a list also keeps a non-zero hit box (`.tm-sortable-list__items--empty` carries `min-block-size:
+  var(--tm-touch-target)`), because the module hovers a list by its element rect. A row dropped over an empty
+  list of the group is reported at insertion slot `0`.
 
 `HandleMode.Handle` gives the drag a dedicated target with `touch-action: none` (an immediate drag);
 `HandleMode.WholeItem` passes `longPressMs: 400` and leaves `touch-action` alone, so a tap and a page scroll
@@ -139,6 +146,11 @@ still work. `(pointer: coarse)` grows the handle to the 44 px `--tm-touch-target
 
 * `role="list"` of `role="listitem"` rows; each row is a "sortable item" (localized
   `aria-roledescription`), named by its content and described by the hidden keyboard instructions.
+* A list that offers **no in-list move** (`AllowLocalReorder="false"`, or `Disabled`) makes no such promise:
+  its rows keep their `role="listitem"`, name and content, but carry no `aria-roledescription`, no per-row
+  `aria-describedby` and no tab stop — a screen reader would otherwise announce every task card or run as a
+  "sortable item" with no keyboard grab behind it. The `<ul>` keeps the instructions (and, for a transfer-only
+  list, the transfer wording) and the host's per-row menu is the keyboard path.
 * ONE polite live region for the whole list — never one per row — announces every step of a move:
   picked up, moved to position *p* of *n*, dropped at position *p* of *n*, cancelled, and the boundary
   messages ("already first"); the row is named by `ItemLabelSelector` (or its string text, or the
@@ -157,7 +169,8 @@ still work. `(pointer: coarse)` grows the handle to the 44 px `--tm-touch-target
 
 ## Styling
 
-`tm-sortable-list`, `--disabled`, `--whole-item`, `__items`, `__item`, `__item--grabbed` (also set by the
+`tm-sortable-list`, `--disabled`, `--whole-item`, `__items`, `__items--empty` (a grouped list with no rows
+keeps a `--tm-touch-target` hit box so it stays a drop target), `__item`, `__item--grabbed` (also set by the
 module while dragging), `__handle`, `__content`, `__actions`, `__move`, `__move-trigger`, `__empty` — all
 built from `--tm-*` tokens, with no `[data-theme]` block (the dark theme re-points the tokens).
 
@@ -167,11 +180,51 @@ built from `--tm-*` tokens, with no `[data-theme]` block (the dark theme re-poin
 `handleMode`, `showMoveMenu`, `disabled`) and a declarative stencil that draws each of those knobs — the
 grabbed row is a raised surface with a primary edge, so the state is not colour alone.
 
+## Moving a row to ANOTHER list (`Group`, `ListId`, `OnTransfer`)
+
+Three optional parameters turn a group of lists into one drag surface, without a second gesture implementation and
+without changing what a standalone list does:
+
+```razor
+<TmSortableList TItem="Task" Items="Backlog"
+                Group="board" ListId="backlog"
+                AllowLocalReorder="false"
+                OnTransfer="OnTransfer" />
+
+<TmSortableList TItem="Task" Items="PlannerTasks"
+                Group="board" ListId="planner"
+                AllowLocalReorder="false"
+                OnTransfer="OnTransfer" />
+```
+
+* **`Group`** — lists that pass the same non-empty value accept each other's rows. The module resolves membership from its
+  own registry (never a DOM query), so a group cannot pick up a list rendered by another component instance. While a row
+  is over another list, that list carries `tm-sortable-list--drop-target`.
+* **`ListId`** — how the host recognises a list inside its group: the value reported as `ToListId` (dropped here) and as
+  `FromListId` (one of mine left). Null falls back to the component's instance key.
+* **`OnTransfer`** — raised **on the SOURCE list** once per committed cross-list drop, with
+  `SortableTransferArgs(FromListId, FromIndex, ToListId, ToIndex, Source)`. `ToIndex` is the insertion slot over the
+  target's *current* rows, so a value equal to the row count means "after the last row".
+* **`AllowLocalReorder`** — default `true`. A host that only wants transfers sets `false`: the keyboard grab/drop model and
+  the per-row move menu are then not rendered (a grab that reorders nothing would announce a change the host ignores) and
+  the rows stop being tab stops and stop calling themselves "sortable items", while the pointer drag and its transfers keep
+  working. Such a list also renders **no** live region of its own, because it announces nothing by design.
+* **Empty columns are drop targets too.** A list that belongs to a `Group` stays attached (and keeps a non-zero hit box)
+  while it has no rows, so the first card can be dragged into an empty column, an emptied backlog or an empty run window;
+  the insertion slot over an empty target is always `0`.
+
+**Who announces.** The component stays silent on a transfer: only the host knows whether the drop was accepted (a column
+at full capacity, a read-only board) and what the move is called. A surface that groups several lists therefore keeps ONE
+polite live region for the whole board, and the transfer-only lists contribute none.
+
+**What the host does.** It removes the row from its own source collection, inserts it into the target one and re-renders.
+The component never moves an item by itself — the same rule as `OnReorder`.
+
 ## Testing
 
 * bUnit: `tests/Tempo.Blazor.Tests/DataDisplay/TmSortableListTests.cs` (ARIA, keyboard incl. the `Tab`
   release and the template-content fence, menu, disabled, keying and duplicate keys, the label fallback,
-  live region, localization) and `SortableListPageTests.cs` (the `/sortable-list` demo page walk).
+  live region, localization, and the cross-list transfer contract) and `SortableListPageTests.cs` (the `/sortable-list` demo page walk).
 * Node: `src/Tempo.Blazor/wwwroot/js/__tests__/tm-sortable.test.mjs` (`npm run test:overlay`).
 * Playwright: `tests/Tempo.Blazor.E2E/SortableListE2ETests.cs` — keyboard, pointer drag, the row menu,
   Escape rollback, the inset focus ring, reduced motion, dark theme, a 390 px phone and a scoped axe scan.

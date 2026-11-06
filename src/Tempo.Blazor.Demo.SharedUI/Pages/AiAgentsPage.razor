@@ -353,6 +353,44 @@
 </section>
 
 @* ---------------------------------------------------------------------------------------------------------
+   Handing work out. The page is the STORE: every reported move is applied to its own task list, so the backlog, the
+   columns and the automatic pass all work on real data — and the board's own copy of the reader's move is replaced by
+   the page's next snapshot. *@
+<section class="demo-section mb-8" data-testid="ai-agents-delegate-section">
+    <h2 class="text-lg font-semibold text-slate-900 dark:text-white mb-2">@Loc["TmAiAgentsDemo_DelegateTitle"]</h2>
+    <p class="text-sm text-slate-600 dark:text-slate-400 mb-2">@Loc["TmAiAgentsDemo_DelegateHint"]</p>
+
+    <p class="text-sm text-slate-700 dark:text-slate-300 mb-3" data-testid="ai-agents-delegate-log">@DelegateText</p>
+
+    <TmDelegateBoard Tasks="_delegateTasks"
+                      Agents="_delegateAgents"
+                      AutoAssign="_delegateAuto"
+                      AutoAssignChanged="OnDelegateAutoChanged"
+                      OnAssign="OnDelegateAssigned"
+                      OnUnassign="OnDelegateUnassigned"
+                      Title="@Loc["TmAiAgentsDemo_DelegateTitle"]"
+                      DataTestId="ai-agents-delegate" />
+</section>
+
+@* ---------------------------------------------------------------------------------------------------------
+   Runs placed into the scheduler's windows. The page owns the supply and the runs; the surface's planner decides
+   where each run sits, and a reported move is applied to the page's own run (its preferred start window). *@
+<section class="demo-section mb-8" data-testid="ai-agents-runs-section">
+    <h2 class="text-lg font-semibold text-slate-900 dark:text-white mb-2">@Loc["TmAiAgentsDemo_RunsTitle"]</h2>
+    <p class="text-sm text-slate-600 dark:text-slate-400 mb-2">@Loc["TmAiAgentsDemo_RunsHint"]</p>
+
+    <p class="text-sm text-slate-700 dark:text-slate-300 mb-3" data-testid="ai-agents-runs-log">@RunsText</p>
+
+    <TmScheduledRuns Windows="_runWindows"
+                     Runs="_scheduledRuns"
+                     ViewMode="_runsView"
+                     ViewModeChanged="OnRunsViewChanged"
+                     OnMove="OnRunMoved"
+                     Title="@Loc["TmAiAgentsDemo_RunsTitle"]"
+                     DataTestId="ai-agents-runs" />
+</section>
+
+@* ---------------------------------------------------------------------------------------------------------
    The same run in the live monitor. When the run reaches its last step it PAUSES and asks for a decision: the
    host's own TmApprovalCard sits in the monitor's PendingApproval slot. Approving resumes the run; rejecting
    skips the step and finishes the run. *@
@@ -522,6 +560,18 @@
     private string _memoryFilter = string.Empty;
     private string? _memoryLogKey;
     private string? _memoryLogValue;
+    private IReadOnlyList<DelegateTask> _delegateTasks = [];
+    private IReadOnlyList<DelegateAgent> _delegateAgents = [];
+    private bool _delegateAuto;
+    private string? _delegateLogKey;
+    private string? _delegateLogValue;
+    private string? _delegateLogSecond;
+    private IReadOnlyList<RunWindow> _runWindows = [];
+    private IReadOnlyList<ScheduledRun> _scheduledRuns = [];
+    private RunViewMode _runsView = RunViewMode.Week;
+    private string? _runsLogKey;
+    private string? _runsLogValue;
+    private string? _runsLogSecond;
     private IReadOnlyList<FallbackAttempt> _fallbackAttempts = [];
     private IReadOnlyList<FallbackChainEntry>? _fallbackChain;
     private FallbackResolutionPolicy _fallbackPolicy = FallbackResolutionPolicy.Fallback;
@@ -578,6 +628,10 @@
         _autonomyLevels = AiAgentsPageSamples.AutonomyLevels();
         _autonomyLocks = AiAgentsPageSamples.AutonomyLocks();
         _memories = AiAgentsPageSamples.Memories(_clock.GetUtcNow());
+        _delegateAgents = AiAgentsPageSamples.DelegateAgents(_clock.GetUtcNow());
+        _delegateTasks = AiAgentsPageSamples.DelegateTasks();
+        _runWindows = AiAgentsPageSamples.RunWindows(_clock.GetUtcNow());
+        _scheduledRuns = AiAgentsPageSamples.ScheduledRuns();
         _bestAttemptId = "draft-b";
         _selection = new AiModelSelection("aurora-pro");
         _templates = AiAgentsPageSamples.Templates(Key);
@@ -803,6 +857,82 @@
     private string AutonomyText => _autonomyLoggedLabel is null
         ? Loc["TmAiAgentsDemo_NoEvent"]
         : Loc["TmAiAgentsDemo_Received", Loc["TmAutonomyDial_Announce", _autonomyLoggedLabel]];
+
+    /// <summary>The last delegate-board change the page received, or an honest "nothing yet".</summary>
+    private string DelegateText => _delegateLogKey is null
+        ? Loc["TmAiAgentsDemo_NoEvent"]
+        : Loc["TmAiAgentsDemo_Received", LogSentence(_delegateLogKey, _delegateLogValue, _delegateLogSecond)];
+
+    /// <summary>The last scheduled-runs change the page received, or an honest "nothing yet".</summary>
+    private string RunsText => _runsLogKey is null
+        ? Loc["TmAiAgentsDemo_NoEvent"]
+        : Loc["TmAiAgentsDemo_Received", LogSentence(_runsLogKey, _runsLogValue, _runsLogSecond)];
+
+    /// <summary>
+    /// One localized sentence from a key and up to two host values. A key that takes no placeholders ignores the extra
+    /// arguments (string.Format does), so the page never prints a raw <c>{0}</c>.
+    /// </summary>
+    private string LogSentence(string key, string? first, string? second)
+        => Loc[key, first ?? string.Empty, second ?? string.Empty];
+
+    private Task OnDelegateAutoChanged(bool auto)
+    {
+        _delegateAuto = auto;
+        _delegateLogKey = auto ? "TmDelegateBoard_AutoLabel" : "TmDelegateBoard_BoardLabel";
+        _delegateLogValue = null;
+        _delegateLogSecond = null;
+        return Task.CompletedTask;
+    }
+
+    /// <summary>The page owns the assignment: the board reports the move and the page applies it to its own task.</summary>
+    private Task OnDelegateAssigned(DelegateMoveRequest request)
+    {
+        ReplaceTask(request.Task with { AssignedAgentId = request.AssigneeId });
+        _delegateLogKey = "TmDelegateBoard_Assigned";
+        _delegateLogValue = request.Task.Title;
+        _delegateLogSecond = request.To?.Agent.Name;
+        return Task.CompletedTask;
+    }
+
+    private Task OnDelegateUnassigned(DelegateMoveRequest request)
+    {
+        ReplaceTask(request.Task with { AssignedAgentId = null });
+        _delegateLogKey = "TmDelegateBoard_Returned";
+        _delegateLogValue = request.Task.Title;
+        _delegateLogSecond = null;
+        return Task.CompletedTask;
+    }
+
+    private Task OnRunsViewChanged(RunViewMode view)
+    {
+        _runsView = view;
+        return Task.CompletedTask;
+    }
+
+    /// <summary>The page owns the plan: a reported move becomes the run's preferred start window.</summary>
+    private Task OnRunMoved(ScheduledRunMoveRequest request)
+    {
+        _scheduledRuns =
+        [
+            .. _scheduledRuns.Select(run => run.Id == request.Run.Id
+                ? run with
+                {
+                    Segments =
+                    [
+                        new RunSegment(request.WindowId, request.To.Start, request.To.End, run.PlannedUnits),
+                    ],
+                }
+                : run),
+        ];
+        _runsLogKey = "TmScheduledRuns_Moved";
+        _runsLogValue = request.Run.Title;
+        _runsLogSecond = request.To.Id;
+        return Task.CompletedTask;
+    }
+
+    /// <summary>Replaces one task in the page's own list, so the board receives a NEW instance and follows it.</summary>
+    private void ReplaceTask(DelegateTask task)
+        => _delegateTasks = [.. _delegateTasks.Select(current => current.Id == task.Id ? task : current)];
 
     /// <summary>The last memory change the page received, or an honest "nothing yet".</summary>
     private string MemoryText => _memoryLogKey is null

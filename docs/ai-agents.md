@@ -315,6 +315,18 @@ over a selection that is pruned to what the reader can actually see. Every callb
 in a busy state, a failing one prints and announces a localized error and changes nothing. Its contract is
 [memory-panel.md](memory-panel.md).
 
+`TmDelegateBoard` is WHERE the work goes: a backlog column and one column per agent, a card per task with its grade and
+its estimate, capacity read from the HOST's `ActiveCount`/`MaxConcurrency`, a column at capacity that refuses a drop with
+an announcement, an occupied-until preview driven by focus as well as hover, an Assign menu as the keyboard and tap
+alternative, and an automatic pass that hands each unassigned task to the agent that becomes free first. Its contract is
+[delegate-board.md](delegate-board.md).
+
+`TmScheduledRuns` is WHEN it runs: the scheduler's supply windows with the capacity each offers and the load the host
+already committed, the runs placed into them by `RunWindowPlanner` (split across windows when they do not fit, with the
+units that fit nowhere named), a capacity bar painted from the same slices the rows show, an overloaded window called out
+with an icon and a word, a week/day/table presentation and a move by drag or by menu. Its contract is
+[scheduled-runs.md](scheduled-runs.md).
+
 ## Related pages
 
 - [TmAgentGraph](agent-graph.md) — the same run as a network of agents, tools and resources.
@@ -324,6 +336,8 @@ in a busy state, a failing one prints and announces a localized error and change
 - [TmFallbackChain](fallback-chain.md) — the models tried for one request, ending in the answer, plus the chain editor.
 - [TmAutonomyDial](autonomy-dial.md) — how much the agent may do alone, with the ceiling and the enforced limits.
 - [TmMemoryPanel](memory-panel.md) — what the agent remembers, with review, an undo window and bulk actions.
+- [TmDelegateBoard](delegate-board.md) — which agent takes which task, with capacity, refusal and an automatic pass.
+- [TmScheduledRuns](scheduled-runs.md) — which window a run lands in, with the capacity bars and the table alternative.
 - [TmAgentLanes](agent-lanes.md), [TmAgentPlan](agent-plan.md), [TmAgentRunTree](agent-run-tree.md), [TmAgentMonitor](agent-monitor.md),
   [TmPermissionRequest](permission-request.md) — the run-side surfaces that these visualizations compose with.
 - [TmTraceWaterfall](trace-waterfall.md) — the span view of one agent's work.

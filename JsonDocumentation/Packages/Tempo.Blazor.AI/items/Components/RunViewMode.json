@@ -1,0 +1,11 @@
+{
+  "kind": "Enum",
+  "category": "Components",
+  "namespace": "Tempo.Blazor.Components.AI",
+  "description": "What a runs board shows: a WEEK of windows grouped by day, a single DAY of windows, or the same schedule as a table — the text alternative a reader who cannot use the two visual views can still read and act on. The table is not a lesser view: it carries every run, every window slice, the time each slice occupies, its units and its status, and the same move menu. What changes between the views is only the shape of the markup.",
+  "packageId": "Tempo.Blazor.AI",
+  "sourcePath": "src/Tempo.Blazor.AI/Components/AI/RunViewMode.cs",
+  "documentationStatus": "documented",
+  "itemName": "RunViewMode",
+  "usageExample": "<TmScheduledRuns Windows=\"_windows\" Runs=\"_runs\" @bind-ViewMode=\"_view\" />"
+}

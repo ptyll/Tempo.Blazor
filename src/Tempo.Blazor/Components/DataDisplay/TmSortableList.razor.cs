@@ -25,6 +25,12 @@ namespace Tempo.Blazor.Components.DataDisplay;
 /// list (a grabbed row is never a keyboard trap); Alt+arrow moves it one position without grabbing. One
 /// polite live region narrates every step of a move.
 /// </para>
+/// <para>
+/// A list without the in-list model (<see cref="AllowLocalReorder"/> off, or <see cref="Disabled"/>)
+/// makes no such promise: its rows are plain list items (no tab stop, no "sortable item" role
+/// description, no per-row description — the list itself keeps the instructions), and a transfer-only
+/// list renders no live region of its own.
+/// </para>
 /// </summary>
 /// <typeparam name="TItem">The row model the host supplies.</typeparam>
 public partial class TmSortableList<TItem> : TmComponentBase, IAsyncDisposable
@@ -112,6 +118,55 @@ public partial class TmSortableList<TItem> : TmComponentBase, IAsyncDisposable
     /// <summary>Additional CSS class(es) for the root element.</summary>
     [Parameter] public string? Class { get; set; }
 
+    /// <summary>
+    /// The cross-list drag group this list belongs to. Two lists that pass the SAME non-empty value accept
+    /// each other's rows: a row dragged out of one and dropped over the other is reported as a
+    /// <see cref="OnTransfer"/> instead of a reorder. Null (the default) keeps the list on its own, exactly
+    /// as before this parameter existed.
+    /// <para>
+    /// The gesture itself is unchanged — the same sortable module over the shared drag helper; the group
+    /// only tells it which sibling lists the pointer may leave the row in, and the module marks the list it
+    /// would drop into with <c>tm-sortable-list--drop-target</c>.
+    /// </para>
+    /// <para>
+    /// A grouped list keeps its registration while it has no rows, because the module builds the drop targets
+    /// of a cross-list drag from that registry: an empty column of a board must still be able to receive the
+    /// first card. A standalone list detaches when it is empty (nothing is there to drag).
+    /// </para>
+    /// </summary>
+    [Parameter] public string? Group { get; set; }
+
+    /// <summary>
+    /// How the host recognises THIS list inside its <see cref="Group"/> — the value reported as
+    /// <see cref="SortableTransferArgs.ToListId"/> when a row is dropped here, and as
+    /// <see cref="SortableTransferArgs.FromListId"/> when one of this list's rows leaves. Null falls back to
+    /// the component's own instance key, which is stable for the lifetime of the instance but meaningless to
+    /// a host, so a group of lists that a host has to tell apart should always set it.
+    /// </summary>
+    [Parameter] public string? ListId { get; set; }
+
+    /// <summary>
+    /// Raised when a row of THIS list is dropped into ANOTHER list of the same <see cref="Group"/>. The
+    /// component reports the move and changes nothing — the host removes the row from its own source
+    /// collection, inserts it into the target one and re-renders.
+    /// <para>
+    /// The component does <b>not</b> announce a transfer on its own live region: only the host knows whether
+    /// the drop was accepted (a column at full capacity refuses it, for instance) and what the move is
+    /// called, so the host owns that announcement and the surface keeps ONE polite region.
+    /// </para>
+    /// </summary>
+    [Parameter] public EventCallback<SortableTransferArgs> OnTransfer { get; set; }
+
+    /// <summary>
+    /// Whether the reader may reorder the rows INSIDE this list. Default <c>true</c>. A host that only wants
+    /// transfers between lists (a board whose column order means nothing) sets <c>false</c>: the keyboard
+    /// grab/drop model and the per-row move menu are then not offered at all — a row that could be moved
+    /// within its list but has nowhere to go would announce a change the host ignores — and the rows stop
+    /// being tab stops while the pointer drag (and its cross-list transfers) keeps working. The host is then
+    /// responsible for a per-row alternative, which is what the two board surfaces do with their own menu.
+    /// </summary>
+    [Parameter] public bool AllowLocalReorder { get; set; } = true;
+
     [Inject] private IJSRuntime JSRuntime { get; set; } = default!;
 
     private ElementReference _listRef;
@@ -133,6 +188,15 @@ public partial class TmSortableList<TItem> : TmComponentBase, IAsyncDisposable
     private bool IsWholeItem => HandleMode == SortableHandleMode.WholeItem;
 
     private bool IsGrabbed => _grabbedSourceIndex is not null;
+
+    /// <summary>
+    /// Whether the row may be reordered inside this list at all: a read-only list and a
+    /// transfer-only list both drop the keyboard model, the move menu and the row's own tab stop.
+    /// </summary>
+    private bool IsLocalReorderEnabled => !Disabled && AllowLocalReorder;
+
+    /// <summary>The value reported as <see cref="SortableTransferArgs.FromListId"/> — the host's id or this instance's key.</summary>
+    private string EffectiveListId => string.IsNullOrWhiteSpace(ListId) ? _registrationId : ListId!;
 
     private bool IsEmpty => _itemCount == 0;
 
@@ -206,9 +270,9 @@ public partial class TmSortableList<TItem> : TmComponentBase, IAsyncDisposable
             ResetGrab();
         }
 
-        // A host that turns the list read-only mid-move must not strand the pending order on screen: the
-        // rows would keep the order of a grab no key can drop any more.
-        if (Disabled && _grabbedSourceIndex is not null)
+        // A host that turns the list read-only (or transfer-only) mid-move must not strand the pending
+        // order on screen: the rows would keep the order of a grab no key can drop any more.
+        if (!IsLocalReorderEnabled && _grabbedSourceIndex is not null)
         {
             ResetGrab();
         }
@@ -236,7 +300,7 @@ public partial class TmSortableList<TItem> : TmComponentBase, IAsyncDisposable
     /// <returns>A task that completes with whether the row was focused.</returns>
     public ValueTask<bool> FocusItemAsync(int index)
     {
-        if (Disabled)
+        if (!IsLocalReorderEnabled)
         {
             return ValueTask.FromResult(false);
         }
@@ -333,7 +397,7 @@ public partial class TmSortableList<TItem> : TmComponentBase, IAsyncDisposable
 
     private async Task OnItemKeyDownAsync(SortableEntry entry, KeyboardEventArgs args)
     {
-        if (Disabled)
+        if (!IsLocalReorderEnabled)
         {
             return;
         }
@@ -392,7 +456,7 @@ public partial class TmSortableList<TItem> : TmComponentBase, IAsyncDisposable
 
     private async Task OnItemKeyUpAsync(SortableEntry entry, KeyboardEventArgs args)
     {
-        if (Disabled)
+        if (!IsLocalReorderEnabled)
         {
             return;
         }
@@ -578,6 +642,46 @@ public partial class TmSortableList<TItem> : TmComponentBase, IAsyncDisposable
         await InvokeAsync(StateHasChanged);
     }
 
+    /// <summary>
+    /// The single commit path of a CROSS-LIST pointer drag: the module reports the target list and the
+    /// insertion slot ONCE on release. Called from JS; not meant to be called by hosts.
+    /// <para>
+    /// Nothing is announced here on purpose: the host decides whether the drop is accepted (capacity, a
+    /// read-only column) and owns the sentence, so the move is never announced twice.
+    /// </para>
+    /// </summary>
+    /// <param name="toListId">The <c>ListId</c> of the list the row was dropped into.</param>
+    /// <param name="fromIndex">The index the row started at, in this list's items.</param>
+    /// <param name="toIndex">The insertion slot over the target list's rows.</param>
+    [JSInvokable]
+    public async Task OnSortableTransferCommitted(string? toListId, int fromIndex, int toIndex)
+    {
+        if (Disabled || string.IsNullOrWhiteSpace(Group) || string.IsNullOrWhiteSpace(toListId))
+        {
+            // Nothing to do: a read-only list has no gesture at all, a standalone list has no target, and a
+            // missing target id names no destination a host could act on. A TRANSFER-ONLY list
+            // (AllowLocalReorder = false) still transfers: that flag governs the in-list model only.
+            return;
+        }
+
+        if (fromIndex < 0 || fromIndex >= _itemCount || toIndex < 0)
+        {
+            return;
+        }
+
+        ResetGrab();
+        Rebuild();
+
+        if (OnTransfer.HasDelegate)
+        {
+            await OnTransfer.InvokeAsync(new SortableTransferArgs(
+                EffectiveListId, fromIndex, toListId, toIndex, SortableReorderSource.Pointer));
+        }
+
+        // A JS invocation is not a Blazor event: nothing marks this component for a render.
+        await InvokeAsync(StateHasChanged);
+    }
+
     // ---------- rendering helpers ----------
 
     private void Rebuild()
@@ -712,7 +816,15 @@ public partial class TmSortableList<TItem> : TmComponentBase, IAsyncDisposable
     {
         // Attach when the list can be dragged, detach when it cannot (Disabled) — a re-render with an
         // unchanged signature must not re-attach (the module's registry would drop the live session).
-        string? signature = Disabled || IsEmpty ? null : IsWholeItem ? "whole-item" : "handle";
+        // The group is part of the signature: two lists that join or leave a group must re-attach, or the
+        // module would keep pointing at the membership of the previous render. An EMPTY list of a group
+        // stays attached on purpose: the module resolves a cross-list drop target from its own registry,
+        // so a column that detaches while it has no rows could never receive the first card of a board.
+        var group = string.IsNullOrWhiteSpace(Group) ? string.Empty : Group!;
+        var grouped = group.Length > 0;
+        string? signature = Disabled || (IsEmpty && !grouped)
+            ? null
+            : (IsWholeItem ? "whole-item" : "handle") + "|" + group + "|" + EffectiveListId;
         if (signature == _attachedSignature)
         {
             return;
@@ -732,7 +844,8 @@ public partial class TmSortableList<TItem> : TmComponentBase, IAsyncDisposable
 
         _dotnetRef ??= DotNetObjectReference.Create(this);
         _interop ??= new SortableListInterop(JSRuntime);
-        await _interop.AttachAsync(_registrationId, _listRef, _dotnetRef, signature);
+        var handleMode = IsWholeItem ? "whole-item" : "handle";
+        await _interop.AttachAsync(_registrationId, _listRef, _dotnetRef, handleMode, group, EffectiveListId);
     }
 
     /// <summary>Releases the JS registration and the .NET reference of this list.</summary>

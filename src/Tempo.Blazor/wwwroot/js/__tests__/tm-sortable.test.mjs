@@ -8,6 +8,8 @@ import {
     attachSortable,
     detachSortable,
     optionsFor,
+    resolveContainerIndex,
+    resolveInsertIndex,
     resolveTargetIndex,
     shouldPreventGrabbedKey,
     __resetForTests,
@@ -60,6 +62,32 @@ test('resolveTargetIndex: never leaves the list', () => {
     assert.equal(resolveTargetIndex(boxesOf(0, 40, 80), 5000, 1), 2);
     assert.equal(resolveTargetIndex([], 10, 0), 0, 'an empty list cannot resolve to a negative index');
     assert.equal(resolveTargetIndex(null, 10, 3), 3);
+});
+
+// ── the cross-list decision: an insertion slot and the list the pointer is over ──────────────
+
+test('resolveInsertIndex: the slot is the first row whose centre the pointer has not passed', () => {
+    assert.equal(resolveInsertIndex(boxesOf(0, 40, 80), -10), 0, 'above the first centre inserts at the top');
+    assert.equal(resolveInsertIndex(boxesOf(0, 40, 80), 10), 0, 'still above the first centre');
+    assert.equal(resolveInsertIndex(boxesOf(0, 40, 80), 30), 1, 'past the first centre, before the second');
+    assert.equal(resolveInsertIndex(boxesOf(0, 40, 80), 70), 2);
+    assert.equal(resolveInsertIndex(boxesOf(0, 40, 80), 5000), 3, 'below every row appends');
+    assert.equal(resolveInsertIndex([], 10), 0, 'an empty target accepts the row at position 0');
+    assert.equal(resolveInsertIndex(null, 10), 0);
+});
+
+test('resolveContainerIndex: the first list whose rect holds the pointer wins, else -1', () => {
+    const rects = [
+        { left: 0, top: 0, right: 100, bottom: 400 },
+        { left: 120, top: 0, right: 220, bottom: 400 },
+    ];
+
+    assert.equal(resolveContainerIndex(rects, 10, 10), 0);
+    assert.equal(resolveContainerIndex(rects, 150, 300), 1);
+    assert.equal(resolveContainerIndex(rects, 110, 10), -1, 'the gap between two columns invents no target');
+    assert.equal(resolveContainerIndex(rects, 10, 900), -1);
+    assert.equal(resolveContainerIndex([], 10, 10), -1);
+    assert.equal(resolveContainerIndex(null, 10, 10), -1);
 });
 
 // ── the grabbed-row key guard: arrows are stopped, Tab and template controls are not ─────────
@@ -121,8 +149,8 @@ function makeEventTarget() {
     };
 }
 
-/** A list root with three 40 px rows starting at y = 0, 40, 80. */
-function stage({ disabled = false } = {}) {
+/** A list root with `rowCount` 40 px rows starting at y = 0, 40, 80 (the default three). */
+function stage({ disabled = false, rowCount = 3 } = {}) {
     const rows = [];
     const root = {
         ...makeEventTarget(),
@@ -138,7 +166,7 @@ function stage({ disabled = false } = {}) {
         querySelectorAll: selector => (selector === '[data-tm-sortable-item]' ? rows : rows.map(row => row.handle)),
     };
 
-    for (let index = 0; index < 3; index++) {
+    for (let index = 0; index < rowCount; index++) {
         const top = index * 40;
         const row = {
             style: { transform: '', zIndex: '' },
@@ -351,6 +379,137 @@ test('attachSortable: a touch press in whole-item mode is held, so a swipe still
 
     assert.deepEqual(calls, []);
     assert.equal(rows[0].style.transform, '');
+});
+
+// ── cross-list transfers ───────────────────────────────────────────────────────────────────
+
+/** A second list stage whose rows sit beside the first one, so the pointer can be over either. */
+function stageAt({ left, top = 0, id, rows = 3 }) {
+    const state = stage({ rowCount: rows });
+    state.root.getBoundingClientRect = () => ({
+        top, left, right: left + 300, bottom: top + 400, width: 300, height: 400,
+    });
+    for (let index = 0; index < state.rows.length; index++) {
+        const rowTop = top + index * 40;
+        state.rows[index].getBoundingClientRect = () => ({
+            top: rowTop, left, right: left + 300, bottom: rowTop + 40, width: 300, height: 40,
+        });
+    }
+    state.root.getAttribute = name => (name === 'data-sortable-list-id' ? id : null);
+    return state;
+}
+
+function installGroup() {
+    const first = stageAt({ left: 0, id: 'backlog' });
+    const second = stageAt({ left: 400, id: 'agent-1' });
+    installDocument();
+    installFrames();
+    const calls = [];
+    const dotnet = { invokeMethodAsync: (...args) => { calls.push(args); return Promise.resolve(); } };
+    attachSortable(first.root, dotnet, 'list-a', 'handle', { group: 'board', listId: 'backlog' });
+    attachSortable(second.root, dotnet, 'list-b', 'handle', { group: 'board', listId: 'agent-1' });
+    return { first, second, calls };
+}
+
+test('attachSortable: a row dropped over another list of the group is reported as a TRANSFER', () => {
+    const { first, second, calls } = installGroup();
+
+    first.root.dispatch('pointerdown', press(first.rows[0].handle));
+    first.root.dispatch('pointermove', move({ x: 420, y: 120 }));
+    assert.equal(first.root.classList.contains('tm-sortable-list--drop-target'), false,
+        'the SOURCE list is never its own drop target');
+    assert.equal(second.root.classList.contains('tm-sortable-list--drop-target'), true,
+        'the list the row would land in is marked');
+
+    first.root.dispatch('pointerup', up({ x: 420, y: 120 }));
+
+    assert.deepEqual(calls, [['OnSortableTransferCommitted', 'agent-1', 0, 3]],
+        'the commit names the TARGET list and the insertion slot over its rows');
+    assert.equal(second.root.classList.contains('tm-sortable-list--drop-target'), false,
+        'the mark is gone once the gesture ends');
+});
+
+test('attachSortable: dropping above the first row of the target inserts at its position 0', () => {
+    const { first, calls } = installGroup();
+
+    first.root.dispatch('pointerdown', press(first.rows[1].handle, { y: 50 }));
+    first.root.dispatch('pointermove', move({ x: 420, y: 5 }));
+    first.root.dispatch('pointerup', up({ x: 420, y: 5 }));
+
+    assert.deepEqual(calls, [['OnSortableTransferCommitted', 'agent-1', 1, 0]]);
+});
+
+test('attachSortable: an EMPTY list of the group accepts the row at position 0', () => {
+    // A board column usually starts empty: the target has no rows to insert between, so the only honest slot is
+    // 0 — never an index borrowed from the SOURCE list's boxes.
+    const source = stageAt({ left: 0, id: 'backlog' });
+    const empty = stageAt({ left: 400, id: 'agent-empty', rows: 0 });
+    installDocument();
+    installFrames();
+    const calls = [];
+    const dotnet = { invokeMethodAsync: (...args) => { calls.push(args); return Promise.resolve(); } };
+    attachSortable(source.root, dotnet, 'list-a', 'handle', { group: 'board', listId: 'backlog' });
+    attachSortable(empty.root, dotnet, 'list-b', 'handle', { group: 'board', listId: 'agent-empty' });
+
+    source.root.dispatch('pointerdown', press(source.rows[1].handle, { y: 50 }));
+    source.root.dispatch('pointermove', move({ x: 420, y: 50 }));
+    assert.equal(empty.root.classList.contains('tm-sortable-list--drop-target'), true,
+        'an empty registered list is still a drop target');
+
+    source.root.dispatch('pointerup', up({ x: 420, y: 50 }));
+
+    assert.deepEqual(calls, [['OnSortableTransferCommitted', 'agent-empty', 1, 0]],
+        'the row lands at the empty list\'s only slot, not at the source row index');
+    assert.equal(empty.root.classList.contains('tm-sortable-list--drop-target'), false);
+});
+
+test('attachSortable: the rows of BOTH lists move while the row is over another list', () => {
+    const { first, second } = installGroup();
+
+    first.root.dispatch('pointerdown', press(first.rows[0].handle));
+    first.root.dispatch('pointermove', move({ x: 420, y: 50 }));
+
+    assert.match(first.rows[0].style.transform, /translate\(410px, 40px\)/,
+        'across lists the row follows the pointer in both axes');
+    assert.equal(first.rows[1].style.transform, 'translateY(-40px)', 'the source closes the hole');
+    assert.equal(second.rows[0].style.transform, '', 'the slot opens below the first target row');
+    assert.equal(second.rows[1].style.transform, 'translateY(40px)');
+    assert.equal(second.rows[2].style.transform, 'translateY(40px)');
+});
+
+test('attachSortable: a cancel restores both lists and reports nothing', () => {
+    const { first, second, calls } = installGroup();
+
+    first.root.dispatch('pointerdown', press(first.rows[0].handle));
+    first.root.dispatch('pointermove', move({ x: 420, y: 120 }));
+    first.root.dispatch('pointercancel', { pointerId: 1 });
+
+    assert.deepEqual(calls, []);
+    for (const row of [...first.rows, ...second.rows]) {
+        assert.equal(row.style.transform, '');
+        assert.equal(row.classList.contains('tm-sortable-list__item--dragging'), false);
+    }
+    assert.equal(second.root.classList.contains('tm-sortable-list--drop-target'), false);
+});
+
+test('attachSortable: a standalone list never transfers — a drop outside it stays a local reorder', () => {
+    const first = stageAt({ left: 0, id: 'solo' });
+    const second = stageAt({ left: 400, id: 'other' });
+    installDocument();
+    installFrames();
+    const calls = [];
+    const dotnet = { invokeMethodAsync: (...args) => { calls.push(args); return Promise.resolve(); } };
+    attachSortable(first.root, dotnet, 'solo-a', 'handle', { listId: 'solo' });
+    attachSortable(second.root, dotnet, 'solo-b', 'handle', { listId: 'other' });
+
+    first.root.dispatch('pointerdown', press(first.rows[0].handle));
+    first.root.dispatch('pointermove', move({ x: 420, y: 120 }));
+    first.root.dispatch('pointerup', up({ x: 420, y: 120 }));
+
+    assert.deepEqual(calls, [['OnSortableReorderCommitted', 0, 2]],
+        'without a shared group the pointer can only reorder the list it started in');
+    assert.equal(second.root.classList.contains('tm-sortable-list--drop-target'), false,
+        'a list outside the group is never marked');
 });
 
 // ── auto-scroll and lifecycle ──────────────────────────────────────────────────────────────

@@ -1,0 +1,452 @@
+@namespace Tempo.Blazor.Components.AI
+@inherits Tempo.Blazor.Components.TmComponentBase
+@using System.Globalization
+@using Tempo.Blazor.AI.Models
+@using Tempo.Blazor.Components.DataDisplay
+@using Tempo.Blazor.Components.Icons
+@using Tempo.Blazor.Components.Inputs
+@using Tempo.Blazor.Components.Navigation
+
+@* Runs placed into the scheduler's windows. Three presentations over ONE plan: the week (every window, grouped by day),
+   the day (one day's windows in full) and the table (the same schedule as a table, which is the text alternative).
+
+   The capacity bar is decorative (aria-hidden) because every number it draws is also a sentence in the window header:
+   capacity, committed load, the overload line and how many runs sit in it. A picture of capacity is a second cue, never
+   the only one.
+
+   Moving a run is the shared tm-sortable drag over pointer-drag.js through TmSortableList's group support (the windows
+   are the lists), and every row's menu lists every window — the keyboard and tap alternative (WCAG 2.5.7). ONE polite
+   live region announces a committed move. *@
+<section class="@RootClass"
+         data-testid="@RootTestId("scheduled-runs")"
+         data-view="@ViewSlug(_view)"
+         data-windows="@Invariant(WindowViews.Count)"
+         data-overloaded="@Invariant(OverloadedCount)"
+         @attributes="AdditionalAttributes">
+
+    <div class="tm-ai-runs__header">
+        @if (ShowTitle)
+        {
+            @SurfaceTitle
+        }
+
+        <p class="tm-ai-runs__summary" data-testid="@TestId("runs-summary")">@SummaryText</p>
+
+        <div class="tm-ai-runs__view" data-testid="@TestId("runs-view")">
+            <TmSegmentedControl TValue="RunViewMode"
+                                Size="SegmentedControlSize.Sm"
+                                Label="@Loc["TmScheduledRuns_ViewLabel"]"
+                                Options="ViewOptions"
+                                Value="_view"
+                                ValueChanged="OnViewChangedAsync" />
+        </div>
+
+        @if (IsDay)
+        {
+            <div class="tm-ai-runs__day-nav">
+                <button type="button"
+                        class="tm-ai-runs__day-step"
+                        data-testid="@TestId("runs-day-previous")"
+                        aria-label="@Loc["TmScheduledRuns_DayPrevious"]"
+                        aria-disabled="@(NeighbourDay(-1) is null ? "true" : null)"
+                        @onclick="() => OnDayChangedAsync(-1)">
+                    <TmIcon Name="@IconNames.ChevronLeft" Size="IconSize.Sm" />
+                </button>
+                <p class="tm-ai-runs__current-day" data-testid="@TestId("runs-current-day")">
+                    @(CurrentDay is { } day ? DayTitle(day) : string.Empty)
+                </p>
+                <button type="button"
+                        class="tm-ai-runs__day-step"
+                        data-testid="@TestId("runs-day-next")"
+                        aria-label="@Loc["TmScheduledRuns_DayNext"]"
+                        aria-disabled="@(NeighbourDay(1) is null ? "true" : null)"
+                        @onclick="() => OnDayChangedAsync(1)">
+                    <TmIcon Name="@IconNames.ChevronRight" Size="IconSize.Sm" />
+                </button>
+            </div>
+        }
+    </div>
+
+    <p class="tm-ai-runs__instructions" id="@InstructionsId">@Loc["TmScheduledRuns_Instructions"]</p>
+
+    @if (_notice is { Length: > 0 })
+    {
+        <p class="tm-ai-runs__notice" data-testid="@TestId("runs-notice")">@_notice</p>
+    }
+
+    @if (WindowViews.Count == 0)
+    {
+        <p class="tm-ai-runs__empty" data-testid="@TestId("runs-empty")">@Loc["TmScheduledRuns_EmptyWindows"]</p>
+    }
+    else if (IsTable)
+    {
+        @* The text alternative: every slice with its window, its time, its units and its status — and the move menu on
+           each row, so the table is as operable as the board. *@
+        <div class="tm-ai-runs__table-wrap">
+            <table class="tm-ai-runs__table" data-testid="@TestId("runs-table")">
+                <caption class="tm-ai-runs__caption">@Loc["TmScheduledRuns_TableCaption"]</caption>
+                <thead>
+                    <tr>
+                        <th scope="col">@Loc["TmScheduledRuns_TableRun"]</th>
+                        <th scope="col">@Loc["TmScheduledRuns_TableWindow"]</th>
+                        <th scope="col">@Loc["TmScheduledRuns_TableTime"]</th>
+                        <th scope="col">@Loc["TmScheduledRuns_TableUnits"]</th>
+                        <th scope="col">@Loc["TmScheduledRuns_TableStatus"]</th>
+                        <th scope="col"><span class="tm-sr-only">@Loc["TmScheduledRuns_TableActions"]</span></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var row in TableRows)
+                    {
+                        var entry = row;
+                        <tr class="@(entry.IsUnplaced ? "tm-ai-runs__row tm-ai-runs__row--unplaced" : "tm-ai-runs__row")"
+                            data-testid="@TestId("runs-table-row")"
+                            data-run-id="@entry.Plan.Run.Id"
+                            data-window-id="@(entry.Segment?.Window.Id)"
+                            data-status="@StatusSlug(entry.Plan.Run.Status)">
+                            <th scope="row" class="tm-ai-runs__cell tm-ai-runs__cell--run" data-testid="@TestId("runs-run-title")">
+                                <span class="tm-ai-runs__run-dot" aria-hidden="true" style="--tm-runs-run-color: var(@RunColorToken(entry.Plan.Run))"></span>
+                                @TitleOf(entry.Plan.Run)
+                                @if (entry.Segment is not null && entry.Plan.SpansWindows)
+                                {
+                                    <span class="tm-ai-runs__part">@Loc["TmScheduledRuns_Part", Invariant(entry.Part), Invariant(entry.Plan.Segments.Count)]</span>
+                                }
+                            </th>
+                            <td class="tm-ai-runs__cell" data-testid="@TestId("runs-table-window")">
+                                @(entry.Segment is null ? Loc["TmScheduledRuns_TableUnplaced"] : WindowTitle(entry.Segment.Window))
+                            </td>
+                            <td class="tm-ai-runs__cell" data-testid="@TestId("runs-table-time")">
+                                @(entry.Segment is null
+                                    ? Loc["TmScheduledRuns_UnplacedUnits", UnitsText(entry.Plan.UnitsUnplaced)]
+                                    : SliceTimeText(entry.Segment))
+                            </td>
+                            <td class="tm-ai-runs__cell" data-testid="@TestId("runs-table-units")">
+                                @(entry.Segment is null ? "—" : UnitsText(entry.Segment.Units))
+                            </td>
+                            <td class="tm-ai-runs__cell" data-testid="@TestId("runs-table-status")">
+                                <span class="tm-ai-runs__status tm-ai-runs__status--@StatusSlug(entry.Plan.Run.Status)">
+                                    <span class="tm-ai-runs__status-icon" aria-hidden="true">
+                                        <TmIcon Name="@StatusIcon(entry.Plan.Run.Status)" Size="IconSize.Xs" />
+                                    </span>
+                                    <span class="tm-ai-runs__status-text">@StatusLabel(entry.Plan.Run.Status)</span>
+                                </span>
+                            </td>
+                            <td class="tm-ai-runs__cell tm-ai-runs__cell--actions">
+                                @MoveMenu(entry.Plan.Run)
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+
+            @if (AllRuns.Count == 0)
+            {
+                <p class="tm-ai-runs__empty" data-testid="@TestId("runs-empty-runs")">@Loc["TmScheduledRuns_EmptyRuns"]</p>
+            }
+        </div>
+    }
+    else
+    {
+        <div class="tm-ai-runs__board"
+             role="group"
+             aria-label="@EffectiveLabel"
+             aria-describedby="@InstructionsId"
+             data-testid="@TestId("runs-board")">
+            @foreach (var day in Days)
+            {
+                var dayView = day;
+                <section class="tm-ai-runs__day" data-testid="@TestId("runs-day")" data-day="@dayView.Day.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)">
+                    @DayHeading(dayView)
+
+                    <div class="tm-ai-runs__windows">
+                        @foreach (var view in dayView.Windows)
+                        {
+                            var windowView = view;
+                            <article class="@WindowClass(windowView)"
+                                     data-testid="@TestId("runs-window")"
+                                     data-window-id="@windowView.Window.Id"
+                                     data-overloaded="@(windowView.Window.IsOverloaded ? "true" : "false")"
+                                     data-full="@(windowView.Window.IsFull ? "true" : "false")"
+                                     aria-labelledby="@WindowId(windowView)">
+                                <header class="tm-ai-runs__window-head">
+                                    @WindowHeading(windowView)
+
+                                    <p class="tm-ai-runs__window-meta" data-testid="@TestId("runs-window-capacity")">
+                                        @CapacityText(windowView.Window)
+                                    </p>
+
+                                    @* Decorative: every number below is a sentence in the header as well. *@
+                                    <div class="tm-ai-runs__bar" aria-hidden="true" data-testid="@TestId("runs-window-bar")">
+                                        <span class="tm-ai-runs__bar-committed" style="@CommittedStyle(windowView.Window)"></span>
+                                        @foreach (var entry in windowView.Entries)
+                                        {
+                                            <span class="tm-ai-runs__bar-slice"
+                                                  data-run-id="@entry.Plan.Run.Id"
+                                                  style="@SliceStyle(entry.Segment, RunColorToken(entry.Plan.Run))"></span>
+                                        }
+                                    </div>
+
+                                    @if (windowView.Window.IsOverloaded)
+                                    {
+                                        <p class="tm-ai-runs__overload" data-testid="@TestId("runs-window-overload")">
+                                            <span class="tm-ai-runs__overload-icon" aria-hidden="true">
+                                                <TmIcon Name="@IconNames.AlertTriangle" Size="IconSize.Xs" />
+                                            </span>
+                                            <span class="tm-ai-runs__overload-text">@OverloadText(windowView.Window)</span>
+                                        </p>
+                                    }
+                                    else if (windowView.Window.IsFull)
+                                    {
+                                        <p class="tm-ai-runs__full" data-testid="@TestId("runs-window-full")">
+                                            <span class="tm-ai-runs__full-icon" aria-hidden="true">
+                                                <TmIcon Name="@IconNames.Ban" Size="IconSize.Xs" />
+                                            </span>
+                                            <span class="tm-ai-runs__full-text">@Loc["TmScheduledRuns_Full"]</span>
+                                        </p>
+                                    }
+                                    else
+                                    {
+                                        <p class="tm-ai-runs__free" data-testid="@TestId("runs-window-free")">
+                                            @Loc["TmScheduledRuns_Free", UnitsText(windowView.Window.Available)]
+                                        </p>
+                                    }
+                                </header>
+
+                                <TmSortableList TItem="ScheduledWindowEntry"
+                                                Items="windowView.Entries"
+                                                Group="@_id"
+                                                ListId="@windowView.Window.Id"
+                                                AllowLocalReorder="false"
+                                                ShowMoveMenu="false"
+                                                AriaLabel="@Loc["TmScheduledRuns_WindowList", WindowTitle(windowView.Window)]"
+                                                KeySelector="WindowEntryKey"
+                                                ItemLabelSelector="WindowEntryLabel"
+                                                OnTransfer="OnTransferAsync"
+                                                DataTestId="@TestId("runs-window-list")">
+                                    <ItemTemplate Context="entry">
+                                        @RunRow(entry)
+                                    </ItemTemplate>
+                                    <EmptyContent>
+                                        <p class="tm-ai-runs__empty" data-testid="@TestId("runs-window-empty")">
+                                            @Loc["TmScheduledRuns_EmptyWindow"]
+                                        </p>
+                                    </EmptyContent>
+                                </TmSortableList>
+                            </article>
+                        }
+                    </div>
+                </section>
+            }
+        </div>
+    }
+
+    <div class="tm-sr-only"
+         role="status"
+         aria-live="polite"
+         aria-atomic="true"
+         data-testid="@TestId("runs-announcement")">@_announcement</div>
+</section>
+
+@code {
+    /// <summary>The trigger and the three views the switcher offers.</summary>
+    private IReadOnlyList<SegmentedOption<RunViewMode>> ViewOptions =>
+    [
+        new() { Label = Loc["TmScheduledRuns_ViewWeek"], Value = RunViewMode.Week },
+        new() { Label = Loc["TmScheduledRuns_ViewDay"], Value = RunViewMode.Day },
+        new() { Label = Loc["TmScheduledRuns_ViewTable"], Value = RunViewMode.Table },
+    ];
+
+    /// <summary>One run's slice inside a window: its title, its status, its units and its move menu.</summary>
+    private RenderFragment RunRow(ScheduledWindowEntry entry) => builder =>
+    {
+        var sequence = 0;
+        builder.OpenElement(sequence++, "div");
+        builder.AddAttribute(sequence++, "class", "tm-ai-runs__run");
+        builder.AddAttribute(sequence++, "data-testid", TestId("runs-run"));
+        builder.AddAttribute(sequence++, "data-run-id", entry.Plan.Run.Id);
+        builder.AddAttribute(sequence++, "data-status", StatusSlug(entry.Plan.Run.Status));
+
+        builder.OpenElement(sequence++, "span");
+        builder.AddAttribute(sequence++, "class", "tm-ai-runs__run-dot");
+        builder.AddAttribute(sequence++, "aria-hidden", "true");
+        builder.AddAttribute(sequence++, "style", "--tm-runs-run-color: var(" + RunColorToken(entry.Plan.Run) + ")");
+        builder.CloseElement();
+
+        builder.OpenElement(sequence++, "span");
+        builder.AddAttribute(sequence++, "class", "tm-ai-runs__run-body");
+
+        builder.OpenElement(sequence++, "span");
+        builder.AddAttribute(sequence++, "class", "tm-ai-runs__run-title");
+        builder.AddAttribute(sequence++, "data-testid", TestId("runs-run-title"));
+        builder.AddContent(sequence++, TitleOf(entry.Plan.Run));
+        builder.CloseElement();
+
+        builder.OpenElement(sequence++, "span");
+        builder.AddAttribute(sequence++, "class", "tm-ai-runs__run-meta");
+        builder.AddAttribute(sequence++, "data-testid", TestId("runs-run-meta"));
+
+        builder.OpenElement(sequence++, "span");
+        builder.AddAttribute(sequence++, "class", "tm-ai-runs__status tm-ai-runs__status--" + StatusSlug(entry.Plan.Run.Status));
+        builder.OpenElement(sequence++, "span");
+        builder.AddAttribute(sequence++, "class", "tm-ai-runs__status-icon");
+        builder.AddAttribute(sequence++, "aria-hidden", "true");
+        builder.OpenComponent<TmIcon>(sequence++);
+        builder.AddAttribute(sequence++, "Name", StatusIcon(entry.Plan.Run.Status));
+        builder.AddAttribute(sequence++, "Size", IconSize.Xs);
+        builder.CloseComponent();
+        builder.CloseElement();
+        builder.OpenElement(sequence++, "span");
+        builder.AddAttribute(sequence++, "class", "tm-ai-runs__status-text");
+        builder.AddContent(sequence++, StatusLabel(entry.Plan.Run.Status));
+        builder.CloseElement();
+        builder.CloseElement();
+
+        builder.OpenElement(sequence++, "span");
+        builder.AddAttribute(sequence++, "class", "tm-ai-runs__units");
+        builder.AddAttribute(sequence++, "data-testid", TestId("runs-run-units"));
+        builder.AddContent(sequence++, UnitsText(entry.Segment.Units));
+        builder.CloseElement();
+
+        if (entry.Plan.SpansWindows)
+        {
+            builder.OpenElement(sequence++, "span");
+            builder.AddAttribute(sequence++, "class", "tm-ai-runs__part");
+            builder.AddAttribute(sequence++, "data-testid", TestId("runs-run-part"));
+            builder.AddContent(sequence++, Loc["TmScheduledRuns_Part", Invariant(entry.PartNumber), Invariant(entry.Plan.Segments.Count)]);
+            builder.CloseElement();
+        }
+
+        builder.CloseElement();
+        builder.CloseElement();
+
+        builder.OpenElement(sequence++, "div");
+        builder.AddAttribute(sequence++, "class", "tm-ai-runs__run-actions");
+        builder.AddContent(sequence++, MoveMenu(entry.Plan.Run));
+        builder.CloseElement();
+
+        builder.CloseElement();
+    };
+
+    /// <summary>
+    /// The move menu: every window, the one the run already sits in named as current and disabled. This menu is the
+    /// keyboard and tap alternative to dragging, so it never hides a window.
+    /// </summary>
+    private RenderFragment MoveMenu(ScheduledRun run) => builder =>
+    {
+        var sequence = 0;
+        builder.OpenComponent<TmContextMenu>(sequence++);
+        builder.AddAttribute(sequence++, "Class", "tm-ai-runs__move");
+        builder.AddAttribute(sequence++, "Trigger", MoveTrigger(run));
+        builder.AddAttribute(sequence++, "ChildContent", MoveItems(run));
+        builder.CloseComponent();
+    };
+
+    private RenderFragment MoveTrigger(ScheduledRun run) => builder =>
+    {
+        builder.OpenElement(0, "span");
+        builder.AddAttribute(1, "class", "tm-ai-runs__move-trigger");
+        builder.AddAttribute(2, "data-testid", TestId("runs-run-move"));
+        // A MENU glyph, never the drag grip: the row already carries the sortable module's handle, and two
+        // identical grips that do different things make a reader grab the wrong one.
+        builder.AddAttribute(3, "data-icon", IconNames.MoreVertical);
+        builder.OpenComponent<TmIcon>(4);
+        builder.AddAttribute(5, "Name", IconNames.MoreVertical);
+        builder.AddAttribute(6, "Size", IconSize.Sm);
+        builder.CloseComponent();
+        builder.OpenElement(7, "span");
+        builder.AddAttribute(8, "class", "tm-sr-only");
+        builder.AddContent(9, Loc["TmScheduledRuns_Move", TitleOf(run)]);
+        builder.CloseElement();
+        builder.CloseElement();
+    };
+
+    private RenderFragment MoveItems(ScheduledRun run) => builder =>
+    {
+        var sequence = 0;
+        var current = PlanOf(run.Id)?.FirstWindow;
+        foreach (var window in WindowList)
+        {
+            var target = window;
+            var isCurrent = current is not null && string.Equals(current.Id, target.Id, StringComparison.Ordinal);
+            var label = WindowTitle(target) + " · " + DayTitle(target.Day);
+            builder.OpenComponent<TmContextMenuItem>(sequence++);
+            builder.AddAttribute(sequence++, "Label",
+                isCurrent ? Loc["TmScheduledRuns_MoveCurrent", label] : Loc["TmScheduledRuns_MoveTo", label]);
+            builder.AddAttribute(sequence++, "Icon", IconNames.Calendar);
+            builder.AddAttribute(sequence++, "Disabled", isCurrent);
+            builder.AddAttribute(sequence++, "OnClick",
+                EventCallback.Factory.Create(this, () => MoveFromMenuAsync(run, target)));
+            builder.CloseComponent();
+        }
+    };
+
+    /// <summary>The icon of a status: the word beside it is the state, the glyph is the second cue.</summary>
+    private static string StatusIcon(ScheduledRunStatus status) => status switch
+    {
+        ScheduledRunStatus.Running => IconNames.Play,
+        ScheduledRunStatus.Succeeded => IconNames.CheckCircle,
+        ScheduledRunStatus.Failed => IconNames.XCircle,
+        ScheduledRunStatus.Paused => IconNames.Pause,
+        _ => IconNames.Clock,
+    };
+
+    /// <summary>
+    /// The surface heading. Razor cannot build a dynamic element NAME (&lt;h@Level&gt; is not a thing), so the heading is
+    /// composed here at the requested level — the same approach TmAutonomyDial uses.
+    /// </summary>
+    private RenderFragment SurfaceTitle => Heading(EffectiveHeadingLevel, "tm-ai-runs__title", TitleId,
+        TestId("runs-title"), builder => builder.AddContent(0, HeadingText));
+
+    /// <summary>One day's heading.</summary>
+    private RenderFragment DayHeading(ScheduledDayView day) => Heading(DayHeadingLevel, "tm-ai-runs__day-title",
+        DayId(day), TestId("runs-day-title"), builder => builder.AddContent(0, DayTitle(day.Day)));
+
+    /// <summary>One window's heading: its time range.</summary>
+    private RenderFragment WindowHeading(ScheduledWindowView view) => Heading(WindowHeadingLevel,
+        "tm-ai-runs__window-title", WindowId(view), TestId("runs-window-title"),
+        builder => builder.AddContent(0, WindowTitle(view.Window)));
+
+    /// <summary>One heading element at the requested level, clamped into the range a sectioning element allows.</summary>
+    private static RenderFragment Heading(int level, string cssClass, string id, string? testId, RenderFragment content)
+        => builder =>
+        {
+            builder.OpenElement(0, "h" + Math.Clamp(level, 2, 6).ToString(CultureInfo.InvariantCulture));
+            builder.AddAttribute(1, "class", cssClass);
+            builder.AddAttribute(2, "id", id);
+            if (testId is not null)
+            {
+                builder.AddAttribute(3, "data-testid", testId);
+            }
+
+            builder.AddContent(4, content);
+            builder.CloseElement();
+        };
+
+    /// <summary>The window card's class, so the state modifiers are composed in one place instead of in a mixed attribute.</summary>
+    private static string WindowClass(ScheduledWindowView view)
+    {
+        var classes = "tm-ai-runs__window";
+        if (view.Window.IsOverloaded)
+        {
+            classes += " tm-ai-runs__window--overloaded";
+        }
+
+        if (view.Window.IsFull)
+        {
+            classes += " tm-ai-runs__window--full";
+        }
+
+        return classes;
+    }
+
+    private static object WindowEntryKey(ScheduledWindowEntry entry) => entry.Plan.Run.Id;
+
+    private string WindowEntryLabel(ScheduledWindowEntry entry)
+        => TitleOf(entry.Plan.Run) + ", " + UnitsText(entry.Segment.Units);
+
+    private string DayId(ScheduledDayView day) => _id + "-day-" + day.Day.ToString("yyyyMMdd", CultureInfo.InvariantCulture);
+
+    private string WindowId(ScheduledWindowView view) => _id + "-window-" + view.Window.Id;
+
+    private static string Invariant(int value) => value.ToString(CultureInfo.InvariantCulture);
+}

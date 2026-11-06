@@ -1,0 +1,102 @@
+{
+  "kind": "Record",
+  "category": "AI",
+  "namespace": "Tempo.Blazor.AI.Models",
+  "description": "One agent as a delegate board column: who it is, how much work it can run at once, how loaded it is right now and until when it is busy. The record is a VALUE — a host recomposes it with agent with { … } when its load changes. The two load facts are the HOST's: ActiveCount is how much work the agent is running, and MaxConcurrency is how much it may run at once, so capacity is decided by the host's numbers and never by how many cards the board happens to show. A column at capacity REFUSES a drop and says so, which is why the numbers are read here rather than counted from the tasks. Nothing is invented: a MaxConcurrency below one is clamped to one (an agent that can never run anything would make its column a permanent, unexplained refusal), a negative ActiveCount reads as zero, and a BusyUntil in the past means the agent is free NOW — the board compares it with its clock instead of trusting a stale timestamp.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/AI/Agents/DelegateAgent.cs",
+  "documentationStatus": "documented",
+  "members": [
+    {
+      "name": "FreeAt",
+      "kind": "Method",
+      "type": "DateTimeOffset",
+      "description": "The instant the agent becomes free, or now when it is free already — the value the occupied-until preview projects from.",
+      "parameters": [
+        {
+          "name": "now",
+          "type": "DateTimeOffset"
+        }
+      ]
+    },
+    {
+      "name": "IsBusyAt",
+      "kind": "Method",
+      "type": "bool",
+      "description": "Whether the agent is busy at now: a timestamp in the past is not busy, because a stale timestamp would otherwise keep a free agent painted as occupied forever.",
+      "parameters": [
+        {
+          "name": "now",
+          "type": "DateTimeOffset"
+        }
+      ]
+    },
+    {
+      "name": "ActiveCount",
+      "kind": "Property",
+      "type": "int",
+      "description": "How much work the agent has in flight right now, as the HOST reports it. A negative value reads as zero."
+    },
+    {
+      "name": "Agent",
+      "kind": "Property",
+      "type": "AgentRef",
+      "description": "The shared agent identity: the column's name, initials, palette slot and the value a team reports."
+    },
+    {
+      "name": "BusyUntil",
+      "kind": "Property",
+      "type": "DateTimeOffset?",
+      "description": "Until when the agent is busy with the work it is already running. Null means \"not busy\" (or unknown), which reads the same way as a timestamp in the past: the agent is free now."
+    },
+    {
+      "name": "EffectiveMaxConcurrency",
+      "kind": "Property",
+      "type": "int",
+      "description": "The concurrency the surface actually uses: the host's value, never below one."
+    },
+    {
+      "name": "HasBusyUntil",
+      "kind": "Property",
+      "type": "bool",
+      "description": "Whether the host reported a busy-until time at all (it may already be in the past)."
+    },
+    {
+      "name": "HasCapacity",
+      "kind": "Property",
+      "type": "bool",
+      "description": "Whether the agent still has room for at least one task."
+    },
+    {
+      "name": "Id",
+      "kind": "Property",
+      "type": "string",
+      "description": "The stable identity of the agent — the value a task's AssignedAgentId matches."
+    },
+    {
+      "name": "IsFull",
+      "kind": "Property",
+      "type": "bool",
+      "description": "Whether the agent has no room left. A full agent renders a \"Full\" word plus an icon and REFUSES a drop with an announcement — a silent refusal would read as a broken drag."
+    },
+    {
+      "name": "Load",
+      "kind": "Property",
+      "type": "int",
+      "description": "The load the surface actually counts: the host's value, never below zero."
+    },
+    {
+      "name": "MaxConcurrency",
+      "kind": "Property",
+      "type": "int",
+      "description": "How many tasks the agent may run at the same time. Default 1. A value below one is clamped to one, so an agent always has room for exactly one task instead of a column that refuses everything."
+    },
+    {
+      "name": "RemainingSlots",
+      "kind": "Property",
+      "type": "int",
+      "description": "How many more tasks the agent can take right now (never negative)."
+    }
+  ],
+  "itemName": "DelegateAgent"
+}

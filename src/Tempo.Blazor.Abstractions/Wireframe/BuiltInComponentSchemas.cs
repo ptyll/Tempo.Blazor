@@ -179,6 +179,8 @@ public sealed class BuiltInComponentSchemas : IWireframeSchemaSource
             ["TmFallbackChain"] = ["fallback-chain"],
             ["TmAutonomyDial"] = ["autonomy-dial"],
             ["TmMemoryPanel"] = ["memory-panel"],
+            ["TmDelegateBoard"] = ["delegate-board"],
+            ["TmScheduledRuns"] = ["scheduled-runs"],
             ["TmPromptLibrary"] = ["prompt-library"],
             ["TmMultiViewList"] = ["list-view"],
             ["TmDataTable"] = ["data-table"],
@@ -1537,6 +1539,39 @@ public sealed class BuiltInComponentSchemas : IWireframeSchemaSource
                 P("enabled",  "Enabled",  PropType.Bool,   true, cat: "Behavior"),
                 P("filter",   "Filter",   PropType.Enum,   "all", cat: "Behavior",
                     opts: ["all", "active", "paused", "pending-review", "forgotten"]),
+            ]
+        };
+
+        yield return new WireframeComponentSchema
+        {
+            Type = "TmDelegateBoard", Category = "AI", DisplayName = "Delegate Board",
+            DefaultWidth = 640, DefaultHeight = 320,
+            Props =
+            [
+                P("title",   "Title",   PropType.String, "Delegate board", cat: "Content"),
+                P("tasks",   "Tasks",   PropType.StringList,
+                    new[] { "Draft the summary", "Collect the invoices", "Review the draft" }, cat: "Content"),
+                P("agents",  "Agents",  PropType.StringList,
+                    new[] { "Planner", "Writer", "Reviewer" }, cat: "Content"),
+                P("auto",    "Auto assign", PropType.Bool, false, cat: "Behavior"),
+                P("agentCount", "Agent columns", PropType.Int, 3, cat: "Behavior"),
+            ]
+        };
+
+        yield return new WireframeComponentSchema
+        {
+            Type = "TmScheduledRuns", Category = "AI", DisplayName = "Scheduled Runs",
+            DefaultWidth = 680, DefaultHeight = 320,
+            Props =
+            [
+                P("title",   "Title",   PropType.String, "Scheduled runs", cat: "Content"),
+                P("runs",    "Runs",    PropType.StringList,
+                    new[] { "Nightly export", "Invoice batch", "Weekly report" }, cat: "Content"),
+                P("windows", "Windows", PropType.StringList,
+                    new[] { "09:00 \u2013 12:00", "13:00 \u2013 16:00", "17:00 \u2013 20:00" }, cat: "Content"),
+                P("view",    "View",    PropType.Enum, "week", cat: "Appearance",
+                    opts: ["week", "day", "table"]),
+                P("overloaded", "Overloaded windows", PropType.Int, 1, cat: "Content"),
             ]
         };
 

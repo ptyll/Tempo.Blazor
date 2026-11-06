@@ -1184,5 +1184,9 @@
   "TmAiAgentsDemo_MemoryTitle": "Pamäť",
   "TmAiAgentsDemo_MemoryHint": "Čo si agent pamätá o pracovnom priestore: fakt upravíte, pozastavíte, zabudnete (s možnosťou vrátiť) alebo skontrolujete, čo agent navrhol.",
   "TmAiAgentsDemo_Received": "Stránka prijala: {0}",
-  "TmAiAgentsDemo_NoEvent": "Zatiaľ nič neprišlo."
+  "TmAiAgentsDemo_NoEvent": "Zatiaľ nič neprišlo.",
+  "TmAiAgentsDemo_DelegateTitle": "Rozdeľovanie úloh",
+  "TmAiAgentsDemo_DelegateHint": "Práca čakajúca na rozdelenie: potiahnite kartu na agenta (alebo použite jej ponuku Priradiť) a sledujte, ako automatický režim zaplní voľné sloty. Agent na plnej kapacite drop odmietne a povie prečo.",
+  "TmAiAgentsDemo_RunsTitle": "Naplánované behy",
+  "TmAiAgentsDemo_RunsHint": "Behy vložené do okien plánovača: kapacita každého okna, čo už hostiteľ obsadil, beh rozdelený cez dve okná a jedno okno, ktoré hostiteľ preplnil."
 }

@@ -1,0 +1,66 @@
+{
+  "kind": "Record",
+  "category": "AI",
+  "namespace": "Tempo.Blazor.AI.Models",
+  "description": "One unit of work waiting to be handed to an agent: what it is, how long it is expected to take, how urgent it is and which agent holds it right now. The record is a VALUE: the host recomposes it with task with { … } when a task is renamed, re-estimated or assigned, and no component mutates the instance it was given. Id is the identity the board keys the assignment overlay on and the value every callback reports, so a blank id is REJECTED at construction — an id the model invented would change on every rebuild of the host's snapshot and silently move a task back to the backlog. Nothing is invented. A missing EstimatedDuration means \"not estimated\" (the board prints no duration and its occupied-until preview cannot project past the agent's own load), a zero or negative one is not an estimate either, a missing Priority is not Normal, and a blank or whitespace AssignedAgentId is the same as no assignment at all.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/AI/Agents/DelegateTask.cs",
+  "documentationStatus": "documented",
+  "members": [
+    {
+      "name": "EstimatedDuration",
+      "kind": "Property",
+      "type": "TimeSpan?",
+      "description": "How long the task is expected to take. Null (the default), Zero and a negative span all mean \"not estimated\": the board shows no duration line and never claims an end time it cannot compute."
+    },
+    {
+      "name": "HasEstimate",
+      "kind": "Property",
+      "type": "bool",
+      "description": "Whether the host gave the task a usable estimate."
+    },
+    {
+      "name": "HasKnownPriority",
+      "kind": "Property",
+      "type": "bool",
+      "description": "Whether Priority is one of the declared grades (a cast integer may not be)."
+    },
+    {
+      "name": "HasPriority",
+      "kind": "Property",
+      "type": "bool",
+      "description": "Whether the host gave the task a priority."
+    },
+    {
+      "name": "Id",
+      "kind": "Property",
+      "type": "string",
+      "description": "Stable identity of the task. Never empty: construction rejects a blank value."
+    },
+    {
+      "name": "IsAssignable",
+      "kind": "Property",
+      "type": "bool",
+      "description": "Whether the task is ready to be handed to somebody. A priority and an estimate are optional, so every task in the backlog is assignable; the flag exists so a surface can ask the question in the model's own terms."
+    },
+    {
+      "name": "IsAssigned",
+      "kind": "Property",
+      "type": "bool",
+      "description": "Whether an agent holds the task right now."
+    },
+    {
+      "name": "Priority",
+      "kind": "Property",
+      "type": "DelegateTaskPriority?",
+      "description": "How urgent the task is. Null (the default) means the host has no priority for it, which renders no priority chip at all — an invented Normal would be a judgement nobody made."
+    },
+    {
+      "name": "Title",
+      "kind": "Property",
+      "type": "string",
+      "description": "The task in the host's own words. A whitespace-only title reads as empty."
+    }
+  ],
+  "itemName": "DelegateTask"
+}

@@ -1,0 +1,42 @@
+{
+  "kind": "Record",
+  "category": "AI",
+  "namespace": "Tempo.Blazor.AI.Models",
+  "description": "One committed move of a scheduled run to another window: the run, the window it sat in and the window the reader moved it to. The surface raises at most ONE of these per reader action and changes nothing itself — the host re-places the run in its own plan and re-renders. Until it does, the surface keeps the reader's pick, so the run visibly sits where it was dropped; a host that re-renders the run UNCHANGED (the same instance) does not undo that pick.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/AI/Agents/ScheduledRunMoveRequest.cs",
+  "documentationStatus": "documented",
+  "members": [
+    {
+      "name": "From",
+      "kind": "Property",
+      "type": "RunWindow?",
+      "description": "The window the run left, or null when it had no window yet."
+    },
+    {
+      "name": "IsChange",
+      "kind": "Property",
+      "type": "bool",
+      "description": "Whether the run actually changed window (a move onto the window it already sits in is not a change)."
+    },
+    {
+      "name": "Run",
+      "kind": "Property",
+      "type": "ScheduledRun",
+      "description": "The run that moved, as the host supplied it."
+    },
+    {
+      "name": "To",
+      "kind": "Property",
+      "type": "RunWindow",
+      "description": "The window the run was moved to."
+    },
+    {
+      "name": "WindowId",
+      "kind": "Property",
+      "type": "string",
+      "description": "The window id the host should store as the run's start window now."
+    }
+  ],
+  "itemName": "ScheduledRunMoveRequest"
+}

@@ -1,0 +1,374 @@
+/* ═══════════════════════════════════════════════════════════════════════════════════════════════
+   TmDelegateBoard — work handed out to agents: a backlog column, one column per agent, a task card per
+   unit of work, the Assign menu, the capacity/full state and the occupied-until preview
+   Contract: docs/delegate-board.md
+   Every rule reads a --tm-* design token (no colour literal, no raw palette step, no [data-theme]
+   block); the package's shared token gate is AiMarkdownViewCssTests and the component's own gate is
+   TmDelegateBoardCssTests.
+
+   Nothing here animates or transitions: every state is a WORD plus an icon (capacity, full, priority,
+   availability), so a state that only moves is a state a reader can miss. The drag itself is the
+   shared sortable module, whose motion is covered by core's reduce block.
+   ═══════════════════════════════════════════════════════════════════════════════════════════════ */
+
+.tm-ai-delegate {
+    /* A host lays the board out in a grid or a flex row: without this the automatic minimum width
+       grows to its content and the PAGE scrolls sideways instead of the board. */
+    min-inline-size: 0;
+
+    /* ONE knob a state modifier SETS and the base rule READS, so source order can never decide a
+       colour. The word and the icon carry the state too. */
+    --tm-delegate-priority-ink: var(--tm-text-secondary);
+    --tm-delegate-priority-fill: var(--tm-bg-surface-secondary);
+    --tm-delegate-priority-border: var(--tm-border-color);
+    --tm-delegate-availability-ink: var(--tm-text-secondary);
+
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-3);
+    padding: var(--tm-space-4);
+    border: var(--tm-border-width) solid var(--tm-border-color);
+    border-radius: var(--tm-radius-card);
+    background-color: var(--tm-bg-surface);
+    color: var(--tm-text-primary);
+    box-shadow: var(--tm-shadow-sm);
+    font-size: var(--tm-font-size-sm);
+    line-height: var(--tm-line-height-normal);
+}
+
+/* ── Header, summary, the automatic switch ───────────────────────────────────────────────── */
+
+.tm-ai-delegate__header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--tm-space-3);
+}
+
+.tm-ai-delegate__title {
+    margin: 0;
+    font-size: var(--tm-font-size-base);
+    font-weight: var(--tm-font-weight-semibold);
+}
+
+.tm-ai-delegate__summary {
+    margin: 0;
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-xs);
+    overflow-wrap: anywhere;
+}
+
+.tm-ai-delegate__auto {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-1);
+    min-inline-size: 0;
+    max-inline-size: 20rem;
+}
+
+.tm-ai-delegate__hint,
+.tm-ai-delegate__instructions {
+    margin: 0;
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-xs);
+    overflow-wrap: anywhere;
+}
+
+/* The instructions are visible on purpose: the drag and the menu are both gestures a reader has to be
+   told about once. */
+.tm-ai-delegate__instructions {
+    padding: var(--tm-space-2) var(--tm-space-3);
+    border: 1px dashed var(--tm-border-color);
+    border-radius: var(--tm-radius-control);
+    background-color: var(--tm-bg-surface-secondary);
+}
+
+/* A refusal: what did not happen and why. It stays until the next move succeeds. */
+.tm-ai-delegate__notice {
+    margin: 0;
+    padding: var(--tm-space-2) var(--tm-space-3);
+    border-inline-start: calc(var(--tm-border-width) * 3) solid var(--tm-color-warning);
+    border-radius: var(--tm-radius-control);
+    background-color: var(--tm-color-warning-subtle);
+    color: var(--tm-color-warning-text);
+    overflow-wrap: anywhere;
+}
+
+/* ── The columns ─────────────────────────────────────────────────────────────────────────── */
+
+.tm-ai-delegate__board {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+    gap: var(--tm-space-3);
+    align-items: start;
+    min-inline-size: 0;
+}
+
+.tm-ai-delegate__column {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-2);
+    min-inline-size: 0;
+    padding: var(--tm-space-2);
+    border: var(--tm-border-width) solid var(--tm-border-color);
+    border-radius: var(--tm-radius-card);
+    background-color: var(--tm-bg-surface-secondary);
+}
+
+/* The backlog is the source of every move, so it is the one column with a dashed frame: "this is the
+   pile you take from", not a state. */
+.tm-ai-delegate__column--backlog {
+    border-style: dashed;
+}
+
+.tm-ai-delegate__column--agent {
+    border-style: solid;
+}
+
+.tm-ai-delegate__column--full {
+    border-color: var(--tm-color-warning);
+}
+
+.tm-ai-delegate__column-head {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-1);
+    min-inline-size: 0;
+}
+
+.tm-ai-delegate__column-title {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-2);
+    margin: 0;
+    font-size: var(--tm-font-size-sm);
+    font-weight: var(--tm-font-weight-semibold);
+    overflow-wrap: anywhere;
+}
+
+.tm-ai-delegate__column-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: var(--tm-space-1);
+    margin: 0;
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-xs);
+}
+
+.tm-ai-delegate__capacity {
+    font-variant-numeric: tabular-nums;
+}
+
+.tm-ai-delegate__separator {
+    color: var(--tm-text-tertiary);
+}
+
+.tm-ai-delegate__queued {
+    font-variant-numeric: tabular-nums;
+}
+
+/* The occupied-until preview. A projection is a fact about the future, so it is never announced as a
+   state; its data-state decides the ink and its word decides the meaning. */
+.tm-ai-delegate__availability {
+    margin: 0;
+    color: var(--tm-delegate-availability-ink);
+    font-size: var(--tm-font-size-xs);
+    font-variant-numeric: tabular-nums;
+    overflow-wrap: anywhere;
+}
+
+.tm-ai-delegate__availability[data-state='busy'] {
+    --tm-delegate-availability-ink: var(--tm-color-warning-text);
+}
+
+.tm-ai-delegate__availability[data-state='preview'] {
+    --tm-delegate-availability-ink: var(--tm-text-primary);
+    font-weight: var(--tm-font-weight-semibold);
+}
+
+.tm-ai-delegate__full {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-1);
+    margin: 0;
+    color: var(--tm-color-warning-text);
+    font-size: var(--tm-font-size-xs);
+    font-weight: var(--tm-font-weight-semibold);
+}
+
+.tm-ai-delegate__full-icon {
+    display: inline-flex;
+    flex: none;
+}
+
+.tm-ai-delegate__full-text {
+    overflow-wrap: anywhere;
+}
+
+/* ── A task card ─────────────────────────────────────────────────────────────────────────── */
+
+.tm-ai-delegate__task {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-1);
+    min-inline-size: 0;
+    flex: 1 1 auto;
+}
+
+.tm-ai-delegate__task-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--tm-space-1);
+    min-inline-size: 0;
+}
+
+.tm-ai-delegate__task-title {
+    flex: 1 1 8rem;
+    min-inline-size: 0;
+    font-weight: var(--tm-font-weight-semibold);
+    overflow-wrap: anywhere;
+}
+
+/* The priority chip: a word, a flag and a tone. The modifiers SET the three knobs the base rule reads. */
+.tm-ai-delegate__priority {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    gap: var(--tm-space-1);
+    padding-inline: var(--tm-space-2);
+    border: var(--tm-border-width) solid var(--tm-delegate-priority-border);
+    border-radius: var(--tm-radius-full);
+    background-color: var(--tm-delegate-priority-fill);
+    color: var(--tm-delegate-priority-ink);
+    font-size: var(--tm-font-size-xs);
+    white-space: nowrap;
+}
+
+.tm-ai-delegate__priority--low {
+    --tm-delegate-priority-ink: var(--tm-text-secondary);
+    --tm-delegate-priority-fill: var(--tm-bg-surface-secondary);
+}
+
+.tm-ai-delegate__priority--normal {
+    --tm-delegate-priority-ink: var(--tm-color-info-text);
+    --tm-delegate-priority-fill: var(--tm-color-info-subtle);
+    --tm-delegate-priority-border: var(--tm-color-info-soft-border);
+}
+
+.tm-ai-delegate__priority--high {
+    --tm-delegate-priority-ink: var(--tm-color-warning-text);
+    --tm-delegate-priority-fill: var(--tm-color-warning-subtle);
+    --tm-delegate-priority-border: var(--tm-color-warning-soft-border);
+}
+
+.tm-ai-delegate__priority--urgent {
+    --tm-delegate-priority-ink: var(--tm-color-danger-text);
+    --tm-delegate-priority-fill: var(--tm-color-danger-subtle);
+    --tm-delegate-priority-border: var(--tm-color-danger-soft-border);
+}
+
+.tm-ai-delegate__priority-icon {
+    display: inline-flex;
+    flex: none;
+}
+
+.tm-ai-delegate__priority-text {
+    overflow-wrap: anywhere;
+}
+
+.tm-ai-delegate__task-meta {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-1);
+    margin: 0;
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-xs);
+    font-variant-numeric: tabular-nums;
+}
+
+.tm-ai-delegate__task-icon {
+    display: inline-flex;
+    flex: none;
+}
+
+.tm-ai-delegate__task-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-1);
+    margin-inline-start: auto;
+}
+
+/* The Assign menu: the keyboard and tap alternative to dragging (WCAG 2.5.7), so its trigger is a real
+   target whatever the pointer is. */
+.tm-ai-delegate__assign,
+.tm-ai-delegate__assign-trigger {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--tm-space-1);
+    min-inline-size: var(--tm-space-6);
+    min-block-size: var(--tm-space-6);
+    border-radius: var(--tm-radius-control);
+    color: var(--tm-text-secondary);
+    cursor: pointer;
+}
+
+.tm-ai-delegate__assign:focus-within,
+.tm-ai-delegate__assign-trigger:focus-visible {
+    outline: var(--tm-border-width) solid var(--tm-border-color-focus);
+    outline-offset: var(--tm-space-1);
+}
+
+.tm-ai-delegate__assign-trigger:hover {
+    color: var(--tm-text-primary);
+}
+
+.tm-ai-delegate__empty {
+    margin: 0;
+    padding: var(--tm-space-3);
+    border: 1px dashed var(--tm-border-color);
+    border-radius: var(--tm-radius-control);
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-xs);
+    text-align: center;
+}
+
+.tm-ai-delegate__empty--agents {
+    grid-column: 1 / -1;
+}
+
+/* A coarse pointer cannot hit a 24 px glyph, so the only per-card action grows to the shared target. */
+@media (pointer: coarse) {
+    .tm-ai-delegate__assign-trigger,
+    .tm-ai-delegate__assign {
+        min-inline-size: var(--tm-touch-target);
+        min-block-size: var(--tm-touch-target);
+    }
+}
+
+/* Forced colors: the system palette stays in charge, so the toned chips hand their borders and their
+   text to CanvasText/Canvas and every focus ring becomes a Highlight outline. */
+@media (forced-colors: active) {
+    .tm-ai-delegate__priority,
+    .tm-ai-delegate__column,
+    .tm-ai-delegate__instructions,
+    .tm-ai-delegate__empty {
+        border-color: CanvasText;
+        background-color: Canvas;
+        color: CanvasText;
+    }
+
+    .tm-ai-delegate__notice,
+    .tm-ai-delegate__full,
+    .tm-ai-delegate__availability {
+        color: CanvasText;
+    }
+
+    .tm-ai-delegate__assign:focus-within,
+    .tm-ai-delegate__assign-trigger:focus-visible {
+        outline: 2px solid Highlight;
+    }
+}

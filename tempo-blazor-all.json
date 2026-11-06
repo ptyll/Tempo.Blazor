@@ -9101,6 +9101,54 @@
           "usageExample": "<TmSortableList Items=\"@rows\" OnReorder=\"@(args => Log(args.Source, args.FromIndex, args.ToIndex))\" />"
         },
         {
+          "itemName": "SortableTransferArgs",
+          "kind": "Class",
+          "category": "Components",
+          "namespace": "Tempo.Blazor.Components.DataDisplay",
+          "description": "Describes one committed CROSS-LIST move of a TmSortableList<TItem>: the row at FromIndex of the SOURCE list (the component that raised the callback) was dropped into the list identified by ToListId at position ToIndex. Raised on the SOURCE list through OnTransfer, because that is the component that owns the moved row and can name it. The component never moves anything itself: the host removes the row from the source collection, inserts it into the target collection and re-renders — and it owns whatever announcement the move deserves, since only the host knows whether the drop was accepted (a full capacity, a read-only board) or refused. Two lists join the same drag group through the same non-empty Group value; ListId is how a host recognises the target inside its handler. ToIndex is the insertion slot the pointer resolved over the target's CURRENT rows, so rows.Count means \"after the last row\" — a host with no meaningful order inside the target (a board column) simply ignores it.",
+          "packageId": "Tempo.Blazor",
+          "sourcePath": "src/Tempo.Blazor/Components/DataDisplay/SortableTransferArgs.cs",
+          "documentationStatus": "merged",
+          "members": [
+            {
+              "name": "FromIndex",
+              "kind": "Property",
+              "type": "int",
+              "description": "The zero-based index of the moved row in the source list's items."
+            },
+            {
+              "name": "FromListId",
+              "kind": "Property",
+              "type": "string?",
+              "description": "The ListId of the list the row came from (the raising component's own id)."
+            },
+            {
+              "name": "Source",
+              "kind": "Property",
+              "type": "SortableReorderSource",
+              "description": "Which input method committed the move. A transfer only ever comes from the pointer."
+            },
+            {
+              "name": "ToIndex",
+              "kind": "Property",
+              "type": "int",
+              "description": "The insertion slot over the target list's rows at the moment of the release. Equal to the target row count when the row was dropped below the last one, so a host that cares about order can insert without an extra clamp."
+            },
+            {
+              "name": "ToListId",
+              "kind": "Property",
+              "type": "string?",
+              "description": "The ListId of the list the row was dropped into."
+            }
+          ],
+          "usageExample": "<TmSortableList TItem=\"Row\"\n                Items=\"Backlog\"\n                Group=\"board\"\n                ListId=\"backlog\"\n                AllowLocalReorder=\"false\"\n                OnTransfer=\"OnTransfer\" />",
+          "notes": [
+            "Raised on the SOURCE list (the component that owns the moved row); the host removes the row from its own collection, inserts it into the target collection and re-renders.",
+            "The component announces nothing for a transfer: only the host knows whether the drop was accepted (a column at full capacity, a read-only board), so the surface keeps ONE polite live region.",
+            "ToIndex is the insertion slot over the target's CURRENT rows, so a value equal to the target row count means \"after the last row\"."
+          ]
+        },
+        {
           "itemName": "SparklineType",
           "kind": "Enum",
           "category": "Components",
@@ -12356,6 +12404,13 @@
           ],
           "parameters": [
             {
+              "name": "AllowLocalReorder",
+              "type": "bool",
+              "isRequired": false,
+              "default": "true",
+              "description": "Whether the reader may reorder the rows INSIDE this list. Default true. A host that only wants transfers between lists (a board whose column order means nothing) sets false: the keyboard grab/drop model and the per-row move menu are then not offered at all — a row that could be moved within its list but has nowhere to go would announce a change the host ignores — and the rows stop being tab stops while the pointer drag (and its cross-list transfers) keeps working. Such a list also renders no live region of its own. The host is then responsible for a per-row alternative."
+            },
+            {
               "name": "AriaLabel",
               "type": "string?",
               "isRequired": false,
@@ -12379,6 +12434,12 @@
               "type": "RenderFragment?",
               "isRequired": false,
               "description": "Rendered instead of the localized default (\"No items to reorder.\") when Items is null or empty. The hidden instructions and the live region stay rendered either way, so the list never loses its explanation."
+            },
+            {
+              "name": "Group",
+              "type": "string?",
+              "isRequired": false,
+              "description": "The cross-list drag group this list belongs to. Two lists that pass the SAME non-empty value accept each other's rows: a row dragged out of one and dropped over the other is reported as OnTransfer instead of a reorder. Null (the default) keeps the list on its own, exactly as before this parameter existed. The gesture itself is unchanged — the same sortable module over the shared drag helper; the group only tells it which sibling lists the pointer may leave the row in, and the module marks the list it would drop into with tm-sortable-list--drop-target."
             },
             {
               "name": "HandleMode",
@@ -12412,10 +12473,22 @@
               "description": "The stable identity of one row, used both for Blazor's @key — a reordered row keeps its DOM node and any child component instance instead of being re-created in place — and for the row's data-sortable-key attribute. Null falls back to the row's index, which is stable only while the order is stable, so a host that reorders should always supply this. Keys must be unique: if the selector repeats one, every row falls back to its index (a keyed diff throws on a duplicate sibling key, so a mistaken selector degrades to an unkeyed list instead of failing the render)."
             },
             {
+              "name": "ListId",
+              "type": "string?",
+              "isRequired": false,
+              "description": "How the host recognises THIS list inside its Group — the value reported as SortableTransferArgs.ToListId when a row is dropped here, and as SortableTransferArgs.FromListId when one of this list's rows leaves. Null falls back to the component's own instance key, which is stable for the lifetime of the instance but meaningless to a host, so a group of lists a host has to tell apart should always set it."
+            },
+            {
               "name": "OnReorder",
               "type": "EventCallback<SortableReorderArgs>",
               "isRequired": false,
               "description": "Raised exactly once per committed move with the indexes of the host's Items list (FromIndex, ToIndex and the Source that committed it). Not raised when nothing moved: a grab that returned to its start, an Alt+arrow at the boundary, or a disabled list. The component does not reorder the list itself — the host applies the move and re-renders."
+            },
+            {
+              "name": "OnTransfer",
+              "type": "EventCallback<SortableTransferArgs>",
+              "isRequired": false,
+              "description": "Raised when a row of THIS list is dropped into ANOTHER list of the same Group. The component reports the move and changes nothing — the host removes the row from its own source collection, inserts it into the target one and re-renders. The component does NOT announce a transfer on its own live region: only the host knows whether the drop was accepted (a column at full capacity refuses it, for instance) and what the move is called, so the host owns that announcement and the surface keeps ONE polite region."
             },
             {
               "name": "ShowMoveMenu",
@@ -12462,7 +12535,8 @@
             "tm-sortable-list__actions",
             "tm-sortable-list__move",
             "tm-sortable-list__move-trigger",
-            "tm-sortable-list__empty"
+            "tm-sortable-list__empty",
+            "tm-sortable-list--drop-target"
           ],
           "examples": [
             {
@@ -12481,7 +12555,8 @@
           "notes": [
             "One reorder at a time: while a row is grabbed it owns the keyboard — the module stops the default action of the reorder keys on the row itself, Tab cancels the grab and moves the focus out, and Escape cancels the move, so a grab is never a keyboard trap (WCAG 2.1.2).",
             "The pointer path rides the shared pointer-drag.js and pointer-gesture.js helpers — the module owns only the list geometry and the single commit, never a second gesture implementation.",
-            "Reduced motion suppresses the row transition in animations.css, so a reader who asked for less motion sees the rows snap instead of slide."
+            "Reduced motion suppresses the row transition in animations.css, so a reader who asked for less motion sees the rows snap instead of slide.",
+            "A transfer is reported ONCE, on the SOURCE list, and the component announces nothing for it: only the host knows whether the drop was accepted and what the move is called. A transfer-only list (AllowLocalReorder=false) therefore renders no live region of its own, so a grouped surface keeps ONE polite region."
           ]
         },
         {
@@ -35689,12 +35764,12 @@
         }
       ],
       "summary": {
-        "itemCount": 447,
-        "manualItemCount": 447,
-        "generatedItemCount": 439,
+        "itemCount": 448,
+        "manualItemCount": 448,
+        "generatedItemCount": 440,
         "generatedOnlyItemCount": 0,
         "componentCount": 236,
-        "publicApiTypeCount": 203
+        "publicApiTypeCount": 204
       }
     },
     {
@@ -39968,6 +40043,156 @@
           ]
         },
         {
+          "itemName": "TmDelegateBoard",
+          "kind": "Component",
+          "category": "AI",
+          "namespace": "Tempo.Blazor.Components.AI",
+          "description": "Work handed out to agents: a backlog column and one column per agent, where a task moves by pointer drag, by the per-card Assign menu, or by the automatic pass that hands each unassigned task to the first free agent. Every card states what it is and what it costs (title, priority word, estimate) and every column states the HOST's capacity facts (ActiveCount of MaxConcurrency, how many cards it holds, and until when the agent is busy). A column at capacity is painted as full — a word plus an icon — and REFUSES a drop with an announcement instead of quietly accepting work it cannot run. The board never mutates the host's lists. It keeps its own copy of what the reader moved (the target agent per task) and drops that copy the moment the host supplies a NEW instance of the task, so a host that re-renders the same snapshot cannot undo the reader's move and a host that accepts it is never fought by a stale overlay. Every move is reported once through OnAssign or OnUnassign. Accessibility: the pointer drag is the shared tm-sortable.js over pointer-drag.js (through TmSortableList's group support — this component writes no gesture), and every card's Assign menu is the keyboard and tap alternative, so nothing is drag-only (WCAG 2.5.7). Every state is a word plus an icon, the occupied-until preview is driven by focus as well as by hover, and the surface owns exactly ONE polite live region.",
+          "packageId": "Tempo.Blazor.AI",
+          "sourcePath": "src/Tempo.Blazor.AI/Components/AI/TmDelegateBoard.razor",
+          "documentationStatus": "merged",
+          "requiredImports": [
+            "@using Tempo.Blazor.Components.AI"
+          ],
+          "parameters": [
+            {
+              "name": "Agents",
+              "type": "IReadOnlyList<DelegateAgent>?",
+              "isRequired": false,
+              "description": "The agents, one column each, in the order they should be read (and in the order the automatic pass offers them). Null or empty shows the backlog alone plus a note that there are no agents."
+            },
+            {
+              "name": "AriaLabel",
+              "type": "string?",
+              "isRequired": false,
+              "description": "The accessible name of the column area. Null uses the localized default (\"Delegate board\")."
+            },
+            {
+              "name": "AutoAssign",
+              "type": "bool",
+              "isRequired": false,
+              "description": "Whether the automatic pass runs, two-way bound with AutoAssignChanged (@bind-AutoAssign). While it is on, every unassigned task is handed to the first free agent — the one that becomes free first, per DelegateAutoAssigner — and each such move is reported through OnAssign. A task the reader puts BACK in the backlog stays there until the switch is turned off and on again, so the pass never fights the reader."
+            },
+            {
+              "name": "AutoAssignChanged",
+              "type": "EventCallback<bool>",
+              "isRequired": false,
+              "description": "Fires with the new switch state."
+            },
+            {
+              "name": "Class",
+              "type": "string?",
+              "isRequired": false,
+              "description": "Additional CSS class(es) for the root element."
+            },
+            {
+              "name": "HeadingLevel",
+              "type": "int",
+              "isRequired": false,
+              "default": "3",
+              "description": "The heading level of the rendered title, clamped to 2–6. Default 3."
+            },
+            {
+              "name": "OnAssign",
+              "type": "EventCallback<DelegateMoveRequest>",
+              "isRequired": false,
+              "description": "Raised once per committed move that puts a task on an agent (from the backlog or from another agent)."
+            },
+            {
+              "name": "OnUnassign",
+              "type": "EventCallback<DelegateMoveRequest>",
+              "isRequired": false,
+              "description": "Raised once per committed move that returns a task to the backlog."
+            },
+            {
+              "name": "ShowTitle",
+              "type": "bool",
+              "isRequired": false,
+              "default": "true",
+              "description": "Whether the heading is rendered. Default true."
+            },
+            {
+              "name": "Tasks",
+              "type": "IReadOnlyList<DelegateTask>?",
+              "isRequired": false,
+              "description": "The tasks to show, assigned or not. Null renders an empty backlog and no cards; a null entry inside the list is skipped. A task whose AssignedAgentId names an agent the board does not have stays in the backlog, so nothing can disappear."
+            },
+            {
+              "name": "TimeProvider",
+              "type": "TimeProvider?",
+              "isRequired": false,
+              "description": "The clock the occupied-until preview reads. Null takes the injected TimeProvider and falls back to System, so a test can pin the projection."
+            },
+            {
+              "name": "Title",
+              "type": "string?",
+              "isRequired": false,
+              "description": "The heading above the board. Null renders the localized default (\"Delegate board\")."
+            }
+          ],
+          "cssClasses": [
+            "tm-ai-delegate",
+            "tm-ai-delegate__header",
+            "tm-ai-delegate__title",
+            "tm-ai-delegate__summary",
+            "tm-ai-delegate__auto",
+            "tm-ai-delegate__hint",
+            "tm-ai-delegate__instructions",
+            "tm-ai-delegate__notice",
+            "tm-ai-delegate__board",
+            "tm-ai-delegate__column",
+            "tm-ai-delegate__column--backlog",
+            "tm-ai-delegate__column--agent",
+            "tm-ai-delegate__column--full",
+            "tm-ai-delegate__column-head",
+            "tm-ai-delegate__column-title",
+            "tm-ai-delegate__column-meta",
+            "tm-ai-delegate__capacity",
+            "tm-ai-delegate__separator",
+            "tm-ai-delegate__queued",
+            "tm-ai-delegate__availability",
+            "tm-ai-delegate__full",
+            "tm-ai-delegate__full-icon",
+            "tm-ai-delegate__full-text",
+            "tm-ai-delegate__task",
+            "tm-ai-delegate__task-head",
+            "tm-ai-delegate__task-title",
+            "tm-ai-delegate__priority",
+            "tm-ai-delegate__priority--low",
+            "tm-ai-delegate__priority--normal",
+            "tm-ai-delegate__priority--high",
+            "tm-ai-delegate__priority--urgent",
+            "tm-ai-delegate__priority-icon",
+            "tm-ai-delegate__priority-text",
+            "tm-ai-delegate__task-meta",
+            "tm-ai-delegate__task-icon",
+            "tm-ai-delegate__task-actions",
+            "tm-ai-delegate__assign",
+            "tm-ai-delegate__assign-trigger",
+            "tm-ai-delegate__empty",
+            "tm-ai-delegate__empty--agents"
+          ],
+          "examples": [
+            {
+              "title": "A board over the host's own tasks and agents",
+              "code": "<TmDelegateBoard Tasks=\"_tasks\"\n                 Agents=\"_agents\"\n                 @bind-AutoAssign=\"_autoAssign\"\n                 OnAssign=\"OnAssign\"\n                 OnUnassign=\"OnUnassign\" />",
+              "description": "The host supplies the tasks and the agent columns and applies every reported move to its own data. The board shows the reader's move at once and drops its copy when the host supplies a new instance of the task."
+            },
+            {
+              "title": "A board that refuses work for a busy agent",
+              "code": "var agents = new[]\n{\n    new DelegateAgent(new AgentRef(\"Planner\", \"planner\")) { MaxConcurrency = 2, ActiveCount = 2 },\n};",
+              "description": "Capacity is the HOST's: ActiveCount against MaxConcurrency. An agent at capacity renders the full word and refuses a drop with an announcement."
+            }
+          ],
+          "notes": [
+            "The board never mutates Tasks: it keeps its own copy of what the reader moved and drops that copy when the host supplies a NEW instance of the task, so a re-render of the same snapshot cannot undo the reader's move.",
+            "Capacity is decided by the host's ActiveCount and MaxConcurrency and never by how many cards a column shows: an agent at capacity refuses a drop and says so, in the visible notice line and in the ONE polite live region.",
+            "The pointer drag is the shared tm-sortable.js over pointer-drag.js, driven through TmSortableList's Group: the columns are transfer-only lists (AllowLocalReorder=false), so nothing announces an order inside a column.",
+            "Every card carries an Assign menu, which is the keyboard and tap alternative (WCAG 2.5.7) and the only keyboard path; a full agent is named as full instead of being hidden.",
+            "The occupied-until preview is driven by focus as well as by hover, because a preview that needs a mouse is not available to everybody."
+          ]
+        },
+        {
           "itemName": "TmFallbackChain",
           "kind": "Component",
           "category": "AI",
@@ -41283,6 +41508,176 @@
           ]
         },
         {
+          "itemName": "TmScheduledRuns",
+          "kind": "Component",
+          "category": "AI",
+          "namespace": "Tempo.Blazor.Components.AI",
+          "description": "Runs placed into the windows a scheduler offers: a week (or one day) of capacity bars, each bar showing what the host has already committed and where every run sits, with a run moved to another window by pointer drag or by its own menu. The placement is COMPUTED, never drawn by hand: RunWindowPlanner distributes each run's units over the windows that still have room, splits a run that does not fit in one window, fills the gaps between runs and reports the units that fit nowhere. The bar next to the plan is painted from the same segments, so the picture and the numbers cannot disagree. The surface keeps the reader's own placements (the window a run was dragged to) and drops them the moment the host supplies a NEW instance of that run, so a host that re-renders the same snapshot cannot undo the move and a host that accepts it is never fought by a stale overlay. Every move is reported once through OnMove. Accessibility: a window states its committed load, its free room and — when the host committed more than it accepts — an OVERLOADED line with an icon and a word, never a colour alone. The pointer drag is the shared tm-sortable.js over pointer-drag.js (through TmSortableList's group support) and every run's menu lists the windows, so nothing is drag-only (WCAG 2.5.7). Table is the text alternative and the surface owns exactly ONE polite live region.",
+          "packageId": "Tempo.Blazor.AI",
+          "sourcePath": "src/Tempo.Blazor.AI/Components/AI/TmScheduledRuns.razor",
+          "documentationStatus": "merged",
+          "requiredImports": [
+            "@using Tempo.Blazor.Components.AI"
+          ],
+          "parameters": [
+            {
+              "name": "AriaLabel",
+              "type": "string?",
+              "isRequired": false,
+              "description": "The accessible name of the schedule area. Null uses the localized default (\"Scheduled runs\")."
+            },
+            {
+              "name": "Class",
+              "type": "string?",
+              "isRequired": false,
+              "description": "Additional CSS class(es) for the root element."
+            },
+            {
+              "name": "HeadingLevel",
+              "type": "int",
+              "isRequired": false,
+              "default": "3",
+              "description": "The heading level of the rendered title, clamped to 2–6. Default 3."
+            },
+            {
+              "name": "OnMove",
+              "type": "EventCallback<ScheduledRunMoveRequest>",
+              "isRequired": false,
+              "description": "Raised once per committed move of a run to another window. The surface keeps the reader's pick until the host supplies a new instance of the run, so the run visibly stays where it was dropped."
+            },
+            {
+              "name": "Runs",
+              "type": "IReadOnlyList<ScheduledRun>?",
+              "isRequired": false,
+              "description": "The runs to place, in the order they compete for capacity (which is also the order the plan fills the gaps in). Null or empty renders the localized \"no runs\" state and empty windows."
+            },
+            {
+              "name": "SelectedDay",
+              "type": "DateOnly?",
+              "isRequired": false,
+              "description": "The day Day shows, two-way bound with SelectedDayChanged. Null (the default) shows the first day that has windows; the day buttons move it inside the range the windows cover."
+            },
+            {
+              "name": "SelectedDayChanged",
+              "type": "EventCallback<DateOnly>",
+              "isRequired": false,
+              "description": "Fires with the new selected day."
+            },
+            {
+              "name": "ShowTitle",
+              "type": "bool",
+              "isRequired": false,
+              "default": "true",
+              "description": "Whether the heading is rendered. Default true."
+            },
+            {
+              "name": "Title",
+              "type": "string?",
+              "isRequired": false,
+              "description": "The heading above the surface. Null renders the localized default (\"Scheduled runs\")."
+            },
+            {
+              "name": "ViewMode",
+              "type": "RunViewMode",
+              "isRequired": true,
+              "description": "Which presentation is shown, two-way bound with ViewModeChanged (@bind-ViewMode). Default Week; the reader's pick wins until the host MOVES the parameter."
+            },
+            {
+              "name": "ViewModeChanged",
+              "type": "EventCallback<RunViewMode>",
+              "isRequired": false,
+              "description": "Fires with the new view."
+            },
+            {
+              "name": "Windows",
+              "type": "IReadOnlyList<RunWindow>?",
+              "isRequired": false,
+              "description": "The windows the scheduler offers, in any order (they are rendered in their own time order). Null or empty renders the localized empty state. A window that closes before it opens, or that accepts no units, is skipped by the planner and not rendered at all."
+            }
+          ],
+          "cssClasses": [
+            "tm-ai-runs",
+            "tm-ai-runs--week",
+            "tm-ai-runs--day",
+            "tm-ai-runs--table",
+            "tm-ai-runs__header",
+            "tm-ai-runs__title",
+            "tm-ai-runs__summary",
+            "tm-ai-runs__view",
+            "tm-ai-runs__day-nav",
+            "tm-ai-runs__day-step",
+            "tm-ai-runs__current-day",
+            "tm-ai-runs__instructions",
+            "tm-ai-runs__notice",
+            "tm-ai-runs__empty",
+            "tm-ai-runs__board",
+            "tm-ai-runs__day",
+            "tm-ai-runs__day-title",
+            "tm-ai-runs__windows",
+            "tm-ai-runs__window",
+            "tm-ai-runs__window--overloaded",
+            "tm-ai-runs__window--full",
+            "tm-ai-runs__window-head",
+            "tm-ai-runs__window-title",
+            "tm-ai-runs__window-meta",
+            "tm-ai-runs__bar",
+            "tm-ai-runs__bar-committed",
+            "tm-ai-runs__bar-slice",
+            "tm-ai-runs__overload",
+            "tm-ai-runs__overload-icon",
+            "tm-ai-runs__overload-text",
+            "tm-ai-runs__full",
+            "tm-ai-runs__full-icon",
+            "tm-ai-runs__full-text",
+            "tm-ai-runs__free",
+            "tm-ai-runs__run",
+            "tm-ai-runs__run-dot",
+            "tm-ai-runs__run-body",
+            "tm-ai-runs__run-title",
+            "tm-ai-runs__run-meta",
+            "tm-ai-runs__status",
+            "tm-ai-runs__status--planned",
+            "tm-ai-runs__status--running",
+            "tm-ai-runs__status--succeeded",
+            "tm-ai-runs__status--failed",
+            "tm-ai-runs__status--paused",
+            "tm-ai-runs__status-icon",
+            "tm-ai-runs__status-text",
+            "tm-ai-runs__units",
+            "tm-ai-runs__part",
+            "tm-ai-runs__run-actions",
+            "tm-ai-runs__move",
+            "tm-ai-runs__move-trigger",
+            "tm-ai-runs__table-wrap",
+            "tm-ai-runs__table",
+            "tm-ai-runs__caption",
+            "tm-ai-runs__row",
+            "tm-ai-runs__row--unplaced",
+            "tm-ai-runs__cell",
+            "tm-ai-runs__cell--run",
+            "tm-ai-runs__cell--actions"
+          ],
+          "examples": [
+            {
+              "title": "A week of windows with the runs placed by the planner",
+              "code": "<TmScheduledRuns Windows=\"_windows\"\n                Runs=\"_runs\"\n                @bind-ViewMode=\"_view\"\n                OnMove=\"OnMove\" />",
+              "description": "The host supplies the supply windows and the runs; RunWindowPlanner distributes the units, splits a run that does not fit in one window and reports the units that fit nowhere."
+            },
+            {
+              "title": "A window the host already committed",
+              "code": "new RunWindow(\"mon-am\", mondayAtNine, mondayAtTwelve, capacity: 4, used: 3)",
+              "description": "Used is the host's committed load: it is taken out of the supply before anything is planned, and a window whose Used exceeds its Capacity is rendered as overloaded with an icon and a word."
+            }
+          ],
+          "notes": [
+            "The placement is COMPUTED, never drawn by hand: the capacity bar and the rows are painted from the same segments, so the picture and the numbers cannot disagree.",
+            "The surface keeps the reader's own placements and drops them the moment the host supplies a NEW instance of that run; a host that re-renders the same snapshot cannot undo the move.",
+            "A move to a window that has no room for even the first slice is REFUSED with a notice and an announcement instead of being reported: the surface never claims a placement the plan did not make.",
+            "RunViewMode.Table is the text alternative (WCAG 1.3.1) and carries the same move menu, so the table is as operable as the board.",
+            "The pointer drag is the shared tm-sortable.js over pointer-drag.js through TmSortableList's Group; the windows are transfer-only lists and every run's menu lists every window, so nothing is drag-only (WCAG 2.5.7)."
+          ]
+        },
+        {
           "itemName": "TmThinkingIndicator",
           "kind": "Component",
           "category": "AI",
@@ -41603,6 +41998,17 @@
           "usageExample": "<TmMemoryPanel Items=\"_items\" @bind-StatusFilter=\"_filter\" />"
         },
         {
+          "itemName": "RunViewMode",
+          "kind": "Enum",
+          "category": "Components",
+          "namespace": "Tempo.Blazor.Components.AI",
+          "description": "What a runs board shows: a WEEK of windows grouped by day, a single DAY of windows, or the same schedule as a table — the text alternative a reader who cannot use the two visual views can still read and act on. The table is not a lesser view: it carries every run, every window slice, the time each slice occupies, its units and its status, and the same move menu. What changes between the views is only the shape of the markup.",
+          "packageId": "Tempo.Blazor.AI",
+          "sourcePath": "src/Tempo.Blazor.AI/Components/AI/RunViewMode.cs",
+          "documentationStatus": "merged",
+          "usageExample": "<TmScheduledRuns Windows=\"_windows\" Runs=\"_runs\" @bind-ViewMode=\"_view\" />"
+        },
+        {
           "itemName": "AIServiceCollectionExtensions",
           "kind": "Class",
           "category": "Configuration",
@@ -41817,6 +42223,10 @@
           "kind": "Css"
         },
         {
+          "path": "src/Tempo.Blazor.AI/wwwroot/css/components/_ai-delegate-board.css",
+          "kind": "Css"
+        },
+        {
           "path": "src/Tempo.Blazor.AI/wwwroot/css/components/_ai-fallback-chain.css",
           "kind": "Css"
         },
@@ -41846,6 +42256,10 @@
         },
         {
           "path": "src/Tempo.Blazor.AI/wwwroot/css/components/_ai-prompt-library.css",
+          "kind": "Css"
+        },
+        {
+          "path": "src/Tempo.Blazor.AI/wwwroot/css/components/_ai-scheduled-runs.css",
           "kind": "Css"
         },
         {
@@ -41918,12 +42332,12 @@
         }
       ],
       "summary": {
-        "itemCount": 41,
-        "manualItemCount": 41,
-        "generatedItemCount": 41,
+        "itemCount": 44,
+        "manualItemCount": 44,
+        "generatedItemCount": 44,
         "generatedOnlyItemCount": 0,
-        "componentCount": 24,
-        "publicApiTypeCount": 17
+        "componentCount": 26,
+        "publicApiTypeCount": 18
       }
     },
     {
@@ -83731,6 +84145,238 @@
           ]
         },
         {
+          "itemName": "DelegateAgent",
+          "kind": "Record",
+          "category": "AI",
+          "namespace": "Tempo.Blazor.AI.Models",
+          "description": "One agent as a delegate board column: who it is, how much work it can run at once, how loaded it is right now and until when it is busy. The record is a VALUE — a host recomposes it with agent with { … } when its load changes. The two load facts are the HOST's: ActiveCount is how much work the agent is running, and MaxConcurrency is how much it may run at once, so capacity is decided by the host's numbers and never by how many cards the board happens to show. A column at capacity REFUSES a drop and says so, which is why the numbers are read here rather than counted from the tasks. Nothing is invented: a MaxConcurrency below one is clamped to one (an agent that can never run anything would make its column a permanent, unexplained refusal), a negative ActiveCount reads as zero, and a BusyUntil in the past means the agent is free NOW — the board compares it with its clock instead of trusting a stale timestamp.",
+          "packageId": "Tempo.Blazor.Abstractions",
+          "sourcePath": "src/Tempo.Blazor.Abstractions/AI/Agents/DelegateAgent.cs",
+          "documentationStatus": "merged",
+          "members": [
+            {
+              "name": "FreeAt",
+              "kind": "Method",
+              "type": "DateTimeOffset",
+              "description": "The instant the agent becomes free, or now when it is free already — the value the occupied-until preview projects from.",
+              "parameters": [
+                {
+                  "name": "now",
+                  "type": "DateTimeOffset"
+                }
+              ]
+            },
+            {
+              "name": "IsBusyAt",
+              "kind": "Method",
+              "type": "bool",
+              "description": "Whether the agent is busy at now: a timestamp in the past is not busy, because a stale timestamp would otherwise keep a free agent painted as occupied forever.",
+              "parameters": [
+                {
+                  "name": "now",
+                  "type": "DateTimeOffset"
+                }
+              ]
+            },
+            {
+              "name": "ActiveCount",
+              "kind": "Property",
+              "type": "int",
+              "description": "How much work the agent has in flight right now, as the HOST reports it. A negative value reads as zero."
+            },
+            {
+              "name": "Agent",
+              "kind": "Property",
+              "type": "AgentRef",
+              "description": "The shared agent identity: the column's name, initials, palette slot and the value a team reports."
+            },
+            {
+              "name": "BusyUntil",
+              "kind": "Property",
+              "type": "DateTimeOffset?",
+              "description": "Until when the agent is busy with the work it is already running. Null means \"not busy\" (or unknown), which reads the same way as a timestamp in the past: the agent is free now."
+            },
+            {
+              "name": "EffectiveMaxConcurrency",
+              "kind": "Property",
+              "type": "int",
+              "description": "The concurrency the surface actually uses: the host's value, never below one."
+            },
+            {
+              "name": "HasBusyUntil",
+              "kind": "Property",
+              "type": "bool",
+              "description": "Whether the host reported a busy-until time at all (it may already be in the past)."
+            },
+            {
+              "name": "HasCapacity",
+              "kind": "Property",
+              "type": "bool",
+              "description": "Whether the agent still has room for at least one task."
+            },
+            {
+              "name": "Id",
+              "kind": "Property",
+              "type": "string",
+              "description": "The stable identity of the agent — the value a task's AssignedAgentId matches."
+            },
+            {
+              "name": "IsFull",
+              "kind": "Property",
+              "type": "bool",
+              "description": "Whether the agent has no room left. A full agent renders a \"Full\" word plus an icon and REFUSES a drop with an announcement — a silent refusal would read as a broken drag."
+            },
+            {
+              "name": "Load",
+              "kind": "Property",
+              "type": "int",
+              "description": "The load the surface actually counts: the host's value, never below zero."
+            },
+            {
+              "name": "MaxConcurrency",
+              "kind": "Property",
+              "type": "int",
+              "description": "How many tasks the agent may run at the same time. Default 1. A value below one is clamped to one, so an agent always has room for exactly one task instead of a column that refuses everything."
+            },
+            {
+              "name": "RemainingSlots",
+              "kind": "Property",
+              "type": "int",
+              "description": "How many more tasks the agent can take right now (never negative)."
+            }
+          ]
+        },
+        {
+          "itemName": "DelegateMoveRequest",
+          "kind": "Record",
+          "category": "AI",
+          "namespace": "Tempo.Blazor.AI.Models",
+          "description": "One committed move of a task on a delegate board: the task, the agent it came from and the agent it went to. The board raises at most ONE of these per reader action and changes nothing itself — the host applies the move to its own data and re-renders. The same record describes an assignment (From null, To set), a return to the backlog (To null) and a hand-over between two agents (both set), so a host that only cares about \"who holds it now\" reads AssigneeId and ignores the rest.",
+          "packageId": "Tempo.Blazor.Abstractions",
+          "sourcePath": "src/Tempo.Blazor.Abstractions/AI/Agents/DelegateMoveRequest.cs",
+          "documentationStatus": "merged",
+          "members": [
+            {
+              "name": "AssigneeId",
+              "kind": "Property",
+              "type": "string?",
+              "description": "The agent id the host should store on the task now, or null for the backlog."
+            },
+            {
+              "name": "From",
+              "kind": "Property",
+              "type": "DelegateAgent?",
+              "description": "The agent the task came from, or null when it came from the backlog."
+            },
+            {
+              "name": "IsAssignment",
+              "kind": "Property",
+              "type": "bool",
+              "description": "Whether the task was handed to an agent (from the backlog or from another agent)."
+            },
+            {
+              "name": "IsHandover",
+              "kind": "Property",
+              "type": "bool",
+              "description": "Whether the task moved between two DIFFERENT agents. A \"move\" to the agent that already holds it is not a change and the board never reports one."
+            },
+            {
+              "name": "IsUnassignment",
+              "kind": "Property",
+              "type": "bool",
+              "description": "Whether the task went back to the backlog."
+            },
+            {
+              "name": "Task",
+              "kind": "Property",
+              "type": "DelegateTask",
+              "description": "The task that moved, as the host supplied it."
+            },
+            {
+              "name": "To",
+              "kind": "Property",
+              "type": "DelegateAgent?",
+              "description": "The agent that holds the task now, or null when it went back to the backlog."
+            }
+          ]
+        },
+        {
+          "itemName": "DelegateTask",
+          "kind": "Record",
+          "category": "AI",
+          "namespace": "Tempo.Blazor.AI.Models",
+          "description": "One unit of work waiting to be handed to an agent: what it is, how long it is expected to take, how urgent it is and which agent holds it right now. The record is a VALUE: the host recomposes it with task with { … } when a task is renamed, re-estimated or assigned, and no component mutates the instance it was given. Id is the identity the board keys the assignment overlay on and the value every callback reports, so a blank id is REJECTED at construction — an id the model invented would change on every rebuild of the host's snapshot and silently move a task back to the backlog. Nothing is invented. A missing EstimatedDuration means \"not estimated\" (the board prints no duration and its occupied-until preview cannot project past the agent's own load), a zero or negative one is not an estimate either, a missing Priority is not Normal, and a blank or whitespace AssignedAgentId is the same as no assignment at all.",
+          "packageId": "Tempo.Blazor.Abstractions",
+          "sourcePath": "src/Tempo.Blazor.Abstractions/AI/Agents/DelegateTask.cs",
+          "documentationStatus": "merged",
+          "members": [
+            {
+              "name": "EstimatedDuration",
+              "kind": "Property",
+              "type": "TimeSpan?",
+              "description": "How long the task is expected to take. Null (the default), Zero and a negative span all mean \"not estimated\": the board shows no duration line and never claims an end time it cannot compute."
+            },
+            {
+              "name": "HasEstimate",
+              "kind": "Property",
+              "type": "bool",
+              "description": "Whether the host gave the task a usable estimate."
+            },
+            {
+              "name": "HasKnownPriority",
+              "kind": "Property",
+              "type": "bool",
+              "description": "Whether Priority is one of the declared grades (a cast integer may not be)."
+            },
+            {
+              "name": "HasPriority",
+              "kind": "Property",
+              "type": "bool",
+              "description": "Whether the host gave the task a priority."
+            },
+            {
+              "name": "Id",
+              "kind": "Property",
+              "type": "string",
+              "description": "Stable identity of the task. Never empty: construction rejects a blank value."
+            },
+            {
+              "name": "IsAssignable",
+              "kind": "Property",
+              "type": "bool",
+              "description": "Whether the task is ready to be handed to somebody. A priority and an estimate are optional, so every task in the backlog is assignable; the flag exists so a surface can ask the question in the model's own terms."
+            },
+            {
+              "name": "IsAssigned",
+              "kind": "Property",
+              "type": "bool",
+              "description": "Whether an agent holds the task right now."
+            },
+            {
+              "name": "Priority",
+              "kind": "Property",
+              "type": "DelegateTaskPriority?",
+              "description": "How urgent the task is. Null (the default) means the host has no priority for it, which renders no priority chip at all — an invented Normal would be a judgement nobody made."
+            },
+            {
+              "name": "Title",
+              "kind": "Property",
+              "type": "string",
+              "description": "The task in the host's own words. A whitespace-only title reads as empty."
+            }
+          ]
+        },
+        {
+          "itemName": "DelegateTaskPriority",
+          "kind": "Enum",
+          "category": "AI",
+          "namespace": "Tempo.Blazor.AI.Models",
+          "description": "How urgent a delegated task is, as the board paints and orders it. The words are the surface's own (the model carries no text), so the same value reads \"High\" in English and \"Vysoká\" in Czech. A host that has no priority scale for its tasks leaves Priority null: an INVENTED Normal would claim a judgement nobody made, and the board would then sort by a value the host never stored.",
+          "packageId": "Tempo.Blazor.Abstractions",
+          "sourcePath": "src/Tempo.Blazor.Abstractions/AI/Agents/DelegateTaskPriority.cs",
+          "documentationStatus": "merged"
+        },
+        {
           "itemName": "FallbackAttempt",
           "kind": "Record",
           "category": "AI",
@@ -85499,6 +86145,304 @@
               "description": "One value out of Options; a value outside the list is reported as a validation error rather than substituted silently."
             }
           ]
+        },
+        {
+          "itemName": "RunSegment",
+          "kind": "Record",
+          "category": "AI",
+          "namespace": "Tempo.Blazor.AI.Models",
+          "description": "One slice of a scheduled run's work: how many units of it sit in one window, and which part of the window's time they occupy. A run longer than a window is SPLIT, and each slice is one of these — so a \"3 h batch\" over three one-hour windows reads as three slices of the same run instead of a run that magically appears three times. The record is a VALUE the planner and the host both produce; Units is what the window's capacity gives up.",
+          "packageId": "Tempo.Blazor.Abstractions",
+          "sourcePath": "src/Tempo.Blazor.Abstractions/AI/Agents/RunSegment.cs",
+          "documentationStatus": "merged",
+          "members": [
+            {
+              "name": "Duration",
+              "kind": "Property",
+              "type": "TimeSpan",
+              "description": "How long the slice lasts, or Zero when it ends before it starts."
+            },
+            {
+              "name": "EffectiveUnits",
+              "kind": "Property",
+              "type": "int",
+              "description": "The units the slice actually covers: never below zero."
+            },
+            {
+              "name": "End",
+              "kind": "Property",
+              "type": "DateTimeOffset",
+              "description": "When the slice ends."
+            },
+            {
+              "name": "Start",
+              "kind": "Property",
+              "type": "DateTimeOffset",
+              "description": "When the slice starts, in the host's timeline."
+            },
+            {
+              "name": "Units",
+              "kind": "Property",
+              "type": "int",
+              "description": "How many units of the run this slice covers. A negative value reads as zero."
+            },
+            {
+              "name": "WindowId",
+              "kind": "Property",
+              "type": "string",
+              "description": "The id of the window the slice sits in."
+            }
+          ]
+        },
+        {
+          "itemName": "RunWindow",
+          "kind": "Record",
+          "category": "AI",
+          "namespace": "Tempo.Blazor.AI.Models",
+          "description": "One window a scheduler may place work in — \"Monday 09:00–12:00, 60 units\" — with the capacity it offers and the load the host has already committed to it. The record is a VALUE: the host recomposes it with window with { … }. Capacity is the amount of work the window accepts and Used the amount already taken by work the board does not show (other schedules, reservations, the host's own backlog), so a window can be FULL or even OVERLOADED before the board places anything in it. Both are reported as words plus an icon, never as a colour alone. Nothing is invented: a window whose End is not after its Start offers no time at all (the planner skips it, and the surface never divides by its length), a negative Capacity reads as zero and a negative Used as zero. A blank Id is REJECTED at construction, because the run segments and the reader's own placement are keyed by it.",
+          "packageId": "Tempo.Blazor.Abstractions",
+          "sourcePath": "src/Tempo.Blazor.Abstractions/AI/Agents/RunWindow.cs",
+          "documentationStatus": "merged",
+          "members": [
+            {
+              "name": "Contains",
+              "kind": "Method",
+              "type": "bool",
+              "description": "Whether instant falls inside the window. The end is EXCLUSIVE: a run starting exactly when a window closes belongs to the next one, which is what makes two adjacent windows partition the timeline rather than overlap by an instant.",
+              "parameters": [
+                {
+                  "name": "instant",
+                  "type": "DateTimeOffset"
+                }
+              ]
+            },
+            {
+              "name": "Available",
+              "kind": "Property",
+              "type": "int",
+              "description": "The units still free for the board, never negative (an overloaded window offers nothing)."
+            },
+            {
+              "name": "Capacity",
+              "kind": "Property",
+              "type": "int",
+              "description": "How much work the window accepts. A negative value reads as zero through EffectiveCapacity."
+            },
+            {
+              "name": "Day",
+              "kind": "Property",
+              "type": "DateOnly",
+              "description": "The day the window belongs to, in its own offset. A window that starts at 22:00 belongs to the day it starts on; a window that starts before midnight and ends after it is still that day's window."
+            },
+            {
+              "name": "Duration",
+              "kind": "Property",
+              "type": "TimeSpan",
+              "description": "How long the window offers, or Zero when it closes before it opens."
+            },
+            {
+              "name": "EffectiveCapacity",
+              "kind": "Property",
+              "type": "int",
+              "description": "The capacity the planner actually uses: the host's value, never below zero."
+            },
+            {
+              "name": "EffectiveUsed",
+              "kind": "Property",
+              "type": "int",
+              "description": "The committed load the planner actually uses: the host's value, never below zero."
+            },
+            {
+              "name": "End",
+              "kind": "Property",
+              "type": "DateTimeOffset",
+              "description": "When the window closes."
+            },
+            {
+              "name": "HasDuration",
+              "kind": "Property",
+              "type": "bool",
+              "description": "Whether the window offers any time at all."
+            },
+            {
+              "name": "Id",
+              "kind": "Property",
+              "type": "string",
+              "description": "Stable identity of the window. Never empty: construction rejects a blank value."
+            },
+            {
+              "name": "IsFull",
+              "kind": "Property",
+              "type": "bool",
+              "description": "Whether the host's committed work already fills the window exactly (or beyond)."
+            },
+            {
+              "name": "IsOverloaded",
+              "kind": "Property",
+              "type": "bool",
+              "description": "Whether the host has committed more work than the window accepts."
+            },
+            {
+              "name": "Overflow",
+              "kind": "Property",
+              "type": "int",
+              "description": "How many units the window is over its capacity by (zero when it is not overloaded)."
+            },
+            {
+              "name": "Start",
+              "kind": "Property",
+              "type": "DateTimeOffset",
+              "description": "When the window opens."
+            },
+            {
+              "name": "Used",
+              "kind": "Property",
+              "type": "int",
+              "description": "How much capacity the host has already committed to work this surface does not show."
+            },
+            {
+              "name": "Utilization",
+              "kind": "Property",
+              "type": "double",
+              "description": "The share of the capacity that is already committed, in 0…1 (0 for a window with no capacity)."
+            }
+          ]
+        },
+        {
+          "itemName": "ScheduledRun",
+          "kind": "Record",
+          "category": "AI",
+          "namespace": "Tempo.Blazor.AI.Models",
+          "description": "One job a scheduler has to fit into run windows: what it is, how many units it needs and where it currently sits. The record is a VALUE: the host recomposes it with run with { … }, and no component mutates the instance it was given. Id is the identity the plan and the reader's own placement are keyed by, so a blank id is REJECTED at construction. Segments is what the HOST has already committed: the planner reads the first segment's window as the run's preferred start window, which is how \"move this run to Thursday\" survives a round-trip. The component recomputes the actual placement from EstimatedUnits over the windows it was given, so the plan it draws can never disagree with the capacity bars next to it. An empty list means \"no preference — first fit\".",
+          "packageId": "Tempo.Blazor.Abstractions",
+          "sourcePath": "src/Tempo.Blazor.Abstractions/AI/Agents/ScheduledRun.cs",
+          "documentationStatus": "merged",
+          "members": [
+            {
+              "name": "EstimatedUnits",
+              "kind": "Property",
+              "type": "int",
+              "description": "How much work the run needs, in abstract units the windows also count in. Zero (the default) means the run needs no capacity; a negative value reads as zero."
+            },
+            {
+              "name": "HasKnownStatus",
+              "kind": "Property",
+              "type": "bool",
+              "description": "Whether Status is one of the declared states (a cast integer may not be)."
+            },
+            {
+              "name": "HasSegments",
+              "kind": "Property",
+              "type": "bool",
+              "description": "Whether the host supplied a placement."
+            },
+            {
+              "name": "Id",
+              "kind": "Property",
+              "type": "string",
+              "description": "Stable identity of the run. Never empty: construction rejects a blank value."
+            },
+            {
+              "name": "IsPaused",
+              "kind": "Property",
+              "type": "bool",
+              "description": "Whether the run is deliberately not scheduled for now."
+            },
+            {
+              "name": "IsRunning",
+              "kind": "Property",
+              "type": "bool",
+              "description": "Whether the run is running right now."
+            },
+            {
+              "name": "IsSettled",
+              "kind": "Property",
+              "type": "bool",
+              "description": "Whether the run is finished (succeeded or failed) and no longer competes for attention."
+            },
+            {
+              "name": "NeedsCapacity",
+              "kind": "Property",
+              "type": "bool",
+              "description": "Whether the run needs any capacity at all."
+            },
+            {
+              "name": "PlannedUnits",
+              "kind": "Property",
+              "type": "int",
+              "description": "The units the plan has to place: the host's value, never below zero."
+            },
+            {
+              "name": "Segments",
+              "kind": "Property",
+              "type": "IReadOnlyList<RunSegment>",
+              "description": "The placement the host committed, or an empty list. Its FIRST segment's window is the run's preferred start window; the rest is informational (the planner recomputes the slices so they add up to the capacity it draws)."
+            },
+            {
+              "name": "Status",
+              "kind": "Property",
+              "type": "ScheduledRunStatus",
+              "description": "How the run is doing. Default Planned: an unclassified run is planned work, never a finished one."
+            },
+            {
+              "name": "Title",
+              "kind": "Property",
+              "type": "string",
+              "description": "The run in the host's own words. A whitespace-only title reads as empty."
+            }
+          ]
+        },
+        {
+          "itemName": "ScheduledRunMoveRequest",
+          "kind": "Record",
+          "category": "AI",
+          "namespace": "Tempo.Blazor.AI.Models",
+          "description": "One committed move of a scheduled run to another window: the run, the window it sat in and the window the reader moved it to. The surface raises at most ONE of these per reader action and changes nothing itself — the host re-places the run in its own plan and re-renders. Until it does, the surface keeps the reader's pick, so the run visibly sits where it was dropped; a host that re-renders the run UNCHANGED (the same instance) does not undo that pick.",
+          "packageId": "Tempo.Blazor.Abstractions",
+          "sourcePath": "src/Tempo.Blazor.Abstractions/AI/Agents/ScheduledRunMoveRequest.cs",
+          "documentationStatus": "merged",
+          "members": [
+            {
+              "name": "From",
+              "kind": "Property",
+              "type": "RunWindow?",
+              "description": "The window the run left, or null when it had no window yet."
+            },
+            {
+              "name": "IsChange",
+              "kind": "Property",
+              "type": "bool",
+              "description": "Whether the run actually changed window (a move onto the window it already sits in is not a change)."
+            },
+            {
+              "name": "Run",
+              "kind": "Property",
+              "type": "ScheduledRun",
+              "description": "The run that moved, as the host supplied it."
+            },
+            {
+              "name": "To",
+              "kind": "Property",
+              "type": "RunWindow",
+              "description": "The window the run was moved to."
+            },
+            {
+              "name": "WindowId",
+              "kind": "Property",
+              "type": "string",
+              "description": "The window id the host should store as the run's start window now."
+            }
+          ]
+        },
+        {
+          "itemName": "ScheduledRunStatus",
+          "kind": "Enum",
+          "category": "AI",
+          "namespace": "Tempo.Blazor.AI.Models",
+          "description": "How a scheduled run is doing. The board paints it as a WORD plus an icon, never as a colour alone, and the same value also decides whether the run still competes for window capacity (only Planned and Running do).",
+          "packageId": "Tempo.Blazor.Abstractions",
+          "sourcePath": "src/Tempo.Blazor.Abstractions/AI/Agents/ScheduledRunStatus.cs",
+          "documentationStatus": "merged"
         },
         {
           "itemName": "CsvColumnMapping",
@@ -124549,12 +125493,12 @@
       ],
       "libraryExamples": [],
       "summary": {
-        "itemCount": 1652,
-        "manualItemCount": 1652,
-        "generatedItemCount": 1636,
+        "itemCount": 1661,
+        "manualItemCount": 1661,
+        "generatedItemCount": 1645,
         "generatedOnlyItemCount": 0,
         "componentCount": 0,
-        "publicApiTypeCount": 1636
+        "publicApiTypeCount": 1645
       }
     },
     {
@@ -141547,10 +142491,10 @@
   ],
   "summary": {
     "packageCount": 28,
-    "itemCount": 3600,
-    "manualItemCount": 3600,
+    "itemCount": 3613,
+    "manualItemCount": 3613,
     "generatedOnlyItemCount": 0,
-    "componentCount": 554,
-    "publicApiTypeCount": 2994
+    "componentCount": 556,
+    "publicApiTypeCount": 3005
   }
 }

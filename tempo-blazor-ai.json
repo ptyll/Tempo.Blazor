@@ -1976,6 +1976,156 @@
       ]
     },
     {
+      "itemName": "TmDelegateBoard",
+      "kind": "Component",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.Components.AI",
+      "description": "Work handed out to agents: a backlog column and one column per agent, where a task moves by pointer drag, by the per-card Assign menu, or by the automatic pass that hands each unassigned task to the first free agent. Every card states what it is and what it costs (title, priority word, estimate) and every column states the HOST's capacity facts (ActiveCount of MaxConcurrency, how many cards it holds, and until when the agent is busy). A column at capacity is painted as full — a word plus an icon — and REFUSES a drop with an announcement instead of quietly accepting work it cannot run. The board never mutates the host's lists. It keeps its own copy of what the reader moved (the target agent per task) and drops that copy the moment the host supplies a NEW instance of the task, so a host that re-renders the same snapshot cannot undo the reader's move and a host that accepts it is never fought by a stale overlay. Every move is reported once through OnAssign or OnUnassign. Accessibility: the pointer drag is the shared tm-sortable.js over pointer-drag.js (through TmSortableList's group support — this component writes no gesture), and every card's Assign menu is the keyboard and tap alternative, so nothing is drag-only (WCAG 2.5.7). Every state is a word plus an icon, the occupied-until preview is driven by focus as well as by hover, and the surface owns exactly ONE polite live region.",
+      "packageId": "Tempo.Blazor.AI",
+      "sourcePath": "src/Tempo.Blazor.AI/Components/AI/TmDelegateBoard.razor",
+      "documentationStatus": "merged",
+      "requiredImports": [
+        "@using Tempo.Blazor.Components.AI"
+      ],
+      "parameters": [
+        {
+          "name": "Agents",
+          "type": "IReadOnlyList<DelegateAgent>?",
+          "isRequired": false,
+          "description": "The agents, one column each, in the order they should be read (and in the order the automatic pass offers them). Null or empty shows the backlog alone plus a note that there are no agents."
+        },
+        {
+          "name": "AriaLabel",
+          "type": "string?",
+          "isRequired": false,
+          "description": "The accessible name of the column area. Null uses the localized default (\"Delegate board\")."
+        },
+        {
+          "name": "AutoAssign",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Whether the automatic pass runs, two-way bound with AutoAssignChanged (@bind-AutoAssign). While it is on, every unassigned task is handed to the first free agent — the one that becomes free first, per DelegateAutoAssigner — and each such move is reported through OnAssign. A task the reader puts BACK in the backlog stays there until the switch is turned off and on again, so the pass never fights the reader."
+        },
+        {
+          "name": "AutoAssignChanged",
+          "type": "EventCallback<bool>",
+          "isRequired": false,
+          "description": "Fires with the new switch state."
+        },
+        {
+          "name": "Class",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Additional CSS class(es) for the root element."
+        },
+        {
+          "name": "HeadingLevel",
+          "type": "int",
+          "isRequired": false,
+          "default": "3",
+          "description": "The heading level of the rendered title, clamped to 2–6. Default 3."
+        },
+        {
+          "name": "OnAssign",
+          "type": "EventCallback<DelegateMoveRequest>",
+          "isRequired": false,
+          "description": "Raised once per committed move that puts a task on an agent (from the backlog or from another agent)."
+        },
+        {
+          "name": "OnUnassign",
+          "type": "EventCallback<DelegateMoveRequest>",
+          "isRequired": false,
+          "description": "Raised once per committed move that returns a task to the backlog."
+        },
+        {
+          "name": "ShowTitle",
+          "type": "bool",
+          "isRequired": false,
+          "default": "true",
+          "description": "Whether the heading is rendered. Default true."
+        },
+        {
+          "name": "Tasks",
+          "type": "IReadOnlyList<DelegateTask>?",
+          "isRequired": false,
+          "description": "The tasks to show, assigned or not. Null renders an empty backlog and no cards; a null entry inside the list is skipped. A task whose AssignedAgentId names an agent the board does not have stays in the backlog, so nothing can disappear."
+        },
+        {
+          "name": "TimeProvider",
+          "type": "TimeProvider?",
+          "isRequired": false,
+          "description": "The clock the occupied-until preview reads. Null takes the injected TimeProvider and falls back to System, so a test can pin the projection."
+        },
+        {
+          "name": "Title",
+          "type": "string?",
+          "isRequired": false,
+          "description": "The heading above the board. Null renders the localized default (\"Delegate board\")."
+        }
+      ],
+      "cssClasses": [
+        "tm-ai-delegate",
+        "tm-ai-delegate__header",
+        "tm-ai-delegate__title",
+        "tm-ai-delegate__summary",
+        "tm-ai-delegate__auto",
+        "tm-ai-delegate__hint",
+        "tm-ai-delegate__instructions",
+        "tm-ai-delegate__notice",
+        "tm-ai-delegate__board",
+        "tm-ai-delegate__column",
+        "tm-ai-delegate__column--backlog",
+        "tm-ai-delegate__column--agent",
+        "tm-ai-delegate__column--full",
+        "tm-ai-delegate__column-head",
+        "tm-ai-delegate__column-title",
+        "tm-ai-delegate__column-meta",
+        "tm-ai-delegate__capacity",
+        "tm-ai-delegate__separator",
+        "tm-ai-delegate__queued",
+        "tm-ai-delegate__availability",
+        "tm-ai-delegate__full",
+        "tm-ai-delegate__full-icon",
+        "tm-ai-delegate__full-text",
+        "tm-ai-delegate__task",
+        "tm-ai-delegate__task-head",
+        "tm-ai-delegate__task-title",
+        "tm-ai-delegate__priority",
+        "tm-ai-delegate__priority--low",
+        "tm-ai-delegate__priority--normal",
+        "tm-ai-delegate__priority--high",
+        "tm-ai-delegate__priority--urgent",
+        "tm-ai-delegate__priority-icon",
+        "tm-ai-delegate__priority-text",
+        "tm-ai-delegate__task-meta",
+        "tm-ai-delegate__task-icon",
+        "tm-ai-delegate__task-actions",
+        "tm-ai-delegate__assign",
+        "tm-ai-delegate__assign-trigger",
+        "tm-ai-delegate__empty",
+        "tm-ai-delegate__empty--agents"
+      ],
+      "examples": [
+        {
+          "title": "A board over the host's own tasks and agents",
+          "code": "<TmDelegateBoard Tasks=\"_tasks\"\n                 Agents=\"_agents\"\n                 @bind-AutoAssign=\"_autoAssign\"\n                 OnAssign=\"OnAssign\"\n                 OnUnassign=\"OnUnassign\" />",
+          "description": "The host supplies the tasks and the agent columns and applies every reported move to its own data. The board shows the reader's move at once and drops its copy when the host supplies a new instance of the task."
+        },
+        {
+          "title": "A board that refuses work for a busy agent",
+          "code": "var agents = new[]\n{\n    new DelegateAgent(new AgentRef(\"Planner\", \"planner\")) { MaxConcurrency = 2, ActiveCount = 2 },\n};",
+          "description": "Capacity is the HOST's: ActiveCount against MaxConcurrency. An agent at capacity renders the full word and refuses a drop with an announcement."
+        }
+      ],
+      "notes": [
+        "The board never mutates Tasks: it keeps its own copy of what the reader moved and drops that copy when the host supplies a NEW instance of the task, so a re-render of the same snapshot cannot undo the reader's move.",
+        "Capacity is decided by the host's ActiveCount and MaxConcurrency and never by how many cards a column shows: an agent at capacity refuses a drop and says so, in the visible notice line and in the ONE polite live region.",
+        "The pointer drag is the shared tm-sortable.js over pointer-drag.js, driven through TmSortableList's Group: the columns are transfer-only lists (AllowLocalReorder=false), so nothing announces an order inside a column.",
+        "Every card carries an Assign menu, which is the keyboard and tap alternative (WCAG 2.5.7) and the only keyboard path; a full agent is named as full instead of being hidden.",
+        "The occupied-until preview is driven by focus as well as by hover, because a preview that needs a mouse is not available to everybody."
+      ]
+    },
+    {
       "itemName": "TmFallbackChain",
       "kind": "Component",
       "category": "AI",
@@ -3291,6 +3441,176 @@
       ]
     },
     {
+      "itemName": "TmScheduledRuns",
+      "kind": "Component",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.Components.AI",
+      "description": "Runs placed into the windows a scheduler offers: a week (or one day) of capacity bars, each bar showing what the host has already committed and where every run sits, with a run moved to another window by pointer drag or by its own menu. The placement is COMPUTED, never drawn by hand: RunWindowPlanner distributes each run's units over the windows that still have room, splits a run that does not fit in one window, fills the gaps between runs and reports the units that fit nowhere. The bar next to the plan is painted from the same segments, so the picture and the numbers cannot disagree. The surface keeps the reader's own placements (the window a run was dragged to) and drops them the moment the host supplies a NEW instance of that run, so a host that re-renders the same snapshot cannot undo the move and a host that accepts it is never fought by a stale overlay. Every move is reported once through OnMove. Accessibility: a window states its committed load, its free room and — when the host committed more than it accepts — an OVERLOADED line with an icon and a word, never a colour alone. The pointer drag is the shared tm-sortable.js over pointer-drag.js (through TmSortableList's group support) and every run's menu lists the windows, so nothing is drag-only (WCAG 2.5.7). Table is the text alternative and the surface owns exactly ONE polite live region.",
+      "packageId": "Tempo.Blazor.AI",
+      "sourcePath": "src/Tempo.Blazor.AI/Components/AI/TmScheduledRuns.razor",
+      "documentationStatus": "merged",
+      "requiredImports": [
+        "@using Tempo.Blazor.Components.AI"
+      ],
+      "parameters": [
+        {
+          "name": "AriaLabel",
+          "type": "string?",
+          "isRequired": false,
+          "description": "The accessible name of the schedule area. Null uses the localized default (\"Scheduled runs\")."
+        },
+        {
+          "name": "Class",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Additional CSS class(es) for the root element."
+        },
+        {
+          "name": "HeadingLevel",
+          "type": "int",
+          "isRequired": false,
+          "default": "3",
+          "description": "The heading level of the rendered title, clamped to 2–6. Default 3."
+        },
+        {
+          "name": "OnMove",
+          "type": "EventCallback<ScheduledRunMoveRequest>",
+          "isRequired": false,
+          "description": "Raised once per committed move of a run to another window. The surface keeps the reader's pick until the host supplies a new instance of the run, so the run visibly stays where it was dropped."
+        },
+        {
+          "name": "Runs",
+          "type": "IReadOnlyList<ScheduledRun>?",
+          "isRequired": false,
+          "description": "The runs to place, in the order they compete for capacity (which is also the order the plan fills the gaps in). Null or empty renders the localized \"no runs\" state and empty windows."
+        },
+        {
+          "name": "SelectedDay",
+          "type": "DateOnly?",
+          "isRequired": false,
+          "description": "The day Day shows, two-way bound with SelectedDayChanged. Null (the default) shows the first day that has windows; the day buttons move it inside the range the windows cover."
+        },
+        {
+          "name": "SelectedDayChanged",
+          "type": "EventCallback<DateOnly>",
+          "isRequired": false,
+          "description": "Fires with the new selected day."
+        },
+        {
+          "name": "ShowTitle",
+          "type": "bool",
+          "isRequired": false,
+          "default": "true",
+          "description": "Whether the heading is rendered. Default true."
+        },
+        {
+          "name": "Title",
+          "type": "string?",
+          "isRequired": false,
+          "description": "The heading above the surface. Null renders the localized default (\"Scheduled runs\")."
+        },
+        {
+          "name": "ViewMode",
+          "type": "RunViewMode",
+          "isRequired": true,
+          "description": "Which presentation is shown, two-way bound with ViewModeChanged (@bind-ViewMode). Default Week; the reader's pick wins until the host MOVES the parameter."
+        },
+        {
+          "name": "ViewModeChanged",
+          "type": "EventCallback<RunViewMode>",
+          "isRequired": false,
+          "description": "Fires with the new view."
+        },
+        {
+          "name": "Windows",
+          "type": "IReadOnlyList<RunWindow>?",
+          "isRequired": false,
+          "description": "The windows the scheduler offers, in any order (they are rendered in their own time order). Null or empty renders the localized empty state. A window that closes before it opens, or that accepts no units, is skipped by the planner and not rendered at all."
+        }
+      ],
+      "cssClasses": [
+        "tm-ai-runs",
+        "tm-ai-runs--week",
+        "tm-ai-runs--day",
+        "tm-ai-runs--table",
+        "tm-ai-runs__header",
+        "tm-ai-runs__title",
+        "tm-ai-runs__summary",
+        "tm-ai-runs__view",
+        "tm-ai-runs__day-nav",
+        "tm-ai-runs__day-step",
+        "tm-ai-runs__current-day",
+        "tm-ai-runs__instructions",
+        "tm-ai-runs__notice",
+        "tm-ai-runs__empty",
+        "tm-ai-runs__board",
+        "tm-ai-runs__day",
+        "tm-ai-runs__day-title",
+        "tm-ai-runs__windows",
+        "tm-ai-runs__window",
+        "tm-ai-runs__window--overloaded",
+        "tm-ai-runs__window--full",
+        "tm-ai-runs__window-head",
+        "tm-ai-runs__window-title",
+        "tm-ai-runs__window-meta",
+        "tm-ai-runs__bar",
+        "tm-ai-runs__bar-committed",
+        "tm-ai-runs__bar-slice",
+        "tm-ai-runs__overload",
+        "tm-ai-runs__overload-icon",
+        "tm-ai-runs__overload-text",
+        "tm-ai-runs__full",
+        "tm-ai-runs__full-icon",
+        "tm-ai-runs__full-text",
+        "tm-ai-runs__free",
+        "tm-ai-runs__run",
+        "tm-ai-runs__run-dot",
+        "tm-ai-runs__run-body",
+        "tm-ai-runs__run-title",
+        "tm-ai-runs__run-meta",
+        "tm-ai-runs__status",
+        "tm-ai-runs__status--planned",
+        "tm-ai-runs__status--running",
+        "tm-ai-runs__status--succeeded",
+        "tm-ai-runs__status--failed",
+        "tm-ai-runs__status--paused",
+        "tm-ai-runs__status-icon",
+        "tm-ai-runs__status-text",
+        "tm-ai-runs__units",
+        "tm-ai-runs__part",
+        "tm-ai-runs__run-actions",
+        "tm-ai-runs__move",
+        "tm-ai-runs__move-trigger",
+        "tm-ai-runs__table-wrap",
+        "tm-ai-runs__table",
+        "tm-ai-runs__caption",
+        "tm-ai-runs__row",
+        "tm-ai-runs__row--unplaced",
+        "tm-ai-runs__cell",
+        "tm-ai-runs__cell--run",
+        "tm-ai-runs__cell--actions"
+      ],
+      "examples": [
+        {
+          "title": "A week of windows with the runs placed by the planner",
+          "code": "<TmScheduledRuns Windows=\"_windows\"\n                Runs=\"_runs\"\n                @bind-ViewMode=\"_view\"\n                OnMove=\"OnMove\" />",
+          "description": "The host supplies the supply windows and the runs; RunWindowPlanner distributes the units, splits a run that does not fit in one window and reports the units that fit nowhere."
+        },
+        {
+          "title": "A window the host already committed",
+          "code": "new RunWindow(\"mon-am\", mondayAtNine, mondayAtTwelve, capacity: 4, used: 3)",
+          "description": "Used is the host's committed load: it is taken out of the supply before anything is planned, and a window whose Used exceeds its Capacity is rendered as overloaded with an icon and a word."
+        }
+      ],
+      "notes": [
+        "The placement is COMPUTED, never drawn by hand: the capacity bar and the rows are painted from the same segments, so the picture and the numbers cannot disagree.",
+        "The surface keeps the reader's own placements and drops them the moment the host supplies a NEW instance of that run; a host that re-renders the same snapshot cannot undo the move.",
+        "A move to a window that has no room for even the first slice is REFUSED with a notice and an announcement instead of being reported: the surface never claims a placement the plan did not make.",
+        "RunViewMode.Table is the text alternative (WCAG 1.3.1) and carries the same move menu, so the table is as operable as the board.",
+        "The pointer drag is the shared tm-sortable.js over pointer-drag.js through TmSortableList's Group; the windows are transfer-only lists and every run's menu lists every window, so nothing is drag-only (WCAG 2.5.7)."
+      ]
+    },
+    {
       "itemName": "TmThinkingIndicator",
       "kind": "Component",
       "category": "AI",
@@ -3611,6 +3931,17 @@
       "usageExample": "<TmMemoryPanel Items=\"_items\" @bind-StatusFilter=\"_filter\" />"
     },
     {
+      "itemName": "RunViewMode",
+      "kind": "Enum",
+      "category": "Components",
+      "namespace": "Tempo.Blazor.Components.AI",
+      "description": "What a runs board shows: a WEEK of windows grouped by day, a single DAY of windows, or the same schedule as a table — the text alternative a reader who cannot use the two visual views can still read and act on. The table is not a lesser view: it carries every run, every window slice, the time each slice occupies, its units and its status, and the same move menu. What changes between the views is only the shape of the markup.",
+      "packageId": "Tempo.Blazor.AI",
+      "sourcePath": "src/Tempo.Blazor.AI/Components/AI/RunViewMode.cs",
+      "documentationStatus": "merged",
+      "usageExample": "<TmScheduledRuns Windows=\"_windows\" Runs=\"_runs\" @bind-ViewMode=\"_view\" />"
+    },
+    {
       "itemName": "AIServiceCollectionExtensions",
       "kind": "Class",
       "category": "Configuration",
@@ -3825,6 +4156,10 @@
       "kind": "Css"
     },
     {
+      "path": "src/Tempo.Blazor.AI/wwwroot/css/components/_ai-delegate-board.css",
+      "kind": "Css"
+    },
+    {
       "path": "src/Tempo.Blazor.AI/wwwroot/css/components/_ai-fallback-chain.css",
       "kind": "Css"
     },
@@ -3854,6 +4189,10 @@
     },
     {
       "path": "src/Tempo.Blazor.AI/wwwroot/css/components/_ai-prompt-library.css",
+      "kind": "Css"
+    },
+    {
+      "path": "src/Tempo.Blazor.AI/wwwroot/css/components/_ai-scheduled-runs.css",
       "kind": "Css"
     },
     {
@@ -3926,11 +4265,11 @@
     }
   ],
   "summary": {
-    "itemCount": 41,
-    "manualItemCount": 41,
-    "generatedItemCount": 41,
+    "itemCount": 44,
+    "manualItemCount": 44,
+    "generatedItemCount": 44,
     "generatedOnlyItemCount": 0,
-    "componentCount": 24,
-    "publicApiTypeCount": 17
+    "componentCount": 26,
+    "publicApiTypeCount": 18
   }
 }

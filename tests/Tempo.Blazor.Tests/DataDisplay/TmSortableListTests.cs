@@ -783,6 +783,218 @@ public class TmSortableListTests : LocalizationTestBase
             .Should().Be("přesunutelná položka");
     }
 
+    // ---------- cross-list transfers (plan d67b33af phase 7) ----------
+
+    private static EventCallback<SortableTransferArgs> CaptureTransfer(Action<SortableTransferArgs> sink)
+        => EventCallback.Factory.Create<SortableTransferArgs>(new object(), sink);
+
+    [Fact]
+    public void TheGroupAndTheListIdArePublishedOnTheRootAndOnTheList()
+    {
+        var cut = RenderDefault(p =>
+        {
+            p.Add(c => c.Group, "board");
+            p.Add(c => c.ListId, "backlog");
+        });
+
+        cut.Find(".tm-sortable-list").GetAttribute("data-group").Should().Be("board");
+        cut.Find(".tm-sortable-list").GetAttribute("data-list-id").Should().Be("backlog");
+        cut.Find(".tm-sortable-list__items").GetAttribute("data-sortable-group").Should().Be("board");
+        cut.Find(".tm-sortable-list__items").GetAttribute("data-sortable-list-id").Should().Be("backlog");
+    }
+
+    [Fact]
+    public void AStandaloneListPublishesNoGroup()
+    {
+        var cut = RenderDefault();
+
+        cut.Find(".tm-sortable-list").GetAttribute("data-group").Should().BeNull();
+        cut.Find(".tm-sortable-list__items").GetAttribute("data-sortable-group").Should().BeNull();
+        cut.Find(".tm-sortable-list__items").GetAttribute("data-sortable-list-id")
+            .Should().NotBeNullOrEmpty("the instance key still names the list, so a host can log it");
+    }
+
+    [Fact]
+    public async Task ACommittedTransferReportsTheTargetListAndTheInsertionSlot()
+    {
+        SortableTransferArgs? raised = null;
+        var cut = RenderDefault(p =>
+        {
+            p.Add(c => c.Group, "board");
+            p.Add(c => c.ListId, "backlog");
+            p.Add(c => c.OnTransfer, CaptureTransfer(args => raised = args));
+        });
+
+        var before = Status(cut);
+        await cut.InvokeAsync(() => cut.Instance.OnSortableTransferCommitted("agent-1", 1, 2));
+
+        raised.Should().NotBeNull();
+        raised!.FromListId.Should().Be("backlog");
+        raised.ToListId.Should().Be("agent-1");
+        raised.FromIndex.Should().Be(1);
+        raised.ToIndex.Should().Be(2);
+        raised.Source.Should().Be(SortableReorderSource.Pointer);
+        Status(cut).Should().Be(before, "the host owns the sentence: the component announces nothing");
+        Titles(cut).Should().Equal("Alpha", "Bravo", "Charlie");
+        // (a transfer changes no order by itself)
+    }
+
+    [Fact]
+    public async Task ATransferOutsideAGroupIsIgnored()
+    {
+        SortableTransferArgs? raised = null;
+        var cut = RenderDefault(p => p.Add(c => c.OnTransfer, CaptureTransfer(args => raised = args)));
+
+        await cut.InvokeAsync(() => cut.Instance.OnSortableTransferCommitted("agent-1", 0, 0));
+
+        raised.Should().BeNull("a list that shares no group has no target to report");
+    }
+
+    [Fact]
+    public async Task ATransferOfAnIndexThatDoesNotExistIsIgnored()
+    {
+        SortableTransferArgs? raised = null;
+        var cut = RenderDefault(p =>
+        {
+            p.Add(c => c.Group, "board");
+            p.Add(c => c.OnTransfer, CaptureTransfer(args => raised = args));
+        });
+
+        await cut.InvokeAsync(() => cut.Instance.OnSortableTransferCommitted("agent-1", 7, 0));
+        await cut.InvokeAsync(() => cut.Instance.OnSortableTransferCommitted("agent-1", -1, 0));
+        await cut.InvokeAsync(() => cut.Instance.OnSortableTransferCommitted("agent-1", 0, -1));
+        await cut.InvokeAsync(() => cut.Instance.OnSortableTransferCommitted(" ", 0, 0));
+
+        raised.Should().BeNull();
+    }
+
+    [Fact]
+    public void ATransferOnlyListDropsTheInListModelButKeepsItsRowsAndTheTransferTargets()
+    {
+        SortableTransferArgs? raised = null;
+        SortableReorderArgs? reorder = null;
+        var cut = RenderDefault(p =>
+        {
+            p.Add(c => c.Group, "board");
+            p.Add(c => c.ListId, "agent-1");
+            p.Add(c => c.AllowLocalReorder, false);
+            p.Add(c => c.OnTransfer, CaptureTransfer(args => raised = args));
+            p.Add(c => c.OnReorder, Capture(args => reorder = args));
+        });
+
+        // Nothing offers an in-list move any more: no row is a tab stop and no move menu is rendered.
+        cut.FindAll(".tm-sortable-list__item").Should().OnlyContain(item => item.GetAttribute("tabindex") == null);
+        cut.FindAll(".tm-sortable-list__move").Should().BeEmpty();
+
+        // Nothing announces anything: a transfer-only list renders no live region at all, because the host owns
+        // the sentence (only it knows whether the drop was accepted).
+        cut.FindAll("[aria-live]").Should().BeEmpty();
+        Grab(cut, 0);
+        Key(Item(cut, 0), "ArrowDown");
+        Drop(cut, 0);
+
+        // The rows keep their content and their structure, and the pointer path still transfers.
+        Titles(cut).Should().Equal("Alpha", "Bravo", "Charlie");
+        cut.Find(".tm-sortable-list__items").GetAttribute("aria-describedby").Should().NotBeNull();
+        cut.Instance.OnSortableTransferCommitted("backlog", 0, 1).GetAwaiter().GetResult();
+
+        reorder.Should().BeNull();
+        raised.Should().NotBeNull("only the in-list model was switched off");
+        raised!.ToIndex.Should().Be(1);
+    }
+
+    [Fact]
+    public void ATransferOnlyListExplainsItsOwnKeyboardPath()
+    {
+        var cut = RenderDefault(p =>
+        {
+            p.Add(c => c.Group, "board");
+            p.Add(c => c.AllowLocalReorder, false);
+        });
+
+        var describedBy = cut.Find(".tm-sortable-list__items").GetAttribute("aria-describedby");
+        cut.Find($"#{describedBy}").TextContent.Should().Contain("another list")
+            .And.NotContain("arrow keys", "a list that cannot be reordered never teaches the reorder keys");
+    }
+
+    [Fact]
+    public void ATransferOnlyRowDoesNotClaimToBeASortableItem()
+    {
+        var cut = RenderDefault(p =>
+        {
+            p.Add(c => c.Group, "board");
+            p.Add(c => c.AllowLocalReorder, false);
+        });
+
+        // Nothing offers a keyboard grab in a transfer-only list, so announcing every card as a "sortable
+        // item" would promise an interaction the reader cannot perform.
+        Item(cut, 0).GetAttribute("aria-roledescription").Should().BeNull();
+        Item(cut, 0).GetAttribute("aria-describedby").Should().BeNull(
+            "the list already carries the transfer instructions; a second pointer to the same text on every row is noise");
+
+        // The LIST keeps both its role and its instructions: the rows are still list items of a described list.
+        cut.Find(".tm-sortable-list__items").GetAttribute("role").Should().Be("list");
+        cut.Find(".tm-sortable-list__items").GetAttribute("aria-describedby").Should().NotBeNull();
+    }
+
+    [Fact]
+    public void ALocalReorderListStillNamesItsRowsASortableItem()
+    {
+        // The guard for the fix above: the default list keeps the description AND its per-row instructions.
+        var cut = RenderDefault();
+
+        Item(cut, 0).GetAttribute("aria-roledescription").Should().Be("sortable item");
+        Item(cut, 0).GetAttribute("aria-describedby")
+            .Should().Be(cut.Find(".tm-sortable-list__items").GetAttribute("aria-describedby"));
+    }
+
+    // ---------- the module registration of an empty list (the drop target of a group) ----------
+
+    private const string SortableModulePath = "./_content/Tempo.Blazor/js/tm-sortable.js";
+
+    private BunitJSModuleInterop SetupSortableModule()
+    {
+        var module = JSInterop.SetupModule(SortableModulePath);
+        module.SetupVoid("attachSortable", _ => true).SetVoidResult();
+        module.SetupVoid("detachSortable", _ => true).SetVoidResult();
+        return module;
+    }
+
+    [Fact]
+    public void AnEmptyGroupedListStaysAttachedSoItCanReceiveADroppedRow()
+    {
+        var module = SetupSortableModule();
+
+        var cut = RenderList(p =>
+        {
+            p.Add(c => c.Items, Array.Empty<Row>());
+            p.Add(c => c.Group, "board");
+            p.Add(c => c.ListId, "agent-1");
+            p.Add(c => c.AllowLocalReorder, false);
+        });
+
+        // The module resolves a cross-list drop target from its OWN registry, so a list that detaches while it
+        // has no rows can never receive the first card of a column that is still empty.
+        cut.WaitForAssertion(() => module.Invocations.Count(invocation => invocation.Identifier == "attachSortable")
+            .Should().Be(1, "an empty column of a board is a drop target and keeps its registration"));
+        cut.Find(".tm-sortable-list__items").Should().NotBeNull("the draggable root is rendered even without rows");
+        cut.Find(".tm-sortable-list__items").ClassList.Should().Contain("tm-sortable-list__items--empty",
+            "the stylesheet gives the empty list a non-zero hit box so the pointer can actually be over it");
+    }
+
+    [Fact]
+    public void AnEmptyStandaloneListNeverLoadsTheModule()
+    {
+        var module = SetupSortableModule();
+
+        RenderList(p => p.Add(c => c.Items, Array.Empty<Row>()));
+
+        // Nothing to drag and no group to receive a row from: today's behaviour keeps no registration and does not
+        // even import the module for a list that can never be dragged.
+        module.Invocations.Should().BeEmpty();
+        JSInterop.Invocations.Select(invocation => invocation.Identifier).Should().NotContain("import");
+    }
+
     /// <summary>Renders its own instance id, so a keyed diff is observable from the DOM.</summary>
     public sealed class KeyProbe : ComponentBase
     {
