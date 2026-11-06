@@ -1,7 +1,4 @@
 .tm-notion-diagram-edit-modal {
-    position: fixed;
-    inset: 0;
-    z-index: var(--tm-z-modal);
     display: flex;
     flex-direction: column;
     background: var(--tm-bg-surface);

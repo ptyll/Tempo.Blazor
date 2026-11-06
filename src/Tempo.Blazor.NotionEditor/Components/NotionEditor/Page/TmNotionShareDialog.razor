@@ -1,32 +1,24 @@
 @namespace Tempo.Blazor.Components.NotionEditor.Page
 @inherits Tempo.Blazor.Components.TmComponentBase
 @using Tempo.Blazor.NotionEditor.Interfaces
+@using Tempo.Blazor.Components.Buttons
+@using Tempo.Blazor.Components.Feedback
+@using Tempo.Blazor.Components.Icons
+@using Tempo.Blazor.Components.Inputs
 
-@if (Visible)
-{
-    <div class="tm-npsd-backdrop" aria-hidden="true" @onclick="CloseAsync"></div>
-    <section class="tm-npsd"
-             role="dialog"
-             aria-modal="true"
-             aria-labelledby="tm-npsd-title"
-             data-testid="@TestId("notion-share-dialog")"
-             @onclick:stopPropagation="true">
-        <header class="tm-npsd__header">
-            <div>
-                <h2 id="tm-npsd-title">@Loc["Notion_Share_Title"]</h2>
-                <p>@Loc["Notion_Share_AnonymousReadOnly"]</p>
-            </div>
-            <button class="tm-npsd__icon-btn"
-                    type="button"
-                    aria-label="@Loc["Tm_Close"]"
-                    title="@Loc["Tm_Close"]"
-                    @onclick="CloseAsync">
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-                    <path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-                </svg>
-            </button>
-        </header>
-
+@* Phase 7 (N8): the share dialog rides the core TmModal — a sheet on mobile. No own backdrop
+   or z-index. An active link keeps its fields locked (NO5); revoking asks first. *@
+<TmModal Show="Visible"
+         OnClose="CloseAsync"
+         Title="@Loc["Notion_Share_Title"]"
+         Subtitle="@Loc["Notion_Share_AnonymousReadOnly"]"
+         Size="ModalSize.Medium"
+         MobilePresentation="MobilePresentation.Sheet"
+         LayoutMode="LayoutMode"
+         CloseOnOverlayClick="false"
+         Class="tm-npsd-host"
+         data-testid="@TestId("notion-share-dialog")">
+    <ChildContent>
         @if (_loading)
         {
             <div class="tm-npsd__loading" role="status" aria-busy="true">
@@ -36,29 +28,31 @@
         }
         else
         {
-            <div class="tm-npsd__body">
-                <div class="tm-npsd__status @StatusClass"
-                     data-testid="@StatusTestId">
+            <div class="tm-npsd">
+                <div class="tm-npsd__status @StatusClass" data-testid="@StatusTestId">
                     <span class="tm-npsd__status-dot" aria-hidden="true"></span>
                     <span>@StatusText</span>
                 </div>
 
                 @if (IsShareUsable)
                 {
-                    <p id="tm-npsd-locked-hint" class="tm-npsd__locked-hint" data-testid="@TestId("notion-share-locked-hint")">
+                    <p id="tm-npsd-locked-hint" class="tm-npsd__hint" data-testid="@TestId("notion-share-locked-hint")">
+                        <TmIcon Name="@IconNames.Lock" Size="IconSize.Xs" />
                         @Loc["Notion_Share_LockedHint"]
                     </p>
                 }
+                else
+                {
+                    <p class="tm-npsd__hint">@Loc["Notion_Share_CreateHint"]</p>
+                }
 
-                <label class="tm-npsd__toggle">
-                    <input type="checkbox"
-                           checked="@_allowComments"
-                           disabled="@(_saving || IsShareUsable)"
-                           aria-describedby="@(IsShareUsable ? "tm-npsd-locked-hint" : null)"
-                           data-testid="@TestId("notion-share-allow-comments")"
-                           @onchange="HandleAllowCommentsChanged" />
-                    <span>@Loc["Notion_Share_AllowComments"]</span>
-                </label>
+                <TmToggle Value="_allowComments"
+                          ValueChanged="HandleAllowCommentsChanged"
+                          Label="@Loc["Notion_Share_AllowComments"]"
+                          Disabled="@(_saving || IsShareUsable)"
+                          AriaDescribedBy="@(IsShareUsable ? "tm-npsd-locked-hint" : null)"
+                          Class="tm-npsd__toggle"
+                          data-testid="@TestId("notion-share-allow-comments")" />
 
                 <div class="tm-npsd__field">
                     <label for="tm-npsd-expires">@Loc["Notion_Share_Expires"]</label>
@@ -83,18 +77,13 @@
                                    value="@ShareUrl"
                                    readonly
                                    data-testid="@TestId("notion-share-url")" />
-                            <button class="tm-npsd__secondary"
-                                    type="button"
-                                    disabled="@_copying"
-                                    data-testid="@TestId("notion-share-copy")"
-                                    @onclick="CopyAsync">
-                                @if (_copying)
-                                {
-                                    <span class="tm-npsd__spinner" aria-hidden="true"></span>
-                                }
-                                @Loc["Notion_Share_Copy"]
-                            </button>
+                            <TmCopyButton Text="@ShareUrl"
+                                          ShowLabel="true"
+                                          Class="tm-npsd__copy"
+                                          data-testid="@TestId("notion-share-copy")"
+                                          OnCopied="AnnounceCopied" />
                         </div>
+                        <p class="tm-npsd__live" role="status" aria-live="polite" data-testid="@TestId("notion-share-copied")">@_copied</p>
                     </div>
                 }
 
@@ -103,41 +92,46 @@
                     <div class="tm-npsd__error" role="alert">@_error</div>
                 }
             </div>
-
-            <footer class="tm-npsd__footer">
-                <button class="tm-npsd__secondary" type="button" @onclick="CloseAsync">
-                    @Loc["Tm_Close"]
-                </button>
-
-                @if (IsShareUsable)
-                {
-                    <button class="tm-npsd__danger"
-                            type="button"
-                            disabled="@_saving"
-                            data-testid="@TestId("notion-share-revoke")"
-                            @onclick="RevokeAsync">
-                        @if (_saving)
-                        {
-                            <span class="tm-npsd__spinner" aria-hidden="true"></span>
-                        }
-                        @Loc["Notion_Share_Revoke"]
-                    </button>
-                }
-                else
-                {
-                    <button class="tm-npsd__primary"
-                            type="button"
-                            disabled="@_saving"
-                            data-testid="@TestId("notion-share-create")"
-                            @onclick="CreateAsync">
-                        @if (_saving)
-                        {
-                            <span class="tm-npsd__spinner" aria-hidden="true"></span>
-                        }
-                        @Loc["Notion_Share_CreateLink"]
-                    </button>
-                }
-            </footer>
         }
-    </section>
-}
+    </ChildContent>
+    <Footer>
+        @if (!_loading)
+        {
+            <div class="tm-npsd__footer tm-npsd__footer--split" data-testid="@TestId("notion-share-footer")">
+                <TmButton Variant="ButtonVariant.Ghost" OnClick="CloseAsync">@Loc["Tm_Close"]</TmButton>
+                <div class="tm-npsd__footer-end">
+                    @if (IsShareUsable)
+                    {
+                        <TmButton Variant="ButtonVariant.Danger"
+                                  Disabled="_saving"
+                                  OnClick="AskRevoke"
+                                  data-testid="@TestId("notion-share-revoke")">
+                            @Loc["Notion_Share_Revoke"]
+                        </TmButton>
+                    }
+                    else
+                    {
+                        <TmButton Variant="ButtonVariant.Primary"
+                                  Disabled="_saving"
+                                  OnClick="CreateAsync"
+                                  data-testid="@TestId("notion-share-create")">
+                            @Loc["Notion_Share_CreateLink"]
+                        </TmButton>
+                    }
+                </div>
+            </div>
+        }
+    </Footer>
+</TmModal>
+
+<TmDialog Show="_confirmRevoke"
+          Type="DialogType.Confirm"
+          Variant="DialogVariant.Warning"
+          IsDangerous="true"
+          Title="@Loc["Notion_Share_RevokeConfirmTitle"]"
+          Message="@Loc["Notion_Share_RevokeConfirmBody"]"
+          OkButtonText="@Loc["Notion_Share_Revoke"]"
+          CancelButtonText="@Loc["Tm_Cancel"]"
+          LayoutMode="ResolvedLayout"
+          OnResult="HandleRevokeResult"
+          data-testid="notion-share-revoke-confirm" />

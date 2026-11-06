@@ -1,7 +1,5 @@
 .tm-notion-wireframe-edit-modal {
-    position: fixed;
-    inset: 0;
-    z-index: var(--tm-z-modal);
+    position: relative;
     display: flex;
     flex-direction: column;
     background: var(--tm-bg-surface);

@@ -116,6 +116,8 @@ public class TmNotionMediaUploadDialogLibraryTests : LocalizationTestBase
 
         var btn = cut.Find(".tm-media-library__item");
         await cut.InvokeAsync(() => btn.Click());
+        confirmed.Url.Should().BeNull("a click only selects; Insert confirms");
+        await cut.InvokeAsync(() => cut.Find("[data-testid=notion-media-insert]").Click());
 
         confirmed.Url.Should().Be("https://example.com/photo.jpg");
     }
@@ -144,6 +146,7 @@ public class TmNotionMediaUploadDialogLibraryTests : LocalizationTestBase
         cut.WaitForState(() => cut.FindAll(".tm-media-library__item").Count > 0);
 
         await cut.InvokeAsync(() => cut.Find(".tm-media-library__item").Click());
+        await cut.InvokeAsync(() => cut.Find("[data-testid=notion-media-insert]").Click());
 
         confirmed.FileId.Should().Be("img42");
     }

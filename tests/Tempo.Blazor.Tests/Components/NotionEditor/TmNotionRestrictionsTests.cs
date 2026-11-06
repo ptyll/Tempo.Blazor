@@ -209,6 +209,69 @@ public sealed class TmNotionRestrictionsTests : LocalizationTestBase
         });
     }
 
+    [Fact]
+    public async Task RestrictionsDialog_EnterInTheIdField_AddsTheEntry()
+    {
+        var provider = new RestrictionProvider();
+        var cut = Render<TmNotionRestrictionsDialog>(p => p
+            .Add(x => x.Visible, true)
+            .Add(x => x.PageId, RestrictionProvider.PageId)
+            .Add(x => x.Provider, provider));
+
+        cut.WaitForAssertion(() => cut.Find("[data-testid=notion-restrictions-subject]").Should().NotBeNull());
+        cut.Find("[data-testid=notion-restrictions-subject]").Input("alice");
+        await cut.Find("[data-testid=notion-restrictions-add-form]").SubmitAsync();
+
+        cut.WaitForAssertion(() =>
+            cut.FindAll("[data-testid=notion-restrictions-entry]").Should().ContainSingle()
+                .Which.TextContent.Should().Contain("alice"));
+    }
+
+    [Fact]
+    public async Task RestrictionsDialog_RemoveRestrictions_AppliesOnlyAfterSave()
+    {
+        var provider = new RestrictionProvider();
+        await provider.SetRestrictionsAsync(new PageRestrictionDto
+        {
+            PageId = RestrictionProvider.PageId,
+            Mode = PageRestrictionMode.EditForSome,
+            Entries = [new PageRestrictionEntryDto { SubjectType = PageRestrictionSubjectType.User, SubjectId = "bob", Permission = PageRestrictionPermission.Edit }]
+        });
+        var cut = Render<TmNotionRestrictionsDialog>(p => p
+            .Add(x => x.Visible, true)
+            .Add(x => x.PageId, RestrictionProvider.PageId)
+            .Add(x => x.Provider, provider));
+
+        cut.WaitForAssertion(() => cut.FindAll("[data-testid=notion-restrictions-entry]").Should().ContainSingle());
+        await cut.Find("[data-testid=notion-restrictions-remove-all]").ClickAsync(new Microsoft.AspNetCore.Components.Web.MouseEventArgs());
+
+        provider.Restrictions.Mode.Should().Be(PageRestrictionMode.EditForSome, "nothing is saved until Save");
+        provider.Restrictions.Entries.Should().ContainSingle();
+
+        await cut.Find("[data-testid=notion-restrictions-save]").ClickAsync(new Microsoft.AspNetCore.Components.Web.MouseEventArgs());
+        cut.WaitForAssertion(() =>
+        {
+            provider.Restrictions.Mode.Should().Be(PageRestrictionMode.Open);
+            provider.Restrictions.Entries.Should().BeEmpty();
+        });
+    }
+
+    [Fact]
+    public void RestrictionsDialog_Footer_SitsOutsideTheScrollContainer()
+    {
+        var cut = Render<TmNotionRestrictionsDialog>(p => p
+            .Add(x => x.Visible, true)
+            .Add(x => x.PageId, RestrictionProvider.PageId)
+            .Add(x => x.Provider, new RestrictionProvider()));
+
+        cut.WaitForAssertion(() =>
+        {
+            var scroll = cut.Find("[data-testid=notion-restrictions-scroll]");
+            scroll.QuerySelector("[data-testid=notion-restrictions-remove-all]").Should().BeNull();
+            cut.Find(".tm-modal-footer [data-testid=notion-restrictions-remove-all]").Should().NotBeNull();
+        });
+    }
+
     private sealed class RestrictionProvider : INotionDataProvider, INotionEditorBlockService, INotionPermissionProvider
     {
         public static readonly Guid PageId = Guid.Parse("cf200000-0000-0000-0000-000000000001");

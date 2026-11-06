@@ -1834,6 +1834,40 @@ public sealed class Eb1BaselineRenderer
         MergeOriginColumn = originColumn
     };
 
+    public void SeedE2EPhase7SurfacesPage()
+    {
+        RemoveBlocksForPages(MockNotionDataStore.Page1Id);
+        AddTo(Guid.Parse("eb700000-0000-0000-0000-000000000001"), MockNotionDataStore.Page1Id, BlockType.Paragraph, 0, new TextBlockContent
+        {
+            Html = "Phase 7 evidence paragraph."
+        });
+        AddTo(Guid.Parse("eb700000-0000-0000-0000-000000000011"), MockNotionDataStore.Page1Id, BlockType.Image, 1, new ImageBlockContent
+        {
+            Url = string.Empty,
+            Caption = "Upload target"
+        });
+        AddTo(Guid.Parse("eb700000-0000-0000-0000-000000000040"), MockNotionDataStore.Page1Id, BlockType.Diagram, 2, new DiagramBlockContent
+        {
+            Caption = "Phase 7 diagram"
+        });
+        AddTo(Guid.Parse("eb700000-0000-0000-0000-000000000120"), MockNotionDataStore.Page1Id, BlockType.TemplateButton, 3, new TemplateButtonBlockContent
+        {
+            Label = "Insert status update",
+            TemplateBlocks =
+            [
+                new PageBlock
+                {
+                    Id = Guid.Parse("eb700000-0000-0000-0000-000000000121"),
+                    PageId = MockNotionDataStore.Page1Id,
+                    Type = BlockType.Paragraph,
+                    Content = new TextBlockContent { Html = "Status update" },
+                    CreatedAt = DateTime.UtcNow,
+                    LastEditedAt = DateTime.UtcNow
+                }
+            ]
+        });
+    }
+
     public void SeedE2EMediaPage()
     {
         RemoveBlocksForPages(MockNotionDataStore.Page1Id);

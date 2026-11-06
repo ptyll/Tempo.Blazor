@@ -10,7 +10,7 @@
 <TmOverlayPanel Anchor="ResolvedAnchor"
                 IsOpen="IsOpen"
                 IsOpenChanged="OnOpenChanged"
-                LayoutMode="LayoutMode"
+                LayoutMode="ResolvedLayout"
                 MobilePresentation="PanelPresentation.Auto"
                 Placement="Placement"
                 Align="Align"
@@ -21,12 +21,14 @@
                 TrapFocus="TrapFocus"
                 InitialFocusSelector="@InitialFocusSelector"
                 SheetInitialFocusSelector="@SheetInitialFocusSelector"
-                CloseOnEscape="true"
+                CloseOnEscape="CloseOnEscape"
+                Class="@Class"
                 CloseOnOutsidePointerDown="true"
                 OnDismissed="OnDismissed">
     @* The consumer class rides the body wrapper — the only surface rendered in BOTH the popover
-       and the sheet presentation (the core overlay never forwards Class onto the sheet content).
-       E2E selectors and the scoped card rules key off it. *@
+       and the sheet presentation (the core overlay never forwards Class onto the sheet content,
+       so passing it on the panel would style the popover only). E2E selectors and the scoped
+       card rules key off this wrapper. *@
     <div class="tm-notion-floating-menu__body @Class">
         @* The sheet header carries the title (SheetTitle is always passed) — an inner copy would
            render it twice. *@

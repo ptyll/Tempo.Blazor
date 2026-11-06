@@ -123,4 +123,18 @@ public class TmNotionSpreadsheetEditModalTests : LocalizationTestBase
 
         cut.FindComponents<TmSpreadsheet>().Should().HaveCount(1);
     }
+
+    [Fact]
+    public async Task Footer_PutsDiscardBeforeSave_AndSaveStaysEnabled()
+    {
+        var cut = Render<TmNotionSpreadsheetEditModal>(p => p
+            .Add(x => x.SpreadsheetDocumentId, Guid.NewGuid()));
+
+        await cut.InvokeAsync(() => { });
+
+        var footer = cut.Find("[data-testid='notion-tempo-modal-footer']").InnerHtml;
+        footer.IndexOf("notion-tempo-modal-discard", StringComparison.Ordinal)
+            .Should().BeLessThan(footer.IndexOf("notion-tempo-modal-save", StringComparison.Ordinal));
+        cut.Find("[data-testid='notion-tempo-modal-save']").HasAttribute("disabled").Should().BeFalse();
+    }
 }

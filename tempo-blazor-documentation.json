@@ -24779,6 +24779,12 @@
           "description": "Id of the rendered panel element. Defaults to a generated value; supply one when the anchor should reference it (e.g. via aria-controls). In sheet mode the id lands on the content wrapper inside the drawer body, so the reference resolves in both presentations."
         },
         {
+          "name": "InitialFocusSelector",
+          "type": "string?",
+          "isRequired": false,
+          "description": "CSS selector of the element a trapped desktop popover focuses first. Null keeps the first focusable."
+        },
+        {
           "name": "InitialMode",
           "type": "TmLayoutMode",
           "isRequired": false,

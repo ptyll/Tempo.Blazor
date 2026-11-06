@@ -206,7 +206,7 @@ public sealed class TmNotionDbDialogsTests : LocalizationTestBase
         var cut = RenderRecordDetail(provider, onClose: () => closed++);
 
         cut.Find(".tm-dbrd__title-input").Input("Renamed record");
-        cut.Find(".tm-dbrd__footer-main button").Click();
+        cut.Find(".tm-dbrd__footer-main .tm-btn-primary").Click();
 
         cut.WaitForAssertion(() =>
         {

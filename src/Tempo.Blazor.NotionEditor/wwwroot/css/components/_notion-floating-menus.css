@@ -68,6 +68,14 @@
     width: min(32rem, calc(100vw - var(--tm-space-4)));
 }
 
+/* A phone sheet is the viewport: the panel must not sit narrower than the screen. */
+.tm-overlay-panel-sheet .tm-notion-ai,
+.tm-overlay-panel-sheet .tm-notion-ai--panel {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
 /* ── Phase 4 (NO1): comment popover panel roots (TmNotionBlockCommentPanel /
    TmNotionTextCommentPanel) — anchored at the bubble position through a zero-size fixed
    anchor span; the card inside keeps only sizing. ── */
@@ -100,6 +108,51 @@
     color: var(--tm-text-primary);
 }
 
+/* N12: the tempo edit modal fills its panel. The class rides the TmModal overlay, so a scoped
+   rule in the shell can never match it. Default stays XLarge (the 900px ceiling); Maximize and
+   the phone presentation are the fullscreen paths. */
+.tm-modal-overlay.tm-notion-tempo-modal .tm-modal-container,
+.tm-modal-overlay.tm-notion-tempo-modal .tm-modal {
+    width: 100%;
+    max-height: min(90vh, 100%);
+    display: flex;
+    flex-direction: column;
+}
+
+.tm-modal-overlay.tm-notion-tempo-modal--maximized .tm-modal-container,
+.tm-modal-overlay.tm-notion-tempo-modal--maximized .tm-modal,
+.tm-modal-overlay.tm-notion-tempo-modal.tm-modal--fullscreen-presentation .tm-modal-container,
+.tm-modal-overlay.tm-notion-tempo-modal.tm-modal--fullscreen-presentation .tm-modal {
+    width: 100%;
+    height: 100%;
+    max-width: none;
+    max-height: 100%;
+}
+
+/* History is a tall surface: the split (or the phone list) must end at the modal footer. */
+.tm-modal-overlay.tm-nph-host .tm-modal-container,
+.tm-modal-overlay.tm-nph-host .tm-modal {
+    display: flex;
+    flex-direction: column;
+    max-height: 100%;
+}
+
+.tm-modal-overlay.tm-nph-host .tm-modal-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.tm-modal-overlay.tm-notion-tempo-modal .tm-modal-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
 .tm-overlay-panel-sheet .tm-npsm,
 .tm-overlay-panel-sheet__content .tm-npsm {
     width: 100%;
@@ -110,7 +163,9 @@
     /* The scoped card clips at overflow:hidden and never scrolls. A sheet whose stored
        viewport is still the previous band must scroll to the last item instead of hiding it. */
     overflow: auto;
-    max-height: calc(var(--tm-sheet-max, 0.85) * var(--tm-sheet-viewport, 100dvh));
+    /* --tm-sheet-* are defined only on .tm-sheet. This body is not one, so the core
+       space token is the defined ceiling (a sheet already clips its own panel). */
+    max-height: 100%;
 }
 
 /* ── N5: floating-menu bodies inside the core bottom sheet ───────────────────

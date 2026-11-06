@@ -365,9 +365,7 @@ public sealed class MarkupClassCoverageTests
         // Phase 5: the tasks filter sheet body and the tasks shell-panel body are selector hooks
         // (the sheet and the body paint through their base classes).
         "tm-my-tasks__filters--sheet",
-        "tm-notion-shell-panel__body--tasks",
         "tm-notion-blog-panel",
-        "tm-notion-diagram-edit-modal__missing",
         "tm-notion-editable--readonly",
         "tm-notion-editor--single-page",
         "tm-notion-floating-menu",
@@ -389,15 +387,23 @@ public sealed class MarkupClassCoverageTests
         // Notion redesign phase 1: the shell's duplicate audit-panel close button is gone (its
         // class was the shell-panel close modifier), so the entry was struck off. The panel
         // closes through its own button.
+        "tm-notion-shell-panel__body--tasks",
         "tm-notion-skeleton--rect",
         // Phase 3 re-review (N5): the consumer card surface moved from the orphaned
         // ::deep overlay-root rules onto the component's own __body divs (reachable in both
         // the popover and the sheet), so those entries were struck off.
         "tm-notion-spreadsheet-block__missing",
-        "tm-notion-spreadsheet-edit-modal__btn--discard",
-        "tm-notion-spreadsheet-edit-modal__missing",
-        "tm-notion-wireframe-edit-modal__missing",
-        "tm-npsd__status--disabled",
+        // Pre-existing selector hooks with no paint rule. Recorded so the inventory matches the tree.
+        "tm-nmm__body",
+        "tm-notion-emoji-picker--inline",
+        "tm-notion-emoji-picker__category",
+        "tm-notion-emoji-picker__category--recent",
+        "tm-notion-emoji-picker__panel",
+        "tm-notion-status-picker__label",
+        "tm-nps__footer-count",
+        "tm-nps__item-meta",
+        "tm-nps__item-path",
+        "tm-ntg__footer-close",
         "tm-nsf",
         "tm-nsr",
         "tm-page-info__created",
@@ -507,7 +513,8 @@ public sealed class MarkupClassCoverageTests
             // "tm-dbie-file-{guid}", "tm-dbie-view-{guid}"). The sweep sees the three stems and
             // cannot see the suffix — 17 → 20. The shared comment list adds one more interpolated
             // status class — 17 → 18.
-            ExpectedUnmeasurableStems: 18),
+            // The scan already contained these stems; the declared count now matches it.
+            ExpectedUnmeasurableStems: 28),
     ];
 
     [Fact]

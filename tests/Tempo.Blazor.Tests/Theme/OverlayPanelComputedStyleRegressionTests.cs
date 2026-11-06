@@ -442,7 +442,8 @@ public sealed class OverlayPanelComputedStyleRegressionTests
         ".tm-overlay-panel-sheet .tm-date-range-footer",
         ".tm-overlay-panel-sheet .tm-context-menu__item",
         ".tm-overlay-panel-sheet .tm-context-menu__divider",
-        ".tm-overlay-panel-sheet .tm-notification-bell__title",
+        // The bell title rule was removed: the sheet header already names the surface, and the
+        // in-panel title is gone, so there is nothing left to hide.
         ".tm-overlay-panel-sheet .tm-notification-bell__list",
         ".tm-overlay-panel-sheet .tm-notification-bell__header",
         ".tm-overlay-panel-sheet .tm-notification-bell__item",

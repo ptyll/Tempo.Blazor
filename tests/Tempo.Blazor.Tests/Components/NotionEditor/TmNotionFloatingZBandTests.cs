@@ -154,34 +154,28 @@ public sealed class TmNotionFloatingZBandTests
             + "stale z-index band duplicate must stay deleted");
     }
 
-    /// <summary>A dialog that covers the page rides the modal band, not a private number.</summary>
-    [Theory]
-    [InlineData("UI/TmNotionMediaUploadDialog")]
-    public void DialogSurfaces_SitOnTheModalBand(string scopedCss)
+    /// <summary>A dialog that covers the page rides the core TmModal, so its own CSS claims no band.</summary>
+    [Fact]
+    public void DialogSurfaces_ClaimNoPrivateBand()
     {
         var css = File.ReadAllText(Path.Combine(
             FindRepositoryRoot(), "src", "Tempo.Blazor.NotionEditor",
-            "Components", "NotionEditor", $"{scopedCss}.razor.css"));
+            "Components", "NotionEditor", "UI", "TmNotionMediaUploadDialog.razor.css"));
 
-        AnyLevel.Matches(css).Should().ContainSingle()
-            .Which.Groups[1].Value.Should().Contain("--tm-z-modal");
+        AnyLevel.Matches(css).Should().BeEmpty("the media dialog rides TmModal");
     }
 
-    /// <summary>Full-screen take-overs ride the overlay band; their dialogs stack above it.</summary>
-    [Theory]
-    [InlineData("UI/TmNotionPageHistory", "--tm-z-overlay", 4)]
-    public void FullScreenTakeOvers_SitOnTheOverlayBand(string scopedCss, string band, int overlayDeclarations)
+    /// <summary>Full-screen take-overs ride TmModal; their own CSS claims no overlay band.</summary>
+    [Fact]
+    public void FullScreenTakeOvers_ClaimNoPrivateBand()
     {
         var css = File.ReadAllText(Path.Combine(
             FindRepositoryRoot(), "src", "Tempo.Blazor.NotionEditor",
-            "Components", "NotionEditor", $"{scopedCss}.razor.css"));
+            "Components", "NotionEditor", "UI", "TmNotionPageHistory.razor.css"));
 
-        var declarations = AnyLevel.Matches(css);
-        var onBand = declarations.Count(d => d.Groups[1].Value.Contains(band, StringComparison.Ordinal));
-        onBand.Should().Be(
-            overlayDeclarations,
-            $"{scopedCss}: backdrop+panel ride {band}; PageHistory's confirm dialog stacks two "
-            + "same-band offsets above its panel and its toast rides --tm-z-toast");
+        AnyLevel.Matches(css)
+            .Count(match => match.Groups[1].Value.Contains("--tm-z-overlay", StringComparison.Ordinal))
+            .Should().Be(0, "page history rides TmModal");
     }
 
     private static string FindRepositoryRoot()

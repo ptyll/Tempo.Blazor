@@ -53,9 +53,10 @@ public sealed class TmNotionPageHistoryDiffTests : LocalizationTestBase
 
         host.WaitForAssertion(() => host.FindAll(".tm-nph__version-item").Should().HaveCount(2));
 
-        await host.FindAll(".tm-nph__version-item")[0].ClickAsync(new MouseEventArgs());
-        await host.Find(".tm-nph__toolbar-btn--secondary").ClickAsync(new MouseEventArgs());
-        await host.FindAll(".tm-nph__version-item")[1].ClickAsync(new MouseEventArgs());
+        // Picking is the checkbox; the row click only previews. Older version first.
+        await host.FindAll("[data-testid='notion-history-pick']")[1].ChangeAsync(new ChangeEventArgs { Value = true });
+        await host.FindAll("[data-testid='notion-history-pick']")[0].ChangeAsync(new ChangeEventArgs { Value = true });
+        await host.Find("[data-testid='notion-history-compare-selected']").ClickAsync(new MouseEventArgs());
 
         host.WaitForAssertion(() =>
         {

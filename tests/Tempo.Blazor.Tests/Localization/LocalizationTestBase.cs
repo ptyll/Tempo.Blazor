@@ -207,6 +207,12 @@ public abstract class LocalizationTestBase : BunitContext
 
     protected static MockTmLocalizer BuildEnglishLocalizer() => new(new Dictionary<string, string>
     {
+        ["TmNotionAiMenu_CharCount"] = "{0} / {1}",
+        ["TmNotionAiMenu_Copy"] = "Copy result",
+        ["TmNotionTempoEditorModal_DiscardConfirm"] = "Discard changes",
+        ["TmNotionTempoEditorModal_DiscardMessage"] = "You have unsaved changes. Discard them and close the editor?",
+        ["TmNotionTempoEditorModal_DiscardTitle"] = "Discard changes?",
+        ["TmNotionTempoEditor_Maximize"] = "Maximize",
         ["TmNotionColor_Blue"] = "Blue",
         ["TmNotionColor_Brown"] = "Brown",
         ["TmNotionColor_Default"] = "Default",
@@ -1042,6 +1048,7 @@ public abstract class LocalizationTestBase : BunitContext
         ["Notion_Share_Active"] = "Active",
         ["Notion_Share_Expired"] = "Public link has expired.",
         ["Notion_Share_Disabled"] = "Public sharing is disabled for this page.",
+        ["Notion_Share_CreateHint"] = "Anyone with the link can view this page.",
         ["Notion_Share_CreateLink"] = "Create link",
         ["Notion_Share_Revoke"] = "Revoke link",
         ["Notion_Share_Copy"] = "Copy",
@@ -5414,6 +5421,12 @@ public abstract class LocalizationTestBase : BunitContext
 
     public static MockTmLocalizer BuildCzechLocalizer() => new(new Dictionary<string, string>
     {
+        ["TmNotionAiMenu_CharCount"] = "{0} / {1}",
+        ["TmNotionAiMenu_Copy"] = "Kopírovat výsledek",
+        ["TmNotionTempoEditorModal_DiscardConfirm"] = "Zahodit změny",
+        ["TmNotionTempoEditorModal_DiscardMessage"] = "Máte neuložené změny. Zahodit je a zavřít editor?",
+        ["TmNotionTempoEditorModal_DiscardTitle"] = "Zahodit změny?",
+        ["TmNotionTempoEditor_Maximize"] = "Maximalizovat",
         ["TmNotionColor_Blue"] = "Modrá",
         ["TmNotionColor_Brown"] = "Hnědá",
         ["TmNotionColor_Default"] = "Výchozí",
@@ -6271,6 +6284,7 @@ public abstract class LocalizationTestBase : BunitContext
         ["TmNotionDbFieldEditor_MoveOptionDown"] = "Posunout dolů",
         ["TmNotionDbTemplateEditor_EditTitle"] = "Upravit šablonu",
         ["TmNotionDbImportExport_ChooseFile"] = "Vybrat soubor",
+        ["Notion_Share_CreateHint"] = "Kdokoli s odkazem může tuto stránku zobrazit.",
         ["Notion_Share_LockedHint"] = "Komentáře a platnost aktivního odkazu jsou pevné. Zrušte odkaz, chcete-li je změnit.",
         ["TmDataTable_SaveRow"]            = "Uložit",
         ["TmDataTable_CancelEdit"]          = "Zrušit",

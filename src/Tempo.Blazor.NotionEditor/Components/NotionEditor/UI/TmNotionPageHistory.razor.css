@@ -1,12 +1,12 @@
 /* ── Backdrop ──────────────────────────────────────────────────────────────── */
 
-.tm-nph-backdrop {
-    position: fixed;
-    inset: 0;
-    z-index: calc(var(--tm-z-overlay) - 1);
-    background: var(--tm-bg-overlay);
-    backdrop-filter: blur(2px);
-    animation: tm-nph-fade-in 120ms ease;
+.tm-nph__pick,
+.tm-nph__back,
+.tm-nph__footer,
+.tm-nph__restore,
+.tm-nph__summary,
+.tm-nph-host {
+    color: var(--tm-text-primary);
 }
 
 @keyframes tm-nph-fade-in {
@@ -17,13 +17,12 @@
 /* ── Panel (full overlay, split layout) ────────────────────────────────────── */
 
 .tm-nph {
-    position: fixed;
-    inset: 0;
-    z-index: var(--tm-z-overlay);
+    position: relative;
     display: flex;
     font-size: 14px;
     color: var(--tm-text-primary);
-    pointer-events: none;
+    pointer-events: auto;
+    height: 100%;
     animation: tm-nph-slide-in 160ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
@@ -134,7 +133,11 @@
 /* ── Version item ──────────────────────────────────────────────────────────── */
 
 .tm-nph__version-item {
-    padding: 9px 16px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--tm-space-1) var(--tm-space-2);
+    padding: var(--tm-space-2) var(--tm-space-3);
     cursor: pointer;
     border-left: 3px solid transparent;
     transition: background 80ms, border-color 80ms;
@@ -661,16 +664,12 @@
 
 /* ── Restore confirm dialog ────────────────────────────────────────────────── */
 
-.tm-nph-confirm-backdrop {
-    position: fixed;
-    inset: 0;
-    z-index: calc(var(--tm-z-overlay) + 10);
-    background: var(--tm-bg-overlay);
+.tm-nph-confirm-host {
+    color: var(--tm-text-primary);
 }
 
 .tm-nph-confirm {
-    position: fixed;
-    z-index: calc(var(--tm-z-overlay) + 11);
+    position: relative;
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
@@ -773,119 +772,64 @@
     color: var(--tm-color-on-primary-fixed);
 }
 
-/* ── Responsive: narrow screens ────────────────────────────────────────────── */
+/* Mobile drill-in is layout-driven (data-layout), never a viewport media query.
+   The column ends at the modal footer so the page below it does not scroll. */
 
-@media (max-width: 640px) {
-    .tm-nph {
-        flex-direction: column;
-        overflow: hidden;
-    }
+.tm-nph[data-layout="mobile"] {
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
+}
 
-    .tm-nph__sidebar {
-        width: 100%;
-        max-height: 232px;
-        border-right: 0;
-        border-bottom: 1px solid var(--tm-border-color);
-    }
+.tm-nph[data-layout="mobile"] .tm-nph__sidebar,
+.tm-nph[data-layout="mobile"] .tm-nph__content {
+    width: 100%;
+    max-width: 100%;
+    max-height: none;
+    flex: 1 1 auto;
+    min-height: 0;
+}
 
-    .tm-nph__sidebar-header {
-        padding: 12px 14px 10px;
-    }
+.tm-nph[data-layout="mobile"] .tm-nph__version-list {
+    display: flex;
+    flex-direction: column;
+    overflow-x: hidden;
+    overflow-y: auto;
+}
 
-    .tm-nph__compare-banner {
-        align-items: flex-start;
-        gap: 8px;
-        padding: 8px 14px;
-    }
+.tm-nph[data-layout="mobile"][data-mobile-preview="False"] .tm-nph__content,
+.tm-nph[data-layout="mobile"][data-mobile-preview="false"] .tm-nph__content {
+    display: none;
+}
 
-    .tm-nph__compare-cancel {
-        flex: 0 0 auto;
-    }
+.tm-nph[data-layout="mobile"][data-mobile-preview="True"] .tm-nph__sidebar,
+.tm-nph[data-layout="mobile"][data-mobile-preview="true"] .tm-nph__sidebar {
+    display: none;
+}
 
-    .tm-nph__version-list {
-        display: flex;
-        gap: 8px;
-        overflow-x: auto;
-        overflow-y: hidden;
-        padding: 8px 12px;
-        scroll-snap-type: x proximity;
-    }
+.tm-nph__pick {
+    flex: 0 0 auto;
+    width: var(--tm-space-4);
+    height: var(--tm-space-4);
+    margin: var(--tm-space-2);
+}
 
-    .tm-nph__version-list::-webkit-scrollbar {
-        height: 4px;
-        width: auto;
-    }
+.tm-nph__footer {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--tm-space-2);
+    justify-content: flex-end;
+    width: 100%;
+}
 
-    .tm-nph__version-item {
-        flex: 0 0 min(248px, 78vw);
-        border-left: 0;
-        border-top: 3px solid transparent;
-        border-radius: 7px;
-        background: var(--tm-bg-elevated, var(--tm-bg-surface));
-        scroll-snap-align: start;
-    }
-
-    .tm-nph__version-item--selected,
-    .tm-nph__version-item--compare-from {
-        border-left-color: transparent;
-        border-top-color: var(--tm-color-primary);
-    }
-
-    .tm-nph__version-item--compare-to {
-        border-left-color: transparent;
-        border-top-color: var(--tm-color-success);
-    }
-
-    .tm-nph__content {
-        min-height: 0;
-    }
-
-    .tm-nph__toolbar {
-        align-items: flex-start;
-        flex-direction: column;
-        gap: 10px;
-        padding: 10px 14px;
-    }
-
-    .tm-nph__toolbar-info {
-        flex-wrap: wrap;
-        width: 100%;
-    }
-
-    .tm-nph__toolbar-actions {
-        flex-wrap: wrap;
-        width: 100%;
-    }
-
-    .tm-nph__toolbar-btn {
-        flex: 1 1 118px;
-        justify-content: center;
-        min-height: 34px;
-        padding-inline: 10px;
-        white-space: normal;
-    }
-
-    .tm-nph__diff-legend {
-        flex-wrap: wrap;
-        gap: 8px 12px;
-        padding: 8px 14px;
-    }
-
-    .tm-nph__legend-item {
-        flex: 1 1 118px;
-    }
-
-    .tm-nph__preview {
-        padding: 20px 16px;
-    }
-
-    .tm-nph-confirm {
-        width: min(400px, calc(100vw - 32px));
-    }
-
-    .tm-nph__toast {
-        width: min(360px, calc(100vw - 32px));
-        justify-content: center;
-        white-space: normal;
+@media (pointer: coarse) {
+    .tm-nph__version-item,
+    .tm-nph__pick,
+    .tm-nph__page-btn,
+    .tm-nph__toolbar-btn,
+    .tm-nph__compare-cancel,
+    .tm-nph__footer ::deep .tm-btn {
+        min-height: var(--tm-touch-target);
+        min-width: var(--tm-touch-target);
     }
 }

@@ -79,7 +79,7 @@ public class TmNotionPhase1FixTests : LocalizationTestBase
 
         cut.WaitForState(() => cut.FindAll("[data-testid=notion-share-locked-hint]").Count == 1);
 
-        cut.Find("[data-testid=notion-share-allow-comments]").HasAttribute("disabled").Should().BeTrue();
+        cut.Find("[data-testid=notion-share-allow-comments] input.tm-toggle-input").HasAttribute("disabled").Should().BeTrue();
         cut.Find("[data-testid=notion-share-expires]").HasAttribute("disabled").Should().BeTrue();
         cut.Markup.Should().Contain("Comments and expiry are fixed");
     }
@@ -192,7 +192,7 @@ public class TmNotionPhase1FixTests : LocalizationTestBase
         cut.WaitForAssertion(() =>
         {
             cut.Find("[data-testid=notion-share-locked-hint]").Should().NotBeNull();
-            cut.Find("[data-testid=notion-share-allow-comments]").HasAttribute("disabled").Should().BeTrue();
+            cut.Find("[data-testid=notion-share-allow-comments] input.tm-toggle-input").HasAttribute("disabled").Should().BeTrue();
             cut.Find("[data-testid=notion-share-expires]").HasAttribute("disabled").Should().BeTrue();
         });
     }

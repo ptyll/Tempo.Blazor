@@ -1,7 +1,10 @@
 @namespace Tempo.Blazor.Components.NotionEditor.UI
 @inherits Tempo.Blazor.Components.TmComponentBase
 @using Tempo.Blazor.NotionEditor.Enums
+@using Tempo.Blazor.Abstractions.Layout
 @using Tempo.Blazor.Components.Overlay
+@using Tempo.Blazor.Components.Icons
+@using System.Globalization
 
 @if (Visible && ActiveProvider is not null)
 {
@@ -15,7 +18,8 @@
     <TmOverlayPanel Anchor="_anchorRef"
                     IsOpen="Visible"
                     IsOpenChanged="SetOpenFromJsAsync"
-                    LayoutMode="LayoutMode"
+                    LayoutMode="ResolvedLayout"
+                    MobilePresentation="PanelPresentation.Auto"
                     Placement="OverlayPlacement.Bottom"
                     Align="OverlayAlign.End"
                     Offset="0"
@@ -42,19 +46,26 @@
         </header>
 
         <div class="tm-notion-ai__tabs" role="tablist" aria-label="@Loc["Notion_AI_Assistant"]">
-            <button type="button" role="tab" class="@ModeButtonClass(NotionAiMenuMode.Generate)" data-testid="@TestId("notion-ai-mode-generate")" @onclick="() => SetMode(NotionAiMenuMode.Generate)">
-                @Loc["Notion_AI_Generate"]
-            </button>
-            <button type="button" role="tab" class="@ModeButtonClass(NotionAiMenuMode.Improve)" data-testid="@TestId("notion-ai-mode-improve")" @onclick="() => SetMode(NotionAiMenuMode.Improve)">
-                @Loc["Notion_AI_Improve"]
-            </button>
-            <button type="button" role="tab" class="@ModeButtonClass(NotionAiMenuMode.Summarize)" data-testid="@TestId("notion-ai-mode-summarize")" @onclick="() => SetMode(NotionAiMenuMode.Summarize)">
-                @Loc["Notion_AI_Summarize"]
-            </button>
-            <button type="button" role="tab" class="@ModeButtonClass(NotionAiMenuMode.Ask)" data-testid="@TestId("notion-ai-mode-ask")" @onclick="() => SetMode(NotionAiMenuMode.Ask)">
-                @Loc["Notion_AI_Ask"]
-            </button>
+            @foreach (var mode in Modes)
+            {
+                <button @ref="_tabElements[ModeIndex(mode.Mode)]"
+                        type="button"
+                        role="tab"
+                        id="@ModeTabId(mode.Mode)"
+                        class="@ModeButtonClass(mode.Mode)"
+                        aria-selected="@(_mode == mode.Mode ? "true" : "false")"
+                        aria-controls="notion-ai-panel"
+                        tabindex="@(_mode == mode.Mode ? 0 : -1)"
+                        data-testid="@TestId(mode.TestId)"
+                        @onclick="() => SetMode(mode.Mode)"
+                        @onkeydown="args => HandleModeKeyAsync(args, mode.Mode)">
+                    <TmIcon Name="@mode.Icon" Size="IconSize.Xs" />
+                    <span>@Loc[mode.Key]</span>
+                </button>
+            }
         </div>
+
+        <div id="notion-ai-panel" role="tabpanel" aria-labelledby="@ModeTabId(_mode)">
 
         @if (_mode == NotionAiMenuMode.Generate)
         {
@@ -62,9 +73,11 @@
                 <span>@Loc["Notion_AI_Generate"]</span>
                 <textarea class="tm-notion-ai__textarea"
                           value="@_prompt"
+                          maxlength="@PromptMaxLength"
                           placeholder="@Loc["Notion_AI_PromptPlaceholder"]"
                           data-testid="@TestId("notion-ai-prompt")"
                           @oninput="HandlePromptInput"></textarea>
+                <span class="tm-notion-ai__counter" data-testid="@TestId("notion-ai-counter")">@string.Format(CultureInfo.InvariantCulture, Loc["TmNotionAiMenu_CharCount"], _prompt.Length, PromptMaxLength)</span>
             </label>
         }
         else if (_mode == NotionAiMenuMode.Improve)
@@ -100,6 +113,7 @@
         {
             <p class="tm-notion-ai__hint">@Loc["Notion_AI_SummarizeDescription"]</p>
         }
+        </div>
 
         @if (!string.IsNullOrWhiteSpace(_error))
         {
@@ -128,20 +142,27 @@
             </output>
         </div>
 
-        <footer class="tm-notion-ai__actions">
-            <button class="tm-notion-ai__btn tm-notion-ai__btn--primary"
+        <footer class="tm-notion-ai__actions @(ResolvedLayout == TmLayoutMode.Mobile ? "tm-notion-ai__actions--sheet" : null)">
+            <button class="tm-notion-ai__btn @(!_hasResult ? "tm-notion-ai__btn--primary" : null)"
                     type="button"
                     disabled="@_isStreaming"
                     data-testid="@TestId("notion-ai-run")"
                     @onclick="RunAsync">
                 @Loc["Notion_AI_Run"]
             </button>
-            <button class="tm-notion-ai__btn"
+            <button class="tm-notion-ai__btn @(_hasResult ? "tm-notion-ai__btn--primary" : null)"
                     type="button"
                     disabled="@(_isStreaming || string.IsNullOrWhiteSpace(_streamedText))"
                     data-testid="@TestId("notion-ai-accept")"
                     @onclick="AcceptAsync">
                 @Loc["Notion_AI_Accept"]
+            </button>
+            <button class="tm-notion-ai__btn"
+                    type="button"
+                    disabled="@(_isStreaming || string.IsNullOrWhiteSpace(_streamedText))"
+                    data-testid="@TestId("notion-ai-copy")"
+                    @onclick="CopyAsync">
+                @Loc["TmNotionAiMenu_Copy"]
             </button>
             <button class="tm-notion-ai__btn"
                     type="button"

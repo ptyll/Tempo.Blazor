@@ -1080,6 +1080,13 @@ public static class NotionEditorEndpoints
                             dataStore.SeedE2ESimplePage("EB6 Media Blocks", "Media seed page.");
                             blockStore.SeedE2EMediaPage();
                             break;
+                        case "seedPhase7Surfaces":
+                            dataStore.SeedE2ESimplePage("Phase 7 surfaces", "Share, history, media and Tempo edit evidence.");
+                            blockStore.SeedE2EPhase7SurfacesPage();
+                            historyStore.SeedDiffHistory();
+                            publicShareProvider.SeedE2EActiveShare();
+                            permissionProvider.SeedE2ERestrictions();
+                            break;
                         case "seedCommentsPage":
                             dataStore.SeedE2ESimplePage("EB10 Comments Workspace", "Comment recovery seed page.");
                             blockStore.SeedE2ECommentsPage();

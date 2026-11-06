@@ -872,6 +872,18 @@
           ]
         },
         {
+          "name": "RememberPages",
+          "kind": "Method",
+          "type": "void",
+          "description": "Records pages the sidebar or editor already loaded, so search can resolve parents.",
+          "parameters": [
+            {
+              "name": "pages",
+              "type": "IEnumerable<INotionPage>?"
+            }
+          ]
+        },
+        {
           "name": "AggregateConflictDetected",
           "kind": "Property",
           "type": "Func<Task>?",
@@ -1048,6 +1060,12 @@
           "kind": "Property",
           "type": "Func<Task>?",
           "description": "Opens the new-page template gallery from the sidebar."
+        },
+        {
+          "name": "PageCache",
+          "kind": "Property",
+          "type": "IReadOnlyDictionary<string, INotionPage>",
+          "description": "Pages already loaded by the sidebar or the editor, keyed by id. Search path resolution reads this cache and must not call the data provider."
         },
         {
           "name": "PageCommentsPresentation",
@@ -1984,7 +2002,7 @@
       "category": "Notion Editor",
       "subcategory": "UI",
       "namespace": "Tempo.Blazor.Components.NotionEditor.UI",
-      "description": "AI assistant panel with Generate, Improve, Summarize, and Ask tabs. Runs the AI provider, streaming output into a live region, and offers run, accept (as HTML), retry, cancel, and discard. The menu is a TmOverlayPanel anchored to a zero-size virtual element pinned at the Top/Left coordinates — popover=\"manual\" puts it in the browser top layer so it paints above a host TmModal. overlay.js supplies flip/shift viewport clamping and Escape + outside-pointerdown dismissal (IsOpenChanged). Panel-root styles live in the global _notion-floating-menus.css because the panel element carries the overlay's scope attribute, not this component's.",
+      "description": "AI assistant panel with iconed Generate, Improve, Summarize, and Ask tabs (aria-selected, arrow keys). Runs the AI provider, streaming output into a live region, and offers run, accept (as HTML), retry, cancel, and discard. The menu is a TmOverlayPanel anchored to a zero-size virtual element pinned at the Top/Left coordinates — popover=\"manual\" puts it in the browser top layer so it paints above a host TmModal. overlay.js supplies flip/shift viewport clamping and Escape + outside-pointerdown dismissal (IsOpenChanged). Panel-root styles live in the global _notion-floating-menus.css because the panel element carries the overlay's scope attribute, not this component's.",
       "packageId": "Tempo.Blazor.NotionEditor",
       "sourcePath": "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/UI/TmNotionAiMenu.razor",
       "documentationStatus": "merged",
@@ -2004,6 +2022,13 @@
           "isRequired": false,
           "default": "NotionAiMenuMode.Generate",
           "description": "Initial mode selected when the menu opens."
+        },
+        {
+          "name": "LayoutMode",
+          "type": "TmLayoutMode",
+          "isRequired": false,
+          "default": "TmLayoutMode.Auto",
+          "description": "Forced layout. Mobile presents the menu as the core sheet."
         },
         {
           "name": "Left",
@@ -2034,6 +2059,13 @@
           "type": "bool",
           "isRequired": false,
           "description": "Renders the component as a wider page-level panel."
+        },
+        {
+          "name": "PromptMaxLength",
+          "type": "int",
+          "isRequired": false,
+          "default": "2000",
+          "description": "Maximum prompt length. The textarea carries maxlength and the counter shows the count."
         },
         {
           "name": "Provider",
@@ -2490,10 +2522,22 @@
       ],
       "parameters": [
         {
+          "name": "Anchor",
+          "type": "ElementReference",
+          "isRequired": true,
+          "description": "The trigger the popover anchors to when Top and Left are unset."
+        },
+        {
           "name": "Block",
           "type": "IPageBlock",
           "isRequired": true,
           "editorRequired": true
+        },
+        {
+          "name": "Left",
+          "type": "double?",
+          "isRequired": false,
+          "description": "Viewport left of the handle the menu anchors to. Null keeps the DOM anchor."
         },
         {
           "name": "OnBackgroundChange",
@@ -2549,6 +2593,12 @@
           "name": "OnTurnInto",
           "type": "EventCallback<BlockType>",
           "isRequired": false
+        },
+        {
+          "name": "Top",
+          "type": "double?",
+          "isRequired": false,
+          "description": "Viewport top of the handle the menu anchors to. Null keeps the DOM anchor."
         }
       ]
     },
@@ -5455,7 +5505,7 @@
       "category": "Notion Editor",
       "subcategory": "Blocks / Tempo Blocks",
       "namespace": "Tempo.Blazor.Components.NotionEditor.Blocks.TempoBlocks",
-      "description": "Modal dialog hosting the dynamically loaded diagram editor (or a missing-package notice) with Save and Discard actions and a loading spinner while the document loads.",
+      "description": "Fullscreen diagram edit modal on the shared TmNotionTempoEditorModal shell. Hosts the dynamically loaded diagram editor, which resolves its own container (desktop chrome at 1024+, its narrow and mobile panels below). Discard while the document changed confirms first; a missing package disables Save.",
       "packageId": "Tempo.Blazor.NotionEditor",
       "sourcePath": "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/Blocks/TempoBlocks/TmNotionDiagramEditModal.razor",
       "documentationStatus": "merged",
@@ -6300,6 +6350,19 @@
       ],
       "parameters": [
         {
+          "name": "Align",
+          "type": "OverlayAlign",
+          "isRequired": false,
+          "default": "OverlayAlign.Start",
+          "description": "Cross-axis alignment against the anchor. A trigger on the viewport's trailing edge passes End so the panel opens inward."
+        },
+        {
+          "name": "AnchorElement",
+          "type": "ElementReference?",
+          "isRequired": false,
+          "description": "The element the popover anchors to. Null uses the zero-size pin; a trigger menu passes its button."
+        },
+        {
           "name": "AriaLabel",
           "type": "string?",
           "isRequired": false,
@@ -6318,10 +6381,23 @@
           "description": "Extra CSS classes for the core overlay panel root."
         },
         {
+          "name": "CloseOnEscape",
+          "type": "bool",
+          "isRequired": false,
+          "default": "true",
+          "description": "Whether the core overlay closes on Escape. A menu that owns its own Escape contract (a submenu collapses first) passes false."
+        },
+        {
           "name": "Footer",
           "type": "RenderFragment?",
           "isRequired": false,
-          "description": "Sheet-only footer."
+          "description": "Footer rendered in both the desktop popover and the mobile sheet. A host that only wants it on the sheet must not also render the same action in ChildContent."
+        },
+        {
+          "name": "InitialFocusSelector",
+          "type": "string?",
+          "isRequired": false,
+          "description": "CSS selector of the element a trapped desktop popover focuses first. Null keeps the first focusable."
         },
         {
           "name": "IsOpen",
@@ -6365,8 +6441,14 @@
           "name": "Role",
           "type": "string",
           "isRequired": false,
-          "default": "\"menu\"",
+          "default": "\"dialog\"",
           "description": "The ARIA role of the panel (a dialog or a listbox menu)."
+        },
+        {
+          "name": "SheetInitialFocusSelector",
+          "type": "string?",
+          "isRequired": false,
+          "description": "CSS selector of the element a mobile sheet focuses first. Null keeps the role default."
         },
         {
           "name": "Title",
@@ -6379,6 +6461,12 @@
           "type": "double?",
           "isRequired": false,
           "description": "Viewport anchor coordinate of the zero-size anchor (a caret or a measured trigger)."
+        },
+        {
+          "name": "TrapFocus",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Trap Tab inside a desktop popover and move initial focus into it. The mobile sheet traps through its drawer."
         }
       ]
     },
@@ -6815,6 +6903,13 @@
           "name": "IsOpen",
           "type": "bool",
           "isRequired": false
+        },
+        {
+          "name": "LayoutMode",
+          "type": "TmLayoutMode",
+          "isRequired": false,
+          "default": "TmLayoutMode.Auto",
+          "description": "Forced layout. Mobile presents the dialog as the core sheet."
         },
         {
           "name": "MediaType",
@@ -7302,6 +7397,13 @@
       ],
       "parameters": [
         {
+          "name": "LayoutMode",
+          "type": "TmLayoutMode",
+          "isRequired": false,
+          "default": "TmLayoutMode.Auto",
+          "description": "Forced layout. Mobile presents the history as a list, then a preview with Back."
+        },
+        {
           "name": "OnClosed",
           "type": "EventCallback",
           "isRequired": false
@@ -7343,6 +7445,13 @@
           "type": "IReadOnlyList<IPageBlock>?",
           "isRequired": false,
           "description": "Currently loaded page blocks. When absent, the component loads them from the block provider."
+        },
+        {
+          "name": "LayoutMode",
+          "type": "TmLayoutMode",
+          "isRequired": false,
+          "default": "TmLayoutMode.Auto",
+          "description": "Forced layout. Mobile presents the panel as a sheet."
         },
         {
           "name": "Page",
@@ -7941,6 +8050,13 @@
           "description": "Effective permission displayed by the dialog when inherited."
         },
         {
+          "name": "LayoutMode",
+          "type": "TmLayoutMode",
+          "isRequired": false,
+          "default": "TmLayoutMode.Auto",
+          "description": "Forced layout. Mobile presents the dialog as a sheet."
+        },
+        {
           "name": "OnSaved",
           "type": "EventCallback",
           "isRequired": false,
@@ -7988,6 +8104,20 @@
         "@using Tempo.Blazor.Components.NotionEditor.Page"
       ],
       "parameters": [
+        {
+          "name": "ConfirmRevoke",
+          "type": "bool",
+          "isRequired": false,
+          "default": "true",
+          "description": "When true, revoking the public link asks for confirmation before the provider call."
+        },
+        {
+          "name": "LayoutMode",
+          "type": "TmLayoutMode",
+          "isRequired": false,
+          "default": "TmLayoutMode.Auto",
+          "description": "Forced layout. Mobile presents the dialog as a sheet."
+        },
         {
           "name": "PageId",
           "type": "Guid",
@@ -8323,7 +8453,7 @@
       "category": "Notion Editor",
       "subcategory": "Blocks / Tempo Blocks",
       "namespace": "Tempo.Blazor.Components.NotionEditor.Blocks.TempoBlocks",
-      "description": "Modal dialog hosting the dynamically loaded spreadsheet editor (or a missing-package notice) with Save and Discard actions and a loading spinner.",
+      "description": "Fullscreen spreadsheet edit modal on the shared TmNotionTempoEditorModal shell. The spreadsheet resolves its own container, so a narrow modal gets its mobile chrome. A cell change marks the modal dirty and Discard confirms first; a missing package disables Save.",
       "packageId": "Tempo.Blazor.NotionEditor",
       "sourcePath": "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/Blocks/TempoBlocks/TmNotionSpreadsheetEditModal.razor",
       "documentationStatus": "merged",
@@ -9528,7 +9658,7 @@
       "category": "Notion Editor",
       "subcategory": "Blocks / Tempo Blocks",
       "namespace": "Tempo.Blazor.Components.NotionEditor.Blocks.TempoBlocks",
-      "description": "Modal dialog hosting the dynamically loaded wireframe editor (or a missing-package notice) with Save and Discard actions and a loading spinner.",
+      "description": "Fullscreen wireframe edit modal on the shared TmNotionTempoEditorModal shell. The editor resolves its own container (desktop chrome at 1024+, its narrow and mobile panels below). Discard while the document changed confirms first; a missing package disables Save.",
       "packageId": "Tempo.Blazor.NotionEditor",
       "sourcePath": "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/Blocks/TempoBlocks/TmNotionWireframeEditModal.razor",
       "documentationStatus": "merged",

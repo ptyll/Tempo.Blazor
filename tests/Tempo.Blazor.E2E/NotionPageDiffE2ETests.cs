@@ -40,8 +40,11 @@ public class NotionPageDiffE2ETests : NotionE2ETestBase
         await panel.Locator(".tm-nph__preview").First.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10000 });
 
         var versionItems = panel.Locator(".tm-nph__version-item");
-        await panel.Locator(".tm-nph__toolbar-btn--secondary").Filter(new LocatorFilterOptions { HasText = "Compare" }).First.ClickAsync();
-        await versionItems.Nth(3).ClickAsync();
+        await panel.Locator("[data-testid='notion-history-pick']").Nth(3).CheckAsync();
+        await panel.Locator("[data-testid='notion-history-pick']").Nth(2).CheckAsync();
+        var compare = Page.Locator("[data-testid='notion-history-compare-selected']");
+        await compare.ScrollIntoViewIfNeededAsync();
+        await compare.ClickAsync();
         await diffViewer.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10000 });
         await panel.Locator(".tm-ndv__empty").First.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10000 });
 
@@ -53,8 +56,10 @@ public class NotionPageDiffE2ETests : NotionE2ETestBase
         var mobile = await OpenNotionEditorAsync(390, 844);
         await SeedHistoryDiffPageAsync();
         var mobilePanel = await OpenLargeDiffAsync(mobile);
-        await mobilePanel.Locator("[data-testid='notion-diff-mode-side-by-side']").ClickAsync();
-        await mobilePanel.Locator(".tm-ndv--sidebyside .tm-ndv__pane--before").First.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10000 });
+        // A 390 viewport is the mobile layout, which offers no side-by-side diff — only Inline.
+        Assert.AreEqual(0, await mobilePanel.Locator("[data-testid='notion-diff-mode-side-by-side']").CountAsync(),
+            "the side-by-side toggle is hidden on a mobile layout");
+        await mobilePanel.Locator(".tm-ndv--inline").First.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10000 });
         await CaptureBaselineAsync("page-diff", "cf23-side-by-side-mobile", mobilePanel);
     }
 
@@ -64,9 +69,12 @@ public class NotionPageDiffE2ETests : NotionE2ETestBase
         var versionItems = panel.Locator(".tm-nph__version-item");
         await versionItems.Nth(3).WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10000 });
 
-        await versionItems.Nth(2).ClickAsync();
-        await panel.Locator(".tm-nph__toolbar-btn--secondary").Filter(new LocatorFilterOptions { HasText = "Compare" }).First.ClickAsync();
-        await versionItems.Nth(0).ClickAsync();
+        // Comparison is an explicit two-version pick now, not a toolbar mode.
+        await panel.Locator("[data-testid='notion-history-pick']").Nth(2).CheckAsync();
+        await panel.Locator("[data-testid='notion-history-pick']").Nth(0).CheckAsync();
+        var compare = page.Locator("[data-testid='notion-history-compare-selected']");
+        await compare.ScrollIntoViewIfNeededAsync();
+        await compare.ClickAsync();
 
         var diffViewer = panel.Locator("[data-testid='notion-diff-viewer']").First;
         await diffViewer.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10000 });
@@ -76,9 +84,12 @@ public class NotionPageDiffE2ETests : NotionE2ETestBase
 
     private static async Task<ILocator> OpenPageHistoryAsync(IPage page)
     {
+        await page.Locator(".tm-notion-editor[data-editor-layout]").First
+            .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10000 });
+        await page.Locator(".tm-notion-page").First.HoverAsync();
         var trigger = page.Locator(".tm-npsm-trigger").First;
         await trigger.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10000 });
-        await trigger.ClickAsync();
+        await trigger.ClickAsync(new LocatorClickOptions { Force = true });
 
         var menu = page.Locator(".tm-npsm").First;
         await menu.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 5000 });

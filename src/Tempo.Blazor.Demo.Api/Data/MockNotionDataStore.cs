@@ -681,6 +681,7 @@ public class MockNotionDataStore
         _pages[Page1Id].Title = "CF20 Restricted Workspace";
         _pages[Page1Id].Description = "Workspace with page-level access controls.";
         _pages[Page1Id].SpaceId = "cf20";
+        _pages[Page2Id].ParentId = Page1Id;
         _pages[Page2Id].Title = "CF20 Child Inherits Restrictions";
         _pages[Page2Id].Description = "Child page that inherits the root restrictions.";
         _pages[Page2Id].SpaceId = "cf20";

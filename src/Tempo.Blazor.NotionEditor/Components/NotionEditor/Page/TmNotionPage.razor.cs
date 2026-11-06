@@ -45,7 +45,7 @@ public partial class TmNotionPage : ComponentBase, IAsyncDisposable
     private TmLayoutContext? Viewport { get; set; }
 
     /// <summary>The layout the page's menus present with. Auto reads the viewport scope.</summary>
-    private TmLayoutMode MenuLayout => Viewport?.Resolved ?? TmLayoutMode.Auto;
+    private TmLayoutMode MenuLayout => Viewport is { Mode: TmLayoutMode.Auto } ? TmLayoutMode.Auto : Viewport?.Resolved ?? TmLayoutMode.Auto;
 
     // ── Parameters ───────────────────────────────────────────────────────────
 

@@ -89,6 +89,24 @@ public sealed class DemoNotionPublicShareProvider : INotionPublicShareProvider
         }
     }
 
+    public void SeedE2EActiveShare()
+    {
+        lock (_syncRoot)
+        {
+            Reset();
+            var share = new PublicShareDto
+            {
+                PageId = MockNotionDataStore.Page1Id,
+                Token = "cf33-active",
+                IsEnabled = true,
+                AllowComments = true,
+                ExpiresAt = DateTime.UtcNow.AddDays(14)
+            };
+            _sharesByPage[share.PageId] = Clone(share);
+            _pageIdsByToken[share.Token] = share.PageId;
+        }
+    }
+
     public void SeedE2EExpiredShare()
     {
         lock (_syncRoot)

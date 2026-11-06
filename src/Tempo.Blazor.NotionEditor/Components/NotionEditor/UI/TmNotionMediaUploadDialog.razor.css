@@ -2,15 +2,8 @@
    TmNotionMediaUploadDialog — shared upload / embed dialog
    ═══════════════════════════════════════════════════════════════ */
 
-.tm-media-dialog-backdrop {
-    position:        fixed;
-    inset:           0;
-    z-index:         var(--tm-z-modal);
-    background: var(--tm-bg-overlay);
-    display:         flex;
-    align-items:     center;
-    justify-content: center;
-    animation:       tm-media-backdrop-in var(--tm-notion-anim-fast, 120ms) ease;
+.tm-media-dialog-host {
+    color: var(--tm-text-primary);
 }
 
 @keyframes tm-media-backdrop-in {
@@ -19,12 +12,11 @@
 }
 
 .tm-media-dialog {
-    background:    var(--tm-color-white);
-    border:        1px solid var(--tm-color-border-subtle);
+    background:    var(--tm-color-surface);
+    border:        1px solid var(--tm-border-color);
     border-radius: var(--tm-radius-lg, 8px);
     box-shadow: var(--tm-shadow-popover);
-    width:         440px;
-    max-width:     calc(100vw - 32px);
+    width:         100%;
     overflow:      hidden;
     animation:     tm-media-dialog-in var(--tm-notion-anim-fast, 120ms) ease;
 }
@@ -76,7 +68,8 @@
     display:       flex;
     gap:           2px;
     padding:       8px 16px 0;
-    border-bottom: 1px solid var(--tm-color-border-subtle);
+    border-bottom: 1px solid var(--tm-border-color);
+    background:    var(--tm-bg-muted);
 }
 
 .tm-media-dialog__tab {
@@ -100,8 +93,70 @@
 
 .tm-media-dialog__tab--active {
     color:              var(--tm-text-primary);
-    border-bottom-color: var(--tm-text-primary);
+    background:         var(--tm-color-surface);
+    border-bottom-color: var(--tm-color-primary);
     font-weight:        500;
+}
+
+/* A coarse pointer gets an explicit picker; the drag hint is for fine pointers. */
+.tm-media-dialog__choose-file,
+.tm-media-dialog__formats {
+    display: none;
+}
+
+@media (pointer: coarse) {
+    .tm-media-dialog__dropzone-text,
+    .tm-media-dialog__browse-hint {
+        display: none;
+    }
+
+    .tm-media-dialog__choose-file,
+    .tm-media-dialog__formats {
+        display: block;
+    }
+
+    .tm-media-dialog__choose-file,
+    .tm-media-dialog__tab,
+    .tm-media-dialog__close,
+    .tm-media-dialog__embed-btn {
+        min-width: var(--tm-touch-target);
+        min-height: var(--tm-touch-target);
+    }
+
+    .tm-media-dialog__choose-file {
+        padding: var(--tm-space-2) var(--tm-space-3);
+        border: 1px solid var(--tm-border-color);
+        border-radius: var(--tm-radius-md);
+        background: var(--tm-color-surface);
+    }
+}
+
+.tm-media-dialog__selected {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-2);
+    margin-top: var(--tm-space-2);
+    padding: var(--tm-space-2);
+    border: 1px solid var(--tm-border-color);
+    border-radius: var(--tm-radius-md);
+    background: var(--tm-bg-muted);
+}
+
+.tm-media-dialog__selected-name {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.tm-media-dialog__selected-remove {
+    border: 0;
+    background: transparent;
+    color: var(--tm-text-primary);
+    cursor: pointer;
+    min-width: var(--tm-touch-target);
+    min-height: var(--tm-touch-target);
 }
 
 /* ── Body ─────────────────────────────────────────────────────── */

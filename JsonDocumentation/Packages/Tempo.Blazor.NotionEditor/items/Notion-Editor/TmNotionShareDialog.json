@@ -35,6 +35,18 @@
       "type": "EventCallback<bool>",
       "isRequired": false,
       "description": "Raised when dialog visibility changes."
+    },
+    {
+      "name": "LayoutMode",
+      "type": "TmLayoutMode",
+      "isRequired": false,
+      "description": "Forced layout. Mobile presents the dialog as a sheet."
+    },
+    {
+      "name": "ConfirmRevoke",
+      "type": "bool",
+      "isRequired": false,
+      "description": "When true, revoking the public link asks for confirmation before the provider call."
     }
   ],
   "subcategory": "Page"

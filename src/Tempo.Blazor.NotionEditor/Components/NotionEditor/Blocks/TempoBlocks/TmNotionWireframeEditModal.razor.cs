@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Components;
+using Tempo.Blazor.Abstractions.Layout;
 using Tempo.Blazor.Components.Wireframe.Models;
 using Tempo.Blazor.NotionEditor.Interfaces;
 
@@ -23,15 +24,24 @@ public partial class TmNotionWireframeEditModal : ComponentBase
     private WireframeDocument? _document;
     private bool                _loading = true;
     private bool                _saving;
+    private bool                _dirty;
     private static readonly Type? WireframeEditorComponentType = ResolveWireframeEditorComponentType();
+
+    [CascadingParameter(Name = TmNotionTempoEditorModal.EditorLayoutScope)]
+    public TmLayoutMode? TempoEditorLayout { get; set; }
+
+    private bool CompactEditor => TempoEditorLayout == TmLayoutMode.Mobile;
 
     private Dictionary<string, object?> WireframeEditorParameters => new()
     {
         ["Document"] = _document,
-        ["DocumentChanged"] = EventCallback.Factory.Create<WireframeDocument>(this, value => _document = value),
-        ["ShowToolbox"] = true,
-        ["ShowPropertiesPanel"] = true,
-        ["ShowMinimap"] = true,
+        ["DocumentChanged"] = EventCallback.Factory.Create<WireframeDocument>(this, OnDocumentChanged),
+        // Below 1024 the shell reports a compact layout. At 1024 and above the editor classifies
+        // its own container.
+        ["LayoutMode"] = CompactEditor ? TmLayoutMode.Mobile : TmLayoutMode.Auto,
+        ["ShowToolbox"] = !CompactEditor,
+        ["ShowPropertiesPanel"] = !CompactEditor,
+        ["ShowMinimap"] = !CompactEditor,
         ["ShowToolbar"] = true,
         ["ShowGrid"] = true,
         ["ShowPageTabs"] = true,
@@ -72,6 +82,13 @@ public partial class TmNotionWireframeEditModal : ComponentBase
             _saving = false;
         }
         await OnSaved.InvokeAsync((_document, svg));
+    }
+
+    private Task OnDocumentChanged(WireframeDocument value)
+    {
+        _document = value;
+        _dirty = true;
+        return Task.CompletedTask;
     }
 
     private async Task DiscardAsync() => await OnDiscarded.InvokeAsync();

@@ -1,6 +1,7 @@
 using Bunit.Rendering;
 using Bunit;
 using FluentAssertions;
+using Microsoft.AspNetCore.Components.Web;
 using Microsoft.Extensions.DependencyInjection;
 using Tempo.Blazor.Abstractions.Shared;
 using Tempo.Blazor.Components.NotionEditor.Page;
@@ -41,6 +42,10 @@ public sealed class TmNotionShareDialogTests : LocalizationTestBase
             ["Notion_Share_LoadError"] = "Public sharing could not be loaded.",
             ["Notion_Share_CreateError"] = "The public link could not be created.",
             ["Notion_Share_RevokeError"] = "The public link could not be revoked.",
+            ["Notion_Share_Copied"] = "Copied",
+            ["Notion_Share_RevokeConfirmTitle"] = "Revoke this link?",
+            ["Notion_Share_RevokeConfirm"] = "Revoke link",
+            ["Tm_Cancel"] = "Cancel",
             ["Notion_Share_PublicPage"] = "Shared page",
             ["Notion_Share_ReadOnlyNotice"] = "You are viewing a public read-only version.",
             ["Notion_Share_NotFoundTitle"] = "Public page unavailable",
@@ -61,7 +66,7 @@ public sealed class TmNotionShareDialogTests : LocalizationTestBase
         var provider = new FakePublicShareProvider();
         var cut = RenderDialog(provider);
 
-        cut.Find("[data-testid='notion-share-allow-comments']").Change(true);
+        cut.Find("[data-testid='notion-share-allow-comments'] input.tm-toggle-input").Change(true);
         cut.Find("[data-testid='notion-share-create']").Click();
 
         cut.WaitForAssertion(() =>
@@ -88,6 +93,8 @@ public sealed class TmNotionShareDialogTests : LocalizationTestBase
         cut.WaitForAssertion(() => cut.Find("[data-testid='notion-share-url']").GetAttribute("value").Should().Contain("/p/share-active"));
 
         cut.Find("[data-testid='notion-share-revoke']").Click();
+        cut.WaitForAssertion(() => cut.Find(".tm-dialog").Should().NotBeNull());
+        cut.Find(".tm-dialog .tm-dialog-btn-ok").Click();
 
         cut.WaitForAssertion(() =>
         {
@@ -156,6 +163,89 @@ public sealed class TmNotionShareDialogTests : LocalizationTestBase
         });
     }
 
+    [Fact]
+    public async Task ShareDialog_Close_RaisesOnCloseOnce()
+    {
+        // Escape is the core TmModal's own handler (CloseOnEscape default true) — the dialog keeps
+        // no @onkeydown of its own, so a keydown here cannot reach it. The close button is the same
+        // OnClose path that Escape takes.
+        var closes = 0;
+        var cut = Render<TmNotionShareDialog>(p => p
+            .Add(x => x.Visible, true)
+            .Add(x => x.PageId, PageId)
+            .Add(x => x.Provider, new FakePublicShareProvider())
+            .Add(x => x.VisibleChanged, () => closes++));
+
+        cut.WaitForAssertion(() => cut.Find("[data-testid=notion-share-dialog]").Should().NotBeNull());
+        await cut.Find(".tm-modal-close").ClickAsync(new MouseEventArgs());
+
+        closes.Should().Be(1, "closing raises OnClose exactly once");
+    }
+
+    [Fact]
+    public async Task ShareDialog_Copy_AnnouncesCopiedInALiveRegion()
+    {
+        var provider = new FakePublicShareProvider();
+        provider.Seed(new PublicShareDto { PageId = PageId, Token = "share-copy", IsEnabled = true });
+        var cut = Render<TmNotionShareDialog>(p => p
+            .Add(x => x.Visible, true)
+            .Add(x => x.PageId, PageId)
+            .Add(x => x.Provider, provider)
+            .Add(x => x.ConfirmRevoke, true));
+        cut.WaitForAssertion(() => cut.Find("[data-testid=notion-share-url]").Should().NotBeNull());
+
+        await cut.Find("[data-testid=notion-share-copy]").ClickAsync(new MouseEventArgs());
+
+        cut.WaitForAssertion(() =>
+            cut.Find("[data-testid=notion-share-copied]").TextContent.Should().Contain("Copied"));
+    }
+
+    [Fact]
+    public async Task ShareDialog_Revoke_ConfirmsBeforeCallingTheProvider()
+    {
+        var provider = new FakePublicShareProvider();
+        provider.Seed(new PublicShareDto { PageId = PageId, Token = "share-revoke", IsEnabled = true });
+        var cut = Render<TmNotionShareDialog>(p => p
+            .Add(x => x.Visible, true)
+            .Add(x => x.PageId, PageId)
+            .Add(x => x.Provider, provider)
+            .Add(x => x.ConfirmRevoke, true));
+        cut.WaitForAssertion(() => cut.Find("[data-testid=notion-share-revoke]").Should().NotBeNull());
+
+        await cut.Find("[data-testid=notion-share-revoke]").ClickAsync(new MouseEventArgs());
+
+        cut.WaitForAssertion(() => cut.Find(".tm-dialog").Should().NotBeNull());
+        provider.RevokeCalls.Should().Be(0, "the provider is not called until the confirmation");
+
+        await cut.Find(".tm-dialog .tm-dialog-btn-ok").ClickAsync(new MouseEventArgs());
+        cut.WaitForAssertion(() => provider.RevokeCalls.Should().Be(1));
+    }
+
+    [Fact]
+    public void ShareDialog_Footer_SeparatesTheDestructiveAction()
+    {
+        var provider = new FakePublicShareProvider();
+        provider.Seed(new PublicShareDto { PageId = PageId, Token = "share-footer", IsEnabled = true });
+        var cut = RenderDialog(provider);
+
+        cut.WaitForAssertion(() =>
+        {
+            var footer = cut.Find("[data-testid=notion-share-footer]");
+            footer.TextContent.Should().Contain("Close");
+            footer.ClassList.Should().Contain("tm-npsd__footer--split");
+            cut.Find("[data-testid=notion-share-revoke]").ClassList.Should().Contain("tm-btn-danger");
+        });
+    }
+
+    [Fact]
+    public void ShareDialog_RidesTheCoreModal_WithNoOwnBackdrop()
+    {
+        var cut = RenderDialog(new FakePublicShareProvider());
+
+        cut.WaitForAssertion(() => cut.Find(".tm-modal-overlay").Should().NotBeNull());
+        cut.FindAll(".tm-npsd-backdrop").Should().BeEmpty();
+    }
+
     private IRenderedComponent<ContainerFragment> RenderDialog(FakePublicShareProvider provider)
         => Render(builder =>
         {
@@ -186,8 +276,11 @@ public sealed class TmNotionShareDialogTests : LocalizationTestBase
             return Task.FromResult(Clone(Share));
         }
 
+        public int RevokeCalls { get; private set; }
+
         public Task RevokeAsync(Guid pageId, CancellationToken cancellationToken = default)
         {
+            RevokeCalls++;
             if (Share?.PageId == pageId)
                 Share.IsEnabled = false;
 

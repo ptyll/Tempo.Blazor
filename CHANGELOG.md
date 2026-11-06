@@ -2,6 +2,15 @@
 
 ## 2.10.0 (unreleased)
 
+- **Breaking: NotionEditor phase-7 dialogs.** Four contracts changed.
+  - **Media insert is two-step on every tab.** Before: picking a file or confirming an embed URL inserted immediately, and Enter on a library option both selected and confirmed. After: a click only selects; Insert (or a double-click) confirms, and Enter is not emulated on the native option buttons. A coarse pointer gets a "Choose file" label, the supported formats, and a preview of the selected file.
+  - **History compare is an explicit pick.** Before: clicking a version both previewed and selected it, and Compare used the pick order. After: a click only previews; the checkbox and Space pick, and Compare orders the pair by `EditedAt` (older first). The footer is Secondary Compare, Primary Restore, then Back with an icon. Mobile is list, then preview, then Back, and offers no side-by-side diff.
+  - **AI menu.** Before: the modes were plain buttons, Accept was always primary, and the menu never sheeted on mobile. After: the modes are a `tablist` (`aria-selected`, `aria-controls`, arrow keys, Home/End, focus follows the selection), Accept is primary only once a result exists, and on mobile the menu is a bottom sheet with a sticky footer.
+  - **Tempo edit modals.** Before: each modal owned its footer and a dirty Discard closed immediately. After: the three modals share an internal `TmNotionTempoEditorModal` (not published) with Discard then Save; a dirty Discard or Escape opens a confirm and does not close until it is confirmed.
+- **Breaking: `TmNotionShareDialog.ConfirmRevoke` defaults to true.** Before: omitting it revoked an active link on the first click. After: the first click asks, and a host that wants the old one-click revoke passes `ConfirmRevoke="false"`.
+- **NotionEditor phase 7: share, restrictions, history, media, AI, Tempo edit modals.** Share, restrictions and history ride `TmModal` (Escape closes; revoke confirms before the provider call; restrictions keep the footer outside the scroll). History on mobile is list then preview with Back. The AI menu modes are a `tablist` (`aria-selected`, arrow keys); Accept is primary only after a result, and Copy calls `tmNotionEditor.copyToClipboard`. Diagram, Spreadsheet and Wireframe edit modals share `TmNotionTempoEditorModal`: fullscreen, header title + ×, footer Discard then Save, dirty discard confirms first, a missing package disables Save. The embedded editor resolves its own container (`LayoutMode=Auto`), so a narrow panel gets that editor's mobile chrome.
+  - **Before:** each Tempo edit modal owned its own footer and a custom loading spinner; a dirty Discard closed immediately; the AI modes were plain buttons and Accept was always primary.
+  - **After:** the three modals render `TmNotionTempoEditorModal` (`data-testid="notion-tempo-modal-discard"` / `notion-tempo-modal-save`). Legacy classes (`tm-notion-diagram-edit-modal__btn--primary`, `tm-notion-spreadsheet-edit-modal__btn--discard`, the wireframe equivalents, and the `__loading` status classes) still ride the same elements. A dirty Discard opens `data-testid="notion-tempo-modal-discard-confirm"` and does not close until that confirm.
 - **NotionEditor phase-5 UX.** The notification sheet keeps its visible title; filter and Mark-all buttons, My Tasks filter pills and the audit chevron grow to `--tm-touch-target` on a coarse pointer. The audit chevron is labelled "Details for {0} {1}". Resolved comment threads no longer dim the whole card: the Resolved label uses `--tm-color-success-text` and the actions use `--tm-text-secondary`. The analytics chart axis labels use `--tm-font-size-xs` and short `M/d` labels so the last tick is not clipped.
 - **Drawer popover box.** A modal `TmDrawer` root is a top-layer popover. The UA reset (`:where(.tm-drawer[popover])`) sets `inset`/`width`/`height` to `auto`, so a side sheet and a bottom sheet had no box: the panel's `height: 100%` resolved against auto and the slide-in finished off-screen. `.tm-drawer[popover].tm-drawer--right|left|bottom` now pins `inset: 0` and `max-block-size: 100dvh`. The panel animation and transform are unchanged. `.tm-drawer__body` scrolls (`overflow: auto`, `min-block-size: 0`). Hosts must not re-pin `.tm-drawer__panel` position, animation or transform.
 - **Breaking: `TmNotionEditor` shell.** The editor root is now `TmEditorShell`. `LayoutMode` (`TmLayoutMode`, default `Auto`) resolves desktop, tablet and mobile from the editor container. `Chrome` is `Full` (default), `Minimal` or `None`. `InspectorContent` is an empty right-slot. Below desktop the sidebar is a drawer of the editor, not a viewport-fixed panel, and it starts closed. Floating menus (slash, emoji, color, type switcher, token, status) use the core overlay; the JS clamps `adjustSlashMenuPosition`, `adjustEmojiPickerPosition`, `adjustColorPickerPosition`, `adjustTypeSwitcherPosition` and `isNarrowViewport` are gone.
@@ -1360,6 +1369,21 @@ findings table and the per-leg results) and the two perf runs
   ≤ +10 % budget is claimed.
 
 ### Breaking / Migration
+
+- **NotionEditor phase 7: share, restrictions, history, media and Tempo edit modals ride core overlays (N8, N9, N11, N12).** Each dialog dropped its own backdrop and `z-index`. The public test ids stay. A host that styled `.tm-npsd-backdrop`, `.tm-nprd-backdrop`, `.tm-nph-backdrop` or `.tm-media-dialog-backdrop` now styles the core `.tm-modal-overlay`.
+
+  ```razor
+  @* before: a page-owned dialog *@
+  <div class="tm-npsd-backdrop"></div>
+  <div class="tm-npsd" role="dialog">…</div>
+
+  @* after: the same content inside TmModal *@
+  <TmModal Show="Visible" MobilePresentation="MobilePresentation.Sheet">
+      <div class="tm-npsd">…</div>
+  </TmModal>
+  ```
+
+  Share revoke confirms only when `ConfirmRevoke` is set. Page history hides side-by-side diff on a mobile layout and drills from the version list into the preview. The diagram, spreadsheet and wireframe edit modals put Discard before Save.
 
 - **NotionEditor phase 5: `TmNotionPageCommentSection` removed; shell-panel DOM changed (N2, P4–P7).**
 

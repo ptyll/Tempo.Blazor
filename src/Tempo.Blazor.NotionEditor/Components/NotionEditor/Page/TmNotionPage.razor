@@ -245,6 +245,7 @@
 @* ── Page history panel (portal — position:fixed) *@
 <TmNotionPageHistory Visible="_historyVisible"
                      PageId="@Page.Id.ToString("D")"
+                     LayoutMode="MenuLayout"
                      OnClosed="() => { _historyVisible = false; StateHasChanged(); }"
                      OnRestored="HandleHistoryRestoredAsync" />
 
@@ -258,10 +259,12 @@
 <TmNotionShareDialog PageId="Page.Id"
                      Provider="Context.PublicShareProvider"
                      Visible="_shareVisible"
+                     LayoutMode="MenuLayout"
                      VisibleChanged="HandleShareVisibleChangedAsync" />
 
 <TmNotionRestrictionsDialog PageId="Page.Id"
                             Provider="Context.PermissionProvider"
+                            LayoutMode="MenuLayout"
                             EffectivePermission="EffectivePermission"
                             Visible="_restrictionsVisible"
                             VisibleChanged="HandleRestrictionsVisibleChangedAsync"

@@ -80,6 +80,44 @@
       "description": "The edge the popover opens from. The sheet presentation ignores it."
     },
     {
+      "name": "Align",
+      "type": "OverlayAlign",
+      "isRequired": false,
+      "default": "OverlayAlign.Start",
+      "description": "Cross-axis alignment against the anchor. A trigger on the viewport's trailing edge passes End so the panel opens inward."
+    },
+    {
+      "name": "AnchorElement",
+      "type": "ElementReference?",
+      "isRequired": false,
+      "description": "The element the popover anchors to. Null uses the zero-size pin; a trigger menu passes its button."
+    },
+    {
+      "name": "CloseOnEscape",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "Whether the core overlay closes on Escape. A menu that owns its own Escape contract (a submenu collapses first) passes false."
+    },
+    {
+      "name": "TrapFocus",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Trap Tab inside a desktop popover and move initial focus into it. The mobile sheet traps through its drawer."
+    },
+    {
+      "name": "InitialFocusSelector",
+      "type": "string?",
+      "isRequired": false,
+      "description": "CSS selector of the element a trapped desktop popover focuses first. Null keeps the first focusable."
+    },
+    {
+      "name": "SheetInitialFocusSelector",
+      "type": "string?",
+      "isRequired": false,
+      "description": "CSS selector of the element a mobile sheet focuses first. Null keeps the role default."
+    },
+    {
       "name": "Role",
       "type": "string",
       "isRequired": false,

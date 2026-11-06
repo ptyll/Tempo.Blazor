@@ -1,7 +1,9 @@
 using System.Runtime.CompilerServices;
 using Bunit;
+using Bunit.JSInterop;
 using FluentAssertions;
 using Microsoft.AspNetCore.Components;
+using Tempo.Blazor.Abstractions.Layout;
 using Tempo.Blazor.Components.NotionEditor.UI;
 using Tempo.Blazor.NotionEditor.Enums;
 using Tempo.Blazor.NotionEditor.Interfaces;
@@ -41,7 +43,9 @@ public sealed class TmNotionAiMenuTests : LocalizationTestBase
             ["Notion_AI_Mode_Lengthen"] = "Lengthen",
             ["Notion_AI_Mode_Tone"] = "Tone",
             ["Notion_AI_Mode_Simplify"] = "Simplify",
-            ["Notion_AI_Mode_Translate"] = "Translate"
+            ["Notion_AI_Mode_Translate"] = "Translate",
+            ["TmNotionAiMenu_Copy"] = "Copy result",
+            ["TmNotionAiMenu_CharCount"] = "{0} / {1}",
         });
     }
 
@@ -176,6 +180,91 @@ public sealed class TmNotionAiMenuTests : LocalizationTestBase
         await cut.Find("[data-testid='notion-ai-discard']").ClickAsync(new());
 
         closed.Should().BeTrue();
+    }
+
+    [Fact]
+    public void Modes_AreSelectableTabs()
+    {
+        var cut = RenderMenu(new RecordingAIProvider());
+
+        foreach (var id in new[] { "generate", "improve", "summarize", "ask" })
+        {
+            var tab = cut.Find($"[data-testid='notion-ai-mode-{id}']");
+            tab.GetAttribute("role").Should().Be("tab");
+            tab.GetAttribute("aria-controls").Should().Be("notion-ai-panel");
+        }
+
+        cut.Find("[data-testid='notion-ai-mode-generate']").GetAttribute("aria-selected").Should().Be("true");
+        cut.Find("[data-testid='notion-ai-mode-ask']").GetAttribute("aria-selected").Should().Be("false");
+    }
+
+    [Fact]
+    public async Task FinishedStream_MakesAcceptPrimary_AndCopyCallsClipboard()
+    {
+        var cut = RenderMenu(new RecordingAIProvider());
+        JSInterop.SetupVoid("tmNotionEditor.copyToClipboard", _ => true);
+
+        cut.Find("[data-testid='notion-ai-prompt']").Input("release notes");
+        await cut.Find("[data-testid='notion-ai-run']").ClickAsync(new());
+        cut.WaitForAssertion(() =>
+            cut.Find("[data-testid='notion-ai-accept']").ClassList.Should().Contain("tm-notion-ai__btn--primary"));
+
+        await cut.Find("[data-testid='notion-ai-copy']").ClickAsync(new());
+
+        var copied = JSInterop.Invocations.Single(call => call.Identifier == "tmNotionEditor.copyToClipboard");
+        copied.Arguments[0].ToString().Should().Contain("Generated release notes");
+    }
+
+    [Fact]
+    public async Task CtrlEnter_RunsThePrompt()
+    {
+        var provider = new RecordingAIProvider();
+        var cut = RenderMenu(provider);
+        cut.Find("[data-testid='notion-ai-prompt']").Input("outline");
+
+        await cut.Find("[data-testid='notion-ai-menu']").KeyDownAsync(
+            new Microsoft.AspNetCore.Components.Web.KeyboardEventArgs { Key = "Enter", CtrlKey = true });
+
+        cut.WaitForAssertion(() => provider.GenerateCalls.Should().Be(1));
+    }
+
+    [Fact]
+    public async Task Tablist_HomeAndEnd_MoveToFirstAndLastTab()
+    {
+        var cut = RenderMenu(new RecordingAIProvider());
+        var tabs = cut.FindAll("[role='tab']");
+
+        tabs[0].GetAttribute("aria-selected").Should().Be("true");
+        tabs[1].GetAttribute("tabindex").Should().Be("-1");
+
+        await tabs[0].KeyDownAsync(new Microsoft.AspNetCore.Components.Web.KeyboardEventArgs { Key = "End" });
+
+        cut.WaitForAssertion(() =>
+        {
+            cut.Find("[data-testid='notion-ai-mode-ask']").GetAttribute("aria-selected").Should().Be("true");
+            cut.Find("[data-testid='notion-ai-mode-generate']").GetAttribute("tabindex").Should().Be("-1");
+        });
+
+        await cut.Find("[data-testid='notion-ai-mode-ask']")
+            .KeyDownAsync(new Microsoft.AspNetCore.Components.Web.KeyboardEventArgs { Key = "Home" });
+
+        cut.WaitForAssertion(() =>
+            cut.Find("[data-testid='notion-ai-mode-generate']").GetAttribute("aria-selected").Should().Be("true"));
+    }
+
+    [Fact]
+    public void Mobile_PresentsAsBottomSheet()
+    {
+        var cut = Render<CascadingValue<TmLayoutContext>>(parameters => parameters
+            .Add(p => p.Name, TmLayoutScopes.Viewport)
+            .Add(p => p.Value, new TmLayoutContext(TmLayoutMode.Auto, TmLayoutMode.Mobile))
+            .Add(p => p.IsFixed, true)
+            .AddChildContent<TmNotionAiMenu>(child => child
+                .Add(c => c.Visible, true)
+                .Add(c => c.Provider, new RecordingAIProvider())));
+
+        cut.Find(".tm-overlay-panel-sheet").Should().NotBeNull();
+        cut.Find(".tm-notion-ai__actions--sheet").Should().NotBeNull();
     }
 
     [Fact]

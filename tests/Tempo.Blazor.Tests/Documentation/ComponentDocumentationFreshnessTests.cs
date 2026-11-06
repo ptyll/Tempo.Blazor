@@ -154,6 +154,10 @@ public class ComponentDocumentationFreshnessTests
             .SelectMany(LoadableTypes)
             .Where(t => t is { IsAbstract: false, IsVisible: true }
                         && typeof(ComponentBase).IsAssignableFrom(t))
+            // The shared shell of the three Tempo edit modals. The razor generator emits a public
+            // class, but the component is an implementation detail excluded from the docs
+            // (packages.json excludePatterns) and never published on its own.
+            .Where(t => t.Name != "TmNotionTempoEditorModal")
             .GroupBy(t => BaseName(t.Name), StringComparer.Ordinal)
             .Select(g => new ComponentEntry(g.Key, g.OrderBy(t => t.FullName, StringComparer.Ordinal).ToArray()))
             .OrderBy(e => e.Name, StringComparer.Ordinal)

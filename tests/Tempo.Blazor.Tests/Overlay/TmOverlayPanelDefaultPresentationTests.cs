@@ -86,8 +86,6 @@ public class TmOverlayPanelMobilePresentationSweepTests
         "TmMultiColumnComboBox.razor",
         "TmTagPicker.razor",
         "TmCommentMentionInput.razor",
-        "TmNotionMentionMenu.razor",
-        "TmNotionAiMenu.razor",
         "TmFilterableDropdown.razor",
         "TmMultiSelect.razor",
     ];
@@ -99,6 +97,8 @@ public class TmOverlayPanelMobilePresentationSweepTests
         "TmDatePicker.razor",
         "TmDateRangePicker.razor",
         "TmDateTimePicker.razor",
+        "TmNotionFloatingMenu.razor",
+        "TmNotionAiMenu.razor",
     ];
 
     [Theory]

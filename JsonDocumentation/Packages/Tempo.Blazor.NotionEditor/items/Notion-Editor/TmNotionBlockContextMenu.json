@@ -18,6 +18,24 @@
       "editorRequired": true
     },
     {
+      "name": "Top",
+      "type": "double?",
+      "isRequired": false,
+      "description": "Viewport top of the handle the menu anchors to. Null keeps the DOM anchor."
+    },
+    {
+      "name": "Left",
+      "type": "double?",
+      "isRequired": false,
+      "description": "Viewport left of the handle the menu anchors to. Null keeps the DOM anchor."
+    },
+    {
+      "name": "Anchor",
+      "type": "ElementReference",
+      "isRequired": false,
+      "description": "The trigger the popover anchors to when Top and Left are unset."
+    },
+    {
       "name": "OnClose",
       "type": "EventCallback",
       "isRequired": false

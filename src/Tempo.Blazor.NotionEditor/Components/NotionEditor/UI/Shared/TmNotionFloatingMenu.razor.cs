@@ -67,6 +67,12 @@ public partial class TmNotionFloatingMenu : TmComponentBase
     [Parameter] public string Role { get; set; } = "dialog";
 
     /// <summary>
+    /// Whether the core overlay closes on Escape. A menu that owns its own Escape contract
+    /// (a submenu collapses first) passes false.
+    /// </summary>
+    [Parameter] public bool CloseOnEscape { get; set; } = true;
+
+    /// <summary>
     /// Trap Tab inside a desktop popover and move initial focus into it. A menu opened from a
     /// handle otherwise leaves focus on the trigger. The mobile sheet traps through its drawer.
     /// </summary>
@@ -103,8 +109,10 @@ public partial class TmNotionFloatingMenu : TmComponentBase
     /// </summary>
     [Parameter] public RenderFragment? Footer { get; set; }
 
-    private bool IsSheet =>
-        (LayoutMode != TmLayoutMode.Auto ? LayoutMode : Layout?.Resolved) == TmLayoutMode.Mobile;
+    private TmLayoutMode ResolvedLayout =>
+        LayoutMode != TmLayoutMode.Auto ? LayoutMode : Layout?.Resolved ?? TmLayoutMode.Auto;
+
+    private bool IsSheet => ResolvedLayout == TmLayoutMode.Mobile;
 
     private ElementReference ResolvedAnchor =>
         AnchorElement is { Id: not null } anchor ? anchor : _anchor;
