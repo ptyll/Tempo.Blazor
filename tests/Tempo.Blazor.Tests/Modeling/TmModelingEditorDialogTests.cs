@@ -656,6 +656,25 @@ public sealed class TmModelingEditorDialogTests : LocalizationTestBase
 
     // ── Fáze 15: the dialog's notation palette (pinned stencil library) ─────
 
+    /// <summary>
+    /// Waits for the editor to be LOADED *and* structure-editable before a structural surface is
+    /// touched (flaky-test fix, phase 3 review H2): the writer capabilities and the load are two
+    /// separate state transitions, so opening the dialog on "loaded" alone could race the
+    /// <c>data-can-edit-structure</c> attribute and render the dialog's palette before the
+    /// capability gate flipped. Explicit 5-second timeout — a slow host must not masquerade as a
+    /// missing palette.
+    /// </summary>
+    private static void WaitForStructureEditing(IRenderedComponent<TmModelingEditor> cut)
+    {
+        var timeout = TimeSpan.FromSeconds(5);
+        cut.WaitForAssertion(
+            () => cut.Find("[data-testid='modeling-editor']").GetAttribute("data-state").Should().Be("loaded"),
+            timeout);
+        cut.WaitForAssertion(
+            () => cut.Find("[data-testid='modeling-editor']").GetAttribute("data-can-edit-structure").Should().Be("true"),
+            timeout);
+    }
+
     /// <summary>The shared LocalizationTestBase registers an EMPTY stencil registry (most tests
     /// register their own). The palette tests need the mapped stencils to resolve — replace the
     /// registration with a minimal library carrying the two palette stencils (last-wins).</summary>
@@ -691,13 +710,18 @@ public sealed class TmModelingEditorDialogTests : LocalizationTestBase
         var module = JSInterop.SetupModule(ModelingModulePath);
         module.SetupVoid("focusWithin", _ => true).SetVoidResult();
         Services.TryAddEnumerable(ServiceDescriptor.Singleton<IModelingModelProvider>(new SuccessfulModelingModelProvider()));
+        // Phase 3: the dialog palette is a STRUCTURAL authoring surface — it renders only for a
+        // writer that advertises Structure (a content-only writer gets no palette at all).
+        Services.AddSingleton<IModelingModelWriter>(
+            new AuthoringModelingModelWriter(SuccessfulModelingModelProvider.Key, ModelingModelWriterCapabilities.All));
         UsePaletteStencilLibrary();
 
         using var cut = Render<TmModelingEditor>(parameters => parameters
             .Add(p => p.ProviderKey, SuccessfulModelingModelProvider.Key)
-            .Add(p => p.NotationKey, "bpmn"));
+            .Add(p => p.NotationKey, "bpmn")
+            .Add(p => p.AllowModelEditing, true));
 
-        cut.WaitForAssertion(() => cut.Find("[data-testid='modeling-editor']").GetAttribute("data-state").Should().Be("loaded"));
+        WaitForStructureEditing(cut);
 
         cut.Find("[data-testid='modeling-open-in-editor-button']").Click();
         cut.WaitForAssertion(() => cut.Find("[data-testid='modeling-open-diagram-editor']").Should().NotBeNull());
@@ -725,13 +749,18 @@ public sealed class TmModelingEditorDialogTests : LocalizationTestBase
         var module = JSInterop.SetupModule(ModelingModulePath);
         module.SetupVoid("focusWithin", _ => true).SetVoidResult();
         Services.TryAddEnumerable(ServiceDescriptor.Singleton<IModelingModelProvider>(new SuccessfulModelingModelProvider()));
+        // Phase 3: the dialog palette is a STRUCTURAL authoring surface — it renders only for a
+        // writer that advertises Structure (a content-only writer gets no palette at all).
+        Services.AddSingleton<IModelingModelWriter>(
+            new AuthoringModelingModelWriter(SuccessfulModelingModelProvider.Key, ModelingModelWriterCapabilities.All));
         UsePaletteStencilLibrary();
 
         using var cut = Render<TmModelingEditor>(parameters => parameters
             .Add(p => p.ProviderKey, SuccessfulModelingModelProvider.Key)
-            .Add(p => p.NotationKey, "bpmn"));
+            .Add(p => p.NotationKey, "bpmn")
+            .Add(p => p.AllowModelEditing, true));
 
-        cut.WaitForAssertion(() => cut.Find("[data-testid='modeling-editor']").GetAttribute("data-state").Should().Be("loaded"));
+        WaitForStructureEditing(cut);
 
         cut.Find("[data-testid='modeling-open-in-editor-button']").Click();
         cut.WaitForAssertion(() =>

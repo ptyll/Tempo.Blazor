@@ -131,6 +131,13 @@ public partial class TmModelingModelTree : IAsyncDisposable
     /// </summary>
     [Parameter] public EventCallback<ModelingElementDto> OnInsertIntoPreview { get; set; }
 
+    /// <summary>
+    /// Phase 3 review (A10): raised when the user presses Delete on a focused tree item. The HOST
+    /// owns the cascade confirmation and the commit, so the tree advertises (and the key really
+    /// does) exactly what the header's Delete action does. Unbound = no Delete handling.
+    /// </summary>
+    [Parameter] public EventCallback<ModelingElementDto> OnDeleteRequested { get; set; }
+
     /// <summary>Optional two-way binding of the collapsed group keys. Seeded from when the instance
     /// is given a new collection; every user toggle raises <see cref="CollapsedGroupsChanged"/> with
     /// a fresh snapshot. The parameter is NEVER assigned inside the component.</summary>
@@ -561,6 +568,22 @@ public partial class TmModelingModelTree : IAsyncDisposable
     /// row button follows (the host's AllowNodeDrop switch AND a listener for the request).</summary>
     private bool CanInsertIntoPreview => AllowNodeDrop && OnInsertIntoPreview.HasDelegate;
 
+    /// <summary>Whether the Delete key is live on a tree item (the host bound the request).</summary>
+    private bool CanDelete => OnDeleteRequested.HasDelegate;
+
+    /// <summary>
+    /// The <c>aria-keyshortcuts</c> value of a tree item: the insert mnemonics plus Delete while the
+    /// host routes it (review A10) — an advertised shortcut must be a real one. Null when neither
+    /// applies (the attribute then renders not at all).
+    /// </summary>
+    private string? NodeShortcutNames => (CanInsertIntoPreview, CanDelete) switch
+    {
+        (true, true) => "Insert Control+Enter Delete",
+        (true, false) => "Insert Control+Enter",
+        (false, true) => "Delete",
+        _ => null
+    };
+
     /// <summary>Keys on a NODE treeitem: Up/Down/Home/End traverse the flat list, Left focuses
     /// the node's group header. Right is a no-op. Enter/Space stay NATIVE (the node is a real
     /// button) — the stopPropagation fence keeps them away from the emulating group treeitem.
@@ -600,6 +623,15 @@ public partial class TmModelingModelTree : IAsyncDisposable
                 if (!args.Repeat && CanInsertIntoPreview)
                 {
                     await HandleInsertRequestedAsync(element);
+                }
+
+                break;
+            case "Delete":
+                // The advertised shortcut IS real (review A10): the treeitem is already the
+                // user's selection context, so Delete asks the host for the cascade.
+                if (!args.Repeat && CanDelete)
+                {
+                    await OnDeleteRequested.InvokeAsync(element);
                 }
 
                 break;
@@ -773,6 +805,12 @@ public partial class TmModelingModelTree : IAsyncDisposable
             ? Loc["TmModelingModelTree_Unnamed"]
             : element.Name;
 
+    /// <summary>
+    /// The tree row's SECONDARY line (phase 3 review, U7). A source-backed row keeps its source
+    /// path; a row with NO source identity whose id is a generated GUID shows its localized TYPE
+    /// instead — a raw <c>3f2a…</c> tells the user nothing, while "User task" does. Any other row
+    /// keeps its id.
+    /// </summary>
     private string GetNodeMetadata(ModelingElementDto element)
     {
         if (!string.IsNullOrWhiteSpace(element.SourcePath))
@@ -780,10 +818,25 @@ public partial class TmModelingModelTree : IAsyncDisposable
             return element.SourcePath;
         }
 
-        return string.IsNullOrWhiteSpace(element.Id)
-            ? Loc["TmModelingModelTree_UnknownId"]
-            : element.Id;
+        if (string.IsNullOrWhiteSpace(element.Id))
+        {
+            return Loc["TmModelingModelTree_UnknownId"];
+        }
+
+        if (string.IsNullOrWhiteSpace(element.SourceId) && Guid.TryParse(element.Id, out _))
+        {
+            return GetTypeLabel(element.SemanticType);
+        }
+
+        return element.Id;
     }
+
+    /// <summary>The localized semantic-type label (<c>TmModelingSemanticType_{type}</c>) with the
+    /// same humanized fallback the group headers use.</summary>
+    private string GetTypeLabel(string semanticType)
+        => string.IsNullOrWhiteSpace(semanticType)
+            ? Loc["TmModelingModelTree_UnknownType"]
+            : GetGroupLabel(semanticType.Trim());
 
     private string GetNodeAriaLabel(ModelingElementDto element)
         => $"{GetDisplayName(element)}, {GetNodeMetadata(element)}, {element.SemanticType}".Trim();

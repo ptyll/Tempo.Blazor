@@ -2,7 +2,7 @@
   "kind": "Class",
   "category": "Modeling",
   "namespace": "Tempo.Blazor.Modeling",
-  "description": "What an operation batch needs from the host: the notation relationship rules and viewpoint rules it validates against, the notation profile provider, and the ModelingOperationPolicy (Strict by default).",
+  "description": "What an operation batch needs from the host: the notation relationship rules and viewpoint rules it validates against, the notation profile provider, the optional Notation the caller authors under (null = the model's own notation — an editor with a notation override passes its effective key so its rule checks and the engine's validation judge the same notation), and the ModelingOperationPolicy (Strict by default).",
   "packageId": "Tempo.Blazor.Abstractions",
   "sourcePath": "src/Tempo.Blazor.Abstractions/Modeling/ModelingOperations.cs",
   "documentationStatus": "generated",

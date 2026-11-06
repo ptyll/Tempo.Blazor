@@ -22,6 +22,16 @@ internal sealed class BpmnNotationProfile : IModelingNotationProfile
         "Choreography",
         "Conversation"
     ];
+
+    /// <summary>BPMN containment (phase 3 review, A6): pools, lanes and subprocesses hold other
+    /// elements — an insert dropped inside one becomes its child and the container grows to fit.</summary>
+    public IReadOnlyCollection<string> ContainerElementTypes { get; } =
+    [
+        "Pool",
+        "Lane",
+        "SubProcess",
+        "EventSubProcess"
+    ];
 }
 
 internal sealed class BpmnLegacyModelingNotationProfile : IModelingNotationProfile

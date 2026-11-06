@@ -248,6 +248,30 @@ public partial class TmModelingDiagramPreview
         await InsertElementAsync(element, offsetX, offsetY);
     }
 
+    /// <summary>
+    /// The insertion point of a SEMANTIC insert (phase 3): the centre of the visible viewport of the
+    /// embedded editor, falling back to the active page centre while no viewport is known (SSR,
+    /// prerender, bUnit). The hosting editor places a semantically created element here — the same
+    /// point the palette drop and the reuse insert use, so both paths agree.
+    /// </summary>
+    /// <param name="point">The resolved centre in document coordinates.</param>
+    /// <returns><c>true</c> when a viewport or a page exists; <c>false</c> with a zero point otherwise.</returns>
+    public bool TryGetInsertionCenter(out (double X, double Y) point)
+    {
+        var page = Document?.ActivePage;
+        if (page is null)
+        {
+            point = default;
+            return false;
+        }
+
+        var viewport = _editor?.GetViewport() ?? default;
+        point = viewport.W > 0
+            ? (viewport.X + viewport.W / 2, viewport.Y + viewport.H / 2)
+            : (page.Width / 2d, page.Height / 2d);
+        return true;
+    }
+
     /// <summary>The shared drop/insert core: create the node at the given point, mutate the document and raise the contract.</summary>
     private async Task InsertElementAsync(ModelingElementDto element, double offsetX, double offsetY)
     {

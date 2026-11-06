@@ -9,14 +9,10 @@
 @using Tempo.Blazor.Modeling
 
 @* Fáze 5 (MO1): the editor resolves its presentation from ITS OWN container (TmLayoutObserver)
-   and renders the desktop workspace through the core TmEditorShell — Header (the phase 3
-   header), Left (model tree), Canvas (diagram preview with the collapsible issues dock under
-   it), Right (inspector with Properties | Source tabs) and StatusBar. The compact layout (below
-   the editor's own mobile threshold) keeps today's panel-tab workspace until the mobile phase;
-   its DOM (data-testid panels, data-active-panel, aside/section semantics — never a <main>) is
-   the frozen contract both branches preserve. The section is the editor's OWN root element (the
-   frozen data-* contract and the scoped root chrome live here — a child component's root would
-   not carry this stylesheet's scope attribute); the observer fills it and hosts the branch. *@
+   and renders the workspace through the core TmEditorShell (Header, tree, preview + issues dock,
+   inspector, status bar); the compact branch keeps the panel-tab DOM both branches freeze. The
+   section is the editor's OWN root element (the data-* contract and this stylesheet's scope live
+   here — a child component's root would not carry it); the observer hosts the branch. *@
 <section class="@RootClass"
          data-testid="@TestId("modeling-editor")"
          @ref="_editorRoot"
@@ -35,6 +31,9 @@
          data-issue-count="@IssueCount"
          data-active-panel="@ActivePanelName"
          data-open-editor="@((_openedEditorDocument is not null).ToString().ToLowerInvariant())"
+         data-can-edit-structure="@CanEditModelStructure.ToString().ToLowerInvariant()"
+         data-writer-capabilities="@EffectiveWriterCapabilities.ToString()"
+         @onkeydown="HandleEditorRootKeyDownAsync"
          style="@HeightStyle">
     @* Fáze 6 review fix: the editor tracks its OWN container through this observer (the shell's
        duplicate is an idempotent echo of the same box) — without it an Auto editor's tablet
@@ -49,19 +48,14 @@
         @if (layout.IsMobile)
         {
             @* ── Mobile layout (the editor container is below its own mobile threshold) ─────
-               Fáze 7 (G2 — viewing + light edits): a compact header (title + state badge + "⋯"),
-               ONE panel at a time behind a real tablist ordered Preview / Tree / Inspector /
-               Issues (badge count), a status card with the four count tiles and the loaded
-               time, and the in-flow F5 action bar (Reload / Change view / Issues + More with
-               Generate diagram and Open in editor — never a "Settings" entry). The editor ROOT
-               section is the focusWithin surface, so the open-editor dialog's close button and
-               the mobile focus return stay inside the scope (the overlays themselves render
-               ONCE after the layout observer — final review fix). *@
+               Fáze 7 (G2 — viewing + light edits): a compact header, ONE panel at a time behind
+               a real tablist (Preview / Tree / Inspector / Issues), a status card and the F5
+               action bar. The editor ROOT is the focusWithin surface, so the dialog's close
+               button and the mobile focus return stay inside it. *@
             @* Fáze 7 review fix (blocker): the mobile shell is the ALWAYS-PRESENT chrome — even on
-               the empty / error / loading-without-model screens it renders the compact header, the
-               "Change view" sheet and a reduced action bar (Reload + Change view), with the
-               single-state screen where the tabs would be. Without it those states had no reload
-               and no way back (no provider surface at all). *@
+               the empty / error / loading-without-model screens it renders the header, the "Change
+               view" sheet and a reduced action bar, with the single-state screen where the tabs
+               would be. *@
             <div class="tm-modeling-editor__mobile-shell">
                 <header class="tm-modeling-editor__toolbar" data-testid="@TestId("modeling-editor-toolbar")">@MobileHeaderContent</header>
 
@@ -83,10 +77,9 @@
                             <TmTabPanel Id="preview"
                                        TabAttributes="@PreviewTabAttributes"
                                        Title="@Loc["TmModelingEditor_Preview"]">
-                                @* Fáze 7 review fix: the status card lives in the PREVIEW tab body —
-                                   a shell-level card stole ~110px from every tab. It sits ABOVE the
-                                   scrolling panel (the tab panel is the flex column), so the canvas
-                                   still fills the tab and the other tabs get the full height. *@
+                                @* Fáze 7 review fix: the status card lives in the PREVIEW tab body
+                                   (a shell-level card stole ~110px from every tab), above the
+                                   scrolling panel so the canvas still fills the tab. *@
                                 <div class="tm-modeling-editor__status-card"
                                      data-testid="@TestId("modeling-status-card")"
                                      role="status"
@@ -115,10 +108,8 @@
                                        Title="@Loc["TmModelingEditor_Inspector"]"
                                        Badge="@InspectorTabBadge">
                                 @* Fáze 7 re-review: the aside is the programmatic focus target of
-                                   the selection switch — an issue/edge tap changes the tab AND
-                                   moves focus onto this panel through the stable
-                                   data-modeling-focus hook (tabindex="-1", not tab-reachable).
-                                   A tree tap is G2 browsing and never lands here. *@
+                                   the selection switch (data-modeling-focus hook, tabindex="-1"); a
+                                   tree tap is G2 browsing and never lands here. *@
                                 <aside class="tm-modeling-editor__panel tm-modeling-editor__inspector tm-modeling-editor__panel--active"
                                        data-testid="@TestId("modeling-inspector-panel")"
                                        data-modeling-focus="inspector-panel"
@@ -154,15 +145,11 @@
         }
         else
         {
-            @* ── Docked layouts (tablet and desktop): the core editor shell owns the chrome ───── *@
-            @* The shell is NOT pinned to the editor's resolved mode: an Auto shell measures its
-               own container (the same Modeling pair), so the nested TmDiagramEditors (preview +
-               open-editor dialog) resolve from THEIR OWN containers instead of inheriting a
-               forced Desktop cascade. The editor's resolved mode only seeds the shell's
-               pre-measure frame; a forced editor still pins the shell (tests/hosts).
-               Fáze 6: the tablet presentation is the shell's Overlay — the tree as an overlay
-               drawer, the inspector as a non-modal side sheet, at most ONE open (the editor
-               owns the flags and renders the "Panels" tabs as the visibility switch). *@
+            @* ── Docked layouts (tablet and desktop): the core editor shell owns the chrome; it is
+               NOT pinned to the editor's resolved mode (an Auto shell measures its own container,
+               so the nested diagram editors resolve from THEIR own boxes). Fáze 6: the tablet
+               presentation is the shell's Overlay — tree drawer + inspector side sheet, at most
+               ONE open (the "Panels" tabs are the visibility switch). *@
             <TmEditorShell @ref="_shell"
                            Class="tm-modeling-editor__shell"
                            LayoutMode="LayoutMode"
@@ -189,9 +176,8 @@
                     @if (layout.IsTablet)
                     {
                         @* Fáze 6: the "Panels" tabs double as the tablet visibility switch —
-                           Tree/Inspector toggle their drawer/sheet (one at a time, aria-expanded
-                           like a disclosure), Preview closes both. Same test ids as the compact
-                           row; the compact branch is the mobile-only alternative. *@
+                           Tree/Inspector toggle their drawer/sheet (one at a time, aria-expanded);
+                           Preview closes both. The compact branch is the mobile-only alternative. *@
                         <nav class="tm-modeling-editor__panel-tabs"
                              data-testid="@TestId("modeling-panel-tabs")"
                              aria-label="@Loc["TmModelingEditor_Panels"]">
@@ -240,10 +226,9 @@
                         </nav>
                     }
                 </Header>
-                @* Left/Right ride as VALUE attributes (final review M4): the section syntax wraps
-                   the fragment, so a null TreeSlot/RightSlot could never reach the shell and the
-                   docked asides painted EMPTY columns on the empty/error screens. The value form
-                   passes the null through and the shell skips the side entirely. *@
+                @* Left/Right ride as VALUE attributes (final review M4): a null TreeSlot/RightSlot
+                   then reaches the shell and the side is skipped instead of painting an empty
+                   column on the empty/error screens. *@
                 <Canvas>@CanvasSlot</Canvas>
                 <StatusBar>@StatusBarSlot</StatusBar>
             </TmEditorShell>
@@ -253,13 +238,17 @@
     </TmLayoutObserver>
 
     @* Final review fix (MAJOR): the overlays render ONCE, outside both layout branches — a flip
-       across the 768 boundary used to tear the dialog down and rebuild it (a new TmDiagramEditor
-       instance, a fresh engine boot). The single instance here survives the flip; the mobile
-       fullscreen vs desktop dialog choice rides the TmModal MobilePresentation parameter from the
-       resolved layout. The editor ROOT section is the focusWithin scope (it contains the close
-       button and every focus-return host in every layout). *@
+       across the 768 boundary used to tear the dialog down (a new TmDiagramEditor, a fresh engine
+       boot). The editor ROOT is the focusWithin scope in every layout. Phase 3: ONE polite live
+       region announces every structural result (insert, connect, delete, rejection). *@
+    <span class="tm-sr-only"
+          role="status"
+          aria-live="polite"
+          aria-atomic="true"
+          data-testid="@TestId("modeling-structure-live")">@_structureAnnouncement</span>
     @ChangeViewSheetContent
     @LegendSheetContent
+    @StructureDialogsContent
     @OpenEditorModalContent
     @EditingOverlaysContent
 </section>
@@ -278,11 +267,15 @@
                 <TmBadge Variant="@StateBadgeVariant" Style="BadgeStyle.Subtle" Pill="true">@Loc[StateLabelKey]</TmBadge>
             </span>
         </div>
-        @* MO3: one provider surface. When the selector is enabled the labeled select owns the
-           value (and the model reloads on change); otherwise the provider stays a labeled
-           chip. The notation/viewpoint chips are gone — the labeled selects own those values. *@
-        @* Review fix (phase 3): the provider surface and the notation/viewpoint selector form one
-           right-aligned header group that wraps together — the toolbar keeps only the title. *@
+        @* Phase 3 (MODELING-WRITER-CAPABILITIES): the non-drag structural actions — the
+           keyboard/tap alternative (WCAG 2.5.7) to the palette drop, the edge drag and the canvas
+           Delete. Rendered only when the writer advertises Structure; a content-only writer gets
+           the localized reason instead of dead controls. *@
+        @StructureHeaderActions
+        @* MO3: one provider surface — a labeled select when enabled (the model reloads on
+           change), else a labeled chip. Review fix (phase 3): the provider surface and the
+           notation/viewpoint selector form one right-aligned header group; the toolbar keeps only
+           the title. *@
         <div class="tm-modeling-editor__context">
             @if (ShowProviderSelector)
             {
@@ -303,7 +296,6 @@
                                     OnViewpointChanged="ChangeViewpointAsync" />
         </div>
     </text>;
-
     /// <summary>The labeled provider select (the docked header field and the mobile "Change
     /// view" sheet share one surface, so the value and the reload path cannot drift).</summary>
     private RenderFragment ProviderSelectContent => @<label class="tm-modeling-editor__field">
@@ -321,14 +313,10 @@
             }
         </select>
     </label>;
-
     /// <summary>
-    /// Fáze 7: the compact mobile header — the title + state badge and ONE "⋯" overflow
-    /// (TmDropdown, sheet presentation on a mobile layout). The provider/notation/viewpoint
-    /// selects live in the "Change view" sheet instead, so the header stays a single row at
-    /// 320px. The wrapper div is the open-editor dialog's mobile focus-return host: the
-    /// preview's trigger button does not render on mobile (no edit actions), so the restore
-    /// lands here — a programmatic focus target (tabindex="-1", not tab-reachable).
+    /// Fáze 7: the compact mobile header — title + state badge and ONE "⋯" overflow (the
+    /// provider/notation/viewpoint selects live in the "Change view" sheet, so the header stays a
+    /// single row at 320px). The wrapper div is the dialog's mobile focus-return host.
     /// </summary>
     private RenderFragment MobileHeaderContent => @<text>
         <div class="tm-modeling-editor__title-group">
@@ -357,7 +345,6 @@
             </TmDropdown>
         </div>
     </text>;
-
     /// <summary>The single-state screens (loading without a model, empty, error) — shared by both layouts.</summary>
     private RenderFragment SingleStateContent => @<text>
         @if (_state == ModelingEditorState.Loading && _model is null)
@@ -411,10 +398,8 @@
             </div>
         }
     </text>;
-
-    /// <summary>The shared retry affordance of the recoverable single-state screens (final UX
-    /// review M4): a Secondary button driving the editor's own reload path. The action bar's
-    /// Reload entry and this button share the label and the handler — one contract.</summary>
+    /// <summary>The shared retry affordance of the recoverable single-state screens (M4) — the
+    /// action bar's Reload entry and this button share the label and the handler.</summary>
     private RenderFragment RetryButtonContent => @<div class="tm-modeling-editor__state-actions">
         <TmButton Variant="ButtonVariant.Secondary"
                   Icon="@IconNames.Refresh"
@@ -423,7 +408,6 @@
             @Loc["TmModelingEditor_Reload"]
         </TmButton>
     </div>;
-
     /// <summary>The reload affordance (mounted workspace, loading state) — shared by both layouts.</summary>
     private RenderFragment ReloadIndicatorContent => @<div class="tm-modeling-editor__reload-indicator" data-testid="@TestId("modeling-editor-loading")" role="status" aria-live="polite">
         @* Carry-forward (phase 2 review): the state text is NOT repeated here — the
@@ -432,15 +416,11 @@
         <TmSpinner Size="SpinnerSize.Sm" />
         <span class="tm-sr-only">@Loc["TmModelingEditor_LoadingTitle"]</span>
     </div>;
-
-    /// <summary>The model tree. CollapsedGroups / CollapsedElementIds (Fáze 12, a separate key
-    /// space: element ids vs group keys) and FilterText stay bound to the editor's own
-    /// fields: the tree may remount when the layout flips, and the editor — not the tree instance
-    /// — owns the state. AllowNodeDrop follows the editor's switch; the non-drag "Insert into
-    /// preview" action routes back through <see cref="HandleInsertIntoPreviewAsync"/> (the
-    /// preview's drop path). Fáze 6 review: on the tablet band the tree renders inside the
-    /// drawer whose sheet title already says "Model tree", so the tree's own heading block is
-    /// hidden there (the search field stays).</summary>
+    /// <summary>The model tree. CollapsedGroups / CollapsedElementIds (a separate key space) and
+    /// FilterText stay bound to the editor (the tree may remount on a layout flip).
+    /// AllowNodeDrop follows the editor's switch; "Insert into preview" routes through the
+    /// preview's drop path. Fáze 6: inside the tablet drawer the tree's heading block is hidden
+    /// (the sheet title already says "Model tree").</summary>
     private RenderFragment ModelTreeContent
     {
         get
@@ -460,18 +440,13 @@
                                          ShowTitle="@(false == IsTablet && !IsMobileLayout)"
                                          OnElementSelected="@selected"
                                          OnElementDragStarted="@dragStarted"
-                                         OnElementDragEnded="@dragEnded" />;
+                                         OnElementDragEnded="@dragEnded"
+                                         OnDeleteRequested="@TreeDeleteRequested" />;
         }
     }
-
     /// <summary>The generated diagram preview — shared by both layouts. On the mobile band the
-    /// edit actions are gone (G2: they live in the action bar and the header "⋯"), the preview
-    /// is not a drop target and its own heading block is hidden — the status card in the same
-    /// tab already carries the nodes/edges counts the heading summary would duplicate (Fáze 7
-    /// re-review). Fáze 7 review: the mobile band also drops the embedded editor's own chrome —
-    /// its header bar would hold ONLY the "⋯" trigger there — through the DE's public parameters.
-    /// Fáze 9: the mobile band opts into the DE's floating zoom pill + a fit-to-width first load
-    /// (ShowZoomOverlay) — the mobile preview is no longer pinch-only.</summary>
+    /// edit actions are gone (G2), the preview is not a drop target and the DE's own chrome and
+    /// heading are dropped; Fáze 9: the mobile band opts into the DE's floating zoom pill.</summary>
     private RenderFragment PreviewContent => @<TmModelingDiagramPreview @ref="_preview"
                                                                         Document="@_document"
                                                                         DocumentChanged="UpdatePreviewDocumentAsync"
@@ -490,12 +465,10 @@
                                                                         OnGenerateRequested="GenerateDiagramFromLoadedModelAsync"
                                                                         OnRelationshipSelected="SelectRelationshipAsync"
                                                                         OnOpenInEditor="OpenGeneratedDiagramAsync" />;
-
     /// <summary>
-    /// The issues dock — MO1 places it UNDER the preview, collapsed to its header on demand. The
-    /// collapsed state is bound to the editor (the canvas grid owns the row height); the panel
-    /// keeps its own min/max-height-free sizing. Fáze 11: the editor turns the filter bar on and
-    /// owns the filter/sort state — the SAME fields feed the tablet sheet and the mobile tab.
+    /// The issues dock — MO1 places it UNDER the preview, collapsed to its header on demand (the
+    /// canvas grid owns the row height). Fáze 11: the editor owns the filter/sort state and the
+    /// SAME fields feed the tablet sheet and the mobile tab.
     /// </summary>
     private RenderFragment IssuesDockContent => @<TmModelingIssuePanel Issues="@DisplayIssues"
                                                                        ContentVersion="@EditContentVersion"
@@ -511,15 +484,11 @@
                                                                        SortModeChanged="SetIssueSortModeAsync"
                                                                        Elements="@_model?.Elements"
                                                                        Relationships="@_model?.Relationships" />;
-
     /// <summary>
-    /// The tablet issues side sheet (final UX review M2): the same non-modal TmFocusScope sheet
-    /// the shell's overlay presentation renders for the inspector, scoped to the editor root and
-    /// positioned by the editor's own stylesheet. The panel renders WITHOUT its collapse toggle
-    /// (the sheet header owns the close button) — the sheet replaces the dock on this band.
-    /// Final review re-fix (M2): the focus scope is a CHILD component root, so it never carries
-    /// this stylesheet's scope attribute — the positioning rule targets an editor-owned HOST
-    /// wrapper rendered here (a plain div in this file) instead, and the scope fills the host.
+    /// The tablet issues side sheet (M2): the same non-modal TmFocusScope sheet, scoped to the
+    /// editor root; the panel renders WITHOUT its collapse toggle (the sheet header owns the
+    /// close). The focus scope is a child component root, so it carries no scope attribute — the
+    /// positioning rule targets the editor-owned HOST wrapper and the scope fills it.
     /// </summary>
     private RenderFragment? TabletIssuesSheetContent
         => IssuesSheetOpen
@@ -565,12 +534,10 @@
                 </TmFocusScope>
             </div>
             : null;
-
     /// <summary>The source panel (the inspector's "Source" tab on the docked layouts).</summary>
     private RenderFragment SourcePanelContent => @<TmModelingSourcePanel Metadata="@_model?.Metadata"
                                                                          IsLoading="@(_state == ModelingEditorState.Loading || _isReloading)"
                                                                          OnLoadRequested="ReloadModelAsync" />;
-
     /// <summary>The element/relationship inspector. Fáze 14: read-only (MO2) unless the editing
     /// contract is active — the editor passes <c>ReadOnly=false</c> together with the commit
     /// callbacks and the inspector-scope undo/redo wiring; the header hosts the editor's
@@ -585,12 +552,10 @@
                                                                      OnUndoRequested="UndoModelEditAsync"
                                                                      OnRedoRequested="RedoModelEditAsync"
                                                                      HeaderActions="@(IsEditingEnabled ? InspectorHeaderActions : null)" />;
-
     /// <summary>
-    /// Fáze 14: the editing surface of the inspector header — the undo/redo pair (with the
-    /// keyboard hints and the live announcement region) plus the docked Save/Discard while a
-    /// Manual save is pending. On the MOBILE band the save/discard live in the sticky action
-    /// bar instead, so the header only carries the history pair.
+    /// Fáze 14: the inspector header's editing surface — the undo/redo pair (keyboard hints + live
+    /// announcement) plus the docked Save/Discard while a Manual save is pending; the MOBILE band
+    /// keeps save/discard in the sticky action bar and the header carries the history pair only.
     /// </summary>
     private RenderFragment InspectorHeaderActions => @<text>
         <span class="tm-modeling-editor__history-buttons">
@@ -614,6 +579,20 @@
                 <TmIcon Name="@IconNames.Redo2" Size="IconSize.Sm" />
                 <span class="tm-sr-only">@Loc["TmModelingEditor_Redo"]</span>
             </button>
+            @* Phase 3 review (U10): the mobile band is G2 (viewing + light edits) — no structural
+               delete in its inspector; the header actions above hide it too. *@
+            @if (!IsMobileLayout && CanEditModelStructure && (_selectedElement is not null || _selectedRelationship is not null))
+            {
+                <button type="button"
+                        class="tm-modeling-editor__history-btn"
+                        data-testid="@TestId("modeling-inspector-delete")"
+                        aria-keyshortcuts="Delete"
+                        title="@Loc["TmModelingEditor_DeleteElement"]"
+                        @onclick="RequestDeleteSelectedAsync">
+                    <TmIcon Name="@IconNames.Trash2" Size="IconSize.Sm" />
+                    <span class="tm-sr-only">@Loc["TmModelingEditor_DeleteElement"]</span>
+                </button>
+            }
             @if (!IsMobileLayout && SaveMode == ModelingSaveMode.Manual && HasPendingModelChanges)
             {
                 <button type="button"
@@ -637,12 +616,9 @@
         </span>
         <span id="@_historyLiveId" class="tm-sr-only" role="status" aria-live="polite">@_historyAnnouncement</span>
     </text>;
-
     /// <summary>
-    /// Fáze 13: the "Relations" tab body — the selected element's outgoing/incoming relationships
-    /// (or the selected relationship's source/target). Activations route through the SAME
-    /// selection paths an issue or an edge pick uses, so a navigation lands in the tree, the
-    /// preview contract and the inspector on every band.
+    /// Fáze 13: the "Relations" tab body — activations use the SAME selection paths an issue or an
+    /// edge pick uses, so a navigation lands in the tree, the preview and the inspector.
     /// </summary>
     private RenderFragment RelatedElementsContent => @<TmModelingRelatedElementsPanel Element="@_selectedElement"
                                                                                       Relationship="@_selectedRelationship"
@@ -652,11 +628,9 @@
                                                                                       OnRelationshipSelected="SelectRelatedRelationshipAsync" />;
 
     /// <summary>
-    /// The compact inspector keeps today's stacked column (source above properties above issues);
-    /// the tabbed inspector is the docked-layout presentation. The mobile phase owns the compact
-    /// restyle — until then the compact DOM stays byte-compatible with the pre-shell editor.
-    /// Fáze 13: the Relations SECTION renders under the properties — the mobile band has no extra
-    /// tab level, so the relations live in the Inspector tab body (G2: viewing only).
+    /// The compact inspector keeps the stacked column (source above properties above issues); the
+    /// tabbed inspector is the docked presentation. Fáze 13: the Relations SECTION renders under
+    /// the properties — the mobile band has no extra tab level (G2: viewing only).
     /// </summary>
     private RenderFragment CompactInspectorContent => @<text>
         @SourcePanelContent
@@ -666,10 +640,8 @@
     </text>;
 
     /// <summary>
-    /// The mobile Issues TAB content: the whole issue panel as the tab body (Fáze 7 — "Nálezy
-    /// na mobilu = celý obsah záložky"), expanded. Fáze 7 review: the tab body is the whole
-    /// scroll surface, so the collapse toggle is hidden there — the header stays a plain
-    /// heading (the desktop/tablet dock keeps its toggle).
+    /// The mobile Issues TAB content: the whole issue panel as the tab body, expanded, with the
+    /// collapse toggle hidden (the tab body is the scroll surface; the dock keeps its toggle).
     /// </summary>
     private RenderFragment MobileIssuesContent => @<TmModelingIssuePanel Issues="@DisplayIssues"
                                                                          ContentVersion="@EditContentVersion"
@@ -688,9 +660,8 @@
                                                                          Relationships="@_model?.Relationships" />;
 
     /// <summary>The mobile status card: four tiles with a SHORT visible label above the count
-    /// (final UX review M3 — the sr-only-only numbers were unreadable without the card's
-    /// context), an aria-hidden type icon per tile, and the loaded line in the aria-live region.
-    /// The state badge in the header owns the visible state (MO3 dedupe).</summary>
+    /// (final UX review M3), an aria-hidden type icon per tile and the loaded line in the aria-live
+    /// region; the header's state badge owns the visible state (MO3 dedupe).</summary>
     private RenderFragment MobileStatusCardContent => @<text>
         <div class="tm-modeling-editor__status-grid">
             @foreach (var (label, count, icon) in StatusTiles)
@@ -716,8 +687,7 @@
         </div>
     </text>;
 
-    /// <summary>The status strip — the docked layouts' status bar content (the mobile band
-    /// replaced it with the status card above).</summary>
+    /// <summary>The status strip — the docked layouts' status bar content.</summary>
     private RenderFragment StatusStripContent => @<text>
         @* Review fix (phase 3): the counts lead the strip; the state/last-loaded item is
            pushed to its trailing edge (margin-inline-start:auto). The state label stays
@@ -740,10 +710,9 @@
     </text>;
 
     /// <summary>
-    /// Fáze 7: the mobile "Change view" sheet (F2/F3) — a TmModal presented as a bottom sheet
-    /// with the provider/notation/viewpoint selects that the compact header no longer carries.
-    /// A mobile-only surface (it can only be opened from the compact DOM), so the presentation
-    /// is forced through the mobile LayoutMode — deterministic without any DOM measurement.
+    /// Fáze 7: the mobile "Change view" sheet — a bottom-sheet TmModal with the
+    /// provider/notation/viewpoint selects the compact header does not carry (mobile-only, so the
+    /// presentation is forced through the mobile LayoutMode).
     /// </summary>
     private RenderFragment ChangeViewSheetContent => @<TmModal Show="@_changeViewOpen"
                                                                Title="@Loc["TmModelingEditor_ChangeView"]"
@@ -771,11 +740,8 @@
     </TmModal>;
 
     /// <summary>
-    /// Fáze 15: the mobile legend sheet — the same TmModal bottom-sheet presentation the
-    /// "Change view" sheet uses, hosting the SAME legend component the preview card uses (the
-    /// sheet replaces the card, which would cover the small mobile preview canvas). A
-    /// mobile-only surface (the compact header "⋯" is the only entry) — the presentation is
-    /// forced through the mobile LayoutMode, deterministic without DOM measurement.
+    /// Fáze 15: the mobile legend sheet — the "Change view" sheet's presentation hosting the SAME
+    /// legend component the preview card uses (the card would cover the small mobile preview).
     /// </summary>
     private RenderFragment LegendSheetContent => @<TmModal Show="@_legendSheetOpen"
                                                            Title="@Loc["TmModelingEditor_Legend"]"
@@ -795,16 +761,35 @@
     </TmModal>;
 
     /// <summary>
-    /// Fáze 14: the editing overlays rendered ONCE — the save/conflict feedback alerts (placed
-    /// in the inspector surfaces by the fragments below) and the discard-confirmation modal.
-    /// The modal is a core TmModal with the localized title/text and Confirm/Cancel.
+    /// Fáze 14: the editing overlays rendered ONCE — the feedback alerts (placed in the inspector
+    /// surfaces by the fragments above) and the discard-confirmation modal (a core TmModal with
+    /// Confirm/Cancel).
     /// </summary>
     private readonly string _historyLiveId = $"tm-modeling-history-live-{Guid.NewGuid():N}";
 
     /// <summary>The save/conflict alerts of the editing surface: the conflict alert carries the
-    /// localized "Reload" action (which asks for confirmation before discarding the pending
-    /// changes); a failed save shows its message. Rendered above the inspector in every band.</summary>
+    /// localized "Reload" action; a failed save shows its message. Rendered above the inspector in
+    /// every band.</summary>
     private RenderFragment EditingAlertsContent => @<text>
+        @if (_structureErrorText is not null)
+        {
+            <div class="tm-modeling-editor__editing-alert" data-testid="@TestId("modeling-structure-error")">
+                <TmAlert Severity="AlertSeverity.Error" Variant="AlertVariant.Soft" Title="@_structureErrorTitle">
+                    <p>@_structureErrorText</p>
+                    @if (!string.IsNullOrWhiteSpace(_structureErrorFix))
+                    {
+                        <p class="tm-modeling-editor__detail">@_structureErrorFix</p>
+                    }
+                </TmAlert>
+                <button type="button"
+                        class="tm-modeling-editor__conflict-reload"
+                        data-testid="@TestId("modeling-structure-error-dismiss")"
+                        @onclick="DismissStructureErrorAsync">
+                    <TmIcon Name="@IconNames.X" Size="IconSize.Sm" />
+                    @Loc["TmModal_Close"]
+                </button>
+            </div>
+        }
         @if (ShowConflictAlert)
         {
             <div class="tm-modeling-editor__editing-alert" data-testid="@TestId("modeling-inspector-conflict")">
@@ -830,11 +815,122 @@
         }
     </text>;
 
+    /// <summary>
+    /// Phase 3 (decision <c>MODELING-WRITER-CAPABILITIES</c>): the non-drag structural actions of the
+    /// docked header — Insert element, Connect to… and Delete. They are the keyboard/tap alternative
+    /// (WCAG 2.5.7) to the palette drop, the edge drag and the canvas Delete, and they render only
+    /// when the effective writer advertises Structure. A content-only writer shows the localized
+    /// reason instead of dead controls (a keyboard user never tabs onto a disabled-by-design entry).
+    /// The mobile band is G2 (viewing + light edits) — it has no structural entry at all.
+    /// </summary>
+    private RenderFragment StructureHeaderActions => @<text>
+        @if (!IsMobileLayout && CanEditModelStructure)
+        {
+            <div class="tm-modeling-editor__structure-actions" role="group" aria-label="@Loc["TmModelingEditor_StructureActions"]">
+                <button type="button"
+                        class="tm-modeling-editor__structure-btn"
+                        data-testid="@TestId("modeling-insert-element")"
+                        title="@Loc["TmModelingEditor_InsertElement"]"
+                        @onclick="OpenInsertElementDialogAsync">
+                    <TmIcon Name="@IconNames.Plus" Size="IconSize.Sm" />
+                    <span class="tm-sr-only">@Loc["TmModelingEditor_InsertElement"]</span>
+                </button>
+                @* Phase 3 review (U11): a structurally-disabled action keeps its TAB STOP and its
+                   accessible name (aria-disabled, never the native disabled attribute) and points
+                   at the sr-only hint that says WHAT is missing — a disabled-by-design button a
+                   keyboard user can never reach explains nothing. The handler still early-returns. *@
+                <button type="button"
+                        class="tm-modeling-editor__structure-btn"
+                        data-testid="@TestId("modeling-connect-to")"
+                        aria-disabled="@((_selectedElement is null).ToString().ToLowerInvariant())"
+                        aria-describedby="@((_selectedElement is null) ? _selectElementFirstHintId : null)"
+                        title="@Loc["TmModelingEditor_ConnectTo"]"
+                        @onclick="OpenConnectDialogAsync">
+                    <TmIcon Name="@IconNames.Link" Size="IconSize.Sm" />
+                    <span class="tm-sr-only">@Loc["TmModelingEditor_ConnectTo"]</span>
+                </button>
+                <button type="button"
+                        class="tm-modeling-editor__structure-btn"
+                        id="@_deleteHeaderButtonId"
+                        data-testid="@TestId("modeling-delete-selection")"
+                        aria-disabled="@((_selectedElement is null && _selectedRelationship is null).ToString().ToLowerInvariant())"
+                        aria-describedby="@((_selectedElement is null && _selectedRelationship is null) ? _selectElementFirstHintId : null)"
+                        title="@Loc["TmModelingEditor_DeleteElement"]"
+                        @onclick="RequestDeleteSelectedAsync">
+                    <TmIcon Name="@IconNames.Trash2" Size="IconSize.Sm" />
+                    <span class="tm-sr-only">@Loc["TmModelingEditor_DeleteElement"]</span>
+                </button>
+                <span id="@_selectElementFirstHintId" class="tm-sr-only">@Loc["TmModelingEditor_SelectElementFirst"]</span>
+            </div>
+        }
+        else if (!IsMobileLayout && IsEditingEnabled)
+        {
+            <span class="tm-modeling-editor__capability-hint"
+                  data-testid="@TestId("modeling-capability-hint")"
+                  title="@Loc["TmModelingEditor_CapabilityMissing"]">@Loc["TmModelingEditor_CapabilityHint"]</span>
+        }
+    </text>;
+
+    /// <summary>
+    /// The three NON-DRAG authoring dialogs (phase 3) — the editor owns every piece of their state
+    /// and commits through the same semantic command the drag path uses, so there is exactly ONE
+    /// commit path per operation. The renderer is INTERNAL (review A8): the sheets are the editor's
+    /// own surface, never public API.
+    /// </summary>
+    private RenderFragment StructureDialogsContent => new TmModelingAuthoringDialogs
+    {
+        TestId = TestId,
+        InsertOpen = _insertElementDialogOpen,
+        InsertTitle = Loc["TmModelingEditor_InsertElement"],
+        InsertTypeLabel = Loc["TmModelingEditor_InsertType"],
+        InsertTypes = InsertTypeChoices,
+        InsertTypeValue = _insertSemanticType,
+        InsertTypeChanged = EventCallback.Factory.Create<string>(this, HandleInsertTypeChangedAsync),
+        InsertContainerLabel = Loc["TmModelingEditor_InsertContainer"],
+        InsertRootLabel = Loc["TmModelingEditor_InsertRoot"],
+        InsertContainers = InsertContainerChoices,
+        InsertContainerValue = _insertContainerId,
+        InsertContainerChanged = EventCallback.Factory.Create<string>(this, HandleInsertContainerChangedAsync),
+        InsertNameLabel = Loc["TmModelingEditor_InsertName"],
+        InsertNamePlaceholder = Loc["TmModelingEditor_InsertNamePlaceholder"],
+        InsertNameValue = _insertName,
+        InsertNameChanged = EventCallback.Factory.Create<string>(this, HandleInsertNameChangedAsync),
+        InsertConfirmLabel = Loc["TmModelingEditor_InsertConfirm"],
+        InsertConfirm = EventCallback.Factory.Create(this, ConfirmInsertElementAsync),
+        InsertCancel = EventCallback.Factory.Create(this, CloseInsertElementDialogAsync),
+        RelationshipOpen = _relationshipDialogOpen,
+        RelationshipTitle = Loc["TmModelingEditor_RelationshipDialogTitle"],
+        SourceLabel = RelationshipSourceLabel,
+        RelationshipSourceFormat = Loc["TmModelingEditor_RelationshipSource"],
+        ShowRelationshipTarget = RelationshipTargetVisible,
+        RelationshipTargetLabel = Loc["TmModelingEditor_RelationshipTarget"],
+        RelationshipTargets = ConnectTargetChoices,
+        RelationshipTargetValue = _connectTargetId,
+        RelationshipTargetChanged = EventCallback.Factory.Create<string>(this, HandleConnectTargetChangedAsync),
+        RelationshipTypeLabel = Loc["TmModelingEditor_RelationshipType"],
+        RelationshipTypes = ConnectTypeChoices,
+        RelationshipTypeValue = _connectRelationshipType,
+        RelationshipTypeChanged = EventCallback.Factory.Create<string>(this, HandleConnectTypeChangedAsync),
+        RelationshipRejection = _connectRejection,
+        RelationshipRejectionFix = _connectRejectionFix,
+        RelationshipRejectionTitle = Loc["TmModelingEditor_RelationshipRejectedTitle"],
+        RelationshipConfirmLabel = Loc["TmModelingEditor_RelationshipConfirm"],
+        RelationshipConfirm = EventCallback.Factory.Create(this, ConfirmConnectAsync),
+        RelationshipCancel = EventCallback.Factory.Create(this, CloseRelationshipDialogAsync),
+        DeleteOpen = _deleteConfirmationOpen,
+        DeleteTitle = DeleteTitleText,
+        DeleteSummary = DeleteSummaryText,
+        DeleteConfirmLabel = Loc["TmModelingEditor_DeleteConfirm"],
+        DeleteConfirm = EventCallback.Factory.Create(this, ConfirmDeleteAsync),
+        DeleteCancel = EventCallback.Factory.Create(this, CancelDelete),
+        DeleteRestoreFocusTargetId = _deleteRestoreFocusTargetId,
+        CancelLabel = Loc["TmModelingEditor_Cancel"]
+    }.Render();
+
     private string LastSaveResultText => _lastSaveResult?.Message ?? string.Empty;
 
     /// <summary>The discard-confirmation modal (Fáze 14): a reload, a provider switch or a
-    /// discard with pending edits asks first. Confirm runs the guarded action; cancel keeps
-    /// everything.</summary>
+    /// discard with pending edits asks first; confirm runs the guarded action.</summary>
     private RenderFragment EditingOverlaysContent => @<TmModal Show="@DiscardConfirmationOpen"
                                                                Title="@Loc["TmModelingEditor_DiscardChangesTitle"]"
                                                                Size="ModalSize.Small"
@@ -866,26 +962,70 @@
         ["data-testid"] = TestId("modeling-discard-changes-modal")
     };
 
-    /// <summary>How many element/relationship entries are pending (the modal's neutral count).</summary>
-    private int PendingChangeCount
+    /// <summary>
+    /// How many element / relationship / layout entries are pending (the discard modal's neutral
+    /// count AND the public observable a host renders — phase 3 review, U6). Counts the structure
+    /// changes (added/removed elements and relationships, parent moves) as well as the view changes
+    /// (node and connection upserts/removals), so a layout-only edit is visible too.
+    /// </summary>
+    public int PendingChangeCount
     {
         get
         {
             var pending = ComputePendingChangeSet();
-            return pending is null ? 0 : pending.Elements.Count + pending.Relationships.Count;
+            return pending is null
+                ? 0
+                : pending.Elements.Count + pending.Relationships.Count
+                    + pending.AddedElements.Count + pending.AddedRelationships.Count
+                    + pending.RemovedElementIds.Count + pending.RemovedRelationshipIds.Count
+                    + pending.ViewChanges.Sum(view => view.Nodes.Count + view.Connections.Count
+                        + view.RemovedNodeElementIds.Count + view.RemovedConnectionRelationshipIds.Count);
         }
     }
 
     /// <summary>
-    /// Fáze 10: the dialog's header close affordance. On the docked bands (desktop/tablet) it is
-    /// a TEXT <c>TmButton</c> "Close" (icon <c>x</c>, Ghost variant) rendered through the core
-    /// <c>TmModal.HeaderActions</c> slot with <c>ShowCloseButton="false"</c>; on the mobile
-    /// fullscreen presentation the icon-only <c>.tm-modal-close</c> stays. The frozen
-    /// <c>modeling-open-diagram-close</c> test id and the <c>open-editor-close</c>
-    /// data-modeling-focus hook live on whichever close is ACTIVE, so
-    /// the open focus and the E2E keep working on both bands. Null on mobile — the slot renders
-    /// nothing and the built-in close button takes over.
+    /// Fáze 10: the dialog's header close. On the docked bands it is a TEXT <c>TmButton</c>
+    /// "Close" through <c>TmModal.HeaderActions</c> (<c>ShowCloseButton="false"</c>); the mobile
+    /// fullscreen keeps the icon-only close. The frozen test id and the <c>open-editor-close</c>
+    /// focus hook live on whichever close is ACTIVE.
     /// </summary>
+    /// <summary>
+    /// The dialog DE's toolbar group selection (review A5): the FULL preset minus History while the
+    /// editor owns the only undo stack; null (the DE default) for a read-only preview.
+    /// </summary>
+    private Tempo.Blazor.Components.Diagram.DiagramToolbarGroups? DialogToolbarGroups
+        => CanEditModelStructure
+            ? Tempo.Blazor.Components.Diagram.DiagramToolbarGroups.All & ~Tempo.Blazor.Components.Diagram.DiagramToolbarGroups.History
+            : null;
+
+    /// <summary>
+    /// The editor's undo/redo pair inside the dialog header (review A5) — the ONE semantic stack, so
+    /// an insert made in the dialog can be undone from the dialog without a second diagram stack
+    /// shadowing it. The keyboard shortcuts are advertised on the buttons.
+    /// </summary>
+    private RenderFragment? DialogHeaderActions => !CanEditModelStructure ? null : @<span class="tm-modeling-editor__history-buttons">
+        <button type="button"
+                class="tm-modeling-editor__history-btn"
+                data-testid="@TestId("modeling-dialog-undo")"
+                aria-keyshortcuts="Control+Z"
+                aria-disabled="@((!CanUndoModelEdits).ToString().ToLowerInvariant())"
+                title="@Loc["TmModelingEditor_Undo"]"
+                @onclick="UndoModelEditAsync">
+            <TmIcon Name="@IconNames.Undo2" Size="IconSize.Sm" />
+            <span class="tm-sr-only">@Loc["TmModelingEditor_Undo"]</span>
+        </button>
+        <button type="button"
+                class="tm-modeling-editor__history-btn"
+                data-testid="@TestId("modeling-dialog-redo")"
+                aria-keyshortcuts="Control+Shift+Z"
+                aria-disabled="@((!CanRedoModelEdits).ToString().ToLowerInvariant())"
+                title="@Loc["TmModelingEditor_Redo"]"
+                @onclick="RedoModelEditAsync">
+            <TmIcon Name="@IconNames.Redo2" Size="IconSize.Sm" />
+            <span class="tm-sr-only">@Loc["TmModelingEditor_Redo"]</span>
+        </button>
+    </span>;
+
     private RenderFragment? OpenEditorHeaderActions => IsMobileLayout ? null : @<text>
         <TmButton Variant="ButtonVariant.Ghost"
                   Icon="x"
@@ -896,21 +1036,10 @@
     </text>;
 
     /// <summary>
-    /// Fáze 4 (G6): the "Open in editor" surface is a core TmModal — a viewport-positioned
-    /// dialog with a scrim, a public focus scope and Escape, sized ~90vw × 90vh on the
-    /// desktop through TmModelingEditor.razor.css. The TmModal header owns the title
-    /// (document title with the "Open in editor" fallback) and the close; the embedded
-    /// diagram editor renders with ShowTitle="false" so the dialog has ONE header. The
-    /// diagram editor keeps every panel and the Full toolbar preset; changes keep
-    /// propagating live (G8 — no footer), so the scrim is not a close affordance.
-    /// Fáze 7: on the editor's own MOBILE band the dialog presents FULLSCREEN (the TmModal
-    /// fullscreen presentation) and hands the diagram editor a full-height body; on the docked
-    /// bands it stays the ~90% dialog. The value is derived from the resolved layout — no
-    /// measurement, no flash. Final review fix (single focus-restore owner): the modal's own
-    /// TmFocusScope restore is DISABLED — the editor's focusWithin close path is the one owner,
-    /// so a mobile close cannot race a restore target that does not exist there.
-    /// Fáze 10: on the docked bands the close is the HeaderActions TEXT button (the icon-only
-    /// close is disabled); on the mobile fullscreen presentation the icon close stays.
+    /// Fáze 4 (G6): the "Open in editor" surface is a core TmModal (scrim, focus scope, Escape).
+    /// Its header owns the title and the close; the embedded editor renders with ShowTitle="false"
+    /// and changes propagate live (G8). Fáze 7: the mobile band presents FULLSCREEN. The modal's
+    /// own focus restore is DISABLED (the editor's focusWithin path is the single owner).
     /// </summary>
     private RenderFragment OpenEditorModalContent => @<text>
         @if (_openedEditorDocument is not null)
@@ -944,16 +1073,28 @@
                            mode seeds the DE's MinimapInitiallyCollapsed — the floating overlay
                            starts collapsed on a tablet (it covered the touch canvas) and reopens
                            from its button; a desktop body keeps the expanded card. *@
+                        @* Phase 3 review (A3): the dialog never adds or switches the diagram PAGE —
+                           a page flip is a navigation gesture the semantic model cannot express, and
+                           the structure diff would read the old page's nodes as deletions. The tabs
+                           render only for a non-structural preview.
+                           Review A5: while the editor owns the semantic undo stack, the dialog's DE
+                           gives up its OWN History group (no second stack to get lost in) and hosts
+                           the editor's undo/redo pair in its header; Ctrl+Z / Ctrl+Shift+Z / Ctrl+Y
+                           reach the editor through OnHistoryRequested. *@
                         <TmDiagramEditor Document="@_openedEditorDocument"
                                          DocumentChanged="UpdateOpenedEditorDocumentAsync"
                                          LayoutMode="TmLayoutMode.Auto"
                                          LayoutBreakpoints="@OpenEditorBreakpoints"
                                          MinimapInitiallyCollapsed="@IsTablet"
                                          ToolbarPreset="DiagramToolbarPreset.Full"
+                                         ToolbarGroups="@DialogToolbarGroups"
+                                         ShowPageTabs="@(!CanEditModelStructure)"
+                                         HeaderActions="@DialogHeaderActions"
+                                         OnHistoryRequested="@DialogHistoryRequestedCallback"
                                          PreferredStencilIds="@NotationPaletteStencilIds"
                                          PreferredStencilsLabel="@NotationPaletteLabel"
                                          ShowTitle="false"
-                                         ShowToolbox="true"
+                                         ShowToolbox="@CanEditModelStructure"
                                          ShowPropertiesPanel="true"
                                          ShowLayersPanel="true"
                                          ShowMinimap="true"
@@ -1015,11 +1156,9 @@
     }
 
     /// <summary>The inspector panel for the shell's right dock: "Properties | Relations | Source"
-    /// tabs (MO1, Fáze 13 adds Relations between the two). Only the active tab renders its body
-    /// (TmTabs contract, M26 budget); a stale source marks the Source tab with a localized badge
-    /// and an sr-only hint OUTSIDE the tablist (the tab's accessible name stays its visible
-    /// label — the hint is referenced via aria-describedby); the Relations tab carries the
-    /// related-row count badge of the current selection.</summary>
+    /// tabs (MO1 + Fáze 13). Only the active tab renders its body (TmTabs, M26 budget); a stale
+    /// source marks the Source tab with a badge and an sr-only hint OUTSIDE the tablist
+    /// (aria-describedby); the Relations tab carries the related-row count badge.</summary>
     private RenderFragment? RightSlot => WorkspaceMounted ? @<div class="tm-modeling-editor__inspector" data-testid="@TestId("modeling-inspector-panel")">
         @if (SourceIsStale)
         {

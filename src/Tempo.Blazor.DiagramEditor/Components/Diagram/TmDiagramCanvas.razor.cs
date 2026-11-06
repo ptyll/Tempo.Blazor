@@ -1261,10 +1261,23 @@ public partial class TmDiagramCanvas : TmComponentBase, IAsyncDisposable
         await OnSelectionChanged.InvokeAsync([]);
     }
 
+    /// <summary>
+    /// Host-owned history (additive, phase 3 review A5): when the embedding host binds this, the
+    /// canvas forwards Ctrl+Z / Ctrl+Shift+Z / Ctrl+Y to it and leaves its own per-page stack
+    /// alone, so an embedded editor never grows a second undo history.
+    /// </summary>
+    [Parameter] public EventCallback<bool> OnHistoryRequested { get; set; }
+
     [JSInvokable("OnUndo")]
     public async Task JsOnUndo()
     {
         if (ReadOnly) return;
+        if (OnHistoryRequested.HasDelegate)
+        {
+            await OnHistoryRequested.InvokeAsync(false);
+            return;
+        }
+
         if (CommandStack is not null)
         {
             CommandStack.Undo();
@@ -1280,6 +1293,12 @@ public partial class TmDiagramCanvas : TmComponentBase, IAsyncDisposable
     public async Task JsOnRedo()
     {
         if (ReadOnly) return;
+        if (OnHistoryRequested.HasDelegate)
+        {
+            await OnHistoryRequested.InvokeAsync(true);
+            return;
+        }
+
         if (CommandStack is not null)
         {
             CommandStack.Redo();

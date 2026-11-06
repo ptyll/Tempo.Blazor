@@ -60,9 +60,6 @@ public partial class TmModelingEditor
     [Parameter] public ModelingModelWriterCapabilities? WriterCapabilities { get; set; }
 
     private DiagramCommandStack? _commandStack;
-    private (ModelingModelDto? Model, string? ProviderKey) _baselineKey;
-    private Dictionary<string, ElementBaseline> _baselineElements = new(StringComparer.Ordinal);
-    private Dictionary<string, RelationshipBaseline> _baselineRelationships = new(StringComparer.Ordinal);
     private ModelingModelSaveResult? _lastSaveResult;
     private bool _isSaving;
     private bool _discardConfirmationOpen;
@@ -79,12 +76,6 @@ public partial class TmModelingEditor
     /// <summary>Whether an Immediate-mode commit landed while a save was in flight; the save
     /// loop consumes the flag after the writer settles and runs the follow-up save.</summary>
     private bool _saveQueued;
-
-    /// <summary>The cached pending change set and the (commit version, model, provider) key it
-    /// was computed for — the diff is an O(model) pass, and the render path (pending indicator,
-    /// mobile action items, save button) reads it several times per render.</summary>
-    private ModelingModelChangeSet? _pendingChangeSetCache;
-    private (int CommitVersion, ModelingModelDto? Model, string? ProviderKey) _pendingChangeSetCacheKey;
 
     /// <summary>Test seam (InternalsVisibleTo): the generated document the preview renders.</summary>
     internal DiagramDocument? TestDocument => _document;
@@ -139,209 +130,13 @@ public partial class TmModelingEditor
     /// <summary>Whether unsaved edits are waiting (a Manual save, a reload or a provider switch
     /// will surface a confirmation). Public for hosts that drive a navigation guard. Structure and
     /// layout changes count too (decision <c>MODELING-AUTHORING-CHANGESET</c>).</summary>
-    public bool HasPendingModelChanges => ComputePendingChangeSet() is { } pending
-        && (pending.Elements.Count > 0 || pending.Relationships.Count > 0
-            || pending.HasStructuralChanges || pending.HasViewChanges);
+    public bool HasPendingModelChanges => HasAnyChange(ComputePendingChangeSet());
 
     /// <summary>The localized transaction name for element edits.</summary>
     private string EditElementTransactionName => Loc["TmModelingEditor_EditElement"];
 
     /// <summary>The localized transaction name for relationship edits.</summary>
     private string EditRelationshipTransactionName => Loc["TmModelingEditor_EditRelationship"];
-
-    // ── Baseline + pending diff ─────────────────────────────────────────────
-
-    private sealed record ElementBaseline(string Name, string Description, Dictionary<string, JsonElement> Properties);
-
-    private sealed record RelationshipBaseline(string? Name, Dictionary<string, JsonElement> Properties);
-
-    /// <summary>
-    /// Captures the baseline snapshot the pending set is diffed against: the model AS LOADED (or
-    /// as last saved/adopted). Per-element name/description/properties and per-relationship
-    /// name/properties are snapshotted; the rest of the DTO is not editable through the inspector.
-    /// </summary>
-    private void CaptureBaseline(ModelingModelDto model)
-    {
-        _baselineElements = model.Elements.ToDictionary(
-            element => element.Id,
-            element => new ElementBaseline(
-                element.Name,
-                element.Description,
-                new Dictionary<string, JsonElement>(element.Properties, StringComparer.Ordinal)),
-            StringComparer.Ordinal);
-        _baselineRelationships = model.Relationships.ToDictionary(
-            relationship => relationship.Id,
-            relationship => new RelationshipBaseline(
-                relationship.Name,
-                new Dictionary<string, JsonElement>(relationship.Properties, StringComparer.Ordinal)),
-            StringComparer.Ordinal);
-        _baselineKey = (model, EffectiveProviderKey);
-        // A new baseline changes the diff inputs without bumping the commit version — the
-        // cached pending set must go.
-        _pendingChangeSetCache = null;
-    }
-
-    /// <summary>
-    /// The pending change set: the diff of the LIVE model against the baseline. Returns null when
-    /// nothing differs (or no baseline was captured for the current model + provider pair).
-    /// Cached on the commit version + model + provider triple — a commit, an undo/redo or a
-    /// baseline change invalidates it, an unrelated re-render reuses it.
-    /// </summary>
-    private ModelingModelChangeSet? ComputePendingChangeSet()
-    {
-        if (_model is null || _baselineKey.Model != _model
-            || !string.Equals(_baselineKey.ProviderKey, EffectiveProviderKey, StringComparison.Ordinal))
-        {
-            return null;
-        }
-
-        var cacheKey = (_commitVersion, _model, EffectiveProviderKey);
-        if (_pendingChangeSetCache is not null && _pendingChangeSetCacheKey.Equals(cacheKey))
-        {
-            return _pendingChangeSetCache;
-        }
-
-        var changeSet = BuildPendingChangeSet(_model);
-        _pendingChangeSetCache = changeSet;
-        _pendingChangeSetCacheKey = cacheKey;
-        return changeSet;
-    }
-
-    private ModelingModelChangeSet? BuildPendingChangeSet(ModelingModelDto model)
-    {
-        var changeSet = new ModelingModelChangeSet
-        {
-            ModelId = model.Id,
-            ProviderKey = EffectiveProviderKey ?? string.Empty,
-            BaseVersion = model.Metadata.SourceVersion
-        };
-
-        foreach (var element in model.Elements)
-        {
-            if (!_baselineElements.TryGetValue(element.Id, out var baseline))
-            {
-                continue;
-            }
-
-            var change = new ModelingElementChange { ElementId = element.Id };
-            if (!string.Equals(element.Name, baseline.Name, StringComparison.Ordinal))
-            {
-                change.Name = element.Name;
-            }
-
-            if (!string.Equals(element.Description, baseline.Description, StringComparison.Ordinal))
-            {
-                change.Description = element.Description;
-            }
-
-            var (setProperties, removedProperties) = DiffProperties(baseline.Properties, element.Properties);
-            if (setProperties is not null)
-            {
-                change.SetProperties = setProperties;
-            }
-
-            if (removedProperties is not null)
-            {
-                change.RemovedProperties = removedProperties;
-            }
-
-            if (change.Name is not null || change.Description is not null
-                || change.SetProperties is not null || change.RemovedProperties is not null)
-            {
-                changeSet.Elements.Add(change);
-            }
-        }
-
-        foreach (var relationship in model.Relationships)
-        {
-            if (!_baselineRelationships.TryGetValue(relationship.Id, out var baseline))
-            {
-                continue;
-            }
-
-            var change = new ModelingRelationshipChange { RelationshipId = relationship.Id };
-            if (!string.Equals(relationship.Name, baseline.Name, StringComparison.Ordinal))
-            {
-                change.Name = relationship.Name;
-            }
-
-            var (setProperties, removedProperties) = DiffProperties(baseline.Properties, relationship.Properties);
-            if (setProperties is not null)
-            {
-                change.SetProperties = setProperties;
-            }
-
-            if (removedProperties is not null)
-            {
-                change.RemovedProperties = removedProperties;
-            }
-
-            if (change.Name is not null || change.SetProperties is not null || change.RemovedProperties is not null)
-            {
-                changeSet.Relationships.Add(change);
-            }
-        }
-
-        return changeSet;
-    }
-
-    private static (Dictionary<string, JsonElement>? Set, List<string>? Removed) DiffProperties(
-        IReadOnlyDictionary<string, JsonElement> baseline,
-        IReadOnlyDictionary<string, JsonElement> current)
-    {
-        Dictionary<string, JsonElement>? set = null;
-        List<string>? removed = null;
-
-        foreach (var property in current)
-        {
-            if (!baseline.TryGetValue(property.Key, out var original) || !JsonElementEquals(original, property.Value))
-            {
-                set ??= new Dictionary<string, JsonElement>();
-                set[property.Key] = property.Value.Clone();
-            }
-        }
-
-        foreach (var key in baseline.Keys)
-        {
-            if (!current.ContainsKey(key))
-            {
-                removed ??= [];
-                removed.Add(key);
-            }
-        }
-
-        return (set, removed);
-    }
-
-    /// <summary>JSON-kind-preserving deep comparison (the .NET 8 multi-target has no
-    /// <c>JsonElement.DeepEquals</c>).</summary>
-    private static bool JsonElementEquals(JsonElement left, JsonElement right)
-    {
-        if (left.ValueKind != right.ValueKind)
-        {
-            return false;
-        }
-
-        return left.ValueKind switch
-        {
-            JsonValueKind.Object => left.EnumerateObject().SequenceEqual(
-                right.EnumerateObject(),
-                new JsonPropertyEqualityComparer()),
-            JsonValueKind.Array => left.GetArrayLength() == right.GetArrayLength()
-                && left.EnumerateArray().Zip(right.EnumerateArray(), JsonElementEquals).All(equal => equal),
-            // Number/True/False/Null/String compare by their raw JSON text — GetString() would
-            // throw on the non-string kinds.
-            _ => string.Equals(left.GetRawText(), right.GetRawText(), StringComparison.Ordinal)
-        };
-    }
-
-    private sealed class JsonPropertyEqualityComparer : IEqualityComparer<JsonProperty>
-    {
-        public bool Equals(JsonProperty x, JsonProperty y)
-            => string.Equals(x.Name, y.Name, StringComparison.Ordinal) && JsonElementEquals(x.Value, y.Value);
-
-        public int GetHashCode(JsonProperty obj) => obj.Name.GetHashCode(StringComparison.Ordinal);
-    }
 
     // ── Commit paths ─────────────────────────────────────────────────────────
 
@@ -477,7 +272,9 @@ public partial class TmModelingEditor
 
     // ── Undo / redo ──────────────────────────────────────────────────────────
 
-    /// <summary>Undoes the last committed edit (model + documents in one step) and re-renders.</summary>
+    /// <summary>Undoes the last committed edit (model + documents in one step) and re-renders. Once a
+    /// STRUCTURAL command entered the stack the documents are rebuilt from the model, so an undone
+    /// insert/delete also disappears from (or returns to) the preview and the dialog.</summary>
     public Task UndoModelEditAsync()
     {
         if (_commandStack is { CanUndo: true })
@@ -486,6 +283,11 @@ public partial class TmModelingEditor
             _commandStack.Undo();
             unchecked { _commitVersion++; }
             _historyAnnouncement = string.Format(CultureInfo.CurrentUICulture, Loc["TmModelingEditor_UndoAction"], name ?? string.Empty);
+            if (_hasStructuralCommands)
+            {
+                RegenerateDocumentsAfterStructureChange();
+            }
+
             InvalidateTreeProjection();
             StateHasChanged();
         }
@@ -493,7 +295,7 @@ public partial class TmModelingEditor
         return Task.CompletedTask;
     }
 
-    /// <summary>Redoes the last undone edit and re-renders.</summary>
+    /// <summary>Redoes the last undone edit and re-renders (same structural rebuild rule).</summary>
     public Task RedoModelEditAsync()
     {
         if (_commandStack is { CanRedo: true })
@@ -502,12 +304,26 @@ public partial class TmModelingEditor
             _commandStack.Redo();
             unchecked { _commitVersion++; }
             _historyAnnouncement = string.Format(CultureInfo.CurrentUICulture, Loc["TmModelingEditor_RedoAction"], name ?? string.Empty);
+            if (_hasStructuralCommands)
+            {
+                RegenerateDocumentsAfterStructureChange();
+            }
+
             InvalidateTreeProjection();
             StateHasChanged();
         }
 
         return Task.CompletedTask;
     }
+
+    /// <summary>
+    /// The dialog's embedded editor asks the HOST to undo/redo (review A5): with ONE semantic stack
+    /// the insert committed in the dialog must disappear from the dialog too, so its Ctrl+Z /
+    /// Ctrl+Shift+Z / Ctrl+Y and its header buttons route here instead of the diagram stack.
+    /// <paramref name="isRedo"/> distinguishes redo. Returns the editor's own task.
+    /// </summary>
+    internal Task HandleDialogHistoryRequestedAsync(bool isRedo)
+        => isRedo ? RedoModelEditAsync() : UndoModelEditAsync();
 
     /// <summary>Whether the editor's own stack can undo (drives the header buttons).</summary>
     public bool CanUndoModelEdits => _commandStack?.CanUndo ?? false;
@@ -544,7 +360,7 @@ public partial class TmModelingEditor
         }
 
         var changeSet = ComputePendingChangeSet();
-        if (changeSet is null || (changeSet.Elements.Count == 0 && changeSet.Relationships.Count == 0))
+        if (!HasAnyChange(changeSet))
         {
             return null;
         }
@@ -606,6 +422,7 @@ public partial class TmModelingEditor
                 if (commitVersionAtStart == _commitVersion)
                 {
                     _commandStack?.Clear();
+                    _hasStructuralCommands = false;
                     _historyAnnouncement = Loc["TmModelingEditor_Saved"];
                 }
             }
@@ -625,75 +442,6 @@ public partial class TmModelingEditor
         }
 
         return result;
-    }
-
-    /// <summary>
-    /// Applies a SENT change set onto the BASELINE snapshot (review fix, phase 14): the baseline
-    /// becomes "the state the source now has" without touching the live model, so a commit that
-    /// raced the save stays pending and undoable against the advanced baseline.
-    /// </summary>
-    private void ApplyChangeSetToBaseline(ModelingModelChangeSet changeSet)
-    {
-        foreach (var elementChange in changeSet.Elements)
-        {
-            if (!_baselineElements.TryGetValue(elementChange.ElementId, out var elementBaseline))
-            {
-                continue;
-            }
-
-            var properties = new Dictionary<string, JsonElement>(elementBaseline.Properties, StringComparer.Ordinal);
-            if (elementChange.SetProperties is not null)
-            {
-                foreach (var property in elementChange.SetProperties)
-                {
-                    properties[property.Key] = property.Value.Clone();
-                }
-            }
-
-            if (elementChange.RemovedProperties is not null)
-            {
-                foreach (var key in elementChange.RemovedProperties)
-                {
-                    properties.Remove(key);
-                }
-            }
-
-            _baselineElements[elementChange.ElementId] = new ElementBaseline(
-                elementChange.Name ?? elementBaseline.Name,
-                elementChange.Description ?? elementBaseline.Description,
-                properties);
-        }
-
-        foreach (var relationshipChange in changeSet.Relationships)
-        {
-            if (!_baselineRelationships.TryGetValue(relationshipChange.RelationshipId, out var relationshipBaseline))
-            {
-                continue;
-            }
-
-            var properties = new Dictionary<string, JsonElement>(relationshipBaseline.Properties, StringComparer.Ordinal);
-            if (relationshipChange.SetProperties is not null)
-            {
-                foreach (var property in relationshipChange.SetProperties)
-                {
-                    properties[property.Key] = property.Value.Clone();
-                }
-            }
-
-            if (relationshipChange.RemovedProperties is not null)
-            {
-                foreach (var key in relationshipChange.RemovedProperties)
-                {
-                    properties.Remove(key);
-                }
-            }
-
-            _baselineRelationships[relationshipChange.RelationshipId] = new RelationshipBaseline(
-                relationshipChange.Name ?? relationshipBaseline.Name,
-                properties);
-        }
-
-        _pendingChangeSetCache = null;
     }
 
     /// <summary>Replaces the loaded model with a saved/restored one: regenerates the preview,
@@ -718,6 +466,7 @@ public partial class TmModelingEditor
         _document = result.Document;
         _issues = result.Issues;
         _completedGenerationCount++;
+        CaptureStructureSnapshot(_document);
         InvalidateTreeProjection();
         await CloseGeneratedDiagramAsync();
         CaptureBaseline(model);
@@ -862,8 +611,8 @@ public partial class TmModelingEditor
     {
         _commandStack?.Clear();
         _baselineKey = default;
-        _baselineElements = new Dictionary<string, ElementBaseline>(StringComparer.Ordinal);
-        _baselineRelationships = new Dictionary<string, RelationshipBaseline>(StringComparer.Ordinal);
+        _baselineModel = null;
+        _hasStructuralCommands = false;
         _lastSaveResult = null;
         _discardConfirmationOpen = false;
         _pendingDiscardAction = null;

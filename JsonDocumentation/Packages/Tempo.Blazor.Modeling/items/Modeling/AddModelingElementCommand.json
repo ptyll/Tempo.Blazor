@@ -1,0 +1,10 @@
+{
+  "itemName": "AddModelingElementCommand",
+  "kind": "Class",
+  "category": "Modeling",
+  "description": "Phase 3: creates ONE semantic element plus its view node from the notation palette (or the non-drag insert) as a single undo/redo step - never a diagram node without a model element. The forward batch (add_element + set_view_node) is applied by the shared ModelingOperationEngine under the Authoring policy, so a notation rule or an invalid container fails exactly as modeling_apply_operations would; the editor validates the same batch on a clone before pushing the command. Undo is a lossless rollback of exactly what the command added.",
+  "packageId": "Tempo.Blazor.Modeling",
+  "namespace": "Tempo.Blazor.Components.Modeling",
+  "sourcePath": "src/Tempo.Blazor.Modeling/Components/Modeling/Commands/AddModelingElementCommand.cs",
+  "documentationStatus": "generated"
+}

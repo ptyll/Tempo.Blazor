@@ -224,6 +224,12 @@
       "isRequired": false,
       "default": "DiagramToolbarPreset.Full",
       "description": "Toolbar layout preset. Full renders every toolbar group (the set of groups, not a historical order — since the phase-4 desktop restructure the command groups share one row, search/panels live in the header, view/canvas-size in the header menu and zoom/read-only in the status bar); Viewer renders only the zoom, view, search and export groups for read-only preview surfaces. Stable public API: the group set and the data-tm-group attribute values must survive toolbar regrouping unchanged."
+    },
+    {
+      "name": "OnHistoryRequested",
+      "type": "EventCallback<bool>",
+      "isRequired": false,
+      "description": "Host-owned history (phase 3 review A5): when bound, every undo/redo entry — the toolbar pair, the context menu and the canvas shortcuts — calls the host instead of this editor's own per-page stack (true = redo). Null keeps today's behavior."
     }
   ],
   "cssClasses": [

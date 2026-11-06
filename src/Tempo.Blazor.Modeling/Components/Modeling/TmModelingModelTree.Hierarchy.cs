@@ -127,6 +127,14 @@ public partial class TmModelingModelTree
                 }
 
                 break;
+            case "Delete":
+                // Review A10: the advertised Delete shortcut really asks the host for the cascade.
+                if (!args.Repeat && CanDelete)
+                {
+                    await OnDeleteRequested.InvokeAsync(node.Element);
+                }
+
+                break;
         }
     }
 

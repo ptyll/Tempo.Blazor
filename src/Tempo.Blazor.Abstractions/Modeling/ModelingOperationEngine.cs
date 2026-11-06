@@ -530,7 +530,7 @@ public static class ModelingOperationEngine
             return;
         }
 
-        if (!ValidateRelationship(model, relationship, state.Context.RelationshipRules, index, op, result))
+        if (!ValidateRelationship(model, relationship, state.Context, index, op, result))
         {
             return;
         }
@@ -582,7 +582,7 @@ public static class ModelingOperationEngine
             Name = operation.ContainsKey("name") ? GetString(operation, "name") ?? string.Empty : relationship.Name
         };
 
-        if (!ValidateRelationship(model, proposed, state.Context.RelationshipRules, index, op, result))
+        if (!ValidateRelationship(model, proposed, state.Context, index, op, result))
         {
             return;
         }
@@ -623,53 +623,78 @@ public static class ModelingOperationEngine
         model.Relationships.Remove(relationship);
     }
 
-    /// <summary>Resolves endpoints and enforces the notation relationship rule. Records an error and
-    /// returns false when the relationship is invalid; nothing is written by the caller in that case.</summary>
-    private static bool ValidateRelationship(
+    /// <summary>
+    /// Validates ONE relationship against the model — both endpoints exist AND the notation rules
+    /// accept it — and returns the FIRST error, or <c>null</c> when the relationship is acceptable.
+    /// Public (phase 3 review, A2) so the editor's type picker and its rejection text probe
+    /// candidate types through the SAME code path the commit uses: the picker can never offer a
+    /// type the batch would refuse, and a rejection always carries the rules' own message and
+    /// suggested fix. The message is the rule text WITHOUT the <c>operations[i] op:</c> prefix the
+    /// batch path adds (§6.4 "one semantics, same errors").
+    /// <para>
+    /// The viewpoint comes from <see cref="ModelingOperationContext.ViewpointKey"/> when the caller
+    /// declares one (an editor whose host filters by viewpoint), else from the target view
+    /// (<c>Views[0]</c> — the view authoring operations default to), else <c>""</c> — the 2.10.0
+    /// behavior. A caller that passes nothing therefore keeps the MCP verdict byte-identical.
+    /// </para>
+    /// </summary>
+    /// <param name="model">The model the relationship belongs to (endpoint lookup + rules context).</param>
+    /// <param name="relationship">The proposed relationship (a candidate type may carry no id).</param>
+    /// <param name="context">Rules + notation + viewpoint; null means "structure checks only".</param>
+    public static ModelingOperationError? ValidateRelationship(
         ModelingModelDto model,
         ModelingRelationshipDto relationship,
-        IModelingRelationshipRulesProvider? rules,
-        int index,
-        string opName,
-        ModelingOperationResult result)
+        ModelingOperationContext? context = null)
     {
+        ArgumentNullException.ThrowIfNull(model);
+        ArgumentNullException.ThrowIfNull(relationship);
+
+        context ??= new ModelingOperationContext();
+
         var source = model.Elements.FirstOrDefault(element => string.Equals(element.Id, relationship.SourceElementId, StringComparison.Ordinal));
         if (source is null)
         {
-            AddError(
-                result,
-                index,
-                opName,
-                "not_found",
-                $"operations[{index}] {opName}: source element '{relationship.SourceElementId}' not found.",
-                elementId: relationship.SourceElementId,
-                relationshipId: KnownRelationshipId(relationship));
-            return false;
+            return new ModelingOperationError
+            {
+                Index = -1,
+                Op = "add_relationship",
+                Code = "not_found",
+                Message = $"source element '{relationship.SourceElementId}' not found.",
+                ElementId = relationship.SourceElementId,
+                RelationshipId = KnownRelationshipId(relationship)
+            };
         }
 
         var target = model.Elements.FirstOrDefault(element => string.Equals(element.Id, relationship.TargetElementId, StringComparison.Ordinal));
         if (target is null)
         {
-            AddError(
-                result,
-                index,
-                opName,
-                "not_found",
-                $"operations[{index}] {opName}: target element '{relationship.TargetElementId}' not found.",
-                elementId: relationship.TargetElementId,
-                relationshipId: KnownRelationshipId(relationship));
-            return false;
+            return new ModelingOperationError
+            {
+                Index = -1,
+                Op = "add_relationship",
+                Code = "not_found",
+                Message = $"target element '{relationship.TargetElementId}' not found.",
+                ElementId = relationship.TargetElementId,
+                RelationshipId = KnownRelationshipId(relationship)
+            };
         }
 
+        var rules = context.RelationshipRules;
         if (rules is null)
         {
-            return true;
+            return null;
         }
 
-        var notationKey = !string.IsNullOrWhiteSpace(model.Notation) ? model.Notation : source.Notation;
+        // The CALLER's notation wins when it declares one (an editor with a notation override);
+        // otherwise the model's own notation, then the element's (the 2.10.0 resolution).
+        var notationKey = !string.IsNullOrWhiteSpace(context.Notation)
+            ? context.Notation!
+            : !string.IsNullOrWhiteSpace(model.Notation) ? model.Notation : source.Notation;
+        var viewpointKey = context.ViewpointKey ?? model.Views.FirstOrDefault()?.ViewpointKey ?? string.Empty;
         var ruleResult = rules.ValidateRelationship(new ModelingRelationshipRuleContext
         {
             NotationKey = notationKey,
+            ViewpointKey = viewpointKey,
             Relationship = relationship,
             SourceElement = source,
             TargetElement = target,
@@ -679,22 +704,51 @@ public static class ModelingOperationEngine
                 .ToDictionary(group => group.Key, group => group.First(), StringComparer.Ordinal)
         });
 
-        if (!ruleResult.IsValid)
+        if (ruleResult.IsValid)
         {
-            var fix = string.IsNullOrWhiteSpace(ruleResult.SuggestedFix) ? string.Empty : $" {ruleResult.SuggestedFix}";
-            AddError(
-                result,
-                index,
-                opName,
-                "invalid_relationship",
-                $"operations[{index}] {opName}: '{relationship.RelationshipType}' from '{source.SemanticType}' to '{target.SemanticType}' is not valid for notation '{notationKey}'. {ruleResult.Message}{fix}".TrimEnd(),
-                suggestedFix: string.IsNullOrWhiteSpace(ruleResult.SuggestedFix) ? null : ruleResult.SuggestedFix,
-                elementId: source.Id,
-                relationshipId: KnownRelationshipId(relationship));
-            return false;
+            return null;
         }
 
-        return true;
+        var fix = string.IsNullOrWhiteSpace(ruleResult.SuggestedFix) ? string.Empty : $" {ruleResult.SuggestedFix}";
+        return new ModelingOperationError
+        {
+            Index = -1,
+            Op = "add_relationship",
+            Code = "invalid_relationship",
+            Message = $"'{relationship.RelationshipType}' from '{source.SemanticType}' to '{target.SemanticType}' is not valid for notation '{notationKey}'. {ruleResult.Message}{fix}".TrimEnd(),
+            SuggestedFix = string.IsNullOrWhiteSpace(ruleResult.SuggestedFix) ? null : ruleResult.SuggestedFix,
+            ElementId = source.Id,
+            RelationshipId = KnownRelationshipId(relationship)
+        };
+    }
+
+    /// <summary>Records the public validation's first error on the batch result with the
+    /// <c>operations[i] op:</c> prefix the 2.10.0 message format carries; false = the caller must
+    /// not write anything.</summary>
+    private static bool ValidateRelationship(
+        ModelingModelDto model,
+        ModelingRelationshipDto relationship,
+        ModelingOperationContext context,
+        int index,
+        string opName,
+        ModelingOperationResult result)
+    {
+        var error = ValidateRelationship(model, relationship, context);
+        if (error is null)
+        {
+            return true;
+        }
+
+        AddError(
+            result,
+            index,
+            opName,
+            error.Code,
+            $"operations[{index}] {opName}: {error.Message}",
+            suggestedFix: error.SuggestedFix,
+            elementId: error.ElementId,
+            relationshipId: error.RelationshipId);
+        return false;
     }
 
     private static string? KnownRelationshipId(ModelingRelationshipDto relationship)
@@ -893,7 +947,7 @@ public static class ModelingOperationEngine
             ValidateRelationship(
                 model,
                 relationship,
-                state.Context.RelationshipRules,
+                state.Context,
                 change.Index,
                 change.Op,
                 result);

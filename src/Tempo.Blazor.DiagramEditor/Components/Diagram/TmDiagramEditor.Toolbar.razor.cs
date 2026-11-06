@@ -36,6 +36,30 @@ public partial class TmDiagramEditor
     [Parameter] public RenderFragment? HeaderActions { get; set; }
 
     /// <summary>
+    /// Optional host-owned history (additive, phase 3 review A5). When bound, EVERY undo/redo entry
+    /// — the toolbar pair, the context menu and the canvas' Ctrl+Z / Ctrl+Shift+Z / Ctrl+Y — calls
+    /// the host instead of this editor's own per-page stack, so an embedded host (the Modeling
+    /// editor with its semantic command stack) keeps ONE undo history. <c>true</c> = redo.
+    /// The default (<c>null</c>) keeps today's behavior byte-identical.
+    /// </summary>
+    [Parameter] public EventCallback<bool> OnHistoryRequested { get; set; }
+
+    /// <summary>Whether the host owns undo/redo (see <see cref="OnHistoryRequested"/>).</summary>
+    private bool HostOwnsHistory => OnHistoryRequested.HasDelegate;
+
+    /// <summary>Routes one history request to the host when it owns the stack; false = do it locally.</summary>
+    private async Task<bool> RequestHistoryAsync(bool isRedo)
+    {
+        if (!HostOwnsHistory)
+        {
+            return false;
+        }
+
+        await OnHistoryRequested.InvokeAsync(isRedo);
+        return true;
+    }
+
+    /// <summary>
     /// Groups that make up the <see cref="DiagramToolbarPreset.Viewer"/> layout: zoom, view
     /// (fit-to-view stays in the zoom group), search and export.
     /// </summary>

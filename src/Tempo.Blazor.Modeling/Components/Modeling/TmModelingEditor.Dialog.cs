@@ -76,6 +76,19 @@ public partial class TmModelingEditor
             ? Loc["TmModelingDiagramPreview_OpenInEditor"]
             : _openedEditorDocument.Title!;
 
+    /// <summary>
+    /// The dialog DE's history binding (review A5): bound ONLY while the editor owns the semantic
+    /// stack. A read-only preview keeps the diagram editor's own undo for its session-only moves —
+    /// routing those to an empty semantic stack would silently break them. Built once per instance
+    /// (the embedded editor must not re-render on every parent pass).
+    /// </summary>
+    private EventCallback<bool>? _dialogHistoryCallback;
+
+    private EventCallback<bool> DialogHistoryRequestedCallback
+        => CanEditModelStructure
+            ? _dialogHistoryCallback ??= EventCallback.Factory.Create<bool>(this, HandleDialogHistoryRequestedAsync)
+            : default;
+
     private async Task OpenGeneratedDiagramAsync(DiagramDocument document)
     {
         _openedEditorDocument = document;
@@ -83,11 +96,16 @@ public partial class TmModelingEditor
         await OnOpenInEditor.InvokeAsync(document);
     }
 
-    private Task UpdateOpenedEditorDocumentAsync(DiagramDocument document)
+    /// <summary>
+    /// The "Open in editor" document mutation (phase 3): the dialog and the preview share ONE
+    /// document, so the structural part of every mutation (palette insert, drawn relationship,
+    /// deletion) commits to the semantic model exactly as it does from the preview.
+    /// </summary>
+    private async Task UpdateOpenedEditorDocumentAsync(DiagramDocument document)
     {
         _openedEditorDocument = document;
         _document = document;
-        return Task.CompletedTask;
+        await SyncStructureFromDocumentAsync(document);
     }
 
     private Task CloseGeneratedDiagramAsync()

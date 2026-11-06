@@ -1223,3 +1223,155 @@
         transition: none;
     }
 }
+
+/* ── Phase 3: structural authoring actions (non-drag alternatives, WCAG 2.5.7) ────────────────
+   The Insert element / Connect to / Delete trio sits in the header's context group next to the
+   provider and notation surfaces. It is a plain button group (no menu) so every entry is one Tab
+   stop away, and the localized reason replaces it when the writer cannot persist structure — a
+   keyboard user never tabs onto a control that cannot work. */
+.tm-modeling-editor__structure-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--tm-space-1);
+}
+
+.tm-modeling-editor__structure-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: var(--tm-space-8);
+    min-height: var(--tm-space-8);
+    padding: var(--tm-space-1);
+    border: 1px solid var(--tm-color-border-subtle);
+    border-radius: var(--tm-radius-sm);
+    background: var(--tm-surface);
+    color: var(--tm-text-primary);
+    cursor: pointer;
+}
+
+.tm-modeling-editor__structure-btn:hover:not(:disabled) {
+    background: var(--tm-color-primary-subtle);
+    border-color: var(--tm-color-primary);
+}
+
+.tm-modeling-editor__structure-btn:disabled {
+    opacity: 0.5;
+    cursor: default;
+}
+
+.tm-modeling-editor__structure-btn:focus-visible {
+    outline: 2px solid var(--tm-color-primary);
+    outline-offset: 1px;
+}
+
+/* The capability hint replaces the dead controls: informational, never interactive. */
+.tm-modeling-editor__capability-hint {
+    align-self: center;
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-xs);
+}
+
+@media (pointer: coarse) {
+    .tm-modeling-editor__structure-btn {
+        min-width: var(--tm-touch-target);
+        min-height: var(--tm-touch-target);
+    }
+}
+
+/* ── Phase 3: the non-drag authoring dialogs (insert / connect / delete) ──────────────────────
+   The chrome is the core TmModal; these rules own the body rhythm and the rejection card only.
+   The dialog markup is built by an INTERNAL code-only renderer (review A8), so it carries no
+   scope attribute of its own — the editor root reaches it with ::deep. Tokens only: no literal
+   color or size, so light/dark and the high-contrast theme recolor the card without a second
+   rule (review U8: the tokens that exist, never a fallback to a token that does not). */
+.tm-modeling-editor ::deep .tm-modeling-authoring-dialog__body {
+    display: grid;
+    gap: var(--tm-space-3);
+}
+
+.tm-modeling-editor ::deep .tm-modeling-authoring-dialog__source {
+    margin: 0;
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-sm);
+}
+
+/* The notation rules' refusal: an error card inside the dialog (never a toast — the explanation
+   stays on screen while the user picks one of the allowed alternatives). */
+.tm-modeling-editor ::deep .tm-modeling-authoring-dialog__rejection {
+    display: grid;
+    gap: var(--tm-space-1);
+    padding: var(--tm-space-3);
+    border: 1px solid var(--tm-color-danger-soft-border);
+    border-radius: var(--tm-radius-md);
+    background: var(--tm-color-danger-subtle);
+    color: var(--tm-color-text);
+}
+
+.tm-modeling-editor ::deep .tm-modeling-authoring-dialog__rejection p {
+    margin: 0;
+    font-size: var(--tm-font-size-sm);
+}
+
+.tm-modeling-editor ::deep .tm-modeling-authoring-dialog__rejection-title {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-2);
+    font-weight: var(--tm-font-weight-semibold);
+}
+
+.tm-modeling-editor ::deep .tm-modeling-authoring-dialog__rejection-icon {
+    display: inline-flex;
+    color: var(--tm-color-danger);
+}
+
+/* The labelled field row of the three sheets (the dialog owns its own copy so the core editor
+   stylesheet never has to reach into another component's scope). */
+.tm-modeling-editor ::deep .tm-modeling-authoring-dialog__field {
+    display: grid;
+    gap: var(--tm-space-1);
+}
+
+.tm-modeling-editor ::deep .tm-modeling-authoring-dialog__field > span {
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-xs);
+    font-weight: var(--tm-font-weight-medium);
+}
+
+.tm-modeling-editor ::deep .tm-modeling-authoring-dialog__field select,
+.tm-modeling-editor ::deep .tm-modeling-authoring-dialog__field input {
+    width: 100%;
+    min-width: 0;
+    height: var(--tm-input-height-md);
+    padding: 0 var(--tm-space-3);
+    border: 1px solid var(--tm-color-border);
+    border-radius: var(--tm-radius-md);
+    background: var(--tm-color-surface);
+    color: var(--tm-color-text);
+    font: inherit;
+    font-size: var(--tm-font-size-sm);
+    text-overflow: ellipsis;
+}
+
+.tm-modeling-editor ::deep .tm-modeling-authoring-dialog__field select:focus-visible,
+.tm-modeling-editor ::deep .tm-modeling-authoring-dialog__field input:focus-visible {
+    outline: 2px solid var(--tm-color-primary);
+    outline-offset: 2px;
+}
+
+.tm-modeling-editor ::deep .tm-modeling-authoring-dialog__actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--tm-space-2);
+}
+
+.tm-modeling-editor ::deep .tm-modeling-authoring-dialog__fix {
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-xs);
+}
+
+@media (pointer: coarse) {
+    .tm-modeling-editor ::deep .tm-modeling-authoring-dialog__field select,
+    .tm-modeling-editor ::deep .tm-modeling-authoring-dialog__field input {
+        min-height: var(--tm-touch-target);
+    }
+}

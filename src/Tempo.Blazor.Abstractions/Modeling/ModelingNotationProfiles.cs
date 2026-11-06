@@ -20,6 +20,16 @@ public interface IModelingNotationProfile
     /// <summary>Viewpoint keys supported by this notation profile.</summary>
     IReadOnlyCollection<string> SupportedViewpointKeys { get; }
 
+    /// <summary>
+    /// Semantic element types that CONTAIN other elements (BPMN <c>Pool</c>/<c>Lane</c>/
+    /// <c>SubProcess</c>/<c>EventSubProcess</c>). The editor derives the "insert into a container",
+    /// the drop target's <c>ParentId</c> and the container candidates of its dialogs from THIS
+    /// profile capability (phase 3 review, A6) — never from a hard-coded list in a component, so a
+    /// custom notation declares its own containers. Empty (the default) = no containment, which is
+    /// the pre-3.0 behavior for every profile that does not override it.
+    /// </summary>
+    IReadOnlyCollection<string> ContainerElementTypes => [];
+
     /// <summary>Whether missing node stencil mappings should skip elements instead of using a fallback stencil.</summary>
     bool EnforcesStrictStencilMapping => false;
 }

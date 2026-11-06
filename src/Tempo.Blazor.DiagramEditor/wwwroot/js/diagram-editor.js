@@ -785,7 +785,7 @@ window.tmDiagramEditor = {
         if (inst.isDrawingPolyline) {
             if (isRightClick) {
                 e.preventDefault();
-                e.stopPropagation();
+                if (typeof e.stopPropagation === 'function') e.stopPropagation();
                 this._cancelEdgeDraw(inst);
                 return;
             }
@@ -3101,6 +3101,9 @@ window.tmDiagramEditor = {
             if (ids.length === 0) return;
             if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
             e.preventDefault();
+            // The keystroke is CONSUMED: a host surface behind the canvas (the Modeling editor's
+            // root Delete shortcut) must not act on the same keypress as a second delete gesture.
+            e.stopPropagation();
             inst.selectedIds.clear();
             this._updateSelection(inst);
             inst.dotNetRef.invokeMethodAsync('OnDeleteSelected', ids);

@@ -531,6 +531,23 @@ public interface IModelingLookupProvider
 }
 ```
 
+**Containment is a notation capability (phase 3 review A6).** `IModelingNotationProfile` gained a
+DEFAULT interface member, so every existing profile keeps compiling and declaring no containment:
+
+```csharp
+public interface IModelingNotationProfile
+{
+    // …existing members…
+    /// <summary>Semantic element types that CONTAIN other elements. Empty = no containment.</summary>
+    IReadOnlyCollection<string> ContainerElementTypes => [];
+}
+```
+
+The BPMN 2.0 profile overrides it with `Pool`, `Lane`, `SubProcess` and `EventSubProcess`. The
+editor derives the insert dialog's container candidates, the drop target's `ParentId` and the
+"inside the container's bounds" placement from THIS member — there is no hard-coded container list
+in a component, so a custom notation declares its own containers.
+
 ### 5.2 Schema model
 
 ```csharp
@@ -719,6 +736,18 @@ public sealed class ModelingOperationContext
     public IModelingRelationshipRulesProvider? RelationshipRules { get; set; }
     public IModelingViewpointRulesProvider? ViewpointRules { get; set; }
     public IModelingNotationProfileProvider? NotationProfiles { get; set; }
+    /// <summary>Phase 3 (added while implementing §9.2): the notation the CALLER authors under.
+    /// null = the model's own Notation (the MCP behavior). An editor whose host overrides the
+    /// notation (a multi-notation model such as "mixed" rendered as "bpmn2") passes its effective
+    /// key, so the picker's rule probe and the engine's verdict judge the same notation — without
+    /// it the two disagree and the editor offers a connection the engine then refuses.</summary>
+    public string? Notation { get; set; }
+    /// <summary>Phase 3 review (A2): the viewpoint the CALLER authors under. null = the target
+    /// view's ViewpointKey (Views[0] — the view authoring operations default to), else "". An
+    /// editor whose host filters by viewpoint passes its effective key, so the type picker's rule
+    /// probe and the engine's verdict judge the same viewpoint — a UML "Include" offered under
+    /// UseCaseDiagram then also commits.</summary>
+    public string? ViewpointKey { get; set; }
     /// <summary>Phase 5. The engine is synchronous, so the caller resolves schemas up front
     /// (IModelingPropertySchemaProvider is async) and passes a lookup by (notation, semanticType).
     /// Reference EXISTENCE is never checked here — that is the writer's job (§5.4).</summary>
@@ -776,8 +805,22 @@ public static class ModelingOperationEngine
 
     /// <summary>Deep copy through System.Text.Json (the helper MCP uses today, moved here).</summary>
     public static ModelingModelDto Clone(ModelingModelDto model);
+
+    /// <summary>Phase 3 review (A2): validates ONE relationship and returns the FIRST error, or null.
+    /// The EDITOR's type picker and rejection text call this — never a hand-built rule context — so
+    /// the picker can never offer a type the commit refuses ("one semantics, same errors"). The
+    /// message carries the rules' own text WITHOUT the operations[i] prefix the batch path adds.</summary>
+    public static ModelingOperationError? ValidateRelationship(
+        ModelingModelDto model,
+        ModelingRelationshipDto relationship,
+        ModelingOperationContext? context = null);
 }
 ```
+
+The engine resolves the notation and the viewpoint ONCE, from the caller's overrides first
+(`ModelingOperationContext.Notation` / `ViewpointKey`, phase 3 review A2) and the model's own
+values second (`model.Notation`, the target view's `ViewpointKey`). MCP callers pass neither and
+keep the 2.10.0 verdict byte-identical.
 
 `ApplyJson` parses into `ModelingOperationBatch` and reports parse errors with the legacy wording
 (`operations[i]: expected a JSON object.`, `operations[i]: missing 'op'.`). The MCP tool becomes a
@@ -1016,35 +1059,73 @@ Compatibility tests that must stay green without edits: `ModelingDtoSerializatio
 
 1. The palette in the open-editor dialog lists `ModelingNotationCatalog.GetPalette` entries; the
    user taps/drops one on the canvas (or uses "Insert element > type > container", the non-drag
-   path).
-2. The editor maps the stencil id back to `SemanticType`, resolves the drop target's container
-   element (`Pool`/`Lane`/`SubProcess`) → `ParentId`, mints an element id and pushes **one**
-   `DiagramCommandTransaction` ("Insert element") containing `AddModelingElementCommand`.
+   path). The notation palette only renders when the effective writer advertises `Structure`.
+2. **As built (phase 3 review).** The embedded `TmDiagramEditor` mutates its document; the editor
+   diffs it against a `StructureSnapshot` captured after the last render/generation and translates
+   the STRUCTURAL part into semantic commands. The snapshot records the document page
+   (`StructureSnapshot.PageId`, A3) plus node id → model element id and the edge ids:
+   - a **page switch/add** inside the dialog is navigation, not a gesture — the mismatch re-captures
+     the snapshot and returns (the open-editor dialog hides the page tabs while structure editing is
+     on, so the gesture does not even exist there);
+   - an **added node** is a palette insert (`modelElementId` absent = a fresh palette shape; a node
+     carrying `modelElementId` is the session-only tree→preview reuse and never semantic);
+   - a **removed node/edge** is a delete request, but only the element ids NO LIVE node still
+     carries (A4 — a duplicated placement keeps its element) and only edge ids that ARE relationship
+     ids;
+   - anything else (a move, a label edit) stays session-only.
+
+   The editor maps the stencil id back to `SemanticType`, resolves the container through the
+   notation profile's `ContainerElementTypes` (A6) → `ParentId`, mints an element id and pushes
+   **one** `DiagramCommandTransaction` ("Insert element") containing `AddModelingElementCommand`
+   (plus, for a viewless model, the `SeedModelingViewCommand` below).
 3. `AddModelingElementCommand` calls the engine (policy `Authoring`): semantic element + the view
-   node at the drop point (view `ParentNodeId` = the container's node id) — both in the same
-   transaction, so one undo removes both.
-4. The pending diff (`BuildPendingChangeSet`) picks it up as `AddedElements` + a `ViewChanges`
+   node at the drop point (view `ParentNodeId` = the container's node id, view `Width`/`Height`
+   defaulted) — both in the same transaction, so one undo removes both. The non-drag insert places
+   the node INSIDE the container's rendered bounds (X = container.X + 30, Y = container.Y + 12, a
+   24px collision nudge clamped to those bounds; a lane spans its pool's width below the last lane)
+   and GROWS the container with a second `set_view_node` in the same command when the node no longer
+   fits — the growth is reported as a second view-node change and reverted by the same undo.
+
+   Every batch is validated on a CLONE through `ModelingOperationEngine` with the editor's context
+   (effective `Notation` **and** `ViewpointKey`, §6.1); the pending set diffs EVERY view (A9), so a
+   save reports the layout of all of them, not just the target.
+4. **Viewless model (A1).** Before the first structural commit the editor prepends
+   `SeedModelingViewCommand` to the SAME transaction: one `set_view_node` per rendered document node
+   (its current geometry and semantic parent) plus one `set_view_connection` per rendered edge whose
+   id is a relationship id. The seed's operations join the clone-validation batch and its changes
+   join the intent's `ViewChanges` for the engine-created `"default"` view; `Undo` removes exactly
+   the view the seed created. The editor's `TargetViewId` is `"default"` from then on.
+5. The pending diff (`BuildPendingChangeSet`) picks it up as `AddedElements` + a `ViewChanges`
    entry; the model tree, the preview and the dialog regenerate from the model.
-5. Manual save → `IModelingModelWriter.SaveChangesAsync` (`Structure | Layout`); the host persists
+6. Manual save → `IModelingModelWriter.SaveChangesAsync` (`Structure | Layout`); the host persists
    and returns the saved `Model`; the editor adopts it and clears the stack.
-6. Without a `Structure` capability the palette in the dialog is hidden and only the semantic
+7. Without a `Structure` capability the palette in the dialog is hidden and only the semantic
    regeneration remains (today's read-only experience).
 
 ### 9.2 Draw a relationship with notation validation (phase 3)
 
-1. Edge handle drag (or "Connect to > target") → the editor asks
-   `IModelingRelationshipRulesProvider` for the candidate types allowed between the two semantic
-   types (a new additive `GetAllowedRelationshipTypes(context)` on the provider, or the engine
-   probes candidates), and renders only those in the type picker.
-2. A disallowed combination is rejected **before** the commit: the canvas shows the localized
-   explanation from `ModelingRelationshipRuleResult.Message` + `SuggestedFix` in an alert and a
-   live region; nothing enters the undo stack.
+1. Edge handle drag (or "Connect to > target") → the editor probes every candidate type through
+   `ModelingOperationEngine.ValidateRelationship(model, relationship, context)` (phase 3 review A2)
+   — the SAME call the commit uses, with the editor's effective notation and `ViewpointKey` — and
+   renders only the accepted ones in the type picker. There is no hand-built rule context in the
+   editor: the picker cannot offer a type the engine would refuse.
+2. A disallowed combination is rejected **before** the commit: the editor shows the engine's own
+   message + `SuggestedFix` in an alert and a live region (the connect sheet shows it inline in a
+   danger card); nothing enters the undo stack.
 3. On confirm: `AddModelingRelationshipCommand` (engine validation again, so MCP and editor agree)
    → `AddedRelationships` + a `ViewChanges.Connections` entry for the resolved view **always**
    (with a view selected the generator renders only `view.Connections`, so a relationship without a
    connection entry would vanish on reload; `Waypoints` stays `null` when none were drawn).
-4. Delete: `DeleteModelingElementCommand` expands the cascade (children + incident relationships)
-   and asks for confirmation showing the counts; the change set carries the expansion.
+4. Delete: `DeleteModelingSelectionCommand` (renamed from `DeleteModelingElementCommand` — it
+   removes relationships too) expands the cascade (children + incident relationships) and asks for
+   confirmation. The confirmation names what goes away ("Delete “Sales”?" plus a grammatical
+   plural summary), the confirm action is the danger variant, the body says aloud what the cascade
+   counts, and focus returns to the next tree row (or the header Delete action) when it closes.
+   The removal touches EVERY view (A9): each view's nodes/connections go in its own explicit
+   `viewId` operation and the change set carries one `ModelingViewChange` per affected view; undo
+   restores each DTO into its ORIGINAL position (A7), so the element/relationship/view-node id
+   sequences are unchanged by a delete → undo pair.
+5. The engine's relationship verdict uses the same `ViewpointKey` the picker's probe used (A2).
 
 ### 9.3 Move a task between lanes (phase 4)
 
@@ -1085,7 +1166,7 @@ Compatibility tests that must stay green without edits: `ModelingDtoSerializatio
 | Phase | Delivered against this document |
 |---|---|
 | 2 | §3 change set v2 + §4 capabilities + §6 engine (typed, JSON front-end, `set_properties`) moved to Abstractions; MCP refactored to a caller with byte-identical output; `DemoModelingModelWriter` extended |
-| 3 | §9.1, §9.2 — semantic palette insert/delete/relationship drawing, cascade confirmation, non-drag alternatives, localization, E2E |
+| 3 | §9.1, §9.2 — semantic palette insert/delete/relationship drawing, cascade confirmation, non-drag alternatives, localization, E2E. As implemented: `ModelingOperationContext.Notation` + `ViewpointKey` (§6.1) so the editor's overrides and the engine agree; `ModelingOperationEngine.ValidateRelationship` is the ONE relationship verdict the picker and the commit share; a viewless model is seeded by `SeedModelingViewCommand` in the same transaction; the cascade delete names its target, touches every view, restores original ordering on undo and is confirmed through an `alertdialog`; the authoring sheets are an INTERNAL renderer (no public component, no JSON documentation entry); `IModelingNotationProfile.ContainerElementTypes` owns containment (§5.1) |
 | 4 | §9.3, §9.4 — layout persistence, hierarchy moves, auto-layout as an undoable op, BPMN visual conventions |
 | 5 | §5 + §9.5 — schema provider, lookups, shared validator, inspector rendering, demo schema |
 | 6 | §7 — `TmModelingViewer`, overlays, a11y, print/SVG, wireframe role, demo page |

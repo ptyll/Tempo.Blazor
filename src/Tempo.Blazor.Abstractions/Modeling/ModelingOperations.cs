@@ -284,6 +284,24 @@ public sealed class ModelingOperationContext
     /// <summary>Optional notation profile provider (supported vocabulary discovery).</summary>
     public IModelingNotationProfileProvider? NotationProfiles { get; set; }
 
+    /// <summary>
+    /// The notation the caller authors under. Null (the default) validates against the model's own
+    /// <see cref="ModelingModelDto.Notation"/> — the MCP behavior. An EDITOR that lets the host
+    /// override the notation (a model supporting several notations, e.g. "mixed", rendered as
+    /// "bpmn2") passes the effective key here so its own rule checks and the engine's validation
+    /// judge the SAME notation (mandatory rule "one semantics, same errors").
+    /// </summary>
+    public string? Notation { get; set; }
+
+    /// <summary>
+    /// The viewpoint the caller authors under (phase 3 review, A2). Null (the default) keeps the
+    /// 2.10.0 behavior: the engine resolves the viewpoint from the target view (or reaches the
+    /// rules with an empty key). An EDITOR whose host filters the model by a viewpoint passes its
+    /// effective key here, so the type picker's rule probe and the engine's own verdict judge the
+    /// SAME viewpoint — a UML "Include" offered under <c>UseCaseDiagram</c> then also COMMITS.
+    /// </summary>
+    public string? ViewpointKey { get; set; }
+
     /// <summary>Editor batch (expanded cascades, geometry allowed) vs MCP batch (no cascade, no
     /// geometry unless asked). Defaults to <see cref="ModelingOperationPolicy.Strict"/>.</summary>
     public ModelingOperationPolicy Policy { get; set; } = ModelingOperationPolicy.Strict;

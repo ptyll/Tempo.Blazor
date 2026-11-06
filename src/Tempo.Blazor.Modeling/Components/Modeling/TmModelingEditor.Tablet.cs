@@ -247,8 +247,30 @@ public partial class TmModelingEditor
     private EventCallback<ModelingElementDto>? _onElementDragStartedCallback;
     private EventCallback? _onElementDragEndedCallback;
     private EventCallback<ModelingElementDto>? _onInsertIntoPreviewCallback;
+    private EventCallback<ModelingElementDto>? _onDeleteRequestedCallback;
     private EventCallback<IReadOnlyCollection<string>>? _collapsedGroupsChangedCallback;
     private EventCallback<IReadOnlyCollection<string>>? _collapsedElementsChangedCallback;
+
+    /// <summary>
+    /// The tree's Delete request (review A10), bound only where a structural delete exists
+    /// (desktop/tablet with the Structure capability) — otherwise the tree renders neither the
+    /// shortcut nor the handler and the advertised key never lies.
+    /// </summary>
+    private EventCallback<ModelingElementDto> TreeDeleteRequested
+        => CanEditModelStructure && !IsMobileLayout
+            ? _onDeleteRequestedCallback ??= EventCallback.Factory.Create<ModelingElementDto>(this, HandleTreeDeleteRequestedAsync)
+            : default;
+
+    /// <summary>
+    /// A Delete on a focused tree row: the key acts on THAT row, so the row becomes the selection
+    /// before the confirmation opens (a native treeitem button does not select on Delete).
+    /// </summary>
+    private async Task HandleTreeDeleteRequestedAsync(ModelingElementDto element)
+    {
+        _selectedElement = element;
+        _selectedRelationship = null;
+        await RequestDeleteSelectedAsync();
+    }
 
     /// <summary>The tree's callbacks, built once per editor instance.</summary>
     private (EventCallback<ModelingElementDto> Selected,

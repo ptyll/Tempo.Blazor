@@ -416,6 +416,37 @@ The inspector becomes editable through an explicit OPT-IN; with no opt-in nothin
   on the version the source moved to. Its `ConflictArmed` static is DEMO-ONLY (process-wide
   mutable state; a real writer scopes conflict state per session).
 
+## Structural authoring commands (phase 3)
+
+Three semantic commands back every structural gesture — the palette drop, the edge drag, the
+non-drag sheets and the cascade delete — so the drag path and the keyboard path commit through ONE
+implementation each (docs/modeling-authoring.md §9.1/§9.2). They live in
+`src/Tempo.Blazor.Modeling/Components/Modeling/Commands/` and are public so a host can drive them
+directly:
+
+| Command | What it does |
+|---------|--------------|
+| `AddModelingElementCommand` | One `add_element` + one `set_view_node` batch (the element and its placement), plus the container's growth `set_view_node` when the node no longer fits its container (`containerResize`). `Undo` removes the element, its node and reverts the container geometry exactly. The change set carries `AddedElements` + the matching view node. |
+| `AddModelingRelationshipCommand` | One `add_relationship` + one `set_view_connection` batch. A semantic relationship is ALWAYS paired with a connection in the target view (a view-selected generator renders edges from `view.Connections` only). `Undo` removes both. The change set carries `AddedRelationships` + the connection. |
+| `DeleteModelingSelectionCommand` | The EXPANDED cascade (descendants + incident relationships) as one ordered batch: for EVERY view its `remove_view_connection`/`remove_view_node` (explicit `viewId`), then the relationships, then the elements descendants-first. The change set reports one `ModelingViewChange` per affected view. `Undo` restores the captured deep copies into their ORIGINAL list positions. |
+
+A fourth, internal command closes the viewless-model case:
+
+| Command | What it does |
+|---------|--------------|
+| `SeedModelingViewCommand` (internal) | Prepended to the SAME transaction as the first insert/connect of a model WITHOUT a view: one `set_view_node` per rendered document node (its geometry and semantic parent) and one `set_view_connection` per rendered edge whose id is a relationship id, reported for the engine-created `"default"` view. `Undo` removes exactly the view it created, so the preview goes back to its pre-insert state. |
+
+Contract rules these commands share:
+
+- The forward batch is applied by the ONE `ModelingOperationEngine` (`Authoring` policy); the editor
+  validates it on a CLONE first, so a rejected operation never enters the undo stack and the user
+  sees the engine's own message.
+- `Undo` is a lossless rollback, not a semantic operation: the DTOs are deep-copied BEFORE the first
+  execution, so source triples, tags, governance and property kinds survive, and original ordering
+  is restored (element/relationship/view-node sequences are unchanged by delete → undo).
+- Each command exposes `Batch` (the clone-validation input) and `Intent` (its contribution to the
+  `ModelingModelChangeSet` the writer receives).
+
 ## Non-drag alternative (WCAG 2.5.7)
 
 Every drag affordance has a tap/keyboard path:
@@ -435,6 +466,22 @@ Every drag affordance has a tap/keyboard path:
   (`?scenario=drag-readonly` demo). The alternative is a DESKTOP/TABLET affordance: the mobile
   band (G2) renders neither the drag grip nor the "+" button — G2 viewing, edits go through
   "Open in editor".
+- **The structural sheets** are "Insert element > type > container" (`modeling-insert-element`),
+  "Connect to > target > type" (`modeling-connect-to`) and the header Delete
+  (`modeling-delete-selection`). They are the keyboard/tap alternative to the palette drop, the
+  edge drag and the canvas Delete, and they render only while the effective writer advertises
+  `Structure`. With nothing selected the Connect/Delete actions stay focusable and expose
+  `aria-disabled="true"` plus an sr-only "Select an element first" hint rather than a dead native
+  `disabled` button; the handlers early-return.
+- **Delete** is live as advertised: a tree item's `aria-keyshortcuts` includes `Delete` and the key
+  asks the host for the same cascade confirmation, and the editor root maps `Delete` on NON-text
+  targets (a nested editor's own consuming handler, the canvas, still wins). The confirmation is an
+  `alertdialog`: `role="alertdialog"`, `aria-describedby` the summary sentence, initial focus on
+  Cancel, the confirm action in the danger variant and focus returned to the next tree row (or the
+  header Delete action) when it closes.
+- The sheets are forms (`onsubmit` prevented, confirm = submit): Enter in a field confirms, the
+  insert confirm disables while no element type is chosen and the connect confirm disables while
+  the pair has no allowed relationship.
 
 ## The "Open in editor" dialog
 
@@ -523,8 +570,14 @@ Panel test ids (`modeling-model-tree-panel`, `modeling-preview-panel`, `modeling
 `modeling-related-{outgoing|incoming|source|target}-{relationshipId}`,
 `modeling-related-{outgoing|incoming}-{counterpart|relationship}-{relationshipId}`,
 `modeling-tree-drawer`, `modeling-inspector-sheet`, `modeling-sheet-close`,
-`modeling-open-diagram-editor`, `modeling-open-diagram-close`) are the contract for hosts and
-E2E — never positional selectors into the `TmEditorShell` or `TmDiagramEditor` internal DOM. The
+`modeling-open-diagram-editor`, `modeling-open-diagram-close`, the authoring sheets
+`modeling-insert-element`, `modeling-connect-to`, `modeling-delete-selection`,
+`modeling-insert-element-dialog` (`modeling-insert-type`/`-container`/`-name`/`-confirm`/`-cancel`),
+`modeling-relationship-dialog` (`modeling-relationship-source`/`-target`/`-type`/`-rejection`/
+`-confirm`/`-cancel`), `modeling-delete-confirm-dialog` (`modeling-delete-summary`/`-confirm`/
+`-cancel`), the dialog's editor history `modeling-dialog-undo`/`modeling-dialog-redo` and the
+`modeling-structure-live` polite region) are the contract for hosts and E2E — never positional
+selectors into the `TmEditorShell` or `TmDiagramEditor` internal DOM. The
 docked inspector tablist has THREE tabs (Properties | Relations | Source) — key off the tab test
 ids, never the index (Breaking / Migration).
 Modeling CSS never touches `.tm-diagram-editor__*` internals; the nested editor is driven only
@@ -552,7 +605,18 @@ filter/sort keys `TmModelingIssuePanel_FilterPlaceholder`, `_SortLabel`, `_SortI
 Fáze 12 adds the hierarchy disclosure keys: `TmModelingModelTree_ExpandNode` / `_CollapseNode`
 ("{0}" = the node display name, used as the chevron `title`) and the plural family
 `TmModelingModelTree_ChildCount_*` ("{0} child(ren)", spoken on a parent node's aria-label).
-Fáze 13 adds the relations keys: `TmModelingEditor_Relations` (the tab title),
+Phase 3 adds the authoring keys: `TmModelingEditor_InsertElement`/`_InsertType`/`_InsertContainer`/
+`_InsertRoot`/`_InsertName`/`_InsertNamePlaceholder`/`_InsertConfirm`, `_ConnectTo`,
+`_RelationshipDialogTitle`/`_RelationshipSource`/`_RelationshipTarget`/`_RelationshipType`/
+`_RelationshipConfirm`/`_RelationshipRejectedTitle`/`_RelationshipRejected`,
+`_DeleteElement`/`_DeleteTitle` ({0} = the element name)/`_DeleteRelationshipTitle` ({0} → {1})/
+`_DeleteConfirm`/`_DeleteSummary` ("This also removes {0} and {1}."), the plural families
+`TmModelingEditor_DeleteNestedCount_*` and `TmModelingEditor_DeleteRelCount_*` (the grammatical
+counts of the summary AND of the delete announcement), `_StructureInserted` ("Inserted {0} “{1}”")/
+`_StructureInsertedInto`/`_StructureDeleted` ("Deleted “{0}” with {1} and {2}.")/
+`_StructureDeletedRelationship`/`_StructureConnected`/`_StructureRejectedTitle`/
+`_UnknownShape*`/`_CapabilityMissing`/`_CapabilityHint`, `_NewElementName` and
+`_SelectElementFirst` (the disabled-action hint). Fáze 13 adds the relations keys: `TmModelingEditor_Relations` (the tab title),
 `TmModelingRelated_Outgoing` / `_Incoming` / `_Source` / `_Target` (group headings),
 `TmModelingRelated_Empty`, `TmModelingRelated_SelectElement` / `_SelectRelationship` ({0} = the
 row target) and the `TmModelingRelated_RelationshipCount_*` plural family (the sr-only count of a
@@ -570,6 +634,12 @@ demo-scoped rule; a real host owns the editor height through the `Height` parame
 
 ## Tests
 
+- bUnit: phase 3 adds `TmModelingEditorAuthoringTests` (the insert/connect/delete paths),
+  `TmModelingEditorStructureReviewTests` (A1–A4/A7/A9/A11/A12 — view seed, viewpoint parity, page
+  switch, duplicate placement, ordering, multi-view delete, container placement, undo/redo and one
+  rendered-dialog insert) and `TmModelingEditorUxReviewTests` (U1–U12 + A5/A10 — named delete copy,
+  re-announcement, alertdialog, generated-id secondary line, forms, mobile band, aria-disabled
+  actions, the dialog's single undo stack and the real Delete shortcut).
 - bUnit: `TmModelingEditorTests`, `TmModelingEditorDialogTests`, `TmModelingEditorTabletTests`,
   `TmModelingEditorMobileTests`, `TmModelingEditorSingleStateTests` (the retry/empty screens and
   the Height CSS-length guard), `TmModelingModelTreeTests`, `TmModelingModelTreeHierarchyTests`,
@@ -578,7 +648,10 @@ demo-scoped rule; a real host owns the editor height through the `Height` parame
   `TmModelingViewSelectorTests`, `TmModelingIssuePanelTests`, `TmModelingInspectorTests`,
   `TmModelingSourcePanelTests`, `TmModelingLocalizationM15Tests` (+ the package-wide
   `ModelingNoEvalInteropTests` guard and `ModelingSemanticTypeIconsTests`).
-- E2E: the `Modeling*` specs (M8–M26) cover the desktop dock, the tablet drawer/sheet rules, the
+- E2E: `ModelingAuthoringPhase3E2ETests` builds a BPMN process from an empty model through the
+  non-drag sheets, filters the relationship picker by the rules, explains a refusal and undoes a
+  cascade; its screenshot lane captures the empty state, the insert sheet, a rejected connect, the
+  delete cascade and the tablet insert sheet in light and dark. The `Modeling*` specs (M8–M26) cover the desktop dock, the tablet drawer/sheet rules, the
   mobile G2 band, the provider selector, tree collapse/filter, the CSP lane (`?csp=1`), the
   open-editor dialog Escape/focus contracts and the M26 performance budgets (inactive tab bodies
   never mount; the tree filter re-render budget). `ModelingRelatedElementsE2ETests` (Fáze 13)

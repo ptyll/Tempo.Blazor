@@ -867,6 +867,12 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
     {
         if (IsReadOnly) return;
         await CloseContextMenu();
+        if (HostOwnsHistory)
+        {
+            await RequestHistoryAsync(isRedo: false);
+            return;
+        }
+
         if (ActiveCommandStack.CanUndo)
         {
             ActiveCommandStack.Undo();
@@ -878,6 +884,12 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
     {
         if (IsReadOnly) return;
         await CloseContextMenu();
+        if (HostOwnsHistory)
+        {
+            await RequestHistoryAsync(isRedo: true);
+            return;
+        }
+
         if (ActiveCommandStack.CanRedo)
         {
             ActiveCommandStack.Redo();
@@ -1656,6 +1668,7 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
     private async Task OnUndoClicked()
     {
         if (IsReadOnly) return;
+        if (await RequestHistoryAsync(isRedo: false)) return;
         ActiveCommandStack.Undo();
         await RerenderCanvas();
     }
@@ -1663,6 +1676,7 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
     private async Task OnRedoClicked()
     {
         if (IsReadOnly) return;
+        if (await RequestHistoryAsync(isRedo: true)) return;
         ActiveCommandStack.Redo();
         await RerenderCanvas();
     }

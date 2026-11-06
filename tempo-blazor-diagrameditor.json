@@ -4354,6 +4354,12 @@
           "description": "Raised when the user presses Ctrl+Shift+G to group selected nodes."
         },
         {
+          "name": "OnHistoryRequested",
+          "type": "EventCallback<bool>",
+          "isRequired": false,
+          "description": "Host-owned history (phase 3 review A5): when bound, Ctrl+Z / Ctrl+Shift+Z / Ctrl+Y forward to the host (true = redo) and this canvas leaves its own per-page stack alone, so an embedded editor never grows a second undo history. Omitted by default — the behavior is unchanged."
+        },
+        {
           "name": "OnLockSelected",
           "type": "EventCallback",
           "isRequired": false,
@@ -4807,6 +4813,12 @@
           "isRequired": false,
           "description": "Whether the mobile panels sheet starts open (peek) on the first mobile render. Defaults to false: the canvas gets the whole stage and the action bar (Shapes / Properties) or a selection opens the sheet (X1). Pass true to restore the pre-2.9.1 open-on-load behaviour.",
           "default": "false"
+        },
+        {
+          "name": "OnHistoryRequested",
+          "type": "EventCallback<bool>",
+          "isRequired": false,
+          "description": "Host-owned history (phase 3 review A5): when bound, every undo/redo entry — the toolbar pair, the context menu and the canvas shortcuts — calls the host instead of this editor's own per-page stack (true = redo). Null keeps today's behavior."
         },
         {
           "name": "OnSelectedIdsChanged",

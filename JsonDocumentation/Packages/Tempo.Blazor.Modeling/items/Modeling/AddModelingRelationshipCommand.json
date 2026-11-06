@@ -1,0 +1,10 @@
+{
+  "itemName": "AddModelingRelationshipCommand",
+  "kind": "Class",
+  "category": "Modeling",
+  "description": "Phase 3: creates ONE semantic relationship plus its view connection as a single undo/redo step. A relationship is always paired with a connection in the target view (a view renders edges from its connections only, so an unpaired relationship would vanish on reload). The forward batch (add_relationship + set_view_connection) goes through the shared ModelingOperationEngine, so the notation rules provider judges the new flow exactly as modeling_apply_operations does; Undo is a lossless rollback of what the command added.",
+  "packageId": "Tempo.Blazor.Modeling",
+  "namespace": "Tempo.Blazor.Components.Modeling",
+  "sourcePath": "src/Tempo.Blazor.Modeling/Components/Modeling/Commands/AddModelingRelationshipCommand.cs",
+  "documentationStatus": "generated"
+}

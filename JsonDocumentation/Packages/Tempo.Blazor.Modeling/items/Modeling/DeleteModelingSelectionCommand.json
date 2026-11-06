@@ -1,0 +1,10 @@
+{
+  "itemName": "DeleteModelingSelectionCommand",
+  "kind": "Class",
+  "category": "Modeling",
+  "description": "Phase 3: deletes the selected elements and relationships as ONE expanded cascade - view connections, view nodes, relationships, then elements DESCENDANTS-FIRST, so the engine's still_referenced / still_has_children checks pass without ever cascading silently (decision Q3: the caller expands). The removed DTOs (elements with their source triple, tags, governance and property kinds, the relationships and the view placement) are deep-copied before the first execution, so Undo restores exactly the state the user deleted in one step.",
+  "packageId": "Tempo.Blazor.Modeling",
+  "namespace": "Tempo.Blazor.Components.Modeling",
+  "sourcePath": "src/Tempo.Blazor.Modeling/Components/Modeling/Commands/DeleteModelingSelectionCommand.cs",
+  "documentationStatus": "generated"
+}

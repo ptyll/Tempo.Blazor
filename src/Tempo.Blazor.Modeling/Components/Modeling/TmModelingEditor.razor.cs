@@ -674,6 +674,9 @@ public partial class TmModelingEditor : IAsyncDisposable
             // belongs to the previous document and is dropped with it.
             ResetEditingState();
             CaptureBaseline(loadedModel);
+            // Phase 3: the freshly generated document is a projection of the model, so the
+            // structural diff starts from it (no gesture can be inferred from a regeneration).
+            CaptureStructureSnapshot(_document);
 
             if (_document is not null)
             {
@@ -977,6 +980,7 @@ public partial class TmModelingEditor : IAsyncDisposable
         _selectedRelationship = null;
         _draggedElement = null;
         _completedGenerationCount++;
+        CaptureStructureSnapshot(_document);
     }
 
     private async Task GenerateDiagramFromLoadedModelAsync()
@@ -993,17 +997,12 @@ public partial class TmModelingEditor : IAsyncDisposable
         _selectedRelationship = null;
         _draggedElement = null;
         _completedGenerationCount++;
+        CaptureStructureSnapshot(_document);
 
         if (_document is not null)
         {
             await OnDiagramGenerated.InvokeAsync(_document);
         }
-    }
-
-    private Task UpdatePreviewDocumentAsync(DiagramDocument document)
-    {
-        _document = document;
-        return Task.CompletedTask;
     }
 
     private Task ActivatePanelAsync(ModelingEditorPanel panel)

@@ -71,6 +71,16 @@ public sealed class ModelingNotationCatalog
             .ToArray();
 
     /// <summary>
+    /// The RELATIONSHIP entries of a notation (edge stencils only), in profile order — the candidate
+    /// vocabulary of the editor's relationship type picker. The notation rules provider decides
+    /// which of them an actual pair of elements allows; an unknown notation returns an empty list.
+    /// </summary>
+    public IReadOnlyList<ModelingNotationCatalogEntry> GetRelationshipTypes(string notationKey, ITmLocalizer localizer)
+        => [.. Resolve(notationKey)
+            .Where(entry => entry.IsRelationship)
+            .Select(entry => WithLabel(entry, localizer))];
+
+    /// <summary>
     /// The legend entries of a notation: the palette and relationship entries of the types the
     /// <paramref name="document"/> actually uses — nodes through their <c>semanticType</c> data
     /// value, relationships through <paramref name="presentRelationshipTypes"/> (the editor
@@ -251,7 +261,9 @@ public sealed class ModelingNotationCatalog
             ? localized
             : Humanize(semanticType);
 
-    private static string Humanize(string semanticType)
+    /// <summary>The humanized fallback of a semantic key ("userTask" → "User task") — shared with
+    /// the editor's own label resolution so a dialog option and a tree row never disagree.</summary>
+    internal static string Humanize(string semanticType)
     {
         var trimmed = semanticType.Trim();
         if (trimmed.Length == 0)

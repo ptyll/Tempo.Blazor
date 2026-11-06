@@ -133,6 +133,30 @@ export function focusTreeGroupHeader(treeRoot, groupKey) {
   header?.focus({ preventScroll: true });
 }
 
+/**
+ * Whether the DOCUMENT's active element is a TEXT-ENTRY control (input/textarea/contenteditable) —
+ * the editor's root Delete shortcut must leave the native Delete (and the native undo) to it
+ * (phase 3 review, A10). A failed lookup answers false: the shortcut then behaves as on a
+ * non-text target, which is the progressive-enhancement default.
+ */
+export function isTextEntryTarget() {
+  const active = typeof document === 'undefined' ? null : document.activeElement;
+  if (!active) {
+    return false;
+  }
+
+  if (active.isContentEditable || active.tagName === 'TEXTAREA') {
+    return true;
+  }
+
+  if (active.tagName === 'INPUT') {
+    const type = (active.getAttribute('type') || 'text').toLowerCase();
+    return ['', 'text', 'search', 'email', 'url', 'password', 'tel', 'number'].includes(type);
+  }
+
+  return false;
+}
+
 export function focusWithin(root, selector) {
   const scope = queryRoot(root);
   if (!scope) {

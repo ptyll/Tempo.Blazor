@@ -80,7 +80,8 @@
         <span class="text-xs opacity-70" data-testid="modeling-demo-pending">@string.Format(Loc["TmDemo_Modeling_Pending"], PendingCount)</span>
     </div>
 
-    <TmModelingEditor ProviderKey="@ResolvedProviderKey"
+    <TmModelingEditor @ref="_editor"
+                      ProviderKey="@ResolvedProviderKey"
                       ShowProviderSelector="true"
                       ProviderKeyChanged="HandleProviderChanged"
                       ProviderDisplayName="ResolveDemoProviderDisplayName"
@@ -134,7 +135,10 @@
     private ModelingModelChangeSet? _lastChangeSet;
     private bool _allowModelEditing;
     private ModelingSaveMode _saveMode = ModelingSaveMode.Manual;
-    private int _pendingCount;
+
+    /// <summary>The editor instance — the pending count is ITS public state (review U6), never a
+    /// demo-side accumulator that could disagree with the editor.</summary>
+    private TmModelingEditor? _editor;
 
     /// <inheritdoc />
     protected override void OnParametersSet()
@@ -172,7 +176,7 @@
 
     private string SaveModeValue => _saveMode == ModelingSaveMode.Immediate ? "immediate" : "manual";
 
-    private int PendingCount => _pendingCount;
+    private int PendingCount => _editor?.PendingChangeCount ?? 0;
 
     private Task HandleAllowEditingChanged(ChangeEventArgs args)
     {
@@ -191,13 +195,15 @@
     private Task HandleModelChanged(ModelingModelChangedEventArgs args)
     {
         _lastChangeSet = args.ChangeSet;
-        _pendingCount = args.ChangeSet.Elements.Count + args.ChangeSet.Relationships.Count;
+        // The editor re-renders its public PendingChangeCount on the same commit; the page only
+        // needs to repaint so the badge reads the fresh value (review U6).
+        StateHasChanged();
         return Task.CompletedTask;
     }
 
     private Task HandleSaveCompleted()
     {
-        _pendingCount = 0;
+        StateHasChanged();
         return Task.CompletedTask;
     }
 
