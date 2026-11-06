@@ -155,7 +155,7 @@ public class NotionUndoRedoE2ETests : NotionE2ETestBase
         await block.Locator(".tm-notion-handle__menu-anchor .tm-notion-handle__btn").First.ClickAsync();
         await page.WaitForTimeoutAsync(700);
 
-        await page.GetByText("Delete", new() { Exact = true }).First.ClickAsync();
+        await page.Locator(".tm-notion-ctx__item--danger").First.ClickAsync();
         await page.WaitForTimeoutAsync(1600);
     }
 

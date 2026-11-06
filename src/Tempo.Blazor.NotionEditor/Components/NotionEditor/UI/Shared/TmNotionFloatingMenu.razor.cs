@@ -54,20 +54,60 @@ public partial class TmNotionFloatingMenu : TmComponentBase
     /// <summary>The edge the popover opens from. The sheet presentation ignores it.</summary>
     [Parameter] public OverlayPlacement Placement { get; set; } = OverlayPlacement.Bottom;
 
-    /// <summary>The ARIA role of the panel (a dialog or a listbox menu).</summary>
-    [Parameter] public string Role { get; set; } = "menu";
+    /// <summary>
+    /// Cross-axis alignment against the anchor. A trigger on the viewport's trailing edge passes
+    /// <see cref="OverlayAlign.End"/> so the panel opens inward; shift still clamps the rest.
+    /// </summary>
+    [Parameter] public OverlayAlign Align { get; set; } = OverlayAlign.Start;
 
-    /// <summary>Extra CSS classes for the core overlay panel root.</summary>
+    /// <summary>
+    /// The ARIA role of the panel. Default dialog: a consumer whose menu role lives on an inner
+    /// element (a submenu host) must not also put role=menu on the panel.
+    /// </summary>
+    [Parameter] public string Role { get; set; } = "dialog";
+
+    /// <summary>
+    /// Trap Tab inside a desktop popover and move initial focus into it. A menu opened from a
+    /// handle otherwise leaves focus on the trigger. The mobile sheet traps through its drawer.
+    /// </summary>
+    [Parameter] public bool TrapFocus { get; set; }
+
+    /// <summary>
+    /// CSS selector of the element a trapped desktop popover focuses first. Null keeps the
+    /// scope default (the first focusable).
+    /// </summary>
+    [Parameter] public string? InitialFocusSelector { get; set; }
+
+    /// <summary>
+    /// CSS selector of the element a mobile sheet focuses first. Null keeps the role default
+    /// (a menu opens on its first item; a dialog opens on the first focusable).
+    /// </summary>
+    [Parameter] public string? SheetInitialFocusSelector { get; set; }
+
+    /// <summary>Extra CSS classes for the menu body (both the popover and the sheet).</summary>
     [Parameter] public string? Class { get; set; }
+
+    /// <summary>
+    /// The element the popover anchors to. Null uses the zero-size pin (a caret menu supplies
+    /// <see cref="Top"/>/<see cref="Left"/>); a trigger menu passes its button so the panel stays
+    /// visible when that pin has no box.
+    /// </summary>
+    [Parameter] public ElementReference? AnchorElement { get; set; }
 
     /// <summary>The menu body.</summary>
     [Parameter] public RenderFragment? ChildContent { get; set; }
 
-    /// <summary>Sheet-only footer.</summary>
+    /// <summary>
+    /// Footer rendered in both the desktop popover and the mobile sheet. A host that only wants
+    /// it on the sheet must not also render the same action in <see cref="ChildContent"/>.
+    /// </summary>
     [Parameter] public RenderFragment? Footer { get; set; }
 
     private bool IsSheet =>
         (LayoutMode != TmLayoutMode.Auto ? LayoutMode : Layout?.Resolved) == TmLayoutMode.Mobile;
+
+    private ElementReference ResolvedAnchor =>
+        AnchorElement is { Id: not null } anchor ? anchor : _anchor;
 
     private string? AnchorStyle => Top is { } top && Left is { } left
         ? string.Create(CultureInfo.InvariantCulture, $"top:{top}px;left:{left}px")

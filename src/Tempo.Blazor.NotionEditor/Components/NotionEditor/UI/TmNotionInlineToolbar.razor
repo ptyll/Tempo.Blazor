@@ -166,6 +166,7 @@
             @* Color (A with underline) *@
             <button class="tm-notion-inline-toolbar__btn tm-notion-inline-toolbar__btn--color"
                     @ref="_colorTriggerRef"
+                    data-testid="@TestId("notion-inline-color")"
                     title="@Loc["TmNotionInlineToolbar_Color"]"
                     @onclick="HandleColorClickAsync" @onclick:preventDefault="true">
                 <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
@@ -254,15 +255,20 @@
                         Align="OverlayAlign.Start"
                         Role="dialog"
                         AriaLabel="@Loc["TmNotionInlineToolbar_Color"]"
-                        SheetTitle="@Loc["TmNotionInlineToolbar_Color"]"
-                        Class="tm-notion-inline-toolbar__color-panel">
+                        SheetTitle="@Loc["TmNotionInlineToolbar_Color"]">
+            @* The class rides an inner element: the overlay root carries it only in the popover
+               presentation, and the sheet content never receives Class, so the selector would miss
+               the palette at every band that opens as a sheet. *@
+            <div class="tm-notion-inline-toolbar__color-panel">
             <div class="tm-notion-inline-toolbar__color-row-label">@Loc["TmNotionInlineToolbar_TextColor"]</div>
             <div class="tm-notion-inline-toolbar__color-row">
                 @foreach (var (name, textName, _) in Colors)
                 {
                     var colorName = textName;
-                    <button class="tm-notion-inline-toolbar__color-swatch @(colorName is null ? "tm-notion-inline-toolbar__color-swatch--default" : "")"
+                    <button class="tm-notion-inline-toolbar__color-swatch @(colorName is null ? "tm-notion-inline-toolbar__color-swatch--default" : "") @(IsCurrentText(colorName) ? "tm-notion-inline-toolbar__color-swatch--current" : "")"
                             style="@(colorName is not null ? $"background:var(--tm-notion-color-{colorName})" : "")"
+                            aria-label="@Loc[$"TmNotionInlineToolbar_Color{char.ToUpper(name[0])}{name[1..]}"]"
+                            aria-pressed="@(IsCurrentText(colorName) ? "true" : "false")"
                             title="@Loc[$"TmNotionInlineToolbar_Color{char.ToUpper(name[0])}{name[1..]}"]"
                             @onclick="() => HandleTextColorAsync(colorName)"
                             @onclick:preventDefault="true">
@@ -280,9 +286,12 @@
                 @foreach (var (name, _, bgName) in Colors)
                 {
                     var colorName = bgName;
-                    <button class="tm-notion-inline-toolbar__color-swatch @(colorName is null ? "tm-notion-inline-toolbar__color-swatch--default" : "")"
+                    <button class="tm-notion-inline-toolbar__color-swatch @(colorName is null ? "tm-notion-inline-toolbar__color-swatch--default" : "") @(IsCurrentBackground(colorName) ? "tm-notion-inline-toolbar__color-swatch--current" : "")"
                             style="@(colorName is not null ? $"background:var(--tm-notion-color-{colorName}-bg)" : "")"
-                            title="@Loc[$"TmNotionInlineToolbar_Color{char.ToUpper(name[0])}{name[1..]}"]"
+                            data-testid="@TestId($"notion-inline-bg-{name}")"
+                            aria-label="@Loc[BgKey(name)]"
+                            aria-pressed="@(IsCurrentBackground(colorName) ? "true" : "false")"
+                            title="@Loc[BgKey(name)]"
                             @onclick="() => HandleBgColorAsync(colorName)"
                             @onclick:preventDefault="true">
                         @if (colorName is null)
@@ -293,6 +302,7 @@
                         }
                     </button>
                 }
+            </div>
             </div>
         </TmOverlayPanel>
     }

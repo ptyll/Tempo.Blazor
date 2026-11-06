@@ -6,14 +6,7 @@
     align-items: center;
 }
 
-/* ── Click-outside backdrop — one step under the popover band, like every other
-   Notion anchored surface (slash menu, token dropdown, color picker…). An inline
-   z-index here escaped the CF10n band sweep and covered the panel. ─────────── */
-.tm-npsm__backdrop {
-    position: fixed;
-    inset: 0;
-    z-index: calc(var(--tm-z-popover) - 1);
-}
+/* Phase 6: dismissal is the core overlay's. No own backdrop or z-index. */
 
 /* ── Trigger button ───────────────────────────────────────────────────────── */
 
@@ -40,11 +33,7 @@
 /* ── Dropdown ─────────────────────────────────────────────────────────────── */
 
 .tm-npsm {
-    position: absolute;
-    top: calc(100% + 4px);
-    right: 0;
-    z-index: var(--tm-z-popover);
-    width: 260px;
+    width: min(16.25rem, 100%);
     background: var(--tm-bg-elevated);
     border: 1px solid var(--tm-border-color);
     border-radius: 8px;

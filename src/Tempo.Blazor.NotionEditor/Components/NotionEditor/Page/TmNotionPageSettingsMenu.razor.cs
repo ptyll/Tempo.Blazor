@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Components;
+using Tempo.Blazor.Abstractions.Layout;
 using Tempo.Blazor.Components;
 using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.AspNetCore.Components.Web;
@@ -27,6 +28,9 @@ public partial class TmNotionPageSettingsMenu : TmComponentBase, IAsyncDisposabl
     // ── Parameters ───────────────────────────────────────────────────────────
 
     [Parameter, EditorRequired] public INotionPage Page { get; set; } = default!;
+
+    /// <summary>Forced layout. Mobile presents the open menu as the core sheet.</summary>
+    [Parameter] public TmLayoutMode LayoutMode { get; set; } = TmLayoutMode.Auto;
 
     [Parameter] public bool ReadOnly { get; set; }
 
@@ -60,6 +64,7 @@ public partial class TmNotionPageSettingsMenu : TmComponentBase, IAsyncDisposabl
     // ── State ─────────────────────────────────────────────────────────────────
 
     private bool _open;
+    private ElementReference _triggerRef;
     private bool _exportOpen;
     private bool _importOpen;
     private bool _moveToOpen;
@@ -127,7 +132,13 @@ public partial class TmNotionPageSettingsMenu : TmComponentBase, IAsyncDisposabl
             await FocusMoveInputAsync();
     }
 
-    private void CloseMenu()
+    private Task CloseMenu()
+    {
+        CloseMenuState();
+        return Task.CompletedTask;
+    }
+
+    private void CloseMenuState()
     {
         _open          = false;
         _exportOpen    = false;

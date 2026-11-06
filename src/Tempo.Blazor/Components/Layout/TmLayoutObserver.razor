@@ -215,9 +215,13 @@
         if (_disposed) await ReleaseAsync();
     }
 
-    private static object ObserveOptions(TmLayoutBreakpoints breakpoints) => new
+    private object ObserveOptions(TmLayoutBreakpoints breakpoints) => new
     {
         breakpoints = new { sm = breakpoints.Sm, md = TmBreakpoints.Md, lg = breakpoints.Lg },
+        // The viewport scope classifies the window. Its own box can stay at the previous band
+        // across a viewport flip (a fixed probe, or a root the ResizeObserver does not re-deliver),
+        // which pins every menu that reads this scope to the stale mode.
+        measureWindow = IsViewportScope,
     };
 
     /// <summary>Called by layout-observer.js when the measured mode changes. An unchanged mode is ignored.</summary>

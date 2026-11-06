@@ -2,28 +2,12 @@
    TmNotionBlockContextMenu — block action dropdown (scoped)
    ═══════════════════════════════════════════════════════════════ */
 
-/* ── Backdrop (click-outside capture) ────────────────────────── */
-
-.tm-notion-ctx-backdrop {
-    position:   fixed;
-    inset:      0;
-    z-index:    calc(var(--tm-z-dropdown) - 1);
-}
+/* Phase 6: dismissal and stacking are the core overlay's. */
 
 /* ── Menu panel ───────────────────────────────────────────────── */
 
-/* The menu is viewport-fixed and positioned by tmNotionEditor.positionContextMenu
-   at the anchor's rect. It must NOT be position:absolute inside the block: the
-   block lives in the scrollable .tm-notion-main column, so scrolling the column
-   (which scroll-reveal actions do when a submenu item overflows the column's
-   client rect) would drag the menu out from under a stationary pointer, firing
-   a phantom @onmouseleave that collapses open submenus mid-interaction. */
+/* Placement is the shared floating menu's. The inner panel keeps only the card chrome. */
 .tm-notion-ctx {
-    position:      fixed;
-    top:           0;
-    left:          0;
-    visibility:    hidden;
-    z-index:       var(--tm-z-dropdown);
     min-width:     192px;
     padding:       var(--tm-space-1);
     background:    var(--tm-bg-surface);
@@ -31,11 +15,6 @@
     border-radius: var(--tm-radius-lg);
     box-shadow: var(--tm-shadow-popover);
     animation:     tm-notion-ctx-in var(--tm-notion-anim-fast) ease;
-}
-
-/* Revealed once JS has written top/left — prevents a one-frame flash at 0,0. */
-.tm-notion-ctx--positioned {
-    visibility: visible;
 }
 
 @keyframes tm-notion-ctx-in {

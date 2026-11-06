@@ -16,7 +16,7 @@ public partial class TmNotionPageTree : TmComponentBase
 
     // ── Cascaded context ──────────────────────────────────────────────────────
 
-    [CascadingParameter] private NotionEditorContext Context { get; set; } = default!;
+    [CascadingParameter] internal NotionEditorContext Context { get; set; } = default!;
 
     // ── Parameters ────────────────────────────────────────────────────────────
 
@@ -188,7 +188,8 @@ public partial class TmNotionPageTree : TmComponentBase
             var parentId = queue.Dequeue();
             try
             {
-                var children = await DataProvider.GetChildPagesAsync(parentId);
+                var children = (await DataProvider.GetChildPagesAsync(parentId)).ToList();
+                Context?.RememberPages(children);
                 foreach (var child in children)
                 {
                     var id = child.Id.ToString("D");
@@ -228,7 +229,8 @@ public partial class TmNotionPageTree : TmComponentBase
             node.ChildrenLoaded = true;
             try
             {
-                var children = await DataProvider.GetChildPagesAsync(node.Page.Id.ToString("D"));
+                var children = (await DataProvider.GetChildPagesAsync(node.Page.Id.ToString("D"))).ToList();
+                Context?.RememberPages(children);
                 node.Children = children
                     .Where(child => !IsExcluded(child))
                     .Select(child => new TargetNode { Page = child, Depth = node.Depth + 1 })

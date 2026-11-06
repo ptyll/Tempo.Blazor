@@ -115,7 +115,6 @@ public sealed class TmNotionFloatingZBandTests
     [InlineData("UI/TmCommentMentionInput")]
     [InlineData("UI/TmNotionSlashMenu")]
     [InlineData("UI/TmNotionBlockTypeSwitcher")]
-    [InlineData("UI/TmNotionColorPicker")]
     [InlineData("UI/TmNotionEmojiPicker")]
     [InlineData("UI/TmNotionTokenDropdown")]
     [InlineData("UI/TmNotionStatusPicker")]
@@ -157,7 +156,7 @@ public sealed class TmNotionFloatingZBandTests
 
     /// <summary>A dialog that covers the page rides the modal band, not a private number.</summary>
     [Theory]
-    [InlineData("UI/TmNotionShortcutsPanel")]
+    [InlineData("UI/TmNotionMediaUploadDialog")]
     public void DialogSurfaces_SitOnTheModalBand(string scopedCss)
     {
         var css = File.ReadAllText(Path.Combine(
@@ -170,7 +169,6 @@ public sealed class TmNotionFloatingZBandTests
 
     /// <summary>Full-screen take-overs ride the overlay band; their dialogs stack above it.</summary>
     [Theory]
-    [InlineData("UI/TmNotionPageSearch", "--tm-z-overlay", 2)]
     [InlineData("UI/TmNotionPageHistory", "--tm-z-overlay", 4)]
     public void FullScreenTakeOvers_SitOnTheOverlayBand(string scopedCss, string band, int overlayDeclarations)
     {

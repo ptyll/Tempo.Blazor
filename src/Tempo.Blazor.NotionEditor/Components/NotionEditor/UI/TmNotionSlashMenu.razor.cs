@@ -55,6 +55,12 @@ public partial class TmNotionSlashMenu : TmComponentBase
 
     private ElementReference _inputRef;
     private ElementReference _listRef;
+    private readonly string _inputId = $"tm-slash-input-{Guid.NewGuid():N}";
+    private readonly string _listId = $"tm-slash-list-{Guid.NewGuid():N}";
+
+    private string OptionId(int index) => $"{_listId}-opt-{index}";
+
+    private string? ActiveOptionId => _totalItems > 0 ? OptionId(_selectedIndex) : null;
 
     private const string AiIcon =
         """<svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M10 2.5l1.35 4.15L15.5 8l-4.15 1.35L10 13.5 8.65 9.35 4.5 8l4.15-1.35L10 2.5z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><path d="M5.5 12.5l.7 2.1 2.1.7-2.1.7-.7 2.1-.7-2.1-2.1-.7 2.1-.7.7-2.1zM15 11l.55 1.65L17.2 13.2l-1.65.55L15 15.4l-.55-1.65-1.65-.55 1.65-.55L15 11z" fill="currentColor"/></svg>""";

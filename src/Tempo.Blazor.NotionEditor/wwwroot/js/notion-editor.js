@@ -471,6 +471,10 @@ window.tmNotionEditor = (function () {
 
         const onKeyDown = (event) => {
             if (event.key !== 'Escape') return;
+            // The editor root is recreated when the shell crosses a layout breakpoint. A handler
+            // whose element was detached must not throw: it runs in the capture phase, and an
+            // exception there swallows the key before the open dialog's own Escape listener.
+            if (!element.isConnected) return;
             const mode = element.getAttribute('data-view-mode');
             if (mode !== 'Reading' && mode !== 'Presentation') return;
 
@@ -572,6 +576,21 @@ window.tmNotionEditor = (function () {
     // APG menu-button pattern: when a submenu trigger opens its panel (ArrowRight,
     // Enter), focus lands on the panel's first item — an aria-expanded flip alone
     // leaves the user outside the submenu they just opened.
+    // Column count is the rendered first row (offsetTop), never a fixed 8. A grid with no
+    // layout (every cell at the same offset) reports its full cell count — one row.
+    function emojiGridColumns(grid) {
+        if (!grid || !grid.querySelectorAll) return 0;
+        const cells = grid.querySelectorAll(':scope > .tm-notion-emoji-picker__emoji');
+        if (!cells.length) return 0;
+        const top = cells[0].offsetTop;
+        let count = 0;
+        for (const cell of cells) {
+            if (cell.offsetTop !== top) break;
+            count++;
+        }
+        return count;
+    }
+
     function focusFirstMenuItem(panel) {
         if (!panel) return;
         const first = panel.querySelector('button:not([disabled])');
@@ -2119,13 +2138,10 @@ window.tmNotionEditor = (function () {
     function registerShortcuts(dotNetRef) {
         unregisterShortcuts();
         const handler = event => {
-            if ((event.key !== '?' && event.key !== 'Escape') || _isEditableShortcutTarget(event.target)) return;
-            if (event.key === '?') {
-                event.preventDefault();
-                dotNetRef.invokeMethodAsync('OnNotionShortcutKey', '?').catch(console.error);
-                return;
-            }
-            dotNetRef.invokeMethodAsync('OnNotionShortcutKey', 'Escape').catch(console.error);
+            // Escape belongs to the open dialog (TmModal). A second shortcut close fired OnClosed twice.
+            if (event.key !== '?' || _isEditableShortcutTarget(event.target)) return;
+            event.preventDefault();
+            dotNetRef.invokeMethodAsync('OnNotionShortcutKey', '?').catch(console.error);
         };
         document.addEventListener('keydown', handler, true);
         document._tmNotionShortcutsHandler = handler;
@@ -3423,7 +3439,7 @@ window.tmNotionEditor = (function () {
         // 26.1
         initBlock, destroyBlock, getHtml, getEditableHtml, getCaretOffset, setCaretOffset, setHtml,
         focus, focusAtEnd, focusAtStart, focusAtOffset,
-        initFocusTrap, destroyFocusTrap, positionContextMenu, focusFirstMenuItem, focusMenuInput,
+        initFocusTrap, destroyFocusTrap, positionContextMenu, emojiGridColumns, focusFirstMenuItem, focusMenuInput,
         initEditorKeyHandler, destroyEditorKeyHandler,
         // 26.2
         getSelectionRange, getSelectionRect, applyFormat,

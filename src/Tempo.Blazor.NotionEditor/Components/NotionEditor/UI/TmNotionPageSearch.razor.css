@@ -1,13 +1,4 @@
-/* ── Backdrop ─────────────────────────────────────────────────────────────── */
-
-.tm-nps-backdrop {
-    position: fixed;
-    inset: 0;
-    z-index: calc(var(--tm-z-overlay) - 1);
-    background: var(--tm-bg-overlay);
-    backdrop-filter: blur(2px);
-    animation: tm-nps-fade-in var(--tm-transition-fast);
-}
+/* Phase 6: the backdrop and stacking are the core TmModal's. */
 
 @keyframes tm-nps-fade-in {
     from { opacity: 0; }
@@ -17,28 +8,16 @@
 /* ── Modal card ───────────────────────────────────────────────────────────── */
 
 .tm-nps {
-    position: fixed;
-    inset: 0;
-    z-index: var(--tm-z-overlay);
     display: flex;
-    align-items: flex-start;
-    justify-content: center;
-    padding: var(--tm-space-16) var(--tm-space-4) 0;
-    pointer-events: none;
+    flex-direction: column;
 }
 
 .tm-nps__card {
     pointer-events: all;
-    width: min(37.5rem, calc(100vw - (var(--tm-space-4) * 2)));
-    max-height: calc(100vh - (var(--tm-space-16) * 2));
+    width: 100%;
     display: flex;
     flex-direction: column;
-    background: var(--tm-color-surface-elevated);
-    border: 1px solid var(--tm-border-color);
-    border-radius: var(--tm-radius-lg);
-    box-shadow: var(--tm-shadow-xl);
     overflow: hidden;
-    animation: tm-nps-slide-in var(--tm-transition-fast);
 }
 
 @keyframes tm-nps-slide-in {
@@ -195,7 +174,6 @@
     padding: var(--tm-space-2) var(--tm-space-4) var(--tm-space-1);
     font-size: var(--tm-font-size-xs);
     font-weight: var(--tm-font-weight-semibold);
-    text-transform: uppercase;
     color: var(--tm-text-tertiary);
     user-select: none;
 }
@@ -370,9 +348,9 @@
         padding: var(--tm-space-2);
     }
 
-    .tm-nps__card {
-        width: 100%;
-        max-height: calc(100vh - (var(--tm-space-2) * 2));
+    .tm-nps__results {
+        flex: 1;
+        max-height: none;
     }
 
     .tm-nps__search-row {

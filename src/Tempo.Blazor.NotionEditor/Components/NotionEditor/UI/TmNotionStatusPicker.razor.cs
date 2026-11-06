@@ -39,6 +39,7 @@ public partial class TmNotionStatusPicker : ComponentBase
     [Parameter] public TmLayoutMode LayoutMode { get; set; } = TmLayoutMode.Auto;
 
     private ElementReference _inputRef;
+    private readonly string _inputId = $"tm-status-label-{Guid.NewGuid():N}";
     private bool _wasVisible;
     private bool _needsFocus;
     private string _label = string.Empty;

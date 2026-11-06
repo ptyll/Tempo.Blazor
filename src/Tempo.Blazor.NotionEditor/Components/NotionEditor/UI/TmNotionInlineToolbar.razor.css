@@ -161,13 +161,14 @@
     box-shadow: var(--tm-notion-menu-shadow, var(--tm-shadow-lg));
 }
 
-/* Sheet presentation: the core sheet content renders in place of the popover root, still
-   inside the toolbar scope, so a ::deep rule reaches it — strip the card chrome the
-   popover root would have carried. */
-::deep .tm-overlay-panel-sheet__content {
+/* Sheet presentation: the palette class now rides an inner element (the sheet content never
+   receives the overlay Class), still inside the toolbar scope — strip the card chrome the
+   popover would have carried. */
+::deep .tm-overlay-panel-sheet .tm-notion-inline-toolbar__color-panel {
     border: 0;
     border-radius: 0;
     box-shadow: none;
+    background: transparent;
 }
 
 .tm-notion-inline-toolbar__color-row-label {

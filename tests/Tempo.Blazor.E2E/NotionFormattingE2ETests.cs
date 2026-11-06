@@ -377,13 +377,7 @@ public class NotionFormattingE2ETests : WasmTestBase
         await colorBtn.ClickAsync();
         await page.WaitForTimeoutAsync(300);
 
-        // Click the Yellow swatch in the Background color row (second row) via JS to bypass viewport issues
-        await page.EvaluateAsync("""
-            const panel = document.querySelector('.tm-notion-inline-toolbar__color-panel');
-            const row = panel?.querySelectorAll('.tm-notion-inline-toolbar__color-row')[1];
-            const swatch = row?.querySelector('button[title="Yellow"]');
-            swatch?.click();
-            """);
+        await page.Locator("[data-testid='notion-inline-bg-yellow']").First.ClickAsync();
         await page.WaitForTimeoutAsync(400);
 
         var block = page.Locator(".tm-notion-paragraph[contenteditable='true']").First;

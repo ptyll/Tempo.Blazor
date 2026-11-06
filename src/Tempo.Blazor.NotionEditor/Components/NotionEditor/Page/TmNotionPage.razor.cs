@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.JSInterop;
 using System.Net;
+using Tempo.Blazor.Abstractions.Layout;
 using Tempo.Blazor.Abstractions.Shared;
 using Tempo.Blazor.Components.NotionEditor.Commands;
 using Tempo.Blazor.Components.NotionEditor.Services;
@@ -37,6 +38,14 @@ public partial class TmNotionPage : ComponentBase, IAsyncDisposable
 
     [CascadingParameter]
     private NotionEditorContext Context { get; set; } = default!;
+
+    // The viewport scope, not the shell's unnamed cascade: a menu opened from this page sheets
+    // when the VIEWPORT is mobile, even while the shell container is still desktop.
+    [CascadingParameter(Name = TmLayoutScopes.Viewport)]
+    private TmLayoutContext? Viewport { get; set; }
+
+    /// <summary>The layout the page's menus present with. Auto reads the viewport scope.</summary>
+    private TmLayoutMode MenuLayout => Viewport?.Resolved ?? TmLayoutMode.Auto;
 
     // ── Parameters ───────────────────────────────────────────────────────────
 

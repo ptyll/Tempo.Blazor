@@ -103,13 +103,13 @@ public sealed class TmNotionBlockContextMenuTests : LocalizationTestBase
         cut.FindAll("button[aria-haspopup='menu']").First().Click();
         cut.FindAll(".tm-notion-ctx-sub").Should().HaveCount(1);
 
-        cut.Find(".tm-notion-ctx").KeyDown(new KeyboardEventArgs { Key = "Escape" });
+        cut.Find("[tabindex='-1'].tm-notion-ctx").KeyDown(new KeyboardEventArgs { Key = "Escape" });
 
         // APG menu-button contract: Escape inside a submenu collapses only the
         // submenu and returns focus to its trigger — the parent menu stays open.
         cut.FindAll(".tm-notion-ctx-sub").Should().BeEmpty();
         closed.Should().BeFalse("Escape with an open submenu must not close the whole menu");
-        cut.FindAll(".tm-notion-ctx").Should().HaveCount(1);
+        cut.FindAll("[tabindex='-1'].tm-notion-ctx").Should().HaveCount(1);
     }
 
     [Fact]
@@ -222,7 +222,7 @@ public sealed class TmNotionBlockContextMenuTests : LocalizationTestBase
 
         cut.FindAll("button[aria-haspopup='menu']").First().Click();
 
-        cut.Find(".tm-notion-ctx").KeyDown(new KeyboardEventArgs { Key = "ArrowLeft" });
+        cut.Find("[tabindex='-1'].tm-notion-ctx").KeyDown(new KeyboardEventArgs { Key = "ArrowLeft" });
 
         cut.FindAll(".tm-notion-ctx-sub").Should().BeEmpty();
         closed.Should().BeFalse();
@@ -234,7 +234,7 @@ public sealed class TmNotionBlockContextMenuTests : LocalizationTestBase
         var closed = false;
         var cut = RenderMenu(TextBlock(), v => closed = v);
 
-        cut.Find(".tm-notion-ctx").KeyDown(new KeyboardEventArgs { Key = "Escape" });
+        cut.Find("[tabindex='-1'].tm-notion-ctx").KeyDown(new KeyboardEventArgs { Key = "Escape" });
 
         closed.Should().BeTrue();
     }

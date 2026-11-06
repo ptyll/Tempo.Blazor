@@ -2,6 +2,8 @@ using Bunit;
 using FluentAssertions;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
+using Tempo.Blazor.Abstractions.Layout;
+using Tempo.Blazor.Components.Feedback;
 using Tempo.Blazor.Components.NotionEditor.UI;
 using Tempo.Blazor.NotionEditor.Enums;
 using Tempo.Blazor.NotionEditor.Interfaces;
@@ -73,6 +75,41 @@ public sealed class TmNotionTemplateGalleryTests : LocalizationTestBase
 
         cut.WaitForAssertion(() =>
             cut.Find(".tm-ntg__state").TextContent.Should().Contain("No templates match"));
+    }
+
+    [Fact]
+    public async Task Escape_RaisesOnClosed_AndApplyingShowsASpinnerOnTheUsedCardOnly()
+    {
+        var closed = 0;
+        var gate = new TaskCompletionSource();
+        var cut = Render<TmNotionTemplateGallery>(parameters => parameters
+            .Add(component => component.Visible, true)
+            .Add(component => component.TemplateProvider, new FakeTemplateProvider(SampleTemplates()))
+            .Add(component => component.OnClosed, EventCallback.Factory.Create(this, () => closed++))
+            .Add(component => component.OnTemplateSelected, EventCallback.Factory.Create<NotionTemplateDto>(this, async _ => await gate.Task)));
+
+        cut.WaitForAssertion(() => cut.FindAll(".tm-ntg__card").Should().NotBeEmpty());
+        await cut.InvokeAsync(() => cut.FindComponent<TmFocusScope>().Instance.HandleFocusTrapEscapeAsync());
+        closed.Should().Be(1);
+
+        var use = cut.Find("[data-template-id='project-plan'] .tm-ntg__use").ClickAsync(new MouseEventArgs());
+        cut.WaitForAssertion(() =>
+            cut.FindAll(".tm-ntg__card .tm-spinner, .tm-ntg__card [role='status']").Should().ContainSingle());
+        gate.SetResult();
+        await use;
+    }
+
+    [Fact]
+    public void Footer_HasACloseAction()
+    {
+        UseCustomLocalization(new Dictionary<string, string>
+        {
+            ["TmNotionTemplateGallery_Close"] = "Close"
+        });
+        var cut = Render<TmNotionTemplateGallery>(parameters => parameters
+            .Add(component => component.Visible, true));
+
+        cut.Find(".tm-modal-footer").TextContent.Should().Contain("Close");
     }
 
     [Fact]

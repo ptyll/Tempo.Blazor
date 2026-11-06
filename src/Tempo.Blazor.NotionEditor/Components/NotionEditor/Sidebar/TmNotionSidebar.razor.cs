@@ -358,10 +358,13 @@ public partial class TmNotionSidebar : ComponentBase, IAsyncDisposable
         if (Context.SpaceProvider is not null && !string.IsNullOrWhiteSpace(selectedSpaceId))
         {
             var pages = await Context.SpaceProvider.GetPagesInSpaceAsync(selectedSpaceId);
+            Context.RememberPages(pages);
             return pages.Where(page => page.ParentId is null);
         }
 
-        return await Context.DataProvider.GetChildPagesAsync(null);
+        var roots = await Context.DataProvider.GetChildPagesAsync(null);
+        Context.RememberPages(roots);
+        return roots;
     }
 
     // ── JS interop callback ───────────────────────────────────────────────────

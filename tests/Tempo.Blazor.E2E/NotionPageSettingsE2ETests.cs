@@ -323,18 +323,21 @@ public class NotionPageSettingsRecoveryE2ETests : NotionE2ETestBase
         await WaitForTitleAsync("EB12 Page Settings");
 
         await page.Locator(".tm-notion-header-icon").First.ClickAsync();
-        var picker = page.Locator(".tm-notion-emoji-picker__panel").First;
+        // Phase 6: the panel class is the modal host; the picker renders one category, so rocket
+        // (Travel) is reached through the search box rather than a click on an unmounted cell.
+        var picker = page.Locator(".tm-modal-body .tm-notion-emoji-picker").First;
         await picker.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10000 });
+        await picker.Locator(".tm-notion-emoji-picker__search").FillAsync("rocket");
         await picker.Locator(".tm-notion-emoji-picker__btn[title='rocket']").First.ClickAsync();
         await Assertions.Expect(page.Locator(".tm-notion-header-icon").First).ToContainTextAsync("🚀");
 
         await page.Locator(".tm-notion-header-icon").First.ClickAsync();
-        await picker.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10000 });
+        await page.Locator(".tm-notion-emoji-picker__panel").First.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10000 });
         await Assertions.Expect(picker.Locator(".tm-notion-emoji-picker__category--recent").First).ToBeVisibleAsync();
         await Assertions.Expect(picker.Locator(".tm-notion-emoji-picker__category--recent .tm-notion-emoji-picker__btn").First)
             .ToContainTextAsync("🚀");
         await AssertNoHorizontalOverflowAsync(page, ".tm-notion-emoji-picker__panel", "EB12 emoji picker recent");
-        await CaptureBaselineAsync("page-settings", "emoji-picker-recent", picker);
+        await CaptureBaselineAsync("page-settings", "emoji-picker-recent", page.Locator(".tm-notion-emoji-picker__panel").First);
     }
 
     [TestMethod]

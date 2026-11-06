@@ -167,4 +167,24 @@ public class TmNotionStatusPickerTests : LocalizationTestBase
 
         closed.Should().BeTrue();
     }
+
+    [Fact]
+    public void StatusPicker_SwatchesAreRadios_AndTheLabelInputIsNamed()
+    {
+        var cut = Render<TmNotionStatusPicker>(p => p
+            .Add(x => x.Visible, true)
+            .Add(x => x.InitialLabel, "DONE")
+            .Add(x => x.InitialColor, NotionStatusColor.Green));
+
+        var group = cut.Find(".tm-notion-status-picker__colors");
+        group.GetAttribute("role").Should().Be("radiogroup");
+        var swatches = group.QuerySelectorAll("[role='radio']");
+        swatches.Should().NotBeEmpty();
+        swatches.Should().OnlyContain(s => s.HasAttribute("aria-checked"));
+        group.QuerySelector("[aria-checked='true']").Should().NotBeNull();
+
+        var input = cut.Find(".tm-notion-status-picker__input");
+        var label = cut.Find("label[for]");
+        label.GetAttribute("for").Should().Be(input.Id);
+    }
 }

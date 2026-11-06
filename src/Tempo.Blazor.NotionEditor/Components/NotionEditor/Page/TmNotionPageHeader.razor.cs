@@ -75,8 +75,6 @@ public partial class TmNotionPageHeader : ComponentBase, IDisposable
     private bool         _showCoverDialog;
     private string       _coverUrlInput    = string.Empty;
     private double       _coverPositionY   = 50;
-    private string       _emojiSearch      = string.Empty;
-    private List<string> _recentEmojis     = [];
     private INotionPage? _lastPage;
 
     /// <summary>Resolved display name of the last editor (meta row); the raw id is the fallback.</summary>
@@ -104,15 +102,6 @@ public partial class TmNotionPageHeader : ComponentBase, IDisposable
         }
     }
 
-    private IEnumerable<EmojiCategory> FilteredCategories =>
-        string.IsNullOrWhiteSpace(_emojiSearch)
-            ? AllCategories
-            : AllCategories
-                .Select(c => new EmojiCategory(
-                    c.Name,
-                    c.Emojis.Where(e => e.Name.Contains(_emojiSearch, StringComparison.OrdinalIgnoreCase)).ToArray()))
-                .Where(c => c.Emojis.Length > 0);
-
     // ── Lifecycle ────────────────────────────────────────────────────────────
 
     protected override async Task OnParametersSetAsync()
@@ -128,7 +117,6 @@ public partial class TmNotionPageHeader : ComponentBase, IDisposable
             _coverPositionY   = Page.CoverImagePositionY ?? 50;
             _showIconPicker   = false;
             _showCoverDialog  = false;
-            _emojiSearch      = string.Empty;
             _lastEditorName   = Page.LastEditedByUserId ?? string.Empty;
             _resolvedEditorId = null;
         }
@@ -276,16 +264,12 @@ public partial class TmNotionPageHeader : ComponentBase, IDisposable
 
     // ── Icon ──────────────────────────────────────────────────────────────────
 
-    private async Task ToggleIconPickerAsync()
+    private void ToggleIconPicker()
     {
         if (ReadOnly) return;
         _showIconPicker = !_showIconPicker;
         if (_showIconPicker)
-        {
             _showCoverDialog = false;
-            _emojiSearch     = string.Empty;
-            await LoadRecentEmojisAsync();
-        }
     }
 
     /// <summary>
@@ -297,7 +281,6 @@ public partial class TmNotionPageHeader : ComponentBase, IDisposable
     private async Task SelectEmojiAsync(string emoji)
     {
         _showIconPicker = false;
-        await AddRecentEmojiAsync(emoji);
         var updated = MapToMutable(Page);
         updated.IconEmoji    = emoji;
         updated.IconImageUrl = null;
@@ -352,36 +335,6 @@ public partial class TmNotionPageHeader : ComponentBase, IDisposable
             try { await JS.InvokeVoidAsync("tmNotionEditor.setHtml", _titleRef, Page.Title); }
             catch { }
         }
-    }
-
-    private async Task LoadRecentEmojisAsync()
-    {
-        try
-        {
-            var recent = await JS.InvokeAsync<string[]>("tmNotionEditor.getRecentEmojis");
-            _recentEmojis = recent
-                .Where(e => !string.IsNullOrWhiteSpace(e))
-                .Distinct(StringComparer.Ordinal)
-                .Take(16)
-                .ToList();
-        }
-        catch
-        {
-            _recentEmojis = [];
-        }
-    }
-
-    private async Task AddRecentEmojiAsync(string emoji)
-    {
-        try
-        {
-            await JS.InvokeVoidAsync("tmNotionEditor.addRecentEmoji", emoji);
-            _recentEmojis.RemoveAll(e => string.Equals(e, emoji, StringComparison.Ordinal));
-            _recentEmojis.Insert(0, emoji);
-            if (_recentEmojis.Count > 16)
-                _recentEmojis.RemoveRange(16, _recentEmojis.Count - 16);
-        }
-        catch { }
     }
 
     private async Task SaveTitleAsync(string newTitle)
@@ -465,57 +418,6 @@ public partial class TmNotionPageHeader : ComponentBase, IDisposable
         IsFavorite          = src.IsFavorite
     };
 
-    // ── Emoji data ────────────────────────────────────────────────────────────
-
-    private static readonly IReadOnlyList<EmojiCategory> AllCategories = BuildEmojiCategories();
-
-    private static EmojiCategory[] BuildEmojiCategories() =>
-    [
-        new("Smileys", [ new("😀","grinning"), new("😂","joy"), new("😍","heart eyes"),
-            new("😎","sunglasses"), new("🤔","thinking"), new("😴","sleeping"),
-            new("😱","scream"), new("🥳","partying"), new("🤩","star struck"),
-            new("😭","loudly crying"), new("🙂","slightly smiling"), new("😊","blush"),
-            new("🤯","exploding head"), new("🥺","pleading"), new("😇","innocent"), new("🤗","hugging") ]),
-        new("Gestures", [ new("👍","thumbs up"), new("👎","thumbs down"), new("🙌","raising hands"),
-            new("👏","clapping"), new("🤝","handshake"), new("✌️","victory"),
-            new("💪","muscle"), new("🖐️","hand"), new("👋","wave"),
-            new("🤞","crossed fingers"), new("🤌","pinched fingers"), new("🫶","heart hands") ]),
-        new("Hearts", [ new("❤️","red heart"), new("🧡","orange heart"), new("💛","yellow heart"),
-            new("💚","green heart"), new("💙","blue heart"), new("💜","purple heart"),
-            new("🖤","black heart"), new("🤍","white heart"), new("💔","broken heart"),
-            new("💕","two hearts"), new("💗","growing heart"), new("💝","heart ribbon") ]),
-        new("Stars & Fire", [ new("⭐","star"), new("🌟","glowing star"), new("✨","sparkles"),
-            new("💫","dizzy"), new("🔥","fire"), new("💯","hundred"),
-            new("🎯","bullseye"), new("⚡","lightning"), new("💥","collision"), new("🌈","rainbow") ]),
-        new("Events", [ new("🎉","party popper"), new("🎊","confetti ball"), new("🎈","balloon"),
-            new("🎁","gift"), new("🏆","trophy"), new("🥇","gold medal"),
-            new("🎖️","medal"), new("🎗️","reminder ribbon"), new("🎀","ribbon"), new("🎪","circus tent") ]),
-        new("Nature", [ new("🌍","earth"), new("🌱","seedling"), new("🌿","herb"),
-            new("🌸","cherry blossom"), new("🌺","hibiscus"), new("🌻","sunflower"),
-            new("⛅","partly cloudy"), new("🌊","wave"), new("🦋","butterfly"),
-            new("🍁","maple leaf"), new("🌴","palm tree"), new("🌙","moon") ]),
-        new("Animals", [ new("🐶","dog"), new("🐱","cat"), new("🦊","fox"),
-            new("🐻","bear"), new("🐼","panda"), new("🦁","lion"),
-            new("🐯","tiger"), new("🐮","cow"), new("🐷","pig"),
-            new("🐸","frog"), new("🦄","unicorn"), new("🐉","dragon") ]),
-        new("Food", [ new("🍕","pizza"), new("🍔","burger"), new("🎂","cake"),
-            new("🍦","ice cream"), new("🍎","apple"), new("🍊","tangerine"),
-            new("🍋","lemon"), new("🍇","grapes"), new("🍓","strawberry"),
-            new("☕","coffee"), new("🥑","avocado"), new("🍜","noodles") ]),
-        new("Objects", [ new("💡","bulb"), new("🔍","search"), new("🔑","key"),
-            new("🔒","lock"), new("⚙️","gear"), new("🛠️","tools"),
-            new("📱","phone"), new("💻","laptop"), new("🎮","game controller"),
-            new("🔬","microscope"), new("🔭","telescope"), new("🧪","test tube") ]),
-        new("Documents", [ new("📝","memo"), new("📄","document"), new("📋","clipboard"),
-            new("📊","chart"), new("📈","chart up"), new("📉","chart down"),
-            new("📌","pushpin"), new("📚","books"), new("📖","open book"),
-            new("✏️","pencil"), new("💼","briefcase"), new("🗂️","folder") ]),
-        new("Travel", [ new("🚀","rocket"), new("✈️","airplane"), new("🚂","train"),
-            new("🚗","car"), new("🏠","house"), new("🏢","office"),
-            new("🏛️","building"), new("🗺️","world map"), new("🧭","compass"),
-            new("🏖️","beach"), new("⛵","sailboat"), new("🌆","city") ]),
-    ];
-
     // ── Cover presets ─────────────────────────────────────────────────────────
 
     private static readonly IReadOnlyList<CoverPreset> _coverPresets =
@@ -532,8 +434,6 @@ public partial class TmNotionPageHeader : ComponentBase, IDisposable
 
     // ── Records ───────────────────────────────────────────────────────────────
 
-    private sealed record EmojiCategory(string Name, EmojiItem[] Emojis);
-    private sealed record EmojiItem(string Char, string Name);
     private sealed record CoverPreset(string Background, string Label);
 
     // ── Dispose ───────────────────────────────────────────────────────────────

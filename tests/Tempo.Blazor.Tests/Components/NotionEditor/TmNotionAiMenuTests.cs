@@ -178,6 +178,15 @@ public sealed class TmNotionAiMenuTests : LocalizationTestBase
         closed.Should().BeTrue();
     }
 
+    [Fact]
+    public void NonPanelAnchor_UsesTopAndLeft_InvariantCulture()
+    {
+        var cut = RenderMenu(new RecordingAIProvider());
+
+        cut.Find(".tm-notion-ai__anchor").GetAttribute("style")
+            .Should().Contain("top:12.5px;left:24.5px");
+    }
+
     private IRenderedComponent<TmNotionAiMenu> RenderMenu(
         RecordingAIProvider provider,
         Action<ComponentParameterCollectionBuilder<TmNotionAiMenu>>? configure = null)
@@ -185,8 +194,8 @@ public sealed class TmNotionAiMenuTests : LocalizationTestBase
         return Render<TmNotionAiMenu>(parameters =>
         {
             parameters.Add(p => p.Visible, true);
-            parameters.Add(p => p.Top, 12);
-            parameters.Add(p => p.Left, 24);
+            parameters.Add(p => p.Top, 12.5);
+            parameters.Add(p => p.Left, 24.5);
             parameters.Add(p => p.Provider, provider);
             configure?.Invoke(parameters);
         });

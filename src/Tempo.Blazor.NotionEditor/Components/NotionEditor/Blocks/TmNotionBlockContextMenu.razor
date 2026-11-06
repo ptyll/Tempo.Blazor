@@ -1,15 +1,27 @@
 @namespace Tempo.Blazor.Components.NotionEditor.Blocks
 @using Tempo.Blazor.NotionEditor.Enums
 @using Tempo.Blazor.NotionEditor.Interfaces
+@using Tempo.Blazor.Components.NotionEditor.UI
+@using Tempo.Blazor.Components.Overlay
 
-@* ── Transparent backdrop — captures outside clicks ──────────────────────── *@
-<div class="tm-notion-ctx-backdrop" @onclick="CloseAsync" aria-hidden="true"></div>
-
-@* ── Menu panel ───────────────────────────────────────────────────────────── *@
-<div class="tm-notion-ctx" role="menu" aria-label="@Loc["TmNotionBlockHandle_OpenMenu"]"
-     tabindex="-1"
-     @ref="_menuRef"
+@* Phase 6 (N6): the context menu rides the shared floating menu. Top/Left anchor it;
+   dismissal and focus are the core overlay's. *@
+<TmNotionFloatingMenu IsOpen="true"
+                      Top="Top"
+                      Left="Left"
+                      AnchorElement="Anchor"
+                      TrapFocus="true"
+                      InitialFocusSelector=".tm-notion-ctx > [role='menuitem']"
+                      SheetInitialFocusSelector=".tm-notion-ctx > [role='menuitem']"
+                      Title="@Loc["TmNotionBlockHandle_OpenMenu"]"
+                      AriaLabel="@Loc["TmNotionBlockHandle_OpenMenu"]"
+                      Class="tm-notion-ctx-panel"
+                      OnClose="CloseAsync">
+<div class="tm-notion-ctx"
+     role="menu"
+     aria-label="@Loc["TmNotionBlockHandle_OpenMenu"]"
      @onkeydown="HandleKeyDownAsync"
+     @onkeydown:stopPropagation="true"
      @onclick:stopPropagation="true">
 
     @* Delete *@
@@ -213,3 +225,4 @@
         }
     </div>
 </div>
+</TmNotionFloatingMenu>

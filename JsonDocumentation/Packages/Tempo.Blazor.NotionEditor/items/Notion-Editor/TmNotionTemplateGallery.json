@@ -18,6 +18,13 @@
       "description": "Controls whether the template gallery dialog is rendered."
     },
     {
+      "name": "LayoutMode",
+      "type": "TmLayoutMode",
+      "isRequired": false,
+      "default": "Auto",
+      "description": "Forced layout. Mobile presents the gallery fullscreen."
+    },
+    {
       "name": "OnClosed",
       "type": "EventCallback",
       "isRequired": false,

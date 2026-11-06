@@ -193,8 +193,14 @@ public sealed class NotionPhase4DialogScreenshots : NotionE2ETestBase
         {
             await SetThemeAsync(page, theme);
             await page.SetViewportSizeAsync(1440, 900);
+            await page.WaitForTimeoutAsync(300);
+            // The 390 pass scrolls the editor into view, which can leave the trigger above the
+            // viewport; an anchored popover parks (visibility:hidden) while its anchor is off-screen.
+            await page.Locator(".tm-npsm-trigger").First.ScrollIntoViewIfNeededAsync();
             await page.Locator(".tm-npsm-trigger").First.EvaluateAsync("el => el.click()");
-            await page.Locator(".tm-npsm__item").Filter(new LocatorFilterOptions { HasText = "Page info" }).First.ClickAsync();
+            var pageInfo = page.Locator(".tm-npsm__item").Filter(new LocatorFilterOptions { HasText = "Page info" }).First;
+            await pageInfo.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 8000 });
+            await pageInfo.ClickAsync();
             var panel = page.Locator("[data-page-info-panel]").First;
             await panel.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 8000 });
             await ShotRegionAsync(page, "notion-page-dialogs",
@@ -206,7 +212,9 @@ public sealed class NotionPhase4DialogScreenshots : NotionE2ETestBase
             await page.WaitForTimeoutAsync(300);
             await page.Locator(".tm-notion-editor").First.ScrollIntoViewIfNeededAsync();
             await page.Locator(".tm-npsm-trigger").First.EvaluateAsync("el => el.click()");
-            await page.Locator(".tm-npsm__item").Filter(new LocatorFilterOptions { HasText = "Page info" }).First.ClickAsync();
+            var pageInfoSheet = page.Locator(".tm-npsm__item").Filter(new LocatorFilterOptions { HasText = "Page info" }).First;
+            await pageInfoSheet.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 8000 });
+            await pageInfoSheet.ClickAsync();
             var sheet = page.Locator(".tm-modal--sheet, [data-page-info-panel]").First;
             await sheet.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 8000 });
             await ShotRegionAsync(page, "notion-page-dialogs",

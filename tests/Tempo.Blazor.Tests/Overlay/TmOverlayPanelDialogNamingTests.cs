@@ -263,11 +263,6 @@ public sealed class TmOverlayPanelDialogNamingTests : LocalizationTestBase
                     .AddCascadingValue(new NotionEditorContext()));
                 return cut.Find(".tm-ntcp-popover");
             },
-            ["TmNotionColorPicker"] = () =>
-            {
-                var cut = Render<TmNotionColorPicker>(p => p.Add(c => c.Visible, true));
-                return cut.Find("[role='dialog']");
-            },
             ["TmNotionEmojiPicker"] = () =>
             {
                 var cut = Render<TmNotionEmojiPicker>(p => p.Add(c => c.Visible, true));

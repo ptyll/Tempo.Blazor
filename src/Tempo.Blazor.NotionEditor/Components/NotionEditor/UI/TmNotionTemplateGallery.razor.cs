@@ -1,4 +1,6 @@
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Web;
+using Tempo.Blazor.Abstractions.Layout;
 using Tempo.Blazor.NotionEditor.Interfaces;
 using Tempo.Blazor.NotionEditor.Models;
 
@@ -13,7 +15,7 @@ public partial class TmNotionTemplateGallery : ComponentBase
     private string _selectedCategory = AllCategory;
     private string _query = string.Empty;
     private bool _loading;
-    private bool _applying;
+    private string? _applyingId;
     private string? _error;
     private bool _loadedForVisible;
 
@@ -28,6 +30,9 @@ public partial class TmNotionTemplateGallery : ComponentBase
 
     /// <summary>Raised when the dialog should close without selecting a template.</summary>
     [Parameter] public EventCallback OnClosed { get; set; }
+
+    /// <summary>Forced layout. Mobile presents the gallery fullscreen.</summary>
+    [Parameter] public TmLayoutMode LayoutMode { get; set; } = TmLayoutMode.Auto;
 
     private IReadOnlyList<string> Categories
     {
@@ -135,8 +140,9 @@ public partial class TmNotionTemplateGallery : ComponentBase
 
     private async Task SelectTemplateAsync(NotionTemplateDto template)
     {
-        if (_applying) return;
-        _applying = true;
+        if (_applyingId is not null) return;
+        _applyingId = template.Id;
+        StateHasChanged();
 
         try
         {
@@ -144,7 +150,7 @@ public partial class TmNotionTemplateGallery : ComponentBase
         }
         finally
         {
-            _applying = false;
+            _applyingId = null;
         }
     }
 

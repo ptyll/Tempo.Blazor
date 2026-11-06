@@ -31,7 +31,7 @@ public sealed class NotionShortcutsE2ETests : NotionE2ETestBase
         await page.Locator(".tm-notion-topbar__title").First.ClickAsync();
         await DispatchQuestionShortcutAsync(page);
 
-        var panel = page.Locator(".tm-nsp__dialog").First;
+        var panel = page.Locator(".tm-nsp").First;
         await panel.WaitForAsync(new LocatorWaitForOptions
         {
             State = WaitForSelectorState.Visible,
@@ -58,23 +58,24 @@ public sealed class NotionShortcutsE2ETests : NotionE2ETestBase
         await page.SetViewportSizeAsync(1280, 720);
 
         await page.Keyboard.PressAsync("Escape");
-        await page.Locator(".tm-nsp__dialog").WaitForAsync(new LocatorWaitForOptions
+        await page.Locator(".tm-nsp").WaitForAsync(new LocatorWaitForOptions
         {
             State = WaitForSelectorState.Detached,
             Timeout = 10000
         });
 
         await DispatchQuestionShortcutAsync(page);
-        await page.Locator(".tm-nsp__dialog").First.WaitForAsync(new LocatorWaitForOptions
+        await page.Locator(".tm-nsp").First.WaitForAsync(new LocatorWaitForOptions
         {
             State = WaitForSelectorState.Visible,
             Timeout = 10000
         });
-        await page.Locator(".tm-nsp__scrim").First.ClickAsync(new LocatorClickOptions
+        // Phase 6: the panel rides TmModal, so the overlay click is the close path the old scrim was.
+        await page.Locator(".tm-modal-overlay").Last.ClickAsync(new LocatorClickOptions
         {
             Position = new Position { X = 8, Y = 8 }
         });
-        await page.Locator(".tm-nsp__dialog").WaitForAsync(new LocatorWaitForOptions
+        await page.Locator(".tm-nsp").WaitForAsync(new LocatorWaitForOptions
         {
             State = WaitForSelectorState.Detached,
             Timeout = 10000
@@ -91,7 +92,7 @@ public sealed class NotionShortcutsE2ETests : NotionE2ETestBase
             """);
         await page.WaitForTimeoutAsync(500);
 
-        Assert.AreEqual(0, await page.Locator(".tm-nsp__dialog").CountAsync(),
+        Assert.AreEqual(0, await page.Locator(".tm-nsp").CountAsync(),
             "Typing ? inside a Notion editable block must not open the shortcuts panel.");
     }
 

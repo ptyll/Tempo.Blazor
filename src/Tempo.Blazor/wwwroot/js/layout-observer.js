@@ -42,7 +42,11 @@ function sharedObserver() {
         for (const record of records) {
             const entry = tracked.get(record.target);
             if (!entry) continue;
-            const width = record.contentRect?.width;
+            // A viewport-scope entry classifies the window: its own content box can stay at the
+            // previous band across a viewport flip and would report mobile over the resize listener.
+            const width = entry.measureWindow && typeof window !== 'undefined'
+                ? window.innerWidth
+                : record.contentRect?.width;
             // Ignore degenerate widths: while the viewport is re-emulated (Playwright fullPage
             // capture, print preview, a hidden→shown transition) Chromium reports transient 0-size
             // content boxes. Classifying one would flip the whole shell to mobile — the editor
@@ -68,7 +72,13 @@ export function observe(element, dotnet, id, options) {
     }
     disconnect(id);
 
-    const entry = { element, dotnet, id, mode: null, breakpoints: options?.breakpoints };
+    const entry = {
+        element, dotnet, id, mode: null, breakpoints: options?.breakpoints,
+        // A viewport-scope observer classifies the window, not its own box: a fixed probe (or a
+        // root whose box the ResizeObserver does not re-deliver) keeps the last mode across a
+        // Playwright 390 → 1440 flip, and every menu pinned to that scope stays a clipped sheet.
+        measureWindow: options?.measureWindow === true,
+    };
     tracked.set(element, entry);
 
     // ResizeObserver fires an initial observation, so there is no clientWidth fallback: that box
@@ -78,6 +88,18 @@ export function observe(element, dotnet, id, options) {
     if (typeof options?.initialWidth === 'number' && Number.isFinite(options.initialWidth)) {
         report(entry, options.initialWidth);
     }
+    // A Playwright viewport flip (390 → 1440) resizes the window. A fixed probe whose box the
+    // ResizeObserver does not re-deliver keeps the last mode, so the shell stays mobile and a
+    // later desktop menu is clipped. Read the live width on the window resize itself.
+    entry.onResize = () => {
+        // window.innerWidth is updated before the resize event; the element's own box may still be
+        // the previous band until the next frame, which is exactly the box that stuck the mode.
+        const live = entry.measureWindow && typeof window !== 'undefined'
+            ? window.innerWidth
+            : element.getBoundingClientRect?.().width;
+        if (typeof live === 'number' && live >= 1) report(entry, live);
+    };
+    if (typeof window !== 'undefined') window.addEventListener('resize', entry.onResize);
     return Promise.resolve();
 }
 
@@ -87,6 +109,7 @@ export function disconnect(id) {
         if (entry.id !== id) continue;
         tracked.delete(element);
         shared?.unobserve(element);
+        if (entry.onResize && typeof window !== 'undefined') window.removeEventListener('resize', entry.onResize);
     }
 }
 

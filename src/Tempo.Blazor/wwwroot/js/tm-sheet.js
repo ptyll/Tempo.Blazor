@@ -132,6 +132,12 @@ export function trackViewport(root, host, trackRoot) {
             window.visualViewport.removeEventListener('scroll', apply);
         }
         window.removeEventListener('resize', apply);
+        // The lengths were measured for the band the sheet opened in. Leaving them inline keeps
+        // that band's viewport after the sheet stops tracking — a 390px height then clips a
+        // surface the host re-presents at 1440. The stylesheet's 100dvh fallback is current.
+        target.style.removeProperty('--tm-sheet-viewport');
+        target.style.removeProperty('--tm-sheet-keyboard');
+        target.classList?.remove?.('tm-sheet--keyboard');
     };
 }
 

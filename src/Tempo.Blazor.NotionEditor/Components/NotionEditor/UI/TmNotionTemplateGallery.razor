@@ -2,29 +2,17 @@
 @using Tempo.Blazor.NotionEditor.Interfaces
 @using Tempo.Blazor.NotionEditor.Models
 
-@if (Visible)
-{
-    <div class="tm-ntg__backdrop" role="presentation" @onclick="CloseAsync">
-        <section class="tm-ntg"
-                 role="dialog"
-                 aria-modal="true"
-                 aria-label="@Loc["Notion_Templates_Title"]"
-                 @onclick:stopPropagation="true">
-            <header class="tm-ntg__header">
-                <div class="tm-ntg__title-wrap">
-                    <h2 class="tm-ntg__title">@Loc["Notion_Templates_Title"]</h2>
-                    <p class="tm-ntg__subtitle">@Loc["Notion_Templates_Subtitle"]</p>
-                </div>
-                <button class="tm-ntg__close"
-                        type="button"
-                        aria-label="@Loc["Tm_Close"]"
-                        title="@Loc["Tm_Close"]"
-                        @onclick="CloseAsync">
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-                        <path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
-                    </svg>
-                </button>
-            </header>
+@* Phase 6 (N10): the gallery rides the core TmModal. Escape and × raise OnClosed; the footer
+   carries Close; the applying state is a spinner on the card that was used. *@
+<TmModal Show="Visible"
+         OnClose="CloseAsync"
+         Title="@Loc["Notion_Templates_Title"]"
+         Subtitle="@Loc["Notion_Templates_Subtitle"]"
+         Size="ModalSize.Large"
+         MobilePresentation="MobilePresentation.Fullscreen"
+         LayoutMode="LayoutMode">
+    <ChildContent>
+        <section class="tm-ntg">
 
             <div class="tm-ntg__toolbar">
                 <label class="tm-ntg__search">
@@ -44,14 +32,13 @@
                            @oninput="OnSearchInput" />
                 </label>
 
-                <div class="tm-ntg__categories" role="tablist" aria-label="@Loc["Notion_Templates_Categories"]">
+                <div class="tm-ntg__categories" role="group" aria-label="@Loc["Notion_Templates_Categories"]">
                     @foreach (var category in Categories)
                     {
                         var active = string.Equals(category, _selectedCategory, StringComparison.OrdinalIgnoreCase);
                         <button class="tm-ntg__category @(active ? "tm-ntg__category--active" : "")"
                                 type="button"
-                                role="tab"
-                                aria-selected="@active"
+                                aria-pressed="@(active ? "true" : "false")"
                                 @onclick="() => SelectCategory(category)">
                             @GetCategoryLabel(category)
                         </button>
@@ -103,14 +90,24 @@
                             </div>
                             <button class="tm-ntg__use"
                                     type="button"
-                                    disabled="@_applying"
+                                    disabled="@(_applyingId is not null)"
                                     @onclick="() => SelectTemplateAsync(template)">
-                                @Loc["Notion_Templates_Use"]
+                                @if (_applyingId == template.Id)
+                                {
+                                    <span class="tm-ntg__spinner" role="status" aria-label="@Loc["Tm_Loading"]"></span>
+                                }
+                                else
+                                {
+                                    @Loc["Notion_Templates_Use"]
+                                }
                             </button>
                         </article>
                     }
                 </div>
             }
         </section>
-    </div>
-}
+    </ChildContent>
+    <Footer>
+        <button type="button" class="tm-ntg__footer-close" @onclick="CloseAsync">@Loc["TmNotionTemplateGallery_Close"]</button>
+    </Footer>
+</TmModal>

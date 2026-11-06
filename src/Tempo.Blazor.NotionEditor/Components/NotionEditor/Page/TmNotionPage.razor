@@ -18,6 +18,7 @@
         <div class="tm-notion-page__settings-btn">
             <TmNotionPageSettingsMenu Page="Page"
                                       ReadOnly="ReadOnly"
+                                      LayoutMode="MenuLayout"
                                       OnPageUpdated="OnPageSettingsUpdated"
                                       OnPageDeleted="HandlePageDeletedAsync"
                                       OnPageHistoryRequested="HandlePageHistoryRequestedAsync"
@@ -202,6 +203,7 @@
 <TmNotionSlashMenu Visible="_slashMenuVisible"
                    Top="_slashMenuTop"
                    Left="_slashMenuLeft"
+                   LayoutMode="MenuLayout"
                    OnItemSelected="HandleSlashItemSelectedAsync"
                    OnSlashItemSelected="HandleSlashMenuItemSelectedAsync"
                    OnAISelected="HandleSlashAISelectedAsync"
@@ -210,6 +212,7 @@
 <TmNotionStatusPicker Visible="_statusPickerVisible"
                       Top="_statusPickerTop"
                       Left="_statusPickerLeft"
+                      LayoutMode="MenuLayout"
                       InitialLabel="@_statusInitialLabel"
                       InitialColor="_statusInitialColor"
                       OnInserted="HandleStatusInsertedAsync"
@@ -219,6 +222,7 @@
 <TmNotionMentionMenu Visible="_mentionMenuVisible"
                      Top="_mentionMenuTop"
                      Left="_mentionMenuLeft"
+                     LayoutMode="MenuLayout"
                      PagesOnly="_mentionPagesOnly"
                      OnItemSelected="HandleMentionItemSelectedAsync"
                      OnClosed="HandleMentionMenuClosedAsync" />
@@ -229,6 +233,7 @@
     <TmNotionTokenDropdown Visible="_tokenDropdownVisible"
                            Top="_tokenDropdownTop"
                            Left="_tokenDropdownLeft"
+                           LayoutMode="MenuLayout"
                            CurrentKey="_tokenCurrentKey"
                            OnItemSelected="HandleTokenItemSelectedAsync"
                            OnClosed="HandleTokenDropdownClosedAsync"
@@ -247,6 +252,7 @@
 <TmNotionPageInfoPanel Page="Page"
                        Blocks="_blocks"
                        Visible="_pageInfoVisible"
+                       LayoutMode="MenuLayout"
                        VisibleChanged="HandlePageInfoVisibleChangedAsync" />
 
 <TmNotionShareDialog PageId="Page.Id"
@@ -283,6 +289,7 @@
 <TmNotionAiMenu Visible="_aiMenuVisible"
                 Top="_aiMenuTop"
                 Left="_aiMenuLeft"
+                LayoutMode="MenuLayout"
                 Panel="_aiMenuPanel"
                 InitialMode="_aiMenuMode"
                 PageId="@Page.Id.ToString("D")"

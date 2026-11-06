@@ -27,6 +27,18 @@ public partial class TmNotionInlineToolbar : TmComponentBase
     [Parameter] public string?        CurrentHref      { get; set; }
     [Parameter] public TextAlignment  CurrentAlign     { get; set; }
 
+    /// <summary>The token name of the current text colour, so the palette can mark it pressed.</summary>
+    [Parameter] public string? CurrentTextColor { get; set; }
+
+    /// <summary>The token name of the current background colour.</summary>
+    [Parameter] public string? CurrentBackgroundColor { get; set; }
+
+    /// <summary>Raised with the palette token name (never a hex) when a text colour is picked.</summary>
+    [Parameter] public EventCallback<string?> OnTextColorSelected { get; set; }
+
+    /// <summary>Raised with the palette token name when a background colour is picked.</summary>
+    [Parameter] public EventCallback<string?> OnBackgroundColorSelected { get; set; }
+
     [Parameter] public EventCallback<BlockType>     OnTurnInto    { get; set; }
     [Parameter] public EventCallback<TextAlignment> OnAlignChange { get; set; }
     [Parameter] public EventCallback<string>        OnComment     { get; set; }
@@ -54,6 +66,12 @@ public partial class TmNotionInlineToolbar : TmComponentBase
         ("pink",    "pink",    "pink"),
         ("red",     "red",     "red"),
     ];
+
+    private static string BgKey(string name)
+    {
+        var title = char.ToUpper(name[0]) + name[1..];
+        return $"TmNotionInlineToolbar_Color{title}Bg";
+    }
 
     private static readonly (BlockType Type, string NameKey)[] TurnIntoItems =
     [
@@ -211,10 +229,19 @@ public partial class TmNotionInlineToolbar : TmComponentBase
         return Task.CompletedTask;
     }
 
+    private bool IsCurrentText(string? name) =>
+        string.Equals(CurrentTextColor, name, StringComparison.OrdinalIgnoreCase);
+
+    private bool IsCurrentBackground(string? name) =>
+        string.Equals(CurrentBackgroundColor, name, StringComparison.OrdinalIgnoreCase);
+
     private async Task HandleTextColorAsync(string? name)
     {
         // The swatch paints from the token; execCommand only keeps a real colour, so the
-        // allowlisted legacy hex is the one value this call may send.
+        // allowlisted legacy hex is the one value this call may send. The callback carries the
+        // token name, never the hex.
+        if (OnTextColorSelected.HasDelegate)
+            await OnTextColorSelected.InvokeAsync(name);
         try { await JS.InvokeVoidAsync("tmNotionEditor.applyInlineColor", "text", NotionColorTokens.InlineHex(name, background: false)); }
         catch { }
         _showColorPanel = false;
@@ -222,6 +249,8 @@ public partial class TmNotionInlineToolbar : TmComponentBase
 
     private async Task HandleBgColorAsync(string? name)
     {
+        if (OnBackgroundColorSelected.HasDelegate)
+            await OnBackgroundColorSelected.InvokeAsync(name);
         try { await JS.InvokeVoidAsync("tmNotionEditor.applyInlineColor", "bg", NotionColorTokens.InlineHex(name, background: true)); }
         catch { }
         _showColorPanel = false;

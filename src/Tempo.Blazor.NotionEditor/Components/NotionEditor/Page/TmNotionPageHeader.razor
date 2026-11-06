@@ -1,6 +1,7 @@
 @namespace Tempo.Blazor.Components.NotionEditor.Page
 @using Tempo.Blazor.NotionEditor.Interfaces
 @using Tempo.Blazor.Components.NotionEditor.Services
+@using Tempo.Blazor.Components.NotionEditor.UI
 @using Tempo.Blazor.Components.Overlay
 @using Tempo.Blazor.Components.Feedback
 @using Tempo.Blazor.Components.Buttons
@@ -106,7 +107,7 @@
                 disabled="@ReadOnly"
                 aria-label="@Loc["TmNotionPage_IconLabel"]"
                 title="@Loc["TmNotionPage_IconLabel"]"
-                @onclick="ToggleIconPickerAsync">
+                @onclick="ToggleIconPicker">
             @Page.IconEmoji
         </button>
     }
@@ -116,7 +117,7 @@
                 type="button"
                 disabled="@ReadOnly"
                 aria-label="@Loc["TmNotionPage_IconLabel"]"
-                @onclick="ToggleIconPickerAsync">
+                @onclick="ToggleIconPicker">
             <img src="@Page.IconImageUrl" alt="" aria-hidden="true" />
         </button>
     }
@@ -127,7 +128,7 @@
         <div class="tm-notion-header-meta__add-row">
             @if (string.IsNullOrEmpty(Page.IconEmoji) && string.IsNullOrEmpty(Page.IconImageUrl))
             {
-                <button class="tm-notion-header-meta__add-btn" type="button" @onclick="ToggleIconPickerAsync">
+                <button class="tm-notion-header-meta__add-btn" type="button" @onclick="ToggleIconPicker">
                     @Loc["TmNotionPage_AddIcon"]
                 </button>
             }
@@ -256,8 +257,8 @@
 
 </div>
 
-@* ── Emoji picker — core TmModal (phase 4): titled, × closes, Escape handled by the focus trap,
-   focus returns to the icon trigger. On a mobile layout the core sheet presents it. *@
+@* ── Emoji picker — the one UI picker (NO4), hosted by the phase-4 titled modal so Escape and
+   the × close it and focus returns to the icon trigger. Mobile presents the core sheet. *@
 @if (_showIconPicker && !ReadOnly)
 {
     <TmModal Show="true"
@@ -266,63 +267,16 @@
              Size="ModalSize.Small"
              MobilePresentation="MobilePresentation.Auto"
              LayoutMode="LayoutMode"
+             Class="tm-notion-emoji-picker__panel"
              InitialFocusSelector=".tm-notion-emoji-picker__search">
         <ChildContent>
-            <div class="tm-notion-emoji-picker__panel">
-                <div class="tm-notion-emoji-picker__header">
-                    <input class="tm-notion-emoji-picker__search"
-                           type="text"
-                           autocomplete="off"
-                           aria-label="@Loc["TmNotionPageHeader_EmojiSearch"]"
-                           placeholder="@Loc["TmNotionPageHeader_EmojiSearch"]"
-                           @bind="_emojiSearch"
-                           @bind:event="oninput" />
-                    <button class="tm-notion-emoji-picker__remove"
-                            type="button"
-                            @onclick="RemoveIconAsync">
-                        @Loc["TmNotionPageHeader_RemoveIcon"]
-                    </button>
-                </div>
-                <div class="tm-notion-emoji-picker__body">
-                    @if (_recentEmojis.Count > 0 && string.IsNullOrWhiteSpace(_emojiSearch))
-                    {
-                        <div class="tm-notion-emoji-picker__category tm-notion-emoji-picker__category--recent">
-                            <div class="tm-notion-emoji-picker__category-label">@Loc["TmNotionEmojiPicker_RecentlyUsed"]</div>
-                            <div class="tm-notion-emoji-picker__grid">
-                                @foreach (var recent in _recentEmojis)
-                                {
-                                    var captured = recent;
-                                    <button class="tm-notion-emoji-picker__btn"
-                                            type="button"
-                                            title="@captured"
-                                            aria-label="@captured"
-                                            @onclick="() => SelectEmojiAsync(captured)">
-                                        @captured
-                                    </button>
-                                }
-                            </div>
-                        </div>
-                    }
-                    @foreach (var cat in FilteredCategories)
-                    {
-                        <div class="tm-notion-emoji-picker__category">
-                            <div class="tm-notion-emoji-picker__category-label">@cat.Name</div>
-                            <div class="tm-notion-emoji-picker__grid">
-                                @foreach (var emoji in cat.Emojis)
-                                {
-                                    <button class="tm-notion-emoji-picker__btn"
-                                            type="button"
-                                            title="@emoji.Name"
-                                            aria-label="@emoji.Name"
-                                            @onclick="() => SelectEmojiAsync(emoji.Char)">
-                                        @emoji.Char
-                                    </button>
-                                }
-                            </div>
-                        </div>
-                    }
-                </div>
-            </div>
+            <TmNotionEmojiPicker Visible="true"
+                                 Inline="true"
+                                 LayoutMode="LayoutMode"
+                                 ShowRemove="true"
+                                 OnEmojiSelected="SelectEmojiAsync"
+                                 OnRemoved="RemoveIconAsync"
+                                 OnClosed="CloseIconPicker" />
         </ChildContent>
     </TmModal>
 }

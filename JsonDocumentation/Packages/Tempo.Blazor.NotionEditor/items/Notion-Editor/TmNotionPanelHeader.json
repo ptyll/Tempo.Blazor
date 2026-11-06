@@ -24,6 +24,12 @@
       "description": "Additional CSS class."
     },
     {
+      "name": "FocusOnOpen",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Moves focus into the header when the panel opens."
+    },
+    {
       "name": "OnClosed",
       "type": "EventCallback",
       "isRequired": false,

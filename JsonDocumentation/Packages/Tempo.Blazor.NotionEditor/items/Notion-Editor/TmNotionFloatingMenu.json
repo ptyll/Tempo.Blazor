@@ -21,7 +21,7 @@
       "name": "Footer",
       "type": "RenderFragment?",
       "isRequired": false,
-      "description": "Sheet-only footer."
+      "description": "Footer rendered in both the desktop popover and the mobile sheet. A host that only wants it on the sheet must not also render the same action in ChildContent."
     },
     {
       "name": "IsOpen",

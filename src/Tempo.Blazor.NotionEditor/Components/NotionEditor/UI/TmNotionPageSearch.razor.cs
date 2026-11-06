@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Components;
+using Tempo.Blazor.Abstractions.Shared;
 using Tempo.Blazor.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.JSInterop;
@@ -44,6 +45,31 @@ public partial class TmNotionPageSearch : TmComponentBase, IAsyncDisposable
     // ── Refs & cleanup ────────────────────────────────────────────────────────
 
     private ElementReference _inputRef;
+    private readonly string _inputId = $"tm-nps-input-{Guid.NewGuid():N}";
+    private readonly Dictionary<string, string> _editorNames = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, string> _filterIds = new()
+    {
+        ["author"] = $"tm-nps-f-{Guid.NewGuid():N}",
+        ["label"] = $"tm-nps-f-{Guid.NewGuid():N}",
+        ["type"] = $"tm-nps-f-{Guid.NewGuid():N}",
+        ["space"] = $"tm-nps-f-{Guid.NewGuid():N}",
+        ["from"] = $"tm-nps-f-{Guid.NewGuid():N}",
+        ["to"] = $"tm-nps-f-{Guid.NewGuid():N}",
+        ["edited"] = $"tm-nps-f-{Guid.NewGuid():N}"
+    };
+    private readonly string _instanceId = Guid.NewGuid().ToString("N");
+
+    private string OptionId(int index) => $"tm-nps-opt-{_instanceId}-{index}";
+
+    private string ResultsId => $"tm-nps-results-{_instanceId}";
+
+    private string FiltersId => $"tm-nps-filters-{_instanceId}";
+
+    private string? ActiveOptionId => _flatResults.Count > 0 ? OptionId(_selectedIndex) : null;
+
+    private int ActiveFilterCount =>
+        new[] { _filterAuthor, _filterLabel, _filterType, _filterSpace, _filterDateFrom, _filterDateTo, _filterEditedBefore }
+            .Count(value => !string.IsNullOrWhiteSpace(value));
     private DotNetObjectReference<TmNotionPageSearch>? _dotNetRef;
     private CancellationTokenSource? _debounceCts;
 
@@ -137,6 +163,7 @@ public partial class TmNotionPageSearch : TmComponentBase, IAsyncDisposable
 
             _pages  = pages.ToList();
             _blocks = blocks.ToList();
+            await ResolvePagePathsAsync();
             RebuildFlatResults();
         }
         catch { }
@@ -210,20 +237,11 @@ public partial class TmNotionPageSearch : TmComponentBase, IAsyncDisposable
 
     // ── Keyboard navigation ───────────────────────────────────────────────────
 
-    // Escape stays on the card so it works wherever focus sits inside the
-    // dialog. Arrow/Enter navigation is handled on the search input itself:
-    // the card contains native <button>s (filter toggle, filter controls,
-    // result items) — a card-level Enter case selected the highlighted result
-    // when the user actually pressed Enter on one of those buttons, on top of
-    // the button's own native click.
-    private async Task HandleCardKeyDownAsync(KeyboardEventArgs e)
-    {
-        if (e.Key == "Escape")
-            await CloseAsync();
-    }
-
+    // Escape is the core TmModal's. A card-level handler closed the dialog twice.
     // Arrow/Enter keydowns inside a text input produce no native click, so
     // this input-level handler is where result navigation + selection belong.
+    private void StopToggleKey(KeyboardEventArgs _) { }
+
     private async Task HandleSearchKeyDownAsync(KeyboardEventArgs e)
     {
         switch (e.Key)
@@ -315,6 +333,55 @@ public partial class TmNotionPageSearch : TmComponentBase, IAsyncDisposable
         !string.IsNullOrWhiteSpace(_filterEditedBefore);
 
     // ── Helpers ───────────────────────────────────────────────────────────────
+
+    private async Task ResolvePagePathsAsync()
+    {
+        Context.RememberPages(_pages);
+        if (Context.MentionProvider is null)
+            return;
+
+        foreach (var userId in _pages
+            .Select(page => page.LastEditedByUserId)
+            .Where(id => !string.IsNullOrWhiteSpace(id))
+            .Distinct(StringComparer.OrdinalIgnoreCase))
+        {
+            if (_editorNames.ContainsKey(userId!))
+                continue;
+            try
+            {
+                var match = await Context.MentionProvider.GetByIdAsync(userId!);
+                if (match is not null && !string.IsNullOrWhiteSpace(match.DisplayName))
+                    _editorNames[userId!] = match.DisplayName;
+            }
+            catch { }
+        }
+    }
+
+    private string? PagePath(INotionPage page)
+    {
+        if (page.ParentId is not { } parentId)
+            return null;
+        if (!Context.PageCache.TryGetValue(parentId.ToString(), out var parent))
+            return null;
+        var parentTitle = string.IsNullOrWhiteSpace(parent.Title)
+            ? Loc["TmNotionPageSearch_Untitled"]
+            : parent.Title;
+        return $"{parentTitle} / {GetPageTitle(page)}";
+    }
+
+    private string PageMeta(INotionPage page)
+    {
+        var editor = EditorDisplayName(page.LastEditedByUserId);
+        var edited = page.LastEditedAt == default ? null : page.LastEditedAt.ToString("d");
+        return string.Join(" · ", new[] { edited, editor }.Where(part => !string.IsNullOrWhiteSpace(part)));
+    }
+
+    private string? EditorDisplayName(string? userId)
+    {
+        if (string.IsNullOrWhiteSpace(userId))
+            return null;
+        return _editorNames.TryGetValue(userId, out var name) ? name : null;
+    }
 
     private static string GetPageIcon(INotionPage page) =>
         string.IsNullOrEmpty(page.IconEmoji) ? "📄" : page.IconEmoji;

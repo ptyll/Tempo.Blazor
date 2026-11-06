@@ -2,7 +2,7 @@
 @using Tempo.Blazor.NotionEditor.Interfaces
 @using Tempo.Blazor.NotionEditor.Enums
 @using Tempo.Blazor.Components.NotionEditor.Services
-@using Tempo.Blazor.Components.NotionEditor.Shared
+@using Tempo.Blazor.Components.NotionEditor.UI
 
 <div class="tm-notion-callout @_variantClass @_bgClass"
      data-variant="@_variantName"
@@ -21,10 +21,11 @@
 
         @if (_showEmojiPicker && !ReadOnly)
         {
-            <TmNotionEmojiPicker OnSelected="HandleEmojiSelectedAsync"
+            <TmNotionEmojiPicker Visible="true"
+                                  OnEmojiSelected="HandleEmojiSelectedAsync"
                                   OnRemoved="HandleEmojiRemovedAsync"
                                   OnClosed="CloseEmojiPicker"
-                                  ShowRemoveButton="true" />
+                                  ShowRemove="true" />
         }
     </div>
 

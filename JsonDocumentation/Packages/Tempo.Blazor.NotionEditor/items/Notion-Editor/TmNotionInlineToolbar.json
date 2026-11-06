@@ -95,6 +95,30 @@
       "name": "DotNetRef",
       "type": "object?",
       "isRequired": false
+    },
+    {
+      "name": "CurrentTextColor",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Palette token name of the current text colour. The matching swatch is pressed."
+    },
+    {
+      "name": "CurrentBackgroundColor",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Palette token name of the current background colour. The matching swatch is pressed."
+    },
+    {
+      "name": "OnTextColorSelected",
+      "type": "EventCallback<string?>",
+      "isRequired": false,
+      "description": "Raised with the palette token name, never a hex, when a text swatch is picked."
+    },
+    {
+      "name": "OnBackgroundColorSelected",
+      "type": "EventCallback<string?>",
+      "isRequired": false,
+      "description": "Raised with the palette token name, never a hex, when a background swatch is picked."
     }
   ],
   "subcategory": "UI"

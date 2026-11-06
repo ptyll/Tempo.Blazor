@@ -1,30 +1,14 @@
-.tm-ntg__backdrop {
-    position: fixed;
-    inset: 0;
-    z-index: var(--tm-z-modal);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: var(--tm-space-4);
-    background: var(--tm-bg-overlay);
-}
+/* Phase 6: the backdrop and stacking are the core TmModal's. */
 
 .tm-ntg {
     --tm-ntg-card-width: calc(var(--tm-space-16) + var(--tm-space-16) + var(--tm-space-16) + var(--tm-space-16) + var(--tm-space-4));
     --tm-ntg-card-min-height: calc(var(--tm-space-16) + var(--tm-space-16) + var(--tm-space-16) + var(--tm-space-16) + var(--tm-space-16));
 
-    width: min(58rem, 100%);
-    max-height: min(44rem, calc(100vh - var(--tm-space-8)));
+    width: 100%;
     display: grid;
     grid-template-rows: auto auto 1fr;
     gap: var(--tm-space-4);
-    padding: var(--tm-space-5);
-    border: 1px solid var(--tm-border-color);
-    border-radius: var(--tm-radius-lg);
-    background: var(--tm-color-surface);
     color: var(--tm-text-primary);
-    box-shadow: var(--tm-shadow-xl);
-    overflow: hidden;
 }
 
 .tm-ntg__header {
@@ -300,16 +284,6 @@
 }
 
 @media (max-width: 42rem) {
-    .tm-ntg__backdrop {
-        align-items: stretch;
-        padding: var(--tm-space-2);
-    }
-
-    .tm-ntg {
-        max-height: none;
-        padding: var(--tm-space-4);
-    }
-
     .tm-ntg__grid {
         grid-template-columns: 1fr;
     }

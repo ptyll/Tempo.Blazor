@@ -7,17 +7,20 @@
    stopped here so a nested menu closes itself and the outer one stays open. *@
 <div class="tm-notion-floating-menu" @onkeydown="OnKeyDown" @onkeydown:stopPropagation="true">
 <span @ref="_anchor" class="tm-notion-floating-menu__anchor" style="@AnchorStyle" aria-hidden="true"></span>
-<TmOverlayPanel Anchor="_anchor"
+<TmOverlayPanel Anchor="ResolvedAnchor"
                 IsOpen="IsOpen"
                 IsOpenChanged="OnOpenChanged"
                 LayoutMode="LayoutMode"
                 MobilePresentation="PanelPresentation.Auto"
                 Placement="Placement"
-                Align="OverlayAlign.Start"
+                Align="Align"
                 Title="@(IsSheet ? Title : null)"
                 SheetTitle="@Title"
                 Role="@Role"
                 AriaLabel="@(AriaLabel ?? Title)"
+                TrapFocus="TrapFocus"
+                InitialFocusSelector="@InitialFocusSelector"
+                SheetInitialFocusSelector="@SheetInitialFocusSelector"
                 CloseOnEscape="true"
                 CloseOnOutsidePointerDown="true"
                 OnDismissed="OnDismissed">
@@ -28,13 +31,13 @@
         @* The sheet header carries the title (SheetTitle is always passed) — an inner copy would
            render it twice. *@
         @ChildContent
+        @if (Footer is not null)
+        {
+            <div class="tm-notion-floating-menu__footer">@Footer</div>
+        }
         @if (IsSheet)
         {
             <button type="button" class="tm-notion-floating-menu__close" @onclick="CloseAsync">@Loc["Tm_Close"]</button>
-        }
-        @if (IsSheet && Footer is not null)
-        {
-            <div class="tm-notion-floating-menu__footer">@Footer</div>
         }
     </div>
 </TmOverlayPanel>

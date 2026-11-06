@@ -29,7 +29,8 @@
 }
 
 .tm-notion-page:hover .tm-notion-page__settings-btn,
-.tm-notion-page__settings-btn:focus-within {
+.tm-notion-page__settings-btn:focus-within,
+.tm-notion-page__settings-btn:has(.tm-npsm-trigger--open) {
     opacity: 1;
 }
 

@@ -12,9 +12,14 @@ public partial class TmNotionPageInfoPanel : ComponentBase
 {
     [CascadingParameter] private NotionEditorContext Context { get; set; } = default!;
 
-    [CascadingParameter] private TmLayoutContext? Layout { get; set; }
+    // The viewport scope: the unnamed cascade is the shell container, whose resolved mode can
+    // stay on the band the panel opened in. A host that already resolved the viewport passes it.
+    [CascadingParameter(Name = TmLayoutScopes.Viewport)] private TmLayoutContext? Layout { get; set; }
 
-    private TmLayoutMode LayoutMode => Layout?.Resolved ?? TmLayoutMode.Auto;
+    /// <summary>Forced layout. <see cref="TmLayoutMode.Auto"/> reads the viewport scope.</summary>
+    [Parameter] public TmLayoutMode LayoutMode { get; set; } = TmLayoutMode.Auto;
+
+    private TmLayoutMode ResolvedLayout => LayoutMode != TmLayoutMode.Auto ? LayoutMode : Layout?.Resolved ?? TmLayoutMode.Auto;
 
     /// <summary>The page whose metadata should be displayed.</summary>
     [Parameter, EditorRequired]

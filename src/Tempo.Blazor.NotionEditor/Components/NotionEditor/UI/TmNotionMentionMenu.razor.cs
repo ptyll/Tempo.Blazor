@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.JSInterop;
 using System.Globalization;
+using Tempo.Blazor.Abstractions.Layout;
 using Tempo.Blazor.Abstractions.Shared;
 using Tempo.Blazor.Components.NotionEditor.Services;
 using Tempo.Blazor.NotionEditor.Interfaces;
@@ -34,6 +35,9 @@ public partial class TmNotionMentionMenu : ComponentBase
     /// <summary>Raised when the user dismisses the menu.</summary>
     [Parameter] public EventCallback OnClosed { get; set; }
 
+    /// <summary>Forced layout. Mobile presents the menu as the core sheet.</summary>
+    [Parameter] public TmLayoutMode LayoutMode { get; set; } = TmLayoutMode.Auto;
+
     // ── State ────────────────────────────────────────────────────────────────
 
     private enum MentionTab { People, Pages, Date }
@@ -50,12 +54,13 @@ public partial class TmNotionMentionMenu : ComponentBase
     private IReadOnlyList<TmUser> _people = [];
     private IReadOnlyList<INotionPage>  _pages  = [];
 
-    private ElementReference _anchorRef;
     private ElementReference _inputRef;
+    private readonly string _inputId = $"tm-mention-input-{Guid.NewGuid():N}";
+    private readonly string _listId = $"tm-mention-list-{Guid.NewGuid():N}";
 
-    private string AnchorStyle => string.Create(
-        CultureInfo.InvariantCulture,
-        $"top:{_top}px;left:{_left}px");
+    private string? ActiveOptionId => $"{_listId}-opt-{_selectedIndex}";
+
+
 
     // ── Lifecycle ─────────────────────────────────────────────────────────────
 
@@ -223,13 +228,7 @@ public partial class TmNotionMentionMenu : ComponentBase
     /// JS-driven dismissal (Escape or outside pointerdown from overlay.js) — same state effects
     /// as the old transparent-backdrop click: cancel the mention trigger and notify OnClosed.
     /// </summary>
-    private async Task SetOpenFromJsAsync(bool open)
-    {
-        if (!open)
-        {
-            await HandleBackdropAsync();
-        }
-    }
+    private Task HandleCloseAsync() => HandleBackdropAsync();
 
     // ── Helpers ───────────────────────────────────────────────────────────────
 

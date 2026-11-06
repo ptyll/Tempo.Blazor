@@ -161,4 +161,21 @@ public sealed class NotionEditorContext
     public bool IsBlockTypeAllowed(BlockType type)
         => (AllowedBlockTypes is null || AllowedBlockTypes.Contains(type))
         && (DeniedBlockTypes is null || !DeniedBlockTypes.Contains(type));
+
+    private readonly Dictionary<string, INotionPage> _pageCache = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// Pages already loaded by the sidebar or the editor, keyed by id. Search path resolution
+    /// reads this cache and must not call the data provider.
+    /// </summary>
+    public IReadOnlyDictionary<string, INotionPage> PageCache => _pageCache;
+
+    /// <summary>Records pages the sidebar or editor already loaded, so search can resolve parents.</summary>
+    public void RememberPages(IEnumerable<INotionPage>? pages)
+    {
+        if (pages is null)
+            return;
+        foreach (var page in pages)
+            _pageCache[page.Id.ToString()] = page;
+    }
 }

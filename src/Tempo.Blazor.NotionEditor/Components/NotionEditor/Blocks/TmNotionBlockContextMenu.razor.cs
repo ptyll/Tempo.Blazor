@@ -15,7 +15,7 @@ namespace Tempo.Blazor.Components.NotionEditor.Blocks;
 /// or strands focus inside a submenu (<c>mouseleave</c> keeps a focused submenu open,
 /// a sibling <c>mouseenter</c> returns focus to the focused submenu's trigger first).
 /// </summary>
-public partial class TmNotionBlockContextMenu : ComponentBase, IAsyncDisposable
+public partial class TmNotionBlockContextMenu : ComponentBase
 {
     [Inject] private IJSRuntime JS { get; set; } = default!;
 
@@ -28,6 +28,15 @@ public partial class TmNotionBlockContextMenu : ComponentBase, IAsyncDisposable
 
     [Parameter, EditorRequired]
     public IPageBlock Block { get; set; } = default!;
+
+    /// <summary>Viewport top of the handle the menu anchors to. Null keeps the DOM anchor.</summary>
+    [Parameter] public double? Top { get; set; }
+
+    /// <summary>Viewport left of the handle the menu anchors to. Null keeps the DOM anchor.</summary>
+    [Parameter] public double? Left { get; set; }
+
+    /// <summary>The trigger the popover anchors to when <see cref="Top"/>/<see cref="Left"/> are unset.</summary>
+    [Parameter] public ElementReference Anchor { get; set; }
 
     [Parameter] public EventCallback          OnClose              { get; set; }
     [Parameter] public EventCallback          OnDelete             { get; set; }
@@ -46,10 +55,8 @@ public partial class TmNotionBlockContextMenu : ComponentBase, IAsyncDisposable
     private bool _showTurnInto;
     private bool _showPanelType;
     private bool _showColor;
-    private bool _focusPending = true;
     private Sub? _pendingSubFocus;
     private Sub? _focusedSub;
-    private ElementReference _menuRef;
     private ElementReference _turnIntoTriggerRef;
     private ElementReference _panelTypeTriggerRef;
     private ElementReference _colorTriggerRef;
@@ -61,21 +68,8 @@ public partial class TmNotionBlockContextMenu : ComponentBase, IAsyncDisposable
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (_focusPending)
-        {
-            _focusPending = false;
-
-            try
-            {
-                await JS.InvokeVoidAsync("tmNotionEditor.positionContextMenu", _menuRef);
-                await JS.InvokeVoidAsync("tmNotionEditor.initFocusTrap", _menuRef);
-            }
-            catch
-            {
-            }
-        }
-
-        // The submenu panel only exists in the DOM after the ArrowRight-triggered
+        // Initial focus and the Tab cycle belong to the overlay (TrapFocus + the menu role's
+        // initial-focus selector). The submenu panel only exists after the ArrowRight-triggered
         // re-render — the focus hand-off must run here, not in the keydown handler.
         if (_pendingSubFocus is { } pending)
         {
@@ -224,7 +218,7 @@ public partial class TmNotionBlockContextMenu : ComponentBase, IAsyncDisposable
         await OnBackgroundChange.InvokeAsync(color);
     }
 
-    private async Task CloseAsync() => await OnClose.InvokeAsync();
+    private Task CloseAsync() => OnClose.InvokeAsync();
 
     private async Task HandleKeyDownAsync(KeyboardEventArgs args)
     {
@@ -273,17 +267,6 @@ public partial class TmNotionBlockContextMenu : ComponentBase, IAsyncDisposable
         {
             // Best-effort — the trigger exists whenever its submenu was open, but a failed
             // focus call must never break the close itself.
-        }
-    }
-
-    public async ValueTask DisposeAsync()
-    {
-        try
-        {
-            await JS.InvokeVoidAsync("tmNotionEditor.destroyFocusTrap", _menuRef);
-        }
-        catch
-        {
         }
     }
 

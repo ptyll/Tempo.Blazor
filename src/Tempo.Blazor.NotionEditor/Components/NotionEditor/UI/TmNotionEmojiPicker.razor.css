@@ -14,7 +14,7 @@
     max-width: calc(100vw - var(--tm-space-4));
     display: flex;
     flex-direction: column;
-    background: var(--tm-color-white);
+    background: var(--tm-bg-elevated);
     border: 1px solid var(--tm-border-color);
     border-radius: 10px;
     box-shadow: var(--tm-shadow-popover);
@@ -29,6 +29,15 @@
 }
 
 /* ── Top bar ─────────────────────────────────────────────────────────────── */
+
+.tm-notion-emoji-picker__remove {
+    flex-shrink: 0;
+    white-space: nowrap;
+    background: transparent;
+    border: none;
+    color: var(--tm-text-secondary);
+    cursor: pointer;
+}
 
 .tm-notion-emoji-picker__top {
     display: flex;
@@ -52,7 +61,7 @@
 }
 
 .tm-notion-emoji-picker__search-wrap:focus-within {
-    background: var(--tm-color-white);
+    background: var(--tm-bg-surface);
     border-color: var(--tm-color-primary);
 }
 
@@ -182,6 +191,12 @@
     display: grid;
     grid-template-columns: repeat(8, 1fr);
     gap: 1px;
+}
+
+@media (pointer: coarse) {
+    .tm-notion-emoji-picker__grid {
+        grid-template-columns: repeat(auto-fill, minmax(44px, 1fr));
+    }
 }
 
 .tm-notion-emoji-picker__grid--recent {

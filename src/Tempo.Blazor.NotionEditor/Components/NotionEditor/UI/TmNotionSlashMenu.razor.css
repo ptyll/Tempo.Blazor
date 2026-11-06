@@ -9,13 +9,13 @@
 /* The card surface lives on the body the component renders itself: the panel root is a child
    component, so a scoped rule never reaches it and the menu grew to its full content height. */
 .tm-notion-slash__body {
-    width: 320px;
+    width: min(440px, calc(100vw - var(--tm-space-4)));
     max-height: 400px;
     display: flex;
     flex-direction: column;
     background: var(--tm-bg-elevated);
     border: 1px solid var(--tm-border-color);
-    border-radius: 6px;
+    border-radius: var(--tm-radius-card);
     box-shadow: var(--tm-shadow-popover);
     overflow: hidden;
     font-size: 14px;
@@ -58,6 +58,10 @@
     padding: 0;
 }
 
+.tm-notion-slash__search:focus-within {
+    box-shadow: var(--tm-shadow-focus);
+}
+
 .tm-notion-slash__input::placeholder {
     color: var(--tm-text-tertiary);
 }
@@ -98,7 +102,7 @@
     font-size: 11px;
     font-weight: 600;
     letter-spacing: 0.04em;
-    text-transform: uppercase;
+    text-transform: none;
     color: var(--tm-text-secondary);
     user-select: none;
 }
@@ -110,14 +114,17 @@
     gap: 10px;
     padding: 5px 12px;
     cursor: pointer;
-    border-radius: 0;
+    border-radius: var(--tm-radius-md);
     transition: background 60ms ease;
     user-select: none;
 }
 
-.tm-notion-slash__item:hover,
-.tm-notion-slash__item--selected {
+.tm-notion-slash__item:hover {
     background: var(--tm-color-surface-hover);
+}
+
+.tm-notion-slash__item--selected {
+    background: var(--tm-color-primary-subtle);
 }
 
 /* ── Icon ─────────────────────────────────────────────────────────────────── */
@@ -128,7 +135,7 @@
     justify-content: center;
     width: 36px;
     height: 36px;
-    border-radius: 6px;
+    border-radius: var(--tm-radius-card);
     background: var(--tm-bg-surface-secondary);
     color: var(--tm-text-primary);
     transition: background 80ms ease;

@@ -1390,7 +1390,34 @@ findings table and the per-leg results) and the two perf runs
   <span data-color="red" data-bg="red">…</span>
   ```
 
-  The accessible name of a swatch moved from `TmNotionColorPicker_{Color}` to `TmNotionColor_{Default|Gray|Brown|Orange|Yellow|Green|Blue|Purple|Pink|Red}` (en/cs/sk/fr). A host that overrode the old key for a swatch name must override the new one; the section headings `TmNotionColorPicker_TextColor` and `TmNotionColorPicker_BgColor` are unchanged.
+- **Notion editor (phase 6, NO4): one emoji picker, no colour picker.** `Shared/TmNotionEmojiPicker` and `UI/TmNotionColorPicker` are deleted. The only emoji picker is `UI/TmNotionEmojiPicker`; the callout and the page header both use it. The inline toolbar's colour panel is the only palette, and it paints from `--tm-notion-color-*`.
+
+  ```razor
+  @* before: the callout used the Shared picker *@
+  <TmNotionEmojiPicker OnSelected="HandleEmojiSelectedAsync"
+                        OnRemoved="HandleEmojiRemovedAsync"
+                        ShowRemoveButton="true" />
+  @* after: the UI picker, opened explicitly *@
+  <TmNotionEmojiPicker Visible="true"
+                        OnEmojiSelected="HandleEmojiSelectedAsync"
+                        OnRemoved="HandleEmojiRemovedAsync"
+                        ShowRemove="true" />
+  ```
+
+  A host that rendered `UI/TmNotionColorPicker` moves to the inline toolbar palette. `OnTextColorSelected` carries the palette token name (`"brown"`), never a hex; `applyInlineColor` still receives the allowlisted legacy hex.
+
+  The accessible name of a text swatch is `TmNotionInlineToolbar_Color{Name}` and of a background swatch `TmNotionInlineToolbar_Color{Name}Bg` (en/cs/sk/fr). The dead `TmNotionColorPicker_*` keys, including `TmNotionColorPicker_TextColor` and `TmNotionColorPicker_BgColor`, are removed. A host that overrode a picker key must override the inline-toolbar key.
+
+  | before | after |
+  |---|---|
+  | `OnSelected` | `OnEmojiSelected` |
+  | `ShowRemoveButton` | `ShowRemove` |
+  | (always open) | `Visible` |
+  | — | `Inline`, `RecentEmojis`, `LayoutMode` |
+
+  `TmNotionColorPicker` is gone. Before, a host rendered the picker and listened to `OnTextColorSelected`. After, the inline toolbar owns the palette.
+
+  Removed DOM classes: emoji/color backdrops, `.tm-nsp__scrim`, `.tm-nsp__dialog`, `.tm-ntg__backdrop`, `.tm-nps-backdrop`. Page search, the template gallery and the shortcuts panel render inside `TmModal` (`tm-nps-host`, `tm-ntg-host`, `tm-nsp-host`). The gallery tablist is a group with `aria-pressed`. Avatars use `TmAvatar`.
 
   **Inline text colour is a hex on the wire, a token on the swatch.** `document.execCommand` does not keep a CSS colour name, so the toolbar paints `var(--tm-notion-color-{name})` and sends the allowlisted legacy hex from `NotionColorTokens.InlineHex(name, background)`. A host that called `applyInlineColor` with `"brown"` must send that hex; the stored span is unchanged.
 

@@ -7,10 +7,21 @@
                       Left="Left"
                       Placement="OverlayPlacement.Bottom"
                       Role="dialog"
-                      Title="@Loc["TmNotionTokenDropdown_Label"]"
+                      Title="@Loc["TmNotionTokenDropdown_Title"]"
                       AriaLabel="@Loc["TmNotionTokenDropdown_Label"]"
                       Class="tm-notion-token-dropdown"
                       OnClose="HandleBackdropClickAsync">
+    <Footer>
+        @if (OnCreateRequested.HasDelegate)
+        {
+            <button class="tm-notion-token-dropdown__create-btn"
+                    type="button"
+                    @onclick="HandleCreateAsync">
+                @Loc["TmNotionTokenDropdown_CreateToken"]
+            </button>
+        }
+    </Footer>
+    <ChildContent>
     <div class="tm-notion-token-dropdown__body" @onkeydown:stopPropagation="true">
 
         @* ── Search input ──────────────────────────────────────────────────────── *@
@@ -72,29 +83,6 @@
                 }
             }
         </div>
-
-        @* ── Create token footer ───────────────────────────────────────────────── *@
-        @if (OnCreateRequested.HasDelegate)
-        {
-            <div class="tm-notion-token-dropdown__footer">
-                <button class="tm-notion-token-dropdown__create-btn"
-                        type="button"
-                        @onclick="HandleCreateAsync"
-                        @onclick:stopPropagation="true">
-                    <svg width="13" height="13" viewBox="0 0 14 14" fill="none" aria-hidden="true">
-                        <line x1="7" y1="1" x2="7" y2="13" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
-                        <line x1="1" y1="7" x2="13" y2="7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
-                    </svg>
-                    @if (!string.IsNullOrWhiteSpace(_query))
-                    {
-                        @(string.Format(Loc["TmNotionTokenDropdown_CreateTokenNamed"], _query))
-                    }
-                    else
-                    {
-                        @Loc["TmNotionTokenDropdown_CreateToken"]
-                    }
-                </button>
-            </div>
-        }
     </div>
+    </ChildContent>
 </TmNotionFloatingMenu>

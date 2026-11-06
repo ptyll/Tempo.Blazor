@@ -27,6 +27,13 @@
       "isRequired": false
     },
     {
+      "name": "LayoutMode",
+      "type": "TmLayoutMode",
+      "isRequired": false,
+      "default": "Auto",
+      "description": "Forced layout. Mobile presents the menu as the core sheet."
+    },
+    {
       "name": "OnClosed",
       "type": "EventCallback",
       "isRequired": false,

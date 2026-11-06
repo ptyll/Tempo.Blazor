@@ -1,5 +1,7 @@
+using System.Globalization;
 using System.Text.Encodings.Web;
 using Microsoft.AspNetCore.Components;
+using Tempo.Blazor.Abstractions.Layout;
 using Tempo.Blazor.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Tempo.Blazor.Components.NotionEditor.Services;
@@ -37,6 +39,9 @@ public partial class TmNotionAiMenu : TmComponentBase, IAsyncDisposable
 
     /// <summary>Fixed left coordinate for inline menu placement.</summary>
     [Parameter] public double Left { get; set; }
+
+    /// <summary>Forced layout. Mobile presents the menu as the core sheet.</summary>
+    [Parameter] public TmLayoutMode LayoutMode { get; set; } = TmLayoutMode.Auto;
 
     /// <summary>Renders the component as a wider page-level panel.</summary>
     [Parameter] public bool Panel { get; set; }
@@ -92,7 +97,7 @@ public partial class TmNotionAiMenu : TmComponentBase, IAsyncDisposable
 
     private string AnchorStyle => Panel
         ? "top:calc(var(--tm-space-8) + 48px);right:var(--tm-space-8);"
-        : "top:var(--tm-space-4);right:var(--tm-space-4);";
+        : string.Create(CultureInfo.InvariantCulture, $"top:{Top}px;left:{Left}px");
 
     private string PanelClass => Panel ? "tm-notion-ai tm-notion-ai--panel" : "tm-notion-ai";
 

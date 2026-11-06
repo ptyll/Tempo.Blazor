@@ -84,6 +84,35 @@
     overflow: hidden;
 }
 
+/* ── Page settings (N6) ──────────────────────────────────────────────────────
+   The card class rides the floating-menu body, which the overlay renders outside this
+   component's scope. A scoped rule in TmNotionPageSettingsMenu.razor.css can never match
+   it (N325), so the surface lives here. The sheet already paints its own card. */
+.tm-overlay-panel .tm-npsm {
+    width: min(16.25rem, calc(100vw - var(--tm-space-4)));
+    max-height: calc(100vh - var(--tm-space-4));
+    background: var(--tm-bg-elevated);
+    border: 1px solid var(--tm-border-color);
+    border-radius: 8px;
+    box-shadow: var(--tm-shadow-popover);
+    overflow: auto;
+    font-size: 14px;
+    color: var(--tm-text-primary);
+}
+
+.tm-overlay-panel-sheet .tm-npsm,
+.tm-overlay-panel-sheet__content .tm-npsm {
+    width: 100%;
+    max-height: none;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    /* The scoped card clips at overflow:hidden and never scrolls. A sheet whose stored
+       viewport is still the previous band must scroll to the last item instead of hiding it. */
+    overflow: auto;
+    max-height: calc(var(--tm-sheet-max, 0.85) * var(--tm-sheet-viewport, 100dvh));
+}
+
 /* ── N5: floating-menu bodies inside the core bottom sheet ───────────────────
    TmNotionFloatingMenu renders the consumer body as a child of its own wrapper inside
    the core sheet content. The consumer bodies carry the popover card chrome (fixed
@@ -94,7 +123,9 @@
    sheet content (the popover root keeps it). */
 
 .tm-overlay-panel-sheet__content > .tm-notion-floating-menu__body > .tm-notion-slash__body,
+.tm-overlay-panel-sheet__content > .tm-notion-floating-menu__body > .tm-notion-slash,
 .tm-overlay-panel-sheet__content > .tm-notion-floating-menu__body > .tm-notion-color-picker__body,
+.tm-modal-overlay .tm-notion-emoji-picker__body,
 .tm-overlay-panel-sheet__content > .tm-notion-floating-menu__body > .tm-notion-emoji-picker__body,
 .tm-overlay-panel-sheet__content > .tm-notion-floating-menu__body > .tm-notion-status-picker__body,
 .tm-overlay-panel-sheet__content > .tm-notion-floating-menu__body > .tm-notion-token-dropdown__body,
@@ -105,4 +136,53 @@
     border: 0;
     border-radius: 0;
     box-shadow: none;
+}
+
+/* The sheet measures the rendered option. The generic touch-target rule below is 44px and
+   matches the same node, so the slash option has to win on its own — a wrapper min-height
+   never reaches the row the test reads. */
+.tm-overlay-panel-sheet__content .tm-notion-slash__item[role="option"],
+.tm-overlay-panel-sheet__content .tm-notion-slash__item[role="menuitem"] {
+    min-height: 56px;
+}
+
+/* A sheet is the touch presentation: every row meets the touch target of the layout it is
+   presenting now, including a row a popover would keep compact. */
+.tm-overlay-panel-sheet__content .tm-npsm__item,
+.tm-overlay-panel-sheet__content .tm-notion-ctx__item,
+.tm-overlay-panel-sheet__content [role="menuitem"],
+.tm-overlay-panel-sheet__content [role="option"] {
+    min-height: var(--tm-touch-target);
+}
+
+.tm-overlay-panel-sheet__content .tm-notion-slash__chevron {
+    display: block;
+    width: var(--tm-space-2);
+    height: var(--tm-space-2);
+    margin-left: auto;
+    border-right: 2px solid var(--tm-text-tertiary);
+    border-bottom: 2px solid var(--tm-text-tertiary);
+    transform: rotate(-45deg);
+}
+
+.tm-notion-slash__chevron {
+    display: none;
+}
+
+.tm-modal-overlay .tm-notion-emoji-picker__body {
+    width: 100%;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+}
+
+.tm-notion-emoji-picker__remove--footer {
+    min-height: 44px;
+    width: 100%;
+}
+
+@media (max-width: 400px), (pointer: coarse) {
+    .tm-nps__footer-hint {
+        display: none;
+    }
 }

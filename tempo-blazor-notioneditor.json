@@ -57,7 +57,6 @@
       "Tempo.Blazor.Components.NotionEditor.Models",
       "Tempo.Blazor.Components.NotionEditor.Page",
       "Tempo.Blazor.Components.NotionEditor.Services",
-      "Tempo.Blazor.Components.NotionEditor.Shared",
       "Tempo.Blazor.Components.NotionEditor.Sidebar",
       "Tempo.Blazor.Components.NotionEditor.UI",
       "Tempo.Blazor.Configuration"
@@ -843,6 +842,12 @@
           ]
         },
         {
+          "name": "RaiseAggregateConflictDetectedAsync",
+          "kind": "Method",
+          "type": "Task",
+          "description": "Invokes AggregateConflictDetected when a block save conflicted."
+        },
+        {
           "name": "RaiseBlockConverted",
           "kind": "Method",
           "type": "void",
@@ -865,6 +870,12 @@
               "type": "IPageBlock"
             }
           ]
+        },
+        {
+          "name": "AggregateConflictDetected",
+          "kind": "Property",
+          "type": "Func<Task>?",
+          "description": "Raised when a block save hits an aggregate concurrency conflict. The block handler swallows the thrown conflict so typing can continue; the page uses this to show the banner."
         },
         {
           "name": "AggregateSession",
@@ -3449,72 +3460,6 @@
       "parameters": []
     },
     {
-      "itemName": "TmNotionColorPicker",
-      "kind": "Component",
-      "category": "Notion Editor",
-      "subcategory": "UI",
-      "namespace": "Tempo.Blazor.Components.NotionEditor.UI",
-      "description": "Popup with text-color and background-color swatch sections (including a default/none option), raising OnColorSelected as a text/background pair where one side is set.",
-      "packageId": "Tempo.Blazor.NotionEditor",
-      "sourcePath": "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/UI/TmNotionColorPicker.razor",
-      "documentationStatus": "merged",
-      "requiredImports": [
-        "@using Tempo.Blazor.Components.NotionEditor.UI"
-      ],
-      "parameters": [
-        {
-          "name": "LayoutMode",
-          "type": "TmLayoutMode",
-          "isRequired": false,
-          "default": "TmLayoutMode.Auto",
-          "description": "Forced layout. Mobile presents the picker as the core sheet."
-        },
-        {
-          "name": "Left",
-          "type": "double",
-          "isRequired": false
-        },
-        {
-          "name": "OnClosed",
-          "type": "EventCallback",
-          "isRequired": false,
-          "description": "Raised when the picker is dismissed without a selection."
-        },
-        {
-          "name": "OnColorSelected",
-          "type": "EventCallback<(string? TextColor, string? BgColor)>",
-          "isRequired": false,
-          "description": "Raised when a color is chosen. Exactly one element of the tuple is non-null: (hex, null) → text color selected; (null, hex) → background color selected. (null, null) → default (remove color) selected for either section."
-        },
-        {
-          "name": "SelectedBgColor",
-          "type": "string?",
-          "isRequired": false,
-          "description": "Currently active background-color hex, or null for default."
-        },
-        {
-          "name": "SelectedTextColor",
-          "type": "string?",
-          "isRequired": false,
-          "description": "Currently active text colour as a palette name (gray, red, orange, yellow, green, blue, purple, pink, brown), or null for default. A hex stored before 2.10.0 is mapped to the same name."
-        },
-        {
-          "name": "Top",
-          "type": "double",
-          "isRequired": false
-        },
-        {
-          "name": "Visible",
-          "type": "bool",
-          "isRequired": false
-        }
-      ],
-      "cssClasses": [
-        "tm-notion-color-picker"
-      ],
-      "notes": "Swatches paint from --tm-notion-color-{name} and --tm-notion-color-{name}-bg, never a hex. The accessible name of a swatch is TmNotionColor_{Default|Gray|Brown|Orange|Yellow|Green|Blue|Purple|Pink|Red}."
-    },
-    {
       "itemName": "TmNotionColumnBlock",
       "kind": "Component",
       "category": "Notion Editor",
@@ -6083,70 +6028,76 @@
       "itemName": "TmNotionEmojiPicker",
       "kind": "Component",
       "category": "Notion Editor",
-      "subcategory": "Shared",
-      "namespace": "Tempo.Blazor.Components.NotionEditor.Shared",
-      "description": "Emoji picker popup used by the Notion editor in two variants: the Shared picker renders a search input, categorised emoji grid and an optional Remove button positioned relative to the nearest positioned ancestor; the UI variant is an absolutely-positioned popup driven by Visible/Top/Left coordinates.",
+      "subcategory": "UI",
+      "namespace": "Tempo.Blazor.Components.NotionEditor.UI",
+      "description": "The one emoji picker of the Notion editor. Search filters the grid, recent emoji render first, arrow keys move a single roving tabindex, and Escape closes it. ShowRemove adds the Remove action.",
       "packageId": "Tempo.Blazor.NotionEditor",
-      "sourcePath": "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/Shared/TmNotionEmojiPicker.razor",
+      "sourcePath": "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/UI/TmNotionEmojiPicker.razor",
       "documentationStatus": "merged",
       "requiredImports": [
-        "@using Tempo.Blazor.Components.NotionEditor.Shared"
+        "@using Tempo.Blazor.Components.NotionEditor.UI"
       ],
       "parameters": [
         {
-          "name": "OnClosed",
-          "type": "EventCallback",
-          "isRequired": false,
-          "description": "Fired when the backdrop is clicked (close without action)."
-        },
-        {
-          "name": "OnRemoved",
-          "type": "EventCallback",
-          "isRequired": false,
-          "description": "Shared variant: fired when the optional Remove action is used."
-        },
-        {
-          "name": "OnSelected",
-          "type": "EventCallback<string>",
-          "isRequired": false,
-          "description": "Shared variant: fired with the chosen emoji."
-        },
-        {
-          "name": "ShowRemoveButton",
+          "name": "Inline",
           "type": "bool",
           "isRequired": false,
-          "description": "Shared variant: shows the Remove action that raises OnRemoved."
+          "description": "Renders in place instead of portalling. A host that supplies its own dialog sets this."
         },
         {
           "name": "LayoutMode",
           "type": "TmLayoutMode",
           "isRequired": false,
-          "default": "Auto",
+          "default": "TmLayoutMode.Auto",
           "description": "Forced layout. Mobile presents the picker as the core sheet."
-        },
-        {
-          "name": "Visible",
-          "type": "bool",
-          "isRequired": false,
-          "description": "UI variant: whether the popup is shown."
-        },
-        {
-          "name": "Top",
-          "type": "double",
-          "isRequired": false,
-          "description": "UI variant: vertical position of the popup in pixels."
         },
         {
           "name": "Left",
           "type": "double",
           "isRequired": false,
-          "description": "UI variant: horizontal position of the popup in pixels."
+          "description": "Fixed left position in CSS pixels."
+        },
+        {
+          "name": "OnClosed",
+          "type": "EventCallback",
+          "isRequired": false,
+          "description": "Raised when the picker is dismissed without a selection."
         },
         {
           "name": "OnEmojiSelected",
           "type": "EventCallback<string>",
           "isRequired": false,
-          "description": "UI variant: fired with the chosen emoji."
+          "description": "Raised when the user selects an emoji. The argument is the emoji character."
+        },
+        {
+          "name": "OnRemoved",
+          "type": "EventCallback",
+          "isRequired": false,
+          "description": "Raised by the Remove action."
+        },
+        {
+          "name": "RecentEmojis",
+          "type": "IReadOnlyList<string>?",
+          "isRequired": false,
+          "description": "Recent emoji to render first. Null reads them from localStorage."
+        },
+        {
+          "name": "ShowRemove",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Shows the Remove action. Off unless the host can clear an icon."
+        },
+        {
+          "name": "Top",
+          "type": "double",
+          "isRequired": false,
+          "description": "Fixed top position in CSS pixels."
+        },
+        {
+          "name": "Visible",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Shows or hides the picker."
         }
       ]
     },
@@ -6669,9 +6620,21 @@
           "isRequired": true
         },
         {
+          "name": "CurrentBackgroundColor",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Palette token name of the current background colour. The matching swatch is pressed."
+        },
+        {
           "name": "CurrentHref",
           "type": "string?",
           "isRequired": false
+        },
+        {
+          "name": "CurrentTextColor",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Palette token name of the current text colour. The matching swatch is pressed."
         },
         {
           "name": "DotNetRef",
@@ -6719,9 +6682,21 @@
           "isRequired": false
         },
         {
+          "name": "OnBackgroundColorSelected",
+          "type": "EventCallback<string?>",
+          "isRequired": false,
+          "description": "Raised with the palette token name, never a hex, when a background swatch is picked."
+        },
+        {
           "name": "OnComment",
           "type": "EventCallback<string>",
           "isRequired": false
+        },
+        {
+          "name": "OnTextColorSelected",
+          "type": "EventCallback<string?>",
+          "isRequired": false,
+          "description": "Raised with the palette token name, never a hex, when a text swatch is picked."
         },
         {
           "name": "OnTurnInto",
@@ -6875,6 +6850,13 @@
         "@using Tempo.Blazor.Components.NotionEditor.UI"
       ],
       "parameters": [
+        {
+          "name": "LayoutMode",
+          "type": "TmLayoutMode",
+          "isRequired": false,
+          "default": "TmLayoutMode.Auto",
+          "description": "Forced layout. Mobile presents the menu as the core sheet."
+        },
         {
           "name": "Left",
           "type": "double",
@@ -7535,6 +7517,13 @@
       ],
       "parameters": [
         {
+          "name": "LayoutMode",
+          "type": "TmLayoutMode",
+          "isRequired": false,
+          "default": "TmLayoutMode.Auto",
+          "description": "Forced layout. Mobile presents the open menu as the core sheet."
+        },
+        {
           "name": "OnAIAskPageRequested",
           "type": "EventCallback",
           "isRequired": false,
@@ -7692,6 +7681,13 @@
           "type": "string?",
           "isRequired": false,
           "description": "Additional CSS class."
+        },
+        {
+          "name": "FocusOnOpen",
+          "type": "bool",
+          "isRequired": false,
+          "default": "true",
+          "description": "Moves focus into the header when the panel opens."
         },
         {
           "name": "OnClosed",
@@ -8040,6 +8036,13 @@
           "isRequired": false,
           "default": "NotionShortcutCatalog.DefaultGroups",
           "description": "Shortcut groups rendered by the panel. Defaults to the built-in Notion catalog."
+        },
+        {
+          "name": "LayoutMode",
+          "type": "TmLayoutMode",
+          "isRequired": false,
+          "default": "TmLayoutMode.Auto",
+          "description": "Forced layout. Mobile presents the panel as the core sheet."
         },
         {
           "name": "Visible",
@@ -8838,6 +8841,13 @@
         "@using Tempo.Blazor.Components.NotionEditor.UI"
       ],
       "parameters": [
+        {
+          "name": "LayoutMode",
+          "type": "TmLayoutMode",
+          "isRequired": false,
+          "default": "TmLayoutMode.Auto",
+          "description": "Forced layout. Mobile presents the gallery fullscreen."
+        },
         {
           "name": "OnClosed",
           "type": "EventCallback",
@@ -9640,11 +9650,11 @@
     }
   ],
   "summary": {
-    "itemCount": 186,
-    "manualItemCount": 186,
-    "generatedItemCount": 185,
+    "itemCount": 185,
+    "manualItemCount": 185,
+    "generatedItemCount": 184,
     "generatedOnlyItemCount": 0,
-    "componentCount": 133,
+    "componentCount": 132,
     "publicApiTypeCount": 52
   }
 }

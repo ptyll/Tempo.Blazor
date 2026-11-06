@@ -126,18 +126,20 @@ public class NotionAccessibilityE2ETests : NotionE2ETestBase
         var menuButton = block.Locator(".tm-notion-handle__menu-anchor > .tm-notion-handle__btn").First;
         await menuButton.ClickAsync();
 
-        var contextMenu = page.Locator(".tm-notion-ctx").First;
+        // Phase 6: the menu rides TmOverlayPanel; the single .tm-notion-ctx-panel class is the
+        // surface rendered in both the popover and the sheet, and that panel is the focus root.
+        var contextMenu = page.Locator(".tm-notion-ctx-panel").First;
         await contextMenu.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 5000 });
-        Assert.IsTrue(await ActiveElementIsInsideAsync(page, ".tm-notion-ctx"), "Block menu should receive focus after opening.");
+        Assert.IsTrue(await ActiveElementIsInsideAsync(page, ".tm-notion-ctx-panel"), "Block menu should receive focus after opening.");
 
         for (var i = 0; i < 8; i++)
         {
             await page.Keyboard.PressAsync(i % 2 == 0 ? "Tab" : "Shift+Tab");
-            Assert.IsTrue(await ActiveElementIsInsideAsync(page, ".tm-notion-ctx"), "Tab traversal should stay inside the block context menu.");
+            Assert.IsTrue(await ActiveElementIsInsideAsync(page, ".tm-notion-ctx-panel"), "Tab traversal should stay inside the block context menu.");
         }
 
         await page.Keyboard.PressAsync("Escape");
-        await Assertions.Expect(page.Locator(".tm-notion-ctx")).ToHaveCountAsync(0);
+        await Assertions.Expect(page.Locator(".tm-notion-ctx-panel")).ToHaveCountAsync(0);
         Assert.IsTrue(await menuButton.EvaluateAsync<bool>("el => document.activeElement === el"), "Block menu trigger should regain focus after Escape.");
 
         await SeedMediaPageAsync();

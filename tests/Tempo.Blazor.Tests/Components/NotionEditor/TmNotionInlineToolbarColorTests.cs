@@ -1,5 +1,6 @@
 using Bunit;
 using FluentAssertions;
+using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Tempo.Blazor.Components.NotionEditor.Services;
 using Tempo.Blazor.Components.NotionEditor.UI;
@@ -32,6 +33,16 @@ public sealed class TmNotionInlineToolbarColorTests : LocalizationTestBase
             ["TmNotionInlineToolbar_ColorPurple"] = "Purple",
             ["TmNotionInlineToolbar_ColorPink"] = "Pink",
             ["TmNotionInlineToolbar_ColorRed"] = "Red",
+            ["TmNotionInlineToolbar_ColorDefaultBg"] = "Default background",
+            ["TmNotionInlineToolbar_ColorGrayBg"] = "Gray background",
+            ["TmNotionInlineToolbar_ColorBrownBg"] = "Brown background",
+            ["TmNotionInlineToolbar_ColorOrangeBg"] = "Orange background",
+            ["TmNotionInlineToolbar_ColorYellowBg"] = "Yellow background",
+            ["TmNotionInlineToolbar_ColorGreenBg"] = "Green background",
+            ["TmNotionInlineToolbar_ColorBlueBg"] = "Blue background",
+            ["TmNotionInlineToolbar_ColorPurpleBg"] = "Purple background",
+            ["TmNotionInlineToolbar_ColorPinkBg"] = "Pink background",
+            ["TmNotionInlineToolbar_ColorRedBg"] = "Red background",
         });
     }
 
@@ -70,5 +81,27 @@ public sealed class TmNotionInlineToolbarColorTests : LocalizationTestBase
         var args = call.Invocations.Single().Arguments;
         args[0].Should().Be("bg");
         args[1].Should().Be(NotionColorTokens.InlineHex("brown", true));
+    }
+
+    [Fact]
+    public void Swatches_NameTheColor_PressTheCurrentOne_AndReportTheTokenName()
+    {
+        string? picked = null;
+        var cut = Render<TmNotionInlineToolbar>(p => p
+            .Add(x => x.Visible, true)
+            .Add(x => x.CurrentTextColor, "brown")
+            .Add(x => x.OnTextColorSelected, EventCallback.Factory.Create<string?>(this, value => picked = value)));
+        cut.Find("button[title='Color']").Click();
+
+        var brown = cut.FindAll(".tm-notion-inline-toolbar__color-swatch")
+            .First(button => button.GetAttribute("aria-label") == "Brown"
+                && button.GetAttribute("style")?.Contains("--tm-notion-color-brown-bg") != true);
+        brown.GetAttribute("aria-pressed").Should().Be("true");
+
+        // The callback carries the token name. The interop still receives the allowlisted hex —
+        // that contract is pinned by TextSwatch_SendsLegacyHex_NotThePaletteName.
+        brown.Click(new MouseEventArgs());
+
+        picked.Should().Be("brown");
     }
 }

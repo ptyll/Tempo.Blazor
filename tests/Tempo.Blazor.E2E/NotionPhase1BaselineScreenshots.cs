@@ -315,7 +315,7 @@ public sealed class NotionPhase1BaselineScreenshots : NotionE2ETestBase
         await SetThemeAsync(page, "dark");
         await ShotAsync(page, "notion-menus", "page-settings-dark", settings);
         await SetThemeAsync(page, "light");
-        await page.Locator(".tm-npsm__backdrop").ClickAsync(new LocatorClickOptions { Force = true });
+        await page.Keyboard.PressAsync("Escape");
 
         var block = page.Locator("[data-notion-block]").First;
         await block.HoverAsync();

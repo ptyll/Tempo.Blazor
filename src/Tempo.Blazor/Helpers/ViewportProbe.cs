@@ -54,6 +54,9 @@ internal sealed class ViewportProbe : ComponentBase, IAsyncDisposable
         await _lazy.TryInvokeVoidAsync("observe", _root, _dotNetRef, _id, new
         {
             breakpoints = new { sm = TmBreakpoints.Sm, md = TmBreakpoints.Md, lg = TmBreakpoints.Lg },
+            // The probe is position:fixed; inset:0. Its box does not track a viewport flip, so the
+            // observer must classify window.innerWidth or the first measured mode sticks.
+            measureWindow = true,
         });
     }
 
