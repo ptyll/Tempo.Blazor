@@ -18,3 +18,18 @@ public enum NotionCommentPresentation
     /// <summary>Popover on a desktop layout, modal / sheet on a narrow (mobile) layout.</summary>
     Auto,
 }
+
+/// <summary>
+/// How the page-level comment panel presents (phase 5, P4). <see cref="Inline"/> (the default)
+/// keeps the collapsible panel at the bottom of the page; <see cref="Dialog"/> renders no inline
+/// panel — the header badge and the Comments page action open a core <c>TmModal</c> hosting the
+/// Embedded panel body.
+/// </summary>
+public enum NotionPageCommentsPresentation
+{
+    /// <summary>Collapsible panel inline at the bottom of the page (default).</summary>
+    Inline,
+
+    /// <summary>The core modal (sheet on a mobile layout) with the Embedded panel body.</summary>
+    Dialog,
+}

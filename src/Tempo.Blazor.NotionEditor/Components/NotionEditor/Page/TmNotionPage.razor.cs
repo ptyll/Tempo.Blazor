@@ -48,6 +48,13 @@ public partial class TmNotionPage : ComponentBase, IAsyncDisposable
     [Parameter]
     public bool ReadOnly { get; set; }
 
+    /// <summary>
+    /// Opt-in page meta row under the title (last edited, last editor, comment count link).
+    /// Defaults to <see langword="false"/>; the demo turns it on.
+    /// </summary>
+    [Parameter]
+    public bool ShowMeta { get; set; }
+
     /// <summary>Raised after the page metadata (title, icon, cover) is saved.</summary>
     [Parameter]
     public EventCallback<INotionPage> OnPageUpdated { get; set; }
@@ -132,6 +139,9 @@ public partial class TmNotionPage : ComponentBase, IAsyncDisposable
     // ── Page-level unresolved comment count (header badge) ────────────────────
 
     private int _pageUnresolvedCommentCount;
+    private bool  _pageCommentDialogOpen;
+    private bool _pageCommentDiscardConfirm;
+    private TmNotionPageCommentPanel? _pageCommentPanel;
 
     // ── Slash menu state ─────────────────────────────────────────────────────
 
@@ -211,6 +221,7 @@ public partial class TmNotionPage : ComponentBase, IAsyncDisposable
     protected override async Task OnParametersSetAsync()
     {
         Context.BlockCreated = HandleExternalBlockCreatedAsync;
+        Context.AggregateConflictDetected = HandleAggregateConflictDetectedAsync;
 
         // The mobile action bar (rendered by the editor above this page) invokes the page's own
         // handlers through the cascaded context — the page stays the single owner of its menus.
@@ -957,6 +968,17 @@ public partial class TmNotionPage : ComponentBase, IAsyncDisposable
     private static string FormatAggregateIssues(IEnumerable<NotionAggregateIssue> issues)
         => string.Join(Environment.NewLine, issues.Select(issue => issue.Message));
 
+    private Task HandleAggregateConflictDetectedAsync()
+    {
+        if (Context.AggregateSession?.HasPendingConflict != true)
+            return Task.CompletedTask;
+
+        _hasAggregateConflict = true;
+        _loadBlocksError = null;
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
     private void SetBlockOperationError()
     {
         _hasAggregateConflict = Context.AggregateSession?.HasPendingConflict == true;
@@ -1178,14 +1200,58 @@ public partial class TmNotionPage : ComponentBase, IAsyncDisposable
         return Task.CompletedTask;
     }
 
-    /// <summary>Scrolls the page to the first block with an unresolved comment (header badge click).</summary>
+    /// <summary>
+    /// Header badge click (Inline): scrolls the page to the first block with an unresolved comment.
+    /// Dialog presentation: opens the page comments dialog instead.
+    /// </summary>
     private async Task HandleCommentBadgeClickedAsync()
     {
+        if (Context.PageCommentsPresentation == NotionPageCommentsPresentation.Dialog)
+        {
+            _pageCommentDialogOpen = true;
+            StateHasChanged();
+            return;
+        }
+
         try
         {
             await JS.InvokeVoidAsync("tmNotionEditor.scrollToFirstUnresolvedComment");
         }
         catch { /* SSR / test */ }
+    }
+
+    /// <summary>Dialog close: an unsaved draft asks first; confirm discards, then the count refreshes.</summary>
+    private Task HandlePageCommentDialogClosedAsync()
+    {
+        if (_pageCommentPanel?.HasUnsavedDraft == true)
+        {
+            _pageCommentDiscardConfirm = true;
+            StateHasChanged();
+            return Task.CompletedTask;
+        }
+
+        return ClosePageCommentDialogAsync();
+    }
+
+    private async Task HandlePageCommentDiscardResultAsync(bool? confirmed)
+    {
+        _pageCommentDiscardConfirm = false;
+        if (confirmed != true)
+        {
+            StateHasChanged();
+            return;
+        }
+
+        if (_pageCommentPanel is not null)
+            await _pageCommentPanel.DiscardDraftAsync();
+        await ClosePageCommentDialogAsync();
+    }
+
+    private async Task ClosePageCommentDialogAsync()
+    {
+        _pageCommentDialogOpen = false;
+        await LoadPageUnresolvedCommentCountAsync();
+        StateHasChanged();
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
@@ -1329,11 +1395,15 @@ public partial class TmNotionPage : ComponentBase, IAsyncDisposable
         StateHasChanged();
     }
 
-    /// <summary>The Comments page action: expands the page comments panel.</summary>
+    /// <summary>The Comments page action: expands the page comments panel (Inline) or opens the
+    /// comments dialog (Dialog presentation).</summary>
     private Task OpenCommentsFromActionAsync()
     {
         if (Context.CommentProvider is null) return Task.CompletedTask;
-        _pageCommentExpanded = true;
+        if (Context.PageCommentsPresentation == NotionPageCommentsPresentation.Dialog)
+            _pageCommentDialogOpen = true;
+        else
+            _pageCommentExpanded = true;
         StateHasChanged();
         return Task.CompletedTask;
     }

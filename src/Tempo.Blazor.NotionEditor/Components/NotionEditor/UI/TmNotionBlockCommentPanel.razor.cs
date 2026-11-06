@@ -301,7 +301,8 @@ public partial class TmNotionBlockCommentPanel : ComponentBase, IDisposable, ITm
     private TmNotionCommentDraftState BuildDraftState()
     {
         var hasReplyText        = !string.IsNullOrWhiteSpace(_replyText);
-        var hasNewCommentDraft  = _isCreatingNewThread && hasReplyText;
+        // The thread-list composer also starts a new thread (no thread selected).
+        var hasNewCommentDraft  = (_isCreatingNewThread || IsThreadList) && hasReplyText;
         var hasThreadReplyDraft = !_isCreatingNewThread && _selectedComment is not null && hasReplyText;
         var hasInlineReplyDraft = !string.IsNullOrWhiteSpace(_inlineReplyText)
             && !string.Equals(_inlineReplyText, _inlineReplyBaseline, StringComparison.Ordinal);
@@ -807,6 +808,14 @@ public partial class TmNotionBlockCommentPanel : ComponentBase, IDisposable, ITm
     }
 
     private async Task CloseAsync() => await OnClosed.InvokeAsync();
+
+    /// <summary>
+    /// overlay.js dismissal of the popover. Escape typed inside a composer that holds an unsaved
+    /// draft is vetoed (the panel stays open and overlay.js re-arms, N167): one keypress must not
+    /// silently throw the comment away. The × button and an outside click still close.
+    /// </summary>
+    private Task HandlePopoverDismissedAsync(string reason)
+        => reason == "escape" && HasUnsavedDraft ? Task.CompletedTask : CloseAsync();
 
     private static IEnumerable<CommentThreadNode> FlattenTree(List<CommentThreadNode> nodes)
     {

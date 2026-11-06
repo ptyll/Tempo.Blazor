@@ -70,6 +70,7 @@ public partial class TmNotionBlogList : TmComponentBase
             _posts.AddRange(result.Items);
             _totalCount = result.TotalCount;
             _hasNextPage = result.HasNextPage;
+            _detailOpened = false;
             _selectedPost = _posts.Count > 0
                 ? await BlogProvider.GetPostAsync(_posts[0].Id)
                 : null;
@@ -89,13 +90,49 @@ public partial class TmNotionBlogList : TmComponentBase
         }
     }
 
+    private string? _focusPostId;
+    private bool _focusDetail;
+
+    /// <summary>
+    /// The user opened a post (row click, create, publish). The load-time auto-selection only
+    /// previews the newest post beside the list; on a compact panel it must not swap the list
+    /// out before the user has seen it.
+    /// </summary>
+    private bool _detailOpened;
+    private readonly Dictionary<string, ElementReference> _postItemRefs = new(StringComparer.OrdinalIgnoreCase);
+
     private async Task SelectPostAsync(string postId)
     {
         var post = await BlogProvider.GetPostAsync(postId);
         if (post is not null)
         {
             _selectedPost = post;
+            _detailOpened = true;
+            _focusDetail = true;
+            _focusPostId = null;
             StateHasChanged();
+        }
+    }
+
+    /// <summary>Compact master → detail flow: "Back to blog" clears the selection and returns focus to the row.</summary>
+    private Task ClearSelectionAsync()
+    {
+        _focusPostId = _selectedPost?.Id;
+        _selectedPost = null;
+        _detailOpened = false;
+        _focusDetail = false;
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_focusPostId is { } postId && _postItemRefs.TryGetValue(postId, out var item))
+        {
+            // One-shot: later renders (paging, publish) must not steal focus back to the row.
+            _focusPostId = null;
+            try { await item.FocusAsync(); }
+            catch { /* SSR / test */ }
         }
     }
 
@@ -178,6 +215,22 @@ public partial class TmNotionBlogList : TmComponentBase
         => string.Equals(_selectedPost?.Id, post.Id, StringComparison.OrdinalIgnoreCase)
             ? "tm-notion-blog__post tm-notion-blog__post--active"
             : "tm-notion-blog__post";
+
+    /// <summary>Perex: the plain text of the first paragraph block (Q-P4, no DTO change).</summary>
+    internal static string PostExcerpt(NotionBlogPostDto post)
+    {
+        var firstParagraph = post.Blocks
+            .Where(block => block.Type == BlockType.Paragraph)
+            .OrderBy(block => block.Order)
+            .FirstOrDefault();
+        if (firstParagraph?.Content is not ITextBlockContent text)
+            return string.Empty;
+
+        var plain = System.Text.RegularExpressions.Regex
+            .Replace(text.Html ?? string.Empty, "<[^>]*>", string.Empty)
+            .Trim();
+        return plain.Length <= 160 ? plain : plain[..157] + "…";
+    }
 
     private static string PostStatusClass(NotionBlogPostDto post)
         => post.PublishedAt is null

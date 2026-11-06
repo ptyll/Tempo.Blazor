@@ -50,6 +50,9 @@
        content) — the same data-demo-shell hook the modeling editor page uses. This replaces the
        E2E init-script hack that hid the bar from the tests. */
     .demo-shell:has(.notion-editor-demo) [data-demo-shell="main"] > .sticky { position: static; }
+    /* The shared page body is max-w-7xl. With the 18.5rem demo sidebar that leaves the editor
+       below its 1024 desktop breakpoint even at a 1440 viewport, so shell panels open as sheets. */
+    .demo-shell:has(.notion-editor-demo) [data-demo-shell="page-body"] { max-width: none !important; }
 </style>
 
 <!-- Page Header -->
@@ -138,6 +141,8 @@
                             CurrentUserGroupIds="@CurrentUserGroupIds"
                             ReadOnly="@IsQueryFlagEnabled("readonly")"
                             CommentPresentation="CommentPresentationForQuery"
+                            PageCommentsPresentation="PageCommentsPresentationForQuery"
+                            ShowMeta="true"
                             InitialPageId="@_currentPage.Id.ToString()"
                             ShowSidebar="true"
                             OnCreateTokenRequested="@CreateTokenAsync"
@@ -1069,6 +1074,7 @@
         "seedMediaPage",
         "seedMentionTokenPage",
         "seedPageInfoPage",
+        "seedPhase5Evidence",
         "seedPagePropertiesPage",
         "seedPageReactionsEmptyPage",
         "seedPageReactionsManyPage",
@@ -1134,16 +1140,21 @@
             (() => {
                 const apiBase = {{apiBaseJson}};
                 const methods = {{methodsJson}};
-                const seed = async (scenario) => {
-                    const response = await fetch(`${apiBase}/api/notion/e2e/seed/${encodeURIComponent(scenario)}`, {
+                const seed = (scenario) => {
+                    // Return the fetch promise. A fire-and-forget POST plus an immediate reload
+                    // aborts the seed (net::ERR_ABORTED) and the next panel opens against the
+                    // pre-seed store — blog lists then render "0 posts".
+                    return fetch(`${apiBase}/api/notion/e2e/seed/${encodeURIComponent(scenario)}`, {
                         method: 'POST'
+                    }).then(response => {
+                        if (!response.ok) {
+                            throw new Error(`Notion E2E seed '${scenario}' failed with ${response.status}`);
+                        }
+                        window.setTimeout(() => window.location.reload(), 0);
+                        return true;
                     });
-                    if (!response.ok) {
-                        throw new Error(`Notion E2E seed '${scenario}' failed with ${response.status}`);
-                    }
-                    window.setTimeout(() => window.location.reload(), 0);
-                    return true;
                 };
+                window.tmNotionDemoApiBase = apiBase;
                 window.tmNotionDemo = window.tmNotionDemo || {};
                 for (const method of methods) {
                     window.tmNotionDemo[method] = () => seed(method);
@@ -1228,6 +1239,15 @@
             "popover" => NotionCommentPresentation.Popover,
             _ => NotionCommentPresentation.Auto,
         };
+
+    /// <summary>
+    /// <c>?pageComments=dialog</c> pins the page-comment panel to the dialog presentation
+    /// (phase 5, P4). The default stays Inline.
+    /// </summary>
+    private NotionPageCommentsPresentation PageCommentsPresentationForQuery
+        => GetQueryValue("pageComments")?.Equals("dialog", StringComparison.OrdinalIgnoreCase) == true
+            ? NotionPageCommentsPresentation.Dialog
+            : NotionPageCommentsPresentation.Inline;
 
     private string CurrentUserId => GetQueryValue("user") switch
     {

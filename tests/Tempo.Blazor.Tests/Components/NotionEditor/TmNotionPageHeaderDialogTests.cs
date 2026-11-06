@@ -118,12 +118,13 @@ public sealed class TmNotionPageHeaderDialogTests : LocalizationTestBase
     [Fact]
     public void CoverDialog_DisabledSetCover_UsesDisabledSurfaces_NotPrimaryOpacity()
     {
-        var css = File.ReadAllText(Path.Combine(FindNotionRoot(), "Page", "TmNotionPageHeader.razor.css"));
+        var css = File.ReadAllText(Path.Combine(FindNotionRoot(), "..", "..", "wwwroot", "css", "tempo-blazor-notion-editor.css"));
 
         // A disabled primary must read as disabled — core disabled tokens, never opacity on the
-        // primary colour (worst in dark mode).
+        // primary colour (worst in dark mode). The rule lives in the package global CSS, scoped to
+        // the cover dialog class the TmModal carries, because scoped CSS cannot reach the portal.
         var match = System.Text.RegularExpressions.Regex.Match(css,
-            @"tm-modal-footer \.tm-btn-primary:disabled\s*\{(?<body>[^}]*)\}");
+            @"\.tm-notion-cover-dialog \.tm-modal-footer \.tm-btn-primary:disabled\s*\{(?<body>[^}]*)\}");
         match.Success.Should().BeTrue("the cover footer overrides the disabled primary");
         match.Groups["body"].Value.Should().Contain("var(--tm-bg-muted)");
         match.Groups["body"].Value.Should().Contain("var(--tm-text-disabled)");

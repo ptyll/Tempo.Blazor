@@ -4,6 +4,8 @@
 @using Tempo.Blazor.Components.Overlay
 @using Tempo.Blazor.Components.Feedback
 @using Tempo.Blazor.Components.Buttons
+@using Tempo.Blazor.Components.Icons
+@using Tempo.Blazor.Components.Avatars
 
 @* ── Cover image ─────────────────────────────────────────────────────────── *@
 @if (!string.IsNullOrEmpty(Page.CoverImageUrl))
@@ -43,6 +45,7 @@
 <TmModal Show="_showCoverDialog"
          OnClose="CloseCoverDialog"
          Title="@Loc["TmNotionPageHeader_CoverDialogTitle"]"
+         Class="tm-notion-cover-dialog"
          Size="ModalSize.Small"
          MobilePresentation="MobilePresentation.Auto"
          LayoutMode="LayoutMode"
@@ -157,7 +160,7 @@
             @onkeydown="OnTitleKeyDownAsync">
         </h1>
 
-        @if (UnresolvedCommentCount > 0)
+        @if (UnresolvedCommentCount > 0 && !ShowMeta)
         {
             <button class="tm-notion-header-comment-badge"
                     type="button"
@@ -207,6 +210,45 @@
                     <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
                         <path d="M2 2l8 8M10 2L2 10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
                     </svg>
+                </button>
+            }
+        </div>
+    }
+
+    @* Meta row (phase 5, N2; opt-in via ShowMeta) *@
+    @if (ShowMeta)
+    {
+        <div class="tm-notion-header-meta-row" data-testid="notion-page-meta">
+            @if (Page.LastEditedAt is { } lastEdited && lastEdited != default)
+            {
+                <span class="tm-notion-header-meta-row__item">
+                    <TmIcon Name="@IconNames.Clock" Size="IconSize.Xs" />
+                    <span class="tm-notion-header-meta-row__label">@Loc["TmNotionPageHeader_MetaLastEdited"]</span>
+                    <time class="tm-notion-header-meta-row__time"
+                          datetime="@lastEdited.ToString("O")"
+                          title="@AbsoluteTime(lastEdited)">
+                        @RelativeTime.Format(lastEdited)
+                    </time>
+                </span>
+            }
+            @if (!string.IsNullOrWhiteSpace(Page.LastEditedByUserId))
+            {
+                <span class="tm-notion-header-meta-row__item">
+                    <TmAvatar Name="@_lastEditorName" Size="AvatarSize.Xs" Alt="@_lastEditorName" />
+                    <span class="tm-notion-header-meta-row__author">@_lastEditorName</span>
+                </span>
+            }
+            @if (UnresolvedCommentCount > 0)
+            {
+                <button class="tm-notion-header-meta-row__item tm-notion-header-meta-row__comment-link"
+                        type="button"
+                        data-testid="notion-page-meta-comments"
+                        title="@Loc.Plural("TmNotionPageHeader_UnresolvedComments", UnresolvedCommentCount)"
+                        aria-label="@Loc.Plural("TmNotionPageHeader_UnresolvedComments", UnresolvedCommentCount)"
+                        @onclick="OnCommentBadgeClicked"
+                        @onclick:stopPropagation="true">
+                    <TmIcon Name="@IconNames.MessageSquare" Size="IconSize.Xs" />
+                    @Loc.Plural("TmNotionPageHeader_MetaComments", UnresolvedCommentCount)
                 </button>
             }
         </div>

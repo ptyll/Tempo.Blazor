@@ -88,13 +88,15 @@
                              LayoutMode="LayoutMode"
                              Title="@ShellPanelTitle"
                              ShowHeader="false"
+                             CloseOnEscape="true"
+                             RestoreFocusTargetId="@ShellPanelTriggerId"
                              Class="tm-notion-shell-panel tm-notion-shell-panel--overlay"
                              Width="@ShellPanelWidth">
                     <ChildContent>
                         @switch (_openShellPanel)
                         {
                             case NotionShellPanel.Tasks when _context.WorkItemSource is not null:
-                                <div class="tm-notion-shell-panel__body tm-notion-tasks-panel">
+                                <div class="tm-notion-shell-panel__body tm-notion-tasks-panel tm-notion-shell-panel__body--tasks">
                                     <TmNotionMyTasks WorkItemSource="_context.WorkItemSource"
                                                      CurrentUserId="@EffectiveCurrentUserId"
                                                      OnClosed="CloseShellPanel"
@@ -198,6 +200,7 @@
                     <CascadingValue Value="_scrollSpyBlockId" Name="TmActiveHeadingBlockId" IsFixed="false">
                         <TmNotionPage Page="_currentPage"
                                       ReadOnly="IsEffectivelyReadOnly || _currentPage.IsLocked"
+                                      ShowMeta="ShowMeta"
                                       EffectivePermission="_effectivePermission"
                                       OnPermissionsChanged="OnPagePermissionsChangedAsync"
                                       OnPageUpdated="OnChildPageUpdatedAsync"
@@ -378,7 +381,7 @@
                                          Text="@Loc["Notion_Tasks_Title"]"
                                          Tooltip="@Loc["Notion_Tasks_Title"]"
                                          Pressed="_openShellPanel == NotionShellPanel.Tasks"
-                                         Priority="ToolbarButtonPriority.Pinned"
+                                         Priority="@TasksPriority"
                                          OnClick="ToggleTasksPanelAsync"
                                          AdditionalAttributes="@(Test("notion-tasks"))" />
                     </TmToolbarGroup>

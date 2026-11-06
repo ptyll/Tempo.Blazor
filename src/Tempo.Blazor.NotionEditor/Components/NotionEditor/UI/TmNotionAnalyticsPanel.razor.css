@@ -238,3 +238,60 @@
 @keyframes tm-notion-analytics-spin {
     to { transform: rotate(360deg); }
 }
+
+
+/* ── Phase 5 (P6): range toggle, container queries, chart canvas ── */
+
+.tm-notion-analytics {
+    container-type: inline-size;
+}
+
+.tm-notion-analytics__range {
+    display: inline-flex;
+    gap: var(--tm-space-1);
+}
+
+.tm-notion-analytics__range-btn {
+    min-height: 1.75rem;
+    padding: 0 var(--tm-space-2);
+    border: 1px solid var(--tm-border-color);
+    border-radius: var(--tm-radius-full);
+    background: transparent;
+    font-size: var(--tm-font-size-xs);
+    color: var(--tm-text-secondary);
+    cursor: pointer;
+    transition: background var(--tm-transition-fast), color var(--tm-transition-fast), border-color var(--tm-transition-fast);
+}
+
+.tm-notion-analytics__range-btn:hover {
+    color: var(--tm-text-primary);
+}
+
+.tm-notion-analytics__range-btn[aria-pressed="true"] {
+    border-color: var(--tm-color-primary);
+    background: var(--tm-color-primary);
+    color: var(--tm-color-on-primary);
+}
+
+.tm-notion-analytics__section-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--tm-space-3);
+    flex-wrap: wrap;
+}
+
+.tm-notion-analytics__chart-canvas {
+    min-height: 0;
+}
+
+@container (max-width: 520px) {
+    .tm-notion-analytics__summary {
+        grid-template-columns: 1fr;
+    }
+
+    .tm-notion-analytics__section-head {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+}

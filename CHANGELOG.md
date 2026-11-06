@@ -2,6 +2,8 @@
 
 ## 2.10.0 (unreleased)
 
+- **NotionEditor phase-5 UX.** The notification sheet keeps its visible title; filter and Mark-all buttons, My Tasks filter pills and the audit chevron grow to `--tm-touch-target` on a coarse pointer. The audit chevron is labelled "Details for {0} {1}". Resolved comment threads no longer dim the whole card: the Resolved label uses `--tm-color-success-text` and the actions use `--tm-text-secondary`. The analytics chart axis labels use `--tm-font-size-xs` and short `M/d` labels so the last tick is not clipped.
+- **Drawer popover box.** A modal `TmDrawer` root is a top-layer popover. The UA reset (`:where(.tm-drawer[popover])`) sets `inset`/`width`/`height` to `auto`, so a side sheet and a bottom sheet had no box: the panel's `height: 100%` resolved against auto and the slide-in finished off-screen. `.tm-drawer[popover].tm-drawer--right|left|bottom` now pins `inset: 0` and `max-block-size: 100dvh`. The panel animation and transform are unchanged. `.tm-drawer__body` scrolls (`overflow: auto`, `min-block-size: 0`). Hosts must not re-pin `.tm-drawer__panel` position, animation or transform.
 - **Breaking: `TmNotionEditor` shell.** The editor root is now `TmEditorShell`. `LayoutMode` (`TmLayoutMode`, default `Auto`) resolves desktop, tablet and mobile from the editor container. `Chrome` is `Full` (default), `Minimal` or `None`. `InspectorContent` is an empty right-slot. Below desktop the sidebar is a drawer of the editor, not a viewport-fixed panel, and it starts closed. Floating menus (slash, emoji, color, type switcher, token, status) use the core overlay; the JS clamps `adjustSlashMenuPosition`, `adjustEmojiPickerPosition`, `adjustColorPickerPosition`, `adjustTypeSwitcherPosition` and `isNarrowViewport` are gone.
   - **Before:** `<TmNotionEditor DataProvider="..." />` always rendered the full top bar, and a narrow viewport pinned the sidebar to the window.
   - **After:** the same call is unchanged (`Chrome=Full`, `LayoutMode=Auto`). A public host passes `Chrome="NotionEditorChrome.Minimal"`. A host that needs no chrome passes `Chrome="NotionEditorChrome.None"`.
@@ -1358,6 +1360,26 @@ findings table and the per-leg results) and the two perf runs
   ≤ +10 % budget is claimed.
 
 ### Breaking / Migration
+
+- **NotionEditor phase 5: `TmNotionPageCommentSection` removed; shell-panel DOM changed (N2, P4–P7).**
+
+  ```razor
+  @* before *@
+  <TmNotionPageCommentSection PageId="@pageId" />
+  <button class="tm-notion-load-error__retry tm-notion-load-error__retry--primary">Reload</button>
+  <button class="tm-notion-load-error__retry">Keep mine</button>
+  <div class="tm-notion-audit__list">…</div>
+  <svg class="tm-chart tm-notion-analytics__sparkline"></svg>
+
+  @* after *@
+  <TmNotionPageCommentPanel PageId="@pageId" Mode="TmNotionPageCommentPanelMode.Embedded" />
+  <button class="tm-notion-load-error__retry tm-notion-load-error__retry--primary">Reload</button>
+  <button class="tm-notion-load-error__retry">Keep mine</button>
+  <table class="tm-notion-audit__table">…</table>
+  <TmChart />
+  ```
+
+  Hosts that want the dialog pass `PageCommentsPresentation="NotionPageCommentsPresentation.Dialog"` on `TmNotionEditor`. `ShowMeta` (default `false`) is the opt-in meta row. Audit cards replace the table below 640 px.
 
 - **Notion editor (phase 2): stored colours are palette names, not hex.** A text or background colour picked in the editor is now one of `gray`, `red`, `orange`, `yellow`, `green`, `blue`, `purple`, `pink`, `brown` (or null for the default). The swatch paints from `--tm-notion-color-{name}` and `--tm-notion-color-{name}-bg`, so dark mode and the indigo theme recompute it. A document saved before 2.10.0 still renders: `NotionColorTokens.Name` maps the legacy hex to the same name at render time, and nothing rewrites the stored JSON.
 

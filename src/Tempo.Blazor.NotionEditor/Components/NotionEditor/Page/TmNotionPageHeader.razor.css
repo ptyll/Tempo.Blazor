@@ -121,14 +121,6 @@
     border-color: var(--tm-focus-ring, var(--tm-color-primary));
 }
 
-/* Disabled primary in the cover footer: core disabled surfaces, not opacity on the primary
-   colour — a 50 % blue still reads as an actionable button, worst in dark mode (UX review). */
-.tm-modal-footer .tm-btn-primary:disabled {
-    background: var(--tm-bg-muted);
-    color: var(--tm-text-disabled);
-    opacity: 1;
-}
-
 .tm-notion-cover-dialog__presets {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(44px, 1fr));
@@ -557,4 +549,51 @@
         right: var(--tm-notion-page-padding-x-narrow, 1rem);
         width: auto;
     }
+}
+
+/* ── Meta row (phase 5, N2) ─────────────────────────────────────── */
+
+.tm-notion-header-meta-row {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--tm-space-2) var(--tm-space-5);
+    margin-top: var(--tm-space-3);
+    font-size: var(--tm-font-size-sm);
+    color: var(--tm-text-secondary);
+}
+
+.tm-notion-header-meta-row__item {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--tm-space-2);
+    min-width: 0;
+}
+
+.tm-notion-header-meta-row__label {
+    color: var(--tm-text-tertiary);
+}
+
+.tm-notion-header-meta-row__time {
+    color: var(--tm-text-secondary);
+}
+
+.tm-notion-header-meta-row__author {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.tm-notion-header-meta-row__comment-link {
+    padding: 0;
+    border: none;
+    background: transparent;
+    font: inherit;
+    color: var(--tm-text-secondary);
+    cursor: pointer;
+    transition: color var(--tm-notion-anim-fast);
+}
+
+.tm-notion-header-meta-row__comment-link:hover {
+    color: var(--tm-color-primary);
 }

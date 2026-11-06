@@ -22,6 +22,26 @@ public partial class TmNotionPanelHeader : TmComponentBase
     /// <summary>Additional CSS class.</summary>
     [Parameter] public string? Class { get; set; }
 
+    /// <summary>
+    /// Moves focus to the (<c>tabindex="-1"</c>) title when the panel opens. Defaults to true: the
+    /// docked shell panel's focus scope closes on Escape only while focus is inside it, and the
+    /// toolbar trigger that opened the panel otherwise keeps focus outside.
+    /// </summary>
+    [Parameter] public bool FocusOnOpen { get; set; } = true;
+
+    private ElementReference _titleRef;
+
+    /// <inheritdoc />
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        await base.OnAfterRenderAsync(firstRender);
+        if (!firstRender || !FocusOnOpen)
+            return;
+
+        try { await _titleRef.FocusAsync(preventScroll: true); }
+        catch { /* prerender / renderer without JS */ }
+    }
+
     private Task CloseAsync() => OnClosed.InvokeAsync();
 
     private Task OnKeyDown(KeyboardEventArgs args)

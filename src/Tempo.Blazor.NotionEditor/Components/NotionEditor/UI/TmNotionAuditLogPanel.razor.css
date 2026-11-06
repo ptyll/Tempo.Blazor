@@ -190,6 +190,7 @@
 .tm-notion-audit__list {
     display: flex;
     flex-direction: column;
+    flex: 1 1 auto;
     gap: var(--tm-space-3);
     min-height: 0;
     overflow-y: auto;
@@ -318,4 +319,141 @@
         align-items: flex-start;
         flex-direction: column;
     }
+}
+
+/* ── Phase 5 (P6): table/cards layout, row expansion, compact bar ── */
+
+.tm-notion-audit {
+    container-type: inline-size;
+}
+
+/* Wide default: the table; cards render for a narrow container (or the pinned modifier). */
+.tm-notion-audit__list {
+    display: none;
+}
+
+.tm-notion-audit--cards .tm-notion-audit__table {
+    display: none;
+}
+
+.tm-notion-audit--cards .tm-notion-audit__list {
+    display: flex;
+}
+
+@container (max-width: 640px) {
+    .tm-notion-audit:not(.tm-notion-audit--table) .tm-notion-audit__table {
+        display: none;
+    }
+
+    .tm-notion-audit:not(.tm-notion-audit--table) .tm-notion-audit__list {
+        display: flex;
+    }
+
+    .tm-notion-audit:not(.tm-notion-audit--table) .tm-notion-audit__filters--inline {
+        display: none;
+    }
+
+    .tm-notion-audit:not(.tm-notion-audit--table) .tm-notion-audit__toolbar {
+        display: none;
+    }
+
+    .tm-notion-audit:not(.tm-notion-audit--table) .tm-notion-audit__compact-bar {
+        display: flex;
+    }
+}
+
+.tm-notion-audit__table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: var(--tm-font-size-sm);
+}
+
+.tm-notion-audit__table th {
+    text-align: start;
+    padding: var(--tm-space-2) var(--tm-space-3);
+    border-bottom: 1px solid var(--tm-border-color);
+    color: var(--tm-text-secondary);
+    font-weight: var(--tm-font-weight-medium);
+    white-space: nowrap;
+}
+
+.tm-notion-audit__table td {
+    padding: var(--tm-space-2) var(--tm-space-3);
+    border-bottom: 1px solid var(--tm-border-color);
+    vertical-align: middle;
+}
+
+.tm-notion-audit__row-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.75rem;
+    height: 1.75rem;
+    margin-inline-start: auto;
+    border: 1px solid var(--tm-border-color);
+    border-radius: var(--tm-radius-md);
+    background: var(--tm-bg-surface);
+    color: var(--tm-text-secondary);
+    cursor: pointer;
+}
+
+.tm-notion-audit__row-chevron {
+    transition: transform var(--tm-transition-fast);
+}
+
+.tm-notion-audit__row-chevron--open {
+    transform: rotate(180deg);
+}
+
+/* Coarse pointers: the 14px chevron keeps its glyph, but the toggle grows to the touch target. */
+@media (pointer: coarse) {
+    .tm-notion-audit__row-toggle {
+        width: var(--tm-touch-target);
+        height: var(--tm-touch-target);
+    }
+}
+
+.tm-notion-audit__row-details {
+    margin: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+    gap: var(--tm-space-2) var(--tm-space-4);
+    padding: var(--tm-space-2) var(--tm-space-3);
+    background: var(--tm-bg-surface-secondary);
+    border-radius: var(--tm-radius-md);
+    font-size: var(--tm-font-size-xs);
+}
+
+.tm-notion-audit__row-details dt {
+    color: var(--tm-text-secondary);
+    font-weight: var(--tm-font-weight-medium);
+}
+
+.tm-notion-audit__row-details dd {
+    margin: 0;
+    color: var(--tm-text-primary);
+    overflow-wrap: anywhere;
+}
+
+.tm-notion-audit__entity-type {
+    color: var(--tm-text-secondary);
+}
+
+/* Compact bar: filters sheet trigger + the ⋯ overflow holding the export. */
+.tm-notion-audit__compact-bar {
+    display: none;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--tm-space-2);
+    padding: var(--tm-space-2) var(--tm-space-3);
+    border-bottom: 1px solid var(--tm-border-color);
+}
+
+.tm-notion-audit--table .tm-notion-audit__compact-bar {
+    display: none;
+}
+
+.tm-notion-audit__filters--sheet {
+    display: grid;
+    gap: var(--tm-space-3);
 }

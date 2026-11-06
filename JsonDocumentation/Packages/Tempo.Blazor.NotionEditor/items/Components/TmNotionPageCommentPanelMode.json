@@ -1,0 +1,10 @@
+{
+  "kind": "Enum",
+  "category": "Components",
+  "namespace": "Tempo.Blazor.Components.NotionEditor.UI",
+  "description": "Presentation mode of TmNotionPageCommentPanel. Inline (the default) renders the collapsible toggle plus the expandable body; Embedded renders the always-expanded body with no toggle — used inside the page-comments dialog (PageCommentsPresentation=Dialog) and any host-owned container.",
+  "packageId": "Tempo.Blazor.NotionEditor",
+  "sourcePath": "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/UI/TmNotionPageCommentPanelMode.cs",
+  "documentationStatus": "generated",
+  "itemName": "TmNotionPageCommentPanelMode"
+}

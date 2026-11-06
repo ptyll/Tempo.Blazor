@@ -85,3 +85,36 @@
     overflow-y: auto;
     padding: var(--tm-space-4);
 }
+
+/* ── Phase 5 (P5): cover, larger title, author meta, publish-in-meta, footer ── */
+
+.tm-notion-blog-post__cover {
+    width: 100%;
+    max-height: 16rem;
+    object-fit: cover;
+    border-bottom: 1px solid var(--tm-border-color);
+}
+
+.tm-notion-blog-post__title {
+    font-size: var(--tm-font-size-2xl);
+}
+
+.tm-notion-blog-post__author {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.tm-notion-blog-post__footer {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-1);
+    padding: var(--tm-space-3) var(--tm-space-4);
+    border-top: 1px solid var(--tm-border-color);
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-xs);
+}
+
+.tm-notion-blog-post__header .tm-notion-blog-post__publish {
+    align-self: center;
+}

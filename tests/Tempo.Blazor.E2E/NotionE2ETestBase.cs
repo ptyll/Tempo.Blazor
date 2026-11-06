@@ -593,35 +593,11 @@ public abstract class NotionE2ETestBase : WasmTestBase
         });
     }
 
-    protected async Task SeedBlogPageAsync()
-    {
-        await InvokeSeedAsync("seedBlogPage");
-        await Page.WaitForSelectorAsync(".tm-notion-page", new PageWaitForSelectorOptions
-        {
-            State = WaitForSelectorState.Visible,
-            Timeout = 60000
-        });
-    }
+    protected async Task SeedBlogPageAsync() => await SeedViaApiAndReloadAsync("seedBlogPage");
 
-    protected async Task SeedEmptyBlogPageAsync()
-    {
-        await InvokeSeedAsync("seedEmptyBlogPage");
-        await Page.WaitForSelectorAsync(".tm-notion-page", new PageWaitForSelectorOptions
-        {
-            State = WaitForSelectorState.Visible,
-            Timeout = 60000
-        });
-    }
+    protected async Task SeedEmptyBlogPageAsync() => await SeedViaApiAndReloadAsync("seedEmptyBlogPage");
 
-    protected async Task SeedManyBlogPostsPageAsync()
-    {
-        await InvokeSeedAsync("seedManyBlogPostsPage");
-        await Page.WaitForSelectorAsync(".tm-notion-page", new PageWaitForSelectorOptions
-        {
-            State = WaitForSelectorState.Visible,
-            Timeout = 60000
-        });
-    }
+    protected async Task SeedManyBlogPostsPageAsync() => await SeedViaApiAndReloadAsync("seedManyBlogPostsPage");
 
     protected async Task SeedBulkPagesAsync()
     {
@@ -839,6 +815,30 @@ public abstract class NotionE2ETestBase : WasmTestBase
             methodName,
             new PageWaitForFunctionOptions { Timeout = 60000 });
         await Page.EvaluateAsync("methodName => window.tmNotionDemo[methodName]()", methodName);
+    }
+
+    /// <summary>
+    /// Seeds through the API the demo helper wraps, then reloads once. The helper posts and
+    /// schedules its own <c>location.reload()</c>, so calling it and reloading again aborts the
+    /// seed (<c>net::ERR_ABORTED</c>) and the next panel opens against the pre-seed store.
+    /// </summary>
+    protected async Task SeedViaApiAndReloadAsync(string scenario)
+    {
+        using var http = DemoApiTestHttp.CreateClient();
+        using var response = await http.PostAsync($"/api/notion/e2e/seed/{Uri.EscapeDataString(scenario)}", null);
+        response.EnsureSuccessStatusCode();
+
+        await Page.ReloadAsync(new PageReloadOptions
+        {
+            WaitUntil = WaitUntilState.DOMContentLoaded,
+            Timeout = 60000
+        });
+        await WaitForAppReadyAsync(Page);
+        await Page.WaitForSelectorAsync(".tm-notion-page", new PageWaitForSelectorOptions
+        {
+            State = WaitForSelectorState.Visible,
+            Timeout = 60000
+        });
     }
 
     /// <summary>

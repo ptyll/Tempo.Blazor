@@ -161,6 +161,21 @@ public partial class TmNotionEditor : TmComponentBase, IAsyncDisposable
     /// </summary>
     [Parameter] public NotionCommentPresentation CommentPresentation { get; set; } = NotionCommentPresentation.Auto;
 
+    /// <summary>
+    /// How the page-level comment panel presents (phase 5, P4). <see cref="NotionPageCommentsPresentation.Inline"/>
+    /// (the default) keeps the collapsible panel at the bottom of the page;
+    /// <see cref="NotionPageCommentsPresentation.Dialog"/> renders no inline panel — the header badge
+    /// and the Comments page action open a core <c>TmModal</c> hosting the Embedded panel (a sheet
+    /// on a mobile layout).
+    /// </summary>
+    [Parameter] public NotionPageCommentsPresentation PageCommentsPresentation { get; set; } = NotionPageCommentsPresentation.Inline;
+
+    /// <summary>
+    /// Opt-in page meta row under the title (last edited, last editor, comment count link).
+    /// Defaults to <see langword="false"/>; the demo turns it on.
+    /// </summary>
+    [Parameter] public bool ShowMeta { get; set; }
+
     /// <summary>Additional CSS class on the root element.</summary>
     [Parameter] public string? Class { get; set; }
 
@@ -204,6 +219,8 @@ public partial class TmNotionEditor : TmComponentBase, IAsyncDisposable
     private bool                       _templateGalleryOpen;
     private bool                       _shareDialogOpen;
     private string?                    _selectedSpaceId;
+    /// <summary>Space last taken from a loaded page. A user pick (sidebar) is not overwritten.</summary>
+    private string?                    _pageSpaceId;
     private NotionEditorViewMode       _viewMode = NotionEditorViewMode.Normal;
     private string?                    _scrollSpyBlockId;
     private PageEffectivePermissionDto? _effectivePermission;
@@ -248,9 +265,24 @@ public partial class TmNotionEditor : TmComponentBase, IAsyncDisposable
     };
 
     /// <summary>The side sheet width of the open shell panel.</summary>
-    private string ShellPanelWidth => _openShellPanel is NotionShellPanel.Blog or NotionShellPanel.Audit
-        ? "min(52rem, 100%)"
-        : "26rem";
+    private string ShellPanelWidth => _openShellPanel switch
+    {
+        // Blog and audit need the wide table. Tasks stays wide enough that a 1440/1600 dock
+        // is a ≥640px container (inline filters); a phone sheet is still <640 (Filters button).
+        NotionShellPanel.Blog or NotionShellPanel.Audit => "min(52rem, 100%)",
+        NotionShellPanel.Tasks => "min(42rem, 100%)",
+        _ => "26rem",
+    };
+
+    /// <summary>The toolbar trigger focus returns to when Escape closes the overlay panel.</summary>
+    private string? ShellPanelTriggerId => _openShellPanel switch
+    {
+        NotionShellPanel.Tasks     => "notion-tasks",
+        NotionShellPanel.Blog      => "notion-blog-open",
+        NotionShellPanel.Analytics => "notion-analytics-open",
+        NotionShellPanel.Audit     => "notion-audit-open",
+        _                          => null,
+    };
 
     private string RootClasses => $"tm-notion-editor {_editorModifiers} {Class}".Trim();
 
@@ -283,6 +315,15 @@ public partial class TmNotionEditor : TmComponentBase, IAsyncDisposable
     private ToolbarButtonPriority ToolPriority => EffectiveLayout is TmLayoutMode.Tablet or TmLayoutMode.Mobile
         ? ToolbarButtonPriority.OverflowOnly
         : ToolbarButtonPriority.Secondary;
+
+    /// <summary>
+    /// My Tasks stays pinned on desktop and tablet. On the mobile band the pinned sidebar toggle,
+    /// watch and bell (44px touch targets each) already fill a 320px bar; a pinned Tasks could
+    /// not fold into "More" and the More trigger painted over it (taps opened More instead).
+    /// </summary>
+    private ToolbarButtonPriority TasksPriority => EffectiveLayout is TmLayoutMode.Mobile
+        ? ToolbarButtonPriority.Primary
+        : ToolbarButtonPriority.Pinned;
 
     private static Dictionary<string, object> Group(string key) => new() { ["data-tm-group"] = key };
 
@@ -572,7 +613,14 @@ public partial class TmNotionEditor : TmComponentBase, IAsyncDisposable
             if (EffectiveLayout is TmLayoutMode.Mobile or TmLayoutMode.Tablet)
                 _sidebarVisible = false;
             _currentPage   = page;
-            _selectedSpaceId ??= string.IsNullOrWhiteSpace(page.SpaceId) ? null : page.SpaceId;
+            // Follow the loaded page unless the user picked another space. A one-shot ??= kept the
+            // space from the first navigation, so a seed that moved the page (blog posts live in
+            // "team") still queried the old space and the panel listed 0 posts.
+            var loadedSpaceId = string.IsNullOrWhiteSpace(page.SpaceId) ? null : page.SpaceId;
+            if (_selectedSpaceId is null
+                || string.Equals(_selectedSpaceId, _pageSpaceId, StringComparison.OrdinalIgnoreCase))
+                _selectedSpaceId = loadedSpaceId;
+            _pageSpaceId = loadedSpaceId;
 
             if (_aggregateSession is not null)
             {
@@ -1071,6 +1119,7 @@ public partial class TmNotionEditor : TmComponentBase, IAsyncDisposable
         AllowedBlockTypes           = AllowedBlockTypes,
         DeniedBlockTypes            = SinglePageMode ? SinglePageDeniedBlockTypes : null,
         CommentPresentation         = CommentPresentation,
+        PageCommentsPresentation    = PageCommentsPresentation,
         PageActions                 = _context?.PageActions,
         PageActionsChanged          = NotifyPageActionsChanged,
         NavigateTo                  = pageId => NavigateToPageAsync(pageId),

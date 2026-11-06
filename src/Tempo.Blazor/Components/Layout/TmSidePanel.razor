@@ -16,7 +16,8 @@
            existing consumer already has. The scope is not modal: it never traps focus. *@
         @if (CloseOnEscape)
         {
-            <TmFocusScope Active="true" Modal="false" CloseOnEscape="true" OnEscape="CloseAsync">
+            <TmFocusScope Active="true" Modal="false" CloseOnEscape="true" OnEscape="CloseAsync"
+                          RestoreFocusTargetId="@RestoreFocusTargetId">
                 @DockedPanel
             </TmFocusScope>
         }
@@ -92,10 +93,10 @@ else if (Open)
 
     /// <summary>
     /// The id of the host element (typically the button that opened the panel) focus returns to
-    /// when the SHEET presentation closes — whichever way it closes (Escape, header close, the
-    /// backdrop, a swipe, or the host setting <see cref="Open"/> to false). Null keeps the focus
-    /// scope default (the element that was focused when the sheet opened). The docked panel is
-    /// in-flow and leaves focus management to the host.
+    /// when the panel closes — whichever way it closes (Escape, header close, the backdrop, a swipe,
+    /// or the host setting <see cref="Open"/> to false). The sheet forwards it to the drawer; the
+    /// docked panel forwards it only when <see cref="CloseOnEscape"/> wraps the panel in a focus
+    /// scope. Null keeps the focus scope default (the element that was focused when the panel opened).
     /// </summary>
     [Parameter] public string? RestoreFocusTargetId { get; set; }
 

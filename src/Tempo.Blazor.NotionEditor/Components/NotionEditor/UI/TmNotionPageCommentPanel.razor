@@ -5,12 +5,14 @@
 @using Tempo.Blazor.Components.Feedback
 
 @* ── Inline panel — rendered inside page header area ─────────────────────── *@
-<div class="tm-npcp @(Expanded ? "tm-npcp--expanded" : "")"
+<div class="tm-npcp @((Expanded || Mode == TmNotionPageCommentPanelMode.Embedded) ? "tm-npcp--expanded" : "") @(Mode == TmNotionPageCommentPanelMode.Embedded ? "tm-npcp--embedded" : "")"
      role="region"
      aria-label="@Loc["TmNotionPageComment_PanelLabel"]"
      @ref="_panelRef">
 
-    @* ── Toggle header ─────────────────────────────────────────────────────── *@
+    @* ── Toggle header (Inline mode only; Embedded renders the body directly) ── *@
+    @if (Mode == TmNotionPageCommentPanelMode.Inline)
+    {
     <button class="tm-npcp__toggle"
             type="button"
             aria-expanded="@Expanded"
@@ -28,11 +30,28 @@
             </span>
         }
     </button>
+    }
 
-    @* ── Expandable body ───────────────────────────────────────────────────── *@
-    @if (Expanded)
+    @* ── Expandable body (Inline: when Expanded; Embedded: always) ─────────── *@
+    @if (Mode == TmNotionPageCommentPanelMode.Embedded || Expanded)
     {
         <div class="tm-npcp__body">
+
+            @* ── Summary bar: unresolved count + mark all as read ──────────── *@
+            <div class="tm-npcp__summary">
+                <span class="tm-npcp__summary-count">
+                    @Loc.Plural("TmNotionPageComment_UnresolvedSummary", _unresolvedCount)
+                </span>
+                <button class="tm-npcp__mark-all-read"
+                        type="button"
+                        disabled="@(_comments.Count == 0)"
+                        @onclick="MarkAllAsReadAsync">
+                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+                        <path d="M2 6l3 3 5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    @Loc["TmNotionPageComment_MarkAllAsRead"]
+                </button>
+            </div>
 
             @* ── Thread list ──────────────────────────────────────────────── *@
             <TmNotionCommentThreadList ClassPrefix="tm-npcp"
@@ -50,18 +69,6 @@
                                        OnDeleteResult="HandleDeleteConfirmResult">
             @if (!_loading && _comments.Count > 0)
             {
-                @* ── Toolbar ──────────────────────────────────────────────── *@
-                <div class="tm-npcp__toolbar">
-                    <button class="tm-npcp__mark-all-read"
-                            type="button"
-                            @onclick="MarkAllAsReadAsync">
-                        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
-                            <path d="M2 6l3 3 5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                        </svg>
-                        @Loc["TmNotionPageComment_MarkAllAsRead"]
-                    </button>
-                </div>
-
                 @foreach (var comment in _comments)
                     {
                         var threadTree = CommentThreadHelper.BuildTree(comment.Entries);
@@ -191,7 +198,7 @@
                                 {
                                     <button class="tm-npcp__reply-trigger" type="button"
                                             @onclick="() => StartReply(comment)">
-                                        @Loc["TmNotionPageComment_ReplyTrigger"]
+                                        @Loc["TmNotionPageComment_ReplyToThis"]
                                     </button>
                                 }
                             }

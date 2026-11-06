@@ -414,8 +414,25 @@
     overflow:       hidden;
 }
 
-::deep .tm-notion-shell-panel--overlay .tm-notion-shell-panel__body--wide {
+::deep .tm-side-panel--docked.tm-notion-shell-panel--overlay .tm-notion-shell-panel__body--wide {
     width: min(52rem, 100%);
+}
+
+/* Tasks is a size container. A 26rem dock is under 640px, so the inline filters and the
+   Filters button were both hidden. 42rem keeps inline filters on a desktop dock; a phone
+   sheet stays under the container query and shows the button. */
+::deep .tm-side-panel--docked.tm-notion-shell-panel--overlay .tm-notion-tasks-panel {
+    width: min(42rem, 100%);
+}
+
+/* The sheet body fills the drawer panel and scrolls. Position, animation and the viewport box
+   belong to the core drawer — a host override of .tm-drawer__panel kills the slide-in. */
+::deep .tm-side-panel-sheet.tm-notion-shell-panel--overlay .tm-notion-shell-panel__body {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+    min-width: 0;
 }
 
 /* The overlay DOCKED aside is a child component's root: the single-segment .tm-notion-shell-panel
@@ -424,10 +441,15 @@
    untouched — the drawer owns it. */
 ::deep .tm-side-panel--docked.tm-notion-shell-panel--overlay {
     position: absolute;
+    /* The shell root is the containing block. A percentage height against the canvas
+       (a flex item with no definite height) collapsed the panel, and Playwright then
+       treated the blog/audit body as hidden. */
     top:      calc(var(--tm-notion-topbar-height, 44px) + var(--tm-space-2));
     right:    var(--tm-space-4);
+    bottom:   var(--tm-space-4);
     z-index:  var(--tm-z-dropdown);
-    height:   min(36rem, calc(100% - var(--tm-notion-topbar-height, 44px) - var(--tm-space-6)));
+    height:   auto;
+    max-height: calc(100% - var(--tm-notion-topbar-height, 44px) - var(--tm-space-6));
 }
 
 .tm-notion-editor--reading,

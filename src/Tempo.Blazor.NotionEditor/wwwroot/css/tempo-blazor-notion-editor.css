@@ -218,6 +218,8 @@
   .tm-media-library__more-btn,
   .tm-media-library__search-input,
   .tm-my-tasks__check,
+  .tm-my-tasks__group-chevron,
+  .tm-my-tasks__group-toggle,
   .tm-my-tasks__icon-btn,
   .tm-my-tasks__spinner,
   .tm-nbcp,
@@ -244,12 +246,14 @@
   .tm-nmm__tab,
   .tm-notion-ai__cursor,
   .tm-notion-analytics__icon-btn,
+  .tm-notion-analytics__range-btn,
   .tm-notion-analytics__retry,
   .tm-notion-analytics__spinner,
   .tm-notion-audio-block__replace-btn,
   .tm-notion-audit__button,
   .tm-notion-audit__download,
   .tm-notion-audit__icon-btn,
+  .tm-notion-audit__row-chevron,
   .tm-notion-audit__spinner,
   .tm-notion-block,
   .tm-notion-block__comment-thread,
@@ -323,6 +327,7 @@
   .tm-notion-handle__btn,
   .tm-notion-handle__drag,
   .tm-notion-header-comment-badge,
+  .tm-notion-header-meta-row__comment-link,
   .tm-notion-header-cover__actions,
   .tm-notion-header-cover__btn,
   .tm-notion-header-cover__drag-hint,
@@ -513,4 +518,12 @@
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
 }
+}
+
+/* Disabled primary inside the cover dialog: core disabled surfaces, not opacity on the primary
+   colour. The modal is portaled, so scoped CSS cannot reach the footer button. */
+.tm-notion-cover-dialog .tm-modal-footer .tm-btn-primary:disabled {
+    background: var(--tm-bg-muted);
+    color: var(--tm-text-disabled);
+    opacity: 1;
 }

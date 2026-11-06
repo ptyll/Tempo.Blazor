@@ -30,6 +30,25 @@ public partial class TmNotionMyTasks : ComponentBase
     private TaskStatusFilter _status = TaskStatusFilter.Open;
     private TaskDueFilter _due = TaskDueFilter.All;
     private TaskGroupBy _groupBy = TaskGroupBy.DueDate;
+    private bool _filtersSheetOpen;
+
+    private int ActiveFilterCount =>
+        (_scope == TaskScope.All ? 1 : 0)
+        + (_status != TaskStatusFilter.Open ? 1 : 0)
+        + (_due != TaskDueFilter.All ? 1 : 0)
+        + (_groupBy != TaskGroupBy.DueDate ? 1 : 0);
+
+    private Task OpenFiltersSheetAsync()
+    {
+        _filtersSheetOpen = true;
+        return Task.CompletedTask;
+    }
+
+    private Task CloseFiltersSheet()
+    {
+        _filtersSheetOpen = false;
+        return Task.CompletedTask;
+    }
 
     protected override async Task OnInitializedAsync()
     {
@@ -202,6 +221,20 @@ public partial class TmNotionMyTasks : ComponentBase
 
     private static string? AssigneeName(TmWorkItem task)
         => task.Assignees.FirstOrDefault()?.Name;
+
+    private static string? AssigneeAvatar(TmWorkItem task)
+        => task.Assignees.FirstOrDefault()?.AvatarUrl;
+
+    private readonly HashSet<string> _collapsedGroups = new(StringComparer.Ordinal);
+
+    private bool IsGroupCollapsed(string key) => _collapsedGroups.Contains(key);
+
+    private void ToggleGroup(string key)
+    {
+        if (!_collapsedGroups.Remove(key))
+            _collapsedGroups.Add(key);
+        StateHasChanged();
+    }
 
     private static string FilterClass(bool active)
         => active ? "tm-my-tasks__filter tm-my-tasks__filter--active" : "tm-my-tasks__filter";

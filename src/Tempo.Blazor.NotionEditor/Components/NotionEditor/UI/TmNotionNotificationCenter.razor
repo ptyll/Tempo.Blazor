@@ -37,6 +37,8 @@
                     Placement="OverlayPlacement.Bottom"
                     Align="OverlayAlign.End"
                     Offset="8"
+                    MobilePresentation="PanelPresentation.Auto"
+                    SheetTitle="@Loc["Notion_Notifications_Title"]"
                     Role="dialog"
                     AriaLabelledBy="@_titleId"
                     Class="tm-notification-bell__dropdown tm-notion-notifications__panel">
@@ -46,13 +48,14 @@
                     <button type="button"
                             class="tm-notification-bell__filter"
                             data-testid="@TestId("notion-notification-filter")"
+                            aria-pressed="@(_showOnlyUnread ? "true" : "false")"
                             @onclick="() => _showOnlyUnread = !_showOnlyUnread">
                         @(_showOnlyUnread ? Loc["TmNotificationBell_ShowAll"] : Loc["TmNotificationBell_ShowOnlyUnread"])
                     </button>
                     @if (_unreadCount > 0)
                     {
                         <button type="button"
-                                class="tm-notification-bell__mark-all"
+                                class="tm-notification-bell__mark-all tm-notion-notifications__mark-all"
                                 data-testid="@TestId("notion-notification-mark-all")"
                                 @onclick="MarkAllReadAsync">
                             @Loc["Notion_Notifications_MarkAllRead"]
@@ -74,7 +77,7 @@
                                 class="tm-notification-bell__item tm-notion-notifications__item @(n.IsRead ? "" : "tm-notification-bell__item--unread")"
                                 data-testid="@TestId("notion-notification-item")"
                                 @onclick="() => OnItemClickAsync(n)">
-                            <span class="tm-notification-bell__avatar" aria-hidden="true">
+                            <span class="tm-notification-bell__avatar tm-notion-notifications__icon @IconToneClass(n.Type)" aria-hidden="true">
                                 @if (!string.IsNullOrEmpty(n.Actor?.AvatarUrl))
                                 {
                                     <img src="@n.Actor.AvatarUrl" alt="" />
@@ -86,6 +89,10 @@
                             </span>
                             <span class="tm-notification-bell__content">
                                 <span class="tm-notification-bell__message">@n.Title</span>
+                                @if (!string.IsNullOrWhiteSpace(n.Body))
+                                {
+                                    <span class="tm-notion-notifications__body">@n.Body</span>
+                                }
                                 <span class="tm-notification-bell__time">@FormatTime(n.CreatedAt)</span>
                             </span>
                             @if (!n.IsRead)
@@ -102,6 +109,18 @@
                     </div>
                 }
             </div>
+
+            @if (OnViewAll.HasDelegate)
+            {
+                <div class="tm-notion-notifications__footer">
+                    <button type="button"
+                            class="tm-notion-notifications__view-all"
+                            data-testid="@TestId("notion-notification-view-all")"
+                            @onclick="ViewAllAsync">
+                        @Loc["TmNotionNotifications_ViewAll"]
+                    </button>
+                </div>
+            }
     </TmOverlayPanel>
 </div>
 
@@ -120,6 +139,12 @@
 
     /// <summary>Polling interval for server-backed notification services. Defaults to 2.5 seconds.</summary>
     [Parameter] public TimeSpan PollInterval { get; set; } = TimeSpan.FromMilliseconds(2500);
+
+    /// <summary>
+    /// Optional "View all" footer action (Q-P8). The footer renders only when a handler is supplied;
+    /// invoking it closes the panel.
+    /// </summary>
+    [Parameter] public EventCallback OnViewAll { get; set; }
 
     /// <summary>Additional unmatched attributes applied to the root element.</summary>
     [Parameter(CaptureUnmatchedValues = true)] public Dictionary<string, object>? AdditionalAttributes { get; set; }
@@ -282,6 +307,25 @@
         await LoadNotificationsAsync();
         await RefreshUnreadCountAsync(forceRender: true);
     }
+
+    /// <summary>"View all" footer: raises <see cref="OnViewAll"/> and closes the panel.</summary>
+    private async Task ViewAllAsync()
+    {
+        await OnViewAll.InvokeAsync();
+        await SetOpenFromJsAsync(false);
+    }
+
+    /// <summary>Tinted icon square tone per notification type (one custom property, set by the modifier).</summary>
+    private static string IconToneClass(string type) => type switch
+    {
+        TmNotificationTypes.Mention or TmNotificationTypes.Reply or TmNotificationTypes.NewThread
+            or TmNotificationTypes.PageCommentAdded => "tm-notion-notifications__icon--communication",
+        TmNotificationTypes.Reaction => "tm-notion-notifications__icon--reaction",
+        TmNotificationTypes.ThreadResolved or TmNotificationTypes.TaskAssigned => "tm-notion-notifications__icon--success",
+        TmNotificationTypes.PageEdited => "tm-notion-notifications__icon--edit",
+        TmNotificationTypes.PageShared => "tm-notion-notifications__icon--share",
+        _ => string.Empty,
+    };
 
     private async Task OnItemClickAsync(TmNotification notification)
     {

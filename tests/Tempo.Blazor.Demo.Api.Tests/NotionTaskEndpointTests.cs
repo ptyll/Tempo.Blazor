@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using System.Text.Json;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Tempo.Blazor.Abstractions.WorkItems;
 using Tempo.Blazor.Demo.Api.Data;
@@ -15,6 +16,24 @@ public class NotionTaskEndpointTests : IClassFixture<WebApplicationFactory<Progr
 
     public NotionTaskEndpointTests(WebApplicationFactory<Program> factory)
         => _client = factory.CreateClient();
+
+    [Fact]
+    public async Task Phase5EvidenceSeed_PutsTheOpenPageInTheBlogSpace()
+    {
+        var seeded = await _client.PostAsync("/api/notion/e2e/seed/seedPhase5Evidence", null);
+        seeded.EnsureSuccessStatusCode();
+
+        var json = new JsonSerializerOptions(JsonSerializerDefaults.Web);
+        var page = await _client.GetFromJsonAsync<NotionPage>(
+            $"/api/notion/pages/{MockNotionDataStore.Page1Id:D}", json);
+        var posts = await _client.GetFromJsonAsync<PagedResult<NotionBlogPostDto>>(
+            "/api/notion/blog/spaces/team/posts?skip=0&take=10&includeDrafts=true", json);
+
+        Assert.NotNull(page);
+        Assert.Equal("team", page.SpaceId);
+        Assert.NotNull(posts);
+        Assert.True(posts.TotalCount > 0);
+    }
 
     [Fact]
     public async Task QueryTasks_ReturnsTodoBlocksAcrossSeededPages()

@@ -93,6 +93,13 @@ public partial class TmNotionPageCommentPanel : ComponentBase, IDisposable, ITmD
     [Parameter] public string PageId   { get; set; } = string.Empty;
     [Parameter] public bool   Expanded { get; set; }
 
+    /// <summary>
+    /// <see cref="TmNotionPageCommentPanelMode.Inline"/> (default) renders the collapsible toggle;
+    /// <see cref="TmNotionPageCommentPanelMode.Embedded"/> renders the always-expanded body with no
+    /// toggle — used inside the page-comments dialog (<c>PageCommentsPresentation=Dialog</c>).
+    /// </summary>
+    [Parameter] public TmNotionPageCommentPanelMode Mode { get; set; } = TmNotionPageCommentPanelMode.Inline;
+
     [Parameter] public EventCallback<bool> OnExpandedChanged { get; set; }
 
     [Parameter] public EventCallback OnCountChanged { get; set; }
@@ -172,6 +179,9 @@ public partial class TmNotionPageCommentPanel : ComponentBase, IDisposable, ITmD
         {
             _initialized = true;
             await LoadUnresolvedCountAsync();
+            // Embedded has no toggle click to lazy-load the threads — fetch them up front.
+            if (Mode == TmNotionPageCommentPanelMode.Embedded)
+                await LoadAsync();
         }
     }
 
@@ -185,13 +195,14 @@ public partial class TmNotionPageCommentPanel : ComponentBase, IDisposable, ITmD
         if (firstRender)
             _dotNetRef = DotNetObjectReference.Create(this);
 
-        // The panel body (and its mention chips) mount when Expanded flips false→true, which is not firstRender.
-        if (Expanded && !_mentionHandlerAttached)
+        // The panel body (and its mention chips) mounts when Expanded flips false→true (Inline)
+        // or on first render (Embedded), neither of which is firstRender.
+        if ((Mode == TmNotionPageCommentPanelMode.Embedded || Expanded) && !_mentionHandlerAttached)
         {
             _mentionHandlerAttached = true;
             try { await JS.InvokeVoidAsync("tmNotionEditor.initMentionClickHandler", _panelRef, _dotNetRef); } catch { /* best-effort */ }
         }
-        else if (!Expanded)
+        else if (Mode == TmNotionPageCommentPanelMode.Inline && !Expanded)
         {
             _mentionHandlerAttached = false;
         }

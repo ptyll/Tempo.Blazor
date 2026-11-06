@@ -1,0 +1,10 @@
+{
+  "kind": "Enum",
+  "category": "Components",
+  "namespace": "Tempo.Blazor.Components.NotionEditor.UI",
+  "description": "Result layout of TmNotionAuditLogPanel: Auto (the default) renders both the table and the cards and lets the panel's own container query pick (table on a wide container, cards below 640 px); Table and Cards pin one of the two at every width.",
+  "packageId": "Tempo.Blazor.NotionEditor",
+  "sourcePath": "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/UI/TmNotionAuditLogPanel.razor.cs",
+  "documentationStatus": "generated",
+  "itemName": "TmNotionAuditLogLayout"
+}

@@ -22,3 +22,83 @@
     color: var(--tm-color-text-muted);
     font-size: var(--tm-font-size-sm);
 }
+
+/* ── Phase 5 (P7): body second line, tinted type icon square, footer ── */
+
+.tm-notion-notifications__body {
+    display: block;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-xs);
+}
+
+.tm-notion-notifications__icon {
+    /* The tone flows through ONE custom property so rule order cannot decide the colour. */
+    --tm-notion-notification-icon-bg: var(--tm-bg-muted);
+    --tm-notion-notification-icon-fg: var(--tm-text-secondary);
+    flex-shrink: 0;
+    width: 2rem;
+    height: 2rem;
+    border-radius: var(--tm-radius-md);
+    background: var(--tm-notion-notification-icon-bg);
+    color: var(--tm-notion-notification-icon-fg);
+}
+
+.tm-notion-notifications__icon--communication {
+    --tm-notion-notification-icon-bg: var(--tm-color-primary-soft);
+    --tm-notion-notification-icon-fg: var(--tm-color-primary);
+}
+
+.tm-notion-notifications__icon--reaction {
+    --tm-notion-notification-icon-bg: var(--tm-color-warning-soft);
+    --tm-notion-notification-icon-fg: var(--tm-color-warning);
+}
+
+.tm-notion-notifications__icon--success {
+    --tm-notion-notification-icon-bg: var(--tm-color-success-soft);
+    --tm-notion-notification-icon-fg: var(--tm-color-success);
+}
+
+.tm-notion-notifications__icon--edit {
+    --tm-notion-notification-icon-bg: var(--tm-bg-muted);
+    --tm-notion-notification-icon-fg: var(--tm-text-secondary);
+}
+
+.tm-notion-notifications__icon--share {
+    --tm-notion-notification-icon-bg: var(--tm-color-info-subtle);
+    --tm-notion-notification-icon-fg: var(--tm-color-info);
+}
+
+.tm-notion-notifications__mark-all {
+    border-color: var(--tm-color-primary);
+    background: var(--tm-color-primary);
+    color: var(--tm-color-on-primary);
+}
+
+.tm-notion-notifications__mark-all:hover {
+    background: var(--tm-color-primary-hover);
+}
+
+.tm-notion-notifications__footer {
+    display: flex;
+    justify-content: center;
+    padding: var(--tm-space-2);
+    border-top: 1px solid var(--tm-border-color);
+}
+
+.tm-notion-notifications__view-all {
+    padding: 0;
+    border: none;
+    background: transparent;
+    font: inherit;
+    font-size: var(--tm-font-size-sm);
+    color: var(--tm-color-primary);
+    cursor: pointer;
+}
+
+.tm-notion-notifications__view-all:hover {
+    text-decoration: underline;
+}

@@ -16,11 +16,17 @@ using Tempo.Blazor.Tests.Localization;
 
 namespace Tempo.Blazor.Tests.Components.NotionEditor;
 
-public sealed class TmNotionPageCommentSectionTests : LocalizationTestBase
+/// <summary>
+/// Phase 5 (P4): page comment panel behaviors — the summary bar with the unresolved count,
+/// <c>Mode=Embedded</c> (no toggle; used inside the dialog presentation), plus the migrated
+/// interaction/keyboard net formerly hosted by the removed
+/// <c>TmNotionPageCommentSection</c> wrapper.
+/// </summary>
+public sealed class TmNotionPageCommentPanelTests : LocalizationTestBase
 {
     private static readonly Guid PageId = Guid.Parse("cf100000-0000-0000-0000-000000000001");
 
-    public TmNotionPageCommentSectionTests()
+    public TmNotionPageCommentPanelTests()
     {
         Services.AddSingleton<ITmNotificationService, NoOpNotificationService>();
         Services.AddScoped<CommentNotificationOrchestrator>();
@@ -41,6 +47,10 @@ public sealed class TmNotionPageCommentSectionTests : LocalizationTestBase
             ["TmNotionPageComment_PanelLabel"] = "Page comments",
             ["TmNotionPageComment_Toggle"] = "Comments",
             ["TmNotionPageComment_BadgeLabel"] = "{0} unresolved comments",
+            ["TmNotionPageComment_UnresolvedSummary_One"] = "{0} unresolved",
+            ["TmNotionPageComment_UnresolvedSummary_Few"] = "{0} unresolved",
+            ["TmNotionPageComment_UnresolvedSummary_Many"] = "{0} unresolved",
+            ["TmNotionPageComment_UnresolvedSummary_Other"] = "{0} unresolved",
             ["TmNotionPageComment_Loading"] = "Loading comments",
             ["TmNotionPageComment_NoComments"] = "No comments yet",
             ["TmNotionPageComment_Thread"] = "Comment threads",
@@ -77,7 +87,7 @@ public sealed class TmNotionPageCommentSectionTests : LocalizationTestBase
     }
 
     [Fact]
-    public async Task PageCommentSection_AddsRepliesReactsAndResolves()
+    public async Task PageCommentPanel_AddsRepliesReactsAndResolves()
     {
         var provider = new FakeCommentProvider(PageId.ToString("D"));
         var context = new NotionEditorContext
@@ -123,6 +133,57 @@ public sealed class TmNotionPageCommentSectionTests : LocalizationTestBase
         provider.PageComments[0].Status.Should().Be(TmCommentThreadStatus.Resolved);
     }
 
+    // ── Summary bar (phase 5) ────────────────────────────────────────────────
+
+    [Fact]
+    public async Task PageCommentPanel_ExpandedSummaryBar_ShowsUnresolvedCount()
+    {
+        var provider = new FakeCommentProvider(PageId.ToString("D"));
+        var context = new NotionEditorContext
+        {
+            DataProvider = default!,
+            BlockService = default!,
+            CommentProvider = provider
+        };
+        var cut = Render<PageCommentHost>(parameters => parameters
+            .Add(component => component.Context, context)
+            .Add(component => component.PageId, PageId.ToString("D")));
+
+        await cut.Find(".tm-npcp__toggle").ClickAsync(new MouseEventArgs());
+        cut.WaitForAssertion(() =>
+            cut.Find(".tm-npcp__status").TextContent.Should().Contain("No comments yet"));
+
+        // Empty state: the summary bar still reports zero unresolved.
+        cut.Find(".tm-npcp__summary-count").TextContent.Should().Contain("0 unresolved");
+
+        cut.Find(".tm-npcp__new-comment .tm-npcp__reply-input").Input("Summary seed");
+        await cut.Find(".tm-npcp__new-comment .tm-npcp__reply-send").ClickAsync(new MouseEventArgs());
+
+        cut.WaitForAssertion(() =>
+            cut.Find(".tm-npcp__summary-count").TextContent.Should().Contain("1 unresolved"));
+    }
+
+    [Fact]
+    public void PageCommentPanel_EmbeddedMode_DoesNotRenderToggle_AndShowsBody()
+    {
+        var provider = new FakeCommentProvider(PageId.ToString("D"));
+        var context = new NotionEditorContext
+        {
+            DataProvider = default!,
+            BlockService = default!,
+            CommentProvider = provider
+        };
+
+        var cut = Render<EmbeddedHost>(parameters => parameters
+            .Add(component => component.Context, context)
+            .Add(component => component.PageId, PageId.ToString("D")));
+
+        // Embedded (the dialog presentation) has no collapsible toggle — the body is direct.
+        cut.FindAll(".tm-npcp__toggle").Should().BeEmpty();
+        cut.Find(".tm-npcp__body").Should().NotBeNull();
+        cut.Find(".tm-npcp__new-comment").Should().NotBeNull();
+    }
+
     // ── Keyboard isolation ──────────────────────────────────────────────────
     // Entry rows are non-native focusables (<div tabindex="0">) that
     // legitimately map Enter -> start inline reply. The native controls nested
@@ -131,7 +192,7 @@ public sealed class TmNotionPageCommentSectionTests : LocalizationTestBase
     // started a reply (bubbled keydown) for one key press.
 
     [Fact]
-    public async Task PageCommentSection_EnterOnEntryEditButton_OpensEdit_WithoutStartingReply()
+    public async Task PageCommentPanel_EnterOnEntryEditButton_OpensEdit_WithoutStartingReply()
     {
         var provider = new FakeCommentProvider(PageId.ToString("D"));
         var context = new NotionEditorContext
@@ -159,7 +220,7 @@ public sealed class TmNotionPageCommentSectionTests : LocalizationTestBase
     }
 
     [Fact]
-    public async Task PageCommentSection_EnterOnEntryDeleteButton_Confirms_WithoutStartingReply()
+    public async Task PageCommentPanel_EnterOnEntryDeleteButton_Confirms_WithoutStartingReply()
     {
         var provider = new FakeCommentProvider(PageId.ToString("D"));
         var context = new NotionEditorContext
@@ -184,7 +245,7 @@ public sealed class TmNotionPageCommentSectionTests : LocalizationTestBase
     }
 
     [Fact]
-    public async Task PageCommentSection_EnterInEditTextarea_DoesNotStartReply_EscapeCancelsEdit()
+    public async Task PageCommentPanel_EnterInEditTextarea_DoesNotStartReply_EscapeCancelsEdit()
     {
         var provider = new FakeCommentProvider(PageId.ToString("D"));
         var context = new NotionEditorContext
@@ -216,7 +277,7 @@ public sealed class TmNotionPageCommentSectionTests : LocalizationTestBase
     }
 
     [Fact]
-    public async Task PageCommentSection_EnterOnEntryItself_StillStartsInlineReply()
+    public async Task PageCommentPanel_EnterOnEntryItself_StillStartsInlineReply()
     {
         // Legitimate emulation kept: the entry row is a non-native focusable.
         var provider = new FakeCommentProvider(PageId.ToString("D"));
@@ -254,6 +315,7 @@ public sealed class TmNotionPageCommentSectionTests : LocalizationTestBase
         return cut.Find("[data-testid=notion-comment-entry-menu]");
     }
 
+    /// <summary>Host with controlled expansion around the bare panel (formerly the section's job).</summary>
     public sealed class PageCommentHost : ComponentBase
     {
         [Parameter] public NotionEditorContext Context { get; set; } = default!;
@@ -267,14 +329,36 @@ public sealed class TmNotionPageCommentSectionTests : LocalizationTestBase
             builder.AddAttribute(1, "Value", Context);
             builder.AddAttribute(2, "ChildContent", (RenderFragment)(childBuilder =>
             {
-                childBuilder.OpenComponent<TmNotionPageCommentSection>(0);
+                childBuilder.OpenComponent<TmNotionPageCommentPanel>(0);
                 childBuilder.AddAttribute(1, "PageId", PageId);
                 childBuilder.AddAttribute(2, "Expanded", _expanded);
-                childBuilder.AddAttribute(3, "OnExpandedChanged", EventCallback.Factory.Create<bool>(this, value =>
-                {
-                    _expanded = value;
-                    StateHasChanged();
-                }));
+                childBuilder.AddAttribute(3, "OnExpandedChanged", EventCallback.Factory.Create<bool>(
+                    this, value =>
+                    {
+                        _expanded = value;
+                        StateHasChanged();
+                    }));
+                childBuilder.CloseComponent();
+            }));
+            builder.CloseComponent();
+        }
+    }
+
+    /// <summary>Host pinning the panel in <c>Mode=Embedded</c> (the dialog presentation body).</summary>
+    public sealed class EmbeddedHost : ComponentBase
+    {
+        [Parameter] public NotionEditorContext Context { get; set; } = default!;
+        [Parameter] public string PageId { get; set; } = string.Empty;
+
+        protected override void BuildRenderTree(RenderTreeBuilder builder)
+        {
+            builder.OpenComponent<CascadingValue<NotionEditorContext>>(0);
+            builder.AddAttribute(1, "Value", Context);
+            builder.AddAttribute(2, "ChildContent", (RenderFragment)(childBuilder =>
+            {
+                childBuilder.OpenComponent<TmNotionPageCommentPanel>(0);
+                childBuilder.AddAttribute(1, "PageId", PageId);
+                childBuilder.AddAttribute(2, "Mode", TmNotionPageCommentPanelMode.Embedded);
                 childBuilder.CloseComponent();
             }));
             builder.CloseComponent();

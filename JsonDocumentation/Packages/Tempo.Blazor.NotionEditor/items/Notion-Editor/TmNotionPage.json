@@ -53,6 +53,13 @@
       "type": "bool",
       "isRequired": false,
       "description": "When true all editing interactions are disabled."
+    },
+    {
+      "name": "ShowMeta",
+      "type": "bool",
+      "isRequired": false,
+      "default": "false",
+      "description": "Opt-in page meta row under the title (last edited relative + absolute time, last editor avatar + resolved name, unresolved comment count as a link). Defaults to false; the demo turns it on."
     }
   ],
   "subcategory": "Page"

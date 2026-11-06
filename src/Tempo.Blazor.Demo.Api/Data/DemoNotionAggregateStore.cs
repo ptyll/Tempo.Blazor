@@ -53,6 +53,15 @@ public sealed class DemoNotionAggregateStore(
                 snapshot.ConcurrencyToken = NextToken();
                 snapshot.Digest = ComputeDigest(snapshot);
                 _snapshots[pageId] = Clone(snapshot);
+                // A force-conflict posted before this first cache must not be served back as
+                // the editor's base token — that save would match and commit. The flag stays
+                // set so the following save still returns 409.
+                if (_forceConflictOnNextSave.Contains(pageId))
+                {
+                    snapshot.ConcurrencyToken = NextToken();
+                    snapshot.Digest = ComputeDigest(snapshot);
+                    _snapshots[pageId] = Clone(snapshot);
+                }
             }
             else
             {
@@ -208,14 +217,26 @@ public sealed class DemoNotionAggregateStore(
     {
         lock (_gate)
         {
-            if (!_snapshots.TryGetValue(pageId, out var snapshot))
-            {
-                return false;
-            }
-            snapshot.ConcurrencyToken = NextToken();
-            snapshot.Digest = ComputeDigest(snapshot);
+            // The E2E posts this before the editor's first load has cached a snapshot.
+            // Returning 404 there dropped the conflict, so the later paragraph save
+            // committed and the page banner never appeared. Remember the page and
+            // force the next save either way; bump the token only when a snapshot exists.
             _forceConflictOnNextSave.Add(pageId);
+            if (_snapshots.TryGetValue(pageId, out var snapshot))
+            {
+                snapshot.ConcurrencyToken = NextToken();
+                snapshot.Digest = ComputeDigest(snapshot);
+            }
+        }
+
+        try
+        {
+            _ = pageStore.GetPageAsync(pageId.ToString("D")).GetAwaiter().GetResult();
             return true;
+        }
+        catch (KeyNotFoundException)
+        {
+            return false;
         }
     }
 

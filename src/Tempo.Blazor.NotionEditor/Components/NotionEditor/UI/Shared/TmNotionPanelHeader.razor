@@ -4,7 +4,7 @@
 
 <header class="tm-notion-panel-header @Class" @onkeydown="OnKeyDown">
     <div class="tm-notion-panel-header__titles">
-        <h2 class="tm-notion-panel-header__title" tabindex="-1">@Title</h2>
+        <h2 class="tm-notion-panel-header__title" tabindex="-1" @ref="_titleRef">@Title</h2>
         @if (!string.IsNullOrEmpty(Subtitle))
         {
             <p class="tm-notion-panel-header__subtitle">@Subtitle</p>

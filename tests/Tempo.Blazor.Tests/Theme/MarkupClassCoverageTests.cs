@@ -357,6 +357,15 @@ public sealed class MarkupClassCoverageTests
         "tm-ndv__empty",
         "tm-ndv__pane--after",
         "tm-notion-analytics-panel",
+        // Phase 5: the chart's hidden value table and the audit row hooks are selector/a11y
+        // surfaces (visually-hidden table, data-testid row). They carry no own paint.
+        "tm-notion-analytics__data",
+        "tm-notion-audit__row",
+        "tm-notion-audit__row-details-row",
+        // Phase 5: the tasks filter sheet body and the tasks shell-panel body are selector hooks
+        // (the sheet and the body paint through their base classes).
+        "tm-my-tasks__filters--sheet",
+        "tm-notion-shell-panel__body--tasks",
         "tm-notion-blog-panel",
         "tm-notion-diagram-edit-modal__missing",
         "tm-notion-editable--readonly",

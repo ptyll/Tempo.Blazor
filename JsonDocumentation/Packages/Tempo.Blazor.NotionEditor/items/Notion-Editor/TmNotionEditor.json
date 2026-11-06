@@ -250,6 +250,20 @@
       "description": "How the block / text comment panels present (NO1). Auto (the default) keeps the anchored popover bubble on a desktop layout and opens the core modal / sheet on touch and narrow containers; Popover pins the bubble at every layout; Dialog always opens the modal."
     },
     {
+      "name": "PageCommentsPresentation",
+      "type": "NotionPageCommentsPresentation",
+      "isRequired": false,
+      "default": "Inline",
+      "description": "How the page-level comment panel presents (P4). Inline (the default) keeps the collapsible panel at the bottom of the page; Dialog renders no inline panel — the header badge and the Comments page action open a core TmModal hosting the Embedded panel body (a sheet on a mobile layout)."
+    },
+    {
+      "name": "ShowMeta",
+      "type": "bool",
+      "isRequired": false,
+      "default": "false",
+      "description": "Opt-in page meta row under the title (last edited, last editor, comment count link), forwarded to the rendered TmNotionPage. Defaults to false; the demo turns it on."
+    },
+    {
       "name": "SinglePageMode",
       "type": "bool",
       "isRequired": false,

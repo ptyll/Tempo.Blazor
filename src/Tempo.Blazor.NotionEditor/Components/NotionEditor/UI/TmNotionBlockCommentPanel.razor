@@ -44,7 +44,7 @@
                         Align="OverlayAlign.Start"
                         Offset="0"
                         Class="tm-nbcp-popover"
-                        OnDismissed="CloseAsync">
+                        OnDismissed="HandlePopoverDismissedAsync">
             @CardContent
         </TmOverlayPanel>
     }
@@ -302,6 +302,29 @@
                     </div>
                 }
             </div>
+        }
+
+        @* ── Reply composer on the popover thread list ──────────────────────────
+           A block with more than one thread stays on the list, so the detail composer never
+           mounts. The dialog already has its own composer and must not grow a second one:
+           its textarea would take Escape before the sheet can close. *@
+        @if (IsThreadList && !UseDialog)
+        {
+            <TmNotionCommentComposer ClassPrefix="tm-nbcp"
+                                     Class="tm-nbcp__reply"
+                                     Value=""
+                                     ResetToken="_composerReset"
+                                     TextChanged="OnReplyText"
+                                     DraftChanged="OnReplyDraft"
+                                     Placeholder="@Loc["TmNotionBlockComment_NewPlaceholder"]"
+                                     AriaLabel="@Loc["TmNotionBlockComment_ReplyLabel"]"
+                                     Hint="@Loc["TmNotionBlockComment_ReplyHint"]"
+                                     SubmitText="@Loc["TmNotionBlockComment_Comment"]"
+                                     OnSubmit="SubmitReply"
+                                     Submitting="_submitting"
+                                     ShowAvatar="true"
+                                     AuthorName="@CurrentUserId"
+                                     MentionProvider="Context.MentionProvider" />
         }
 
         @* ── Thread detail (entries) ───────────────────────────────────────── *@

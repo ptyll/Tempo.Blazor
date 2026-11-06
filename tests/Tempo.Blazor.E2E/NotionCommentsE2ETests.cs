@@ -43,12 +43,16 @@ public class NotionCommentsE2ETests : WasmTestBase
         try { await http.PostAsync("https://localhost:5100/api/notion/reset", null); }
         catch { /* API may not be running; ignore */ }
 
+        // 1600, not the 1280 context default: the demo shell consumes ~280px and the editor
+        // classifies its own container (desktop from 1024). At 1280 the editor is tablet, so
+        // Auto comment presentation opens a dialog and hides .tm-nbcp__close-btn.
         var context = await CreateContextAsync();
         var page = await context.NewPageAsync();
+        await page.SetViewportSizeAsync(1600, 900);
         await page.GotoAsync($"{BaseUrl}/notion-editor");
         await WaitForAppReadyAsync(page);
         await page.WaitForSelectorAsync(".tm-notion-editor", new PageWaitForSelectorOptions { Timeout = 30000 });
-        await page.WaitForTimeoutAsync(2000);
+        await page.WaitForSelectorAsync("[data-editor-layout='desktop']", new PageWaitForSelectorOptions { Timeout = 15000 });
         return page;
     }
 
@@ -505,14 +509,17 @@ public class NotionCommentsE2ETests : WasmTestBase
     {
         var page = await OpenNotionEditorAsync();
 
-        // The demo page is pre-seeded with page comments; badge should be visible.
-        var headerBadge = page.Locator(".tm-notion-header-comment-badge").First;
+        // Phase 5 hides the title badge when ShowMeta is on (the demo default) and moves the
+        // count into the meta row. The title badge remains the contract only when ShowMeta is off.
+        var headerBadge = page.Locator(".tm-notion-header-meta-row__comment-link, .tm-notion-header-comment-badge").First;
         await headerBadge.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 5000 });
 
-        var countText = await headerBadge.TextContentAsync();
+        var countText = (await headerBadge.InnerTextAsync()).Trim();
         Assert.IsFalse(string.IsNullOrEmpty(countText), "Header badge should show a count");
-        Assert.IsTrue(int.TryParse(countText, out var count) && count > 0,
-            "Header badge should show a positive unresolved count");
+        // Title badge is a bare number; the ShowMeta link is the localized "N unresolved comments".
+        var digits = new string(countText.Where(char.IsDigit).ToArray());
+        Assert.IsTrue(int.TryParse(digits, out var count) && count > 0,
+            $"Header badge should show a positive unresolved count, got '{countText}'.");
         await TakeScreenshotAsync(page, "page_comment_header_badge");
     }
 
@@ -533,8 +540,8 @@ public class NotionCommentsE2ETests : WasmTestBase
         await page.EvaluateAsync("() => window.scrollTo(0, 0)");
         await page.WaitForTimeoutAsync(300);
 
-        // Click header badge
-        var headerBadge = page.Locator(".tm-notion-header-comment-badge").First;
+        // Click header badge. With ShowMeta the count lives on the meta-row link, not the title badge.
+        var headerBadge = page.Locator(".tm-notion-header-meta-row__comment-link, .tm-notion-header-comment-badge").First;
         await headerBadge.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 5000 });
         await headerBadge.ClickAsync();
         await page.WaitForTimeoutAsync(800);

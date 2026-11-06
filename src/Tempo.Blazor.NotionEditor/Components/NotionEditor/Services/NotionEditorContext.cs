@@ -85,6 +85,14 @@ public sealed class NotionEditorContext
     /// </summary>
     public NotionCommentPresentation CommentPresentation { get; init; } = NotionCommentPresentation.Auto;
 
+    /// <summary>
+    /// How the page-level comment panel presents (phase 5): <c>Inline</c> (the default) keeps the
+    /// collapsible panel at the bottom of the page; <c>Dialog</c> renders no inline panel — the
+    /// header badge and the Comments page action open a core <c>TmModal</c> with the Embedded panel.
+    /// Set from <c>TmNotionEditor.PageCommentsPresentation</c>.
+    /// </summary>
+    public NotionPageCommentsPresentation PageCommentsPresentation { get; init; } = NotionPageCommentsPresentation.Inline;
+
     /// <summary>Raised after the active page is moved to another space.</summary>
     public Func<string, Task>?             CurrentPageMovedToSpace  { get; init; }
 
@@ -115,6 +123,16 @@ public sealed class NotionEditorContext
 
     /// <summary>Invokes <see cref="BlockConverted"/> if any subscriber is attached.</summary>
     public void RaiseBlockConverted(IPageBlock block) => BlockConverted?.Invoke(block);
+
+    /// <summary>
+    /// Raised when a block save hits an aggregate concurrency conflict. The block handler
+    /// swallows the thrown conflict so typing can continue; the page uses this to show the banner.
+    /// </summary>
+    public Func<Task>? AggregateConflictDetected { get; set; }
+
+    /// <summary>Invokes <see cref="AggregateConflictDetected"/> when a block save conflicted.</summary>
+    public Task RaiseAggregateConflictDetectedAsync()
+        => AggregateConflictDetected?.Invoke() ?? Task.CompletedTask;
 
     /// <summary>Raised by nested blocks when they create a sibling block through the shared provider.</summary>
     public Func<IPageBlock, Task>? BlockCreated { get; set; }

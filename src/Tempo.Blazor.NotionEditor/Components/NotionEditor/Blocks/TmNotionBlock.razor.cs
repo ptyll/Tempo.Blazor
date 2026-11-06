@@ -207,7 +207,11 @@ public partial class TmNotionBlock : ComponentBase
             await Context.BlockService.UpdateBlockAsync(updated);
             await OnUpdated.InvokeAsync(updated);
         }
-        catch { }
+        catch
+        {
+            if (Context.AggregateSession?.HasPendingConflict == true)
+                await Context.RaiseAggregateConflictDetectedAsync();
+        }
     }
 
     private async Task HandleTodoAssigneeChangedAsync((string? AssigneeId, string? AssigneeDisplayName) assignee)
@@ -231,7 +235,11 @@ public partial class TmNotionBlock : ComponentBase
             await Context.BlockService.UpdateBlockAsync(updated);
             await OnUpdated.InvokeAsync(updated);
         }
-        catch { }
+        catch
+        {
+            if (Context.AggregateSession?.HasPendingConflict == true)
+                await Context.RaiseAggregateConflictDetectedAsync();
+        }
     }
 
     private async Task HandleTodoDueDateChangedAsync(DateTime? dueDate)
@@ -255,7 +263,11 @@ public partial class TmNotionBlock : ComponentBase
             await Context.BlockService.UpdateBlockAsync(updated);
             await OnUpdated.InvokeAsync(updated);
         }
-        catch { }
+        catch
+        {
+            if (Context.AggregateSession?.HasPendingConflict == true)
+                await Context.RaiseAggregateConflictDetectedAsync();
+        }
     }
 
     private async Task HandleTodoContentSavedAsync(string html)
@@ -266,7 +278,11 @@ public partial class TmNotionBlock : ComponentBase
             await Context.BlockService.UpdateBlockAsync(updated);
             await OnUpdated.InvokeAsync(updated);
         }
-        catch { }
+        catch
+        {
+            if (Context.AggregateSession?.HasPendingConflict == true)
+                await Context.RaiseAggregateConflictDetectedAsync();
+        }
     }
 
     private async Task HandleTodoEnterSplitAsync(string afterHtml) =>
@@ -318,7 +334,11 @@ public partial class TmNotionBlock : ComponentBase
             await Context.BlockService.UpdateBlockAsync(updated);
             await OnUpdated.InvokeAsync(updated);
         }
-        catch { }
+        catch
+        {
+            if (Context.AggregateSession?.HasPendingConflict == true)
+                await Context.RaiseAggregateConflictDetectedAsync();
+        }
     }
 
     private async Task HandleToggleContentSavedAsync(string html)
@@ -329,7 +349,11 @@ public partial class TmNotionBlock : ComponentBase
             await Context.BlockService.UpdateBlockAsync(updated);
             await OnUpdated.InvokeAsync(updated);
         }
-        catch { }
+        catch
+        {
+            if (Context.AggregateSession?.HasPendingConflict == true)
+                await Context.RaiseAggregateConflictDetectedAsync();
+        }
     }
 
     private async Task HandleToggleEnterSplitAsync(string afterHtml) =>
@@ -373,7 +397,11 @@ public partial class TmNotionBlock : ComponentBase
             await Context.BlockService.UpdateBlockAsync(updated);
             await OnUpdated.InvokeAsync(updated);
         }
-        catch { }
+        catch
+        {
+            if (Context.AggregateSession?.HasPendingConflict == true)
+                await Context.RaiseAggregateConflictDetectedAsync();
+        }
     }
 
     private async Task HandleCodeLanguageChangedAsync(string? language)
@@ -392,7 +420,11 @@ public partial class TmNotionBlock : ComponentBase
             await Context.BlockService.UpdateBlockAsync(updated);
             await OnUpdated.InvokeAsync(updated);
         }
-        catch { }
+        catch
+        {
+            if (Context.AggregateSession?.HasPendingConflict == true)
+                await Context.RaiseAggregateConflictDetectedAsync();
+        }
     }
 
     private async Task HandleCodeCaptionSavedAsync(string? caption)
@@ -411,7 +443,11 @@ public partial class TmNotionBlock : ComponentBase
             await Context.BlockService.UpdateBlockAsync(updated);
             await OnUpdated.InvokeAsync(updated);
         }
-        catch { }
+        catch
+        {
+            if (Context.AggregateSession?.HasPendingConflict == true)
+                await Context.RaiseAggregateConflictDetectedAsync();
+        }
     }
 
     // ── Child page (TmNotionChildPageBlock) callbacks ────────────────────────
@@ -436,7 +472,11 @@ public partial class TmNotionBlock : ComponentBase
             await Context.BlockService.UpdateBlockAsync(updated);
             await OnUpdated.InvokeAsync(updated);
         }
-        catch { }
+        catch
+        {
+            if (Context.AggregateSession?.HasPendingConflict == true)
+                await Context.RaiseAggregateConflictDetectedAsync();
+        }
     }
 
     // ── Linked page (TmNotionLinkedPageBlock) callbacks ──────────────────────
@@ -506,7 +546,11 @@ public partial class TmNotionBlock : ComponentBase
             await Context.BlockService.UpdateBlockAsync(updated);
             await OnUpdated.InvokeAsync(updated);
         }
-        catch { }
+        catch
+        {
+            if (Context.AggregateSession?.HasPendingConflict == true)
+                await Context.RaiseAggregateConflictDetectedAsync();
+        }
     }
 
     // ── Image (TmNotionImageBlock) callbacks ──────────────────────────────────
@@ -856,7 +900,13 @@ public partial class TmNotionBlock : ComponentBase
             await Context.BlockService.UpdateBlockAsync(updated);
             await OnUpdated.InvokeAsync(updated);
         }
-        catch { }
+        catch
+        {
+            // A 409 is recorded on the session and then thrown. Swallowing it here used to
+            // hide the page banner — surface the pending conflict without failing the keystroke.
+            if (Context.AggregateSession?.HasPendingConflict == true)
+                await Context.RaiseAggregateConflictDetectedAsync();
+        }
     }
 
     private async Task HandleParagraphEnterPressedAsync(string afterHtml) =>
@@ -934,7 +984,11 @@ public partial class TmNotionBlock : ComponentBase
             await Context.BlockService.UpdateBlockAsync(updated);
             await OnUpdated.InvokeAsync(updated);
         }
-        catch { }
+        catch
+        {
+            if (Context.AggregateSession?.HasPendingConflict == true)
+                await Context.RaiseAggregateConflictDetectedAsync();
+        }
     }
 
     private async Task HandleHeadingEnterPressedAsync(string afterHtml) =>
@@ -981,7 +1035,11 @@ public partial class TmNotionBlock : ComponentBase
             await Context.BlockService.UpdateBlockAsync(updated);
             await OnUpdated.InvokeAsync(updated);
         }
-        catch { }
+        catch
+        {
+            if (Context.AggregateSession?.HasPendingConflict == true)
+                await Context.RaiseAggregateConflictDetectedAsync();
+        }
     }
 
     private async Task HandleQuoteEnterPressedAsync(string afterHtml) =>
@@ -1026,7 +1084,11 @@ public partial class TmNotionBlock : ComponentBase
             await Context.BlockService.UpdateBlockAsync(updated);
             await OnUpdated.InvokeAsync(updated);
         }
-        catch { }
+        catch
+        {
+            if (Context.AggregateSession?.HasPendingConflict == true)
+                await Context.RaiseAggregateConflictDetectedAsync();
+        }
     }
 
     private async Task HandleCalloutEnterPressedAsync(string afterHtml) =>
@@ -1080,7 +1142,11 @@ public partial class TmNotionBlock : ComponentBase
             await Context.BlockService.UpdateBlockAsync(updated);
             await OnUpdated.InvokeAsync(updated);
         }
-        catch { }
+        catch
+        {
+            if (Context.AggregateSession?.HasPendingConflict == true)
+                await Context.RaiseAggregateConflictDetectedAsync();
+        }
     }
 
     // ── BulletList (TmNotionBulletListBlock) callbacks ───────────────────────
@@ -1093,7 +1159,11 @@ public partial class TmNotionBlock : ComponentBase
             await Context.BlockService.UpdateBlockAsync(updated);
             await OnUpdated.InvokeAsync(updated);
         }
-        catch { }
+        catch
+        {
+            if (Context.AggregateSession?.HasPendingConflict == true)
+                await Context.RaiseAggregateConflictDetectedAsync();
+        }
     }
 
     private async Task HandleBulletEnterSplitAsync(string afterHtml) =>
@@ -1117,7 +1187,11 @@ public partial class TmNotionBlock : ComponentBase
             await Context.BlockService.UpdateBlockAsync(updated);
             await OnUpdated.InvokeAsync(updated);
         }
-        catch { }
+        catch
+        {
+            if (Context.AggregateSession?.HasPendingConflict == true)
+                await Context.RaiseAggregateConflictDetectedAsync();
+        }
     }
 
     private async Task HandleBulletMarkdownShortcutAsync(string shortcut)
@@ -1158,7 +1232,11 @@ public partial class TmNotionBlock : ComponentBase
             await Context.BlockService.UpdateBlockAsync(updated);
             await OnUpdated.InvokeAsync(updated);
         }
-        catch { }
+        catch
+        {
+            if (Context.AggregateSession?.HasPendingConflict == true)
+                await Context.RaiseAggregateConflictDetectedAsync();
+        }
     }
 
     private async Task HandleNumberedEnterSplitAsync(string afterHtml) =>
@@ -1182,7 +1260,11 @@ public partial class TmNotionBlock : ComponentBase
             await Context.BlockService.UpdateBlockAsync(updated);
             await OnUpdated.InvokeAsync(updated);
         }
-        catch { }
+        catch
+        {
+            if (Context.AggregateSession?.HasPendingConflict == true)
+                await Context.RaiseAggregateConflictDetectedAsync();
+        }
     }
 
     private async Task HandleNumberedMarkdownShortcutAsync(string shortcut)
@@ -1255,7 +1337,11 @@ public partial class TmNotionBlock : ComponentBase
             await Context.BlockService.UpdateBlockAsync(updated);
             await OnUpdated.InvokeAsync(updated);
         }
-        catch { }
+        catch
+        {
+            if (Context.AggregateSession?.HasPendingConflict == true)
+                await Context.RaiseAggregateConflictDetectedAsync();
+        }
     }
 
     private async Task HandleTextColorChangeAsync(string? color)
@@ -1267,7 +1353,11 @@ public partial class TmNotionBlock : ComponentBase
             await Context.BlockService.UpdateBlockAsync(updated);
             await OnUpdated.InvokeAsync(updated);
         }
-        catch { }
+        catch
+        {
+            if (Context.AggregateSession?.HasPendingConflict == true)
+                await Context.RaiseAggregateConflictDetectedAsync();
+        }
     }
 
     private async Task HandleBackgroundColorChangeAsync(string? color)
@@ -1279,7 +1369,11 @@ public partial class TmNotionBlock : ComponentBase
             await Context.BlockService.UpdateBlockAsync(updated);
             await OnUpdated.InvokeAsync(updated);
         }
-        catch { }
+        catch
+        {
+            if (Context.AggregateSession?.HasPendingConflict == true)
+                await Context.RaiseAggregateConflictDetectedAsync();
+        }
     }
 
     private static IBlockContent UpdateTextBlockColor(ITextBlockContent src,

@@ -64290,6 +64290,12 @@
               "description": "Opens the new-page template gallery from the sidebar."
             },
             {
+              "name": "PageCommentsPresentation",
+              "kind": "Property",
+              "type": "NotionPageCommentsPresentation",
+              "description": "How the page-level comment panel presents (phase 5): Inline (the default) keeps the collapsible panel at the bottom of the page; Dialog renders no inline panel — the header badge and the Comments page action open a core TmModal with the Embedded panel. Set from TmNotionEditor.PageCommentsPresentation."
+            },
+            {
               "name": "PagePropertiesProvider",
               "kind": "Property",
               "type": "INotionPagePropertiesProvider?"
@@ -64636,6 +64642,16 @@
           ]
         },
         {
+          "itemName": "NotionPageCommentsPresentation",
+          "kind": "Enum",
+          "category": "Components",
+          "namespace": "Tempo.Blazor.Components.NotionEditor",
+          "description": "How the page-level comment panel presents (see TmNotionEditor.PageCommentsPresentation): Inline (the default) keeps the collapsible panel at the bottom of the page; Dialog renders no inline panel — the header badge and the Comments page action open a core TmModal hosting the Embedded panel body (a sheet on a mobile layout).",
+          "packageId": "Tempo.Blazor.NotionEditor",
+          "sourcePath": "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/NotionCommentPresentation.cs",
+          "documentationStatus": "merged"
+        },
+        {
           "itemName": "NotionShellPanelPresentation",
           "kind": "Enum",
           "category": "Components",
@@ -64808,6 +64824,16 @@
             }
           ],
           "itemName": "Tempo.Blazor.Components.NotionEditor.Commands.BatchCommand"
+        },
+        {
+          "itemName": "TmNotionAuditLogLayout",
+          "kind": "Enum",
+          "category": "Components",
+          "namespace": "Tempo.Blazor.Components.NotionEditor.UI",
+          "description": "Result layout of TmNotionAuditLogPanel: Auto (the default) renders both the table and the cards and lets the panel's own container query pick (table on a wide container, cards below 640 px); Table and Cards pin one of the two at every width.",
+          "packageId": "Tempo.Blazor.NotionEditor",
+          "sourcePath": "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/UI/TmNotionAuditLogPanel.razor.cs",
+          "documentationStatus": "merged"
         },
         {
           "itemName": "TmNotionCommentLabels",
@@ -64989,6 +65015,16 @@
           "description": "Per-block comment summary for margin-thread indicators and hover tooltip.",
           "packageId": "Tempo.Blazor.NotionEditor",
           "sourcePath": "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/Page/TmNotionPage.razor.cs",
+          "documentationStatus": "merged"
+        },
+        {
+          "itemName": "TmNotionPageCommentPanelMode",
+          "kind": "Enum",
+          "category": "Components",
+          "namespace": "Tempo.Blazor.Components.NotionEditor.UI",
+          "description": "Presentation mode of TmNotionPageCommentPanel. Inline (the default) renders the collapsible toggle plus the expandable body; Embedded renders the always-expanded body with no toggle — used inside the page-comments dialog (PageCommentsPresentation=Dialog) and any host-owned container.",
+          "packageId": "Tempo.Blazor.NotionEditor",
+          "sourcePath": "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/UI/TmNotionPageCommentPanelMode.cs",
           "documentationStatus": "merged"
         },
         {
@@ -65400,6 +65436,13 @@
               "type": "string?",
               "isRequired": false,
               "description": "Additional CSS class."
+            },
+            {
+              "name": "Layout",
+              "type": "TmNotionAuditLogLayout",
+              "isRequired": false,
+              "default": "TmNotionAuditLogLayout.Auto",
+              "description": "Result layout: Auto (default) renders both the table and the cards and lets the panel's own container query pick (table on a wide container, cards below 640 px); Table and Cards pin one of them at every width."
             },
             {
               "name": "OnClosed",
@@ -66123,6 +66166,12 @@
               "type": "string?",
               "isRequired": false,
               "description": "Additional CSS class."
+            },
+            {
+              "name": "FocusHeading",
+              "type": "bool",
+              "isRequired": false,
+              "description": "When true, the heading takes focus after render (compact master → detail)."
             },
             {
               "name": "IsPublishing",
@@ -69032,6 +69081,13 @@
               "description": "Raised when the user requests to open the trash panel from the sidebar."
             },
             {
+              "name": "PageCommentsPresentation",
+              "type": "NotionPageCommentsPresentation",
+              "isRequired": false,
+              "default": "NotionPageCommentsPresentation.Inline",
+              "description": "How the page-level comment panel presents (P4). Inline (the default) keeps the collapsible panel at the bottom of the page; Dialog renders no inline panel — the header badge and the Comments page action open a core TmModal hosting the Embedded panel body (a sheet on a mobile layout)."
+            },
+            {
               "name": "PagePropertiesProvider",
               "type": "INotionPagePropertiesProvider?",
               "isRequired": false
@@ -69069,6 +69125,13 @@
               "isRequired": false,
               "default": "NotionShellPanelPresentation.Overlay",
               "description": "How the Tasks / Blog / Analytics / Audit shell panels present themselves. Overlay (default) rides the core TmSidePanel — docked next to the page on a desktop layout, a side sheet on a tablet layout and a full-height sheet on a mobile layout — while the page stays mounted. Main replaces the page in the main region. At most one shell panel is open at a time either way."
+            },
+            {
+              "name": "ShowMeta",
+              "type": "bool",
+              "isRequired": false,
+              "description": "Opt-in page meta row under the title (last edited, last editor, comment count link), forwarded to the rendered TmNotionPage. Defaults to false; the demo turns it on.",
+              "default": "false"
             },
             {
               "name": "ShowSidebar",
@@ -70180,6 +70243,12 @@
               "description": "Raised whenever the dropdown is opened or closed."
             },
             {
+              "name": "OnViewAll",
+              "type": "EventCallback",
+              "isRequired": false,
+              "description": "Optional \"View all\" footer action (Q-P8, G9): the footer renders only when a handler is supplied; invoking it closes the panel."
+            },
+            {
               "name": "PollInterval",
               "type": "TimeSpan",
               "isRequired": false,
@@ -70358,6 +70427,13 @@
               "type": "bool",
               "isRequired": false,
               "description": "When true all editing interactions are disabled."
+            },
+            {
+              "name": "ShowMeta",
+              "type": "bool",
+              "isRequired": false,
+              "description": "Opt-in page meta row under the title (last edited relative + absolute time, last editor avatar + resolved name, unresolved comment count as a link). Defaults to false; the demo turns it on.",
+              "default": "false"
             }
           ]
         },
@@ -70379,6 +70455,13 @@
               "name": "Expanded",
               "type": "bool",
               "isRequired": false
+            },
+            {
+              "name": "Mode",
+              "type": "TmNotionPageCommentPanelMode",
+              "isRequired": false,
+              "default": "TmNotionPageCommentPanelMode.Inline",
+              "description": "Inline (default) renders the collapsible toggle + expandable body; Embedded renders the always-expanded body with no toggle and loads threads up front — used inside the page-comments dialog (TmNotionEditor.PageCommentsPresentation=Dialog) and any host-owned container."
             },
             {
               "name": "OnCountChanged",
@@ -70406,59 +70489,6 @@
               "type": "string",
               "isRequired": false,
               "default": "\"\""
-            }
-          ]
-        },
-        {
-          "itemName": "TmNotionPageCommentSection",
-          "kind": "Component",
-          "category": "Notion Editor",
-          "subcategory": "UI",
-          "namespace": "Tempo.Blazor.Components.NotionEditor.UI",
-          "description": "Thin labeled-section wrapper that renders TmNotionPageCommentPanel, forwarding the page id, expanded state, and the expanded, count, and mention callbacks.",
-          "packageId": "Tempo.Blazor.NotionEditor",
-          "sourcePath": "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/UI/TmNotionPageCommentSection.razor",
-          "documentationStatus": "merged",
-          "requiredImports": [
-            "@using Tempo.Blazor.Components.NotionEditor.UI"
-          ],
-          "parameters": [
-            {
-              "name": "Expanded",
-              "type": "bool",
-              "isRequired": false,
-              "description": "Whether the page comment section is expanded."
-            },
-            {
-              "name": "OnCountChanged",
-              "type": "EventCallback",
-              "isRequired": false,
-              "description": "Raised after the comment count may have changed."
-            },
-            {
-              "name": "OnDraftChanged",
-              "type": "EventCallback<TmNotionCommentDraftState>",
-              "isRequired": false,
-              "description": "Pass-through of the embedded panel's OnDraftChanged: forwards the panel's deduped TmNotionCommentDraftState transitions so a host rendering the section gets the same draft-guard visibility as the bare panel. Pair with HasUnsavedDraft for polling and DiscardDraftAsync for the discard after the host's own confirmation."
-            },
-            {
-              "name": "OnExpandedChanged",
-              "type": "EventCallback<bool>",
-              "isRequired": false,
-              "description": "Raised when the expanded state changes."
-            },
-            {
-              "name": "OnMentionClicked",
-              "type": "EventCallback<string>",
-              "isRequired": false,
-              "description": "Raised when a user mention inside a comment is activated."
-            },
-            {
-              "name": "PageId",
-              "type": "string",
-              "isRequired": false,
-              "default": "\"\"",
-              "description": "Page identifier whose page-level comment threads are displayed."
             }
           ]
         },
@@ -70504,6 +70534,13 @@
               "name": "ReadOnly",
               "type": "bool",
               "isRequired": false
+            },
+            {
+              "name": "ShowMeta",
+              "type": "bool",
+              "isRequired": false,
+              "description": "Opt-in meta row under the title: last-edited time (relative, absolute in the title tooltip), the last editor (TmAvatar + name resolved through the mention provider, raw id fallback) and the unresolved comment count as a link (fires OnCommentBadgeClicked). Defaults to false.",
+              "default": "false"
             },
             {
               "name": "ShowRestrictedIndicator",
@@ -72854,12 +72891,12 @@
         }
       ],
       "summary": {
-        "itemCount": 184,
-        "manualItemCount": 184,
-        "generatedItemCount": 183,
+        "itemCount": 186,
+        "manualItemCount": 186,
+        "generatedItemCount": 185,
         "generatedOnlyItemCount": 0,
-        "componentCount": 134,
-        "publicApiTypeCount": 49
+        "componentCount": 133,
+        "publicApiTypeCount": 52
       }
     },
     {
@@ -107340,7 +107377,7 @@
           "kind": "Interface",
           "category": "Shared",
           "namespace": "Tempo.Blazor.Abstractions.Shared",
-          "description": "Uniform dirty-guard surface implemented by every component whose composer text lives in private fields the host cannot observe through parameters: TmActivityComments, TmChat, TmNotionBlockCommentPanel, TmNotionTextCommentPanel, TmNotionPageCommentPanel, TmNotionPageCommentSection, TmDocumentCommentComposer, TmDocumentCommentThread, TmDocumentCommentRail, TmDocumentCommentThreadPanel and TmDocumentPageViewer. Flow: poll HasUnsavedDraft (or track OnDraftChanged), ask in the CONSUMER'S OWN confirmation dialog, then DiscardDraftAsync — no implementing component shows a confirmation itself.",
+          "description": "Uniform dirty-guard surface implemented by every component whose composer text lives in private fields the host cannot observe through parameters: TmActivityComments, TmChat, TmNotionBlockCommentPanel, TmNotionTextCommentPanel, TmNotionPageCommentPanel, TmDocumentCommentComposer, TmDocumentCommentThread, TmDocumentCommentRail, TmDocumentCommentThreadPanel and TmDocumentPageViewer. Flow: poll HasUnsavedDraft (or track OnDraftChanged), ask in the CONSUMER'S OWN confirmation dialog, then DiscardDraftAsync — no implementing component shows a confirmation itself.",
           "packageId": "Tempo.Blazor.Abstractions",
           "sourcePath": "src/Tempo.Blazor.Abstractions/Shared/ITmDraftGuard.cs",
           "documentationStatus": "merged",
@@ -133607,10 +133644,10 @@
   ],
   "summary": {
     "packageCount": 28,
-    "itemCount": 3479,
-    "manualItemCount": 3479,
+    "itemCount": 3481,
+    "manualItemCount": 3481,
     "generatedOnlyItemCount": 0,
-    "componentCount": 536,
-    "publicApiTypeCount": 2891
+    "componentCount": 535,
+    "publicApiTypeCount": 2894
   }
 }

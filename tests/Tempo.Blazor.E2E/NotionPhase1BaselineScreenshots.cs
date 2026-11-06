@@ -166,9 +166,24 @@ public sealed class NotionPhase1BaselineScreenshots : NotionE2ETestBase
         await CloseByButtonAsync(modal);
         await modal.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Hidden, Timeout = 5000 });
 
+        // The row ⋯ menu is hover-revealed. Closing the record modal returns focus and can scroll
+        // the page after the hover, leaving the pointer off the row — re-hover until it shows.
         var row = page.Locator(".tm-dbt__row").First;
-        await row.HoverAsync();
-        await row.GetByTestId("notion-db-table-row-delete").Locator(".tm-dropdown-trigger").ClickAsync();
+        var rowMenu = row.GetByTestId("notion-db-table-row-delete").Locator(".tm-dropdown-trigger");
+        for (var attempt = 0; ; attempt++)
+        {
+            try
+            {
+                await row.ScrollIntoViewIfNeededAsync();
+                await row.HoverAsync();
+                await rowMenu.ClickAsync(new LocatorClickOptions { Timeout = 2000 });
+                break;
+            }
+            catch (TimeoutException) when (attempt < 5)
+            {
+                await page.WaitForTimeoutAsync(200);
+            }
+        }
         await page.Locator(".tm-dropdown-item").Filter(new LocatorFilterOptions { HasText = "Delete" }).Last.ClickAsync();
         confirm = page.Locator(".tm-dialog").Last;
         await confirm.WaitForAsync(new LocatorWaitForOptions { Timeout = 5000 });

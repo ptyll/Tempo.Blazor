@@ -1,5 +1,6 @@
 @namespace Tempo.Blazor.Components.NotionEditor.UI
 @inherits Tempo.Blazor.Components.TmComponentBase
+@using Tempo.Blazor.Components.Charts
 @using Tempo.Blazor.NotionEditor.Models
 
 <section class="tm-notion-analytics tm-notion-analytics-panel @Class" aria-label="@Loc["Notion_Analytics_Title"]" data-testid="@TestId("notion-analytics-panel")">
@@ -24,33 +25,51 @@
     else
     {
         <div class="tm-notion-analytics__body">
-            <section class="tm-notion-analytics__summary" aria-label="@Loc["Notion_Analytics_Views"]">
-                <div class="tm-notion-analytics__metric" data-testid="@TestId("notion-analytics-views")">
-                    <span class="tm-notion-analytics__metric-label">@Loc["Notion_Analytics_Views"]</span>
-                    <strong class="tm-notion-analytics__metric-value">@CurrentSummary.Views.ToString("N0")</strong>
-                </div>
-                <div class="tm-notion-analytics__metric" data-testid="@TestId("notion-analytics-unique")">
-                    <span class="tm-notion-analytics__metric-label">@Loc["Notion_Analytics_Unique"]</span>
-                    <strong class="tm-notion-analytics__metric-value">@CurrentSummary.UniqueVisitors.ToString("N0")</strong>
-                </div>
-                <div class="tm-notion-analytics__metric tm-notion-analytics__metric--wide">
-                    <span class="tm-notion-analytics__metric-label">@Loc["Notion_Analytics_LastViewed"]</span>
-                    @if (CurrentSummary.LastViewedAt is null)
-                    {
-                        <strong class="tm-notion-analytics__metric-value">@Loc["Notion_Analytics_NeverViewed"]</strong>
-                    }
-                    else
-                    {
-                        <time class="tm-notion-analytics__metric-value" datetime="@CurrentSummary.LastViewedAt.Value.ToString("O")">
-                            @FormatDate(CurrentSummary.LastViewedAt)
-                        </time>
-                    }
-                </div>
-            </section>
+            @* ── Metric cards: page-scoped, hidden without a current page ── *@
+            @if (CurrentPageId is not null)
+            {
+                <section class="tm-notion-analytics__summary" aria-label="@Loc["Notion_Analytics_Views"]">
+                    <div class="tm-notion-analytics__metric" data-testid="@TestId("notion-analytics-views")">
+                        <span class="tm-notion-analytics__metric-label">@Loc["Notion_Analytics_Views"]</span>
+                        <strong class="tm-notion-analytics__metric-value">@CurrentSummary.Views.ToString("N0")</strong>
+                    </div>
+                    <div class="tm-notion-analytics__metric" data-testid="@TestId("notion-analytics-unique")">
+                        <span class="tm-notion-analytics__metric-label">@Loc["Notion_Analytics_Unique"]</span>
+                        <strong class="tm-notion-analytics__metric-value">@CurrentSummary.UniqueVisitors.ToString("N0")</strong>
+                    </div>
+                    <div class="tm-notion-analytics__metric tm-notion-analytics__metric--wide" data-testid="@TestId("notion-analytics-last-viewed")">
+                        <span class="tm-notion-analytics__metric-label">@Loc["Notion_Analytics_LastViewed"]</span>
+                        @if (CurrentSummary.LastViewedAt is null)
+                        {
+                            <strong class="tm-notion-analytics__metric-value">@Loc["Notion_Analytics_NeverViewed"]</strong>
+                        }
+                        else
+                        {
+                            <time class="tm-notion-analytics__metric-value"
+                                  datetime="@CurrentSummary.LastViewedAt.Value.ToString("O")"
+                                  title="@AbsoluteTime(CurrentSummary.LastViewedAt.Value)">
+                                @RelativeTime.Format(CurrentSummary.LastViewedAt.Value)
+                            </time>
+                        }
+                    </div>
+                </section>
+            }
 
             <section class="tm-notion-analytics__chart" aria-label="@Loc["Notion_Analytics_ViewsByDay"]">
                 <div class="tm-notion-analytics__section-head">
                     <h3>@Loc["Notion_Analytics_ViewsByDay"]</h3>
+                    <div class="tm-notion-analytics__range" role="group" aria-label="@Loc["Notion_Analytics_Range"]">
+                        @foreach (var range in RangeOptions)
+                        {
+                            <button type="button"
+                                    class="tm-notion-analytics__range-btn"
+                                    aria-pressed="@(_rangeDays == range.Days ? "true" : "false")"
+                                    data-testid="@TestId($"notion-analytics-range-{range.Days}")"
+                                    @onclick="() => SetRangeAsync(range.Days)">
+                                @Loc[range.Key]
+                            </button>
+                        }
+                    </div>
                 </div>
                 @if (CurrentSummary.ViewsByDay.Count == 0)
                 {
@@ -60,16 +79,30 @@
                 }
                 else
                 {
-                    <svg class="tm-notion-analytics__sparkline"
-                         viewBox="0 0 220 64"
-                         role="img"
-                         aria-label="@Loc["Notion_Analytics_ViewsByDay"]"
-                         preserveAspectRatio="none">
-                        <polyline class="tm-notion-analytics__sparkline-fill"
-                                  points="0,64 @BuildSparklinePoints(CurrentSummary.ViewsByDay) 220,64" />
-                        <polyline class="tm-notion-analytics__sparkline-line"
-                                  points="@BuildSparklinePoints(CurrentSummary.ViewsByDay)" />
-                    </svg>
+                    <TmChart Type="ChartType.Area"
+                             Data="ChartData"
+                             ShowLegend="false"
+                             Animated="false"
+                             Height="240px"
+                             Class="tm-notion-analytics__chart-canvas" />
+                    <table class="tm-notion-analytics__data tm-sr-only">
+                        <caption>@Loc["Notion_Analytics_ViewsByDay"]</caption>
+                        <thead>
+                            <tr>
+                                <th scope="col">@Loc["Notion_Analytics_Date"]</th>
+                                <th scope="col">@Loc["Notion_Analytics_Views"]</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var point in CurrentSummary.ViewsByDay)
+                            {
+                                <tr>
+                                    <td>@point.Date.ToString("d")</td>
+                                    <td>@point.Views.ToString("N0")</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
                 }
             </section>
 

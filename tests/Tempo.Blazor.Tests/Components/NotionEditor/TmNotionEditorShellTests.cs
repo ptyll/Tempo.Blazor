@@ -80,6 +80,20 @@ public sealed class TmNotionEditorShellTests : LocalizationTestBase
         cut.Markup.Should().NotContain("data-action-id=\"tasks\"");
     }
 
+    [Theory]
+    [InlineData(TmLayoutMode.Desktop, "never")]
+    [InlineData(TmLayoutMode.Tablet, "never")]
+    [InlineData(TmLayoutMode.Mobile, "auto")]
+    public void MyTasks_PinnedExceptOnMobile(TmLayoutMode mode, string pin)
+    {
+        // On the mobile band a pinned Tasks could not fold into More once the pinned toggle /
+        // watch / bell filled a 320px bar, and the More trigger painted over it.
+        var cut = RenderEditor(mode, workItems: true);
+
+        cut.WaitForAssertion(() => cut.Find("[data-testid='notion-tasks']").Should().NotBeNull());
+        cut.Find("[data-testid='notion-tasks']").GetAttribute("data-pin").Should().Be(pin);
+    }
+
     [Fact]
     public void Tablet_LowPriorityItemsInMoreMenu_WithTestIds()
     {
@@ -220,6 +234,35 @@ public sealed class TmNotionEditorShellTests : LocalizationTestBase
         // The shell panel IS the surface: no second wrapper around the page while it is open.
         cut.FindAll(".tm-notion-shell-panel--main .tm-notion-page-wrap, .tm-notion-page-wrap").Should().BeEmpty();
         cut.Find(".tm-notion-shell-panel--main").Should().NotBeNull();
+    }
+
+    [Fact]
+    public void DockedTasks_Escape_ClosesAndRestoresTheTrigger()
+    {
+        var cut = RenderEditor(TmLayoutMode.Desktop, workItems: true);
+
+        cut.WaitForAssertion(() => cut.Find(".tm-notion-page").Should().NotBeNull());
+        cut.Find("[data-testid='notion-tasks']").Click();
+
+        var scope = cut.FindComponents<TmFocusScope>()
+            .Single(item => item.Instance.RestoreFocusTargetId == "notion-tasks");
+        scope.Instance.CloseOnEscape.Should().BeTrue();
+
+        cut.InvokeAsync(() => scope.Instance.HandleFocusTrapEscapeAsync()).GetAwaiter().GetResult();
+
+        cut.WaitForAssertion(() => cut.FindAll(".tm-my-tasks").Should().BeEmpty());
+    }
+
+    [Fact]
+    public void ShellSheet_ForwardsTheTriggerAsRestoreTarget()
+    {
+        var cut = RenderEditor(TmLayoutMode.Tablet, workItems: true);
+
+        cut.WaitForAssertion(() => cut.Find(".tm-notion-page").Should().NotBeNull());
+        cut.Find("[data-testid='notion-tasks']").Click();
+
+        cut.FindComponents<TmFocusScope>()
+            .Should().Contain(scope => scope.Instance.RestoreFocusTargetId == "notion-tasks");
     }
 
     [Fact]

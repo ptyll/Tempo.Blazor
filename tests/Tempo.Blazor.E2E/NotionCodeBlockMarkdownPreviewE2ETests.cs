@@ -184,7 +184,7 @@ public class NotionCodeBlockMarkdownPreviewE2ETests : NotionE2ETestBase
 
     private static async Task<ILocator> InsertBlockViaSlashMenuAsync(IPage page, string searchTerm)
     {
-        var para = page.Locator(".tm-notion-paragraph[contenteditable='true']").First;
+        var para = page.Locator(".tm-notion-paragraph[contenteditable='true']").Last;
         await para.WaitForAsync(new LocatorWaitForOptions { Timeout = 10000 });
         await para.ClickAsync();
         await page.Keyboard.PressAsync("End");

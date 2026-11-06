@@ -36,4 +36,28 @@ public sealed class TmNotionPanelHeaderTests : LocalizationTestBase
 
         closed.Should().Be(1);
     }
+
+    [Fact]
+    public void Open_MovesFocusToTheTitle_OnlyOnce()
+    {
+        // The docked shell panel closes on Escape only while focus is inside it; the toolbar
+        // trigger keeps focus outside unless the panel takes it on open.
+        var cut = Render<TmNotionPanelHeader>(p => p.Add(c => c.Title, "Analytics"));
+
+        var focus = JSInterop.VerifyFocusAsyncInvoke();
+        focus.Arguments[0].Should().BeOfType<ElementReference>();
+
+        cut.Render(p => p.Add(c => c.Subtitle, "3 views"));
+        JSInterop.Invocations.Count(i => i.Identifier == "Blazor._internal.domWrapper.focus").Should().Be(1);
+    }
+
+    [Fact]
+    public void FocusOnOpen_False_LeavesFocusAlone()
+    {
+        Render<TmNotionPanelHeader>(p => p
+            .Add(c => c.Title, "Analytics")
+            .Add(c => c.FocusOnOpen, false));
+
+        JSInterop.Invocations.Should().NotContain(i => i.Identifier == "Blazor._internal.domWrapper.focus");
+    }
 }

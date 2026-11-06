@@ -88,8 +88,20 @@
     display: flex;
     flex-direction: column;
     gap: 12px;
-    max-height: 600px;
     overflow-y: auto;
+}
+
+/* Inline panel keeps an internal scroll on large thread lists; the Embedded body
+   (dialog presentation) never nests its own max-height — the dialog owns the scroll. */
+.tm-npcp:not(.tm-npcp--embedded) .tm-npcp__body {
+    max-height: 600px;
+}
+
+@media (max-width: 640px) {
+    /* Mobile inline: the page itself scrolls — no nested max-height window. */
+    .tm-npcp:not(.tm-npcp--embedded) .tm-npcp__body {
+        max-height: none;
+    }
 }
 
 .tm-npcp__body::-webkit-scrollbar { width: 4px; }
@@ -131,12 +143,21 @@
     to { transform: rotate(360deg); }
 }
 
-/* ── Toolbar ───────────────────────────────────────────────────────────────── */
+/* ── Summary bar ───────────────────────────────────────────────────────────── */
 
-.tm-npcp__toolbar {
+.tm-npcp__summary {
     display: flex;
-    justify-content: flex-end;
-    padding: 0 0 4px;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--tm-space-2);
+    padding-bottom: var(--tm-space-2);
+    border-bottom: 1px solid var(--tm-border-color);
+}
+
+.tm-npcp__summary-count {
+    font-size: 12.5px;
+    font-weight: 500;
+    color: var(--tm-text-secondary);
 }
 
 .tm-npcp__mark-all-read {
@@ -153,10 +174,27 @@
     transition: background 80ms, color 80ms, border-color 80ms;
 }
 
-.tm-npcp__mark-all-read:hover {
+.tm-npcp__mark-all-read:hover:not(:disabled) {
     background: var(--tm-color-surface-hover);
     color: var(--tm-text-primary);
     border-color: var(--tm-text-secondary);
+}
+
+.tm-npcp__mark-all-read:disabled {
+    opacity: var(--tm-opacity-disabled);
+    cursor: not-allowed;
+}
+
+/* ── Embedded variant (dialog body): no card chrome, the dialog owns it ────── */
+
+.tm-npcp--embedded {
+    border: none;
+    border-radius: 0;
+    background: transparent;
+}
+
+.tm-npcp--embedded .tm-npcp__body {
+    padding: 0;
 }
 
 /* ── Threads list ──────────────────────────────────────────────────────────── */
@@ -175,8 +213,16 @@
     overflow: hidden;
 }
 
+/* Resolved threads stay at full opacity: dimming the whole card dropped the action
+   text below AA. The badge and the actions carry the muted colour themselves. */
 .tm-npcp__thread--resolved {
-    opacity: 0.65;
+    opacity: 1;
+}
+
+.tm-npcp__thread--resolved .tm-npcp__thread-action,
+.tm-npcp__thread--resolved .tm-npcp__watch-btn,
+.tm-npcp__thread--resolved ::deep .tm-npcp__reply-trigger {
+    color: var(--tm-text-secondary);
 }
 
 /* ── Thread header ─────────────────────────────────────────────────────────── */
@@ -193,8 +239,9 @@
     display: flex;
     align-items: center;
     gap: 4px;
-    font-size: 11px;
-    color: var(--tm-color-success);
+    font-size: var(--tm-font-size-xs);
+    /* --tm-color-success is a fill green (fails AA as text); the text token passes. */
+    color: var(--tm-color-success-text);
     font-weight: 500;
 }
 

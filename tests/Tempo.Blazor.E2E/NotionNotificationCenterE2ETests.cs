@@ -37,11 +37,12 @@ public class NotionNotificationCenterE2ETests : WasmTestBase
         Assert.IsTrue(Math.Abs(wideWidth - 384f) < 1.5f,
             $"at 1440px the panel must be 24rem=384px wide (got {wideWidth}px)");
 
-        // 390px: the min() branch flips to 100vw − 1.5rem = 366px.
+        // 390px: MobilePresentation=Auto replaces the popover with the bottom sheet.
         await page.SetViewportSizeAsync(390, 800);
-        var narrowWidth = await panel.EvaluateAsync<float>("el => el.getBoundingClientRect().width");
-        Assert.IsTrue(Math.Abs(narrowWidth - 366f) < 1.5f,
-            $"at 390px the panel must clamp to viewport − 24px = 366px (got {narrowWidth}px)");
+        var sheet = page.Locator(".tm-overlay-panel-sheet").First;
+        await sheet.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10000 });
+        Assert.AreEqual(0, await page.Locator(".tm-notion-notifications__panel.tm-overlay-panel--open").CountAsync(),
+            "at 390px the bell must present as a sheet, not the anchored popover");
     }
 
     [TestMethod]

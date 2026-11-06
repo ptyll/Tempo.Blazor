@@ -33,6 +33,7 @@
             <span class="@($"{ClassPrefix}__reply-hint")">@Hint</span>
         }
         <button class="@($"{ClassPrefix}__reply-send")"
+                aria-label="@SubmitText"
                 type="button"
                 data-testid="@TestId("notion-comment-composer-submit")"
                 disabled="@(string.IsNullOrWhiteSpace(_text) || Submitting || Disabled)"

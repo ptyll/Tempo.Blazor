@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Components.Web;
 using Microsoft.JSInterop;
 using Tempo.Blazor.Abstractions.Layout;
 using Tempo.Blazor.Components.NotionEditor.Services;
+using Tempo.Blazor.Localization;
 using Tempo.Blazor.NotionEditor.Interfaces;
 using Tempo.Blazor.NotionEditor.Models;
 
@@ -18,6 +19,15 @@ public partial class TmNotionPageHeader : ComponentBase, IDisposable
 
     [Inject] private IJSRuntime JS { get; set; } = default!;
 
+    [Inject] private IServiceProvider Services { get; set; } = default!;
+
+    private ITmRelativeTimeFormatter? _relativeTime;
+
+    /// <summary>Cached per component — <see cref="TmRelativeTime.Resolve"/> allocates a fallback when none is registered.</summary>
+    private ITmRelativeTimeFormatter RelativeTime => _relativeTime ??= TmRelativeTime.Resolve(Services, Loc);
+
+    private string AbsoluteTime(DateTimeOffset dt) => RelativeTime.Absolute(dt);
+
     // ── Cascaded context ─────────────────────────────────────────────────────
 
     [CascadingParameter]
@@ -32,6 +42,13 @@ public partial class TmNotionPageHeader : ComponentBase, IDisposable
     public INotionPage Page { get; set; } = default!;
 
     [Parameter] public bool ReadOnly { get; set; }
+
+    /// <summary>
+    /// Opt-in meta row under the title (phase 5, N2): last-edited time (relative + absolute),
+    /// the last editor (avatar + resolved name) and the unresolved comment count as a link.
+    /// Defaults to <see langword="false"/>; the demo turns it on.
+    /// </summary>
+    [Parameter] public bool ShowMeta { get; set; }
 
     /// <summary>When true, displays a visible page-level restricted access indicator in the header.</summary>
     [Parameter] public bool ShowRestrictedIndicator { get; set; }
@@ -61,6 +78,9 @@ public partial class TmNotionPageHeader : ComponentBase, IDisposable
     private string       _emojiSearch      = string.Empty;
     private List<string> _recentEmojis     = [];
     private INotionPage? _lastPage;
+
+    /// <summary>Resolved display name of the last editor (meta row); the raw id is the fallback.</summary>
+    private string _lastEditorName = string.Empty;
 
     private ElementReference _titleRef;
     private ElementReference _descRef;
@@ -109,7 +129,33 @@ public partial class TmNotionPageHeader : ComponentBase, IDisposable
             _showIconPicker   = false;
             _showCoverDialog  = false;
             _emojiSearch      = string.Empty;
+            _lastEditorName   = Page.LastEditedByUserId ?? string.Empty;
+            _resolvedEditorId = null;
         }
+
+        if (ShowMeta && !string.IsNullOrWhiteSpace(Page.LastEditedByUserId))
+            await ResolveLastEditorAsync();
+    }
+
+    private string? _resolvedEditorId;
+
+    /// <summary>Resolves the last editor's display name through the mention provider; the raw id stays as fallback.</summary>
+    private async Task ResolveLastEditorAsync()
+    {
+        var userId = Page.LastEditedByUserId!.Trim();
+        if (string.Equals(_resolvedEditorId, userId, StringComparison.Ordinal))
+            return;
+        _resolvedEditorId = userId;
+        _lastEditorName = userId;
+        if (Context.MentionProvider is null)
+            return;
+        try
+        {
+            var match = await Context.MentionProvider.GetByIdAsync(userId);
+            if (match is not null && !string.IsNullOrWhiteSpace(match.DisplayName))
+                _lastEditorName = match.DisplayName;
+        }
+        catch { /* provider unavailable — keep the id fallback */ }
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)

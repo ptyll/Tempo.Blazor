@@ -44,6 +44,7 @@ builder.Services.AddCors(o => o.AddDefaultPolicy(p =>
     p.SetIsOriginAllowed(origin => DemoCorsPolicy.IsAllowed(origin, configuredOrigins, isDevelopment))
      .AllowAnyMethod()
      .AllowAnyHeader()
+     .WithExposedHeaders("X-Demo-Pid", "X-Demo-Stored", "X-Demo-After")
      .AllowCredentials()));   // required for SignalR WebSocket handshake; SetIsOriginAllowed echoes the origin, so credentials stay valid
 
 builder.Services.AddSignalR();

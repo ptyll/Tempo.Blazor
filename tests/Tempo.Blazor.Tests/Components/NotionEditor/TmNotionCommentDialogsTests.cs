@@ -367,6 +367,18 @@ public sealed class TmNotionCommentDialogsTests : LocalizationTestBase
     }
 
     [Fact]
+    public void BlockComment_ThreadList_StillRendersReplySend()
+    {
+        var provider = new BlockFakeCommentProvider();
+        SeedTwoThreads(provider);
+        var cut = RenderBlockPanel(provider, NotionCommentPresentation.Popover, TmLayoutMode.Desktop);
+
+        cut.WaitForAssertion(() =>
+            cut.FindAll(".tm-nbcp__reply-send").Should().NotBeEmpty(
+                "the open panel must expose the original send class even on a thread list"));
+    }
+
+    [Fact]
     public void TextComment_Popover_DismissalRaisesOnClosed()
     {
         var provider = new BlockFakeCommentProvider();
@@ -377,6 +389,39 @@ public sealed class TmNotionCommentDialogsTests : LocalizationTestBase
             .GetAwaiter().GetResult();
 
         closed.Should().Be(1);
+    }
+
+    [Fact]
+    public void BlockComment_Popover_EscapeWithDraft_KeepsPanelOpen_OutsideStillCloses()
+    {
+        // Escape typed in the composer (the E2E closes a mention menu that way) must not discard
+        // the unsent comment: the popover vetoes an Escape dismissal while a draft exists.
+        var provider = new BlockFakeCommentProvider();
+        var closed = 0;
+        var cut = RenderBlockPanel(provider, NotionCommentPresentation.Popover, TmLayoutMode.Desktop, onClosed: () => closed++);
+
+        cut.Find(".tm-nbcp__reply-input").Input("Hey @alice check this out");
+        cut.WaitForAssertion(() => cut.Instance.HasUnsavedDraft.Should().BeTrue());
+
+        var overlay = cut.FindComponent<TmOverlayPanel>().Instance;
+        cut.InvokeAsync(() => overlay.NotifyDismissedAsync("escape")).GetAwaiter().GetResult();
+        closed.Should().Be(0);
+        cut.FindAll(".tm-nbcp__reply-send").Should().NotBeEmpty();
+
+        cut.InvokeAsync(() => overlay.NotifyDismissedAsync("outside")).GetAwaiter().GetResult();
+        closed.Should().Be(1);
+    }
+
+    [Fact]
+    public void BlockComment_ThreadListComposer_ReportsNewCommentDraft()
+    {
+        var provider = new BlockFakeCommentProvider();
+        SeedTwoThreads(provider);
+        var cut = RenderBlockPanel(provider, NotionCommentPresentation.Popover, TmLayoutMode.Desktop);
+
+        cut.WaitForAssertion(() => cut.FindAll(".tm-nbcp__thread-list").Should().NotBeEmpty());
+        cut.Find(".tm-nbcp__reply-input").Input("draft on the list");
+        cut.WaitForAssertion(() => cut.Instance.HasUnsavedDraft.Should().BeTrue());
     }
 
     // ── Hosts ────────────────────────────────────────────────────────────────
