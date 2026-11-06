@@ -1,0 +1,235 @@
+/* ═══════════════════════════════════════════════════════════════════════════════════════════════
+   TmAgentPresenceOverlay — collaborators' cursors over any host content
+   Contract: docs/agent-presence-overlay.md
+   Every rule reads a --tm-* design token (no colour literal, no raw palette step, no [data-theme]
+   block); the package's shared token gate is AiMarkdownViewCssTests and this partial's own gate is
+   TmAgentPresenceOverlayCssTests.
+
+   The layer is DECORATION: it sits above the content with pointer-events: none, carries no focus stop
+   and is aria-hidden, so the document underneath keeps its own behaviour. The same presence is text
+   through the roster and one polite live region.
+
+   Motion: a marker that moves between two measured positions slides; prefers-reduced-motion turns that
+   into a jump (the module never animates, so this is the only motion source). A marker that has an
+   anchor stays INVISIBLE until the module placed it, so a cursor never sits at the content's origin
+   pretending its element is there.
+   ═══════════════════════════════════════════════════════════════════════════════════════════════ */
+
+.tm-ai-presence {
+    /* A host lays the surface out in a grid or a flex row: without this the automatic minimum width
+       grows to the content and the PAGE scrolls sideways instead of the content's own scroller. */
+    min-inline-size: 0;
+    position: relative;
+
+    /* The runtime knobs: the palette colour of one cursor and the two measured offsets. The declared
+       defaults are what a point marker and an unmeasured anchored marker use; the inline style and the
+       module's writes always outrank them. */
+    --tm-presence-color: var(--tm-color-primary);
+    --tm-presence-x: 0%;
+    --tm-presence-y: 0%;
+    --tm-presence-ink: var(--tm-text-inverse);
+    --tm-presence-label-bg: var(--tm-color-primary);
+    --tm-presence-roster-bg: var(--tm-bg-surface-secondary);
+
+    color: var(--tm-text-primary);
+}
+
+.tm-ai-presence__content {
+    position: relative;
+    min-inline-size: 0;
+}
+
+/* ── The visual layer ─────────────────────────────────────────────────────────────────────── */
+
+.tm-ai-presence__layer {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    /* The content underneath keeps every press, drag and selection: the layer is a picture. */
+    pointer-events: none;
+    /* A label that would run past the content is mirrored by the module; clipping here is the last guard, so a
+       decorative layer can never widen the PAGE even when the measurement has not landed yet. */
+    overflow: clip;
+}
+
+.tm-ai-presence__marker {
+    position: absolute;
+    inset-inline-start: var(--tm-presence-x);
+    inset-block-start: var(--tm-presence-y);
+    display: flex;
+    align-items: flex-start;
+    gap: var(--tm-space-1);
+    /* The cursor's tip is the measured point, so the glyph starts below it and the label beside it. */
+    margin-block-start: calc(-1 * var(--tm-space-0-5));
+    max-inline-size: 14rem;
+    transition:
+        inset-inline-start 160ms ease,
+        inset-block-start 160ms ease,
+        opacity 120ms ease;
+}
+
+/* An anchored marker is only revealed once the module measured it. */
+.tm-ai-presence__marker[data-presence-anchor]:not([data-presence-placed="true"]) {
+    opacity: 0;
+    transition: none;
+}
+
+.tm-ai-presence__marker:not([data-presence-placed="true"]) {
+    transition: none;
+}
+
+/* Near the content's inline end the module mirrors the marker: its label then grows INTO the content (left of the
+   pointer) instead of running off the edge. Mirrored, the cursor stays right-most, on the measured point. */
+.tm-ai-presence__marker[data-presence-flip="true"] {
+    flex-direction: row-reverse;
+    transform: translateX(-100%);
+}
+
+.tm-ai-presence__cursor {
+    display: inline-flex;
+    flex: 0 0 auto;
+    color: var(--tm-presence-color);
+}
+
+.tm-ai-presence__pointer {
+    display: block;
+    inline-size: var(--tm-space-3-5);
+    block-size: var(--tm-space-5);
+    fill: currentColor;
+    stroke: var(--tm-bg-surface);
+    stroke-width: 1;
+}
+
+.tm-ai-presence__label {
+    display: inline-flex;
+    flex-direction: column;
+    gap: var(--tm-space-0-5);
+    padding: var(--tm-space-0-5) var(--tm-space-1-5);
+    border-radius: var(--tm-radius-sm);
+    background-color: var(--tm-presence-label-bg);
+    color: var(--tm-presence-ink);
+    font-size: var(--tm-font-size-xs);
+    font-weight: var(--tm-font-weight-medium);
+    line-height: var(--tm-line-height-tight);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* The label takes the cursor's own palette colour, written inline per marker. */
+.tm-ai-presence__marker .tm-ai-presence__label {
+    background-color: var(--tm-presence-color);
+}
+
+.tm-ai-presence__name {
+    font-weight: var(--tm-font-weight-semibold);
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.tm-ai-presence__activity {
+    font-weight: var(--tm-font-weight-normal);
+    opacity: 0.9;
+}
+
+/* The activity tone is a SECOND cue next to the word: the label always names what the agent is doing. */
+.tm-ai-presence__marker[data-activity="editing"] .tm-ai-presence__activity {
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
+.tm-ai-presence__marker[data-activity="commenting"] .tm-ai-presence__activity {
+    font-style: italic;
+}
+
+/* ── The roster: the same presence as text ────────────────────────────────────────────────── */
+
+.tm-ai-presence__roster {
+    margin-block-start: var(--tm-space-2);
+    padding: var(--tm-space-2);
+    border: var(--tm-border-width) solid var(--tm-border-color);
+    border-radius: var(--tm-radius-control);
+    background-color: var(--tm-presence-roster-bg);
+}
+
+.tm-ai-presence__roster-title {
+    margin: 0 0 var(--tm-space-1);
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-xs);
+    font-weight: var(--tm-font-weight-semibold);
+}
+
+.tm-ai-presence__roster-empty {
+    margin: 0;
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-xs);
+}
+
+.tm-ai-presence__roster-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--tm-space-1) var(--tm-space-3);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.tm-ai-presence__roster-item {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--tm-space-1);
+    min-inline-size: 0;
+    color: var(--tm-text-primary);
+    font-size: var(--tm-font-size-xs);
+}
+
+.tm-ai-presence__roster-activity {
+    color: var(--tm-text-secondary);
+    overflow-wrap: anywhere;
+}
+
+/* A coarse pointer gets the 44 px row: the roster is the tap-friendly alternative to a 14 px pointer. */
+@media (pointer: coarse) {
+    .tm-ai-presence__roster-item {
+        min-block-size: var(--tm-touch-target);
+    }
+}
+
+/* Forced colors: the cursor becomes the system's cursor colour and the label keeps its text on the
+   system's own background, so the name and the activity stay readable without any palette colour. */
+@media (forced-colors: active) {
+    .tm-ai-presence__cursor {
+        color: CanvasText;
+        forced-color-adjust: none;
+    }
+
+    .tm-ai-presence__label,
+    .tm-ai-presence__marker .tm-ai-presence__label,
+    .tm-ai-presence__roster {
+        border: var(--tm-border-width) solid CanvasText;
+        background-color: Canvas;
+        color: CanvasText;
+        forced-color-adjust: none;
+    }
+
+    .tm-ai-presence__pointer {
+        fill: Highlight;
+        stroke: Canvas;
+    }
+
+    .tm-ai-presence__roster-item {
+        color: CanvasText;
+    }
+
+    .tm-ai-presence__roster-activity {
+        color: CanvasText;
+    }
+}
+
+/* A reader who asked for less motion gets the finished position at once: the cursor still moves, it just
+   does not travel. The information (who is where and what they do) is unchanged. */
+@media (prefers-reduced-motion: reduce) {
+    .tm-ai-presence__marker {
+        transition: none;
+    }
+}

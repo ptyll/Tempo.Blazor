@@ -1,0 +1,11 @@
+﻿{
+  "kind": "Enum",
+  "category": "AI",
+  "namespace": "Tempo.Blazor.AI.Models",
+  "description": "How a reader settled a conflicting file: they picked one agent's version to keep, or they decided to merge the file by hand. The enum is the CHOICE, not the outcome. Agent says \"take this agent's side\" and AgentId names which agent that is; Manual says \"I will resolve this one myself\", which is a real decision and therefore unblocks the merge instead of counting as unresolved.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/AI/Agents/ConflictResolutionKind.cs",
+  "documentationStatus": "documented",
+  "itemName": "ConflictResolutionKind",
+  "usageExample": "_resolutions.Add(new ConflictResolution(\"README.md\", ConflictResolutionKind.Manual));"
+}

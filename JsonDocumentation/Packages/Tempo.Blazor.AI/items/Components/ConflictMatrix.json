@@ -1,0 +1,14 @@
+﻿{
+  "kind": "Class",
+  "category": "Components",
+  "namespace": "Tempo.Blazor.Components.AI",
+  "description": "The conflict radar's MODEL: every path the agents touched as one row, every agent as one column, and a cell where the two meet when that agent changed that file. The matrix is pure C# and fully testable without a renderer, which is the point: a conflict is a FACT (\"two or more agents changed the same path\"), not a colour a template decides. One agent changing a file is work; two agents changing it is a decision somebody has to make, so the row is marked a conflict and the surface can never disagree with the count it prints. Ordering answers the reader's first question. Conflicting rows come FIRST and, inside both groups, paths are sorted ordinally, so the same input always paints the same picture. Directories are derived from that order — the directory holding the first conflict is the first group — which keeps \"group by directory\" and \"conflicts on top\" from fighting each other: the group order follows the rows rather than the other way round. A conflict is judged on the path an agent leaves the file AT: a rename's PreviousPath is shown in the cell (\"was src/Old.cs\") but does not create a second row, because a reader decides about one file, not about a path that no longer exists.",
+  "packageId": "Tempo.Blazor.AI",
+  "sourcePath": "src/Tempo.Blazor.AI/Components/AI/ConflictMatrix.cs",
+  "documentationStatus": "documented",
+  "itemName": "ConflictMatrix",
+  "notes": [
+    "The matrix is pure C#: a conflict is a fact (two or more agents changed the same path) and the ordering, the directory groups and the merge readiness are all computed here, so no template can disagree with the count it prints.",
+    "Paths are compared ordinally after their separators are normalised to '/', so the same file reported by two agents with different separators is one row — while a case difference stays two rows, because folding it would hide a change nobody resolved."
+  ]
+}

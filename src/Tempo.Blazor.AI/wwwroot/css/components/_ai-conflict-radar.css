@@ -1,0 +1,460 @@
+/* ═══════════════════════════════════════════════════════════════════════════════════════════════
+   TmConflictRadar — the agents' branches as one file × agent grid, with a side choice per conflict
+   Contract: docs/conflict-radar.md
+   Every rule reads a --tm-* design token (no colour literal, no raw palette step, no [data-theme]
+   block); the package's shared token gate is AiMarkdownViewCssTests and this partial's own gate is
+   TmConflictRadarCssTests.
+
+   Nothing here animates or transitions: a row that slid in would be motion without information, and a
+   conflict has to be readable in a screenshot. Focus rings are real outlines on real focusable
+   elements (the directory buttons, the side radios and the merge action), a coarse pointer reaches
+   the 44 px target, and the forced-colors block hands every colour back to the system palette while
+   KEEPING the "Conflict" word — the tone is the second cue, never the only one.
+   ═══════════════════════════════════════════════════════════════════════════════════════════════ */
+
+.tm-ai-radar {
+    /* A host lays the surface out in a grid or a flex row: without this the automatic minimum width
+       grows to the table's content and the PAGE scrolls sideways instead of the grid's own wrapper. */
+    min-inline-size: 0;
+
+    /* Every knob is DECLARED here (a var() that only ever carries a fallback is an undefined alias):
+       a host overrides one by restyling this root. */
+    --tm-radar-agent-ink: var(--tm-text-primary);
+    --tm-radar-conflict-ink: var(--tm-color-danger-text);
+    --tm-radar-conflict-fill: var(--tm-color-danger-subtle);
+    --tm-radar-conflict-border: var(--tm-color-danger-soft-border);
+    --tm-radar-change-ink: var(--tm-text-secondary);
+    --tm-radar-none-ink: var(--tm-text-muted);
+
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-3);
+    padding: var(--tm-space-4);
+    border: var(--tm-border-width) solid var(--tm-border-color);
+    border-radius: var(--tm-radius-card);
+    background-color: var(--tm-bg-surface);
+    color: var(--tm-text-primary);
+    box-shadow: var(--tm-shadow-sm);
+    font-size: var(--tm-font-size-sm);
+    line-height: var(--tm-line-height-normal);
+}
+
+/* ── Header, summary, filter and the merge action ─────────────────────────────────────────── */
+
+/* The conflicts-only filter narrows the grid: the summary keeps reporting the WHOLE picture, so a
+   reader knows what the filter hid. */
+.tm-ai-radar--conflicts-only .tm-ai-radar__summary {
+    color: var(--tm-text-primary);
+    font-weight: var(--tm-font-weight-medium);
+}
+
+.tm-ai-radar__header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: var(--tm-space-2) var(--tm-space-3);
+}
+
+.tm-ai-radar__title {
+    flex: 1 1 100%;
+    margin: 0;
+    font-size: var(--tm-font-size-base);
+    font-weight: var(--tm-font-weight-semibold);
+}
+
+.tm-ai-radar__summary {
+    flex: 1 1 14rem;
+    margin: 0;
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-xs);
+    font-variant-numeric: tabular-nums;
+    overflow-wrap: anywhere;
+}
+
+.tm-ai-radar__filter {
+    flex: 0 1 auto;
+    min-inline-size: 0;
+}
+
+.tm-ai-radar__merge {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: var(--tm-space-1);
+    min-block-size: var(--tm-space-9);
+    padding: var(--tm-space-1) var(--tm-space-3);
+    border: var(--tm-border-width) solid var(--tm-color-primary-solid);
+    border-radius: var(--tm-radius-control);
+    background-color: var(--tm-color-primary);
+    color: var(--tm-color-on-primary);
+    font-size: var(--tm-font-size-sm);
+    font-weight: var(--tm-font-weight-medium);
+    cursor: pointer;
+}
+
+.tm-ai-radar__merge:hover:not([disabled]) {
+    background-color: var(--tm-color-primary-hover);
+}
+
+.tm-ai-radar__merge[disabled] {
+    border-color: var(--tm-border-color-control);
+    background-color: var(--tm-bg-surface-secondary);
+    color: var(--tm-text-disabled);
+    cursor: not-allowed;
+}
+
+.tm-ai-radar__merge-icon {
+    display: inline-flex;
+    align-items: center;
+}
+
+.tm-ai-radar__merge-text {
+    white-space: nowrap;
+}
+
+.tm-ai-radar__merge:focus-visible {
+    outline: var(--tm-border-width) solid var(--tm-border-color-focus);
+    outline-offset: 2px;
+}
+
+.tm-ai-radar__instructions,
+.tm-ai-radar__merge-hint {
+    margin: 0;
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-xs);
+    overflow-wrap: anywhere;
+}
+
+.tm-ai-radar__merge-hint {
+    font-variant-numeric: tabular-nums;
+}
+
+.tm-ai-radar__empty {
+    margin: 0;
+    padding: var(--tm-space-6) var(--tm-space-3);
+    border: var(--tm-border-width) dashed var(--tm-border-color);
+    border-radius: var(--tm-radius-control);
+    color: var(--tm-text-secondary);
+    text-align: center;
+}
+
+/* ── The grid ─────────────────────────────────────────────────────────────────────────────── */
+
+.tm-ai-radar__grid-wrap {
+    min-inline-size: 0;
+    overflow-x: auto;
+    /* The wrapper is the containing block of the grid's absolutely positioned screen-reader spans (the "No change" text
+       of an empty cell). Without this they resolve against the PAGE and park at the far end of the wide table, which
+       widens the page by their offset — a scroller can only contain the overflow it actually contains. */
+    position: relative;
+}
+
+.tm-ai-radar__grid {
+    inline-size: 100%;
+    border-collapse: collapse;
+    font-size: var(--tm-font-size-xs);
+}
+
+.tm-ai-radar__cell {
+    padding: var(--tm-space-2);
+    border-block-end: var(--tm-border-width) solid var(--tm-border-color);
+    text-align: start;
+    vertical-align: top;
+}
+
+.tm-ai-radar__head-row .tm-ai-radar__cell {
+    border-block-end-color: var(--tm-border-color-strong);
+    color: var(--tm-text-secondary);
+    font-weight: var(--tm-font-weight-semibold);
+    white-space: nowrap;
+}
+
+.tm-ai-radar__cell--file {
+    position: sticky;
+    inset-inline-start: 0;
+    z-index: 1;
+    min-inline-size: 12rem;
+    background-color: var(--tm-bg-surface);
+}
+
+.tm-ai-radar__cell--agent {
+    min-inline-size: 8rem;
+}
+
+.tm-ai-radar__branch {
+    display: block;
+    margin-block-start: var(--tm-space-1);
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-xs);
+    font-weight: var(--tm-font-weight-normal);
+    overflow-wrap: anywhere;
+}
+
+.tm-ai-radar__file-name {
+    display: block;
+    color: var(--tm-text-primary);
+    font-weight: var(--tm-font-weight-medium);
+    overflow-wrap: anywhere;
+}
+
+.tm-ai-radar__file-path {
+    display: block;
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-xs);
+    overflow-wrap: anywhere;
+}
+
+/* ── Directory groups ─────────────────────────────────────────────────────────────────────── */
+
+.tm-ai-radar__directory-row {
+    background-color: var(--tm-bg-surface-secondary);
+}
+
+.tm-ai-radar__group .tm-ai-radar__directory-cell {
+    padding: 0;
+    background-color: var(--tm-bg-surface-secondary);
+    border-block-end: var(--tm-border-width) solid var(--tm-border-color);
+}
+
+.tm-ai-radar__directory-toggle {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-2);
+    inline-size: 100%;
+    min-block-size: var(--tm-space-9);
+    padding: var(--tm-space-1) var(--tm-space-2);
+    border: 0;
+    background: none;
+    color: var(--tm-text-primary);
+    font-family: inherit;
+    font-size: var(--tm-font-size-xs);
+    font-weight: var(--tm-font-weight-semibold);
+    text-align: start;
+    cursor: pointer;
+}
+
+.tm-ai-radar__directory-toggle:hover {
+    background-color: var(--tm-color-surface-hover);
+}
+
+.tm-ai-radar__directory-toggle:focus-visible {
+    outline: var(--tm-border-width) solid var(--tm-border-color-focus);
+    outline-offset: -2px;
+}
+
+.tm-ai-radar__directory-icon {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    color: var(--tm-text-secondary);
+}
+
+.tm-ai-radar__directory-name {
+    flex: 0 1 auto;
+    font-family: var(--tm-font-mono);
+    overflow-wrap: anywhere;
+}
+
+.tm-ai-radar__directory-meta {
+    margin-inline-start: auto;
+    color: var(--tm-text-secondary);
+    font-weight: var(--tm-font-weight-normal);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+/* ── Rows ────────────────────────────────────────────────────────────────────────────────── */
+
+.tm-ai-radar__row {
+    color: var(--tm-text-primary);
+}
+
+.tm-ai-radar__row--conflict {
+    background-color: var(--tm-radar-conflict-fill);
+    box-shadow: inset 3px 0 0 0 var(--tm-color-danger);
+}
+
+.tm-ai-radar__row--conflict .tm-ai-radar__file-name {
+    color: var(--tm-radar-conflict-ink);
+}
+
+.tm-ai-radar__conflict {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--tm-space-1);
+    margin-block-start: var(--tm-space-1);
+    color: var(--tm-radar-conflict-ink);
+    font-size: var(--tm-font-size-xs);
+    font-weight: var(--tm-font-weight-semibold);
+}
+
+.tm-ai-radar__conflict-icon {
+    display: inline-flex;
+    align-items: center;
+}
+
+.tm-ai-radar__conflict-text {
+    white-space: nowrap;
+}
+
+/* ── Cells ───────────────────────────────────────────────────────────────────────────────── */
+
+.tm-ai-radar__cell--change {
+    min-inline-size: 8rem;
+}
+
+.tm-ai-radar__change {
+    display: inline-flex;
+    flex-direction: column;
+    gap: var(--tm-space-0-5);
+    color: var(--tm-radar-change-ink);
+}
+
+.tm-ai-radar__change-icon {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--tm-space-1);
+    color: var(--tm-text-secondary);
+}
+
+.tm-ai-radar__change-kind {
+    font-weight: var(--tm-font-weight-medium);
+}
+
+.tm-ai-radar__change--modified .tm-ai-radar__change-icon,
+.tm-ai-radar__change--modified .tm-ai-radar__change-kind {
+    color: var(--tm-text-secondary);
+}
+
+.tm-ai-radar__change--added .tm-ai-radar__change-icon,
+.tm-ai-radar__change--added .tm-ai-radar__change-kind {
+    color: var(--tm-color-success-text);
+}
+
+.tm-ai-radar__change--deleted .tm-ai-radar__change-icon,
+.tm-ai-radar__change--deleted .tm-ai-radar__change-kind {
+    color: var(--tm-color-danger-text);
+}
+
+.tm-ai-radar__change--renamed .tm-ai-radar__change-icon,
+.tm-ai-radar__change--renamed .tm-ai-radar__change-kind {
+    color: var(--tm-color-info-text);
+}
+
+.tm-ai-radar__change-from {
+    color: var(--tm-text-secondary);
+    overflow-wrap: anywhere;
+}
+
+.tm-ai-radar__none {
+    display: inline-flex;
+    align-items: center;
+    min-block-size: var(--tm-space-6);
+    color: var(--tm-radar-none-ink);
+}
+
+.tm-ai-radar__none-mark {
+    font-size: var(--tm-font-size-base);
+}
+
+/* ── The side choice of one conflicting file ─────────────────────────────────────────────── */
+
+.tm-ai-radar__row--resolution .tm-ai-radar__resolution-cell {
+    padding: var(--tm-space-2) var(--tm-space-2) var(--tm-space-3);
+    border-block-end: var(--tm-border-width) solid var(--tm-border-color);
+    background-color: var(--tm-bg-surface);
+}
+
+.tm-ai-radar__sides {
+    display: flex;
+    flex-wrap: wrap;
+    /* The labels are 24 px tall (--tm-space-6), so a wrapped row needs a real row gap: at --tm-space-1 the
+       WCAG 2.5.8 spacing exemption is met by a hair, and a label that wraps onto two lines makes it luck. */
+    gap: var(--tm-space-2) var(--tm-space-3);
+}
+
+.tm-ai-radar__side {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--tm-space-1);
+    min-block-size: var(--tm-space-6);
+    padding-inline-end: var(--tm-space-1);
+    color: var(--tm-text-primary);
+    font-size: var(--tm-font-size-xs);
+    cursor: pointer;
+}
+
+.tm-ai-radar__side-input {
+    flex: 0 0 auto;
+    inline-size: var(--tm-space-4);
+    block-size: var(--tm-space-4);
+    margin: 0;
+    accent-color: var(--tm-color-primary);
+}
+
+.tm-ai-radar__side-input:focus-visible {
+    outline: var(--tm-border-width) solid var(--tm-border-color-focus);
+    outline-offset: 2px;
+}
+
+.tm-ai-radar__side-text {
+    overflow-wrap: anywhere;
+}
+
+/* A coarse pointer grows the LABELS (and the merge/directory buttons), not the radio glyph: the whole
+   label is the target and the radio still looks like a radio. */
+@media (pointer: coarse) {
+    .tm-ai-radar__side,
+    .tm-ai-radar__merge,
+    .tm-ai-radar__directory-toggle {
+        min-block-size: var(--tm-touch-target);
+    }
+
+    .tm-ai-radar__side-input {
+        inline-size: var(--tm-space-5);
+        block-size: var(--tm-space-5);
+    }
+}
+
+/* Forced colors: the system palette stays in charge, so the conflict frame, the toned change words and
+   the merge action hand their colours over while the WORDS keep carrying the meaning. */
+@media (forced-colors: active) {
+    .tm-ai-radar__grid,
+    .tm-ai-radar__cell,
+    .tm-ai-radar__directory-toggle,
+    .tm-ai-radar__side,
+    .tm-ai-radar__merge,
+    .tm-ai-radar__empty {
+        border-color: CanvasText;
+        background-color: Canvas;
+        color: CanvasText;
+    }
+
+    .tm-ai-radar__row {
+        color: CanvasText;
+    }
+
+    .tm-ai-radar__row--conflict {
+        background-color: Canvas;
+        box-shadow: inset 3px 0 0 0 CanvasText;
+    }
+
+    .tm-ai-radar__row--conflict .tm-ai-radar__file-name,
+    .tm-ai-radar__conflict,
+    .tm-ai-radar__change--added .tm-ai-radar__change-kind,
+    .tm-ai-radar__change--deleted .tm-ai-radar__change-kind,
+    .tm-ai-radar__change--renamed .tm-ai-radar__change-kind {
+        color: CanvasText;
+    }
+
+    .tm-ai-radar__merge[disabled] {
+        color: GrayText;
+        border-color: GrayText;
+    }
+
+    .tm-ai-radar__merge:focus-visible,
+    .tm-ai-radar__directory-toggle:focus-visible,
+    .tm-ai-radar__side-input:focus-visible {
+        outline: 2px solid Highlight;
+    }
+}

@@ -1,4 +1,5 @@
-using Tempo.Blazor.AI.Models;
+﻿using Tempo.Blazor.AI.Models;
+using Tempo.Blazor.NotionEditor.Models;
 
 namespace Tempo.Blazor.Demo.SharedUI.Pages;
 
@@ -840,6 +841,57 @@ internal static class AiAgentsPageSamples
         new("run-report", "Weekly report") { EstimatedUnits = 2, Status = ScheduledRunStatus.Succeeded },
         new("run-cleanup", "Cache cleanup") { EstimatedUnits = 1 },
     ];
+
+    /// <summary>
+    /// Three agents on three branches over the same repository: the demo's conflict radar. Two paths are changed by two
+    /// agents (a real conflict the reader has to settle) and one more by a third pair, so the grid shows both a conflict
+    /// and plain work.
+    /// </summary>
+    internal static IReadOnlyList<AgentBranchChanges> BranchChanges() =>
+    [
+        new(new AgentRef("Planner", "planner") { Role = "Orchestrator", ColorIndex = 0 }, "feat/conflict-radar",
+        [
+            new ChangedPath("src/Tempo.Blazor.AI/Components/AI/TmConflictRadar.razor", ChangeKind.Modified),
+            new ChangedPath("src/Tempo.Blazor.AI/Components/AI/ConflictMatrix.cs", ChangeKind.Added),
+            new ChangedPath("docs/conflict-radar.md", ChangeKind.Added),
+            new ChangedPath("CHANGELOG.md", ChangeKind.Modified),
+        ]),
+        new(new AgentRef("Reconciler", "reconciler") { Role = "Worker", ColorIndex = 1 }, "feat/presence",
+        [
+            new ChangedPath("src/Tempo.Blazor.AI/Components/AI/TmConflictRadar.razor", ChangeKind.Modified),
+            new ChangedPath("src/Tempo.Blazor.AI/Components/AI/TmAgentPresenceOverlay.razor", ChangeKind.Added),
+            new ChangedPath("CHANGELOG.md", ChangeKind.Modified),
+        ]),
+        new(new AgentRef("Reviewer", "reviewer") { Role = "Reviewer", ColorIndex = 3 }, "feat/docs",
+        [
+            new ChangedPath("docs/conflict-radar.md", ChangeKind.Modified),
+            new ChangedPath("README.md", ChangeKind.Renamed, "README-old.md"),
+            new ChangedPath("docs/agent-presence-overlay.md", ChangeKind.Added),
+        ]),
+    ];
+
+    /// <summary>The demo document's blocks the collaborator cursors point at, in reading order.</summary>
+    internal static IReadOnlyList<Guid> PresenceBlocks() =>
+    [
+        Guid.Parse("a1a1a1a1-0000-4000-8000-000000000001"),
+        Guid.Parse("a1a1a1a1-0000-4000-8000-000000000002"),
+        Guid.Parse("a1a1a1a1-0000-4000-8000-000000000003"),
+    ];
+
+    /// <summary>
+    /// A collaboration feed's cursors over that document — the shape a host already has (the Notion editor's
+    /// <c>CollaboratorCursor</c>) and the input of the demo-only adapter that turns them into presence markers.
+    /// </summary>
+    internal static IReadOnlyList<CollaboratorCursor> CollaboratorCursors()
+    {
+        var blocks = PresenceBlocks();
+        return
+        [
+            new("planner", "Planner", null, "#3b82f6", blocks[0], 12),
+            new("reconciler", "Reconciler", null, "#16a34a", blocks[1], 4),
+            new("reviewer", "Reviewer", null, "#f59e0b", blocks[2], 30),
+        ];
+    }
 
     /// <summary>The effort levels of a model, labelled in the page's language.</summary>
     private static AiModelEffortLevel[] Effort(Func<string, string> loc, params string[] ids)

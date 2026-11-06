@@ -1,0 +1,95 @@
+﻿{
+  "itemName": "TmAgentPresenceOverlay",
+  "kind": "Component",
+  "category": "AI",
+  "description": "Collaborators' cursors over ANY host content: a labelled pointer per present agent (or person), anchored either to an element the host marked with data-presence-anchor or to a fraction of the content box. The layer is absolutely positioned OVER ChildContent and never changes it: the host's markup renders exactly as it would without the overlay, so a document, a wireframe canvas or a form keeps its own behaviour. The position of an ANCHORED marker is measured by the package's ES module (it watches the content and every anchor with a ResizeObserver and the content with a MutationObserver, throttling the work) and written into two CSS custom properties, so a cursor that moves never re-renders the component or the host's content. A POINT marker is painted from the host's own X/Y fractions. Accessibility: the visual layer is decorative — it is aria-hidden and never enters the tab order, because a pointer that takes focus would fight the editor underneath. The same presence is available as text through ShowRoster (a list of the present agents and what they are doing), and exactly ONE polite live region announces a join, a change of activity and a leave, with an identical state never announced twice. Motion: a cursor that moves between two measured positions is animated by the stylesheet, and its reduced-motion block turns the movement into a jump — the module itself never animates, so there is one motion source only.",
+  "packageId": "Tempo.Blazor.AI",
+  "namespace": "Tempo.Blazor.Components.AI",
+  "sourcePath": "src/Tempo.Blazor.AI/Components/AI/TmAgentPresenceOverlay.razor",
+  "documentationStatus": "documented",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.AI"
+  ],
+  "parameters": [
+    {
+      "name": "AnnounceChanges",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "Whether joins, activity changes and leaves are announced through the polite live region. Default true. A host that owns its own announcement channel turns this off; the component then renders NO live region at all rather than a second, competing one."
+    },
+    {
+      "name": "ChildContent",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "The content the cursors are painted over. It renders untouched; the layer is absolutely positioned on top of it and never intercepts the pointer."
+    },
+    {
+      "name": "Class",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Additional CSS class(es) for the root element."
+    },
+    {
+      "name": "Markers",
+      "type": "IReadOnlyList<PresenceMarker>?",
+      "isRequired": false,
+      "description": "The cursors to paint, in an order the host controls (the component keeps it). Null or empty renders an empty layer and — with ShowRoster — the localized \"no one is present\" line."
+    },
+    {
+      "name": "RosterLabel",
+      "type": "string?",
+      "isRequired": false,
+      "description": "The roster's visible title and its accessible name. Null uses the localized default (\"Present now\")."
+    },
+    {
+      "name": "ShowRoster",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Whether the roster is rendered — the TEXT alternative of the cursor layer, listing every present agent and what they are doing. Default false, because the visual layer is what most hosts want and the live region already announces changes."
+    }
+  ],
+  "usageExample": "<TmAgentPresenceOverlay Markers=\"_markers\" ShowRoster=\"true\">\n    <p data-presence-anchor=\"intro\">The quarterly plan…</p>\n</TmAgentPresenceOverlay>",
+  "cssClasses": [
+    "tm-ai-presence",
+    "tm-ai-presence__content",
+    "tm-ai-presence__layer",
+    "tm-ai-presence__marker",
+    "tm-ai-presence__cursor",
+    "tm-ai-presence__pointer",
+    "tm-ai-presence__label",
+    "tm-ai-presence__name",
+    "tm-ai-presence__activity",
+    "tm-ai-presence__roster",
+    "tm-ai-presence__roster-title",
+    "tm-ai-presence__roster-empty",
+    "tm-ai-presence__roster-list",
+    "tm-ai-presence__roster-item",
+    "tm-ai-presence__roster-activity"
+  ],
+  "examples": [
+    {
+      "title": "A cursor anchored to an element",
+      "code": "new PresenceMarker(\"m1\", ana)\n{\n    AnchorId = \"intro\",\n    Activity = PresenceActivity.Typing,\n}",
+      "description": "The marker is measured from the element that carries data-presence-anchor=\"intro\"; it follows a scroll, a resize and a reflow."
+    },
+    {
+      "title": "A cursor at a point",
+      "code": "new PresenceMarker(\"m2\", bo) { X = 0.4, Y = 0.25, Activity = PresenceActivity.Viewing }",
+      "description": "Fractions of the content box are normalised into 0…1 and need no JavaScript at all — the fallback for content the host cannot annotate."
+    },
+    {
+      "title": "The text alternative",
+      "code": "<TmAgentPresenceOverlay Markers=\"_markers\" ShowRoster=\"true\" RosterLabel=\"Present now\" />",
+      "description": "The roster lists every present agent and what they are doing, so the presence the cursors show is also readable text."
+    }
+  ],
+  "notes": [
+    "The visual layer is decorative: it is absolutely positioned over the content, has pointer-events: none and aria-hidden, and is never in the tab order — a pointer that took focus would fight the editor underneath.",
+    "An anchored marker stays invisible until the package's ES module measured it; a marker whose anchor disappeared is hidden instead of being left at a stale position.",
+    "The module watches the content and every anchor with a ResizeObserver and the content with a MutationObserver, throttles its measurements, and writes the two offsets into CSS custom properties, so a moving cursor never re-renders the component or the host's content.",
+    "Movement is the ONE animation: a marker travels between measured positions, and the prefers-reduced-motion block turns that into a jump; the module itself never animates.",
+    "Exactly ONE polite live region announces a join, a change of activity and a leave, and an unchanged state is never announced twice; a join or a changed agent NAME reads \"{0} is {1}.\" while an activity change reads \"{0} is now {1}.\" so the reader hears that something changed; AnnounceChanges=\"false\" removes the region entirely for a host that owns its own channel.",
+    "Without JavaScript (prerender, a disconnected circuit, a refused module import) the layer still renders: anchored markers stay hidden, the host's point markers and the roster still work."
+  ]
+}

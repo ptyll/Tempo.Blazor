@@ -1,0 +1,73 @@
+﻿{
+  "kind": "Record",
+  "category": "AI",
+  "namespace": "Tempo.Blazor.AI.Models",
+  "description": "One present agent (or person) and where on the content their cursor sits — the input of a presence overlay. The marker is anchored EITHER to an element inside the content (AnchorId, matched against data-presence-anchor) or to a point the host computes itself (X/Y as fractions of the content box). An anchor is measured from the real DOM and therefore survives a scroll, a resize and a reflow, so it WINS when a marker carries both; the point is the fallback for content the host cannot annotate. The record is a VALUE: a host recomposes it with marker with { Activity = … } as presence changes and the component never mutates it. X and Y are normalised into 0…1 on assignment, so a host that hands over a pixel offset by mistake still paints inside the content instead of off the edge.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/AI/Agents/PresenceMarker.cs",
+  "documentationStatus": "documented",
+  "members": [
+    {
+      "name": "Normalize",
+      "kind": "Method",
+      "type": "double",
+      "description": "Normalises a coordinate into 0…1; a value that is not finite reads as 0.",
+      "parameters": [
+        {
+          "name": "value",
+          "type": "double"
+        }
+      ]
+    },
+    {
+      "name": "Activity",
+      "kind": "Property",
+      "type": "PresenceActivity",
+      "description": "What the agent is doing at the place the marker points at."
+    },
+    {
+      "name": "Agent",
+      "kind": "Property",
+      "type": "AgentRef",
+      "description": "The agent (or person) the cursor belongs to."
+    },
+    {
+      "name": "AnchorId",
+      "kind": "Property",
+      "type": "string?",
+      "description": "The value of the data-presence-anchor attribute on an element inside the content this marker points at. Null or whitespace means the marker uses X/Y instead."
+    },
+    {
+      "name": "HasAnchor",
+      "kind": "Property",
+      "type": "bool",
+      "description": "Whether the marker is anchored to an element of the content (so it is measured, not computed)."
+    },
+    {
+      "name": "HasLabel",
+      "kind": "Property",
+      "type": "bool",
+      "description": "Whether the host supplied its own activity sentence."
+    },
+    {
+      "name": "HasPoint",
+      "kind": "Property",
+      "type": "bool",
+      "description": "Whether the marker carries a usable point (a marker with neither an anchor nor a point paints at the content's origin, which is a real position rather than a hidden marker)."
+    },
+    {
+      "name": "Id",
+      "kind": "Property",
+      "type": "string",
+      "description": "Stable identity of the marker. Never empty: a missing id is generated at construction."
+    },
+    {
+      "name": "Label",
+      "kind": "Property",
+      "type": "string?",
+      "description": "The host's own sentence for the activity (\"Reviewing the summary\"), used INSTEAD of the component's localized activity word. Null renders the localized word, which is not the same as an empty label."
+    }
+  ],
+  "itemName": "PresenceMarker",
+  "usageExample": "new PresenceMarker(\"m1\", agent) { AnchorId = \"intro\", Activity = PresenceActivity.Typing }"
+}

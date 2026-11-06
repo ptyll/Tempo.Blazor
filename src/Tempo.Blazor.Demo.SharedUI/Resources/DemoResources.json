@@ -1188,5 +1188,16 @@
   "TmAiAgentsDemo_DelegateTitle": "Delegate board",
   "TmAiAgentsDemo_DelegateHint": "Work waiting to be handed out: drag a card onto an agent (or use its Assign menu), and watch the automatic pass fill the free slots. An agent at capacity refuses the drop and says why.",
   "TmAiAgentsDemo_RunsTitle": "Scheduled runs",
-  "TmAiAgentsDemo_RunsHint": "Runs placed into the scheduler's windows: the capacity each window offers, what the host has already committed, a run split across two windows and one window the host over-committed."
+  "TmAiAgentsDemo_RunsHint": "Runs placed into the scheduler's windows: the capacity each window offers, what the host has already committed, a run split across two windows and one window the host over-committed.",
+  "TmAiAgentsDemo_ConflictTitle": "Conflict radar",
+  "TmAiAgentsDemo_ConflictHint": "Three agents on three branches over the same repository. Two paths were changed by two agents each: settle every conflict by keeping one agent's version or merging the file by hand, and the Merge action becomes available.",
+  "TmAiAgentsDemo_ConflictResolved": "{0} conflict(s) settled — the page stores the reader's decisions.",
+  "TmAiAgentsDemo_ConflictMerged": "Merge requested: {0} files, {1} conflicts settled.",
+  "TmAiAgentsDemo_PresenceTitle": "Where the collaborators are",
+  "TmAiAgentsDemo_PresenceHint": "The same document with three collaborators over it: the demo adapter turns the collaboration feed's cursors into presence markers anchored to the paragraphs below, and the roster names everyone present for a screen reader.",
+  "TmAiAgentsDemo_PresenceRoster": "Present now",
+  "TmAiAgentsDemo_PresenceDocumentTitle": "Quarterly plan",
+  "TmAiAgentsDemo_PresenceDocumentLead": "The quarterly plan starts with the goals the team agreed on, each with an owner and a review date.",
+  "TmAiAgentsDemo_PresenceDocumentBody": "Work that nobody owns is listed as an open question instead of being assigned silently, so the plan never claims an owner who never agreed.",
+  "TmAiAgentsDemo_PresenceDocumentClose": "Every goal is reviewed at the end of the quarter; a goal that missed its date is carried into the next plan with the reason it slipped."
 }

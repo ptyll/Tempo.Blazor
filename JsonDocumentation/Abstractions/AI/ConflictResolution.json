@@ -1,0 +1,54 @@
+﻿{
+  "kind": "Record",
+  "category": "AI",
+  "namespace": "Tempo.Blazor.AI.Models",
+  "description": "The reader's decision about ONE conflicting file: keep one agent's version, or merge the file by hand. The record is a VALUE and the file's path is its key, which is why a surface bound to a list of these can have at most one decision per file: two entries for one path would let the merge request claim two winners for one file. A decision for a path that is not in conflict is ignored by the radar (nothing to decide) but is still carried to the host unchanged, so a host that keeps its own list never loses data on a re-render. Agent requires AgentId; a blank one is REJECTED at construction because \"keep the agent's side\" without an agent would pick a winner by accident.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/AI/Agents/ConflictResolution.cs",
+  "documentationStatus": "documented",
+  "members": [
+    {
+      "name": "Decides",
+      "kind": "Method",
+      "type": "bool",
+      "description": "Whether a decision stored under path settles that file.",
+      "parameters": [
+        {
+          "name": "path",
+          "type": "string?"
+        }
+      ]
+    },
+    {
+      "name": "AgentId",
+      "kind": "Property",
+      "type": "string?",
+      "description": "The winning agent's id, or null for a manual resolution."
+    },
+    {
+      "name": "IsAgentSide",
+      "kind": "Property",
+      "type": "bool",
+      "description": "Whether this decision picks an agent's version."
+    },
+    {
+      "name": "IsManual",
+      "kind": "Property",
+      "type": "bool",
+      "description": "Whether this decision hands the file to the reader."
+    },
+    {
+      "name": "Kind",
+      "kind": "Property",
+      "type": "ConflictResolutionKind",
+      "description": "Whether one agent wins or the reader merges the file by hand."
+    },
+    {
+      "name": "Path",
+      "kind": "Property",
+      "type": "string",
+      "description": "The conflicting file's path, normalised the same way Path is."
+    }
+  ],
+  "itemName": "ConflictResolution"
+}

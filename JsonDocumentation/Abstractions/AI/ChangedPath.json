@@ -1,0 +1,48 @@
+﻿{
+  "kind": "Record",
+  "category": "AI",
+  "namespace": "Tempo.Blazor.AI.Models",
+  "description": "One path an agent touched on its branch: where the file is, what happened to it, and — for a rename — where it came from. The record is a VALUE: the host composes it from its own workspace receipt (ChangedPaths) and never mutates it. Paths are compared ORDINALLY after their separators are normalised to /, so the same file reported as src/AI/Foo.cs by one agent and src\\AI\\Foo.cs by another is ONE row in the matrix instead of two rows that hide a real conflict. Case is kept as the host spelled it — a case-insensitive file system would also fold Foo.cs and foo.cs, but merging two genuinely distinct paths would hide a change nobody resolved. A blank Path is REJECTED at construction: a path is the matrix's row key and the reader's own side choice is keyed by it, so an invented one would move a decision onto the wrong file.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/AI/Agents/ChangedPath.cs",
+  "documentationStatus": "documented",
+  "members": [
+    {
+      "name": "Normalize",
+      "kind": "Method",
+      "type": "string",
+      "description": "Normalises the separators of a path the host supplied.",
+      "parameters": [
+        {
+          "name": "path",
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "name": "IsRename",
+      "kind": "Property",
+      "type": "bool",
+      "description": "Whether the agent moved the file (so PreviousPath may name where it came from)."
+    },
+    {
+      "name": "Kind",
+      "kind": "Property",
+      "type": "ChangeKind",
+      "description": "What the agent did to the file."
+    },
+    {
+      "name": "Path",
+      "kind": "Property",
+      "type": "string",
+      "description": "The path the file sits at now, with \\ normalised to /."
+    },
+    {
+      "name": "PreviousPath",
+      "kind": "Property",
+      "type": "string?",
+      "description": "Where a renamed file came from, with its separators normalised the same way as Path. Null for every other kind, and for a rename the host did not describe."
+    }
+  ],
+  "itemName": "ChangedPath"
+}

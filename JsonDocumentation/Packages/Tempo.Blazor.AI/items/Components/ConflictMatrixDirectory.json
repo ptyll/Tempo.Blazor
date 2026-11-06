@@ -1,0 +1,10 @@
+﻿{
+  "kind": "Class",
+  "category": "Components",
+  "namespace": "Tempo.Blazor.Components.AI",
+  "description": "One directory group of the conflict matrix: the folder and the rows that sit directly in it. The group is FLAT by design — a nested tree would hide the conflicts of a deep folder behind three disclosures a reader has to open. The path of every row is printed in full by the surface, so one level of grouping is enough to shorten the scan without losing where a file lives.",
+  "packageId": "Tempo.Blazor.AI",
+  "sourcePath": "src/Tempo.Blazor.AI/Components/AI/ConflictMatrix.cs",
+  "documentationStatus": "documented",
+  "itemName": "ConflictMatrixDirectory"
+}

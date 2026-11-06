@@ -1188,5 +1188,16 @@
   "TmAiAgentsDemo_DelegateTitle": "Rozdělování úkolů",
   "TmAiAgentsDemo_DelegateHint": "Práce čekající na rozdělení: přetáhněte kartu na agenta (nebo použijte její nabídku Přiřadit) a sledujte, jak automatický režim zaplní volné sloty. Agent na plné kapacitě drop odmítne a řekne proč.",
   "TmAiAgentsDemo_RunsTitle": "Naplánované běhy",
-  "TmAiAgentsDemo_RunsHint": "Běhy vložené do oken plánovače: kapacita každého okna, co už hostitel obsadil, běh rozdělený přes dvě okna a jedno okno, které hostitel přeplnil."
+  "TmAiAgentsDemo_RunsHint": "Běhy vložené do oken plánovače: kapacita každého okna, co už hostitel obsadil, běh rozdělený přes dvě okna a jedno okno, které hostitel přeplnil.",
+  "TmAiAgentsDemo_ConflictTitle": "Radar konfliktů",
+  "TmAiAgentsDemo_ConflictHint": "Tři agenti na třech větvích nad stejným repozitářem. Dvě cesty změnili vždy dva agenti: každý konflikt vyřešte zachováním verze jednoho agenta nebo ručním sloučením a akce Sloučit se zpřístupní.",
+  "TmAiAgentsDemo_ConflictResolved": "Vyřešené konflikty: {0} — stránka si rozhodnutí čtenáře ukládá.",
+  "TmAiAgentsDemo_ConflictMerged": "Požadavek na sloučení: {0} souborů, {1} vyřešených konfliktů.",
+  "TmAiAgentsDemo_PresenceTitle": "Kde jsou spolupracovníci",
+  "TmAiAgentsDemo_PresenceHint": "Stejný dokument se třemi spolupracovníky: ukázkový adaptér převádí kurzory z kolaboračního zdroje na značky přítomnosti ukotvené k odstavcům níže a seznam jmenuje všechny přítomné pro čtečku obrazovky.",
+  "TmAiAgentsDemo_PresenceRoster": "Právě přítomni",
+  "TmAiAgentsDemo_PresenceDocumentTitle": "Čtvrtletní plán",
+  "TmAiAgentsDemo_PresenceDocumentLead": "Čtvrtletní plán začíná cíli, na kterých se tým dohodl; každý má vlastníka a datum revize.",
+  "TmAiAgentsDemo_PresenceDocumentBody": "Práce, kterou nikdo nevlastní, je uvedena jako otevřená otázka, místo aby byla někomu tiše přidělena — plán tak nikdy netvrdí vlastníka, který s tím nesouhlasil.",
+  "TmAiAgentsDemo_PresenceDocumentClose": "Každý cíl se na konci čtvrtletí vyhodnocuje; cíl, který datum nestihl, přechází do dalšího plánu i s důvodem zpoždění."
 }

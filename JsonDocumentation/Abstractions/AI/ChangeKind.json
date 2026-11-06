@@ -1,0 +1,10 @@
+﻿{
+  "kind": "Enum",
+  "category": "AI",
+  "namespace": "Tempo.Blazor.AI.Models",
+  "description": "What one agent did to one path on its own branch — the fact a conflict radar paints in the cell where the file and the agent meet. The enum carries no text: a surface renders its own localized word and icon for each value, so the same change reads \"Modified\" in English and \"Změněno\" in Czech. Renamed is the only value that also needs a second path (where the file came from), which PreviousPath carries. The four values are deliberately the whole vocabulary: a real Git status also reports modes, copies and merges, but none of them changes what a reader has to decide here — WHO wins the file — and inventing a value per porcelain token would leave most cells with a state no surface can explain.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/AI/Agents/ChangeKind.cs",
+  "documentationStatus": "documented",
+  "itemName": "ChangeKind"
+}

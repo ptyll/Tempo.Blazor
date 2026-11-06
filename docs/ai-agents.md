@@ -327,6 +327,16 @@ units that fit nowhere named), a capacity bar painted from the same slices the r
 with an icon and a word, a week/day/table presentation and a move by drag or by menu. Its contract is
 [scheduled-runs.md](scheduled-runs.md).
 
+`TmConflictRadar` is WHO TOUCHED WHAT: the agents' branches as one file × agent TABLE (a native `<table>`, no grid
+role), where a cell names the change one agent made to one file, a path more than one agent changed is a CONFLICT the
+reader has to settle (keep one agent's version, or merge the file by hand), the merge action stays unavailable until
+every conflict is decided, the conflicts can be filtered on their own and the directories collapse. Its contract is [conflict-radar.md](conflict-radar.md).
+
+`TmAgentPresenceOverlay` is WHERE EVERYBODY IS: labelled cursors over content the host renders, anchored to an element
+(`data-presence-anchor`) or to a fraction of the content box, with the activity word, the shared agent palette, an
+optional roster as the text alternative and one polite live region — the layer is decorative and never takes the
+pointer. Its contract is [agent-presence-overlay.md](agent-presence-overlay.md).
+
 ## Related pages
 
 - [TmAgentGraph](agent-graph.md) — the same run as a network of agents, tools and resources.
@@ -338,6 +348,8 @@ with an icon and a word, a week/day/table presentation and a move by drag or by 
 - [TmMemoryPanel](memory-panel.md) — what the agent remembers, with review, an undo window and bulk actions.
 - [TmDelegateBoard](delegate-board.md) — which agent takes which task, with capacity, refusal and an automatic pass.
 - [TmScheduledRuns](scheduled-runs.md) — which window a run lands in, with the capacity bars and the table alternative.
+- [TmConflictRadar](conflict-radar.md) — which files two agents changed, and the side the team keeps.
+- [TmAgentPresenceOverlay](agent-presence-overlay.md) — the collaborators' cursors over the host's own content.
 - [TmAgentLanes](agent-lanes.md), [TmAgentPlan](agent-plan.md), [TmAgentRunTree](agent-run-tree.md), [TmAgentMonitor](agent-monitor.md),
   [TmPermissionRequest](permission-request.md) — the run-side surfaces that these visualizations compose with.
 - [TmTraceWaterfall](trace-waterfall.md) — the span view of one agent's work.

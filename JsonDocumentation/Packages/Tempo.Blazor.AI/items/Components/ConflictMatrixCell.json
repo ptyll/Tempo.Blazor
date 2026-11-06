@@ -1,0 +1,10 @@
+﻿{
+  "kind": "Class",
+  "category": "Components",
+  "namespace": "Tempo.Blazor.Components.AI",
+  "description": "One cell of the conflict matrix: the agent, the change it made and — for a rename — where the file came from. A cell exists only where an agent really changed the file; the matrix stores null instead of an \"unchanged\" cell so no surface can paint a change that did not happen.",
+  "packageId": "Tempo.Blazor.AI",
+  "sourcePath": "src/Tempo.Blazor.AI/Components/AI/ConflictMatrix.cs",
+  "documentationStatus": "documented",
+  "itemName": "ConflictMatrixCell"
+}

@@ -1,0 +1,162 @@
+﻿{
+  "itemName": "TmConflictRadar",
+  "kind": "Component",
+  "category": "AI",
+  "description": "The agents' branches as one grid: a row per changed file, a column per agent, a cell wherever that agent changed that file — and a row that more than one agent claimed called out as a conflict the reader has to settle. The table is COMPUTED, never drawn by hand: ConflictMatrix decides which paths exist, which of them are conflicts, their order and their directory groups, so the picture and the counts in the summary cannot disagree. Conflicting rows come first, a directory follows the row order rather than the other way round, and every cell names the change with an icon AND a word (Modified, Deleted, was src/Old.cs) instead of a colour. A conflicting file carries its own side choice — one agent's version, or \"merge it by hand\" — bound two-way through Resolutions. The merge action stays DISABLED until every conflict is decided, and its hint states how many are still open, so a reader is never left guessing why the button does nothing. The reader's decisions survive a host that re-renders the same list and are replaced only when the host MOVES the parameter. Accessibility: the surface is a NATIVE table and declares no grid role — a header per agent (its name and branch), a th scope=rowgroup per directory, a th scope=row per file and a resolution cell that names that row header through headers. A grid role without a roving tabindex would make a screen reader switch to focus mode and expect arrow keys the surface does not handle. The side choice is a NATIVE radio group per file, so the browser's own arrow-key behaviour applies and each file is its own group. Directories expand and collapse through the table's native buttons, and the surface owns exactly ONE polite live region that announces a resolution, a merge, a filter change and a collapsed directory.",
+  "packageId": "Tempo.Blazor.AI",
+  "namespace": "Tempo.Blazor.Components.AI",
+  "sourcePath": "src/Tempo.Blazor.AI/Components/AI/TmConflictRadar.razor",
+  "documentationStatus": "documented",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.AI"
+  ],
+  "parameters": [
+    {
+      "name": "Agents",
+      "type": "IReadOnlyList<AgentBranchChanges>?",
+      "isRequired": false,
+      "description": "One entry per agent branch: the agent, the branch it works on and every path it changed. Null or empty renders the localized empty state. An agent that changed nothing is not a column (a column with no cells would only widen the table)."
+    },
+    {
+      "name": "AriaLabel",
+      "type": "string?",
+      "isRequired": false,
+      "description": "The accessible name of the table. Null uses the localized default (\"Conflict radar\")."
+    },
+    {
+      "name": "Class",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Additional CSS class(es) for the root element."
+    },
+    {
+      "name": "ConflictOnly",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Whether only conflicting files are shown, two-way bound with ConflictOnlyChanged (@bind-ConflictOnly). Default false. The reader's pick wins until the host MOVES the parameter."
+    },
+    {
+      "name": "ConflictOnlyChanged",
+      "type": "EventCallback<bool>",
+      "isRequired": false,
+      "description": "Fires with the new filter state."
+    },
+    {
+      "name": "HeadingLevel",
+      "type": "int",
+      "isRequired": false,
+      "default": "3",
+      "description": "The heading level of the rendered title, clamped to 2–6. Default 3."
+    },
+    {
+      "name": "OnMerge",
+      "type": "EventCallback<ConflictMergeRequest>",
+      "isRequired": false,
+      "description": "Raised once per committed merge, with every file the merge touches and the accepted decision for each conflict. The surface changes nothing itself: the host applies the merge in its own repository and re-renders."
+    },
+    {
+      "name": "Resolutions",
+      "type": "IReadOnlyList<ConflictResolution>?",
+      "isRequired": false,
+      "description": "The reader's decisions, one per conflicting file, two-way bound with ResolutionsChanged (@bind-Resolutions). Null means nothing is decided yet, so every conflict is unresolved and the merge stays disabled. The reader's own pick wins until the host supplies a NEW list instance."
+    },
+    {
+      "name": "ResolutionsChanged",
+      "type": "EventCallback<IReadOnlyList<ConflictResolution>>",
+      "isRequired": false,
+      "description": "Fires with the full, ordered decision list whenever the reader decides a file."
+    },
+    {
+      "name": "ShowTitle",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "Whether the heading is rendered. Default true."
+    },
+    {
+      "name": "Title",
+      "type": "string?",
+      "isRequired": false,
+      "description": "The heading above the table. Null renders the localized default (\"Conflict radar\")."
+    }
+  ],
+  "usageExample": "<TmConflictRadar Agents=\"_branches\" @bind-Resolutions=\"_resolutions\" OnMerge=\"OnMerge\" />",
+  "cssClasses": [
+    "tm-ai-radar",
+    "tm-ai-radar--conflicts-only",
+    "tm-ai-radar__header",
+    "tm-ai-radar__title",
+    "tm-ai-radar__summary",
+    "tm-ai-radar__filter",
+    "tm-ai-radar__merge",
+    "tm-ai-radar__merge-icon",
+    "tm-ai-radar__merge-text",
+    "tm-ai-radar__instructions",
+    "tm-ai-radar__merge-hint",
+    "tm-ai-radar__empty",
+    "tm-ai-radar__grid-wrap",
+    "tm-ai-radar__grid",
+    "tm-ai-radar__head-row",
+    "tm-ai-radar__cell",
+    "tm-ai-radar__cell--file",
+    "tm-ai-radar__cell--agent",
+    "tm-ai-radar__cell--change",
+    "tm-ai-radar__branch",
+    "tm-ai-radar__group",
+    "tm-ai-radar__directory-row",
+    "tm-ai-radar__directory-cell",
+    "tm-ai-radar__directory-toggle",
+    "tm-ai-radar__directory-icon",
+    "tm-ai-radar__directory-name",
+    "tm-ai-radar__directory-meta",
+    "tm-ai-radar__row",
+    "tm-ai-radar__row--conflict",
+    "tm-ai-radar__file-name",
+    "tm-ai-radar__file-path",
+    "tm-ai-radar__conflict",
+    "tm-ai-radar__conflict-icon",
+    "tm-ai-radar__conflict-text",
+    "tm-ai-radar__none",
+    "tm-ai-radar__none-mark",
+    "tm-ai-radar__change",
+    "tm-ai-radar__change--added",
+    "tm-ai-radar__change--modified",
+    "tm-ai-radar__change--deleted",
+    "tm-ai-radar__change--renamed",
+    "tm-ai-radar__change-icon",
+    "tm-ai-radar__change-kind",
+    "tm-ai-radar__change-from",
+    "tm-ai-radar__row--resolution",
+    "tm-ai-radar__resolution-cell",
+    "tm-ai-radar__sides",
+    "tm-ai-radar__side",
+    "tm-ai-radar__side-input",
+    "tm-ai-radar__side-text"
+  ],
+  "examples": [
+    {
+      "title": "Three agents on three branches",
+      "code": "new AgentBranchChanges(ana, \"feat/radar\",\n[\n    new ChangedPath(\"src/AI/TmConflictRadar.razor\", ChangeKind.Modified),\n    new ChangedPath(\"README.md\", ChangeKind.Modified),\n])\nnew AgentBranchChanges(bo, \"feat/lanes\",\n[\n    new ChangedPath(\"src/AI/TmConflictRadar.razor\", ChangeKind.Modified),\n])",
+      "description": "The two agents that changed the same path form one conflicting row; the rest are work nobody has to decide about."
+    },
+    {
+      "title": "A settled conflict",
+      "code": "@bind-Resolutions=\"_resolutions\"\n\n_resolutions = [new ConflictResolution(\"README.md\", ConflictResolutionKind.Agent, \"a3\")];",
+      "description": "The merge action enables once every conflict carries a decision; a decision that names an agent which did not change the file does not settle it."
+    },
+    {
+      "title": "Reading the merge",
+      "code": "private Task OnMerge(ConflictMergeRequest request)\n{\n    foreach (var resolution in request.Resolutions)\n    {\n        // apply the reader's side for resolution.Path\n    }\n}",
+      "description": "The request carries every file the merge touches plus the accepted decision for each conflict — the surface itself changes nothing."
+    }
+  ],
+  "notes": [
+    "A conflict is a FACT computed by ConflictMatrix (two or more agents changed the same path), never a colour a template decides; the summary, the Conflict badge and the row order come from the same matrix.",
+    "The conflict is judged on the path an agent leaves the file at: a rename's previous path is shown in the cell (\"was src/Old.cs\") but does not create a second row.",
+    "Rows are ordered conflicts first and then by path, and the directory groups follow that row order, so \"group by directory\" and \"conflicts on top\" never fight each other.",
+    "The side choice is a NATIVE radio group per file: the browser's own arrow keys apply, each file is its own group, and the radios are re-mounted when the host replaces the decision list so a host-driven revert cannot leave a stale checked mark.",
+    "The table declares NO role=grid and no explicit row/columnheader/rowheader/cell roles: the native table semantics are what a screen reader's table navigation needs, and aria-rowcount/aria-colcount are omitted because the counts change with the filter and the collapsed directories. A conflict's side-choice row names the file row header through its headers attribute instead of reading as an anonymous row.",
+    "Merge is DISABLED (and states how many conflicts are open) until every conflict is decided; a merge with no conflicts at all is ready immediately.",
+    "The surface owns exactly ONE polite live region: a resolution, a merge, a filter change and a collapsed directory are announced there, and an identical sentence is never repeated."
+  ]
+}

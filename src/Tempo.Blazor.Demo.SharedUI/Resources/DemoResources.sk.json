@@ -1188,5 +1188,16 @@
   "TmAiAgentsDemo_DelegateTitle": "Rozdeľovanie úloh",
   "TmAiAgentsDemo_DelegateHint": "Práca čakajúca na rozdelenie: potiahnite kartu na agenta (alebo použite jej ponuku Priradiť) a sledujte, ako automatický režim zaplní voľné sloty. Agent na plnej kapacite drop odmietne a povie prečo.",
   "TmAiAgentsDemo_RunsTitle": "Naplánované behy",
-  "TmAiAgentsDemo_RunsHint": "Behy vložené do okien plánovača: kapacita každého okna, čo už hostiteľ obsadil, beh rozdelený cez dve okná a jedno okno, ktoré hostiteľ preplnil."
+  "TmAiAgentsDemo_RunsHint": "Behy vložené do okien plánovača: kapacita každého okna, čo už hostiteľ obsadil, beh rozdelený cez dve okná a jedno okno, ktoré hostiteľ preplnil.",
+  "TmAiAgentsDemo_ConflictTitle": "Radar konfliktov",
+  "TmAiAgentsDemo_ConflictHint": "Traja agenti na troch vetvách nad tým istým repozitárom. Dve cesty zmenili vždy dvaja agenti: každý konflikt vyriešte zachovaním verzie jedného agenta alebo ručným zlúčením a akcia Zlúčiť sa sprístupní.",
+  "TmAiAgentsDemo_ConflictResolved": "Vyriešené konflikty: {0} — stránka si rozhodnutie čitateľa ukladá.",
+  "TmAiAgentsDemo_ConflictMerged": "Požiadavka na zlúčenie: {0} súborov, {1} vyriešených konfliktov.",
+  "TmAiAgentsDemo_PresenceTitle": "Kde sú spolupracovníci",
+  "TmAiAgentsDemo_PresenceHint": "Ten istý dokument s tromi spolupracovníkmi: ukážkový adaptér prevádza kurzory z kolaboračného zdroja na značky prítomnosti ukotvené k odsekom nižšie a zoznam pomenúva všetkých prítomných pre čítačku obrazovky.",
+  "TmAiAgentsDemo_PresenceRoster": "Práve prítomní",
+  "TmAiAgentsDemo_PresenceDocumentTitle": "Štvrťročný plán",
+  "TmAiAgentsDemo_PresenceDocumentLead": "Štvrťročný plán začína cieľmi, na ktorých sa tím dohodol; každý má vlastníka a dátum revízie.",
+  "TmAiAgentsDemo_PresenceDocumentBody": "Práca, ktorú nikto nevlastní, je uvedená ako otvorená otázka, namiesto toho aby bola niekomu ticho pridelená — plán tak nikdy netvrdí vlastníka, ktorý s tým nesúhlasil.",
+  "TmAiAgentsDemo_PresenceDocumentClose": "Každý cieľ sa na konci štvrťroka vyhodnocuje; cieľ, ktorý dátum nestihol, prechádza do ďalšieho plánu aj s dôvodom zdržania."
 }

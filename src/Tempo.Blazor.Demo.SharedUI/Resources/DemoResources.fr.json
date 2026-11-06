@@ -1188,5 +1188,16 @@
   "TmAiAgentsDemo_DelegateTitle": "Tableau de délégation",
   "TmAiAgentsDemo_DelegateHint": "Le travail en attente d'attribution : faites glisser une carte sur un agent (ou ouvrez son menu Attribuer) et regardez la passe automatique remplir les places libres. Un agent complet refuse le dépôt et explique pourquoi.",
   "TmAiAgentsDemo_RunsTitle": "Exécutions planifiées",
-  "TmAiAgentsDemo_RunsHint": "Des exécutions placées dans les fenêtres du planificateur : la capacité de chaque fenêtre, ce que l'hôte a déjà engagé, une exécution répartie sur deux fenêtres et une fenêtre que l'hôte a surchargée."
+  "TmAiAgentsDemo_RunsHint": "Des exécutions placées dans les fenêtres du planificateur : la capacité de chaque fenêtre, ce que l'hôte a déjà engagé, une exécution répartie sur deux fenêtres et une fenêtre que l'hôte a surchargée.",
+  "TmAiAgentsDemo_ConflictTitle": "Radar des conflits",
+  "TmAiAgentsDemo_ConflictHint": "Trois agents sur trois branches du même dépôt. Deux chemins ont été modifiés par deux agents chacun : tranchez chaque conflit en gardant la version d'un agent ou en fusionnant le fichier à la main, et l'action Fusionner devient disponible.",
+  "TmAiAgentsDemo_ConflictResolved": "Conflits tranchés : {0} — la page conserve les décisions du lecteur.",
+  "TmAiAgentsDemo_ConflictMerged": "Fusion demandée : {0} fichiers, {1} conflits tranchés.",
+  "TmAiAgentsDemo_PresenceTitle": "Où sont les collaborateurs",
+  "TmAiAgentsDemo_PresenceHint": "Le même document avec trois collaborateurs : l'adaptateur de démonstration transforme les curseurs du flux de collaboration en marqueurs de présence ancrés aux paragraphes ci-dessous, et la liste nomme chaque personne présente pour un lecteur d'écran.",
+  "TmAiAgentsDemo_PresenceRoster": "Présents maintenant",
+  "TmAiAgentsDemo_PresenceDocumentTitle": "Plan trimestriel",
+  "TmAiAgentsDemo_PresenceDocumentLead": "Le plan trimestriel commence par les objectifs convenus par l'équipe, chacun avec un responsable et une date de revue.",
+  "TmAiAgentsDemo_PresenceDocumentBody": "Le travail que personne ne possède est listé comme question ouverte au lieu d'être attribué en silence : le plan ne prétend donc jamais avoir un responsable qui n'a rien accepté.",
+  "TmAiAgentsDemo_PresenceDocumentClose": "Chaque objectif est revu à la fin du trimestre ; un objectif qui a manqué sa date passe dans le plan suivant avec la raison du retard."
 }

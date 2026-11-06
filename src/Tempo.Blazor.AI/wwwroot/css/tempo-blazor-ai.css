@@ -28,3 +28,5 @@
 @import "components/_ai-memory-panel.css";
 @import "components/_ai-delegate-board.css";
 @import "components/_ai-scheduled-runs.css";
+@import "components/_ai-conflict-radar.css";
+@import "components/_ai-agent-presence.css";

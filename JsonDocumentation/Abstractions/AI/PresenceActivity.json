@@ -1,0 +1,10 @@
+﻿{
+  "kind": "Enum",
+  "category": "AI",
+  "namespace": "Tempo.Blazor.AI.Models",
+  "description": "What a present agent (or person) is doing at the place their marker points at — the word a presence label carries next to the name. The enum is a small, shared vocabulary on purpose: the activity is the SECOND thing a reader needs (the name comes first) and a host that invented its own words would make two surfaces describe the same presence differently. A label may override it with the host's own sentence through Label.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/AI/Agents/PresenceActivity.cs",
+  "documentationStatus": "documented",
+  "itemName": "PresenceActivity"
+}

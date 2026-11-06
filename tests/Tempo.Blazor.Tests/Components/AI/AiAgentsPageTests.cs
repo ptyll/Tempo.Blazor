@@ -1,4 +1,4 @@
-using AngleSharp.Dom;
+﻿using AngleSharp.Dom;
 using Bunit;
 using FluentAssertions;
 using Microsoft.AspNetCore.Components.Web;
@@ -55,11 +55,11 @@ public class AiAgentsPageTests : DemoPageLocalizationTestBase
             .KeyDown(new KeyboardEventArgs { Key = key }));
 
     [Fact]
-    public void ThePageRendersItsSixteenSectionsWithoutRawKeys()
+    public void ThePageRendersItsSectionsWithoutRawKeys()
     {
         var cut = RenderPage();
 
-        cut.FindAll("section.demo-section").Should().HaveCount(16);
+        cut.FindAll("section.demo-section").Should().HaveCount(18);
         foreach (var section in new[]
                  {
                      "ai-agents-plan-section", "ai-agents-tree-section", "ai-agents-lanes-section",
@@ -67,6 +67,7 @@ public class AiAgentsPageTests : DemoPageLocalizationTestBase
                      "ai-agents-handoff-section", "ai-agents-fallback-section",
                      "ai-agents-autonomy-section", "ai-agents-memory-section",
                      "ai-agents-delegate-section", "ai-agents-runs-section",
+                     "ai-agents-conflict-section", "ai-agents-presence-section",
                      "ai-agents-monitor-section", "ai-agents-models-section",
                      "ai-agents-context-section", "ai-agents-prompts-section",
                  })
@@ -504,7 +505,10 @@ public class AiAgentsPageTests : DemoPageLocalizationTestBase
                 .Should().ContainSingle(),
             TimeSpan.FromSeconds(10));
 
-        cut.Find("[data-testid='ai-agents-fan-out'] [data-testid='fan-out-detail-retry']").Click();
+        // The grid's countdown ticker re-renders on its own clock, so the ONE look-up and the press happen in the same
+        // renderer turn: a stale event-handler id between them is a flake, not a product defect.
+        cut.InvokeAsync(() => cut.Find(
+            "[data-testid='ai-agents-fan-out'] [data-testid='fan-out-detail-retry']").Click());
 
         cut.WaitForAssertion(() =>
         {
@@ -739,6 +743,68 @@ public class AiAgentsPageTests : DemoPageLocalizationTestBase
         }, TimeSpan.FromSeconds(10));
 
         Text(cut, "ai-agents-runs").Should().NotContain("TmScheduledRuns_");
+    }
+
+    /// <summary>
+    /// The conflict section shows the page's three branches as one grid, keeps the reader's decisions and reports the
+    /// merge: the page stores the decision list and turns the merge into a log line, because the demo has no repository.
+    /// </summary>
+    [Fact]
+    public void TheConflictSection_SettlesEveryConflictAndReportsTheMerge()
+    {
+        var cut = RenderPage();
+        var radar = Section(cut, "ai-agents-conflict");
+
+        radar.QuerySelectorAll("[data-testid='radar-agent-header']").Should().HaveCount(3);
+        radar.QuerySelectorAll("[data-testid='radar-row'][data-conflict='true']").Should().HaveCount(3);
+        Text(cut, "ai-agents-conflict-log").Should().Be("Nothing received yet.");
+        radar.QuerySelectorAll("[data-testid='radar-merge'][disabled]").Should().HaveCount(1,
+            "the merge is unavailable until every conflict is settled");
+
+        // Settle every conflict: the first agent's version on each, exactly as a reader would.
+        for (var index = 0; index < 3; index++)
+        {
+            cut.FindAll("[data-testid='ai-agents-conflict'] [role='radiogroup']")[index]
+                .QuerySelectorAll("input[type='radio']")[0]
+                .Change(true);
+        }
+
+        cut.WaitForAssertion(() =>
+        {
+            cut.FindAll("[data-testid='ai-agents-conflict'] [data-testid='radar-merge'][disabled]").Should().BeEmpty(
+                "every conflict is decided, so the merge is ready");
+            Text(cut, "ai-agents-conflict-log").Should().Contain("settled");
+        }, TimeSpan.FromSeconds(10));
+
+        cut.Find("[data-testid='ai-agents-conflict'] [data-testid='radar-merge']").Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            Text(cut, "ai-agents-conflict-log").Should().Contain("Merge requested");
+        }, TimeSpan.FromSeconds(10));
+
+        Text(cut, "ai-agents-conflict").Should().NotContain("TmConflictRadar_");
+    }
+
+    /// <summary>
+    /// The presence section paints the demo adapter's markers over the page's own document: the anchors live on the
+    /// paragraphs, the cursor labels name the agents and the roster is the text alternative for a screen reader.
+    /// </summary>
+    [Fact]
+    public void ThePresenceSection_AnchorsTheCursorsToTheDocumentAndNamesEveryone()
+    {
+        var cut = RenderPage();
+        var presence = Section(cut, "ai-agents-presence");
+
+        presence.QuerySelectorAll("[data-testid='presence-content'] [data-presence-anchor]").Should().HaveCount(3,
+            "the host's own document carries the anchors");
+        presence.QuerySelectorAll("[data-presence-marker]").Should().HaveCount(3);
+        presence.QuerySelectorAll("[data-presence-marker][data-presence-anchor]").Should().HaveCount(3);
+        presence.TextContent.Should().Contain("Planner").And.Contain("Reconciler").And.Contain("Reviewer");
+        presence.QuerySelectorAll("[data-testid='presence-roster-item']").Should().HaveCount(3);
+        presence.QuerySelectorAll("[aria-live]").Should().HaveCount(1, "the overlay owns exactly one live region");
+        presence.QuerySelectorAll("[data-testid='presence-layer'][aria-hidden='true']").Should().HaveCount(1);
+        presence.TextContent.Should().NotContain("TmAgentPresenceOverlay_");
     }
 
     [Fact]

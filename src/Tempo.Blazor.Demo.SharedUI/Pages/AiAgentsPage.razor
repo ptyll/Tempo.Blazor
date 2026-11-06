@@ -1,4 +1,4 @@
-@page "/ai-agents"
+﻿@page "/ai-agents"
 @implements IDisposable
 @using System.Globalization
 @using Tempo.Blazor.Abstractions.Models.Approvals
@@ -391,6 +391,56 @@
 </section>
 
 @* ---------------------------------------------------------------------------------------------------------
+   Two agents, one file: the conflict radar. The page owns the branches and the decisions; a merge is reported back as
+   one request carrying every file and the accepted side per conflict, and the page applies nothing itself (the demo
+   has no repository) — it logs what it received. *@
+<section class="demo-section mb-8" data-testid="ai-agents-conflict-section">
+    <h2 class="text-lg font-semibold text-slate-900 dark:text-white mb-2">@Loc["TmAiAgentsDemo_ConflictTitle"]</h2>
+    <p class="text-sm text-slate-600 dark:text-slate-400 mb-2">@Loc["TmAiAgentsDemo_ConflictHint"]</p>
+
+    <p class="text-sm text-slate-700 dark:text-slate-300 mb-3" data-testid="ai-agents-conflict-log">@ConflictText</p>
+
+    <TmConflictRadar Agents="_branchChanges"
+                     Resolutions="_radarResolutions"
+                     ResolutionsChanged="OnRadarResolutionsChanged"
+                     OnMerge="OnRadarMerge"
+                     Title="@Loc["TmAiAgentsDemo_ConflictTitle"]"
+                     DataTestId="ai-agents-conflict" />
+</section>
+
+@* ---------------------------------------------------------------------------------------------------------
+   Collaborators' cursors over a document the page renders itself. The page's content carries the anchors; the demo
+   adapter turns the collaboration feed's CollaboratorCursor list into the overlay's generic markers, so the AI package
+   stays free of any editor dependency. *@
+<section class="demo-section mb-8" data-testid="ai-agents-presence-section">
+    <h2 class="text-lg font-semibold text-slate-900 dark:text-white mb-2">@Loc["TmAiAgentsDemo_PresenceTitle"]</h2>
+    <p class="text-sm text-slate-600 dark:text-slate-400 mb-2">@Loc["TmAiAgentsDemo_PresenceHint"]</p>
+
+    <TmAgentPresenceOverlay Markers="_presenceMarkers"
+                            ShowRoster="true"
+                            RosterLabel="@Loc["TmAiAgentsDemo_PresenceRoster"]"
+                            DataTestId="ai-agents-presence">
+        <div class="rounded-lg border border-slate-200 bg-white p-5 dark:border-slate-700 dark:bg-slate-900">
+            <h3 class="text-base font-semibold text-slate-900 dark:text-white mb-3">
+                @Loc["TmAiAgentsDemo_PresenceDocumentTitle"]
+            </h3>
+            <p class="text-sm text-slate-700 dark:text-slate-300 mb-3">
+                @Loc["TmAiAgentsDemo_PresenceDocumentLead"]<span
+                    data-presence-anchor="@PresenceMarkerAdapter.AnchorOf(AiAgentsPageSamples.PresenceBlocks()[0])"></span>
+            </p>
+            <p class="text-sm text-slate-700 dark:text-slate-300 mb-3">
+                @Loc["TmAiAgentsDemo_PresenceDocumentBody"]<span
+                    data-presence-anchor="@PresenceMarkerAdapter.AnchorOf(AiAgentsPageSamples.PresenceBlocks()[1])"></span>
+            </p>
+            <p class="text-sm text-slate-700 dark:text-slate-300">
+                @Loc["TmAiAgentsDemo_PresenceDocumentClose"]<span
+                    data-presence-anchor="@PresenceMarkerAdapter.AnchorOf(AiAgentsPageSamples.PresenceBlocks()[2])"></span>
+            </p>
+        </div>
+    </TmAgentPresenceOverlay>
+</section>
+
+@* ---------------------------------------------------------------------------------------------------------
    The same run in the live monitor. When the run reaches its last step it PAUSES and asks for a decision: the
    host's own TmApprovalCard sits in the monitor's PendingApproval slot. Approving resumes the run; rejecting
    skips the step and finishes the run. *@
@@ -572,6 +622,10 @@
     private string? _runsLogKey;
     private string? _runsLogValue;
     private string? _runsLogSecond;
+    private IReadOnlyList<AgentBranchChanges> _branchChanges = [];
+    private IReadOnlyList<ConflictResolution> _radarResolutions = [];
+    private ConflictMergeRequest? _radarMerge;
+    private IReadOnlyList<PresenceMarker> _presenceMarkers = [];
     private IReadOnlyList<FallbackAttempt> _fallbackAttempts = [];
     private IReadOnlyList<FallbackChainEntry>? _fallbackChain;
     private FallbackResolutionPolicy _fallbackPolicy = FallbackResolutionPolicy.Fallback;
@@ -632,6 +686,14 @@
         _delegateTasks = AiAgentsPageSamples.DelegateTasks();
         _runWindows = AiAgentsPageSamples.RunWindows(_clock.GetUtcNow());
         _scheduledRuns = AiAgentsPageSamples.ScheduledRuns();
+        _branchChanges = AiAgentsPageSamples.BranchChanges();
+        _presenceMarkers =
+        [
+            .. PresenceMarkerAdapter.ToMarkers(AiAgentsPageSamples.CollaboratorCursors())
+                .Select((marker, index) => index == 2
+                    ? marker with { Activity = PresenceActivity.Commenting }
+                    : marker),
+        ];
         _bestAttemptId = "draft-b";
         _selection = new AiModelSelection("aurora-pro");
         _templates = AiAgentsPageSamples.Templates(Key);
@@ -900,6 +962,31 @@
         _delegateLogKey = "TmDelegateBoard_Returned";
         _delegateLogValue = request.Task.Title;
         _delegateLogSecond = null;
+        return Task.CompletedTask;
+    }
+
+    /// <summary>The last radar change the page received: a decision list or a merge request.</summary>
+    private string ConflictText => _radarMerge is { } merge
+        ? Loc["TmAiAgentsDemo_ConflictMerged",
+            merge.FileCount.ToString(CultureInfo.CurrentCulture),
+            merge.ResolvedConflictCount.ToString(CultureInfo.CurrentCulture)]
+        : _radarResolutions.Count == 0
+            ? Loc["TmAiAgentsDemo_NoEvent"]
+            : Loc["TmAiAgentsDemo_ConflictResolved",
+                _radarResolutions.Count.ToString(CultureInfo.CurrentCulture)];
+
+    /// <summary>The page is the store of the reader's decisions; the radar follows the list it echoes back.</summary>
+    private Task OnRadarResolutionsChanged(IReadOnlyList<ConflictResolution> resolutions)
+    {
+        _radarResolutions = resolutions;
+        _radarMerge = null;
+        return Task.CompletedTask;
+    }
+
+    /// <summary>The merge is reported once and applied by the host — the demo logs what it received.</summary>
+    private Task OnRadarMerge(ConflictMergeRequest request)
+    {
+        _radarMerge = request;
         return Task.CompletedTask;
     }
 

@@ -1,4 +1,4 @@
-using Tempo.Blazor.Components.Wireframe.Models;
+﻿using Tempo.Blazor.Components.Wireframe.Models;
 
 namespace Tempo.Blazor.Components.Wireframe;
 
@@ -181,6 +181,8 @@ public sealed class BuiltInComponentSchemas : IWireframeSchemaSource
             ["TmMemoryPanel"] = ["memory-panel"],
             ["TmDelegateBoard"] = ["delegate-board"],
             ["TmScheduledRuns"] = ["scheduled-runs"],
+            ["TmConflictRadar"] = ["conflict-radar"],
+            ["TmAgentPresenceOverlay"] = ["agent-presence-overlay"],
             ["TmPromptLibrary"] = ["prompt-library"],
             ["TmMultiViewList"] = ["list-view"],
             ["TmDataTable"] = ["data-table"],
@@ -1572,6 +1574,36 @@ public sealed class BuiltInComponentSchemas : IWireframeSchemaSource
                 P("view",    "View",    PropType.Enum, "week", cat: "Appearance",
                     opts: ["week", "day", "table"]),
                 P("overloaded", "Overloaded windows", PropType.Int, 1, cat: "Content"),
+            ]
+        };
+
+        yield return new WireframeComponentSchema
+        {
+            Type = "TmConflictRadar", Category = "AI", DisplayName = "Conflict Radar",
+            DefaultWidth = 720, DefaultHeight = 340,
+            Props =
+            [
+                P("title",    "Title",    PropType.String, "Conflict radar", cat: "Content"),
+                P("agents",   "Agents",   PropType.StringList,
+                    new[] { "Ana \u00b7 feat/radar", "Bo \u00b7 feat/lanes", "Cy \u00b7 feat/rename" }, cat: "Content"),
+                P("files",    "Files",    PropType.StringList,
+                    new[] { "src/AI/TmConflictRadar.razor", "README.md", "docs/conflict-radar.md" }, cat: "Content"),
+                P("conflicts", "Conflicts", PropType.Int, 2, cat: "Content"),
+                P("resolved", "Resolved conflicts", PropType.Int, 0, cat: "Content"),
+                P("conflictsOnly", "Only conflicts", PropType.Bool, false, cat: "Behavior"),
+            ]
+        };
+
+        yield return new WireframeComponentSchema
+        {
+            Type = "TmAgentPresenceOverlay", Category = "AI", DisplayName = "Agent Presence Overlay",
+            DefaultWidth = 480, DefaultHeight = 260,
+            Props =
+            [
+                P("title",   "Content label", PropType.String, "Shared document", cat: "Content"),
+                P("markers", "Present agents", PropType.StringList,
+                    new[] { "Ana \u00b7 Typing", "Bo \u00b7 Viewing" }, cat: "Content"),
+                P("showRoster", "Show roster", PropType.Bool, true, cat: "Appearance"),
             ]
         };
 

@@ -1,0 +1,10 @@
+﻿{
+  "kind": "Class",
+  "category": "Components",
+  "namespace": "Tempo.Blazor.Components.AI",
+  "description": "One row of the conflict matrix: a file, the agents' changes to it and whether more than one agent claimed it. Cells is aligned with Columns — index i is the column of the agent at index i, and a null cell means \"this agent did not touch this file\". The alignment is the point: a grid that looks cells up by agent id would re-order itself the moment a host sorted its agents differently from its matrix.",
+  "packageId": "Tempo.Blazor.AI",
+  "sourcePath": "src/Tempo.Blazor.AI/Components/AI/ConflictMatrix.cs",
+  "documentationStatus": "documented",
+  "itemName": "ConflictMatrixRow"
+}

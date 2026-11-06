@@ -1,0 +1,91 @@
+@namespace Tempo.Blazor.Components.AI
+@inherits Tempo.Blazor.Components.TmComponentBase
+@using System.Globalization
+@using Tempo.Blazor.AI.Models
+
+@* Collaborators' cursors over the host's own content.
+
+   The content renders FIRST and untouched; the cursor layer is an absolutely positioned sibling above it with
+   aria-hidden, because a pointer that took focus (or was read out as content) would fight the editor underneath. The
+   same presence is available as text through ShowRoster, and exactly ONE polite live region announces a join, an
+   activity change and a leave.
+
+   An anchored marker carries data-presence-anchor and is placed by the package's ES module from the measured DOM; it is
+   invisible until that measurement lands (the stylesheet reveals [data-presence-placed] only), so a cursor never sits at
+   the content's origin pretending its element is there. A point marker is painted from the host's own fractions and
+   needs no JavaScript at all. *@
+<div class="@RootClass"
+     data-testid="@RootTestId("presence-overlay")"
+     data-markers="@_markers.Count.ToString(CultureInfo.InvariantCulture)"
+     @ref="_root"
+     @attributes="AdditionalAttributes">
+
+    <div class="tm-ai-presence__content" data-testid="@TestId("presence-content")" @ref="_content">
+        @ChildContent
+    </div>
+
+    <div class="tm-ai-presence__layer" aria-hidden="true" data-testid="@TestId("presence-layer")">
+        @foreach (var marker in _markers)
+        {
+            var entry = marker;
+            <div class="tm-ai-presence__marker"
+                 data-presence-marker="@entry.Id"
+                 data-presence-anchor="@(entry.HasAnchor ? entry.AnchorId : null)"
+                 data-agent-id="@entry.Agent.Id"
+                 data-activity="@ActivitySlug(entry.Activity)"
+                 style="@MarkerStyle(entry)"
+                 @key="entry.Id">
+                <span class="tm-ai-presence__cursor" aria-hidden="true">
+                    <svg class="tm-ai-presence__pointer" viewBox="0 0 14 20" focusable="false" aria-hidden="true">
+                        <path d="M1 1 L1 15.2 L4.9 11.4 L7.7 18.6 L10.6 17.3 L7.8 10.2 L13 9.3 Z" />
+                    </svg>
+                </span>
+                <span class="tm-ai-presence__label">
+                    <span class="tm-ai-presence__name">@AgentName(entry.Agent)</span>
+                    <span class="tm-ai-presence__activity">@ActivityText(entry)</span>
+                </span>
+            </div>
+        }
+    </div>
+
+    @if (ShowRoster)
+    {
+        <div class="tm-ai-presence__roster"
+             role="group"
+             aria-labelledby="@RosterTitleId"
+             data-testid="@TestId("presence-roster")">
+            <p class="tm-ai-presence__roster-title"
+               id="@RosterTitleId"
+               data-testid="@TestId("presence-roster-title")">@EffectiveRosterLabel</p>
+
+            @if (_markers.Count == 0)
+            {
+                <p class="tm-ai-presence__roster-empty" data-testid="@TestId("presence-roster-empty")">
+                    @Loc["TmAgentPresenceOverlay_RosterEmpty"]
+                </p>
+            }
+            else
+            {
+                <ul class="tm-ai-presence__roster-list">
+                    @foreach (var marker in _markers)
+                    {
+                        var entry = marker;
+                        <li class="tm-ai-presence__roster-item"
+                            data-testid="@TestId("presence-roster-item")"
+                            data-agent-id="@entry.Agent.Id"
+                            data-activity="@ActivitySlug(entry.Activity)"
+                            @key="entry.Id">
+                            <TmAgentBadge Agent="@entry.Agent" Size="AgentBadgeSize.Sm" ShowStatus="false" />
+                            <span class="tm-ai-presence__roster-activity">@ActivityText(entry)</span>
+                        </li>
+                    }
+                </ul>
+            }
+        </div>
+    }
+
+    @if (AnnounceChanges)
+    {
+        <p class="tm-sr-only" aria-live="polite" data-testid="@TestId("presence-announcement")">@_announcement</p>
+    }
+</div>

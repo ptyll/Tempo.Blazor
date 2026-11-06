@@ -138,6 +138,60 @@
       ]
     },
     {
+      "itemName": "AgentBranchChanges",
+      "kind": "Record",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.AI.Models",
+      "description": "Everything ONE agent changed on its own branch — the input of the conflict radar, one entry per agent. The record is a VALUE the host builds from its workspace receipts: the agent, the branch (or worktree) name the changes live on, and every path the agent touched. It carries no opinion about conflicts: whether two agents touch the same file is a question the matrix answers from these lists, so a host never has to decide what a conflict is. A path reported twice by the same agent collapses to ONE entry — the LAST one wins, because a receipt that lists a file twice describes the newer fact second, and two cells for one file would make the matrix claim a conflict an agent does not have. The host's path order is preserved otherwise, so a diagnostic reading of the list matches the host's own receipt.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/AI/Agents/AgentBranchChanges.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Find",
+          "kind": "Method",
+          "type": "ChangedPath?",
+          "description": "The agent's change to one path, or null when the agent did not touch it.",
+          "parameters": [
+            {
+              "name": "path",
+              "type": "string?"
+            }
+          ]
+        },
+        {
+          "name": "Agent",
+          "kind": "Property",
+          "type": "AgentRef",
+          "description": "The agent the branch belongs to."
+        },
+        {
+          "name": "Branch",
+          "kind": "Property",
+          "type": "string",
+          "description": "The branch (or worktree) name the host reported. Empty when the host named none."
+        },
+        {
+          "name": "ChangedPaths",
+          "kind": "Property",
+          "type": "IReadOnlyList<ChangedPath>",
+          "description": "The paths the agent touched, de-duplicated by path and in the host's order."
+        },
+        {
+          "name": "HasBranch",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Whether the host named the branch."
+        },
+        {
+          "name": "HasChanges",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Whether the agent changed anything at all (an agent with no changes is not a matrix column)."
+        }
+      ]
+    },
+    {
       "itemName": "AgentEventStream<TEvent>",
       "kind": "Class",
       "category": "AI",
@@ -2498,6 +2552,177 @@
       ]
     },
     {
+      "itemName": "ChangedPath",
+      "kind": "Record",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.AI.Models",
+      "description": "One path an agent touched on its branch: where the file is, what happened to it, and — for a rename — where it came from. The record is a VALUE: the host composes it from its own workspace receipt (ChangedPaths) and never mutates it. Paths are compared ORDINALLY after their separators are normalised to /, so the same file reported as src/AI/Foo.cs by one agent and src\\AI\\Foo.cs by another is ONE row in the matrix instead of two rows that hide a real conflict. Case is kept as the host spelled it — a case-insensitive file system would also fold Foo.cs and foo.cs, but merging two genuinely distinct paths would hide a change nobody resolved. A blank Path is REJECTED at construction: a path is the matrix's row key and the reader's own side choice is keyed by it, so an invented one would move a decision onto the wrong file.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/AI/Agents/ChangedPath.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Normalize",
+          "kind": "Method",
+          "type": "string",
+          "description": "Normalises the separators of a path the host supplied.",
+          "parameters": [
+            {
+              "name": "path",
+              "type": "string"
+            }
+          ]
+        },
+        {
+          "name": "IsRename",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Whether the agent moved the file (so PreviousPath may name where it came from)."
+        },
+        {
+          "name": "Kind",
+          "kind": "Property",
+          "type": "ChangeKind",
+          "description": "What the agent did to the file."
+        },
+        {
+          "name": "Path",
+          "kind": "Property",
+          "type": "string",
+          "description": "The path the file sits at now, with \\ normalised to /."
+        },
+        {
+          "name": "PreviousPath",
+          "kind": "Property",
+          "type": "string?",
+          "description": "Where a renamed file came from, with its separators normalised the same way as Path. Null for every other kind, and for a rename the host did not describe."
+        }
+      ]
+    },
+    {
+      "itemName": "ChangeKind",
+      "kind": "Enum",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.AI.Models",
+      "description": "What one agent did to one path on its own branch — the fact a conflict radar paints in the cell where the file and the agent meet. The enum carries no text: a surface renders its own localized word and icon for each value, so the same change reads \"Modified\" in English and \"Změněno\" in Czech. Renamed is the only value that also needs a second path (where the file came from), which PreviousPath carries. The four values are deliberately the whole vocabulary: a real Git status also reports modes, copies and merges, but none of them changes what a reader has to decide here — WHO wins the file — and inventing a value per porcelain token would leave most cells with a state no surface can explain.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/AI/Agents/ChangeKind.cs",
+      "documentationStatus": "merged"
+    },
+    {
+      "itemName": "ConflictMergeRequest",
+      "kind": "Record",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.AI.Models",
+      "description": "One committed merge of the agents' branches: every file the merge touches, plus the reader's decision for each file that more than one agent changed. The request is the payload a conflict radar reports ONCE per merge action; the surface changes nothing itself. A file with a single agent's change needs no decision and is listed anyway, because the host has to merge it too — the request describes the whole merge, not only its conflicts. Resolutions carries exactly the reader's decisions; a conflicting file with no decision is a file the surface refuses to merge, so a request the host receives never leaves a conflict for it to discover itself.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/AI/Agents/ConflictMergeRequest.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "ResolutionOf",
+          "kind": "Method",
+          "type": "ConflictResolution?",
+          "description": "The decision for one path, or null when the reader did not decide about it.",
+          "parameters": [
+            {
+              "name": "path",
+              "type": "string?"
+            }
+          ]
+        },
+        {
+          "name": "FileCount",
+          "kind": "Property",
+          "type": "int",
+          "description": "How many files the merge touches."
+        },
+        {
+          "name": "Files",
+          "kind": "Property",
+          "type": "IReadOnlyList<string>",
+          "description": "The paths the merge touches (conflict-free files included), in the order the surface shows them, with separators normalised to / and each path present once — a request that named one file twice would have the host merge it twice."
+        },
+        {
+          "name": "Resolutions",
+          "kind": "Property",
+          "type": "IReadOnlyList<ConflictResolution>",
+          "description": "The reader's decisions, one per conflicting file."
+        },
+        {
+          "name": "ResolvedConflictCount",
+          "kind": "Property",
+          "type": "int",
+          "description": "How many files the reader had to decide about."
+        }
+      ]
+    },
+    {
+      "itemName": "ConflictResolution",
+      "kind": "Record",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.AI.Models",
+      "description": "The reader's decision about ONE conflicting file: keep one agent's version, or merge the file by hand. The record is a VALUE and the file's path is its key, which is why a surface bound to a list of these can have at most one decision per file: two entries for one path would let the merge request claim two winners for one file. A decision for a path that is not in conflict is ignored by the radar (nothing to decide) but is still carried to the host unchanged, so a host that keeps its own list never loses data on a re-render. Agent requires AgentId; a blank one is REJECTED at construction because \"keep the agent's side\" without an agent would pick a winner by accident.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/AI/Agents/ConflictResolution.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Decides",
+          "kind": "Method",
+          "type": "bool",
+          "description": "Whether a decision stored under path settles that file.",
+          "parameters": [
+            {
+              "name": "path",
+              "type": "string?"
+            }
+          ]
+        },
+        {
+          "name": "AgentId",
+          "kind": "Property",
+          "type": "string?",
+          "description": "The winning agent's id, or null for a manual resolution."
+        },
+        {
+          "name": "IsAgentSide",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Whether this decision picks an agent's version."
+        },
+        {
+          "name": "IsManual",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Whether this decision hands the file to the reader."
+        },
+        {
+          "name": "Kind",
+          "kind": "Property",
+          "type": "ConflictResolutionKind",
+          "description": "Whether one agent wins or the reader merges the file by hand."
+        },
+        {
+          "name": "Path",
+          "kind": "Property",
+          "type": "string",
+          "description": "The conflicting file's path, normalised the same way Path is."
+        }
+      ]
+    },
+    {
+      "itemName": "ConflictResolutionKind",
+      "kind": "Enum",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.AI.Models",
+      "description": "How a reader settled a conflicting file: they picked one agent's version to keep, or they decided to merge the file by hand. The enum is the CHOICE, not the outcome. Agent says \"take this agent's side\" and AgentId names which agent that is; Manual says \"I will resolve this one myself\", which is a real decision and therefore unblocks the merge instead of counting as unresolved.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/AI/Agents/ConflictResolutionKind.cs",
+      "documentationStatus": "merged",
+      "usageExample": "_resolutions.Add(new ConflictResolution(\"README.md\", ConflictResolutionKind.Manual));"
+    },
+    {
       "itemName": "ContextUsageItem",
       "kind": "Record",
       "category": "AI",
@@ -4441,6 +4666,89 @@
       "packageId": "Tempo.Blazor.Abstractions",
       "sourcePath": "src/Tempo.Blazor.Abstractions/AI/Permissions/PermissionScope.cs",
       "documentationStatus": "merged"
+    },
+    {
+      "itemName": "PresenceActivity",
+      "kind": "Enum",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.AI.Models",
+      "description": "What a present agent (or person) is doing at the place their marker points at — the word a presence label carries next to the name. The enum is a small, shared vocabulary on purpose: the activity is the SECOND thing a reader needs (the name comes first) and a host that invented its own words would make two surfaces describe the same presence differently. A label may override it with the host's own sentence through Label.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/AI/Agents/PresenceActivity.cs",
+      "documentationStatus": "merged"
+    },
+    {
+      "itemName": "PresenceMarker",
+      "kind": "Record",
+      "category": "AI",
+      "namespace": "Tempo.Blazor.AI.Models",
+      "description": "One present agent (or person) and where on the content their cursor sits — the input of a presence overlay. The marker is anchored EITHER to an element inside the content (AnchorId, matched against data-presence-anchor) or to a point the host computes itself (X/Y as fractions of the content box). An anchor is measured from the real DOM and therefore survives a scroll, a resize and a reflow, so it WINS when a marker carries both; the point is the fallback for content the host cannot annotate. The record is a VALUE: a host recomposes it with marker with { Activity = … } as presence changes and the component never mutates it. X and Y are normalised into 0…1 on assignment, so a host that hands over a pixel offset by mistake still paints inside the content instead of off the edge.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/AI/Agents/PresenceMarker.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Normalize",
+          "kind": "Method",
+          "type": "double",
+          "description": "Normalises a coordinate into 0…1; a value that is not finite reads as 0.",
+          "parameters": [
+            {
+              "name": "value",
+              "type": "double"
+            }
+          ]
+        },
+        {
+          "name": "Activity",
+          "kind": "Property",
+          "type": "PresenceActivity",
+          "description": "What the agent is doing at the place the marker points at."
+        },
+        {
+          "name": "Agent",
+          "kind": "Property",
+          "type": "AgentRef",
+          "description": "The agent (or person) the cursor belongs to."
+        },
+        {
+          "name": "AnchorId",
+          "kind": "Property",
+          "type": "string?",
+          "description": "The value of the data-presence-anchor attribute on an element inside the content this marker points at. Null or whitespace means the marker uses X/Y instead."
+        },
+        {
+          "name": "HasAnchor",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Whether the marker is anchored to an element of the content (so it is measured, not computed)."
+        },
+        {
+          "name": "HasLabel",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Whether the host supplied its own activity sentence."
+        },
+        {
+          "name": "HasPoint",
+          "kind": "Property",
+          "type": "bool",
+          "description": "Whether the marker carries a usable point (a marker with neither an anchor nor a point paints at the content's origin, which is a real position rather than a hidden marker)."
+        },
+        {
+          "name": "Id",
+          "kind": "Property",
+          "type": "string",
+          "description": "Stable identity of the marker. Never empty: a missing id is generated at construction."
+        },
+        {
+          "name": "Label",
+          "kind": "Property",
+          "type": "string?",
+          "description": "The host's own sentence for the activity (\"Reviewing the summary\"), used INSTEAD of the component's localized activity word. Null renders the localized word, which is not the same as an empty label."
+        }
+      ],
+      "usageExample": "new PresenceMarker(\"m1\", agent) { AnchorId = \"intro\", Activity = PresenceActivity.Typing }"
     },
     {
       "itemName": "PromptTemplate",
@@ -44171,11 +44479,11 @@
   ],
   "libraryExamples": [],
   "summary": {
-    "itemCount": 1661,
-    "manualItemCount": 1661,
-    "generatedItemCount": 1645,
+    "itemCount": 1669,
+    "manualItemCount": 1669,
+    "generatedItemCount": 1653,
     "generatedOnlyItemCount": 0,
     "componentCount": 0,
-    "publicApiTypeCount": 1645
+    "publicApiTypeCount": 1653
   }
 }

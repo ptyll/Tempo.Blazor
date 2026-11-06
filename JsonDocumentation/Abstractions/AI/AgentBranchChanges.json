@@ -1,0 +1,54 @@
+﻿{
+  "kind": "Record",
+  "category": "AI",
+  "namespace": "Tempo.Blazor.AI.Models",
+  "description": "Everything ONE agent changed on its own branch — the input of the conflict radar, one entry per agent. The record is a VALUE the host builds from its workspace receipts: the agent, the branch (or worktree) name the changes live on, and every path the agent touched. It carries no opinion about conflicts: whether two agents touch the same file is a question the matrix answers from these lists, so a host never has to decide what a conflict is. A path reported twice by the same agent collapses to ONE entry — the LAST one wins, because a receipt that lists a file twice describes the newer fact second, and two cells for one file would make the matrix claim a conflict an agent does not have. The host's path order is preserved otherwise, so a diagnostic reading of the list matches the host's own receipt.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/AI/Agents/AgentBranchChanges.cs",
+  "documentationStatus": "documented",
+  "members": [
+    {
+      "name": "Find",
+      "kind": "Method",
+      "type": "ChangedPath?",
+      "description": "The agent's change to one path, or null when the agent did not touch it.",
+      "parameters": [
+        {
+          "name": "path",
+          "type": "string?"
+        }
+      ]
+    },
+    {
+      "name": "Agent",
+      "kind": "Property",
+      "type": "AgentRef",
+      "description": "The agent the branch belongs to."
+    },
+    {
+      "name": "Branch",
+      "kind": "Property",
+      "type": "string",
+      "description": "The branch (or worktree) name the host reported. Empty when the host named none."
+    },
+    {
+      "name": "ChangedPaths",
+      "kind": "Property",
+      "type": "IReadOnlyList<ChangedPath>",
+      "description": "The paths the agent touched, de-duplicated by path and in the host's order."
+    },
+    {
+      "name": "HasBranch",
+      "kind": "Property",
+      "type": "bool",
+      "description": "Whether the host named the branch."
+    },
+    {
+      "name": "HasChanges",
+      "kind": "Property",
+      "type": "bool",
+      "description": "Whether the agent changed anything at all (an agent with no changes is not a matrix column)."
+    }
+  ],
+  "itemName": "AgentBranchChanges"
+}
