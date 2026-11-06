@@ -8,6 +8,11 @@ model tree, diagram preview, inspector, issues dock, source panel), the supporti
 profiles (`BuiltInModelingProfiles`), the `ModelingDiagramGenerator` and one CSP-safe ES module
 (`_content/Tempo.Blazor.Modeling/js/modeling-editor.js`).
 
+The designed public contract of the full BPMN authoring plan (change set v2, writer
+capabilities, property schema + host lookups, the unified operation engine and
+`TmModelingViewer`) lives in [modeling-authoring.md](modeling-authoring.md); this document stays
+the contract of what ships **today**.
+
 The package embeds `TmDiagramEditor` (the preview and the "Open in editor" dialog), so a host
 also needs the DiagramEditor static assets — no Modeling-specific `<script>` tag or stylesheet
 exists; all Modeling styling is scoped Razor CSS:
