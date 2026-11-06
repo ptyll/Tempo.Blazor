@@ -50,5 +50,6 @@
       "description": "The agent that holds the task now, or null when it went back to the backlog."
     }
   ],
-  "itemName": "DelegateMoveRequest"
+  "itemName": "DelegateMoveRequest",
+  "usageExample": "private void OnAssigned(DelegateMoveRequest request)\n{\n    var task = request.Task;\n    var assignee = request.AssigneeId;\n    var agent = request.To?.Agent.Name;\n}"
 }

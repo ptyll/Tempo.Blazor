@@ -50,5 +50,6 @@
       "description": "Whether the agent changed anything at all (an agent with no changes is not a matrix column)."
     }
   ],
-  "itemName": "AgentBranchChanges"
+  "itemName": "AgentBranchChanges",
+  "usageExample": "var branch = new AgentBranchChanges(planner, \"feat/conflict-radar\",\n[\n    new ChangedPath(\"src/TmConflictRadar.razor\", ChangeKind.Modified),\n    new ChangedPath(\"docs/conflict-radar.md\", ChangeKind.Added),\n]);"
 }

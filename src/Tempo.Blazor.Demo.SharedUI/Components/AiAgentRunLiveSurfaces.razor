@@ -1,0 +1,158 @@
+@using System.Globalization
+@implements IDisposable
+@using Tempo.Blazor.AI.Models
+@using Tempo.Blazor.Components.AI
+
+@* The LIVE half of the page: the host-side simulator and the three surfaces whose data it changes on every paint.
+   They live in their own component so a tick re-renders THIS subtree only — the ten decision surfaces below stay
+   untouched, and the paint gate can therefore hold its window without the run's event rate falling behind. *@
+@* ---------------------------------------------------------------------------------------------------------
+   The simulator. Play, pause, the speed and the reset are native controls; the read-outs are visible text, so the
+   run's progress is readable without a live region screaming every event. The page's ONE polite live region
+   announces the controls themselves. *@
+<section class="demo-section mb-8" data-testid="ai-viz-simulator">
+    <h2 class="text-lg font-semibold text-slate-900 dark:text-white mb-2">@Loc["TmAiAgentVizDemo_SimTitle"]</h2>
+    <p class="text-sm text-slate-600 dark:text-slate-400 mb-3">@Loc["TmAiAgentVizDemo_SimHint"]</p>
+
+    <div class="mb-4 flex flex-wrap items-center gap-3">
+        <TmButton Variant="ButtonVariant.Primary"
+                  Class="min-h-11"
+                  data-testid="ai-viz-play"
+                  OnClick="ToggleRun">@(IsRunning ? Loc["TmAiAgentVizDemo_Pause"] : Loc["TmAiAgentVizDemo_Play"])</TmButton>
+        <div data-testid="ai-viz-speed">
+            <TmSegmentedControl TValue="double"
+                                Size="SegmentedControlSize.Sm"
+                                Label="@Loc["TmAiAgentVizDemo_SpeedLabel"]"
+                                Options="SpeedOptions"
+                                Value="@Speed"
+                                ValueChanged="SetSpeed" />
+        </div>
+        <TmButton Variant="ButtonVariant.Secondary"
+                  Class="min-h-11"
+                  data-testid="ai-viz-reset"
+                  OnClick="ResetRun">@Loc["TmAiAgentVizDemo_Reset"]</TmButton>
+    </div>
+
+    <dl class="mb-3 grid grid-cols-2 gap-3 text-sm sm:grid-cols-3 lg:grid-cols-6" data-testid="ai-viz-readouts">
+        <div>
+            <dt class="text-slate-500 dark:text-slate-400">@Loc["TmAiAgentVizDemo_ReadoutState"]</dt>
+            <dd class="text-slate-900 dark:text-white" data-testid="ai-viz-state">@StateText</dd>
+        </div>
+        <div>
+            <dt class="text-slate-500 dark:text-slate-400">@Loc["TmAiAgentVizDemo_ReadoutEvents"]</dt>
+            <dd class="text-slate-900 dark:text-white" data-testid="ai-viz-events">@State.EventCount</dd>
+        </div>
+        <div>
+            <dt class="text-slate-500 dark:text-slate-400">@Loc["TmAiAgentVizDemo_ReadoutRate"]</dt>
+            <dd class="text-slate-900 dark:text-white" data-testid="ai-viz-rate">@EventsPerSecond</dd>
+        </div>
+        <div>
+            <dt class="text-slate-500 dark:text-slate-400">@Loc["TmAiAgentVizDemo_ReadoutSequence"]</dt>
+            <dd class="text-slate-900 dark:text-white" data-testid="ai-viz-sequence">@State.Sequence</dd>
+        </div>
+        <div>
+            <dt class="text-slate-500 dark:text-slate-400">@Loc["TmAiAgentVizDemo_ReadoutBlocks"]</dt>
+            <dd class="text-slate-900 dark:text-white" data-testid="ai-viz-blocks">@State.Blocks.Count(block => block.End == null)</dd>
+        </div>
+        <div>
+            <dt class="text-slate-500 dark:text-slate-400">@Loc["TmAiAgentVizDemo_ReadoutTasks"]</dt>
+            <dd class="text-slate-900 dark:text-white" data-testid="ai-viz-tasks">@State.FinishedTasks</dd>
+        </div>
+    </dl>
+
+    <p class="text-sm text-slate-700 dark:text-slate-300 mb-2" data-testid="ai-viz-last-event">@LastEventText</p>
+    <p class="text-xs text-slate-500 dark:text-slate-400" data-testid="ai-viz-keyboard-hint">@Loc["TmAiAgentVizDemo_SimKeyboardHint"]</p>
+
+    <div class="tm-sr-only" aria-live="polite" data-testid="ai-viz-announcer">@_announcement</div>
+</section>
+
+@* ---------------------------------------------------------------------------------------------------------
+   The run in time. The lanes surface owns its Timeline/Table switch, which is its text alternative; the page feeds
+   it the reduced snapshot and records the block the reader selects. *@
+<section class="demo-section mb-8" data-testid="ai-viz-lanes-section">
+    <h2 class="text-lg font-semibold text-slate-900 dark:text-white mb-2">@Loc["TmAiAgentsDemo_LanesTitle"]</h2>
+    <p class="text-sm text-slate-600 dark:text-slate-400 mb-2">@Loc["TmAiAgentVizDemo_LanesHint"]</p>
+    <p class="text-sm text-slate-700 dark:text-slate-300 mb-3" data-testid="ai-viz-lanes-selected">@LanesSelectedText</p>
+
+    <TmAgentLanes Snapshot="LanesSnapshot"
+                  @bind-SelectedBlockId="_laneBlockId"
+                  @bind-ViewMode="_lanesView"
+                  Title="@Loc["TmAiAgentsDemo_LanesRunTitle"]"
+                  TimeProvider="Clock"
+                  Culture="@CultureInfo.CurrentCulture"
+                  DataTestId="ai-viz-lanes" />
+</section>
+
+@* ---------------------------------------------------------------------------------------------------------
+   The same run as a NETWORK. This is the ONE surface fed the incremental path: the page hands it the AgentGraphCall
+   batch of the last paint, whose call log is contiguous, and a hole (a reset restarted it) makes the page reload the
+   snapshot the calls re-base on. *@
+<section class="demo-section mb-8" data-testid="ai-viz-graph-section">
+    <h2 class="text-lg font-semibold text-slate-900 dark:text-white mb-2">@Loc["TmAiAgentsDemo_GraphTitle"]</h2>
+    <p class="text-sm text-slate-600 dark:text-slate-400 mb-2">@Loc["TmAiAgentVizDemo_GraphHint"]</p>
+    <p class="text-sm text-slate-700 dark:text-slate-300 mb-3" data-testid="ai-viz-graph-selected">@GraphSelectedText</p>
+
+    <TmAgentGraph Snapshot="_graph"
+                  Events="_graphCalls"
+                  @bind-SelectedNodeId="_graphNodeId"
+                  @bind-ViewMode="_graphView"
+                  Title="@Loc["TmAiAgentsDemo_GraphRunTitle"]"
+                  TimeProvider="Clock"
+                  Culture="@CultureInfo.CurrentCulture"
+                  OnGapDetected="OnGraphGap"
+                  DataTestId="ai-viz-graph" />
+</section>
+
+@* ---------------------------------------------------------------------------------------------------------
+   The run split into forty units. The page's table presentation is the text alternative; the surface's own Retry
+   stays live in both presentations (the page re-queues the unit in the simulator). *@
+<section class="demo-section mb-8" data-testid="ai-viz-fan-out-section">
+    <h2 class="text-lg font-semibold text-slate-900 dark:text-white mb-2">@Loc["TmAiAgentsDemo_FanOutTitle"]</h2>
+    <p class="text-sm text-slate-600 dark:text-slate-400 mb-2">@Loc["TmAiAgentVizDemo_FanOutHint"]</p>
+    <div class="mb-3">
+        <TmButton Variant="ButtonVariant.Secondary"
+                  Class="min-h-11"
+                  Size="ButtonSize.Sm"
+                  data-testid="ai-viz-fan-out-view"
+                  OnClick="@(() => ToggleTextView("fan-out"))">@TextViewLabel("fan-out")</TmButton>
+    </div>
+
+    @if (IsTextView("fan-out"))
+    {
+        <div data-testid="ai-viz-fan-out-table">
+            <p class="text-xs text-slate-500 dark:text-slate-400 mb-2">@Loc["TmAiAgentVizDemo_TableHelp"]</p>
+            <table class="w-full text-left text-sm">
+                <caption class="mb-2 text-left text-sm text-slate-600 dark:text-slate-400">@Loc["TmAiAgentVizDemo_FanOutTableCaption"]</caption>
+                <thead>
+                    <tr>
+                        <th scope="col" class="py-1">@Loc["TmAiAgentVizDemo_ColTask"]</th>
+                        <th scope="col" class="py-1">@Loc["TmAiAgentVizDemo_ColWorker"]</th>
+                        <th scope="col" class="py-1">@Loc["TmAiAgentVizDemo_ColState"]</th>
+                        <th scope="col" class="py-1">@Loc["TmAiAgentVizDemo_ColAttempt"]</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var task in Tasks)
+                    {
+                        <tr data-testid="ai-viz-fan-out-row" data-task-id="@task.Id">
+                            <th scope="row" class="py-1 font-normal">@task.Label</th>
+                            <td class="py-1">@task.WorkerName</td>
+                            <td class="py-1">@StatusText(task.Status)</td>
+                            <td class="py-1">@task.EffectiveAttempt</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+    else
+    {
+        <TmFanOutGrid Tasks="Tasks"
+                      @bind-Filter="_fanOutFilter"
+                      Title="@Loc["TmAiAgentsDemo_FanOutTitle"]"
+                      TimeProvider="Clock"
+                      Culture="@CultureInfo.CurrentCulture"
+                      OnRetry="RetryTask"
+                      DataTestId="ai-viz-fan-out" />
+    }
+</section>

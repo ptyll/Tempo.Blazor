@@ -8,10 +8,26 @@
   "documentationStatus": "documented",
   "itemName": "AgentLaneBlockKind",
   "members": [
-    { "name": "Task", "description": "A piece of work assigned to the agent — a plan step, a turn, a task. The default." },
-    { "name": "Tool", "description": "A tool call the agent made (a lookup, a write, a command)." },
-    { "name": "Message", "description": "A message the agent produced or received." },
-    { "name": "Review", "description": "A review or approval gate — the block a reader usually has to act on." },
-    { "name": "Handoff", "description": "A transfer of the work to another agent; the lane surface draws it with a handoff arrow." }
-  ]
+    {
+      "name": "Task",
+      "description": "A piece of work assigned to the agent — a plan step, a turn, a task. The default."
+    },
+    {
+      "name": "Tool",
+      "description": "A tool call the agent made (a lookup, a write, a command)."
+    },
+    {
+      "name": "Message",
+      "description": "A message the agent produced or received."
+    },
+    {
+      "name": "Review",
+      "description": "A review or approval gate — the block a reader usually has to act on."
+    },
+    {
+      "name": "Handoff",
+      "description": "A transfer of the work to another agent; the lane surface draws it with a handoff arrow."
+    }
+  ],
+  "usageExample": "var block = new AgentLaneBlock(\"b-1\", \"planner\", DateTimeOffset.UtcNow, \"Search the ledger\")\n{\n    Kind = AgentLaneBlockKind.Tool,\n};"
 }

@@ -6,5 +6,6 @@
   "packageId": "Tempo.Blazor.AI",
   "sourcePath": "src/Tempo.Blazor.AI/Components/AI/ConflictMatrix.cs",
   "documentationStatus": "documented",
-  "itemName": "ConflictMatrixDirectory"
+  "itemName": "ConflictMatrixDirectory",
+  "usageExample": "// A directory group of the radar, with the rows it holds.\nvar group = matrix.Directories[0];\nvar rows = group.Rows.Count;"
 }

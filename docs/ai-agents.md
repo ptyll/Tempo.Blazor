@@ -354,3 +354,232 @@ pointer. Its contract is [agent-presence-overlay.md](agent-presence-overlay.md).
   [TmPermissionRequest](permission-request.md) — the run-side surfaces that these visualizations compose with.
 - [TmTraceWaterfall](trace-waterfall.md) — the span view of one agent's work.
 - [TmModelPicker](model-picker.md) — which model an agent runs on.
+
+## Usage examples — every surface
+
+Each snippet below compiles as written: the parameter names, enum names and model shapes are the ones the components
+declare, and the host owns every list (a component reports intent and never mutates the data it is handed). Import
+`Tempo.Blazor.Components.AI` for the components and `Tempo.Blazor.AI.Models` for the models.
+
+### `TmAgentBadge` — one agent's identity
+
+```razor
+<TmAgentBadge Agent="@planner" Status="@AgentActivityStatus.Running" />
+```
+
+`Agent` carries the identity and the palette slot; `Status` is optional, and `ShowName` / `ShowStatus` / `Size` trim the
+badge for a dense row. The badge is the shared identity everywhere else below — a lane header, a graph node, a card.
+
+### `TmAgentLanes` — the run in time
+
+```razor
+<TmAgentLanes Snapshot="@LanesSnapshot"
+              @bind-SelectedBlockId="@_blockId"
+              @bind-ViewMode="@_lanesView"
+              Events="@_laneEvents"
+              OnGapDetected="@ReloadSnapshotAsync"
+              TimeProvider="@Clock" />
+```
+
+`Snapshot` is the complete state at one moment (`Agents`, `Blocks`, `Handoffs` and the `Sequence` the events re-base
+on). `Events` is the optional incremental tail of `AgentLaneEvent`s; `OnGapDetected` asks the host to reload the
+snapshot when a sequence is missing. `ViewMode` switches to the two tables that are the text alternative.
+
+### `TmAgentGraph` — the run as a network
+
+```razor
+<TmAgentGraph Snapshot="@GraphSnapshot"
+              Events="@_calls"
+              @bind-SelectedNodeId="@_nodeId"
+              @bind-ViewMode="@_graphView"
+              OnGapDetected="@ReloadGraphAsync"
+              TimeProvider="@Clock" />
+```
+
+`Events` is a contiguous log of `AgentGraphCall`s, each carrying the edge it travelled and its own `Sequence`; a hole
+means the host reloads the snapshot, which re-bases the stream. `NodePositions` pins the layout when the host has its own
+geometry.
+
+### `TmFanOutGrid` — the work split
+
+```razor
+<TmFanOutGrid Tasks="@tasks"
+              @bind-Filter="@_filter"
+              OnRetry="@RetryAsync"
+              OnCancel="@CancelAsync"
+              CostFormatter="@FormatCost"
+              TimeProvider="@Clock" />
+```
+
+A tile per `FanOutTask` with its worker, attempt, countdown and error; `FanOutSummary` rolls the whole grid up. `OnRetry`
+and `OnCancel` report intent — the host re-queues the unit in its own list.
+
+### `TmParallelAttempts` — several attempts, one winner
+
+```razor
+<TmParallelAttempts Attempts="@attempts"
+                    BestAttemptId="@_best"
+                    @bind-SelectedAttemptId="@_winner"
+                    OnSelect="@Accept"
+                    ConfirmSelection="true">
+    <ContentTemplate Context="attempt">
+        <pre>@attempt.Body</pre>
+    </ContentTemplate>
+</TmParallelAttempts>
+```
+
+`ParallelAttempt` carries the score and the votes; the component asks for a confirmation before it reports `OnSelect`, so
+the page records only what the reader confirmed. `ShowComparison` renders the side-by-side table.
+
+### `TmAgentHandoff` — what travelled and what was lost
+
+```razor
+<TmAgentHandoff Steps="@steps"
+                Orientation="@HandoffOrientation.Horizontal"
+                @bind-ViewMode="@_handoffView"
+                @bind-ExpandedStepIds="@_expanded" />
+```
+
+A `HandoffStep` has a from/to agent, a state, the `PassedItems` and the `LostItems` (with the reason each was dropped).
+`ViewMode` renders the chain or its table.
+
+### `TmFallbackChain` — the models tried, in order
+
+```razor
+<TmFallbackChain Attempts="@attempts"
+                 Mode="@FallbackChainMode.Edit"
+                 @bind-ViewMode="@_fallbackView"
+                 Chain="@_chain"
+                 ChainChanged="@OnChainChanged"
+                 AvailableModels="@_models"
+                 Policy="@_policy"
+                 PolicyChanged="@OnPolicyChanged" />
+```
+
+`FallbackAttempt` describes a recorded attempt (its failure reason, latency and the answer). With `Mode="Edit"` the same
+surface edits the `Chain` over `AvailableModels`: a drag, a per-row move menu and a keyboard grab all raise
+`ChainChanged` with a new list the host stores.
+
+### `TmAutonomyDial` — how much the agent may do alone
+
+```razor
+<TmAutonomyDial Levels="@levels"
+                @bind-Value="@_level"
+                Presentation="@AutonomyDialPresentation.Dial"
+                Locks="@locks"
+                MaxAllowed="2"
+                MaxAllowedReason="@reason"
+                ConfirmAbove="2" />
+```
+
+`AutonomyLevel` is a grade with its label and description; `AutonomyLock` is a limit an administrator enforces, shown
+beside the stops. A change above `ConfirmAbove` is confirmed before it raises `ValueChanged`, and a grade above
+`MaxAllowed` is offered but unavailable.
+
+### `TmMemoryPanel` — what the agent remembers
+
+```razor
+<TmMemoryPanel Items="@memories"
+               @bind-Enabled="@_memoryOn"
+               @bind-FilterText="@_filter"
+               @bind-StatusFilter="@_status"
+               OnEdit="@OnEdited"
+               OnPause="@OnPaused"
+               OnResume="@OnResumed"
+               OnForget="@OnForgotten"
+               OnReview="@OnReviewed"
+               OnBulkAction="@OnBulk"
+               UndoWindow="@TimeSpan.FromSeconds(10)" />
+```
+
+`MemoryItem` is one fact with its category, confidence, source and status. A forget starts an undo window: the row leaves
+the list and `OnForget` is raised only when the window closes, so an undone removal never reaches the host. A row's edit,
+pause, resume and review are separate callbacks, and `MemoryBulkActionRequest` batches a selection.
+
+### `TmDelegateBoard` — which agent takes which task
+
+```razor
+<TmDelegateBoard Tasks="@tasks"
+                 Agents="@agents"
+                 @bind-AutoAssign="@_auto"
+                 OnAssign="@OnAssigned"
+                 OnUnassign="@OnUnassigned"
+                 TimeProvider="@Clock" />
+```
+
+The board is one backlog column plus one column per `DelegateAgent` (capacity, current load, busy-until). A move by drag
+or by the card's Assign menu raises `DelegateMoveRequest`; `DelegateAutoAssigner` is the automatic pass, and the board
+refuses a drop on a full agent with a visible notice.
+
+### `TmScheduledRuns` — which window a run lands in
+
+```razor
+<TmScheduledRuns Windows="@windows"
+                 Runs="@runs"
+                 ViewMode="@_runsView"
+                 ViewModeChanged="@OnRunsViewChanged"
+                 OnMove="@OnMoved"
+                 SelectedDay="@_day" />
+```
+
+`RunWindow` is a slot with its capacity and the host's own usage; `ScheduledRun` is the work that has to fit (its
+`EstimatedUnits` may split it across windows). `RunWindowPlanner` is the placement the surface renders, and `OnMove`
+reports the reader's pick — the host applies it and re-renders. The table is the text alternative.
+
+### `TmConflictRadar` — who touched what
+
+```razor
+<TmConflictRadar Agents="@branches"
+                 @bind-Resolutions="@_resolutions"
+                 @bind-ConflictOnly="@_conflictOnly"
+                 OnMerge="@OnMerge" />
+```
+
+`AgentBranchChanges` is one agent's branch and the `ChangedPaths` it touched; `ConflictMatrix` computes the rows, the
+conflicts and the directory groups from them. A conflict carries its own side choice (`ConflictResolution`, an agent or a
+manual merge), the merge stays disabled until every conflict is decided, and `ConflictMergeRequest` reports the files and
+the accepted decision per conflict.
+
+### `TmAgentPresenceOverlay` — where everybody is
+
+```razor
+<TmAgentPresenceOverlay Markers="@markers" ShowRoster="true" RosterLabel="@presenceLabel">
+    <article>
+        <p>@body<span data-presence-anchor="plan-lead"></span></p>
+    </article>
+</TmAgentPresenceOverlay>
+```
+
+A `PresenceMarker` names an agent, an `AnchorId` (matched against `data-presence-anchor`) or a fraction of the content
+box, and an activity (`Viewing`, `Typing`, `Editing`, `Commenting`). The layer is decorative and never takes the pointer;
+`ShowRoster` adds the text alternative, and the component owns one polite live region for presence changes.
+
+### The live-data path
+
+The two surfaces with an incremental contract take a snapshot plus events; everything else renders a snapshot only.
+
+```csharp
+private AgentEventStream<AgentLaneEvent> _laneStream = new(change => change.Sequence);
+private AgentEventStream<AgentGraphCall> _callStream = new(call => call.Sequence);
+private readonly AgentRenderThrottle _paint = new(Clock, TimeSpan.FromMilliseconds(100));
+
+// A hub callback and a one-second poll both land here.
+private void OnLaneBatch(IReadOnlyList<AgentLaneEvent> batch)
+{
+    if (_laneStream.Apply(batch).Count > 0 && _paint.ShouldRender())
+    {
+        _ = InvokeAsync(StateHasChanged);
+    }
+}
+```
+
+| Rule | What the host does |
+|---|---|
+| **Snapshot first** | `Snapshot.Sequence` is the baseline the next event must follow; a reload replaces the snapshot and re-bases the stream (`ResetToSnapshot`). |
+| **Events are optional** | A host without a live feed passes a snapshot and nothing else; the surface is complete without events. |
+| **A gap is a repair** | `OnGapDetected` is the host's cue to reload. The surface never papers over a hole. |
+| **The paint is throttled** | `AgentRenderThrottle` collapses a burst into one paint per window; the state keeps absorbing every event, so a snapshot read at any moment is complete. |
+| **The transport is not the library's business** | Nothing in the package subscribes to a hub, polls or starts a timer. |
+
+The demo pages that prove both paths are `/ai-agents` (a scenario end to end) and `/ai-agent-visualizations` (one
+simulated run rendered by every surface at once — see [ai-agent-visualizations.md](ai-agent-visualizations.md)).

@@ -80,5 +80,6 @@
       "description": "The run in the host's own words. A whitespace-only title reads as empty."
     }
   ],
-  "itemName": "ScheduledRun"
+  "itemName": "ScheduledRun",
+  "usageExample": "var run = new ScheduledRun(\"run-export\", \"Nightly export\")\n{\n    EstimatedUnits = 6,\n    Status = ScheduledRunStatus.Running,\n};"
 }

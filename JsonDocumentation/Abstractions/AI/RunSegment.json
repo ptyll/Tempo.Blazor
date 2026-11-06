@@ -44,5 +44,6 @@
       "description": "The id of the window the slice sits in."
     }
   ],
-  "itemName": "RunSegment"
+  "itemName": "RunSegment",
+  "usageExample": "var run = new ScheduledRun(\"run-export\", \"Nightly export\")\n{\n    Segments =\n    [\n        new RunSegment(\"win-mon-am\", window.Start, window.End, 3),\n    ],\n};"
 }

@@ -135,7 +135,8 @@
           "name": "Cancelled",
           "description": "The agent was stopped before it finished. Terminal, and neither a success nor a failure."
         }
-      ]
+      ],
+      "usageExample": "var block = new AgentLaneBlock(\"b-1\", \"planner\", DateTimeOffset.UtcNow, \"Read the ledger\")\n{\n    Status = AgentActivityStatus.Running,\n};"
     },
     {
       "itemName": "AgentBranchChanges",
@@ -189,7 +190,8 @@
           "type": "bool",
           "description": "Whether the agent changed anything at all (an agent with no changes is not a matrix column)."
         }
-      ]
+      ],
+      "usageExample": "var branch = new AgentBranchChanges(planner, \"feat/conflict-radar\",\n[\n    new ChangedPath(\"src/TmConflictRadar.razor\", ChangeKind.Modified),\n    new ChangedPath(\"docs/conflict-radar.md\", ChangeKind.Added),\n]);"
     },
     {
       "itemName": "AgentEventStream<TEvent>",
@@ -433,7 +435,8 @@
           "name": "Human",
           "description": "The human in the loop — the person who asked, approved or is being waited for. Painted to the LEFT of the agents, because the request comes from there."
         }
-      ]
+      ],
+      "usageExample": "var node = new AgentGraphNode(\"search\", \"Web search\")\n{\n    Kind = AgentGraphNodeKind.Tool,\n    Status = AgentActivityStatus.Succeeded,\n};"
     },
     {
       "itemName": "AgentGraphSnapshot",
@@ -632,7 +635,8 @@
           "name": "Handoff",
           "description": "A transfer of the work to another agent; the lane surface draws it with a handoff arrow."
         }
-      ]
+      ],
+      "usageExample": "var block = new AgentLaneBlock(\"b-1\", \"planner\", DateTimeOffset.UtcNow, \"Search the ledger\")\n{\n    Kind = AgentLaneBlockKind.Tool,\n};"
     },
     {
       "itemName": "AgentLaneBlockMarker",
@@ -656,7 +660,8 @@
           "name": "Review",
           "description": "The block is under review and no verdict exists yet."
         }
-      ]
+      ],
+      "usageExample": "var block = new AgentLaneBlock(\"b-1\", \"reviewer\", DateTimeOffset.UtcNow, \"Approve the write-off\")\n{\n    Marker = AgentLaneBlockMarker.Approval,\n};"
     },
     {
       "itemName": "AgentLaneEvent",
@@ -723,7 +728,8 @@
           "name": "HandoffAdded",
           "description": "Records the handoff, unless the same link is already present."
         }
-      ]
+      ],
+      "usageExample": "var change = new AgentLaneEvent(sequence: 12)\n{\n    Kind = AgentLaneEventKind.BlockCompleted,\n    BlockId = \"b-1\",\n};"
     },
     {
       "itemName": "AgentLanesSnapshot",
@@ -2597,7 +2603,8 @@
           "type": "string?",
           "description": "Where a renamed file came from, with its separators normalised the same way as Path. Null for every other kind, and for a rename the host did not describe."
         }
-      ]
+      ],
+      "usageExample": "var change = new ChangedPath(\"src/TmConflictRadar.razor\", ChangeKind.Renamed, \"src/Radar.razor\");"
     },
     {
       "itemName": "ChangeKind",
@@ -2607,7 +2614,8 @@
       "description": "What one agent did to one path on its own branch — the fact a conflict radar paints in the cell where the file and the agent meet. The enum carries no text: a surface renders its own localized word and icon for each value, so the same change reads \"Modified\" in English and \"Změněno\" in Czech. Renamed is the only value that also needs a second path (where the file came from), which PreviousPath carries. The four values are deliberately the whole vocabulary: a real Git status also reports modes, copies and merges, but none of them changes what a reader has to decide here — WHO wins the file — and inventing a value per porcelain token would leave most cells with a state no surface can explain.",
       "packageId": "Tempo.Blazor.Abstractions",
       "sourcePath": "src/Tempo.Blazor.Abstractions/AI/Agents/ChangeKind.cs",
-      "documentationStatus": "merged"
+      "documentationStatus": "merged",
+      "usageExample": "var added = new ChangedPath(\"docs/conflict-radar.md\", ChangeKind.Added);"
     },
     {
       "itemName": "ConflictMergeRequest",
@@ -2655,7 +2663,8 @@
           "type": "int",
           "description": "How many files the reader had to decide about."
         }
-      ]
+      ],
+      "usageExample": "private void OnMerge(ConflictMergeRequest request)\n{\n    // The host applies the merge in its own repository; the radar changed nothing itself.\n    var files = request.FileCount;\n    var settled = request.ResolvedConflictCount;\n}"
     },
     {
       "itemName": "ConflictResolution",
@@ -2709,7 +2718,8 @@
           "type": "string",
           "description": "The conflicting file's path, normalised the same way Path is."
         }
-      ]
+      ],
+      "usageExample": "// Keep the planner's version of one conflicting file.\nvar resolution = new ConflictResolution(\"CHANGELOG.md\", ConflictResolutionKind.Agent, \"planner\");\n\n// Or merge that file by hand.\nvar manual = new ConflictResolution(\"CHANGELOG.md\", ConflictResolutionKind.Manual);"
     },
     {
       "itemName": "ConflictResolutionKind",
@@ -3147,7 +3157,8 @@
           "type": "int",
           "description": "How many more tasks the agent can take right now (never negative)."
         }
-      ]
+      ],
+      "usageExample": "var agent = new DelegateAgent(planner)\n{\n    MaxConcurrency = 2,\n    ActiveCount = 1,\n    BusyUntil = DateTimeOffset.UtcNow.AddMinutes(40),\n};"
     },
     {
       "itemName": "DelegateMoveRequest",
@@ -3201,7 +3212,8 @@
           "type": "DelegateAgent?",
           "description": "The agent that holds the task now, or null when it went back to the backlog."
         }
-      ]
+      ],
+      "usageExample": "private void OnAssigned(DelegateMoveRequest request)\n{\n    var task = request.Task;\n    var assignee = request.AssigneeId;\n    var agent = request.To?.Agent.Name;\n}"
     },
     {
       "itemName": "DelegateTask",
@@ -3267,7 +3279,8 @@
           "type": "string",
           "description": "The task in the host's own words. A whitespace-only title reads as empty."
         }
-      ]
+      ],
+      "usageExample": "var task = new DelegateTask(\"task-summary\", \"Draft the release summary\")\n{\n    Priority = DelegateTaskPriority.Urgent,\n    EstimatedDuration = TimeSpan.FromMinutes(45),\n};"
     },
     {
       "itemName": "DelegateTaskPriority",
@@ -3277,7 +3290,8 @@
       "description": "How urgent a delegated task is, as the board paints and orders it. The words are the surface's own (the model carries no text), so the same value reads \"High\" in English and \"Vysoká\" in Czech. A host that has no priority scale for its tasks leaves Priority null: an INVENTED Normal would claim a judgement nobody made, and the board would then sort by a value the host never stored.",
       "packageId": "Tempo.Blazor.Abstractions",
       "sourcePath": "src/Tempo.Blazor.Abstractions/AI/Agents/DelegateTaskPriority.cs",
-      "documentationStatus": "merged"
+      "documentationStatus": "merged",
+      "usageExample": "var task = new DelegateTask(\"task-notes\", \"Summarize the stand-up\")\n{\n    Priority = DelegateTaskPriority.Low,\n};"
     },
     {
       "itemName": "FallbackAttempt",
@@ -4675,7 +4689,8 @@
       "description": "What a present agent (or person) is doing at the place their marker points at — the word a presence label carries next to the name. The enum is a small, shared vocabulary on purpose: the activity is the SECOND thing a reader needs (the name comes first) and a host that invented its own words would make two surfaces describe the same presence differently. A label may override it with the host's own sentence through Label.",
       "packageId": "Tempo.Blazor.Abstractions",
       "sourcePath": "src/Tempo.Blazor.Abstractions/AI/Agents/PresenceActivity.cs",
-      "documentationStatus": "merged"
+      "documentationStatus": "merged",
+      "usageExample": "var marker = new PresenceMarker(\"planner\", planner)\n{\n    AnchorId = \"plan-lead\",\n    Activity = PresenceActivity.Editing,\n};"
     },
     {
       "itemName": "PresenceMarker",
@@ -5178,7 +5193,8 @@
           "type": "string",
           "description": "The id of the window the slice sits in."
         }
-      ]
+      ],
+      "usageExample": "var run = new ScheduledRun(\"run-export\", \"Nightly export\")\n{\n    Segments =\n    [\n        new RunSegment(\"win-mon-am\", window.Start, window.End, 3),\n    ],\n};"
     },
     {
       "itemName": "RunWindow",
@@ -5292,7 +5308,8 @@
           "type": "double",
           "description": "The share of the capacity that is already committed, in 0…1 (0 for a window with no capacity)."
         }
-      ]
+      ],
+      "usageExample": "var window = new RunWindow(\n    \"win-mon-am\",\n    DateTimeOffset.UtcNow.Date.AddHours(9),\n    DateTimeOffset.UtcNow.Date.AddHours(12),\n    capacity: 6,\n    used: 1);"
     },
     {
       "itemName": "ScheduledRun",
@@ -5376,7 +5393,8 @@
           "type": "string",
           "description": "The run in the host's own words. A whitespace-only title reads as empty."
         }
-      ]
+      ],
+      "usageExample": "var run = new ScheduledRun(\"run-export\", \"Nightly export\")\n{\n    EstimatedUnits = 6,\n    Status = ScheduledRunStatus.Running,\n};"
     },
     {
       "itemName": "ScheduledRunMoveRequest",
@@ -5418,7 +5436,8 @@
           "type": "string",
           "description": "The window id the host should store as the run's start window now."
         }
-      ]
+      ],
+      "usageExample": "private void OnMoved(ScheduledRunMoveRequest request)\n{\n    var run = request.Run;\n    var window = request.To;\n    var from = request.From;\n}"
     },
     {
       "itemName": "ScheduledRunStatus",
@@ -5428,7 +5447,8 @@
       "description": "How a scheduled run is doing. The board paints it as a WORD plus an icon, never as a colour alone, and the same value also decides whether the run still competes for window capacity (only Planned and Running do).",
       "packageId": "Tempo.Blazor.Abstractions",
       "sourcePath": "src/Tempo.Blazor.Abstractions/AI/Agents/ScheduledRunStatus.cs",
-      "documentationStatus": "merged"
+      "documentationStatus": "merged",
+      "usageExample": "var run = new ScheduledRun(\"run-report\", \"Weekly report\")\n{\n    Status = ScheduledRunStatus.Succeeded,\n};"
     },
     {
       "itemName": "CsvColumnMapping",

@@ -16,5 +16,6 @@
       "name": "Y",
       "description": "Distance in pixels from the canvas's top edge; never negative (a negative or non-finite value is stored as zero)."
     }
-  ]
+  ],
+  "usageExample": "// Pin a node to a coordinate the host computed itself.\n<TmAgentGraph Snapshot=\"@graph\"\n              NodePositions=\"@(new Dictionary<string, AgentGraphPosition>\n              {\n                  [\"planner\"] = new(0.2, 0.3),\n              })\" />"
 }

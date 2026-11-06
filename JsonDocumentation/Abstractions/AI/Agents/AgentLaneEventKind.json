@@ -8,8 +8,18 @@
   "documentationStatus": "documented",
   "itemName": "AgentLaneEventKind",
   "members": [
-    { "name": "BlockUpserted", "description": "Adds the block, or replaces the block with the same AgentLaneBlock.Id in place (its position in the list is kept)." },
-    { "name": "BlockRemoved", "description": "Removes the block named by AgentLaneEvent.BlockId; an unknown id is a no-op." },
-    { "name": "HandoffAdded", "description": "Records the handoff, unless the same link is already present." }
-  ]
+    {
+      "name": "BlockUpserted",
+      "description": "Adds the block, or replaces the block with the same AgentLaneBlock.Id in place (its position in the list is kept)."
+    },
+    {
+      "name": "BlockRemoved",
+      "description": "Removes the block named by AgentLaneEvent.BlockId; an unknown id is a no-op."
+    },
+    {
+      "name": "HandoffAdded",
+      "description": "Records the handoff, unless the same link is already present."
+    }
+  ],
+  "usageExample": "var change = new AgentLaneEvent(sequence: 12)\n{\n    Kind = AgentLaneEventKind.BlockCompleted,\n    BlockId = \"b-1\",\n};"
 }

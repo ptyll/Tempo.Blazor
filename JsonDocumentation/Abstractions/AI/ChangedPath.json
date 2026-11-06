@@ -44,5 +44,6 @@
       "description": "Where a renamed file came from, with its separators normalised the same way as Path. Null for every other kind, and for a rename the host did not describe."
     }
   ],
-  "itemName": "ChangedPath"
+  "itemName": "ChangedPath",
+  "usageExample": "var change = new ChangedPath(\"src/TmConflictRadar.razor\", ChangeKind.Renamed, \"src/Radar.razor\");"
 }

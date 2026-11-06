@@ -44,5 +44,6 @@
       "description": "How many files the reader had to decide about."
     }
   ],
-  "itemName": "ConflictMergeRequest"
+  "itemName": "ConflictMergeRequest",
+  "usageExample": "private void OnMerge(ConflictMergeRequest request)\n{\n    // The host applies the merge in its own repository; the radar changed nothing itself.\n    var files = request.FileCount;\n    var settled = request.ResolvedConflictCount;\n}"
 }

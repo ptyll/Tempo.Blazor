@@ -62,5 +62,6 @@
       "description": "The task in the host's own words. A whitespace-only title reads as empty."
     }
   ],
-  "itemName": "DelegateTask"
+  "itemName": "DelegateTask",
+  "usageExample": "var task = new DelegateTask(\"task-summary\", \"Draft the release summary\")\n{\n    Priority = DelegateTaskPriority.Urgent,\n    EstimatedDuration = TimeSpan.FromMinutes(45),\n};"
 }

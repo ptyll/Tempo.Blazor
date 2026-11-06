@@ -8,12 +8,34 @@
   "documentationStatus": "documented",
   "itemName": "AgentActivityStatus",
   "members": [
-    { "name": "Idle", "description": "The agent exists but has nothing to do. The neutral state, and the one an unknown backend value falls back to." },
-    { "name": "Queued", "description": "Work is assigned to the agent and it has not started yet — a turn in the queue, a task waiting for a free slot." },
-    { "name": "Running", "description": "The agent is working right now. The only state whose duration is still growing." },
-    { "name": "WaitingForApproval", "description": "The agent stopped and is waiting for a human decision (an approval, a permission grant, a review verdict). Painted in the attention tone, because nothing moves until the reader acts." },
-    { "name": "Succeeded", "description": "The agent finished its work successfully. A terminal state." },
-    { "name": "Failed", "description": "The agent failed. A terminal state; the failure reason belongs to the host's own data." },
-    { "name": "Cancelled", "description": "The agent was stopped before it finished. Terminal, and neither a success nor a failure." }
-  ]
+    {
+      "name": "Idle",
+      "description": "The agent exists but has nothing to do. The neutral state, and the one an unknown backend value falls back to."
+    },
+    {
+      "name": "Queued",
+      "description": "Work is assigned to the agent and it has not started yet — a turn in the queue, a task waiting for a free slot."
+    },
+    {
+      "name": "Running",
+      "description": "The agent is working right now. The only state whose duration is still growing."
+    },
+    {
+      "name": "WaitingForApproval",
+      "description": "The agent stopped and is waiting for a human decision (an approval, a permission grant, a review verdict). Painted in the attention tone, because nothing moves until the reader acts."
+    },
+    {
+      "name": "Succeeded",
+      "description": "The agent finished its work successfully. A terminal state."
+    },
+    {
+      "name": "Failed",
+      "description": "The agent failed. A terminal state; the failure reason belongs to the host's own data."
+    },
+    {
+      "name": "Cancelled",
+      "description": "The agent was stopped before it finished. Terminal, and neither a success nor a failure."
+    }
+  ],
+  "usageExample": "var block = new AgentLaneBlock(\"b-1\", \"planner\", DateTimeOffset.UtcNow, \"Read the ledger\")\n{\n    Status = AgentActivityStatus.Running,\n};"
 }

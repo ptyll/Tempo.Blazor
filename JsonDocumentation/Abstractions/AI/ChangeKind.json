@@ -6,5 +6,6 @@
   "packageId": "Tempo.Blazor.Abstractions",
   "sourcePath": "src/Tempo.Blazor.Abstractions/AI/Agents/ChangeKind.cs",
   "documentationStatus": "documented",
-  "itemName": "ChangeKind"
+  "itemName": "ChangeKind",
+  "usageExample": "var added = new ChangedPath(\"docs/conflict-radar.md\", ChangeKind.Added);"
 }

@@ -98,5 +98,6 @@
       "description": "How many more tasks the agent can take right now (never negative)."
     }
   ],
-  "itemName": "DelegateAgent"
+  "itemName": "DelegateAgent",
+  "usageExample": "var agent = new DelegateAgent(planner)\n{\n    MaxConcurrency = 2,\n    ActiveCount = 1,\n    BusyUntil = DateTimeOffset.UtcNow.AddMinutes(40),\n};"
 }

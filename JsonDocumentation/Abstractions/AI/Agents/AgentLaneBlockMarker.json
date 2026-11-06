@@ -8,8 +8,18 @@
   "documentationStatus": "documented",
   "itemName": "AgentLaneBlockMarker",
   "members": [
-    { "name": "Approval", "description": "The work was approved." },
-    { "name": "ChangesRequested", "description": "A reviewer asked for changes; the work is not done yet." },
-    { "name": "Review", "description": "The block is under review and no verdict exists yet." }
-  ]
+    {
+      "name": "Approval",
+      "description": "The work was approved."
+    },
+    {
+      "name": "ChangesRequested",
+      "description": "A reviewer asked for changes; the work is not done yet."
+    },
+    {
+      "name": "Review",
+      "description": "The block is under review and no verdict exists yet."
+    }
+  ],
+  "usageExample": "var block = new AgentLaneBlock(\"b-1\", \"reviewer\", DateTimeOffset.UtcNow, \"Approve the write-off\")\n{\n    Marker = AgentLaneBlockMarker.Approval,\n};"
 }

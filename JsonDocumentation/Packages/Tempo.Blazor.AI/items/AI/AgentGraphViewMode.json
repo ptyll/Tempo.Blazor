@@ -16,5 +16,6 @@
       "name": "Table",
       "description": "The text alternative: one table of every connection (from, to, kind, calls, last call) and one of every node (name, kind, state, calls). The same data without the geometry, reachable by keyboard and read by a screen reader; the node row action selects a node exactly as the drawing does."
     }
-  ]
+  ],
+  "usageExample": "// Open the graph on its table presentation (the text alternative).\n<TmAgentGraph Snapshot=\"@graph\" @bind-ViewMode=\"_view\" />\n\n@code {\n    private AgentGraphViewMode _view = AgentGraphViewMode.Table;\n}"
 }

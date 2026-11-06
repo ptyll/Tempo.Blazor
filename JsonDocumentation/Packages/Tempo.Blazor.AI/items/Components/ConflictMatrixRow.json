@@ -6,5 +6,6 @@
   "packageId": "Tempo.Blazor.AI",
   "sourcePath": "src/Tempo.Blazor.AI/Components/AI/ConflictMatrix.cs",
   "documentationStatus": "documented",
-  "itemName": "ConflictMatrixRow"
+  "itemName": "ConflictMatrixRow",
+  "usageExample": "// One file row; IsConflict is true when more than one agent changed it.\nvar row = matrix.Rows.First(r => r.IsConflict);\nvar agents = row.Changed.Count;"
 }

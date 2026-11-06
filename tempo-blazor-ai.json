@@ -4032,7 +4032,8 @@
           "name": "Lg",
           "description": "Prominent — the agent in focus, a detail header (32 px avatar)."
         }
-      ]
+      ],
+      "usageExample": "// Trim the badge for a dense lane header.\n<TmAgentBadge Agent=\"@planner\" Size=\"AgentBadgeSize.Sm\" ShowStatus=\"false\" />"
     },
     {
       "itemName": "AgentGraphPosition",
@@ -4056,7 +4057,8 @@
           "type": "double",
           "description": "Distance in pixels from the canvas's top edge; never negative (a negative or non-finite value is stored as zero)."
         }
-      ]
+      ],
+      "usageExample": "// Pin a node to a coordinate the host computed itself.\n<TmAgentGraph Snapshot=\"@graph\"\n              NodePositions=\"@(new Dictionary<string, AgentGraphPosition>\n              {\n                  [\"planner\"] = new(0.2, 0.3),\n              })\" />"
     },
     {
       "itemName": "AgentGraphViewMode",
@@ -4076,7 +4078,8 @@
           "name": "Table",
           "description": "The text alternative: one table of every connection (from, to, kind, calls, last call) and one of every node (name, kind, state, calls). The same data without the geometry, reachable by keyboard and read by a screen reader; the node row action selects a node exactly as the drawing does."
         }
-      ]
+      ],
+      "usageExample": "// Open the graph on its table presentation (the text alternative).\n<TmAgentGraph Snapshot=\"@graph\" @bind-ViewMode=\"_view\" />\n\n@code {\n    private AgentGraphViewMode _view = AgentGraphViewMode.Table;\n}"
     },
     {
       "itemName": "AgentHandoffViewMode",
@@ -4107,7 +4110,8 @@
           "name": "Table",
           "description": "The text alternative: every block as a row (agent, activity, kind, start, end, state, marker) plus a second table of the handoffs. The same data without the geometry, reachable by keyboard and read by a screen reader; the row action selects a block exactly as the timeline does."
         }
-      ]
+      ],
+      "usageExample": "// Open the lanes on their table presentation (the text alternative).\n<TmAgentLanes Snapshot=\"@lanes\" @bind-ViewMode=\"_view\" />\n\n@code {\n    private AgentLanesViewMode _view = AgentLanesViewMode.Table;\n}"
     },
     {
       "itemName": "AutonomyDialPresentation",
@@ -4132,7 +4136,8 @@
       "notes": [
         "The matrix is pure C#: a conflict is a fact (two or more agents changed the same path) and the ordering, the directory groups and the merge readiness are all computed here, so no template can disagree with the count it prints.",
         "Paths are compared ordinally after their separators are normalised to '/', so the same file reported by two agents with different separators is one row — while a case difference stays two rows, because folding it would hide a change nobody resolved."
-      ]
+      ],
+      "usageExample": "var matrix = ConflictMatrix.Build(branches);\nvar conflicts = matrix.Rows.Count(row => row.IsConflict);\nvar files = matrix.Rows.Count;"
     },
     {
       "itemName": "ConflictMatrixCell",
@@ -4142,7 +4147,8 @@
       "description": "One cell of the conflict matrix: the agent, the change it made and — for a rename — where the file came from. A cell exists only where an agent really changed the file; the matrix stores null instead of an \"unchanged\" cell so no surface can paint a change that did not happen.",
       "packageId": "Tempo.Blazor.AI",
       "sourcePath": "src/Tempo.Blazor.AI/Components/AI/ConflictMatrix.cs",
-      "documentationStatus": "merged"
+      "documentationStatus": "merged",
+      "usageExample": "// One cell of the matrix: the change an agent made to one file.\nvar cell = matrix.Rows[0].Cells[0];\nvar label = cell.HasChange ? cell.Kind.ToString() : \"No change\";"
     },
     {
       "itemName": "ConflictMatrixDirectory",
@@ -4152,7 +4158,8 @@
       "description": "One directory group of the conflict matrix: the folder and the rows that sit directly in it. The group is FLAT by design — a nested tree would hide the conflicts of a deep folder behind three disclosures a reader has to open. The path of every row is printed in full by the surface, so one level of grouping is enough to shorten the scan without losing where a file lives.",
       "packageId": "Tempo.Blazor.AI",
       "sourcePath": "src/Tempo.Blazor.AI/Components/AI/ConflictMatrix.cs",
-      "documentationStatus": "merged"
+      "documentationStatus": "merged",
+      "usageExample": "// A directory group of the radar, with the rows it holds.\nvar group = matrix.Directories[0];\nvar rows = group.Rows.Count;"
     },
     {
       "itemName": "ConflictMatrixRow",
@@ -4162,7 +4169,8 @@
       "description": "One row of the conflict matrix: a file, the agents' changes to it and whether more than one agent claimed it. Cells is aligned with Columns — index i is the column of the agent at index i, and a null cell means \"this agent did not touch this file\". The alignment is the point: a grid that looks cells up by agent id would re-order itself the moment a host sorted its agents differently from its matrix.",
       "packageId": "Tempo.Blazor.AI",
       "sourcePath": "src/Tempo.Blazor.AI/Components/AI/ConflictMatrix.cs",
-      "documentationStatus": "merged"
+      "documentationStatus": "merged",
+      "usageExample": "// One file row; IsConflict is true when more than one agent changed it.\nvar row = matrix.Rows.First(r => r.IsConflict);\nvar agents = row.Changed.Count;"
     },
     {
       "itemName": "FallbackChainMode",

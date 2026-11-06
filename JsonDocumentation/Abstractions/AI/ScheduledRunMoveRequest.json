@@ -38,5 +38,6 @@
       "description": "The window id the host should store as the run's start window now."
     }
   ],
-  "itemName": "ScheduledRunMoveRequest"
+  "itemName": "ScheduledRunMoveRequest",
+  "usageExample": "private void OnMoved(ScheduledRunMoveRequest request)\n{\n    var run = request.Run;\n    var window = request.To;\n    var from = request.From;\n}"
 }

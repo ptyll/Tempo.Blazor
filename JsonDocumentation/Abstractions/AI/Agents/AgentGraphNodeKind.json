@@ -24,5 +24,6 @@
       "name": "Human",
       "description": "The human in the loop — the person who asked, approved or is being waited for. Painted to the LEFT of the agents, because the request comes from there."
     }
-  ]
+  ],
+  "usageExample": "var node = new AgentGraphNode(\"search\", \"Web search\")\n{\n    Kind = AgentGraphNodeKind.Tool,\n    Status = AgentActivityStatus.Succeeded,\n};"
 }

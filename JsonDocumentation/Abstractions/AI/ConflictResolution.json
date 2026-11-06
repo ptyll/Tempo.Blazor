@@ -50,5 +50,6 @@
       "description": "The conflicting file's path, normalised the same way Path is."
     }
   ],
-  "itemName": "ConflictResolution"
+  "itemName": "ConflictResolution",
+  "usageExample": "// Keep the planner's version of one conflicting file.\nvar resolution = new ConflictResolution(\"CHANGELOG.md\", ConflictResolutionKind.Agent, \"planner\");\n\n// Or merge that file by hand.\nvar manual = new ConflictResolution(\"CHANGELOG.md\", ConflictResolutionKind.Manual);"
 }

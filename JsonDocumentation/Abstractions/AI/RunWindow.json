@@ -110,5 +110,6 @@
       "description": "The share of the capacity that is already committed, in 0…1 (0 for a window with no capacity)."
     }
   ],
-  "itemName": "RunWindow"
+  "itemName": "RunWindow",
+  "usageExample": "var window = new RunWindow(\n    \"win-mon-am\",\n    DateTimeOffset.UtcNow.Date.AddHours(9),\n    DateTimeOffset.UtcNow.Date.AddHours(12),\n    capacity: 6,\n    used: 1);"
 }

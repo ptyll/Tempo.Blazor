@@ -10,5 +10,6 @@
   "notes": [
     "The matrix is pure C#: a conflict is a fact (two or more agents changed the same path) and the ordering, the directory groups and the merge readiness are all computed here, so no template can disagree with the count it prints.",
     "Paths are compared ordinally after their separators are normalised to '/', so the same file reported by two agents with different separators is one row — while a case difference stays two rows, because folding it would hide a change nobody resolved."
-  ]
+  ],
+  "usageExample": "var matrix = ConflictMatrix.Build(branches);\nvar conflicts = matrix.Rows.Count(row => row.IsConflict);\nvar files = matrix.Rows.Count;"
 }
