@@ -1,0 +1,10 @@
+{
+  "kind": "Class",
+  "category": "Modeling",
+  "namespace": "Tempo.Blazor.Modeling",
+  "description": "A layout change of ONE modeling view: node placements and connection waypoints to upsert plus the node/connection ids to remove. An empty ViewId means the model's default view. Layout is never semantic content, and without the Layout writer capability the editor emits no geometry changes.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/Modeling/ModelingProviderContracts.cs",
+  "documentationStatus": "generated",
+  "itemName": "ModelingViewChange"
+}

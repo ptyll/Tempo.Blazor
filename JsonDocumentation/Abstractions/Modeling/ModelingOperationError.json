@@ -1,0 +1,10 @@
+{
+  "kind": "Class",
+  "category": "Modeling",
+  "namespace": "Tempo.Blazor.Modeling",
+  "description": "One failed modeling operation: the batch index and op kind, a machine-readable Code (parse, unknown_op, missing_field, duplicate_id, not_found, parent_cycle, parent_not_found, still_referenced, still_has_children, invalid_relationship, unsupported_operation, ...), the 2.10.0-formatted Message kept for MCP parity, an optional SuggestedFix and the offending element/relationship/property ids.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/Modeling/ModelingOperations.cs",
+  "documentationStatus": "generated",
+  "itemName": "ModelingOperationError"
+}

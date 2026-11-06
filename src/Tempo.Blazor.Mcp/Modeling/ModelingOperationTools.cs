@@ -10,7 +10,7 @@ namespace Tempo.Blazor.Mcp.Modeling;
 public static class ModelingOperationTools
 {
     [McpServerTool(Name = "modeling_apply_operations")]
-    [Description("Apply an ordered batch of edit operations to a modeling model and save it. operationsJson is a JSON array; each item has an 'op' field: add_element (name, semanticType, optional id/notation/description/parentId), update_element (id + fields to change; parentId=\"\" clears the parent), delete_element (id — referencing relationships AND child elements must be deleted or reparented in the same batch), add_relationship (relationshipType, sourceElementId, targetElementId, optional id/name), update_relationship (id + fields), delete_relationship (id). parentId must resolve to an existing element and must not close a cycle (validated per operation). Relationships are validated against the model's notation rules; an invalid operation fails the WHOLE batch (nothing is saved) with a per-operation explanation. Pass expectedModifiedAt from modeling_get_model_tree for optimistic concurrency.")]
+    [Description("Apply an ordered batch of edit operations to a modeling model and save it. operationsJson is a JSON array; each item has an 'op' field: add_element (name, semanticType, optional id/notation/description/parentId/properties), update_element (id + fields to change; parentId=\"\" clears the parent; optional properties/removedProperties), delete_element (id — referencing relationships AND child elements must be deleted or reparented in the same batch), add_relationship (relationshipType, sourceElementId, targetElementId, optional id/name/properties), update_relationship (id + fields; optional properties/removedProperties), delete_relationship (id), set_properties (id of an element OR relationship + a properties object, optional removedProperties). 'properties' is a JSON object of values and 'removedProperties' a JSON array of keys; both are optional on the four add/update operations AND together form set_properties. parentId must resolve to an existing element and must not close a cycle (validated per operation). Relationships are validated against the model's notation rules; an invalid operation fails the WHOLE batch (nothing is saved) with a per-operation explanation. Pass expectedModifiedAt from modeling_get_model_tree for optimistic concurrency.")]
     public static async Task<string> ApplyOperations(
         ITempoDocumentLibraryProvider library,
         IModelingModelDocumentProvider models,
@@ -35,11 +35,23 @@ public static class ModelingOperationTools
             return McpToolResults.Failure(McpToolResults.NotFound, $"Model {modelId} not found.");
         }
 
-        var working = McpJsonHelpers.Clone(current, McpJson.Options);
-        var result = ModelingOperationEngine.Apply(working, operationsJson, relationshipRules);
+        // ONE engine, shared with the editor (decision MODELING-UNIFIED-OPERATION-ENGINE): the MCP
+        // tool is a caller that loads, applies atomically to a clone and persists.
+        var working = ModelingOperationEngine.Clone(current);
+        var result = ModelingOperationEngine.ApplyJson(
+            working,
+            operationsJson,
+            new ModelingOperationContext
+            {
+                RelationshipRules = relationshipRules,
+                Policy = ModelingOperationPolicy.Strict
+            });
         if (!result.Success)
         {
-            return McpToolResults.Failure(McpToolResults.ValidationFailed, "One or more operations are invalid; nothing was saved.", result.Errors);
+            return McpToolResults.Failure(
+                McpToolResults.ValidationFailed,
+                "One or more operations are invalid; nothing was saved.",
+                result.Errors.Select(error => error.Message).ToList());
         }
 
         await models.SaveModelingModelDocumentAsync(modelId, working);

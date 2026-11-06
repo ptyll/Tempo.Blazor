@@ -17960,7 +17960,7 @@
       "kind": "Interface",
       "category": "Modeling",
       "namespace": "Tempo.Blazor.Modeling",
-      "description": "Writes edited modeling model data back to the source that IModelingModelProvider loaded it from (Fáze 14, decision MODELING-INSPECTOR-EDITING). The provider contract stays READ-ONLY: a host that wants an editable inspector registers a separate writer resolved by ProviderKey.",
+      "description": "Writes edited modeling model data back to the source that IModelingModelProvider loaded it from (Fáze 14, decision MODELING-INSPECTOR-EDITING). The provider contract stays READ-ONLY: a host that wants an editable inspector registers a separate writer resolved by ProviderKey. Capabilities is a default interface member so a 2.10.0 writer keeps working as Content only (decision MODELING-WRITER-CAPABILITIES).",
       "packageId": "Tempo.Blazor.Abstractions",
       "sourcePath": "src/Tempo.Blazor.Abstractions/Modeling/ModelingProviderContracts.cs",
       "documentationStatus": "merged"
@@ -18036,6 +18036,26 @@
       "documentationStatus": "merged"
     },
     {
+      "itemName": "ModelingChangeSetTranslation",
+      "kind": "Class",
+      "category": "Modeling",
+      "namespace": "Tempo.Blazor.Modeling",
+      "description": "The outcome of ToOperationBatch: the ordered batch a writer feeds to Apply plus the section-level errors that make the change set self-contradictory.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Modeling/ModelingChangeSetTranslator.cs",
+      "documentationStatus": "merged"
+    },
+    {
+      "itemName": "ModelingChangeSetTranslator",
+      "kind": "Class",
+      "category": "Modeling",
+      "namespace": "Tempo.Blazor.Modeling",
+      "description": "Translates a v2 ModelingModelChangeSet into the ONE ordered ModelingOperationBatch the shared ModelingOperationEngine applies (decision MODELING-AUTHORING-CHANGESET). The translation lives in Abstractions — next to the change-set DTOs and the engine — so every writer (the demo writer, a host writer, a future server-side writer) executes the SAME application order instead of re-deriving it: added elements (parents first) → content/parent updates of existing elements → removed relationships → added relationships → relationship updates → removed elements (descendants first) → view (layout) changes. The engine never cascades a removal, so the change set must carry the expansion the editor produced. The translator also rejects a self-contradictory change set BEFORE anything is applied: when the same id is named in more than one of the added/updated/removed sections of ONE kind (element or relationship) the change set has no defined outcome, so it is reported as a single duplicate_id error per offending id and the returned batch is empty.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Modeling/ModelingChangeSetTranslator.cs",
+      "documentationStatus": "merged"
+    },
+    {
       "itemName": "ModelingDiagramGenerationOptionsDto",
       "kind": "Class",
       "category": "Modeling",
@@ -18056,11 +18076,21 @@
       "documentationStatus": "merged"
     },
     {
+      "itemName": "ModelingElementAdd",
+      "kind": "Class",
+      "category": "Modeling",
+      "namespace": "Tempo.Blazor.Modeling",
+      "description": "A NEW semantic element proposed by the editor (id, semanticType, name, optional notation/description/parentId/properties). The client id is stable so undo/redo and the diagram commands already reference it; a writer may keep it or rewrite it and return the saved model. ParentId empty means a root element (decision MODELING-AUTHORING-CHANGESET).",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Modeling/ModelingProviderContracts.cs",
+      "documentationStatus": "merged"
+    },
+    {
       "itemName": "ModelingElementChange",
       "kind": "Class",
       "category": "Modeling",
       "namespace": "Tempo.Blazor.Modeling",
-      "description": "A single element's changed fields (ElementId, Name?, Description?, SetProperties, RemovedProperties) — a null member means unchanged.",
+      "description": "A single element's changed fields (ElementId, Name?, Description?, SetProperties, RemovedProperties, ParentId?) — a null member means unchanged; ParentId null means unchanged and an empty string makes the element a root.",
       "packageId": "Tempo.Blazor.Abstractions",
       "sourcePath": "src/Tempo.Blazor.Abstractions/Modeling/ModelingProviderContracts.cs",
       "documentationStatus": "merged"
@@ -18120,7 +18150,7 @@
       "kind": "Class",
       "category": "Modeling",
       "namespace": "Tempo.Blazor.Modeling",
-      "description": "An aggregated change set passed to IModelingModelWriter.SaveChangesAsync (ModelId, ProviderKey, BaseVersion = Metadata.SourceVersion, Elements, Relationships).",
+      "description": "An aggregated change set passed to IModelingModelWriter.SaveChangesAsync: ModelId, ProviderKey, BaseVersion = Metadata.SourceVersion, content changes of existing items (Elements, Relationships) and the additive v2 batch — AddedElements/AddedRelationships, RemovedElementIds/RemovedRelationshipIds and ViewChanges (layout). A null member always means unchanged; the batch is applied atomically in the contract's fixed order (decision MODELING-AUTHORING-CHANGESET).",
       "packageId": "Tempo.Blazor.Abstractions",
       "sourcePath": "src/Tempo.Blazor.Abstractions/Modeling/ModelingProviderContracts.cs",
       "documentationStatus": "merged"
@@ -18156,6 +18186,16 @@
       "documentationStatus": "merged"
     },
     {
+      "itemName": "ModelingModelWriterCapabilities",
+      "kind": "Enum",
+      "category": "Modeling",
+      "namespace": "Tempo.Blazor.Modeling",
+      "description": "Flags describing what an IModelingModelWriter can persist: Content (rename/description/property values of existing items, the 2.10.0 behavior), Structure (added/removed elements and relationships, parent moves), Layout (view node geometry and connection waypoints) and All.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Modeling/ModelingProviderContracts.cs",
+      "documentationStatus": "merged"
+    },
+    {
       "itemName": "ModelingNotationProfileRegistry",
       "kind": "Class",
       "category": "Modeling",
@@ -18166,11 +18206,116 @@
       "documentationStatus": "merged"
     },
     {
+      "itemName": "ModelingOperation",
+      "kind": "Class",
+      "category": "Modeling",
+      "namespace": "Tempo.Blazor.Modeling",
+      "description": "ONE typed modeling operation - the typed front-end of the JSON shape modeling_apply_operations accepts. A null member is not emitted, so it means unchanged, while an empty string or empty list is a real value (clear the parent, clear the waypoints).",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Modeling/ModelingOperations.cs",
+      "documentationStatus": "merged"
+    },
+    {
+      "itemName": "ModelingOperationBatch",
+      "kind": "Class",
+      "category": "Modeling",
+      "namespace": "Tempo.Blazor.Modeling",
+      "description": "An ordered batch of typed modeling operations applied by ModelingOperationEngine (a parent must precede its children; the change-set to batch translation uses the same order).",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Modeling/ModelingOperations.cs",
+      "documentationStatus": "merged"
+    },
+    {
+      "itemName": "ModelingOperationContext",
+      "kind": "Class",
+      "category": "Modeling",
+      "namespace": "Tempo.Blazor.Modeling",
+      "description": "What an operation batch needs from the host: the notation relationship rules and viewpoint rules it validates against, the notation profile provider, and the ModelingOperationPolicy (Strict by default).",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Modeling/ModelingOperations.cs",
+      "documentationStatus": "merged"
+    },
+    {
+      "itemName": "ModelingOperationEngine",
+      "kind": "Class",
+      "category": "Modeling",
+      "namespace": "Tempo.Blazor.Modeling",
+      "description": "The ONE modeling operation engine (decision MODELING-UNIFIED-OPERATION-ENGINE) shared by the editor and the modeling_apply_operations MCP tool: Apply runs a typed batch, ApplyJson parses the byte-compatible JSON array, and Clone provides the deep copy atomic callers apply to and swap on success. It mutates the passed model in place, never touches a provider or writer, never cascades a removal (the editor expands the cascade), and matches MCP byte-for-byte for the 2.10.0 operations.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Modeling/ModelingOperationEngine.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Clone",
+          "kind": "Method",
+          "type": "ModelingModelDto",
+          "description": "Deep copy through System.Text.Json — the atomic-batch helper (the MCP tools moved their private clone here).",
+          "parameters": [
+            {
+              "name": "model",
+              "type": "ModelingModelDto"
+            }
+          ]
+        },
+        {
+          "name": "Context",
+          "kind": "Property",
+          "type": "ModelingOperationContext"
+        },
+        {
+          "name": "ParentChanges",
+          "kind": "Property",
+          "type": "Dictionary<string, (int Index, string Op)>",
+          "description": "Element id → the (index, op) that changed its ParentId. The Authoring policy re-validates every relationship incident to such an element after the last operation (§3.2 rule 3): a lane move can invalidate a flow the batch never touched."
+        }
+      ]
+    },
+    {
+      "itemName": "ModelingOperationError",
+      "kind": "Class",
+      "category": "Modeling",
+      "namespace": "Tempo.Blazor.Modeling",
+      "description": "One failed modeling operation: the batch index and op kind, a machine-readable Code (parse, unknown_op, missing_field, duplicate_id, not_found, parent_cycle, parent_not_found, still_referenced, still_has_children, invalid_relationship, unsupported_operation, ...), the 2.10.0-formatted Message kept for MCP parity, an optional SuggestedFix and the offending element/relationship/property ids.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Modeling/ModelingOperations.cs",
+      "documentationStatus": "merged"
+    },
+    {
+      "itemName": "ModelingOperationPolicy",
+      "kind": "Enum",
+      "category": "Modeling",
+      "namespace": "Tempo.Blazor.Modeling",
+      "description": "How strictly a modeling operation batch is applied: Strict keeps the MCP semantics byte-compatible (no silent cascade, no view operations), Authoring allows view (layout) operations because the editor expanded the cascade itself.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Modeling/ModelingOperations.cs",
+      "documentationStatus": "merged"
+    },
+    {
+      "itemName": "ModelingOperationResult",
+      "kind": "Class",
+      "category": "Modeling",
+      "namespace": "Tempo.Blazor.Modeling",
+      "description": "The outcome of ModelingOperationEngine.Apply / ApplyJson: Success (no errors), Applied count, the ids the engine minted for operations that carried none, and the per-operation errors. A failed batch is still partially applied to the passed model, so atomic callers apply to a clone and swap only on success.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Modeling/ModelingOperations.cs",
+      "documentationStatus": "merged"
+    },
+    {
+      "itemName": "ModelingRelationshipAdd",
+      "kind": "Class",
+      "category": "Modeling",
+      "namespace": "Tempo.Blazor.Modeling",
+      "description": "A NEW semantic relationship between two elements that exist after the batch (id, relationshipType, sourceElementId, targetElementId, optional name/properties). The editor pairs it with a view connection upsert so the relationship does not vanish on reload.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Modeling/ModelingProviderContracts.cs",
+      "documentationStatus": "merged"
+    },
+    {
       "itemName": "ModelingRelationshipChange",
       "kind": "Class",
       "category": "Modeling",
       "namespace": "Tempo.Blazor.Modeling",
-      "description": "A single relationship's changed fields (RelationshipId, Name?, SetProperties, RemovedProperties) — a null member means unchanged.",
+      "description": "A single relationship's changed fields (RelationshipId, Name?, SetProperties, RemovedProperties, SourceElementId?, TargetElementId?) — a null member means unchanged; the nullable endpoint ids carry a re-target when a lane move rewrites a connection.",
       "packageId": "Tempo.Blazor.Abstractions",
       "sourcePath": "src/Tempo.Blazor.Abstractions/Modeling/ModelingProviderContracts.cs",
       "documentationStatus": "merged"
@@ -18216,6 +18361,26 @@
       "documentationStatus": "merged"
     },
     {
+      "itemName": "ModelingViewChange",
+      "kind": "Class",
+      "category": "Modeling",
+      "namespace": "Tempo.Blazor.Modeling",
+      "description": "A layout change of ONE modeling view: node placements and connection waypoints to upsert plus the node/connection ids to remove. An empty ViewId means the model's default view. Layout is never semantic content, and without the Layout writer capability the editor emits no geometry changes.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Modeling/ModelingProviderContracts.cs",
+      "documentationStatus": "merged"
+    },
+    {
+      "itemName": "ModelingViewConnectionChange",
+      "kind": "Class",
+      "category": "Modeling",
+      "namespace": "Tempo.Blazor.Modeling",
+      "description": "A routing change of one view connection, addressed by relationship id. Null waypoints mean unchanged, an EMPTY list clears the manual routing.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Modeling/ModelingProviderContracts.cs",
+      "documentationStatus": "merged"
+    },
+    {
       "itemName": "ModelingViewConnectionDto",
       "kind": "Class",
       "category": "Modeling",
@@ -18233,6 +18398,16 @@
       "description": "A named projection of model elements and relationships.",
       "packageId": "Tempo.Blazor.Abstractions",
       "sourcePath": "src/Tempo.Blazor.Abstractions/Modeling/ModelingDtos.cs",
+      "documentationStatus": "merged"
+    },
+    {
+      "itemName": "ModelingViewNodeChange",
+      "kind": "Class",
+      "category": "Modeling",
+      "namespace": "Tempo.Blazor.Modeling",
+      "description": "A geometry change of one view node. Every coordinate is nullable (null = unchanged); a node that is not in the view yet REQUIRES X and Y, while ParentNodeId holds the PARENT ELEMENT id (null = unchanged, empty string = clear).",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Modeling/ModelingProviderContracts.cs",
       "documentationStatus": "merged"
     },
     {
@@ -44499,11 +44674,11 @@
   ],
   "libraryExamples": [],
   "summary": {
-    "itemCount": 1669,
-    "manualItemCount": 1669,
-    "generatedItemCount": 1653,
+    "itemCount": 1684,
+    "manualItemCount": 1684,
+    "generatedItemCount": 1668,
     "generatedOnlyItemCount": 0,
     "componentCount": 0,
-    "publicApiTypeCount": 1653
+    "publicApiTypeCount": 1668
   }
 }

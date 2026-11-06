@@ -1,0 +1,10 @@
+{
+  "kind": "Class",
+  "category": "Modeling",
+  "namespace": "Tempo.Blazor.Modeling",
+  "description": "The outcome of ToOperationBatch: the ordered batch a writer feeds to Apply plus the section-level errors that make the change set self-contradictory.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/Modeling/ModelingChangeSetTranslator.cs",
+  "documentationStatus": "generated",
+  "itemName": "ModelingChangeSetTranslation"
+}

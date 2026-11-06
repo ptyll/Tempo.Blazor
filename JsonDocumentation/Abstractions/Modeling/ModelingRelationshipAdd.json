@@ -1,0 +1,10 @@
+{
+  "kind": "Class",
+  "category": "Modeling",
+  "namespace": "Tempo.Blazor.Modeling",
+  "description": "A NEW semantic relationship between two elements that exist after the batch (id, relationshipType, sourceElementId, targetElementId, optional name/properties). The editor pairs it with a view connection upsert so the relationship does not vanish on reload.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/Modeling/ModelingProviderContracts.cs",
+  "documentationStatus": "generated",
+  "itemName": "ModelingRelationshipAdd"
+}

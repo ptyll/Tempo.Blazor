@@ -1,0 +1,10 @@
+{
+  "kind": "Enum",
+  "category": "Modeling",
+  "namespace": "Tempo.Blazor.Modeling",
+  "description": "Flags describing what an IModelingModelWriter can persist: Content (rename/description/property values of existing items, the 2.10.0 behavior), Structure (added/removed elements and relationships, parent moves), Layout (view node geometry and connection waypoints) and All.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/Modeling/ModelingProviderContracts.cs",
+  "documentationStatus": "generated",
+  "itemName": "ModelingModelWriterCapabilities"
+}

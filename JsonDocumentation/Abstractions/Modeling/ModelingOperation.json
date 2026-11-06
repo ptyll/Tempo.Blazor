@@ -1,0 +1,10 @@
+{
+  "kind": "Class",
+  "category": "Modeling",
+  "namespace": "Tempo.Blazor.Modeling",
+  "description": "ONE typed modeling operation - the typed front-end of the JSON shape modeling_apply_operations accepts. A null member is not emitted, so it means unchanged, while an empty string or empty list is a real value (clear the parent, clear the waypoints).",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/Modeling/ModelingOperations.cs",
+  "documentationStatus": "generated",
+  "itemName": "ModelingOperation"
+}

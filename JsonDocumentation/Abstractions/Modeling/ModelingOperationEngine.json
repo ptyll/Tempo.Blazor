@@ -1,0 +1,10 @@
+{
+  "kind": "Class",
+  "category": "Modeling",
+  "namespace": "Tempo.Blazor.Modeling",
+  "description": "The ONE modeling operation engine (decision MODELING-UNIFIED-OPERATION-ENGINE) shared by the editor and the modeling_apply_operations MCP tool: Apply runs a typed batch, ApplyJson parses the byte-compatible JSON array, and Clone provides the deep copy atomic callers apply to and swap on success. It mutates the passed model in place, never touches a provider or writer, never cascades a removal (the editor expands the cascade), and matches MCP byte-for-byte for the 2.10.0 operations.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/Modeling/ModelingOperationEngine.cs",
+  "documentationStatus": "generated",
+  "itemName": "ModelingOperationEngine"
+}

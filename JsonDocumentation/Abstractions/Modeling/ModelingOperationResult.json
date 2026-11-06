@@ -1,0 +1,10 @@
+{
+  "kind": "Class",
+  "category": "Modeling",
+  "namespace": "Tempo.Blazor.Modeling",
+  "description": "The outcome of ModelingOperationEngine.Apply / ApplyJson: Success (no errors), Applied count, the ids the engine minted for operations that carried none, and the per-operation errors. A failed batch is still partially applied to the passed model, so atomic callers apply to a clone and swap only on success.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/Modeling/ModelingOperations.cs",
+  "documentationStatus": "generated",
+  "itemName": "ModelingOperationResult"
+}

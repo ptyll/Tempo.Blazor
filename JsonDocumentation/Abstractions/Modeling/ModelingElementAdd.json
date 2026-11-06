@@ -1,0 +1,10 @@
+{
+  "kind": "Class",
+  "category": "Modeling",
+  "namespace": "Tempo.Blazor.Modeling",
+  "description": "A NEW semantic element proposed by the editor (id, semanticType, name, optional notation/description/parentId/properties). The client id is stable so undo/redo and the diagram commands already reference it; a writer may keep it or rewrite it and return the saved model. ParentId empty means a root element (decision MODELING-AUTHORING-CHANGESET).",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/Modeling/ModelingProviderContracts.cs",
+  "documentationStatus": "generated",
+  "itemName": "ModelingElementAdd"
+}

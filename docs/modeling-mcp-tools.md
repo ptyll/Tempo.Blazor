@@ -146,21 +146,29 @@ is the bridge into `diagram_render_svg`.
 ### `modeling_apply_operations`
 Batch mutation of a model under an `expectedConcurrencyToken`. Operations (each `op`):
 `add_element`, `update_element`, `delete_element`, `add_relationship`, `update_relationship`,
-`delete_relationship`.
+`delete_relationship`, `set_properties`.
 
 - **add_element**: `notation`, `semanticType`, `name`, optional `id` (server-generated when
-  omitted; explicit duplicate id → `validation_failed`), `description`, `properties`.
-- **update_element**: `id` + any of `name`/`semanticType`/`description`/`properties` (only supplied
-  fields change).
+  omitted; explicit duplicate id → `validation_failed`), `description`, `parentId`, `properties`,
+  `removedProperties`.
+- **update_element**: `id` + any of `name`/`semanticType`/`description`/`notation`/`parentId`/
+  `properties`/`removedProperties` (only supplied fields change).
 - **delete_element**: `id`. Relationships referencing the element must be deleted in the **same
   batch**, otherwise the batch is rejected with a dangling-reference error (no silent cascade —
-  the agent stays in control).
+  the agent stays in control). An element that still parents other elements must be reparented or
+  deleted first (`still_has_children`).
 - **add_relationship** / **update_relationship**: `relationshipType`, `sourceElementId`,
-  `targetElementId` (+ `name`/`properties`). Each is validated via
+  `targetElementId` (+ `name`/`properties`/`removedProperties`). Each is validated via
   `IModelingRelationshipRulesProvider.ValidateRelationship` against the notation matrix (e.g.
   ArchiMate). An invalid relationship returns the rule's `Message` + `SuggestedFix` — it is **not
   written**.
 - **delete_relationship**: `id`.
+- **set_properties**: `id` of an element OR a relationship (resolved by id) + a `properties`
+  object, optional `removedProperties` (a JSON array of keys to remove). The same two members are
+  accepted directly by the four add/update operations, so one `add_element` or `update_element`
+  carries its values without a follow-up op. A malformed payload (`properties` that is not an
+  object, `removedProperties` that is not an array of strings) fails the op with `property_type`
+  before anything is written.
 
 **Atomicity**: all operations are applied to a working clone and every element/relationship is
 validated first; only if the *entire* batch is valid is the model saved via

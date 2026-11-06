@@ -176,6 +176,13 @@
       "type": "string?",
       "isRequired": false,
       "description": "Optional viewpoint key passed to the selected provider and used to choose the initial model view."
+    },
+    {
+      "name": "WriterCapabilities",
+      "type": "ModelingModelWriterCapabilities?",
+      "isRequired": false,
+      "default": "null",
+      "description": "What the host's writer can persist (decision MODELING-WRITER-CAPABILITIES), used when the host writes the change set itself or wants to NARROW what its writer stores. The effective set is WriterCapabilities ?? ResolvedWriter?.Capabilities ?? Content; an explicit value is intersected with the resolved writer's capabilities, so a host can narrow but never widen what its writer actually stores (EffectiveWriterCapabilities)."
     }
   ],
   "cssClasses": [

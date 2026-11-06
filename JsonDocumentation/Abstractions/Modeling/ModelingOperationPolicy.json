@@ -1,0 +1,10 @@
+{
+  "kind": "Enum",
+  "category": "Modeling",
+  "namespace": "Tempo.Blazor.Modeling",
+  "description": "How strictly a modeling operation batch is applied: Strict keeps the MCP semantics byte-compatible (no silent cascade, no view operations), Authoring allows view (layout) operations because the editor expanded the cascade itself.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/Modeling/ModelingOperations.cs",
+  "documentationStatus": "generated",
+  "itemName": "ModelingOperationPolicy"
+}

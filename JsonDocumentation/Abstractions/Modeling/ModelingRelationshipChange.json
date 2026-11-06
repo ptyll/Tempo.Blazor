@@ -2,7 +2,7 @@
   "kind": "Class",
   "category": "Modeling",
   "namespace": "Tempo.Blazor.Modeling",
-  "description": "A single relationship's changed fields (RelationshipId, Name?, SetProperties, RemovedProperties) — a null member means unchanged.",
+  "description": "A single relationship's changed fields (RelationshipId, Name?, SetProperties, RemovedProperties, SourceElementId?, TargetElementId?) — a null member means unchanged; the nullable endpoint ids carry a re-target when a lane move rewrites a connection.",
   "packageId": "Tempo.Blazor.Abstractions",
   "sourcePath": "src/Tempo.Blazor.Abstractions/Modeling/ModelingProviderContracts.cs",
   "documentationStatus": "generated",

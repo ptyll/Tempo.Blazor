@@ -1,0 +1,10 @@
+{
+  "kind": "Class",
+  "category": "Modeling",
+  "namespace": "Tempo.Blazor.Modeling",
+  "description": "Translates a v2 ModelingModelChangeSet into the ONE ordered ModelingOperationBatch the shared ModelingOperationEngine applies (decision MODELING-AUTHORING-CHANGESET). The translation lives in Abstractions — next to the change-set DTOs and the engine — so every writer (the demo writer, a host writer, a future server-side writer) executes the SAME application order instead of re-deriving it: added elements (parents first) → content/parent updates of existing elements → removed relationships → added relationships → relationship updates → removed elements (descendants first) → view (layout) changes. The engine never cascades a removal, so the change set must carry the expansion the editor produced. The translator also rejects a self-contradictory change set BEFORE anything is applied: when the same id is named in more than one of the added/updated/removed sections of ONE kind (element or relationship) the change set has no defined outcome, so it is reported as a single duplicate_id error per offending id and the returned batch is empty.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/Modeling/ModelingChangeSetTranslator.cs",
+  "documentationStatus": "generated",
+  "itemName": "ModelingChangeSetTranslator"
+}

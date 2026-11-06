@@ -2,7 +2,7 @@
   "kind": "Class",
   "category": "Modeling",
   "namespace": "Tempo.Blazor.Modeling",
-  "description": "An aggregated change set passed to IModelingModelWriter.SaveChangesAsync (ModelId, ProviderKey, BaseVersion = Metadata.SourceVersion, Elements, Relationships).",
+  "description": "An aggregated change set passed to IModelingModelWriter.SaveChangesAsync: ModelId, ProviderKey, BaseVersion = Metadata.SourceVersion, content changes of existing items (Elements, Relationships) and the additive v2 batch — AddedElements/AddedRelationships, RemovedElementIds/RemovedRelationshipIds and ViewChanges (layout). A null member always means unchanged; the batch is applied atomically in the contract's fixed order (decision MODELING-AUTHORING-CHANGESET).",
   "packageId": "Tempo.Blazor.Abstractions",
   "sourcePath": "src/Tempo.Blazor.Abstractions/Modeling/ModelingProviderContracts.cs",
   "documentationStatus": "generated",

@@ -786,17 +786,27 @@ public static class ModelingOperationEngine
 
 ### 6.2 Operation catalog (existing ops unchanged, new ones additive)
 
-Existing (must stay byte-compatible, `ModelingOperationToolsTests` + `DiagramOperationToolsTests`
-stay green):
+Existing (message strings must stay byte-compatible, `ModelingOperationToolsTests` +
+`DiagramOperationToolsTests` stay green; the optional `properties` / `removedProperties` members
+are additive — see §8):
 
 | `op` | Required | Optional |
 |---|---|---|
-| `add_element` | `name`, `semanticType` | `id`, `notation`, `description`, `parentId` |
-| `update_element` | `id` | `name`, `semanticType`, `description`, `notation`, `parentId` (`""` clears) |
+| `add_element` | `name`, `semanticType` | `id`, `notation`, `description`, `parentId`, `properties`, `removedProperties` |
+| `update_element` | `id` | `name`, `semanticType`, `description`, `notation`, `parentId` (`""` clears), `properties`, `removedProperties` |
 | `delete_element` | `id` | — (no cascade; referencing relationships and children must go first) |
-| `add_relationship` | `relationshipType`, `sourceElementId`, `targetElementId` | `id`, `name` |
-| `update_relationship` | `id` | `relationshipType`, `sourceElementId`, `targetElementId`, `name` |
+| `add_relationship` | `relationshipType`, `sourceElementId`, `targetElementId` | `id`, `name`, `properties`, `removedProperties` |
+| `update_relationship` | `id` | `relationshipType`, `sourceElementId`, `targetElementId`, `name`, `properties`, `removedProperties` |
 | `delete_relationship` | `id` | — |
+
+The property payload is ONE contract on all four collection operations (`add_element`,
+`update_element`, `add_relationship`, `update_relationship`) and on `set_properties`: both members
+are optional, absent/`null` means "do not touch properties", `properties` is a JSON object of values
+(the JSON value kind is preserved) and `removedProperties` is a JSON array of keys to remove. A
+writer therefore never needs a follow-up `set_properties` op — `ModelingChangeSetTranslator` puts
+the values directly on the add/update op. A MALFORMED payload (`properties` that is not an object,
+`removedProperties` that is not an array of strings) fails the operation with `property_type`
+BEFORE any field of the element/relationship is written.
 
 New (phases 2, 4, 5, 7):
 
@@ -988,6 +998,8 @@ coupling: the wireframe editor only needs the type/prop schema.
 | `IModelingModelWriter.Capabilities` (default member `Content`) | additive, default impl | none — no source change for existing writers; a structural host overrides it |
 | `IModelingPropertySchemaProvider`, `IModelingLookupProvider`, schema DTOs, validator | new API | none — no provider = 2.10.0 behavior |
 | `ModelingOperationEngine` moves `Tempo.Blazor.Mcp.Modeling` (internal) → `Tempo.Blazor.Modeling` (public, Abstractions) | internal type removed | none publicly; MCP keeps its tool output (message strings unchanged) |
+| `properties` / `removedProperties` on `add_element`, `add_relationship`, `update_element`, `update_relationship` (the same payload `set_properties` takes) | additive member support — the property payload was silently IGNORED in 2.10.0 | none for a well-formed payload — it is now applied; a MALFORMED payload (`properties` not an object, `removedProperties` not an array of strings) fails the op with `property_type` instead of being skipped |
+| `ModelingChangeSetTranslator.ToOperationBatch` (change set → engine batch, in the documented order, plus the `duplicate_id` self-contradiction check) | new public API (Abstractions) | none — the demo writer is its first caller; a host writer may keep its own translation |
 | New MCP ops (`set_properties`, `set_view_*`) + `Capabilities`-driven policy | additive | none — existing ops/strings unchanged |
 | `TmModelingViewer`, `ModelingDiffOverlayDto`, `ModelingHeatmapDto` | new component/types | none |
 | Editor behavior | unchanged unless a host opts in (`AllowModelEditing` + writer capabilities + schema provider) | MO2 and 2.10.0 read-only behavior is the default and is test-guarded |

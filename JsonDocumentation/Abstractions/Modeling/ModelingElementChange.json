@@ -2,7 +2,7 @@
   "kind": "Class",
   "category": "Modeling",
   "namespace": "Tempo.Blazor.Modeling",
-  "description": "A single element's changed fields (ElementId, Name?, Description?, SetProperties, RemovedProperties) — a null member means unchanged.",
+  "description": "A single element's changed fields (ElementId, Name?, Description?, SetProperties, RemovedProperties, ParentId?) — a null member means unchanged; ParentId null means unchanged and an empty string makes the element a root.",
   "packageId": "Tempo.Blazor.Abstractions",
   "sourcePath": "src/Tempo.Blazor.Abstractions/Modeling/ModelingProviderContracts.cs",
   "documentationStatus": "generated",

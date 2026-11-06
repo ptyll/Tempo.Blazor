@@ -92,6 +92,7 @@ window still resolves the DE tablet layout).
 | `SaveMode` | `ModelingSaveMode` | `Manual` | `Manual` aggregates the pending change set until `SaveModelChangesAsync()` (or the inspector Save button / the mobile action-bar entry); `Immediate` calls the writer after every field commit. |
 | `OnModelChanged` | `EventCallback<ModelingModelChangedEventArgs>` | — | After every committed field edit: the commit's change set + the current model. Binding it alone (without a writer) makes the HOST own the persistence — the editor clears its pending state after the callback. |
 | `OnSaveCompleted` | `EventCallback` | — | After a completed save (success, conflict or failure). |
+| `WriterCapabilities` | `ModelingModelWriterCapabilities?` | `null` | Narrows what the editor offers the writer (decision `MODELING-WRITER-CAPABILITIES`): `Content` (2.10.0 rename/description/scalar properties), `Structure` (add/remove elements + relationships, parent moves) and `Layout` (persisted view geometry/waypoints), or `All`. `null` uses the resolved writer's own advertisement; an explicit value is INTERSECTED with it, so a host can narrow but never widen what its writer actually stores. The resolved value is public as `EffectiveWriterCapabilities` (see Editing). |
 | `OnNodeDropped` | `EventCallback<ModelingNodeDroppedEventArgs>` | — | Raised by a real drop AND by the insert alternative (same contract). |
 | `ShowPreviewLegend` | `bool` | `true` | Fáze 15: render the notation legend card over the preview canvas (desktop/tablet) and the "⋯" → Legenda bottom sheet on the mobile band. `false` restores the pre-Fáze-15 look (see Breaking / Migration). |
 | `LayoutMode` / `InitialMode` / `LayoutBreakpoints` | see above | `Auto` / `Desktop` / `new(768, 1200)` | Presentation resolution from the editor's own container. |
@@ -332,6 +333,20 @@ The inspector becomes editable through an explicit OPT-IN; with no opt-in nothin
   aggregated until `SaveModelChangesAsync()`) or `Immediate` (the writer is called after every
   field commit). `HasPendingModelChanges` is public so a host's `TmNavigationGuard` can block
   navigation away.
+- **Writer capabilities (decision `MODELING-WRITER-CAPABILITIES`)** — a writer advertises what it
+  can persist through `IModelingModelWriter.Capabilities` (a default interface member returning
+  `Content`, so a 2.10.0 writer needs no source change): `Content` (rename, description and
+  scalar property values of EXISTING items), `Structure` (added/removed elements and
+  relationships, `ParentId` moves, relationship re-targeting) and `Layout` (persisted view node
+  geometry, view nodes and connection waypoints), plus the `All` alias. The host can NARROW that
+  set with the `WriterCapabilities` parameter (useful for an `OnModelChanged`-only host that writes
+  the change set itself); an explicit value is intersected with the resolved writer's
+  advertisement, never widened. Every authoring action is gated on the ONE public
+  `TmModelingEditor.EffectiveWriterCapabilities` property — `WriterCapabilities` when supplied
+  (intersected with the resolved writer), otherwise the writer's own value, otherwise the
+  2.10.0 `Content` baseline. No panel decides for itself: a missing capability HIDES the action
+  instead of rendering a dead control, and the editor never sends `Added*/Removed*` sections
+  without `Structure` or `ViewChanges` without `Layout`.
 - **What is editable** — the element/relationship NAME, the element DESCRIPTION and the SCALAR
   `Properties` entries: `string` → `TmTextInput`, integer → `TmNumberInput`, other numbers → a
   text field parsed invariantly, `bool` → `TmToggle`; the JSON value kind is preserved on every

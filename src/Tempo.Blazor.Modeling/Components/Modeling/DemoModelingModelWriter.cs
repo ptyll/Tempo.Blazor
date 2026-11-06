@@ -3,20 +3,48 @@ using Tempo.Blazor.Modeling;
 namespace Tempo.Blazor.Components.Modeling;
 
 /// <summary>
-/// In-memory demo writer (Fáze 14): persists inspector edits against an in-memory copy of the
-/// demo model so the demo page can exercise the full edit → save → reload loop without a
-/// backend. Version checks are simulated with a configurable <see cref="SourceVersion"/>, which
-/// the <c>?scenario=save-conflict</c> demo route bumps so the writer reports the conflict path.
-/// Registered automatically by <c>AddTempoBlazorModeling</c> for the
-/// <see cref="DemoModelingModelProvider"/> key.
+/// In-memory demo writer (Fáze 14, extended in phase 2 with the v2 change set): persists inspector
+/// edits against an in-memory copy of the demo model so the demo page can exercise the full edit →
+/// save → reload loop without a backend. Version checks are simulated with a configurable
+/// <see cref="SourceVersion"/>, which the <c>?scenario=save-conflict</c> demo route bumps so the
+/// writer reports the conflict path.
+/// <para>
+/// It is also the reference writer for the authoring contract: it advertises
+/// <see cref="ModelingModelWriterCapabilities.All"/>, translates the change set with the shared
+/// <see cref="ModelingChangeSetTranslator"/> (decision <c>MODELING-AUTHORING-CHANGESET</c>) and
+/// applies the resulting batch through the shared <see cref="ModelingOperationEngine"/> under the
+/// <see cref="ModelingOperationPolicy.Authoring"/> policy, so the demo exercises exactly the
+/// semantics a real host writer must implement. Registered automatically by
+/// <c>AddTempoBlazorModeling</c> for the <see cref="DemoModelingModelProvider"/> key, where the
+/// built-in relationship/viewpoint rules providers are injected so an invalid BPMN flow fails the
+/// save just like it would in the editor.
+/// </para>
 /// </summary>
 public sealed class DemoModelingModelWriter : IModelingModelWriter
 {
     private readonly object _gate = new();
+    private readonly IModelingRelationshipRulesProvider? _relationshipRules;
+    private readonly IModelingViewpointRulesProvider? _viewpointRules;
     private ModelingModelDto? _persisted;
+
+    /// <summary>Creates the demo writer.</summary>
+    /// <param name="relationshipRules">Notation relationship rules handed to the engine
+    /// (<see cref="ModelingOperationContext.RelationshipRules"/>); null validates references only.</param>
+    /// <param name="viewpointRules">Optional viewpoint rules handed to the engine
+    /// (<see cref="ModelingOperationContext.ViewpointRules"/>).</param>
+    public DemoModelingModelWriter(
+        IModelingRelationshipRulesProvider? relationshipRules = null,
+        IModelingViewpointRulesProvider? viewpointRules = null)
+    {
+        _relationshipRules = relationshipRules;
+        _viewpointRules = viewpointRules;
+    }
 
     /// <inheritdoc />
     public string ProviderKey => DemoModelingModelProvider.ProviderKeyValue;
+
+    /// <summary>The demo writer stores content, structure and layout (the whole v2 change set).</summary>
+    public ModelingModelWriterCapabilities Capabilities => ModelingModelWriterCapabilities.All;
 
     /// <summary>The source version the writer pretends the backend is on. The demo save-conflict
     /// scenario raises it so the next save reports <see cref="ModelingModelSaveResult.IsConflict"/>.</summary>
@@ -41,7 +69,7 @@ public sealed class DemoModelingModelWriter : IModelingModelWriter
         {
             lock (_gate)
             {
-                return _persisted ??= Clone(DemoModelingModelProvider.CreateModel());
+                return _persisted ??= ModelingOperationEngine.Clone(DemoModelingModelProvider.CreateModel());
             }
         }
     }
@@ -80,74 +108,45 @@ public sealed class DemoModelingModelWriter : IModelingModelWriter
                     Succeeded = false,
                     IsConflict = true,
                     Message = $"The model changed in the meantime (source version {SourceVersion}, edit was based on {changes.BaseVersion}).",
-                    Model = Clone(persistedNow)
+                    Model = ModelingOperationEngine.Clone(persistedNow)
                 });
             }
 
-            var persisted = Clone(PersistedModel);
-            foreach (var elementChange in changes.Elements)
+            // The shared translator owns the application order AND the self-contradictory change
+            // set check (an id in more than one of added/updated/removed applies nothing).
+            var translation = ModelingChangeSetTranslator.ToOperationBatch(changes);
+            if (!translation.Success)
             {
-                var element = persisted.Elements.FirstOrDefault(item => string.Equals(item.Id, elementChange.ElementId, StringComparison.Ordinal));
-                if (element is null)
+                var sectionErrors = translation.Errors;
+                return Task.FromResult(new ModelingModelSaveResult
                 {
-                    continue;
-                }
-
-                if (elementChange.Name is not null)
-                {
-                    element.Name = elementChange.Name;
-                }
-
-                if (elementChange.Description is not null)
-                {
-                    element.Description = elementChange.Description;
-                }
-
-                if (elementChange.SetProperties is not null)
-                {
-                    foreach (var property in elementChange.SetProperties)
-                    {
-                        element.Properties[property.Key] = property.Value.Clone();
-                    }
-                }
-
-                if (elementChange.RemovedProperties is not null)
-                {
-                    foreach (var key in elementChange.RemovedProperties)
-                    {
-                        element.Properties.Remove(key);
-                    }
-                }
+                    Succeeded = false,
+                    Message = sectionErrors[0].Message,
+                    Issues = [.. sectionErrors.Select(ToIssue)]
+                });
             }
 
-            foreach (var relationshipChange in changes.Relationships)
+            var persisted = ModelingOperationEngine.Clone(PersistedModel);
+            var outcome = ModelingOperationEngine.Apply(
+                persisted,
+                translation.Batch,
+                new ModelingOperationContext
+                {
+                    RelationshipRules = _relationshipRules,
+                    ViewpointRules = _viewpointRules,
+                    Policy = ModelingOperationPolicy.Authoring
+                });
+
+            if (!outcome.Success)
             {
-                var relationship = persisted.Relationships.FirstOrDefault(item => string.Equals(item.Id, relationshipChange.RelationshipId, StringComparison.Ordinal));
-                if (relationship is null)
+                // All-or-nothing: the working copy is dropped, the persisted model is untouched.
+                var errors = outcome.Errors;
+                return Task.FromResult(new ModelingModelSaveResult
                 {
-                    continue;
-                }
-
-                if (relationshipChange.Name is not null)
-                {
-                    relationship.Name = relationshipChange.Name;
-                }
-
-                if (relationshipChange.SetProperties is not null)
-                {
-                    foreach (var property in relationshipChange.SetProperties)
-                    {
-                        relationship.Properties[property.Key] = property.Value.Clone();
-                    }
-                }
-
-                if (relationshipChange.RemovedProperties is not null)
-                {
-                    foreach (var key in relationshipChange.RemovedProperties)
-                    {
-                        relationship.Properties.Remove(key);
-                    }
-                }
+                    Succeeded = false,
+                    Message = errors[0].Message,
+                    Issues = [.. errors.Select(ToIssue)]
+                });
             }
 
             SourceVersion = $"2026.06-{++SaveCount}";
@@ -160,94 +159,25 @@ public sealed class DemoModelingModelWriter : IModelingModelWriter
             return Task.FromResult(new ModelingModelSaveResult
             {
                 Succeeded = true,
-                Model = Clone(persisted)
+                Model = ModelingOperationEngine.Clone(persisted)
             });
         }
     }
 
-    private static ModelingModelDto Clone(ModelingModelDto model)
+    /// <summary>
+    /// Maps one engine error onto a modeling issue. The id carries BOTH positions — the issue's
+    /// position in this list (<paramref name="position"/>) and the operation index — because the
+    /// post-batch re-validation can report SEVERAL errors for ONE operation index, and an id built
+    /// from (index, code) alone would then collide and break the issue list's identity.
+    /// </summary>
+    private static ModelingIssueDto ToIssue(ModelingOperationError error, int position) => new()
     {
-        var copy = new ModelingModelDto
-        {
-            Id = model.Id,
-            Title = model.Title,
-            Notation = model.Notation,
-            SupportedNotations = [.. model.SupportedNotations],
-            Metadata = new ModelingMetadataDto
-            {
-                SourceSystem = model.Metadata.SourceSystem,
-                SourceVersion = model.Metadata.SourceVersion,
-                LoadedAt = model.Metadata.LoadedAt,
-                IsFresh = model.Metadata.IsFresh
-            }
-        };
-
-        foreach (var element in model.Elements)
-        {
-            copy.Elements.Add(new ModelingElementDto
-            {
-                Id = element.Id,
-                SourceId = element.SourceId,
-                SourceType = element.SourceType,
-                SourcePath = element.SourcePath,
-                Notation = element.Notation,
-                SemanticType = element.SemanticType,
-                Name = element.Name,
-                Description = element.Description,
-                ParentId = element.ParentId,
-                Properties = element.Properties.ToDictionary(property => property.Key, property => property.Value.Clone(), StringComparer.Ordinal),
-                Tags = [.. element.Tags],
-                Governance = new ModelingGovernanceDto
-                {
-                    TrustLevel = element.Governance.TrustLevel,
-                    ReviewState = element.Governance.ReviewState,
-                    SyncState = element.Governance.SyncState,
-                    DataSource = element.Governance.DataSource
-                }
-            });
-        }
-
-        foreach (var relationship in model.Relationships)
-        {
-            copy.Relationships.Add(new ModelingRelationshipDto
-            {
-                Id = relationship.Id,
-                SourceId = relationship.SourceId,
-                SourceType = relationship.SourceType,
-                SourceElementId = relationship.SourceElementId,
-                TargetElementId = relationship.TargetElementId,
-                RelationshipType = relationship.RelationshipType,
-                Name = relationship.Name,
-                Properties = relationship.Properties.ToDictionary(property => property.Key, property => property.Value.Clone(), StringComparer.Ordinal),
-                Tags = [.. relationship.Tags]
-            });
-        }
-
-        copy.Views.AddRange(model.Views.Select(view => new ModelingViewDto
-        {
-            Id = view.Id,
-            Name = view.Name,
-            Notation = view.Notation,
-            ViewpointKey = view.ViewpointKey,
-            Nodes = view.Nodes.Select(node => new ModelingViewNodeDto
-            {
-                ElementId = node.ElementId,
-                X = node.X,
-                Y = node.Y,
-                Width = node.Width,
-                Height = node.Height,
-                ParentNodeId = node.ParentNodeId
-            }).ToList(),
-            Connections = view.Connections.Select(connection => new ModelingViewConnectionDto
-            {
-                RelationshipId = connection.RelationshipId,
-                SourceNodeId = connection.SourceNodeId,
-                TargetNodeId = connection.TargetNodeId,
-                Waypoints = connection.Waypoints.Select(waypoint => new ModelingViewWaypointDto { X = waypoint.X, Y = waypoint.Y }).ToList()
-            }).ToList()
-        }));
-
-        copy.Issues.AddRange(model.Issues);
-        return copy;
-    }
+        Id = $"demo-modeling-save-{position}-{error.Index}-{error.Code}",
+        Severity = ModelingIssueSeverity.Error,
+        Category = "validation",
+        SourceElementId = error.ElementId ?? string.Empty,
+        SourceRelationshipId = error.RelationshipId ?? string.Empty,
+        Message = error.Message,
+        SuggestedFix = error.SuggestedFix ?? string.Empty
+    };
 }

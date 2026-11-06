@@ -1,0 +1,10 @@
+{
+  "kind": "Class",
+  "category": "Modeling",
+  "namespace": "Tempo.Blazor.Modeling",
+  "description": "A geometry change of one view node. Every coordinate is nullable (null = unchanged); a node that is not in the view yet REQUIRES X and Y, while ParentNodeId holds the PARENT ELEMENT id (null = unchanged, empty string = clear).",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/Modeling/ModelingProviderContracts.cs",
+  "documentationStatus": "generated",
+  "itemName": "ModelingViewNodeChange"
+}

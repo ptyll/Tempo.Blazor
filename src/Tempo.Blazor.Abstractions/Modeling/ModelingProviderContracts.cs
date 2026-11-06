@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Tempo.Blazor.Components.Diagram.Models;
 
 namespace Tempo.Blazor.Modeling;
@@ -130,7 +131,8 @@ public sealed class ModelingDiagramGenerationResultDto
 
 /// <summary>
 /// Writes edited modeling model data back to the source that <see cref="IModelingModelProvider"/>
-/// loaded it from (Fáze 14, decision <c>MODELING-INSPECTOR-EDITING</c>).
+/// loaded it from (Fáze 14, decision <c>MODELING-INSPECTOR-EDITING</c>; v2 structure + layout in
+/// decision <c>MODELING-AUTHORING-CHANGESET</c>).
 /// <para>
 /// The provider contract stays READ-ONLY: a host that wants an editable inspector registers a
 /// separate writer resolved by <see cref="ProviderKey"/>. The editing feature in
@@ -144,6 +146,17 @@ public interface IModelingModelWriter
     /// <see cref="IModelingModelProvider.ProviderKey"/> of the provider that loads the model.</summary>
     string ProviderKey { get; }
 
+    /// <summary>
+    /// Capabilities advertised to the editor (decision <c>MODELING-WRITER-CAPABILITIES</c>).
+    /// <para>
+    /// A <b>default interface member</b>, so a 2.10.0 writer — which knows only the content fields
+    /// of an existing item — keeps compiling and behaves exactly as before without a source change.
+    /// The editor hides every structurally impossible action instead of letting a host discover the
+    /// limitation in its own writer.
+    /// </para>
+    /// </summary>
+    ModelingModelWriterCapabilities Capabilities => ModelingModelWriterCapabilities.Content;
+
     /// <summary>Persists the supplied change set against the source system.
     /// <paramref name="changes"/> carries its <see cref="ModelingModelChangeSet.BaseVersion"/>
     /// — the <see cref="ModelingMetadataDto.SourceVersion"/> the edited model was loaded with —
@@ -156,6 +169,30 @@ public interface IModelingModelWriter
     Task<ModelingModelSaveResult> SaveChangesAsync(ModelingModelChangeSet changes, CancellationToken cancellationToken);
 }
 
+/// <summary>
+/// What an <see cref="IModelingModelWriter"/> can persist (decision
+/// <c>MODELING-WRITER-CAPABILITIES</c>). Additive: an existing writer that does not override
+/// <see cref="IModelingModelWriter.Capabilities"/> is treated as <see cref="Content"/> only.
+/// </summary>
+[Flags]
+public enum ModelingModelWriterCapabilities
+{
+    /// <summary>The writer cannot persist model edits through this contract.</summary>
+    None = 0,
+
+    /// <summary>Rename, description and property values of existing items (2.10.0 behavior).</summary>
+    Content = 1,
+
+    /// <summary>Added/removed elements and relationships, parent (pool/lane) changes.</summary>
+    Structure = 2,
+
+    /// <summary>Persisted layout — view node geometry, connection waypoints, view nodes.</summary>
+    Layout = 4,
+
+    /// <summary>Content | Structure | Layout.</summary>
+    All = Content | Structure | Layout
+}
+
 /// <summary>An aggregated change set passed to <see cref="IModelingModelWriter.SaveChangesAsync"/>.</summary>
 public sealed class ModelingModelChangeSet
 {
@@ -164,6 +201,11 @@ public sealed class ModelingModelChangeSet
     private string _baseVersion = string.Empty;
     private List<ModelingElementChange> _elements = [];
     private List<ModelingRelationshipChange> _relationships = [];
+    private List<ModelingElementAdd> _addedElements = [];
+    private List<ModelingRelationshipAdd> _addedRelationships = [];
+    private List<string> _removedElementIds = [];
+    private List<string> _removedRelationshipIds = [];
+    private List<ModelingViewChange> _viewChanges = [];
 
     /// <summary>Identifier of the edited <see cref="ModelingModelDto.Id"/>.</summary>
     public string ModelId
@@ -200,6 +242,277 @@ public sealed class ModelingModelChangeSet
         get => _relationships;
         set => _relationships = value ?? [];
     }
+
+    /// <summary>
+    /// NEW semantic elements, in list order (a parent must precede its children). Additive in the
+    /// authoring contract; empty for a 2.10.0 content-only edit.
+    /// </summary>
+    public List<ModelingElementAdd> AddedElements
+    {
+        get => _addedElements;
+        set => _addedElements = value ?? [];
+    }
+
+    /// <summary>NEW semantic relationships. Endpoints may be existing or added elements.</summary>
+    public List<ModelingRelationshipAdd> AddedRelationships
+    {
+        get => _addedRelationships;
+        set => _addedRelationships = value ?? [];
+    }
+
+    /// <summary>
+    /// Elements the host must delete. The editor expands a cascade and lists the descendants FIRST
+    /// (decision Q3) — writers never cascade on their own.
+    /// </summary>
+    public List<string> RemovedElementIds
+    {
+        get => _removedElementIds;
+        set => _removedElementIds = value ?? [];
+    }
+
+    /// <summary>Relationships the host must delete (the editor lists them before the elements).</summary>
+    public List<string> RemovedRelationshipIds
+    {
+        get => _removedRelationshipIds;
+        set => _removedRelationshipIds = value ?? [];
+    }
+
+    /// <summary>Layout changes per view (<see cref="ModelingViewDto"/>). Never semantic content.</summary>
+    public List<ModelingViewChange> ViewChanges
+    {
+        get => _viewChanges;
+        set => _viewChanges = value ?? [];
+    }
+
+    /// <summary>
+    /// Whether the batch changes the model STRUCTURE (an added/removed element or relationship, a
+    /// <c>ParentId</c> move or a relationship re-target). Computed, never serialized state —
+    /// System.Text.Json serializes get-only properties, so the flag must be ignored explicitly.
+    /// </summary>
+    [JsonIgnore]
+    public bool HasStructuralChanges => AddedElements.Count > 0 || AddedRelationships.Count > 0
+        || RemovedElementIds.Count > 0 || RemovedRelationshipIds.Count > 0
+        || Elements.Any(change => change.ParentId is not null)
+        || Relationships.Any(change => change.SourceElementId is not null || change.TargetElementId is not null);
+
+    /// <summary>Whether the batch carries persisted-layout changes. Computed, never serialized.</summary>
+    [JsonIgnore]
+    public bool HasViewChanges => ViewChanges.Count > 0;
+}
+
+/// <summary>
+/// A NEW semantic element (decision <c>MODELING-AUTHORING-CHANGESET</c>). The editor proposes a
+/// stable client id — the same id its commands and its pending diff use — so undo/redo and the
+/// diagram commands already reference it; a writer may keep it or rewrite it and return the saved
+/// model.
+/// </summary>
+public sealed class ModelingElementAdd
+{
+    private string _id = string.Empty;
+    private string _semanticType = string.Empty;
+    private string _name = string.Empty;
+    private string _notation = string.Empty;
+    private string _description = string.Empty;
+    private string _parentId = string.Empty;
+    private Dictionary<string, JsonElement> _properties = [];
+
+    /// <summary>Client-proposed unique identifier (required; unique inside the model).</summary>
+    public string Id
+    {
+        get => _id;
+        set => _id = value ?? string.Empty;
+    }
+
+    /// <summary>Semantic element type within the notation (required).</summary>
+    public string SemanticType
+    {
+        get => _semanticType;
+        set => _semanticType = value ?? string.Empty;
+    }
+
+    /// <summary>Display name (required).</summary>
+    public string Name
+    {
+        get => _name;
+        set => _name = value ?? string.Empty;
+    }
+
+    /// <summary>Notation key; empty means the model's notation.</summary>
+    public string Notation
+    {
+        get => _notation;
+        set => _notation = value ?? string.Empty;
+    }
+
+    /// <summary>Optional description.</summary>
+    public string Description
+    {
+        get => _description;
+        set => _description = value ?? string.Empty;
+    }
+
+    /// <summary>Parent element id for pool/lane/subprocess containment; empty means a root element.</summary>
+    public string ParentId
+    {
+        get => _parentId;
+        set => _parentId = value ?? string.Empty;
+    }
+
+    /// <summary>Initial property values, preserving the JSON value kind of each entry.</summary>
+    public Dictionary<string, JsonElement> Properties
+    {
+        get => _properties;
+        set => _properties = value ?? [];
+    }
+}
+
+/// <summary>A NEW semantic relationship between two elements that exist after this batch.</summary>
+public sealed class ModelingRelationshipAdd
+{
+    private string _id = string.Empty;
+    private string _relationshipType = string.Empty;
+    private string _sourceElementId = string.Empty;
+    private string _targetElementId = string.Empty;
+    private string _name = string.Empty;
+    private Dictionary<string, JsonElement> _properties = [];
+
+    /// <summary>Client-proposed unique identifier (required; unique inside the model).</summary>
+    public string Id
+    {
+        get => _id;
+        set => _id = value ?? string.Empty;
+    }
+
+    /// <summary>Semantic relationship type within the notation (required).</summary>
+    public string RelationshipType
+    {
+        get => _relationshipType;
+        set => _relationshipType = value ?? string.Empty;
+    }
+
+    /// <summary>Source element id (required).</summary>
+    public string SourceElementId
+    {
+        get => _sourceElementId;
+        set => _sourceElementId = value ?? string.Empty;
+    }
+
+    /// <summary>Target element id (required).</summary>
+    public string TargetElementId
+    {
+        get => _targetElementId;
+        set => _targetElementId = value ?? string.Empty;
+    }
+
+    /// <summary>Optional display name.</summary>
+    public string Name
+    {
+        get => _name;
+        set => _name = value ?? string.Empty;
+    }
+
+    /// <summary>Initial property values, preserving the JSON value kind of each entry.</summary>
+    public Dictionary<string, JsonElement> Properties
+    {
+        get => _properties;
+        set => _properties = value ?? [];
+    }
+}
+
+/// <summary>
+/// A layout change of ONE view (decision <c>MODELING-AUTHORING-CHANGESET</c>); upsert semantics per
+/// node and connection. An empty <see cref="ViewId"/> means the model's default view — the writer
+/// creates one (<c>Id = "default"</c>) when the model has none.
+/// </summary>
+public sealed class ModelingViewChange
+{
+    private string _viewId = string.Empty;
+    private List<ModelingViewNodeChange> _nodes = [];
+    private List<string> _removedNodeElementIds = [];
+    private List<ModelingViewConnectionChange> _connections = [];
+    private List<string> _removedConnectionRelationshipIds = [];
+
+    /// <summary>Target view id; empty means the model's default view.</summary>
+    public string ViewId
+    {
+        get => _viewId;
+        set => _viewId = value ?? string.Empty;
+    }
+
+    /// <summary>Node placements to upsert (a new node requires <c>X</c> and <c>Y</c>).</summary>
+    public List<ModelingViewNodeChange> Nodes
+    {
+        get => _nodes;
+        set => _nodes = value ?? [];
+    }
+
+    /// <summary>View nodes to remove, addressed by <see cref="ModelingViewNodeDto.ElementId"/>.</summary>
+    public List<string> RemovedNodeElementIds
+    {
+        get => _removedNodeElementIds;
+        set => _removedNodeElementIds = value ?? [];
+    }
+
+    /// <summary>Connection placements to upsert.</summary>
+    public List<ModelingViewConnectionChange> Connections
+    {
+        get => _connections;
+        set => _connections = value ?? [];
+    }
+
+    /// <summary>View connections to remove, addressed by the relationship id.</summary>
+    public List<string> RemovedConnectionRelationshipIds
+    {
+        get => _removedConnectionRelationshipIds;
+        set => _removedConnectionRelationshipIds = value ?? [];
+    }
+}
+
+/// <summary>A geometry change of ONE view node. Every member is nullable: <c>null</c> = unchanged.</summary>
+public sealed class ModelingViewNodeChange
+{
+    private string _elementId = string.Empty;
+
+    /// <summary>Model element rendered by the view node.</summary>
+    public string ElementId
+    {
+        get => _elementId;
+        set => _elementId = value ?? string.Empty;
+    }
+
+    /// <summary>X position; null = unchanged, and required for a node that is not in the view yet.</summary>
+    public double? X { get; set; }
+
+    /// <summary>Y position; null = unchanged, and required for a node that is not in the view yet.</summary>
+    public double? Y { get; set; }
+
+    /// <summary>Width; null = unchanged (or the stencil default for a new node).</summary>
+    public double? Width { get; set; }
+
+    /// <summary>Height; null = unchanged (or the stencil default for a new node).</summary>
+    public double? Height { get; set; }
+
+    /// <summary>
+    /// Parent VIEW node identifier for nested elements (it holds the PARENT ELEMENT id — view nodes
+    /// have no id of their own). <c>null</c> = unchanged, <c>""</c> = clear (the node becomes a root).
+    /// </summary>
+    public string? ParentNodeId { get; set; }
+}
+
+/// <summary>A routing change of ONE view connection. <c>null</c> = unchanged, empty = clear.</summary>
+public sealed class ModelingViewConnectionChange
+{
+    private string _relationshipId = string.Empty;
+
+    /// <summary>Model relationship rendered by the view connection.</summary>
+    public string RelationshipId
+    {
+        get => _relationshipId;
+        set => _relationshipId = value ?? string.Empty;
+    }
+
+    /// <summary>Bend points; null = unchanged, an EMPTY list clears the manual routing.</summary>
+    public List<ModelingViewWaypointDto>? Waypoints { get; set; }
 }
 
 /// <summary>A single element's changed fields. A <c>null</c> property means "unchanged" —
@@ -227,6 +540,12 @@ public sealed class ModelingElementChange
 
     /// <summary>Property keys to remove; null when no property was removed.</summary>
     public List<string>? RemovedProperties { get; set; }
+
+    /// <summary>
+    /// The new <see cref="ModelingElementDto.ParentId"/> (pool/lane/subprocess containment).
+    /// <c>null</c> = unchanged, <c>""</c> = make the element a root.
+    /// </summary>
+    public string? ParentId { get; set; }
 }
 
 /// <summary>A single relationship's changed fields. A <c>null</c> property means "unchanged".</summary>
@@ -250,6 +569,17 @@ public sealed class ModelingRelationshipChange
 
     /// <summary>Property keys to remove; null when no property was removed.</summary>
     public List<string>? RemovedProperties { get; set; }
+
+    /// <summary>
+    /// The new <see cref="ModelingRelationshipDto.SourceElementId"/>, or null when unchanged
+    /// (re-targeting, needed when a lane move rewrites a connection).
+    /// </summary>
+    public string? SourceElementId { get; set; }
+
+    /// <summary>
+    /// The new <see cref="ModelingRelationshipDto.TargetElementId"/>, or null when unchanged.
+    /// </summary>
+    public string? TargetElementId { get; set; }
 }
 
 /// <summary>The outcome of <see cref="IModelingModelWriter.SaveChangesAsync"/>.</summary>

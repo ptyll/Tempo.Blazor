@@ -50,6 +50,15 @@ public partial class TmModelingEditor
     /// <summary>Raised after a completed save (success, conflict or failure).</summary>
     [Parameter] public EventCallback OnSaveCompleted { get; set; }
 
+    /// <summary>
+    /// What the host's writer can persist (decision <c>MODELING-WRITER-CAPABILITIES</c>), used when
+    /// the host writes the change set itself or wants to NARROW what its writer stores. The
+    /// effective set is <c>WriterCapabilities ?? ResolvedWriter?.Capabilities ?? Content</c>; an
+    /// explicit value is intersected with the resolved writer's capabilities, so a host can narrow
+    /// but never widen what its writer actually stores.
+    /// </summary>
+    [Parameter] public ModelingModelWriterCapabilities? WriterCapabilities { get; set; }
+
     private DiagramCommandStack? _commandStack;
     private (ModelingModelDto? Model, string? ProviderKey) _baselineKey;
     private Dictionary<string, ElementBaseline> _baselineElements = new(StringComparer.Ordinal);
@@ -98,6 +107,27 @@ public partial class TmModelingEditor
             string.Equals(writer.ProviderKey, EffectiveProviderKey, StringComparison.Ordinal));
 
     /// <summary>
+    /// The capabilities every new authoring action is gated on (decision
+    /// <c>MODELING-WRITER-CAPABILITIES</c>): the host parameter when supplied (intersected with the
+    /// resolved writer's advertisement), otherwise the writer's own capabilities, otherwise the
+    /// 2.10.0 content-only baseline. Phases 3–4 read this ONE property — no panel decides for
+    /// itself and a missing capability hides an action instead of rendering a dead control.
+    /// </summary>
+    public ModelingModelWriterCapabilities EffectiveWriterCapabilities
+    {
+        get
+        {
+            var writer = ResolvedWriter;
+            if (WriterCapabilities is { } declared)
+            {
+                return writer is null ? declared : declared & writer.Capabilities;
+            }
+
+            return writer?.Capabilities ?? ModelingModelWriterCapabilities.Content;
+        }
+    }
+
+    /// <summary>
     /// Whether editing is active: the host opted in AND at least one write path exists (a writer
     /// for the provider key or an <see cref="OnModelChanged"/> delegate). Without it the
     /// inspector stays read-only (MO2).
@@ -107,9 +137,11 @@ public partial class TmModelingEditor
             && (ResolvedWriter is not null || OnModelChanged.HasDelegate);
 
     /// <summary>Whether unsaved edits are waiting (a Manual save, a reload or a provider switch
-    /// will surface a confirmation). Public for hosts that drive a navigation guard.</summary>
+    /// will surface a confirmation). Public for hosts that drive a navigation guard. Structure and
+    /// layout changes count too (decision <c>MODELING-AUTHORING-CHANGESET</c>).</summary>
     public bool HasPendingModelChanges => ComputePendingChangeSet() is { } pending
-        && (pending.Elements.Count > 0 || pending.Relationships.Count > 0);
+        && (pending.Elements.Count > 0 || pending.Relationships.Count > 0
+            || pending.HasStructuralChanges || pending.HasViewChanges);
 
     /// <summary>The localized transaction name for element edits.</summary>
     private string EditElementTransactionName => Loc["TmModelingEditor_EditElement"];
