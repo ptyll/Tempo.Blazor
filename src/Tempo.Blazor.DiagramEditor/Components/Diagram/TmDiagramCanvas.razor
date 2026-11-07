@@ -398,6 +398,19 @@
                 var _shapeKind = _nodeLayout.GetNativeShapeKind();
                 var _shapeFill = node.Style.Fill ?? _nodeLayout?.Fill ?? "#ffffff";
                 var _shapeStroke = node.Style.Stroke ?? _nodeLayout?.Stroke ?? "#111827";
+                // U1/MODELING-AUTHORING §10: a BPMN stencil's own ShapeSvg is the SINGLE source of
+                // truth for its body (task type markers, event rings, gateway markers). Its
+                // .tm-diagram-node__svg-bg is re-shown by CSS (the native primitive would otherwise
+                // hide it with the markers), so the native primitive paints NOTHING — a transparent
+                // body would still double-paint the outline over the stencil's ring.
+                var _nativeBpmn = node.StencilId is not null
+                    && node.StencilId.StartsWith("bpmn2.", StringComparison.Ordinal);
+                if (_nativeBpmn && node.Style.Fill is null && node.Style.Stroke is null)
+                {
+                    _shapeFill = "none";
+                    _shapeStroke = "none";
+                }
+
                 var _shapeStrokeWidth = F(node.Style.StrokeWidth ?? _nodeLayout?.StrokeWidth ?? 1.5);
                 var _shapeOpacity = F(node.Style.Opacity ?? 1.0);
                 <g @key="@node.Id"
@@ -410,6 +423,7 @@
                    data-h="@node.H"
                    data-group-id="@node.GroupId"
                    data-parent-id="@node.ParentNodeId"
+                   data-swimlane="@(node.SwimlaneData is not null ? "true" : null)"
                    data-parent-group-id="@node.ParentGroupId"
                    data-locked="@(IsNodeLocked(node) ? "true" : "false")"
                    data-link="@node.Link"

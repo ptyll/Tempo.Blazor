@@ -108,6 +108,16 @@ public sealed class ModelingDiagramGenerationOptionsDto
         get => _layoutHint;
         set => _layoutHint = value ?? string.Empty;
     }
+
+    /// <summary>
+    /// Whether an element WITHOUT a stored view node is AUTO-PLACED instead of dropped when a
+    /// curated view is selected. Default <c>false</c> — the 2.10.0 contract: with a view selected, a
+    /// view node is a visibility gate, so every existing consumer (the MCP diagram tool included)
+    /// keeps byte-identical output. An AUTHORING host (the modeling editor) opts in, because there a
+    /// missing view node only means "no position yet" and dropping the element would hide a newly
+    /// inserted one until it was positioned (phase 4, docs/modeling-authoring.md §1.4/§9.4).
+    /// </summary>
+    public bool AutoPlaceElementsWithoutViewNode { get; set; }
 }
 
 /// <summary>Result of generating a diagram document from a modeling model.</summary>

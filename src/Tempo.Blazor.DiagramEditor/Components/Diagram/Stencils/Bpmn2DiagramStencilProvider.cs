@@ -10,6 +10,21 @@ public sealed class Bpmn2DiagramStencilProvider : IDiagramStencilProvider
     private const string SetNameResourceKey = "DiagramStencilSet_Bpmn2";
     private const string Category = "BPMN 2.0";
 
+    /// <summary>
+    /// Token-based fill of every BPMN node shape. The drawing surface is the canvas PAPER
+    /// (<c>--tm-diagram-paper</c>, declared on <c>.tm-diagram-canvas</c> next to the other
+    /// canvas-scoped paints; theme-invariant by design, because the page is a paper metaphor even
+    /// in a dark theme), so the shapes paint with the canvas tokens instead of a hard-coded hex: a
+    /// host (or a high-contrast theme) can recolour them by overriding the tokens. The literal
+    /// fallback covers an SVG viewer WITHOUT the stylesheet (the server-side export resolves the
+    /// token through <c>DiagramSvgBuilder</c> instead).
+    /// </summary>
+    private const string NodeFillToken = "var(--tm-diagram-paper, #ffffff)";
+
+    /// <summary>Token-based stroke of every BPMN node shape (the canvas ink keeps the boundary
+    /// legible on the paper surface in every theme).</summary>
+    private const string NodeStrokeToken = "var(--tm-diagram-node-stroke, #111827)";
+
     /// <inheritdoc />
     public int Priority => 10;
 
@@ -137,7 +152,10 @@ public sealed class Bpmn2DiagramStencilProvider : IDiagramStencilProvider
             520,
             260,
             "swimlane-horizontal",
-            "<rect x='0' y='0' width='100' height='100' rx='2' fill='var(--stencil-fill)' stroke='var(--stencil-stroke)' stroke-width='var(--stencil-stroke-width)' vector-effect='non-scaling-stroke'/><path d='M0 18 H100 M8 0 V100' fill='none' stroke='var(--stencil-stroke)' stroke-width='var(--stencil-stroke-width)' vector-effect='non-scaling-stroke'/>",
+            // U3: ONE outer <rect> only. The swimlane component paints the header band, the
+            // separators and the collapsed stripes itself, so a separator path here would paint
+            // the same line twice (a dark stroke doubled over the header edge).
+            "<rect x='0' y='0' width='100' height='100' rx='2' fill='var(--stencil-fill)' stroke='var(--stencil-stroke)' stroke-width='var(--stencil-stroke-width)' vector-effect='non-scaling-stroke'/>",
             [SwimlaneSection()],
             new() { ["label"] = "Pool" },
             isCollapsible: true,
@@ -155,7 +173,8 @@ public sealed class Bpmn2DiagramStencilProvider : IDiagramStencilProvider
             440,
             140,
             "swimlane-horizontal",
-            "<rect x='0' y='0' width='100' height='100' rx='2' fill='var(--stencil-fill)' stroke='var(--stencil-stroke)' stroke-width='var(--stencil-stroke-width)' vector-effect='non-scaling-stroke'/><path d='M8 0 V100' fill='none' stroke='var(--stencil-stroke)' stroke-width='var(--stencil-stroke-width)' vector-effect='non-scaling-stroke'/>",
+            // U3: ONE outer <rect> only — the label band separator is the component's job.
+            "<rect x='0' y='0' width='100' height='100' rx='2' fill='var(--stencil-fill)' stroke='var(--stencil-stroke)' stroke-width='var(--stencil-stroke-width)' vector-effect='non-scaling-stroke'/>",
             [SwimlaneSection()],
             new() { ["label"] = "Lane" },
             isSwimlane: true);
@@ -287,7 +306,14 @@ public sealed class Bpmn2DiagramStencilProvider : IDiagramStencilProvider
             {
                 BackgroundShape = backgroundShape,
                 ShapeSvg = shapeSvg,
-                Sections = sections
+                Sections = sections,
+                // Phase 4 of the Modeling authoring plan ("dark mode tokens"): without an explicit
+                // fill/stroke the node renderer falls back to hard-coded #ffffff / #111827, which a
+                // dark theme and a high-contrast theme cannot recolour. BPMN shapes therefore carry
+                // the canonical TOKENS (the node's own DiagramStyle still wins when set).
+                Fill = NodeFillToken,
+                Stroke = NodeStrokeToken,
+                StrokeWidth = 1.5
             },
             DefaultData = defaultData
         };

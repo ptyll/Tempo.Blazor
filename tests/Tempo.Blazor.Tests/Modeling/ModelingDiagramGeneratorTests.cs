@@ -245,6 +245,9 @@ public sealed class ModelingDiagramGeneratorTests : LocalizationTestBase
         var page = result.Document!.ActivePage;
         page.Id.Should().Be("view-main");
         page.Name.Should().Be("Main process");
+
+        // Review A2: the auto-placement is OPT-IN. This consumer does not pass the flag, so the
+        // 2.10 contract stands — with a view selected, a missing view node hides the element.
         page.Nodes.Should().HaveCount(2);
         page.Nodes.Should().NotContain(node => node.Id == "source-task-c");
         page.Nodes.Single(node => node.Id == "source-task-a").Should().Match<DiagramNode>(node =>
@@ -416,6 +419,172 @@ public sealed class ModelingDiagramGeneratorTests : LocalizationTestBase
         cut.Find("[data-node-id='source-task-a']").Should().NotBeNull();
     }
 
+    // ── Phase 4: persisted layout, auto-layout for position-less elements, BPMN conventions ──
+
+    /// <summary>The options the AUTHORING editor passes (review A2): auto-place what has no
+    /// position. Every other consumer keeps the 2.10 visibility-gate contract.</summary>
+    private static ModelingDiagramGenerationOptionsDto AuthoringOptions(string viewId)
+        => new() { ViewId = viewId, AutoPlaceElementsWithoutViewNode = true };
+
+    [Fact]
+    public void Auto_placement_is_opt_in_so_a_positionless_element_is_hidden_by_default()
+    {
+        var generator = CreateGenerator();
+        var model = CreateModel(
+            Element("task-a", "source-task-a", "bpmn", "userTask", "A"),
+            Element("task-b", "source-task-b", "bpmn", "userTask", "B"));
+        model.Views.Add(new ModelingViewDto
+        {
+            Id = "view-main",
+            Notation = "bpmn",
+            Nodes = [new() { ElementId = "task-a", X = 500, Y = 300, Width = 160, Height = 88 }]
+        });
+
+        var page = generator.Generate(model, new ModelingDiagramGenerationOptionsDto { ViewId = "view-main" })
+            .Document!.ActivePage;
+
+        page.Nodes.Should().ContainSingle("without the opt-in the missing view node still hides task-b");
+    }
+
+    [Fact]
+    public void Stored_view_position_is_never_re_laid_out()
+    {
+        // Phase 4 §9.4: a persisted position wins; auto-layout applies ONLY to what has none.
+        var generator = CreateGenerator();
+        var model = CreateModel(
+            [
+                Element("task-a", "source-task-a", "bpmn", "userTask", "A"),
+                Element("task-b", "source-task-b", "bpmn", "serviceTask", "B")
+            ],
+            []);
+        model.Views.Add(new ModelingViewDto
+        {
+            Id = "view-main",
+            Notation = "bpmn",
+            Nodes = [new() { ElementId = "task-a", X = 640, Y = 480, Width = 210, Height = 110 }]
+        });
+
+        var page = generator.Generate(model, AuthoringOptions("view-main"))
+            .Document!.ActivePage;
+
+        page.Nodes.Single(node => node.Id == "source-task-a").Should().Match<DiagramNode>(node =>
+            node.X == 640 && node.Y == 480 && node.W == 210 && node.H == 110);
+    }
+
+    [Fact]
+    public void Positionless_element_is_auto_placed_inside_its_rendered_container()
+    {
+        // A view node missing from a partially authored view means "no position yet": the child is
+        // placed INSIDE its semantic container (after the pool/lane label band), never dropped.
+        var generator = CreateGenerator();
+        var pool = Element("pool", "source-pool", "bpmn", "pool", "Order handling");
+        var lane = Element("lane", "source-lane", "bpmn", "lane", "Sales");
+        lane.ParentId = "pool";
+        var task = Element("task-a", "source-task-a", "bpmn", "userTask", "Approve");
+        task.ParentId = "lane";
+        var model = CreateModel([pool, lane, task], []);
+        model.Views.Add(new ModelingViewDto
+        {
+            Id = "view-main",
+            Notation = "bpmn",
+            Nodes =
+            [
+                new() { ElementId = "pool", X = 40, Y = 40, Width = 600, Height = 300 },
+                new() { ElementId = "lane", X = 70, Y = 70, Width = 540, Height = 240, ParentNodeId = "pool" }
+            ]
+        });
+
+        var page = generator.Generate(model, AuthoringOptions("view-main"))
+            .Document!.ActivePage;
+
+        var node = page.Nodes.Single(candidate => candidate.Id == "source-task-a");
+        node.ParentNodeId.Should().Be("source-lane",
+            "the node nests under the LANE's generated node id (the view stores the parent ELEMENT id)");
+        node.X.Should().BeGreaterThan(70, "the child starts after the lane's left label band");
+        node.Y.Should().BeGreaterThanOrEqualTo(70);
+        node.X.Should().BeLessThan(70 + 540);
+    }
+
+    [Fact]
+    public void Positionless_root_element_keeps_the_deterministic_grid()
+    {
+        var generator = CreateGenerator();
+        var model = CreateModel(
+            Element("task-a", "source-task-a", "bpmn", "userTask", "A"),
+            Element("task-b", "source-task-b", "bpmn", "userTask", "B"));
+        model.Views.Add(new ModelingViewDto
+        {
+            Id = "view-main",
+            Notation = "bpmn",
+            Nodes = [new() { ElementId = "task-a", X = 500, Y = 300, Width = 160, Height = 88 }]
+        });
+
+        var page = generator.Generate(model, AuthoringOptions("view-main"))
+            .Document!.ActivePage;
+
+        page.Nodes.Single(node => node.Id == "source-task-b").Should().Match<DiagramNode>(node => node.X == 80 && node.Y == 80);
+    }
+
+    [Fact]
+    public void Pool_and_lane_nodes_carry_their_name_in_a_left_label_band()
+    {
+        // Phase 4 BPMN convention: a pool/lane renders as a horizontal band whose NAME sits in the
+        // left label band — the stencil's swimlane data, not a component overlay.
+        var generator = CreateGenerator();
+        var pool = Element("pool", "source-pool", "bpmn", "pool", "Order handling");
+        var lane = Element("lane", "source-lane", "bpmn", "lane", "Sales");
+        lane.ParentId = "pool";
+
+        var page = generator.Generate(CreateModel([pool, lane], [])).Document!.ActivePage;
+
+        foreach (var (nodeId, label) in new[] { ("source-pool", "Order handling"), ("source-lane", "Sales") })
+        {
+            var node = page.Nodes.Single(candidate => candidate.Id == nodeId);
+            node.SwimlaneData.Should().NotBeNull($"{nodeId} is a swimlane stencil");
+            node.SwimlaneData!.IsHorizontal.Should().BeTrue("BPMN pools and lanes are horizontal bands");
+            node.SwimlaneData.HeaderSize.Should().BeGreaterThan(0);
+            node.SwimlaneData.CellLabels.Should().ContainSingle().Which.Should().Be(label);
+        }
+    }
+
+    [Fact]
+    public void A_rendered_task_carries_no_swimlane_band()
+    {
+        var generator = CreateGenerator();
+        var page = generator.Generate(CreateModel(Element("task-a", "source-task-a", "bpmn", "userTask", "A")))
+            .Document!.ActivePage;
+
+        page.Nodes.Single().SwimlaneData.Should().BeNull("a task is not a swimlane stencil");
+    }
+
+    [Fact]
+    public void View_node_parent_is_mapped_to_the_generated_node_id()
+    {
+        // §3.1: a view node's ParentNodeId holds the PARENT ELEMENT id; the generated node id may
+        // differ (a non-empty SourceId renames the node), so the generator maps it.
+        var generator = CreateGenerator();
+        var parent = Element("element-parent", "source-parent", "bpmn", "subProcess", "Parent");
+        var child = Element("element-child", "source-child", "bpmn", "userTask", "Child");
+        child.ParentId = "element-parent";
+        var model = CreateModel([parent, child], []);
+        model.Views.Add(new ModelingViewDto
+        {
+            Id = "view-main",
+            Notation = "bpmn",
+            Nodes =
+            [
+                new() { ElementId = "element-parent", X = 40, Y = 40, Width = 400, Height = 240 },
+                new() { ElementId = "element-child", X = 80, Y = 90, Width = 160, Height = 88, ParentNodeId = "element-parent" }
+            ]
+        });
+
+        var page = generator.Generate(model, AuthoringOptions("view-main"))
+            .Document!.ActivePage;
+
+        page.Nodes.Single(node => node.Id == "source-child").ParentNodeId.Should().Be("source-parent",
+            "the marker is the parent's generated NODE id, never the raw element id");
+    }
+
     private static ModelingDiagramGenerator CreateGenerator()
     {
         var registry = new DiagramStencilRegistry();
@@ -486,6 +655,9 @@ public sealed class ModelingDiagramGeneratorTests : LocalizationTestBase
                 ("bpmn", "userTask") => "bpmn2.task.user",
                 ("bpmn", "serviceTask") => "bpmn2.task.service",
                 ("bpmn", "startEvent") => "bpmn2.event.start",
+                ("bpmn", "pool") => "bpmn2.pool",
+                ("bpmn", "lane") => "bpmn2.lane",
+                ("bpmn", "subProcess") => "bpmn2.subprocess",
                 ("archimate", "applicationComponent") => "archimate3.application.component",
                 _ => null
             };

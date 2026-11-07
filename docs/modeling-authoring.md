@@ -113,6 +113,13 @@ with a **semantic** insert.
   `DiagramNode`s. Per element it takes `X/Y` and `W/H` (when > 0) and `ParentNodeId` **from the
   selected view node**; with no view node it falls back to a deterministic grid
   (`GetGridPosition`, `:630` — 5 columns, 220×150 steps).
+- **Phase 4 (opt-in).** With `ModelingDiagramGenerationOptionsDto.AutoPlaceElementsWithoutViewNode`
+  = `true` a position-less element is AUTO-PLACED instead of dropped when a view is selected: inside
+  its rendered semantic container's content area (after the label band) or on the root grid, in a
+  second pass so the container is already positioned. The default is `false` — the 2.10.0 contract
+  (a view node is a visibility gate) stays byte-identical for every existing consumer, the MCP
+  diagram tool included; the authoring editor opts in only while it can persist the result
+  (`CanEditModelStructure || CanEditModelLayout`).
 - `SelectView` (`:242`) returns **null when `options.ViewId` is empty** — only in that case does
   the generator ignore `model.Views` entirely.
 - With a view selected, edges are iterated from `view.Connections` (in view order, unknown
@@ -864,11 +871,16 @@ New (phases 2, 4, 5, 7):
 (`viewId` omitted/`""` = the **target view**: `Views[0]`… see §3.2 rule 8 — note this is NOT the
 generator's `SelectView` meaning, where an empty id renders the grid without any view.)
 
-Auto-layout is **not** an engine op: the layout is computed by dagre in the browser
-(`TmDiagramEditor.RunLayoutAsync`) and server-side layout is a non-goal. The editor's "Uspořádat"
-action runs the layout, then commits the resulting geometry as ONE transaction of `set_view_node`
-/ `set_view_connection` ops (one undo step). MCP clients that want a layout send computed
-positions the same way.
+Auto-layout is **not** an engine op. The editor's Arrange ("Uspořádat") is a **deterministic C#
+arrangement** — the internal `ModelingLayoutArranger` (docs/modeling-editor.md) — and commits the
+resulting geometry as ONE transaction of `set_view_node` / `set_view_connection` ops (one undo
+step). It is NOT dagre and it is not a general graph layout: a pool and a lane are horizontal BANDS
+(lanes flush inside their pool) and the flow nodes of one container are RANKED by their
+relationships (a source before its target, one branch's targets on the same rank, declaration order
+breaking ties); a run without relationships is packed into a `ceil(sqrt(n))` grid. The browser dagre
+of the embedded `TmDiagramEditor` stays its own **Layout** menu — available in the standalone
+editor, hidden in the modeling dialog once the host persists layout (the Arrange action replaces
+it). MCP clients that want a layout send computed positions the same way.
 
 ### 6.3 Error codes (`ModelingOperationError.Code`)
 
@@ -1044,6 +1056,8 @@ coupling: the wireframe editor only needs the type/prop schema.
 | `properties` / `removedProperties` on `add_element`, `add_relationship`, `update_element`, `update_relationship` (the same payload `set_properties` takes) | additive member support — the property payload was silently IGNORED in 2.10.0 | none for a well-formed payload — it is now applied; a MALFORMED payload (`properties` not an object, `removedProperties` not an array of strings) fails the op with `property_type` instead of being skipped |
 | `ModelingChangeSetTranslator.ToOperationBatch` (change set → engine batch, in the documented order, plus the `duplicate_id` self-contradiction check) | new public API (Abstractions) | none — the demo writer is its first caller; a host writer may keep its own translation |
 | New MCP ops (`set_properties`, `set_view_*`) + `Capabilities`-driven policy | additive | none — existing ops/strings unchanged |
+| `ModelingDiagramGenerationOptionsDto.AutoPlaceElementsWithoutViewNode` (default `false`) and `TmDiagramEditor.SnapDocumentOnLoad` (default `true`) | additive opt-in | none — the default keeps the 2.10.0 projection (a view node is a visibility gate) and a load-time grid snap; the authoring editor opts into both |
+| `TmDiagramEditor`/`TmDiagramCanvas` `Snap(...)` guards and the JS `gridSize` default | bug fix | none — `GridSize="0"` is once again "snapping off" (it used to produce `NaN` positions and the JS still snapped at 8); `GridSize` and `SnapDocumentOnLoad` stay plain `[Parameter]`s |
 | `TmModelingViewer`, `ModelingDiffOverlayDto`, `ModelingHeatmapDto` | new component/types | none |
 | Editor behavior | unchanged unless a host opts in (`AllowModelEditing` + writer capabilities + schema provider) | MO2 and 2.10.0 read-only behavior is the default and is test-guarded |
 
@@ -1134,18 +1148,77 @@ Compatibility tests that must stay green without edits: `ModelingDtoSerializatio
    the view node change → `Elements[].ParentId` + `ViewChanges.Nodes[].ParentNodeId` in the same
    pending set, one undo step.
 3. The host validates BPMN semantics (e.g. a SequenceFlow that would now cross a pool → the engine's
-   `invalid_relationship` code); a rejected batch keeps the pending edit and shows the issues.
+   `invalid_relationship` code). A rejected batch never enters the stack: the **canvas regenerates
+   the reverted geometry** (the node snaps back to its persisted position) and **the engine message
+   is shown** in the structure alert/error card, so the user reads why the move was refused.
 
 ### 9.4 Persist layout (phase 4)
 
 1. A node move/resize/waypoint drag inside the embedded editor mutates the document.
-2. After a debounce (~400 ms) the editor diffs the document geometry against the generated baseline
-   and pushes `SetModelingViewNodeCommand` transactions (one per gesture, not per pointer move).
+2. The editor diffs the document geometry against the baseline captured after the last
+   render/generation and pushes ONE `SetModelingViewLayoutCommand` (internal) per gesture — never
+   per pointer move.
 3. `ViewChanges` accumulate in the pending set; `HasViewChanges` drives the "unsaved layout"
    indicator. Without the `Layout` capability no `ViewChanges` are produced (see §3.2 rule 7).
 4. Reload → the provider returns the persisted view → the generator renders the saved geometry;
    elements without a view node still fall back to the grid (auto-layout for position-less
    elements only — phase 4 requirement).
+
+**As built (phase 4).** The gesture boundary is the embedded editor's own `DocumentChanged`, which
+`TmDiagramEditor` raises ONCE per gesture (on release, after its command was pushed) — so the
+"~400 ms debounce" of step 2 is unnecessary: a debounce timer would only add a window in which a
+second gesture could merge into the first transaction. Details that later phases must keep:
+
+- The commit is ONE engine batch: `update_element parentId` (only when the gesture re-parented the
+  element, §9.3) + `set_view_node` per moved/resized node + `set_view_connection` per changed
+  waypoint list. It is clone-validated through `ModelingOperationEngine` (`Authoring` policy) before
+  it enters the stack, so a re-parent the notation rules refuse (`invalid_relationship` on a now
+  cross-pool SequenceFlow) is rejected with the engine's own message and the canvas regenerates the
+  reverted geometry. The pure-layout commit does NOT regenerate the canvas (the document already
+  carries the gesture), while undo/redo and a rejected batch do.
+- The **layout parent** of a node is the SMALLEST rendered container whose bounds contain the node's
+  CENTRE, resolved with the node's own semantic subtree excluded (a pool's centre lies inside its
+  lane — geometry alone would report a `parent_cycle`). The embedded editor's own `ParentNodeId` is
+  the fallback for a node parked outside every container.
+- A container that no longer encloses a moved child GROWS (`set_view_node` width/height with a
+  24 px margin) in the SAME transaction — "a lane stretches around its content". A manual resize of
+  that container in the same gesture wins over the auto-growth.
+- Both embedded editors (the preview and the "Open in editor" dialog) pass
+  `SnapDocumentOnLoad="false"`: `TmDiagramEditor` otherwise re-snaps every node to `GridSize` on
+  load, which would turn "opening the editor" into a layout edit. The GRID stays configured (8 px)
+  for the interactive snap (drag, drop, resize) and every `Snap(...)` helper guards a zero grid, so
+  `GridSize="0"` is once again a valid "no snapping" setting instead of producing `NaN` positions.
+  The JSON import follows the same flag (a load, not a gesture).
+- **Arrange** ("Uspořádat") is the deterministic BPMN band arrangement of
+  `ModelingLayoutArranger` (internal): pools stack vertically, the lanes of a pool are FLUSH bands
+  (no margin, no gap, the pool's content width) and the flow nodes of one container are RANKED by
+  their relationships — a source precedes its target along the direction axis, one branch's targets
+  share a rank and stack on the cross axis, declaration order breaks ties, back edges are ignored;
+  a run with no relationship is packed into a `ceil(sqrt(n))` grid. It commits the resulting
+  geometry as ONE `set_view_node` transaction (one undo step), clears the WAYPOINTS of the routed
+  connections in the SAME transaction (an arranged scene must not keep the bends of the old
+  geometry — undo restores them) and re-fits the preview (`FitToViewAsync(Page)`). This is NOT a
+  general graph layout: the browser dagre of the embedded `TmDiagramEditor` stays its own Layout
+  menu (hidden in the dialog while the host persists layout, where the Arrange action replaces it);
+  a server-side graph layout remains a non-goal.
+- **Generator (§1.4/§3.1 fix).** With a view selected an element WITHOUT a view node is auto-placed
+  (inside its rendered semantic container's content area, after the label band, else on the root
+  grid) — "auto-layout only for elements without a position" — but ONLY for the authoring editor:
+  the behavior is the `AutoPlaceElementsWithoutViewNode` option (§1.4), so the default projection
+  still hides what the view does not place. A stored view node's geometry is never re-laid-out.
+  `ModelingViewNodeDto.ParentNodeId` (a parent ELEMENT id) is mapped through the element →
+  diagram-node map, so nesting survives a `SourceId` rename.
+- **BPMN conventions.** A pool and a lane are horizontal BANDS whose name lives in the stencil's
+  left label band: the generator fills the node's `SwimlaneData` (`RowCount` 1, the element name as
+  the cell label) for every `IsSwimlane` stencil, and every BPMN node shape paints with the
+  `--tm-paper` / `--tm-paper-ink` TOKENS (the canvas is a paper surface in both themes; a host or a
+  high-contrast theme recolours them by overriding the tokens).
+  Task-type icons, event rings, gateway markers and data-object shapes come from the stencil set
+  (`Bpmn2DiagramStencilProvider`); `BpmnStencilMapper` maps every `BpmnModelingCatalog` type to one
+  of them (`BpmnStencilMapperConventionsTests`).
+- **Capability.** Every layout write and the Arrange action are gated on
+  `ModelingModelWriterCapabilities.Layout` — independently of `Structure` (a host may persist
+  geometry without allowing inserts). Served as `data-can-edit-layout` on the editor root.
 
 ### 9.5 Edit a schema-driven property with a lookup (phase 5)
 
@@ -1167,7 +1240,7 @@ Compatibility tests that must stay green without edits: `ModelingDtoSerializatio
 |---|---|
 | 2 | §3 change set v2 + §4 capabilities + §6 engine (typed, JSON front-end, `set_properties`) moved to Abstractions; MCP refactored to a caller with byte-identical output; `DemoModelingModelWriter` extended |
 | 3 | §9.1, §9.2 — semantic palette insert/delete/relationship drawing, cascade confirmation, non-drag alternatives, localization, E2E. As implemented: `ModelingOperationContext.Notation` + `ViewpointKey` (§6.1) so the editor's overrides and the engine agree; `ModelingOperationEngine.ValidateRelationship` is the ONE relationship verdict the picker and the commit share; a viewless model is seeded by `SeedModelingViewCommand` in the same transaction; the cascade delete names its target, touches every view, restores original ordering on undo and is confirmed through an `alertdialog`; the authoring sheets are an INTERNAL renderer (no public component, no JSON documentation entry); `IModelingNotationProfile.ContainerElementTypes` owns containment (§5.1) |
-| 4 | §9.3, §9.4 — layout persistence, hierarchy moves, auto-layout as an undoable op, BPMN visual conventions |
+| 4 | §9.3, §9.4 — layout persistence, hierarchy moves, auto-layout as an undoable op, BPMN visual conventions. As implemented: one `SetModelingViewLayoutCommand` (internal, engine batch of `update_element parentId` + `set_view_node` + `set_view_connection`) per gesture with no debounce timer, a burst of keyboard nudges of the same element set inside 800 ms merged into the command on top of the stack (one undo step), the layout parent resolved by GEOMETRY with the node's subtree excluded and ONLY for a node whose own X/Y changed (a container resize never re-parents its children), a Layout-only writer never re-parents, container growth plus flush-band sibling shifting and ancestor-pool growth in the same transaction, `SnapDocumentOnLoad="false"` on both embedded editors (a load never re-snaps the host's layout; `GridSize="0"` is a valid no-snap setting again), the deterministic relationship-ranked `ModelingLayoutArranger` behind "Arrange" with waypoint clearing and a preview fit (browser dagre stays the DE's own Layout menu, replaced in the dialog by Arrange), position-less elements auto-placed inside their container instead of dropped (opt-in `AutoPlaceElementsWithoutViewNode`), the view `ParentNodeId` mapped to the generated node id, swimlane band data for pool/lane labels with `data-swimlane` on the canvas (a band does not clamp a dragged child), token-based fill/stroke on every BPMN node stencil resolved to the palette in the server SVG export, the bpmn2 marker SVG re-shown behind a transparent native primitive, paper-token swimlane headers/toggles, the non-drag "Move to container" sheet, the in-dialog structure live region and a per-sync lookup context that keeps one move of a 300-element model under 200 ms |
 | 5 | §5 + §9.5 — schema provider, lookups, shared validator, inspector rendering, demo schema |
 | 6 | §7 — `TmModelingViewer`, overlays, a11y, print/SVG, wireframe role, demo page |
 | 7 | §6.4 parity tests, docs updates, CHANGELOG, packaging smoke test, release |

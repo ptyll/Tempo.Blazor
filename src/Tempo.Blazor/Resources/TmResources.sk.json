@@ -7397,5 +7397,21 @@
   "TmModelingEditor_DeleteRelCount_Other": "{0} vzťahov",
   "TmModelingEditor_StructureDeletedRelationship": "Zmazaný vzťah „{0} → {1}“.",
   "TmModelingEditor_StructureInsertedInto": "Vložený {0} „{1}“ do {2}",
-  "TmModelingEditor_SelectElementFirst": "Najprv vyberte prvok"
+  "TmModelingEditor_Arrange": "Usporiadať",
+  "TmModelingEditor_ArrangeDirection": "Smer",
+  "TmModelingEditor_ArrangeDirectionLr": "Zľava doprava",
+  "TmModelingEditor_ArrangeDirectionTb": "Zhora nadol",
+  "TmModelingEditor_ArrangeConfirm": "Usporiadať",
+  "TmModelingEditor_ArrangeAnnouncement": "Diagram usporiadaný: {0}.",
+  "TmModelingEditor_ArrangeUpToDate": "Diagram je už usporiadaný.",
+  "TmModelingEditor_LayoutUpdated": "Rozloženie aktualizované.",
+  "TmModelingEditor_LayoutMoved": "Presunuté „{0}“.",
+  "TmModelingEditor_LayoutMovedInto": "Presunuté „{0}“ do „{1}“.",
+  "TmModelingEditor_LayoutTransaction": "Zmena rozloženia",
+  "TmModelingEditor_MoveToContainer": "Presun do kontajnera",
+  "TmModelingEditor_SelectElementFirst": "Najprv vyberte prvok",
+  "TmModelingEditor_LayoutMovedToRoot": "„{0}“ presunuté mimo kontajnera.",
+  "TmModelingEditor_MoveToContainerLabel": "Kontajner",
+  "TmModelingEditor_MoveToRoot": "Bez kontajnera (koreň)",
+  "TmModelingEditor_DiagramNotReady": "Najprv otvorte diagram."
 }

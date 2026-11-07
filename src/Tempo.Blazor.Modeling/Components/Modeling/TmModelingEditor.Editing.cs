@@ -282,6 +282,8 @@ public partial class TmModelingEditor
             var name = _commandStack.NextUndoName;
             _commandStack.Undo();
             unchecked { _commitVersion++; }
+            // A burst of nudges ends at an undo: the next move must be its OWN step.
+            _coalescedLayoutCommand = null;
             _historyAnnouncement = string.Format(CultureInfo.CurrentUICulture, Loc["TmModelingEditor_UndoAction"], name ?? string.Empty);
             if (_hasStructuralCommands)
             {
@@ -303,6 +305,7 @@ public partial class TmModelingEditor
             var name = _commandStack.NextRedoName;
             _commandStack.Redo();
             unchecked { _commitVersion++; }
+            _coalescedLayoutCommand = null;
             _historyAnnouncement = string.Format(CultureInfo.CurrentUICulture, Loc["TmModelingEditor_RedoAction"], name ?? string.Empty);
             if (_hasStructuralCommands)
             {

@@ -208,6 +208,7 @@ behavior, so a host that sets nothing sees no change:
 | `MinimapInitiallyCollapsed` | `bool`, `false` | Seeds the minimap card (desktop) / floating overlay (tablet) collapsed ONCE at initialization. The user's own toggle wins afterwards; the mobile X1 rule (minimap hidden, "⋯" toggle) is unchanged. The Modeling tablet dialog seeds it from the editor's resolved mode. |
 | `PreferredStencilIds` | `IReadOnlyList<string>?`, `null` | Fáze 15 (the Modeling "Open in editor" notation palette): stencil ids pinned as the FIRST toolbox library — order preserved, unknown ids ignored — while every other library starts collapsed (a live search still expands matches across the WHOLE library). `null` keeps today's toolbox (a set→null transition restores exactly the palettes the pinned pass collapsed; the user's own collapses survive). The pinned section carries `data-library-id="notation-palette"` and `data-pinned="true"`; its label renders ONCE — on the single palette's own collapsible category header, never as a repeated library header. On a mobile layout the pinned library is the "first category" for `CollapseCategoriesExceptFirst`. A pinned stencil that also belongs to a native library is listed in BOTH places (the pinned row for the notation context, the native row for its category) — that duplication is intentional; inserting from either creates the same stencil. |
 | `PreferredStencilsLabel` | `string?`, `null` | Label of the pinned library (the Modeling dialog passes the notation profile's display name), rendered on the pinned palette's category header. Null falls back to the localized `TmDiagramToolbox_PreferredDefault`. Ignored while `PreferredStencilIds` is unset. |
+| `SnapDocumentOnLoad` | `bool`, `true` | Whether a LOADED document is re-snapped to `GridSize`. A layout-persisting host (the Modeling preview and its dialog) passes `false` — a load must never turn into a layout edit; the interactive snap (drag, drop, resize, keyboard nudge) keeps working with the configured grid, and `GridSize="0"` is a valid "snapping off" setting (every division site is guarded). |
 
 ### `TmDiagramStencilIcon` (Fáze 15)
 
@@ -323,9 +324,36 @@ Everything painted ON the page (node bodies, edge-label pills, cardinalities) re
 canvas-scoped aliases declared on `.tm-diagram-canvas`:
 
 - `--tm-diagram-backdrop` — the page-backdrop fill (alias of the generic `--tm-canvas-backdrop`).
-- `--tm-diagram-paper` — the page fill (alias of the theme-invariant `--tm-paper`, white in
-  every theme). Edge-label pills reuse it so the edge stroke never runs through the text.
+- `--tm-diagram-paper` — the page fill AND the fill of the shipped BPMN node stencils (alias of
+  the theme-invariant `--tm-paper`, white in every theme). Edge-label pills reuse it so the edge
+  stroke never runs through the text.
+- `--tm-diagram-node-stroke` — the OUTLINE of the shipped BPMN node stencils (alias of
+  `--tm-paper-ink`). A host or a high-contrast theme recolours every BPMN shape by overriding the
+  two `--tm-diagram-*` paint tokens.
 - `--tm-diagram-node-ink` — the node/label ink (alias of `--tm-paper-ink-muted`).
+
+The BPMN stencils carry the paints as `var(--tm-diagram-paper, #ffffff)` /
+`var(--tm-diagram-node-stroke, #111827)` (the literal is the fallback for an SVG viewer without the
+stylesheet). Two consequences worth knowing:
+
+- the **server-side export** (`DiagramSvgBuilder`) cannot resolve a `var()`: it emits the palette
+  colour instead, and the node's own `Style.Fill`/`Style.Stroke` wins over the stencil layout —
+  an exported SVG is therefore always self-contained;
+- the **client export** (`exportViewportAsSvg`) copies the computed `--tm-diagram-paper`,
+  `--tm-diagram-node-stroke` and `--tm-diagram-node-ink` values onto the clone root, so the
+  serialized tree keeps the paints the user actually saw.
+
+Swimlane bands paint with the SAME paper tokens: the header background (`--tm-paper-backdrop`),
+its ink (`--tm-paper-ink`), the separators (`--tm-paper-border`) and the node collapse toggle
+(`--tm-paper` / `--tm-paper-ink`) stay legible when the surrounding chrome is dark (≥ 4.5:1).
+
+### Swimlane bands and the drag clamp
+
+`data-swimlane="true"` marks a node whose stencil is a swimlane (a BPMN pool or lane) — a BAND the
+user drags a child ACROSS. `_clampChildPosition` therefore leaves a child of a swimlane band
+unclamped (the drop re-resolves the target lane in the Modeling host's layout diff), while a child
+of a logical GROUP container is still clamped inside its parent. `TmDiagramCanvas` emits the
+attribute only for a node with swimlane data.
 
 A host that rebrands the diagram surface (e.g. sepia paper) overrides BOTH tokens by targeting
 `.tm-diagram-canvas` or any deeper wrapper around one canvas — the declaration lives on the

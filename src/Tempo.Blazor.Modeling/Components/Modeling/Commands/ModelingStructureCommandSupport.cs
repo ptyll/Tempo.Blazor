@@ -62,6 +62,21 @@ internal static class ModelingStructureCommandSupport
         Waypoints = []
     };
 
+    /// <summary>The <c>set_view_connection</c> op of a layout change (phase 4): an empty list clears
+    /// the manual routing, a null list leaves it untouched.</summary>
+    internal static ModelingOperation SetViewConnectionOperation(
+        string relationshipId,
+        string? viewId,
+        IReadOnlyList<ModelingViewWaypointDto>? waypoints) => new()
+    {
+        Op = "set_view_connection",
+        ViewId = string.IsNullOrEmpty(viewId) ? null : viewId,
+        RelationshipId = relationshipId,
+        Waypoints = waypoints is null
+            ? null
+            : [.. waypoints.Select(waypoint => new ModelingViewWaypointDto { X = waypoint.X, Y = waypoint.Y })]
+    };
+
     /// <summary>The view a layout change targets: the explicit id, else the model's default view.</summary>
     internal static ModelingViewDto? FindView(ModelingModelDto model, string? viewId)
         => string.IsNullOrEmpty(viewId)

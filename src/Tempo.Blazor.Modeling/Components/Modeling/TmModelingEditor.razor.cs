@@ -553,6 +553,15 @@ public partial class TmModelingEditor : IAsyncDisposable
             await FocusWithinAsync(InspectorNameFieldSelector);
         }
 
+        if (_focusMoveToContainerAfterRender)
+        {
+            // Phase 4 review U5: the move-to-container sheet closed — focus returns to the header
+            // action that opened it (never the document body). Progressive enhancement: the JS
+            // helper swallows a missing module.
+            _focusMoveToContainerAfterRender = false;
+            await FocusWithinAsync(MoveToContainerActionSelector);
+        }
+
         if (_shouldRestoreOpenButtonFocus)
         {
             _shouldRestoreOpenButtonFocus = false;
@@ -1082,48 +1091,6 @@ public partial class TmModelingEditor : IAsyncDisposable
             : "tm-modeling-editor__panel-tab";
     }
 
-    private ModelingDiagramGenerationResultDto GenerateDiagram(ModelingModelDto model)
-        => DiagramGenerator.Generate(CreateGenerationModel(model), new ModelingDiagramGenerationOptionsDto
-        {
-            ViewpointKey = EffectiveViewpointKey,
-            ViewId = ResolveInitialViewId(model) ?? string.Empty,
-            IncludeIssues = true
-        });
-
-    private ModelingModelDto CreateGenerationModel(ModelingModelDto model)
-    {
-        if (string.IsNullOrWhiteSpace(EffectiveNotationKey))
-        {
-            return model;
-        }
-
-        var notation = EffectiveNotationKey;
-        return new ModelingModelDto
-        {
-            Id = model.Id,
-            Title = model.Title,
-            Notation = notation,
-            SupportedNotations = [notation],
-            Metadata = model.Metadata,
-            Elements = model.Elements.Select(element => new ModelingElementDto
-            {
-                Id = element.Id,
-                SourceId = element.SourceId,
-                SourceType = element.SourceType,
-                SourcePath = element.SourcePath,
-                Notation = notation,
-                SemanticType = element.SemanticType,
-                Name = element.Name,
-                Description = element.Description,
-                Properties = element.Properties,
-                Tags = element.Tags,
-                Governance = element.Governance
-            }).ToList(),
-            Relationships = model.Relationships,
-            Views = model.Views,
-            Issues = model.Issues
-        };
-    }
 
     private bool IsElementVisibleInViewpoint(ModelingElementDto element)
     {

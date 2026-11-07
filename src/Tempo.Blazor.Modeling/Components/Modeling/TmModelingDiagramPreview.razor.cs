@@ -138,6 +138,15 @@ public partial class TmModelingDiagramPreview
         => _editor?.FitToViewAsync() ?? Task.CompletedTask;
 
     /// <summary>
+    /// Phase 4: re-fits the embedded viewer to the requested mode. The hosting editor calls it after
+    /// "Arrange" (<see cref="Tempo.Blazor.Components.Diagram.DiagramFitMode.Page"/>) so the arranged
+    /// scene is visible without a manual zoom-out. A no-op before the editor mounted.
+    /// </summary>
+    /// <param name="mode">The fit mode; page mode fits the whole page, width mode only the width.</param>
+    public Task FitToViewAsync(Tempo.Blazor.Components.Diagram.DiagramFitMode mode = Tempo.Blazor.Components.Diagram.DiagramFitMode.Page)
+        => _editor?.FitToViewAsync(mode) ?? Task.CompletedTask;
+
+    /// <summary>
     /// Final UX review (M5 re-review): the docked preview's canvas column sits NEAR the diagram
     /// editor's own 768px mobile threshold (760px at the 1440x900 baseline), so a width nudge —
     /// a scrollbar appearing or a pane nudge during a dock collapse/expand — would flip the

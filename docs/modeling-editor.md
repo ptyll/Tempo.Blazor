@@ -447,6 +447,69 @@ Contract rules these commands share:
 - Each command exposes `Batch` (the clone-validation input) and `Intent` (its contribution to the
   `ModelingModelChangeSet` the writer receives).
 
+## Layout and hierarchy authoring (phase 4)
+
+The editor persists the AUTHORED layout, not just the semantic model
+(docs/modeling-authoring.md §9.3/§9.4). It is opt-in through the writer capability and fully
+undoable; without `ModelingModelWriterCapabilities.Layout` every move stays session-only (2.10.0
+behavior) and the Arrange action is NOT rendered (a keyboard user never tabs onto a dead control).
+
+- **What is persisted.** A node move/resize in the "Open in editor" dialog, a waypoint drag, a task
+  dropped into another lane/pool and the Arrange action all become ONE `DiagramCommandTransaction`
+  of the internal `SetModelingViewLayoutCommand`: `set_view_node` (X/Y/W/H and the layout parent),
+  `set_view_connection` (waypoints) and — when the container changed — `update_element parentId`
+  (the SEMANTIC hierarchy). One undo reverts the geometry, the hierarchy and the container growth
+  together. The pending set reports them as `ModelingViewChange` + `ModelingElementChange.ParentId`,
+  so a host that only writes `OnModelChanged` sees the layout too.
+- **Hierarchy rule.** The container a node belongs to is the smallest rendered container (from the
+  notation profile's `ContainerElementTypes`) whose bounds contain the node's centre, resolved with
+  the node's own subtree excluded. A lane that no longer encloses a moved child GROWS around it in
+  the same transaction. The canvas clamps a dragged child only inside a logical GROUP — a pool/lane
+  BAND is a container the user drags ACROSS (the node carries `data-swimlane="true"`), and the drop
+  re-resolves the lane, so "move a task to another lane" is a normal gesture.
+- **Arrange ("Uspořádat"), the non-drag alternative (WCAG 2.5.7).** The header action
+  `modeling-arrange` (icon: `IconNames.ListTree`, never the generic grid) opens the
+  `modeling-arrange-dialog` sheet: pick `Left to right` or `Top to bottom` and confirm. It lays the
+  rendered elements out by BPMN convention (pools stacked, lanes as FLUSH bands spanning the pool's
+  content width, flow nodes RANKED by their relationships — a source before its target, a branch's
+  targets on one rank, declaration order breaking ties, a relationship-free run packed into a
+  `ceil(sqrt(n))` grid) and commits the result as ONE undoable layout transaction, clearing the
+  waypoints of routed connections in the same step and re-fitting the preview to the page. It is a
+  deterministic C# arrangement, not a graph layout: the browser dagre of the embedded
+  `TmDiagramEditor` stays its OWN **Layout** menu and is REMOVED from the dialog's toolbar once the
+  host persists layout (`CanEditModelLayout`) — the dialog header hosts `modeling-dialog-arrange`
+  instead. The action is disabled (aria-disabled + an sr-only hint) while no document is loaded.
+- **"Move to container", the other non-drag alternative (U5).** The header action
+  `modeling-move-to-container` (mirrored as `modeling-dialog-move-to-container` in the open-editor
+  dialog header) opens the `modeling-move-to-container-dialog` sheet: a select of the rendered
+  containers — the element's own subtree excluded — plus "No container (root)". Confirm commits ONE
+  `SetModelingViewLayoutCommand`: the element lands in the container's content area (the same slot
+  math the generator's auto-placement uses), the view parent moves, the semantic `ParentId` moves
+  only when the writer may edit Structure, the container grows when needed, the result is announced
+  ("Moved “X” into “Y”." / "Moved “X” out of its container.") and focus returns to the action.
+  Disabled while no element is selected (aria-disabled + the "select an element first" hint).
+- **Reload.** The provider returns the persisted view, so the generator renders the saved geometry.
+  Elements WITHOUT a stored position (a view that does not cover the whole model) are auto-placed
+  inside their rendered container instead of disappearing (docs/modeling-authoring.md §9.4).
+- **BPMN conventions.** A pool/lane renders as a horizontal band with its NAME in the left label
+  band (the generator writes the stencil's swimlane cell label), task types show their icon, events
+  differ by ring, gateways carry their marker, data objects use the document/cylinder shapes, and
+  every BPMN node shape paints with the `--tm-paper` / `--tm-paper-ink` design tokens
+  (the canvas is a paper surface in both themes, so a host or a high-contrast theme recolours the
+  shapes by overriding the tokens instead of editing the package).
+- **A load never re-snaps** the embedded editors: both pass `SnapDocumentOnLoad="false"`, so the
+  persisted geometry renders exactly as saved while the interactive grid (8 px) still snaps a drag,
+  a drop and a resize. The dialog's own snap toggle still lets a user turn snapping off entirely
+  (`GridSize="0"`, a guarded no-op at every division site).
+- **Keyboard nudges coalesce (U6).** Ten arrow presses over the SAME element set, with no
+  re-parent and no waypoint change, inside 800 ms merge into the ONE layout command already on top of
+  the stack (its before-snapshot is kept, so one undo reverts the whole burst). The polite layout
+  announcement is debounced 500 ms so the live region speaks once; a re-parent announces
+  immediately.
+- **Live region (U7).** While the open-editor dialog is up, the ONE structure live region lives
+  inside the dialog body (`modeling-dialog-structure-live`); the outer
+  `modeling-structure-live` is suppressed, so a screen reader inside the modal hears the result.
+
 ## Non-drag alternative (WCAG 2.5.7)
 
 Every drag affordance has a tap/keyboard path:
@@ -482,6 +545,15 @@ Every drag affordance has a tap/keyboard path:
 - The sheets are forms (`onsubmit` prevented, confirm = submit): Enter in a field confirms, the
   insert confirm disables while no element type is chosen and the connect confirm disables while
   the pair has no allowed relationship.
+- **The LAYOUT gestures** have the same pair of sheets (phase 4): **"Move to container"**
+  (`modeling-move-to-container`, sheet `modeling-move-to-container-dialog` with the select
+  `modeling-move-to-container-target`) is the non-drag alternative to dragging a node into another
+  lane/pool — it lists every rendered container except the element's own subtree plus "No container
+  (root)", commits ONE undoable layout transaction (the semantic `ParentId` only when the writer may
+  edit Structure) and moves focus back to the action; **"Arrange"** (`modeling-arrange`) is the
+  alternative to nudging every node by hand. Both render only with the `Layout` capability, keep
+  their tab stop while disabled and expose `aria-disabled` + an sr-only hint ("Select an element
+  first" / "Open a diagram first.").
 
 ## The "Open in editor" dialog
 
@@ -563,7 +635,8 @@ The editor root `<section data-testid="modeling-editor">` carries the frozen sta
 `data-state`, `data-load-count`, `data-generation-count`, `data-provider`, `data-notation`,
 `data-viewpoint`, `data-selected-element-id`, `data-selected-relationship-id`,
 `data-element-count`, `data-relationship-count`, `data-diagram-node-count`,
-`data-diagram-edge-count`, `data-active-panel` and `data-open-editor` (`"true"`/`"false"`).
+`data-diagram-edge-count`, `data-active-panel`, `data-open-editor` (`"true"`/`"false"`),
+`data-can-edit-structure` and `data-can-edit-layout` (the two authoring capabilities, phase 4).
 Panel test ids (`modeling-model-tree-panel`, `modeling-preview-panel`, `modeling-inspector-panel`,
 `modeling-issues-panel`, `modeling-panel-tab-*`, `modeling-tab-properties`,
 `modeling-tab-relations`, `modeling-tab-source`, `modeling-related-panel`,
@@ -575,8 +648,13 @@ Panel test ids (`modeling-model-tree-panel`, `modeling-preview-panel`, `modeling
 `modeling-insert-element-dialog` (`modeling-insert-type`/`-container`/`-name`/`-confirm`/`-cancel`),
 `modeling-relationship-dialog` (`modeling-relationship-source`/`-target`/`-type`/`-rejection`/
 `-confirm`/`-cancel`), `modeling-delete-confirm-dialog` (`modeling-delete-summary`/`-confirm`/
-`-cancel`), the dialog's editor history `modeling-dialog-undo`/`modeling-dialog-redo` and the
-`modeling-structure-live` polite region) are the contract for hosts and E2E — never positional
+`-cancel`), the phase-4 arrange sheet `modeling-arrange`
+(`modeling-arrange-dialog`/`-direction`/`-confirm`/`-cancel`), the move-to-container sheet
+`modeling-move-to-container` (`modeling-move-to-container-dialog`/`-target`/`-confirm`/`-cancel`)
+and its dialog twin `modeling-dialog-move-to-container`/`modeling-dialog-arrange`, the dialog live
+region `modeling-dialog-structure-live`, the dialog's editor history
+`modeling-dialog-undo`/`modeling-dialog-redo` and the `modeling-structure-live` polite region) are
+the contract for hosts and E2E — never positional
 selectors into the `TmEditorShell` or `TmDiagramEditor` internal DOM. The
 docked inspector tablist has THREE tabs (Properties | Relations | Source) — key off the tab test
 ids, never the index (Breaking / Migration).
@@ -657,4 +735,15 @@ demo-scoped rule; a real host owns the editor height through the `Height` parame
   never mount; the tree filter re-render budget). `ModelingRelatedElementsE2ETests` (Fáze 13)
   covers the desktop Relations tab (badge + counterpart navigation), the tablet sheet tap, the
   mobile section at 320×640 without horizontal overflow and the a11y names.
+- Phase 4 layout: `TmModelingEditorLayoutTests` (bUnit) covers the geometry write-back into
+  `ModelingViewDto` + `ViewChanges`, the waypoint upsert, the semantic + layout re-parent in ONE
+  transaction, the engine's refusal of a cross-pool move, the lane growth, the capability gate and
+  both Arrange directions with undo. `ModelingDiagramGeneratorTests` covers the stored-position
+  precedence, the auto-placement of position-less elements, the element → node parent mapping and
+  the pool/lane band data; `BpmnStencilMapperConventionsTests` covers the BPMN visual conventions
+  and the token-based colours. `ModelingLayoutPhase4E2ETests` drives the real pointer path (a task
+  dragged into the other lane), the Arrange + undo round trip, the demo writer reload and the
+  layout screenshots (light/dark, desktop/tablet). A 303-element budget test
+  (`Arrange_stays_responsive_for_three_hundred_elements`) guards the arrangement's linear cost
+  (the plan's "300 elements" edge case).
 - Node lane: `npm run test:diagram-editor` covers the shared engine the preview embeds.

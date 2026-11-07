@@ -17,6 +17,16 @@ public sealed class ModelingDiagramGenerator : IModelingDiagramProjector
     private const double GridStepX = 220;
     private const double GridStepY = 150;
 
+    /// <summary>BPMN band convention (phase 4): a pool/lane keeps its NAME in a left-hand label
+    /// band, so an element auto-placed INSIDE a container starts after that band plus a margin.
+    /// The generator does not hard-code the band — it asks the stencil layout
+    /// (<see cref="DiagramStencilLayout.BackgroundShape"/> = <c>swimlane-horizontal</c> and the
+    /// node's own swimlane data) and falls back to <see cref="DefaultLabelBandWidth"/>.</summary>
+    private const double DefaultLabelBandWidth = 30;
+    private const double ContainerContentMargin = 20;
+    private const double AutoPlacementGapX = 30;
+    private const double AutoPlacementGapY = 20;
+
     private readonly IModelingStencilMapper _stencilMapper;
     private readonly DiagramStencilRegistry _stencilRegistry;
     private readonly IModelingNotationProfileProvider? _notationProfiles;
@@ -65,11 +75,25 @@ public sealed class ModelingDiagramGenerator : IModelingDiagramProjector
         var usedNodeIds = new HashSet<string>(StringComparer.Ordinal);
         var elementOrder = BuildElementOrder(model);
 
+        // Phase 4 §9.4, OPT-IN: only an authoring host asks for auto-placement — for every other
+        // consumer a selected view keeps the 2.10.0 contract (a view node is a visibility gate), so
+        // the MCP diagram tool and existing projector tests keep byte-identical output. When the
+        // flag is on, a position-less element is placed in a SECOND pass (a container is already
+        // positioned when its position-less children are laid out — declaration order is free, a
+        // child may precede its parent).
+        var autoPlaceWithoutViewNode = options?.AutoPlaceElementsWithoutViewNode == true;
+        var autoPlacedNodes = new List<(ModelingElementDto Element, DiagramNode Node)>();
+        var pendingParentByNodeId = new Dictionary<string, PendingNodeParent>(StringComparer.Ordinal);
+
         for (var index = 0; index < model.Elements.Count; index++)
         {
             var element = model.Elements[index];
-            if (selectedView is not null && !viewNodes.ContainsKey(element.Id))
+            if (selectedView is not null
+                && !viewNodes.ContainsKey(element.Id)
+                && !autoPlaceWithoutViewNode)
+            {
                 continue;
+            }
 
             if (string.IsNullOrWhiteSpace(element.Id))
             {
@@ -124,7 +148,10 @@ public sealed class ModelingDiagramGenerator : IModelingDiagramProjector
                 W = viewNode?.Width > 0 ? viewNode.Width : stencil.DefaultWidth,
                 H = viewNode?.Height > 0 ? viewNode.Height : stencil.DefaultHeight,
                 ZIndex = elementOrder.GetValueOrDefault(element.Id, page.Nodes.Count),
-                ParentNodeId = string.IsNullOrWhiteSpace(viewNode?.ParentNodeId) ? null : viewNode.ParentNodeId,
+                // Phase 4 (§3.1): a view node's ParentNodeId holds the PARENT ELEMENT id — it is
+                // mapped to the generated node id AFTER the loop, because the parent may be
+                // declared (and therefore rendered) later than its child.
+                ParentNodeId = null,
                 LayerId = DefaultLayerId,
                 IsCollapsible = stencil.IsCollapsible,
                 Data = CreateNodeData(stencil, element)
@@ -132,7 +159,37 @@ public sealed class ModelingDiagramGenerator : IModelingDiagramProjector
 
             page.Nodes.Add(node);
             elementToNodeId[element.Id] = node.Id;
+
+            var parentElementId = !string.IsNullOrWhiteSpace(viewNode?.ParentNodeId)
+                ? viewNode!.ParentNodeId
+                : selectedView is not null && viewNode is null && autoPlaceWithoutViewNode
+                    ? element.ParentId
+                    : null;
+            if (!string.IsNullOrWhiteSpace(parentElementId))
+            {
+                pendingParentByNodeId[node.Id] = new PendingNodeParent(parentElementId!, element);
+            }
+
+            // Phase 4 BPMN convention: a pool/lane is a horizontal band whose NAME sits in a
+            // left-hand label band (the stencil's own swimlane slot — never a component overlay).
+            ApplySwimlaneBandData(node, stencil, element);
+
+            if (selectedView is not null && viewNode is null && autoPlaceWithoutViewNode)
+            {
+                autoPlacedNodes.Add((element, node));
+            }
         }
+
+        // Second pass: auto-layout ONLY for the elements without a position (phase 4 §9.4) — a
+        // stored view node never moves. A child of a rendered container lands inside that
+        // container's content area (BPMN: after the left label band); a root element keeps the
+        // deterministic grid the view-less projection has always used.
+        PlacePositionlessNodes(selectedView, page, autoPlacedNodes, elementById, elementToNodeId);
+
+        // Layout nesting: element id → the generated node id of its parent. Both the view's
+        // ParentNodeId and an auto-placed element's semantic ParentId go through the SAME map, so
+        // the diagram nests by element identity even when SourceId renames the node.
+        ApplyNodeParents(page, pendingParentByNodeId, elementToNodeId, issues);
 
         var usedEdgeIds = new HashSet<string>(StringComparer.Ordinal);
         if (selectedView is null)
@@ -627,8 +684,168 @@ public sealed class ModelingDiagramGenerator : IModelingDiagramProjector
         ordered.Add(id);
     }
 
+    /// <summary>
+    /// Resolves the DIAGRAM nesting of every node from the PARENT ELEMENT id it declares (phase 4,
+    /// §3.1 of the authoring contract): a view node stores the parent's <c>ElementId</c> — never a
+    /// diagram node id — and the generated node id may differ from the element id (a non-empty
+    /// <see cref="ModelingElementDto.SourceId"/> renames the node), so the value is mapped through
+    /// the element → node map. An unresolvable parent (a filtered or skipped element) leaves the
+    /// node at the root and reports a warning instead of nesting it under a non-existent id.
+    /// </summary>
+    private static void ApplyNodeParents(
+        DiagramPage page,
+        IReadOnlyDictionary<string, PendingNodeParent> pendingParentByNodeId,
+        IReadOnlyDictionary<string, string> elementToNodeId,
+        List<ModelingIssueDto> issues)
+    {
+        if (pendingParentByNodeId.Count == 0)
+        {
+            return;
+        }
+
+        var nodesById = page.Nodes.ToDictionary(node => node.Id, StringComparer.Ordinal);
+        foreach (var (nodeId, pending) in pendingParentByNodeId)
+        {
+            if (!nodesById.TryGetValue(nodeId, out var node))
+            {
+                continue;
+            }
+
+            var parentElementId = pending.ParentElementId ?? string.Empty;
+            if (string.Equals(parentElementId, pending.Element.Id, StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            if (elementToNodeId.TryGetValue(parentElementId, out var parentNodeId)
+                && !string.IsNullOrEmpty(parentNodeId)
+                && !string.Equals(parentNodeId, nodeId, StringComparison.Ordinal))
+            {
+                node.ParentNodeId = parentNodeId;
+                continue;
+            }
+
+            issues.Add(CreateElementIssue(
+                $"modeling-generator-element-parent-{nodeId}-not-visible",
+                pending.Element,
+                "hierarchy",
+                $"The parent element '{parentElementId}' of '{pending.Element.Id}' is not part of the generated view. The node was placed at the root.",
+                "Include the parent in the view (a set_view_node operation) or clear the element's parent."));
+        }
+    }
+
     private static (double X, double Y) GetGridPosition(int index)
         => (GridOriginX + (index % GridColumns) * GridStepX, GridOriginY + (index / GridColumns) * GridStepY);
+
+    /// <summary>
+    /// Phase 4 §9.4 — auto-layout for the elements WITHOUT a stored position. A stored view node is
+    /// never moved (that is the whole point of the persisted layout); a position-less element whose
+    /// semantic parent (<see cref="ModelingElementDto.ParentId"/>) is rendered lands INSIDE that
+    /// container's content area, everything else keeps the deterministic root grid. Slots are per
+    /// container, so children of one lane form a left-to-right row before they wrap.
+    /// </summary>
+    private static void PlacePositionlessNodes(
+        ModelingViewDto? selectedView,
+        DiagramPage page,
+        List<(ModelingElementDto Element, DiagramNode Node)> autoPlacedNodes,
+        IReadOnlyDictionary<string, ModelingElementDto> elementById,
+        IReadOnlyDictionary<string, string> elementToNodeId)
+    {
+        if (selectedView is null || autoPlacedNodes.Count == 0)
+        {
+            return;
+        }
+
+        var nodesById = new Dictionary<string, DiagramNode>(StringComparer.Ordinal);
+        foreach (var node in page.Nodes)
+        {
+            nodesById[node.Id] = node;
+        }
+
+        var slotByContainer = new Dictionary<string, int>(StringComparer.Ordinal);
+        var rootSlot = 0;
+
+        foreach (var (element, node) in autoPlacedNodes)
+        {
+            var parentId = element.ParentId ?? string.Empty;
+            if (!string.IsNullOrEmpty(parentId)
+                && elementById.ContainsKey(parentId)
+                && !string.Equals(parentId, element.Id, StringComparison.Ordinal)
+                && elementToNodeId.TryGetValue(parentId, out var containerNodeId)
+                && !string.IsNullOrEmpty(containerNodeId)
+                && !string.Equals(containerNodeId, node.Id, StringComparison.Ordinal)
+                && nodesById.TryGetValue(containerNodeId, out var container))
+            {
+                var slot = slotByContainer.TryGetValue(container.Id, out var used) ? used : 0;
+                slotByContainer[container.Id] = slot + 1;
+                var (x, y) = GetContainerContentPosition(container, node.W, node.H, slot);
+                node.X = x;
+                node.Y = y;
+                continue;
+            }
+
+            var (gridX, gridY) = GetGridPosition(rootSlot++);
+            node.X = gridX;
+            node.Y = gridY;
+        }
+    }
+
+    /// <summary>
+    /// The placement of the <paramref name="slot"/>-th auto-placed child inside a container: after
+    /// the container's left LABEL BAND (the BPMN convention — a pool and a lane are horizontal bands
+    /// with their name on the left, phase 4), wrapped into as many columns as the content area
+    /// affords and clamped back inside the container when the child still fits.
+    /// </summary>
+    internal static (double X, double Y) GetContainerContentPosition(DiagramNode container, double width, double height, int slot)
+    {
+        var band = container.SwimlaneData is { HeaderSize: > 0 } swimlane ? swimlane.HeaderSize : 0;
+        var left = container.X + band + ContainerContentMargin;
+        var top = container.Y + ContainerContentMargin;
+        var available = Math.Max(width, container.W - band - (2 * ContainerContentMargin));
+        var columns = Math.Max(1, (int)Math.Floor((available + AutoPlacementGapX) / (width + AutoPlacementGapX)));
+        var column = slot % columns;
+        var row = slot / columns;
+        var x = left + (column * (width + AutoPlacementGapX));
+        var y = top + (row * (height + AutoPlacementGapY));
+
+        if (container.W >= width + band + (2 * ContainerContentMargin))
+        {
+            x = Math.Min(x, container.X + container.W - width - ContainerContentMargin);
+        }
+
+        if (container.H >= height + (2 * ContainerContentMargin))
+        {
+            y = Math.Min(y, container.Y + container.H - height - ContainerContentMargin);
+        }
+
+        return (x, y);
+    }
+
+    /// <summary>
+    /// Phase 4 — the BPMN visual convention: a POOL and a LANE are horizontal BANDS with their NAME
+    /// in a left-hand label band. The label lives in the stencil's swimlane data (the same channel
+    /// the diagram editor's swimlane cells read), so the generated document renders the name without
+    /// the editor inventing its own overlay. Every other stencil keeps no swimlane data.
+    /// </summary>
+    private static void ApplySwimlaneBandData(DiagramNode node, DiagramStencil stencil, ModelingElementDto element)
+    {
+        if (!stencil.IsSwimlane)
+        {
+            return;
+        }
+
+        var label = string.IsNullOrWhiteSpace(element.Name) ? element.Id : element.Name;
+        node.SwimlaneData = new DiagramNodeSwimlaneData
+        {
+            IsHorizontal = !string.Equals(stencil.Layout.BackgroundShape, "swimlane-vertical", StringComparison.Ordinal),
+            RowCount = 1,
+            ColumnCount = 1,
+            HeaderSize = DefaultLabelBandWidth,
+            RowSizes = [],
+            ColumnSizes = [],
+            CellLabels = [label]
+        };
+    }
 
     private static string GetNotationKey(ModelingModelDto model, ModelingElementDto element)
     {
@@ -738,4 +955,8 @@ public sealed class ModelingDiagramGenerator : IModelingDiagramProjector
             Message = message,
             SuggestedFix = suggestedFix
         };
+
+    /// <summary>The declared parent of one generated node, resolved after the element loop (the
+    /// parent may be rendered later than its child).</summary>
+    private sealed record PendingNodeParent(string ParentElementId, ModelingElementDto Element);
 }

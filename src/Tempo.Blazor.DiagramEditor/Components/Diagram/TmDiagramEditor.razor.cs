@@ -138,6 +138,15 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
     /// <summary>Snap-to-grid cell size in pixels. 0 = disabled.</summary>
     [Parameter] public int GridSize { get; set; } = 8;
 
+    /// <summary>
+    /// Whether a LOADED document may be re-snapped to <see cref="GridSize"/>. Default <c>true</c>
+    /// (today's behavior: opening the editor normalizes the geometry). A host that persists an
+    /// AUTHORED layout passes <c>false</c> — a load must never turn into a layout edit, and the
+    /// interactive snap (drag, drop, resize) keeps working with the configured grid. The gated
+    /// call sites are <c>OnInitialized</c>, a replaced <c>Document</c> parameter and a JSON import.
+    /// </summary>
+    [Parameter] public bool SnapDocumentOnLoad { get; set; } = true;
+
     /// <summary>Show page view with shadow and boundaries on the canvas.</summary>
     [Parameter] public bool ShowPageView { get; set; } = true;
 
@@ -425,7 +434,11 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
             _document.Pages[0].Name = $"{Loc["TmDiagramEditor_PageName"]} 1";
         }
         EnsureDocumentLayers(_document);
-        _document.SnapToGrid(GridSize);
+        if (SnapDocumentOnLoad)
+        {
+            _document.SnapToGrid(GridSize);
+        }
+
         EnsureCommandStackForActivePage();
 
         // Fáze 9: the minimap start state is seeded ONCE, here — a host (the Modeling tablet
@@ -444,7 +457,11 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
             _document = Document;
             _document.EnsurePages();
             EnsureDocumentLayers(_document);
-            _document.SnapToGrid(GridSize);
+            if (SnapDocumentOnLoad)
+            {
+                _document.SnapToGrid(GridSize);
+            }
+
             _selectedIds = [];
             EnsureCommandStackForActivePage();
         }
@@ -1933,8 +1950,8 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
                 cy = vp.Y + vp.H / 2;
             }
         }
-        var x = Math.Round((cx - w / 2) / GridSize) * GridSize;
-        var y = Math.Round((cy - h / 2) / GridSize) * GridSize;
+        var x = Snap(cx - w / 2);
+        var y = Snap(cy - h / 2);
 
         var node = new DiagramNode
         {
@@ -2126,7 +2143,11 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
             }
 
             _document = doc;
-            _document.SnapToGrid(GridSize);
+            if (SnapDocumentOnLoad)
+            {
+                _document.SnapToGrid(GridSize);
+            }
+
             ActiveCommandStack.Clear();
             _selectedIds = [];
             await DocumentChanged.InvokeAsync(_document);
@@ -2190,8 +2211,8 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
 
         var w = stencil?.DefaultWidth ?? 120;
         var h = stencil?.DefaultHeight ?? 60;
-        var x = Math.Round(drop.X / GridSize) * GridSize;
-        var y = Math.Round(drop.Y / GridSize) * GridSize;
+        var x = Snap(drop.X);
+        var y = Snap(drop.Y);
 
         var node = new DiagramNode
         {
@@ -2677,8 +2698,8 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
         // Position AFTER the fit: class-like UML stencils grow (e.g. abstract-class 140→150),
         // and the new node must be centred/offset by the height the editor actually inserts.
         var (x, y) = ComputeConnectPosition(sourceNode, w, newNode.H, _connectDirection);
-        x = Math.Round(x / GridSize) * GridSize;
-        y = Math.Round(y / GridSize) * GridSize;
+        x = Snap(x);
+        y = Snap(y);
         newNode.X = x;
         newNode.Y = y;
 
@@ -2939,6 +2960,14 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
 
     // ── Helpers ───────────────────────────────────────────────────────────────
 
+    /// <summary>
+    /// Snaps one document coordinate to the grid. <see cref="GridSize"/> = 0 (snapping off) returns
+    /// the value UNCHANGED — never <c>Math.Round(v / 0) * 0</c>, which is <c>NaN</c> and poisoned
+    /// every insert position (a node at <c>NaN</c> disappears from the canvas).
+    /// </summary>
+    private double Snap(double value)
+        => GridSize > 0 ? Math.Round(value / GridSize) * GridSize : value;
+
     private async Task RerenderCanvas()
     {
         _canvas?.NotifyContentMutated();
@@ -2987,8 +3016,8 @@ public partial class TmDiagramEditor : TmComponentBase, IDisposable
                 cy = band.Y;
             }
         }
-        var x = Math.Round((cx - w / 2) / GridSize) * GridSize;
-        var y = Math.Round((cy - h / 2) / GridSize) * GridSize;
+        var x = Snap(cx - w / 2);
+        var y = Snap(cy - h / 2);
         await OnToolboxDrop((stencilId, x, y));
     }
 

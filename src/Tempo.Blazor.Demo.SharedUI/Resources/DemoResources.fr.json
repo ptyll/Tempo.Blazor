@@ -354,6 +354,7 @@
   "TmDemo_Modeling_AllowEditing": "Autoriser l'édition",
   "TmDemo_Modeling_LastChangeSet": "Dernier change set (OnModelChanged)",
   "TmDemo_Modeling_Pending": "Modifications non enregistrées : {0}",
+  "TmDemo_Modeling_ReloadEditor": "Recharger l’éditeur",
   "TmDemo_Modeling_SaveMode": "Mode d'enregistrement",
   "TmDemo_Modeling_SaveModeImmediate": "Immédiat",
   "TmDemo_Modeling_SaveModeManual": "Manuel",

@@ -1720,11 +1720,19 @@ public partial class TmDiagramCanvas : TmComponentBase, IAsyncDisposable
         if (ReadOnly || Document is null) return;
         if (string.IsNullOrWhiteSpace(stencilId)) return;
 
-        x = Math.Round(x / GridSize) * GridSize;
-        y = Math.Round(y / GridSize) * GridSize;
+        x = Snap(x);
+        y = Snap(y);
 
         await OnToolboxDrop.InvokeAsync((StencilId: stencilId, X: x, Y: y));
     }
+
+    /// <summary>
+    /// Snaps one document coordinate to the grid. <see cref="GridSize"/> = 0 (snapping off) returns
+    /// the value UNCHANGED — never <c>Math.Round(v / 0) * 0</c>, which is <c>NaN</c> and dropped the
+    /// node out of the scene.
+    /// </summary>
+    private double Snap(double value)
+        => GridSize > 0 ? Math.Round(value / GridSize) * GridSize : value;
 
     /// <summary>Raised when a toolbox stencil is dropped on the canvas, with the stencil id and the grid-snapped drop position.</summary>
     [Parameter] public EventCallback<(string StencilId, double X, double Y)> OnToolboxDrop { get; set; }

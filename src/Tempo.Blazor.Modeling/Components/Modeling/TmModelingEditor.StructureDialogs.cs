@@ -131,6 +131,85 @@ public partial class TmModelingEditor
         => [.. ConnectTypeOptions.Select(type => (type, GetTypeLabel(type)))];
     private (IReadOnlyList<string> ElementIds, IReadOnlyList<string> RelationshipIds)? _pendingDelete;
 
+    /// <summary>
+    /// Builds the authoring sheets (insert / relationship / delete / arrange / move-to-container)
+    /// as ONE render fragment. Split from the editor's markup file to respect the 1200-line source
+    /// ceiling (N270/F13) — the dialogs themselves live in <see cref="TmModelingAuthoringDialogs"/>.
+    /// </summary>
+    private RenderFragment RenderStructureDialogs() =>
+        new TmModelingAuthoringDialogs
+    {
+        TestId = TestId,
+        InsertOpen = _insertElementDialogOpen,
+        InsertTitle = Loc["TmModelingEditor_InsertElement"],
+        InsertTypeLabel = Loc["TmModelingEditor_InsertType"],
+        InsertTypes = InsertTypeChoices,
+        InsertTypeValue = _insertSemanticType,
+        InsertTypeChanged = EventCallback.Factory.Create<string>(this, HandleInsertTypeChangedAsync),
+        InsertContainerLabel = Loc["TmModelingEditor_InsertContainer"],
+        InsertRootLabel = Loc["TmModelingEditor_InsertRoot"],
+        InsertContainers = InsertContainerChoices,
+        InsertContainerValue = _insertContainerId,
+        InsertContainerChanged = EventCallback.Factory.Create<string>(this, HandleInsertContainerChangedAsync),
+        InsertNameLabel = Loc["TmModelingEditor_InsertName"],
+        InsertNamePlaceholder = Loc["TmModelingEditor_InsertNamePlaceholder"],
+        InsertNameValue = _insertName,
+        InsertNameChanged = EventCallback.Factory.Create<string>(this, HandleInsertNameChangedAsync),
+        InsertConfirmLabel = Loc["TmModelingEditor_InsertConfirm"],
+        InsertConfirm = EventCallback.Factory.Create(this, ConfirmInsertElementAsync),
+        InsertCancel = EventCallback.Factory.Create(this, CloseInsertElementDialogAsync),
+        RelationshipOpen = _relationshipDialogOpen,
+        RelationshipTitle = Loc["TmModelingEditor_RelationshipDialogTitle"],
+        SourceLabel = RelationshipSourceLabel,
+        RelationshipSourceFormat = Loc["TmModelingEditor_RelationshipSource"],
+        ShowRelationshipTarget = RelationshipTargetVisible,
+        RelationshipTargetLabel = Loc["TmModelingEditor_RelationshipTarget"],
+        RelationshipTargets = ConnectTargetChoices,
+        RelationshipTargetValue = _connectTargetId,
+        RelationshipTargetChanged = EventCallback.Factory.Create<string>(this, HandleConnectTargetChangedAsync),
+        RelationshipTypeLabel = Loc["TmModelingEditor_RelationshipType"],
+        RelationshipTypes = ConnectTypeChoices,
+        RelationshipTypeValue = _connectRelationshipType,
+        RelationshipTypeChanged = EventCallback.Factory.Create<string>(this, HandleConnectTypeChangedAsync),
+        RelationshipRejection = _connectRejection,
+        RelationshipRejectionFix = _connectRejectionFix,
+        RelationshipRejectionTitle = Loc["TmModelingEditor_RelationshipRejectedTitle"],
+        RelationshipConfirmLabel = Loc["TmModelingEditor_RelationshipConfirm"],
+        RelationshipConfirm = EventCallback.Factory.Create(this, ConfirmConnectAsync),
+        RelationshipCancel = EventCallback.Factory.Create(this, CloseRelationshipDialogAsync),
+        DeleteOpen = _deleteConfirmationOpen,
+        DeleteTitle = DeleteTitleText,
+        DeleteSummary = DeleteSummaryText,
+        DeleteConfirmLabel = Loc["TmModelingEditor_DeleteConfirm"],
+        DeleteConfirm = EventCallback.Factory.Create(this, ConfirmDeleteAsync),
+        DeleteCancel = EventCallback.Factory.Create(this, CancelDelete),
+        DeleteRestoreFocusTargetId = _deleteRestoreFocusTargetId,
+        CancelLabel = Loc["TmModelingEditor_Cancel"],
+
+        // Phase 4: the undoable auto-layout sheet (Arrange > direction > confirm).
+        ArrangeOpen = _arrangeDialogOpen,
+        ArrangeTitle = Loc["TmModelingEditor_Arrange"],
+        ArrangeDirectionLabel = Loc["TmModelingEditor_ArrangeDirection"],
+        ArrangeDirections = ArrangeDirectionChoices,
+        ArrangeDirectionValue = _arrangeDirection,
+        ArrangeDirectionChanged = EventCallback.Factory.Create<string>(this, HandleArrangeDirectionChangedAsync),
+        ArrangeConfirmLabel = Loc["TmModelingEditor_ArrangeConfirm"],
+        ArrangeConfirm = EventCallback.Factory.Create(this, ConfirmArrangeAsync),
+        ArrangeCancel = EventCallback.Factory.Create(this, CloseArrangeDialog),
+
+        // Phase 4 (U5): the non-drag "Move to container" sheet.
+        MoveToContainerOpen = _moveToContainerDialogOpen,
+        MoveToContainerTitle = Loc["TmModelingEditor_MoveToContainer"],
+        MoveToContainerLabel = Loc["TmModelingEditor_MoveToContainerLabel"],
+        MoveToContainerRootLabel = Loc["TmModelingEditor_MoveToRoot"],
+        MoveToContainerChoices = MoveToContainerChoices,
+        MoveToContainerValue = _moveToContainerId,
+        MoveToContainerChanged = EventCallback.Factory.Create<string>(this, HandleMoveToContainerChangedAsync),
+        MoveToContainerConfirmLabel = Loc["TmModelingEditor_MoveToContainer"],
+        MoveToContainerConfirm = EventCallback.Factory.Create(this, ConfirmMoveToContainerAsync),
+        MoveToContainerCancel = EventCallback.Factory.Create(this, CloseMoveToContainerDialogAsync)
+        }.Render();
+
     // ── Insert element ───────────────────────────────────────────────────────
 
     /// <summary>The palette entries of the active notation (type picker of the insert dialog).</summary>

@@ -7275,5 +7275,21 @@
   "TmModelingEditor_DeleteRelCount_Other": "{0} relationships",
   "TmModelingEditor_StructureDeletedRelationship": "Deleted the relationship “{0} → {1}”.",
   "TmModelingEditor_StructureInsertedInto": "Inserted {0} “{1}” into {2}",
-  "TmModelingEditor_SelectElementFirst": "Select an element first"
+  "TmModelingEditor_Arrange": "Arrange",
+  "TmModelingEditor_ArrangeDirection": "Direction",
+  "TmModelingEditor_ArrangeDirectionLr": "Left to right",
+  "TmModelingEditor_ArrangeDirectionTb": "Top to bottom",
+  "TmModelingEditor_ArrangeConfirm": "Arrange",
+  "TmModelingEditor_ArrangeAnnouncement": "Arranged the diagram: {0}.",
+  "TmModelingEditor_ArrangeUpToDate": "The diagram is already arranged.",
+  "TmModelingEditor_LayoutUpdated": "Layout updated.",
+  "TmModelingEditor_LayoutMoved": "Moved “{0}”.",
+  "TmModelingEditor_LayoutMovedInto": "Moved “{0}” into “{1}”.",
+  "TmModelingEditor_LayoutTransaction": "Layout change",
+  "TmModelingEditor_MoveToContainer": "Move to container",
+  "TmModelingEditor_SelectElementFirst": "Select an element first",
+  "TmModelingEditor_LayoutMovedToRoot": "Moved “{0}” out of its container.",
+  "TmModelingEditor_MoveToContainerLabel": "Container",
+  "TmModelingEditor_MoveToRoot": "No container (root)",
+  "TmModelingEditor_DiagramNotReady": "Open a diagram first."
 }

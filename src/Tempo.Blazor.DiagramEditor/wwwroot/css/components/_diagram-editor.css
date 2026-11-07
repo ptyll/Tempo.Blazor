@@ -791,6 +791,14 @@
     display: block !important;
 }
 
+/* BPMN 2.0: the stencil's own ShapeSvg contains the task type marker, the event rings and the
+ * gateway marker — hiding it with the native primitive removed every marker from the canvas
+ * (U1 review). The stencil SVG is re-shown as the single painter, and TmDiagramCanvas emits a
+ * "none"/"none" native primitive for these stencils, so nothing is painted twice. */
+.tm-diagram-node__body[data-native-shape="true"] .tm-diagram-node__shape[data-stencil-id^="bpmn2."] .tm-diagram-node__svg-bg {
+    display: block !important;
+}
+
 /* ── Selection outline ──────────────────────────────────────────────────────
  * Post-F3 the selection outline is an SVG <rect> injected into overlay-pane.
  * It uses stroke instead of border and SVG drop-shadow filter instead of
@@ -988,7 +996,10 @@ rect.tm-diagram-selection-outline {
     display: flex;
     flex-direction: row;
     min-height: 0;
-    border-bottom: 1px solid var(--tm-color-border);
+    /* Phase 4 U2: a swimlane band is painted ON the page paper, so its separators, its header
+       band and its ink come from the PAPER tokens (theme-invariant by design) instead of the
+       themed surface tokens — a dark theme keeps the paper white and the label legible. */
+    border-bottom: 1px solid var(--tm-paper-border);
 }
 
 .tm-diagram-node__swimlane--horizontal .tm-diagram-node__swimlane-row:last-child {
@@ -1000,8 +1011,9 @@ rect.tm-diagram-selection-outline {
     display: flex;
     align-items: center;
     justify-content: center;
-    background: var(--tm-color-surface-subtle);
-    border-right: 1px solid var(--tm-color-border);
+    background: var(--tm-paper-backdrop);
+    color: var(--tm-paper-ink);
+    border-right: 1px solid var(--tm-paper-border);
     flex-shrink: 0;
     writing-mode: vertical-rl;
     text-orientation: mixed;
@@ -1022,7 +1034,7 @@ rect.tm-diagram-selection-outline {
     display: flex;
     flex-direction: column;
     min-width: 0;
-    border-right: 1px solid var(--tm-color-border);
+    border-right: 1px solid var(--tm-paper-border);
 }
 
 .tm-diagram-node__swimlane--vertical .tm-diagram-node__swimlane-col:last-child {
@@ -1034,8 +1046,9 @@ rect.tm-diagram-selection-outline {
     display: flex;
     align-items: center;
     justify-content: center;
-    background: var(--tm-color-surface-subtle);
-    border-bottom: 1px solid var(--tm-color-border);
+    background: var(--tm-paper-backdrop);
+    color: var(--tm-paper-ink);
+    border-bottom: 1px solid var(--tm-paper-border);
     flex-shrink: 0;
     padding: 0 4px;
 }
@@ -1158,9 +1171,11 @@ rect.tm-diagram-selection-outline {
     font-size: var(--tm-font-size-xs);
     line-height: 1;
     font-weight: 700;
-    color: var(--tm-color-text);
-    background: var(--tm-color-surface-elevated);
-    border: 1px solid var(--tm-color-border);
+    /* Phase 4 U2: the toggle rides on the page PAPER (like the swimlane header band), so it is
+       painted with the paper tokens and stays legible when the surrounding chrome is dark. */
+    color: var(--tm-paper-ink);
+    background: var(--tm-paper);
+    border: 1px solid var(--tm-paper-border);
     border-radius: var(--tm-radius-sm, 4px);
     cursor: pointer;
     z-index: 20;
@@ -1168,8 +1183,8 @@ rect.tm-diagram-selection-outline {
 }
 
 .tm-diagram-node__collapse-btn:hover {
-    background: var(--tm-color-surface-hover);
-    border-color: var(--tm-border-color-strong);
+    background: var(--tm-paper-backdrop);
+    border-color: var(--tm-paper-ink);
 }
 
 .tm-diagram-editor--readonly .tm-diagram-node__collapse-btn {
@@ -3171,6 +3186,10 @@ line.tm-diagram-rotate-handle-stem {
     /* Paper + ink for everything painted ON the page (node bodies, edge labels,
        cardinalities). Declared here, not on the node body, so edge labels resolve it. */
     --tm-diagram-paper: var(--tm-paper);
+    /* Node OUTLINE. The shipped BPMN stencils paint their fill/stroke with the two canvas tokens
+       (var(--tm-diagram-paper, #ffffff) / var(--tm-diagram-node-stroke)), so a host or a
+       high-contrast theme recolours every BPMN shape by overriding them here. */
+    --tm-diagram-node-stroke: var(--tm-paper-ink);
     --tm-diagram-node-ink: var(--tm-paper-ink-muted);
     /* Swimlane header band. Matches DiagramNodeSwimlaneData.HeaderSize = 30 — the data model
        hit-testing and drop math both measure 30px, so the painted header must not drift

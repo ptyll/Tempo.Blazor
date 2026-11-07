@@ -86,7 +86,9 @@ window.tmDiagramEditor = {
             dotNetRef: dotNetRef,
 
             readOnly: !!opts.readOnly,
-            gridSize: opts.gridSize || 8,
+            // `|| 8` turned an EXPLICIT 0 (snapping off) back into 8 and left the C# and JS
+            // grids disagreeing; only an ABSENT option falls back to the default.
+            gridSize: typeof opts.gridSize === 'number' ? opts.gridSize : 8,
             showGrid: opts.showGrid !== false,
             canvasW: opts.canvasWidth || 3000,
             canvasH: opts.canvasHeight || 2000,
@@ -622,10 +624,48 @@ window.tmDiagramEditor = {
         return parentGroupId === inst.activeGroupId;
     },
 
+    // Transitive descendants of one node, in breadth-first order. The drag set used to include
+    // only DIRECT children, so moving a pool left every task nested a lane deeper behind (the
+    // scene kept the old geometry). A queue plus a visited set walks the whole subtree once —
+    // a node reachable through two paths (or a malformed parent cycle) can never loop.
+    _collectDescendantIds: function (inst, rootId) {
+        const collected = [];
+        if (!inst.scenePane || !rootId) return collected;
+        const childrenByParent = new Map();
+        inst.scenePane.querySelectorAll('g.tm-diagram-node[data-parent-id]').forEach(nodeEl => {
+            const parentId = nodeEl.getAttribute('data-parent-id');
+            if (!parentId) return;
+            const siblings = childrenByParent.get(parentId);
+            if (siblings) siblings.push(nodeEl);
+            else childrenByParent.set(parentId, [nodeEl]);
+        });
+        const visited = new Set([rootId]);
+        const queue = [rootId];
+        while (queue.length > 0) {
+            const parentId = queue.shift();
+            const children = childrenByParent.get(parentId) || [];
+            children.forEach(childEl => {
+                const cid = childEl.getAttribute('data-node-id');
+                if (!cid || visited.has(cid)) return;
+                visited.add(cid);
+                if (!this._isNodeInActiveGroup(inst, childEl)) return;
+                collected.push(cid);
+                queue.push(cid);
+            });
+        }
+        return collected;
+    },
+
     _clampChildPosition: function (inst, childId, x, y) {
         const childEl = this._nodeEl(inst, childId);
         const parentId = childEl ? childEl.getAttribute('data-parent-id') : null;
         if (!parentId || inst.dragNodeIds.includes(parentId)) return { x, y };
+        const parentEl = this._nodeEl(inst, parentId);
+        // Modeling phase 4: a SWIMLANE band (a BPMN pool/lane) is a container the user drags a
+        // child ACROSS — the drop re-resolves the target lane in C# (ResolveSwimlaneState), so
+        // clamping the child inside its current band would make "move a task to another lane"
+        // impossible. Only logical GROUP containers clamp their members.
+        if (parentEl && parentEl.getAttribute('data-swimlane') === 'true') return { x, y };
         const parentRect = this._nodeRect(inst, parentId);
         const childRect = this._nodeRect(inst, childId);
         if (!parentRect || !childRect) return { x, y };
@@ -1121,15 +1161,10 @@ window.tmDiagramEditor = {
             inst.isDragging = true;
             inst.dragNodeIds = [...inst.selectedIds];
 
-            // Include children of selected nodes
+            // Include the whole SUBTREE of every selected node (pool > lane > task).
             const allIds = new Set(inst.dragNodeIds);
             inst.dragNodeIds.forEach(nid => {
-                if (inst.scenePane) {
-                    inst.scenePane.querySelectorAll('[data-parent-id="' + nid + '"]').forEach(childEl => {
-                        const cid = childEl.getAttribute('data-node-id');
-                        if (cid && this._isNodeInActiveGroup(inst, childEl)) allIds.add(cid);
-                    });
-                }
+                this._collectDescendantIds(inst, nid).forEach(cid => allIds.add(cid));
             });
             inst.dragNodeIds = [...allIds];
 
@@ -1523,12 +1558,7 @@ window.tmDiagramEditor = {
 
         const allIds = new Set(inst.dragNodeIds);
         inst.dragNodeIds.forEach(nid => {
-            if (inst.scenePane) {
-                inst.scenePane.querySelectorAll('[data-parent-id="' + nid + '"]').forEach(childEl => {
-                    const cid = childEl.getAttribute('data-node-id');
-                    if (cid && this._isNodeInActiveGroup(inst, childEl)) allIds.add(cid);
-                });
-            }
+            this._collectDescendantIds(inst, nid).forEach(cid => allIds.add(cid));
         });
         inst.dragNodeIds = [...allIds];
         inst.dragNodeIds = this._includeGroupNodes(inst, inst.dragNodeIds);
@@ -2140,15 +2170,10 @@ window.tmDiagramEditor = {
         inst.isDragging = true;
         inst.dragNodeIds = [...inst.selectedIds];
 
-        // Include children of selected nodes
+        // Include the whole SUBTREE of every selected node (pool > lane > task).
         const allIds = new Set(inst.dragNodeIds);
         inst.dragNodeIds.forEach(nid => {
-            if (inst.scenePane) {
-                inst.scenePane.querySelectorAll('[data-parent-id="' + nid + '"]').forEach(childEl => {
-                    const cid = childEl.getAttribute('data-node-id');
-                    if (cid && this._isNodeInActiveGroup(inst, childEl)) allIds.add(cid);
-                });
-            }
+            this._collectDescendantIds(inst, nid).forEach(cid => allIds.add(cid));
         });
         inst.dragNodeIds = [...allIds];
 
@@ -5022,10 +5047,11 @@ window.tmDiagramEditor = {
 
         // The canvas-scoped custom properties must travel too: node bodies, table cells and
         // labels inside the serialized tree reference var(--tm-diagram-node-ink) /
-        // var(--tm-diagram-paper), and the standalone export has no stylesheet to resolve them.
+        // var(--tm-diagram-paper) / var(--tm-diagram-node-stroke), and the standalone export has
+        // no stylesheet to resolve them.
         // Setting the computed values on the clone ROOT re-points every var() in the tree.
         const canvasComputed = window.getComputedStyle(inst.svg);
-        ['--tm-diagram-node-ink', '--tm-diagram-paper'].forEach(function (prop) {
+        ['--tm-diagram-node-ink', '--tm-diagram-paper', '--tm-diagram-node-stroke'].forEach(function (prop) {
             const value = canvasComputed.getPropertyValue(prop);
             if (value) clone.style.setProperty(prop, value);
         });

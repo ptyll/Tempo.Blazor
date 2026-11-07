@@ -176,3 +176,52 @@ public class TmDiagramCanvasTests : DiagramTestBase
             .Should().ContainSingle("the mouse keeps its direct rotation path");
     }
 }
+
+/// <summary>
+/// Phase 4 review (A9): the canvas marks a SWIMLANE node (<c>data-swimlane="true"</c>) so the drag
+/// clamp in <c>diagram-editor.js</c> leaves a child of a pool/lane unclamped — a BPMN task must be
+/// draggable into another lane — while an ordinary node stays unmarked and a logical group still
+/// clamps its members.
+/// </summary>
+public class TmDiagramCanvasSwimlaneAttributeTests : DiagramTestBase
+{
+    [Fact]
+    public void Only_a_swimlane_node_carries_the_data_swimlane_attribute()
+    {
+        var document = new DiagramDocument
+        {
+            Title = "Swimlane attribute",
+            Width = 1000,
+            Height = 1000,
+            Nodes =
+            [
+                new DiagramNode
+                {
+                    Id = "pool",
+                    StencilId = "bpmn2.pool",
+                    X = 40,
+                    Y = 40,
+                    W = 600,
+                    H = 300,
+                    SwimlaneData = new DiagramNodeSwimlaneData
+                    {
+                        IsHorizontal = true,
+                        RowCount = 1,
+                        ColumnCount = 1,
+                        HeaderSize = 30,
+                        CellLabels = ["Order handling"]
+                    }
+                },
+                new DiagramNode { Id = "task", StencilId = "bpmn2.task.user", X = 120, Y = 90, W = 150, H = 92 },
+                new DiagramNode { Id = "plain", StencilId = "general.rectangle", X = 700, Y = 40, W = 120, H = 60 }
+            ]
+        };
+
+        var cut = Render<TmDiagramCanvas>(parameters => parameters.Add(p => p.Document, document));
+
+        cut.Find("[data-node-id='pool']").GetAttribute("data-swimlane").Should().Be("true");
+        cut.Find("[data-node-id='task']").HasAttribute("data-swimlane").Should().BeFalse(
+            "a task is not a band: its own children (if any) keep the group clamp");
+        cut.Find("[data-node-id='plain']").HasAttribute("data-swimlane").Should().BeFalse();
+    }
+}

@@ -47946,6 +47946,13 @@
               "description": "Show the component toolbox panel on the left."
             },
             {
+              "name": "SnapDocumentOnLoad",
+              "type": "bool",
+              "isRequired": false,
+              "default": "true",
+              "description": "Whether a LOADED document may be re-snapped to GridSize. Default true (today's behavior: opening the editor normalizes the geometry). A host that persists an AUTHORED layout passes false — a load must never turn into a layout edit, and the interactive snap (drag, drop, resize) keeps working with the configured grid. The gated call sites are OnInitialized, a replaced Document parameter and a JSON import."
+            },
+            {
               "name": "ToolbarGroups",
               "type": "DiagramToolbarGroups?",
               "isRequired": false,
@@ -99885,7 +99892,7 @@
           "kind": "Class",
           "category": "Modeling",
           "namespace": "Tempo.Blazor.Modeling",
-          "description": "Options used when generating a diagram document from a modeling model.",
+          "description": "Options used when generating a diagram document from a modeling model. `AutoPlaceElementsWithoutViewNode` (default `false`) is the authoring opt-in: with a view selected, an element WITHOUT a stored view node is auto-placed inside its rendered semantic container (after the label band) or on the root grid instead of being hidden by the view — the default keeps the 2.10.0 visibility-gate projection byte-identical for every other consumer (the MCP diagram tool included).",
           "packageId": "Tempo.Blazor.Abstractions",
           "sourcePath": "src/Tempo.Blazor.Abstractions/Modeling/ModelingProviderContracts.cs",
           "documentationStatus": "merged"

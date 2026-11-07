@@ -30,6 +30,11 @@ public partial class TmModelingEditor
     /// so the writer receives the complete scene (existing nodes + the inserted one) and ONE undo
     /// removes the insert AND the view it created.
     /// </para>
+    /// <para>
+    /// Phase 4: a LAYOUT commit passes <paramref name="regenerate"/> = <c>false</c> — the document
+    /// already carries the gesture's geometry, and rebuilding it would reset the canvas zoom and
+    /// selection on every move. The transaction still enters the stack (so undo/redo regenerate).
+    /// </para>
     /// </summary>
     private async Task PushStructuralCommandsAsync(
         string transactionName,
@@ -37,12 +42,17 @@ public partial class TmModelingEditor
         ModelingOperationBatch batch,
         ModelingModelChangeSet intent,
         Action? afterCommit,
-        bool seedView = true)
+        bool seedView = true,
+        bool regenerate = true)
     {
         if (_model is null)
         {
             return;
         }
+
+        // Any other command breaks the keyboard-nudge burst (the layout path re-arms it after the
+        // push when the gesture is still coalescable).
+        _coalescedLayoutCommand = null;
 
         var seed = seedView ? CreateViewSeedCommand(transactionName) : null;
         if (seed is not null)
@@ -73,7 +83,11 @@ public partial class TmModelingEditor
         _hasStructuralCommands = true;
         unchecked { _commitVersion++; }
         afterCommit?.Invoke();
-        RegenerateDocumentsAfterStructureChange();
+        if (regenerate)
+        {
+            RegenerateDocumentsAfterStructureChange();
+        }
+
         await AfterCommitAsync(intent);
     }
 
@@ -342,6 +356,10 @@ public partial class TmModelingEditor
     /// <summary>Per-instance id of the "select an element first" sr-only hint the disabled
     /// Connect/Delete actions point at (review U11).</summary>
     private readonly string _selectElementFirstHintId = $"tm-modeling-select-first-{Guid.NewGuid():N}";
+
+    /// <summary>Per-instance id of the "open a diagram first" sr-only hint the disabled Arrange
+    /// action points at (phase 4 review U10).</summary>
+    private readonly string _diagramNotReadyHintId = $"tm-modeling-diagram-not-ready-{Guid.NewGuid():N}";
 
     /// <summary>
     /// The editor root's Delete shortcut (phase 3 review, A10): on a NON-text target it asks for the

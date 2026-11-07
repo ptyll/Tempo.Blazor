@@ -7336,5 +7336,21 @@
   "TmModelingEditor_DeleteRelCount_Other": "{0} relations",
   "TmModelingEditor_StructureDeletedRelationship": "Relation « {0} → {1} » supprimée.",
   "TmModelingEditor_StructureInsertedInto": "{0} « {1} » inséré dans {2}",
-  "TmModelingEditor_SelectElementFirst": "Sélectionnez d’abord un élément"
+  "TmModelingEditor_Arrange": "Réorganiser",
+  "TmModelingEditor_ArrangeDirection": "Direction",
+  "TmModelingEditor_ArrangeDirectionLr": "De gauche à droite",
+  "TmModelingEditor_ArrangeDirectionTb": "De haut en bas",
+  "TmModelingEditor_ArrangeConfirm": "Réorganiser",
+  "TmModelingEditor_ArrangeAnnouncement": "Diagramme réorganisé : {0}.",
+  "TmModelingEditor_ArrangeUpToDate": "Le diagramme est déjà organisé.",
+  "TmModelingEditor_LayoutUpdated": "Disposition mise à jour.",
+  "TmModelingEditor_LayoutMoved": "« {0} » déplacé.",
+  "TmModelingEditor_LayoutMovedInto": "« {0} » déplacé dans « {1} ».",
+  "TmModelingEditor_LayoutTransaction": "Modification de la disposition",
+  "TmModelingEditor_MoveToContainer": "Déplacer vers un conteneur",
+  "TmModelingEditor_SelectElementFirst": "Sélectionnez d’abord un élément",
+  "TmModelingEditor_LayoutMovedToRoot": "« {0} » sorti de son conteneur.",
+  "TmModelingEditor_MoveToContainerLabel": "Conteneur",
+  "TmModelingEditor_MoveToRoot": "Aucun conteneur (racine)",
+  "TmModelingEditor_DiagramNotReady": "Ouvrez d’abord un diagramme."
 }

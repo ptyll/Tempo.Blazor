@@ -175,6 +175,10 @@ public partial class TmModelingEditor
             document.ActivePage?.Id,
             elementByNodeId,
             [.. document.Edges.Select(edge => edge.Id)]);
+
+        // Phase 4: the SAME hook anchors the layout diff (a regenerated document is a projection of
+        // the model, never a user gesture).
+        CaptureLayoutBaseline(document);
     }
 
     /// <summary>
@@ -196,7 +200,7 @@ public partial class TmModelingEditor
     /// </summary>
     internal async Task SyncStructureFromDocumentAsync(DiagramDocument document)
     {
-        if (_model is null || !CanEditModelStructure)
+        if (_model is null || (!CanEditModelStructure && !CanEditModelLayout))
         {
             // 2.10.0 behavior: diagram-local edits stay diagram-local (never a silent model node).
             CaptureStructureSnapshot(document);
@@ -224,10 +228,22 @@ public partial class TmModelingEditor
         var liveNodeIds = new HashSet<string>(document.Nodes.Select(node => node.Id), StringComparer.Ordinal);
         var liveEdgeIds = new HashSet<string>(document.Edges.Select(edge => edge.Id), StringComparer.Ordinal);
 
-        var addedNodes = document.Nodes.Where(node => !snapshot.ElementByNodeId.ContainsKey(node.Id)).ToList();
-        var removedNodeIds = snapshot.ElementByNodeId.Keys.Where(nodeId => !liveNodeIds.Contains(nodeId)).ToList();
-        var addedEdges = document.Edges.Where(edge => !snapshot.EdgeIds.Contains(edge.Id)).ToList();
-        var removedEdgeIds = snapshot.EdgeIds.Where(edgeId => !liveEdgeIds.Contains(edgeId)).ToList();
+        // A STRUCTURE-capable writer sees the added/removed diff; a layout-only writer (Layout
+        // without Structure) never creates or deletes semantics, so its diff is always empty and the
+        // mutation falls through to the layout sync.
+        var structuralEditing = CanEditModelStructure;
+        var addedNodes = structuralEditing
+            ? document.Nodes.Where(node => !snapshot.ElementByNodeId.ContainsKey(node.Id)).ToList()
+            : [];
+        var removedNodeIds = structuralEditing
+            ? snapshot.ElementByNodeId.Keys.Where(nodeId => !liveNodeIds.Contains(nodeId)).ToList()
+            : [];
+        var addedEdges = structuralEditing
+            ? document.Edges.Where(edge => !snapshot.EdgeIds.Contains(edge.Id)).ToList()
+            : [];
+        var removedEdgeIds = structuralEditing
+            ? snapshot.EdgeIds.Where(edgeId => !liveEdgeIds.Contains(edgeId)).ToList()
+            : [];
 
         // A reuse insert (the model tree's "Insert into preview") carries a modelElementId — it is
         // the phase-6 session-only placement feature and never a semantic insert.
@@ -235,7 +251,9 @@ public partial class TmModelingEditor
 
         if (addedNodes.Count == 0 && addedEdges.Count == 0 && removedNodeIds.Count == 0 && removedEdgeIds.Count == 0)
         {
-            CaptureStructureSnapshot(document);
+            // Not a structural change: a move, a resize, a waypoint or a label. Phase 4 persists the
+            // GEOMETRY ones as one layout transaction (the baseline advances inside the sync).
+            await SyncLayoutFromDocumentAsync(document);
             return;
         }
 
@@ -582,7 +600,10 @@ public partial class TmModelingEditor
     /// The container (pool/lane/subprocess) the new node was dropped into: the SMALLEST container
     /// node whose bounds contain the new node's centre. Empty when the drop is on the bare canvas.
     /// </summary>
-    internal string ResolveContainerElementId(DiagramDocument document, DiagramNode node)
+    internal string ResolveContainerElementId(
+        DiagramDocument document,
+        DiagramNode node,
+        IReadOnlySet<string>? excludedElementIds = null)
     {
         if (_model is null)
         {
@@ -600,6 +621,11 @@ public partial class TmModelingEditor
                 || !candidate.Data.TryGetValue("modelElementId", out var value)
                 || value?.ToString() is not { Length: > 0 } elementId
                 || string.Equals(elementId, node.Data?.GetValueOrDefault("modelElementId")?.ToString(), StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            if (excludedElementIds is not null && excludedElementIds.Contains(elementId))
             {
                 continue;
             }

@@ -32,6 +32,7 @@
          data-active-panel="@ActivePanelName"
          data-open-editor="@((_openedEditorDocument is not null).ToString().ToLowerInvariant())"
          data-can-edit-structure="@CanEditModelStructure.ToString().ToLowerInvariant()"
+         data-can-edit-layout="@CanEditModelLayout.ToString().ToLowerInvariant()"
          data-writer-capabilities="@EffectiveWriterCapabilities.ToString()"
          @onkeydown="HandleEditorRootKeyDownAsync"
          style="@HeightStyle">
@@ -241,11 +242,22 @@
        across the 768 boundary used to tear the dialog down (a new TmDiagramEditor, a fresh engine
        boot). The editor ROOT is the focusWithin scope in every layout. Phase 3: ONE polite live
        region announces every structural result (insert, connect, delete, rejection). *@
-    <span class="tm-sr-only"
-          role="status"
-          aria-live="polite"
-          aria-atomic="true"
-          data-testid="@TestId("modeling-structure-live")">@_structureAnnouncement</span>
+    @* Review U7: the polite live region lives INSIDE the open-editor dialog while it is open (the
+       modal's focus scope must contain it — a region behind the modal is neither rendered for a
+       screen reader's virtual cursor nor reliably announced), and outside it otherwise. Exactly ONE
+       instance exists at any time. *@
+    @if (_openedEditorDocument is null)
+    {
+        <span class="tm-sr-only"
+              role="status"
+              aria-live="polite"
+              aria-atomic="true"
+              data-testid="@TestId("modeling-structure-live")">@_structureAnnouncement</span>
+    }
+    @* The hints a disabled-by-design action points at. They live on the ROOT (always rendered) so a
+       button in the header and its twin in the dialog header can share them. *@
+    <span id="@_selectElementFirstHintId" class="tm-sr-only">@Loc["TmModelingEditor_SelectElementFirst"]</span>
+    <span id="@_diagramNotReadyHintId" class="tm-sr-only">@Loc["TmModelingEditor_DiagramNotReady"]</span>
     @ChangeViewSheetContent
     @LegendSheetContent
     @StructureDialogsContent
@@ -824,43 +836,74 @@
     /// The mobile band is G2 (viewing + light edits) — it has no structural entry at all.
     /// </summary>
     private RenderFragment StructureHeaderActions => @<text>
-        @if (!IsMobileLayout && CanEditModelStructure)
+        @if (!IsMobileLayout && (CanEditModelStructure || CanEditModelLayout))
         {
             <div class="tm-modeling-editor__structure-actions" role="group" aria-label="@Loc["TmModelingEditor_StructureActions"]">
-                <button type="button"
-                        class="tm-modeling-editor__structure-btn"
-                        data-testid="@TestId("modeling-insert-element")"
-                        title="@Loc["TmModelingEditor_InsertElement"]"
-                        @onclick="OpenInsertElementDialogAsync">
-                    <TmIcon Name="@IconNames.Plus" Size="IconSize.Sm" />
-                    <span class="tm-sr-only">@Loc["TmModelingEditor_InsertElement"]</span>
-                </button>
-                @* Phase 3 review (U11): a structurally-disabled action keeps its TAB STOP and its
-                   accessible name (aria-disabled, never the native disabled attribute) and points
-                   at the sr-only hint that says WHAT is missing — a disabled-by-design button a
-                   keyboard user can never reach explains nothing. The handler still early-returns. *@
-                <button type="button"
-                        class="tm-modeling-editor__structure-btn"
-                        data-testid="@TestId("modeling-connect-to")"
-                        aria-disabled="@((_selectedElement is null).ToString().ToLowerInvariant())"
-                        aria-describedby="@((_selectedElement is null) ? _selectElementFirstHintId : null)"
-                        title="@Loc["TmModelingEditor_ConnectTo"]"
-                        @onclick="OpenConnectDialogAsync">
-                    <TmIcon Name="@IconNames.Link" Size="IconSize.Sm" />
-                    <span class="tm-sr-only">@Loc["TmModelingEditor_ConnectTo"]</span>
-                </button>
-                <button type="button"
-                        class="tm-modeling-editor__structure-btn"
-                        id="@_deleteHeaderButtonId"
-                        data-testid="@TestId("modeling-delete-selection")"
-                        aria-disabled="@((_selectedElement is null && _selectedRelationship is null).ToString().ToLowerInvariant())"
-                        aria-describedby="@((_selectedElement is null && _selectedRelationship is null) ? _selectElementFirstHintId : null)"
-                        title="@Loc["TmModelingEditor_DeleteElement"]"
-                        @onclick="RequestDeleteSelectedAsync">
-                    <TmIcon Name="@IconNames.Trash2" Size="IconSize.Sm" />
-                    <span class="tm-sr-only">@Loc["TmModelingEditor_DeleteElement"]</span>
-                </button>
-                <span id="@_selectElementFirstHintId" class="tm-sr-only">@Loc["TmModelingEditor_SelectElementFirst"]</span>
+                @if (CanEditModelStructure)
+                {
+                    <button type="button"
+                            class="tm-modeling-editor__structure-btn"
+                            data-testid="@TestId("modeling-insert-element")"
+                            title="@Loc["TmModelingEditor_InsertElement"]"
+                            @onclick="OpenInsertElementDialogAsync">
+                        <TmIcon Name="@IconNames.Plus" Size="IconSize.Sm" />
+                        <span class="tm-sr-only">@Loc["TmModelingEditor_InsertElement"]</span>
+                    </button>
+                    @* Phase 3 review (U11): a structurally-disabled action keeps its TAB STOP and its
+                       accessible name (aria-disabled, never the native disabled attribute) and points
+                       at the sr-only hint that says WHAT is missing — a disabled-by-design button a
+                       keyboard user can never reach explains nothing. The handler still early-returns. *@
+                    <button type="button"
+                            class="tm-modeling-editor__structure-btn"
+                            data-testid="@TestId("modeling-connect-to")"
+                            aria-disabled="@((_selectedElement is null).ToString().ToLowerInvariant())"
+                            aria-describedby="@((_selectedElement is null) ? _selectElementFirstHintId : null)"
+                            title="@Loc["TmModelingEditor_ConnectTo"]"
+                            @onclick="OpenConnectDialogAsync">
+                        <TmIcon Name="@IconNames.Link" Size="IconSize.Sm" />
+                        <span class="tm-sr-only">@Loc["TmModelingEditor_ConnectTo"]</span>
+                    </button>
+                    <button type="button"
+                            class="tm-modeling-editor__structure-btn"
+                            id="@_deleteHeaderButtonId"
+                            data-testid="@TestId("modeling-delete-selection")"
+                            aria-disabled="@((_selectedElement is null && _selectedRelationship is null).ToString().ToLowerInvariant())"
+                            aria-describedby="@((_selectedElement is null && _selectedRelationship is null) ? _selectElementFirstHintId : null)"
+                            title="@Loc["TmModelingEditor_DeleteElement"]"
+                            @onclick="RequestDeleteSelectedAsync">
+                        <TmIcon Name="@IconNames.Trash2" Size="IconSize.Sm" />
+                        <span class="tm-sr-only">@Loc["TmModelingEditor_DeleteElement"]</span>
+                    </button>
+                }
+                @* Phase 4: the two NON-DRAG layout entries (WCAG 2.5.7) — "Move to container" and the
+                   undoable "Arrange". Both are gated on the LAYOUT capability, not on Structure: a host
+                   may persist geometry without allowing semantic inserts. A disabled-by-design action
+                   keeps its tab stop and points aria-describedby at the sr-only hint that says WHAT is
+                   missing (review U10). *@
+                @if (CanEditModelLayout)
+                {
+                    <button type="button"
+                            class="tm-modeling-editor__structure-btn"
+                            data-testid="@TestId("modeling-move-to-container")"
+                            data-modeling-focus="move-to-container"
+                            aria-disabled="@((_selectedElement is null).ToString().ToLowerInvariant())"
+                            aria-describedby="@((_selectedElement is null) ? _selectElementFirstHintId : null)"
+                            title="@Loc["TmModelingEditor_MoveToContainer"]"
+                            @onclick="OpenMoveToContainerDialogAsync">
+                        <TmIcon Name="@IconNames.Box" Size="IconSize.Sm" />
+                        <span class="tm-sr-only">@Loc["TmModelingEditor_MoveToContainer"]</span>
+                    </button>
+                    <button type="button"
+                            class="tm-modeling-editor__structure-btn"
+                            data-testid="@TestId("modeling-arrange")"
+                            aria-disabled="@((_document is null).ToString().ToLowerInvariant())"
+                            aria-describedby="@((_document is null) ? _diagramNotReadyHintId : null)"
+                            title="@Loc["TmModelingEditor_Arrange"]"
+                            @onclick="OpenArrangeDialog">
+                        <TmIcon Name="@IconNames.ListTree" Size="IconSize.Sm" />
+                        <span class="tm-sr-only">@Loc["TmModelingEditor_Arrange"]</span>
+                    </button>
+                }
             </div>
         }
         else if (!IsMobileLayout && IsEditingEnabled)
@@ -877,55 +920,9 @@
     /// commit path per operation. The renderer is INTERNAL (review A8): the sheets are the editor's
     /// own surface, never public API.
     /// </summary>
-    private RenderFragment StructureDialogsContent => new TmModelingAuthoringDialogs
-    {
-        TestId = TestId,
-        InsertOpen = _insertElementDialogOpen,
-        InsertTitle = Loc["TmModelingEditor_InsertElement"],
-        InsertTypeLabel = Loc["TmModelingEditor_InsertType"],
-        InsertTypes = InsertTypeChoices,
-        InsertTypeValue = _insertSemanticType,
-        InsertTypeChanged = EventCallback.Factory.Create<string>(this, HandleInsertTypeChangedAsync),
-        InsertContainerLabel = Loc["TmModelingEditor_InsertContainer"],
-        InsertRootLabel = Loc["TmModelingEditor_InsertRoot"],
-        InsertContainers = InsertContainerChoices,
-        InsertContainerValue = _insertContainerId,
-        InsertContainerChanged = EventCallback.Factory.Create<string>(this, HandleInsertContainerChangedAsync),
-        InsertNameLabel = Loc["TmModelingEditor_InsertName"],
-        InsertNamePlaceholder = Loc["TmModelingEditor_InsertNamePlaceholder"],
-        InsertNameValue = _insertName,
-        InsertNameChanged = EventCallback.Factory.Create<string>(this, HandleInsertNameChangedAsync),
-        InsertConfirmLabel = Loc["TmModelingEditor_InsertConfirm"],
-        InsertConfirm = EventCallback.Factory.Create(this, ConfirmInsertElementAsync),
-        InsertCancel = EventCallback.Factory.Create(this, CloseInsertElementDialogAsync),
-        RelationshipOpen = _relationshipDialogOpen,
-        RelationshipTitle = Loc["TmModelingEditor_RelationshipDialogTitle"],
-        SourceLabel = RelationshipSourceLabel,
-        RelationshipSourceFormat = Loc["TmModelingEditor_RelationshipSource"],
-        ShowRelationshipTarget = RelationshipTargetVisible,
-        RelationshipTargetLabel = Loc["TmModelingEditor_RelationshipTarget"],
-        RelationshipTargets = ConnectTargetChoices,
-        RelationshipTargetValue = _connectTargetId,
-        RelationshipTargetChanged = EventCallback.Factory.Create<string>(this, HandleConnectTargetChangedAsync),
-        RelationshipTypeLabel = Loc["TmModelingEditor_RelationshipType"],
-        RelationshipTypes = ConnectTypeChoices,
-        RelationshipTypeValue = _connectRelationshipType,
-        RelationshipTypeChanged = EventCallback.Factory.Create<string>(this, HandleConnectTypeChangedAsync),
-        RelationshipRejection = _connectRejection,
-        RelationshipRejectionFix = _connectRejectionFix,
-        RelationshipRejectionTitle = Loc["TmModelingEditor_RelationshipRejectedTitle"],
-        RelationshipConfirmLabel = Loc["TmModelingEditor_RelationshipConfirm"],
-        RelationshipConfirm = EventCallback.Factory.Create(this, ConfirmConnectAsync),
-        RelationshipCancel = EventCallback.Factory.Create(this, CloseRelationshipDialogAsync),
-        DeleteOpen = _deleteConfirmationOpen,
-        DeleteTitle = DeleteTitleText,
-        DeleteSummary = DeleteSummaryText,
-        DeleteConfirmLabel = Loc["TmModelingEditor_DeleteConfirm"],
-        DeleteConfirm = EventCallback.Factory.Create(this, ConfirmDeleteAsync),
-        DeleteCancel = EventCallback.Factory.Create(this, CancelDelete),
-        DeleteRestoreFocusTargetId = _deleteRestoreFocusTargetId,
-        CancelLabel = Loc["TmModelingEditor_Cancel"]
-    }.Render();
+    /// <summary>The authoring sheets (insert / relationship / delete / arrange / move) — the renderer
+    /// lives in the code-behind partial so this file stays under the 1200-line source ceiling.</summary>
+    private RenderFragment StructureDialogsContent => RenderStructureDialogs();
 
     private string LastSaveResultText => _lastSaveResult?.Message ?? string.Empty;
 
@@ -957,53 +954,47 @@
         </ChildContent>
     </TmModal>;
 
-    private Dictionary<string, object> DiscardModalAttributes => new()
-    {
-        ["data-testid"] = TestId("modeling-discard-changes-modal")
-    };
+    /// <summary>The discard-confirmation modal's attributes (see `TmModelingEditor.Dialog.cs`).</summary>
+    private Dictionary<string, object> DiscardModalAttributes => BuildDiscardModalAttributes();
 
-    /// <summary>
-    /// How many element / relationship / layout entries are pending (the discard modal's neutral
-    /// count AND the public observable a host renders — phase 3 review, U6). Counts the structure
-    /// changes (added/removed elements and relationships, parent moves) as well as the view changes
-    /// (node and connection upserts/removals), so a layout-only edit is visible too.
-    /// </summary>
-    public int PendingChangeCount
-    {
-        get
-        {
-            var pending = ComputePendingChangeSet();
-            return pending is null
-                ? 0
-                : pending.Elements.Count + pending.Relationships.Count
-                    + pending.AddedElements.Count + pending.AddedRelationships.Count
-                    + pending.RemovedElementIds.Count + pending.RemovedRelationshipIds.Count
-                    + pending.ViewChanges.Sum(view => view.Nodes.Count + view.Connections.Count
-                        + view.RemovedNodeElementIds.Count + view.RemovedConnectionRelationshipIds.Count);
-        }
-    }
+    /// <summary>How many element / relationship / layout entries are pending (see `TmModelingEditor.Dialog.cs`).</summary>
+    public int PendingChangeCount => CountPendingChanges();
 
-    /// <summary>
-    /// Fáze 10: the dialog's header close. On the docked bands it is a TEXT <c>TmButton</c>
-    /// "Close" through <c>TmModal.HeaderActions</c> (<c>ShowCloseButton="false"</c>); the mobile
-    /// fullscreen keeps the icon-only close. The frozen test id and the <c>open-editor-close</c>
-    /// focus hook live on whichever close is ACTIVE.
-    /// </summary>
-    /// <summary>
-    /// The dialog DE's toolbar group selection (review A5): the FULL preset minus History while the
-    /// editor owns the only undo stack; null (the DE default) for a read-only preview.
-    /// </summary>
-    private Tempo.Blazor.Components.Diagram.DiagramToolbarGroups? DialogToolbarGroups
-        => CanEditModelStructure
-            ? Tempo.Blazor.Components.Diagram.DiagramToolbarGroups.All & ~Tempo.Blazor.Components.Diagram.DiagramToolbarGroups.History
-            : null;
+    /// <summary>The dialog DE's toolbar group selection (see `TmModelingEditor.Dialog.cs`).</summary>
+    private Tempo.Blazor.Components.Diagram.DiagramToolbarGroups? DialogToolbarGroups => ResolveDialogToolbarGroups();
 
     /// <summary>
     /// The editor's undo/redo pair inside the dialog header (review A5) — the ONE semantic stack, so
     /// an insert made in the dialog can be undone from the dialog without a second diagram stack
     /// shadowing it. The keyboard shortcuts are advertised on the buttons.
     /// </summary>
-    private RenderFragment? DialogHeaderActions => !CanEditModelStructure ? null : @<span class="tm-modeling-editor__history-buttons">
+    private RenderFragment? DialogHeaderActions => !CanEditModelStructure && !CanEditModelLayout ? null : @<span class="tm-modeling-editor__history-buttons">
+        @if (CanEditModelLayout)
+        {
+            @* Phase 4 (U8 + U5): the dialog-scoped non-drag layout entries. The dialog toolbar no
+               longer offers the DE's Layout (dagre) menu, so "Arrange" lives HERE, and "Move to
+               container" is the keyboard/tap path for the drag the dialog hosts. *@
+            <button type="button"
+                    class="tm-modeling-editor__history-btn"
+                    data-testid="@TestId("modeling-dialog-arrange")"
+                    aria-disabled="@((_document is null).ToString().ToLowerInvariant())"
+                    aria-describedby="@((_document is null) ? _diagramNotReadyHintId : null)"
+                    title="@Loc["TmModelingEditor_Arrange"]"
+                    @onclick="OpenArrangeDialog">
+                <TmIcon Name="@IconNames.ListTree" Size="IconSize.Sm" />
+                <span class="tm-sr-only">@Loc["TmModelingEditor_Arrange"]</span>
+            </button>
+            <button type="button"
+                    class="tm-modeling-editor__history-btn"
+                    data-testid="@TestId("modeling-dialog-move-to-container")"
+                    aria-disabled="@((_selectedElement is null).ToString().ToLowerInvariant())"
+                    aria-describedby="@((_selectedElement is null) ? _selectElementFirstHintId : null)"
+                    title="@Loc["TmModelingEditor_MoveToContainer"]"
+                    @onclick="OpenMoveToContainerDialogAsync">
+                <TmIcon Name="@IconNames.Box" Size="IconSize.Sm" />
+                <span class="tm-sr-only">@Loc["TmModelingEditor_MoveToContainer"]</span>
+            </button>
+        }
         <button type="button"
                 class="tm-modeling-editor__history-btn"
                 data-testid="@TestId("modeling-dialog-undo")"
@@ -1062,6 +1053,13 @@
                      AdditionalAttributes="@OpenEditorModalAttributes">
                 <ChildContent>
                     <div class="tm-modeling-editor__open-editor-body">
+                        @* Review U7: the ONE structure live region, inside the dialog body while the
+                           dialog is open. A drag to another lane speaks the lane's name here. *@
+                        <span class="tm-sr-only"
+                              role="status"
+                              aria-live="polite"
+                              aria-atomic="true"
+                              data-testid="@TestId("modeling-dialog-structure-live")">@_structureAnnouncement</span>
                         @* The dialog body is its own layout scope: the embedded editor resolves
                            AUTO from the dialog body (its own container) — NOT pinned to the
                            editor's resolved mode (Fáze 6 review fix: the pin went stale the
@@ -1093,6 +1091,7 @@
                                          OnHistoryRequested="@DialogHistoryRequestedCallback"
                                          PreferredStencilIds="@NotationPaletteStencilIds"
                                          PreferredStencilsLabel="@NotationPaletteLabel"
+                                         SnapDocumentOnLoad="false"
                                          ShowTitle="false"
                                          ShowToolbox="@CanEditModelStructure"
                                          ShowPropertiesPanel="true"

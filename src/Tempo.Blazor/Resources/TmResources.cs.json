@@ -7397,5 +7397,21 @@
   "TmModelingEditor_DeleteRelCount_Other": "{0} vztahů",
   "TmModelingEditor_StructureDeletedRelationship": "Smazán vztah „{0} → {1}“.",
   "TmModelingEditor_StructureInsertedInto": "Vložen {0} „{1}“ do {2}",
-  "TmModelingEditor_SelectElementFirst": "Nejprve vyberte prvek"
+  "TmModelingEditor_Arrange": "Uspořádat",
+  "TmModelingEditor_ArrangeDirection": "Směr",
+  "TmModelingEditor_ArrangeDirectionLr": "Zleva doprava",
+  "TmModelingEditor_ArrangeDirectionTb": "Shora dolů",
+  "TmModelingEditor_ArrangeConfirm": "Uspořádat",
+  "TmModelingEditor_ArrangeAnnouncement": "Diagram uspořádán: {0}.",
+  "TmModelingEditor_ArrangeUpToDate": "Diagram je již uspořádaný.",
+  "TmModelingEditor_LayoutUpdated": "Rozvržení aktualizováno.",
+  "TmModelingEditor_LayoutMoved": "Přesunuto „{0}“.",
+  "TmModelingEditor_LayoutMovedInto": "Přesunuto „{0}“ do „{1}“.",
+  "TmModelingEditor_LayoutTransaction": "Změna rozvržení",
+  "TmModelingEditor_MoveToContainer": "Přesun do kontejneru",
+  "TmModelingEditor_SelectElementFirst": "Nejprve vyberte prvek",
+  "TmModelingEditor_LayoutMovedToRoot": "„{0}“ přesunuto mimo kontejner.",
+  "TmModelingEditor_MoveToContainerLabel": "Kontejner",
+  "TmModelingEditor_MoveToRoot": "Bez kontejneru (kořen)",
+  "TmModelingEditor_DiagramNotReady": "Nejprve otevřete diagram."
 }

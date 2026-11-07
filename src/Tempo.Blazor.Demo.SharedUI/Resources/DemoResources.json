@@ -354,6 +354,7 @@
   "TmDemo_Modeling_AllowEditing": "Allow editing",
   "TmDemo_Modeling_LastChangeSet": "Last change set (OnModelChanged)",
   "TmDemo_Modeling_Pending": "Unsaved changes: {0}",
+  "TmDemo_Modeling_ReloadEditor": "Reload editor",
   "TmDemo_Modeling_SaveMode": "Save mode",
   "TmDemo_Modeling_SaveModeImmediate": "Immediate",
   "TmDemo_Modeling_SaveModeManual": "Manual",

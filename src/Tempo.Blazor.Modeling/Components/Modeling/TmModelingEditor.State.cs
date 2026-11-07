@@ -13,6 +13,58 @@ namespace Tempo.Blazor.Components.Modeling;
 /// </summary>
 public partial class TmModelingEditor
 {
+    // ── Generation (moved out of the code-behind for the 1200-line ceiling) ──
+
+    private ModelingDiagramGenerationResultDto GenerateDiagram(ModelingModelDto model)
+        => DiagramGenerator.Generate(CreateGenerationModel(model), new ModelingDiagramGenerationOptionsDto
+        {
+            ViewpointKey = EffectiveViewpointKey,
+            ViewId = ResolveInitialViewId(model) ?? string.Empty,
+            IncludeIssues = true,
+
+            // Phase 4 §9.4: the AUTHORING editor opts into auto-placement for elements without a
+            // stored position (a view node is a position, not a visibility gate there) — and only
+            // when the host can persist the result. A read-only preview keeps the 2.10.0 projection
+            // so a curated view still hides what it does not place (review A2).
+            AutoPlaceElementsWithoutViewNode = CanEditModelStructure || CanEditModelLayout
+        });
+
+    private ModelingModelDto CreateGenerationModel(ModelingModelDto model)
+    {
+        if (string.IsNullOrWhiteSpace(EffectiveNotationKey))
+        {
+            return model;
+        }
+
+        var notation = EffectiveNotationKey;
+        return new ModelingModelDto
+        {
+            Id = model.Id,
+            Title = model.Title,
+            Notation = notation,
+            SupportedNotations = [notation],
+            Metadata = model.Metadata,
+            Elements = model.Elements.Select(element => new ModelingElementDto
+            {
+                Id = element.Id,
+                SourceId = element.SourceId,
+                SourceType = element.SourceType,
+                SourcePath = element.SourcePath,
+                Notation = notation,
+                SemanticType = element.SemanticType,
+                Name = element.Name,
+                Description = element.Description,
+                Properties = element.Properties,
+                Tags = element.Tags,
+                Governance = element.Governance
+            }).ToList(),
+            Relationships = model.Relationships,
+            Views = model.Views,
+            Issues = model.Issues
+        };
+    }
+
+
     private string StateName => _state switch
     {
         ModelingEditorState.Loading => "loading",

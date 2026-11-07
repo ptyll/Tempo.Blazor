@@ -7,6 +7,7 @@
 @using Tempo.Blazor.Demo.SharedUI.Services
 @inject ITmLocalizer Loc
 @inject IEnumerable<IModelingModelProvider> ModelProviders
+@inject IEnumerable<IModelingModelWriter> ModelWriters
 
 <PageTitle>@Loc["TmModelingEditor_Title"] - Tempo.Blazor</PageTitle>
 
@@ -78,9 +79,18 @@
             </select>
         </label>
         <span class="text-xs opacity-70" data-testid="modeling-demo-pending">@string.Format(Loc["TmDemo_Modeling_Pending"], PendingCount)</span>
+        @* Phase 4 (layout persistence): a full EDITOR REMOUNT — the provider is asked again, so the
+           authored layout only renders when the demo writer really persisted it. *@
+        <button type="button"
+                class="rounded border px-2 py-1"
+                data-testid="modeling-demo-reload"
+                @onclick="ReloadDemoEditor">
+            @Loc["TmDemo_Modeling_ReloadEditor"]
+        </button>
     </div>
 
-    <TmModelingEditor @ref="_editor"
+    <TmModelingEditor @key="_editorKey"
+                      @ref="_editor"
                       ProviderKey="@ResolvedProviderKey"
                       ShowProviderSelector="true"
                       ProviderKeyChanged="HandleProviderChanged"
@@ -139,6 +149,12 @@
     /// <summary>The editor instance — the pending count is ITS public state (review U6), never a
     /// demo-side accumulator that could disagree with the editor.</summary>
     private TmModelingEditor? _editor;
+
+    /// <summary>Phase 4: bumped by the demo "Reload editor" button — a new <c>@key</c> remounts the
+    /// editor so the provider (and the demo writer) are asked from scratch.</summary>
+    private int _editorKey;
+
+    private void ReloadDemoEditor() => _editorKey++;
 
     /// <inheritdoc />
     protected override void OnParametersSet()
@@ -233,6 +249,8 @@
         string.Equals(Scenario, "error", StringComparison.OrdinalIgnoreCase)
             ? ThrowingModelLoaderAsync
             : Delay.GetValueOrDefault() > 0 || Fresh == false || HasModelingTreeScenario
+                || HasBpmnLanesScenario
+                || HasLayoutPersistScenario
                 || HasDiagramPreviewScenario
                 || HasIssueScenario
                 || HasInspectorScenario
@@ -252,6 +270,17 @@
         string.Equals(Scenario, "bpmn2-generated", StringComparison.OrdinalIgnoreCase)
         || string.Equals(Scenario, "bpmn2-cross-pool", StringComparison.OrdinalIgnoreCase)
         || string.Equals(Scenario, "bpmn2-ai-task", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>Phase 4: <c>?scenario=bpmn2-lanes</c> — ONE pool with two LANES carrying a task
+    /// each (no relationships), the scene the layout/hierarchy E2E moves a task across.</summary>
+    private bool HasBpmnLanesScenario =>
+        string.Equals(Scenario, "bpmn2-lanes", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>Phase 4: <c>?scenario=layout-persist</c> — the loader serves the DEMO WRITER's
+    /// persisted model, so the editor's reload (a provider switch) proves the authored layout
+    /// survived the save round trip.</summary>
+    private bool HasLayoutPersistScenario =>
+        string.Equals(Scenario, "layout-persist", StringComparison.OrdinalIgnoreCase);
 
     private bool HasUmlProfileScenario =>
         string.Equals(Scenario, "uml25-class", StringComparison.OrdinalIgnoreCase)
@@ -390,6 +419,21 @@
         }
 
         var model = await provider.GetModelAsync(request, cancellationToken);
+
+        // Phase 4 (layout persistence): the demo writer keeps the last saved model, so the reload
+        // round trip renders the AUTHORED layout instead of the shipped default one.
+        if (HasLayoutPersistScenario
+            && string.Equals(ResolvedProviderKey, DemoModelingModelProvider.ProviderKeyValue, StringComparison.Ordinal)
+            && ModelWriters.OfType<DemoModelingModelWriter>().FirstOrDefault() is { } layoutWriter)
+        {
+            return ModelingOperationEngine.Clone(layoutWriter.PersistedModel);
+        }
+
+        if (HasBpmnLanesScenario)
+        {
+            return CreateBpmnLanesScenarioModel();
+        }
+
         if (HasHierarchyScenario)
         {
             return HasHierarchyLargeScenario
@@ -1036,6 +1080,60 @@
                 }
             ]
         };
+
+    /// <summary>
+    /// Phase 4 demo scene: one BPMN pool with two LANES, each carrying one task with NO
+    /// relationship — so the layout/hierarchy E2E can drop a task into the other lane without a
+    /// SequenceFlow verdict standing in the way.
+    /// </summary>
+    private static ModelingModelDto CreateBpmnLanesScenarioModel()
+    {
+        var pool = CreateBpmnElement("lane-scene-pool", "Pool", "Order handling", "lane-scene-pool");
+        var sales = CreateBpmnElement("lane-sales", "Lane", "Sales", "lane-sales", "lane-scene-pool");
+        sales.ParentId = pool.Id;
+        var warehouse = CreateBpmnElement("lane-warehouse", "Lane", "Warehouse", "lane-warehouse", "lane-scene-pool");
+        warehouse.ParentId = pool.Id;
+        var validate = CreateBpmnElement("task-validate", "UserTask", "Validate order", "task-validate", "lane-sales");
+        validate.ParentId = sales.Id;
+        var ship = CreateBpmnElement("task-ship", "ServiceTask", "Ship order", "task-ship", "lane-warehouse");
+        ship.ParentId = warehouse.Id;
+
+        return new ModelingModelDto
+        {
+            Id = "demo-bpmn2-lanes",
+            Title = "BPMN 2.0 lanes",
+            Notation = "bpmn2",
+            SupportedNotations = ["bpmn2"],
+            Metadata = new ModelingMetadataDto
+            {
+                SourceSystem = "Tempo.Blazor Demo",
+                SourceVersion = "2026.06-lanes",
+                LoadedAt = new DateTimeOffset(2026, 6, 6, 8, 0, 0, TimeSpan.Zero),
+                IsFresh = true
+            },
+            Elements = [pool, sales, warehouse, validate, ship],
+            Views =
+            [
+                new ModelingViewDto
+                {
+                    Id = "lane-scene-view",
+                    Name = "Order handling",
+                    Notation = "bpmn2",
+                    ViewpointKey = "Process",
+                    Nodes =
+                    [
+                        // Phase 4 review (U4): FLUSH lanes — the pool's bands start at the pool's top
+                        // edge, span its content width (pool width - 30px label band) and carry no gap.
+                        new() { ElementId = "lane-scene-pool", X = 40, Y = 60, Width = 900, Height = 280 },
+                        new() { ElementId = "lane-sales", X = 70, Y = 60, Width = 870, Height = 140, ParentNodeId = "lane-scene-pool" },
+                        new() { ElementId = "lane-warehouse", X = 70, Y = 200, Width = 870, Height = 140, ParentNodeId = "lane-scene-pool" },
+                        new() { ElementId = "task-validate", X = 150, Y = 90, Width = 160, Height = 92, ParentNodeId = "lane-sales" },
+                        new() { ElementId = "task-ship", X = 150, Y = 230, Width = 160, Height = 92, ParentNodeId = "lane-warehouse" }
+                    ]
+                }
+            ]
+        };
+    }
 
     private ModelingModelDto CreateBpmnProfileScenarioModel()
     {

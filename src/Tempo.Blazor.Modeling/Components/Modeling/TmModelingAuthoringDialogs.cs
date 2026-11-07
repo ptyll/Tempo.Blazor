@@ -174,7 +174,68 @@ internal sealed class TmModelingAuthoringDialogs
     /// <summary>Per-instance ids of the delete confirmation's description paragraph.</summary>
     private readonly string _deleteSummaryId = $"tm-modeling-delete-summary-{Guid.NewGuid():N}";
 
-    /// <summary>Renders the three dialogs (only the open ones render).</summary>
+    // ── Arrange (phase 4) ────────────────────────────────────────────────────
+
+    /// <summary>Whether the arrange dialog is open.</summary>
+    public bool ArrangeOpen { get; init; }
+
+    /// <summary>Dialog title.</summary>
+    public string ArrangeTitle { get; init; } = string.Empty;
+
+    /// <summary>Label of the direction field.</summary>
+    public string ArrangeDirectionLabel { get; init; } = string.Empty;
+
+    /// <summary>The direction candidates (left to right / top to bottom).</summary>
+    public IReadOnlyList<(string Value, string Label)> ArrangeDirections { get; init; } = [];
+
+    /// <summary>Selected direction value.</summary>
+    public string ArrangeDirectionValue { get; init; } = string.Empty;
+
+    /// <summary>Raised when the selected direction changes.</summary>
+    public EventCallback<string> ArrangeDirectionChanged { get; init; }
+
+    /// <summary>Label of the confirm action.</summary>
+    public string ArrangeConfirmLabel { get; init; } = string.Empty;
+
+    /// <summary>Raised when the user confirms the arrangement.</summary>
+    public EventCallback ArrangeConfirm { get; init; }
+
+    /// <summary>Raised when the user cancels the arrangement.</summary>
+    public EventCallback ArrangeCancel { get; init; }
+
+    // ── Move to container (phase 4, U5) ──────────────────────────────────────
+
+    /// <summary>Whether the move-to-container dialog is open.</summary>
+    public bool MoveToContainerOpen { get; init; }
+
+    /// <summary>Dialog title.</summary>
+    public string MoveToContainerTitle { get; init; } = string.Empty;
+
+    /// <summary>Label of the container field.</summary>
+    public string MoveToContainerLabel { get; init; } = string.Empty;
+
+    /// <summary>Label of the "no container" (root) option.</summary>
+    public string MoveToContainerRootLabel { get; init; } = string.Empty;
+
+    /// <summary>The container candidates (the element's own subtree is already excluded).</summary>
+    public IReadOnlyList<(string Value, string Label)> MoveToContainerChoices { get; init; } = [];
+
+    /// <summary>Selected container value (empty = the root).</summary>
+    public string MoveToContainerValue { get; init; } = string.Empty;
+
+    /// <summary>Raised when the selected container changes.</summary>
+    public EventCallback<string> MoveToContainerChanged { get; init; }
+
+    /// <summary>Label of the confirm action.</summary>
+    public string MoveToContainerConfirmLabel { get; init; } = string.Empty;
+
+    /// <summary>Raised when the user confirms the move.</summary>
+    public EventCallback MoveToContainerConfirm { get; init; }
+
+    /// <summary>Raised when the user cancels the move.</summary>
+    public EventCallback MoveToContainerCancel { get; init; }
+
+    /// <summary>Renders the five dialogs (only the open ones render).</summary>
     public RenderFragment Render() => builder =>
     {
         if (InsertOpen)
@@ -191,7 +252,152 @@ internal sealed class TmModelingAuthoringDialogs
         {
             RenderDeleteDialog(builder);
         }
+
+        if (ArrangeOpen)
+        {
+            RenderArrangeDialog(builder);
+        }
+
+        if (MoveToContainerOpen)
+        {
+            RenderMoveToContainerDialog(builder);
+        }
     };
+
+    // ── Arrange (phase 4) ────────────────────────────────────────────────────
+
+    /// <summary>
+    /// The phase-4 "Arrange" sheet: the direction choice (left to right / top to bottom) of the
+    /// undoable auto-layout. It is the non-drag alternative to nudging every node by hand
+    /// (WCAG 2.5.7) and commits through the editor's ONE layout command.
+    /// </summary>
+    private void RenderArrangeDialog(RenderTreeBuilder builder)
+    {
+        builder.OpenComponent<TmModal>(0);
+        builder.AddAttribute(1, nameof(TmModal.Show), true);
+        builder.AddAttribute(2, nameof(TmModal.Title), ArrangeTitle);
+        builder.AddAttribute(3, nameof(TmModal.Size), ModalSize.Small);
+        builder.AddAttribute(4, nameof(TmModal.ShowFooter), false);
+        builder.AddAttribute(5, nameof(TmModal.ShowDefaultFooterButtons), false);
+        builder.AddAttribute(6, nameof(TmModal.CloseOnOverlayClick), false);
+        builder.AddAttribute(7, nameof(TmModal.CloseOnEscape), true);
+        builder.AddAttribute(8, nameof(TmModal.OnClose), ArrangeCancel);
+        builder.AddAttribute(9, nameof(TmModal.Class), "tm-modeling-authoring-dialog");
+        builder.AddAttribute(10, nameof(TmModal.AdditionalAttributes), Attributes("modeling-arrange-dialog"));
+        builder.AddAttribute(11, nameof(TmModal.ChildContent), (RenderFragment)(body =>
+        {
+            body.OpenElement(0, "form");
+            body.AddAttribute(1, "class", "tm-modeling-authoring-dialog__body");
+            body.AddAttribute(2, "onsubmit", EventCallback.Factory.Create<EventArgs>(this, OnArrangeSubmit));
+            body.AddEventPreventDefaultAttribute(3, "onsubmit", true);
+
+            RenderField(body, 10, "modeling-arrange-direction", ArrangeDirectionLabel, control =>
+            {
+                control.OpenElement(0, "select");
+                control.AddAttribute(1, "data-testid", TestId("modeling-arrange-direction"));
+                control.AddAttribute(2, "value", ArrangeDirectionValue);
+                control.AddAttribute(3, "onchange", EventCallback.Factory.Create<ChangeEventArgs>(
+                    this, args => ArrangeDirectionChanged.InvokeAsync(args.Value?.ToString() ?? string.Empty)));
+                foreach (var option in ArrangeDirections)
+                {
+                    control.OpenElement(4, "option");
+                    control.AddAttribute(5, "value", option.Value);
+                    control.AddContent(6, option.Label);
+                    control.CloseElement();
+                }
+
+                control.CloseElement();
+            });
+
+            RenderActions(
+                body,
+                40,
+                @class: "tm-modeling-authoring-dialog__cancel",
+                cancelLabel: CancelLabel,
+                cancelTestId: TestId("modeling-arrange-cancel"),
+                cancel: ArrangeCancel,
+                confirmLabel: ArrangeConfirmLabel,
+                confirmTestId: TestId("modeling-arrange-confirm"),
+                confirmDisabled: string.IsNullOrWhiteSpace(ArrangeDirectionValue),
+                confirm: ArrangeConfirm,
+                confirmVariant: ButtonVariant.Primary);
+
+            body.CloseElement();
+        }));
+        builder.CloseComponent();
+    }
+
+    private Task OnArrangeSubmit(EventArgs args)
+        => string.IsNullOrWhiteSpace(ArrangeDirectionValue) ? Task.CompletedTask : ArrangeConfirm.InvokeAsync();
+
+    /// <summary>
+    /// The phase-4 "Move to container" sheet (U5): the keyboard/tap alternative to dragging a node
+    /// into another lane/pool (WCAG 2.5.7). The candidate list excludes the element's own subtree, and
+    /// the root option turns the element back into a root — the editor commits ONE layout transaction.
+    /// </summary>
+    private void RenderMoveToContainerDialog(RenderTreeBuilder builder)
+    {
+        builder.OpenComponent<TmModal>(0);
+        builder.AddAttribute(1, nameof(TmModal.Show), true);
+        builder.AddAttribute(2, nameof(TmModal.Title), MoveToContainerTitle);
+        builder.AddAttribute(3, nameof(TmModal.Size), ModalSize.Small);
+        builder.AddAttribute(4, nameof(TmModal.ShowFooter), false);
+        builder.AddAttribute(5, nameof(TmModal.ShowDefaultFooterButtons), false);
+        builder.AddAttribute(6, nameof(TmModal.CloseOnOverlayClick), false);
+        builder.AddAttribute(7, nameof(TmModal.CloseOnEscape), true);
+        builder.AddAttribute(8, nameof(TmModal.OnClose), MoveToContainerCancel);
+        builder.AddAttribute(9, nameof(TmModal.Class), "tm-modeling-authoring-dialog");
+        builder.AddAttribute(10, nameof(TmModal.AdditionalAttributes), Attributes("modeling-move-to-container-dialog"));
+        builder.AddAttribute(11, nameof(TmModal.ChildContent), (RenderFragment)(body =>
+        {
+            body.OpenElement(0, "form");
+            body.AddAttribute(1, "class", "tm-modeling-authoring-dialog__body");
+            body.AddAttribute(2, "onsubmit", EventCallback.Factory.Create<EventArgs>(this, OnMoveToContainerSubmit));
+            body.AddEventPreventDefaultAttribute(3, "onsubmit", true);
+
+            RenderField(body, 10, "modeling-move-to-container-target", MoveToContainerLabel, control =>
+            {
+                control.OpenElement(0, "select");
+                control.AddAttribute(1, "data-testid", TestId("modeling-move-to-container-target"));
+                control.AddAttribute(2, "value", MoveToContainerValue);
+                control.AddAttribute(3, "onchange", EventCallback.Factory.Create<ChangeEventArgs>(
+                    this, args => MoveToContainerChanged.InvokeAsync(args.Value?.ToString() ?? string.Empty)));
+
+                control.OpenElement(4, "option");
+                control.AddAttribute(5, "value", string.Empty);
+                control.AddContent(6, MoveToContainerRootLabel);
+                control.CloseElement();
+
+                foreach (var option in MoveToContainerChoices)
+                {
+                    control.OpenElement(7, "option");
+                    control.AddAttribute(8, "value", option.Value);
+                    control.AddContent(9, option.Label);
+                    control.CloseElement();
+                }
+
+                control.CloseElement();
+            });
+
+            RenderActions(
+                body,
+                40,
+                @class: "tm-modeling-authoring-dialog__cancel",
+                cancelLabel: CancelLabel,
+                cancelTestId: TestId("modeling-move-to-container-cancel"),
+                cancel: MoveToContainerCancel,
+                confirmLabel: MoveToContainerConfirmLabel,
+                confirmTestId: TestId("modeling-move-to-container-confirm"),
+                confirmDisabled: false,
+                confirm: MoveToContainerConfirm,
+                confirmVariant: ButtonVariant.Primary);
+
+            body.CloseElement();
+        }));
+        builder.CloseComponent();
+    }
+
+    private Task OnMoveToContainerSubmit(EventArgs args) => MoveToContainerConfirm.InvokeAsync();
 
     // ── Insert element ───────────────────────────────────────────────────────
 

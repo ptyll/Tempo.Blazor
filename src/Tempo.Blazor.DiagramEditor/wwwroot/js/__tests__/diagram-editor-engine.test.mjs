@@ -2043,3 +2043,84 @@ test('exportViewportAsSvg leaves the clone root custom properties unset when the
         'an uncomputed custom property must not be written on the clone root');
     assert.equal(serialized.style.getPropertyValue('--tm-diagram-paper'), '');
 });
+
+// ── Modeling phase 4 review: transitive drag set (A5) + swimlane clamp (A9) ─────────────
+
+/** A fake scene whose `querySelectorAll('g.tm-diagram-node[data-parent-id]')` returns the given
+ *  nodes (each one a `{ id, parentId, parentGroupId }` descriptor). */
+function fakeScene(nodes) {
+    return {
+        querySelectorAll: () => nodes.map(node => ({
+            getAttribute: (name) => {
+                if (name === 'data-node-id') return node.id;
+                if (name === 'data-parent-id') return node.parentId ?? null;
+                if (name === 'data-parent-group-id') return node.parentGroupId ?? null;
+                if (name === 'data-swimlane') return node.swimlane === true ? 'true' : null;
+                return null;
+            },
+        })),
+    };
+}
+
+test('_collectDescendantIds walks the whole subtree (pool > lane > task)', () => {
+    const engine = loadEngine();
+    const inst = {
+        activeGroupId: null,
+        scenePane: fakeScene([
+            { id: 'pool' },
+            { id: 'lane', parentId: 'pool' },
+            { id: 'task', parentId: 'lane' },
+            { id: 'other' },
+        ]),
+    };
+
+    const descendants = Array.from(engine._collectDescendantIds(inst, 'pool'));
+    assert.deepEqual(descendants.sort(), ['lane', 'task'],
+        'a task nested two levels deep travels with its ancestor');
+    assert.deepEqual(Array.from(engine._collectDescendantIds(inst, 'task')), []);
+});
+
+test('_collectDescendantIds terminates on a parent cycle and skips other groups', () => {
+    const engine = loadEngine();
+    const inst = {
+        activeGroupId: 'g1',
+        scenePane: fakeScene([
+            { id: 'a', parentId: 'b', parentGroupId: 'g1' },
+            { id: 'b', parentId: 'a', parentGroupId: 'g1' },
+            { id: 'hidden', parentId: 'a', parentGroupId: 'g2' },
+        ]),
+    };
+
+    const descendants = Array.from(engine._collectDescendantIds(inst, 'a')).sort();
+    assert.deepEqual(descendants, ['b'], 'the cycle closes and the other group is not dragged');
+});
+
+test('_clampChildPosition does NOT clamp a child of a swimlane band', () => {
+    const engine = loadEngine();
+    const inst = { dragNodeIds: [] };
+    const nodes = {
+        task: { 'data-parent-id': 'lane' },
+        lane: { 'data-swimlane': 'true' },
+    };
+    engine._nodeEl = (_inst, id) => (nodes[id] ? { getAttribute: (name) => nodes[id][name] ?? null } : null);
+    engine._nodeRect = () => ({ x: 100, y: 100, w: 200, h: 100 });
+
+    const moved = engine._clampChildPosition(inst, 'task', 1000, 1000);
+    assert.deepEqual({ x: moved.x, y: moved.y }, { x: 1000, y: 1000 },
+        'a BPMN lane is a band the user drags ACROSS (the drop re-resolves the lane in C#)');
+});
+
+test('_clampChildPosition still clamps a child of a logical GROUP container', () => {
+    const engine = loadEngine();
+    const inst = { dragNodeIds: [] };
+    const nodes = {
+        inner: { 'data-parent-id': 'group' },
+        group: {},
+    };
+    engine._nodeEl = (_inst, id) => (nodes[id] ? { getAttribute: (name) => nodes[id][name] ?? null } : null);
+    engine._nodeRect = () => ({ x: 100, y: 100, w: 200, h: 100 });
+
+    const moved = engine._clampChildPosition(inst, 'inner', 1000, 1000);
+    assert.deepEqual({ x: moved.x, y: moved.y }, { x: 104, y: 104 },
+        'a group container keeps its member inside its own bounds');
+});

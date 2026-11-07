@@ -145,6 +145,13 @@
       "description": "Show grid lines on the canvas background."
     },
     {
+      "name": "SnapDocumentOnLoad",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "Whether a LOADED document may be re-snapped to GridSize. Default true (today's behavior: opening the editor normalizes the geometry). A host that persists an AUTHORED layout passes false — a load must never turn into a layout edit, and the interactive snap (drag, drop, resize) keeps working with the configured grid. The gated call sites are OnInitialized, a replaced Document parameter and a JSON import."
+    },
+    {
       "name": "ShowLayersPanel",
       "type": "bool",
       "isRequired": false,

@@ -2,7 +2,7 @@
   "kind": "Class",
   "category": "Modeling",
   "namespace": "Tempo.Blazor.Modeling",
-  "description": "Options used when generating a diagram document from a modeling model.",
+  "description": "Options used when generating a diagram document from a modeling model. `AutoPlaceElementsWithoutViewNode` (default `false`) is the authoring opt-in: with a view selected, an element WITHOUT a stored view node is auto-placed inside its rendered semantic container (after the label band) or on the root grid instead of being hidden by the view — the default keeps the 2.10.0 visibility-gate projection byte-identical for every other consumer (the MCP diagram tool included).",
   "packageId": "Tempo.Blazor.Abstractions",
   "sourcePath": "src/Tempo.Blazor.Abstractions/Modeling/ModelingProviderContracts.cs",
   "documentationStatus": "generated",

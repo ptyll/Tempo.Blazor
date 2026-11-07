@@ -106,9 +106,14 @@ public static class DiagramSvgBuilder
         var layout = stencil?.Layout ?? new DiagramStencilLayout { BackgroundShape = "rectangle" };
         var shape = layout.BackgroundShape ?? "rectangle";
 
-        string fill = layout.Fill ?? node.Style.Fill ?? palette.DefaultNodeFill;
-        string stroke = layout.Stroke ?? node.Style.Stroke ?? palette.DefaultNodeStroke;
-        double strokeWidth = layout.StrokeWidth ?? node.Style.StrokeWidth ?? 1.5;
+        // A node's OWN style wins over the stencil layout (an author who recoloured one node must
+        // see that colour in an export), and the palette is the last resort. A CSS custom-property
+        // reference (the shipped BPMN stencils paint with var(--tm-diagram-paper, …)) cannot resolve
+        // in a standalone SVG — the serialized file has no stylesheet — so a var() paint falls back
+        // to the palette instead of rendering as an invalid (black) paint.
+        string fill = ResolveNodePaint(node.Style.Fill, layout.Fill, palette.DefaultNodeFill);
+        string stroke = ResolveNodePaint(node.Style.Stroke, layout.Stroke, palette.DefaultNodeStroke);
+        double strokeWidth = node.Style.StrokeWidth ?? layout.StrokeWidth ?? 1.5;
 
         sb.Append($"""<g transform="translate({F(ox + node.X)},{F(oy + node.Y)}) rotate({F(node.Rotation)},{F(node.W / 2)},{F(node.H / 2)})">""");
 
@@ -141,6 +146,27 @@ public static class DiagramSvgBuilder
         RenderNodeContent(sb, node, layout, palette);
         sb.Append("</g>");
     }
+
+    /// <summary>
+    /// The paint of one node boundary: the node's own style first, then the stencil layout, then the
+    /// palette. A <c>var(--…)</c> reference (the shipped stencils' token paints) is emitted as the
+    /// palette default — a standalone SVG has no stylesheet to resolve it, and an unresolved paint
+    /// renders black.
+    /// </summary>
+    private static string ResolveNodePaint(string? nodePaint, string? layoutPaint, string palettePaint)
+    {
+        var paint = nodePaint ?? layoutPaint;
+        if (string.IsNullOrWhiteSpace(paint) || IsTokenPaint(paint!))
+        {
+            return palettePaint;
+        }
+
+        return paint!;
+    }
+
+    /// <summary>Whether a paint value references a CSS custom property (unresolvable in an export).</summary>
+    private static bool IsTokenPaint(string paint)
+        => paint.TrimStart().StartsWith("var(", StringComparison.OrdinalIgnoreCase);
 
     private static void RenderNodeContent(StringBuilder sb, DiagramNode node, DiagramStencilLayout layout, DiagramSvgPalette palette)
     {

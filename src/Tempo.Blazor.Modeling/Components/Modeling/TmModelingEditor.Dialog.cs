@@ -85,9 +85,59 @@ public partial class TmModelingEditor
     private EventCallback<bool>? _dialogHistoryCallback;
 
     private EventCallback<bool> DialogHistoryRequestedCallback
-        => CanEditModelStructure
+        => CanEditModelStructure || CanEditModelLayout
             ? _dialogHistoryCallback ??= EventCallback.Factory.Create<bool>(this, HandleDialogHistoryRequestedAsync)
             : default;
+
+
+    // ── Chrome helpers moved out of the markup partial (1200-line ceiling) ──
+
+    /// <summary>The discard-confirmation modal's attributes.</summary>
+    private Dictionary<string, object> BuildDiscardModalAttributes() => new(StringComparer.Ordinal)
+    {
+        ["data-testid"] = TestId("modeling-discard-changes-modal")
+    };
+
+    /// <summary>
+    /// How many element / relationship / layout entries are pending (the discard modal's neutral
+    /// count AND the public observable a host renders — phase 3 review, U6). Counts the structure
+    /// changes (added/removed elements and relationships, parent moves) as well as the view changes
+    /// (node and connection upserts/removals), so a layout-only edit is visible too.
+    /// </summary>
+    private int CountPendingChanges()
+    {
+        var pending = ComputePendingChangeSet();
+        return pending is null
+            ? 0
+            : pending.Elements.Count + pending.Relationships.Count
+                + pending.AddedElements.Count + pending.AddedRelationships.Count
+                + pending.RemovedElementIds.Count + pending.RemovedRelationshipIds.Count
+                + pending.ViewChanges.Sum(view => view.Nodes.Count + view.Connections.Count
+                    + view.RemovedNodeElementIds.Count + view.RemovedConnectionRelationshipIds.Count);
+    }
+
+    /// <summary>
+    /// The dialog DE's toolbar group selection: the FULL preset minus History while the editor owns
+    /// the only undo stack; null (the DE default) for a read-only preview. Review U8: while the host
+    /// persists LAYOUT, the DE's own Layout (browser dagre) menu is removed too — the editor's Arrange
+    /// action in the dialog header is the one deterministic arrangement.
+    /// </summary>
+    private Tempo.Blazor.Components.Diagram.DiagramToolbarGroups? ResolveDialogToolbarGroups()
+    {
+        if (!CanEditModelStructure && !CanEditModelLayout)
+        {
+            return null;
+        }
+
+        var groups = Tempo.Blazor.Components.Diagram.DiagramToolbarGroups.All
+            & ~Tempo.Blazor.Components.Diagram.DiagramToolbarGroups.History;
+        if (CanEditModelLayout)
+        {
+            groups &= ~Tempo.Blazor.Components.Diagram.DiagramToolbarGroups.Layout;
+        }
+
+        return groups;
+    }
 
     private async Task OpenGeneratedDiagramAsync(DiagramDocument document)
     {

@@ -354,6 +354,7 @@
   "TmDemo_Modeling_AllowEditing": "Povoliť úpravu",
   "TmDemo_Modeling_LastChangeSet": "Posledný change set (OnModelChanged)",
   "TmDemo_Modeling_Pending": "Neuložené zmeny: {0}",
+  "TmDemo_Modeling_ReloadEditor": "Znova načítať editor",
   "TmDemo_Modeling_SaveMode": "Režim ukladania",
   "TmDemo_Modeling_SaveModeImmediate": "Okamžitý",
   "TmDemo_Modeling_SaveModeManual": "Ručný",

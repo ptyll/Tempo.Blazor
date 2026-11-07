@@ -357,6 +357,10 @@
 > (Fáze 15b). Contracts: [docs/modeling-editor.md](docs/modeling-editor.md),
 > [docs/diagram-editor.md](docs/diagram-editor.md).
 
+### Changed
+
+- **DiagramEditor: a swimlane band no longer clamps the node dragged across it (Modeling authoring phase 4).** `_clampChildPosition` pinned every child inside its parent's rectangle, so a BPMN task could never leave its lane. A node whose rendered parent carries `data-swimlane="true"` (a pool/lane) is now left unclamped — the drop re-resolves the container in C# (the modeling layout diff) — while a logical GROUP container still clamps its members. `TmDiagramCanvas` emits `data-swimlane` ONLY for a node with swimlane data (a pool/lane), never for an ordinary frame, and the node tests pin both halves (`npm run test:diagram-editor`). Three more DiagramEditor changes ride along, all token/CSS level: (1) the BPMN type markers are visible again — the stencil SVG (`__svg-bg`) that carries the task type icon, the event ring and the gateway marker is re-shown for `bpmn2.*` stencils and the native primitive paints `fill: none; stroke: none` for them, so nothing is painted twice; (2) the swimlane header band, its separators and the node collapse toggle paint with the page PAPER tokens (`--tm-paper-backdrop`, `--tm-paper-ink`, `--tm-paper-border`, `--tm-paper`) instead of the themed surface tokens, so a dark chrome keeps the band readable (≥ 4.5:1); (3) the pool and lane stencil SVG is the outer BAND rectangle only (the component paints the header and the separators). The BPMN node fill/stroke now resolve through the canvas-scoped `--tm-diagram-paper` / `--tm-diagram-node-stroke` custom properties, which the SVG exporter copies onto the serialized clone, and the server-side `DiagramSvgBuilder` resolves a `var(...)` paint to the palette (a standalone SVG has no stylesheet) with the node's own `Style.Fill`/`Stroke` winning over the stencil layout.
+
 ### Demo, documentation and E2E — the app shell series (plan 5d396592, phase 6)
 
 The frame series ships with a real demo page and a browser-proven contract instead of a unit-tested
