@@ -53,15 +53,15 @@
 }
 
 /* ── Text colour (via data-color) ────────────────────────────────────────── */
-.tm-notion-bullet__body[data-color="gray"]    { color: var(--tm-notion-color-gray); }
-.tm-notion-bullet__body[data-color="brown"]   { color: var(--tm-notion-color-brown); }
-.tm-notion-bullet__body[data-color="orange"]  { color: var(--tm-notion-color-orange); }
-.tm-notion-bullet__body[data-color="yellow"]  { color: var(--tm-notion-color-yellow); }
-.tm-notion-bullet__body[data-color="green"]   { color: var(--tm-notion-color-green); }
-.tm-notion-bullet__body[data-color="blue"]    { color: var(--tm-notion-color-blue); }
-.tm-notion-bullet__body[data-color="purple"]  { color: var(--tm-notion-color-purple); }
-.tm-notion-bullet__body[data-color="pink"]    { color: var(--tm-notion-color-pink); }
-.tm-notion-bullet__body[data-color="red"]     { color: var(--tm-notion-color-red); }
+.tm-notion-bullet__body[data-color="gray"]    { color: var(--tm-notion-option-text-gray-ink); }
+.tm-notion-bullet__body[data-color="brown"]   { color: var(--tm-notion-option-text-brown-ink); }
+.tm-notion-bullet__body[data-color="orange"]  { color: var(--tm-notion-option-text-orange-ink); }
+.tm-notion-bullet__body[data-color="yellow"]  { color: var(--tm-notion-option-text-yellow-ink); }
+.tm-notion-bullet__body[data-color="green"]   { color: var(--tm-notion-option-text-green-ink); }
+.tm-notion-bullet__body[data-color="blue"]    { color: var(--tm-notion-option-text-blue-ink); }
+.tm-notion-bullet__body[data-color="purple"]  { color: var(--tm-notion-option-text-purple-ink); }
+.tm-notion-bullet__body[data-color="pink"]    { color: var(--tm-notion-option-text-pink-ink); }
+.tm-notion-bullet__body[data-color="red"]     { color: var(--tm-notion-option-text-red-ink); }
 
 /* ── Alignment ───────────────────────────────────────────────────────────── */
 .tm-notion-bullet__body.tm-notion-align-center { text-align: center; }

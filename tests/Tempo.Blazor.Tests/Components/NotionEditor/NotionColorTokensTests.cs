@@ -58,9 +58,9 @@ public sealed class NotionColorTokensTests
     }
 
     [Theory]
-    [InlineData("brown", "var(--tm-notion-option-brown-solid)")]
-    [InlineData("Red", "var(--tm-notion-option-red-solid)")]
-    [InlineData("#e03e3e", "var(--tm-notion-option-red-solid)")]
+    [InlineData("brown", "var(--tm-notion-option-brown-swatch)")]
+    [InlineData("Red", "var(--tm-notion-option-red-swatch)")]
+    [InlineData("#e03e3e", "var(--tm-notion-option-red-swatch)")]
     public void OptionSolid_MapsAPaletteNameOrLegacyHex(string stored, string expected)
     {
         NotionColorTokens.OptionSolid(stored).Should().Be(expected);

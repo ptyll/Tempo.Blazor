@@ -196,7 +196,7 @@ public partial class TmNotionTableRowBlock : ComponentBase, IAsyncDisposable
         var paint = NotionColorTokens.Name(value);
         if (paint is not null && NotionColorTokens.InlineHex(paint, background: false) is not null)
         {
-            declarations.Add($"{name}:var(--tm-notion-color-{paint.ToLowerInvariant()}-bg)");
+            declarations.Add($"{name}:var(--tm-notion-option-text-{paint.ToLowerInvariant()}-wash)");
             return;
         }
 

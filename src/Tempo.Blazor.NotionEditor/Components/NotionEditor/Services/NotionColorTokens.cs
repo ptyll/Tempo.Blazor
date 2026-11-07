@@ -3,7 +3,7 @@ namespace Tempo.Blazor.Components.NotionEditor.Services;
 /// <summary>
 /// Maps a stored block colour onto the data-palette token names. Documents saved before
 /// Fáze 2 store the picker hex; new documents store the colour name. Both render through
-/// <c>--tm-notion-color-*</c>, so the theme — not a baked hex — decides the colour.
+/// <c>--tm-notion-option-text-*</c>, so the theme — not a baked hex — decides the colour.
 /// </summary>
 public static class NotionColorTokens
 {
@@ -66,16 +66,16 @@ public static class NotionColorTokens
     }
 
     /// <summary>
-    /// A select/status option colour as <c>var(--tm-notion-option-{name}-solid)</c>.
+    /// A select/status option colour as <c>var(--tm-notion-option-{name}-swatch)</c>.
     /// A legacy hex maps through <see cref="Name"/>; anything else falls back to the theme primary.
     /// </summary>
-    public static string OptionSolid(string? stored) => OptionToken(stored, "solid") ?? "var(--tm-color-primary)";
+    public static string OptionSolid(string? stored) => OptionToken(stored, "swatch") ?? "var(--tm-color-primary)";
 
-    /// <summary>The option wash (<c>--tm-notion-option-{name}-bg</c>), or the muted surface.</summary>
-    public static string OptionWash(string? stored) => OptionToken(stored, "bg") ?? "var(--tm-bg-muted)";
+    /// <summary>The option wash (<c>--tm-notion-option-{name}-wash</c>), or the muted surface.</summary>
+    public static string OptionWash(string? stored) => OptionToken(stored, "wash") ?? "var(--tm-bg-muted)";
 
-    /// <summary>The option ink (<c>--tm-notion-option-{name}-fg</c>), or the secondary text.</summary>
-    public static string OptionInk(string? stored) => OptionToken(stored, "fg") ?? "var(--tm-text-secondary)";
+    /// <summary>The option ink (<c>--tm-notion-option-{name}-ink</c>), or the secondary text.</summary>
+    public static string OptionInk(string? stored) => OptionToken(stored, "ink") ?? "var(--tm-text-secondary)";
 
     private static string? OptionToken(string? stored, string suffix)
     {

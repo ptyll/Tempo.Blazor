@@ -90,7 +90,7 @@
     max-width: min(calc(var(--tm-space-16, 4rem) * 3), var(--tm-notion-status-max-label-width));
     padding: calc(var(--tm-space-1) / 2) var(--tm-space-2);
     border-radius: var(--tm-radius-full);
-    border: var(--tm-notion-border-width, 1px) solid var(--tm-status-border);
+    border: var(--tm-border-width, 1px) solid var(--tm-status-border);
     background: var(--tm-status-bg);
     color: var(--tm-status-text);
     font-size: 0.78em;
@@ -128,9 +128,9 @@
 }
 
 .tm-notion-page ::deep .tm-notion-status--purple {
-    --tm-status-bg: var(--tm-notion-bg-purple);
-    --tm-status-text: var(--tm-notion-text-purple);
-    --tm-status-border: var(--tm-notion-text-purple);
+    --tm-status-bg: var(--tm-notion-option-text-purple-wash);
+    --tm-status-text: var(--tm-notion-option-text-purple-ink);
+    --tm-status-border: var(--tm-notion-option-text-purple-ink);
 }
 
 .tm-notion-page ::deep .tm-notion-status__label {

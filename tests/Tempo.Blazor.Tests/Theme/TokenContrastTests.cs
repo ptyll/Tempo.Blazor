@@ -1141,12 +1141,12 @@ public sealed partial class TokenContrastTests
 
         foreach (var name in new[] { "gray", "red", "orange", "yellow", "green", "blue", "purple", "pink", "brown" })
         {
-            var ink = ThemeCss.ResolveColour($"var(--tm-notion-option-{name}-fg)", tokens);
-            var wash = ThemeCss.ResolveColour($"var(--tm-notion-option-{name}-bg)", tokens);
+            var ink = ThemeCss.ResolveColour($"var(--tm-notion-option-{name}-ink)", tokens);
+            var wash = ThemeCss.ResolveColour($"var(--tm-notion-option-{name}-wash)", tokens);
             ThemeCss.Contrast(ink, wash).Should().BeGreaterThanOrEqualTo(
                 4.5, "option pill text {0}, {1} {2}", name, indigo ? "indigo" : "default", dark ? "dark" : "light");
 
-            var solid = ThemeCss.ResolveColour($"var(--tm-notion-option-{name}-solid)", tokens);
+            var solid = ThemeCss.ResolveColour($"var(--tm-notion-option-{name}-swatch)", tokens);
             ThemeCss.Contrast("#ffffff", solid).Should().BeGreaterThanOrEqualTo(
                 4.5, "white text on the solid swatch {0}, {1} {2}", name, indigo ? "indigo" : "default", dark ? "dark" : "light");
         }

@@ -23,70 +23,6 @@
     --tm-notion-page-padding-top:      3.5rem;
     --tm-notion-page-padding-bottom:   8rem;
     --tm-notion-header-height:         2.75rem;
-    /* deprecated alias – remove by Fáze 10 */
-    --tm-notion-option-gray-bg: var(--tm-notion-option-gray-wash);
-    --tm-notion-option-gray-fg: var(--tm-notion-option-gray-ink);
-    --tm-notion-option-gray-solid: var(--tm-notion-option-gray-swatch);
-    --tm-notion-option-text-gray: var(--tm-notion-option-text-gray-ink);
-    --tm-notion-option-text-gray-bg: var(--tm-notion-option-text-gray-wash);
-    --tm-notion-color-gray: var(--tm-notion-option-text-gray-ink);
-    --tm-notion-color-gray-bg: var(--tm-notion-option-text-gray-wash);
-    --tm-notion-option-red-bg: var(--tm-notion-option-red-wash);
-    --tm-notion-option-red-fg: var(--tm-notion-option-red-ink);
-    --tm-notion-option-red-solid: var(--tm-notion-option-red-swatch);
-    --tm-notion-option-text-red: var(--tm-notion-option-text-red-ink);
-    --tm-notion-option-text-red-bg: var(--tm-notion-option-text-red-wash);
-    --tm-notion-color-red: var(--tm-notion-option-text-red-ink);
-    --tm-notion-color-red-bg: var(--tm-notion-option-text-red-wash);
-    --tm-notion-option-orange-bg: var(--tm-notion-option-orange-wash);
-    --tm-notion-option-orange-fg: var(--tm-notion-option-orange-ink);
-    --tm-notion-option-orange-solid: var(--tm-notion-option-orange-swatch);
-    --tm-notion-option-text-orange: var(--tm-notion-option-text-orange-ink);
-    --tm-notion-option-text-orange-bg: var(--tm-notion-option-text-orange-wash);
-    --tm-notion-color-orange: var(--tm-notion-option-text-orange-ink);
-    --tm-notion-color-orange-bg: var(--tm-notion-option-text-orange-wash);
-    --tm-notion-option-yellow-bg: var(--tm-notion-option-yellow-wash);
-    --tm-notion-option-yellow-fg: var(--tm-notion-option-yellow-ink);
-    --tm-notion-option-yellow-solid: var(--tm-notion-option-yellow-swatch);
-    --tm-notion-option-text-yellow: var(--tm-notion-option-text-yellow-ink);
-    --tm-notion-color-yellow: var(--tm-notion-option-text-yellow-ink);
-    --tm-notion-color-yellow-bg: var(--tm-notion-option-text-yellow-wash);
-    --tm-notion-option-text-yellow-bg: var(--tm-notion-option-text-yellow-wash);
-    --tm-notion-option-green-bg: var(--tm-notion-option-green-wash);
-    --tm-notion-option-green-fg: var(--tm-notion-option-green-ink);
-    --tm-notion-option-green-solid: var(--tm-notion-option-green-swatch);
-    --tm-notion-option-text-green: var(--tm-notion-option-text-green-ink);
-    --tm-notion-color-green: var(--tm-notion-option-text-green-ink);
-    --tm-notion-color-green-bg: var(--tm-notion-option-text-green-wash);
-    --tm-notion-option-text-green-bg: var(--tm-notion-option-text-green-wash);
-    --tm-notion-option-blue-bg: var(--tm-notion-option-blue-wash);
-    --tm-notion-option-blue-fg: var(--tm-notion-option-blue-ink);
-    --tm-notion-option-blue-solid: var(--tm-notion-option-blue-swatch);
-    --tm-notion-option-text-blue: var(--tm-notion-option-text-blue-ink);
-    --tm-notion-color-blue: var(--tm-notion-option-text-blue-ink);
-    --tm-notion-color-blue-bg: var(--tm-notion-option-text-blue-wash);
-    --tm-notion-option-text-blue-bg: var(--tm-notion-option-text-blue-wash);
-    --tm-notion-option-purple-bg: var(--tm-notion-option-purple-wash);
-    --tm-notion-option-purple-fg: var(--tm-notion-option-purple-ink);
-    --tm-notion-option-purple-solid: var(--tm-notion-option-purple-swatch);
-    --tm-notion-option-text-purple: var(--tm-notion-option-text-purple-ink);
-    --tm-notion-color-purple: var(--tm-notion-option-text-purple-ink);
-    --tm-notion-color-purple-bg: var(--tm-notion-option-text-purple-wash);
-    --tm-notion-option-text-purple-bg: var(--tm-notion-option-text-purple-wash);
-    --tm-notion-option-pink-bg: var(--tm-notion-option-pink-wash);
-    --tm-notion-option-pink-fg: var(--tm-notion-option-pink-ink);
-    --tm-notion-option-pink-solid: var(--tm-notion-option-pink-swatch);
-    --tm-notion-option-text-pink: var(--tm-notion-option-text-pink-ink);
-    --tm-notion-color-pink: var(--tm-notion-option-text-pink-ink);
-    --tm-notion-color-pink-bg: var(--tm-notion-option-text-pink-wash);
-    --tm-notion-option-text-pink-bg: var(--tm-notion-option-text-pink-wash);
-    --tm-notion-option-brown-bg: var(--tm-notion-option-brown-wash);
-    --tm-notion-option-brown-fg: var(--tm-notion-option-brown-ink);
-    --tm-notion-option-brown-solid: var(--tm-notion-option-brown-swatch);
-    --tm-notion-option-text-brown: var(--tm-notion-option-text-brown-ink);
-    --tm-notion-color-brown: var(--tm-notion-option-text-brown-ink);
-    --tm-notion-color-brown-bg: var(--tm-notion-option-text-brown-wash);
-    --tm-notion-option-text-brown-bg: var(--tm-notion-option-text-brown-wash);
     --tm-notion-topbar-height:         var(--tm-notion-header-height);
     --tm-notion-workspace-bg:          var(--tm-bg-workspace);
     --tm-notion-page-surface:          var(--tm-bg-surface);
@@ -188,36 +124,42 @@
     --tm-notion-option-text-pink-wash:    #f4dfeb;
     --tm-notion-option-text-brown-wash:   #e9e5e3;
 
-    /* deprecated alias – remove by Fáze 10 */
-    --tm-notion-text-red:     var(--tm-notion-option-text-red);
-    --tm-notion-text-orange:  var(--tm-notion-option-text-orange);
-    --tm-notion-text-yellow:  var(--tm-notion-option-text-yellow);
-    --tm-notion-text-green:   var(--tm-notion-option-text-green);
-    --tm-notion-text-blue:    var(--tm-notion-option-text-blue);
-    --tm-notion-text-purple:  var(--tm-notion-option-text-purple);
-    --tm-notion-text-pink:    var(--tm-notion-option-text-pink);
-    --tm-notion-text-gray:    var(--tm-notion-option-text-gray);
-    --tm-notion-text-brown:   var(--tm-notion-option-text-brown);
-    /* deprecated alias – remove by Fáze 10 */
-    --tm-notion-bg-red:     var(--tm-notion-option-text-red-bg);
-    --tm-notion-bg-orange:  var(--tm-notion-option-text-orange-bg);
-    --tm-notion-bg-yellow:  var(--tm-notion-option-text-yellow-bg);
-    --tm-notion-bg-green:   var(--tm-notion-option-text-green-bg);
-    --tm-notion-bg-blue:    var(--tm-notion-option-text-blue-bg);
-    --tm-notion-bg-purple:  var(--tm-notion-option-text-purple-bg);
-    --tm-notion-bg-pink:    var(--tm-notion-option-text-pink-bg);
-    --tm-notion-bg-gray:    var(--tm-notion-option-text-gray-bg);
-    --tm-notion-bg-brown:   var(--tm-notion-option-text-brown-bg);
     --tm-notion-bg-default: transparent;
 
     /* ── Borders ──────────────────────────────────────────────── */
     --tm-notion-border:         var(--tm-border-color);
-    /* deprecated alias – remove by Fáze 10 */
-    --tm-notion-border-width:   var(--tm-border-width);
     --tm-notion-border-quote:   var(--tm-border-color-strong);
     --tm-notion-border-code:    var(--tm-border-color);
     --tm-notion-border-table:   var(--tm-border-color);
     --tm-notion-border-divider: var(--tm-border-color);
+
+    /* ── Comment entry / composer (one surface, three panels) ── */
+    --tm-notion-comment-avatar: 26px;
+    --tm-notion-comment-gap: 9px;
+    --tm-notion-comment-indent-gap: 9px;
+    --tm-notion-comment-meta-gap: 5px;
+    --tm-notion-comment-body-gap: 3px;
+    --tm-notion-comment-author-size: 12.5px;
+    --tm-notion-comment-text-size: 13px;
+    --tm-notion-comment-action-gap: 3px;
+    --tm-notion-comment-action-pad: 2px 5px;
+    --tm-notion-comment-action-size: 11px;
+    --tm-notion-comment-edit-gap: 5px;
+    --tm-notion-comment-edit-pad: 5px 7px;
+    --tm-notion-comment-edit-radius: 4px;
+    --tm-notion-comment-edit-size: 12.5px;
+    --tm-notion-comment-btn-pad: 3px 10px;
+    --tm-notion-comment-btn-size: 11.5px;
+    --tm-notion-comment-reply-pad: 9px 12px;
+    --tm-notion-comment-reply-gap: 5px;
+    --tm-notion-comment-input-pad: 6px 8px;
+    --tm-notion-comment-send-gap: 4px;
+    --tm-notion-comment-send-pad: 4px 12px;
+    --tm-notion-comment-send-size: 12px;
+    --tm-notion-comment-quote-margin: 3px 0;
+    --tm-notion-comment-quote-pad: 5px 8px;
+    --tm-notion-comment-quote-size: 12.5px;
+    --tm-notion-comment-avatar-font: 11px;
 
     /* ── Interactive ──────────────────────────────────────────── */
     --tm-notion-checkbox-color: var(--tm-color-primary);

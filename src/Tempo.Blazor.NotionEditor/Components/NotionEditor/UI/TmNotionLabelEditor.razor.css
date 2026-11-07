@@ -23,7 +23,7 @@
     align-items: center;
     max-width: 100%;
     min-height: var(--tm-space-7);
-    border: var(--tm-notion-border-width, 1px) solid var(--tm-border-color);
+    border: var(--tm-border-width, 1px) solid var(--tm-border-color);
     border-radius: var(--tm-radius-full);
     background: var(--tm-bg-surface-secondary);
     color: var(--tm-color-primary);
@@ -87,7 +87,7 @@
     flex: 1;
     min-width: 160px;
     min-height: var(--tm-space-8);
-    border: var(--tm-notion-border-width, 1px) solid var(--tm-border-color);
+    border: var(--tm-border-width, 1px) solid var(--tm-border-color);
     border-radius: var(--tm-radius-sm);
     background: var(--tm-bg-surface);
     color: var(--tm-text-primary);
@@ -106,7 +106,7 @@
 .tm-notion-labels__suggestion,
 .tm-notion-labels__filter-close,
 .tm-notion-labels__filter-page {
-    border: var(--tm-notion-border-width, 1px) solid var(--tm-border-color);
+    border: var(--tm-border-width, 1px) solid var(--tm-border-color);
     border-radius: var(--tm-radius-sm);
     background: var(--tm-bg-surface);
     color: var(--tm-text-primary);
@@ -132,7 +132,7 @@
     gap: var(--tm-space-1);
     width: min(100%, 360px);
     padding: var(--tm-space-1);
-    border: var(--tm-notion-border-width, 1px) solid var(--tm-border-color);
+    border: var(--tm-border-width, 1px) solid var(--tm-border-color);
     border-radius: var(--tm-radius-md);
     background: var(--tm-bg-surface);
     box-shadow: var(--tm-shadow-md);
@@ -155,7 +155,7 @@
     gap: var(--tm-space-2);
     width: min(100%, 420px);
     padding: var(--tm-space-3);
-    border: var(--tm-notion-border-width, 1px) solid var(--tm-border-color);
+    border: var(--tm-border-width, 1px) solid var(--tm-border-color);
     border-radius: var(--tm-radius-md);
     background: var(--tm-bg-surface);
     box-shadow: var(--tm-shadow-md);

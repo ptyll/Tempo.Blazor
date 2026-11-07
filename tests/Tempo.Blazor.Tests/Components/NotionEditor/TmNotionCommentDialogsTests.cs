@@ -190,7 +190,10 @@ public sealed class TmNotionCommentDialogsTests : LocalizationTestBase
     [Fact]
     public void BlockComment_ComposerCss_CoarseHidesHintAndGrowsSubmit_DisabledUsesSurfaces()
     {
-        var css = StripComments(File.ReadAllText(Path.Combine(NotionUiPath(), "TmNotionBlockCommentPanel.razor.css")));
+        // The coarse-pointer and disabled-send rules moved to the shared package stylesheet
+        // (one copy for the three panels) in the phase-10 shrink.
+        var css = StripComments(File.ReadAllText(Path.Combine(
+            NotionUiPath(), "..", "..", "..", "wwwroot", "css", "tempo-blazor-notion-editor.css")));
 
         var coarse = System.Text.RegularExpressions.Regex.Match(css,
             @"@media \(pointer: coarse\)\s*\{(?<body>.*)\}",
@@ -201,7 +204,7 @@ public sealed class TmNotionCommentDialogsTests : LocalizationTestBase
         coarse.Groups["body"].Value.Should().Contain("min-height: 44px");
 
         var disabled = System.Text.RegularExpressions.Regex.Match(css,
-            @"tm-nbcp__reply-send:disabled\s*\{(?<body>[^}]*)\}");
+            @"tm-nbcp__reply-send:disabled[^{]*\{(?<body>[^}]*)\}");
         disabled.Success.Should().BeTrue();
         disabled.Groups["body"].Value.Should().Contain("var(--tm-bg-muted)");
         disabled.Groups["body"].Value.Should().Contain("var(--tm-text-disabled)");

@@ -236,7 +236,7 @@
     width: 100%;
 }
 
-@media (max-width: 400px), (pointer: coarse) {
+@media (pointer: coarse) {
     .tm-nps__footer-hint {
         display: none;
     }

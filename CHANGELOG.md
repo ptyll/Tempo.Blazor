@@ -2,6 +2,31 @@
 
 ## 2.10.0 (unreleased)
 
+- **NotionEditor redesign (phases 1–9), consolidated.** The editor is a `TmEditorShell`: `LayoutMode` (`Auto`, desktop ≥ 1024 / tablet 640–1023 / mobile < 640 of the editor container), `Chrome` (`Full` / `Minimal` / `None`), `InspectorContent` (null renders no right region), `ShellPanelPresentation` (`Overlay` default, `Main` replaces the page) and `CommentPresentation` (`Auto` default: popover on desktop, `TmModal` on touch/narrow). The contract, frozen `data-testid`s and `data-tm-group` values live in [docs/notion-editor.md](docs/notion-editor.md). Each breaking item below already has its before/after; the index is the map.
+
+### NotionEditor 2.10.0 — Breaking / Migration index
+
+| Change | Before | After | Detail |
+|---|---|---|---|
+| Palette aliases | `--tm-notion-option-*-bg/fg/solid`, `--tm-notion-color-*`, `--tm-notion-text-{color}`, `--tm-notion-bg-{color}`, `--tm-notion-border-width` | `--tm-notion-option-*-wash/ink/swatch`, `--tm-notion-option-text-*-ink/wash`, `--tm-border-width` | phase 10, below |
+| Pickers | `Shared/TmNotionEmojiPicker`, `UI/TmNotionColorPicker` | `UI/TmNotionEmojiPicker`; the inline toolbar owns colour | phase 6 |
+| Page comments | `TmNotionPageCommentSection` | `TmNotionPageCommentPanel` | phase 5 |
+| Top bar DOM | flat `.tm-notion-topbar` buttons | `TmToolbar`, `data-tm-group` `navigation \| collaboration \| tools \| modes \| primary` | phase 3 |
+| Dialogs and menus | package backdrops and z-index bands | core `TmModal` / `TmOverlayPanel` / `TmSidePanel` | phases 4, 6, 7 |
+| Database toolbar | always-visible `.tm-db__tool-btn` row | `data-tm-group` `views \| tools \| primary`; compact tools live in More | phase 8 |
+| Timeline classes | `.tm-dbt` / `.tm-dbt__*` | `.tm-dbtl` / `.tm-dbtl__*` (the table keeps `.tm-dbt`) | phase 9 |
+| Comment default | bubble at every width | `CommentPresentation=Auto` | phase 4 |
+| Calendar week | always Monday | `CultureInfo` `FirstDayOfWeek` | phase 9 |
+| Bulk target | one click executed | two-step: select, then the footer confirms | phase 4 |
+| Media insert | a pick inserted | a pick selects; Insert or a double-click confirms | phase 7 |
+| History compare | click previewed and selected | click previews; the checkbox picks; Compare orders by `EditedAt` | phase 7 |
+| Relative time | eight package keys | `TmRelativeTime.Resolve` and `TmRelativeTime_*` | phase 9 |
+
+- **Breaking: NotionEditor palette aliases removed (phase 10).** The "remove by Fáze 10" aliases and their dark-theme copies are gone. A host stylesheet that named one now names the canonical token.
+  - **Before:** `color: var(--tm-notion-color-red); background: var(--tm-notion-bg-red); border-width: var(--tm-notion-border-width);`
+  - **After:** `color: var(--tm-notion-option-text-red-ink); background: var(--tm-notion-option-text-red-wash); border-width: var(--tm-border-width);`
+  - Chip roles: `--tm-notion-option-{color}-wash` / `-ink` / `-swatch` (was `-bg` / `-fg` / `-solid`). `{color}` is `gray | red | orange | yellow | green | blue | purple | pink | brown`.
+
 - **Breaking: NotionEditor database board, calendar and timeline (phase 9).**
   - **Timeline classes.** Before: the timeline root and its children shared the table prefix (`.tm-dbt`, `.tm-dbt__zoom-group`, `.tm-dbt__gantt`, `.tm-dbt__bar`, `.tm-dbt__bar-resize`). After: the timeline is `.tm-dbtl` and every timeline child is `.tm-dbtl__*` (`.tm-dbtl__zoom-group`, `.tm-dbtl__gantt`, `.tm-dbtl__bar`, `.tm-dbtl__bar-resize`). The table keeps `.tm-dbt` / `.tm-dbt__*`. A drag adds `.tm-dbtl--dragging` (was `.tm-dbt--dragging`).
   - **Calendar week start.** Before: the grid always started on Monday. After: it follows `CultureInfo.CurrentCulture.DateTimeFormat.FirstDayOfWeek` (en-US Sunday, cs-CZ Monday). To keep Monday under an en-US UI, set the current culture's `DateTimeFormat.FirstDayOfWeek = DayOfWeek.Monday` before the view renders.
@@ -1430,7 +1455,7 @@ findings table and the per-leg results) and the two perf runs
   <span data-color="red" data-bg="red">…</span>
   ```
 
-- **Notion editor (phase 6, NO4): one emoji picker, no colour picker.** `Shared/TmNotionEmojiPicker` and `UI/TmNotionColorPicker` are deleted. The only emoji picker is `UI/TmNotionEmojiPicker`; the callout and the page header both use it. The inline toolbar's colour panel is the only palette, and it paints from `--tm-notion-color-*`.
+- **Notion editor (phase 6, NO4): one emoji picker, no colour picker.** `Shared/TmNotionEmojiPicker` and `UI/TmNotionColorPicker` are deleted. The only emoji picker is `UI/TmNotionEmojiPicker`; the callout and the page header both use it. The inline toolbar's colour panel is the only palette. Since phase 10 it paints `--tm-notion-option-text-{color}-ink` / `-wash` — the `--tm-notion-color-*` aliases this note first named are gone (see the phase-10 token entry).
 
   ```razor
   @* before: the callout used the Shared picker *@
@@ -1459,7 +1484,7 @@ findings table and the per-leg results) and the two perf runs
 
   Removed DOM classes: emoji/color backdrops, `.tm-nsp__scrim`, `.tm-nsp__dialog`, `.tm-ntg__backdrop`, `.tm-nps-backdrop`. Page search, the template gallery and the shortcuts panel render inside `TmModal` (`tm-nps-host`, `tm-ntg-host`, `tm-nsp-host`). The gallery tablist is a group with `aria-pressed`. Avatars use `TmAvatar`.
 
-  **Inline text colour is a hex on the wire, a token on the swatch.** `document.execCommand` does not keep a CSS colour name, so the toolbar paints `var(--tm-notion-color-{name})` and sends the allowlisted legacy hex from `NotionColorTokens.InlineHex(name, background)`. A host that called `applyInlineColor` with `"brown"` must send that hex; the stored span is unchanged.
+  **Inline text colour is a hex on the wire, a token on the swatch.** `document.execCommand` does not keep a CSS colour name, so the toolbar paints `var(--tm-notion-option-text-{name}-ink)` and sends the allowlisted legacy hex from `NotionColorTokens.InlineHex(name, background)`. A host that called `applyInlineColor` with `"brown"` must send that hex; the stored span is unchanged.
 
   ```html
   <!-- before: the toolbar handed execCommand the palette name, which the browser dropped -->

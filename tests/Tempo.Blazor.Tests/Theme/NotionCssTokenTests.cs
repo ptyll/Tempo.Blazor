@@ -7,7 +7,7 @@ namespace Tempo.Blazor.Tests.Theme;
 /// Token gate for the NotionEditor package (redesign Fáze 2). Every scoped sheet and every
 /// <c>_notion-*.css</c> reads a core token or a <c>--tm-notion-*</c> knob the package declares.
 /// A colour literal is allowed only as a data-palette entry
-/// (<c>--tm-notion-option-*</c> / <c>--tm-notion-color-*</c>) in the two palette files.
+/// (<c>--tm-notion-option-*</c> / <c>--tm-notion-option-text-*</c>) in the two palette files.
 /// </summary>
 public sealed class NotionCssTokenTests
 {
@@ -211,10 +211,10 @@ public sealed class NotionCssTokenTests
 
         foreach (var name in new[] { "gray", "red", "orange", "yellow", "green", "blue", "purple", "pink", "brown" })
         {
-            var ink = ThemeCss.ResolveColour($"var(--tm-notion-color-{name})", tokens);
+            var ink = ThemeCss.ResolveColour($"var(--tm-notion-option-text-{name}-ink)", tokens);
             ThemeCss.Contrast(ink, page).Should().BeGreaterThanOrEqualTo(
                 4.5,
-                "--tm-notion-color-{0} on --tm-notion-bg must hold AA in dark ({1})",
+                "--tm-notion-option-text-{0}-ink on --tm-notion-bg must hold AA in dark ({1})",
                 name, indigo ? "indigo" : "default");
         }
     }

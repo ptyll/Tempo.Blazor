@@ -266,7 +266,7 @@
                 {
                     var colorName = textName;
                     <button class="tm-notion-inline-toolbar__color-swatch @(colorName is null ? "tm-notion-inline-toolbar__color-swatch--default" : "") @(IsCurrentText(colorName) ? "tm-notion-inline-toolbar__color-swatch--current" : "")"
-                            style="@(colorName is not null ? $"background:var(--tm-notion-color-{colorName})" : "")"
+                            style="@(colorName is not null ? $"background:var(--tm-notion-option-text-{colorName}-ink)" : "")"
                             aria-label="@Loc[$"TmNotionInlineToolbar_Color{char.ToUpper(name[0])}{name[1..]}"]"
                             aria-pressed="@(IsCurrentText(colorName) ? "true" : "false")"
                             title="@Loc[$"TmNotionInlineToolbar_Color{char.ToUpper(name[0])}{name[1..]}"]"
@@ -287,7 +287,7 @@
                 {
                     var colorName = bgName;
                     <button class="tm-notion-inline-toolbar__color-swatch @(colorName is null ? "tm-notion-inline-toolbar__color-swatch--default" : "") @(IsCurrentBackground(colorName) ? "tm-notion-inline-toolbar__color-swatch--current" : "")"
-                            style="@(colorName is not null ? $"background:var(--tm-notion-color-{colorName}-bg)" : "")"
+                            style="@(colorName is not null ? $"background:var(--tm-notion-option-text-{colorName}-wash)" : "")"
                             data-testid="@TestId($"notion-inline-bg-{name}")"
                             aria-label="@Loc[BgKey(name)]"
                             aria-pressed="@(IsCurrentBackground(colorName) ? "true" : "false")"

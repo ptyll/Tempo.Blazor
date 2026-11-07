@@ -54,8 +54,8 @@ public sealed class TmNotionInlineToolbarColorTests : LocalizationTestBase
 
         var brown = cut.FindAll(".tm-notion-inline-toolbar__color-swatch")
             .First(button => button.GetAttribute("title") == "Brown"
-                && button.GetAttribute("style")?.Contains("--tm-notion-color-brown-bg") != true);
-        brown.GetAttribute("style").Should().Contain("var(--tm-notion-color-brown)");
+                && button.GetAttribute("style")?.Contains("--tm-notion-option-text-brown-wash") != true);
+        brown.GetAttribute("style").Should().Contain("var(--tm-notion-option-text-brown-ink)");
 
         var call = JSInterop.SetupVoid("tmNotionEditor.applyInlineColor", _ => true);
         brown.Click(new MouseEventArgs());
@@ -73,7 +73,7 @@ public sealed class TmNotionInlineToolbarColorTests : LocalizationTestBase
         cut.Find("button[title='Color']").Click();
 
         var brown = cut.FindAll(".tm-notion-inline-toolbar__color-swatch")
-            .First(button => button.GetAttribute("style")?.Contains("--tm-notion-color-brown-bg") == true);
+            .First(button => button.GetAttribute("style")?.Contains("--tm-notion-option-text-brown-wash") == true);
 
         var call = JSInterop.SetupVoid("tmNotionEditor.applyInlineColor", _ => true);
         brown.Click(new MouseEventArgs());
@@ -95,7 +95,7 @@ public sealed class TmNotionInlineToolbarColorTests : LocalizationTestBase
 
         var brown = cut.FindAll(".tm-notion-inline-toolbar__color-swatch")
             .First(button => button.GetAttribute("aria-label") == "Brown"
-                && button.GetAttribute("style")?.Contains("--tm-notion-color-brown-bg") != true);
+                && button.GetAttribute("style")?.Contains("--tm-notion-option-text-brown-wash") != true);
         brown.GetAttribute("aria-pressed").Should().Be("true");
 
         // The callback carries the token name. The interop still receives the allowlisted hex —

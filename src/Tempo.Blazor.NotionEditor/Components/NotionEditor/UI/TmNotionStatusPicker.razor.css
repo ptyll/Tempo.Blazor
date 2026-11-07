@@ -15,14 +15,14 @@
     display: grid;
     gap: var(--tm-space-2);
     background: var(--tm-color-surface-elevated);
-    border: var(--tm-notion-border-width, 1px) solid var(--tm-border-color);
+    border: var(--tm-border-width, 1px) solid var(--tm-border-color);
     border-radius: var(--tm-radius-md);
     box-shadow: var(--tm-shadow-lg);
 }
 
 .tm-notion-status-picker__input {
     width: 100%;
-    border: var(--tm-notion-border-width, 1px) solid var(--tm-border-color);
+    border: var(--tm-border-width, 1px) solid var(--tm-border-color);
     border-radius: var(--tm-radius-sm);
     background: var(--tm-bg-surface);
     color: var(--tm-text-primary);
@@ -49,7 +49,7 @@
 }
 
 .tm-notion-status-picker__swatch {
-    border: var(--tm-notion-border-width, 1px) solid var(--tm-border-color);
+    border: var(--tm-border-width, 1px) solid var(--tm-border-color);
     border-radius: var(--tm-radius-sm);
     background: var(--tm-bg-surface);
     padding: var(--tm-space-1);
@@ -64,7 +64,7 @@
     height: var(--tm-space-5);
     border-radius: var(--tm-radius-full);
     background: var(--tm-status-bg);
-    border: var(--tm-notion-border-width, 1px) solid var(--tm-status-border);
+    border: var(--tm-border-width, 1px) solid var(--tm-status-border);
 }
 
 .tm-notion-status-picker__swatch--selected {
@@ -122,9 +122,9 @@
 }
 
 .tm-notion-status-picker__swatch--purple {
-    --tm-status-bg: var(--tm-notion-bg-purple);
-    --tm-status-text: var(--tm-notion-text-purple);
-    --tm-status-border: var(--tm-notion-text-purple);
+    --tm-status-bg: var(--tm-notion-option-text-purple-wash);
+    --tm-status-text: var(--tm-notion-option-text-purple-ink);
+    --tm-status-border: var(--tm-notion-option-text-purple-ink);
 }
 
 /* The chip itself is injected into contenteditable HTML, so its rules live in

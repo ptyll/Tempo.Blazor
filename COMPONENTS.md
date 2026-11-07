@@ -45,6 +45,7 @@ Sdílený základ redesignu (tokeny, rozvržení, bottom sheet, překryvy, edito
 35. [Design Token System](#design-token-system)
 35. [Diagram Editor](#diagram-editor)
 36. [Email Templates](#email-templates) — TmEmailTemplateEditor, TmEmailTemplatePreview, TmEmailTemplateToolbox, TmEmailTemplateCanvas, TmEmailPropertyPanel, TmEmailImportDialog, TmEmailExportDialog, TmEmailValidationPanel, TmEmailItemDialog, TmEmailTableCellDialog, TmEmailObjectFields a podobory
+37. [Notion Editor](#notion-editor) — TmNotionEditor, shell, komentáře, databázové pohledy
 
 ---
 
@@ -8918,4 +8919,71 @@ hostitelské testy (popisky jsou lokalizované, ne odvozené z názvu vlastnosti
 
 ---
 
-*Dokumentace komponent byla aktualizována o Diagram Editor, Knihovnu dokumentů (Document Library + TmDocumentOpenDialog + MCP), Email Templates 2.10.0 a Modeling.*
+## Notion Editor
+
+Balíček `Tempo.Blazor.NotionEditor`. Smlouva (pásma, překryvy, zmrazené `data-testid`, tokeny,
+JS a CSP) je v [docs/notion-editor.md](docs/notion-editor.md); tento oddíl je přehled parametrů.
+
+### Instalace
+
+```csharp
+builder.Services.AddTempoBlazor();
+```
+
+```html
+<link href="_content/Tempo.Blazor/css/tempo-blazor.css" rel="stylesheet" />
+<link href="_content/Tempo.Blazor.NotionEditor/css/tempo-blazor-notion-editor.css" rel="stylesheet" />
+<script src="_content/Tempo.Blazor.NotionEditor/js/notion-editor.js"></script>
+```
+
+Host musí obsluhovat i `_content/Tempo.Blazor/js/` — resize sloupce a timeline importují jádrový
+`pointer-drag.js`. CSP hash uvádí `pointer-drag.js` vedle `notion-editor.js`,
+`notion-db-column-resize.js` a `notion-db-timeline.js`.
+
+### TmNotionEditor
+
+| Parametr | Typ | Výchozí | Popis |
+|----------|-----|---------|-------|
+| `LayoutMode` | `TmLayoutMode` | `Auto` | Desktop ≥ 1024, tablet 640–1023, mobil < 640 kontejneru editoru. První snímek je Desktop. |
+| `Chrome` | `NotionEditorChrome` | `Full` | `Minimal` je veřejná read-only stránka; `None` je jen stránka. |
+| `InspectorContent` | `RenderFragment?` | `null` | Pravý slot hostitele. `null` nevykreslí pravý region. |
+| `ShellPanelPresentation` | `NotionShellPanelPresentation` | `Overlay` | Tasks / Blog / Analytics / Audit: `Overlay` drží stránku namountovanou, `Main` ji nahradí. Otevřený je nejvýš jeden. |
+| `CommentPresentation` | `NotionCommentPresentation` | `Auto` | Komentář bloku a textu: popover na desktopu, `TmModal` na dotyk a úzký kontejner. `Popover` drží bublinu na každé šířce. |
+| `PageCommentsPresentation` | `NotionPageCommentsPresentation` | `Inline` | `Dialog` otevře komentáře stránky v `TmModal` místo spodního panelu. |
+| `ShowSidebar` | `bool` | `true` | `false` a prázdný `InspectorContent` nevykreslí levý/pravý region ani mobilní lištu. |
+| `DocumentLibraryProvider` | `ITempoDocumentLibraryProvider?` | `null` | Bez něj se akce „Vložit existující“ nezobrazí. |
+
+Mobil drží čtení a lehké úpravy (přidat blok, komentář, My tasks, buňka). Tažení sloupce, resize
+a tažení pruhu timeline se na hrubém ukazateli ani v mobilním pásmu nenabízí — pořadí mění panel
+Properties, šířku Alt+šipka, pruh Alt+šipka / Alt+Shift+šipka. Plné chrome v úzkém boxu vynutí
+`LayoutMode="TmLayoutMode.Tablet"`.
+
+Dialogy, menu a bubliny jedou na jádrovém `TmModal` / `TmOverlayPanel` / `TmSidePanel`. Balíček
+nemá vlastní backdrop ani z-index pásmo.
+
+### Databáze
+
+`TmNotionDatabaseBlock`: `ShowSearch` (výchozí `false`) filtruje už načtené záznamy a varuje, když
+existují další stránky; `TmNotionEditor` ho pro hostovaný blok předává jako `true`. `IsPage`
+(výchozí `false`) zapíná mobilní lištu akcí. Skupiny toolbaru: `data-tm-group`
+`views | tools | primary`. Timeline je `.tm-dbtl`, tabulka zůstává `.tm-dbt`.
+
+### Tokeny
+
+Paleta: `--tm-notion-option-{color}-wash` / `-ink` / `-swatch` a
+`--tm-notion-option-text-{color}-ink` / `-wash`. Aliasy `--tm-notion-color-*`,
+`--tm-notion-bg-{color}`, `--tm-notion-text-{color}` a `--tm-notion-border-width` jsou pryč
+(2.10.0). Lokalizační klíče Notion jsou v jádrových `TmResources*.json`.
+
+### Přehled enumů balíčku
+
+| Enum | Hodnoty | Význam |
+|------|---------|--------|
+| `NotionEditorChrome` | `Full`, `Minimal`, `None` | Kolik chromu editor vykreslí. |
+| `NotionShellPanelPresentation` | `Overlay`, `Main` | Panel vedle stránky, nebo místo ní. |
+| `NotionCommentPresentation` | `Auto`, `Popover`, `Dialog` | Bublina vs. `TmModal` pro komentář bloku a textu. |
+| `NotionPageCommentsPresentation` | `Inline`, `Dialog` | Spodní panel vs. dialog komentářů stránky. |
+
+---
+
+*Dokumentace komponent byla aktualizována o Diagram Editor, Knihovnu dokumentů (Document Library + TmDocumentOpenDialog + MCP), Email Templates 2.10.0, Modeling a Notion Editor 2.10.0.*

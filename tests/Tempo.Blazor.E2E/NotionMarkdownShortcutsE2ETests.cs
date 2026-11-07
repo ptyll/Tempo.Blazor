@@ -204,7 +204,7 @@ public class NotionMarkdownShortcutsE2ETests : NotionE2ETestBase
         await page.Keyboard.PressAsync("Control+A");
         await page.Locator(".tm-notion-inline-toolbar").First.WaitForAsync(Visible());
         await page.Locator(".tm-notion-inline-toolbar__btn--color").ClickAsync();
-        await page.Locator(".tm-notion-inline-toolbar__color-swatch[style*='--tm-notion-color-brown)']").ClickAsync();
+        await page.Locator(".tm-notion-inline-toolbar__color-swatch[style*='--tm-notion-option-text-brown-ink)']").ClickAsync();
         await page.WaitForTimeoutAsync(400);
 
         var painted = await Block(page, blockId).Locator("[style*='color']").First.GetAttributeAsync("style");
