@@ -58,7 +58,18 @@
 
     protected override async Task OnInitializedAsync()
     {
-        _lastUnreadCount = await NotificationService.GetUnreadCountAsync(CurrentUserId);
+        // A failed unread-count must not take down the host page. The demo editor mounts this
+        // container inside the canvas; an HTTP/seed miss was surfacing as the fixed Blazor
+        // error bar over the database table.
+        try
+        {
+            _lastUnreadCount = await NotificationService.GetUnreadCountAsync(CurrentUserId);
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Notification unread count failed: {ex.Message}");
+        }
+
         NotificationService.OnChanged += OnNotificationsChanged;
     }
 
@@ -66,16 +77,32 @@
     {
         await InvokeAsync(async () =>
         {
-            var newCount = await NotificationService.GetUnreadCountAsync(CurrentUserId);
+            int newCount;
+            try
+            {
+                newCount = await NotificationService.GetUnreadCountAsync(CurrentUserId);
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"Notification unread count failed: {ex.Message}");
+                return;
+            }
             if (newCount > _lastUnreadCount && !IsPanelOpen)
             {
-                var notes = await NotificationService.GetNotificationsAsync(new TmNotificationQuery
+                try
                 {
-                    RecipientUserId = CurrentUserId,
-                    Take = 1
-                });
-                if (notes.FirstOrDefault() is { } n)
-                    EnqueueToast(n);
+                    var notes = await NotificationService.GetNotificationsAsync(new TmNotificationQuery
+                    {
+                        RecipientUserId = CurrentUserId,
+                        Take = 1
+                    });
+                    if (notes.FirstOrDefault() is { } n)
+                        EnqueueToast(n);
+                }
+                catch (Exception ex)
+                {
+                    Console.Error.WriteLine($"Notification toast load failed: {ex.Message}");
+                }
             }
             _lastUnreadCount = newCount;
             StateHasChanged();

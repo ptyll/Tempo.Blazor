@@ -23,10 +23,22 @@ public partial class TmNotionDbPropertyValue
     /// <summary>The raw stored value. Null or empty renders nothing.</summary>
     [Parameter] public object? Value { get; set; }
 
-    /// <summary>Date format passed to the shared formatter. Defaults to a short date.</summary>
-    [Parameter] public string DateFormat { get; set; } = "yyyy-MM-dd";
+    /// <summary>Date format passed to the shared formatter. Empty uses the culture short date.</summary>
+    [Parameter] public string DateFormat { get; set; } = string.Empty;
 
-    private string Text => NotionDatabaseValueFormatter.Format(Value, DateFormat);
+    private string ResolvedDateFormat
+    {
+        get
+        {
+            if (Field?.Config is IDateFieldConfig configured && configured.DateFormat.Length > 0)
+                return configured.DateFormat;
+            if (DateFormat.Length > 0)
+                return DateFormat;
+            return Field?.Config is IDateFieldConfig { IncludeTime: true } ? "g" : "d";
+        }
+    }
+
+    private string Text => NotionDatabaseValueFormatter.Format(Value, ResolvedDateFormat);
 
     private bool Checked => Value switch
     {
@@ -68,7 +80,7 @@ public partial class TmNotionDbPropertyValue
         {
             foreach (var item in many)
             {
-                var formatted = NotionDatabaseValueFormatter.Format(item, DateFormat);
+                var formatted = NotionDatabaseValueFormatter.Format(item, ResolvedDateFormat);
                 if (formatted.Length > 0) yield return formatted;
             }
         }

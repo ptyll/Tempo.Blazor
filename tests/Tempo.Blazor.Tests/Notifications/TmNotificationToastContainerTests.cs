@@ -102,6 +102,17 @@ public class TmNotificationToastContainerTests : LocalizationTestBase
             "the closed card left the visible set although the count never dropped");
     }
 
+    [Fact]
+    public void Container_UnreadCountFailure_DoesNotTakeDownTheHost()
+    {
+        Services.AddSingleton<ITmNotificationService>(new ThrowingNotificationService());
+
+        var cut = Render<TmNotificationToastContainer>();
+
+        cut.Markup.Should().Contain("tm-notification-toast-container");
+        cut.FindAll(".tm-notification-toast").Should().BeEmpty();
+    }
+
     private static TmNotification MakeNotification(string sender, string message) => new()
     {
         Type = TmNotificationTypes.Mention,
@@ -110,6 +121,28 @@ public class TmNotificationToastContainerTests : LocalizationTestBase
         Title = message,
         CreatedAt = DateTimeOffset.UtcNow
     };
+
+    private sealed class ThrowingNotificationService : ITmNotificationService
+    {
+        public TmNotificationServiceCapabilities Capabilities => TmNotificationServiceCapabilities.UnreadCount;
+
+        public event Action? OnChanged { add { } remove { } }
+
+        public Task<TmNotification> PublishAsync(TmNotification notification, CancellationToken ct = default)
+            => throw new InvalidOperationException("seed");
+
+        public Task MarkAsReadAsync(string notificationId, string userId, CancellationToken ct = default)
+            => Task.CompletedTask;
+
+        public Task MarkAllAsReadAsync(string userId, CancellationToken ct = default)
+            => Task.CompletedTask;
+
+        public Task<IReadOnlyList<TmNotification>> GetNotificationsAsync(TmNotificationQuery query, CancellationToken ct = default)
+            => throw new InvalidOperationException("seed");
+
+        public Task<int> GetUnreadCountAsync(string userId, CancellationToken ct = default)
+            => throw new InvalidOperationException("demo API unread-count failed");
+    }
 
     private sealed class FakeNavManager : NavigationManager
     {

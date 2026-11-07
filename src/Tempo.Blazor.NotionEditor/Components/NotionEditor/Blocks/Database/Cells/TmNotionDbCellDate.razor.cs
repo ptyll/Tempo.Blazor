@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Components;
+using Tempo.Blazor.Components.NotionEditor.Blocks.Database;
 
 namespace Tempo.Blazor.Components.NotionEditor.Blocks.Database.Cells;
 
@@ -16,8 +17,11 @@ public partial class TmNotionDbCellDate : TmNotionDbCellBase
     {
         get
         {
-            if (Value is DateTime dt)
-                return IncludeTime ? dt.ToString("yyyy-MM-dd HH:mm") : dt.ToString("yyyy-MM-dd");
+            if (Value is DateTime or DateTimeOffset or string)
+            {
+                var formatted = NotionDatabaseValueFormatter.Format(Value, IncludeTime ? "g" : "d");
+                if (formatted.Length > 0) return formatted;
+            }
             if (Value is string s && s.Length > 0) return s;
             return string.Empty;
         }

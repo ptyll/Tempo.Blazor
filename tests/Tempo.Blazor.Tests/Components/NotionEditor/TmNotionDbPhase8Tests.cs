@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.Json;
 using Bunit;
 using FluentAssertions;
@@ -80,6 +81,33 @@ public class TmNotionDbPhase8Tests : LocalizationTestBase
 
         cut.Find("[data-testid=notion-db-value]").TextContent.Trim().Should().NotBeNullOrEmpty();
         cut.Markup.Should().Contain("2026");
+    }
+
+    [Fact]
+    public void PropertyValue_IsoDateString_RendersByCurrentCulture()
+    {
+        var field = new DatabaseField { Id = Guid.NewGuid(), Name = "Due", Type = DatabaseFieldType.Date };
+        var previous = CultureInfo.CurrentCulture;
+        var previousUi = CultureInfo.CurrentUICulture;
+        try
+        {
+            var czech = CultureInfo.GetCultureInfo("cs-CZ");
+            CultureInfo.CurrentCulture = czech;
+            CultureInfo.CurrentUICulture = czech;
+
+            var cut = Render<TmNotionDbPropertyValue>(p => p
+                .Add(x => x.Field, field)
+                .Add(x => x.Value, "2026-06-23T12:00:00Z"));
+
+            var text = cut.Find("[data-testid=notion-db-value]").TextContent.Trim();
+            text.Should().Be(new DateTime(2026, 6, 23).ToString("d", czech));
+            text.Should().NotContain("T12:00");
+        }
+        finally
+        {
+            CultureInfo.CurrentCulture = previous;
+            CultureInfo.CurrentUICulture = previousUi;
+        }
     }
 
     [Fact]
