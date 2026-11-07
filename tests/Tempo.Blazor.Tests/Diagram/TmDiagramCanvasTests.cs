@@ -178,6 +178,80 @@ public class TmDiagramCanvasTests : DiagramTestBase
 }
 
 /// <summary>
+/// Phase 6 (Modeling viewer): the ONE additive DOM hook the diagram canvas exposes for a host's
+/// overlay — <c>node.Data["viewerState"]</c> → <c>data-viewer-state</c>, plus the optional badge and
+/// title text cues. An editor that writes none of them renders exactly what it always did.
+/// </summary>
+public class TmDiagramCanvasViewerStateTests : DiagramTestBase
+{
+    private static DiagramDocument CreateDocument()
+    {
+        var stateful = new DiagramNode { Id = "marked", StencilId = "general.rectangle", X = 40, Y = 40, W = 120, H = 60 };
+        stateful.Data["viewerState"] = "diff-added";
+        stateful.Data["viewerBadge"] = "+";
+        stateful.Data["viewerTitle"] = "Ship order: 90 % (High)";
+
+        return new DiagramDocument
+        {
+            Title = "Viewer state",
+            Width = 1000,
+            Height = 1000,
+            Nodes =
+            [
+                stateful,
+                new DiagramNode { Id = "plain", StencilId = "general.rectangle", X = 400, Y = 40, W = 120, H = 60 }
+            ],
+            Edges =
+            [
+                new DiagramEdge
+                {
+                    Id = "e1",
+                    SourceNodeId = "marked",
+                    TargetNodeId = "plain",
+                    Title = "Ship order: 90 % (High)"
+                },
+                new DiagramEdge { Id = "e2", SourceNodeId = "plain", TargetNodeId = "marked" }
+            ]
+        };
+    }
+
+    [Fact]
+    public void A_node_state_becomes_the_data_viewer_state_attribute()
+    {
+        var cut = Render<TmDiagramCanvas>(parameters => parameters.Add(p => p.Document, CreateDocument()));
+
+        cut.Find("[data-node-id='marked']").GetAttribute("data-viewer-state").Should().Be("diff-added");
+        cut.Find("[data-node-id='plain']").HasAttribute("data-viewer-state").Should().BeFalse(
+            "a node without a state emits no attribute instead of an empty one");
+    }
+
+    [Fact]
+    public void A_node_badge_renders_as_a_decorative_canvas_text()
+    {
+        var cut = Render<TmDiagramCanvas>(parameters => parameters.Add(p => p.Document, CreateDocument()));
+
+        var badge = cut.Find("[data-node-id='marked'] .tm-diagram-node__viewer-badge");
+        badge.TextContent.Should().Be("+");
+        badge.GetAttribute("aria-hidden").Should().Be("true");
+        cut.FindAll("[data-node-id='plain'] .tm-diagram-node__viewer-badge").Should().BeEmpty();
+    }
+
+    [Fact]
+    public void A_viewer_title_becomes_the_first_title_child_of_the_node_and_edge_group()
+    {
+        var cut = Render<TmDiagramCanvas>(parameters => parameters.Add(p => p.Document, CreateDocument()));
+
+        var nodeTitle = cut.Find("[data-node-id='marked'] > title");
+        nodeTitle.TextContent.Should().Be("Ship order: 90 % (High)");
+        cut.FindAll("[data-node-id='plain'] > title").Should().BeEmpty();
+
+        cut.Find(".tm-diagram-edge-group[data-edge-id='e1'] > title").TextContent
+            .Should().Be("Ship order: 90 % (High)");
+        cut.FindAll(".tm-diagram-edge-group[data-edge-id='e2'] > title").Should().BeEmpty();
+    }
+}
+
+/// <summary>
 /// Phase 4 review (A9): the canvas marks a SWIMLANE node (<c>data-swimlane="true"</c>) so the drag
 /// clamp in <c>diagram-editor.js</c> leaves a child of a pool/lane unclamped — a BPMN task must be
 /// draggable into another lane — while an ordinary node stays unmarked and a logical group still

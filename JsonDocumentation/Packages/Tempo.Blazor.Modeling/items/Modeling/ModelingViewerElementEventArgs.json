@@ -1,0 +1,10 @@
+{
+  "kind": "Class",
+  "category": "Modeling",
+  "namespace": "Tempo.Blazor.Components.Modeling",
+  "description": "Describes the modeling element or relationship the reader activated in TmModelingViewer: ElementId (a relationship id when IsRelationship), IsRelationship, SemanticType and Name.",
+  "packageId": "Tempo.Blazor.Modeling",
+  "sourcePath": "src/Tempo.Blazor.Modeling/Components/Modeling/ModelingViewerElementEventArgs.cs",
+  "documentationStatus": "generated",
+  "itemName": "ModelingViewerElementEventArgs"
+}

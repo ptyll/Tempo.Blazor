@@ -1,0 +1,10 @@
+{
+  "kind": "Class",
+  "category": "Modeling",
+  "namespace": "Tempo.Blazor.Components.Modeling",
+  "description": "The context handed to TmModelingViewer.ElementListContent for one row of the text alternative: ElementId, IsRelationship, SemanticType, Name, IsSelected, IsRemoved, DiffState, HeatmapValue and the formatted HeatmapValueText. The viewer keeps the list semantics; the host replaces the row content.",
+  "packageId": "Tempo.Blazor.Modeling",
+  "sourcePath": "src/Tempo.Blazor.Modeling/Components/Modeling/ModelingViewerElementEventArgs.cs",
+  "documentationStatus": "generated",
+  "itemName": "ModelingViewerElementContext"
+}

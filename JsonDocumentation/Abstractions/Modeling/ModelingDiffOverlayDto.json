@@ -1,0 +1,10 @@
+{
+  "kind": "Class",
+  "category": "Modeling",
+  "namespace": "Tempo.Blazor.Modeling",
+  "description": "The diff overlay of TmModelingViewer: added / removed / changed / layout-only semantic element ids plus added / removed relationship ids. The viewer never draws an id absent from the model; removed ids are counted by the legend and, with BaselineModel, named in the text alternative's Removed group.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/Modeling/ModelingViewerContracts.cs",
+  "documentationStatus": "generated",
+  "itemName": "ModelingDiffOverlayDto"
+}

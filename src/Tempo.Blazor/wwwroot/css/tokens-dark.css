@@ -93,6 +93,21 @@
   --tm-color-warning:        #fbbf24;
   --tm-color-warning-hover:  #fcd34d;
   --tm-color-warning-subtle: rgba(245, 158, 11, 0.15);
+  /* Heatmap scale — theme-INVARIANT on purpose: the diagram's paper stays white in every theme, so
+     the viewer's heat tints and their ink keep the light values. A dark override would put a dark
+     wash on white paper (and light ink on a dark fill); what changes in dark mode is the shell, not
+     the page. */
+  --tm-color-heat-0:           #dcfce7;
+  --tm-color-heat-1:           #fde68a;
+  --tm-color-heat-2:           #fb923c;
+  --tm-color-heat-3:           #dc2626;
+  --tm-color-heat-ink:         #1f2937;
+  --tm-color-heat-3-text:      #ffffff;
+  /* Diff overlay strokes — same rule as the heat scale: they paint on the white paper, so the dark
+     theme keeps the dark values (a brightened dark-theme accent would vanish on white). */
+  --tm-color-diff-added-stroke:   #15803d;
+  --tm-color-diff-changed-stroke: #b45309;
+  --tm-color-diff-layout-stroke:  #4b5563;
   --tm-color-warning-text:   #fcd34d;
 
   --tm-color-danger:         #f87171;
@@ -363,6 +378,17 @@
   --tm-color-warning-hover:         #d97706;
   --tm-color-warning-subtle:        #fffbeb;
   --tm-color-warning-text:          #92400e;
+  /* Heatmap scale (Modeling viewer): the island resets the steps to their light values — the same
+     values the dark block keeps, because the diagram's paper is white in both. */
+  --tm-color-heat-0:                #dcfce7;
+  --tm-color-heat-1:                #fde68a;
+  --tm-color-heat-2:                #fb923c;
+  --tm-color-heat-3:                #dc2626;
+  --tm-color-heat-ink:              #1f2937;
+  --tm-color-heat-3-text:           #ffffff;
+  --tm-color-diff-added-stroke:     #15803d;
+  --tm-color-diff-changed-stroke:   #b45309;
+  --tm-color-diff-layout-stroke:    #4b5563;
   --tm-color-danger:                #dc2626;
   --tm-color-danger-hover:          #b91c1c;
   --tm-color-danger-subtle:         #fef2f2;

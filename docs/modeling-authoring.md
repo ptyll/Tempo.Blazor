@@ -1112,9 +1112,12 @@ public sealed class ModelingHeatmapDto
    `ReadOnly="true"`, `ToolbarPreset="Viewer"`, `ShowToolbox="false"`,
    `ShowPropertiesPanel="false"`, `ShowLayersPanel="false"`, `ShowPageTabs="false"`,
    `ShowMinimap="false"`, `ShowToolbar="@ShowZoomControls"`, `FitOnDocumentLoad`,
-   `ShowMobileZoomOverlay` and `OnSelectedIdsChanged`. **No DiagramEditor change is planned:**
-   highlight parameters such as `HighlightNodeIds`/`HighlightEdgeIds` are not needed because the
-   viewer restyles the presentation copy instead. `DocumentChanged` is not bound (read-only).
+   `ShowMobileZoomOverlay` and `OnSelectedIdsChanged`. **One additive DE change:** `TmDiagramCanvas`
+   renders `Data["viewerState"]` as `data-viewer-state` on `.tm-diagram-node`, plus the optional
+   `Data["viewerBadge"]` glyph and the `Data["viewerTitle"]` / `DiagramEdge.Title` `<title>` child
+   (see [docs/diagram-editor.md](diagram-editor.md), "Node and edge DOM hooks"). Highlight parameters
+   such as `HighlightNodeIds`/`HighlightEdgeIds` are not needed — the viewer restyles the presentation
+   copy instead — and no editor behaviour changes. `DocumentChanged` is not bound (read-only).
 4. Selection: `OnSelectedIdsChanged` → map diagram ids to model ids through
    `Data["modelElementId"]` / the edge id (the generator writes `modelElementId` on nodes and uses
    relationship ids as edge ids). `SelectedElementId` two-way; the presentation copy restyles the
@@ -1127,11 +1130,15 @@ public sealed class ModelingHeatmapDto
 - The viewer renders a **text alternative list** (`ShowElementList`, default `true`) — a real
   `<ul>` of buttons in topological order (BFS from the start elements over relationships, ties by
   model order), each `aria-label="<type> <name>"`, with an `aria-describedby` hint. It is visible
-  (not `sr-only`) on the mobile band and collapsible elsewhere; `ElementListContent` lets a host
-  replace the row.
+  (not `sr-only`) on the mobile band and collapsible elsewhere; `ElementListContent` replaces the
+  VISIBLE content of the row, never the row itself — the `<button>`, its roving `tabindex`, its
+  `aria-label`/`aria-describedby` and its keys stay viewer-owned, so the fragment must be
+  non-interactive phrasing content. An empty model renders no list section at all (a count of zero
+  and a toggle describing rows that cannot exist are noise).
 - Keyboard: the list is the tab path (arrow keys move, Enter/Space raises `OnElementClick` and sets
   `SelectedElementId`); the DE canvas remains usable with its own keyboard model, but the viewer
-  never relies on it.
+  never relies on it. The roving index bounds are the DRAWN rows only: baseline-only "Removed" rows
+  are appended last, carry no button and are never a tab stop, so End lands on the last drawn row.
 - Every overlay carries a text equivalent: the diff legend lists counts per state, the heatmap
   legend lists the scale plus the value of the selected element.
 - Live region: a polite `aria-live` announces selection and overlay changes.
@@ -1146,7 +1153,9 @@ public sealed class ModelingHeatmapDto
   cannot resolve `var(--tm-…)`, so before rendering the viewer resolves every overlay token it
   used to a concrete color through the package JS module (`resolveTokens(root, names)` →
   `getComputedStyle`, under the requested theme) and writes those values into an export-only
-  copy. Without JS (prerender) the export omits the overlay styling and keeps `data-viewer-state`.
+  copy. Without JS (prerender) the export DROPS the overlay paint instead of writing an
+  unresolvable `var()` into the markup (an unresolved token would paint nothing at all), so the
+  diagram keeps the renderer's palette and its `viewerState`/`viewerTitle` hooks.
 
 ### 7.5 Wireframe role/stencil (phase 6)
 
@@ -1154,6 +1163,76 @@ A `modeling-viewer` **wireframe UI role + component type** (`TmModelingViewer` w
 `modelId`, `viewId`, `fitMode`, `showLegend`) is registered through the existing wireframe
 component catalog so a wireframe can reserve the viewer's place in a page layout. No runtime
 coupling: the wireframe editor only needs the type/prop schema.
+
+### 7.6 As implemented (phase 6)
+
+- **Files**: `src/Tempo.Blazor.Abstractions/Modeling/ModelingViewerContracts.cs`
+  (`ModelingViewerFitMode`, `ModelingDiffOverlayDto`, `ModelingHeatmapDto`),
+  `src/Tempo.Blazor.Modeling/Components/Modeling/TmModelingViewer.razor(.cs/.css)`,
+  `ModelingViewerElementEventArgs.cs` (`ModelingViewerElementEventArgs` +
+  `ModelingViewerElementContext` for the `ElementListContent` slot) and the internal
+  `ModelingViewerProjection.cs` (topological order + overlay application).
+- **Data hook**: the presentation copy writes `Data["viewerState"]` on nodes (`highlight`,
+  `diff-added`, `diff-changed`, `diff-layout`, `heatmap`) and the DiagramEditor canvas exposes it
+  as `data-viewer-state` on `.tm-diagram-node` (an additive attribute read from node `Data`; no
+  editor behaviour changes). Edges have no `Data` bag — their state is carried by `DiagramEdge.Style`
+  and by the element-list row.
+- **Print opt-in**: `ShowElementListInPrint` (default `false`) keeps the text alternative in the
+  printed output; the `@media print` block hides the zoom toolbar group (`[data-tm-group="zoom"]`,
+  the frozen toolbar hook — never a `.tm-diagram-editor__*` internal class) and avoids page breaks
+  inside the canvas.
+- **Export tokens**: `ExportSvgAsync` resolves every token the projection can write
+  (`ModelingViewerProjection.ViewerTokens`: `--tm-color-heat-0..3`, `--tm-color-heat-ink`,
+  `--tm-color-heat-3-text`, `--tm-color-primary`, `--tm-color-success`, `--tm-color-warning`,
+  `--tm-border-color-strong` and the three `--tm-color-diff-*-stroke` tokens) through the package's
+  CSP-safe ES module (`resolveTokens(root, names, theme)` in `modeling-editor.js`). The probe rule:
+  when the requested theme is already the root's live theme (`closest [data-theme]` / `.tm-dark`,
+  default light) the tokens are read off the root; otherwise a hidden `data-theme="{theme}"` probe
+  (`tm-dark` for the class switch) is appended INSIDE the root for the synchronous read and removed
+  in a `finally`. The document element is never touched — flipping the page theme, even for one
+  read, would invalidate every other component's resolved styles and let two concurrent exports see
+  each other's theme. Any token that still cannot be resolved is stripped from the export copy.
+  Without JS the export keeps the renderer's palette (progressive enhancement).
+- **Heat scale**: four steps that spread their LIGHTNESS
+  (`--tm-color-heat-0 #dcfce7`, `-1 #fde68a`, `-2 #fb923c`, `-3 #dc2626`) with per-band ink
+  (`--tm-color-heat-ink` for the pale bands, `--tm-color-heat-3-text` white for the dark one) and the
+  band word in the legend/tooltip. The scale is theme-INVARIANT (`tokens-dark.css` re-declares the
+  same light values, the `[data-theme="light"]` island included) because the diagram's paper is white
+  in every theme: a dark override put a dark wash on white paper and light ink on the fill.
+- **Diff cues**: `--tm-color-diff-added-stroke` (#15803d), `--tm-color-diff-changed-stroke`
+  (#b45309) and `--tm-color-diff-layout-stroke` (gray-600) all measure >= 3:1 on the white paper in
+  both themes, and each state is ALSO a pattern — solid width 3, dotted `2,2`, dashed `6,3` — plus a
+  node badge glyph (`+`, `~`, `↔`) and a matching legend swatch border style, so the state never
+  rides on hue alone.
+- **Canvas text equivalent**: the overlay reading travels in text — `Data["viewerTitle"]` becomes the
+  node's `<title>` (`"SLA risk: 80 % — High (75–100 %)"`, or the diff state word) and
+  `DiagramEdge.Title` the edge's, so a pointer and a screen reader both get the reading.
+- **Layout**: every legend card — the notation legend (collapsed at rest), the diff counts and the
+  heatmap scale — is a DOCKED strip under the canvas (desktop and tablet; a
+  `data-testid="modeling-viewer-legends-toggle"` collapse toggle with `aria-expanded`) instead of a
+  floating card over the fitted diagram; the mobile band stacks the overlay cards in the reading
+  order, always expanded, with no toggle, and drops the notation card (the element list already names
+  every type). The strip only renders when it has at least one card.
+  The presentation copy's PAGE is shrunk to the drawn content (`FitPageToContent`), so fit-to-width
+  no longer leaves the diagram in the top-left corner of the generator's default 3000x2000 sheet;
+  node positions are never translated. A runtime `FitMode` flip re-arms the fit (`_appliedFitMode`).
+  On a width fit the canvas box is sized from the page ratio —
+  `height: calc((100cqw - 80px) / aspect + 2.4rem)`, i.e. the fitted content plus the editor's own
+  toolbar row — so a wide diagram no longer floats in empty paper and a tall one is not cropped;
+  `min-height`/`max-height` keep both extremes usable and a host that picks a height too small for
+  all three regions scrolls the legend strip, never the element list.
+- **Node lane**: `npm run test:modeling` runs
+  `src/Tempo.Blazor.Modeling/wwwroot/js/__tests__/modeling-viewer-tokens.test.mjs`; the CI JS
+  workflow includes the lane.
+- **Overlay invalidation**: an overlay pass snapshots the presentation copy's own paint the first
+  time it touches a style and RESTORES it instead of writing `null`, so a generator-owned stroke
+  survives an overlay that no longer covers the item; the overlay signature is built from the model,
+  the view and the overlay CONTENT (never from a "regenerate" flag), so a selection-only re-render
+  keeps the selection announcement instead of re-announcing the overlay over it.
+- **Demo/E2E**: `/modeling-viewer` with the version-diff, SLA-risk-heatmap and empty-model
+  scenarios; `ModelingViewerPhase6E2ETests` covers element click, diff (including the badge count and
+  the docked-legend geometry), heatmap, mobile fit-to-width, keyboard navigation, the runtime
+  `FitMode` flip, the empty model and the light/dark desktop/tablet/mobile screenshots.
 
 ---
 
@@ -1411,7 +1490,7 @@ second gesture could merge into the first transaction. Details that later phases
 | 3 | §9.1, §9.2 — semantic palette insert/delete/relationship drawing, cascade confirmation, non-drag alternatives, localization, E2E. As implemented: `ModelingOperationContext.Notation` + `ViewpointKey` (§6.1) so the editor's overrides and the engine agree; `ModelingOperationEngine.ValidateRelationship` is the ONE relationship verdict the picker and the commit share; a viewless model is seeded by `SeedModelingViewCommand` in the same transaction; the cascade delete names its target, touches every view, restores original ordering on undo and is confirmed through an `alertdialog`; the authoring sheets are an INTERNAL renderer (no public component, no JSON documentation entry); `IModelingNotationProfile.ContainerElementTypes` owns containment (§5.1) |
 | 4 | §9.3, §9.4 — layout persistence, hierarchy moves, auto-layout as an undoable op, BPMN visual conventions. As implemented: one `SetModelingViewLayoutCommand` (internal, engine batch of `update_element parentId` + `set_view_node` + `set_view_connection`) per gesture with no debounce timer, a burst of keyboard nudges of the same element set inside 800 ms merged into the command on top of the stack (one undo step), the layout parent resolved by GEOMETRY with the node's subtree excluded and ONLY for a node whose own X/Y changed (a container resize never re-parents its children), a Layout-only writer never re-parents, container growth plus flush-band sibling shifting and ancestor-pool growth in the same transaction, `SnapDocumentOnLoad="false"` on both embedded editors (a load never re-snaps the host's layout; `GridSize="0"` is a valid no-snap setting again), the deterministic relationship-ranked `ModelingLayoutArranger` behind "Arrange" with waypoint clearing and a preview fit (browser dagre stays the DE's own Layout menu, replaced in the dialog by Arrange), position-less elements auto-placed inside their container instead of dropped (opt-in `AutoPlaceElementsWithoutViewNode`), the view `ParentNodeId` mapped to the generated node id, swimlane band data for pool/lane labels with `data-swimlane` on the canvas (a band does not clamp a dragged child), token-based fill/stroke on every BPMN node stencil resolved to the palette in the server SVG export, the bpmn2 marker SVG re-shown behind a transparent native primitive, paper-token swimlane headers/toggles, the non-drag "Move to container" sheet, the in-dialog structure live region and a per-sync lookup context that keeps one move of a 300-element model under 200 ms |
 | 5 | §5 + §9.5 — schema provider, lookups, shared validator, inspector rendering, demo schema. As implemented: `IModelingPropertySchemaProvider` + `IModelingLookupProvider` resolved per provider key with a pinned schema version, the shared `ModelingPropertySchemaValidator` behind the inspector's inline errors, the editor's save gate and `ModelingOperationContext.ResolvePropertySchema`, one guarded after-render refresh (no call on each selection path), a read-only host keeps labels but gains no findings, the reference fields use the APG `TmMultiSelect` (the recorded deviation above), and the demo ships a BPMN step-attribute schema + catalogue for the `step-attributes` scenario while every other demo scenario keeps the 2.10.0 inspector |
-| 6 | §7 — `TmModelingViewer`, overlays, a11y, print/SVG, wireframe role, demo page |
+| 6 | §7 — `TmModelingViewer`, overlays, a11y, print/SVG, wireframe role, demo page. As implemented: the read-only viewer projects with `ModelingDiagramGenerator` and renders through `TmDiagramEditor` viewer mode; the diff/heatmap overlays restyle the viewer-owned presentation copy (`DiagramStyle` + `DiagramNode.Data["viewerState"]`); the text alternative is a roving-tabstop button list in BFS order with a Removed group resolved from `BaselineModel`; `ExportSvgAsync` resolves the overlay tokens through the new `resolveTokens` JS export for the requested theme; the `modeling-viewer` wireframe role/schema/stencil and `/modeling-viewer` demo ship with the phase |
 | 7 | §6.4 parity tests, docs updates, CHANGELOG, packaging smoke test, release |
 
 ---

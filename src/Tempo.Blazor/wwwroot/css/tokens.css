@@ -60,6 +60,27 @@
   --tm-color-warning-hover:    #d97706;
   --tm-color-warning-subtle:   #fffbeb;
   --tm-color-warning-text:     #92400e;
+  /* Heatmap scale (Modeling viewer, phase 6): four fill steps from low (0) to high (1) over a
+     light surface. The steps spread their LIGHTNESS (pale green → amber → orange → a deep red) so
+     the bands separate on shade as well as hue, and the viewer pairs every tint with a text
+     value/band label — the scale never carries the reading by colour alone. A standalone SVG
+     export resolves these to concrete colours through the viewer's token bridge. */
+  --tm-color-heat-0:           #dcfce7;
+  --tm-color-heat-1:           #fde68a;
+  --tm-color-heat-2:           #fb923c;
+  --tm-color-heat-3:           #dc2626;
+  /* Ink on a heat-tinted node. The diagram's paper is white in every theme, so the pale bands keep
+     the paper ink and only the darkest band flips to white (4,83:1 on #dc2626). */
+  --tm-color-heat-ink:         #1f2937;  /* gray-800, 12,4:1 on heat-0, 6,0:1 on heat-2 */
+  --tm-color-heat-3-text:      #ffffff;  /* white on heat-3 */
+
+  /* Diff overlay strokes (Modeling viewer, phase 6): the outline colour of the added / changed /
+     layout-only states. Dark enough for the white diagram paper in every theme (5,0:1 / 5,1:1 /
+     7,6:1) and always paired with a pattern — solid, dotted, dashed — so the state is never
+     colour-only. */
+  --tm-color-diff-added-stroke:   #15803d;
+  --tm-color-diff-changed-stroke: #b45309;
+  --tm-color-diff-layout-stroke:  #4b5563;  /* gray-600 */
 
   /* Info */
   --tm-color-info:             #06b6d4;

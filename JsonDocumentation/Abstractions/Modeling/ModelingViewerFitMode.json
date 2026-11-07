@@ -1,0 +1,10 @@
+{
+  "kind": "Enum",
+  "category": "Modeling",
+  "namespace": "Tempo.Blazor.Modeling",
+  "description": "How the read-only TmModelingViewer fits the generated diagram into its box: Width scales by the container width only (a tall diagram stays scrollable), Page fits both axes.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/Modeling/ModelingViewerContracts.cs",
+  "documentationStatus": "generated",
+  "itemName": "ModelingViewerFitMode"
+}

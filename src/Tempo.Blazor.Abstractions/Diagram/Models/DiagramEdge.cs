@@ -132,6 +132,14 @@ public sealed class DiagramEdge
     /// <summary>Optional hyperlink target (external URL or page:// link).</summary>
     public string? Link { get; set; }
 
+    /// <summary>
+    /// Optional accessible name / pointer tooltip. The canvas renders it as the edge group's first
+    /// <c>&lt;title&gt;</c> child, so a screen reader and a hovering pointer both get the text. Used by
+    /// the read-only Modeling viewer to carry an overlay reading ("Name: value (band)") that the
+    /// picture alone would not convey; null renders nothing.
+    /// </summary>
+    public string? Title { get; set; }
+
     /// <summary>Validates that at least one end of the edge is connected (to a node or edge) or has an absolute point.</summary>
     public bool IsValid()
     {

@@ -1,0 +1,266 @@
+@page "/modeling-viewer"
+@using Microsoft.AspNetCore.Components
+@using Tempo.Blazor.Components.Diagram.Services
+@using Tempo.Blazor.Components.Modeling
+@using Tempo.Blazor.Modeling
+@inherits Tempo.Blazor.Components.TmComponentBase
+@inject ITmLocalizer Loc
+
+<PageTitle>@Loc["TmModelingViewerDemo_PageTitle"] - Tempo.Blazor</PageTitle>
+
+@* Demo-only sizing: the page owns the viewer's height like a host layout would. Desktop gives the
+   diagram, its in-flow legends and the element list room; the phone baseline is taller so the
+   legends and the list do not squeeze the canvas to a strip. Scoped CSS in the SharedUI project is
+   not linked by the demo shells, so this stays a page-level <style> with page-prefixed selectors. *@
+<style>
+    .modeling-viewer-demo__stage .tm-modeling-viewer {
+        height: 700px !important;
+    }
+
+    @@media (max-width: 639.98px) {
+        .modeling-viewer-demo__stage .tm-modeling-viewer {
+            height: 700px !important;
+        }
+    }
+</style>
+
+<div class="mb-6" data-testid="modeling-viewer-page-header">
+    <h1 class="text-3xl font-bold text-slate-900 dark:text-white mb-2">@Loc["TmModelingViewerDemo_PageTitle"]</h1>
+    <p class="text-slate-600 dark:text-slate-400">@Loc["TmModelingViewerDemo_PageDescription"]</p>
+</div>
+
+@* Phase 6 demo: the read-only viewer with the version-diff and SLA-risk-heatmap scenarios plus the
+   empty-model edge case. The page owns the models and reacts to OnElementClick / the two-way
+   selection; the viewer itself never writes to them. *@
+<section class="demo-section mb-6" data-testid="modeling-viewer-controls">
+    <div class="flex flex-wrap items-end gap-4">
+        <label class="flex flex-col gap-1 text-sm">
+            <span class="font-medium text-slate-700 dark:text-slate-300">@Loc["TmModelingViewerDemo_Scenario"]</span>
+            <select class="rounded border border-slate-300 bg-white px-2 py-1 text-sm text-slate-900 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
+                    value="@_scenario"
+                    data-testid="modeling-viewer-scenario"
+                    @onchange="HandleScenarioChanged">
+                <option value="diff">@Loc["TmModelingViewerDemo_ScenarioDiff"]</option>
+                <option value="heatmap">@Loc["TmModelingViewerDemo_ScenarioHeatmap"]</option>
+                <option value="empty">@Loc["TmModelingViewerDemo_ScenarioEmpty"]</option>
+            </select>
+        </label>
+
+        <label class="flex flex-col gap-1 text-sm">
+            <span class="font-medium text-slate-700 dark:text-slate-300">@Loc["TmModelingViewerDemo_FitMode"]</span>
+            <select class="rounded border border-slate-300 bg-white px-2 py-1 text-sm text-slate-900 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
+                    value="@_fitMode"
+                    data-testid="modeling-viewer-fit-mode"
+                    @onchange="HandleFitModeChanged">
+                <option value="width">@Loc["TmModelingViewerDemo_FitWidth"]</option>
+                <option value="page">@Loc["TmModelingViewerDemo_FitPage"]</option>
+            </select>
+        </label>
+
+        <label class="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
+            <input type="checkbox" checked="@_showLegend" data-testid="modeling-viewer-show-legend" @onchange="HandleShowLegendChanged" />
+            <span>@Loc["TmModelingViewerDemo_ShowLegend"]</span>
+        </label>
+
+        <div class="flex flex-wrap gap-2">
+            <TmButton Variant="ButtonVariant.Secondary" Size="ButtonSize.Sm" OnClick="ExportLightAsync"
+                      data-testid="modeling-viewer-export-light">
+                @Loc["TmModelingViewerDemo_ExportLight"]
+            </TmButton>
+            <TmButton Variant="ButtonVariant.Secondary" Size="ButtonSize.Sm" OnClick="ExportDarkAsync"
+                      data-testid="modeling-viewer-export-dark">
+                @Loc["TmModelingViewerDemo_ExportDark"]
+            </TmButton>
+        </div>
+    </div>
+
+    @if (_exportInfo is not null)
+    {
+        <p class="mt-3 text-sm text-slate-600 dark:text-slate-400" data-testid="modeling-viewer-export-info">@_exportInfo</p>
+    }
+</section>
+
+<div class="grid gap-4" data-testid="modeling-viewer-demo-layout">
+    <div class="modeling-viewer-demo__stage">
+        <TmModelingViewer @ref="_viewer"
+                          Model="_model"
+                          ViewId="@ModelingViewerPageSamples.ViewId"
+                          FitMode="@FitMode"
+                          ShowLegend="_showLegend"
+                          SelectedElementId="_selectedId"
+                          SelectedElementIdChanged="HandleSelectionChangedAsync"
+                          OnElementClick="HandleElementClick"
+                          DiffOverlay="_diff"
+                          Heatmap="_heatmap"
+                          AriaLabel="@Loc["TmModelingViewerDemo_AriaLabel"]"
+                          DataTestId="modeling-viewer-demo" />
+    </div>
+
+    <aside class="rounded border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900"
+           data-testid="modeling-viewer-selection-panel">
+        <h2 class="mb-2 text-lg font-semibold text-slate-900 dark:text-white">@Loc["TmModelingViewerDemo_SelectionTitle"]</h2>
+        @if (_selected is null)
+        {
+            <p class="text-sm text-slate-600 dark:text-slate-400" data-testid="modeling-viewer-demo-selection-empty">
+                @Loc["TmModelingViewerDemo_SelectionEmpty"]
+            </p>
+        }
+        else
+        {
+            <p class="text-sm font-medium text-slate-900 dark:text-white" data-testid="modeling-viewer-demo-selection">
+                @_selected.Name
+            </p>
+            <p class="mt-1 text-xs text-slate-600 dark:text-slate-400" data-testid="modeling-viewer-demo-selection-meta">
+                @string.Format(
+                    System.Globalization.CultureInfo.CurrentCulture,
+                    Loc["TmModelingViewerDemo_SelectionMeta"],
+                    ModelingNotationCatalog.Humanize(_selected.SemanticType),
+                    _selected.IsRelationship ? Loc["TmModelingViewerDemo_Relationship"] : Loc["TmModelingViewerDemo_Element"])
+            </p>
+            @if (SelectedHeatValueText is not null)
+            {
+                <p class="mt-2 text-sm text-slate-900 dark:text-white" data-testid="modeling-viewer-demo-selection-heat">
+                    @SelectedHeatValueText
+                </p>
+            }
+        }
+        <p class="mt-4 text-xs text-slate-500 dark:text-slate-400" data-testid="modeling-viewer-demo-hint">
+            @ScenarioHint
+        </p>
+    </aside>
+</div>
+
+@code {
+
+    [SupplyParameterFromQuery(Name = "scenario")]
+    public string? Scenario { get; set; }
+
+    private TmModelingViewer? _viewer;
+    private ModelingModelDto _model = ModelingViewerPageSamples.CreateAfter();
+    private ModelingDiffOverlayDto? _diff = ModelingViewerPageSamples.CreateDiffOverlay();
+    private ModelingHeatmapDto? _heatmap;
+    private string _scenario = "diff";
+    private string? _appliedScenario;
+    private string _fitMode = "width";
+    private bool _showLegend = true;
+    private string? _selectedId;
+    private ModelingViewerElementEventArgs? _selected;
+    private string? _exportInfo;
+
+    private ModelingViewerFitMode FitMode
+        => string.Equals(_fitMode, "page", StringComparison.Ordinal)
+            ? ModelingViewerFitMode.Page
+            : ModelingViewerFitMode.Width;
+
+    private string? SelectedHeatValueText
+        => _selected is null || _heatmap is null
+            ? null
+            : _heatmap.Values.TryGetValue(_selected.ElementId, out var value)
+                ? string.Format(
+                    System.Globalization.CultureInfo.CurrentCulture,
+                    Loc["TmModelingViewerDemo_HeatValue"],
+                    _heatmap.ValueLabel ?? Loc["TmModelingViewer_HeatmapTitle"],
+                    string.Format(
+                        System.Globalization.CultureInfo.CurrentCulture,
+                        _heatmap.Format ?? "{0:P0}",
+                        value))
+                : null;
+
+    private string ScenarioHint => _scenario switch
+    {
+        "heatmap" => Loc["TmModelingViewerDemo_HeatHint"],
+        "empty" => Loc["TmModelingViewerDemo_EmptyHint"],
+        _ => Loc["TmModelingViewerDemo_DiffHint"]
+    };
+
+    /// <inheritdoc />
+    protected override void OnParametersSet()
+    {
+        var next = Scenario is "heatmap" or "empty" ? Scenario : "diff";
+        if (string.Equals(next, _appliedScenario, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        _appliedScenario = next;
+        _scenario = next;
+        ApplyScenario();
+    }
+
+    private void ApplyScenario()
+    {
+        _selected = null;
+        _selectedId = null;
+        _exportInfo = null;
+
+        switch (_scenario)
+        {
+            case "heatmap":
+                _model = ModelingViewerPageSamples.CreateBaseline();
+                _diff = null;
+                _heatmap = ModelingViewerPageSamples.CreateHeatmap();
+                break;
+            case "empty":
+                _model = ModelingViewerPageSamples.CreateEmpty();
+                _diff = null;
+                _heatmap = null;
+                break;
+            default:
+                _model = ModelingViewerPageSamples.CreateAfter();
+                _diff = ModelingViewerPageSamples.CreateDiffOverlay();
+                _heatmap = null;
+                break;
+        }
+    }
+
+    private void HandleScenarioChanged(ChangeEventArgs args)
+    {
+        Scenario = args.Value?.ToString();
+        var next = Scenario is "heatmap" or "empty" ? Scenario : "diff";
+        _appliedScenario = next;
+        _scenario = next;
+        ApplyScenario();
+    }
+
+    private void HandleFitModeChanged(ChangeEventArgs args)
+        => _fitMode = string.Equals(args.Value?.ToString(), "page", StringComparison.Ordinal) ? "page" : "width";
+
+    private void HandleShowLegendChanged(ChangeEventArgs args)
+        => _showLegend = args.Value is true;
+
+    private Task HandleSelectionChangedAsync(string? elementId)
+    {
+        _selectedId = elementId;
+        if (elementId is null)
+        {
+            _selected = null;
+        }
+
+        return Task.CompletedTask;
+    }
+
+    private void HandleElementClick(ModelingViewerElementEventArgs args)
+    {
+        _selected = args;
+        _selectedId = args.ElementId;
+    }
+
+    private async Task ExportLightAsync() => await ExportAsync(DiagramSvgTheme.Light);
+
+    private async Task ExportDarkAsync() => await ExportAsync(DiagramSvgTheme.Dark);
+
+    private async Task ExportAsync(DiagramSvgTheme theme)
+    {
+        if (_viewer is null)
+        {
+            return;
+        }
+
+        var svg = await _viewer.ExportSvgAsync(theme);
+        _exportInfo = string.Format(
+            System.Globalization.CultureInfo.CurrentCulture,
+            Loc["TmModelingViewerDemo_ExportInfo"],
+            svg.Length,
+            theme);
+    }
+}

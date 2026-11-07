@@ -762,6 +762,21 @@
     pointer-events: none;
 }
 
+/* Overlay badge (Modeling viewer phase 6): a short non-colour cue a host writes into the node's
+ * Data bag ("+" added, "~" changed, "↔" layout-only), rendered in the node's top-right corner. It
+ * paints over the node body, never takes a pointer, and uses the white paper's ink (the page is
+ * theme-invariant) with a paper-coloured halo so it stays legible over any fill. */
+.tm-diagram-node__viewer-badge {
+    font-size: var(--tm-font-size-sm);
+    font-weight: var(--tm-font-weight-bold);
+    fill: var(--tm-paper-ink);
+    paint-order: stroke;
+    stroke: var(--tm-paper);
+    stroke-width: 3px;
+    stroke-linejoin: round;
+    pointer-events: none;
+}
+
 .tm-diagram-node__body[data-native-shape="true"] .tm-diagram-node__shape {
     background: transparent !important;
     border: 0 !important;

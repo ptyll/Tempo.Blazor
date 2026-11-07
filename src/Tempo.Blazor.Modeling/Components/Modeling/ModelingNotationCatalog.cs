@@ -261,9 +261,13 @@ public sealed class ModelingNotationCatalog
             ? localized
             : Humanize(semanticType);
 
-    /// <summary>The humanized fallback of a semantic key ("userTask" → "User task") — shared with
-    /// the editor's own label resolution so a dialog option and a tree row never disagree.</summary>
-    internal static string Humanize(string semanticType)
+    /// <summary>
+    /// The humanized fallback of a semantic key ("userTask" → "User task") — shared with the
+    /// editor's own label resolution so a dialog option, a tree row and a host's own caption never
+    /// disagree. Public because a host presenting a reading next to the viewer ("User task") must be
+    /// able to produce the same word the viewer's element list uses.
+    /// </summary>
+    public static string Humanize(string semanticType)
     {
         var trimmed = semanticType.Trim();
         if (trimmed.Length == 0)

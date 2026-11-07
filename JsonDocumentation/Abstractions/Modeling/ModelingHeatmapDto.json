@@ -1,0 +1,10 @@
+{
+  "kind": "Class",
+  "category": "Modeling",
+  "namespace": "Tempo.Blazor.Modeling",
+  "description": "The heatmap overlay of TmModelingViewer: a normalized 0..1 value per element or relationship id, an optional ValueLabel, min/max scale labels and a composite format. A missing id gets no tint; every value also renders as text in the element list and the legend, so the picture never carries the reading alone.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/Modeling/ModelingViewerContracts.cs",
+  "documentationStatus": "generated",
+  "itemName": "ModelingHeatmapDto"
+}

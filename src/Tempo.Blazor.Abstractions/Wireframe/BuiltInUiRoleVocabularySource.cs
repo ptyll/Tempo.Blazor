@@ -142,6 +142,7 @@ public sealed class BuiltInUiRoleVocabularySource : IUiRoleVocabularySource
         R("rich-text-editor", "Rich text editor", "Edits formatted rich text content.", "wysiwyg editor", "editor textu", "TmRichEditorFull", "TmRichEditorSimple"),
         R("spreadsheet", "Spreadsheet", "Displays and edits tabular worksheet data.", "worksheet", "tabulkovy procesor", "TmSpreadsheet"),
         R("diagram-editor", "Diagram editor", "Creates or edits visual diagrams and models.", "diagram canvas", "editor diagramu", "TmDiagramEditor", "TmModelingEditor"),
+        R("modeling-viewer", "Modeling viewer", "Displays a read-only modeling diagram with optional diff and heatmap overlays.", "process viewer", "model viewer", "diagram viewer", "prohlizec modelu", "TmModelingViewer"),
         R("image-gallery", "Image gallery", "Displays images in a browsable gallery.", "gallery", "galerie", "TmImageGallery", "TmLightbox"),
         R("filter-builder", "Filter builder", "Builds complex filter conditions.", "query builder", "tvorba filtru", "TmFilterBuilder"),
         R("facet-filter", "Facet filter", "Narrows a list through grouped options with result counts, presented as a popover or inline panel.", "filter menu", "faceted filter", "facet filter", "filtr faset", "fasetovy filtr", "TmFacetFilter"),

@@ -54092,6 +54092,26 @@
           "documentationStatus": "merged"
         },
         {
+          "itemName": "ModelingViewerElementContext",
+          "kind": "Class",
+          "category": "Components",
+          "namespace": "Tempo.Blazor.Components.Modeling",
+          "description": "The context handed to TmModelingViewer.ElementListContent for one row of the text alternative: ElementId, IsRelationship, SemanticType, Name, IsSelected, IsRemoved, DiffState, HeatmapValue and the formatted HeatmapValueText. The viewer keeps the list semantics; the host replaces the row content.",
+          "packageId": "Tempo.Blazor.Modeling",
+          "sourcePath": "src/Tempo.Blazor.Modeling/Components/Modeling/ModelingViewerElementEventArgs.cs",
+          "documentationStatus": "merged"
+        },
+        {
+          "itemName": "ModelingViewerElementEventArgs",
+          "kind": "Class",
+          "category": "Components",
+          "namespace": "Tempo.Blazor.Components.Modeling",
+          "description": "Describes the modeling element or relationship the reader activated in TmModelingViewer: ElementId (a relationship id when IsRelationship), IsRelationship, SemanticType and Name.",
+          "packageId": "Tempo.Blazor.Modeling",
+          "sourcePath": "src/Tempo.Blazor.Modeling/Components/Modeling/ModelingViewerElementEventArgs.cs",
+          "documentationStatus": "merged"
+        },
+        {
           "itemName": "UpdateModelingElementCommand",
           "kind": "Class",
           "category": "Components",
@@ -55394,6 +55414,142 @@
           ]
         },
         {
+          "itemName": "TmModelingViewer",
+          "kind": "Component",
+          "category": "Modeling",
+          "namespace": "Tempo.Blazor.Components.Modeling",
+          "description": "Phase 6 (MODELING-READONLY-VIEWER): a read-only presentation surface for a semantic modeling model - no model tree, no inspector, no editor chrome and no writer. It projects the model with the shared ModelingDiagramGenerator and renders the presentation copy through TmDiagramEditor in viewer mode; the diff and heatmap overlays restyle only that copy (public DiagramStyle / DiagramNode.Data), never the caller's model. The keyboard/text alternative is a real list of buttons in topological order; every overlay carries a text equivalent (legend counts, scale bands and values, one polite live region) and ExportSvgAsync renders a standalone SVG through IDiagramSvgRenderer with the overlay tokens resolved for the requested theme.",
+          "packageId": "Tempo.Blazor.Modeling",
+          "sourcePath": "src/Tempo.Blazor.Modeling/Components/Modeling/TmModelingViewer.razor",
+          "documentationStatus": "merged",
+          "requiredImports": [
+            "@using Tempo.Blazor.Components.Modeling"
+          ],
+          "parameters": [
+            {
+              "name": "AriaLabel",
+              "type": "string?",
+              "isRequired": false,
+              "description": "Accessible name of the viewer region; null uses the localized default."
+            },
+            {
+              "name": "Class",
+              "type": "string?",
+              "isRequired": false,
+              "description": "Additional CSS class applied to the viewer root."
+            },
+            {
+              "name": "DiffOverlay",
+              "type": "ModelingDiffOverlayDto?",
+              "isRequired": false,
+              "description": "Optional diff overlay (added / removed / changed / layout-only)."
+            },
+            {
+              "name": "ElementListContent",
+              "type": "RenderFragment<ModelingViewerElementContext>?",
+              "isRequired": false,
+              "description": "Host slot replacing the default row content of the element list; the list semantics stay."
+            },
+            {
+              "name": "FitMode",
+              "type": "ModelingViewerFitMode",
+              "isRequired": false,
+              "default": "ModelingViewerFitMode.Width",
+              "description": "How the diagram fits into the viewer box (Width or Page)."
+            },
+            {
+              "name": "Heatmap",
+              "type": "ModelingHeatmapDto?",
+              "isRequired": false,
+              "description": "Optional heatmap overlay (normalized 0..1 value per element or relationship id)."
+            },
+            {
+              "name": "Height",
+              "type": "string",
+              "isRequired": false,
+              "default": "\"480px\"",
+              "description": "CSS height of the viewer root."
+            },
+            {
+              "name": "HighlightElementIds",
+              "type": "IReadOnlyCollection<string>?",
+              "isRequired": false,
+              "description": "Element and relationship ids to emphasize without selecting them."
+            },
+            {
+              "name": "LayoutMode",
+              "type": "TmLayoutMode",
+              "isRequired": false,
+              "default": "TmLayoutMode.Auto",
+              "description": "How the viewer resolves its presentation; Auto measures its own container."
+            },
+            {
+              "name": "Model",
+              "type": "ModelingModelDto",
+              "isRequired": true,
+              "description": "The semantic model to present. Required.",
+              "editorRequired": true
+            },
+            {
+              "name": "OnElementClick",
+              "type": "EventCallback<ModelingViewerElementEventArgs>",
+              "isRequired": false,
+              "description": "Raised when the reader activates an element or relationship on the canvas or in the element list."
+            },
+            {
+              "name": "SelectedElementId",
+              "type": "string?",
+              "isRequired": false,
+              "description": "Two-way selected element or relationship id."
+            },
+            {
+              "name": "SelectedElementIdChanged",
+              "type": "EventCallback<string?>",
+              "isRequired": false,
+              "description": "Raised when SelectedElementId changes."
+            },
+            {
+              "name": "ShowElementList",
+              "type": "bool",
+              "isRequired": false,
+              "default": "true",
+              "description": "Whether the keyboard/text alternative element list renders."
+            },
+            {
+              "name": "ShowElementListInPrint",
+              "type": "bool",
+              "isRequired": false,
+              "description": "Print opt-in: keep the element list in the printed output. Default false - print shows the diagram and its legends only."
+            },
+            {
+              "name": "ShowLegend",
+              "type": "bool",
+              "isRequired": false,
+              "default": "true",
+              "description": "Whether the notation legend card renders (reuses the shared ModelingNotationCatalog)."
+            },
+            {
+              "name": "ShowZoomControls",
+              "type": "bool",
+              "isRequired": false,
+              "default": "true",
+              "description": "Whether the embedded viewer renders its zoom controls (the viewer-mode toolbar's zoom group and the mobile zoom pill)."
+            },
+            {
+              "name": "ViewId",
+              "type": "string?",
+              "isRequired": false,
+              "description": "Optional view id to project; null uses the default view / generated grid."
+            },
+            {
+              "name": "Zoom",
+              "type": "double?",
+              "isRequired": false,
+              "description": "Explicit zoom (1 = 100 %). Null fits the diagram through FitMode; an explicit value wins over fit-on-load."
+            }
+          ]
+        },
+        {
           "itemName": "TmModelingViewSelector",
           "kind": "Component",
           "category": "Modeling",
@@ -55444,15 +55600,19 @@
         {
           "path": "src/Tempo.Blazor.Modeling/wwwroot/js/modeling-editor.js",
           "kind": "JavaScript"
+        },
+        {
+          "path": "src/Tempo.Blazor.Modeling/wwwroot/js/__tests__/modeling-viewer-tokens.test.mjs",
+          "kind": "JavaScript"
         }
       ],
       "summary": {
-        "itemCount": 29,
-        "manualItemCount": 29,
-        "generatedItemCount": 29,
+        "itemCount": 32,
+        "manualItemCount": 32,
+        "generatedItemCount": 32,
         "generatedOnlyItemCount": 0,
-        "componentCount": 9,
-        "publicApiTypeCount": 20
+        "componentCount": 10,
+        "publicApiTypeCount": 22
       }
     },
     {
@@ -88206,6 +88366,12 @@
               "description": "Spacing between target node boundary and edge end."
             },
             {
+              "name": "Title",
+              "kind": "Property",
+              "type": "string?",
+              "description": "Optional accessible name / pointer tooltip. The canvas renders it as the edge group's first <title> child, so a screen reader and a hovering pointer both get the text. Used by the read-only Modeling viewer to carry an overlay reading (\"Name: value (band)\") that the picture alone would not convey; null renders nothing."
+            },
+            {
               "name": "Waypoints",
               "kind": "Property",
               "type": "List<DiagramPoint>",
@@ -100255,6 +100421,16 @@
           "documentationStatus": "merged"
         },
         {
+          "itemName": "ModelingDiffOverlayDto",
+          "kind": "Class",
+          "category": "Modeling",
+          "namespace": "Tempo.Blazor.Modeling",
+          "description": "The diff overlay of TmModelingViewer: added / removed / changed / layout-only semantic element ids plus added / removed relationship ids. The viewer never draws an id absent from the model; removed ids are counted by the legend and, with BaselineModel, named in the text alternative's Removed group.",
+          "packageId": "Tempo.Blazor.Abstractions",
+          "sourcePath": "src/Tempo.Blazor.Abstractions/Modeling/ModelingViewerContracts.cs",
+          "documentationStatus": "merged"
+        },
+        {
           "itemName": "ModelingElementAdd",
           "kind": "Class",
           "category": "Modeling",
@@ -100302,6 +100478,16 @@
           "description": "Governance state attached to a source-backed modeling element.",
           "packageId": "Tempo.Blazor.Abstractions",
           "sourcePath": "src/Tempo.Blazor.Abstractions/Modeling/ModelingDtos.cs",
+          "documentationStatus": "merged"
+        },
+        {
+          "itemName": "ModelingHeatmapDto",
+          "kind": "Class",
+          "category": "Modeling",
+          "namespace": "Tempo.Blazor.Modeling",
+          "description": "The heatmap overlay of TmModelingViewer: a normalized 0..1 value per element or relationship id, an optional ValueLabel, min/max scale labels and a composite format. A missing id gets no tint; every value also renders as text in the element list and the legend, so the picture never carries the reading alone.",
+          "packageId": "Tempo.Blazor.Abstractions",
+          "sourcePath": "src/Tempo.Blazor.Abstractions/Modeling/ModelingViewerContracts.cs",
           "documentationStatus": "merged"
         },
         {
@@ -100729,6 +100915,16 @@
           "description": "A named projection of model elements and relationships.",
           "packageId": "Tempo.Blazor.Abstractions",
           "sourcePath": "src/Tempo.Blazor.Abstractions/Modeling/ModelingDtos.cs",
+          "documentationStatus": "merged"
+        },
+        {
+          "itemName": "ModelingViewerFitMode",
+          "kind": "Enum",
+          "category": "Modeling",
+          "namespace": "Tempo.Blazor.Modeling",
+          "description": "How the read-only TmModelingViewer fits the generated diagram into its box: Width scales by the container width only (a tall diagram stays scrollable), Page fits both axes.",
+          "packageId": "Tempo.Blazor.Abstractions",
+          "sourcePath": "src/Tempo.Blazor.Abstractions/Modeling/ModelingViewerContracts.cs",
           "documentationStatus": "merged"
         },
         {
@@ -127005,12 +127201,12 @@
       ],
       "libraryExamples": [],
       "summary": {
-        "itemCount": 1700,
-        "manualItemCount": 1700,
-        "generatedItemCount": 1684,
+        "itemCount": 1703,
+        "manualItemCount": 1703,
+        "generatedItemCount": 1687,
         "generatedOnlyItemCount": 0,
         "componentCount": 0,
-        "publicApiTypeCount": 1684
+        "publicApiTypeCount": 1687
       }
     },
     {
@@ -144003,10 +144199,10 @@
   ],
   "summary": {
     "packageCount": 28,
-    "itemCount": 3663,
-    "manualItemCount": 3663,
+    "itemCount": 3669,
+    "manualItemCount": 3669,
     "generatedOnlyItemCount": 0,
-    "componentCount": 558,
-    "publicApiTypeCount": 3053
+    "componentCount": 559,
+    "publicApiTypeCount": 3058
   }
 }

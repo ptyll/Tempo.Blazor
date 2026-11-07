@@ -2648,6 +2648,17 @@ public partial class TmDiagramCanvas : TmComponentBase, IAsyncDisposable
     private static string GetNodeDataString(DiagramNode node, string key)
         => node.Data.TryGetValue(key, out var value) ? value?.ToString() ?? string.Empty : string.Empty;
 
+    /// <summary>
+    /// A node's data value as an optional DOM attribute. Phase 6: the Modeling viewer writes
+    /// <c>Data["viewerState"]</c> (<c>highlight</c> / <c>diff-*</c> / <c>heatmap</c>) on its
+    /// presentation copy so hosts and tests have a stable CSS hook; a node without a state emits
+    /// no attribute instead of an empty one.
+    /// </summary>
+    private static string? GetNodeDataOrNull(DiagramNode node, string key)
+        => node.Data.TryGetValue(key, out var value) && value?.ToString() is { Length: > 0 } text
+            ? text
+            : null;
+
     private (double X, double Y, string TextAnchor, string Baseline) ComputeCardinalityPosition(DiagramEdge edge, bool isSource)
     {
         var pts = DiagramGeometryHelper.GetEdgePoints(Document, edge);

@@ -1,0 +1,291 @@
+@using Tempo.Blazor.Abstractions.Layout
+@using Tempo.Blazor.Components.Layout
+@inherits Tempo.Blazor.Components.TmComponentBase
+@using Tempo.Blazor.Components.Diagram
+@using Tempo.Blazor.Components.Diagram.Models
+@using Tempo.Blazor.Modeling
+
+@* Phase 6 (MODELING-READONLY-VIEWER): a presentation surface only — no model tree, no inspector,
+   no editor chrome, no writer. The embedded DiagramEditor runs in viewer mode; the diff/heatmap
+   overlays restyle the viewer-owned presentation copy through the public diagram model. The
+   element list is the keyboard/text alternative and the live region announces selection and
+   overlay changes. *@
+<section @ref="_root"
+         class="@RootClass"
+         data-testid="@RootTestId("modeling-viewer")"
+         data-state="@StateName"
+         data-layout="@LayoutName"
+         data-overlay="@OverlayName"
+         data-fit-mode="@FitModeName"
+         data-node-count="@NodeCount"
+         data-edge-count="@EdgeCount"
+         data-element-count="@ElementCount"
+         data-selected="@_selectedId"
+         data-zoom="@ZoomName"
+         data-legend="@((_legendEntries is { Count: > 0 }).ToString().ToLowerInvariant())"
+         style="@($"height:{Height}")"
+         role="region"
+         aria-label="@RootAriaLabel">
+    <TmLayoutObserver LayoutMode="LayoutMode"
+                      Breakpoints="ViewerBreakpoints"
+                      ResolvedLayoutChanged="OnResolvedLayoutChanged"
+                      IsContainer="true"
+                      Class="tm-modeling-viewer__layout">
+        <div class="tm-modeling-viewer__body">
+            @if (_document is null || IsEmpty)
+            {
+                <div class="tm-modeling-viewer__empty" data-testid="@TestId("modeling-viewer-empty")">
+                    <strong id="@EmptyTitleId">@Loc["TmModelingViewer_EmptyTitle"]</strong>
+                    <span>@Loc["TmModelingViewer_EmptyText"]</span>
+                </div>
+            }
+            else
+            {
+                <div class="tm-modeling-viewer__canvas" data-testid="@TestId("modeling-viewer-canvas")" style="@CanvasStyle">
+                    @* Viewer mode: read-only, no toolbox / inspector / layers / page tabs / minimap;
+                       only the zoom group when ShowZoomControls is on. No DocumentChanged binding —
+                       the viewer never writes to the host's model. *@
+                    <TmDiagramEditor @ref="_editor"
+                                     Document="@_document"
+                                     ReadOnly="true"
+                                     ToolbarPreset="DiagramToolbarPreset.Viewer"
+                                     ToolbarGroups="DiagramToolbarGroups.Zoom"
+                                     ShowToolbar="@ShowZoomControls"
+                                     ShowTitle="false"
+                                     ShowToolbox="false"
+                                     ShowPropertiesPanel="false"
+                                     ShowLayersPanel="false"
+                                     ShowPageTabs="false"
+                                     ShowMinimap="false"
+                                     ShowPageView="false"
+                                     GridSize="0"
+                                     SnapDocumentOnLoad="false"
+                                     FitOnDocumentLoad="@(Zoom is null ? DiagramFit : null)"
+                                     ShowMobileZoomOverlay="@(ShowZoomControls ? (bool?)true : null)"
+                                     OnSelectedIdsChanged="HandleSelectedIdsChangedAsync"
+                                     Class="tm-modeling-viewer__editor" />
+                </div>
+
+                @* Every legend card — the notation legend, the diff counts and the heatmap scale — is
+                   a DOCKED strip under the canvas, never a floating card over the diagram: the canvas
+                   is sized to the fitted content, so an absolutely positioned card would cover the
+                   very thing it explains (review fix, U6). On the mobile band the strip is part of the
+                   reading order and always expanded — a phone has no room for a covered canvas and the
+                   text equivalent must not need a tap; the notation legend is dropped there because
+                   the element list already names every type. *@
+                @if (HasLegends)
+                {
+                    <section class="tm-modeling-viewer__legends"
+                             data-testid="@TestId("modeling-viewer-legends")"
+                             data-expanded="@((IsMobile || _legendsExpanded).ToString().ToLowerInvariant())"
+                             aria-labelledby="@LegendsTitleId">
+                        <div class="tm-modeling-viewer__legends-header">
+                            <h3 id="@LegendsTitleId" class="tm-modeling-viewer__legends-title">@Loc["TmModelingViewer_Legends"]</h3>
+                            @if (!IsMobile)
+                            {
+                                <button type="button"
+                                        class="tm-modeling-viewer__legends-toggle"
+                                        aria-expanded="@_legendsExpanded.ToString().ToLowerInvariant()"
+                                        aria-controls="@($"{LegendsTitleId}-body")"
+                                        data-testid="@TestId("modeling-viewer-legends-toggle")"
+                                        @onclick="ToggleLegends">
+                                    @LegendsToggleLabel
+                                </button>
+                            }
+                        </div>
+                        @if (IsMobile || _legendsExpanded)
+                        {
+                            <div id="@($"{LegendsTitleId}-body")" class="tm-modeling-viewer__legends-body">
+                                @if (ShowNotationLegend && _legendEntries is not null)
+                                {
+                                    <div class="tm-modeling-viewer__notation-legend">
+                                        <TmModelingDiagramLegend Entries="_legendEntries" DefaultExpanded="false" />
+                                    </div>
+                                }
+
+                                @if (DiffOverlay is not null)
+                                {
+                                    <aside class="tm-modeling-viewer__diff-legend"
+                                           data-testid="@TestId("modeling-viewer-diff-legend")"
+                                           aria-label="@DiffLegendTitle">
+                                        <p class="tm-modeling-viewer__legend-title">@DiffLegendTitle</p>
+                                        <ul role="list" class="tm-modeling-viewer__legend-list">
+                                            @foreach (var row in DiffLegendRows)
+                                            {
+                                                <li class="tm-modeling-viewer__legend-row"
+                                                    data-state="@row.State"
+                                                    data-count="@row.Count">
+                                                    <span class="tm-modeling-viewer__swatch tm-modeling-viewer__swatch--@row.State" aria-hidden="true"></span>
+                                                    <span class="tm-modeling-viewer__legend-label">
+                                                        @row.Label
+                                                        @if (DiffLegendHint(row.State) is { } hint)
+                                                        {
+                                                            <span class="tm-modeling-viewer__legend-hint">@hint</span>
+                                                        }
+                                                    </span>
+                                                    <span class="tm-modeling-viewer__legend-count">@row.Count</span>
+                                                </li>
+                                            }
+                                        </ul>
+                                    </aside>
+                                }
+
+                                @if (Heatmap is not null)
+                                {
+                                    <aside class="tm-modeling-viewer__heatmap-legend"
+                                           data-testid="@TestId("modeling-viewer-heatmap-legend")"
+                                           aria-label="@HeatmapTitle">
+                                        <p class="tm-modeling-viewer__legend-title">@HeatmapTitle</p>
+                                        @* The gradient is decorative; the list below is the text equivalent. *@
+                                        <div class="tm-modeling-viewer__scale" aria-hidden="true">
+                                            @foreach (var step in HeatmapScaleRows)
+                                            {
+                                                <span class="@HeatStepClass(step.Token)" title="@step.Label"></span>
+                                            }
+                                        </div>
+                                        <p class="tm-modeling-viewer__scale-range">
+                                            <span>@HeatmapMinLabel</span>
+                                            <span>@HeatmapMaxLabel</span>
+                                        </p>
+                                        <ul role="list" class="tm-modeling-viewer__legend-list tm-modeling-viewer__scale-labels">
+                                            @foreach (var step in HeatmapScaleRows)
+                                            {
+                                                <li class="tm-modeling-viewer__legend-row">
+                                                    <span class="@($"tm-modeling-viewer__swatch tm-modeling-viewer__scale-swatch {HeatStepClass(step.Token)}")" aria-hidden="true"></span>
+                                                    <span class="tm-modeling-viewer__legend-label">@step.Label</span>
+                                                </li>
+                                            }
+                                        </ul>
+                                        <p class="tm-modeling-viewer__heatmap-value" data-testid="@TestId("modeling-viewer-heatmap-selected")">
+                                            @(SelectedHeatValueText() ?? Loc["TmModelingViewer_HeatmapNoSelection"])
+                                        </p>
+                                    </aside>
+                                }
+                            </div>
+                        }
+                    </section>
+                }
+            }
+
+            @* The keyboard/text alternative. An empty model has nothing to list (and no toggle / hint
+               that would describe rows that cannot exist). *@
+            @if (ShowElementList && !IsEmpty)
+            {
+                <section class="tm-modeling-viewer__elements"
+                         data-testid="@TestId("modeling-viewer-element-list")"
+                         data-expanded="@((IsMobile || _elementListExpanded).ToString().ToLowerInvariant())"
+                         data-mobile="@IsMobile.ToString().ToLowerInvariant()">
+                    <div class="tm-modeling-viewer__elements-header">
+                        <h3 id="@ListTitleId" class="tm-modeling-viewer__elements-title">@ElementListTitle</h3>
+                        @if (!IsMobile)
+                        {
+                            <button type="button"
+                                    class="tm-modeling-viewer__elements-toggle"
+                                    aria-expanded="@((_elementListExpanded).ToString().ToLowerInvariant())"
+                                    aria-controls="@($"{ListTitleId}-list")"
+                                    data-testid="@TestId("modeling-viewer-element-list-toggle")"
+                                    @onclick="ToggleElementList">
+                                @ElementListToggleLabel
+                            </button>
+                        }
+                    </div>
+                    @if (IsElementListVisible)
+                    {
+                        <p id="@HintId" class="tm-modeling-viewer__hint">@Loc["TmModelingViewer_ElementListHint"]</p>
+                        var drawnRows = DrawnEntries;
+                        <ul @ref="_listRoot"
+                            id="@($"{ListTitleId}-list")"
+                            data-focused-index="@_focusedListIndex"
+                            role="list"
+                            class="tm-modeling-viewer__element-list"
+                            aria-labelledby="@ListTitleId">
+                            @for (var index = 0; index < drawnRows.Count; index++)
+                            {
+                                var entry = drawnRows[index];
+                                var rowIndex = index;
+                                <li class="tm-modeling-viewer__element-row" data-removed="false">
+                                    @* One interactive button per row — always viewer-owned, so the
+                                       roving tabindex, the arrow/Home/End keys and the activation
+                                       contract hold even when ElementListContent replaces the row's
+                                       visible content. Host content must be PHRASING and
+                                       NON-INTERACTIVE (a nested control is invalid inside a button
+                                       and steals the row's own activation). *@
+                                    <button type="button"
+                                            class="tm-modeling-viewer__element"
+                                            data-testid="@TestId($"modeling-viewer-element-{entry.Key}")"
+                                            data-element-id="@entry.Id"
+                                            data-list-index="@index"
+                                            data-relationship="@entry.IsRelationship.ToString().ToLowerInvariant()"
+                                            data-viewer-state="@entry.DiffState"
+                                            aria-current="@(string.Equals(_selectedId, entry.Id, StringComparison.Ordinal) ? "true" : null)"
+                                            tabindex="@(index == _focusedListIndex ? 0 : -1)"
+                                            aria-label="@EntryAriaLabel(entry)"
+                                            aria-describedby="@($"{HintId} {RowDescriptionId(entry.Key)}")"
+                                            title="@(EntryTitle(entry) is { } tooltip ? tooltip : null)"
+                                            @onkeydown="args => HandleListKeyDownAsync(args, rowIndex)"
+                                            @onclick="() => HandleEntryClickedAsync(entry)">
+                                        @if (ElementListContent is not null)
+                                        {
+                                            @ElementListContent(CreateContext(entry))
+                                        }
+                                        else
+                                        {
+                                            <span class="tm-modeling-viewer__element-name">@entry.Name</span>
+                                            <span class="tm-modeling-viewer__element-type">@TypeLabel(entry)</span>
+                                            @if (DiffStateLabel(entry.DiffState) is { } stateLabel)
+                                            {
+                                                <span class="tm-modeling-viewer__element-state" data-state="@entry.DiffState">@stateLabel</span>
+                                            }
+                                            @if (entry.HeatmapValue is { } heatValue)
+                                            {
+                                                <span class="tm-modeling-viewer__element-value">@HeatValueText(heatValue)</span>
+                                            }
+                                        }
+                                    </button>
+                                    <span id="@RowDescriptionId(entry.Key)" class="tm-modeling-viewer__sr">@EntryDescription(entry)</span>
+                                </li>
+                            }
+                        </ul>
+
+                        @* Baseline-only rows: listed for the text alternative, never drawn and never
+                           interactive (there is nothing to activate). Inside the collapsible body, so a
+                           collapsed list hides the whole alternative. *@
+                        @if (RemovedEntries.Count > 0)
+                        {
+                            <p class="tm-modeling-viewer__removed-title" id="@($"{ListTitleId}-removed")">@Loc["TmModelingViewer_RemovedGroup"]</p>
+                            <ul role="list"
+                                class="tm-modeling-viewer__element-list tm-modeling-viewer__element-list--removed"
+                                aria-labelledby="@($"{ListTitleId}-removed")">
+                                @foreach (var entry in RemovedEntries)
+                                {
+                                    <li class="tm-modeling-viewer__element-row"
+                                        data-removed="true"
+                                        data-element-id="@entry.Id"
+                                        data-relationship="@entry.IsRelationship.ToString().ToLowerInvariant()">
+                                        <span class="tm-modeling-viewer__element tm-modeling-viewer__element--removed">
+                                            <span class="tm-modeling-viewer__element-name">@entry.Name</span>
+                                            <span class="tm-modeling-viewer__element-type">@TypeLabel(entry)</span>
+                                            @if (DiffStateLabel(entry.DiffState) is { } removedStateLabel)
+                                            {
+                                                <span class="tm-modeling-viewer__element-state" data-state="@entry.DiffState">@removedStateLabel</span>
+                                            }
+                                        </span>
+                                    </li>
+                                }
+                            </ul>
+                        }
+                    }
+                </section>
+            }
+
+            <p class="tm-modeling-viewer__sr"
+               data-testid="@TestId("modeling-viewer-live-region")"
+               aria-live="polite"
+               aria-atomic="true">@_announcement</p>
+        </div>
+    </TmLayoutObserver>
+</section>
+
+@code {
+    private static readonly TmLayoutBreakpoints ViewerBreakpoints = TmLayoutBreakpoints.Default;
+}

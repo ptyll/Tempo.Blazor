@@ -1,0 +1,601 @@
+/* Phase 6 (MODELING-READONLY-VIEWER): the read-only presentation surface. Every colour, radius and
+   space comes from a design token; the component-local knobs are declared on the root. The
+   stylesheet never reaches into the embedded DiagramEditor's internals — the only descendant rules
+   are host-owned hooks: the root class the viewer passes through the editor's public Class
+   parameter, the canvas' published `data-viewer-state` / `data-tm-group` attributes and the
+   DE-owned `.tm-diagram-node__shape-bg` primitive class. */
+.tm-modeling-viewer {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    background: var(--tm-bg-surface);
+    border: 1px solid var(--tm-border-color);
+    border-radius: var(--tm-radius-card);
+    overflow: hidden;
+    color: var(--tm-text-primary);
+}
+
+.tm-modeling-viewer ::deep .tm-modeling-viewer__layout {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.tm-modeling-viewer__body {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    position: relative;
+    min-height: 0;
+}
+
+.tm-modeling-viewer__canvas {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    position: relative;
+    min-height: 0;
+}
+
+/* A width fit scales against the container width only, so the fitted content's height follows from
+   the presentation page's own aspect ratio (the page hugs the content). The component writes that
+   height inline — `calc((100cqw - 80px) / aspect + 2.4rem)`, the editor's fit padding plus its own
+   toolbar row — and these rules keep both extremes usable. Floor and ceiling matter: a tiny canvas
+   still has to show something, and a huge one must not push the legends and the list out of the
+   viewer. A PAGE fit keeps the flexible canvas because the ratio does not describe both axes. */
+.tm-modeling-viewer[data-fit-mode="width"] .tm-modeling-viewer__canvas {
+    flex: 0 0 auto;
+    min-height: 12rem;
+    max-height: 62%;
+}
+
+.tm-modeling-viewer ::deep .tm-modeling-viewer__editor {
+    height: 100%;
+}
+
+/* ── Overlay cues on the canvas ───────────────────────────────────────────────
+ * The viewer restyles only its own presentation copy; the state reaches the DOM as
+ * `data-viewer-state` on `.tm-diagram-node` (an additive DE hook). The pattern carries the state
+ * as well as the colour: added = solid heavy, changed = fine dot, layout-only = long dash. */
+.tm-modeling-viewer ::deep .tm-diagram-node[data-viewer-state="diff-added"] .tm-diagram-node__shape-bg {
+    stroke: var(--tm-color-diff-added-stroke);
+    stroke-width: 3;
+    stroke-dasharray: none;
+}
+
+.tm-modeling-viewer ::deep .tm-diagram-node[data-viewer-state="diff-changed"] .tm-diagram-node__shape-bg {
+    stroke: var(--tm-color-diff-changed-stroke);
+    stroke-width: 2.5;
+    stroke-dasharray: 2 2;
+}
+
+.tm-modeling-viewer ::deep .tm-diagram-node[data-viewer-state="diff-layout"] .tm-diagram-node__shape-bg {
+    stroke: var(--tm-color-diff-layout-stroke);
+    stroke-width: 2.5;
+    stroke-dasharray: 6 3;
+}
+
+/* The notation legend is one more card in the docked strip (collapsed at rest), never a floating
+   card in the canvas corner — the canvas is sized to the fitted content, so an absolute card would
+   cover the diagram's own right-hand end. */
+.tm-modeling-viewer__notation-legend {
+    max-width: min(18rem, 100%);
+}
+
+/* ── Diff / heatmap legend strip ─────────────────────────────────────────────
+ * A docked row under the canvas, never a floating card over the diagram: on a fitted diagram an
+ * absolutely positioned legend covers the very thing it explains (review fix). Desktop and tablet
+ * share the strip; the phone band stacks the cards in the reading order and always shows them. */
+.tm-modeling-viewer__legends {
+    display: flex;
+    flex: 0 0 auto;
+    flex-direction: column;
+    gap: var(--tm-space-2);
+    min-height: 0;
+    max-height: 45%;
+    padding: var(--tm-space-2) var(--tm-space-3);
+    overflow: auto;
+    border-top: 1px solid var(--tm-border-color);
+    background: var(--tm-bg-surface);
+}
+
+.tm-modeling-viewer__legends-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--tm-space-2);
+}
+
+.tm-modeling-viewer__legends-title {
+    margin: 0;
+    font-size: var(--tm-font-size-xs);
+    font-weight: var(--tm-font-weight-semibold);
+    color: var(--tm-text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.tm-modeling-viewer__legends-toggle {
+    padding: var(--tm-space-1) var(--tm-space-2);
+    background: var(--tm-bg-surface-secondary);
+    border: 1px solid var(--tm-border-color);
+    border-radius: var(--tm-radius-sm);
+    color: var(--tm-text-primary);
+    font-size: var(--tm-font-size-xs);
+    cursor: pointer;
+}
+
+.tm-modeling-viewer__legends-toggle:focus-visible {
+    outline: 2px solid var(--tm-border-color-focus);
+    outline-offset: 2px;
+}
+
+.tm-modeling-viewer__legends-body {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: var(--tm-space-2);
+}
+
+.tm-modeling-viewer__diff-legend,
+.tm-modeling-viewer__heatmap-legend {
+    position: static;
+    max-width: min(17rem, 100%);
+    padding: var(--tm-space-2) var(--tm-space-3);
+    background: var(--tm-bg-surface);
+    border: 1px solid var(--tm-border-color);
+    border-radius: var(--tm-radius-md);
+    font-size: var(--tm-font-size-xs);
+}
+
+.tm-modeling-viewer__legend-title {
+    margin: 0 0 var(--tm-space-1);
+    font-weight: var(--tm-font-weight-semibold);
+    color: var(--tm-text-primary);
+}
+
+.tm-modeling-viewer__legend-list {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.tm-modeling-viewer__legend-row {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-2);
+    min-height: 1.25rem;
+}
+
+.tm-modeling-viewer__legend-label {
+    flex: 1 1 auto;
+    color: var(--tm-text-secondary);
+}
+
+.tm-modeling-viewer__legend-hint {
+    margin-left: 0.25em;
+    color: var(--tm-text-tertiary);
+}
+
+.tm-modeling-viewer__legend-count {
+    font-variant-numeric: tabular-nums;
+    color: var(--tm-text-primary);
+    font-weight: var(--tm-font-weight-semibold);
+}
+
+/* The swatch repeats the canvas cue — fill AND the matching border pattern — so a reader who cannot
+   separate the hues still maps a legend row to the outline it explains. */
+.tm-modeling-viewer__swatch {
+    display: inline-block;
+    flex: 0 0 auto;
+    width: 0.75rem;
+    height: 0.75rem;
+    border-radius: var(--tm-radius-sm);
+    border: 2px solid var(--tm-border-color-strong);
+    background: var(--tm-bg-surface);
+}
+
+.tm-modeling-viewer__swatch--diff-added {
+    background: var(--tm-color-diff-added-stroke);
+    border-color: var(--tm-color-diff-added-stroke);
+    border-style: solid;
+}
+
+.tm-modeling-viewer__swatch--diff-removed {
+    background: var(--tm-color-danger);
+    border-color: var(--tm-color-danger);
+    border-style: dotted;
+    text-decoration: line-through;
+}
+
+.tm-modeling-viewer__swatch--diff-changed {
+    background: var(--tm-color-diff-changed-stroke);
+    border-color: var(--tm-color-diff-changed-stroke);
+    border-style: dotted;
+}
+
+.tm-modeling-viewer__swatch--diff-layout {
+    background: transparent;
+    border-color: var(--tm-color-diff-layout-stroke);
+    border-style: dashed;
+}
+
+.tm-modeling-viewer__scale {
+    display: flex;
+    height: 0.625rem;
+    margin: 0 0 var(--tm-space-1);
+    overflow: hidden;
+    border-radius: var(--tm-radius-sm);
+    border: 1px solid var(--tm-border-color);
+}
+
+.tm-modeling-viewer__scale-step {
+    flex: 1 1 0;
+    display: block;
+}
+
+.tm-modeling-viewer__scale-step--tm-color-heat-0 {
+    background: var(--tm-color-heat-0);
+}
+
+.tm-modeling-viewer__scale-step--tm-color-heat-1 {
+    background: var(--tm-color-heat-1);
+}
+
+.tm-modeling-viewer__scale-step--tm-color-heat-2 {
+    background: var(--tm-color-heat-2);
+}
+
+.tm-modeling-viewer__scale-step--tm-color-heat-3 {
+    background: var(--tm-color-heat-3);
+}
+
+.tm-modeling-viewer__scale-range {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--tm-space-2);
+    margin: 0 0 var(--tm-space-1);
+    color: var(--tm-text-secondary);
+}
+
+.tm-modeling-viewer__scale-labels .tm-modeling-viewer__legend-row {
+    min-height: 1.125rem;
+}
+
+.tm-modeling-viewer__scale-swatch {
+    border-width: 1px;
+    border-color: var(--tm-border-color);
+}
+
+.tm-modeling-viewer__heatmap-value {
+    margin: var(--tm-space-1) 0 0;
+    padding-top: var(--tm-space-1);
+    border-top: 1px solid var(--tm-border-color);
+    color: var(--tm-text-primary);
+    font-variant-numeric: tabular-nums;
+}
+
+/* ── Element list (the keyboard / text alternative) ───────────────────────── */
+/* The text alternative keeps a floor and takes whatever the canvas (sized to the fitted content) and
+   the legend strip leave over; a host that picks a height too small for all three scrolls the strip,
+   never the accessible path. */
+.tm-modeling-viewer__elements {
+    flex: 1 1 auto;
+    min-height: 4.5rem;
+    max-height: 40%;
+    overflow: auto;
+    padding: var(--tm-space-2) var(--tm-space-3);
+    border-top: 1px solid var(--tm-border-color);
+    background: var(--tm-bg-surface);
+}
+
+.tm-modeling-viewer--mobile .tm-modeling-viewer__elements {
+    min-height: 6.5rem;
+    max-height: 36%;
+}
+
+.tm-modeling-viewer__elements-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--tm-space-2);
+}
+
+.tm-modeling-viewer__elements-title {
+    margin: 0;
+    font-size: var(--tm-font-size-sm);
+    font-weight: var(--tm-font-weight-semibold);
+    color: var(--tm-text-primary);
+}
+
+.tm-modeling-viewer__elements-toggle {
+    padding: var(--tm-space-1) var(--tm-space-2);
+    background: var(--tm-bg-surface-secondary);
+    border: 1px solid var(--tm-border-color);
+    border-radius: var(--tm-radius-sm);
+    color: var(--tm-text-primary);
+    font-size: var(--tm-font-size-xs);
+    cursor: pointer;
+}
+
+.tm-modeling-viewer__elements-toggle:focus-visible {
+    outline: 2px solid var(--tm-border-color-focus);
+    outline-offset: 2px;
+}
+
+.tm-modeling-viewer__hint {
+    margin: var(--tm-space-1) 0;
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-xs);
+}
+
+.tm-modeling-viewer__element-list {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.tm-modeling-viewer__element-row {
+    min-width: 0;
+}
+
+.tm-modeling-viewer__element {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: var(--tm-space-2);
+    width: 100%;
+    padding: var(--tm-space-1) var(--tm-space-2);
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: var(--tm-radius-sm);
+    color: var(--tm-text-primary);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+.tm-modeling-viewer__element:hover {
+    background: var(--tm-bg-surface-secondary);
+}
+
+.tm-modeling-viewer__element:focus-visible {
+    outline: 2px solid var(--tm-border-color-focus);
+    outline-offset: 1px;
+}
+
+.tm-modeling-viewer__element[aria-current="true"] {
+    background: var(--tm-color-primary-subtle);
+    border-color: var(--tm-color-primary);
+}
+
+.tm-modeling-viewer__element-name {
+    font-weight: var(--tm-font-weight-medium);
+}
+
+.tm-modeling-viewer__element-type,
+.tm-modeling-viewer__element-value {
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-xs);
+}
+
+.tm-modeling-viewer__element-value {
+    font-variant-numeric: tabular-nums;
+}
+
+.tm-modeling-viewer__element-state {
+    padding: 0 var(--tm-space-1);
+    border: 1px solid var(--tm-border-color-strong);
+    border-radius: var(--tm-radius-sm);
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-xs);
+}
+
+.tm-modeling-viewer__element-state[data-state="diff-added"] {
+    border-color: var(--tm-color-diff-added-stroke);
+    color: var(--tm-color-success-text);
+}
+
+.tm-modeling-viewer__element-state[data-state="diff-removed"] {
+    border-color: var(--tm-color-danger);
+    color: var(--tm-color-danger-text);
+}
+
+.tm-modeling-viewer__element-state[data-state="diff-changed"] {
+    border-color: var(--tm-color-diff-changed-stroke);
+    color: var(--tm-color-warning-text);
+}
+
+.tm-modeling-viewer__element-state[data-state="diff-layout"] {
+    border-style: dashed;
+    color: var(--tm-text-secondary);
+}
+
+.tm-modeling-viewer__element--removed {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--tm-space-2);
+    padding: var(--tm-space-1) var(--tm-space-2);
+    color: var(--tm-text-secondary);
+    text-decoration: line-through;
+    cursor: default;
+}
+
+.tm-modeling-viewer__removed-title {
+    margin: var(--tm-space-2) 0 var(--tm-space-1);
+    font-size: var(--tm-font-size-xs);
+    font-weight: var(--tm-font-weight-semibold);
+    color: var(--tm-text-secondary);
+}
+
+.tm-modeling-viewer__empty {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--tm-space-1);
+    padding: var(--tm-space-4);
+    color: var(--tm-text-secondary);
+    text-align: center;
+}
+
+.tm-modeling-viewer__empty strong {
+    color: var(--tm-text-primary);
+}
+
+.tm-modeling-viewer__sr {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
+}
+
+/* ── Tablet: the docked strip shrinks, the canvas keeps the taller share ────── */
+.tm-modeling-viewer--tablet .tm-modeling-viewer__legends {
+    max-height: 40%;
+}
+
+.tm-modeling-viewer--tablet .tm-modeling-viewer__elements {
+    max-height: 32%;
+}
+
+/* ── Mobile (G2 viewing surface) ────────────────────────────────────────────
+ * Everything is in the reading order: the canvas follows the fitted content (a floor so a wide
+ * diagram still has a usable strip, a ceiling so the legends and the list are not squeezed off a
+ * phone), then the always-expanded legend cards, then the text alternative. */
+.tm-modeling-viewer--mobile ::deep .tm-modeling-viewer__editor {
+    flex: 1 1 auto;
+    height: auto;
+    min-height: 9rem;
+}
+
+.tm-modeling-viewer--mobile .tm-modeling-viewer__canvas,
+.tm-modeling-viewer--mobile[data-fit-mode="width"] .tm-modeling-viewer__canvas {
+    min-height: 9rem;
+    max-height: 42%;
+}
+
+.tm-modeling-viewer--mobile .tm-modeling-viewer__legends {
+    max-height: 58%;
+    padding: var(--tm-space-2);
+}
+
+.tm-modeling-viewer--mobile .tm-modeling-viewer__legends-body {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--tm-space-2);
+}
+
+.tm-modeling-viewer--mobile .tm-modeling-viewer__diff-legend,
+.tm-modeling-viewer--mobile .tm-modeling-viewer__heatmap-legend {
+    width: auto;
+    max-width: none;
+}
+
+/* The gradient strip is decorative — the band labels below are the text scale, and the space is
+   scarce on a phone. */
+.tm-modeling-viewer--mobile .tm-modeling-viewer__scale {
+    display: none;
+}
+
+.tm-modeling-viewer--mobile .tm-modeling-viewer__scale-labels {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: var(--tm-space-1) var(--tm-space-3);
+}
+
+.tm-modeling-viewer--mobile .tm-modeling-viewer__scale-labels .tm-modeling-viewer__legend-row {
+    flex: 1 1 40%;
+}
+
+/* ── Print: the diagram is the subject ──────────────────────────────────────
+ * No zoom controls, no toggle chrome, legends in the flow (never absolutely positioned over the
+ * page); the element list is opt-in through ShowElementListInPrint (the host adds
+ * tm-modeling-viewer--print-elements). */
+@media print {
+    .tm-modeling-viewer {
+        height: auto !important;
+        border: 0;
+        overflow: visible;
+        background: var(--tm-color-white);
+        color: var(--tm-color-gray-900);
+    }
+
+    .tm-modeling-viewer ::deep .tm-modeling-viewer__canvas,
+    .tm-modeling-viewer__canvas {
+        break-inside: avoid;
+        page-break-inside: avoid;
+        flex: 0 0 auto;
+        height: auto !important;
+        min-height: 24rem;
+    }
+
+    .tm-modeling-viewer ::deep [data-tm-group="zoom"] {
+        display: none !important;
+    }
+
+    .tm-modeling-viewer__legends {
+        position: static;
+        inset: auto;
+        max-height: none;
+        overflow: visible;
+        border-top: 1px solid var(--tm-color-gray-300);
+    }
+
+    .tm-modeling-viewer__legends-toggle,
+    .tm-modeling-viewer__elements-toggle,
+    .tm-modeling-viewer__hint {
+        display: none !important;
+    }
+
+    .tm-modeling-viewer__elements {
+        max-height: none;
+        border-top: 0;
+    }
+
+    .tm-modeling-viewer__element-list:not(.tm-modeling-viewer__element-list--removed) {
+        display: none;
+    }
+
+    .tm-modeling-viewer--print-elements .tm-modeling-viewer__element-list {
+        display: flex;
+    }
+
+    /* A hidden list leaves no orphan heading behind. */
+    .tm-modeling-viewer:not(.tm-modeling-viewer--print-elements) .tm-modeling-viewer__elements-header,
+    .tm-modeling-viewer:not(.tm-modeling-viewer--print-elements) .tm-modeling-viewer__removed-title {
+        display: none !important;
+    }
+
+    .tm-modeling-viewer__elements-title,
+    .tm-modeling-viewer__removed-title,
+    .tm-modeling-viewer__legends-title {
+        color: var(--tm-color-gray-900);
+    }
+
+    .tm-modeling-viewer__element,
+    .tm-modeling-viewer__element-type,
+    .tm-modeling-viewer__element-state,
+    .tm-modeling-viewer__element-value,
+    .tm-modeling-viewer__legend-label,
+    .tm-modeling-viewer__legend-hint,
+    .tm-modeling-viewer__legend-count,
+    .tm-modeling-viewer__legend-title,
+    .tm-modeling-viewer__heatmap-value {
+        color: var(--tm-color-gray-900);
+    }
+}

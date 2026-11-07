@@ -1,0 +1,135 @@
+{
+  "itemName": "TmModelingViewer",
+  "kind": "Component",
+  "category": "Modeling",
+  "description": "Phase 6 (MODELING-READONLY-VIEWER): a read-only presentation surface for a semantic modeling model - no model tree, no inspector, no editor chrome and no writer. It projects the model with the shared ModelingDiagramGenerator and renders the presentation copy through TmDiagramEditor in viewer mode; the diff and heatmap overlays restyle only that copy (public DiagramStyle / DiagramNode.Data), never the caller's model. The keyboard/text alternative is a real list of buttons in topological order; every overlay carries a text equivalent (legend counts, scale bands and values, one polite live region) and ExportSvgAsync renders a standalone SVG through IDiagramSvgRenderer with the overlay tokens resolved for the requested theme.",
+  "packageId": "Tempo.Blazor.Modeling",
+  "namespace": "Tempo.Blazor.Components.Modeling",
+  "sourcePath": "src/Tempo.Blazor.Modeling/Components/Modeling/TmModelingViewer.razor",
+  "documentationStatus": "generated",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.Modeling"
+  ],
+  "parameters": [
+    {
+      "name": "Model",
+      "type": "ModelingModelDto",
+      "isRequired": true,
+      "description": "The semantic model to present. Required."
+    },
+    {
+      "name": "ViewId",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Optional view id to project; null uses the default view / generated grid."
+    },
+    {
+      "name": "FitMode",
+      "type": "ModelingViewerFitMode",
+      "isRequired": false,
+      "default": "Width",
+      "description": "How the diagram fits into the viewer box (Width or Page)."
+    },
+    {
+      "name": "Zoom",
+      "type": "double?",
+      "isRequired": false,
+      "description": "Explicit zoom (1 = 100 %). Null fits the diagram through FitMode; an explicit value wins over fit-on-load."
+    },
+    {
+      "name": "ShowZoomControls",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "Whether the embedded viewer renders its zoom controls (the viewer-mode toolbar's zoom group and the mobile zoom pill)."
+    },
+    {
+      "name": "HighlightElementIds",
+      "type": "IReadOnlyCollection<string>?",
+      "isRequired": false,
+      "description": "Element and relationship ids to emphasize without selecting them."
+    },
+    {
+      "name": "SelectedElementId",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Two-way selected element or relationship id."
+    },
+    {
+      "name": "SelectedElementIdChanged",
+      "type": "EventCallback<string?>",
+      "isRequired": false,
+      "description": "Raised when SelectedElementId changes."
+    },
+    {
+      "name": "OnElementClick",
+      "type": "EventCallback<ModelingViewerElementEventArgs>",
+      "isRequired": false,
+      "description": "Raised when the reader activates an element or relationship on the canvas or in the element list."
+    },
+    {
+      "name": "DiffOverlay",
+      "type": "ModelingDiffOverlayDto?",
+      "isRequired": false,
+      "description": "Optional diff overlay (added / removed / changed / layout-only)."
+    },
+    {
+      "name": "Heatmap",
+      "type": "ModelingHeatmapDto?",
+      "isRequired": false,
+      "description": "Optional heatmap overlay (normalized 0..1 value per element or relationship id)."
+    },
+    {
+      "name": "ShowLegend",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "Whether the notation legend card renders (reuses the shared ModelingNotationCatalog)."
+    },
+    {
+      "name": "ShowElementList",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "Whether the keyboard/text alternative element list renders."
+    },
+    {
+      "name": "ElementListContent",
+      "type": "RenderFragment<ModelingViewerElementContext>?",
+      "isRequired": false,
+      "description": "Host slot replacing the default row content of the element list; the list semantics stay."
+    },
+    {
+      "name": "Height",
+      "type": "string",
+      "isRequired": false,
+      "default": "480px",
+      "description": "CSS height of the viewer root."
+    },
+    {
+      "name": "LayoutMode",
+      "type": "TmLayoutMode",
+      "isRequired": false,
+      "default": "Auto",
+      "description": "How the viewer resolves its presentation; Auto measures its own container."
+    },
+    {
+      "name": "Class",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Additional CSS class applied to the viewer root."
+    },
+    {
+      "name": "AriaLabel",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Accessible name of the viewer region; null uses the localized default."
+    },
+    {
+      "name": "ShowElementListInPrint",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Print opt-in: keep the element list in the printed output. Default false - print shows the diagram and its legends only."
+    }
+  ]
+}

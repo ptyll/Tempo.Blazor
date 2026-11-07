@@ -33,6 +33,18 @@
  *    undo — the target is not a text-entry control. Inside a field the native text undo keeps
  *    its default role: the inspector's keydown handler yields to it whenever an editing draft
  *    differs from the committed value.
+ *  - resolveTokens(root, names, theme): resolve design-token names (default: the viewer's heat /
+ *    overlay scale) to concrete CSS colours for a standalone SVG export. `theme` is `light` or
+ *    `dark`; an unknown/omitted theme reads the LIVE theme of `root`.
+ *
+ *    The document element is NEVER touched: flipping the whole page's theme (even for one
+ *    synchronous read) invalidates every other component's resolved styles and, when two viewers
+ *    export in the same tick, the second read sees the first one's theme. When the requested theme
+ *    equals the theme the root already lives in, the tokens are read straight off the root
+ *    (cheap, no DOM churn). Otherwise a hidden probe element carrying `data-theme="{theme}"` (plus
+ *    `tm-dark` for the class switch) is appended INSIDE the root for the synchronous read and
+ *    removed again in a `finally`, so the token cascade hands the probe the requested theme's
+ *    values without the browser ever painting an intermediate state.
  */
 
 let dragBridgeRegistered = false;
@@ -219,4 +231,140 @@ function findTreeNode(treeRoot, elementId) {
     ? CSS.escape(elementId)
     : elementId.replace(/["\\]/g, '\\$&');
   return root.querySelector(`[data-element-id="${escapedElementId}"]`);
+}
+
+// ── Viewer export tokens (phase 6) ─────────────────────────────────────────
+
+/** Normalize a token-name list: trim, prefix `--`, drop empties and duplicates (order kept). */
+export function normalizeTokenNames(names) {
+  const list = Array.isArray(names) ? names : [];
+  const seen = new Set();
+  const result = [];
+  for (const raw of list) {
+    if (typeof raw !== 'string') {
+      continue;
+    }
+
+    const trimmed = raw.trim();
+    if (!trimmed) {
+      continue;
+    }
+
+    const name = trimmed.startsWith('--') ? trimmed : `--${trimmed}`;
+    if (seen.has(name)) {
+      continue;
+    }
+
+    seen.add(name);
+    result.push(name);
+  }
+
+  return result;
+}
+
+/**
+ * Resolve design-token names to concrete CSS colours for the requested export theme.
+ * `resolveTokensIn` is the dependency-injected core (node tests call it with a fake document).
+ */
+export function resolveTokens(root, names, theme) {
+  const doc = typeof document === 'undefined' ? null : document;
+  return resolveTokensIn(root, names, theme, doc, element => window.getComputedStyle(element));
+}
+
+/** The theme the root already lives in: the closest [data-theme] / .tm-dark switch, else light. */
+export function liveThemeOf(root) {
+  if (!root || typeof root.closest !== 'function') {
+    return 'light';
+  }
+
+  const switched = root.closest('[data-theme]');
+  if (switched && typeof switched.getAttribute === 'function') {
+    const value = String(switched.getAttribute('data-theme') || '').toLowerCase();
+    if (value === 'dark' || value === 'light') {
+      return value;
+    }
+  }
+
+  return root.closest('.tm-dark') ? 'dark' : 'light';
+}
+
+/** Read the requested tokens off one element's computed style (blank values are omitted). */
+function readTokens(element, tokenNames, getStyle) {
+  let computed;
+  try {
+    computed = getStyle(element);
+  } catch {
+    return {};
+  }
+
+  const result = {};
+  if (!computed || typeof computed.getPropertyValue !== 'function') {
+    return result;
+  }
+
+  for (const name of tokenNames) {
+    const value = computed.getPropertyValue(name);
+    const trimmed = typeof value === 'string' ? value.trim() : '';
+    if (trimmed) {
+      result[name] = trimmed;
+    }
+  }
+
+  return result;
+}
+
+export function resolveTokensIn(root, names, theme, doc, getStyle) {
+  const tokenNames = normalizeTokenNames(names);
+  if (tokenNames.length === 0 || !doc || typeof getStyle !== 'function') {
+    return {};
+  }
+
+  const scope = queryRoot(root);
+  if (!scope) {
+    return {};
+  }
+
+  const requested = theme === 'dark' || theme === 'light' ? theme : null;
+
+  // Same theme as the root's own: no probe needed, the live cascade already resolves it.
+  if (!requested || requested === liveThemeOf(scope)) {
+    return readTokens(scope, tokenNames, getStyle);
+  }
+
+  const probe = createThemeProbe(doc, requested);
+  if (!probe || typeof scope.appendChild !== 'function') {
+    return readTokens(scope, tokenNames, getStyle);
+  }
+
+  try {
+    scope.appendChild(probe);
+    return readTokens(probe, tokenNames, getStyle);
+  } finally {
+    try {
+      scope.removeChild?.(probe);
+    } catch {
+      // A torn-down tree has nothing left to clean up.
+    }
+  }
+}
+
+/** The hidden probe carrying the requested theme switch (see resolveTokensIn). */
+function createThemeProbe(doc, theme) {
+  if (typeof doc.createElement !== 'function') {
+    return null;
+  }
+
+  const probe = doc.createElement('span');
+  if (!probe) {
+    return null;
+  }
+
+  probe.setAttribute?.('data-theme', theme);
+  probe.setAttribute?.('hidden', '');
+  probe.setAttribute?.('aria-hidden', 'true');
+  if (theme === 'dark' && probe.classList && typeof probe.classList.add === 'function') {
+    probe.classList.add('tm-dark');
+  }
+
+  return probe;
 }

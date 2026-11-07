@@ -123,6 +123,13 @@
                 var pathD = ComputeEdgePath(edge);
                 var isSelected = _currentSelectionIds.Contains(edge.Id);
                 <g class="tm-diagram-edge-group" data-edge-id="@edge.Id" opacity="@F(GetEdgeOpacity(edge))">
+                    @* Canvas tooltip: an optional accessible name (the one text alternative a fully
+                       graphical edge can carry). First child of the group so assistive technology reads
+                       it before the edge's own geometry; absent when the edge has no title. *@
+                    @if (!string.IsNullOrWhiteSpace(edge.Title))
+                    {
+                        <title>@edge.Title</title>
+                    }
                     @* Selection outline (rendered behind the edge) *@
                     @if (isSelected)
                     {
@@ -419,6 +426,7 @@
                    data-stencil-id="@node.StencilId"
                    data-source-id="@GetNodeDataString(node, "sourceId")"
                    data-model-element-id="@GetNodeDataString(node, "modelElementId")"
+                   data-viewer-state="@GetNodeDataOrNull(node, "viewerState")"
                    data-w="@node.W"
                    data-h="@node.H"
                    data-group-id="@node.GroupId"
@@ -429,6 +437,13 @@
                    data-link="@node.Link"
                    data-shape-kind="@_shapeKind.ToString().ToLowerInvariant()"
                    transform="@_nodeTransform">
+                    @* Canvas tooltip: an optional accessible name carried in the node's Data bag
+                       (the Modeling viewer writes "Name: value (band)"). First child of the group so a
+                       screen reader reads the node's name before its body. *@
+                    @if (GetNodeDataOrNull(node, "viewerTitle") is { } _nodeViewerTitle)
+                    {
+                        <title>@_nodeViewerTitle</title>
+                    }
                     @* F3.E — native SVG primitive behind the foreignObject for simple stencils.
                        Custom stencils fall back to the HTML/CSS shape inside TmDiagramStencilShape. *@
                     @switch (_shapeKind)
@@ -527,6 +542,16 @@
                            above every other pane regardless of Z-order. *@
                         </div>
                     </foreignObject>
+
+                    @* Overlay badge (Modeling viewer phase 6): a short non-colour cue in the node's
+                       top-right corner ("+" added, "~" changed, "↔" layout-only). Decorative — the
+                       element list and the node title carry the words — so it is aria-hidden and
+                       paints above the node body. Rendered as a markup string because a literal
+                       <text> tag in Razor markup is the Razor text-block keyword, not an SVG element. *@
+                    @if (GetNodeDataOrNull(node, "viewerBadge") is { } _nodeViewerBadge)
+                    {
+                        @((MarkupString)$"<text class=\"tm-diagram-node__viewer-badge\" x=\"{F(node.W - 8)}\" y=\"19\" text-anchor=\"end\" aria-hidden=\"true\">{System.Net.WebUtility.HtmlEncode(_nodeViewerBadge)}</text>")
+                    }
 
                     @* Ports + connection points rendered as SVG primitives OUTSIDE the
                        <foreignObject>. Chromium's hit-testing clips <foreignObject> to

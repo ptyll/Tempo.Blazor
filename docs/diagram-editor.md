@@ -426,6 +426,23 @@ long-press) and `pointer-gesture.js` (two-finger pinch/pan) — imported by the 
 - A tap is press/release only — tap-time behaviour hooks `onPress`, never `onEnd`.
 - Toolbox tiles insert on tap; dragging a tile still performs drag-and-drop insertion.
 
+## Node and edge DOM hooks
+
+Three additive DOM hooks let a read-only host present an overlay WITHOUT touching the editor or
+duplicating its renderer (used by `TmModelingViewer`, decision `MODELING-READONLY-VIEWER`). An
+editor that writes none of them renders exactly what it always did:
+
+| Hook | Source | Rendered as |
+|---|---|---|
+| `data-viewer-state` | `DiagramNode.Data["viewerState"]` (`highlight` / `diff-added` / `diff-changed` / `diff-layout` / `heatmap`) | attribute on `.tm-diagram-node` — the CSS hook a host styles (pattern + colour). A node without a state emits no attribute. |
+| node badge | `DiagramNode.Data["viewerBadge"]` (a short glyph such as `+`, `~`, `↔`) | `<text class="tm-diagram-node__viewer-badge" aria-hidden="true">` in the node's top-right corner, painted over the body with the paper ink and a paper halo. |
+| node / edge title | `DiagramNode.Data["viewerTitle"]` / `DiagramEdge.Title` | the group's FIRST `<title>` child — the accessible name and the pointer tooltip of a node or an edge. |
+
+`data-model-element-id` and `data-source-id` are the generator's own hooks (the Modeling mapper
+writes the semantic element id into node `Data`); a host maps a canvas selection back to its model
+through them. Edges have no `Data` bag — their overlay state travels in `DiagramEdge.Style` and in
+`DiagramEdge.Title`, and the element list carries their text equivalent.
+
 ## E2E anchors (stable selectors)
 
 `data-testid="diagram-editor"` on the root; `.tm-diagram-editor__zoom-label`, `__toolbar`,

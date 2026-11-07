@@ -6047,6 +6047,12 @@
           "description": "Spacing between target node boundary and edge end."
         },
         {
+          "name": "Title",
+          "kind": "Property",
+          "type": "string?",
+          "description": "Optional accessible name / pointer tooltip. The canvas renders it as the edge group's first <title> child, so a screen reader and a hovering pointer both get the text. Used by the read-only Modeling viewer to carry an overlay reading (\"Name: value (band)\") that the picture alone would not convey; null renders nothing."
+        },
+        {
           "name": "Waypoints",
           "kind": "Property",
           "type": "List<DiagramPoint>",
@@ -18096,6 +18102,16 @@
       "documentationStatus": "merged"
     },
     {
+      "itemName": "ModelingDiffOverlayDto",
+      "kind": "Class",
+      "category": "Modeling",
+      "namespace": "Tempo.Blazor.Modeling",
+      "description": "The diff overlay of TmModelingViewer: added / removed / changed / layout-only semantic element ids plus added / removed relationship ids. The viewer never draws an id absent from the model; removed ids are counted by the legend and, with BaselineModel, named in the text alternative's Removed group.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Modeling/ModelingViewerContracts.cs",
+      "documentationStatus": "merged"
+    },
+    {
       "itemName": "ModelingElementAdd",
       "kind": "Class",
       "category": "Modeling",
@@ -18143,6 +18159,16 @@
       "description": "Governance state attached to a source-backed modeling element.",
       "packageId": "Tempo.Blazor.Abstractions",
       "sourcePath": "src/Tempo.Blazor.Abstractions/Modeling/ModelingDtos.cs",
+      "documentationStatus": "merged"
+    },
+    {
+      "itemName": "ModelingHeatmapDto",
+      "kind": "Class",
+      "category": "Modeling",
+      "namespace": "Tempo.Blazor.Modeling",
+      "description": "The heatmap overlay of TmModelingViewer: a normalized 0..1 value per element or relationship id, an optional ValueLabel, min/max scale labels and a composite format. A missing id gets no tint; every value also renders as text in the element list and the legend, so the picture never carries the reading alone.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Modeling/ModelingViewerContracts.cs",
       "documentationStatus": "merged"
     },
     {
@@ -18570,6 +18596,16 @@
       "description": "A named projection of model elements and relationships.",
       "packageId": "Tempo.Blazor.Abstractions",
       "sourcePath": "src/Tempo.Blazor.Abstractions/Modeling/ModelingDtos.cs",
+      "documentationStatus": "merged"
+    },
+    {
+      "itemName": "ModelingViewerFitMode",
+      "kind": "Enum",
+      "category": "Modeling",
+      "namespace": "Tempo.Blazor.Modeling",
+      "description": "How the read-only TmModelingViewer fits the generated diagram into its box: Width scales by the container width only (a tall diagram stays scrollable), Page fits both axes.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Modeling/ModelingViewerContracts.cs",
       "documentationStatus": "merged"
     },
     {
@@ -44846,11 +44882,11 @@
   ],
   "libraryExamples": [],
   "summary": {
-    "itemCount": 1700,
-    "manualItemCount": 1700,
-    "generatedItemCount": 1684,
+    "itemCount": 1703,
+    "manualItemCount": 1703,
+    "generatedItemCount": 1687,
     "generatedOnlyItemCount": 0,
     "componentCount": 0,
-    "publicApiTypeCount": 1684
+    "publicApiTypeCount": 1687
   }
 }

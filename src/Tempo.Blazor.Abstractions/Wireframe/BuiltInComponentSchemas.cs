@@ -132,6 +132,7 @@ public sealed class BuiltInComponentSchemas : IWireframeSchemaSource
             ["TmTreeList"] = ["list-view", "data-table"],
             ["TmNotionPage"] = ["rich-text-editor"],
             ["TmModelingEditor"] = ["diagram-editor"],
+            ["TmModelingViewer"] = ["modeling-viewer"],
             ["TmFileManager"] = ["attachment-manager", "file-drop"],
             ["TmDocumentManager"] = ["attachment-manager", "list-view"],
             ["TmDocumentOpenDialog"] = ["dialog", "list-view"],
@@ -3281,6 +3282,21 @@ public sealed class BuiltInComponentSchemas : IWireframeSchemaSource
                 // TmDiagramEditor.layoutMode.
                 P("layoutMode", "Layout Mode", PropType.Enum, "auto", cat: "Behavior",
                     opts: ["auto", "desktop", "tablet", "mobile"]),
+            ]
+        };
+
+        yield return new WireframeComponentSchema
+        {
+            Type = "TmModelingViewer", Category = "Editors & Apps", DisplayName = "Modeling Viewer",
+            DefaultWidth = 520, DefaultHeight = 340,
+            Props =
+            [
+                P("modelId",    "Model",    PropType.String, "order-fulfillment", cat: "Content"),
+                P("viewId",     "View",     PropType.String, "main-view",         cat: "Content"),
+                // Fáze 6: TmModelingViewer.FitMode (Width | Page).
+                P("fitMode",    "Fit Mode", PropType.Enum,   "width",             cat: "Appearance",
+                    opts: ["width", "page"]),
+                P("showLegend", "Show Legend", PropType.Bool, true,              cat: "Content"),
             ]
         };
 

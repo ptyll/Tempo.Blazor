@@ -50,6 +50,9 @@ jobs:
       - name: Spreadsheet canvas (palette tokens, density, header highlight)
         run: npm run test:spreadsheet
 
+      - name: Modeling viewer (export token resolution)
+        run: npm run test:modeling
+
       - name: Reporting modules
         run: npm run test:reporting-modules
 
