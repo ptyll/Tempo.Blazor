@@ -299,6 +299,31 @@ public sealed class TmNotionEditorShellTests : LocalizationTestBase
     }
 
     [Fact]
+    public async Task LayoutModeFlip_DesktopToMobile_KeepsAnOpenRestrictionsDialog()
+    {
+        var cut = RenderEditor(TmLayoutMode.Desktop, permissions: true);
+
+        cut.WaitForAssertion(() => cut.Find(".tm-notion-page").Should().NotBeNull());
+        await cut.InvokeAsync(() => cut.Find(".tm-npsm-trigger").ClickAsync(new MouseEventArgs()));
+        cut.WaitForAssertion(() => cut.Markup.Should().Contain("Notion_Restrictions_Title"));
+        await cut.InvokeAsync(() => cut.FindAll(".tm-npsm__item")
+            .First(item => item.TextContent.Contains("Notion_Restrictions_Title", StringComparison.Ordinal))
+            .ClickAsync(new MouseEventArgs()));
+        cut.WaitForAssertion(() => cut.Find("[data-testid=notion-restrictions-dialog]").Should().NotBeNull());
+
+        // Crossing into the mobile band remounts the shell canvas. The dialog is editor-owned, so
+        // the open surface and its mobile layout survive the remount.
+        cut.Render(p => p.Add(c => c.LayoutMode, TmLayoutMode.Mobile));
+
+        cut.WaitForAssertion(() =>
+        {
+            cut.Find(".tm-notion-editor").GetAttribute("data-editor-layout").Should().Be("mobile");
+            cut.Find("[data-testid=notion-restrictions-dialog]").Should().NotBeNull();
+            cut.Find(".tm-nprd[data-layout=mobile]").Should().NotBeNull();
+        });
+    }
+
+    [Fact]
     public void MobileBar_AddBlock_OpensSlashMenu()
     {
         var cut = RenderEditor(TmLayoutMode.Mobile);
@@ -366,6 +391,7 @@ public sealed class TmNotionEditorShellTests : LocalizationTestBase
         bool share = false,
         bool watch = false,
         bool comments = false,
+        bool permissions = false,
         NotionShellPanelPresentation? shellPanelPresentation = null,
         NotionEditorChrome chrome = NotionEditorChrome.Full)
     {
@@ -383,6 +409,7 @@ public sealed class TmNotionEditorShellTests : LocalizationTestBase
             if (share) p.Add(c => c.PublicShareProvider, new ShellShare());
             if (watch) p.Add(c => c.WatchProvider, new ShellWatch());
             if (comments) p.Add(c => c.CommentProvider, new ShellComments());
+            if (permissions) p.Add(c => c.PermissionProvider, new ShellPermissions());
             if (shellPanelPresentation is { } presentation) p.Add(c => c.ShellPanelPresentation, presentation);
             if (chrome != NotionEditorChrome.Full) p.Add(c => c.Chrome, chrome);
         });
@@ -446,6 +473,19 @@ public sealed class TmNotionEditorShellTests : LocalizationTestBase
         public Task<IPageBlock> DuplicateBlockAsync(string blockId) => Task.FromResult(_blocks[0]);
         public Task<IPageBlock> ConvertBlockTypeAsync(string blockId, BlockType newType) => Task.FromResult(_blocks[0]);
         public Task<string> GetBlockLinkAsync(string blockId) => Task.FromResult($"https://localhost/notion/{MainPageId:D}#{blockId}");
+    }
+
+    private sealed class ShellPermissions : INotionPermissionProvider
+    {
+        public Task<PageRestrictionDto> GetRestrictionsAsync(Guid pageId, CancellationToken cancellationToken = default)
+            => Task.FromResult(new PageRestrictionDto { PageId = pageId, Mode = PageRestrictionMode.Open });
+
+        public Task SetRestrictionsAsync(PageRestrictionDto restrictions, CancellationToken cancellationToken = default)
+            => Task.CompletedTask;
+
+        public Task<PageEffectivePermissionDto> GetEffectivePermissionAsync(
+            Guid pageId, string userId, IReadOnlyList<string>? groupIds = null, CancellationToken cancellationToken = default)
+            => Task.FromResult(new PageEffectivePermissionDto { PageId = pageId, UserId = userId, Permission = PageRestrictionPermission.Edit });
     }
 
     private sealed class ShellWorkItems : TmWorkItemProviderBase

@@ -3,6 +3,7 @@ using FluentAssertions;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.Extensions.DependencyInjection;
+using Tempo.Blazor.Abstractions.Layout;
 using Tempo.Blazor.Abstractions.Shared;
 using Tempo.Blazor.Components.NotionEditor;
 using Tempo.Blazor.Components.NotionEditor.Page;
@@ -254,6 +255,36 @@ public sealed class TmNotionRestrictionsTests : LocalizationTestBase
             provider.Restrictions.Mode.Should().Be(PageRestrictionMode.Open);
             provider.Restrictions.Entries.Should().BeEmpty();
         });
+    }
+
+    [Fact]
+    public void RestrictionsDialog_FollowsALiveViewportResize()
+    {
+        var viewport = new TmLayoutContext(TmLayoutMode.Auto, TmLayoutMode.Desktop);
+        var cut = Render<CascadingValue<TmLayoutContext>>(parameters => parameters
+            .Add(p => p.Value, viewport)
+            .Add(p => p.Name, TmLayoutScopes.Viewport)
+            .Add(p => p.IsFixed, false)
+            .AddChildContent<TmNotionRestrictionsDialog>(dialog => dialog
+                .Add(x => x.Visible, true)
+                .Add(x => x.PageId, RestrictionProvider.PageId)
+                .Add(x => x.Provider, new RestrictionProvider())));
+
+        cut.WaitForAssertion(() =>
+            cut.Find(".tm-nprd").GetAttribute("data-layout").Should().Be("desktop"));
+
+        viewport = new TmLayoutContext(TmLayoutMode.Auto, TmLayoutMode.Mobile);
+        cut.Render(parameters => parameters
+            .Add(p => p.Value, viewport)
+            .Add(p => p.Name, TmLayoutScopes.Viewport)
+            .Add(p => p.IsFixed, false)
+            .AddChildContent<TmNotionRestrictionsDialog>(dialog => dialog
+                .Add(x => x.Visible, true)
+                .Add(x => x.PageId, RestrictionProvider.PageId)
+                .Add(x => x.Provider, new RestrictionProvider())));
+
+        cut.Find(".tm-nprd").GetAttribute("data-layout").Should().Be("mobile",
+            "an open restrictions dialog follows the viewport instead of the width it opened at");
     }
 
     [Fact]

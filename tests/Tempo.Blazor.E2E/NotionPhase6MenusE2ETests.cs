@@ -65,7 +65,18 @@ public sealed class NotionPhase6MenusE2ETests : WasmTestBase
         foreach (var (width, height, touch, band) in Bands)
         {
             var page = await OpenAsync(width, height, touch);
-            await page.Locator(".tm-notion-header-icon").First.ClickAsync(new LocatorClickOptions { Force = true });
+            // A page with no icon has no .tm-notion-header-icon — the opener is the "Add icon"
+            // control, which only appears while the header is hovered.
+            var icon = page.Locator(".tm-notion-header-icon");
+            if (await icon.CountAsync() == 0)
+            {
+                await page.Locator(".tm-notion-header-meta").First.HoverAsync();
+                await page.Locator(".tm-notion-header-meta__add-btn").First.ClickAsync();
+            }
+            else
+            {
+                await icon.First.ClickAsync();
+            }
             var picker = page.Locator(".tm-modal-overlay").First;
             await picker.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10000 });
 
@@ -282,11 +293,16 @@ public sealed class NotionPhase6MenusE2ETests : WasmTestBase
 
     private static async Task CaptureTemplatesAsync(IPage page, string band, string theme, int width)
     {
-        
+        var bandName = width >= 1200 ? "desktop" : width >= 768 ? "tablet" : "mobile";
+        await page.Locator($".tm-notion-editor[data-editor-layout='{bandName}']").First.WaitForAsync(Visible());
         // Tablet starts with the sidebar drawer closed, so the New-page trigger is absent until it opens.
-        if (await page.Locator(".tm-ns-btn-new").CountAsync() == 0)
-            await page.Locator(".tm-notion-sidebar-toggle").First.ClickAsync();
-        await page.Locator(".tm-ns-btn-new").First.ClickAsync(new LocatorClickOptions { Force = true });
+        var newPage = page.Locator(".tm-ns-btn-new:visible");
+        if (await newPage.CountAsync() == 0)
+        {
+            await page.Locator(".tm-notion-sidebar-toggle:visible").First.ClickAsync();
+            await newPage.First.WaitForAsync(Visible());
+        }
+        await newPage.First.ClickAsync();
         var gallery = page.Locator(".tm-ntg").First;
         await gallery.WaitForAsync(Visible());
         if (width < 1024)
@@ -303,16 +319,31 @@ public sealed class NotionPhase6MenusE2ETests : WasmTestBase
     private static async Task CaptureShortcutsAsync(IPage page, string band, string theme, int width)
     {
         
-        // Desktop keeps the trigger on the bar. Tablet and mobile move it into the toolbar More
-        // menu or the action-bar More sheet, whose entry (data-testid / data-menu-testid) is not
-        // in the DOM until that menu opens.
-        // :visible — a collapsed bar copy keeps data-testid but is visibility:hidden, and a force
-        // click on it fires nothing. The visible match is the bar button or the open More entry.
+        // Desktop and tablet keep the trigger on the bar. The mobile band has no bar copy — the
+        // action-bar More sheet owns the only entry, and it is not in the DOM until that sheet
+        // opens. :visible — a collapsed bar copy keeps data-testid but is visibility:hidden, and a
+        // force click on it fires nothing.
         var trigger = page.Locator("[data-testid='notion-shortcuts-open']:visible, [data-menu-testid='notion-shortcuts-open']:visible");
-        if (await trigger.CountAsync() == 0)
+        if (width < 640 || await trigger.CountAsync() == 0)
         {
-            var more = page.Locator(".tm-notion-topbar .tm-toolbar-more, .tm-mobile-action-bar__more");
-            await more.First.ClickAsync();
+            // The demo host pins the editor to 900px, so the action bar sits below a short phone
+            // viewport. The toolbar More is the one on screen and it does not carry this entry.
+            var more = page.Locator(".tm-mobile-action-bar__more").First;
+            await more.ScrollIntoViewIfNeededAsync();
+            await more.ClickAsync();
+            await page.Locator(".tm-overlay-panel-sheet:visible, .tm-toolbar-more__menu:visible").First.WaitForAsync(Visible());
+        }
+        if (width <= 320)
+        {
+            var hit = await trigger.First.EvaluateAsync<bool>(
+                """
+                el => {
+                    const box = el.getBoundingClientRect();
+                    const hit = document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2);
+                    return hit === el || el.contains(hit);
+                }
+                """);
+            Assert.IsTrue(hit, $"shortcuts trigger at {width} is covered — elementFromPoint of its center is not the trigger");
         }
         await trigger.First.ClickAsync();
         var panel = page.Locator("[data-testid='notion-shortcuts-panel']").First;

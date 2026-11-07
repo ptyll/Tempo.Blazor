@@ -69,6 +69,7 @@
                                     @(isSelected  ? "tm-nph__version-item--selected"  : "")
                                     @(isFrom      ? "tm-nph__version-item--compare-from" : "")
                                     @(isTo        ? "tm-nph__version-item--compare-to"   : "")"
+                             data-version-id="@version.Id.ToString("D")"
                              role="option"
                              aria-selected="@(_picked.Contains(version.Id).ToString().ToLowerInvariant())"
                              tabindex="@(_focusedVersionId == version.Id ? 0 : -1)"

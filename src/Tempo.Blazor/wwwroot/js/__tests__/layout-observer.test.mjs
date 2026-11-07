@@ -176,6 +176,72 @@ test('observe re-registered with new thresholds reclassifies the same width', as
 // A 0-size content box is transient (viewport re-emulation during a fullPage screenshot, print
 // preview, hidden→shown), not a real mobile container: classifying it would remount the editor
 // canvas and lose every open piece of UI state.
+// Pointer kind is a media-query signal, not a pointermove stream: one report when the query
+// matches, and another only when it flips. A missing matchMedia stays silent (fine pointer).
+test('observe reports a coarse pointer once and again only when the query flips', async () => {
+    __resetForTests();
+    installFakeResizeObserver();
+    const previousMedia = globalThis.matchMedia;
+    const previousWindow = globalThis.window;
+    const listeners = new Map();
+    const query = {
+        matches: true,
+        addEventListener(type, fn) { listeners.set(type, fn); },
+        removeEventListener(type) { listeners.delete(type); },
+    };
+    const moves = [];
+    globalThis.matchMedia = (q) => (q === '(pointer: coarse)'
+        ? query
+        : { matches: false, addEventListener() {}, removeEventListener() {} });
+    globalThis.window = {
+        addEventListener(type, fn) { if (type === 'pointermove') moves.push(fn); },
+        removeEventListener() {},
+        innerWidth: 1440,
+    };
+    try {
+        const dotnet = dotNet();
+        const root = element('pane');
+        await observe(root, dotnet, 'pane', { initialWidth: 1440, breakpoints });
+
+        assert.deepEqual(
+            dotnet.calls.filter(call => call.name === 'OnPointerKindChanged'),
+            [{ name: 'OnPointerKindChanged', args: [true] }],
+            'a coarse primary pointer is reported once, not on every observation');
+
+        query.matches = true;
+        listeners.get('change')?.();
+        assert.equal(
+            dotnet.calls.filter(call => call.name === 'OnPointerKindChanged').length,
+            1,
+            'an unchanged query must not call .NET');
+
+        query.matches = false;
+        listeners.get('change')?.();
+        assert.deepEqual(
+            dotnet.calls.filter(call => call.name === 'OnPointerKindChanged').at(-1),
+            { name: 'OnPointerKindChanged', args: [false] });
+        assert.equal(moves.length, 0, 'pointer kind is not sampled from pointermove');
+
+        disconnect('pane');
+        query.matches = true;
+        listeners.get('change')?.();
+        assert.equal(
+            dotnet.calls.filter(call => call.name === 'OnPointerKindChanged').length,
+            2,
+            'disconnect removes the media-query listener');
+    } finally {
+        globalThis.matchMedia = previousMedia;
+        globalThis.window = previousWindow;
+    }
+});
+
+test('readPointer treats a missing or throwing matchMedia as a fine pointer', async () => {
+    const { readPointer } = await import('../layout-observer.js');
+    assert.equal(readPointer(undefined), false);
+    assert.equal(readPointer(() => { throw new Error('denied'); }), false);
+    assert.equal(readPointer(q => ({ matches: q === '(pointer: coarse)' })), true);
+});
+
 test('a degenerate 0-width record keeps the last resolved mode', async () => {
     __resetForTests();
     const instances = installFakeResizeObserver();

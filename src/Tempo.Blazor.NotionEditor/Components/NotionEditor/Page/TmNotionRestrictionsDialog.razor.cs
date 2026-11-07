@@ -32,6 +32,7 @@ public partial class TmNotionRestrictionsDialog : ComponentBase
     /// <summary>The cascaded viewport. Auto sheets when the viewport is mobile.</summary>
     [CascadingParameter(Name = TmLayoutScopes.Viewport)] public TmLayoutContext? Layout { get; set; }
 
+    /// <summary>The layout the dialog is presenting. A host pins it; Auto reads the viewport cascade.</summary>
     private TmLayoutMode ResolvedLayout =>
         LayoutMode != TmLayoutMode.Auto ? LayoutMode : Layout?.Resolved ?? TmLayoutMode.Auto;
 

@@ -79,8 +79,8 @@ backdrop, its own z-index band or a second drag implementation.
 `CommentPresentation` (`NotionCommentPresentation`, default **`Auto`**) is the block and text
 comment panels:
 
-- `Auto` — anchored popover on a desktop layout; the core `TmModal` (a sheet on a mobile layout)
-  on touch and narrow containers.
+- `Auto` — anchored popover on a fine desktop pointer; the core `TmModal` (a sheet on a mobile
+  layout) on a coarse pointer (`TmLayoutContext.IsCoarsePointer`) and on touch and narrow containers.
 - `Popover` — the bubble at every layout (the pre-redesign behavior).
 - `Dialog` — the modal at every layout.
 

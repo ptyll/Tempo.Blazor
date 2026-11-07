@@ -411,7 +411,7 @@ public class NotionMediaBlocksE2ETests : WasmTestBase
     }
 
     [TestMethod]
-    [Description("Clicking a library item closes the dialog and sets the image on the block")]
+    [Description("Selecting a library item, then Insert, closes the dialog and sets the image on the block")]
     public async Task MediaLibrary_SelectItem_SetsImageOnBlock()
     {
         var page = await OpenNotionEditorAsync();
@@ -427,15 +427,20 @@ public class NotionMediaBlocksE2ETests : WasmTestBase
         await libraryTab.ClickAsync();
         await page.WaitForTimeoutAsync(600);
 
+        // Phase 7: a click only selects; Insert (or double-click / Enter) confirms.
         var firstItem = dialog.Locator(".tm-media-library__item").First;
         await firstItem.WaitForAsync(new LocatorWaitForOptions { Timeout = 5000 });
         await firstItem.ClickAsync();
+
+        // Insert lives in the modal footer, outside .tm-media-dialog.
+        var insert = page.GetByTestId("notion-media-insert");
+        await insert.ClickAsync();
         await page.WaitForTimeoutAsync(1000);
 
         // Dialog should close and image should appear on block
         var dialogAfter = page.Locator(".tm-media-dialog");
         var dialogVisible = await dialogAfter.IsVisibleAsync();
-        Assert.IsFalse(dialogVisible, "Dialog should close after selecting a library item");
+        Assert.IsFalse(dialogVisible, "Dialog should close after Insert confirms the selected library item");
 
         var img = imageBlock.Locator(".tm-notion-image-block__img");
         await img.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 5000 });

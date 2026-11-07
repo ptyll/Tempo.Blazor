@@ -13034,7 +13034,7 @@
       "kind": "Record",
       "category": "Layout",
       "namespace": "Tempo.Blazor.Abstractions.Layout",
-      "description": "The layout a component has resolved, cascaded to its children so they can branch in markup without measuring anything themselves. Mode = requested mode (Auto when measuring); Resolved = rendered mode, never Auto; CssModifier = desktop|tablet|mobile.",
+      "description": "The layout a component has resolved, cascaded to its children so they can branch in markup without measuring anything themselves. Mode = requested mode (Auto when measuring); Resolved = rendered mode, never Auto; CssModifier = desktop|tablet|mobile; IsCoarsePointer = matchMedia('(pointer: coarse)'), independent of the width band, false until an observer reports.",
       "packageId": "Tempo.Blazor.Abstractions",
       "sourcePath": "src/Tempo.Blazor.Abstractions/Layout/TmLayoutContext.cs",
       "documentationStatus": "merged",
@@ -13044,6 +13044,12 @@
           "kind": "Property",
           "type": "string",
           "description": "The BEM modifier for Resolved: desktop, tablet or mobile."
+        },
+        {
+          "name": "IsCoarsePointer",
+          "kind": "Property",
+          "type": "bool",
+          "description": "True when the primary pointer is coarse (a finger): matchMedia('(pointer: coarse)'). Independent of Resolved, so a desktop-width layout on a touch device still reads true. False until an observer reports, and false when there is no observer."
         },
         {
           "name": "IsDesktop",

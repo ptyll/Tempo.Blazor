@@ -100,6 +100,13 @@ public sealed class NotionEditorContext
     public Func<Task>?                     OpenTemplateGallery      { get; init; }
 
     /// <summary>
+    /// Opens an editor-owned page dialog (restrictions, share) for a page. The page calls this
+    /// instead of rendering the dialog itself: the shell canvas remounts on a band flip, and a
+    /// dialog inside it would close mid-open.
+    /// </summary>
+    public Action<string, Guid>?           OpenPageDialog           { get; init; }
+
+    /// <summary>
     /// Page-level actions (add block, comments, page settings) the rendered
     /// <see cref="Page.TmNotionPage"/> registers for chrome above it — the mobile action bar
     /// invokes these instead of duplicating page logic. Preserved across <c>BuildContext</c>

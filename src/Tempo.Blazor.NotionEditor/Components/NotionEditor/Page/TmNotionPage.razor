@@ -256,19 +256,24 @@
                        LayoutMode="MenuLayout"
                        VisibleChanged="HandlePageInfoVisibleChangedAsync" />
 
-<TmNotionShareDialog PageId="Page.Id"
-                     Provider="Context.PublicShareProvider"
-                     Visible="_shareVisible"
-                     LayoutMode="MenuLayout"
-                     VisibleChanged="HandleShareVisibleChangedAsync" />
+@* A hosted page opens these through NotionEditorContext.OpenPageDialog: the editor renders them
+   outside the shell canvas, which remounts on a band flip and would close a dialog inside it.
+   A standalone page (no callback) keeps rendering them here. *@
+@if (Context.OpenPageDialog is null)
+{
+    <TmNotionShareDialog PageId="Page.Id"
+                         Provider="Context.PublicShareProvider"
+                         Visible="_shareVisible"
+                         LayoutMode="MenuLayout"
+                         VisibleChanged="HandleShareVisibleChangedAsync" />
 
-<TmNotionRestrictionsDialog PageId="Page.Id"
-                            Provider="Context.PermissionProvider"
-                            LayoutMode="MenuLayout"
-                            EffectivePermission="EffectivePermission"
-                            Visible="_restrictionsVisible"
-                            VisibleChanged="HandleRestrictionsVisibleChangedAsync"
-                            OnSaved="HandleRestrictionsSavedAsync" />
+    <TmNotionRestrictionsDialog PageId="Page.Id"
+                                Provider="Context.PermissionProvider"
+                                EffectivePermission="EffectivePermission"
+                                Visible="_restrictionsVisible"
+                                VisibleChanged="HandleRestrictionsVisibleChangedAsync"
+                                OnSaved="HandleRestrictionsSavedAsync" />
+}
 
 @* ── Inline formatting toolbar (portal — position:fixed, outside scroll) *@
 <TmNotionInlineToolbar Visible="_toolbarVisible"

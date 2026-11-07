@@ -382,13 +382,27 @@ public partial class TmNotionPageHistory : TmComponentBase, IAsyncDisposable
         }
     }
 
-    private void ExitDiff()
+    private Task ExitDiff()
     {
-        _view               = _selectedVersion is not null ? HistoryView.Preview : HistoryView.Empty;
+        // A two-version pick never sets _selectedVersion, so falling back to Empty hid the preview
+        // the user had just been comparing. Show the last selected version, otherwise version B.
+        // Version B is the newer of the two picks (CompareSelected orders by EditedAt). A row
+        // click before the comparison wins, because that is the preview the user last chose.
+        var target = _selectedVersion ?? _compareToVersion ?? _compareFromVersion;
         _compareFromVersion = null;
         _compareToVersion   = null;
         _diffs              = [];
         _diffViewMode       = NotionDiffViewMode.Inline;
+        if (target is null)
+        {
+            _view = HistoryView.Empty;
+            return Task.CompletedTask;
+        }
+
+        // Empty first: ShowPreviewAsync returns early while the view is already Preview of target,
+        // which a row click before the comparison would have set. The exit must reload that preview.
+        _view = HistoryView.Empty;
+        return ShowPreviewAsync(target);
     }
 
     private void SetDiffViewMode(NotionDiffViewMode viewMode)

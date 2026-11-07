@@ -7,10 +7,10 @@
 @using Tempo.Blazor.Components.Buttons
 @using Tempo.Blazor.Components.Icons
 
-@* ── Phase 4 (NO1): CommentPresentation decides the surface. Dialog (or Auto on a narrow /
-     mobile layout) rides the core TmModal — visible title, footer "Close", Escape, focus return.
-     Auto on a desktop layout keeps the anchored popover bubble — no own backdrop, no z-index,
-     no false aria-modal. ── *@
+@* ── Phase 4 (NO1): CommentPresentation decides the surface. Dialog (or Auto on a coarse
+     pointer or a narrow / mobile layout) rides the core TmModal — visible title, footer "Close",
+     Escape, focus return. Auto on a fine desktop pointer keeps the anchored popover bubble —
+     no own backdrop, no z-index, no false aria-modal. ── *@
 @if (Visible)
 {
     @if (UseDialog)

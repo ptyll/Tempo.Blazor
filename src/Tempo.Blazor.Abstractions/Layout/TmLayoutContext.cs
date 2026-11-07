@@ -37,4 +37,11 @@ public sealed record TmLayoutContext(TmLayoutMode Mode, TmLayoutMode Resolved)
 
     /// <summary>True when the rendered layout is the wide one.</summary>
     public bool IsDesktop => Resolved == TmLayoutMode.Desktop;
+
+    /// <summary>
+    /// True when the primary pointer is coarse (a finger): <c>matchMedia('(pointer: coarse)')</c>.
+    /// Independent of <see cref="Resolved"/>, so a desktop-width layout on a touch device still
+    /// reads true. False until an observer reports, and false when there is no observer.
+    /// </summary>
+    public bool IsCoarsePointer { get; init; }
 }

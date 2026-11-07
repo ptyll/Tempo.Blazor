@@ -80,6 +80,29 @@ public sealed class TmNotionPageHistoryLayoutTests : LocalizationTestBase
     }
 
     [Fact]
+    public async Task ExitComparison_AfterTwoPicks_ShowsAPreview()
+    {
+        var host = RenderHistory();
+        host.WaitForAssertion(() => host.FindAll(".tm-nph__version-item").Should().HaveCount(2));
+
+        await host.FindAll("[data-testid='notion-history-pick']")[0].ChangeAsync(new ChangeEventArgs { Value = true });
+        await host.FindAll("[data-testid='notion-history-pick']")[1].ChangeAsync(new ChangeEventArgs { Value = true });
+        await host.Find("[data-testid='notion-history-compare-selected']").ClickAsync(new MouseEventArgs());
+        host.WaitForAssertion(() => host.Find("[data-testid='notion-diff-viewer']").Should().NotBeNull());
+        host.FindAll(".tm-nph__preview").Should().BeEmpty("a comparison is not a preview");
+
+        await host.FindAll("button").First(button => button.TextContent.Contains("Exit comparison", StringComparison.Ordinal))
+            .ClickAsync(new MouseEventArgs());
+
+        host.WaitForAssertion(() =>
+        {
+            host.Find(".tm-nph__preview").Should().NotBeNull("leaving a two-pick comparison shows version B when no row was selected");
+            host.Find(".tm-nph__version-item--selected").GetAttribute("data-version-id")
+                .Should().Be("cf230000-0000-0000-0000-000000000201", "version B is the newer pick, not the first");
+        });
+    }
+
+    [Fact]
     public async Task Mobile_HasNoSideBySideToggle()
     {
         var host = RenderHistory(TmLayoutMode.Mobile);

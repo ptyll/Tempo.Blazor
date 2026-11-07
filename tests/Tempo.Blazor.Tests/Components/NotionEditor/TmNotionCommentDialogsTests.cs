@@ -212,6 +212,34 @@ public sealed class TmNotionCommentDialogsTests : LocalizationTestBase
     }
 
     [Fact]
+    public void BlockComment_AutoDesktop_CoarsePointer_RendersTheModal()
+    {
+        var provider = new BlockFakeCommentProvider();
+        var cut = RenderBlockPanel(provider, NotionCommentPresentation.Auto, TmLayoutMode.Desktop, coarsePointer: true);
+
+        cut.FindComponent<TmModal>().Should().NotBeNull();
+        cut.FindAll(".tm-nbcp-anchor").Should().BeEmpty("a coarse pointer does not keep the anchored bubble");
+    }
+
+    [Fact]
+    public void BlockComment_Popover_CoarsePointer_KeepsTheAnchoredPopover()
+    {
+        var provider = new BlockFakeCommentProvider();
+        var cut = RenderBlockPanel(provider, NotionCommentPresentation.Popover, TmLayoutMode.Desktop, coarsePointer: true);
+
+        cut.FindComponents<TmModal>().Should().BeEmpty("Popover pins the bubble even on a coarse pointer");
+    }
+
+    [Fact]
+    public void TextComment_AutoDesktop_CoarsePointer_RendersTheModal()
+    {
+        var provider = new BlockFakeCommentProvider();
+        var cut = RenderTextPanel(provider, NotionCommentPresentation.Auto, "Short quote", TmLayoutMode.Desktop, coarsePointer: true);
+
+        cut.FindComponent<TmModal>().Should().NotBeNull();
+    }
+
+    [Fact]
     public void BlockComment_AutoDesktop_KeepsTheAnchoredPopover()
     {
         var provider = new BlockFakeCommentProvider();
@@ -433,7 +461,8 @@ public sealed class TmNotionCommentDialogsTests : LocalizationTestBase
         BlockFakeCommentProvider provider,
         NotionCommentPresentation presentation,
         TmLayoutMode mode = TmLayoutMode.Desktop,
-        Action? onClosed = null)
+        Action? onClosed = null,
+        bool coarsePointer = false)
         => Render<CascadingValue<NotionEditorContext>>(p => p
             .Add(x => x.Value, new NotionEditorContext
             {
@@ -443,10 +472,10 @@ public sealed class TmNotionCommentDialogsTests : LocalizationTestBase
             })
             .Add(p2 => p2.IsFixed, false)
             .AddChildContent<CascadingValue<TmLayoutContext>>(layout => layout
-                .Add(p => p.Value, new TmLayoutContext(mode, mode))
+                .Add(p => p.Value, new TmLayoutContext(mode, mode) { IsCoarsePointer = coarsePointer })
                 .Add(p => p.Name, TmLayoutScopes.Viewport)
                 .AddChildContent<CascadingValue<TmLayoutContext>>(viewport => viewport
-                    .Add(x => x.Value, new TmLayoutContext(mode, mode))
+                    .Add(x => x.Value, new TmLayoutContext(mode, mode) { IsCoarsePointer = coarsePointer })
                     .AddChildContent<TmNotionBlockCommentPanel>(panel => panel
                         .Add(x => x.Visible, true)
                         .Add(x => x.BlockId, "block-1")
@@ -459,7 +488,8 @@ public sealed class TmNotionCommentDialogsTests : LocalizationTestBase
         NotionCommentPresentation presentation,
         string highlightedText,
         TmLayoutMode mode = TmLayoutMode.Desktop,
-        Action? onClosed = null)
+        Action? onClosed = null,
+        bool coarsePointer = false)
         => Render<CascadingValue<NotionEditorContext>>(p => p
             .Add(x => x.Value, new NotionEditorContext
             {
@@ -469,10 +499,10 @@ public sealed class TmNotionCommentDialogsTests : LocalizationTestBase
             })
             .Add(p2 => p2.IsFixed, false)
             .AddChildContent<CascadingValue<TmLayoutContext>>(layout => layout
-                .Add(p => p.Value, new TmLayoutContext(mode, mode))
+                .Add(p => p.Value, new TmLayoutContext(mode, mode) { IsCoarsePointer = coarsePointer })
                 .Add(p => p.Name, TmLayoutScopes.Viewport)
                 .AddChildContent<CascadingValue<TmLayoutContext>>(viewport => viewport
-                    .Add(x => x.Value, new TmLayoutContext(mode, mode))
+                    .Add(x => x.Value, new TmLayoutContext(mode, mode) { IsCoarsePointer = coarsePointer })
                     .AddChildContent<TmNotionTextCommentPanel>(panel => panel
                         .Add(x => x.Visible, true)
                         .Add(x => x.CommentId, string.Empty)

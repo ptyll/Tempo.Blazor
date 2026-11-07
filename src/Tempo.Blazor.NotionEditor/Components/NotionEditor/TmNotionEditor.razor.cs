@@ -154,8 +154,8 @@ public partial class TmNotionEditor : TmComponentBase, IAsyncDisposable
 
     /// <summary>
     /// How the block / text comment panels present (NO1). <see cref="NotionCommentPresentation.Auto"/>
-    /// (the default) keeps the anchored popover bubble on a desktop layout and opens the core
-    /// modal / sheet on touch and narrow containers; <see cref="NotionCommentPresentation.Popover"/>
+    /// (the default) keeps the anchored popover bubble on a fine desktop pointer and opens the core
+    /// modal / sheet on a coarse pointer and on touch and narrow containers; <see cref="NotionCommentPresentation.Popover"/>
     /// pins the bubble at every layout; <see cref="NotionCommentPresentation.Dialog"/> always opens
     /// the modal.
     /// </summary>
@@ -202,6 +202,10 @@ public partial class TmNotionEditor : TmComponentBase, IAsyncDisposable
     private string?                    _loadError;
     private bool                       _sidebarVisible = true;
     private TmLayoutMode               _resolvedLayout = TmLayoutMode.Desktop;
+
+    /// <summary>The viewport scope — its pointer signal is copied into <see cref="LayoutCascade"/>.</summary>
+    [CascadingParameter(Name = TmLayoutScopes.Viewport)]
+    private TmLayoutContext? ViewportLayout { get; set; }
     private bool                       _sidebarTouched;
 
     /// <summary>Below desktop the drawer starts closed; a forced mode must not wait for the JS probe.</summary>
@@ -218,6 +222,8 @@ public partial class TmNotionEditor : TmComponentBase, IAsyncDisposable
     private bool                       _shortcutsVisible;
     private bool                       _templateGalleryOpen;
     private bool                       _shareDialogOpen;
+    private bool                       _restrictionsDialogOpen;
+    private Guid?                      _pageDialogPageId;
     private string?                    _selectedSpaceId;
     /// <summary>Space last taken from a loaded page. A user pick (sidebar) is not overwritten.</summary>
     private string?                    _pageSpaceId;
@@ -289,7 +295,12 @@ public partial class TmNotionEditor : TmComponentBase, IAsyncDisposable
     /// <summary>The layout cascaded into the page, the menus and the database blocks.</summary>
     private TmLayoutMode EffectiveLayout => LayoutMode == TmLayoutMode.Auto ? _resolvedLayout : LayoutMode;
 
-    private TmLayoutContext LayoutCascade => new(LayoutMode, EffectiveLayout);
+    private TmLayoutContext LayoutCascade => new(LayoutMode, EffectiveLayout)
+    {
+        // The shell observer is nearer than this cascade. A forced shell does not measure, so it
+        // inherits this value — without the copy a pinned desktop width would hide a coarse pointer.
+        IsCoarsePointer = ViewportLayout?.IsCoarsePointer == true,
+    };
 
     private Dictionary<string, object> ShellAttributes => new()
     {
@@ -454,6 +465,29 @@ public partial class TmNotionEditor : TmComponentBase, IAsyncDisposable
         _shareDialogOpen = visible;
         return Task.CompletedTask;
     }
+
+    /// <summary>
+    /// The page asks the editor to open a dialog. The dialog renders beside the shortcuts panel,
+    /// outside the shell canvas, so a band flip (NOTION-EDITOR-SHELL-CANVAS-REMOUNT) cannot
+    /// dispose it while it is open.
+    /// </summary>
+    private void OpenPageDialogFromPage(string kind, Guid pageId)
+    {
+        _pageDialogPageId = pageId;
+        if (kind == "share")
+            _shareDialogOpen = true;
+        else if (kind == "restrictions")
+            _restrictionsDialogOpen = true;
+        _ = InvokeAsync(StateHasChanged);
+    }
+
+    private Task OnRestrictionsVisibleChanged(bool visible)
+    {
+        _restrictionsDialogOpen = visible;
+        return Task.CompletedTask;
+    }
+
+    private Task OnRestrictionsSavedAsync() => OnPagePermissionsChangedAsync();
 
     private static Dictionary<string, object> Attrs(params (string Key, object Value)[] pairs)
     {
@@ -1126,7 +1160,8 @@ public partial class TmNotionEditor : TmComponentBase, IAsyncDisposable
         SelectedSpaceId             = _selectedSpaceId,
         SelectSpace                 = SinglePageMode ? null : HandleSpaceSelectedAsync,
         CurrentPageMovedToSpace     = SinglePageMode ? null : HandleCurrentPageMovedToSpaceAsync,
-        OpenTemplateGallery         = SinglePageMode ? null : OpenTemplateGalleryAsync
+        OpenTemplateGallery         = SinglePageMode ? null : OpenTemplateGalleryAsync,
+        OpenPageDialog              = OpenPageDialogFromPage
     };
 
     // ── Dispose ──────────────────────────────────────────────────────────────

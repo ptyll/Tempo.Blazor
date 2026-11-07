@@ -14,6 +14,58 @@
 const tracked = new Map();
 let shared = null;
 
+/**
+ * Whether the primary pointer is coarse (a finger). A missing or throwing matchMedia is a fine
+ * pointer — the same answer static render and node tests get before any browser signal arrives.
+ * @param {((query: string) => { matches?: boolean }) | undefined} matchMedia
+ * @returns {boolean}
+ */
+export function readPointer(matchMedia) {
+    try {
+        return matchMedia?.('(pointer: coarse)')?.matches === true;
+    } catch {
+        return false;
+    }
+}
+
+function pointerQuery() {
+    if (typeof globalThis.matchMedia !== 'function') return null;
+    try {
+        return globalThis.matchMedia('(pointer: coarse)');
+    } catch {
+        return null;
+    }
+}
+
+function reportPointer(entry, coarse) {
+    if (coarse === entry.pointer) return;
+    entry.pointer = coarse;
+    entry.dotnet.invokeMethodAsync('OnPointerKindChanged', coarse).catch(() => {});
+}
+
+/** Subscribe to the coarse-pointer query. A change listener only — never pointermove. */
+function attachPointer(entry) {
+    const query = pointerQuery();
+    if (!query) return;
+    entry.pointerQuery = query;
+    const coarse = readPointer(() => query);
+    entry.pointer = coarse;
+    entry.onPointer = () => reportPointer(entry, readPointer(() => query));
+    if (typeof query.addEventListener === 'function') query.addEventListener('change', entry.onPointer);
+    else if (typeof query.addListener === 'function') query.addListener(entry.onPointer);
+    // A fine pointer is the .NET default, so only a coarse match is worth a render.
+    if (coarse) entry.dotnet.invokeMethodAsync('OnPointerKindChanged', true).catch(() => {});
+}
+
+function detachPointer(entry) {
+    const query = entry.pointerQuery;
+    if (!query || !entry.onPointer) return;
+    if (typeof query.removeEventListener === 'function') query.removeEventListener('change', entry.onPointer);
+    else if (typeof query.removeListener === 'function') query.removeListener(entry.onPointer);
+    entry.onPointer = null;
+    entry.pointerQuery = null;
+}
+
 /** @param {number} widthPx @param {{ sm: number, lg: number }} breakpoints */
 export function classifyWidth(widthPx, breakpoints) {
     if (!Number.isFinite(widthPx) || widthPx < 0) {
@@ -80,6 +132,7 @@ export function observe(element, dotnet, id, options) {
         measureWindow: options?.measureWindow === true,
     };
     tracked.set(element, entry);
+    attachPointer(entry);
 
     // ResizeObserver fires an initial observation, so there is no clientWidth fallback: that box
     // differs from the content box the observer reports. initialWidth is only the caller's own
@@ -109,6 +162,7 @@ export function disconnect(id) {
         if (entry.id !== id) continue;
         tracked.delete(element);
         shared?.unobserve(element);
+        detachPointer(entry);
         if (entry.onResize && typeof window !== 'undefined') window.removeEventListener('resize', entry.onResize);
     }
 }
@@ -116,6 +170,8 @@ export function disconnect(id) {
 /** Drop every registration. Test-only: a module imported by Node is shared across tests. */
 export function __resetForTests() {
     for (const element of [...tracked.keys()]) {
+        const entry = tracked.get(element);
+        if (entry) detachPointer(entry);
         shared?.unobserve(element);
         tracked.delete(element);
     }

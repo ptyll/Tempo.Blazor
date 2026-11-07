@@ -1327,6 +1327,7 @@ public abstract class LocalizationTestBase : BunitContext
         ["TmNotionPageTree_BulkDeleteMessage_Other"] = "{0} selected pages will be moved to trash.",
         ["TmNotionPageTree_BulkMoveDescendantError"] = "Selected pages cannot be moved into their own descendants.",
         ["TmNotionPageTree_BulkOperationError"] = "Could not complete the bulk page operation.",
+        ["TmNotionPageHistory_ExitDiff"] = "Exit comparison",
         ["TmNotionPageHistory_DiffModeInline"] = "Inline",
         ["TmNotionPageHistory_DiffModeSideBySide"] = "Side by side",
         ["TmNotionPageHistory_ContentLabel"] = "Version content",

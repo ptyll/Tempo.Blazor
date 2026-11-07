@@ -2,6 +2,7 @@
 
 ## 2.10.0 (unreleased)
 
+- **Added (core `TmLayoutContext`): `IsCoarsePointer`.** Additive. A cascaded context now also carries whether the primary pointer is coarse (`matchMedia('(pointer: coarse)')`), independent of the width band. `TmLayoutObserver` reports it through `layout-observer.js` when the query flips (never from `pointermove`) and stamps `data-pointer="coarse|fine"` on its root; a forced observer does not measure and inherits the ancestor's signal. False until a report arrives, so existing hosts keep today's fine-pointer reading. `CommentPresentation=Auto` opens the comment dialog/sheet on a coarse pointer even at a desktop width; `Popover` still pins the bubble.
 - **NotionEditor redesign (phases 1–9), consolidated.** The editor is a `TmEditorShell`: `LayoutMode` (`Auto`, desktop ≥ 1024 / tablet 640–1023 / mobile < 640 of the editor container), `Chrome` (`Full` / `Minimal` / `None`), `InspectorContent` (null renders no right region), `ShellPanelPresentation` (`Overlay` default, `Main` replaces the page) and `CommentPresentation` (`Auto` default: popover on desktop, `TmModal` on touch/narrow). The contract, frozen `data-testid`s and `data-tm-group` values live in [docs/notion-editor.md](docs/notion-editor.md). Each breaking item below already has its before/after; the index is the map.
 
 ### NotionEditor 2.10.0 — Breaking / Migration index
@@ -15,7 +16,9 @@
 | Dialogs and menus | package backdrops and z-index bands | core `TmModal` / `TmOverlayPanel` / `TmSidePanel` | phases 4, 6, 7 |
 | Database toolbar | always-visible `.tm-db__tool-btn` row | `data-tm-group` `views \| tools \| primary`; compact tools live in More | phase 8 |
 | Timeline classes | `.tm-dbt` / `.tm-dbt__*` | `.tm-dbtl` / `.tm-dbtl__*` (the table keeps `.tm-dbt`) | phase 9 |
-| Comment default | bubble at every width | `CommentPresentation=Auto` | phase 4 |
+| Comment default | bubble at every width | `CommentPresentation=Auto` (popover on a fine desktop pointer; dialog/sheet on a coarse pointer or a narrow layout) | phase 4 |
+| History close / restore confirm | local `.tm-nph__close-btn`, `.tm-nph-confirm` | the core modal close (`.tm-nph-host .tm-modal-close`) and `TmDialog` (`[data-testid=notion-history-restore-confirm]`) | phase 7 |
+| Spreadsheet edit footer | `.tm-notion-spreadsheet-edit-modal__footer` | the shared tempo footer `[data-testid=notion-tempo-modal-footer]` (Save/Discard classes unchanged) | phase 7 |
 | Calendar week | always Monday | `CultureInfo` `FirstDayOfWeek` | phase 9 |
 | Bulk target | one click executed | two-step: select, then the footer confirms | phase 4 |
 | Media insert | a pick inserted | a pick selects; Insert or a double-click confirms | phase 7 |

@@ -158,13 +158,13 @@ public partial class TmNotionBlockCommentPanel : ComponentBase, IDisposable, ITm
 
     private bool IsNarrowLayout => Layout?.IsMobile == true || Layout?.IsTablet == true;
 
-    /// <summary>Auto resolves per layout: popover bubble on desktop, core modal/sheet on a touch
-    /// or narrow (tablet / mobile) layout.</summary>
+    /// <summary>Auto resolves per layout: popover bubble on a fine desktop pointer, core modal/sheet
+    /// on a coarse pointer or a narrow (tablet / mobile) layout.</summary>
     private bool UseDialog => Presentation switch
     {
         NotionCommentPresentation.Dialog  => true,
         NotionCommentPresentation.Popover => false,
-        _                                  => IsNarrowLayout,
+        _                                  => IsNarrowLayout || Layout?.IsCoarsePointer == true,
     };
 
     /// <summary>Two or more threads in a dialog on a wide layout render master/detail side by side.</summary>

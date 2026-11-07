@@ -75,6 +75,9 @@ public sealed class NotionPhase7SurfacesE2ETests : WasmTestBase
 
         await page.SetViewportSizeAsync(390, 844);
         await page.WaitForTimeoutAsync(400);
+        // The shell remounts its canvas on the band flip. The dialog is editor-owned, so it stays
+        // attached and restamps data-layout from the editor's resolved band.
+        await Assertions.Expect(dialog).ToBeAttachedAsync();
         await Assertions.Expect(dialog.Locator(".tm-nprd[data-layout='mobile']")).ToBeVisibleAsync();
         await ShotAsync(page, "notion-restrictions", "restrictions-cards-390-light", dialog);
         await page.Context.CloseAsync();
@@ -146,7 +149,9 @@ public sealed class NotionPhase7SurfacesE2ETests : WasmTestBase
         {
             var page = await OpenAsync(width, 844, true, "seedPhase7Surfaces");
             await TypeSlashAsync(page);
-            await page.Locator("[data-testid='notion-ai-slash-item']").First.ClickAsync(new LocatorClickOptions { Force = true });
+            // A force click never places the caret the slash menu was opened from. The item is
+            // already visible, so a real click (a tap on a coarse pointer) is the user path.
+            await page.Locator("[data-testid='notion-ai-slash-item']").First.ClickAsync();
             var menu = page.Locator("[data-testid='notion-ai-menu']");
             await menu.WaitForAsync(Visible());
             var panelWidth = await menu.EvaluateAsync<double>("el => el.getBoundingClientRect().width");
@@ -220,9 +225,18 @@ public sealed class NotionPhase7SurfacesE2ETests : WasmTestBase
     private static async Task OpenPageSettingsFromMoreAsync(IPage page)
     {
         await page.Locator(".tm-notion-editor[data-editor-layout]").First.WaitForAsync(Visible());
+        // Page settings is an action-bar More entry on the mobile band and a toolbar More entry
+        // elsewhere. Neither is in the DOM until its menu opens, and a hidden bar copy must not win.
         var entry = page.Locator("[data-testid='notion-page-settings']:visible, [data-menu-testid='notion-page-settings']:visible");
         if (await entry.CountAsync() == 0)
-            await page.Locator(".tm-mobile-action-bar__more, .tm-notion-topbar .tm-toolbar-more").First.ClickAsync();
+        {
+            // The demo host pins the editor to 900px, so the action bar sits below a short phone
+            // viewport. The toolbar More is the one on screen and it does not carry this entry.
+            var more = page.Locator(".tm-mobile-action-bar__more, .tm-notion-topbar .tm-toolbar-more").Last;
+            await more.ScrollIntoViewIfNeededAsync();
+            await more.ClickAsync();
+            await page.Locator(".tm-overlay-panel-sheet:visible, .tm-toolbar-more__menu:visible").First.WaitForAsync(Visible());
+        }
         await entry.First.ClickAsync();
         await page.Locator(".tm-npsm:visible, .tm-overlay-panel-sheet .tm-notion-floating-menu__body").First.WaitForAsync(Visible());
     }
@@ -278,10 +292,19 @@ public sealed class NotionPhase7SurfacesE2ETests : WasmTestBase
 
     private static async Task TypeSlashAsync(IPage page)
     {
+        // Same path as NotionPhase6MenusE2ETests.TypeTriggerAsync. A force click on a touch
+        // context leaves no caret, so "/" never reaches the editor and the slash menu stays closed.
         var para = page.Locator(".tm-notion-paragraph[contenteditable='true']").First;
         await para.WaitForAsync(Visible());
-        await para.ClickAsync(new LocatorClickOptions { Force = true });
+        await para.ScrollIntoViewIfNeededAsync();
+        var touch = await page.EvaluateAsync<bool>("() => navigator.maxTouchPoints > 0");
+        if (touch)
+            await para.TapAsync();
+        else
+            await para.ClickAsync();
         await page.Keyboard.PressAsync("End");
+        await page.Keyboard.PressAsync("Enter");
+        await page.WaitForTimeoutAsync(1000);
         await page.Keyboard.TypeAsync("/");
         await page.WaitForSelectorAsync(".tm-notion-slash", new PageWaitForSelectorOptions
         {

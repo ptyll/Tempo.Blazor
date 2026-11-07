@@ -608,6 +608,14 @@ public partial class TmNotionPage : ComponentBase, IAsyncDisposable
 
     private Task HandleShareRequestedAsync()
     {
+        // The editor owns the dialog (outside the remounting shell canvas) when it registered the
+        // callback. A standalone page keeps the dialog it renders itself.
+        if (Context.OpenPageDialog is { } open)
+        {
+            open("share", Page.Id);
+            return Task.CompletedTask;
+        }
+
         _shareVisible = true;
         StateHasChanged();
         return Task.CompletedTask;
@@ -622,6 +630,12 @@ public partial class TmNotionPage : ComponentBase, IAsyncDisposable
 
     private Task HandleRestrictionsRequestedAsync()
     {
+        if (Context.OpenPageDialog is { } open)
+        {
+            open("restrictions", Page.Id);
+            return Task.CompletedTask;
+        }
+
         _restrictionsVisible = true;
         StateHasChanged();
         return Task.CompletedTask;

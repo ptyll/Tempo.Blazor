@@ -665,13 +665,13 @@ public partial class TmNotionTextCommentPanel : ComponentBase, IDisposable, ITmD
 
     // ── Presentation (NO1) ────────────────────────────────────────────────────
 
-    /// <summary>Auto resolves per layout: popover bubble on desktop, core modal/sheet on a touch
-    /// or narrow (tablet / mobile) layout.</summary>
+    /// <summary>Auto resolves per layout: popover bubble on a fine desktop pointer, core modal/sheet
+    /// on a coarse pointer or a narrow (tablet / mobile) layout.</summary>
     private bool UseDialog => Presentation switch
     {
         NotionCommentPresentation.Dialog  => true,
         NotionCommentPresentation.Popover => false,
-        _                                  => Layout?.IsMobile == true || Layout?.IsTablet == true,
+        _                                  => Layout?.IsMobile == true || Layout?.IsTablet == true || Layout?.IsCoarsePointer == true,
     };
 
     /// <summary>Length beyond which the dialog quote clamps (with a "Show full quote" toggle).</summary>

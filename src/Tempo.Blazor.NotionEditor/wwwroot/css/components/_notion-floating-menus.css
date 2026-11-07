@@ -68,12 +68,13 @@
     width: min(32rem, calc(100vw - var(--tm-space-4)));
 }
 
-/* A phone sheet is the viewport: the panel must not sit narrower than the screen. */
-.tm-overlay-panel-sheet .tm-notion-ai,
-.tm-overlay-panel-sheet .tm-notion-ai--panel {
-    width: 100%;
-    max-width: 100%;
-    box-sizing: border-box;
+/* A phone sheet is the viewport. The drawer body pads 1.25rem each side, and the sheet branch of
+   TmOverlayPanel drops the panel Class, so the AI surface is the bare section inside
+   .tm-overlay-panel-sheet__content. The same rule lives in the package bundle, which is the sheet
+   the page loads. */
+.tm-overlay-panel-sheet__content:has([data-testid="notion-ai-menu"]) {
+    margin-inline: calc(-1 * var(--tm-space-5));
+    width: calc(100% + 2 * var(--tm-space-5));
 }
 
 /* ── Phase 4 (NO1): comment popover panel roots (TmNotionBlockCommentPanel /

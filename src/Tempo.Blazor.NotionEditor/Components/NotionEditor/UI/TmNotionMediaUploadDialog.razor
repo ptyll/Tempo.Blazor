@@ -124,7 +124,7 @@
                     }
                     </div>
                 }
-                else if (_activeTab == "library")
+                @if (CanBrowseLibrary && _activeTab == "library")
                 {
                     <div id="tm-media-panel-library" role="tabpanel" aria-labelledby="tm-media-tab-library" class="tm-media-library">
                         <div class="tm-media-library__search">

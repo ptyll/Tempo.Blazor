@@ -153,8 +153,8 @@ public partial class TmNotionMediaUploadDialog : ComponentBase, IAsyncDisposable
     private void SetTab(string tab)
     {
         _activeTab = tab;
-        if (tab == "library" && !_libraryLoaded && !_isLoadingLibrary)
-            _ = LoadLibraryAsync(reset: true);
+        // A click only queues the load. OnAfterRender owns the await, so a second click (or a
+        // search keystroke) cannot start a second request that the first one's reset wipes.
     }
 
     private static readonly string[] TabOrder = ["upload", "embed", "library"];
@@ -302,6 +302,9 @@ public partial class TmNotionMediaUploadDialog : ComponentBase, IAsyncDisposable
         catch (OperationCanceledException) { return; }
         catch
         {
+            // A failed load is still an attempt. Leaving _libraryLoaded false would make
+            // OnAfterRender ask again on every render and spin the request.
+            _libraryLoaded = true;
             _libraryError = Loc["TmNotionMediaUploadDialog_LibraryError"];
         }
         finally

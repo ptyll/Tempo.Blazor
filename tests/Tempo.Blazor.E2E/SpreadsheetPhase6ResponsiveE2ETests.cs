@@ -465,7 +465,7 @@ public partial class SpreadsheetE2ETests
         // the footer is measured at rest instead of mid-animation.
         await page.WaitForTimeoutAsync(400);
 
-        var footer = await modal.Locator(".tm-notion-spreadsheet-edit-modal__footer").First.BoundingBoxAsync();
+        var footer = await modal.Locator("[data-testid='notion-tempo-modal-footer']").First.BoundingBoxAsync();
         Assert.IsNotNull(footer, "the Save / Discard footer renders");
         Assert.IsTrue(footer!.Y >= 0 && footer.Y + footer.Height <= viewportHeight + 1,
             $"the Save / Discard footer stays inside the {viewportHeight}px viewport "

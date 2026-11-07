@@ -12,6 +12,7 @@
      id="@_id"
      class="tm-layout tm-layout--@Context.CssModifier @(IsContainer ? null : "tm-layout--no-container") @Class"
      data-layout="@Context.CssModifier"
+     data-pointer="@(Context.IsCoarsePointer ? "coarse" : "fine")"
      data-testid="@RootTestId("tm-layout")"
      style="@Style"
      @attributes="AdditionalAttributes">
@@ -41,6 +42,8 @@
     private TmLayoutBreakpoints _observedBreakpoints = TmLayoutBreakpoints.Default;
     private bool _disposed;
     private TmLayoutMode? _measured;
+    private bool _pointerKnown;
+    private bool _coarsePointer;
     private TmLayoutMode _resolved;
     private bool _resolvedInitialised;
     private TmLayoutContext? _context;
@@ -120,13 +123,21 @@
         get
         {
             var resolved = Current();
-            if (_context is null || _context.Mode != LayoutMode || _context.Resolved != resolved)
-                _context = new TmLayoutContext(LayoutMode, resolved);
+            var coarse = CoarsePointer;
+            if (_context is null || _context.Mode != LayoutMode || _context.Resolved != resolved || _context.IsCoarsePointer != coarse)
+                _context = new TmLayoutContext(LayoutMode, resolved) { IsCoarsePointer = coarse };
             return _context;
         }
     }
 
     private TmLayoutMode Current() => TmLayout.Resolve(LayoutMode, Parent, _measured, InitialMode);
+
+    /// <summary>
+    /// A measurement this observer received wins. Before that — and for a forced observer, which
+    /// never imports the script — the ancestor's signal stands, so a pinned desktop width on a
+    /// touch device does not read as a fine pointer.
+    /// </summary>
+    private bool CoarsePointer => _pointerKnown ? _coarsePointer : Parent?.IsCoarsePointer == true;
 
     private RenderFragment RenderContent => builder =>
     {
@@ -223,6 +234,23 @@
         // which pins every menu that reads this scope to the stale mode.
         measureWindow = IsViewportScope,
     };
+
+    /// <summary>
+    /// Called by layout-observer.js when <c>(pointer: coarse)</c> flips. An unchanged value is ignored,
+    /// and the script never reports from <c>pointermove</c>.
+    /// </summary>
+    /// <param name="coarse">True when the primary pointer is coarse.</param>
+    [JSInvokable]
+    public Task OnPointerKindChanged(bool coarse)
+    {
+        if (_pointerKnown && _coarsePointer == coarse) return Task.CompletedTask;
+        return InvokeAsync(() =>
+        {
+            _pointerKnown = true;
+            _coarsePointer = coarse;
+            StateHasChanged();
+        });
+    }
 
     /// <summary>Called by layout-observer.js when the measured mode changes. An unchanged mode is ignored.</summary>
     /// <param name="mode">One of <c>desktop</c>, <c>tablet</c>, <c>mobile</c>.</param>

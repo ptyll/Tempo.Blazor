@@ -29,7 +29,8 @@ public sealed class NotionRestrictionsE2ETests : NotionE2ETestBase
             var dialogCapture = await CaptureBaselineAsync("restrictions", "cf20-restrictions-dialog", dialog);
             TestContext.WriteLine($"UX CF20 dialog baseline captured: {dialogCapture.FullPagePath} / {dialogCapture.RegionPath}");
 
-            await dialog.Locator(".tm-nprd__primary").ClickAsync();
+            // The Save button lives in the modal footer, outside .tm-nprd (the scrolling body).
+            await page.GetByTestId("notion-restrictions-save").ClickAsync();
             await page.Locator(".tm-nprd").WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Detached, Timeout = 10000 });
 
             await page.Locator(".tm-notion-restricted-badge").WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10000 });

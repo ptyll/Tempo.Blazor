@@ -644,7 +644,7 @@
           "name": "OptionInk",
           "kind": "Method",
           "type": "string",
-          "description": "The option ink (--tm-notion-option-{name}-fg), or the secondary text.",
+          "description": "The option ink (--tm-notion-option-{name}-ink), or the secondary text.",
           "parameters": [
             {
               "name": "stored",
@@ -668,7 +668,7 @@
           "name": "OptionWash",
           "kind": "Method",
           "type": "string",
-          "description": "The option wash (--tm-notion-option-{name}-bg), or the muted surface.",
+          "description": "The option wash (--tm-notion-option-{name}-wash), or the muted surface.",
           "parameters": [
             {
               "name": "stored",

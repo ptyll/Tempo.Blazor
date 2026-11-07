@@ -223,13 +223,6 @@
                                      OnClosed="CloseTemplateGallery" />
         }
 
-        @if (_context.PublicShareProvider is not null && _currentPage is not null)
-        {
-            <TmNotionShareDialog Visible="_shareDialogOpen"
-                                 VisibleChanged="OnShareVisibleChanged"
-                                 PageId="_currentPage.Id" />
-        }
-
         @* ── Notification toasts ─────────────────────────────────────────────── *@
         <TmNotificationToastContainer IsPanelOpen="_notificationPanelOpen" />
 
@@ -241,6 +234,26 @@
 <TmNotionShortcutsPanel Visible="_shortcutsVisible"
                         VisibleChanged="HandleShortcutsVisibleChangedAsync"
                         LayoutMode="EffectiveLayout" />
+@* Restrictions and share follow the shortcuts panel: the canvas remounts on a band flip, so a
+   dialog rendered inside it closed itself on 1440 → 390. The page opens them through the context. *@
+@if (_context.PublicShareProvider is not null && (_pageDialogPageId ?? _currentPage?.Id) is { } sharePageId)
+{
+    <TmNotionShareDialog Visible="_shareDialogOpen"
+                         VisibleChanged="OnShareVisibleChanged"
+                         PageId="sharePageId"
+                         Provider="_context.PublicShareProvider"
+                         LayoutMode="EffectiveLayout" />
+}
+@if (_context.PermissionProvider is not null && (_pageDialogPageId ?? _currentPage?.Id) is { } restrictionsPageId)
+{
+    <TmNotionRestrictionsDialog PageId="restrictionsPageId"
+                                Provider="_context.PermissionProvider"
+                                EffectivePermission="@(_pageDialogPageId is null || _pageDialogPageId == _currentPage?.Id ? _effectivePermission : null)"
+                                Visible="_restrictionsDialogOpen"
+                                VisibleChanged="OnRestrictionsVisibleChanged"
+                                OnSaved="OnRestrictionsSavedAsync"
+                                LayoutMode="EffectiveLayout" />
+}
 </CascadingValue>
 </CascadingValue>
 
@@ -307,9 +320,12 @@
                                              OnClick="ToggleAuditPanelAsync"
                                              AdditionalAttributes="@(Test("notion-audit-open"))" />
                         }
-                        @* Pinned, not ToolPriority: a Secondary button collapses into More and keeps its
-                           data-testid on the visibility:hidden bar copy, so the trigger is absent at a
-                           1440 viewport whose bar overflows. The shortcut help must stay one click away. *@
+                        @* Pinned on desktop and tablet: a Secondary button collapses into More and keeps its
+                           data-testid on the visibility:hidden bar copy. On the mobile band the action-bar
+                           More sheet already carries this trigger — a second pinned copy sits under the
+                           fixed header, and a tap at its center hits More instead of opening shortcuts. *@
+                        @if (EffectiveLayout != TmLayoutMode.Mobile)
+                        {
                         <TmToolbarButton Class="tm-notion-topbar__shortcuts tm-notion-topbar__tool"
                                          AdditionalAttributes="@(Test("notion-shortcuts-open"))"
                                          Icon="@IconNames.HelpCircle"
@@ -317,6 +333,7 @@
                                          Pressed="_shortcutsVisible"
                                          Priority="ToolbarButtonPriority.Pinned"
                                          OnClick="OpenShortcutsAsync" />
+                        }
                         @if (_context.BlogProvider is not null && !SinglePageMode)
                         {
                             <TmToolbarButton Class="tm-notion-topbar__tool"
