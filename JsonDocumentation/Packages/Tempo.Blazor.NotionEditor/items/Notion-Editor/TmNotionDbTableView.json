@@ -31,6 +31,12 @@
       "isRequired": false
     },
     {
+      "name": "CoarsePointer",
+      "type": "bool",
+      "isRequired": false,
+      "description": "A coarse pointer (touch). Hides the header drag and the column resize handle; column order then changes from the Properties panel (the non-drag alternative, WCAG 2.5.7)."
+    },
+    {
       "name": "RowHeight",
       "type": "TableRowHeight",
       "isRequired": false,

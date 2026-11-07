@@ -60,8 +60,16 @@ public class NotionDatabaseBasicE2ETests : WasmTestBase
     private async Task SwitchDatabaseViewAsync(IPage page, ILocator db, string viewName)
     {
         var tab = db.Locator(".tm-db__view-tab").Filter(new LocatorFilterOptions { HasText = viewName });
-        await tab.WaitForAsync(new LocatorWaitForOptions { Timeout = 5000 });
-        await tab.ClickAsync();
+        if (await tab.CountAsync() > 0 && await tab.First.IsVisibleAsync())
+        {
+            await tab.First.ClickAsync();
+        }
+        else
+        {
+            await db.GetByTestId("notion-db-more-views").Locator(".tm-dropdown-trigger").ClickAsync();
+            await page.Locator("[role='menuitem']").Filter(new LocatorFilterOptions { HasText = viewName })
+                .First.ClickAsync();
+        }
         await page.WaitForTimeoutAsync(800);
     }
 

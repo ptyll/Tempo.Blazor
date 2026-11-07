@@ -8,7 +8,7 @@
 
     @if (_selectedOption is not null)
     {
-        <span class="tm-dbc__chip" style="background:@ChipBackground(_selectedOption.Color)">
+        <span class="tm-dbc__chip" style="background:@ChipBackground(_selectedOption.Color); color:@ChipForeground(_selectedOption.Color);">
             @_selectedOption.Name
         </span>
     }

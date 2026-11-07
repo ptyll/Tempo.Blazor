@@ -238,29 +238,10 @@ public partial class TmNotionDbTimelineView : TmComponentBase
 
     // ── Formatted values ──────────────────────────────────────────────────────
 
-    private string GetPrimaryValue(IDatabaseRecord record)
-    {
-        var pf = PrimaryField;
-        if (pf is null) return string.Empty;
-        return record.Fields.TryGetValue(pf.Id.ToString(), out var v)
-            ? v?.ToString() ?? string.Empty
-            : string.Empty;
-    }
 
-    private static string GetFieldValue(IDatabaseRecord record, IDatabaseField field)
-    {
-        if (!record.Fields.TryGetValue(field.Id.ToString(), out var v) || v is null)
-            return string.Empty;
-        return v switch
-        {
-            bool b                   => b ? "✓" : string.Empty,
-            double d                 => d.ToString("G"),
-            DateTime dt              => dt.ToString("yyyy-MM-dd"),
-            string[] arr             => string.Join(", ", arr),
-            IEnumerable<string> list => string.Join(", ", list),
-            _                        => v.ToString() ?? string.Empty
-        };
-    }
+
+    private static object? RawValue(IDatabaseRecord record, IDatabaseField field)
+        => record.Fields.TryGetValue(field.Id.ToString(), out var value) ? value : null;
 
     // ── Drag & drop ───────────────────────────────────────────────────────────
 

@@ -6,6 +6,7 @@
 @using Tempo.Blazor.NotionEditor.Interfaces
 @using Tempo.Blazor.Components.NotionEditor.Blocks.Database.Cells
 @using Tempo.Blazor.Components.Dropdowns
+@using Tempo.Blazor.Components.Icons
 
 <div class="tm-dbt-wrap @RowHeightClass @(WrapCells ? "tm-dbt--wrap" : "")"
      @ref="_tableRef">
@@ -36,7 +37,7 @@
                         <th class="tm-dbt__th @(field.IsPrimary ? "tm-dbt__th--primary" : "") @(isDragOver ? "tm-dbt__th--dragover" : "")"
                             scope="col"
                             style="min-width:@(width)px; width:@(width)px"
-                            draggable="@(!ReadOnly)"
+                            draggable="@HeaderDraggable"
                             @ondragstart="e => OnHeaderDragStart(e, fi)"
                             @ondragover:preventDefault="true"
                             @ondragover="() => OnDragOver(fi)"
@@ -44,10 +45,10 @@
                             <span class="tm-dbt__th-inner"
                                   role="@(OnFieldEdit.HasDelegate ? "button" : null)"
                                   @onclick="() => OnFieldEdit.InvokeAsync(field)">
-                                <span class="tm-dbt__th-icon" aria-hidden="true">@FieldTypeIcon(field.Type)</span>
+                                <span class="tm-dbt__th-icon" aria-hidden="true"><TmIcon Name="@DatabaseFieldIcons.Get(field.Type)" Size="IconSize.Xs" /></span>
                                 <span class="tm-dbt__th-name">@field.Name</span>
                             </span>
-                            @if (!ReadOnly)
+                            @if (!ReadOnly && !CoarsePointer)
                             {
                                 <span class="tm-dbt__resize-handle"
                                       data-resize-field="@field.Id"
@@ -109,10 +110,12 @@
                             <tr class="tm-dbt__group-row">
                                 <td class="tm-dbt__group-sep" colspan="@colCount">
                                     <div class="tm-dbt__group-sep-inner">
+                                        <span class="tm-dbt__group-dot" aria-hidden="true"></span>
                                         <button class="tm-dbt__group-toggle"
                                                 type="button"
+                                                data-testid="@TestId("notion-db-group-toggle")"
                                                 aria-expanded="@(!isCollapsed)"
-                                                aria-label="@(isCollapsed ? Loc["TmNotionDbTableView_GroupExpand"] : Loc["TmNotionDbTableView_GroupCollapse"])"
+                                                aria-label="@(isCollapsed ? Loc["TmNotionDb_ExpandGroup"] : Loc["TmNotionDb_CollapseGroup"])"
                                                 @onclick="() => ToggleGroup(g.Key)">
                                             <svg class="tm-dbt__group-chevron @(isCollapsed ? "tm-dbt__group-chevron--collapsed" : "")"
                                                  width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -145,7 +148,7 @@
                                 var isExpanded = ShowSubItems && IsRecordExpanded(record.Id);
 
                                 @* ── Parent row ── *@
-                                <tr class="tm-dbt__row @(isSelected ? "tm-dbt__row--selected" : "")">
+                                <tr class="tm-dbt__row @(isSelected ? "tm-dbt__row--selected" : "")" style="height: var(--tm-dbt-row-height);">
 
                                     @* Row checkbox and the non-drag delete (the row has no context menu) *@
                                     <td class="tm-dbt__cell tm-dbt__cell--check">
@@ -163,9 +166,12 @@
                                                             Icon="@IconNames.MoreHorizontal"
                                                             ShowChevron="false"
                                                             Text=""
-                                                            AriaLabel="@Loc["Tm_More"]"
+                                                            AriaLabel="@Loc["TmNotionDb_RowActions"]"
                                                             data-testid="@TestId("notion-db-table-row-delete")"
                                                             OnSelect="v => OnRowMenuAsync(record, v)">
+                                                    <TmDropdownItem Value="open" Icon="@IconNames.ExternalLink">
+                                                        @Loc["TmNotionDb_OpenRecord"]
+                                                    </TmDropdownItem>
                                                     <TmDropdownItem Value="delete" Icon="@IconNames.Trash">
                                                         @Loc["TmNotionDbRecordDetail_Delete"]
                                                     </TmDropdownItem>
@@ -237,7 +243,7 @@
                                     @foreach (var child in GetDirectChildren(record.Id))
                                     {
                                         var childSelected = IsSelected(child.Id);
-                                        <tr class="tm-dbt__row tm-dbt__row--sub @(childSelected ? "tm-dbt__row--selected" : "")">
+                                        <tr class="tm-dbt__row tm-dbt__row--sub @(childSelected ? "tm-dbt__row--selected" : "")" style="height: var(--tm-dbt-row-height);">
 
                                             <td class="tm-dbt__cell tm-dbt__cell--check">
                                                 <input class="tm-dbt__check"

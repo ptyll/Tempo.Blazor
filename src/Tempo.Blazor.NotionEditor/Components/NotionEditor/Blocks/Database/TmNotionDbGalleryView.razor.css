@@ -14,7 +14,12 @@
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(var(--tm-dbg-min, 220px), 1fr));
     gap: 12px;
-    align-items: start;
+    align-items: stretch;
+}
+
+/* One column under 480px even for CardSize.Small. */
+@container tm-db (max-width: 480px) {
+    .tm-dbg__grid { grid-template-columns: 1fr; }
 }
 
 .tm-dbg--small  { --tm-dbg-min: 154px; }
@@ -128,10 +133,18 @@
     min-width: 0;
 }
 
+.tm-dbg__card-prop-icon {
+    display: inline-flex;
+    align-items: center;
+    flex-shrink: 0;
+    color: var(--tm-text-secondary);
+}
+
 /* ── Add card ───────────────────────────────────────────────────────────── */
 
 .tm-dbg__add-card {
     border: 1.5px dashed var(--tm-border-color);
+    height: 100%;
     border-radius: 8px;
     background: transparent;
     display: flex;
@@ -147,6 +160,14 @@
     width: 100%;
     aspect-ratio: unset;
     min-height: 100px;
+    box-sizing: border-box;
+}
+
+@media (pointer: coarse) {
+    .tm-dbg__card,
+    .tm-dbg__add-card {
+        min-height: var(--tm-touch-target);
+    }
 }
 
 .tm-dbg__add-card:hover {

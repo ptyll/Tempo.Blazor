@@ -348,6 +348,7 @@ public sealed class MarkupClassCoverageTests
         "tm-cbl__state--prompt",
         "tm-child-page__icon",
         "tm-db__panel--fields",
+        "tm-db__mobile-more-list",
         // Phase 4 review batch A: the comment popover anchors are zero-size inline-styled spans
         // (position/size ride the style attribute; the TmOverlayPanel positions against them) —
         // they carry a class only as a stable selector hook.
@@ -514,7 +515,7 @@ public sealed class MarkupClassCoverageTests
             // cannot see the suffix — 17 → 20. The shared comment list adds one more interpolated
             // status class — 17 → 18.
             // The scan already contained these stems; the declared count now matches it.
-            ExpectedUnmeasurableStems: 28),
+            ExpectedUnmeasurableStems: 34),
     ];
 
     [Fact]

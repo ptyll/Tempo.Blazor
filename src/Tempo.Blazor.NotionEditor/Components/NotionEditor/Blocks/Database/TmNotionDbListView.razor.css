@@ -55,7 +55,7 @@
     align-items: center;
     gap: 10px;
     padding: 0 14px;
-    height: 38px;
+    min-height: 38px;
     border-bottom: 1px solid var(--tm-border-color);
     cursor: pointer;
     transition: background 0.08s;
@@ -162,9 +162,33 @@
     align-items: center;
     flex-shrink: 0;
     color: var(--tm-text-secondary);
-    opacity: 0;
-    transition: opacity 0.12s, color 0.12s;
+    opacity: 1;
+    transition: color 0.12s;
     margin-left: 2px;
+}
+
+/* ── Narrow: title and chips on two lines ───────────────────────────────── */
+
+@container tm-db (max-width: 600px) {
+    .tm-dblv__row {
+        flex-wrap: wrap;
+        align-items: flex-start;
+        padding-top: var(--tm-space-2);
+        padding-bottom: var(--tm-space-2);
+    }
+
+    .tm-dblv__chips {
+        flex-basis: 100%;
+        max-width: 100%;
+        order: 1;
+    }
+}
+
+@media (pointer: coarse) {
+    .tm-dblv__row,
+    .tm-dblv__add-row {
+        min-height: var(--tm-touch-target);
+    }
 }
 
 .tm-dblv__row:hover .tm-dblv__chevron,

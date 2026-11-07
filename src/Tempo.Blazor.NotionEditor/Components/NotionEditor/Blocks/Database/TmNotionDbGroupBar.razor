@@ -1,5 +1,6 @@
 @namespace Tempo.Blazor.Components.NotionEditor.Blocks.Database
 @using Tempo.Blazor.NotionEditor.Enums
+@using Tempo.Blazor.Components.Icons
 @using Tempo.Blazor.NotionEditor.Models
 
 <div class="tm-dbgb">
@@ -50,7 +51,7 @@
                     aria-selected="@(_selectedFieldId == f.Id)"
                     disabled="@ReadOnly"
                     @onclick="() => SelectFieldAsync(f.Id)">
-                <span class="tm-dbgb__field-icon" aria-hidden="true">@FieldTypeIcon(f.Type)</span>
+                <span class="tm-dbgb__field-icon" aria-hidden="true"><TmIcon Name="@DatabaseFieldIcons.Get(f.Type)" Size="IconSize.Xs" /></span>
                 <span class="tm-dbgb__field-name">@f.Name</span>
                 @if (_selectedFieldId == f.Id)
                 {

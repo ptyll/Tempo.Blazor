@@ -229,17 +229,6 @@ public partial class TmNotionDbBoardView : TmComponentBase, IAsyncDisposable
 
     // ── Card helpers ─────────────────────────────────────────────────────────
 
-    private IDatabaseField? PrimaryField => Fields.FirstOrDefault(f => f.IsPrimary);
-
-    private string GetPrimaryValue(IDatabaseRecord record)
-    {
-        var primary = PrimaryField;
-        if (primary is null) return string.Empty;
-        return record.Fields.TryGetValue(primary.Id.ToString(), out var v)
-            ? NotionDatabaseValueFormatter.Format(v)
-            : string.Empty;
-    }
-
     private string? GetCoverUrl(IDatabaseRecord record)
     {
         var filesField = Fields.FirstOrDefault(f => f.Type == DatabaseFieldType.Files && f.IsVisible);
@@ -267,27 +256,15 @@ public partial class TmNotionDbBoardView : TmComponentBase, IAsyncDisposable
         return null;
     }
 
-    private static string FormatFieldValue(IDatabaseRecord record, IDatabaseField field)
+    private static object? PropertyValue(IDatabaseRecord record, IDatabaseField field)
     {
-        if (!record.Fields.TryGetValue(field.Id.ToString(), out var val) || val is null)
-            return string.Empty;
-
-        return NotionDatabaseValueFormatter.Format(val);
+        if (!record.Fields.TryGetValue(field.Id.ToString(), out var value) || value is null)
+            return null;
+        return NotionDatabaseValueFormatter.Format(value).Length == 0 ? null : value;
     }
 
     private int GetSubItemCount(IDatabaseRecord record)
         => Records.Count(r => r.ParentRecordId == record.Id);
 
-    private static MarkupString FieldTypeIcon(DatabaseFieldType type) => (MarkupString)(type switch
-    {
-        DatabaseFieldType.Text        => "<svg width='11' height='11' viewBox='0 0 24 24' fill='none' aria-hidden='true'><path d='M4 7h16M4 12h16M4 17h10' stroke='currentColor' stroke-width='1.5' stroke-linecap='round'/></svg>",
-        DatabaseFieldType.Number      => "<svg width='11' height='11' viewBox='0 0 24 24' fill='none' aria-hidden='true'><path d='M7 3L5 21M19 3l-2 18M3 9h18M3 15h18' stroke='currentColor' stroke-width='1.5' stroke-linecap='round'/></svg>",
-        DatabaseFieldType.Select      => "<svg width='11' height='11' viewBox='0 0 24 24' fill='none' aria-hidden='true'><circle cx='12' cy='12' r='9' stroke='currentColor' stroke-width='1.5'/><circle cx='12' cy='12' r='4' fill='currentColor'/></svg>",
-        DatabaseFieldType.MultiSelect => "<svg width='11' height='11' viewBox='0 0 24 24' fill='none' aria-hidden='true'><rect x='2' y='5' width='9' height='6' rx='1' fill='currentColor'/><rect x='13' y='5' width='9' height='6' rx='1' fill='currentColor'/><rect x='2' y='14' width='9' height='6' rx='1' fill='currentColor'/></svg>",
-        DatabaseFieldType.Status      => "<svg width='11' height='11' viewBox='0 0 24 24' fill='none' aria-hidden='true'><circle cx='12' cy='12' r='9' stroke='currentColor' stroke-width='1.5'/><path d='M8 12l3 3 5-5' stroke='currentColor' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/></svg>",
-        DatabaseFieldType.Date        => "<svg width='11' height='11' viewBox='0 0 24 24' fill='none' aria-hidden='true'><rect x='3' y='4' width='18' height='17' rx='2' stroke='currentColor' stroke-width='1.5'/><path d='M16 2v4M8 2v4M3 10h18' stroke='currentColor' stroke-width='1.5' stroke-linecap='round'/></svg>",
-        DatabaseFieldType.Checkbox    => "<svg width='11' height='11' viewBox='0 0 24 24' fill='none' aria-hidden='true'><rect x='3' y='3' width='18' height='18' rx='2' stroke='currentColor' stroke-width='1.5'/><path d='M7 12l4 4 6-6' stroke='currentColor' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/></svg>",
-        DatabaseFieldType.Person      => "<svg width='11' height='11' viewBox='0 0 24 24' fill='none' aria-hidden='true'><circle cx='12' cy='8' r='4' stroke='currentColor' stroke-width='1.5'/><path d='M4 20c0-4 3.6-7 8-7s8 3 8 7' stroke='currentColor' stroke-width='1.5' stroke-linecap='round'/></svg>",
-        _                             => "<svg width='11' height='11' viewBox='0 0 24 24' fill='none' aria-hidden='true'><path d='M4 7h16M4 12h16M4 17h10' stroke='currentColor' stroke-width='1.5' stroke-linecap='round'/></svg>"
-    });
+    // Field type icons come from DatabaseFieldIcons (DB-2).
 }

@@ -3,6 +3,7 @@
 @using Tempo.Blazor.NotionEditor.Models
 @using Tempo.Blazor.NotionEditor.Interfaces
 @using Tempo.Blazor.NotionEditor.Enums
+@using Tempo.Blazor.Components.Icons
 
 <div class="tm-dbb" @ref="_boardRef">
 
@@ -68,16 +69,20 @@
                             }
 
                             <div class="tm-dbb__card-body">
-                                <span class="tm-dbb__card-title">@GetPrimaryValue(rec)</span>
+                                <span class="tm-dbb__card-title">@NotionDatabaseValueFormatter.PrimaryText(rec, Fields)</span>
 
                                 @foreach (var field in _previewFields)
                                 {
-                                    var val = FormatFieldValue(rec, field);
-                                    if (val.Length > 0)
+                                    var propValue = PropertyValue(rec, field);
+                                    if (propValue is not null)
                                     {
                                         <div class="tm-dbb__card-prop">
-                                            <span class="tm-dbb__card-prop-icon" aria-hidden="true">@FieldTypeIcon(field.Type)</span>
-                                            <span class="tm-dbb__card-prop-val">@val</span>
+                                            <span class="tm-dbb__card-prop-icon" aria-hidden="true">
+                                                <TmIcon Name="@DatabaseFieldIcons.Get(field.Type)" Size="IconSize.Xs" />
+                                            </span>
+                                            <span class="tm-dbb__card-prop-val">
+                                                <TmNotionDbPropertyValue Field="field" Value="propValue" />
+                                            </span>
                                         </div>
                                     }
                                 }

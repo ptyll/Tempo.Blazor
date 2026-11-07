@@ -43,6 +43,14 @@ public partial class TmNotionDbTableView : IAsyncDisposable
     [Parameter] public bool                                            ShowSubItems    { get; set; }
     [Parameter] public EventCallback<IDatabaseRecord>                  OnExpandRecord  { get; set; }
 
+    /// <summary>
+    /// A coarse pointer (touch). Hides the header drag and the column resize handle; column order
+    /// then changes from the Properties panel (the non-drag alternative, WCAG 2.5.7).
+    /// </summary>
+    [Parameter] public bool CoarsePointer { get; set; }
+
+    private string HeaderDraggable => (!ReadOnly && !CoarsePointer).ToString().ToLowerInvariant();
+
     // ── Inline edit state ────────────────────────────────────────────────────
 
     private Guid? _editRecordId;
@@ -127,13 +135,18 @@ public partial class TmNotionDbTableView : IAsyncDisposable
 
     private IDatabaseRecord? _pendingDelete;
 
-    private void AskDeleteRow(IDatabaseRecord record) => _pendingDelete = record;
-
-    private Task OnRowMenuAsync(IDatabaseRecord record, string value)
+    private bool AskDeleteRow(IDatabaseRecord record)
     {
-        if (value == "delete") AskDeleteRow(record);
-        return Task.CompletedTask;
+        _pendingDelete = record;
+        return true;
     }
+
+    private Task OnRowMenuAsync(IDatabaseRecord record, string value) => value switch
+    {
+        "delete" => Task.FromResult(AskDeleteRow(record)),
+        "open"   => OnRecordClicked.InvokeAsync(record),
+        _        => Task.CompletedTask
+    };
 
     private Task ConfirmDeleteRowAsync(bool? confirmed)
     {
@@ -316,27 +329,5 @@ public partial class TmNotionDbTableView : IAsyncDisposable
         public IReadOnlyList<IDatabaseRecord> Records { get; } = records;
     }
 
-    // ── Column header icons (static helpers) ─────────────────────────────────
-
-    private static MarkupString FieldTypeIcon(DatabaseFieldType type) => (MarkupString)(type switch
-    {
-        DatabaseFieldType.Text            => "<svg width='12' height='12' viewBox='0 0 24 24' fill='none' aria-hidden='true'><path d='M4 7h16M4 12h16M4 17h10' stroke='currentColor' stroke-width='1.5' stroke-linecap='round'/></svg>",
-        DatabaseFieldType.Number          => "<svg width='12' height='12' viewBox='0 0 24 24' fill='none' aria-hidden='true'><path d='M7 3L5 21M19 3l-2 18M3 9h18M3 15h18' stroke='currentColor' stroke-width='1.5' stroke-linecap='round'/></svg>",
-        DatabaseFieldType.Select          => "<svg width='12' height='12' viewBox='0 0 24 24' fill='none' aria-hidden='true'><circle cx='12' cy='12' r='9' stroke='currentColor' stroke-width='1.5'/><circle cx='12' cy='12' r='4' fill='currentColor'/></svg>",
-        DatabaseFieldType.MultiSelect     => "<svg width='12' height='12' viewBox='0 0 24 24' fill='none' aria-hidden='true'><rect x='2' y='5' width='9' height='6' rx='1' fill='currentColor'/><rect x='13' y='5' width='9' height='6' rx='1' fill='currentColor'/><rect x='2' y='14' width='9' height='6' rx='1' fill='currentColor'/></svg>",
-        DatabaseFieldType.Status          => "<svg width='12' height='12' viewBox='0 0 24 24' fill='none' aria-hidden='true'><circle cx='12' cy='12' r='9' stroke='currentColor' stroke-width='1.5'/><path d='M8 12l3 3 5-5' stroke='currentColor' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/></svg>",
-        DatabaseFieldType.Date or DatabaseFieldType.DateRange
-                                          => "<svg width='12' height='12' viewBox='0 0 24 24' fill='none' aria-hidden='true'><rect x='3' y='4' width='18' height='17' rx='2' stroke='currentColor' stroke-width='1.5'/><path d='M16 2v4M8 2v4M3 10h18' stroke='currentColor' stroke-width='1.5' stroke-linecap='round'/></svg>",
-        DatabaseFieldType.Checkbox        => "<svg width='12' height='12' viewBox='0 0 24 24' fill='none' aria-hidden='true'><rect x='3' y='3' width='18' height='18' rx='2' stroke='currentColor' stroke-width='1.5'/><path d='M7 12l4 4 6-6' stroke='currentColor' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/></svg>",
-        DatabaseFieldType.Person          => "<svg width='12' height='12' viewBox='0 0 24 24' fill='none' aria-hidden='true'><circle cx='12' cy='8' r='4' stroke='currentColor' stroke-width='1.5'/><path d='M4 20c0-4 3.6-7 8-7s8 3 8 7' stroke='currentColor' stroke-width='1.5' stroke-linecap='round'/></svg>",
-        DatabaseFieldType.Url             => "<svg width='12' height='12' viewBox='0 0 24 24' fill='none' aria-hidden='true'><path d='M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71' stroke='currentColor' stroke-width='1.5' stroke-linecap='round'/><path d='M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71' stroke='currentColor' stroke-width='1.5' stroke-linecap='round'/></svg>",
-        DatabaseFieldType.Email           => "<svg width='12' height='12' viewBox='0 0 24 24' fill='none' aria-hidden='true'><rect x='2' y='4' width='20' height='16' rx='2' stroke='currentColor' stroke-width='1.5'/><path d='M2 8l10 6 10-6' stroke='currentColor' stroke-width='1.5'/></svg>",
-        DatabaseFieldType.Phone           => "<svg width='12' height='12' viewBox='0 0 24 24' fill='none' aria-hidden='true'><path d='M5 4h4l2 5-2.5 1.5a11 11 0 0 0 4 4L14 12l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z' stroke='currentColor' stroke-width='1.5' stroke-linejoin='round'/></svg>",
-        DatabaseFieldType.Files           => "<svg width='12' height='12' viewBox='0 0 24 24' fill='none' aria-hidden='true'><path d='M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z' stroke='currentColor' stroke-width='1.5'/><polyline points='14 2 14 8 20 8' stroke='currentColor' stroke-width='1.5'/></svg>",
-        DatabaseFieldType.CreatedTime or DatabaseFieldType.LastEditedTime
-                                          => "<svg width='12' height='12' viewBox='0 0 24 24' fill='none' aria-hidden='true'><circle cx='12' cy='12' r='9' stroke='currentColor' stroke-width='1.5'/><path d='M12 7v5l3 3' stroke='currentColor' stroke-width='1.5' stroke-linecap='round'/></svg>",
-        DatabaseFieldType.CreatedBy or DatabaseFieldType.LastEditedBy
-                                          => "<svg width='12' height='12' viewBox='0 0 24 24' fill='none' aria-hidden='true'><circle cx='9' cy='7' r='4' stroke='currentColor' stroke-width='1.5'/><path d='M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2' stroke='currentColor' stroke-width='1.5'/><path d='M16 11l2 2 4-4' stroke='currentColor' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/></svg>",
-        _                                 => "<svg width='12' height='12' viewBox='0 0 24 24' fill='none' aria-hidden='true'><path d='M4 7h16M4 12h16M4 17h10' stroke='currentColor' stroke-width='1.5' stroke-linecap='round'/></svg>"
-    });
+    // Column header icons come from DatabaseFieldIcons (DB-2).
 }

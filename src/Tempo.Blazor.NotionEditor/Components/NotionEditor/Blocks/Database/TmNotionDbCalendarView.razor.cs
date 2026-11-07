@@ -41,7 +41,9 @@ public partial class TmNotionDbCalendarView
         if (!_initialized)
         {
             var today = DateOnly.FromDateTime(DateTime.Today);
-            _currentMonth = new DateOnly(today.Year, today.Month, 1);
+            var dated = Records.Select(FirstRecordDate).FirstOrDefault(date => date is not null);
+            var seed = dated ?? today;
+            _currentMonth = new DateOnly(seed.Year, seed.Month, 1);
             _initialized  = true;
         }
         ComputeCalendar();
@@ -74,6 +76,15 @@ public partial class TmNotionDbCalendarView
         ? Fields.FirstOrDefault(f => f.Id == DateFieldId)
         : Fields.FirstOrDefault(f =>
             f.Type is DatabaseFieldType.Date or DatabaseFieldType.DateRange);
+
+    private DateOnly? FirstRecordDate(IDatabaseRecord record)
+    {
+        var field = DateField;
+        if (field is null || !record.Fields.TryGetValue(field.Id.ToString(), out var value) || value is null)
+            return null;
+        var parsed = ParseDate(value);
+        return parsed is null ? null : DateOnly.FromDateTime(parsed.Value);
+    }
 
     private List<IDatabaseRecord> GetRecordsForDate(DateOnly date)
     {
@@ -188,13 +199,11 @@ public partial class TmNotionDbCalendarView
 
     private IDatabaseField? PrimaryField => Fields.FirstOrDefault(f => f.IsPrimary);
 
-    private string GetPrimaryValue(IDatabaseRecord record)
+    private object? PrimaryRaw(IDatabaseRecord record)
     {
         var primary = PrimaryField;
-        if (primary is null) return string.Empty;
-        return record.Fields.TryGetValue(primary.Id.ToString(), out var v)
-            ? v?.ToString() ?? string.Empty
-            : string.Empty;
+        if (primary is null) return null;
+        return record.Fields.TryGetValue(primary.Id.ToString(), out var value) ? value : null;
     }
 
     // ── Drag & drop ──────────────────────────────────────────────────────────

@@ -94,7 +94,7 @@
                         var rec      = record;
                         var isDragging = _dragRecordId == rec.Id;
                         var eventColor = GetEventColor(rec);
-                        var title      = GetPrimaryValue(rec);
+                        var title      = NotionDatabaseValueFormatter.PrimaryText(rec, Fields);
 
                         <div class="tm-dbcal__event @(isDragging ? "tm-dbcal__event--dragging" : "")"
                              data-testid="@TestId("notion-db-calendar-event")"
@@ -142,7 +142,7 @@
                                             <button type="button"
                                                     class="tm-dbcal__day-list-item"
                                                     @onclick="() => SelectOverflowRecordAsync(overflowRec)">
-                                                @GetPrimaryValue(overflowRec)
+                                                <TmNotionDbPropertyValue Field="PrimaryField" Value="@PrimaryRaw(overflowRec)" />
                                             </button>
                                         </li>
                                     }

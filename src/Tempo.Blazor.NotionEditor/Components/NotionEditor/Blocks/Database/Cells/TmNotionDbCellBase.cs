@@ -74,7 +74,7 @@ public abstract class TmNotionDbCellBase : ComponentBase
             "blue", "green", "yellow", "red", "purple",
             "gray", "orange", "brown", "pink", "blue"
         };
-        var idx = Math.Abs(seed.GetHashCode()) % names.Length;
+        var idx = TmNotionDbPropertyValue.StableIndex(seed, names.Length);
         return NotionColorTokens.OptionSolid(names[idx]);
     }
 
@@ -82,7 +82,12 @@ public abstract class TmNotionDbCellBase : ComponentBase
     protected static string ChipBackground(string? color) =>
         string.IsNullOrEmpty(color)
             ? "var(--tm-bg-muted)"
-            : NotionColorTokens.OptionSolid(color);
+            : NotionColorTokens.OptionWash(color);
+
+    protected static string ChipForeground(string? color) =>
+        string.IsNullOrEmpty(color)
+            ? "var(--tm-text-secondary)"
+            : NotionColorTokens.OptionInk(color);
 
     protected static string Initials(string name)
     {

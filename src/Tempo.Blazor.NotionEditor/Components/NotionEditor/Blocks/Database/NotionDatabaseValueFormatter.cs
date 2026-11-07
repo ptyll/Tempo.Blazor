@@ -1,11 +1,26 @@
 using System.Collections;
 using System.Globalization;
 using System.Text.Json;
+using Tempo.Blazor.NotionEditor.Interfaces;
+using Tempo.Blazor.NotionEditor.Models;
 
 namespace Tempo.Blazor.Components.NotionEditor.Blocks.Database;
 
 internal static class NotionDatabaseValueFormatter
 {
+    /// <summary>
+    /// The display text of a record's primary field. Every reading view used to keep its own copy;
+    /// one helper keeps a date, a list and an empty value formatted the same way.
+    /// </summary>
+    public static string PrimaryText(IDatabaseRecord record, IEnumerable<IDatabaseField> fields, string dateFormat = "yyyy-MM-dd")
+    {
+        var primary = fields.FirstOrDefault(field => field.IsPrimary);
+        if (primary is null) return string.Empty;
+        return record.Fields.TryGetValue(primary.Id.ToString(), out var value)
+            ? Format(value, dateFormat)
+            : string.Empty;
+    }
+
     public static string Format(object? value, string dateFormat = "yyyy-MM-dd")
     {
         return value switch

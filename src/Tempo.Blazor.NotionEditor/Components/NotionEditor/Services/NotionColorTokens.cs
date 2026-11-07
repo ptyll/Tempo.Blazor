@@ -69,11 +69,19 @@ public static class NotionColorTokens
     /// A select/status option colour as <c>var(--tm-notion-option-{name}-solid)</c>.
     /// A legacy hex maps through <see cref="Name"/>; anything else falls back to the theme primary.
     /// </summary>
-    public static string OptionSolid(string? stored)
+    public static string OptionSolid(string? stored) => OptionToken(stored, "solid") ?? "var(--tm-color-primary)";
+
+    /// <summary>The option wash (<c>--tm-notion-option-{name}-bg</c>), or the muted surface.</summary>
+    public static string OptionWash(string? stored) => OptionToken(stored, "bg") ?? "var(--tm-bg-muted)";
+
+    /// <summary>The option ink (<c>--tm-notion-option-{name}-fg</c>), or the secondary text.</summary>
+    public static string OptionInk(string? stored) => OptionToken(stored, "fg") ?? "var(--tm-text-secondary)";
+
+    private static string? OptionToken(string? stored, string suffix)
     {
         var name = Name(stored);
         return name is not null && InlinePalette.ContainsKey(name)
-            ? $"var(--tm-notion-option-{name.ToLowerInvariant()}-solid)"
-            : "var(--tm-color-primary)";
+            ? $"var(--tm-notion-option-{name.ToLowerInvariant()}-{suffix})"
+            : null;
     }
 }

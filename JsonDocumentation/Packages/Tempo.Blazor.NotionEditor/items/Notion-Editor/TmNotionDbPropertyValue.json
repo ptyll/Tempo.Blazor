@@ -1,0 +1,36 @@
+{
+  "itemName": "TmNotionDbPropertyValue",
+  "kind": "Component",
+  "category": "Notion Editor",
+  "description": "Read-only renderer for one database field value (DB-2). It sits on top of NotionDatabaseValueFormatter and adds the presentation the plain text lost: a colored pill for Select/Status/MultiSelect, initials for a person, a check for a checkbox and nothing for an empty value.",
+  "packageId": "Tempo.Blazor.NotionEditor",
+  "namespace": "Tempo.Blazor.Components.NotionEditor.Blocks.Database",
+  "sourcePath": "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/Blocks/Database/TmNotionDbPropertyValue.razor",
+  "documentationStatus": "generated",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.NotionEditor.Blocks.Database"
+  ],
+  "parameters": [
+    {
+      "name": "DateFormat",
+      "type": "string",
+      "isRequired": false,
+      "default": "\"yyyy-MM-dd\"",
+      "description": "Date format passed to the shared formatter. Defaults to a short date."
+    },
+    {
+      "name": "Field",
+      "type": "IDatabaseField?",
+      "isRequired": true,
+      "description": "The field the value belongs to. Drives the presentation.",
+      "editorRequired": true
+    },
+    {
+      "name": "Value",
+      "type": "object?",
+      "isRequired": false,
+      "description": "The raw stored value. Null or empty renders nothing."
+    }
+  ],
+  "subcategory": "Blocks / Database"
+}

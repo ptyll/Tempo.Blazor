@@ -3,6 +3,8 @@
 @using Tempo.Blazor.NotionEditor.Models
 @using Tempo.Blazor.NotionEditor.Interfaces
 @using Tempo.Blazor.NotionEditor.Enums
+@using Tempo.Blazor.Components.Icons
+@using Tempo.Blazor.Components.NotionEditor.Blocks.Database
 
 <div class="tm-dbg @CardSizeClass">
 
@@ -53,16 +55,21 @@
 
                     @* ── Card body ───────────────────────────────── *@
                     <div class="tm-dbg__card-body">
-                        <div class="tm-dbg__card-title">@GetPrimaryValue(rec)</div>
+                        <div class="tm-dbg__card-title">@NotionDatabaseValueFormatter.PrimaryText(rec, Fields)</div>
 
                         @foreach (var field in _previewFields)
                         {
-                            var val = FormatFieldValue(rec, field);
-                            if (val.Length > 0)
+                            var propValue = PropertyValue(rec, field);
+                            if (propValue is not null)
                             {
-                                <div class="tm-dbg__card-prop">
+                                <div class="tm-dbg__card-prop" data-testid="@TestId("notion-db-gallery-prop")">
+                                    <span class="tm-dbg__card-prop-icon" aria-hidden="true" data-icon="@DatabaseFieldIcons.Get(field.Type)">
+                                        <TmIcon Name="@DatabaseFieldIcons.Get(field.Type)" Size="IconSize.Xs" />
+                                    </span>
                                     <span class="tm-dbg__card-prop-name">@field.Name</span>
-                                    <span class="tm-dbg__card-prop-val">@val</span>
+                                    <span class="tm-dbg__card-prop-val">
+                                        <TmNotionDbPropertyValue Field="field" Value="propValue" />
+                                    </span>
                                 </div>
                             }
                         }

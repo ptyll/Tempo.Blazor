@@ -2,6 +2,7 @@
 @using Tempo.Blazor.NotionEditor.Enums
 @using Tempo.Blazor.NotionEditor.Interfaces
 @using Tempo.Blazor.Components.Buttons
+@using Tempo.Blazor.Components.Icons
 @using Tempo.Blazor.Components.Feedback
 @using Tempo.Blazor.Components.NotionEditor.Blocks
 @using Tempo.Blazor.Components.NotionEditor.Blocks.Database.Cells
@@ -51,7 +52,7 @@
                             _localFields.TryGetValue(fid.ToString(), out var fieldValue);
                             <div class="tm-dbte__prop-row @(isEditing ? "tm-dbte__prop-row--editing" : "")">
                                 <div class="tm-dbte__prop-label">
-                                    <span class="tm-dbte__prop-icon" aria-hidden="true">@FieldTypeIcon(field.Type)</span>
+                                    <span class="tm-dbte__prop-icon" aria-hidden="true"><TmIcon Name="@DatabaseFieldIcons.Get(field.Type)" Size="IconSize.Xs" /></span>
                                     <span class="tm-dbte__prop-name">@field.Name</span>
                                 </div>
                                 <div class="tm-dbte__prop-value"

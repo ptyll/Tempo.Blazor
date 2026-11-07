@@ -21,9 +21,12 @@ using Tempo.Blazor.Helpers;
 internal sealed class ActionOverflowMenu : ComponentBase
 {
     private readonly string _panelId = $"tm-aom-panel-{Guid.NewGuid():N}";
-    private readonly string _triggerId = $"tm-aom-trigger-{Guid.NewGuid():N}";
+    private string _triggerId = $"tm-aom-trigger-{Guid.NewGuid():N}";
     private TmOverlayPanel? _panel;
     private ElementReference _trigger;
+
+    /// <summary>The trigger button. A host that opened a panel from an overflowed item returns focus here.</summary>
+    public ElementReference Trigger => _trigger;
     // Every item is captured (a stable frame set), the first ENABLED one is picked at focus time - a capture
     // frame added only to whichever item happens to be first crashed the diff when the menu was reordered
     // while open ("Unexpected frame type during RemoveOldFrame: ElementReferenceCapture").
@@ -154,6 +157,7 @@ internal sealed class ActionOverflowMenu : ComponentBase
         builder.AddComponentParameter(15, "Class", PanelClass);
         builder.AddComponentParameter(16, "Role", "menu");
         builder.AddComponentParameter(17, "Title", Title);
+        builder.AddComponentParameter(29, "AriaLabel", Title);
         builder.AddComponentParameter(18, "MobilePresentation", MobilePresentation);
         builder.AddComponentParameter(19, "InitialMode", InitialMode);
         builder.AddComponentParameter(20, "Placement", Placement);
@@ -395,6 +399,14 @@ internal sealed class ActionOverflowMenu : ComponentBase
     /// <inheritdoc />
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        // The HTML id follows the captured element reference, so a caller that reads the button's
+        // id and a caller that focuses the reference name the same element.
+        if (_trigger.Id is { Length: > 0 } triggerId && triggerId != _triggerId)
+        {
+            _triggerId = triggerId;
+            StateHasChanged();
+        }
+
         if (_focusFirstItemPending)
         {
             _focusFirstItemPending = false;

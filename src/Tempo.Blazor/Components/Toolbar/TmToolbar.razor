@@ -45,6 +45,7 @@
     private IReadOnlyList<IToolbarOverflowItem> _menu = [];
     private HashSet<IToolbarOverflowItem> _collapsed = [];
     private ElementReference _root;
+    private ActionOverflowMenu? _moreMenu;
     private ToolbarInterop? _interop;
     private DotNetObjectReference<TmToolbar>? _dotNetRef;
     private int? _maxVisible;
@@ -113,6 +114,16 @@
     /// <summary>Whether the toolbar's item is on the bar but out of room (collapsed) or only in the menu.</summary>
     internal bool IsCollapsed(IToolbarOverflowItem item) => _collapsed.Contains(item);
 
+    /// <summary>
+    /// True when the item carrying <paramref name="elementId"/> (<c>data-tm-toolbar-item</c>) currently
+    /// renders only inside "More". A panel opened from that item returns focus to <see cref="MoreButton"/>.
+    /// </summary>
+    public bool IsInMenu(string? elementId) =>
+        elementId is not null && _menu.Any(item => string.Equals(item.MenuId, elementId, StringComparison.Ordinal));
+
+    /// <summary>The "More" trigger, when the menu is rendered. Empty otherwise.</summary>
+    public ElementReference MoreButton => _moreMenu?.Trigger ?? default;
+
     internal void Register(IToolbarOverflowItem button)
     {
         if (_disposed || _buttons.Contains(button)) return;
@@ -161,7 +172,9 @@
     {
         var reordered = ApplyDomOrder(orderedIds);
         if (_maxVisible == maxVisible && !reordered) return Task.CompletedTask;
-        _maxVisible = maxVisible;
+        // A measured zero means nothing fits, including a pin. The partition itself still clamps a
+        // negative budget, so only this measured report maps 0 onto the empty bar.
+        _maxVisible = maxVisible == 0 ? -1 : maxVisible;
         return InvokeAsync(() => Recompute());
     }
 
@@ -236,6 +249,7 @@
         // The viewport scope (cascaded from TmLayoutObserver / the app shell) decides sheet vs popover
         // inside TmOverlayPanel - Auto presents as a bottom sheet on a phone-sized viewport.
         builder.AddComponentParameter(15, nameof(ActionOverflowMenu.MobilePresentation), OverflowPresentation);
+        builder.AddComponentReferenceCapture(16, reference => _moreMenu = (ActionOverflowMenu)reference);
         builder.CloseComponent();
     };
 

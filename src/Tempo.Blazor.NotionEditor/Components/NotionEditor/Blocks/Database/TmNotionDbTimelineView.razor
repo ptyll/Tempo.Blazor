@@ -106,10 +106,10 @@
                          data-testid="@TestId("notion-db-timeline-bar")"
                          @onclick="() => OnRecordClicked.InvokeAsync(rec)"
                          @onkeydown="e => HandleItemKeyAsync(e, rec)">
-                        <span class="tm-dbt__sidebar-name">@GetPrimaryValue(rec)</span>
+                        <span class="tm-dbt__sidebar-name">@NotionDatabaseValueFormatter.PrimaryText(rec, Fields)</span>
                         @foreach (var sf in sidebarCols)
                         {
-                            <span class="tm-dbt__sidebar-val">@GetFieldValue(rec, sf)</span>
+                            <span class="tm-dbt__sidebar-val"><TmNotionDbPropertyValue Field="sf" Value="@RawValue(rec, sf)" /></span>
                         }
                     </div>
                 }
@@ -192,13 +192,13 @@
                                              @key="rec.Id"
                                              role="button"
                                              tabindex="0"
-                                             title="@GetPrimaryValue(rec)"
+                                             title="@NotionDatabaseValueFormatter.PrimaryText(rec, Fields)"
                                              @onclick="() => OnRecordClicked.InvokeAsync(rec)"
                                              @onclick:stopPropagation="true"
                                              @onmousedown="e => StartMoveBar(e, rec)"
                                              @onmousedown:stopPropagation="true"
                                              @onkeydown="e => HandleItemKeyAsync(e, rec)">
-                                            <span class="tm-dbt__bar-label">@GetPrimaryValue(rec)</span>
+                                            <span class="tm-dbt__bar-label">@NotionDatabaseValueFormatter.PrimaryText(rec, Fields)</span>
                                             @if (!ReadOnly)
                                             {
                                                 <div class="tm-dbt__bar-resize"

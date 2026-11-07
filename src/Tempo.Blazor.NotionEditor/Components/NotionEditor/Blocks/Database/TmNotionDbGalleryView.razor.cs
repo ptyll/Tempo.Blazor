@@ -34,6 +34,7 @@ public partial class TmNotionDbGalleryView : TmComponentBase
             _previewFields = PreviewFieldIds
                 .Select(id => Fields.FirstOrDefault(f => f.Id == id))
                 .OfType<IDatabaseField>()
+                .Where(f => !f.IsPrimary)
                 .ToList();
         }
         else
@@ -90,23 +91,11 @@ public partial class TmNotionDbGalleryView : TmComponentBase
 
     // ── Card helpers ─────────────────────────────────────────────────────────
 
-    private IDatabaseField? PrimaryField => Fields.FirstOrDefault(f => f.IsPrimary);
-
-    private string GetPrimaryValue(IDatabaseRecord record)
+    private static object? PropertyValue(IDatabaseRecord record, IDatabaseField field)
     {
-        var primary = PrimaryField;
-        if (primary is null) return string.Empty;
-        return record.Fields.TryGetValue(primary.Id.ToString(), out var v)
-            ? NotionDatabaseValueFormatter.Format(v)
-            : string.Empty;
-    }
-
-    private static string FormatFieldValue(IDatabaseRecord record, IDatabaseField field)
-    {
-        if (!record.Fields.TryGetValue(field.Id.ToString(), out var val) || val is null)
-            return string.Empty;
-
-        return NotionDatabaseValueFormatter.Format(val);
+        if (!record.Fields.TryGetValue(field.Id.ToString(), out var value) || value is null)
+            return null;
+        return NotionDatabaseValueFormatter.Format(value).Length == 0 ? null : value;
     }
 
     private async Task HandleCardClickAsync(IDatabaseRecord record)

@@ -272,6 +272,30 @@
       ]
     },
     {
+      "itemName": "DatabaseFieldIcons",
+      "kind": "Class",
+      "category": "Components",
+      "namespace": "Tempo.Blazor.Components.NotionEditor.Blocks.Database",
+      "description": "The one icon map for a database field type (DB-2). The six inline SVG copies it replaces all rendered through TmIcon now, so a new field type fails the icon test instead of falling through to a text glyph in one view and nothing in another.",
+      "packageId": "Tempo.Blazor.NotionEditor",
+      "sourcePath": "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/Blocks/Database/DatabaseFieldIcons.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Get",
+          "kind": "Method",
+          "type": "string",
+          "description": "The IconNames glyph for type.",
+          "parameters": [
+            {
+              "name": "type",
+              "type": "DatabaseFieldType"
+            }
+          ]
+        }
+      ]
+    },
+    {
       "itemName": "DeleteBlockCommand",
       "kind": "Class",
       "category": "Components",
@@ -617,10 +641,34 @@
           ]
         },
         {
+          "name": "OptionInk",
+          "kind": "Method",
+          "type": "string",
+          "description": "The option ink (--tm-notion-option-{name}-fg), or the secondary text.",
+          "parameters": [
+            {
+              "name": "stored",
+              "type": "string?"
+            }
+          ]
+        },
+        {
           "name": "OptionSolid",
           "kind": "Method",
           "type": "string",
           "description": "The option chip token var(--tm-notion-option-{name}-solid) for a stored name or legacy hex, or var(--tm-color-primary) when the value is empty or unknown.",
+          "parameters": [
+            {
+              "name": "stored",
+              "type": "string?"
+            }
+          ]
+        },
+        {
+          "name": "OptionWash",
+          "kind": "Method",
+          "type": "string",
+          "description": "The option wash (--tm-notion-option-{name}-bg), or the muted surface.",
           "parameters": [
             {
               "name": "stored",
@@ -4279,6 +4327,19 @@
           "isRequired": false
         },
         {
+          "name": "IsPage",
+          "type": "bool",
+          "isRequired": false,
+          "description": "The database fills the page (opened as a page, or the only content). Only then does the mobile action bar render; an inline block keeps the compact toolbar."
+        },
+        {
+          "name": "LayoutMode",
+          "type": "TmLayoutMode",
+          "isRequired": false,
+          "default": "TmLayoutMode.Auto",
+          "description": "Pins the database's own layout. Auto follows the cascaded layout (the editor decides it); a forced value lets a host — and a test — render a mode without a DOM."
+        },
+        {
           "name": "OnFocused",
           "type": "EventCallback",
           "isRequired": false
@@ -4297,6 +4358,12 @@
           "name": "ReadOnly",
           "type": "bool",
           "isRequired": false
+        },
+        {
+          "name": "ShowSearch",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Shows the client-side \"search records\" field (NO2). Default off, so existing hosts are unchanged."
         }
       ]
     },
@@ -5063,6 +5130,42 @@
       ]
     },
     {
+      "itemName": "TmNotionDbPropertyValue",
+      "kind": "Component",
+      "category": "Notion Editor",
+      "subcategory": "Blocks / Database",
+      "namespace": "Tempo.Blazor.Components.NotionEditor.Blocks.Database",
+      "description": "Read-only renderer for one database field value (DB-2). It sits on top of NotionDatabaseValueFormatter and adds the presentation the plain text lost: a colored pill for Select/Status/MultiSelect, initials for a person, a check for a checkbox and nothing for an empty value.",
+      "packageId": "Tempo.Blazor.NotionEditor",
+      "sourcePath": "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/Blocks/Database/TmNotionDbPropertyValue.razor",
+      "documentationStatus": "merged",
+      "requiredImports": [
+        "@using Tempo.Blazor.Components.NotionEditor.Blocks.Database"
+      ],
+      "parameters": [
+        {
+          "name": "DateFormat",
+          "type": "string",
+          "isRequired": false,
+          "default": "\"yyyy-MM-dd\"",
+          "description": "Date format passed to the shared formatter. Defaults to a short date."
+        },
+        {
+          "name": "Field",
+          "type": "IDatabaseField?",
+          "isRequired": true,
+          "description": "The field the value belongs to. Drives the presentation.",
+          "editorRequired": true
+        },
+        {
+          "name": "Value",
+          "type": "object?",
+          "isRequired": false,
+          "description": "The raw stored value. Null or empty renders nothing."
+        }
+      ]
+    },
+    {
       "itemName": "TmNotionDbRecordDetail",
       "kind": "Component",
       "category": "Notion Editor",
@@ -5189,6 +5292,12 @@
         "@using Tempo.Blazor.Components.NotionEditor.Blocks.Database"
       ],
       "parameters": [
+        {
+          "name": "CoarsePointer",
+          "type": "bool",
+          "isRequired": false,
+          "description": "A coarse pointer (touch). Hides the header drag and the column resize handle; column order then changes from the Properties panel (the non-drag alternative, WCAG 2.5.7)."
+        },
         {
           "name": "Fields",
           "type": "IReadOnlyList<IDatabaseField>",
@@ -9780,11 +9889,11 @@
     }
   ],
   "summary": {
-    "itemCount": 185,
-    "manualItemCount": 185,
-    "generatedItemCount": 184,
+    "itemCount": 187,
+    "manualItemCount": 187,
+    "generatedItemCount": 186,
     "generatedOnlyItemCount": 0,
-    "componentCount": 132,
-    "publicApiTypeCount": 52
+    "componentCount": 133,
+    "publicApiTypeCount": 53
   }
 }

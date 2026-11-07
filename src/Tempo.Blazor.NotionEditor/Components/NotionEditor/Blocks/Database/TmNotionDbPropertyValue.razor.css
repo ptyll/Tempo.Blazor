@@ -1,0 +1,50 @@
+/* DB-2 shared value renderer. Tokens only; the option colours come from the data palette. */
+
+.tm-dbv {
+    color: var(--tm-text-primary);
+}
+
+.tm-dbv__pill {
+    display: inline-flex;
+    align-items: center;
+    max-width: 100%;
+    padding: 0 var(--tm-space-2);
+    border-radius: var(--tm-radius-pill);
+    font-size: var(--tm-font-size-xs);
+    line-height: var(--tm-space-5);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.tm-dbv__person {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--tm-space-1);
+    min-width: 0;
+}
+
+.tm-dbv__avatar {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--tm-space-5);
+    height: var(--tm-space-5);
+    border-radius: var(--tm-radius-full);
+    color: var(--tm-color-on-primary);
+    font-size: var(--tm-font-size-xs);
+    font-weight: var(--tm-font-weight-semibold);
+    flex-shrink: 0;
+}
+
+.tm-dbv__person-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.tm-dbv__check {
+    display: inline-flex;
+    align-items: center;
+    color: var(--tm-color-success);
+}
