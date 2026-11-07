@@ -1,6 +1,8 @@
 using System.Globalization;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
+using Tempo.Blazor.Abstractions.Layout;
+using Tempo.Blazor.Localization;
 using Tempo.Blazor.Components;
 using Tempo.Blazor.Components.NotionEditor.Services;
 using Tempo.Blazor.NotionEditor.Enums;
@@ -26,6 +28,11 @@ public partial class TmNotionDbCalendarView
     [Parameter] public EventCallback<IDatabaseRecord> OnRecordUpdated { get; set; }
     [Parameter] public EventCallback<IDatabaseRecord> OnRecordClicked { get; set; }
     [Parameter] public EventCallback<DateTime>        OnNewRecord     { get; set; }
+
+    /// <summary>Cascaded layout. A mobile container opens the day as a sheet instead of a popover.</summary>
+    [CascadingParameter] private TmLayoutContext? Layout { get; set; }
+
+    private bool IsMobile => Layout?.IsMobile == true;
 
     // ── Calendar state ───────────────────────────────────────────────────────
 
@@ -55,9 +62,10 @@ public partial class TmNotionDbCalendarView
         var month    = _currentMonth.Month;
         var firstDay = new DateOnly(year, month, 1);
 
-        // Monday-based: Monday=0 … Sunday=6
+        // G7: the week starts on the culture's first day (en-US Sunday, cs-CZ Monday).
         var firstDow    = (int)firstDay.DayOfWeek;
-        var startOffset = (firstDow + 6) % 7;
+        var weekStart   = (int)CultureInfo.CurrentCulture.DateTimeFormat.FirstDayOfWeek;
+        var startOffset = (firstDow - weekStart + 7) % 7;
         var startDate   = firstDay.AddDays(-startOffset);
 
         _cells = Enumerable.Range(0, 42)
@@ -144,10 +152,12 @@ public partial class TmNotionDbCalendarView
         get
         {
             var names = CultureInfo.CurrentCulture.DateTimeFormat.AbbreviatedDayNames;
-            // Reorder Mon…Sun (DayOfWeek: Sun=0, Mon=1 … Sat=6)
-            return [names[1], names[2], names[3], names[4], names[5], names[6], names[0]];
+            var start = (int)CultureInfo.CurrentCulture.DateTimeFormat.FirstDayOfWeek;
+            return Enumerable.Range(0, 7).Select(i => names[(start + i) % 7]).ToArray();
         }
     }
+
+    private string MoreLabel(int count) => Loc.Plural("TmNotionDbCalendarView_More", count);
 
     private static IEnumerable<IDatabaseRecord> VisibleEvents(CalendarCell cell)
         => cell.Records.Take(MaxEventsPerCell);
@@ -255,6 +265,11 @@ public partial class TmNotionDbCalendarView
 
     private async Task HandleCellClickAsync(DateOnly date)
     {
+        if (IsMobile)
+        {
+            await SetOverflowOpen(date, true);
+            return;
+        }
         if (ReadOnly) return;
         await OnNewRecord.InvokeAsync(date.ToDateTime(TimeOnly.MinValue));
     }

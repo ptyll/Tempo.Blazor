@@ -262,7 +262,7 @@
                             <div class="tm-nbcp__thread-card__stats">
                                 @if (comment.Entries.Count > 1)
                                 {
-                                    <span>@Loc["TmNotionBlockComment_RepliesCount", comment.Entries.Count - 1]</span>
+                                    <span>@Loc.Plural("TmNotionBlockComment_RepliesCount", comment.Entries.Count - 1)</span>
                                 }
                                 @if (comment.IsResolved())
                                 {

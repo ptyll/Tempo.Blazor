@@ -1,6 +1,9 @@
 using System.Globalization;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
+using Microsoft.JSInterop;
+using Tempo.Blazor.Abstractions.Layout;
+using Tempo.Blazor.Localization;
 using Tempo.Blazor.Components.NotionEditor.Services;
 using Tempo.Blazor.NotionEditor.Enums;
 using Tempo.Blazor.NotionEditor.Interfaces;
@@ -8,10 +11,16 @@ using Tempo.Blazor.NotionEditor.Models;
 
 namespace Tempo.Blazor.Components.NotionEditor.Blocks.Database;
 
-public partial class TmNotionDbTimelineView : TmComponentBase
+public partial class TmNotionDbTimelineView : TmComponentBase, IAsyncDisposable
 {
+    [Inject] private IJSRuntime JS { get; set; } = default!;
+
+    private ElementReference _rootRef;
+    private IJSObjectReference? _module;
+    private IJSObjectReference? _timeline;
+    private DotNetObjectReference<TmNotionDbTimelineView>? _self;
+
     private enum TimelineZoom { Day, Week, Month }
-    private enum DragMode    { None, MoveBar, ResizeBar }
 
     // ── Parameters ───────────────────────────────────────────────────────────
 
@@ -26,20 +35,135 @@ public partial class TmNotionDbTimelineView : TmComponentBase
     [Parameter] public EventCallback<IDatabaseRecord> OnRecordClicked { get; set; }
     [Parameter] public EventCallback                  OnNewRecord     { get; set; }
 
+    /// <summary>Cascaded layout. A mobile container hides the sidebar and opens a date sheet on tap.</summary>
+    [CascadingParameter] private TmLayoutContext? Layout { get; set; }
+
+    private bool IsMobile => Layout?.IsMobile == true;
+
+    private bool IsCoarseSheet => Layout?.IsMobile == true || Layout?.IsTablet == true;
+
     // ── State ────────────────────────────────────────────────────────────────
 
     private TimelineZoom _zoom          = TimelineZoom.Week;
     private DateTime     _viewStart;
     private bool         _showTableArea = true;
     private bool         _initialized;
+    private Guid?        _sheetRecordId;
 
-    private DragMode _dragMode      = DragMode.None;
-    private Guid?    _dragId;
-    private double   _dragStartX;
-    private DateTime _dragOrigStart;
-    private DateTime _dragOrigEnd;
+    private TimelineZoomLevel ZoomLevel => _zoom switch
+    {
+        TimelineZoom.Day => TimelineZoomLevel.Day,
+        TimelineZoom.Month => TimelineZoomLevel.Month,
+        _ => TimelineZoomLevel.Week
+    };
+
+    private bool ShowSidebar => _showTableArea && !IsMobile;
 
     // ── Lifecycle ─────────────────────────────────────────────────────────────
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender || ReadOnly) return;
+        _self = DotNetObjectReference.Create(this);
+        _module = await JS.InvokeAsync<IJSObjectReference>("import",
+            "./_content/Tempo.Blazor.NotionEditor/js/notion-db-timeline.js");
+        _timeline = await _module.InvokeAsync<IJSObjectReference>("attachTimeline", _rootRef, _self);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        try
+        {
+            if (_timeline is not null)
+            {
+                await _timeline.InvokeVoidAsync("detach");
+                await _timeline.DisposeAsync();
+            }
+        }
+        catch (JSDisconnectedException)
+        {
+            // The circuit is already gone.
+        }
+
+        try
+        {
+            if (_module is not null) await _module.DisposeAsync();
+        }
+        catch (JSDisconnectedException)
+        {
+            // The circuit is already gone.
+        }
+        _self?.Dispose();
+    }
+
+    /// <summary>Commits a bar move or resize. The pointer helper calls this once, on pointerup.</summary>
+    [JSInvokable]
+    public Task OnBarCommitted(string recordId, int days, bool resize)
+        => Guid.TryParse(recordId, out var id)
+            ? ApplyKeyboardStepAsync(id, days, resize)
+            : Task.CompletedTask;
+
+    /// <summary>Moves (or resizes) one bar by a whole number of days and raises <see cref="OnRecordUpdated"/>.</summary>
+    public async Task ApplyKeyboardStepAsync(Guid recordId, int days, bool resize)
+    {
+        if (ReadOnly || days == 0) return;
+        if (Records.FirstOrDefault(r => r.Id == recordId) is not DatabaseRecord mutable) return;
+
+        var start = GetDate(mutable, StartField) ?? DateTime.Today;
+        var end = GetDate(mutable, EndField) ?? start.AddDays(1);
+        if (resize)
+        {
+            var next = end.AddDays(days);
+            if (next <= start) return;
+            end = next;
+        }
+        else
+        {
+            start = start.AddDays(days);
+            end = end.AddDays(days);
+        }
+
+        WriteDates(mutable, start, end);
+        await OnRecordUpdated.InvokeAsync(mutable);
+    }
+
+    private void WriteDates(DatabaseRecord record, DateTime start, DateTime end)
+    {
+        var dict = new Dictionary<string, object?>(record.Fields);
+        if (StartField is not null) dict[StartField.Id.ToString()] = start;
+        if (EndField is not null) dict[EndField.Id.ToString()] = end;
+        record.Fields = dict;
+    }
+
+    private void OpenDateSheet(IDatabaseRecord record) => _sheetRecordId = record.Id;
+
+    private void CloseDateSheet() => _sheetRecordId = null;
+
+    private IDatabaseRecord? SheetRecord => _sheetRecordId is { } id
+        ? Records.FirstOrDefault(r => r.Id == id)
+        : null;
+
+    private string RecordCountLabel => Loc.Plural("TmNotionDbTimelineView_RecordCount", Records.Count);
+
+    private IEnumerable<(string Label, int Span)> MonthHeaderSpans()
+    {
+        var headers = GetColumnHeaders();
+        if (headers.Count == 0) yield break;
+        var label = headers[0].Start.ToString("MMMM yyyy", CultureInfo.CurrentCulture);
+        var span = 0;
+        foreach (var header in headers)
+        {
+            var next = header.Start.ToString("MMMM yyyy", CultureInfo.CurrentCulture);
+            if (next != label)
+            {
+                yield return (label, span);
+                label = next;
+                span = 0;
+            }
+            span++;
+        }
+        yield return (label, span);
+    }
 
     protected override void OnParametersSet()
     {
@@ -68,21 +192,9 @@ public partial class TmNotionDbTimelineView : TmComponentBase
 
     // ── Zoom geometry ─────────────────────────────────────────────────────────
 
-    private double ColWidthPx => _zoom switch
-    {
-        TimelineZoom.Day   => 44.0,
-        TimelineZoom.Week  => 100.0,
-        TimelineZoom.Month => 110.0,
-        _                  => 44.0
-    };
+    private double ColWidthPx => TimelineGeometry.ColumnWidth(ZoomLevel);
 
-    private double PxPerDay => _zoom switch
-    {
-        TimelineZoom.Day   => 44.0,
-        TimelineZoom.Week  => 100.0 / 7.0,
-        TimelineZoom.Month => 110.0 / 30.0,
-        _                  => 44.0
-    };
+    private double PxPerDay => TimelineGeometry.PixelsPerDay(ZoomLevel);
 
     private int ColumnCount => _zoom switch
     {
@@ -243,84 +355,45 @@ public partial class TmNotionDbTimelineView : TmComponentBase
     private static object? RawValue(IDatabaseRecord record, IDatabaseField field)
         => record.Fields.TryGetValue(field.Id.ToString(), out var value) ? value : null;
 
-    // ── Drag & drop ───────────────────────────────────────────────────────────
+    private Task OnBarClickAsync(IDatabaseRecord record)
+        => IsMobile ? OpenSheetAndReturn(record) : OnRecordClicked.InvokeAsync(record);
 
-    private void StartMoveBar(MouseEventArgs e, IDatabaseRecord record)
+    private Task OpenSheetAndReturn(IDatabaseRecord record)
     {
-        if (ReadOnly) return;
-        _dragMode      = DragMode.MoveBar;
-        _dragId        = record.Id;
-        _dragStartX    = e.ClientX;
-        _dragOrigStart = GetDate(record, StartField) ?? DateTime.Today;
-        _dragOrigEnd   = GetDate(record, EndField)   ?? _dragOrigStart.AddDays(1);
+        OpenDateSheet(record);
+        return Task.CompletedTask;
     }
 
-    private void StartResizeBar(MouseEventArgs e, IDatabaseRecord record)
+    private async Task OpenSheetRecordAsync(IDatabaseRecord record)
     {
-        if (ReadOnly) return;
-        _dragMode      = DragMode.ResizeBar;
-        _dragId        = record.Id;
-        _dragStartX    = e.ClientX;
-        _dragOrigStart = GetDate(record, StartField) ?? DateTime.Today;
-        _dragOrigEnd   = GetDate(record, EndField)   ?? _dragOrigStart.AddDays(1);
+        CloseDateSheet();
+        await OnRecordClicked.InvokeAsync(record);
     }
 
-    private void HandleMouseMove(MouseEventArgs e)
-    {
-        if (_dragMode == DragMode.None || _dragId is null) return;
-
-        var deltaDays = (e.ClientX - _dragStartX) / PxPerDay;
-        var record    = Records.FirstOrDefault(r => r.Id == _dragId);
-        if (record is not DatabaseRecord mutable) return;
-
-        if (_dragMode == DragMode.MoveBar)
-        {
-            var newStart = _dragOrigStart.AddDays(deltaDays);
-            var duration = (_dragOrigEnd - _dragOrigStart).TotalDays;
-            UpdateDraggedDates(mutable, newStart, newStart.AddDays(duration));
-        }
-        else
-        {
-            var newEnd = _dragOrigEnd.AddDays(deltaDays);
-            if (newEnd > _dragOrigStart.AddHours(1))
-                UpdateDraggedDates(mutable, _dragOrigStart, newEnd);
-        }
-    }
-
-    private void UpdateDraggedDates(DatabaseRecord record, DateTime start, DateTime end)
-    {
-        var dict = new Dictionary<string, object?>(record.Fields);
-        if (StartField is not null) dict[StartField.Id.ToString()] = start;
-        if (EndField   is not null) dict[EndField.Id.ToString()]   = end;
-        record.Fields = dict;
-        StateHasChanged();
-    }
-
-    private async Task HandleMouseUpAsync(MouseEventArgs _)
-    {
-        if (_dragMode == DragMode.None || _dragId is null) return;
-
-        var record = Records.FirstOrDefault(r => r.Id == _dragId);
-        _dragMode  = DragMode.None;
-        _dragId    = null;
-
-        if (record is not null)
-            await OnRecordUpdated.InvokeAsync(record);
-    }
+    private string SheetDate(IDatabaseRecord record, IDatabaseField? field)
+        => GetDate(record, field)?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture) ?? string.Empty;
 
     private async Task HandleItemKeyAsync(KeyboardEventArgs e, IDatabaseRecord record)
     {
+        // Alt+Arrow is owned by notion-db-timeline.js. A Blazor handler would raise
+        // OnRecordUpdated a second time for the same chord.
         if (e.Key is "Enter" or " ")
             await OnRecordClicked.InvokeAsync(record);
     }
 
-    private void CancelDrag()
+    private async Task CommitSheetDateAsync(IDatabaseRecord record, bool end, ChangeEventArgs e)
     {
-        if (_dragMode == DragMode.None) return;
-        var record = Records.FirstOrDefault(r => r.Id == _dragId);
-        if (record is DatabaseRecord mutable)
-            UpdateDraggedDates(mutable, _dragOrigStart, _dragOrigEnd);
-        _dragMode = DragMode.None;
-        _dragId   = null;
+        if (ReadOnly || record is not DatabaseRecord mutable) return;
+        if (!DateTime.TryParse(e.Value?.ToString(), CultureInfo.InvariantCulture, DateTimeStyles.None, out var parsed)
+            && !DateTime.TryParse(e.Value?.ToString(), out parsed))
+            return;
+
+        var start = GetDate(mutable, StartField) ?? parsed.Date;
+        var finish = GetDate(mutable, EndField) ?? start.AddDays(1);
+        if (end) finish = parsed.Date;
+        else start = parsed.Date;
+        if (finish <= start) finish = start.AddDays(1);
+        WriteDates(mutable, start, finish);
+        await OnRecordUpdated.InvokeAsync(mutable);
     }
 }

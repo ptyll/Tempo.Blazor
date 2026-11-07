@@ -219,6 +219,20 @@
     min-width: 0;
 }
 
+@media (max-width: 639px) {
+    .tm-dbcal__event-label {
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        white-space: normal;
+    }
+
+    .tm-dbcal__overflow {
+        min-height: var(--tm-touch-target);
+        min-width: var(--tm-touch-target);
+    }
+}
+
 /* ── Overflow ───────────────────────────────────────────────────────────── */
 
 .tm-dbcal__overflow {

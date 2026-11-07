@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Components;
+using Tempo.Blazor.Localization;
 using Tempo.Blazor.Components.NotionEditor.Services;
 using Tempo.Blazor.NotionEditor.Interfaces;
 
@@ -6,6 +7,8 @@ namespace Tempo.Blazor.Components.NotionEditor.Sidebar;
 
 public partial class TmNotionSidebarRecent : ComponentBase
 {
+    [Inject] private IServiceProvider Services { get; set; } = default!;
+
     // ── Cascaded context ──────────────────────────────────────────────────────
 
     [CascadingParameter] private NotionEditorContext Context { get; set; } = default!;
@@ -40,21 +43,11 @@ public partial class TmNotionSidebarRecent : ComponentBase
     private string GetIcon(INotionPage page) =>
         string.IsNullOrEmpty(page.IconEmoji) ? "📄" : page.IconEmoji;
 
-    private string GetRelativeTime(DateTime utcTime)
-    {
-        var diff = DateTime.UtcNow - utcTime;
+    private ITmRelativeTimeFormatter? _relativeTime;
 
-        if (diff.TotalMinutes < 1)
-            return Loc["TmNotionSidebarRecent_JustNow"];
+    private ITmRelativeTimeFormatter RelativeTime => _relativeTime ??= TmRelativeTime.Resolve(Services, Loc);
 
-        if (diff.TotalHours < 1)
-            return string.Format(Loc["TmNotionSidebarRecent_MinutesAgo"], (int)diff.TotalMinutes);
-
-        if (diff.TotalDays < 1)
-            return string.Format(Loc["TmNotionSidebarRecent_HoursAgo"], (int)diff.TotalHours);
-
-        return string.Format(Loc["TmNotionSidebarRecent_DaysAgo"], (int)diff.TotalDays);
-    }
+    private string GetRelativeTime(DateTime utcTime) => RelativeTime.Format(new DateTimeOffset(DateTime.SpecifyKind(utcTime, DateTimeKind.Utc)));
 
     private void ToggleExpanded()
     {

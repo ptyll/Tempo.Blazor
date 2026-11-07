@@ -249,7 +249,8 @@ public class TmNotionDbPhase8ReviewTests : LocalizationTestBase
             "Blocks", "Database", "TmNotionDatabaseBlock.razor.css"));
         css.Should().Contain(".tm-db__search:focus-within");
         css.Should().Contain("@media (pointer: coarse)");
-        css.Should().Contain(".tm-dbt__resize-handle");
+        css.Should().NotContain(".tm-dbt__resize-handle",
+            "the table owns that handle; a rule here is scoped away and never applies");
     }
 
     [Fact]

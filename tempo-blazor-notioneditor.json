@@ -1652,6 +1652,26 @@
       "itemName": "Tempo.Blazor.Components.NotionEditor.Commands.BatchCommand"
     },
     {
+      "itemName": "TimelineGeometry",
+      "kind": "Class",
+      "category": "Components",
+      "namespace": "Tempo.Blazor.Components.NotionEditor.Blocks.Database",
+      "description": "Pure pixel-to-day maths for the database timeline. The pointer helper reports pixels; this converts them, so a drag never needs a render to know how far it moved.",
+      "packageId": "Tempo.Blazor.NotionEditor",
+      "sourcePath": "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/Blocks/Database/TimelineGeometry.cs",
+      "documentationStatus": "merged"
+    },
+    {
+      "itemName": "TimelineZoomLevel",
+      "kind": "Enum",
+      "category": "Components",
+      "namespace": "Tempo.Blazor.Components.NotionEditor.Blocks.Database",
+      "description": "Zoom of the database timeline. One column is a day, a week or a month.",
+      "packageId": "Tempo.Blazor.NotionEditor",
+      "sourcePath": "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/Blocks/Database/TimelineGeometry.cs",
+      "documentationStatus": "merged"
+    },
+    {
       "itemName": "TmNotionAuditLogLayout",
       "kind": "Enum",
       "category": "Components",
@@ -4373,7 +4393,7 @@
       "category": "Notion Editor",
       "subcategory": "Blocks / Database",
       "namespace": "Tempo.Blazor.Components.NotionEditor.Blocks.Database",
-      "description": "Kanban board view that groups database records into columns by a select or status field. Renders cards with cover image, title, and preview properties, supports drag-and-drop between columns (which rewrites the group field), and offers per-column add-card.",
+      "description": "Kanban board view that groups database records into columns by a select or status field. Cards render their values through the shared property renderer and offer a Move-to menu (the non-drag alternative) plus an add-card button. Desktop drag-and-drop is unchanged. On a mobile layout each lane is 85% wide and snaps.",
       "packageId": "Tempo.Blazor.NotionEditor",
       "sourcePath": "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/Blocks/Database/TmNotionDbBoardView.razor",
       "documentationStatus": "merged",
@@ -4439,7 +4459,7 @@
       "category": "Notion Editor",
       "subcategory": "Blocks / Database",
       "namespace": "Tempo.Blazor.Components.NotionEditor.Blocks.Database",
-      "description": "Monthly calendar view (a six-week, Monday-based grid) that places records as colored events on their date field. Supports previous/next/today navigation, drag-to-reschedule, click-to-create, and per-cell overflow indicators.",
+      "description": "Monthly calendar view (a six-week grid whose first day follows the current culture) that places records as colored pills on their date field. Supports previous/next/today navigation and per-cell overflow. On a mobile layout tapping a day or the pluralized '+N more' opens a day sheet; elsewhere the overflow stays a popover.",
       "packageId": "Tempo.Blazor.NotionEditor",
       "sourcePath": "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/Blocks/Database/TmNotionDbCalendarView.razor",
       "documentationStatus": "merged",
@@ -5506,7 +5526,7 @@
       "category": "Notion Editor",
       "subcategory": "Blocks / Database",
       "namespace": "Tempo.Blazor.Components.NotionEditor.Blocks.Database",
-      "description": "Gantt-style timeline view with day/week/month zoom and an optional sidebar table. Positions records as horizontal bars from their start and end date fields, with drag to move or resize (updating the dates), a today marker, and period navigation.",
+      "description": "Gantt-style timeline view (root classes tm-dbt tm-dbtl) with day/week/month zoom and an optional sidebar. Bars move and resize through the shared pointer-drag helper (no Blazor render on pointermove); Shift+Arrow moves a bar one unit and Alt+Arrow resizes it. A mobile layout hides the sidebar and a tap opens a date sheet. The header has a month row and a week row, a labelled today marker, and a pluralized record-count footer.",
       "packageId": "Tempo.Blazor.NotionEditor",
       "sourcePath": "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/Blocks/Database/TmNotionDbTimelineView.razor",
       "documentationStatus": "merged",
@@ -9880,20 +9900,28 @@
       "kind": "JavaScript"
     },
     {
+      "path": "src/Tempo.Blazor.NotionEditor/wwwroot/js/notion-db-timeline.js",
+      "kind": "JavaScript"
+    },
+    {
       "path": "src/Tempo.Blazor.NotionEditor/wwwroot/js/notion-editor.js",
       "kind": "JavaScript"
     },
     {
       "path": "src/Tempo.Blazor.NotionEditor/wwwroot/js/__tests__/notion-db-column-resize.test.mjs",
       "kind": "JavaScript"
+    },
+    {
+      "path": "src/Tempo.Blazor.NotionEditor/wwwroot/js/__tests__/notion-db-timeline.test.mjs",
+      "kind": "JavaScript"
     }
   ],
   "summary": {
-    "itemCount": 187,
-    "manualItemCount": 187,
-    "generatedItemCount": 186,
+    "itemCount": 189,
+    "manualItemCount": 189,
+    "generatedItemCount": 188,
     "generatedOnlyItemCount": 0,
     "componentCount": 133,
-    "publicApiTypeCount": 53
+    "publicApiTypeCount": 55
   }
 }

@@ -126,7 +126,8 @@
                                     <span class="tm-nst-item__path">@GetParentPath(capturedPage)</span>
                                 }
                                 <time class="tm-nst-item__date"
-                                      datetime="@(capturedPage.DeletedAt?.ToString("yyyy-MM-ddTHH:mm:ssZ") ?? "")">
+                                      datetime="@(capturedPage.DeletedAt?.ToString("yyyy-MM-ddTHH:mm:ssZ") ?? "")"
+                                      title="@(capturedPage.DeletedAt is null ? null : RelativeTime.Absolute(new DateTimeOffset(DateTime.SpecifyKind(capturedPage.DeletedAt.Value, DateTimeKind.Utc))))">
                                     @GetDeletedAt(capturedPage)
                                 </time>
                             </div>

@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.JSInterop;
+using Tempo.Blazor.Abstractions.Layout;
 using Tempo.Blazor.Components;
 using Tempo.Blazor.NotionEditor.Enums;
 using Tempo.Blazor.NotionEditor.Interfaces;
@@ -29,6 +30,11 @@ public partial class TmNotionDbBoardView : TmComponentBase, IAsyncDisposable
     [Parameter] public EventCallback<IDatabaseRecord> OnRecordUpdated { get; set; }
     [Parameter] public EventCallback<IDatabaseRecord> OnRecordClicked { get; set; }
     [Parameter] public EventCallback<string?>         OnNewRecord     { get; set; }
+
+    /// <summary>Cascaded layout. A mobile container snaps its lanes and keeps the Move-to menu.</summary>
+    [CascadingParameter] private TmLayoutContext? Layout { get; set; }
+
+    private bool IsMobile => Layout?.IsMobile == true;
 
     // ── Computed state ───────────────────────────────────────────────────────
 
@@ -226,6 +232,30 @@ public partial class TmNotionDbBoardView : TmComponentBase, IAsyncDisposable
 
     private async Task HandleAddCardAsync(string groupValue)
         => await OnNewRecord.InvokeAsync(groupValue.Length > 0 ? groupValue : null);
+
+    // The Move-to menu is the non-drag alternative (WCAG 2.5.7). It writes the same group
+    // field a drop would, so the host sees one OnRecordUpdated either way.
+    private string CurrentGroup(IDatabaseRecord record)
+        => GroupByField is not null
+           && record.Fields.TryGetValue(GroupByField.Id.ToString(), out var value)
+            ? value?.ToString() ?? string.Empty
+            : string.Empty;
+
+    private async Task MoveToAsync(IDatabaseRecord record, string groupValue)
+    {
+        if (record is not DatabaseRecord mutable || GroupByField is null) return;
+
+        var current = record.Fields.TryGetValue(GroupByField.Id.ToString(), out var value)
+            ? value?.ToString() ?? string.Empty
+            : string.Empty;
+        if (string.Equals(current, groupValue, StringComparison.OrdinalIgnoreCase)) return;
+
+        mutable.Fields = new Dictionary<string, object?>(record.Fields)
+        {
+            [GroupByField.Id.ToString()] = groupValue.Length > 0 ? groupValue : null
+        };
+        await OnRecordUpdated.InvokeAsync(mutable);
+    }
 
     // ── Card helpers ─────────────────────────────────────────────────────────
 

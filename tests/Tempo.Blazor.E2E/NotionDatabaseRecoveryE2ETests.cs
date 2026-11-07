@@ -172,8 +172,8 @@ public sealed class NotionDatabaseRecoveryE2ETests : NotionE2ETestBase
 
     private static async Task AssertTimelineStateAsync(ILocator db)
     {
-        await Assertions.Expect(db.Locator(".tm-dbt__zoom-group")).ToBeVisibleAsync();
-        await Assertions.Expect(db.Locator(".tm-dbt__gantt")).ToBeVisibleAsync();
+        await Assertions.Expect(db.Locator(".tm-dbtl__zoom-group")).ToBeVisibleAsync();
+        await Assertions.Expect(db.Locator(".tm-dbtl__gantt")).ToBeVisibleAsync();
     }
 
     private async Task OpenFilterPanelAsync(ILocator db)

@@ -1,0 +1,10 @@
+{
+  "kind": "Class",
+  "category": "Components",
+  "namespace": "Tempo.Blazor.Components.NotionEditor.Blocks.Database",
+  "description": "Pure pixel-to-day maths for the database timeline. The pointer helper reports pixels; this converts them, so a drag never needs a render to know how far it moved.",
+  "packageId": "Tempo.Blazor.NotionEditor",
+  "sourcePath": "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/Blocks/Database/TimelineGeometry.cs",
+  "documentationStatus": "generated",
+  "itemName": "TimelineGeometry"
+}

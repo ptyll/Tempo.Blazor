@@ -60,6 +60,33 @@ public class MockNotionDatabaseStore : INotionDatabaseProvider
                 _records[record.Id] = record;
             }
         }
+        else if (string.Equals(seed, "board-empty-group", StringComparison.OrdinalIgnoreCase))
+        {
+            // Every status option stays a column; Backlog has no cards, so the empty-group
+            // state renders inside a board that still has cards in the other columns.
+            foreach (var record in _records.Values.Where(r =>
+                         string.Equals(GetFieldText(r, _fStatus), "Backlog", StringComparison.OrdinalIgnoreCase))
+                     .ToList())
+            {
+                _records.Remove(record.Id);
+            }
+        }
+        else if (string.Equals(seed, "no-date-field", StringComparison.OrdinalIgnoreCase))
+        {
+            // Calendar and timeline both point at a date field the database no longer has.
+            _fieldsByDb[DbId].RemoveAll(f => f.Type == DatabaseFieldType.Date);
+            foreach (var view in _viewsByDb[DbId])
+            {
+                if (view.Config is CalendarViewConfig calendar)
+                    calendar.DateFieldId = Guid.Parse("f0000000-0000-0000-0000-000000000099");
+                if (view.Config is TimelineViewConfig timeline)
+                    timeline.StartDateFieldId = Guid.Parse("f0000000-0000-0000-0000-000000000099");
+            }
+        }
+        else if (string.Equals(seed, "empty-timeline", StringComparison.OrdinalIgnoreCase))
+        {
+            _records.Clear();
+        }
         else if (string.Equals(seed, "calendar-overflow", StringComparison.OrdinalIgnoreCase))
         {
             // Four events on one day of the current month, so the calendar's 3-chip cap

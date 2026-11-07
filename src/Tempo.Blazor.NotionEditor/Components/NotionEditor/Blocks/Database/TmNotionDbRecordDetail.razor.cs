@@ -158,7 +158,7 @@ public partial class TmNotionDbRecordDetail
         {
             var result = await Context.DatabaseProvider.UpdateRecordAsync(Record.DatabaseId.ToString(), updated);
             await OnRecordUpdated.InvokeAsync(result);
-            await ShowSavedIndicatorAsync();
+            _ = ShowSavedIndicatorAsync();
         }
         catch { /* silently ignore — UI already updated optimistically */ }
     }
@@ -169,12 +169,12 @@ public partial class TmNotionDbRecordDetail
         _savedCts = new CancellationTokenSource();
         var token = _savedCts.Token;
         _showSaved = true;
-        StateHasChanged();
+        await InvokeAsync(StateHasChanged);
         try
         {
             await Task.Delay(2000, token);
             _showSaved = false;
-            StateHasChanged();
+            await InvokeAsync(StateHasChanged);
         }
         catch (TaskCanceledException) { }
     }

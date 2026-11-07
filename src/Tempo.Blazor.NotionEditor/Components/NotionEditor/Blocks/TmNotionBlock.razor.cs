@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.JSInterop;
+using Tempo.Blazor.Localization;
 using Tempo.Blazor.Components.Diagram.Models;
 using Tempo.Blazor.Components.NotionEditor.Services;
 using Tempo.Blazor.Components.Wireframe.Models;
@@ -20,6 +21,7 @@ public partial class TmNotionBlock : ComponentBase
     // ── DI ───────────────────────────────────────────────────────────────────
 
     [Inject] private IJSRuntime JS { get; set; } = default!;
+    [Inject] private IServiceProvider Services { get; set; } = default!;
 
     // ── Cascaded context ─────────────────────────────────────────────────────
 
@@ -152,16 +154,12 @@ public partial class TmNotionBlock : ComponentBase
         }
     }
 
+    private ITmRelativeTimeFormatter? _relativeTime;
+
+    private ITmRelativeTimeFormatter RelativeTime => _relativeTime ??= TmRelativeTime.Resolve(Services, Loc);
+
     private string FormatRelativeTime(DateTime? dt)
-    {
-        if (dt is null) return string.Empty;
-        var diff = DateTime.UtcNow - dt.Value.ToUniversalTime();
-        if (diff.TotalMinutes < 1) return "just now";
-        if (diff.TotalHours < 1) return $"{(int)diff.TotalMinutes}m ago";
-        if (diff.TotalDays < 1) return $"{(int)diff.TotalHours}h ago";
-        if (diff.TotalDays < 7) return $"{(int)diff.TotalDays}d ago";
-        return dt.Value.ToString("MMM d");
-    }
+        => dt is null ? string.Empty : RelativeTime.Format(new DateTimeOffset(dt.Value));
 
     // ── Computed ─────────────────────────────────────────────────────────────
 

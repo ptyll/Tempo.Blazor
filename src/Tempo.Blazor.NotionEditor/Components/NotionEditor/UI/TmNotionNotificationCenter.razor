@@ -93,7 +93,9 @@
                                 {
                                     <span class="tm-notion-notifications__body">@n.Body</span>
                                 }
-                                <span class="tm-notification-bell__time">@FormatTime(n.CreatedAt)</span>
+                                <time class="tm-notification-bell__time"
+                                      datetime="@n.CreatedAt.ToString("o")"
+                                      title="@RelativeTime.Absolute(n.CreatedAt)">@FormatTime(n.CreatedAt)</time>
                             </span>
                             @if (!n.IsRead)
                             {
@@ -339,15 +341,13 @@
         await RefreshUnreadCountAsync(forceRender: true);
     }
 
-    private string FormatTime(DateTimeOffset dt)
-    {
-        var diff = DateTimeOffset.UtcNow - dt.ToUniversalTime();
-        if (diff.TotalMinutes < 1) return Loc["Notion_Notifications_JustNow"];
-        if (diff.TotalHours < 1) return Loc["Notion_Notifications_MinutesAgo", (int)diff.TotalMinutes];
-        if (diff.TotalDays < 1) return Loc["Notion_Notifications_HoursAgo", (int)diff.TotalHours];
-        if (diff.TotalDays < 7) return Loc["Notion_Notifications_DaysAgo", (int)diff.TotalDays];
-        return dt.ToLocalTime().ToString("d");
-    }
+    [Inject] private IServiceProvider Services { get; set; } = default!;
+
+    private ITmRelativeTimeFormatter? _relativeTime;
+
+    private ITmRelativeTimeFormatter RelativeTime => _relativeTime ??= TmRelativeTime.Resolve(Services, Loc);
+
+    private string FormatTime(DateTimeOffset dt) => RelativeTime.Format(dt);
 
     private static string TypeIcon(string type) => type switch
     {

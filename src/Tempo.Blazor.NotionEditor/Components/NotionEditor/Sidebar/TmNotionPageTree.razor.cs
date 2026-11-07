@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
+using Tempo.Blazor.Localization;
 using Tempo.Blazor.Components;
 using Tempo.Blazor.Components.NotionEditor.Services;
 using Tempo.Blazor.NotionEditor.Interfaces;
@@ -139,8 +140,8 @@ public partial class TmNotionPageTree : TmComponentBase
     }
 
     private string BulkPickerTitle => _bulkAction == BulkAction.Move
-        ? string.Format(Loc["TmNotionPageTree_BulkMoveTitle"], SelectedCount)
-        : string.Format(Loc["TmNotionPageTree_BulkCopyTitle"], SelectedCount);
+        ? Loc.Plural("TmNotionPageTree_BulkMoveTitle", SelectedCount)
+        : Loc.Plural("TmNotionPageTree_BulkCopyTitle", SelectedCount);
 
     private async Task OpenBulkTargetPicker(BulkAction action)
     {

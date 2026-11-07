@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.JSInterop;
 using Tempo.Blazor.Components.NotionEditor.Services;
+using Tempo.Blazor.Localization;
 using Tempo.Blazor.NotionEditor.Interfaces;
 
 namespace Tempo.Blazor.Components.NotionEditor.Sidebar;
@@ -11,6 +12,7 @@ public partial class TmNotionSidebarTrash : ComponentBase
     // ── DI ────────────────────────────────────────────────────────────────────
 
     [Inject] private IJSRuntime JS { get; set; } = default!;
+    [Inject] private IServiceProvider Services { get; set; } = default!;
 
     // ── Cascaded context ──────────────────────────────────────────────────────
 
@@ -48,22 +50,14 @@ public partial class TmNotionSidebarTrash : ComponentBase
             ? Loc["TmNotionSidebarTrash_Untitled"]
             : page.Title;
 
+    private ITmRelativeTimeFormatter? _relativeTime;
+
+    private ITmRelativeTimeFormatter RelativeTime => _relativeTime ??= TmRelativeTime.Resolve(Services, Loc);
+
     private string GetDeletedAt(INotionPage page)
-    {
-        if (page.DeletedAt is null) return string.Empty;
-
-        var diff = DateTime.UtcNow - page.DeletedAt.Value;
-
-        if (diff.TotalHours < 24)
-            return Loc["TmNotionSidebarTrash_DeletedToday"];
-
-        if (diff.TotalDays < 30)
-            return string.Format(Loc["TmNotionSidebarTrash_DeletedDaysAgo"], (int)diff.TotalDays);
-
-        return string.Format(
-            Loc["TmNotionSidebarTrash_DeletedOn"],
-            page.DeletedAt.Value.ToLocalTime().ToString("MMM d, yyyy"));
-    }
+        => page.DeletedAt is null
+            ? string.Empty
+            : RelativeTime.Format(new DateTimeOffset(DateTime.SpecifyKind(page.DeletedAt.Value, DateTimeKind.Utc)));
 
     private bool IsConfirming(Guid id) => _pendingDelete.Contains(id);
 

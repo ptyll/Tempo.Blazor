@@ -2,7 +2,7 @@
   "itemName": "TmNotionDbCalendarView",
   "kind": "Component",
   "category": "Notion Editor",
-  "description": "Monthly calendar view (a six-week, Monday-based grid) that places records as colored events on their date field. Supports previous/next/today navigation, drag-to-reschedule, click-to-create, and per-cell overflow indicators.",
+  "description": "Monthly calendar view (a six-week grid whose first day follows the current culture) that places records as colored pills on their date field. Supports previous/next/today navigation and per-cell overflow. On a mobile layout tapping a day or the pluralized '+N more' opens a day sheet; elsewhere the overflow stays a popover.",
   "packageId": "Tempo.Blazor.NotionEditor",
   "namespace": "Tempo.Blazor.Components.NotionEditor.Blocks.Database",
   "sourcePath": "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/Blocks/Database/TmNotionDbCalendarView.razor",

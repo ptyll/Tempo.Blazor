@@ -2,26 +2,21 @@
 @inherits Tempo.Blazor.Components.TmComponentBase
 @using Tempo.Blazor.NotionEditor.Models
 @using Tempo.Blazor.NotionEditor.Interfaces
+@using Tempo.Blazor.Components.Feedback
+@using Tempo.Blazor.Localization
 @using Tempo.Blazor.NotionEditor.Enums
 @using System.Globalization
 
-<div class="tm-dbt @(_dragMode != DragMode.None ? "tm-dbt--dragging" : "")">
-
-    @* ── Drag capture overlay ─────────────────────────────────────────────── *@
-    @if (_dragMode != DragMode.None)
-    {
-        <div class="tm-dbt__drag-overlay"
-             @onmousemove="HandleMouseMove"
-             @onmousemove:preventDefault="true"
-             @onmouseup="HandleMouseUpAsync"
-             @onmouseleave="CancelDrag">
-        </div>
-    }
+<div class="tm-dbtl @(IsMobile ? "tm-dbtl--mobile" : "")"
+     data-layout="@(Layout?.CssModifier ?? "desktop")"
+     data-px-per-day="@PxPerDay.ToString("F4", CultureInfo.InvariantCulture)"
+     data-readonly="@(ReadOnly ? "true" : "false")"
+     @ref="_rootRef">
 
     @* ── Toolbar ─────────────────────────────────────────────────────────── *@
-    <div class="tm-dbt__toolbar">
+    <div class="tm-dbtl__toolbar">
 
-        <button class="tm-dbt__tool-btn @(_showTableArea ? "tm-dbt__tool-btn--active" : "")"
+        <button class="tm-dbtl__tool-btn @(_showTableArea ? "tm-dbtl__tool-btn--active" : "")"
                 type="button"
                 title="@Loc["TmNotionDbTimelineView_ToggleTable"]"
                 @onclick="() => _showTableArea = !_showTableArea">
@@ -32,52 +27,64 @@
             @Loc["TmNotionDbTimelineView_ToggleTable"]
         </button>
 
-        <div class="tm-dbt__nav">
-            <button class="tm-dbt__nav-btn"
+        <div class="tm-dbtl__nav">
+            <button class="tm-dbtl__nav-btn"
                     type="button"
-                    title="@Loc["TmNotionDbTimelineView_Prev"]"
+                    aria-label="@Loc["TmNotionDbTimelineView_Prev"]"
                     @onclick="PrevPeriod">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                     <path d="M15 18l-6-6 6-6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
+                <span class="tm-dbtl__nav-label">@Loc["TmNotionDbTimelineView_Prev"]</span>
             </button>
 
-            <button class="tm-dbt__today-btn" type="button" @onclick="GoToToday">
+            <button class="tm-dbtl__today-btn" type="button" @onclick="GoToToday">
                 @Loc["TmNotionDbTimelineView_Today"]
             </button>
 
-            <button class="tm-dbt__nav-btn"
+            <button class="tm-dbtl__nav-btn"
                     type="button"
-                    title="@Loc["TmNotionDbTimelineView_Next"]"
+                    aria-label="@Loc["TmNotionDbTimelineView_Next"]"
                     @onclick="NextPeriod">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                     <path d="M9 18l6-6-6-6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
+                <span class="tm-dbtl__nav-label">@Loc["TmNotionDbTimelineView_Next"]</span>
             </button>
         </div>
 
-        <div class="tm-dbt__zoom-group" role="group" aria-label="@Loc["TmNotionDbTimelineView_Zoom"]">
-            <button class="tm-dbt__zoom-btn @(_zoom == TimelineZoom.Day ? "tm-dbt__zoom-btn--active" : "")"
+        <div class="tm-dbtl__zoom-group" role="group" aria-label="@Loc["TmNotionDbTimelineView_Zoom"]">
+            <button class="tm-dbtl__zoom-btn @(_zoom == TimelineZoom.Day ? "tm-dbtl__zoom-btn--active" : "")"
                     type="button"
+                    aria-pressed="@(_zoom == TimelineZoom.Day ? "true" : "false")"
                     @onclick="() => SetZoom(TimelineZoom.Day)">
                 @Loc["TmNotionDbTimelineView_ZoomDay"]
             </button>
-            <button class="tm-dbt__zoom-btn @(_zoom == TimelineZoom.Week ? "tm-dbt__zoom-btn--active" : "")"
+            <button class="tm-dbtl__zoom-btn @(_zoom == TimelineZoom.Week ? "tm-dbtl__zoom-btn--active" : "")"
                     type="button"
+                    aria-pressed="@(_zoom == TimelineZoom.Week ? "true" : "false")"
                     @onclick="() => SetZoom(TimelineZoom.Week)">
                 @Loc["TmNotionDbTimelineView_ZoomWeek"]
             </button>
-            <button class="tm-dbt__zoom-btn @(_zoom == TimelineZoom.Month ? "tm-dbt__zoom-btn--active" : "")"
+            <button class="tm-dbtl__zoom-btn @(_zoom == TimelineZoom.Month ? "tm-dbtl__zoom-btn--active" : "")"
                     type="button"
+                    aria-pressed="@(_zoom == TimelineZoom.Month ? "true" : "false")"
                     @onclick="() => SetZoom(TimelineZoom.Month)">
                 @Loc["TmNotionDbTimelineView_ZoomMonth"]
             </button>
         </div>
 
+        @if (!ReadOnly)
+        {
+            <button class="tm-dbtl__new-btn" type="button" @onclick="() => OnNewRecord.InvokeAsync()">
+                @Loc["TmNotionDbTimelineView_NewRecord"]
+            </button>
+        }
+
     </div>
 
     @* ── Body ────────────────────────────────────────────────────────────── *@
-    <div class="tm-dbt__body">
+    <div class="tm-dbtl__body">
 
         @{
             var headers     = GetColumnHeaders();
@@ -85,38 +92,38 @@
         }
 
         @* ── Sidebar ─────────────────────────────────────────────────────── *@
-        @if (_showTableArea)
+        @if (ShowSidebar)
         {
-            <div class="tm-dbt__sidebar">
+            <div class="tm-dbtl__sidebar">
 
-                <div class="tm-dbt__sidebar-head">
-                    <span class="tm-dbt__sidebar-title">@Loc["TmNotionDbTimelineView_Name"]</span>
+                <div class="tm-dbtl__sidebar-head">
+                    <span class="tm-dbtl__sidebar-title">@Loc["TmNotionDbTimelineView_Name"]</span>
                     @foreach (var sf in sidebarCols)
                     {
-                        <span class="tm-dbt__sidebar-col">@sf.Name</span>
+                        <span class="tm-dbtl__sidebar-col">@sf.Name</span>
                     }
                 </div>
 
                 @foreach (var record in Records)
                 {
                     var rec = record;
-                    <div class="tm-dbt__sidebar-row"
+                    <div class="tm-dbtl__sidebar-row"
                          role="button"
                          tabindex="0"
                          data-testid="@TestId("notion-db-timeline-bar")"
                          @onclick="() => OnRecordClicked.InvokeAsync(rec)"
                          @onkeydown="e => HandleItemKeyAsync(e, rec)">
-                        <span class="tm-dbt__sidebar-name">@NotionDatabaseValueFormatter.PrimaryText(rec, Fields)</span>
+                        <span class="tm-dbtl__sidebar-name">@NotionDatabaseValueFormatter.PrimaryText(rec, Fields)</span>
                         @foreach (var sf in sidebarCols)
                         {
-                            <span class="tm-dbt__sidebar-val"><TmNotionDbPropertyValue Field="sf" Value="@RawValue(rec, sf)" /></span>
+                            <span class="tm-dbtl__sidebar-val"><TmNotionDbPropertyValue Field="sf" Value="@RawValue(rec, sf)" /></span>
                         }
                     </div>
                 }
 
                 @if (!ReadOnly)
                 {
-                    <button class="tm-dbt__sidebar-add" type="button" @onclick="() => OnNewRecord.InvokeAsync()">
+                    <button class="tm-dbtl__sidebar-add" type="button" @onclick="() => OnNewRecord.InvokeAsync()">
                         <svg width="10" height="10" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                             <path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
                         </svg>
@@ -128,33 +135,44 @@
         }
 
         @* ── Gantt ────────────────────────────────────────────────────────── *@
-        <div class="tm-dbt__gantt-wrap">
-            <div class="tm-dbt__gantt"
+        <div class="tm-dbtl__gantt-wrap">
+            <div class="tm-dbtl__gantt"
                  style="min-width:@(TotalGanttWidth.ToString("F0", CultureInfo.InvariantCulture))px">
 
-                @* Column headers — sticky top *@
-                <div class="tm-dbt__gantt-head">
+                @* Two header rows: the month spans above the week/day columns. *@
+                <div class="tm-dbtl__gantt-head">
+                <div class="tm-dbtl__head-months" data-testid="@TestId("notion-db-timeline-months")">
+                    @foreach (var (label, span) in MonthHeaderSpans())
+                    {
+                        <div class="tm-dbtl__month"
+                             style="width:@((span * ColWidthPx).ToString("F0", CultureInfo.InvariantCulture))px">
+                            @label
+                        </div>
+                    }
+                </div>
+                <div class="tm-dbtl__head-weeks">
                     @foreach (var (colStart, label) in headers)
                     {
                         var isTodayCol = _zoom == TimelineZoom.Day && colStart.Date == DateTime.Today;
-                        <div class="tm-dbt__col-header @(isTodayCol ? "tm-dbt__col-header--today" : "")"
+                        <div class="tm-dbtl__col-header @(isTodayCol ? "tm-dbtl__col-header--today" : "")"
                              style="width:@(ColWidthPx.ToString("F0", CultureInfo.InvariantCulture))px">
                             @label
                         </div>
                     }
                 </div>
+                </div>
 
                 @* Gantt body *@
-                <div class="tm-dbt__gantt-body">
+                <div class="tm-dbtl__gantt-body">
 
                     @* Background column stripes *@
-                    <div class="tm-dbt__grid-bg" aria-hidden="true">
+                    <div class="tm-dbtl__grid-bg" aria-hidden="true">
                         @foreach (var (colStart, _) in headers)
                         {
                             var isWeekend = _zoom == TimelineZoom.Day &&
                                 (colStart.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday);
                             var isTodayCol = _zoom == TimelineZoom.Day && colStart.Date == DateTime.Today;
-                            <div class="tm-dbt__col-stripe @(isTodayCol ? "tm-dbt__col-stripe--today" : "") @(isWeekend ? "tm-dbt__col-stripe--weekend" : "")"
+                            <div class="tm-dbtl__col-stripe @(isTodayCol ? "tm-dbtl__col-stripe--today" : "") @(isWeekend ? "tm-dbtl__col-stripe--weekend" : "")"
                                  style="width:@(ColWidthPx.ToString("F0", CultureInfo.InvariantCulture))px">
                             </div>
                         }
@@ -163,17 +181,18 @@
                     @* Today marker *@
                     @if (TodayVisible)
                     {
-                        <div class="tm-dbt__today-line"
-                             style="left:@(TodayPixel.ToString("F1", CultureInfo.InvariantCulture))px"
-                             aria-hidden="true">
+                        <div class="tm-dbtl__today-line"
+                             data-testid="@TestId("notion-db-timeline-today")"
+                             style="left:@(TodayPixel.ToString("F1", CultureInfo.InvariantCulture))px">
+                            <span class="tm-dbtl__today-label">@Loc["TmNotionDbTimelineView_Today"]</span>
                         </div>
                     }
 
                     @* Rows *@
-                    <div class="tm-dbt__rows">
+                    <div class="tm-dbtl__rows">
                         @if (StartField is null)
                         {
-                            <div class="tm-dbt__no-field">@Loc["TmNotionDbTimelineView_NoStartField"]</div>
+                            <div class="tm-dbtl__no-field">@Loc["TmNotionDbTimelineView_NoStartField"]</div>
                         }
                         else
                         {
@@ -181,31 +200,31 @@
                             {
                                 var rec = record;
                                 var (left, width, visible) = GetBarGeometry(rec);
-                                var color      = GetBarColor(rec);
-                                var isDragging = _dragId == rec.Id;
+                                var color = GetBarColor(rec);
 
-                                <div class="tm-dbt__row">
+                                <div class="tm-dbtl__row">
                                     @if (visible)
                                     {
-                                        <div class="tm-dbt__bar @(isDragging ? "tm-dbt__bar--dragging" : "")"
+                                        <div class="tm-dbtl__bar"
+                                             data-timeline-bar
+                                             data-record-id="@rec.Id"
                                              style="left:@(left.ToString("F1", CultureInfo.InvariantCulture))px;width:@(width.ToString("F1", CultureInfo.InvariantCulture))px;--bar-color:@color"
                                              @key="rec.Id"
                                              role="button"
                                              tabindex="0"
+                                             data-testid="@TestId("notion-db-timeline-bar")"
+                                             aria-keyshortcuts="Alt+ArrowLeft Alt+ArrowRight Alt+Shift+ArrowLeft Alt+Shift+ArrowRight"
                                              title="@NotionDatabaseValueFormatter.PrimaryText(rec, Fields)"
-                                             @onclick="() => OnRecordClicked.InvokeAsync(rec)"
+                                             @onclick="() => OnBarClickAsync(rec)"
                                              @onclick:stopPropagation="true"
-                                             @onmousedown="e => StartMoveBar(e, rec)"
-                                             @onmousedown:stopPropagation="true"
                                              @onkeydown="e => HandleItemKeyAsync(e, rec)">
-                                            <span class="tm-dbt__bar-label">@NotionDatabaseValueFormatter.PrimaryText(rec, Fields)</span>
+                                            <span class="tm-dbtl__bar-label">@NotionDatabaseValueFormatter.PrimaryText(rec, Fields)</span>
                                             @if (!ReadOnly)
                                             {
-                                                <div class="tm-dbt__bar-resize"
+                                                <div class="tm-dbtl__bar-resize"
+                                                     data-timeline-resize
                                                      title="@Loc["TmNotionDbTimelineView_ResizeBar"]"
-                                                     @onmousedown="e => StartResizeBar(e, rec)"
-                                                     @onmousedown:stopPropagation="true"
-                                                     @onclick:stopPropagation="true">
+                                                     aria-label="@Loc["TmNotionDbTimelineView_ResizeBar"]">
                                                 </div>
                                             }
                                         </div>
@@ -215,8 +234,8 @@
 
                             @if (!ReadOnly && Records.Count == 0)
                             {
-                                <div class="tm-dbt__empty-rows">
-                                    <button class="tm-dbt__empty-add" type="button"
+                                <div class="tm-dbtl__empty-rows">
+                                    <button class="tm-dbtl__empty-add" type="button"
                                             @onclick="() => OnNewRecord.InvokeAsync()">
                                         @Loc["TmNotionDbTimelineView_NewRecord"]
                                     </button>
@@ -230,4 +249,33 @@
         </div>
 
     </div>
+
+    <div class="tm-dbtl__footer" data-testid="@TestId("notion-db-timeline-footer")">
+        @RecordCountLabel
+    </div>
+
+    @if (IsCoarseSheet && SheetRecord is { } sheet)
+    {
+        <TmModal Show="true"
+                 ShowChanged="open => { if (!open) CloseDateSheet(); }"
+                 Title="@NotionDatabaseValueFormatter.PrimaryText(sheet, Fields)"
+                 MobilePresentation="MobilePresentation.Sheet"
+                 Size="ModalSize.Medium">
+            <div class="tm-dbtl__date-sheet" data-testid="@TestId("notion-db-timeline-date-sheet")">
+                <label class="tm-dbtl__date-field">
+                    <span>@Loc["TmNotionDbTimelineView_Start"]</span>
+                    <input type="date" value="@SheetDate(sheet, StartField)"
+                           @onchange="e => CommitSheetDateAsync(sheet, end: false, e)" />
+                </label>
+                <label class="tm-dbtl__date-field">
+                    <span>@Loc["TmNotionDbTimelineView_End"]</span>
+                    <input type="date" value="@SheetDate(sheet, EndField)"
+                           @onchange="e => CommitSheetDateAsync(sheet, end: true, e)" />
+                </label>
+                <button type="button" class="tm-dbtl__date-open" @onclick="() => OpenSheetRecordAsync(sheet)">
+                    @Loc["TmNotionDbTimelineView_OpenRecord"]
+                </button>
+            </div>
+        </TmModal>
+    }
 </div>

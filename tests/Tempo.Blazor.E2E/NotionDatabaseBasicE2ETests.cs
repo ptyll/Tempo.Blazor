@@ -202,8 +202,8 @@ public class NotionDatabaseBasicE2ETests : WasmTestBase
         var db = await NavigateToDatabaseBlockAsync(page);
         await SwitchDatabaseViewAsync(page, db, "Timeline");
 
-        // The timeline view has a unique zoom-group toolbar (.tm-dbt__zoom-group)
-        var zoomGroup = db.Locator(".tm-dbt__zoom-group");
+        // The timeline view has a unique zoom-group toolbar (.tm-dbtl__zoom-group)
+        var zoomGroup = db.Locator(".tm-dbtl__zoom-group");
         await zoomGroup.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 8000 });
         Assert.IsTrue(await zoomGroup.IsVisibleAsync(), "Timeline view should show zoom controls");
 

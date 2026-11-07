@@ -2,6 +2,8 @@
 @inherits Tempo.Blazor.Components.TmComponentBase
 @using Tempo.Blazor.NotionEditor.Models
 @using Tempo.Blazor.NotionEditor.Interfaces
+@using Tempo.Blazor.Components.Feedback
+@using Tempo.Blazor.Localization
 @using Tempo.Blazor.NotionEditor.Enums
 
 <div class="tm-dbcal" @ondragend="OnDragEnd">
@@ -53,9 +55,9 @@
     {
         @* ── Weekday headers ─────────────────────────────────────────────── *@
         <div class="tm-dbcal__weekdays" role="row" aria-hidden="true">
-            @foreach (var day in WeekdayHeaders)
+            @foreach (var weekday in WeekdayHeaders)
             {
-                <div class="tm-dbcal__weekday">@day</div>
+                <div class="tm-dbcal__weekday">@weekday</div>
             }
         </div>
 
@@ -115,7 +117,7 @@
 
                     @* Overflow — the +N button IS the popover trigger, so Escape, focus-into-first
                        and refocus-on-close stay inside TmPopover. No second close control. *@
-                    @if (OverflowCount(cell) > 0)
+                    @if (OverflowCount(cell) > 0 && !IsMobile)
                     {
                         var overflowCell = cell;
                         <TmPopover IsOpen="@(_overflowDate == overflowCell.Date)"
@@ -129,7 +131,7 @@
                             <TriggerContent>
                                 <span class="tm-dbcal__overflow"
                                       data-testid="@TestId("notion-db-calendar-overflow")">
-                                    +@OverflowCount(overflowCell)&nbsp;@Loc["TmNotionDbCalendarView_More"]
+                                    +@MoreLabel(OverflowCount(overflowCell))
                                 </span>
                             </TriggerContent>
                             <ChildContent>
@@ -150,10 +152,55 @@
                             </ChildContent>
                         </TmPopover>
                     }
+                    else if (OverflowCount(cell) > 0)
+                    {
+                        var overflowCell = cell;
+                        <button type="button"
+                                class="tm-dbcal__overflow"
+                                data-testid="@TestId("notion-db-calendar-overflow")"
+                                @onclick:stopPropagation="true"
+                                @onclick="() => SetOverflowOpen(overflowCell.Date, true)">
+                            +@MoreLabel(OverflowCount(overflowCell))
+                        </button>
+                    }
 
                 </div>
             }
         </div>
+
+        @if (IsMobile && OverflowCell is { } day)
+        {
+            <TmModal Show="true"
+                     ShowChanged="open => SetOverflowOpen(day.Date, open)"
+                     Title="@Loc["TmNotionDbCalendarView_DayList", day.Date.ToString("d")]"
+                     MobilePresentation="MobilePresentation.Sheet"
+                     Size="ModalSize.Medium">
+                <ul class="tm-dbcal__day-list-items" data-testid="@TestId("notion-db-calendar-day-sheet")">
+                    @if (!ReadOnly)
+                    {
+                        <li>
+                            <button type="button"
+                                    class="tm-dbcal__day-list-item"
+                                    data-testid="@TestId("notion-db-calendar-new")"
+                                    @onclick="() => OnNewRecord.InvokeAsync(day.Date.ToDateTime(TimeOnly.MinValue))">
+                                @Loc["TmNotionDbCalendarView_NewRecord"]
+                            </button>
+                        </li>
+                    }
+                    @foreach (var rec in day.Records)
+                    {
+                        var overflowRec = rec;
+                        <li>
+                            <button type="button"
+                                    class="tm-dbcal__day-list-item"
+                                    @onclick="() => SelectOverflowRecordAsync(overflowRec)">
+                                <TmNotionDbPropertyValue Field="PrimaryField" Value="@PrimaryRaw(overflowRec)" />
+                            </button>
+                        </li>
+                    }
+                </ul>
+            </TmModal>
+        }
     }
 
 </div>

@@ -237,7 +237,6 @@
 
 @media (pointer: coarse) {
     .tm-db__search-input { min-height: var(--tm-touch-target); }
-    .tm-dbt__resize-handle { display: none; }
 }
 
 .tm-db__search-input:focus { outline: none; }

@@ -11,7 +11,7 @@
 
 .tm-dbb__scroll {
     display: flex;
-    gap: 10px;
+    gap: var(--tm-space-3);
     overflow-x: auto;
     overflow-y: hidden;
     padding: 2px 2px 14px;
@@ -31,6 +31,36 @@
 }
 
 /* ── Column ────────────────────────────────────────────────────────────── */
+
+.tm-dbb__scroll--snap {
+    scroll-snap-type: x mandatory;
+}
+
+.tm-dbb--mobile .tm-dbb__col {
+    flex: 0 0 85%;
+    scroll-snap-align: start;
+}
+
+.tm-dbb__move ::deep .tm-dropdown-trigger {
+    width: 28px;
+    height: 28px;
+    min-width: 28px;
+    padding: 0;
+}
+
+@media (pointer: coarse) {
+    .tm-dbb__move ::deep .tm-dropdown-trigger {
+        width: var(--tm-touch-target);
+        height: var(--tm-touch-target);
+        min-width: var(--tm-touch-target);
+    }
+}
+
+@media (min-width: 640px) and (max-width: 1023px) {
+    .tm-dbb__col {
+        flex-basis: calc((100% - 2 * var(--tm-space-3)) / 2.5);
+    }
+}
 
 .tm-dbb__col {
     flex: 0 0 264px;
@@ -54,13 +84,12 @@
 .tm-dbb__col-header {
     display: flex;
     align-items: center;
-    gap: 6px;
-    padding: 10px 10px 8px;
+    gap: var(--tm-space-2);
+    padding: var(--tm-space-3) var(--tm-space-3) var(--tm-space-2);
     position: sticky;
     top: 0;
     background: inherit;
-    border-radius: 10px 10px 0 0;
-    z-index: 1;
+    border-radius: var(--tm-radius-md) var(--tm-radius-md) 0 0;
 }
 
 .tm-dbb__col-dot {
@@ -197,7 +226,57 @@
     gap: 5px;
 }
 
+.tm-dbb__card-title-row {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--tm-space-2);
+}
+
+.tm-dbb__move {
+    flex-shrink: 0;
+    min-height: var(--tm-touch-target);
+    padding: var(--tm-space-1) var(--tm-space-2);
+    border: 1px solid var(--tm-border-color);
+    border-radius: var(--tm-radius-sm);
+    background: var(--tm-bg-surface);
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-text-xs);
+    cursor: pointer;
+}
+
+.tm-dbb__move-menu {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-1);
+    padding: var(--tm-space-1);
+    background: var(--tm-bg-surface);
+    border: 1px solid var(--tm-border-color);
+    border-radius: var(--tm-radius-sm);
+}
+
+.tm-dbb__move-item {
+    min-height: var(--tm-touch-target);
+    text-align: start;
+    padding: var(--tm-space-2);
+    border: 0;
+    border-radius: var(--tm-radius-sm);
+    background: transparent;
+    color: var(--tm-text-primary);
+    cursor: pointer;
+}
+
+.tm-dbb__add-card {
+    margin: var(--tm-space-2);
+    min-height: var(--tm-touch-target);
+    border: 1px dashed var(--tm-border-color);
+    border-radius: var(--tm-radius-sm);
+    background: transparent;
+    color: var(--tm-text-secondary);
+    cursor: pointer;
+}
+
 .tm-dbb__card-title {
+    flex: 1;
     font-size: 13px;
     font-weight: 500;
     color: var(--tm-text-primary);

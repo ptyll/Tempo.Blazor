@@ -31603,6 +31603,13 @@
           "description": "Icon name from IconNames. Displayed before the text."
         },
         {
+          "name": "KeepMenuOpen",
+          "type": "bool",
+          "isRequired": false,
+          "description": "The \"More\" entry keeps the menu open while its action runs. A panel opened by the action would otherwise close with the menu before it rendered.",
+          "default": "false"
+        },
+        {
           "name": "LabelPosition",
           "type": "ToolbarLabelPosition",
           "isRequired": true,

@@ -80,7 +80,9 @@
                     <div class="tm-notion-block__thread-tooltip__body">
                         <div class="tm-notion-block__thread-tooltip__meta">
                             <span class="tm-notion-block__thread-tooltip__author">@BlockLastAuthorName</span>
-                            <span class="tm-notion-block__thread-tooltip__time">@FormatRelativeTime(BlockLastEntryTime)</span>
+                            <time class="tm-notion-block__thread-tooltip__time"
+                                  datetime="@BlockLastEntryTime?.ToString("o")"
+                                  title="@(BlockLastEntryTime is null ? null : RelativeTime.Absolute(BlockLastEntryTime.Value))">@FormatRelativeTime(BlockLastEntryTime)</time>
                         </div>
                         @if (!string.IsNullOrEmpty(BlockLastEntryText))
                         {

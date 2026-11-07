@@ -73,10 +73,6 @@ public sealed class TmNotionPageCommentPanelDraftGuardTests : LocalizationTestBa
             ["TmNotionPageComment_MarkAllAsRead"] = "Mark all as read",
             ["TmNotionPageComment_Watch"] = "Watch thread",
             ["TmNotionPageComment_Unwatch"] = "Unwatch",
-            ["TmNotionPageComment_Time_JustNow"] = "just now",
-            ["TmNotionPageComment_Time_MinutesAgo"] = "{0}m ago",
-            ["TmNotionPageComment_Time_HoursAgo"] = "{0}h ago",
-            ["TmNotionPageComment_Time_DaysAgo"] = "{0}d ago"
         });
     }
 

@@ -90,7 +90,7 @@ public class TmNotionDbViewCharacterizationTests : LocalizationTestBase
             .Add(x => x.Records, records)
             .Add(x => x.StartDateFieldId, fields[0].Id));
 
-        cut.Find(".tm-dbt").Should().NotBeNull();
+        cut.Find(".tm-dbtl").Should().NotBeNull();
         cut.Markup.Should().Contain("Alpha");
     }
 

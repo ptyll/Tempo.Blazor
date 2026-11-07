@@ -4,10 +4,11 @@
 @using Tempo.Blazor.NotionEditor.Interfaces
 @using Tempo.Blazor.NotionEditor.Enums
 @using Tempo.Blazor.Components.Icons
+@using Tempo.Blazor.Components.Dropdowns
 
-<div class="tm-dbb" @ref="_boardRef">
+<div class="tm-dbb @(IsMobile ? "tm-dbb--mobile" : "")" data-layout="@(Layout?.CssModifier ?? "desktop")" @ref="_boardRef">
 
-    <div class="tm-dbb__scroll">
+    <div class="tm-dbb__scroll @(IsMobile ? "tm-dbb__scroll--snap" : "")">
 
         @foreach (var group in _groups)
         {
@@ -32,7 +33,9 @@
                     {
                         <button class="tm-dbb__col-add"
                                 type="button"
+                                data-testid="@TestId("notion-db-board-add")"
                                 title="@Loc["TmNotionDbBoardView_AddCard"]"
+                                aria-label="@Loc["TmNotionDbBoardView_AddCard"]"
                                 @onclick="() => HandleAddCardAsync(gv)">
                             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                                 <path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
@@ -69,7 +72,34 @@
                             }
 
                             <div class="tm-dbb__card-body">
-                                <span class="tm-dbb__card-title">@NotionDatabaseValueFormatter.PrimaryText(rec, Fields)</span>
+                                <div class="tm-dbb__card-title-row">
+                                    <span class="tm-dbb__card-title">@NotionDatabaseValueFormatter.PrimaryText(rec, Fields)</span>
+                                    @if (!ReadOnly && GroupByField is not null)
+                                    {
+                                        <TmDropdown Class="tm-dbb__move"
+                                                    Text="⋯"
+                                                    ShowChevron="false"
+                                                    AriaLabel="@Loc["TmNotionDbBoardView_MoveTo"]"
+                                                    data-testid="@TestId("notion-db-board-move")"
+                                                    @onclick:stopPropagation="true"
+                                                    @onkeydown:stopPropagation="true"
+                                                    OnSelect="value => MoveToAsync(rec, value)">
+                                            @foreach (var target in _groups)
+                                            {
+                                                var targetValue = target.Value;
+                                                var current = CurrentGroup(rec);
+                                                var isCurrent = string.Equals(current, targetValue, StringComparison.OrdinalIgnoreCase);
+                                                <TmDropdownItem Value="@targetValue"
+                                                                Disabled="@isCurrent"
+                                                                Checked="@isCurrent"
+                                                                data-testid="@TestId("notion-db-board-move-target")"
+                                                                data-group-value="@targetValue">
+                                                    @(target.Label.Length > 0 ? target.Label : Loc["TmNotionDatabaseBlock_Uncategorized"])
+                                                </TmDropdownItem>
+                                            }
+                                        </TmDropdown>
+                                    }
+                                </div>
 
                                 @foreach (var field in _previewFields)
                                 {
@@ -111,6 +141,16 @@
                     else if (group.Records.Count == 0)
                     {
                         <p class="tm-dbb__empty" data-testid="@TestId("notion-db-board-empty")">@Loc["TmNotionDbBoardView_EmptyGroup"]</p>
+                    }
+
+                    @if (!ReadOnly)
+                    {
+                        <button type="button"
+                                class="tm-dbb__add-card"
+                                data-testid="@TestId("notion-db-board-add-card")"
+                                @onclick="() => HandleAddCardAsync(gv)">
+                            @Loc["TmNotionDbBoardView_AddCard"]
+                        </button>
                     }
 
                 </div>
