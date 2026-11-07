@@ -245,12 +245,12 @@ public abstract class NotionE2ETestBase : WasmTestBase
 
     protected async Task SeedSidebarDeepPageAsync()
     {
-        await InvokeSeedAsync("seedSidebarDeepPage");
-        await Page.WaitForSelectorAsync(".tm-notion-sidebar", new PageWaitForSelectorOptions
-        {
-            State = WaitForSelectorState.Visible,
-            Timeout = 60000
-        });
+        // The JS helper posts and then schedules its own location.reload(). Waiting for the
+        // sidebar on that in-flight navigation is what timed EB11 out at 60s. Seed through the
+        // API, reload once, and only then look for the docked tree.
+        await SeedViaApiAndReloadAsync("seedSidebarDeepPage");
+        // Do not wait for .tm-notion-sidebar here. On a phone the shell unmounts a closed drawer,
+        // so that wait is the 60s timeout. The caller opens the drawer, or reads the docked tree.
     }
 
     protected async Task SeedSidebarEmptyPageAsync()

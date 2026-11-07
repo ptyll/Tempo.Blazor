@@ -2,6 +2,7 @@
 
 ## 2.10.0 (unreleased)
 
+- **Fixed (core `TmToolbar`): a collapsed overflow copy no longer widens `scrollWidth`.** `.tm-toolbar-item--collapsed` is `position: fixed` (was `absolute`). An absolute copy is contained by the nearest `transform` / `filter` / `will-change` ancestor, and Chromium still counts it in the toolbar's `scrollWidth` — `overflow: clip` does not stop that. `offsetWidth`, which the fit measures, is unchanged, and the More menu is not clipped. Hosts that asserted `getComputedStyle(collapsed).position === "absolute"` must expect `"fixed"`.
 - **Added (core `TmLayoutContext`): `IsCoarsePointer`.** Additive. A cascaded context now also carries whether the primary pointer is coarse (`matchMedia('(pointer: coarse)')`), independent of the width band. `TmLayoutObserver` reports it through `layout-observer.js` when the query flips (never from `pointermove`) and stamps `data-pointer="coarse|fine"` on its root; a forced observer does not measure and inherits the ancestor's signal. False until a report arrives, so existing hosts keep today's fine-pointer reading. `CommentPresentation=Auto` opens the comment dialog/sheet on a coarse pointer even at a desktop width; `Popover` still pins the bubble.
 - **NotionEditor redesign (phases 1–9), consolidated.** The editor is a `TmEditorShell`: `LayoutMode` (`Auto`, desktop ≥ 1024 / tablet 640–1023 / mobile < 640 of the editor container), `Chrome` (`Full` / `Minimal` / `None`), `InspectorContent` (null renders no right region), `ShellPanelPresentation` (`Overlay` default, `Main` replaces the page) and `CommentPresentation` (`Auto` default: popover on desktop, `TmModal` on touch/narrow). The contract, frozen `data-testid`s and `data-tm-group` values live in [docs/notion-editor.md](docs/notion-editor.md). Each breaking item below already has its before/after; the index is the map.
 
@@ -24,6 +25,11 @@
 | Media insert | a pick inserted | a pick selects; Insert or a double-click confirms | phase 7 |
 | History compare | click previewed and selected | click previews; the checkbox picks; Compare orders by `EditedAt` | phase 7 |
 | Relative time | eight package keys | `TmRelativeTime.Resolve` and `TmRelativeTime_*` | phase 9 |
+
+- **Breaking: NotionEditor history close, restore confirm, and spreadsheet edit footer (phase 11 hosts).** These DOM moves landed with the phase-7 shell; phase 11 is the migration hosts and tests must follow. `TmNotionPageHistory` and `TmNotionSpreadsheetEditModal` stay editor chrome — no wireframe stencil and no new role.
+  - **History close.** Before: a button inside the panel, `.tm-nph__close-btn`. After: the core `TmModal` header close, `button.tm-modal-close` under the overlay `.tm-nph-host`. The inner close is not rendered.
+  - **Restore confirm.** Before: a box inside the panel, `.tm-nph-confirm`, confirmed by a local OK control. After: a sibling `TmDialog` (`[data-testid=notion-history-restore-confirm]`); confirm is `button.tm-dialog-btn-ok` inside that dialog, not inside `.tm-nph`.
+  - **Spreadsheet edit footer.** Before: `.tm-notion-spreadsheet-edit-modal__footer` inside the editor body. After: the shared tempo footer `[data-testid=notion-tempo-modal-footer]` on the modal overlay. Save and Discard keep `.tm-notion-spreadsheet-edit-modal__btn--primary` and `__btn--discard`.
 
 - **Breaking: NotionEditor palette aliases removed (phase 10).** The "remove by Fáze 10" aliases and their dark-theme copies are gone. A host stylesheet that named one now names the canonical token.
   - **Before:** `color: var(--tm-notion-color-red); background: var(--tm-notion-bg-red); border-width: var(--tm-notion-border-width);`
