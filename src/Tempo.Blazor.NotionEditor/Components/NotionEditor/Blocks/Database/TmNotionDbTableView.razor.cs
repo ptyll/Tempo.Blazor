@@ -126,6 +126,16 @@ public partial class TmNotionDbTableView : IAsyncDisposable
         return field.Width ?? (field.IsPrimary ? 200 : 140);
     }
 
+    /// <summary>
+    /// The column's inline width. The primary column caps at the scrollport minus the sticky
+    /// offset: a sticky cell wider than that does not stick, and an inline width beats the
+    /// class rule that would otherwise cap it.
+    /// </summary>
+    private string ColumnStyle(IDatabaseField field, int width)
+        => field.IsPrimary
+            ? $"min-width:min({width}px, calc(100cqi - 52px)); width:min({width}px, calc(100cqi - 52px))"
+            : $"min-width:{width}px; width:{width}px";
+
     // ── Column resize ─────────────────────────────────────────────────────────
     // The drag writes the width to the header cell in JS (notion-db-column-resize.js, which
     // imports the shared pointer-drag helper). Blazor state changes only when the gesture ends,

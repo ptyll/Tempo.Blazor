@@ -119,7 +119,15 @@ public sealed class NotionPhase1BaselineScreenshots : NotionE2ETestBase
             Timeout = 15000
         });
 
-        await db.Locator(".tm-db__view-tab").Filter(new LocatorFilterOptions { HasText = "Calendar" }).ClickAsync();
+        var calendarTab = db.Locator(".tm-db__view-tab").Filter(new LocatorFilterOptions { HasText = "Calendar" });
+        if (await calendarTab.CountAsync() > 0)
+            await calendarTab.ClickAsync();
+        else
+        {
+            await db.GetByTestId("notion-db-more-views").Locator(".tm-dropdown-trigger").ClickAsync();
+            await page.Locator(".tm-dropdown-item, [role='menuitem']")
+                .Filter(new LocatorFilterOptions { HasText = "Calendar" }).First.ClickAsync();
+        }
         var calendar = page.Locator(".tm-dbcal").First;
         await calendar.WaitForAsync(new LocatorWaitForOptions { Timeout = 10000 });
         var overflow = page.GetByTestId("notion-db-calendar-overflow").First;

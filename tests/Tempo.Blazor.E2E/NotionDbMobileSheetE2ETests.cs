@@ -67,6 +67,29 @@ public sealed class NotionDbMobileSheetE2ETests : WasmTestBase
         await trigger.EvaluateAsync("el => el.click()");
     }
 
+    /// <summary>
+    /// Compact layouts park secondary actions in More. The bar copy is position:fixed and inert,
+    /// so a click has to land on the menu entry (data-menu-testid) when the bar copy is collapsed.
+    /// </summary>
+    private static async Task OpenToolbarActionAsync(ILocator db, string testId)
+    {
+        var bar = db.Locator($"[data-testid='{testId}']:not(.tm-toolbar-item--collapsed)");
+        if (await bar.CountAsync() > 0)
+        {
+            await EvaluateClickInViewAsync(bar.First);
+            return;
+        }
+
+        await db.Locator("button.tm-toolbar-more").ClickAsync();
+        var page = db.Page;
+        // A pressed toggle renders as menuitemcheckbox; a plain action as menuitem. Overflow-only
+        // entries own data-testid, collapsed bar copies expose data-menu-testid.
+        var entry = page.Locator($"[data-menu-testid='{testId}'], [role^='menuitem'][data-testid='{testId}']").First;
+        await entry.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 8000 });
+        await entry.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 8000 });
+        await entry.ClickAsync();
+    }
+
     private static async Task AssertBottomDockedAsync(IPage page, ILocator sheet, int viewportHeight, string what)
     {
         await sheet.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 8000 });
@@ -91,7 +114,7 @@ public sealed class NotionDbMobileSheetE2ETests : WasmTestBase
         var page = await OpenTouchEditorAsync(390, 844);
         var db = await NavigateToDatabaseBlockAsync(page);
 
-        await EvaluateClickInViewAsync(db.Locator("[data-testid='notion-db-properties-open']").First);
+        await OpenToolbarActionAsync(db, "notion-db-properties-open");
         var sheet = page.Locator(".tm-overlay-panel-sheet:has(.tm-db__panel--fields)").First;
         await AssertBottomDockedAsync(page, sheet, 844, "properties sheet");
         Assert.IsTrue(await sheet.Locator(".tm-db__field-row").First.IsVisibleAsync(),
@@ -119,7 +142,7 @@ public sealed class NotionDbMobileSheetE2ETests : WasmTestBase
         var page = await OpenTouchEditorAsync(390, 844);
         var db = await NavigateToDatabaseBlockAsync(page);
 
-        await EvaluateClickInViewAsync(db.Locator(".tm-db__tool-btn[title*='Import']").First);
+        await OpenToolbarActionAsync(db, "notion-db-import-export");
         var sheet = page.Locator(".tm-modal--sheet:has(.tm-dbie)").First;
         await AssertBottomDockedAsync(page, sheet, 844, "import/export sheet");
 

@@ -14,9 +14,12 @@
 
 .tm-dbt-scroll {
     overflow-x: auto;
-    overflow-y: auto;
+    overflow-y: hidden;
     scrollbar-width: thin;
     scrollbar-color: var(--tm-border-color) transparent;
+    /* Size container so the sticky column cap (100cqi) resolves against this scrollport, not the
+       database block. A sticky cell wider than the scrollport minus its offset does not stick. */
+    container-type: inline-size;
 }
 
 .tm-dbt-scroll::-webkit-scrollbar      { height: 6px; width: 6px; }
@@ -25,7 +28,10 @@
 
 /* ── Table ──────────────────────────────────────────────────────────────── */
 .tm-dbt {
-    border-collapse: collapse;
+    /* separate, not collapse: a collapsed border is not a containing edge, so position:sticky
+       on the primary cell resolves against a box 10px left of the scrollport. */
+    border-collapse: separate;
+    border-spacing: 0;
     table-layout: fixed;
     min-width: 100%;
 }
@@ -65,12 +71,14 @@
 
 .tm-dbt__th--primary {
     position: sticky;
-    /* The check column is 36px plus 8px of padding on each side, so a hard 36px offset
-       lets the name slide under it (and left of the scrollport) on a phone. */
+    /* The check column is width 36px plus 8px of padding on each side (border-box), so 52px.
+       2.25rem (36px) let the name slide 16px under the checkbox and 10px left of the scrollport. */
     left: 52px;
     background: var(--tm-bg-surface-secondary);
     z-index: 2;
-    max-width: 45%;
+    /* The width cap lives in the inline style (ColumnStyle): an inline width beats a class rule,
+       and a sticky cell wider than the scrollport minus this offset does not stick. */
+    max-width: calc(100cqi - 52px);
 }
 
 .tm-dbt__th--add {
@@ -189,6 +197,8 @@
     z-index: 1;
     font-weight: 500;
     color: var(--tm-text-primary);
+    /* Same cap as the header, for a cell without an inline width. */
+    max-width: calc(100cqi - 52px);
 }
 
 .tm-dbt__cell--readonly { cursor: default; }
@@ -389,6 +399,7 @@
     accent-color: var(--tm-color-primary);
     width: 14px;
     height: 14px;
+    margin: 0;
     cursor: pointer;
     vertical-align: middle;
 }

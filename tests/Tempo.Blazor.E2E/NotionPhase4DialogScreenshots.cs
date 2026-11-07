@@ -508,7 +508,7 @@ public sealed class NotionPhase4DialogScreenshots : NotionE2ETestBase
         foreach (var theme in new[] { "light", "dark" })
         {
             await SetThemeAsync(page, theme);
-            await EvaluateClickInViewAsync(db.Locator("[data-testid='notion-db-properties-open']").First);
+            await OpenToolbarActionAsync(db, "notion-db-properties-open");
             // The popover lives in the browser top layer — Playwright's visibility probe is flaky
             // there (batch-A advanced suites already wait for Attached), so wait for Attached.
             var popover = page.Locator(".tm-overlay-panel:has(.tm-db__panel--fields)").First;
@@ -525,7 +525,7 @@ public sealed class NotionPhase4DialogScreenshots : NotionE2ETestBase
         {
             await SetThemeAsync(touch, theme);
             var tdb = await NavigateToDbAsync(touch);
-            await EvaluateClickInViewAsync(tdb.Locator("[data-testid='notion-db-properties-open']").First);
+            await OpenToolbarActionAsync(tdb, "notion-db-properties-open");
             var sheet = touch.Locator(".tm-overlay-panel-sheet:has(.tm-db__panel--fields)").First;
             await sheet.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 8000 });
             await ShotRegionAsync(touch, "notion-db-dialogs",
@@ -536,7 +536,7 @@ public sealed class NotionPhase4DialogScreenshots : NotionE2ETestBase
 
         await touch.SetViewportSizeAsync(320, 700);
         var db320 = await NavigateToDbAsync(touch);
-        await EvaluateClickInViewAsync(db320.Locator("[data-testid='notion-db-properties-open']").First);
+        await OpenToolbarActionAsync(db320, "notion-db-properties-open");
         var sheet320 = touch.Locator(".tm-overlay-panel-sheet:has(.tm-db__panel--fields)").First;
         await sheet320.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 8000 });
         await ShotRegionAsync(touch, "notion-db-dialogs", "notion-db-properties--mobile-320-light", sheet320);
@@ -734,7 +734,26 @@ public sealed class NotionPhase4DialogScreenshots : NotionE2ETestBase
     }
 
     private static async Task OpenImportExportAsync(ILocator db)
-        => await EvaluateClickInViewAsync(db.Locator(".tm-db__tool-btn[title*='Import']").First);
+        => await OpenToolbarActionAsync(db, "notion-db-import-export");
+
+    /// <summary>
+    /// Compact layouts park secondary actions in More. The collapsed bar copy is position:fixed
+    /// and inert, so the click lands on the menu entry when the bar copy is not on the bar.
+    /// </summary>
+    private static async Task OpenToolbarActionAsync(ILocator db, string testId)
+    {
+        var bar = db.Locator($"[data-testid='{testId}']:not(.tm-toolbar-item--collapsed)");
+        if (await bar.CountAsync() > 0)
+        {
+            await EvaluateClickInViewAsync(bar.First);
+            return;
+        }
+
+        await db.Locator("button.tm-toolbar-more").ClickAsync();
+        var entry = db.Page.Locator($"[data-menu-testid='{testId}'], [role^='menuitem'][data-testid='{testId}']").First;
+        await entry.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 8000 });
+        await entry.ClickAsync();
+    }
 
     /// <summary>
     /// Scrolls a trigger into view RIGHT BEFORE clicking it: the table re-renders after the

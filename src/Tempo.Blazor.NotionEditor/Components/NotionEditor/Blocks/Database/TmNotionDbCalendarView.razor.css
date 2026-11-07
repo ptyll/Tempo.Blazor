@@ -300,6 +300,9 @@
     padding: 0;
     list-style: none;
     overflow: auto;
+    /* The phone day sheet is content-sized. A short list collapses the sheet to a few dozen pixels,
+       so the sheet screenshot clips to nothing. The list keeps a readable height. */
+    min-height: 8rem;
 }
 
 .tm-dbcal__day-list-item {

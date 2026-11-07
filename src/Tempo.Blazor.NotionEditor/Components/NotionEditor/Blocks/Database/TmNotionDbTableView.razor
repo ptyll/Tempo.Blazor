@@ -36,7 +36,7 @@
                         var isDragOver = _dragOverFieldIndex == fi && _dragFromFieldIndex >= 0 && _dragFromFieldIndex != fi;
                         <th class="tm-dbt__th @(field.IsPrimary ? "tm-dbt__th--primary" : "") @(isDragOver ? "tm-dbt__th--dragover" : "")"
                             scope="col"
-                            style="min-width:@(width)px; width:@(width)px"
+                            style="@ColumnStyle(field, width)"
                             draggable="@HeaderDraggable"
                             @ondragstart="e => OnHeaderDragStart(e, fi)"
                             @ondragover:preventDefault="true"

@@ -102,8 +102,15 @@ public sealed class NotionDatabasePhase9E2ETests : WasmTestBase
         Assert.IsFalse(string.IsNullOrEmpty(recordId), "No timeline bar is inside the visible grid.");
         var bar = db.Locator($".tm-dbtl__gantt [data-record-id='{recordId}']");
         var before = await bar.EvaluateAsync<double>("el => parseFloat(el.style.left) || 0");
+        // The grid can sit below the fold on a tall page; a press there lands on nothing.
         var point = await bar.EvaluateAsync<double[]>(
-            "el => { const box = el.getBoundingClientRect(); return [box.left + 10, box.top + box.height / 2]; }");
+            """
+            el => {
+                el.scrollIntoView({ block: 'center', inline: 'center', behavior: 'instant' });
+                const box = el.getBoundingClientRect();
+                return [box.left + 10, box.top + box.height / 2];
+            }
+            """);
         await page.Mouse.MoveAsync((float)point[0], (float)point[1]);
         await page.Mouse.DownAsync();
         await page.Mouse.MoveAsync((float)point[0] + 60, (float)point[1], new MouseMoveOptions { Steps = 8 });
@@ -159,7 +166,8 @@ public sealed class NotionDatabasePhase9E2ETests : WasmTestBase
         await db.GetByTestId("notion-db-board-card").First
             .GetByTestId("notion-db-board-move").Locator(".tm-dropdown-trigger").ClickAsync();
         await Assertions.Expect(page.GetByTestId("notion-db-board-move-target").First).ToBeVisibleAsync();
-        await ShotPageAsync(page, "board-move-to-menu", "[data-testid=notion-db-board-move-target]");
+        // The menu is a top-layer popover; clipping the first item alone is a few hundred bytes.
+        await ShotPageAsync(page, "board-move-to-menu", "[role='menu']:has([data-testid=notion-db-board-move-target])");
         await page.Keyboard.PressAsync("Escape");
 
         await SwitchAsync(page, db, "Calendar");
@@ -184,7 +192,9 @@ public sealed class NotionDatabasePhase9E2ETests : WasmTestBase
         await page.WaitForTimeoutAsync(400);
         if (await db.Locator(".tm-dbtl").CountAsync() == 0)
             await SwitchAsync(page, db, "Timeline");
-        await db.GetByTestId("notion-db-timeline-bar").First.ClickAsync();
+        // The bar lives in a nested scroll container. Playwright's click scrolls it and then reports
+        // it outside the viewport, so the click never lands. A DOM click opens the sheet directly.
+        await db.GetByTestId("notion-db-timeline-bar").First.EvaluateAsync("el => el.click()");
         await Assertions.Expect(page.GetByTestId("notion-db-timeline-date-sheet")).ToBeVisibleAsync();
         await ShotPageAsync(page, "timeline-390-date-sheet", "[data-testid=notion-db-timeline-date-sheet]");
         await page.Keyboard.PressAsync("Escape");

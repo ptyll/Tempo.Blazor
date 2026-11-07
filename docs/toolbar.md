@@ -70,8 +70,8 @@ buttons can show their text next to or under the icon.
   (children, class/disabled/rank/pin attributes, and **character data** — a changed label re-measures),
   coalesced into one animation frame, with signature dedup — .NET is called only when the count or the
   order changes, so there is no render loop. A button that left the bar stays in the DOM *collapsed*
-  (`.tm-toolbar-item--collapsed`: out of flow, invisible, `inert`, `aria-hidden`) so its width stays
-  measurable; that is why widening the toolbar brings it back without a second pass. A bar that cannot
+  (`.tm-toolbar-item--collapsed`: `position: fixed`, invisible, `inert`, `aria-hidden`) so its width stays
+  measurable; that is why widening the toolbar brings it back without a second pass. Fixed, not absolute: an absolute copy is contained by a transformed ancestor and Chromium still counts it in `scrollWidth`. A bar that cannot
   be measured (no item in the DOM, not laid out) reports nothing rather than "0 fit". The module
   detaches itself when its root leaves the document.
 * **Items at any depth, and groups.** Every `TmToolbarButton` and `TmToolbarItem` below the toolbar registers (cascade) and

@@ -44,6 +44,14 @@
     max-width: 100%;
 }
 
+/* Below 480px of the block the title and the toolbar cannot share a row: the pinned cluster
+   (view switch, Filter, New, templates, More) is wider than the leftover, so the header's
+   scrollWidth exceeds its clientWidth (308 > 290 at 390). The title takes its own row and the
+   toolbar the full width. */
+@container tm-db (max-width: 480px) {
+    .tm-db__title-area { flex-basis: 100%; }
+}
+
 .tm-db__icon {
     font-size: 1.1rem;
     line-height: 1;

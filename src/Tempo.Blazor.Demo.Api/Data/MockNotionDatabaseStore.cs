@@ -89,9 +89,10 @@ public class MockNotionDatabaseStore : INotionDatabaseProvider
         }
         else if (string.Equals(seed, "calendar-overflow", StringComparison.OrdinalIgnoreCase))
         {
-            // Four events on one day of the current month, so the calendar's 3-chip cap
-            // renders the +N overflow popover no matter which month the test runs in.
-            var day = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 15, 12, 0, 0, DateTimeKind.Utc);
+            // Four events on one day of the month the calendar opens on. The seeded records are
+            // anchored on 9 June 2026 and the calendar opens on the first record's month, so the
+            // overflow day has to be in that month, not the month the test happens to run in.
+            var day = new DateTime(2026, 6, 15, 12, 0, 0, DateTimeKind.Utc);
             var names = new[] { "Overflow alpha", "Overflow beta", "Overflow gamma", "Overflow delta" };
             for (var i = 0; i < names.Length; i++)
             {
