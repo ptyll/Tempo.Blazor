@@ -1,0 +1,10 @@
+{
+  "kind": "Class",
+  "category": "Modeling",
+  "namespace": "Tempo.Blazor.Modeling",
+  "description": "The property schema of one notation + semantic type: SchemaId, host-owned Version, Notation, SemanticType (empty = every type of the notation) and the ordered Sections.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/Modeling/ModelingPropertyContracts.cs",
+  "documentationStatus": "generated",
+  "itemName": "ModelingPropertySchemaDto"
+}

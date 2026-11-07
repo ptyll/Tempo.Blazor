@@ -1,0 +1,10 @@
+{
+  "kind": "Record",
+  "category": "Modeling",
+  "namespace": "Tempo.Blazor.Modeling",
+  "description": "The typed entity-reference value of docs/modeling-authoring.md §5.4 — the ONE reader/writer of the stored JSON shape {type, id, display, snapshotAt}. TryParse reads a stored value, ToJsonElement writes it, FromLookupItem builds a newly picked one (a fresh snapshotAt) and Label is the fallback ladder display -> id -> type. Shared by the schema validator, the inspector and a host writer, so the shape cannot drift.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/Modeling/ModelingPropertyContracts.cs",
+  "documentationStatus": "generated",
+  "itemName": "ModelingEntityReference"
+}

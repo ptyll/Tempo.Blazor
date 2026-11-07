@@ -305,6 +305,37 @@ public sealed class ModelingOperationContext
     /// <summary>Editor batch (expanded cascades, geometry allowed) vs MCP batch (no cascade, no
     /// geometry unless asked). Defaults to <see cref="ModelingOperationPolicy.Strict"/>.</summary>
     public ModelingOperationPolicy Policy { get; set; } = ModelingOperationPolicy.Strict;
+
+    /// <summary>
+    /// Phase 5 (decision <c>MODELING-PROPERTY-SCHEMA</c> §5.5/§6.4): resolves the property schema for
+    /// a <see cref="ModelingPropertySchemaRequest"/>. The engine is synchronous while
+    /// <see cref="IModelingPropertySchemaProvider"/> is async, so the CALLER resolves the schemas up
+    /// front (a dictionary lookup here — see <see cref="ModelingPropertySchemaResolver"/>) and the
+    /// engine validates every property payload with the SHARED
+    /// <see cref="ModelingPropertySchemaValidator"/> — the same rules, messages and codes the
+    /// inspector uses ("one semantics, same errors").
+    /// <para>
+    /// The engine BUILDS the request (§5.1): <c>ModelId = model.Id</c>, the notation and semantic
+    /// type of the judged value, <c>ViewpointKey</c> = this context's
+    /// <see cref="ViewpointKey"/> else the target view's (<c>Views[0]</c>) else <c>""</c>,
+    /// <c>Culture</c> = <see cref="System.Globalization.CultureInfo.CurrentUICulture"/> and
+    /// <c>SchemaVersion = null</c> (the engine never pins — a caller that pinned answers from its
+    /// preloaded dictionary). A body that only needs the pair ignores the rest, exactly like the
+    /// phase-5 <c>(notation, semanticType)</c> delegate did.
+    /// </para>
+    /// <para>
+    /// A RELATIONSHIP is looked up with its relationship type as the semantic type. A NEW
+    /// element/relationship (<c>add_element</c> / <c>add_relationship</c>) is validated in FULL —
+    /// AFTER the whole batch, so a following <c>set_properties</c> in the same batch can still
+    /// satisfy a required field — while an UPDATE (<c>update_element</c>, <c>update_relationship</c>,
+    /// <c>set_properties</c>) is validated only for the keys it touches (or in full when the
+    /// operation changes the semantic type / notation), so a client can still fix one field of a
+    /// model that carries an unrelated legacy value. Reference EXISTENCE is never checked here —
+    /// that is the writer's job (§5.4).
+    /// </para>
+    /// <para>Null (the default) validates no property values at all — the 2.10.0 behavior.</para>
+    /// </summary>
+    public Func<ModelingPropertySchemaRequest, ModelingPropertySchemaDto?>? ResolvePropertySchema { get; set; }
 }
 
 /// <summary>The outcome of <see cref="ModelingOperationEngine.Apply"/> / <c>ApplyJson</c>.</summary>

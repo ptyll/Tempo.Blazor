@@ -1,0 +1,10 @@
+{
+  "kind": "Interface",
+  "category": "Modeling",
+  "namespace": "Tempo.Blazor.Modeling",
+  "description": "Property schema provider resolved by ProviderKey (decision MODELING-PROPERTY-SCHEMA, docs/modeling-authoring.md §5.1). It answers the sections and typed fields of one notation + semantic type; returning null means 'no schema' and restores the 2.10.0 inspector (scalars editable, complex values read-only).",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/Modeling/ModelingPropertyContracts.cs",
+  "documentationStatus": "generated",
+  "itemName": "IModelingPropertySchemaProvider"
+}

@@ -11,9 +11,19 @@
         OnFormat="@HandleFormat" />
 
     <div class="tm-mde-content-wrapper">
+        @* Review U2: the content surface is a real textbox to assistive technology — role +
+           aria-multiline describe what it is, and the four optional ARIA parameters let a host name
+           it (aria-labelledby), describe it (aria-describedby: help/error text), and announce its
+           invalid/required state without wrapping it in a fake form control. *@
         <div class="tm-mde-content"
              id="@_editorId"
              @ref="_editorRef"
+             role="textbox"
+             aria-multiline="true"
+             aria-labelledby="@AriaLabelledBy"
+             aria-describedby="@AriaDescribedBy"
+             aria-invalid="@(AriaInvalid ? "true" : null)"
+             aria-required="@(AriaRequired ? "true" : null)"
              contenteditable="@(!IsDisabled ? "true" : "false")"
              @oninput="@HandleInput"
              @onfocus="@HandleFocus"
@@ -91,6 +101,33 @@
     /// Callback fired when the user submits content with Ctrl+Enter.
     /// </summary>
     [Parameter] public EventCallback OnSubmit { get; set; }
+
+    /// <summary>
+    /// Space-separated id list of the element(s) that NAME the editor, rendered as
+    /// <c>aria-labelledby</c> on the content surface. Use it when the visible label already exists in
+    /// the surrounding markup (a schema field's own label) instead of inventing an <c>aria-label</c>.
+    /// </summary>
+    [Parameter] public string? AriaLabelledBy { get; set; }
+
+    /// <summary>
+    /// Space-separated id list of the element(s) that describe the editor, rendered as
+    /// <c>aria-describedby</c> on the content surface — typically the field's help text and its error
+    /// message, so both are reachable while focus is inside the editor.
+    /// </summary>
+    [Parameter] public string? AriaDescribedBy { get; set; }
+
+    /// <summary>
+    /// Marks the content surface <c>aria-invalid="true"</c> (validation failed). Rendered only when
+    /// true, so a valid editor carries no aria-invalid attribute at all.
+    /// </summary>
+    [Parameter] public bool AriaInvalid { get; set; }
+
+    /// <summary>
+    /// Marks the content surface <c>aria-required="true"</c>. The editor implements no form
+    /// validation of its own — this is the announce-only flag a schema-driven host sets when the
+    /// value is required.
+    /// </summary>
+    [Parameter] public bool AriaRequired { get; set; }
 
     /// <summary>
     /// Additional CSS class applied to the root container.

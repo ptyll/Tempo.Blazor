@@ -214,6 +214,71 @@
       ]
     },
     {
+      "itemName": "DemoModelingLookupProvider",
+      "kind": "Class",
+      "category": "Components",
+      "namespace": "Tempo.Blazor.Components.Modeling",
+      "description": "Demo lookup provider (phase 5, §5.3): the fictional process-role and system catalogue the step-attribute schema searches, with paging, TotalCount/HasMore and accent-insensitive substring matching. Its ContainsReference helper is what the demo writer's save-time reference rejection consults.",
+      "packageId": "Tempo.Blazor.Modeling",
+      "sourcePath": "src/Tempo.Blazor.Modeling/Components/Modeling/DemoModelingLookupProvider.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "ContainsReference",
+          "kind": "Method",
+          "type": "bool",
+          "description": "Whether the demo catalogue still knows a stored typed reference (§5.4: the host may reject one at save time).",
+          "parameters": [
+            {
+              "name": "refType",
+              "type": "string"
+            },
+            {
+              "name": "refId",
+              "type": "string"
+            }
+          ]
+        },
+        {
+          "name": "LookupAsync",
+          "kind": "Method",
+          "type": "Task<ModelingLookupResultDto>",
+          "parameters": [
+            {
+              "name": "request",
+              "type": "ModelingLookupRequest"
+            },
+            {
+              "name": "cancellationToken",
+              "type": "CancellationToken"
+            }
+          ]
+        },
+        {
+          "name": "ResolveAsync",
+          "kind": "Method",
+          "type": "Task<ModelingLookupResultDto?>",
+          "description": "Phase 5 review (A1): re-resolves the DISPLAY LABELS of stored references. An id the catalogue no longer knows is simply absent from Items — the inspector renders the stored snapshot plus its localized \"reference may be stale\" hint and still lets the save through.",
+          "parameters": [
+            {
+              "name": "request",
+              "type": "ModelingLookupResolveRequest"
+            },
+            {
+              "name": "cancellationToken",
+              "type": "CancellationToken"
+            }
+          ]
+        },
+        {
+          "name": "ProviderKey",
+          "kind": "Property",
+          "type": "string",
+          "description": "The provider key of the demo model provider (one lookup provider per model provider)."
+        }
+      ]
+    },
+    {
       "itemName": "DemoModelingModelProvider",
       "kind": "Class",
       "category": "Components",
@@ -280,6 +345,30 @@
       "documentationStatus": "merged",
       "members": [
         {
+          "name": "GetPersistedModel",
+          "kind": "Method",
+          "type": "ModelingModelDto",
+          "description": "The persisted copy of one demo model (a successful save or the shipped default). Phase 5: the writer serves MORE than the single default model — the step-attribute scenario keeps its own persisted copy so the two scenarios cannot leak into each other.",
+          "parameters": [
+            {
+              "name": "modelId",
+              "type": "string"
+            }
+          ]
+        },
+        {
+          "name": "GetSourceVersion",
+          "kind": "Method",
+          "type": "string",
+          "description": "The source version the writer pretends the backend is on for one demo model: its shipped metadata version until a save bumps it (<base>-<n>).",
+          "parameters": [
+            {
+              "name": "modelId",
+              "type": "string"
+            }
+          ]
+        },
+        {
           "name": "SaveChangesAsync",
           "kind": "Method",
           "type": "Task<ModelingModelSaveResult>",
@@ -307,21 +396,103 @@
           "description": "Armed by the demo ?scenario=save-conflict route: the NEXT save reports the conflict path (the source moved on from the version the editor based its edit on) and the flag disarms itself, so a later save succeeds. DEMO-ONLY: a STATIC mutable flag shared by the whole process — two browser sessions (or two editors on one page) would arm each other's conflict. A real writer scopes conflict state per session/request; the demo accepts the coupling because the writer is demo infrastructure, not a contract example."
         },
         {
+          "name": "PersistedModel",
+          "kind": "Property",
+          "type": "ModelingModelDto",
+          "description": "The persisted model (the last successful save or the initial demo model)."
+        },
+        {
           "name": "ProviderKey",
           "kind": "Property",
           "type": "string"
-        },
+        }
+      ]
+    },
+    {
+      "itemName": "DemoModelingPropertySchemaProvider",
+      "kind": "Class",
+      "category": "Components",
+      "namespace": "Tempo.Blazor.Components.Modeling",
+      "description": "Demo property-schema provider (phase 5, decision MODELING-PROPERTY-SCHEMA): the BPMN step-attribute schema the demo page exercises — instructions (markdown), the owning role (entity reference with a host lookup), the systems (entity reference list), the SLA (duration stored in MINUTES), the priority and automation (enum) and the exception list (structured list with required item fields). Registered for the demo provider key but answering ONLY for the 'demo-bpmn-step-attributes' model, so every pre-existing demo scenario keeps the 2.10.0 inspector.",
+      "packageId": "Tempo.Blazor.Modeling",
+      "sourcePath": "src/Tempo.Blazor.Modeling/Components/Modeling/DemoModelingPropertySchemaProvider.cs",
+      "documentationStatus": "merged",
+      "members": [
         {
-          "name": "SaveCount",
-          "kind": "Property",
-          "type": "int",
-          "description": "How many change sets were persisted (demo diagnostics)."
-        },
-        {
-          "name": "SourceVersion",
-          "kind": "Property",
+          "name": "ModelIdValue",
+          "kind": "Field",
           "type": "string",
-          "description": "The source version the writer pretends the backend is on. The demo save-conflict scenario raises it so the next save reports IsConflict."
+          "description": "The model id of the phase-5 demo scenario (?scenario=step-attributes)."
+        },
+        {
+          "name": "SchemaIdValue",
+          "kind": "Field",
+          "type": "string",
+          "description": "The schema identity the demo serves."
+        },
+        {
+          "name": "SchemaVersionValue",
+          "kind": "Field",
+          "type": "string",
+          "description": "The schema version the demo serves (the editor pins it per session)."
+        },
+        {
+          "name": "CreateStepAttributesModel",
+          "kind": "Method",
+          "type": "ModelingModelDto",
+          "description": "The phase-5 demo scenario model: four order steps where Validate order carries every attribute (including a role/system snapshot and one exception) and Approve discount deliberately misses the two REQUIRED fields, so the inspector's required-field error is reachable from one deep link."
+        },
+        {
+          "name": "CreateStepSchema",
+          "kind": "Method",
+          "type": "ModelingPropertySchemaDto",
+          "description": "The step-attribute schema of one BPMN task type.",
+          "parameters": [
+            {
+              "name": "semanticType",
+              "type": "string"
+            }
+          ]
+        },
+        {
+          "name": "GetSchemaAsync",
+          "kind": "Method",
+          "type": "Task<ModelingPropertySchemaDto?>",
+          "parameters": [
+            {
+              "name": "request",
+              "type": "ModelingPropertySchemaRequest"
+            },
+            {
+              "name": "cancellationToken",
+              "type": "CancellationToken"
+            }
+          ]
+        },
+        {
+          "name": "Resolve",
+          "kind": "Method",
+          "type": "ModelingPropertySchemaDto?",
+          "description": "The synchronous resolver the demo writer hands to ResolvePropertySchema so a demo save validates the SAME values the inspector did (the engine path).",
+          "parameters": [
+            {
+              "name": "modelId",
+              "type": "string?"
+            },
+            {
+              "name": "notation",
+              "type": "string?"
+            },
+            {
+              "name": "semanticType",
+              "type": "string?"
+            }
+          ]
+        },
+        {
+          "name": "ProviderKey",
+          "kind": "Property",
+          "type": "string"
         }
       ]
     },
@@ -981,7 +1152,7 @@
       "kind": "Component",
       "category": "Modeling",
       "namespace": "Tempo.Blazor.Components.Modeling",
-      "description": "Displays details for a selected modeling element or relationship. Read-only (MO2) by default; with ReadOnly=false the name, the description and the SCALAR properties become editable inputs raising OnElementEdited/OnRelationshipEdited — source-backed fields, governance and complex JSON values are never editable (decision MODELING-INSPECTOR-EDITING).",
+      "description": "Displays details for a selected modeling element or relationship. Read-only (MO2) by default; with ReadOnly=false the name, the description and the SCALAR properties become editable inputs raising OnElementEdited/OnRelationshipEdited — source-backed fields, governance and complex JSON values are never editable (decision MODELING-INSPECTOR-EDITING). Phase 5 (decision MODELING-PROPERTY-SCHEMA): with a PropertySchema the schema's sections and typed fields replace the generic table for the keys it covers (markdown through the Tempo markdown editor, enum through TmSelect, dates through the pickers, duration as a number plus a display unit stored in MINUTES, entity references through the APG combobox with the host's async lookup, string lists and the repeatable structured list); every remaining key stays in an 'Other properties' table. Field errors come from the SHARED validator (or the host writer's save-time rejection) and render inline with role=alert plus aria-invalid on the input.",
       "packageId": "Tempo.Blazor.Modeling",
       "sourcePath": "src/Tempo.Blazor.Modeling/Components/Modeling/TmModelingInspector.razor",
       "documentationStatus": "merged",
@@ -994,6 +1165,12 @@
           "type": "string?",
           "isRequired": false,
           "description": "Additional CSS class applied to the inspector root."
+        },
+        {
+          "name": "Culture",
+          "type": "string?",
+          "isRequired": false,
+          "description": "UI culture name for the lookup requests (null = the current UI culture)."
         },
         {
           "name": "Element",
@@ -1013,6 +1190,18 @@
           "type": "RenderFragment?",
           "isRequired": false,
           "description": "Editor-owned actions rendered inside the header (the undo/redo pair and the docked Save/Discard while a Manual save is pending)."
+        },
+        {
+          "name": "LookupProvider",
+          "type": "IModelingLookupProvider?",
+          "isRequired": false,
+          "description": "The host lookup provider for EntityReference/EntityReferenceList fields; null keeps those fields read-only (a reference cannot be picked without a catalogue)."
+        },
+        {
+          "name": "ModelId",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Model id passed to the schema/lookup requests."
         },
         {
           "name": "OnElementEdited",
@@ -1037,6 +1226,18 @@
           "type": "EventCallback",
           "isRequired": false,
           "description": "Raised for the inspector-scope Ctrl+Z — the editor's own undo stack, never the diagram canvas keyboard scope."
+        },
+        {
+          "name": "PropertyIssues",
+          "type": "IReadOnlyList<ModelingIssueDto>?",
+          "isRequired": false,
+          "description": "Validation issues of the selected element/relationship — the editor's shared-validator result plus the writer's save-time rejections. They render inline on their field (role=alert, aria-invalid) and as the issue dock rows."
+        },
+        {
+          "name": "PropertySchema",
+          "type": "ModelingPropertySchemaDto?",
+          "isRequired": false,
+          "description": "The property schema of the SELECTED element/relationship, or null when the host registered no schema provider for the provider key (the 2.10.0 surface)."
         },
         {
           "name": "ReadOnly",
@@ -1087,6 +1288,90 @@
         {
           "name": "tm-modeling-inspector__property-edit",
           "description": "Editable scalar property cell (the key cell stays the label)."
+        },
+        {
+          "name": "tm-modeling-inspector__schema-section",
+          "description": "One schema section (its key rides the data-schema-section attribute)."
+        },
+        {
+          "name": "tm-modeling-inspector__schema-help",
+          "description": "The section's help text."
+        },
+        {
+          "name": "tm-modeling-inspector__fields",
+          "description": "The field column of a schema section."
+        },
+        {
+          "name": "tm-modeling-inspector__field",
+          "description": "One schema field wrapper; data-field-key / data-field-type / data-required / data-schema-error describe it."
+        },
+        {
+          "name": "tm-modeling-inspector__field--invalid",
+          "description": "A field whose shared-validator issue is showing."
+        },
+        {
+          "name": "tm-modeling-inspector__field-label",
+          "description": "The label of a read-only schema field."
+        },
+        {
+          "name": "tm-modeling-inspector__field-value",
+          "description": "The formatted value of a read-only schema field."
+        },
+        {
+          "name": "tm-modeling-inspector__field-error",
+          "description": "Inline field error (the core inputs own their own alert; this class covers the controls that have no Error parameter)."
+        },
+        {
+          "name": "tm-modeling-inspector__field-help",
+          "description": "A field's help text."
+        },
+        {
+          "name": "tm-modeling-inspector__field-control",
+          "description": "Wrapper of a field whose control needs a composed layout (date pickers, markdown, duration, lists)."
+        },
+        {
+          "name": "tm-modeling-inspector__duration",
+          "description": "The duration field row: number input plus the display unit select."
+        },
+        {
+          "name": "tm-modeling-inspector__duration-unit",
+          "description": "The duration display unit select (the stored value is always minutes)."
+        },
+        {
+          "name": "tm-modeling-inspector__markdown",
+          "description": "The markdown field group (the Tempo markdown editor)."
+        },
+        {
+          "name": "tm-modeling-inspector__list",
+          "description": "A string/list field body."
+        },
+        {
+          "name": "tm-modeling-inspector__list-row",
+          "description": "One string-list row."
+        },
+        {
+          "name": "tm-modeling-inspector__structured",
+          "description": "The repeatable structured-list body."
+        },
+        {
+          "name": "tm-modeling-inspector__structured-item",
+          "description": "One structured-list item form."
+        },
+        {
+          "name": "tm-modeling-inspector__structured-header",
+          "description": "The item header (its number and the remove action)."
+        },
+        {
+          "name": "tm-modeling-inspector__structured-title",
+          "description": "The item's localized number."
+        },
+        {
+          "name": "tm-modeling-inspector__field-action",
+          "description": "A field action button (add/remove a list item)."
+        },
+        {
+          "name": "tm-modeling-inspector__field-add",
+          "description": "The add-item action of a list field."
         }
       ]
     },
@@ -1667,11 +1952,11 @@
     }
   ],
   "summary": {
-    "itemCount": 27,
-    "manualItemCount": 27,
-    "generatedItemCount": 27,
+    "itemCount": 29,
+    "manualItemCount": 29,
+    "generatedItemCount": 29,
     "generatedOnlyItemCount": 0,
     "componentCount": 9,
-    "publicApiTypeCount": 18
+    "publicApiTypeCount": 20
   }
 }

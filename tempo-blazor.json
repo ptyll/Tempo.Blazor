@@ -1700,6 +1700,34 @@
       ],
       "parameters": [
         {
+          "name": "AriaDescribedBy",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Space-separated id list of the element(s) that describe the editor, rendered as aria-describedby on the content surface — typically the field's help text and its error message.",
+          "default": "null"
+        },
+        {
+          "name": "AriaInvalid",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Marks the content surface aria-invalid=\"true\" (validation failed). Rendered only when true, so a valid editor carries no aria-invalid attribute at all.",
+          "default": "false"
+        },
+        {
+          "name": "AriaLabelledBy",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Space-separated id list of the element(s) that NAME the editor, rendered as aria-labelledby on the content surface. Use it when the visible label already exists in the surrounding markup instead of inventing an aria-label.",
+          "default": "null"
+        },
+        {
+          "name": "AriaRequired",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Marks the content surface aria-required=\"true\". The editor implements no form validation of its own — this is the announce-only flag a schema-driven host sets when the value is required.",
+          "default": "false"
+        },
+        {
           "name": "Class",
           "type": "string?",
           "isRequired": false,
@@ -20887,6 +20915,13 @@
           "description": "When true (default), the error message renders with role=\"alert\" so screen readers announce it assertively the moment it appears. Set false when the host moves focus to the invalid field after submit — the error is then read through aria-describedby on the control and the live region would announce the same text a second time. Only the role attribute is dropped; the message, its styling and the aria-describedby link remain. Only safe when the same render that shows the error also moves focus to this control. Keep the default for validation on blur or on input, async/server validation, or when focus stays on the submit button — otherwise the error is not announced at all. With several invalid fields, pair it with a summary (e.g. TmValidationSummary) or focus the first invalid field."
         },
         {
+          "name": "AriaDescribedBy",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Extra ids the trigger describes, appended to the ones this component owns (its error or help text). A host uses it for a message it renders itself — the modeling inspector's \"reference may be stale\" hint — so the trigger announces exactly what is on screen.",
+          "default": "null"
+        },
+        {
           "name": "AriaLabel",
           "type": "string?",
           "isRequired": false,
@@ -21130,6 +21165,13 @@
           "type": "bool",
           "isRequired": false,
           "description": "Shows Select All / Deselect All control."
+        },
+        {
+          "name": "SingleSelection",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Turns the control into a SINGLE-value combobox while keeping this component's keyboard model, its async DataProvider and its chips: picking an option REPLACES the selection, closes the popup and returns focus to the trigger, the listbox announces aria-multiselectable=\"false\", and the select-all / confirm controls are not rendered. The value still flows through Values/ValuesChanged (a zero-or-one element list).",
+          "default": "false"
         },
         {
           "name": "ValueField",

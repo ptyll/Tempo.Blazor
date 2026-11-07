@@ -133,6 +133,13 @@
       "description": "Help text shown below when no error is present."
     },
     {
+      "name": "AriaDescribedBy",
+      "type": "string?",
+      "isRequired": false,
+      "default": "null",
+      "description": "Extra ids the trigger describes, appended to the ones this component owns (its error or help text). A host uses it for a message it renders itself — the modeling inspector's \"reference may be stale\" hint — so the trigger announces exactly what is on screen."
+    },
+    {
       "name": "Id",
       "type": "string",
       "isRequired": false,
@@ -213,6 +220,13 @@
       "type": "bool",
       "isRequired": false,
       "description": "Shows checkboxes next to items."
+    },
+    {
+      "name": "SingleSelection",
+      "type": "bool",
+      "isRequired": false,
+      "default": "false",
+      "description": "Turns the control into a SINGLE-value combobox while keeping this component's keyboard model, its async DataProvider and its chips: picking an option REPLACES the selection, closes the popup and returns focus to the trigger, the listbox announces aria-multiselectable=\"false\", and the select-all / confirm controls are not rendered. The value still flows through Values/ValuesChanged (a zero-or-one element list)."
     },
     {
       "name": "HighlightMatches",

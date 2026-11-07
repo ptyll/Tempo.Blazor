@@ -1,0 +1,10 @@
+{
+  "kind": "Class",
+  "category": "Modeling",
+  "namespace": "Tempo.Blazor.Modeling",
+  "description": "One page of lookup results: Items, TotalCount, HasMore and an optional ContinuationToken.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/Modeling/ModelingPropertyContracts.cs",
+  "documentationStatus": "generated",
+  "itemName": "ModelingLookupResultDto"
+}

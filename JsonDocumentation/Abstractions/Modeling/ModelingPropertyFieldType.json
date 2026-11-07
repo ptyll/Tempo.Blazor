@@ -1,0 +1,10 @@
+{
+  "kind": "Enum",
+  "category": "Modeling",
+  "namespace": "Tempo.Blazor.Modeling",
+  "description": "The value type of a schema field and the JSON shape it stores (§5.2): String, Markdown, MultilineText, Integer, Number, Boolean, Enum, Date (yyyy-MM-dd), DateTime (ISO 8601 round-trip), Duration (integer MINUTES), Url, EntityReference, EntityReferenceList, StringList and StructuredList.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/Modeling/ModelingPropertyContracts.cs",
+  "documentationStatus": "generated",
+  "itemName": "ModelingPropertyFieldType"
+}

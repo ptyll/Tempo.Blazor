@@ -368,6 +368,13 @@ public partial class TmModelingEditor
             return null;
         }
 
+        // Phase 5 §5.6: a schema ERROR blocks the save. The gate re-validates the model (the cached
+        // issues may predate the latest commit) and announces the localized count.
+        if (await HasBlockingPropertyIssuesAsync(changeSet))
+        {
+            return null;
+        }
+
         var writer = ResolvedWriter;
         if (writer is null)
         {
@@ -612,6 +619,11 @@ public partial class TmModelingEditor
     /// and the baseline belong to the loaded model.</summary>
     private void ResetEditingState()
     {
+        // Phase 5 review (A5): the resolved schemas, their pinned versions and the collected issues
+        // belong to the dropped edit session — a reset (reload, provider switch, model swap) clears
+        // them so a stale pin cannot survive into the next model.
+        ResetPropertySchemaState();
+
         _commandStack?.Clear();
         _baselineKey = default;
         _baselineModel = null;

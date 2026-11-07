@@ -1,0 +1,10 @@
+{
+  "kind": "Class",
+  "category": "Components",
+  "namespace": "Tempo.Blazor.Components.Modeling",
+  "description": "Demo property-schema provider (phase 5, decision MODELING-PROPERTY-SCHEMA): the BPMN step-attribute schema the demo page exercises — instructions (markdown), the owning role (entity reference with a host lookup), the systems (entity reference list), the SLA (duration stored in MINUTES), the priority and automation (enum) and the exception list (structured list with required item fields). Registered for the demo provider key but answering ONLY for the 'demo-bpmn-step-attributes' model, so every pre-existing demo scenario keeps the 2.10.0 inspector.",
+  "packageId": "Tempo.Blazor.Modeling",
+  "sourcePath": "src/Tempo.Blazor.Modeling/Components/Modeling/DemoModelingPropertySchemaProvider.cs",
+  "documentationStatus": "generated",
+  "itemName": "DemoModelingPropertySchemaProvider"
+}

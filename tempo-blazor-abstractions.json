@@ -17936,6 +17936,16 @@
       "documentationStatus": "merged"
     },
     {
+      "itemName": "IModelingLookupProvider",
+      "kind": "Interface",
+      "category": "Modeling",
+      "namespace": "Tempo.Blazor.Modeling",
+      "description": "Host lookups for entity-reference fields (§5.3), resolved by ProviderKey. The inspector's reference combobox calls it with debounce, the descriptor's MinQueryLength and Skip/Take paging; a stored value keeps its display snapshot so a portal can render it without a lookup call.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Modeling/ModelingPropertyContracts.cs",
+      "documentationStatus": "merged"
+    },
+    {
       "itemName": "IModelingModelDocumentProvider",
       "kind": "Interface",
       "category": "Modeling",
@@ -18003,6 +18013,16 @@
       "description": "Notation-specific viewpoint rules advertised by notation key.",
       "packageId": "Tempo.Blazor.Abstractions",
       "sourcePath": "src/Tempo.Blazor.Abstractions/Modeling/ModelingNotationProfiles.cs",
+      "documentationStatus": "merged"
+    },
+    {
+      "itemName": "IModelingPropertySchemaProvider",
+      "kind": "Interface",
+      "category": "Modeling",
+      "namespace": "Tempo.Blazor.Modeling",
+      "description": "Property schema provider resolved by ProviderKey (decision MODELING-PROPERTY-SCHEMA, docs/modeling-authoring.md §5.1). It answers the sections and typed fields of one notation + semantic type; returning null means 'no schema' and restores the 2.10.0 inspector (scalars editable, complex values read-only).",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Modeling/ModelingPropertyContracts.cs",
       "documentationStatus": "merged"
     },
     {
@@ -18106,6 +18126,16 @@
       "documentationStatus": "merged"
     },
     {
+      "itemName": "ModelingEntityReference",
+      "kind": "Record",
+      "category": "Modeling",
+      "namespace": "Tempo.Blazor.Modeling",
+      "description": "The typed entity-reference value of docs/modeling-authoring.md §5.4 — the ONE reader/writer of the stored JSON shape {type, id, display, snapshotAt}. TryParse reads a stored value, ToJsonElement writes it, FromLookupItem builds a newly picked one (a fresh snapshotAt) and Label is the fallback ladder display -> id -> type. Shared by the schema validator, the inspector and a host writer, so the shape cannot drift.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Modeling/ModelingPropertyContracts.cs",
+      "documentationStatus": "merged"
+    },
+    {
       "itemName": "ModelingGovernanceDto",
       "kind": "Class",
       "category": "Modeling",
@@ -18133,6 +18163,56 @@
       "description": "Severity of an issue discovered while loading or generating a modeling model.",
       "packageId": "Tempo.Blazor.Abstractions",
       "sourcePath": "src/Tempo.Blazor.Abstractions/Modeling/ModelingDtos.cs",
+      "documentationStatus": "merged"
+    },
+    {
+      "itemName": "ModelingLookupDescriptor",
+      "kind": "Class",
+      "category": "Modeling",
+      "namespace": "Tempo.Blazor.Modeling",
+      "description": "How an entity-reference field searches the host catalogue: LookupType, an optional EntityType narrowing, MinQueryLength, PageSize and SearchRequired (false offers the first page immediately).",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Modeling/ModelingPropertyContracts.cs",
+      "documentationStatus": "merged"
+    },
+    {
+      "itemName": "ModelingLookupItemDto",
+      "kind": "Class",
+      "category": "Modeling",
+      "namespace": "Tempo.Blazor.Modeling",
+      "description": "One lookup hit: RefType, RefId, Display (the label the user sees and the stored display snapshot), Description, SecondaryText and Disabled. The editor stores the hit as the typed reference object {type, id, display, snapshotAt}.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Modeling/ModelingPropertyContracts.cs",
+      "documentationStatus": "merged"
+    },
+    {
+      "itemName": "ModelingLookupRequest",
+      "kind": "Class",
+      "category": "Modeling",
+      "namespace": "Tempo.Blazor.Modeling",
+      "description": "One lookup query: ModelId, LookupType, optional EntityType, SearchText, Skip/Take paging, Culture and an optional host-owned ContinuationToken.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Modeling/ModelingPropertyContracts.cs",
+      "documentationStatus": "merged"
+    },
+    {
+      "itemName": "ModelingLookupResolveRequest",
+      "kind": "Class",
+      "category": "Modeling",
+      "namespace": "Tempo.Blazor.Modeling",
+      "description": "One label re-resolution batch (§5.4): ModelId, Culture and the References a field currently stores, so IModelingLookupProvider.ResolveAsync answers with ONE call per field instead of one call per reference. An id missing from the answer is STALE — the inspector then renders the stored snapshot plus its localized 'reference may be stale' hint and still lets the save through.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Modeling/ModelingPropertyContracts.cs",
+      "documentationStatus": "merged"
+    },
+    {
+      "itemName": "ModelingLookupResultDto",
+      "kind": "Class",
+      "category": "Modeling",
+      "namespace": "Tempo.Blazor.Modeling",
+      "description": "One page of lookup results: Items, TotalCount, HasMore and an optional ContinuationToken.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Modeling/ModelingPropertyContracts.cs",
       "documentationStatus": "merged"
     },
     {
@@ -18263,6 +18343,18 @@
           "type": "ModelingOperationContext"
         },
         {
+          "name": "FullPropertyElements",
+          "kind": "Property",
+          "type": "Dictionary<string, (int Index, string Op)>",
+          "description": "Element id → the (index, op) that created or RE-TYPED it (review A4). The full property set of such an element is validated AFTER the batch, so a following set_properties in the same batch can still satisfy a required field while a genuinely missing one is still reported at the operation the user must fix."
+        },
+        {
+          "name": "FullPropertyRelationships",
+          "kind": "Property",
+          "type": "Dictionary<string, (int Index, string Op)>",
+          "description": "Relationship id → the (index, op) that created or re-typed it (review A4)."
+        },
+        {
           "name": "ParentChanges",
           "kind": "Property",
           "type": "Dictionary<string, (int Index, string Op)>",
@@ -18298,6 +18390,86 @@
       "description": "The outcome of ModelingOperationEngine.Apply / ApplyJson: Success (no errors), Applied count, the ids the engine minted for operations that carried none, and the per-operation errors. A failed batch is still partially applied to the passed model, so atomic callers apply to a clone and swap only on success.",
       "packageId": "Tempo.Blazor.Abstractions",
       "sourcePath": "src/Tempo.Blazor.Abstractions/Modeling/ModelingOperations.cs",
+      "documentationStatus": "merged"
+    },
+    {
+      "itemName": "ModelingPropertyFieldDto",
+      "kind": "Class",
+      "category": "Modeling",
+      "namespace": "Tempo.Blazor.Modeling",
+      "description": "One typed field of a section: the Properties KEY it stores, Label, Type, Required/ReadOnly, Help/Placeholder/Unit, DefaultValue, Min/Max/MaxLength/Pattern, Enum Options, a Lookup descriptor for the reference types and the recursive ItemFields of a StructuredList.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Modeling/ModelingPropertyContracts.cs",
+      "documentationStatus": "merged"
+    },
+    {
+      "itemName": "ModelingPropertyFieldType",
+      "kind": "Enum",
+      "category": "Modeling",
+      "namespace": "Tempo.Blazor.Modeling",
+      "description": "The value type of a schema field and the JSON shape it stores (§5.2): String, Markdown, MultilineText, Integer, Number, Boolean, Enum, Date (yyyy-MM-dd), DateTime (ISO 8601 round-trip), Duration (integer MINUTES), Url, EntityReference, EntityReferenceList, StringList and StructuredList.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Modeling/ModelingPropertyContracts.cs",
+      "documentationStatus": "merged"
+    },
+    {
+      "itemName": "ModelingPropertyOptionDto",
+      "kind": "Class",
+      "category": "Modeling",
+      "namespace": "Tempo.Blazor.Modeling",
+      "description": "One offered value of an Enum field: the stored Value, the visible Label, an optional Help and Disabled.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Modeling/ModelingPropertyContracts.cs",
+      "documentationStatus": "merged"
+    },
+    {
+      "itemName": "ModelingPropertySchemaDto",
+      "kind": "Class",
+      "category": "Modeling",
+      "namespace": "Tempo.Blazor.Modeling",
+      "description": "The property schema of one notation + semantic type: SchemaId, host-owned Version, Notation, SemanticType (empty = every type of the notation) and the ordered Sections.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Modeling/ModelingPropertyContracts.cs",
+      "documentationStatus": "merged"
+    },
+    {
+      "itemName": "ModelingPropertySchemaRequest",
+      "kind": "Class",
+      "category": "Modeling",
+      "namespace": "Tempo.Blazor.Modeling",
+      "description": "Schema request: ModelId, Notation, SemanticType, ViewpointKey, Culture and an optional SchemaVersion the host previously served (null = latest), so a mid-session deploy cannot silently re-interpret a value.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Modeling/ModelingPropertyContracts.cs",
+      "documentationStatus": "merged"
+    },
+    {
+      "itemName": "ModelingPropertySchemaResolver",
+      "kind": "Class",
+      "category": "Modeling",
+      "namespace": "Tempo.Blazor.Modeling",
+      "description": "Bridges the ASYNC IModelingPropertySchemaProvider and the SYNCHRONOUS ModelingOperationContext.ResolvePropertySchema the operation engine consumes (§5.5/§6.4). PropertySchemaPairs lists the (notation, semanticType) pairs a model/batch can judge and PreloadAsync resolves them into a dictionary-backed delegate (a provider that throws degrades that pair to 'no schema'); a host writer and the modeling_apply_operations MCP tool both use it, so the engine and the editor validate with the same schemas.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Modeling/ModelingPropertySchemaResolver.cs",
+      "documentationStatus": "merged"
+    },
+    {
+      "itemName": "ModelingPropertySchemaValidator",
+      "kind": "Class",
+      "category": "Modeling",
+      "namespace": "Tempo.Blazor.Modeling",
+      "description": "The SHARED property-value validator (§5.5): required, JSON type, numeric range, text length, pattern, enum membership, entity-reference shape and structured-list item rules. The inspector, the editor's save gate and ModelingOperationEngine all call it, so MCP and the UI reject the identical value with the identical issue ('one semantics, same errors'). Every issue has Category = 'property', SuggestedFix = the field label and a machine-readable Id '<code>:<path>' (required|type|range|length|pattern|enum|reference|unknown).",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Modeling/ModelingPropertyContracts.cs",
+      "documentationStatus": "merged"
+    },
+    {
+      "itemName": "ModelingPropertySectionDto",
+      "kind": "Class",
+      "category": "Modeling",
+      "namespace": "Tempo.Blazor.Modeling",
+      "description": "One collapsible group of schema fields: Key (stable identity), Label, Help, Order, CollapsedByDefault and the Fields.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Modeling/ModelingPropertyContracts.cs",
       "documentationStatus": "merged"
     },
     {
@@ -44674,11 +44846,11 @@
   ],
   "libraryExamples": [],
   "summary": {
-    "itemCount": 1684,
-    "manualItemCount": 1684,
-    "generatedItemCount": 1668,
+    "itemCount": 1700,
+    "manualItemCount": 1700,
+    "generatedItemCount": 1684,
     "generatedOnlyItemCount": 0,
     "componentCount": 0,
-    "publicApiTypeCount": 1668
+    "publicApiTypeCount": 1684
   }
 }

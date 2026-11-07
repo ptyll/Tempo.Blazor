@@ -1,0 +1,10 @@
+{
+  "kind": "Class",
+  "category": "Modeling",
+  "namespace": "Tempo.Blazor.Modeling",
+  "description": "One lookup hit: RefType, RefId, Display (the label the user sees and the stored display snapshot), Description, SecondaryText and Disabled. The editor stores the hit as the typed reference object {type, id, display, snapshotAt}.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/Modeling/ModelingPropertyContracts.cs",
+  "documentationStatus": "generated",
+  "itemName": "ModelingLookupItemDto"
+}

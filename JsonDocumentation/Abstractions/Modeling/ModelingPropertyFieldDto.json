@@ -1,0 +1,10 @@
+{
+  "kind": "Class",
+  "category": "Modeling",
+  "namespace": "Tempo.Blazor.Modeling",
+  "description": "One typed field of a section: the Properties KEY it stores, Label, Type, Required/ReadOnly, Help/Placeholder/Unit, DefaultValue, Min/Max/MaxLength/Pattern, Enum Options, a Lookup descriptor for the reference types and the recursive ItemFields of a StructuredList.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/Modeling/ModelingPropertyContracts.cs",
+  "documentationStatus": "generated",
+  "itemName": "ModelingPropertyFieldDto"
+}

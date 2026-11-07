@@ -64,6 +64,68 @@ public class ModelingToolsTests
         result.GetProperty("error").GetString().Should().Be("not_found");
     }
 
+    // ── A3: property schema validation on the MCP path ──────────────────────────
+
+    [Fact]
+    public async Task ApplyOperations_With_a_schema_provider_rejects_a_missing_required_field_with_the_engine_message()
+    {
+        var (backend, id) = SeededArchimate();
+        var provider = new McpTaskSchemaProvider();
+
+        // The SAME batch the engine test pins: an add_element with no `instructions`.
+        var ops = """
+        [ { "op": "add_element", "id": "t", "name": "Task", "semanticType": "Task", "notation": "archimate" } ]
+        """;
+
+        var result = Parse(await ModelingOperationTools.ApplyOperations(
+            backend,
+            backend,
+            id,
+            ops,
+            relationshipRules: null,
+            expectedModifiedAt: backend.ModifiedAtOf(id),
+            propertySchemaProviders: [provider]));
+
+        result.GetProperty("success").GetBoolean().Should().BeFalse();
+        result.GetProperty("error").GetString().Should().Be("validation_failed");
+
+        // The message is the ENGINE's, byte for byte — the MCP path and the engine share the code.
+        var engineModel = ModelingOperationEngine.Clone(backend.ModelOf(id));
+        var expected = ModelingOperationEngine.ApplyJson(
+            engineModel,
+            ops,
+            new ModelingOperationContext
+            {
+                Policy = ModelingOperationPolicy.Strict,
+                ResolvePropertySchema = request => request.SemanticType == "Task" ? provider.Schema : null
+            });
+
+        expected.Errors.Should().ContainSingle();
+        expected.Errors[0].Code.Should().Be("property_required");
+        result.GetProperty("validationErrors")[0].GetString().Should().Be(expected.Errors[0].Message);
+        backend.SaveCount.Should().Be(0, "a failed batch persists nothing");
+    }
+
+    [Fact]
+    public async Task ApplyOperations_Without_a_schema_provider_validates_no_property_values()
+    {
+        var (backend, id) = SeededArchimate();
+        var ops = """
+        [ { "op": "add_element", "id": "t", "name": "Task", "semanticType": "Task", "notation": "archimate" } ]
+        """;
+
+        var result = Parse(await ModelingOperationTools.ApplyOperations(
+            backend,
+            backend,
+            id,
+            ops,
+            relationshipRules: null,
+            expectedModifiedAt: backend.ModifiedAtOf(id)));
+
+        result.GetProperty("success").GetBoolean().Should().BeTrue("2.10.0 behavior is unchanged");
+        backend.SaveCount.Should().Be(1);
+    }
+
     // ── get_view ─────────────────────────────────────────────────────────────────
 
     [Fact]
@@ -249,5 +311,41 @@ public class ModelingToolsTests
         var result = Parse(ModelingValidationTools.ListNotations());
 
         result.GetProperty("totalCount").GetInt32().Should().Be(0);
+    }
+
+    /// <summary>A property-schema provider that requires one field on the Task type (A3).</summary>
+    private sealed class McpTaskSchemaProvider : IModelingPropertySchemaProvider
+    {
+        public string ProviderKey => "tempo.tests.mcp.schema";
+
+        public ModelingPropertySchemaDto Schema { get; } = new()
+        {
+            SchemaId = "tests.mcp.task",
+            Version = "1",
+            Notation = "archimate",
+            SemanticType = "Task",
+            Sections =
+            [
+                new ModelingPropertySectionDto
+                {
+                    Key = "execution",
+                    Label = "Execution",
+                    Fields =
+                    [
+                        new ModelingPropertyFieldDto
+                        {
+                            Key = "instructions",
+                            Label = "Instructions",
+                            Type = ModelingPropertyFieldType.String,
+                            Required = true
+                        }
+                    ]
+                }
+            ]
+        };
+
+        public Task<ModelingPropertySchemaDto?> GetSchemaAsync(ModelingPropertySchemaRequest request, CancellationToken cancellationToken)
+            => Task.FromResult<ModelingPropertySchemaDto?>(
+                string.Equals(request.SemanticType, "Task", StringComparison.Ordinal) ? Schema : null);
     }
 }

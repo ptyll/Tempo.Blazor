@@ -441,6 +441,111 @@ public sealed class DemoModelingModelWriterTests
                 or "Task" or "StartEvent" or "EndEvent" or "SubProcess";
     }
 
+    // ── Phase 5 review (A16): the added collections are scanned too ─────────
+
+    [Fact]
+    public async Task An_ADDED_element_with_an_unknown_reference_is_rejected()
+    {
+        var writer = new DemoModelingModelWriter();
+        var stepModelId = DemoModelingPropertySchemaProvider.ModelIdValue;
+
+        var result = await writer.SaveChangesAsync(
+            new ModelingModelChangeSet
+            {
+                ModelId = stepModelId,
+                ProviderKey = DemoModelingModelProvider.ProviderKeyValue,
+                BaseVersion = writer.GetSourceVersion(stepModelId),
+                AddedElements =
+                [
+                    new ModelingElementAdd
+                    {
+                        Id = "step-new",
+                        Name = "New step",
+                        SemanticType = "userTask",
+                        Notation = "bpmn",
+                        Properties = new Dictionary<string, JsonElement>
+                        {
+                            ["instructions"] = JsonSerializer.SerializeToElement("Do it"),
+                            ["role"] = JsonSerializer.SerializeToElement(new Dictionary<string, JsonElement>
+                            {
+                                ["type"] = JsonSerializer.SerializeToElement("role"),
+                                ["id"] = JsonSerializer.SerializeToElement("role-gone"),
+                                ["display"] = JsonSerializer.SerializeToElement("Ghost")
+                            })
+                        }
+                    }
+                ]
+            },
+            CancellationToken.None);
+
+        result.Succeeded.Should().BeFalse(
+            "an ADDED item carries its values on the add itself, so its references are scanned too");
+        result.Issues.Should().ContainSingle(issue => issue.SourceElementId == "step-new" && issue.SuggestedFix == "role");
+        writer.GetPersistedModel(stepModelId).Elements.Should().NotContain(element => element.Id == "step-new");
+    }
+
+    [Fact]
+    public async Task An_ADDED_RELATIONSHIP_with_an_unknown_reference_is_rejected()
+    {
+        var writer = new DemoModelingModelWriter();
+        var stepModelId = DemoModelingPropertySchemaProvider.ModelIdValue;
+
+        var result = await writer.SaveChangesAsync(
+            new ModelingModelChangeSet
+            {
+                ModelId = stepModelId,
+                ProviderKey = DemoModelingModelProvider.ProviderKeyValue,
+                BaseVersion = writer.GetSourceVersion(stepModelId),
+                AddedRelationships =
+                [
+                    new ModelingRelationshipAdd
+                    {
+                        Id = "step-flow-new",
+                        RelationshipType = "SequenceFlow",
+                        SourceElementId = "step-validate",
+                        TargetElementId = "step-ship",
+                        Properties = new Dictionary<string, JsonElement>
+                        {
+                            ["owner"] = JsonSerializer.SerializeToElement(new Dictionary<string, JsonElement>
+                            {
+                                ["type"] = JsonSerializer.SerializeToElement("role"),
+                                ["id"] = JsonSerializer.SerializeToElement("role-gone")
+                            })
+                        }
+                    }
+                ]
+            },
+            CancellationToken.None);
+
+        result.Succeeded.Should().BeFalse();
+        result.Issues.Should().ContainSingle(issue => issue.SourceRelationshipId == "step-flow-new");
+    }
+
+    [Fact]
+    public async Task The_save_count_is_read_consistently_with_a_save_in_flight()
+    {
+        // Review A16: SaveCount reads under the writer's gate, so a concurrent read can never observe
+        // the counter mid-update. The demo writer is fast, so the test pins the observable contract:
+        // only a SUCCESSFUL save advances the counter, and it advances exactly once.
+        var writer = new DemoModelingModelWriter();
+
+        var before = writer.SaveCount;
+        var reads = new List<Task<int>>();
+        for (var i = 0; i < 8; i++)
+        {
+            reads.Add(Task.Run(() => writer.SaveCount));
+        }
+
+        var result = await SaveAsync(writer, new ModelingModelChangeSet
+        {
+            Elements = [new ModelingElementChange { ElementId = "bpmn-validate-order", Name = "Renamed" }]
+        });
+
+        result.Succeeded.Should().BeTrue();
+        (await Task.WhenAll(reads)).Should().OnlyContain(count => count == before || count == before + 1);
+        writer.SaveCount.Should().Be(before + 1);
+    }
+
     private static Task<ModelingModelSaveResult> SaveAsync(DemoModelingModelWriter writer, ModelingModelChangeSet changeSet)
     {
         changeSet.ModelId = DemoModelingModelProvider.ModelIdValue;

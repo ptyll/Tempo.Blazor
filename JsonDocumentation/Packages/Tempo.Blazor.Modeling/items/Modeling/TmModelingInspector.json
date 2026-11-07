@@ -2,7 +2,7 @@
   "itemName": "TmModelingInspector",
   "kind": "Component",
   "category": "Modeling",
-  "description": "Displays details for a selected modeling element or relationship. Read-only (MO2) by default; with ReadOnly=false the name, the description and the SCALAR properties become editable inputs raising OnElementEdited/OnRelationshipEdited — source-backed fields, governance and complex JSON values are never editable (decision MODELING-INSPECTOR-EDITING).",
+  "description": "Displays details for a selected modeling element or relationship. Read-only (MO2) by default; with ReadOnly=false the name, the description and the SCALAR properties become editable inputs raising OnElementEdited/OnRelationshipEdited — source-backed fields, governance and complex JSON values are never editable (decision MODELING-INSPECTOR-EDITING). Phase 5 (decision MODELING-PROPERTY-SCHEMA): with a PropertySchema the schema's sections and typed fields replace the generic table for the keys it covers (markdown through the Tempo markdown editor, enum through TmSelect, dates through the pickers, duration as a number plus a display unit stored in MINUTES, entity references through the APG combobox with the host's async lookup, string lists and the repeatable structured list); every remaining key stays in an 'Other properties' table. Field errors come from the SHARED validator (or the host writer's save-time rejection) and render inline with role=alert plus aria-invalid on the input.",
   "packageId": "Tempo.Blazor.Modeling",
   "namespace": "Tempo.Blazor.Components.Modeling",
   "sourcePath": "src/Tempo.Blazor.Modeling/Components/Modeling/TmModelingInspector.razor",
@@ -79,6 +79,36 @@
       "isRequired": false,
       "default": "false",
       "description": "Whether a model save is currently in flight. Every editing input disables and the drafts are not re-seeded from the re-renders the saving state causes, so a keystroke mid-save cannot be silently wiped."
+    },
+    {
+      "name": "PropertySchema",
+      "type": "ModelingPropertySchemaDto?",
+      "isRequired": false,
+      "description": "The property schema of the SELECTED element/relationship, or null when the host registered no schema provider for the provider key (the 2.10.0 surface)."
+    },
+    {
+      "name": "PropertyIssues",
+      "type": "IReadOnlyList<ModelingIssueDto>?",
+      "isRequired": false,
+      "description": "Validation issues of the selected element/relationship — the editor's shared-validator result plus the writer's save-time rejections. They render inline on their field (role=alert, aria-invalid) and as the issue dock rows."
+    },
+    {
+      "name": "LookupProvider",
+      "type": "IModelingLookupProvider?",
+      "isRequired": false,
+      "description": "The host lookup provider for EntityReference/EntityReferenceList fields; null keeps those fields read-only (a reference cannot be picked without a catalogue)."
+    },
+    {
+      "name": "ModelId",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Model id passed to the schema/lookup requests."
+    },
+    {
+      "name": "Culture",
+      "type": "string?",
+      "isRequired": false,
+      "description": "UI culture name for the lookup requests (null = the current UI culture)."
     }
   ],
   "cssClasses": [
@@ -109,6 +139,90 @@
     {
       "name": "tm-modeling-inspector__property-edit",
       "description": "Editable scalar property cell (the key cell stays the label)."
+    },
+    {
+      "name": "tm-modeling-inspector__schema-section",
+      "description": "One schema section (its key rides the data-schema-section attribute)."
+    },
+    {
+      "name": "tm-modeling-inspector__schema-help",
+      "description": "The section's help text."
+    },
+    {
+      "name": "tm-modeling-inspector__fields",
+      "description": "The field column of a schema section."
+    },
+    {
+      "name": "tm-modeling-inspector__field",
+      "description": "One schema field wrapper; data-field-key / data-field-type / data-required / data-schema-error describe it."
+    },
+    {
+      "name": "tm-modeling-inspector__field--invalid",
+      "description": "A field whose shared-validator issue is showing."
+    },
+    {
+      "name": "tm-modeling-inspector__field-label",
+      "description": "The label of a read-only schema field."
+    },
+    {
+      "name": "tm-modeling-inspector__field-value",
+      "description": "The formatted value of a read-only schema field."
+    },
+    {
+      "name": "tm-modeling-inspector__field-error",
+      "description": "Inline field error (the core inputs own their own alert; this class covers the controls that have no Error parameter)."
+    },
+    {
+      "name": "tm-modeling-inspector__field-help",
+      "description": "A field's help text."
+    },
+    {
+      "name": "tm-modeling-inspector__field-control",
+      "description": "Wrapper of a field whose control needs a composed layout (date pickers, markdown, duration, lists)."
+    },
+    {
+      "name": "tm-modeling-inspector__duration",
+      "description": "The duration field row: number input plus the display unit select."
+    },
+    {
+      "name": "tm-modeling-inspector__duration-unit",
+      "description": "The duration display unit select (the stored value is always minutes)."
+    },
+    {
+      "name": "tm-modeling-inspector__markdown",
+      "description": "The markdown field group (the Tempo markdown editor)."
+    },
+    {
+      "name": "tm-modeling-inspector__list",
+      "description": "A string/list field body."
+    },
+    {
+      "name": "tm-modeling-inspector__list-row",
+      "description": "One string-list row."
+    },
+    {
+      "name": "tm-modeling-inspector__structured",
+      "description": "The repeatable structured-list body."
+    },
+    {
+      "name": "tm-modeling-inspector__structured-item",
+      "description": "One structured-list item form."
+    },
+    {
+      "name": "tm-modeling-inspector__structured-header",
+      "description": "The item header (its number and the remove action)."
+    },
+    {
+      "name": "tm-modeling-inspector__structured-title",
+      "description": "The item's localized number."
+    },
+    {
+      "name": "tm-modeling-inspector__field-action",
+      "description": "A field action button (add/remove a list item)."
+    },
+    {
+      "name": "tm-modeling-inspector__field-add",
+      "description": "The add-item action of a list field."
     }
   ]
 }

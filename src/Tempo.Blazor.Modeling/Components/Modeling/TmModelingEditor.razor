@@ -554,15 +554,13 @@
     /// contract is active — the editor passes <c>ReadOnly=false</c> together with the commit
     /// callbacks and the inspector-scope undo/redo wiring; the header hosts the editor's
     /// undo/redo pair (and the docked Save/Discard while a Manual save is pending).</summary>
-    private RenderFragment InspectorContent => @<TmModelingInspector Element="@_selectedElement"
-                                                                     Relationship="@_selectedRelationship"
-                                                                     Elements="@LoadedElements"
-                                                                     ReadOnly="@(!IsEditingEnabled)"
-                                                                     Saving="@IsSaving"
-                                                                     OnElementEdited="CommitElementEditAsync"
-                                                                     OnRelationshipEdited="CommitRelationshipEditAsync"
-                                                                     OnUndoRequested="UndoModelEditAsync"
-                                                                     OnRedoRequested="RedoModelEditAsync"
+    private RenderFragment InspectorContent => @<TmModelingInspector Element="@_selectedElement" Relationship="@_selectedRelationship"
+                                                                     Elements="@LoadedElements" ReadOnly="@(!IsEditingEnabled)" Saving="@IsSaving"
+                                                                     PropertySchema="@_selectedPropertySchema" PropertyIssues="@SelectedPropertyIssues"
+                                                                     LookupProvider="@ResolvedLookupProvider" ModelId="@_model?.Id"
+                                                                     Culture="@CultureInfo.CurrentUICulture.Name"
+                                                                     OnElementEdited="CommitElementEditAsync" OnRelationshipEdited="CommitRelationshipEditAsync"
+                                                                     OnUndoRequested="UndoModelEditAsync" OnRedoRequested="RedoModelEditAsync"
                                                                      HeaderActions="@(IsEditingEnabled ? InspectorHeaderActions : null)" />;
     /// <summary>
     /// Fáze 14: the inspector header's editing surface — the undo/redo pair (keyboard hints + live

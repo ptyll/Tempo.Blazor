@@ -251,6 +251,7 @@
             : Delay.GetValueOrDefault() > 0 || Fresh == false || HasModelingTreeScenario
                 || HasBpmnLanesScenario
                 || HasLayoutPersistScenario
+                || HasStepAttributesScenario
                 || HasDiagramPreviewScenario
                 || HasIssueScenario
                 || HasInspectorScenario
@@ -281,6 +282,14 @@
     /// survived the save round trip.</summary>
     private bool HasLayoutPersistScenario =>
         string.Equals(Scenario, "layout-persist", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>Phase 5 (decision MODELING-PROPERTY-SCHEMA): <c>?scenario=step-attributes</c> — the
+    /// BPMN step-attribute demo model. Its model id is the one the shipped demo schema + lookup
+    /// providers answer for, so the inspector renders the schema surface (markdown instructions, the
+    /// role reference with an async lookup, the systems list, the SLA duration and the exception
+    /// list). Served from the DEMO WRITER's per-model copy so a reload proves the save round trip.</summary>
+    private bool HasStepAttributesScenario =>
+        string.Equals(Scenario, "step-attributes", StringComparison.OrdinalIgnoreCase);
 
     private bool HasUmlProfileScenario =>
         string.Equals(Scenario, "uml25-class", StringComparison.OrdinalIgnoreCase)
@@ -427,6 +436,13 @@
             && ModelWriters.OfType<DemoModelingModelWriter>().FirstOrDefault() is { } layoutWriter)
         {
             return ModelingOperationEngine.Clone(layoutWriter.PersistedModel);
+        }
+
+        if (HasStepAttributesScenario)
+        {
+            return ModelWriters.OfType<DemoModelingModelWriter>().FirstOrDefault() is { } stepWriter
+                ? ModelingOperationEngine.Clone(stepWriter.GetPersistedModel(DemoModelingPropertySchemaProvider.ModelIdValue))
+                : DemoModelingPropertySchemaProvider.CreateStepAttributesModel();
         }
 
         if (HasBpmnLanesScenario)

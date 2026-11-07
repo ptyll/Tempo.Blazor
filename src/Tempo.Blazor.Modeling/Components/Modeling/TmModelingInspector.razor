@@ -9,6 +9,7 @@
          data-selected-element-id="@(Element?.Id ?? string.Empty)"
          data-selected-relationship-id="@(Relationship?.Id ?? string.Empty)"
          aria-label="@Loc["TmModelingInspector_Title"]"
+         @ref="_inspectorRoot"
          @onkeydown="HandleInspectorKeyDownAsync">
     @if (Element is null && Relationship is null)
     {
@@ -114,6 +115,7 @@
                         <p>@(string.IsNullOrWhiteSpace(Element.Description) ? Loc["TmModelingInspector_NoDescription"] : Element.Description)</p>
                     </section>
                 }
+                @SchemaSurface
                 <section class="tm-modeling-inspector__section" data-testid="@TestId("modeling-inspector-governance")">
                     <h4>@Loc["TmModelingInspector_Governance"]</h4>
                     <dl class="tm-modeling-inspector__summary">
@@ -127,8 +129,8 @@
                     </dl>
                 </section>
                 <section class="tm-modeling-inspector__section" data-testid="@TestId("modeling-inspector-properties")">
-                    <h4>@Loc["TmModelingInspector_Properties"]</h4>
-                    @if (Element.Properties.Count == 0)
+                    <h4>@(HasPropertySchema ? Loc["TmModelingInspector_OtherProperties"] : Loc["TmModelingInspector_Properties"])</h4>
+                    @if (OtherProperties(Element.Properties).Count == 0)
                     {
                         <p class="tm-modeling-inspector__empty-note" data-testid="@TestId("modeling-inspector-no-properties")">@Loc["TmModelingInspector_NoProperties"]</p>
                     }
@@ -136,7 +138,7 @@
                     {
                         <table class="tm-modeling-inspector__properties-table">
                             <tbody>
-                                @foreach (var property in Element.Properties.OrderBy(item => item.Key, StringComparer.OrdinalIgnoreCase))
+                                @foreach (var property in OtherProperties(Element.Properties))
                                 {
                                     <tr data-testid="@($"modeling-inspector-property-{property.Key}")">
                                         @if (IsEditing && IsScalarEditable(property.Value))
@@ -246,9 +248,10 @@
                         }
                     }
                 </dl>
+                @SchemaSurface
                 <section class="tm-modeling-inspector__section" data-testid="@TestId("modeling-inspector-properties")">
-                    <h4>@Loc["TmModelingInspector_Properties"]</h4>
-                    @if (Relationship.Properties.Count == 0)
+                    <h4>@(HasPropertySchema ? Loc["TmModelingInspector_OtherProperties"] : Loc["TmModelingInspector_Properties"])</h4>
+                    @if (OtherProperties(Relationship.Properties).Count == 0)
                     {
                         <p class="tm-modeling-inspector__empty-note" data-testid="@TestId("modeling-inspector-no-properties")">@Loc["TmModelingInspector_NoProperties"]</p>
                     }
@@ -256,7 +259,7 @@
                     {
                         <table class="tm-modeling-inspector__properties-table">
                             <tbody>
-                                @foreach (var property in Relationship.Properties.OrderBy(item => item.Key, StringComparer.OrdinalIgnoreCase))
+                                @foreach (var property in OtherProperties(Relationship.Properties))
                                 {
                                     <tr data-testid="@($"modeling-inspector-property-{property.Key}")">
                                         @if (IsEditing && IsScalarEditable(property.Value))
@@ -306,6 +309,10 @@
                 </section>
             </div>
         }
+
+        @* Review U8: ONE polite live region announces a list add/remove ("Item added to SLA"),
+           so a screen-reader user learns what happened without seeing the new row. *@
+        <p class="tm-sr-only" role="status" aria-live="polite" data-testid="@TestId("modeling-inspector-item-announcement")">@_itemAnnouncement</p>
     }
 </section>
 
@@ -336,6 +343,454 @@
         new DefinitionRow(Loc["TmModelingInspector_SyncState"], Element.Governance.SyncState, "modeling-inspector-sync"),
         new DefinitionRow(Loc["TmModelingInspector_DataSource"], Element.Governance.DataSource, "modeling-inspector-data-source"),
     };
+
+    /// <summary>Review U3: the required marker every CUSTOM label carries (the core components draw
+    /// their own from <c>tm-input-label-required</c>). <c>aria-hidden</c> because the control already
+    /// announces its required state.</summary>
+    private RenderFragment RequiredMark => @<span class="tm-input-required" aria-hidden="true">*</span>;
+
+    /// <summary>
+    /// Phase 5: the schema-driven surface (§5.6). Each section renders its typed fields; a field the
+    /// editor may not change (read-only host, a `ReadOnly` schema field or no lookup catalogue for a
+    /// reference) renders as label + formatted value.
+    /// <para>
+    /// Review U7: an error that was already on the value when the inspector seeded renders WITHOUT
+    /// <c>role="alert"</c> (it is described by the control instead) — only a field the user committed
+    /// announces assertively.
+    /// </para>
+    /// </summary>
+    private RenderFragment SchemaSurface => @<text>
+        @if (HasPropertySchema)
+        {
+            @foreach (var schemaSection in SchemaSections)
+            {
+                var collapsed = IsSectionCollapsed(schemaSection);
+                <section class="tm-modeling-inspector__section tm-modeling-inspector__schema-section"
+                         data-testid="@TestId($"modeling-inspector-schema-section-{schemaSection.Key}")"
+                         data-schema-section="@schemaSection.Key"
+                         data-collapsed="@(collapsed ? "true" : "false")">
+                    <h4>
+                        @if (schemaSection.CollapsedByDefault)
+                        {
+                            @* Review A11: a collapsible section is a real disclosure — a button whose
+                               aria-expanded/aria-controls name the body, so keyboard and screen-reader
+                               users can open it and a section with an error force-opens. *@
+                            <button type="button"
+                                    class="tm-modeling-inspector__section-toggle"
+                                    aria-expanded="@(collapsed ? "false" : "true")"
+                                    aria-controls="@SectionBodyId(schemaSection)"
+                                    data-testid="@TestId($"modeling-inspector-schema-section-{schemaSection.Key}-toggle")"
+                                    @onclick="@(() => ToggleSection(schemaSection))">
+                                <TmIcon Name="@(collapsed ? IconNames.ChevronRight : IconNames.ChevronDown)" Size="IconSize.Sm" />
+                                <span>@SectionLabel(schemaSection)</span>
+                            </button>
+                        }
+                        else
+                        {
+                            @SectionLabel(schemaSection)
+                        }
+                    </h4>
+                    <div id="@SectionBodyId(schemaSection)" class="tm-modeling-inspector__section-body" hidden="@collapsed">
+                        @if (!string.IsNullOrWhiteSpace(schemaSection.Help))
+                        {
+                            <p class="tm-modeling-inspector__schema-help">@schemaSection.Help</p>
+                        }
+                        <div class="tm-modeling-inspector__fields">
+                            @foreach (var schemaField in SectionFields(schemaSection))
+                            {
+                                var error = SchemaFieldError(schemaField);
+                                var editable = ShowSchemaEditor(schemaField);
+                                var stale = StaleReferenceHint(schemaField);
+                                <div class="tm-modeling-inspector__field @(SchemaFieldHasError(schemaField) ? "tm-modeling-inspector__field--invalid" : null)"
+                                     data-testid="@TestId($"modeling-inspector-field-{schemaField.Key}")"
+                                     data-field-key="@schemaField.Key"
+                                     data-field-type="@FieldTypeAttribute(schemaField)"
+                                     data-required="@(schemaField.Required ? "true" : "false")"
+                                     data-schema-error="@(SchemaFieldHasError(schemaField) ? "true" : null)">
+                                    @if (!editable)
+                                    {
+                                        <span class="tm-modeling-inspector__field-label">
+                                            @FieldDisplayLabel(schemaField)
+                                            @if (schemaField.Required)
+                                            {
+                                                @RequiredMark
+                                            }
+                                        </span>
+                                        <span class="tm-modeling-inspector__field-value"
+                                              data-testid="@TestId($"modeling-inspector-field-{schemaField.Key}-value")">@SchemaDisplayValue(schemaField)</span>
+                                        @if (stale is not null)
+                                        {
+                                            <p class="tm-modeling-inspector__field-stale" id="@FieldStaleId(schemaField)">@stale</p>
+                                        }
+                                        @FieldMessage(schemaField, error)
+                                    }
+                                    else
+                                    {
+                                        @switch (schemaField.Type)
+                                        {
+                                            case ModelingPropertyFieldType.Boolean:
+                                                @* Review U4: the toggle has no Error parameter — its error/help
+                                                   block renders AFTER it, carrying the same ids. *@
+                                                <TmToggle Id="@FieldDomId(schemaField)"
+                                                          Label="@FieldDisplayLabel(schemaField)"
+                                                          Value="@SchemaBoolean(schemaField)"
+                                                          ValueChanged="@(value => HandleSchemaBooleanAsync(schemaField, value))"
+                                                          Disabled="@Saving"
+                                                          Required="@schemaField.Required"
+                                                          AriaDescribedBy="@DescribedBy(schemaField, error)" />
+                                                @FieldMessage(schemaField, error)
+                                                break;
+
+                                            case ModelingPropertyFieldType.Enum:
+                                                <TmSelect TValue="string"
+                                                          Id="@FieldDomId(schemaField)"
+                                                          Label="@FieldDisplayLabel(schemaField)"
+                                                          Value="@SchemaString(schemaField)"
+                                                          ValueChanged="@(value => HandleSchemaEnumAsync(schemaField, value))"
+                                                          Options="FieldOptions(schemaField)"
+                                                          Placeholder="@(schemaField.Placeholder ?? Loc["TmModelingInspector_EnumPlaceholder"])"
+                                                          Error="@error"
+                                                          AnnounceError="@ShouldAnnounce(schemaField.Key)"
+                                                          Required="@schemaField.Required"
+                                                          HelpText="@schemaField.Help"
+                                                          Disabled="@Saving" />
+                                                break;
+
+                                            case ModelingPropertyFieldType.Date:
+                                                <div class="tm-modeling-inspector__field-control">
+                                                    @* Review U1: the picker names its own trigger from Label —
+                                                       no duplicate span and no aria-label. *@
+                                                    <TmDatePicker Value="@SchemaDate(schemaField)"
+                                                                  ValueChanged="@(value => HandleSchemaDateAsync(schemaField, value))"
+                                                                  Label="@FieldDisplayLabel(schemaField)"
+                                                                  Disabled="@Saving"
+                                                                  Required="@schemaField.Required"
+                                                                  Placeholder="@schemaField.Placeholder"
+                                                                  AdditionalAttributes="@FieldAriaAttributes(schemaField, error)" />
+                                                    @FieldMessage(schemaField, error)
+                                                </div>
+                                                break;
+
+                                            case ModelingPropertyFieldType.DateTime:
+                                                <div class="tm-modeling-inspector__field-control">
+                                                    <TmDateTimePicker Value="@SchemaDateTime(schemaField)"
+                                                                      ValueChanged="@(value => HandleSchemaDateTimeAsync(schemaField, value))"
+                                                                      Label="@FieldDisplayLabel(schemaField)"
+                                                                      Disabled="@Saving"
+                                                                      Required="@schemaField.Required"
+                                                                      Placeholder="@schemaField.Placeholder"
+                                                                      AdditionalAttributes="@FieldAriaAttributes(schemaField, error)" />
+                                                    @FieldMessage(schemaField, error)
+                                                </div>
+                                                break;
+
+                                            case ModelingPropertyFieldType.Markdown:
+                                                <div id="@FieldDomId(schemaField)"
+                                                     class="tm-modeling-inspector__field-control tm-modeling-inspector__markdown"
+                                                     data-testid="@TestId($"modeling-inspector-field-{schemaField.Key}-editor")">
+                                                    <span class="tm-input-label" id="@($"{FieldDomId(schemaField)}-label")">
+                                                        @FieldDisplayLabel(schemaField)
+                                                        @if (schemaField.Required)
+                                                        {
+                                                            @RequiredMark
+                                                        }
+                                                    </span>
+                                                    @* Review U2: the editor's content surface is the textbox — it
+                                                       is named by the label above and described by the error/help
+                                                       and the stale hint. *@
+                                                    <TmMarkdownEditor Value="@SchemaText(schemaField)"
+                                                                      ValueChanged="@(value => HandleSchemaTextInput(schemaField, value))"
+                                                                      OnSubmit="@(() => CommitSchemaTextFieldAsync(schemaField))"
+                                                                      IsDisabled="@Saving"
+                                                                      Placeholder="@schemaField.Placeholder"
+                                                                      AriaLabelledBy="@($"{FieldDomId(schemaField)}-label")"
+                                                                      AriaDescribedBy="@DescribedBy(schemaField, error)"
+                                                                      AriaInvalid="@(error is not null)"
+                                                                      AriaRequired="@schemaField.Required"
+                                                                      AdditionalAttributes="@MarkdownAttributes(schemaField)" />
+                                                    @FieldMessage(schemaField, error)
+                                                    @if (stale is not null)
+                                                    {
+                                                        <p class="tm-modeling-inspector__field-stale" id="@FieldStaleId(schemaField)">@stale</p>
+                                                    }
+                                                </div>
+                                                break;
+
+                                            case ModelingPropertyFieldType.MultilineText:
+                                                <TmTextArea Id="@FieldDomId(schemaField)"
+                                                            Label="@FieldDisplayLabel(schemaField)"
+                                                            Value="@SchemaText(schemaField)"
+                                                            ValueChanged="@(value => HandleSchemaTextInput(schemaField, value))"
+                                                            Rows="3"
+                                                            Error="@error"
+                                                            AnnounceError="@ShouldAnnounce(schemaField.Key)"
+                                                            Required="@schemaField.Required"
+                                                            Disabled="@Saving"
+                                                            AdditionalAttributes="@TextFieldAttributes(schemaField)" />
+                                                break;
+
+                                            case ModelingPropertyFieldType.Duration:
+                                                @* Review U5: the number and its unit live in ONE row; the
+                                                   label carries NO unit (the select says it) and the
+                                                   error/help block spans both columns below. The stored
+                                                   value is always integer MINUTES. *@
+                                                <div class="tm-modeling-inspector__field-control tm-modeling-inspector__duration">
+                                                    <div class="tm-modeling-inspector__duration-row">
+                                                        <TmTextInput Id="@FieldDomId(schemaField)"
+                                                                     Label="@FieldDisplayLabel(schemaField)"
+                                                                     Value="@SchemaText(schemaField)"
+                                                                     ValueChanged="@(value => HandleSchemaTextInput(schemaField, value))"
+                                                                     OnKeyDown="@(args => HandleSchemaTextKeyDownAsync(schemaField, args))"
+                                                                     OnBlur="@(() => CommitSchemaTextFieldAsync(schemaField))"
+                                                                     Error="@error"
+                                                                     AnnounceError="@ShouldAnnounce(schemaField.Key)"
+                                                                     Required="@schemaField.Required"
+                                                                     Placeholder="@schemaField.Placeholder"
+                                                                     Disabled="@Saving" />
+                                                        <select class="tm-modeling-inspector__duration-unit"
+                                                                data-testid="@TestId($"modeling-inspector-field-{schemaField.Key}-unit")"
+                                                                aria-label="@($"{FieldDisplayLabel(schemaField)}: {DurationUnitLabel(schemaField)}")"
+                                                                value="@DurationUnit(schemaField)"
+                                                                disabled="@Saving"
+                                                                @onchange="@(args => HandleDurationUnitChanged(schemaField, args))">
+                                                            <option value="minutes">@Loc["TmModelingInspector_DurationUnitMinutes"]</option>
+                                                            <option value="hours">@Loc["TmModelingInspector_DurationUnitHours"]</option>
+                                                            <option value="days">@Loc["TmModelingInspector_DurationUnitDays"]</option>
+                                                        </select>
+                                                    </div>
+                                                    @FieldMessage(schemaField, error)
+                                                </div>
+                                                break;
+
+                                            case ModelingPropertyFieldType.EntityReference:
+                                            case ModelingPropertyFieldType.EntityReferenceList:
+                                                @* Review A8: ONE reference is a single-value combobox — the core
+                                                   TmMultiSelect picks, replaces, closes and returns focus. *@
+                                                <TmMultiSelect TItem="ModelingLookupItemDto"
+                                                               TValue="string"
+                                                               Id="@FieldDomId(schemaField)"
+                                                               Label="@FieldDisplayLabel(schemaField)"
+                                                               Values="@CurrentReferenceIds(schemaField)"
+                                                               ValuesChanged="@(values => HandleSchemaReferencesChangedAsync(schemaField, values))"
+                                                               SingleSelection="@(schemaField.Type == ModelingPropertyFieldType.EntityReference)"
+                                                               Items="@ReferenceItems(schemaField)"
+                                                               ValueField="@(item => item.RefId)"
+                                                               DisplayField="@(item => item.Display)"
+                                                               IdField="@(item => item.RefId)"
+                                                               Placeholder="@LookupPlaceholder(schemaField)"
+                                                               FilterPlaceholder="@Loc["TmModelingInspector_ReferenceSearch"]"
+                                                               Error="@error"
+                                                               AnnounceError="@ShouldAnnounce(schemaField.Key)"
+                                                               AriaDescribedBy="@(stale is null ? null : FieldStaleId(schemaField))"
+                                                               Required="@schemaField.Required"
+                                                               HelpText="@schemaField.Help"
+                                                               EmptyMessage="@(ReferenceLookupMessage(schemaField) ?? Loc["TmMultiSelect_NoResults"])"
+                                                               ErrorMessage="@Loc["TmModelingInspector_LookupFailed"]"
+                                                               Disabled="@Saving"
+                                                               AllowFiltering="true"
+                                                               OnOpen="@(() => HandleReferenceOpenAsync(schemaField))"
+                                                               OnFiltering="@(text => HandleReferenceFilterAsync(schemaField, text))" />
+                                                @if (stale is not null)
+                                                {
+                                                    <p class="tm-modeling-inspector__field-stale" id="@FieldStaleId(schemaField)">@stale</p>
+                                                }
+                                                @if (HasMoreReferences(schemaField))
+                                                {
+                                                    <button type="button"
+                                                            class="tm-modeling-inspector__field-action tm-modeling-inspector__load-more"
+                                                            data-testid="@TestId($"modeling-inspector-field-{schemaField.Key}-load-more")"
+                                                            disabled="@Saving"
+                                                            @onclick="@(() => LoadMoreReferencesAsync(schemaField))">
+                                                        <span>@Loc["TmModelingInspector_ReferenceLoadMore"]</span>
+                                                    </button>
+                                                }
+                                                break;
+
+                                            case ModelingPropertyFieldType.StringList:
+                                                <div class="tm-modeling-inspector__field-control">
+                                                    <span class="tm-input-label" id="@($"{FieldDomId(schemaField)}-label")">
+                                                        @FieldDisplayLabel(schemaField)
+                                                        @if (schemaField.Required)
+                                                        {
+                                                            @RequiredMark
+                                                        }
+                                                    </span>
+                                                    <div class="tm-modeling-inspector__list"
+                                                         role="group"
+                                                         aria-labelledby="@($"{FieldDomId(schemaField)}-label")"
+                                                         aria-describedby="@DescribedBy(schemaField, error)">
+                                                        @for (var index = 0; index < SchemaStringList(schemaField).Count; index++)
+                                                        {
+                                                            var itemIndex = index;
+                                                            <div class="tm-modeling-inspector__list-row" data-testid="@TestId($"modeling-inspector-field-{schemaField.Key}-row-{itemIndex}")">
+                                                                <TmTextInput Id="@($"{FieldDomId(schemaField)}-{itemIndex}")"
+                                                                             AriaLabel="@string.Format(CultureInfo.CurrentUICulture, Loc["TmModelingInspector_ItemLabel"], itemIndex + 1)"
+                                                                             Value="@StringListItemText(schemaField, itemIndex)"
+                                                                             ValueChanged="@(value => HandleStringListItemInput(schemaField, itemIndex, value))"
+                                                                             OnBlur="@(() => CommitStringListItemAsync(schemaField, itemIndex))"
+                                                                             Disabled="@Saving" />
+                                                                <button type="button"
+                                                                        class="tm-modeling-inspector__field-action"
+                                                                        id="@($"modeling-inspector-field-{SanitizeKey(schemaField.Key)}-remove-{itemIndex}")"
+                                                                        data-testid="@TestId($"modeling-inspector-field-{schemaField.Key}-remove-{itemIndex}")"
+                                                                        aria-label="@RemoveItemAriaLabel(schemaField, itemIndex)"
+                                                                        disabled="@Saving"
+                                                                        @onclick="@(() => RemoveStringListItemAsync(schemaField, itemIndex))">
+                                                                    <TmIcon Name="@IconNames.X" Size="IconSize.Sm" />
+                                                                </button>
+                                                            </div>
+                                                        }
+                                                        <button type="button"
+                                                                class="tm-modeling-inspector__field-action tm-modeling-inspector__field-add"
+                                                                id="@($"modeling-inspector-field-{SanitizeKey(schemaField.Key)}-add")"
+                                                                data-testid="@TestId($"modeling-inspector-field-{schemaField.Key}-add")"
+                                                                aria-label="@AddItemAriaLabel(schemaField)"
+                                                                disabled="@Saving"
+                                                                @onclick="@(() => AddStringListItemAsync(schemaField))">
+                                                            <TmIcon Name="@IconNames.Plus" Size="IconSize.Sm" />
+                                                            <span>@Loc["TmModelingInspector_AddItem"]</span>
+                                                        </button>
+                                                    </div>
+                                                    @FieldMessage(schemaField, error)
+                                                </div>
+                                                break;
+
+                                            case ModelingPropertyFieldType.StructuredList:
+                                                <div class="tm-modeling-inspector__field-control">
+                                                    <span class="tm-input-label" id="@($"{FieldDomId(schemaField)}-label")">
+                                                        @FieldDisplayLabel(schemaField)
+                                                        @if (schemaField.Required)
+                                                        {
+                                                            @RequiredMark
+                                                        }
+                                                    </span>
+                                                    <div class="tm-modeling-inspector__list tm-modeling-inspector__structured"
+                                                         role="group"
+                                                         aria-labelledby="@($"{FieldDomId(schemaField)}-label")"
+                                                         aria-describedby="@DescribedBy(schemaField, error)">
+                                                        @for (var index = 0; index < SchemaArray(schemaField).Count; index++)
+                                                        {
+                                                            var itemIndex = index;
+                                                            <div class="tm-modeling-inspector__structured-item"
+                                                                 data-testid="@TestId($"modeling-inspector-field-{schemaField.Key}-item-{itemIndex}")">
+                                                                <div class="tm-modeling-inspector__structured-header">
+                                                                    <span class="tm-modeling-inspector__structured-title">@string.Format(CultureInfo.CurrentUICulture, Loc["TmModelingInspector_ItemLabel"], itemIndex + 1)</span>
+                                                                    <button type="button"
+                                                                            class="tm-modeling-inspector__field-action"
+                                                                            id="@($"modeling-inspector-field-{SanitizeKey(schemaField.Key)}-remove-{itemIndex}")"
+                                                                            data-testid="@TestId($"modeling-inspector-field-{schemaField.Key}-remove-{itemIndex}")"
+                                                                            aria-label="@RemoveItemAriaLabel(schemaField, itemIndex)"
+                                                                            disabled="@Saving"
+                                                                            @onclick="@(() => RemoveStructuredItemAsync(schemaField, itemIndex))">
+                                                                        <TmIcon Name="@IconNames.X" Size="IconSize.Sm" />
+                                                                    </button>
+                                                                </div>
+                                                                @foreach (var itemField in OrderedFields(schemaField.ItemFields))
+                                                                {
+                                                                    var itemError = SchemaItemError(schemaField, itemIndex, itemField);
+                                                                    @switch (itemField.Type)
+                                                                    {
+                                                                        case ModelingPropertyFieldType.Boolean:
+                                                                            <TmToggle Id="@ItemDomId(schemaField, itemIndex, itemField)"
+                                                                                      Label="@FieldDisplayLabel(itemField)"
+                                                                                      Value="@StructuredItemBoolean(schemaField, itemIndex, itemField)"
+                                                                                      ValueChanged="@(value => HandleStructuredItemBooleanAsync(schemaField, itemIndex, itemField, value))"
+                                                                                      Disabled="@Saving"
+                                                                                      Required="@itemField.Required"
+                                                                                      AriaDescribedBy="@(itemError is null ? null : ItemErrorId(schemaField, itemIndex, itemField))" />
+                                                                            @if (itemError is not null)
+                                                                            {
+                                                                                <div class="tm-input-error-message" role="@(ShouldAnnounce(StructuredItemDraftKey(schemaField, itemIndex, itemField)) ? "alert" : null)" id="@ItemErrorId(schemaField, itemIndex, itemField)">@itemError</div>
+                                                                            }
+                                                                            break;
+
+                                                                        case ModelingPropertyFieldType.Enum:
+                                                                            <TmSelect TValue="string"
+                                                                                      Id="@ItemDomId(schemaField, itemIndex, itemField)"
+                                                                                      Label="@FieldDisplayLabel(itemField)"
+                                                                                      Value="@StructuredItemString(schemaField, itemIndex, itemField)"
+                                                                                      ValueChanged="@(value => HandleStructuredItemEnumAsync(schemaField, itemIndex, itemField, value))"
+                                                                                      Options="FieldOptions(itemField)"
+                                                                                      Placeholder="@(itemField.Placeholder ?? Loc["TmModelingInspector_EnumPlaceholder"])"
+                                                                                      Error="@itemError"
+                                                                                      AnnounceError="@ShouldAnnounce(StructuredItemDraftKey(schemaField, itemIndex, itemField))"
+                                                                                      Required="@itemField.Required"
+                                                                                      Disabled="@Saving" />
+                                                                            break;
+
+                                                                        default:
+                                                                            <TmTextInput Id="@ItemDomId(schemaField, itemIndex, itemField)"
+                                                                                         Label="@FieldDisplayLabel(itemField)"
+                                                                                         Value="@StructuredItemText(schemaField, itemIndex, itemField)"
+                                                                                         ValueChanged="@(value => HandleStructuredItemInput(schemaField, itemIndex, itemField, value))"
+                                                                                         OnBlur="@(() => CommitStructuredItemFieldAsync(schemaField, itemIndex, itemField))"
+                                                                                         Error="@itemError"
+                                                                                         AnnounceError="@ShouldAnnounce(StructuredItemDraftKey(schemaField, itemIndex, itemField))"
+                                                                                         Required="@itemField.Required"
+                                                                                         Placeholder="@itemField.Placeholder"
+                                                                                         Disabled="@Saving"
+                                                                                         AdditionalAttributes="@ItemFieldAttributes(schemaField, itemIndex, itemField, itemError)" />
+                                                                            break;
+                                                                    }
+                                                                }
+                                                            </div>
+                                                        }
+                                                        <button type="button"
+                                                                class="tm-modeling-inspector__field-action tm-modeling-inspector__field-add"
+                                                                id="@($"modeling-inspector-field-{SanitizeKey(schemaField.Key)}-add")"
+                                                                data-testid="@TestId($"modeling-inspector-field-{schemaField.Key}-add")"
+                                                                aria-label="@AddItemAriaLabel(schemaField)"
+                                                                disabled="@Saving"
+                                                                @onclick="@(() => AddStructuredItemAsync(schemaField))">
+                                                            <TmIcon Name="@IconNames.Plus" Size="IconSize.Sm" />
+                                                            <span>@Loc["TmModelingInspector_AddItem"]</span>
+                                                        </button>
+                                                    </div>
+                                                    @FieldMessage(schemaField, error)
+                                                </div>
+                                                break;
+
+                                            default:
+                                                <TmTextInput Id="@FieldDomId(schemaField)"
+                                                             Label="@FieldDisplayLabel(schemaField)"
+                                                             Type="@(schemaField.Type == ModelingPropertyFieldType.Url ? "url" : "text")"
+                                                             Value="@SchemaText(schemaField)"
+                                                             ValueChanged="@(value => HandleSchemaTextInput(schemaField, value))"
+                                                             OnKeyDown="@(args => HandleSchemaTextKeyDownAsync(schemaField, args))"
+                                                             OnBlur="@(() => CommitSchemaTextFieldAsync(schemaField))"
+                                                             Error="@error"
+                                                             AnnounceError="@ShouldAnnounce(schemaField.Key)"
+                                                             Required="@schemaField.Required"
+                                                             Placeholder="@schemaField.Placeholder"
+                                                             HelpText="@schemaField.Help"
+                                                             Disabled="@Saving"
+                                                             AdditionalAttributes="@TextFieldAttributes(schemaField)" />
+                                                break;
+                                        }
+                                    }
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </section>
+            }
+        }
+    </text>;
+
+    /// <summary>The error/help block of a field the inspector renders itself (the core controls own
+    /// theirs through <c>Error</c>). Review U7: <c>role="alert"</c> only once the field was committed
+    /// — a seeded error stays a described message. Review U6: this block is the FIELD-level one, so a
+    /// structured list only shows it when the issue's path is the field itself.</summary>
+    private RenderFragment FieldMessage(ModelingPropertyFieldDto field, string? error) => @<text>
+        @if (error is not null)
+        {
+            <div class="tm-input-error-message" role="@(ShouldAnnounce(field.Key) ? "alert" : null)" id="@FieldErrorId(field)">@error</div>
+        }
+        else if (!string.IsNullOrWhiteSpace(field.Help))
+        {
+            <p class="tm-modeling-inspector__field-help" id="@FieldHelpId(field)">@field.Help</p>
+        }
+    </text>;
 
     /// <summary>The integer property's change commit: TmNumberInput raises on its native change
     /// event (blur/Enter in the browser); the splat keeps the escape-revert + parse contract off

@@ -675,6 +675,37 @@ re-resolution renders the snapshot plus a localized "reference may be stale" hin
 blocks the save. The **host may reject** a reference at save time (the writer returns an issue on
 the field, `SourceElementId` set) — that is the contract the plan asks for.
 
+**Re-resolution (phase 5 review A1).** The re-resolution is ONE batch per field, not one call per
+reference — and a lookup provider that can only search keeps compiling through a default interface
+member returning `null`:
+
+```csharp
+public sealed class ModelingLookupResolveRequest
+{
+    public string ModelId { get; set; }
+    public string Culture { get; set; }
+    public List<ModelingLookupItemDto> References { get; set; }  // RefId = the match key
+}
+
+public interface IModelingLookupProvider
+{
+    // …ProviderKey + LookupAsync…
+    /// <summary>null = re-resolution unsupported (no hint at all). An id missing from the returned
+    /// Items is STALE. Default member returning null, so every existing provider keeps compiling.</summary>
+    Task<ModelingLookupResultDto?> ResolveAsync(ModelingLookupResolveRequest request, CancellationToken cancellationToken)
+        => Task.FromResult<ModelingLookupResultDto?>(null);
+}
+```
+
+Rules the inspector keeps: one resolve per (field, id set) after seeding, its CTS cancelled on
+reseed/dispose so a late answer cannot land; a fresh `Display` only replaces the rendered LABEL —
+the stored value (`id`, `display`, `snapshotAt`) is never rewritten; a stale id renders the stored
+snapshot plus the hint (`<p id="{FieldDomId}-stale">`, `TmModelingInspector_ReferenceStale`, added
+to the field's `aria-describedby`) and never an error issue, so the save is not blocked; a THROWING
+or unsupported provider is UNRESOLVED (snapshot, no hint) rather than stale. Re-selecting an id the
+value already stores keeps its ORIGINAL `snapshotAt`; only a newly picked item gets
+`ModelingEntityReference.FromLookupItem` (`snapshotAt = now`).
+
 ### 5.5 Validation (shared)
 
 New public helper in Abstractions:
@@ -692,30 +723,100 @@ public sealed class ModelingPropertySchemaValidator
 ```
 
 Rules: `Required` (missing/empty/`null`), type match (JSON kind per field type; numbers accept
-integer JSON for `Number` and reject `1.5` for `Integer`), `Min`/`Max`, `MaxLength`, `Pattern`,
-`Enum` membership (`Options.Value`), `EntityReference` shape (`type`+`id` non-empty strings),
-`StructuredList` item validation. The **same validator** is called by the editor (field-level
-errors + save gate) and by the engine (§6) so MCP and the editor reject the identical value with
-the identical issue — mandatory rule "one semantics".
+integer JSON for `Number` and reject `1.5` for `Integer` — an integer field never silently rounds a
+fraction), `Min`/`Max`, `MaxLength`, `Pattern`, `Enum` membership (`Options.Value`),
+`EntityReference` shape (`type`+`id` non-empty strings), `StructuredList` item validation (an
+unparsable item number keeps the typed text and fails at the item's own path, never at the list's).
+The **same validator** is called by the editor (field-level errors + save gate) and by the engine
+(§6) so MCP and the editor reject the identical value with the identical issue — mandatory rule
+"one semantics".
+
+Two properties every consumer relies on:
+
+- **Identity.** `Category = "property"`, `SuggestedFix` = the field LABEL, and
+  `Id = "<code>:<path>"` where code is `required | type | range | length | pattern | enum |
+  reference | unknown` and path is `key` or `key[index].itemKey`. A caller that owns several items
+  STAMPS the owner into the id (`"<code>:<path>@<ownerId>"`, phase 5 review A12) so two elements
+  that miss the same field keep distinct identities; readers strip the suffix
+  (`ModelingPropertyIssueText.PathOf`) before matching a field.
+- **Two modes.** ONE operation is judged on the keys it TOUCHES (a legacy value elsewhere never
+  blocks a targeted fix — a REMOVED required key still fails); a NEW or RE-TYPED item is judged on
+  its FULL property set, deferred to the END of the batch (§5.6, phase 5 review A4), so
+  `add_element` + `set_properties` in one batch satisfies the required fields while a still-missing
+  field is reported at the ADD's index.
 
 ### 5.6 Editor/engine integration
 
 - Resolution: `IModelingPropertySchemaProvider` registered for `ProviderKey`; the editor resolves it
-  like the writer. Cache key = `(providerKey, notation, semanticType, viewpointKey, culture,
-  schemaVersion)`; a `null` schema falls back to today's behavior (scalars editable, complex
-  read-only) — the backward-compatibility test.
+  like the writer. Cache key = `(providerKey, modelId, notation, semanticType, viewpointKey,
+  culture, schemaVersion)`; the version a provider first serves is PINNED per
+  `providerKey|modelId|notation|semanticType|viewpointKey` (a mid-session schema deploy cannot
+  re-interpret a stored value) and a `null` schema falls back to today's behavior (scalars editable,
+  complex read-only) — the backward-compatibility test. A provider that THROWS is never cached.
+- Refresh: ONE guarded after-render hook owns the async race — a cancellation token reaches the
+  provider and a generation is re-checked after every await, so an answer for a selection the user
+  already left cannot overwrite the newer one; the save gate bumps the same generation.
+- **Renderer → engine bridge (phase 5 review A3).** The engine is synchronous while the provider is
+  async, so `ModelingOperationContext.ResolvePropertySchema` is a
+  `Func<ModelingPropertySchemaRequest, ModelingPropertySchemaDto?>?` (phase 5 review A2) the CALLER
+  fills. `ModelingPropertySchemaResolver.PreloadAsync(provider, model, extraPairs, viewpointKey,
+  culture, ct)` asks every pair ONCE (the model's own plus the batch's, see
+  `PropertySchemaPairs` / `PropertySchemaPairsFromJson`), contains a throwing provider as "no
+  schema for that pair" and returns the dictionary lookup — `null` when no provider is registered,
+  so a caller can assign it unconditionally. `modeling_apply_operations` resolves the provider for
+  an optional `propertySchemaProviderKey` argument (else the only registered one), preloads and
+  passes the resolver; with no provider registered the batch is byte-identical to 2.10.0.
+- The **editor's live context intentionally carries NO resolver**: every editor commit already went
+  through the inspector's shared-validator gate, so re-validating inside the command would double
+  the rules and report a not-yet-filled required field mid-edit. Parity is defined as MCP
+  `apply_operations` vs the editor's SAVE (both run the same validator with the full set), not as
+  every in-memory command (§6.4).
 - Render mapping (phase 5): `String` → `TmTextInput`, `MultilineText`/`Markdown` → the Tempo
   markdown editor, `Integer`/`Number` → `TmNumberInput`, `Boolean` → `TmToggle`, `Enum` →
   `TmSelect`, `Date`/`DateTime` → `TmDatePicker`/`TmDateTimePicker`, `Duration` → number + unit
   select (stored as **minutes**, integer), `Url` → `TmTextInput` with URL validation,
-  `EntityReference` → `TmFilterableDropdown`/combobox with debounced async lookup,
-  `EntityReferenceList` → `TmMultiSelect` (async + `AllowCreate=false`), `StringList` →
-  repeated `TmTextInput` with add/remove, `StructuredList` → a repeatable nested form
-  (`TmFormSection` + item actions).
+  `EntityReference` → a debounced async combobox, `EntityReferenceList` → the same combobox as a
+  list (`AllowCreate=false`), `StringList` → repeated inputs with add/remove, `StructuredList` → a
+  repeatable nested form. **As built**, both reference types render through the core `TmMultiSelect`
+  — the single reference sets `SingleSelection` (one value, pick replaces and closes) — because the
+  combobox must show the STORED display SNAPSHOT as a chip before any lookup call (so a value
+  renders offline), a reason independent of the core controls' keyboard support: `TmFilterableDropdown`
+  DOES implement `aria-activedescendant`; `TmEntityPicker` does not. `TmMultiSelect.SingleSelection`
+  is a public core knob (review A8), not an inspector-private hack.
+- Lookup: per-field debounce (300 ms), request generation (a stale answer is dropped), per-field CTS,
+  `MinQueryLength` (below it the field asks for `MinQueryLength` characters), a `SearchRequired =
+  false` descriptor offering its first page on open, and "Load more" APPENDING the next page through
+  the host's own `ContinuationToken` (else `Skip`).
 - Required-field and type errors render inline (`aria-invalid` + described-by) and as
   `ModelingIssueDto` in the issues dock; saving is blocked while an `Error` issue exists
-  (`SaveModelChangesAsync` returns `null` and announces the count).
+  (`SaveModelChangesAsync` returns `null` and announces the count). The gate only counts issues the
+  pending change set TOUCHES (phase 5 review A9) — every key of an added item, or a key an updated
+  item sets/removes — so a legacy error elsewhere never traps the user.
 - Localization: new `TmModelingInspector_*` keys in en/cs/sk/fr + `MockTmLocalizer` (phase 5 DoD).
+- **Form semantics (phase 5 review U1–U9).** Every field is labelled exactly once: the date and
+  date-time pickers name their own trigger from `Label` (no duplicate span, no `aria-label` on the
+  trigger), the custom labels (markdown, both list types, the read-only presentation) carry the
+  `tm-input-required` marker when the field is required, and a duration keeps the unit OUT of the
+  label — the number and its display unit share one row, the unit select is named
+  `"<label>: <unit>"` and the error/help block spans both columns below. The markdown editor's
+  content surface is a real `textbox` (`role`, `aria-multiline`) named/described through its four
+  optional ARIA parameters, and the boolean field's error/help block renders after its toggle.
+  A structured list reports an error on the ITEM it belongs to (path
+  `key[<i>].itemKey`), never on the list.
+- **Announcements (phase 5 review U7/U8).** An error that was already on the value when the
+  inspector seeded renders as a DESCRIPTION (the control's `aria-describedby`) and becomes an
+  assertive `role="alert"` only once the user commits that field — a panel that shouts on load is
+  noise. Adding or removing a list item commits, announces politely
+  (`TmModelingInspector_ItemAdded` / `_ItemRemoved`) and moves focus through the shared CSP-safe
+  `modeling-editor.js` `focusWithin`: into the new row's first input after an add, onto the next
+  row's remove button after a remove, and back to the add button when the last row goes away.
+- **Dock rows (phase 5 review U10).** The issues dock shows the LOCALIZED message
+  (`ModelingPropertyIssueText.Localize`, the single reader shared with the inspector) and no
+  suggested fix; the raw English `ModelingIssueDto` stays the MCP/writer-facing text, and the
+  inspector matches an issue only by the PATH of its `Id`. Screenshots of these states live in
+  `tests/Tempo.Blazor.E2E/__screenshots__/modeling/` (`inspector-schema-error-*`,
+  `inspector-schema-lists-*`, generated by `ModelingPropertySchemaPhase5Screenshots` under
+  `TM_WRITE_BASELINES=1`).
 
 ---
 
@@ -756,9 +857,12 @@ public sealed class ModelingOperationContext
     /// UseCaseDiagram then also commits.</summary>
     public string? ViewpointKey { get; set; }
     /// <summary>Phase 5. The engine is synchronous, so the caller resolves schemas up front
-    /// (IModelingPropertySchemaProvider is async) and passes a lookup by (notation, semanticType).
-    /// Reference EXISTENCE is never checked here — that is the writer's job (§5.4).</summary>
-    public Func<string, string, ModelingPropertySchemaDto?>? ResolvePropertySchema { get; set; }
+    /// (IModelingPropertySchemaProvider is async) and passes a resolver of the request the engine
+    /// builds — ModelId, the judged value's notation + semantic type, the caller's viewpoint (else
+    /// Views[0]'s, else ""), CurrentUICulture and SchemaVersion = null. A null resolver (the
+    /// default) validates no property values at all. See ModelingPropertySchemaResolver.PreloadAsync
+    /// (§5.6) and the preload helper §5.6 documents.</summary>
+    public Func<ModelingPropertySchemaRequest, ModelingPropertySchemaDto?>? ResolvePropertySchema { get; set; }
     /// <summary>Editor batch (expanded cascades, geometry allowed) vs MCP batch (no cascade, no
     /// geometry unless asked).</summary>
     public ModelingOperationPolicy Policy { get; set; } = ModelingOperationPolicy.Strict;
@@ -832,7 +936,13 @@ keep the 2.10.0 verdict byte-identical.
 `ApplyJson` parses into `ModelingOperationBatch` and reports parse errors with the legacy wording
 (`operations[i]: expected a JSON object.`, `operations[i]: missing 'op'.`). The MCP tool becomes a
 ~10-line caller: load model → clone → `ApplyJson` → persist or fail with
-`result.Errors.Select(e => e.Message)`.
+`result.Errors.Select(e => e.Message)`. Since phase 5 it first resolves an optional
+`IModelingPropertySchemaProvider`, preloads the schemas the batch can need
+(`ModelingPropertySchemaResolver`, §5.6) and hands the dictionary lookup in as
+`ResolvePropertySchema`; `add_element`/`add_relationship` are judged on their full set AFTER the
+batch (so a later `set_properties` can satisfy them) and reported at the ADD's index, while an
+update is judged on the keys it touches. Reference EXISTENCE is never checked here — that is the
+writer's job (§5.4).
 
 ### 6.2 Operation catalog (existing ops unchanged, new ones additive)
 
@@ -904,6 +1014,12 @@ operations[2] add_relationship: 'SequenceFlow' from 'Task' to 'Pool' is not vali
 - Phase 7 ships a **parity test**: the same logical batch applied through the editor path and
   through `modeling_apply_operations` yields the same model JSON and the same error list
   (`Message` + `Code`).
+- **Property values (phase 5 review A4).** Property parity is defined between MCP
+  `modeling_apply_operations` and the editor's SAVE: both run the shared
+  `ModelingPropertySchemaValidator` over the resulting FULL property set and produce the same
+  `property_*` code for the same value. The editor's own in-memory commands deliberately run no
+  property resolver (§5.6) — the inspector's gate is the editor-side verdict, and a save
+  re-validates the whole model through the same rules.
 - Notation rules come only from `IModelingRelationshipRulesProvider` /
   `IModelingViewpointRulesProvider` (BPMN rules stay in
   `BpmnRelationshipRulesProvider`) — no ad-hoc checks in components.
@@ -1232,6 +1348,59 @@ second gesture could merge into the first transaction. Details that later phases
    the value stays pending and the user can re-pick.
 5. No schema registered → the inspector is exactly the 2.10.0 one (scalars only).
 
+**As built (phase 5).** The details later phases and hosts must keep:
+
+- **Resolution.** `TmModelingEditor` injects `IEnumerable<IModelingPropertySchemaProvider>` /
+  `IEnumerable<IModelingLookupProvider>` and resolves them by the effective model provider key,
+  exactly like the writer. The schema cache key is the documented
+  `(providerKey, modelId, notation, semanticType, viewpointKey, culture, schemaVersion)`, and the
+  version a provider first serves is PINNED into every later request (and into the cache key), so a
+  mid-session schema deploy cannot re-interpret a value. A provider that throws degrades to "no
+  schema" — it never breaks the editor.
+- **Refresh hook.** One guarded call in `TmModelingEditor.OnAfterRenderAsync` (selection identity,
+  model, notation, viewpoint, culture, the generation counter and the edit generation) replaces a
+  call on each of the eight selection paths; the follow-up render is a no-op.
+- **Validation + save gate.** The editor validates EVERY element's and relationship's properties
+  through the shared `ModelingPropertySchemaValidator` (the relationship is judged with its
+  relationship TYPE as the semantic type) and only `Error` issues enter the dock. A read-only host
+  (MO2) sees the schema labels but never gains validation findings. `SaveModelChangesAsync`
+  re-validates and returns `null` while an error exists, announcing the localized count through the
+  existing history live region (`TmModelingInspector_SaveBlocked`).
+- **Engine.** `ModelingOperationContext.ResolvePropertySchema` (a synchronous resolver the async
+  caller fills) validates every property payload with the same validator. A NEW
+  element/relationship is validated in FULL (a missing required field fails the operation); an
+  UPDATE only for the keys it touches (or in full when it changes the semantic type/notation), so a
+  client can still fix one field of a model that carries an unrelated legacy value. A REMOVED
+  required key still fails (`property_required` on the key's path, e.g. `exceptions[0].code`).
+  Length folds into `property_range` (there is no `property_length` code in §6.3).
+- **Issue identity.** Every validator issue is `Category = "property"`, `SuggestedFix` = the field
+  LABEL and `Id = "<code>:<path>"` (`required|type|range|length|pattern|enum|reference|unknown`).
+  The inspector localizes the coded message and shows a host-authored (writer) issue VERBATIM, so a
+  rejected reference keeps its own wording.
+- **Render mapping (deviation from §5.6 recorded here).** `EntityReference` and `EntityReferenceList`
+  both render through the core `TmMultiSelect` — the single reference sets the new public
+  `SingleSelection` knob (one value: a pick REPLACES the value, closes the popup, returns focus to
+  the trigger, and the select-all/confirm controls are hidden) — instead of
+  `TmFilterableDropdown`. The reason is NOT keyboard support: `TmFilterableDropdown` already
+  implements the APG combobox contract (`aria-activedescendant`, arrow navigation), and a host can
+  hand its `DataProvider` the inspector's `IDropdownDataProvider` adapter. The blocking reasons are
+  the two things that dropdown cannot do: (a) it renders its selection as TEXT, while a reference
+  must show the STORED `display` SNAPSHOT as a chip before any lookup call — that snapshot is the
+  whole point of §5.4, and it is the only way the value renders at all offline; (b) the SAME
+  control must serve the single reference and the list, whose stored arrays seed the option list, so
+  a lookup never has to run to render a value (the host catalogue can be unreachable mid-edit).
+  `TmEntityPicker` is not used either (it has no `aria-activedescendant`), and a dropdown shows a
+  single value while the list field needs chips per stored reference.
+  `TmMarkdownEditor` commits on its root's bubbling `focusout` (it has no blur callback) and on
+  Ctrl+Enter. A duration field shows a number plus a display-unit select and always stores integer
+  MINUTES.
+- **Backward compatibility.** With no provider (or a `null` schema) the inspector is byte-identical
+  to 2.10.0; the shipped DEMO schema/lookup providers answer only for the demo provider key AND the
+  phase-5 demo model id (`demo-bpmn-step-attributes`, `?scenario=step-attributes`), so every
+  pre-existing demo scenario keeps the old surface too. The demo writer accepts both demo model ids,
+  keeps a persisted copy per model id, validates the same schema on its engine path and REJECTS a
+  reference the demo catalogue no longer knows (an issue on the element + field).
+
 ---
 
 ## 10. Phase → deliverable map
@@ -1241,7 +1410,7 @@ second gesture could merge into the first transaction. Details that later phases
 | 2 | §3 change set v2 + §4 capabilities + §6 engine (typed, JSON front-end, `set_properties`) moved to Abstractions; MCP refactored to a caller with byte-identical output; `DemoModelingModelWriter` extended |
 | 3 | §9.1, §9.2 — semantic palette insert/delete/relationship drawing, cascade confirmation, non-drag alternatives, localization, E2E. As implemented: `ModelingOperationContext.Notation` + `ViewpointKey` (§6.1) so the editor's overrides and the engine agree; `ModelingOperationEngine.ValidateRelationship` is the ONE relationship verdict the picker and the commit share; a viewless model is seeded by `SeedModelingViewCommand` in the same transaction; the cascade delete names its target, touches every view, restores original ordering on undo and is confirmed through an `alertdialog`; the authoring sheets are an INTERNAL renderer (no public component, no JSON documentation entry); `IModelingNotationProfile.ContainerElementTypes` owns containment (§5.1) |
 | 4 | §9.3, §9.4 — layout persistence, hierarchy moves, auto-layout as an undoable op, BPMN visual conventions. As implemented: one `SetModelingViewLayoutCommand` (internal, engine batch of `update_element parentId` + `set_view_node` + `set_view_connection`) per gesture with no debounce timer, a burst of keyboard nudges of the same element set inside 800 ms merged into the command on top of the stack (one undo step), the layout parent resolved by GEOMETRY with the node's subtree excluded and ONLY for a node whose own X/Y changed (a container resize never re-parents its children), a Layout-only writer never re-parents, container growth plus flush-band sibling shifting and ancestor-pool growth in the same transaction, `SnapDocumentOnLoad="false"` on both embedded editors (a load never re-snaps the host's layout; `GridSize="0"` is a valid no-snap setting again), the deterministic relationship-ranked `ModelingLayoutArranger` behind "Arrange" with waypoint clearing and a preview fit (browser dagre stays the DE's own Layout menu, replaced in the dialog by Arrange), position-less elements auto-placed inside their container instead of dropped (opt-in `AutoPlaceElementsWithoutViewNode`), the view `ParentNodeId` mapped to the generated node id, swimlane band data for pool/lane labels with `data-swimlane` on the canvas (a band does not clamp a dragged child), token-based fill/stroke on every BPMN node stencil resolved to the palette in the server SVG export, the bpmn2 marker SVG re-shown behind a transparent native primitive, paper-token swimlane headers/toggles, the non-drag "Move to container" sheet, the in-dialog structure live region and a per-sync lookup context that keeps one move of a 300-element model under 200 ms |
-| 5 | §5 + §9.5 — schema provider, lookups, shared validator, inspector rendering, demo schema |
+| 5 | §5 + §9.5 — schema provider, lookups, shared validator, inspector rendering, demo schema. As implemented: `IModelingPropertySchemaProvider` + `IModelingLookupProvider` resolved per provider key with a pinned schema version, the shared `ModelingPropertySchemaValidator` behind the inspector's inline errors, the editor's save gate and `ModelingOperationContext.ResolvePropertySchema`, one guarded after-render refresh (no call on each selection path), a read-only host keeps labels but gains no findings, the reference fields use the APG `TmMultiSelect` (the recorded deviation above), and the demo ships a BPMN step-attribute schema + catalogue for the `step-attributes` scenario while every other demo scenario keeps the 2.10.0 inspector |
 | 6 | §7 — `TmModelingViewer`, overlays, a11y, print/SVG, wireframe role, demo page |
 | 7 | §6.4 parity tests, docs updates, CHANGELOG, packaging smoke test, release |
 

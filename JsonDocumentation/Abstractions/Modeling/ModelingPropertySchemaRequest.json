@@ -1,0 +1,10 @@
+{
+  "kind": "Class",
+  "category": "Modeling",
+  "namespace": "Tempo.Blazor.Modeling",
+  "description": "Schema request: ModelId, Notation, SemanticType, ViewpointKey, Culture and an optional SchemaVersion the host previously served (null = latest), so a mid-session deploy cannot silently re-interpret a value.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/Modeling/ModelingPropertyContracts.cs",
+  "documentationStatus": "generated",
+  "itemName": "ModelingPropertySchemaRequest"
+}

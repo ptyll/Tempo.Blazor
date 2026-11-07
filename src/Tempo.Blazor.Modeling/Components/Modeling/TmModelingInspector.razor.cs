@@ -68,6 +68,17 @@ public partial class TmModelingInspector
     {
         base.OnParametersSet();
         SeedDrafts();
+        // Phase 5: the schema-driven drafts re-seed on the same contract (selection / schema identity
+        // / committed value change) — never on an unrelated parent render.
+        SeedSchemaDrafts();
+    }
+
+    /// <inheritdoc />
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        // Review U8: a list add/remove asked for a focus target in the render it caused — move it now
+        // that the row exists (progressive enhancement: a missing JS module is not an error).
+        await ApplyPendingListFocusAsync();
     }
 
     private void SeedDrafts()

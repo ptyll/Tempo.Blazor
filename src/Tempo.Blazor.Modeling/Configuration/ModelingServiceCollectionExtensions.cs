@@ -54,6 +54,13 @@ public static class ModelingServiceCollectionExtensions
         // ships an in-memory demo writer so the demo page can edit out of the box.
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IModelingModelWriter, DemoModelingModelWriter>());
 
+        // Phase 5 (decision MODELING-PROPERTY-SCHEMA): the schema + lookup providers are OPTIONAL and
+        // resolved by provider key. The shipped demo pair answers only for the demo provider key AND
+        // the phase-5 demo model id, so every pre-existing host (and every pre-existing demo
+        // scenario) keeps the 2.10.0 inspector.
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IModelingPropertySchemaProvider, DemoModelingPropertySchemaProvider>());
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IModelingLookupProvider, DemoModelingLookupProvider>());
+
         services.TryAddScoped<ModelingDiagramGenerator>();
         services.TryAddScoped<IModelingDiagramProjector>(sp => sp.GetRequiredService<ModelingDiagramGenerator>());
 

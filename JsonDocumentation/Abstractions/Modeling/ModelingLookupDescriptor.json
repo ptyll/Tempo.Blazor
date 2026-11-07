@@ -1,0 +1,10 @@
+{
+  "kind": "Class",
+  "category": "Modeling",
+  "namespace": "Tempo.Blazor.Modeling",
+  "description": "How an entity-reference field searches the host catalogue: LookupType, an optional EntityType narrowing, MinQueryLength, PageSize and SearchRequired (false offers the first page immediately).",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/Modeling/ModelingPropertyContracts.cs",
+  "documentationStatus": "generated",
+  "itemName": "ModelingLookupDescriptor"
+}

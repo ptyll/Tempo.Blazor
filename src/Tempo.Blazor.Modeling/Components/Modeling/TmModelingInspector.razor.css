@@ -250,3 +250,209 @@
         transition: none;
     }
 }
+
+/* ── Phase 5: schema-driven fields (decision MODELING-PROPERTY-SCHEMA) ──────── */
+
+.tm-modeling-inspector__schema-section {
+    display: grid;
+    gap: var(--tm-space-2);
+    padding-block-start: var(--tm-space-2);
+    border-top: 1px solid var(--tm-color-border);
+}
+
+.tm-modeling-inspector__schema-help {
+    margin: 0;
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-xs);
+}
+
+.tm-modeling-inspector__fields {
+    display: grid;
+    gap: var(--tm-space-3);
+    min-width: 0;
+}
+
+.tm-modeling-inspector__field {
+    display: grid;
+    gap: var(--tm-space-1);
+    min-width: 0;
+}
+
+.tm-modeling-inspector__field--invalid {
+    padding-inline-start: var(--tm-space-2);
+    border-inline-start: 2px solid var(--tm-color-danger);
+}
+
+.tm-modeling-inspector__field-label {
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-xs);
+    font-weight: var(--tm-font-weight-medium);
+}
+
+.tm-modeling-inspector__field-value {
+    color: var(--tm-color-text);
+    font-size: var(--tm-font-size-sm);
+    overflow-wrap: anywhere;
+}
+
+.tm-modeling-inspector__field-help {
+    margin: 0;
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-xs);
+}
+
+.tm-modeling-inspector__field-control {
+    display: grid;
+    gap: var(--tm-space-1);
+    min-width: 0;
+}
+
+.tm-modeling-inspector__field-control ::deep .tm-input-wrapper,
+.tm-modeling-inspector__field-control ::deep .tm-textarea-wrapper,
+.tm-modeling-inspector__field-control ::deep .tm-select-wrapper,
+.tm-modeling-inspector__field-control ::deep .tm-multiselect {
+    width: 100%;
+    min-width: 0;
+}
+
+/* U5: the duration is ONE row (number + display unit) with the error/help block BELOW it,
+   spanning both columns — see the duration-row / duration-unit rules further down. */
+.tm-modeling-inspector__duration {
+    gap: var(--tm-space-2);
+}
+
+.tm-modeling-inspector__markdown ::deep .tm-markdown-editor {
+    width: 100%;
+    min-height: calc(var(--tm-space-16) * 1.5);
+}
+
+.tm-modeling-inspector__list {
+    display: grid;
+    gap: var(--tm-space-2);
+    min-width: 0;
+}
+
+.tm-modeling-inspector__list-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: var(--tm-space-2);
+}
+
+.tm-modeling-inspector__structured {
+    gap: var(--tm-space-3);
+}
+
+.tm-modeling-inspector__structured-item {
+    display: grid;
+    gap: var(--tm-space-2);
+    padding: var(--tm-space-2);
+    border: 1px solid var(--tm-color-border);
+    border-radius: var(--tm-radius-md);
+    background: var(--tm-bg-surface-secondary);
+}
+
+.tm-modeling-inspector__structured-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--tm-space-2);
+}
+
+.tm-modeling-inspector__structured-title {
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-xs);
+    font-weight: var(--tm-font-weight-medium);
+}
+
+.tm-modeling-inspector__field-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--tm-space-1);
+    min-width: var(--tm-touch-target);
+    min-height: var(--tm-touch-target);
+    padding-inline: var(--tm-space-2);
+    border: 1px solid var(--tm-color-border);
+    border-radius: var(--tm-radius-md);
+    background: transparent;
+    color: var(--tm-color-text);
+    font-size: var(--tm-font-size-sm);
+    cursor: pointer;
+}
+
+.tm-modeling-inspector__field-action:hover:not(:disabled) {
+    background: var(--tm-bg-surface-secondary);
+}
+
+.tm-modeling-inspector__field-action:focus-visible {
+    outline: 2px solid var(--tm-color-primary);
+    outline-offset: 2px;
+}
+
+.tm-modeling-inspector__field-add {
+    justify-self: start;
+}
+
+/* ── Phase 5 review additions ─────────────────────────────────────────────── */
+
+/* U3: the required marker of every CUSTOM label (the core controls draw their own). */
+.tm-input-required {
+    margin-inline-start: var(--tm-space-1);
+    color: var(--tm-color-danger);
+}
+
+/* A1: the "reference may be stale" hint, and A11's disclosure header. */
+.tm-modeling-inspector__field-stale {
+    margin: 0;
+    color: var(--tm-color-warning);
+    font-size: var(--tm-font-size-xs);
+}
+
+.tm-modeling-inspector__section-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--tm-space-1);
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+}
+
+.tm-modeling-inspector__section-toggle:focus-visible {
+    outline: 2px solid var(--tm-color-primary);
+    outline-offset: 2px;
+}
+
+/* U5: the duration number and its display unit share ONE row; the error/help block below
+   spans both columns. */
+.tm-modeling-inspector__duration-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: end;
+    gap: var(--tm-space-2);
+}
+
+.tm-modeling-inspector__duration-unit {
+    height: var(--tm-input-height-md);
+    padding: 0 var(--tm-space-2);
+    border: 1px solid var(--tm-color-border);
+    border-radius: var(--tm-radius-md);
+    background: var(--tm-bg-surface);
+    color: var(--tm-text-primary);
+    font-size: var(--tm-font-size-sm);
+}
+
+/* The row's message belongs to the whole row: it spans both columns instead of sitting under
+   the number only. */
+.tm-modeling-inspector__duration > .tm-input-error-message,
+.tm-modeling-inspector__duration > .tm-modeling-inspector__field-help {
+    grid-column: 1 / -1;
+}
+
+/* A7: the "Load more" action of a paged lookup. */
+.tm-modeling-inspector__load-more {
+    justify-self: start;
+}

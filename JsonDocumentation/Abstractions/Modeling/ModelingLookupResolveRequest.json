@@ -1,0 +1,10 @@
+{
+  "kind": "Class",
+  "category": "Modeling",
+  "namespace": "Tempo.Blazor.Modeling",
+  "description": "One label re-resolution batch (§5.4): ModelId, Culture and the References a field currently stores, so IModelingLookupProvider.ResolveAsync answers with ONE call per field instead of one call per reference. An id missing from the answer is STALE — the inspector then renders the stored snapshot plus its localized 'reference may be stale' hint and still lets the save through.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/Modeling/ModelingPropertyContracts.cs",
+  "documentationStatus": "generated",
+  "itemName": "ModelingLookupResolveRequest"
+}

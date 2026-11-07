@@ -67,6 +67,54 @@ public sealed class ModelingServiceRegistrationTests
     }
 
     [Fact]
+    public void AddTempoBlazorModeling_registers_the_demo_property_schema_and_lookup_providers()
+    {
+        // Phase 5: both providers are OPTIONAL services resolved per provider key. The shipped demo
+        // pair answers ONLY for the phase-5 demo model, so every pre-existing scenario keeps the
+        // 2.10.0 inspector.
+        var services = new ServiceCollection();
+
+        services.AddTempoBlazorModeling();
+
+        using var provider = services.BuildServiceProvider();
+        var schemaProviders = provider.GetServices<IModelingPropertySchemaProvider>().ToList();
+        var lookupProviders = provider.GetServices<IModelingLookupProvider>().ToList();
+
+        schemaProviders.Should().ContainSingle();
+        schemaProviders[0].ProviderKey.Should().Be(DemoModelingModelProvider.ProviderKeyValue);
+        lookupProviders.Should().ContainSingle();
+        lookupProviders[0].ProviderKey.Should().Be(DemoModelingModelProvider.ProviderKeyValue);
+
+        schemaProviders[0]
+            .GetSchemaAsync(
+                new ModelingPropertySchemaRequest
+                {
+                    ModelId = DemoModelingModelProvider.ModelIdValue,
+                    Notation = "bpmn",
+                    SemanticType = "userTask"
+                },
+                CancellationToken.None)
+            .GetAwaiter().GetResult()
+            .Should().BeNull("the default demo model keeps the 2.10.0 inspector");
+
+        var stepSchema = schemaProviders[0]
+            .GetSchemaAsync(
+                new ModelingPropertySchemaRequest
+                {
+                    ModelId = DemoModelingPropertySchemaProvider.ModelIdValue,
+                    Notation = "bpmn",
+                    SemanticType = "userTask"
+                },
+                CancellationToken.None)
+            .GetAwaiter().GetResult()!;
+
+        stepSchema.SchemaId.Should().Be(DemoModelingPropertySchemaProvider.SchemaIdValue);
+        stepSchema.Sections.Should().HaveCount(4);
+        stepSchema.Sections.SelectMany(section => section.Fields).Select(field => field.Key)
+            .Should().Contain(["instructions", "role", "systems", "sla", "exceptions"]);
+    }
+
+    [Fact]
     public void Consumer_can_add_second_modeling_provider_with_stable_order()
     {
         var services = new ServiceCollection();

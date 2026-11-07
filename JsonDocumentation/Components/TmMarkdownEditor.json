@@ -46,6 +46,34 @@
       "description": "Callback fired when the user presses Ctrl+Enter or calls Submit(). Only fires when content is non-empty and within MaxLength."
     },
     {
+      "name": "AriaLabelledBy",
+      "type": "string?",
+      "isRequired": false,
+      "default": "null",
+      "description": "Space-separated id list of the element(s) that NAME the editor, rendered as aria-labelledby on the content surface. Use it when the visible label already exists in the surrounding markup instead of inventing an aria-label."
+    },
+    {
+      "name": "AriaDescribedBy",
+      "type": "string?",
+      "isRequired": false,
+      "default": "null",
+      "description": "Space-separated id list of the element(s) that describe the editor, rendered as aria-describedby on the content surface — typically the field's help text and its error message."
+    },
+    {
+      "name": "AriaInvalid",
+      "type": "bool",
+      "isRequired": false,
+      "default": "false",
+      "description": "Marks the content surface aria-invalid=\"true\" (validation failed). Rendered only when true, so a valid editor carries no aria-invalid attribute at all."
+    },
+    {
+      "name": "AriaRequired",
+      "type": "bool",
+      "isRequired": false,
+      "default": "false",
+      "description": "Marks the content surface aria-required=\"true\". The editor implements no form validation of its own — this is the announce-only flag a schema-driven host sets when the value is required."
+    },
+    {
       "name": "Class",
       "type": "string?",
       "isRequired": false,
@@ -96,21 +124,63 @@
   ],
   "supportedFormats": {
     "inline": [
-      { "name": "Bold", "shortcut": "Ctrl+B", "markdown": "**text**" },
-      { "name": "Italic", "shortcut": "Ctrl+I", "markdown": "_text_" },
-      { "name": "Strikethrough", "markdown": "~~text~~" },
-      { "name": "Inline code", "markdown": "`code`" },
-      { "name": "Link", "shortcut": "Ctrl+K", "markdown": "[label](url)" }
+      {
+        "name": "Bold",
+        "shortcut": "Ctrl+B",
+        "markdown": "**text**"
+      },
+      {
+        "name": "Italic",
+        "shortcut": "Ctrl+I",
+        "markdown": "_text_"
+      },
+      {
+        "name": "Strikethrough",
+        "markdown": "~~text~~"
+      },
+      {
+        "name": "Inline code",
+        "markdown": "`code`"
+      },
+      {
+        "name": "Link",
+        "shortcut": "Ctrl+K",
+        "markdown": "[label](url)"
+      }
     ],
     "block": [
-      { "name": "Heading 1", "markdown": "# " },
-      { "name": "Heading 2", "markdown": "## " },
-      { "name": "Heading 3", "markdown": "### " },
-      { "name": "Bullet list", "markdown": "- " },
-      { "name": "Ordered list", "markdown": "1. " },
-      { "name": "Blockquote", "markdown": "> " },
-      { "name": "Code fence", "markdown": "```\\n...\\n```" },
-      { "name": "Horizontal rule", "markdown": "---" }
+      {
+        "name": "Heading 1",
+        "markdown": "# "
+      },
+      {
+        "name": "Heading 2",
+        "markdown": "## "
+      },
+      {
+        "name": "Heading 3",
+        "markdown": "### "
+      },
+      {
+        "name": "Bullet list",
+        "markdown": "- "
+      },
+      {
+        "name": "Ordered list",
+        "markdown": "1. "
+      },
+      {
+        "name": "Blockquote",
+        "markdown": "> "
+      },
+      {
+        "name": "Code fence",
+        "markdown": "```\\n...\\n```"
+      },
+      {
+        "name": "Horizontal rule",
+        "markdown": "---"
+      }
     ]
   },
   "examples": [

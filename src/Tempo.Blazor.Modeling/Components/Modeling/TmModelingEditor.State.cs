@@ -206,7 +206,7 @@ public partial class TmModelingEditor
     /// the markup reads it through several fragments per render) keyed on the (_model, _issues)
     /// references; the null-model case returns the generated issues list as-is.</summary>
     private IReadOnlyList<ModelingIssueDto>? _displayIssuesCache;
-    private (ModelingModelDto? Model, IReadOnlyList<ModelingIssueDto> Issues) _displayIssuesKey;
+    private (ModelingModelDto? Model, IReadOnlyList<ModelingIssueDto> Issues, IReadOnlyList<ModelingIssueDto> DockPropertyIssues, IReadOnlyList<ModelingIssueDto>? SaveIssues) _displayIssuesKey;
 
     private IReadOnlyList<ModelingIssueDto> DisplayIssues
     {
@@ -217,10 +217,20 @@ public partial class TmModelingEditor
                 return _issues;
             }
 
-            if (_displayIssuesCache is null || !_displayIssuesKey.Equals((_model, _issues)))
+            // Phase 5: the dock also carries the schema validation issues and the last save's writer
+            // issues (§5.4 — a rejected reference must be visible where the other findings are).
+            var saveIssues = _lastSaveResult?.Issues;
+            // Review U10: the dock shows the LOCALIZED copy of the schema issues (the raw English DTOs
+            // stay with the inspector/MCP); a host-authored writer issue keeps its own wording.
+            var key = (_model, _issues, _dockPropertyIssues, saveIssues);
+            if (_displayIssuesCache is null || !_displayIssuesKey.Equals(key))
             {
-                _displayIssuesKey = (_model, _issues);
-                _displayIssuesCache = _model.Issues.Concat(_issues).ToArray();
+                _displayIssuesKey = key;
+                _displayIssuesCache = _model.Issues
+                    .Concat(_issues)
+                    .Concat(_dockPropertyIssues)
+                    .Concat(saveIssues ?? [])
+                    .ToArray();
             }
 
             return _displayIssuesCache;

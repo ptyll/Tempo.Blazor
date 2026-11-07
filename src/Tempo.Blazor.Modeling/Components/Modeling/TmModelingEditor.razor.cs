@@ -511,6 +511,15 @@ public partial class TmModelingEditor : IAsyncDisposable
     /// <inheritdoc />
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        // Phase 5 (decision MODELING-PROPERTY-SCHEMA): one guarded hook refreshes the selected schema
+        // and the model's property issues whenever the selection key (selection identity, model,
+        // notation, viewpoint, culture and the edit generation) moved — a selection change, a commit,
+        // undo/redo or a reload. The guard makes the follow-up render a no-op.
+        if (await TryRefreshPropertySchemaAsync())
+        {
+            StateHasChanged();
+        }
+
         if (_shouldFocusOpenEditorCloseButton)
         {
             _shouldFocusOpenEditorCloseButton = false;
@@ -959,6 +968,9 @@ public partial class TmModelingEditor : IAsyncDisposable
 
     private async Task ApplyProviderChangeAsync(string? normalized)
     {
+        // Phase 5 review (A5): a provider switch drops every resolved schema, its pinned version and
+        // the collected issues — the new provider has its own catalogue and its own versions.
+        ResetPropertySchemaState();
         _effectiveProviderKey = normalized;
         _effectiveNotationKey = string.IsNullOrWhiteSpace(NotationKey) ? null : NotationKey;
         _effectiveViewpointKey = string.IsNullOrWhiteSpace(ViewpointKey) ? null : ViewpointKey;
@@ -1141,6 +1153,8 @@ public partial class TmModelingEditor : IAsyncDisposable
     {
         _loadCts?.Cancel();
         _loadCts?.Dispose();
+        // Phase 5 review (A6): an in-flight schema refresh must not land on a disposed component.
+        CancelSchemaRefresh();
 
         if (_interopModule is not null)
         {

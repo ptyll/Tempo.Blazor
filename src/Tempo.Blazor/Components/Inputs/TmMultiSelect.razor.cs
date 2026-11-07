@@ -113,6 +113,13 @@ public partial class TmMultiSelect<TItem, TValue> : TmComponentBase
     /// <summary>Help text shown below when no error is present.</summary>
     [Parameter] public string? HelpText { get; set; }
 
+    /// <summary>
+    /// Extra ids the trigger describes, appended to the ones this component owns (its error or help
+    /// text). A host uses it for a message it renders itself — the modeling inspector's "reference may
+    /// be stale" hint — so the trigger announces exactly what is on screen.
+    /// </summary>
+    [Parameter] public string? AriaDescribedBy { get; set; }
+
     /// <summary>HTML id attribute.</summary>
     [Parameter] public string Id { get; set; } = Guid.NewGuid().ToString("n")[..8];
 
@@ -150,10 +157,14 @@ public partial class TmMultiSelect<TItem, TValue> : TmComponentBase
     {
         get
         {
-            if (!string.IsNullOrEmpty(Error)) return ErrorId;
-            if (FormFieldErrorId is { Length: > 0 } fieldError)
-                return !string.IsNullOrEmpty(HelpText) ? $"{HelpId} {fieldError}" : fieldError;
-            return !string.IsNullOrEmpty(HelpText) ? HelpId : null;
+            var own = !string.IsNullOrEmpty(Error)
+                ? ErrorId
+                : FormFieldErrorId is { Length: > 0 } fieldError
+                    ? (!string.IsNullOrEmpty(HelpText) ? $"{HelpId} {fieldError}" : fieldError)
+                    : (!string.IsNullOrEmpty(HelpText) ? HelpId : null);
+
+            if (string.IsNullOrWhiteSpace(AriaDescribedBy)) return own;
+            return string.IsNullOrEmpty(own) ? AriaDescribedBy : $"{own} {AriaDescribedBy}";
         }
     }
 
@@ -196,6 +207,21 @@ public partial class TmMultiSelect<TItem, TValue> : TmComponentBase
 
     /// <summary>Shows checkboxes next to items.</summary>
     [Parameter] public bool ShowCheckBox { get; set; }
+
+    /// <summary>
+    /// Turns the control into a SINGLE-value combobox while keeping this component's keyboard model,
+    /// its async <see cref="DataProvider"/> and its chips: picking an option REPLACES the selection,
+    /// closes the popup and returns focus to the trigger, the listbox announces
+    /// <c>aria-multiselectable="false"</c>, and the select-all / confirm controls (which only make
+    /// sense for a set) are not rendered. Default <c>false</c>, so every existing multi-select is
+    /// byte-identical.
+    /// <para>
+    /// The value still flows through <see cref="Values"/> / <see cref="ValuesChanged"/> — a
+    /// single-value host binds a zero-or-one element list, which keeps ONE component and ONE
+    /// accessibility model behind both shapes (the modeling inspector's entity reference uses it).
+    /// </para>
+    /// </summary>
+    [Parameter] public bool SingleSelection { get; set; }
 
     /// <summary>
     /// Adds a "Create “{text}”" row at the END of the option list whenever the filter text matches no
@@ -524,6 +550,19 @@ public partial class TmMultiSelect<TItem, TValue> : TmComponentBase
     {
         if (Disabled) return;
         var val = ValueField(item);
+
+        if (SingleSelection)
+        {
+            // A single value is REPLACED (never toggled off by re-picking it) and the popup closes
+            // with focus back on the trigger, so one click/keypress both picks and returns.
+            var single = new List<TValue> { val };
+            Values = single;
+            await ValuesChanged.InvokeAsync(single);
+            _isOpen = false;
+            _focusTriggerAfterClose = true;
+            return;
+        }
+
         var list = new List<TValue>(Values);
 
         if (IsSelected(item))

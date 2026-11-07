@@ -1,0 +1,10 @@
+{
+  "kind": "Class",
+  "category": "Modeling",
+  "namespace": "Tempo.Blazor.Modeling",
+  "description": "Bridges the ASYNC IModelingPropertySchemaProvider and the SYNCHRONOUS ModelingOperationContext.ResolvePropertySchema the operation engine consumes (§5.5/§6.4). PropertySchemaPairs lists the (notation, semanticType) pairs a model/batch can judge and PreloadAsync resolves them into a dictionary-backed delegate (a provider that throws degrades that pair to 'no schema'); a host writer and the modeling_apply_operations MCP tool both use it, so the engine and the editor validate with the same schemas.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/Modeling/ModelingPropertySchemaResolver.cs",
+  "documentationStatus": "generated",
+  "itemName": "ModelingPropertySchemaResolver"
+}

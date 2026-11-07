@@ -965,4 +965,61 @@ public class TmMultiSelectTests : LocalizationTestBase
             cut.FindAll(".tm-multiselect__popup").Should().BeEmpty());
         JSInterop.Invocations.Count(i => i.Identifier == FocusInvocation).Should().Be(1);
     }
+
+    // ── SingleSelection (phase-5 review A8) ─────────────────────
+
+    [Fact]
+    public void TmMultiSelect_SingleSelection_Announces_A_Single_Value_Listbox_And_Hides_Set_Controls()
+    {
+        var cut = Render<TmMultiSelect<SelectOption<string>, string>>(p => p
+            .Add(c => c.Items, FruitOptions)
+            .Add(c => c.DisplayField, Display)
+            .Add(c => c.ValueField, Value)
+            .Add(c => c.SingleSelection, true)
+            .Add(c => c.ShowSelectAll, true)
+            .Add(c => c.ShowConfirmButton, true));
+
+        cut.Find(".tm-multiselect").Click();
+
+        cut.Find(".tm-multiselect__options").GetAttribute("aria-multiselectable").Should().Be("false");
+        cut.FindAll(".tm-multiselect__select-all-btn").Should().BeEmpty(
+            "select-all only makes sense for a set");
+        cut.FindAll(".tm-multiselect__confirm-btn").Should().BeEmpty();
+    }
+
+    [Fact]
+    public void TmMultiSelect_SingleSelection_Replaces_The_Value_And_Closes()
+    {
+        IReadOnlyList<string>? captured = null;
+        var cut = Render<TmMultiSelect<SelectOption<string>, string>>(p => p
+            .Add(c => c.Items, FruitOptions)
+            .Add(c => c.DisplayField, Display)
+            .Add(c => c.ValueField, Value)
+            .Add(c => c.Values, new List<string> { "apple" })
+            .Add(c => c.SingleSelection, true)
+            .Add(c => c.ValuesChanged, EventCallback.Factory.Create<IReadOnlyList<string>>(this, v => captured = v)));
+
+        cut.Find(".tm-multiselect").Click();
+        cut.FindAll(".tm-multiselect__option")[1].Click();
+
+        captured.Should().NotBeNull();
+        captured.Should().Equal(["banana"], "a single value REPLACES the previous one");
+        cut.Find(".tm-multiselect").GetAttribute("aria-expanded").Should().Be("false",
+            "picking closes the popup");
+    }
+
+    [Fact]
+    public void TmMultiSelect_AriaDescribedBy_Is_Merged_With_The_Own_Description()
+    {
+        var cut = Render<TmMultiSelect<SelectOption<string>, string>>(p => p
+            .Add(c => c.Id, "fruits")
+            .Add(c => c.Items, FruitOptions)
+            .Add(c => c.DisplayField, Display)
+            .Add(c => c.ValueField, Value)
+            .Add(c => c.HelpText, "Pick some fruit")
+            .Add(c => c.AriaDescribedBy, "stale-hint"));
+
+        cut.Find(".tm-multiselect").GetAttribute("aria-describedby")
+            .Should().Be("fruits-help stale-hint");
+    }
 }

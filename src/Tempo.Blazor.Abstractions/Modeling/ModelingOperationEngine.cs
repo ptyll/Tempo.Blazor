@@ -17,7 +17,7 @@ namespace Tempo.Blazor.Modeling;
 /// <c>still_referenced</c> / <c>still_has_children</c> errors for every caller.
 /// </para>
 /// </summary>
-public static class ModelingOperationEngine
+public static partial class ModelingOperationEngine
 {
     internal const string DefaultViewId = "default";
 
@@ -68,6 +68,7 @@ public static class ModelingOperationEngine
         }
 
         ValidateRelationshipsAfterParentChanges(model, result, state);
+        ValidateDeferredPropertySets(model, result, state);
         return result;
     }
 
@@ -120,6 +121,7 @@ public static class ModelingOperationEngine
         }
 
         ValidateRelationshipsAfterParentChanges(model, result, state);
+        ValidateDeferredPropertySets(model, result, state);
         return result;
     }
 
@@ -146,6 +148,15 @@ public static class ModelingOperationEngine
         /// re-validates every relationship incident to such an element after the last operation
         /// (§3.2 rule 3): a lane move can invalidate a flow the batch never touched.</summary>
         public Dictionary<string, (int Index, string Op)> ParentChanges { get; } = new(StringComparer.Ordinal);
+
+        /// <summary>Element id → the (index, op) that created or RE-TYPED it (review A4). The full
+        /// property set of such an element is validated AFTER the batch, so a following
+        /// <c>set_properties</c> in the same batch can still satisfy a required field while a
+        /// genuinely missing one is still reported at the operation the user must fix.</summary>
+        public Dictionary<string, (int Index, string Op)> FullPropertyElements { get; } = new(StringComparer.Ordinal);
+
+        /// <summary>Relationship id → the (index, op) that created or re-typed it (review A4).</summary>
+        public Dictionary<string, (int Index, string Op)> FullPropertyRelationships { get; } = new(StringComparer.Ordinal);
     }
 
     private static void ApplyOperation(
@@ -195,7 +206,7 @@ public static class ModelingOperationEngine
                 ApplyDeleteRelationship(model, operation, index, result);
                 break;
             case "set_properties":
-                ApplySetProperties(model, operation, index, result);
+                ApplySetProperties(model, operation, index, result, state);
                 break;
             case "set_view_node":
                 ModelingViewOperationEngine.ApplySetViewNode(model, operation, index, result, state.Context);
@@ -273,6 +284,12 @@ public static class ModelingOperationEngine
             return;
         }
 
+        // Phase 5 (review A4): a NEW element's property set is validated IN FULL — but only AFTER the
+        // whole batch, so a `set_properties` that follows this add in the SAME batch can still
+        // satisfy a required field. The (index, op) is recorded so a genuinely missing field reports
+        // `property_required` at THIS operation.
+        state.FullPropertyElements[id] = (index, op);
+
         var element = new ModelingElementDto
         {
             Id = id,
@@ -284,7 +301,6 @@ public static class ModelingOperationEngine
         };
         ApplyPropertyValues(element.Properties, setProperties, removedProperties);
         model.Elements.Add(element);
-
         if (!string.IsNullOrWhiteSpace(parentId))
         {
             state.ParentChanges[id] = (index, op);
@@ -332,6 +348,26 @@ public static class ModelingOperationEngine
             return;
         }
 
+        // Phase 5: an UPDATE validates only the keys it touches. A re-typing/re-notating update also
+        // schedules the DEFERRED full-set pass (review A4), which runs after the batch against the
+        // NEW schema.
+        if (!ModelingPropertyPayloadValidation.Validate(
+                model,
+                operation.ContainsKey("notation") ? GetString(operation, "notation") ?? string.Empty : element.Notation,
+                operation.ContainsKey("semanticType") ? GetString(operation, "semanticType") ?? string.Empty : element.SemanticType,
+                setProperties,
+                removedProperties,
+                fullSet: false,
+                state.Context,
+                index,
+                op,
+                result,
+                existing: element.Properties,
+                elementId: id))
+        {
+            return;
+        }
+
         if (operation.ContainsKey("name"))
         {
             element.Name = GetString(operation, "name") ?? string.Empty;
@@ -359,6 +395,13 @@ public static class ModelingOperationEngine
         }
 
         ApplyPropertyValues(element.Properties, setProperties, removedProperties);
+
+        // Review A4: a re-typed/re-notated element is judged against the NEW schema in full — after
+        // the batch, so the same batch can still fill the fields the new type requires.
+        if (operation.ContainsKey("semanticType") || operation.ContainsKey("notation"))
+        {
+            state.FullPropertyElements[id] = (index, op);
+        }
     }
 
     /// <summary>Validates a proposed ParentId edge: the parent must exist, must not be the element
@@ -540,11 +583,16 @@ public static class ModelingOperationEngine
             return;
         }
 
+        // Phase 5 (review A4): a NEW relationship's full property set is validated AFTER the batch
+        // (against the schema of its relationship type), so a following `set_properties` in the same
+        // batch still satisfies a required field.
         if (string.IsNullOrWhiteSpace(relationship.Id))
         {
             relationship.Id = Guid.NewGuid().ToString();
             result.AddCreatedId(relationship.Id);
         }
+
+        state.FullPropertyRelationships[relationship.Id] = (index, op);
 
         ApplyPropertyValues(relationship.Properties, setProperties, removedProperties);
         model.Relationships.Add(relationship);
@@ -592,11 +640,34 @@ public static class ModelingOperationEngine
             return;
         }
 
+        if (!ModelingPropertyPayloadValidation.Validate(
+                model,
+                model.Notation,
+                proposed.RelationshipType,
+                setProperties,
+                removedProperties,
+                fullSet: false,
+                state.Context,
+                index,
+                op,
+                result,
+                existing: relationship.Properties,
+                relationshipId: id))
+        {
+            return;
+        }
+
         relationship.RelationshipType = proposed.RelationshipType;
         relationship.SourceElementId = proposed.SourceElementId;
         relationship.TargetElementId = proposed.TargetElementId;
         relationship.Name = proposed.Name;
         ApplyPropertyValues(relationship.Properties, setProperties, removedProperties);
+
+        // Review A4: a re-typed relationship is judged against the NEW schema in full, after the batch.
+        if (operation.ContainsKey("relationshipType"))
+        {
+            state.FullPropertyRelationships[id] = (index, op);
+        }
     }
 
     private static void ApplyDeleteRelationship(
@@ -760,7 +831,8 @@ public static class ModelingOperationEngine
         ModelingModelDto model,
         JsonObject operation,
         int index,
-        ModelingOperationResult result)
+        ModelingOperationResult result,
+        ApplyState state)
     {
         const string op = "set_properties";
         var id = GetString(operation, "id");
@@ -793,6 +865,28 @@ public static class ModelingOperationEngine
         }
 
         if (!TryReadRemovedProperties(operation, index, op, result, out var removedProperties))
+        {
+            return;
+        }
+
+        // Phase 5: only the touched keys are validated (an unrelated legacy value never blocks a
+        // targeted fix). A RELATIONSHIP is judged with its relationship type as the semantic type.
+        var notation = element is not null ? element.Notation : model.Notation;
+        var semanticType = element is not null ? element.SemanticType : relationship!.RelationshipType;
+        if (!ModelingPropertyPayloadValidation.Validate(
+                model,
+                notation,
+                semanticType,
+                properties,
+                removedProperties,
+                fullSet: false,
+                state.Context,
+                index,
+                op,
+                result,
+                existing: element is not null ? element.Properties : relationship!.Properties,
+                elementId: element?.Id,
+                relationshipId: relationship?.Id))
         {
             return;
         }
@@ -953,6 +1047,77 @@ public static class ModelingOperationEngine
                 result);
         }
     }
+
+    // ── Deferred full property-set validation (phase 5, review A4) ─────────────
+
+    /// <summary>
+    /// Phase 5 review (A4): a NEW or RE-TYPED element/relationship is judged against its schema IN
+    /// FULL — after the whole batch applied, at the operation index that created/re-typed it. The
+    /// per-operation pass keeps touching only the keys each operation names; deferring the full set
+    /// is what lets <c>[add_element, set_properties]</c> in ONE batch succeed (the add alone would
+    /// have failed its required field before the follow-up ever ran) while a genuinely missing
+    /// required field still reports <c>property_required</c> at the ADD's index.
+    /// <para>
+    /// An item the same batch removed again is skipped; an item that already carries a reported error
+    /// is skipped too, so one failing batch does not stack a second, derived finding on it.
+    /// </para>
+    /// </summary>
+    private static void ValidateDeferredPropertySets(
+        ModelingModelDto model,
+        ModelingOperationResult result,
+        ApplyState state)
+    {
+        if (state.Context.ResolvePropertySchema is null
+            || (state.FullPropertyElements.Count == 0 && state.FullPropertyRelationships.Count == 0))
+        {
+            return;
+        }
+
+        foreach (var (id, change) in state.FullPropertyElements)
+        {
+            var element = model.Elements.FirstOrDefault(item => string.Equals(item.Id, id, StringComparison.Ordinal));
+            if (element is null || AlreadyReported(result, elementId: id))
+            {
+                continue;
+            }
+
+            ModelingPropertyPayloadValidation.ValidateFullSet(
+                model,
+                string.IsNullOrWhiteSpace(element.Notation) ? model.Notation : element.Notation,
+                element.SemanticType,
+                element.Properties,
+                state.Context,
+                change.Index,
+                change.Op,
+                result,
+                elementId: id);
+        }
+
+        foreach (var (id, change) in state.FullPropertyRelationships)
+        {
+            var relationship = model.Relationships.FirstOrDefault(item => string.Equals(item.Id, id, StringComparison.Ordinal));
+            if (relationship is null || AlreadyReported(result, relationshipId: id))
+            {
+                continue;
+            }
+
+            ModelingPropertyPayloadValidation.ValidateFullSet(
+                model,
+                model.Notation,
+                relationship.RelationshipType,
+                relationship.Properties,
+                state.Context,
+                change.Index,
+                change.Op,
+                result,
+                relationshipId: id);
+        }
+    }
+
+    private static bool AlreadyReported(ModelingOperationResult result, string? elementId = null, string? relationshipId = null)
+        => result.Errors.Any(error =>
+            (elementId is not null && string.Equals(error.ElementId, elementId, StringComparison.Ordinal))
+            || (relationshipId is not null && string.Equals(error.RelationshipId, relationshipId, StringComparison.Ordinal)));
 
     // ── JSON helpers ────────────────────────────────────────────────────────────
 

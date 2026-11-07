@@ -1,0 +1,10 @@
+{
+  "kind": "Interface",
+  "category": "Modeling",
+  "namespace": "Tempo.Blazor.Modeling",
+  "description": "Host lookups for entity-reference fields (§5.3), resolved by ProviderKey. The inspector's reference combobox calls it with debounce, the descriptor's MinQueryLength and Skip/Take paging; a stored value keeps its display snapshot so a portal can render it without a lookup call.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/Modeling/ModelingPropertyContracts.cs",
+  "documentationStatus": "generated",
+  "itemName": "IModelingLookupProvider"
+}

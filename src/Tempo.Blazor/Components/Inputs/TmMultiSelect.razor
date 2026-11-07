@@ -158,7 +158,7 @@
                 </div>
             }
 
-            @if (ShowSelectAll)
+            @if (ShowSelectAll && !SingleSelection)
             {
                 var visibleCount = GetVisibleItems().Count();
                 var allSelected = visibleCount > 0 && Values.Count >= visibleCount;
@@ -207,7 +207,7 @@
                     <div class="tm-multiselect__options"
                          role="listbox"
                          id="@(Id + "-listbox")"
-                         aria-multiselectable="true"
+                         aria-multiselectable="@(SingleSelection ? "false" : "true")"
                          aria-label="@ListboxAriaLabel"
                          aria-labelledby="@ListboxLabelledBy"
                          tabindex="@(ListboxTabIndex)"
@@ -260,11 +260,11 @@
                 }
             }
 
-            @if (FooterTemplate is not null || ShowConfirmButton)
+            @if (FooterTemplate is not null || (ShowConfirmButton && !SingleSelection))
             {
                 <div class="tm-multiselect__footer">
                     @FooterTemplate
-                    @if (ShowConfirmButton)
+                    @if (ShowConfirmButton && !SingleSelection)
                     {
                         <button type="button"
                                 class="tm-multiselect__confirm-btn"

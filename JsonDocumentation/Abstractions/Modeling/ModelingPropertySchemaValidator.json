@@ -1,0 +1,10 @@
+{
+  "kind": "Class",
+  "category": "Modeling",
+  "namespace": "Tempo.Blazor.Modeling",
+  "description": "The SHARED property-value validator (§5.5): required, JSON type, numeric range, text length, pattern, enum membership, entity-reference shape and structured-list item rules. The inspector, the editor's save gate and ModelingOperationEngine all call it, so MCP and the UI reject the identical value with the identical issue ('one semantics, same errors'). Every issue has Category = 'property', SuggestedFix = the field label and a machine-readable Id '<code>:<path>' (required|type|range|length|pattern|enum|reference|unknown).",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/Modeling/ModelingPropertyContracts.cs",
+  "documentationStatus": "generated",
+  "itemName": "ModelingPropertySchemaValidator"
+}

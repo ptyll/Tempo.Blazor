@@ -1,0 +1,10 @@
+{
+  "kind": "Class",
+  "category": "Components",
+  "namespace": "Tempo.Blazor.Components.Modeling",
+  "description": "Demo lookup provider (phase 5, §5.3): the fictional process-role and system catalogue the step-attribute schema searches, with paging, TotalCount/HasMore and accent-insensitive substring matching. Its ContainsReference helper is what the demo writer's save-time reference rejection consults.",
+  "packageId": "Tempo.Blazor.Modeling",
+  "sourcePath": "src/Tempo.Blazor.Modeling/Components/Modeling/DemoModelingLookupProvider.cs",
+  "documentationStatus": "generated",
+  "itemName": "DemoModelingLookupProvider"
+}
