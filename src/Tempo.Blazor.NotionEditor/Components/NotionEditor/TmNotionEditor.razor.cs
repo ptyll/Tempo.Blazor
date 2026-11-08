@@ -221,9 +221,6 @@ public partial class TmNotionEditor : TmComponentBase, IAsyncDisposable
     private NotionShellPanel           _openShellPanel = NotionShellPanel.None;
     private bool                       _shortcutsVisible;
     private bool                       _templateGalleryOpen;
-    private bool                       _shareDialogOpen;
-    private bool                       _restrictionsDialogOpen;
-    private Guid?                      _pageDialogPageId;
     private string?                    _selectedSpaceId;
     /// <summary>Space last taken from a loaded page. A user pick (sidebar) is not overwritten.</summary>
     private string?                    _pageSpaceId;
@@ -459,35 +456,6 @@ public partial class TmNotionEditor : TmComponentBase, IAsyncDisposable
 
     /// <summary>The page re-registered its actions — re-render the chrome that consumes them.</summary>
     private Task NotifyPageActionsChanged() => InvokeAsync(StateHasChanged);
-
-    private Task OnShareVisibleChanged(bool visible)
-    {
-        _shareDialogOpen = visible;
-        return Task.CompletedTask;
-    }
-
-    /// <summary>
-    /// The page asks the editor to open a dialog. The dialog renders beside the shortcuts panel,
-    /// outside the shell canvas, so a band flip (NOTION-EDITOR-SHELL-CANVAS-REMOUNT) cannot
-    /// dispose it while it is open.
-    /// </summary>
-    private void OpenPageDialogFromPage(NotionPageDialog dialog, Guid pageId)
-    {
-        _pageDialogPageId = pageId;
-        if (dialog == NotionPageDialog.Share)
-            _shareDialogOpen = true;
-        else if (dialog == NotionPageDialog.Restrictions)
-            _restrictionsDialogOpen = true;
-        _ = InvokeAsync(StateHasChanged);
-    }
-
-    private Task OnRestrictionsVisibleChanged(bool visible)
-    {
-        _restrictionsDialogOpen = visible;
-        return Task.CompletedTask;
-    }
-
-    private Task OnRestrictionsSavedAsync() => OnPagePermissionsChangedAsync();
 
     private static Dictionary<string, object> Attrs(params (string Key, object Value)[] pairs)
     {

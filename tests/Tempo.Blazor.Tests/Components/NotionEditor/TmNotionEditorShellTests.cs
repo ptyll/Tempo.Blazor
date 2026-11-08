@@ -324,6 +324,31 @@ public sealed class TmNotionEditorShellTests : LocalizationTestBase
     }
 
     [Fact]
+    public async Task LayoutModeFlip_DesktopToMobile_KeepsAnOpenHistoryDialog()
+    {
+        var cut = RenderEditor(TmLayoutMode.Desktop, history: true);
+
+        cut.WaitForAssertion(() => cut.Find(".tm-notion-page").Should().NotBeNull());
+        await cut.InvokeAsync(() => cut.Find(".tm-npsm-trigger").ClickAsync(new MouseEventArgs()));
+        cut.WaitForAssertion(() => cut.Markup.Should().Contain("TmNotionPageSettingsMenu_PageHistory"));
+        await cut.InvokeAsync(() => cut.FindAll(".tm-npsm__item")
+            .First(item => item.TextContent.Contains("TmNotionPageSettingsMenu_PageHistory", StringComparison.Ordinal))
+            .ClickAsync(new MouseEventArgs()));
+        cut.WaitForAssertion(() => cut.Find(".tm-nph-host").Should().NotBeNull());
+
+        // Crossing into the mobile band remounts the shell canvas. The dialog is editor-owned
+        // (like share/restrictions), so the open surface and its mobile layout survive the remount.
+        cut.Render(p => p.Add(c => c.LayoutMode, TmLayoutMode.Mobile));
+
+        cut.WaitForAssertion(() =>
+        {
+            cut.Find(".tm-notion-editor").GetAttribute("data-editor-layout").Should().Be("mobile");
+            cut.Find(".tm-nph-host").Should().NotBeNull();
+            cut.Find(".tm-nph[data-layout=mobile]").Should().NotBeNull();
+        });
+    }
+
+    [Fact]
     public void MobileBar_AddBlock_OpensSlashMenu()
     {
         var cut = RenderEditor(TmLayoutMode.Mobile);
@@ -392,6 +417,7 @@ public sealed class TmNotionEditorShellTests : LocalizationTestBase
         bool watch = false,
         bool comments = false,
         bool permissions = false,
+        bool history = false,
         NotionShellPanelPresentation? shellPanelPresentation = null,
         NotionEditorChrome chrome = NotionEditorChrome.Full)
     {
@@ -410,6 +436,7 @@ public sealed class TmNotionEditorShellTests : LocalizationTestBase
             if (watch) p.Add(c => c.WatchProvider, new ShellWatch());
             if (comments) p.Add(c => c.CommentProvider, new ShellComments());
             if (permissions) p.Add(c => c.PermissionProvider, new ShellPermissions());
+            if (history) p.Add(c => c.HistoryProvider, new Tempo.Blazor.Demo.Services.MockNotionHistoryProvider());
             if (shellPanelPresentation is { } presentation) p.Add(c => c.ShellPanelPresentation, presentation);
             if (chrome != NotionEditorChrome.Full) p.Add(c => c.Chrome, chrome);
         });

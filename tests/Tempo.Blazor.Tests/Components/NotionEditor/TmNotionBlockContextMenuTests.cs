@@ -229,14 +229,32 @@ public sealed class TmNotionBlockContextMenuTests : LocalizationTestBase
     }
 
     [Fact]
-    public void Escape_WithoutOpenSubmenu_ClosesMenu()
+    public void Escape_WithoutOpenSubmenu_LeavesTheCloseToTheOverlay()
     {
+        // Phase-13 review: a top-level Escape no longer closes through the component — the core
+        // overlay (window capture) dismisses the panel and restores focus to the handle anchor.
+        // The component only collapses submenus; CloseOnEscape hands the top-level Escape over.
         var closed = false;
         var cut = RenderMenu(TextBlock(), v => closed = v);
 
         cut.Find("[tabindex='-1'].tm-notion-ctx").KeyDown(new KeyboardEventArgs { Key = "Escape" });
 
-        closed.Should().BeTrue();
+        closed.Should().BeFalse("a top-level Escape is the overlay's job — focus returns to the handle");
+        cut.FindComponent<Tempo.Blazor.Components.Overlay.TmOverlayPanel>().Instance
+            .CloseOnEscape.Should().BeTrue("with no submenu open the overlay owns Escape");
+    }
+
+    [Fact]
+    public void Escape_WithOpenSubmenu_DisablesOverlayCloseOnEscape()
+    {
+        // While a submenu is open the overlay must NOT eat Escape — the component collapses the
+        // submenu instead (same predicate drives CloseOnEscape and HandleKeyDownAsync).
+        var cut = RenderMenu(CalloutBlock());
+
+        cut.FindAll("button[aria-haspopup='menu']").First().Click();
+
+        cut.FindComponent<Tempo.Blazor.Components.Overlay.TmOverlayPanel>().Instance
+            .CloseOnEscape.Should().BeFalse("an open submenu owns Escape — the overlay stays out");
     }
 
     [Fact]

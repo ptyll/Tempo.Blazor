@@ -198,7 +198,8 @@
                                          ReadOnly="IsEffectivelyReadOnly || _currentPage.IsLocked"
                                          OnLabelsChanged="HandleCurrentPageLabelsChangedAsync" />
                     <CascadingValue Value="_scrollSpyBlockId" Name="TmActiveHeadingBlockId" IsFixed="false">
-                        <TmNotionPage Page="_currentPage"
+                        <TmNotionPage @ref="_pageComponent"
+                                      Page="_currentPage"
                                       ReadOnly="IsEffectivelyReadOnly || _currentPage.IsLocked"
                                       ShowMeta="ShowMeta"
                                       EffectivePermission="_effectivePermission"
@@ -253,6 +254,16 @@
                                 VisibleChanged="OnRestrictionsVisibleChanged"
                                 OnSaved="OnRestrictionsSavedAsync"
                                 LayoutMode="EffectiveLayout" />
+}
+@* History follows share and restrictions: the page opens it through the context and it renders
+   here, outside the remounting shell canvas, so a band flip cannot close it mid-open. *@
+@if ((_pageDialogPageId ?? _currentPage?.Id) is { } historyPageId)
+{
+    <TmNotionPageHistory Visible="_historyDialogOpen"
+                         PageId="@historyPageId.ToString("D")"
+                         LayoutMode="EffectiveLayout"
+                         OnClosed="OnHistoryVisibleChanged"
+                         OnRestored="OnHistoryRestoredAsync" />
 }
 </CascadingValue>
 </CascadingValue>

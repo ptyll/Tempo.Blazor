@@ -16,7 +16,7 @@
                       Title="@Loc["TmNotionBlockHandle_OpenMenu"]"
                       AriaLabel="@Loc["TmNotionBlockHandle_OpenMenu"]"
                       Class="tm-notion-ctx-panel"
-                      CloseOnEscape="false"
+                      CloseOnEscape="@(!_showTurnInto && !_showPanelType && !_showColor)"
                        OnClose="CloseAsync">
 <div class="tm-notion-ctx" tabindex="-1"
      role="menu"

@@ -111,9 +111,12 @@ public sealed class NotionPhase7SurfacesE2ETests : WasmTestBase
         await page.Context.CloseAsync();
 
         var phone = await OpenAsync(320, 700, true, "seedPhase7Surfaces");
+        // Wait out the band flip before opening the settings menu — the editor-owned history
+        // modal renders outside the remounting canvas, so nothing may close mid-open.
+        await phone.Locator(".tm-notion-editor[data-editor-layout='mobile']").First.WaitForAsync(Visible());
         await OpenPageSettingsFromMoreAsync(phone);
         await phone.Locator(".tm-npsm__item", new PageLocatorOptions { HasTextString = "Page history" }).First
-            .ClickAsync(new LocatorClickOptions { Force = true });
+            .ClickAsync();
         await phone.Locator(".tm-nph").WaitForAsync(Visible());
         var footerBottom = await phone.Locator(".tm-nph__footer").EvaluateAsync<double>("el => el.getBoundingClientRect().bottom");
         var viewport = phone.ViewportSize!.Height;

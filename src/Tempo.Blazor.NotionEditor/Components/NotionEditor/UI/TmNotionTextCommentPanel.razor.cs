@@ -147,7 +147,11 @@ public partial class TmNotionTextCommentPanel : ComponentBase, IDisposable, ITmD
     {
         if (Visible && !_wasVisible)
         {
-            _top              = Top;
+            // The popover anchors on a zero-size fixed span; overlay.js parks (hides) the panel
+            // while the anchor sits fully outside the viewport (anchor.bottom > 0 is required).
+            // A selection at the very top of the viewport used to report a negative toolbar top,
+            // parking the panel forever — clamp the anchor into the viewport (phase-13 review).
+            _top              = Math.Max(0, Top);
             _left             = Left;
             _replyText        = string.Empty;
             _error            = string.Empty;

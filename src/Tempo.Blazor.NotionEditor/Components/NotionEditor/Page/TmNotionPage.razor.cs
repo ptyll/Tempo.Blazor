@@ -587,6 +587,14 @@ public partial class TmNotionPage : ComponentBase, IAsyncDisposable
 
     private Task HandlePageHistoryRequestedAsync()
     {
+        // The editor owns the dialog (outside the remounting shell canvas) when it registered the
+        // callback. A standalone page keeps the dialog it renders itself.
+        if (Context.OpenPageDialog is { } open)
+        {
+            open(NotionPageDialog.History, Page.Id);
+            return Task.CompletedTask;
+        }
+
         _historyVisible = true;
         StateHasChanged();
         return Task.CompletedTask;
@@ -1184,8 +1192,11 @@ public partial class TmNotionPage : ComponentBase, IAsyncDisposable
     {
         _textCommentId       = commentId;
         _textCommentBlockId  = _toolbarBlockId;
-        _textCommentTop      = _toolbarTop;
-        _textCommentLeft     = _toolbarLeft + 40;
+        // Anchor on the SELECTION rect, not the toolbar: the toolbar top is clamped 40px above
+        // the selection and goes negative at the viewport's top edge — the panel's zero-size
+        // anchor then parks the popover hidden (overlay.js requires anchor.bottom > 0).
+        _textCommentTop      = _toolbarTop + 40;
+        _textCommentLeft     = _toolbarLeft + 160;
         _textCommentVisible  = true;
         _toolbarVisible      = false; // hide toolbar when comment panel opens
         StateHasChanged();

@@ -242,13 +242,6 @@
                                : default)" />
 }
 
-@* ── Page history panel (portal — position:fixed) *@
-<TmNotionPageHistory Visible="_historyVisible"
-                     PageId="@Page.Id.ToString("D")"
-                     LayoutMode="MenuLayout"
-                     OnClosed="() => { _historyVisible = false; StateHasChanged(); }"
-                     OnRestored="HandleHistoryRestoredAsync" />
-
 @* ── Page info panel (portal — position:fixed) *@
 <TmNotionPageInfoPanel Page="Page"
                        Blocks="_blocks"
@@ -261,6 +254,12 @@
    A standalone page (no callback) keeps rendering them here. *@
 @if (Context.OpenPageDialog is null)
 {
+    <TmNotionPageHistory Visible="_historyVisible"
+                         PageId="@Page.Id.ToString("D")"
+                         LayoutMode="MenuLayout"
+                         OnClosed="() => { _historyVisible = false; StateHasChanged(); }"
+                         OnRestored="HandleHistoryRestoredAsync" />
+
     <TmNotionShareDialog PageId="Page.Id"
                          Provider="Context.PublicShareProvider"
                          Visible="_shareVisible"

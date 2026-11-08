@@ -223,13 +223,15 @@ public partial class TmNotionBlockContextMenu : ComponentBase
     private async Task HandleKeyDownAsync(KeyboardEventArgs args)
     {
         // Escape with an open submenu collapses ONLY the submenu and returns focus to its
-        // trigger — the APG menu-button contract. Only a top-level Escape (no submenu open)
-        // closes the whole menu. ArrowLeft is the submenu's "back" gesture.
+        // trigger — the APG menu-button contract. A top-level Escape (no submenu open) is left
+        // to the core overlay (window capture): it dismisses the panel AND restores focus to
+        // the handle anchor — the component must not close on its own, or focus dies on <body>.
+        // CloseOnEscape follows the same predicate, so the overlay ignores Escape while a
+        // submenu is open and this handler collapses it instead. ArrowLeft is the submenu's
+        // "back" gesture.
         if (string.Equals(args.Key, "Escape", StringComparison.Ordinal))
         {
-            if (await CloseOpenSubAsync())
-                return;
-            await CloseAsync();
+            await CloseOpenSubAsync();
         }
         else if (string.Equals(args.Key, "ArrowLeft", StringComparison.Ordinal))
         {
