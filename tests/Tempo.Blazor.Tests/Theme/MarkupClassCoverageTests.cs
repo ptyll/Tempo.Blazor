@@ -486,7 +486,10 @@ public sealed class MarkupClassCoverageTests
             // Plan 4ebadc60 phase 1 (TmOtpInput): the root class is interpolated
             // ($"tm-otp-input{...}"), so the sweep counts the stem and cannot see the --disabled
             // suffix — 67 → 68.
-            ExpectedUnmeasurableStems: 68),
+            // Plan 4ebadc60 phase 2 (TmOtpInput): RootCssClass builds its modifiers by StringBuilder
+            // concatenation instead of one interpolated string, so the bare "tm-otp-input" stem
+            // left the scanned population (the modifiers are literal) — 68 → 67.
+            ExpectedUnmeasurableStems: 67),
         new Scope("Signing", "Tempo.Blazor.Signing", UnstyledSigningMarkupClasses,
             MinRazorFiles: 28, MinMarkupClasses: 400, InheritsCoreCss: true,
             // Signing redesign phase 2 (B25): the runner's single step panel id

@@ -1,26 +1,41 @@
 // Input handling for TmOtpInput.
 //
-// Blazor cannot intercept beforeinput, keep IME composition out of the .NET circuit or move focus
-// between cells without a round-trip, so this module owns every per-cell DOM event. The component
-// owns the model (one character per cell) and exposes two [JSInvokable] entry points; the module
-// calls them through the DotNetObjectReference passed to attach():
+// Blazor cannot intercept beforeinput, keep IME composition out of the .NET circuit, read the
+// pasted text (ClipboardEventArgs carries no clipboard data across the Blazor boundary) or move
+// focus between cells without a round-trip, so this module owns every per-cell DOM event. The
+// component owns the model (one character per cell) and exposes two [JSInvokable] entry points;
+// the module calls them through the DotNetObjectReference passed to attach():
 //
 //   inputMethod     (index, value)  — a single cell changed to `value` (one accepted character or
 //                                     an empty string when the cell was cleared). Fired for typed
 //                                     characters, autofill replacements and delete* input types.
 //   distributeMethod(index, raw)    — a multi-character insert (paste, autofill, drop) starting at
-//                                     `index`. Phase 2 owns the exact paste semantics; the C# side
-//                                     already distributes the accepted characters from the index on.
+//                                     `index`. The accepted characters are distributed over the
+//                                     consecutive cells from that index on; a paste longer than the
+//                                     remaining cells is truncated to them.
 //
 // Filtering happens here, before the browser applies the edit: disallowed characters per Kind are
-// dropped with preventDefault(), Alphanumeric input is uppercased and a single typed character
-// always replaces the cell content (the INSERTED character wins, not the last one). Composition
-// sessions are left alone while they run (isComposing input is skipped) and committed on
-// compositionend. Arrow keys, Home/End, Backspace-step-back and the redirect-to-first-empty-cell
-// guard all run locally — no circuit traffic for pure navigation.
+// dropped with preventDefault() (paste text with spaces/dashes is cleaned the same way),
+// Alphanumeric input is uppercased and a single typed character always replaces the cell content
+// (the INSERTED character wins, not the last one). Paste is handled on the `paste` event itself —
+// readPastedText() pulls text/plain out of the clipboard event, the default insertion is cancelled
+// and the code is distributed from the cell that received the paste. Browser autofill (e.g. iOS
+// one-time-code) writes the whole code in one input event without beforeinput; the input listener
+// detects a multi-character value and distributes it the same way.
 //
-// After any C# correction the component pushes the authoritative cell value back through
-// setCellValue(). No maxlength anywhere: length is enforced by the model, not the DOM.
+// Composition sessions are left alone while they run (isComposing input is skipped) and committed
+// on compositionend. Arrow keys, Home/End, Backspace-step-back and the redirect-to-first-empty-cell
+// guard all run locally — no circuit traffic for pure navigation. Disabled and readOnly (Verified /
+// ReadOnly states) cells are ignored everywhere: the browser already blocks their edits, and the
+// module must not synthesize any.
+//
+// After any C# correction the component pushes the authoritative cell values back through
+// setCellValue() (single edit) or the batched setCellValues() (distribute / clear). No maxlength
+// anywhere: length is enforced by the model, not the DOM. Autofill replacements
+// (insertReplacementText) and drops (insertFromDrop) carry their text on dataTransfer when
+// event.data is null; a payload-less beforeinput is left to the browser so the input listener
+// distributes the value the browser actually wrote. Paste prefers the LAST run of accepted
+// characters whose length equals the remaining cell count ("Your code: AB12CD" → "AB12CD").
 //
 // State is one session per root element in a WeakMap (listeners + dotnet ref); detach() removes
 // every listener so no session outlives the component. Every entry point is null-safe and
@@ -90,6 +105,24 @@ function invoke(dotNetRef, method, ...args) {
     }
 }
 
+/** Editing is module-driven; disabled and readOnly (Verified / ReadOnly) cells opt out of it. */
+function isEditable(cell) {
+    return !!cell && !cell.disabled && !cell.readOnly;
+}
+
+/**
+ * Reads the pasted plain text out of a ClipboardEvent. Blazor's ClipboardEventArgs carries no
+ * clipboard data, so the paste event is consumed here (in the module) instead of round-tripping.
+ */
+export function readPastedText(event) {
+    try {
+        return event?.clipboardData?.getData?.('text/plain') ?? '';
+    } catch {
+        // A host that revoked clipboard access gets the browser no-op instead.
+        return '';
+    }
+}
+
 function setCellValueInternal(cell, value) {
     if (cell) {
         cell.value = value ?? '';
@@ -104,6 +137,62 @@ function focusCellInternal(root, index, select) {
             cell.select?.();
         }
     }
+}
+
+/** Writes `text` into the consecutive cells from `index` on (truncated at the last cell). */
+function writeDistributed(root, index, text) {
+    const all = cells(root);
+    for (let i = 0; i < (text?.length ?? 0) && index + i < all.length; i++) {
+        all[index + i].value = text[i];
+    }
+}
+
+/** Filtered text clipped to the cells that remain from `index` on. */
+function remainingText(root, index, filtered) {
+    return filtered.slice(0, Math.max(0, cells(root).length - index));
+}
+
+/**
+ * Paste heuristic: split the raw text on non-accepted characters and prefer the LAST run whose
+ * length is EXACTLY the remaining cell count. A copied "Your code: AB12CD" pasted into six free
+ * Alphanumeric cells must distribute "AB12CD", not the truncated "YOURCO" a flat filter produces.
+ * Returns null when no run matches — the caller then truncates the flat filter.
+ */
+function bestRun(text, kind, remaining) {
+    const runs = [];
+    let current = '';
+    for (const ch of text ?? '') {
+        if (isAccepted(ch, kind)) {
+            current += kind === 'alphanumeric' ? ch.toUpperCase() : ch;
+        } else if (current.length > 0) {
+            runs.push(current);
+            current = '';
+        }
+    }
+
+    if (current.length > 0) {
+        runs.push(current);
+    }
+
+    for (let i = runs.length - 1; i >= 0; i--) {
+        if (runs[i].length === remaining) {
+            return runs[i];
+        }
+    }
+
+    return null;
+}
+
+/** Filtered insert text clipped to the remaining cells, with the last-exact-run paste heuristic. */
+function distributeText(root, index, raw) {
+    const kind = kindOf(root);
+    const remaining = Math.max(0, cells(root).length - index);
+    const filtered = filterData(raw, kind);
+    if (filtered.length <= remaining) {
+        return filtered;
+    }
+
+    return bestRun(raw, kind, remaining) ?? filtered.slice(0, remaining);
 }
 
 /**
@@ -134,13 +223,26 @@ export function attach(root, dotNetRef, options) {
             return;
         }
 
+        if (!isEditable(cell)) {
+            return;
+        }
+
         const inputType = event.inputType ?? '';
         if (!inputType.startsWith('insert')) {
             // Deletes are reported by the input listener after the browser applied them.
             return;
         }
 
-        const filtered = filterData(event.data, kindOf(root));
+        // Autofill (insertReplacementText) and drops (insertFromDrop) may carry the text on
+        // dataTransfer instead of data; with no payload at all the insert is left to the browser
+        // (no preventDefault) — the input listener distributes whatever landed, which is how iOS
+        // one-time-code autofill reaches the cells.
+        const raw = event.data ?? event.dataTransfer?.getData?.('text/plain') ?? null;
+        if (raw == null) {
+            return;
+        }
+
+        const filtered = filterData(raw, kindOf(root));
         if (filtered.length === 0) {
             event.preventDefault?.();
             return;
@@ -148,30 +250,96 @@ export function attach(root, dotNetRef, options) {
 
         event.preventDefault?.();
 
-        // Typing into a later cell while an earlier one is empty fills the FIRST empty cell.
-        const index = Math.min(indexOf(cell), firstEmptyIndex(root));
         if (filtered.length === 1) {
-            // The INSERTED character wins (caret-before-insert included): a filled cell is
-            // replaced by the new character, not concatenated.
+            // Typing into a later cell while an earlier one is empty fills the FIRST empty cell;
+            // the INSERTED character wins (caret-before insert included).
+            const index = Math.min(indexOf(cell), firstEmptyIndex(root));
             setCellValueInternal(cellAt(root, index), filtered);
             invoke(dotNetRef, inputMethod, index, filtered);
             focusCellInternal(root, index + 1, true);
         } else {
-            // Multi-character insert (paste / autofill / drop) — distribute from the index.
-            invoke(dotNetRef, distributeMethod, index, filtered);
+            // Multi-character insert (paste fallback, autofill, drop) — distribute from the cell
+            // that received it (paste semantics), truncated at the last cell.
+            const index = indexOf(cell);
+            const text = distributeText(root, index, raw);
+            writeDistributed(root, index, text);
+            invoke(dotNetRef, distributeMethod, index, text);
         }
     };
 
     const onInput = (event) => {
         const cell = event.currentTarget ?? event.target;
-        if (!cell || composing.has(cell)) {
+        if (!cell || composing.has(cell) || !isEditable(cell)) {
             return;
         }
 
         const inputType = event.inputType ?? '';
+        const kind = kindOf(root);
         if (inputType.startsWith('delete')) {
             invoke(dotNetRef, inputMethod, indexOf(cell), cell.value ?? '');
+            return;
         }
+
+        const value = cell.value ?? '';
+        if (value.length > 1) {
+            // Autofill (e.g. iOS one-time-code) writes the whole code at once with no
+            // beforeinput — distribute it from the cell it landed in.
+            const filtered = distributeText(root, indexOf(cell), value);
+            if (filtered.length === 0) {
+                setCellValueInternal(cell, '');
+                invoke(dotNetRef, inputMethod, indexOf(cell), '');
+                return;
+            }
+
+            const index = indexOf(cell);
+            writeDistributed(root, index, filtered);
+            invoke(dotNetRef, distributeMethod, index, filtered);
+            return;
+        }
+
+        if (inputType.startsWith('insert')) {
+            // Single-character autofill without beforeinput.
+            const filtered = filterData(value, kind);
+            if (filtered.length === 0) {
+                setCellValueInternal(cell, '');
+                invoke(dotNetRef, inputMethod, indexOf(cell), '');
+                return;
+            }
+
+            const index = Math.min(indexOf(cell), firstEmptyIndex(root));
+            if (index !== indexOf(cell)) {
+                // The character landed past a gap — move it to the first empty cell.
+                setCellValueInternal(cell, '');
+            }
+            setCellValueInternal(cellAt(root, index), filtered);
+            invoke(dotNetRef, inputMethod, index, filtered);
+            focusCellInternal(root, index + 1, true);
+        }
+    };
+
+    const onPaste = (event) => {
+        const cell = event.target;
+        if (!cell || typeof cell.getAttribute !== 'function'
+            || cell.getAttribute('data-tm-otp-index') === null) {
+            return;
+        }
+
+        if (!isEditable(cell)) {
+            // readOnly/disabled cells already no-op; do not fight the browser.
+            return;
+        }
+
+        // ClipboardEventArgs carries no clipboard text, so the paste is consumed here: the default
+        // insertion is cancelled and the (cleaned) code distributes from the pasted-into cell.
+        event.preventDefault?.();
+        const filtered = distributeText(root, indexOf(cell), readPastedText(event));
+        if (filtered.length === 0) {
+            return;
+        }
+
+        const index = indexOf(cell);
+        writeDistributed(root, index, filtered);
+        invoke(dotNetRef, distributeMethod, index, filtered);
     };
 
     const onCompositionStart = (event) => {
@@ -181,7 +349,7 @@ export function attach(root, dotNetRef, options) {
     const onCompositionEnd = (event) => {
         const cell = event.currentTarget ?? event.target;
         composing.delete(cell);
-        if (!cell) {
+        if (!cell || !isEditable(cell)) {
             return;
         }
 
@@ -213,6 +381,9 @@ export function attach(root, dotNetRef, options) {
         const last = cells(root).length - 1;
         switch (event.key) {
             case 'Backspace':
+                if (!isEditable(cell)) {
+                    break;
+                }
                 // Filled cell: the browser deletes the character and the input listener reports
                 // it. Empty cell: step back — clear the previous cell and focus it.
                 if (cell.value === '' && index > 0) {
@@ -285,6 +456,7 @@ export function attach(root, dotNetRef, options) {
 
     on(root, 'focusin', onFocusIn);
     on(root, 'pointerdown', onPointerDown);
+    on(root, 'paste', onPaste);
 
     sessions.set(root, { listeners, dotNetRef });
 }
@@ -305,6 +477,28 @@ export function detach(root) {
 /** Pushes a C#-corrected cell value into the DOM (no events raised). */
 export function setCellValue(root, index, value) {
     setCellValueInternal(cellAt(root, index), value);
+}
+
+/**
+ * Pushes the whole model array into the cells in ONE batched write (no events raised). Used by
+ * DistributeFromAsync / ClearAsync instead of a per-cell round-trip.
+ */
+export function setCellValues(root, values) {
+    const all = cells(root);
+    for (let i = 0; i < (values?.length ?? 0) && i < all.length; i++) {
+        all[i].value = values[i] ?? '';
+    }
+}
+
+/** Restarts the one-shot invalid shake: class off → forced reflow → class on. */
+export function restartShake(root) {
+    if (!root || !root.classList) {
+        return;
+    }
+
+    root.classList.remove('tm-otp-input--invalid');
+    void root.offsetWidth; // reflow: without it the re-added class does not restart the animation
+    root.classList.add('tm-otp-input--invalid');
 }
 
 export function focusCell(root, index) {

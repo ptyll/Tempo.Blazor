@@ -38,6 +38,12 @@
   cursor: not-allowed;
 }
 
+/* ReadOnly / Verified cells stay focusable (the keyboard can still reach them) but are not
+   editable — the muted surface is the only cue, so the disabled dimming is not repeated. */
+.tm-otp-input__cell:read-only:not(:disabled) {
+  background-color: var(--tm-bg-muted);
+}
+
 .tm-otp-input__separator {
   flex: none;
   width: var(--tm-space-3);
@@ -51,6 +57,10 @@
   cursor: not-allowed;
 }
 
+.tm-otp-input--readonly {
+  cursor: default;
+}
+
 .tm-otp-input--invalid .tm-otp-input__cell {
   border-color: var(--tm-color-danger);
 }
@@ -59,8 +69,47 @@
   box-shadow: var(--tm-focus-ring-danger);
 }
 
+/* The error shake runs once when the invalid state is applied; it is a horizontal nudge only —
+   never a moving page. Neutralised by the reduced-motion enumeration in animations.css. */
+@keyframes tm-otp-input-shake {
+  0%, 100% { transform: translateX(0); }
+  25%      { transform: translateX(var(--tm-space-1)); }
+  75%      { transform: translateX(calc(-1 * var(--tm-space-1))); }
+}
+
+.tm-otp-input--invalid {
+  animation: tm-otp-input-shake var(--tm-transition-normal);
+}
+
 .tm-otp-input--verified .tm-otp-input__cell {
   border-color: var(--tm-color-success);
+}
+
+.tm-otp-input__error {
+  margin-top: var(--tm-space-1);
+  font-family: var(--tm-font-sans);
+  font-size: var(--tm-font-size-sm);
+  color: var(--tm-color-danger-text);
+}
+
+.tm-otp-input__status {
+  display: flex;
+  align-items: center;
+  gap: var(--tm-space-1);
+  margin-top: var(--tm-space-1);
+  font-family: var(--tm-font-sans);
+  font-size: var(--tm-font-size-sm);
+  font-weight: var(--tm-font-weight-medium);
+  color: var(--tm-color-success-text);
+}
+
+@media (forced-colors: active) {
+  /* Token colours are overridden in forced colors, so the states keep a real boundary through a
+     thicker system border instead (WCAG 1.4.11). */
+  .tm-otp-input--invalid .tm-otp-input__cell,
+  .tm-otp-input--verified .tm-otp-input__cell {
+    border: 2px solid CanvasText;
+  }
 }
 
 /* Coarse pointers get 44px cells (WCAG 2.5.5 target size). */

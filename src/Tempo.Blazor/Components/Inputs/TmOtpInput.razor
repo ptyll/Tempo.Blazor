@@ -1,3 +1,4 @@
+@using Tempo.Blazor.Components.Icons
 @namespace Tempo.Blazor.Components.Inputs
 @inherits Tempo.Blazor.Components.TmComponentBase
 
@@ -7,7 +8,8 @@
      role="group"
      aria-label="@GroupAriaLabel"
      aria-labelledby="@AriaLabelledBy"
-     aria-describedby="@AriaDescribedBy"
+     aria-describedby="@GroupAriaDescribedBy"
+     aria-invalid="@(Invalid ? "true" : null)"
      data-tm-otp-kind="@(Kind == OtpInputKind.Alphanumeric ? "alphanumeric" : "numeric")"
      data-testid="@RootTestId("otp-input")"
      @attributes="AdditionalAttributes">
@@ -29,7 +31,24 @@
                spellcheck="false"
                pattern="@(Kind == OtpInputKind.Numeric ? "[0-9]*" : null)"
                aria-label="@CellAriaLabel(index)"
+               aria-invalid="@(Invalid ? "true" : null)"
+               aria-describedby="@CellAriaDescribedBy"
                disabled="@Disabled"
+               readonly="@CellReadOnly"
+               aria-readonly="@(CellReadOnly ? "true" : null)"
                data-tm-otp-index="@index" />
     }
 </div>
+@if (Invalid && !string.IsNullOrEmpty(ErrorText))
+{
+    <div id="@ErrorId" class="tm-otp-input__error" data-testid="@TestId("otp-input-error")">@ErrorText</div>
+}
+@if (Verified)
+{
+    <div id="@StatusId" class="tm-otp-input__status" data-testid="@TestId("otp-input-status")">
+        <TmIcon Name="@IconNames.CheckCircle" Size="IconSize.Xs" />
+        <span>@Loc["TmOtpInput_VerifiedStatus"]</span>
+    </div>
+}
+@* ONE always-rendered polite live region: the text changes are what screen readers announce. *@
+<div class="tm-sr-only" role="status" aria-live="polite">@LiveText</div>

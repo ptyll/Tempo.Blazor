@@ -42,6 +42,40 @@ public partial class TmOtpInput : IAsyncDisposable
     /// <summary>Disables every cell and applies the <c>tm-otp-input--disabled</c> root modifier.</summary>
     [Parameter] public bool Disabled { get; set; }
 
+    /// <summary>
+    /// Renders every cell <c>readonly</c> and applies the <c>tm-otp-input--readonly</c> root
+    /// modifier: the code stays visible and focusable but cannot be edited.
+    /// </summary>
+    [Parameter] public bool ReadOnly { get; set; }
+
+    /// <summary>
+    /// Error state: applies the <c>tm-otp-input--invalid</c> root modifier (with the shake
+    /// animation), sets <c>aria-invalid="true"</c> and an <c>aria-describedby</c> pointing at the
+    /// <see cref="ErrorText"/> message on the group and every cell. Setting
+    /// <c>Invalid="true"</c> WITHOUT <see cref="ErrorText"/> is the supported way to surface a
+    /// message owned by a surrounding <c>TmFormField</c> (the field error is already reachable
+    /// through the host <see cref="AriaDescribedBy"/>). The message text is announced through a
+    /// single always-rendered polite live region; call <see cref="ShowErrorAsync"/> to replay the
+    /// shake and re-announce an unchanged error.
+    /// </summary>
+    [Parameter] public bool Invalid { get; set; }
+
+    /// <summary>
+    /// Error message rendered below the input (and announced politely) while
+    /// <see cref="Invalid"/> is <c>true</c>. Localize it through <c>ITmLocalizer</c>; null or
+    /// empty renders no error element and adds no <c>{Id}-error</c> reference — use that when a
+    /// surrounding <c>TmFormField</c> renders the message instead.
+    /// </summary>
+    [Parameter] public string? ErrorText { get; set; }
+
+    /// <summary>
+    /// Verified state: blocks editing (the cells become <c>readonly</c>), applies the
+    /// <c>tm-otp-input--verified</c> root modifier and renders the localized verified status
+    /// (check icon + text) below the input, referenced from every cell through
+    /// <c>aria-describedby="{Id}-status"</c> and announced through the polite live region.
+    /// </summary>
+    [Parameter] public bool Verified { get; set; }
+
     /// <summary>Moves focus to the first cell after the first render.</summary>
     [Parameter] public bool AutoFocus { get; set; }
 
@@ -87,12 +121,97 @@ public partial class TmOtpInput : IAsyncDisposable
     {
         get
         {
-            var baseClass = $"tm-otp-input{(Disabled ? " tm-otp-input--disabled" : "")}";
-            return string.IsNullOrWhiteSpace(Class) ? baseClass : $"{baseClass} {Class}";
+            var builder = new System.Text.StringBuilder("tm-otp-input");
+            if (Disabled)
+            {
+                builder.Append(" tm-otp-input--disabled");
+            }
+
+            if (ReadOnly)
+            {
+                builder.Append(" tm-otp-input--readonly");
+            }
+
+            if (Invalid)
+            {
+                builder.Append(" tm-otp-input--invalid");
+            }
+
+            if (Verified)
+            {
+                builder.Append(" tm-otp-input--verified");
+            }
+
+            if (!string.IsNullOrWhiteSpace(Class))
+            {
+                builder.Append(' ').Append(Class);
+            }
+
+            return builder.ToString();
         }
     }
 
     private string? GroupAriaLabel => AriaLabelledBy is null ? AriaLabel ?? Loc["TmOtpInput_GroupLabel"] : null;
+
+    private string? GroupAriaDescribedBy
+    {
+        get
+        {
+            var errorId = Invalid && !string.IsNullOrEmpty(ErrorText) ? ErrorId : null;
+            if (errorId is null)
+            {
+                return AriaDescribedBy;
+            }
+
+            return string.IsNullOrEmpty(AriaDescribedBy) ? errorId : $"{AriaDescribedBy} {errorId}";
+        }
+    }
+
+    private string ErrorId => $"{Id}-error";
+
+    private string StatusId => $"{Id}-status";
+
+    /// <summary>
+    /// Text announced through the single polite live region: the error while invalid, the
+    /// verified status while verified, empty otherwise. <see cref="ShowErrorAsync"/> clears it
+    /// for one render so an unchanged message is re-announced.
+    /// </summary>
+    private string? _liveTextOverride;
+
+    private string LiveText => _liveTextOverride
+        ?? (Invalid && !string.IsNullOrEmpty(ErrorText) ? ErrorText
+            : Verified ? Loc["TmOtpInput_VerifiedStatus"]
+            : string.Empty);
+
+    /// <summary>
+    /// <c>aria-describedby</c> of every cell: the host reference, the error message id while
+    /// <see cref="Invalid"/> renders one and the verified status id while <see cref="Verified"/>.
+    /// </summary>
+    private string? CellAriaDescribedBy
+    {
+        get
+        {
+            var refs = new List<string>(3);
+            if (!string.IsNullOrEmpty(AriaDescribedBy))
+            {
+                refs.Add(AriaDescribedBy!);
+            }
+
+            if (Invalid && !string.IsNullOrEmpty(ErrorText))
+            {
+                refs.Add(ErrorId);
+            }
+
+            if (Verified)
+            {
+                refs.Add(StatusId);
+            }
+
+            return refs.Count == 0 ? null : string.Join(' ', refs);
+        }
+    }
+
+    private bool CellReadOnly => ReadOnly || Verified;
 
     private string CellInputType => Masked ? "password" : "text";
 
@@ -171,7 +290,7 @@ public partial class TmOtpInput : IAsyncDisposable
     [JSInvokable]
     public async Task OnCellInputAsync(int index, string value)
     {
-        if (index < 0 || index >= Length)
+        if (index < 0 || index >= Length || IsEditingBlocked)
         {
             return;
         }
@@ -191,8 +310,9 @@ public partial class TmOtpInput : IAsyncDisposable
     /// <summary>
     /// Called by the module for a multi-character insert (paste, autofill, drop) starting at
     /// <paramref name="index"/>: the accepted characters are distributed over consecutive cells
-    /// from that index on and focus moves behind the last written cell. Exact paste semantics
-    /// (phase 2) may refine this path.
+    /// from that index on (truncated at the last cell) and focus moves behind the last written
+    /// cell. Paste text containing spaces or dashes is cleaned by the same normalization as a
+    /// host-supplied <see cref="Value"/>.
     /// </summary>
     /// <param name="index">Cell index the insert started at.</param>
     /// <param name="raw">Inserted text (already filtered per Kind by the module).</param>
@@ -200,7 +320,7 @@ public partial class TmOtpInput : IAsyncDisposable
     [JSInvokable]
     public async Task DistributeFromAsync(int index, string raw)
     {
-        if (index < 0 || index >= Length)
+        if (index < 0 || index >= Length || IsEditingBlocked)
         {
             return;
         }
@@ -215,10 +335,9 @@ public partial class TmOtpInput : IAsyncDisposable
                 _cells[target] = accepted[i].ToString();
                 touched = true;
             }
-
-            await SyncCellAsync(target);
         }
 
+        await SyncCellsAsync();
         if (touched)
         {
             await RaiseChangeAsync();
@@ -251,6 +370,9 @@ public partial class TmOtpInput : IAsyncDisposable
     }
 
     private string CurrentValue() => string.Concat(_cells);
+
+    /// <summary>The module already guards the DOM; the model must not accept edits either.</summary>
+    private bool IsEditingBlocked => Disabled || ReadOnly || Verified;
 
     private bool IsAccepted(char c) => Kind == OtpInputKind.Numeric
         ? c is >= '0' and <= '9'
@@ -335,6 +457,19 @@ public partial class TmOtpInput : IAsyncDisposable
         }
     }
 
+    /// <summary>Pushes the whole model into the DOM in one batched call (never raises events).</summary>
+    private async Task SyncCellsAsync()
+    {
+        try
+        {
+            var module = await Module;
+            await module.InvokeVoidAsync("setCellValues", _rootElement, (object)_cells);
+        }
+        catch (Exception ex) when (IsInteropTeardown(ex))
+        {
+        }
+    }
+
     private async Task FocusCellAsync(int index, bool select)
     {
         if (Disabled)
@@ -350,6 +485,71 @@ public partial class TmOtpInput : IAsyncDisposable
         catch (Exception ex) when (IsInteropTeardown(ex))
         {
             // The circuit/runtime/element is gone; there is nothing left to focus.
+        }
+    }
+
+    /// <summary>
+    /// Moves focus to the first empty cell (selecting it); a complete code focuses the first cell.
+    /// No-op while <see cref="Disabled"/> — readOnly and Verified cells stay focusable.
+    /// </summary>
+    /// <returns>A task that completes when the focus request was handed to the module.</returns>
+    public async Task FocusAsync()
+    {
+        var index = Array.IndexOf(_cells, string.Empty);
+        await FocusCellAsync(index < 0 ? 0 : index, select: true);
+    }
+
+    /// <summary>
+    /// Clears every cell: raises <see cref="ValueChanged"/> with the empty string, pushes the
+    /// cleared values into the DOM and re-arms <see cref="OnComplete"/> so completing the code
+    /// again fires it anew. No-op while editing is blocked.
+    /// </summary>
+    /// <returns>A task that completes when the model and the DOM are in sync.</returns>
+    public async Task ClearAsync()
+    {
+        if (IsEditingBlocked)
+        {
+            return;
+        }
+
+        for (var i = 0; i < _cells.Length; i++)
+        {
+            _cells[i] = string.Empty;
+        }
+
+        await RaiseChangeAsync();
+        await SyncCellsAsync();
+
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// Re-triggers the invalid shake and re-announces the error message. Call it after (re)applying
+    /// <see cref="Invalid"/>/<see cref="ErrorText"/> when the same error is already shown: the
+    /// shake replays via a JS reflow and the live region re-announces the message (it is cleared
+    /// for one render and then restored, because a polite live region only announces CHANGES).
+    /// </summary>
+    /// <returns>A task that completes when the shake was handed to the module and the text restored.</returns>
+    public async Task ShowErrorAsync()
+    {
+        _liveTextOverride = string.Empty;
+        StateHasChanged();
+        await Task.Yield();
+        _liveTextOverride = null;
+        StateHasChanged();
+        await RestartShakeAsync();
+    }
+
+    private async Task RestartShakeAsync()
+    {
+        try
+        {
+            var module = await Module;
+            await module.InvokeVoidAsync("restartShake", _rootElement);
+        }
+        catch (Exception ex) when (IsInteropTeardown(ex))
+        {
+            // A torn-down circuit has no animation left to restart.
         }
     }
 

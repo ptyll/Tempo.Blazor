@@ -6715,5 +6715,6 @@
   "TmAppShell_MenuButton": "Navigačná ponuka",
   "TmOtpInput_GroupLabel": "Overovací kód",
   "TmOtpInput_DigitLabel": "Číslica {0} z {1}",
-  "TmOtpInput_CharacterLabel": "Znak {0} z {1}"
+  "TmOtpInput_CharacterLabel": "Znak {0} z {1}",
+  "TmOtpInput_VerifiedStatus": "Kód overený"
 }

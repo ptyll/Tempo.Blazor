@@ -23,6 +23,8 @@ public class TmOtpInputTests : LocalizationTestBase
         module.SetupVoid("attach", _ => true).SetVoidResult();
         module.SetupVoid("detach", _ => true).SetVoidResult();
         module.SetupVoid("setCellValue", _ => true).SetVoidResult();
+        module.SetupVoid("setCellValues", _ => true).SetVoidResult();
+        module.SetupVoid("restartShake", _ => true).SetVoidResult();
         module.SetupVoid("focusCell", _ => true).SetVoidResult();
         module.SetupVoid("selectCell", _ => true).SetVoidResult();
         return module;
@@ -485,5 +487,321 @@ public class TmOtpInputTests : LocalizationTestBase
         var cut = Render<TmOtpInput>(p => p.Add(c => c.Length, 6));
         cut.Find("[role='group']").GetAttribute("aria-label").Should().Be("Ověřovací kód");
         Cell(cut, 0).GetAttribute("aria-label").Should().Be("Číslice 1 ze 6");
+    }
+
+    // ── Phase 2: paste, autofill, error and verified state ──────────────────
+
+    [Fact]
+    public async Task Paste_Into_Any_Cell_Distributes_Characters_From_That_Cell()
+    {
+        SetupOtpModule();
+        string? value = null;
+        var cut = Render<TmOtpInput>(p => p
+            .Add(c => c.Length, 6)
+            .Add(c => c.ValueChanged, v => value = v));
+        await DistributeAsync(cut, 2, "3456");
+        value.Should().Be("3456");
+        Cell(cut, 0).GetAttribute("value").Should().BeEmpty();
+        for (var i = 0; i < 4; i++)
+        {
+            Cell(cut, i + 2).GetAttribute("value").Should().Be($"{i + 3}");
+        }
+    }
+
+    [Fact]
+    public async Task Paste_Cleans_Spaces_And_Dashes()
+    {
+        SetupOtpModule();
+        var cut = Render<TmOtpInput>(p => p.Add(c => c.Length, 6));
+        await DistributeAsync(cut, 0, "12 34-5");
+        for (var i = 0; i < 5; i++)
+        {
+            Cell(cut, i).GetAttribute("value").Should().Be($"{i + 1}");
+        }
+    }
+
+    [Fact]
+    public async Task Autofill_Of_The_Whole_Code_Fires_OnComplete()
+    {
+        SetupOtpModule();
+        var completions = 0;
+        string? completed = null;
+        var cut = Render<TmOtpInput>(p => p
+            .Add(c => c.Length, 6)
+            .Add(c => c.OnComplete, v => { completions++; completed = v; }));
+        await DistributeAsync(cut, 0, "123456");
+        completions.Should().Be(1);
+        completed.Should().Be("123456");
+    }
+
+    [Fact]
+    public void Invalid_Sets_AriaInvalid_And_DescribedBy_On_The_Group()
+    {
+        var cut = Render<TmOtpInput>(p => p
+            .Add(c => c.Length, 6)
+            .Add(c => c.Id, "otp")
+            .Add(c => c.Invalid, true)
+            .Add(c => c.ErrorText, "Wrong code"));
+        cut.Find(".tm-otp-input").ClassList.Should().Contain("tm-otp-input--invalid");
+        var group = cut.Find("[role='group']");
+        group.GetAttribute("aria-invalid").Should().Be("true");
+        group.GetAttribute("aria-describedby").Should().Be("otp-error");
+        cut.Find("#otp-error").TextContent.Should().Be("Wrong code");
+    }
+
+    [Fact]
+    public void Invalid_Combines_Host_DescribedBy_With_The_Error_Id()
+    {
+        var cut = Render<TmOtpInput>(p => p
+            .Add(c => c.Id, "otp")
+            .Add(c => c.Invalid, true)
+            .Add(c => c.ErrorText, "Wrong code")
+            .Add(c => c.AriaDescribedBy, "otp-hint"));
+        cut.Find("[role='group']").GetAttribute("aria-describedby").Should().Be("otp-hint otp-error");
+    }
+
+    [Fact]
+    public void Invalid_Without_ErrorText_Renders_No_Error_Element_And_Keeps_Host_DescribedBy()
+    {
+        var cut = Render<TmOtpInput>(p => p
+            .Add(c => c.Id, "otp")
+            .Add(c => c.Invalid, true)
+            .Add(c => c.AriaDescribedBy, "otp-hint"));
+        cut.FindAll(".tm-otp-input__error").Should().BeEmpty();
+        cut.Find("[role='group']").GetAttribute("aria-describedby").Should().Be("otp-hint");
+    }
+
+    [Fact]
+    public void Invalid_Announces_The_Error_Politely()
+    {
+        var cut = Render<TmOtpInput>(p => p
+            .Add(c => c.Invalid, true)
+            .Add(c => c.ErrorText, "Wrong code"));
+        var live = cut.Find("[role='status'][aria-live='polite']");
+        live.TextContent.Should().Be("Wrong code");
+        live.ClassList.Should().Contain("tm-sr-only");
+    }
+
+    [Fact]
+    public async Task Verified_Blocks_Editing_And_Shows_The_Localized_Status()
+    {
+        SetupOtpModule();
+        string? value = null;
+        var cut = Render<TmOtpInput>(p => p
+            .Add(c => c.Length, 6)
+            .Add(c => c.Verified, true)
+            .Add(c => c.ValueChanged, v => value = v));
+        cut.Find(".tm-otp-input").ClassList.Should().Contain("tm-otp-input--verified");
+        cut.FindAll(".tm-otp-input__cell").Should().OnlyContain(c =>
+            c.HasAttribute("readonly") && c.GetAttribute("aria-readonly") == "true");
+
+        await CellInputAsync(cut, 0, "1");
+        Cell(cut, 0).GetAttribute("value").Should().BeEmpty();
+        value.Should().BeNull();
+
+        cut.Find(".tm-otp-input__status span").TextContent.Should().Be("Code verified");
+        cut.FindAll("[role='status'][aria-live='polite']")
+            .Should().Contain(s => s.TextContent == "Code verified");
+    }
+
+    [Fact]
+    public void Verified_Czech_Localization_Uses_Czech_Status()
+    {
+        UseCzechLocalization();
+        var cut = Render<TmOtpInput>(p => p.Add(c => c.Verified, true));
+        cut.Find(".tm-otp-input__status span").TextContent.Should().Be("Kód ověřen");
+    }
+
+    [Fact]
+    public void ReadOnly_Renders_ReadOnly_Cells_And_Root_Modifier()
+    {
+        var cut = Render<TmOtpInput>(p => p
+            .Add(c => c.Length, 6)
+            .Add(c => c.ReadOnly, true));
+        cut.Find(".tm-otp-input").ClassList.Should().Contain("tm-otp-input--readonly");
+        cut.FindAll(".tm-otp-input__cell").Should().OnlyContain(c =>
+            c.HasAttribute("readonly") && c.GetAttribute("aria-readonly") == "true");
+    }
+
+    [Fact]
+    public async Task ReadOnly_Blocks_Edits()
+    {
+        SetupOtpModule();
+        string? value = null;
+        var cut = Render<TmOtpInput>(p => p
+            .Add(c => c.Length, 6)
+            .Add(c => c.ReadOnly, true)
+            .Add(c => c.ValueChanged, v => value = v));
+        await CellInputAsync(cut, 0, "1");
+        Cell(cut, 0).GetAttribute("value").Should().BeEmpty();
+        value.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task Disabled_Blocks_Edits()
+    {
+        SetupOtpModule();
+        string? value = null;
+        var cut = Render<TmOtpInput>(p => p
+            .Add(c => c.Length, 6)
+            .Add(c => c.Disabled, true)
+            .Add(c => c.ValueChanged, v => value = v));
+        await CellInputAsync(cut, 0, "1");
+        Cell(cut, 0).GetAttribute("value").Should().BeEmpty();
+        value.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task FocusAsync_Focuses_The_First_Empty_Cell()
+    {
+        var module = SetupOtpModule();
+        var cut = Render<TmOtpInput>(p => p.Add(c => c.Length, 6));
+        await CellInputAsync(cut, 0, "1");
+        await cut.InvokeAsync(() => cut.Instance.FocusAsync());
+        FocusedIndexes(module).Should().Equal(1);
+    }
+
+    [Fact]
+    public async Task FocusAsync_NoOp_When_Disabled()
+    {
+        var module = SetupOtpModule();
+        var cut = Render<TmOtpInput>(p => p
+            .Add(c => c.Length, 6)
+            .Add(c => c.Disabled, true));
+        await cut.InvokeAsync(() => cut.Instance.FocusAsync());
+        FocusedIndexes(module).Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task ClearAsync_Clears_Cells_Syncs_Dom_And_ReArms_OnComplete()
+    {
+        var module = SetupOtpModule();
+        var completions = 0;
+        string? value = null;
+        var cut = Render<TmOtpInput>(p => p
+            .Add(c => c.Length, 4)
+            .Add(c => c.ValueChanged, v => value = v)
+            .Add(c => c.OnComplete, _ => completions++));
+        for (var i = 0; i < 4; i++)
+        {
+            await CellInputAsync(cut, i, $"{i + 1}");
+        }
+
+        await cut.InvokeAsync(() => cut.Instance.ClearAsync());
+        value.Should().BeEmpty();
+        for (var i = 0; i < 4; i++)
+        {
+            Cell(cut, i).GetAttribute("value").Should().BeEmpty();
+        }
+
+        module.Invocations.Where(i => i.Identifier == "setCellValues").Should().HaveCount(1);
+        module.Invocations.Where(i => i.Identifier == "setCellValues")
+            .Single().Arguments[1].Should().BeEquivalentTo(new[] { "", "", "", "" });
+
+        for (var i = 0; i < 4; i++)
+        {
+            await CellInputAsync(cut, i, $"{i + 5}");
+        }
+        completions.Should().Be(2);
+    }
+
+    [Fact]
+    public void Live_Region_Exists_On_First_Render_Empty()
+    {
+        var cut = Render<TmOtpInput>(p => p.Add(c => c.Length, 6));
+        var live = cut.Find("[role='status'][aria-live='polite']");
+        live.ClassList.Should().Contain("tm-sr-only");
+        live.TextContent.Should().BeEmpty();
+        cut.FindAll("[role='status'][aria-live='polite']").Should().HaveCount(1);
+    }
+
+    [Fact]
+    public void Invalid_Sets_AriaInvalid_And_Error_DescribedBy_On_Every_Cell()
+    {
+        var cut = Render<TmOtpInput>(p => p
+            .Add(c => c.Length, 6)
+            .Add(c => c.Id, "otp")
+            .Add(c => c.Invalid, true)
+            .Add(c => c.ErrorText, "Wrong code"));
+        cut.FindAll(".tm-otp-input__cell").Should().OnlyContain(c =>
+            c.GetAttribute("aria-invalid") == "true" && c.GetAttribute("aria-describedby") == "otp-error");
+    }
+
+    [Fact]
+    public void Invalid_Cell_DescribedBy_Combines_Host_Reference_With_The_Error_Id()
+    {
+        var cut = Render<TmOtpInput>(p => p
+            .Add(c => c.Id, "otp")
+            .Add(c => c.Invalid, true)
+            .Add(c => c.ErrorText, "Wrong code")
+            .Add(c => c.AriaDescribedBy, "otp-hint"));
+        cut.FindAll(".tm-otp-input__cell").Should().OnlyContain(c =>
+            c.GetAttribute("aria-describedby") == "otp-hint otp-error");
+    }
+
+    [Fact]
+    public void Invalid_Without_ErrorText_Keeps_Cells_Without_Error_DescribedBy()
+    {
+        var cut = Render<TmOtpInput>(p => p
+            .Add(c => c.Length, 6)
+            .Add(c => c.Invalid, true));
+        cut.FindAll(".tm-otp-input__cell").Should().OnlyContain(c =>
+            c.GetAttribute("aria-invalid") == "true" && !c.HasAttribute("aria-describedby"));
+        // Exactly one live region, empty (a TmFormField-owned message is not duplicated here).
+        var live = cut.Find("[role='status'][aria-live='polite']");
+        live.TextContent.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void Verified_Adds_Status_Id_To_Every_Cell_DescribedBy()
+    {
+        var cut = Render<TmOtpInput>(p => p
+            .Add(c => c.Length, 6)
+            .Add(c => c.Id, "otp")
+            .Add(c => c.Verified, true));
+        cut.FindAll(".tm-otp-input__cell").Should().OnlyContain(c =>
+            c.GetAttribute("aria-describedby") == "otp-status"
+            && !c.HasAttribute("aria-invalid"));
+    }
+
+    [Fact]
+    public void Verified_Status_Renders_Check_Icon_And_Span()
+    {
+        var cut = Render<TmOtpInput>(p => p
+            .Add(c => c.Id, "otp")
+            .Add(c => c.Verified, true));
+        var status = cut.Find(".tm-otp-input__status");
+        status.GetAttribute("id").Should().Be("otp-status");
+        status.QuerySelector("span")!.TextContent.Should().Be("Code verified");
+        status.QuerySelector(".tm-icon").Should().NotBeNull();
+        // Exactly one live region carries the announced status.
+        cut.FindAll("[role='status'][aria-live='polite']").Should().HaveCount(1);
+    }
+
+    [Fact]
+    public async Task ShowErrorAsync_Restarts_Shake_And_Refreshes_The_Live_Text()
+    {
+        var module = SetupOtpModule();
+        var cut = Render<TmOtpInput>(p => p
+            .Add(c => c.Length, 6)
+            .Add(c => c.Invalid, true)
+            .Add(c => c.ErrorText, "Wrong code"));
+        cut.Find("[role='status'][aria-live='polite']").TextContent.Should().Be("Wrong code");
+
+        await cut.InvokeAsync(() => cut.Instance.ShowErrorAsync());
+
+        module.Invocations.Where(i => i.Identifier == "restartShake").Should().HaveCount(1);
+        cut.Find("[role='status'][aria-live='polite']").TextContent.Should().Be("Wrong code");
+    }
+
+    [Fact]
+    public async Task DistributeFrom_Syncs_The_Dom_With_One_Batched_setCellValues_Call()
+    {
+        var module = SetupOtpModule();
+        var cut = Render<TmOtpInput>(p => p.Add(c => c.Length, 6));
+        await DistributeAsync(cut, 0, "1234");
+        module.Invocations.Where(i => i.Identifier == "setCellValues").Should().HaveCount(1);
+        module.Invocations.Where(i => i.Identifier == "setCellValues")
+            .Single().Arguments[1].Should().BeEquivalentTo(new[] { "1", "2", "3", "4", "", "" });
     }
 }

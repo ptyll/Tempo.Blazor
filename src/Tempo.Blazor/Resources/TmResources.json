@@ -6603,5 +6603,6 @@
   "TmAppShell_MenuButton": "Navigation menu",
   "TmOtpInput_GroupLabel": "Verification code",
   "TmOtpInput_DigitLabel": "Digit {0} of {1}",
-  "TmOtpInput_CharacterLabel": "Character {0} of {1}"
+  "TmOtpInput_CharacterLabel": "Character {0} of {1}",
+  "TmOtpInput_VerifiedStatus": "Code verified"
 }

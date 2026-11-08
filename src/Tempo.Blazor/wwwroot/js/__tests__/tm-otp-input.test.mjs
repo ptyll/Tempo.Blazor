@@ -4,7 +4,7 @@
 // multi-char distribute, IME composition, local navigation and the first-empty-cell redirect.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { attach, detach, setCellValue, focusCell, selectCell } from '../tm-otp-input.js';
+import { attach, detach, setCellValue, setCellValues, focusCell, selectCell, readPastedText, restartShake } from '../tm-otp-input.js';
 
 function makeCell(root, index) {
     const listeners = new Map();
@@ -13,6 +13,7 @@ function makeCell(root, index) {
         index,
         value: '',
         disabled: false,
+        readOnly: false,
         focusCalls: 0,
         selectCalls: 0,
         getAttribute(name) {
@@ -78,6 +79,17 @@ function beforeinput(cell, { data = null, inputType = 'insertText', isComposing 
     return event;
 }
 
+function paste(root, cell, text) {
+    const event = {
+        target: cell,
+        clipboardData: { getData: (type) => (type === 'text/plain' ? text : '') },
+        defaultPrevented: false,
+        preventDefault() { this.defaultPrevented = true; },
+    };
+    root.dispatch('paste', event);
+    return event;
+}
+
 test('numeric beforeinput prevents letters and reports nothing', () => {
     const root = makeRoot(6);
     const dotNet = dotnetStub();
@@ -127,14 +139,15 @@ test('inserted character wins on a filled cell (caret-before insert)', () => {
     assert.deepEqual(dotNet.calls.at(-1), { method: 'OnCellInputAsync', args: [0, '3'] });
 });
 
-test('multi-character insert preventDefaults and calls DistributeFrom at the first empty cell', () => {
+test('multi-character insert preventDefaults and distributes from the target cell', () => {
     const root = makeRoot(6);
     const dotNet = dotnetStub();
     attachStub(root, dotNet);
     const event = beforeinput(root.cells[1], { data: '73', inputType: 'insertFromPaste' });
     assert.equal(event.defaultPrevented, true);
-    assert.equal(root.cells[1].value, '');
-    assert.deepEqual(dotNet.calls, [{ method: 'DistributeFromAsync', args: [0, '73'] }]);
+    assert.equal(root.cells[1].value, '7');
+    assert.equal(root.cells[2].value, '3');
+    assert.deepEqual(dotNet.calls, [{ method: 'DistributeFromAsync', args: [1, '73'] }]);
 });
 
 test('typing into a later cell fills the first empty cell instead', () => {
@@ -301,4 +314,187 @@ test('reattach replaces the previous session without double reporting', () => {
     beforeinput(root.cells[0], { data: '5' });
     assert.equal(dotNet.calls.length, 0); // first ref must be gone
     assert.equal(root.cells[0].value, '5');
+});
+
+// ── Phase 2: paste, autofill, readOnly ───────────────────────────────────
+
+test('readPastedText reads text/plain from the clipboard event', () => {
+    const event = { clipboardData: { getData: (t) => (t === 'text/plain' ? '1 2-3' : 'x') } };
+    assert.equal(readPastedText(event), '1 2-3');
+    assert.equal(readPastedText({}), '');
+});
+
+test('paste into a cell distributes the code from that cell', () => {
+    const root = makeRoot(6);
+    const dotNet = dotnetStub();
+    attachStub(root, dotNet);
+    const event = paste(root, root.cells[2], '3456');
+    assert.equal(event.defaultPrevented, true);
+    assert.deepEqual(dotNet.calls, [{ method: 'DistributeFromAsync', args: [2, '3456'] }]);
+    assert.deepEqual(root.cells.map((c) => c.value), ['', '', '3', '4', '5', '6']);
+});
+
+test('paste cleans spaces and dashes', () => {
+    const root = makeRoot(6);
+    const dotNet = dotnetStub();
+    attachStub(root, dotNet);
+    paste(root, root.cells[0], '12 34-5');
+    assert.deepEqual(root.cells.map((c) => c.value), ['1', '2', '3', '4', '5', '']);
+});
+
+test('paste longer than the remaining cells is truncated', () => {
+    const root = makeRoot(4);
+    const dotNet = dotnetStub();
+    attachStub(root, dotNet);
+    paste(root, root.cells[2], '56789');
+    assert.deepEqual(dotNet.calls, [{ method: 'DistributeFromAsync', args: [2, '56'] }]);
+    assert.deepEqual(root.cells.map((c) => c.value), ['', '', '5', '6']);
+});
+
+test('paste with no accepted characters reports nothing', () => {
+    const root = makeRoot(6);
+    const dotNet = dotnetStub();
+    attachStub(root, dotNet);
+    const event = paste(root, root.cells[0], '----');
+    assert.equal(event.defaultPrevented, true);
+    assert.equal(dotNet.calls.length, 0);
+});
+
+test('paste into a readOnly or disabled cell is left to the browser no-op', () => {
+    const root = makeRoot(6);
+    const dotNet = dotnetStub();
+    attachStub(root, dotNet);
+    root.cells[1].readOnly = true;
+    let event = paste(root, root.cells[1], '3456');
+    assert.equal(event.defaultPrevented, false);
+    root.cells[1].readOnly = false;
+    root.cells[1].disabled = true;
+    event = paste(root, root.cells[1], '3456');
+    assert.equal(event.defaultPrevented, false);
+    assert.equal(dotNet.calls.length, 0);
+});
+
+test('autofill input event with a multi-character value distributes the whole code', () => {
+    const root = makeRoot(6);
+    const dotNet = dotnetStub();
+    attachStub(root, dotNet);
+    root.cells[0].value = '123456';
+    root.cells[0].dispatch('input', { inputType: 'insertText' });
+    assert.deepEqual(dotNet.calls, [{ method: 'DistributeFromAsync', args: [0, '123456'] }]);
+    assert.deepEqual(root.cells.map((c) => c.value), ['1', '2', '3', '4', '5', '6']);
+});
+
+test('autofill input event starting at a later cell distributes from that cell', () => {
+    const root = makeRoot(6);
+    const dotNet = dotnetStub();
+    attachStub(root, dotNet);
+    root.cells[2].value = '3456';
+    root.cells[2].dispatch('input', { inputType: 'insertText' });
+    assert.deepEqual(dotNet.calls, [{ method: 'DistributeFromAsync', args: [2, '3456'] }]);
+    assert.deepEqual(root.cells.map((c) => c.value), ['', '', '3', '4', '5', '6']);
+});
+
+test('single-character autofill (no beforeinput) is applied at the first empty cell', () => {
+    const root = makeRoot(6);
+    const dotNet = dotnetStub();
+    attachStub(root, dotNet);
+    root.cells[3].value = '9';
+    root.cells[3].dispatch('input', { inputType: 'insertText' });
+    assert.equal(root.cells[0].value, '9');
+    assert.equal(root.cells[3].value, '');
+    assert.deepEqual(dotNet.calls, [{ method: 'OnCellInputAsync', args: [0, '9'] }]);
+});
+
+test('readOnly cells ignore beforeinput, autofill and backspace-step-back', () => {
+    const root = makeRoot(6);
+    const dotNet = dotnetStub();
+    attachStub(root, dotNet);
+    root.cells[1].readOnly = true;
+
+    const event = beforeinput(root.cells[1], { data: '5' });
+    assert.equal(event.defaultPrevented, false);
+
+    root.cells[1].value = '12';
+    root.cells[1].dispatch('input', { inputType: 'insertText' });
+    assert.equal(dotNet.calls.length, 0);
+
+    const backspace = { key: 'Backspace', defaultPrevented: false, preventDefault() { this.defaultPrevented = true; } };
+    root.cells[1].dispatch('keydown', backspace);
+    assert.equal(backspace.defaultPrevented, false);
+    assert.equal(dotNet.calls.length, 0);
+});
+
+test('insertReplacementText autofill reads text/plain from dataTransfer and distributes once', () => {
+    const root = makeRoot(6);
+    const dotNet = dotnetStub();
+    attachStub(root, dotNet);
+    const event = {
+        data: null,
+        inputType: 'insertReplacementText',
+        dataTransfer: { getData: (t) => (t === 'text/plain' ? '123456' : '') },
+        defaultPrevented: false,
+        preventDefault() { this.defaultPrevented = true; },
+    };
+    root.cells[0].dispatch('beforeinput', event);
+    assert.equal(event.defaultPrevented, true);
+    assert.deepEqual(dotNet.calls, [{ method: 'DistributeFromAsync', args: [0, '123456'] }]);
+    assert.deepEqual(root.cells.map((c) => c.value), ['1', '2', '3', '4', '5', '6']);
+});
+
+test('insertFromDrop with a null payload is left to the browser (no preventDefault)', () => {
+    const root = makeRoot(6);
+    const dotNet = dotnetStub();
+    attachStub(root, dotNet);
+    const event = beforeinput(root.cells[0], { data: null, inputType: 'insertFromDrop' });
+    assert.equal(event.defaultPrevented, false);
+    assert.equal(dotNet.calls.length, 0);
+});
+
+test('paste prefers the last accepted run with exactly the remaining length', () => {
+    const root = makeRoot(6, 'alphanumeric');
+    const dotNet = dotnetStub();
+    attachStub(root, dotNet);
+    paste(root, root.cells[0], 'Your code: AB12CD');
+    assert.deepEqual(dotNet.calls, [{ method: 'DistributeFromAsync', args: [0, 'AB12CD'] }]);
+    assert.deepEqual(root.cells.map((c) => c.value), ['A', 'B', '1', '2', 'C', 'D']);
+});
+
+test('paste heuristic falls back to truncation when no run matches exactly', () => {
+    const root = makeRoot(6, 'alphanumeric');
+    const dotNet = dotnetStub();
+    attachStub(root, dotNet);
+    paste(root, root.cells[0], 'Code AB12CD extra');
+    // Runs: "Code"(4), "AB12CD"(6), "extra"(5) — "AB12CD" still matches the remaining 6.
+    assert.deepEqual(dotNet.calls, [{ method: 'DistributeFromAsync', args: [0, 'AB12CD'] }]);
+});
+
+test('setCellValues writes the whole model array in one batch without events', () => {
+    const root = makeRoot(4);
+    const dotNet = dotnetStub();
+    attachStub(root, dotNet);
+    setCellValues(root, ['1', '', '3', '']);
+    assert.deepEqual(root.cells.map((c) => c.value), ['1', '', '3', '']);
+    setCellValues(root, ['', '', '', '']);
+    assert.deepEqual(root.cells.map((c) => c.value), ['', '', '', '']);
+    assert.equal(dotNet.calls.length, 0);
+});
+
+test('restartShake removes and re-adds the invalid class around a reflow', () => {
+    const root = makeRoot(6);
+    const dotNet = dotnetStub();
+    attachStub(root, dotNet);
+    const log = [];
+    root.classList = {
+        remove: (cls) => log.push(['remove', cls]),
+        add: (cls) => log.push(['add', cls]),
+    };
+    root.offsetWidth = 0; // stub: reading it is the reflow
+    restartShake(root);
+    assert.deepEqual(log, [
+        ['remove', 'tm-otp-input--invalid'],
+        ['add', 'tm-otp-input--invalid'],
+    ]);
+    // Null-safe on a root without a classList.
+    delete root.classList;
+    restartShake(root);
 });

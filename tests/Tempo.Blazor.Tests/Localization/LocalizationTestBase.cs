@@ -848,6 +848,7 @@ public abstract class LocalizationTestBase : BunitContext
         ["TmOtpInput_GroupLabel"]      = "Verification code",
         ["TmOtpInput_DigitLabel"]      = "Digit {0} of {1}",
         ["TmOtpInput_CharacterLabel"]  = "Character {0} of {1}",
+        ["TmOtpInput_VerifiedStatus"]  = "Code verified",
 
         // TmEmptyState
         ["TmEmptyState_DefaultTitle"] = "No data available",
@@ -6185,6 +6186,7 @@ public abstract class LocalizationTestBase : BunitContext
         ["TmOtpInput_GroupLabel"]      = "Ověřovací kód",
         ["TmOtpInput_DigitLabel"]      = "Číslice {0} ze {1}",
         ["TmOtpInput_CharacterLabel"]  = "Znak {0} ze {1}",
+        ["TmOtpInput_VerifiedStatus"]  = "Kód ověřen",
 
         // TmEmptyState
         ["TmEmptyState_DefaultTitle"] = "Žádná data",

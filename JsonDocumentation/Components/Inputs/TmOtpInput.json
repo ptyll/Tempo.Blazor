@@ -57,6 +57,30 @@
       "description": "Disables every cell and applies the tm-otp-input--disabled root modifier."
     },
     {
+      "name": "ReadOnly",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Renders every cell readonly and applies the tm-otp-input--readonly root modifier: the code stays visible and focusable but cannot be edited."
+    },
+    {
+      "name": "Invalid",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Error state: applies the tm-otp-input--invalid root modifier (with the shake animation) and sets aria-invalid=\"true\" plus an aria-describedby pointing at the ErrorText message on the group and every cell. Setting Invalid=true WITHOUT ErrorText is the supported way to surface a message owned by a surrounding TmFormField (reachable through the host AriaDescribedBy). The message text is announced through a single always-rendered polite live region; call ShowErrorAsync() to replay the shake and re-announce an unchanged error."
+    },
+    {
+      "name": "ErrorText",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Error message rendered below the input (and announced politely) while Invalid is true. Localize it through ITmLocalizer; null or empty renders no error element and adds no {Id}-error reference — use that when a surrounding TmFormField renders the message instead."
+    },
+    {
+      "name": "Verified",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Verified state: blocks editing (the cells become readonly), applies the tm-otp-input--verified root modifier and renders the localized verified status (check icon + text) below the input, referenced from every cell through aria-describedby=\"{Id}-status\" and announced through the polite live region."
+    },
+    {
       "name": "AutoFocus",
       "type": "bool",
       "isRequired": false,
@@ -116,6 +140,23 @@
       "type": "Dictionary<string, object>?",
       "isRequired": false,
       "description": "Additional attributes applied to the root element."
+    }
+  ],
+  "methods": [
+    {
+      "name": "FocusAsync",
+      "signature": "Task FocusAsync()",
+      "description": "Moves focus to the first empty cell (selecting it); a complete code focuses the first cell. No-op while Disabled."
+    },
+    {
+      "name": "ClearAsync",
+      "signature": "Task ClearAsync()",
+      "description": "Clears every cell, raises ValueChanged with the empty string, syncs the DOM (one batched setCellValues call) and re-arms OnComplete. No-op while editing is blocked."
+    },
+    {
+      "name": "ShowErrorAsync",
+      "signature": "Task ShowErrorAsync()",
+      "description": "Re-triggers the invalid shake (JS reflow restart) and re-announces the error message: the single polite live region is cleared for one render and then restored, because it only announces changes. Call after (re)applying Invalid/ErrorText when the same error is already shown."
     }
   ]
 }

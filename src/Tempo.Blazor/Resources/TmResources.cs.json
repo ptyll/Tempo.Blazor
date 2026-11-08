@@ -6715,5 +6715,6 @@
   "TmAppShell_MenuButton": "Navigační nabídka",
   "TmOtpInput_GroupLabel": "Ověřovací kód",
   "TmOtpInput_DigitLabel": "Číslice {0} ze {1}",
-  "TmOtpInput_CharacterLabel": "Znak {0} ze {1}"
+  "TmOtpInput_CharacterLabel": "Znak {0} ze {1}",
+  "TmOtpInput_VerifiedStatus": "Kód ověřen"
 }
