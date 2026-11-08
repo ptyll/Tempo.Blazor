@@ -466,9 +466,18 @@
     color: var(--tm-color-primary-text);
 }
 
+/* F-13: a disabled primary dims through the token, not a hardcoded wash. */
 .tm-nph__toolbar-btn:disabled {
-    opacity: 0.40;
+    opacity: var(--tm-opacity-disabled, 0.40);
     cursor: not-allowed;
+}
+
+@media (max-width: 639px) {
+    /* F-13: the mobile preview keeps ONE action set — the footer owns Compare/Restore, so the
+       preview toolbar renders no action buttons (its Restore used to read as a faded primary). */
+    .tm-nph__preview-toolbar-actions {
+        display: none;
+    }
 }
 
 /* ── Block preview area ────────────────────────────────────────────────────── */

@@ -309,7 +309,9 @@ public sealed class NotionPhase6MenusE2ETests : WasmTestBase
             Assert.IsTrue(await page.Locator(".tm-modal--fullscreen, .tm-modal-overlay--fullscreen").CountAsync() > 0
                 || await gallery.EvaluateAsync<bool>("el => el.closest('.tm-modal')?.getBoundingClientRect().height > window.innerHeight * 0.9"),
                 $"templates are fullscreen at {band}");
-        await ShotAsync(page, "notion-templates", $"templates-{band}-{theme}", gallery);
+        // F-23: on a phone the gallery is a fullscreen sheet — a viewport shot (FullPage=false)
+        // shows the sheet surface alone; a region capture used to include the page below it.
+        await ShotAsync(page, "notion-templates", $"templates-{band}-{theme}", width < 640 ? null : gallery);
         await page.Keyboard.PressAsync("Escape");
     }
 
@@ -348,7 +350,8 @@ public sealed class NotionPhase6MenusE2ETests : WasmTestBase
         await trigger.First.ClickAsync();
         var panel = page.Locator("[data-testid='notion-shortcuts-panel']").First;
         await panel.WaitForAsync(Visible());
-        await ShotAsync(page, "notion-menus", $"shortcuts-{band}-{theme}", panel);
+        // F-23: on a phone the panel is a sheet — capture the viewport, not the element region.
+        await ShotAsync(page, "notion-menus", $"shortcuts-{band}-{theme}", width < 640 ? null : panel);
         await page.Keyboard.PressAsync("Escape");
         _ = width;
     }

@@ -161,7 +161,8 @@
                                                        OnCancelEdit="CancelEdit"
                                                        OnDraftChanged="NotifyDraftChangedAsync"
                                                        Submitting="_submitting"
-                                                       LabelPrefix="TmNotionPageComment">
+                                                       LabelPrefix="TmNotionPageComment"
+                                                        HideReplyOnLastEntry="true">
                                 <Reactions>
                                     <span @onkeydown:stopPropagation="true">
                                         <TmCommentReactions Reactions="context.Reactions"

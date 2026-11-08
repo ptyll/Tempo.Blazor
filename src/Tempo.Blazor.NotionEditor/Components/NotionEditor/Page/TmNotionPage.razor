@@ -69,18 +69,20 @@
                             <span>@_aggregateConflictError</span>
                         }
                     </span>
-                    <button type="button"
-                            class="tm-notion-load-error__retry tm-notion-load-error__retry--primary"
-                            disabled="@_resolvingAggregateConflict"
-                            @onclick="ReloadAggregateConflictAsync">
-                        @Loc["TmNotionTableBlock_ConflictReload"]
-                    </button>
-                    <button type="button"
-                            class="tm-notion-load-error__retry"
-                            disabled="@_resolvingAggregateConflict"
-                            @onclick="ReapplyAggregateConflictAsync">
-                        @Loc["TmNotionTableBlock_ConflictReapply"]
-                    </button>
+                    <span class="tm-notion-page__aggregate-actions">
+                        <button type="button"
+                                class="tm-notion-load-error__retry tm-notion-load-error__retry--primary"
+                                disabled="@_resolvingAggregateConflict"
+                                @onclick="ReloadAggregateConflictAsync">
+                            @Loc["TmNotionTableBlock_ConflictReload"]
+                        </button>
+                        <button type="button"
+                                class="tm-notion-load-error__retry"
+                                disabled="@_resolvingAggregateConflict"
+                                @onclick="ReapplyAggregateConflictAsync">
+                            @Loc["TmNotionTableBlock_ConflictReapply"]
+                        </button>
+                    </span>
                 </div>
             }
 

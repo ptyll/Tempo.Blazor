@@ -149,10 +149,12 @@
     font-size: var(--tm-font-size-sm);
 }
 
-/* ── Color submenu ────────────────────────────────────────────── */
+/* ── Color submenu (F-12) ─────────────────────────────────────── */
 
+/* The group label is its own row above the swatch grid. */
 .tm-notion-ctx-color__section-label {
-    padding:     4px var(--tm-space-2) 2px;
+    display:     block;
+    padding:     var(--tm-space-2) var(--tm-space-2) var(--tm-space-1);
     font-size:   var(--tm-font-size-xs);
     font-weight: var(--tm-font-weight-medium);
     color:       var(--tm-text-tertiary);
@@ -168,13 +170,21 @@
     display:       inline-flex;
     align-items:   center;
     justify-content: center;
-    width:         18px;
-    height:        18px;
+    /* F-12: 18px swatches were clipped by the 72px panel — 28px desktop, 44px coarse. */
+    width:         28px;
+    height:        28px;
     border-radius: var(--tm-radius-sm);
     flex-shrink:   0;
-    font-size:     12px;
+    font-size:     var(--tm-font-size-sm);
     font-weight:   var(--tm-font-weight-bold);
     border:        1px solid var(--tm-border-color);
+}
+
+@media (pointer: coarse) {
+    .tm-notion-ctx-color__swatch {
+        width:  var(--tm-touch-target);
+        height: var(--tm-touch-target);
+    }
 }
 
 .tm-notion-ctx-color__swatch--text {

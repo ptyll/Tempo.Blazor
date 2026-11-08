@@ -67230,6 +67230,13 @@
               "isRequired": false,
               "default": "\"\"",
               "description": "Reply button label. Reply is always visible."
+            },
+            {
+              "name": "ShowReply",
+              "type": "bool",
+              "isRequired": false,
+              "default": "true",
+              "description": "Shows the inline Reply action. A panel with a thread-level reply trigger hides it on the last entry so the two never sit next to each other."
             }
           ]
         },
@@ -67406,6 +67413,13 @@
               "type": "Func<DateTimeOffset, string>?",
               "isRequired": false,
               "description": "Relative time. The parent resolves ITmRelativeTimeFormatter."
+            },
+            {
+              "name": "HideReplyOnLastEntry",
+              "type": "bool",
+              "isRequired": false,
+              "description": "Hides the inline Reply action on the last entry (panels that render a thread-level reply trigger right below the thread).",
+              "default": "false"
             },
             {
               "name": "InlineReplyBaseline",

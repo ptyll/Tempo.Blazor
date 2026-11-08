@@ -45,6 +45,23 @@ public sealed class NotionPhase4DialogScreenshots : NotionE2ETestBase
         await page.WaitForTimeoutAsync(200);
     }
 
+    /// <summary>F-24: the indigo variant rides the same attribute pair the phase-2 matrix uses.</summary>
+    private static async Task SetIndigoAsync(IPage page, string theme)
+    {
+        await page.EvaluateAsync(
+            """
+            theme => {
+                localStorage.setItem('tm-demo-color-theme', 'indigo');
+                document.documentElement.setAttribute('data-tm-theme', 'indigo');
+                document.documentElement.setAttribute('data-theme', theme);
+                const shell = document.querySelector('.demo-shell');
+                if (shell) shell.setAttribute('data-theme', theme);
+            }
+            """,
+            theme);
+        await page.WaitForTimeoutAsync(250);
+    }
+
     private async Task ShotRegionAsync(IPage page, string area, string name, ILocator region)
     {
         var path = Path.Combine(ShotDir(area), name + ".png");
@@ -653,6 +670,27 @@ public sealed class NotionPhase4DialogScreenshots : NotionE2ETestBase
                 .EvaluateAsync("el => el.click()");
             await page.WaitForTimeoutAsync(250);
         }
+
+        // F-24: the final capture set gains the indigo variant for the modal.
+        foreach (var theme in new[] { "light", "dark" })
+        {
+            await SetIndigoAsync(page, theme);
+            await OpenFirstRecordDetailAsync(page, db);
+            var overlay = page.Locator(".tm-modal-overlay:has(.tm-dbrd)").First;
+            await overlay.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 8000 });
+            await ShotRegionAsync(page, "notion-db-dialogs",
+                $"notion-db-record-detail--desktop-{theme}-indigo", overlay);
+            await page.Locator(".tm-modal-overlay:has(.tm-dbrd) .tm-modal-close").First
+                .EvaluateAsync("el => el.click()");
+            await page.WaitForTimeoutAsync(250);
+        }
+        await page.EvaluateAsync(
+            """
+            () => {
+                localStorage.setItem('tm-demo-color-theme', 'default');
+                document.documentElement.setAttribute('data-tm-theme', 'default');
+            }
+            """);
 
         var touch = await OpenDbTouchEditorAsync(390, 844);
         foreach (var theme in new[] { "light", "dark" })

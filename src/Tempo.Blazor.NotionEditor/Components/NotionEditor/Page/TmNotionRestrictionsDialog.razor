@@ -41,9 +41,10 @@
                 }
 
                 <section class="tm-nprd__section" aria-labelledby="tm-nprd-mode-heading">
+                    @* F-18: one visible "Restriction mode" text — the select names itself after the
+                       heading instead of duplicating it in a second (visually hidden) label. *@
                     <h3 id="tm-nprd-mode-heading" class="tm-nprd__heading">@Loc["Notion_Restrictions_Mode"]</h3>
-                    <label class="tm-nprd__field tm-sr-only" for="tm-nprd-mode">@Loc["Notion_Restrictions_Mode"]</label>
-                    <select id="tm-nprd-mode" class="tm-nprd__select" value="@_mode" @onchange="HandleModeChanged">
+                    <select id="tm-nprd-mode" class="tm-nprd__select" value="@_mode" aria-labelledby="tm-nprd-mode-heading" @onchange="HandleModeChanged">
                         <option value="@PageRestrictionMode.Open">@Loc["Notion_Restrictions_ModeOpen"]</option>
                         <option value="@PageRestrictionMode.ReadOnlyForSome">@Loc["Notion_Restrictions_ModeReadOnlyForSome"]</option>
                         <option value="@PageRestrictionMode.EditForSome">@Loc["Notion_Restrictions_ModeEditForSome"]</option>

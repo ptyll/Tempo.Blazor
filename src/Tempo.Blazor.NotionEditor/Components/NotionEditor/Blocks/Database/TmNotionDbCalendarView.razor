@@ -6,7 +6,7 @@
 @using Tempo.Blazor.Localization
 @using Tempo.Blazor.NotionEditor.Enums
 
-<div class="tm-dbcal" @ondragend="OnDragEnd">
+<div class="tm-dbcal @(IsMobile ? "tm-dbcal--mobile" : "")" @ondragend="OnDragEnd">
 
     @* ── Header ─────────────────────────────────────────────────────────── *@
     <div class="tm-dbcal__header">

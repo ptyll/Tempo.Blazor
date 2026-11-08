@@ -283,6 +283,12 @@
     }
 }
 
+/* ── Footer (inside the TmModal footer fragment) ─────────────────────────────
+   F-23: the Close action used to sit glued to the right edge with no padding. */
+.tm-ntg__footer-close {
+    padding: var(--tm-space-3) var(--tm-space-4);
+}
+
 @media (max-width: 42rem) {
     .tm-ntg__grid {
         grid-template-columns: 1fr;

@@ -233,6 +233,27 @@
     }
 }
 
+/* F-11: on a mobile layout the text chips are unreadable (1–2 clipped characters), so an event
+   is a colour dot; the day tap opens the day sheet with the full record list. */
+.tm-dbcal--mobile .tm-dbcal__event {
+    padding: 2px;
+    background: transparent;
+    border-radius: var(--tm-radius-full);
+}
+
+.tm-dbcal--mobile .tm-dbcal__event:hover {
+    background: color-mix(in srgb, var(--event-color, var(--tm-color-primary)) 14%, var(--tm-bg-surface));
+}
+
+.tm-dbcal--mobile .tm-dbcal__event-label {
+    display: none;
+}
+
+.tm-dbcal--mobile .tm-dbcal__event-dot {
+    width: 8px;
+    height: 8px;
+}
+
 /* ── Overflow ───────────────────────────────────────────────────────────── */
 
 .tm-dbcal__overflow {

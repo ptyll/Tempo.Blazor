@@ -212,6 +212,8 @@
     gap: 2px;
     overflow-x: auto;
     scrollbar-width: none;
+    /* F-17: tab labels and the "More views" trigger stay on one line; the row scrolls instead. */
+    white-space: nowrap;
     /* A phone-width block must scroll the tabs inside itself, not grow the page. */
     min-width: 0;
     max-width: 100%;

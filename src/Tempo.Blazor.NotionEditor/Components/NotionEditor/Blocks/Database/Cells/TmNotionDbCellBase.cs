@@ -51,7 +51,19 @@ public abstract class TmNotionDbCellBase : ComponentBase
 
     protected virtual void OnStartEdit() { }
 
-    protected string StringValue => Value?.ToString() ?? string.Empty;
+    /// <summary>
+    /// The display text of the stored value. The demo API delivers record values as
+    /// <see cref="System.Text.Json.JsonElement"/> — a Select/Status is a JSON string — so unwrap
+    /// the element instead of calling <c>ToString()</c> (which returns the raw JSON for arrays).
+    /// </summary>
+    protected string StringValue => Value switch
+    {
+        null                          => string.Empty,
+        string s                      => s,
+        System.Text.Json.JsonElement { ValueKind: System.Text.Json.JsonValueKind.String } je
+                                      => je.GetString() ?? string.Empty,
+        var other                     => other.ToString() ?? string.Empty
+    };
 
     protected async Task CommitAsync(object? value) => await OnCommit.InvokeAsync(value);
     protected async Task CancelAsync()              => await OnCancel.InvokeAsync();

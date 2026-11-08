@@ -51,10 +51,56 @@
 
 .tm-dbtl__nav-label {
     font-size: var(--tm-font-size-sm);
+    white-space: nowrap;
 }
+
+/* F-10: the period navigation is icon-only (‹ ›) on a mobile layout — the labels used to
+   wrap onto two lines. The aria-label keeps the accessible name. */
+.tm-dbtl--mobile .tm-dbtl__nav-label { display: none; }
 
 @media (max-width: 639px) {
     .tm-dbtl__nav-label { display: none; }
+}
+
+/* F-10: a mobile layout renders the record list under the axis (the sidebar stays tablet+). */
+.tm-dbtl__mobile-list {
+    display: flex;
+    flex-direction: column;
+    border-top: 1px solid var(--tm-border-color);
+}
+
+.tm-dbtl__mobile-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--tm-space-2);
+    min-height: var(--tm-touch-target);
+    padding: var(--tm-space-2) var(--tm-space-3);
+    border-bottom: 1px solid var(--tm-border-color);
+    cursor: pointer;
+}
+
+.tm-dbtl__mobile-row:hover {
+    background: var(--tm-color-surface-hover);
+}
+
+.tm-dbtl__mobile-row:focus-visible {
+    outline: 2px solid var(--tm-color-primary);
+    outline-offset: -2px;
+}
+
+.tm-dbtl__mobile-row-name {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: var(--tm-font-size-sm);
+}
+
+.tm-dbtl__mobile-row-dates {
+    flex-shrink: 0;
+    font-size: var(--tm-font-size-xs);
+    color: var(--tm-text-secondary);
 }
 
 .tm-dbtl__new-btn {

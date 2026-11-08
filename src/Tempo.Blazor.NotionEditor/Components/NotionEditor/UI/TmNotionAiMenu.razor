@@ -27,6 +27,8 @@
                     AriaLabel="@Loc["Notion_AI_Assistant"]"
                     Class="@PanelClass">
     <section data-testid="@TestId("notion-ai-menu")"
+             class="tm-notion-ai__root"
+             data-presentation="@(ResolvedLayout == TmLayoutMode.Mobile ? "sheet" : "overlay")"
              @onkeydown="HandleKeyDownAsync">
         <header class="tm-notion-ai__header">
             <div class="tm-notion-ai__title">

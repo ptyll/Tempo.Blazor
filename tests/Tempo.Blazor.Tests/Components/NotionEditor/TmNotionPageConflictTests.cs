@@ -91,6 +91,11 @@ public sealed class TmNotionPageConflictTests : LocalizationTestBase
         buttons[0].TextContent.Trim().Should().Be("Reload server version");
         buttons[1].ClassList.Should().NotContain("tm-notion-load-error__retry--primary");
         buttons[1].TextContent.Trim().Should().Be("Reapply my changes");
+
+        // F-03: the actions sit in their own second-row wrapper, not squeezed beside the message.
+        banner.QuerySelector(".tm-notion-page__aggregate-actions").Should().NotBeNull(
+            "the two actions render inside the aggregate-actions row");
+        banner.QuerySelectorAll(".tm-notion-page__aggregate-actions button").Should().HaveCount(2);
     }
 
     [Fact]

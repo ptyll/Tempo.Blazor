@@ -402,9 +402,8 @@ public sealed class MarkupClassCoverageTests
         "tm-notion-emoji-picker__panel",
         "tm-notion-status-picker__label",
         "tm-nps__footer-count",
-        "tm-nps__item-meta",
-        "tm-nps__item-path",
-        "tm-ntg__footer-close",
+        // F-09: tm-nps__item-meta / tm-nps__item-path gained rules (the search result hierarchy).
+        // F-23: tm-ntg__footer-close gained the footer padding rule.
         "tm-nsf",
         "tm-nsr",
         "tm-page-info__created",

@@ -18,6 +18,17 @@ QuestPDF.Settings.License = QuestPDF.Infrastructure.LicenseType.Community;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// IFieldConfig / IDatabaseViewConfig are empty marker interfaces — through the interface the
+// JSON payload is `{}` and the WASM client loses every Select/Status option (F-04/F-05). Write
+// the runtime type's payload instead.
+builder.Services.ConfigureHttpJsonOptions(options =>
+{
+    options.SerializerOptions.Converters.Add(
+        new Tempo.Blazor.Demo.Api.Serialization.MarkerInterfaceJsonConverter<Tempo.Blazor.NotionEditor.Models.IFieldConfig>());
+    options.SerializerOptions.Converters.Add(
+        new Tempo.Blazor.Demo.Api.Serialization.MarkerInterfaceJsonConverter<Tempo.Blazor.NotionEditor.Models.IDatabaseViewConfig>());
+});
+
 // `diagrams.db` next to the project is COMMITTED, so anything that boots this host mutates the
 // working tree — the e2e lane leaves it modified plus a -wal/-shm pair every run. Overridable via
 // `Demo__DiagramsDbPath`, which the Playwright host launcher points at a temp directory; unset it

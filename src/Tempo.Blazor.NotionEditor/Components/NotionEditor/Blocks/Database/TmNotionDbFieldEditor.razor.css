@@ -307,10 +307,13 @@
     color:       var(--tm-text-secondary);
 }
 
-/* ── Footer (inside the TmModal footer fragment) ──────────────────────────── */
+/* ── Footer (inside the TmModal footer fragment) ────────────────────────────
+   F-06: the four actions must not overflow the modal on a phone — the footer wraps, and
+   under 480 px the groups stack full-width with the primary Save on its own line. */
 
 .tm-dbfe__footer {
     display:         flex;
+    flex-wrap:       wrap;
     align-items:     center;
     justify-content: space-between;
     gap:             8px;
@@ -319,15 +322,35 @@
 
 .tm-dbfe__footer-danger {
     display:     flex;
+    flex-wrap:   wrap;
     align-items: center;
     gap:         4px;
 }
 
 .tm-dbfe__footer-right {
-    display:     flex;
-    align-items: center;
-    gap:         8px;
-    margin-left: auto;
+    display:      flex;
+    flex-wrap:    wrap;
+    align-items:  center;
+    gap:          8px;
+    margin-left:  auto;
+}
+
+@media (max-width: 480px) {
+    .tm-dbfe__footer {
+        flex-direction: column-reverse;
+        align-items:    stretch;
+    }
+
+    .tm-dbfe__footer-danger,
+    .tm-dbfe__footer-right {
+        width: 100%;
+        margin-left: 0;
+    }
+
+    .tm-dbfe__footer-danger ::deep .tm-btn,
+    .tm-dbfe__footer-right ::deep .tm-btn {
+        width: 100%;
+    }
 }
 
 /* ── Option reorder (non-drag alternative) ─────────────────────────────── */

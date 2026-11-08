@@ -178,7 +178,9 @@
 
 .tm-notion-page__aggregate-conflict {
     display: grid;
-    grid-template-columns: auto minmax(0, 1fr) auto auto;
+    /* Text first, actions on their own second row (F-03): the four-column grid squeezed the
+       buttons into a narrow column beside the message. */
+    grid-template-columns: auto minmax(0, 1fr);
     align-items: center;
     gap: var(--tm-space-3);
     margin-bottom: var(--tm-space-3);
@@ -202,8 +204,20 @@
 
 .tm-notion-page__aggregate-conflict .tm-notion-load-error__retry {
     min-height: var(--tm-input-height-sm);
+    padding: var(--tm-space-2) var(--tm-space-4);
+    border: var(--tm-border-width) solid var(--tm-border-color);
+    border-radius: var(--tm-radius-md);
     color: var(--tm-text-primary);
     background: var(--tm-color-surface);
+}
+
+/* The actions row: second grid row, right-aligned like the mobile mockup. */
+.tm-notion-page__aggregate-actions {
+    grid-column: 2;
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--tm-space-2);
+    justify-content: flex-end;
 }
 
 /* The ONE primary action (N2): reloading the server version wins the conflict. */
@@ -240,8 +254,13 @@
         grid-template-columns: auto minmax(0, 1fr);
     }
 
-    .tm-notion-page__aggregate-conflict .tm-notion-load-error__retry {
-        grid-column: 2;
+    .tm-notion-page__aggregate-actions {
+        grid-column: 1 / -1;
+        justify-content: stretch;
+        flex-direction: column;
+    }
+
+    .tm-notion-page__aggregate-actions .tm-notion-load-error__retry {
         width: 100%;
     }
 }

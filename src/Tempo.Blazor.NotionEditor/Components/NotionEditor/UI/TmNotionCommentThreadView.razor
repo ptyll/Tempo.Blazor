@@ -4,6 +4,11 @@
 @using Tempo.Blazor.Components.NotionEditor.Models
 
 @* Shared reply tree. The parent owns loading, the provider and the delete dialog. *@
+@{
+    // F-21: panels with a thread-level reply trigger hide the inline Reply on the LAST entry,
+    // so the two identical actions never render next to each other.
+    _lastEntryId = Flatten(Nodes).LastOrDefault()?.Entry.Id;
+}
 <div class="@WrapperClass"
      role="list"
      aria-label="@Resolved.ListLabel"
@@ -74,6 +79,7 @@
                                                   CanEdit="@(CanEdit is not null && CanEdit(node.Entry))"
                                                   CanDelete="@(CanDelete is not null && CanDelete(node.Entry))"
                                                   CanQuote="@(OnQuote.HasDelegate)"
+                                                  ShowReply="@(!HideReplyOnLastEntry || node.Entry.Id != _lastEntryId)"
                                                   OnReply="() => OnReply.InvokeAsync(node.Entry)"
                                                   OnEdit="() => OnEdit.InvokeAsync(node.Entry)"
                                                   OnDelete="() => OnDelete.InvokeAsync(node.Entry)"
@@ -116,6 +122,12 @@
 
     /// <summary>Localization prefix used when <see cref="Labels"/> is null.</summary>
     [Parameter] public string LabelPrefix { get; set; } = "TmNotionBlockComment";
+
+    /// <summary>Hides the inline Reply action on the last entry (panels that render a
+    /// thread-level reply trigger right below the thread, F-21).</summary>
+    [Parameter] public bool HideReplyOnLastEntry { get; set; }
+
+    private string? _lastEntryId;
 
     /// <summary>Reply tree. The parent builds it.</summary>
     [Parameter] public IReadOnlyList<CommentThreadNode> Nodes { get; set; } = [];

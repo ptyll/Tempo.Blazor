@@ -42,10 +42,22 @@
 .tm-notion-emoji-picker__top {
     display: flex;
     align-items: center;
+    flex-wrap: wrap;
     gap: 6px;
     padding: 10px 10px 8px;
     border-bottom: 1px solid var(--tm-border-color);
     flex-shrink: 0;
+}
+
+/* F-22: under 480px the "Remove icon" action takes its own row — it no longer squeezes the
+   category tabs off the right edge of the search row. */
+@media (max-width: 480px) {
+    .tm-notion-emoji-picker__remove {
+        order: 3;
+        flex-basis: 100%;
+        text-align: start;
+        min-height: var(--tm-touch-target);
+    }
 }
 
 .tm-notion-emoji-picker__search-wrap {

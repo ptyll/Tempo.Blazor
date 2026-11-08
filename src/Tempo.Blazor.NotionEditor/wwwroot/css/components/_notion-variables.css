@@ -35,6 +35,7 @@
     --tm-notion-block-padding-x:       2px;
     --tm-notion-block-handle-width:    28px;
     --tm-notion-table-cell-width-default: 7.5rem;
+    --tm-notion-db-row-height:       44px;
     --tm-notion-indent-size:           1.5rem;
 
     /* ── Typography — block-specific ─────────────────────────── */

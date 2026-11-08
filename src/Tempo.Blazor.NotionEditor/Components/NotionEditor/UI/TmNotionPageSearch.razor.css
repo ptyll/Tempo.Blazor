@@ -151,7 +151,8 @@
 .tm-nps__results {
     flex: 0 1 auto;
     min-height: 3.5rem;
-    max-height: min(22rem, calc(100vh - 24rem));
+    /* F-09: a centered large modal (not a fullscreen sheet) — the list never exceeds 80dvh. */
+    max-height: min(22rem, 80dvh);
     overflow-y: auto;
     padding: var(--tm-space-2) 0;
     scrollbar-width: thin;
@@ -248,10 +249,20 @@
     gap: var(--tm-space-1);
 }
 
+/* F-09: hierarchy — the title is the largest element; path/meta/snippet stay secondary. */
 .tm-nps__item-title {
-    font-size: var(--tm-font-size-sm);
-    font-weight: var(--tm-font-weight-medium);
+    font-size: var(--tm-font-size-md);
+    font-weight: var(--tm-font-weight-semibold);
     color: var(--tm-text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.tm-nps__item-meta,
+.tm-nps__item-path {
+    font-size: var(--tm-font-size-sm);
+    color: var(--tm-text-secondary);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;

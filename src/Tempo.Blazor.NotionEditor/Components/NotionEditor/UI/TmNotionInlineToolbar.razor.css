@@ -7,7 +7,7 @@
     align-items: center;
     gap: 1px;
     padding: 4px 6px;
-    background: var(--tm-color-white);
+    background: var(--tm-bg-elevated);
     border: 1px solid var(--tm-border-color);
     border-radius: 6px;
     box-shadow: var(--tm-shadow-popover);
@@ -237,6 +237,18 @@
 
 .tm-notion-inline-toolbar__turninto-item:hover {
     background: var(--tm-color-surface-hover);
+}
+
+/* F-15: the item icon reuses the slash-menu SVGs. */
+.tm-notion-inline-toolbar__turninto-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    margin-right: 6px;
+    flex-shrink: 0;
+    color: var(--tm-text-secondary);
 }
 
 /* ── Align panel ─────────────────────────────────────────────────────────── */

@@ -16,6 +16,38 @@
     font-size: var(--tm-font-size-sm);
 }
 
+/* F-08: the sheet presentation gets its chrome (title + Done) from the core overlay sheet
+   header, so the panel hides its own header, gains side padding and lets the mode tabs scroll
+   horizontally instead of pushing Retry/Discard off the right edge. */
+.tm-notion-ai__root {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-3);
+    min-height: 0;
+}
+
+.tm-notion-ai__root[data-presentation="sheet"] {
+    padding-inline: var(--tm-space-4);
+}
+
+.tm-notion-ai__root[data-presentation="sheet"] .tm-notion-ai__header {
+    display: none;
+}
+
+.tm-notion-ai__root[data-presentation="sheet"] .tm-notion-ai__tabs {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+
+.tm-notion-ai__root[data-presentation="sheet"] .tm-notion-ai__tabs::-webkit-scrollbar {
+    display: none;
+}
+
+.tm-notion-ai__root[data-presentation="sheet"] .tm-notion-ai__actions--sheet .tm-notion-ai__btn--primary {
+    flex: 1 1 100%;
+}
+
 .tm-notion-ai__header,
 .tm-notion-ai__actions,
 .tm-notion-ai__title,

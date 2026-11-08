@@ -57,10 +57,15 @@
                 @foreach (var (blockType, nameKey) in TurnIntoItems)
                 {
                     var capturedType = blockType;
+                    var icon = SlashMenuRegistry.FindByType(blockType)?.SvgIcon;
                     <button class="tm-notion-inline-toolbar__turninto-item"
                             role="option"
                             @onclick="() => HandleTurnIntoAsync(capturedType)"
                             @onclick:preventDefault="true">
+                        @if (!string.IsNullOrEmpty(icon))
+                        {
+                            <span class="tm-notion-inline-toolbar__turninto-icon" aria-hidden="true">@((MarkupString)icon)</span>
+                        }
                         @Loc[nameKey]
                     </button>
                 }

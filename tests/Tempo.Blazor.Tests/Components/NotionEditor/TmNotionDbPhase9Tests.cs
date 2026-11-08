@@ -119,6 +119,22 @@ public class TmNotionDbPhase9Tests : LocalizationTestBase
     }
 
     [Fact]
+    public void CalendarView_Mobile_EventsRenderAsColorDots()
+    {
+        // F-11: text chips are unreadable on a phone — the root carries the mobile modifier
+        // (the CSS hides .tm-dbcal__event-label there) and the day tap opens the day sheet.
+        var (title, when, records) = CalendarSeed(1);
+        var cut = Render<TmNotionDbCalendarView>(p => p
+            .Add(x => x.Fields, new IDatabaseField[] { title, when })
+            .Add(x => x.Records, records)
+            .Add(x => x.DateFieldId, when.Id)
+            .AddCascadingValue(new TmLayoutContext(TmLayoutMode.Mobile, TmLayoutMode.Mobile)));
+
+        cut.Find(".tm-dbcal").ClassList.Should().Contain("tm-dbcal--mobile");
+        cut.FindAll(".tm-dbcal__event-dot").Should().NotBeEmpty();
+    }
+
+    [Fact]
     public void TimelineView_Header_RendersMonthAndWeekRows()
     {
         var (fields, records) = TimelineSeed();
@@ -238,6 +254,50 @@ public class TmNotionDbPhase9Tests : LocalizationTestBase
         var days = TimelineGeometry.DaysForPixels(pxPerDay * expectedDays, zoom);
         days.Should().Be(expectedDays);
         TimelineGeometry.PixelsPerDay(zoom).Should().BeApproximately(pxPerDay, 0.001);
+    }
+
+    [Fact]
+    public void TimelineView_FirstRender_OpensOnTheNearestRecord()
+    {
+        // F-10: a record months away from today must be inside the first visible window,
+        // not hidden outside a today-centered grid.
+        var title = new DatabaseField { Id = Guid.NewGuid(), Name = "Name", Type = DatabaseFieldType.Text, IsPrimary = true };
+        var start = new DatabaseField { Id = Guid.NewGuid(), Name = "Start", Type = DatabaseFieldType.Date };
+        var farDay = DateTime.Today.AddDays(-300);
+        var record = new DatabaseRecord
+        {
+            Id = Guid.NewGuid(),
+            Fields = new Dictionary<string, object?>
+            {
+                [title.Id.ToString()] = "Far away",
+                [start.Id.ToString()] = farDay
+            }
+        };
+
+        var cut = Render<TmNotionDbTimelineView>(p => p
+            .Add(x => x.Fields, new IDatabaseField[] { title, start })
+            .Add(x => x.Records, new IDatabaseRecord[] { record })
+            .Add(x => x.StartDateFieldId, start.Id));
+
+        var months = cut.Find("[data-testid=notion-db-timeline-months]").TextContent;
+        months.Should().Contain(farDay.ToString("MMMM yyyy", CultureInfo.CurrentCulture));
+    }
+
+    [Fact]
+    public void TimelineView_Mobile_RendersRecordListUnderTheAxis()
+    {
+        // F-10: the sidebar stays tablet+; a phone gets the record list under the axis.
+        var (fields, records) = TimelineSeed();
+        var cut = Render<TmNotionDbTimelineView>(p => p
+            .Add(x => x.Fields, fields)
+            .Add(x => x.Records, records)
+            .Add(x => x.StartDateFieldId, fields[1].Id)
+            .Add(x => x.EndDateFieldId, fields[2].Id)
+            .AddCascadingValue(new TmLayoutContext(TmLayoutMode.Mobile, TmLayoutMode.Mobile)));
+
+        var list = cut.Find("[data-testid=notion-db-timeline-mobile-list]");
+        list.TextContent.Should().Contain("Alpha");
+        cut.FindAll(".tm-dbtl__sidebar").Should().BeEmpty();
     }
 
     private static DatabaseField StatusField() => new()

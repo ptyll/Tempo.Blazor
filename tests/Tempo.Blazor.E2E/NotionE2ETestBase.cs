@@ -59,8 +59,28 @@ public abstract class NotionE2ETestBase : WasmTestBase
             State = WaitForSelectorState.Visible,
             Timeout = 60000
         });
+        // F-01: a visible #blazor-error-ui means an unhandled Blazor exception on the page — the
+        // same guard SmokeLaneE2ETests asserts. Fail here instead of capturing a broken surface.
+        await AssertNoBlazorErrorUiAsync(_page);
 
         return _page;
+    }
+
+    /// <summary>
+    /// F-01 guard: a visible <c>#blazor-error-ui</c> means an unhandled Blazor exception occurred.
+    /// Screenshot captures must not accept such a page (the bar covers the bottom ~60 px and
+    /// signals a broken render), so every capture helper asserts this like SmokeLaneE2ETests.
+    /// </summary>
+    protected static async Task AssertNoBlazorErrorUiAsync(IPage page)
+    {
+        var errorUiVisible = await page.EvaluateAsync<bool>(
+            """
+            () => {
+                const el = document.querySelector('#blazor-error-ui');
+                return !!el && getComputedStyle(el).display !== 'none';
+            }
+            """);
+        Assert.IsFalse(errorUiVisible, "#blazor-error-ui is visible — an unhandled Blazor exception occurred on the Notion demo page.");
     }
 
     protected async Task<IPage> OpenNotionEditorAsync(int viewportWidth, int viewportHeight, string query = "")
@@ -721,6 +741,7 @@ public abstract class NotionE2ETestBase : WasmTestBase
         var fullPath = Path.Combine(outputDir, $"{safeState}.png");
         var regionPath = Path.Combine(outputDir, $"{safeState}.region.png");
 
+        await AssertNoBlazorErrorUiAsync(Page);
         await Page.WaitForTimeoutAsync(250);
         await Page.ScreenshotAsync(new PageScreenshotOptions
         {
@@ -749,6 +770,7 @@ public abstract class NotionE2ETestBase : WasmTestBase
         var fullPath = Path.Combine(outputDir, $"{safeState}.png");
         var regionPath = Path.Combine(outputDir, $"{safeState}.region.png");
 
+        await AssertNoBlazorErrorUiAsync(Page);
         await Page.WaitForTimeoutAsync(250);
         await Page.ScreenshotAsync(new PageScreenshotOptions
         {

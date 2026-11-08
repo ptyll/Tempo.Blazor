@@ -21,7 +21,9 @@
                  Class="tm-ntcp-dialog">
             <ChildContent>@CardContent</ChildContent>
             <Footer>
-                <TmButton Variant="ButtonVariant.Primary" OnClick="CloseAsync">@Loc["Tm_Close"]</TmButton>
+                @* F-20: Close is a ghost — a full primary next to the composer's Comment competed
+                   for the one primary slot of the dialog. *@
+                <TmButton Variant="ButtonVariant.Ghost" OnClick="CloseAsync">@Loc["Tm_Close"]</TmButton>
             </Footer>
         </TmModal>
     }

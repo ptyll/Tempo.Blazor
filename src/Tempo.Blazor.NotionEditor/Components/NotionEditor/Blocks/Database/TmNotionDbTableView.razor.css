@@ -211,16 +211,24 @@
     z-index: 10;
 }
 
-/* ── Row heights ────────────────────────────────────────────────────────── */
+/* ── Row heights ──────────────────────────────────────────────────────────
+   One token drives every density and both the row and the cells, so a cell's content
+   (a chip stack, an empty &nbsp;) can never stretch a row past its siblings (F-05). */
+.tm-dbt-wrap  { --tm-dbt-row-height: var(--tm-notion-db-row-height); }
 .tm-dbt--short  { --tm-dbt-row-height: 36px; }
-.tm-dbt--medium { --tm-dbt-row-height: 44px; }
+.tm-dbt--medium { --tm-dbt-row-height: var(--tm-notion-db-row-height); }
 .tm-dbt--tall   { --tm-dbt-row-height: 72px; }
 
+.tm-dbt__cell {
+    height: var(--tm-dbt-row-height);
+    box-sizing: border-box;
+}
+
 .tm-dbt--short  .tm-dbt__cell:not(.tm-dbt__cell--check):not(.tm-dbt__cell--editing),
-.tm-dbt--short  .tm-dbt-cell { height: var(--tm-dbt-row-height); max-height: var(--tm-dbt-row-height); line-height: 36px; padding: 0 8px; }
+.tm-dbt--short  .tm-dbt-cell { height: var(--tm-dbt-row-height); max-height: var(--tm-dbt-row-height); line-height: var(--tm-dbt-row-height); padding: 0 8px; }
 
 .tm-dbt--medium .tm-dbt__cell:not(.tm-dbt__cell--check):not(.tm-dbt__cell--editing),
-.tm-dbt--medium .tm-dbt-cell { height: var(--tm-dbt-row-height); max-height: var(--tm-dbt-row-height); line-height: 44px; padding: 0 10px; }
+.tm-dbt--medium .tm-dbt-cell { height: var(--tm-dbt-row-height); max-height: var(--tm-dbt-row-height); line-height: var(--tm-dbt-row-height); padding: 0 10px; }
 
 .tm-dbt--tall   .tm-dbt__cell:not(.tm-dbt__cell--check):not(.tm-dbt__cell--editing),
 .tm-dbt--tall   .tm-dbt-cell { max-height: 64px; line-height: 1.5; padding: 10px; }

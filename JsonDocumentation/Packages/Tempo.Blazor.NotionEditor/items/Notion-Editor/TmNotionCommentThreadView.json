@@ -69,6 +69,13 @@
       "description": "Relative time. The parent resolves ITmRelativeTimeFormatter."
     },
     {
+      "name": "HideReplyOnLastEntry",
+      "type": "bool",
+      "isRequired": false,
+      "default": "false",
+      "description": "Hides the inline Reply action on the last entry (panels that render a thread-level reply trigger right below the thread)."
+    },
+    {
       "name": "InlineReplyBaseline",
       "type": "string",
       "isRequired": false,

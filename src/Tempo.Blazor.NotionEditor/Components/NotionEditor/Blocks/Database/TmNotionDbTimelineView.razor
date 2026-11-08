@@ -254,6 +254,32 @@
         @RecordCountLabel
     </div>
 
+    @* ── Mobile record list (F-10): the sidebar stays tablet+, a phone gets the record list
+         under the axis — tap opens the date sheet like a bar tap. ───────────────────────── *@
+    @if (IsMobile && Records.Count > 0)
+    {
+        <div class="tm-dbtl__mobile-list" data-testid="@TestId("notion-db-timeline-mobile-list")">
+            @foreach (var record in Records)
+            {
+                var rec   = record;
+                var start = GetDate(rec, StartField);
+                <div class="tm-dbtl__mobile-row"
+                     role="button"
+                     tabindex="0"
+                     @onclick="() => OnBarClickAsync(rec)"
+                     @onkeydown="e => HandleItemKeyAsync(e, rec)">
+                    <span class="tm-dbtl__mobile-row-name">@NotionDatabaseValueFormatter.PrimaryText(rec, Fields)</span>
+                    @if (start is not null)
+                    {
+                        <span class="tm-dbtl__mobile-row-dates">
+                            @start.Value.ToString("d", CultureInfo.CurrentCulture) – @((GetDate(rec, EndField) ?? start.Value.AddDays(1)).ToString("d", CultureInfo.CurrentCulture))
+                        </span>
+                    }
+                </div>
+            }
+        </div>
+    }
+
     @if (IsCoarseSheet && SheetRecord is { } sheet)
     {
         <TmModal Show="true"

@@ -348,7 +348,8 @@
                         @if (_context.BlogProvider is not null && !SinglePageMode)
                         {
                             <TmToolbarButton Class="tm-notion-topbar__tool"
-                                             Icon="@IconNames.BookOpen"
+                                             Icon="@IconNames.FileText"
+                                             Text="@Loc["Notion_Blog_Title"]"
                                              Tooltip="@Loc["Notion_Blog_Title"]"
                                              Pressed="_openShellPanel == NotionShellPanel.Blog"
                                              Priority="@ToolPriority"
@@ -359,6 +360,7 @@
                         {
                             <TmToolbarButton Class="tm-notion-topbar__tool"
                                              Icon="@IconNames.BarChart2"
+                                             Text="@Loc["Notion_Analytics_Title"]"
                                              Tooltip="@Loc["Notion_Analytics_Title"]"
                                              Pressed="_openShellPanel == NotionShellPanel.Analytics"
                                              Priority="@ToolPriority"
@@ -395,6 +397,7 @@
                         <TmToolbarButton Class="tm-notion-reading-toggle tm-notion-topbar__tool"
                                          AdditionalAttributes="@(Test("notion-reading-toggle"))"
                                          Icon="@IconNames.BookOpen"
+                                         Text="@Loc["Notion_Reading_Enter"]"
                                          Tooltip="@Loc["Notion_Reading_Enter"]"
                                          Priority="ToolbarButtonPriority.Secondary"
                                          OnClick="EnterReadingModeAsync" />

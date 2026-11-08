@@ -3607,6 +3607,19 @@ window.tmNotionPdf = (function () {
 
 window.tmDb = window.tmDb || {};
 
+// tmNotionDb — the surface the database block interops against directly. The coarse-pointer
+// probe resolves the touch layout; it must never throw (headless browsers, SSR, no matchMedia).
+window.tmNotionDb = window.tmNotionDb || {};
+window.tmNotionDb.isCoarsePointer = function () {
+    try {
+        return typeof window !== 'undefined'
+            && typeof window.matchMedia === 'function'
+            && window.matchMedia('(pointer: coarse)').matches === true;
+    } catch (_) {
+        return false;
+    }
+};
+
 // Column resize lives in its own module so it can import the shared pointer-drag helper.
 // Capture the script directory once, while document.currentScript is still this classic script
 // (a later call sees null). Same pattern as tmNotionPdf._scriptDir.

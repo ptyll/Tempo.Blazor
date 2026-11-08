@@ -48,6 +48,7 @@ public partial class TmNotionDbTimelineView : TmComponentBase, IAsyncDisposable
     private DateTime     _viewStart;
     private bool         _showTableArea = true;
     private bool         _initialized;
+    private bool         _autoAligned;
     private Guid?        _sheetRecordId;
 
     private TimelineZoomLevel ZoomLevel => _zoom switch
@@ -173,7 +174,31 @@ public partial class TmNotionDbTimelineView : TmComponentBase, IAsyncDisposable
             _viewStart     = StartOfUnit(DateTime.Today.AddDays(-14), TimelineZoom.Week);
             _initialized   = true;
         }
+
+        // F-10: the first render with data opens on the records, not on today — a database whose
+        // dates sit months away used to show an empty grid (bars outside the visible window).
+        if (!_autoAligned && StartField is not null)
+        {
+            var dated = Records
+                .Select(r => GetDate(r, StartField))
+                .Where(d => d is not null)
+                .Select(d => d!.Value)
+                .ToList();
+            if (dated.Count > 0)
+            {
+                var nearest  = dated.MinBy(d => Math.Abs((d.Date - DateTime.Today).TotalDays));
+                _viewStart   = StartOfUnit(nearest.Date.AddDays(-VisibleSpanDays() / 3), _zoom);
+                _autoAligned = true;
+            }
+        }
     }
+
+    private double VisibleSpanDays() => _zoom switch
+    {
+        TimelineZoom.Day   => ColumnCount * 1.0,
+        TimelineZoom.Month => ColumnCount * 30.0,
+        _                  => ColumnCount * 7.0
+    };
 
     // ── Field resolution ──────────────────────────────────────────────────────
 

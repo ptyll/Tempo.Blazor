@@ -24,8 +24,12 @@
     color: var(--tm-color-success);
 }
 
+/* ── Footer ─────────────────────────────────────
+   F-06: on a phone the four actions must not fight for one row — the footer wraps and the
+   primary action takes its own full-width line, the destructive one its own line above it. */
 .tm-dbrd__footer {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
     gap: var(--tm-space-2);
@@ -40,8 +44,27 @@
 
 .tm-dbrd__footer-main {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
+    justify-content: flex-end;
     gap: var(--tm-space-2);
+}
+
+@media (max-width: 480px) {
+    .tm-dbrd__footer {
+        flex-direction: column-reverse;
+        align-items: stretch;
+    }
+
+    .tm-dbrd__footer-danger,
+    .tm-dbrd__footer-main {
+        width: 100%;
+    }
+
+    .tm-dbrd__footer-danger ::deep .tm-btn,
+    .tm-dbrd__footer-main ::deep .tm-btn {
+        width: 100%;
+    }
 }
 
 /* ── Body ─────────────────────────────────────── */

@@ -62,16 +62,35 @@ public partial class TmNotionDbPropertyValue
     private IEnumerable<string> Names()
     {
         if (Value is null) yield break;
+
+        // The demo API round-trips record values as JsonElement: a Select/Status is a JSON string,
+        // a MultiSelect a JSON array. Neither is `string` nor `IEnumerable`, so unwrap explicitly
+        // (F-04 — the record detail read these as empty while other views showed the value).
+        if (Value is JsonElement json)
+        {
+            if (json.ValueKind == JsonValueKind.Array)
+            {
+                foreach (var item in json.EnumerateArray())
+                {
+                    var formatted = NotionDatabaseValueFormatter.Format(item, ResolvedDateFormat);
+                    if (formatted.Length > 0) yield return formatted;
+                }
+                yield break;
+            }
+
+            var jsonString = json.ValueKind == JsonValueKind.String ? json.GetString() ?? string.Empty : string.Empty;
+            foreach (var name in SplitNames(jsonString))
+            {
+                yield return name;
+            }
+            yield break;
+        }
+
         if (Value is string s)
         {
-            if (Field?.Type == DatabaseFieldType.MultiSelect)
+            foreach (var name in SplitNames(s))
             {
-                foreach (var part in s.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
-                    yield return part;
-            }
-            else
-            {
-                yield return s;
+                yield return name;
             }
             yield break;
         }
@@ -83,6 +102,19 @@ public partial class TmNotionDbPropertyValue
                 var formatted = NotionDatabaseValueFormatter.Format(item, ResolvedDateFormat);
                 if (formatted.Length > 0) yield return formatted;
             }
+        }
+    }
+
+    private IEnumerable<string> SplitNames(string stored)
+    {
+        if (Field?.Type == DatabaseFieldType.MultiSelect)
+        {
+            foreach (var part in stored.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                yield return part;
+        }
+        else
+        {
+            yield return stored;
         }
     }
 

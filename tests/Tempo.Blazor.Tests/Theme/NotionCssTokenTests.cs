@@ -131,6 +131,42 @@ public sealed class NotionCssTokenTests
             + string.Join("\n", offences));
     }
 
+    /// <summary>
+    /// A floating panel surface (turn-into, inline toolbar, menus) rendered with the constant
+    /// <c>--tm-color-white</c> keeps the light background in dark mode while its text switches,
+    /// making items unreadable (F-02). A <c>color-mix</c> wash is fine; a plain surface fill must
+    /// read <c>--tm-bg-elevated</c>.
+    /// </summary>
+    [Fact]
+    public void FloatingPanelSurfaces_DoNotUseColorWhiteAsBackground()
+    {
+        var offences = new List<string>();
+        foreach (var file in PackageFiles())
+        {
+            foreach (Match rule in Regex.Matches(Strip(file.Css), @"([^{}]+)\{([^{}]*)\}", RegexOptions.None, RegexTimeout))
+            {
+                var body = rule.Groups[2].Value;
+                if (!body.Contains("background:", StringComparison.Ordinal)
+                    || body.Contains("color-mix", StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                foreach (Match declaration in Regex.Matches(body, @"background\s*:\s*([^;]+);", RegexOptions.None, RegexTimeout))
+                {
+                    if (declaration.Groups[1].Value.Contains("--tm-color-white", StringComparison.Ordinal))
+                    {
+                        offences.Add($"{file.Name}: {rule.Groups[1].Value.Trim()}");
+                    }
+                }
+            }
+        }
+
+        offences.Should().BeEmpty(
+            "a floating panel filled with --tm-color-white stays white in dark mode with dark text on top. Offences:\n"
+            + string.Join("\n", offences));
+    }
+
     [Fact]
     public void NoManualDarkThemeBlocksInComponents()
     {

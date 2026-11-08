@@ -258,6 +258,21 @@ public sealed class TmNotionBlockContextMenuTests : LocalizationTestBase
     }
 
     [Fact]
+    public void Delete_IsLast_AndInitialFocusLandsOnANonDestructiveItem()
+    {
+        // F-14: Delete moved to the end of the menu (Notion convention). The first direct-child
+        // menuitem — the InitialFocusSelector target — must never be the destructive action, so
+        // Enter right after opening cannot delete the block.
+        var cut = RenderMenu(TextBlock());
+
+        var items = cut.Find(".tm-notion-ctx").QuerySelectorAll(":scope > button[role='menuitem']");
+        items[^1].ClassList.Should().Contain("tm-notion-ctx__item--danger",
+            "Delete is the last top-level item");
+        items[0].ClassList.Should().NotContain("tm-notion-ctx__item--danger",
+            "the initial focus lands on the first non-destructive item");
+    }
+
+    [Fact]
     public void ParagraphBlock_Renders_TwoSubmenuTriggers()
     {
         var cut = RenderMenu(TextBlock());

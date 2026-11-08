@@ -10,14 +10,17 @@
      aria-label="@ActionsLabel"
      data-testid="@TestId("notion-comment-entry-actions")"
      @onkeydown:stopPropagation="true">
-    <button class="@($"{ClassPrefix}__entry-action")"
-            type="button"
-            title="@ReplyText"
-            data-testid="@TestId("notion-comment-reply")"
-            @onclick="OnReply">
-        <TmIcon Name="@IconNames.MessageSquare" Size="IconSize.Sm" />
-        @ReplyText
-    </button>
+    @if (ShowReply)
+    {
+        <button class="@($"{ClassPrefix}__entry-action")"
+                type="button"
+                title="@ReplyText"
+                data-testid="@TestId("notion-comment-reply")"
+                @onclick="OnReply">
+            <TmIcon Name="@IconNames.MessageSquare" Size="IconSize.Sm" />
+            @ReplyText
+        </button>
+    }
     @if (CanEdit || CanDelete || CanQuote)
     {
         <TmDropdown Class="@($"{ClassPrefix}__entry-menu")"
@@ -79,6 +82,10 @@
 
     /// <summary>Shows Quote in the menu.</summary>
     [Parameter] public bool CanQuote { get; set; }
+
+    /// <summary>Shows the inline Reply action. A panel with a thread-level reply trigger
+    /// (F-21) hides it on the last entry so the two never sit next to each other.</summary>
+    [Parameter] public bool ShowReply { get; set; } = true;
 
     /// <summary>Raised by Reply.</summary>
     [Parameter] public EventCallback OnReply { get; set; }

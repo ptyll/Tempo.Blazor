@@ -12,7 +12,7 @@
 .tm-notion-type-switcher__body {
     min-width: 220px;
     padding: 6px 4px;
-    background: var(--tm-color-white);
+    background: var(--tm-bg-elevated);
     border: 1px solid var(--tm-border-color);
     border-radius: 8px;
     box-shadow: var(--tm-shadow-popover);

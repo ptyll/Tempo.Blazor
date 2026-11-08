@@ -101,6 +101,13 @@
       "isRequired": false,
       "default": "\"\"",
       "description": "Reply button label. Reply is always visible."
+    },
+    {
+      "name": "ShowReply",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "Shows the inline Reply action. A panel with a thread-level reply trigger hides it on the last entry so the two never sit next to each other."
     }
   ],
   "subcategory": "UI"
