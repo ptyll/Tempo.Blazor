@@ -1,0 +1,35 @@
+@namespace Tempo.Blazor.Components.Inputs
+@inherits Tempo.Blazor.Components.TmComponentBase
+
+<div @ref="_rootElement"
+     id="@Id"
+     class="@RootCssClass"
+     role="group"
+     aria-label="@GroupAriaLabel"
+     aria-labelledby="@AriaLabelledBy"
+     aria-describedby="@AriaDescribedBy"
+     data-tm-otp-kind="@(Kind == OtpInputKind.Alphanumeric ? "alphanumeric" : "numeric")"
+     data-testid="@RootTestId("otp-input")"
+     @attributes="AdditionalAttributes">
+    @for (var i = 0; i < Length; i++)
+    {
+        var index = i;
+        if (GroupSize > 0 && index > 0 && index % GroupSize == 0)
+        {
+            <span class="tm-otp-input__separator" aria-hidden="true"></span>
+        }
+        <input type="@CellInputType"
+               class="tm-otp-input__cell"
+               id="@CellId(index)"
+               value="@_cells[index]"
+               inputmode="@InputMode"
+               autocomplete="@(index == 0 ? "one-time-code" : "off")"
+               autocapitalize="@(Kind == OtpInputKind.Alphanumeric ? "characters" : null)"
+               autocorrect="off"
+               spellcheck="false"
+               pattern="@(Kind == OtpInputKind.Numeric ? "[0-9]*" : null)"
+               aria-label="@CellAriaLabel(index)"
+               disabled="@Disabled"
+               data-tm-otp-index="@index" />
+    }
+</div>

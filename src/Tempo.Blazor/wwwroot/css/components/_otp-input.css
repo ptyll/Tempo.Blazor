@@ -1,0 +1,72 @@
+/* TmOtpInput — segmented verification-code input (one cell per character). */
+
+.tm-otp-input {
+  display: flex;
+  align-items: center;
+  gap: var(--tm-space-2);
+  max-width: 100%;
+}
+
+.tm-otp-input__cell {
+  flex: 0 1 var(--tm-input-height-md);
+  min-width: 0;
+  height: var(--tm-input-height-md);
+  padding: 0;
+  font-family: var(--tm-font-sans);
+  font-size: var(--tm-font-size-lg);
+  font-weight: var(--tm-font-weight-semibold);
+  text-align: center;
+  color: var(--tm-text-primary);
+  caret-color: var(--tm-color-primary);
+  background-color: var(--tm-bg-surface);
+  border: 1px solid var(--tm-border-color);
+  border-radius: var(--tm-radius-control);
+  outline: none;
+  transition: border-color var(--tm-transition-fast),
+              box-shadow var(--tm-transition-fast);
+}
+
+.tm-otp-input__cell:focus {
+  outline: 2px solid transparent;
+  border-color: var(--tm-border-color-focus);
+  box-shadow: var(--tm-focus-ring);
+}
+
+.tm-otp-input__cell:disabled {
+  color: var(--tm-text-secondary);
+  background-color: var(--tm-bg-muted);
+  cursor: not-allowed;
+}
+
+.tm-otp-input__separator {
+  flex: none;
+  width: var(--tm-space-3);
+  border-top: 2px solid var(--tm-border-color);
+}
+
+/* State modifiers (driven by TmOtpInput parameters). The disabled cell styles above are the
+   single dimming source — a root-level opacity on top of them would double-dim below AA contrast,
+   so the root modifier only carries the cursor cue (and a host styling hook). */
+.tm-otp-input--disabled {
+  cursor: not-allowed;
+}
+
+.tm-otp-input--invalid .tm-otp-input__cell {
+  border-color: var(--tm-color-danger);
+}
+
+.tm-otp-input--invalid .tm-otp-input__cell:focus {
+  box-shadow: var(--tm-focus-ring-danger);
+}
+
+.tm-otp-input--verified .tm-otp-input__cell {
+  border-color: var(--tm-color-success);
+}
+
+/* Coarse pointers get 44px cells (WCAG 2.5.5 target size). */
+@media (pointer: coarse) {
+  .tm-otp-input__cell {
+    flex-basis: var(--tm-touch-target);
+    height: var(--tm-touch-target);
+  }
+}

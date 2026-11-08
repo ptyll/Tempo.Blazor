@@ -6600,5 +6600,8 @@
   "TmAppShell_WorkArea": "Work area",
   "TmAppShell_ResizeWorkArea": "Resize work area",
   "TmAppShell_CloseWorkArea": "Close work area",
-  "TmAppShell_MenuButton": "Navigation menu"
+  "TmAppShell_MenuButton": "Navigation menu",
+  "TmOtpInput_GroupLabel": "Verification code",
+  "TmOtpInput_DigitLabel": "Digit {0} of {1}",
+  "TmOtpInput_CharacterLabel": "Character {0} of {1}"
 }

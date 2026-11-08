@@ -483,7 +483,10 @@ public sealed class MarkupClassCoverageTests
             // Comment surface 2.10.0 (merged from main): the internal modifiers are interpolated
             // ($"tm-comment-item{...}", $"tm-comment-editor{...}"), so the sweep counts the two
             // stems and cannot see the --internal suffix — 65 → 67.
-            ExpectedUnmeasurableStems: 67),
+            // Plan 4ebadc60 phase 1 (TmOtpInput): the root class is interpolated
+            // ($"tm-otp-input{...}"), so the sweep counts the stem and cannot see the --disabled
+            // suffix — 67 → 68.
+            ExpectedUnmeasurableStems: 68),
         new Scope("Signing", "Tempo.Blazor.Signing", UnstyledSigningMarkupClasses,
             MinRazorFiles: 28, MinMarkupClasses: 400, InheritsCoreCss: true,
             // Signing redesign phase 2 (B25): the runner's single step panel id

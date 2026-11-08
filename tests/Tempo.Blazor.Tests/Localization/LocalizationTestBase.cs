@@ -844,6 +844,11 @@ public abstract class LocalizationTestBase : BunitContext
         ["TmSearchInput_Placeholder"] = "Search...",
         ["TmSearchInput_Clear"]       = "Clear search",
 
+        // TmOtpInput
+        ["TmOtpInput_GroupLabel"]      = "Verification code",
+        ["TmOtpInput_DigitLabel"]      = "Digit {0} of {1}",
+        ["TmOtpInput_CharacterLabel"]  = "Character {0} of {1}",
+
         // TmEmptyState
         ["TmEmptyState_DefaultTitle"] = "No data available",
 
@@ -6175,6 +6180,11 @@ public abstract class LocalizationTestBase : BunitContext
         // TmSearchInput
         ["TmSearchInput_Placeholder"] = "Hledat...",
         ["TmSearchInput_Clear"]       = "Vymazat hledání",
+
+        // TmOtpInput
+        ["TmOtpInput_GroupLabel"]      = "Ověřovací kód",
+        ["TmOtpInput_DigitLabel"]      = "Číslice {0} ze {1}",
+        ["TmOtpInput_CharacterLabel"]  = "Znak {0} ze {1}",
 
         // TmEmptyState
         ["TmEmptyState_DefaultTitle"] = "Žádná data",

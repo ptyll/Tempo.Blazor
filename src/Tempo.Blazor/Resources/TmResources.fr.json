@@ -6656,5 +6656,8 @@
   "TmAppShell_WorkArea": "Espace de travail",
   "TmAppShell_ResizeWorkArea": "Redimensionner l'espace de travail",
   "TmAppShell_CloseWorkArea": "Fermer l'espace de travail",
-  "TmAppShell_MenuButton": "Menu de navigation"
+  "TmAppShell_MenuButton": "Menu de navigation",
+  "TmOtpInput_GroupLabel": "Code de vérification",
+  "TmOtpInput_DigitLabel": "Chiffre {0} sur {1}",
+  "TmOtpInput_CharacterLabel": "Caractère {0} sur {1}"
 }

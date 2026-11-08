@@ -8331,6 +8331,26 @@
       ]
     },
     {
+      "itemName": "OtpInputKind",
+      "kind": "Enum",
+      "category": "Components",
+      "namespace": "Tempo.Blazor.Components.Inputs",
+      "description": "Which characters TmOtpInput accepts per cell and the keyboard it presents.",
+      "packageId": "Tempo.Blazor",
+      "sourcePath": "src/Tempo.Blazor/Components/Inputs/OtpInputKind.cs",
+      "documentationStatus": "merged",
+      "values": [
+        {
+          "name": "Numeric",
+          "description": "ASCII digits 0-9 only. Presents the numeric keyboard (inputmode=\"numeric\")."
+        },
+        {
+          "name": "Alphanumeric",
+          "description": "ASCII letters (normalized to uppercase) and digits. Presents the standard keyboard."
+        }
+      ]
+    },
+    {
       "itemName": "OverlayAlign",
       "kind": "Enum",
       "category": "Components",
@@ -19539,6 +19559,128 @@
         {
           "title": "Number input without buttons",
           "code": "<TmNumberInput @bind-Value=\"age\" Label=\"Age\" ShowButtons=\"false\" Placeholder=\"Enter age\" />"
+        }
+      ]
+    },
+    {
+      "itemName": "TmOtpInput",
+      "kind": "Component",
+      "category": "Inputs",
+      "namespace": "Tempo.Blazor.Components.Inputs",
+      "description": "Segmented one-time-code input: one cell per character, auto-advance on typing, Backspace steps back, arrow/Home/End navigation, optional grouping separators and masking.",
+      "packageId": "Tempo.Blazor",
+      "sourcePath": "src/Tempo.Blazor/Components/Inputs/TmOtpInput.razor",
+      "documentationStatus": "merged",
+      "requiredImports": [
+        "@using Tempo.Blazor.Components.Inputs"
+      ],
+      "parameters": [
+        {
+          "name": "AriaDescribedBy",
+          "type": "string?",
+          "isRequired": false,
+          "description": "aria-describedby of the group (e.g. a hint or error message id)."
+        },
+        {
+          "name": "AriaLabel",
+          "type": "string?",
+          "isRequired": false,
+          "description": "aria-label of the group. Defaults to the localized \"Verification code\" label; ignored when AriaLabelledBy is set (the reference wins per WAI-ARIA)."
+        },
+        {
+          "name": "AriaLabelledBy",
+          "type": "string?",
+          "isRequired": false,
+          "description": "aria-labelledby of the group. When set, AriaLabel is not rendered."
+        },
+        {
+          "name": "AutoFocus",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Moves focus to the first cell after the first render."
+        },
+        {
+          "name": "Class",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Additional CSS class(es) applied to the root element."
+        },
+        {
+          "name": "Disabled",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Disables every cell and applies the tm-otp-input--disabled root modifier."
+        },
+        {
+          "name": "GroupSize",
+          "type": "int",
+          "isRequired": false,
+          "description": "Renders an aria-hidden separator between groups of this many cells (0 = no separators).",
+          "default": "0"
+        },
+        {
+          "name": "Id",
+          "type": "string",
+          "isRequired": false,
+          "default": "Guid.NewGuid().ToString(\"n\")[..8]",
+          "description": "HTML id attribute of the root group."
+        },
+        {
+          "name": "Kind",
+          "type": "OtpInputKind",
+          "isRequired": false,
+          "default": "OtpInputKind.Numeric",
+          "description": "Which characters are accepted (Numeric: ASCII digits; Alphanumeric: letters normalized to uppercase plus digits) and which keyboard is presented via inputmode."
+        },
+        {
+          "name": "Length",
+          "type": "int",
+          "isRequired": false,
+          "default": "6",
+          "description": "Number of cells. Must be between 4 and 10; other values throw ArgumentOutOfRangeException."
+        },
+        {
+          "name": "Masked",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Renders every cell as type=\"password\" so the code is hidden while typing."
+        },
+        {
+          "name": "OnComplete",
+          "type": "EventCallback<string>",
+          "isRequired": false,
+          "description": "Fires exactly once each time the code transitions from incomplete to complete; clearing a character and completing again fires it again."
+        },
+        {
+          "name": "Value",
+          "type": "string",
+          "isRequired": false,
+          "default": "\"\"",
+          "description": "The complete verification code. Equals the concatenation of all cell values."
+        },
+        {
+          "name": "ValueChanged",
+          "type": "EventCallback<string>",
+          "isRequired": false,
+          "description": "Fires when the code changes (every accepted or removed character)."
+        },
+        {
+          "name": "DataTestId",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Overrides the root data-testid."
+        },
+        {
+          "name": "TestIdPrefix",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Namespaces every internal data-testid as \"{prefix}-{name}\"."
+        },
+        {
+          "name": "AdditionalAttributes",
+          "type": "Dictionary<string, object>?",
+          "isRequired": false,
+          "description": "Additional attributes applied to the root element."
         }
       ]
     },
@@ -33047,6 +33189,10 @@
       "kind": "Css"
     },
     {
+      "path": "src/Tempo.Blazor/wwwroot/css/components/_otp-input.css",
+      "kind": "Css"
+    },
+    {
       "path": "src/Tempo.Blazor/wwwroot/css/components/_overlay-panel.css",
       "kind": "Css"
     },
@@ -33419,6 +33565,10 @@
       "kind": "JavaScript"
     },
     {
+      "path": "src/Tempo.Blazor/wwwroot/js/tm-otp-input.js",
+      "kind": "JavaScript"
+    },
+    {
       "path": "src/Tempo.Blazor/wwwroot/js/tm-panel-resize.js",
       "kind": "JavaScript"
     },
@@ -33539,6 +33689,10 @@
       "kind": "JavaScript"
     },
     {
+      "path": "src/Tempo.Blazor/wwwroot/js/__tests__/tm-otp-input.test.mjs",
+      "kind": "JavaScript"
+    },
+    {
       "path": "src/Tempo.Blazor/wwwroot/js/__tests__/tm-panel-resize.test.mjs",
       "kind": "JavaScript"
     },
@@ -33568,11 +33722,11 @@
     }
   ],
   "summary": {
-    "itemCount": 422,
-    "manualItemCount": 422,
-    "generatedItemCount": 414,
+    "itemCount": 424,
+    "manualItemCount": 424,
+    "generatedItemCount": 416,
     "generatedOnlyItemCount": 0,
-    "componentCount": 227,
-    "publicApiTypeCount": 187
+    "componentCount": 228,
+    "publicApiTypeCount": 188
   }
 }

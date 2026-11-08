@@ -6712,5 +6712,8 @@
   "TmAppShell_WorkArea": "Pracovná plocha",
   "TmAppShell_ResizeWorkArea": "Zmeniť šírku pracovnej plochy",
   "TmAppShell_CloseWorkArea": "Zavrieť pracovnú plochu",
-  "TmAppShell_MenuButton": "Navigačná ponuka"
+  "TmAppShell_MenuButton": "Navigačná ponuka",
+  "TmOtpInput_GroupLabel": "Overovací kód",
+  "TmOtpInput_DigitLabel": "Číslica {0} z {1}",
+  "TmOtpInput_CharacterLabel": "Znak {0} z {1}"
 }

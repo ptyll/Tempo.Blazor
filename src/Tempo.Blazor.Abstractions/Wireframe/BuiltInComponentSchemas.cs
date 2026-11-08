@@ -254,6 +254,7 @@ public sealed class BuiltInComponentSchemas : IWireframeSchemaSource
             ["TmRangeSlider"] = ["range-slider"],
             ["TmRating"] = ["rating"],
             ["TmMaskedTextBox"] = ["masked-input", "otp-input"],
+            ["TmOtpInput"] = ["otp-input"],
             ["TmMultiColumnComboBox"] = ["combo-box", "data-table"],
             ["TmSignature"] = ["signature-pad"],
             ["TmSignatureCapture"] = ["signature-pad"],
@@ -787,6 +788,21 @@ public sealed class BuiltInComponentSchemas : IWireframeSchemaSource
                 P("label",    "Label",    PropType.String, "Label",       cat: "Content"),
                 P("mask",     "Mask",     PropType.String, "__/__/____",  cat: "Behavior"),
                 P("disabled", "Disabled", PropType.Bool,   false,         cat: "Behavior"),
+            ]
+        };
+
+        yield return new WireframeComponentSchema
+        {
+            Type = "TmOtpInput", Category = "Inputs", DisplayName = "OTP Input",
+            DefaultWidth = 232, DefaultHeight = 44,
+            Props =
+            [
+                P("length",    "Length",    PropType.Int,    6,         cat: "Behavior"),
+                P("kind",      "Kind",      PropType.Enum,   "numeric", cat: "Behavior",
+                  opts: ["numeric", "alphanumeric"]),
+                P("groupSize", "Group Size", PropType.Int,   0,         cat: "Appearance"),
+                P("masked",    "Masked",    PropType.Bool,   false,     cat: "Behavior"),
+                P("disabled",  "Disabled",  PropType.Bool,   false,     cat: "Behavior"),
             ]
         };
 
