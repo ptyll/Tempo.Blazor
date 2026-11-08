@@ -23,6 +23,8 @@
   "TmPdfSignatureVerification_Certificate": "Certifikát",
   "TmPdfSignatureVerification_SignedAt": "Datum a čas podpisu",
   "TmPdfSignatureVerification_SigningMethod": "Způsob podpisu",
+  "TmQRCode_DefaultLabel": "QR kód",
+  "TmQRCode_Download": "Stáhnout SVG",
   "TmRecipientRoleEditor_ColorValue": "Barva {0}",
   "TmRecipientRoleEditor_CustomColor": "Vlastní…",
   "TmRecipientRoleEditor_ToggleDetails": "Zobrazit nebo skrýt detaily role {0}",

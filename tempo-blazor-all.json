@@ -43101,7 +43101,7 @@
           "kind": "Component",
           "category": "Data Display",
           "namespace": "Tempo.Blazor.Components.DataDisplay",
-          "description": "Renders a QR code as an SVG element. Supports custom size, foreground/background colors, and multiple error correction levels.",
+          "description": "Renders a QR code as an SVG element you can scan and a screen reader can name. The root SVG is role=\"img\" and always carries a name (AriaLabel or the localized \"QR code\" fallback) plus a matching <title>. Ink and quiet-zone colours accept hex, rgb()/hsl(), a named colour or currentColor as SVG fill attributes — no inline style on that path, so a strict style-src is satisfied — while UseThemeColors paints from the component tokens --tm-qr-code-foreground / --tm-qr-code-background, whose paper defaults stay light in dark mode so the four-module quiet zone never goes dark. A var(--token) colour is written as a CSS fill declaration (the only inline-style path, documented for CSP). Opt-in ShowDownload renders a JavaScript-free <a download> with a data: URL of a standalone SVG (absolute colours), and GetSvg() / GetStandaloneSvg() expose the same markup to a host's own button. Supports custom size and multiple error correction levels.",
           "packageId": "Tempo.Blazor.Codes",
           "sourcePath": "src/Tempo.Blazor.Codes/Components/DataDisplay/TmQRCode.razor",
           "documentationStatus": "merged",
@@ -43110,17 +43110,31 @@
           ],
           "parameters": [
             {
-              "name": "BackgroundColor",
-              "type": "string",
+              "name": "AriaLabel",
+              "type": "string?",
               "isRequired": false,
-              "default": "\"#ffffff\"",
-              "description": "Background color in hex format. Default is #ffffff."
+              "description": "The accessible name of the graphic (role=\"img\"). A blank value falls back to the localized TmQRCode_DefaultLabel. The same text is rendered as the SVG <title>.",
+              "default": "null (localized \"QR code\")"
+            },
+            {
+              "name": "BackgroundColor",
+              "type": "string?",
+              "isRequired": false,
+              "description": "Colour of the surface and of the four-module quiet zone: any value ForegroundColor accepts. null paints #ffffff, or reads --tm-qr-code-background with UseThemeColors. Keep it light: a dark quiet zone makes the code unscannable.",
+              "default": "null (#ffffff)"
             },
             {
               "name": "CssClass",
               "type": "string?",
               "isRequired": false,
-              "description": "Optional CSS class."
+              "description": "Optional CSS class applied to the root element."
+            },
+            {
+              "name": "DownloadFileName",
+              "type": "string?",
+              "isRequired": false,
+              "description": "The download file name.",
+              "default": "qr-code.svg"
             },
             {
               "name": "ErrorCorrectionLevel",
@@ -43131,17 +43145,31 @@
             },
             {
               "name": "ForegroundColor",
-              "type": "string",
+              "type": "string?",
               "isRequired": false,
-              "default": "\"#000000\"",
-              "description": "Foreground color in hex format. Default is #000000."
+              "description": "Colour of the dark modules: hex (#000000), rgb()/hsl(), a named colour, currentColor, or a var(--token) reference. Written as an SVG fill attribute; a var() becomes a CSS fill declaration because a custom property is not valid in a presentation attribute. null paints #000000, or currentColor with UseThemeColors. An unusable value falls back to the default and logs a warning.",
+              "default": "null (#000000)"
+            },
+            {
+              "name": "ShowDownload",
+              "type": "bool",
+              "isRequired": false,
+              "description": "Render the opt-in \"Download SVG\" link: a native <a download> whose href is a data:image/svg+xml;base64 URL of the standalone SVG. No JavaScript, no Blob, no round trip. The label is localized (TmQRCode_Download).",
+              "default": "false"
             },
             {
               "name": "Size",
               "type": "int",
               "isRequired": false,
               "default": "200",
-              "description": "The size in pixels. Default is 200."
+              "description": "The rendered width and height in pixels; the QR geometry scales through the SVG viewBox. Default is 200."
+            },
+            {
+              "name": "UseThemeColors",
+              "type": "bool",
+              "isRequired": false,
+              "description": "Whether the ink and the quiet zone follow --tm-qr-code-foreground (default var(--tm-paper-ink)) and --tm-qr-code-background (default var(--tm-paper)) instead of the default hex pair. The paper tokens are theme-invariant, so the quiet zone stays light in dark mode. Needs no inline style (CSP-safe). An explicit ForegroundColor/BackgroundColor still wins.",
+              "default": "false"
             },
             {
               "name": "Value",
@@ -43152,7 +43180,22 @@
             }
           ],
           "cssClasses": [
-            "tm-qr-code"
+            "tm-qr-code",
+            "tm-qr-code__svg",
+            "tm-qr-code__svg--themed",
+            "tm-qr-code__surface",
+            "tm-qr-code__modules",
+            "tm-qr-code__download"
+          ],
+          "cssVariables": [
+            {
+              "name": "--tm-qr-code-foreground",
+              "description": "Ink of the dark modules in UseThemeColors mode. Default var(--tm-paper-ink) — the paper ink is dark enough for every scanner and does not flip in dark mode. Override it on the component wrapper (or .tm-qr-code)."
+            },
+            {
+              "name": "--tm-qr-code-background",
+              "description": "Surface of the SVG and of the four-module quiet zone in UseThemeColors mode. Default var(--tm-paper), which is white in EVERY theme on purpose: a dark quiet zone makes the code unscannable. Override it only with a light colour."
+            }
           ],
           "examples": [
             {
@@ -43160,8 +43203,20 @@
               "code": "<TmQRCode Value=\"https://example.com\" />"
             },
             {
-              "title": "Large QR code with custom colors",
+              "title": "Named for screen readers",
+              "code": "<TmQRCode Value=\"https://example.com/hub\" AriaLabel=\"Scan to open the hub\" />"
+            },
+            {
+              "title": "Theme colours (light and dark) with a download action",
+              "code": "<TmQRCode Value=\"https://example.com/hub\" Size=\"160\" UseThemeColors=\"true\" ShowDownload=\"true\" DownloadFileName=\"hub-qr.svg\" />"
+            },
+            {
+              "title": "Brand colours",
               "code": "<TmQRCode Value=\"https://example.com\" Size=\"300\" ForegroundColor=\"#3b82f6\" BackgroundColor=\"#f0f9ff\" />"
+            },
+            {
+              "title": "A host's own download button",
+              "code": "<TmQRCode @ref=\"qr\" Value=\"https://example.com\" />\n<button @onclick=\"() => Download(qr.GetStandaloneSvg()!)\">Save the QR code</button>"
             },
             {
               "title": "High error correction",

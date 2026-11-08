@@ -23,6 +23,8 @@
   "TmPdfSignatureVerification_Certificate": "Certificate",
   "TmPdfSignatureVerification_SignedAt": "Date and time of signing",
   "TmPdfSignatureVerification_SigningMethod": "Signing method",
+  "TmQRCode_DefaultLabel": "QR code",
+  "TmQRCode_Download": "Download SVG",
   "TmRecipientRoleEditor_ColorValue": "Colour {0}",
   "TmRecipientRoleEditor_CustomColor": "Custom…",
   "TmRecipientRoleEditor_ToggleDetails": "Show or hide details for {0}",

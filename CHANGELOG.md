@@ -7,8 +7,9 @@
 > prepared (version, changelog, docs, JSON documentation, local pack + clean-host smoke test) but
 > NOT tagged or published. Everything below is additive and opt-in — the migration table at the end of
 > this section lists every behavior a 2.10.0 host could notice, with a before/after. It also carries the
-> core `TmChart` funnel-label work (plan 8fa7319c, phase 1) and the `TmScheduler` day-granularity
-> timeline (phase 2), neither of which depends on the Modeling release gate.
+> core `TmChart` funnel-label work (plan 8fa7319c, phase 1), the `TmScheduler` day-granularity
+> timeline (phase 2) and the `TmQRCode` accessible-name/token/download work (phase 3), none of which
+> depends on the Modeling release gate.
 
 ### Added — modeling authoring (`Tempo.Blazor.Abstractions`, `Tempo.Blazor.Modeling`, `Tempo.Blazor.Mcp`)
 
@@ -40,6 +41,57 @@
 - **`TmScheduler` day-granularity timeline (`TimelineScale`)** — `TmSchedulerTimelineScale.Days` turns the Timeline view from one day of hour slots into the days of the range with one row per resource, the "channel × day" board a campaign planner needs ([docs/scheduler.md](docs/scheduler.md)). `Hours` is the default and every earlier behavior is unchanged. The scale is part of `SchedulerRangeOptions`, so the range a host's `DataProvider` is queried with, the toolbar title and Previous/Next are the Week view's: seven days from `FirstDayOfWeek` (`WeekDays="WorkWeek"`: five), a step of seven days and the inclusive week as the title. Rows are resources with the sticky label column, columns are the days; a narrow container scrolls horizontally with the column pinned (no forced degradation), and print lays every column out on one page. A day cell paints one chip per event (localized time + title, or `EventTemplate` with a visually hidden accessible name; an all-day event prints `TmScheduler_AllDay`, and an event that started earlier keeps the continuation edge and paints on every day it covers), overlapping events take the shared `SchedulerLayout` lanes as a CSS grid (`data-lane`, `--tm-scheduler-lanes`) and the per-cell cap is `MaxVisibleEvents` (kept on a mobile layout too) with the plural `TmScheduler_More` overflow whose fallback opens that day in the Day view. The move contract is shared: HTML5 drop, the touch hold-and-drag (`scheduler.js` gained the day-board branch that commits the day and the resource with `-1` for the minute axis, so the time of day is kept, and the moving chip is lifted by the same `.tm-scheduler-event--moving` rule the other views use, so the finger's hit-test reaches the cell underneath) and the Alt+Arrow alternative (Alt+Left/Right a day, Alt+Up/Down a resource, Alt+Shift+Left/Right the end ± one day) announced as a date. A drop on a **continuation** chip moves the whole span by the days the pointer crossed, not onto the dropped day. The grid has one tab stop: Enter/F2 on a cell steps onto its first chip, ArrowUp/Down walk the cell's widgets and Escape returns to the cell. `ScrollToTime` has no minute axis there, so it scrolls the first event's day column into view (and re-applies once the layout resolves; the HOUR timeline keeps its one-and-only scroll). The board paints scroll-edge shadows only while it actually overflows. New component-local tokens `--tm-scheduler-timeline-day-width` (9rem; 7.5rem on a mobile layout), `--tm-scheduler-timeline-day-cell-height`, `--tm-scheduler-scroll-shadow-size` and `--tm-scheduler-scroll-shadow-color`. New keys `TmScheduler_TimelineDaysGrid` and `TmScheduler_MoveHint_TimelineDays` (en/cs/sk/fr), demo card "Channels × days" on `/scheduler`, and the E2E spec `SchedulerTimelineDaysE2ETests` (WASM + Server + InteractiveAuto). The full toolbar also keeps the date title above the view buttons: a bar narrower than 60rem of its own container collapses the pill switcher to the compact view dropdown instead of clipping the active view.
 - **Event time in a narrow column** — a week cell, a week of resources or a phone used to cut `9:00 AM – 10:00 AM` mid-token at the card's edge. The card now prints a full reading and a compact one that shares one meridiem (`9:00 – 10:00 AM`) and the stylesheet picks by the CARD's width (`@container`: ≥ 8rem full, 4.5 – 8rem compact, < 4.5rem no time at all), the full reading wraps instead of overflowing, and the wrapper's `title` always carries the full range. `SchedulerTimeText` normalizes the ICU narrow no-break space to U+00A0, so a time never breaks between the clock and its meridiem ("10:00 AM") and the only break points are the two plain spaces around the en dash. Applies to `TmSchedulerTimeGrid` (Week/Day) and the timeline bars/chips; `EventTemplate` opts out as before.
 
+### Added — `Tempo.Blazor.Codes` (`TmQRCode`: accessible name, colour tokens, SVG download)
+
+- **The graphic is named.** The SVG used to be an unnamed image — no `role`, no `aria-label`, no
+  `<title>` — so a screen reader announced nothing. It is now `role="img"` with an accessible name from
+  the new `AriaLabel` parameter or the localized `TmQRCode_DefaultLabel` fallback ("QR code"), and a
+  `<title>` carrying the same text as the native tooltip. The name is HTML-encoded, so a host label with
+  quotes or `<` cannot break the markup.
+- **Colours have a token home.** `ForegroundColor`/`BackgroundColor` accept hex, `rgb()`/`hsl()`, a CSS
+  named colour, `currentColor`, or a `var(--token)` reference. The first four are valid SVG `fill`
+  presentation attributes and are written as attributes; a `var()` reference is **not** valid there
+  (browsers do not substitute custom properties in presentation attributes), so it — and only it — is
+  written as a `fill` declaration inside a `style` attribute. `UseThemeColors` (default `false`) is the
+  CSP-clean path: the ink becomes `currentColor` driven by `--tm-qr-code-foreground` and the surface
+  reads `--tm-qr-code-background`, both component-local knobs on `.tm-qr-code` whose defaults are the
+  **paper** tokens (`var(--tm-paper-ink)`, `var(--tm-paper)`). The paper tokens are white in every theme
+  on purpose, so the four-module quiet zone stays light in dark mode and the code keeps scanning; an
+  explicit colour still wins over the token. An unusable value is rejected (no injected declaration can
+  reach the attribute), falls back to the default and logs one warning per parameter pair.
+- **Contrast check.** With both colours absolute, the component measures their WCAG ratio and logs one
+  warning below **3:1** (WCAG 1.4.11 for graphical objects) — a scanner needs the modules to stand out
+  from the quiet zone. Token and `currentColor` values skip the check (they cannot be resolved here, and
+  guessing would warn on every render). The component's only logging is optional: no `ILoggerFactory`
+  registered means no warning, never a missing-service exception.
+- **No inline style on the default and theme paths.** The old markup painted the quiet zone with
+  `style="background-color: …"` on the `<svg>`; the surface rectangle now paints the same pixels with a
+  `fill` attribute (or the `--tm-qr-code-background` token), so the component renders under a strict
+  `style-src` without `'unsafe-inline'`. Only the explicit `var()` colour path writes a `style`
+  attribute, documented as such.
+- **Direct renderer, same pixels.** The SVG is generated from QRCoder's module matrix (merged dark runs,
+  exactly the rectangles `SvgQRCode` emits) instead of post-processing the library's SVG string with
+  regular expressions. The geometry is pinned to QRCoder's own output by a bUnit test, so the default
+  hex rendering is unchanged; the modules now live in one `<g class="tm-qr-code__modules">` and the
+  viewBox is unchanged (`0 0 {modules × 10} {modules × 10}`).
+- **SVG download without JavaScript.** `ShowDownload` (opt-in, default `false`) renders a localized
+  "Download SVG" link — a native `<a download>` whose `href` is a `data:image/svg+xml;base64,` URL of
+  `GetStandaloneSvg()`, so no Blob, no interop and no round trip. The exported file carries absolute
+  colours (`#000000`/`#ffffff` when the page painted from tokens), so it renders when opened on its own.
+  `DownloadFileName` defaults to `qr-code.svg`. The public `GetSvg()` (the markup as rendered) and
+  `GetStandaloneSvg()` (the self-contained file) let a host drive its own button.
+- **Responsive sizing actually applies.** The stylesheet's SVG rule was scoped and therefore never
+  matched the `MarkupString` SVG (Blazor isolation cannot put its scope attribute on injected markup);
+  it is now `::deep`, so a code wider than its container shrinks instead of overflowing.
+- **Localization:** `TmQRCode_DefaultLabel` and `TmQRCode_Download` (en/cs/sk/fr) plus
+  `MockTmLocalizer`; the CSS contract is guarded by `TmQRCodeCssTests` (component tokens, no colour
+  literal, no dark-theme block, no animation).
+- **Demo and E2E:** the `/new-components` QR section gained theme colours, a download card and a named
+  graphic, and the section stayed light-on-white in both themes; `TmQRCodeE2ETests` (WASM) checks the
+  name, the inline-style-free markup, the quiet zone's computed fill in LIGHT and DARK and the decoded
+  download payload, with `TmQRCodeServerE2ETests` / `TmQRCodeInteractiveAutoE2ETests` smoke runs.
+
+
 ### Breaking changes and migration
 
 **No source-breaking change.** Every new member is additive or a default interface member; every new component is new. The behavior changes below are the complete list a 2.10.0 consumer can notice, with before/after:
@@ -64,6 +116,13 @@
 | `TmChart` funnel — stage numbers | Invariant formatting (`1000`, `45 %`) | The reader's culture (`1,000` / `1 000`), two decimals at most, a non-breaking space before `%` | None at the API level; a test that asserted the invariant string must format with the same culture |
 | `TmChart` funnel — screen-reader output | Only the `role="img"` SVG name | The SVG name plus a visually hidden stage/conversion table | None; an unrelated `table` query in a host test could now match the hidden table (`[data-testid='chart-funnel-table']` names it) |
 | Event time markup (time grid, timeline, day board) | One `<span class="…-event-time">9:00 AM – 10:00 AM</span>` | The wrapper keeps the `title` with the full range and holds two spans: `.tm-scheduler-event-time-full` (the culture's full range) and `.tm-scheduler-event-time-compact` (`9:00 – 10:00 AM`); the stylesheet shows exactly one by the card's width | None for behaviour. A host selector that targeted the wrapper still matches; a selector that expected the time TEXT inside `.tm-scheduler-event-time` must target `.tm-scheduler-event-time-full` (or read the wrapper's `title`). The full reading now joins the time to its meridiem with U+00A0, so a test that asserted `9:00 AM – 10:00 AM` with plain spaces has to normalise or expect the non-breaking space |
+| `TmQRCode` accessible name | SVG without `role`/`aria-label`/`title` — an unnamed graphic | `role="img"` + `aria-label` (the host's `AriaLabel` or the localized "QR code") + a matching `<title>` | None to render code; a QR that is genuinely decorative must be hidden by the HOST (`<div aria-hidden="true">`) — the component always names it |
+| `TmQRCode` background painting | `<svg style="background-color: {BackgroundColor}">` (an inline style, blocked by a strict `style-src`) | The surface `<rect fill="{BackgroundColor}">` paints the same pixels; the SVG carries no inline style any more | None visually. A selector that read the SVG's `style` attribute must target `svg > rect` (or `.tm-qr-code__surface` in theme mode); a host with a CSP without `'unsafe-inline'` now gets the background |
+| `TmQRCode` colour parameters | `string` properties defaulting to `#000000`/`#ffffff` and used verbatim in the markup | `string?` (`null` = the same defaults), validated: hex/`rgb()`/`hsl()`/named/`currentColor` as a `fill` attribute, a `var(--token)` as a CSS `fill` declaration, anything else rejected with a dev warning | None for a valid hex; code that READS the parameter must handle `null`, and an invalid value can no longer reach the attribute |
+| `TmQRCode` default markup | `<svg … >`, one `<rect>` per dark run, inline background style | `<svg role="img" aria-label … ><title>…</title><rect …/><g class="tm-qr-code__modules" fill="#000000">…</g></svg>` — the same rects, wrapped in one group | None; `svg rect` still matches every module, a selector that assumed modules are `svg > rect` must target `.tm-qr-code__modules rect` |
+| `TmQRCode` SVG sizing | `.tm-qr-code svg { max-width: 100% }` was scoped and never matched the injected SVG | The rule is `::deep` and applies: a code wider than its container shrinks instead of overflowing | None at the API level; a host that relied on the overflow sets an explicit width |
+| `TmQRCode` SVG download | Did not exist | Opt-in `ShowDownload` (localized `<a download>` with a `data:` URL) plus the public `GetSvg()` / `GetStandaloneSvg()` | None — opt-in; the demo shows both |
+
 
 ### Release preparation
 

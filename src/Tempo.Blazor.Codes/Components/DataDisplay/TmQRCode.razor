@@ -4,5 +4,14 @@
 {
     <div class="tm-qr-code @CssClass">
         @((MarkupString)_svgContent)
+        @if (ShowDownload && !string.IsNullOrEmpty(_downloadHref))
+        {
+            <a class="tm-qr-code__download"
+               href="@_downloadHref"
+               download="@EffectiveDownloadFileName"
+               type="image/svg+xml">
+                @Loc["TmQRCode_Download"]
+            </a>
+        }
     </div>
 }

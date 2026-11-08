@@ -1,10 +1,52 @@
 .tm-qr-code {
     display: inline-block;
     line-height: 0;
+    /* Component-local knobs (plan 8fa7319c, phase 3). THE defaults are the paper pair: the paper tokens
+       are white in every theme on purpose (tokens-dark.css deliberately does not re-declare them), so the
+       quiet zone stays light in dark mode and the code keeps scanning. A host overrides the knobs on its
+       own wrapper or on .tm-qr-code. */
+    --tm-qr-code-foreground: var(--tm-paper-ink);
+    --tm-qr-code-background: var(--tm-paper);
 }
 
-.tm-qr-code svg {
+/* ::deep — the SVG lives inside a MarkupString, so it never receives Blazor's scope attribute and a
+   scoped (non-deep) selector would silently match nothing. */
+.tm-qr-code ::deep svg {
     display: block;
     max-width: 100%;
     height: auto;
+}
+
+.tm-qr-code ::deep .tm-qr-code__svg--themed {
+    color: var(--tm-qr-code-foreground);
+}
+
+.tm-qr-code ::deep .tm-qr-code__surface {
+    fill: var(--tm-qr-code-background);
+}
+
+.tm-qr-code ::deep .tm-qr-code__download {
+    display: block;
+    width: fit-content;
+    margin-top: var(--tm-space-2);
+    padding: var(--tm-space-1) var(--tm-space-2);
+    min-height: var(--tm-space-6);
+    border: var(--tm-border-width) solid var(--tm-border-color);
+    border-radius: var(--tm-radius-sm);
+    background: var(--tm-color-surface);
+    color: var(--tm-color-primary);
+    font-family: var(--tm-font-sans);
+    font-size: var(--tm-font-size-sm);
+    /* The root sets line-height: 0 for the graphic; the link owns its own line box. */
+    line-height: 1.5;
+    text-decoration: none;
+}
+
+.tm-qr-code ::deep .tm-qr-code__download:hover {
+    background: var(--tm-color-surface-hover);
+}
+
+.tm-qr-code ::deep .tm-qr-code__download:focus-visible {
+    box-shadow: var(--tm-focus-ring);
+    outline: none;
 }

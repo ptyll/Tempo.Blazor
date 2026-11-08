@@ -223,20 +223,41 @@
 </section>
 
 <!-- QR Code -->
-<section class="demo-section">
-    <h2 class="text-lg font-semibold text-slate-900 dark:text-white mb-4">QR Code</h2>
+<section class="demo-section" data-testid="qr-code-section">
+    <h2 class="text-lg font-semibold text-slate-900 dark:text-white mb-2">QR Code</h2>
+    <p class="text-sm text-slate-500 dark:text-slate-400 mb-4">
+        Every code is a named <code>role="img"</code> graphic, its ink and quiet zone are component
+        tokens (<code>--tm-qr-code-foreground</code> / <code>--tm-qr-code-background</code>) and the
+        SVG can be downloaded without JavaScript. Toggle the theme above: the quiet zone stays light so
+        the code keeps scanning.
+    </p>
     <div class="demo-grid demo-grid-3">
-        <div class="showcase-card">
+        <div class="showcase-card" data-testid="qr-code-default">
             <h3 class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-4">Default</h3>
             <TmQRCode Value="https://tempo.blazor" />
         </div>
-        <div class="showcase-card">
+        <div class="showcase-card" data-testid="qr-code-large">
             <h3 class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-4">Large (300px)</h3>
             <TmQRCode Value="https://tempo.blazor" Size="300" />
         </div>
-        <div class="showcase-card">
+        <div class="showcase-card" data-testid="qr-code-colors">
             <h3 class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-4">Custom Colors</h3>
             <TmQRCode Value="https://tempo.blazor" Size="150" ForegroundColor="#3b82f6" BackgroundColor="#f0f9ff" />
+        </div>
+        <div class="showcase-card" data-testid="qr-code-theme">
+            <h3 class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-4">Theme colors (light + dark)</h3>
+            <TmQRCode Value="https://tempo.blazor" Size="150" UseThemeColors="true" />
+            <p class="text-xs text-slate-500 dark:text-slate-400 mt-2">Ink from <code>--tm-paper-ink</code>, quiet zone from <code>--tm-paper</code>.</p>
+        </div>
+        <div class="showcase-card" data-testid="qr-code-download">
+            <h3 class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-4">Download SVG</h3>
+            <TmQRCode Value="https://tempo.blazor" Size="150" UseThemeColors="true" ShowDownload="true" DownloadFileName="tempo-hub.svg" />
+        </div>
+        <div class="showcase-card" data-testid="qr-code-label">
+            <h3 class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-4">Named for screen readers</h3>
+            <TmQRCode Value="https://tempo.blazor" Size="150"
+                      AriaLabel="Scan to open the Tempo Blazor documentation" />
+            <p class="text-xs text-slate-500 dark:text-slate-400 mt-2">Without <code>AriaLabel</code> the code falls back to the localized “QR code”.</p>
         </div>
     </div>
 </section>
