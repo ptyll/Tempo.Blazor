@@ -390,9 +390,13 @@
         return true;
     }
 
-    /// <summary>Called by the touch move when the finger releases over a day. A month keeps the time of day.</summary>
+    /// <summary>
+    /// Called by the touch move when the finger releases over a day. A month keeps the time of day;
+    /// <paramref name="grabbedDate"/> is the day-cell the chip was grabbed in (a day-board
+    /// continuation offset, which a month does not need).
+    /// </summary>
     [JSInvokable]
-    public Task NotifyMoveComplete(string eventId, string date, int minuteOfDay, string? resourceId)
+    public Task NotifyMoveComplete(string eventId, string date, int minuteOfDay, string? resourceId, string? grabbedDate = null)
     {
         var evt = Events?.FirstOrDefault(e => e.Id == eventId);
         return evt is null ? Task.CompletedTask : CommitMoveAsync(evt, date, -1, resourceId);

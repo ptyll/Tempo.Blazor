@@ -54,6 +54,41 @@ public class SchedulerRangeTests
             "a non-positive agenda length steps by the normalized one day");
     }
 
+    /// <summary>
+    /// A day-granularity timeline renders the days of the range, so it loads, titles and steps the
+    /// same week the Week view does. The hour timeline keeps its single day.
+    /// </summary>
+    [Fact]
+    public void Day_Granularity_Timeline_Renders_The_Week_Range()
+    {
+        var day = new DateTime(2025, 6, 15); // a Sunday
+        var options = new SchedulerRangeOptions(1, 30, TimelineScale: TmSchedulerTimelineScale.Days);
+
+        var range = SchedulerRange.Visible(TmScheduleViewType.Timeline, day, options);
+        range.Start.Should().Be(new DateTime(2025, 6, 9), "the Monday of the displayed week");
+        range.End.Should().Be(new DateTime(2025, 6, 16));
+
+        SchedulerRange.Step(TmScheduleViewType.Timeline, day, 1, options).Should().Be(new DateTime(2025, 6, 22),
+            "previous and next step a whole week");
+        SchedulerRange.Step(TmScheduleViewType.Timeline, day, -1, options).Should().Be(new DateTime(2025, 6, 8));
+
+        SchedulerRange.Visible(TmScheduleViewType.Timeline, day, Options(1))
+            .Should().Be((new DateTime(2025, 6, 15), new DateTime(2025, 6, 16)),
+                "the default hour scale still renders a single day");
+    }
+
+    [Fact]
+    public void Day_Granularity_Timeline_Honours_WorkWeek()
+    {
+        var options = new SchedulerRangeOptions(
+            1, 30, TmSchedulerWeekDays.WorkWeek, TimelineScale: TmSchedulerTimelineScale.Days);
+        var range = SchedulerRange.Visible(TmScheduleViewType.Timeline, new DateTime(2025, 6, 15), options);
+        range.Start.Should().Be(new DateTime(2025, 6, 9), "Monday");
+        range.End.Should().Be(new DateTime(2025, 6, 14), "the half-open end after Friday");
+        SchedulerRange.WeekDates(new DateTime(2025, 6, 15), 1, TmSchedulerWeekDays.WorkWeek)
+            .Should().HaveCount(5, "the day columns are the work week");
+    }
+
     [Theory]
     [InlineData("en-US", "June 15–21, 2026")]
     [InlineData("cs-CZ", "15.–21. června 2026")]

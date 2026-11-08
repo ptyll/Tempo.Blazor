@@ -1,4 +1,5 @@
 @namespace Tempo.Blazor.Components.Scheduler
+@using Tempo.Blazor.Abstractions.Layout
 @using Tempo.Blazor.Models
 @using System.Globalization
 @using Microsoft.JSInterop
@@ -7,6 +8,100 @@
 @inject IJSRuntime JS
 
 <CascadingValue Value="_ticker" IsFixed="true">
+@if (IsDays)
+{
+    @* The frame owns the scroll-edge shadows: an inset shadow on the scroller would paint under the
+       rows, and the state attribute (set by scheduler.js only while the board overflows) decides
+       whether an edge shows at all. *@
+    <div class="tm-scheduler-timeline-day-frame" data-tm-scroll-frame="true">
+    <div class="tm-scheduler-timeline tm-scheduler-timeline--days" @ref="_containerRef"
+         data-scale="days" data-tm-scroll="timeline-days" data-slot-duration="@SlotDuration"
+         data-date="@CurrentDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)"
+         data-time-culture="@CultureInfo.CurrentUICulture.Name"
+         style="--tm-scheduler-timeline-day-count: @_days.Count.ToString(CultureInfo.InvariantCulture);">
+        <span id="@_moveHintId" class="tm-sr-only">@Loc["TmScheduler_MoveHint_TimelineDays"]</span>
+        @* Header: one sticky resource header, one column per day of the range. *@
+        <div class="tm-scheduler-timeline-header">
+            <div class="tm-scheduler-timeline-resource-header tm-scheduler-timeline-resource-header--sticky">@Loc["TmScheduler_Resources"]</div>
+            @foreach (var day in _days)
+            {
+                var d = day;
+                var header = SchedulerRange.FormatColumnHeader(d, CultureInfo.CurrentUICulture);
+                <div class="tm-scheduler-timeline-day-header @DayHeaderClass(d)" data-date="@Iso(d)">
+                    <span class="tm-scheduler-timeline-day-header-weekday">@header.Weekday</span>
+                    <span class="tm-scheduler-timeline-day-header-date">@header.Date</span>
+                </div>
+            }
+        </div>
+
+        @* One row per resource; every day of the range is one cell of that row. *@
+        <div class="tm-scheduler-timeline-body" role="grid" aria-label="@Loc["TmScheduler_TimelineDaysGrid"]"
+             aria-keyshortcuts="ArrowLeft ArrowRight ArrowUp ArrowDown Home End">
+            @foreach (var resource in _resources)
+            {
+                var r = resource;
+                <div class="tm-scheduler-timeline-row" role="row" data-resource="@r.Id">
+                    <div class="tm-scheduler-timeline-resource-label tm-scheduler-timeline-resource-label--sticky" role="rowheader"
+                         style="@(r.Color is not null ? $"border-left-color: {r.Color};" : "")">
+                        @SchedulerResourceHeader.Render(r, ResourceHeaderTemplate, AvatarSize.Sm)
+                    </div>
+                    @foreach (var day in _days)
+                    {
+                        var d = day;
+                        var items = DayCellItems(r.Id, d);
+                        var (visible, remaining) = SchedulerTimelineDay.Split(items, MaxVisibleEvents);
+                        <div @key="@($"{r.Id}|{d:yyyy-MM-dd}")" class="tm-scheduler-timeline-day-cell @DayCellClass(d)"
+                             role="gridcell"
+                             tabindex="@(IsDayCellStop(r.Id, d) ? "0" : "-1")"
+                             aria-current="@(IsToday(d) ? "date" : null)"
+                             aria-selected="@(IsSelectedDay(d) ? "true" : "false")"
+                             aria-label="@DayCellLabel(d, items.Count)"
+                             data-tm-roving="@_rovingId"
+                             data-date="@Iso(d)"
+                             data-resource="@r.Id"
+                             @onclick="@(() => HandleDayCellClickAsync(d))"
+                             @onkeydown="@(e => HandleDayCellKeyDown(e, r.Id, d))"
+                             @onkeyup="@(e => HandleDayCellKeyUp(e, d))"
+                             @ondragover:preventDefault="true"
+                             @ondrop="@(() => HandleDayCellDropAsync(d, r.Id))"
+                             @oncontextmenu="@(e => HandleDayCellContextMenu(e, d, r.Id))"
+                             @oncontextmenu:preventDefault="true">
+                            @if (visible.Count > 0)
+                            {
+                                <div class="tm-scheduler-timeline-day-cell-events"
+                                     style="--tm-scheduler-lanes: @items.Max(i => i.CellLanes).ToString(CultureInfo.InvariantCulture);">
+                                    @foreach (var item in visible)
+                                    {
+                                        @DayEvent(r, item, d)
+                                    }
+                                </div>
+                            }
+                            @if (remaining > 0)
+                            {
+                                @* A native button nested in the emulating cell: its keys are fenced
+                                   off the cell's handler, so Enter opens the day exactly once. It is
+                                   not a tab stop of its own — the cell steps into its chips, and the
+                                   last chip's ArrowDown reaches this button. *@
+                                <button type="button" class="tm-scheduler-timeline-day-more"
+                                        tabindex="@(IsDayMoreStop(r.Id, d) ? "0" : "-1")"
+                                        data-cell="@CellKey(r.Id, d)"
+                                        aria-label="@Loc.Plural("TmScheduler_MoreAria", remaining, SchedulerRange.FormatDayTitle(d.ToDateTime(TimeOnly.MinValue), CultureInfo.CurrentUICulture))"
+                                        @onclick="@(() => HandleDayMoreClickAsync(d))"
+                                        @onclick:stopPropagation="true"
+                                        @onkeydown="@(e => HandleDayMoreKeyDown(e, r.Id, d))"
+                                        @onkeydown:stopPropagation="true"
+                                        @onkeyup:stopPropagation="true">@Loc.Plural("TmScheduler_More", remaining)</button>
+                            }
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+    </div>
+    </div>
+}
+else
+{
 <div class="tm-scheduler-timeline" @ref="_containerRef" data-slot-duration="@SlotDuration" data-tm-scroll="timeline"
      data-range-start="@RangeStartMinutes" data-range-minutes="@RangeMinutes"
      data-date="@CurrentDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)"
@@ -59,6 +154,8 @@
     }
     </div>
 </div>
+}
+
 </CascadingValue>
 
 @code {
@@ -86,7 +183,7 @@
     private int _activeSlotIndex;
 
     private int _slotsPerDay;
-    private TimeSpan? _scrolledTo;
+    private (TimeSpan? Time, TmLayoutMode Mode) _scrolledTo;
     private SchedulerNowTicker? _ticker;
     private readonly List<SchedulerNowIndicator> _indicators = [];
     private bool _disposed;
@@ -136,9 +233,18 @@
         }
         else
         {
+            var time = SchedulerTimeText.Range(e.StartLocal, e.EndLocal);
             builder.OpenElement(sequence++, "span");
             builder.AddAttribute(sequence++, "class", "tm-scheduler-timeline-event-time");
-            builder.AddContent(sequence++, $"{e.Start.ToString("t", CultureInfo.CurrentUICulture)} – {e.End.ToString("t", CultureInfo.CurrentUICulture)}");
+            builder.AddAttribute(sequence++, "title", time.Full);
+            builder.OpenElement(sequence++, "span");
+            builder.AddAttribute(sequence++, "class", "tm-scheduler-event-time-full");
+            builder.AddContent(sequence++, time.Full);
+            builder.CloseElement();
+            builder.OpenElement(sequence++, "span");
+            builder.AddAttribute(sequence++, "class", "tm-scheduler-event-time-compact");
+            builder.AddContent(sequence++, time.Compact);
+            builder.CloseElement();
             builder.CloseElement();
             builder.OpenElement(sequence++, "span");
             builder.AddAttribute(sequence++, "class", "tm-scheduler-timeline-event-title");
@@ -194,6 +300,12 @@
     private Dictionary<string, List<TmScheduleEvent>> _resourceEventMap = new();
     private TmScheduleEvent? _draggedEvent;
     private string? _draggedEventOriginalResourceId;
+    /// <summary>
+    /// The day column the chip was grabbed in. A multi-day event paints a continuation chip on every
+    /// day it covers, so a drop has to move the start by the days the pointer crossed, not to the
+    /// dropped day (the chip a reader grabbed is often not the event's first day).
+    /// </summary>
+    private DateOnly? _draggedFromDay;
 
     /// <summary>Currently displayed date.</summary>
     [Parameter] public DateTime CurrentDate { get; set; }
@@ -252,6 +364,14 @@
     /// <summary>When set, the timeline scrolls this time into view after the first render. Null does not scroll.</summary>
     [Parameter] public TimeSpan? ScrollToTime { get; set; }
 
+    /// <summary>
+    /// The layout the scheduler resolved. On the day scale the scroll is applied again when it
+    /// changes, because the first render can precede the container measurement and a board that did
+    /// not overflow then clamps the scroll to zero. The HOUR timeline keeps its 2.10 behavior — one
+    /// scroll per <see cref="ScrollToTime"/> — so a responsive layout switch never re-scrolls it.
+    /// </summary>
+    [Parameter] public TmLayoutMode LayoutMode { get; set; } = TmLayoutMode.Auto;
+
     /// <summary>When true the current day draws the current-time indicator. Default true.</summary>
     [Parameter] public bool ShowNowIndicator { get; set; } = true;
 
@@ -296,6 +416,8 @@
         if (_activeSlotIndex >= _slotsPerDay) _activeSlotIndex = 0;
         BuildResourceEventMap();
         BuildLanes();
+        // The day scale paints its chips from these cells; the hour scale keeps its hourly lanes.
+        if (IsDays) BuildDays();
     }
 
     private RenderFragment Slot(string resourceId, int slotIndex) => builder =>
@@ -519,9 +641,14 @@
             catch (TaskCanceledException) { }
         }
 
-        if (_jsRegistered && ScrollToTime != _scrolledTo)
+        // The day board re-applies the scroll when the layout resolves: its first render can happen
+        // before the container is measured, and a board that did not overflow then clamped the scroll
+        // to zero. The hour timeline keeps its 2.10 contract and scrolls once per ScrollToTime, so a
+        // layout switch (a responsive breakpoint) never moves it back.
+        var scrollKey = (ScrollToTime, IsDays ? LayoutMode : TmLayoutMode.Auto);
+        if (_jsRegistered && scrollKey != _scrolledTo)
         {
-            _scrolledTo = ScrollToTime;
+            _scrolledTo = scrollKey;
             if (ScrollToTime is { } scrollTo)
             {
                 try
@@ -538,9 +665,7 @@
         if (_moveFocus)
         {
             _moveFocus = false;
-            var selector = _focusEventId is { } id
-                ? $"[data-event-id=\"{id}\"]"
-                : ".tm-scheduler-timeline-slot[tabindex='0']";
+            var selector = RovingStopSelector;
             try
             {
                 await JS.InvokeVoidAsync("TempoBlazor.Scheduler.focusRovingStop", _containerRef, selector);
@@ -550,6 +675,7 @@
                 // The tabindex already moved; a missing circuit only skips the focus.
             }
             _focusEventId = null;
+            _focusMoreCell = null;
         }
     }
 
@@ -558,6 +684,14 @@
         if (ReadOnly || evt.IsReadOnly) return;
         _draggedEvent = evt;
         _draggedEventOriginalResourceId = resourceId;
+        _draggedFromDay = null;
+    }
+
+    /// <summary>The day board's drag start: the grabbed cell is the offset a continuation drop keeps.</summary>
+    private void HandleDayDragStart(TmScheduleEvent evt, string resourceId, DateOnly grabbedDay)
+    {
+        HandleDragStart(evt, resourceId);
+        if (_draggedEvent is not null) _draggedFromDay = grabbedDay;
     }
 
     private async Task HandleSlotDrop(DateTime slotStart, DateTime slotEnd, string targetResourceId)
@@ -572,17 +706,32 @@
         }
     }
 
+    /// <summary>
+    /// The date a day-board move commits. <paramref name="grabbedDay"/> is the day column the chip was
+    /// grabbed in (a continuation chip is not the event's first day), so the event moves by the days
+    /// the pointer crossed and a multi-day span keeps its start offset. A drop with no grabbed day
+    /// falls back to the dropped day, which is exactly the event's own offset for a first-day chip.
+    /// </summary>
+    private string DayMoveDate(TmScheduleEvent evt, DateOnly dropDay, DateOnly? grabbedDay)
+    {
+        var start = DateOnly.FromDateTime(evt.StartLocal.Date);
+        var from = grabbedDay ?? start;
+        return Iso(start.AddDays(dropDay.DayNumber - from.DayNumber));
+    }
+
     /// <summary>The one move commit: HTML5 drop, the touch gesture and the keyboard alternative.</summary>
     private async Task<bool> CommitMoveAsync(TmScheduleEvent evt, string date, int minuteOfDay, string? resourceId)
     {
-        var day = DateOnly.FromDateTime(evt.StartLocal).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
-        if (!SchedulerMove.Move(evt, day, minuteOfDay, RealResource(resourceId), ReadOnly, TimeZone, RangeStartMinutes, RangeMinutes))
+        if (!SchedulerMove.Move(evt, date, minuteOfDay, RealResource(resourceId), ReadOnly, TimeZone, RangeStartMinutes, RangeMinutes))
             return false;
         _focusEventId = evt.Id;
+        _focusMoreCell = null;
         _activeResourceIndex = ResourceIndex(evt.ResourceId);
+        SyncActiveDay(evt);
         _moveFocus = true;
         await OnEventChanged.InvokeAsync(evt);
-        await OnAnnounced.InvokeAsync(SchedulerMove.MovedText(Loc, evt, ResourceName(evt.ResourceId)));
+        // A day board has no minute axis, so the announcement names the date only.
+        await OnAnnounced.InvokeAsync(SchedulerMove.MovedText(Loc, evt, ResourceName(evt.ResourceId), dateOnly: IsDays));
         return true;
     }
 
@@ -590,13 +739,27 @@
     private string? RealResource(string? resourceId)
         => resourceId is null || resourceId == "_default" ? null : resourceId;
 
-    /// <summary>Called by the touch move when the finger releases over a row.</summary>
+    /// <summary>
+    /// Called by the touch move when the finger releases over a row. <paramref name="grabbedDate"/> is
+    /// the day column the chip was grabbed in (the day board's continuation offset; the hour
+    /// timeline ignores it, because every bar there is its own start).
+    /// </summary>
     [JSInvokable]
-    public Task NotifyMoveComplete(string eventId, string date, int minuteOfDay, string? resourceId)
+    public Task NotifyMoveComplete(string eventId, string date, int minuteOfDay, string? resourceId, string? grabbedDate = null)
     {
         var evt = Events?.FirstOrDefault(e => e.Id == eventId);
-        return evt is null ? Task.CompletedTask : CommitMoveAsync(evt, date, minuteOfDay, resourceId);
+        if (evt is null) return Task.CompletedTask;
+        var target = date;
+        if (IsDays && ParseDay(grabbedDate) is { } grabbed && ParseDay(date) is { } drop)
+            target = DayMoveDate(evt, drop, grabbed);
+        return CommitMoveAsync(evt, target, minuteOfDay, resourceId);
     }
+
+    /// <summary>A day-board date in the invariant form, or null when it is missing or malformed.</summary>
+    private static DateOnly? ParseDay(string? text)
+        => DateOnly.TryParseExact(text, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var day)
+            ? day
+            : null;
 
     /// <summary>Called by the Alt+Arrow keyboard alternative. A shifted chord resizes instead.</summary>
     [JSInvokable]
@@ -604,6 +767,12 @@
     {
         var evt = Events?.FirstOrDefault(e => e.Id == eventId);
         if (evt is null) return;
+        // The day scale moves along days, not minutes, so its chords are their own path.
+        if (IsDays)
+        {
+            await KeyboardStepDaysAsync(evt, x, y, shift);
+            return;
+        }
         if (shift)
         {
             if (!SchedulerMove.Step(evt, x, y, true, SlotDuration, ReadOnly, true, TimeZone, RangeStartMinutes, RangeMinutes, horizontalResize: true))

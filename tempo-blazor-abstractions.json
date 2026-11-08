@@ -26036,6 +26036,16 @@
       "documentationStatus": "merged"
     },
     {
+      "itemName": "TmSchedulerTimelineScale",
+      "kind": "Enum",
+      "category": "Models",
+      "namespace": "Tempo.Blazor.Models",
+      "description": "How the scheduler Timeline view lays out its columns. Hours is the historical single-day hour-slot timeline; Days renders the days of the range with one row per resource, the channel × day board.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Models/SchedulerModels.cs",
+      "documentationStatus": "merged"
+    },
+    {
       "itemName": "TmSchedulerWeekDays",
       "kind": "Enum",
       "category": "Models",
@@ -44910,11 +44920,11 @@
   ],
   "libraryExamples": [],
   "summary": {
-    "itemCount": 1704,
-    "manualItemCount": 1704,
-    "generatedItemCount": 1688,
+    "itemCount": 1705,
+    "manualItemCount": 1705,
+    "generatedItemCount": 1689,
     "generatedOnlyItemCount": 0,
     "componentCount": 0,
-    "publicApiTypeCount": 1688
+    "publicApiTypeCount": 1689
   }
 }

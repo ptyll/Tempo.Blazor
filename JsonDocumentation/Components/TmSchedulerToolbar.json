@@ -135,6 +135,13 @@
       "type": "EventCallback",
       "isRequired": false,
       "description": "Fires when the user clicks Print."
+    },
+    {
+      "name": "TimelineScale",
+      "type": "TmSchedulerTimelineScale",
+      "isRequired": false,
+      "default": "TmSchedulerTimelineScale.Hours",
+      "description": "How the Timeline view lays out its columns. Days titles the range (a week) instead of the one day the hour timeline shows."
     }
   ],
   "cssClasses": [

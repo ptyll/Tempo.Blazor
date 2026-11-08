@@ -17,6 +17,20 @@ public enum TmScheduleViewType
     Timeline
 }
 
+/// <summary>
+/// How the Timeline view lays out its columns. <see cref="Hours"/> is the historical single-day,
+/// hour-slot timeline; <see cref="Days"/> turns the same resource rows into the days of the range
+/// (a channel × day board), so the rows stay resources and the columns become days.
+/// </summary>
+public enum TmSchedulerTimelineScale
+{
+    /// <summary>One day split into hour slots, one row per resource. The default.</summary>
+    Hours,
+
+    /// <summary>The days of the visible range, one row per resource, one column per day.</summary>
+    Days
+}
+
 /// <summary>Which days the week view renders. FullWeek is the historical seven columns.</summary>
 public enum TmSchedulerWeekDays
 {

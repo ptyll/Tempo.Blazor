@@ -4879,6 +4879,8 @@
   "TmScheduler_SlotAriaLabel": "{0} to {1}, {2}",
   "TmScheduler_Timeline": "Timeline",
   "TmScheduler_TimelineGrid": "Timeline",
+  "TmScheduler_TimelineDaysGrid": "Timeline by day",
+  "TmScheduler_MoveHint_TimelineDays": "Hold and drag to move. Enter or F2 on a day focuses its first event, Escape returns to the day. Alt+Left or Alt+Right moves a day, Alt+Up or Alt+Down moves to another resource, Alt+Shift+Left or Alt+Shift+Right changes the end by a day.",
   "TmScheduler_NowIndicator": "Current time {0}",
   "TmScheduler_Resources": "Resources",
   "TmScheduler_AllResources": "All resources",

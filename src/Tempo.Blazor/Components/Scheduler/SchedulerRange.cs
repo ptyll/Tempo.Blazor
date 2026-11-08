@@ -14,7 +14,8 @@ internal static class SchedulerRange
     /// The half-open range a view renders for <paramref name="current"/>. Month covers exactly the
     /// rendered grid (six weeks, or five when <see cref="SchedulerRangeOptions.MonthWeeks"/> is Auto
     /// and the month fits); Week starts on the configured first day and spans the configured week
-    /// days; Agenda spans its day count from the current date; Day and Timeline are that single day.
+    /// days; Agenda spans its day count from the current date; Day and the hour Timeline are that
+    /// single day, and a day-granularity Timeline spans the same week the Week view renders.
     /// </summary>
     public static (DateTime Start, DateTime End) Visible(
         TmScheduleViewType view, DateTime current, SchedulerRangeOptions options)
@@ -23,6 +24,8 @@ internal static class SchedulerRange
         return view switch
         {
             TmScheduleViewType.Week => WeekRange(day, options),
+            TmScheduleViewType.Timeline when options.TimelineScale == TmSchedulerTimelineScale.Days
+                => WeekRange(day, options),
             TmScheduleViewType.Month => Month(day, options.FirstDay, options.MonthWeeks),
             TmScheduleViewType.Agenda => (day, day.AddDays(options.AgendaLength)),
             _ => (day, day.AddDays(1))
@@ -69,8 +72,9 @@ internal static class SchedulerRange
 
     /// <summary>
     /// The date one navigation step away. <paramref name="direction"/> is negative for previous.
-    /// Agenda steps by its normalized day count, Week by seven days, Month by a calendar month and
-    /// Day and Timeline by one day.
+    /// Agenda steps by its normalized day count, Week by seven days, Month by a calendar month, the
+    /// day-granularity Timeline by seven days (it renders the week) and Day with the hour Timeline
+    /// by one day.
     /// </summary>
     public static DateTime Step(TmScheduleViewType view, DateTime current, int direction, SchedulerRangeOptions options)
     {
@@ -78,6 +82,8 @@ internal static class SchedulerRange
         return view switch
         {
             TmScheduleViewType.Week => current.AddDays(7 * sign),
+            TmScheduleViewType.Timeline when options.TimelineScale == TmSchedulerTimelineScale.Days
+                => current.AddDays(7 * sign),
             TmScheduleViewType.Month => current.AddMonths(sign),
             TmScheduleViewType.Agenda => current.AddDays(options.AgendaLength * sign),
             _ => current.AddDays(sign)
@@ -264,7 +270,8 @@ internal readonly record struct SchedulerRangeOptions(
     int FirstDayOfWeek,
     int AgendaDays,
     TmSchedulerWeekDays WeekDays = TmSchedulerWeekDays.FullWeek,
-    TmSchedulerMonthWeeks MonthWeeks = TmSchedulerMonthWeeks.Six)
+    TmSchedulerMonthWeeks MonthWeeks = TmSchedulerMonthWeeks.Six,
+    TmSchedulerTimelineScale TimelineScale = TmSchedulerTimelineScale.Hours)
 {
     /// <summary>The week start folded into 0..6.</summary>
     public int FirstDay => SchedulerRange.NormalizeFirstDay(FirstDayOfWeek);

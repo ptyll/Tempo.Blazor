@@ -4955,6 +4955,8 @@
   "TmScheduler_SlotAriaLabel": "od {0} do {1}, {2}",
   "TmScheduler_Timeline": "Časová osa",
   "TmScheduler_TimelineGrid": "Časová osa",
+  "TmScheduler_TimelineDaysGrid": "Časová osa po dnech",
+  "TmScheduler_MoveHint_TimelineDays": "Podržte a táhněte pro přesun. Enter nebo F2 na dni zaměří první událost, Escape se vrátí na den. Alt+vlevo nebo Alt+vpravo posune o den, Alt+nahoru nebo Alt+dolů na jiný zdroj, Alt+Shift+vlevo nebo Alt+Shift+vpravo změní konec o den.",
   "TmScheduler_NowIndicator": "Aktuální čas {0}",
   "TmScheduler_Resources": "Zdroje",
   "TmScheduler_AllResources": "Všechny zdroje",

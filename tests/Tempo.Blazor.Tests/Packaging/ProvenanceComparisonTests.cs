@@ -225,9 +225,10 @@ public class ProvenanceComparisonTests
         // rte-caret-bookmark.test.mjs + tm-user-zone.test.mjs + tm-splitter.test.mjs + data-table-resize.test.mjs + data-table-pin.test.mjs + data-table-menu-keys.test.mjs + data-table-grid-keys.test.mjs + tm-color-gradient.test.mjs + pointer-gesture.test.mjs +
         // workflow-designer-pointer.test.mjs + dashboard-pointer.test.mjs + tm-dod-space-guard.test.mjs + tm-toolbar-file-button.test.mjs + gantt-scroll-link.test.mjs + gantt-pointer.test.mjs + gantt-virtual.test.mjs + gantt-virtual-session.test.mjs + chat.test.mjs (FZE-5) +
         // tm-panel-resize.test.mjs (plan 5d396592 phase 3: the shared panel-resize helper) +
-        // tm-sortable.test.mjs (plan 3e96f6d8 phase 1: the sortable-list drag module) —
+        // tm-sortable.test.mjs (plan 3e96f6d8 phase 1: the sortable-list drag module) +
+        // scheduler-timeline-days.test.mjs (plan 8fa7319c phase 2: the day-scale timeline scroll) —
         // the Node tests ship in the repo, never in the nupkg.
-        denominator.PackExcludedFiles.Should().Be(30);
+        denominator.PackExcludedFiles.Should().Be(31);
     }
 
     /// <summary>

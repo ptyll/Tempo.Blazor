@@ -7,6 +7,7 @@ range, the rendered range and the toolbar title are the same range.
 | View | Range | Navigation step | Title |
 |------|-------|-----------------|-------|
 | Day, Timeline | that single day | one day | the day |
+| Timeline with `TimelineScale="Days"` | the week (seven days from `FirstDayOfWeek`, `WorkWeek`: five) | seven days | the week |
 | Week | seven days from `FirstDayOfWeek` (`WorkWeek`: five) | seven days | the week |
 | Month | the rendered grid (42 days, or 35 when `MonthWeeks="Auto"` drops an empty trailing week) | one month | the month |
 | Agenda | `AgendaDays` days from `CurrentDate` (default 30, minimum 1) | `AgendaDays` days | the inclusive range |
@@ -122,13 +123,106 @@ selection hides nothing. An event with no resource stays visible.
 
 - `ShowFullDay="false"` draws only the working hours in Day, Week and Timeline. `HighlightOffHours`
   tints the hours outside them and is opt-in.
-- `ScrollToTime` scrolls that time into view after the first render. Null does not scroll.
+- `ScrollToTime` scrolls that time into view after the first render. Null does not scroll. The
+  day-granularity timeline has no minute axis, so there it scrolls the **first event's day column**
+  into view instead; the `0 – 24 h` range knobs (`WorkDayStart`, `WorkDayEnd`, `ShowFullDay`,
+  `HighlightOffHours`) and the now indicator do not apply to that scale.
+- The full (desktop/tablet) toolbar keeps the date title above the view buttons: when the bar is
+  narrower than 60rem of its OWN container, the pill view switcher collapses to the same dropdown the
+  phone's compact row uses, so the active view is never clipped and the title never shrinks to
+  nothing. The switch is a `@container tm-toolbar` query, not a viewport breakpoint.
 - `ShowNowIndicator` (default `true`) draws the current-time line in today's column. The line is its
   own component (`SchedulerNowIndicator`) driven by an injected `TimeProvider` and the display zone,
   so a tick re-renders the line and not the grid. Tests pin the clock with `FakeTimeProvider`.
 - `MonthWeeks="Auto"` drops an empty trailing week; `Six` (the default) keeps a stable height.
 - `WeekDays="WorkWeek"` hides the weekend. `HighlightWeekends` is opt-in.
 - `AgendaDays` is the length Agenda loads, renders and steps by.
+
+## Day-granularity timeline (channels × days)
+
+`TimelineScale` turns the Timeline view from one day of hour slots into the days of the range with one
+row per resource — the "channel × day" board a campaign planner needs. `Hours` is the default and the
+shape every earlier version rendered; nothing changes unless a host opts in.
+
+```razor
+<TmScheduler View="TmScheduleViewType.Timeline"
+             TimelineScale="TmSchedulerTimelineScale.Days"
+             @bind-CurrentDate="_week"
+             Events="_channelEvents"
+             Resources="_channels"
+             FirstDayOfWeek="1"
+             WeekDays="TmSchedulerWeekDays.WorkWeek"
+             ScrollToTime="new TimeSpan(8, 0, 0)" />
+```
+
+- **Range, title, navigation, provider.** The scale is part of `SchedulerRangeOptions`, so the loaded
+  week (`VisibleEvents`/`DataProvider` query), the toolbar title and Previous/Next all follow the
+  Week view: the range is `FirstDayOfWeek`'s seven days (`WorkWeek`: five), a step is seven days and
+  the title is the inclusive week. The two views cannot drift apart, because one `SchedulerRange`
+  call feeds both.
+- **Rows and columns.** One row per resource (the sticky label column) and one column per day
+  (weekday + date header). A narrow container scrolls horizontally and the resource column stays
+  pinned — the same scroller the hour timeline uses (`data-tm-scroll="timeline-days"`), so there is
+  no forced degradation to Agenda at any width.
+- **Chips.** A day cell paints one chip per event with the localized time and the title (or
+  `EventTemplate`, whose content replaces the inner markup exactly as in the hour timeline, with a
+  visually hidden accessible name). An all-day event prints `TmScheduler_AllDay`. An event that
+  started on an earlier day keeps the `tm-scheduler-timeline-day-event--continuation` dashed edge and
+  paints on every day it covers.
+- **Lanes.** Overlapping events inside one day take the shared `SchedulerLayout` lanes: the cell is a
+  CSS grid of `--tm-scheduler-lanes` columns, each chip is placed by `grid-column` (its lane) and
+  `grid-row` (its order inside the lane), and `data-lane` names the lane for hosts and tests. A cell
+  narrower than 12rem stacks its chips chronologically instead of splitting them into slivers (the
+  lane is still on every chip as `data-lane` / `--tm-scheduler-lane`), because a 60 px chip cannot
+  read. Two overlapping events therefore become side-by-side only where there is room for two.
+- **Cap.** `MaxVisibleEvents` (default 3) caps a cell; unlike a month cell, a day cell keeps that cap
+  on a mobile layout too, because a 7.5rem column of short chips is not a cramped month cell. The rest becomes the localized plural `TmScheduler_More` button (English "+1 more", Czech
+  "+3 další"), whose accessible name is `TmScheduler_MoreAria`. It raises `OnMoreClick` — and the
+  scheduler's own fallback opens that day in the Day view when the host binds both `@bind-View` and
+  `@bind-CurrentDate`, exactly like the month grid.
+- **Tokens.** The column width is `--tm-scheduler-timeline-day-width` (9rem; 7.5rem on a mobile
+  layout) and the cell floor is `--tm-scheduler-timeline-day-cell-height` (4.5rem). On a mobile
+  layout the channel column is 8rem — wider than the hour timeline's 5rem rail — and the channel
+  name wraps instead of ellipsizing to one letter. The header and
+  the rows size themselves from those tokens, so a host overrides the board's density with two
+  declarations. Both are component-local tokens on `.tm-scheduler`. The board also paints
+  **scroll-edge shadows**: a right edge while columns still hide to the right, and a shadow on the
+  pinned channel column's right edge once content has scrolled under it — both only while the board
+  actually overflows (`scheduler.js` keeps `data-scroll-shadow` on the frame: `none`, `start`,
+  `end` or `both`, so a board whose columns fit shows no edge at all). Themes through
+  `--tm-scheduler-scroll-shadow-size` and `--tm-scheduler-scroll-shadow-color` on the frame.
+- **Lifecycle.** The board measures its own container (the scheduler's `TmLayoutObserver`), prints
+  every column on one page (the pin unpins and the scroller stops scrolling in `@media print`; the
+  "+N more" cap still applies, and the button prints as its own text), and
+  the chips are a touch drag surface: a finger holds and drags, the drop lands on a day and a
+  resource, and the event keeps its time of day (the commit passes `-1` for the minute axis, the same
+  value a month drop passes). A chip that paints a **continuation** day is not the event's first
+  day, so the commit moves the start by the days the pointer crossed (`StartLocal.Date +
+  (dropDay − grabbedDay)`, the grabbed day travels as the fifth `NotifyMoveComplete` argument and as
+  `scheduler.js`'s `session.startDate`) — a four-day campaign stays four days long instead of
+  collapsing its start onto the dropped cell.
+
+## Event time in a narrow column
+
+A week cell, a week of resources and a phone all end up narrower than the full range
+("9:00 AM – 10:00 AM"). The default renderer prints the range twice — a full reading and a compact
+one that shares one meridiem ("9:00 – 10:00 AM") — and the stylesheet picks by the **card's own
+width** (`@container`). A time never breaks between the clock and its meridiem: `SchedulerTimeText`
+normalizes ICU's narrow no-break space to U+00A0, so the only break opportunities in a full range
+are the two plain spaces around the en dash — a narrow card wraps the range onto a second line
+("10:00 AM –" / "12:00 PM") instead of tearing "10:00 AM" apart. The markup is two spans,
+`.tm-scheduler-event-time-full` and `.tm-scheduler-event-time-compact`, inside the wrapper that
+carries the full range in its `title`:
+
+| Card width | What the card prints |
+|---|---|
+| ≥ 8rem | the full reading, which wraps instead of being cut mid-token |
+| 4.5 – 8rem | the compact reading |
+| < 4.5rem | no time (the title and the card's accessible name keep it) |
+
+The wrapper's `title` always carries the full range, so a hover (or a screen reader reading the
+card's name) still gets it. `EventTemplate` opts out of all three — a host template owns its own
+layout.
 
 ## Mobile action bar
 
@@ -153,7 +247,17 @@ chords use Alt, so they never collide with it. A read-only event is not a keyboa
 |------|------|--------|
 | Day, Week | Alt+Left/Right moves a day, Alt+Up/Down a slot | Alt+Shift+Up/Down resizes the end |
 | Timeline | Alt+Left/Right moves a slot, Alt+Up/Down another resource | Alt+Shift+Left/Right resizes the end |
+| Timeline, `Days` scale | Alt+Left/Right moves a day, Alt+Up/Down another resource | Alt+Shift+Left/Right changes the end by a day |
 | Month | Alt+Left/Right moves a day, Alt+Up/Down a week | none |
+
+The day board is `role="grid"` too — a row per resource, a `gridcell` per day — with **one tab stop
+per grid**: the active cell. Arrows cross days and rows, Home/End the row, and Space selects the
+whole day (`OnSlotClick` with `00:00 – 23:59:59`). Enter (or F2) steps *into* the cell: its first
+chip becomes the grid's tab stop (a chip is `tabindex="-1"` until then, so a board with thirty events
+is still one stop), ArrowUp/ArrowDown walk the cell's own widgets (the visible chips and then the
+"+N more" button), Escape returns to the cell, and Enter/Space on a chip opens it. Its move hint is
+`TmScheduler_MoveHint_TimelineDays`, and a move announces the **date** (the scale has no minute
+axis), not the time.
 
 The month grid is `role="grid"` with one roving tab stop: arrows move a day or a week, Home/End the
 row, PageUp/PageDown raise `CurrentDateChanged`, and Enter or Space select the day
@@ -180,7 +284,9 @@ The month overflow is a button (`.tm-scheduler-month-more`). Its visible label i
 `TmScheduler_More` (`Loc.Plural`): English "+1 more / +2 more", Czech "+1 další / +2 další /
 +5 dalších". The accessible name (`TmScheduler_MoreAria`) names the day it opens. Without
 `OnMoreClick` the scheduler opens that day in the Day view, but only when the host binds both
-`@bind-View` and `@bind-CurrentDate`; with either binding missing the click is inert.
+`@bind-View` and `@bind-CurrentDate`; with either binding missing the click is inert. The
+day-granularity timeline's per-day cap uses the same control (`.tm-scheduler-timeline-day-more`) and
+the same fallback.
 
 `MaxVisibleEvents` (default 3) is the desktop and tablet cap; a mobile layout uses
 `CompactMaxVisibleEvents` (default 1).

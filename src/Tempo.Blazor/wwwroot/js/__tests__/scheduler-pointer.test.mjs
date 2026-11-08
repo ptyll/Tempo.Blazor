@@ -954,7 +954,7 @@ test('the drop target resolves the day, the snapped minute and the resource from
     doc.elementFromPoint = () => g.col2;
 
     g.event.dispatch('pointerup', longPressDrag(t, g.event, { x: 40, y: 630 }, { x: 140, y: 690 }));
-    assert.deepEqual(ref.calls, [['NotifyMoveComplete', 'e1', '2026-10-14', 660, null]]);
+    assert.deepEqual(ref.calls, [['NotifyMoveComplete', 'e1', '2026-10-14', 660, null, '2026-10-13']]);
 
     const tl = moveTimeline({ slot: 30 });
     const tlRef = dotnet();
@@ -963,7 +963,7 @@ test('the drop target resolves the day, the snapped minute and the resource from
     tl.event.dispatch('pointerup', longPressDrag(t, tl.event, { x: 630, y: 10 }, { x: 750, y: 50 }));
     // The press is 30px into a 60px event whose left edge is minute 600, so the grabbed point at
     // finger 750 is minute 720, and the row under the finger carries the resource.
-    assert.deepEqual(tlRef.calls, [['NotifyMoveComplete', 't1', '2026-10-13', 720, 'room-b']]);
+    assert.deepEqual(tlRef.calls, [['NotifyMoveComplete', 't1', '2026-10-13', 720, 'room-b', '2026-10-13']]);
     assert.equal(tl.body2.classList.contains('tm-scheduler-timeline-slot--drop-target'), false);
 
     const month = monthGrid();
@@ -972,7 +972,7 @@ test('the drop target resolves the day, the snapped minute and the resource from
     doc.elementFromPoint = () => month.day2;
     month.event.dispatch('pointerup', longPressDrag(t, month.event, { x: 40, y: 30 }, { x: 140, y: 30 }));
     // A month has no minute axis: -1 tells .NET to keep the time of day.
-    assert.deepEqual(monthRef.calls, [['NotifyMoveComplete', 'm1', '2026-10-20', -1, null]]);
+    assert.deepEqual(monthRef.calls, [['NotifyMoveComplete', 'm1', '2026-10-20', -1, null, '2026-10-13']]);
     assert.equal(month.day2.classList.contains('tm-scheduler-month-day--drop-target'), false,
         'the drop target highlight is gone once the finger lifts');
 });
@@ -1037,7 +1037,7 @@ test('the visual translate snaps to the same minute the release commits, honouri
     assert.equal(g.event.style.transform, 'translate(0px, 30px)',
         'the preview snaps to the committed minute instead of following the finger raw');
     g.event.dispatch('pointerup', up);
-    assert.deepEqual(ref.calls, [['NotifyMoveComplete', 'e1', '2026-10-13', 630, null]]);
+    assert.deepEqual(ref.calls, [['NotifyMoveComplete', 'e1', '2026-10-13', 630, null, '2026-10-13']]);
 });
 
 test('a month day and a grid column under the finger get the drop-target class, removed on release', async (t) => {

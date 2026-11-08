@@ -424,6 +424,8 @@
     min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
+    /* A short card lays the card out in one row, so its range stays on one line and ellipsizes. */
+    white-space: nowrap;
 }
 
 /* A week column is about 8rem, so the time only fits beside the title in a wider column. */
@@ -439,7 +441,18 @@
 .tm-scheduler-timegrid-event-time {
     font-size: var(--tm-font-size-xs, 0.75rem);
     color: var(--tm-text-secondary);
-    white-space: nowrap;
+    /* Narrow column: the readings inside wrap instead of being cut at the card's edge. */
+    white-space: normal;
+    max-width: 100%;
+    min-width: 0;
+}
+
+/* Below this the card cannot hold a time range at all; the title (and the card's accessible
+   name) still say everything, so the time is dropped rather than cut mid-token. */
+@container (width < 4.5rem) {
+    .tm-scheduler-timegrid-event-time {
+        display: none;
+    }
 }
 
 .tm-scheduler-timegrid-event .tm-scheduler-event-content {

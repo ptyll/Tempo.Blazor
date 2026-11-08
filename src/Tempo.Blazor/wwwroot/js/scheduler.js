@@ -28,7 +28,7 @@
     // The event body. A touch long-press moves it; a mouse or a pen press is HTML5 drag-and-drop.
     // The keyboard alternative is restricted to a draggable event, so a read-only one does not swallow
     // Alt+Left/Right (the browser's Back/Forward).
-    var MOVE_SELECTOR = '.tm-scheduler-timegrid-event[data-event-id][draggable="true"], .tm-scheduler-timeline-event[data-event-id][draggable="true"], .tm-scheduler-month-event[data-event-id][draggable="true"]';
+    var MOVE_SELECTOR = '.tm-scheduler-timegrid-event[data-event-id][draggable="true"], .tm-scheduler-timeline-event[data-event-id][draggable="true"], .tm-scheduler-month-event[data-event-id][draggable="true"], .tm-scheduler-timeline-day-event[data-event-id][draggable="true"]';
     var DROP_TARGET = 'tm-scheduler-month-day--drop-target tm-scheduler-timegrid-slot--drop-target tm-scheduler-timeline-slot--drop-target';
     /** A culture-aware time. Falls back to HH:mm when Intl is missing (the node tests). */
     function clock(minute, culture) {
@@ -99,6 +99,8 @@
          * Scrolls the grid's own scroller so <paramref>minutes</paramref> sits near the top, under
          * the sticky head. The root carries data-range-start and data-range-minutes, so a clipped
          * day scrolls by the same range the resize maths use. A time outside the range is a no-op.
+         * The day-granularity timeline has no minute axis: its columns are days, so there is no
+         * minute to scroll to and the first event's column is what the scroll brings into view.
          */
         scrollToTime: function (root, minutes) {
             if (!root || typeof root.querySelector !== 'function') return;
@@ -107,6 +109,12 @@
                 ? root
                 : root.querySelector('[data-tm-scroll]');
             if (!scroller) return;
+            if (scroller.dataset && scroller.dataset.tmScroll === 'timeline-days') {
+                this._attachScrollShadow(scroller);
+                this.scrollToFirstEvent(scroller);
+                this._refreshScrollShadow(scroller);
+                return;
+            }
             var start = parseInt(root.dataset.rangeStart) || 0;
             var range = parseInt(root.dataset.rangeMinutes) || 24 * 60;
             var offset = minutes - start;
@@ -121,6 +129,88 @@
             var head = root.querySelector('.tm-scheduler-timegrid-head');
             var headHeight = head ? head.offsetHeight : 0;
             scroller.scrollTop = Math.max(0, (scroller.scrollHeight - headHeight) * fraction);
+        },
+
+        /**
+         * Brings the first day column that holds an event into view, past the pinned resource
+         * column. The day board is the one horizontal scroller here, so the offset is measured in
+         * its own content box. No event (or a scroller that cannot measure) leaves the scroll alone.
+         */
+        scrollToFirstEvent: function (scroller) {
+            if (!scroller || typeof scroller.querySelector !== 'function') return;
+            var chip = scroller.querySelector('.tm-scheduler-timeline-day-event');
+            if (!chip) return;
+            var cell = typeof chip.closest === 'function'
+                ? chip.closest('.tm-scheduler-timeline-day-cell')
+                : null;
+            var label = scroller.querySelector('.tm-scheduler-timeline-resource-header');
+            var labelWidth = label ? label.offsetWidth : 0;
+            var left = (cell && typeof cell.offsetLeft === 'number' ? cell.offsetLeft : 0) - labelWidth;
+            scroller.scrollLeft = Math.max(0, left);
+        },
+
+        /**
+         * Which edges of a horizontal scroller still hide content: `none` (everything fits),
+         * `end` (more to the right), `start` (more to the left) or `both`. One pixel of slack
+         * absorbs a fractional layout width. Pure, so the state is testable without a browser.
+         */
+        _scrollShadowState: function (scrollLeft, scrollWidth, clientWidth) {
+            var max = (scrollWidth || 0) - (clientWidth || 0);
+            if (!(max > 1)) return 'none';
+            var left = scrollLeft || 0;
+            if (left <= 1) return 'end';
+            if (left >= max - 1) return 'start';
+            return 'both';
+        },
+
+        /**
+         * The day board's scroll-edge shadows. The shadow lives on the frame around the scroller
+         * (an inset shadow would paint under the rows), and the state attribute is only ever
+         * `none` while the board does NOT overflow — so a board that fits shows no edge at all.
+         * Idempotent per scroller; detached by unregisterInstance or destroy.
+         */
+        _attachScrollShadow: function (scroller) {
+            if (!scroller || scroller.__tmScrollShadow) return;
+            var frame = scroller.parentElement;
+            if (!frame || typeof frame.setAttribute !== 'function') return;
+            if (typeof frame.hasAttribute === 'function' && !frame.hasAttribute('data-tm-scroll-frame')) return;
+            var scheduler = this;
+            var update = function () {
+                frame.setAttribute('data-scroll-shadow',
+                    scheduler._scrollShadowState(scroller.scrollLeft, scroller.scrollWidth, scroller.clientWidth));
+            };
+            var onScroll = function () { update(); };
+            if (typeof scroller.addEventListener === 'function') {
+                scroller.addEventListener('scroll', onScroll, { passive: true });
+            }
+            var observer = null;
+            if (typeof ResizeObserver !== 'undefined') {
+                observer = new ResizeObserver(update);
+                observer.observe(scroller);
+            }
+            scroller.__tmScrollShadow = { frame: frame, update: update, onScroll: onScroll, observer: observer };
+            update();
+            // The board is often registered before it is laid out; one frame later the extents are real.
+            if (typeof requestAnimationFrame === 'function') requestAnimationFrame(update);
+        },
+
+        /** Re-reads the extents (a programmatic scroll has no listener of its own in a test). */
+        _refreshScrollShadow: function (scroller) {
+            var state = scroller && scroller.__tmScrollShadow;
+            if (state && typeof state.update === 'function') state.update();
+        },
+
+        _detachScrollShadow: function (scroller) {
+            var state = scroller && scroller.__tmScrollShadow;
+            if (!state) return;
+            if (typeof scroller.removeEventListener === 'function') {
+                scroller.removeEventListener('scroll', state.onScroll);
+            }
+            if (state.observer) state.observer.disconnect();
+            if (state.frame && typeof state.frame.removeAttribute === 'function') {
+                state.frame.removeAttribute('data-scroll-shadow');
+            }
+            delete scroller.__tmScrollShadow;
         },
 
         /**
@@ -382,6 +472,8 @@
         registerInstance: function (element, dotNetRef) {
             if (element) {
                 this._dotNetRefs.set(element, dotNetRef);
+                if (element.dataset && element.dataset.tmScroll === 'timeline-days')
+                    this._attachScrollShadow(element);
             }
         },
 
@@ -391,6 +483,7 @@
          */
         unregisterInstance: function (element) {
             if (element) {
+                this._detachScrollShadow(element);
                 this._dotNetRefs.delete(element);
             }
         },
@@ -649,16 +742,20 @@
 
             var isMonth = eventElement.classList.contains('tm-scheduler-month-event');
             var isTimeline = eventElement.classList.contains('tm-scheduler-timeline-event');
+            // A day-granularity chip has no minute axis: one drop moves it to a day and a resource.
+            var isDays = eventElement.classList.contains('tm-scheduler-timeline-day-event');
             var container = isMonth
                 ? eventElement.closest('.tm-scheduler-month')
-                : isTimeline
+                : isTimeline || isDays
                     ? eventElement.closest('.tm-scheduler-timeline')
                     : eventElement.closest('.tm-scheduler-timegrid');
             if (!container) return false;
 
-            var column = isTimeline
-                ? eventElement.closest('.tm-scheduler-timeline-row-body')
-                : eventElement.closest('.tm-scheduler-timegrid-col, .tm-scheduler-timegrid-resource-col');
+            var column = isDays
+                ? eventElement.closest('.tm-scheduler-timeline-day-cell')
+                : isTimeline
+                    ? eventElement.closest('.tm-scheduler-timeline-row-body')
+                    : eventElement.closest('.tm-scheduler-timegrid-col, .tm-scheduler-timegrid-resource-col');
             var startCell = eventElement.closest('[data-date]');
             var startRow = eventElement.closest('[data-resource]');
 
@@ -666,6 +763,7 @@
                 eventElement: eventElement,
                 isMonth: isMonth,
                 isTimeline: isTimeline,
+                isDays: isDays,
                 container: container,
                 column: column,
                 eventId: eventElement.dataset.eventId,
@@ -723,6 +821,7 @@
         _scrollerOf: function (session) {
             var start = session.eventElement || session.container;
             if (!start || typeof start.closest !== 'function') return null;
+            if (session.isDays) return start.closest('.tm-scheduler-timeline--days');
             if (session.isTimeline) return start.closest('.tm-scheduler-timeline');
             return start.closest('.tm-scheduler-timegrid-scroll');
         },
@@ -733,7 +832,7 @@
             if (!factory || !container) return;
             var scheduler = this;
             session.scroller = factory(container, {
-                axis: session.isTimeline ? 'x' : 'y',
+                axis: session.isTimeline || session.isDays ? 'x' : 'y',
                 onScroll: function () { scheduler._moveDrag(scheduler._lastMove || { x: 0, y: 0, dx: 0, dy: 0 }); }
             });
         },
@@ -744,12 +843,16 @@
             var hit = document.elementFromPoint(x, y);
             if (!hit || typeof hit.closest !== 'function') return null;
             return hit.closest(
-                '.tm-scheduler-timegrid-col, .tm-scheduler-timegrid-resource-col, .tm-scheduler-month-day, .tm-scheduler-timeline-row-body');
+                '.tm-scheduler-timegrid-col, .tm-scheduler-timegrid-resource-col, .tm-scheduler-month-day,'
+                + ' .tm-scheduler-timeline-row-body, .tm-scheduler-timeline-day-cell');
         },
 
-        /** Minutes of the grabbed point, snapped to the slot, or -1 for a month. */
+        /**
+         * Minutes of the grabbed point, snapped to the slot, or -1 when the view has no minute axis
+         * (a month grid or the day-granularity board, whose columns are whole days).
+         */
         _minuteAt: function (session, target, x, y) {
-            if (session.isMonth || !target || typeof target.getBoundingClientRect !== 'function') return -1;
+            if (session.isMonth || session.isDays || !target || typeof target.getBoundingClientRect !== 'function') return -1;
             var box = target.getBoundingClientRect();
             var size = session.isTimeline ? box.width : box.height;
             if (!(size > 0)) return -1;
@@ -777,7 +880,11 @@
                 session.targetDate = cell ? cell.dataset.date : (session.container.dataset.date || session.startDate);
                 var row = target.closest('[data-resource]');
                 session.targetResource = row ? row.dataset.resource : session.startResource;
-                session.targetMinute = this._minuteAt(session, session.isTimeline ? target : (session.column || target), info.x, info.y);
+                // A day board keeps the event's own time of day: -1 is the "no minute axis" value
+                // the .NET side reads as "keep the time" (the same value a month drop passes).
+                session.targetMinute = session.isDays
+                    ? -1
+                    : this._minuteAt(session, session.isTimeline ? target : (session.column || target), info.x, info.y);
             }
             this._markDropTarget(session, target);
             this._snapTranslate(session, info);
@@ -803,7 +910,9 @@
             if (target && target.classList) {
                 var name = session.isMonth
                     ? 'tm-scheduler-month-day--drop-target'
-                    : session.isTimeline ? 'tm-scheduler-timeline-slot--drop-target' : 'tm-scheduler-timegrid-slot--drop-target';
+                    : session.isTimeline || session.isDays
+                        ? 'tm-scheduler-timeline-slot--drop-target'
+                        : 'tm-scheduler-timegrid-slot--drop-target';
                 target.classList.add(name);
             }
         },
@@ -837,14 +946,15 @@
             return session.appliedDelta;
         },
 
-        /** The live range label. A month has no minute axis, so it shows nothing. */
+        /** The live range label. A month or a day board has no minute axis, so it shows nothing. */
         _showTime: function (session, minute, duration) {
             var eventElement = session.eventElement;
             if (!eventElement || typeof eventElement.querySelector !== 'function') return;
             if (minute === null || minute < 0) {
-                // A month has no minute axis, so a label left by an earlier drag must not follow it.
+                // A month or a day board has no minute axis, so a label left by an earlier drag must
+                // not follow it (a day chip commits its time of day and never a new minute).
                 // A timeline whose column has not resolved yet keeps the label it already shows.
-                if (session.isMonth) this._removeLabel(eventElement);
+                if (session.isMonth || session.isDays) this._removeLabel(eventElement);
                 else {
                     var kept = eventElement.closest ? eventElement.closest('.tm-scheduler') : null;
                     var existing = kept && kept.querySelector ? kept.querySelector('.tm-scheduler-event-drag-time') : null;
@@ -986,8 +1096,11 @@
             if (!session || !session.dotNetRef || !session.targetDate) return;
             var generation = this._generation;
             var self = this;
+            // The grabbed day travels with the drop: a chip painted on a continuation day is not
+            // the event's start day, so .NET moves the start by the days the finger crossed.
             session.dotNetRef.invokeMethodAsync('NotifyMoveComplete',
-                session.eventId, session.targetDate, session.targetMinute, session.targetResource)
+                session.eventId, session.targetDate, session.targetMinute, session.targetResource,
+                session.startDate || null)
                 .catch(function (err) {
                     if (self._generation === generation)
                         console.warn('Scheduler: the move could not be committed', err);
@@ -1056,6 +1169,8 @@
         destroy: function () {
             this._generation++;
             this._detachDrag();
+            var scheduler = this;
+            this._dotNetRefs.forEach(function (_, element) { scheduler._detachScrollShadow(element); });
             this._dotNetRefs.clear();
         }
     };

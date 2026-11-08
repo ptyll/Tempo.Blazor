@@ -6,6 +6,9 @@
     --tm-scheduler-lane-height: 3.5rem;
     --tm-scheduler-timeline-hour-width: 5rem;
     --tm-scheduler-timeline-resource-width: 12rem;
+    /* One column of the day-granularity timeline (a channel × day board). */
+    --tm-scheduler-timeline-day-width: 9rem;
+    --tm-scheduler-timeline-day-cell-height: 4.5rem;
     --tm-scheduler-now: 0;
     display: flex;
     flex-direction: column;
@@ -23,6 +26,7 @@
    underneath; the translate itself is inline, so a cancel clears it and the event is back. */
 .tm-scheduler-timegrid-event.tm-scheduler-event--moving,
 .tm-scheduler-timeline-event.tm-scheduler-event--moving,
+.tm-scheduler-timeline-day-event.tm-scheduler-event--moving,
 .tm-scheduler-month-event.tm-scheduler-event--moving {
     z-index: var(--tm-scheduler-z-moving);
     pointer-events: none;
@@ -34,6 +38,7 @@
    label that sticks out above the event. The compound selector wins that cascade. */
 .tm-scheduler-timegrid-event.tm-scheduler-event--moving,
 .tm-scheduler-timeline-event.tm-scheduler-event--moving,
+.tm-scheduler-timeline-day-event.tm-scheduler-event--moving,
 .tm-scheduler-month-event.tm-scheduler-event--moving {
     overflow: visible;
 }
@@ -125,6 +130,33 @@
 .tm-scheduler-event-surface:hover {
     background: color-mix(in srgb, var(--event-color, var(--tm-color-primary)) var(--tm-scheduler-event-tint), var(--tm-bg-surface));
     filter: brightness(0.97);
+}
+
+/* ── Event time: two readings, picked by the card's own width ───────────────────────────────
+   The full reading ("9:00 AM – 10:00 AM") wraps instead of being cut mid-token at the card's
+   edge, which is what a narrow week column (or a phone) used to do. Below 8rem of card width the
+   compact reading takes over: it prints the shared meridiem once ("9:00 – 10:00 AM"), so the
+   range stays on one line. Both readings live inside the card that already carries the accessible
+   name, so neither is read twice. */
+.tm-scheduler-event-time-full,
+.tm-scheduler-event-time-compact {
+    white-space: normal;
+    overflow-wrap: break-word;
+    line-height: var(--tm-line-height-tight);
+}
+
+.tm-scheduler-event-time-compact {
+    display: none;
+}
+
+@container (width < 8rem) {
+    .tm-scheduler-event-time-full {
+        display: none;
+    }
+
+    .tm-scheduler-event-time-compact {
+        display: inline;
+    }
 }
 
 .tm-scheduler-body {
@@ -278,6 +310,43 @@
 .tm-scheduler-toolbar-views .tm-tabs--pill [role="tab"][aria-selected="true"]:hover {
     background: color-mix(in srgb, var(--tm-color-primary) 12%, transparent);
     color: var(--tm-color-primary-text);
+}
+
+/* The view switcher in the full bar has two presentations. Wide bars show the pill tablist; a bar
+   that cannot hold the pills shows the same dropdown the phone's compact row uses, so the pills
+   never clip mid-word ("Ti..." for Timeline) and the date title keeps its room. The switch is the
+   toolbar's OWN width (the core toolbar is a size container), not the viewport. */
+.tm-scheduler-toolbar-views-pills {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-1);
+    min-width: 0;
+}
+
+.tm-scheduler-toolbar-view-menu {
+    display: none;
+    min-width: 0;
+}
+
+/* The date title outranks the view buttons: its wrapper keeps a readable floor and yields last. */
+.tm-toolbar .tm-toolbar-item.tm-scheduler-toolbar-title {
+    flex: 0 1 auto;
+    min-width: 11rem;
+}
+
+@container tm-toolbar (width < 60rem) {
+    .tm-scheduler-toolbar-views {
+        /* The collapsed group is the dropdown alone: no fixed row height, no clipping box, so a
+           coarse pointer's 44px trigger stays whole. */
+        height: auto;
+        padding: 0;
+        border: none;
+        background: transparent;
+        overflow: visible;
+    }
+
+    .tm-scheduler-toolbar-views-pills { display: none; }
+    .tm-scheduler-toolbar-view-menu { display: inline-flex; align-items: center; }
 }
 
 

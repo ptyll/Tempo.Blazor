@@ -608,10 +608,20 @@
             }
             else
             {
-                // Time
+                // Time. The full reading wraps in a narrow column and the compact one fits one
+                // line; the stylesheet picks by the card's width and the title owns the full text.
+                var time = SchedulerTimeText.Range(e.StartLocal, e.EndLocal);
                 builder.OpenElement(sequence++, "span");
                 builder.AddAttribute(sequence++, "class", "tm-scheduler-timegrid-event-time");
-                builder.AddContent(sequence++, $"{e.Start.ToString("t", CultureInfo.CurrentUICulture)} – {e.End.ToString("t", CultureInfo.CurrentUICulture)}");
+                builder.AddAttribute(sequence++, "title", time.Full);
+                builder.OpenElement(sequence++, "span");
+                builder.AddAttribute(sequence++, "class", "tm-scheduler-event-time-full");
+                builder.AddContent(sequence++, time.Full);
+                builder.CloseElement();
+                builder.OpenElement(sequence++, "span");
+                builder.AddAttribute(sequence++, "class", "tm-scheduler-event-time-compact");
+                builder.AddContent(sequence++, time.Compact);
+                builder.CloseElement();
                 builder.CloseElement();
 
                 // Title
@@ -792,9 +802,13 @@
         StateHasChanged();
     }
 
-    /// <summary>Called by the touch move when the finger releases over a column.</summary>
+    /// <summary>
+    /// Called by the touch move when the finger releases over a column. <paramref name="grabbedDate"/>
+    /// is the cell the chip was grabbed in (the timeline's continuation offset); the time grid has no
+    /// continuation chips, so it only crosses the interop boundary unchanged.
+    /// </summary>
     [JSInvokable]
-    public Task NotifyMoveComplete(string eventId, string date, int minuteOfDay, string? resourceId)
+    public Task NotifyMoveComplete(string eventId, string date, int minuteOfDay, string? resourceId, string? grabbedDate = null)
         => MoveByIdAsync(eventId, date, minuteOfDay, resourceId);
 
     /// <summary>Called by the Alt+Arrow keyboard alternative. A shifted chord resizes instead.</summary>

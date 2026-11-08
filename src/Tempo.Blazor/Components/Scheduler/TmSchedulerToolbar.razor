@@ -51,6 +51,13 @@
         }
     </div>
     <div class="tm-scheduler-toolbar-view" data-tm-group="view" data-testid="@TestId("scheduler-view-menu")">
+        @ViewMenu
+    </div>
+    </text>;
+
+    @* One view switcher control, two presentations: the phone's compact row always uses the
+       dropdown, and the full bar swaps its pills for it when the row runs out of room. *@
+    private RenderFragment ViewMenu => @<text>
         <TmDropdown @ref="_viewDropdown" Text="@GetViewLabel(View)"
                     AriaLabel="@($"{Loc["TmScheduler_SwitchView"]}: {GetViewLabel(View)}")" data-testid="@TestId("scheduler-view")"
                     MobilePresentation="PanelPresentation.Auto" LayoutMode="TmLayoutMode.Mobile"
@@ -61,7 +68,6 @@
                                 Checked="@(view == View)">@GetViewLabel(view)</TmDropdownItem>
             }
         </TmDropdown>
-    </div>
     </text>;
 
     private RenderFragment FullRow => @<text>
@@ -84,16 +90,23 @@
         @TitleGroup
     </TmToolbarItem>
 
+    @* The date title outranks the view buttons, and the buttons themselves have a compact form:
+       when the bar is too narrow for the pill tablist, the stylesheet hides the pills and shows the
+       view dropdown instead (a measured container query, so the title never collapses to nothing
+       and the active view is never clipped mid-label). *@
     <TmToolbarGroup Class="tm-scheduler-toolbar-views" data-tm-group="view">
-        <TmTabs Variant="TabVariant.Pill" ActiveTabId="@ActiveTabId" ActiveTabIdChanged="SelectViewAsync"
-                AriaLabel="@Loc["TmScheduler_ViewSwitcher"]">
-            @foreach (var view in OfferedViews)
-            {
-                var v = view;
-                <TmTabPanel Id="@TabId(v)" Title="@GetViewLabel(v)"
-                            TabAttributes="@(new Dictionary<string, object> { ["data-view"] = v.ToString() })" />
-            }
-        </TmTabs>
+        <div class="tm-scheduler-toolbar-views-pills">
+            <TmTabs Variant="TabVariant.Pill" ActiveTabId="@ActiveTabId" ActiveTabIdChanged="SelectViewAsync"
+                    AriaLabel="@Loc["TmScheduler_ViewSwitcher"]">
+                @foreach (var view in OfferedViews)
+                {
+                    var v = view;
+                    <TmTabPanel Id="@TabId(v)" Title="@GetViewLabel(v)"
+                                TabAttributes="@(new Dictionary<string, object> { ["data-view"] = v.ToString() })" />
+                }
+            </TmTabs>
+        </div>
+        <div class="tm-scheduler-toolbar-view-menu">@ViewMenu</div>
     </TmToolbarGroup>
 
     @if (HeaderActions is not null)
@@ -192,6 +205,13 @@
     /// <summary>Current view type.</summary>
     [Parameter] public TmScheduleViewType View { get; set; }
 
+    /// <summary>
+    /// How the Timeline view lays out its columns. <see cref="TmSchedulerTimelineScale.Days"/> titles
+    /// the range (a week) instead of the one day the hour timeline shows. Default
+    /// <see cref="TmSchedulerTimelineScale.Hours"/>.
+    /// </summary>
+    [Parameter] public TmSchedulerTimelineScale TimelineScale { get; set; } = TmSchedulerTimelineScale.Hours;
+
     /// <summary>Currently displayed date. The Month title is this date's month.</summary>
     [Parameter] public DateTime CurrentDate { get; set; }
 
@@ -277,11 +297,14 @@
         {
             var culture = CultureInfo.CurrentUICulture;
             // No range handed in: title the same Monday-week / 30-day default the scheduler uses.
-            var fallback = SchedulerRange.Visible(View, CurrentDate, new SchedulerRangeOptions(1, 30));
+            var fallback = SchedulerRange.Visible(View, CurrentDate, new SchedulerRangeOptions(1, 30, TimelineScale: TimelineScale));
             var start = RangeStart == default ? fallback.Start : RangeStart.Date;
             var endInclusive = RangeEnd == default ? fallback.End.AddDays(-1) : RangeEnd.Date.AddDays(-1);
             return View switch
             {
+                // A day-granularity timeline renders the days of the range, so it titles the range.
+                TmScheduleViewType.Timeline when TimelineScale == TmSchedulerTimelineScale.Days
+                    => SchedulerRange.FormatRange(start, endInclusive, culture),
                 TmScheduleViewType.Day or TmScheduleViewType.Timeline => SchedulerRange.FormatDayTitle(start, culture),
                 TmScheduleViewType.Week or TmScheduleViewType.Agenda => SchedulerRange.FormatRange(start, endInclusive, culture),
                 TmScheduleViewType.Month => $"{culture.DateTimeFormat.GetMonthName(CurrentDate.Month)} {CurrentDate.Year}",

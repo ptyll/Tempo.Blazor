@@ -2,7 +2,7 @@
   "itemName": "TmScheduler",
   "kind": "Component",
   "category": "Scheduler",
-  "description": "Full-featured event scheduler with month, week, day, agenda, and timeline views. A host EventTemplate renders directly into the time-grid and timeline cards; span.tm-scheduler-event-content is the host opt-in ellipsis for a template that should stay one line. Supports client-side event lists or server-side data providers, drag-and-drop event moving, resource grouping, context menus, and custom event templates. Timed events render as tinted cards with a coloured left stripe; all-day events keep a solid fill. A finger moves an event with a 400ms hold (a quick swipe scrolls); a mouse or a pen keeps HTML5 drag-and-drop. The toolbar groups are navigation, title, views, an opt-in add button and a More menu that holds Print. The title opens a date popover. Keyboard: the month grid, time grid and timeline use one roving tab stop (arrows, Home/End, PageUp/PageDown), events and slots activate on Enter and Space exactly once, Alt+Arrow moves the focused event by one slot or day and Alt+Shift+Arrow resizes it, and Shift+F10 or the ContextMenu key opens the context menu on the cell itself. The toolbar view switcher is a local tablist (aria-selected, one tab stop), the title heading is a polite live region, and one sr-only role=status region announces a move or a resize.",
+  "description": "Full-featured event scheduler with month, week, day, agenda, and timeline views. A host EventTemplate renders directly into the time-grid and timeline cards; span.tm-scheduler-event-content is the host opt-in ellipsis for a template that should stay one line. Supports client-side event lists or server-side data providers, drag-and-drop event moving, resource grouping, context menus, and custom event templates. Timed events render as tinted cards with a coloured left stripe; all-day events keep a solid fill. A finger moves an event with a 400ms hold (a quick swipe scrolls); a mouse or a pen keeps HTML5 drag-and-drop. The toolbar groups are navigation, title, views, an opt-in add button and a More menu that holds Print. The title opens a date popover. Keyboard: the month grid, time grid and timeline use one roving tab stop (arrows, Home/End, PageUp/PageDown), events and slots activate on Enter and Space exactly once, Alt+Arrow moves the focused event by one slot or day and Alt+Shift+Arrow resizes it, and Shift+F10 or the ContextMenu key opens the context menu on the cell itself. The toolbar view switcher is a local tablist (aria-selected, one tab stop), the title heading is a polite live region, and one sr-only role=status region announces a move or a resize. TimelineScale=\"Days\" scales the Timeline to the days of the range (one row per resource, one column per day — the channel × day board): the range, the data-provider query, the toolbar title and the navigation step are the Week view's, overlapping events take lanes inside one day, MaxVisibleEvents caps a cell and the TmScheduler_More overflow opens that day in the Day view, ScrollToTime reveals the first event's day column, and the move contract (drop, touch drag, Alt+Arrow) keeps the event's time of day. The Hours default is the pre-2.11 timeline.",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Scheduler"
   ],
@@ -379,6 +379,13 @@
       "type": "string?",
       "isRequired": false,
       "description": "Display timezone (IANA id such as Europe/Prague, or a Windows id). When set, event times are converted to this zone at the render boundary (DST-aware). When null, the machine-local timezone is used and non-recurring events are passed through unchanged for backward compatibility."
+    },
+    {
+      "name": "TimelineScale",
+      "type": "TmSchedulerTimelineScale",
+      "isRequired": false,
+      "default": "TmSchedulerTimelineScale.Hours",
+      "description": "How the Timeline view lays out its columns: the hour slots of one day (the default) or the days of the range with one row per resource (the channel × day board). The day scale loads, titles and steps the week the Week view renders; its chips keep the event's time of day when moved."
     }
   ],
   "cssClasses": [

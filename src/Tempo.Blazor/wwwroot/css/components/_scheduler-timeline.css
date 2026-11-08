@@ -220,7 +220,8 @@
     max-width: 100%;
 }
 
-@container (width < 3.5rem) {
+/* Below this the bar cannot hold a time range at all; the title keeps the meaning. */
+@container (width < 4.5rem) {
     .tm-scheduler-timeline-event-time { display: none; }
 }
 
@@ -336,4 +337,275 @@
 
 .tm-scheduler-timeline-slot--drop-target {
     background: color-mix(in srgb, var(--tm-color-primary) 20%, transparent);
+}
+
+/* ═══════════════ TmSchedulerTimelineView — day granularity (Scale=Days) ═══════════════
+   The same resource rows, but the columns are the days of the range: a channel × day board. A
+   narrow container scrolls horizontally (the timeline root is the scroller) and the resource
+   column stays pinned, so no width ever needs a different view. */
+.tm-scheduler-timeline--days .tm-scheduler-timeline-header,
+.tm-scheduler-timeline--days .tm-scheduler-timeline-row {
+    min-width: calc(var(--tm-scheduler-timeline-resource-width, 12rem) + var(--tm-scheduler-timeline-day-count, 7) * var(--tm-scheduler-timeline-day-width, 9rem));
+}
+
+/* The frame around the day board owns its scroll-edge shadows: an inset shadow on the scroller
+   itself paints under the rows, and a sticky pseudo-element inside a flex scroller would join the
+   flex flow. scheduler.js sets data-scroll-shadow only while the board actually overflows, so a
+   board whose columns fit shows no edge at all. */
+.tm-scheduler-timeline-day-frame {
+    --tm-scheduler-scroll-shadow-size: 1.5rem;
+    --tm-scheduler-scroll-shadow-color: color-mix(in srgb, var(--tm-bg-overlay) 25%, transparent);
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    min-height: 0;
+    position: relative;
+}
+
+.tm-scheduler-timeline-day-frame > .tm-scheduler-timeline--days {
+    min-width: 0;
+    min-height: 0;
+}
+
+/* The mobile layout reserves a narrower channel column; the left shadow follows that column edge. */
+.tm-scheduler[data-layout="mobile"] .tm-scheduler-timeline-day-frame {
+    --tm-scheduler-timeline-resource-width: 8rem;
+}
+
+.tm-scheduler-timeline-day-frame::before,
+.tm-scheduler-timeline-day-frame::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: var(--tm-scheduler-scroll-shadow-size);
+    pointer-events: none;
+    z-index: 5;
+    opacity: 0;
+}
+
+/* The pinned channel column hides the columns that scrolled past it, so the left shadow sits on
+   the column's own right edge rather than on the frame's. */
+.tm-scheduler-timeline-day-frame::before {
+    left: var(--tm-scheduler-timeline-resource-width, 12rem);
+    background: linear-gradient(to right, var(--tm-scheduler-scroll-shadow-color), transparent);
+}
+
+.tm-scheduler-timeline-day-frame::after {
+    right: 0;
+    background: linear-gradient(to left, var(--tm-scheduler-scroll-shadow-color), transparent);
+}
+
+.tm-scheduler-timeline-day-frame[data-scroll-shadow~="start"]::before,
+.tm-scheduler-timeline-day-frame[data-scroll-shadow~="both"]::before,
+.tm-scheduler-timeline-day-frame[data-scroll-shadow~="end"]::after,
+.tm-scheduler-timeline-day-frame[data-scroll-shadow~="both"]::after {
+    opacity: 1;
+}
+
+@media print {
+    .tm-scheduler-timeline-day-frame::before,
+    .tm-scheduler-timeline-day-frame::after { display: none; }
+}
+
+.tm-scheduler[data-layout="mobile"] .tm-scheduler-timeline--days {
+    --tm-scheduler-timeline-day-width: 7.5rem;
+    /* A channel column has to keep its name readable on a phone, so it is wider than the hour
+       timeline's 5rem rail and the name wraps instead of ellipsizing to one letter. */
+    --tm-scheduler-timeline-resource-width: 8rem;
+    /* Free horizontal scrolling: the day board has no snap points, and a mandatory snap would
+       pull a programmatic "scroll to the first event" back to the start. */
+    scroll-snap-type: none;
+}
+
+/* ── Day column header ── */
+.tm-scheduler-timeline-day-header {
+    flex: 1 1 0;
+    min-width: var(--tm-scheduler-timeline-day-width, 9rem);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--tm-space-1);
+    padding: var(--tm-space-2) var(--tm-space-1);
+    border-right: 1px solid var(--tm-border-color);
+    font-size: var(--tm-font-size-xs);
+    color: var(--tm-text-secondary);
+    text-align: center;
+}
+
+.tm-scheduler-timeline-day-header:last-child {
+    border-right: none;
+}
+
+.tm-scheduler-timeline-day-header--today {
+    color: var(--tm-color-primary);
+}
+
+.tm-scheduler-timeline-day-header-weekday {
+    font-weight: var(--tm-font-weight-semibold);
+}
+
+.tm-scheduler-timeline-day-header-date {
+    font-size: var(--tm-font-size-xs);
+    white-space: nowrap;
+}
+
+/* ── Day cell ── */
+.tm-scheduler-timeline-day-cell {
+    flex: 1 1 0;
+    min-width: var(--tm-scheduler-timeline-day-width, 9rem);
+    /* The cell measures itself so the lane grid can collapse where it would squeeze a chip. */
+    container-type: inline-size;
+    min-height: var(--tm-scheduler-timeline-day-cell-height, 4.5rem);
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-1);
+    padding: var(--tm-space-1);
+    border-right: 1px solid var(--tm-border-color);
+    cursor: pointer;
+    transition: background-color 0.1s ease;
+}
+
+.tm-scheduler-timeline-day-cell:last-child {
+    border-right: none;
+}
+
+.tm-scheduler-timeline-day-cell:hover {
+    background: var(--tm-color-surface-hover);
+}
+
+.tm-scheduler-timeline-day-cell:focus-visible {
+    outline: 2px solid transparent;
+    box-shadow: inset 0 0 0 2px var(--tm-color-primary), inset 0 0 0 4px var(--tm-bg-surface);
+    z-index: 2;
+}
+
+.tm-scheduler-timeline-day-cell--weekend {
+    background: color-mix(in srgb, var(--tm-text-secondary) 4%, transparent);
+}
+
+.tm-scheduler-timeline-day-cell--today {
+    background: color-mix(in srgb, var(--tm-color-primary) 5%, transparent);
+}
+
+.tm-scheduler-timeline-day-cell--selected {
+    box-shadow: inset 0 0 0 2px var(--tm-color-primary);
+}
+
+/* ── The chips of one cell, laid out on the cell's lanes ── */
+.tm-scheduler-timeline-day-cell-events {
+    display: grid;
+    grid-template-columns: repeat(var(--tm-scheduler-lanes, 1), minmax(0, 1fr));
+    gap: var(--tm-space-1);
+    align-content: start;
+    min-width: 0;
+}
+
+/* Overlapping events split the cell into lane columns only when the cell is wide enough for two
+   readable chips. A narrower cell stacks its chips chronologically instead of squeezing every
+   title into a sliver; the lane is still on each chip as data-lane / --tm-scheduler-lane. */
+@container (width < 12rem) {
+    .tm-scheduler-timeline-day-cell-events {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .tm-scheduler-timeline-day-cell-events > .tm-scheduler-timeline-day-event {
+        grid-column: 1 / -1 !important;
+        grid-row: auto !important;
+    }
+}
+
+.tm-scheduler-timeline-day-event {
+    container-type: inline-size;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    padding: var(--tm-space-1) var(--tm-space-2);
+    border-radius: var(--tm-radius-sm);
+    font-size: var(--tm-font-size-xs);
+    cursor: pointer;
+    overflow: hidden;
+    z-index: 1;
+}
+
+.tm-scheduler-timeline-day-event:focus-visible {
+    outline: 2px solid transparent;
+    box-shadow: var(--tm-focus-ring);
+    z-index: 2;
+}
+
+/* An event that started on an earlier day keeps a dashed edge, so a reader can tell it continues. */
+.tm-scheduler-timeline-day-event--continuation {
+    border-left-style: dashed;
+}
+
+.tm-scheduler[data-layout="mobile"] .tm-scheduler-timeline--days .tm-scheduler-timeline-resource-label {
+    white-space: normal;
+    font-size: var(--tm-font-size-sm);
+}
+
+.tm-scheduler[data-layout="mobile"] .tm-scheduler-timeline--days .tm-scheduler-resource-header-name {
+    white-space: normal;
+    overflow-wrap: break-word;
+}
+
+.tm-scheduler-timeline-day-cell .tm-scheduler-timeline-event-time {
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-xs);
+    line-height: var(--tm-line-height-tight);
+    max-width: 100%;
+}
+
+.tm-scheduler-timeline-day-cell .tm-scheduler-timeline-event-title {
+    font-weight: var(--tm-font-weight-medium);
+    max-width: 100%;
+    /* A lane halves the cell's width, so a chip wraps its title instead of ellipsizing it away. */
+    white-space: normal;
+    overflow-wrap: break-word;
+}
+
+/* ── The chip cap ── */
+.tm-scheduler-timeline-day-more {
+    align-self: flex-start;
+    padding: 0 var(--tm-space-1);
+    border: none;
+    border-radius: var(--tm-radius-sm);
+    background: transparent;
+    color: var(--tm-color-primary);
+    font-size: var(--tm-font-size-xs);
+    font-weight: var(--tm-font-weight-medium);
+    cursor: pointer;
+}
+
+.tm-scheduler-timeline-day-more:hover {
+    background: var(--tm-color-surface-hover);
+    text-decoration: underline;
+}
+
+.tm-scheduler-timeline-day-more:focus-visible {
+    outline: 2px solid transparent;
+    box-shadow: var(--tm-focus-ring);
+}
+
+/* The day board is a drag surface on a coarse pointer too: no native drag image, no text pick. */
+.tm-scheduler-timeline-day-event[draggable="true"] {
+    cursor: grab;
+    user-select: none;
+}
+
+@media print {
+    /* Print shows every column on one page: the scroller stops scrolling and the pins unpin. */
+    .tm-scheduler-timeline--days {
+        overflow: visible;
+    }
+
+    .tm-scheduler-timeline--days .tm-scheduler-timeline-header,
+    .tm-scheduler-timeline--days .tm-scheduler-timeline-row {
+        min-width: 0;
+    }
+
+    .tm-scheduler-timeline--days .tm-scheduler-timeline-resource-header--sticky,
+    .tm-scheduler-timeline--days .tm-scheduler-timeline-resource-label--sticky {
+        position: static;
+    }
 }

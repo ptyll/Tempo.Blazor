@@ -427,6 +427,34 @@
     </div>
 </section>
 
+<!-- Day-granularity timeline: channels × days -->
+<section class="demo-section" data-testid="scheduler-timeline-days-section">
+    <div class="flex items-center justify-between mb-4">
+        <div>
+            <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Channels × days</h2>
+            <p class="text-sm text-slate-500 dark:text-slate-400">
+                The same timeline scaled to days: one row per channel, one column per day of the week
+            </p>
+        </div>
+        <span class="px-2 py-0.5 text-xs font-medium bg-sky-100 dark:bg-sky-900/30 text-sky-700 dark:text-sky-300 rounded-full">Days</span>
+    </div>
+
+    <div class="showcase-card" style="height: 680px; position: relative;">
+        @* No pinned LayoutMode: the board has to prove the responsive path (a narrow container
+           scrolls with the channel column pinned). *@
+        <TmScheduler View="TmScheduleViewType.Timeline"
+                     TimelineScale="TmSchedulerTimelineScale.Days"
+                     Class="demo-scheduler-channel-board"
+                     @bind-CurrentDate="_channelWeek"
+                     Events="_channelEvents"
+                     Resources="_channels"
+                     ScrollToTime="@_scrollToEight"
+                     ShowResourceFilter="true"
+                     OnEventClick="HandleEventClick"
+                     OnSlotClick="HandleSlotClick" />
+    </div>
+</section>
+
 <!-- Highlighted weekends and tinted all-day events -->
 <section class="demo-section" data-testid="scheduler-highlight-section">
     <div class="flex items-center justify-between mb-4">
@@ -800,6 +828,34 @@
         // Overlaps Meeting A, so Room A shows two lanes.
         new() { Id = "t6", Title = "Interview", Start = DateTime.Today.AddHours(9.5), End = DateTime.Today.AddHours(10.5), Color = "#ec4899", ResourceId = "room-a" },
     };
+
+    /// <summary>The day-granularity board: the week of 15 June 2026, Monday first.</summary>
+    private DateTime _channelWeek = new(2026, 6, 15);
+
+    private readonly List<TmScheduleResource> _channels =
+    [
+        new() { Id = "paid", Name = "Paid search", Color = "#3b82f6", ResourceType = "Channel" },
+        new() { Id = "social", Name = "Social", Color = "#ec4899", ResourceType = "Channel" },
+        new() { Id = "email", Name = "E-mail", Color = "#10b981", ResourceType = "Channel" },
+        new() { Id = "display", Name = "Display", Color = "#f59e0b", ResourceType = "Channel" },
+    ];
+
+    private readonly List<TmScheduleEvent> _channelEvents =
+    [
+        // Nothing on Monday, so the board's first column is empty and ScrollToTime has a day to
+        // reveal: the first event is Tuesday's, and the board scrolls to it.
+        new() { Id = "c1", Title = "Summer promo", Start = new DateTime(2026, 6, 16, 9, 0, 0), End = new DateTime(2026, 6, 16, 11, 0, 0), Color = "#3b82f6", ResourceId = "paid" },
+        // Overlaps the promo, so the paid row paints two lanes in that cell.
+        new() { Id = "c2", Title = "Bid review", Start = new DateTime(2026, 6, 16, 10, 0, 0), End = new DateTime(2026, 6, 16, 12, 0, 0), Color = "#8b5cf6", ResourceId = "paid" },
+        new() { Id = "c3", Title = "Reel launch", Start = new DateTime(2026, 6, 17, 13, 0, 0), End = new DateTime(2026, 6, 17, 15, 0, 0), Color = "#ec4899", ResourceId = "social" },
+        // Spans four days, so it paints on each of them with the continuation edge.
+        new() { Id = "c4", Title = "Always-on campaign", Start = new DateTime(2026, 6, 16, 0, 0, 0), End = new DateTime(2026, 6, 20, 0, 0, 0), AllDay = true, Color = "#0ea5e9", ResourceId = "display" },
+        new() { Id = "c5", Title = "Newsletter", Start = new DateTime(2026, 6, 18, 8, 0, 0), End = new DateTime(2026, 6, 18, 9, 0, 0), Color = "#10b981", ResourceId = "email" },
+        new() { Id = "c6", Title = "Segmentation", Start = new DateTime(2026, 6, 18, 9, 0, 0), End = new DateTime(2026, 6, 18, 10, 0, 0), Color = "#10b981", ResourceId = "email" },
+        new() { Id = "c7", Title = "A/B test", Start = new DateTime(2026, 6, 18, 10, 0, 0), End = new DateTime(2026, 6, 18, 11, 0, 0), Color = "#10b981", ResourceId = "email" },
+        new() { Id = "c8", Title = "Retargeting", Start = new DateTime(2026, 6, 18, 11, 0, 0), End = new DateTime(2026, 6, 18, 12, 0, 0), Color = "#10b981", ResourceId = "email" },
+        new() { Id = "c9", Title = "Webinar", Start = new DateTime(2026, 6, 19, 14, 0, 0), End = new DateTime(2026, 6, 19, 16, 0, 0), Color = "#f59e0b", ResourceId = "display" },
+    ];
 
     private TmScheduleViewType _toolbarView = TmScheduleViewType.Month;
     private DateTime _toolbarDate = new(2026, 6, 15);

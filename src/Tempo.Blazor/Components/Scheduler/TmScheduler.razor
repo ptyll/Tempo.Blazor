@@ -34,6 +34,7 @@
                         ShowPrint="@AllowPrint"
                         OnPrint="@PrintAsync"
                         InstanceId="@_instanceId"
+                        TimelineScale="@TimelineScale"
                         LayoutMode="@mode.Resolved"
                         HasActionBar="@(MobileActionBar == TmSchedulerMobileActionBar.Auto && mode.IsMobile)" />
 
@@ -105,6 +106,13 @@
 
     /// <summary>Active view type.</summary>
     [Parameter] public TmScheduleViewType View { get; set; } = TmScheduleViewType.Month;
+
+    /// <summary>
+    /// How the Timeline view lays out its columns: the hour slots of one day (the default, the shape
+    /// every host had) or the days of the range with one row per resource — the channel × day board.
+    /// The day scale loads, titles and steps the week the Week view renders.
+    /// </summary>
+    [Parameter] public TmSchedulerTimelineScale TimelineScale { get; set; } = TmSchedulerTimelineScale.Hours;
 
     /// <summary>Fires when the view type changes.</summary>
     [Parameter] public EventCallback<TmScheduleViewType> ViewChanged { get; set; }
@@ -739,7 +747,8 @@
     private int NormalizedAgendaDays => SchedulerRange.NormalizeAgendaDays(AgendaDays);
 
     /// <summary>The one range this render loads, titles and hands to the view.</summary>
-    private SchedulerRangeOptions RangeOptions => new(NormalizedFirstDay, NormalizedAgendaDays, WeekDays, MonthWeeks);
+    private SchedulerRangeOptions RangeOptions
+        => new(NormalizedFirstDay, NormalizedAgendaDays, WeekDays, MonthWeeks, TimelineScale);
 
     /// <summary>
     /// Events the views render. An empty <see cref="SelectedResourceIds"/> keeps every loaded event;
@@ -941,6 +950,14 @@
                                          Events="@VisibleEvents"
                                          Resources="@VisibleResources"
                                          SlotDuration="@SlotDuration"
+                                         Scale="@TimelineScale"
+                                         FirstDayOfWeek="@NormalizedFirstDay"
+                                         WeekDays="@WeekDays"
+                                         Today="@DateOnly.FromDateTime(TodayInDisplayZone())"
+                                         SelectedDate="@SelectedDate"
+                                         LayoutMode="@mode.Resolved"
+                                         MaxVisibleEvents="@MaxVisibleEvents"
+                                         OnMoreClick="@HandleMoreClickAsync"
                                          ReadOnly="@ReadOnly"
                                          WorkDayStart="@WorkDayStart"
                                          WorkDayEnd="@WorkDayEnd"

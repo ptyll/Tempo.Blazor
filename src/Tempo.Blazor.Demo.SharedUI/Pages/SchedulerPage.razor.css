@@ -32,3 +32,12 @@
 .demo-scheduler-panel-calendar {
     width: 100%;
 }
+
+/* The channel board's own density: eleven-rem channel labels and seven-and-a-quarter-rem days fit
+   the demo card's width on a desktop, so all seven days are visible without scrolling, and the
+   channel name is not ellipsized. `::deep` because the token lands on a child component's root
+   element, not on this page's own markup. */
+::deep .demo-scheduler-channel-board {
+    --tm-scheduler-timeline-resource-width: 11rem;
+    --tm-scheduler-timeline-day-width: 7.25rem;
+}

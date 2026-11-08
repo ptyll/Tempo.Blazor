@@ -4917,6 +4917,8 @@
   "TmScheduler_SlotAriaLabel": "de {0} à {1}, {2}",
   "TmScheduler_Timeline": "Chronologie",
   "TmScheduler_TimelineGrid": "Chronologie",
+  "TmScheduler_TimelineDaysGrid": "Chronologie par jour",
+  "TmScheduler_MoveHint_TimelineDays": "Maintenez et faites glisser pour déplacer. Entrée ou F2 sur un jour place le focus sur son premier événement, Échap revient au jour. Alt+gauche ou Alt+droite déplace d'un jour, Alt+haut ou Alt+bas vers une autre ressource, Alt+Maj+gauche ou Alt+Maj+droite décale la fin d'un jour.",
   "TmScheduler_NowIndicator": "Heure actuelle {0}",
   "TmScheduler_Resources": "Ressources",
   "TmScheduler_AllResources": "Toutes les ressources",
