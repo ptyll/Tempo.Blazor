@@ -1405,6 +1405,12 @@ public abstract class LocalizationTestBase : BunitContext
         ["TmKanbanBoard_Empty"] = "No items",
         ["TmKanban_NoSwimlane"] = "No value",
         ["TmKanban_ToggleSwimlane"] = "Toggle swimlane",
+        // TmKanbanBoard — collapsible columns (plan a98e4a71). The plural family keeps the count in
+        // {0} (Loc.Plural always formats the count there) and the column title in {1}.
+        ["TmKanban_CollapseColumn"] = "Collapse column {0}",
+        ["TmKanban_ExpandColumn"] = "Expand column {0}",
+        ["TmKanban_CollapsedColumnSummary_One"] = "{1}, {0} card",
+        ["TmKanban_CollapsedColumnSummary_Other"] = "{1}, {0} cards",
 
         // TmRichEditor - Tokens
         ["TmRichEditor_Token"]          = "Insert variable",
