@@ -3748,10 +3748,10 @@ to{opacity:1;}
 .tm-chart__funnel-label,.tm-chart__funnel-value{fill:var(--tm-chart-funnel-label-outside);}
 .tm-chart__funnel-label{font-size:var(--tm-chart-funnel-label-size-viewbox);}
 .tm-chart__funnel-value{font-size:var(--tm-chart-funnel-value-size-viewbox);}
-@container tm-chart-funnel (max-width:520px){.tm-chart__funnel-label{font-size:var(--tm-chart-funnel-label-size-narrow);}
+@container tm-chart-funnel (width < 32.5rem){.tm-chart__funnel-label{font-size:var(--tm-chart-funnel-label-size-narrow);}
 .tm-chart__funnel-value{font-size:var(--tm-chart-funnel-value-size-narrow);}
 }
-@container tm-chart-funnel-plot (max-height:245px){.tm-chart__funnel-label{font-size:var(--tm-chart-funnel-label-size-narrow);}
+@container tm-chart-funnel-plot (height < 15.3125rem){.tm-chart__funnel-label{font-size:var(--tm-chart-funnel-label-size-narrow);}
 .tm-chart__funnel-value{font-size:var(--tm-chart-funnel-value-size-narrow);}
 }
 .tm-chart__funnel-label--inside{fill:var(--tm-chart-funnel-label-inside);}

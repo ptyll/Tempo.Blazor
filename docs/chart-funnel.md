@@ -91,9 +91,11 @@ Two containers fix it, and both are on the funnel's own DOM:
 .tm-chart--funnel .tm-chart__plot { container: tm-chart-funnel-plot / size; }   /* both axes */
 ```
 
-The root is a **named** container, so `@container tm-chart-funnel (max-width: 520px)` never binds to a
-nested container a host dropped inside the chart. The plot box (`.tm-chart__plot`, the box the SVG meets
-into) is a **size** container, because the compensation needs the block axis:
+The root is a **named** container, so `@container tm-chart-funnel (width < 32.5rem)` never binds to a
+nested container a host dropped inside the chart. The thresholds are component-local **density** steps, so
+they are declared in `rem` behind half-open range syntax — the form the scheduler's card queries use —
+while `TmBreakpoints` (and its guard) owns the four LAYOUT widths in `px`. The plot box (`.tm-chart__plot`,
+the box the SVG meets into) is a **size** container, because the compensation needs the block axis:
 
 ```css
 /* the exact compensation — a length divided by a container length turns plot pixels into viewBox units */
@@ -117,16 +119,16 @@ large chart keeps type proportional to its own shape instead of shrinking to 12 
 | `--tm-chart-funnel-value-size` | `11px` | **Rendered** floor of the value line |
 | `--tm-chart-funnel-label-size-viewbox` | `18px` | Wide-container fallback in viewBox units (≈ 12,2 px at a 0.68 scale) |
 | `--tm-chart-funnel-value-size-viewbox` | `17px` | Wide-container value fallback (≈ 11,5 px) |
-| `--tm-chart-funnel-label-size-narrow` | `23px` | Below a 520 px container **or** a 245 px plot (≈ 13 px at a 0.56 scale) |
+| `--tm-chart-funnel-label-size-narrow` | `23px` | Below a 32.5 rem container (≈ 520 px) **or** a 15.3125 rem plot (≈ 245 px) (≈ 13 px at a 0.56 scale) |
 | `--tm-chart-funnel-value-size-narrow` | `21px` | The same step for a value line (≈ 11,9 px) |
 
 The four `-viewbox`/`-narrow` tokens are the **fallback** for an engine that cannot divide a length by a
 container length: it drops the whole `@supports` declaration and keeps two discrete viewBox steps, which
 are dimensioned to reach the same floor at the scales a funnel actually runs at. The bigger step is taken
-by **two** conditions — a container under 520 px *or* a plot under 245 px tall — because the scale is
-height limited: a wide card that is short needs the same bigger type as a phone. Every query and the
-compensation read the chart's own box — never the viewport — so a funnel in a dashboard column and a
-funnel in a full-width page each get the scale their own container needs.
+by **two** conditions — a container under 32.5 rem (≈ 520 px) *or* a plot under 15.3125 rem (≈ 245 px) tall
+— because the scale is height limited: a wide card that is short needs the same bigger type as a phone.
+Every query and the compensation read the chart's own box — never the viewport — so a funnel in a dashboard
+column and a funnel in a full-width page each get the scale their own container needs.
 
 The fallback's envelope: a step is a constant, so it can only be calibrated for the scales it meets. The
 two steps cover the cards a funnel lives in (any width at the default ~320 px height, plus phone-sized

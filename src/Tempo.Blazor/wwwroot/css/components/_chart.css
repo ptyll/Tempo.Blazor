@@ -475,7 +475,9 @@
 
 /* The step an engine without length division in calc() can have: two discrete viewBox sizes, each
    dimensioned to reach the rendered floor at the scales a funnel actually runs at. The second one is
-   taken below a 520 px container and below a 245 px plot (see the two @container blocks below). */
+   taken below a 32.5rem container (≈ 520 px) and below a 15.3125rem plot (≈ 245 px — see the two
+   @container blocks below). Component-local density thresholds are declared in rem, exactly like the
+   scheduler's 4.5rem/8rem/9rem card queries; TmBreakpoints guards the four LAYOUT widths in px. */
 .tm-chart__funnel-label {
     font-size: var(--tm-chart-funnel-label-size-viewbox);
 }
@@ -484,7 +486,7 @@
     font-size: var(--tm-chart-funnel-value-size-viewbox);
 }
 
-@container tm-chart-funnel (max-width: 520px) {
+@container tm-chart-funnel (width < 32.5rem) {
     .tm-chart__funnel-label {
         font-size: var(--tm-chart-funnel-label-size-narrow);
     }
@@ -498,7 +500,7 @@
    plot needs the bigger step even when the card is wide (a 320 px card keeps ≈ 271 px of plot once its
    legend is laid out; a wrapped phone legend leaves even less). Same values as the narrow step — both
    conditions say "the box is small", just on a different axis. */
-@container tm-chart-funnel-plot (max-height: 245px) {
+@container tm-chart-funnel-plot (height < 15.3125rem) {
     .tm-chart__funnel-label {
         font-size: var(--tm-chart-funnel-label-size-narrow);
     }

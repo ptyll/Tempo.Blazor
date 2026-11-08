@@ -667,7 +667,27 @@
     private DateTime _currentDate = DateTime.Today;
     private DateTime _templateDate = new(2026, 7, 2);
     private TmScheduleViewType _templateView = TmScheduleViewType.Month;
-    private DateTime _weekDate = DateTime.Today;
+
+    /// <summary>
+    /// The day the week samples sit on — and the week the week section opens on. It is never a
+    /// weekend: the range section clips its week to a WorkWeek (Mon–Fri), so a Saturday or Sunday
+    /// anchor left that board with no events at all (and the scheduler resize E2E waiting for
+    /// "Morning Standup" timed out). Friday is always inside the Monday-first WorkWeek.
+    /// </summary>
+    private static readonly DateTime WeekSampleDate = ResolveWeekSampleDate();
+
+    private static DateTime ResolveWeekSampleDate()
+    {
+        var today = DateTime.Today;
+        return today.DayOfWeek switch
+        {
+            DayOfWeek.Saturday => today.AddDays(-1),
+            DayOfWeek.Sunday => today.AddDays(-2),
+            _ => today,
+        };
+    }
+
+    private DateTime _weekDate = WeekSampleDate;
     private DateTime _dayDate = DateTime.Today;
     private DateTime _agendaDate = DateTime.Today;
     private TmScheduleViewType _rangesView = TmScheduleViewType.Month;
@@ -792,11 +812,11 @@
 
     private List<TmScheduleEvent> _weekEvents = new()
     {
-        new() { Id = "w1", Title = "Morning Standup", Start = DateTime.Today.AddHours(9), End = DateTime.Today.AddHours(9.5), Color = "#3b82f6" },
-        new() { Id = "w2", Title = "Sprint Review", Start = DateTime.Today.AddHours(10), End = DateTime.Today.AddHours(11), Color = "#10b981" },
-        new() { Id = "w3", Title = "Lunch Break", Start = DateTime.Today.AddHours(12), End = DateTime.Today.AddHours(13), Color = "#f59e0b" },
-        new() { Id = "w4", Title = "Dev Meeting", Start = DateTime.Today.AddHours(14), End = DateTime.Today.AddHours(15), Color = "#8b5cf6" },
-        new() { Id = "w5", Title = "Code Review", Start = DateTime.Today.AddHours(15.5), End = DateTime.Today.AddHours(16.5), Color = "#ef4444" },
+        new() { Id = "w1", Title = "Morning Standup", Start = WeekSampleDate.AddHours(9), End = WeekSampleDate.AddHours(9.5), Color = "#3b82f6" },
+        new() { Id = "w2", Title = "Sprint Review", Start = WeekSampleDate.AddHours(10), End = WeekSampleDate.AddHours(11), Color = "#10b981" },
+        new() { Id = "w3", Title = "Lunch Break", Start = WeekSampleDate.AddHours(12), End = WeekSampleDate.AddHours(13), Color = "#f59e0b" },
+        new() { Id = "w4", Title = "Dev Meeting", Start = WeekSampleDate.AddHours(14), End = WeekSampleDate.AddHours(15), Color = "#8b5cf6" },
+        new() { Id = "w5", Title = "Code Review", Start = WeekSampleDate.AddHours(15.5), End = WeekSampleDate.AddHours(16.5), Color = "#ef4444" },
     };
 
     private List<TmScheduleEvent> _dayEvents = new()

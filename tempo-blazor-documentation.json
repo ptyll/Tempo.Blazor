@@ -15285,6 +15285,10 @@
         {
           "title": "Warning alert with actions",
           "code": "<TmAlert Severity=\"AlertSeverity.Warning\" Variant=\"AlertVariant.Outlined\" Title=\"Expiring soon\">\n    Your subscription expires in 3 days.\n    <Actions>\n        <TmButton Variant=\"ButtonVariant.Ghost\" Size=\"ButtonSize.Sm\">Renew now</TmButton>\n    </Actions>\n</TmAlert>"
+        },
+        {
+          "title": "Success alert announced politely (role=status)",
+          "code": "<TmAlert Severity=\"AlertSeverity.Success\" Role=\"status\" Title=\"Profile saved\">\n    Your changes are live. Role=\"status\" announces the good news politely instead of\n    interrupting an active announcement.\n</TmAlert>"
         }
       ]
     },

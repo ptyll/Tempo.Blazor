@@ -67,6 +67,17 @@ public class ServerRenderingTests : ServerTestBase
         var alerts = page.Locator(".tm-alert");
         await alerts.First.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
 
+        // The Role parameter (plan 8fa7319c phase 4) must have left the DEFAULT rendering exactly
+        // where it was: every alert on the demo passes no Role, so each one is still the assertive
+        // live region and no alert root grew an opt-in status/none role of its own.
+        var count = await alerts.CountAsync();
+        Assert.IsTrue(count > 0, "the alerts section renders at least one alert");
+        for (var index = 0; index < count; index++)
+        {
+            Assert.AreEqual("alert", await alerts.Nth(index).GetAttributeAsync("role"),
+                $"alert #{index} keeps the default role=alert — status/none render only when a host asks for them");
+        }
+
         await TakeScreenshotAsync(page, "alerts_page");
     }
 

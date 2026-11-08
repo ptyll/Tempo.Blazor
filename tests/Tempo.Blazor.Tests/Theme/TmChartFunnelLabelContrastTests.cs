@@ -82,7 +82,7 @@ public class TmChartFunnelLabelContrastTests
         var labelNarrow = Px(tokens["--tm-chart-funnel-label-size-narrow"]);
         var valueNarrow = Px(tokens["--tm-chart-funnel-value-size-narrow"]);
 
-        // Wide bucket (the container is over 520 px, so the discrete step is the base one).
+        // Wide bucket (the container is over 32.5rem ≈ 520 px, so the discrete step is the base one).
         Rendered(labelWide, 672, plotHeight).Should().BeGreaterThanOrEqualTo(labelFloor,
             "the 672 px desktop card renders its viewBox type at ≈ 0,68 — 18 units is 12,2 px");
         Rendered(valueWide, 672, plotHeight).Should().BeGreaterThanOrEqualTo(valueFloor,
@@ -186,7 +186,10 @@ public class TmChartFunnelLabelContrastTests
             .Should().Be("tm-chart-funnel / inline-size");
         ThemeCss.Property("_chart.css", ".tm-chart--funnel .tm-chart__plot", "container")
             .Should().Be("tm-chart-funnel-plot / size");
-        css.Should().Contain("@container tm-chart-funnel (max-width: 520px)",
+        // The thresholds are component-local DENSITY steps, so they are declared in rem behind
+        // half-open range syntax — the same form the scheduler's card queries use — while
+        // TmBreakpoints owns the four LAYOUT widths in px (TmBreakpointsTests).
+        css.Should().Contain("@container tm-chart-funnel (width < 32.5rem)",
             "the width step must query the NAMED container, never whichever container is nearest");
 
         // The exact compensation: `size × 600 / 100cqw` and `size × 400 / 100cqh`, floored by the
@@ -208,7 +211,7 @@ public class TmChartFunnelLabelContrastTests
         var narrow = css[css.IndexOf("@container tm-chart-funnel", StringComparison.Ordinal)..];
         narrow.Should().Contain("var(--tm-chart-funnel-label-size-narrow)");
         narrow.Should().Contain("var(--tm-chart-funnel-value-size-narrow)");
-        narrow.Should().Contain("@container tm-chart-funnel-plot (max-height: 245px)",
+        narrow.Should().Contain("@container tm-chart-funnel-plot (height < 15.3125rem)",
             "the block axis is where the scale comes from, so the fallback has to query it too");
     }
 
@@ -228,7 +231,7 @@ public class TmChartFunnelLabelContrastTests
         bundled.Should().MatchRegex(@"container:\s*tm-chart-funnel / inline-size");
         bundled.Should().MatchRegex(@"container:\s*tm-chart-funnel-plot / size");
         bundled.Should().MatchRegex(@"@supports \(font-size:\s*calc\(1px \* 600 / 100cqw \* 1px\)\)");
-        bundled.Should().MatchRegex(@"@container tm-chart-funnel \(max-width:\s*520px\)");
-        bundled.Should().MatchRegex(@"@container tm-chart-funnel-plot \(max-height:\s*245px\)");
+        bundled.Should().MatchRegex(@"@container tm-chart-funnel \(width\s*<\s*32\.5rem\)");
+        bundled.Should().MatchRegex(@"@container tm-chart-funnel-plot \(height\s*<\s*15\.3125rem\)");
     }
 }

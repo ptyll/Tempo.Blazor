@@ -481,10 +481,15 @@ public class TmPdfTemplateDesignerTests : LocalizationTestBase
         cut.Find("[data-field-uuid='field-1']").ContextMenu();
         cut.Find(".tm-pdf-template-designer__copy-field").Click();
 
+        // The shared menu closes the item, then yields, before the item handler runs (the same
+        // contract the paste path below waits on): the copy announcement lands on a later render,
+        // so reading the markup straight after the click is a race under a loaded test host.
+        cut.WaitForAssertion(() => cut.Markup.Should().Contain("Field copied"));
         cut.FindAll(".tm-pdf-template-designer__context-actions").Should().BeEmpty();
-        cut.Markup.Should().Contain("Field copied");
 
         cut.Find(".tm-pdf-template-designer__next-page").Click();
+        cut.WaitForAssertion(() =>
+            cut.Find("[data-page-key='attachment-1:1'] .tm-pdf-template-designer__page-surface"));
         cut.Find("[data-page-key='attachment-1:1'] .tm-pdf-template-designer__page-surface")
             .ContextMenu(new MouseEventArgs { OffsetX = 500, OffsetY = 500 });
         cut.Find(".tm-pdf-template-designer__paste-field").Click();
@@ -498,7 +503,7 @@ public class TmPdfTemplateDesignerTests : LocalizationTestBase
         pastedArea.Page.Should().Be(1);
         pastedArea.X.Should().BeApproximately(0.4, 0.001);
         pastedArea.Y.Should().BeApproximately(0.46, 0.001);
-        cut.Markup.Should().Contain("Field pasted");
+        cut.WaitForAssertion(() => cut.Markup.Should().Contain("Field pasted"));
     }
 
     [Fact]
