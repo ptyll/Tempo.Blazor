@@ -590,6 +590,7 @@ public partial class TmModelingViewer : Tempo.Blazor.Components.TmComponentBase,
             DiffOverlay?.LayoutOnlyElementIds is null ? "-" : string.Join(",", DiffOverlay.LayoutOnlyElementIds),
             DiffOverlay?.AddedRelationshipIds is null ? "-" : string.Join(",", DiffOverlay.AddedRelationshipIds),
             DiffOverlay?.RemovedRelationshipIds is null ? "-" : string.Join(",", DiffOverlay.RemovedRelationshipIds),
+            DiffOverlay?.ChangedRelationshipIds is null ? "-" : string.Join(",", DiffOverlay.ChangedRelationshipIds),
             Heatmap is null ? "-" : string.Join(",", Heatmap.Values.OrderBy(pair => pair.Key, StringComparer.Ordinal).Select(pair => $"{pair.Key}:{pair.Value.ToString("R", CultureInfo.InvariantCulture)}")));
 
     private IReadOnlyList<ModelingNotationCatalogEntry>? BuildLegendEntries()

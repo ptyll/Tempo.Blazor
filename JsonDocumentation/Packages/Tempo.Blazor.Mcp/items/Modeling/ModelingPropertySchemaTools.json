@@ -1,0 +1,10 @@
+{
+  "kind": "Class",
+  "category": "Modeling",
+  "namespace": "Tempo.Blazor.Mcp.Modeling",
+  "description": "Read tool for the host's property schema (phase 7): the sections and typed fields the modeling inspector renders for a notation + semantic type, resolved through the SAME IModelingPropertySchemaProvider and request shape modeling_apply_operations validates with, so an agent can discover the required fields (and the lookup descriptors) BEFORE it writes a batch.",
+  "packageId": "Tempo.Blazor.Mcp",
+  "sourcePath": "src/Tempo.Blazor.Mcp/Modeling/ModelingPropertySchemaTools.cs",
+  "documentationStatus": "generated",
+  "itemName": "ModelingPropertySchemaTools"
+}

@@ -973,10 +973,10 @@ New (phases 2, 4, 5, 7):
 | `op` | Required | Optional | Policy |
 |---|---|---|---|
 | `set_properties` | `id` (element or relationship — resolved by id), `properties` | `removedProperties` | both |
-| `set_view_node` | `elementId`, `viewId?` | `x`, `y`, `width`, `height`, `parentNodeId` (`""` clears) | `Authoring`, MCP in phase 7 |
-| `remove_view_node` | `elementId`, `viewId?` | — | `Authoring` |
-| `set_view_connection` | `relationshipId`, `viewId?` | `waypoints: [{x,y}]` (`[]` clears) | `Authoring` |
-| `remove_view_connection` | `relationshipId`, `viewId?` | — | `Authoring` |
+| `set_view_node` | `elementId`, `viewId?` | `x`, `y`, `width`, `height`, `parentNodeId` (`""` clears) | `Authoring` (MCP since phase 7) |
+| `remove_view_node` | `elementId`, `viewId?` | — | `Authoring` (MCP since phase 7) |
+| `set_view_connection` | `relationshipId`, `viewId?` | `waypoints: [{x,y}]` (`[]` clears) | `Authoring` (MCP since phase 7) |
+| `remove_view_connection` | `relationshipId`, `viewId?` | — | `Authoring` (MCP since phase 7) |
 
 (`viewId` omitted/`""` = the **target view**: `Views[0]`… see §3.2 rule 8 — note this is NOT the
 generator's `SelectView` meaning, where an empty id renders the grid without any view.)
@@ -1023,6 +1023,55 @@ operations[2] add_relationship: 'SequenceFlow' from 'Task' to 'Pool' is not vali
 - Notation rules come only from `IModelingRelationshipRulesProvider` /
   `IModelingViewpointRulesProvider` (BPMN rules stay in
   `BpmnRelationshipRulesProvider`) — no ad-hoc checks in components.
+
+### 6.5 As implemented (phase 7 — MCP parity, diff, release prep)
+
+- **One policy for both surfaces.** `modeling_apply_operations` now passes
+  `ModelingOperationPolicy.Authoring` (view operations allowed, and after the last operation every
+  relationship incident to an element whose `ParentId` changed is re-validated), so §6.4's parity is
+  literal: the tool and the editor's save run the same engine configuration. The tool gained an
+  optional `viewpointRules` argument so the viewpoint verdict (`viewpoint_disallowed`) is the same on
+  both paths. `Strict` remains for callers that want the 2.10.0 behavior; no existing message string
+  changed.
+- **`modeling_get_property_schema`** (new read tool) resolves the schema with the same
+  `ModelingSchemaProviders` rule the batch uses (requested key → only registered → first registered),
+  from `modelId` + `elementId`/`relationshipId` or a stateless `notation` + `semanticType`, and
+  returns `{ hasSchema, sections, … }`. `unsupported` when no provider is registered; a provider that
+  throws is an `error` (a batch contains it as "no schema" instead — an agent reading explicitly
+  deserves the failure).
+- **Applied diff.** `modeling_apply_operations` returns `diff` (added/removed/changed/layout ids and
+  counts) computed by the new headless **`ModelingModelDiff.Compute(baseline, current)`** in
+  Abstractions. `ModelingDiffOverlayDto` gained the additive `ChangedRelationshipIds` member, and the
+  viewer renders a changed relationship with the changed stroke and counts it in the legend. Diff
+  semantics are documented on the helper: added/removed ids in model order, changed = any semantic
+  field, layout-only = view geometry/membership only in ANY view (a change beats a layout change), and
+  a relationship's waypoints are NOT a diff state.
+- **Contract snapshots.** `ModelingMcpContractSnapshotTests` pins the exact JSON of
+  `modeling_get_model_tree`, `modeling_get_property_schema`, a rejected and an applied batch in
+  `tests/Tempo.Blazor.Mcp.Tests/Fixtures/modeling-mcp-contract.snapshot.json` (regenerate with
+  `TM_REGEN_MODELING_MCP_SNAPSHOT=1` and review the diff). `ModelingMcpToolsDocumentationDriftTests`
+  makes the catalog in [modeling-mcp-tools.md](modeling-mcp-tools.md) complete.
+- **Review findings fixed** (phase 7 code-review pass): a `set_view_node` parent chain is now
+  cycle-checked across the whole existing chain — a batch could previously build `A parent B` +
+  `B parent A` (only a self-parent was rejected), which the generator cannot nest — reported as
+  `parent_cycle` before any geometry is written; and a cleared `parentNodeId` (`""`) is stored as
+  `null` so the DTO has ONE spelling of "no parent" (the generator already treated both alike).
+  `ModelingViewOperationParentChainTests` pins both; the engine suite moved the new specs to its own
+  file to stay under the 1200-line ceiling.
+- **Parity specs.** `tests/Tempo.Blazor.Mcp.Tests/ModelingMcpParityTests.cs` drives a reference host
+  writer (the documented pattern: `ModelingChangeSetTranslator` + `ModelingOperationEngine` under
+  `Authoring`, `ModelingPropertySchemaResolver` preloaded) as the editor's SAVE path and asserts the
+  same model JSON and the same error messages/codes for: a structural + layout batch, an invalid
+  notation relationship, a missing required property, a parent move that invalidates a flow, and a
+  stale concurrency token. The editor's live commands keep carrying no resolver by design (§5.6).
+- **Docs and release prep.** New [modeling-hosting-guide.md](modeling-hosting-guide.md) (writer
+  capabilities, atomic apply, optimistic concurrency, schema/lookups, error mapping, MCP wiring);
+  [modeling-mcp-tools.md](modeling-mcp-tools.md) and [modeling-editor.md](modeling-editor.md)
+  updated; CHANGELOG has the 2.11.0 section with the additive changes and the migration notes; the
+  JSON documentation overlay covers the new public types and `validate --fail-on-drift` is clean; the
+  packages pack locally and a clean host implements the writer + schema against the packaged
+  assemblies (no publish — the tag/publish step waits for the user and ships together with the BPMN
+  2.0 XML converter plan, decision Q6).
 
 ---
 
@@ -1491,7 +1540,7 @@ second gesture could merge into the first transaction. Details that later phases
 | 4 | §9.3, §9.4 — layout persistence, hierarchy moves, auto-layout as an undoable op, BPMN visual conventions. As implemented: one `SetModelingViewLayoutCommand` (internal, engine batch of `update_element parentId` + `set_view_node` + `set_view_connection`) per gesture with no debounce timer, a burst of keyboard nudges of the same element set inside 800 ms merged into the command on top of the stack (one undo step), the layout parent resolved by GEOMETRY with the node's subtree excluded and ONLY for a node whose own X/Y changed (a container resize never re-parents its children), a Layout-only writer never re-parents, container growth plus flush-band sibling shifting and ancestor-pool growth in the same transaction, `SnapDocumentOnLoad="false"` on both embedded editors (a load never re-snaps the host's layout; `GridSize="0"` is a valid no-snap setting again), the deterministic relationship-ranked `ModelingLayoutArranger` behind "Arrange" with waypoint clearing and a preview fit (browser dagre stays the DE's own Layout menu, replaced in the dialog by Arrange), position-less elements auto-placed inside their container instead of dropped (opt-in `AutoPlaceElementsWithoutViewNode`), the view `ParentNodeId` mapped to the generated node id, swimlane band data for pool/lane labels with `data-swimlane` on the canvas (a band does not clamp a dragged child), token-based fill/stroke on every BPMN node stencil resolved to the palette in the server SVG export, the bpmn2 marker SVG re-shown behind a transparent native primitive, paper-token swimlane headers/toggles, the non-drag "Move to container" sheet, the in-dialog structure live region and a per-sync lookup context that keeps one move of a 300-element model under 200 ms |
 | 5 | §5 + §9.5 — schema provider, lookups, shared validator, inspector rendering, demo schema. As implemented: `IModelingPropertySchemaProvider` + `IModelingLookupProvider` resolved per provider key with a pinned schema version, the shared `ModelingPropertySchemaValidator` behind the inspector's inline errors, the editor's save gate and `ModelingOperationContext.ResolvePropertySchema`, one guarded after-render refresh (no call on each selection path), a read-only host keeps labels but gains no findings, the reference fields use the APG `TmMultiSelect` (the recorded deviation above), and the demo ships a BPMN step-attribute schema + catalogue for the `step-attributes` scenario while every other demo scenario keeps the 2.10.0 inspector |
 | 6 | §7 — `TmModelingViewer`, overlays, a11y, print/SVG, wireframe role, demo page. As implemented: the read-only viewer projects with `ModelingDiagramGenerator` and renders through `TmDiagramEditor` viewer mode; the diff/heatmap overlays restyle the viewer-owned presentation copy (`DiagramStyle` + `DiagramNode.Data["viewerState"]`); the text alternative is a roving-tabstop button list in BFS order with a Removed group resolved from `BaselineModel`; `ExportSvgAsync` resolves the overlay tokens through the new `resolveTokens` JS export for the requested theme; the `modeling-viewer` wireframe role/schema/stencil and `/modeling-viewer` demo ship with the phase |
-| 7 | §6.4 parity tests, docs updates, CHANGELOG, packaging smoke test, release |
+| 7 | §6.4 parity tests, docs updates, CHANGELOG, packaging smoke test, release. As implemented: the MCP tool runs the `Authoring` policy (view ops + post-batch parent-change re-validation) with an optional `viewpointRules`; `modeling_get_property_schema` reads the same schema the batch judges; the apply response carries an applied diff from the headless `ModelingModelDiff.Compute`; `ModelingDiffOverlayDto.ChangedRelationshipIds` + the viewer's changed-edge rendering; `ModelingMcpParityTests` (editor save vs MCP, same model and same errors), `ModelingMcpContractSnapshotTests` and the docs-drift guard; new `docs/modeling-hosting-guide.md`; CHANGELOG 2.11.0 section, JSON overlay + `validate --fail-on-drift`, local pack + clean-host smoke test (no tag/publish — gated on the user) |
 
 ---
 
@@ -1528,8 +1577,9 @@ The six decisions in §2 record these answers; their `reviewDisposition` moves f
   change-set types + `null = unchanged`; engine operations and every error code; capability gating
   (a content-only writer renders no structural action); schema validator cases; viewer projection,
   overlays, keyboard order and empty model.
-- **MCP** (`tests/Tempo.Blazor.Mcp.Tests`): the existing modeling specs stay **unmodified** (byte
-  parity), new specs for `set_properties`/view ops + parity fixtures (§6.4).
+- **MCP** (`tests/Tempo.Blazor.Mcp.Tests`): the 2.10.0 modeling specs stayed **unmodified** (byte
+  parity); phase 2 added `set_properties`/property-payload specs, phase 7 the view-operation specs,
+  `modeling_get_property_schema`, the contract snapshot and the editor-save parity fixtures (§6.4).
 - **E2E** (`tests/Tempo.Blazor.E2E`, `Modeling*`): only the specs of the screens touched by the
   phase, plus the new `/modeling-viewer` page; screenshots (light/dark, desktop/tablet/mobile) as
   the phase DoDs require.

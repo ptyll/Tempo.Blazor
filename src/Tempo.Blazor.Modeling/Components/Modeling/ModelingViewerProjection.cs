@@ -366,6 +366,7 @@ internal static class ModelingViewerProjection
         var layoutElements = ToSet(diff?.LayoutOnlyElementIds);
         var removedElements = ToSet(diff?.RemovedElementIds);
         var addedRelationships = ToSet(diff?.AddedRelationshipIds);
+        var changedRelationships = ToSet(diff?.ChangedRelationshipIds);
         var removedRelationships = ToSet(diff?.RemovedRelationshipIds);
         var highlighted = ToSet(highlightElementIds);
         var states = new Dictionary<string, string>(StringComparer.Ordinal);
@@ -463,6 +464,11 @@ internal static class ModelingViewerProjection
                     ApplyDiffStroke(edge.Style, DiffAdded, isEdge: true);
                     state = DiffAdded;
                 }
+                else if (changedRelationships.Contains(relationshipId))
+                {
+                    ApplyDiffStroke(edge.Style, DiffChanged, isEdge: true);
+                    state = DiffChanged;
+                }
 
                 if (highlighted.Contains(relationshipId))
                 {
@@ -503,7 +509,7 @@ internal static class ModelingViewerProjection
             States = states,
             AddedCount = addedElements.Count + addedRelationships.Count,
             RemovedCount = removedElements.Count + removedRelationships.Count,
-            ChangedCount = changedElements.Count,
+            ChangedCount = changedElements.Count + changedRelationships.Count,
             LayoutCount = layoutElements.Count
         };
     }

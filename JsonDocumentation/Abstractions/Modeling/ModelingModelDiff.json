@@ -1,0 +1,28 @@
+{
+  "kind": "Class",
+  "category": "Modeling",
+  "namespace": "Tempo.Blazor.Modeling",
+  "description": "Headless model diff (phase 7 of the full BPMN authoring plan): compares two ModelingModelDto versions and returns the overlay TmModelingViewer renders, so a host or an MCP agent can compute it WITHOUT referencing the Blazor package. The result is a pure function of the two models — no ids are resolved against any registry and nothing is mutated. Classification rules: Added / removed — an id present in only one of the two models. Added ids are listed in the CURRENT model's order, removed ids in the BASELINE's order, so the overlay is stable for a given pair of models. Changed — an id present in both whose semantic fields differ (Name, Description, SemanticType, Notation, ParentId, Tags, Properties, Governance and the source triple for an element; RelationshipType, endpoints, Name, Tags, Properties and the source triple for a relationship). Layout-only — an element present in both whose semantics are IDENTICAL but whose stored view geometry (X, Y, Width, Height, ParentNodeId) or view-node MEMBERSHIP differs in at least one view. A relationship's layout (waypoints / a view connection appearing or disappearing) is not part of the overlay — the overlay distinguishes relationships only as added, removed or changed. A change beats a layout change: an element whose semantics changed is reported in ChangedElementIds and never also in LayoutOnlyElementIds.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/Modeling/ModelingModelDiff.cs",
+  "documentationStatus": "generated",
+  "members": [
+    {
+      "name": "Compute",
+      "kind": "Method",
+      "type": "ModelingDiffOverlayDto",
+      "description": "Computes the diff overlay between baseline and current.",
+      "parameters": [
+        {
+          "name": "baseline",
+          "type": "ModelingModelDto?"
+        },
+        {
+          "name": "current",
+          "type": "ModelingModelDto?"
+        }
+      ]
+    }
+  ],
+  "itemName": "ModelingModelDiff"
+}

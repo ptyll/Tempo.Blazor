@@ -1091,6 +1091,16 @@
       "documentationStatus": "merged"
     },
     {
+      "itemName": "ModelingPropertySchemaTools",
+      "kind": "Class",
+      "category": "Modeling",
+      "namespace": "Tempo.Blazor.Mcp.Modeling",
+      "description": "Read tool for the host's property schema (phase 7): the sections and typed fields the modeling inspector renders for a notation + semantic type, resolved through the SAME IModelingPropertySchemaProvider and request shape modeling_apply_operations validates with, so an agent can discover the required fields (and the lookup descriptors) BEFORE it writes a batch.",
+      "packageId": "Tempo.Blazor.Mcp",
+      "sourcePath": "src/Tempo.Blazor.Mcp/Modeling/ModelingPropertySchemaTools.cs",
+      "documentationStatus": "merged"
+    },
+    {
       "itemName": "ModelingValidationTools",
       "kind": "Class",
       "category": "Modeling",
@@ -1866,11 +1876,11 @@
     }
   ],
   "summary": {
-    "itemCount": 90,
-    "manualItemCount": 90,
-    "generatedItemCount": 90,
+    "itemCount": 91,
+    "manualItemCount": 91,
+    "generatedItemCount": 91,
     "generatedOnlyItemCount": 0,
     "componentCount": 0,
-    "publicApiTypeCount": 90
+    "publicApiTypeCount": 91
   }
 }

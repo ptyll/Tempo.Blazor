@@ -27,6 +27,23 @@ public static class FakeModelingNotation
 
     public static IModelingRelationshipRulesProvider RelationshipRules()
         => new ModelingRelationshipRulesProvider(Registry());
+
+    /// <summary>
+    /// An allow-all relationship rules provider: every type pair is valid. The contract snapshot's
+    /// <c>applied</c> batch uses it because the seeded model is <c>bpmn2</c> while this fixture's
+    /// registry only ships an ArchiMate profile — the snapshot pins the success RESPONSE SHAPE (the
+    /// diff ids/counts an agent reads), not the notation matrix (that is the notation-rule suites' job).
+    /// </summary>
+    public static IModelingRelationshipRulesProvider AllowAllRules() => new AllowAllRelationshipRules();
+
+    private sealed class AllowAllRelationshipRules : IModelingRelationshipRulesProvider
+    {
+        public bool IsValidRelationship(string notationKey, string sourceType, string targetType, string relationshipType)
+            => true;
+
+        public ModelingRelationshipRuleResult ValidateRelationship(ModelingRelationshipRuleContext context)
+            => ModelingRelationshipRuleResult.Valid;
+    }
 }
 
 /// <summary>A deterministic projector that renders one node per element and one edge per relationship.</summary>

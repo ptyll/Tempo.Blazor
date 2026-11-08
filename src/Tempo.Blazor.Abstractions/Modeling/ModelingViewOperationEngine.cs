@@ -47,11 +47,12 @@ internal static class ModelingViewOperationEngine
         }
 
         // A non-empty parentNodeId must resolve to an ELEMENT (view nodes carry the parent's
-        // element id — they have no id of their own) and must never be the node itself. Validated
-        // BEFORE any geometry is written, so a rejected operation leaves the view untouched.
+        // element id — they have no id of their own) and must never close a cycle in the view's
+        // parent chain. Validated BEFORE any geometry is written, so a rejected operation leaves
+        // the view untouched.
         if (operation.ContainsKey("parentNodeId")
             && GetString(operation, "parentNodeId") is { Length: > 0 } requestedParentNodeId
-            && !ValidateViewNodeParent(model, elementId, requestedParentNodeId, index, op, result))
+            && !ValidateViewNodeParent(model, view!, elementId, requestedParentNodeId, index, op, result))
         {
             return;
         }
@@ -109,10 +110,12 @@ internal static class ModelingViewOperationEngine
             }
         }
 
-        // null = unchanged, "" = clear (the node becomes a root).
+        // null = unchanged, "" = clear (the node becomes a root). A cleared parent is stored as
+        // null so the DTO keeps ONE representation of "no parent" (the generator treats both the
+        // same, but a diff/marshalling host should not see two spellings of one state).
         if (operation.ContainsKey("parentNodeId") && GetString(operation, "parentNodeId") is { } parentNodeId)
         {
-            node.ParentNodeId = parentNodeId;
+            node.ParentNodeId = string.IsNullOrEmpty(parentNodeId) ? null : parentNodeId;
         }
     }
 
@@ -270,11 +273,14 @@ internal static class ModelingViewOperationEngine
     /// <summary>
     /// Validates the optional <c>parentNodeId</c> of a <c>set_view_node</c> operation: a view node is
     /// parented by the ELEMENT it is nested under, so the id must resolve to an existing element and
-    /// must not be the node itself (code <c>parent_cycle</c>). Without this check an unknown or
-    /// self-referencing parent would be stored and the generator would build a broken tree.
+    /// must not close a CYCLE in the view's parent chain (code <c>parent_cycle</c>). The chain walk
+    /// matters: rejecting only a self-parent let <c>A parent B</c> + <c>B parent A</c> through in one
+    /// batch, which the generator cannot nest. Without this check an unknown or cyclic parent would
+    /// be stored and the generator would build a broken tree.
     /// </summary>
     private static bool ValidateViewNodeParent(
         ModelingModelDto model,
+        ModelingViewDto view,
         string elementId,
         string parentNodeId,
         int index,
@@ -303,6 +309,29 @@ internal static class ModelingViewOperationEngine
                 $"operations[{index}] {opName}: parent element '{parentNodeId}' not found.",
                 elementId: parentNodeId);
             return false;
+        }
+
+        // Walk the EXISTING view parent chain: parent -> its parent -> ... . Reaching the node being
+        // placed means the new parent would close a cycle. The visited set also makes a chain that
+        // was already cyclic terminate instead of hanging.
+        var visited = new HashSet<string>(StringComparer.Ordinal);
+        var current = parentNodeId;
+        while (!string.IsNullOrEmpty(current) && visited.Add(current))
+        {
+            if (string.Equals(current, elementId, StringComparison.Ordinal))
+            {
+                AddError(
+                    result,
+                    index,
+                    opName,
+                    "parent_cycle",
+                    $"operations[{index}] {opName}: parenting element '{elementId}' under '{parentNodeId}' would close a cycle.",
+                    elementId: elementId);
+                return false;
+            }
+
+            current = view.Nodes.FirstOrDefault(item =>
+                string.Equals(item.ElementId, current, StringComparison.Ordinal))?.ParentNodeId;
         }
 
         return true;

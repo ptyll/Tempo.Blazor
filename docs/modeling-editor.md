@@ -11,7 +11,8 @@ profiles (`BuiltInModelingProfiles`), the `ModelingDiagramGenerator` and one CSP
 The designed public contract of the full BPMN authoring plan (change set v2, writer
 capabilities, property schema + host lookups, the unified operation engine and
 `TmModelingViewer`) lives in [modeling-authoring.md](modeling-authoring.md); this document stays
-the contract of what ships **today**.
+the contract of what ships **today**. A host that wants to AUTHOR a model (own writer, schema,
+lookups, MCP) follows [modeling-hosting-guide.md](modeling-hosting-guide.md).
 
 The package embeds `TmDiagramEditor` (the preview and the "Open in editor" dialog), so a host
 also needs the DiagramEditor static assets — no Modeling-specific `<script>` tag or stylesheet
@@ -510,6 +511,32 @@ behavior) and the Arrange action is NOT rendered (a keyboard user never tabs ont
   inside the dialog body (`modeling-dialog-structure-live`); the outer
   `modeling-structure-live` is suppressed, so a screen reader inside the modal hears the result.
 
+## MCP parity, the headless diff and 2.11.0 (phase 7)
+
+Phase 7 closes the loop between the editor and agents:
+
+- **One operation policy.** `modeling_apply_operations` (docs/modeling-mcp-tools.md) now runs the
+  same `ModelingOperationPolicy.Authoring` the editor's save runs: view (layout) operations are
+  accepted and a `ParentId` change re-validates every relationship incident to it after the batch.
+  `ModelingMcpParityTests` pins that the same batch yields the same model JSON and the same error
+  messages/codes through the MCP tool and through a reference host writer. The editor's LIVE commands
+  still carry no property resolver by design — parity is defined against the SAVE
+  (docs/modeling-authoring.md §5.6/§6.4).
+- **`ModelingModelDiff.Compute(baseline, current)`** (Abstractions) is the headless diff the viewer
+  overlays: added/removed ids, changed semantic fields, layout-only geometry (in any view), plus
+  relationship adds/removes/changes. `ModelingDiffOverlayDto.ChangedRelationshipIds` is the additive
+  member the viewer draws with the changed stroke and counts in the legend. A host or an MCP agent
+  can therefore produce the same overlay without the Blazor package.
+- **`modeling_get_property_schema`** reads the host's `IModelingPropertySchemaProvider` through the
+  same request shape the batch validates with, so an agent discovers required fields (and their
+  lookup descriptors) before writing.
+- **The apply response carries the diff**, so an agent reports what it changed without a reload.
+- **Docs + release:** [modeling-hosting-guide.md](modeling-hosting-guide.md) is the writer
+  implementation pattern (capabilities, atomic apply, optimistic concurrency, schema/lookups, error
+  mapping, MCP wiring); CHANGELOG 2.11.0 lists the additive changes and the migration notes; the JSON
+  documentation overlay is regenerated (`validate --fail-on-drift` clean) and the packages pack
+  locally. Tagging/publishing is gated on the user and ships with the BPMN 2.0 XML converter plan.
+
 ## Non-drag alternative (WCAG 2.5.7)
 
 Every drag affordance has a tap/keyboard path:
@@ -746,4 +773,9 @@ demo-scoped rule; a real host owns the editor height through the `Height` parame
   layout screenshots (light/dark, desktop/tablet). A 303-element budget test
   (`Arrange_stays_responsive_for_three_hundred_elements`) guards the arrangement's linear cost
   (the plan's "300 elements" edge case).
+- Phase 7: `tests/Tempo.Blazor.Tests/Modeling/ModelingModelDiffTests` (the headless diff),
+  `TmModelingViewerOverlayTests` (a changed relationship's stroke and legend count),
+  `tests/Tempo.Blazor.Mcp.Tests/ModelingMcpParityTests` (editor save vs MCP),
+  `ModelingViewOperationToolsTests`, `ModelingPropertySchemaToolsTests`,
+  `ModelingMcpContractSnapshotTests` and `ModelingMcpToolsDocumentationDriftTests`.
 - Node lane: `npm run test:diagram-editor` covers the shared engine the preview embeds.

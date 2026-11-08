@@ -93,6 +93,7 @@ public static class TempoModelingMcp
     [
         typeof(ModelingModelTools),
         typeof(ModelingOperationTools),
+        typeof(ModelingPropertySchemaTools),
         typeof(ModelingValidationTools)
     ];
 

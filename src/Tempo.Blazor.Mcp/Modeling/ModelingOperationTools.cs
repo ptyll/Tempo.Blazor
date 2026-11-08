@@ -10,7 +10,7 @@ namespace Tempo.Blazor.Mcp.Modeling;
 public static class ModelingOperationTools
 {
     [McpServerTool(Name = "modeling_apply_operations")]
-    [Description("Apply an ordered batch of edit operations to a modeling model and save it. operationsJson is a JSON array; each item has an 'op' field: add_element (name, semanticType, optional id/notation/description/parentId/properties), update_element (id + fields to change; parentId=\"\" clears the parent; optional properties/removedProperties), delete_element (id — referencing relationships AND child elements must be deleted or reparented in the same batch), add_relationship (relationshipType, sourceElementId, targetElementId, optional id/name/properties), update_relationship (id + fields; optional properties/removedProperties), delete_relationship (id), set_properties (id of an element OR relationship + a properties object, optional removedProperties). 'properties' is a JSON object of values and 'removedProperties' a JSON array of keys; both are optional on the four add/update operations AND together form set_properties. parentId must resolve to an existing element and must not close a cycle (validated per operation). Relationships are validated against the model's notation rules; an invalid operation fails the WHOLE batch (nothing is saved) with a per-operation explanation. Pass expectedModifiedAt from modeling_get_model_tree for optimistic concurrency. When the host registers an IModelingPropertySchemaProvider the batch also validates every property payload against the SAME schema and validator the editor uses: a new element/relationship is judged in full (a missing required field fails with property_required at its own operation index), an update only for the keys it touches. Without such a provider nothing about property values is validated.")]
+    [Description("Apply an ordered batch of edit operations to a modeling model and save it (atomic: one invalid operation saves nothing). operationsJson is a JSON array; each item has an 'op' field: add_element (name, semanticType, optional id/notation/description/parentId/properties), update_element (id + fields to change; parentId=\"\" clears the parent; optional properties/removedProperties), delete_element (id — referencing relationships AND child elements must be deleted or reparented in the same batch), add_relationship (relationshipType, sourceElementId, targetElementId, optional id/name/properties), update_relationship (id + fields; optional properties/removedProperties), delete_relationship (id), set_properties (id of an element OR relationship + a properties object, optional removedProperties), set_view_node (elementId + x/y for a new node, optional viewId/x/y/width/height/parentNodeId where parentNodeId=\"\" clears it), remove_view_node (elementId, optional viewId), set_view_connection (relationshipId + waypoints [{x,y}]; [] clears, optional viewId), remove_view_connection (relationshipId, optional viewId). viewId omitted/empty = the target view (Views[0], created on demand). View operations are layout changes and run under the SAME policy as the editor's save (view operations allowed; removals are still never cascaded). 'properties' is a JSON object of values and 'removedProperties' a JSON array of keys; both are optional on the four add/update operations AND together form set_properties. parentId must resolve to an existing element and must not close a cycle (validated per operation). Relationships are validated against the model's notation rules; an invalid operation fails the WHOLE batch (nothing is saved) with a per-operation explanation. After a parent change the batch re-validates every incident relationship too (the editor's save does the same), so a lane move that invalidates a flow fails the batch. Pass expectedModifiedAt from modeling_get_model_tree for optimistic concurrency. When the host registers an IModelingPropertySchemaProvider the batch also validates every property payload against the SAME schema and validator the editor uses: a new element/relationship is judged in full (a missing required field fails with property_required at its own operation index), an update only for the keys it touches. Without such a provider nothing about property values is validated. The success payload carries the applied diff (added/removed/changed/layout-only element and relationship ids).")]
     public static async Task<string> ApplyOperations(
         ITempoDocumentLibraryProvider library,
         IModelingModelDocumentProvider models,
@@ -19,7 +19,8 @@ public static class ModelingOperationTools
         IModelingRelationshipRulesProvider? relationshipRules = null,
         [Description("Optional optimistic-concurrency token from modeling_get_model_tree.")] DateTime? expectedModifiedAt = null,
         IEnumerable<IModelingPropertySchemaProvider>? propertySchemaProviders = null,
-        [Description("Optional provider key of the property-schema provider to use when several are registered.")] string? propertySchemaProviderKey = null)
+        [Description("Optional provider key of the property-schema provider to use when several are registered.")] string? propertySchemaProviderKey = null,
+        IModelingViewpointRulesProvider? viewpointRules = null)
     {
         var entry = await library.GetEntryAsync(TempoDocumentKind.Modeling, modelId);
         if (entry is null)
@@ -45,7 +46,7 @@ public static class ModelingOperationTools
         // schemas the batch can need and validate every property payload with the SAME shared
         // validator the editor uses ("one semantics, same errors"). Without a provider the resolver
         // stays null and the batch behaves EXACTLY as it did in 2.10.0.
-        var schemaProvider = ResolveSchemaProvider(propertySchemaProviders, propertySchemaProviderKey);
+        var schemaProvider = ModelingSchemaProviders.Resolve(propertySchemaProviders, propertySchemaProviderKey);
         var resolver = await ModelingPropertySchemaResolver.PreloadAsync(
             schemaProvider,
             working,
@@ -59,8 +60,13 @@ public static class ModelingOperationTools
             new ModelingOperationContext
             {
                 RelationshipRules = relationshipRules,
+                ViewpointRules = viewpointRules,
                 ResolvePropertySchema = resolver,
-                Policy = ModelingOperationPolicy.Strict
+                // Phase 7 (docs/modeling-authoring.md §6.2/§6.4): the MCP batch now runs the SAME
+                // policy the editor's save runs — view (layout) operations are allowed and a parent
+                // change re-validates the relationships incident to it — so the two surfaces share
+                // ONE semantics and the SAME error list ("one semantics, same errors").
+                Policy = ModelingOperationPolicy.Authoring
             });
         if (!result.Success)
         {
@@ -73,6 +79,11 @@ public static class ModelingOperationTools
         await models.SaveModelingModelDocumentAsync(modelId, working);
         var saved = await library.GetEntryAsync(TempoDocumentKind.Modeling, modelId);
 
+        // Phase 7: the headless diff of what this batch actually changed. Computed in Abstractions
+        // (ModelingModelDiff), so a host renders the same overlay without the Blazor package; the
+        // baseline model itself is not echoed (the ids are enough for an agent's next read).
+        var diff = ModelingModelDiff.Compute(current, working);
+
         return McpToolResults.Success(new
         {
             id = modelId,
@@ -80,38 +91,27 @@ public static class ModelingOperationTools
             createdIds = result.CreatedIds,
             elementCount = working.Elements.Count,
             relationshipCount = working.Relationships.Count,
-            modifiedAt = saved?.ModifiedAt
+            modifiedAt = saved?.ModifiedAt,
+            diff = new
+            {
+                addedElementIds = diff.AddedElementIds,
+                removedElementIds = diff.RemovedElementIds,
+                changedElementIds = diff.ChangedElementIds,
+                layoutOnlyElementIds = diff.LayoutOnlyElementIds,
+                addedRelationshipIds = diff.AddedRelationshipIds,
+                removedRelationshipIds = diff.RemovedRelationshipIds,
+                changedRelationshipIds = diff.ChangedRelationshipIds,
+                counts = new
+                {
+                    addedElements = diff.AddedElementIds.Count,
+                    removedElements = diff.RemovedElementIds.Count,
+                    changedElements = diff.ChangedElementIds.Count,
+                    layoutOnlyElements = diff.LayoutOnlyElementIds.Count,
+                    addedRelationships = diff.AddedRelationshipIds.Count,
+                    removedRelationships = diff.RemovedRelationshipIds.Count,
+                    changedRelationships = diff.ChangedRelationshipIds.Count
+                }
+            }
         });
-    }
-
-    /// <summary>The property-schema provider the batch validates against: the requested key when
-    /// supplied, else the only registered provider. A key that names no registered provider falls back
-    /// to the first one (a host that passes a key for a provider it did not register still gets the
-    /// validation it asked for) — null only when the host registered none.</summary>
-    private static IModelingPropertySchemaProvider? ResolveSchemaProvider(
-        IEnumerable<IModelingPropertySchemaProvider>? providers,
-        string? providerKey)
-    {
-        if (providers is null)
-        {
-            return null;
-        }
-
-        var registered = providers
-            .Where(provider => provider is not null && !string.IsNullOrWhiteSpace(provider.ProviderKey))
-            .ToArray();
-        if (registered.Length == 0)
-        {
-            return null;
-        }
-
-        if (!string.IsNullOrWhiteSpace(providerKey))
-        {
-            return registered.FirstOrDefault(provider =>
-                       string.Equals(provider.ProviderKey, providerKey, StringComparison.Ordinal))
-                   ?? registered[0];
-        }
-
-        return registered[0];
     }
 }

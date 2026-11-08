@@ -9,8 +9,10 @@ namespace Tempo.Blazor.Modeling;
 /// </summary>
 public enum ModelingOperationPolicy
 {
-    /// <summary>MCP semantics kept byte-compatible: no silent cascade and no view operations
-    /// (until a later phase enables them for MCP).</summary>
+    /// <summary>The 2.10.0 MCP semantics, kept for callers that want them: no silent cascade, no view
+    /// operations and only the per-operation validation. The <c>modeling_apply_operations</c> tool
+    /// itself moved to <see cref="Authoring"/> in phase 7 of the authoring plan so agents and the
+    /// editor's save share one policy.</summary>
     Strict,
 
     /// <summary>Editor semantics: view (layout) operations are allowed. Removals are still never

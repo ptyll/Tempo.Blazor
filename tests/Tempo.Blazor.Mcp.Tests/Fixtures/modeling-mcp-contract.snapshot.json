@@ -1,0 +1,115 @@
+{
+  "responses": {
+    "modeling_get_model_tree": {
+      "success": true,
+      "id": "\u003CmodelId\u003E",
+      "title": "Contract",
+      "notation": "bpmn2",
+      "supportedNotations": [],
+      "concurrencyToken": "\u003Cdynamic\u003E",
+      "counts": {
+        "elements": 1,
+        "relationships": 0,
+        "views": 1
+      },
+      "elements": [
+        {
+          "id": "task",
+          "notation": "bpmn2",
+          "semanticType": "Task",
+          "name": "Validate order",
+          "description": "",
+          "parentId": "",
+          "tags": []
+        }
+      ],
+      "relationships": [],
+      "views": [
+        {
+          "id": "default",
+          "name": "Process",
+          "viewpointKey": "Process"
+        }
+      ],
+      "issues": []
+    },
+    "modeling_get_property_schema": {
+      "success": true,
+      "providerKey": "tests.contract-schema",
+      "modelId": "\u003CmodelId\u003E",
+      "notation": "bpmn2",
+      "semanticType": "Task",
+      "viewpointKey": "Process",
+      "culture": "en-US",
+      "hasSchema": true,
+      "schema": {
+        "schemaId": "tests.contract.task",
+        "version": "1",
+        "notation": "bpmn2",
+        "semanticType": "Task",
+        "sections": [
+          {
+            "key": "execution",
+            "label": "Execution",
+            "order": 0,
+            "collapsedByDefault": false,
+            "fields": [
+              {
+                "key": "instructions",
+                "label": "Instructions",
+                "type": "string",
+                "required": true,
+                "readOnly": false,
+                "options": [],
+                "itemFields": [],
+                "order": 0
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "modeling_apply_operations_rejected": {
+      "success": false,
+      "error": "validation_failed",
+      "message": "One or more operations are invalid; nothing was saved.",
+      "validationErrors": [
+        "operations[0] add_relationship: target element \u0027missing\u0027 not found.",
+        "operations[1] set_view_node: element \u0027missing\u0027 not found."
+      ]
+    },
+    "modeling_apply_operations_applied": {
+      "success": true,
+      "id": "\u003CmodelId\u003E",
+      "applied": 5,
+      "createdIds": [],
+      "elementCount": 2,
+      "relationshipCount": 1,
+      "modifiedAt": "\u003Cdynamic\u003E",
+      "diff": {
+        "addedElementIds": [
+          "step"
+        ],
+        "removedElementIds": [],
+        "changedElementIds": [],
+        "layoutOnlyElementIds": [
+          "task"
+        ],
+        "addedRelationshipIds": [
+          "flow"
+        ],
+        "removedRelationshipIds": [],
+        "changedRelationshipIds": [],
+        "counts": {
+          "addedElements": 1,
+          "removedElements": 0,
+          "changedElements": 0,
+          "layoutOnlyElements": 1,
+          "addedRelationships": 1,
+          "removedRelationships": 0,
+          "changedRelationships": 0
+        }
+      }
+    }
+  }
+}

@@ -23,6 +23,7 @@ public class TempoModelingMcpRegistrationTests
         {
             "modeling_apply_operations",
             "modeling_get_model_tree",
+            "modeling_get_property_schema",
             "modeling_get_view",
             "modeling_list_models",
             "modeling_list_notations",

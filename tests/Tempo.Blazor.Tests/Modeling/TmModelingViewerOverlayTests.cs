@@ -415,12 +415,40 @@ public sealed class TmModelingViewerOverlayTests : LocalizationTestBase
         cut.FindAll("[data-testid='modeling-viewer-legends']").Should().BeEmpty();
     }
 
+    [Fact]
+    public void A_changed_relationship_gets_the_changed_stroke_and_counts_once()
+    {
+        var current = ModelingViewerTestModels.CreateProcessModel();
+        current.Relationships.Find(relationship => relationship.Id == "r1")!.Name = "Reworded flow";
+        var overlay = ModelingModelDiff.Compute(ModelingViewerTestModels.CreateProcessModel(), current);
+
+        using var cut = Render<TmModelingViewer>(parameters => parameters
+            .Add(p => p.Model, current)
+            .Add(p => p.ViewId, ModelingViewerTestModels.ViewId)
+            .Add(p => p.DiffOverlay, overlay)
+            .Add(p => p.LayoutMode, TmLayoutMode.Desktop));
+
+        var edge = Edge(cut, "r1");
+        edge.Style.Stroke.Should().Be("var(--tm-color-diff-changed-stroke)");
+        edge.Style.StrokeWidth.Should().Be(2.5, "an edge keeps its own dash pattern; the weight carries the cue");
+        edge.Style.StrokeDasharray.Should().BeNull("the generator's edge dash is never overwritten");
+        cut.FindAll("[data-testid='modeling-viewer-element-list'] [data-state='diff-changed']")
+            .Should().ContainSingle("the relationship row is the edge's text equivalent");
+        cut.Find("[data-testid='modeling-viewer-diff-legend'] [data-state='diff-changed']")
+            .GetAttribute("data-count").Should().Be("1");
+    }
+
     private IRenderedComponent<TmModelingViewer> RenderDiff()
         => Render<TmModelingViewer>(parameters => parameters
             .Add(p => p.Model, ModelingViewerTestModels.CreateDiffModel())
             .Add(p => p.ViewId, ModelingViewerTestModels.ViewId)
             .Add(p => p.DiffOverlay, ModelingViewerTestModels.CreateDiffOverlay())
             .Add(p => p.LayoutMode, TmLayoutMode.Desktop));
+
+    private static DiagramEdge Edge(IRenderedComponent<TmModelingViewer> cut, string relationshipId)
+        => cut.FindComponent<Tempo.Blazor.Components.Diagram.TmDiagramEditor>().Instance.Document!
+            .Pages.SelectMany(page => page.Edges)
+            .Single(edge => string.Equals(edge.Id, relationshipId, StringComparison.Ordinal));
 
     private static DiagramNode Node(IRenderedComponent<TmModelingViewer> cut, string elementId)
         => cut.FindComponent<Tempo.Blazor.Components.Diagram.TmDiagramEditor>().Instance.Document!

@@ -37,6 +37,14 @@ public sealed class ModelingDiffOverlayDto
     public IReadOnlyCollection<string> RemovedRelationshipIds { get; set; } = [];
 
     /// <summary>
+    /// Relationship ids whose semantic content changed between the versions (type, endpoints, name,
+    /// tags or properties). Additive in 2.11.0 — a relationship's layout (waypoints, a view
+    /// connection appearing or disappearing) is deliberately not part of the overlay. A host that
+    /// computes the overlay through <see cref="ModelingModelDiff.Compute"/> gets this list filled.
+    /// </summary>
+    public IReadOnlyCollection<string> ChangedRelationshipIds { get; set; } = [];
+
+    /// <summary>
     /// Optional "before" model. Removed ids are resolved against it so the legend and the element
     /// list can NAME removed items (they are listed, never drawn).
     /// </summary>

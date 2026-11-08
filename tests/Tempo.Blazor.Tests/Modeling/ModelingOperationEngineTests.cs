@@ -417,7 +417,8 @@ public sealed class ModelingOperationEngineTests
         model.Views[0].Nodes.Single(item => item.ElementId == "task-1").ParentNodeId.Should().Be("pool-1", "null means unchanged");
 
         AuthoringApply(model, Op("set_view_node", ("elementId", "task-1"), ("parentNodeId", "")));
-        model.Views[0].Nodes.Single(item => item.ElementId == "task-1").ParentNodeId.Should().BeEmpty("an empty parentNodeId clears the parent view node");
+        model.Views[0].Nodes.Single(item => item.ElementId == "task-1").ParentNodeId.Should().BeNull(
+            "an empty parentNodeId clears the parent view node, stored as the ONE null spelling of \"no parent\"");
     }
 
     [Fact]

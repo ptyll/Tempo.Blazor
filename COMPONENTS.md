@@ -8668,7 +8668,11 @@ události pro save draft/publish.
 Balíček `Tempo.Blazor.Modeling` převádí sémantický model (profily BPMN, UML, ArchiMate, ERD) na diagram a
 přehrává ho. Kompletní kontrakt — rozvržení dle MO1/G2, parametry, stabilní DOM a CSP-safe modul — je v
 [docs/modeling-editor.md](docs/modeling-editor.md); demo stránka je `/modeling-editor` (scénáře
-`?scenario=drag-readonly|error|performance-large|bpmn2-*|uml25-*` a deep linky `?provider=|notation=|viewpoint=`).
+`?scenario=drag-readonly|error|performance-large|bpmn2-*|uml25-*|step-attributes` a deep linky
+`?provider=|notation=|viewpoint=|editing=1`). Od 2.11.0 balíček model i **autorsky** mění (change set v2,
+writer capabilities `Content|Structure|Layout`, property schema + lookupy, `TmModelingViewer`, MCP parita);
+recept pro hostitele (writer s optimistickou konkurencí, schéma, chyby, MCP) je
+[docs/modeling-hosting-guide.md](docs/modeling-hosting-guide.md).
 
 ### TmModelingEditor
 
@@ -8707,6 +8711,37 @@ akční lišta, bez dragu). Dialog „Otevřít v editoru" je jádrový `TmModal
                   ProviderKeyChanged="HandleProviderChanged"
                   ProviderDisplayName="ResolveDisplayName"
                   OnDiagramGenerated="HandleGenerated" />
+```
+
+### TmModelingViewer
+
+Chrome-less read-only prezentace modelu pro portály, dokumentaci a diffy — bez stromu, inspektoru, dialogu
+i writeru. Plátno kreslí `TmDiagramEditor` v režimu Viewer, overlaye (diff/heatmapa) ale aplikuje na
+**vlastní kopii** dokumentu jen přes veřejný model (`Data["viewerState"]`, `["viewerBadge"]`,
+`["viewerTitle"]`, `DiagramEdge.Title`), takže nesahá do interních tříd editoru. Textová alternativa je
+seznam tlačítek v BFS pořadí (roving tabindex, skupina „Removed" jmenovaná z `BaselineModel`), každý
+overlay má textový ekvivalent, `ExportSvgAsync(theme)` vyřeší tokeny do konkrétních barev a tisk řeší
+`@media print` blok. Diff overlay umí spočítat i bez Blazoru: `ModelingModelDiff.Compute(baseline, current)`
+v Abstractions (používá ho i MCP).
+
+| Parametr | Typ | Výchozí | Popis |
+|----------|-----|---------|-------|
+| `Model` | `ModelingModelDto` | — (required) | Sémantický model k vykreslení. |
+| `ViewId` | `string?` | `null` | Pohled; `null` = výchozí pohled / mřížka bez pohledu. |
+| `FitMode` / `Zoom` | `ModelingViewerFitMode` / `double?` | `Width` / `null` | `Width` (jen šířka kontejneru) nebo `Page` (celá stránka); `Zoom = null` = fit. |
+| `HighlightElementIds` | `IReadOnlyCollection<string>?` | `null` | Zvýrazněné prvky i vazby. |
+| `SelectedElementId` / `SelectedElementIdChanged` | `string?` / `EventCallback<string?>` | `null` | Dvoucestný výběr; `OnElementClick` hlásí prvek i vazbu. |
+| `DiffOverlay` / `Heatmap` | `ModelingDiffOverlayDto?` / `ModelingHeatmapDto?` | `null` | Diff (added/removed/changed/layout + změněné vazby) a heatmapa 0..1 s textovým čtením. |
+| `ShowLegend` / `ShowElementList` | `bool` | `true` | Notační legenda a textová alternativa (vypnutelná). |
+| `ElementListContent` | `RenderFragment<ModelingViewerElementContext>?` | `null` | Nahradí OBSAH řádku, ne řádek/tlačítko (klávesy a ARIA zůstávají vlastnictvím komponenty). |
+| `Height` / `LayoutMode` / `Class` / `AriaLabel` | — | `480px` / `Auto` / `null` / `null` | Výška, rozvržení z vlastního kontejneru a popisné atributy. |
+| `ShowZoomControls` / `ShowElementListInPrint` | `bool` | `true` / `false` | Ovládání zoomu a opt-in textové alternativy v tisku. |
+
+```razor
+<TmModelingViewer Model="_model"
+                  ViewId="process-view"
+                  DiffOverlay="ModelingModelDiff.Compute(_baseline, _model)"
+                  Heatmap="_risk" />
 ```
 
 ### Podpůrné panely

@@ -1,14 +1,16 @@
 # Modeling MCP tools + headless diagram SVG export — design & catalog
 
-Status: **approved design (Phase 1)** for plan _"Upstream II: Modeling MCP tooly + headless SVG
-export DiagramEditoru"_. Target release **2.6.0** (next minor after the shipped `v2.5.5`; the
-plan's original `2.2.0` is superseded). Everything here is **additive** — existing `2.x`
-consumers compile and run unchanged.
+Status: **living catalog**. The suite shipped in 2.6.0 with plan _"Upstream II: Modeling MCP tooly +
+headless SVG export DiagramEditoru"_; the authoring plan (`eadbf967`, full BPMN authoring) extended it
+in 2.11.0 with view operations, property-schema reads, applied diffs and the editor↔MCP parity
+contract (phase 7). Everything here is **additive** — existing `2.x` consumers compile and run
+unchanged; the one behavioral change is called out in
+[§2.11.0 changes](#what-2110-changed-authoring-plan-phase-7).
 
-This document is both the Phase 1 design record and the living tool catalog. From Phase 4 it is
-guarded by a documentation-drift test (mirror of `DocumentMcpToolsDocumentationDriftTests`):
-every registered modeling tool must have a `### \`name\`` section here, and no section may
-describe a tool that no longer exists.
+This document is both the design record and the living tool catalog. It is guarded by
+`ModelingMcpToolsDocumentationDriftTests` (mirror of `DocumentMcpToolsDocumentationDriftTests`):
+every registered modeling tool must have a `### \`name\`` section here, and no section may describe
+a tool that no longer exists.
 
 ## Why (context)
 
@@ -112,7 +114,8 @@ matching read tool. All strings are literal English.
 modeling_list_models                     (discover models: id, name, folder, notation)
 → modeling_get_model_tree                (elements/relationships/views + concurrencyToken)
 → modeling_list_notations                (allowed element/relationship/viewpoint types per notation)
-→ modeling_apply_operations              (batch add/update/delete under notation rules, atomic)
+→ modeling_get_property_schema           (the host's required/typed fields for one type)
+→ modeling_apply_operations              (batch add/update/delete/view ops under notation rules, atomic)
 → modeling_validate                      (notation issues: severity/category/message/suggestedFix)
 → modeling_get_view                      (generated DiagramDocument JSON for a view/viewpoint)
 → diagram_render_svg                     (DiagramDocument JSON → SVG string for embed/preview)
@@ -143,10 +146,30 @@ Project a model view/viewpoint to a `DiagramDocument` via `ModelingDiagramGenera
 (serialized through `DiagramSerializer`) plus the generation `issues` and `concurrencyToken`. This
 is the bridge into `diagram_render_svg`.
 
+### `modeling_get_property_schema`
+Read the host's property schema for one notation + semantic type (or relationship type): ordered
+`sections` with typed `fields` (key, label, type, required, default, options, min/max, maxLength,
+pattern, lookup descriptor), the resolved `notation` / `semanticType` / `viewpointKey` / `culture`
+and `hasSchema` (`false` = the host has no schema for that type, so the inspector is the 2.10.0
+scalar-only one).
+
+- Resolve the target from a stored model: `modelId` + `elementId` (its notation and semantic type are
+  used unless overridden) or `modelId` + `relationshipId` (its relationship type is the semantic
+  type). Or pass `notation` + `semanticType` directly for a stateless query.
+- `propertySchemaProviderKey` selects one of several registered `IModelingPropertySchemaProvider`s;
+  a key that names none falls back to the first registered one (the same rule the batch uses).
+- `unsupported` when the host registered **no** provider; `not_found` for an unknown model/element/
+  relationship; `validation_failed` when `elementId`/`relationshipId` arrives without `modelId` or no
+  `semanticType` can be resolved; `error` when the provider itself throws.
+- The **same** provider, request shape and validator judge `modeling_apply_operations`, so the fields
+  reported here are exactly the fields a batch is validated against ("one semantics, same errors").
+
 ### `modeling_apply_operations`
-Batch mutation of a model under an `expectedConcurrencyToken`. Operations (each `op`):
+Batch mutation of a model under `expectedModifiedAt` (the `modifiedAt` token a read returned; the
+MCP parameter name is `expectedModifiedAt`). Operations (each `op`):
 `add_element`, `update_element`, `delete_element`, `add_relationship`, `update_relationship`,
-`delete_relationship`, `set_properties`.
+`delete_relationship`, `set_properties`, `set_view_node`, `remove_view_node`,
+`set_view_connection`, `remove_view_connection`.
 
 - **add_element**: `notation`, `semanticType`, `name`, optional `id` (server-generated when
   omitted; explicit duplicate id → `validation_failed`), `description`, `parentId`, `properties`,
@@ -169,13 +192,46 @@ Batch mutation of a model under an `expectedConcurrencyToken`. Operations (each 
   carries its values without a follow-up op. A malformed payload (`properties` that is not an
   object, `removedProperties` that is not an array of strings) fails the op with `property_type`
   before anything is written.
+- **set_view_node** (2.11.0): `elementId` + `x`/`y` (required for a NEW view node), optional
+  `viewId`, `width`, `height`, `parentNodeId` (`""` clears it). The node is an UPSERT: an existing
+  node keeps every member the op omits.
+- **remove_view_node** (2.11.0): `elementId`, optional `viewId`.
+- **set_view_connection** (2.11.0): `relationshipId` + `waypoints: [{x,y}]` (`[]` clears the
+  waypoints), optional `viewId`.
+- **remove_view_connection** (2.11.0): `relationshipId`, optional `viewId`.
+- `viewId` omitted or empty means the TARGET view (`Views[0]`); when the model has no view at all the
+  engine creates one (`"default"`, the model's notation, the caller's viewpoint). This is NOT the
+  generator's "empty id = grid without a view" meaning.
+
+**Policy — the editor's save semantics (2.11.0).** The batch runs under
+`ModelingOperationPolicy.Authoring`, exactly like a host writer's save: view operations are allowed
+and, after the last operation, every relationship incident to an element whose `ParentId` changed in
+the batch is re-validated (a lane move that invalidates a flow fails the batch). Pass the host's
+`IModelingRelationshipRulesProvider` / `IModelingViewpointRulesProvider` so both surfaces judge the
+same rules. Removals are still never cascaded — the batch must name the descendants and the incident
+relationships itself.
 
 **Atomicity**: all operations are applied to a working clone and every element/relationship is
 validated first; only if the *entire* batch is valid is the model saved via
 `SaveModelingModelDocumentAsync`. A single invalid op fails the whole batch with
 `validation_failed` and a per-op `operations[i]` locator — nothing is persisted (mirrors the
-convergence-tested wireframe/diagram operation flow). Success returns the new `concurrencyToken`
-and a post-apply `issues` list.
+convergence-tested wireframe/diagram operation flow). A successful response carries exactly these
+members: `id` (the model id), `applied` (how many operations ran), `createdIds` (ids the engine
+minted for operations that omitted one), `elementCount`, `relationshipCount`, `modifiedAt` (the
+library entry's new modification time — the **optimistic-concurrency token**; the next write sends it
+back as the `expectedModifiedAt` parameter, not as a `concurrencyToken` argument) and the **applied
+diff**: `diff.addedElementIds`, `removedElementIds`, `changedElementIds`, `layoutOnlyElementIds`,
+`addedRelationshipIds`, `removedRelationshipIds`, `changedRelationshipIds` plus a `counts` object.
+The diff is computed by the headless `ModelingModelDiff.Compute(baseline, current)` in
+`Tempo.Blazor.Abstractions`, the same helper a host feeds into `TmModelingViewer.DiffOverlay` — an
+agent can therefore report what it changed without reloading the model.
+
+The catalogue of `Code` values is the engine's (`parse`, `unknown_op`, `missing_field`,
+`duplicate_id`, `not_found`, `parent_cycle`, `parent_not_found`, `still_referenced`,
+`still_has_children`, `invalid_relationship`, `unsupported_relationship`, `viewpoint_disallowed`,
+`property_required`, `property_type`, `property_range`, `property_pattern`, `property_enum`,
+`property_reference`, `unsupported_operation`); the `Message` keeps the 2.6.0 wording, so existing
+clients and tests see no rewrite.
 
 ### `modeling_validate`
 Run notation validation over a model (loaded by id, or a supplied `modelJson` for stateless
@@ -188,6 +244,21 @@ List the registered notation profiles from `IModelingNotationProfileProvider`: `
 `displayName`, `supportedElementTypes`, `supportedRelationshipTypes`, `supportedViewpointKeys`,
 `enforcesStrictStencilMapping`. Lets an agent discover the legal vocabulary before calling
 `modeling_apply_operations`.
+
+## What 2.11.0 changed (authoring plan, phase 7)
+
+| Change | Kind | What an agent sees |
+|---|---|---|
+| View operations accepted (`set_view_node`, `remove_view_node`, `set_view_connection`, `remove_view_connection`) | additive operations | the layout an agent writes is the layout the editor reloads |
+| `Authoring` policy (view ops + post-batch relationship re-validation after a parent change) | behavior | a lane move that invalidates a flow now fails the batch instead of persisting an invalid model |
+| `modeling_get_property_schema` | new read tool | required/typed fields and lookup descriptors before writing |
+| Applied `diff` in the success payload | additive response member | added/removed/changed/layout ids and counts |
+| `viewpointRules` parameter on `modeling_apply_operations` | additive argument | the same viewpoint verdict the editor's save gives |
+
+The rest of the catalog (list/read/validate/notations, the result envelope, the error codes) is
+unchanged. The host implementation recipe — writer with capabilities, optimistic concurrency,
+schema/lookups and the MCP wiring — lives in
+[modeling-hosting-guide.md](modeling-hosting-guide.md).
 
 ## Diagram tool catalog (addition)
 
@@ -257,12 +328,20 @@ Sample outputs (committed golden files):
   determinism (two renders byte-equal) + sanitizer safety (no `<script>`/`javascript:`/`onload=`)
   + edges: empty document, large graph, custom colors, dark theme. DI registration test (singleton,
   resolves & renders).
-- **MCP suite (Phase 3)** — `tests/Tempo.Blazor.Mcp.Tests`: a `FakeModelingBackend` implementing
-  both `ITempoDocumentLibraryProvider` and `IModelingModelDocumentProvider` (mirror
+- **MCP suite** — `tests/Tempo.Blazor.Mcp.Tests`: a `FakeModelingBackend` implementing both
+  `ITempoDocumentLibraryProvider` and `IModelingModelDocumentProvider` (mirror
   `FakeWireframeBackend`); happy-path + edge tests (unknown model → `not_found`, stale token →
   `conflict`, invalid ArchiMate relationship → `validation_failed` with `operations[i]`, partially-
   invalid batch → atomic no-write); tool-name **snapshot** (`TempoModelingMcp` names) + append to
   the cross-package `AllToolNames_*` snapshot; registration test (`AddTempoModelingMcpTools` wiring).
+- **Parity (2.11.0)** — `ModelingMcpParityTests` drives the documented host writer
+  (`ModelingChangeSetTranslator` + `ModelingOperationEngine` under `Authoring`, resolver preloaded)
+  as the editor's SAVE path against the MCP tool: the same batch must yield the same model JSON and
+  the same error messages/codes, including a missing required property and a parent move that
+  invalidates a flow. `ModelingViewOperationToolsTests` and `ModelingPropertySchemaToolsTests` cover
+  the new operations/tool; `ModelingMcpContractSnapshotTests` pins the responses in
+  `Fixtures/modeling-mcp-contract.snapshot.json` (regenerate with
+  `TM_REGEN_MODELING_MCP_SNAPSHOT=1` and review the diff).
 - All new tests are registered/recorded via the test MCP tools per the plan's app rules.
 
 ## Worked example (agent walkthrough)
@@ -308,3 +387,7 @@ End-to-end coverage lives in `tests/Tempo.Blazor.Mcp.Tests/ModelingToolsTests.cs
   `src/Tempo.Blazor.Demo.Api/Services/DiagramExportSvgBuilder.cs`
 - Notation rules & ArchiMate matrix:
   `src/Tempo.Blazor.Modeling/Components/Modeling/BuiltInModelingProfiles.cs`
+- Host implementation recipe (writer, capabilities, concurrency, schema, lookups, MCP wiring):
+  [modeling-hosting-guide.md](modeling-hosting-guide.md)
+- Authoring design contract (change set v2, engine, parity, viewer):
+  [modeling-authoring.md](modeling-authoring.md)

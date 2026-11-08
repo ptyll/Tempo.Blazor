@@ -8,7 +8,7 @@
     <RootNamespace>Tempo.Blazor</RootNamespace>
     <IsPackable>true</IsPackable>
     <PackageId>Tempo.Blazor.AI</PackageId>
-    <Version>2.10.0</Version>
+    <Version>2.11.0</Version>
     <Authors>ptyll</Authors>
     <Title>Tempo.Blazor.AI</Title>
     <Description>AI conversation components for Tempo.Blazor: a safe Markdig markdown view, messages with citations and feedback, a streaming conversation container, a composer and tool-call/reasoning panels. Generic contracts live in Tempo.Blazor.Abstractions, so no LLM SDK is referenced.</Description>
