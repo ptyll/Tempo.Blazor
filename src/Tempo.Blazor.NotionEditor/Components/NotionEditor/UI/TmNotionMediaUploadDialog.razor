@@ -1,4 +1,5 @@
 @namespace Tempo.Blazor.Components.NotionEditor.UI
+@inherits Tempo.Blazor.Components.TmComponentBase
 @using Tempo.Blazor.Components.NotionEditor.Services
 @using Microsoft.AspNetCore.Components.Forms
 @using Tempo.Blazor.Components.Buttons
@@ -107,7 +108,7 @@
 
                     @if (_selectedFile is not null)
                     {
-                        <div class="tm-media-dialog__selected" data-testid="notion-media-selected-file">
+                        <div class="tm-media-dialog__selected" data-testid="@TestId("notion-media-selected-file")">
                             <span>@Loc["TmNotionMediaUploadDialog_SelectedFile"]</span>
                             <span class="tm-media-dialog__selected-name">@_selectedFile.Name</span>
                             <span>@FormatSize(_selectedFile.Size)</span>
@@ -238,7 +239,7 @@
         <TmButton Variant="ButtonVariant.Primary"
                   Disabled="@(_selectedLibraryItem is null && _selectedFile is null && string.IsNullOrWhiteSpace(_embedUrl))"
                   OnClick="InsertSelectedAsync"
-                  data-testid="notion-media-insert">
+                  data-testid="@TestId("notion-media-insert")">
             @Loc["TmNotionMediaUploadDialog_Insert"]
         </TmButton>
     </Footer>

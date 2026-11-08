@@ -64368,6 +64368,12 @@
               "description": "Navigates to the given page by ID. Supplied by TmNotionEditor and used by child page / linked page / breadcrumb blocks to trigger in-editor navigation."
             },
             {
+              "name": "OpenPageDialog",
+              "kind": "Property",
+              "type": "Action<NotionPageDialog, Guid>?",
+              "description": "Opens an editor-owned page dialog (restrictions, share, history) for a page. The page calls this instead of rendering the dialog itself: the shell canvas remounts on a band flip, and a dialog inside it would close mid-open."
+            },
+            {
               "name": "OpenTemplateGallery",
               "kind": "Property",
               "type": "Func<Task>?",
@@ -68431,7 +68437,7 @@
               "name": "DateFormat",
               "type": "string",
               "isRequired": false,
-              "default": "\"yyyy-MM-dd\"",
+              "default": "\"\"",
               "description": "Date format passed to the shared formatter. Defaults to a short date."
             },
             {
@@ -103894,6 +103900,16 @@
           "documentationStatus": "merged"
         },
         {
+          "itemName": "NotionPageDialog",
+          "kind": "Enum",
+          "category": "Notion Editor",
+          "namespace": "Tempo.Blazor.NotionEditor.Enums",
+          "description": "The editor-owned page dialogs a page can ask the shell to open (NotionEditorContext.OpenPageDialog). The page calls the context instead of rendering the dialog itself: the shell canvas remounts on a band flip, and a dialog inside it would close mid-open.",
+          "packageId": "Tempo.Blazor.Abstractions",
+          "sourcePath": "src/Tempo.Blazor.Abstractions/NotionEditor/Enums/NotionPageDialog.cs",
+          "documentationStatus": "merged"
+        },
+        {
           "itemName": "NotionPageSave",
           "kind": "Class",
           "category": "Notion Editor",
@@ -116942,12 +116958,12 @@
       ],
       "libraryExamples": [],
       "summary": {
-        "itemCount": 1572,
-        "manualItemCount": 1572,
-        "generatedItemCount": 1556,
+        "itemCount": 1573,
+        "manualItemCount": 1573,
+        "generatedItemCount": 1557,
         "generatedOnlyItemCount": 0,
         "componentCount": 0,
-        "publicApiTypeCount": 1556
+        "publicApiTypeCount": 1557
       }
     },
     {
@@ -133940,10 +133956,10 @@
   ],
   "summary": {
     "packageCount": 28,
-    "itemCount": 3484,
-    "manualItemCount": 3484,
+    "itemCount": 3485,
+    "manualItemCount": 3485,
     "generatedOnlyItemCount": 0,
     "componentCount": 535,
-    "publicApiTypeCount": 2897
+    "publicApiTypeCount": 2898
   }
 }

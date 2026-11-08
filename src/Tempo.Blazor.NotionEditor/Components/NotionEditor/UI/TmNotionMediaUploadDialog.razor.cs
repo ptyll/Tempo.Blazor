@@ -8,7 +8,7 @@ using Tempo.Blazor.NotionEditor.Models;
 
 namespace Tempo.Blazor.Components.NotionEditor.UI;
 
-public partial class TmNotionMediaUploadDialog : ComponentBase, IAsyncDisposable
+public partial class TmNotionMediaUploadDialog : TmComponentBase, IAsyncDisposable
 {
     // ── DI ───────────────────────────────────────────────────────────────────
 

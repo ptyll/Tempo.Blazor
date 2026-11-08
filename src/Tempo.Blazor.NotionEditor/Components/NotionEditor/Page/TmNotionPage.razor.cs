@@ -612,7 +612,7 @@ public partial class TmNotionPage : ComponentBase, IAsyncDisposable
         // callback. A standalone page keeps the dialog it renders itself.
         if (Context.OpenPageDialog is { } open)
         {
-            open("share", Page.Id);
+            open(NotionPageDialog.Share, Page.Id);
             return Task.CompletedTask;
         }
 
@@ -632,7 +632,7 @@ public partial class TmNotionPage : ComponentBase, IAsyncDisposable
     {
         if (Context.OpenPageDialog is { } open)
         {
-            open("restrictions", Page.Id);
+            open(NotionPageDialog.Restrictions, Page.Id);
             return Task.CompletedTask;
         }
 

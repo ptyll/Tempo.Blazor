@@ -74,6 +74,11 @@ backdrop, its own z-index band or a second drag implementation.
 | Page tree (tablet), inspector, shell panels | `TmSidePanel` / shell drawer | At most one shell panel open. |
 | Mobile page tree, shell panels, database sheets | sheet presentation of the same primitives | Full height; the page tree starts closed. |
 
+`TmNotionTempoEditorModal` (N12) — the shared shell of the Diagram / Spreadsheet / Wireframe edit
+modals — is built on the core `TmModal`: the header is the core modal header (title, Maximize, ×),
+the footer order is Discard | Save and close, and a dirty Discard (or Escape) confirms first
+through a core `TmDialog`.
+
 ## Comment presentation
 
 `CommentPresentation` (`NotionCommentPresentation`, default **`Auto`**) is the block and text

@@ -10,7 +10,7 @@ namespace Tempo.Blazor.Components.NotionEditor.Blocks.TempoBlocks;
 /// handler and takes the same discard path; the confirm dialog sits above the modal, so Escape
 /// closes the confirm first.
 /// </summary>
-public partial class TmNotionTempoEditorModal : ComponentBase
+public partial class TmNotionTempoEditorModal : TmComponentBase
 {
     /// <summary>The modal title.</summary>
     [Parameter, EditorRequired] public string Title { get; set; } = string.Empty;

@@ -4,7 +4,7 @@ using Tempo.Blazor.Abstractions.WorkItems;
 namespace Tempo.Blazor.Components.NotionEditor.UI;
 
 /// <summary>Aggregated task panel for Notion action items, backed by the unified work-item provider.</summary>
-public partial class TmNotionMyTasks : ComponentBase
+public partial class TmNotionMyTasks : TmComponentBase
 {
     /// <summary>Unified work-item source used to query and update tasks.</summary>
     [Parameter, EditorRequired] public ITmWorkItemProvider WorkItemSource { get; set; } = default!;

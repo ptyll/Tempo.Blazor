@@ -26537,6 +26537,16 @@
       "documentationStatus": "merged"
     },
     {
+      "itemName": "NotionPageDialog",
+      "kind": "Enum",
+      "category": "Notion Editor",
+      "namespace": "Tempo.Blazor.NotionEditor.Enums",
+      "description": "The editor-owned page dialogs a page can ask the shell to open (NotionEditorContext.OpenPageDialog). The page calls the context instead of rendering the dialog itself: the shell canvas remounts on a band flip, and a dialog inside it would close mid-open.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/NotionEditor/Enums/NotionPageDialog.cs",
+      "documentationStatus": "merged"
+    },
+    {
       "itemName": "NotionPageSave",
       "kind": "Class",
       "category": "Notion Editor",
@@ -39585,11 +39595,11 @@
   ],
   "libraryExamples": [],
   "summary": {
-    "itemCount": 1572,
-    "manualItemCount": 1572,
-    "generatedItemCount": 1556,
+    "itemCount": 1573,
+    "manualItemCount": 1573,
+    "generatedItemCount": 1557,
     "generatedOnlyItemCount": 0,
     "componentCount": 0,
-    "publicApiTypeCount": 1556
+    "publicApiTypeCount": 1557
   }
 }

@@ -6,7 +6,7 @@ using Tempo.Blazor.Abstractions.Layout;
 namespace Tempo.Blazor.Components.NotionEditor.UI;
 
 /// <summary>Modal overlay that lists Notion editor keyboard shortcuts.</summary>
-public partial class TmNotionShortcutsPanel : ComponentBase, IAsyncDisposable
+public partial class TmNotionShortcutsPanel : TmComponentBase, IAsyncDisposable
 {
     [Inject] private IJSRuntime JS { get; set; } = default!;
 

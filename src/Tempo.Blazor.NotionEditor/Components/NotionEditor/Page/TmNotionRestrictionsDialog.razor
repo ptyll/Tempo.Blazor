@@ -1,4 +1,5 @@
 @namespace Tempo.Blazor.Components.NotionEditor.Page
+@inherits Tempo.Blazor.Components.TmComponentBase
 @using Tempo.Blazor.NotionEditor.Interfaces
 @using Tempo.Blazor.NotionEditor.Models
 @using Tempo.Blazor.Components.Buttons
@@ -16,7 +17,7 @@
          LayoutMode="ResolvedLayout"
          CloseOnOverlayClick="false"
          Class="tm-nprd-host"
-         data-testid="notion-restrictions-dialog">
+         data-testid="@TestId("notion-restrictions-dialog")">
     <ChildContent>
         @if (_loading)
         {
@@ -34,7 +35,7 @@
                              Variant="AlertVariant.Soft"
                              Class="tm-nprd__banner"
                              role="status"
-                             data-testid="notion-restrictions-inherited">
+                             data-testid="@TestId("notion-restrictions-inherited")">
                         @Loc["Notion_Restrictions_Inherited"]
                     </TmAlert>
                 }
@@ -52,7 +53,7 @@
                 <section class="tm-nprd__section" aria-labelledby="tm-nprd-people-heading">
                     <h3 id="tm-nprd-people-heading" class="tm-nprd__heading">@Loc["Notion_Restrictions_People"]</h3>
                     <form class="tm-nprd__add"
-                          data-testid="notion-restrictions-add-form"
+                          data-testid="@TestId("notion-restrictions-add-form")"
                           @onsubmit="AddEntry"
                           @onsubmit:preventDefault="true">
                         <select class="tm-nprd__select tm-nprd__select--compact"
@@ -67,7 +68,7 @@
                                aria-label="@Loc["Notion_Restrictions_Subject"]"
                                placeholder="@Loc["Notion_Restrictions_SubjectPlaceholder"]"
                                value="@_newSubjectId"
-                               data-testid="notion-restrictions-subject"
+                               data-testid="@TestId("notion-restrictions-subject")"
                                @oninput="e => _newSubjectId = e.Value?.ToString() ?? string.Empty" />
                         <select class="tm-nprd__select tm-nprd__select--compact"
                                 aria-label="@Loc["Notion_Restrictions_Permission"]"
@@ -88,7 +89,7 @@
                     </form>
                 </section>
 
-                <div class="tm-nprd__scroll" data-testid="notion-restrictions-scroll">
+                <div class="tm-nprd__scroll" data-testid="@TestId("notion-restrictions-scroll")">
                     @if (_entries.Count == 0)
                     {
                         <div class="tm-nprd__empty">@Loc["Notion_Restrictions_Empty"]</div>
@@ -99,7 +100,7 @@
                             @foreach (var entry in _entries)
                             {
                                 var captured = entry;
-                                <div class="tm-nprd__entry" role="listitem" data-testid="notion-restrictions-entry">
+                                <div class="tm-nprd__entry" role="listitem" data-testid="@TestId("notion-restrictions-entry")">
                                     <TmIcon Name="@(captured.SubjectType == PageRestrictionSubjectType.User ? IconNames.User : IconNames.Users)"
                                             Size="IconSize.Sm" />
                                     <span class="tm-nprd__subject-kind">@SubjectTypeText(captured.SubjectType)</span>
@@ -140,7 +141,7 @@
                 <TmButton Variant="ButtonVariant.Danger"
                           Disabled="_saving"
                           OnClick="RemoveRestrictions"
-                          data-testid="notion-restrictions-remove-all">
+                          data-testid="@TestId("notion-restrictions-remove-all")">
                     @Loc["Notion_Restrictions_RemoveAll"]
                 </TmButton>
                 <div class="tm-nprd__footer-end">
@@ -149,7 +150,7 @@
                               Class="tm-nprd__primary"
                               Disabled="_saving"
                               OnClick="SaveAsync"
-                              data-testid="notion-restrictions-save">
+                              data-testid="@TestId("notion-restrictions-save")">
                         @Loc["Tm_Save"]
                     </TmButton>
                 </div>

@@ -1,4 +1,5 @@
 @namespace Tempo.Blazor.Components.NotionEditor.UI
+@inherits Tempo.Blazor.Components.TmComponentBase
 
 @* Phase 6 (N10): the shortcuts panel rides the core TmModal — a sheet on mobile. The kbd text
    stays in the accessibility tree. *@
@@ -11,7 +12,7 @@
          LayoutMode="LayoutMode"
          Class="tm-nsp-host">
     <ChildContent>
-        <div class="tm-nsp" data-testid="notion-shortcuts-panel">
+        <div class="tm-nsp" data-testid="@TestId("notion-shortcuts-panel")">
 
             <div class="tm-nsp__grid">
                 @foreach (var group in Groups)

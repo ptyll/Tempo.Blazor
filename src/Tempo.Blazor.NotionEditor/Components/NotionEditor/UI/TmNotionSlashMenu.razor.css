@@ -59,7 +59,8 @@
 }
 
 .tm-notion-slash__search:focus-within {
-    box-shadow: var(--tm-shadow-focus);
+    outline: 2px solid transparent;
+    box-shadow: var(--tm-focus-ring);
 }
 
 .tm-notion-slash__input::placeholder {

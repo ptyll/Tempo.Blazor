@@ -100,11 +100,11 @@ public sealed class NotionEditorContext
     public Func<Task>?                     OpenTemplateGallery      { get; init; }
 
     /// <summary>
-    /// Opens an editor-owned page dialog (restrictions, share) for a page. The page calls this
+    /// Opens an editor-owned page dialog (restrictions, share, history) for a page. The page calls this
     /// instead of rendering the dialog itself: the shell canvas remounts on a band flip, and a
     /// dialog inside it would close mid-open.
     /// </summary>
-    public Action<string, Guid>?           OpenPageDialog           { get; init; }
+    public Action<NotionPageDialog, Guid>?   OpenPageDialog           { get; init; }
 
     /// <summary>
     /// Page-level actions (add block, comments, page settings) the rendered

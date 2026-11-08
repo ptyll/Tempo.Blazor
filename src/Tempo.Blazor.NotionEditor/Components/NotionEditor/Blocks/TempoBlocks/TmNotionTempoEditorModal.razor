@@ -1,4 +1,5 @@
 @namespace Tempo.Blazor.Components.NotionEditor.Blocks.TempoBlocks
+@inherits Tempo.Blazor.Components.TmComponentBase
 @using Tempo.Blazor.Abstractions.Layout
 @using Tempo.Blazor.Components.Buttons
 @using Tempo.Blazor.Components.Feedback
@@ -37,7 +38,7 @@
                       AriaLabel="@Loc["TmNotionTempoEditor_Maximize"]"
                       aria-pressed="@_maximized.ToString().ToLowerInvariant()"
                       OnClick="ToggleMaximize"
-                      data-testid="notion-tempo-modal-maximize">
+                      data-testid="@TestId("notion-tempo-modal-maximize")">
                 <TmIcon Name="@(_maximized ? IconNames.Minimize2 : IconNames.Maximize2)" Size="IconSize.Sm" />
             </TmButton>
         }
@@ -63,12 +64,12 @@
         </div>
     </ChildContent>
     <Footer>
-        <div class="tm-notion-tempo-modal__footer" data-testid="notion-tempo-modal-footer">
+        <div class="tm-notion-tempo-modal__footer" data-testid="@TestId("notion-tempo-modal-footer")">
             <TmButton Variant="ButtonVariant.Ghost"
                       Class="@($"tm-notion-tempo-modal__btn--discard {DiscardClass}")"
                       Disabled="Saving"
                       OnClick="RequestDiscardAsync"
-                      data-testid="notion-tempo-modal-discard">
+                      data-testid="@TestId("notion-tempo-modal-discard")">
                 <TmIcon Name="@IconNames.Trash2" Size="IconSize.Xs" />
                 @DiscardText
             </TmButton>
@@ -76,7 +77,7 @@
                       Class="@($"tm-notion-tempo-modal__btn--primary {SaveClass}")"
                       Disabled="@(Saving || Missing)"
                       OnClick="OnSave"
-                      data-testid="notion-tempo-modal-save">
+                      data-testid="@TestId("notion-tempo-modal-save")">
                 <TmIcon Name="@IconNames.Save" Size="IconSize.Xs" />
                 @SaveText
             </TmButton>
@@ -95,5 +96,5 @@
               OkButtonText="@ConfirmOkText"
               CancelButtonText="@ConfirmCancelText"
               OnResult="ResolveConfirmAsync"
-              data-testid="notion-tempo-modal-discard-confirm" />
+              data-testid="@TestId("notion-tempo-modal-discard-confirm")" />
 }

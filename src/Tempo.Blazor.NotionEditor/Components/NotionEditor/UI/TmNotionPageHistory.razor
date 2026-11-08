@@ -82,7 +82,7 @@
                                    checked="@_picked.Contains(version.Id)"
                                    tabindex="-1"
                                    aria-label="@Loc["TmNotionPageHistory_Pick"]"
-                                   data-testid="notion-history-pick"
+                                   data-testid="@TestId("notion-history-pick")"
                                    @onclick:stopPropagation="true"
                                    @onchange="() => PickVersion(version)" />
 
@@ -282,7 +282,7 @@
                 </div>
 
                 @* ── Diff legend ───────────────────────────────────────────── *@
-                <p class="tm-nph__summary" data-testid="notion-history-change-count">@ChangeSummary</p>
+                <p class="tm-nph__summary" data-testid="@TestId("notion-history-change-count")">@ChangeSummary</p>
                 <div class="tm-nph__diff-legend" role="group" aria-label="@Loc["TmNotionPageHistory_DiffLegend"]">
                     <span class="tm-nph__legend-item tm-nph__legend-item--added">
                         @Loc["TmNotionPageHistory_DiffAdded"]
@@ -313,13 +313,13 @@
             <TmButton Variant="ButtonVariant.Secondary"
                       Disabled="@(!CanCompareSelected)"
                       OnClick="CompareSelectedAsync"
-                      data-testid="notion-history-compare-selected">
+                      data-testid="@TestId("notion-history-compare-selected")">
                 @Loc["TmNotionPageHistory_CompareSelected"]
             </TmButton>
             <TmButton Variant="ButtonVariant.Primary"
                       Disabled="@(!CanRestore || _restoring)"
                       OnClick="RestoreAsync"
-                      data-testid="notion-history-restore">
+                      data-testid="@TestId("notion-history-restore")">
                 @Loc["TmNotionPageHistory_Restore"]
             </TmButton>
             @if (IsMobile && _mobilePreview)
@@ -327,7 +327,7 @@
                 <TmButton Variant="ButtonVariant.Ghost"
                           Class="tm-nph__back"
                           OnClick="BackToList"
-                          data-testid="notion-history-back">
+                          data-testid="@TestId("notion-history-back")">
                     <TmIcon Name="@IconNames.ChevronLeft" Size="IconSize.Xs" />
                     @Loc["TmNotionPageHistory_Back"]
                 </TmButton>
@@ -345,7 +345,7 @@
               CancelButtonText="@Loc["TmNotionPageHistory_Cancel"]"
               LayoutMode="ResolvedLayout"
               OnResult="HandleRestoreResult"
-              data-testid="notion-history-restore-confirm" />
+              data-testid="@TestId("notion-history-restore-confirm")" />
 
     @* ── Error toast ────────────────────────────────────────────────────────── *@
     @if (!string.IsNullOrEmpty(_error))

@@ -1104,6 +1104,12 @@
           "description": "Navigates to the given page by ID. Supplied by TmNotionEditor and used by child page / linked page / breadcrumb blocks to trigger in-editor navigation."
         },
         {
+          "name": "OpenPageDialog",
+          "kind": "Property",
+          "type": "Action<NotionPageDialog, Guid>?",
+          "description": "Opens an editor-owned page dialog (restrictions, share, history) for a page. The page calls this instead of rendering the dialog itself: the shell canvas remounts on a band flip, and a dialog inside it would close mid-open."
+        },
+        {
           "name": "OpenTemplateGallery",
           "kind": "Property",
           "type": "Func<Task>?",
@@ -5167,7 +5173,7 @@
           "name": "DateFormat",
           "type": "string",
           "isRequired": false,
-          "default": "\"yyyy-MM-dd\"",
+          "default": "\"\"",
           "description": "Date format passed to the shared formatter. Defaults to a short date."
         },
         {

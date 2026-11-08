@@ -13,7 +13,7 @@ namespace Tempo.Blazor.Components.NotionEditor.Page;
 /// Page header: cover image (with drag repositioning), icon (emoji picker),
 /// title (contenteditable), and optional description.
 /// </summary>
-public partial class TmNotionPageHeader : ComponentBase, IDisposable
+public partial class TmNotionPageHeader : TmComponentBase, IDisposable
 {
     // ── DI ───────────────────────────────────────────────────────────────────
 

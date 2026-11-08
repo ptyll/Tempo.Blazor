@@ -6,7 +6,7 @@ using Tempo.Blazor.NotionEditor.Models;
 
 namespace Tempo.Blazor.Components.NotionEditor.Page;
 
-public partial class TmNotionRestrictionsDialog : ComponentBase
+public partial class TmNotionRestrictionsDialog : TmComponentBase
 {
     /// <summary>Controls whether the dialog is visible.</summary>
     [Parameter] public bool Visible { get; set; }

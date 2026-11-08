@@ -471,12 +471,12 @@ public partial class TmNotionEditor : TmComponentBase, IAsyncDisposable
     /// outside the shell canvas, so a band flip (NOTION-EDITOR-SHELL-CANVAS-REMOUNT) cannot
     /// dispose it while it is open.
     /// </summary>
-    private void OpenPageDialogFromPage(string kind, Guid pageId)
+    private void OpenPageDialogFromPage(NotionPageDialog dialog, Guid pageId)
     {
         _pageDialogPageId = pageId;
-        if (kind == "share")
+        if (dialog == NotionPageDialog.Share)
             _shareDialogOpen = true;
-        else if (kind == "restrictions")
+        else if (dialog == NotionPageDialog.Restrictions)
             _restrictionsDialogOpen = true;
         _ = InvokeAsync(StateHasChanged);
     }

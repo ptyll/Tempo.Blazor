@@ -85,6 +85,11 @@ public sealed class ComponentChangeCarriesJsonTests
         // the .razor file (plus doc text of ToolboxCollapsed); the overlay was regenerated in the
         // phase 8/9 window and `validate --fail-on-drift` is clean, so no documentation gap ships.
         "4eb96606c346777de760971e555e5c992dc2935d",
+        // NotionEditor phase 13 (74f857fb0): TmNotionDbPropertyValue gained a date-format parameter
+        // without a JsonDocumentation/** path in the same commit; the JSON was regenerated in the
+        // phase-13 review commit (same window) and `validate --fail-on-drift` is clean, so no
+        // documentation gap ships — the same-commit contract was the broken part.
+        "74f857fb0e51099431e3de84217ab2ba1823b1f3",
     };
 
     /// <summary>

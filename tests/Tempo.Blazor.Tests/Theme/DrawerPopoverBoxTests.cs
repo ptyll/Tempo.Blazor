@@ -31,7 +31,7 @@ public sealed class DrawerPopoverBoxTests
         css.Should().Contain("max-block-size: 100dvh");
         css.Should().Contain("min-block-size: 0");
         css.Should().Contain(".tm-drawer__body");
-        css.Should().MatchRegex(@"\.tm-drawer__body\s*\{[^}]*overflow:\s*auto");
+        css.Should().MatchRegex(@"\.tm-drawer__body\s*\{[^}]*overflow-y:\s*auto");
     }
 
     private static string FindCoreCss()

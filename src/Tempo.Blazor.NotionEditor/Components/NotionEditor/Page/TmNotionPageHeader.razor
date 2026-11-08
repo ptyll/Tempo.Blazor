@@ -1,4 +1,5 @@
 @namespace Tempo.Blazor.Components.NotionEditor.Page
+@inherits Tempo.Blazor.Components.TmComponentBase
 @using Tempo.Blazor.NotionEditor.Interfaces
 @using Tempo.Blazor.Components.NotionEditor.Services
 @using Tempo.Blazor.Components.NotionEditor.UI
@@ -219,7 +220,7 @@
     @* Meta row (phase 5, N2; opt-in via ShowMeta) *@
     @if (ShowMeta)
     {
-        <div class="tm-notion-header-meta-row" data-testid="notion-page-meta">
+        <div class="tm-notion-header-meta-row" data-testid="@TestId("notion-page-meta")">
             @if (Page.LastEditedAt is { } lastEdited && lastEdited != default)
             {
                 <span class="tm-notion-header-meta-row__item">
@@ -243,7 +244,7 @@
             {
                 <button class="tm-notion-header-meta-row__item tm-notion-header-meta-row__comment-link"
                         type="button"
-                        data-testid="notion-page-meta-comments"
+                        data-testid="@TestId("notion-page-meta-comments")"
                         title="@Loc.Plural("TmNotionPageHeader_UnresolvedComments", UnresolvedCommentCount)"
                         aria-label="@Loc.Plural("TmNotionPageHeader_UnresolvedComments", UnresolvedCommentCount)"
                         @onclick="OnCommentBadgeClicked"
