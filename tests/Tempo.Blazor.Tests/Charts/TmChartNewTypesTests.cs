@@ -117,7 +117,7 @@ public class TmChartNewTypesTests : LocalizationTestBase
         var text = cut.Find("svg").TextContent;
         text.Should().Contain("45");    // 450 / 1000
         text.Should().Contain("%");
-        text.Should().Contain("1000");
+        text.Should().Contain("1,000", "a stage value reads with the reader's thousands grouping");
     }
 
     [Fact]

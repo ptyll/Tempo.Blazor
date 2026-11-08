@@ -2,7 +2,7 @@
 @inherits Tempo.Blazor.Components.TmComponentBase
 @using System.Globalization
 
-<div class="tm-chart @(Animated ? "tm-chart--animated" : "") @Class"
+<div class="tm-chart @(Animated ? "tm-chart--animated" : "") @(Type == ChartType.Funnel ? "tm-chart--funnel" : "") @Class"
      style="width: @Width; height: @Height;"
      data-testid="@RootTestId("tm-chart")"
      data-tooltip-mode="@TooltipMode.ToString().ToLowerInvariant()"
@@ -14,22 +14,27 @@
     }
     else
     {
-        <svg viewBox="0 0 @SvgW @SvgH"
-             preserveAspectRatio="xMidYMid meet"
-             aria-label="@ChartAriaLabel"
-             role="img"
-             width="100%"
-             height="100%"
-             tabindex="@IndexTabIndex"
-             aria-keyshortcuts="@IndexKeyshortcuts"
-             aria-describedby="@IndexDescribedBy"
-             @onkeydown="HandleChartKeyDown"
-             @onblur="HandleChartBlur">
-            @ChartContent
-            @IndexOverlayContent
-            @TooltipContent
-            @IndexTooltipContent
-        </svg>
+        @* The plot box is the funnel's SIZE container: its width and height are the box the SVG meets
+           into, which is the scale the label type has to compensate (_chart.css). Every other chart type
+           gets the same box without the containment. *@
+        <div class="tm-chart__plot">
+            <svg viewBox="0 0 @SvgW @SvgH"
+                 preserveAspectRatio="xMidYMid meet"
+                 aria-label="@ChartAriaLabel"
+                 role="img"
+                 width="100%"
+                 height="100%"
+                 tabindex="@IndexTabIndex"
+                 aria-keyshortcuts="@IndexKeyshortcuts"
+                 aria-describedby="@IndexDescribedBy"
+                 @onkeydown="HandleChartKeyDown"
+                 @onblur="HandleChartBlur">
+                @ChartContent
+                @IndexOverlayContent
+                @TooltipContent
+                @IndexTooltipContent
+            </svg>
+        </div>
 
         @if (IndexTooltipActive)
         {
@@ -79,6 +84,37 @@
                     }
                 }
             </div>
+        }
+
+        @if (Type == ChartType.Funnel)
+        {
+            @* The SVG is role="img", so a reader hears only the chart's type. The funnel's stages and
+               their conversions are the data a reader needs, so it gets a real (visually hidden) table
+               of exactly the stages that are drawn — an accessible name instead of a picture. *@
+            var funnelRows = FunnelTableRows();
+            if (funnelRows.Count > 0)
+            {
+                <table class="tm-sr-only" data-testid="@TestId("chart-funnel-table")">
+                    <caption>@Loc["TmChart_FunnelTableCaption"]</caption>
+                    <thead>
+                        <tr>
+                            <th scope="col">@Loc["TmChart_FunnelStageColumn"]</th>
+                            <th scope="col">@Loc["TmChart_FunnelValueColumn"]</th>
+                            <th scope="col">@Loc["TmChart_FunnelConversionColumn"]</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var row in funnelRows)
+                        {
+                            <tr>
+                                <th scope="row">@row.Label</th>
+                                <td>@row.Value</td>
+                                <td>@row.Conversion</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
         }
     }
 </div>
@@ -1600,76 +1636,6 @@
         {
             var cx = PL + i * sx;
             SvgText(b, "tm-chart__label", cx, PT + CH + 24, Data.Labels[i], "middle");
-        }
-    }
-
-    // ── Funnel ──
-
-    private void BuildFunnel(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder b)
-    {
-        var ds = Data.Datasets[0];
-        var stages = new List<int>();
-        var count = Math.Min(Data.Labels.Length, ds.Values.Length);
-        for (int i = 0; i < count; i++)
-        {
-            if (!IsSegmentHidden(0, i)) stages.Add(i);
-        }
-        if (stages.Count == 0) return;
-
-        var max = stages.Max(i => ds.Values[i]);
-        if (max <= 0) max = 1;
-        var first = ds.Values[stages[0]];
-        var sh = CH / (double)stages.Count;
-        var cx = PL + CW / 2.0;
-
-        for (int s = 0; s < stages.Count; s++)
-        {
-            var i = stages[s];
-            var val = ds.Values[i];
-            var topW = CW * (Math.Max(val, 0) / max);
-            var nextVal = s + 1 < stages.Count ? ds.Values[stages[s + 1]] : val;
-            var botW = CW * (Math.Max(nextVal, 0) / max);
-            var yTop = PT + s * sh;
-            var yBot = yTop + sh - 3;
-            var fill = ResolveFillColor(ds, i, Palette[i % Palette.Length]);
-            var ci = i;
-
-            b.OpenElement(0, "path");
-            b.AddAttribute(1, "class", "tm-chart__funnel-segment");
-            b.AddAttribute(2, "d",
-                $"M {F(cx - topW / 2)} {F(yTop)} L {F(cx + topW / 2)} {F(yTop)} " +
-                $"L {F(cx + botW / 2)} {F(yBot)} L {F(cx - botW / 2)} {F(yBot)} Z");
-            b.AddAttribute(3, "fill", fill);
-            b.AddAttribute(4, "data-index", ci.ToString(CultureInfo.InvariantCulture));
-            b.AddAttribute(5, "data-value", F(val));
-            b.AddAttribute(6, "data-width", F(topW));
-            b.AddAttribute(7, "onclick",
-                EventCallback.Factory.Create<Microsoft.AspNetCore.Components.Web.MouseEventArgs>(
-                    this, () => HandleClick(0, ci)));
-            b.AddAttribute(8, "onmouseover",
-                EventCallback.Factory.Create<Microsoft.AspNetCore.Components.Web.MouseEventArgs>(
-                    this, () => ShowTip(0, ci, cx, yTop)));
-            b.AddAttribute(9, "onmouseout",
-                EventCallback.Factory.Create<Microsoft.AspNetCore.Components.Web.MouseEventArgs>(this, HideTip));
-            b.CloseElement();
-
-            // Narrow stages can't fit their text — render it beside the funnel instead of inside.
-            var label = i < Data.Labels.Length ? Data.Labels[i] : "";
-            var inside = topW >= 150;
-            var textX = inside ? cx : cx + Math.Max(topW, botW) / 2 + 10;
-            var anchor = inside ? "middle" : "start";
-            var textFill = inside ? "#ffffff" : "#6b7280";
-            if (ShowValues)
-            {
-                var pct = first > 0 ? val / first * 100 : 0;
-                SvgTextColored(b, "tm-chart__funnel-label", textX, yTop + sh / 2 - 3, label, anchor, textFill, 12);
-                SvgTextColored(b, "tm-chart__funnel-value", textX, yTop + sh / 2 + 12,
-                    $"{F(val)} ({F(pct)} %)", anchor, textFill, 10);
-            }
-            else
-            {
-                SvgTextColored(b, "tm-chart__funnel-label", textX, yTop + sh / 2 + 4, label, anchor, textFill, 12);
-            }
         }
     }
 

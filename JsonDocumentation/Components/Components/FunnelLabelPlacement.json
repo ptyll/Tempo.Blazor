@@ -1,0 +1,25 @@
+{
+  "kind": "Enum",
+  "category": "Components",
+  "namespace": "Tempo.Blazor.Components.Charts",
+  "description": "Where a TmChart funnel stage's label is drawn. The stage bands narrow with the value, so a label that fits a wide first stage does not fit a thin last one.",
+  "packageId": "Tempo.Blazor",
+  "sourcePath": "src/Tempo.Blazor/Components/Charts/ChartModels.cs",
+  "documentationStatus": "documented",
+  "itemName": "FunnelLabelPlacement",
+  "members": [
+    {
+      "name": "Auto",
+      "description": "Inside the stage when its band is at least 150 viewBox units wide, beside the funnel otherwise. The default, so a funnel that never sets FunnelLabelPlacement renders exactly what it rendered before the placement existed."
+    },
+    {
+      "name": "Inside",
+      "description": "Always inside the stage band, centered. A thin stage keeps its label centered over the band instead of moving it out of the shape."
+    },
+    {
+      "name": "Outside",
+      "description": "Always beside the stage, in one COLUMN in the gutter to the right of the funnel: the funnel narrows to 62 % of the plot width and starts at its left edge, so every label reads at the same x and never sits on a fill colour. The gutter is sized from the longest stage label and value line; a name longer than it can hold is truncated with an ellipsis and its full text moves into the label's tooltip."
+    }
+  ],
+  "usageExample": "<TmChart Type=\"ChartType.Funnel\" Data=\"@funnel\" FunnelLabelPlacement=\"FunnelLabelPlacement.Outside\" ShowValues=\"true\" />"
+}

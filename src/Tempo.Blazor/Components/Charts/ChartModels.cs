@@ -31,6 +31,33 @@ public enum ChartType
     Waterfall
 }
 
+/// <summary>
+/// Where a <see cref="ChartType.Funnel"/> stage's label is drawn. The funnel's stage bands narrow with
+/// the value, so a label that fits a wide first stage does not fit a thin last one.
+/// </summary>
+public enum FunnelLabelPlacement
+{
+    /// <summary>
+    /// Inside the stage when its band is wide enough for the text, beside the funnel otherwise.
+    /// This is the default and keeps the pre-2.11.0 output.
+    /// </summary>
+    Auto,
+
+    /// <summary>
+    /// Always inside the stage band, centered. A thin stage keeps its label centered over the band
+    /// instead of moving it out of the shape.
+    /// </summary>
+    Inside,
+
+    /// <summary>
+    /// Always beside the stage, in a COLUMN in the gutter to the right of the funnel: the funnel
+    /// narrows to 62 % of the plot width and starts at its left edge, so every label reads at the same
+    /// x and never sits on a fill colour. A stage name longer than the gutter can hold is truncated
+    /// with an ellipsis and its full text moves into the label's tooltip.
+    /// </summary>
+    Outside
+}
+
 /// <summary>Data for TmChart.</summary>
 public sealed record ChartData
 {

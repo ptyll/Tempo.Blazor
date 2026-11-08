@@ -413,6 +413,28 @@
     </div>
 </section>
 
+<section class="demo-section mb-8" data-testid="charts-demo-funnel-labels">
+    <h2 class="text-xl font-semibold text-slate-800 dark:text-slate-200 mb-4">Funnel — Label Placement and Zero Stages</h2>
+    <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">
+        The same funnel with every stage label in a gutter beside the shape
+        (<code>FunnelLabelPlacement="Outside"</code>), and an intake pipeline whose last two stages have
+        not converted yet — a zero stage keeps a thin, labelled band instead of disappearing from the chart
+        (<code>FunnelMinSegmentWidth</code>).
+    </p>
+    <div class="grid gap-6 lg:grid-cols-2">
+        <div class="max-w-md" data-testid="charts-demo-funnel-outside">
+            <TmChart Type="ChartType.Funnel" Data="_funnelData" Height="320px"
+                     ShowValues="true" FunnelLabelPlacement="FunnelLabelPlacement.Outside"
+                     OnSegmentClick="HandleSegmentClick" />
+        </div>
+        <div class="max-w-md" data-testid="charts-demo-funnel-zero">
+            <TmChart Type="ChartType.Funnel" Data="_funnelZeroStageData" Height="320px"
+                     ShowValues="true" FunnelMinSegmentWidth="6" FunnelLabelPlacement="FunnelLabelPlacement.Outside"
+                     OnSegmentClick="HandleSegmentClick" />
+        </div>
+    </div>
+</section>
+
 <section class="demo-section mb-8" data-testid="charts-demo-heatmap">
     <h2 class="text-xl font-semibold text-slate-800 dark:text-slate-200 mb-4">Heatmap — Filings by Day × Hour</h2>
     <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">
@@ -752,6 +774,26 @@
                 Values = [1240, 610, 320, 145, 128],
                 Color = "#2563eb",
                 BackgroundColors = ["#2563eb", "#7c3aed", "#db2777", "#ea580c", "#16a34a"]
+            }
+        ]
+    };
+
+    /// <summary>
+    /// The second funnel: an intake pipeline that stalled after the consultation, so two stages carry no
+    /// conversions at all. <c>FunnelMinSegmentWidth</c> keeps them visible (and labelled) instead of
+    /// collapsing them out of the chart.
+    /// </summary>
+    private static readonly ChartData _funnelZeroStageData = new()
+    {
+        Labels = ["Poptávky", "Konzultace", "Nabídka", "Smlouva"],
+        Datasets =
+        [
+            new ChartDataset
+            {
+                Label = "Konverze klientů",
+                Values = [1240, 610, 0, 0],
+                Color = "#2563eb",
+                BackgroundColors = ["#2563eb", "#7c3aed", "#db2777", "#ea580c"]
             }
         ]
     };

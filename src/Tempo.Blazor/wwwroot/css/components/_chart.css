@@ -13,6 +13,15 @@
     display: block;
 }
 
+/* The box the SVG actually meets into. It exists so the funnel can make it a SIZE container: the
+   label type scale has to know the block axis, and only the funnel asks for the containment. */
+.tm-chart__plot {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+}
+
 /* ── Empty state ── */
 
 .tm-chart__empty {
@@ -426,3 +435,110 @@
 .tm-chart__treemap-group-label {
     pointer-events: none;
 }
+
+/* ── Funnel stage labels (plan 8fa7319c, phase 1) ────────────────────────
+   The ink and the type scale are TOKENS, never an inline hex: the placement class names the ink, so
+   a theme retunes the funnel without a rebuild. An inside label sits on the stage's fill (the
+   component picks the contrasting variant from the resolved fill); an outside one sits on the chart
+   surface and is ordinary secondary text.
+
+   The type scale has to answer a SCALE, not a width. The SVG meets into its box, and that box is
+   height-limited as soon as the card is wide: a 320 px card keeps ≈ 271 px of plot once its legend is
+   laid out, so a 672 px card meets at ≈ 0.68 and a ~358 px phone card at ≈ 0.60 — the pre-2.11.0
+   12-unit label reached the reader at ≈ 8 px on desktop and ≈ 7 px on a phone, and a width-only query
+   never fired at 1440. Two containers fix that: the root is the NAMED container the discrete width step
+   reads (naming it means a nested container can never shadow the query), and the plot box is a SIZE
+   container, because the compensation needs the block axis too. */
+
+.tm-chart--funnel {
+    container: tm-chart-funnel / inline-size;
+}
+
+.tm-chart--funnel .tm-chart__plot {
+    container: tm-chart-funnel-plot / size;
+    /* Size containment means the plot's own height cannot come from its content. Height=auto (or a
+       percentage of an auto-height parent) would therefore collapse it, so the viewBox's aspect
+       ratio — the same 600 × 400 the component draws in — is the fallback shape. */
+    aspect-ratio: 600 / 400;
+}
+
+.tm-chart__funnel-text,
+.tm-chart__funnel-label,
+.tm-chart__funnel-value {
+    font-weight: 500;
+}
+
+.tm-chart__funnel-label,
+.tm-chart__funnel-value {
+    fill: var(--tm-chart-funnel-label-outside);
+}
+
+/* The step an engine without length division in calc() can have: two discrete viewBox sizes, each
+   dimensioned to reach the rendered floor at the scales a funnel actually runs at. The second one is
+   taken below a 520 px container and below a 245 px plot (see the two @container blocks below). */
+.tm-chart__funnel-label {
+    font-size: var(--tm-chart-funnel-label-size-viewbox);
+}
+
+.tm-chart__funnel-value {
+    font-size: var(--tm-chart-funnel-value-size-viewbox);
+}
+
+@container tm-chart-funnel (max-width: 520px) {
+    .tm-chart__funnel-label {
+        font-size: var(--tm-chart-funnel-label-size-narrow);
+    }
+
+    .tm-chart__funnel-value {
+        font-size: var(--tm-chart-funnel-value-size-narrow);
+    }
+}
+
+/* The second discrete condition is the one the finding is about: the SVG is HEIGHT limited, so a short
+   plot needs the bigger step even when the card is wide (a 320 px card keeps ≈ 271 px of plot once its
+   legend is laid out; a wrapped phone legend leaves even less). Same values as the narrow step — both
+   conditions say "the box is small", just on a different axis. */
+@container tm-chart-funnel-plot (max-height: 245px) {
+    .tm-chart__funnel-label {
+        font-size: var(--tm-chart-funnel-label-size-narrow);
+    }
+
+    .tm-chart__funnel-value {
+        font-size: var(--tm-chart-funnel-value-size-narrow);
+    }
+}
+
+.tm-chart__funnel-label--inside {
+    fill: var(--tm-chart-funnel-label-inside);
+}
+
+.tm-chart__funnel-label--inside.tm-chart__funnel-label--on-light {
+    fill: var(--tm-chart-funnel-label-inside-on-light);
+}
+
+.tm-chart__funnel-label--outside {
+    fill: var(--tm-chart-funnel-label-outside);
+}
+
+/* The exact compensation. A label renders at `font-size × min(plotWidth / 600, plotHeight / 400)`, so
+   the font size that renders at the target is `target × 600 / plotWidth` (and `× 400 / plotHeight`).
+   `cqw`/`cqh` are the plot box's own axes, so the floor holds at EVERY container size, including the
+   1440 px desktop card whose SVG is height-limited. `max()` keeps the viewBox step as the floor, and a
+   browser that cannot divide a length by a container length drops the whole declaration and keeps the
+   two discrete steps above it. */
+@supports (font-size: calc(1px * 600 / 100cqw * 1px)) {
+    .tm-chart__funnel-label {
+        font-size: max(
+            var(--tm-chart-funnel-label-size-viewbox),
+            calc(var(--tm-chart-funnel-label-size) * 600 / 100cqw * 1px),
+            calc(var(--tm-chart-funnel-label-size) * 400 / 100cqh * 1px));
+    }
+
+    .tm-chart__funnel-value {
+        font-size: max(
+            var(--tm-chart-funnel-value-size-viewbox),
+            calc(var(--tm-chart-funnel-value-size) * 600 / 100cqw * 1px),
+            calc(var(--tm-chart-funnel-value-size) * 400 / 100cqh * 1px));
+    }
+}
+

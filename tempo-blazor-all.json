@@ -4264,7 +4264,7 @@
           "kind": "Component",
           "category": "Charts",
           "namespace": "Tempo.Blazor.Components.Charts",
-          "description": "Pure SVG chart component supporting Bar, Line, Area, Pie, Donut, and HorizontalBar chart types with optional legend, grid, value labels, animation, gradient area fills, a proportional DateTime X axis for time series, combo charts (per-dataset ChartDataset.RenderAs = ChartDatasetRenderAs.Line renders that dataset as a line overlay over the bars of a Bar chart on a shared Y scale — bars for periodic flows, lines for cumulative values), dense-axis label thinning on Bar charts (over 24 categories only every n-th label renders), negative values on Bar/Line charts (signed domain with an emphasized zero axis; bars grow down from the zero baseline), point-marker thinning on dense line series (markers closer than ~9 units thin to ~24-unit spacing while the polyline stays complete), and click events on segments. Chart types additionally include Funnel (conversion trapezoids with per-stage conversion percentages), Heatmap (dataset-rows × label-columns intensity matrix with a global scale), Treemap (squarified shares, flat or hierarchical via ChartTreeNode), and Waterfall (the first value starts at zero and subsequent values are cumulative deltas, with optional connectors and calculated total). Stacked variants (StackedBar vertical, StackedHorizontalBar, StackedArea) accumulate each category's datasets on a shared baseline scaled to the largest stack total; non-positive values contribute nothing to a stack, datasets toggle off through the series legend, and bar value labels are omitted when a segment is too small to keep the text readable.",
+          "description": "Pure SVG chart component supporting Bar, Line, Area, Pie, Donut, and HorizontalBar chart types with optional legend, grid, value labels, animation, gradient area fills, a proportional DateTime X axis for time series, combo charts (per-dataset ChartDataset.RenderAs = ChartDatasetRenderAs.Line renders that dataset as a line overlay over the bars of a Bar chart on a shared Y scale — bars for periodic flows, lines for cumulative values), dense-axis label thinning on Bar charts (over 24 categories only every n-th label renders), negative values on Bar/Line charts (signed domain with an emphasized zero axis; bars grow down from the zero baseline), point-marker thinning on dense line series (markers closer than ~9 units thin to ~24-unit spacing while the polyline stays complete), and click events on segments. Chart types additionally include Funnel (conversion trapezoids with per-stage conversion percentages; opt-in FunnelLabelPlacement moves every stage label into a gutter beside the shape, a stage whose value is 0 or NaN keeps a visible FunnelMinSegmentWidth-wide band, the label ink follows the --tm-chart-funnel-label-* tokens — no inline hex — and a visually hidden stage table gives screen readers the stages and their conversions), Heatmap (dataset-rows × label-columns intensity matrix with a global scale), Treemap (squarified shares, flat or hierarchical via ChartTreeNode), and Waterfall (the first value starts at zero and subsequent values are cumulative deltas, with optional connectors and calculated total). Stacked variants (StackedBar vertical, StackedHorizontalBar, StackedArea) accumulate each category's datasets on a shared baseline scaled to the largest stack total; non-positive values contribute nothing to a stack, datasets toggle off through the series legend, and bar value labels are omitted when a segment is too small to keep the text readable.",
           "packageId": "Tempo.Blazor",
           "sourcePath": "src/Tempo.Blazor/Components/Charts/TmChart.razor",
           "documentationStatus": "merged",
@@ -4300,6 +4300,20 @@
               "type": "ChartData",
               "isRequired": true,
               "editorRequired": true
+            },
+            {
+              "name": "FunnelLabelPlacement",
+              "type": "FunnelLabelPlacement",
+              "isRequired": false,
+              "default": "FunnelLabelPlacement.Auto",
+              "description": "Funnel only: where each stage's label is drawn. Auto (default) keeps the pre-2.11.0 behavior — inside a band at least 150 viewBox units wide, beside the funnel otherwise; Inside always centers the label in the band; Outside always draws it in one column in the gutter to the right of the funnel, which narrows to 62 % of the plot width and starts at its left edge so a long stage name is not clipped. Ignored by every other chart type."
+            },
+            {
+              "name": "FunnelMinSegmentWidth",
+              "type": "double",
+              "isRequired": false,
+              "default": "4",
+              "description": "Funnel only: the minimum width, in viewBox units, of a stage band. A stage whose value is 0 (or NaN, drawn as 0) would otherwise collapse to a zero-width path and disappear; the floor draws a thin visible band that keeps its \"0 (0 %)\" label. 0 restores the pre-2.11.0 zero-width stage. Ignored by every other chart type."
             },
             {
               "name": "Height",
@@ -4439,7 +4453,16 @@
             "tm-chart__bar--positive",
             "tm-chart__bar--negative",
             "tm-chart__bar--total",
-            "tm-chart__waterfall-connector"
+            "tm-chart__waterfall-connector",
+            "tm-chart--funnel",
+            "tm-chart__plot",
+            "tm-chart__funnel-segment",
+            "tm-chart__funnel-label",
+            "tm-chart__funnel-value",
+            "tm-chart__funnel-text",
+            "tm-chart__funnel-label--inside",
+            "tm-chart__funnel-label--on-light",
+            "tm-chart__funnel-label--outside"
           ],
           "examples": [
             {
@@ -4477,6 +4500,14 @@
             {
               "title": "Waterfall chart with connectors and calculated total",
               "code": "<TmChart Type=\"ChartType.Waterfall\"\n         Data=\"@(new ChartData { Labels = new[] { \"Opening\", \"Sales\", \"Costs\" }, Datasets = new[] { new ChartDataset { Label = \"Profit\", Values = new[] { 100.0, 50.0, -30.0 }, Color = \"#2563eb\" } } })\"\n         WaterfallShowConnectors=\"true\"\n         WaterfallShowTotal=\"true\"\n         ShowValues=\"true\"\n         Height=\"320px\" />"
+            },
+            {
+              "title": "Funnel with the stage labels outside",
+              "code": "<TmChart Type=\"ChartType.Funnel\"\n         Data=\"@(new ChartData {\n             Labels = new[] { \"Leads\", \"Qualified\", \"Proposal\", \"Won\" },\n             Datasets = new[] {\n                 new ChartDataset {\n                     Label = \"Conversion\",\n                     Values = new[] { 1240.0, 610.0, 320.0, 128.0 },\n                     Color = \"#3b82f6\",\n                     BackgroundColors = new[] { \"#2563eb\", \"#7c3aed\", \"#db2777\", \"#ea580c\" }\n                 }\n             }\n         })\"\n         ShowValues=\"true\"\n         FunnelLabelPlacement=\"FunnelLabelPlacement.Outside\"\n         Height=\"320px\" />"
+            },
+            {
+              "title": "Funnel with a zero stage kept visible",
+              "code": "<TmChart Type=\"ChartType.Funnel\"\n         Data=\"@(new ChartData {\n             Labels = new[] { \"Leads\", \"Qualified\", \"Proposal\", \"Won\" },\n             Datasets = new[] {\n                 new ChartDataset {\n                     Label = \"Conversion\",\n                     Values = new[] { 1240.0, 610.0, 0.0, 0.0 },\n                     Color = \"#3b82f6\"\n                 }\n             }\n         })\"\n         ShowValues=\"true\"\n         FunnelMinSegmentWidth=\"6\"\n         Height=\"320px\" />"
             }
           ]
         },
@@ -7546,6 +7577,31 @@
           "packageId": "Tempo.Blazor",
           "sourcePath": "src/Tempo.Blazor/Components/Toolbar/FormActionBarStatusSeverity.cs",
           "documentationStatus": "merged"
+        },
+        {
+          "itemName": "FunnelLabelPlacement",
+          "kind": "Enum",
+          "category": "Components",
+          "namespace": "Tempo.Blazor.Components.Charts",
+          "description": "Where a TmChart funnel stage's label is drawn. The stage bands narrow with the value, so a label that fits a wide first stage does not fit a thin last one.",
+          "packageId": "Tempo.Blazor",
+          "sourcePath": "src/Tempo.Blazor/Components/Charts/ChartModels.cs",
+          "documentationStatus": "merged",
+          "members": [
+            {
+              "name": "Auto",
+              "description": "Inside the stage when its band is at least 150 viewBox units wide, beside the funnel otherwise. The default, so a funnel that never sets FunnelLabelPlacement renders exactly what it rendered before the placement existed."
+            },
+            {
+              "name": "Inside",
+              "description": "Always inside the stage band, centered. A thin stage keeps its label centered over the band instead of moving it out of the shape."
+            },
+            {
+              "name": "Outside",
+              "description": "Always beside the stage, in one COLUMN in the gutter to the right of the funnel: the funnel narrows to 62 % of the plot width and starts at its left edge, so every label reads at the same x and never sits on a fill colour. The gutter is sized from the longest stage label and value line; a name longer than it can hold is truncated with an ellipsis and its full text moves into the label's tooltip."
+            }
+          ],
+          "usageExample": "<TmChart Type=\"ChartType.Funnel\" Data=\"@funnel\" FunnelLabelPlacement=\"FunnelLabelPlacement.Outside\" ShowValues=\"true\" />"
         },
         {
           "itemName": "GanttDropPosition",
@@ -35806,12 +35862,12 @@
         }
       ],
       "summary": {
-        "itemCount": 448,
-        "manualItemCount": 448,
-        "generatedItemCount": 440,
+        "itemCount": 449,
+        "manualItemCount": 449,
+        "generatedItemCount": 441,
         "generatedOnlyItemCount": 0,
         "componentCount": 236,
-        "publicApiTypeCount": 204
+        "publicApiTypeCount": 205
       }
     },
     {
@@ -144237,10 +144293,10 @@
   ],
   "summary": {
     "packageCount": 28,
-    "itemCount": 3671,
-    "manualItemCount": 3671,
+    "itemCount": 3672,
+    "manualItemCount": 3672,
     "generatedOnlyItemCount": 0,
     "componentCount": 559,
-    "publicApiTypeCount": 3060
+    "publicApiTypeCount": 3061
   }
 }

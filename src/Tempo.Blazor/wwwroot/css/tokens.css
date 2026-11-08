@@ -477,6 +477,40 @@
      which renders ≈ 10 px at the widget chart's viewBox scale). Declared so the strict token
      audit no longer counts the alias as undefined; the value matches the stylesheet fallback. */
   --tm-widget-chart-font-size: 20px;
+  /* Funnel stage labels (TmChart Funnel). The inside ink is a PAIR because the label sits on the
+     stage's fill, not on a surface: the palette (#3b82f6 … #6366f1) measures 2,0–4,4:1 against white,
+     so a component picks the ink that actually contrasts with the resolved fill. #ffffff is the light
+     ink (dark fill), #000000 the dark one (light fill — the only dark tone that holds 4.5:1 on the
+     indigo #6366f1). An outside label sits on the chart surface, so it is ordinary secondary text —
+     and because a :root-only alias would compute with the LIGHT text token, the alias is repeated on
+     the dark theme roots in tokens-dark.css. */
+  --tm-chart-funnel-label-inside: #ffffff;
+  --tm-chart-funnel-label-inside-on-light: #000000;
+  --tm-chart-funnel-label-outside: var(--tm-text-secondary);
+  /* Label type scale. THREE numbers per line, because a funnel's text is drawn in viewBox units and
+     the SVG meets into its box — and that box is HEIGHT limited: a 320 px card keeps ≈ 271 px of plot
+     once its legend is laid out, so a 12-unit label renders at 0.68 of that (≈ 8,2 px) in a 672 px card
+     and at ≈ 0.60 (≈ 7,2 px) on a phone.
+
+       -size        the RENDERED floor, in px on screen. `_chart.css` solves
+                    `font-size = size × 600 / plotWidth` (and × 400 / plotHeight) from these, so the
+                    label never renders smaller than 12 px and the value line never smaller than 11 px.
+       -size-viewbox  the viewBox step a browser without length division in calc() falls back to. A
+                    672 × 320 chart card keeps ≈ 271 px of plot height once its legend is laid out, so
+                    the SVG meets at ≈ 0.68: 18 units ≈ 12,2 px (value: 17 units ≈ 11,5 px). It is also
+                    the floor of the exact formula, so a large or tall chart keeps type proportional to
+                    its own shape.
+       -size-narrow   the second fallback step, taken below a 520 px container OR a 245 px plot (the
+                    SVG is height limited, so a short plot needs it however wide the card is), where
+                    the scale is ≈ 0.56: 23 units ≈ 13,0 px (value: 21 units ≈ 11,9 px).
+     The Outside label gutter is estimated from the -narrow values (the worst case in viewBox units),
+     so TmChart.Funnel.cs carries the same two numbers — a Theme test pins the pair. */
+  --tm-chart-funnel-label-size: 12px;
+  --tm-chart-funnel-value-size: 11px;
+  --tm-chart-funnel-label-size-viewbox: 18px;
+  --tm-chart-funnel-value-size-viewbox: 17px;
+  --tm-chart-funnel-label-size-narrow: 23px;
+  --tm-chart-funnel-value-size-narrow: 21px;
 
   /* ── Redesign surfaces (F0) ─────────────────────────────────── */
   /* The canvas behind cards. The default theme keeps the page white (decision G4);
