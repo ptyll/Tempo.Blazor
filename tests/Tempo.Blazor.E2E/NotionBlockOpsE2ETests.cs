@@ -153,8 +153,9 @@ public class NotionBlockOpsE2ETests : WasmTestBase
 
         await OpenContextMenuAsync(page);
 
-        // Click Duplicate (second menu item)
-        var duplicateBtn = page.Locator(".tm-notion-ctx__item").Nth(1);
+        // Click Duplicate — the first menu item (F-14: it owns the initial focus; Delete sits at
+        // the end of the menu).
+        var duplicateBtn = page.Locator(".tm-notion-ctx__item").First;
         await duplicateBtn.ClickAsync();
         await page.WaitForTimeoutAsync(800);
 

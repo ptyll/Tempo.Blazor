@@ -18,16 +18,10 @@ QuestPDF.Settings.License = QuestPDF.Infrastructure.LicenseType.Community;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// IFieldConfig / IDatabaseViewConfig are empty marker interfaces — through the interface the
-// JSON payload is `{}` and the WASM client loses every Select/Status option (F-04/F-05). Write
-// the runtime type's payload instead.
-builder.Services.ConfigureHttpJsonOptions(options =>
-{
-    options.SerializerOptions.Converters.Add(
-        new Tempo.Blazor.Demo.Api.Serialization.MarkerInterfaceJsonConverter<Tempo.Blazor.NotionEditor.Models.IFieldConfig>());
-    options.SerializerOptions.Converters.Add(
-        new Tempo.Blazor.Demo.Api.Serialization.MarkerInterfaceJsonConverter<Tempo.Blazor.NotionEditor.Models.IDatabaseViewConfig>());
-});
+// IFieldConfig / IDatabaseViewConfig are polymorphic ([JsonPolymorphic] on the interfaces in
+// Abstractions): STJ writes the runtime payload with a $type discriminator and reads it back, so
+// both the API responses (F-04/F-05: Select/Status options reach the WASM client) and the client's
+// PUT/POST bodies bind on the server.
 
 // `diagrams.db` next to the project is COMMITTED, so anything that boots this host mutates the
 // working tree — the e2e lane leaves it modified plus a -wal/-shm pair every run. Overridable via
