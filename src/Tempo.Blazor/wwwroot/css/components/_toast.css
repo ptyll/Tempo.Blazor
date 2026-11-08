@@ -125,6 +125,48 @@
     color: var(--tm-color-text, #1e293b);
 }
 
+/* Action button (Undo, …) — a native button: the browser owns its key activation. The colour
+   resolves through the AA-contrast -text token (the plain --tm-color-primary fails contrast on
+   dark surfaces); forced-colors falls back to the system ButtonText pairing. */
+.tm-toast-action {
+    flex-shrink: 0;
+    align-self: center;
+    border: none;
+    background: transparent;
+    color: var(--tm-color-primary-text, var(--tm-color-primary));
+    font: inherit;
+    font-size: var(--tm-text-sm, 0.875rem);
+    font-weight: 600;
+    padding: var(--tm-space-1, 0.25rem) var(--tm-space-2, 0.5rem);
+    border-radius: var(--tm-radius-md, 0.5rem);
+    cursor: pointer;
+    transition: background-color 0.15s;
+}
+
+.tm-toast-action:hover {
+    background: var(--tm-color-surface-hover);
+}
+
+@media (forced-colors: active) {
+    .tm-toast-action {
+        border: 1px solid ButtonText;
+        color: ButtonText;
+    }
+}
+
+/* Host-supplied custom content below the message */
+.tm-toast-custom {
+    margin-top: var(--tm-space-2, 0.5rem);
+    font-size: var(--tm-text-sm, 0.875rem);
+    color: var(--tm-text-secondary);
+}
+
+/* Paused (hover/focus/document hidden): freeze the progress animation where it is — the .NET
+   timer is paused by the service, so the bar and the timer stay in agreement. */
+.tm-toast--paused .tm-toast-progress-bar {
+    animation-play-state: paused;
+}
+
 /* Progress bar */
 .tm-toast-progress {
     height: 3px;
@@ -257,6 +299,9 @@
     }
     .tm-toast-progress-bar {
         animation: none;
+    }
+    .tm-toast-action {
+        transition: none;
     }
 }
 

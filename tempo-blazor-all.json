@@ -9324,6 +9324,16 @@
           "documentationStatus": "merged"
         },
         {
+          "itemName": "ToastPoliteness",
+          "kind": "Enum",
+          "category": "Components",
+          "namespace": "Tempo.Blazor.Components.Feedback",
+          "description": "Live-region politeness of a toast announcement: how urgently a screen reader interrupts to speak it. Maps to the ARIA role the container renders: Polite → role=\"status\", Assertive → role=\"alert\".",
+          "packageId": "Tempo.Blazor",
+          "sourcePath": "src/Tempo.Blazor/Components/Feedback/ToastEnums.cs",
+          "documentationStatus": "merged"
+        },
+        {
           "itemName": "ToastPosition",
           "kind": "Enum",
           "category": "Components",
@@ -14778,6 +14788,20 @@
               "description": "Maximum number of toasts visible at once."
             },
             {
+              "name": "MinActionDuration",
+              "type": "int",
+              "isRequired": false,
+              "default": "10_000",
+              "description": "Minimum duration (milliseconds) for toasts carrying an action button (e.g. Undo): a shorter requested duration is floored to this value so the action stays reachable long enough to react. Pushed to ToastService.MinActionDuration when parameters are set (set it before showing toasts). Sticky toasts (duration <= 0) and toasts without an action are never floored."
+            },
+            {
+              "name": "PauseOnHover",
+              "type": "bool",
+              "isRequired": false,
+              "default": "true",
+              "description": "Pause the auto-dismiss timer while the pointer hovers a toast or focus is inside it (mouseenter/focusin pause, mouseleave/focusout resume with the remaining time). A hidden document pauses every toast regardless of this setting."
+            },
+            {
               "name": "Position",
               "type": "ToastPosition",
               "isRequired": false,
@@ -14796,11 +14820,14 @@
             "tm-toast--error",
             "tm-toast--warning",
             "tm-toast--info",
+            "tm-toast--paused",
             "tm-toast-body",
             "tm-toast-icon",
             "tm-toast-content",
             "tm-toast-title",
             "tm-toast-message",
+            "tm-toast-custom",
+            "tm-toast-action",
             "tm-toast-dismiss",
             "tm-toast-progress",
             "tm-toast-progress-bar"
@@ -14813,6 +14840,10 @@
             {
               "title": "Bottom-left position with limit",
               "code": "<TmToastContainer Position=\"ToastPosition.BottomLeft\" MaxVisible=\"3\" />"
+            },
+            {
+              "title": "Undoable action toast",
+              "code": "ToastService.ShowUndo(\"Item deleted\", OnUndoAsync)"
             }
           ]
         },
@@ -30836,6 +30867,16 @@
           "documentationStatus": "merged"
         },
         {
+          "itemName": "ToastAction",
+          "kind": "Record",
+          "category": "Services",
+          "namespace": "Tempo.Blazor.Services",
+          "description": "An action button rendered inside a toast (the classic use is Undo). The label resolves through ITmLocalizer when LabelKey is set, so services stay localization-free.",
+          "packageId": "Tempo.Blazor",
+          "sourcePath": "src/Tempo.Blazor/Services/ToastOptions.cs",
+          "documentationStatus": "merged"
+        },
+        {
           "itemName": "ToastInstance",
           "kind": "Record",
           "category": "Services",
@@ -30843,6 +30884,16 @@
           "description": "Describes a single toast notification instance.",
           "packageId": "Tempo.Blazor",
           "sourcePath": "src/Tempo.Blazor/Services/ToastService.cs",
+          "documentationStatus": "merged"
+        },
+        {
+          "itemName": "ToastOptions",
+          "kind": "Record",
+          "category": "Services",
+          "namespace": "Tempo.Blazor.Services",
+          "description": "Configuration for a toast shown through Show. Purely additive over the classic ShowSuccess/ShowInfo/ShowWarning/ShowError helpers: every property is optional and the defaults reproduce a classic info toast.",
+          "packageId": "Tempo.Blazor",
+          "sourcePath": "src/Tempo.Blazor/Services/ToastOptions.cs",
           "documentationStatus": "merged"
         },
         {
@@ -33628,6 +33679,14 @@
           "kind": "JavaScript"
         },
         {
+          "path": "src/Tempo.Blazor/wwwroot/js/tm-toast-visibility.js",
+          "kind": "JavaScript"
+        },
+        {
+          "path": "src/Tempo.Blazor/wwwroot/js/tm-toast.js",
+          "kind": "JavaScript"
+        },
+        {
           "path": "src/Tempo.Blazor/wwwroot/js/tm-toolbar.js",
           "kind": "JavaScript"
         },
@@ -33748,6 +33807,14 @@
           "kind": "JavaScript"
         },
         {
+          "path": "src/Tempo.Blazor/wwwroot/js/__tests__/tm-toast-visibility.test.mjs",
+          "kind": "JavaScript"
+        },
+        {
+          "path": "src/Tempo.Blazor/wwwroot/js/__tests__/tm-toast.test.mjs",
+          "kind": "JavaScript"
+        },
+        {
           "path": "src/Tempo.Blazor/wwwroot/js/__tests__/tm-toolbar-file-button.test.mjs",
           "kind": "JavaScript"
         },
@@ -33765,12 +33832,12 @@
         }
       ],
       "summary": {
-        "itemCount": 424,
-        "manualItemCount": 424,
-        "generatedItemCount": 416,
+        "itemCount": 427,
+        "manualItemCount": 427,
+        "generatedItemCount": 419,
         "generatedOnlyItemCount": 0,
         "componentCount": 228,
-        "publicApiTypeCount": 188
+        "publicApiTypeCount": 191
       }
     },
     {
@@ -134165,10 +134232,10 @@
   ],
   "summary": {
     "packageCount": 28,
-    "itemCount": 3487,
-    "manualItemCount": 3487,
+    "itemCount": 3490,
+    "manualItemCount": 3490,
     "generatedOnlyItemCount": 0,
     "componentCount": 536,
-    "publicApiTypeCount": 2899
+    "publicApiTypeCount": 2902
   }
 }

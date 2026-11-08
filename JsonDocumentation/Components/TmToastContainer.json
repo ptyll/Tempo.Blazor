@@ -20,6 +20,20 @@
       "isRequired": false,
       "default": "5",
       "description": "Maximum number of toasts visible at once."
+    },
+    {
+      "name": "PauseOnHover",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "Pause the auto-dismiss timer while the pointer hovers a toast or focus is inside it (mouseenter/focusin pause, mouseleave/focusout resume with the remaining time). A hidden document pauses every toast regardless of this setting."
+    },
+    {
+      "name": "MinActionDuration",
+      "type": "int",
+      "isRequired": false,
+      "default": "10000",
+      "description": "Minimum duration (milliseconds) for toasts carrying an action button (e.g. Undo): a shorter requested duration is floored to this value so the action stays reachable long enough to react. Pushed to ToastService.MinActionDuration when parameters are set (set it before showing toasts). Sticky toasts (duration <= 0) and toasts without an action are never floored."
     }
   ],
   "cssClasses": [
@@ -33,11 +47,14 @@
     "tm-toast--error",
     "tm-toast--warning",
     "tm-toast--info",
+    "tm-toast--paused",
     "tm-toast-body",
     "tm-toast-icon",
     "tm-toast-content",
     "tm-toast-title",
     "tm-toast-message",
+    "tm-toast-custom",
+    "tm-toast-action",
     "tm-toast-dismiss",
     "tm-toast-progress",
     "tm-toast-progress-bar"
@@ -50,6 +67,10 @@
     {
       "title": "Bottom-left position with limit",
       "code": "<TmToastContainer Position=\"ToastPosition.BottomLeft\" MaxVisible=\"3\" />"
+    },
+    {
+      "title": "Undoable action toast",
+      "code": "ToastService.ShowUndo(\"Item deleted\", OnUndoAsync)"
     }
   ]
 }

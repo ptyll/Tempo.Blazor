@@ -2,6 +2,7 @@
 @using Tempo.Blazor.Helpers
 @using Tempo.Blazor.Services
 @using Tempo.Blazor.Components.Icons
+@using Microsoft.JSInterop
 @inject ToastService ToastService
 @inject IJSRuntime JS
 @implements IAsyncDisposable
@@ -10,10 +11,24 @@
    push, so a toast pushed while a sheet or dialog is open always paints above it. R3-M1: the
    container is PINNED on top — promote() re-raises it after every later promotion, and the raise
    is keyed on the newest toast id (not the count), so a push at the MaxVisible cap re-raises too. *@
-<div class="tm-toast-container @PositionClass" popover="manual" data-tm-inert-exempt @ref="_root">
+<div class="tm-toast-container @PositionClass" popover="manual" data-tm-inert-exempt
+     role="region" aria-label="@Loc["TmToast_RegionLabel"]" @ref="_root">
+    @* Two PERSISTENT screen-reader-only live regions (empty on first render) carry every
+       announcement — the cards themselves carry no live role, so removal of a card is never
+       announced and dedupe replaces announce exactly once per text change. *@
+    <div class="tm-sr-only" role="status" aria-live="polite" data-toast-live="polite">@_politeAnnouncement</div>
+    <div class="tm-sr-only" role="alert" aria-live="assertive" data-toast-live="assertive">@_assertiveAnnouncement</div>
     @foreach (var toast in VisibleToasts)
     {
-        <div class="tm-toast tm-toast--@toast.Severity.ToString().ToLowerInvariant()" role="alert">
+        var sev = toast.Severity.ToString().ToLowerInvariant();
+        var paused = ToastService.IsPaused(toast.Id);
+        <div @key="toast.Id"
+             class="tm-toast tm-toast--@sev @(paused ? "tm-toast--paused" : null)"
+             data-toast-id="@toast.Id"
+             @onmouseenter="() => Pause(toast)"
+             @onmouseleave="() => Resume(toast)"
+             @onfocusin="() => Pause(toast)"
+             @onfocusout="() => Resume(toast)">
             <div class="tm-toast-body">
                 <span class="tm-toast-icon">
                     <TmIcon Name="@GetIcon(toast.Severity)" Size="IconSize.Sm" />
@@ -24,7 +39,23 @@
                         <div class="tm-toast-title">@toast.Title</div>
                     }
                     <div class="tm-toast-message">@toast.Message</div>
+                    @if (toast.Content is not null)
+                    {
+                        <div class="tm-toast-custom">@toast.Content</div>
+                    }
                 </div>
+                @if (toast.Action is not null)
+                {
+                    @* Native button: one activation per key is the browser's own behavior, no
+                       emulation (keyboard-activation-convention). Alt+T focuses the newest action
+                       button (see tm-toast.js). *@
+                    <button type="button"
+                            class="tm-toast-action"
+                            aria-keyshortcuts="Alt+T"
+                            @onclick="() => InvokeActionAsync(toast)">
+                        @(toast.Action.LabelKey is not null ? Loc[toast.Action.LabelKey] : toast.Action.Label)
+                    </button>
+                }
                 <button class="tm-toast-dismiss"
                         @onclick="() => Dismiss(toast.Id)"
                         aria-label="@Loc["TmToast_Close"]">
@@ -32,7 +63,10 @@
                 </button>
             </div>
             <div class="tm-toast-progress">
+                @* Keyed on Revision: an in-place replacement (Key dedupe/Update) recreates the bar
+                   so the CSS animation restarts with the new duration. *@
                 <div class="tm-toast-progress-bar"
+                     @key="toast.Revision"
                      style="animation-duration: @(toast.Duration)ms">
                 </div>
             </div>
@@ -46,6 +80,23 @@
 
     /// <summary>Maximum number of toasts visible at once.</summary>
     [Parameter] public int MaxVisible { get; set; } = 5;
+
+    /// <summary>
+    /// Pause the auto-dismiss timer while the pointer hovers a toast or focus is inside it
+    /// (mouseenter/focusin pause, mouseleave/focusout resume with the remaining time). The
+    /// progress animation freezes through the <c>tm-toast--paused</c> modifier. A hidden document
+    /// pauses every toast regardless of this setting. Defaults to <c>true</c>.
+    /// </summary>
+    [Parameter] public bool PauseOnHover { get; set; } = true;
+
+    /// <summary>
+    /// Minimum duration (milliseconds) for toasts carrying an <see cref="ToastAction"/> (e.g.
+    /// Undo): a shorter requested duration is floored to this value so the action stays reachable
+    /// long enough to react. Pushed to <see cref="ToastService.MinActionDuration"/> when
+    /// parameters are set (set it before showing toasts). Sticky toasts (duration ≤ 0) and toasts
+    /// without an action are never floored. Defaults to 10000 (10 seconds).
+    /// </summary>
+    [Parameter] public int MinActionDuration { get; set; } = 10_000;
 
     private IReadOnlyList<ToastInstance> VisibleToasts =>
         ToastService.Toasts
@@ -65,8 +116,19 @@
     private ElementReference _root;
     private TopLayerInterop? _topLayer;
     private FocusIfLostInterop? _focusIfLost;
+    private LazyJsModule? _visibility;
+    private LazyJsModule? _toastJs;
+    private DotNetObjectReference<TmToastContainer>? _dotNetRef;
     private string? _lastNewestId;
     private HashSet<string> _lastIds = new();
+    /// <summary>Toasts held by hover/focus: their pause must outlive a document hide/show cycle.</summary>
+    private readonly HashSet<string> _held = new();
+    /// <summary>Last text announced per toast id: a toast announces once per TEXT CHANGE (dedupe
+    /// replaces re-announce only when the content actually changed).</summary>
+    private readonly Dictionary<string, string> _announcedTexts = new();
+    private string? _politeAnnouncement;
+    private string? _assertiveAnnouncement;
+    private bool _watchingVisibility;
     private bool _promoted;
     private bool _pinned;
     private bool _disposed;
@@ -75,6 +137,9 @@
     {
         ToastService.OnChange += HandleChange;
     }
+
+    protected override void OnParametersSet()
+        => ToastService.MinActionDuration = MinActionDuration;
 
     private void HandleChange()
     {
@@ -107,18 +172,53 @@
                 _promoted = true;
                 _lastNewestId = newestId;
             }
-        }
-        else if (_promoted)
-        {
-            _promoted = false;
-            _lastNewestId = null;
-            if (_topLayer is not null)
+
+            // Watch document visibility only while toasts are on screen: a hidden document pauses
+            // every auto-dismiss timer (the browser throttles the CSS animation on its own, so the
+            // progress bar and the timer must agree). watch() reports immediately when the tab is
+            // ALREADY hidden at watch time.
+            if (!_watchingVisibility)
             {
-                await _topLayer.DemoteAsync(_root);
-                if (_pinned)
+                _visibility ??= new LazyJsModule(JS, "./_content/Tempo.Blazor/js/tm-toast-visibility.js");
+                _dotNetRef ??= DotNetObjectReference.Create(this);
+                var (ok, _) = await _visibility.TryInvokeAsync<bool>("watch", _dotNetRef);
+                _watchingVisibility = ok;
+            }
+
+            // Browser-owned behaviors: Escape dismissal, focus return on card removal, Alt+T.
+            _toastJs ??= new LazyJsModule(JS, "./_content/Tempo.Blazor/js/tm-toast.js");
+            await _toastJs.TryInvokeVoidAsync("attach", _root, _dotNetRef ??= DotNetObjectReference.Create(this));
+        }
+        else
+        {
+            if (_visibility is not null)
+            {
+                if (_watchingVisibility)
+                    await _visibility.TryInvokeVoidAsync("unwatch", _dotNetRef);
+                _watchingVisibility = false;
+                await _visibility.DisposeAsync();
+                _visibility = null;
+            }
+
+            if (_toastJs is not null)
+            {
+                await _toastJs.TryInvokeVoidAsync("detach", _root);
+                await _toastJs.DisposeAsync();
+                _toastJs = null;
+            }
+
+            if (_promoted)
+            {
+                _promoted = false;
+                _lastNewestId = null;
+                if (_topLayer is not null)
                 {
-                    _pinned = false;
-                    await _topLayer.UnpinAsync(_root);
+                    await _topLayer.DemoteAsync(_root);
+                    if (_pinned)
+                    {
+                        _pinned = false;
+                        await _topLayer.UnpinAsync(_root);
+                    }
                 }
             }
         }
@@ -137,6 +237,114 @@
             await _focusIfLost.RestoreTrapFocusIfLostAsync();
         }
         _lastIds = ids;
+        // A hold can only matter while the toast is visible; pruned against the visible set so a
+        // removed/expired id can not keep an unrelated pause alive after a tab switch.
+        _held.RemoveWhere(id => !ids.Contains(id));
+
+        await AnnounceTextChangesAsync();
+    }
+
+    /// <summary>
+    /// Diff the visible toasts against what was already announced and speak every new or changed
+    /// text through the matching live region. The region is cleared and refilled (one yield
+    /// between renders): an unchanged textContent is not re-announced by screen readers, and a
+    /// dedupe replacement announces only when its text actually changed.
+    /// </summary>
+    private async Task AnnounceTextChangesAsync()
+    {
+        string? polite = null;
+        string? assertive = null;
+        var visibleIds = new HashSet<string>();
+        foreach (var toast in ToastService.Toasts)
+        {
+            visibleIds.Add(toast.Id);
+            var text = string.IsNullOrEmpty(toast.Title)
+                ? toast.Message
+                : toast.Title + ": " + toast.Message;
+            if (_announcedTexts.TryGetValue(toast.Id, out var previous) && previous == text)
+                continue;
+            _announcedTexts[toast.Id] = text;
+            if (toast.Politeness == ToastPoliteness.Assertive)
+                assertive = assertive is null ? text : assertive + " " + text;
+            else
+                polite = polite is null ? text : polite + " " + text;
+        }
+        foreach (var id in _announcedTexts.Keys.Where(id => !visibleIds.Contains(id)).ToList())
+            _announcedTexts.Remove(id);
+
+        if (polite is null && assertive is null)
+            return;
+
+        _politeAnnouncement = null;
+        _assertiveAnnouncement = null;
+        StateHasChanged();
+        await Task.Yield();
+        if (_disposed)
+            return;
+        _politeAnnouncement = polite;
+        _assertiveAnnouncement = assertive;
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// Called by the tm-toast-visibility module whenever the document visibility flips. A hidden
+    /// document pauses every auto-dismiss timer; becoming visible resumes all EXCEPT the toasts
+    /// the user is currently holding (hovering / focusing) — their hold outlives the tab switch.
+    /// </summary>
+    [JSInvokable]
+    public Task OnDocumentVisibilityChanged(bool hidden)
+    {
+        if (_disposed)
+            return Task.CompletedTask;
+        if (hidden)
+        {
+            ToastService.PauseAll();
+            return Task.CompletedTask;
+        }
+        foreach (var id in ToastService.PausedIds)
+        {
+            if (!_held.Contains(id))
+                ToastService.Resume(id);
+        }
+        return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Called by the tm-toast module when Escape dismisses a card: the service owns the state, JS
+    /// only asks.
+    /// </summary>
+    [JSInvokable]
+    public void DismissToast(string id)
+    {
+        if (!_disposed)
+            ToastService.Remove(id);
+    }
+
+    private void Pause(ToastInstance toast)
+    {
+        if (!PauseOnHover || toast.Duration <= 0)
+            return;
+        _held.Add(toast.Id);
+        ToastService.Pause(toast.Id);
+    }
+
+    private void Resume(ToastInstance toast)
+    {
+        _held.Remove(toast.Id);
+        if (!PauseOnHover)
+            return;
+        ToastService.Resume(toast.Id);
+    }
+
+    private async Task InvokeActionAsync(ToastInstance toast)
+    {
+        // Remove FIRST: a double click (or a second activation racing a slow delegate) must not
+        // run the action twice — the second click lands on an already-removed card — and the
+        // toast closes even when the delegate throws.
+        var onClick = toast.Action?.OnClick;
+        ToastService.Remove(toast.Id);
+        if (onClick is not null)
+            await onClick();
     }
 
     private void Dismiss(string id)
@@ -163,6 +371,21 @@
             await _focusIfLost.DisposeAsync();
             _focusIfLost = null;
         }
+        if (_visibility is not null)
+        {
+            if (_watchingVisibility)
+                await _visibility.TryInvokeVoidAsync("unwatch", _dotNetRef);
+            _watchingVisibility = false;
+            await _visibility.DisposeAsync();
+            _visibility = null;
+        }
+        if (_toastJs is not null)
+        {
+            await _toastJs.TryInvokeVoidAsync("detach", _root);
+            await _toastJs.DisposeAsync();
+            _toastJs = null;
+        }
+        _dotNetRef?.Dispose();
         if (_topLayer is not null)
         {
             if (_pinned)

@@ -1301,7 +1301,9 @@ public abstract class LocalizationTestBase : BunitContext
         ["TmPasswordStrength_HintExcellent"]           = "Excellent password!",
 
         // TmToast
-        ["TmToast_Close"] = "Dismiss",
+        ["TmToast_Close"]       = "Dismiss",
+        ["TmToast_RegionLabel"] = "Notifications",
+        ["TmToast_Undo"]        = "Undo",
 
         // TmAlert
         ["TmAlert_Dismiss"] = "Dismiss",
@@ -6590,7 +6592,9 @@ public abstract class LocalizationTestBase : BunitContext
         ["TmPasswordStrength_HintExcellent"]           = "Vynikající heslo!",
 
         // TmToast
-        ["TmToast_Close"] = "Zavřít",
+        ["TmToast_Close"]       = "Zavřít",
+        ["TmToast_RegionLabel"] = "Oznámení",
+        ["TmToast_Undo"]        = "Vrátit",
 
         // TmAlert
         ["TmAlert_Dismiss"] = "Zavřít",

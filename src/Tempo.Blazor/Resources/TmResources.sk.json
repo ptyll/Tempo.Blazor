@@ -5755,6 +5755,8 @@
   "TmTimeline_TypeFilterAll": "Všetky typy",
   "TmTimeline_TypeFilterLabel": "Filtrovať podľa typu",
   "TmToast_Close": "Zavrieť",
+  "TmToast_RegionLabel": "Oznámenia",
+  "TmToast_Undo": "Vrátiť",
   "TmTopBar_OpenNotifications": "Otvoriť notifikácie",
   "TmTopBar_OpenSearch": "Hľadať (Ctrl+K)",
   "TmTopBar_OpenUserMenu": "Otvoriť ponuku používateľa",

@@ -5709,6 +5709,8 @@
   "TmTimeline_TypeFilterAll": "Tous les types",
   "TmTimeline_TypeFilterLabel": "Filtrer par type",
   "TmToast_Close": "Fermer",
+  "TmToast_RegionLabel": "Notifications",
+  "TmToast_Undo": "Annuler",
   "TmTopBar_OpenNotifications": "Ouvrir les notifications",
   "TmTopBar_OpenSearch": "Rechercher (Ctrl+K)",
   "TmTopBar_OpenUserMenu": "Ouvrir le menu utilisateur",

@@ -1,0 +1,10 @@
+{
+  "kind": "Enum",
+  "category": "Components",
+  "namespace": "Tempo.Blazor.Components.Feedback",
+  "description": "Live-region politeness of a toast announcement: how urgently a screen reader interrupts to speak it. Maps to the ARIA role the container renders: Polite → role=\"status\", Assertive → role=\"alert\".",
+  "packageId": "Tempo.Blazor",
+  "sourcePath": "src/Tempo.Blazor/Components/Feedback/ToastEnums.cs",
+  "documentationStatus": "generated",
+  "itemName": "ToastPoliteness"
+}
