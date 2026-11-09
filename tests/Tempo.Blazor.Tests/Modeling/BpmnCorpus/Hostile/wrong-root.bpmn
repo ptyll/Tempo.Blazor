@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<notBpmn xmlns="http://tempo.example/bpmn/hostile" id="NotBpmn_Root">
+  <something id="Something_1"/>
+</notBpmn>

@@ -1,0 +1,226 @@
+{
+  "Models": [
+    {
+      "Id": "Process_Main",
+      "Title": "Main process",
+      "Notation": "bpmn2",
+      "SupportedNotations": [
+        "bpmn2"
+      ],
+      "Elements": [
+        {
+          "Id": "StartEvent_Main",
+          "SourceId": "StartEvent_Main",
+          "SourceType": "startEvent",
+          "SourcePath": "/definitions[@id=\u0027Definitions_EventSubProcess\u0027]/process[@id=\u0027Process_Main\u0027]/startEvent[@id=\u0027StartEvent_Main\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "StartEvent",
+          "Name": "Start",
+          "ParentId": "",
+          "Description": "",
+          "Properties": {},
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "Task_Review",
+          "SourceId": "Task_Review",
+          "SourceType": "userTask",
+          "SourcePath": "/definitions[@id=\u0027Definitions_EventSubProcess\u0027]/process[@id=\u0027Process_Main\u0027]/userTask[@id=\u0027Task_Review\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "UserTask",
+          "Name": "Review document",
+          "ParentId": "",
+          "Description": "",
+          "Properties": {},
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "SubProcess_OnSignal",
+          "SourceId": "SubProcess_OnSignal",
+          "SourceType": "subProcess",
+          "SourcePath": "/definitions[@id=\u0027Definitions_EventSubProcess\u0027]/process[@id=\u0027Process_Main\u0027]/subProcess[@id=\u0027SubProcess_OnSignal\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "EventSubProcess",
+          "Name": "Escalation handler",
+          "ParentId": "",
+          "Description": "",
+          "Properties": {},
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "StartEvent_Escalation",
+          "SourceId": "StartEvent_Escalation",
+          "SourceType": "startEvent",
+          "SourcePath": "/definitions[@id=\u0027Definitions_EventSubProcess\u0027]/process[@id=\u0027Process_Main\u0027]/subProcess[@id=\u0027SubProcess_OnSignal\u0027]/startEvent[@id=\u0027StartEvent_Escalation\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "StartEvent",
+          "Name": "Escalation arrives",
+          "ParentId": "SubProcess_OnSignal",
+          "Description": "",
+          "Properties": {
+            "bpmn:isInterrupting": "false",
+            "eventDefinitions": [
+              {
+                "type": "escalation",
+                "id": "EscDef",
+                "ref": "Escalation_Warn",
+                "name": "Warning",
+                "code": "W-1"
+              }
+            ]
+          },
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "Task_Notify",
+          "SourceId": "Task_Notify",
+          "SourceType": "task",
+          "SourcePath": "/definitions[@id=\u0027Definitions_EventSubProcess\u0027]/process[@id=\u0027Process_Main\u0027]/subProcess[@id=\u0027SubProcess_OnSignal\u0027]/task[@id=\u0027Task_Notify\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "Task",
+          "Name": "Notify manager",
+          "ParentId": "SubProcess_OnSignal",
+          "Description": "",
+          "Properties": {},
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "EndEvent_Escalation",
+          "SourceId": "EndEvent_Escalation",
+          "SourceType": "endEvent",
+          "SourcePath": "/definitions[@id=\u0027Definitions_EventSubProcess\u0027]/process[@id=\u0027Process_Main\u0027]/subProcess[@id=\u0027SubProcess_OnSignal\u0027]/endEvent[@id=\u0027EndEvent_Escalation\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "EndEvent",
+          "Name": "Handled",
+          "ParentId": "SubProcess_OnSignal",
+          "Description": "",
+          "Properties": {},
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "EndEvent_Main",
+          "SourceId": "EndEvent_Main",
+          "SourceType": "endEvent",
+          "SourcePath": "/definitions[@id=\u0027Definitions_EventSubProcess\u0027]/process[@id=\u0027Process_Main\u0027]/endEvent[@id=\u0027EndEvent_Main\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "EndEvent",
+          "Name": "Done",
+          "ParentId": "",
+          "Description": "",
+          "Properties": {},
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        }
+      ],
+      "Relationships": [
+        {
+          "Id": "Flow_ES10",
+          "SourceId": "Flow_ES10",
+          "SourceType": "sequenceFlow",
+          "SourceElementId": "StartEvent_Escalation",
+          "TargetElementId": "Task_Notify",
+          "RelationshipType": "SequenceFlow",
+          "Name": "",
+          "Properties": {},
+          "Tags": []
+        },
+        {
+          "Id": "Flow_ES11",
+          "SourceId": "Flow_ES11",
+          "SourceType": "sequenceFlow",
+          "SourceElementId": "Task_Notify",
+          "TargetElementId": "EndEvent_Escalation",
+          "RelationshipType": "SequenceFlow",
+          "Name": "",
+          "Properties": {},
+          "Tags": []
+        },
+        {
+          "Id": "Flow_ES1",
+          "SourceId": "Flow_ES1",
+          "SourceType": "sequenceFlow",
+          "SourceElementId": "StartEvent_Main",
+          "TargetElementId": "Task_Review",
+          "RelationshipType": "SequenceFlow",
+          "Name": "",
+          "Properties": {},
+          "Tags": []
+        },
+        {
+          "Id": "Flow_ES2",
+          "SourceId": "Flow_ES2",
+          "SourceType": "sequenceFlow",
+          "SourceElementId": "Task_Review",
+          "TargetElementId": "EndEvent_Main",
+          "RelationshipType": "SequenceFlow",
+          "Name": "",
+          "Properties": {},
+          "Tags": []
+        }
+      ],
+      "Views": [],
+      "Issues": [],
+      "Metadata": {
+        "SourceSystem": "bpmn-xml",
+        "SourceVersion": "http://tempo.example/bpmn/corpus",
+        "LoadedAt": "1970-01-01T00:00:00+00:00",
+        "IsFresh": true
+      },
+      "Properties": {
+        "bpmnDefinitions": [
+          {
+            "kind": "escalation",
+            "id": "Escalation_Warn",
+            "name": "Warning",
+            "code": "W-1"
+          }
+        ]
+      }
+    }
+  ],
+  "Losses": [],
+  "Warnings": [],
+  "HasErrors": false,
+  "ErrorMessage": null
+}

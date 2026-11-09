@@ -1,0 +1,203 @@
+{
+  "Models": [
+    {
+      "Id": "Process_Simple",
+      "Title": "Order handling",
+      "Notation": "bpmn2",
+      "SupportedNotations": [
+        "bpmn2"
+      ],
+      "Elements": [
+        {
+          "Id": "StartEvent_1",
+          "SourceId": "StartEvent_1",
+          "SourceType": "startEvent",
+          "SourcePath": "/definitions[@id=\u0027Definitions_SimpleProcess\u0027]/process[@id=\u0027Process_Simple\u0027]/startEvent[@id=\u0027StartEvent_1\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "StartEvent",
+          "Name": "Order received",
+          "ParentId": "",
+          "Description": "",
+          "Properties": {},
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "Task_EnterOrder",
+          "SourceId": "Task_EnterOrder",
+          "SourceType": "userTask",
+          "SourcePath": "/definitions[@id=\u0027Definitions_SimpleProcess\u0027]/process[@id=\u0027Process_Simple\u0027]/userTask[@id=\u0027Task_EnterOrder\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "UserTask",
+          "Name": "Enter order",
+          "ParentId": "",
+          "Description": "",
+          "Properties": {},
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "Gateway_Approved",
+          "SourceId": "Gateway_Approved",
+          "SourceType": "exclusiveGateway",
+          "SourcePath": "/definitions[@id=\u0027Definitions_SimpleProcess\u0027]/process[@id=\u0027Process_Simple\u0027]/exclusiveGateway[@id=\u0027Gateway_Approved\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "ExclusiveGateway",
+          "Name": "Approved?",
+          "ParentId": "",
+          "Description": "",
+          "Properties": {
+            "bpmn:default": "Flow_Rejected"
+          },
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "Task_Ship",
+          "SourceId": "Task_Ship",
+          "SourceType": "task",
+          "SourcePath": "/definitions[@id=\u0027Definitions_SimpleProcess\u0027]/process[@id=\u0027Process_Simple\u0027]/task[@id=\u0027Task_Ship\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "Task",
+          "Name": "Ship order",
+          "ParentId": "",
+          "Description": "",
+          "Properties": {},
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "EndEvent_Shipped",
+          "SourceId": "EndEvent_Shipped",
+          "SourceType": "endEvent",
+          "SourcePath": "/definitions[@id=\u0027Definitions_SimpleProcess\u0027]/process[@id=\u0027Process_Simple\u0027]/endEvent[@id=\u0027EndEvent_Shipped\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "EndEvent",
+          "Name": "Order shipped",
+          "ParentId": "",
+          "Description": "",
+          "Properties": {},
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "EndEvent_Rejected",
+          "SourceId": "EndEvent_Rejected",
+          "SourceType": "endEvent",
+          "SourcePath": "/definitions[@id=\u0027Definitions_SimpleProcess\u0027]/process[@id=\u0027Process_Simple\u0027]/endEvent[@id=\u0027EndEvent_Rejected\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "EndEvent",
+          "Name": "Order rejected",
+          "ParentId": "",
+          "Description": "",
+          "Properties": {},
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        }
+      ],
+      "Relationships": [
+        {
+          "Id": "Flow_1",
+          "SourceId": "Flow_1",
+          "SourceType": "sequenceFlow",
+          "SourceElementId": "StartEvent_1",
+          "TargetElementId": "Task_EnterOrder",
+          "RelationshipType": "SequenceFlow",
+          "Name": "",
+          "Properties": {},
+          "Tags": []
+        },
+        {
+          "Id": "Flow_2",
+          "SourceId": "Flow_2",
+          "SourceType": "sequenceFlow",
+          "SourceElementId": "Task_EnterOrder",
+          "TargetElementId": "Gateway_Approved",
+          "RelationshipType": "SequenceFlow",
+          "Name": "",
+          "Properties": {},
+          "Tags": []
+        },
+        {
+          "Id": "Flow_Approved",
+          "SourceId": "Flow_Approved",
+          "SourceType": "sequenceFlow",
+          "SourceElementId": "Gateway_Approved",
+          "TargetElementId": "Task_Ship",
+          "RelationshipType": "ConditionalFlow",
+          "Name": "yes",
+          "Properties": {
+            "condition": "approved = true()",
+            "conditionLanguage": "http://www.w3.org/1999/XPath"
+          },
+          "Tags": []
+        },
+        {
+          "Id": "Flow_Rejected",
+          "SourceId": "Flow_Rejected",
+          "SourceType": "sequenceFlow",
+          "SourceElementId": "Gateway_Approved",
+          "TargetElementId": "EndEvent_Rejected",
+          "RelationshipType": "DefaultFlow",
+          "Name": "no",
+          "Properties": {},
+          "Tags": []
+        },
+        {
+          "Id": "Flow_End",
+          "SourceId": "Flow_End",
+          "SourceType": "sequenceFlow",
+          "SourceElementId": "Task_Ship",
+          "TargetElementId": "EndEvent_Shipped",
+          "RelationshipType": "SequenceFlow",
+          "Name": "",
+          "Properties": {},
+          "Tags": []
+        }
+      ],
+      "Views": [],
+      "Issues": [],
+      "Metadata": {
+        "SourceSystem": "bpmn-xml",
+        "SourceVersion": "http://tempo.example/bpmn/corpus",
+        "LoadedAt": "1970-01-01T00:00:00+00:00",
+        "IsFresh": true
+      },
+      "Properties": {}
+    }
+  ],
+  "Losses": [],
+  "Warnings": [],
+  "HasErrors": false,
+  "ErrorMessage": null
+}

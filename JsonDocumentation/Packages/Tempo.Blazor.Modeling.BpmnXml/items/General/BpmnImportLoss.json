@@ -1,0 +1,10 @@
+{
+  "kind": "Class",
+  "category": "General",
+  "namespace": "Tempo.Blazor.Modeling.BpmnXml",
+  "description": "One entry of the import loss report: an unsupported or approximated BPMN construct that was NOT silently dropped. Also surfaced as a bpmn-import issue on the owning model.",
+  "packageId": "Tempo.Blazor.Modeling.BpmnXml",
+  "sourcePath": "src/Tempo.Blazor.Modeling.BpmnXml/BpmnImportContracts.cs",
+  "documentationStatus": "generated",
+  "itemName": "BpmnImportLoss"
+}

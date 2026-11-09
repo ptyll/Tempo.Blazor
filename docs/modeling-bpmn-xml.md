@@ -129,7 +129,7 @@ public sealed class BpmnImportOptions
     public bool ImportBpmndi { get; set; } = true;        // false = pozice ignorovány (auto-layout fáze 3)
     public long MaxInputBytes { get; set; } = 10 * 1024 * 1024;
     public int MaxDepth { get; set; } = 256;
-    public int MaxElements { get; set; } = 200_000;
+    public int MaxElements { get; set; } = 500_000;
     public IList<IBpmnToolExtension> ToolExtensions { get; } = []; // Camunda/Signavio/Bizagi pluginy
 }
 

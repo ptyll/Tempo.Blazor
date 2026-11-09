@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
+             id="Definitions_Malformed"
+             name="Malformed probe"
+             targetNamespace="http://tempo.example/bpmn/hostile">
+  <process id="Process_Malformed" name="Malformed" isExecutable="false">
+    <startEvent id="StartEvent_Malformed" name="Start">
+      <outgoing>Flow_M1</outgoing>
+    </startEvent>
+    <task id="Task_Malformed" name="Unclosed">
+      <incoming>Flow_M1</incoming>
+    <!-- the task element above is never closed and the process ends abruptly -->
+  </process>
+</definitions>

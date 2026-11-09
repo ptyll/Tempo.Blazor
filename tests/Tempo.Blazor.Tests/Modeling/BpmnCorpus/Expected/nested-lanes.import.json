@@ -1,0 +1,375 @@
+{
+  "Models": [
+    {
+      "Id": "Process_Nested",
+      "Title": "Claim handling",
+      "Notation": "bpmn2",
+      "SupportedNotations": [
+        "bpmn2"
+      ],
+      "Elements": [
+        {
+          "Id": "Lane_FrontOffice",
+          "SourceId": "Lane_FrontOffice",
+          "SourceType": "lane",
+          "SourcePath": "/definitions[@id=\u0027Definitions_NestedLanes\u0027]/process[@id=\u0027Process_Nested\u0027]/laneSet[@id=\u0027LaneSet_Top\u0027]/lane[@id=\u0027Lane_FrontOffice\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "Lane",
+          "Name": "Front office",
+          "ParentId": "",
+          "Description": "",
+          "Properties": {},
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "Lane_Phone",
+          "SourceId": "Lane_Phone",
+          "SourceType": "lane",
+          "SourcePath": "/definitions[@id=\u0027Definitions_NestedLanes\u0027]/process[@id=\u0027Process_Nested\u0027]/laneSet[@id=\u0027LaneSet_Top\u0027]/lane[@id=\u0027Lane_FrontOffice\u0027]/childLaneSet[@id=\u0027LaneSet_FrontOffice\u0027]/lane[@id=\u0027Lane_Phone\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "Lane",
+          "Name": "Phone team",
+          "ParentId": "Lane_FrontOffice",
+          "Description": "",
+          "Properties": {},
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "Lane_Email",
+          "SourceId": "Lane_Email",
+          "SourceType": "lane",
+          "SourcePath": "/definitions[@id=\u0027Definitions_NestedLanes\u0027]/process[@id=\u0027Process_Nested\u0027]/laneSet[@id=\u0027LaneSet_Top\u0027]/lane[@id=\u0027Lane_FrontOffice\u0027]/childLaneSet[@id=\u0027LaneSet_FrontOffice\u0027]/lane[@id=\u0027Lane_Email\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "Lane",
+          "Name": "Email team",
+          "ParentId": "Lane_FrontOffice",
+          "Description": "",
+          "Properties": {},
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "Lane_BackOffice",
+          "SourceId": "Lane_BackOffice",
+          "SourceType": "lane",
+          "SourcePath": "/definitions[@id=\u0027Definitions_NestedLanes\u0027]/process[@id=\u0027Process_Nested\u0027]/laneSet[@id=\u0027LaneSet_Top\u0027]/lane[@id=\u0027Lane_BackOffice\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "Lane",
+          "Name": "Back office",
+          "ParentId": "",
+          "Description": "",
+          "Properties": {},
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "StartEvent_Claim",
+          "SourceId": "StartEvent_Claim",
+          "SourceType": "startEvent",
+          "SourcePath": "/definitions[@id=\u0027Definitions_NestedLanes\u0027]/process[@id=\u0027Process_Nested\u0027]/startEvent[@id=\u0027StartEvent_Claim\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "StartEvent",
+          "Name": "Claim received",
+          "ParentId": "Lane_FrontOffice",
+          "Description": "",
+          "Properties": {},
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "Task_Register",
+          "SourceId": "Task_Register",
+          "SourceType": "task",
+          "SourcePath": "/definitions[@id=\u0027Definitions_NestedLanes\u0027]/process[@id=\u0027Process_Nested\u0027]/task[@id=\u0027Task_Register\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "Task",
+          "Name": "Register claim",
+          "ParentId": "Lane_FrontOffice",
+          "Description": "",
+          "Properties": {},
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "Task_PhoneCall",
+          "SourceId": "Task_PhoneCall",
+          "SourceType": "task",
+          "SourcePath": "/definitions[@id=\u0027Definitions_NestedLanes\u0027]/process[@id=\u0027Process_Nested\u0027]/task[@id=\u0027Task_PhoneCall\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "Task",
+          "Name": "Phone the client",
+          "ParentId": "Lane_Phone",
+          "Description": "",
+          "Properties": {},
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "Task_ReplyEmail",
+          "SourceId": "Task_ReplyEmail",
+          "SourceType": "task",
+          "SourcePath": "/definitions[@id=\u0027Definitions_NestedLanes\u0027]/process[@id=\u0027Process_Nested\u0027]/task[@id=\u0027Task_ReplyEmail\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "Task",
+          "Name": "Reply by email",
+          "ParentId": "Lane_Email",
+          "Description": "",
+          "Properties": {},
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "Task_Respond",
+          "SourceId": "Task_Respond",
+          "SourceType": "task",
+          "SourcePath": "/definitions[@id=\u0027Definitions_NestedLanes\u0027]/process[@id=\u0027Process_Nested\u0027]/task[@id=\u0027Task_Respond\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "Task",
+          "Name": "Respond to client",
+          "ParentId": "Lane_FrontOffice",
+          "Description": "",
+          "Properties": {},
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "Task_Assess",
+          "SourceId": "Task_Assess",
+          "SourceType": "task",
+          "SourcePath": "/definitions[@id=\u0027Definitions_NestedLanes\u0027]/process[@id=\u0027Process_Nested\u0027]/task[@id=\u0027Task_Assess\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "Task",
+          "Name": "Assess claim",
+          "ParentId": "Lane_BackOffice",
+          "Description": "",
+          "Properties": {},
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "Gateway_Decision",
+          "SourceId": "Gateway_Decision",
+          "SourceType": "exclusiveGateway",
+          "SourcePath": "/definitions[@id=\u0027Definitions_NestedLanes\u0027]/process[@id=\u0027Process_Nested\u0027]/exclusiveGateway[@id=\u0027Gateway_Decision\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "ExclusiveGateway",
+          "Name": "Pay out?",
+          "ParentId": "Lane_BackOffice",
+          "Description": "",
+          "Properties": {},
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "Task_Pay",
+          "SourceId": "Task_Pay",
+          "SourceType": "task",
+          "SourcePath": "/definitions[@id=\u0027Definitions_NestedLanes\u0027]/process[@id=\u0027Process_Nested\u0027]/task[@id=\u0027Task_Pay\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "Task",
+          "Name": "Pay out",
+          "ParentId": "Lane_BackOffice",
+          "Description": "",
+          "Properties": {},
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "EndEvent_Done",
+          "SourceId": "EndEvent_Done",
+          "SourceType": "endEvent",
+          "SourcePath": "/definitions[@id=\u0027Definitions_NestedLanes\u0027]/process[@id=\u0027Process_Nested\u0027]/endEvent[@id=\u0027EndEvent_Done\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "EndEvent",
+          "Name": "Claim closed",
+          "ParentId": "Lane_BackOffice",
+          "Description": "",
+          "Properties": {},
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        }
+      ],
+      "Relationships": [
+        {
+          "Id": "Flow_N1",
+          "SourceId": "Flow_N1",
+          "SourceType": "sequenceFlow",
+          "SourceElementId": "StartEvent_Claim",
+          "TargetElementId": "Task_Register",
+          "RelationshipType": "SequenceFlow",
+          "Name": "",
+          "Properties": {},
+          "Tags": []
+        },
+        {
+          "Id": "Flow_N2",
+          "SourceId": "Flow_N2",
+          "SourceType": "sequenceFlow",
+          "SourceElementId": "Task_Register",
+          "TargetElementId": "Task_PhoneCall",
+          "RelationshipType": "SequenceFlow",
+          "Name": "",
+          "Properties": {},
+          "Tags": []
+        },
+        {
+          "Id": "Flow_N3",
+          "SourceId": "Flow_N3",
+          "SourceType": "sequenceFlow",
+          "SourceElementId": "Task_PhoneCall",
+          "TargetElementId": "Task_ReplyEmail",
+          "RelationshipType": "SequenceFlow",
+          "Name": "",
+          "Properties": {},
+          "Tags": []
+        },
+        {
+          "Id": "Flow_N4",
+          "SourceId": "Flow_N4",
+          "SourceType": "sequenceFlow",
+          "SourceElementId": "Task_ReplyEmail",
+          "TargetElementId": "Task_Respond",
+          "RelationshipType": "SequenceFlow",
+          "Name": "",
+          "Properties": {},
+          "Tags": []
+        },
+        {
+          "Id": "Flow_N5",
+          "SourceId": "Flow_N5",
+          "SourceType": "sequenceFlow",
+          "SourceElementId": "Task_Respond",
+          "TargetElementId": "Task_Assess",
+          "RelationshipType": "SequenceFlow",
+          "Name": "",
+          "Properties": {},
+          "Tags": []
+        },
+        {
+          "Id": "Flow_N6",
+          "SourceId": "Flow_N6",
+          "SourceType": "sequenceFlow",
+          "SourceElementId": "Task_Assess",
+          "TargetElementId": "Gateway_Decision",
+          "RelationshipType": "SequenceFlow",
+          "Name": "",
+          "Properties": {},
+          "Tags": []
+        },
+        {
+          "Id": "Flow_N7",
+          "SourceId": "Flow_N7",
+          "SourceType": "sequenceFlow",
+          "SourceElementId": "Gateway_Decision",
+          "TargetElementId": "Task_Pay",
+          "RelationshipType": "SequenceFlow",
+          "Name": "yes",
+          "Properties": {},
+          "Tags": []
+        },
+        {
+          "Id": "Flow_N8",
+          "SourceId": "Flow_N8",
+          "SourceType": "sequenceFlow",
+          "SourceElementId": "Gateway_Decision",
+          "TargetElementId": "EndEvent_Done",
+          "RelationshipType": "SequenceFlow",
+          "Name": "no",
+          "Properties": {},
+          "Tags": []
+        },
+        {
+          "Id": "Flow_N9",
+          "SourceId": "Flow_N9",
+          "SourceType": "sequenceFlow",
+          "SourceElementId": "Task_Pay",
+          "TargetElementId": "EndEvent_Done",
+          "RelationshipType": "SequenceFlow",
+          "Name": "",
+          "Properties": {},
+          "Tags": []
+        }
+      ],
+      "Views": [],
+      "Issues": [],
+      "Metadata": {
+        "SourceSystem": "bpmn-xml",
+        "SourceVersion": "http://tempo.example/bpmn/corpus",
+        "LoadedAt": "1970-01-01T00:00:00+00:00",
+        "IsFresh": true
+      },
+      "Properties": {}
+    }
+  ],
+  "Losses": [],
+  "Warnings": [],
+  "HasErrors": false,
+  "ErrorMessage": null
+}

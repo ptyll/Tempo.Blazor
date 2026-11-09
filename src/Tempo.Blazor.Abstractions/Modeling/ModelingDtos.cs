@@ -464,6 +464,7 @@ public sealed class ModelingModelDto
     private List<ModelingViewDto> _views = [];
     private List<ModelingIssueDto> _issues = [];
     private ModelingMetadataDto _metadata = new();
+    private Dictionary<string, JsonElement> _properties = [];
 
     /// <summary>Unique model identifier.</summary>
     public string Id
@@ -526,5 +527,15 @@ public sealed class ModelingModelDto
     {
         get => _metadata;
         set => _metadata = value ?? new();
+    }
+
+    /// <summary>
+    /// Free-form model-level properties (e.g. converter metadata such as the BPMN global
+    /// definitions a model references). Serializes as a JSON object; an empty map is the default.
+    /// </summary>
+    public Dictionary<string, JsonElement> Properties
+    {
+        get => _properties;
+        set => _properties = value ?? [];
     }
 }

@@ -1,0 +1,250 @@
+{
+  "Models": [
+    {
+      "Id": "Process_Camunda",
+      "Title": "Invoice approval",
+      "Notation": "bpmn2",
+      "SupportedNotations": [
+        "bpmn2"
+      ],
+      "Elements": [
+        {
+          "Id": "StartEvent_InvoiceReceived",
+          "SourceId": "StartEvent_InvoiceReceived",
+          "SourceType": "startEvent",
+          "SourcePath": "/definitions[@id=\u0027Definitions_Camunda\u0027]/process[@id=\u0027Process_Camunda\u0027]/startEvent[@id=\u0027StartEvent_InvoiceReceived\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "StartEvent",
+          "Name": "Invoice received",
+          "ParentId": "",
+          "Description": "",
+          "Properties": {
+            "camunda:formKey": "embedded:app:forms/invoice.html"
+          },
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "Task_Approve",
+          "SourceId": "Task_Approve",
+          "SourceType": "userTask",
+          "SourcePath": "/definitions[@id=\u0027Definitions_Camunda\u0027]/process[@id=\u0027Process_Camunda\u0027]/userTask[@id=\u0027Task_Approve\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "UserTask",
+          "Name": "Approve invoice",
+          "ParentId": "",
+          "Description": "",
+          "Properties": {
+            "camunda:assignee": "${approver}",
+            "camunda:dueDate": "PT2D",
+            "foreignExtensions": {
+              "http://camunda.org/schema/1.0/bpmn": "\u003Ccamunda:taskListener event=\u0022create\u0022 expression=\u0022${approvalNotifier.notify(task)}\u0022 xmlns:camunda=\u0022http://camunda.org/schema/1.0/bpmn\u0022 /\u003E\u003Ccamunda:inputOutput xmlns:camunda=\u0022http://camunda.org/schema/1.0/bpmn\u0022\u003E\r\n          \u003Ccamunda:inputParameter name=\u0022amount\u0022\u003E${invoice.amount}\u003C/camunda:inputParameter\u003E\r\n          \u003Ccamunda:outputParameter name=\u0022approved\u0022\u003E${approved}\u003C/camunda:outputParameter\u003E\r\n        \u003C/camunda:inputOutput\u003E"
+            }
+          },
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "Task_ReviewPool",
+          "SourceId": "Task_ReviewPool",
+          "SourceType": "userTask",
+          "SourcePath": "/definitions[@id=\u0027Definitions_Camunda\u0027]/process[@id=\u0027Process_Camunda\u0027]/userTask[@id=\u0027Task_ReviewPool\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "UserTask",
+          "Name": "Pool review",
+          "ParentId": "",
+          "Description": "",
+          "Properties": {
+            "camunda:candidateGroups": "finance,controlling",
+            "camunda:candidateUsers": "alice,bob"
+          },
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "Task_Book",
+          "SourceId": "Task_Book",
+          "SourceType": "serviceTask",
+          "SourcePath": "/definitions[@id=\u0027Definitions_Camunda\u0027]/process[@id=\u0027Process_Camunda\u0027]/serviceTask[@id=\u0027Task_Book\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "ServiceTask",
+          "Name": "Book invoice",
+          "ParentId": "",
+          "Description": "",
+          "Properties": {
+            "camunda:delegateExpression": "${invoiceBooker}",
+            "foreignExtensions": {
+              "http://camunda.org/schema/1.0/bpmn": "\u003Ccamunda:connector xmlns:camunda=\u0022http://camunda.org/schema/1.0/bpmn\u0022\u003E\r\n          \u003Ccamunda:connectorId\u003Ehttp-connector\u003C/camunda:connectorId\u003E\r\n          \u003Ccamunda:inputOutput\u003E\r\n            \u003Ccamunda:inputParameter name=\u0022url\u0022\u003Ehttps://erp.example/book\u003C/camunda:inputParameter\u003E\r\n            \u003Ccamunda:inputParameter name=\u0022method\u0022\u003EPOST\u003C/camunda:inputParameter\u003E\r\n          \u003C/camunda:inputOutput\u003E\r\n        \u003C/camunda:connector\u003E"
+            }
+          },
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "EndEvent_Booked",
+          "SourceId": "EndEvent_Booked",
+          "SourceType": "endEvent",
+          "SourcePath": "/definitions[@id=\u0027Definitions_Camunda\u0027]/process[@id=\u0027Process_Camunda\u0027]/endEvent[@id=\u0027EndEvent_Booked\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "EndEvent",
+          "Name": "Booked",
+          "ParentId": "",
+          "Description": "",
+          "Properties": {},
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        }
+      ],
+      "Relationships": [
+        {
+          "Id": "Flow_C1",
+          "SourceId": "Flow_C1",
+          "SourceType": "sequenceFlow",
+          "SourceElementId": "StartEvent_InvoiceReceived",
+          "TargetElementId": "Task_Approve",
+          "RelationshipType": "SequenceFlow",
+          "Name": "",
+          "Properties": {},
+          "Tags": []
+        },
+        {
+          "Id": "Flow_C2",
+          "SourceId": "Flow_C2",
+          "SourceType": "sequenceFlow",
+          "SourceElementId": "Task_Approve",
+          "TargetElementId": "Task_ReviewPool",
+          "RelationshipType": "SequenceFlow",
+          "Name": "",
+          "Properties": {},
+          "Tags": []
+        },
+        {
+          "Id": "Flow_C3",
+          "SourceId": "Flow_C3",
+          "SourceType": "sequenceFlow",
+          "SourceElementId": "Task_ReviewPool",
+          "TargetElementId": "Task_Book",
+          "RelationshipType": "SequenceFlow",
+          "Name": "",
+          "Properties": {},
+          "Tags": []
+        },
+        {
+          "Id": "Flow_C4",
+          "SourceId": "Flow_C4",
+          "SourceType": "sequenceFlow",
+          "SourceElementId": "Task_Book",
+          "TargetElementId": "EndEvent_Booked",
+          "RelationshipType": "SequenceFlow",
+          "Name": "",
+          "Properties": {},
+          "Tags": []
+        }
+      ],
+      "Views": [],
+      "Issues": [
+        {
+          "Id": "bpmn-import-loss-0001",
+          "Severity": "Warning",
+          "Category": "bpmn-import",
+          "SourceElementId": "",
+          "SourceRelationshipId": "",
+          "Message": "extensionElements: Process-level extension element in namespace \u0027http://camunda.org/schema/1.0/bpmn\u0027 has no model element to attach to; content: \u003Ccamunda:properties xmlns:camunda=\u0022http://camunda.org/schema/1.0/bpmn\u0022\u003E\r\n        \u003Ccamunda:property name=\u0022department\u0022 value=\u0022Finance\u0022 /\u003E\r\n        \u003Ccamunda:property name=\u0022criticality\u0022 value=\u0022high\u0022 /\u003E\r\n      \u003C/camunda:properties\u003E",
+          "SuggestedFix": ""
+        },
+        {
+          "Id": "bpmn-import-loss-0002",
+          "Severity": "Warning",
+          "Category": "bpmn-import",
+          "SourceElementId": "Task_Approve",
+          "SourceRelationshipId": "",
+          "Message": "extensionElements: Unrecognized extension namespace \u0027http://camunda.org/schema/1.0/bpmn\u0027; the content is preserved verbatim under \u0027foreignExtensions\u0027.",
+          "SuggestedFix": ""
+        },
+        {
+          "Id": "bpmn-import-loss-0003",
+          "Severity": "Warning",
+          "Category": "bpmn-import",
+          "SourceElementId": "Task_Approve",
+          "SourceRelationshipId": "",
+          "Message": "extensionElements: Unrecognized extension namespace \u0027http://camunda.org/schema/1.0/bpmn\u0027; the content is preserved verbatim under \u0027foreignExtensions\u0027.",
+          "SuggestedFix": ""
+        },
+        {
+          "Id": "bpmn-import-loss-0004",
+          "Severity": "Warning",
+          "Category": "bpmn-import",
+          "SourceElementId": "Task_Book",
+          "SourceRelationshipId": "",
+          "Message": "extensionElements: Unrecognized extension namespace \u0027http://camunda.org/schema/1.0/bpmn\u0027; the content is preserved verbatim under \u0027foreignExtensions\u0027.",
+          "SuggestedFix": ""
+        }
+      ],
+      "Metadata": {
+        "SourceSystem": "bpmn-xml",
+        "SourceVersion": "http://tempo.example/bpmn/corpus/camunda",
+        "LoadedAt": "1970-01-01T00:00:00+00:00",
+        "IsFresh": true
+      },
+      "Properties": {}
+    }
+  ],
+  "Losses": [
+    {
+      "ElementId": null,
+      "XmlPath": "/definitions[@id=\u0027Definitions_Camunda\u0027]/process[@id=\u0027Process_Camunda\u0027]/extensionElements/properties",
+      "Construct": "extensionElements",
+      "Reason": "Process-level extension element in namespace \u0027http://camunda.org/schema/1.0/bpmn\u0027 has no model element to attach to; content: \u003Ccamunda:properties xmlns:camunda=\u0022http://camunda.org/schema/1.0/bpmn\u0022\u003E\r\n        \u003Ccamunda:property name=\u0022department\u0022 value=\u0022Finance\u0022 /\u003E\r\n        \u003Ccamunda:property name=\u0022criticality\u0022 value=\u0022high\u0022 /\u003E\r\n      \u003C/camunda:properties\u003E",
+      "Severity": 0
+    },
+    {
+      "ElementId": "Task_Approve",
+      "XmlPath": "/definitions[@id=\u0027Definitions_Camunda\u0027]/process[@id=\u0027Process_Camunda\u0027]/userTask[@id=\u0027Task_Approve\u0027]/extensionElements/taskListener",
+      "Construct": "extensionElements",
+      "Reason": "Unrecognized extension namespace \u0027http://camunda.org/schema/1.0/bpmn\u0027; the content is preserved verbatim under \u0027foreignExtensions\u0027.",
+      "Severity": 0
+    },
+    {
+      "ElementId": "Task_Approve",
+      "XmlPath": "/definitions[@id=\u0027Definitions_Camunda\u0027]/process[@id=\u0027Process_Camunda\u0027]/userTask[@id=\u0027Task_Approve\u0027]/extensionElements/inputOutput",
+      "Construct": "extensionElements",
+      "Reason": "Unrecognized extension namespace \u0027http://camunda.org/schema/1.0/bpmn\u0027; the content is preserved verbatim under \u0027foreignExtensions\u0027.",
+      "Severity": 0
+    },
+    {
+      "ElementId": "Task_Book",
+      "XmlPath": "/definitions[@id=\u0027Definitions_Camunda\u0027]/process[@id=\u0027Process_Camunda\u0027]/serviceTask[@id=\u0027Task_Book\u0027]/extensionElements/connector",
+      "Construct": "extensionElements",
+      "Reason": "Unrecognized extension namespace \u0027http://camunda.org/schema/1.0/bpmn\u0027; the content is preserved verbatim under \u0027foreignExtensions\u0027.",
+      "Severity": 0
+    }
+  ],
+  "Warnings": [],
+  "HasErrors": false,
+  "ErrorMessage": null
+}

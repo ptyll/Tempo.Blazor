@@ -1,0 +1,156 @@
+{
+  "Models": [
+    {
+      "Id": "Process_Prefixed",
+      "Title": "Prefixed process",
+      "Notation": "bpmn2",
+      "SupportedNotations": [
+        "bpmn2"
+      ],
+      "Elements": [
+        {
+          "Id": "StartEvent_Prefixed",
+          "SourceId": "StartEvent_Prefixed",
+          "SourceType": "startEvent",
+          "SourcePath": "/definitions[@id=\u0027Definitions_Prefixed\u0027]/process[@id=\u0027Process_Prefixed\u0027]/startEvent[@id=\u0027StartEvent_Prefixed\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "StartEvent",
+          "Name": "Start",
+          "ParentId": "",
+          "Description": "",
+          "Properties": {},
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "Catch_Notify",
+          "SourceId": "Catch_Notify",
+          "SourceType": "intermediateCatchEvent",
+          "SourcePath": "/definitions[@id=\u0027Definitions_Prefixed\u0027]/process[@id=\u0027Process_Prefixed\u0027]/intermediateCatchEvent[@id=\u0027Catch_Notify\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "IntermediateCatchEvent",
+          "Name": "Wait for notify",
+          "ParentId": "",
+          "Description": "",
+          "Properties": {
+            "eventDefinitions": [
+              {
+                "type": "message",
+                "id": "MsgDef_Prefixed",
+                "ref": "tns_Message_Notify",
+                "name": "Notify"
+              }
+            ]
+          },
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "Task_Prefixed",
+          "SourceId": "Task_Prefixed",
+          "SourceType": "task",
+          "SourcePath": "/definitions[@id=\u0027Definitions_Prefixed\u0027]/process[@id=\u0027Process_Prefixed\u0027]/task[@id=\u0027Task_Prefixed\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "Task",
+          "Name": "Handle notify",
+          "ParentId": "",
+          "Description": "",
+          "Properties": {},
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "EndEvent_Prefixed",
+          "SourceId": "EndEvent_Prefixed",
+          "SourceType": "endEvent",
+          "SourcePath": "/definitions[@id=\u0027Definitions_Prefixed\u0027]/process[@id=\u0027Process_Prefixed\u0027]/endEvent[@id=\u0027EndEvent_Prefixed\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "EndEvent",
+          "Name": "Done",
+          "ParentId": "",
+          "Description": "",
+          "Properties": {},
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        }
+      ],
+      "Relationships": [
+        {
+          "Id": "Flow_P1",
+          "SourceId": "Flow_P1",
+          "SourceType": "sequenceFlow",
+          "SourceElementId": "StartEvent_Prefixed",
+          "TargetElementId": "Catch_Notify",
+          "RelationshipType": "SequenceFlow",
+          "Name": "",
+          "Properties": {},
+          "Tags": []
+        },
+        {
+          "Id": "Flow_P2",
+          "SourceId": "Flow_P2",
+          "SourceType": "sequenceFlow",
+          "SourceElementId": "Catch_Notify",
+          "TargetElementId": "Task_Prefixed",
+          "RelationshipType": "SequenceFlow",
+          "Name": "",
+          "Properties": {},
+          "Tags": []
+        },
+        {
+          "Id": "Flow_P3",
+          "SourceId": "Flow_P3",
+          "SourceType": "sequenceFlow",
+          "SourceElementId": "Task_Prefixed",
+          "TargetElementId": "EndEvent_Prefixed",
+          "RelationshipType": "SequenceFlow",
+          "Name": "",
+          "Properties": {},
+          "Tags": []
+        }
+      ],
+      "Views": [],
+      "Issues": [],
+      "Metadata": {
+        "SourceSystem": "bpmn-xml",
+        "SourceVersion": "http://tempo.example/bpmn/corpus/prefixed",
+        "LoadedAt": "1970-01-01T00:00:00+00:00",
+        "IsFresh": true
+      },
+      "Properties": {
+        "bpmnDefinitions": [
+          {
+            "kind": "message",
+            "id": "tns_Message_Notify",
+            "name": "Notify",
+            "code": ""
+          }
+        ]
+      }
+    }
+  ],
+  "Losses": [],
+  "Warnings": [],
+  "HasErrors": false,
+  "ErrorMessage": null
+}

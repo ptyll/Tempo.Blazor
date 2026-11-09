@@ -24,17 +24,63 @@
 - **Docs.** New [docs/modeling-hosting-guide.md](docs/modeling-hosting-guide.md) — the writer implementation pattern with optimistic concurrency (capabilities, atomic apply through the translator + engine, layout/view changes, schema/lookups, issue mapping, MCP wiring, verification recipe). [docs/modeling-authoring.md](docs/modeling-authoring.md) carries the design contract and §6.5 "as implemented (phase 7)"; [docs/modeling-editor.md](docs/modeling-editor.md) the component contract; [docs/modeling-mcp-tools.md](docs/modeling-mcp-tools.md) the living MCP catalog and the "What 2.11.0 changed" table; AGENTS.md gained the authoring bullet list.
 - **Tests.** `ModelingModelDiffTests`, `TmModelingViewerOverlayTests` (a changed relationship), the phase 3–6 suites already in the tree, `ModelingMcpParityTests`, `ModelingViewOperationToolsTests`, `ModelingPropertySchemaToolsTests`, `ModelingMcpContractSnapshotTests`, `ModelingMcpToolsDocumentationDriftTests`; the JSON documentation overlays are regenerated and `validate --fail-on-drift` is clean.
 
-### Added — BPMN 2.0 XML converter (plan 6fca9139, phase 1: design + corpus)
+### Added — BPMN 2.0 XML converter (plan 6fca9139, phases 1–2: design, corpus, secure import)
 
 - Design document [docs/modeling-bpmn-xml.md](docs/modeling-bpmn-xml.md): the headless
   `Tempo.Blazor.Modeling.BpmnXml` package proposal (dependency on `Tempo.Blazor.Abstractions`
   only), the `IBpmnXmlImporter`/`IBpmnXmlExporter` API, the BPMN 2.0 XML → semantic type
-  mapping table, the host/tool extension mechanism and the loss-report contract. Awaiting
-  owner confirmation before phase 2 implements it.
-- Test corpus `tests/Tempo.Blazor.Tests/Modeling/BpmnCorpus/` — 15 hand-authored,
+  mapping table, the host/tool extension mechanism and the loss-report contract (approved —
+  decision MODELING-BPMN-XML-API).
+- Test corpus `tests/Tempo.Blazor.Tests/Modeling/BpmnCorpus/` — 21 hand-authored,
   license-clean BPMN 2.0 fixtures (MIT) mimicking the Camunda/Signavio/Bizagi/bpmn.io
   dialects, guarded by `BpmnCorpusTests` (safe-parse, well-formedness, unique NCName ids,
-  dangling-reference and BPMNDI-presence checks).
+  dangling-reference and BPMNDI-presence checks), plus adversarial `Hostile/` fixtures
+  (XXE, billion laughs, malformed XML, wrong root, size/depth/element-count probes).
+- **Phase 2 — `Tempo.Blazor.Modeling.BpmnXml` package** (`AddTempoBpmnXml()`): safe,
+  bounded, deterministic BPMN 2.0 XML → `ModelingModelDto` import. DTD prohibited and no
+  XML resolver; `MaxInputBytes`/`MaxDepth`/`MaxElements` options enforced on non-seekable
+  streams; malformed XML returns `HasErrors` with the line number — the importer never
+  throws for bad input. Elements keep their BPMN ids (stable generated ids for anonymous
+  elements), element order follows the XML, and `BpmnModelSplit.PerProcess` (default) maps
+  each collaboration participant's process to its own model with pools, nested lanes and
+  cross-model `messageFlow` links carrying an `externalModelRef`; `SingleWithPools` imports
+  one model. Event definitions (timer/message/error/signal/escalation/compensation/
+  conditional/link/terminate/cancel), `conditionExpression` → `ConditionalFlow`, gateway
+  `default` → `DefaultFlow`, boundary-event `attachedToRef`/`cancelActivity` as properties
+  only, data-association implicit-endpoint resolution (ioSpecification/`<property>` ids
+  resolve to the enclosing activity), data objects/stores, annotations, groups and the
+  catch-all attribute rule (`bpmn:*`/prefixed foreign attributes preserved verbatim in
+  `Properties`). Nothing is silently dropped: unsupported or approximated constructs
+  (choreography/conversation, loop characteristics, ad-hoc ordering, transaction
+  compensation, unused global definitions, unrecognized extension namespaces preserved
+  under `foreignExtensions`, …) land in `BpmnImportResult.Losses` with element id, XML
+  path, construct, reason and severity, mirrored as `bpmn-import` issues on the owning
+  model together with structural validation results (dangling flow endpoints, broken
+  boundary attachments, start/end-event flow violations, duplicate ids).
+- **Tests.** `BpmnXmlImporterSecurityTests` (XXE/billion-laughs/limits/malformed, the
+  mandatory security suite), `BpmnXmlImporterTests` (mapping semantics, collaboration
+  splits, loss report, validation issues, determinism, DI registration, catalog parity),
+  `BpmnImportGoldenTests` (normalized JSON goldens for the whole corpus, regeneration via
+  `TEMPO_REGENERATE_BPMN_IMPORT_GOLDEN=1`), `BpmnPackageBoundaryTests` (headless boundary:
+  Abstractions-only references, no UI/server stack in the closure, not part of
+  `Tempo.Blazor.All` — the DocumentFormats/Engine precedent). JSON documentation
+  participates in the bundle pipeline (`tempo-blazor-bpmnxml.json`, overlays, aggregate;
+  `validate --fail-on-drift` clean via `DocumentationValidationTests`).
+- **Not in this phase (per the plan):** BPMNDI view import (phase 3), export/round-trip
+  (phase 4), Camunda/Signavio/Bizagi tool plugins and MCP tools (phase 5). The
+  `BpmnImportOptions` knobs those phases honor already exist.
+- **Phase 2 review hardening (all 10 findings):** O(n) import backed by per-model id sets and a
+  global element index (200 000 flat tasks import in seconds under the default limits —
+  `MaxElements` default raised to 500 000); the bounded reader never disposes the caller's stream
+  and honors cancellation mid-read; the string overload decodes through a `TextReader` so a utf-16
+  encoding declaration cannot fail the import; any unexpected load/build failure (e.g. hostile
+  assignment endpoints, participant-less collaborations with message flows — both now covered by
+  hostile fixtures) returns a generic `HasErrors` failure instead of throwing; the attribute
+  catch-all also covers relationships (messageRef/isImmediate/foreign attributes) while skipping
+  per-type mapped attributes; tool plugins are invoked once per `(extensionElements, namespace)`;
+  loss paths carry `[@id]`/positional predicates via the shared `BuildPath`; referenced global
+  message/signal/error/escalation definitions are kept on the model as canonical
+  `Properties["bpmnDefinitions"]` JSON (design §4); goldens compare with normalized line endings.
 
 ### Added — `Tempo.Blazor.DiagramEditor` (additive; consumed by the authoring editor and the viewer)
 

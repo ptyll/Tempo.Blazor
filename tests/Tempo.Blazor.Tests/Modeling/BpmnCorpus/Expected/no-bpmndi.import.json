@@ -1,0 +1,268 @@
+{
+  "Models": [
+    {
+      "Id": "Process_NoDi",
+      "Title": "Headless process",
+      "Notation": "bpmn2",
+      "SupportedNotations": [
+        "bpmn2"
+      ],
+      "Elements": [
+        {
+          "Id": "StartEvent_NoDi",
+          "SourceId": "StartEvent_NoDi",
+          "SourceType": "startEvent",
+          "SourcePath": "/definitions[@id=\u0027Definitions_NoBpmndi\u0027]/process[@id=\u0027Process_NoDi\u0027]/startEvent[@id=\u0027StartEvent_NoDi\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "StartEvent",
+          "Name": "Begin",
+          "ParentId": "",
+          "Description": "",
+          "Properties": {},
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "ServiceTask_Call",
+          "SourceId": "ServiceTask_Call",
+          "SourceType": "serviceTask",
+          "SourcePath": "/definitions[@id=\u0027Definitions_NoBpmndi\u0027]/process[@id=\u0027Process_NoDi\u0027]/serviceTask[@id=\u0027ServiceTask_Call\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "ServiceTask",
+          "Name": "Call service",
+          "ParentId": "",
+          "Description": "",
+          "Properties": {
+            "bpmn:implementation": "##WebService"
+          },
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "ScriptTask_Calc",
+          "SourceId": "ScriptTask_Calc",
+          "SourceType": "scriptTask",
+          "SourcePath": "/definitions[@id=\u0027Definitions_NoBpmndi\u0027]/process[@id=\u0027Process_NoDi\u0027]/scriptTask[@id=\u0027ScriptTask_Calc\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "ScriptTask",
+          "Name": "Calculate",
+          "ParentId": "",
+          "Description": "",
+          "Properties": {
+            "bpmn:scriptFormat": "javascript"
+          },
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "RuleTask_Check",
+          "SourceId": "RuleTask_Check",
+          "SourceType": "businessRuleTask",
+          "SourcePath": "/definitions[@id=\u0027Definitions_NoBpmndi\u0027]/process[@id=\u0027Process_NoDi\u0027]/businessRuleTask[@id=\u0027RuleTask_Check\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "BusinessRuleTask",
+          "Name": "Check rules",
+          "ParentId": "",
+          "Description": "",
+          "Properties": {
+            "bpmn:implementation": "##unspecified"
+          },
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "SendTask_Notify",
+          "SourceId": "SendTask_Notify",
+          "SourceType": "sendTask",
+          "SourcePath": "/definitions[@id=\u0027Definitions_NoBpmndi\u0027]/process[@id=\u0027Process_NoDi\u0027]/sendTask[@id=\u0027SendTask_Notify\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "SendTask",
+          "Name": "Notify",
+          "ParentId": "",
+          "Description": "",
+          "Properties": {
+            "bpmn:implementation": "##WebService"
+          },
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "ReceiveTask_Wait",
+          "SourceId": "ReceiveTask_Wait",
+          "SourceType": "receiveTask",
+          "SourcePath": "/definitions[@id=\u0027Definitions_NoBpmndi\u0027]/process[@id=\u0027Process_NoDi\u0027]/receiveTask[@id=\u0027ReceiveTask_Wait\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "ReceiveTask",
+          "Name": "Wait for reply",
+          "ParentId": "",
+          "Description": "",
+          "Properties": {
+            "bpmn:implementation": "##WebService"
+          },
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "ManualTask_Inspect",
+          "SourceId": "ManualTask_Inspect",
+          "SourceType": "manualTask",
+          "SourcePath": "/definitions[@id=\u0027Definitions_NoBpmndi\u0027]/process[@id=\u0027Process_NoDi\u0027]/manualTask[@id=\u0027ManualTask_Inspect\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "ManualTask",
+          "Name": "Inspect manually",
+          "ParentId": "",
+          "Description": "",
+          "Properties": {},
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "EndEvent_NoDi",
+          "SourceId": "EndEvent_NoDi",
+          "SourceType": "endEvent",
+          "SourcePath": "/definitions[@id=\u0027Definitions_NoBpmndi\u0027]/process[@id=\u0027Process_NoDi\u0027]/endEvent[@id=\u0027EndEvent_NoDi\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "EndEvent",
+          "Name": "End",
+          "ParentId": "",
+          "Description": "",
+          "Properties": {},
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        }
+      ],
+      "Relationships": [
+        {
+          "Id": "Flow_ND1",
+          "SourceId": "Flow_ND1",
+          "SourceType": "sequenceFlow",
+          "SourceElementId": "StartEvent_NoDi",
+          "TargetElementId": "ServiceTask_Call",
+          "RelationshipType": "SequenceFlow",
+          "Name": "",
+          "Properties": {},
+          "Tags": []
+        },
+        {
+          "Id": "Flow_ND2",
+          "SourceId": "Flow_ND2",
+          "SourceType": "sequenceFlow",
+          "SourceElementId": "ServiceTask_Call",
+          "TargetElementId": "ScriptTask_Calc",
+          "RelationshipType": "SequenceFlow",
+          "Name": "",
+          "Properties": {},
+          "Tags": []
+        },
+        {
+          "Id": "Flow_ND3",
+          "SourceId": "Flow_ND3",
+          "SourceType": "sequenceFlow",
+          "SourceElementId": "ScriptTask_Calc",
+          "TargetElementId": "RuleTask_Check",
+          "RelationshipType": "SequenceFlow",
+          "Name": "",
+          "Properties": {},
+          "Tags": []
+        },
+        {
+          "Id": "Flow_ND4",
+          "SourceId": "Flow_ND4",
+          "SourceType": "sequenceFlow",
+          "SourceElementId": "RuleTask_Check",
+          "TargetElementId": "SendTask_Notify",
+          "RelationshipType": "SequenceFlow",
+          "Name": "",
+          "Properties": {},
+          "Tags": []
+        },
+        {
+          "Id": "Flow_ND5",
+          "SourceId": "Flow_ND5",
+          "SourceType": "sequenceFlow",
+          "SourceElementId": "SendTask_Notify",
+          "TargetElementId": "ReceiveTask_Wait",
+          "RelationshipType": "SequenceFlow",
+          "Name": "",
+          "Properties": {},
+          "Tags": []
+        },
+        {
+          "Id": "Flow_ND6",
+          "SourceId": "Flow_ND6",
+          "SourceType": "sequenceFlow",
+          "SourceElementId": "ReceiveTask_Wait",
+          "TargetElementId": "ManualTask_Inspect",
+          "RelationshipType": "SequenceFlow",
+          "Name": "",
+          "Properties": {},
+          "Tags": []
+        },
+        {
+          "Id": "Flow_ND7",
+          "SourceId": "Flow_ND7",
+          "SourceType": "sequenceFlow",
+          "SourceElementId": "ManualTask_Inspect",
+          "TargetElementId": "EndEvent_NoDi",
+          "RelationshipType": "SequenceFlow",
+          "Name": "",
+          "Properties": {},
+          "Tags": []
+        }
+      ],
+      "Views": [],
+      "Issues": [],
+      "Metadata": {
+        "SourceSystem": "bpmn-xml",
+        "SourceVersion": "http://tempo.example/bpmn/corpus",
+        "LoadedAt": "1970-01-01T00:00:00+00:00",
+        "IsFresh": true
+      },
+      "Properties": {}
+    }
+  ],
+  "Losses": [],
+  "Warnings": [],
+  "HasErrors": false,
+  "ErrorMessage": null
+}

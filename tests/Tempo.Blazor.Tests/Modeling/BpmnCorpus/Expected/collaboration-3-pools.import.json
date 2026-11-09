@@ -1,0 +1,617 @@
+{
+  "Models": [
+    {
+      "Id": "Process_Customer",
+      "Title": "Customer",
+      "Notation": "bpmn2",
+      "SupportedNotations": [
+        "bpmn2"
+      ],
+      "Elements": [
+        {
+          "Id": "Participant_Customer",
+          "SourceId": "Participant_Customer",
+          "SourceType": "participant",
+          "SourcePath": "/definitions[@id=\u0027Definitions_Collaboration\u0027]/collaboration[@id=\u0027Collaboration_1\u0027]/participant[@id=\u0027Participant_Customer\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "Pool",
+          "Name": "Customer",
+          "ParentId": "",
+          "Description": "",
+          "Properties": {},
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "StartEvent_Want",
+          "SourceId": "StartEvent_Want",
+          "SourceType": "startEvent",
+          "SourcePath": "/definitions[@id=\u0027Definitions_Collaboration\u0027]/process[@id=\u0027Process_Customer\u0027]/startEvent[@id=\u0027StartEvent_Want\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "StartEvent",
+          "Name": "Wants goods",
+          "ParentId": "Participant_Customer",
+          "Description": "",
+          "Properties": {},
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "Task_PlaceOrder",
+          "SourceId": "Task_PlaceOrder",
+          "SourceType": "task",
+          "SourcePath": "/definitions[@id=\u0027Definitions_Collaboration\u0027]/process[@id=\u0027Process_Customer\u0027]/task[@id=\u0027Task_PlaceOrder\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "Task",
+          "Name": "Place order",
+          "ParentId": "Participant_Customer",
+          "Description": "",
+          "Properties": {},
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "Task_AwaitConfirmation",
+          "SourceId": "Task_AwaitConfirmation",
+          "SourceType": "task",
+          "SourcePath": "/definitions[@id=\u0027Definitions_Collaboration\u0027]/process[@id=\u0027Process_Customer\u0027]/task[@id=\u0027Task_AwaitConfirmation\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "Task",
+          "Name": "Await confirmation",
+          "ParentId": "Participant_Customer",
+          "Description": "",
+          "Properties": {},
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "Task_AwaitShipment",
+          "SourceId": "Task_AwaitShipment",
+          "SourceType": "task",
+          "SourcePath": "/definitions[@id=\u0027Definitions_Collaboration\u0027]/process[@id=\u0027Process_Customer\u0027]/task[@id=\u0027Task_AwaitShipment\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "Task",
+          "Name": "Await shipment",
+          "ParentId": "Participant_Customer",
+          "Description": "",
+          "Properties": {},
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "EndEvent_Happy",
+          "SourceId": "EndEvent_Happy",
+          "SourceType": "endEvent",
+          "SourcePath": "/definitions[@id=\u0027Definitions_Collaboration\u0027]/process[@id=\u0027Process_Customer\u0027]/endEvent[@id=\u0027EndEvent_Happy\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "EndEvent",
+          "Name": "Goods received",
+          "ParentId": "Participant_Customer",
+          "Description": "",
+          "Properties": {},
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        }
+      ],
+      "Relationships": [
+        {
+          "Id": "Flow_C1",
+          "SourceId": "Flow_C1",
+          "SourceType": "sequenceFlow",
+          "SourceElementId": "StartEvent_Want",
+          "TargetElementId": "Task_PlaceOrder",
+          "RelationshipType": "SequenceFlow",
+          "Name": "",
+          "Properties": {},
+          "Tags": []
+        },
+        {
+          "Id": "Flow_C2",
+          "SourceId": "Flow_C2",
+          "SourceType": "sequenceFlow",
+          "SourceElementId": "Task_PlaceOrder",
+          "TargetElementId": "Task_AwaitConfirmation",
+          "RelationshipType": "SequenceFlow",
+          "Name": "",
+          "Properties": {},
+          "Tags": []
+        },
+        {
+          "Id": "Flow_C3",
+          "SourceId": "Flow_C3",
+          "SourceType": "sequenceFlow",
+          "SourceElementId": "Task_AwaitConfirmation",
+          "TargetElementId": "Task_AwaitShipment",
+          "RelationshipType": "SequenceFlow",
+          "Name": "",
+          "Properties": {},
+          "Tags": []
+        },
+        {
+          "Id": "Flow_C4",
+          "SourceId": "Flow_C4",
+          "SourceType": "sequenceFlow",
+          "SourceElementId": "Task_AwaitShipment",
+          "TargetElementId": "EndEvent_Happy",
+          "RelationshipType": "SequenceFlow",
+          "Name": "",
+          "Properties": {},
+          "Tags": []
+        },
+        {
+          "Id": "MessageFlow_Order",
+          "SourceId": "MessageFlow_Order",
+          "SourceType": "messageFlow",
+          "SourceElementId": "Task_PlaceOrder",
+          "TargetElementId": "StartEvent_OrderReceived",
+          "RelationshipType": "MessageFlow",
+          "Name": "Order",
+          "Properties": {
+            "externalModelRef": {
+              "modelId": "Process_Shop",
+              "elementId": "StartEvent_OrderReceived"
+            }
+          },
+          "Tags": []
+        }
+      ],
+      "Views": [],
+      "Issues": [],
+      "Metadata": {
+        "SourceSystem": "bpmn-xml",
+        "SourceVersion": "http://tempo.example/bpmn/corpus",
+        "LoadedAt": "1970-01-01T00:00:00+00:00",
+        "IsFresh": true
+      },
+      "Properties": {}
+    },
+    {
+      "Id": "Process_Shop",
+      "Title": "Web shop",
+      "Notation": "bpmn2",
+      "SupportedNotations": [
+        "bpmn2"
+      ],
+      "Elements": [
+        {
+          "Id": "Participant_Shop",
+          "SourceId": "Participant_Shop",
+          "SourceType": "participant",
+          "SourcePath": "/definitions[@id=\u0027Definitions_Collaboration\u0027]/collaboration[@id=\u0027Collaboration_1\u0027]/participant[@id=\u0027Participant_Shop\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "Pool",
+          "Name": "Web shop",
+          "ParentId": "",
+          "Description": "",
+          "Properties": {},
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "Lane_Sales",
+          "SourceId": "Lane_Sales",
+          "SourceType": "lane",
+          "SourcePath": "/definitions[@id=\u0027Definitions_Collaboration\u0027]/process[@id=\u0027Process_Shop\u0027]/laneSet[@id=\u0027LaneSet_Shop\u0027]/lane[@id=\u0027Lane_Sales\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "Lane",
+          "Name": "Sales",
+          "ParentId": "Participant_Shop",
+          "Description": "",
+          "Properties": {},
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "Lane_Billing",
+          "SourceId": "Lane_Billing",
+          "SourceType": "lane",
+          "SourcePath": "/definitions[@id=\u0027Definitions_Collaboration\u0027]/process[@id=\u0027Process_Shop\u0027]/laneSet[@id=\u0027LaneSet_Shop\u0027]/lane[@id=\u0027Lane_Billing\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "Lane",
+          "Name": "Billing",
+          "ParentId": "Participant_Shop",
+          "Description": "",
+          "Properties": {},
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "StartEvent_OrderReceived",
+          "SourceId": "StartEvent_OrderReceived",
+          "SourceType": "startEvent",
+          "SourcePath": "/definitions[@id=\u0027Definitions_Collaboration\u0027]/process[@id=\u0027Process_Shop\u0027]/startEvent[@id=\u0027StartEvent_OrderReceived\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "StartEvent",
+          "Name": "Order received",
+          "ParentId": "Lane_Sales",
+          "Description": "",
+          "Properties": {},
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "Task_Confirm",
+          "SourceId": "Task_Confirm",
+          "SourceType": "task",
+          "SourcePath": "/definitions[@id=\u0027Definitions_Collaboration\u0027]/process[@id=\u0027Process_Shop\u0027]/task[@id=\u0027Task_Confirm\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "Task",
+          "Name": "Confirm order",
+          "ParentId": "Lane_Sales",
+          "Description": "",
+          "Properties": {},
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "Task_SendToWarehouse",
+          "SourceId": "Task_SendToWarehouse",
+          "SourceType": "task",
+          "SourcePath": "/definitions[@id=\u0027Definitions_Collaboration\u0027]/process[@id=\u0027Process_Shop\u0027]/task[@id=\u0027Task_SendToWarehouse\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "Task",
+          "Name": "Send to warehouse",
+          "ParentId": "Lane_Sales",
+          "Description": "",
+          "Properties": {},
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "Task_Invoice",
+          "SourceId": "Task_Invoice",
+          "SourceType": "task",
+          "SourcePath": "/definitions[@id=\u0027Definitions_Collaboration\u0027]/process[@id=\u0027Process_Shop\u0027]/task[@id=\u0027Task_Invoice\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "Task",
+          "Name": "Invoice customer",
+          "ParentId": "Lane_Billing",
+          "Description": "",
+          "Properties": {},
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "EndEvent_Invoiced",
+          "SourceId": "EndEvent_Invoiced",
+          "SourceType": "endEvent",
+          "SourcePath": "/definitions[@id=\u0027Definitions_Collaboration\u0027]/process[@id=\u0027Process_Shop\u0027]/endEvent[@id=\u0027EndEvent_Invoiced\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "EndEvent",
+          "Name": "Invoiced",
+          "ParentId": "Lane_Billing",
+          "Description": "",
+          "Properties": {},
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        }
+      ],
+      "Relationships": [
+        {
+          "Id": "Flow_S1",
+          "SourceId": "Flow_S1",
+          "SourceType": "sequenceFlow",
+          "SourceElementId": "StartEvent_OrderReceived",
+          "TargetElementId": "Task_Confirm",
+          "RelationshipType": "SequenceFlow",
+          "Name": "",
+          "Properties": {},
+          "Tags": []
+        },
+        {
+          "Id": "Flow_S2",
+          "SourceId": "Flow_S2",
+          "SourceType": "sequenceFlow",
+          "SourceElementId": "Task_Confirm",
+          "TargetElementId": "Task_SendToWarehouse",
+          "RelationshipType": "SequenceFlow",
+          "Name": "",
+          "Properties": {},
+          "Tags": []
+        },
+        {
+          "Id": "Flow_S3",
+          "SourceId": "Flow_S3",
+          "SourceType": "sequenceFlow",
+          "SourceElementId": "Task_SendToWarehouse",
+          "TargetElementId": "Task_Invoice",
+          "RelationshipType": "SequenceFlow",
+          "Name": "",
+          "Properties": {},
+          "Tags": []
+        },
+        {
+          "Id": "Flow_S4",
+          "SourceId": "Flow_S4",
+          "SourceType": "sequenceFlow",
+          "SourceElementId": "Task_Invoice",
+          "TargetElementId": "EndEvent_Invoiced",
+          "RelationshipType": "SequenceFlow",
+          "Name": "",
+          "Properties": {},
+          "Tags": []
+        },
+        {
+          "Id": "MessageFlow_Confirm",
+          "SourceId": "MessageFlow_Confirm",
+          "SourceType": "messageFlow",
+          "SourceElementId": "Task_Confirm",
+          "TargetElementId": "Task_AwaitConfirmation",
+          "RelationshipType": "MessageFlow",
+          "Name": "Confirmation",
+          "Properties": {
+            "externalModelRef": {
+              "modelId": "Process_Customer",
+              "elementId": "Task_AwaitConfirmation"
+            }
+          },
+          "Tags": []
+        },
+        {
+          "Id": "MessageFlow_ShipRequest",
+          "SourceId": "MessageFlow_ShipRequest",
+          "SourceType": "messageFlow",
+          "SourceElementId": "Task_SendToWarehouse",
+          "TargetElementId": "StartEvent_Pick",
+          "RelationshipType": "MessageFlow",
+          "Name": "",
+          "Properties": {
+            "externalModelRef": {
+              "modelId": "Process_Warehouse",
+              "elementId": "StartEvent_Pick"
+            }
+          },
+          "Tags": []
+        }
+      ],
+      "Views": [],
+      "Issues": [],
+      "Metadata": {
+        "SourceSystem": "bpmn-xml",
+        "SourceVersion": "http://tempo.example/bpmn/corpus",
+        "LoadedAt": "1970-01-01T00:00:00+00:00",
+        "IsFresh": true
+      },
+      "Properties": {}
+    },
+    {
+      "Id": "Process_Warehouse",
+      "Title": "Warehouse",
+      "Notation": "bpmn2",
+      "SupportedNotations": [
+        "bpmn2"
+      ],
+      "Elements": [
+        {
+          "Id": "Participant_Warehouse",
+          "SourceId": "Participant_Warehouse",
+          "SourceType": "participant",
+          "SourcePath": "/definitions[@id=\u0027Definitions_Collaboration\u0027]/collaboration[@id=\u0027Collaboration_1\u0027]/participant[@id=\u0027Participant_Warehouse\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "Pool",
+          "Name": "Warehouse",
+          "ParentId": "",
+          "Description": "",
+          "Properties": {},
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "StartEvent_Pick",
+          "SourceId": "StartEvent_Pick",
+          "SourceType": "startEvent",
+          "SourcePath": "/definitions[@id=\u0027Definitions_Collaboration\u0027]/process[@id=\u0027Process_Warehouse\u0027]/startEvent[@id=\u0027StartEvent_Pick\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "StartEvent",
+          "Name": "Pick request",
+          "ParentId": "Participant_Warehouse",
+          "Description": "",
+          "Properties": {},
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "Task_Pick",
+          "SourceId": "Task_Pick",
+          "SourceType": "task",
+          "SourcePath": "/definitions[@id=\u0027Definitions_Collaboration\u0027]/process[@id=\u0027Process_Warehouse\u0027]/task[@id=\u0027Task_Pick\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "Task",
+          "Name": "Pick goods",
+          "ParentId": "Participant_Warehouse",
+          "Description": "",
+          "Properties": {},
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "Task_Dispatch",
+          "SourceId": "Task_Dispatch",
+          "SourceType": "task",
+          "SourcePath": "/definitions[@id=\u0027Definitions_Collaboration\u0027]/process[@id=\u0027Process_Warehouse\u0027]/task[@id=\u0027Task_Dispatch\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "Task",
+          "Name": "Dispatch",
+          "ParentId": "Participant_Warehouse",
+          "Description": "",
+          "Properties": {},
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "EndEvent_Dispatched",
+          "SourceId": "EndEvent_Dispatched",
+          "SourceType": "endEvent",
+          "SourcePath": "/definitions[@id=\u0027Definitions_Collaboration\u0027]/process[@id=\u0027Process_Warehouse\u0027]/endEvent[@id=\u0027EndEvent_Dispatched\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "EndEvent",
+          "Name": "Dispatched",
+          "ParentId": "Participant_Warehouse",
+          "Description": "",
+          "Properties": {},
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        }
+      ],
+      "Relationships": [
+        {
+          "Id": "Flow_W1",
+          "SourceId": "Flow_W1",
+          "SourceType": "sequenceFlow",
+          "SourceElementId": "StartEvent_Pick",
+          "TargetElementId": "Task_Pick",
+          "RelationshipType": "SequenceFlow",
+          "Name": "",
+          "Properties": {},
+          "Tags": []
+        },
+        {
+          "Id": "Flow_W2",
+          "SourceId": "Flow_W2",
+          "SourceType": "sequenceFlow",
+          "SourceElementId": "Task_Pick",
+          "TargetElementId": "Task_Dispatch",
+          "RelationshipType": "SequenceFlow",
+          "Name": "",
+          "Properties": {},
+          "Tags": []
+        },
+        {
+          "Id": "Flow_W3",
+          "SourceId": "Flow_W3",
+          "SourceType": "sequenceFlow",
+          "SourceElementId": "Task_Dispatch",
+          "TargetElementId": "EndEvent_Dispatched",
+          "RelationshipType": "SequenceFlow",
+          "Name": "",
+          "Properties": {},
+          "Tags": []
+        },
+        {
+          "Id": "MessageFlow_Shipped",
+          "SourceId": "MessageFlow_Shipped",
+          "SourceType": "messageFlow",
+          "SourceElementId": "Task_Dispatch",
+          "TargetElementId": "Task_AwaitShipment",
+          "RelationshipType": "MessageFlow",
+          "Name": "Shipped",
+          "Properties": {
+            "externalModelRef": {
+              "modelId": "Process_Customer",
+              "elementId": "Task_AwaitShipment"
+            }
+          },
+          "Tags": []
+        }
+      ],
+      "Views": [],
+      "Issues": [],
+      "Metadata": {
+        "SourceSystem": "bpmn-xml",
+        "SourceVersion": "http://tempo.example/bpmn/corpus",
+        "LoadedAt": "1970-01-01T00:00:00+00:00",
+        "IsFresh": true
+      },
+      "Properties": {}
+    }
+  ],
+  "Losses": [],
+  "Warnings": [],
+  "HasErrors": false,
+  "ErrorMessage": null
+}

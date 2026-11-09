@@ -1,0 +1,233 @@
+{
+  "Models": [
+    {
+      "Id": "Process_Signavio",
+      "Title": "Request approval",
+      "Notation": "bpmn2",
+      "SupportedNotations": [
+        "bpmn2"
+      ],
+      "Elements": [
+        {
+          "Id": "StartEvent_Request",
+          "SourceId": "StartEvent_Request",
+          "SourceType": "startEvent",
+          "SourcePath": "/definitions[@id=\u0027Definitions_Signavio\u0027]/process[@id=\u0027Process_Signavio\u0027]/startEvent[@id=\u0027StartEvent_Request\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "StartEvent",
+          "Name": "Request submitted",
+          "ParentId": "",
+          "Description": "",
+          "Properties": {
+            "foreignExtensions": {
+              "http://www.signavio.com": "\u003Csignavio:signavioMetaData metaKey=\u0022elementgeometry\u0022 metaValue=\u0022\u0022 xmlns:signavio=\u0022http://www.signavio.com\u0022 /\u003E"
+            }
+          },
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "Task_Validate",
+          "SourceId": "Task_Validate",
+          "SourceType": "task",
+          "SourcePath": "/definitions[@id=\u0027Definitions_Signavio\u0027]/process[@id=\u0027Process_Signavio\u0027]/task[@id=\u0027Task_Validate\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "Task",
+          "Name": "Validate request",
+          "ParentId": "",
+          "Description": "",
+          "Properties": {
+            "foreignExtensions": {
+              "http://www.signavio.com": "\u003Csignavio:signavioMetaData metaKey=\u0022meta-role\u0022 metaValue=\u0022Compliance\u0022 xmlns:signavio=\u0022http://www.signavio.com\u0022 /\u003E"
+            }
+          },
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "Task_Decide",
+          "SourceId": "Task_Decide",
+          "SourceType": "userTask",
+          "SourcePath": "/definitions[@id=\u0027Definitions_Signavio\u0027]/process[@id=\u0027Process_Signavio\u0027]/userTask[@id=\u0027Task_Decide\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "UserTask",
+          "Name": "Decide",
+          "ParentId": "",
+          "Description": "",
+          "Properties": {
+            "signavio:assignmentRule": "round-robin",
+            "foreignExtensions": {
+              "http://www.signavio.com": "\u003Csignavio:signavioMetaData metaKey=\u0022meta-sla\u0022 metaValue=\u0022P1D\u0022 xmlns:signavio=\u0022http://www.signavio.com\u0022 /\u003E"
+            }
+          },
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "EndEvent_Decided",
+          "SourceId": "EndEvent_Decided",
+          "SourceType": "endEvent",
+          "SourcePath": "/definitions[@id=\u0027Definitions_Signavio\u0027]/process[@id=\u0027Process_Signavio\u0027]/endEvent[@id=\u0027EndEvent_Decided\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "EndEvent",
+          "Name": "Decided",
+          "ParentId": "",
+          "Description": "",
+          "Properties": {},
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        }
+      ],
+      "Relationships": [
+        {
+          "Id": "Flow_SV1",
+          "SourceId": "Flow_SV1",
+          "SourceType": "sequenceFlow",
+          "SourceElementId": "StartEvent_Request",
+          "TargetElementId": "Task_Validate",
+          "RelationshipType": "SequenceFlow",
+          "Name": "",
+          "Properties": {},
+          "Tags": []
+        },
+        {
+          "Id": "Flow_SV2",
+          "SourceId": "Flow_SV2",
+          "SourceType": "sequenceFlow",
+          "SourceElementId": "Task_Validate",
+          "TargetElementId": "Task_Decide",
+          "RelationshipType": "SequenceFlow",
+          "Name": "",
+          "Properties": {},
+          "Tags": []
+        },
+        {
+          "Id": "Flow_SV3",
+          "SourceId": "Flow_SV3",
+          "SourceType": "sequenceFlow",
+          "SourceElementId": "Task_Decide",
+          "TargetElementId": "EndEvent_Decided",
+          "RelationshipType": "SequenceFlow",
+          "Name": "",
+          "Properties": {},
+          "Tags": []
+        }
+      ],
+      "Views": [],
+      "Issues": [
+        {
+          "Id": "bpmn-import-loss-0001",
+          "Severity": "Warning",
+          "Category": "bpmn-import",
+          "SourceElementId": "",
+          "SourceRelationshipId": "",
+          "Message": "extensionElements: Process-level extension element in namespace \u0027http://www.signavio.com\u0027 has no model element to attach to; content: \u003Csignavio:signavioDiagramMetaData metaKey=\u0022revision\u0022 metaValue=\u002242\u0022 xmlns:signavio=\u0022http://www.signavio.com\u0022 /\u003E",
+          "SuggestedFix": ""
+        },
+        {
+          "Id": "bpmn-import-loss-0002",
+          "Severity": "Warning",
+          "Category": "bpmn-import",
+          "SourceElementId": "",
+          "SourceRelationshipId": "",
+          "Message": "extensionElements: Process-level extension element in namespace \u0027http://www.signavio.com\u0027 has no model element to attach to; content: \u003Csignavio:signavioDiagramMetaData metaKey=\u0022author\u0022 metaValue=\u0022jdoe@example.com\u0022 xmlns:signavio=\u0022http://www.signavio.com\u0022 /\u003E",
+          "SuggestedFix": ""
+        },
+        {
+          "Id": "bpmn-import-loss-0003",
+          "Severity": "Warning",
+          "Category": "bpmn-import",
+          "SourceElementId": "StartEvent_Request",
+          "SourceRelationshipId": "",
+          "Message": "extensionElements: Unrecognized extension namespace \u0027http://www.signavio.com\u0027; the content is preserved verbatim under \u0027foreignExtensions\u0027.",
+          "SuggestedFix": ""
+        },
+        {
+          "Id": "bpmn-import-loss-0004",
+          "Severity": "Warning",
+          "Category": "bpmn-import",
+          "SourceElementId": "Task_Validate",
+          "SourceRelationshipId": "",
+          "Message": "extensionElements: Unrecognized extension namespace \u0027http://www.signavio.com\u0027; the content is preserved verbatim under \u0027foreignExtensions\u0027.",
+          "SuggestedFix": ""
+        },
+        {
+          "Id": "bpmn-import-loss-0005",
+          "Severity": "Warning",
+          "Category": "bpmn-import",
+          "SourceElementId": "Task_Decide",
+          "SourceRelationshipId": "",
+          "Message": "extensionElements: Unrecognized extension namespace \u0027http://www.signavio.com\u0027; the content is preserved verbatim under \u0027foreignExtensions\u0027.",
+          "SuggestedFix": ""
+        }
+      ],
+      "Metadata": {
+        "SourceSystem": "bpmn-xml",
+        "SourceVersion": "http://tempo.example/bpmn/corpus/signavio",
+        "LoadedAt": "1970-01-01T00:00:00+00:00",
+        "IsFresh": true
+      },
+      "Properties": {}
+    }
+  ],
+  "Losses": [
+    {
+      "ElementId": null,
+      "XmlPath": "/definitions[@id=\u0027Definitions_Signavio\u0027]/process[@id=\u0027Process_Signavio\u0027]/extensionElements/signavioDiagramMetaData[1]",
+      "Construct": "extensionElements",
+      "Reason": "Process-level extension element in namespace \u0027http://www.signavio.com\u0027 has no model element to attach to; content: \u003Csignavio:signavioDiagramMetaData metaKey=\u0022revision\u0022 metaValue=\u002242\u0022 xmlns:signavio=\u0022http://www.signavio.com\u0022 /\u003E",
+      "Severity": 0
+    },
+    {
+      "ElementId": null,
+      "XmlPath": "/definitions[@id=\u0027Definitions_Signavio\u0027]/process[@id=\u0027Process_Signavio\u0027]/extensionElements/signavioDiagramMetaData[2]",
+      "Construct": "extensionElements",
+      "Reason": "Process-level extension element in namespace \u0027http://www.signavio.com\u0027 has no model element to attach to; content: \u003Csignavio:signavioDiagramMetaData metaKey=\u0022author\u0022 metaValue=\u0022jdoe@example.com\u0022 xmlns:signavio=\u0022http://www.signavio.com\u0022 /\u003E",
+      "Severity": 0
+    },
+    {
+      "ElementId": "StartEvent_Request",
+      "XmlPath": "/definitions[@id=\u0027Definitions_Signavio\u0027]/process[@id=\u0027Process_Signavio\u0027]/startEvent[@id=\u0027StartEvent_Request\u0027]/extensionElements/signavioMetaData",
+      "Construct": "extensionElements",
+      "Reason": "Unrecognized extension namespace \u0027http://www.signavio.com\u0027; the content is preserved verbatim under \u0027foreignExtensions\u0027.",
+      "Severity": 0
+    },
+    {
+      "ElementId": "Task_Validate",
+      "XmlPath": "/definitions[@id=\u0027Definitions_Signavio\u0027]/process[@id=\u0027Process_Signavio\u0027]/task[@id=\u0027Task_Validate\u0027]/extensionElements/signavioMetaData",
+      "Construct": "extensionElements",
+      "Reason": "Unrecognized extension namespace \u0027http://www.signavio.com\u0027; the content is preserved verbatim under \u0027foreignExtensions\u0027.",
+      "Severity": 0
+    },
+    {
+      "ElementId": "Task_Decide",
+      "XmlPath": "/definitions[@id=\u0027Definitions_Signavio\u0027]/process[@id=\u0027Process_Signavio\u0027]/userTask[@id=\u0027Task_Decide\u0027]/extensionElements/signavioMetaData",
+      "Construct": "extensionElements",
+      "Reason": "Unrecognized extension namespace \u0027http://www.signavio.com\u0027; the content is preserved verbatim under \u0027foreignExtensions\u0027.",
+      "Severity": 0
+    }
+  ],
+  "Warnings": [],
+  "HasErrors": false,
+  "ErrorMessage": null
+}

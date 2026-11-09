@@ -1,0 +1,10 @@
+{
+  "kind": "Class",
+  "category": "General",
+  "namespace": "Tempo.Blazor.Modeling.BpmnXml",
+  "description": "A non-fatal observation about the imported document that is not a content loss.",
+  "packageId": "Tempo.Blazor.Modeling.BpmnXml",
+  "sourcePath": "src/Tempo.Blazor.Modeling.BpmnXml/BpmnImportContracts.cs",
+  "documentationStatus": "generated",
+  "itemName": "BpmnImportWarning"
+}

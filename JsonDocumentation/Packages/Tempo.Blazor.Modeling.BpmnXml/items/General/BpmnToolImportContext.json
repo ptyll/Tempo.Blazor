@@ -1,0 +1,10 @@
+{
+  "kind": "Class",
+  "category": "General",
+  "namespace": "Tempo.Blazor.Modeling.BpmnXml",
+  "description": "Context handed to OnImportElement for one extensionElements payload of the extension's namespace.",
+  "packageId": "Tempo.Blazor.Modeling.BpmnXml",
+  "sourcePath": "src/Tempo.Blazor.Modeling.BpmnXml/IBpmnXmlImporter.cs",
+  "documentationStatus": "generated",
+  "itemName": "BpmnToolImportContext"
+}

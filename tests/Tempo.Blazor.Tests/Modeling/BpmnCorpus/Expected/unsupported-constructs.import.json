@@ -1,0 +1,812 @@
+{
+  "Models": [
+    {
+      "Id": "Process_Us",
+      "Title": "Our side",
+      "Notation": "bpmn2",
+      "SupportedNotations": [
+        "bpmn2"
+      ],
+      "Elements": [
+        {
+          "Id": "Participant_Us",
+          "SourceId": "Participant_Us",
+          "SourceType": "participant",
+          "SourcePath": "/definitions[@id=\u0027Definitions_Unsupported\u0027]/collaboration[@id=\u0027Collaboration_Unsup\u0027]/participant[@id=\u0027Participant_Us\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "Pool",
+          "Name": "Us",
+          "ParentId": "",
+          "Description": "",
+          "Properties": {},
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "StartEvent_Unsup",
+          "SourceId": "StartEvent_Unsup",
+          "SourceType": "startEvent",
+          "SourcePath": "/definitions[@id=\u0027Definitions_Unsupported\u0027]/process[@id=\u0027Process_Us\u0027]/startEvent[@id=\u0027StartEvent_Unsup\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "StartEvent",
+          "Name": "Start",
+          "ParentId": "Participant_Us",
+          "Description": "",
+          "Properties": {},
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "Task_Multi",
+          "SourceId": "Task_Multi",
+          "SourceType": "task",
+          "SourcePath": "/definitions[@id=\u0027Definitions_Unsupported\u0027]/process[@id=\u0027Process_Us\u0027]/task[@id=\u0027Task_Multi\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "Task",
+          "Name": "Fan out to all regions",
+          "ParentId": "Participant_Us",
+          "Description": "",
+          "Properties": {},
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "Task_StandardLoop",
+          "SourceId": "Task_StandardLoop",
+          "SourceType": "task",
+          "SourcePath": "/definitions[@id=\u0027Definitions_Unsupported\u0027]/process[@id=\u0027Process_Us\u0027]/task[@id=\u0027Task_StandardLoop\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "Task",
+          "Name": "Retry until ok",
+          "ParentId": "Participant_Us",
+          "Description": "",
+          "Properties": {},
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "SubProcess_AdHoc",
+          "SourceId": "SubProcess_AdHoc",
+          "SourceType": "subProcess",
+          "SourcePath": "/definitions[@id=\u0027Definitions_Unsupported\u0027]/process[@id=\u0027Process_Us\u0027]/subProcess[@id=\u0027SubProcess_AdHoc\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "SubProcess",
+          "Name": "Ad-hoc review",
+          "ParentId": "Participant_Us",
+          "Description": "",
+          "Properties": {},
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "Task_ReviewA",
+          "SourceId": "Task_ReviewA",
+          "SourceType": "task",
+          "SourcePath": "/definitions[@id=\u0027Definitions_Unsupported\u0027]/process[@id=\u0027Process_Us\u0027]/subProcess[@id=\u0027SubProcess_AdHoc\u0027]/task[@id=\u0027Task_ReviewA\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "Task",
+          "Name": "Review part A",
+          "ParentId": "SubProcess_AdHoc",
+          "Description": "",
+          "Properties": {},
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "Task_ReviewB",
+          "SourceId": "Task_ReviewB",
+          "SourceType": "task",
+          "SourcePath": "/definitions[@id=\u0027Definitions_Unsupported\u0027]/process[@id=\u0027Process_Us\u0027]/subProcess[@id=\u0027SubProcess_AdHoc\u0027]/task[@id=\u0027Task_ReviewB\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "Task",
+          "Name": "Review part B",
+          "ParentId": "SubProcess_AdHoc",
+          "Description": "",
+          "Properties": {},
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "AdHocOrder",
+          "SourceId": "AdHocOrder",
+          "SourceType": "adHocSubProcess",
+          "SourcePath": "/definitions[@id=\u0027Definitions_Unsupported\u0027]/process[@id=\u0027Process_Us\u0027]/adHocSubProcess[@id=\u0027AdHocOrder\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "SubProcess",
+          "Name": "Ordered ad-hoc work",
+          "ParentId": "Participant_Us",
+          "Description": "",
+          "Properties": {
+            "bpmn:ordering": "Parallel",
+            "completionCondition": "done"
+          },
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "Task_OrderedA",
+          "SourceId": "Task_OrderedA",
+          "SourceType": "task",
+          "SourcePath": "/definitions[@id=\u0027Definitions_Unsupported\u0027]/process[@id=\u0027Process_Us\u0027]/adHocSubProcess[@id=\u0027AdHocOrder\u0027]/task[@id=\u0027Task_OrderedA\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "Task",
+          "Name": "Ordered step A",
+          "ParentId": "AdHocOrder",
+          "Description": "",
+          "Properties": {},
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "Task_OrderedB",
+          "SourceId": "Task_OrderedB",
+          "SourceType": "task",
+          "SourcePath": "/definitions[@id=\u0027Definitions_Unsupported\u0027]/process[@id=\u0027Process_Us\u0027]/adHocSubProcess[@id=\u0027AdHocOrder\u0027]/task[@id=\u0027Task_OrderedB\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "Task",
+          "Name": "Ordered step B",
+          "ParentId": "AdHocOrder",
+          "Description": "",
+          "Properties": {},
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "Transaction_Unsup",
+          "SourceId": "Transaction_Unsup",
+          "SourceType": "transaction",
+          "SourcePath": "/definitions[@id=\u0027Definitions_Unsupported\u0027]/process[@id=\u0027Process_Us\u0027]/transaction[@id=\u0027Transaction_Unsup\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "SubProcess",
+          "Name": "Compensable payment",
+          "ParentId": "Participant_Us",
+          "Description": "",
+          "Properties": {
+            "transaction": true
+          },
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "Task_PayU",
+          "SourceId": "Task_PayU",
+          "SourceType": "task",
+          "SourcePath": "/definitions[@id=\u0027Definitions_Unsupported\u0027]/process[@id=\u0027Process_Us\u0027]/transaction[@id=\u0027Transaction_Unsup\u0027]/task[@id=\u0027Task_PayU\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "Task",
+          "Name": "Pay",
+          "ParentId": "Transaction_Unsup",
+          "Description": "",
+          "Properties": {},
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "StartEvent_PayU",
+          "SourceId": "StartEvent_PayU",
+          "SourceType": "startEvent",
+          "SourcePath": "/definitions[@id=\u0027Definitions_Unsupported\u0027]/process[@id=\u0027Process_Us\u0027]/transaction[@id=\u0027Transaction_Unsup\u0027]/startEvent[@id=\u0027StartEvent_PayU\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "StartEvent",
+          "Name": "Pay start",
+          "ParentId": "Transaction_Unsup",
+          "Description": "",
+          "Properties": {},
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "EndEvent_PayU",
+          "SourceId": "EndEvent_PayU",
+          "SourceType": "endEvent",
+          "SourcePath": "/definitions[@id=\u0027Definitions_Unsupported\u0027]/process[@id=\u0027Process_Us\u0027]/transaction[@id=\u0027Transaction_Unsup\u0027]/endEvent[@id=\u0027EndEvent_PayU\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "EndEvent",
+          "Name": "Pay end",
+          "ParentId": "Transaction_Unsup",
+          "Description": "",
+          "Properties": {},
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "Boundary_Compensate",
+          "SourceId": "Boundary_Compensate",
+          "SourceType": "boundaryEvent",
+          "SourcePath": "/definitions[@id=\u0027Definitions_Unsupported\u0027]/process[@id=\u0027Process_Us\u0027]/transaction[@id=\u0027Transaction_Unsup\u0027]/boundaryEvent[@id=\u0027Boundary_Compensate\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "BoundaryEvent",
+          "Name": "",
+          "ParentId": "Transaction_Unsup",
+          "Description": "",
+          "Properties": {
+            "eventDefinitions": [
+              {
+                "type": "compensate",
+                "id": "CompensateBoundaryDef",
+                "waitForCompletion": true
+              }
+            ],
+            "attachedToRef": "Task_PayU",
+            "cancelActivity": false
+          },
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "Task_UndoPay",
+          "SourceId": "Task_UndoPay",
+          "SourceType": "task",
+          "SourcePath": "/definitions[@id=\u0027Definitions_Unsupported\u0027]/process[@id=\u0027Process_Us\u0027]/transaction[@id=\u0027Transaction_Unsup\u0027]/task[@id=\u0027Task_UndoPay\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "Task",
+          "Name": "Undo payment",
+          "ParentId": "Transaction_Unsup",
+          "Description": "",
+          "Properties": {
+            "bpmn:isForCompensation": "true",
+            "isForCompensation": true
+          },
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "EndEvent_Unsup",
+          "SourceId": "EndEvent_Unsup",
+          "SourceType": "endEvent",
+          "SourcePath": "/definitions[@id=\u0027Definitions_Unsupported\u0027]/process[@id=\u0027Process_Us\u0027]/endEvent[@id=\u0027EndEvent_Unsup\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "EndEvent",
+          "Name": "End",
+          "ParentId": "Participant_Us",
+          "Description": "",
+          "Properties": {
+            "eventDefinitions": [
+              {
+                "type": "compensate",
+                "id": "CompensateEndDef",
+                "activityRef": "Task_PayU",
+                "waitForCompletion": true
+              }
+            ]
+          },
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        }
+      ],
+      "Relationships": [
+        {
+          "Id": "Flow_UT0",
+          "SourceId": "Flow_UT0",
+          "SourceType": "sequenceFlow",
+          "SourceElementId": "StartEvent_PayU",
+          "TargetElementId": "Task_PayU",
+          "RelationshipType": "SequenceFlow",
+          "Name": "",
+          "Properties": {},
+          "Tags": []
+        },
+        {
+          "Id": "Flow_UT1",
+          "SourceId": "Flow_UT1",
+          "SourceType": "sequenceFlow",
+          "SourceElementId": "Task_PayU",
+          "TargetElementId": "EndEvent_PayU",
+          "RelationshipType": "SequenceFlow",
+          "Name": "",
+          "Properties": {},
+          "Tags": []
+        },
+        {
+          "Id": "Flow_U5",
+          "SourceId": "Flow_U5",
+          "SourceType": "sequenceFlow",
+          "SourceElementId": "Boundary_Compensate",
+          "TargetElementId": "Task_UndoPay",
+          "RelationshipType": "SequenceFlow",
+          "Name": "",
+          "Properties": {},
+          "Tags": []
+        },
+        {
+          "Id": "Association_Comp",
+          "SourceId": "Association_Comp",
+          "SourceType": "association",
+          "SourceElementId": "Task_UndoPay",
+          "TargetElementId": "Task_PayU",
+          "RelationshipType": "Association",
+          "Name": "",
+          "Properties": {},
+          "Tags": []
+        },
+        {
+          "Id": "Flow_U1",
+          "SourceId": "Flow_U1",
+          "SourceType": "sequenceFlow",
+          "SourceElementId": "StartEvent_Unsup",
+          "TargetElementId": "Task_Multi",
+          "RelationshipType": "SequenceFlow",
+          "Name": "",
+          "Properties": {},
+          "Tags": []
+        },
+        {
+          "Id": "Flow_U2",
+          "SourceId": "Flow_U2",
+          "SourceType": "sequenceFlow",
+          "SourceElementId": "Task_Multi",
+          "TargetElementId": "Task_StandardLoop",
+          "RelationshipType": "SequenceFlow",
+          "Name": "",
+          "Properties": {},
+          "Tags": []
+        },
+        {
+          "Id": "Flow_U3",
+          "SourceId": "Flow_U3",
+          "SourceType": "sequenceFlow",
+          "SourceElementId": "Task_StandardLoop",
+          "TargetElementId": "Transaction_Unsup",
+          "RelationshipType": "SequenceFlow",
+          "Name": "",
+          "Properties": {},
+          "Tags": []
+        },
+        {
+          "Id": "Flow_U4",
+          "SourceId": "Flow_U4",
+          "SourceType": "sequenceFlow",
+          "SourceElementId": "Transaction_Unsup",
+          "TargetElementId": "EndEvent_Unsup",
+          "RelationshipType": "SequenceFlow",
+          "Name": "",
+          "Properties": {},
+          "Tags": []
+        },
+        {
+          "Id": "MessageFlow_Unsup",
+          "SourceId": "MessageFlow_Unsup",
+          "SourceType": "messageFlow",
+          "SourceElementId": "Participant_Us",
+          "TargetElementId": "Participant_Them",
+          "RelationshipType": "MessageFlow",
+          "Name": "",
+          "Properties": {
+            "externalModelRef": {
+              "modelId": "Process_Them",
+              "elementId": "Participant_Them"
+            }
+          },
+          "Tags": []
+        }
+      ],
+      "Views": [],
+      "Issues": [
+        {
+          "Id": "bpmn-import-loss-0001",
+          "Severity": "Warning",
+          "Category": "bpmn-import",
+          "SourceElementId": "Task_Multi",
+          "SourceRelationshipId": "",
+          "Message": "multiInstanceLoopCharacteristics: Multi-instance loop settings are not preserved on the imported task.",
+          "SuggestedFix": ""
+        },
+        {
+          "Id": "bpmn-import-loss-0002",
+          "Severity": "Warning",
+          "Category": "bpmn-import",
+          "SourceElementId": "Task_StandardLoop",
+          "SourceRelationshipId": "",
+          "Message": "standardLoopCharacteristics: Standard loop settings are not preserved on the imported task.",
+          "SuggestedFix": ""
+        },
+        {
+          "Id": "bpmn-import-loss-0003",
+          "Severity": "Warning",
+          "Category": "bpmn-import",
+          "SourceElementId": "SubProcess_AdHoc",
+          "SourceRelationshipId": "",
+          "Message": "adHocSubProcess: Ad-hoc subprocess imported as SubProcess; ordering/completion semantics are not preserved.",
+          "SuggestedFix": ""
+        },
+        {
+          "Id": "bpmn-import-loss-0004",
+          "Severity": "Warning",
+          "Category": "bpmn-import",
+          "SourceElementId": "AdHocOrder",
+          "SourceRelationshipId": "",
+          "Message": "adHocSubProcess: Ad-hoc subprocess imported as SubProcess; ordering/completion semantics are not preserved.",
+          "SuggestedFix": ""
+        },
+        {
+          "Id": "bpmn-import-loss-0005",
+          "Severity": "Warning",
+          "Category": "bpmn-import",
+          "SourceElementId": "Transaction_Unsup",
+          "SourceRelationshipId": "",
+          "Message": "transaction: Transaction imported as SubProcess with transaction=true; compensation protocol semantics are approximated.",
+          "SuggestedFix": ""
+        },
+        {
+          "Id": "bpmn-import-loss-0006",
+          "Severity": "Warning",
+          "Category": "bpmn-import",
+          "SourceElementId": "ChoreoTask_1",
+          "SourceRelationshipId": "",
+          "Message": "choreographyTask: Choreography/conversation construct is not supported by the modeling notation; content is not preserved.",
+          "SuggestedFix": ""
+        },
+        {
+          "Id": "bpmn-import-loss-0007",
+          "Severity": "Warning",
+          "Category": "bpmn-import",
+          "SourceElementId": "SubChoreo_1",
+          "SourceRelationshipId": "",
+          "Message": "subChoreography: Choreography/conversation construct is not supported by the modeling notation; content is not preserved.",
+          "SuggestedFix": ""
+        },
+        {
+          "Id": "bpmn-import-loss-0008",
+          "Severity": "Warning",
+          "Category": "bpmn-import",
+          "SourceElementId": "CallChoreo_1",
+          "SourceRelationshipId": "",
+          "Message": "callChoreography: Choreography/conversation construct is not supported by the modeling notation; content is not preserved.",
+          "SuggestedFix": ""
+        },
+        {
+          "Id": "bpmn-import-loss-0009",
+          "Severity": "Warning",
+          "Category": "bpmn-import",
+          "SourceElementId": "Conversation_1",
+          "SourceRelationshipId": "",
+          "Message": "conversation: Choreography/conversation construct is not supported by the modeling notation; content is not preserved.",
+          "SuggestedFix": ""
+        },
+        {
+          "Id": "bpmn-import-loss-0010",
+          "Severity": "Warning",
+          "Category": "bpmn-import",
+          "SourceElementId": "SubConversation_1",
+          "SourceRelationshipId": "",
+          "Message": "subConversation: Choreography/conversation construct is not supported by the modeling notation; content is not preserved.",
+          "SuggestedFix": ""
+        },
+        {
+          "Id": "bpmn-import-loss-0011",
+          "Severity": "Warning",
+          "Category": "bpmn-import",
+          "SourceElementId": "CallConversation_1",
+          "SourceRelationshipId": "",
+          "Message": "callConversation: Choreography/conversation construct is not supported by the modeling notation; content is not preserved.",
+          "SuggestedFix": ""
+        },
+        {
+          "Id": "bpmn-import-loss-0012",
+          "Severity": "Warning",
+          "Category": "bpmn-import",
+          "SourceElementId": "ConversationLink_1",
+          "SourceRelationshipId": "",
+          "Message": "conversationLink: Choreography/conversation construct is not supported by the modeling notation; content is not preserved.",
+          "SuggestedFix": ""
+        },
+        {
+          "Id": "bpmn-import-loss-0013",
+          "Severity": "Info",
+          "Category": "bpmn-import",
+          "SourceElementId": "Signal_Unused",
+          "SourceRelationshipId": "",
+          "Message": "signal: Global definition is declared but never used; the export phase can only restore definitions referenced from the model.",
+          "SuggestedFix": ""
+        }
+      ],
+      "Metadata": {
+        "SourceSystem": "bpmn-xml",
+        "SourceVersion": "http://tempo.example/bpmn/corpus",
+        "LoadedAt": "1970-01-01T00:00:00+00:00",
+        "IsFresh": true
+      },
+      "Properties": {}
+    },
+    {
+      "Id": "Process_Them",
+      "Title": "Their side",
+      "Notation": "bpmn2",
+      "SupportedNotations": [
+        "bpmn2"
+      ],
+      "Elements": [
+        {
+          "Id": "Participant_Them",
+          "SourceId": "Participant_Them",
+          "SourceType": "participant",
+          "SourcePath": "/definitions[@id=\u0027Definitions_Unsupported\u0027]/collaboration[@id=\u0027Collaboration_Unsup\u0027]/participant[@id=\u0027Participant_Them\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "Pool",
+          "Name": "Them",
+          "ParentId": "",
+          "Description": "",
+          "Properties": {},
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "StartEvent_Them",
+          "SourceId": "StartEvent_Them",
+          "SourceType": "startEvent",
+          "SourcePath": "/definitions[@id=\u0027Definitions_Unsupported\u0027]/process[@id=\u0027Process_Them\u0027]/startEvent[@id=\u0027StartEvent_Them\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "StartEvent",
+          "Name": "Start",
+          "ParentId": "Participant_Them",
+          "Description": "",
+          "Properties": {},
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "Task_Them",
+          "SourceId": "Task_Them",
+          "SourceType": "task",
+          "SourcePath": "/definitions[@id=\u0027Definitions_Unsupported\u0027]/process[@id=\u0027Process_Them\u0027]/task[@id=\u0027Task_Them\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "Task",
+          "Name": "Their work",
+          "ParentId": "Participant_Them",
+          "Description": "",
+          "Properties": {},
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "EndEvent_Them",
+          "SourceId": "EndEvent_Them",
+          "SourceType": "endEvent",
+          "SourcePath": "/definitions[@id=\u0027Definitions_Unsupported\u0027]/process[@id=\u0027Process_Them\u0027]/endEvent[@id=\u0027EndEvent_Them\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "EndEvent",
+          "Name": "End",
+          "ParentId": "Participant_Them",
+          "Description": "",
+          "Properties": {},
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        }
+      ],
+      "Relationships": [
+        {
+          "Id": "Flow_T1",
+          "SourceId": "Flow_T1",
+          "SourceType": "sequenceFlow",
+          "SourceElementId": "StartEvent_Them",
+          "TargetElementId": "Task_Them",
+          "RelationshipType": "SequenceFlow",
+          "Name": "",
+          "Properties": {},
+          "Tags": []
+        },
+        {
+          "Id": "Flow_T2",
+          "SourceId": "Flow_T2",
+          "SourceType": "sequenceFlow",
+          "SourceElementId": "Task_Them",
+          "TargetElementId": "EndEvent_Them",
+          "RelationshipType": "SequenceFlow",
+          "Name": "",
+          "Properties": {},
+          "Tags": []
+        }
+      ],
+      "Views": [],
+      "Issues": [],
+      "Metadata": {
+        "SourceSystem": "bpmn-xml",
+        "SourceVersion": "http://tempo.example/bpmn/corpus",
+        "LoadedAt": "1970-01-01T00:00:00+00:00",
+        "IsFresh": true
+      },
+      "Properties": {}
+    }
+  ],
+  "Losses": [
+    {
+      "ElementId": "Task_Multi",
+      "XmlPath": "/definitions[@id=\u0027Definitions_Unsupported\u0027]/process[@id=\u0027Process_Us\u0027]/task[@id=\u0027Task_Multi\u0027]/multiInstanceLoopCharacteristics[@id=\u0027MultiLoop_1\u0027]",
+      "Construct": "multiInstanceLoopCharacteristics",
+      "Reason": "Multi-instance loop settings are not preserved on the imported task.",
+      "Severity": 0
+    },
+    {
+      "ElementId": "Task_StandardLoop",
+      "XmlPath": "/definitions[@id=\u0027Definitions_Unsupported\u0027]/process[@id=\u0027Process_Us\u0027]/task[@id=\u0027Task_StandardLoop\u0027]/standardLoopCharacteristics[@id=\u0027StdLoop_1\u0027]",
+      "Construct": "standardLoopCharacteristics",
+      "Reason": "Standard loop settings are not preserved on the imported task.",
+      "Severity": 0
+    },
+    {
+      "ElementId": "SubProcess_AdHoc",
+      "XmlPath": "/definitions[@id=\u0027Definitions_Unsupported\u0027]/process[@id=\u0027Process_Us\u0027]/subProcess[@id=\u0027SubProcess_AdHoc\u0027]",
+      "Construct": "adHocSubProcess",
+      "Reason": "Ad-hoc subprocess imported as SubProcess; ordering/completion semantics are not preserved.",
+      "Severity": 1
+    },
+    {
+      "ElementId": "AdHocOrder",
+      "XmlPath": "/definitions[@id=\u0027Definitions_Unsupported\u0027]/process[@id=\u0027Process_Us\u0027]/adHocSubProcess[@id=\u0027AdHocOrder\u0027]",
+      "Construct": "adHocSubProcess",
+      "Reason": "Ad-hoc subprocess imported as SubProcess; ordering/completion semantics are not preserved.",
+      "Severity": 1
+    },
+    {
+      "ElementId": "Transaction_Unsup",
+      "XmlPath": "/definitions[@id=\u0027Definitions_Unsupported\u0027]/process[@id=\u0027Process_Us\u0027]/transaction[@id=\u0027Transaction_Unsup\u0027]",
+      "Construct": "transaction",
+      "Reason": "Transaction imported as SubProcess with transaction=true; compensation protocol semantics are approximated.",
+      "Severity": 1
+    },
+    {
+      "ElementId": "ChoreoTask_1",
+      "XmlPath": "/definitions[@id=\u0027Definitions_Unsupported\u0027]/collaboration[@id=\u0027Collaboration_Unsup\u0027]/choreographyTask[@id=\u0027ChoreoTask_1\u0027]",
+      "Construct": "choreographyTask",
+      "Reason": "Choreography/conversation construct is not supported by the modeling notation; content is not preserved.",
+      "Severity": 0
+    },
+    {
+      "ElementId": "SubChoreo_1",
+      "XmlPath": "/definitions[@id=\u0027Definitions_Unsupported\u0027]/collaboration[@id=\u0027Collaboration_Unsup\u0027]/subChoreography[@id=\u0027SubChoreo_1\u0027]",
+      "Construct": "subChoreography",
+      "Reason": "Choreography/conversation construct is not supported by the modeling notation; content is not preserved.",
+      "Severity": 0
+    },
+    {
+      "ElementId": "CallChoreo_1",
+      "XmlPath": "/definitions[@id=\u0027Definitions_Unsupported\u0027]/collaboration[@id=\u0027Collaboration_Unsup\u0027]/callChoreography[@id=\u0027CallChoreo_1\u0027]",
+      "Construct": "callChoreography",
+      "Reason": "Choreography/conversation construct is not supported by the modeling notation; content is not preserved.",
+      "Severity": 0
+    },
+    {
+      "ElementId": "Conversation_1",
+      "XmlPath": "/definitions[@id=\u0027Definitions_Unsupported\u0027]/collaboration[@id=\u0027Collaboration_Unsup\u0027]/conversation[@id=\u0027Conversation_1\u0027]",
+      "Construct": "conversation",
+      "Reason": "Choreography/conversation construct is not supported by the modeling notation; content is not preserved.",
+      "Severity": 0
+    },
+    {
+      "ElementId": "SubConversation_1",
+      "XmlPath": "/definitions[@id=\u0027Definitions_Unsupported\u0027]/collaboration[@id=\u0027Collaboration_Unsup\u0027]/subConversation[@id=\u0027SubConversation_1\u0027]",
+      "Construct": "subConversation",
+      "Reason": "Choreography/conversation construct is not supported by the modeling notation; content is not preserved.",
+      "Severity": 0
+    },
+    {
+      "ElementId": "CallConversation_1",
+      "XmlPath": "/definitions[@id=\u0027Definitions_Unsupported\u0027]/collaboration[@id=\u0027Collaboration_Unsup\u0027]/callConversation[@id=\u0027CallConversation_1\u0027]",
+      "Construct": "callConversation",
+      "Reason": "Choreography/conversation construct is not supported by the modeling notation; content is not preserved.",
+      "Severity": 0
+    },
+    {
+      "ElementId": "ConversationLink_1",
+      "XmlPath": "/definitions[@id=\u0027Definitions_Unsupported\u0027]/collaboration[@id=\u0027Collaboration_Unsup\u0027]/conversationLink[@id=\u0027ConversationLink_1\u0027]",
+      "Construct": "conversationLink",
+      "Reason": "Choreography/conversation construct is not supported by the modeling notation; content is not preserved.",
+      "Severity": 0
+    },
+    {
+      "ElementId": "Signal_Unused",
+      "XmlPath": "/definitions/signal[@id=\u0027Signal_Unused\u0027]",
+      "Construct": "signal",
+      "Reason": "Global definition is declared but never used; the export phase can only restore definitions referenced from the model.",
+      "Severity": 2
+    }
+  ],
+  "Warnings": [],
+  "HasErrors": false,
+  "ErrorMessage": null
+}

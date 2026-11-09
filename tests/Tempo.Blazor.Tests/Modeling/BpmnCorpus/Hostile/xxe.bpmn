@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE definitions [
+  <!ENTITY xxe SYSTEM "file:///etc/passwd">
+]>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
+             id="Definitions_Xxe"
+             name="XXE probe"
+             targetNamespace="http://tempo.example/bpmn/hostile">
+  <process id="Process_Xxe" name="XXE" isExecutable="false">
+    <startEvent id="StartEvent_Xxe" name="&xxe;">
+      <outgoing>Flow_X1</outgoing>
+    </startEvent>
+    <task id="Task_Xxe" name="Work">
+      <incoming>Flow_X1</incoming>
+    </task>
+    <sequenceFlow id="Flow_X1" sourceRef="StartEvent_Xxe" targetRef="Task_Xxe"/>
+  </process>
+</definitions>

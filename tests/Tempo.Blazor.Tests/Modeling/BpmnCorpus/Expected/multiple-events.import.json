@@ -1,0 +1,217 @@
+{
+  "Models": [
+    {
+      "Id": "Process_Multiple",
+      "Title": "Multiple",
+      "Notation": "bpmn2",
+      "SupportedNotations": [
+        "bpmn2"
+      ],
+      "Elements": [
+        {
+          "Id": "StartEvent_Multiple",
+          "SourceId": "StartEvent_Multiple",
+          "SourceType": "startEvent",
+          "SourcePath": "/definitions[@id=\u0027Definitions_Multiple\u0027]/process[@id=\u0027Process_Multiple\u0027]/startEvent[@id=\u0027StartEvent_Multiple\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "StartEvent",
+          "Name": "Start",
+          "ParentId": "",
+          "Description": "",
+          "Properties": {},
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "Catch_Multiple",
+          "SourceId": "Catch_Multiple",
+          "SourceType": "intermediateCatchEvent",
+          "SourcePath": "/definitions[@id=\u0027Definitions_Multiple\u0027]/process[@id=\u0027Process_Multiple\u0027]/intermediateCatchEvent[@id=\u0027Catch_Multiple\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "IntermediateCatchEvent",
+          "Name": "Mail or timer",
+          "ParentId": "",
+          "Description": "",
+          "Properties": {
+            "bpmn:multiple": "true",
+            "eventDefinitions": [
+              {
+                "type": "message",
+                "id": "MsgDef_Multiple",
+                "ref": "Message_Mail",
+                "name": "Mail arrived"
+              },
+              {
+                "type": "timer",
+                "id": "TimerDef_Multiple",
+                "timeDuration": "PT2H"
+              }
+            ],
+            "multiple": true
+          },
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "Catch_Parallel",
+          "SourceId": "Catch_Parallel",
+          "SourceType": "intermediateCatchEvent",
+          "SourcePath": "/definitions[@id=\u0027Definitions_Multiple\u0027]/process[@id=\u0027Process_Multiple\u0027]/intermediateCatchEvent[@id=\u0027Catch_Parallel\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "IntermediateCatchEvent",
+          "Name": "Mail and escalation",
+          "ParentId": "",
+          "Description": "",
+          "Properties": {
+            "bpmn:parallelMultiple": "true",
+            "eventDefinitions": [
+              {
+                "type": "message",
+                "id": "MsgDef_Parallel",
+                "ref": "Message_Mail",
+                "name": "Mail arrived"
+              },
+              {
+                "type": "escalation",
+                "id": "EscDef_Parallel",
+                "ref": "Escalation_NeedsReview",
+                "name": "Needs review",
+                "code": "R-1"
+              }
+            ],
+            "parallelMultiple": true
+          },
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "Task_Multiple",
+          "SourceId": "Task_Multiple",
+          "SourceType": "task",
+          "SourcePath": "/definitions[@id=\u0027Definitions_Multiple\u0027]/process[@id=\u0027Process_Multiple\u0027]/task[@id=\u0027Task_Multiple\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "Task",
+          "Name": "Handle",
+          "ParentId": "",
+          "Description": "",
+          "Properties": {},
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "EndEvent_Multiple",
+          "SourceId": "EndEvent_Multiple",
+          "SourceType": "endEvent",
+          "SourcePath": "/definitions[@id=\u0027Definitions_Multiple\u0027]/process[@id=\u0027Process_Multiple\u0027]/endEvent[@id=\u0027EndEvent_Multiple\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "EndEvent",
+          "Name": "Done",
+          "ParentId": "",
+          "Description": "",
+          "Properties": {},
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        }
+      ],
+      "Relationships": [
+        {
+          "Id": "Flow_M1",
+          "SourceId": "Flow_M1",
+          "SourceType": "sequenceFlow",
+          "SourceElementId": "StartEvent_Multiple",
+          "TargetElementId": "Catch_Multiple",
+          "RelationshipType": "SequenceFlow",
+          "Name": "",
+          "Properties": {},
+          "Tags": []
+        },
+        {
+          "Id": "Flow_M2",
+          "SourceId": "Flow_M2",
+          "SourceType": "sequenceFlow",
+          "SourceElementId": "Catch_Multiple",
+          "TargetElementId": "Catch_Parallel",
+          "RelationshipType": "SequenceFlow",
+          "Name": "",
+          "Properties": {},
+          "Tags": []
+        },
+        {
+          "Id": "Flow_M3",
+          "SourceId": "Flow_M3",
+          "SourceType": "sequenceFlow",
+          "SourceElementId": "Catch_Parallel",
+          "TargetElementId": "Task_Multiple",
+          "RelationshipType": "SequenceFlow",
+          "Name": "",
+          "Properties": {},
+          "Tags": []
+        },
+        {
+          "Id": "Flow_M4",
+          "SourceId": "Flow_M4",
+          "SourceType": "sequenceFlow",
+          "SourceElementId": "Task_Multiple",
+          "TargetElementId": "EndEvent_Multiple",
+          "RelationshipType": "SequenceFlow",
+          "Name": "",
+          "Properties": {},
+          "Tags": []
+        }
+      ],
+      "Views": [],
+      "Issues": [],
+      "Metadata": {
+        "SourceSystem": "bpmn-xml",
+        "SourceVersion": "http://tempo.example/bpmn/corpus",
+        "LoadedAt": "1970-01-01T00:00:00+00:00",
+        "IsFresh": true
+      },
+      "Properties": {
+        "bpmnDefinitions": [
+          {
+            "kind": "message",
+            "id": "Message_Mail",
+            "name": "Mail arrived",
+            "code": ""
+          },
+          {
+            "kind": "escalation",
+            "id": "Escalation_NeedsReview",
+            "name": "Needs review",
+            "code": "R-1"
+          }
+        ]
+      }
+    }
+  ],
+  "Losses": [],
+  "Warnings": [],
+  "HasErrors": false,
+  "ErrorMessage": null
+}

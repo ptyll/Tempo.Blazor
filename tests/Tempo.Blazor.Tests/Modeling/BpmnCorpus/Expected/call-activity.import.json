@@ -1,0 +1,242 @@
+{
+  "Models": [
+    {
+      "Id": "Process_Order",
+      "Title": "Order process",
+      "Notation": "bpmn2",
+      "SupportedNotations": [
+        "bpmn2"
+      ],
+      "Elements": [
+        {
+          "Id": "StartEvent_Order",
+          "SourceId": "StartEvent_Order",
+          "SourceType": "startEvent",
+          "SourcePath": "/definitions[@id=\u0027Definitions_CallActivity\u0027]/process[@id=\u0027Process_Order\u0027]/startEvent[@id=\u0027StartEvent_Order\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "StartEvent",
+          "Name": "Order placed",
+          "ParentId": "",
+          "Description": "",
+          "Properties": {},
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "CallActivity_Fulfil",
+          "SourceId": "CallActivity_Fulfil",
+          "SourceType": "callActivity",
+          "SourcePath": "/definitions[@id=\u0027Definitions_CallActivity\u0027]/process[@id=\u0027Process_Order\u0027]/callActivity[@id=\u0027CallActivity_Fulfil\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "CallActivity",
+          "Name": "Fulfil order",
+          "ParentId": "",
+          "Description": "",
+          "Properties": {
+            "bpmn:calledElement": "Process_Fulfilment",
+            "bpmn:calledElementBinding": "latest",
+            "bpmn:calledElementVersion": "3"
+          },
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "Task_NotifyCustomer",
+          "SourceId": "Task_NotifyCustomer",
+          "SourceType": "task",
+          "SourcePath": "/definitions[@id=\u0027Definitions_CallActivity\u0027]/process[@id=\u0027Process_Order\u0027]/task[@id=\u0027Task_NotifyCustomer\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "Task",
+          "Name": "Notify customer",
+          "ParentId": "",
+          "Description": "",
+          "Properties": {},
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "EndEvent_Order",
+          "SourceId": "EndEvent_Order",
+          "SourceType": "endEvent",
+          "SourcePath": "/definitions[@id=\u0027Definitions_CallActivity\u0027]/process[@id=\u0027Process_Order\u0027]/endEvent[@id=\u0027EndEvent_Order\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "EndEvent",
+          "Name": "Order closed",
+          "ParentId": "",
+          "Description": "",
+          "Properties": {},
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        }
+      ],
+      "Relationships": [
+        {
+          "Id": "Flow_CA1",
+          "SourceId": "Flow_CA1",
+          "SourceType": "sequenceFlow",
+          "SourceElementId": "StartEvent_Order",
+          "TargetElementId": "CallActivity_Fulfil",
+          "RelationshipType": "SequenceFlow",
+          "Name": "",
+          "Properties": {},
+          "Tags": []
+        },
+        {
+          "Id": "Flow_CA2",
+          "SourceId": "Flow_CA2",
+          "SourceType": "sequenceFlow",
+          "SourceElementId": "CallActivity_Fulfil",
+          "TargetElementId": "Task_NotifyCustomer",
+          "RelationshipType": "SequenceFlow",
+          "Name": "",
+          "Properties": {},
+          "Tags": []
+        },
+        {
+          "Id": "Flow_CA3",
+          "SourceId": "Flow_CA3",
+          "SourceType": "sequenceFlow",
+          "SourceElementId": "Task_NotifyCustomer",
+          "TargetElementId": "EndEvent_Order",
+          "RelationshipType": "SequenceFlow",
+          "Name": "",
+          "Properties": {},
+          "Tags": []
+        }
+      ],
+      "Views": [],
+      "Issues": [],
+      "Metadata": {
+        "SourceSystem": "bpmn-xml",
+        "SourceVersion": "http://tempo.example/bpmn/corpus",
+        "LoadedAt": "1970-01-01T00:00:00+00:00",
+        "IsFresh": true
+      },
+      "Properties": {}
+    },
+    {
+      "Id": "Process_Fulfilment",
+      "Title": "Fulfilment process",
+      "Notation": "bpmn2",
+      "SupportedNotations": [
+        "bpmn2"
+      ],
+      "Elements": [
+        {
+          "Id": "StartEvent_Fulfil",
+          "SourceId": "StartEvent_Fulfil",
+          "SourceType": "startEvent",
+          "SourcePath": "/definitions[@id=\u0027Definitions_CallActivity\u0027]/process[@id=\u0027Process_Fulfilment\u0027]/startEvent[@id=\u0027StartEvent_Fulfil\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "StartEvent",
+          "Name": "Fulfilment requested",
+          "ParentId": "",
+          "Description": "",
+          "Properties": {},
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "Task_Pack",
+          "SourceId": "Task_Pack",
+          "SourceType": "task",
+          "SourcePath": "/definitions[@id=\u0027Definitions_CallActivity\u0027]/process[@id=\u0027Process_Fulfilment\u0027]/task[@id=\u0027Task_Pack\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "Task",
+          "Name": "Pack goods",
+          "ParentId": "",
+          "Description": "",
+          "Properties": {},
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "EndEvent_Fulfil",
+          "SourceId": "EndEvent_Fulfil",
+          "SourceType": "endEvent",
+          "SourcePath": "/definitions[@id=\u0027Definitions_CallActivity\u0027]/process[@id=\u0027Process_Fulfilment\u0027]/endEvent[@id=\u0027EndEvent_Fulfil\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "EndEvent",
+          "Name": "Fulfilled",
+          "ParentId": "",
+          "Description": "",
+          "Properties": {},
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        }
+      ],
+      "Relationships": [
+        {
+          "Id": "Flow_CF1",
+          "SourceId": "Flow_CF1",
+          "SourceType": "sequenceFlow",
+          "SourceElementId": "StartEvent_Fulfil",
+          "TargetElementId": "Task_Pack",
+          "RelationshipType": "SequenceFlow",
+          "Name": "",
+          "Properties": {},
+          "Tags": []
+        },
+        {
+          "Id": "Flow_CF2",
+          "SourceId": "Flow_CF2",
+          "SourceType": "sequenceFlow",
+          "SourceElementId": "Task_Pack",
+          "TargetElementId": "EndEvent_Fulfil",
+          "RelationshipType": "SequenceFlow",
+          "Name": "",
+          "Properties": {},
+          "Tags": []
+        }
+      ],
+      "Views": [],
+      "Issues": [],
+      "Metadata": {
+        "SourceSystem": "bpmn-xml",
+        "SourceVersion": "http://tempo.example/bpmn/corpus",
+        "LoadedAt": "1970-01-01T00:00:00+00:00",
+        "IsFresh": true
+      },
+      "Properties": {}
+    }
+  ],
+  "Losses": [],
+  "Warnings": [],
+  "HasErrors": false,
+  "ErrorMessage": null
+}

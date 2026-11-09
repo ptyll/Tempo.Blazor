@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
+             id="Definitions_Oversized"
+             name="Oversized probe"
+             targetNamespace="http://tempo.example/bpmn/hostile">
+  <process id="Process_Oversized" name="Oversized" isExecutable="false">
+    <task id="Task_Oversized_1" name="Bulk task 1"/>
+    <task id="Task_Oversized_2" name="Bulk task 2"/>
+    <task id="Task_Oversized_3" name="Bulk task 3"/>
+    <task id="Task_Oversized_4" name="Bulk task 4"/>
+    <task id="Task_Oversized_5" name="Bulk task 5"/>
+    <task id="Task_Oversized_6" name="Bulk task 6"/>
+    <task id="Task_Oversized_7" name="Bulk task 7"/>
+    <task id="Task_Oversized_8" name="Bulk task 8"/>
+    <task id="Task_Oversized_9" name="Bulk task 9"/>
+    <task id="Task_Oversized_10" name="Bulk task 10"/>
+    <task id="Task_Oversized_11" name="Bulk task 11"/>
+    <task id="Task_Oversized_12" name="Bulk task 12"/>
+    <task id="Task_Oversized_13" name="Bulk task 13"/>
+    <task id="Task_Oversized_14" name="Bulk task 14"/>
+    <task id="Task_Oversized_15" name="Bulk task 15"/>
+    <task id="Task_Oversized_16" name="Bulk task 16"/>
+    <task id="Task_Oversized_17" name="Bulk task 17"/>
+    <task id="Task_Oversized_18" name="Bulk task 18"/>
+    <task id="Task_Oversized_19" name="Bulk task 19"/>
+    <task id="Task_Oversized_20" name="Bulk task 20"/>
+    <task id="Task_Oversized_21" name="Bulk task 21"/>
+    <task id="Task_Oversized_22" name="Bulk task 22"/>
+    <task id="Task_Oversized_23" name="Bulk task 23"/>
+    <task id="Task_Oversized_24" name="Bulk task 24"/>
+    <task id="Task_Oversized_25" name="Bulk task 25"/>
+    <task id="Task_Oversized_26" name="Bulk task 26"/>
+    <task id="Task_Oversized_27" name="Bulk task 27"/>
+    <task id="Task_Oversized_28" name="Bulk task 28"/>
+    <task id="Task_Oversized_29" name="Bulk task 29"/>
+    <task id="Task_Oversized_30" name="Bulk task 30"/>
+    <task id="Task_Oversized_31" name="Bulk task 31"/>
+    <task id="Task_Oversized_32" name="Bulk task 32"/>
+    <task id="Task_Oversized_33" name="Bulk task 33"/>
+    <task id="Task_Oversized_34" name="Bulk task 34"/>
+    <task id="Task_Oversized_35" name="Bulk task 35"/>
+    <task id="Task_Oversized_36" name="Bulk task 36"/>
+    <task id="Task_Oversized_37" name="Bulk task 37"/>
+    <task id="Task_Oversized_38" name="Bulk task 38"/>
+    <task id="Task_Oversized_39" name="Bulk task 39"/>
+    <task id="Task_Oversized_40" name="Bulk task 40"/>
+    <task id="Task_Oversized_41" name="Bulk task 41"/>
+    <task id="Task_Oversized_42" name="Bulk task 42"/>
+    <task id="Task_Oversized_43" name="Bulk task 43"/>
+    <task id="Task_Oversized_44" name="Bulk task 44"/>
+    <task id="Task_Oversized_45" name="Bulk task 45"/>
+    <task id="Task_Oversized_46" name="Bulk task 46"/>
+    <task id="Task_Oversized_47" name="Bulk task 47"/>
+    <task id="Task_Oversized_48" name="Bulk task 48"/>
+    <task id="Task_Oversized_49" name="Bulk task 49"/>
+    <task id="Task_Oversized_50" name="Bulk task 50"/>
+    <task id="Task_Oversized_51" name="Bulk task 51"/>
+    <task id="Task_Oversized_52" name="Bulk task 52"/>
+    <task id="Task_Oversized_53" name="Bulk task 53"/>
+    <task id="Task_Oversized_54" name="Bulk task 54"/>
+    <task id="Task_Oversized_55" name="Bulk task 55"/>
+    <task id="Task_Oversized_56" name="Bulk task 56"/>
+    <task id="Task_Oversized_57" name="Bulk task 57"/>
+    <task id="Task_Oversized_58" name="Bulk task 58"/>
+    <task id="Task_Oversized_59" name="Bulk task 59"/>
+    <task id="Task_Oversized_60" name="Bulk task 60"/>
+  </process>
+</definitions>

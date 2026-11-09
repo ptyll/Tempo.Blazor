@@ -1,0 +1,258 @@
+{
+  "package": {
+    "packageId": "Tempo.Blazor.Modeling.BpmnXml",
+    "title": "Tempo.Blazor.Modeling.BpmnXml",
+    "description": "Headless BPMN 2.0 XML converter for Tempo.Blazor Modeling: deterministic, loss-reporting import of BPMN 2.0 XML into ModelingModelDto. Zero UI dependencies — safe to reference from API/service projects.",
+    "authors": "ptyll",
+    "targetFrameworks": [
+      "net8.0",
+      "net9.0",
+      "net10.0"
+    ],
+    "tags": "blazor;modeling;bpmn;bpmn2;xml;import;converter;headless",
+    "repositoryUrl": "https://github.com/ptyll/Tempo.Blazor",
+    "projectUrl": "https://github.com/ptyll/Tempo.Blazor",
+    "installation": {
+      "nuget": [
+        "dotnet add package Tempo.Blazor.Modeling.BpmnXml"
+      ]
+    },
+    "dependencies": [
+      {
+        "name": "Microsoft.Extensions.DependencyInjection.Abstractions",
+        "version": "8.0.2"
+      },
+      {
+        "name": "Microsoft.Extensions.DependencyInjection.Abstractions",
+        "version": "9.0.3"
+      },
+      {
+        "name": "Microsoft.Extensions.DependencyInjection.Abstractions",
+        "version": "10.0.3"
+      }
+    ],
+    "projectReferences": [
+      "../Tempo.Blazor.Abstractions/Tempo.Blazor.Abstractions.csproj"
+    ],
+    "namespaces": [
+      "Tempo.Blazor.Modeling.BpmnXml"
+    ]
+  },
+  "gettingStarted": {
+    "title": "Tempo.Blazor.Modeling.BpmnXml",
+    "overview": "Headless BPMN 2.0 XML converter for Tempo.Blazor Modeling: deterministic, loss-reporting import of BPMN 2.0 XML into ModelingModelDto. Zero UI dependencies — safe to reference from API/service projects.",
+    "targetFramework": "net8.0 / net9.0 / net10.0",
+    "installation": {
+      "nuget": [
+        "dotnet add package Tempo.Blazor.Modeling.BpmnXml"
+      ]
+    },
+    "dependencies": [
+      {
+        "name": "Microsoft.Extensions.DependencyInjection.Abstractions",
+        "version": "8.0.2"
+      },
+      {
+        "name": "Microsoft.Extensions.DependencyInjection.Abstractions",
+        "version": "9.0.3"
+      },
+      {
+        "name": "Microsoft.Extensions.DependencyInjection.Abstractions",
+        "version": "10.0.3"
+      }
+    ]
+  },
+  "items": [
+    {
+      "itemName": "BpmnConstants",
+      "kind": "Class",
+      "category": "General",
+      "namespace": "Tempo.Blazor.Modeling.BpmnXml",
+      "description": "BPMN 2.0 namespace and notation constants used by the headless converter.",
+      "packageId": "Tempo.Blazor.Modeling.BpmnXml",
+      "sourcePath": "src/Tempo.Blazor.Modeling.BpmnXml/BpmnConstants.cs",
+      "documentationStatus": "merged"
+    },
+    {
+      "itemName": "BpmnImportLoss",
+      "kind": "Class",
+      "category": "General",
+      "namespace": "Tempo.Blazor.Modeling.BpmnXml",
+      "description": "One entry of the import loss report: an unsupported or approximated BPMN construct that was NOT silently dropped. Also surfaced as a bpmn-import issue on the owning model.",
+      "packageId": "Tempo.Blazor.Modeling.BpmnXml",
+      "sourcePath": "src/Tempo.Blazor.Modeling.BpmnXml/BpmnImportContracts.cs",
+      "documentationStatus": "merged"
+    },
+    {
+      "itemName": "BpmnImportLossSeverity",
+      "kind": "Enum",
+      "category": "General",
+      "namespace": "Tempo.Blazor.Modeling.BpmnXml",
+      "description": "Severity of an import loss record.",
+      "packageId": "Tempo.Blazor.Modeling.BpmnXml",
+      "sourcePath": "src/Tempo.Blazor.Modeling.BpmnXml/BpmnImportContracts.cs",
+      "documentationStatus": "merged"
+    },
+    {
+      "itemName": "BpmnImportOptions",
+      "kind": "Class",
+      "category": "General",
+      "namespace": "Tempo.Blazor.Modeling.BpmnXml",
+      "description": "Options controlling the BPMN 2.0 XML import.",
+      "packageId": "Tempo.Blazor.Modeling.BpmnXml",
+      "sourcePath": "src/Tempo.Blazor.Modeling.BpmnXml/BpmnImportContracts.cs",
+      "documentationStatus": "merged"
+    },
+    {
+      "itemName": "BpmnImportResult",
+      "kind": "Class",
+      "category": "General",
+      "namespace": "Tempo.Blazor.Modeling.BpmnXml",
+      "description": "Result of a BPMN 2.0 XML import. Never throws for bad input — inspect HasErrors.",
+      "packageId": "Tempo.Blazor.Modeling.BpmnXml",
+      "sourcePath": "src/Tempo.Blazor.Modeling.BpmnXml/BpmnImportContracts.cs",
+      "documentationStatus": "merged"
+    },
+    {
+      "itemName": "BpmnImportWarning",
+      "kind": "Class",
+      "category": "General",
+      "namespace": "Tempo.Blazor.Modeling.BpmnXml",
+      "description": "A non-fatal observation about the imported document that is not a content loss.",
+      "packageId": "Tempo.Blazor.Modeling.BpmnXml",
+      "sourcePath": "src/Tempo.Blazor.Modeling.BpmnXml/BpmnImportContracts.cs",
+      "documentationStatus": "merged"
+    },
+    {
+      "itemName": "BpmnModelSplit",
+      "kind": "Enum",
+      "category": "General",
+      "namespace": "Tempo.Blazor.Modeling.BpmnXml",
+      "description": "How the importer maps a BPMN document with several processes onto ModelingModelDto models.",
+      "packageId": "Tempo.Blazor.Modeling.BpmnXml",
+      "sourcePath": "src/Tempo.Blazor.Modeling.BpmnXml/BpmnImportContracts.cs",
+      "documentationStatus": "merged"
+    },
+    {
+      "itemName": "BpmnRelationshipTypes",
+      "kind": "Class",
+      "category": "General",
+      "namespace": "Tempo.Blazor.Modeling.BpmnXml",
+      "description": "Semantic relationship type names the importer emits. Duplicated on purpose from the internal BpmnModelingCatalog; the corpus parity test keeps the two lists from drifting.",
+      "packageId": "Tempo.Blazor.Modeling.BpmnXml",
+      "sourcePath": "src/Tempo.Blazor.Modeling.BpmnXml/BpmnConstants.cs",
+      "documentationStatus": "merged"
+    },
+    {
+      "itemName": "BpmnSemanticTypes",
+      "kind": "Class",
+      "category": "General",
+      "namespace": "Tempo.Blazor.Modeling.BpmnXml",
+      "description": "Semantic element type names the importer emits. Duplicated on purpose from the internal BpmnModelingCatalog (Tempo.Blazor.Modeling) — the converter must not depend on the internal type; the corpus parity test keeps the two lists from drifting.",
+      "packageId": "Tempo.Blazor.Modeling.BpmnXml",
+      "sourcePath": "src/Tempo.Blazor.Modeling.BpmnXml/BpmnConstants.cs",
+      "documentationStatus": "merged"
+    },
+    {
+      "itemName": "BpmnToolExportContext",
+      "kind": "Class",
+      "category": "General",
+      "namespace": "Tempo.Blazor.Modeling.BpmnXml",
+      "description": "Context handed to OnExportElement while the exporter writes extensionElements (export lands in a later phase of the converter plan).",
+      "packageId": "Tempo.Blazor.Modeling.BpmnXml",
+      "sourcePath": "src/Tempo.Blazor.Modeling.BpmnXml/IBpmnXmlImporter.cs",
+      "documentationStatus": "merged"
+    },
+    {
+      "itemName": "BpmnToolImportContext",
+      "kind": "Class",
+      "category": "General",
+      "namespace": "Tempo.Blazor.Modeling.BpmnXml",
+      "description": "Context handed to OnImportElement for one extensionElements payload of the extension's namespace.",
+      "packageId": "Tempo.Blazor.Modeling.BpmnXml",
+      "sourcePath": "src/Tempo.Blazor.Modeling.BpmnXml/IBpmnXmlImporter.cs",
+      "documentationStatus": "merged"
+    },
+    {
+      "itemName": "BpmnXmlImporter",
+      "kind": "Class",
+      "category": "General",
+      "namespace": "Tempo.Blazor.Modeling.BpmnXml",
+      "description": "Default IBpmnXmlImporter: safe, bounded, deterministic BPMN 2.0 XML → ModelingModelDto conversion. Never throws for bad input — structural problems surface as HasErrors with a message.",
+      "packageId": "Tempo.Blazor.Modeling.BpmnXml",
+      "sourcePath": "src/Tempo.Blazor.Modeling.BpmnXml/BpmnXmlImporter.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Import",
+          "kind": "Method",
+          "type": "BpmnImportResult",
+          "parameters": [
+            {
+              "name": "xml",
+              "type": "string"
+            },
+            {
+              "name": "options",
+              "type": "BpmnImportOptions?",
+              "default": "null"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "itemName": "BpmnXmlServiceCollectionExtensions",
+      "kind": "Class",
+      "category": "General",
+      "namespace": "Tempo.Blazor.Modeling.BpmnXml",
+      "description": "DI registration for the headless BPMN 2.0 XML converter.",
+      "packageId": "Tempo.Blazor.Modeling.BpmnXml",
+      "sourcePath": "src/Tempo.Blazor.Modeling.BpmnXml/BpmnXmlServiceCollectionExtensions.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "AddTempoBpmnXml",
+          "kind": "Method",
+          "type": "IServiceCollection",
+          "description": "Registers the headless BPMN 2.0 XML importer (IBpmnXmlImporter) with the service collection. Idempotent — safe to call from host and library composition roots.",
+          "parameters": [
+            {
+              "name": "services",
+              "type": "this IServiceCollection"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "itemName": "IBpmnToolExtension",
+      "kind": "Interface",
+      "category": "General",
+      "namespace": "Tempo.Blazor.Modeling.BpmnXml",
+      "description": "A tool dialect plugin (Camunda, Signavio, Bizagi, …). The importer routes every extensionElements child in NamespaceUri through OnImportElement; unrecognized namespaces are preserved verbatim under foreignExtensions with a loss record instead of being dropped.",
+      "packageId": "Tempo.Blazor.Modeling.BpmnXml",
+      "sourcePath": "src/Tempo.Blazor.Modeling.BpmnXml/IBpmnXmlImporter.cs",
+      "documentationStatus": "merged"
+    },
+    {
+      "itemName": "IBpmnXmlImporter",
+      "kind": "Interface",
+      "category": "General",
+      "namespace": "Tempo.Blazor.Modeling.BpmnXml",
+      "description": "Imports BPMN 2.0 XML into modeling models. Implementations must be deterministic and never throw for bad input.",
+      "packageId": "Tempo.Blazor.Modeling.BpmnXml",
+      "sourcePath": "src/Tempo.Blazor.Modeling.BpmnXml/IBpmnXmlImporter.cs",
+      "documentationStatus": "merged"
+    }
+  ],
+  "libraryExamples": [],
+  "summary": {
+    "itemCount": 15,
+    "manualItemCount": 15,
+    "generatedItemCount": 15,
+    "generatedOnlyItemCount": 0,
+    "componentCount": 0,
+    "publicApiTypeCount": 15
+  }
+}

@@ -14,6 +14,7 @@ src/Tempo.Blazor.AI/Tempo.Blazor.AI.csproj
 src/Tempo.Blazor.DiagramEditor/Tempo.Blazor.DiagramEditor.csproj
 src/Tempo.Blazor.Wireframe/Tempo.Blazor.Wireframe.csproj
 src/Tempo.Blazor.Modeling/Tempo.Blazor.Modeling.csproj
+src/Tempo.Blazor.Modeling.BpmnXml/Tempo.Blazor.Modeling.BpmnXml.csproj
 src/Tempo.Blazor.Spreadsheet/Tempo.Blazor.Spreadsheet.csproj
 src/Tempo.Blazor.GanttXlsx/Tempo.Blazor.GanttXlsx.csproj
 src/Tempo.Blazor.DataTableXlsx/Tempo.Blazor.DataTableXlsx.csproj
