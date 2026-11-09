@@ -51,6 +51,20 @@
       "description": "Additional CSS classes for the root element."
     },
     {
+      "name": "CodeInputMode",
+      "type": "SigningCodeInputMode",
+      "isRequired": false,
+      "default": "Single",
+      "description": "How the phone steps render the one-time-code input („Nové komponenty 1/7\" fáze 5, additive): forwarded to TmSigningPhoneStep.CodeInputMode. The default Single keeps today's single TmTextInput; Segmented swaps it for the core TmOtpInput."
+    },
+    {
+      "name": "CodeLength",
+      "type": "int",
+      "isRequired": false,
+      "default": "6",
+      "description": "Number of OTP cells in Segmented mode (additive, fáze 5): forwarded to TmSigningPhoneStep.CodeLength. Defaults to 6."
+    },
+    {
       "name": "Culture",
       "type": "string?",
       "isRequired": false,

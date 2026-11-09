@@ -19744,6 +19744,12 @@
               "description": "Verified state: blocks editing (the cells become readonly), applies the tm-otp-input--verified root modifier and renders the localized verified status (check icon + text) below the input, referenced from every cell through aria-describedby=\"{Id}-status\" and announced through the polite live region."
             },
             {
+              "name": "VerifiedText",
+              "type": "string?",
+              "isRequired": false,
+              "description": "Optional text of the verified status row (additive): overrides the localized TmOtpInput_VerifiedStatus default in the status element AND in the polite live region, so a host with its own verified wording (e.g. a signing step reusing the host's \"Verified\" key) keeps ONE consistent text everywhere."
+            },
+            {
               "name": "DataTestId",
               "type": "string?",
               "isRequired": false,
@@ -73673,6 +73679,16 @@
           "documentationStatus": "merged"
         },
         {
+          "itemName": "SigningCodeInputMode",
+          "kind": "Enum",
+          "category": "Components",
+          "namespace": "Tempo.Blazor.Components.Signing",
+          "description": "How TmSigningPhoneStep renders the one-time-code input („Nové komponenty 1/7\" fáze 5). The default preserves today's behaviour; the segmented mode is the opt-in TmOtpInput integration.",
+          "packageId": "Tempo.Blazor.Signing",
+          "sourcePath": "src/Tempo.Blazor.Signing/Components/Signing/SigningCodeInputMode.cs",
+          "documentationStatus": "merged"
+        },
+        {
           "itemName": "SigningExternalStepContext",
           "kind": "Record",
           "category": "Components",
@@ -76713,6 +76729,20 @@
               "description": "Additional CSS classes for the root element."
             },
             {
+              "name": "CodeInputMode",
+              "type": "SigningCodeInputMode",
+              "isRequired": false,
+              "default": "SigningCodeInputMode.Single",
+              "description": "How the phone steps render the one-time-code input („Nové komponenty 1/7\" fáze 5, additive): forwarded to TmSigningPhoneStep.CodeInputMode. The default Single keeps today's single TmTextInput; Segmented swaps it for the core TmOtpInput."
+            },
+            {
+              "name": "CodeLength",
+              "type": "int",
+              "isRequired": false,
+              "default": "6",
+              "description": "Number of OTP cells in Segmented mode (additive, fáze 5): forwarded to TmSigningPhoneStep.CodeLength. Defaults to 6."
+            },
+            {
               "name": "Culture",
               "type": "string?",
               "isRequired": false,
@@ -76989,6 +77019,20 @@
               "type": "string?",
               "isRequired": false,
               "description": "Additional CSS classes for the shell element."
+            },
+            {
+              "name": "CodeInputMode",
+              "type": "SigningCodeInputMode",
+              "isRequired": false,
+              "default": "SigningCodeInputMode.Single",
+              "description": "How the one-time-code input renders („Nové komponenty 1/7\" fáze 5): Single (the default) keeps the single core TmTextInput; Segmented swaps it for the core TmOtpInput with CodeLength cells — completing the code automatically starts the verification when a verifier is wired, a wrong code drives the input's invalid state (the step shell keeps owning the error text; every new failure replays the shake through ShowErrorAsync) and a resend clears and refocuses the input."
+            },
+            {
+              "name": "CodeLength",
+              "type": "int",
+              "isRequired": false,
+              "default": "6",
+              "description": "Number of OTP cells in Segmented mode (the TmOtpInput.Length; must be between 4 and 10). Defaults to 6; ignored in Single mode."
             },
             {
               "name": "CodeSent",
@@ -77576,12 +77620,12 @@
         }
       ],
       "summary": {
-        "itemCount": 57,
-        "manualItemCount": 57,
-        "generatedItemCount": 57,
+        "itemCount": 58,
+        "manualItemCount": 58,
+        "generatedItemCount": 58,
         "generatedOnlyItemCount": 0,
         "componentCount": 34,
-        "publicApiTypeCount": 23
+        "publicApiTypeCount": 24
       }
     },
     {
@@ -134272,10 +134316,10 @@
   ],
   "summary": {
     "packageCount": 28,
-    "itemCount": 3491,
-    "manualItemCount": 3491,
+    "itemCount": 3492,
+    "manualItemCount": 3492,
     "generatedOnlyItemCount": 0,
     "componentCount": 536,
-    "publicApiTypeCount": 2903
+    "publicApiTypeCount": 2904
   }
 }

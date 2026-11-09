@@ -65,12 +65,14 @@
 
     @if (HasSentCode || IsVerifiedState)
     {
-        @if (IsVerifiedState)
+        @if (IsVerifiedState && !IsSegmented)
         {
             @* The host-confirmed state (phase 6): replaces the OTP input, the Verify action and
                 the resend affordances — the value the runner carries was verified by the HOST.
                 The announcement goes through the always-rendered live region below (one region
-                per step, WCAG 4.1.3), so this block carries no role itself. *@
+                per step, WCAG 4.1.3), so this block carries no role itself. In the SEGMENTED
+                mode (fáze 5) the TmOtpInput renders its own verified state instead — the row
+                stays mounted with readonly cells + the localized verified status. *@
             <div class="tm-signing-phone-step__verified">
                 <TmIcon Name="check-circle" Size="IconSize.Sm" />
                 <span>@Loc["TmSigningStep_Verified"]</span>
@@ -78,20 +80,51 @@
         }
         else
         {
-            <div class="tm-signing-phone-step__otp-row">
-                <TmTextInput @ref="_otpInput"
-                             Value="@(OtpCode ?? string.Empty)"
-                             ValueChanged="HandleOtpInputAsync"
-                             Label="@Loc["TmSigningStep_OtpLabel"]"
-                             Placeholder="@OtpPlaceholderText"
-                             Disabled="@(Disabled || _verifyInFlight || _sendInFlight)"
-                             IsValid="@OtpValidationState"
-                             Class="tm-signing-phone-step__otp"
-                             AdditionalAttributes="@(BuildOtpAttributes())" />
+            <div class="tm-signing-phone-step__otp-row" aria-busy="@(_verifyInFlight ? "true" : null)">
+                @if (IsSegmented)
+                {
+                    @* Fáze 5: the segmented core TmOtpInput. OtpInvalid → its Invalid state (the
+                        step shell keeps OWNING the message — the input references the shell's
+                        validation id through AriaDescribedBy, the documented pattern for a host-
+                        owned error — no duplicate error text); a NEW wrong-code report replays the
+                        shake (ShowErrorAsync) and clears + refocuses the cells so the next full
+                        code fires OnComplete again. Verified maps the host-confirmed state and
+                        reuses the step's own verified wording (VerifiedText). While a verify runs
+                        the cells turn READONLY (never disabled — the focus stays reachable) and
+                        the otp row carries aria-busy. The step's own class on the ROOT keeps the
+                        otp-row flex contract. *@
+                    <TmOtpInput @ref="_otpSegmentedInput"
+                                Value="@(OtpCode ?? string.Empty)"
+                                ValueChanged="HandleOtpInputAsync"
+                                Length="@CodeLength"
+                                Invalid="@OtpInvalid"
+                                Verified="@IsVerifiedState"
+                                VerifiedText="@Loc["TmSigningStep_Verified"]"
+                                ReadOnly="@_verifyInFlight"
+                                Disabled="@(Disabled || _sendInFlight)"
+                                AriaLabel="@Loc["TmSigningStep_OtpLabel"]"
+                                AriaDescribedBy="@SegmentedOtpDescribedBy"
+                                Class="tm-signing-phone-step__otp"
+                                OnComplete="HandleOtpCompleteAsync" />
+                }
+                else
+                {
+                    <TmTextInput @ref="_otpInput"
+                                 Value="@(OtpCode ?? string.Empty)"
+                                 ValueChanged="HandleOtpInputAsync"
+                                 Label="@Loc["TmSigningStep_OtpLabel"]"
+                                 Placeholder="@OtpPlaceholderText"
+                                 Disabled="@(Disabled || _verifyInFlight || _sendInFlight)"
+                                 IsValid="@OtpValidationState"
+                                 Class="tm-signing-phone-step__otp"
+                                 AdditionalAttributes="@(BuildOtpAttributes())" />
+                }
                 @* Verify appears only when a host verifier is wired (the runner passes its
                     OnVerifyPhoneCode through) — without one the code stays cosmetic, exactly the
-                    documented legacy behaviour. *@
-                @if (OnVerifyCode.HasDelegate)
+                    documented legacy behaviour. In SEGMENTED mode completing the code ALSO starts
+                    the verification (fáze 5) — the manual action stays visible as an extra path
+                    (fáze 5 review). *@
+                @if (!IsVerifiedState && OnVerifyCode.HasDelegate)
                 {
                     <TmButton Variant="ButtonVariant.Primary"
                               Class="tm-signing-phone-step__verify"
@@ -103,18 +136,21 @@
                 @* Functional countdown (phase 6): the remaining seconds tick on the injectable
                     clock; at zero the text becomes the real "Resend" action. The ticking text is
                     aria-live="off" — the live region below announces the EVENTS (WCAG 4.1.3). *@
-                @if (ShowResendButton)
+                @if (!IsVerifiedState)
                 {
-                    <TmButton Variant="ButtonVariant.Link"
-                              Class="tm-signing-phone-step__resend-button"
-                              Disabled="@Disabled"
-                              OnClick="ResendCodeAsync">
-                        @Loc["TmSigningStep_Resend"]
-                    </TmButton>
-                }
-                else
-                {
-                    <span class="tm-signing-phone-step__resend" @attributes="BuildCountdownAttributes()">@Loc["TmSigningStep_ResendIn", CountdownValue]</span>
+                    @if (ShowResendButton)
+                    {
+                        <TmButton Variant="ButtonVariant.Link"
+                                  Class="tm-signing-phone-step__resend-button"
+                                  Disabled="@Disabled"
+                                  OnClick="ResendCodeAsync">
+                            @Loc["TmSigningStep_Resend"]
+                        </TmButton>
+                    }
+                    else
+                    {
+                        <span class="tm-signing-phone-step__resend" @attributes="BuildCountdownAttributes()">@Loc["TmSigningStep_ResendIn", CountdownValue]</span>
+                    }
                 }
             </div>
         }

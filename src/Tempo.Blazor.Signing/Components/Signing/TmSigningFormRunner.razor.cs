@@ -214,6 +214,22 @@ public partial class TmSigningFormRunner : IAsyncDisposable
     [Parameter] public Func<SigningPhoneVerificationRequest, Task<bool>>? OnVerifyPhoneCode { get; set; }
 
     /// <summary>
+    /// How the phone steps render the one-time-code input („Nové komponenty 1/7" fáze 5, additive):
+    /// forwarded to <see cref="TmSigningPhoneStep.CodeInputMode"/>. The default
+    /// <see cref="SigningCodeInputMode.Single"/> keeps today's single <c>TmTextInput</c>;
+    /// <see cref="SigningCodeInputMode.Segmented"/> swaps it for the core <see cref="TmOtpInput"/>.
+    /// </summary>
+    [Parameter] public SigningCodeInputMode CodeInputMode { get; set; } = SigningCodeInputMode.Single;
+
+    /// <summary>
+    /// Number of OTP cells in <see cref="SigningCodeInputMode.Segmented"/> mode (additive, fáze 5):
+    /// forwarded to <see cref="TmSigningPhoneStep.CodeLength"/> (the <see cref="TmOtpInput.Length"/>;
+    /// must be between 4 and 10 — the step throws an <see cref="ArgumentOutOfRangeException"/>
+    /// outside the range while segmented). Defaults to 6.
+    /// </summary>
+    [Parameter] public int CodeLength { get; set; } = 6;
+
+    /// <summary>
     /// Host upload hook for attachment fields (Signing redesign phase 6, S2-5, opt-in). The runner
     /// hands the picked <see cref="IBrowserFile"/> over and stores the RETURNED url on the
     /// attachment card; a <c>null</c> result (or a throwing host, cancellation aside) REJECTS the

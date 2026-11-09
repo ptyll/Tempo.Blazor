@@ -76,6 +76,14 @@ public partial class TmOtpInput : IAsyncDisposable
     /// </summary>
     [Parameter] public bool Verified { get; set; }
 
+    /// <summary>
+    /// Optional text of the verified status row (additive): overrides the localized
+    /// <c>TmOtpInput_VerifiedStatus</c> default in the status element AND in the polite live
+    /// region, so a host with its own verified wording (e.g. a signing step reusing the host's
+    /// "Verified" key) keeps ONE consistent text everywhere.
+    /// </summary>
+    [Parameter] public string? VerifiedText { get; set; }
+
     /// <summary>Moves focus to the first cell after the first render.</summary>
     [Parameter] public bool AutoFocus { get; set; }
 
@@ -180,8 +188,13 @@ public partial class TmOtpInput : IAsyncDisposable
 
     private string LiveText => _liveTextOverride
         ?? (Invalid && !string.IsNullOrEmpty(ErrorText) ? ErrorText
-            : Verified ? Loc["TmOtpInput_VerifiedStatus"]
+            : Verified ? VerifiedStatusText
             : string.Empty);
+
+    /// <summary>The verified status text in effect: the host's <see cref="VerifiedText"/> first,
+    /// then the localized default.</summary>
+    private string VerifiedStatusText
+        => !string.IsNullOrEmpty(VerifiedText) ? VerifiedText! : Loc["TmOtpInput_VerifiedStatus"];
 
     /// <summary>
     /// <c>aria-describedby</c> of every cell: the host reference, the error message id while

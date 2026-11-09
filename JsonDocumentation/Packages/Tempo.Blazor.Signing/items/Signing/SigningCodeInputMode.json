@@ -1,0 +1,10 @@
+{
+  "kind": "Enum",
+  "category": "Signing",
+  "namespace": "Tempo.Blazor.Components.Signing",
+  "description": "How TmSigningPhoneStep renders the one-time-code input („Nové komponenty 1/7\" fáze 5). The default preserves today's behaviour; the segmented mode is the opt-in TmOtpInput integration.",
+  "packageId": "Tempo.Blazor.Signing",
+  "sourcePath": "src/Tempo.Blazor.Signing/Components/Signing/SigningCodeInputMode.cs",
+  "documentationStatus": "generated",
+  "itemName": "SigningCodeInputMode"
+}

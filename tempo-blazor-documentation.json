@@ -19742,6 +19742,12 @@
           "description": "Verified state: blocks editing (the cells become readonly), applies the tm-otp-input--verified root modifier and renders the localized verified status (check icon + text) below the input, referenced from every cell through aria-describedby=\"{Id}-status\" and announced through the polite live region."
         },
         {
+          "name": "VerifiedText",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Optional text of the verified status row (additive): overrides the localized TmOtpInput_VerifiedStatus default in the status element AND in the polite live region, so a host with its own verified wording (e.g. a signing step reusing the host's \"Verified\" key) keeps ONE consistent text everywhere."
+        },
+        {
           "name": "DataTestId",
           "type": "string?",
           "isRequired": false,

@@ -613,6 +613,17 @@ public class TmOtpInputTests : LocalizationTestBase
     }
 
     [Fact]
+    public void VerifiedText_Overrides_The_Localized_Status_In_The_Row_And_The_Live_Region()
+    {
+        var cut = Render<TmOtpInput>(p => p
+            .Add(c => c.Verified, true)
+            .Add(c => c.VerifiedText, "Verified by the host"));
+        cut.Find(".tm-otp-input__status span").TextContent.Should().Be("Verified by the host");
+        cut.Find("[role='status'][aria-live='polite']").TextContent.Should().Be("Verified by the host",
+            "the host wording is announced, not the localized default");
+    }
+
+    [Fact]
     public void ReadOnly_Renders_ReadOnly_Cells_And_Root_Modifier()
     {
         var cut = Render<TmOtpInput>(p => p
