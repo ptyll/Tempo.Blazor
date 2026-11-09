@@ -11645,6 +11645,30 @@
           "description": "Additional CSS class."
         },
         {
+          "name": "CollapsedColumns",
+          "type": "IReadOnlyCollection<string>?",
+          "isRequired": false,
+          "description": "Host-owned set of collapsed column ids. null (the default) keeps the state inside the board; a host set wins and a toggle only raises CollapsedColumnsChanged."
+        },
+        {
+          "name": "CollapsedColumnsChanged",
+          "type": "EventCallback<IReadOnlyCollection<string>>",
+          "isRequired": false,
+          "description": "Fires with the complete new collapsed-column set when a column toggle is used, so @bind-CollapsedColumns round-trips. An uncontrolled board also applies the new set itself."
+        },
+        {
+          "name": "CollapsedLanes",
+          "type": "IReadOnlyCollection<string>?",
+          "isRequired": false,
+          "description": "Host-owned set of collapsed swimlane ids. The trailing \"no value\" lane is addressed with TmKanbanBoard<TItem>.NoSwimlaneId. null (the default) keeps the state inside the board."
+        },
+        {
+          "name": "CollapsedLanesChanged",
+          "type": "EventCallback<IReadOnlyCollection<string>>",
+          "isRequired": false,
+          "description": "Fires with the complete new collapsed-lane set when a swimlane toggle is used, so @bind-CollapsedLanes round-trips. The \"no value\" lane is reported as TmKanbanBoard<TItem>.NoSwimlaneId."
+        },
+        {
           "name": "ColumnHeaderTemplate",
           "type": "RenderFragment<KanbanColumn>?",
           "isRequired": false,
@@ -11656,6 +11680,12 @@
           "isRequired": true,
           "description": "Column definitions.",
           "editorRequired": true
+        },
+        {
+          "name": "ColumnsCollapsible",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Renders a collapse/expand toggle in every column header (classic and swimlane layouts). A collapsed column becomes a narrow strip showing the title, card count and WIP badge, renders no cards, and stays a drop target that appends the dragged card. The toggle is never part of ColumnHeaderTemplate. Defaults to false (classic markup)."
         },
         {
           "name": "ColumnSelector",
@@ -11751,6 +11781,9 @@
         "tm-kanban__column-headers",
         "tm-kanban__column--header-only",
         "tm-kanban__column--lane-cell",
+        "tm-kanban__column--collapsed",
+        "tm-kanban__column--drop-target",
+        "tm-kanban__column-toggle",
         "tm-kanban__swimlane",
         "tm-kanban__swimlane--collapsed",
         "tm-kanban__swimlane-header",

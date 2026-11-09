@@ -13,7 +13,10 @@
     <h2 class="text-lg font-semibold text-slate-900 dark:text-white mb-1">Reorderable board</h2>
     <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">
         Drag a card onto another card to drop it above or below, or into a different column. A drop indicator shows
-        the exact insertion point, and the new order is persisted into the sample data.
+        the exact insertion point, and the new order is persisted into the sample data. The collapse button in each
+        column header narrows the column to a strip that still shows its title, count and WIP badge — and still catches
+        a card dropped on it (appended to the end), so a wide board stays readable. Click anywhere on a collapsed
+        column to expand it again.
     </p>
 
     <TmKanbanBoard TItem="TaskItem"
@@ -21,6 +24,7 @@
                    Items="_tasks"
                    ColumnSelector="t => t.Status"
                    CardTemplate="RenderCard"
+                   ColumnsCollapsible="true"
                    OnCardClick="HandleCardClick"
                    OnItemMoved="HandleItemMoved"
                    OnItemReordered="HandleItemReordered" />
@@ -66,8 +70,10 @@
     <h2 class="text-lg font-semibold text-slate-900 dark:text-white mb-1">Swimlanes (grouped by assignee)</h2>
     <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">
         The same board grouped into horizontal swimlanes by assignee. Column counts and WIP limits are board-level,
-        each lane shows its own count, and lanes can be collapsed. Drag a card into another lane to reassign it;
-        unassigned cards fall into the trailing "No value" lane.
+        each lane shows its own count, and lanes can be collapsed. Columns can be collapsed here too — the header cell
+        and every lane cell of that column narrow together, so the grid stays aligned and the narrowed cell still accepts
+        a drop. Drag a card into another lane to reassign it; unassigned cards fall into the trailing "No value" lane.
+        A collapsed column keeps the same vertical strip in the shared header row, and clicking that header expands it.
     </p>
 
     <TmKanbanBoard TItem="TaskItem"
@@ -76,6 +82,7 @@
                    ColumnSelector="t => t.Status"
                    SwimlaneSelector="t => string.IsNullOrEmpty(t.Assignee) ? null : t.Assignee"
                    CardTemplate="RenderCard"
+                   ColumnsCollapsible="true"
                    OnItemMoved="HandleSwimMove"
                    OnItemReordered="HandleSwimReorder" />
 
@@ -230,15 +237,18 @@
     private void HandleSwimMove(KanbanMoveEvent<TaskItem> move)
     {
         var assignee = move.ToSwimlane ?? "";
-        _lastSwimChange = $"'{move.Item.Title}' → column {move.ToColumn}, lane '{(string.IsNullOrEmpty(assignee) ? "No value" : assignee)}' (index {move.TargetIndex})";
+        _lastSwimChange = $"'{move.Item.Title}' → column {move.ToColumn}, lane '{(string.IsNullOrEmpty(assignee) ? "No value" : assignee)}' (ToSwimlane={DescribeSwimlane(move.ToSwimlane)}, TargetIndex={move.TargetIndex})";
         ApplySwimMove(move, move.Item with { Status = move.ToColumn, Assignee = assignee });
     }
 
     private void HandleSwimReorder(KanbanMoveEvent<TaskItem> move)
     {
-        _lastSwimChange = $"'{move.Item.Title}' reordered within {move.ToColumn}/{move.ToSwimlane ?? "No value"} (index {move.TargetIndex})";
+        _lastSwimChange = $"'{move.Item.Title}' reordered within {move.ToColumn}/{move.ToSwimlane ?? "No value"} (ToSwimlane={DescribeSwimlane(move.ToSwimlane)}, TargetIndex={move.TargetIndex})";
         ApplySwimMove(move, move.Item);
     }
+
+    // The "Last change" line reports ToSwimlane too; the trailing "no value" lane arrives as null.
+    private static string DescribeSwimlane(string? swimlane) => swimlane is null ? "null" : $"\"{swimlane}\"";
 
     private void ApplySwimMove(KanbanMoveEvent<TaskItem> move, TaskItem moved)
     {

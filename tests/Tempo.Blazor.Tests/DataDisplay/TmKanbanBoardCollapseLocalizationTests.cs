@@ -70,6 +70,14 @@ public class TmKanbanBoardCollapseLocalizationTests : LocalizationTestBase
         table["TmKanban_CollapseColumn"].Should().Contain("{0}", "the label names the column");
         table["TmKanban_ExpandColumn"].Should().Contain("{0}", "the label names the column");
 
+        // The collapsed strip's aria-label appends the WIP limit and, only when breached, the word
+        // for "over limit" (review fze-2). The limit is a scalar key with the number in {0}.
+        table.Should().ContainKey("TmKanban_CollapsedColumnWip");
+        table["TmKanban_CollapsedColumnWip"].Should().Contain("{0}", "the limit names the MaxItems value");
+        table.Should().ContainKey("TmKanban_CollapsedColumnOverLimit");
+        table["TmKanban_CollapsedColumnOverLimit"].Should().NotContain("{0}",
+            "the over-limit word carries no value of its own");
+
         // The forms the language's grammar needs (docs/localization-plurals.md): en one/other,
         // fr one/many/other, cs+sk one/few/many/other.
         foreach (var suffix in SuffixesFor(language))
@@ -80,6 +88,20 @@ public class TmKanbanBoardCollapseLocalizationTests : LocalizationTestBase
             table[key].Should().Contain("{0", "{0} must show the count", key);
             table[key].Should().Contain("{1}", "{0} must show the column title", key);
         }
+    }
+
+    [Theory]
+    [InlineData("en", "limit {0}", "over limit")]
+    [InlineData("cs", "limit {0}", "překročen limit")]
+    [InlineData("sk", "limit {0}", "prekročený limit")]
+    [InlineData("fr", "limite {0}", "limite dépassée")]
+    public void Every_shipped_language_translates_the_wip_and_over_limit_keys(
+        string language, string wip, string overLimit)
+    {
+        var table = Tables[language];
+
+        table["TmKanban_CollapsedColumnWip"].Should().Be(wip);
+        table["TmKanban_CollapsedColumnOverLimit"].Should().Be(overLimit);
     }
 
     private static string[] SuffixesFor(string language) => language switch

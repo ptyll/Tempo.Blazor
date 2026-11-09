@@ -68,17 +68,14 @@ namespace Tempo.Blazor.Tests.DataDisplay;
 /// </item>
 /// </list>
 /// <para>
-/// HOW THE NOT-YET-EXISTING API IS REFERENCED: the new parameters are passed through
-/// <c>TryAdd("Name", value)</c>, which binds the real <c>[Parameter]</c> the moment phase 2 declares it
-/// and is a silent no-op before that (so this file compiles in the RED phase). <c>NoSwimlaneId</c> is
-/// resolved through a tiny reflection accessor that fails with a readable message until phase 2 adds
-/// it; phase 2/3 replace both bridges with the strongly typed API when the skips come off.
+/// HOW THE NEW API IS REFERENCED: phase 2 landed the parameters, so every test passes them through the
+/// strongly typed <c>p.Add(x =&gt; x.Name, value)</c> and addresses the "No value" lane with the public
+/// <c>TmKanbanBoard&lt;TItem&gt;.NoSwimlaneId</c> constant. The phase 3 facts (collapsed-swimlane slots)
+/// stay skipped until their implementation lands.
 /// </para>
 /// </summary>
 public class TmKanbanBoardCollapseTests : LocalizationTestBase
 {
-    // TODO(phase 2/3): replace TryAdd with p.Add(...) and NoSwimlaneId() with typed constant
-    private const string RedPhase2 = "RED (plan a98e4a71): collapsible columns land in phase 2";
     private const string RedPhase3 = "RED (plan a98e4a71): drop zones on collapsed columns/swimlanes land in phase 3";
 
     private const string DragStart = "ondragstart";
@@ -110,10 +107,10 @@ public class TmKanbanBoardCollapseTests : LocalizationTestBase
     // Subtask 1 — ColumnsCollapsible=true renders a toggle per column
     // ══════════════════════════════════════════════════════════════════════
 
-    [Fact(Skip = RedPhase2)]
+    [Fact]
     public void ColumnsCollapsible_True_RendersNativeToggleInEveryClassicColumnHeader()
     {
-        var cut = RenderClassicBoard(p => p.TryAdd("ColumnsCollapsible", true));
+        var cut = RenderClassicBoard(p => p.Add(x => x.ColumnsCollapsible, true));
 
         foreach (var column in Columns)
         {
@@ -128,12 +125,12 @@ public class TmKanbanBoardCollapseTests : LocalizationTestBase
         cut.FindAll(".tm-kanban__column-toggle").Count.Should().Be(Columns.Count);
     }
 
-    [Fact(Skip = RedPhase2)]
+    [Fact]
     public void ColumnsCollapsible_True_RendersToggleEvenWithCustomColumnHeaderTemplate()
     {
         var cut = RenderClassicBoard(p =>
         {
-            p.TryAdd("ColumnsCollapsible", true);
+            p.Add(x => x.ColumnsCollapsible, true);
             p.Add(x => x.ColumnHeaderTemplate, col => (RenderFragment)(b =>
             {
                 b.OpenElement(0, "span");
@@ -149,10 +146,10 @@ public class TmKanbanBoardCollapseTests : LocalizationTestBase
         cut.FindAll("[data-testid='column-toggle-todo']").Count.Should().Be(1);
     }
 
-    [Fact(Skip = RedPhase2)]
+    [Fact]
     public void ColumnsCollapsible_True_RendersToggleInSwimlaneColumnHeaders()
     {
-        var cut = RenderSwimlaneBoard(p => p.TryAdd("ColumnsCollapsible", true));
+        var cut = RenderSwimlaneBoard(p => p.Add(x => x.ColumnsCollapsible, true));
 
         foreach (var column in Columns)
         {
@@ -181,7 +178,7 @@ public class TmKanbanBoardCollapseTests : LocalizationTestBase
     [Fact]
     public void ColumnsCollapsible_ExplicitFalse_RendersNoToggle()
     {
-        var cut = RenderClassicBoard(p => p.TryAdd("ColumnsCollapsible", false));
+        var cut = RenderClassicBoard(p => p.Add(x => x.ColumnsCollapsible, false));
 
         cut.FindAll(".tm-kanban__column-toggle").Should().BeEmpty();
         cut.FindAll("[data-testid^='column-toggle-']").Should().BeEmpty();
@@ -192,10 +189,10 @@ public class TmKanbanBoardCollapseTests : LocalizationTestBase
     // Subtask 3 — clicking the toggle collapses the column (D1)
     // ══════════════════════════════════════════════════════════════════════
 
-    [Fact(Skip = RedPhase2)]
+    [Fact]
     public void Toggle_CollapsesColumn_HidesCards_KeepsTitleCountAndSummary_AndFlipsAriaExpanded()
     {
-        var cut = RenderClassicBoard(p => p.TryAdd("ColumnsCollapsible", true));
+        var cut = RenderClassicBoard(p => p.Add(x => x.ColumnsCollapsible, true));
 
         cut.Find("[data-testid='board-column-todo'] .tm-kanban__cards").Should().NotBeNull();
 
@@ -228,13 +225,13 @@ public class TmKanbanBoardCollapseTests : LocalizationTestBase
     // Subtask 4 — a collapsed column renders no virtualizer
     // ══════════════════════════════════════════════════════════════════════
 
-    [Fact(Skip = RedPhase2)]
+    [Fact]
     public void CollapsedColumn_WithVirtualizeCards_RendersNoVirtualizedBody()
     {
         var many = Enumerable.Range(1, 60).Select(i => new KanbanTask(i, $"Task {i}", "todo")).ToList();
         var cut = RenderClassicBoard(p =>
         {
-            p.TryAdd("ColumnsCollapsible", true);
+            p.Add(x => x.ColumnsCollapsible, true);
             p.Add(x => x.VirtualizeCards, true);
         }, items: many);
 
@@ -251,13 +248,13 @@ public class TmKanbanBoardCollapseTests : LocalizationTestBase
     // Subtask 5 — D2: a collapsed column narrows header AND every lane cell
     // ══════════════════════════════════════════════════════════════════════
 
-    [Fact(Skip = RedPhase2)]
+    [Fact]
     public void CollapsedColumn_InSwimlaneLayout_NarrowsColumnHeaderAndEveryLaneCell_KeepingCellsDroppable()
     {
         KanbanMoveEvent<LaneTask>? moved = null;
         var cut = RenderSwimlaneBoard(p =>
         {
-            p.TryAdd("ColumnsCollapsible", true);
+            p.Add(x => x.ColumnsCollapsible, true);
             p.Add(x => x.OnItemMoved, e => moved = e);
         });
 
@@ -290,13 +287,13 @@ public class TmKanbanBoardCollapseTests : LocalizationTestBase
     // Subtask 6 — a drop on the collapsed classic column appends
     // ══════════════════════════════════════════════════════════════════════
 
-    [Fact(Skip = RedPhase2)]
+    [Fact]
     public void Drop_OnCollapsedClassicColumn_FiresOnItemMoved_AppendingToTheEnd()
     {
         KanbanMoveEvent<KanbanTask>? moved = null;
         var cut = RenderClassicBoard(p =>
         {
-            p.TryAdd("ColumnsCollapsible", true);
+            p.Add(x => x.ColumnsCollapsible, true);
             p.Add(x => x.OnItemMoved, e => moved = e);
         });
 
@@ -317,13 +314,13 @@ public class TmKanbanBoardCollapseTests : LocalizationTestBase
     // Subtask 7 — a drop on the narrowed lane cell appends for (column, lane)
     // ══════════════════════════════════════════════════════════════════════
 
-    [Fact(Skip = RedPhase2)]
+    [Fact]
     public void Drop_OnNarrowedLaneCellOfCollapsedColumn_FiresOnItemMoved_WithColumnLaneAndAppend()
     {
         KanbanMoveEvent<LaneTask>? moved = null;
         var cut = RenderSwimlaneBoard(p =>
         {
-            p.TryAdd("ColumnsCollapsible", true);
+            p.Add(x => x.ColumnsCollapsible, true);
             p.Add(x => x.OnItemMoved, e => moved = e);
         });
 
@@ -414,10 +411,10 @@ public class TmKanbanBoardCollapseTests : LocalizationTestBase
     // Subtask 9 — D4: the collapsed zone under the drag is highlighted
     // ══════════════════════════════════════════════════════════════════════
 
-    [Fact(Skip = RedPhase2)]
+    [Fact]
     public void Dragover_CollapsedColumn_AddsDropTargetClass_AndDragendRemovesIt()
     {
-        var cut = RenderClassicBoard(p => p.TryAdd("ColumnsCollapsible", true));
+        var cut = RenderClassicBoard(p => p.Add(x => x.ColumnsCollapsible, true));
 
         cut.Find("[data-testid='column-toggle-todo']").Click();
 
@@ -458,13 +455,13 @@ public class TmKanbanBoardCollapseTests : LocalizationTestBase
     // Subtask 10 — D5/D7: two-way binding, host state wins
     // ══════════════════════════════════════════════════════════════════════
 
-    [Fact(Skip = RedPhase2)]
+    [Fact]
     public void CollapsedColumns_HostSetWins_ColumnStartsCollapsedWithoutAClick()
     {
         var cut = RenderClassicBoard(p =>
         {
-            p.TryAdd("ColumnsCollapsible", true);
-            p.TryAdd("CollapsedColumns", (IReadOnlyCollection<string>)new[] { "doing" });
+            p.Add(x => x.ColumnsCollapsible, true);
+            p.Add(x => x.CollapsedColumns, (IReadOnlyCollection<string>)new[] { "doing" });
         });
 
         cut.Find("[data-testid='board-column-doing']").ClassList.Should().Contain("tm-kanban__column--collapsed");
@@ -474,15 +471,15 @@ public class TmKanbanBoardCollapseTests : LocalizationTestBase
         cut.Find("[data-testid='column-toggle-doing']").GetAttribute("aria-expanded").Should().Be("false");
     }
 
-    [Fact(Skip = RedPhase2)]
+    [Fact]
     public void Toggle_RaisesCollapsedColumnsChanged_WithTheNewSet_AndHostStateKeepsTheView()
     {
         IReadOnlyCollection<string>? captured = null;
         var cut = RenderClassicBoard(p =>
         {
-            p.TryAdd("ColumnsCollapsible", true);
-            p.TryAdd("CollapsedColumns", (IReadOnlyCollection<string>)Array.Empty<string>());
-            p.TryAdd("CollapsedColumnsChanged",
+            p.Add(x => x.ColumnsCollapsible, true);
+            p.Add(x => x.CollapsedColumns, (IReadOnlyCollection<string>)Array.Empty<string>());
+            p.Add(x => x.CollapsedColumnsChanged,
                 EventCallback.Factory.Create<IReadOnlyCollection<string>>(this, set => captured = set));
         });
 
@@ -499,10 +496,10 @@ public class TmKanbanBoardCollapseTests : LocalizationTestBase
     [Fact(Skip = RedPhase3)]
     public void CollapsedLanes_HostSetWins_AndNoValueLaneIsAddressedByNoSwimlaneId()
     {
-        var noLaneId = NoSwimlaneId();
+        var noLaneId = TmKanbanBoard<LaneTask>.NoSwimlaneId;
         noLaneId.Should().NotBeNullOrWhiteSpace();
 
-        var cut = RenderSwimlaneBoard(p => p.TryAdd("CollapsedLanes", (IReadOnlyCollection<string>)new[] { noLaneId }));
+        var cut = RenderSwimlaneBoard(p => p.Add(x => x.CollapsedLanes, (IReadOnlyCollection<string>)new[] { noLaneId }));
 
         cut.FindAll("[data-testid='swimlane-none'] .tm-kanban__swimlane-slots").Count.Should().Be(1);
         cut.FindAll("[data-testid='lane-slot-todo-none']").Count.Should().Be(1);
@@ -512,12 +509,12 @@ public class TmKanbanBoardCollapseTests : LocalizationTestBase
     [Fact(Skip = RedPhase3)]
     public void ToggleLane_RaisesCollapsedLanesChanged_KeepingTheNoValueSentinel()
     {
-        var noLaneId = NoSwimlaneId();
+        var noLaneId = TmKanbanBoard<LaneTask>.NoSwimlaneId;
         IReadOnlyCollection<string>? captured = null;
         var cut = RenderSwimlaneBoard(p =>
         {
-            p.TryAdd("CollapsedLanes", (IReadOnlyCollection<string>)new[] { noLaneId });
-            p.TryAdd("CollapsedLanesChanged",
+            p.Add(x => x.CollapsedLanes, (IReadOnlyCollection<string>)new[] { noLaneId });
+            p.Add(x => x.CollapsedLanesChanged,
                 EventCallback.Factory.Create<IReadOnlyCollection<string>>(this, set => captured = set));
         });
 
@@ -527,7 +524,7 @@ public class TmKanbanBoardCollapseTests : LocalizationTestBase
         captured.Should().BeEquivalentTo(new[] { noLaneId, "Alice" });
     }
 
-    [Fact(Skip = RedPhase2)]
+    [Fact]
     public void NoSwimlaneId_IsAPublicConstantOnTheBoard()
     {
         var field = typeof(TmKanbanBoard<LaneTask>)
@@ -545,13 +542,13 @@ public class TmKanbanBoardCollapseTests : LocalizationTestBase
     // Review (phase fze-1): this covers the classic layout. The swimlane layout has its own D6
     // contract — the lane toggle keeps working and the slots still render while the drop stays inert;
     // see Disabled_SwimlaneLayout_LaneToggleStillCollapsesAndRendersSlots_ButDropZonesStayInert.
-    [Fact(Skip = RedPhase2)]
+    [Fact]
     public void Disabled_ToggleStillCollapses_ButCollapsedDropZoneStaysInert()
     {
         KanbanMoveEvent<KanbanTask>? moved = null;
         var cut = RenderClassicBoard(p =>
         {
-            p.TryAdd("ColumnsCollapsible", true);
+            p.Add(x => x.ColumnsCollapsible, true);
             p.Add(x => x.Disabled, true);
             p.Add(x => x.OnItemMoved, e => moved = e);
         });
@@ -575,7 +572,7 @@ public class TmKanbanBoardCollapseTests : LocalizationTestBase
     // Subtask 12 (review) — D7: the public surface is pinned by reflection
     // ══════════════════════════════════════════════════════════════════════
 
-    [Fact(Skip = RedPhase2)]
+    [Fact]
     public void D7_Parameters_AreDeclaredWithTheContractedTypesAndAreRealParameters()
     {
         var board = typeof(TmKanbanBoard<LaneTask>);
@@ -593,10 +590,10 @@ public class TmKanbanBoardCollapseTests : LocalizationTestBase
     // Subtask 13 (review) — the collapsed strip is a named group, not a bare div
     // ══════════════════════════════════════════════════════════════════════
 
-    [Fact(Skip = RedPhase2)]
+    [Fact]
     public void CollapsedColumn_StripCarriesRoleGroup_AndTheSummaryLabel()
     {
-        var cut = RenderClassicBoard(p => p.TryAdd("ColumnsCollapsible", true));
+        var cut = RenderClassicBoard(p => p.Add(x => x.ColumnsCollapsible, true));
 
         // an expanded column is an anonymous region: no role, no summary label
         var expanded = cut.Find("[data-testid='board-column-todo']");
@@ -617,11 +614,11 @@ public class TmKanbanBoardCollapseTests : LocalizationTestBase
     // Subtask 14 (review) — the exact toggle labels in BOTH layouts
     // ══════════════════════════════════════════════════════════════════════
 
-    [Fact(Skip = RedPhase2)]
+    [Fact]
     public void ColumnToggle_UsesTheExactCollapseAndExpandLabels_AndFlipsAriaExpanded_InBothLayouts()
     {
         // classic layout
-        var classic = RenderClassicBoard(p => p.TryAdd("ColumnsCollapsible", true));
+        var classic = RenderClassicBoard(p => p.Add(x => x.ColumnsCollapsible, true));
         var classicToggle = classic.Find("[data-testid='column-toggle-todo']");
         classicToggle.GetAttribute("aria-label").Should().Be("Collapse column To Do");
         classicToggle.GetAttribute("aria-expanded").Should().Be("true");
@@ -633,7 +630,7 @@ public class TmKanbanBoardCollapseTests : LocalizationTestBase
         classicToggle.GetAttribute("aria-expanded").Should().Be("false");
 
         // swimlane layout: the same toggle lives in the column header row
-        var swimlane = RenderSwimlaneBoard(p => p.TryAdd("ColumnsCollapsible", true));
+        var swimlane = RenderSwimlaneBoard(p => p.Add(x => x.ColumnsCollapsible, true));
         var colheadToggle = swimlane.Find("[data-testid='colhead-todo'] [data-testid='column-toggle-todo']");
         colheadToggle.GetAttribute("aria-label").Should().Be("Collapse column To Do");
         colheadToggle.GetAttribute("aria-expanded").Should().Be("true");
@@ -651,7 +648,7 @@ public class TmKanbanBoardCollapseTests : LocalizationTestBase
     // Subtask 15 (review) — WIP state survives the collapse
     // ══════════════════════════════════════════════════════════════════════
 
-    [Fact(Skip = RedPhase2)]
+    [Fact]
     public void CollapsedColumn_KeepsTheWipBadge_AndTheOverLimitClass()
     {
         // 2 cards in "todo" against a MaxItems of 1 → the column is over its WIP limit.
@@ -661,7 +658,7 @@ public class TmKanbanBoardCollapseTests : LocalizationTestBase
             new("doing", "In Progress", "#f59e0b"),
             new("done", "Done", "#10b981"),
         };
-        var cut = RenderClassicBoard(p => p.TryAdd("ColumnsCollapsible", true), columns: wipColumns);
+        var cut = RenderClassicBoard(p => p.Add(x => x.ColumnsCollapsible, true), columns: wipColumns);
 
         var expanded = cut.Find("[data-testid='board-column-todo']");
         expanded.ClassList.Should().Contain("tm-kanban__column--over-limit");
@@ -713,7 +710,7 @@ public class TmKanbanBoardCollapseTests : LocalizationTestBase
         KanbanMoveEvent<LaneTask>? moved = null;
         var cut = RenderSwimlaneBoard(p =>
         {
-            p.TryAdd("ColumnsCollapsible", true);
+            p.Add(x => x.ColumnsCollapsible, true);
             p.Add(x => x.OnItemMoved, e => moved = e);
         });
 
@@ -743,10 +740,10 @@ public class TmKanbanBoardCollapseTests : LocalizationTestBase
     // Subtask 18 (review) — narrowed lane cells never show the insertion line
     // ══════════════════════════════════════════════════════════════════════
 
-    [Fact(Skip = RedPhase2)]
+    [Fact]
     public void Dragover_NarrowedLaneCellOfACollapsedColumn_AddsDropTargetClass_WithoutTheInsertionLine()
     {
-        var cut = RenderSwimlaneBoard(p => p.TryAdd("ColumnsCollapsible", true));
+        var cut = RenderSwimlaneBoard(p => p.Add(x => x.ColumnsCollapsible, true));
 
         cut.Find("[data-testid='column-toggle-todo']").Click();
 
@@ -804,15 +801,15 @@ public class TmKanbanBoardCollapseTests : LocalizationTestBase
     // Subtask 20 (review) — host ownership round-trips, uncontrolled stays internal
     // ══════════════════════════════════════════════════════════════════════
 
-    [Fact(Skip = RedPhase2)]
+    [Fact]
     public void CollapsedColumns_HostRoundTrip_AcrossReRender_KeepsTheColumnCollapsed()
     {
         IReadOnlyCollection<string>? captured = null;
         var cut = RenderClassicBoard(p =>
         {
-            p.TryAdd("ColumnsCollapsible", true);
-            p.TryAdd("CollapsedColumns", (IReadOnlyCollection<string>)Array.Empty<string>());
-            p.TryAdd("CollapsedColumnsChanged",
+            p.Add(x => x.ColumnsCollapsible, true);
+            p.Add(x => x.CollapsedColumns, (IReadOnlyCollection<string>)Array.Empty<string>());
+            p.Add(x => x.CollapsedColumnsChanged,
                 EventCallback.Factory.Create<IReadOnlyCollection<string>>(this, set => captured = set));
         });
 
@@ -820,7 +817,7 @@ public class TmKanbanBoardCollapseTests : LocalizationTestBase
         captured.Should().BeEquivalentTo(new[] { "todo" });
 
         // The host applies the callback value through a re-render — the ordinary @bind-… round-trip.
-        cut.Render(p => p.TryAdd("CollapsedColumns", captured!));
+        cut.Render(p => p.Add(x => x.CollapsedColumns, captured!));
 
         cut.Find("[data-testid='board-column-todo']").ClassList
             .Should().Contain("tm-kanban__column--collapsed");
@@ -831,12 +828,12 @@ public class TmKanbanBoardCollapseTests : LocalizationTestBase
     [Fact(Skip = RedPhase3)]
     public void CollapsedLanes_HostRoundTrip_AcrossReRender_KeepsTheNoValueLaneCollapsed()
     {
-        var noLaneId = NoSwimlaneId();
+        var noLaneId = TmKanbanBoard<LaneTask>.NoSwimlaneId;
         IReadOnlyCollection<string>? captured = null;
         var cut = RenderSwimlaneBoard(p =>
         {
-            p.TryAdd("CollapsedLanes", (IReadOnlyCollection<string>)Array.Empty<string>());
-            p.TryAdd("CollapsedLanesChanged",
+            p.Add(x => x.CollapsedLanes, (IReadOnlyCollection<string>)Array.Empty<string>());
+            p.Add(x => x.CollapsedLanesChanged,
                 EventCallback.Factory.Create<IReadOnlyCollection<string>>(this, set => captured = set));
         });
 
@@ -846,7 +843,7 @@ public class TmKanbanBoardCollapseTests : LocalizationTestBase
         cut.FindAll("[data-testid='swimlane-none'] .tm-kanban__swimlane-body").Count.Should()
             .Be(1, "the unchanged host set wins, so the lane stays expanded until the callback lands");
 
-        cut.Render(p => p.TryAdd("CollapsedLanes", captured!));
+        cut.Render(p => p.Add(x => x.CollapsedLanes, captured!));
 
         cut.Find("[data-testid='swimlane-none']").ClassList
             .Should().Contain("tm-kanban__swimlane--collapsed");
@@ -856,15 +853,15 @@ public class TmKanbanBoardCollapseTests : LocalizationTestBase
         cut.FindAll("[data-testid='swimlane-Alice'] .tm-kanban__swimlane-body").Count.Should().Be(1);
     }
 
-    [Fact(Skip = RedPhase2)]
+    [Fact]
     public void UncontrolledBoard_ToggleRaisesCollapsedColumnsChanged_AndUpdatesItsOwnState()
     {
         var raised = new List<IReadOnlyCollection<string>>();
         var cut = RenderClassicBoard(p =>
         {
-            p.TryAdd("ColumnsCollapsible", true);
+            p.Add(x => x.ColumnsCollapsible, true);
             // no CollapsedColumns parameter → the board owns the set, the callback only observes it
-            p.TryAdd("CollapsedColumnsChanged",
+            p.Add(x => x.CollapsedColumnsChanged,
                 EventCallback.Factory.Create<IReadOnlyCollection<string>>(this, set => raised.Add(set)));
         });
 
@@ -888,10 +885,10 @@ public class TmKanbanBoardCollapseTests : LocalizationTestBase
     // Subtask 21 (review) — the toggle is a plain native button
     // ══════════════════════════════════════════════════════════════════════
 
-    [Fact(Skip = RedPhase2)]
+    [Fact]
     public void ColumnToggle_IsANativeButton_WithNoRoleOrTabindexOverride_InBothLayouts()
     {
-        var classic = RenderClassicBoard(p => p.TryAdd("ColumnsCollapsible", true));
+        var classic = RenderClassicBoard(p => p.Add(x => x.ColumnsCollapsible, true));
         var classicToggle = classic.Find("[data-testid='column-toggle-todo']");
         classicToggle.TagName.Should().Be("BUTTON");
         classicToggle.GetAttribute("type").Should().Be("button",
@@ -900,13 +897,131 @@ public class TmKanbanBoardCollapseTests : LocalizationTestBase
         classicToggle.HasAttribute("tabindex").Should().BeFalse("a native button is focusable as-is");
         classicToggle.GetAttribute("aria-expanded").Should().NotBeNull();
 
-        var swimlane = RenderSwimlaneBoard(p => p.TryAdd("ColumnsCollapsible", true));
+        var swimlane = RenderSwimlaneBoard(p => p.Add(x => x.ColumnsCollapsible, true));
         var colheadToggle = swimlane.Find("[data-testid='colhead-todo'] [data-testid='column-toggle-todo']");
         colheadToggle.TagName.Should().Be("BUTTON");
         colheadToggle.GetAttribute("type").Should().Be("button");
         colheadToggle.HasAttribute("role").Should().BeFalse();
         colheadToggle.HasAttribute("tabindex").Should().BeFalse();
         colheadToggle.GetAttribute("aria-expanded").Should().NotBeNull();
+    }
+
+    // ══════════════════════════════════════════════════════════════════════
+    // Subtask 22 (review fze-2) — the collapsed summary names the WIP limit
+    // ══════════════════════════════════════════════════════════════════════
+
+    [Fact]
+    public void CollapsedColumn_AriaLabel_AppendsTheWipLimit_AndTheOverLimitWord()
+    {
+        var wipColumns = new List<KanbanColumn>
+        {
+            new("todo", "To Do", "#3b82f6", 1),        // 2 cards against a limit of 1 → over limit
+            new("doing", "In Progress", "#f59e0b", 5), // 1 card → within the limit
+            new("done", "Done", "#10b981"),            // no MaxItems at all
+        };
+
+        var classic = RenderClassicBoard(p => p.Add(x => x.ColumnsCollapsible, true), columns: wipColumns);
+        classic.Find("[data-testid='column-toggle-todo']").Click();
+        classic.Find("[data-testid='column-toggle-doing']").Click();
+        classic.Find("[data-testid='column-toggle-done']").Click();
+
+        classic.Find("[data-testid='board-column-todo']").GetAttribute("aria-label")
+            .Should().Be("To Do, 2 cards, limit 1, over limit",
+                "the strip must not hide its WIP breach from assistive technology");
+        classic.Find("[data-testid='board-column-doing']").GetAttribute("aria-label")
+            .Should().Be("In Progress, 1 card, limit 5",
+                "the over-limit word appears only when the count exceeds the limit");
+        classic.Find("[data-testid='board-column-done']").GetAttribute("aria-label")
+            .Should().Be("Done, 1 card", "a column without MaxItems keeps the plain summary");
+
+        // The swimlane layout's sticky header cell exposes the same named group and the same summary.
+        var swimlane = RenderSwimlaneBoard(p => p.Add(x => x.ColumnsCollapsible, true), columns: wipColumns);
+        swimlane.Find("[data-testid='column-toggle-todo']").Click();
+
+        var colhead = swimlane.Find("[data-testid='colhead-todo']");
+        colhead.GetAttribute("role").Should().Be("group");
+        colhead.GetAttribute("aria-label").Should().Be("To Do, 3 cards, limit 1, over limit");
+    }
+
+    // ══════════════════════════════════════════════════════════════════════
+    // Subtask 23 (review fze-2) — the collapsed classic strip has a title tip
+    // ══════════════════════════════════════════════════════════════════════
+
+    [Fact]
+    public void CollapsedColumn_CarriesTheTitleTip_InBothLayouts()
+    {
+        var classic = RenderClassicBoard(p => p.Add(x => x.ColumnsCollapsible, true));
+        classic.Find("[data-testid='board-column-todo']").GetAttribute("title").Should().BeNull(
+            "an expanded column shows its title in the header, so no tooltip is needed");
+
+        classic.Find("[data-testid='column-toggle-todo']").Click();
+        classic.Find("[data-testid='board-column-todo']").GetAttribute("title").Should().Be("To Do",
+            "the vertical strip keeps the full column name as its title tip");
+
+        classic.Find("[data-testid='column-toggle-todo']").Click();
+        classic.Find("[data-testid='board-column-todo']").GetAttribute("title").Should().BeNull();
+
+        // The swimlane layout's header cell keeps the tip it already had.
+        var swimlane = RenderSwimlaneBoard(p => p.Add(x => x.ColumnsCollapsible, true));
+        swimlane.Find("[data-testid='column-toggle-todo']").Click();
+        swimlane.Find("[data-testid='colhead-todo']").GetAttribute("title").Should().Be("To Do");
+    }
+
+    // ══════════════════════════════════════════════════════════════════════
+    // Subtask 24 (review fze-2) — the collapsed header is a pointer-only expand target
+    // ══════════════════════════════════════════════════════════════════════
+
+    [Fact]
+    public void CollapsedColumnHeader_IsAPointerOnlyExpandTarget_WithTheNativeToggleAsItsKeyboardPath()
+    {
+        var cut = RenderClassicBoard(p => p.Add(x => x.ColumnsCollapsible, true));
+        cut.Find("[data-testid='column-toggle-todo']").Click();
+
+        var header = cut.Find("[data-testid='board-column-todo'] .tm-kanban__header");
+        header.HasAttribute("tabindex").Should().BeFalse("the pointer affordance never enters the tab order");
+        header.HasAttribute("role").Should().BeFalse("the header stays a plain container");
+        header.HasAttribute("aria-expanded").Should().BeFalse(
+            "the state lives on the native toggle, the keyboard path");
+
+        var act = () => header.KeyDown(new KeyboardEventArgs { Key = "Enter" });
+        act.Should().Throw<MissingEventHandlerException>(
+            "the header is pointer-only: there is no Enter/Space emulation to find");
+
+        header.Click();
+        cut.Find("[data-testid='board-column-todo']").ClassList.Should()
+            .NotContain("tm-kanban__column--collapsed", "clicking anywhere on the collapsed header expands it");
+        cut.Find("[data-testid='column-toggle-todo']").GetAttribute("aria-expanded").Should().Be("true");
+
+        // The toggle is the keyboard path: each activation toggles exactly once.
+        cut.Find("[data-testid='column-toggle-todo']").Click();
+        cut.Find("[data-testid='board-column-todo']").ClassList.Should()
+            .Contain("tm-kanban__column--collapsed");
+        cut.Find("[data-testid='column-toggle-todo']").Click();
+        cut.Find("[data-testid='board-column-todo']").ClassList.Should()
+            .NotContain("tm-kanban__column--collapsed");
+    }
+
+    // ══════════════════════════════════════════════════════════════════════
+    // Subtask 25 (review fze-2) — collapse state only applies to a collapsible board
+    // ══════════════════════════════════════════════════════════════════════
+
+    [Fact]
+    public void CollapsedColumns_HostSet_IsIgnoredWhileColumnsCollapsibleIsFalse()
+    {
+        var classic = RenderClassicBoard(p =>
+            p.Add(x => x.CollapsedColumns, (IReadOnlyCollection<string>)new[] { "todo" }));
+
+        classic.FindAll(".tm-kanban__column--collapsed").Should().BeEmpty(
+            "IsColumnCollapsed honours ColumnsCollapsible — the feature's state cannot outrun its switch");
+        classic.FindAll(".tm-kanban__column-toggle").Should().BeEmpty();
+        classic.FindAll("[data-testid='board-column-todo'] .tm-kanban__card").Count.Should().Be(2);
+        classic.Find("[data-testid='board-column-todo']").GetAttribute("aria-label").Should().BeNull();
+
+        var swimlane = RenderSwimlaneBoard(p =>
+            p.Add(x => x.CollapsedColumns, (IReadOnlyCollection<string>)new[] { "todo" }));
+
+        swimlane.FindAll(".tm-kanban__column--collapsed").Should().BeEmpty();
+        swimlane.FindAll("[data-testid='cell-todo-Alice'] .tm-kanban__card").Count.Should().Be(1);
     }
 
     // ══════════════════════════════════════════════════════════════════════
@@ -941,10 +1056,11 @@ public class TmKanbanBoardCollapseTests : LocalizationTestBase
         });
 
     private IRenderedComponent<TmKanbanBoard<LaneTask>> RenderSwimlaneBoard(
-        Action<ComponentParameterCollectionBuilder<TmKanbanBoard<LaneTask>>>? extra = null)
+        Action<ComponentParameterCollectionBuilder<TmKanbanBoard<LaneTask>>>? extra = null,
+        IReadOnlyList<KanbanColumn>? columns = null)
         => Render<TmKanbanBoard<LaneTask>>(p =>
         {
-            p.Add(x => x.Columns, Columns)
+            p.Add(x => x.Columns, columns ?? Columns)
              .Add(x => x.Items, LaneTasks)
              .Add(x => x.ColumnSelector, t => t.Status)
              .Add(x => x.CardTemplate, LaneCard)
@@ -967,14 +1083,4 @@ public class TmKanbanBoardCollapseTests : LocalizationTestBase
             .NotBeNull($"{name} must be a [Parameter], or a host binding silently does nothing");
     }
 
-    /// <summary>
-    /// Resolves D5's public constant. Phase 2 declares <c>public const string NoSwimlaneId</c> on
-    /// <see cref="TmKanbanBoard{TItem}"/>; until then this accessor reports the missing API instead of
-    /// breaking the compile of the RED suite. The typed reference replaces it when the skips come off.
-    /// </summary>
-    private static string NoSwimlaneId()
-        => typeof(TmKanbanBoard<LaneTask>)
-               .GetField("NoSwimlaneId", BindingFlags.Public | BindingFlags.Static)?.GetValue(null) as string
-           ?? throw new InvalidOperationException(
-               "TmKanbanBoard<TItem>.NoSwimlaneId is not implemented yet (plan a98e4a71, phase 2, D5).");
 }

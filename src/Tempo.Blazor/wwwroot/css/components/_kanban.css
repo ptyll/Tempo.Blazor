@@ -3,6 +3,11 @@
    ═══════════════════════════════════════════════════════════════ */
 
 .tm-kanban {
+    /* Host knobs (plan a98e4a71): width of a collapsed column strip and the height its vertical title
+       gets in the swimlane layout's sticky header row (that row stretches to it). */
+    --tm-kanban-collapsed-width: 48px;
+    --tm-kanban-collapsed-header-height: 10rem;
+
     display: flex;
     gap: var(--tm-space-4, 1rem);
     overflow-x: auto;
@@ -68,6 +73,67 @@
     color: var(--tm-text-tertiary);
 }
 
+/* ── Collapse toggles (plan a98e4a71; review fze-2) ──
+
+   Both toggles are the same control: a 24×24 chevron button (WCAG 2.5.8's minimum target), growing to
+   the shared 44px touch target on a coarse pointer, with a token-only hover. */
+
+.tm-kanban__column-toggle,
+.tm-kanban__swimlane-toggle {
+    width: var(--tm-space-6);
+    height: var(--tm-space-6);
+    padding: 0;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--tm-text-secondary);
+    border-radius: var(--tm-radius-sm);
+    flex-shrink: 0;
+    transition: background-color var(--tm-transition-fast), color var(--tm-transition-fast);
+}
+
+.tm-kanban__column-toggle:hover,
+.tm-kanban__swimlane-toggle:hover {
+    background-color: var(--tm-color-primary-subtle);
+    color: var(--tm-text-primary);
+}
+
+@media (pointer: coarse) {
+    .tm-kanban__column-toggle,
+    .tm-kanban__swimlane-toggle {
+        min-width: var(--tm-touch-target);
+        min-height: var(--tm-touch-target);
+    }
+}
+
+.tm-kanban__column-toggle:focus-visible,
+.tm-kanban__swimlane-toggle:focus-visible {
+    outline: 2px solid transparent;
+    box-shadow: var(--tm-focus-ring);
+}
+
+/* One chevron for both toggles: pointing right when collapsed, down when expanded. The state is read
+   from aria-expanded — the same attribute assistive technology announces. */
+.tm-kanban__swimlane-toggle::before,
+.tm-kanban__column-toggle::before {
+    content: "";
+    width: 0;
+    height: 0;
+    border-left: 5px solid currentColor;
+    border-top: 4px solid transparent;
+    border-bottom: 4px solid transparent;
+    transform: rotate(90deg);
+    transition: transform var(--tm-transition-fast);
+}
+
+.tm-kanban__swimlane-toggle[aria-expanded="false"]::before,
+.tm-kanban__column-toggle[aria-expanded="false"]::before {
+    transform: rotate(0deg);
+}
+
 /* ── Cards container ── */
 
 .tm-kanban__cards {
@@ -121,6 +187,7 @@
 
 .tm-kanban__column-headers {
     display: flex;
+    align-items: stretch;
     gap: var(--tm-space-4, 1rem);
     position: sticky;
     top: 0;
@@ -131,6 +198,15 @@
     max-height: none;
     background-color: transparent;
     border: none;
+}
+
+/* A header-only column has no border or background of its own (it floats above its lanes), so the
+   over-limit tint has to land on its header — otherwise a WIP breach would be invisible there, in the
+   full-width header and on the collapsed strip alike. */
+.tm-kanban__column--header-only.tm-kanban__column--over-limit .tm-kanban__header {
+    background-color: var(--tm-color-danger-subtle);
+    border-radius: var(--tm-radius-md);
+    box-shadow: inset 0 0 0 1px var(--tm-color-danger-soft-border);
 }
 
 .tm-kanban__swimlane {
@@ -150,35 +226,6 @@
     border-bottom: 1px solid var(--tm-border-color);
     position: sticky;
     left: 0;
-}
-
-.tm-kanban__swimlane-toggle {
-    width: 20px;
-    height: 20px;
-    padding: 0;
-    border: none;
-    background: transparent;
-    cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    color: var(--tm-text-secondary);
-    flex-shrink: 0;
-}
-
-.tm-kanban__swimlane-toggle::before {
-    content: "";
-    width: 0;
-    height: 0;
-    border-left: 5px solid currentColor;
-    border-top: 4px solid transparent;
-    border-bottom: 4px solid transparent;
-    transform: rotate(90deg);
-    transition: transform 0.15s ease;
-}
-
-.tm-kanban__swimlane--collapsed .tm-kanban__swimlane-toggle::before {
-    transform: rotate(0deg);
 }
 
 .tm-kanban__swimlane-color {
@@ -216,6 +263,59 @@
     max-height: none;
     min-height: 60px;
     background-color: var(--tm-bg-muted);
+}
+
+/* ── Collapsed column (plan a98e4a71, D1/D2) ──
+
+   A collapsed column becomes a narrow strip: the header turns vertical (title, count, WIP badge) and
+   the card body is not rendered at all. The same modifier narrows the sticky header cell AND every
+   lane cell of the swimlane layout, so the column grid stays aligned. The strip is still a drop zone. */
+
+.tm-kanban__column--collapsed {
+    flex: 0 0 var(--tm-kanban-collapsed-width);
+    min-width: var(--tm-kanban-collapsed-width);
+    max-width: var(--tm-kanban-collapsed-width);
+}
+
+.tm-kanban__column--collapsed .tm-kanban__header {
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    gap: var(--tm-space-2);
+    padding: var(--tm-space-2) var(--tm-space-1);
+    border-bottom: none;
+    height: 100%;
+    min-height: 0;
+    /* Clicking anywhere on the collapsed header expands the column (the toggle is the keyboard path). */
+    cursor: pointer;
+}
+
+.tm-kanban__column--collapsed .tm-kanban__header-title {
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+    flex: 1 1 auto;
+    min-height: 0;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    text-align: center;
+}
+
+/* The swimlane layout's sticky header row renders the SAME strip as the classic column: the vertical
+   title, the colour dot, the count and the WIP badge stack in the 48px column. Its vertical title needs
+   a height, so the header-only cell gets one and the sticky row (align-items: stretch) grows with it. */
+.tm-kanban__column--header-only.tm-kanban__column--collapsed .tm-kanban__header {
+    min-height: var(--tm-kanban-collapsed-header-height);
+}
+
+/* D4: the zone under the drag reports itself. Outline only — a narrowed zone has no room for the
+   horizontal insertion line, and the colour pair clears 3:1 in both themes (primary on muted). */
+.tm-kanban__column--collapsed.tm-kanban__column--drop-target {
+    border-color: var(--tm-color-primary);
+    outline: 2px solid var(--tm-color-primary);
+    outline-offset: -2px;
+    background-color: var(--tm-color-primary-subtle);
 }
 
 /* ── Drop indicator (in-column reorder / drop position) ── */
@@ -274,7 +374,16 @@
         animation: none;
     }
 
+    .tm-kanban__swimlane-toggle,
+    .tm-kanban__column-toggle {
+        transition: none;
+    }
+
     .tm-kanban__swimlane-toggle::before {
+        transition: none;
+    }
+
+    .tm-kanban__column-toggle::before {
         transition: none;
     }
 }

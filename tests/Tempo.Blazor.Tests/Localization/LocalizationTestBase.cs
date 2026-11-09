@@ -1409,6 +1409,8 @@ public abstract class LocalizationTestBase : BunitContext
         // {0} (Loc.Plural always formats the count there) and the column title in {1}.
         ["TmKanban_CollapseColumn"] = "Collapse column {0}",
         ["TmKanban_ExpandColumn"] = "Expand column {0}",
+        ["TmKanban_CollapsedColumnWip"] = "limit {0}",
+        ["TmKanban_CollapsedColumnOverLimit"] = "over limit",
         ["TmKanban_CollapsedColumnSummary_One"] = "{1}, {0} card",
         ["TmKanban_CollapsedColumnSummary_Other"] = "{1}, {0} cards",
 
