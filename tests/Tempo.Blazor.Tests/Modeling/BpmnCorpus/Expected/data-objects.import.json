@@ -1,0 +1,262 @@
+{
+  "Models": [
+    {
+      "Id": "Process_Data",
+      "Title": "Data handling",
+      "Notation": "bpmn2",
+      "SupportedNotations": [
+        "bpmn2"
+      ],
+      "Elements": [
+        {
+          "Id": "StartEvent_Data",
+          "SourceId": "StartEvent_Data",
+          "SourceType": "startEvent",
+          "SourcePath": "/definitions[@id=\u0027Definitions_Data\u0027]/process[@id=\u0027Process_Data\u0027]/startEvent[@id=\u0027StartEvent_Data\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "StartEvent",
+          "Name": "Start",
+          "ParentId": "",
+          "Description": "",
+          "Properties": {},
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "Task_Check",
+          "SourceId": "Task_Check",
+          "SourceType": "task",
+          "SourcePath": "/definitions[@id=\u0027Definitions_Data\u0027]/process[@id=\u0027Process_Data\u0027]/task[@id=\u0027Task_Check\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "Task",
+          "Name": "Check stock",
+          "ParentId": "",
+          "Description": "",
+          "Properties": {},
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "Task_Order",
+          "SourceId": "Task_Order",
+          "SourceType": "task",
+          "SourcePath": "/definitions[@id=\u0027Definitions_Data\u0027]/process[@id=\u0027Process_Data\u0027]/task[@id=\u0027Task_Order\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "Task",
+          "Name": "Order goods",
+          "ParentId": "",
+          "Description": "",
+          "Properties": {},
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "EndEvent_Data",
+          "SourceId": "EndEvent_Data",
+          "SourceType": "endEvent",
+          "SourcePath": "/definitions[@id=\u0027Definitions_Data\u0027]/process[@id=\u0027Process_Data\u0027]/endEvent[@id=\u0027EndEvent_Data\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "EndEvent",
+          "Name": "Done",
+          "ParentId": "",
+          "Description": "",
+          "Properties": {},
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "DataObjectRef_Stock",
+          "SourceId": "DataObjectRef_Stock",
+          "SourceType": "dataObjectReference",
+          "SourcePath": "/definitions[@id=\u0027Definitions_Data\u0027]/process[@id=\u0027Process_Data\u0027]/dataObjectReference[@id=\u0027DataObjectRef_Stock\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "DataObject",
+          "Name": "Stock level",
+          "ParentId": "",
+          "Description": "",
+          "Properties": {
+            "dataObjectRef": "DataObject_Stock",
+            "isCollection": false
+          },
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "DataStoreRef_Catalog",
+          "SourceId": "DataStoreRef_Catalog",
+          "SourceType": "dataStoreReference",
+          "SourcePath": "/definitions[@id=\u0027Definitions_Data\u0027]/process[@id=\u0027Process_Data\u0027]/dataStoreReference[@id=\u0027DataStoreRef_Catalog\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "DataStore",
+          "Name": "Product catalog",
+          "ParentId": "",
+          "Description": "",
+          "Properties": {
+            "dataStoreRef": "DataStore_Catalog",
+            "dataStoreName": "Product catalog"
+          },
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "DataObject_Unused",
+          "SourceId": "DataObject_Unused",
+          "SourceType": "dataObject",
+          "SourcePath": "/definitions[@id=\u0027Definitions_Data\u0027]/process[@id=\u0027Process_Data\u0027]/dataObject[@id=\u0027DataObject_Unused\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "DataObject",
+          "Name": "Unreferenced list",
+          "ParentId": "",
+          "Description": "",
+          "Properties": {
+            "bpmn:isCollection": "true",
+            "isCollection": true
+          },
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        }
+      ],
+      "Relationships": [
+        {
+          "Id": "DataOut_1",
+          "SourceId": "DataOut_1",
+          "SourceType": "dataOutputAssociation",
+          "SourceElementId": "Task_Check",
+          "TargetElementId": "DataObjectRef_Stock",
+          "RelationshipType": "DataOutputAssociation",
+          "Name": "",
+          "Properties": {
+            "assignments": [
+              {
+                "from": "checkedStock",
+                "to": "stockLevel"
+              }
+            ]
+          },
+          "Tags": []
+        },
+        {
+          "Id": "DataIn_1",
+          "SourceId": "DataIn_1",
+          "SourceType": "dataInputAssociation",
+          "SourceElementId": "DataObjectRef_Stock",
+          "TargetElementId": "Task_Order",
+          "RelationshipType": "DataInputAssociation",
+          "Name": "",
+          "Properties": {},
+          "Tags": []
+        },
+        {
+          "Id": "DataIn_2",
+          "SourceId": "DataIn_2",
+          "SourceType": "dataInputAssociation",
+          "SourceElementId": "DataStoreRef_Catalog",
+          "TargetElementId": "Task_Order",
+          "RelationshipType": "DataInputAssociation",
+          "Name": "",
+          "Properties": {},
+          "Tags": []
+        },
+        {
+          "Id": "Flow_D1",
+          "SourceId": "Flow_D1",
+          "SourceType": "sequenceFlow",
+          "SourceElementId": "StartEvent_Data",
+          "TargetElementId": "Task_Check",
+          "RelationshipType": "SequenceFlow",
+          "Name": "",
+          "Properties": {},
+          "Tags": []
+        },
+        {
+          "Id": "Flow_D2",
+          "SourceId": "Flow_D2",
+          "SourceType": "sequenceFlow",
+          "SourceElementId": "Task_Check",
+          "TargetElementId": "Task_Order",
+          "RelationshipType": "SequenceFlow",
+          "Name": "",
+          "Properties": {},
+          "Tags": []
+        },
+        {
+          "Id": "Flow_D3",
+          "SourceId": "Flow_D3",
+          "SourceType": "sequenceFlow",
+          "SourceElementId": "Task_Order",
+          "TargetElementId": "EndEvent_Data",
+          "RelationshipType": "SequenceFlow",
+          "Name": "",
+          "Properties": {},
+          "Tags": []
+        }
+      ],
+      "Views": [],
+      "Issues": [
+        {
+          "Id": "bpmn-import-loss-0001",
+          "Severity": "Info",
+          "Category": "bpmn-import",
+          "SourceElementId": "DataObject_Unused",
+          "SourceRelationshipId": "",
+          "Message": "dataObject: Unreferenced dataObject imported as a standalone DataObject element.",
+          "SuggestedFix": ""
+        }
+      ],
+      "Metadata": {
+        "SourceSystem": "bpmn-xml",
+        "SourceVersion": "http://tempo.example/bpmn/corpus",
+        "LoadedAt": "1970-01-01T00:00:00+00:00",
+        "IsFresh": true
+      },
+      "Properties": {}
+    }
+  ],
+  "Losses": [
+    {
+      "ElementId": "DataObject_Unused",
+      "XmlPath": "/definitions[@id=\u0027Definitions_Data\u0027]/process[@id=\u0027Process_Data\u0027]/dataObject[@id=\u0027DataObject_Unused\u0027]",
+      "Construct": "dataObject",
+      "Reason": "Unreferenced dataObject imported as a standalone DataObject element.",
+      "Severity": 2
+    }
+  ],
+  "Warnings": [],
+  "HasErrors": false,
+  "ErrorMessage": null
+}

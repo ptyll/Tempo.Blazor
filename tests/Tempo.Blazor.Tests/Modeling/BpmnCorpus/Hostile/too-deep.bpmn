@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
+             id="Definitions_Deep"
+             name="Depth probe"
+             targetNamespace="http://tempo.example/bpmn/hostile">
+  <process id="Process_Deep" name="Deep" isExecutable="false">
+  <subProcess id="Sub_1" name="Depth 1">
+    <subProcess id="Sub_2" name="Depth 2">
+      <subProcess id="Sub_3" name="Depth 3">
+        <subProcess id="Sub_4" name="Depth 4">
+          <subProcess id="Sub_5" name="Depth 5">
+            <subProcess id="Sub_6" name="Depth 6">
+              <subProcess id="Sub_7" name="Depth 7">
+                <subProcess id="Sub_8" name="Depth 8">
+                  <subProcess id="Sub_9" name="Depth 9">
+                    <subProcess id="Sub_10" name="Depth 10">
+                      <subProcess id="Sub_11" name="Depth 11">
+                        <subProcess id="Sub_12" name="Depth 12">
+                          <subProcess id="Sub_13" name="Depth 13">
+                            <subProcess id="Sub_14" name="Depth 14">
+                              <subProcess id="Sub_15" name="Depth 15">
+                                <subProcess id="Sub_16" name="Depth 16">
+                                  <subProcess id="Sub_17" name="Depth 17">
+                                    <subProcess id="Sub_18" name="Depth 18">
+                                      <subProcess id="Sub_19" name="Depth 19">
+                                        <subProcess id="Sub_20" name="Depth 20">
+                                          <subProcess id="Sub_21" name="Depth 21">
+                                            <subProcess id="Sub_22" name="Depth 22">
+                                              <subProcess id="Sub_23" name="Depth 23">
+                                                <subProcess id="Sub_24" name="Depth 24">
+                                                  <subProcess id="Sub_25" name="Depth 25">
+                                                    <subProcess id="Sub_26" name="Depth 26">
+                                                      <subProcess id="Sub_27" name="Depth 27">
+                                                        <subProcess id="Sub_28" name="Depth 28">
+                                                          <subProcess id="Sub_29" name="Depth 29">
+                                                            <subProcess id="Sub_30" name="Depth 30">
+                                                              <subProcess id="Sub_31" name="Depth 31">
+                                                                <subProcess id="Sub_32" name="Depth 32">
+                                                                  <subProcess id="Sub_33" name="Depth 33">
+                                                                    <subProcess id="Sub_34" name="Depth 34">
+                                                                      <subProcess id="Sub_35" name="Depth 35">
+                                                                        <subProcess id="Sub_36" name="Depth 36">
+                                                                          <subProcess id="Sub_37" name="Depth 37">
+                                                                            <subProcess id="Sub_38" name="Depth 38">
+                                                                              <subProcess id="Sub_39" name="Depth 39">
+                                                                                <subProcess id="Sub_40" name="Depth 40">
+                                                                                </subProcess>
+                                                                              </subProcess>
+                                                                            </subProcess>
+                                                                          </subProcess>
+                                                                        </subProcess>
+                                                                      </subProcess>
+                                                                    </subProcess>
+                                                                  </subProcess>
+                                                                </subProcess>
+                                                              </subProcess>
+                                                            </subProcess>
+                                                          </subProcess>
+                                                        </subProcess>
+                                                      </subProcess>
+                                                    </subProcess>
+                                                  </subProcess>
+                                                </subProcess>
+                                              </subProcess>
+                                            </subProcess>
+                                          </subProcess>
+                                        </subProcess>
+                                      </subProcess>
+                                    </subProcess>
+                                  </subProcess>
+                                </subProcess>
+                              </subProcess>
+                            </subProcess>
+                          </subProcess>
+                        </subProcess>
+                      </subProcess>
+                    </subProcess>
+                  </subProcess>
+                </subProcess>
+              </subProcess>
+            </subProcess>
+          </subProcess>
+        </subProcess>
+      </subProcess>
+    </subProcess>
+  </subProcess>
+  </process>
+</definitions>

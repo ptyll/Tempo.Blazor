@@ -21,6 +21,7 @@
     <Project Path="src/Tempo.Blazor.GanttXlsx/Tempo.Blazor.GanttXlsx.csproj" />
     <Project Path="src/Tempo.Blazor.WebPush/Tempo.Blazor.WebPush.csproj" />
     <Project Path="src/Tempo.Blazor.Modeling/Tempo.Blazor.Modeling.csproj" />
+    <Project Path="src/Tempo.Blazor.Modeling.BpmnXml/Tempo.Blazor.Modeling.BpmnXml.csproj" />
     <Project Path="src/Tempo.Blazor.NotionEditor/Tempo.Blazor.NotionEditor.csproj" />
     <Project Path="src/Tempo.Blazor.Maps/Tempo.Blazor.Maps.csproj" />
     <Project Path="src/Tempo.Blazor.PdfViewer/Tempo.Blazor.PdfViewer.csproj" />

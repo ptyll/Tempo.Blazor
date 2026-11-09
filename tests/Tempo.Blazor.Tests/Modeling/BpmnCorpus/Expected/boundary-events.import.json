@@ -1,0 +1,600 @@
+{
+  "Models": [
+    {
+      "Id": "Process_Boundary",
+      "Title": "Boundary zoo",
+      "Notation": "bpmn2",
+      "SupportedNotations": [
+        "bpmn2"
+      ],
+      "Elements": [
+        {
+          "Id": "StartEvent_B",
+          "SourceId": "StartEvent_B",
+          "SourceType": "startEvent",
+          "SourcePath": "/definitions[@id=\u0027Definitions_Boundary\u0027]/process[@id=\u0027Process_Boundary\u0027]/startEvent[@id=\u0027StartEvent_B\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "StartEvent",
+          "Name": "Start",
+          "ParentId": "",
+          "Description": "",
+          "Properties": {},
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "Task_Main",
+          "SourceId": "Task_Main",
+          "SourceType": "task",
+          "SourcePath": "/definitions[@id=\u0027Definitions_Boundary\u0027]/process[@id=\u0027Process_Boundary\u0027]/task[@id=\u0027Task_Main\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "Task",
+          "Name": "Main work",
+          "ParentId": "",
+          "Description": "",
+          "Properties": {},
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "Boundary_Timer",
+          "SourceId": "Boundary_Timer",
+          "SourceType": "boundaryEvent",
+          "SourcePath": "/definitions[@id=\u0027Definitions_Boundary\u0027]/process[@id=\u0027Process_Boundary\u0027]/boundaryEvent[@id=\u0027Boundary_Timer\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "BoundaryEvent",
+          "Name": "Reminder",
+          "ParentId": "",
+          "Description": "",
+          "Properties": {
+            "eventDefinitions": [
+              {
+                "type": "timer",
+                "id": "TimerBoundaryDef",
+                "timeDuration": "PT1D"
+              }
+            ],
+            "attachedToRef": "Task_Main",
+            "cancelActivity": true
+          },
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "Boundary_Message",
+          "SourceId": "Boundary_Message",
+          "SourceType": "boundaryEvent",
+          "SourcePath": "/definitions[@id=\u0027Definitions_Boundary\u0027]/process[@id=\u0027Process_Boundary\u0027]/boundaryEvent[@id=\u0027Boundary_Message\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "BoundaryEvent",
+          "Name": "Message while working",
+          "ParentId": "",
+          "Description": "",
+          "Properties": {
+            "eventDefinitions": [
+              {
+                "type": "message",
+                "id": "MsgBoundaryDef",
+                "ref": "Message_Note",
+                "name": "Note message"
+              }
+            ],
+            "attachedToRef": "Task_Main",
+            "cancelActivity": false
+          },
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "Boundary_Signal",
+          "SourceId": "Boundary_Signal",
+          "SourceType": "boundaryEvent",
+          "SourcePath": "/definitions[@id=\u0027Definitions_Boundary\u0027]/process[@id=\u0027Process_Boundary\u0027]/boundaryEvent[@id=\u0027Boundary_Signal\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "BoundaryEvent",
+          "Name": "Signal interrupt",
+          "ParentId": "",
+          "Description": "",
+          "Properties": {
+            "eventDefinitions": [
+              {
+                "type": "signal",
+                "id": "SignalBoundaryDef",
+                "ref": "Signal_Pause",
+                "name": "Pause"
+              }
+            ],
+            "attachedToRef": "Task_Main",
+            "cancelActivity": true
+          },
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "Boundary_Conditional",
+          "SourceId": "Boundary_Conditional",
+          "SourceType": "boundaryEvent",
+          "SourcePath": "/definitions[@id=\u0027Definitions_Boundary\u0027]/process[@id=\u0027Process_Boundary\u0027]/boundaryEvent[@id=\u0027Boundary_Conditional\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "BoundaryEvent",
+          "Name": "Condition interrupt",
+          "ParentId": "",
+          "Description": "",
+          "Properties": {
+            "eventDefinitions": [
+              {
+                "type": "conditional",
+                "id": "CondBoundaryDef",
+                "condition": "cancel = true()"
+              }
+            ],
+            "attachedToRef": "Task_Main",
+            "cancelActivity": true
+          },
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "Task_Remind",
+          "SourceId": "Task_Remind",
+          "SourceType": "task",
+          "SourcePath": "/definitions[@id=\u0027Definitions_Boundary\u0027]/process[@id=\u0027Process_Boundary\u0027]/task[@id=\u0027Task_Remind\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "Task",
+          "Name": "Send reminder",
+          "ParentId": "",
+          "Description": "",
+          "Properties": {},
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "Task_Note",
+          "SourceId": "Task_Note",
+          "SourceType": "task",
+          "SourcePath": "/definitions[@id=\u0027Definitions_Boundary\u0027]/process[@id=\u0027Process_Boundary\u0027]/task[@id=\u0027Task_Note\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "Task",
+          "Name": "Note message",
+          "ParentId": "",
+          "Description": "",
+          "Properties": {},
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "Task_Pause",
+          "SourceId": "Task_Pause",
+          "SourceType": "task",
+          "SourcePath": "/definitions[@id=\u0027Definitions_Boundary\u0027]/process[@id=\u0027Process_Boundary\u0027]/task[@id=\u0027Task_Pause\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "Task",
+          "Name": "Pause work",
+          "ParentId": "",
+          "Description": "",
+          "Properties": {},
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "Task_Cancel",
+          "SourceId": "Task_Cancel",
+          "SourceType": "task",
+          "SourcePath": "/definitions[@id=\u0027Definitions_Boundary\u0027]/process[@id=\u0027Process_Boundary\u0027]/task[@id=\u0027Task_Cancel\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "Task",
+          "Name": "Cancel work",
+          "ParentId": "",
+          "Description": "",
+          "Properties": {},
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "Transaction_Pay",
+          "SourceId": "Transaction_Pay",
+          "SourceType": "transaction",
+          "SourcePath": "/definitions[@id=\u0027Definitions_Boundary\u0027]/process[@id=\u0027Process_Boundary\u0027]/transaction[@id=\u0027Transaction_Pay\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "SubProcess",
+          "Name": "Payment",
+          "ParentId": "",
+          "Description": "",
+          "Properties": {
+            "transaction": true
+          },
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "StartEvent_Pay",
+          "SourceId": "StartEvent_Pay",
+          "SourceType": "startEvent",
+          "SourcePath": "/definitions[@id=\u0027Definitions_Boundary\u0027]/process[@id=\u0027Process_Boundary\u0027]/transaction[@id=\u0027Transaction_Pay\u0027]/startEvent[@id=\u0027StartEvent_Pay\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "StartEvent",
+          "Name": "Pay start",
+          "ParentId": "Transaction_Pay",
+          "Description": "",
+          "Properties": {},
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "Task_Charge",
+          "SourceId": "Task_Charge",
+          "SourceType": "task",
+          "SourcePath": "/definitions[@id=\u0027Definitions_Boundary\u0027]/process[@id=\u0027Process_Boundary\u0027]/transaction[@id=\u0027Transaction_Pay\u0027]/task[@id=\u0027Task_Charge\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "Task",
+          "Name": "Charge card",
+          "ParentId": "Transaction_Pay",
+          "Description": "",
+          "Properties": {},
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "EndEvent_Pay",
+          "SourceId": "EndEvent_Pay",
+          "SourceType": "endEvent",
+          "SourcePath": "/definitions[@id=\u0027Definitions_Boundary\u0027]/process[@id=\u0027Process_Boundary\u0027]/transaction[@id=\u0027Transaction_Pay\u0027]/endEvent[@id=\u0027EndEvent_Pay\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "EndEvent",
+          "Name": "Pay end",
+          "ParentId": "Transaction_Pay",
+          "Description": "",
+          "Properties": {},
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "Boundary_Cancel",
+          "SourceId": "Boundary_Cancel",
+          "SourceType": "boundaryEvent",
+          "SourcePath": "/definitions[@id=\u0027Definitions_Boundary\u0027]/process[@id=\u0027Process_Boundary\u0027]/boundaryEvent[@id=\u0027Boundary_Cancel\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "BoundaryEvent",
+          "Name": "Payment failed",
+          "ParentId": "",
+          "Description": "",
+          "Properties": {
+            "eventDefinitions": [
+              {
+                "type": "cancel",
+                "id": "CancelBoundaryDef"
+              }
+            ],
+            "attachedToRef": "Transaction_Pay",
+            "cancelActivity": true
+          },
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "Boundary_Error",
+          "SourceId": "Boundary_Error",
+          "SourceType": "boundaryEvent",
+          "SourcePath": "/definitions[@id=\u0027Definitions_Boundary\u0027]/process[@id=\u0027Process_Boundary\u0027]/boundaryEvent[@id=\u0027Boundary_Error\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "BoundaryEvent",
+          "Name": "Processing error",
+          "ParentId": "",
+          "Description": "",
+          "Properties": {
+            "eventDefinitions": [
+              {
+                "type": "error",
+                "id": "ErrorBoundaryDef",
+                "ref": "Error_Decline",
+                "name": "Declined",
+                "code": "D-1"
+              }
+            ],
+            "attachedToRef": "Transaction_Pay",
+            "cancelActivity": true
+          },
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "Task_Failed",
+          "SourceId": "Task_Failed",
+          "SourceType": "task",
+          "SourcePath": "/definitions[@id=\u0027Definitions_Boundary\u0027]/process[@id=\u0027Process_Boundary\u0027]/task[@id=\u0027Task_Failed\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "Task",
+          "Name": "Handle failure",
+          "ParentId": "",
+          "Description": "",
+          "Properties": {},
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "EndEvent_B",
+          "SourceId": "EndEvent_B",
+          "SourceType": "endEvent",
+          "SourcePath": "/definitions[@id=\u0027Definitions_Boundary\u0027]/process[@id=\u0027Process_Boundary\u0027]/endEvent[@id=\u0027EndEvent_B\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "EndEvent",
+          "Name": "Done",
+          "ParentId": "",
+          "Description": "",
+          "Properties": {},
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        }
+      ],
+      "Relationships": [
+        {
+          "Id": "Flow_BT1",
+          "SourceId": "Flow_BT1",
+          "SourceType": "sequenceFlow",
+          "SourceElementId": "StartEvent_Pay",
+          "TargetElementId": "Task_Charge",
+          "RelationshipType": "SequenceFlow",
+          "Name": "",
+          "Properties": {},
+          "Tags": []
+        },
+        {
+          "Id": "Flow_BT2",
+          "SourceId": "Flow_BT2",
+          "SourceType": "sequenceFlow",
+          "SourceElementId": "Task_Charge",
+          "TargetElementId": "EndEvent_Pay",
+          "RelationshipType": "SequenceFlow",
+          "Name": "",
+          "Properties": {},
+          "Tags": []
+        },
+        {
+          "Id": "Flow_B1",
+          "SourceId": "Flow_B1",
+          "SourceType": "sequenceFlow",
+          "SourceElementId": "StartEvent_B",
+          "TargetElementId": "Task_Main",
+          "RelationshipType": "SequenceFlow",
+          "Name": "",
+          "Properties": {},
+          "Tags": []
+        },
+        {
+          "Id": "Flow_B2",
+          "SourceId": "Flow_B2",
+          "SourceType": "sequenceFlow",
+          "SourceElementId": "Task_Main",
+          "TargetElementId": "Transaction_Pay",
+          "RelationshipType": "SequenceFlow",
+          "Name": "",
+          "Properties": {},
+          "Tags": []
+        },
+        {
+          "Id": "Flow_B3",
+          "SourceId": "Flow_B3",
+          "SourceType": "sequenceFlow",
+          "SourceElementId": "Transaction_Pay",
+          "TargetElementId": "EndEvent_B",
+          "RelationshipType": "SequenceFlow",
+          "Name": "",
+          "Properties": {},
+          "Tags": []
+        },
+        {
+          "Id": "Flow_B10",
+          "SourceId": "Flow_B10",
+          "SourceType": "sequenceFlow",
+          "SourceElementId": "Boundary_Timer",
+          "TargetElementId": "Task_Remind",
+          "RelationshipType": "SequenceFlow",
+          "Name": "",
+          "Properties": {},
+          "Tags": []
+        },
+        {
+          "Id": "Flow_B11",
+          "SourceId": "Flow_B11",
+          "SourceType": "sequenceFlow",
+          "SourceElementId": "Boundary_Message",
+          "TargetElementId": "Task_Note",
+          "RelationshipType": "SequenceFlow",
+          "Name": "",
+          "Properties": {},
+          "Tags": []
+        },
+        {
+          "Id": "Flow_B12",
+          "SourceId": "Flow_B12",
+          "SourceType": "sequenceFlow",
+          "SourceElementId": "Boundary_Signal",
+          "TargetElementId": "Task_Pause",
+          "RelationshipType": "SequenceFlow",
+          "Name": "",
+          "Properties": {},
+          "Tags": []
+        },
+        {
+          "Id": "Flow_B13",
+          "SourceId": "Flow_B13",
+          "SourceType": "sequenceFlow",
+          "SourceElementId": "Boundary_Conditional",
+          "TargetElementId": "Task_Cancel",
+          "RelationshipType": "SequenceFlow",
+          "Name": "",
+          "Properties": {},
+          "Tags": []
+        },
+        {
+          "Id": "Flow_B14",
+          "SourceId": "Flow_B14",
+          "SourceType": "sequenceFlow",
+          "SourceElementId": "Task_Remind",
+          "TargetElementId": "EndEvent_B",
+          "RelationshipType": "SequenceFlow",
+          "Name": "",
+          "Properties": {},
+          "Tags": []
+        },
+        {
+          "Id": "Flow_B15",
+          "SourceId": "Flow_B15",
+          "SourceType": "sequenceFlow",
+          "SourceElementId": "Boundary_Cancel",
+          "TargetElementId": "Task_Failed",
+          "RelationshipType": "SequenceFlow",
+          "Name": "",
+          "Properties": {},
+          "Tags": []
+        },
+        {
+          "Id": "Flow_B16",
+          "SourceId": "Flow_B16",
+          "SourceType": "sequenceFlow",
+          "SourceElementId": "Boundary_Error",
+          "TargetElementId": "Task_Failed",
+          "RelationshipType": "SequenceFlow",
+          "Name": "",
+          "Properties": {},
+          "Tags": []
+        },
+        {
+          "Id": "Flow_B17",
+          "SourceId": "Flow_B17",
+          "SourceType": "sequenceFlow",
+          "SourceElementId": "Task_Failed",
+          "TargetElementId": "EndEvent_B",
+          "RelationshipType": "SequenceFlow",
+          "Name": "",
+          "Properties": {},
+          "Tags": []
+        }
+      ],
+      "Views": [],
+      "Issues": [],
+      "Metadata": {
+        "SourceSystem": "bpmn-xml",
+        "SourceVersion": "http://tempo.example/bpmn/corpus",
+        "LoadedAt": "1970-01-01T00:00:00+00:00",
+        "IsFresh": true
+      },
+      "Properties": {
+        "bpmnDefinitions": [
+          {
+            "kind": "message",
+            "id": "Message_Note",
+            "name": "Note message",
+            "code": ""
+          },
+          {
+            "kind": "signal",
+            "id": "Signal_Pause",
+            "name": "Pause",
+            "code": ""
+          },
+          {
+            "kind": "error",
+            "id": "Error_Decline",
+            "name": "Declined",
+            "code": "D-1"
+          }
+        ]
+      }
+    }
+  ],
+  "Losses": [],
+  "Warnings": [],
+  "HasErrors": false,
+  "ErrorMessage": null
+}

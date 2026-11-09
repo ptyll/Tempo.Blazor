@@ -1,0 +1,28 @@
+{
+  "kind": "Class",
+  "category": "General",
+  "namespace": "Tempo.Blazor.Modeling.BpmnXml",
+  "description": "Default IBpmnXmlImporter: safe, bounded, deterministic BPMN 2.0 XML → ModelingModelDto conversion. Never throws for bad input — structural problems surface as HasErrors with a message.",
+  "packageId": "Tempo.Blazor.Modeling.BpmnXml",
+  "sourcePath": "src/Tempo.Blazor.Modeling.BpmnXml/BpmnXmlImporter.cs",
+  "documentationStatus": "generated",
+  "members": [
+    {
+      "name": "Import",
+      "kind": "Method",
+      "type": "BpmnImportResult",
+      "parameters": [
+        {
+          "name": "xml",
+          "type": "string"
+        },
+        {
+          "name": "options",
+          "type": "BpmnImportOptions?",
+          "default": "null"
+        }
+      ]
+    }
+  ],
+  "itemName": "BpmnXmlImporter"
+}

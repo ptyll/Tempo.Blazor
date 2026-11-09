@@ -1,0 +1,10 @@
+{
+  "kind": "Class",
+  "category": "General",
+  "namespace": "Tempo.Blazor.Modeling.BpmnXml",
+  "description": "Semantic element type names the importer emits. Duplicated on purpose from the internal BpmnModelingCatalog (Tempo.Blazor.Modeling) — the converter must not depend on the internal type; the corpus parity test keeps the two lists from drifting.",
+  "packageId": "Tempo.Blazor.Modeling.BpmnXml",
+  "sourcePath": "src/Tempo.Blazor.Modeling.BpmnXml/BpmnConstants.cs",
+  "documentationStatus": "generated",
+  "itemName": "BpmnSemanticTypes"
+}

@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE definitions [
+  <!ENTITY lol "lollollollollollollollollollol">
+  <!ENTITY lol2 "&lol;&lol;&lol;&lol;&lol;&lol;&lol;&lol;&lol;&lol;">
+  <!ENTITY lol3 "&lol2;&lol2;&lol2;&lol2;&lol2;&lol2;&lol2;&lol2;&lol2;&lol2;">
+  <!ENTITY lol4 "&lol3;&lol3;&lol3;&lol3;&lol3;&lol3;&lol3;&lol3;&lol3;&lol3;">
+  <!ENTITY lol5 "&lol4;&lol4;&lol4;&lol4;&lol4;&lol4;&lol4;&lol4;&lol4;&lol4;">
+  <!ENTITY lol6 "&lol5;&lol5;&lol5;&lol5;&lol5;&lol5;&lol5;&lol5;&lol5;&lol5;">
+  <!ENTITY lol7 "&lol6;&lol6;&lol6;&lol6;&lol6;&lol6;&lol6;&lol6;&lol6;&lol6;">
+  <!ENTITY lol8 "&lol7;&lol7;&lol7;&lol7;&lol7;&lol7;&lol7;&lol7;&lol7;&lol7;">
+  <!ENTITY lol9 "&lol8;&lol8;&lol8;&lol8;&lol8;&lol8;&lol8;&lol8;&lol8;&lol8;">
+]>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
+             id="Definitions_Laughs"
+             name="Billion laughs probe"
+             targetNamespace="http://tempo.example/bpmn/hostile">
+  <process id="Process_Laughs" name="Billion laughs" isExecutable="false">
+    <startEvent id="StartEvent_Laughs" name="&lol9;">
+      <outgoing>Flow_L1</outgoing>
+    </startEvent>
+    <task id="Task_Laughs" name="Work">
+      <incoming>Flow_L1</incoming>
+    </task>
+    <sequenceFlow id="Flow_L1" sourceRef="StartEvent_Laughs" targetRef="Task_Laughs"/>
+  </process>
+</definitions>

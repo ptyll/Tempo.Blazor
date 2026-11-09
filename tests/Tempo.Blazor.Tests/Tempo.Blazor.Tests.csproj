@@ -33,6 +33,7 @@
     <ProjectReference Include="..\..\src\Tempo.Blazor.DocumentFormats\Tempo.Blazor.DocumentFormats.csproj" />
     <ProjectReference Include="..\..\src\Tempo.Blazor.GanttXlsx\Tempo.Blazor.GanttXlsx.csproj" />
     <ProjectReference Include="..\..\src\Tempo.Blazor.Modeling\Tempo.Blazor.Modeling.csproj" />
+    <ProjectReference Include="..\..\src\Tempo.Blazor.Modeling.BpmnXml\Tempo.Blazor.Modeling.BpmnXml.csproj" />
     <ProjectReference Include="..\..\src\Tempo.Blazor.Maps\Tempo.Blazor.Maps.csproj" />
     <ProjectReference Include="..\..\src\Tempo.Blazor.NotionEditor\Tempo.Blazor.NotionEditor.csproj" />
     <ProjectReference Include="..\..\src\Tempo.Blazor.PdfViewer\Tempo.Blazor.PdfViewer.csproj" />

@@ -1,0 +1,10 @@
+{
+  "kind": "Interface",
+  "category": "General",
+  "namespace": "Tempo.Blazor.Modeling.BpmnXml",
+  "description": "Imports BPMN 2.0 XML into modeling models. Implementations must be deterministic and never throw for bad input.",
+  "packageId": "Tempo.Blazor.Modeling.BpmnXml",
+  "sourcePath": "src/Tempo.Blazor.Modeling.BpmnXml/IBpmnXmlImporter.cs",
+  "documentationStatus": "generated",
+  "itemName": "IBpmnXmlImporter"
+}

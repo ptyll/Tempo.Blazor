@@ -36,6 +36,13 @@ tested against realistic dialects, without shipping any tool's copyrighted diagr
 
 ## Hostile/
 
-The `Hostile/` subfolder is reserved for phase-2 security fixtures (XXE, billion
-laughs, oversized streams). Those files deliberately FAIL the safe-parse guards, so
-they are kept outside `ExpectedCorpusFiles` in `BpmnCorpusTests`. See `Hostile/README.md`.
+The `Hostile/` subfolder holds the phase-2 security fixtures (XXE, billion
+laughs, malformed XML, limit probes). Those files deliberately FAIL the safe-parse
+guards, so they are kept outside `ExpectedCorpusFiles` in `BpmnCorpusTests`.
+See `Hostile/README.md`.
+
+## Expected/
+
+The `Expected/` subfolder holds the golden import results (`*.import.json`) produced
+by `BpmnImportGoldenTests` over the corpus above. Regenerate after an intentional
+mapping change with `TEMPO_REGENERATE_BPMN_IMPORT_GOLDEN=1`.

@@ -1,0 +1,10 @@
+{
+  "kind": "Enum",
+  "category": "General",
+  "namespace": "Tempo.Blazor.Modeling.BpmnXml",
+  "description": "How the importer maps a BPMN document with several processes onto ModelingModelDto models.",
+  "packageId": "Tempo.Blazor.Modeling.BpmnXml",
+  "sourcePath": "src/Tempo.Blazor.Modeling.BpmnXml/BpmnImportContracts.cs",
+  "documentationStatus": "generated",
+  "itemName": "BpmnModelSplit"
+}

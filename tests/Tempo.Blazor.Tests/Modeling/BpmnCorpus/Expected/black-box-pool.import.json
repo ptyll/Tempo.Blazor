@@ -1,0 +1,216 @@
+{
+  "Models": [
+    {
+      "Id": "Process_Internal",
+      "Title": "Our process",
+      "Notation": "bpmn2",
+      "SupportedNotations": [
+        "bpmn2"
+      ],
+      "Elements": [
+        {
+          "Id": "Participant_Internal",
+          "SourceId": "Participant_Internal",
+          "SourceType": "participant",
+          "SourcePath": "/definitions[@id=\u0027Definitions_BlackBox\u0027]/collaboration[@id=\u0027Collaboration_BlackBox\u0027]/participant[@id=\u0027Participant_Internal\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "Pool",
+          "Name": "Our system",
+          "ParentId": "",
+          "Description": "",
+          "Properties": {},
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "Participant_External",
+          "SourceId": "Participant_External",
+          "SourceType": "participant",
+          "SourcePath": "/definitions[@id=\u0027Definitions_BlackBox\u0027]/collaboration[@id=\u0027Collaboration_BlackBox\u0027]/participant[@id=\u0027Participant_External\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "Pool",
+          "Name": "Legacy vendor",
+          "ParentId": "",
+          "Description": "",
+          "Properties": {},
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "StartEvent_BlackBox",
+          "SourceId": "StartEvent_BlackBox",
+          "SourceType": "startEvent",
+          "SourcePath": "/definitions[@id=\u0027Definitions_BlackBox\u0027]/process[@id=\u0027Process_Internal\u0027]/startEvent[@id=\u0027StartEvent_BlackBox\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "StartEvent",
+          "Name": "Start",
+          "ParentId": "Participant_Internal",
+          "Description": "",
+          "Properties": {},
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "Task_Send",
+          "SourceId": "Task_Send",
+          "SourceType": "task",
+          "SourcePath": "/definitions[@id=\u0027Definitions_BlackBox\u0027]/process[@id=\u0027Process_Internal\u0027]/task[@id=\u0027Task_Send\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "Task",
+          "Name": "Send request",
+          "ParentId": "Participant_Internal",
+          "Description": "",
+          "Properties": {},
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "Task_Receive",
+          "SourceId": "Task_Receive",
+          "SourceType": "task",
+          "SourcePath": "/definitions[@id=\u0027Definitions_BlackBox\u0027]/process[@id=\u0027Process_Internal\u0027]/task[@id=\u0027Task_Receive\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "Task",
+          "Name": "Receive reply",
+          "ParentId": "Participant_Internal",
+          "Description": "",
+          "Properties": {},
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "EndEvent_BlackBox",
+          "SourceId": "EndEvent_BlackBox",
+          "SourceType": "endEvent",
+          "SourcePath": "/definitions[@id=\u0027Definitions_BlackBox\u0027]/process[@id=\u0027Process_Internal\u0027]/endEvent[@id=\u0027EndEvent_BlackBox\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "EndEvent",
+          "Name": "Done",
+          "ParentId": "Participant_Internal",
+          "Description": "",
+          "Properties": {},
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        }
+      ],
+      "Relationships": [
+        {
+          "Id": "Flow_BB1",
+          "SourceId": "Flow_BB1",
+          "SourceType": "sequenceFlow",
+          "SourceElementId": "StartEvent_BlackBox",
+          "TargetElementId": "Task_Send",
+          "RelationshipType": "SequenceFlow",
+          "Name": "",
+          "Properties": {},
+          "Tags": []
+        },
+        {
+          "Id": "Flow_BB2",
+          "SourceId": "Flow_BB2",
+          "SourceType": "sequenceFlow",
+          "SourceElementId": "Task_Send",
+          "TargetElementId": "Task_Receive",
+          "RelationshipType": "SequenceFlow",
+          "Name": "",
+          "Properties": {},
+          "Tags": []
+        },
+        {
+          "Id": "Flow_BB3",
+          "SourceId": "Flow_BB3",
+          "SourceType": "sequenceFlow",
+          "SourceElementId": "Task_Receive",
+          "TargetElementId": "EndEvent_BlackBox",
+          "RelationshipType": "SequenceFlow",
+          "Name": "",
+          "Properties": {},
+          "Tags": []
+        },
+        {
+          "Id": "MessageFlow_Request",
+          "SourceId": "MessageFlow_Request",
+          "SourceType": "messageFlow",
+          "SourceElementId": "Task_Send",
+          "TargetElementId": "Participant_External",
+          "RelationshipType": "MessageFlow",
+          "Name": "Request",
+          "Properties": {},
+          "Tags": []
+        },
+        {
+          "Id": "MessageFlow_Reply",
+          "SourceId": "MessageFlow_Reply",
+          "SourceType": "messageFlow",
+          "SourceElementId": "Participant_External",
+          "TargetElementId": "Task_Receive",
+          "RelationshipType": "MessageFlow",
+          "Name": "Reply",
+          "Properties": {},
+          "Tags": []
+        }
+      ],
+      "Views": [],
+      "Issues": [
+        {
+          "Id": "bpmn-import-loss-0001",
+          "Severity": "Info",
+          "Category": "bpmn-import",
+          "SourceElementId": "Participant_External",
+          "SourceRelationshipId": "",
+          "Message": "black-box pool: Participant has no resolvable processRef; the pool imports without any contents.",
+          "SuggestedFix": ""
+        }
+      ],
+      "Metadata": {
+        "SourceSystem": "bpmn-xml",
+        "SourceVersion": "http://tempo.example/bpmn/corpus",
+        "LoadedAt": "1970-01-01T00:00:00+00:00",
+        "IsFresh": true
+      },
+      "Properties": {}
+    }
+  ],
+  "Losses": [
+    {
+      "ElementId": "Participant_External",
+      "XmlPath": "/definitions[@id=\u0027Definitions_BlackBox\u0027]/collaboration[@id=\u0027Collaboration_BlackBox\u0027]/participant[@id=\u0027Participant_External\u0027]",
+      "Construct": "black-box pool",
+      "Reason": "Participant has no resolvable processRef; the pool imports without any contents.",
+      "Severity": 2
+    }
+  ],
+  "Warnings": [],
+  "HasErrors": false,
+  "ErrorMessage": null
+}

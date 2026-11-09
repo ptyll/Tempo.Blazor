@@ -1,0 +1,187 @@
+{
+  "Models": [
+    {
+      "Id": "Process_Collapsed",
+      "Title": "Collapsed",
+      "Notation": "bpmn2",
+      "SupportedNotations": [
+        "bpmn2"
+      ],
+      "Elements": [
+        {
+          "Id": "StartEvent_Collapsed",
+          "SourceId": "StartEvent_Collapsed",
+          "SourceType": "startEvent",
+          "SourcePath": "/definitions[@id=\u0027Definitions_Collapsed\u0027]/process[@id=\u0027Process_Collapsed\u0027]/startEvent[@id=\u0027StartEvent_Collapsed\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "StartEvent",
+          "Name": "Start",
+          "ParentId": "",
+          "Description": "",
+          "Properties": {},
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "SubProcess_Collapsed",
+          "SourceId": "SubProcess_Collapsed",
+          "SourceType": "subProcess",
+          "SourcePath": "/definitions[@id=\u0027Definitions_Collapsed\u0027]/process[@id=\u0027Process_Collapsed\u0027]/subProcess[@id=\u0027SubProcess_Collapsed\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "SubProcess",
+          "Name": "Inner detail",
+          "ParentId": "",
+          "Description": "",
+          "Properties": {},
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "StartEvent_Inner",
+          "SourceId": "StartEvent_Inner",
+          "SourceType": "startEvent",
+          "SourcePath": "/definitions[@id=\u0027Definitions_Collapsed\u0027]/process[@id=\u0027Process_Collapsed\u0027]/subProcess[@id=\u0027SubProcess_Collapsed\u0027]/startEvent[@id=\u0027StartEvent_Inner\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "StartEvent",
+          "Name": "Inner start",
+          "ParentId": "SubProcess_Collapsed",
+          "Description": "",
+          "Properties": {},
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "Task_Inner",
+          "SourceId": "Task_Inner",
+          "SourceType": "task",
+          "SourcePath": "/definitions[@id=\u0027Definitions_Collapsed\u0027]/process[@id=\u0027Process_Collapsed\u0027]/subProcess[@id=\u0027SubProcess_Collapsed\u0027]/task[@id=\u0027Task_Inner\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "Task",
+          "Name": "Inner work",
+          "ParentId": "SubProcess_Collapsed",
+          "Description": "",
+          "Properties": {},
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "EndEvent_Inner",
+          "SourceId": "EndEvent_Inner",
+          "SourceType": "endEvent",
+          "SourcePath": "/definitions[@id=\u0027Definitions_Collapsed\u0027]/process[@id=\u0027Process_Collapsed\u0027]/subProcess[@id=\u0027SubProcess_Collapsed\u0027]/endEvent[@id=\u0027EndEvent_Inner\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "EndEvent",
+          "Name": "Inner end",
+          "ParentId": "SubProcess_Collapsed",
+          "Description": "",
+          "Properties": {},
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "EndEvent_Collapsed",
+          "SourceId": "EndEvent_Collapsed",
+          "SourceType": "endEvent",
+          "SourcePath": "/definitions[@id=\u0027Definitions_Collapsed\u0027]/process[@id=\u0027Process_Collapsed\u0027]/endEvent[@id=\u0027EndEvent_Collapsed\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "EndEvent",
+          "Name": "Done",
+          "ParentId": "",
+          "Description": "",
+          "Properties": {},
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        }
+      ],
+      "Relationships": [
+        {
+          "Id": "Flow_C2",
+          "SourceId": "Flow_C2",
+          "SourceType": "sequenceFlow",
+          "SourceElementId": "StartEvent_Inner",
+          "TargetElementId": "Task_Inner",
+          "RelationshipType": "SequenceFlow",
+          "Name": "",
+          "Properties": {},
+          "Tags": []
+        },
+        {
+          "Id": "Flow_C3",
+          "SourceId": "Flow_C3",
+          "SourceType": "sequenceFlow",
+          "SourceElementId": "Task_Inner",
+          "TargetElementId": "EndEvent_Inner",
+          "RelationshipType": "SequenceFlow",
+          "Name": "",
+          "Properties": {},
+          "Tags": []
+        },
+        {
+          "Id": "Flow_C1",
+          "SourceId": "Flow_C1",
+          "SourceType": "sequenceFlow",
+          "SourceElementId": "StartEvent_Collapsed",
+          "TargetElementId": "SubProcess_Collapsed",
+          "RelationshipType": "SequenceFlow",
+          "Name": "",
+          "Properties": {},
+          "Tags": []
+        },
+        {
+          "Id": "Flow_C4",
+          "SourceId": "Flow_C4",
+          "SourceType": "sequenceFlow",
+          "SourceElementId": "SubProcess_Collapsed",
+          "TargetElementId": "EndEvent_Collapsed",
+          "RelationshipType": "SequenceFlow",
+          "Name": "",
+          "Properties": {},
+          "Tags": []
+        }
+      ],
+      "Views": [],
+      "Issues": [],
+      "Metadata": {
+        "SourceSystem": "bpmn-xml",
+        "SourceVersion": "http://tempo.example/bpmn/corpus",
+        "LoadedAt": "1970-01-01T00:00:00+00:00",
+        "IsFresh": true
+      },
+      "Properties": {}
+    }
+  ],
+  "Losses": [],
+  "Warnings": [],
+  "HasErrors": false,
+  "ErrorMessage": null
+}

@@ -1,0 +1,345 @@
+{
+  "Models": [
+    {
+      "Id": "Process_Nested",
+      "Title": "Nested",
+      "Notation": "bpmn2",
+      "SupportedNotations": [
+        "bpmn2"
+      ],
+      "Elements": [
+        {
+          "Id": "StartEvent_Nested",
+          "SourceId": "StartEvent_Nested",
+          "SourceType": "startEvent",
+          "SourcePath": "/definitions[@id=\u0027Definitions_Nested\u0027]/process[@id=\u0027Process_Nested\u0027]/startEvent[@id=\u0027StartEvent_Nested\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "StartEvent",
+          "Name": "Start",
+          "ParentId": "",
+          "Description": "",
+          "Properties": {},
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "SubProcess_L1",
+          "SourceId": "SubProcess_L1",
+          "SourceType": "subProcess",
+          "SourcePath": "/definitions[@id=\u0027Definitions_Nested\u0027]/process[@id=\u0027Process_Nested\u0027]/subProcess[@id=\u0027SubProcess_L1\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "SubProcess",
+          "Name": "Level 1",
+          "ParentId": "",
+          "Description": "",
+          "Properties": {},
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "StartEvent_L1",
+          "SourceId": "StartEvent_L1",
+          "SourceType": "startEvent",
+          "SourcePath": "/definitions[@id=\u0027Definitions_Nested\u0027]/process[@id=\u0027Process_Nested\u0027]/subProcess[@id=\u0027SubProcess_L1\u0027]/startEvent[@id=\u0027StartEvent_L1\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "StartEvent",
+          "Name": "L1 start",
+          "ParentId": "SubProcess_L1",
+          "Description": "",
+          "Properties": {},
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "SubProcess_L2",
+          "SourceId": "SubProcess_L2",
+          "SourceType": "subProcess",
+          "SourcePath": "/definitions[@id=\u0027Definitions_Nested\u0027]/process[@id=\u0027Process_Nested\u0027]/subProcess[@id=\u0027SubProcess_L1\u0027]/subProcess[@id=\u0027SubProcess_L2\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "SubProcess",
+          "Name": "Level 2",
+          "ParentId": "SubProcess_L1",
+          "Description": "",
+          "Properties": {},
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "StartEvent_L2",
+          "SourceId": "StartEvent_L2",
+          "SourceType": "startEvent",
+          "SourcePath": "/definitions[@id=\u0027Definitions_Nested\u0027]/process[@id=\u0027Process_Nested\u0027]/subProcess[@id=\u0027SubProcess_L1\u0027]/subProcess[@id=\u0027SubProcess_L2\u0027]/startEvent[@id=\u0027StartEvent_L2\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "StartEvent",
+          "Name": "L2 start",
+          "ParentId": "SubProcess_L2",
+          "Description": "",
+          "Properties": {},
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "SubProcess_L3",
+          "SourceId": "SubProcess_L3",
+          "SourceType": "subProcess",
+          "SourcePath": "/definitions[@id=\u0027Definitions_Nested\u0027]/process[@id=\u0027Process_Nested\u0027]/subProcess[@id=\u0027SubProcess_L1\u0027]/subProcess[@id=\u0027SubProcess_L2\u0027]/subProcess[@id=\u0027SubProcess_L3\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "SubProcess",
+          "Name": "Level 3",
+          "ParentId": "SubProcess_L2",
+          "Description": "",
+          "Properties": {},
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "StartEvent_L3",
+          "SourceId": "StartEvent_L3",
+          "SourceType": "startEvent",
+          "SourcePath": "/definitions[@id=\u0027Definitions_Nested\u0027]/process[@id=\u0027Process_Nested\u0027]/subProcess[@id=\u0027SubProcess_L1\u0027]/subProcess[@id=\u0027SubProcess_L2\u0027]/subProcess[@id=\u0027SubProcess_L3\u0027]/startEvent[@id=\u0027StartEvent_L3\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "StartEvent",
+          "Name": "L3 start",
+          "ParentId": "SubProcess_L3",
+          "Description": "",
+          "Properties": {},
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "Task_L3",
+          "SourceId": "Task_L3",
+          "SourceType": "task",
+          "SourcePath": "/definitions[@id=\u0027Definitions_Nested\u0027]/process[@id=\u0027Process_Nested\u0027]/subProcess[@id=\u0027SubProcess_L1\u0027]/subProcess[@id=\u0027SubProcess_L2\u0027]/subProcess[@id=\u0027SubProcess_L3\u0027]/task[@id=\u0027Task_L3\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "Task",
+          "Name": "Deep work",
+          "ParentId": "SubProcess_L3",
+          "Description": "",
+          "Properties": {},
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "EndEvent_L3",
+          "SourceId": "EndEvent_L3",
+          "SourceType": "endEvent",
+          "SourcePath": "/definitions[@id=\u0027Definitions_Nested\u0027]/process[@id=\u0027Process_Nested\u0027]/subProcess[@id=\u0027SubProcess_L1\u0027]/subProcess[@id=\u0027SubProcess_L2\u0027]/subProcess[@id=\u0027SubProcess_L3\u0027]/endEvent[@id=\u0027EndEvent_L3\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "EndEvent",
+          "Name": "L3 end",
+          "ParentId": "SubProcess_L3",
+          "Description": "",
+          "Properties": {},
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "EndEvent_L1",
+          "SourceId": "EndEvent_L1",
+          "SourceType": "endEvent",
+          "SourcePath": "/definitions[@id=\u0027Definitions_Nested\u0027]/process[@id=\u0027Process_Nested\u0027]/subProcess[@id=\u0027SubProcess_L1\u0027]/subProcess[@id=\u0027SubProcess_L2\u0027]/endEvent[@id=\u0027EndEvent_L1\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "EndEvent",
+          "Name": "L1 end",
+          "ParentId": "SubProcess_L2",
+          "Description": "",
+          "Properties": {},
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "EndEvent_L0",
+          "SourceId": "EndEvent_L0",
+          "SourceType": "endEvent",
+          "SourcePath": "/definitions[@id=\u0027Definitions_Nested\u0027]/process[@id=\u0027Process_Nested\u0027]/subProcess[@id=\u0027SubProcess_L1\u0027]/endEvent[@id=\u0027EndEvent_L0\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "EndEvent",
+          "Name": "Top end",
+          "ParentId": "SubProcess_L1",
+          "Description": "",
+          "Properties": {},
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "EndEvent_Nested",
+          "SourceId": "EndEvent_Nested",
+          "SourceType": "endEvent",
+          "SourcePath": "/definitions[@id=\u0027Definitions_Nested\u0027]/process[@id=\u0027Process_Nested\u0027]/endEvent[@id=\u0027EndEvent_Nested\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "EndEvent",
+          "Name": "Done",
+          "ParentId": "",
+          "Description": "",
+          "Properties": {},
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        }
+      ],
+      "Relationships": [
+        {
+          "Id": "Flow_N2",
+          "SourceId": "Flow_N2",
+          "SourceType": "sequenceFlow",
+          "SourceElementId": "StartEvent_L3",
+          "TargetElementId": "Task_L3",
+          "RelationshipType": "SequenceFlow",
+          "Name": "",
+          "Properties": {},
+          "Tags": []
+        },
+        {
+          "Id": "Flow_N3",
+          "SourceId": "Flow_N3",
+          "SourceType": "sequenceFlow",
+          "SourceElementId": "Task_L3",
+          "TargetElementId": "EndEvent_L3",
+          "RelationshipType": "SequenceFlow",
+          "Name": "",
+          "Properties": {},
+          "Tags": []
+        },
+        {
+          "Id": "Flow_NL2",
+          "SourceId": "Flow_NL2",
+          "SourceType": "sequenceFlow",
+          "SourceElementId": "StartEvent_L2",
+          "TargetElementId": "SubProcess_L3",
+          "RelationshipType": "SequenceFlow",
+          "Name": "",
+          "Properties": {},
+          "Tags": []
+        },
+        {
+          "Id": "Flow_NL3",
+          "SourceId": "Flow_NL3",
+          "SourceType": "sequenceFlow",
+          "SourceElementId": "SubProcess_L3",
+          "TargetElementId": "EndEvent_L1",
+          "RelationshipType": "SequenceFlow",
+          "Name": "",
+          "Properties": {},
+          "Tags": []
+        },
+        {
+          "Id": "Flow_NL1",
+          "SourceId": "Flow_NL1",
+          "SourceType": "sequenceFlow",
+          "SourceElementId": "StartEvent_L1",
+          "TargetElementId": "SubProcess_L2",
+          "RelationshipType": "SequenceFlow",
+          "Name": "",
+          "Properties": {},
+          "Tags": []
+        },
+        {
+          "Id": "Flow_NL4",
+          "SourceId": "Flow_NL4",
+          "SourceType": "sequenceFlow",
+          "SourceElementId": "SubProcess_L2",
+          "TargetElementId": "EndEvent_L0",
+          "RelationshipType": "SequenceFlow",
+          "Name": "",
+          "Properties": {},
+          "Tags": []
+        },
+        {
+          "Id": "Flow_N1",
+          "SourceId": "Flow_N1",
+          "SourceType": "sequenceFlow",
+          "SourceElementId": "StartEvent_Nested",
+          "TargetElementId": "SubProcess_L1",
+          "RelationshipType": "SequenceFlow",
+          "Name": "",
+          "Properties": {},
+          "Tags": []
+        },
+        {
+          "Id": "Flow_N4",
+          "SourceId": "Flow_N4",
+          "SourceType": "sequenceFlow",
+          "SourceElementId": "SubProcess_L1",
+          "TargetElementId": "EndEvent_Nested",
+          "RelationshipType": "SequenceFlow",
+          "Name": "",
+          "Properties": {},
+          "Tags": []
+        }
+      ],
+      "Views": [],
+      "Issues": [],
+      "Metadata": {
+        "SourceSystem": "bpmn-xml",
+        "SourceVersion": "http://tempo.example/bpmn/corpus",
+        "LoadedAt": "1970-01-01T00:00:00+00:00",
+        "IsFresh": true
+      },
+      "Properties": {}
+    }
+  ],
+  "Losses": [],
+  "Warnings": [],
+  "HasErrors": false,
+  "ErrorMessage": null
+}

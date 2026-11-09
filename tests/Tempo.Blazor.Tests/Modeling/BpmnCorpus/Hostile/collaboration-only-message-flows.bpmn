@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
+             id="Definitions_CollaborationOnly"
+             targetNamespace="http://tempo.example/bpmn/hostile">
+  <!-- Hostile: a collaboration without any process and without participants, carrying a
+       message flow — there is no process model to anchor the flow on, so the importer
+       must synthesize a collaboration model instead of crashing on an empty model list. -->
+  <collaboration id="Collaboration_Only">
+    <messageFlow id="MessageFlow_Orphan" name="orphaned flow"/>
+  </collaboration>
+</definitions>

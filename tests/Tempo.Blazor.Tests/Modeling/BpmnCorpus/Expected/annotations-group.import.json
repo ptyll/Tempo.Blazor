@@ -1,0 +1,226 @@
+{
+  "Models": [
+    {
+      "Id": "Process_Annotated",
+      "Title": "Annotated process",
+      "Notation": "bpmn2",
+      "SupportedNotations": [
+        "bpmn2"
+      ],
+      "Elements": [
+        {
+          "Id": "StartEvent_Annotated",
+          "SourceId": "StartEvent_Annotated",
+          "SourceType": "startEvent",
+          "SourcePath": "/definitions[@id=\u0027Definitions_Annotations\u0027]/process[@id=\u0027Process_Annotated\u0027]/startEvent[@id=\u0027StartEvent_Annotated\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "StartEvent",
+          "Name": "Start",
+          "ParentId": "",
+          "Description": "",
+          "Properties": {},
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "Task_Step1",
+          "SourceId": "Task_Step1",
+          "SourceType": "task",
+          "SourcePath": "/definitions[@id=\u0027Definitions_Annotations\u0027]/process[@id=\u0027Process_Annotated\u0027]/task[@id=\u0027Task_Step1\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "Task",
+          "Name": "Step one",
+          "ParentId": "",
+          "Description": "",
+          "Properties": {},
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "Task_Step2",
+          "SourceId": "Task_Step2",
+          "SourceType": "task",
+          "SourcePath": "/definitions[@id=\u0027Definitions_Annotations\u0027]/process[@id=\u0027Process_Annotated\u0027]/task[@id=\u0027Task_Step2\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "Task",
+          "Name": "Step two",
+          "ParentId": "",
+          "Description": "",
+          "Properties": {},
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "EndEvent_Annotated",
+          "SourceId": "EndEvent_Annotated",
+          "SourceType": "endEvent",
+          "SourcePath": "/definitions[@id=\u0027Definitions_Annotations\u0027]/process[@id=\u0027Process_Annotated\u0027]/endEvent[@id=\u0027EndEvent_Annotated\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "EndEvent",
+          "Name": "End",
+          "ParentId": "",
+          "Description": "",
+          "Properties": {},
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "TextAnnotation_Note1",
+          "SourceId": "TextAnnotation_Note1",
+          "SourceType": "textAnnotation",
+          "SourcePath": "/definitions[@id=\u0027Definitions_Annotations\u0027]/process[@id=\u0027Process_Annotated\u0027]/textAnnotation[@id=\u0027TextAnnotation_Note1\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "TextAnnotation",
+          "Name": "Remember to keep the SLA under 2 days for premium clients.",
+          "ParentId": "",
+          "Description": "",
+          "Properties": {},
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "TextAnnotation_Note2",
+          "SourceId": "TextAnnotation_Note2",
+          "SourceType": "textAnnotation",
+          "SourcePath": "/definitions[@id=\u0027Definitions_Annotations\u0027]/process[@id=\u0027Process_Annotated\u0027]/textAnnotation[@id=\u0027TextAnnotation_Note2\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "TextAnnotation",
+          "Name": "Step two is outsourced since 2026.",
+          "ParentId": "",
+          "Description": "",
+          "Properties": {},
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "Group_Outsourced",
+          "SourceId": "Group_Outsourced",
+          "SourceType": "group",
+          "SourcePath": "/definitions[@id=\u0027Definitions_Annotations\u0027]/process[@id=\u0027Process_Annotated\u0027]/group[@id=\u0027Group_Outsourced\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "Group",
+          "Name": "",
+          "ParentId": "",
+          "Description": "",
+          "Properties": {
+            "categoryValueRef": "CategoryValue_Outsource",
+            "categoryValue": "Outsourced"
+          },
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        }
+      ],
+      "Relationships": [
+        {
+          "Id": "Association_Note1",
+          "SourceId": "Association_Note1",
+          "SourceType": "association",
+          "SourceElementId": "TextAnnotation_Note1",
+          "TargetElementId": "Task_Step1",
+          "RelationshipType": "Association",
+          "Name": "",
+          "Properties": {
+            "bpmn:associationDirection": "None",
+            "direction": "None"
+          },
+          "Tags": []
+        },
+        {
+          "Id": "Association_Note2",
+          "SourceId": "Association_Note2",
+          "SourceType": "association",
+          "SourceElementId": "Task_Step2",
+          "TargetElementId": "TextAnnotation_Note2",
+          "RelationshipType": "Association",
+          "Name": "",
+          "Properties": {
+            "bpmn:associationDirection": "One",
+            "direction": "One"
+          },
+          "Tags": []
+        },
+        {
+          "Id": "Flow_AN1",
+          "SourceId": "Flow_AN1",
+          "SourceType": "sequenceFlow",
+          "SourceElementId": "StartEvent_Annotated",
+          "TargetElementId": "Task_Step1",
+          "RelationshipType": "SequenceFlow",
+          "Name": "",
+          "Properties": {},
+          "Tags": []
+        },
+        {
+          "Id": "Flow_AN2",
+          "SourceId": "Flow_AN2",
+          "SourceType": "sequenceFlow",
+          "SourceElementId": "Task_Step1",
+          "TargetElementId": "Task_Step2",
+          "RelationshipType": "SequenceFlow",
+          "Name": "",
+          "Properties": {},
+          "Tags": []
+        },
+        {
+          "Id": "Flow_AN3",
+          "SourceId": "Flow_AN3",
+          "SourceType": "sequenceFlow",
+          "SourceElementId": "Task_Step2",
+          "TargetElementId": "EndEvent_Annotated",
+          "RelationshipType": "SequenceFlow",
+          "Name": "",
+          "Properties": {},
+          "Tags": []
+        }
+      ],
+      "Views": [],
+      "Issues": [],
+      "Metadata": {
+        "SourceSystem": "bpmn-xml",
+        "SourceVersion": "http://tempo.example/bpmn/corpus",
+        "LoadedAt": "1970-01-01T00:00:00+00:00",
+        "IsFresh": true
+      },
+      "Properties": {}
+    }
+  ],
+  "Losses": [],
+  "Warnings": [],
+  "HasErrors": false,
+  "ErrorMessage": null
+}

@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
+             id="Definitions_Count"
+             name="Element count probe"
+             targetNamespace="http://tempo.example/bpmn/hostile">
+  <process id="Process_Count" name="Count" isExecutable="false">
+    <task id="Task_Count_1" name="Task 1"/>
+    <task id="Task_Count_2" name="Task 2"/>
+    <task id="Task_Count_3" name="Task 3"/>
+    <task id="Task_Count_4" name="Task 4"/>
+    <task id="Task_Count_5" name="Task 5"/>
+    <task id="Task_Count_6" name="Task 6"/>
+    <task id="Task_Count_7" name="Task 7"/>
+    <task id="Task_Count_8" name="Task 8"/>
+    <task id="Task_Count_9" name="Task 9"/>
+    <task id="Task_Count_10" name="Task 10"/>
+    <task id="Task_Count_11" name="Task 11"/>
+    <task id="Task_Count_12" name="Task 12"/>
+    <task id="Task_Count_13" name="Task 13"/>
+    <task id="Task_Count_14" name="Task 14"/>
+    <task id="Task_Count_15" name="Task 15"/>
+    <task id="Task_Count_16" name="Task 16"/>
+    <task id="Task_Count_17" name="Task 17"/>
+    <task id="Task_Count_18" name="Task 18"/>
+    <task id="Task_Count_19" name="Task 19"/>
+    <task id="Task_Count_20" name="Task 20"/>
+    <task id="Task_Count_21" name="Task 21"/>
+    <task id="Task_Count_22" name="Task 22"/>
+    <task id="Task_Count_23" name="Task 23"/>
+    <task id="Task_Count_24" name="Task 24"/>
+    <task id="Task_Count_25" name="Task 25"/>
+    <task id="Task_Count_26" name="Task 26"/>
+    <task id="Task_Count_27" name="Task 27"/>
+    <task id="Task_Count_28" name="Task 28"/>
+    <task id="Task_Count_29" name="Task 29"/>
+    <task id="Task_Count_30" name="Task 30"/>
+    <task id="Task_Count_31" name="Task 31"/>
+    <task id="Task_Count_32" name="Task 32"/>
+    <task id="Task_Count_33" name="Task 33"/>
+    <task id="Task_Count_34" name="Task 34"/>
+    <task id="Task_Count_35" name="Task 35"/>
+    <task id="Task_Count_36" name="Task 36"/>
+    <task id="Task_Count_37" name="Task 37"/>
+    <task id="Task_Count_38" name="Task 38"/>
+    <task id="Task_Count_39" name="Task 39"/>
+    <task id="Task_Count_40" name="Task 40"/>
+  </process>
+</definitions>

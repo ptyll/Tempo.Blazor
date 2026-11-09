@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
+             id="Definitions_MissingAssignment"
+             targetNamespace="http://tempo.example/bpmn/hostile">
+  <process id="Process_MissingAssignment" isExecutable="false">
+    <task id="Task_Write" name="Write">
+      <dataInputAssociation id="DIA_Broken">
+        <sourceRef>DataObjectRef_Doc</sourceRef>
+        <targetRef>Task_Write</targetRef>
+        <assignment>
+          <!-- Hostile: the assignment carries neither a from nor a to child — the
+               importer must not throw on the missing endpoints. -->
+        </assignment>
+      </dataInputAssociation>
+    </task>
+    <dataObjectReference id="DataObjectRef_Doc" name="Document" dataObjectRef="DataObject_Doc"/>
+    <dataObject id="DataObject_Doc" name="Document"/>
+  </process>
+</definitions>

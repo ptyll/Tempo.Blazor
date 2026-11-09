@@ -1,0 +1,839 @@
+{
+  "Models": [
+    {
+      "Id": "Process_Events",
+      "Title": "Event zoo",
+      "Notation": "bpmn2",
+      "SupportedNotations": [
+        "bpmn2"
+      ],
+      "Elements": [
+        {
+          "Id": "Start_None",
+          "SourceId": "Start_None",
+          "SourceType": "startEvent",
+          "SourcePath": "/definitions[@id=\u0027Definitions_AllEvents\u0027]/process[@id=\u0027Process_Events\u0027]/startEvent[@id=\u0027Start_None\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "StartEvent",
+          "Name": "Plain start",
+          "ParentId": "",
+          "Description": "",
+          "Properties": {},
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "Start_Message",
+          "SourceId": "Start_Message",
+          "SourceType": "startEvent",
+          "SourcePath": "/definitions[@id=\u0027Definitions_AllEvents\u0027]/process[@id=\u0027Process_Events\u0027]/startEvent[@id=\u0027Start_Message\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "StartEvent",
+          "Name": "Message start",
+          "ParentId": "",
+          "Description": "",
+          "Properties": {
+            "eventDefinitions": [
+              {
+                "type": "message",
+                "id": "MsgStartDef",
+                "ref": "Message_StartMsg",
+                "name": "Start message"
+              }
+            ]
+          },
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "Start_Timer",
+          "SourceId": "Start_Timer",
+          "SourceType": "startEvent",
+          "SourcePath": "/definitions[@id=\u0027Definitions_AllEvents\u0027]/process[@id=\u0027Process_Events\u0027]/startEvent[@id=\u0027Start_Timer\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "StartEvent",
+          "Name": "Timer start",
+          "ParentId": "",
+          "Description": "",
+          "Properties": {
+            "eventDefinitions": [
+              {
+                "type": "timer",
+                "id": "TimerStartDef",
+                "timeCycle": "0 0 6 * * ?"
+              }
+            ]
+          },
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "Start_Signal",
+          "SourceId": "Start_Signal",
+          "SourceType": "startEvent",
+          "SourcePath": "/definitions[@id=\u0027Definitions_AllEvents\u0027]/process[@id=\u0027Process_Events\u0027]/startEvent[@id=\u0027Start_Signal\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "StartEvent",
+          "Name": "Signal start",
+          "ParentId": "",
+          "Description": "",
+          "Properties": {
+            "eventDefinitions": [
+              {
+                "type": "signal",
+                "id": "SignalStartDef",
+                "ref": "Signal_Alarm",
+                "name": "Alarm"
+              }
+            ]
+          },
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "Start_Conditional",
+          "SourceId": "Start_Conditional",
+          "SourceType": "startEvent",
+          "SourcePath": "/definitions[@id=\u0027Definitions_AllEvents\u0027]/process[@id=\u0027Process_Events\u0027]/startEvent[@id=\u0027Start_Conditional\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "StartEvent",
+          "Name": "Conditional start",
+          "ParentId": "",
+          "Description": "",
+          "Properties": {
+            "eventDefinitions": [
+              {
+                "type": "conditional",
+                "id": "CondStartDef",
+                "condition": "stock \u003C 5"
+              }
+            ]
+          },
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "Task_Events_Hub",
+          "SourceId": "Task_Events_Hub",
+          "SourceType": "task",
+          "SourcePath": "/definitions[@id=\u0027Definitions_AllEvents\u0027]/process[@id=\u0027Process_Events\u0027]/task[@id=\u0027Task_Events_Hub\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "Task",
+          "Name": "Hub",
+          "ParentId": "",
+          "Description": "",
+          "Properties": {},
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "Catch_Message",
+          "SourceId": "Catch_Message",
+          "SourceType": "intermediateCatchEvent",
+          "SourcePath": "/definitions[@id=\u0027Definitions_AllEvents\u0027]/process[@id=\u0027Process_Events\u0027]/intermediateCatchEvent[@id=\u0027Catch_Message\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "IntermediateCatchEvent",
+          "Name": "Catch message",
+          "ParentId": "",
+          "Description": "",
+          "Properties": {
+            "eventDefinitions": [
+              {
+                "type": "message",
+                "id": "MsgCatchDef",
+                "ref": "Message_InfoMsg",
+                "name": "Info message"
+              }
+            ]
+          },
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "Catch_Timer",
+          "SourceId": "Catch_Timer",
+          "SourceType": "intermediateCatchEvent",
+          "SourcePath": "/definitions[@id=\u0027Definitions_AllEvents\u0027]/process[@id=\u0027Process_Events\u0027]/intermediateCatchEvent[@id=\u0027Catch_Timer\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "IntermediateCatchEvent",
+          "Name": "Catch timer",
+          "ParentId": "",
+          "Description": "",
+          "Properties": {
+            "eventDefinitions": [
+              {
+                "type": "timer",
+                "id": "TimerCatchDef",
+                "timeDate": "2027-01-01T00:00:00Z"
+              }
+            ]
+          },
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "Catch_Signal",
+          "SourceId": "Catch_Signal",
+          "SourceType": "intermediateCatchEvent",
+          "SourcePath": "/definitions[@id=\u0027Definitions_AllEvents\u0027]/process[@id=\u0027Process_Events\u0027]/intermediateCatchEvent[@id=\u0027Catch_Signal\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "IntermediateCatchEvent",
+          "Name": "Catch signal",
+          "ParentId": "",
+          "Description": "",
+          "Properties": {
+            "eventDefinitions": [
+              {
+                "type": "signal",
+                "id": "SignalCatchDef",
+                "ref": "Signal_Alarm",
+                "name": "Alarm"
+              }
+            ]
+          },
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "Catch_Conditional",
+          "SourceId": "Catch_Conditional",
+          "SourceType": "intermediateCatchEvent",
+          "SourcePath": "/definitions[@id=\u0027Definitions_AllEvents\u0027]/process[@id=\u0027Process_Events\u0027]/intermediateCatchEvent[@id=\u0027Catch_Conditional\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "IntermediateCatchEvent",
+          "Name": "Catch condition",
+          "ParentId": "",
+          "Description": "",
+          "Properties": {
+            "eventDefinitions": [
+              {
+                "type": "conditional",
+                "id": "CondCatchDef",
+                "condition": "approved"
+              }
+            ]
+          },
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "Catch_Link",
+          "SourceId": "Catch_Link",
+          "SourceType": "intermediateCatchEvent",
+          "SourcePath": "/definitions[@id=\u0027Definitions_AllEvents\u0027]/process[@id=\u0027Process_Events\u0027]/intermediateCatchEvent[@id=\u0027Catch_Link\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "IntermediateCatchEvent",
+          "Name": "Catch link",
+          "ParentId": "",
+          "Description": "",
+          "Properties": {
+            "eventDefinitions": [
+              {
+                "type": "link",
+                "id": "LinkCatchDef",
+                "name": "hop"
+              }
+            ]
+          },
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "Throw_Message",
+          "SourceId": "Throw_Message",
+          "SourceType": "intermediateThrowEvent",
+          "SourcePath": "/definitions[@id=\u0027Definitions_AllEvents\u0027]/process[@id=\u0027Process_Events\u0027]/intermediateThrowEvent[@id=\u0027Throw_Message\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "IntermediateThrowEvent",
+          "Name": "Throw message",
+          "ParentId": "",
+          "Description": "",
+          "Properties": {
+            "eventDefinitions": [
+              {
+                "type": "message",
+                "id": "MsgThrowDef",
+                "ref": "Message_InfoMsg",
+                "name": "Info message"
+              }
+            ]
+          },
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "Throw_Signal",
+          "SourceId": "Throw_Signal",
+          "SourceType": "intermediateThrowEvent",
+          "SourcePath": "/definitions[@id=\u0027Definitions_AllEvents\u0027]/process[@id=\u0027Process_Events\u0027]/intermediateThrowEvent[@id=\u0027Throw_Signal\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "IntermediateThrowEvent",
+          "Name": "Throw signal",
+          "ParentId": "",
+          "Description": "",
+          "Properties": {
+            "eventDefinitions": [
+              {
+                "type": "signal",
+                "id": "SignalThrowDef",
+                "ref": "Signal_Alarm",
+                "name": "Alarm"
+              }
+            ]
+          },
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "Throw_Escalation",
+          "SourceId": "Throw_Escalation",
+          "SourceType": "intermediateThrowEvent",
+          "SourcePath": "/definitions[@id=\u0027Definitions_AllEvents\u0027]/process[@id=\u0027Process_Events\u0027]/intermediateThrowEvent[@id=\u0027Throw_Escalation\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "IntermediateThrowEvent",
+          "Name": "Throw escalation",
+          "ParentId": "",
+          "Description": "",
+          "Properties": {
+            "eventDefinitions": [
+              {
+                "type": "escalation",
+                "id": "EscThrowDef",
+                "ref": "Escalation_Late",
+                "name": "Late escalation",
+                "code": "ESC-1"
+              }
+            ]
+          },
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "Throw_Link",
+          "SourceId": "Throw_Link",
+          "SourceType": "intermediateThrowEvent",
+          "SourcePath": "/definitions[@id=\u0027Definitions_AllEvents\u0027]/process[@id=\u0027Process_Events\u0027]/intermediateThrowEvent[@id=\u0027Throw_Link\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "IntermediateThrowEvent",
+          "Name": "Throw link",
+          "ParentId": "",
+          "Description": "",
+          "Properties": {
+            "eventDefinitions": [
+              {
+                "type": "link",
+                "id": "LinkThrowDef",
+                "name": "hop"
+              }
+            ]
+          },
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "Task_Events_End",
+          "SourceId": "Task_Events_End",
+          "SourceType": "task",
+          "SourcePath": "/definitions[@id=\u0027Definitions_AllEvents\u0027]/process[@id=\u0027Process_Events\u0027]/task[@id=\u0027Task_Events_End\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "Task",
+          "Name": "Finish",
+          "ParentId": "",
+          "Description": "",
+          "Properties": {},
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "End_None",
+          "SourceId": "End_None",
+          "SourceType": "endEvent",
+          "SourcePath": "/definitions[@id=\u0027Definitions_AllEvents\u0027]/process[@id=\u0027Process_Events\u0027]/endEvent[@id=\u0027End_None\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "EndEvent",
+          "Name": "Plain end",
+          "ParentId": "",
+          "Description": "",
+          "Properties": {},
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "End_Message",
+          "SourceId": "End_Message",
+          "SourceType": "endEvent",
+          "SourcePath": "/definitions[@id=\u0027Definitions_AllEvents\u0027]/process[@id=\u0027Process_Events\u0027]/endEvent[@id=\u0027End_Message\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "EndEvent",
+          "Name": "Message end",
+          "ParentId": "",
+          "Description": "",
+          "Properties": {
+            "eventDefinitions": [
+              {
+                "type": "message",
+                "id": "MsgEndDef",
+                "ref": "Message_InfoMsg",
+                "name": "Info message"
+              }
+            ]
+          },
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "End_Error",
+          "SourceId": "End_Error",
+          "SourceType": "endEvent",
+          "SourcePath": "/definitions[@id=\u0027Definitions_AllEvents\u0027]/process[@id=\u0027Process_Events\u0027]/endEvent[@id=\u0027End_Error\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "EndEvent",
+          "Name": "Error end",
+          "ParentId": "",
+          "Description": "",
+          "Properties": {
+            "eventDefinitions": [
+              {
+                "type": "error",
+                "id": "ErrorEndDef",
+                "ref": "Error_Broken",
+                "name": "Broken",
+                "code": "E-42"
+              }
+            ]
+          },
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "End_Signal",
+          "SourceId": "End_Signal",
+          "SourceType": "endEvent",
+          "SourcePath": "/definitions[@id=\u0027Definitions_AllEvents\u0027]/process[@id=\u0027Process_Events\u0027]/endEvent[@id=\u0027End_Signal\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "EndEvent",
+          "Name": "Signal end",
+          "ParentId": "",
+          "Description": "",
+          "Properties": {
+            "eventDefinitions": [
+              {
+                "type": "signal",
+                "id": "SignalEndDef",
+                "ref": "Signal_Alarm",
+                "name": "Alarm"
+              }
+            ]
+          },
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        },
+        {
+          "Id": "End_Terminate",
+          "SourceId": "End_Terminate",
+          "SourceType": "endEvent",
+          "SourcePath": "/definitions[@id=\u0027Definitions_AllEvents\u0027]/process[@id=\u0027Process_Events\u0027]/endEvent[@id=\u0027End_Terminate\u0027]",
+          "Notation": "bpmn2",
+          "SemanticType": "EndEvent",
+          "Name": "Terminate",
+          "ParentId": "",
+          "Description": "",
+          "Properties": {
+            "eventDefinitions": [
+              {
+                "type": "terminate",
+                "id": "TerminateDef"
+              }
+            ]
+          },
+          "Tags": [],
+          "Governance": {
+            "TrustLevel": "",
+            "ReviewState": "",
+            "SyncState": "",
+            "DataSource": ""
+          }
+        }
+      ],
+      "Relationships": [
+        {
+          "Id": "Flow_E01",
+          "SourceId": "Flow_E01",
+          "SourceType": "sequenceFlow",
+          "SourceElementId": "Start_None",
+          "TargetElementId": "Task_Events_Hub",
+          "RelationshipType": "SequenceFlow",
+          "Name": "",
+          "Properties": {},
+          "Tags": []
+        },
+        {
+          "Id": "Flow_E02",
+          "SourceId": "Flow_E02",
+          "SourceType": "sequenceFlow",
+          "SourceElementId": "Start_Message",
+          "TargetElementId": "Task_Events_Hub",
+          "RelationshipType": "SequenceFlow",
+          "Name": "",
+          "Properties": {},
+          "Tags": []
+        },
+        {
+          "Id": "Flow_E03",
+          "SourceId": "Flow_E03",
+          "SourceType": "sequenceFlow",
+          "SourceElementId": "Start_Timer",
+          "TargetElementId": "Task_Events_Hub",
+          "RelationshipType": "SequenceFlow",
+          "Name": "",
+          "Properties": {},
+          "Tags": []
+        },
+        {
+          "Id": "Flow_E04",
+          "SourceId": "Flow_E04",
+          "SourceType": "sequenceFlow",
+          "SourceElementId": "Start_Signal",
+          "TargetElementId": "Task_Events_Hub",
+          "RelationshipType": "SequenceFlow",
+          "Name": "",
+          "Properties": {},
+          "Tags": []
+        },
+        {
+          "Id": "Flow_E05",
+          "SourceId": "Flow_E05",
+          "SourceType": "sequenceFlow",
+          "SourceElementId": "Start_Conditional",
+          "TargetElementId": "Task_Events_Hub",
+          "RelationshipType": "SequenceFlow",
+          "Name": "",
+          "Properties": {},
+          "Tags": []
+        },
+        {
+          "Id": "Flow_E10",
+          "SourceId": "Flow_E10",
+          "SourceType": "sequenceFlow",
+          "SourceElementId": "Task_Events_Hub",
+          "TargetElementId": "Catch_Message",
+          "RelationshipType": "SequenceFlow",
+          "Name": "",
+          "Properties": {},
+          "Tags": []
+        },
+        {
+          "Id": "Flow_E11",
+          "SourceId": "Flow_E11",
+          "SourceType": "sequenceFlow",
+          "SourceElementId": "Task_Events_Hub",
+          "TargetElementId": "Catch_Timer",
+          "RelationshipType": "SequenceFlow",
+          "Name": "",
+          "Properties": {},
+          "Tags": []
+        },
+        {
+          "Id": "Flow_E12",
+          "SourceId": "Flow_E12",
+          "SourceType": "sequenceFlow",
+          "SourceElementId": "Task_Events_Hub",
+          "TargetElementId": "Catch_Signal",
+          "RelationshipType": "SequenceFlow",
+          "Name": "",
+          "Properties": {},
+          "Tags": []
+        },
+        {
+          "Id": "Flow_E13",
+          "SourceId": "Flow_E13",
+          "SourceType": "sequenceFlow",
+          "SourceElementId": "Task_Events_Hub",
+          "TargetElementId": "Catch_Conditional",
+          "RelationshipType": "SequenceFlow",
+          "Name": "",
+          "Properties": {},
+          "Tags": []
+        },
+        {
+          "Id": "Flow_E14",
+          "SourceId": "Flow_E14",
+          "SourceType": "sequenceFlow",
+          "SourceElementId": "Task_Events_Hub",
+          "TargetElementId": "Catch_Link",
+          "RelationshipType": "SequenceFlow",
+          "Name": "",
+          "Properties": {},
+          "Tags": []
+        },
+        {
+          "Id": "Flow_E15",
+          "SourceId": "Flow_E15",
+          "SourceType": "sequenceFlow",
+          "SourceElementId": "Task_Events_Hub",
+          "TargetElementId": "Throw_Message",
+          "RelationshipType": "SequenceFlow",
+          "Name": "",
+          "Properties": {},
+          "Tags": []
+        },
+        {
+          "Id": "Flow_E16",
+          "SourceId": "Flow_E16",
+          "SourceType": "sequenceFlow",
+          "SourceElementId": "Throw_Message",
+          "TargetElementId": "Throw_Signal",
+          "RelationshipType": "SequenceFlow",
+          "Name": "",
+          "Properties": {},
+          "Tags": []
+        },
+        {
+          "Id": "Flow_E17",
+          "SourceId": "Flow_E17",
+          "SourceType": "sequenceFlow",
+          "SourceElementId": "Throw_Signal",
+          "TargetElementId": "Throw_Escalation",
+          "RelationshipType": "SequenceFlow",
+          "Name": "",
+          "Properties": {},
+          "Tags": []
+        },
+        {
+          "Id": "Flow_E18",
+          "SourceId": "Flow_E18",
+          "SourceType": "sequenceFlow",
+          "SourceElementId": "Throw_Escalation",
+          "TargetElementId": "Throw_Link",
+          "RelationshipType": "SequenceFlow",
+          "Name": "",
+          "Properties": {},
+          "Tags": []
+        },
+        {
+          "Id": "Flow_E19",
+          "SourceId": "Flow_E19",
+          "SourceType": "sequenceFlow",
+          "SourceElementId": "Throw_Link",
+          "TargetElementId": "Task_Events_End",
+          "RelationshipType": "SequenceFlow",
+          "Name": "",
+          "Properties": {},
+          "Tags": []
+        },
+        {
+          "Id": "Flow_E20",
+          "SourceId": "Flow_E20",
+          "SourceType": "sequenceFlow",
+          "SourceElementId": "Catch_Message",
+          "TargetElementId": "Task_Events_End",
+          "RelationshipType": "SequenceFlow",
+          "Name": "",
+          "Properties": {},
+          "Tags": []
+        },
+        {
+          "Id": "Flow_E21",
+          "SourceId": "Flow_E21",
+          "SourceType": "sequenceFlow",
+          "SourceElementId": "Task_Events_End",
+          "TargetElementId": "End_None",
+          "RelationshipType": "SequenceFlow",
+          "Name": "",
+          "Properties": {},
+          "Tags": []
+        },
+        {
+          "Id": "Flow_E22",
+          "SourceId": "Flow_E22",
+          "SourceType": "sequenceFlow",
+          "SourceElementId": "Task_Events_End",
+          "TargetElementId": "End_Message",
+          "RelationshipType": "SequenceFlow",
+          "Name": "",
+          "Properties": {},
+          "Tags": []
+        },
+        {
+          "Id": "Flow_E23",
+          "SourceId": "Flow_E23",
+          "SourceType": "sequenceFlow",
+          "SourceElementId": "Task_Events_End",
+          "TargetElementId": "End_Error",
+          "RelationshipType": "SequenceFlow",
+          "Name": "",
+          "Properties": {},
+          "Tags": []
+        },
+        {
+          "Id": "Flow_E24",
+          "SourceId": "Flow_E24",
+          "SourceType": "sequenceFlow",
+          "SourceElementId": "Task_Events_End",
+          "TargetElementId": "End_Signal",
+          "RelationshipType": "SequenceFlow",
+          "Name": "",
+          "Properties": {},
+          "Tags": []
+        },
+        {
+          "Id": "Flow_E25",
+          "SourceId": "Flow_E25",
+          "SourceType": "sequenceFlow",
+          "SourceElementId": "Task_Events_End",
+          "TargetElementId": "End_Terminate",
+          "RelationshipType": "SequenceFlow",
+          "Name": "",
+          "Properties": {},
+          "Tags": []
+        }
+      ],
+      "Views": [],
+      "Issues": [],
+      "Metadata": {
+        "SourceSystem": "bpmn-xml",
+        "SourceVersion": "http://tempo.example/bpmn/corpus",
+        "LoadedAt": "1970-01-01T00:00:00+00:00",
+        "IsFresh": true
+      },
+      "Properties": {
+        "bpmnDefinitions": [
+          {
+            "kind": "message",
+            "id": "Message_StartMsg",
+            "name": "Start message",
+            "code": ""
+          },
+          {
+            "kind": "message",
+            "id": "Message_InfoMsg",
+            "name": "Info message",
+            "code": ""
+          },
+          {
+            "kind": "signal",
+            "id": "Signal_Alarm",
+            "name": "Alarm",
+            "code": ""
+          },
+          {
+            "kind": "error",
+            "id": "Error_Broken",
+            "name": "Broken",
+            "code": "E-42"
+          },
+          {
+            "kind": "escalation",
+            "id": "Escalation_Late",
+            "name": "Late escalation",
+            "code": "ESC-1"
+          }
+        ]
+      }
+    }
+  ],
+  "Losses": [],
+  "Warnings": [],
+  "HasErrors": false,
+  "ErrorMessage": null
+}

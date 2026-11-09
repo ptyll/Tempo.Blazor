@@ -1,0 +1,10 @@
+{
+  "kind": "Class",
+  "category": "General",
+  "namespace": "Tempo.Blazor.Modeling.BpmnXml",
+  "description": "Semantic relationship type names the importer emits. Duplicated on purpose from the internal BpmnModelingCatalog; the corpus parity test keeps the two lists from drifting.",
+  "packageId": "Tempo.Blazor.Modeling.BpmnXml",
+  "sourcePath": "src/Tempo.Blazor.Modeling.BpmnXml/BpmnConstants.cs",
+  "documentationStatus": "generated",
+  "itemName": "BpmnRelationshipTypes"
+}

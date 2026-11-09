@@ -117,6 +117,10 @@
         "description": "Modeling editor components for Tempo.Blazor, including BPMN, UML, ArchiMate, ERD notation profiles and diagram generation."
       },
       {
+        "name": "Tempo.Blazor.Modeling.BpmnXml",
+        "description": "Headless BPMN 2.0 XML converter for Tempo.Blazor Modeling: deterministic, loss-reporting import of BPMN 2.0 XML into ModelingModelDto. Zero UI dependencies — safe to reference from API/service projects."
+      },
+      {
         "name": "Tempo.Blazor.Spreadsheet",
         "description": "Excel-like spreadsheet components for Tempo.Blazor, including canvas rendering, formula editing, workbook import/export, and spreadsheet interop assets."
       },

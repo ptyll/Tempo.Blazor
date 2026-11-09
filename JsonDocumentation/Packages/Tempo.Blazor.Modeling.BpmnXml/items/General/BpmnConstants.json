@@ -1,0 +1,10 @@
+{
+  "kind": "Class",
+  "category": "General",
+  "namespace": "Tempo.Blazor.Modeling.BpmnXml",
+  "description": "BPMN 2.0 namespace and notation constants used by the headless converter.",
+  "packageId": "Tempo.Blazor.Modeling.BpmnXml",
+  "sourcePath": "src/Tempo.Blazor.Modeling.BpmnXml/BpmnConstants.cs",
+  "documentationStatus": "generated",
+  "itemName": "BpmnConstants"
+}

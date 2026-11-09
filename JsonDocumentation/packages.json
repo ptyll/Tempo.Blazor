@@ -127,6 +127,17 @@
       "includeAssets": true
     },
     {
+      "packageId": "Tempo.Blazor.Modeling.BpmnXml",
+      "sourceProject": "src/Tempo.Blazor.Modeling.BpmnXml/Tempo.Blazor.Modeling.BpmnXml.csproj",
+      "outputFile": "tempo-blazor-bpmnxml.json",
+      "documentationRoots": [
+        "Packages/Tempo.Blazor.Modeling.BpmnXml/items"
+      ],
+      "includePatterns": [],
+      "excludePatterns": [],
+      "includePublicTypes": true
+    },
+    {
       "packageId": "Tempo.Blazor.Spreadsheet",
       "sourceProject": "src/Tempo.Blazor.Spreadsheet/Tempo.Blazor.Spreadsheet.csproj",
       "outputFile": "tempo-blazor-spreadsheet.json",
