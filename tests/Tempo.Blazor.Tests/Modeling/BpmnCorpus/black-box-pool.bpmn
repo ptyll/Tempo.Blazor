@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
+             xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+             xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+             xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+             id="Definitions_BlackBox"
+             name="Black-box pool"
+             targetNamespace="http://tempo.example/bpmn/corpus">
+  <!-- Black-box participant: Participant_External has NO processRef (no process body).
+       Importer rule: Pool with a loss/info record "black-box pool", no child elements. -->
+  <collaboration id="Collaboration_BlackBox">
+    <participant id="Participant_Internal" name="Our system" processRef="Process_Internal"/>
+    <participant id="Participant_External" name="Legacy vendor"/>
+    <messageFlow id="MessageFlow_Request" name="Request" sourceRef="Task_Send" targetRef="Participant_External"/>
+    <messageFlow id="MessageFlow_Reply" name="Reply" sourceRef="Participant_External" targetRef="Task_Receive"/>
+  </collaboration>
+  <process id="Process_Internal" name="Our process" isExecutable="false">
+    <startEvent id="StartEvent_BlackBox" name="Start">
+      <outgoing>Flow_BB1</outgoing>
+    </startEvent>
+    <task id="Task_Send" name="Send request">
+      <incoming>Flow_BB1</incoming>
+      <outgoing>Flow_BB2</outgoing>
+    </task>
+    <task id="Task_Receive" name="Receive reply">
+      <incoming>Flow_BB2</incoming>
+      <outgoing>Flow_BB3</outgoing>
+    </task>
+    <endEvent id="EndEvent_BlackBox" name="Done">
+      <incoming>Flow_BB3</incoming>
+    </endEvent>
+    <sequenceFlow id="Flow_BB1" sourceRef="StartEvent_BlackBox" targetRef="Task_Send"/>
+    <sequenceFlow id="Flow_BB2" sourceRef="Task_Send" targetRef="Task_Receive"/>
+    <sequenceFlow id="Flow_BB3" sourceRef="Task_Receive" targetRef="EndEvent_BlackBox"/>
+  </process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_BlackBox" name="Black-box pool">
+    <bpmndi:BPMNPlane id="BPMNPlane_BlackBox" bpmnElement="Collaboration_BlackBox">
+      <bpmndi:BPMNShape id="Participant_Internal_di" bpmnElement="Participant_Internal" isHorizontal="true">
+        <dc:Bounds x="160" y="80" width="720" height="200"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Participant_External_di" bpmnElement="Participant_External" isHorizontal="true">
+        <dc:Bounds x="160" y="340" width="720" height="120"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="StartEvent_BlackBox_di" bpmnElement="StartEvent_BlackBox">
+        <dc:Bounds x="212" y="162" width="36" height="36"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Send_di" bpmnElement="Task_Send">
+        <dc:Bounds x="300" y="140" width="100" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Receive_di" bpmnElement="Task_Receive">
+        <dc:Bounds x="480" y="140" width="100" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EndEvent_BlackBox_di" bpmnElement="EndEvent_BlackBox">
+        <dc:Bounds x="652" y="162" width="36" height="36"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_BB1_di" bpmnElement="Flow_BB1">
+        <di:waypoint x="248" y="180"/>
+        <di:waypoint x="300" y="180"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_BB2_di" bpmnElement="Flow_BB2">
+        <di:waypoint x="400" y="180"/>
+        <di:waypoint x="480" y="180"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_BB3_di" bpmnElement="Flow_BB3">
+        <di:waypoint x="580" y="180"/>
+        <di:waypoint x="652" y="180"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MessageFlow_Request_di" bpmnElement="MessageFlow_Request">
+        <di:waypoint x="350" y="220"/>
+        <di:waypoint x="350" y="340"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MessageFlow_Reply_di" bpmnElement="MessageFlow_Reply">
+        <di:waypoint x="530" y="340"/>
+        <di:waypoint x="530" y="220"/>
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</definitions>

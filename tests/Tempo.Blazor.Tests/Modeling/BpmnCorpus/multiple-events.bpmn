@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
+             xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+             xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+             xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+             xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+             id="Definitions_Multiple"
+             name="Multiple event definitions"
+             targetNamespace="http://tempo.example/bpmn/corpus">
+  <!-- Events carrying multiple=true / parallelMultiple=true with TWO eventDefinitions.
+       Importer rule: both definitions land in Properties["eventDefinitions"]; the
+       multiple/parallelMultiple flags go to Properties (multiple / parallelMultiple). -->
+  <process id="Process_Multiple" name="Multiple" isExecutable="false">
+    <startEvent id="StartEvent_Multiple" name="Start">
+      <outgoing>Flow_M1</outgoing>
+    </startEvent>
+    <intermediateCatchEvent id="Catch_Multiple" name="Mail or timer" multiple="true">
+      <incoming>Flow_M1</incoming>
+      <outgoing>Flow_M2</outgoing>
+      <messageEventDefinition id="MsgDef_Multiple" messageRef="Message_Mail"/>
+      <timerEventDefinition id="TimerDef_Multiple">
+        <timeDuration xsi:type="tFormalExpression">PT2H</timeDuration>
+      </timerEventDefinition>
+    </intermediateCatchEvent>
+    <intermediateCatchEvent id="Catch_Parallel" name="Mail and escalation" parallelMultiple="true">
+      <incoming>Flow_M2</incoming>
+      <outgoing>Flow_M3</outgoing>
+      <messageEventDefinition id="MsgDef_Parallel" messageRef="Message_Mail"/>
+      <escalationEventDefinition id="EscDef_Parallel" escalationRef="Escalation_NeedsReview"/>
+    </intermediateCatchEvent>
+    <task id="Task_Multiple" name="Handle">
+      <incoming>Flow_M3</incoming>
+      <outgoing>Flow_M4</outgoing>
+    </task>
+    <endEvent id="EndEvent_Multiple" name="Done">
+      <incoming>Flow_M4</incoming>
+    </endEvent>
+    <sequenceFlow id="Flow_M1" sourceRef="StartEvent_Multiple" targetRef="Catch_Multiple"/>
+    <sequenceFlow id="Flow_M2" sourceRef="Catch_Multiple" targetRef="Catch_Parallel"/>
+    <sequenceFlow id="Flow_M3" sourceRef="Catch_Parallel" targetRef="Task_Multiple"/>
+    <sequenceFlow id="Flow_M4" sourceRef="Task_Multiple" targetRef="EndEvent_Multiple"/>
+  </process>
+  <message id="Message_Mail" name="Mail arrived"/>
+  <escalation id="Escalation_NeedsReview" name="Needs review" escalationCode="R-1"/>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_Multiple" name="Multiple event definitions">
+    <bpmndi:BPMNPlane id="BPMNPlane_Multiple" bpmnElement="Process_Multiple">
+      <bpmndi:BPMNShape id="StartEvent_Multiple_di" bpmnElement="StartEvent_Multiple">
+        <dc:Bounds x="152" y="162" width="36" height="36"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Catch_Multiple_di" bpmnElement="Catch_Multiple">
+        <dc:Bounds x="260" y="160" width="36" height="36"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Catch_Parallel_di" bpmnElement="Catch_Parallel">
+        <dc:Bounds x="380" y="160" width="36" height="36"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Multiple_di" bpmnElement="Task_Multiple">
+        <dc:Bounds x="470" y="140" width="100" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EndEvent_Multiple_di" bpmnElement="EndEvent_Multiple">
+        <dc:Bounds x="642" y="162" width="36" height="36"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_M1_di" bpmnElement="Flow_M1">
+        <di:waypoint x="188" y="180"/>
+        <di:waypoint x="260" y="180"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_M2_di" bpmnElement="Flow_M2">
+        <di:waypoint x="296" y="180"/>
+        <di:waypoint x="380" y="180"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_M3_di" bpmnElement="Flow_M3">
+        <di:waypoint x="416" y="180"/>
+        <di:waypoint x="470" y="180"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_M4_di" bpmnElement="Flow_M4">
+        <di:waypoint x="570" y="180"/>
+        <di:waypoint x="642" y="180"/>
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</definitions>
