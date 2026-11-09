@@ -11664,7 +11664,7 @@
       "kind": "Component",
       "category": "Data Display",
       "namespace": "Tempo.Blazor.Components.DataDisplay",
-      "description": "Generic drag-and-drop Kanban board with typed items, configurable columns with optional color and WIP limits, optional horizontal swimlanes, custom card/column/swimlane templates, cross-column and cross-lane moves, in-column reordering with a visual drop indicator, and events for card moves and clicks. Every card is also a focusable, keyboard-operable move target (WCAG 2.5.7): a \"Move…\" menu on the card offers every column × swimlane destination, collapsed zones included, plus Move up / Move down, and reports the same OnItemMoved / OnItemReordered contract as a drop.",
+      "description": "Generic drag-and-drop Kanban board with typed items, configurable columns with optional color and WIP limits, optional horizontal swimlanes, custom card/column/swimlane templates, cross-column and cross-lane moves, in-column reordering with a visual drop indicator, collapsible columns and swimlanes whose collapsed zones stay drop targets, and events for card moves and clicks. Every card is also a focusable, keyboard-operable move target (WCAG 2.5.7): a \"Move…\" menu on the card offers every column × swimlane destination, collapsed zones included, plus Move up / Move down, and reports the same OnItemMoved / OnItemReordered contract as a drop.",
       "packageId": "Tempo.Blazor",
       "sourcePath": "src/Tempo.Blazor/Components/DataDisplay/TmKanbanBoard.razor",
       "documentationStatus": "merged",
@@ -11841,6 +11841,7 @@
         "tm-kanban__count",
         "tm-kanban__wip-limit",
         "tm-kanban__cards",
+        "tm-kanban__cards--virtual",
         "tm-kanban__card",
         "tm-kanban__drop-indicator",
         "tm-kanban__empty",
@@ -11869,6 +11870,13 @@
         "tm-kanban__card-actions",
         "tm-kanban__card-move",
         "tm-kanban__card-move-trigger"
+      ],
+      "notes": [
+        "The board is a pure view over the host's list: it never inserts, removes or reorders an item, it reports KanbanMoveEvent and the host applies the move. Prefer TargetBeforeItem over TargetIndex when persisting order — it is unaffected by whether the dragged item is removed before or after the insertion point is computed.",
+        "A drop on a zone (header, padding, empty area, a collapsed strip or a collapsed lane's slot) appends: TargetIndex equals the cell's card count and TargetBeforeItem is null. The horizontal __drop-indicator line is drawn only by an expanded column.",
+        "Collapsing is view state. A collapsed column narrows to the --tm-kanban-collapsed-width strip (vertical title, count, WIP badge, no card body) and stays a drop target that appends; a collapsed swimlane renders .tm-kanban__swimlane-slots with one .tm-kanban__lane-slot per column instead of dropping its body, so every (column, lane) drop keeps working. Disabled keeps the collapse but leaves every drop zone inert.",
+        "The non-drag path is on by default because a drag-only card fails WCAG 2.5.7: one roving tab stop per cell, M / Alt+ArrowDown opens the move menu, Enter / Space raise OnCardClick, and the result is announced once through one polite live region.",
+        "Full behaviour contract: docs/kanban-board.md (layouts, collapsed zones, drop contract, a11y, data-testid set, localization keys, wireframe role, verification)."
       ],
       "examples": [
         {
