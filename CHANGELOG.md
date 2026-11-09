@@ -156,6 +156,23 @@
   download payload, with `TmQRCodeServerE2ETests` / `TmQRCodeInteractiveAutoE2ETests` smoke runs.
 
 
+### Fixed — test suite stability (plan 7ba95ed6, phase FZE-1)
+
+- **No production behavior change.** `Tempo.Blazor.Tests` (21 331 tests) is green 3× consecutively
+  with xUnit parallelism intact; previously a full run ended with ~5 rotating timing-flaky failures.
+- `LocalizationTestBase` (and the three direct `TestContext` subclasses) set `DefaultWaitTimeout = 5 s`
+  so bUnit `WaitFor*` calls outlive full-suite parallel-load scheduling jitter.
+- `TmDateRangePicker`'s "look at your pick" auto-close now runs on the injectable `TimeProvider`
+  (`Task.Delay(..., Clock)`); production defaults to `TimeProvider.System`, behavior unchanged.
+- `AiAgentsPageTests` dispatch on fresh elements inside the renderer's dispatcher and wait for
+  overlay context-menu items before clicking (stale event-handler ids under re-render).
+- Test-only `SetupVoid` JS-interop handlers gained explicit `.SetVoidResult()` except the deliberate
+  pending promote/focus-trap/init pattern; BPMN import golden fixtures are LF-normalized;
+  `BpmnModelBuilder` was split into partials to respect the 1200-line source ceiling; the wireframe
+  pack control count guard follows the main-merge schema (46).
+- `MoveNodesCommand` gained an internal timestamp ctor for tests; the public surface is unchanged.
+
+
 ### Breaking changes and migration
 
 **No source-breaking change.** Every new member is additive or a default interface member; every new component is new. The behavior changes below are the complete list a 2.10.0 consumer can notice, with before/after:

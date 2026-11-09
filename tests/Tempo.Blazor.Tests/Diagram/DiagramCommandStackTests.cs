@@ -283,14 +283,18 @@ public class DiagramCommandStackTests
         var node = MakeNode(x: 0, y: 0);
         doc.Nodes.Add(node);
         var stack = new DiagramCommandStack();
+        // Explicit logical stamps: the coalescing window must not depend on how long the
+        // machine stalled between the two pushes (full-suite parallel load, FZE-1).
+        var t1 = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+        var t2 = t1.AddMilliseconds(50);
 
         var before1 = new Dictionary<string, NodeMoveState> { [node.Id] = new(0, 0, null, -1, -1) };
         var after1 = new Dictionary<string, NodeMoveState> { [node.Id] = new(10, 10, null, -1, -1) };
-        stack.Push(new MoveNodesCommand(doc, before1, after1));
+        stack.Push(new MoveNodesCommand(doc, before1, after1, t1));
 
         var before2 = new Dictionary<string, NodeMoveState> { [node.Id] = new(10, 10, null, -1, -1) };
         var after2 = new Dictionary<string, NodeMoveState> { [node.Id] = new(20, 20, null, -1, -1) };
-        stack.Push(new MoveNodesCommand(doc, before2, after2));
+        stack.Push(new MoveNodesCommand(doc, before2, after2, t2));
 
         stack.Undo();
         stack.CanUndo.Should().BeFalse("coalesced into single undo step");
@@ -501,16 +505,19 @@ public class DiagramCommandStackTests
         var stack = new DiagramCommandStack();
         var node = MakeNode(x: 0, y: 0);
         doc.Nodes.Add(node);
+        // Explicit logical stamps keep the coalesce window off the wall clock (FZE-1).
+        var t1 = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+        var t2 = t1.AddMilliseconds(50);
 
         using (stack.TransactionScope("Move"))
         {
             var before1 = new Dictionary<string, NodeMoveState> { [node.Id] = new(0, 0, null, -1, -1) };
             var after1 = new Dictionary<string, NodeMoveState> { [node.Id] = new(10, 10, null, -1, -1) };
-            stack.Push(new MoveNodesCommand(doc, before1, after1));
+            stack.Push(new MoveNodesCommand(doc, before1, after1, t1));
 
             var before2 = new Dictionary<string, NodeMoveState> { [node.Id] = new(10, 10, null, -1, -1) };
             var after2 = new Dictionary<string, NodeMoveState> { [node.Id] = new(20, 20, null, -1, -1) };
-            stack.Push(new MoveNodesCommand(doc, before2, after2));
+            stack.Push(new MoveNodesCommand(doc, before2, after2, t2));
         }
 
         stack.CanUndo.Should().BeTrue();

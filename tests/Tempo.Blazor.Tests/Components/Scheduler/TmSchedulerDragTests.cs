@@ -370,8 +370,8 @@ public class TmSchedulerDragTests : LocalizationTestBase
     public async Task Keyboard_Move_Across_Column_Focuses_The_Moved_Event()
     {
         JSInterop.Mode = JSRuntimeMode.Strict;
-        JSInterop.SetupVoid("TempoBlazor.Scheduler.registerInstance", _ => true);
-        var focus = JSInterop.SetupVoid("TempoBlazor.Scheduler.focusRovingStop", _ => true);
+        JSInterop.SetupVoid("TempoBlazor.Scheduler.registerInstance", _ => true).SetVoidResult();
+        var focus = JSInterop.SetupVoid("TempoBlazor.Scheduler.focusRovingStop", _ => true).SetVoidResult();
 
         var events = OneEvent();
         var cut = Render<TmSchedulerTimeGrid>(p => p

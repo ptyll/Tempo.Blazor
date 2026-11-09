@@ -42,7 +42,7 @@ public class WireframeExportRoutingTests : LocalizationTestBase
         if (api is not null)
             Services.AddSingleton<IHttpClientFactory>(new FakeFactory(new() { ["DemoApi"] = new HttpClient(api) { BaseAddress = new Uri("https://api.test/") } }));
         JSInterop.Setup<string>("tmWireframeDesigner.exportSvg", _ => true).SetResult("<svg xmlns='http://www.w3.org/2000/svg'/>");
-        JSInterop.SetupVoid("tmWireframe.download", _ => true);
+        JSInterop.SetupVoid("tmWireframe.download", _ => true).SetVoidResult();
         return Render<TmWireframeEditor>(p =>
         {
             p.Add(e => e.Document, new WireframeDocument { Title = "Export", Width = 800, Height = 600 });
@@ -123,7 +123,7 @@ public class WireframeExportRoutingTests : LocalizationTestBase
         Services.AddSingleton(registry);
         Services.AddSingleton(new HttpClient(capture) { BaseAddress = new Uri("https://host.test/") });
         JSInterop.Setup<string>("tmWireframeDesigner.exportSvg", _ => true).SetResult("<svg xmlns='http://www.w3.org/2000/svg'/>");
-        JSInterop.SetupVoid("tmWireframe.download", _ => true);
+        JSInterop.SetupVoid("tmWireframe.download", _ => true).SetVoidResult();
         _ = new Tempo.Blazor.Components.Wireframe.BuiltInStencilPackProvider().GetDefinitions().Count();   // compiling the pack registers its theme names
         var cut = Render<TmWireframeEditor>(p =>
         {

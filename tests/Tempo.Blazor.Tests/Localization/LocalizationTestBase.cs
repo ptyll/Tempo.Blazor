@@ -35,6 +35,11 @@ public abstract class LocalizationTestBase : BunitContext
         Services.AddSingleton<Tempo.Blazor.Components.Diagram.Templates.DiagramTemplateRegistry>();
         Services.AddHttpClient();
         JSInterop.Mode = JSRuntimeMode.Loose;
+        // The suite runs thousands of bUnit contexts in parallel; under full-suite load the renderer
+        // can starve for longer than bUnit's 1 s default and turn timing-sensitive waits into flaky
+        // WaitForFailedExceptions. 5 s keeps a genuinely-stuck component failing fast while absorbing
+        // scheduler jitter (FZE-1).
+        DefaultWaitTimeout = TimeSpan.FromSeconds(5);
         JSInterop.SetupVoid("tmColorPicker.registerEscape", _ => true).SetVoidResult();
         JSInterop.SetupVoid("tmColorPicker.unregister", _ => true).SetVoidResult();
     }

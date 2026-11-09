@@ -212,9 +212,14 @@ public class TmQueryInputTests : LocalizationTestBase
         // Escape inside the debounce window, and the pending timer still fired
         // LoadSuggestionsAsync, reopening the dropdown the user just closed (the new load
         // stamps its own fresh version, so the version bump cannot catch it).
+        // The debounce must outlive the dismissal bookkeeping with margin: with the production
+        // 80 ms window a loaded CI machine can stall between Input("sta") and the dismissal long
+        // enough for the timer to fire legitimately, which is the flake this guard used to hit
+        // (calls == 2). A 2 s window makes "dismissal ran first" deterministic; we then wait past
+        // the full window to prove the armed timer was cancelled.
         var calls = 0;
         var cut = Render<TmQueryInput>(p => p
-            .Add(c => c.DebounceMs, 80)
+            .Add(c => c.DebounceMs, 2000)
             .Add(c => c.SuggestionsProvider, _ =>
             {
                 calls++;
@@ -233,7 +238,7 @@ public class TmQueryInputTests : LocalizationTestBase
         cut.FindAll("[role='listbox']").Should().BeEmpty();
 
         // …and the armed timer must be dead: no second provider call, no reopen.
-        await Task.Delay(250);
+        await Task.Delay(2300);
         calls.Should().Be(1,
             "the dismissal must cancel the pending debounce — letting it fire reopens the dropdown (N323)");
         cut.FindAll("[role='listbox']").Should().BeEmpty();

@@ -25,6 +25,7 @@ public class EmailTemplatePagesTests : BunitContext
     public EmailTemplatePagesTests()
     {
         JSInterop.Mode = JSRuntimeMode.Loose;
+        DefaultWaitTimeout = TimeSpan.FromSeconds(5); // FZE-1: absorb full-suite parallel-load jitter
         Services.AddSingleton<ITmLocalizer>(new EchoTmLocalizer());
         Services.AddSingleton<ILoggerFactory>(NullLoggerFactory.Instance);
         Services.AddHttpClient();

@@ -259,10 +259,12 @@
     private DateOnly? _presetsDay;
 
     /// <summary>
-    /// Clock behind the built-in presets. Resolved through <see cref="IServiceProvider"/> so a
-    /// consumer that never registers a <see cref="TimeProvider"/> still gets
-    /// <see cref="TimeProvider.System"/> — a bare <c>[Inject] TimeProvider</c> would throw for
-    /// exactly those consumers. Tests register a FakeTimeProvider.
+    /// Clock behind the built-in presets and the post-selection auto-close delay (the 300 ms
+    /// "look at your pick" window a completed range schedules before the popup closes).
+    /// Resolved through <see cref="IServiceProvider"/> so a consumer that never registers a
+    /// <see cref="TimeProvider"/> still gets <see cref="TimeProvider.System"/> — a bare
+    /// <c>[Inject] TimeProvider</c> would throw for exactly those consumers. Tests register a
+    /// FakeTimeProvider.
     /// </summary>
     [Inject] private IServiceProvider Services { get; set; } = default!;
 
@@ -588,7 +590,11 @@
         var token = _autoCloseToken;
         _ = Task.Run(async () =>
         {
-            await Task.Delay(300);
+            // Runs on the injectable clock (FakeTimeProvider in tests) so the "look at your pick"
+            // window never fires mid-assertion under full-suite parallel load — a real 300 ms
+            // Task.Delay could elapse between the completing click and the test's next Find
+            // and close the popup under it (FZE-1).
+            await Task.Delay(TimeSpan.FromMilliseconds(300), Clock);
             await InvokeAsync(() =>
             {
                 if (token != _autoCloseToken)

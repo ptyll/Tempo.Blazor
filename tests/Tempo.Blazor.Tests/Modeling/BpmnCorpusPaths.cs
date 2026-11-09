@@ -26,7 +26,12 @@ internal static class BpmnCorpusPaths
 
     public static string ExpectedDirectory => Path.Combine(CorpusDirectory, "Expected");
 
-    public static string ReadFixture(string fileName) => File.ReadAllText(Path.Combine(CorpusDirectory, fileName));
+    // Line endings are normalized to LF at read time so the importer's captured text (documentation,
+    // loss messages) is identical across checkouts (core.autocrlf) and platforms — the golden files
+    // in Expected/ are compared byte-for-byte after the same normalization.
+    public static string ReadFixture(string fileName) =>
+        File.ReadAllText(Path.Combine(CorpusDirectory, fileName)).ReplaceLineEndings("\n");
 
-    public static string ReadHostileFixture(string fileName) => File.ReadAllText(Path.Combine(HostileDirectory, fileName));
+    public static string ReadHostileFixture(string fileName) =>
+        File.ReadAllText(Path.Combine(HostileDirectory, fileName)).ReplaceLineEndings("\n");
 }

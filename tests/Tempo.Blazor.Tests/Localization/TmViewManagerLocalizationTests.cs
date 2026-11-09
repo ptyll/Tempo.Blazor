@@ -17,6 +17,7 @@ public class TmViewManagerLocalizationTests : BunitContext
         Services.AddSingleton<ITmLocalizer>(LocalizationTestBase.BuildCzechLocalizer());
         Services.AddScoped<DragDropService>();
         JSInterop.Mode = JSRuntimeMode.Loose;
+        DefaultWaitTimeout = TimeSpan.FromSeconds(5); // FZE-1: absorb full-suite parallel-load jitter
     }
 
     private static IDataTableViewProvider ProviderWithCurrent()

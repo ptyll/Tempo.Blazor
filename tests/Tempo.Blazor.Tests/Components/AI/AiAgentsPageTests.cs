@@ -1,4 +1,4 @@
-﻿using AngleSharp.Dom;
+using AngleSharp.Dom;
 using Bunit;
 using FluentAssertions;
 using Microsoft.AspNetCore.Components.Web;
@@ -53,6 +53,30 @@ public class AiAgentsPageTests : DemoPageLocalizationTestBase
     private static Task KeyAsync(IRenderedComponent<AiAgentsPage> cut, string selector, int index, string key)
         => cut.InvokeAsync(() => cut.FindAll(selector)[index]
             .KeyDown(new KeyboardEventArgs { Key = key }));
+
+    /// <summary>
+    /// Changes the first radio of group <paramref name="index"/> on a FRESH element inside the renderer's
+    /// dispatcher: settling a conflict re-renders the radar asynchronously, so an element found earlier in
+    /// the loop can carry a stale event-handler id by the time the change is dispatched (FZE-1).
+    /// </summary>
+    private static Task SettleConflictAsync(IRenderedComponent<AiAgentsPage> cut, int index)
+        => cut.InvokeAsync(() => cut.FindAll("[data-testid='ai-agents-conflict'] [role='radiogroup']")[index]
+            .QuerySelectorAll("input[type='radio']")[0]
+            .Change(true));
+
+    /// <summary>
+    /// Clicks the <paramref name="index"/>th item of an open context menu on a FRESH element inside the
+    /// renderer's dispatcher. The menu renders through an overlay whose items can land a render tick
+    /// after the trigger's click, so the presence is awaited first and the item is re-found at dispatch
+    /// time (FZE-1).
+    /// </summary>
+    private static Task ClickMenuItemAsync(IRenderedComponent<AiAgentsPage> cut, string scope, int index)
+    {
+        cut.WaitForAssertion(
+            () => cut.FindAll($"{scope} .tm-context-menu__item").Should().HaveCountGreaterThan(index),
+            TimeSpan.FromSeconds(5));
+        return cut.InvokeAsync(() => cut.FindAll($"{scope} .tm-context-menu__item")[index].Click());
+    }
 
     [Fact]
     public void ThePageRendersItsSectionsWithoutRawKeys()
@@ -685,7 +709,7 @@ public class AiAgentsPageTests : DemoPageLocalizationTestBase
 
         const string card = "[data-testid='delegate-task'][data-task-id='task-summary']";
         cut.Find("[data-testid='ai-agents-delegate'] " + card + " .tm-context-menu__trigger").Click();
-        cut.FindAll("[data-testid='ai-agents-delegate'] .tm-context-menu__item")[0].Click();
+        ClickMenuItemAsync(cut, "[data-testid='ai-agents-delegate']", 0).GetAwaiter().GetResult();
 
         cut.WaitForAssertion(() =>
         {
@@ -735,7 +759,7 @@ public class AiAgentsPageTests : DemoPageLocalizationTestBase
         var row = "[data-testid='ai-agents-runs'] [data-window-id='win-mon-am'] [data-testid='runs-run'][data-run-id='run-export']";
         cut.Find(row + " .tm-context-menu__trigger").Click();
         // The item for a window with room (the overloaded one would be refused).
-        cut.FindAll("[data-testid='ai-agents-runs'] .tm-context-menu__item")[2].Click();
+        ClickMenuItemAsync(cut, "[data-testid='ai-agents-runs']", 2).GetAwaiter().GetResult();
 
         cut.WaitForAssertion(() =>
         {
@@ -762,11 +786,11 @@ public class AiAgentsPageTests : DemoPageLocalizationTestBase
             "the merge is unavailable until every conflict is settled");
 
         // Settle every conflict: the first agent's version on each, exactly as a reader would.
+        // Each Change re-renders the radar, so every dispatch re-finds its radio on a fresh element
+        // inside the renderer's dispatcher — a held element can carry a stale event-handler id (FZE-1).
         for (var index = 0; index < 3; index++)
         {
-            cut.FindAll("[data-testid='ai-agents-conflict'] [role='radiogroup']")[index]
-                .QuerySelectorAll("input[type='radio']")[0]
-                .Change(true);
+            SettleConflictAsync(cut, index).GetAwaiter().GetResult();
         }
 
         cut.WaitForAssertion(() =>
@@ -776,7 +800,11 @@ public class AiAgentsPageTests : DemoPageLocalizationTestBase
             Text(cut, "ai-agents-conflict-log").Should().Contain("settled");
         }, TimeSpan.FromSeconds(10));
 
-        cut.Find("[data-testid='ai-agents-conflict'] [data-testid='radar-merge']").Click();
+        // Fresh element inside the dispatcher again: the wait's last assertion render could be
+        // followed by an async continuation re-render before a plain Find+Click ran.
+        cut.InvokeAsync(() =>
+                cut.Find("[data-testid='ai-agents-conflict'] [data-testid='radar-merge']").Click())
+            .GetAwaiter().GetResult();
 
         cut.WaitForAssertion(() =>
         {

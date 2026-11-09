@@ -202,7 +202,7 @@ public sealed class TmNotionAiMenuTests : LocalizationTestBase
     public async Task FinishedStream_MakesAcceptPrimary_AndCopyCallsClipboard()
     {
         var cut = RenderMenu(new RecordingAIProvider());
-        JSInterop.SetupVoid("tmNotionEditor.copyToClipboard", _ => true);
+        JSInterop.SetupVoid("tmNotionEditor.copyToClipboard", _ => true).SetVoidResult();
 
         cut.Find("[data-testid='notion-ai-prompt']").Input("release notes");
         await cut.Find("[data-testid='notion-ai-run']").ClickAsync(new());

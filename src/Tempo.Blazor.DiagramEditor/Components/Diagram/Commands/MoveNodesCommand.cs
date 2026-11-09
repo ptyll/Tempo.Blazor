@@ -21,15 +21,30 @@ public sealed class MoveNodesCommand : IDiagramCommand
     private Dictionary<string, NodeMoveState> _after;
     private DateTime _pushedAt;
 
+    /// <summary>Production constructor: the command stamps the push time with <see cref="DateTime.UtcNow"/>.</summary>
     public MoveNodesCommand(
         DiagramDocument doc,
         Dictionary<string, NodeMoveState> before,
         Dictionary<string, NodeMoveState> after)
+        : this(doc, before, after, DateTime.UtcNow)
+    {
+    }
+
+    /// <param name="pushedAt">
+    /// Logical push timestamp. Tests pass an explicit value so the coalescing window is deterministic
+    /// regardless of how long the machine stalled between two pushes (FZE-1). Internal so the public
+    /// constructor signature stays binary-compatible; production code uses the public overload.
+    /// </param>
+    internal MoveNodesCommand(
+        DiagramDocument doc,
+        Dictionary<string, NodeMoveState> before,
+        Dictionary<string, NodeMoveState> after,
+        DateTime pushedAt)
     {
         _doc = doc;
         _before = before;
         _after = after;
-        _pushedAt = DateTime.UtcNow;
+        _pushedAt = pushedAt;
     }
 
     public string Name => _after.Count == 1

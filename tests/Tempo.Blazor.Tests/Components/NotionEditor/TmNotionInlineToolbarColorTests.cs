@@ -57,7 +57,7 @@ public sealed class TmNotionInlineToolbarColorTests : LocalizationTestBase
                 && button.GetAttribute("style")?.Contains("--tm-notion-option-text-brown-wash") != true);
         brown.GetAttribute("style").Should().Contain("var(--tm-notion-option-text-brown-ink)");
 
-        var call = JSInterop.SetupVoid("tmNotionEditor.applyInlineColor", _ => true);
+        var call = JSInterop.SetupVoid("tmNotionEditor.applyInlineColor", _ => true).SetVoidResult();
         brown.Click(new MouseEventArgs());
 
         var args = call.Invocations.Single().Arguments;
@@ -75,7 +75,7 @@ public sealed class TmNotionInlineToolbarColorTests : LocalizationTestBase
         var brown = cut.FindAll(".tm-notion-inline-toolbar__color-swatch")
             .First(button => button.GetAttribute("style")?.Contains("--tm-notion-option-text-brown-wash") == true);
 
-        var call = JSInterop.SetupVoid("tmNotionEditor.applyInlineColor", _ => true);
+        var call = JSInterop.SetupVoid("tmNotionEditor.applyInlineColor", _ => true).SetVoidResult();
         brown.Click(new MouseEventArgs());
 
         var args = call.Invocations.Single().Arguments;

@@ -139,7 +139,7 @@ public class TmGanttVirtualizationTests : LocalizationTestBase
     public void Virtualization_Inactive_Mode_Disables_The_Window_Reports_In_The_Session()
     {
         JSInterop.Setup<bool>("tmGantt.attachVirtualScroll", _ => true).SetResult(true);
-        var update = JSInterop.SetupVoid("tmGantt.updateVirtualScroll", _ => true);
+        var update = JSInterop.SetupVoid("tmGantt.updateVirtualScroll", _ => true).SetVoidResult();
         var cut = Render<TmGantt>(p => p
             .Add(c => c.Items, Tasks(10))
             .Add(c => c.Virtualization, GanttVirtualizationMode.Auto));
@@ -167,7 +167,7 @@ public class TmGanttVirtualizationTests : LocalizationTestBase
     [Fact]
     public async Task Virtualization_DrawVersion_Change_Asks_The_Browser_To_Remasure()
     {
-        var remeasure = JSInterop.SetupVoid("tmGantt.remeasureVirtual", _ => true);
+        var remeasure = JSInterop.SetupVoid("tmGantt.remeasureVirtual", _ => true).SetVoidResult();
         var tasks = Tasks(20, groups: 4);
         var cut = RenderVirtualized(tasks);
         remeasure.Invocations.Should().BeEmpty("the fresh session measures itself");

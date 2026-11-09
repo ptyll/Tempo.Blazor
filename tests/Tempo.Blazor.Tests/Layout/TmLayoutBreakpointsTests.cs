@@ -87,7 +87,7 @@ public class TmLayoutBreakpointsTests : LocalizationTestBase
     public void Observer_Auto_DefaultsToTheSharedThresholds()
     {
         var module = JSInterop.SetupModule(ObserverModule);
-        var observe = module.SetupVoid("observe", _ => true);
+        var observe = module.SetupVoid("observe", _ => true).SetVoidResult();
 
         Render<TmLayoutObserver>(p => p.Add(x => x.LayoutMode, TmLayoutMode.Auto));
 
@@ -98,7 +98,7 @@ public class TmLayoutBreakpointsTests : LocalizationTestBase
     public void Observer_Auto_FeedsTheCustomThresholdsToTheModule()
     {
         var module = JSInterop.SetupModule(ObserverModule);
-        var observe = module.SetupVoid("observe", _ => true);
+        var observe = module.SetupVoid("observe", _ => true).SetVoidResult();
 
         Render<TmLayoutObserver>(p => p
             .Add(x => x.LayoutMode, TmLayoutMode.Auto)
@@ -111,7 +111,7 @@ public class TmLayoutBreakpointsTests : LocalizationTestBase
     public void Observer_BreakpointsChange_ReobservesWithTheNewThresholds()
     {
         var module = JSInterop.SetupModule(ObserverModule);
-        var observe = module.SetupVoid("observe", _ => true);
+        var observe = module.SetupVoid("observe", _ => true).SetVoidResult();
         var cut = Render<TmLayoutObserver>(p => p
             .Add(x => x.LayoutMode, TmLayoutMode.Auto)
             .Add(x => x.Breakpoints, new TmLayoutBreakpoints(768, 1200)));
@@ -126,7 +126,7 @@ public class TmLayoutBreakpointsTests : LocalizationTestBase
     public void Observer_EqualBreakpointsRerender_DoesNotReobserve()
     {
         var module = JSInterop.SetupModule(ObserverModule);
-        var observe = module.SetupVoid("observe", _ => true);
+        var observe = module.SetupVoid("observe", _ => true).SetVoidResult();
         var cut = Render<TmLayoutObserver>(p => p
             .Add(x => x.LayoutMode, TmLayoutMode.Auto)
             .Add(x => x.Breakpoints, new TmLayoutBreakpoints(768, 1200)));
@@ -155,7 +155,7 @@ public class TmLayoutBreakpointsTests : LocalizationTestBase
     public void Shell_Auto_ForwardsItsBreakpointsToTheObserverModule()
     {
         var module = JSInterop.SetupModule(ObserverModule);
-        var observe = module.SetupVoid("observe", _ => true);
+        var observe = module.SetupVoid("observe", _ => true).SetVoidResult();
 
         Render<TmEditorShell>(p => p
             .Add(x => x.Breakpoints, new TmLayoutBreakpoints(768, 1200))
@@ -168,7 +168,7 @@ public class TmLayoutBreakpointsTests : LocalizationTestBase
     public void Shell_Auto_WithoutBreakpoints_UsesTheDefaults()
     {
         var module = JSInterop.SetupModule(ObserverModule);
-        var observe = module.SetupVoid("observe", _ => true);
+        var observe = module.SetupVoid("observe", _ => true).SetVoidResult();
 
         Render<TmEditorShell>(p => p.Add(x => x.Canvas, builder => builder.AddContent(0, "Canvas")));
 

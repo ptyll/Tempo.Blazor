@@ -62,7 +62,7 @@ public class TmLayoutObserverTests : LocalizationTestBase
     public void Auto_RegistersTheObserver_AgainstTheComponentRoot()
     {
         var module = JSInterop.SetupModule(ModulePath);
-        var observe = module.SetupVoid("observe", invocation => true);
+        var observe = module.SetupVoid("observe", invocation => true).SetVoidResult();
 
         var cut = Render<TmLayoutObserver>(parameters => parameters
             .Add(p => p.LayoutMode, TmLayoutMode.Auto)
@@ -95,8 +95,8 @@ public class TmLayoutObserverTests : LocalizationTestBase
     public async Task OnLayoutModeChanged_RerendersOnlyWhenTheModeChanges()
     {
         var module = JSInterop.SetupModule(ModulePath);
-        module.SetupVoid("observe", invocation => true);
-        module.SetupVoid("disconnect", invocation => true);
+        module.SetupVoid("observe", invocation => true).SetVoidResult();
+        module.SetupVoid("disconnect", invocation => true).SetVoidResult();
 
         var cut = Render<TmLayoutObserver>(parameters => parameters
             .Add(p => p.LayoutMode, TmLayoutMode.Auto));
@@ -119,7 +119,7 @@ public class TmLayoutObserverTests : LocalizationTestBase
     public async Task OnLayoutModeChanged_RejectsAnUnknownMode_AndDoesNotRerender()
     {
         var module = JSInterop.SetupModule(ModulePath);
-        module.SetupVoid("observe", invocation => true);
+        module.SetupVoid("observe", invocation => true).SetVoidResult();
 
         var cut = Render<TmLayoutObserver>(parameters => parameters
             .Add(p => p.LayoutMode, TmLayoutMode.Auto));
@@ -136,7 +136,7 @@ public class TmLayoutObserverTests : LocalizationTestBase
     public async Task Dispose_DisconnectsTheObserver()
     {
         var module = JSInterop.SetupModule(ModulePath);
-        var observe = module.SetupVoid("observe", invocation => true);
+        var observe = module.SetupVoid("observe", invocation => true).SetVoidResult();
 
         var cut = Render<TmLayoutObserver>(parameters => parameters
             .Add(p => p.LayoutMode, TmLayoutMode.Auto));
@@ -188,7 +188,7 @@ public class TmLayoutObserverTests : LocalizationTestBase
     public async Task AutoToForcedToAuto_ReturnsToMeasuredMode()
     {
         var module = JSInterop.SetupModule(ModulePath);
-        module.SetupVoid("observe", invocation => true);
+        module.SetupVoid("observe", invocation => true).SetVoidResult();
 
         TmLayoutMode? reported = null;
         var cut = Render<TmLayoutObserver>(parameters => parameters
@@ -353,7 +353,7 @@ public class TmLayoutObserverTests : LocalizationTestBase
         // TmDocumentOpenDialog widens its mobile threshold while its fullscreen panel is up (hysteresis): the observer must hand the new
         // pair to the module, which classifies with what it was given - otherwise the widened threshold would never apply.
         var module = JSInterop.SetupModule(ModulePath);
-        var observe = module.SetupVoid("observe", invocation => true);
+        var observe = module.SetupVoid("observe", invocation => true).SetVoidResult();
 
         var cut = Render<TmLayoutObserver>(parameters => parameters
             .Add(p => p.Breakpoints, new TmLayoutBreakpoints(640, 768))
@@ -373,7 +373,7 @@ public class TmLayoutObserverTests : LocalizationTestBase
     public async Task AutoUnderAutoParent_InheritedMobileFirstResolution_RaisesOnce_AndALaterJsReportRaisesNothing()
     {
         var module = JSInterop.SetupModule(ModulePath);
-        module.SetupVoid("observe", invocation => true);
+        module.SetupVoid("observe", invocation => true).SetVoidResult();
 
         var cut = Render<InheritedRaiseHost>();
         cut.Instance.InnerRaised.Should().BeEmpty("the first frame resolves the parent's desktop default");
@@ -409,7 +409,7 @@ public class TmLayoutObserverTests : LocalizationTestBase
     public async Task InitialMode_DoesNotRaiseTheFirstResolution_ButALaterChangeStillDoes()
     {
         var module = JSInterop.SetupModule(ModulePath);
-        module.SetupVoid("observe", invocation => true);
+        module.SetupVoid("observe", invocation => true).SetVoidResult();
 
         var raised = new List<TmLayoutMode>();
         var cut = Render<TmLayoutObserver>(parameters => parameters
@@ -441,7 +441,7 @@ public class TmLayoutObserverTests : LocalizationTestBase
     public async Task OnPointerKindChanged_StampsTheCascade_WithoutChangingTheWidthBand()
     {
         var module = JSInterop.SetupModule(ModulePath);
-        module.SetupVoid("observe", invocation => true);
+        module.SetupVoid("observe", invocation => true).SetVoidResult();
 
         var cut = Render<TmLayoutObserver>(parameters => parameters
             .Add(p => p.LayoutMode, TmLayoutMode.Auto)

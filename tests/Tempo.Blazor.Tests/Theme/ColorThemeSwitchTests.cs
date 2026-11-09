@@ -16,6 +16,7 @@ public class ColorThemeSwitchTests : BunitContext
     public ColorThemeSwitchTests()
     {
         JSInterop.Mode = JSRuntimeMode.Loose;
+        DefaultWaitTimeout = TimeSpan.FromSeconds(5); // FZE-1: absorb full-suite parallel-load jitter
         Services.AddScoped<ColorThemeState>();
     }
 

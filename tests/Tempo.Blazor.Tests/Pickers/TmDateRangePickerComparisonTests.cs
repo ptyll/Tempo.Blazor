@@ -39,6 +39,20 @@ public class TmDateRangePickerComparisonTests : LocalizationTestBase
     private static void UseCzechLocalizer(IServiceCollection services)
         => services.AddSingleton<ITmLocalizer>(BuildCzechLocalizer());
 
+    /// <summary>
+    /// Drives the fake clock past the 300 ms "look at your pick" auto-close. The close is scheduled
+    /// on a thread-pool task, so the delay may not be registered with the fake clock yet on the
+    /// first advance — advance in steps with real yields between them until the popup is gone.
+    /// </summary>
+    private static async Task SettleAutoCloseAsync(IRenderedComponent<TmDateRangePicker> cut, FakeTimeProvider clock)
+    {
+        for (var i = 0; i < 20 && cut.FindAll(".tm-date-range-calendars").Count > 0; i++)
+        {
+            clock.Advance(TimeSpan.FromMilliseconds(100));
+            await Task.Delay(TimeSpan.FromMilliseconds(25));
+        }
+    }
+
     // ── Presets: the clock and the labels ────────────────────────────────────────────────────
 
     [Fact]
@@ -183,6 +197,10 @@ public class TmDateRangePickerComparisonTests : LocalizationTestBase
     [Fact]
     public void Custom_LetsTheReaderPickTheSecondWindow()
     {
+        // Freeze the auto-close clock: completing the window schedules the "look at your pick"
+        // close 300 ms out, and under full-suite load that real delay can elapse between the
+        // completing click and the summary assertion below, closing the popup under the test (FZE-1).
+        UseClock(Services, Clock());
         var raised = new List<(DateOnly? Start, DateOnly? End)>();
         var cut = Render<TmDateRangePicker>(p => p
             .Add(c => c.Value, (Oct10, (DateOnly?)Oct14))
@@ -381,8 +399,10 @@ public class TmDateRangePickerComparisonTests : LocalizationTestBase
     }
 
     [Fact]
-    public void Custom_ReopeningThePickerEditsThePrimaryRangeAgain()
+    public async Task Custom_ReopeningThePickerEditsThePrimaryRangeAgain()
     {
+        var clock = Clock();
+        UseClock(Services, clock);
         var picked = new List<(DateOnly? Start, DateOnly? End)>();
         var cut = Render<TmDateRangePicker>(p => p
             .Add(c => c.Value, (Oct10, (DateOnly?)Oct14))
@@ -394,10 +414,10 @@ public class TmDateRangePickerComparisonTests : LocalizationTestBase
         Day(cut, new DateOnly(2026, 10, 20)).Click();
         Day(cut, new DateOnly(2026, 10, 24)).Click();
 
-        // Finishing the comparison window closes the popup after the "look at your pick" delay.
-        cut.WaitForAssertion(
-            () => cut.FindAll(".tm-date-range-calendars").Should().BeEmpty(),
-            TimeSpan.FromSeconds(5));
+        // Finishing the comparison window schedules the "look at your pick" close 300 ms out —
+        // advance the fake clock instead of waiting on the wall clock.
+        await SettleAutoCloseAsync(cut, clock);
+        cut.FindAll(".tm-date-range-calendars").Should().BeEmpty();
 
         cut.Find(".tm-date-range-trigger").Click();
         // The reopen is rendered by the picker itself, so wait for the calendars instead of assuming
@@ -435,6 +455,8 @@ public class TmDateRangePickerComparisonTests : LocalizationTestBase
     [Fact]
     public async Task ReopeningBeforeTheAutoCloseFires_KeepsThePopupOpen()
     {
+        var clock = Clock();
+        UseClock(Services, clock);
         var cut = Render<TmDateRangePicker>(p => p.Add(c => c.Value, (Oct10, (DateOnly?)Oct14)));
 
         cut.Find(".tm-date-range-trigger").Click();
@@ -447,13 +469,34 @@ public class TmDateRangePickerComparisonTests : LocalizationTestBase
         cut.Find(".tm-date-range-footer button").Click();
         cut.Find(".tm-date-range-trigger").Click();
 
-        await Task.Delay(TimeSpan.FromMilliseconds(800));
+        // Advance the fake clock past the scheduled 300 ms close: the stale close is now due, so
+        // this exercises the token guard instead of sleeping on the wall clock.
+        await SettleAutoCloseAsync(cut, clock);
+
         var stillOpen = false;
         await cut.InvokeAsync(() => stillOpen = cut.FindAll(".tm-date-range-calendars").Count > 0);
 
         stillOpen.Should().BeTrue(
             "a pending auto-close belongs to the pick that scheduled it and must never shut a popup "
             + "the reader has already reopened");
+    }
+
+    [Fact]
+    public async Task CompletingTheRange_AutoClosesOnceTheClockAdvances()
+    {
+        var clock = Clock();
+        UseClock(Services, clock);
+        var cut = Render<TmDateRangePicker>(p => p.Add(c => c.Value, (Oct10, (DateOnly?)Oct14)));
+
+        cut.Find(".tm-date-range-trigger").Click();
+        Day(cut, new DateOnly(2026, 10, 20)).Click();
+        Day(cut, new DateOnly(2026, 10, 24)).Click();
+
+        cut.FindAll(".tm-date-range-calendars").Should().NotBeEmpty(
+            "the completed range schedules the close 300 ms out — the popup must still be open before the clock advances");
+
+        await SettleAutoCloseAsync(cut, clock);
+        cut.FindAll(".tm-date-range-calendars").Should().BeEmpty();
     }
 
     // ── Preset caching stays correct across midnight ────────────────────────────────────────

@@ -241,7 +241,7 @@ public sealed class TmModelingEditorTabletTests : LocalizationTestBase
     public async Task Leaving_the_tablet_never_resets_the_desktop_dock_flags()
     {
         var module = JSInterop.SetupModule("./_content/Tempo.Blazor/js/layout-observer.js");
-        module.SetupVoid("observe", invocation => true);
+        module.SetupVoid("observe", invocation => true).SetVoidResult();
         Services.TryAddEnumerable(ServiceDescriptor.Singleton<IModelingModelProvider>(new SuccessfulModelingModelProvider()));
 
         using var cut = Render<TmModelingEditor>(parameters => parameters
@@ -278,7 +278,7 @@ public sealed class TmModelingEditorTabletTests : LocalizationTestBase
     public async Task Auto_editor_tracks_its_own_container_and_desktop_selection_stays_docked()
     {
         var module = JSInterop.SetupModule("./_content/Tempo.Blazor/js/layout-observer.js");
-        module.SetupVoid("observe", invocation => true);
+        module.SetupVoid("observe", invocation => true).SetVoidResult();
         Services.TryAddEnumerable(ServiceDescriptor.Singleton<IModelingModelProvider>(new SuccessfulModelingModelProvider()));
 
         using var cut = Render<TmModelingEditor>(parameters => parameters

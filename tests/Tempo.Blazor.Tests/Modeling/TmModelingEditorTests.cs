@@ -881,7 +881,7 @@ public sealed class TmModelingEditorTests : LocalizationTestBase
         // registration is exactly what a forced shell never makes. A forced editor pins the
         // shell, and a forced mode never measures, so no observer registers the pair.
         var module = JSInterop.SetupModule("./_content/Tempo.Blazor/js/layout-observer.js");
-        module.SetupVoid("observe", invocation => true);
+        module.SetupVoid("observe", invocation => true).SetVoidResult();
 
         Services.TryAddEnumerable(ServiceDescriptor.Singleton<IModelingModelProvider>(new SuccessfulModelingModelProvider()));
         using var auto = Render<TmModelingEditor>(parameters => parameters

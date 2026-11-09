@@ -555,8 +555,8 @@ public partial class TmPdfViewerTests
     private void SetupLayoutObserverModule()
     {
         var module = JSInterop.SetupModule("./_content/Tempo.Blazor/js/layout-observer.js");
-        module.SetupVoid("observe", _ => true);
-        module.SetupVoid("disconnect", _ => true);
+        module.SetupVoid("observe", _ => true).SetVoidResult();
+        module.SetupVoid("disconnect", _ => true).SetVoidResult();
     }
 
     // ── Auto: a measured flip re-applies the panel defaults (until the user touched) ──

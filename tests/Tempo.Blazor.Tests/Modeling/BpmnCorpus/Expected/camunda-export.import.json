@@ -43,7 +43,7 @@
             "camunda:assignee": "${approver}",
             "camunda:dueDate": "PT2D",
             "foreignExtensions": {
-              "http://camunda.org/schema/1.0/bpmn": "\u003Ccamunda:taskListener event=\u0022create\u0022 expression=\u0022${approvalNotifier.notify(task)}\u0022 xmlns:camunda=\u0022http://camunda.org/schema/1.0/bpmn\u0022 /\u003E\u003Ccamunda:inputOutput xmlns:camunda=\u0022http://camunda.org/schema/1.0/bpmn\u0022\u003E\r\n          \u003Ccamunda:inputParameter name=\u0022amount\u0022\u003E${invoice.amount}\u003C/camunda:inputParameter\u003E\r\n          \u003Ccamunda:outputParameter name=\u0022approved\u0022\u003E${approved}\u003C/camunda:outputParameter\u003E\r\n        \u003C/camunda:inputOutput\u003E"
+              "http://camunda.org/schema/1.0/bpmn": "\u003Ccamunda:taskListener event=\u0022create\u0022 expression=\u0022${approvalNotifier.notify(task)}\u0022 xmlns:camunda=\u0022http://camunda.org/schema/1.0/bpmn\u0022 /\u003E\u003Ccamunda:inputOutput xmlns:camunda=\u0022http://camunda.org/schema/1.0/bpmn\u0022\u003E\n          \u003Ccamunda:inputParameter name=\u0022amount\u0022\u003E${invoice.amount}\u003C/camunda:inputParameter\u003E\n          \u003Ccamunda:outputParameter name=\u0022approved\u0022\u003E${approved}\u003C/camunda:outputParameter\u003E\n        \u003C/camunda:inputOutput\u003E"
             }
           },
           "Tags": [],
@@ -89,7 +89,7 @@
           "Properties": {
             "camunda:delegateExpression": "${invoiceBooker}",
             "foreignExtensions": {
-              "http://camunda.org/schema/1.0/bpmn": "\u003Ccamunda:connector xmlns:camunda=\u0022http://camunda.org/schema/1.0/bpmn\u0022\u003E\r\n          \u003Ccamunda:connectorId\u003Ehttp-connector\u003C/camunda:connectorId\u003E\r\n          \u003Ccamunda:inputOutput\u003E\r\n            \u003Ccamunda:inputParameter name=\u0022url\u0022\u003Ehttps://erp.example/book\u003C/camunda:inputParameter\u003E\r\n            \u003Ccamunda:inputParameter name=\u0022method\u0022\u003EPOST\u003C/camunda:inputParameter\u003E\r\n          \u003C/camunda:inputOutput\u003E\r\n        \u003C/camunda:connector\u003E"
+              "http://camunda.org/schema/1.0/bpmn": "\u003Ccamunda:connector xmlns:camunda=\u0022http://camunda.org/schema/1.0/bpmn\u0022\u003E\n          \u003Ccamunda:connectorId\u003Ehttp-connector\u003C/camunda:connectorId\u003E\n          \u003Ccamunda:inputOutput\u003E\n            \u003Ccamunda:inputParameter name=\u0022url\u0022\u003Ehttps://erp.example/book\u003C/camunda:inputParameter\u003E\n            \u003Ccamunda:inputParameter name=\u0022method\u0022\u003EPOST\u003C/camunda:inputParameter\u003E\n          \u003C/camunda:inputOutput\u003E\n        \u003C/camunda:connector\u003E"
             }
           },
           "Tags": [],
@@ -174,7 +174,7 @@
           "Category": "bpmn-import",
           "SourceElementId": "",
           "SourceRelationshipId": "",
-          "Message": "extensionElements: Process-level extension element in namespace \u0027http://camunda.org/schema/1.0/bpmn\u0027 has no model element to attach to; content: \u003Ccamunda:properties xmlns:camunda=\u0022http://camunda.org/schema/1.0/bpmn\u0022\u003E\r\n        \u003Ccamunda:property name=\u0022department\u0022 value=\u0022Finance\u0022 /\u003E\r\n        \u003Ccamunda:property name=\u0022criticality\u0022 value=\u0022high\u0022 /\u003E\r\n      \u003C/camunda:properties\u003E",
+          "Message": "extensionElements: Process-level extension element in namespace \u0027http://camunda.org/schema/1.0/bpmn\u0027 has no model element to attach to; content: \u003Ccamunda:properties xmlns:camunda=\u0022http://camunda.org/schema/1.0/bpmn\u0022\u003E\n        \u003Ccamunda:property name=\u0022department\u0022 value=\u0022Finance\u0022 /\u003E\n        \u003Ccamunda:property name=\u0022criticality\u0022 value=\u0022high\u0022 /\u003E\n      \u003C/camunda:properties\u003E",
           "SuggestedFix": ""
         },
         {
@@ -219,7 +219,7 @@
       "ElementId": null,
       "XmlPath": "/definitions[@id=\u0027Definitions_Camunda\u0027]/process[@id=\u0027Process_Camunda\u0027]/extensionElements/properties",
       "Construct": "extensionElements",
-      "Reason": "Process-level extension element in namespace \u0027http://camunda.org/schema/1.0/bpmn\u0027 has no model element to attach to; content: \u003Ccamunda:properties xmlns:camunda=\u0022http://camunda.org/schema/1.0/bpmn\u0022\u003E\r\n        \u003Ccamunda:property name=\u0022department\u0022 value=\u0022Finance\u0022 /\u003E\r\n        \u003Ccamunda:property name=\u0022criticality\u0022 value=\u0022high\u0022 /\u003E\r\n      \u003C/camunda:properties\u003E",
+      "Reason": "Process-level extension element in namespace \u0027http://camunda.org/schema/1.0/bpmn\u0027 has no model element to attach to; content: \u003Ccamunda:properties xmlns:camunda=\u0022http://camunda.org/schema/1.0/bpmn\u0022\u003E\n        \u003Ccamunda:property name=\u0022department\u0022 value=\u0022Finance\u0022 /\u003E\n        \u003Ccamunda:property name=\u0022criticality\u0022 value=\u0022high\u0022 /\u003E\n      \u003C/camunda:properties\u003E",
       "Severity": 0
     },
     {
