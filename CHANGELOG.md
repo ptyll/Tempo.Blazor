@@ -24,7 +24,7 @@
 - **Docs.** New [docs/modeling-hosting-guide.md](docs/modeling-hosting-guide.md) — the writer implementation pattern with optimistic concurrency (capabilities, atomic apply through the translator + engine, layout/view changes, schema/lookups, issue mapping, MCP wiring, verification recipe). [docs/modeling-authoring.md](docs/modeling-authoring.md) carries the design contract and §6.5 "as implemented (phase 7)"; [docs/modeling-editor.md](docs/modeling-editor.md) the component contract; [docs/modeling-mcp-tools.md](docs/modeling-mcp-tools.md) the living MCP catalog and the "What 2.11.0 changed" table; AGENTS.md gained the authoring bullet list.
 - **Tests.** `ModelingModelDiffTests`, `TmModelingViewerOverlayTests` (a changed relationship), the phase 3–6 suites already in the tree, `ModelingMcpParityTests`, `ModelingViewOperationToolsTests`, `ModelingPropertySchemaToolsTests`, `ModelingMcpContractSnapshotTests`, `ModelingMcpToolsDocumentationDriftTests`; the JSON documentation overlays are regenerated and `validate --fail-on-drift` is clean.
 
-### Added — BPMN 2.0 XML converter (plan 6fca9139, phases 1–2: design, corpus, secure import)
+### Added — BPMN 2.0 XML converter (plan 6fca9139, phases 1–3: design, corpus, secure import, BPMNDI layout)
 
 - Design document [docs/modeling-bpmn-xml.md](docs/modeling-bpmn-xml.md): the headless
   `Tempo.Blazor.Modeling.BpmnXml` package proposal (dependency on `Tempo.Blazor.Abstractions`
@@ -69,6 +69,55 @@
 - **Not in this phase (per the plan):** BPMNDI view import (phase 3), export/round-trip
   (phase 4), Camunda/Signavio/Bizagi tool plugins and MCP tools (phase 5). The
   `BpmnImportOptions` knobs those phases honor already exist.
+- **Phase 3 — BPMNDI view import and headless auto-layout.** BPMNShape bounds import as
+  view nodes and BPMNEdge waypoints as view connections: one `bpmn2` view per BPMNPlane
+  (per covered model under `PerProcess`, so a collaboration plane reaches every pool model
+  and a collapsed subprocess keeps its internals on their own second plane), with
+  `ParentNodeId` nesting for shapes inside lane/pool/expanded-subprocess shapes per DI
+  `isExpanded`. A connection is imported only when BOTH ends are nodes of that view —
+  cross-model message flows keep their full DI polyline on the relationship as
+  `bpmndi:waypoints` + `bpmndi:planeId` for the export round-trip instead. DI flags on
+  shapes and edges (`isExpanded`, `isHorizontal`, `isMarkerVisible`,
+  `messageVisibleKind`, `sourceElement`/`targetElement`, …) are preserved as `bpmndi:*`
+  element/relationship properties and `BPMNLabel` bounds as `bpmndi:labelBounds` JSON
+  (the `labelStyle` reference as `bpmndi:labelStyle`); `BPMNLabelStyle` definitions and
+  `di:extension` payloads are reported as losses. DI referencing unknown elements, shapes
+  without usable bounds and missing edges/positions are filled from the new deterministic,
+  headless `BpmnAutoLayout` — `O(V+E)` with an iterative Kahn longest-path layering (no
+  recursion; a 100k-node chain lays out in milliseconds), back edges ignored for ranking,
+  layer blocks centred so a plain chain renders as one horizontal line, boundary events
+  anchored to a separate row inside their activity's column, pools/lanes as stacked bands —
+  and reported as losses/warnings, never dropped. Each missing element joins only the view
+  holding its nearest semantic ancestor, offset below the view's DI bounding box, so no
+  ElementId is duplicated across views. Auto-layouted connections carry NO waypoints — the
+  diagram generator auto-routes them. Documents without BPMNDI (or `ImportBpmndi=false`)
+  get a full auto-layout view plus a warning. Nothing breaks for hosts: `BpmnImportResult`
+  only gains views inside the existing models; `BpmnModelBuilder` was split into partial
+  classes to satisfy the 1200-line source ceiling.
+- **Tests.** `BpmnViewImportTests` (shape/edge geometry, multi-plane and per-model
+  partitioning, collapsed/expanded subprocess nesting, `bpmndi:*` flags, label bounds and
+  edge attributes, waypoints/planeId round-trip properties, the both-ends connection rule
+  with a generator no-missing-end check, `SingleWithPools` one-view coverage with pool root
+  parents, nearest-ancestor partial-DI fill without duplicates/overlaps), `BpmnAutoLayoutTests`
+  (determinism, overlap freedom, layer centring, loops, boundary events, pools/lanes/
+  subprocess bands, a 50k reversed-declaration layering with no stack overflow and a 100k
+  chain under 5 s), `BpmnViewRenderTests` (bUnit: imported and auto-layouted coordinates
+  render through `TmModelingEditor`), the regenerated corpus goldens; JSON documentation
+  covers `BpmnAutoLayout`/`BpmnAutoLayoutOptions` and `validate --fail-on-drift` is clean.
+- **Phase 3 review hardening (findings 1–10):** the longest-path layering is an iterative
+  Kahn topological sort (a 50 000-node reversed-declaration chain cannot overflow the
+  stack) and the whole layout is O(V+E) with relationship indices built once and one-pass
+  layer bucketing (100k chain < 5 s; the 200k flat-task import budget was raised to 20 s
+  with a comment — it guards near-linearity, not wall time, and flaked at 10 s under
+  parallel load); a chain renders as one horizontal line (per-layer stacks centred on the
+  tallest layer); auto-layout emits no waypoints (the generator auto-routes); view
+  connections require both ends in the view (cross-model message flows keep their geometry
+  on the relationship); partial-DI fill targets the nearest-ancestor view below the DI
+  bounds with no duplicate ElementId; edge/label DI attributes (`messageVisibleKind`,
+  `sourceElement`/`targetElement`, `labelStyle`) are preserved as `bpmndi:*` properties
+  while `BPMNLabelStyle` definitions and `di:extension` are reported as losses; E2E
+  screenshots of the BPMN DI rendering are deferred to phase 5 (bUnit render tests cover
+  phase 3).
 - **Phase 2 review hardening (all 10 findings):** O(n) import backed by per-model id sets and a
   global element index (200 000 flat tasks import in seconds under the default limits —
   `MaxElements` default raised to 500 000); the bounded reader never disposes the caller's stream

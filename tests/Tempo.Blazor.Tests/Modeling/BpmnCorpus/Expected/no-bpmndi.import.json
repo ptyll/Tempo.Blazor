@@ -250,7 +250,124 @@
           "Tags": []
         }
       ],
-      "Views": [],
+      "Views": [
+        {
+          "Id": "auto",
+          "Name": "Headless process",
+          "Notation": "bpmn2",
+          "ViewpointKey": "",
+          "Nodes": [
+            {
+              "ElementId": "StartEvent_NoDi",
+              "X": 40,
+              "Y": 62,
+              "Width": 36,
+              "Height": 36,
+              "ParentNodeId": null
+            },
+            {
+              "ElementId": "ServiceTask_Call",
+              "X": 180,
+              "Y": 40,
+              "Width": 100,
+              "Height": 80,
+              "ParentNodeId": null
+            },
+            {
+              "ElementId": "ScriptTask_Calc",
+              "X": 320,
+              "Y": 40,
+              "Width": 100,
+              "Height": 80,
+              "ParentNodeId": null
+            },
+            {
+              "ElementId": "RuleTask_Check",
+              "X": 460,
+              "Y": 40,
+              "Width": 100,
+              "Height": 80,
+              "ParentNodeId": null
+            },
+            {
+              "ElementId": "SendTask_Notify",
+              "X": 600,
+              "Y": 40,
+              "Width": 100,
+              "Height": 80,
+              "ParentNodeId": null
+            },
+            {
+              "ElementId": "ReceiveTask_Wait",
+              "X": 740,
+              "Y": 40,
+              "Width": 100,
+              "Height": 80,
+              "ParentNodeId": null
+            },
+            {
+              "ElementId": "ManualTask_Inspect",
+              "X": 880,
+              "Y": 40,
+              "Width": 100,
+              "Height": 80,
+              "ParentNodeId": null
+            },
+            {
+              "ElementId": "EndEvent_NoDi",
+              "X": 1020,
+              "Y": 62,
+              "Width": 36,
+              "Height": 36,
+              "ParentNodeId": null
+            }
+          ],
+          "Connections": [
+            {
+              "RelationshipId": "Flow_ND1",
+              "SourceNodeId": "StartEvent_NoDi",
+              "TargetNodeId": "ServiceTask_Call",
+              "Waypoints": []
+            },
+            {
+              "RelationshipId": "Flow_ND2",
+              "SourceNodeId": "ServiceTask_Call",
+              "TargetNodeId": "ScriptTask_Calc",
+              "Waypoints": []
+            },
+            {
+              "RelationshipId": "Flow_ND3",
+              "SourceNodeId": "ScriptTask_Calc",
+              "TargetNodeId": "RuleTask_Check",
+              "Waypoints": []
+            },
+            {
+              "RelationshipId": "Flow_ND4",
+              "SourceNodeId": "RuleTask_Check",
+              "TargetNodeId": "SendTask_Notify",
+              "Waypoints": []
+            },
+            {
+              "RelationshipId": "Flow_ND5",
+              "SourceNodeId": "SendTask_Notify",
+              "TargetNodeId": "ReceiveTask_Wait",
+              "Waypoints": []
+            },
+            {
+              "RelationshipId": "Flow_ND6",
+              "SourceNodeId": "ReceiveTask_Wait",
+              "TargetNodeId": "ManualTask_Inspect",
+              "Waypoints": []
+            },
+            {
+              "RelationshipId": "Flow_ND7",
+              "SourceNodeId": "ManualTask_Inspect",
+              "TargetNodeId": "EndEvent_NoDi",
+              "Waypoints": []
+            }
+          ]
+        }
+      ],
       "Issues": [],
       "Metadata": {
         "SourceSystem": "bpmn-xml",
@@ -262,7 +379,12 @@
     }
   ],
   "Losses": [],
-  "Warnings": [],
+  "Warnings": [
+    {
+      "Message": "The BPMN document contains no BPMNDI diagram data; a deterministic headless auto-layout generated the view positions.",
+      "XmlPath": "/definitions"
+    }
+  ],
   "HasErrors": false,
   "ErrorMessage": null
 }

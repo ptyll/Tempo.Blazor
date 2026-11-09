@@ -100,7 +100,9 @@ kořen i po čistém import→export cyklu; definice deklarované ale nikde nepo
 `globalConversation`, `partnerEntity/Role`, `monitoring`, `auditing`, IO specifikace
 (`ioSpecification dataInput`/`dataOutput` jako endpointy asociací resolvujeme na
 ohraničující aktivitu; samotná deklarace bez vazby ⇒ loss), `resourceRole`, `category`/`categoryValue`
-samotné (skupiny importujeme, kategorie do Properties), `rendering`, DI `style`/`labelStyle`.
+samotné (skupiny importujeme, kategorie do Properties), `rendering`, DI `style`;
+`BPMNLabelStyle` fontové definice a `di:extension` payloady (reference `labelStyle`
+se jako `bpmndi:labelStyle` property zachovává — viz §5.4).
 Saxová pravidla: chybějící povinný atribut (např. `sourceRef`) ⇒ loss + uzel/vazba
 i tak importován, pokud je srozumitelný.
 
@@ -183,6 +185,37 @@ Rozhodnutí v návrhu:
    sám čte s bounded buffer; HTTP caller může (nemusí) bufferovat body
    (`await Request.Body.CopyToAsync` s capem `MaxInputBytes`). Limit `MaxInputBytes` je
    vynucen bounded čtením, **ne** přes `Stream.Length` (stream nemusí být seekable).
+
+### 5.4 View waypointy, generované pozice a DI lossy (fáze 3)
+
+- **Waypointy view connections = plná absolutní DI polyline včetně koncových bodů**
+  tak, jak je BPMNEdge nese. Import ji zároveň ukládá na vazbu do
+  `Properties["bpmndi:waypoints"]` + `Properties["bpmndi:planeId"]`, aby ji export (fáze 4)
+  mohl napsat zpět beze ztráty.
+- **Connection se do view přidá jen když jsou oba konce uzly tohoto view.** Cross-model
+  `messageFlow` tedy neleze do žádného per-model view (končí v cizím modelu) — jeho
+  geometrie přežije v `bpmndi:waypoints` na vazbě. Generátor diagramu pak nikdy nehlásí
+  missing-end issue pro importované view.
+- **Auto-layout (`BpmnAutoLayout.Layout`) nechává waypointy prázdné** — generátor hranu
+  sám trasuje. Částečný DI fill (chybějící hrany) syntetizuje alespoň koncové body
+  (`Route` přes DI pozice uzlů).
+- **Částečný DI fill elementů:** každý chybějící element doplní jen view, které drží jeho
+  **nejblížšího sémantického předka** (fallback `Views[0]`), s vertikálním offsetem
+  pod DI bounding box view (`maxY + gap`) — žádný překryv s uloženou DI geometrií a
+  žádný duplicitní `ElementId` napříč view. Model, který nezachytí žádná plane, dostane
+  úplný auto-layout view s varováním.
+- **DI flagy a labely:** atributy BPMNShape i BPMNEdge (`isExpanded`, `isHorizontal`,
+  `isMarkerVisible`, `messageVisibleKind`, `sourceElement`/`targetElement`, …) se
+  ukládají jako `bpmndi:*` property elementu/vazby; `BPMNLabel` bounds jako
+  `bpmndi:labelBounds` a odkaz `labelStyle` jako `bpmndi:labelStyle`. Definice
+  `BPMNLabelStyle` (fonty) a `di:extension` payloady se do modelu nepřenášejí — jsou
+  hlášeny v loss reportu.
+- **Auto-layout konvence:** `O(V+E)` (Kahnův topologický sort iterativně, žádná
+  rekurze — 50k reverz deklarovaný chain neoverflowuje); rank = nejdelší cesta od startu
+  přes non-back hrany (zpětné hrany cyklů se ignorují); vrstvy se centrují na
+  nejvyšší vrstvu, takže čistý chain je jedna horizontální linka; **boundary event sedí
+  ve sloupci hostitelské aktivity na samostatném řádku** (weight-0 hrana do její vrstvy);
+  pooly jsou horizontální pásy s flush lane pásy uvnitř.
 
 ## 6. Extenze (host + nástroje)
 

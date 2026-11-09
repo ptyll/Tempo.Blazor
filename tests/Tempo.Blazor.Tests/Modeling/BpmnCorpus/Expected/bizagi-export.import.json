@@ -105,7 +105,19 @@
           "TargetElementId": "Task_CollectDocs",
           "RelationshipType": "SequenceFlow",
           "Name": "",
-          "Properties": {},
+          "Properties": {
+            "bpmndi:waypoints": [
+              {
+                "x": 188,
+                "y": 170
+              },
+              {
+                "x": 240,
+                "y": 170
+              }
+            ],
+            "bpmndi:planeId": "BPMNPlane_1"
+          },
           "Tags": []
         },
         {
@@ -116,7 +128,19 @@
           "TargetElementId": "Task_Verify",
           "RelationshipType": "SequenceFlow",
           "Name": "",
-          "Properties": {},
+          "Properties": {
+            "bpmndi:waypoints": [
+              {
+                "x": 340,
+                "y": 170
+              },
+              {
+                "x": 400,
+                "y": 170
+              }
+            ],
+            "bpmndi:planeId": "BPMNPlane_1"
+          },
           "Tags": []
         },
         {
@@ -127,11 +151,111 @@
           "TargetElementId": "EndEvent_Onboarded",
           "RelationshipType": "SequenceFlow",
           "Name": "",
-          "Properties": {},
+          "Properties": {
+            "bpmndi:waypoints": [
+              {
+                "x": 500,
+                "y": 170
+              },
+              {
+                "x": 572,
+                "y": 170
+              }
+            ],
+            "bpmndi:planeId": "BPMNPlane_1"
+          },
           "Tags": []
         }
       ],
-      "Views": [],
+      "Views": [
+        {
+          "Id": "BPMNPlane_1",
+          "Name": "Customer onboarding",
+          "Notation": "bpmn2",
+          "ViewpointKey": "",
+          "Nodes": [
+            {
+              "ElementId": "StartEvent_NewCustomer",
+              "X": 152,
+              "Y": 152,
+              "Width": 36,
+              "Height": 36,
+              "ParentNodeId": null
+            },
+            {
+              "ElementId": "Task_CollectDocs",
+              "X": 240,
+              "Y": 130,
+              "Width": 100,
+              "Height": 80,
+              "ParentNodeId": null
+            },
+            {
+              "ElementId": "Task_Verify",
+              "X": 400,
+              "Y": 130,
+              "Width": 100,
+              "Height": 80,
+              "ParentNodeId": null
+            },
+            {
+              "ElementId": "EndEvent_Onboarded",
+              "X": 572,
+              "Y": 152,
+              "Width": 36,
+              "Height": 36,
+              "ParentNodeId": null
+            }
+          ],
+          "Connections": [
+            {
+              "RelationshipId": "Flow_BZ1",
+              "SourceNodeId": "StartEvent_NewCustomer",
+              "TargetNodeId": "Task_CollectDocs",
+              "Waypoints": [
+                {
+                  "X": 188,
+                  "Y": 170
+                },
+                {
+                  "X": 240,
+                  "Y": 170
+                }
+              ]
+            },
+            {
+              "RelationshipId": "Flow_BZ2",
+              "SourceNodeId": "Task_CollectDocs",
+              "TargetNodeId": "Task_Verify",
+              "Waypoints": [
+                {
+                  "X": 340,
+                  "Y": 170
+                },
+                {
+                  "X": 400,
+                  "Y": 170
+                }
+              ]
+            },
+            {
+              "RelationshipId": "Flow_BZ3",
+              "SourceNodeId": "Task_Verify",
+              "TargetNodeId": "EndEvent_Onboarded",
+              "Waypoints": [
+                {
+                  "X": 500,
+                  "Y": 170
+                },
+                {
+                  "X": 572,
+                  "Y": 170
+                }
+              ]
+            }
+          ]
+        }
+      ],
       "Issues": [
         {
           "Id": "bpmn-import-loss-0001",

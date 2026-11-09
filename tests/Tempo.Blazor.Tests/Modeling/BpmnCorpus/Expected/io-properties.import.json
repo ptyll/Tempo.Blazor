@@ -149,7 +149,19 @@
           "TargetElementId": "Task_Write",
           "RelationshipType": "SequenceFlow",
           "Name": "",
-          "Properties": {},
+          "Properties": {
+            "bpmndi:waypoints": [
+              {
+                "x": 188,
+                "y": 180
+              },
+              {
+                "x": 240,
+                "y": 180
+              }
+            ],
+            "bpmndi:planeId": "BPMNPlane_Io"
+          },
           "Tags": []
         },
         {
@@ -160,7 +172,19 @@
           "TargetElementId": "Task_Approve",
           "RelationshipType": "SequenceFlow",
           "Name": "",
-          "Properties": {},
+          "Properties": {
+            "bpmndi:waypoints": [
+              {
+                "x": 340,
+                "y": 180
+              },
+              {
+                "x": 410,
+                "y": 180
+              }
+            ],
+            "bpmndi:planeId": "BPMNPlane_Io"
+          },
           "Tags": []
         },
         {
@@ -171,14 +195,194 @@
           "TargetElementId": "EndEvent_Io",
           "RelationshipType": "SequenceFlow",
           "Name": "",
-          "Properties": {},
+          "Properties": {
+            "bpmndi:waypoints": [
+              {
+                "x": 510,
+                "y": 180
+              },
+              {
+                "x": 582,
+                "y": 180
+              }
+            ],
+            "bpmndi:planeId": "BPMNPlane_Io"
+          },
           "Tags": []
         }
       ],
-      "Views": [],
+      "Views": [
+        {
+          "Id": "BPMNPlane_Io",
+          "Name": "IO handling",
+          "Notation": "bpmn2",
+          "ViewpointKey": "",
+          "Nodes": [
+            {
+              "ElementId": "StartEvent_Io",
+              "X": 152,
+              "Y": 162,
+              "Width": 36,
+              "Height": 36,
+              "ParentNodeId": null
+            },
+            {
+              "ElementId": "Task_Write",
+              "X": 240,
+              "Y": 140,
+              "Width": 100,
+              "Height": 80,
+              "ParentNodeId": null
+            },
+            {
+              "ElementId": "Task_Approve",
+              "X": 410,
+              "Y": 140,
+              "Width": 100,
+              "Height": 80,
+              "ParentNodeId": null
+            },
+            {
+              "ElementId": "EndEvent_Io",
+              "X": 582,
+              "Y": 162,
+              "Width": 36,
+              "Height": 36,
+              "ParentNodeId": null
+            },
+            {
+              "ElementId": "DataObjectRef_Doc",
+              "X": 340,
+              "Y": 280,
+              "Width": 36,
+              "Height": 50,
+              "ParentNodeId": null
+            }
+          ],
+          "Connections": [
+            {
+              "RelationshipId": "Flow_I1",
+              "SourceNodeId": "StartEvent_Io",
+              "TargetNodeId": "Task_Write",
+              "Waypoints": [
+                {
+                  "X": 188,
+                  "Y": 180
+                },
+                {
+                  "X": 240,
+                  "Y": 180
+                }
+              ]
+            },
+            {
+              "RelationshipId": "Flow_I2",
+              "SourceNodeId": "Task_Write",
+              "TargetNodeId": "Task_Approve",
+              "Waypoints": [
+                {
+                  "X": 340,
+                  "Y": 180
+                },
+                {
+                  "X": 410,
+                  "Y": 180
+                }
+              ]
+            },
+            {
+              "RelationshipId": "Flow_I3",
+              "SourceNodeId": "Task_Approve",
+              "TargetNodeId": "EndEvent_Io",
+              "Waypoints": [
+                {
+                  "X": 510,
+                  "Y": 180
+                },
+                {
+                  "X": 582,
+                  "Y": 180
+                }
+              ]
+            },
+            {
+              "RelationshipId": "DIA_Template",
+              "SourceNodeId": "DataObjectRef_Doc",
+              "TargetNodeId": "Task_Write",
+              "Waypoints": [
+                {
+                  "X": 340,
+                  "Y": 305
+                },
+                {
+                  "X": 340,
+                  "Y": 180
+                }
+              ]
+            },
+            {
+              "RelationshipId": "DOA_Report",
+              "SourceNodeId": "Task_Write",
+              "TargetNodeId": "DataObjectRef_Doc",
+              "Waypoints": [
+                {
+                  "X": 340,
+                  "Y": 180
+                },
+                {
+                  "X": 340,
+                  "Y": 305
+                }
+              ]
+            },
+            {
+              "RelationshipId": "DIA_Approver",
+              "SourceNodeId": "DataObjectRef_Doc",
+              "TargetNodeId": "Task_Approve",
+              "Waypoints": [
+                {
+                  "X": 376,
+                  "Y": 305
+                },
+                {
+                  "X": 410,
+                  "Y": 180
+                }
+              ]
+            }
+          ]
+        }
+      ],
       "Issues": [
         {
           "Id": "bpmn-import-loss-0001",
+          "Severity": "Warning",
+          "Category": "bpmn-import",
+          "SourceElementId": "DIA_Template_di",
+          "SourceRelationshipId": "",
+          "Message": "BPMNEdge: BPMNEdge references \u0027DIA_Template\u0027 which is not an imported model relationship; the diagram geometry is not preserved.",
+          "SuggestedFix": ""
+        },
+        {
+          "Id": "bpmn-import-loss-0002",
+          "Severity": "Warning",
+          "Category": "bpmn-import",
+          "SourceElementId": "DOA_Report_di",
+          "SourceRelationshipId": "",
+          "Message": "BPMNEdge: BPMNEdge references \u0027DOA_Report\u0027 which is not an imported model relationship; the diagram geometry is not preserved.",
+          "SuggestedFix": ""
+        },
+        {
+          "Id": "bpmn-import-loss-0003",
+          "Severity": "Warning",
+          "Category": "bpmn-import",
+          "SourceElementId": "DIA_Approver_di",
+          "SourceRelationshipId": "",
+          "Message": "BPMNEdge: BPMNEdge references \u0027DIA_Approver\u0027 which is not an imported model relationship; the diagram geometry is not preserved.",
+          "SuggestedFix": ""
+        },
+        {
+          "Id": "bpmn-import-loss-0004",
           "Severity": "Warning",
           "Category": "bpmn-import",
           "SourceElementId": "Task_Write",
@@ -198,6 +402,27 @@
   ],
   "Losses": [
     {
+      "ElementId": "DIA_Template_di",
+      "XmlPath": "/definitions[@id=\u0027Definitions_IoProperties\u0027]/BPMNDiagram[@id=\u0027BPMNDiagram_Io\u0027]/BPMNPlane[@id=\u0027BPMNPlane_Io\u0027]/BPMNEdge[@id=\u0027DIA_Template_di\u0027]",
+      "Construct": "BPMNEdge",
+      "Reason": "BPMNEdge references \u0027DIA_Template\u0027 which is not an imported model relationship; the diagram geometry is not preserved.",
+      "Severity": 0
+    },
+    {
+      "ElementId": "DOA_Report_di",
+      "XmlPath": "/definitions[@id=\u0027Definitions_IoProperties\u0027]/BPMNDiagram[@id=\u0027BPMNDiagram_Io\u0027]/BPMNPlane[@id=\u0027BPMNPlane_Io\u0027]/BPMNEdge[@id=\u0027DOA_Report_di\u0027]",
+      "Construct": "BPMNEdge",
+      "Reason": "BPMNEdge references \u0027DOA_Report\u0027 which is not an imported model relationship; the diagram geometry is not preserved.",
+      "Severity": 0
+    },
+    {
+      "ElementId": "DIA_Approver_di",
+      "XmlPath": "/definitions[@id=\u0027Definitions_IoProperties\u0027]/BPMNDiagram[@id=\u0027BPMNDiagram_Io\u0027]/BPMNPlane[@id=\u0027BPMNPlane_Io\u0027]/BPMNEdge[@id=\u0027DIA_Approver_di\u0027]",
+      "Construct": "BPMNEdge",
+      "Reason": "BPMNEdge references \u0027DIA_Approver\u0027 which is not an imported model relationship; the diagram geometry is not preserved.",
+      "Severity": 0
+    },
+    {
       "ElementId": "Task_Write",
       "XmlPath": "/definitions[@id=\u0027Definitions_IoProperties\u0027]/process[@id=\u0027Process_Io\u0027]/task[@id=\u0027Task_Write\u0027]/property[@id=\u0027Property_Config\u0027]",
       "Construct": "property",
@@ -205,7 +430,24 @@
       "Severity": 0
     }
   ],
-  "Warnings": [],
+  "Warnings": [
+    {
+      "Message": "BPMNEdge \u0027DIA_Template_di\u0027 references \u0027DIA_Template\u0027, which is not an imported relationship; the diagram geometry is not preserved.",
+      "XmlPath": "/definitions[@id=\u0027Definitions_IoProperties\u0027]/BPMNDiagram[@id=\u0027BPMNDiagram_Io\u0027]/BPMNPlane[@id=\u0027BPMNPlane_Io\u0027]/BPMNEdge[@id=\u0027DIA_Template_di\u0027]"
+    },
+    {
+      "Message": "BPMNEdge \u0027DOA_Report_di\u0027 references \u0027DOA_Report\u0027, which is not an imported relationship; the diagram geometry is not preserved.",
+      "XmlPath": "/definitions[@id=\u0027Definitions_IoProperties\u0027]/BPMNDiagram[@id=\u0027BPMNDiagram_Io\u0027]/BPMNPlane[@id=\u0027BPMNPlane_Io\u0027]/BPMNEdge[@id=\u0027DOA_Report_di\u0027]"
+    },
+    {
+      "Message": "BPMNEdge \u0027DIA_Approver_di\u0027 references \u0027DIA_Approver\u0027, which is not an imported relationship; the diagram geometry is not preserved.",
+      "XmlPath": "/definitions[@id=\u0027Definitions_IoProperties\u0027]/BPMNDiagram[@id=\u0027BPMNDiagram_Io\u0027]/BPMNPlane[@id=\u0027BPMNPlane_Io\u0027]/BPMNEdge[@id=\u0027DIA_Approver_di\u0027]"
+    },
+    {
+      "Message": "3 connection(s) have no BPMNDI edge in plane \u0027BPMNPlane_Io\u0027; their waypoints were generated by the auto-layout: DIA_Template, DOA_Report, DIA_Approver",
+      "XmlPath": "/definitions"
+    }
+  ],
   "HasErrors": false,
   "ErrorMessage": null
 }

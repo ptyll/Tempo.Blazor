@@ -129,7 +129,19 @@
           "TargetElementId": "Task_Approve",
           "RelationshipType": "SequenceFlow",
           "Name": "",
-          "Properties": {},
+          "Properties": {
+            "bpmndi:waypoints": [
+              {
+                "x": 188,
+                "y": 170
+              },
+              {
+                "x": 240,
+                "y": 170
+              }
+            ],
+            "bpmndi:planeId": "BPMNPlane_1"
+          },
           "Tags": []
         },
         {
@@ -140,7 +152,19 @@
           "TargetElementId": "Task_ReviewPool",
           "RelationshipType": "SequenceFlow",
           "Name": "",
-          "Properties": {},
+          "Properties": {
+            "bpmndi:waypoints": [
+              {
+                "x": 340,
+                "y": 170
+              },
+              {
+                "x": 400,
+                "y": 170
+              }
+            ],
+            "bpmndi:planeId": "BPMNPlane_1"
+          },
           "Tags": []
         },
         {
@@ -151,7 +175,19 @@
           "TargetElementId": "Task_Book",
           "RelationshipType": "SequenceFlow",
           "Name": "",
-          "Properties": {},
+          "Properties": {
+            "bpmndi:waypoints": [
+              {
+                "x": 500,
+                "y": 170
+              },
+              {
+                "x": 560,
+                "y": 170
+              }
+            ],
+            "bpmndi:planeId": "BPMNPlane_1"
+          },
           "Tags": []
         },
         {
@@ -162,11 +198,134 @@
           "TargetElementId": "EndEvent_Booked",
           "RelationshipType": "SequenceFlow",
           "Name": "",
-          "Properties": {},
+          "Properties": {
+            "bpmndi:waypoints": [
+              {
+                "x": 660,
+                "y": 170
+              },
+              {
+                "x": 732,
+                "y": 170
+              }
+            ],
+            "bpmndi:planeId": "BPMNPlane_1"
+          },
           "Tags": []
         }
       ],
-      "Views": [],
+      "Views": [
+        {
+          "Id": "BPMNPlane_1",
+          "Name": "Invoice approval",
+          "Notation": "bpmn2",
+          "ViewpointKey": "",
+          "Nodes": [
+            {
+              "ElementId": "StartEvent_InvoiceReceived",
+              "X": 152,
+              "Y": 152,
+              "Width": 36,
+              "Height": 36,
+              "ParentNodeId": null
+            },
+            {
+              "ElementId": "Task_Approve",
+              "X": 240,
+              "Y": 130,
+              "Width": 100,
+              "Height": 80,
+              "ParentNodeId": null
+            },
+            {
+              "ElementId": "Task_ReviewPool",
+              "X": 400,
+              "Y": 130,
+              "Width": 100,
+              "Height": 80,
+              "ParentNodeId": null
+            },
+            {
+              "ElementId": "Task_Book",
+              "X": 560,
+              "Y": 130,
+              "Width": 100,
+              "Height": 80,
+              "ParentNodeId": null
+            },
+            {
+              "ElementId": "EndEvent_Booked",
+              "X": 732,
+              "Y": 152,
+              "Width": 36,
+              "Height": 36,
+              "ParentNodeId": null
+            }
+          ],
+          "Connections": [
+            {
+              "RelationshipId": "Flow_C1",
+              "SourceNodeId": "StartEvent_InvoiceReceived",
+              "TargetNodeId": "Task_Approve",
+              "Waypoints": [
+                {
+                  "X": 188,
+                  "Y": 170
+                },
+                {
+                  "X": 240,
+                  "Y": 170
+                }
+              ]
+            },
+            {
+              "RelationshipId": "Flow_C2",
+              "SourceNodeId": "Task_Approve",
+              "TargetNodeId": "Task_ReviewPool",
+              "Waypoints": [
+                {
+                  "X": 340,
+                  "Y": 170
+                },
+                {
+                  "X": 400,
+                  "Y": 170
+                }
+              ]
+            },
+            {
+              "RelationshipId": "Flow_C3",
+              "SourceNodeId": "Task_ReviewPool",
+              "TargetNodeId": "Task_Book",
+              "Waypoints": [
+                {
+                  "X": 500,
+                  "Y": 170
+                },
+                {
+                  "X": 560,
+                  "Y": 170
+                }
+              ]
+            },
+            {
+              "RelationshipId": "Flow_C4",
+              "SourceNodeId": "Task_Book",
+              "TargetNodeId": "EndEvent_Booked",
+              "Waypoints": [
+                {
+                  "X": 660,
+                  "Y": 170
+                },
+                {
+                  "X": 732,
+                  "Y": 170
+                }
+              ]
+            }
+          ]
+        }
+      ],
       "Issues": [
         {
           "Id": "bpmn-import-loss-0001",

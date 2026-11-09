@@ -200,7 +200,19 @@
           "TargetElementId": "Task_Check",
           "RelationshipType": "SequenceFlow",
           "Name": "",
-          "Properties": {},
+          "Properties": {
+            "bpmndi:waypoints": [
+              {
+                "x": 188,
+                "y": 180
+              },
+              {
+                "x": 240,
+                "y": 180
+              }
+            ],
+            "bpmndi:planeId": "BPMNPlane_1"
+          },
           "Tags": []
         },
         {
@@ -211,7 +223,19 @@
           "TargetElementId": "Task_Order",
           "RelationshipType": "SequenceFlow",
           "Name": "",
-          "Properties": {},
+          "Properties": {
+            "bpmndi:waypoints": [
+              {
+                "x": 340,
+                "y": 180
+              },
+              {
+                "x": 400,
+                "y": 180
+              }
+            ],
+            "bpmndi:planeId": "BPMNPlane_1"
+          },
           "Tags": []
         },
         {
@@ -222,11 +246,180 @@
           "TargetElementId": "EndEvent_Data",
           "RelationshipType": "SequenceFlow",
           "Name": "",
-          "Properties": {},
+          "Properties": {
+            "bpmndi:waypoints": [
+              {
+                "x": 500,
+                "y": 180
+              },
+              {
+                "x": 572,
+                "y": 180
+              }
+            ],
+            "bpmndi:planeId": "BPMNPlane_1"
+          },
           "Tags": []
         }
       ],
-      "Views": [],
+      "Views": [
+        {
+          "Id": "BPMNPlane_1",
+          "Name": "Data handling",
+          "Notation": "bpmn2",
+          "ViewpointKey": "",
+          "Nodes": [
+            {
+              "ElementId": "StartEvent_Data",
+              "X": 152,
+              "Y": 162,
+              "Width": 36,
+              "Height": 36,
+              "ParentNodeId": null
+            },
+            {
+              "ElementId": "Task_Check",
+              "X": 240,
+              "Y": 140,
+              "Width": 100,
+              "Height": 80,
+              "ParentNodeId": null
+            },
+            {
+              "ElementId": "Task_Order",
+              "X": 400,
+              "Y": 140,
+              "Width": 100,
+              "Height": 80,
+              "ParentNodeId": null
+            },
+            {
+              "ElementId": "EndEvent_Data",
+              "X": 572,
+              "Y": 162,
+              "Width": 36,
+              "Height": 36,
+              "ParentNodeId": null
+            },
+            {
+              "ElementId": "DataObjectRef_Stock",
+              "X": 320,
+              "Y": 280,
+              "Width": 36,
+              "Height": 50,
+              "ParentNodeId": null
+            },
+            {
+              "ElementId": "DataStoreRef_Catalog",
+              "X": 460,
+              "Y": 280,
+              "Width": 50,
+              "Height": 50,
+              "ParentNodeId": null
+            },
+            {
+              "ElementId": "DataObject_Unused",
+              "X": 206,
+              "Y": 370,
+              "Width": 36,
+              "Height": 50,
+              "ParentNodeId": null
+            }
+          ],
+          "Connections": [
+            {
+              "RelationshipId": "Flow_D1",
+              "SourceNodeId": "StartEvent_Data",
+              "TargetNodeId": "Task_Check",
+              "Waypoints": [
+                {
+                  "X": 188,
+                  "Y": 180
+                },
+                {
+                  "X": 240,
+                  "Y": 180
+                }
+              ]
+            },
+            {
+              "RelationshipId": "Flow_D2",
+              "SourceNodeId": "Task_Check",
+              "TargetNodeId": "Task_Order",
+              "Waypoints": [
+                {
+                  "X": 340,
+                  "Y": 180
+                },
+                {
+                  "X": 400,
+                  "Y": 180
+                }
+              ]
+            },
+            {
+              "RelationshipId": "Flow_D3",
+              "SourceNodeId": "Task_Order",
+              "TargetNodeId": "EndEvent_Data",
+              "Waypoints": [
+                {
+                  "X": 500,
+                  "Y": 180
+                },
+                {
+                  "X": 572,
+                  "Y": 180
+                }
+              ]
+            },
+            {
+              "RelationshipId": "DataOut_1",
+              "SourceNodeId": "Task_Check",
+              "TargetNodeId": "DataObjectRef_Stock",
+              "Waypoints": [
+                {
+                  "X": 340,
+                  "Y": 180
+                },
+                {
+                  "X": 320,
+                  "Y": 305
+                }
+              ]
+            },
+            {
+              "RelationshipId": "DataIn_1",
+              "SourceNodeId": "DataObjectRef_Stock",
+              "TargetNodeId": "Task_Order",
+              "Waypoints": [
+                {
+                  "X": 356,
+                  "Y": 305
+                },
+                {
+                  "X": 400,
+                  "Y": 180
+                }
+              ]
+            },
+            {
+              "RelationshipId": "DataIn_2",
+              "SourceNodeId": "DataStoreRef_Catalog",
+              "TargetNodeId": "Task_Order",
+              "Waypoints": [
+                {
+                  "X": 460,
+                  "Y": 305
+                },
+                {
+                  "X": 500,
+                  "Y": 180
+                }
+              ]
+            }
+          ]
+        }
+      ],
       "Issues": [
         {
           "Id": "bpmn-import-loss-0001",
@@ -235,6 +428,33 @@
           "SourceElementId": "DataObject_Unused",
           "SourceRelationshipId": "",
           "Message": "dataObject: Unreferenced dataObject imported as a standalone DataObject element.",
+          "SuggestedFix": ""
+        },
+        {
+          "Id": "bpmn-import-loss-0002",
+          "Severity": "Warning",
+          "Category": "bpmn-import",
+          "SourceElementId": "DataOut_1_di",
+          "SourceRelationshipId": "",
+          "Message": "BPMNEdge: BPMNEdge references \u0027DataOut_1\u0027 which is not an imported model relationship; the diagram geometry is not preserved.",
+          "SuggestedFix": ""
+        },
+        {
+          "Id": "bpmn-import-loss-0003",
+          "Severity": "Warning",
+          "Category": "bpmn-import",
+          "SourceElementId": "DataIn_1_di",
+          "SourceRelationshipId": "",
+          "Message": "BPMNEdge: BPMNEdge references \u0027DataIn_1\u0027 which is not an imported model relationship; the diagram geometry is not preserved.",
+          "SuggestedFix": ""
+        },
+        {
+          "Id": "bpmn-import-loss-0004",
+          "Severity": "Warning",
+          "Category": "bpmn-import",
+          "SourceElementId": "DataIn_2_di",
+          "SourceRelationshipId": "",
+          "Message": "BPMNEdge: BPMNEdge references \u0027DataIn_2\u0027 which is not an imported model relationship; the diagram geometry is not preserved.",
           "SuggestedFix": ""
         }
       ],
@@ -254,9 +474,51 @@
       "Construct": "dataObject",
       "Reason": "Unreferenced dataObject imported as a standalone DataObject element.",
       "Severity": 2
+    },
+    {
+      "ElementId": "DataOut_1_di",
+      "XmlPath": "/definitions[@id=\u0027Definitions_Data\u0027]/BPMNDiagram[@id=\u0027BPMNDiagram_1\u0027]/BPMNPlane[@id=\u0027BPMNPlane_1\u0027]/BPMNEdge[@id=\u0027DataOut_1_di\u0027]",
+      "Construct": "BPMNEdge",
+      "Reason": "BPMNEdge references \u0027DataOut_1\u0027 which is not an imported model relationship; the diagram geometry is not preserved.",
+      "Severity": 0
+    },
+    {
+      "ElementId": "DataIn_1_di",
+      "XmlPath": "/definitions[@id=\u0027Definitions_Data\u0027]/BPMNDiagram[@id=\u0027BPMNDiagram_1\u0027]/BPMNPlane[@id=\u0027BPMNPlane_1\u0027]/BPMNEdge[@id=\u0027DataIn_1_di\u0027]",
+      "Construct": "BPMNEdge",
+      "Reason": "BPMNEdge references \u0027DataIn_1\u0027 which is not an imported model relationship; the diagram geometry is not preserved.",
+      "Severity": 0
+    },
+    {
+      "ElementId": "DataIn_2_di",
+      "XmlPath": "/definitions[@id=\u0027Definitions_Data\u0027]/BPMNDiagram[@id=\u0027BPMNDiagram_1\u0027]/BPMNPlane[@id=\u0027BPMNPlane_1\u0027]/BPMNEdge[@id=\u0027DataIn_2_di\u0027]",
+      "Construct": "BPMNEdge",
+      "Reason": "BPMNEdge references \u0027DataIn_2\u0027 which is not an imported model relationship; the diagram geometry is not preserved.",
+      "Severity": 0
     }
   ],
-  "Warnings": [],
+  "Warnings": [
+    {
+      "Message": "BPMNEdge \u0027DataOut_1_di\u0027 references \u0027DataOut_1\u0027, which is not an imported relationship; the diagram geometry is not preserved.",
+      "XmlPath": "/definitions[@id=\u0027Definitions_Data\u0027]/BPMNDiagram[@id=\u0027BPMNDiagram_1\u0027]/BPMNPlane[@id=\u0027BPMNPlane_1\u0027]/BPMNEdge[@id=\u0027DataOut_1_di\u0027]"
+    },
+    {
+      "Message": "BPMNEdge \u0027DataIn_1_di\u0027 references \u0027DataIn_1\u0027, which is not an imported relationship; the diagram geometry is not preserved.",
+      "XmlPath": "/definitions[@id=\u0027Definitions_Data\u0027]/BPMNDiagram[@id=\u0027BPMNDiagram_1\u0027]/BPMNPlane[@id=\u0027BPMNPlane_1\u0027]/BPMNEdge[@id=\u0027DataIn_1_di\u0027]"
+    },
+    {
+      "Message": "BPMNEdge \u0027DataIn_2_di\u0027 references \u0027DataIn_2\u0027, which is not an imported relationship; the diagram geometry is not preserved.",
+      "XmlPath": "/definitions[@id=\u0027Definitions_Data\u0027]/BPMNDiagram[@id=\u0027BPMNDiagram_1\u0027]/BPMNPlane[@id=\u0027BPMNPlane_1\u0027]/BPMNEdge[@id=\u0027DataIn_2_di\u0027]"
+    },
+    {
+      "Message": "3 connection(s) have no BPMNDI edge in plane \u0027BPMNPlane_1\u0027; their waypoints were generated by the auto-layout: DataOut_1, DataIn_1, DataIn_2",
+      "XmlPath": "/definitions"
+    },
+    {
+      "Message": "1 element(s) have no BPMNPlane shape in any plane of model \u0027Process_Data\u0027; their positions were generated by the auto-layout below the plane\u0027s diagram bounds: DataObject_Unused",
+      "XmlPath": "/definitions"
+    }
+  ],
   "HasErrors": false,
   "ErrorMessage": null
 }

@@ -18,7 +18,9 @@
           "Name": "Front office",
           "ParentId": "",
           "Description": "",
-          "Properties": {},
+          "Properties": {
+            "bpmndi:isHorizontal": "true"
+          },
           "Tags": [],
           "Governance": {
             "TrustLevel": "",
@@ -37,7 +39,9 @@
           "Name": "Phone team",
           "ParentId": "Lane_FrontOffice",
           "Description": "",
-          "Properties": {},
+          "Properties": {
+            "bpmndi:isHorizontal": "true"
+          },
           "Tags": [],
           "Governance": {
             "TrustLevel": "",
@@ -56,7 +60,9 @@
           "Name": "Email team",
           "ParentId": "Lane_FrontOffice",
           "Description": "",
-          "Properties": {},
+          "Properties": {
+            "bpmndi:isHorizontal": "true"
+          },
           "Tags": [],
           "Governance": {
             "TrustLevel": "",
@@ -75,7 +81,9 @@
           "Name": "Back office",
           "ParentId": "",
           "Description": "",
-          "Properties": {},
+          "Properties": {
+            "bpmndi:isHorizontal": "true"
+          },
           "Tags": [],
           "Governance": {
             "TrustLevel": "",
@@ -208,7 +216,9 @@
           "Name": "Pay out?",
           "ParentId": "Lane_BackOffice",
           "Description": "",
-          "Properties": {},
+          "Properties": {
+            "bpmndi:isMarkerVisible": "true"
+          },
           "Tags": [],
           "Governance": {
             "TrustLevel": "",
@@ -265,7 +275,19 @@
           "TargetElementId": "Task_Register",
           "RelationshipType": "SequenceFlow",
           "Name": "",
-          "Properties": {},
+          "Properties": {
+            "bpmndi:waypoints": [
+              {
+                "x": 248,
+                "y": 180
+              },
+              {
+                "x": 300,
+                "y": 180
+              }
+            ],
+            "bpmndi:planeId": "BPMNPlane_1"
+          },
           "Tags": []
         },
         {
@@ -276,7 +298,19 @@
           "TargetElementId": "Task_PhoneCall",
           "RelationshipType": "SequenceFlow",
           "Name": "",
-          "Properties": {},
+          "Properties": {
+            "bpmndi:waypoints": [
+              {
+                "x": 400,
+                "y": 180
+              },
+              {
+                "x": 470,
+                "y": 180
+              }
+            ],
+            "bpmndi:planeId": "BPMNPlane_1"
+          },
           "Tags": []
         },
         {
@@ -287,7 +321,23 @@
           "TargetElementId": "Task_ReplyEmail",
           "RelationshipType": "SequenceFlow",
           "Name": "",
-          "Properties": {},
+          "Properties": {
+            "bpmndi:waypoints": [
+              {
+                "x": 520,
+                "y": 220
+              },
+              {
+                "x": 520,
+                "y": 280
+              },
+              {
+                "x": 690,
+                "y": 280
+              }
+            ],
+            "bpmndi:planeId": "BPMNPlane_1"
+          },
           "Tags": []
         },
         {
@@ -298,7 +348,19 @@
           "TargetElementId": "Task_Respond",
           "RelationshipType": "SequenceFlow",
           "Name": "",
-          "Properties": {},
+          "Properties": {
+            "bpmndi:waypoints": [
+              {
+                "x": 740,
+                "y": 280
+              },
+              {
+                "x": 840,
+                "y": 280
+              }
+            ],
+            "bpmndi:planeId": "BPMNPlane_1"
+          },
           "Tags": []
         },
         {
@@ -309,7 +371,27 @@
           "TargetElementId": "Task_Assess",
           "RelationshipType": "SequenceFlow",
           "Name": "",
-          "Properties": {},
+          "Properties": {
+            "bpmndi:waypoints": [
+              {
+                "x": 840,
+                "y": 320
+              },
+              {
+                "x": 840,
+                "y": 500
+              },
+              {
+                "x": 350,
+                "y": 500
+              },
+              {
+                "x": 350,
+                "y": 460
+              }
+            ],
+            "bpmndi:planeId": "BPMNPlane_1"
+          },
           "Tags": []
         },
         {
@@ -320,7 +402,19 @@
           "TargetElementId": "Gateway_Decision",
           "RelationshipType": "SequenceFlow",
           "Name": "",
-          "Properties": {},
+          "Properties": {
+            "bpmndi:waypoints": [
+              {
+                "x": 400,
+                "y": 420
+              },
+              {
+                "x": 465,
+                "y": 420
+              }
+            ],
+            "bpmndi:planeId": "BPMNPlane_1"
+          },
           "Tags": []
         },
         {
@@ -331,7 +425,19 @@
           "TargetElementId": "Task_Pay",
           "RelationshipType": "SequenceFlow",
           "Name": "yes",
-          "Properties": {},
+          "Properties": {
+            "bpmndi:waypoints": [
+              {
+                "x": 515,
+                "y": 420
+              },
+              {
+                "x": 580,
+                "y": 420
+              }
+            ],
+            "bpmndi:planeId": "BPMNPlane_1"
+          },
           "Tags": []
         },
         {
@@ -342,7 +448,19 @@
           "TargetElementId": "EndEvent_Done",
           "RelationshipType": "SequenceFlow",
           "Name": "no",
-          "Properties": {},
+          "Properties": {
+            "bpmndi:waypoints": [
+              {
+                "x": 490,
+                "y": 445
+              },
+              {
+                "x": 490,
+                "y": 420
+              }
+            ],
+            "bpmndi:planeId": "BPMNPlane_1"
+          },
           "Tags": []
         },
         {
@@ -353,11 +471,285 @@
           "TargetElementId": "EndEvent_Done",
           "RelationshipType": "SequenceFlow",
           "Name": "",
-          "Properties": {},
+          "Properties": {
+            "bpmndi:waypoints": [
+              {
+                "x": 680,
+                "y": 420
+              },
+              {
+                "x": 752,
+                "y": 420
+              }
+            ],
+            "bpmndi:planeId": "BPMNPlane_1"
+          },
           "Tags": []
         }
       ],
-      "Views": [],
+      "Views": [
+        {
+          "Id": "BPMNPlane_1",
+          "Name": "Claim handling",
+          "Notation": "bpmn2",
+          "ViewpointKey": "",
+          "Nodes": [
+            {
+              "ElementId": "Lane_FrontOffice",
+              "X": 160,
+              "Y": 80,
+              "Width": 760,
+              "Height": 260,
+              "ParentNodeId": null
+            },
+            {
+              "ElementId": "Lane_Phone",
+              "X": 190,
+              "Y": 80,
+              "Width": 730,
+              "Height": 130,
+              "ParentNodeId": "Lane_FrontOffice"
+            },
+            {
+              "ElementId": "Lane_Email",
+              "X": 190,
+              "Y": 210,
+              "Width": 730,
+              "Height": 130,
+              "ParentNodeId": "Lane_FrontOffice"
+            },
+            {
+              "ElementId": "Lane_BackOffice",
+              "X": 160,
+              "Y": 340,
+              "Width": 760,
+              "Height": 160,
+              "ParentNodeId": null
+            },
+            {
+              "ElementId": "StartEvent_Claim",
+              "X": 212,
+              "Y": 162,
+              "Width": 36,
+              "Height": 36,
+              "ParentNodeId": "Lane_FrontOffice"
+            },
+            {
+              "ElementId": "Task_Register",
+              "X": 300,
+              "Y": 140,
+              "Width": 100,
+              "Height": 80,
+              "ParentNodeId": "Lane_FrontOffice"
+            },
+            {
+              "ElementId": "Task_PhoneCall",
+              "X": 470,
+              "Y": 140,
+              "Width": 100,
+              "Height": 80,
+              "ParentNodeId": "Lane_Phone"
+            },
+            {
+              "ElementId": "Task_ReplyEmail",
+              "X": 640,
+              "Y": 240,
+              "Width": 100,
+              "Height": 80,
+              "ParentNodeId": "Lane_Email"
+            },
+            {
+              "ElementId": "Task_Respond",
+              "X": 790,
+              "Y": 240,
+              "Width": 100,
+              "Height": 80,
+              "ParentNodeId": "Lane_FrontOffice"
+            },
+            {
+              "ElementId": "Task_Assess",
+              "X": 300,
+              "Y": 380,
+              "Width": 100,
+              "Height": 80,
+              "ParentNodeId": "Lane_BackOffice"
+            },
+            {
+              "ElementId": "Gateway_Decision",
+              "X": 465,
+              "Y": 395,
+              "Width": 50,
+              "Height": 50,
+              "ParentNodeId": "Lane_BackOffice"
+            },
+            {
+              "ElementId": "Task_Pay",
+              "X": 580,
+              "Y": 380,
+              "Width": 100,
+              "Height": 80,
+              "ParentNodeId": "Lane_BackOffice"
+            },
+            {
+              "ElementId": "EndEvent_Done",
+              "X": 752,
+              "Y": 402,
+              "Width": 36,
+              "Height": 36,
+              "ParentNodeId": "Lane_BackOffice"
+            }
+          ],
+          "Connections": [
+            {
+              "RelationshipId": "Flow_N1",
+              "SourceNodeId": "StartEvent_Claim",
+              "TargetNodeId": "Task_Register",
+              "Waypoints": [
+                {
+                  "X": 248,
+                  "Y": 180
+                },
+                {
+                  "X": 300,
+                  "Y": 180
+                }
+              ]
+            },
+            {
+              "RelationshipId": "Flow_N2",
+              "SourceNodeId": "Task_Register",
+              "TargetNodeId": "Task_PhoneCall",
+              "Waypoints": [
+                {
+                  "X": 400,
+                  "Y": 180
+                },
+                {
+                  "X": 470,
+                  "Y": 180
+                }
+              ]
+            },
+            {
+              "RelationshipId": "Flow_N3",
+              "SourceNodeId": "Task_PhoneCall",
+              "TargetNodeId": "Task_ReplyEmail",
+              "Waypoints": [
+                {
+                  "X": 520,
+                  "Y": 220
+                },
+                {
+                  "X": 520,
+                  "Y": 280
+                },
+                {
+                  "X": 690,
+                  "Y": 280
+                }
+              ]
+            },
+            {
+              "RelationshipId": "Flow_N4",
+              "SourceNodeId": "Task_ReplyEmail",
+              "TargetNodeId": "Task_Respond",
+              "Waypoints": [
+                {
+                  "X": 740,
+                  "Y": 280
+                },
+                {
+                  "X": 840,
+                  "Y": 280
+                }
+              ]
+            },
+            {
+              "RelationshipId": "Flow_N5",
+              "SourceNodeId": "Task_Respond",
+              "TargetNodeId": "Task_Assess",
+              "Waypoints": [
+                {
+                  "X": 840,
+                  "Y": 320
+                },
+                {
+                  "X": 840,
+                  "Y": 500
+                },
+                {
+                  "X": 350,
+                  "Y": 500
+                },
+                {
+                  "X": 350,
+                  "Y": 460
+                }
+              ]
+            },
+            {
+              "RelationshipId": "Flow_N6",
+              "SourceNodeId": "Task_Assess",
+              "TargetNodeId": "Gateway_Decision",
+              "Waypoints": [
+                {
+                  "X": 400,
+                  "Y": 420
+                },
+                {
+                  "X": 465,
+                  "Y": 420
+                }
+              ]
+            },
+            {
+              "RelationshipId": "Flow_N7",
+              "SourceNodeId": "Gateway_Decision",
+              "TargetNodeId": "Task_Pay",
+              "Waypoints": [
+                {
+                  "X": 515,
+                  "Y": 420
+                },
+                {
+                  "X": 580,
+                  "Y": 420
+                }
+              ]
+            },
+            {
+              "RelationshipId": "Flow_N8",
+              "SourceNodeId": "Gateway_Decision",
+              "TargetNodeId": "EndEvent_Done",
+              "Waypoints": [
+                {
+                  "X": 490,
+                  "Y": 445
+                },
+                {
+                  "X": 490,
+                  "Y": 420
+                }
+              ]
+            },
+            {
+              "RelationshipId": "Flow_N9",
+              "SourceNodeId": "Task_Pay",
+              "TargetNodeId": "EndEvent_Done",
+              "Waypoints": [
+                {
+                  "X": 680,
+                  "Y": 420
+                },
+                {
+                  "X": 752,
+                  "Y": 420
+                }
+              ]
+            }
+          ]
+        }
+      ],
       "Issues": [],
       "Metadata": {
         "SourceSystem": "bpmn-xml",

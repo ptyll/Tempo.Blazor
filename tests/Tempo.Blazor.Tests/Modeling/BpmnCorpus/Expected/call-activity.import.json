@@ -98,7 +98,19 @@
           "TargetElementId": "CallActivity_Fulfil",
           "RelationshipType": "SequenceFlow",
           "Name": "",
-          "Properties": {},
+          "Properties": {
+            "bpmndi:waypoints": [
+              {
+                "x": 188,
+                "y": 180
+              },
+              {
+                "x": 240,
+                "y": 180
+              }
+            ],
+            "bpmndi:planeId": "BPMNPlane_1"
+          },
           "Tags": []
         },
         {
@@ -109,7 +121,19 @@
           "TargetElementId": "Task_NotifyCustomer",
           "RelationshipType": "SequenceFlow",
           "Name": "",
-          "Properties": {},
+          "Properties": {
+            "bpmndi:waypoints": [
+              {
+                "x": 340,
+                "y": 180
+              },
+              {
+                "x": 400,
+                "y": 180
+              }
+            ],
+            "bpmndi:planeId": "BPMNPlane_1"
+          },
           "Tags": []
         },
         {
@@ -120,11 +144,111 @@
           "TargetElementId": "EndEvent_Order",
           "RelationshipType": "SequenceFlow",
           "Name": "",
-          "Properties": {},
+          "Properties": {
+            "bpmndi:waypoints": [
+              {
+                "x": 500,
+                "y": 180
+              },
+              {
+                "x": 572,
+                "y": 180
+              }
+            ],
+            "bpmndi:planeId": "BPMNPlane_1"
+          },
           "Tags": []
         }
       ],
-      "Views": [],
+      "Views": [
+        {
+          "Id": "BPMNPlane_1",
+          "Name": "Order process",
+          "Notation": "bpmn2",
+          "ViewpointKey": "",
+          "Nodes": [
+            {
+              "ElementId": "StartEvent_Order",
+              "X": 152,
+              "Y": 162,
+              "Width": 36,
+              "Height": 36,
+              "ParentNodeId": null
+            },
+            {
+              "ElementId": "CallActivity_Fulfil",
+              "X": 240,
+              "Y": 140,
+              "Width": 100,
+              "Height": 80,
+              "ParentNodeId": null
+            },
+            {
+              "ElementId": "Task_NotifyCustomer",
+              "X": 400,
+              "Y": 140,
+              "Width": 100,
+              "Height": 80,
+              "ParentNodeId": null
+            },
+            {
+              "ElementId": "EndEvent_Order",
+              "X": 572,
+              "Y": 162,
+              "Width": 36,
+              "Height": 36,
+              "ParentNodeId": null
+            }
+          ],
+          "Connections": [
+            {
+              "RelationshipId": "Flow_CA1",
+              "SourceNodeId": "StartEvent_Order",
+              "TargetNodeId": "CallActivity_Fulfil",
+              "Waypoints": [
+                {
+                  "X": 188,
+                  "Y": 180
+                },
+                {
+                  "X": 240,
+                  "Y": 180
+                }
+              ]
+            },
+            {
+              "RelationshipId": "Flow_CA2",
+              "SourceNodeId": "CallActivity_Fulfil",
+              "TargetNodeId": "Task_NotifyCustomer",
+              "Waypoints": [
+                {
+                  "X": 340,
+                  "Y": 180
+                },
+                {
+                  "X": 400,
+                  "Y": 180
+                }
+              ]
+            },
+            {
+              "RelationshipId": "Flow_CA3",
+              "SourceNodeId": "Task_NotifyCustomer",
+              "TargetNodeId": "EndEvent_Order",
+              "Waypoints": [
+                {
+                  "X": 500,
+                  "Y": 180
+                },
+                {
+                  "X": 572,
+                  "Y": 180
+                }
+              ]
+            }
+          ]
+        }
+      ],
       "Issues": [],
       "Metadata": {
         "SourceSystem": "bpmn-xml",
@@ -209,7 +333,19 @@
           "TargetElementId": "Task_Pack",
           "RelationshipType": "SequenceFlow",
           "Name": "",
-          "Properties": {},
+          "Properties": {
+            "bpmndi:waypoints": [
+              {
+                "x": 188,
+                "y": 180
+              },
+              {
+                "x": 240,
+                "y": 180
+              }
+            ],
+            "bpmndi:planeId": "BPMNPlane_2"
+          },
           "Tags": []
         },
         {
@@ -220,11 +356,88 @@
           "TargetElementId": "EndEvent_Fulfil",
           "RelationshipType": "SequenceFlow",
           "Name": "",
-          "Properties": {},
+          "Properties": {
+            "bpmndi:waypoints": [
+              {
+                "x": 340,
+                "y": 180
+              },
+              {
+                "x": 412,
+                "y": 180
+              }
+            ],
+            "bpmndi:planeId": "BPMNPlane_2"
+          },
           "Tags": []
         }
       ],
-      "Views": [],
+      "Views": [
+        {
+          "Id": "BPMNPlane_2",
+          "Name": "Fulfilment process",
+          "Notation": "bpmn2",
+          "ViewpointKey": "",
+          "Nodes": [
+            {
+              "ElementId": "StartEvent_Fulfil",
+              "X": 152,
+              "Y": 162,
+              "Width": 36,
+              "Height": 36,
+              "ParentNodeId": null
+            },
+            {
+              "ElementId": "Task_Pack",
+              "X": 240,
+              "Y": 140,
+              "Width": 100,
+              "Height": 80,
+              "ParentNodeId": null
+            },
+            {
+              "ElementId": "EndEvent_Fulfil",
+              "X": 412,
+              "Y": 162,
+              "Width": 36,
+              "Height": 36,
+              "ParentNodeId": null
+            }
+          ],
+          "Connections": [
+            {
+              "RelationshipId": "Flow_CF1",
+              "SourceNodeId": "StartEvent_Fulfil",
+              "TargetNodeId": "Task_Pack",
+              "Waypoints": [
+                {
+                  "X": 188,
+                  "Y": 180
+                },
+                {
+                  "X": 240,
+                  "Y": 180
+                }
+              ]
+            },
+            {
+              "RelationshipId": "Flow_CF2",
+              "SourceNodeId": "Task_Pack",
+              "TargetNodeId": "EndEvent_Fulfil",
+              "Waypoints": [
+                {
+                  "X": 340,
+                  "Y": 180
+                },
+                {
+                  "X": 412,
+                  "Y": 180
+                }
+              ]
+            }
+          ]
+        }
+      ],
       "Issues": [],
       "Metadata": {
         "SourceSystem": "bpmn-xml",

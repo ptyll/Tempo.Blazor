@@ -788,7 +788,501 @@
           "Tags": []
         }
       ],
-      "Views": [],
+      "Views": [
+        {
+          "Id": "BPMNPlane_1",
+          "Name": "Event zoo",
+          "Notation": "bpmn2",
+          "ViewpointKey": "",
+          "Nodes": [
+            {
+              "ElementId": "Start_None",
+              "X": 152,
+              "Y": 102,
+              "Width": 36,
+              "Height": 36,
+              "ParentNodeId": null
+            },
+            {
+              "ElementId": "Start_Message",
+              "X": 152,
+              "Y": 182,
+              "Width": 36,
+              "Height": 36,
+              "ParentNodeId": null
+            },
+            {
+              "ElementId": "Start_Timer",
+              "X": 152,
+              "Y": 262,
+              "Width": 36,
+              "Height": 36,
+              "ParentNodeId": null
+            },
+            {
+              "ElementId": "Start_Signal",
+              "X": 152,
+              "Y": 342,
+              "Width": 36,
+              "Height": 36,
+              "ParentNodeId": null
+            },
+            {
+              "ElementId": "Start_Conditional",
+              "X": 152,
+              "Y": 422,
+              "Width": 36,
+              "Height": 36,
+              "ParentNodeId": null
+            },
+            {
+              "ElementId": "Task_Events_Hub",
+              "X": 300,
+              "Y": 240,
+              "Width": 100,
+              "Height": 80,
+              "ParentNodeId": null
+            },
+            {
+              "ElementId": "Catch_Message",
+              "X": 490,
+              "Y": 92,
+              "Width": 36,
+              "Height": 36,
+              "ParentNodeId": null
+            },
+            {
+              "ElementId": "Catch_Timer",
+              "X": 490,
+              "Y": 162,
+              "Width": 36,
+              "Height": 36,
+              "ParentNodeId": null
+            },
+            {
+              "ElementId": "Catch_Signal",
+              "X": 490,
+              "Y": 232,
+              "Width": 36,
+              "Height": 36,
+              "ParentNodeId": null
+            },
+            {
+              "ElementId": "Catch_Conditional",
+              "X": 490,
+              "Y": 302,
+              "Width": 36,
+              "Height": 36,
+              "ParentNodeId": null
+            },
+            {
+              "ElementId": "Catch_Link",
+              "X": 490,
+              "Y": 372,
+              "Width": 36,
+              "Height": 36,
+              "ParentNodeId": null
+            },
+            {
+              "ElementId": "Throw_Message",
+              "X": 490,
+              "Y": 442,
+              "Width": 36,
+              "Height": 36,
+              "ParentNodeId": null
+            },
+            {
+              "ElementId": "Throw_Signal",
+              "X": 580,
+              "Y": 442,
+              "Width": 36,
+              "Height": 36,
+              "ParentNodeId": null
+            },
+            {
+              "ElementId": "Throw_Escalation",
+              "X": 670,
+              "Y": 442,
+              "Width": 36,
+              "Height": 36,
+              "ParentNodeId": null
+            },
+            {
+              "ElementId": "Throw_Link",
+              "X": 760,
+              "Y": 442,
+              "Width": 36,
+              "Height": 36,
+              "ParentNodeId": null
+            },
+            {
+              "ElementId": "Task_Events_End",
+              "X": 860,
+              "Y": 240,
+              "Width": 100,
+              "Height": 80,
+              "ParentNodeId": null
+            },
+            {
+              "ElementId": "End_None",
+              "X": 1042,
+              "Y": 92,
+              "Width": 36,
+              "Height": 36,
+              "ParentNodeId": null
+            },
+            {
+              "ElementId": "End_Message",
+              "X": 1042,
+              "Y": 162,
+              "Width": 36,
+              "Height": 36,
+              "ParentNodeId": null
+            },
+            {
+              "ElementId": "End_Error",
+              "X": 1042,
+              "Y": 232,
+              "Width": 36,
+              "Height": 36,
+              "ParentNodeId": null
+            },
+            {
+              "ElementId": "End_Signal",
+              "X": 1042,
+              "Y": 302,
+              "Width": 36,
+              "Height": 36,
+              "ParentNodeId": null
+            },
+            {
+              "ElementId": "End_Terminate",
+              "X": 1042,
+              "Y": 372,
+              "Width": 36,
+              "Height": 36,
+              "ParentNodeId": null
+            }
+          ],
+          "Connections": [
+            {
+              "RelationshipId": "Flow_E01",
+              "SourceNodeId": "Start_None",
+              "TargetNodeId": "Task_Events_Hub",
+              "Waypoints": [
+                {
+                  "X": 188,
+                  "Y": 120
+                },
+                {
+                  "X": 300,
+                  "Y": 280
+                }
+              ]
+            },
+            {
+              "RelationshipId": "Flow_E02",
+              "SourceNodeId": "Start_Message",
+              "TargetNodeId": "Task_Events_Hub",
+              "Waypoints": [
+                {
+                  "X": 188,
+                  "Y": 200
+                },
+                {
+                  "X": 300,
+                  "Y": 280
+                }
+              ]
+            },
+            {
+              "RelationshipId": "Flow_E03",
+              "SourceNodeId": "Start_Timer",
+              "TargetNodeId": "Task_Events_Hub",
+              "Waypoints": [
+                {
+                  "X": 188,
+                  "Y": 280
+                },
+                {
+                  "X": 300,
+                  "Y": 280
+                }
+              ]
+            },
+            {
+              "RelationshipId": "Flow_E04",
+              "SourceNodeId": "Start_Signal",
+              "TargetNodeId": "Task_Events_Hub",
+              "Waypoints": [
+                {
+                  "X": 188,
+                  "Y": 360
+                },
+                {
+                  "X": 300,
+                  "Y": 280
+                }
+              ]
+            },
+            {
+              "RelationshipId": "Flow_E05",
+              "SourceNodeId": "Start_Conditional",
+              "TargetNodeId": "Task_Events_Hub",
+              "Waypoints": [
+                {
+                  "X": 188,
+                  "Y": 440
+                },
+                {
+                  "X": 300,
+                  "Y": 280
+                }
+              ]
+            },
+            {
+              "RelationshipId": "Flow_E10",
+              "SourceNodeId": "Task_Events_Hub",
+              "TargetNodeId": "Catch_Message",
+              "Waypoints": [
+                {
+                  "X": 400,
+                  "Y": 280
+                },
+                {
+                  "X": 490,
+                  "Y": 110
+                }
+              ]
+            },
+            {
+              "RelationshipId": "Flow_E11",
+              "SourceNodeId": "Task_Events_Hub",
+              "TargetNodeId": "Catch_Timer",
+              "Waypoints": [
+                {
+                  "X": 400,
+                  "Y": 280
+                },
+                {
+                  "X": 490,
+                  "Y": 180
+                }
+              ]
+            },
+            {
+              "RelationshipId": "Flow_E12",
+              "SourceNodeId": "Task_Events_Hub",
+              "TargetNodeId": "Catch_Signal",
+              "Waypoints": [
+                {
+                  "X": 400,
+                  "Y": 280
+                },
+                {
+                  "X": 490,
+                  "Y": 250
+                }
+              ]
+            },
+            {
+              "RelationshipId": "Flow_E13",
+              "SourceNodeId": "Task_Events_Hub",
+              "TargetNodeId": "Catch_Conditional",
+              "Waypoints": [
+                {
+                  "X": 400,
+                  "Y": 280
+                },
+                {
+                  "X": 490,
+                  "Y": 320
+                }
+              ]
+            },
+            {
+              "RelationshipId": "Flow_E14",
+              "SourceNodeId": "Task_Events_Hub",
+              "TargetNodeId": "Catch_Link",
+              "Waypoints": [
+                {
+                  "X": 400,
+                  "Y": 280
+                },
+                {
+                  "X": 490,
+                  "Y": 390
+                }
+              ]
+            },
+            {
+              "RelationshipId": "Flow_E15",
+              "SourceNodeId": "Task_Events_Hub",
+              "TargetNodeId": "Throw_Message",
+              "Waypoints": [
+                {
+                  "X": 400,
+                  "Y": 280
+                },
+                {
+                  "X": 490,
+                  "Y": 460
+                }
+              ]
+            },
+            {
+              "RelationshipId": "Flow_E16",
+              "SourceNodeId": "Throw_Message",
+              "TargetNodeId": "Throw_Signal",
+              "Waypoints": [
+                {
+                  "X": 526,
+                  "Y": 460
+                },
+                {
+                  "X": 580,
+                  "Y": 460
+                }
+              ]
+            },
+            {
+              "RelationshipId": "Flow_E17",
+              "SourceNodeId": "Throw_Signal",
+              "TargetNodeId": "Throw_Escalation",
+              "Waypoints": [
+                {
+                  "X": 616,
+                  "Y": 460
+                },
+                {
+                  "X": 670,
+                  "Y": 460
+                }
+              ]
+            },
+            {
+              "RelationshipId": "Flow_E18",
+              "SourceNodeId": "Throw_Escalation",
+              "TargetNodeId": "Throw_Link",
+              "Waypoints": [
+                {
+                  "X": 706,
+                  "Y": 460
+                },
+                {
+                  "X": 760,
+                  "Y": 460
+                }
+              ]
+            },
+            {
+              "RelationshipId": "Flow_E19",
+              "SourceNodeId": "Throw_Link",
+              "TargetNodeId": "Task_Events_End",
+              "Waypoints": [
+                {
+                  "X": 796,
+                  "Y": 460
+                },
+                {
+                  "X": 860,
+                  "Y": 280
+                }
+              ]
+            },
+            {
+              "RelationshipId": "Flow_E20",
+              "SourceNodeId": "Catch_Message",
+              "TargetNodeId": "Task_Events_End",
+              "Waypoints": [
+                {
+                  "X": 526,
+                  "Y": 110
+                },
+                {
+                  "X": 860,
+                  "Y": 280
+                }
+              ]
+            },
+            {
+              "RelationshipId": "Flow_E21",
+              "SourceNodeId": "Task_Events_End",
+              "TargetNodeId": "End_None",
+              "Waypoints": [
+                {
+                  "X": 960,
+                  "Y": 280
+                },
+                {
+                  "X": 1042,
+                  "Y": 110
+                }
+              ]
+            },
+            {
+              "RelationshipId": "Flow_E22",
+              "SourceNodeId": "Task_Events_End",
+              "TargetNodeId": "End_Message",
+              "Waypoints": [
+                {
+                  "X": 960,
+                  "Y": 280
+                },
+                {
+                  "X": 1042,
+                  "Y": 180
+                }
+              ]
+            },
+            {
+              "RelationshipId": "Flow_E23",
+              "SourceNodeId": "Task_Events_End",
+              "TargetNodeId": "End_Error",
+              "Waypoints": [
+                {
+                  "X": 960,
+                  "Y": 280
+                },
+                {
+                  "X": 1042,
+                  "Y": 250
+                }
+              ]
+            },
+            {
+              "RelationshipId": "Flow_E24",
+              "SourceNodeId": "Task_Events_End",
+              "TargetNodeId": "End_Signal",
+              "Waypoints": [
+                {
+                  "X": 960,
+                  "Y": 280
+                },
+                {
+                  "X": 1042,
+                  "Y": 320
+                }
+              ]
+            },
+            {
+              "RelationshipId": "Flow_E25",
+              "SourceNodeId": "Task_Events_End",
+              "TargetNodeId": "End_Terminate",
+              "Waypoints": [
+                {
+                  "X": 960,
+                  "Y": 280
+                },
+                {
+                  "X": 1042,
+                  "Y": 390
+                }
+              ]
+            }
+          ]
+        }
+      ],
       "Issues": [],
       "Metadata": {
         "SourceSystem": "bpmn-xml",
@@ -833,7 +1327,12 @@
     }
   ],
   "Losses": [],
-  "Warnings": [],
+  "Warnings": [
+    {
+      "Message": "21 connection(s) have no BPMNDI edge in plane \u0027BPMNPlane_1\u0027; their waypoints were generated by the auto-layout: Flow_E01, Flow_E02, Flow_E03, Flow_E04, Flow_E05, Flow_E10, Flow_E11, Flow_E12, Flow_E13, Flow_E14, Flow_E15, Flow_E16, Flow_E17, Flow_E18, Flow_E19, Flow_E20, Flow_E21, Flow_E22, Flow_E23, Flow_E24, Flow_E25",
+      "XmlPath": "/definitions"
+    }
+  ],
   "HasErrors": false,
   "ErrorMessage": null
 }

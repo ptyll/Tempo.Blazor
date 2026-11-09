@@ -56310,6 +56310,26 @@
       },
       "items": [
         {
+          "itemName": "BpmnAutoLayout",
+          "kind": "Class",
+          "category": "General",
+          "namespace": "Tempo.Blazor.Modeling.BpmnXml",
+          "description": "Deterministic, headless layered left-to-right layout for BPMN models that carry no (or incomplete) BPMNDI diagram data. Pools render as stacked horizontal bands with lanes stacked inside them; the token flow runs from left to right in longest-path layers; containers are sized to fit their contents. Pure functions over ModelingModelDto — no JS interop, no UI dependency, no randomness and no clock: the same model always produces the same view, so the output is safe for golden tests and server-side use.",
+          "packageId": "Tempo.Blazor.Modeling.BpmnXml",
+          "sourcePath": "src/Tempo.Blazor.Modeling.BpmnXml/BpmnAutoLayout.cs",
+          "documentationStatus": "merged"
+        },
+        {
+          "itemName": "BpmnAutoLayoutOptions",
+          "kind": "Class",
+          "category": "General",
+          "namespace": "Tempo.Blazor.Modeling.BpmnXml",
+          "description": "Options controlling the headless BpmnAutoLayout.",
+          "packageId": "Tempo.Blazor.Modeling.BpmnXml",
+          "sourcePath": "src/Tempo.Blazor.Modeling.BpmnXml/BpmnAutoLayout.cs",
+          "documentationStatus": "merged"
+        },
+        {
           "itemName": "BpmnConstants",
           "kind": "Class",
           "category": "General",
@@ -56494,12 +56514,12 @@
       ],
       "libraryExamples": [],
       "summary": {
-        "itemCount": 15,
-        "manualItemCount": 15,
-        "generatedItemCount": 15,
+        "itemCount": 17,
+        "manualItemCount": 17,
+        "generatedItemCount": 17,
         "generatedOnlyItemCount": 0,
         "componentCount": 0,
-        "publicApiTypeCount": 15
+        "publicApiTypeCount": 17
       }
     },
     {
@@ -146627,10 +146647,10 @@
   ],
   "summary": {
     "packageCount": 29,
-    "itemCount": 3713,
-    "manualItemCount": 3713,
+    "itemCount": 3715,
+    "manualItemCount": 3715,
     "generatedOnlyItemCount": 0,
     "componentCount": 565,
-    "publicApiTypeCount": 3096
+    "publicApiTypeCount": 3098
   }
 }
