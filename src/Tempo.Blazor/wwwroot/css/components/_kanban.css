@@ -12,6 +12,15 @@
     --tm-kanban-collapsed-header-height: 10rem;
     --tm-kanban-lane-slot-height: var(--tm-space-8);
 
+    /* The horizontal inset every LANE ROW starts at: the lane's own border plus its body's padding. The
+       sticky header row (see .tm-kanban__column-headers) reads the same inset, so a header cell and the
+       lane cells of the same column can never drift apart — before this knob existed the lane cells
+       started 9px to the RIGHT of their own header, which the phase-5 geometry E2E measured
+       (KanbanCollapsedLayoutE2ETests). One token drives both, and the border is read from the shared
+       --tm-border-width rather than repeated as a literal. */
+    --tm-kanban-lane-padding: var(--tm-space-2, 0.5rem);
+    --tm-kanban-lane-inset: calc(var(--tm-kanban-lane-padding) + var(--tm-border-width));
+
     display: flex;
     gap: var(--tm-space-4, 1rem);
     overflow-x: auto;
@@ -74,7 +83,10 @@
 
 .tm-kanban__wip-limit {
     font-size: 0.7rem;
-    color: var(--tm-text-tertiary);
+    /* The badge is real text at 11.2px and the collapsed strip keeps it as one of its three remaining
+       signals, so it reads in the secondary ink: --tm-text-tertiary measures 4.39:1 (light) and 4.04:1
+       (dark) on the muted panel — under WCAG AA for small text. Secondary is 6.87:1 / 6.97:1. */
+    color: var(--tm-text-secondary);
 }
 
 /* ── Collapse toggles (plan a98e4a71; review fze-2) ──
@@ -256,6 +268,9 @@
     position: sticky;
     top: 0;
     z-index: 2;
+    /* The lane rows start after their own border and body padding; without the same inset here the
+       header cell of a column would sit 9px to the LEFT of every lane cell it heads. */
+    padding-inline: var(--tm-kanban-lane-inset);
 }
 
 .tm-kanban__column--header-only {
@@ -276,7 +291,7 @@
 .tm-kanban__swimlane {
     display: flex;
     flex-direction: column;
-    border: 1px solid var(--tm-border-color);
+    border: var(--tm-border-width) solid var(--tm-border-color);
     border-radius: var(--tm-radius-lg, 0.75rem);
     overflow: hidden;
 }
@@ -320,7 +335,8 @@
 .tm-kanban__swimlane-body {
     display: flex;
     gap: var(--tm-space-4, 1rem);
-    padding: var(--tm-space-2, 0.5rem);
+    /* Read through the shared inset knob: the sticky header row starts at the same place. */
+    padding: var(--tm-kanban-lane-padding);
 }
 
 /* ── Collapsed swimlane slots (plan a98e4a71, D3/D4) ──
@@ -334,7 +350,7 @@
 .tm-kanban__swimlane-slots {
     display: flex;
     gap: var(--tm-space-4, 1rem);
-    padding: var(--tm-space-2, 0.5rem);
+    padding: var(--tm-kanban-lane-padding);
 }
 
 .tm-kanban__lane-slot {
@@ -424,6 +440,39 @@
    a height, so the header-only cell gets one and the sticky row (align-items: stretch) grows with it. */
 .tm-kanban__column--header-only.tm-kanban__column--collapsed .tm-kanban__header {
     min-height: var(--tm-kanban-collapsed-header-height);
+}
+
+/* An EXPANDED header-only cell is transparent on purpose (it is just a title floating over its lane),
+   but a 160px vertical strip with no panel of its own reads as an empty header row rather than as a
+   collapsed column — the phase-5 review saw the title, dot and count floating on the page background
+   with nothing tying them to the narrowed lane cells below. The collapsed cell therefore carries the
+   classic strip's panel: the same muted fill, the same --tm-border-width border and the same radius,
+   so the strip is one continuous column from the sticky header down. Border-box sizing (base.css) keeps
+   the 48px width identical to the lane cells under it. */
+.tm-kanban__column--header-only.tm-kanban__column--collapsed {
+    background-color: var(--tm-bg-muted);
+    border: var(--tm-border-width) solid var(--tm-border-color);
+    border-radius: var(--tm-radius-lg, 0.75rem);
+}
+
+/* Over-limit on a COLLAPSED strip (plan a98e4a71, phase 5 review). A strip has no card body left to
+   carry the WIP breach, and the decorative pair used by the expanded column
+   (--tm-color-danger-soft-border over --tm-color-danger-subtle) measures ~1.3:1 against the column's
+   own muted panel — i.e. invisible in the one place the breach has no other cue. The strip therefore
+   states it at the NON-TEXT 3:1 level: a solid --tm-color-danger edge (4.39:1 light / 3.74:1 dark on
+   the muted panel) and its numbers in --tm-color-danger-text (7.6:1 light / 5.0:1 dark on the wash).
+   The accessible name already carries the word ("…, over limit"). This rule sits BEFORE the D4
+   drop-target rule on purpose: while a card is in flight over the strip, the target highlight wins. */
+.tm-kanban__column--collapsed.tm-kanban__column--over-limit {
+    border-color: var(--tm-color-danger);
+    outline: 2px solid var(--tm-color-danger);
+    outline-offset: -2px;
+    background-color: var(--tm-color-danger-subtle);
+}
+
+.tm-kanban__column--collapsed.tm-kanban__column--over-limit .tm-kanban__count,
+.tm-kanban__column--collapsed.tm-kanban__column--over-limit .tm-kanban__wip-limit {
+    color: var(--tm-color-danger-text);
 }
 
 /* D4: the zone under the drag reports itself. Outline only — a narrowed zone has no room for the
