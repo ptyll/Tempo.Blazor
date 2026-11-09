@@ -139,8 +139,8 @@
         </main>
     </div>
 
-    <!-- Toast Notifications -->
-    <TmToastContainer Position="ToastPosition.TopRight" MaxVisible="5" />
+    <!-- Toast Notifications (position/stacked driven by the Feedback demo page via DemoToastPresentationState) -->
+    <TmToastContainer Position="ToastPresentation.Position" Stacked="ToastPresentation.Stacked" MaxVisible="5" />
 </div>
 </TmLayoutObserver>
 
@@ -149,9 +149,12 @@
     private readonly string _currentCulture =
         System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName;
 
+    [Inject] private Services.DemoToastPresentationState ToastPresentation { get; set; } = default!;
+
     protected override void OnInitialized()
     {
         ThemeService.OnChanged += StateHasChanged;
+        ToastPresentation.Changed += OnToastPresentationChanged;
         // Reapply the host-resolved culture inside the render context. A culture set on the startup
         // thread never reaches the renderer, so without this the switch persists but changes nothing.
         if (DemoCulture.Applied is { } culture)
@@ -194,8 +197,11 @@
         _mobileMenuOpen = !_mobileMenuOpen;
     }
 
+    private void OnToastPresentationChanged() => InvokeAsync(StateHasChanged);
+
     public void Dispose()
     {
         ThemeService.OnChanged -= StateHasChanged;
+        ToastPresentation.Changed -= OnToastPresentationChanged;
     }
 }

@@ -9,7 +9,7 @@ Sdílený základ redesignu (tokeny, rozvržení, bottom sheet, překryvy, edito
 ## Obsah
 
 1. [Tlačítka (Buttons)](#tlačítka) — TmButton, TmSplitButton, TmCopyButton
-2. [Textové vstupy (Inputs)](#textové-vstupy) — TmTextInput, TmTextArea, TmNumberInput, TmSearchInput, TmEntityPicker, TmUserPicker, TmExpressionEditor, TmPasswordStrengthIndicator
+2. [Textové vstupy (Inputs)](#textové-vstupy) — TmTextInput, TmTextArea, TmNumberInput, TmSearchInput, TmEntityPicker, TmUserPicker, TmExpressionEditor, TmPasswordStrengthIndicator, TmOtpInput
 3. [Výběrové komponenty (Select, Dropdown)](#výběrové-komponenty) — TmSelect, TmMultiSelect, TmDropdown, TmFilterableDropdown
 4. [Přepínače a checkboxy](#přepínače-a-checkboxy) — TmCheckbox, TmToggle, TmRadioGroup, TmRadio
 5. [Datové zobrazení (Data Display)](#datové-zobrazení) — TmBadge, TmCard, TmAccordion, TmChip, TmChipGroup, TmChangeDiff, TmEmptyState, TmStatCard, TmKanbanBoard, TmMultiViewList
@@ -679,6 +679,65 @@ Vizuální indikátor síly hesla.
 ```razor
 <TmTextInput @bind-Value="_password" Label="Heslo" Type="password" />
 <TmPasswordStrengthIndicator Password="@_password" />
+```
+
+---
+
+### TmOtpInput
+
+Segmentovaný vstup pro ověřovací kódy (OTP/one-time code). Rendruje `Length` (4–10) buněk
+s vlastním labelem každé buňky, distribucí vloženého textu (paste/autofill), režimem
+`Masked` pro PIN a stavy `Invalid`/`Verified`. Veškerá DOM logika (filtrování znaků,
+auto-advance, navigace šipkami) žije v modulu `tm-otp-input.js`. Dokumentace:
+[docs/otp-input.md](docs/otp-input.md).
+
+#### CSS třídy
+
+| Třída | Popis |
+|-------|-------|
+| `tm-otp-input` | Root (`role="group"`, lokalizovaný `aria-label`) |
+| `tm-otp-input__cell` | Jednotlivá buňka `<input>` |
+| `tm-otp-input__separator` | Aria-hidden separátor mezi skupinami (`GroupSize`) |
+| `tm-otp-input__error` | Chybová zpráva (`Invalid` + `ErrorText`) |
+| `tm-otp-input__status` | Ověřený stav (check ikona + text) |
+| `tm-otp-input--disabled` / `--readonly` / `--invalid` / `--verified` | Modifikátory rootu |
+
+#### Parametry
+
+| Parametr | Typ | Výchozí | Popis |
+|----------|-----|---------|-------|
+| `Value` / `ValueChanged` | `string` / `EventCallback<string>` | `""` | Kompletní kód (konkatenace buněk) |
+| `Length` | `int` | `6` | Počet buněk (4–10) |
+| `Kind` | `OtpInputKind` | `Numeric` | `Numeric` (číslice, `inputmode="numeric"`) nebo `Alphanumeric` (A–Z 0–9, auto-uppercase) |
+| `GroupSize` | `int` | `0` | Separátor každých N buněk (0 = bez) |
+| `Masked` | `bool` | `false` | Buňky jako `type="password"` (PIN) |
+| `Disabled` / `ReadOnly` | `bool` | `false` | Blokace editace |
+| `Invalid` / `ErrorText` | `bool` / `string?` | `false`/`null` | Chybový stav (shake, `aria-invalid`, live region) |
+| `Verified` / `VerifiedText` | `bool` / `string?` | `false`/`null` | Ověřený stav (readonly buňky + status) |
+| `AutoFocus` | `bool` | `false` | Focus do první buňky po renderu |
+| `OnComplete` | `EventCallback<string>` | — | Přechod nekompletní → kompletní (při každém dokončení) |
+| `Id` / `Class` / `AriaLabel` / `AriaLabelledBy` / `AriaDescribedBy` / `AdditionalAttributes` | — | — | Standardní |
+
+#### Veřejné metody
+
+| Metoda | Popis |
+|--------|-------|
+| `FocusAsync()` | Focus do první prázdné buňky |
+| `ClearAsync()` | Vyčistí všechny buňky (znovu vyzbrojí `OnComplete`) |
+| `ShowErrorAsync()` | Zopakuje shake a re-announcne chybu (stejný text) |
+
+#### Příklady
+
+```razor
+@* Číselný 6místný kód s ověřením *@
+<TmOtpInput @bind-Value="_code" Length="6" OnComplete="VerifyAsync"
+            Invalid="_invalid" ErrorText="Nesprávný kód" Verified="_verified" />
+
+@* Alfanumerický záložní kód se seskupením *@
+<TmOtpInput @bind-Value="_backupCode" Length="8" Kind="OtpInputKind.Alphanumeric" GroupSize="4" />
+
+@* Maskovaný PIN *@
+<TmOtpInput @bind-Value="_pin" Length="4" Masked="true" />
 ```
 
 ---

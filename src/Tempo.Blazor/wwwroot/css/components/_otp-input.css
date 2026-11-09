@@ -1,15 +1,39 @@
 /* TmOtpInput — segmented verification-code input (one cell per character). */
 
 .tm-otp-input {
+  max-width: 100%;
+  /* Inline-size containment: the root's intrinsic size must not depend on the cells, so a flex
+     or grid host is never forced wider than its track by the row's min-content (a <input>'s
+     intrinsic minimum is ~20ch, which would push a 320px phone page into the overflow-x clip).
+     The root is a block, so its used width is the available width either way. */
+  contain: inline-size;
+}
+
+.tm-otp-input__row {
+  display: flex;
+  align-items: center;
+  /* Wrapping is lazy: a group is one flex item (see __group below), so the row stays on one line
+     at every normal width and only stacks its groups when the container is too narrow for the
+     full code — a 320px phone never overflows horizontally. A @container query cannot express
+     this (the repo lints container widths to the TmBreakpoints constants, and a box can never
+     query its own size anyway). */
+  flex-wrap: wrap;
+  gap: var(--tm-space-2);
+}
+
+.tm-otp-input__group {
   display: flex;
   align-items: center;
   gap: var(--tm-space-2);
-  max-width: 100%;
+  /* The group is one flex item of the wrapping row: min-width 0 lets it shrink to the row width
+     (the cells inside keep their own floor), instead of forcing the row wide. */
+  min-width: 0;
 }
 
 .tm-otp-input__cell {
   flex: 0 1 var(--tm-input-height-md);
-  min-width: 0;
+  /* Cells keep the 24px floor (they shrink to fit a narrow row, never below a tappable size). */
+  min-inline-size: var(--tm-space-6);
   height: var(--tm-input-height-md);
   padding: 0;
   font-family: var(--tm-font-sans);

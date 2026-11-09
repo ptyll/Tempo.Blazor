@@ -124,6 +124,40 @@ public class SigningStepsE2ETests : WasmTestBase
         await Assertions.Expect(steps.Locator("[data-testid='signing-step-image']").GetByLabel("Upload image").First).ToBeAttachedAsync();
     }
 
+    /// <summary>
+    /// „Nové komponenty 1/7" fáze 5: in Segmented mode the phone step swaps the single code input
+    /// for the core TmOtpInput; the demo verifier confirms the code "123456" (anything else is
+    /// rejected), so completing the segmented cells must flip the input to its verified state.
+    /// </summary>
+    [TestMethod]
+    [Description("Signing phone step segmented mode verifies the demo code 123456")]
+    public async Task SigningSteps_PhoneSegmentedMode_VerifiesDemoCode()
+    {
+        var page = await OpenStepsAsync();
+        var steps = GetSteps(page);
+        var phone = steps.Locator("[data-testid='signing-step-phone']");
+        var otp = phone.Locator(".tm-signing-phone-step__otp");
+
+        // Switch the demo phone step to the segmented TmOtpInput (the switch is a core TmSelect —
+        // a native <select id="signing-phone-code-mode">).
+        await page.Locator("#signing-phone-code-mode").SelectOptionAsync(
+            new[] { new SelectOptionValue { Label = "Segmented (TmOtpInput)" } });
+
+        await phone.GetByLabel("Phone number").FillAsync("777 123 456");
+        await phone.Locator(".tm-signing-phone-step__send").ClickAsync();
+
+        // The otp row renders only after the send; in Segmented mode it is the core TmOtpInput.
+        await Assertions.Expect(otp.Locator(".tm-otp-input__cell")).ToHaveCountAsync(6);
+        // Focus (not click): the runner reveal-scrolls the otp row (smooth scroll), so the cell
+        // can keep moving under a pointer click for longer than the actionability window.
+        await otp.Locator(".tm-otp-input__cell").First.FocusAsync();
+        await page.Keyboard.TypeAsync("123456");
+
+        // The demo verifier confirms 123456 — the input settles in the verified state.
+        await Assertions.Expect(otp).ToHaveClassAsync(new System.Text.RegularExpressions.Regex("tm-otp-input--verified"));
+        await Assertions.Expect(phone.Locator(".tm-otp-input__status")).ToBeVisibleAsync();
+    }
+
     private async Task<IPage> OpenStepsAsync()
     {
         var context = await CreateContextAsync();

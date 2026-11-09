@@ -13,31 +13,46 @@
      data-tm-otp-kind="@(Kind == OtpInputKind.Alphanumeric ? "alphanumeric" : "numeric")"
      data-testid="@RootTestId("otp-input")"
      @attributes="AdditionalAttributes">
-    @for (var i = 0; i < Length; i++)
-    {
-        var index = i;
-        if (GroupSize > 0 && index > 0 && index % GroupSize == 0)
+    @* The root is a pure size container: the row is its own flex child so a container query can
+       switch it to wrapping per group under a narrow host (a box cannot query its own size). *@
+    <span class="tm-otp-input__row">
+        @for (int g = 0, groupSize = GroupSize > 0 ? GroupSize : Length; g * groupSize < Length; g++)
         {
-            <span class="tm-otp-input__separator" aria-hidden="true"></span>
+            var groupIndex = g;
+            var size = groupSize;
+            <span class="tm-otp-input__group">
+                @if (GroupSize > 0 && groupIndex > 0)
+                {
+                    <span class="tm-otp-input__separator" aria-hidden="true"></span>
+                }
+                @for (var i = groupIndex * size; i < Math.Min((groupIndex + 1) * size, Length); i++)
+                {
+                    var index = i;
+                    @* size="1" keeps the input's intrinsic min-content (the default is ~20ch, which
+                       would push flex parents wider than a phone viewport and clip siblings); the
+                       rendered cell width comes from the flex-basis and the 24px min-inline-size floor. *@
+                    <input type="@CellInputType"
+                           class="tm-otp-input__cell"
+                           id="@CellId(index)"
+                           value="@_cells[index]"
+                           size="1"
+                           inputmode="@InputMode"
+                           autocomplete="@(index == 0 ? "one-time-code" : "off")"
+                           autocapitalize="@(Kind == OtpInputKind.Alphanumeric ? "characters" : null)"
+                           autocorrect="off"
+                           spellcheck="false"
+                           pattern="@(Kind == OtpInputKind.Numeric ? "[0-9]*" : null)"
+                           aria-label="@CellAriaLabel(index)"
+                           aria-invalid="@(Invalid ? "true" : null)"
+                           aria-describedby="@CellAriaDescribedBy"
+                           disabled="@Disabled"
+                           readonly="@CellReadOnly"
+                           aria-readonly="@(CellReadOnly ? "true" : null)"
+                           data-tm-otp-index="@index" />
+                }
+            </span>
         }
-        <input type="@CellInputType"
-               class="tm-otp-input__cell"
-               id="@CellId(index)"
-               value="@_cells[index]"
-               inputmode="@InputMode"
-               autocomplete="@(index == 0 ? "one-time-code" : "off")"
-               autocapitalize="@(Kind == OtpInputKind.Alphanumeric ? "characters" : null)"
-               autocorrect="off"
-               spellcheck="false"
-               pattern="@(Kind == OtpInputKind.Numeric ? "[0-9]*" : null)"
-               aria-label="@CellAriaLabel(index)"
-               aria-invalid="@(Invalid ? "true" : null)"
-               aria-describedby="@CellAriaDescribedBy"
-               disabled="@Disabled"
-               readonly="@CellReadOnly"
-               aria-readonly="@(CellReadOnly ? "true" : null)"
-               data-tm-otp-index="@index" />
-    }
+    </span>
 </div>
 @if (Invalid && !string.IsNullOrEmpty(ErrorText))
 {

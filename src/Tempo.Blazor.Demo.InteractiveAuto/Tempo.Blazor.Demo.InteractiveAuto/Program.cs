@@ -104,6 +104,8 @@ builder.Services.AddScoped<SignalRCollaborationProvider>();
 
 // Register Tempo.Blazor services (ITmLocalizer, ThemeService, ToastService)
 builder.Services.AddTempoBlazor();
+// Demo-only: the Feedback page drives the layout toast container position/deck presentation.
+builder.Services.AddScoped<Tempo.Blazor.Demo.SharedUI.Services.DemoToastPresentationState>();
 // Demo-only strings (TmDemo_*, *Demo_* pages) come from SharedUI's DemoResources; everything
 // else falls through to the library's TmResources. The Client (WASM) side registers the same
 // decorator in its own Program.cs.

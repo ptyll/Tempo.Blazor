@@ -94,6 +94,7 @@ builder.Services.AddTempoBlazor();
 // else falls through to the library's TmResources. The Server side registers the same decorator.
 builder.Services.AddTempoDemoLocalizer();
 builder.Services.AddScoped<Tempo.Blazor.Demo.SharedUI.Layout.ColorThemeState>();
+builder.Services.AddScoped<Tempo.Blazor.Demo.SharedUI.Services.DemoToastPresentationState>();
 builder.Services.AddTempoBlazorPdfViewer();
 builder.Services.AddTempoBlazorCodes();
 builder.Services.AddTempoBlazorAI();
