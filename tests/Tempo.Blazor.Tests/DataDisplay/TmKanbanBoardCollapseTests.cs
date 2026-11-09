@@ -9,11 +9,12 @@ using Tempo.Blazor.Tests.Localization;
 namespace Tempo.Blazor.Tests.DataDisplay;
 
 /// <summary>
-/// Phase 1 (TDD, RED) of plan a98e4a71 — "TmKanbanBoard: even collapsed columns catch cards".
+/// Contract of plan a98e4a71 — "TmKanbanBoard: even collapsed columns catch cards".
 /// <para>
-/// These tests are the CONTRACT phase 2 (column collapse) and phase 3 (drop zones on collapsed columns
-/// and swimlanes) implement against. Until then every fact that exercises not-yet-existing behaviour is
-/// skipped with a reason, so the suite stays green; nothing here is "written to pass".
+/// Phase 1 wrote these facts RED, phase 2 implemented column collapse and phase 3 the drop zones on
+/// collapsed columns and swimlanes (the <c>tm-kanban__swimlane-slots</c> strip, the
+/// <c>tm-kanban__lane-slot--drop-target</c> highlight and the root's <c>tm-kanban--dragging</c> state).
+/// Nothing here is "written to pass" — every fact is the DOM contract the component owes its hosts.
 /// </para>
 /// <para>
 /// DOM CONTRACT asserted below:
@@ -68,16 +69,14 @@ namespace Tempo.Blazor.Tests.DataDisplay;
 /// </item>
 /// </list>
 /// <para>
-/// HOW THE NEW API IS REFERENCED: phase 2 landed the parameters, so every test passes them through the
-/// strongly typed <c>p.Add(x =&gt; x.Name, value)</c> and addresses the "No value" lane with the public
-/// <c>TmKanbanBoard&lt;TItem&gt;.NoSwimlaneId</c> constant. The phase 3 facts (collapsed-swimlane slots)
-/// stay skipped until their implementation lands.
+/// HOW THE NEW API IS REFERENCED: every test passes the parameters through the strongly typed
+/// <c>p.Add(x =&gt; x.Name, value)</c> and addresses the "No value" lane with the public
+/// <c>TmKanbanBoard&lt;TItem&gt;.NoSwimlaneId</c> constant. Phase 3 landed the collapsed-swimlane drop
+/// slots and the board root's <c>tm-kanban--dragging</c> state, so every fact here is green.
 /// </para>
 /// </summary>
 public class TmKanbanBoardCollapseTests : LocalizationTestBase
 {
-    private const string RedPhase3 = "RED (plan a98e4a71): drop zones on collapsed columns/swimlanes land in phase 3";
-
     private const string DragStart = "ondragstart";
     private const string DragOver = "ondragover";
     private const string Drop = "ondrop";
@@ -344,7 +343,7 @@ public class TmKanbanBoardCollapseTests : LocalizationTestBase
     // Subtask 8 — D3: a collapsed swimlane renders one drop slot per column
     // ══════════════════════════════════════════════════════════════════════
 
-    [Fact(Skip = RedPhase3)]
+    [Fact]
     public void CollapsedSwimlane_RendersOneDropSlotPerColumn_AlignedWithTheColumnHeaders()
     {
         var cut = RenderSwimlaneBoard();
@@ -365,7 +364,7 @@ public class TmKanbanBoardCollapseTests : LocalizationTestBase
         cut.FindAll("[data-testid='swimlane-Bob'] .tm-kanban__swimlane-body").Count.Should().Be(1);
     }
 
-    [Fact(Skip = RedPhase3)]
+    [Fact]
     public void Drop_InCollapsedLaneSlot_FiresOnItemMoved_WithColumnLaneAndAppend()
     {
         KanbanMoveEvent<LaneTask>? moved = null;
@@ -387,7 +386,7 @@ public class TmKanbanBoardCollapseTests : LocalizationTestBase
         moved.TargetBeforeItem.Should().BeNull();
     }
 
-    [Fact(Skip = RedPhase3)]
+    [Fact]
     public void Drop_InNoValueLaneSlot_FiresOnItemMoved_WithNullSwimlane()
     {
         KanbanMoveEvent<LaneTask>? moved = null;
@@ -432,7 +431,7 @@ public class TmKanbanBoardCollapseTests : LocalizationTestBase
             .Should().NotContain("tm-kanban__column--drop-target");
     }
 
-    [Fact(Skip = RedPhase3)]
+    [Fact]
     public void Dragover_LaneSlot_AddsDropTargetClass_AndDragendRemovesIt()
     {
         var cut = RenderSwimlaneBoard();
@@ -493,7 +492,7 @@ public class TmKanbanBoardCollapseTests : LocalizationTestBase
             .Should().NotContain("tm-kanban__column--collapsed");
     }
 
-    [Fact(Skip = RedPhase3)]
+    [Fact]
     public void CollapsedLanes_HostSetWins_AndNoValueLaneIsAddressedByNoSwimlaneId()
     {
         var noLaneId = TmKanbanBoard<LaneTask>.NoSwimlaneId;
@@ -506,7 +505,7 @@ public class TmKanbanBoardCollapseTests : LocalizationTestBase
         cut.FindAll("[data-testid='swimlane-Alice'] .tm-kanban__swimlane-body").Count.Should().Be(1);
     }
 
-    [Fact(Skip = RedPhase3)]
+    [Fact]
     public void ToggleLane_RaisesCollapsedLanesChanged_KeepingTheNoValueSentinel()
     {
         var noLaneId = TmKanbanBoard<LaneTask>.NoSwimlaneId;
@@ -679,7 +678,7 @@ public class TmKanbanBoardCollapseTests : LocalizationTestBase
     // Subtask 16 (review) — the board root reports the in-flight drag
     // ══════════════════════════════════════════════════════════════════════
 
-    [Fact(Skip = RedPhase3)]
+    [Fact]
     public void DragStart_AddsTheDraggingClassToTheBoardRoot_AndDragEndRemovesIt()
     {
         var cut = RenderClassicBoard();
@@ -704,7 +703,7 @@ public class TmKanbanBoardCollapseTests : LocalizationTestBase
     // Subtask 17 (review) — collapsed column INSIDE a collapsed lane
     // ══════════════════════════════════════════════════════════════════════
 
-    [Fact(Skip = RedPhase3)]
+    [Fact]
     public void CollapsedColumn_InCollapsedLane_KeepsTheSlotDroppable_WithTheCollapsedModifier()
     {
         KanbanMoveEvent<LaneTask>? moved = null;
@@ -768,7 +767,7 @@ public class TmKanbanBoardCollapseTests : LocalizationTestBase
     // Subtask 19 (review) — Disabled: lane collapse stays, the drop does not
     // ══════════════════════════════════════════════════════════════════════
 
-    [Fact(Skip = RedPhase3)]
+    [Fact]
     public void Disabled_SwimlaneLayout_LaneToggleStillCollapsesAndRendersSlots_ButDropZonesStayInert()
     {
         KanbanMoveEvent<LaneTask>? moved = null;
@@ -825,7 +824,7 @@ public class TmKanbanBoardCollapseTests : LocalizationTestBase
         cut.Find("[data-testid='column-toggle-todo']").GetAttribute("aria-expanded").Should().Be("false");
     }
 
-    [Fact(Skip = RedPhase3)]
+    [Fact]
     public void CollapsedLanes_HostRoundTrip_AcrossReRender_KeepsTheNoValueLaneCollapsed()
     {
         var noLaneId = TmKanbanBoard<LaneTask>.NoSwimlaneId;

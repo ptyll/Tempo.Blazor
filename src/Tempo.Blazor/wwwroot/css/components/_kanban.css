@@ -3,10 +3,14 @@
    ═══════════════════════════════════════════════════════════════ */
 
 .tm-kanban {
-    /* Host knobs (plan a98e4a71): width of a collapsed column strip and the height its vertical title
-       gets in the swimlane layout's sticky header row (that row stretches to it). */
+    /* Host knobs (plan a98e4a71): the shared column width (the classic column, the lane cell and the
+       collapsed-lane slot all read it, so their widths can never drift apart), the width of a collapsed
+       column strip, the height its vertical title gets in the swimlane layout's sticky header row
+       (that row stretches to it) and the quiet height of a collapsed lane's drop slots. */
+    --tm-kanban-column-width: 280px;
     --tm-kanban-collapsed-width: 48px;
     --tm-kanban-collapsed-header-height: 10rem;
+    --tm-kanban-lane-slot-height: var(--tm-space-8);
 
     display: flex;
     gap: var(--tm-space-4, 1rem);
@@ -18,8 +22,8 @@
 /* ── Column ── */
 
 .tm-kanban__column {
-    flex: 0 0 280px;
-    min-width: 280px;
+    flex: 0 0 var(--tm-kanban-column-width);
+    min-width: var(--tm-kanban-column-width);
     display: flex;
     flex-direction: column;
     background-color: var(--tm-bg-muted);
@@ -259,6 +263,52 @@
     padding: var(--tm-space-2, 0.5rem);
 }
 
+/* ── Collapsed swimlane slots (plan a98e4a71, D3/D4) ──
+
+   A collapsed lane drops its body but keeps one slot per column, so the column grid stays aligned and
+   every slot keeps catching a (column, lane) drop. Outside a drag the strip is quiet — a low, invisible
+   row; the board root's tm-kanban--dragging modifier (added for the whole gesture) is what turns the
+   slots into visible targets. Slot widths copy the grid: a normal slot is the column width, a slot under
+   a collapsed column is the narrow collapsed width. */
+
+.tm-kanban__swimlane-slots {
+    display: flex;
+    gap: var(--tm-space-4, 1rem);
+    padding: var(--tm-space-2, 0.5rem);
+}
+
+.tm-kanban__lane-slot {
+    flex: 0 0 var(--tm-kanban-column-width);
+    min-width: var(--tm-kanban-column-width);
+    min-height: var(--tm-kanban-lane-slot-height);
+    border: 1px dashed transparent;
+    border-radius: var(--tm-radius-md, 0.5rem);
+    transition: background-color var(--tm-transition-fast), border-color var(--tm-transition-fast);
+}
+
+.tm-kanban__lane-slot--collapsed {
+    flex: 0 0 var(--tm-kanban-collapsed-width);
+    min-width: var(--tm-kanban-collapsed-width);
+    max-width: var(--tm-kanban-collapsed-width);
+}
+
+/* While a card is in flight every slot advertises itself as a target (D4). The hovered slot's rule
+   below repeats the dragging prefix, so it outweighs this wash and keeps the solid target outline. */
+.tm-kanban--dragging .tm-kanban__lane-slot {
+    border-color: var(--tm-color-primary-soft-border);
+    background-color: var(--tm-color-primary-subtle);
+}
+
+/* D4: the slot under the drag reports itself. The --tm-color-primary pair clears 3:1 in both themes
+   (primary-600 on primary-50, primary-400 on the dark primary-subtle wash) — WCAG 1.4.11. */
+.tm-kanban__lane-slot--drop-target,
+.tm-kanban--dragging .tm-kanban__lane-slot--drop-target {
+    border-color: var(--tm-color-primary);
+    outline: 2px solid var(--tm-color-primary);
+    outline-offset: -2px;
+    background-color: var(--tm-color-primary-subtle);
+}
+
 .tm-kanban__column--lane-cell {
     max-height: none;
     min-height: 60px;
@@ -372,6 +422,10 @@
 
     .tm-kanban__drop-indicator {
         animation: none;
+    }
+
+    .tm-kanban__lane-slot {
+        transition: none;
     }
 
     .tm-kanban__swimlane-toggle,

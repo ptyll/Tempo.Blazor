@@ -11793,7 +11793,12 @@
             "tm-kanban__swimlane-color",
             "tm-kanban__swimlane-title",
             "tm-kanban__swimlane-count",
-            "tm-kanban__swimlane-body"
+            "tm-kanban__swimlane-body",
+            "tm-kanban__swimlane-slots",
+            "tm-kanban__lane-slot",
+            "tm-kanban__lane-slot--collapsed",
+            "tm-kanban__lane-slot--drop-target",
+            "tm-kanban--dragging"
           ],
           "examples": [
             {

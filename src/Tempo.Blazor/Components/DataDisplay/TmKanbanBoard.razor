@@ -2,7 +2,14 @@
 @inherits Tempo.Blazor.Components.TmComponentBase
 @typeparam TItem
 
-<div class="tm-kanban@(SwimlanesEnabled ? " tm-kanban--swimlanes" : "") @Class @(Disabled ? "tm-kanban-disabled" : "")" @attributes="AdditionalAttributes">
+@{
+    var rootCss = "tm-kanban"
+        + (SwimlanesEnabled ? " tm-kanban--swimlanes" : "")
+        + (IsDragging ? " tm-kanban--dragging" : "")
+        + (Disabled ? " tm-kanban-disabled" : "");
+}
+
+<div class="@rootCss @Class" @attributes="AdditionalAttributes">
     @if (Columns is not null && !SwimlanesEnabled)
     {
         @foreach (var col in Columns)
@@ -198,6 +205,26 @@
                         }
                     </div>
                 }
+                else
+                {
+                    @* D3: a collapsed lane keeps one drop slot per column instead of its body, so the column
+                       grid stays aligned and every slot keeps catching a (column, lane) drop. *@
+                    <div class="tm-kanban__swimlane-slots">
+                        @foreach (var col in Columns)
+                        {
+                            var colCollapsed = IsColumnCollapsed(col.Id);
+                            var slotCss = "tm-kanban__lane-slot"
+                                + (colCollapsed ? " tm-kanban__lane-slot--collapsed" : "")
+                                + (IsActiveDropTarget(col.Id, laneKey) ? " tm-kanban__lane-slot--drop-target" : "");
+
+                            <div class="@slotCss"
+                                 data-testid="@TestId($"lane-slot-{col.Id}-{laneTestId}")"
+                                 @ondragover="@(() => HandleColumnDragOver(col.Id, laneKey))"
+                                 @ondragover:preventDefault="true"
+                                 @ondrop="@(() => HandleDrop(col.Id, laneKey))"></div>
+                        }
+                    </div>
+                }
             </div>
         }
     }
@@ -346,13 +373,20 @@
 
     private bool IsLaneCollapsed(string laneId) => EffectiveCollapsedLanes.Contains(LaneSetValue(laneId));
 
-    // A collapsed zone only advertises itself as a drop target while a card is actually in flight (D4/D6).
-    private bool IsCollapsedDropTarget(string columnId, string? laneId, bool isCollapsed)
-        => isCollapsed
-           && !Disabled
+    // The board root reports the in-flight gesture (tm-kanban--dragging) so the collapsed drop zones can
+    // style themselves as targets for exactly as long as a card is actually being dragged.
+    private bool IsDragging => !Disabled && _draggedItem is not null;
+
+    // The zone currently under the drag: only a live, enabled gesture may advertise a drop target (D4/D6).
+    private bool IsActiveDropTarget(string columnId, string? laneId)
+        => !Disabled
            && _draggedItem is not null
            && _dropTargetColumn == columnId
            && _dropTargetSwimlane == laneId;
+
+    // A collapsed zone only advertises itself as a drop target while a card is actually in flight (D4/D6).
+    private bool IsCollapsedDropTarget(string columnId, string? laneId, bool isCollapsed)
+        => isCollapsed && IsActiveDropTarget(columnId, laneId);
 
     // The strip's accessible name: title, count, then the WIP limit and the over-limit word when the
     // collapsed strip would otherwise hide the visible WIP badge from assistive technology.

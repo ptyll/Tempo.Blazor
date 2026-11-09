@@ -168,4 +168,70 @@ public sealed class TmKanbanCollapseCssTests
             ".tm-kanban__column--header-only.tm-kanban__column--collapsed .tm-kanban__header-title{display:none",
             "the header-only strip must not hide its title in the shipped bundle");
     }
+
+    // ══════════════════════════════════════════════════════════════════════
+    // Phase 3 (plan a98e4a71, D3/D4) — collapsed-lane slots and the target
+    // ══════════════════════════════════════════════════════════════════════
+
+    [Fact]
+    public void CollapsedLaneSlots_AreQuietUntilTheGesture_CopyTheGridWidths_AndShipInTheBundle()
+    {
+        var css = Sheet();
+
+        Body(css, ".tm-kanban__swimlane-slots").Should()
+            .Contain("display: flex")
+            .And.Contain("gap: var(--tm-space-4, 1rem)")
+            .And.Contain("padding: var(--tm-space-2, 0.5rem)",
+                "the slots line up with the lane body they replace");
+
+        var slot = Body(css, ".tm-kanban__lane-slot");
+        slot.Should().Contain("flex: 0 0 var(--tm-kanban-column-width)")
+            .And.Contain("min-width: var(--tm-kanban-column-width)",
+                "a slot copies the column width, so the grid stays aligned")
+            .And.Contain("min-height: var(--tm-kanban-lane-slot-height)",
+                "outside a drag the strip stays low and quiet")
+            .And.Contain("border: 1px dashed transparent",
+                "an idle slot paints no affordance at all");
+
+        Body(css, ".tm-kanban__lane-slot--collapsed").Should()
+            .Contain("flex: 0 0 var(--tm-kanban-collapsed-width)")
+            .And.Contain("max-width: var(--tm-kanban-collapsed-width)",
+                "a slot under a collapsed column is the narrow strip");
+
+        Body(css, ".tm-kanban--dragging .tm-kanban__lane-slot").Should()
+            .Contain("border-color: var(--tm-color-primary-soft-border)")
+            .And.Contain("background-color: var(--tm-color-primary-subtle)",
+                "the root's gesture class is what turns the quiet slots into visible targets");
+
+        Body(css, ".tm-kanban__lane-slot--drop-target").Should()
+            .Contain("outline: 2px solid var(--tm-color-primary)")
+            .And.Contain("background-color: var(--tm-color-primary-subtle)");
+
+        var reducedMotion = MediaBlock(css, "@media (prefers-reduced-motion: reduce)");
+        Body(reducedMotion, ".tm-kanban__lane-slot").Should().Contain("transition: none");
+
+        var bundle = Bundle();
+        bundle.Should().Contain(".tm-kanban__swimlane-slots", "a consumer links the bundle, not the partial");
+        bundle.Should().Contain(".tm-kanban__lane-slot--drop-target");
+        bundle.Should().Contain("--tm-kanban-lane-slot-height");
+        bundle.Should().Contain("--tm-kanban-column-width");
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void SlotDropTarget_OutlineMeetsTheNonTextContrastMinimum_OnEverySurface(bool dark)
+    {
+        // WCAG 1.4.11 — a non-text indicator needs 3:1 against its neighbour. The outline is
+        // --tm-color-primary; the surfaces it can sit on are the lane's muted panel and the page surface.
+        // The dark target wash (primary-500 at 15 % over --tm-bg-muted) lifts the background just enough
+        // to read 3.49:1, so the pair clears the minimum without a dark-only override.
+        foreach (var surface in new[] { "var(--tm-bg-muted)", "var(--tm-bg-surface)" })
+        {
+            ThemeCss.Ratio("var(--tm-color-primary)", surface, dark).Should()
+                .BeGreaterThanOrEqualTo(3.0,
+                    "the drop-target outline must be perceivable on {0} in the {1} theme",
+                    surface, dark ? "dark" : "light");
+        }
+    }
 }
