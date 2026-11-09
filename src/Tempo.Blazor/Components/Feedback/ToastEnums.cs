@@ -25,11 +25,17 @@ public enum ToastPosition
     /// <summary>Top-left corner of the screen.</summary>
     TopLeft,
 
+    /// <summary>Top-center of the screen.</summary>
+    TopCenter,
+
     /// <summary>Bottom-right corner of the screen.</summary>
     BottomRight,
 
     /// <summary>Bottom-left corner of the screen.</summary>
-    BottomLeft
+    BottomLeft,
+
+    /// <summary>Bottom-center of the screen.</summary>
+    BottomCenter
 }
 
 /// <summary>

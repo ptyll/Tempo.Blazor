@@ -11,28 +11,49 @@
    push, so a toast pushed while a sheet or dialog is open always paints above it. R3-M1: the
    container is PINNED on top — promote() re-raises it after every later promotion, and the raise
    is keyed on the newest toast id (not the count), so a push at the MaxVisible cap re-raises too. *@
-<div class="tm-toast-container @PositionClass" popover="manual" data-tm-inert-exempt
+<div class="tm-toast-container @PositionClass @(Stacked ? "tm-toast-container--stacked" : null)" popover="manual" data-tm-inert-exempt
      role="region" aria-label="@Loc["TmToast_RegionLabel"]" @ref="_root">
     @* Two PERSISTENT screen-reader-only live regions (empty on first render) carry every
        announcement — the cards themselves carry no live role, so removal of a card is never
        announced and dedupe replaces announce exactly once per text change. *@
     <div class="tm-sr-only" role="status" aria-live="polite" data-toast-live="polite">@_politeAnnouncement</div>
     <div class="tm-sr-only" role="alert" aria-live="assertive" data-toast-live="assertive">@_assertiveAnnouncement</div>
-    @foreach (var toast in VisibleToasts)
+    @* Deck hidden-count: NOT a live region (the two regions above own every announcement) — a
+       plain sr-only plural text so screen-reader users know how many collapsed strips the deck
+       hides. *@
+    @if (Stacked && VisibleToasts.Count > 3)
     {
+        <div class="tm-sr-only" data-toast-deck-count>@Loc.Plural("TmToast_DeckHidden", VisibleToasts.Count - 3)</div>
+    }
+    @for (var i = 0; i < VisibleToasts.Count; i++)
+    {
+        var toast = VisibleToasts[i];
         var sev = toast.Severity.ToString().ToLowerInvariant();
         var paused = ToastService.IsPaused(toast.Id);
+        @* Deck: the newest three cards stay fully visible; every older one carries the collapsed
+           class and the CSS (released by :hover/:focus-within on the container) shrinks it to a
+           strip. *@
+        var deckCollapsed = Stacked && VisibleToasts.Count - i > 3;
         <div @key="toast.Id"
-             class="tm-toast tm-toast--@sev @(paused ? "tm-toast--paused" : null)"
+             class="tm-toast tm-toast--@sev @(paused ? "tm-toast--paused" : null) @(toast.IsLoading ? "tm-toast--loading" : null) @(deckCollapsed ? "tm-toast--deck-collapsed" : null)"
              data-toast-id="@toast.Id"
              @onmouseenter="() => Pause(toast)"
              @onmouseleave="() => Resume(toast)"
              @onfocusin="() => Pause(toast)"
              @onfocusout="() => Resume(toast)">
             <div class="tm-toast-body">
-                <span class="tm-toast-icon">
-                    <TmIcon Name="@GetIcon(toast.Severity)" Size="IconSize.Sm" />
-                </span>
+                @if (toast.IsLoading)
+                {
+                    @* A loading (promise) toast spins instead of a severity icon; the message still
+                       announces through the live region, so the spinner stays decorative. *@
+                    <span class="tm-toast-spinner" aria-hidden="true"></span>
+                }
+                else
+                {
+                    <span class="tm-toast-icon">
+                        <TmIcon Name="@GetIcon(toast.Severity)" Size="IconSize.Sm" />
+                    </span>
+                }
                 <div class="tm-toast-content">
                     @if (!string.IsNullOrEmpty(toast.Title))
                     {
@@ -62,14 +83,17 @@
                     <TmIcon Name="@IconNames.X" Size="IconSize.Xs" />
                 </button>
             </div>
-            <div class="tm-toast-progress">
-                @* Keyed on Revision: an in-place replacement (Key dedupe/Update) recreates the bar
-                   so the CSS animation restarts with the new duration. *@
-                <div class="tm-toast-progress-bar"
-                     @key="toast.Revision"
-                     style="animation-duration: @(toast.Duration)ms">
+            @if (!toast.IsLoading)
+            {
+                <div class="tm-toast-progress">
+                    @* Keyed on Revision: an in-place replacement (Key dedupe/Update) recreates the bar
+                       so the CSS animation restarts with the new duration. *@
+                    <div class="tm-toast-progress-bar"
+                         @key="toast.Revision"
+                         style="animation-duration: @(toast.Duration)ms">
+                    </div>
                 </div>
-            </div>
+            }
         </div>
     }
 </div>
@@ -98,6 +122,13 @@
     /// </summary>
     [Parameter] public int MinActionDuration { get; set; } = 10_000;
 
+    /// <summary>
+    /// Collapsed-deck presentation: the newest three toasts stay fully visible, every older card
+    /// collapses to a thin strip (a pure-CSS depth hint), and hovering the container or moving
+    /// focus inside it expands the deck. Defaults to <c>false</c> (the classic vertical stack).
+    /// </summary>
+    [Parameter] public bool Stacked { get; set; } = false;
+
     private IReadOnlyList<ToastInstance> VisibleToasts =>
         ToastService.Toasts
             .OrderByDescending(t => t.CreatedAt)
@@ -108,8 +139,10 @@
     private string PositionClass => Position switch
     {
         ToastPosition.TopLeft => "tm-toast-container--top-left",
+        ToastPosition.TopCenter => "tm-toast-container--top-center",
         ToastPosition.BottomRight => "tm-toast-container--bottom-right",
         ToastPosition.BottomLeft => "tm-toast-container--bottom-left",
+        ToastPosition.BottomCenter => "tm-toast-container--bottom-center",
         _ => "tm-toast-container--top-right"
     };
 
@@ -118,6 +151,7 @@
     private FocusIfLostInterop? _focusIfLost;
     private LazyJsModule? _visibility;
     private LazyJsModule? _toastJs;
+    private LazyJsModule? _swipeJs;
     private DotNetObjectReference<TmToastContainer>? _dotNetRef;
     private string? _lastNewestId;
     private HashSet<string> _lastIds = new();
@@ -143,7 +177,26 @@
 
     private void HandleChange()
     {
+        RePauseHeldToasts();
         InvokeAsync(StateHasChanged);
+    }
+
+    /// <summary>
+    /// A hold can start on a LOADING (sticky) toast, where there is no timer to pause yet. The
+    /// moment the promise settles, the in-place update gives the toast a real duration and arms
+    /// the auto-dismiss timer — while the user may still be hovering it. Every held id whose
+    /// toast has since become pausable is paused again (idempotent: Pause is a no-op when already
+    /// paused or the timer is already disarmed).
+    /// </summary>
+    private void RePauseHeldToasts()
+    {
+        if (_held.Count == 0 || !PauseOnHover)
+            return;
+        foreach (var toast in ToastService.Toasts)
+        {
+            if (toast.Duration > 0 && _held.Contains(toast.Id) && !ToastService.IsPaused(toast.Id))
+                ToastService.Pause(toast.Id);
+        }
     }
 
     /// <inheritdoc />
@@ -188,6 +241,12 @@
             // Browser-owned behaviors: Escape dismissal, focus return on card removal, Alt+T.
             _toastJs ??= new LazyJsModule(JS, "./_content/Tempo.Blazor/js/tm-toast.js");
             await _toastJs.TryInvokeVoidAsync("attach", _root, _dotNetRef ??= DotNetObjectReference.Create(this));
+
+            // Swipe-to-dismiss rides the shared pointer-drag helper (touch/pen only); the gesture
+            // asks for dismissal through the same DismissToast entry point as Escape, and the close
+            // button stays the always-available alternative (WCAG 2.5.7).
+            _swipeJs ??= new LazyJsModule(JS, "./_content/Tempo.Blazor/js/tm-toast-swipe.js");
+            await _swipeJs.TryInvokeVoidAsync("attachSwipe", _root, _dotNetRef);
         }
         else
         {
@@ -205,6 +264,13 @@
                 await _toastJs.TryInvokeVoidAsync("detach", _root);
                 await _toastJs.DisposeAsync();
                 _toastJs = null;
+            }
+
+            if (_swipeJs is not null)
+            {
+                await _swipeJs.TryInvokeVoidAsync("detachSwipe", _root);
+                await _swipeJs.DisposeAsync();
+                _swipeJs = null;
             }
 
             if (_promoted)
@@ -240,6 +306,8 @@
         // A hold can only matter while the toast is visible; pruned against the visible set so a
         // removed/expired id can not keep an unrelated pause alive after a tab switch.
         _held.RemoveWhere(id => !ids.Contains(id));
+        // The render may be the first one after a settle that armed timers for held toasts.
+        RePauseHeldToasts();
 
         await AnnounceTextChangesAsync();
     }
@@ -322,9 +390,13 @@
 
     private void Pause(ToastInstance toast)
     {
-        if (!PauseOnHover || toast.Duration <= 0)
+        if (!PauseOnHover)
             return;
+        // The hold registers even for a sticky/loading toast: there is no timer to pause yet, but
+        // when the promise settles and the update arms one, the hold re-pauses it (RePauseHeldToasts).
         _held.Add(toast.Id);
+        if (toast.Duration <= 0)
+            return;
         ToastService.Pause(toast.Id);
     }
 
@@ -384,6 +456,12 @@
             await _toastJs.TryInvokeVoidAsync("detach", _root);
             await _toastJs.DisposeAsync();
             _toastJs = null;
+        }
+        if (_swipeJs is not null)
+        {
+            await _swipeJs.TryInvokeVoidAsync("detachSwipe", _root);
+            await _swipeJs.DisposeAsync();
+            _swipeJs = null;
         }
         _dotNetRef?.Dispose();
         if (_topLayer is not null)

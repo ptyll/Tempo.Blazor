@@ -602,6 +602,298 @@ public class ToastServiceTests
         svc.Toasts.Should().BeEmpty("resume re-arms the FULL updated 80ms");
     }
 
+    // ── Phase fze-4: PromiseAsync (loading → success/error), Warning politeness ──
+
+    [Fact]
+    public async Task PromiseAsync_ShowsStickyLoadingToast_WithIsLoading()
+    {
+        var svc = new ToastService(new FakeTimeProvider());
+        var gate = new TaskCompletionSource<int>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        var pending = svc.PromiseAsync(_ => gate.Task,
+            new ToastPromiseOptions { LoadingMessage = "Working…", SuccessMessage = _ => "Done" });
+
+        svc.Toasts.Should().ContainSingle();
+        svc.Toasts[0].IsLoading.Should().BeTrue("the pending phase renders as a loading toast");
+        svc.Toasts[0].Message.Should().Be("Working…");
+        svc.Toasts[0].Duration.Should().Be(0, "a loading toast is sticky — it must survive until the promise settles");
+        svc.PendingAutoDismissCount.Should().Be(0, "a sticky loading toast arms no auto-dismiss timer");
+
+        gate.SetResult(1);
+        await pending;
+    }
+
+    [Fact]
+    public async Task PromiseAsync_OnSuccess_UpdatesInPlaceToSuccess_WithDelegateMessageAndStandardDuration()
+    {
+        var svc = new ToastService(new FakeTimeProvider());
+
+        var pending = svc.PromiseAsync(_ => Task.FromResult(42),
+            new ToastPromiseOptions { LoadingMessage = "Working…", SuccessMessage = r => $"Got {r}" });
+        var id = svc.Toasts.Should().ContainSingle().Which.Id;
+
+        await pending;
+
+        svc.Toasts.Should().ContainSingle();
+        svc.Toasts[0].Id.Should().Be(id, "the promise resolves the loading toast in place — no second toast");
+        svc.Toasts[0].IsLoading.Should().BeFalse();
+        svc.Toasts[0].Severity.Should().Be(ToastSeverity.Success);
+        svc.Toasts[0].Message.Should().Be("Got 42", "the success message comes from the delegate");
+        svc.Toasts[0].Duration.Should().Be(5000, "the success phase gets the standard reading time");
+        svc.Toasts[0].Revision.Should().Be(1, "the in-place update bumps the revision like any Update");
+    }
+
+    [Fact]
+    public async Task PromiseAsync_OnSuccess_PassesTheResultToTheSuccessDelegate()
+    {
+        var svc = new ToastService(new FakeTimeProvider());
+
+        await svc.PromiseAsync(_ => Task.FromResult("hello"),
+            new ToastPromiseOptions { LoadingMessage = "W", SuccessMessage = r => (string)r! });
+
+        svc.Toasts[0].Message.Should().Be("hello");
+    }
+
+    [Fact]
+    public async Task PromiseAsync_OnError_UpdatesToErrorWithDelegateMessage_AndPropagatesTheException()
+    {
+        var svc = new ToastService(new FakeTimeProvider());
+        var boom = new InvalidOperationException("nope");
+
+        var act = async () => await svc.PromiseAsync<int>(_ => Task.FromException<int>(boom),
+            new ToastPromiseOptions
+            {
+                LoadingMessage = "Working…",
+                SuccessMessage = _ => "ok",
+                ErrorMessage = ex => $"Failed: {ex.Message}",
+            });
+
+        await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("nope");
+
+        svc.Toasts.Should().ContainSingle();
+        svc.Toasts[0].Severity.Should().Be(ToastSeverity.Error);
+        svc.Toasts[0].Message.Should().Be("Failed: nope");
+        svc.Toasts[0].Duration.Should().Be(8000, "an error stays on screen longer than a success");
+        svc.Toasts[0].Politeness.Should().Be(ToastPoliteness.Assertive);
+        svc.Toasts[0].IsLoading.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task PromiseAsync_OnCancellation_RemovesTheLoadingToast_AndPropagatesTheCancellation()
+    {
+        var svc = new ToastService(new FakeTimeProvider());
+        using var cts = new CancellationTokenSource();
+
+        var pending = svc.PromiseAsync<int>(async ct =>
+        {
+            await Task.Delay(Timeout.InfiniteTimeSpan, ct);
+            return 0;
+        },
+            new ToastPromiseOptions { LoadingMessage = "Working…", SuccessMessage = _ => "Done" },
+            cts.Token);
+
+        svc.Toasts.Should().ContainSingle("the loading toast is on screen while the promise is pending");
+
+        cts.Cancel();
+
+        var act = async () => await pending;
+        await act.Should().ThrowAsync<OperationCanceledException>();
+
+        svc.Toasts.Should().BeEmpty("a cancelled promise must not leave a stale loading toast behind");
+        svc.PendingAutoDismissCount.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task PromiseAsync_ErrorMessageDelegateNull_KeepsTheLoadingMessage()
+    {
+        var svc = new ToastService(new FakeTimeProvider());
+
+        var act = async () => await svc.PromiseAsync<int>(_ => Task.FromException<int>(new Exception("x")),
+            new ToastPromiseOptions { LoadingMessage = "Working…", SuccessMessage = _ => "ok" });
+
+        await act.Should().ThrowAsync<Exception>();
+        svc.Toasts[0].Message.Should().Be("Working…");
+    }
+
+    [Fact]
+    public async Task PromiseAsync_NonGenericOverload_CompletesWithoutResult()
+    {
+        var svc = new ToastService(new FakeTimeProvider());
+        var ran = false;
+
+        await svc.PromiseAsync(_ => { ran = true; return Task.CompletedTask; },
+            new ToastPromiseOptions { LoadingMessage = "W", SuccessMessage = _ => "Done" });
+
+        ran.Should().BeTrue();
+        svc.Toasts[0].Severity.Should().Be(ToastSeverity.Success);
+    }
+
+    [Fact]
+    public void Show_DefaultPoliteness_WarningIsAssertive_InfoAndSuccessStayPolite()
+    {
+        var svc = new ToastService();
+        svc.ShowWarning("w");
+        svc.ShowInfo("i");
+        svc.ShowSuccess("s");
+
+        svc.Toasts[0].Politeness.Should().Be(ToastPoliteness.Assertive,
+            "a warning needs attention now — announced assertively like an error");
+        svc.Toasts[1].Politeness.Should().Be(ToastPoliteness.Polite);
+        svc.Toasts[2].Politeness.Should().Be(ToastPoliteness.Polite);
+    }
+
+    [Fact]
+    public void Update_WithPoliteness_OverridesTheInstanceValue()
+    {
+        var svc = new ToastService(new FakeTimeProvider());
+        svc.ShowInfo("x");
+        var id = svc.Toasts[0].Id;
+        svc.Toasts[0].Politeness.Should().Be(ToastPoliteness.Polite);
+
+        svc.Update(id, severity: ToastSeverity.Error, politeness: ToastPoliteness.Polite);
+
+        svc.Toasts[0].Politeness.Should().Be(ToastPoliteness.Polite,
+            "an explicit politeness wins over the severity derivation (the promise error flow relies on it)");
+    }
+
+    [Fact]
+    public async Task PromiseAsync_OnError_WithExplicitPoliteness_KeepsTheExplicitValue()
+    {
+        var svc = new ToastService(new FakeTimeProvider());
+
+        var act = async () => await svc.PromiseAsync<int>(_ => Task.FromException<int>(new Exception("x")),
+            new ToastPromiseOptions
+            {
+                LoadingMessage = "W",
+                SuccessMessage = _ => "ok",
+                Politeness = ToastPoliteness.Polite,
+            });
+
+        await act.Should().ThrowAsync<Exception>();
+        svc.Toasts[0].Politeness.Should().Be(ToastPoliteness.Polite,
+            "ToastPromiseOptions.Politeness overrides the Auto derivation in every phase");
+    }
+
+    // ── Review round (fze-4): Key-race ownership, guarded formatters, original exception ──
+
+    [Fact]
+    public async Task PromiseAsync_KeyRace_SettleAfterReplacement_DoesNotClobberTheNewFlow()
+    {
+        var svc = new ToastService(new FakeTimeProvider());
+        var gateA = new TaskCompletionSource<int>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var gateB = new TaskCompletionSource<int>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        var flowA = svc.PromiseAsync(_ => gateA.Task,
+            new ToastPromiseOptions { LoadingMessage = "Saving A…", SuccessMessage = _ => "A done", Key = "save" });
+        var id = svc.Toasts.Should().ContainSingle().Which.Id;
+
+        // A second flow with the same key replaces the pending toast in place: new revision.
+        var flowB = svc.PromiseAsync(_ => gateB.Task,
+            new ToastPromiseOptions { LoadingMessage = "Saving B…", SuccessMessage = _ => "B done", Key = "save" });
+        svc.Toasts.Should().ContainSingle().Which.Id.Should().Be(id, "Key dedupe replaces in place");
+        svc.Toasts[0].Message.Should().Be("Saving B…");
+        svc.Toasts[0].Revision.Should().Be(1);
+
+        // Flow A settles LAST: its owner token (revision 0) no longer matches — a no-op.
+        gateA.SetResult(1);
+        await flowA;
+
+        svc.Toasts.Should().ContainSingle();
+        svc.Toasts[0].Message.Should().Be("Saving B…",
+            "the superseded flow must not overwrite the toast the newer flow owns");
+        svc.Toasts[0].IsLoading.Should().BeTrue("flow A's success update was refused — the toast is still loading");
+
+        gateB.SetResult(2);
+        await flowB;
+
+        svc.Toasts.Should().ContainSingle();
+        svc.Toasts[0].Message.Should().Be("B done", "the OWNING flow settles the toast");
+        svc.Toasts[0].Severity.Should().Be(ToastSeverity.Success);
+    }
+
+    [Fact]
+    public async Task PromiseAsync_KeyRace_SettleBeforeReplacement_OwnsAndAppliesNormally()
+    {
+        var svc = new ToastService(new FakeTimeProvider());
+
+        var flowA = svc.PromiseAsync(_ => Task.FromResult(1),
+            new ToastPromiseOptions { LoadingMessage = "Saving A…", SuccessMessage = _ => "A done", Key = "save" });
+        await flowA;
+
+        svc.Toasts.Should().ContainSingle();
+        svc.Toasts[0].Message.Should().Be("A done", "a flow that settles while still owned applies its update");
+
+        // A later flow with the same key starts fresh on the settled toast.
+        var flowB = svc.PromiseAsync(_ => Task.FromResult(2),
+            new ToastPromiseOptions { LoadingMessage = "Saving B…", SuccessMessage = _ => "B done", Key = "save" });
+        await flowB;
+
+        svc.Toasts.Should().ContainSingle();
+        svc.Toasts[0].Message.Should().Be("B done");
+    }
+
+    [Fact]
+    public async Task PromiseAsync_ManualDismissWhilePending_LeavesTheSettleAHarmlessNoOp()
+    {
+        var svc = new ToastService(new FakeTimeProvider());
+        var gate = new TaskCompletionSource<int>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        var pending = svc.PromiseAsync(_ => gate.Task,
+            new ToastPromiseOptions { LoadingMessage = "Working…", SuccessMessage = _ => "Done", Key = "k" });
+        var id = svc.Toasts.Should().ContainSingle().Which.Id;
+
+        svc.Remove(id);
+        svc.Toasts.Should().BeEmpty();
+
+        gate.SetResult(1);
+        await pending;
+
+        svc.Toasts.Should().BeEmpty("a dismissed loading toast is not resurrected by the settle");
+    }
+
+    [Fact]
+    public async Task PromiseAsync_SuccessMessageFormatterThrows_FallsBackToTheLoadingMessage_AndStillReturns()
+    {
+        var svc = new ToastService(new FakeTimeProvider());
+
+        var result = await svc.PromiseAsync(_ => Task.FromResult(7),
+            new ToastPromiseOptions
+            {
+                LoadingMessage = "Working…",
+                SuccessMessage = _ => throw new FormatException("broken formatter"),
+            });
+
+        result.Should().Be(7, "a broken success formatter must not swallow the operation result");
+        svc.Toasts.Should().ContainSingle("the toast still settles");
+        svc.Toasts[0].Severity.Should().Be(ToastSeverity.Success);
+        svc.Toasts[0].Message.Should().Be("Working…",
+            "the guarded fallback keeps the loading message instead of crashing the settle");
+    }
+
+    [Fact]
+    public async Task PromiseAsync_ErrorMessageFormatterThrows_RethrowsTheOriginalException_AndToastSettles()
+    {
+        var svc = new ToastService(new FakeTimeProvider());
+        var boom = new InvalidOperationException("the real failure");
+
+        var act = async () => await svc.PromiseAsync<int>(_ => Task.FromException<int>(boom),
+            new ToastPromiseOptions
+            {
+                LoadingMessage = "Working…",
+                SuccessMessage = _ => "ok",
+                ErrorMessage = _ => throw new FormatException("broken formatter"),
+            });
+
+        var thrown = await act.Should().ThrowAsync<InvalidOperationException>()
+            .WithMessage("the real failure");
+        thrown.Which.Should().BeSameAs(boom,
+            "ExceptionDispatchInfo rethrows the ORIGINAL exception — the formatter failure must not replace it");
+
+        svc.Toasts.Should().ContainSingle("the toast still settles even when the formatter throws");
+        svc.Toasts[0].Severity.Should().Be(ToastSeverity.Error);
+        svc.Toasts[0].Message.Should().Be("Working…", "the guarded fallback keeps the loading message");
+    }
+
     /// <summary>TimeProvider whose timers only fire when the test fires them manually — even when
     /// disposed (simulating a real timer whose callback was already queued).</summary>
     private sealed class ManualTimerProvider : TimeProvider

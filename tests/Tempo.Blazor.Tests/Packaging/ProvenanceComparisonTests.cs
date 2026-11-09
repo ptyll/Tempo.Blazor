@@ -227,9 +227,10 @@ public class ProvenanceComparisonTests
         // tm-panel-resize.test.mjs (plan 5d396592 phase 3: the shared panel-resize helper) +
         // tm-otp-input.test.mjs (TmOtpInput phase 1) +
         // tm-toast-visibility.test.mjs (plan 4ebadc60 phase 3: the document-hidden toast pause) +
-        // tm-toast.test.mjs (plan 4ebadc60 phase 3 review: Escape/focus-return/Alt+T behaviors) —
+        // tm-toast.test.mjs (plan 4ebadc60 phase 3 review: Escape/focus-return/Alt+T behaviors) +
+        // tm-toast-swipe.test.mjs (plan 4ebadc60 phase 4: swipe-to-dismiss on the shared pointer-drag helper) —
         // the Node tests ship in the repo, never in the nupkg.
-        denominator.PackExcludedFiles.Should().Be(32);
+        denominator.PackExcludedFiles.Should().Be(33);
     }
 
     /// <summary>

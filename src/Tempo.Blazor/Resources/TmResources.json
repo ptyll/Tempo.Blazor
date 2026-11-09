@@ -5663,6 +5663,8 @@
   "TmTimeline_TypeFilterAll": "All types",
   "TmTimeline_TypeFilterLabel": "Filter by type",
   "TmToast_Close": "Dismiss",
+  "TmToast_DeckHidden_One": "{0} hidden notification",
+  "TmToast_DeckHidden_Other": "{0} hidden notifications",
   "TmToast_RegionLabel": "Notifications",
   "TmToast_Undo": "Undo",
   "TmTopBar_OpenNotifications": "Open notifications",

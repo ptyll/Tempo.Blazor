@@ -14770,7 +14770,7 @@
       "kind": "Component",
       "category": "Feedback",
       "namespace": "Tempo.Blazor.Components.Feedback",
-      "description": "Fixed-position container that renders toast notifications from the injected ToastService. Supports four screen positions and auto-dismiss with animated progress bars.",
+      "description": "Fixed-position container that renders toast notifications from the injected ToastService. Supports six screen positions, auto-dismiss with animated progress bars, an optional collapsed-deck presentation and swipe-to-dismiss (touch/pen).",
       "packageId": "Tempo.Blazor",
       "sourcePath": "src/Tempo.Blazor/Components/Feedback/TmToastContainer.razor",
       "documentationStatus": "merged",
@@ -14805,22 +14805,36 @@
           "isRequired": false,
           "default": "ToastPosition.TopRight",
           "description": "Position of the toast container on screen."
+        },
+        {
+          "name": "Stacked",
+          "type": "bool",
+          "isRequired": false,
+          "default": "false",
+          "description": "Collapsed-deck presentation: the newest three toasts stay fully visible, every older card collapses to a thin strip (a pure-CSS depth hint), and hovering the container or moving focus inside it expands the deck."
         }
       ],
       "cssClasses": [
         "tm-toast-container",
         "tm-toast-container--top-right",
         "tm-toast-container--top-left",
+        "tm-toast-container--top-center",
         "tm-toast-container--bottom-right",
         "tm-toast-container--bottom-left",
+        "tm-toast-container--bottom-center",
+        "tm-toast-container--stacked",
         "tm-toast",
         "tm-toast--success",
         "tm-toast--error",
         "tm-toast--warning",
         "tm-toast--info",
         "tm-toast--paused",
+        "tm-toast--loading",
+        "tm-toast--deck-collapsed",
+        "tm-toast--swipe-return",
         "tm-toast-body",
         "tm-toast-icon",
+        "tm-toast-spinner",
         "tm-toast-content",
         "tm-toast-title",
         "tm-toast-message",
@@ -14842,6 +14856,14 @@
         {
           "title": "Undoable action toast",
           "code": "ToastService.ShowUndo(\"Item deleted\", OnUndoAsync)"
+        },
+        {
+          "title": "Promise toast: loading in place, success or error update",
+          "code": "await ToastService.PromiseAsync(ct => SaveAsync(ct), new ToastPromiseOptions { LoadingMessage = \"Saving…\", SuccessMessage = _ => \"Saved\", ErrorMessage = ex => $\"Save failed: {ex.Message}\" });"
+        },
+        {
+          "title": "Collapsed deck at the top center",
+          "code": "<TmToastContainer Position=\"ToastPosition.TopCenter\" Stacked=\"true\" />"
         }
       ]
     },
@@ -30895,6 +30917,16 @@
       "documentationStatus": "merged"
     },
     {
+      "itemName": "ToastPromiseOptions",
+      "kind": "Record",
+      "category": "Services",
+      "namespace": "Tempo.Blazor.Services",
+      "description": "Configuration for ToastService.PromiseAsync: the three phases of a long-running operation surfaced through ONE toast — a sticky loading state, an in-place update to Success (or Error) when the operation settles. The service stays localization-free: the caller supplies every message.",
+      "packageId": "Tempo.Blazor",
+      "sourcePath": "src/Tempo.Blazor/Services/ToastOptions.cs",
+      "documentationStatus": "merged"
+    },
+    {
       "itemName": "ToastService",
       "kind": "Class",
       "category": "Services",
@@ -33677,6 +33709,10 @@
       "kind": "JavaScript"
     },
     {
+      "path": "src/Tempo.Blazor/wwwroot/js/tm-toast-swipe.js",
+      "kind": "JavaScript"
+    },
+    {
       "path": "src/Tempo.Blazor/wwwroot/js/tm-toast-visibility.js",
       "kind": "JavaScript"
     },
@@ -33805,6 +33841,10 @@
       "kind": "JavaScript"
     },
     {
+      "path": "src/Tempo.Blazor/wwwroot/js/__tests__/tm-toast-swipe.test.mjs",
+      "kind": "JavaScript"
+    },
+    {
       "path": "src/Tempo.Blazor/wwwroot/js/__tests__/tm-toast-visibility.test.mjs",
       "kind": "JavaScript"
     },
@@ -33830,11 +33870,11 @@
     }
   ],
   "summary": {
-    "itemCount": 427,
-    "manualItemCount": 427,
-    "generatedItemCount": 419,
+    "itemCount": 428,
+    "manualItemCount": 428,
+    "generatedItemCount": 420,
     "generatedOnlyItemCount": 0,
     "componentCount": 228,
-    "publicApiTypeCount": 191
+    "publicApiTypeCount": 192
   }
 }

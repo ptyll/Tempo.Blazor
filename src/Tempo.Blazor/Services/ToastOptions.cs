@@ -40,8 +40,72 @@ public sealed record ToastOptions
 
     /// <summary>
     /// Live-region politeness of the announcement. <c>null</c> derives from severity:
-    /// <see cref="ToastSeverity.Error"/> is <see cref="ToastPoliteness.Assertive"/>, everything
-    /// else <see cref="ToastPoliteness.Polite"/>.
+    /// <see cref="ToastSeverity.Warning"/> and <see cref="ToastSeverity.Error"/> are
+    /// <see cref="ToastPoliteness.Assertive"/>, everything else <see cref="ToastPoliteness.Polite"/>.
+    /// </summary>
+    public ToastPoliteness? Politeness { get; init; }
+
+    /// <summary>
+    /// Loading state (the promise-toast pattern): the card renders a spinner instead of the
+    /// severity icon and no progress bar. A loading toast is sticky regardless of
+    /// <see cref="Duration"/> — it stays until updated or removed. Defaults to <c>false</c>.
+    /// </summary>
+    public bool IsLoading { get; init; }
+}
+
+/// <summary>
+/// Configuration for <see cref="ToastService.PromiseAsync{T}"/>: the three phases of a
+/// long-running operation surfaced through ONE toast — a sticky loading state, an in-place update
+/// to <see cref="ToastSeverity.Success"/> (or <see cref="ToastSeverity.Error"/>) when the
+/// operation settles. The service stays localization-free: the caller supplies every message.
+/// </summary>
+public sealed record ToastPromiseOptions
+{
+    /// <summary>Message of the sticky loading toast shown while the operation runs.</summary>
+    public string LoadingMessage { get; init; } = string.Empty;
+
+    /// <summary>Optional title of the loading toast.</summary>
+    public string? LoadingTitle { get; init; }
+
+    /// <summary>
+    /// Success message builder; receives the operation result. <c>null</c> keeps the loading
+    /// message on success.
+    /// </summary>
+    public Func<object?, string>? SuccessMessage { get; init; }
+
+    /// <summary>Optional title set on the success update.</summary>
+    public string? SuccessTitle { get; init; }
+
+    /// <summary>
+    /// Duration (milliseconds) of the success phase. Defaults to 5000 (the standard reading time).
+    /// A value &lt;= 0 makes the success toast sticky.
+    /// </summary>
+    public int SuccessDuration { get; init; } = 5000;
+
+    /// <summary>
+    /// Error message builder; receives the thrown exception. <c>null</c> keeps the loading message
+    /// on error.
+    /// </summary>
+    public Func<Exception, string>? ErrorMessage { get; init; }
+
+    /// <summary>Optional title set on the error update.</summary>
+    public string? ErrorTitle { get; init; }
+
+    /// <summary>
+    /// Duration (milliseconds) of the error phase. Defaults to 8000. A value &lt;= 0 makes the
+    /// error toast sticky.
+    /// </summary>
+    public int ErrorDuration { get; init; } = 8000;
+
+    /// <summary>
+    /// Optional dedupe key of the whole flow: a second <see cref="ToastService.PromiseAsync{T}"/>
+    /// with the same key replaces the pending toast in place instead of stacking a second one.
+    /// </summary>
+    public string? Key { get; init; }
+
+    /// <summary>
+    /// Live-region politeness applied to every phase. <c>null</c> derives from severity per phase
+    /// (the error phase is announced assertively).
     /// </summary>
     public ToastPoliteness? Politeness { get; init; }
 }

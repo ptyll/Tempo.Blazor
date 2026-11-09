@@ -1301,9 +1301,11 @@ public abstract class LocalizationTestBase : BunitContext
         ["TmPasswordStrength_HintExcellent"]           = "Excellent password!",
 
         // TmToast
-        ["TmToast_Close"]       = "Dismiss",
-        ["TmToast_RegionLabel"] = "Notifications",
-        ["TmToast_Undo"]        = "Undo",
+        ["TmToast_Close"]             = "Dismiss",
+        ["TmToast_DeckHidden_One"]    = "{0} hidden notification",
+        ["TmToast_DeckHidden_Other"]  = "{0} hidden notifications",
+        ["TmToast_RegionLabel"]       = "Notifications",
+        ["TmToast_Undo"]              = "Undo",
 
         // TmAlert
         ["TmAlert_Dismiss"] = "Dismiss",
@@ -6592,9 +6594,13 @@ public abstract class LocalizationTestBase : BunitContext
         ["TmPasswordStrength_HintExcellent"]           = "Vynikající heslo!",
 
         // TmToast
-        ["TmToast_Close"]       = "Zavřít",
-        ["TmToast_RegionLabel"] = "Oznámení",
-        ["TmToast_Undo"]        = "Vrátit",
+        ["TmToast_Close"]             = "Zavřít",
+        ["TmToast_DeckHidden_One"]    = "{0} skryté oznámení",
+        ["TmToast_DeckHidden_Few"]    = "{0} skrytá oznámení",
+        ["TmToast_DeckHidden_Many"]   = "{0} skrytého oznámení",
+        ["TmToast_DeckHidden_Other"]  = "{0} skrytých oznámení",
+        ["TmToast_RegionLabel"]       = "Oznámení",
+        ["TmToast_Undo"]              = "Vrátit",
 
         // TmAlert
         ["TmAlert_Dismiss"] = "Zavřít",
