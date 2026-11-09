@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
+             xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+             id="Definitions_NoBpmndi"
+             name="No BPMNDI"
+             targetNamespace="http://tempo.example/bpmn/corpus">
+  <process id="Process_NoDi" name="Headless process" isExecutable="false">
+    <startEvent id="StartEvent_NoDi" name="Begin">
+      <outgoing>Flow_ND1</outgoing>
+    </startEvent>
+    <serviceTask id="ServiceTask_Call" name="Call service" implementation="##WebService">
+      <incoming>Flow_ND1</incoming>
+      <outgoing>Flow_ND2</outgoing>
+    </serviceTask>
+    <scriptTask id="ScriptTask_Calc" name="Calculate" scriptFormat="javascript">
+      <incoming>Flow_ND2</incoming>
+      <outgoing>Flow_ND3</outgoing>
+      <script>return 42;</script>
+    </scriptTask>
+    <businessRuleTask id="RuleTask_Check" name="Check rules" implementation="##unspecified">
+      <incoming>Flow_ND3</incoming>
+      <outgoing>Flow_ND4</outgoing>
+    </businessRuleTask>
+    <sendTask id="SendTask_Notify" name="Notify" implementation="##WebService">
+      <incoming>Flow_ND4</incoming>
+      <outgoing>Flow_ND5</outgoing>
+    </sendTask>
+    <receiveTask id="ReceiveTask_Wait" name="Wait for reply" implementation="##WebService">
+      <incoming>Flow_ND5</incoming>
+      <outgoing>Flow_ND6</outgoing>
+    </receiveTask>
+    <manualTask id="ManualTask_Inspect" name="Inspect manually">
+      <incoming>Flow_ND6</incoming>
+      <outgoing>Flow_ND7</outgoing>
+    </manualTask>
+    <endEvent id="EndEvent_NoDi" name="End">
+      <incoming>Flow_ND7</incoming>
+    </endEvent>
+    <sequenceFlow id="Flow_ND1" sourceRef="StartEvent_NoDi" targetRef="ServiceTask_Call"/>
+    <sequenceFlow id="Flow_ND2" sourceRef="ServiceTask_Call" targetRef="ScriptTask_Calc"/>
+    <sequenceFlow id="Flow_ND3" sourceRef="ScriptTask_Calc" targetRef="RuleTask_Check"/>
+    <sequenceFlow id="Flow_ND4" sourceRef="RuleTask_Check" targetRef="SendTask_Notify"/>
+    <sequenceFlow id="Flow_ND5" sourceRef="SendTask_Notify" targetRef="ReceiveTask_Wait"/>
+    <sequenceFlow id="Flow_ND6" sourceRef="ReceiveTask_Wait" targetRef="ManualTask_Inspect"/>
+    <sequenceFlow id="Flow_ND7" sourceRef="ManualTask_Inspect" targetRef="EndEvent_NoDi"/>
+  </process>
+</definitions>

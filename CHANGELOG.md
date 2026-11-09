@@ -24,6 +24,18 @@
 - **Docs.** New [docs/modeling-hosting-guide.md](docs/modeling-hosting-guide.md) — the writer implementation pattern with optimistic concurrency (capabilities, atomic apply through the translator + engine, layout/view changes, schema/lookups, issue mapping, MCP wiring, verification recipe). [docs/modeling-authoring.md](docs/modeling-authoring.md) carries the design contract and §6.5 "as implemented (phase 7)"; [docs/modeling-editor.md](docs/modeling-editor.md) the component contract; [docs/modeling-mcp-tools.md](docs/modeling-mcp-tools.md) the living MCP catalog and the "What 2.11.0 changed" table; AGENTS.md gained the authoring bullet list.
 - **Tests.** `ModelingModelDiffTests`, `TmModelingViewerOverlayTests` (a changed relationship), the phase 3–6 suites already in the tree, `ModelingMcpParityTests`, `ModelingViewOperationToolsTests`, `ModelingPropertySchemaToolsTests`, `ModelingMcpContractSnapshotTests`, `ModelingMcpToolsDocumentationDriftTests`; the JSON documentation overlays are regenerated and `validate --fail-on-drift` is clean.
 
+### Added — BPMN 2.0 XML converter (plan 6fca9139, phase 1: design + corpus)
+
+- Design document [docs/modeling-bpmn-xml.md](docs/modeling-bpmn-xml.md): the headless
+  `Tempo.Blazor.Modeling.BpmnXml` package proposal (dependency on `Tempo.Blazor.Abstractions`
+  only), the `IBpmnXmlImporter`/`IBpmnXmlExporter` API, the BPMN 2.0 XML → semantic type
+  mapping table, the host/tool extension mechanism and the loss-report contract. Awaiting
+  owner confirmation before phase 2 implements it.
+- Test corpus `tests/Tempo.Blazor.Tests/Modeling/BpmnCorpus/` — 15 hand-authored,
+  license-clean BPMN 2.0 fixtures (MIT) mimicking the Camunda/Signavio/Bizagi/bpmn.io
+  dialects, guarded by `BpmnCorpusTests` (safe-parse, well-formedness, unique NCName ids,
+  dangling-reference and BPMNDI-presence checks).
+
 ### Added — `Tempo.Blazor.DiagramEditor` (additive; consumed by the authoring editor and the viewer)
 
 - **`TmDiagramEditor.SnapDocumentOnLoad`** (`bool`, default `true`) — when `false`, loading a document does NOT snap its nodes to the grid, so a host's persisted geometry renders exactly as saved while an interactive drag/drop/resize still snaps. The Modeling editors pass `false`; `GridSize="0"` is once again a valid "snapping off" setting (the guards no longer divide by zero, and the JS honours `gridSize: 0`).

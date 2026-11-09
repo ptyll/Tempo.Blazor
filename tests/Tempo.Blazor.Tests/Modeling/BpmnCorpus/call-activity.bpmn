@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
+             xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+             xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+             xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+             id="Definitions_CallActivity"
+             name="Call activity"
+             targetNamespace="http://tempo.example/bpmn/corpus">
+  <process id="Process_Order" name="Order process" isExecutable="false">
+    <startEvent id="StartEvent_Order" name="Order placed">
+      <outgoing>Flow_CA1</outgoing>
+    </startEvent>
+    <callActivity id="CallActivity_Fulfil" name="Fulfil order"
+                  calledElement="Process_Fulfilment"
+                  calledElementBinding="latest"
+                  calledElementVersion="3">
+      <incoming>Flow_CA1</incoming>
+      <outgoing>Flow_CA2</outgoing>
+    </callActivity>
+    <task id="Task_NotifyCustomer" name="Notify customer">
+      <incoming>Flow_CA2</incoming>
+      <outgoing>Flow_CA3</outgoing>
+    </task>
+    <endEvent id="EndEvent_Order" name="Order closed">
+      <incoming>Flow_CA3</incoming>
+    </endEvent>
+    <sequenceFlow id="Flow_CA1" sourceRef="StartEvent_Order" targetRef="CallActivity_Fulfil"/>
+    <sequenceFlow id="Flow_CA2" sourceRef="CallActivity_Fulfil" targetRef="Task_NotifyCustomer"/>
+    <sequenceFlow id="Flow_CA3" sourceRef="Task_NotifyCustomer" targetRef="EndEvent_Order"/>
+  </process>
+  <process id="Process_Fulfilment" name="Fulfilment process" isExecutable="false">
+    <startEvent id="StartEvent_Fulfil" name="Fulfilment requested">
+      <outgoing>Flow_CF1</outgoing>
+    </startEvent>
+    <task id="Task_Pack" name="Pack goods">
+      <incoming>Flow_CF1</incoming>
+      <outgoing>Flow_CF2</outgoing>
+    </task>
+    <endEvent id="EndEvent_Fulfil" name="Fulfilled">
+      <incoming>Flow_CF2</incoming>
+    </endEvent>
+    <sequenceFlow id="Flow_CF1" sourceRef="StartEvent_Fulfil" targetRef="Task_Pack"/>
+    <sequenceFlow id="Flow_CF2" sourceRef="Task_Pack" targetRef="EndEvent_Fulfil"/>
+  </process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1" name="Order process">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Process_Order">
+      <bpmndi:BPMNShape id="StartEvent_Order_di" bpmnElement="StartEvent_Order">
+        <dc:Bounds x="152" y="162" width="36" height="36"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="CallActivity_Fulfil_di" bpmnElement="CallActivity_Fulfil">
+        <dc:Bounds x="240" y="140" width="100" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_NotifyCustomer_di" bpmnElement="Task_NotifyCustomer">
+        <dc:Bounds x="400" y="140" width="100" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EndEvent_Order_di" bpmnElement="EndEvent_Order">
+        <dc:Bounds x="572" y="162" width="36" height="36"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_CA1_di" bpmnElement="Flow_CA1">
+        <di:waypoint x="188" y="180"/>
+        <di:waypoint x="240" y="180"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_CA2_di" bpmnElement="Flow_CA2">
+        <di:waypoint x="340" y="180"/>
+        <di:waypoint x="400" y="180"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_CA3_di" bpmnElement="Flow_CA3">
+        <di:waypoint x="500" y="180"/>
+        <di:waypoint x="572" y="180"/>
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_2" name="Fulfilment process">
+    <bpmndi:BPMNPlane id="BPMNPlane_2" bpmnElement="Process_Fulfilment">
+      <bpmndi:BPMNShape id="StartEvent_Fulfil_di" bpmnElement="StartEvent_Fulfil">
+        <dc:Bounds x="152" y="162" width="36" height="36"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Pack_di" bpmnElement="Task_Pack">
+        <dc:Bounds x="240" y="140" width="100" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EndEvent_Fulfil_di" bpmnElement="EndEvent_Fulfil">
+        <dc:Bounds x="412" y="162" width="36" height="36"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_CF1_di" bpmnElement="Flow_CF1">
+        <di:waypoint x="188" y="180"/>
+        <di:waypoint x="240" y="180"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_CF2_di" bpmnElement="Flow_CF2">
+        <di:waypoint x="340" y="180"/>
+        <di:waypoint x="412" y="180"/>
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</definitions>
