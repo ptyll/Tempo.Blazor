@@ -39,8 +39,8 @@
           "Description": "",
           "Properties": {
             "bpmn:calledElement": "Process_Fulfilment",
-            "bpmn:calledElementBinding": "latest",
-            "bpmn:calledElementVersion": "3"
+            "camunda:calledElementBinding": "latest",
+            "camunda:calledElementVersion": "3"
           },
           "Tags": [],
           "Governance": {
@@ -256,7 +256,9 @@
         "LoadedAt": "1970-01-01T00:00:00+00:00",
         "IsFresh": true
       },
-      "Properties": {}
+      "Properties": {
+        "bpmn:isExecutable": "false"
+      }
     },
     {
       "Id": "Process_Fulfilment",
@@ -445,7 +447,9 @@
         "LoadedAt": "1970-01-01T00:00:00+00:00",
         "IsFresh": true
       },
-      "Properties": {}
+      "Properties": {
+        "bpmn:isExecutable": "false"
+      }
     }
   ],
   "Losses": [],

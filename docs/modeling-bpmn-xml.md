@@ -123,6 +123,8 @@ public interface IBpmnXmlImporter
 public interface IBpmnXmlExporter
 {
     BpmnExportResult Export(ModelingModelDto model, BpmnExportOptions? options = null, CancellationToken ct = default);
+    // fáze 4: více modelů (PerProcess import) ⇒ JEDEN dokument s collaboration
+    BpmnExportResult Export(IReadOnlyList<ModelingModelDto> models, BpmnExportOptions? options = null, CancellationToken ct = default);
 }
 
 public sealed class BpmnImportOptions
@@ -153,9 +155,23 @@ public sealed class BpmnExportOptions
     public string HostExtensionPrefix { get; set; } = "tempo";
     public bool EmitBpmndi { get; set; } = true;
     public string? TargetNamespace { get; set; }
+    public IList<IBpmnToolExtension> ToolExtensions { get; } = []; // export hooky pluginů (fáze 4)
+    // prefix → URI mapa pro cizí atributové property (camunda:assignee, …); neznámé prefixy se
+    // deklarují deterministicky jako urn:tempo-blazor:bpmn:{prefix} s Info loss (fáze 4)
+    public IDictionary<string, string> ExtensionNamespaces { get; }
 }
 
 public enum BpmnExportProfile { Standard, WithHostExtensions }
+
+public enum BpmnExportLossSeverity { Loss, Approximated, Info } // fáze 4
+
+public sealed class BpmnExportLoss // fáze 4: jeden záznam loss reportu
+{
+    public string? ElementId { get; init; }   // id elementu/vazby, když konstrukt nese
+    public required string Construct { get; init; }  // Property | Tags | Governance | Namespace | …
+    public required string Reason { get; init; }
+    public BpmnExportLossSeverity Severity { get; init; }
+}
 
 public sealed class BpmnExportResult
 {
@@ -217,6 +233,43 @@ Rozhodnutí v návrhu:
   ve sloupci hostitelské aktivity na samostatném řádku** (weight-0 hrana do její vrstvy);
   pooly jsou horizontální pásy s flush lane pásy uvnitř.
 
+### 5.5 Export a round-trip (fáze 4)
+
+- **Multi-model overload.** `Export(IReadOnlyList<ModelingModelDto>)` (additive vedle
+  schváleného single-model API; rozhodnutí MODELING-BPMN-XML-API je uzavřené moderátorem)
+  píše JEDEN dokument: každý model ⇒ `<process>`, pooly ⇒ participanti, cross-model
+  messageFlowy ⇒ `<messageFlow>` v `<collaboration>`. Prázdná `<collaboration/>` se
+  neemituje nikdy.
+- **Schéma-validní výstup.** Kořen deklaruje `xmlns:xsi`; `conditionExpression`,
+  `timeDuration`/`timeDate`/`timeCycle`, conditional `condition` a `completionCondition`
+  nesou `xsi:type="tFormalExpression"`. `<process>` vždy nese `isExecutable` (výchozí
+  `"false"`; atributy procesu jako `camunda:versionTag` import catch-all uchovává v
+  `Model.Properties` a export je píše zpět). `definitions` nese
+  `exporter="Tempo.Blazor"` + `exporterVersion` (assembly informational version bez
+  commit hashe — jinak by golden testy rotovaly každým commitem). textAnnotation píše
+  tělo do `<text>` child (import čte `<text>` s fallbackem na direct text). Flow nodes
+  nesou Camunda-style `<incoming>`/`<outgoing>`. Plane s participant/message-flow DI
+  referencuje collaboration. Per každý `dataObjectRef` se syntetizuje jeden
+  `<dataObject id name isCollection>`. `incoming`/`outgoing` wiring, `{id}_di` DI id
+  (kolize ⇒ `{id}_di_1`).
+- **Robustnost.** Export nikdy nehodí pro špatný modelový obsah: nevalidní NCName
+  property klíče ⇒ loss; invalid XML 1.0 znaky ⇒ strip + `Approximated` loss;
+  eventDefinition bez/ s neznámým typem ⇒ loss (žádné tiché terminate). Duplicitní id
+  elementů napříč modely exportuje první výskyt (sdílená instance není duplicita);
+  duplicitní id vazby ⇒ loss. Prefixy generované z URI jsou stabilní FNV-1a hashe
+  (`BpmnImportInternals.StableId`), rezervované prefixy (`bpmndi`/`dc`/`di`/`xsi`/`xml`/
+  host) se nikdy nezastíní — kolize se přejmenují deterministicky na `{prefix}_1` s Info
+  loss; opakované xmlns deklarace uvnitř `foreignExtensions` payloadů se stripují.
+  `Tags`/`Governance` (element) a tagy vazeb jedou v `WithHostExtensions` profilu do
+  host payloadu (import je vrací do typovaných DTO polí), v `Standard` profilu ⇒ loss.
+- **Výkon.** Děti a vazby se před-indexují podle parent/source/target — export
+  5000 tasků + 5000 flowů trvá < 2 s.
+- **Root-extension import.** `extensionElements` na `definitions` v host namespace
+  obnovují model-level properties (dříve ignorováno).
+- **Interoperabilita.** `npm run test:bpmn-interop` (`bpmn-moddle` fromXML nad všemi
+  export goldeny, zero warnings, `bpmn:Definitions` root) a opt-in XSD validační test
+  (`TM_BPMN_XSD_DIR` ukazuje na BPMN 2.0.2 XSD soubory; bez proměnné se test přeskočí).
+
 ## 6. Extenze (host + nástroje)
 
 - **Host namespace**: při `Profile=WithHostExtensions` se `Properties` prvku/vazby
@@ -241,11 +294,12 @@ Rozhodnutí v návrhu:
 
 ## 7. Testovací korpus
 
-`tests/Tempo.Blazor.Tests/Modeling/BpmnCorpus/` — 20 hand-authored fixtur (MIT, viz
+`tests/Tempo.Blazor.Tests/Modeling/BpmnCorpus/` — 21 hand-authored fixtur (MIT, viz
 README složky) imitujících dialektů reálných nástrojů: jednoduchý proces, collaboration
 se 3 pooly a messageFlow, vnořené lanes, všechny brány, všechny události s eventDefinitions,
 boundary events (incl. transaction+cancel), event subprocess, callActivity, datové objekty,
 model bez BPMNDI, Camunda/Signavio/Bizagi export, textAnnotation/association/group,
+textAnnotation v standardní formě (`<text>` child),
 soubor záměrně nepodporovaných konstrukcí (incl. top-level `adHocSubProcess` a kompenzace),
 prefixed-qnames dialekt (`bpmn2:` + `tns:` QName refy), subprocess vnořený 3 úrovně,
 collapsed subprocess s vlastním druhým BPMNDiagram/BPMNPlane, black-box participant
@@ -255,6 +309,9 @@ fázi 2 (XXE, billion laughs, oversized streamy) a záměrně leží mimo `Expec
 Guard testy: `BpmnCorpusTests` (well-formed, bezpečný parse, unikátní NCName id,
 dangling reference guard vč. element-text referencí s odstraněným QName prefixem,
 BPMNDI presence, parity konstant proti `BpmnModelingCatalog` přes InternalsVisibleTo).
+Složka `Expected/` nese vedle import goldenů (`*.import.json`) i export goldeny
+(`*.export.bpmn`) — ty procházejí kromě byte-identického srovnání i `bpmn-moddle`
+interop parse (`npm run test:bpmn-interop`, zero warnings, `bpmn:Definitions` root).
 
 ## 8. Fázování (připomínka)
 

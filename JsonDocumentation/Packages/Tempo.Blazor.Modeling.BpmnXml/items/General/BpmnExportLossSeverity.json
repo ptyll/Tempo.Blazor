@@ -1,0 +1,10 @@
+{
+  "kind": "Enum",
+  "category": "General",
+  "namespace": "Tempo.Blazor.Modeling.BpmnXml",
+  "description": "Severity of an export loss record.",
+  "packageId": "Tempo.Blazor.Modeling.BpmnXml",
+  "sourcePath": "src/Tempo.Blazor.Modeling.BpmnXml/IBpmnXmlExporter.cs",
+  "documentationStatus": "generated",
+  "itemName": "BpmnExportLossSeverity"
+}

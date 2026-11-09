@@ -1,0 +1,201 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitions_Process_Boundary" targetNamespace="http://tempo.example/bpmn/corpus" exporter="Tempo.Blazor" exporterVersion="2.11.0" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:tempo="https://tempo.blazor/schemas/bpmn-extensions" name="Boundary zoo">
+  <process id="Process_Boundary" name="Boundary zoo" isExecutable="false">
+    <startEvent id="StartEvent_B" name="Start">
+      <outgoing>Flow_B1</outgoing>
+    </startEvent>
+    <task id="Task_Main" name="Main work">
+      <incoming>Flow_B1</incoming>
+      <outgoing>Flow_B2</outgoing>
+    </task>
+    <boundaryEvent id="Boundary_Timer" name="Reminder" attachedToRef="Task_Main" cancelActivity="true">
+      <outgoing>Flow_B10</outgoing>
+      <timerEventDefinition id="TimerBoundaryDef">
+        <timeDuration xsi:type="tFormalExpression">PT1D</timeDuration>
+      </timerEventDefinition>
+    </boundaryEvent>
+    <boundaryEvent id="Boundary_Message" name="Message while working" attachedToRef="Task_Main" cancelActivity="false">
+      <outgoing>Flow_B11</outgoing>
+      <messageEventDefinition id="MsgBoundaryDef" messageRef="Message_Note" />
+    </boundaryEvent>
+    <boundaryEvent id="Boundary_Signal" name="Signal interrupt" attachedToRef="Task_Main" cancelActivity="true">
+      <outgoing>Flow_B12</outgoing>
+      <signalEventDefinition id="SignalBoundaryDef" signalRef="Signal_Pause" />
+    </boundaryEvent>
+    <boundaryEvent id="Boundary_Conditional" name="Condition interrupt" attachedToRef="Task_Main" cancelActivity="true">
+      <outgoing>Flow_B13</outgoing>
+      <conditionalEventDefinition id="CondBoundaryDef">
+        <condition xsi:type="tFormalExpression">cancel = true()</condition>
+      </conditionalEventDefinition>
+    </boundaryEvent>
+    <task id="Task_Remind" name="Send reminder">
+      <incoming>Flow_B10</incoming>
+      <outgoing>Flow_B14</outgoing>
+    </task>
+    <task id="Task_Note" name="Note message">
+      <incoming>Flow_B11</incoming>
+    </task>
+    <task id="Task_Pause" name="Pause work">
+      <incoming>Flow_B12</incoming>
+    </task>
+    <task id="Task_Cancel" name="Cancel work">
+      <incoming>Flow_B13</incoming>
+    </task>
+    <transaction id="Transaction_Pay" name="Payment">
+      <startEvent id="StartEvent_Pay" name="Pay start">
+        <outgoing>Flow_BT1</outgoing>
+      </startEvent>
+      <task id="Task_Charge" name="Charge card">
+        <incoming>Flow_BT1</incoming>
+        <outgoing>Flow_BT2</outgoing>
+      </task>
+      <endEvent id="EndEvent_Pay" name="Pay end">
+        <incoming>Flow_BT2</incoming>
+      </endEvent>
+      <sequenceFlow id="Flow_BT1" sourceRef="StartEvent_Pay" targetRef="Task_Charge" />
+      <sequenceFlow id="Flow_BT2" sourceRef="Task_Charge" targetRef="EndEvent_Pay" />
+    </transaction>
+    <boundaryEvent id="Boundary_Cancel" name="Payment failed" attachedToRef="Transaction_Pay" cancelActivity="true">
+      <outgoing>Flow_B15</outgoing>
+      <cancelEventDefinition id="CancelBoundaryDef" />
+    </boundaryEvent>
+    <boundaryEvent id="Boundary_Error" name="Processing error" attachedToRef="Transaction_Pay" cancelActivity="true">
+      <outgoing>Flow_B16</outgoing>
+      <errorEventDefinition id="ErrorBoundaryDef" errorRef="Error_Decline" />
+    </boundaryEvent>
+    <task id="Task_Failed" name="Handle failure">
+      <incoming>Flow_B15</incoming>
+      <incoming>Flow_B16</incoming>
+      <outgoing>Flow_B17</outgoing>
+    </task>
+    <endEvent id="EndEvent_B" name="Done">
+      <incoming>Flow_B14</incoming>
+      <incoming>Flow_B17</incoming>
+      <incoming>Flow_B3</incoming>
+    </endEvent>
+    <sequenceFlow id="Flow_B1" sourceRef="StartEvent_B" targetRef="Task_Main" />
+    <sequenceFlow id="Flow_B2" sourceRef="Task_Main" targetRef="Transaction_Pay" />
+    <sequenceFlow id="Flow_B3" sourceRef="Transaction_Pay" targetRef="EndEvent_B" />
+    <sequenceFlow id="Flow_B10" sourceRef="Boundary_Timer" targetRef="Task_Remind" />
+    <sequenceFlow id="Flow_B11" sourceRef="Boundary_Message" targetRef="Task_Note" />
+    <sequenceFlow id="Flow_B12" sourceRef="Boundary_Signal" targetRef="Task_Pause" />
+    <sequenceFlow id="Flow_B13" sourceRef="Boundary_Conditional" targetRef="Task_Cancel" />
+    <sequenceFlow id="Flow_B14" sourceRef="Task_Remind" targetRef="EndEvent_B" />
+    <sequenceFlow id="Flow_B15" sourceRef="Boundary_Cancel" targetRef="Task_Failed" />
+    <sequenceFlow id="Flow_B16" sourceRef="Boundary_Error" targetRef="Task_Failed" />
+    <sequenceFlow id="Flow_B17" sourceRef="Task_Failed" targetRef="EndEvent_B" />
+  </process>
+  <message id="Message_Note" name="Note message" />
+  <signal id="Signal_Pause" name="Pause" />
+  <error id="Error_Decline" errorCode="D-1" name="Declined" />
+  <bpmndi:BPMNDiagram id="BPMNDiagram_BPMNPlane_1" name="Boundary zoo">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Process_Boundary">
+      <bpmndi:BPMNShape id="StartEvent_B_di" bpmnElement="StartEvent_B">
+        <dc:Bounds x="152" y="242" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Main_di" bpmnElement="Task_Main">
+        <dc:Bounds x="240" y="220" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Boundary_Timer_di" bpmnElement="Boundary_Timer">
+        <dc:Bounds x="322" y="202" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Boundary_Message_di" bpmnElement="Boundary_Message">
+        <dc:Bounds x="322" y="282" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Boundary_Signal_di" bpmnElement="Boundary_Signal">
+        <dc:Bounds x="262" y="182" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Boundary_Conditional_di" bpmnElement="Boundary_Conditional">
+        <dc:Bounds x="292" y="182" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Remind_di" bpmnElement="Task_Remind">
+        <dc:Bounds x="440" y="140" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Note_di" bpmnElement="Task_Note">
+        <dc:Bounds x="440" y="300" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Pause_di" bpmnElement="Task_Pause">
+        <dc:Bounds x="440" y="60" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Cancel_di" bpmnElement="Task_Cancel">
+        <dc:Bounds x="440" y="220" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Transaction_Pay_di" bpmnElement="Transaction_Pay" isExpanded="true">
+        <dc:Bounds x="620" y="180" width="350" height="200" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="StartEvent_Pay_di" bpmnElement="StartEvent_Pay">
+        <dc:Bounds x="672" y="262" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Charge_di" bpmnElement="Task_Charge">
+        <dc:Bounds x="760" y="240" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EndEvent_Pay_di" bpmnElement="EndEvent_Pay">
+        <dc:Bounds x="912" y="262" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Boundary_Cancel_di" bpmnElement="Boundary_Cancel">
+        <dc:Bounds x="702" y="362" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Boundary_Error_di" bpmnElement="Boundary_Error">
+        <dc:Bounds x="822" y="362" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Failed_di" bpmnElement="Task_Failed">
+        <dc:Bounds x="760" y="420" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EndEvent_B_di" bpmnElement="EndEvent_B">
+        <dc:Bounds x="1042" y="242" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_BT1_di" bpmnElement="Flow_BT1">
+        <di:waypoint x="708" y="280" />
+        <di:waypoint x="760" y="280" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_BT2_di" bpmnElement="Flow_BT2">
+        <di:waypoint x="860" y="280" />
+        <di:waypoint x="912" y="280" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_B1_di" bpmnElement="Flow_B1">
+        <di:waypoint x="188" y="260" />
+        <di:waypoint x="240" y="260" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_B2_di" bpmnElement="Flow_B2">
+        <di:waypoint x="340" y="260" />
+        <di:waypoint x="620" y="280" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_B3_di" bpmnElement="Flow_B3">
+        <di:waypoint x="970" y="280" />
+        <di:waypoint x="1042" y="260" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_B10_di" bpmnElement="Flow_B10">
+        <di:waypoint x="358" y="220" />
+        <di:waypoint x="440" y="180" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_B11_di" bpmnElement="Flow_B11">
+        <di:waypoint x="358" y="300" />
+        <di:waypoint x="440" y="340" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_B12_di" bpmnElement="Flow_B12">
+        <di:waypoint x="298" y="200" />
+        <di:waypoint x="440" y="100" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_B13_di" bpmnElement="Flow_B13">
+        <di:waypoint x="328" y="200" />
+        <di:waypoint x="440" y="260" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_B14_di" bpmnElement="Flow_B14">
+        <di:waypoint x="540" y="180" />
+        <di:waypoint x="1042" y="260" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_B15_di" bpmnElement="Flow_B15">
+        <di:waypoint x="738" y="380" />
+        <di:waypoint x="760" y="460" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_B16_di" bpmnElement="Flow_B16">
+        <di:waypoint x="822" y="380" />
+        <di:waypoint x="860" y="460" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_B17_di" bpmnElement="Flow_B17">
+        <di:waypoint x="860" y="460" />
+        <di:waypoint x="1042" y="260" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</definitions>

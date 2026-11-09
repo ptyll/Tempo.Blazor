@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitions_Process_NoDi" targetNamespace="http://tempo.example/bpmn/corpus" exporter="Tempo.Blazor" exporterVersion="2.11.0" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:tempo="https://tempo.blazor/schemas/bpmn-extensions" name="Headless process">
+  <process id="Process_NoDi" name="Headless process" isExecutable="false">
+    <startEvent id="StartEvent_NoDi" name="Begin">
+      <outgoing>Flow_ND1</outgoing>
+    </startEvent>
+    <serviceTask id="ServiceTask_Call" name="Call service" implementation="##WebService">
+      <incoming>Flow_ND1</incoming>
+      <outgoing>Flow_ND2</outgoing>
+    </serviceTask>
+    <scriptTask id="ScriptTask_Calc" name="Calculate" scriptFormat="javascript">
+      <incoming>Flow_ND2</incoming>
+      <outgoing>Flow_ND3</outgoing>
+    </scriptTask>
+    <businessRuleTask id="RuleTask_Check" name="Check rules" implementation="##unspecified">
+      <incoming>Flow_ND3</incoming>
+      <outgoing>Flow_ND4</outgoing>
+    </businessRuleTask>
+    <sendTask id="SendTask_Notify" name="Notify" implementation="##WebService">
+      <incoming>Flow_ND4</incoming>
+      <outgoing>Flow_ND5</outgoing>
+    </sendTask>
+    <receiveTask id="ReceiveTask_Wait" name="Wait for reply" implementation="##WebService">
+      <incoming>Flow_ND5</incoming>
+      <outgoing>Flow_ND6</outgoing>
+    </receiveTask>
+    <manualTask id="ManualTask_Inspect" name="Inspect manually">
+      <incoming>Flow_ND6</incoming>
+      <outgoing>Flow_ND7</outgoing>
+    </manualTask>
+    <endEvent id="EndEvent_NoDi" name="End">
+      <incoming>Flow_ND7</incoming>
+    </endEvent>
+    <sequenceFlow id="Flow_ND1" sourceRef="StartEvent_NoDi" targetRef="ServiceTask_Call" />
+    <sequenceFlow id="Flow_ND2" sourceRef="ServiceTask_Call" targetRef="ScriptTask_Calc" />
+    <sequenceFlow id="Flow_ND3" sourceRef="ScriptTask_Calc" targetRef="RuleTask_Check" />
+    <sequenceFlow id="Flow_ND4" sourceRef="RuleTask_Check" targetRef="SendTask_Notify" />
+    <sequenceFlow id="Flow_ND5" sourceRef="SendTask_Notify" targetRef="ReceiveTask_Wait" />
+    <sequenceFlow id="Flow_ND6" sourceRef="ReceiveTask_Wait" targetRef="ManualTask_Inspect" />
+    <sequenceFlow id="Flow_ND7" sourceRef="ManualTask_Inspect" targetRef="EndEvent_NoDi" />
+  </process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_auto" name="Headless process">
+    <bpmndi:BPMNPlane id="auto" bpmnElement="Process_NoDi">
+      <bpmndi:BPMNShape id="StartEvent_NoDi_di" bpmnElement="StartEvent_NoDi">
+        <dc:Bounds x="40" y="62" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="ServiceTask_Call_di" bpmnElement="ServiceTask_Call">
+        <dc:Bounds x="180" y="40" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="ScriptTask_Calc_di" bpmnElement="ScriptTask_Calc">
+        <dc:Bounds x="320" y="40" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="RuleTask_Check_di" bpmnElement="RuleTask_Check">
+        <dc:Bounds x="460" y="40" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="SendTask_Notify_di" bpmnElement="SendTask_Notify">
+        <dc:Bounds x="600" y="40" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="ReceiveTask_Wait_di" bpmnElement="ReceiveTask_Wait">
+        <dc:Bounds x="740" y="40" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="ManualTask_Inspect_di" bpmnElement="ManualTask_Inspect">
+        <dc:Bounds x="880" y="40" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EndEvent_NoDi_di" bpmnElement="EndEvent_NoDi">
+        <dc:Bounds x="1020" y="62" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_ND1_di" bpmnElement="Flow_ND1">
+        <di:waypoint x="76" y="80" />
+        <di:waypoint x="180" y="80" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_ND2_di" bpmnElement="Flow_ND2">
+        <di:waypoint x="280" y="80" />
+        <di:waypoint x="320" y="80" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_ND3_di" bpmnElement="Flow_ND3">
+        <di:waypoint x="420" y="80" />
+        <di:waypoint x="460" y="80" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_ND4_di" bpmnElement="Flow_ND4">
+        <di:waypoint x="560" y="80" />
+        <di:waypoint x="600" y="80" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_ND5_di" bpmnElement="Flow_ND5">
+        <di:waypoint x="700" y="80" />
+        <di:waypoint x="740" y="80" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_ND6_di" bpmnElement="Flow_ND6">
+        <di:waypoint x="840" y="80" />
+        <di:waypoint x="880" y="80" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_ND7_di" bpmnElement="Flow_ND7">
+        <di:waypoint x="980" y="80" />
+        <di:waypoint x="1020" y="80" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</definitions>

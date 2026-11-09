@@ -1,0 +1,186 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitions_Process_Us" targetNamespace="http://tempo.example/bpmn/corpus" exporter="Tempo.Blazor" exporterVersion="2.11.0" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:tempo="https://tempo.blazor/schemas/bpmn-extensions">
+  <collaboration id="Process_Us_collaboration">
+    <participant id="Participant_Us" name="Us" processRef="Process_Us" />
+    <participant id="Participant_Them" name="Them" processRef="Process_Them" />
+    <messageFlow id="MessageFlow_Unsup" sourceRef="Participant_Us" targetRef="Participant_Them" />
+  </collaboration>
+  <process id="Process_Us" name="Our side" isExecutable="false">
+    <startEvent id="StartEvent_Unsup" name="Start">
+      <outgoing>Flow_U1</outgoing>
+    </startEvent>
+    <task id="Task_Multi" name="Fan out to all regions">
+      <incoming>Flow_U1</incoming>
+      <outgoing>Flow_U2</outgoing>
+    </task>
+    <task id="Task_StandardLoop" name="Retry until ok">
+      <incoming>Flow_U2</incoming>
+      <outgoing>Flow_U3</outgoing>
+    </task>
+    <subProcess id="SubProcess_AdHoc" name="Ad-hoc review">
+      <task id="Task_ReviewA" name="Review part A" />
+      <task id="Task_ReviewB" name="Review part B" />
+    </subProcess>
+    <adHocSubProcess id="AdHocOrder" name="Ordered ad-hoc work" ordering="Parallel">
+      <completionCondition xsi:type="tFormalExpression">done</completionCondition>
+      <task id="Task_OrderedA" name="Ordered step A" />
+      <task id="Task_OrderedB" name="Ordered step B" />
+    </adHocSubProcess>
+    <transaction id="Transaction_Unsup" name="Compensable payment">
+      <task id="Task_PayU" name="Pay">
+        <incoming>Flow_UT0</incoming>
+        <outgoing>Flow_UT1</outgoing>
+      </task>
+      <startEvent id="StartEvent_PayU" name="Pay start">
+        <outgoing>Flow_UT0</outgoing>
+      </startEvent>
+      <endEvent id="EndEvent_PayU" name="Pay end">
+        <incoming>Flow_UT1</incoming>
+      </endEvent>
+      <boundaryEvent id="Boundary_Compensate" attachedToRef="Task_PayU" cancelActivity="false">
+        <outgoing>Flow_U5</outgoing>
+        <compensateEventDefinition id="CompensateBoundaryDef" waitForCompletion="true" />
+      </boundaryEvent>
+      <task id="Task_UndoPay" name="Undo payment" isForCompensation="true">
+        <incoming>Flow_U5</incoming>
+      </task>
+      <sequenceFlow id="Flow_UT0" sourceRef="StartEvent_PayU" targetRef="Task_PayU" />
+      <sequenceFlow id="Flow_UT1" sourceRef="Task_PayU" targetRef="EndEvent_PayU" />
+      <sequenceFlow id="Flow_U5" sourceRef="Boundary_Compensate" targetRef="Task_UndoPay" />
+      <association id="Association_Comp" sourceRef="Task_UndoPay" targetRef="Task_PayU" />
+    </transaction>
+    <endEvent id="EndEvent_Unsup" name="End">
+      <incoming>Flow_U4</incoming>
+      <compensateEventDefinition id="CompensateEndDef" activityRef="Task_PayU" waitForCompletion="true" />
+    </endEvent>
+    <sequenceFlow id="Flow_U1" sourceRef="StartEvent_Unsup" targetRef="Task_Multi" />
+    <sequenceFlow id="Flow_U2" sourceRef="Task_Multi" targetRef="Task_StandardLoop" />
+    <sequenceFlow id="Flow_U3" sourceRef="Task_StandardLoop" targetRef="Transaction_Unsup" />
+    <sequenceFlow id="Flow_U4" sourceRef="Transaction_Unsup" targetRef="EndEvent_Unsup" />
+  </process>
+  <process id="Process_Them" name="Their side" isExecutable="false">
+    <startEvent id="StartEvent_Them" name="Start">
+      <outgoing>Flow_T1</outgoing>
+    </startEvent>
+    <task id="Task_Them" name="Their work">
+      <incoming>Flow_T1</incoming>
+      <outgoing>Flow_T2</outgoing>
+    </task>
+    <endEvent id="EndEvent_Them" name="End">
+      <incoming>Flow_T2</incoming>
+    </endEvent>
+    <sequenceFlow id="Flow_T1" sourceRef="StartEvent_Them" targetRef="Task_Them" />
+    <sequenceFlow id="Flow_T2" sourceRef="Task_Them" targetRef="EndEvent_Them" />
+  </process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_BPMNPlane_1" name="Unsupported constructs">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Process_Us_collaboration">
+      <bpmndi:BPMNShape id="Participant_Us_di" bpmnElement="Participant_Us" isHorizontal="true">
+        <dc:Bounds x="160" y="80" width="600" height="300" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="StartEvent_Unsup_di" bpmnElement="StartEvent_Unsup">
+        <dc:Bounds x="90" y="420" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Multi_di" bpmnElement="Task_Multi">
+        <dc:Bounds x="550" y="638" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_StandardLoop_di" bpmnElement="Task_StandardLoop">
+        <dc:Bounds x="1010" y="638" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="SubProcess_AdHoc_di" bpmnElement="SubProcess_AdHoc">
+        <dc:Bounds x="90" y="476" width="140" height="220" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_ReviewA_di" bpmnElement="Task_ReviewA">
+        <dc:Bounds x="110" y="496" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_ReviewB_di" bpmnElement="Task_ReviewB">
+        <dc:Bounds x="110" y="596" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="AdHocOrder_di" bpmnElement="AdHocOrder">
+        <dc:Bounds x="90" y="716" width="140" height="220" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_OrderedA_di" bpmnElement="Task_OrderedA">
+        <dc:Bounds x="110" y="736" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_OrderedB_di" bpmnElement="Task_OrderedB">
+        <dc:Bounds x="110" y="836" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Transaction_Unsup_di" bpmnElement="Transaction_Unsup">
+        <dc:Bounds x="1470" y="590" width="420" height="176" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_PayU_di" bpmnElement="Task_PayU">
+        <dc:Bounds x="1630" y="610" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="StartEvent_PayU_di" bpmnElement="StartEvent_PayU">
+        <dc:Bounds x="1490" y="660" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EndEvent_PayU_di" bpmnElement="EndEvent_PayU">
+        <dc:Bounds x="1770" y="610" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Boundary_Compensate_di" bpmnElement="Boundary_Compensate">
+        <dc:Bounds x="1630" y="710" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_UndoPay_di" bpmnElement="Task_UndoPay">
+        <dc:Bounds x="1770" y="666" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EndEvent_Unsup_di" bpmnElement="EndEvent_Unsup">
+        <dc:Bounds x="1930" y="660" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Participant_Them_di" bpmnElement="Participant_Them" isHorizontal="true">
+        <dc:Bounds x="160" y="440" width="600" height="200" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="StartEvent_Them_di" bpmnElement="StartEvent_Them">
+        <dc:Bounds x="90" y="702" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Them_di" bpmnElement="Task_Them">
+        <dc:Bounds x="230" y="680" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EndEvent_Them_di" bpmnElement="EndEvent_Them">
+        <dc:Bounds x="370" y="702" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_UT0_di" bpmnElement="Flow_UT0">
+        <di:waypoint x="1526" y="678" />
+        <di:waypoint x="1630" y="650" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_UT1_di" bpmnElement="Flow_UT1">
+        <di:waypoint x="1730" y="650" />
+        <di:waypoint x="1770" y="628" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_U5_di" bpmnElement="Flow_U5">
+        <di:waypoint x="1666" y="728" />
+        <di:waypoint x="1770" y="706" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Association_Comp_di" bpmnElement="Association_Comp">
+        <di:waypoint x="1770" y="706" />
+        <di:waypoint x="1730" y="650" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_U1_di" bpmnElement="Flow_U1">
+        <di:waypoint x="126" y="438" />
+        <di:waypoint x="550" y="678" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_U2_di" bpmnElement="Flow_U2">
+        <di:waypoint x="650" y="678" />
+        <di:waypoint x="1010" y="678" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_U3_di" bpmnElement="Flow_U3">
+        <di:waypoint x="1110" y="678" />
+        <di:waypoint x="1470" y="678" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_U4_di" bpmnElement="Flow_U4">
+        <di:waypoint x="1890" y="678" />
+        <di:waypoint x="1930" y="678" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_T1_di" bpmnElement="Flow_T1">
+        <di:waypoint x="126" y="720" />
+        <di:waypoint x="230" y="720" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_T2_di" bpmnElement="Flow_T2">
+        <di:waypoint x="330" y="720" />
+        <di:waypoint x="370" y="720" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MessageFlow_Unsup_di" bpmnElement="MessageFlow_Unsup">
+        <di:waypoint x="400" y="380" />
+        <di:waypoint x="400" y="460" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</definitions>

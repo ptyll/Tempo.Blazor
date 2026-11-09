@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitions_Process_Simple" targetNamespace="http://tempo.example/bpmn/corpus" exporter="Tempo.Blazor" exporterVersion="2.11.0" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:tempo="https://tempo.blazor/schemas/bpmn-extensions" name="Order handling">
+  <process id="Process_Simple" name="Order handling" isExecutable="false">
+    <startEvent id="StartEvent_1" name="Order received">
+      <outgoing>Flow_1</outgoing>
+    </startEvent>
+    <userTask id="Task_EnterOrder" name="Enter order">
+      <incoming>Flow_1</incoming>
+      <outgoing>Flow_2</outgoing>
+    </userTask>
+    <exclusiveGateway id="Gateway_Approved" name="Approved?" default="Flow_Rejected">
+      <incoming>Flow_2</incoming>
+      <outgoing>Flow_Approved</outgoing>
+      <outgoing>Flow_Rejected</outgoing>
+    </exclusiveGateway>
+    <task id="Task_Ship" name="Ship order">
+      <incoming>Flow_Approved</incoming>
+      <outgoing>Flow_End</outgoing>
+    </task>
+    <endEvent id="EndEvent_Shipped" name="Order shipped">
+      <incoming>Flow_End</incoming>
+    </endEvent>
+    <endEvent id="EndEvent_Rejected" name="Order rejected">
+      <incoming>Flow_Rejected</incoming>
+    </endEvent>
+    <sequenceFlow id="Flow_1" sourceRef="StartEvent_1" targetRef="Task_EnterOrder" />
+    <sequenceFlow id="Flow_2" sourceRef="Task_EnterOrder" targetRef="Gateway_Approved" />
+    <sequenceFlow id="Flow_Approved" sourceRef="Gateway_Approved" targetRef="Task_Ship" name="yes">
+      <conditionExpression xsi:type="tFormalExpression" language="http://www.w3.org/1999/XPath">approved = true()</conditionExpression>
+    </sequenceFlow>
+    <sequenceFlow id="Flow_Rejected" sourceRef="Gateway_Approved" targetRef="EndEvent_Rejected" name="no" />
+    <sequenceFlow id="Flow_End" sourceRef="Task_Ship" targetRef="EndEvent_Shipped" />
+  </process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_BPMNPlane_1" name="Order handling">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Process_Simple">
+      <bpmndi:BPMNShape id="StartEvent_1_di" bpmnElement="StartEvent_1">
+        <dc:Bounds x="172" y="152" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="158" y="195" width="65" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_EnterOrder_di" bpmnElement="Task_EnterOrder">
+        <dc:Bounds x="260" y="130" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_Approved_di" bpmnElement="Gateway_Approved" isMarkerVisible="true">
+        <dc:Bounds x="415" y="145" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Ship_di" bpmnElement="Task_Ship">
+        <dc:Bounds x="520" y="130" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EndEvent_Shipped_di" bpmnElement="EndEvent_Shipped">
+        <dc:Bounds x="672" y="152" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EndEvent_Rejected_di" bpmnElement="EndEvent_Rejected">
+        <dc:Bounds x="522" y="262" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_1_di" bpmnElement="Flow_1">
+        <di:waypoint x="208" y="170" />
+        <di:waypoint x="260" y="170" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_2_di" bpmnElement="Flow_2">
+        <di:waypoint x="360" y="170" />
+        <di:waypoint x="415" y="170" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Approved_di" bpmnElement="Flow_Approved">
+        <di:waypoint x="465" y="170" />
+        <di:waypoint x="520" y="170" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="475" y="146" width="22" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Rejected_di" bpmnElement="Flow_Rejected">
+        <di:waypoint x="440" y="195" />
+        <di:waypoint x="440" y="280" />
+        <di:waypoint x="522" y="280" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_End_di" bpmnElement="Flow_End">
+        <di:waypoint x="620" y="170" />
+        <di:waypoint x="672" y="170" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</definitions>

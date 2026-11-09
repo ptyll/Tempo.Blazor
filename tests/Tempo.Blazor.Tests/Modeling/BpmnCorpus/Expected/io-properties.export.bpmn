@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitions_Process_Io" targetNamespace="http://tempo.example/bpmn/corpus" exporter="Tempo.Blazor" exporterVersion="2.11.0" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:tempo="https://tempo.blazor/schemas/bpmn-extensions" name="IO handling">
+  <process id="Process_Io" name="IO handling" isExecutable="false">
+    <dataObject id="DataObject_Doc" name="Document" isCollection="false" />
+    <startEvent id="StartEvent_Io" name="Start">
+      <outgoing>Flow_I1</outgoing>
+    </startEvent>
+    <task id="Task_Write" name="Write report">
+      <incoming>Flow_I1</incoming>
+      <outgoing>Flow_I2</outgoing>
+      <dataInputAssociation id="DIA_Template">
+        <sourceRef>DataObjectRef_Doc</sourceRef>
+        <targetRef>Task_Write</targetRef>
+      </dataInputAssociation>
+      <dataOutputAssociation id="DOA_Report">
+        <sourceRef>Task_Write</sourceRef>
+        <targetRef>DataObjectRef_Doc</targetRef>
+      </dataOutputAssociation>
+    </task>
+    <userTask id="Task_Approve" name="Approve">
+      <incoming>Flow_I2</incoming>
+      <outgoing>Flow_I3</outgoing>
+      <dataInputAssociation id="DIA_Approver">
+        <sourceRef>DataObjectRef_Doc</sourceRef>
+        <targetRef>Task_Approve</targetRef>
+      </dataInputAssociation>
+    </userTask>
+    <endEvent id="EndEvent_Io" name="Done">
+      <incoming>Flow_I3</incoming>
+    </endEvent>
+    <dataObjectReference id="DataObjectRef_Doc" name="Document" dataObjectRef="DataObject_Doc" />
+    <sequenceFlow id="Flow_I1" sourceRef="StartEvent_Io" targetRef="Task_Write" />
+    <sequenceFlow id="Flow_I2" sourceRef="Task_Write" targetRef="Task_Approve" />
+    <sequenceFlow id="Flow_I3" sourceRef="Task_Approve" targetRef="EndEvent_Io" />
+  </process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_BPMNPlane_Io" name="IO handling">
+    <bpmndi:BPMNPlane id="BPMNPlane_Io" bpmnElement="Process_Io">
+      <bpmndi:BPMNShape id="StartEvent_Io_di" bpmnElement="StartEvent_Io">
+        <dc:Bounds x="152" y="162" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Write_di" bpmnElement="Task_Write">
+        <dc:Bounds x="240" y="140" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Approve_di" bpmnElement="Task_Approve">
+        <dc:Bounds x="410" y="140" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EndEvent_Io_di" bpmnElement="EndEvent_Io">
+        <dc:Bounds x="582" y="162" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="DataObjectRef_Doc_di" bpmnElement="DataObjectRef_Doc">
+        <dc:Bounds x="340" y="280" width="36" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_I1_di" bpmnElement="Flow_I1">
+        <di:waypoint x="188" y="180" />
+        <di:waypoint x="240" y="180" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_I2_di" bpmnElement="Flow_I2">
+        <di:waypoint x="340" y="180" />
+        <di:waypoint x="410" y="180" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_I3_di" bpmnElement="Flow_I3">
+        <di:waypoint x="510" y="180" />
+        <di:waypoint x="582" y="180" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="DIA_Template_di" bpmnElement="DIA_Template">
+        <di:waypoint x="340" y="305" />
+        <di:waypoint x="340" y="180" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="DOA_Report_di" bpmnElement="DOA_Report">
+        <di:waypoint x="340" y="180" />
+        <di:waypoint x="340" y="305" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="DIA_Approver_di" bpmnElement="DIA_Approver">
+        <di:waypoint x="376" y="305" />
+        <di:waypoint x="410" y="180" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</definitions>

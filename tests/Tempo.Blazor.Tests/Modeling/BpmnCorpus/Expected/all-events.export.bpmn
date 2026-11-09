@@ -1,0 +1,291 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitions_Process_Events" targetNamespace="http://tempo.example/bpmn/corpus" exporter="Tempo.Blazor" exporterVersion="2.11.0" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:tempo="https://tempo.blazor/schemas/bpmn-extensions" name="Event zoo">
+  <process id="Process_Events" name="Event zoo" isExecutable="false">
+    <startEvent id="Start_None" name="Plain start">
+      <outgoing>Flow_E01</outgoing>
+    </startEvent>
+    <startEvent id="Start_Message" name="Message start">
+      <outgoing>Flow_E02</outgoing>
+      <messageEventDefinition id="MsgStartDef" messageRef="Message_StartMsg" />
+    </startEvent>
+    <startEvent id="Start_Timer" name="Timer start">
+      <outgoing>Flow_E03</outgoing>
+      <timerEventDefinition id="TimerStartDef">
+        <timeCycle xsi:type="tFormalExpression">0 0 6 * * ?</timeCycle>
+      </timerEventDefinition>
+    </startEvent>
+    <startEvent id="Start_Signal" name="Signal start">
+      <outgoing>Flow_E04</outgoing>
+      <signalEventDefinition id="SignalStartDef" signalRef="Signal_Alarm" />
+    </startEvent>
+    <startEvent id="Start_Conditional" name="Conditional start">
+      <outgoing>Flow_E05</outgoing>
+      <conditionalEventDefinition id="CondStartDef">
+        <condition xsi:type="tFormalExpression">stock &lt; 5</condition>
+      </conditionalEventDefinition>
+    </startEvent>
+    <task id="Task_Events_Hub" name="Hub">
+      <incoming>Flow_E01</incoming>
+      <incoming>Flow_E02</incoming>
+      <incoming>Flow_E03</incoming>
+      <incoming>Flow_E04</incoming>
+      <incoming>Flow_E05</incoming>
+      <outgoing>Flow_E10</outgoing>
+      <outgoing>Flow_E11</outgoing>
+      <outgoing>Flow_E12</outgoing>
+      <outgoing>Flow_E13</outgoing>
+      <outgoing>Flow_E14</outgoing>
+      <outgoing>Flow_E15</outgoing>
+    </task>
+    <intermediateCatchEvent id="Catch_Message" name="Catch message">
+      <incoming>Flow_E10</incoming>
+      <outgoing>Flow_E20</outgoing>
+      <messageEventDefinition id="MsgCatchDef" messageRef="Message_InfoMsg" />
+    </intermediateCatchEvent>
+    <intermediateCatchEvent id="Catch_Timer" name="Catch timer">
+      <incoming>Flow_E11</incoming>
+      <timerEventDefinition id="TimerCatchDef">
+        <timeDate xsi:type="tFormalExpression">2027-01-01T00:00:00Z</timeDate>
+      </timerEventDefinition>
+    </intermediateCatchEvent>
+    <intermediateCatchEvent id="Catch_Signal" name="Catch signal">
+      <incoming>Flow_E12</incoming>
+      <signalEventDefinition id="SignalCatchDef" signalRef="Signal_Alarm" />
+    </intermediateCatchEvent>
+    <intermediateCatchEvent id="Catch_Conditional" name="Catch condition">
+      <incoming>Flow_E13</incoming>
+      <conditionalEventDefinition id="CondCatchDef">
+        <condition xsi:type="tFormalExpression">approved</condition>
+      </conditionalEventDefinition>
+    </intermediateCatchEvent>
+    <intermediateCatchEvent id="Catch_Link" name="Catch link">
+      <incoming>Flow_E14</incoming>
+      <linkEventDefinition id="LinkCatchDef" name="hop" />
+    </intermediateCatchEvent>
+    <intermediateThrowEvent id="Throw_Message" name="Throw message">
+      <incoming>Flow_E15</incoming>
+      <outgoing>Flow_E16</outgoing>
+      <messageEventDefinition id="MsgThrowDef" messageRef="Message_InfoMsg" />
+    </intermediateThrowEvent>
+    <intermediateThrowEvent id="Throw_Signal" name="Throw signal">
+      <incoming>Flow_E16</incoming>
+      <outgoing>Flow_E17</outgoing>
+      <signalEventDefinition id="SignalThrowDef" signalRef="Signal_Alarm" />
+    </intermediateThrowEvent>
+    <intermediateThrowEvent id="Throw_Escalation" name="Throw escalation">
+      <incoming>Flow_E17</incoming>
+      <outgoing>Flow_E18</outgoing>
+      <escalationEventDefinition id="EscThrowDef" escalationRef="Escalation_Late" />
+    </intermediateThrowEvent>
+    <intermediateThrowEvent id="Throw_Link" name="Throw link">
+      <incoming>Flow_E18</incoming>
+      <outgoing>Flow_E19</outgoing>
+      <linkEventDefinition id="LinkThrowDef" name="hop" />
+    </intermediateThrowEvent>
+    <task id="Task_Events_End" name="Finish">
+      <incoming>Flow_E19</incoming>
+      <incoming>Flow_E20</incoming>
+      <outgoing>Flow_E21</outgoing>
+      <outgoing>Flow_E22</outgoing>
+      <outgoing>Flow_E23</outgoing>
+      <outgoing>Flow_E24</outgoing>
+      <outgoing>Flow_E25</outgoing>
+    </task>
+    <endEvent id="End_None" name="Plain end">
+      <incoming>Flow_E21</incoming>
+    </endEvent>
+    <endEvent id="End_Message" name="Message end">
+      <incoming>Flow_E22</incoming>
+      <messageEventDefinition id="MsgEndDef" messageRef="Message_InfoMsg" />
+    </endEvent>
+    <endEvent id="End_Error" name="Error end">
+      <incoming>Flow_E23</incoming>
+      <errorEventDefinition id="ErrorEndDef" errorRef="Error_Broken" />
+    </endEvent>
+    <endEvent id="End_Signal" name="Signal end">
+      <incoming>Flow_E24</incoming>
+      <signalEventDefinition id="SignalEndDef" signalRef="Signal_Alarm" />
+    </endEvent>
+    <endEvent id="End_Terminate" name="Terminate">
+      <incoming>Flow_E25</incoming>
+      <terminateEventDefinition id="TerminateDef" />
+    </endEvent>
+    <sequenceFlow id="Flow_E01" sourceRef="Start_None" targetRef="Task_Events_Hub" />
+    <sequenceFlow id="Flow_E02" sourceRef="Start_Message" targetRef="Task_Events_Hub" />
+    <sequenceFlow id="Flow_E03" sourceRef="Start_Timer" targetRef="Task_Events_Hub" />
+    <sequenceFlow id="Flow_E04" sourceRef="Start_Signal" targetRef="Task_Events_Hub" />
+    <sequenceFlow id="Flow_E05" sourceRef="Start_Conditional" targetRef="Task_Events_Hub" />
+    <sequenceFlow id="Flow_E10" sourceRef="Task_Events_Hub" targetRef="Catch_Message" />
+    <sequenceFlow id="Flow_E11" sourceRef="Task_Events_Hub" targetRef="Catch_Timer" />
+    <sequenceFlow id="Flow_E12" sourceRef="Task_Events_Hub" targetRef="Catch_Signal" />
+    <sequenceFlow id="Flow_E13" sourceRef="Task_Events_Hub" targetRef="Catch_Conditional" />
+    <sequenceFlow id="Flow_E14" sourceRef="Task_Events_Hub" targetRef="Catch_Link" />
+    <sequenceFlow id="Flow_E15" sourceRef="Task_Events_Hub" targetRef="Throw_Message" />
+    <sequenceFlow id="Flow_E16" sourceRef="Throw_Message" targetRef="Throw_Signal" />
+    <sequenceFlow id="Flow_E17" sourceRef="Throw_Signal" targetRef="Throw_Escalation" />
+    <sequenceFlow id="Flow_E18" sourceRef="Throw_Escalation" targetRef="Throw_Link" />
+    <sequenceFlow id="Flow_E19" sourceRef="Throw_Link" targetRef="Task_Events_End" />
+    <sequenceFlow id="Flow_E20" sourceRef="Catch_Message" targetRef="Task_Events_End" />
+    <sequenceFlow id="Flow_E21" sourceRef="Task_Events_End" targetRef="End_None" />
+    <sequenceFlow id="Flow_E22" sourceRef="Task_Events_End" targetRef="End_Message" />
+    <sequenceFlow id="Flow_E23" sourceRef="Task_Events_End" targetRef="End_Error" />
+    <sequenceFlow id="Flow_E24" sourceRef="Task_Events_End" targetRef="End_Signal" />
+    <sequenceFlow id="Flow_E25" sourceRef="Task_Events_End" targetRef="End_Terminate" />
+  </process>
+  <message id="Message_StartMsg" name="Start message" />
+  <message id="Message_InfoMsg" name="Info message" />
+  <signal id="Signal_Alarm" name="Alarm" />
+  <error id="Error_Broken" errorCode="E-42" name="Broken" />
+  <escalation id="Escalation_Late" escalationCode="ESC-1" name="Late escalation" />
+  <bpmndi:BPMNDiagram id="BPMNDiagram_BPMNPlane_1" name="Event zoo">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Process_Events">
+      <bpmndi:BPMNShape id="Start_None_di" bpmnElement="Start_None">
+        <dc:Bounds x="152" y="102" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Start_Message_di" bpmnElement="Start_Message">
+        <dc:Bounds x="152" y="182" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Start_Timer_di" bpmnElement="Start_Timer">
+        <dc:Bounds x="152" y="262" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Start_Signal_di" bpmnElement="Start_Signal">
+        <dc:Bounds x="152" y="342" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Start_Conditional_di" bpmnElement="Start_Conditional">
+        <dc:Bounds x="152" y="422" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Events_Hub_di" bpmnElement="Task_Events_Hub">
+        <dc:Bounds x="300" y="240" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Catch_Message_di" bpmnElement="Catch_Message">
+        <dc:Bounds x="490" y="92" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Catch_Timer_di" bpmnElement="Catch_Timer">
+        <dc:Bounds x="490" y="162" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Catch_Signal_di" bpmnElement="Catch_Signal">
+        <dc:Bounds x="490" y="232" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Catch_Conditional_di" bpmnElement="Catch_Conditional">
+        <dc:Bounds x="490" y="302" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Catch_Link_di" bpmnElement="Catch_Link">
+        <dc:Bounds x="490" y="372" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Throw_Message_di" bpmnElement="Throw_Message">
+        <dc:Bounds x="490" y="442" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Throw_Signal_di" bpmnElement="Throw_Signal">
+        <dc:Bounds x="580" y="442" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Throw_Escalation_di" bpmnElement="Throw_Escalation">
+        <dc:Bounds x="670" y="442" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Throw_Link_di" bpmnElement="Throw_Link">
+        <dc:Bounds x="760" y="442" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Events_End_di" bpmnElement="Task_Events_End">
+        <dc:Bounds x="860" y="240" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="End_None_di" bpmnElement="End_None">
+        <dc:Bounds x="1042" y="92" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="End_Message_di" bpmnElement="End_Message">
+        <dc:Bounds x="1042" y="162" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="End_Error_di" bpmnElement="End_Error">
+        <dc:Bounds x="1042" y="232" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="End_Signal_di" bpmnElement="End_Signal">
+        <dc:Bounds x="1042" y="302" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="End_Terminate_di" bpmnElement="End_Terminate">
+        <dc:Bounds x="1042" y="372" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_E01_di" bpmnElement="Flow_E01">
+        <di:waypoint x="188" y="120" />
+        <di:waypoint x="300" y="280" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_E02_di" bpmnElement="Flow_E02">
+        <di:waypoint x="188" y="200" />
+        <di:waypoint x="300" y="280" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_E03_di" bpmnElement="Flow_E03">
+        <di:waypoint x="188" y="280" />
+        <di:waypoint x="300" y="280" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_E04_di" bpmnElement="Flow_E04">
+        <di:waypoint x="188" y="360" />
+        <di:waypoint x="300" y="280" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_E05_di" bpmnElement="Flow_E05">
+        <di:waypoint x="188" y="440" />
+        <di:waypoint x="300" y="280" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_E10_di" bpmnElement="Flow_E10">
+        <di:waypoint x="400" y="280" />
+        <di:waypoint x="490" y="110" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_E11_di" bpmnElement="Flow_E11">
+        <di:waypoint x="400" y="280" />
+        <di:waypoint x="490" y="180" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_E12_di" bpmnElement="Flow_E12">
+        <di:waypoint x="400" y="280" />
+        <di:waypoint x="490" y="250" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_E13_di" bpmnElement="Flow_E13">
+        <di:waypoint x="400" y="280" />
+        <di:waypoint x="490" y="320" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_E14_di" bpmnElement="Flow_E14">
+        <di:waypoint x="400" y="280" />
+        <di:waypoint x="490" y="390" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_E15_di" bpmnElement="Flow_E15">
+        <di:waypoint x="400" y="280" />
+        <di:waypoint x="490" y="460" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_E16_di" bpmnElement="Flow_E16">
+        <di:waypoint x="526" y="460" />
+        <di:waypoint x="580" y="460" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_E17_di" bpmnElement="Flow_E17">
+        <di:waypoint x="616" y="460" />
+        <di:waypoint x="670" y="460" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_E18_di" bpmnElement="Flow_E18">
+        <di:waypoint x="706" y="460" />
+        <di:waypoint x="760" y="460" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_E19_di" bpmnElement="Flow_E19">
+        <di:waypoint x="796" y="460" />
+        <di:waypoint x="860" y="280" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_E20_di" bpmnElement="Flow_E20">
+        <di:waypoint x="526" y="110" />
+        <di:waypoint x="860" y="280" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_E21_di" bpmnElement="Flow_E21">
+        <di:waypoint x="960" y="280" />
+        <di:waypoint x="1042" y="110" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_E22_di" bpmnElement="Flow_E22">
+        <di:waypoint x="960" y="280" />
+        <di:waypoint x="1042" y="180" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_E23_di" bpmnElement="Flow_E23">
+        <di:waypoint x="960" y="280" />
+        <di:waypoint x="1042" y="250" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_E24_di" bpmnElement="Flow_E24">
+        <di:waypoint x="960" y="280" />
+        <di:waypoint x="1042" y="320" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_E25_di" bpmnElement="Flow_E25">
+        <di:waypoint x="960" y="280" />
+        <di:waypoint x="1042" y="390" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</definitions>

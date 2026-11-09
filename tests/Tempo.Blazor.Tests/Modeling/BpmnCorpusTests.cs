@@ -32,6 +32,7 @@ public sealed class BpmnCorpusTests
         "signavio-export.bpmn",
         "bizagi-export.bpmn",
         "annotations-group.bpmn",
+        "text-annotation-text.bpmn",
         "unsupported-constructs.bpmn",
         "prefixed-qnames.bpmn",
         "nested-subprocess.bpmn",

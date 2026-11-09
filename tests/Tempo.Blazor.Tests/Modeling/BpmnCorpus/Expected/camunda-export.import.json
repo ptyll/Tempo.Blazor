@@ -370,7 +370,11 @@
         "LoadedAt": "1970-01-01T00:00:00+00:00",
         "IsFresh": true
       },
-      "Properties": {}
+      "Properties": {
+        "bpmn:isExecutable": "true",
+        "camunda:versionTag": "1.4.0",
+        "camunda:historyTimeToLive": "180"
+      }
     }
   ],
   "Losses": [

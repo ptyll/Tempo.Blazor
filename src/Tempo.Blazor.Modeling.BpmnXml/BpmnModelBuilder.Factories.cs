@@ -107,15 +107,48 @@ internal sealed partial class BpmnModelBuilder
             : "bpmn:" + attribute.Name.LocalName;
     }
 
+    /// <summary>
+    /// The process element IS the model: its own attributes (<c>isExecutable</c>,
+    /// <c>camunda:versionTag</c>, <c>camunda:historyTimeToLive</c>, …) are preserved verbatim in
+    /// the model properties via the same catch-all the elements use (finding 5), so the exporter
+    /// can write them back onto <c>&lt;process&gt;</c>.
+    /// </summary>
+    private void ApplyProcessCatchAllAttributes(XElement process, ModelingModelDto model)
+    {
+        foreach (var attribute in process.Attributes())
+        {
+            if (attribute.IsNamespaceDeclaration)
+            {
+                continue;
+            }
+
+            if (attribute.Name.NamespaceName.Length == 0
+                && attribute.Name.LocalName is "id" or "name")
+            {
+                continue;
+            }
+
+            if (string.Equals(attribute.Name.NamespaceName, BpmnConstants.ModelNamespace, StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            model.Properties[CatchAllKey(attribute)] = BpmnImportInternals.StringElement(attribute.Value);
+        }
+    }
+
     /// <summary>Attributes the element catch-all skips but whose value the mapping still preserves explicitly.</summary>
-    private static void ApplyExplicitMappedAttributes(XElement source, ModelingElementDto node)
+    private void ApplyExplicitMappedAttributes(XElement source, ModelingElementDto node)
     {
         switch (source.Name.LocalName)
         {
             case "callActivity":
                 CopyRawAttribute(source, node, "calledElement");
-                CopyRawAttribute(source, node, "calledElementBinding");
-                CopyRawAttribute(source, node, "calledElementVersion");
+                // Legacy Camunda dialect attributes (unprefixed in old exports): preserve them
+                // under the Camunda namespace key — the exporter writes them back namespaced so
+                // schema-validating consumers accept the document (bpmn-moddle interop).
+                CopyRawAttribute(source, node, "calledElementBinding", CamundaNamespace);
+                CopyRawAttribute(source, node, "calledElementVersion", CamundaNamespace);
                 break;
             case "exclusiveGateway":
             case "parallelGateway":
@@ -127,13 +160,21 @@ internal sealed partial class BpmnModelBuilder
         }
     }
 
-    private static void CopyRawAttribute(XElement source, ModelingElementDto node, string localName)
+    private const string CamundaNamespace = "http://camunda.org/schema/1.0/bpmn";
+
+    private static void CopyRawAttribute(XElement source, ModelingElementDto node, string localName, string? namespaceOverride = null)
     {
         if (source.Attribute(localName) is { } attribute)
         {
-            node.Properties["bpmn:" + localName] = BpmnImportInternals.StringElement(attribute.Value);
+            var key = namespaceOverride is null
+                ? "bpmn:" + localName
+                : CatchAllKeyForNamespace(namespaceOverride, localName);
+            node.Properties[key] = BpmnImportInternals.StringElement(attribute.Value);
         }
     }
+
+    private static string CatchAllKeyForNamespace(string namespaceUri, string localName) =>
+        namespaceUri == CamundaNamespace ? "camunda:" + localName : "bpmn:" + localName;
 
     private bool IsConsumedAttribute(XElement source, XAttribute attribute)
     {

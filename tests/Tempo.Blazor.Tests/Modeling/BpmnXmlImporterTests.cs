@@ -352,8 +352,10 @@ public sealed class BpmnXmlImporterTests
         var callActivity = Element(result.Models[0], "CallActivity_Fulfil");
         callActivity.SemanticType.Should().Be("CallActivity");
         Property(callActivity, "bpmn:calledElement").GetString().Should().Be("Process_Fulfilment");
-        Property(callActivity, "bpmn:calledElementBinding").GetString().Should().Be("latest");
-        Property(callActivity, "bpmn:calledElementVersion").GetString().Should().Be("3");
+        // Legacy unprefixed Camunda dialect: preserved under the Camunda namespace key so the
+        // exporter writes them back namespaced (schema-valid per bpmn-moddle).
+        Property(callActivity, "camunda:calledElementBinding").GetString().Should().Be("latest");
+        Property(callActivity, "camunda:calledElementVersion").GetString().Should().Be("3");
     }
 
     // -------------------------------------------------------------- data

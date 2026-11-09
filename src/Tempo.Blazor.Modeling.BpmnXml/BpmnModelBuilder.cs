@@ -162,6 +162,7 @@ internal sealed partial class BpmnModelBuilder
             BuildPerProcessModels(collaboration, processes);
         }
 
+        ApplyRootExtensionElements(root);
         ImportViewsAndAutoLayout(root);
 
         ReportUnusedGlobalDefinitions();
@@ -330,6 +331,7 @@ internal sealed partial class BpmnModelBuilder
         if (BpmnImportInternals.IsLocal(container, "process"))
         {
             ReportProcessLevelContent(container, model);
+            ApplyProcessCatchAllAttributes(container, model);
         }
 
         var laneOwnership = new Dictionary<string, string>(StringComparer.Ordinal);
@@ -587,6 +589,16 @@ internal sealed partial class BpmnModelBuilder
         foreach (var definition in element.Elements()
                      .Where(child => child.Name.LocalName.EndsWith("EventDefinition", StringComparison.Ordinal)))
         {
+            if (BpmnImportInternals.IsLocal(definition, "multipleEventDefinition"))
+            {
+                // The strict schema form of the legacy `multiple="true"` attribute: restore the
+                // same typed property + catch-all twin the attribute path produces, so both
+                // spellings normalize to the same model.
+                node.Properties["multiple"] = BpmnImportInternals.JsonElementFrom(true);
+                node.Properties["bpmn:multiple"] = BpmnImportInternals.StringElement("true");
+                continue;
+            }
+
             definitions.Add(BuildEventDefinition(definition, model));
         }
 
@@ -801,7 +813,10 @@ internal sealed partial class BpmnModelBuilder
             case "textAnnotation":
             {
                 var node = CreateElement(element, BpmnSemanticTypes.TextAnnotation, parentId, model);
-                node.Name = BpmnImportInternals.DirectText(element);
+                // Standard form keeps the body in a <text> child; the direct-text form is the
+                // fallback (finding 1).
+                node.Name = BpmnImportInternals.DirectText(
+                    BpmnImportInternals.Child(element, "text") ?? element);
                 break;
             }
             case "group":
@@ -903,6 +918,7 @@ internal sealed partial class BpmnModelBuilder
         }
 
         var relationship = CreateRelationship(element, relationshipType, source, target, model);
+        ApplyRelationshipExtensionElements(element, relationship, model);
         if (condition is not null)
         {
             relationship.Properties["condition"] = BpmnImportInternals.StringElement(BpmnImportInternals.DirectText(condition));
@@ -918,6 +934,7 @@ internal sealed partial class BpmnModelBuilder
         var source = StripRef(element.Attribute("sourceRef")?.Value);
         var target = StripRef(element.Attribute("targetRef")?.Value);
         var relationship = CreateRelationship(element, BpmnRelationshipTypes.Association, source, target, model);
+        ApplyRelationshipExtensionElements(element, relationship, model);
         var direction = element.Attribute("associationDirection")?.Value ?? element.Attribute("direction")?.Value;
         if (!string.IsNullOrWhiteSpace(direction))
         {
@@ -945,6 +962,7 @@ internal sealed partial class BpmnModelBuilder
             Name = element.Attribute("name")?.Value ?? string.Empty,
         };
         ApplyCatchAllAttributes(element, relationship);
+        ApplyRelationshipExtensionElements(element, relationship, host);
         host.Relationships.Add(relationship);
         _relationshipIndex[relationship.Id] = (host, relationship);
 

@@ -24,7 +24,7 @@
 - **Docs.** New [docs/modeling-hosting-guide.md](docs/modeling-hosting-guide.md) — the writer implementation pattern with optimistic concurrency (capabilities, atomic apply through the translator + engine, layout/view changes, schema/lookups, issue mapping, MCP wiring, verification recipe). [docs/modeling-authoring.md](docs/modeling-authoring.md) carries the design contract and §6.5 "as implemented (phase 7)"; [docs/modeling-editor.md](docs/modeling-editor.md) the component contract; [docs/modeling-mcp-tools.md](docs/modeling-mcp-tools.md) the living MCP catalog and the "What 2.11.0 changed" table; AGENTS.md gained the authoring bullet list.
 - **Tests.** `ModelingModelDiffTests`, `TmModelingViewerOverlayTests` (a changed relationship), the phase 3–6 suites already in the tree, `ModelingMcpParityTests`, `ModelingViewOperationToolsTests`, `ModelingPropertySchemaToolsTests`, `ModelingMcpContractSnapshotTests`, `ModelingMcpToolsDocumentationDriftTests`; the JSON documentation overlays are regenerated and `validate --fail-on-drift` is clean.
 
-### Added — BPMN 2.0 XML converter (plan 6fca9139, phases 1–3: design, corpus, secure import, BPMNDI layout)
+### Added — BPMN 2.0 XML converter (plan 6fca9139, phases 1–4: design, corpus, secure import, BPMNDI layout, export and round-trip)
 
 - Design document [docs/modeling-bpmn-xml.md](docs/modeling-bpmn-xml.md): the headless
   `Tempo.Blazor.Modeling.BpmnXml` package proposal (dependency on `Tempo.Blazor.Abstractions`
@@ -118,6 +118,75 @@
   while `BPMNLabelStyle` definitions and `di:extension` are reported as losses; E2E
   screenshots of the BPMN DI rendering are deferred to phase 5 (bUnit render tests cover
   phase 3).
+- **Phase 4 — BPMN 2.0 XML export and round-trip.** `IBpmnXmlExporter`/`BpmnXmlExporter`
+  (`AddTempoBpmnXml()` now registers the exporter too) converts `ModelingModelDto` back to
+  deterministic BPMN 2.0 XML: stable ordering, invariant-culture numbers, LF line endings, no BOM.
+  `BpmnExportOptions` adds the `Standard`/`WithHostExtensions` profiles (the latter serializes every
+  non-native property into `<extensionElements><tempo:properties>` as canonical JSON under the
+  configurable host namespace), `EmitBpmndi`, `TargetNamespace`, tool-extension hooks
+  (`ToolExtensions`) and an `ExtensionNamespaces` prefix→URI map (pre-seeded with the
+  Camunda/Signavio/Bizagi dialect namespaces) for writing foreign attribute properties back.
+  Multi-model export (`Export(IReadOnlyList<ModelingModelDto>)` — an additive overload next to the
+  approved single-model API) rebuilds ONE `definitions` with a `collaboration`: pools become
+  participants, every populated pool keeps its process, cross-model message flows are re-wired
+  between participants, and `Properties["bpmnDefinitions"]` restores the global
+  message/signal/error/escalation definitions (data stores and group category values rebuild from
+  their referencing elements). The catch-all write-back emits `bpmn:*`/`bpmndi:*` properties as
+  attributes/DI (`labelBounds` → `BPMNLabel`, `labelStyle` reference kept, edge `waypoints` for
+  cross-model message flows from the relationship properties), `foreignExtensions` payloads embed
+  verbatim, event definitions/conditions/data associations/boundary attachments/ad-hoc and
+  transaction subprocesses/lane sets (lanes stay transparent containers — flow nodes stay
+  process-level children referenced by `flowNodeRef`) all round-trip natively. View geometry
+  exports as one `BPMNPlane` per distinct view id (a collaboration plane merges the per-model views
+  that share it; the plane's `bpmnElement` is derived deterministically — a fully-enclosing
+  collapsed subprocess plane references that subprocess); auto-layouted connections with empty
+  waypoints get synthesized endpoints (§5.4), elements/relationships without geometry are filled
+  from the deterministic auto-layout. Nothing is dropped silently: unrepresentable constructs land
+  in `BpmnExportResult.Losses`. Definitions-root `extensionElements` in the host namespace now
+  restore model-level properties on import (previously ignored). No breaking changes — everything is
+  additive; hosts that only import are untouched.
+- **Tests.** `BpmnXmlExporterTests` (document structure, profiles, host/foreign extension
+  write-back, escaping/injection safety, multi-model collaboration, global-definition rebuild,
+  determinism/LF/no-BOM, cancellation, DI registration), `BpmnExportGoldenTests` (XML goldens for
+  the whole corpus regenerated via `TEMPO_REGENERATE_BPMN_EXPORT_GOLDEN=1`, plus structural
+  validity: safe parse, namespace correctness, unique ids, every `bpmnElement`/flow/`flowNodeRef`
+  reference resolves and every emitted `*Ref` attribute — `dataObjectRef`, `dataStoreRef`,
+  `messageRef`, `signalRef`, `errorRef`, `escalationRef`, `attachedToRef`, `default`,
+  `categoryValueRef`, `processRef`, `activityRef` — resolves, and the Camunda-style
+  `incoming`/`outgoing` wiring is consistent), `BpmnRoundTripTests` (import → export → import
+  equals the normalized model for all 21 corpus fixtures with exact view membership/positions/DI
+  flags, and export(import(export(x))) is byte-identical to export(x)); the JSON documentation
+  covers the new public API and `validate --fail-on-drift` is clean.
+- **Phase 4 review hardening (findings 1–12 and 14):** text annotations export their body in a
+  standard `<text>` child (never a `name` attribute) and the import reads the `<text>` child with
+  a direct-text fallback (new `text-annotation-text.bpmn` corpus fixture); the root declares
+  `xmlns:xsi` and `conditionExpression`, `timeDuration`/`timeDate`/`timeCycle`, conditional-event
+  `condition` and ad-hoc `completionCondition` all carry `xsi:type="tFormalExpression"`; a plane
+  holding participant/message-flow DI references the collaboration and an empty
+  `<collaboration/>` is never emitted; one `<dataObject id name isCollection>` is synthesized per
+  distinct `dataObjectRef`; process attributes (`isExecutable` — default `"false"` —,
+  `camunda:versionTag`, `camunda:historyTimeToLive`, …) import into the model properties via a
+  catch-all and are written back on `<process>`, and `definitions` carries
+  `exporter="Tempo.Blazor"` + `exporterVersion`; robustness — catch-all names written natively
+  are skipped, `XmlConvert.VerifyNCName` guards every property-derived attribute name (invalid
+  names become losses, never exceptions), invalid XML 1.0 characters are stripped with an
+  `Approximated` loss, and event definitions with a missing/unknown type are reported instead of
+  silently terminating; duplicate element ids across models export the first occurrence only (a
+  shared element instance is not a duplicate) and duplicate relationship ids are reported;
+  generated namespace prefixes come from the stable FNV-1a `StableId` (no `GetHashCode`),
+  reserved prefixes (`bpmndi`/`dc`/`di`/`xsi`/`xml`/host) are never shadowed — collisions rename
+  deterministically to `{prefix}_1` with an info loss — and repeated `xmlns` declarations inside
+  preserved `foreignExtensions` payloads are stripped; element `Tags`/`Governance` and
+  relationship tags ride the host payload under `WithHostExtensions` (restoring the typed DTO
+  fields) and are reported as losses under `Standard`; children and relationships are pre-indexed
+  by parent/source/target (a 5000-task/5000-flow export stays under 2 s); flow nodes emit
+  Camunda-style `<incoming>`/`<outgoing>` wiring and generated `{id}_di` ids step aside
+  (`{id}_di_1`) of colliding element ids; legacy unprefixed Camunda `calledElementBinding`/
+  `calledElementVersion` and the `multiple` trigger flag (which has no BPMN 2.0 schema construct)
+  export in schema-valid form, verified by the new `npm run test:bpmn-interop` lane
+  (`bpmn-moddle` fromXML over every export golden, zero warnings, `bpmn:Definitions` root) and an
+  opt-in XSD validation test (`TM_BPMN_XSD_DIR`, skipped when unset). `BpmnExporterReviewTests`
+  pins every finding.
 - **Phase 2 review hardening (all 10 findings):** O(n) import backed by per-model id sets and a
   global element index (200 000 flat tasks import in seconds under the default limits —
   `MaxElements` default raised to 500 000); the bounded reader never disposes the caller's stream

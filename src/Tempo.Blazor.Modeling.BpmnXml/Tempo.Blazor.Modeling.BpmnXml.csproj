@@ -8,6 +8,9 @@
     <IsPackable>true</IsPackable>
     <PackageId>Tempo.Blazor.Modeling.BpmnXml</PackageId>
     <Version>2.11.0</Version>
+    <!-- The exporter writes exporterVersion into every BPMN document; a commit-hash suffix would
+         churn the committed export goldens on every commit. -->
+    <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
     <Authors>ptyll</Authors>
     <Title>Tempo.Blazor.Modeling.BpmnXml</Title>
     <Description>Headless BPMN 2.0 XML converter for Tempo.Blazor Modeling: deterministic, loss-reporting import of BPMN 2.0 XML into ModelingModelDto. Zero UI dependencies — safe to reference from API/service projects.</Description>

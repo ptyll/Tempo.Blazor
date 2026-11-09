@@ -1076,6 +1076,7 @@
         "IsFresh": true
       },
       "Properties": {
+        "bpmn:isExecutable": "false",
         "bpmnDefinitions": [
           {
             "kind": "message",
