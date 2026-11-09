@@ -1,0 +1,10 @@
+{
+  "kind": "Class",
+  "category": "Modeling",
+  "namespace": "Tempo.Blazor.Mcp.Modeling",
+  "description": "MCP tools for the headless BPMN 2.0 XML converter (plan \"BPMN 2.0 XML converter\", phase 5): modeling_import_bpmn imports a BPMN document into modeling models with the loss report (optionally persisted through the document provider) and modeling_export_bpmn exports a stored model back to BPMN 2.0 XML. Both directions run the built-in Camunda/Signavio/Bizagi tool dialect plugins, so tool metadata survives the round trip.",
+  "packageId": "Tempo.Blazor.Mcp",
+  "sourcePath": "src/Tempo.Blazor.Mcp/Modeling/ModelingBpmnTools.cs",
+  "documentationStatus": "generated",
+  "itemName": "ModelingBpmnTools"
+}

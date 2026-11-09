@@ -42,6 +42,7 @@
     "projectReferences": [
       "../Tempo.Blazor.Abstractions/Tempo.Blazor.Abstractions.csproj",
       "../Tempo.Blazor.DocumentFormats/Tempo.Blazor.DocumentFormats.csproj",
+      "../Tempo.Blazor.Modeling.BpmnXml/Tempo.Blazor.Modeling.BpmnXml.csproj",
       "../Tempo.Reporting.Abstractions/Tempo.Reporting.Abstractions.csproj",
       "../Tempo.Reporting.Engine/Tempo.Reporting.Engine.csproj"
     ],
@@ -1071,6 +1072,30 @@
       ]
     },
     {
+      "itemName": "ModelingBpmnTools",
+      "kind": "Class",
+      "category": "Modeling",
+      "namespace": "Tempo.Blazor.Mcp.Modeling",
+      "description": "MCP tools for the headless BPMN 2.0 XML converter (plan \"BPMN 2.0 XML converter\", phase 5): modeling_import_bpmn imports a BPMN document into modeling models with the loss report (optionally persisted through the document provider) and modeling_export_bpmn exports a stored model back to BPMN 2.0 XML. Both directions run the built-in Camunda/Signavio/Bizagi tool dialect plugins, so tool metadata survives the round trip.",
+      "packageId": "Tempo.Blazor.Mcp",
+      "sourcePath": "src/Tempo.Blazor.Mcp/Modeling/ModelingBpmnTools.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "MaxBpmnXmlChars",
+          "kind": "Field",
+          "type": "int",
+          "description": "Maximum accepted bpmnXml text length per call (roughly 2 MB of XML). The importer's byte cap is aligned to the UTF-8 worst case of this text limit."
+        },
+        {
+          "name": "MaxNameChars",
+          "kind": "Field",
+          "type": "int",
+          "description": "Maximum accepted name length per call (saved document title override). Titles are persisted by host document providers, so the cap keeps a hostile agent input out of the host's storage."
+        }
+      ]
+    },
+    {
       "itemName": "ModelingModelTools",
       "kind": "Class",
       "category": "Modeling",
@@ -1876,11 +1901,11 @@
     }
   ],
   "summary": {
-    "itemCount": 91,
-    "manualItemCount": 91,
-    "generatedItemCount": 91,
+    "itemCount": 92,
+    "manualItemCount": 92,
+    "generatedItemCount": 92,
     "generatedOnlyItemCount": 0,
     "componentCount": 0,
-    "publicApiTypeCount": 91
+    "publicApiTypeCount": 92
   }
 }

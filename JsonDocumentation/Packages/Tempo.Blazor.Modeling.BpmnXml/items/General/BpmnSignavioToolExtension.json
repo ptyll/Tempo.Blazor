@@ -1,0 +1,10 @@
+{
+  "kind": "Class",
+  "category": "General",
+  "namespace": "Tempo.Blazor.Modeling.BpmnXml",
+  "description": "Signavio Process Editor dialect plugin (http://www.signavio.com). Imports signavio:signavioMetaData into signavio:* element property keys and diagram-level signavio:signavioDiagramMetaData into signavio:* model properties; exports the keys back as signavioMetaData payloads (the dialect-native shape Signavio reads).",
+  "packageId": "Tempo.Blazor.Modeling.BpmnXml",
+  "sourcePath": "src/Tempo.Blazor.Modeling.BpmnXml/BpmnToolExtensions.cs",
+  "documentationStatus": "generated",
+  "itemName": "BpmnSignavioToolExtension"
+}

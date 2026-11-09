@@ -100,7 +100,7 @@ public sealed class BpmnExportOptions
     {
         ["camunda"] = "http://camunda.org/schema/1.0/bpmn",
         ["signavio"] = "http://www.signavio.com",
-        ["Bizagi"] = "http://www.bizagi.com/schemas/2010/Bizagi",
+        ["bizagi"] = "http://www.bizagi.com/schemas/2010/Bizagi",
     };
 }
 

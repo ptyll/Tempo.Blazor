@@ -19,7 +19,7 @@
           "ParentId": "",
           "Description": "",
           "Properties": {
-            "Bizagi:property": "displayName:Start;category:Events"
+            "bizagi:property": "displayName:Start;category:Events"
           },
           "Tags": [],
           "Governance": {
@@ -40,7 +40,7 @@
           "ParentId": "",
           "Description": "",
           "Properties": {
-            "Bizagi:property": "displayName:Collect;category:Activities",
+            "bizagi:property": "displayName:Collect;category:Activities",
             "foreignExtensions": {
               "http://www.bizagi.com/schemas/2010/Bizagi": "\u003CBizagi:BizagiExtensions xmlns:Bizagi=\u0022http://www.bizagi.com/schemas/2010/Bizagi\u0022\u003E\r\n          \u003CBizagi:BizagiProperty name=\u0022FormId\u0022 value=\u0022frm-collect\u0022 /\u003E\r\n          \u003CBizagi:BizagiProperty name=\u0022ApplicationId\u0022 value=\u0022onboarding-app\u0022 /\u003E\r\n        \u003C/Bizagi:BizagiExtensions\u003E"
             }
@@ -64,7 +64,7 @@
           "ParentId": "",
           "Description": "",
           "Properties": {
-            "Bizagi:property": "category:Activities"
+            "bizagi:property": "category:Activities"
           },
           "Tags": [],
           "Governance": {
@@ -85,7 +85,7 @@
           "ParentId": "",
           "Description": "",
           "Properties": {
-            "Bizagi:property": "category:Events"
+            "bizagi:property": "category:Events"
           },
           "Tags": [],
           "Governance": {

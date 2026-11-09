@@ -50,13 +50,17 @@ public class WireframeValidationEngineTests
     [Fact]
     public void UnknownType_UsesRoleSynonymSuggestion()
     {
-        var doc = DocWith(new WireframeElement { Type = "TmOtpInput", W = 100, H = 40 });
+        // "verification code" is a registered synonym of the otp-input role; the suggestion must
+        // resolve through the role vocabulary to the role's unambiguous owner (finding 10: the
+        // TmOtpInput schema now exists, so a bare "TmOtpInput" type would be KNOWN — the synonym
+        // path needs an unknown spelling).
+        var doc = DocWith(new WireframeElement { Type = "verification code", W = 100, H = 40 });
 
         var result = WireframeValidationEngine.Validate(doc, Registry());
 
         result.IsValid.Should().BeFalse();
         result.Errors.Should().ContainSingle()
-            .Which.Should().Contain("TmMaskedTextBox");
+            .Which.Should().Contain("TmOtpInput");
     }
 
     [Fact]

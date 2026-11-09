@@ -110,6 +110,58 @@
           "changedRelationships": 0
         }
       }
+    },
+    "modeling_import_bpmn": {
+      "success": true,
+      "modelCount": 1,
+      "models": [
+        {
+          "id": "ImportedProcess",
+          "title": "Imported process",
+          "notation": "bpmn2",
+          "counts": {
+            "elements": 1,
+            "relationships": 0,
+            "views": 1
+          },
+          "elements": [
+            {
+              "id": "ImportedStart",
+              "semanticType": "StartEvent",
+              "name": "Begin",
+              "parentId": ""
+            }
+          ],
+          "relationships": [],
+          "views": [
+            {
+              "id": "auto",
+              "name": "Imported process",
+              "viewpointKey": "",
+              "nodes": 1,
+              "connections": 0
+            }
+          ]
+        }
+      ],
+      "losses": [],
+      "warnings": [
+        {
+          "message": "The BPMN document contains no BPMNDI diagram data; a deterministic headless auto-layout generated the view positions.",
+          "xmlPath": "/definitions"
+        }
+      ],
+      "saved": []
+    },
+    "modeling_export_bpmn": {
+      "success": true,
+      "id": "\u003CmodelId\u003E",
+      "xml": "\u003C?xml version=\u00221.0\u0022 encoding=\u0022UTF-8\u0022?\u003E\n\u003Cdefinitions xmlns=\u0022http://www.omg.org/spec/BPMN/20100524/MODEL\u0022 id=\u0022Definitions_contract\u0022 targetNamespace=\u0022http://tempo.example/contract-export\u0022 exporter=\u0022Tempo.Blazor\u0022 exporterVersion=\u00222.11.0\u0022 xmlns:bpmndi=\u0022http://www.omg.org/spec/BPMN/20100524/DI\u0022 xmlns:dc=\u0022http://www.omg.org/spec/DD/20100524/DC\u0022 xmlns:di=\u0022http://www.omg.org/spec/DD/20100524/DI\u0022 xmlns:xsi=\u0022http://www.w3.org/2001/XMLSchema-instance\u0022 xmlns:tempo=\u0022https://tempo.blazor/schemas/bpmn-extensions\u0022 name=\u0022Contract\u0022\u003E\n  \u003Cprocess id=\u0022contract\u0022 name=\u0022Contract\u0022 isExecutable=\u0022false\u0022\u003E\n    \u003Ctask id=\u0022task\u0022 name=\u0022Validate order\u0022\u003E\n      \u003Coutgoing\u003Eflow\u003C/outgoing\u003E\n    \u003C/task\u003E\n    \u003Ctask id=\u0022step\u0022 name=\u0022Approve\u0022\u003E\n      \u003Cincoming\u003Eflow\u003C/incoming\u003E\n      \u003CextensionElements\u003E\n        \u003Ctempo:properties\u003E\n          \u003Ctempo:property name=\u0022instructions\u0022 value=\u0022\u0026quot;Approve the order\u0026quot;\u0022 /\u003E\n        \u003C/tempo:properties\u003E\n      \u003C/extensionElements\u003E\n    \u003C/task\u003E\n    \u003CsequenceFlow id=\u0022flow\u0022 sourceRef=\u0022task\u0022 targetRef=\u0022step\u0022 /\u003E\n  \u003C/process\u003E\n  \u003Cbpmndi:BPMNDiagram id=\u0022BPMNDiagram_default\u0022 name=\u0022Process\u0022\u003E\n    \u003Cbpmndi:BPMNPlane id=\u0022default\u0022 bpmnElement=\u0022contract\u0022\u003E\n      \u003Cbpmndi:BPMNShape id=\u0022task_di\u0022 bpmnElement=\u0022task\u0022\u003E\n        \u003Cdc:Bounds x=\u002240\u0022 y=\u002260\u0022 width=\u0022180\u0022 height=\u002290\u0022 /\u003E\n      \u003C/bpmndi:BPMNShape\u003E\n      \u003Cbpmndi:BPMNShape id=\u0022step_di\u0022 bpmnElement=\u0022step\u0022\u003E\n        \u003Cdc:Bounds x=\u0022320\u0022 y=\u002260\u0022 width=\u00220\u0022 height=\u00220\u0022 /\u003E\n      \u003C/bpmndi:BPMNShape\u003E\n      \u003Cbpmndi:BPMNEdge id=\u0022flow_di\u0022 bpmnElement=\u0022flow\u0022\u003E\n        \u003Cdi:waypoint x=\u0022240\u0022 y=\u0022100\u0022 /\u003E\n      \u003C/bpmndi:BPMNEdge\u003E\n    \u003C/bpmndi:BPMNPlane\u003E\n  \u003C/bpmndi:BPMNDiagram\u003E\n\u003C/definitions\u003E",
+      "losses": []
     }
+  },
+  "toolClassificationByEffect": {
+    "modeling_apply_operations": "write",
+    "modeling_import_bpmn": "write (only when save=true; otherwise read-only conversion)"
   }
 }

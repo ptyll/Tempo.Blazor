@@ -1,24 +1,24 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitions_Process_Bizagi" targetNamespace="http://tempo.example/bpmn/corpus/bizagi" exporter="Tempo.Blazor" exporterVersion="2.11.0" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:tempo="https://tempo.blazor/schemas/bpmn-extensions" name="Customer onboarding" xmlns:Bizagi="http://www.bizagi.com/schemas/2010/Bizagi">
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitions_Process_Bizagi" targetNamespace="http://tempo.example/bpmn/corpus/bizagi" exporter="Tempo.Blazor" exporterVersion="2.11.0" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:tempo="https://tempo.blazor/schemas/bpmn-extensions" name="Customer onboarding" xmlns:bizagi="http://www.bizagi.com/schemas/2010/Bizagi">
   <process id="Process_Bizagi" name="Customer onboarding" isExecutable="false">
-    <startEvent id="StartEvent_NewCustomer" name="New customer" Bizagi:property="displayName:Start;category:Events">
+    <startEvent id="StartEvent_NewCustomer" name="New customer" bizagi:property="displayName:Start;category:Events">
       <outgoing>Flow_BZ1</outgoing>
     </startEvent>
-    <userTask id="Task_CollectDocs" name="Collect documents" Bizagi:property="displayName:Collect;category:Activities">
+    <userTask id="Task_CollectDocs" name="Collect documents" bizagi:property="displayName:Collect;category:Activities">
       <incoming>Flow_BZ1</incoming>
       <outgoing>Flow_BZ2</outgoing>
       <extensionElements>
-        <Bizagi:BizagiExtensions>
-          <Bizagi:BizagiProperty name="FormId" value="frm-collect" />
-          <Bizagi:BizagiProperty name="ApplicationId" value="onboarding-app" />
-        </Bizagi:BizagiExtensions>
+        <bizagi:BizagiExtensions>
+          <bizagi:BizagiProperty name="FormId" value="frm-collect" />
+          <bizagi:BizagiProperty name="ApplicationId" value="onboarding-app" />
+        </bizagi:BizagiExtensions>
       </extensionElements>
     </userTask>
-    <serviceTask id="Task_Verify" name="Verify identity" Bizagi:property="category:Activities">
+    <serviceTask id="Task_Verify" name="Verify identity" bizagi:property="category:Activities">
       <incoming>Flow_BZ2</incoming>
       <outgoing>Flow_BZ3</outgoing>
     </serviceTask>
-    <endEvent id="EndEvent_Onboarded" name="Onboarded" Bizagi:property="category:Events">
+    <endEvent id="EndEvent_Onboarded" name="Onboarded" bizagi:property="category:Events">
       <incoming>Flow_BZ3</incoming>
     </endEvent>
     <sequenceFlow id="Flow_BZ1" sourceRef="StartEvent_NewCustomer" targetRef="Task_CollectDocs" />

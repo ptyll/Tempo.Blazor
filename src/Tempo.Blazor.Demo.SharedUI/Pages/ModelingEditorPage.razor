@@ -1,13 +1,19 @@
 @page "/modeling-editor"
 @using Microsoft.AspNetCore.Components
+@using Microsoft.AspNetCore.Components.Forms
+@using System.Text
 @using System.Text.Json
 @using Tempo.Blazor.Components.Diagram.Models
 @using Tempo.Blazor.Components.Modeling
 @using Tempo.Blazor.Modeling
+@using Tempo.Blazor.Modeling.BpmnXml
 @using Tempo.Blazor.Demo.SharedUI.Services
 @inject ITmLocalizer Loc
 @inject IEnumerable<IModelingModelProvider> ModelProviders
 @inject IEnumerable<IModelingModelWriter> ModelWriters
+@inject IJSRuntime JS
+@inject HttpClient Http
+@inject NavigationManager NavigationManager
 
 <PageTitle>@Loc["TmModelingEditor_Title"] - Tempo.Blazor</PageTitle>
 
@@ -89,6 +95,74 @@
         </button>
     </div>
 
+    @* BPMN 2.0 XML converter demo (plan 6fca9139 phase 5): import a .bpmn file, pasted XML or a
+       corpus sample through the headless converter and preview it in the editor; export the
+       imported model back to BPMN with the loss report. A separate row so the editing-controls
+       row (and its mobile fold contract) is untouched; hidden only below the Modeling editor's
+       mobile floor (768) — the mobile preview is driven by the ?bpmn= deep link instead, with a
+       localized hint below (finding 6). *@
+    <div class="modeling-demo-page__bpmn-controls text-sm mb-2 flex flex-wrap gap-2 items-center" data-testid="modeling-demo-bpmn-controls">
+        <button type="button"
+                id="modeling-demo-bpmn-import"
+                class="rounded border px-2 py-1"
+                data-testid="modeling-demo-import-bpmn"
+                @onclick="OpenBpmnImportDialog">
+            @Loc["TmDemo_Modeling_ImportBpmn"]
+        </button>
+        <button type="button"
+                class="rounded border px-2 py-1"
+                data-testid="modeling-demo-export-bpmn"
+                disabled="@(_bpmnModel is null)"
+                @onclick="ExportBpmnAsync">
+            @Loc["TmDemo_Modeling_ExportBpmn"]
+        </button>
+        @if (_bpmnLosses.Count > 0)
+        {
+            <button type="button"
+                    class="rounded border px-2 py-1"
+                    data-testid="modeling-demo-loss-report"
+                    @onclick="() => _showBpmnLossReport = true">
+                @string.Format(Loc["TmDemo_Modeling_LossReport"], _bpmnLosses.Count)
+            </button>
+        }
+        @if (_bpmnModel is not null)
+        {
+            <button type="button"
+                    class="rounded border px-2 py-1"
+                    data-testid="modeling-demo-clear-bpmn"
+                    @onclick="ClearBpmnImport">
+                @Loc["TmDemo_Modeling_ClearImport"]
+            </button>
+        }
+        @* Always-rendered polite status line (finding 7): empty until the first import/export
+           outcome, so assistive tech has a stable role=status element to watch. *@
+        <span class="text-xs opacity-70" role="status" data-testid="modeling-demo-bpmn-status">@_bpmnStatusMessage</span>
+    </div>
+
+    @* Mobile (<768): the editor's own chrome has no host slot for BPMN actions (G2 light edits),
+       so the demo says where the capability lives instead of hiding it without a trace. *@
+    <p class="modeling-demo-page__bpmn-mobile-hint text-xs opacity-70 mb-2" data-testid="modeling-demo-bpmn-mobile-hint">
+        @Loc["TmDemo_Modeling_BpmnMobileHint"]
+    </p>
+
+    <style>
+        @@media (max-width: 767.98px) {
+            .modeling-demo-page__bpmn-controls { display: none; }
+        }
+        @@media (min-width: 768px) {
+            .modeling-demo-page__bpmn-mobile-hint { display: none; }
+        }
+        @@media (min-width: 768px) and (max-width: 1023.98px) {
+            .modeling-demo-page .tm-modeling-editor {
+                /* Finding 6: the BPMN controls row now renders in the tablet band too (hidden only
+                   below 768), so the fold subtraction grows by its ~2.25rem and the in-flow chrome
+                   keeps the first-paint fold contract. */
+                height: calc(100dvh - 15.75rem) !important;
+                min-height: 0 !important;
+            }
+        }
+    </style>
+
     <TmModelingEditor @key="_editorKey"
                       @ref="_editor"
                       ProviderKey="@ResolvedProviderKey"
@@ -112,6 +186,105 @@
             <pre class="overflow-auto" style="max-height: 12rem;">@JsonSerializer.Serialize(lastChangeSet, new JsonSerializerOptions { WriteIndented = true, DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull })</pre>
         </section>
     }
+
+    @* BPMN import dialog: file picker, pasted XML or a corpus sample (fetched from the demo's
+       static web assets — the same fixtures the converter test corpus ships). *@
+    <TmModal Show="_showBpmnImportDialog"
+             Title="@Loc["TmDemo_Modeling_ImportDialogTitle"]"
+             Size="ModalSize.Large"
+             OnClose="CloseBpmnImportDialog"
+             RestoreFocusTargetId="modeling-demo-bpmn-import"
+             ShowDefaultFooterButtons="false">
+        <div class="flex flex-col gap-3" data-testid="modeling-demo-bpmn-import-dialog">
+            <div>
+                <label class="block text-sm font-medium mb-1" for="modeling-demo-bpmn-file">@Loc["TmDemo_Modeling_BpmnFile"]</label>
+                <InputFile id="modeling-demo-bpmn-file"
+                           data-testid="modeling-demo-bpmn-file"
+                           accept=".bpmn,.xml"
+                           class="text-sm"
+                           OnChange="HandleBpmnFileSelectedAsync" />
+            </div>
+            <div>
+                <label class="block text-sm font-medium mb-1" for="modeling-demo-bpmn-xml">@Loc["TmDemo_Modeling_PasteXml"]</label>
+                <textarea id="modeling-demo-bpmn-xml"
+                          data-testid="modeling-demo-bpmn-xml"
+                          class="w-full h-40 p-2 text-xs font-mono border rounded"
+                          style="border-color: var(--tm-border-color);"
+                          @bind="_pastedBpmnXml"
+                          @bind:event="onchange"></textarea>
+            </div>
+            <div class="flex flex-wrap items-center gap-2">
+                <label class="text-sm font-medium" for="modeling-demo-bpmn-sample">@Loc["TmDemo_Modeling_CorpusSample"]</label>
+                <select id="modeling-demo-bpmn-sample"
+                        data-testid="modeling-demo-bpmn-sample"
+                        class="text-sm rounded border px-2 py-1"
+                        @bind="_selectedBpmnSample">
+                    @foreach (var sample in BpmnCorpusSamples)
+                    {
+                        <option value="@sample">@sample</option>
+                    }
+                </select>
+                <button type="button"
+                        class="rounded border px-2 py-1 text-sm"
+                        data-testid="modeling-demo-bpmn-load-sample"
+                        @onclick="LoadBpmnSampleAsync">
+                    @Loc["TmDemo_Modeling_LoadSample"]
+                </button>
+                @* Finding 8: the binding commits on change (not per keystroke). The confirm button is
+                   therefore gated on click, not disabled — a disabled button would swallow the
+                   first click (the blur that commits the change) after typing. *@
+                <button type="button"
+                        class="rounded border px-3 py-1 text-sm"
+                        data-testid="modeling-demo-bpmn-import-confirm"
+                        @onclick="ImportPastedBpmnAsync">
+                    @Loc["TmDemo_Modeling_ImportAction"]
+                </button>
+            </div>
+        </div>
+    </TmModal>
+
+    @* Loss report dialog: one row per import loss — nothing the converter could not represent is
+       silently dropped (plan mandatory rule). *@
+    <TmModal Show="_showBpmnLossReport"
+             Title="@Loc["TmDemo_Modeling_LossReportTitle"]"
+             Size="ModalSize.XLarge"
+             OnClose="CloseBpmnLossReportDialog"
+             RestoreFocusTargetId="modeling-demo-bpmn-import"
+             ShowDefaultFooterButtons="false">
+        <div data-testid="modeling-demo-loss-dialog">
+            @if (_bpmnLosses.Count == 0)
+            {
+                <p class="text-sm" data-testid="modeling-demo-loss-empty">@Loc["TmDemo_Modeling_NoLosses"]</p>
+            }
+            else
+            {
+                <table class="w-full text-xs" data-testid="modeling-demo-loss-table">
+                    <caption class="text-left font-medium py-1">@Loc["TmDemo_Modeling_LossReportCaption"]</caption>
+                    <thead>
+                        <tr class="text-left">
+                            <th scope="col" class="py-1 pr-3">@Loc["TmDemo_Modeling_LossSeverity"]</th>
+                            <th scope="col" class="py-1 pr-3">@Loc["TmDemo_Modeling_LossElement"]</th>
+                            <th scope="col" class="py-1 pr-3">@Loc["TmDemo_Modeling_LossConstruct"]</th>
+                            <th scope="col" class="py-1 pr-3">@Loc["TmDemo_Modeling_LossReason"]</th>
+                            <th scope="col" class="py-1">@Loc["TmDemo_Modeling_LossXmlPath"]</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var loss in _bpmnLosses)
+                        {
+                            <tr data-testid="modeling-demo-loss-row" style="border-top: 1px solid var(--tm-border-color);">
+                                <td class="py-1 pr-3">@Loc[$"TmDemo_Modeling_LossSeverity_{loss.Severity}"]</td>
+                                <td class="py-1 pr-3">@(loss.ElementId ?? "—")</td>
+                                <td class="py-1 pr-3">@loss.Construct</td>
+                                <td class="py-1 pr-3">@loss.Reason</td>
+                                <td class="py-1">@loss.XmlPath</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+        </div>
+    </TmModal>
 </div>
 
 @code {
@@ -138,6 +311,40 @@
     /// does the same live. A string — the query parser accepts only bool literals.</summary>
     [SupplyParameterFromQuery(Name = "editing")]
     public string? Editing { get; set; }
+
+    /// <summary>
+    /// BPMN converter demo (phase 5): <c>?bpmn=&lt;sample&gt;</c> fetches a corpus fixture from the
+    /// demo's static web assets (<c>bpmn-corpus/</c>) and imports it automatically — the E2E DI
+    /// screenshot lane drives the preview through this deep link.
+    /// </summary>
+    [SupplyParameterFromQuery(Name = "bpmn")]
+    public string? Bpmn { get; set; }
+
+    /// <summary>The corpus samples served from the RCL's <c>wwwroot/bpmn-corpus</c> (reachable at
+    /// <c>_content/Tempo.Blazor.Demo.SharedUI/bpmn-corpus/…</c>; copies of the converter test corpus
+    /// fixtures — see <c>tests/Tempo.Blazor.Tests/Modeling/BpmnCorpus</c>).</summary>
+    private const string BpmnCorpusBasePath = "_content/Tempo.Blazor.Demo.SharedUI/bpmn-corpus/";
+
+    private static readonly string[] BpmnCorpusSamples =
+    [
+        "simple-process.bpmn",
+        "collaboration-3-pools.bpmn",
+        "camunda-export.bpmn",
+        "no-bpmndi.bpmn",
+        "partial-bpmndi.bpmn",
+        "collapsed-subprocess.bpmn",
+        "unsupported-constructs.bpmn",
+    ];
+
+    private ModelingModelDto? _bpmnModel;
+    private IReadOnlyList<ModelingModelDto> _bpmnModels = [];
+    private IReadOnlyList<BpmnImportLoss> _bpmnLosses = [];
+    private bool _showBpmnImportDialog;
+    private bool _showBpmnLossReport;
+    private bool _bpmnAutoImportAttempted;
+    private string _pastedBpmnXml = string.Empty;
+    private string _selectedBpmnSample = BpmnCorpusSamples[0];
+    private string? _bpmnStatusMessage;
 
     private DiagramDocument? _lastGeneratedDocument;
     private string? _selectedProvider;
@@ -246,7 +453,9 @@
     };
 
     private Func<ModelingModelRequest, CancellationToken, Task<ModelingModelDto>>? ModelLoaderOverride =>
-        string.Equals(Scenario, "error", StringComparison.OrdinalIgnoreCase)
+        _bpmnModel is not null
+            ? BpmnModelLoaderAsync
+            : string.Equals(Scenario, "error", StringComparison.OrdinalIgnoreCase)
             ? ThrowingModelLoaderAsync
             : Delay.GetValueOrDefault() > 0 || Fresh == false || HasModelingTreeScenario
                 || HasBpmnLanesScenario
@@ -409,6 +618,185 @@
         string.Equals(Scenario, "inspector-many-properties", StringComparison.OrdinalIgnoreCase)
         || string.Equals(Scenario, "inspector-empty-description", StringComparison.OrdinalIgnoreCase)
         || string.Equals(Scenario, "inspector-low-trust", StringComparison.OrdinalIgnoreCase);
+
+    // ---------------------------------------------------------------- BPMN import/export (phase 5)
+
+    /// <summary>The imported model wins over every provider/scenario loader until reset — the demo
+    /// remounts the editor (a fresh <c>@key</c>) so the preview renders the imported document.</summary>
+    private Task<ModelingModelDto> BpmnModelLoaderAsync(ModelingModelRequest request, CancellationToken cancellationToken)
+        => Task.FromResult(ModelingOperationEngine.Clone(_bpmnModel!));
+
+    private void OpenBpmnImportDialog() => _showBpmnImportDialog = true;
+
+    /// <summary>Matches a <c>?bpmn=</c> query value against the corpus file names, tolerating a
+    /// dropped <c>.bpmn</c> extension; <c>null</c> when nothing matches.</summary>
+    private static string? ResolveBpmnSample(string? queryValue)
+    {
+        if (string.IsNullOrWhiteSpace(queryValue))
+        {
+            return null;
+        }
+
+        var withExtension = queryValue.EndsWith(".bpmn", StringComparison.OrdinalIgnoreCase)
+            ? queryValue
+            : queryValue + ".bpmn";
+        return BpmnCorpusSamples.FirstOrDefault(candidate =>
+            string.Equals(candidate, withExtension, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private void CloseBpmnImportDialog() => _showBpmnImportDialog = false;
+
+    private void CloseBpmnLossReportDialog() => _showBpmnLossReport = false;
+
+    private void ClearBpmnImport()
+    {
+        _bpmnModel = null;
+        _bpmnModels = [];
+        _bpmnLosses = [];
+        _bpmnStatusMessage = null;
+        _showBpmnLossReport = false;
+        _editorKey++;
+    }
+
+    /// <summary>The demo-side BPMN import size cap (10 MB); a larger file gets the localized
+    /// "file too large" status instead of the reader's raw exception message (finding 8).</summary>
+    private const long MaxBpmnFileBytes = 10 * 1024 * 1024;
+
+    private async Task HandleBpmnFileSelectedAsync(InputFileChangeEventArgs args)
+    {
+        if (args.File.Size > MaxBpmnFileBytes)
+        {
+            _bpmnStatusMessage = string.Format(
+                Loc["TmDemo_Modeling_BpmnFileTooLarge"], args.File.Name, MaxBpmnFileBytes / (1024 * 1024));
+            return;
+        }
+
+        try
+        {
+            using var stream = args.File.OpenReadStream(maxAllowedSize: MaxBpmnFileBytes);
+            using var reader = new StreamReader(stream);
+            var xml = await reader.ReadToEndAsync();
+            await ApplyBpmnImportAsync(xml, args.File.Name);
+        }
+        catch (Exception ex)
+        {
+            _bpmnStatusMessage = string.Format(Loc["TmDemo_Modeling_BpmnImportFailed"], ex.Message);
+        }
+    }
+
+    private async Task LoadBpmnSampleAsync()
+    {
+        try
+        {
+            var xml = await Http.GetStringAsync(SampleUri(_selectedBpmnSample));
+            await ApplyBpmnImportAsync(xml, _selectedBpmnSample);
+        }
+        catch (Exception ex)
+        {
+            _bpmnStatusMessage = string.Format(Loc["TmDemo_Modeling_BpmnImportFailed"], ex.Message);
+        }
+    }
+
+    /// <summary>
+    /// Finding 1: the corpus sample needs an ABSOLUTE url. The Server/InteractiveAuto demo hosts
+    /// point their default <see cref="HttpClient"/> at the Demo API, so a relative
+    /// <c>_content/…</c> path would resolve against the API origin (404); the navigation-based
+    /// absolute URI targets the serving web host's static web assets in every render mode.
+    /// </summary>
+    private Uri SampleUri(string sample) => NavigationManager.ToAbsoluteUri(BpmnCorpusBasePath + sample);
+
+    private async Task ImportPastedBpmnAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_pastedBpmnXml))
+        {
+            _bpmnStatusMessage = Loc["TmDemo_Modeling_BpmnNothingToImport"];
+            return;
+        }
+
+        await ApplyBpmnImportAsync(_pastedBpmnXml, Loc["TmDemo_Modeling_PastedXmlSource"]);
+    }
+
+    private async Task ApplyBpmnImportAsync(string xml, string sourceName)
+    {
+        await Task.Yield();
+        var importer = new BpmnXmlImporter(BpmnBuiltInToolExtensions.All);
+        // SingleWithPools keeps a collaboration in ONE model so the preview shows every pool.
+        var result = importer.Import(xml, new BpmnImportOptions { ModelSplit = BpmnModelSplit.SingleWithPools });
+        if (result.HasErrors)
+        {
+            _bpmnStatusMessage = string.Format(Loc["TmDemo_Modeling_BpmnImportFailed"], result.ErrorMessage);
+            StateHasChanged();
+            return;
+        }
+
+        _bpmnModels = result.Models;
+        _bpmnModel = result.Models[0];
+        _bpmnLosses = result.Losses;
+        _bpmnStatusMessage = string.Format(Loc["TmDemo_Modeling_BpmnImported"], sourceName, result.Models.Count, result.Losses.Count);
+        _pastedBpmnXml = string.Empty;
+        _showBpmnImportDialog = false;
+        _showBpmnLossReport = result.Losses.Count > 0;
+        _editorKey++;
+        // Called from OnAfterRenderAsync (the ?bpmn= deep link) as well as event handlers — only the
+        // latter re-render automatically, so request the repaint explicitly.
+        StateHasChanged();
+    }
+
+    private async Task ExportBpmnAsync()
+    {
+        if (_bpmnModel is null)
+        {
+            return;
+        }
+
+        var exporter = new BpmnXmlExporter(BpmnBuiltInToolExtensions.All);
+        var result = exporter.Export(_bpmnModels, new BpmnExportOptions { Profile = BpmnExportProfile.WithHostExtensions });
+        if (!result.Success)
+        {
+            _bpmnStatusMessage = string.Format(Loc["TmDemo_Modeling_BpmnImportFailed"], result.ErrorMessage);
+            return;
+        }
+
+        var title = string.IsNullOrWhiteSpace(_bpmnModel.Title) ? "model" : _bpmnModel.Title;
+        var safe = string.Concat(title.Split(Path.GetInvalidFileNameChars(), StringSplitOptions.RemoveEmptyEntries))
+            .Replace(' ', '-');
+        if (safe.Length == 0)
+        {
+            safe = "model";
+        }
+
+        var bytes = Encoding.UTF8.GetBytes(result.Xml!);
+        await JS.InvokeVoidAsync("tmDataTable.downloadFile", $"{safe}.bpmn", "application/xml", Convert.ToBase64String(bytes));
+        _bpmnStatusMessage = string.Format(Loc["TmDemo_Modeling_BpmnExported"], safe, result.Losses.Count);
+    }
+
+    /// <inheritdoc />
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        await base.OnAfterRenderAsync(firstRender);
+        if (firstRender && !_bpmnAutoImportAttempted && !string.IsNullOrWhiteSpace(Bpmn))
+        {
+            // Deep-link auto import (?bpmn=<sample>): one attempt per page load, errors surface in
+            // the status line instead of throwing from the render loop. The query value may drop
+            // the ".bpmn" extension (?bpmn=simple-process) — match either spelling.
+            _bpmnAutoImportAttempted = true;
+            var sample = ResolveBpmnSample(Bpmn);
+            if (sample is not null)
+            {
+                _selectedBpmnSample = sample;
+                try
+                {
+                    var xml = await Http.GetStringAsync(SampleUri(sample));
+                    await ApplyBpmnImportAsync(xml, sample);
+                }
+                catch (Exception ex)
+                {
+                    _bpmnStatusMessage = string.Format(Loc["TmDemo_Modeling_BpmnImportFailed"], ex.Message);
+                    StateHasChanged();
+                }
+            }
+        }
+    }
 
     private Task<ModelingModelDto> ThrowingModelLoaderAsync(ModelingModelRequest request, CancellationToken cancellationToken) =>
         Task.FromException<ModelingModelDto>(new InvalidOperationException(Loc["TmModelingEditor_DemoError"]));

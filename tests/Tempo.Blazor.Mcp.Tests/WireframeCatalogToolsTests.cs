@@ -100,7 +100,9 @@ public class WireframeCatalogToolsTests
             scope: null,
             targetPackIds: null);
 
-        suggestion.Should().Be("TmMaskedTextBox");
+        // Finding 10: "TmOtpInput" is a registered synonym of the otp-input role and the role is
+        // unambiguously TmOtpInput's since the OTP plan (TmMaskedTextBox keeps only masked-input).
+        suggestion.Should().Be("TmOtpInput");
     }
 
     [Fact]

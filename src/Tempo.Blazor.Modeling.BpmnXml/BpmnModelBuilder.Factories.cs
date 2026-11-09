@@ -102,10 +102,28 @@ internal sealed partial class BpmnModelBuilder
             return "bpmn:" + attribute.Name.LocalName;
         }
 
+        // Known tool dialects normalize to their canonical lowercase prefix regardless of the
+        // prefix spelling the source document declared (e.g. a "Bizagi:"-prefixed attribute becomes
+        // the 'bizagi:property' key — converter design §6); unknown namespaces keep the document's
+        // declared prefix when one is registered, otherwise the neutral 'bpmn:' bucket.
+        var canonical = CanonicalToolPrefix(attribute.Name.NamespaceName);
+        if (canonical is not null)
+        {
+            return canonical + ":" + attribute.Name.LocalName;
+        }
+
         return _namespacePrefixes.TryGetValue(attribute.Name.NamespaceName, out var prefix)
             ? prefix + ":" + attribute.Name.LocalName
             : "bpmn:" + attribute.Name.LocalName;
     }
+
+    private static string? CanonicalToolPrefix(string namespaceUri) => namespaceUri switch
+    {
+        BpmnCamundaToolExtension.NamespaceUriConstant => "camunda",
+        BpmnSignavioToolExtension.NamespaceUriConstant => "signavio",
+        BpmnBizagiToolExtension.NamespaceUriConstant => "bizagi",
+        _ => null,
+    };
 
     /// <summary>
     /// The process element IS the model: its own attributes (<c>isExecutable</c>,

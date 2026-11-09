@@ -17,6 +17,11 @@ public static class BpmnXmlServiceCollectionExtensions
     {
         services.TryAddSingleton<IBpmnXmlImporter, BpmnXmlImporter>();
         services.TryAddSingleton<IBpmnXmlExporter, BpmnXmlExporter>();
+        // Built-in tool dialect plugins (Camunda/Signavio/Bizagi). Registered as a set so hosts can
+        // add their own IBpmnToolExtension implementations without replacing the built-ins.
+        services.TryAddEnumerable(Microsoft.Extensions.DependencyInjection.ServiceDescriptor.Singleton<IBpmnToolExtension, BpmnCamundaToolExtension>());
+        services.TryAddEnumerable(Microsoft.Extensions.DependencyInjection.ServiceDescriptor.Singleton<IBpmnToolExtension, BpmnSignavioToolExtension>());
+        services.TryAddEnumerable(Microsoft.Extensions.DependencyInjection.ServiceDescriptor.Singleton<IBpmnToolExtension, BpmnBizagiToolExtension>());
         return services;
     }
 }

@@ -1,4 +1,4 @@
-﻿using Tempo.Blazor.Components.Wireframe.Models;
+using Tempo.Blazor.Components.Wireframe.Models;
 
 namespace Tempo.Blazor.Components.Wireframe;
 
@@ -281,7 +281,10 @@ public sealed class BuiltInComponentSchemas : IWireframeSchemaSource
             ["TmSlider"] = ["slider"],
             ["TmRangeSlider"] = ["range-slider"],
             ["TmRating"] = ["rating"],
-            ["TmMaskedTextBox"] = ["masked-input", "otp-input"],
+            // The OTP plan made TmOtpInput the unambiguous owner of the otp-input role:
+            // TmMaskedTextBox keeps only masked-input so role resolution never warns about the
+            // otp-input ambiguity (phase 5 review, finding 10).
+            ["TmMaskedTextBox"] = ["masked-input"],
             ["TmOtpInput"] = ["otp-input"],
             ["TmMultiColumnComboBox"] = ["combo-box", "data-table"],
             ["TmSignature"] = ["signature-pad"],

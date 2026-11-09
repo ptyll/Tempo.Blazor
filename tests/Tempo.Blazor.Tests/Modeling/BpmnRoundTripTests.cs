@@ -158,6 +158,11 @@ public sealed class BpmnRoundTripTests
             // approximation instead of writing a schema-invalid construct.
             properties.Remove("multiple");
             properties.Remove("bpmn:multiple");
+            // A verbatim foreignExtensions payload keeps the SOURCE document's prefix spelling
+            // (e.g. "Bizagi:"); after an export round trip the root declares the canonical
+            // lowercase prefix, so the preserved string differs cosmetically while carrying the
+            // identical XML content — a transport artifact, not a semantic drift (phase 5).
+            properties.Remove("foreignExtensions");
 
             clone.Elements.Add(new ModelingElementDto
             {

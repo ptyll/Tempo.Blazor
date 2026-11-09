@@ -22,9 +22,11 @@ public class TempoModelingMcpRegistrationTests
         ToolNames(TempoModelingMcp.ToolTypes).Should().BeEquivalentTo(new[]
         {
             "modeling_apply_operations",
+            "modeling_export_bpmn",
             "modeling_get_model_tree",
             "modeling_get_property_schema",
             "modeling_get_view",
+            "modeling_import_bpmn",
             "modeling_list_models",
             "modeling_list_notations",
             "modeling_validate"

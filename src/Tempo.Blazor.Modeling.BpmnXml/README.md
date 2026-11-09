@@ -16,13 +16,20 @@ reported in the loss report.
   extension namespace; the `Standard` profile writes only native BPMN and reports the
   rest as export losses).
 - Dependency injection: `services.AddTempoBpmnXml()` registers `IBpmnXmlImporter` and
-  `IBpmnXmlExporter`.
+  `IBpmnXmlExporter` plus the built-in tool dialect plugins; the DI-resolved importer/
+  exporter apply them automatically (explicit `ToolExtensions` options plugins are
+  consulted first, the DI fallback list fills the remaining namespaces, the merged list is
+  de-duplicated by `NamespaceUri` first-wins, and the parameterless constructors stay
+  plugin-free).
 
 ```csharp
 var importer = new BpmnXmlImporter();
 BpmnImportResult result = importer.Import(bpmnXmlStream);
 if (result.HasErrors) { /* result.ErrorMessage — never throws for bad input */ }
 IReadOnlyList<ModelingModelDto> models = result.Models;
+
+// Built-in Camunda/Signavio/Bizagi dialect plugins keep tool metadata loss-free:
+var pluginImporter = new BpmnXmlImporter(BpmnBuiltInToolExtensions.All);
 
 var exporter = new BpmnXmlExporter();
 // one definitions document: collaboration, participants, processes, message flows, BPMNDI
@@ -31,5 +38,9 @@ BpmnExportResult exported = exporter.Export(models,
 if (exported.Success) { string xml = exported.Xml!; }
 ```
 
-Tool plugins (Camunda, Signavio, Bizagi) land in the next phase of the converter plan;
-`BpmnImportOptions`/`BpmnExportOptions` already carry the hooks those phases honor.
+Tool plugins: `IBpmnToolExtension` lets a dialect map its `extensionElements` into typed
+properties and restore them on export; the built-in Camunda (`camunda:*` keys,
+`camundaExtensions` verbatim payloads), Signavio (`signavio:*` keys) and Bizagi
+(`bizagi:*` keys) plugins ship in `BpmnToolExtensions.cs` and are registered by
+`AddTempoBpmnXml()`. Unrecognized namespaces are still preserved verbatim under
+`foreignExtensions` with a loss record — nothing is dropped.

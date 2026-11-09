@@ -52,6 +52,7 @@
     <ProjectReference Include="..\Tempo.Blazor.FluentValidation\Tempo.Blazor.FluentValidation.csproj" />
     <ProjectReference Include="..\Tempo.Blazor.Maps\Tempo.Blazor.Maps.csproj" />
     <ProjectReference Include="..\Tempo.Blazor.Modeling\Tempo.Blazor.Modeling.csproj" />
+    <ProjectReference Include="..\Tempo.Blazor.Modeling.BpmnXml\Tempo.Blazor.Modeling.BpmnXml.csproj" />
     <ProjectReference Include="..\Tempo.Blazor.NotionEditor\Tempo.Blazor.NotionEditor.csproj" />
     <ProjectReference Include="..\Tempo.Blazor.PdfViewer\Tempo.Blazor.PdfViewer.csproj" />
     <ProjectReference Include="..\Tempo.Blazor.Signing\Tempo.Blazor.Signing.csproj" />

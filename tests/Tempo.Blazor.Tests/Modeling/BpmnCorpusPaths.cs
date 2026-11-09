@@ -46,6 +46,7 @@ internal static class BpmnImportGoldenFixtures
         "call-activity.bpmn",
         "data-objects.bpmn",
         "no-bpmndi.bpmn",
+        "partial-bpmndi.bpmn",
         "camunda-export.bpmn",
         "signavio-export.bpmn",
         "bizagi-export.bpmn",

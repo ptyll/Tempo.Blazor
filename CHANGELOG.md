@@ -187,6 +187,57 @@
   (`bpmn-moddle` fromXML over every export golden, zero warnings, `bpmn:Definitions` root) and an
   opt-in XSD validation test (`TM_BPMN_XSD_DIR`, skipped when unset). `BpmnExporterReviewTests`
   pins every finding.
+- **Phase 5 — tool dialect plugins, MCP tools and the demo.** The built-in
+  `BpmnCamundaToolExtension`/`BpmnSignavioToolExtension`/`BpmnBizagiToolExtension` plugins
+  (exposed together as `BpmnBuiltInToolExtensions.All` and registered by `AddTempoBpmnXml()`)
+  map their dialects' `extensionElements` into typed properties and restore them on export:
+  Camunda `properties` → `camunda:*` keys, `camunda:documentation` → the element description and
+  every other Camunda payload (listeners, connectors, input/output) preserved verbatim under
+  `camundaExtensions` for a loss-free re-export; Signavio `signavioMetaData` → `signavio:*`
+  element keys and diagram-level `signavioDiagramMetaData` → `signavio:*` model properties;
+  Bizagi `BizagiProperty` name/value pairs → `bizagi:*` keys. `IBpmnToolExtension` gains the
+  additive default member `OwnsAttributeExport` (Signavio/Bizagi serialize their scalars in the
+  dialect-native payload shape; Camunda keeps the attribute shape), and the attribute catch-all
+  normalizes the known tool namespaces to their canonical lowercase prefixes (`Bizagi:property`
+  → `bizagi:property` — the seeded `ExtensionNamespaces` key is renamed `Bizagi` → `bizagi`, the
+  only visible export change: the same URI declared under the lowercase prefix). The DI-resolved
+  importer/exporter pick the registered plugins up automatically (an explicitly populated
+  `ToolExtensions` options list still wins), so `new BpmnXmlImporter()` stays plugin-free and the
+  existing corpus goldens only changed for the Bizagi prefix normalization. New MCP tools
+  `modeling_import_bpmn` (model + full loss report, optional per-model persistence through the
+  document provider, 2M-character input cap) and `modeling_export_bpmn` (XML + export loss
+  report, `Standard`/`WithHostExtensions` profiles) run the built-ins; the contract snapshot
+  gained both responses plus a `toolClassificationByEffect` map (write: `modeling_apply_operations`,
+  `modeling_import_bpmn` when `save=true`), and the catalog in `docs/modeling-mcp-tools.md` is
+  complete. The `/modeling-editor` demo page imports BPMN 2.0 XML (file picker / pasted XML /
+   corpus sample, or the `?bpmn=<sample>` deep link) and previews it in `TmModelingEditor`, shows
+  the loss report as a dialog table, and exports a downloadable `.bpmn` — localized in en/cs/sk/fr.
+  New corpus fixture `partial-bpmndi.bpmn` (DI covering only some nodes/edges) with regenerated
+  goldens; `npm run test:bpmn-interop` stays green.
+- **Tests.** `BpmnToolExtensionTests` (per-dialect import mapping from the corpus fixtures,
+  export round-trips keeping every `camunda:*`/`signavio:*`/`bizagi:*` key, the
+  plugin-free default importer unchanged, explicit options winning over the DI fallback,
+  DI registration), `ModelingBpmnToolsTests` (MCP import/export incl. size limits, save
+  persistence, profile validation, host-extensions round trip), E2E
+  `ModelingBpmnXmlConverterE2ETests` (dialog/file/paste/deep-link import, loss report dialog,
+  export download re-imported through the paste path) and `ModelingBpmnDiRenderingE2ETests`
+  (carry-forward c59bf3f1: DI rendering screenshots for 3 DI corpus files + no-DI + partial-DI +
+  collapsed plane at 1440/390 in light/dark, `#blazor-error-ui` hidden and PNG > 2 KB per shot);
+  JSON documentation overlays regenerated and `validate --fail-on-drift` clean.
++- **Phase 5 review hardening (findings 1–10).** Demo corpus samples load through an absolute
++  `NavigationManager.ToAbsoluteUri` URL (the Server/InteractiveAuto `HttpClient` targets the API;
++  the Server host maps the `.bpmn` content type so its static web assets actually serve)
++  with a Server-host `?bpmn=` E2E; the 24 DI rendering shots + the loss-report shot are committed
++  evidence in `__screenshots__/modeling-bpmn-di/`. Export merges tool plugins first-wins by
++  `NamespaceUri` (explicit options before the DI fallback) so dialect payloads never double-write.
++  `modeling_import_bpmn` validates `name` at 200 characters, reports malformed XML as
++  `validation_failed`, and saves each document independently — a failure returns the exact
++  partial progress (`saved`/`failedAt`/`failed`). The demo BPMN controls hide only below 768 px
++  (localized mobile hint otherwise), the loss table carries a localized caption, `scope="col"`,
++  the xmlPath in its own column and localized severities, the status line is an always-rendered
++  `role="status"` element and both dialogs restore focus to the Import BPMN trigger; oversized
++  files get a localized message. The `otp-input` role is unambiguously `TmOtpInput`'s again
++  (`TmMaskedTextBox` keeps only `masked-input`).
 - **Phase 2 review hardening (all 10 findings):** O(n) import backed by per-model id sets and a
   global element index (200 000 flat tasks import in seconds under the default limits —
   `MaxElements` default raised to 500 000); the bounded reader never disposes the caller's stream

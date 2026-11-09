@@ -12,10 +12,22 @@ namespace Tempo.Blazor.Modeling.BpmnXml;
 /// </summary>
 public sealed class BpmnXmlImporter : IBpmnXmlImporter
 {
+    private readonly IReadOnlyList<IBpmnToolExtension> _toolExtensions;
+
+    /// <summary>
+    /// Creates the importer. <paramref name="toolExtensions"/> supplies the fallback tool dialect
+    /// plugins (see <see cref="AddTempoBpmnXml"/>) used when the caller's
+    /// <see cref="BpmnImportOptions.ToolExtensions"/> list is empty; an explicitly populated
+    /// options list always wins. Omit the argument (or pass an empty sequence) for the plain
+    /// converter without tool plugins.
+    /// </summary>
+    public BpmnXmlImporter(IEnumerable<IBpmnToolExtension>? toolExtensions = null) =>
+        _toolExtensions = toolExtensions?.ToArray() ?? [];
+
     /// <inheritdoc />
     public BpmnImportResult Import(string xml, BpmnImportOptions? options = null)
     {
-        options ??= new BpmnImportOptions();
+        options = ResolveOptions(options);
         if (xml is null)
         {
             return Failure(options, "The BPMN XML input is null.");
@@ -41,7 +53,7 @@ public sealed class BpmnXmlImporter : IBpmnXmlImporter
     /// <inheritdoc />
     public BpmnImportResult Import(Stream xml, BpmnImportOptions? options = null, CancellationToken ct = default)
     {
-        options ??= new BpmnImportOptions();
+        options = ResolveOptions(options);
         if (xml is null)
         {
             return Failure(options, "The BPMN XML stream is null.");
@@ -55,6 +67,42 @@ public sealed class BpmnXmlImporter : IBpmnXmlImporter
             // The bounded stream is only wrapped, never disposed, so the caller's stream stays readable.
             return BpmnXmlSecurity.CreateLimitEnforcingReader(reader, options.MaxDepth, options.MaxElements);
         }, options, ct);
+    }
+
+    private BpmnImportOptions ResolveOptions(BpmnImportOptions? options)
+    {
+        if (options is null)
+        {
+            return _toolExtensions.Count == 0 ? new BpmnImportOptions() : MergeOptions(new BpmnImportOptions(), []);
+        }
+
+        return options.ToolExtensions.Count > 0 || _toolExtensions.Count == 0
+            ? options
+            : MergeOptions(options, options.ToolExtensions);
+    }
+
+    private BpmnImportOptions MergeOptions(BpmnImportOptions source, IList<IBpmnToolExtension> explicitExtensions)
+    {
+        var merged = new BpmnImportOptions
+        {
+            ModelSplit = source.ModelSplit,
+            ImportBpmndi = source.ImportBpmndi,
+            MaxInputBytes = source.MaxInputBytes,
+            MaxDepth = source.MaxDepth,
+            MaxElements = source.MaxElements,
+        };
+
+        foreach (var extension in explicitExtensions)
+        {
+            merged.ToolExtensions.Add(extension);
+        }
+
+        foreach (var extension in _toolExtensions)
+        {
+            merged.ToolExtensions.Add(extension);
+        }
+
+        return merged;
     }
 
     private static BpmnImportResult ImportCore(Func<XmlReader> createReader, BpmnImportOptions options, CancellationToken ct)

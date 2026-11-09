@@ -56330,6 +56330,36 @@
           "documentationStatus": "merged"
         },
         {
+          "itemName": "BpmnBizagiToolExtension",
+          "kind": "Class",
+          "category": "General",
+          "namespace": "Tempo.Blazor.Modeling.BpmnXml",
+          "description": "Bizagi Modeler dialect plugin (http://www.bizagi.com/schemas/2010/Bizagi). Imports Bizagi:BizagiExtensions/Bizagi:BizagiProperty name/value pairs into bizagi:* element property keys and exports them back as a BizagiExtensions payload. The Bizagi:property element ATTRIBUTE is normalized to the bizagi:property key by the importer's attribute catch-all and written back by this plugin's payload (round-trip stable).",
+          "packageId": "Tempo.Blazor.Modeling.BpmnXml",
+          "sourcePath": "src/Tempo.Blazor.Modeling.BpmnXml/BpmnToolExtensions.cs",
+          "documentationStatus": "merged"
+        },
+        {
+          "itemName": "BpmnBuiltInToolExtensions",
+          "kind": "Class",
+          "category": "General",
+          "namespace": "Tempo.Blazor.Modeling.BpmnXml",
+          "description": "The built-in tool dialect plugins of the headless BPMN 2.0 XML converter, in their fixed registration order (Camunda, Signavio, Bizagi). State-free — fresh instances are cheap, so callers and DI can share this list or create their own; the mapping is deterministic either way.",
+          "packageId": "Tempo.Blazor.Modeling.BpmnXml",
+          "sourcePath": "src/Tempo.Blazor.Modeling.BpmnXml/BpmnToolExtensions.cs",
+          "documentationStatus": "merged"
+        },
+        {
+          "itemName": "BpmnCamundaToolExtension",
+          "kind": "Class",
+          "category": "General",
+          "namespace": "Tempo.Blazor.Modeling.BpmnXml",
+          "description": "Camunda Modeler dialect plugin (http://camunda.org/schema/1.0/bpmn). Imports camunda:properties into camunda:* property keys, camunda:documentation into the element description and preserves every other payload (task listeners, connectors, input/output mappings, …) verbatim under the camundaExtensions property for a loss-free re-export. Element-level camunda:* attributes (assignee, candidateGroups, candidateUsers, formKey, dueDate, versionTag, delegateExpression, …) are the attribute catch-all's job and are written back as attributes by the exporter — this plugin owns only the element payloads.",
+          "packageId": "Tempo.Blazor.Modeling.BpmnXml",
+          "sourcePath": "src/Tempo.Blazor.Modeling.BpmnXml/BpmnToolExtensions.cs",
+          "documentationStatus": "merged"
+        },
+        {
           "itemName": "BpmnConstants",
           "kind": "Class",
           "category": "General",
@@ -56470,6 +56500,16 @@
           "documentationStatus": "merged"
         },
         {
+          "itemName": "BpmnSignavioToolExtension",
+          "kind": "Class",
+          "category": "General",
+          "namespace": "Tempo.Blazor.Modeling.BpmnXml",
+          "description": "Signavio Process Editor dialect plugin (http://www.signavio.com). Imports signavio:signavioMetaData into signavio:* element property keys and diagram-level signavio:signavioDiagramMetaData into signavio:* model properties; exports the keys back as signavioMetaData payloads (the dialect-native shape Signavio reads).",
+          "packageId": "Tempo.Blazor.Modeling.BpmnXml",
+          "sourcePath": "src/Tempo.Blazor.Modeling.BpmnXml/BpmnToolExtensions.cs",
+          "documentationStatus": "merged"
+        },
+        {
           "itemName": "BpmnToolExportContext",
           "kind": "Class",
           "category": "General",
@@ -56607,12 +56647,12 @@
       ],
       "libraryExamples": [],
       "summary": {
-        "itemCount": 24,
-        "manualItemCount": 24,
-        "generatedItemCount": 24,
+        "itemCount": 28,
+        "manualItemCount": 28,
+        "generatedItemCount": 28,
         "generatedOnlyItemCount": 0,
         "componentCount": 0,
-        "publicApiTypeCount": 24
+        "publicApiTypeCount": 28
       }
     },
     {
@@ -139169,6 +139209,7 @@
         "projectReferences": [
           "../Tempo.Blazor.Abstractions/Tempo.Blazor.Abstractions.csproj",
           "../Tempo.Blazor.DocumentFormats/Tempo.Blazor.DocumentFormats.csproj",
+          "../Tempo.Blazor.Modeling.BpmnXml/Tempo.Blazor.Modeling.BpmnXml.csproj",
           "../Tempo.Reporting.Abstractions/Tempo.Reporting.Abstractions.csproj",
           "../Tempo.Reporting.Engine/Tempo.Reporting.Engine.csproj"
         ],
@@ -140198,6 +140239,30 @@
           ]
         },
         {
+          "itemName": "ModelingBpmnTools",
+          "kind": "Class",
+          "category": "Modeling",
+          "namespace": "Tempo.Blazor.Mcp.Modeling",
+          "description": "MCP tools for the headless BPMN 2.0 XML converter (plan \"BPMN 2.0 XML converter\", phase 5): modeling_import_bpmn imports a BPMN document into modeling models with the loss report (optionally persisted through the document provider) and modeling_export_bpmn exports a stored model back to BPMN 2.0 XML. Both directions run the built-in Camunda/Signavio/Bizagi tool dialect plugins, so tool metadata survives the round trip.",
+          "packageId": "Tempo.Blazor.Mcp",
+          "sourcePath": "src/Tempo.Blazor.Mcp/Modeling/ModelingBpmnTools.cs",
+          "documentationStatus": "merged",
+          "members": [
+            {
+              "name": "MaxBpmnXmlChars",
+              "kind": "Field",
+              "type": "int",
+              "description": "Maximum accepted bpmnXml text length per call (roughly 2 MB of XML). The importer's byte cap is aligned to the UTF-8 worst case of this text limit."
+            },
+            {
+              "name": "MaxNameChars",
+              "kind": "Field",
+              "type": "int",
+              "description": "Maximum accepted name length per call (saved document title override). Titles are persisted by host document providers, so the cap keeps a hostile agent input out of the host's storage."
+            }
+          ]
+        },
+        {
           "itemName": "ModelingModelTools",
           "kind": "Class",
           "category": "Modeling",
@@ -141003,12 +141068,12 @@
         }
       ],
       "summary": {
-        "itemCount": 91,
-        "manualItemCount": 91,
-        "generatedItemCount": 91,
+        "itemCount": 92,
+        "manualItemCount": 92,
+        "generatedItemCount": 92,
         "generatedOnlyItemCount": 0,
         "componentCount": 0,
-        "publicApiTypeCount": 91
+        "publicApiTypeCount": 92
       }
     },
     {
@@ -146740,10 +146805,10 @@
   ],
   "summary": {
     "packageCount": 29,
-    "itemCount": 3722,
-    "manualItemCount": 3722,
+    "itemCount": 3727,
+    "manualItemCount": 3727,
     "generatedOnlyItemCount": 0,
     "componentCount": 565,
-    "publicApiTypeCount": 3105
+    "publicApiTypeCount": 3110
   }
 }

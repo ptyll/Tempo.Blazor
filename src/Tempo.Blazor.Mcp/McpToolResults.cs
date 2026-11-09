@@ -54,9 +54,13 @@ public static class McpToolResults
         return result.ToJsonString(McpJson.Options);
     }
 
-    /// <summary>A failure result with an error code, message and optional validation details.</summary>
+    /// <summary>
+    /// A failure result with an error code, message and optional validation details. The
+    /// properties of <paramref name="data"/> (e.g. a partial-progress report) are merged at the
+    /// top level next to <c>success: false</c>.
+    /// </summary>
     public static string Failure(
-        string error, string message, IEnumerable<string>? validationErrors = null)
+        string error, string message, IEnumerable<string>? validationErrors = null, object? data = null)
     {
         var result = new JsonObject
         {
@@ -73,6 +77,18 @@ public static class McpToolResults
                 array.Add(e);
             }
             result["validationErrors"] = array;
+        }
+
+        if (data is not null)
+        {
+            var node = JsonSerializer.SerializeToNode(data, McpJson.Options);
+            if (node is JsonObject obj)
+            {
+                foreach (var kvp in obj)
+                {
+                    result[kvp.Key] = kvp.Value?.DeepClone();
+                }
+            }
         }
 
         return result.ToJsonString(McpJson.Options);
