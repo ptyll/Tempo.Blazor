@@ -286,7 +286,7 @@ public sealed class SchedulerVisualE2ETests : WasmTestBase
         var page = await context.NewPageAsync();
         await page.SetViewportSizeAsync(1440, 1100);
         await page.SetExtraHTTPHeadersAsync(new Dictionary<string, string> { ["Cache-Control"] = "no-cache" });
-        await page.GotoAsync($"{BaseUrl}/scheduler",
+        await page.GotoAsync(SchedulerDemoUrl.For(BaseUrl),
             new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
         await WaitForAppReadyAsync(page);
 

@@ -65,6 +65,30 @@ public class TmSchedulerResponsiveTests : LocalizationTestBase
         cut.Find("[role='tablist']").Should().NotBeNull();
     }
 
+    /// <summary>
+    /// The container query hides the pills below 60rem of the toolbar's own width, so the full bar
+    /// keeps the compact dropdown in the markup and both presentations share the
+    /// <c>scheduler-view-menu</c> region id. E2E helpers switch views through whichever is visible.
+    /// </summary>
+    [Fact]
+    public void Toolbar_Desktop_ViewSwitcher_Exposes_The_Compact_Menu_Contract()
+    {
+        var cut = Render<TmScheduler>(p => p
+            .Add(c => c.LayoutMode, TmLayoutMode.Desktop)
+            .Add(c => c.View, TmScheduleViewType.Week)
+            .Add(c => c.CurrentDate, Monday));
+
+        var trigger = cut.Find("[data-testid='scheduler-view-menu']")
+            .QuerySelector("button[aria-haspopup='true']");
+        trigger.Should().NotBeNull("the full bar keeps the collapsed dropdown the narrow bar shows");
+        trigger!.Click();
+
+        cut.Find("[data-testid='scheduler-view-menu']")
+            .QuerySelectorAll("[data-view]")
+            .Select(item => item.GetAttribute("data-view"))
+            .Should().Equal("Day", "Week", "Month", "Agenda", "Timeline");
+    }
+
     [Fact]
     public void Month_CompactMaxVisibleEvents_Used_In_Mobile()
     {

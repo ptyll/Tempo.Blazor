@@ -1,5 +1,6 @@
 using Microsoft.Playwright;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Tempo.Blazor.E2E.Scheduler;
 
 namespace Tempo.Blazor.E2E;
 
@@ -57,7 +58,7 @@ public class PointerDragE2ETests : WasmTestBase
         await host.WaitForAsync(new LocatorWaitForOptions { Timeout = 30000 });
         await host.ScrollIntoViewIfNeededAsync();
         // The Day view has the "Resize Test Event" today at 14:00-15:00 with both handles.
-        await host.Locator("[data-view='Day']").ClickAsync();
+        await SchedulerViewSwitcher.SwitchViewAsync(host, "Day");
         await page.WaitForSelectorAsync("[data-testid='scheduler-interactive'] .tm-scheduler-timegrid-event[data-event-id='i4']");
         await page.EvaluateAsync("() => document.querySelector(\"[data-event-id='i4']\").scrollIntoView({ block: 'center', behavior: 'instant' })");
         await page.WaitForTimeoutAsync(300);

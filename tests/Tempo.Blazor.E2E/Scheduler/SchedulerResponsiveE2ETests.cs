@@ -417,7 +417,7 @@ public sealed class SchedulerResponsiveE2ETests : WasmTestBase
         });
         RegisterContext(context);
         var page = await context.NewPageAsync();
-        await page.GotoAsync($"{BaseUrl}/scheduler", new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
+        await page.GotoAsync(SchedulerDemoUrl.For(BaseUrl), new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
         await WaitForAppReadyAsync(page);
         if (dark)
         {

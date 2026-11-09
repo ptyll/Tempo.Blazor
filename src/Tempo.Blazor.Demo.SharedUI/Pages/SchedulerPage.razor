@@ -9,6 +9,9 @@
 @inject HttpClient Http
 @inject Microsoft.JSInterop.IJSRuntime JS
 @inject ITmLocalizer Loc
+@* The demo's clock, never DateTime.Today: a host pins it (?now= in the WASM demo, FakeTimeProvider in
+   tests), so the sample week below is a fact a test can replay on any day of the week. *@
+@inject TimeProvider Clock
 
 <PageTitle>Scheduler – Tempo.Blazor</PageTitle>
 
@@ -380,7 +383,7 @@
                      ShowResourceFilter="true">
             <SidePanel>
                 <TmCalendarView Compact="true" Class="demo-scheduler-panel-calendar"
-                                SelectedDate="@PanelDay" Today="@DateOnly.FromDateTime(DateTime.Today)"
+                                SelectedDate="@PanelDay" Today="@DateOnly.FromDateTime(Clock.GetLocalNow().Date)"
                                 OnDateClick="PickPanelDay" />
                 <p class="demo-scheduler-panel-day" data-testid="scheduler-panel-day">
                     Selected day: @PanelDay.ToString("d")
@@ -653,43 +656,42 @@
         catch { }
     }
 
+    // The dates below are assigned from the sample day in OnInitialized, never from DateTime.Today:
+    // the demo has to render the same shape on a Monday as on a weekend.
     private TmScheduleViewType _monthView = TmScheduleViewType.Month;
     private TmScheduleViewType _tabletView = TmScheduleViewType.Week;
-    private DateTime _tabletDate = DateTime.Today;
+    private DateTime _tabletDate;
     private TmScheduleViewType _plainMobileView = TmScheduleViewType.Week;
     private TmScheduleViewType _mobileAgendaView = TmScheduleViewType.Agenda;
-    private DateTime _plainMobileDate = DateTime.Today;
+    private DateTime _plainMobileDate;
     private TmScheduleViewType _mobileView = TmScheduleViewType.Week;
-    private DateTime _mobileDate = DateTime.Today;
+    private DateTime _mobileDate;
 
     private void HandleAddClick() { }
     private TmScheduleViewType _interactiveView = TmScheduleViewType.Month;
-    private DateTime _currentDate = DateTime.Today;
+    private DateTime _currentDate;
     private DateTime _templateDate = new(2026, 7, 2);
     private TmScheduleViewType _templateView = TmScheduleViewType.Month;
 
     /// <summary>
-    /// The day the week samples sit on — and the week the week section opens on. It is never a
-    /// weekend: the range section clips its week to a WorkWeek (Mon–Fri), so a Saturday or Sunday
-    /// anchor left that board with no events at all (and the scheduler resize E2E waiting for
-    /// "Morning Standup" timed out). Friday is always inside the Monday-first WorkWeek.
+    /// The weekday every today-relative sample and open range is anchored to: Wednesday of the
+    /// current week. A calendar demo whose shape follows the real weekday cannot be tested — the
+    /// phone week draws the focus day plus its two neighbours (three columns), so a Monday or Sunday
+    /// focus would render two, and the range section clips its week to Mon–Fri, so a Saturday or
+    /// Sunday anchor left that board with no events ("Morning Standup" missing). Wednesday is
+    /// mid-week under every first-day convention the demo can render and is never a weekend.
+    /// Computed per component instance in <see cref="OnInitialized"/> — a static field would freeze
+    /// the weekday of whichever request loaded the assembly first for the whole process.
     /// </summary>
-    private static readonly DateTime WeekSampleDate = ResolveWeekSampleDate();
+    private DateTime _sampleDay;
 
-    private static DateTime ResolveWeekSampleDate()
-    {
-        var today = DateTime.Today;
-        return today.DayOfWeek switch
-        {
-            DayOfWeek.Saturday => today.AddDays(-1),
-            DayOfWeek.Sunday => today.AddDays(-2),
-            _ => today,
-        };
-    }
+    /// <summary>The Wednesday of the Monday-first week that contains <paramref name="today"/>.</summary>
+    private static DateTime WednesdayOfWeek(DateTime today)
+        => today.Date.AddDays(-(((int)today.DayOfWeek + 6) % 7) + 2);
 
-    private DateTime _weekDate = WeekSampleDate;
-    private DateTime _dayDate = DateTime.Today;
-    private DateTime _agendaDate = DateTime.Today;
+    private DateTime _weekDate;
+    private DateTime _dayDate;
+    private DateTime _agendaDate;
     private TmScheduleViewType _rangesView = TmScheduleViewType.Month;
     private DateTime _rangesDate = new(2026, 6, 15);
     private string _rangesResult = "Click an event";
@@ -704,8 +706,8 @@
         new() { Id = "r4", Title = "Overflow D", Start = new DateTime(2026, 6, 10, 13, 0, 0), End = new DateTime(2026, 6, 10, 14, 0, 0), Color = "#ef4444" },
         new() { Id = "r5", Title = "Range Anchor", Start = new DateTime(2026, 6, 15, 8, 0, 0), End = new DateTime(2026, 6, 15, 18, 0, 0), Color = "#8b5cf6" },
     };
-    private DateTime _timelineDate = DateTime.Today;
-    private DateTime _interactiveDate = DateTime.Today;
+    private DateTime _timelineDate;
+    private DateTime _interactiveDate;
     private DateTime _highlightDate = new(2026, 5, 12);
     private bool _highlightWeekends = true;
     private TmAllDayEventStyle _allDayStyle = TmAllDayEventStyle.Tinted;
@@ -767,16 +769,8 @@
         new() { Id = "room-d", Name = "Board Room", Color = "#8b5cf6" },
     };
 
-    private List<TmScheduleEvent> _sampleEvents = new()
-    {
-        new() { Id = "1", Title = "Team Standup", Start = DateTime.Today.AddDays(-2).AddHours(9), End = DateTime.Today.AddDays(-2).AddHours(9.5), Color = "#3b82f6" },
-        new() { Id = "2", Title = "Product Review", Start = DateTime.Today.AddDays(-1).AddHours(14), End = DateTime.Today.AddDays(-1).AddHours(15), Color = "#10b981" },
-        new() { Id = "3", Title = "Client Meeting", Start = DateTime.Today.AddHours(10), End = DateTime.Today.AddHours(11), Color = "#f59e0b" },
-        new() { Id = "4", Title = "Code Review", Start = DateTime.Today.AddHours(14), End = DateTime.Today.AddHours(15), Color = "#8b5cf6" },
-        new() { Id = "5", Title = "Sprint Planning", Start = DateTime.Today.AddDays(2).AddHours(9), End = DateTime.Today.AddDays(2).AddHours(11), Color = "#ef4444" },
-        new() { Id = "6", Title = "Design Workshop", Start = DateTime.Today.AddDays(3).AddHours(13), End = DateTime.Today.AddDays(3).AddHours(16), Color = "#ec4899" },
-        new() { Id = "7", Title = "Company Holiday", Start = DateTime.Today, End = DateTime.Today.AddDays(1), AllDay = true, Color = "#8b5cf6" },
-    };
+    /// <summary>The shared demo set. Filled from <see cref="_sampleDay"/> in <see cref="BuildSampleData"/>.</summary>
+    private List<TmScheduleEvent> _sampleEvents = [];
 
     private List<TmScheduleEvent> _templateEvents = new()
     {
@@ -797,11 +791,8 @@
         new() { Id = "now-1", Title = "Standup", Start = new DateTime(2026, 6, 15, 9, 0, 0), End = new DateTime(2026, 6, 15, 9, 30, 0), Color = "#3b82f6" },
     ];
 
-    private readonly List<TmScheduleEvent> _resourceDayEvents =
-    [
-        new() { Id = "rd1", Title = "Standup", Start = DateTime.Today.AddHours(9), End = DateTime.Today.AddHours(9.5), Color = "#3b82f6", ResourceId = "room-a" },
-        new() { Id = "rd2", Title = "Workshop", Start = DateTime.Today.AddHours(13), End = DateTime.Today.AddHours(15), Color = "#f59e0b", ResourceId = "room-a" },
-    ];
+    /// <summary>The resource-day card's events. Filled from <see cref="_sampleDay"/> in <see cref="BuildSampleData"/>.</summary>
+    private List<TmScheduleEvent> _resourceDayEvents = [];
 
     private void HandleRangeEventChanged(TmScheduleEvent changed)
     {
@@ -810,44 +801,20 @@
         StateHasChanged();
     }
 
-    private List<TmScheduleEvent> _weekEvents = new()
-    {
-        new() { Id = "w1", Title = "Morning Standup", Start = WeekSampleDate.AddHours(9), End = WeekSampleDate.AddHours(9.5), Color = "#3b82f6" },
-        new() { Id = "w2", Title = "Sprint Review", Start = WeekSampleDate.AddHours(10), End = WeekSampleDate.AddHours(11), Color = "#10b981" },
-        new() { Id = "w3", Title = "Lunch Break", Start = WeekSampleDate.AddHours(12), End = WeekSampleDate.AddHours(13), Color = "#f59e0b" },
-        new() { Id = "w4", Title = "Dev Meeting", Start = WeekSampleDate.AddHours(14), End = WeekSampleDate.AddHours(15), Color = "#8b5cf6" },
-        new() { Id = "w5", Title = "Code Review", Start = WeekSampleDate.AddHours(15.5), End = WeekSampleDate.AddHours(16.5), Color = "#ef4444" },
-    };
+    /// <summary>The week and the range sections' events. Filled from <see cref="_sampleDay"/> in <see cref="BuildSampleData"/>.</summary>
+    private List<TmScheduleEvent> _weekEvents = [];
 
-    private List<TmScheduleEvent> _dayEvents = new()
-    {
-        new() { Id = "d1", Title = "Daily Standup", Start = DateTime.Today.AddHours(9), End = DateTime.Today.AddHours(9.5), Color = "#3b82f6" },
-        new() { Id = "d2", Title = "Focus Time", Start = DateTime.Today.AddHours(10), End = DateTime.Today.AddHours(12), Color = "#10b981" },
-        new() { Id = "d3", Title = "Lunch", Start = DateTime.Today.AddHours(12), End = DateTime.Today.AddHours(13), Color = "#f59e0b" },
-        new() { Id = "d4", Title = "1:1 with Manager", Start = DateTime.Today.AddHours(14), End = DateTime.Today.AddHours(14.5), Color = "#8b5cf6" },
-        new() { Id = "d5", Title = "Team Sync", Start = DateTime.Today.AddHours(15), End = DateTime.Today.AddHours(16), Color = "#ef4444" },
-        new() { Id = "d6", Title = "Documentation", Start = DateTime.Today.AddHours(16), End = DateTime.Today.AddHours(17), Color = "#ec4899" },
-    };
+    /// <summary>The day card's events. Filled from <see cref="_sampleDay"/> in <see cref="BuildSampleData"/>.</summary>
+    private List<TmScheduleEvent> _dayEvents = [];
 
-    private List<TmScheduleEvent> _agendaEvents = new()
-    {
-        new() { Id = "a1", Title = "Project Kickoff", Start = DateTime.Today.AddDays(1).AddHours(10), End = DateTime.Today.AddDays(1).AddHours(12), Color = "#3b82f6" },
-        new() { Id = "a2", Title = "Design Review", Start = DateTime.Today.AddDays(2).AddHours(14), End = DateTime.Today.AddDays(2).AddHours(15), Color = "#10b981" },
-        new() { Id = "a3", Title = "Stakeholder Update", Start = DateTime.Today.AddDays(3).AddHours(9), End = DateTime.Today.AddDays(3).AddHours(10), Color = "#f59e0b" },
-        new() { Id = "a4", Title = "Release Planning", Start = DateTime.Today.AddDays(5).AddHours(13), End = DateTime.Today.AddDays(5).AddHours(15), Color = "#8b5cf6" },
-        new() { Id = "a5", Title = "Retrospective", Start = DateTime.Today.AddDays(7).AddHours(15), End = DateTime.Today.AddDays(7).AddHours(16), Color = "#ef4444" },
-    };
+    /// <summary>The agenda card's events. Filled from <see cref="_sampleDay"/> in <see cref="BuildSampleData"/>.</summary>
+    private List<TmScheduleEvent> _agendaEvents = [];
 
-    private List<TmScheduleEvent> _timelineEvents = new()
-    {
-        new() { Id = "t1", Title = "Meeting A", Start = DateTime.Today.AddHours(9), End = DateTime.Today.AddHours(10), Color = "#3b82f6", ResourceId = "room-a" },
-        new() { Id = "t2", Title = "Meeting B", Start = DateTime.Today.AddHours(10.5), End = DateTime.Today.AddHours(11.5), Color = "#10b981", ResourceId = "room-b" },
-        new() { Id = "t3", Title = "Workshop", Start = DateTime.Today.AddHours(13), End = DateTime.Today.AddHours(15), Color = "#f59e0b", ResourceId = "room-a" },
-        new() { Id = "t4", Title = "Demo", Start = DateTime.Today.AddHours(14), End = DateTime.Today.AddHours(15), Color = "#8b5cf6", ResourceId = "room-c" },
-        new() { Id = "t5", Title = "Training", Start = DateTime.Today.AddHours(9.5), End = DateTime.Today.AddHours(12), Color = "#ef4444", ResourceId = "room-d" },
-        // Overlaps Meeting A, so Room A shows two lanes.
-        new() { Id = "t6", Title = "Interview", Start = DateTime.Today.AddHours(9.5), End = DateTime.Today.AddHours(10.5), Color = "#ec4899", ResourceId = "room-a" },
-    };
+    /// <summary>The hour timeline's events. Filled from <see cref="_sampleDay"/> in <see cref="BuildSampleData"/>.</summary>
+    private List<TmScheduleEvent> _timelineEvents = [];
+
+    /// <summary>The interactive card's events. Filled from <see cref="_sampleDay"/> in <see cref="BuildSampleData"/>.</summary>
+    private List<TmScheduleEvent> _interactiveEvents = [];
 
     /// <summary>The day-granularity board: the week of 15 June 2026, Monday first.</summary>
     private DateTime _channelWeek = new(2026, 6, 15);
@@ -898,6 +865,22 @@
 
     protected override void OnInitialized()
     {
+        // One anchor for every today-relative section, resolved from the demo's clock once per
+        // component instance (a static field would freeze the first load's weekday process-wide).
+        // The dates are assigned before the first render, so every board opens on the same week its
+        // events sit in.
+        _sampleDay = WednesdayOfWeek(Clock.GetLocalNow().Date);
+        _tabletDate = _sampleDay;
+        _plainMobileDate = _sampleDay;
+        _mobileDate = _sampleDay;
+        _currentDate = _sampleDay;
+        _dayDate = _sampleDay;
+        _agendaDate = _sampleDay;
+        _timelineDate = _sampleDay;
+        _interactiveDate = _sampleDay;
+        _weekDate = _sampleDay;
+        BuildSampleData();
+
         if (_toolbarSeeded) return;
         _toolbarSeeded = true;
         _toolbarSelectedEvent = _toolbarEvents[0];
@@ -906,19 +889,85 @@
         _agendaSelected = _agendaEvents.FirstOrDefault();
     }
 
-    private void HandleToolbarAdd() => Toast.ShowInfo("Add event");
-
-    // Events for Interactive Demo - always ensure there's an event today for resize/drag testing
-    private List<TmScheduleEvent> _interactiveEvents = new()
+    /// <summary>
+    /// Fills the today-relative sets from <see cref="_sampleDay"/>: the shared month/week set, the
+    /// day, agenda and timeline cards, the resource day and the interactive card. The interactive
+    /// set keeps an event on the anchor day itself, so the Day view and the touch/resize specs always
+    /// have a target.
+    /// </summary>
+    private void BuildSampleData()
     {
-        new() { Id = "i1", Title = "Clickable Event 1", Start = DateTime.Today.AddDays(-1).AddHours(10), End = DateTime.Today.AddDays(-1).AddHours(11), Color = "#3b82f6" },
-        new() { Id = "i2", Title = "Draggable Event", Start = DateTime.Today.AddHours(10), End = DateTime.Today.AddHours(11), Color = "#10b981" },
-        new() { Id = "i3", Title = "Another Event", Start = DateTime.Today.AddDays(2).AddHours(14), End = DateTime.Today.AddDays(2).AddHours(15), Color = "#f59e0b" },
-        // Event specifically for today to ensure Day view has content for testing
-        new() { Id = "i4", Title = "Resize Test Event", Start = DateTime.Today.AddHours(14), End = DateTime.Today.AddHours(15), Color = "#8b5cf6" },
-        // 30 minutes: both coarse handles would cover it, so a centre swipe must still scroll (F7 J3).
-        new() { Id = "i5", Title = "Short Event", Start = DateTime.Today.AddHours(16), End = DateTime.Today.AddHours(16).AddMinutes(30), Color = "#0ea5e9" }
-    };
+        var day = _sampleDay;
+
+        _sampleEvents =
+        [
+            new() { Id = "1", Title = "Team Standup", Start = day.AddDays(-2).AddHours(9), End = day.AddDays(-2).AddHours(9.5), Color = "#3b82f6" },
+            new() { Id = "2", Title = "Product Review", Start = day.AddDays(-1).AddHours(14), End = day.AddDays(-1).AddHours(15), Color = "#10b981" },
+            new() { Id = "3", Title = "Client Meeting", Start = day.AddHours(10), End = day.AddHours(11), Color = "#f59e0b" },
+            new() { Id = "4", Title = "Code Review", Start = day.AddHours(14), End = day.AddHours(15), Color = "#8b5cf6" },
+            new() { Id = "5", Title = "Sprint Planning", Start = day.AddDays(2).AddHours(9), End = day.AddDays(2).AddHours(11), Color = "#ef4444" },
+            new() { Id = "6", Title = "Design Workshop", Start = day.AddDays(3).AddHours(13), End = day.AddDays(3).AddHours(16), Color = "#ec4899" },
+            new() { Id = "7", Title = "Company Holiday", Start = day, End = day.AddDays(1), AllDay = true, Color = "#8b5cf6" },
+        ];
+
+        _weekEvents =
+        [
+            new() { Id = "w1", Title = "Morning Standup", Start = day.AddHours(9), End = day.AddHours(9.5), Color = "#3b82f6" },
+            new() { Id = "w2", Title = "Sprint Review", Start = day.AddHours(10), End = day.AddHours(11), Color = "#10b981" },
+            new() { Id = "w3", Title = "Lunch Break", Start = day.AddHours(12), End = day.AddHours(13), Color = "#f59e0b" },
+            new() { Id = "w4", Title = "Dev Meeting", Start = day.AddHours(14), End = day.AddHours(15), Color = "#8b5cf6" },
+            new() { Id = "w5", Title = "Code Review", Start = day.AddHours(15.5), End = day.AddHours(16.5), Color = "#ef4444" },
+        ];
+
+        _dayEvents =
+        [
+            new() { Id = "d1", Title = "Daily Standup", Start = day.AddHours(9), End = day.AddHours(9.5), Color = "#3b82f6" },
+            new() { Id = "d2", Title = "Focus Time", Start = day.AddHours(10), End = day.AddHours(12), Color = "#10b981" },
+            new() { Id = "d3", Title = "Lunch", Start = day.AddHours(12), End = day.AddHours(13), Color = "#f59e0b" },
+            new() { Id = "d4", Title = "1:1 with Manager", Start = day.AddHours(14), End = day.AddHours(14.5), Color = "#8b5cf6" },
+            new() { Id = "d5", Title = "Team Sync", Start = day.AddHours(15), End = day.AddHours(16), Color = "#ef4444" },
+            new() { Id = "d6", Title = "Documentation", Start = day.AddHours(16), End = day.AddHours(17), Color = "#ec4899" },
+        ];
+
+        _agendaEvents =
+        [
+            new() { Id = "a1", Title = "Project Kickoff", Start = day.AddDays(1).AddHours(10), End = day.AddDays(1).AddHours(12), Color = "#3b82f6" },
+            new() { Id = "a2", Title = "Design Review", Start = day.AddDays(2).AddHours(14), End = day.AddDays(2).AddHours(15), Color = "#10b981" },
+            new() { Id = "a3", Title = "Stakeholder Update", Start = day.AddDays(3).AddHours(9), End = day.AddDays(3).AddHours(10), Color = "#f59e0b" },
+            new() { Id = "a4", Title = "Release Planning", Start = day.AddDays(5).AddHours(13), End = day.AddDays(5).AddHours(15), Color = "#8b5cf6" },
+            new() { Id = "a5", Title = "Retrospective", Start = day.AddDays(7).AddHours(15), End = day.AddDays(7).AddHours(16), Color = "#ef4444" },
+        ];
+
+        _timelineEvents =
+        [
+            new() { Id = "t1", Title = "Meeting A", Start = day.AddHours(9), End = day.AddHours(10), Color = "#3b82f6", ResourceId = "room-a" },
+            new() { Id = "t2", Title = "Meeting B", Start = day.AddHours(10.5), End = day.AddHours(11.5), Color = "#10b981", ResourceId = "room-b" },
+            new() { Id = "t3", Title = "Workshop", Start = day.AddHours(13), End = day.AddHours(15), Color = "#f59e0b", ResourceId = "room-a" },
+            new() { Id = "t4", Title = "Demo", Start = day.AddHours(14), End = day.AddHours(15), Color = "#8b5cf6", ResourceId = "room-c" },
+            new() { Id = "t5", Title = "Training", Start = day.AddHours(9.5), End = day.AddHours(12), Color = "#ef4444", ResourceId = "room-d" },
+            // Overlaps Meeting A, so Room A shows two lanes.
+            new() { Id = "t6", Title = "Interview", Start = day.AddHours(9.5), End = day.AddHours(10.5), Color = "#ec4899", ResourceId = "room-a" },
+        ];
+
+        _resourceDayEvents =
+        [
+            new() { Id = "rd1", Title = "Standup", Start = day.AddHours(9), End = day.AddHours(9.5), Color = "#3b82f6", ResourceId = "room-a" },
+            new() { Id = "rd2", Title = "Workshop", Start = day.AddHours(13), End = day.AddHours(15), Color = "#f59e0b", ResourceId = "room-a" },
+        ];
+
+        _interactiveEvents =
+        [
+            new() { Id = "i1", Title = "Clickable Event 1", Start = day.AddDays(-1).AddHours(10), End = day.AddDays(-1).AddHours(11), Color = "#3b82f6" },
+            new() { Id = "i2", Title = "Draggable Event", Start = day.AddHours(10), End = day.AddHours(11), Color = "#10b981" },
+            new() { Id = "i3", Title = "Another Event", Start = day.AddDays(2).AddHours(14), End = day.AddDays(2).AddHours(15), Color = "#f59e0b" },
+            // An event on the anchor day itself, so the Day view always has content for testing.
+            new() { Id = "i4", Title = "Resize Test Event", Start = day.AddHours(14), End = day.AddHours(15), Color = "#8b5cf6" },
+            // 30 minutes: both coarse handles would cover it, so a centre swipe must still scroll (F7 J3).
+            new() { Id = "i5", Title = "Short Event", Start = day.AddHours(16), End = day.AddHours(16).AddMinutes(30), Color = "#0ea5e9" },
+        ];
+    }
+
+    private void HandleToolbarAdd() => Toast.ShowInfo("Add event");
 
     private bool _detailOpen;
     private TmScheduleEvent? _detail;
