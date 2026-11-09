@@ -106,6 +106,7 @@ npm ci                         # once: installs esbuild for the document-editor 
 npm run test:document-editor
 npm run test:reporting-modules
 npm run test:overlay           # core: pointer-drag, pointer-gesture, overlay, workflow/scheduler/dashboard pointer
+npm run test:core-modules      # core: tm-animated-number.js (easing/frame math, formatter cache, cancel idempotency) + TmSegmentedControl.razor.js (indicator place/focusOption/release, ResizeObserver bookkeeping) — pure-logic node tests
 npm run test:signing-runner    # Signing: signing-runner.js + signing-editor.js + pdf-template-designer-pointer.js + coarse-pointer probe
 npm run test:diagram-editor    # DiagramEditor: diagram-editor-touch.js + engine tests
 npm run test:email-templates   # EmailTemplates: tm-email-save-shortcut.js (Ctrl/⌘+S guard)

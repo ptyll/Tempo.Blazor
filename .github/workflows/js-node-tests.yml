@@ -35,6 +35,9 @@ jobs:
       - name: Core helpers + overlay (pointer-drag, pointer-gesture, workflow, scheduler, dashboard, …)
         run: npm run test:overlay
 
+      - name: Core modules (animated number ticker + segmented control indicator)
+        run: npm run test:core-modules
+
       - name: Signing runner (scrollToField, coarse-pointer probe, designer pointer adapter)
         run: npm run test:signing-runner
 

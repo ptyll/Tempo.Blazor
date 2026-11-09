@@ -50,7 +50,10 @@ function formatterFor(options) {
     const style = options?.style === 'percent' ? 'percent' : 'decimal';
     const min = clampDigits(options?.minimumFractionDigits);
     const max = Math.max(min, clampDigits(options?.maximumFractionDigits));
-    const key = `${locale}|${style}|${min}|${max}`;
+    // useGrouping shapes the output too — a formatter cached for a grouping-free instance must
+    // not be handed to one that asked for separators (and vice versa).
+    const grouping = options?.useGrouping === false ? 'off' : 'on';
+    const key = `${locale}|${style}|${min}|${max}|${grouping}`;
 
     let formatter = formatters.get(key);
     if (formatter) {
