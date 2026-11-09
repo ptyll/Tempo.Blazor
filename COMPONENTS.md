@@ -6433,6 +6433,8 @@ Kompletní panel aktivity entity (timeline + komentáře + přílohy).
 | `ShowAttachments` | `bool` | `true` | Zobrazit přílohy |
 | `OnCommentAdded` | `EventCallback<string>` | — | Přidání komentáře (HTML). Předává se do `TmActivityComments`; při novém komentáři až po `OnCommentSubmitted` |
 | `OnCommentSubmitted` | `EventCallback<TmCommentSubmission>` | — | Nový komentář: HTML + příznak interního režimu. Log nic nefiltruje |
+| `CommentSubmitHandler` | `Func<TmCommentSubmission, Task<bool>>?` | `null` | Předá se do `TmActivityComments`; když je nastavený, nahrazuje tam `OnCommentSubmitted` + `OnCommentAdded` — `false` nechá draft otevřený |
+| `CommentEditHandler` | `Func<TmCommentEdit, Task<bool>>?` | `null` | Předá se do `TmActivityComments`; když je nastavený, nahrazuje tam `OnCommentEdited` — `false` nechá inline editor otevřený |
 | `OnCommentDeleted` | `EventCallback<string>` | — | Smazání komentáře |
 | `CommentActions` | `RenderFragment<TmCommentEntry>?` | `null` | Vlastní akce za Edit/Delete; předá se beze změny |
 | `SupportsMentions` | `bool` | `false` | Našeptávač zmínek na záložce komentářů; bez `MentionProvider` zůstane vypnutý |
@@ -6497,6 +6499,8 @@ Komentáře s přidáváním, editací a mazáním.
 | `OnCommentSubmitted` | `EventCallback<TmCommentSubmission>` | — | Nový komentář: HTML + `IsInternal`. Pořadí: tento callback, pak `OnCommentAdded`. Editace ho nevolá |
 | `OnCommentDeleted` | `EventCallback<string>` | — | Smazání |
 | `OnCommentEdited` | `EventCallback<(string Id, string NewText)>` | — | Editace |
+| `CommentSubmitHandler` | `Func<TmCommentSubmission, Task<bool>>?` | `null` | 2.10.0: save handler nového komentáře. Když je nastavený, nahrazuje `OnCommentSubmitted` + `OnCommentAdded`: `true` editor zavře, `false` nechá draft otevřený s textem a přepínačem (důvod selhání hlásí konzument, komponenta oznámí neuložení přes aria-live). Handler běží v událostním kontextu komponenty — chce-li konzument na selhání zobrazit vlastní UI, musí si sám zavolat `StateHasChanged` |
+| `CommentEditHandler` | `Func<TmCommentEdit, Task<bool>>?` | `null` | 2.10.0: save handler inline editace (`TmCommentEdit`: `CommentId` + `Html`). Když je nastavený, nahrazuje `OnCommentEdited`: `false` nechá inline editor otevřený s upraveným textem |
 | `ShowAddButton` | `bool` | `true` | Zobrazit přidávání |
 | `SupportsMentions` | `bool` | `false` | Našeptávač zmínek v composeru i inline editaci; bez `MentionProvider` zůstane vypnutý |
 | `MentionProvider` | `ITmPeopleProvider?` | `null` | Zdroj lidí pro `@` |

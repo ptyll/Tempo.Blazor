@@ -100,4 +100,47 @@ public class TmActivityLogTests : LocalizationTestBase
         tabs.Should().NotContain(t =>
             t.TextContent.Contains("Comments") || t.TextContent.Contains("Komentáře"));
     }
+
+    [Fact]
+    public void TmActivityLog_ForwardsCommentHandlers()
+    {
+        Func<TmCommentSubmission, Task<bool>> submitHandler = _ => Task.FromResult(true);
+        Func<TmCommentEdit, Task<bool>> editHandler = _ => Task.FromResult(true);
+
+        var cut = Render<TmActivityLog>(p => p
+            .Add(c => c.TimelineEntries, SampleEntries())
+            .Add(c => c.Comments, SampleComments())
+            .Add(c => c.CommentSubmitHandler, submitHandler)
+            .Add(c => c.CommentEditHandler, editHandler));
+
+        // Comments tab content mounts on demand — switch to it.
+        cut.Find("#tm-activity-tab-comments").Click();
+
+        var comments = cut.FindComponent<TmActivityComments>();
+        comments.Instance.CommentSubmitHandler.Should().BeSameAs(submitHandler);
+        comments.Instance.CommentEditHandler.Should().BeSameAs(editHandler);
+    }
+
+    [Fact]
+    public async Task TmActivityLog_CommentSubmitHandlerFalse_KeepsDraft()
+    {
+        var cut = Render<TmActivityLog>(p => p
+            .Add(c => c.TimelineEntries, SampleEntries())
+            .Add(c => c.Comments, SampleComments())
+            .Add(c => c.CommentSubmitHandler, _ => Task.FromResult(false)));
+
+        cut.Find("#tm-activity-tab-comments").Click();
+        var comments = cut.FindComponent<TmActivityComments>();
+
+        comments.Find(".tm-comments-add-btn").Click();
+        await cut.InvokeAsync(() => comments.Instance.SetEditorContentForTestAsync("<p>draft text</p>"));
+        comments.Find(".tm-comment-submit-btn").Click();
+
+        // The failed save keeps the composer open with the draft and no comment is appended.
+        comments.FindAll(".tm-comment-editor").Should().NotBeEmpty();
+        comments.Instance.HasUnsavedDraft.Should().BeTrue();
+        cut.FindComponent<TmRichEditorSimple>().Instance.Value
+            .Should().Contain("draft text");
+        comments.Instance.Comments.Should().HaveCount(1);
+    }
 }

@@ -638,5 +638,11 @@
   "TmDemo_ActivityComments_ToggleTitlePublic": "Označit tento komentář jako interní?",
   "TmDemo_ActivityComments_ToggleMessageInternal": "Komentář uvidí každý, kdo vlákno otevře. Již odeslané notifikace nelze odvolat.",
   "TmDemo_ActivityComments_ToggleMessagePublic": "Interní komentář mají vidět jen privilegovaní uživatelé. Komponenta ho neskrývá — filtrování je na aplikaci. Již odeslané notifikace nelze odvolat.",
-  "TmDemo_ActivityComments_ToggleConfirm": "Změnit viditelnost"
+  "TmDemo_ActivityComments_ToggleConfirm": "Změnit viditelnost",
+  "TmDemo_ActivityComments_SimulateFailure": "Simulovat selhání uložení",
+  "TmDemo_ActivityComments_SimulateFailureHint": "Když je zapnuto, handler uložení po krátké prodlevě vrátí selhání: editor zůstane otevřený s vaším textem a důvod se zobrazí v upozornění.",
+  "TmDemo_ActivityComments_SaveFailedTitle": "Komentář nebyl uložen",
+  "TmDemo_ActivityComments_SaveFailedMessage": "Server komentář odmítl (simulované). Váš text zůstává v editoru — opravte ho a zkuste znovu, nebo vypněte simulaci.",
+  "TmDemo_ActivityComments_EditFailedTitle": "Úprava nebyla uložena",
+  "TmDemo_ActivityComments_EditFailedMessage": "Server odmítl upravený text (simulované). Vnitřní editor zůstává otevřený s vaším textem."
 }

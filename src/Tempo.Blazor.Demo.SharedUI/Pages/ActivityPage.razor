@@ -91,6 +91,40 @@
             </TmButton>
         </div>
 
+        <div class="mb-4 flex flex-wrap items-center gap-3">
+            <TmToggle Value="_simulateSaveFailure"
+                      ValueChanged="OnSimulateFailureChanged"
+                      Label="@Loc["TmDemo_ActivityComments_SimulateFailure"]"
+                      AriaDescribedBy="activity-comments-simulate-failure-hint"
+                      data-testid="activity-comments-simulate-failure" />
+            <span id="activity-comments-simulate-failure-hint"
+                  class="text-sm text-slate-600 dark:text-slate-400">
+                @Loc["TmDemo_ActivityComments_SimulateFailureHint"]
+            </span>
+            <span class="text-sm font-mono text-slate-600 dark:text-slate-400"
+                  data-testid="activity-comments-save-attempts"
+                  aria-hidden="true">save attempts: @_saveAttempts</span>
+        </div>
+
+        @if (_saveFailure is not null)
+        {
+            <div class="mb-4" data-testid="activity-comments-save-failed">
+                <TmAlert Severity="AlertSeverity.Error"
+                         Title="@Loc["TmDemo_ActivityComments_SaveFailedTitle"]">
+                    @_saveFailure
+                </TmAlert>
+            </div>
+        }
+        @if (_editFailure is not null)
+        {
+            <div class="mb-4" data-testid="activity-comments-edit-failed">
+                <TmAlert Severity="AlertSeverity.Error"
+                         Title="@Loc["TmDemo_ActivityComments_EditFailedTitle"]">
+                    @_editFailure
+                </TmAlert>
+            </div>
+        }
+
         <div class="showcase-card">
             <TmActivityComments @ref="_commentsComponent"
                                 Comments="@_standaloneComments"
@@ -102,6 +136,8 @@
                                 OnCommentEdited="@EditStandaloneComment"
                                 OnCommentDeleted="@DeleteStandaloneComment"
                                 OnDraftChanged="@HandleDraftChanged"
+                                CommentSubmitHandler="@StandaloneSubmitHandler"
+                                CommentEditHandler="@StandaloneEditHandler"
                                 CommentActions="@CommentVisibilityAction" />
         </div>
     </div>
@@ -384,6 +420,56 @@
     }
 
     private bool? _pendingSubmissionInternal;
+
+    // Failed-save simulation (TC4): while the toggle is on, the standalone thread routes
+    // posting through CommentSubmitHandler/CommentEditHandler returning false — the
+    // handlers REPLACE the legacy callbacks there, the component keeps the draft and the
+    // page presents the (simulated) reason through a TmAlert.
+    private bool _simulateSaveFailure;
+    private string? _saveFailure;
+    private string? _editFailure;
+    // Counts the times the simulated submit handler actually ran — E2E asserts a second
+    // click while the save is in flight never reaches the handler (no double post).
+    private int _saveAttempts;
+
+    private void OnSimulateFailureChanged(bool value)
+    {
+        _simulateSaveFailure = value;
+        if (!value)
+        {
+            _saveFailure = null;
+            _editFailure = null;
+        }
+    }
+
+    private Func<TmCommentSubmission, Task<bool>>? StandaloneSubmitHandler
+        => _simulateSaveFailure ? SubmitStandaloneCommentSimulated : null;
+
+    private Func<TmCommentEdit, Task<bool>>? StandaloneEditHandler
+        => _simulateSaveFailure ? EditStandaloneCommentSimulated : null;
+
+    private async Task<bool> SubmitStandaloneCommentSimulated(TmCommentSubmission submission)
+    {
+        // Simulated latency keeps the save in flight long enough to observe the
+        // aria-disabled submit button; the failure leaves the draft in the editor.
+        _saveAttempts++;
+        await Task.Delay(500);
+        _editFailure = null;
+        _saveFailure = Loc["TmDemo_ActivityComments_SaveFailedMessage"];
+        // The handler runs inside the child's event handler — the page owns the alert,
+        // so it must re-render itself.
+        await InvokeAsync(StateHasChanged);
+        return false;
+    }
+
+    private async Task<bool> EditStandaloneCommentSimulated(TmCommentEdit edit)
+    {
+        await Task.Delay(500);
+        _saveFailure = null;
+        _editFailure = Loc["TmDemo_ActivityComments_EditFailedMessage"];
+        await InvokeAsync(StateHasChanged);
+        return false;
+    }
 
     /// <summary>
     /// Fires before <see cref="AddStandaloneComment"/> (document order). Remembers the internal
