@@ -77,6 +77,18 @@
       "description": "Raised before OnCommentAdded with the HTML and the composer internal flag. Forwarded unchanged; the log does not interpret or filter internal comments."
     },
     {
+      "name": "CommentSubmitHandler",
+      "type": "Func<TmCommentSubmission, Task<bool>>?",
+      "isRequired": false,
+      "description": "Optional save handler for a NEW comment, forwarded to TmActivityComments. When set it replaces OnCommentSubmitted and OnCommentAdded there: return true to close the editor, false to keep the draft open. Null (default) keeps the legacy callbacks, order unchanged. Added in 2.10.0."
+    },
+    {
+      "name": "CommentEditHandler",
+      "type": "Func<TmCommentEdit, Task<bool>>?",
+      "isRequired": false,
+      "description": "Optional save handler for an inline edit, forwarded to TmActivityComments. When set it replaces OnCommentEdited there: return true to close the inline editor, false to keep the edited text. Null (default) keeps the legacy callback. Added in 2.10.0."
+    },
+    {
       "name": "OnCommentDeleted",
       "type": "EventCallback<string>",
       "isRequired": false,

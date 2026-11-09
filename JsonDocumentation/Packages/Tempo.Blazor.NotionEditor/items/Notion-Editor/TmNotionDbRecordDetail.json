@@ -47,9 +47,22 @@
       "isRequired": false
     },
     {
+      "name": "OnRecordDeleted",
+      "type": "EventCallback<IDatabaseRecord>",
+      "description": "Raised after the user confirms deleting this record. The detail does not call the provider itself — the host owns the row list and the DeleteRecordAsync call.",
+      "isRequired": false
+    },
+    {
       "name": "OnOpenAsPage",
       "type": "EventCallback<IDatabaseRecord>",
       "isRequired": false
+    },
+    {
+      "name": "Show",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "Whether the detail dialog is open. Defaults to true — the host renders the component only while a record is open (inside the core TmModal since phase 4)."
     }
   ],
   "subcategory": "Blocks / Database"

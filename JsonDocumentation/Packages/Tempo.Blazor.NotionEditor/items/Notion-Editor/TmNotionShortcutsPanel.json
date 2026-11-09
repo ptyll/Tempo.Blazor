@@ -19,6 +19,13 @@
       "description": "Shortcut groups rendered by the panel. Defaults to the built-in Notion catalog."
     },
     {
+      "name": "LayoutMode",
+      "type": "TmLayoutMode",
+      "isRequired": false,
+      "default": "Auto",
+      "description": "Forced layout. Mobile presents the panel as the core sheet."
+    },
+    {
       "name": "Visible",
       "type": "bool",
       "isRequired": false,

@@ -287,6 +287,17 @@
   --tm-transition-normal: 200ms ease;
   --tm-transition-slow:   300ms ease;
 
+  /* ── Icon sizes & animation durations ─────────────────────────
+     The icon-size steps mirror the .tm-icon-xs/sm/md boxes so non-icon subjects
+     (the toast spinner) track the same scale; the duration steps feed animation and
+     transition declarations that need a bare time (var(--tm-transition-*) carries an
+     easing, so it cannot). */
+  --tm-icon-size-xs: 0.75rem;  /* 12px — the .tm-icon-xs box */
+  --tm-icon-size-sm: 1rem;     /* 16px — the .tm-icon-sm box */
+  --tm-icon-size-md: 1.25rem;  /* 20px — the .tm-icon-md box */
+  --tm-duration-quick: 180ms;  /* micro transitions (toast swipe rollback) */
+  --tm-duration-spin:  800ms;  /* one indeterminate spinner rotation */
+
   /* ── Z-Index Scale ──────────────────────────────────────────── */
   /* The bands below order ONLY surfaces that are NOT promoted to the browser top layer
      (popover="manual" + showPopover) and the no-Popover-API fallback. Every modal

@@ -28,6 +28,12 @@
       "isRequired": false
     },
     {
+      "name": "LayoutMode",
+      "type": "TmLayoutMode",
+      "isRequired": false,
+      "description": "Forced layout. Mobile presents the history as a list, then a preview with Back."
+    },
+    {
       "name": "OnRestored",
       "type": "EventCallback<string>",
       "isRequired": false

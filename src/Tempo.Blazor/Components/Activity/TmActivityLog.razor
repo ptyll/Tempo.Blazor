@@ -65,6 +65,8 @@
                                     OnCommentAdded="OnCommentAdded"
                                     OnCommentSubmitted="OnCommentSubmitted"
                                     OnCommentDeleted="OnCommentDeleted"
+                                    CommentSubmitHandler="CommentSubmitHandler"
+                                    CommentEditHandler="CommentEditHandler"
                                     CommentActions="CommentActions"
                                     SupportsMentions="SupportsMentions"
                                     MentionProvider="MentionProvider"
@@ -101,6 +103,12 @@
 
     /// <summary>Raised before <see cref="OnCommentAdded"/> with the HTML and the composer internal flag. Forwarded unchanged; the log does not interpret or filter internal comments.</summary>
     [Parameter] public EventCallback<TmCommentSubmission> OnCommentSubmitted { get; set; }
+
+    /// <summary>Optional save handler for a NEW comment, forwarded to <c>TmActivityComments</c>. When set it replaces <see cref="OnCommentSubmitted"/> and <see cref="OnCommentAdded"/> there: return <see langword="true"/> to close the editor, <see langword="false"/> to keep the draft open. Null (default) keeps the legacy callbacks, order unchanged.</summary>
+    [Parameter] public Func<TmCommentSubmission, Task<bool>>? CommentSubmitHandler { get; set; }
+
+    /// <summary>Optional save handler for an inline edit, forwarded to <c>TmActivityComments</c>. When set it replaces <c>OnCommentEdited</c> there: return <see langword="true"/> to close the inline editor, <see langword="false"/> to keep the edited text. Null (default) keeps the legacy callback.</summary>
+    [Parameter] public Func<TmCommentEdit, Task<bool>>? CommentEditHandler { get; set; }
 
     /// <summary>Raised with the comment id when the user deletes a comment. Forwarded to <c>TmActivityComments</c>.</summary>
     [Parameter] public EventCallback<string> OnCommentDeleted { get; set; }

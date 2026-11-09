@@ -1,8 +1,8 @@
 .tm-props-report {
-    border: 1px solid var(--tm-color-border);
+    border: 1px solid var(--tm-border-color);
     border-radius: var(--tm-radius-md);
     background: var(--tm-color-surface);
-    color: var(--tm-color-text);
+    color: var(--tm-text-primary);
     overflow: hidden;
 }
 
@@ -11,7 +11,7 @@
     align-items: center;
     gap: var(--tm-space-2);
     padding: var(--tm-space-3);
-    border-bottom: 1px solid var(--tm-color-border);
+    border-bottom: 1px solid var(--tm-border-color);
     background: var(--tm-bg-muted);
 }
 
@@ -49,7 +49,7 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: var(--tm-space-3);
     padding: var(--tm-space-3);
-    border-bottom: 1px solid var(--tm-color-border);
+    border-bottom: 1px solid var(--tm-border-color);
 }
 
 .tm-props-report__field {
@@ -69,10 +69,10 @@
 .tm-props-report__columns-input {
     width: 100%;
     min-height: 2.25rem;
-    border: 1px solid var(--tm-color-border);
+    border: 1px solid var(--tm-border-color);
     border-radius: var(--tm-radius-sm);
     background: var(--tm-color-surface);
-    color: var(--tm-color-text);
+    color: var(--tm-text-primary);
     font: inherit;
     padding: var(--tm-space-1) var(--tm-space-2);
 }
@@ -111,7 +111,7 @@
 .tm-props-report__table th,
 .tm-props-report__table td {
     padding: var(--tm-space-2) var(--tm-space-3);
-    border-bottom: 1px solid var(--tm-color-border);
+    border-bottom: 1px solid var(--tm-border-color);
     text-align: left;
     vertical-align: top;
     overflow-wrap: anywhere;
@@ -140,7 +140,7 @@
     max-width: 18rem;
     border: 0;
     background: transparent;
-    color: var(--tm-color-text);
+    color: var(--tm-text-primary);
     font: inherit;
     font-weight: var(--tm-font-weight-semibold);
     padding: 0;
@@ -172,7 +172,7 @@
 }
 
 .tm-props-report__value {
-    color: var(--tm-color-text);
+    color: var(--tm-text-primary);
 }
 
 .tm-props-report__missing {

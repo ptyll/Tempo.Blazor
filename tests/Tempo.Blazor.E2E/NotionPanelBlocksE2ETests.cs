@@ -261,9 +261,10 @@ public class NotionPanelBlocksE2ETests : NotionE2ETestBase
             if (await visibleSidebar.IsVisibleAsync())
             {
                 await page.Locator(".tm-notion-sidebar-toggle").First.EvaluateAsync("el => el.click()");
-                await page.Locator(".tm-notion-sidebar--hidden").First.WaitForAsync(new LocatorWaitForOptions
+                // Phase 3 (N0): closing the drawer unmounts the page tree (no --hidden class).
+                await page.Locator(".tm-notion-sidebar--visible").First.WaitForAsync(new LocatorWaitForOptions
                 {
-                    State = WaitForSelectorState.Attached,
+                    State = WaitForSelectorState.Detached,
                     Timeout = 10000
                 });
             }

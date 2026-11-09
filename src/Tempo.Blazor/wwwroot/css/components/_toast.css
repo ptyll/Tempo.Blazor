@@ -33,6 +33,18 @@
     left: 0;
 }
 
+.tm-toast-container--top-center {
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+.tm-toast-container--bottom-center {
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
 /* The container rides the browser top layer (U1: popover="manual", re-raised on each push), so
    every UA [popover] default is reset at zero specificity, mirroring :where(.tm-overlay-panel).
    The own declarations above win where they exist (the fixed position, the position-class
@@ -52,7 +64,8 @@
     overflow: visible;
 }
 
-/* Toast card */
+/* Toast card. The slide-in fill is BACKWARDS, not forwards: a forwards fill would keep pinning
+   transform: translateX(0) over the inline swipe-drag transform for the card's whole life. */
 .tm-toast {
     pointer-events: auto;
     width: 380px;
@@ -62,7 +75,7 @@
     box-shadow: var(--tm-shadow-lg, 0 10px 25px -5px rgba(0,0,0,.1), 0 8px 10px -6px rgba(0,0,0,.1));
     border: 1px solid var(--tm-color-border, #e5e7eb);
     overflow: hidden;
-    animation: tmToastSlideIn 0.3s cubic-bezier(0.21, 1.02, 0.73, 1) forwards;
+    animation: tmToastSlideIn 0.3s cubic-bezier(0.21, 1.02, 0.73, 1) backwards;
 }
 
 /* Toast body */
@@ -123,6 +136,99 @@
 .tm-toast-dismiss:hover {
     background: var(--tm-color-surface-hover, rgba(0,0,0,0.05));
     color: var(--tm-color-text, #1e293b);
+}
+
+/* Action button (Undo, …) — a native button: the browser owns its key activation. The colour
+   resolves through the AA-contrast -text token (the plain --tm-color-primary fails contrast on
+   dark surfaces); forced-colors falls back to the system ButtonText pairing. */
+.tm-toast-action {
+    flex-shrink: 0;
+    align-self: center;
+    border: none;
+    background: transparent;
+    color: var(--tm-color-primary-text, var(--tm-color-primary));
+    font: inherit;
+    font-size: var(--tm-text-sm, 0.875rem);
+    font-weight: 600;
+    padding: var(--tm-space-1, 0.25rem) var(--tm-space-2, 0.5rem);
+    border-radius: var(--tm-radius-md, 0.5rem);
+    cursor: pointer;
+    transition: background-color 0.15s;
+}
+
+.tm-toast-action:hover {
+    background: var(--tm-color-surface-hover);
+}
+
+@media (forced-colors: active) {
+    .tm-toast-action {
+        border: 1px solid ButtonText;
+        color: ButtonText;
+    }
+}
+
+/* Host-supplied custom content below the message */
+.tm-toast-custom {
+    margin-top: var(--tm-space-2, 0.5rem);
+    font-size: var(--tm-text-sm, 0.875rem);
+    color: var(--tm-text-secondary);
+}
+
+/* Paused (hover/focus/document hidden): freeze the progress animation where it is — the .NET
+   timer is paused by the service, so the bar and the timer stay in agreement. */
+.tm-toast--paused .tm-toast-progress-bar {
+    animation-play-state: paused;
+}
+
+/* Loading (promise) toast: the severity icon swaps for a spinner. aria-hidden — the live region
+   carries the announcement. Size and rotation resolve through the shared icon-size/duration
+   tokens. */
+.tm-toast-spinner {
+    flex-shrink: 0;
+    width: var(--tm-icon-size-md, 1.25rem);
+    height: var(--tm-icon-size-md, 1.25rem);
+    margin-top: 2px;
+    border-radius: 50%;
+    border: 2px solid var(--tm-color-border);
+    border-top-color: var(--tm-color-primary);
+    animation: tmToastSpin var(--tm-duration-spin, 800ms) linear infinite;
+}
+
+.tm-toast--loading .tm-toast-progress {
+    display: none;
+}
+
+/* Swipe-to-dismiss rollback: tm-toast-swipe.js drives the inline transform during the drag and
+   adds this class for the animated return; under reduced motion the module snaps back instantly
+   without the class. */
+.tm-toast--swipe-return {
+    transition-property: transform, opacity;
+    transition-duration: var(--tm-duration-quick, 180ms);
+    transition-timing-function: ease-out;
+}
+
+/* ── Stacked „deck" presentation ──
+   The newest three toasts stay fully visible; every older card carries the Blazor-assigned
+   .tm-toast--deck-collapsed class and collapses to a thin strip — a pure-CSS depth hint, inert to
+   pointer and focus. Hovering the container or moving focus into it expands the deck (the
+   :not(:hover):not(:focus-within) guard releases the collapse with nothing else to undo). The
+   strip height is the spacing token --tm-space-3; there is intentionally NO max-height
+   transition — a strip toggles between a fixed 12px and the auto-height of an expanded card,
+   which is not interpolable, so an animation would be a no-op the reduced-motion block would
+   still have to enumerate. */
+.tm-toast-container--stacked {
+    gap: 0;
+}
+
+.tm-toast-container--stacked:not(:hover):not(:focus-within) .tm-toast--deck-collapsed {
+    max-height: var(--tm-space-3, 0.75rem);
+    min-height: 0;
+    overflow: hidden;
+    pointer-events: none;
+}
+
+.tm-toast-container--stacked:not(:hover):not(:focus-within) .tm-toast--deck-collapsed .tm-toast-body {
+    visibility: hidden;
 }
 
 /* Progress bar */
@@ -214,6 +320,29 @@
     }
 }
 
+/* Center containers drop/float in instead of sliding in from a side */
+.tm-toast-container--top-center .tm-toast,
+.tm-toast-container--bottom-center .tm-toast {
+    animation-name: tmToastSlideInCenter;
+}
+
+@keyframes tmToastSlideInCenter {
+    from {
+        opacity: 0;
+        transform: translateY(-12px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes tmToastSpin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
 @keyframes tmToastProgress {
     from { transform: scaleX(1); }
     to   { transform: scaleX(0); }
@@ -258,6 +387,24 @@
     .tm-toast-progress-bar {
         animation: none;
     }
+    .tm-toast-action {
+        transition: none;
+    }
+    .tm-toast-spinner {
+        animation: none;
+    }
+    .tm-toast--swipe-return {
+        transition: none;
+    }
+}
+
+/* ── Forced colours ── */
+
+@media (forced-colors: active) {
+    .tm-toast-spinner {
+        border-color: CanvasText;
+        border-top-color: Highlight;
+    }
 }
 
 /* ── Mobile ── */
@@ -267,6 +414,10 @@
         left: 0;
         right: 0;
         padding: var(--tm-space-2, 0.5rem);
+    }
+    .tm-toast-container--top-center,
+    .tm-toast-container--bottom-center {
+        transform: none;
     }
     .tm-toast {
         width: 100%;

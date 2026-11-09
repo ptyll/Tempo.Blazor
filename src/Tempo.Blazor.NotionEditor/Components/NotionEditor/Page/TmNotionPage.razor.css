@@ -29,7 +29,8 @@
 }
 
 .tm-notion-page:hover .tm-notion-page__settings-btn,
-.tm-notion-page__settings-btn:focus-within {
+.tm-notion-page__settings-btn:focus-within,
+.tm-notion-page__settings-btn:has(.tm-npsm-trigger--open) {
     opacity: 1;
 }
 
@@ -89,7 +90,7 @@
     max-width: min(calc(var(--tm-space-16, 4rem) * 3), var(--tm-notion-status-max-label-width));
     padding: calc(var(--tm-space-1) / 2) var(--tm-space-2);
     border-radius: var(--tm-radius-full);
-    border: var(--tm-border-width-1, 1px) solid var(--tm-status-border);
+    border: var(--tm-border-width, 1px) solid var(--tm-status-border);
     background: var(--tm-status-bg);
     color: var(--tm-status-text);
     font-size: 0.78em;
@@ -127,9 +128,9 @@
 }
 
 .tm-notion-page ::deep .tm-notion-status--purple {
-    --tm-status-bg: var(--tm-notion-bg-purple);
-    --tm-status-text: var(--tm-notion-text-purple);
-    --tm-status-border: var(--tm-notion-text-purple);
+    --tm-status-bg: var(--tm-notion-option-text-purple-wash);
+    --tm-status-text: var(--tm-notion-option-text-purple-ink);
+    --tm-status-border: var(--tm-notion-option-text-purple-ink);
 }
 
 .tm-notion-page ::deep .tm-notion-status__label {
@@ -177,7 +178,9 @@
 
 .tm-notion-page__aggregate-conflict {
     display: grid;
-    grid-template-columns: auto minmax(0, 1fr) auto auto;
+    /* Text first, actions on their own second row (F-03): the four-column grid squeezed the
+       buttons into a narrow column beside the message. */
+    grid-template-columns: auto minmax(0, 1fr);
     align-items: center;
     gap: var(--tm-space-3);
     margin-bottom: var(--tm-space-3);
@@ -185,7 +188,7 @@
     border: var(--tm-border-width) solid var(--tm-color-warning);
     border-radius: var(--tm-radius-md);
     background: var(--tm-color-warning-subtle);
-    color: var(--tm-color-text);
+    color: var(--tm-text-primary);
     text-align: start;
 }
 
@@ -201,8 +204,37 @@
 
 .tm-notion-page__aggregate-conflict .tm-notion-load-error__retry {
     min-height: var(--tm-input-height-sm);
-    color: var(--tm-color-text);
+    padding: var(--tm-space-2) var(--tm-space-4);
+    border: var(--tm-border-width) solid var(--tm-border-color);
+    border-radius: var(--tm-radius-md);
+    color: var(--tm-text-primary);
     background: var(--tm-color-surface);
+}
+
+/* The actions row: second grid row, right-aligned like the mobile mockup. */
+.tm-notion-page__aggregate-actions {
+    grid-column: 2;
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--tm-space-2);
+    justify-content: flex-end;
+}
+
+/* The ONE primary action (N2): reloading the server version wins the conflict. */
+.tm-notion-page__aggregate-conflict .tm-notion-load-error__retry--primary {
+    background: var(--tm-color-primary);
+    color: var(--tm-color-on-primary);
+    border-color: var(--tm-color-primary);
+    font-weight: var(--tm-font-weight-medium, 500);
+}
+
+.tm-notion-page__aggregate-conflict .tm-notion-load-error__retry--primary:hover:not(:disabled) {
+    background: var(--tm-color-primary-hover);
+}
+
+.tm-notion-page__aggregate-conflict .tm-notion-load-error__retry--primary:disabled {
+    background: var(--tm-color-primary);
+    color: var(--tm-color-on-primary);
 }
 
 .tm-notion-page__aggregate-conflict .tm-notion-load-error__retry:disabled {
@@ -222,8 +254,13 @@
         grid-template-columns: auto minmax(0, 1fr);
     }
 
-    .tm-notion-page__aggregate-conflict .tm-notion-load-error__retry {
-        grid-column: 2;
+    .tm-notion-page__aggregate-actions {
+        grid-column: 1 / -1;
+        justify-content: stretch;
+        flex-direction: column;
+    }
+
+    .tm-notion-page__aggregate-actions .tm-notion-load-error__retry {
         width: 100%;
     }
 }

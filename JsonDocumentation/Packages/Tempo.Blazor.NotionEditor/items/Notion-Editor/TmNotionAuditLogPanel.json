@@ -25,6 +25,13 @@
       "description": "Additional CSS class."
     },
     {
+      "name": "Layout",
+      "type": "TmNotionAuditLogLayout",
+      "isRequired": false,
+      "default": "Auto",
+      "description": "Result layout: Auto (default) renders both the table and the cards and lets the panel's own container query pick (table on a wide container, cards below 640 px); Table and Cards pin one of them at every width."
+    },
+    {
       "name": "OnClosed",
       "type": "EventCallback",
       "isRequired": false,

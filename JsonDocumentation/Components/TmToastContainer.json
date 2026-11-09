@@ -2,7 +2,7 @@
   "itemName": "TmToastContainer",
   "kind": "Component",
   "category": "Feedback",
-  "description": "Fixed-position container that renders toast notifications from the injected ToastService. Supports four screen positions and auto-dismiss with animated progress bars.",
+  "description": "Fixed-position container that renders toast notifications from the injected ToastService. Supports six screen positions, auto-dismiss with animated progress bars, an optional collapsed-deck presentation and swipe-to-dismiss (touch/pen).",
   "requiredImports": [
     "@using Tempo.Blazor.Components.Feedback"
   ],
@@ -20,24 +20,55 @@
       "isRequired": false,
       "default": "5",
       "description": "Maximum number of toasts visible at once."
+    },
+    {
+      "name": "PauseOnHover",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "Pause the auto-dismiss timer while the pointer hovers a toast or focus is inside it (mouseenter/focusin pause, mouseleave/focusout resume with the remaining time). A hidden document pauses every toast regardless of this setting."
+    },
+    {
+      "name": "MinActionDuration",
+      "type": "int",
+      "isRequired": false,
+      "default": "10000",
+      "description": "Minimum duration (milliseconds) for toasts carrying an action button (e.g. Undo): a shorter requested duration is floored to this value so the action stays reachable long enough to react. Pushed to ToastService.MinActionDuration when parameters are set (set it before showing toasts). Sticky toasts (duration <= 0) and toasts without an action are never floored."
+    },
+    {
+      "name": "Stacked",
+      "type": "bool",
+      "isRequired": false,
+      "default": "false",
+      "description": "Collapsed-deck presentation: the newest three toasts stay fully visible, every older card collapses to a thin strip (a pure-CSS depth hint), and hovering the container or moving focus inside it expands the deck."
     }
   ],
   "cssClasses": [
     "tm-toast-container",
     "tm-toast-container--top-right",
     "tm-toast-container--top-left",
+    "tm-toast-container--top-center",
     "tm-toast-container--bottom-right",
     "tm-toast-container--bottom-left",
+    "tm-toast-container--bottom-center",
+    "tm-toast-container--stacked",
     "tm-toast",
     "tm-toast--success",
     "tm-toast--error",
     "tm-toast--warning",
     "tm-toast--info",
+    "tm-toast--paused",
+    "tm-toast--loading",
+    "tm-toast--deck-collapsed",
+    "tm-toast--swipe-return",
     "tm-toast-body",
     "tm-toast-icon",
+    "tm-toast-spinner",
     "tm-toast-content",
     "tm-toast-title",
     "tm-toast-message",
+    "tm-toast-custom",
+    "tm-toast-action",
     "tm-toast-dismiss",
     "tm-toast-progress",
     "tm-toast-progress-bar"
@@ -50,6 +81,18 @@
     {
       "title": "Bottom-left position with limit",
       "code": "<TmToastContainer Position=\"ToastPosition.BottomLeft\" MaxVisible=\"3\" />"
+    },
+    {
+      "title": "Undoable action toast",
+      "code": "ToastService.ShowUndo(\"Item deleted\", OnUndoAsync)"
+    },
+    {
+      "title": "Promise toast: loading in place, success or error update",
+      "code": "await ToastService.PromiseAsync(ct => SaveAsync(ct), new ToastPromiseOptions { LoadingMessage = \"Saving…\", SuccessMessage = _ => \"Saved\", ErrorMessage = ex => $\"Save failed: {ex.Message}\" });"
+    },
+    {
+      "title": "Collapsed deck at the top center",
+      "code": "<TmToastContainer Position=\"ToastPosition.TopCenter\" Stacked=\"true\" />"
     }
   ]
 }

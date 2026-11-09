@@ -112,7 +112,14 @@ public class NotionStructuralOperationsE2ETests : NotionE2ETestBase
         await FocusTopLevelParagraphAsync(page, string.Empty);
 
         // Create a toggle from the slash menu, then open it so it renders its children.
-        await page.Keyboard.TypeAsync(" /toggle");
+        // Phase 3: the menu is a core overlay whose search input receives focus after the
+        // open render (focusMenuInput). Typing the filter in the same burst as the "/" can
+        // outrun that round-trip, so open first, wait for the input to own focus, then type.
+        await page.Keyboard.TypeAsync(" /");
+        var slashInput = page.Locator(".tm-notion-slash__input").First;
+        await slashInput.WaitForAsync(Visible());
+        await Assertions.Expect(slashInput).ToBeFocusedAsync();
+        await page.Keyboard.TypeAsync("toggle");
         await page.WaitForTimeoutAsync(900);
         await page.Keyboard.PressAsync("Enter");
         await page.WaitForTimeoutAsync(1400);

@@ -1,9 +1,12 @@
 @namespace Tempo.Blazor.Components.NotionEditor.Blocks.Database
+@inherits Tempo.Blazor.Components.TmComponentBase
 @using Tempo.Blazor.NotionEditor.Models
 @using Tempo.Blazor.NotionEditor.Interfaces
+@using Tempo.Blazor.Components.Feedback
+@using Tempo.Blazor.Localization
 @using Tempo.Blazor.NotionEditor.Enums
 
-<div class="tm-dbcal" @ondragend="OnDragEnd">
+<div class="tm-dbcal @(IsMobile ? "tm-dbcal--mobile" : "")" @ondragend="OnDragEnd">
 
     @* ── Header ─────────────────────────────────────────────────────────── *@
     <div class="tm-dbcal__header">
@@ -52,9 +55,9 @@
     {
         @* ── Weekday headers ─────────────────────────────────────────────── *@
         <div class="tm-dbcal__weekdays" role="row" aria-hidden="true">
-            @foreach (var day in WeekdayHeaders)
+            @foreach (var weekday in WeekdayHeaders)
             {
-                <div class="tm-dbcal__weekday">@day</div>
+                <div class="tm-dbcal__weekday">@weekday</div>
             }
         </div>
 
@@ -73,6 +76,7 @@
 
                 <div class="@cls"
                      role="gridcell"
+                     data-testid="@TestId("notion-db-calendar-cell")"
                      aria-label="@date.ToString("d MMMM yyyy")"
                      @ondragover:preventDefault="true"
                      @ondragenter:preventDefault="true"
@@ -92,9 +96,10 @@
                         var rec      = record;
                         var isDragging = _dragRecordId == rec.Id;
                         var eventColor = GetEventColor(rec);
-                        var title      = GetPrimaryValue(rec);
+                        var title      = NotionDatabaseValueFormatter.PrimaryText(rec, Fields);
 
                         <div class="tm-dbcal__event @(isDragging ? "tm-dbcal__event--dragging" : "")"
+                             data-testid="@TestId("notion-db-calendar-event")"
                              style="--event-color: @eventColor"
                              draggable="@(!ReadOnly ? "true" : "false")"
                              role="button"
@@ -110,18 +115,92 @@
                         </div>
                     }
 
-                    @* Overflow indicator *@
-                    @if (OverflowCount(cell) > 0)
+                    @* Overflow — the +N button IS the popover trigger, so Escape, focus-into-first
+                       and refocus-on-close stay inside TmPopover. No second close control. *@
+                    @if (OverflowCount(cell) > 0 && !IsMobile)
                     {
-                        <span class="tm-dbcal__overflow"
-                              @onclick:stopPropagation="true">
-                            +@OverflowCount(cell)&nbsp;@Loc["TmNotionDbCalendarView_More"]
-                        </span>
+                        var overflowCell = cell;
+                        <TmPopover IsOpen="@(_overflowDate == overflowCell.Date)"
+                                   IsOpenChanged="open => SetOverflowOpen(overflowCell.Date, open)"
+                                   ShowArrow="false"
+                                   TrapFocus="true"
+                                   Role="dialog"
+                                   Title="@Loc["TmNotionDbCalendarView_DayList", overflowCell.Date.ToString("d")]"
+                                   Class="tm-dbcal__overflow-popover"
+                                   @onclick:stopPropagation="true">
+                            <TriggerContent>
+                                <span class="tm-dbcal__overflow"
+                                      data-testid="@TestId("notion-db-calendar-overflow")">
+                                    +@MoreLabel(OverflowCount(overflowCell))
+                                </span>
+                            </TriggerContent>
+                            <ChildContent>
+                                <ul class="tm-dbcal__day-list-items"
+                                    data-testid="@TestId("notion-db-calendar-day-list")">
+                                    @foreach (var rec in overflowCell.Records)
+                                    {
+                                        var overflowRec = rec;
+                                        <li>
+                                            <button type="button"
+                                                    class="tm-dbcal__day-list-item"
+                                                    @onclick="() => SelectOverflowRecordAsync(overflowRec)">
+                                                <TmNotionDbPropertyValue Field="PrimaryField" Value="@PrimaryRaw(overflowRec)" />
+                                            </button>
+                                        </li>
+                                    }
+                                </ul>
+                            </ChildContent>
+                        </TmPopover>
+                    }
+                    else if (OverflowCount(cell) > 0)
+                    {
+                        var overflowCell = cell;
+                        <button type="button"
+                                class="tm-dbcal__overflow"
+                                data-testid="@TestId("notion-db-calendar-overflow")"
+                                @onclick:stopPropagation="true"
+                                @onclick="() => SetOverflowOpen(overflowCell.Date, true)">
+                            +@MoreLabel(OverflowCount(overflowCell))
+                        </button>
                     }
 
                 </div>
             }
         </div>
+
+        @if (IsMobile && OverflowCell is { } day)
+        {
+            <TmModal Show="true"
+                     ShowChanged="open => SetOverflowOpen(day.Date, open)"
+                     Title="@Loc["TmNotionDbCalendarView_DayList", day.Date.ToString("d")]"
+                     MobilePresentation="MobilePresentation.Sheet"
+                     Size="ModalSize.Medium">
+                <ul class="tm-dbcal__day-list-items" data-testid="@TestId("notion-db-calendar-day-sheet")">
+                    @if (!ReadOnly)
+                    {
+                        <li>
+                            <button type="button"
+                                    class="tm-dbcal__day-list-item"
+                                    data-testid="@TestId("notion-db-calendar-new")"
+                                    @onclick="() => OnNewRecord.InvokeAsync(day.Date.ToDateTime(TimeOnly.MinValue))">
+                                @Loc["TmNotionDbCalendarView_NewRecord"]
+                            </button>
+                        </li>
+                    }
+                    @foreach (var rec in day.Records)
+                    {
+                        var overflowRec = rec;
+                        <li>
+                            <button type="button"
+                                    class="tm-dbcal__day-list-item"
+                                    @onclick="() => SelectOverflowRecordAsync(overflowRec)">
+                                <TmNotionDbPropertyValue Field="PrimaryField" Value="@PrimaryRaw(overflowRec)" />
+                            </button>
+                        </li>
+                    }
+                </ul>
+            </TmModal>
+        }
     }
 
 </div>

@@ -85,6 +85,13 @@
       "description": "Renders a toggle whose Pressed is false as partially on — aria-pressed=\"mixed\" on the bar, aria-checked=\"mixed\" in \"More\" (e.g. Bold over a partly bold selection). Ignored when Pressed is null or true."
     },
     {
+      "name": "KeepMenuOpen",
+      "type": "bool",
+      "isRequired": false,
+      "default": "false",
+      "description": "The \"More\" entry keeps the menu open while its action runs. A panel opened by the action would otherwise close with the menu before it rendered."
+    },
+    {
       "name": "PreserveFocus",
       "type": "bool",
       "isRequired": false,

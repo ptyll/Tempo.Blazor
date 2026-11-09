@@ -1,4 +1,6 @@
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Web;
+using Tempo.Blazor.Localization;
 using Tempo.Blazor.Components;
 using Tempo.Blazor.Components.NotionEditor.Services;
 using Tempo.Blazor.NotionEditor.Interfaces;
@@ -15,7 +17,7 @@ public partial class TmNotionPageTree : TmComponentBase
 
     // ── Cascaded context ──────────────────────────────────────────────────────
 
-    [CascadingParameter] private NotionEditorContext Context { get; set; } = default!;
+    [CascadingParameter] internal NotionEditorContext Context { get; set; } = default!;
 
     // ── Parameters ────────────────────────────────────────────────────────────
 
@@ -30,9 +32,14 @@ public partial class TmNotionPageTree : TmComponentBase
     private bool                     _bulkPickerOpen;
     private bool                     _bulkDeleteConfirmOpen;
     private string                   _bulkTargetQuery = string.Empty;
-    private IReadOnlyList<INotionPage> _bulkTargetResults = [];
-    private bool                       _bulkTargetLoading;
-    private string                     _bulkError = string.Empty;
+    private List<TargetNode>         _targetRoots     = [];
+    private HashSet<string>          _excludedTargetIds = new(StringComparer.OrdinalIgnoreCase);
+    private bool                     _bulkTargetLoading;
+    private string                   _bulkError = string.Empty;
+
+    /// <summary>Pending two-step target: the root option (flag) or a concrete page.</summary>
+    private bool          _pendingTargetIsRoot;
+    private INotionPage?  _pendingTargetPage;
 
     internal int SelectedCount => _selectedPageIds.Count;
 
@@ -132,14 +139,28 @@ public partial class TmNotionPageTree : TmComponentBase
             await Context.NavigateTo(page.Id.ToString());
     }
 
-    private void OpenBulkTargetPicker(BulkAction action)
+    private string BulkPickerTitle => _bulkAction == BulkAction.Move
+        ? Loc.Plural("TmNotionPageTree_BulkMoveTitle", SelectedCount)
+        : Loc.Plural("TmNotionPageTree_BulkCopyTitle", SelectedCount);
+
+    private async Task OpenBulkTargetPicker(BulkAction action)
     {
         _bulkAction            = action;
         _bulkPickerOpen        = true;
         _bulkDeleteConfirmOpen = false;
         _bulkTargetQuery       = string.Empty;
-        _bulkTargetResults     = [];
+        _pendingTargetIsRoot   = false;
+        _pendingTargetPage     = null;
         _bulkError             = string.Empty;
+
+        // ComputeExcludedTargetsAsync walks the provider — the spinner covers that latency.
+        _bulkTargetLoading = true;
+        await InvokeAsync(StateHasChanged);
+        _excludedTargetIds = await ComputeExcludedTargetsAsync();
+        _targetRoots = BuildRootTargets();
+        RebuildVisibleRows();
+        _bulkTargetLoading = false;
+        await InvokeAsync(StateHasChanged);
     }
 
     private void OpenBulkDeleteConfirm()
@@ -149,13 +170,268 @@ public partial class TmNotionPageTree : TmComponentBase
         _bulkError             = string.Empty;
     }
 
+    private async Task HandleBulkDeleteResult(bool? result)
+    {
+        if (result == true)
+            await ExecuteBulkDeleteAsync();
+        else
+            CloseBulkPanels();
+    }
+
+    /// <summary>Selected pages plus their whole descendant subtrees — never offered as a move/copy
+    /// target (a cycle).</summary>
+    private async Task<HashSet<string>> ComputeExcludedTargetsAsync()
+    {
+        var excluded = new HashSet<string>(_selectedPageIds, StringComparer.OrdinalIgnoreCase);
+        var queue = new Queue<string>(_selectedPageIds);
+        while (queue.Count > 0)
+        {
+            var parentId = queue.Dequeue();
+            try
+            {
+                var children = (await DataProvider.GetChildPagesAsync(parentId)).ToList();
+                Context?.RememberPages(children);
+                foreach (var child in children)
+                {
+                    var id = child.Id.ToString("D");
+                    if (excluded.Add(id))
+                        queue.Enqueue(id);
+                }
+            }
+            catch
+            {
+                // A provider that cannot list children still excludes the selection itself.
+            }
+        }
+
+        return excluded;
+    }
+
+    private bool IsExcluded(INotionPage page) => _excludedTargetIds.Contains(page.Id.ToString("D"));
+
+    private List<TargetNode> BuildRootTargets()
+        => RootPages
+            .Where(page => !IsExcluded(page))
+            .Select(page => new TargetNode { Page = page, Depth = 0 })
+            .ToList();
+
+    private async Task ToggleNodeAsync(TargetNode node)
+    {
+        if (node.Expanded)
+        {
+            node.Expanded = false;
+            RebuildVisibleRows();
+            await InvokeAsync(StateHasChanged);
+            return;
+        }
+
+        if (!node.ChildrenLoaded)
+        {
+            node.ChildrenLoaded = true;
+            try
+            {
+                var children = (await DataProvider.GetChildPagesAsync(node.Page.Id.ToString("D"))).ToList();
+                Context?.RememberPages(children);
+                node.Children = children
+                    .Where(child => !IsExcluded(child))
+                    .Select(child => new TargetNode { Page = child, Depth = node.Depth + 1 })
+                    .ToList();
+            }
+            catch
+            {
+                node.Children = [];
+            }
+        }
+
+        node.Expanded = node.Children.Count > 0;
+        RebuildVisibleRows();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private void SelectBulkTarget(INotionPage? page)
+    {
+        _pendingTargetPage   = page;
+        _pendingTargetIsRoot = page is null;
+    }
+
+    private bool IsPending(INotionPage page)
+        => !_pendingTargetIsRoot
+        && string.Equals(_pendingTargetPage?.Id.ToString("D"), page.Id.ToString("D"), StringComparison.OrdinalIgnoreCase);
+
+    private async Task ConfirmBulkTargetAsync()
+    {
+        if (!_pendingTargetIsRoot && _pendingTargetPage is null)
+            return;
+        await ExecuteBulkTargetAsync(_pendingTargetPage);
+    }
+
+    // ── Bulk target picker keyboard (APG flat listbox with aria-level) ────────
+
+    /// <summary>A visible picker row: the page plus its (possibly expanded) node. The list renders
+    /// FLAT from this list so the roving tabindex can index the option refs positionally.</summary>
+    private sealed record TargetRow(INotionPage Page, TargetNode Node)
+    {
+        public int Depth => Node.Depth;
+    }
+
+    /// <summary>The visible rows in order — root-level pages, with expanded children inline.</summary>
+    private List<TargetRow> _visibleRows = [];
+
+    private ElementReference[] _rowRefs = [];
+
+    private ElementReference _rootTargetRef;
+
+    /// <summary>Row index the next render must focus (-1 = the root option; null = no move pending).</summary>
+    private int? _pendingFocusRow;
+
+    /// <summary> preventDefault mirror for the listbox keydown (repo roving pattern, see
+    /// TmSchedulerDateStrip): set for every handled nav key, cleared for anything else.</summary>
+    private bool _targetNavHandled;
+
+    private void RebuildVisibleRows()
+    {
+        var rows = new List<TargetRow>();
+        AddNodes(_targetRoots);
+        _visibleRows = rows;
+        _rowRefs = new ElementReference[rows.Count];
+        return;
+
+        void AddNodes(IEnumerable<TargetNode> nodes)
+        {
+            foreach (var node in nodes)
+            {
+                rows.Add(new TargetRow(node.Page, node));
+                if (node.Expanded)
+                    AddNodes(node.Children);
+            }
+        }
+    }
+
+    /// <inheritdoc />
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_pendingFocusRow is null)
+            return;
+
+        var index = _pendingFocusRow.Value;
+        _pendingFocusRow = null;
+        var reference = index < 0 ? _rootTargetRef
+            : index < _rowRefs.Length ? _rowRefs[index]
+            : default;
+        if (reference.Id is null)
+            return;
+        try { await reference.FocusAsync(); }
+        catch (InvalidOperationException) { /* element unmounted mid-move */ }
+    }
+
+    /// <summary>Moves the active option (selection follows focus — the roving tabindex target) and
+    /// queues the DOM focus move for after the render.</summary>
+    private async Task ActivateTargetAsync(INotionPage? page, int rowIndex)
+    {
+        SelectBulkTarget(page);
+        _pendingFocusRow = rowIndex;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private TargetNode? FindTargetNode(INotionPage page)
+    {
+        var id = page.Id.ToString("D");
+        return Find(_targetRoots);
+
+        TargetNode? Find(IEnumerable<TargetNode> nodes)
+        {
+            foreach (var node in nodes)
+            {
+                if (string.Equals(node.Page.Id.ToString("D"), id, StringComparison.OrdinalIgnoreCase))
+                    return node;
+                var inChild = Find(node.Children);
+                if (inChild is not null)
+                    return inChild;
+            }
+
+            return null;
+        }
+    }
+
+    private async Task ExpandActiveTargetAsync()
+    {
+        if (_pendingTargetPage is null)
+            return;
+        var node = FindTargetNode(_pendingTargetPage);
+        if (node is not null && !node.Expanded && (!node.ChildrenLoaded || node.Children.Count > 0))
+            await ToggleNodeAsync(node);
+    }
+
+    private async Task CollapseActiveTargetAsync()
+    {
+        if (_pendingTargetPage is null)
+            return;
+        var node = FindTargetNode(_pendingTargetPage);
+        if (node is { Expanded: true })
+            await ToggleNodeAsync(node);
+    }
+
+    private async Task OnTargetListKeyDown(KeyboardEventArgs e)
+    {
+        // Visible options: the root option at index 0, the visible rows after it.
+        var count = _visibleRows.Count + 1;
+        var current = _pendingTargetIsRoot ? 0
+            : 1 + _visibleRows.FindIndex(r => string.Equals(
+                r.Page.Id.ToString("D"), _pendingTargetPage?.Id.ToString("D"), StringComparison.OrdinalIgnoreCase));
+        if (current < 1)
+            current = 0;
+
+        switch (e.Key)
+        {
+            case "ArrowDown":
+                _targetNavHandled = true;
+                await MoveAsync(Math.Min(current + 1, count - 1));
+                break;
+            case "ArrowUp":
+                _targetNavHandled = true;
+                await MoveAsync(Math.Max(current - 1, 0));
+                break;
+            case "Home":
+                _targetNavHandled = true;
+                await MoveAsync(0);
+                break;
+            case "End":
+                _targetNavHandled = true;
+                await MoveAsync(count - 1);
+                break;
+            case "ArrowRight":
+                _targetNavHandled = true;
+                await ExpandActiveTargetAsync();
+                break;
+            case "ArrowLeft":
+                _targetNavHandled = true;
+                await CollapseActiveTargetAsync();
+                break;
+            default:
+                // Enter/Space stay with the native option button (one activation per press, no
+                // emulated keydown — see docs/keyboard-activation-convention.md) and only SELECT;
+                // the sticky "Select" footer button is the only confirmation path.
+                _targetNavHandled = false;
+                break;
+        }
+
+        async Task MoveAsync(int index)
+            => await ActivateTargetAsync(index == 0 ? null : _visibleRows[index - 1].Page, index - 1);
+    }
+
+
     private void CloseBulkPanels()
     {
         _bulkPickerOpen        = false;
         _bulkDeleteConfirmOpen = false;
         _bulkTargetQuery       = string.Empty;
-        _bulkTargetResults     = [];
+        _targetRoots           = [];
+        _visibleRows           = [];
+        _rowRefs               = [];
+        _pendingFocusRow       = null;
         _bulkTargetLoading     = false;
+        _pendingTargetPage     = null;
+        _pendingTargetIsRoot   = false;
     }
 
     private async Task ClearSelectionAsync()
@@ -172,7 +448,11 @@ public partial class TmNotionPageTree : TmComponentBase
 
         if (SearchProvider is null || string.IsNullOrWhiteSpace(_bulkTargetQuery))
         {
-            _bulkTargetResults = [];
+            // No query: the loaded tree roots (selected pages and their descendants excluded).
+            _targetRoots = BuildRootTargets();
+            _pendingTargetPage = null;
+            _pendingTargetIsRoot = false;
+            RebuildVisibleRows();
             return;
         }
 
@@ -181,15 +461,19 @@ public partial class TmNotionPageTree : TmComponentBase
 
         try
         {
-            var selected = _selectedPageIds.ToHashSet(StringComparer.OrdinalIgnoreCase);
             var results = await SearchProvider.SearchPagesAsync(_bulkTargetQuery, null);
-            _bulkTargetResults = results
-                .Where(page => !selected.Contains(page.Id.ToString("D")))
+            _targetRoots = results
+                .Where(page => !IsExcluded(page))
+                .Select(page => new TargetNode { Page = page, Depth = 0, ChildrenLoaded = true })
                 .ToList();
+            _pendingTargetPage = null;
+            _pendingTargetIsRoot = false;
+            RebuildVisibleRows();
         }
         catch
         {
-            _bulkTargetResults = [];
+            _targetRoots = [];
+            RebuildVisibleRows();
         }
         finally
         {
@@ -255,5 +539,14 @@ public partial class TmNotionPageTree : TmComponentBase
             CloseBulkPanels();
             await InvokeAsync(StateHasChanged);
         }
+    }
+
+    private sealed class TargetNode
+    {
+        public required INotionPage Page { get; init; }
+        public int Depth { get; init; }
+        public bool Expanded { get; set; }
+        public bool ChildrenLoaded { get; set; }
+        public List<TargetNode> Children { get; set; } = [];
     }
 }

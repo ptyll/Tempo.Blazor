@@ -67,3 +67,5 @@ src/Tempo.Blazor/wwwroot/js/document-editor.dist.js.map
 /tmp/
 
 /scheduler-*.log
+
+.scratch/

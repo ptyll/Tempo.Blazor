@@ -4,6 +4,8 @@
 @using Tempo.Blazor.NotionEditor.Interfaces
 @using Tempo.Blazor.NotionEditor.Enums
 @using Tempo.Blazor.Components.NotionEditor.Services
+@using Tempo.Blazor.Components.NotionEditor.UI
+@using Tempo.Blazor.Components.Overlay
 
 <div class="tm-npsm-wrap" @onkeydown="HandleMenuKeyDownAsync">
 
@@ -14,6 +16,7 @@
             title="@Loc["TmNotionPageSettingsMenu_TriggerLabel"]"
             aria-haspopup="menu"
             aria-expanded="@_open"
+            @ref="_triggerRef"
             @onclick="ToggleMenuAsync">
         <svg width="15" height="15" viewBox="0 0 15 15" fill="none" aria-hidden="true">
             <circle cx="7.5" cy="2"   r="1.2" fill="currentColor"/>
@@ -22,16 +25,16 @@
         </svg>
     </button>
 
-    @* ── Backdrop to close ───────────────────────────────────────────────────── *@
-    @if (_open)
-    {
-        <div class="tm-npsm__backdrop" aria-hidden="true" @onclick="CloseMenu"></div>
-    }
-
-    @* ── Dropdown ────────────────────────────────────────────────────────────── *@
-    @if (_open)
-    {
-        <div class="tm-npsm" role="menu" aria-label="@Loc["TmNotionPageSettingsMenu_TriggerLabel"]">
+    @* ── Menu: an anchored popover on desktop, the core sheet on mobile (ecdd3e79). ──────── *@
+    <TmNotionFloatingMenu IsOpen="_open"
+                          AnchorElement="_triggerRef"
+                          LayoutMode="LayoutMode"
+                          Align="OverlayAlign.End"
+                          Role="menu"
+                          Title="@Loc["TmNotionPageSettingsMenu_TriggerLabel"]"
+                          AriaLabel="@Loc["TmNotionPageSettingsMenu_TriggerLabel"]"
+                          Class="tm-npsm"
+                          OnClose="CloseMenu">
 
             @* ── Toast ────────────────────────────────────────────────────────── *@
             @if (!string.IsNullOrEmpty(_toastMessage))
@@ -470,7 +473,5 @@
                 }
 
             </div>
-
-        </div>
-    }
+    </TmNotionFloatingMenu>
 </div>

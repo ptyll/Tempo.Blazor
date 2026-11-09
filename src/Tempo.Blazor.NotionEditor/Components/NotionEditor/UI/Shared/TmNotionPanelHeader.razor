@@ -1,0 +1,24 @@
+@namespace Tempo.Blazor.Components.NotionEditor.UI
+@inherits Tempo.Blazor.Components.TmComponentBase
+@using Tempo.Blazor.Components.Icons
+
+<header class="tm-notion-panel-header @Class" @onkeydown="OnKeyDown">
+    <div class="tm-notion-panel-header__titles">
+        <h2 class="tm-notion-panel-header__title" tabindex="-1" @ref="_titleRef">@Title</h2>
+        @if (!string.IsNullOrEmpty(Subtitle))
+        {
+            <p class="tm-notion-panel-header__subtitle">@Subtitle</p>
+        }
+    </div>
+    @if (Actions is not null)
+    {
+        <div class="tm-notion-panel-header__actions">@Actions</div>
+    }
+    <button type="button"
+            class="tm-notion-panel-header__close"
+            aria-label="@Loc["Tm_Close"]"
+            title="@Loc["Tm_Close"]"
+            @onclick="CloseAsync">
+        <TmIcon Name="@IconNames.X" Size="IconSize.Sm" />
+    </button>
+</header>

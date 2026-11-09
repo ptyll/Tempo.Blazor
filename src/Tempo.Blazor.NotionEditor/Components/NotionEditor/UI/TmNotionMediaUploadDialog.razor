@@ -1,56 +1,65 @@
 @namespace Tempo.Blazor.Components.NotionEditor.UI
+@inherits Tempo.Blazor.Components.TmComponentBase
 @using Tempo.Blazor.Components.NotionEditor.Services
 @using Microsoft.AspNetCore.Components.Forms
+@using Tempo.Blazor.Components.Buttons
+@using Tempo.Blazor.Components.Feedback
 
 @if (IsOpen)
 {
-    <div class="tm-media-dialog-backdrop" @onclick="HandleCancelAsync">
+    <TmModal Show="true"
+             OnClose="HandleCancelAsync"
+             Title="@_dialogTitle"
+             Size="ModalSize.Large"
+             MobilePresentation="MobilePresentation.Sheet"
+             LayoutMode="ResolvedLayout"
+              CloseOnOverlayClick="false"
+             Class="tm-media-dialog-host">
+    <ChildContent>
         <div class="tm-media-dialog"
-             role="dialog"
-             aria-modal="true"
-             aria-labelledby="tm-media-dialog-title"
-             @ref="_dialogRef"
-             @onkeydown="HandleDialogKeyDownAsync"
-             @onclick:stopPropagation="true">
+             @ref="_dialogRef">
 
-            <div class="tm-media-dialog__header">
-                <span id="tm-media-dialog-title" class="tm-media-dialog__title">@_dialogTitle</span>
-                <button class="tm-media-dialog__close"
-                        type="button"
-                        aria-label="@Loc["TmNotionMediaUploadDialog_Cancel"]"
-                        @onclick="HandleCancelAsync">
-                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
-                        <path d="M1 1l12 12M13 1L1 13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-                    </svg>
-                </button>
-            </div>
-
-            <div class="tm-media-dialog__tabs" role="tablist">
+            <div class="tm-media-dialog__tabs" role="tablist" aria-label="@_dialogTitle">
                 @if (CanUpload)
                 {
                     <button class="tm-media-dialog__tab @(_activeTab == "upload" ? "tm-media-dialog__tab--active" : "")"
                             role="tab"
-                            aria-selected="@(_activeTab == "upload").ToString().ToLower()"
+                            id="tm-media-tab-upload"
+                            aria-controls="tm-media-panel-upload"
+                            aria-selected="@(_activeTab == "upload" ? "true" : "false")"
+                            tabindex="@(_activeTab == "upload" ? 0 : -1)"
                             type="button"
-                            @onclick='() => SetTab("upload")'>
+                            @onclick='() => SetTab("upload")'
+                            @onkeydown="HandleTabKeyAsync"
+                            @onkeydown:stopPropagation="true">
                         @Loc["TmNotionMediaUploadDialog_TabUpload"]
                     </button>
                 }
                 <button class="tm-media-dialog__tab @(_activeTab == "embed" ? "tm-media-dialog__tab--active" : "")"
                         role="tab"
-                        aria-selected="@(_activeTab == "embed").ToString().ToLower()"
+                        id="tm-media-tab-embed"
+                        aria-controls="tm-media-panel-embed"
+                        aria-selected="@(_activeTab == "embed" ? "true" : "false")"
+                        tabindex="@(_activeTab == "embed" ? 0 : -1)"
                         type="button"
-                        @onclick='() => SetTab("embed")'>
+                        @onclick='() => SetTab("embed")'
+                        @onkeydown="HandleTabKeyAsync"
+                        @onkeydown:stopPropagation="true">
                     @Loc["TmNotionMediaUploadDialog_TabEmbed"]
                 </button>
                 @if (CanBrowseLibrary)
                 {
                     <button class="tm-media-dialog__tab @(_activeTab == "library" ? "tm-media-dialog__tab--active" : "")"
                             role="tab"
-                            aria-selected="@(_activeTab == "library").ToString().ToLower()"
+                            id="tm-media-tab-library"
+                            aria-controls="tm-media-panel-library"
+                            aria-selected="@(_activeTab == "library" ? "true" : "false")"
+                            tabindex="@(_activeTab == "library" ? 0 : -1)"
                             type="button"
                             data-tab="library"
-                            @onclick='() => SetTab("library")'>
+                            @onclick='() => SetTab("library")'
+                            @onkeydown="HandleTabKeyAsync"
+                            @onkeydown:stopPropagation="true">
                         @Loc["TmNotionMediaUploadDialog_TabLibrary"]
                     </button>
                 }
@@ -64,8 +73,9 @@
                     </div>
                 }
 
-                @if (_activeTab == "upload")
+                @if (CanUpload)
                 {
+                    <div id="tm-media-panel-upload" role="tabpanel" aria-labelledby="tm-media-tab-upload" hidden="@(_activeTab != "upload")">
                     <label class="tm-media-dialog__dropzone @(_isDragging ? "tm-media-dialog__dropzone--dragging" : "")"
                            @ondragenter="() => _isDragging = true"
                            @ondragleave="() => _isDragging = false"
@@ -81,6 +91,8 @@
                         </svg>
                         <span class="tm-media-dialog__dropzone-text">@Loc["TmNotionMediaUploadDialog_DropZone"]</span>
                         <span class="tm-media-dialog__browse-hint">@Loc["TmNotionMediaUploadDialog_BrowseFiles"]</span>
+                        <span class="tm-media-dialog__choose-file">@Loc["TmNotionMediaUploadDialog_ChooseFile"]</span>
+                        <span class="tm-media-dialog__formats">@string.Format(Loc["TmNotionMediaUploadDialog_Formats"], SupportedFormats)</span>
                         <InputFile class="tm-media-dialog__file-input"
                                    accept="@_acceptTypes"
                                    OnChange="HandleFileSelectedAsync" />
@@ -94,14 +106,28 @@
                         </div>
                     }
 
+                    @if (_selectedFile is not null)
+                    {
+                        <div class="tm-media-dialog__selected" data-testid="@TestId("notion-media-selected-file")">
+                            <span>@Loc["TmNotionMediaUploadDialog_SelectedFile"]</span>
+                            <span class="tm-media-dialog__selected-name">@_selectedFile.Name</span>
+                            <span>@FormatSize(_selectedFile.Size)</span>
+                            <button type="button"
+                                    class="tm-media-dialog__selected-remove"
+                                    aria-label="@Loc["TmNotionMediaUploadDialog_RemoveFile"]"
+                                    @onclick="ClearSelectedFile">×</button>
+                        </div>
+                    }
+
                     @if (!string.IsNullOrEmpty(_uploadError))
                     {
                         <div class="tm-media-dialog__error" role="alert">@_uploadError</div>
                     }
+                    </div>
                 }
-                else if (_activeTab == "library")
+                @if (CanBrowseLibrary && _activeTab == "library")
                 {
-                    <div class="tm-media-library">
+                    <div id="tm-media-panel-library" role="tabpanel" aria-labelledby="tm-media-tab-library" class="tm-media-library">
                         <div class="tm-media-library__search">
                             <input class="tm-media-library__search-input"
                                    type="search"
@@ -128,15 +154,18 @@
                         }
                         else
                         {
-                            <div class="tm-media-library__grid" role="grid"
+                            <div class="tm-media-library__grid" role="listbox"
                                  aria-label="@Loc["TmNotionMediaUploadDialog_LibraryGridLabel"]">
                                 @foreach (var item in _libraryItems)
                                 {
-                                    <button class="tm-media-library__item"
+                                    <button class="tm-media-library__item @(_selectedLibraryItem?.Id == item.Id ? "tm-media-library__item--selected" : "")"
                                             type="button"
-                                            role="gridcell"
+                                            role="option"
+                                            aria-selected="@((_selectedLibraryItem?.Id == item.Id).ToString().ToLowerInvariant())"
                                             title="@item.Name"
-                                            @onclick="() => HandleLibraryItemSelectedAsync(item)">
+                                            @onclick="() => SelectLibraryItem(item)"
+                                            @ondblclick="() => HandleLibraryItemSelectedAsync(item)"
+                                            @onkeydown:stopPropagation="true">
                                         @if (!string.IsNullOrEmpty(item.ThumbnailUrl))
                                         {
                                             <img src="@item.ThumbnailUrl"
@@ -180,9 +209,9 @@
                         }
                     </div>
                 }
-                else
-                {
-                    <div class="tm-media-dialog__embed">
+                @{
+                    /* always rendered so aria-controls has a target; hidden hides the inactive tab */
+                    <div id="tm-media-panel-embed" role="tabpanel" aria-labelledby="tm-media-tab-embed" class="tm-media-dialog__embed" hidden="@(_activeTab != "embed")">
                         <div class="tm-media-dialog__embed-row">
                             <input class="tm-media-dialog__url-input"
                                    type="url"
@@ -204,5 +233,15 @@
             </div>
 
         </div>
-    </div>
+    </ChildContent>
+    <Footer>
+        <TmButton Variant="ButtonVariant.Ghost" OnClick="HandleCancelAsync">@Loc["TmNotionMediaUploadDialog_Cancel"]</TmButton>
+        <TmButton Variant="ButtonVariant.Primary"
+                  Disabled="@(_selectedLibraryItem is null && _selectedFile is null && string.IsNullOrWhiteSpace(_embedUrl))"
+                  OnClick="InsertSelectedAsync"
+                  data-testid="@TestId("notion-media-insert")">
+            @Loc["TmNotionMediaUploadDialog_Insert"]
+        </TmButton>
+    </Footer>
+    </TmModal>
 }

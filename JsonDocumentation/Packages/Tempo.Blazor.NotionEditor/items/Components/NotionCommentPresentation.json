@@ -1,0 +1,10 @@
+{
+  "kind": "Enum",
+  "category": "Components",
+  "namespace": "Tempo.Blazor.Components.NotionEditor",
+  "description": "How the block / text comment panels present (see TmNotionEditor.CommentPresentation): Popover keeps the anchored bubble at every layout, Dialog always renders the core TmModal (centred dialog on desktop, sheet on mobile), Auto (the default) follows the layout — popover on a desktop layout, dialog / sheet on touch and narrow containers.",
+  "packageId": "Tempo.Blazor.NotionEditor",
+  "sourcePath": "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/NotionCommentPresentation.cs",
+  "documentationStatus": "generated",
+  "itemName": "NotionCommentPresentation"
+}

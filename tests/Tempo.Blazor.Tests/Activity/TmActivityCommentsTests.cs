@@ -1018,7 +1018,7 @@ public class TmActivityCommentsTests : LocalizationTestBase
             {
                 cut.Render();
                 cut.Find(".tm-comment-internal-toggle input").HasAttribute("disabled").Should().BeTrue();
-                cut.Find(".tm-comment-submit-btn").HasAttribute("disabled").Should().BeTrue();
+                cut.Find(".tm-comment-submit-btn").GetAttribute("aria-disabled").Should().Be("true");
                 return Task.CompletedTask;
             })));
 

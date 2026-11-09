@@ -1,0 +1,10 @@
+{
+  "kind": "Enum",
+  "category": "Components",
+  "namespace": "Tempo.Blazor.Components.NotionEditor",
+  "description": "How the page-level comment panel presents (see TmNotionEditor.PageCommentsPresentation): Inline (the default) keeps the collapsible panel at the bottom of the page; Dialog renders no inline panel — the header badge and the Comments page action open a core TmModal hosting the Embedded panel body (a sheet on a mobile layout).",
+  "packageId": "Tempo.Blazor.NotionEditor",
+  "sourcePath": "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/NotionCommentPresentation.cs",
+  "documentationStatus": "generated",
+  "itemName": "NotionPageCommentsPresentation"
+}

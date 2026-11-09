@@ -16,7 +16,8 @@
            existing consumer already has. The scope is not modal: it never traps focus. *@
         @if (CloseOnEscape)
         {
-            <TmFocusScope Active="true" Modal="false" CloseOnEscape="true" OnEscape="CloseAsync">
+            <TmFocusScope Active="true" Modal="false" CloseOnEscape="true" OnEscape="CloseAsync"
+                          RestoreFocusTargetId="@RestoreFocusTargetId">
                 @DockedPanel
             </TmFocusScope>
         }
@@ -34,23 +35,24 @@ else if (Open)
               Modal="true"
               Width="@Width"
               Class="@($"tm-side-panel-sheet {Class}")"
-              Title="@Title"
-              AriaLabel="@(HasTitle ? Title : DefaultName)"
+              Title="@(ShowHeader ? Title : null)"
+              AriaLabel="@(ShowHeader && HasTitle ? Title : DefaultName)"
               LayoutMode="@(LayoutMode)"
               InitialMode="@SheetInitialMode"
               ResolvedLayoutChanged="OnSheetLayoutResolved"
               ShowOverlay="true"
               CloseOnOverlayClick="true"
               CloseOnEscape="true"
+              ShowCloseButton="@ShowHeader"
               RestoreFocusTargetId="@RestoreFocusTargetId"
               FooterContent="FooterContent"
               AdditionalAttributes="SheetAttributes">
         <HeaderContent>
-            @if (!string.IsNullOrEmpty(Title))
+            @if (ShowHeader && !string.IsNullOrEmpty(Title))
             {
                 <h2 class="tm-drawer__title" id="@_titleId">@Title</h2>
             }
-            @if (HeaderActions is not null)
+            @if (ShowHeader && HeaderActions is not null)
             {
                 <div class="tm-side-panel__header-actions">@HeaderActions</div>
             }
@@ -91,15 +93,21 @@ else if (Open)
 
     /// <summary>
     /// The id of the host element (typically the button that opened the panel) focus returns to
-    /// when the SHEET presentation closes — whichever way it closes (Escape, header close, the
-    /// backdrop, a swipe, or the host setting <see cref="Open"/> to false). Null keeps the focus
-    /// scope default (the element that was focused when the sheet opened). The docked panel is
-    /// in-flow and leaves focus management to the host.
+    /// when the panel closes — whichever way it closes (Escape, header close, the backdrop, a swipe,
+    /// or the host setting <see cref="Open"/> to false). The sheet forwards it to the drawer; the
+    /// docked panel forwards it only when <see cref="CloseOnEscape"/> wraps the panel in a focus
+    /// scope. Null keeps the focus scope default (the element that was focused when the panel opened).
     /// </summary>
     [Parameter] public string? RestoreFocusTargetId { get; set; }
 
     /// <summary>Optional actions rendered in the header, next to the close button.</summary>
     [Parameter] public RenderFragment? HeaderActions { get; set; }
+
+    /// <summary>
+    /// The host's own chrome carries the title/close (e.g. a panel that renders its own header):
+    /// opt out of the built-in header row. Defaults to true (the header renders as before).
+    /// </summary>
+    [Parameter] public bool ShowHeader { get; set; } = true;
 
     /// <summary>Main body content.</summary>
     [Parameter] public RenderFragment? ChildContent { get; set; }
@@ -233,10 +241,12 @@ else if (Open)
                style="--tm-side-panel-width: @Width"
                data-layout="@Context.CssModifier"
                data-side="@SideName"
-               aria-labelledby="@(HasTitle ? _titleId : null)"
-               aria-label="@(HasTitle ? null : DefaultName)"
+               aria-labelledby="@(ShowHeader && HasTitle ? _titleId : null)"
+               aria-label="@(ShowHeader && HasTitle ? null : DefaultName)"
                data-testid="@RootTestId("tm-side-panel")"
                @attributes="AdditionalAttributes">
+        @if (ShowHeader)
+        {
         <header class="tm-side-panel__header">
             @if (!string.IsNullOrEmpty(Title))
             {
@@ -253,6 +263,7 @@ else if (Open)
                 <TmIcon Name="x" Size="IconSize.Sm" />
             </button>
         </header>
+        }
         <div class="tm-side-panel__body">
             @ChildContent
         </div>

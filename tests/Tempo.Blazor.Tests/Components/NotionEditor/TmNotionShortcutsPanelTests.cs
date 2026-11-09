@@ -2,6 +2,8 @@ using Bunit;
 using FluentAssertions;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
+using Tempo.Blazor.Abstractions.Layout;
+using Tempo.Blazor.Components.Feedback;
 using Tempo.Blazor.Components.NotionEditor.UI;
 using Tempo.Blazor.Tests.Localization;
 
@@ -86,8 +88,38 @@ public sealed class TmNotionShortcutsPanelTests : LocalizationTestBase
             .Add(p => p.Visible, visible)
             .Add(p => p.VisibleChanged, EventCallback.Factory.Create<bool>(this, value => visible = value)));
 
-        await cut.Find(".tm-nsp").KeyDownAsync(new KeyboardEventArgs { Key = "Escape" });
+        await cut.InvokeAsync(() => cut.FindComponent<TmFocusScope>().Instance.HandleFocusTrapEscapeAsync());
 
         visible.Should().BeFalse();
+    }
+
+    [Fact]
+    public void EveryItem_ExposesItsShortcutAsAccessibleText()
+    {
+        var cut = Render<TmNotionShortcutsPanel>(parameters => parameters
+            .Add(p => p.Visible, true)
+            .Add(p => p.Groups, new[]
+            {
+                new NotionShortcutGroup
+                {
+                    TitleKey = "Shortcut_Group_Custom",
+                    Items = [new NotionShortcutItem { Action = "CustomAction", DescriptionKey = "Notion_Shortcut_CustomAction", Keys = ["Ctrl", "K"] }]
+                }
+            }));
+
+        var item = cut.Find("[data-shortcut-action='CustomAction']");
+        item.QuerySelectorAll("kbd").Should().NotBeEmpty();
+        item.TextContent.Should().Contain("Ctrl");
+        item.InnerHtml.Should().NotContain("aria-hidden=\"true\"");
+    }
+
+    [Fact]
+    public void Mobile_PresentsAsASheet()
+    {
+        var cut = Render<TmNotionShortcutsPanel>(parameters => parameters
+            .Add(p => p.Visible, true)
+            .Add(p => p.LayoutMode, TmLayoutMode.Mobile));
+
+        cut.Find(".tm-modal--sheet, .tm-overlay-panel-sheet").Should().NotBeNull();
     }
 }

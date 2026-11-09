@@ -101,6 +101,7 @@ public partial class TmNotionPageTreeItem : TmComponentBase
         {
             var result     = await Tree.DataProvider.GetChildPagesAsync(Page.Id.ToString());
             _children      = result.ToList();
+            Tree.Context?.RememberPages(_children);
             _childrenLoaded = true;
         }
         catch { }

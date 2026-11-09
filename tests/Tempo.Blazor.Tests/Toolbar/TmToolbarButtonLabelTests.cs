@@ -161,6 +161,37 @@ public class TmToolbarButtonLabelTests : LocalizationTestBase
             @"\.tm-toolbar-divider:[^{]*\{[^}]*display:\s*none",
             "display:none would feed back into the measurement");
     }
+
+    [Fact]
+    public void CollapsedItem_IsParkedUnderTheVisibleButtons_SoItNeverStealsClicks()
+    {
+        // The collapsed copy stays in the DOM (measurable width for the fit) but must not sit in
+        // the hit-test tree: without a negative z-index it overlapped the pinned button next to it
+        // and swallowed its clicks (Notion phase-3 review, tablet band).
+        var css = File.ReadAllText(Path.Combine(RepoRoot(), "src", "Tempo.Blazor", "wwwroot", "css", "components", "_toolbar.css"));
+
+        css.Should().MatchRegex(
+            @"\.tm-toolbar-item--collapsed\s*\{[^}]*z-index:\s*-1",
+            "the collapsed wrapper is parked at the inline start UNDER the visible buttons");
+    }
+
+    [Fact]
+    public void CollapsedItem_IsFixed_SoItCannotWidenTheScrollport()
+    {
+        // position:absolute is contained by the nearest transform/filter/will-change ancestor, and
+        // Chromium still counts that copy in the toolbar's scrollWidth — overflow:clip does not
+        // stop it (verified: 158 > 127). position:fixed leaves every scrollport; offsetWidth, which
+        // the fit measures, stays the label width. overflow:hidden/clip on the bar would clip the
+        // More menu of a host that does not use the Popover API.
+        var css = File.ReadAllText(Path.Combine(RepoRoot(), "src", "Tempo.Blazor", "wwwroot", "css", "components", "_toolbar.css"));
+
+        css.Should().MatchRegex(
+            @"\.tm-toolbar-item--collapsed\s*\{[^}]*position:\s*fixed",
+            "a collapsed copy must not contribute to any ancestor's scrollWidth");
+        css.Should().NotMatchRegex(
+            @"\.tm-toolbar\s*\{[^}]*overflow:\s*(hidden|clip)",
+            "clipping the bar would clip the More menu");
+    }
     [Fact]
     public void Ribbon_LabelBelowTiles_AreRoomyAndDividersSpanTheTileHeight()
     {

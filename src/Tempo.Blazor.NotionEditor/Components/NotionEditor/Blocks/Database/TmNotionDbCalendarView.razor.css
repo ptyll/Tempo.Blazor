@@ -1,6 +1,7 @@
 /* ── Wrapper ────────────────────────────────────────────────────────────── */
 
 .tm-dbcal {
+    position: relative;
     display: flex;
     flex-direction: column;
     height: 100%;
@@ -30,7 +31,7 @@
 .tm-dbcal__month-title {
     font-size: 15px;
     font-weight: 600;
-    color: var(--tm-text-primary, #1a1a1a);
+    color: var(--tm-text-primary);
     min-width: 160px;
     text-align: center;
     letter-spacing: -0.01em;
@@ -46,14 +47,14 @@
     background: transparent;
     border: none;
     cursor: pointer;
-    color: var(--tm-text-muted, #8a8a8a);
+    color: var(--tm-text-secondary);
     transition: background 0.1s, color 0.1s;
     padding: 0;
 }
 
 .tm-dbcal__nav-btn:hover {
-    background: var(--tm-bg-hover, rgba(0,0,0,.06));
-    color: var(--tm-text-primary, #1a1a1a);
+    background: var(--tm-color-surface-hover);
+    color: var(--tm-text-primary);
 }
 
 .tm-dbcal__today-btn {
@@ -61,18 +62,18 @@
     padding: 0 12px;
     border-radius: 5px;
     background: transparent;
-    border: 1px solid var(--tm-border, #e0e0e0);
+    border: 1px solid var(--tm-border-color);
     cursor: pointer;
     font-size: 12px;
     font-weight: 500;
-    color: var(--tm-text-secondary, #4a4a4a);
+    color: var(--tm-text-secondary);
     transition: background 0.1s, border-color 0.1s;
     white-space: nowrap;
 }
 
 .tm-dbcal__today-btn:hover {
-    background: var(--tm-bg-hover, rgba(0,0,0,.04));
-    border-color: var(--tm-border-hover, #ccc);
+    background: var(--tm-color-surface-hover);
+    border-color: var(--tm-border-hover);
 }
 
 /* ── Weekday headers ────────────────────────────────────────────────────── */
@@ -80,7 +81,7 @@
 .tm-dbcal__weekdays {
     display: grid;
     grid-template-columns: repeat(7, 1fr);
-    border-bottom: 1px solid var(--tm-border, #e8e8e8);
+    border-bottom: 1px solid var(--tm-border-color);
     flex-shrink: 0;
 }
 
@@ -88,7 +89,7 @@
     padding: 6px 8px;
     font-size: 11px;
     font-weight: 600;
-    color: var(--tm-text-muted, #9a9a9a);
+    color: var(--tm-text-secondary);
     text-align: center;
     text-transform: uppercase;
     letter-spacing: 0.04em;
@@ -102,15 +103,15 @@
     grid-auto-rows: minmax(88px, 1fr);
     flex: 1;
     overflow-y: auto;
-    border-left: 1px solid var(--tm-border, #e8e8e8);
+    border-left: 1px solid var(--tm-border-color);
     scrollbar-width: thin;
 }
 
 /* ── Cell ───────────────────────────────────────────────────────────────── */
 
 .tm-dbcal__cell {
-    border-right: 1px solid var(--tm-border, #e8e8e8);
-    border-bottom: 1px solid var(--tm-border, #e8e8e8);
+    border-right: 1px solid var(--tm-border-color);
+    border-bottom: 1px solid var(--tm-border-color);
     padding: 4px 5px 6px;
     display: flex;
     flex-direction: column;
@@ -123,29 +124,24 @@
 }
 
 .tm-dbcal__cell:hover {
-    background: var(--tm-bg-hover, rgba(0,0,0,.025));
+    background: var(--tm-color-surface-hover);
 }
 
 .tm-dbcal__cell--other-month {
-    background: var(--tm-bg-subtle, #fcfcfc);
+    background: var(--tm-bg-surface-secondary);
 }
 
 .tm-dbcal__cell--other-month .tm-dbcal__cell-num {
-    color: var(--tm-text-muted, #c0c0c0);
+    color: var(--tm-text-secondary);
 }
 
 .tm-dbcal__cell--today {
-    background: color-mix(in srgb, var(--tm-primary, #2383e2) 4%, white);
-}
-
-:global(.tm-dark) .tm-dbcal__cell--today,
-:global([data-theme="dark"]) .tm-dbcal__cell--today {
-    background: color-mix(in srgb, var(--tm-primary, #2383e2) 8%, var(--tm-bg, #1a1a1a));
+    background: color-mix(in srgb, var(--tm-color-primary) 4%, var(--tm-bg-surface));
 }
 
 .tm-dbcal__cell--target {
-    background: color-mix(in srgb, var(--tm-primary, #2383e2) 8%, white) !important;
-    outline: 2px solid var(--tm-primary, #2383e2);
+    background: color-mix(in srgb, var(--tm-color-primary) 8%, var(--tm-bg-surface)) !important;
+    outline: 2px solid var(--tm-color-primary);
     outline-offset: -2px;
 }
 
@@ -154,7 +150,7 @@
 .tm-dbcal__cell-num {
     font-size: 12px;
     font-weight: 500;
-    color: var(--tm-text-secondary, #5a5a5a);
+    color: var(--tm-text-secondary);
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -167,8 +163,8 @@
 }
 
 .tm-dbcal__cell-num--today {
-    background: var(--tm-primary, #2383e2);
-    color: #fff;
+    background: var(--tm-color-primary);
+    color: var(--tm-color-on-primary);
     font-weight: 700;
 }
 
@@ -183,8 +179,8 @@
     font-size: 11px;
     font-weight: 500;
     line-height: 1.3;
-    background: color-mix(in srgb, var(--event-color, #2383e2) 14%, white);
-    color: color-mix(in srgb, var(--event-color, #2383e2) 70%, #111);
+    background: color-mix(in srgb, var(--event-color, var(--tm-color-primary)) 14%, var(--tm-bg-surface));
+    color: color-mix(in srgb, var(--event-color, var(--tm-color-primary)) 70%, var(--tm-text-primary));
     cursor: pointer;
     outline: none;
     transition: background 0.1s, opacity 0.12s;
@@ -195,11 +191,11 @@
 }
 
 .tm-dbcal__event:hover {
-    background: color-mix(in srgb, var(--event-color, #2383e2) 22%, white);
+    background: color-mix(in srgb, var(--event-color, var(--tm-color-primary)) 22%, var(--tm-bg-surface));
 }
 
 .tm-dbcal__event:focus-visible {
-    box-shadow: 0 0 0 2px var(--event-color, #2383e2);
+    box-shadow: 0 0 0 2px var(--event-color, var(--tm-color-primary));
 }
 
 .tm-dbcal__event--dragging {
@@ -211,7 +207,7 @@
     width: 7px;
     height: 7px;
     border-radius: 50%;
-    background: var(--event-color, #2383e2);
+    background: var(--event-color, var(--tm-color-primary));
     flex-shrink: 0;
 }
 
@@ -223,14 +219,130 @@
     min-width: 0;
 }
 
+@media (max-width: 639px) {
+    .tm-dbcal__event-label {
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        white-space: normal;
+    }
+
+    .tm-dbcal__overflow {
+        min-height: var(--tm-touch-target);
+        min-width: var(--tm-touch-target);
+    }
+}
+
+/* F-11: on a mobile layout the text chips are unreadable (1–2 clipped characters), so an event
+   is a colour dot; the day tap opens the day sheet with the full record list. */
+.tm-dbcal--mobile .tm-dbcal__event {
+    padding: 2px;
+    background: transparent;
+    border-radius: var(--tm-radius-full);
+}
+
+.tm-dbcal--mobile .tm-dbcal__event:hover {
+    background: color-mix(in srgb, var(--event-color, var(--tm-color-primary)) 14%, var(--tm-bg-surface));
+}
+
+.tm-dbcal--mobile .tm-dbcal__event-label {
+    display: none;
+}
+
+.tm-dbcal--mobile .tm-dbcal__event-dot {
+    width: 8px;
+    height: 8px;
+}
+
 /* ── Overflow ───────────────────────────────────────────────────────────── */
 
 .tm-dbcal__overflow {
     font-size: 10px;
-    color: var(--tm-text-muted, #9a9a9a);
+    color: var(--tm-text-secondary);
     padding: 1px 4px;
-    cursor: default;
+    border: none;
+    background: transparent;
+    font-family: inherit;
+    text-align: start;
+    cursor: pointer;
     flex-shrink: 0;
+}
+
+.tm-dbcal__overflow:hover,
+.tm-dbcal__overflow:focus-visible {
+    color: var(--tm-color-primary);
+    text-decoration: underline;
+}
+
+.tm-dbcal__day-list {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--tm-space-4);
+    background: color-mix(in srgb, var(--tm-color-gray-900) 50%, transparent);
+}
+
+.tm-dbcal__day-list-card {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-2);
+    width: min(20rem, 100%);
+    max-height: 80%;
+    padding: var(--tm-space-3);
+    border: 1px solid var(--tm-border-color);
+    border-radius: var(--tm-radius-md);
+    background: var(--tm-bg-surface);
+    box-shadow: var(--tm-shadow-lg);
+}
+
+.tm-dbcal__day-list-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--tm-space-2);
+    font-size: var(--tm-font-size-sm);
+    font-weight: var(--tm-font-weight-medium);
+}
+
+.tm-dbcal__day-list-close {
+    border: none;
+    background: transparent;
+    color: var(--tm-text-secondary);
+    font-family: inherit;
+    font-size: var(--tm-font-size-sm);
+    cursor: pointer;
+}
+
+.tm-dbcal__day-list-items {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    overflow: auto;
+    /* The phone day sheet is content-sized. A short list collapses the sheet to a few dozen pixels,
+       so the sheet screenshot clips to nothing. The list keeps a readable height. */
+    min-height: 8rem;
+}
+
+.tm-dbcal__day-list-item {
+    display: block;
+    width: 100%;
+    padding: var(--tm-space-2);
+    border: none;
+    border-radius: var(--tm-radius-sm);
+    background: transparent;
+    color: var(--tm-text-primary);
+    font-family: inherit;
+    font-size: var(--tm-font-size-sm);
+    text-align: start;
+    cursor: pointer;
+}
+
+.tm-dbcal__day-list-item:hover,
+.tm-dbcal__day-list-item:focus-visible {
+    background: var(--tm-bg-muted);
 }
 
 /* ── No date field ──────────────────────────────────────────────────────── */
@@ -238,29 +350,9 @@
 .tm-dbcal__no-field {
     padding: 40px 24px;
     text-align: center;
-    color: var(--tm-text-muted, #9a9a9a);
+    color: var(--tm-text-secondary);
     font-size: 14px;
 }
 
 /* ── Dark mode ──────────────────────────────────────────────────────────── */
 
-:global(.tm-dark) .tm-dbcal__cell--other-month,
-:global([data-theme="dark"]) .tm-dbcal__cell--other-month {
-    background: var(--tm-bg-subtle, #1a1a1a);
-}
-
-:global(.tm-dark) .tm-dbcal__event,
-:global([data-theme="dark"]) .tm-dbcal__event {
-    background: color-mix(in srgb, var(--event-color, #2383e2) 18%, #222);
-    color: color-mix(in srgb, var(--event-color, #2383e2) 60%, #eee);
-}
-
-:global(.tm-dark) .tm-dbcal__event:hover,
-:global([data-theme="dark"]) .tm-dbcal__event:hover {
-    background: color-mix(in srgb, var(--event-color, #2383e2) 28%, #222);
-}
-
-:global(.tm-dark) .tm-dbcal__cell--target,
-:global([data-theme="dark"]) .tm-dbcal__cell--target {
-    background: color-mix(in srgb, var(--tm-primary, #2383e2) 12%, #222) !important;
-}

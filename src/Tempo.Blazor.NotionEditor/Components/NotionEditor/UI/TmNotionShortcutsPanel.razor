@@ -1,36 +1,18 @@
 @namespace Tempo.Blazor.Components.NotionEditor.UI
+@inherits Tempo.Blazor.Components.TmComponentBase
 
-@if (Visible)
-{
-    <div class="tm-nsp"
-         role="presentation"
-         @onkeydown="HandleKeyDownAsync">
-        <button type="button"
-                class="tm-nsp__scrim"
-                aria-label="@Loc["Notion_Shortcuts_Close"]"
-                @onclick="CloseAsync">
-        </button>
-
-        <section class="tm-nsp__dialog"
-                 role="dialog"
-                 aria-modal="true"
-                 aria-labelledby="tm-nsp-title"
-                 tabindex="-1">
-            <header class="tm-nsp__header">
-                <div>
-                    <h2 id="tm-nsp-title" class="tm-nsp__title">@Loc["Notion_Shortcuts_Title"]</h2>
-                    <p class="tm-nsp__subtitle">@Loc["Notion_Shortcuts_Subtitle"]</p>
-                </div>
-                <button type="button"
-                        class="tm-nsp__close"
-                        aria-label="@Loc["Notion_Shortcuts_Close"]"
-                        title="@Loc["Notion_Shortcuts_Close"]"
-                        @onclick="CloseAsync">
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-                        <path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-                    </svg>
-                </button>
-            </header>
+@* Phase 6 (N10): the shortcuts panel rides the core TmModal — a sheet on mobile. The kbd text
+   stays in the accessibility tree. *@
+<TmModal Show="Visible"
+         OnClose="CloseAsync"
+         Title="@Loc["Notion_Shortcuts_Title"]"
+         Subtitle="@Loc["Notion_Shortcuts_Subtitle"]"
+         Size="ModalSize.Medium"
+         MobilePresentation="MobilePresentation.Sheet"
+         LayoutMode="LayoutMode"
+         Class="tm-nsp-host">
+    <ChildContent>
+        <div class="tm-nsp" data-testid="@TestId("notion-shortcuts-panel")">
 
             <div class="tm-nsp__grid">
                 @foreach (var group in Groups)
@@ -42,7 +24,7 @@
                             {
                                 <li class="tm-nsp__item" data-shortcut-action="@item.Action">
                                     <span class="tm-nsp__description">@Loc[item.DescriptionKey]</span>
-                                    <span class="tm-nsp__keys" aria-hidden="true">
+                                    <span class="tm-nsp__keys">
                                         @foreach (var key in item.Keys)
                                         {
                                             <kbd class="tm-nsp__key">@key</kbd>
@@ -54,6 +36,6 @@
                     </section>
                 }
             </div>
-        </section>
-    </div>
-}
+        </div>
+    </ChildContent>
+</TmModal>

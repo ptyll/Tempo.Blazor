@@ -1,0 +1,10 @@
+{
+  "kind": "Enum",
+  "category": "Components",
+  "namespace": "Tempo.Blazor.Components.NotionEditor",
+  "description": "How much chrome TmNotionEditor renders around the page.",
+  "packageId": "Tempo.Blazor.NotionEditor",
+  "sourcePath": "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/NotionEditorChrome.cs",
+  "documentationStatus": "generated",
+  "itemName": "NotionEditorChrome"
+}

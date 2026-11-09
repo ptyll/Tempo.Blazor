@@ -226,9 +226,13 @@ public class ProvenanceComparisonTests
         // workflow-designer-pointer.test.mjs + dashboard-pointer.test.mjs + tm-dod-space-guard.test.mjs + tm-toolbar-file-button.test.mjs + gantt-scroll-link.test.mjs + gantt-pointer.test.mjs + gantt-virtual.test.mjs + gantt-virtual-session.test.mjs + chat.test.mjs (FZE-5) +
         // tm-panel-resize.test.mjs (plan 5d396592 phase 3: the shared panel-resize helper) +
         // tm-sortable.test.mjs (plan 3e96f6d8 phase 1: the sortable-list drag module) +
-        // scheduler-timeline-days.test.mjs (plan 8fa7319c phase 2: the day-scale timeline scroll) —
+        // scheduler-timeline-days.test.mjs (plan 8fa7319c phase 2: the day-scale timeline scroll) +
+        // tm-otp-input.test.mjs (TmOtpInput phase 1) +
+        // tm-toast-visibility.test.mjs (plan 4ebadc60 phase 3: the document-hidden toast pause) +
+        // tm-toast.test.mjs (plan 4ebadc60 phase 3 review: Escape/focus-return/Alt+T behaviors) +
+        // tm-toast-swipe.test.mjs (plan 4ebadc60 phase 4: swipe-to-dismiss on the shared pointer-drag helper) —
         // the Node tests ship in the repo, never in the nupkg.
-        denominator.PackExcludedFiles.Should().Be(31);
+        denominator.PackExcludedFiles.Should().Be(35);
     }
 
     /// <summary>

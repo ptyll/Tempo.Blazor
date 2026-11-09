@@ -1,31 +1,32 @@
 @namespace Tempo.Blazor.Components.NotionEditor.Blocks
 @using Tempo.Blazor.NotionEditor.Enums
 @using Tempo.Blazor.NotionEditor.Interfaces
+@using Tempo.Blazor.Components.NotionEditor.UI
+@using Tempo.Blazor.Components.Overlay
 
-@* ── Transparent backdrop — captures outside clicks ──────────────────────── *@
-<div class="tm-notion-ctx-backdrop" @onclick="CloseAsync" aria-hidden="true"></div>
-
-@* ── Menu panel ───────────────────────────────────────────────────────────── *@
-<div class="tm-notion-ctx" role="menu" aria-label="@Loc["TmNotionBlockHandle_OpenMenu"]"
-     tabindex="-1"
-     @ref="_menuRef"
+@* Phase 6 (N6): the context menu rides the shared floating menu. Top/Left anchor it;
+   dismissal and focus are the core overlay's. *@
+<TmNotionFloatingMenu IsOpen="true"
+                      Top="Top"
+                      Left="Left"
+                      AnchorElement="Anchor"
+                      TrapFocus="true"
+                      InitialFocusSelector=".tm-notion-ctx > [role='menuitem']"
+                      SheetInitialFocusSelector=".tm-notion-ctx > [role='menuitem']"
+                      Title="@Loc["TmNotionBlockHandle_OpenMenu"]"
+                      AriaLabel="@Loc["TmNotionBlockHandle_OpenMenu"]"
+                      Class="tm-notion-ctx-panel"
+                      CloseOnEscape="@(!_showTurnInto && !_showPanelType && !_showColor)"
+                       OnClose="CloseAsync">
+<div class="tm-notion-ctx" tabindex="-1"
+     role="menu"
+     aria-label="@Loc["TmNotionBlockHandle_OpenMenu"]"
      @onkeydown="HandleKeyDownAsync"
+     @onkeydown:stopPropagation="true"
      @onclick:stopPropagation="true">
 
-    @* Delete *@
-    <button class="tm-notion-ctx__item tm-notion-ctx__item--danger"
-            type="button" role="menuitem"
-            @onclick="HandleDeleteAsync">
-        <svg class="tm-notion-ctx__icon" width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-            <path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" stroke="currentColor" stroke-width="1.5"
-                  stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-        @Loc["TmNotionBlockContextMenu_Delete"]
-    </button>
-
-    <div class="tm-notion-ctx__separator"></div>
-
-    @* Duplicate *@
+    @* Duplicate — the first item owns the initial focus (F-14): Delete sits at the end of the
+       menu (Notion convention), so Enter right after opening can never delete the block. *@
     <button class="tm-notion-ctx__item" type="button" role="menuitem" @onclick="HandleDuplicateAsync">
         <svg class="tm-notion-ctx__icon" width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
             <rect x="9" y="9" width="13" height="13" rx="2" stroke="currentColor" stroke-width="1.5"/>
@@ -191,8 +192,10 @@
                 {
                     <button class="tm-notion-ctx__item tm-notion-ctx-color__item"
                             type="button" role="menuitem"
+                            aria-label="@Loc[c.LabelKey]"
                             @onclick="() => HandleTextColorAsync(c.Value)">
                         <span class="tm-notion-ctx-color__swatch tm-notion-ctx-color__swatch--text"
+                              aria-hidden="true"
                               style="@(c.Value is null ? "" : $"color: var(--tm-notion-text-{c.Value})")">A</span>
                         @Loc[c.LabelKey]
                     </button>
@@ -203,8 +206,10 @@
                 {
                     <button class="tm-notion-ctx__item tm-notion-ctx-color__item"
                             type="button" role="menuitem"
+                            aria-label="@Loc[c.LabelKey]"
                             @onclick="() => HandleBackgroundAsync(c.Value)">
                         <span class="tm-notion-ctx-color__swatch tm-notion-ctx-color__swatch--bg"
+                              aria-hidden="true"
                               style="@(c.Value is null ? "" : $"background: var(--tm-notion-bg-{c.Value})")"></span>
                         @Loc[c.LabelKey]
                     </button>
@@ -212,4 +217,18 @@
             </div>
         }
     </div>
+
+    <div class="tm-notion-ctx__separator"></div>
+
+    @* Delete — last, separated (F-14): the destructive action never receives the initial focus. *@
+    <button class="tm-notion-ctx__item tm-notion-ctx__item--danger"
+            type="button" role="menuitem"
+            @onclick="HandleDeleteAsync">
+        <svg class="tm-notion-ctx__icon" width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" stroke="currentColor" stroke-width="1.5"
+                  stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        @Loc["TmNotionBlockContextMenu_Delete"]
+    </button>
 </div>
+</TmNotionFloatingMenu>

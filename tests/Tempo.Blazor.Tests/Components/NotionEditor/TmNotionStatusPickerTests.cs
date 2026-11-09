@@ -44,7 +44,7 @@ public class TmNotionStatusPickerTests : LocalizationTestBase
             .Add(x => x.InitialLabel, "DONE")
             .Add(x => x.InitialColor, NotionStatusColor.Green));
 
-        cut.Find(".tm-notion-status-picker").GetAttribute("style").Should().Contain("top:120px");
+        cut.Find(".tm-notion-floating-menu__anchor").GetAttribute("style").Should().Contain("top:120px");
         cut.Find(".tm-notion-status").ClassList.Should().Contain("tm-notion-status--green");
         cut.Find(".tm-notion-status__label").TextContent.Should().Be("DONE");
     }
@@ -166,5 +166,25 @@ public class TmNotionStatusPickerTests : LocalizationTestBase
             .KeyDown(new KeyboardEventArgs { Key = "Escape" });
 
         closed.Should().BeTrue();
+    }
+
+    [Fact]
+    public void StatusPicker_SwatchesAreRadios_AndTheLabelInputIsNamed()
+    {
+        var cut = Render<TmNotionStatusPicker>(p => p
+            .Add(x => x.Visible, true)
+            .Add(x => x.InitialLabel, "DONE")
+            .Add(x => x.InitialColor, NotionStatusColor.Green));
+
+        var group = cut.Find(".tm-notion-status-picker__colors");
+        group.GetAttribute("role").Should().Be("radiogroup");
+        var swatches = group.QuerySelectorAll("[role='radio']");
+        swatches.Should().NotBeEmpty();
+        swatches.Should().OnlyContain(s => s.HasAttribute("aria-checked"));
+        group.QuerySelector("[aria-checked='true']").Should().NotBeNull();
+
+        var input = cut.Find(".tm-notion-status-picker__input");
+        var label = cut.Find("label[for]");
+        label.GetAttribute("for").Should().Be(input.Id);
     }
 }

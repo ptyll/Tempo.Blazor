@@ -1,0 +1,29 @@
+{
+  "itemName": "TmNotionCommentThreadList",
+  "kind": "Component",
+  "category": "Notion Editor",
+  "description": "Shared comment thread list: loading and empty states plus the delete confirmation the three panels used to copy.",
+  "packageId": "Tempo.Blazor.NotionEditor",
+  "namespace": "Tempo.Blazor.Components.NotionEditor.UI",
+  "sourcePath": "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/UI/TmNotionCommentThreadList.razor",
+  "documentationStatus": "generated",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.NotionEditor.UI"
+  ],
+  "parameters": [
+    { "name": "ChildContent", "type": "RenderFragment?", "isRequired": false, "description": "The list body. Rendered only when the list is neither loading nor empty." },
+    { "name": "Class", "type": "string?", "isRequired": false, "description": "Class of the list root. Defaults to {ClassPrefix}__thread." },
+    { "name": "ClassPrefix", "type": "string", "isRequired": true, "default": "\"tm-nbcp\"", "description": "CSS class prefix of the owning panel.", "editorRequired": true },
+    { "name": "DeleteCancelText", "type": "string?", "isRequired": false, "description": "Delete dialog cancel label." },
+    { "name": "DeleteMessage", "type": "string?", "isRequired": false, "description": "Delete dialog message." },
+    { "name": "DeleteOkText", "type": "string?", "isRequired": false, "description": "Delete dialog confirm label." },
+    { "name": "DeleteTitle", "type": "string?", "isRequired": false, "description": "Delete dialog title." },
+    { "name": "Empty", "type": "bool", "isRequired": false, "description": "Shows the empty status when nothing is loading." },
+    { "name": "EmptyText", "type": "string?", "isRequired": false, "description": "Empty status text." },
+    { "name": "ListLabel", "type": "string?", "isRequired": false, "description": "Accessible name of the list." },
+    { "name": "Loading", "type": "bool", "isRequired": false, "description": "Shows the loading status instead of the list." },
+    { "name": "LoadingText", "type": "string?", "isRequired": false, "description": "Loading status text." },
+    { "name": "OnDeleteResult", "type": "EventCallback<bool?>", "isRequired": false, "description": "Raised by the delete dialog." },
+    { "name": "ShowDeleteConfirm", "type": "bool", "isRequired": false, "description": "Shows the shared delete confirmation." }
+  ]
+}

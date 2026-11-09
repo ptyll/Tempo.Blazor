@@ -1,0 +1,20 @@
+{
+  "itemName": "OtpInputKind",
+  "kind": "Enum",
+  "category": "Inputs",
+  "description": "Which characters TmOtpInput accepts per cell and the keyboard it presents.",
+  "packageId": "Tempo.Blazor",
+  "namespace": "Tempo.Blazor.Components.Inputs",
+  "sourcePath": "src/Tempo.Blazor/Components/Inputs/OtpInputKind.cs",
+  "documentationStatus": "generated",
+  "values": [
+    {
+      "name": "Numeric",
+      "description": "ASCII digits 0-9 only. Presents the numeric keyboard (inputmode=\"numeric\")."
+    },
+    {
+      "name": "Alphanumeric",
+      "description": "ASCII letters (normalized to uppercase) and digits. Presents the standard keyboard."
+    }
+  ]
+}

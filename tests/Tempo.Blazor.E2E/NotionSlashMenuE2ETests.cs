@@ -84,8 +84,14 @@ public class NotionSlashMenuE2ETests : WasmTestBase
         var page = await OpenNotionEditorAsync();
         await OpenSlashMenuAsync(page);
 
-        // Click the backdrop via JS (Playwright actionability is blocked by overlay)
-        await page.EvaluateAsync("() => document.querySelector('.tm-notion-slash-backdrop')?.click()");
+        // Phase 3 (N5): the menu is a core TmOverlayPanel — the transparent
+        // .tm-notion-slash-backdrop is gone and overlay.js dismisses on a real pointerdown
+        // outside the panel. A synthetic el.click() dispatches no pointerdown, so drive the
+        // actual mouse at a neutral spot outside the menu.
+        var title = page.Locator(".tm-notion-topbar__title").First;
+        var box = await title.BoundingBoxAsync();
+        Assert.IsNotNull(box, "The topbar title must be present as the outside-click target");
+        await page.Mouse.ClickAsync(box!.X + box.Width / 2, box.Y + box.Height / 2);
         await page.WaitForTimeoutAsync(500);
 
         var menu = page.Locator(".tm-notion-slash").First;

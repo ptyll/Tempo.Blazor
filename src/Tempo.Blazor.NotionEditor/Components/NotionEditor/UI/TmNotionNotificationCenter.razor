@@ -37,6 +37,8 @@
                     Placement="OverlayPlacement.Bottom"
                     Align="OverlayAlign.End"
                     Offset="8"
+                    MobilePresentation="PanelPresentation.Auto"
+                    SheetTitle="@Loc["Notion_Notifications_Title"]"
                     Role="dialog"
                     AriaLabelledBy="@_titleId"
                     Class="tm-notification-bell__dropdown tm-notion-notifications__panel">
@@ -46,13 +48,14 @@
                     <button type="button"
                             class="tm-notification-bell__filter"
                             data-testid="@TestId("notion-notification-filter")"
+                            aria-pressed="@(_showOnlyUnread ? "true" : "false")"
                             @onclick="() => _showOnlyUnread = !_showOnlyUnread">
                         @(_showOnlyUnread ? Loc["TmNotificationBell_ShowAll"] : Loc["TmNotificationBell_ShowOnlyUnread"])
                     </button>
                     @if (_unreadCount > 0)
                     {
                         <button type="button"
-                                class="tm-notification-bell__mark-all"
+                                class="tm-notification-bell__mark-all tm-notion-notifications__mark-all"
                                 data-testid="@TestId("notion-notification-mark-all")"
                                 @onclick="MarkAllReadAsync">
                             @Loc["Notion_Notifications_MarkAllRead"]
@@ -74,7 +77,7 @@
                                 class="tm-notification-bell__item tm-notion-notifications__item @(n.IsRead ? "" : "tm-notification-bell__item--unread")"
                                 data-testid="@TestId("notion-notification-item")"
                                 @onclick="() => OnItemClickAsync(n)">
-                            <span class="tm-notification-bell__avatar" aria-hidden="true">
+                            <span class="tm-notification-bell__avatar tm-notion-notifications__icon @IconToneClass(n.Type)" aria-hidden="true">
                                 @if (!string.IsNullOrEmpty(n.Actor?.AvatarUrl))
                                 {
                                     <img src="@n.Actor.AvatarUrl" alt="" />
@@ -86,7 +89,13 @@
                             </span>
                             <span class="tm-notification-bell__content">
                                 <span class="tm-notification-bell__message">@n.Title</span>
-                                <span class="tm-notification-bell__time">@FormatTime(n.CreatedAt)</span>
+                                @if (!string.IsNullOrWhiteSpace(n.Body))
+                                {
+                                    <span class="tm-notion-notifications__body">@n.Body</span>
+                                }
+                                <time class="tm-notification-bell__time"
+                                      datetime="@n.CreatedAt.ToString("o")"
+                                      title="@RelativeTime.Absolute(n.CreatedAt)">@FormatTime(n.CreatedAt)</time>
                             </span>
                             @if (!n.IsRead)
                             {
@@ -102,6 +111,18 @@
                     </div>
                 }
             </div>
+
+            @if (OnViewAll.HasDelegate)
+            {
+                <div class="tm-notion-notifications__footer">
+                    <button type="button"
+                            class="tm-notion-notifications__view-all"
+                            data-testid="@TestId("notion-notification-view-all")"
+                            @onclick="ViewAllAsync">
+                        @Loc["TmNotionNotifications_ViewAll"]
+                    </button>
+                </div>
+            }
     </TmOverlayPanel>
 </div>
 
@@ -113,13 +134,19 @@
     [Parameter] public string? Class { get; set; }
 
     /// <summary>User whose notifications should be shown in the center.</summary>
-    [Parameter] public string CurrentUserId { get; set; } = "demo";
+    [Parameter] public string CurrentUserId { get; set; } = string.Empty;
 
     /// <summary>Raised whenever the dropdown is opened or closed.</summary>
     [Parameter] public EventCallback<bool> OnDropdownOpenChanged { get; set; }
 
     /// <summary>Polling interval for server-backed notification services. Defaults to 2.5 seconds.</summary>
     [Parameter] public TimeSpan PollInterval { get; set; } = TimeSpan.FromMilliseconds(2500);
+
+    /// <summary>
+    /// Optional "View all" footer action (Q-P8). The footer renders only when a handler is supplied;
+    /// invoking it closes the panel.
+    /// </summary>
+    [Parameter] public EventCallback OnViewAll { get; set; }
 
     /// <summary>Additional unmatched attributes applied to the root element.</summary>
     [Parameter(CaptureUnmatchedValues = true)] public Dictionary<string, object>? AdditionalAttributes { get; set; }
@@ -187,14 +214,23 @@
 
     private async void OnNotificationsChanged()
     {
-        await InvokeAsync(async () =>
+        // Provider change events can race disposal; an exception escaping an async void handler is
+        // unhandled and takes the whole circuit down, so the refresh is fenced.
+        try
         {
-            _hasNew = true;
-            await RefreshUnreadCountAsync(forceRender: false);
-            if (_isOpen)
-                await LoadNotificationsAsync();
-            StateHasChanged();
-        });
+            await InvokeAsync(async () =>
+            {
+                _hasNew = true;
+                await RefreshUnreadCountAsync(forceRender: false);
+                if (_isOpen)
+                    await LoadNotificationsAsync();
+                StateHasChanged();
+            });
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or JSException or JSDisconnectedException or ObjectDisposedException)
+        {
+            // Mid-dispose; the next poll re-syncs the unread count.
+        }
     }
 
     private async Task ToggleAsync()
@@ -274,6 +310,25 @@
         await RefreshUnreadCountAsync(forceRender: true);
     }
 
+    /// <summary>"View all" footer: raises <see cref="OnViewAll"/> and closes the panel.</summary>
+    private async Task ViewAllAsync()
+    {
+        await OnViewAll.InvokeAsync();
+        await SetOpenFromJsAsync(false);
+    }
+
+    /// <summary>Tinted icon square tone per notification type (one custom property, set by the modifier).</summary>
+    private static string IconToneClass(string type) => type switch
+    {
+        TmNotificationTypes.Mention or TmNotificationTypes.Reply or TmNotificationTypes.NewThread
+            or TmNotificationTypes.PageCommentAdded => "tm-notion-notifications__icon--communication",
+        TmNotificationTypes.Reaction => "tm-notion-notifications__icon--reaction",
+        TmNotificationTypes.ThreadResolved or TmNotificationTypes.TaskAssigned => "tm-notion-notifications__icon--success",
+        TmNotificationTypes.PageEdited => "tm-notion-notifications__icon--edit",
+        TmNotificationTypes.PageShared => "tm-notion-notifications__icon--share",
+        _ => string.Empty,
+    };
+
     private async Task OnItemClickAsync(TmNotification notification)
     {
         if (!notification.IsRead)
@@ -286,15 +341,13 @@
         await RefreshUnreadCountAsync(forceRender: true);
     }
 
-    private string FormatTime(DateTimeOffset dt)
-    {
-        var diff = DateTimeOffset.UtcNow - dt.ToUniversalTime();
-        if (diff.TotalMinutes < 1) return Loc["Notion_Notifications_JustNow"];
-        if (diff.TotalHours < 1) return Loc["Notion_Notifications_MinutesAgo", (int)diff.TotalMinutes];
-        if (diff.TotalDays < 1) return Loc["Notion_Notifications_HoursAgo", (int)diff.TotalHours];
-        if (diff.TotalDays < 7) return Loc["Notion_Notifications_DaysAgo", (int)diff.TotalDays];
-        return dt.ToLocalTime().ToString("d");
-    }
+    [Inject] private IServiceProvider Services { get; set; } = default!;
+
+    private ITmRelativeTimeFormatter? _relativeTime;
+
+    private ITmRelativeTimeFormatter RelativeTime => _relativeTime ??= TmRelativeTime.Resolve(Services, Loc);
+
+    private string FormatTime(DateTimeOffset dt) => RelativeTime.Format(dt);
 
     private static string TypeIcon(string type) => type switch
     {

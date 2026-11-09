@@ -112,6 +112,22 @@
   gap: var(--tm-space-2);
 }
 
+/* The submit buttons carry aria-disabled (not the native disabled attribute) while a save is
+   in flight, so focus is not dropped from the button — the component's own _isSubmitting
+   guard blocks the second click. Same look as a disabled .tm-btn: the existing disabled
+   token, no hover repaint (the compound beats .tm-btn.tm-btn-primary:hover regardless of
+   import order). */
+.tm-comment-submit-btn[aria-disabled="true"] {
+  opacity: var(--tm-opacity-disabled);
+  cursor: not-allowed;
+}
+
+.tm-btn.tm-comment-submit-btn[aria-disabled="true"]:hover {
+  background-color: var(--tm-color-primary);
+  border-color: var(--tm-color-primary);
+  color: var(--tm-color-on-primary);
+}
+
 /* Composer in internal mode. Same tokens as an internal comment; the switch label
    is the non-colour cue. No animation, so no reduced-motion rule. */
 .tm-comment-editor--internal {

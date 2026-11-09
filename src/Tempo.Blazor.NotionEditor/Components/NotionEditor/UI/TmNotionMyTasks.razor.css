@@ -13,7 +13,7 @@
     justify-content: space-between;
     gap: var(--tm-space-3);
     padding: var(--tm-space-4);
-    border-bottom: 1px solid var(--tm-color-border);
+    border-bottom: 1px solid var(--tm-border-color);
 }
 
 .tm-my-tasks__title-wrap {
@@ -39,7 +39,7 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    border: 1px solid var(--tm-color-border);
+    border: 1px solid var(--tm-border-color);
     background: var(--tm-bg-surface);
     color: var(--tm-text-secondary);
     cursor: pointer;
@@ -63,7 +63,7 @@
     flex-direction: column;
     gap: var(--tm-space-2);
     padding: var(--tm-space-3) var(--tm-space-4);
-    border-bottom: 1px solid var(--tm-color-border);
+    border-bottom: 1px solid var(--tm-border-color);
 }
 
 .tm-my-tasks__segment {
@@ -76,7 +76,7 @@
     min-height: 1.75rem;
     padding: 0 var(--tm-space-2);
     border-radius: var(--tm-radius-md);
-    border: 1px solid var(--tm-color-border);
+    border: 1px solid var(--tm-border-color);
     background: var(--tm-bg-surface);
     color: var(--tm-text-secondary);
     font-size: var(--tm-font-size-xs);
@@ -113,7 +113,7 @@
 }
 
 .tm-my-tasks__retry {
-    border: 1px solid var(--tm-color-border);
+    border: 1px solid var(--tm-border-color);
     border-radius: var(--tm-radius-md);
     background: var(--tm-bg-surface);
     color: var(--tm-text-primary);
@@ -133,7 +133,7 @@
     width: 1rem;
     height: 1rem;
     border-radius: var(--tm-radius-full);
-    border: 2px solid var(--tm-color-border);
+    border: 2px solid var(--tm-border-color);
     border-top-color: var(--tm-color-primary);
     animation: tm-my-tasks-spin 0.8s linear infinite;
 }
@@ -172,7 +172,7 @@
     gap: var(--tm-space-2);
     align-items: start;
     padding: var(--tm-space-2);
-    border: 1px solid var(--tm-color-border);
+    border: 1px solid var(--tm-border-color);
     border-radius: var(--tm-radius-md);
     background: var(--tm-bg-surface);
 }
@@ -251,4 +251,120 @@
 
 @keyframes tm-my-tasks-spin {
     to { transform: rotate(360deg); }
+}
+
+/* ── Phase 5 (P6): fieldset filters, collapsible groups, avatar rows, CQ ── */
+
+.tm-my-tasks {
+    container-type: inline-size;
+}
+
+.tm-my-tasks__segment {
+    margin: 0;
+    padding: 0;
+    border: none;
+    min-width: 0;
+}
+
+.tm-my-tasks__legend {
+    padding: 0;
+    margin-bottom: var(--tm-space-1);
+    font-size: var(--tm-font-size-xs);
+    font-weight: var(--tm-font-weight-medium);
+    color: var(--tm-text-tertiary);
+}
+
+.tm-my-tasks__segment-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--tm-space-1);
+}
+
+.tm-my-tasks__group-title {
+    display: block;
+    margin: 0 0 var(--tm-space-2);
+    text-transform: none;
+    font-size: var(--tm-font-size-sm);
+}
+
+.tm-my-tasks__group-toggle {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-2);
+    width: 100%;
+    padding: var(--tm-space-1) var(--tm-space-2);
+    margin: 0 calc(-1 * var(--tm-space-2));
+    border: none;
+    border-radius: var(--tm-radius-md);
+    background: transparent;
+    color: var(--tm-text-secondary);
+    font: inherit;
+    font-weight: var(--tm-font-weight-semibold);
+    cursor: pointer;
+    transition: background var(--tm-transition-fast), color var(--tm-transition-fast);
+}
+
+.tm-my-tasks__group-toggle:hover {
+    background: var(--tm-bg-surface-secondary);
+    color: var(--tm-text-primary);
+}
+
+.tm-my-tasks__group-chevron {
+    transition: transform var(--tm-transition-fast);
+}
+
+.tm-my-tasks__group-chevron--open {
+    transform: rotate(180deg);
+}
+
+.tm-my-tasks__group-heading {
+    flex: 1;
+    text-align: left;
+}
+
+.tm-my-tasks__assignee-avatar {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--tm-space-1);
+}
+
+.tm-my-tasks__page,
+.tm-my-tasks__due {
+    gap: var(--tm-space-1);
+}
+
+/* Coarse pointers: filter pills and the completion checkbox get the 44px touch target. */
+@media (pointer: coarse) {
+    .tm-my-tasks__filter {
+        min-height: var(--tm-touch-target);
+        padding-inline: var(--tm-space-3);
+    }
+
+    .tm-my-tasks__check {
+        width: var(--tm-touch-target, 44px);
+        height: var(--tm-touch-target, 44px);
+        justify-self: center;
+    }
+
+    .tm-my-tasks__item {
+        grid-template-columns: var(--tm-touch-target, 44px) minmax(0, 1fr);
+        align-items: center;
+    }
+}
+
+/* Wide default: inline filters. The sheet trigger stays hidden until the container is narrow. */
+.tm-my-tasks__compact-bar {
+    display: none;
+}
+
+/* Narrow containers: the inline filters hide; "Filters (n)" opens them in a sheet. */
+@container (max-width: 640px) {
+    .tm-my-tasks__filters--inline {
+        display: none;
+    }
+
+    .tm-my-tasks__compact-bar,
+    .tm-my-tasks__filters-open {
+        display: flex;
+    }
 }

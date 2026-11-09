@@ -68,7 +68,7 @@
     border:        1px solid var(--tm-notion-border-code);
     border-radius: var(--tm-radius-xs, 3px);
     padding:       0.1em 0.35em;
-    color:         var(--tm-color-error, #c7254e);
+    color:         var(--tm-color-error);
 }
 
 .tm-notion-callout__body a {

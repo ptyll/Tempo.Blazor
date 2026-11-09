@@ -5,6 +5,499 @@
 @import "components/_notion-notifications.css";
 @import "components/_notion-floating-menus.css";
 
+/* Phase 3 (N0): the editor root is the TmEditorShell root — a CHILD component — so scoped
+   single-segment selectors for the root modifier classes (.tm-notion-editor--presentation)
+   can never match it (the scope id belongs to TmEditorShell). Root-modifier rules that must
+   paint the editor root itself live here, in the package global stylesheet. */
+
+/* Presentation mode overlays the viewport. */
+.tm-notion-editor--presentation {
+    position: fixed;
+    inset: 0;
+    z-index: var(--tm-z-modal);
+}
+
+/* The shared thread view is a layout-neutral wrapper: the panel's list stays the flex parent. */
+.tm-notion-comment-thread {
+    display: contents;
+}
+
+/* Shared entry and composer surface (phase-10 shrink). One copy for the three panels; the
+   panel prefix (tm-nbcp / tm-ntcp / tm-npcp) only chooses which panel the rule paints. The
+   block popover keeps its slightly larger metrics through the tokens below. */
+.tm-nbcp {
+    --tm-notion-comment-avatar: 28px;
+    --tm-notion-comment-gap: 10px;
+    --tm-notion-comment-indent-gap: 10px;
+    --tm-notion-comment-meta-gap: 6px;
+    --tm-notion-comment-body-gap: 4px;
+    --tm-notion-comment-author-size: 13px;
+    --tm-notion-comment-text-size: 13.5px;
+    --tm-notion-comment-action-gap: 4px;
+    --tm-notion-comment-action-pad: 3px 6px;
+    --tm-notion-comment-action-size: 11.5px;
+    --tm-notion-comment-edit-gap: 6px;
+    --tm-notion-comment-edit-pad: 6px 8px;
+    --tm-notion-comment-edit-radius: 5px;
+    --tm-notion-comment-edit-size: 13px;
+    --tm-notion-comment-btn-pad: 4px 12px;
+    --tm-notion-comment-btn-size: 12px;
+    --tm-notion-comment-reply-pad: 10px 14px;
+    --tm-notion-comment-reply-gap: 6px;
+    --tm-notion-comment-input-pad: 7px 9px;
+    --tm-notion-comment-send-gap: 5px;
+    --tm-notion-comment-send-pad: 5px 14px;
+    --tm-notion-comment-send-size: 12.5px;
+    --tm-notion-comment-quote-margin: 4px 0;
+    --tm-notion-comment-quote-pad: 6px 10px;
+    --tm-notion-comment-quote-size: 13px;
+    --tm-notion-comment-avatar-font: 12px;
+}
+
+.tm-nbcp__entry,
+.tm-ntcp__entry,
+.tm-npcp__entry {
+    display: flex; flex-direction: row; align-items: flex-start;
+}
+
+.tm-nbcp__entry-indent,
+.tm-ntcp__entry-indent,
+.tm-npcp__entry-indent {
+    flex-shrink: 0;
+    width: 0;
+    border-left: 2px solid var(--tm-border-color);
+    margin-right: var(--tm-notion-comment-indent-gap);
+    align-self: stretch;
+    min-height: 20px;
+}
+
+.tm-nbcp__entry--level-1 .tm-nbcp__entry-indent,
+.tm-ntcp__entry--level-1 .tm-ntcp__entry-indent,
+.tm-npcp__entry--level-1 .tm-npcp__entry-indent { width: 12px; }
+
+.tm-nbcp__entry--level-2 .tm-nbcp__entry-indent,
+.tm-ntcp__entry--level-2 .tm-ntcp__entry-indent,
+.tm-npcp__entry--level-2 .tm-npcp__entry-indent { width: 24px; }
+
+.tm-nbcp__entry--level-3 .tm-nbcp__entry-indent,
+.tm-ntcp__entry--level-3 .tm-ntcp__entry-indent,
+.tm-npcp__entry--level-3 .tm-npcp__entry-indent { width: 36px; }
+
+.tm-nbcp__entry--level-4 .tm-nbcp__entry-indent,
+.tm-ntcp__entry--level-4 .tm-ntcp__entry-indent,
+.tm-npcp__entry--level-4 .tm-npcp__entry-indent { width: 48px; }
+
+.tm-nbcp__entry--level-5 .tm-nbcp__entry-indent,
+.tm-ntcp__entry--level-5 .tm-ntcp__entry-indent,
+.tm-npcp__entry--level-5 .tm-npcp__entry-indent { width: 60px; }
+
+.tm-nbcp__entry-content,
+.tm-ntcp__entry-content,
+.tm-npcp__entry-content {
+    flex: 1;
+    display: flex;
+    gap: var(--tm-notion-comment-gap);
+    align-items: flex-start;
+    min-width: 0;
+}
+
+.tm-npcp__entry-content { padding: 8px 10px; }
+.tm-npcp__entry--level-0 > .tm-npcp__entry-content { border-top: 1px solid var(--tm-border-color); }
+
+.tm-nbcp__avatar,
+.tm-ntcp__avatar,
+.tm-npcp__avatar {
+    flex-shrink: 0;
+    width: var(--tm-notion-comment-avatar);
+    height: var(--tm-notion-comment-avatar);
+    border-radius: 50%;
+    overflow: hidden;
+    background: var(--tm-color-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.tm-nbcp__avatar-img,
+.tm-ntcp__avatar-img,
+.tm-npcp__avatar-img {
+    width: 100%; height: 100%; object-fit: cover;
+}
+
+.tm-nbcp__avatar-fallback,
+.tm-ntcp__avatar-fallback,
+.tm-npcp__avatar-fallback {
+    font-size: var(--tm-notion-comment-avatar-font);
+    font-weight: 600;
+    color: var(--tm-color-on-primary-fixed);
+    line-height: 1;
+}
+
+.tm-nbcp__entry-body,
+.tm-ntcp__entry-body,
+.tm-npcp__entry-body {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-notion-comment-body-gap);
+}
+
+.tm-nbcp__entry-meta,
+.tm-ntcp__entry-meta,
+.tm-npcp__entry-meta {
+    display: flex; align-items: baseline; gap: var(--tm-notion-comment-meta-gap);
+}
+
+.tm-nbcp__entry-author,
+.tm-ntcp__entry-author,
+.tm-npcp__entry-author {
+    font-size: var(--tm-notion-comment-author-size);
+    font-weight: 600;
+    color: var(--tm-text-primary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.tm-nbcp__entry-time,
+.tm-ntcp__entry-time,
+.tm-npcp__entry-time {
+    font-size: 11px;
+    color: var(--tm-text-secondary);
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.tm-nbcp__entry-text,
+.tm-ntcp__entry-text,
+.tm-npcp__entry-text {
+    font-size: var(--tm-notion-comment-text-size);
+    line-height: 1.5;
+    color: var(--tm-text-primary);
+    word-break: break-word;
+}
+
+.tm-nbcp__entry-edited,
+.tm-ntcp__entry-edited,
+.tm-npcp__entry-edited {
+    font-size: 11px; color: var(--tm-text-secondary); font-style: italic;
+}
+
+.tm-nbcp__entry-actions,
+.tm-ntcp__entry-actions,
+.tm-npcp__entry-actions {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 2px;
+    opacity: 0;
+    transition: opacity 100ms;
+    position: relative;
+}
+
+.tm-nbcp__entry:hover .tm-nbcp__entry-actions,
+.tm-ntcp__entry:hover .tm-ntcp__entry-actions,
+.tm-npcp__entry:hover .tm-npcp__entry-actions,
+.tm-nbcp__entry:focus-within .tm-nbcp__entry-actions,
+.tm-ntcp__entry:focus-within .tm-ntcp__entry-actions,
+.tm-npcp__entry:focus-within .tm-npcp__entry-actions,
+.tm-nbcp__entry-actions:focus-within,
+.tm-ntcp__entry-actions:focus-within,
+.tm-npcp__entry-actions:focus-within {
+    opacity: 1;
+}
+
+.tm-nbcp__entry-action,
+.tm-ntcp__entry-action,
+.tm-npcp__entry-action {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-notion-comment-action-gap);
+    padding: var(--tm-notion-comment-action-pad);
+    border: none;
+    border-radius: 4px;
+    background: transparent;
+    font-size: var(--tm-notion-comment-action-size);
+    color: var(--tm-text-secondary);
+    cursor: pointer;
+    transition: background 80ms, color 80ms;
+}
+
+.tm-nbcp__entry-action:hover,
+.tm-ntcp__entry-action:hover,
+.tm-npcp__entry-action:hover {
+    background: var(--tm-color-surface-hover); color: var(--tm-text-primary);
+}
+
+.tm-nbcp__entry-action--danger:hover,
+.tm-ntcp__entry-action--danger:hover,
+.tm-npcp__entry-action--danger:hover {
+    background: color-mix(in srgb, var(--tm-color-danger) 8%, transparent); color: var(--tm-color-danger);
+}
+
+.tm-nbcp__edit-wrap,
+.tm-ntcp__edit-wrap,
+.tm-npcp__edit-wrap {
+    display: flex; flex-direction: column; gap: var(--tm-notion-comment-edit-gap);
+}
+
+.tm-nbcp__edit-input,
+.tm-ntcp__edit-input,
+.tm-npcp__edit-input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: var(--tm-notion-comment-edit-pad);
+    border: 1.5px solid var(--tm-color-primary);
+    border-radius: var(--tm-notion-comment-edit-radius);
+    background: var(--tm-bg-surface);
+    font-size: var(--tm-notion-comment-edit-size);
+    color: var(--tm-text-primary);
+    resize: vertical;
+    outline: none;
+    font-family: inherit;
+    line-height: 1.5;
+}
+
+.tm-nbcp__edit-actions,
+.tm-ntcp__edit-actions,
+.tm-npcp__edit-actions {
+    display: flex; gap: var(--tm-notion-comment-edit-gap); justify-content: flex-end;
+}
+
+.tm-nbcp__edit-save,
+.tm-ntcp__edit-save,
+.tm-npcp__edit-save {
+    padding: var(--tm-notion-comment-btn-pad);
+    border: none;
+    border-radius: var(--tm-notion-comment-edit-radius);
+    background: var(--tm-color-primary-solid);
+    color: var(--tm-color-on-primary-fixed);
+    font-size: var(--tm-notion-comment-btn-size);
+    font-weight: 500;
+    cursor: pointer;
+    transition: opacity 80ms;
+}
+
+.tm-nbcp__edit-save:disabled,
+.tm-ntcp__edit-save:disabled,
+.tm-npcp__edit-save:disabled {
+    background: var(--tm-bg-muted);
+    color: var(--tm-text-disabled);
+    opacity: 1;
+    cursor: not-allowed;
+}
+
+.tm-nbcp__edit-cancel,
+.tm-ntcp__edit-cancel,
+.tm-npcp__edit-cancel,
+.tm-nbcp__reply-cancel,
+.tm-ntcp__reply-cancel,
+.tm-npcp__reply-cancel {
+    padding: 4px 10px;
+    border: 1px solid var(--tm-border-color);
+    border-radius: 5px;
+    background: transparent;
+    color: var(--tm-text-secondary);
+    font-size: 12px;
+    cursor: pointer;
+    transition: background 80ms;
+}
+
+.tm-nbcp__edit-cancel:hover,
+.tm-ntcp__edit-cancel:hover,
+.tm-npcp__edit-cancel:hover,
+.tm-nbcp__reply-cancel:hover,
+.tm-ntcp__reply-cancel:hover,
+.tm-npcp__reply-cancel:hover {
+    background: var(--tm-color-surface-hover);
+}
+
+.tm-nbcp__inline-reply,
+.tm-ntcp__inline-reply,
+.tm-npcp__inline-reply {
+    margin-top: var(--tm-notion-comment-reply-gap);
+    padding: 8px;
+    background: var(--tm-bg-surface-secondary);
+    border: 1px solid var(--tm-border-color);
+    border-radius: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-notion-comment-reply-gap);
+    color: var(--tm-text-primary);
+}
+
+.tm-nbcp__reply,
+.tm-ntcp__reply {
+    flex-shrink: 0;
+    border-top: 1px solid var(--tm-border-color);
+    padding: var(--tm-notion-comment-reply-pad);
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-notion-comment-reply-gap);
+    background: var(--tm-bg-surface);
+    color: var(--tm-text-primary);
+}
+
+.tm-nbcp__reply-btns,
+.tm-ntcp__reply-btns,
+.tm-npcp__reply-btns {
+    display: flex; gap: 6px;
+}
+
+.tm-nbcp__reply-input,
+.tm-ntcp__reply-input,
+.tm-npcp__reply-input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: var(--tm-notion-comment-input-pad);
+    border: 1.5px solid var(--tm-border-color);
+    border-radius: 5px;
+    background: var(--tm-bg-surface);
+    font-size: 13px;
+    color: var(--tm-text-primary);
+    resize: none;
+    outline: none;
+    font-family: inherit;
+    line-height: 1.5;
+    transition: border-color 100ms;
+}
+
+.tm-npcp__reply-input { padding: 7px 9px; }
+
+.tm-nbcp__reply-input:focus,
+.tm-ntcp__reply-input:focus,
+.tm-npcp__reply-input:focus {
+    border-color: var(--tm-color-primary);
+}
+
+.tm-nbcp__reply-input::placeholder,
+.tm-ntcp__reply-input::placeholder,
+.tm-npcp__reply-input::placeholder {
+    color: var(--tm-text-secondary);
+}
+
+.tm-nbcp__reply-actions,
+.tm-ntcp__reply-actions,
+.tm-npcp__reply-actions {
+    display: flex; align-items: center; justify-content: space-between;
+}
+
+.tm-nbcp__reply-hint,
+.tm-ntcp__reply-hint,
+.tm-npcp__reply-hint {
+    font-size: 11px; color: var(--tm-text-secondary);
+}
+
+.tm-nbcp__reply-send,
+.tm-ntcp__reply-send,
+.tm-npcp__reply-send {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-notion-comment-send-gap);
+    padding: var(--tm-notion-comment-send-pad);
+    border: none;
+    border-radius: 5px;
+    background: var(--tm-color-primary-solid);
+    color: var(--tm-color-on-primary-fixed);
+    font-size: var(--tm-notion-comment-send-size);
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 80ms;
+}
+
+.tm-nbcp__reply-send:hover:not(:disabled),
+.tm-ntcp__reply-send:hover:not(:disabled),
+.tm-npcp__reply-send:hover:not(:disabled) {
+    background: var(--tm-color-primary-700);
+}
+
+.tm-nbcp__reply-send:disabled,
+.tm-ntcp__reply-send:disabled,
+.tm-npcp__reply-send:disabled {
+    background: var(--tm-bg-muted);
+    color: var(--tm-text-disabled);
+    opacity: 1;
+    cursor: not-allowed;
+}
+
+@media (pointer: coarse) {
+.tm-nbcp__reply-hint,
+.tm-ntcp__reply-hint,
+.tm-npcp__reply-hint { display: none; }
+.tm-nbcp__reply-send,
+.tm-ntcp__reply-send,
+.tm-npcp__reply-send { min-height: 44px; }
+}
+
+.tm-nbcp .tm-mention,
+.tm-ntcp .tm-mention,
+.tm-npcp .tm-mention {
+    color: var(--tm-color-primary);
+    font-weight: 500;
+    cursor: default;
+}
+
+.tm-comment-quote {
+    margin: var(--tm-notion-comment-quote-margin);
+    padding: var(--tm-notion-comment-quote-pad);
+    border-left: 3px solid var(--tm-color-primary);
+    background: var(--tm-bg-surface-secondary);
+    border-radius: 0 5px 5px 0;
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-notion-comment-quote-size);
+    line-height: 1.5;
+}
+.tm-nbcp__entry--replying .tm-nbcp__entry-indent,
+.tm-ntcp__entry--replying .tm-ntcp__entry-indent,
+.tm-npcp__entry--replying .tm-npcp__entry-indent {
+    border-left-color: var(--tm-color-primary);
+    border-left-width: 3px;
+}
+
+.tm-nbcp__entry--replying .tm-nbcp__entry-content,
+.tm-ntcp__entry--replying .tm-ntcp__entry-content,
+.tm-npcp__entry--replying .tm-npcp__entry-content {
+    background: var(--tm-color-surface-hover);
+    border-radius: 6px;
+}
+
+.tm-nbcp__watch-btn,
+.tm-ntcp__watch-btn,
+.tm-npcp__watch-btn {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 8px;
+    border: 1px solid var(--tm-border-color);
+    border-radius: 5px;
+    background: transparent;
+    font-size: 12px;
+    color: var(--tm-text-secondary);
+    cursor: pointer;
+    transition: background 80ms, color 80ms, border-color 80ms;
+}
+
+.tm-nbcp__watch-btn:hover,
+.tm-ntcp__watch-btn:hover,
+.tm-npcp__watch-btn:hover {
+    background: var(--tm-color-surface-hover);
+    color: var(--tm-text-primary);
+    border-color: var(--tm-border-color-strong);
+}
+
+.tm-nbcp__watch-btn--watching,
+.tm-ntcp__watch-btn--watching,
+.tm-npcp__watch-btn--watching {
+    color: var(--tm-color-primary);
+    border-color: color-mix(in srgb, var(--tm-color-primary) 35%, transparent);
+}
+
+.tm-nbcp__watch-btn--watching:hover,
+.tm-ntcp__watch-btn--watching:hover,
+.tm-npcp__watch-btn--watching:hover {
+    background: color-mix(in srgb, var(--tm-color-primary) 8%, transparent);
+}
+
 /* ── Reduced motion ──────────────────────────────────────────────────────────
    Explicit enumeration of every Tempo.Blazor.NotionEditor animated subject (mirrors the core block in
    animations.css and the DiagramEditor package block, never a universal selector).
@@ -100,22 +593,22 @@
   .tm-dbsb__select,
   .tm-dbt__add-field-btn,
   .tm-dbt__add-row-btn,
-  .tm-dbt__bar,
-  .tm-dbt__bar-resize,
-  .tm-dbt__empty-add,
+  .tm-dbtl__bar,
+  .tm-dbtl__bar-resize,
+  .tm-dbtl__empty-add,
   .tm-dbt__expand-btn,
   .tm-dbt__expand-chevron,
   .tm-dbt__group-chevron,
   .tm-dbt__group-toggle,
-  .tm-dbt__nav-btn,
+  .tm-dbtl__nav-btn,
   .tm-dbt__resize-handle,
   .tm-dbt__resize-handle::after,
   .tm-dbt__row,
-  .tm-dbt__sidebar-add,
-  .tm-dbt__sidebar-row,
-  .tm-dbt__today-btn,
-  .tm-dbt__tool-btn,
-  .tm-dbt__zoom-btn,
+  .tm-dbtl__sidebar-add,
+  .tm-dbtl__sidebar-row,
+  .tm-dbtl__today-btn,
+  .tm-dbtl__tool-btn,
+  .tm-dbtl__zoom-btn,
   .tm-dbt-select-opt,
   .tm-dbte__close-btn,
   .tm-dbte__modal,
@@ -146,6 +639,8 @@
   .tm-media-library__more-btn,
   .tm-media-library__search-input,
   .tm-my-tasks__check,
+  .tm-my-tasks__group-chevron,
+  .tm-my-tasks__group-toggle,
   .tm-my-tasks__icon-btn,
   .tm-my-tasks__spinner,
   .tm-nbcp,
@@ -172,12 +667,14 @@
   .tm-nmm__tab,
   .tm-notion-ai__cursor,
   .tm-notion-analytics__icon-btn,
+  .tm-notion-analytics__range-btn,
   .tm-notion-analytics__retry,
   .tm-notion-analytics__spinner,
   .tm-notion-audio-block__replace-btn,
   .tm-notion-audit__button,
   .tm-notion-audit__download,
   .tm-notion-audit__icon-btn,
+  .tm-notion-audit__row-chevron,
   .tm-notion-audit__spinner,
   .tm-notion-block,
   .tm-notion-block__comment-thread,
@@ -203,6 +700,7 @@
   .tm-notion-code-block__lang-select,
   .tm-notion-code-block__preview-toggle,
   .tm-notion-color-picker,
+  .tm-notion-color-picker__body,
   .tm-notion-color-picker__check,
   .tm-notion-color-picker__item,
   .tm-notion-color-picker__swatch,
@@ -230,6 +728,7 @@
   .tm-notion-embed-block__input-zone,
   .tm-notion-embed-block__overlay,
   .tm-notion-emoji-picker,
+  .tm-notion-emoji-picker__body,
   .tm-notion-emoji-picker__btn,
   .tm-notion-emoji-picker__emoji,
   .tm-notion-emoji-picker__random,
@@ -249,6 +748,7 @@
   .tm-notion-handle__btn,
   .tm-notion-handle__drag,
   .tm-notion-header-comment-badge,
+  .tm-notion-header-meta-row__comment-link,
   .tm-notion-header-cover__actions,
   .tm-notion-header-cover__btn,
   .tm-notion-header-cover__drag-hint,
@@ -275,9 +775,11 @@
   .tm-notion-quote a,
   .tm-notion-resize-handle,
   .tm-notion-sidebar,
+  .tm-notion-sidebar-collapse,
   .tm-notion-sidebar-toggle,
   .tm-notion-skeleton,
   .tm-notion-slash,
+  .tm-notion-slash__body,
   .tm-notion-slash__item,
   .tm-notion-slash__item-icon,
   .tm-notion-spreadsheet-block__edit-btn,
@@ -310,6 +812,7 @@
   .tm-notion-topbar__tasks,
   .tm-notion-topbar__tool,
   .tm-notion-type-switcher,
+  .tm-notion-type-switcher__body,
   .tm-notion-type-switcher__item,
   .tm-notion-type-switcher__item-icon,
   .tm-notion-video-block__overlay,
@@ -320,6 +823,8 @@
   .tm-notion-wireframe-edit-modal__btn,
   .tm-notion-wireframe-edit-modal__spinner,
   .tm-npcp,
+  .tm-npcp__edit-cancel,
+  .tm-npcp__edit-save,
   .tm-npcp__entry-action,
   .tm-npcp__entry-actions,
   .tm-npcp__mark-all-read,
@@ -353,7 +858,6 @@
   .tm-nps__item,
   .tm-nps__item-shortcut,
   .tm-nps__spinner,
-  .tm-nps-backdrop,
   .tm-npsd__spinner,
   .tm-npsm,
   .tm-npsm__confirm-btn,
@@ -407,6 +911,8 @@
   .tm-nst-status__retry,
   .tm-ntcp,
   .tm-ntcp__close-btn,
+  .tm-ntcp__edit-cancel,
+  .tm-ntcp__edit-save,
   .tm-ntcp__entry-action,
   .tm-ntcp__entry-actions,
   .tm-ntcp__reply-cancel,
@@ -436,4 +942,12 @@
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
 }
+}
+
+/* Disabled primary inside the cover dialog: core disabled surfaces, not opacity on the primary
+   colour. The modal is portaled, so scoped CSS cannot reach the footer button. */
+.tm-notion-cover-dialog .tm-modal-footer .tm-btn-primary:disabled {
+    background: var(--tm-bg-muted);
+    color: var(--tm-text-disabled);
+    opacity: 1;
 }

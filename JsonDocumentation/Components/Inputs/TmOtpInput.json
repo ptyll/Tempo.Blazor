@@ -1,0 +1,168 @@
+{
+  "itemName": "TmOtpInput",
+  "kind": "Component",
+  "category": "Inputs",
+  "description": "Segmented one-time-code input: one cell per character, auto-advance on typing, Backspace steps back, arrow/Home/End navigation, optional grouping separators and masking.",
+  "packageId": "Tempo.Blazor",
+  "namespace": "Tempo.Blazor.Components.Inputs",
+  "sourcePath": "src/Tempo.Blazor/Components/Inputs/TmOtpInput.razor",
+  "documentationStatus": "generated",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.Inputs"
+  ],
+  "parameters": [
+    {
+      "name": "Value",
+      "type": "string",
+      "isRequired": false,
+      "description": "The complete verification code. Equals the concatenation of all cell values."
+    },
+    {
+      "name": "ValueChanged",
+      "type": "EventCallback<string>",
+      "isRequired": false,
+      "description": "Fires when the code changes (every accepted or removed character)."
+    },
+    {
+      "name": "Length",
+      "type": "int",
+      "isRequired": false,
+      "default": "6",
+      "description": "Number of cells. Must be between 4 and 10; other values throw ArgumentOutOfRangeException."
+    },
+    {
+      "name": "Kind",
+      "type": "OtpInputKind",
+      "isRequired": false,
+      "default": "Numeric",
+      "description": "Which characters are accepted (Numeric: ASCII digits; Alphanumeric: letters normalized to uppercase plus digits) and which keyboard is presented via inputmode."
+    },
+    {
+      "name": "GroupSize",
+      "type": "int",
+      "isRequired": false,
+      "default": "0",
+      "description": "Renders an aria-hidden separator between groups of this many cells (0 = no separators)."
+    },
+    {
+      "name": "Masked",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Renders every cell as type=\"password\" so the code is hidden while typing."
+    },
+    {
+      "name": "Disabled",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Disables every cell and applies the tm-otp-input--disabled root modifier."
+    },
+    {
+      "name": "ReadOnly",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Renders every cell readonly and applies the tm-otp-input--readonly root modifier: the code stays visible and focusable but cannot be edited."
+    },
+    {
+      "name": "Invalid",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Error state: applies the tm-otp-input--invalid root modifier (with the shake animation) and sets aria-invalid=\"true\" plus an aria-describedby pointing at the ErrorText message on the group and every cell. Setting Invalid=true WITHOUT ErrorText is the supported way to surface a message owned by a surrounding TmFormField (reachable through the host AriaDescribedBy). The message text is announced through a single always-rendered polite live region; call ShowErrorAsync() to replay the shake and re-announce an unchanged error."
+    },
+    {
+      "name": "ErrorText",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Error message rendered below the input (and announced politely) while Invalid is true. Localize it through ITmLocalizer; null or empty renders no error element and adds no {Id}-error reference — use that when a surrounding TmFormField renders the message instead."
+    },
+    {
+      "name": "Verified",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Verified state: blocks editing (the cells become readonly), applies the tm-otp-input--verified root modifier and renders the localized verified status (check icon + text) below the input, referenced from every cell through aria-describedby=\"{Id}-status\" and announced through the polite live region."
+    },
+    {
+      "name": "VerifiedText",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Optional text of the verified status row (additive): overrides the localized TmOtpInput_VerifiedStatus default in the status element AND in the polite live region, so a host with its own verified wording (e.g. a signing step reusing the host's \"Verified\" key) keeps ONE consistent text everywhere."
+    },
+    {
+      "name": "AutoFocus",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Moves focus to the first cell after the first render."
+    },
+    {
+      "name": "Id",
+      "type": "string",
+      "isRequired": false,
+      "default": "Guid.NewGuid().ToString(\"n\")[..8]",
+      "description": "HTML id attribute of the root group."
+    },
+    {
+      "name": "Class",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Additional CSS class(es) applied to the root element."
+    },
+    {
+      "name": "AriaLabel",
+      "type": "string?",
+      "isRequired": false,
+      "description": "aria-label of the group. Defaults to the localized \"Verification code\" label; ignored when AriaLabelledBy is set (the reference wins per WAI-ARIA)."
+    },
+    {
+      "name": "AriaLabelledBy",
+      "type": "string?",
+      "isRequired": false,
+      "description": "aria-labelledby of the group. When set, AriaLabel is not rendered."
+    },
+    {
+      "name": "AriaDescribedBy",
+      "type": "string?",
+      "isRequired": false,
+      "description": "aria-describedby of the group (e.g. a hint or error message id)."
+    },
+    {
+      "name": "OnComplete",
+      "type": "EventCallback<string>",
+      "isRequired": false,
+      "description": "Fires exactly once each time the code transitions from incomplete to complete; clearing a character and completing again fires it again."
+    },
+    {
+      "name": "DataTestId",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Overrides the root data-testid."
+    },
+    {
+      "name": "TestIdPrefix",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Namespaces every internal data-testid as \"{prefix}-{name}\"."
+    },
+    {
+      "name": "AdditionalAttributes",
+      "type": "Dictionary<string, object>?",
+      "isRequired": false,
+      "description": "Additional attributes applied to the root element."
+    }
+  ],
+  "methods": [
+    {
+      "name": "FocusAsync",
+      "signature": "Task FocusAsync()",
+      "description": "Moves focus to the first empty cell (selecting it); a complete code focuses the first cell. No-op while Disabled."
+    },
+    {
+      "name": "ClearAsync",
+      "signature": "Task ClearAsync()",
+      "description": "Clears every cell, raises ValueChanged with the empty string, syncs the DOM (one batched setCellValues call) and re-arms OnComplete. No-op while editing is blocked."
+    },
+    {
+      "name": "ShowErrorAsync",
+      "signature": "Task ShowErrorAsync()",
+      "description": "Re-triggers the invalid shake (JS reflow restart) and re-announces the error message: the single polite live region is cleared for one render and then restored, because it only announces changes. Call after (re)applying Invalid/ErrorText when the same error is already shown."
+    }
+  ]
+}

@@ -1,7 +1,7 @@
 .tm-npt-empty {
     padding: 6px 12px;
     font-size: 12px;
-    color: var(--tm-color-text-secondary, #999);
+    color: var(--tm-text-secondary);
     font-style: italic;
 }
 
@@ -17,7 +17,7 @@
     gap: var(--tm-space-2);
     margin: var(--tm-space-2);
     padding: var(--tm-space-2);
-    border: 1px solid var(--tm-color-border);
+    border: 1px solid var(--tm-border-color);
     border-radius: var(--tm-radius-md);
     background: var(--tm-color-surface-elevated);
     box-shadow: var(--tm-shadow-sm);
@@ -28,7 +28,7 @@
     min-width: 0;
     font-size: var(--tm-font-size-sm);
     font-weight: var(--tm-font-weight-semibold);
-    color: var(--tm-color-text);
+    color: var(--tm-text-primary);
 }
 
 .tm-npt-bulk-toolbar__button {
@@ -36,11 +36,11 @@
     align-items: center;
     justify-content: center;
     min-height: 32px;
-    border: 1px solid var(--tm-color-border);
+    border: 1px solid var(--tm-border-color);
     border-radius: var(--tm-radius-sm);
     padding: 0 var(--tm-space-3);
     background: var(--tm-color-surface);
-    color: var(--tm-color-text);
+    color: var(--tm-text-primary);
     font-size: var(--tm-font-size-sm);
     text-align: center;
     white-space: normal;
@@ -56,65 +56,80 @@
     color: var(--tm-color-danger);
 }
 
-.tm-npt-bulk-panel {
-    margin: var(--tm-space-2);
-    padding: var(--tm-space-3);
-    border: 1px solid var(--tm-color-border);
-    border-radius: var(--tm-radius-md);
-    background: var(--tm-color-surface-elevated);
-    box-shadow: var(--tm-shadow-md);
+/* Phase 4: the picker chrome rides the core TmModal — content styles only (no card chrome, no
+   own backdrop, no z-index). */
+
+.tm-npt-bulk-panel__search {
+    width: 100%;
+    min-height: 40px;
+    border: 1px solid var(--tm-border-color);
+    border-radius: var(--tm-radius-sm);
+    padding: 0 var(--tm-space-3);
+    background: var(--tm-color-surface);
+    color: var(--tm-text-primary);
 }
 
-.tm-npt-bulk-panel__header,
-.tm-npt-bulk-panel__actions {
+.tm-npt-bulk-panel__results {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-1);
+    margin-top: var(--tm-space-2);
+    max-height: min(50vh, 26rem);
+    overflow: auto;
+}
+
+.tm-npt-bulk-panel__row {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: var(--tm-space-2);
+    gap: var(--tm-space-1);
 }
 
-.tm-npt-bulk-panel__close {
-    width: 32px;
+.tm-npt-bulk-panel__expand {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 28px;
+    width: 28px;
     height: 32px;
     border: 0;
     border-radius: var(--tm-radius-sm);
     background: transparent;
-    color: var(--tm-color-text-secondary);
+    color: var(--tm-text-secondary);
     cursor: pointer;
+    transition: transform var(--tm-notion-anim-fast, 120ms);
 }
 
-.tm-npt-bulk-panel__close:hover {
+.tm-npt-bulk-panel__expand--open {
+    transform: rotate(90deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .tm-npt-bulk-panel__expand {
+        transition: none;
+    }
+}
+
+.tm-npt-bulk-panel__expand--spacer {
+    visibility: hidden;
+    pointer-events: none;
+}
+
+.tm-npt-bulk-panel__expand:hover {
     background: var(--tm-color-surface-hover);
-    color: var(--tm-color-text);
-}
-
-.tm-npt-bulk-panel__search {
-    width: 100%;
-    min-height: 36px;
-    margin-top: var(--tm-space-2);
-    border: 1px solid var(--tm-color-border);
-    border-radius: var(--tm-radius-sm);
-    padding: 0 var(--tm-space-3);
-    background: var(--tm-color-surface);
-    color: var(--tm-color-text);
-}
-
-.tm-npt-bulk-panel__results {
-    display: grid;
-    gap: var(--tm-space-1);
-    margin-top: var(--tm-space-2);
+    color: var(--tm-text-primary);
 }
 
 .tm-npt-bulk-panel__result {
+    flex: 1;
     display: flex;
     align-items: center;
     gap: var(--tm-space-2);
-    min-height: 34px;
+    min-height: 40px;
     border: 0;
     border-radius: var(--tm-radius-sm);
     padding: 0 var(--tm-space-2);
     background: transparent;
-    color: var(--tm-color-text);
+    color: var(--tm-text-primary);
     text-align: left;
     cursor: pointer;
 }
@@ -123,9 +138,9 @@
     background: var(--tm-color-surface-hover);
 }
 
-.tm-npt-bulk-panel__message {
-    margin: 0 0 var(--tm-space-3);
-    color: var(--tm-color-text);
+.tm-npt-bulk-panel__result[aria-selected="true"] {
+    background: var(--tm-color-primary-subtle, var(--tm-color-surface-hover));
+    color: var(--tm-color-primary);
 }
 
 .tm-npt-bulk-error {

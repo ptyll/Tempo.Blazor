@@ -593,7 +593,8 @@ internal sealed class PackageDocumentationComposer
                     $"{config.PackageId}: configured component root does not exist: {rootPath}");
             }
 
-            generated.AddRange(ComponentDocumentationScanner.Scan(rootPath, _repoRoot, config.PackageId));
+            generated.AddRange(ComponentDocumentationScanner.Scan(
+                rootPath, _repoRoot, config.PackageId, config.ExcludePatterns));
         }
 
         var componentNames = generated
@@ -604,7 +605,8 @@ internal sealed class PackageDocumentationComposer
         if (config.IncludePublicTypes)
         {
             var sourceRoot = Path.GetDirectoryName(projectPath)!;
-            generated.AddRange(PublicApiDocumentationScanner.Scan(sourceRoot, _repoRoot, config.PackageId, componentNames));
+            generated.AddRange(PublicApiDocumentationScanner.Scan(
+                sourceRoot, _repoRoot, config.PackageId, componentNames, config.ExcludePatterns));
         }
 
         var generatedByName = new Dictionary<string, GeneratedDocumentationItem>(StringComparer.OrdinalIgnoreCase);
@@ -899,11 +901,16 @@ internal sealed class PackageDocumentationComposer
 
 internal static class ComponentDocumentationScanner
 {
-    public static List<GeneratedDocumentationItem> Scan(string componentRoot, string repoRoot, string packageId)
+    public static List<GeneratedDocumentationItem> Scan(
+        string componentRoot, string repoRoot, string packageId, IEnumerable<string>? excludePatterns = null)
     {
+        var excluded = (excludePatterns ?? [])
+            .Select(pattern => new Regex(pattern, RegexOptions.IgnoreCase, GeneratorRegex.MatchTimeout))
+            .ToList();
         var items = new List<GeneratedDocumentationItem>();
         foreach (var razorFile in Directory.GetFiles(componentRoot, "*.razor", SearchOption.AllDirectories)
                      .Where(f => !Path.GetFileName(f).StartsWith("_", StringComparison.Ordinal))
+                     .Where(f => !excluded.Any(pattern => pattern.IsMatch(Path.GetRelativePath(componentRoot, f))))
                      .OrderBy(f => f, StringComparer.OrdinalIgnoreCase))
         {
             var item = BuildComponentItem(componentRoot, repoRoot, packageId, razorFile);
@@ -1027,10 +1034,16 @@ internal static class PublicApiDocumentationScanner
         RegexOptions.Compiled,
         GeneratorRegex.MatchTimeout);
 
-    public static List<GeneratedDocumentationItem> Scan(string sourceRoot, string repoRoot, string packageId, ISet<string> componentBaseNames)
+    public static List<GeneratedDocumentationItem> Scan(
+        string sourceRoot, string repoRoot, string packageId, ISet<string> componentBaseNames,
+        IEnumerable<string>? excludePatterns = null)
     {
+        var excluded = (excludePatterns ?? [])
+            .Select(pattern => new Regex(pattern, RegexOptions.IgnoreCase, GeneratorRegex.MatchTimeout))
+            .ToList();
         var candidates = new List<PublicApiCandidate>();
         foreach (var file in Directory.GetFiles(sourceRoot, "*.cs", SearchOption.AllDirectories)
+                     .Where(f => !excluded.Any(pattern => pattern.IsMatch(Path.GetRelativePath(sourceRoot, f))))
                      .Where(f => !PackageDocumentationGenerator.IsUnderBuildOutput(f))
                      .OrderBy(f => f, StringComparer.OrdinalIgnoreCase))
         {

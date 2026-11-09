@@ -70,6 +70,8 @@
 .tm-drawer--right .tm-drawer__panel,
 .tm-drawer--left .tm-drawer__panel {
     height: 100%;
+    max-block-size: 100dvh;
+    min-block-size: 0;
 }
 
 .tm-drawer--right .tm-drawer__panel {
@@ -82,6 +84,7 @@
 }
 
 .tm-drawer--bottom .tm-drawer__panel {
+    max-block-size: 100dvh;
     padding-bottom: env(safe-area-inset-bottom, 0px);
     flex: 0 0 auto;
     width: 100%;
@@ -206,8 +209,8 @@
 .tm-drawer__body {
     overscroll-behavior: contain;
     overflow-y: auto;
-    flex: 1;
-    overflow-y: auto;
+    flex: 1 1 auto;
+    min-block-size: 0;
     padding: 1.25rem;
 }
 
@@ -297,4 +300,17 @@
     background: transparent;
     color: inherit;
     overflow: visible;
+}
+
+/* The UA reset above is zero-specificity and sets inset/width/height to auto. A promoted side
+   drawer then has no box: the panel's height:100% resolves against auto, the sheet collapses,
+   and the slide-in finishes off-screen. Pin the popover root to the viewport WITHOUT touching
+   the panel animation or transform. An inline drawer never carries popover. */
+.tm-drawer[popover].tm-drawer--right,
+.tm-drawer[popover].tm-drawer--left,
+.tm-drawer[popover].tm-drawer--bottom {
+    inset: 0;
+    width: auto;
+    height: auto;
+    max-block-size: 100dvh;
 }

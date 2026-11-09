@@ -1,0 +1,35 @@
+.tm-notion-floating-menu__anchor {
+    position: fixed;
+    width: 0;
+    height: 0;
+    overflow: hidden;
+    /* A caret menu supplies top/left. A trigger menu does not: without an inset the fixed pin
+       collapses to the viewport origin and overlay.js parks the panel (anchor off-screen). */
+    inset: auto;
+}
+
+::deep .tm-notion-floating-menu__panel {
+    min-width: var(--tm-space-16);
+}
+
+.tm-notion-floating-menu__body {
+    display: flex;
+    flex-direction: column;
+    min-width: var(--tm-space-16);
+}
+
+.tm-notion-floating-menu__title {
+    margin: 0;
+    padding: var(--tm-space-3) var(--tm-space-4);
+    font-size: var(--tm-font-size-md);
+    color: var(--tm-text-primary);
+}
+
+.tm-notion-floating-menu__close {
+    align-self: flex-end;
+    margin: var(--tm-space-2) var(--tm-space-3) var(--tm-space-3);
+    border: 0;
+    background: transparent;
+    color: var(--tm-color-primary);
+    cursor: pointer;
+}

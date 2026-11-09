@@ -16,13 +16,22 @@ public sealed class NotionShortcutsE2ETests : NotionE2ETestBase
 
         Assert.IsTrue(await page.EvaluateAsync<bool>("() => typeof window.tmNotionEditor?.registerShortcuts === 'function'"),
             "The Notion shortcuts JS registration function must be available.");
-        Assert.AreEqual(1, await page.Locator(".tm-notion-topbar__shortcuts").CountAsync(),
-            "The shortcuts trigger should render in the Notion editor top bar.");
+        // Phase 3: the topbar is a single TmToolbar with Overflow=Menu. The More button only
+        // renders when the bar actually overflows — at 1600 the shortcuts trigger sits directly
+        // on the bar. Exercise the More menu only when it exists.
+        var more = page.Locator(".tm-notion-topbar .tm-toolbar-more");
+        var hasMore = await more.CountAsync() > 0;
+        if (hasMore)
+            await more.First.ClickAsync(new LocatorClickOptions { Force = true });
+        Assert.AreEqual(1, await page.Locator("[data-testid='notion-shortcuts-open'], [data-menu-testid='notion-shortcuts-open']").CountAsync(),
+            "The shortcuts trigger should render on the bar or in its More menu.");
+        if (hasMore)
+            await page.Keyboard.PressAsync("Escape");
 
         await page.Locator(".tm-notion-topbar__title").First.ClickAsync();
         await DispatchQuestionShortcutAsync(page);
 
-        var panel = page.Locator(".tm-nsp__dialog").First;
+        var panel = page.Locator(".tm-nsp").First;
         await panel.WaitForAsync(new LocatorWaitForOptions
         {
             State = WaitForSelectorState.Visible,
@@ -49,23 +58,24 @@ public sealed class NotionShortcutsE2ETests : NotionE2ETestBase
         await page.SetViewportSizeAsync(1280, 720);
 
         await page.Keyboard.PressAsync("Escape");
-        await page.Locator(".tm-nsp__dialog").WaitForAsync(new LocatorWaitForOptions
+        await page.Locator(".tm-nsp").WaitForAsync(new LocatorWaitForOptions
         {
             State = WaitForSelectorState.Detached,
             Timeout = 10000
         });
 
         await DispatchQuestionShortcutAsync(page);
-        await page.Locator(".tm-nsp__dialog").First.WaitForAsync(new LocatorWaitForOptions
+        await page.Locator(".tm-nsp").First.WaitForAsync(new LocatorWaitForOptions
         {
             State = WaitForSelectorState.Visible,
             Timeout = 10000
         });
-        await page.Locator(".tm-nsp__scrim").First.ClickAsync(new LocatorClickOptions
+        // Phase 6: the panel rides TmModal, so the overlay click is the close path the old scrim was.
+        await page.Locator(".tm-modal-overlay").Last.ClickAsync(new LocatorClickOptions
         {
             Position = new Position { X = 8, Y = 8 }
         });
-        await page.Locator(".tm-nsp__dialog").WaitForAsync(new LocatorWaitForOptions
+        await page.Locator(".tm-nsp").WaitForAsync(new LocatorWaitForOptions
         {
             State = WaitForSelectorState.Detached,
             Timeout = 10000
@@ -82,7 +92,7 @@ public sealed class NotionShortcutsE2ETests : NotionE2ETestBase
             """);
         await page.WaitForTimeoutAsync(500);
 
-        Assert.AreEqual(0, await page.Locator(".tm-nsp__dialog").CountAsync(),
+        Assert.AreEqual(0, await page.Locator(".tm-nsp").CountAsync(),
             "Typing ? inside a Notion editable block must not open the shortcuts panel.");
     }
 

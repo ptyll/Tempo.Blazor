@@ -1,4 +1,6 @@
+using System.Globalization;
 using Microsoft.AspNetCore.Components;
+using Tempo.Blazor.Abstractions.Layout;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.JSInterop;
 using Tempo.Blazor.NotionEditor.Enums;
@@ -20,6 +22,7 @@ public partial class TmNotionBlockTypeSwitcher : ComponentBase
 
     [Parameter] public EventCallback<BlockType> OnTypeChanged { get; set; }
     [Parameter] public EventCallback            OnClosed      { get; set; }
+    [Parameter] public TmLayoutMode LayoutMode { get; set; } = TmLayoutMode.Auto;
 
     // ── Internal model ────────────────────────────────────────────────────────
 
@@ -88,12 +91,8 @@ public partial class TmNotionBlockTypeSwitcher : ComponentBase
 
     // ── State ─────────────────────────────────────────────────────────────────
 
-    private double _top;
-    private double _left;
     private bool   _wasVisible;
     private int    _highlightedIndex = -1;
-
-    private ElementReference _panelRef;
 
     // ── Lifecycle ─────────────────────────────────────────────────────────────
 
@@ -101,23 +100,9 @@ public partial class TmNotionBlockTypeSwitcher : ComponentBase
     {
         if (Visible && !_wasVisible)
         {
-            _top              = Top;
-            _left             = Left;
             _highlightedIndex = CurrentTypeIndex();
         }
         _wasVisible = Visible;
-    }
-
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (Visible)
-        {
-            try
-            {
-                await JS.InvokeVoidAsync("tmNotionEditor.adjustTypeSwitcherPosition", _panelRef);
-            }
-            catch { /* SSR / test */ }
-        }
     }
 
     // ── Handlers ──────────────────────────────────────────────────────────────

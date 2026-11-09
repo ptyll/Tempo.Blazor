@@ -67,3 +67,178 @@
 .tm-notion-ai--panel {
     width: min(32rem, calc(100vw - var(--tm-space-4)));
 }
+
+/* A phone sheet is the viewport. The drawer body pads 1.25rem each side, and the sheet branch of
+   TmOverlayPanel drops the panel Class, so the AI surface is the bare section inside
+   .tm-overlay-panel-sheet__content. The same rule lives in the package bundle, which is the sheet
+   the page loads. */
+.tm-overlay-panel-sheet__content:has([data-testid="notion-ai-menu"]) {
+    margin-inline: calc(-1 * var(--tm-space-5));
+    width: calc(100% + 2 * var(--tm-space-5));
+}
+
+/* ── Phase 4 (NO1): comment popover panel roots (TmNotionBlockCommentPanel /
+   TmNotionTextCommentPanel) — anchored at the bubble position through a zero-size fixed
+   anchor span; the card inside keeps only sizing. ── */
+
+.tm-nbcp-popover,
+.tm-ntcp-popover {
+    display: flex;
+    flex-direction: column;
+    max-height: min(520px, calc(100vh - var(--tm-space-4)));
+    background: var(--tm-bg-elevated);
+    border: 1px solid var(--tm-border-color);
+    border-radius: 8px;
+    box-shadow: var(--tm-shadow-popover);
+    overflow: hidden;
+}
+
+/* ── Page settings (N6) ──────────────────────────────────────────────────────
+   The card class rides the floating-menu body, which the overlay renders outside this
+   component's scope. A scoped rule in TmNotionPageSettingsMenu.razor.css can never match
+   it (N325), so the surface lives here. The sheet already paints its own card. */
+.tm-overlay-panel .tm-npsm {
+    width: min(16.25rem, calc(100vw - var(--tm-space-4)));
+    max-height: calc(100vh - var(--tm-space-4));
+    background: var(--tm-bg-elevated);
+    border: 1px solid var(--tm-border-color);
+    border-radius: 8px;
+    box-shadow: var(--tm-shadow-popover);
+    overflow: auto;
+    font-size: 14px;
+    color: var(--tm-text-primary);
+}
+
+/* N12: the tempo edit modal fills its panel. The class rides the TmModal overlay, so a scoped
+   rule in the shell can never match it. Default stays XLarge (the 900px ceiling); Maximize and
+   the phone presentation are the fullscreen paths. */
+.tm-modal-overlay.tm-notion-tempo-modal .tm-modal-container,
+.tm-modal-overlay.tm-notion-tempo-modal .tm-modal {
+    width: 100%;
+    max-height: min(90vh, 100%);
+    display: flex;
+    flex-direction: column;
+}
+
+.tm-modal-overlay.tm-notion-tempo-modal--maximized .tm-modal-container,
+.tm-modal-overlay.tm-notion-tempo-modal--maximized .tm-modal,
+.tm-modal-overlay.tm-notion-tempo-modal.tm-modal--fullscreen-presentation .tm-modal-container,
+.tm-modal-overlay.tm-notion-tempo-modal.tm-modal--fullscreen-presentation .tm-modal {
+    width: 100%;
+    height: 100%;
+    max-width: none;
+    max-height: 100%;
+}
+
+/* History is a tall surface: the split (or the phone list) must end at the modal footer. */
+.tm-modal-overlay.tm-nph-host .tm-modal-container,
+.tm-modal-overlay.tm-nph-host .tm-modal {
+    display: flex;
+    flex-direction: column;
+    max-height: 100%;
+}
+
+.tm-modal-overlay.tm-nph-host .tm-modal-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.tm-modal-overlay.tm-notion-tempo-modal .tm-modal-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.tm-overlay-panel-sheet .tm-npsm,
+.tm-overlay-panel-sheet__content .tm-npsm {
+    width: 100%;
+    max-height: none;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    /* The scoped card clips at overflow:hidden and never scrolls. A sheet whose stored
+       viewport is still the previous band must scroll to the last item instead of hiding it. */
+    overflow: auto;
+    /* --tm-sheet-* are defined only on .tm-sheet. This body is not one, so the core
+       space token is the defined ceiling (a sheet already clips its own panel). */
+    max-height: 100%;
+}
+
+/* ── N5: floating-menu bodies inside the core bottom sheet ───────────────────
+   TmNotionFloatingMenu renders the consumer body as a child of its own wrapper inside
+   the core sheet content. The consumer bodies carry the popover card chrome (fixed
+   width, border/radius/shadow) through their SCOPED rules, and a scoped rule can never
+   reach up into the sheet-content ancestor — so the sheet reset lives here, in the
+   global stylesheet, keyed off .tm-overlay-panel-sheet__content (present only in the
+   sheet presentation). The core overlay deliberately does NOT forward Class onto the
+   sheet content (the popover root keeps it). */
+
+.tm-overlay-panel-sheet__content > .tm-notion-floating-menu__body > .tm-notion-slash__body,
+.tm-overlay-panel-sheet__content > .tm-notion-floating-menu__body > .tm-notion-slash,
+.tm-overlay-panel-sheet__content > .tm-notion-floating-menu__body > .tm-notion-color-picker__body,
+.tm-modal-overlay .tm-notion-emoji-picker__body,
+.tm-overlay-panel-sheet__content > .tm-notion-floating-menu__body > .tm-notion-emoji-picker__body,
+.tm-overlay-panel-sheet__content > .tm-notion-floating-menu__body > .tm-notion-status-picker__body,
+.tm-overlay-panel-sheet__content > .tm-notion-floating-menu__body > .tm-notion-token-dropdown__body,
+.tm-overlay-panel-sheet__content > .tm-notion-floating-menu__body > .tm-notion-type-switcher__body {
+    width: 100%;
+    max-width: 100%;
+    max-height: none;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+}
+
+/* The sheet measures the rendered option. The generic touch-target rule below is 44px and
+   matches the same node, so the slash option has to win on its own — a wrapper min-height
+   never reaches the row the test reads. */
+.tm-overlay-panel-sheet__content .tm-notion-slash__item[role="option"],
+.tm-overlay-panel-sheet__content .tm-notion-slash__item[role="menuitem"] {
+    min-height: 56px;
+}
+
+/* A sheet is the touch presentation: every row meets the touch target of the layout it is
+   presenting now, including a row a popover would keep compact. */
+.tm-overlay-panel-sheet__content .tm-npsm__item,
+.tm-overlay-panel-sheet__content .tm-notion-ctx__item,
+.tm-overlay-panel-sheet__content [role="menuitem"],
+.tm-overlay-panel-sheet__content [role="option"] {
+    min-height: var(--tm-touch-target);
+}
+
+.tm-overlay-panel-sheet__content .tm-notion-slash__chevron {
+    display: block;
+    width: var(--tm-space-2);
+    height: var(--tm-space-2);
+    margin-left: auto;
+    border-right: 2px solid var(--tm-text-tertiary);
+    border-bottom: 2px solid var(--tm-text-tertiary);
+    transform: rotate(-45deg);
+}
+
+.tm-notion-slash__chevron {
+    display: none;
+}
+
+.tm-modal-overlay .tm-notion-emoji-picker__body {
+    width: 100%;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+}
+
+.tm-notion-emoji-picker__remove--footer {
+    min-height: 44px;
+    width: 100%;
+}
+
+@media (pointer: coarse) {
+    .tm-nps__footer-hint {
+        display: none;
+    }
+}

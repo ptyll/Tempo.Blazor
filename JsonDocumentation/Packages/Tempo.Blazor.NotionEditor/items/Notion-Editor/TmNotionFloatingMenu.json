@@ -1,0 +1,135 @@
+{
+  "itemName": "TmNotionFloatingMenu",
+  "kind": "Component",
+  "category": "Notion Editor",
+  "description": "The one floating menu of the Notion package. Desktop is an anchored popover; mobile is the core sheet. Title and footer render only in the sheet.",
+  "packageId": "Tempo.Blazor.NotionEditor",
+  "namespace": "Tempo.Blazor.Components.NotionEditor.UI",
+  "sourcePath": "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/UI/Shared/TmNotionFloatingMenu.razor",
+  "documentationStatus": "generated",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.NotionEditor.UI"
+  ],
+  "parameters": [
+    {
+      "name": "ChildContent",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "The menu body."
+    },
+    {
+      "name": "Footer",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "Footer rendered in both the desktop popover and the mobile sheet. A host that only wants it on the sheet must not also render the same action in ChildContent."
+    },
+    {
+      "name": "IsOpen",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Whether the menu is open."
+    },
+    {
+      "name": "IsOpenChanged",
+      "type": "EventCallback<bool>",
+      "isRequired": false,
+      "description": "Raised when the core overlay changes the open state."
+    },
+    {
+      "name": "LayoutMode",
+      "type": "TmLayoutMode",
+      "isRequired": false,
+      "default": "TmLayoutMode.Auto",
+      "description": "Forced layout. Auto reads the cascaded context."
+    },
+    {
+      "name": "OnClose",
+      "type": "EventCallback",
+      "isRequired": false,
+      "description": "Raised by Escape, an outside click and the sheet's Close button."
+    },
+    {
+      "name": "Title",
+      "type": "string?",
+      "isRequired": false,
+      "description": "The sheet title. A desktop popover renders none."
+    },
+    {
+      "name": "AriaLabel",
+      "type": "string?",
+      "isRequired": false,
+      "description": "The accessible name of the desktop popover. Defaults to Title (a desktop popover with no title needs an explicit value to stay a named dialog)."
+    },
+    {
+      "name": "Top",
+      "type": "double?",
+      "isRequired": false,
+      "description": "Viewport anchor coordinate of the zero-size anchor (a caret or a measured trigger)."
+    },
+    {
+      "name": "Left",
+      "type": "double?",
+      "isRequired": false,
+      "description": "See Top. Null anchors the menu where it renders in the DOM flow."
+    },
+    {
+      "name": "Placement",
+      "type": "OverlayPlacement",
+      "isRequired": false,
+      "default": "OverlayPlacement.Bottom",
+      "description": "The edge the popover opens from. The sheet presentation ignores it."
+    },
+    {
+      "name": "Align",
+      "type": "OverlayAlign",
+      "isRequired": false,
+      "default": "OverlayAlign.Start",
+      "description": "Cross-axis alignment against the anchor. A trigger on the viewport's trailing edge passes End so the panel opens inward."
+    },
+    {
+      "name": "AnchorElement",
+      "type": "ElementReference?",
+      "isRequired": false,
+      "description": "The element the popover anchors to. Null uses the zero-size pin; a trigger menu passes its button."
+    },
+    {
+      "name": "CloseOnEscape",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "Whether the core overlay closes on Escape. A menu that owns its own Escape contract (a submenu collapses first) passes false."
+    },
+    {
+      "name": "TrapFocus",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Trap Tab inside a desktop popover and move initial focus into it. The mobile sheet traps through its drawer."
+    },
+    {
+      "name": "InitialFocusSelector",
+      "type": "string?",
+      "isRequired": false,
+      "description": "CSS selector of the element a trapped desktop popover focuses first. Null keeps the first focusable."
+    },
+    {
+      "name": "SheetInitialFocusSelector",
+      "type": "string?",
+      "isRequired": false,
+      "description": "CSS selector of the element a mobile sheet focuses first. Null keeps the role default."
+    },
+    {
+      "name": "Role",
+      "type": "string",
+      "isRequired": false,
+      "default": "menu",
+      "description": "The ARIA role of the panel (a dialog or a listbox menu)."
+    },
+    {
+      "name": "Class",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Extra CSS classes for the core overlay panel root."
+    }
+  ],
+  "subcategory": "UI / Shared"
+}

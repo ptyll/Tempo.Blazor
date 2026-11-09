@@ -1,28 +1,23 @@
 @namespace Tempo.Blazor.Components.NotionEditor.UI
 @using Tempo.Blazor.NotionEditor.Interfaces
 @using Tempo.Blazor.NotionEditor.Models
+@using Tempo.Blazor.Components.Avatars
 @using Tempo.Blazor.Components.NotionEditor.Services
 @using Tempo.Blazor.Components.Overlay
 
-@if (Visible)
-{
-    @* CF18-7: zero-size virtual anchor pinned at the caret coordinates — the panel is a
-       TmOverlayPanel (popover="manual", browser top layer), so it paints above a host
-       TmModal instead of sitting under the modal band like the old z-index:1030 card.
-       overlay.js supplies flip/shift viewport clamping (was adjustSlashMenuPosition) and
-       Escape + outside-pointerdown dismissal (was the transparent backdrop). *@
-    <span @ref="_anchorRef" class="tm-nmm__anchor" style="@AnchorStyle" aria-hidden="true"></span>
-
-    @* ── Menu card ─────────────────────────────────────────────────────────── *@
-    <TmOverlayPanel Anchor="_anchorRef"
-                    IsOpen="Visible"
-                    IsOpenChanged="SetOpenFromJsAsync"
-                    Placement="OverlayPlacement.Bottom"
-                    Align="OverlayAlign.Start"
-                    Role="dialog"
-                    AriaLabel="@(PagesOnly ? Loc["TmNotionMentionMenu_PagesSearchPlaceholder"] : Loc["TmNotionMentionMenu_SearchPlaceholder"])"
-                    Class="tm-nmm">
-    <div style="display:contents" @onkeydown:stopPropagation="true">
+@* Phase 6 (N6): the mention menu rides the shared floating menu — an anchored popover on
+   desktop, the core sheet ("Mention" + Close) on mobile. *@
+<TmNotionFloatingMenu IsOpen="Visible"
+                      LayoutMode="LayoutMode"
+                      Top="Top"
+                      Left="Left"
+                      Placement="OverlayPlacement.Bottom"
+                      Role="dialog"
+                      Title="@Loc["TmNotionMentionMenu_Title"]"
+                      AriaLabel="@(PagesOnly ? Loc["TmNotionMentionMenu_PagesSearchPlaceholder"] : Loc["TmNotionMentionMenu_SearchPlaceholder"])"
+                      Class="tm-nmm"
+                      OnClose="HandleCloseAsync">
+    <div class="tm-nmm__body" @onkeydown:stopPropagation="true">
 
         @* ── Search input ──────────────────────────────────────────────────── *@
         <div class="tm-nmm__search">
@@ -32,7 +27,13 @@
                 <path d="M8.5 8.5L11 11" stroke="currentColor" stroke-width="1.25"
                       stroke-linecap="round"/>
             </svg>
-            <input class="tm-nmm__search-input"
+            <input id="@_inputId"
+                   class="tm-nmm__search-input"
+                   role="combobox"
+                   aria-autocomplete="list"
+                   aria-expanded="true"
+                   aria-controls="@_listId"
+                   aria-activedescendant="@ActiveOptionId"
                    type="text"
                    autocomplete="off"
                    spellcheck="false"
@@ -72,7 +73,7 @@
         }
 
         @* ── Result list ───────────────────────────────────────────────────── *@
-        <div class="tm-nmm__list" role="listbox">
+        <div id="@_listId" class="tm-nmm__list" role="listbox">
 
             @if (_loading)
             {
@@ -92,25 +93,16 @@
                 {
                     var p = _people[_pIdx];
                     var pIdx = _pIdx;
-                    <div class="tm-nmm__item @(pIdx == _selectedIndex ? "tm-nmm__item--selected" : "")"
+                    <div id="@($"{_listId}-opt-{pIdx}")"
+                         class="tm-nmm__item @(pIdx == _selectedIndex ? "tm-nmm__item--selected" : "")"
                          role="option"
                          aria-selected="@(pIdx == _selectedIndex)"
                          @onclick="() => SelectUserAsync(p)"
-                         @onmouseenter="() => _selectedIndex = pIdx">
-                        <div class="tm-nmm__avatar" aria-hidden="true">
-                            @if (!string.IsNullOrEmpty(p.AvatarUrl))
-                            {
-                                <img class="tm-nmm__avatar-img" src="@p.AvatarUrl" alt="" />
-                            }
-                            else
-                            {
-                                <span class="tm-nmm__avatar-fallback">
-                                    @(p.DisplayName.Length > 0
-                                        ? p.DisplayName[0].ToString().ToUpperInvariant()
-                                        : "?")
-                                </span>
-                            }
-                        </div>
+                         @onpointermove="() => _selectedIndex = pIdx">
+                        <TmAvatar Name="@p.DisplayName"
+                                  Src="@p.AvatarUrl"
+                                  Alt=""
+                                  Size="AvatarSize.Sm" />
                         <div class="tm-nmm__item-body">
                             <span class="tm-nmm__item-title">@p.DisplayName</span>
                             @if (!string.IsNullOrEmpty(p.Email))
@@ -132,11 +124,12 @@
                 {
                     var capturedPg = _pages[_pgIdx];
                     var pgIdx      = _pgIdx;
-                    <div class="tm-nmm__item @(pgIdx == _selectedIndex ? "tm-nmm__item--selected" : "")"
+                    <div id="@($"{_listId}-opt-{pgIdx}")"
+                         class="tm-nmm__item @(pgIdx == _selectedIndex ? "tm-nmm__item--selected" : "")"
                          role="option"
                          aria-selected="@(pgIdx == _selectedIndex)"
                          @onclick="() => SelectPageAsync(capturedPg)"
-                         @onmouseenter="() => _selectedIndex = pgIdx">
+                         @onpointermove="() => _selectedIndex = pgIdx">
                         <span class="tm-nmm__page-icon" aria-hidden="true">@GetPageIcon(capturedPg)</span>
                         <div class="tm-nmm__item-body">
                             <span class="tm-nmm__item-title">@GetPageTitle(capturedPg)</span>
@@ -147,24 +140,27 @@
 
             @if (!_loading && _tab == MentionTab.Date && !PagesOnly)
             {
-                <div class="tm-nmm__item @(0 == _selectedIndex ? "tm-nmm__item--selected" : "")"
+                <div id="@($"{_listId}-opt-0")"
+                     class="tm-nmm__item @(0 == _selectedIndex ? "tm-nmm__item--selected" : "")"
                      role="option" aria-selected="@(0 == _selectedIndex)"
                      @onclick="() => SelectDateByIndexAsync(0)"
-                     @onmouseenter="() => _selectedIndex = 0">
+                     @onpointermove="() => _selectedIndex = 0">
                     @DateIcon
                     <span class="tm-nmm__item-title">@Loc["TmNotionMentionMenu_DateToday"]</span>
                 </div>
-                <div class="tm-nmm__item @(1 == _selectedIndex ? "tm-nmm__item--selected" : "")"
+                <div id="@($"{_listId}-opt-1")"
+                     class="tm-nmm__item @(1 == _selectedIndex ? "tm-nmm__item--selected" : "")"
                      role="option" aria-selected="@(1 == _selectedIndex)"
                      @onclick="() => SelectDateByIndexAsync(1)"
-                     @onmouseenter="() => _selectedIndex = 1">
+                     @onpointermove="() => _selectedIndex = 1">
                     @DateIcon
                     <span class="tm-nmm__item-title">@Loc["TmNotionMentionMenu_DateTomorrow"]</span>
                 </div>
-                <div class="tm-nmm__item @(2 == _selectedIndex ? "tm-nmm__item--selected" : "")"
+                <div id="@($"{_listId}-opt-2")"
+                     class="tm-nmm__item @(2 == _selectedIndex ? "tm-nmm__item--selected" : "")"
                      role="option" aria-selected="@(2 == _selectedIndex)"
                      @onclick="() => SelectDateByIndexAsync(2)"
-                     @onmouseenter="() => _selectedIndex = 2">
+                     @onpointermove="() => _selectedIndex = 2">
                     @DateIcon
                     <span class="tm-nmm__item-title">@Loc["TmNotionMentionMenu_DateYesterday"]</span>
                 </div>
@@ -173,5 +169,4 @@
         </div>
 
     </div>
-    </TmOverlayPanel>
-}
+</TmNotionFloatingMenu>

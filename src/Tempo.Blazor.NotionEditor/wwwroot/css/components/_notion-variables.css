@@ -3,9 +3,15 @@
    Namespace: --tm-notion-*
    Extends the global Tempo token system (tokens.css).
    Import this file before any other NotionEditor CSS.
+
+   Aliases are declared on :root AND .tm-notion-editor. A custom property
+   substitutes its var() where it is declared, and the demo switches the theme
+   on a wrapper div — an alias declared only on :root would keep the light colour
+   inside a nested dark editor.
    ═══════════════════════════════════════════════════════════════ */
 
-:root {
+:root,
+.tm-notion-editor {
 
     /* ── Layout ───────────────────────────────────────────────── */
     --tm-notion-sidebar-width:         260px;
@@ -17,6 +23,11 @@
     --tm-notion-page-padding-top:      3.5rem;
     --tm-notion-page-padding-bottom:   8rem;
     --tm-notion-header-height:         2.75rem;
+    --tm-notion-topbar-height:         var(--tm-notion-header-height);
+    --tm-notion-workspace-bg:          var(--tm-bg-workspace);
+    --tm-notion-page-surface:          var(--tm-bg-surface);
+    --tm-notion-touch-target:          var(--tm-touch-target);
+    --tm-notion-bottom-bar-height:     3.5rem;
 
     /* ── Block spacing ────────────────────────────────────────── */
     --tm-notion-block-gap:             2px;
@@ -24,13 +35,14 @@
     --tm-notion-block-padding-x:       2px;
     --tm-notion-block-handle-width:    28px;
     --tm-notion-table-cell-width-default: 7.5rem;
+    --tm-notion-db-row-height:       44px;
     --tm-notion-indent-size:           1.5rem;
 
     /* ── Typography — block-specific ─────────────────────────── */
     --tm-notion-font-sans:     var(--tm-font-sans);
     --tm-notion-font-mono:     var(--tm-font-mono);
 
-    --tm-notion-text-size:       1rem;          /* paragraph */
+    --tm-notion-text-size:       1rem;
     --tm-notion-text-size-sm:    var(--tm-font-size-sm);
     --tm-notion-h1-size:         1.875rem;
     --tm-notion-h2-size:         1.5rem;
@@ -47,107 +59,147 @@
     --tm-notion-h3-weight:  600;
 
     /* ── Surface colors ───────────────────────────────────────── */
-    --tm-notion-bg:                  var(--tm-bg-page);
-    --tm-notion-bg-sidebar:          var(--tm-bg-surface-secondary);
-    --tm-notion-bg-sidebar-item-hover: rgba(0, 0, 0, 0.04);
-    --tm-notion-bg-sidebar-item-active: rgba(59, 130, 246, 0.1);
-    --tm-notion-bg-block-hover:      rgba(0, 0, 0, 0.028);
-    --tm-notion-bg-block-selected:   rgba(59, 130, 246, 0.08);
-    --tm-notion-bg-block-focused:    transparent;
-    --tm-notion-bg-handle:           rgba(0, 0, 0, 0.06);
-    --tm-notion-bg-code:             var(--tm-color-gray-50);
-    --tm-notion-bg-callout:          var(--tm-color-gray-100);
-    --tm-notion-bg-quote:            transparent;
-    --tm-notion-bg-toolbar:          var(--tm-bg-surface);
-    --tm-notion-bg-slash-menu:       var(--tm-bg-surface);
-    --tm-notion-bg-mention-menu:     var(--tm-bg-surface);
-    --tm-notion-bg-drag-ghost:       var(--tm-bg-surface);
+    --tm-notion-bg:                    var(--tm-bg-page);
+    --tm-notion-bg-sidebar:            var(--tm-bg-surface-secondary);
+    --tm-notion-bg-sidebar-item-hover: var(--tm-color-surface-hover);
+    --tm-notion-bg-sidebar-item-active: var(--tm-color-primary-subtle);
+    --tm-notion-bg-block-hover:        var(--tm-color-surface-hover);
+    --tm-notion-bg-block-selected:     var(--tm-color-primary-subtle);
+    --tm-notion-bg-block-focused:      transparent;
+    --tm-notion-bg-handle:             var(--tm-bg-muted);
+    --tm-notion-bg-code:               var(--tm-bg-muted);
+    --tm-notion-bg-callout:            var(--tm-bg-surface-secondary);
+    --tm-notion-bg-quote:              transparent;
+    --tm-notion-bg-toolbar:            var(--tm-bg-surface);
+    --tm-notion-bg-slash-menu:         var(--tm-bg-surface);
+    --tm-notion-bg-mention-menu:       var(--tm-bg-surface);
+    --tm-notion-bg-drag-ghost:         var(--tm-bg-surface);
 
-    /* ── Block background color palette (Notion-style) ─────────── */
-    --tm-notion-bg-red:              rgba(253, 235, 236, 0.7);
-    --tm-notion-bg-orange:           rgba(255, 243, 226, 0.7);
-    --tm-notion-bg-yellow:           rgba(255, 250, 215, 0.7);
-    --tm-notion-bg-green:            rgba(227, 246, 236, 0.7);
-    --tm-notion-bg-blue:             rgba(221, 235, 255, 0.7);
-    --tm-notion-bg-purple:           rgba(240, 229, 255, 0.7);
-    --tm-notion-bg-pink:             rgba(255, 226, 246, 0.7);
-    --tm-notion-bg-gray:             rgba(241, 241, 239, 0.7);
-    --tm-notion-bg-brown:            rgba(244, 238, 238, 0.7);
-    --tm-notion-bg-default:          transparent;
+    /* ── Data palette: option chips (bg = pill wash, fg = pill text, solid = swatch) ── */
+    /* AA pairs, measured by TokenContrastTests.NotionOptionPalette_HoldsAa. */
+    --tm-notion-option-gray-wash:     #f3f4f6;
+    --tm-notion-option-gray-ink:     #374151;
+    --tm-notion-option-gray-swatch:  #4b5563;
+    --tm-notion-option-red-wash:      #fee2e2;
+    --tm-notion-option-red-ink:      #991b1b;
+    --tm-notion-option-red-swatch:   #b91c1c;
+    --tm-notion-option-orange-wash:   #ffedd5;
+    --tm-notion-option-orange-ink:   #9a3412;
+    --tm-notion-option-orange-swatch: #c2410c;
+    --tm-notion-option-yellow-wash:   #fef9c3;
+    --tm-notion-option-yellow-ink:   #854d0e;
+    --tm-notion-option-yellow-swatch: #a16207;
+    --tm-notion-option-green-wash:    #dcfce7;
+    --tm-notion-option-green-ink:    #166534;
+    --tm-notion-option-green-swatch: #15803d;
+    --tm-notion-option-blue-wash:     #dbeafe;
+    --tm-notion-option-blue-ink:     #1e40af;
+    --tm-notion-option-blue-swatch:  #1d4ed8;
+    --tm-notion-option-purple-wash:   #ede9fe;
+    --tm-notion-option-purple-ink:   #5b21b6;
+    --tm-notion-option-purple-swatch: #6d28d9;
+    --tm-notion-option-pink-wash:     #fce7f3;
+    --tm-notion-option-pink-ink:     #9d174d;
+    --tm-notion-option-pink-swatch:  #be185d;
+    --tm-notion-option-brown-wash:    #f5f0e8;
+    --tm-notion-option-brown-ink:    #78350f;
+    --tm-notion-option-brown-swatch: #92400e;
 
-    /* ── Text color palette ───────────────────────────────────── */
-    --tm-notion-text-red:            #c0392b;
-    --tm-notion-text-orange:         #e67e22;
-    --tm-notion-text-yellow:         #d4ac0d;
-    --tm-notion-text-green:          #27ae60;
-    --tm-notion-text-blue:           #2980b9;
-    --tm-notion-text-purple:         #7d3c98;
-    --tm-notion-text-pink:           #c0588c;
-    --tm-notion-text-gray:           #6b7280;
-    --tm-notion-text-brown:          #784212;
-    --tm-notion-text-default:        var(--tm-text-primary);
+    /* ── Data palette: text / highlight colours (named, not hex, in documents) ── */
+    --tm-notion-option-text-gray-ink:    #4b5563;
+    --tm-notion-option-text-red-ink:     #b91c1c;
+    --tm-notion-option-text-orange-ink:  #c2410c;
+    --tm-notion-option-text-yellow-ink:  #a16207;
+    --tm-notion-option-text-green-ink:   #15803d;
+    --tm-notion-option-text-blue-ink:    #1d4ed8;
+    --tm-notion-option-text-purple-ink:  #6d28d9;
+    --tm-notion-option-text-pink-ink:    #be185d;
+    --tm-notion-option-text-brown-ink:   #92400e;
+    --tm-notion-option-text-gray-wash:    #ebeced;
+    --tm-notion-option-text-red-wash:     #fbe4e4;
+    --tm-notion-option-text-orange-wash:  #faebdd;
+    --tm-notion-option-text-yellow-wash:  #fbf3db;
+    --tm-notion-option-text-green-wash:   #ddedea;
+    --tm-notion-option-text-blue-wash:    #ddebf1;
+    --tm-notion-option-text-purple-wash:  #eae4f2;
+    --tm-notion-option-text-pink-wash:    #f4dfeb;
+    --tm-notion-option-text-brown-wash:   #e9e5e3;
 
-    /* Aliases for the --tm-notion-color-* names used by list/todo/toggle blocks
-       (scripts/audit-css-tokens.mjs backfill — the blocks referenced these while
-       only the --tm-notion-text-* names were defined). */
-    --tm-notion-color-red:           var(--tm-notion-text-red);
-    --tm-notion-color-orange:        var(--tm-notion-text-orange);
-    --tm-notion-color-yellow:        var(--tm-notion-text-yellow);
-    --tm-notion-color-green:         var(--tm-notion-text-green);
-    --tm-notion-color-blue:          var(--tm-notion-text-blue);
-    --tm-notion-color-purple:        var(--tm-notion-text-purple);
-    --tm-notion-color-pink:          var(--tm-notion-text-pink);
-    --tm-notion-color-gray:          var(--tm-notion-text-gray);
-    --tm-notion-color-brown:         var(--tm-notion-text-brown);
+    --tm-notion-bg-default: transparent;
 
     /* ── Borders ──────────────────────────────────────────────── */
-    --tm-notion-border:              var(--tm-border-color);
-    --tm-notion-border-quote:        var(--tm-color-gray-300);
-    --tm-notion-border-code:         var(--tm-color-gray-200);
-    --tm-notion-border-table:        var(--tm-color-gray-200);
-    --tm-notion-border-divider:      var(--tm-color-gray-200);
-    --tm-notion-border-drag-over:    var(--tm-color-primary);
+    --tm-notion-border:         var(--tm-border-color);
+    --tm-notion-border-quote:   var(--tm-border-color-strong);
+    --tm-notion-border-code:    var(--tm-border-color);
+    --tm-notion-border-table:   var(--tm-border-color);
+    --tm-notion-border-divider: var(--tm-border-color);
+
+    /* ── Comment entry / composer (one surface, three panels) ── */
+    --tm-notion-comment-avatar: 26px;
+    --tm-notion-comment-gap: 9px;
+    --tm-notion-comment-indent-gap: 9px;
+    --tm-notion-comment-meta-gap: 5px;
+    --tm-notion-comment-body-gap: 3px;
+    --tm-notion-comment-author-size: 12.5px;
+    --tm-notion-comment-text-size: 13px;
+    --tm-notion-comment-action-gap: 3px;
+    --tm-notion-comment-action-pad: 2px 5px;
+    --tm-notion-comment-action-size: 11px;
+    --tm-notion-comment-edit-gap: 5px;
+    --tm-notion-comment-edit-pad: 5px 7px;
+    --tm-notion-comment-edit-radius: 4px;
+    --tm-notion-comment-edit-size: 12.5px;
+    --tm-notion-comment-btn-pad: 3px 10px;
+    --tm-notion-comment-btn-size: 11.5px;
+    --tm-notion-comment-reply-pad: 9px 12px;
+    --tm-notion-comment-reply-gap: 5px;
+    --tm-notion-comment-input-pad: 6px 8px;
+    --tm-notion-comment-send-gap: 4px;
+    --tm-notion-comment-send-pad: 4px 12px;
+    --tm-notion-comment-send-size: 12px;
+    --tm-notion-comment-quote-margin: 3px 0;
+    --tm-notion-comment-quote-pad: 5px 8px;
+    --tm-notion-comment-quote-size: 12.5px;
+    --tm-notion-comment-avatar-font: 11px;
 
     /* ── Interactive ──────────────────────────────────────────── */
-    --tm-notion-focus-ring:          0 0 0 2px var(--tm-color-primary-300);
-    --tm-notion-checkbox-color:      var(--tm-color-primary);
-    --tm-notion-link-color:          var(--tm-color-primary);
-    --tm-notion-link-hover:          var(--tm-color-primary-hover);
-    --tm-notion-comment-highlight:   rgba(255, 212, 0, 0.35);
-    --tm-notion-comment-highlight-active: rgba(255, 193, 7, 0.65);
-    --tm-notion-selection-bg:        rgba(59, 130, 246, 0.15);
+    --tm-notion-checkbox-color: var(--tm-color-primary);
+    --tm-notion-link-color:     var(--tm-color-primary);
+    --tm-notion-link-hover:     var(--tm-color-primary-hover);
+    --tm-notion-comment-highlight:        var(--tm-color-warning-subtle);
+    --tm-notion-comment-highlight-active: var(--tm-color-warning-soft-border);
+    --tm-notion-selection-bg:   var(--tm-color-primary-subtle);
 
     /* ── Toolbar / menus ──────────────────────────────────────── */
-    --tm-notion-toolbar-height:      36px;
-    --tm-notion-toolbar-radius:      var(--tm-radius-lg);
-    --tm-notion-toolbar-shadow:      var(--tm-shadow-lg);
-    --tm-notion-menu-min-width:      220px;
-    --tm-notion-menu-max-height:     340px;
-    --tm-notion-menu-radius:         var(--tm-radius-lg);
-    --tm-notion-menu-shadow:         var(--tm-shadow-xl);
+    --tm-notion-toolbar-height:  36px;
+    --tm-notion-toolbar-radius:  var(--tm-radius-lg);
+    --tm-notion-menu-min-width:  220px;
+    --tm-notion-menu-max-height: 340px;
+    --tm-notion-menu-radius:     var(--tm-radius-lg);
+    --tm-notion-menu-shadow:     var(--tm-shadow-popover);
 
-    /* ── Z-index layers ───────────────────────────────────────── */
-    --tm-notion-z-block-handle:      10;
-    --tm-notion-z-drop-indicator:    500;
-    --tm-notion-z-inline-toolbar:    600;
-    --tm-notion-z-slash-menu:        700;
-    --tm-notion-z-mention-menu:      700;
-    --tm-notion-z-context-menu:      800;
-    --tm-notion-z-drag-ghost:        900;
+    /* ── Z-index layers (in-flow, under 100 — not a band claim) ── */
+    --tm-notion-z-block-handle:   10;
+    --tm-notion-z-drop-indicator: 50;
+    --tm-notion-z-inline-toolbar: 60;
+    --tm-notion-z-slash-menu:     70;
+    --tm-notion-z-mention-menu:   70;
+    --tm-notion-z-context-menu:   80;
+    --tm-notion-z-drag-ghost:     90;
 
     /* ── Animations ───────────────────────────────────────────── */
-    --tm-notion-anim-fast:           120ms ease;
-    --tm-notion-anim-normal:         200ms ease;
-    --tm-notion-anim-slow:           300ms ease;
-    --tm-notion-anim-menu-in:        160ms cubic-bezier(0.16, 1, 0.3, 1);
+    --tm-notion-anim-fast:     120ms ease;
+    --tm-notion-anim-normal:   200ms ease;
+    --tm-notion-anim-slow:     300ms ease;
+    --tm-notion-anim-menu-in:  160ms cubic-bezier(0.16, 1, 0.3, 1);
 
     /* ── Cover image ──────────────────────────────────────────── */
-    --tm-notion-cover-height:        200px;
-    --tm-notion-cover-height-md:     260px;
+    --tm-notion-cover-height:    200px;
+    --tm-notion-cover-height-md: 260px;
 
     /* ── Icon / emoji ─────────────────────────────────────────── */
-    --tm-notion-icon-size-sm:        20px;
-    --tm-notion-icon-size:           40px;
-    --tm-notion-icon-size-lg:        78px;
-    --tm-notion-icon-offset-cover:   -24px;
+    --tm-notion-icon-size-sm:      20px;
+    --tm-notion-icon-size:         40px;
+    --tm-notion-icon-size-lg:      78px;
+    --tm-notion-icon-offset-cover: -24px;
 }

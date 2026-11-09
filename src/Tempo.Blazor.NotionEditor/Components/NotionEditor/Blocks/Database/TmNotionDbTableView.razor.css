@@ -4,7 +4,7 @@
     flex-direction: column;
     position: relative;
     font-size: 0.875rem;
-    color: var(--tm-text, #1f2937);
+    color: var(--tm-text-primary);
 }
 
 .tm-dbt-wrap.tm-dbt--resizing {
@@ -14,35 +14,43 @@
 
 .tm-dbt-scroll {
     overflow-x: auto;
-    overflow-y: auto;
+    overflow-y: hidden;
     scrollbar-width: thin;
-    scrollbar-color: var(--tm-border, #e5e7eb) transparent;
+    scrollbar-color: var(--tm-border-color) transparent;
+    /* Size container so the sticky column cap (100cqi) resolves against this scrollport, not the
+       database block. A sticky cell wider than the scrollport minus its offset does not stick. */
+    container-type: inline-size;
 }
 
 .tm-dbt-scroll::-webkit-scrollbar      { height: 6px; width: 6px; }
 .tm-dbt-scroll::-webkit-scrollbar-track { background: transparent; }
-.tm-dbt-scroll::-webkit-scrollbar-thumb { background: var(--tm-border, #e5e7eb); border-radius: 3px; }
+.tm-dbt-scroll::-webkit-scrollbar-thumb { background: var(--tm-border-color); border-radius: 3px; }
 
 /* ── Table ──────────────────────────────────────────────────────────────── */
 .tm-dbt {
-    border-collapse: collapse;
+    /* separate, not collapse: a collapsed border is not a containing edge, so position:sticky
+       on the primary cell resolves against a box 10px left of the scrollport. */
+    border-collapse: separate;
+    border-spacing: 0;
     table-layout: fixed;
     min-width: 100%;
 }
 
 /* ── Head ───────────────────────────────────────────────────────────────── */
 .tm-dbt__head-row {
-    background: var(--tm-bg-1, #f9fafb);
-    border-bottom: 1.5px solid var(--tm-border, #e5e7eb);
+    background: var(--tm-bg-surface-secondary);
+    border-bottom: 1.5px solid var(--tm-border-color);
 }
 
 .tm-dbt__th {
+    scroll-margin-top: var(--tm-space-12);
     padding: 0;
+    height: var(--tm-space-12);
     text-align: left;
     font-size: 0.75rem;
     font-weight: 600;
-    color: var(--tm-text-2, #6b7280);
-    border-right: 1px solid var(--tm-border, #f3f4f6);
+    color: var(--tm-text-secondary);
+    border-right: 1px solid var(--tm-border-color);
     position: relative;
     user-select: none;
     overflow: hidden;
@@ -57,15 +65,20 @@
     padding: 0 8px;
     position: sticky;
     left: 0;
-    background: var(--tm-bg-1, #f9fafb);
+    background: var(--tm-bg-surface-secondary);
     z-index: 3;
 }
 
 .tm-dbt__th--primary {
     position: sticky;
-    left: 36px;
-    background: var(--tm-bg-1, #f9fafb);
+    /* The check column is width 36px plus 8px of padding on each side (border-box), so 52px.
+       2.25rem (36px) let the name slide 16px under the checkbox and 10px left of the scrollport. */
+    left: 52px;
+    background: var(--tm-bg-surface-secondary);
     z-index: 2;
+    /* The width cap lives in the inline style (ColumnStyle): an inline width beats a class rule,
+       and a sticky cell wider than the scrollport minus this offset does not stick. */
+    max-width: calc(100cqi - 52px);
 }
 
 .tm-dbt__th--add {
@@ -75,8 +88,8 @@
 }
 
 .tm-dbt__th--dragover {
-    background: color-mix(in srgb, var(--tm-accent, #3b82f6) 10%, transparent);
-    border-left: 2px solid var(--tm-accent, #3b82f6);
+    background: color-mix(in srgb, var(--tm-color-primary) 10%, transparent);
+    border-left: 2px solid var(--tm-color-primary);
 }
 
 .tm-dbt__th-inner {
@@ -127,31 +140,36 @@
     transition: background 0.12s;
 }
 
+@media (pointer: coarse) {
+    .tm-dbt__resize-handle { display: none; }
+}
+
 .tm-dbt__th:hover .tm-dbt__resize-handle::after,
+.tm-dbt__resize-handle:focus-visible::after,
 .tm-dbt-wrap.tm-dbt--resizing .tm-dbt__resize-handle::after {
-    background: var(--tm-accent, #3b82f6);
+    background: var(--tm-color-primary);
 }
 
 /* ── Rows ────────────────────────────────────────────────────────────────── */
 .tm-dbt__row {
-    border-bottom: 1px solid var(--tm-border, #f3f4f6);
+    border-bottom: 1px solid var(--tm-border-color);
     transition: background 0.08s;
 }
 
 .tm-dbt__row:last-child { border-bottom: none; }
 
-.tm-dbt__row:hover { background: var(--tm-bg-hover, #f9fafb); }
+.tm-dbt__row:hover { background: var(--tm-color-surface-hover); }
 
-.tm-dbt__row--selected { background: color-mix(in srgb, var(--tm-accent, #3b82f6) 6%, transparent); }
+.tm-dbt__row--selected { background: color-mix(in srgb, var(--tm-color-primary) 6%, transparent); }
 
-.tm-dbt__row--selected:hover { background: color-mix(in srgb, var(--tm-accent, #3b82f6) 10%, transparent); }
+.tm-dbt__row--selected:hover { background: color-mix(in srgb, var(--tm-color-primary) 10%, transparent); }
 
 /* ── Cells ──────────────────────────────────────────────────────────────── */
 .tm-dbt__cell {
     padding: 0;
     font-size: 0.8125rem;
-    color: var(--tm-text, #374151);
-    border-right: 1px solid var(--tm-border, #f3f4f6);
+    color: var(--tm-text-primary);
+    border-right: 1px solid var(--tm-border-color);
     overflow: hidden;
     vertical-align: middle;
     position: relative;
@@ -174,11 +192,13 @@
 
 .tm-dbt__cell--primary {
     position: sticky;
-    left: 36px;
+    left: 52px;
     background: inherit;
     z-index: 1;
     font-weight: 500;
-    color: var(--tm-text, #111827);
+    color: var(--tm-text-primary);
+    /* Same cap as the header, for a cell without an inline width. */
+    max-width: calc(100cqi - 52px);
 }
 
 .tm-dbt__cell--readonly { cursor: default; }
@@ -191,12 +211,24 @@
     z-index: 10;
 }
 
-/* ── Row heights ────────────────────────────────────────────────────────── */
+/* ── Row heights ──────────────────────────────────────────────────────────
+   One token drives every density and both the row and the cells, so a cell's content
+   (a chip stack, an empty &nbsp;) can never stretch a row past its siblings (F-05). */
+.tm-dbt-wrap  { --tm-dbt-row-height: var(--tm-notion-db-row-height); }
+.tm-dbt--short  { --tm-dbt-row-height: 36px; }
+.tm-dbt--medium { --tm-dbt-row-height: var(--tm-notion-db-row-height); }
+.tm-dbt--tall   { --tm-dbt-row-height: 72px; }
+
+.tm-dbt__cell {
+    height: var(--tm-dbt-row-height);
+    box-sizing: border-box;
+}
+
 .tm-dbt--short  .tm-dbt__cell:not(.tm-dbt__cell--check):not(.tm-dbt__cell--editing),
-.tm-dbt--short  .tm-dbt-cell { max-height: 28px; line-height: 28px; padding: 0 8px; }
+.tm-dbt--short  .tm-dbt-cell { height: var(--tm-dbt-row-height); max-height: var(--tm-dbt-row-height); line-height: var(--tm-dbt-row-height); padding: 0 8px; }
 
 .tm-dbt--medium .tm-dbt__cell:not(.tm-dbt__cell--check):not(.tm-dbt__cell--editing),
-.tm-dbt--medium .tm-dbt-cell { max-height: 40px; line-height: 40px; padding: 0 10px; }
+.tm-dbt--medium .tm-dbt-cell { height: var(--tm-dbt-row-height); max-height: var(--tm-dbt-row-height); line-height: var(--tm-dbt-row-height); padding: 0 10px; }
 
 .tm-dbt--tall   .tm-dbt__cell:not(.tm-dbt__cell--check):not(.tm-dbt__cell--editing),
 .tm-dbt--tall   .tm-dbt-cell { max-height: 64px; line-height: 1.5; padding: 10px; }
@@ -227,7 +259,7 @@
     vertical-align: middle;
 }
 
-.tm-dbt-cell--empty { color: var(--tm-text-2, #d1d5db); }
+.tm-dbt-cell--empty { color: var(--tm-text-secondary); }
 
 .tm-dbt-cell--tags {
     display: inline-flex;
@@ -245,14 +277,14 @@
     border-radius: 10px;
     font-size: 0.75rem;
     font-weight: 500;
-    color: var(--tm-text, #111827);
-    background: var(--tm-bg-3, #f3f4f6);
+    color: var(--tm-text-primary);
+    background: var(--tm-bg-muted);
     white-space: nowrap;
     line-height: 1.6;
 }
 
 .tm-dbt-cell__link {
-    color: var(--tm-accent, #3b82f6);
+    color: var(--tm-color-primary);
     text-decoration: none;
     white-space: nowrap;
     overflow: hidden;
@@ -268,7 +300,7 @@
     display: inline-flex;
     align-items: center;
     gap: 5px;
-    color: var(--tm-text-2, #6b7280);
+    color: var(--tm-text-secondary);
     font-size: 0.8125rem;
 }
 
@@ -280,10 +312,10 @@
     min-height: 36px;
     padding: 0 10px;
     border: none;
-    outline: 2px solid var(--tm-accent, #3b82f6);
+    outline: 2px solid var(--tm-color-primary);
     outline-offset: -2px;
-    background: var(--tm-bg, #fff);
-    color: var(--tm-text, #111827);
+    background: var(--tm-bg-surface);
+    color: var(--tm-text-primary);
     font-size: 0.8125rem;
     font-family: inherit;
     border-radius: 0;
@@ -299,9 +331,9 @@
     display: flex;
     align-items: center;
     padding: 0 8px;
-    outline: 2px solid var(--tm-accent, #3b82f6);
+    outline: 2px solid var(--tm-color-primary);
     outline-offset: -2px;
-    background: var(--tm-bg, #fff);
+    background: var(--tm-bg-surface);
 }
 
 .tm-dbt-edit--select,
@@ -316,10 +348,10 @@
     top: 100%;
     left: 0;
     z-index: 1;
-    background: var(--tm-bg, #fff);
-    border: 1px solid var(--tm-border, #e5e7eb);
+    background: var(--tm-bg-surface);
+    border: 1px solid var(--tm-border-color);
     border-radius: 6px;
-    box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+    box-shadow: var(--tm-shadow-popover);
     min-width: 160px;
     max-width: 260px;
     max-height: 220px;
@@ -343,24 +375,24 @@
     transition: background 0.1s;
 }
 
-.tm-dbt-select-opt:hover { background: var(--tm-bg-2, #f3f4f6); }
+.tm-dbt-select-opt:hover { background: var(--tm-bg-surface-secondary); }
 
-.tm-dbt-select-opt--active { background: color-mix(in srgb, var(--tm-accent, #3b82f6) 10%, transparent); }
+.tm-dbt-select-opt--active { background: color-mix(in srgb, var(--tm-color-primary) 10%, transparent); }
 
 .tm-dbt-check-icon {
     display: inline-flex;
     width: 14px;
     align-items: center;
     justify-content: center;
-    color: var(--tm-accent, #3b82f6);
+    color: var(--tm-color-primary);
     flex-shrink: 0;
 }
 
 .tm-dbt-select-confirm {
     margin-top: 4px;
     border: none;
-    background: var(--tm-accent, #3b82f6);
-    color: #fff;
+    background: var(--tm-color-primary-solid);
+    color: var(--tm-color-on-primary-fixed);
     border-radius: 4px;
     padding: 4px 10px;
     font-size: 0.75rem;
@@ -372,9 +404,10 @@
 
 /* ── Checkbox ───────────────────────────────────────────────────────────── */
 .tm-dbt__check {
-    accent-color: var(--tm-accent, #3b82f6);
+    accent-color: var(--tm-color-primary);
     width: 14px;
     height: 14px;
+    margin: 0;
     cursor: pointer;
     vertical-align: middle;
 }
@@ -389,14 +422,14 @@
     border: none;
     border-radius: 4px;
     background: transparent;
-    color: var(--tm-text-2, #9ca3af);
+    color: var(--tm-text-secondary);
     cursor: pointer;
     transition: background 0.12s, color 0.12s;
 }
 
 .tm-dbt__add-field-btn:hover {
-    background: var(--tm-bg-2, #f3f4f6);
-    color: var(--tm-text, #374151);
+    background: var(--tm-bg-surface-secondary);
+    color: var(--tm-text-primary);
 }
 
 .tm-dbt__add-row-btn {
@@ -407,37 +440,86 @@
     padding: 7px 14px;
     border: none;
     background: transparent;
-    color: var(--tm-text-2, #9ca3af);
+    color: var(--tm-text-secondary);
     font-size: 0.8125rem;
     cursor: pointer;
     transition: background 0.12s, color 0.12s;
-    border-top: 1px solid var(--tm-border, #f3f4f6);
+    border-top: 1px solid var(--tm-border-color);
     text-align: left;
     font-family: inherit;
 }
 
 .tm-dbt__add-row-btn:hover {
-    background: var(--tm-bg-2, #f3f4f6);
-    color: var(--tm-text, #374151);
+    background: var(--tm-bg-surface-secondary);
+    color: var(--tm-text-primary);
+}
+
+.tm-dbt__row-menu {
+    display: none;
+    margin-inline-start: var(--tm-space-1);
+}
+
+.tm-dbt__row-delete {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: var(--tm-space-6);
+    min-height: var(--tm-space-6);
+    padding: 0;
+    border: none;
+    background: transparent;
+    color: var(--tm-color-danger);
+    cursor: pointer;
+}
+
+.tm-dbt__row:hover .tm-dbt__row-menu,
+.tm-dbt__row:focus-within .tm-dbt__row-menu {
+    display: inline-flex;
+}
+
+@media (hover: none) {
+    .tm-dbt__row-menu {
+        display: inline-flex;
+    }
+}
+
+.tm-dbt__resize-hint {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+}
+
+.tm-dbt__row-delete ::deep .tm-dropdown-trigger {
+    min-width: var(--tm-touch-target, 24px);
+    min-height: var(--tm-touch-target, 24px);
+}
+
+.tm-dbt__footer {
+    padding: 6px 14px;
+    border-top: 1px solid var(--tm-border-color);
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-sm);
 }
 
 /* ── Empty state ────────────────────────────────────────────────────────── */
 .tm-dbt__empty {
     padding: 20px 14px;
     text-align: center;
-    color: var(--tm-text-2, #9ca3af);
+    color: var(--tm-text-secondary);
     font-size: 0.875rem;
 }
 
 /* ── Group separator ────────────────────────────────────────────────────── */
 .tm-dbt__group-row + .tm-dbt__group-row .tm-dbt__group-sep {
-    border-top: 1px solid var(--tm-border, #e5e7eb);
+    border-top: 1px solid var(--tm-border-color);
 }
 
 .tm-dbt__group-sep {
     padding: 0 !important;
-    background: var(--tm-bg-1, #f9fafb);
-    border-bottom: 1px solid var(--tm-border, #e5e7eb);
+    background: var(--tm-bg-surface-secondary);
+    border-bottom: 1px solid var(--tm-border-color);
     position: sticky;
     left: 0;
 }
@@ -461,12 +543,12 @@
     background:      none;
     border-radius:   3px;
     cursor:          pointer;
-    color:           var(--tm-text-2, #6b7280);
+    color:           var(--tm-text-secondary);
     transition:      background .1s, color .1s;
 }
 .tm-dbt__group-toggle:hover {
-    background: var(--tm-bg-2, #e5e7eb);
-    color:      var(--tm-text, #1f2937);
+    background: var(--tm-bg-surface-secondary);
+    color:      var(--tm-text-primary);
 }
 
 .tm-dbt__group-chevron {
@@ -480,7 +562,7 @@
 .tm-dbt__group-label {
     font-size:   0.8125rem;
     font-weight: 600;
-    color:       var(--tm-text, #1f2937);
+    color:       var(--tm-text-primary);
     flex:        1 1 auto;
     white-space: nowrap;
     overflow:    hidden;
@@ -495,8 +577,8 @@
     border-radius: 10px;
     font-size:     0.75rem;
     font-weight:   600;
-    background:    color-mix(in srgb, var(--tm-accent, #3b82f6) 10%, transparent);
-    color:         var(--tm-accent, #3b82f6);
+    background:    color-mix(in srgb, var(--tm-color-primary) 10%, transparent);
+    color:         var(--tm-color-primary);
     flex-shrink:   0;
 }
 
@@ -504,8 +586,8 @@
     flex-shrink:   0;
     font-size:     0.6875rem;
     font-weight:   500;
-    color:         var(--tm-text-2, #6b7280);
-    background:    var(--tm-bg-2, #f3f4f6);
+    color:         var(--tm-text-secondary);
+    background:    var(--tm-bg-surface-secondary);
     padding:       1px 7px;
     border-radius: 10px;
     margin-left:   auto;
@@ -514,7 +596,7 @@
 /* ── Sub-items ─────────────────────────────────────────────────────────── */
 
 .tm-dbt__row--sub {
-    background: color-mix(in srgb, var(--tm-bg-1, #f9fafb) 60%, transparent);
+    background: color-mix(in srgb, var(--tm-bg-surface-secondary) 60%, transparent);
 }
 
 .tm-dbt__row--sub .tm-dbt__cell--sub-primary {
@@ -527,7 +609,7 @@
     align-items: center;
     padding-left: 28px;
     padding-right: 4px;
-    color: var(--tm-text-tertiary, #ccc);
+    color: var(--tm-text-tertiary);
     flex-shrink: 0;
 }
 
@@ -547,7 +629,7 @@
     border: none;
     border-radius: 3px;
     background: transparent;
-    color: var(--tm-text-secondary, #888);
+    color: var(--tm-text-secondary);
     cursor: pointer;
     padding: 0;
     transition: background 0.1s, color 0.1s;
@@ -555,8 +637,8 @@
 }
 
 .tm-dbt__expand-btn:hover {
-    background: var(--tm-hover, rgba(0,0,0,0.06));
-    color: var(--tm-text, #1a1a1a);
+    background: var(--tm-color-surface-hover);
+    color: var(--tm-text-primary);
 }
 
 .tm-dbt__expand-chevron {
@@ -573,5 +655,28 @@
     width: 18px;
     height: 18px;
     flex-shrink: 0;
+}
+
+/* ── Group marker ───────────────────────────────────────────────────────── */
+
+.tm-dbt__group-dot {
+    width: var(--tm-space-2);
+    height: var(--tm-space-2);
+    border-radius: var(--tm-radius-full);
+    background: var(--tm-color-primary);
+    flex-shrink: 0;
+}
+
+/* ── Coarse pointer: 44px targets, no drag affordance (WCAG 2.5.7) ──────── */
+
+@media (pointer: coarse) {
+    .tm-dbt__th-inner,
+    .tm-dbt__group-toggle,
+    .tm-dbt__add-field-btn,
+    .tm-dbt__add-row-btn,
+    .tm-dbt__expand-btn {
+        min-height: var(--tm-touch-target);
+        min-width: var(--tm-touch-target);
+    }
 }
 

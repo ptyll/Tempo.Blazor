@@ -1,56 +1,27 @@
 @namespace Tempo.Blazor.Components.NotionEditor.Blocks.TempoBlocks
-@using Tempo.Blazor.NotionEditor.Interfaces
 
-<div class="tm-notion-spreadsheet-edit-modal"
-     role="dialog"
-     aria-modal="true"
-     aria-label="@Loc["TmNotionSpreadsheetEditModal_Title"]">
-
-    @if (_loading)
-    {
-        <div class="tm-notion-spreadsheet-edit-modal__loading">
-            <span class="tm-notion-spreadsheet-edit-modal__spinner" aria-hidden="true"></span>
-        </div>
-    }
-    else
-    {
-        @if (SpreadsheetComponentType is not null)
-        {
-            @* The wrapper is an element THIS component owns: a class passed to the child lands on the child's
-               root with the child's scope id, so a scoped rule for it here would never match (the dead
-               .tm-notion-spreadsheet-edit-modal__editor rule this replaces). *@
-            <div class="tm-notion-spreadsheet-edit-modal__editor">
-                <DynamicComponent @ref="_spreadsheetRef"
-                                  Type="SpreadsheetComponentType"
-                                  Parameters="SpreadsheetEditorParameters" />
-            </div>
-        }
-        else
-        {
-            <div class="tm-notion-spreadsheet-edit-modal__missing" role="status">
-                @Loc["TmNotionSpreadsheetEditModal_MissingPackage"]
-            </div>
-        }
-
-        <div class="tm-notion-spreadsheet-edit-modal__footer">
-            <button class="tm-notion-spreadsheet-edit-modal__btn tm-notion-spreadsheet-edit-modal__btn--primary"
-                    type="button"
-                    disabled="@(_saving || SpreadsheetComponentType is null)"
-                    @onclick="SaveAsync">
-                @if (_saving)
-                {
-                    <span class="tm-notion-spreadsheet-edit-modal__spinner tm-notion-spreadsheet-edit-modal__spinner--sm"
-                          aria-hidden="true"></span>
-                }
-                @Loc["TmNotionSpreadsheetEditModal_Save"]
-            </button>
-            <button class="tm-notion-spreadsheet-edit-modal__btn tm-notion-spreadsheet-edit-modal__btn--discard"
-                    type="button"
-                    disabled="@_saving"
-                    @onclick="DiscardAsync">
-                @Loc["TmNotionSpreadsheetEditModal_Discard"]
-            </button>
-        </div>
-    }
-
-</div>
+<TmNotionTempoEditorModal Title="@Loc["TmNotionSpreadsheetEditModal_Title"]"
+                          Loading="_loading"
+                          Saving="_saving"
+                          Missing="@(SpreadsheetComponentType is null)"
+                          MissingText="@Loc["TmNotionSpreadsheetEditModal_MissingPackage"]"
+                          IsDirty="_dirty"
+                          DiscardText="@Loc["TmNotionSpreadsheetEditModal_Discard"]"
+                          SaveText="@Loc["TmNotionSpreadsheetEditModal_Save"]"
+                          ConfirmTitle="@Loc["TmNotionTempoEditorModal_DiscardTitle"]"
+                          ConfirmMessage="@Loc["TmNotionTempoEditorModal_DiscardMessage"]"
+                          ConfirmOkText="@Loc["TmNotionTempoEditorModal_DiscardConfirm"]"
+                          ConfirmCancelText="@Loc["Tm_Cancel"]"
+                          StatusClass="tm-notion-spreadsheet-edit-modal__loading"
+                          DiscardClass="tm-notion-spreadsheet-edit-modal__btn--discard"
+                          SaveClass="tm-notion-spreadsheet-edit-modal__btn--primary"
+                          Class="tm-notion-spreadsheet-edit-modal"
+                          TestId="notion-spreadsheet-edit-modal"
+                          OnSave="SaveAsync"
+                          OnDiscard="DiscardAsync">
+    <div class="tm-notion-spreadsheet-edit-modal__editor">
+        <DynamicComponent @ref="_spreadsheetRef"
+                          Type="SpreadsheetComponentType"
+                          Parameters="SpreadsheetEditorParameters" />
+    </div>
+</TmNotionTempoEditorModal>

@@ -14,7 +14,7 @@
     gap:           8px;
     width:         100%;
     padding:       10px 14px;
-    border:        1px dashed var(--tm-border-default, #d8d8d8);
+    border:        1px dashed var(--tm-border-color);
     border-radius: var(--tm-radius-md, 6px);
     background:    transparent;
     transition:    border-color var(--tm-notion-anim-fast, 120ms),
@@ -22,8 +22,8 @@
 }
 
 .tm-notion-embed-block__input-zone:focus-within {
-    border-color: var(--tm-color-primary, #6c63ff);
-    background:   var(--tm-notion-bg-block-hover, rgba(0,0,0,0.02));
+    border-color: var(--tm-color-primary);
+    background:   var(--tm-notion-bg-block-hover);
 }
 
 .tm-notion-embed-block__input-zone--loading {
@@ -33,7 +33,7 @@
 
 .tm-notion-embed-block__icon {
     flex-shrink: 0;
-    color:       var(--tm-text-tertiary, #aaa);
+    color:       var(--tm-text-tertiary);
 }
 
 .tm-notion-embed-block__url-input {
@@ -42,13 +42,13 @@
     outline:    none;
     background: transparent;
     font-size:  13px;
-    color:      var(--tm-text-primary, #1a1a1a);
+    color:      var(--tm-text-primary);
     font-family: inherit;
     min-width:  0;
 }
 
 .tm-notion-embed-block__url-input::placeholder {
-    color: var(--tm-text-tertiary, #aaa);
+    color: var(--tm-text-tertiary);
 }
 
 .tm-notion-embed-block__provider-badge {
@@ -56,8 +56,8 @@
     padding:       2px 7px;
     font-size:     11px;
     font-weight:   500;
-    color:         var(--tm-color-primary, #6c63ff);
-    background:    rgba(108, 99, 255, 0.08);
+    color:         var(--tm-color-primary);
+    background: color-mix(in srgb, var(--tm-color-primary) 8%, transparent);
     border-radius: var(--tm-radius-pill, 999px);
     white-space:   nowrap;
 }
@@ -70,9 +70,9 @@
     padding:       5px 12px;
     font-size:     12px;
     font-weight:   500;
-    color:         var(--tm-color-primary, #6c63ff);
+    color:         var(--tm-color-primary);
     background:    transparent;
-    border:        1px solid var(--tm-color-primary, #6c63ff);
+    border:        1px solid var(--tm-color-primary);
     border-radius: var(--tm-radius-sm, 4px);
     cursor:        pointer;
     white-space:   nowrap;
@@ -82,8 +82,8 @@
 }
 
 .tm-notion-embed-block__confirm-btn:hover:not(:disabled) {
-    background: var(--tm-color-primary, #6c63ff);
-    color:      #fff;
+    background: var(--tm-color-primary-solid);
+    color:      var(--tm-color-on-primary-fixed);
 }
 
 .tm-notion-embed-block__confirm-btn:disabled {
@@ -97,9 +97,9 @@
     margin-top:  6px;
     padding:     6px 10px;
     font-size:   12px;
-    color:       var(--tm-color-danger, #e53e3e);
-    background:  rgba(229, 62, 62, 0.06);
-    border-left: 3px solid var(--tm-color-danger, #e53e3e);
+    color:       var(--tm-color-danger);
+    background: color-mix(in srgb, var(--tm-color-danger) 6%, transparent);
+    border-left: 3px solid var(--tm-color-danger);
     border-radius: 0 var(--tm-radius-sm, 4px) var(--tm-radius-sm, 4px) 0;
 }
 
@@ -119,10 +119,10 @@
     flex-direction: column;
     width:        100%;
     min-height:   200px;
-    border:       1px solid var(--tm-border-default, #e0e0e0);
+    border:       1px solid var(--tm-border-color);
     border-radius: var(--tm-radius-md, 6px);
     overflow:     hidden;
-    background:   var(--tm-notion-bg-block, #fafafa);
+    background:   var(--tm-notion-bg);
 }
 
 /* ── Source fallback strip ───────────────────────────────────── */
@@ -201,7 +201,7 @@
     align-items:     center;
     gap:             6px;
     padding:         4px 6px;
-    background:      rgba(0, 0, 0, 0.65);
+    background: color-mix(in srgb, var(--tm-color-gray-900) 65%, transparent);
     border-radius:   var(--tm-radius-sm, 4px);
     opacity:         0;
     pointer-events:  none;
@@ -216,9 +216,9 @@
     padding:       3px 7px;
     font-size:     11px;
     font-weight:   500;
-    color:         rgba(255, 255, 255, 0.9);
+    color: var(--tm-text-secondary);
     background:    transparent;
-    border:        1px solid rgba(255, 255, 255, 0.2);
+    border:        1px solid var(--tm-border-color);
     border-radius: var(--tm-radius-xs, 3px);
     cursor:        pointer;
     white-space:   nowrap;
@@ -227,7 +227,7 @@
 }
 
 .tm-notion-embed-block__action-btn:hover {
-    background: rgba(255, 255, 255, 0.15);
+    background: color-mix(in srgb, var(--tm-color-white) 15%, transparent);
 }
 
 /* ── Resize handle (injected by JS) ──────────────────────────── */
@@ -245,5 +245,5 @@
 }
 
 .tm-notion-embed-block__frame-wrap:hover .tm-notion-resize-handle {
-    background: rgba(0, 0, 0, 0.2);
+    background: color-mix(in srgb, var(--tm-color-gray-900) 20%, transparent);
 }

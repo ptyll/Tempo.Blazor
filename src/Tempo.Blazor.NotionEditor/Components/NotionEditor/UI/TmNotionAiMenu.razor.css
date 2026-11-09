@@ -11,6 +11,43 @@
     pointer-events: none;
 }
 
+.tm-notion-ai__counter {
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-sm);
+}
+
+/* F-08: the sheet presentation gets its chrome (title + Done) from the core overlay sheet
+   header, so the panel hides its own header, gains side padding and lets the mode tabs scroll
+   horizontally instead of pushing Retry/Discard off the right edge. */
+.tm-notion-ai__root {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tm-space-3);
+    min-height: 0;
+}
+
+.tm-notion-ai__root[data-presentation="sheet"] {
+    padding-inline: var(--tm-space-4);
+}
+
+.tm-notion-ai__root[data-presentation="sheet"] .tm-notion-ai__header {
+    display: none;
+}
+
+.tm-notion-ai__root[data-presentation="sheet"] .tm-notion-ai__tabs {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+
+.tm-notion-ai__root[data-presentation="sheet"] .tm-notion-ai__tabs::-webkit-scrollbar {
+    display: none;
+}
+
+.tm-notion-ai__root[data-presentation="sheet"] .tm-notion-ai__actions--sheet .tm-notion-ai__btn--primary {
+    flex: 1 1 100%;
+}
+
 .tm-notion-ai__header,
 .tm-notion-ai__actions,
 .tm-notion-ai__title,
@@ -76,18 +113,25 @@
     background: var(--tm-bg-muted);
     border-radius: var(--tm-radius-lg);
     flex: 0 0 auto;
+    flex-wrap: wrap;
 }
 
 .tm-notion-ai__tab {
-    flex: 1 1 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--tm-space-1);
+    flex: 1 1 auto;
     min-width: 0;
+    overflow: hidden;
+    min-height: var(--tm-touch-target);
     padding: var(--tm-space-2) var(--tm-space-2);
     color: var(--tm-color-text-muted);
     white-space: nowrap;
 }
 
 .tm-notion-ai__tab--active {
-    color: var(--tm-color-text);
+    color: var(--tm-text-primary);
     background: var(--tm-color-surface);
     box-shadow: var(--tm-shadow-sm);
 }
@@ -103,9 +147,9 @@
     resize: vertical;
     width: 100%;
     padding: var(--tm-space-2) var(--tm-space-3);
-    color: var(--tm-color-text);
+    color: var(--tm-text-primary);
     background: var(--tm-color-surface);
-    border: 1px solid var(--tm-color-border);
+    border: 1px solid var(--tm-border-color);
     border-radius: var(--tm-radius-md);
     font: inherit;
 }
@@ -126,7 +170,7 @@
 
 .tm-notion-ai__mode-chip {
     padding: var(--tm-space-2) var(--tm-space-3);
-    border-color: var(--tm-color-border);
+    border-color: var(--tm-border-color);
 }
 
 .tm-notion-ai__mode-chip--active {
@@ -170,7 +214,7 @@
     padding: var(--tm-space-3);
     white-space: pre-wrap;
     background: var(--tm-bg-muted);
-    border: 1px solid var(--tm-color-border);
+    border: 1px solid var(--tm-border-color);
     border-radius: var(--tm-radius-md);
 }
 
@@ -195,10 +239,18 @@
     flex: 0 0 auto;
 }
 
+/* Sheet presentation: the footer stays put while the body scrolls. */
+.tm-notion-ai__actions--sheet {
+    position: sticky;
+    bottom: 0;
+    background: var(--tm-color-surface);
+    padding-top: var(--tm-space-2);
+}
+
 .tm-notion-ai__btn {
     min-height: var(--tm-input-height-sm);
     padding: var(--tm-space-2) var(--tm-space-3);
-    border-color: var(--tm-color-border);
+    border-color: var(--tm-border-color);
 }
 
 .tm-notion-ai__btn--primary {
@@ -214,6 +266,15 @@
 .tm-notion-ai__btn:disabled {
     cursor: not-allowed;
     opacity: 0.5;
+}
+
+@media (pointer: coarse) {
+    .tm-notion-ai__tab,
+    .tm-notion-ai__icon-btn,
+    .tm-notion-ai__btn {
+        min-width: var(--tm-touch-target);
+        min-height: var(--tm-touch-target);
+    }
 }
 
 @keyframes tm-notion-ai-cursor {

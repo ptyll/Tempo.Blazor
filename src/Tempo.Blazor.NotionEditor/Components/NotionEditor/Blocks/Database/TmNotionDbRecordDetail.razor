@@ -1,138 +1,152 @@
 @namespace Tempo.Blazor.Components.NotionEditor.Blocks.Database
+@inherits Tempo.Blazor.Components.TmComponentBase
 @using Tempo.Blazor.NotionEditor.Enums
 @using Tempo.Blazor.NotionEditor.Interfaces
+@using Tempo.Blazor.Components.Buttons
+@using Tempo.Blazor.Components.Icons
+@using Tempo.Blazor.Components.Feedback
 @using Tempo.Blazor.Components.NotionEditor.Blocks
 @using Tempo.Blazor.Components.NotionEditor.Blocks.Database.Cells
 
-<div class="tm-dbrd__overlay" @onclick="OnClose" role="dialog" aria-modal="true" aria-label="@RecordTitle">
+@* Phase 4 (DB-3): the record detail rides the core TmModal — Large centred dialog on desktop,
+   fullscreen sheet on mobile, visible title (the record) and subtitle (the database), Escape,
+   focus return and a fixed footer with the destructive action separated. No own overlay. *@
+<TmModal Show="Show"
+         OnClose="HandleCloseAsync"
+         Title="@RecordTitle"
+         Subtitle="@(string.IsNullOrEmpty(DatabaseName) ? null : DatabaseName)"
+         Size="ModalSize.Large"
+         MobilePresentation="MobilePresentation.AutoFullscreen"
+         CloseOnEscape="@(_editingFieldId is null)"
+         data-testid="@TestId("notion-db-record-detail")">
+    <ChildContent>
+        <div class="tm-dbrd">
 
-    <div class="tm-dbrd__modal" @onclick:stopPropagation="true">
-
-        @* ── Toolbar ──────────────────────────────────────────────────────── *@
-        <div class="tm-dbrd__toolbar">
-            <span class="tm-dbrd__breadcrumb">
-                @if (DatabaseName is { Length: > 0 })
-                {
-                    <span class="tm-dbrd__breadcrumb-db">@DatabaseName</span>
-                    <svg class="tm-dbrd__breadcrumb-sep" width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                        <path d="M9 18l6-6-6-6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                }
-                <span class="tm-dbrd__breadcrumb-title">@RecordTitle</span>
-            </span>
-
-            <div class="tm-dbrd__toolbar-actions">
-                @if (_showSaved)
-                {
-                    <span class="tm-dbrd__saved-indicator" aria-live="polite">
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                            <path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        </svg>
-                        @Loc["TmNotionDbRecordDetail_Saved"]
-                    </span>
-                }
-                @if (OnOpenAsPage.HasDelegate)
-                {
-                    <button class="tm-dbrd__action-btn"
-                            type="button"
-                            title="@Loc["TmNotionDbRecordDetail_OpenAsPage"]"
-                            @onclick="HandleOpenAsPageAsync">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-                            <polyline points="15 3 21 3 21 9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                            <line x1="10" y1="14" x2="21" y2="3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-                        </svg>
-                        @Loc["TmNotionDbRecordDetail_OpenAsPage"]
-                    </button>
-                }
-                <button class="tm-dbrd__close-btn"
-                        type="button"
-                        aria-label="@Loc["TmNotionDbRecordDetail_Close"]"
-                        @onclick="OnClose">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                        <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-                    </svg>
-                </button>
-            </div>
-        </div>
-
-        @* ── Body ─────────────────────────────────────────────────────────── *@
-        <div class="tm-dbrd__body">
-
-            @* Title *@
-            @if (PrimaryField is not null)
+            @* ── Saved / error indicators ─────────────────────────────────── *@
+            @if (!string.IsNullOrEmpty(_deleteError))
             {
-                <textarea class="tm-dbrd__title-input"
-                          placeholder="@Loc["TmNotionDbRecordDetail_Untitled"]"
-                          rows="1"
-                          disabled="@ReadOnly"
-                          value="@_titleBuffer"
-                          @oninput="e => _titleBuffer = e.Value?.ToString() ?? string.Empty"
-                          @onblur="CommitTitleAsync"></textarea>
+                <div class="tm-dbrd__delete-error" role="alert">@_deleteError</div>
             }
-
-            @* Properties *@
-            @{
-                var nonPrimary = NonPrimaryFields.ToList();
-            }
-            @if (nonPrimary.Count > 0)
+            @if (_showSaved)
             {
-                <div class="tm-dbrd__props" aria-label="@Loc["TmNotionDbRecordDetail_Properties"]">
-                    @foreach (var field in nonPrimary)
-                    {
-                        var fid       = field.Id;
-                        var isEditing = _editingFieldId == fid;
-                        _localFields.TryGetValue(fid.ToString(), out var fieldValue);
-                        <div class="tm-dbrd__prop-row @(isEditing ? "tm-dbrd__prop-row--editing" : "")">
-                            <div class="tm-dbrd__prop-label">
-                                <span class="tm-dbrd__prop-icon" aria-hidden="true">@FieldTypeIcon(field.Type)</span>
-                                <span class="tm-dbrd__prop-name">@field.Name</span>
-                            </div>
-                            <div class="tm-dbrd__prop-value"
-                                 @onclick="() => { if (!ReadOnly && !isEditing) _editingFieldId = fid; }">
-                                <TmNotionDbCell Field="field"
-                                               Value="fieldValue"
-                                               ReadOnly="ReadOnly"
-                                               IsEditing="isEditing"
-                                               OnCommit="val => HandleCellCommitAsync(field, val)"
-                                               OnCancel="() => _editingFieldId = null"
-                                               OnEditRequested="() => _editingFieldId = fid" />
-                            </div>
-                        </div>
-                    }
+                <div class="tm-dbrd__saved-indicator" aria-live="polite">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                        <path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    @Loc["TmNotionDbRecordDetail_Saved"]
                 </div>
             }
 
-            @* Divider *@
-            <hr class="tm-dbrd__divider" aria-hidden="true" />
+            @* ── Body ─────────────────────────────────────────────────────── *@
+            <div class="tm-dbrd__body">
 
-            @* Content blocks *@
-            <div class="tm-dbrd__content">
-                @if (_loadingBlocks)
+                @* Title *@
+                @if (PrimaryField is not null)
                 {
-                    <div class="tm-dbrd__skeleton" aria-busy="true" aria-label="@Loc["Tm_Loading"]">
-                        @for (var i = 0; i < 3; i++)
+                    <textarea class="tm-dbrd__title-input"
+                              placeholder="@Loc["TmNotionDbRecordDetail_Untitled"]"
+                              rows="1"
+                              disabled="@ReadOnly"
+                              value="@_titleBuffer"
+                              @oninput="e => _titleBuffer = e.Value?.ToString() ?? string.Empty"
+                              @onblur="CommitTitleAsync"></textarea>
+                }
+
+                @* Properties — property grid, stacked under 600 px (shared record layout). *@
+                @{
+                    var nonPrimary = NonPrimaryFields.ToList();
+                }
+                @if (nonPrimary.Count > 0)
+                {
+                    <div class="tm-dbrd__props" aria-label="@Loc["TmNotionDbRecordDetail_Properties"]">
+                        @foreach (var field in nonPrimary)
                         {
-                            <div class="tm-notion-skeleton tm-notion-skeleton--line" style="width: @(80 - i * 15)%"></div>
+                            var fid       = field.Id;
+                            var isEditing = _editingFieldId == fid;
+                            _localFields.TryGetValue(fid.ToString(), out var fieldValue);
+                            <div class="tm-dbrd__prop-row @(isEditing ? "tm-dbrd__prop-row--editing" : "")">
+                                <div class="tm-dbrd__prop-label">
+                                    <span class="tm-dbrd__prop-icon" aria-hidden="true"><TmIcon Name="@DatabaseFieldIcons.Get(field.Type)" Size="IconSize.Xs" /></span>
+                                    <span class="tm-dbrd__prop-name">@field.Name</span>
+                                </div>
+                                <div class="tm-dbrd__prop-value"
+                                     @onclick="() => { if (!ReadOnly && !isEditing) _editingFieldId = fid; }">
+                                    <TmNotionDbCell Field="field"
+                                                   Value="fieldValue"
+                                                   ReadOnly="ReadOnly"
+                                                   IsEditing="isEditing"
+                                                   OnCommit="val => HandleCellCommitAsync(field, val)"
+                                                   OnCancel="() => _editingFieldId = null"
+                                                   OnEditRequested="() => _editingFieldId = fid" />
+                                </div>
+                            </div>
                         }
                     </div>
                 }
-                else if (Context.BlockService is not null)
+
+                @* Divider *@
+                <hr class="tm-dbrd__divider" aria-hidden="true" />
+
+                @* Content blocks *@
+                <div class="tm-dbrd__content">
+                    @if (_loadingBlocks)
+                    {
+                        <div class="tm-dbrd__skeleton" aria-busy="true" aria-label="@Loc["Tm_Loading"]">
+                            @for (var i = 0; i < 3; i++)
+                            {
+                                <div class="tm-notion-skeleton tm-notion-skeleton--line" style="width: @(80 - i * 15)%"></div>
+                            }
+                        </div>
+                    }
+                    else if (Context.BlockService is not null)
+                    {
+                        <TmNotionBlockList Blocks="@_contentBlocks"
+                                           ReadOnly="@ReadOnly"
+                                           ActiveBlockId="@_activeBlockId"
+                                           OnReorder="HandleReorderAsync"
+                                           OnBlockFocused="HandleBlockFocusedAsync"
+                                           OnBlockDeleted="HandleBlockDeletedAsync"
+                                           OnBlockUpdated="HandleBlockUpdatedAsync"
+                                           OnBlockDuplicated="HandleBlockDuplicatedAsync"
+                                           OnConvertBlock="HandleConvertBlockAsync"
+                                           OnAddBlockAfter="HandleAddBlockAfterAsync"
+                                           OnAddBlockAtEnd="HandleAddBlockAtEndAsync" />
+                    }
+                </div>
+
+            </div>
+        </div>
+    </ChildContent>
+    <Footer>
+        <div class="tm-dbrd__footer">
+            <div class="tm-dbrd__footer-danger">
+                @if (!ReadOnly && OnRecordDeleted.HasDelegate)
                 {
-                    <TmNotionBlockList Blocks="@_contentBlocks"
-                                       ReadOnly="@ReadOnly"
-                                       ActiveBlockId="@_activeBlockId"
-                                       OnReorder="HandleReorderAsync"
-                                       OnBlockFocused="HandleBlockFocusedAsync"
-                                       OnBlockDeleted="HandleBlockDeletedAsync"
-                                       OnBlockUpdated="HandleBlockUpdatedAsync"
-                                       OnBlockDuplicated="HandleBlockDuplicatedAsync"
-                                       OnConvertBlock="HandleConvertBlockAsync"
-                                       OnAddBlockAfter="HandleAddBlockAfterAsync"
-                                       OnAddBlockAtEnd="HandleAddBlockAtEndAsync" />
+                    <TmButton Variant="ButtonVariant.Danger"
+                              data-testid="@TestId("notion-db-record-delete")"
+                              OnClick="AskDelete">
+                        @Loc["TmNotionDbRecordDetail_Delete"]
+                    </TmButton>
                 }
             </div>
-
+            <div class="tm-dbrd__footer-main">
+                @if (OnOpenAsPage.HasDelegate)
+                {
+                    <TmButton Variant="ButtonVariant.Ghost" OnClick="HandleOpenAsPageAsync">
+                        @Loc["TmNotionDbRecordDetail_OpenAsPage"]
+                    </TmButton>
+                }
+                <TmButton Variant="ButtonVariant.Primary" OnClick="HandleCloseAsync">@Loc["TmNotionDb_Done"]</TmButton>
+            </div>
         </div>
-    </div>
-</div>
+    </Footer>
+</TmModal>
+
+<TmDialog Show="_showDeleteConfirm"
+          Type="DialogType.Confirm"
+          Title="@Loc["TmNotionDbRecordDetail_Delete"]"
+          Message="@Loc["TmNotionDbRecordDetail_DeleteConfirm"]"
+          IsDangerous="true"
+          OkButtonText="@Loc["Tm_Delete"]"
+          CancelButtonText="@Loc["Tm_Cancel"]"
+          OnResult="HandleDeleteConfirmAsync" />

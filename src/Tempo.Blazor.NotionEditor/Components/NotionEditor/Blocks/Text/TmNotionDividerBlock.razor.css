@@ -20,11 +20,11 @@
 /* ── Focused / selected state ─────────────────────────────────── */
 
 .tm-notion-divider-block--focused {
-    background: var(--tm-notion-bg-selected, rgba(35,131,226,0.08));
+    background: var(--tm-notion-bg-block-selected);
 }
 
 .tm-notion-divider-block--focused .tm-notion-divider {
-    background: var(--tm-notion-interactive-focus, var(--tm-color-primary, #2383e2));
+    background: var(--tm-focus-ring, var(--tm-color-primary));
     opacity: 0.55;
 }
 
@@ -37,5 +37,5 @@
 /* ── Focus ring for keyboard navigation ───────────────────────── */
 
 .tm-notion-divider-block:focus-visible {
-    box-shadow: 0 0 0 2px var(--tm-notion-interactive-focus, var(--tm-color-primary, #2383e2));
+    box-shadow: 0 0 0 2px var(--tm-focus-ring, var(--tm-color-primary));
 }

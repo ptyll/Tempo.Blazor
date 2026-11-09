@@ -1,4 +1,6 @@
 using Microsoft.AspNetCore.Components;
+using Tempo.Blazor.Abstractions.Layout;
+using Tempo.Blazor.Components.Spreadsheet;
 using Tempo.Blazor.Components.Spreadsheet.Enums;
 using Tempo.Blazor.Components.Spreadsheet.Models;
 using Tempo.Blazor.NotionEditor.Interfaces;
@@ -24,17 +26,33 @@ public partial class TmNotionSpreadsheetEditModal : ComponentBase
     private SpreadsheetWorkbook _workbook = new();
     private bool _loading = true;
     private bool _saving;
+    private bool _dirty;
     private static readonly Type? SpreadsheetComponentType = ResolveSpreadsheetComponentType();
 
-    private Dictionary<string, object?> SpreadsheetEditorParameters => new()
+    [CascadingParameter(Name = TmNotionTempoEditorModal.EditorLayoutScope)]
+    public TmLayoutMode? TempoEditorLayout { get; set; }
+
+    private bool CompactEditor => TempoEditorLayout == TmLayoutMode.Mobile;
+
+    private Dictionary<string, object?> SpreadsheetEditorParameters
     {
-        ["InitialWorkbook"] = _workbook,
-        ["Mode"] = SpreadsheetMode.Full,
-        ["Height"] = "calc(100vh - 120px)",
-        ["Width"] = "100%",
-        // NO LayoutMode: the editor resolves its own container (the modal is a fullscreen surface, so it is
-        // a phone at 390 and a tablet/desktop at 1024+). Pinning it here would break the container contract.
-    };
+        get
+        {
+            var parameters = new Dictionary<string, object?>
+            {
+                ["InitialWorkbook"] = _workbook,
+                ["OnChange"] = EventCallback.Factory.Create<SpreadsheetChangeEventArgs>(this, _ => _dirty = true),
+                ["Mode"] = SpreadsheetMode.Full,
+                ["Height"] = "calc(100vh - 120px)",
+                ["Width"] = "100%",
+            };
+            // Below 1024 the shell's compact layout wins. At 1024 and above the key stays absent so
+            // the spreadsheet classifies its own container.
+            if (CompactEditor)
+                parameters["LayoutMode"] = TmLayoutMode.Mobile;
+            return parameters;
+        }
+    }
 
     // ── Lifecycle ────────────────────────────────────────────────────────────
 

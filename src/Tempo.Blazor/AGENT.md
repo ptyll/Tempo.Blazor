@@ -480,11 +480,11 @@ Toast.Show("Saved!", ToastSeverity.Success);
                OnCommentAdded="HandleAdded" />
 ```
 - Tabs: Timeline | Comments | Attachments
-- Comment tab forwards `CommentActions`, `SupportsMentions`, `MentionProvider`, `ShowInternalToggle`, `OnCommentSubmitted` (before `OnCommentAdded`). Defaults off. The log does not hide internal comments.
+- Comment tab forwards `CommentActions`, `SupportsMentions`, `MentionProvider`, `ShowInternalToggle`, `OnCommentSubmitted` (before `OnCommentAdded`) and — since 2.10.0 — `CommentSubmitHandler` / `CommentEditHandler`. Defaults off. The log does not hide internal comments.
 
-**TmActivityComments** — comment list. `TmCommentEntry.IsInternal` paints the internal wash and lock badge; `Badges` (`TmCommentBadge` / `TmCommentBadgeTone`) render in the meta row. `CommentActions` is the host's button (and dialog). `OnCommentSubmitted` is `TmCommentSubmission(Html, IsInternal)` and fires before `OnCommentAdded`. The component never filters internal content.
+**TmActivityComments** — comment list. `TmCommentEntry.IsInternal` paints the internal wash and lock badge; `Badges` (`TmCommentBadge` / `TmCommentBadgeTone`) render in the meta row. `CommentActions` is the host's button (and dialog). `OnCommentSubmitted` is `TmCommentSubmission(Html, IsInternal)` and fires before `OnCommentAdded`. The component never filters internal content. Since 2.10.0: optional `CommentSubmitHandler` / `CommentEditHandler` (`Func<…, Task<bool>>`, new `TmCommentEdit(CommentId, Html)` record) replace the legacy callbacks when set — returning `false` keeps the draft/inline editor open with the text (a failed save no longer discards the draft); the host presents the reason.
 
-**TmGanttTaskPanel** — same five comment parameters, forwarded. Still raises one `OnCommentAdded(TmCommentEntry)`; `IsInternal` is the composer flag. Does not filter.
+**TmGanttTaskPanel** — same comment parameters, forwarded (incl. `CommentSubmitHandler` / `CommentEditHandler` since 2.10.0). Still raises one `OnCommentAdded(TmCommentEntry)`; `IsInternal` is the composer flag. Does not filter.
 
 **TmRichEditorFull** — Full rich text editor
 ```razor

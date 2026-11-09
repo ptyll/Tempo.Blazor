@@ -33,6 +33,12 @@
       "name": "OnCancelled",
       "type": "EventCallback",
       "isRequired": false
+    },
+    {
+      "name": "LayoutMode",
+      "type": "TmLayoutMode",
+      "isRequired": false,
+      "description": "Forced layout. Mobile presents the dialog as the core sheet."
     }
   ],
   "subcategory": "UI"

@@ -1,0 +1,43 @@
+.tm-notion-panel-header {
+    display: flex;
+    align-items: center;
+    gap: var(--tm-space-2);
+    padding: var(--tm-space-3) var(--tm-space-4);
+    border-bottom: var(--tm-border-width) solid var(--tm-border-color);
+}
+
+.tm-notion-panel-header__titles {
+    flex: 1;
+    min-width: 0;
+}
+
+.tm-notion-panel-header__title {
+    margin: 0;
+    font-size: var(--tm-font-size-md);
+    font-weight: var(--tm-font-weight-semibold);
+    color: var(--tm-text-primary);
+}
+
+.tm-notion-panel-header__subtitle {
+    margin: 0;
+    color: var(--tm-text-secondary);
+    font-size: var(--tm-font-size-sm);
+}
+
+.tm-notion-panel-header__close {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--tm-notion-touch-target, var(--tm-space-8));
+    height: var(--tm-notion-touch-target, var(--tm-space-8));
+    border: 0;
+    border-radius: var(--tm-radius-md);
+    background: transparent;
+    color: var(--tm-text-secondary);
+    cursor: pointer;
+}
+
+.tm-notion-panel-header__close:hover {
+    background: var(--tm-color-surface-hover);
+    color: var(--tm-text-primary);
+}

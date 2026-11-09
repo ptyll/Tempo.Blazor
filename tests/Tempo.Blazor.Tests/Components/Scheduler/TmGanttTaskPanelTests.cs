@@ -2,6 +2,7 @@ using Bunit;
 using FluentAssertions;
 using Microsoft.AspNetCore.Components;
 using Tempo.Blazor.Abstractions.Models;
+using Tempo.Blazor.Abstractions.Shared;
 using Tempo.Blazor.Components.Scheduler;
 using Tempo.Blazor.Tests.Localization;
 using Xunit;
@@ -473,5 +474,26 @@ public class TmGanttTaskPanelTests : LocalizationTestBase
         fired.Should().NotBeNull();
         fired!.Value.TaskId.Should().Be("1");
         fired!.Value.Entry.StoppedAt.Should().NotBeNull();
+    }
+
+    /// <summary>
+    /// The panel forwards the new save handlers to the embedded TmActivityComments,
+    /// the same way it forwards OnCommentSubmitted (additive pass-through).
+    /// </summary>
+    [Fact]
+    public void TmGanttTaskPanel_ForwardsCommentHandlers()
+    {
+        Func<TmCommentSubmission, Task<bool>> submitHandler = _ => Task.FromResult(true);
+        Func<TmCommentEdit, Task<bool>> editHandler = _ => Task.FromResult(true);
+
+        var cut = Render<TmGanttTaskPanel>(p => p
+            .Add(c => c.Task, CreateTask())
+            .Add(c => c.AllTasks, new List<TmWorkItem>())
+            .Add(c => c.CommentSubmitHandler, submitHandler)
+            .Add(c => c.CommentEditHandler, editHandler));
+
+        var comments = cut.FindComponent<Tempo.Blazor.Components.Activity.TmActivityComments>();
+        comments.Instance.CommentSubmitHandler.Should().BeSameAs(submitHandler);
+        comments.Instance.CommentEditHandler.Should().BeSameAs(editHandler);
     }
 }

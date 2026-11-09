@@ -18,7 +18,7 @@
 }
 else
 {
-    <button type="button"
+    <button @ref="Element" type="button"
             class="tm-toolbar-btn tm-toolbar-btn--@Variant.ToString().ToLowerInvariant() @ModifierClasses"
             title="@EffectiveTitle"
             aria-label="@EffectiveAriaLabel"
@@ -128,12 +128,21 @@ else
     /// <summary>Additional CSS class for the button element.</summary>
     [Parameter] public string? Class { get; set; }
 
+    /// <summary>
+    /// The "More" entry keeps the menu open while its action runs. A panel opened by the action
+    /// would otherwise close with the menu before it rendered. Default <see langword="false"/>.
+    /// </summary>
+    [Parameter] public bool KeepMenuOpen { get; set; }
+
     /// <summary>Additional HTML attributes for the button element.</summary>
     [Parameter(CaptureUnmatchedValues = true)] public Dictionary<string, object>? AdditionalAttributes { get; set; }
 
     /// <summary>Stable id of the button's entry in the More menu (internal: the contract is the
     /// internal <see cref="IToolbarOverflowItem"/>, implemented explicitly).</summary>
-    internal string MenuId { get; } = $"tm-tb-{Guid.NewGuid():N}";
+    public string MenuId { get; } = $"tm-tb-{Guid.NewGuid():N}";
+
+    /// <summary>The rendered button. A host that opens a panel from this trigger anchors on it.</summary>
+    public ElementReference Element { get; private set; }
 
     /// <inheritdoc />
     string IToolbarOverflowItem.MenuId => MenuId;
@@ -251,7 +260,9 @@ else
         GroupLabel = OwnerGroup?.EffectiveLabel,
         TestId = CopyTestIdToMenu ? HostTestId : null,
         MenuTestId = CopyTestIdToMenu ? null : HostTestId,
-        // The receiver is the BUTTON, so the button re-renders; the toolbar re-renders on Recompute.
+        KeepMenuOpen = KeepMenuOpen,
+        // The receiver is the BUTTON. The menu calls the live handler: a callback captured here would
+        // be the empty one from the button's first render, before the host wired OnClick.
         OnClick = EventCallback.Factory.Create(this, ClickAsync),
     });
 

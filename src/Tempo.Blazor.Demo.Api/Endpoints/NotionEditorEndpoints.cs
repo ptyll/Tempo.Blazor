@@ -872,14 +872,25 @@ public static class NotionEditorEndpoints
             int? skip,
             int? take,
             bool? includeRead,
+            HttpContext http,
             DemoNotionNotificationStore notificationStore) =>
-            Results.Ok(notificationStore.GetNotifications(new TmNotificationQuery
+        {
+            var listed = notificationStore.GetNotifications(new TmNotificationQuery
+            {
+                RecipientUserId = userId,
+                Skip = 0,
+                Take = 200,
+                IncludeRead = true
+            });
+            http.Response.Headers["X-Demo-Stored"] = listed.Count.ToString();
+            return Results.Ok(notificationStore.GetNotifications(new TmNotificationQuery
             {
                 RecipientUserId = userId,
                 Skip = skip.GetValueOrDefault(0),
                 Take = take.GetValueOrDefault(20),
                 IncludeRead = includeRead.GetValueOrDefault(true)
-            })));
+            }));
+        });
 
         notificationGroup.MapGet("/users/{userId}/unread-count", async (
             string userId,
@@ -932,6 +943,7 @@ public static class NotionEditorEndpoints
             "/api/notion/e2e/seed/{scenario}",
             async (
                 string scenario,
+                HttpContext http,
                 MockNotionDataStore dataStore,
                 MockNotionBlockStore blockStore,
                 DemoNotionAggregateStore aggregateStore,
@@ -946,6 +958,7 @@ public static class NotionEditorEndpoints
                 [FromServices] DemoNotionHistoryStore historyStore,
                 CancellationToken cancellationToken) =>
             {
+                http.Response.Headers["X-Demo-Pid"] = Environment.ProcessId + " " + Environment.ProcessPath;
                 await E2ESeedGate.WaitAsync(cancellationToken);
                 try
                 {
@@ -1067,6 +1080,13 @@ public static class NotionEditorEndpoints
                             dataStore.SeedE2ESimplePage("EB6 Media Blocks", "Media seed page.");
                             blockStore.SeedE2EMediaPage();
                             break;
+                        case "seedPhase7Surfaces":
+                            dataStore.SeedE2ESimplePage("Phase 7 surfaces", "Share, history, media and Tempo edit evidence.");
+                            blockStore.SeedE2EPhase7SurfacesPage();
+                            historyStore.SeedDiffHistory();
+                            publicShareProvider.SeedE2EActiveShare();
+                            permissionProvider.SeedE2ERestrictions();
+                            break;
                         case "seedCommentsPage":
                             dataStore.SeedE2ESimplePage("EB10 Comments Workspace", "Comment recovery seed page.");
                             blockStore.SeedE2ECommentsPage();
@@ -1140,6 +1160,10 @@ public static class NotionEditorEndpoints
                             dataStore.SeedE2ESidebarTrashNavigation();
                             blockStore.SeedE2EEmptyPage();
                             break;
+                        case "seedSidebarTrashChildPage":
+                            dataStore.SeedE2ESidebarTrashChildPage();
+                            blockStore.SeedE2EEmptyPage();
+                            break;
                         case "seedPageInfoPage":
                             dataStore.SeedE2EPageInfoPage();
                             blockStore.SeedE2EPageInfoLikePage();
@@ -1189,6 +1213,20 @@ public static class NotionEditorEndpoints
                             dataStore.SeedE2ESpacesPage();
                             blogProvider.SeedE2EBlog();
                             break;
+                        case "seedPhase5Evidence":
+                            // One seed for the phase-5 evidence captures: tasks, blog, notifications
+                            // with a body line, and a comment-bearing page for the conflict shot.
+                            // Blog posts are seeded under "team". HEAD queries the open page's space
+                            // (CurrentSpaceId), so the default SeedE2ESimplePage space "e2e" lists 0 posts.
+                            dataStore.SeedE2ESimplePage("CF4 Release Follow-up", "Task aggregation seed page.");
+                            await dataStore.MovePageToSpaceAsync(
+                                MockNotionDataStore.Page1Id.ToString("D"),
+                                "team",
+                                cancellationToken);
+                            blockStore.SeedE2ETasksPage();
+                            blogProvider.SeedE2EBlog();
+                            notificationStore.SeedE2EPhase5();
+                            break;
                         case "seedEmptyBlogPage":
                             dataStore.SeedE2ESpacesPage();
                             blogProvider.SeedE2EEmptyBlog();
@@ -1223,6 +1261,9 @@ public static class NotionEditorEndpoints
                             historyStore.SeedDiffHistory();
                             break;
                     }
+
+                    http.Response.Headers["X-Demo-After"] = notificationStore
+                        .GetNotifications(new TmNotificationQuery { RecipientUserId = "demo", Take = 200 }).Count.ToString();
                 }
                 finally
                 {

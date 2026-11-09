@@ -110,7 +110,8 @@ public sealed class MarkupClassCoverageTests
         // The internal-switch hint is a visually-hidden aria-describedby target (tm-sr-only
         // carries the hiding). The class is the stable hook, so it stays rule-free.
         "tm-comment-internal-toggle-hint",
-        "tm-comment-submit-btn",
+        // Gained its own rule in _activity-comments.css: the aria-disabled in-flight look
+        // (.tm-comment-submit-btn[aria-disabled="true"]) means it is no longer rule-free.
         "tm-currency-input",
         "tm-currency-input__amount",
         "tm-currency-input__converted",
@@ -348,15 +349,31 @@ public sealed class MarkupClassCoverageTests
         "tm-cbl__state--prompt",
         "tm-child-page__icon",
         "tm-db__panel--fields",
+        "tm-db__mobile-more-list",
+        // Phase 4 review batch A: the comment popover anchors are zero-size inline-styled spans
+        // (position/size ride the style attribute; the TmOverlayPanel positions against them) —
+        // they carry a class only as a stable selector hook.
+        "tm-nbcp-anchor",
+        "tm-ntcp-anchor",
         "tm-ndv__block--after",
         "tm-ndv__empty",
         "tm-ndv__pane--after",
         "tm-notion-analytics-panel",
+        // Phase 5: the chart's hidden value table and the audit row hooks are selector/a11y
+        // surfaces (visually-hidden table, data-testid row). They carry no own paint.
+        "tm-notion-analytics__data",
+        "tm-notion-audit__row",
+        "tm-notion-audit__row-details-row",
+        // Phase 5: the tasks filter sheet body and the tasks shell-panel body are selector hooks
+        // (the sheet and the body paint through their base classes).
+        "tm-my-tasks__filters--sheet",
         "tm-notion-blog-panel",
-        "tm-notion-diagram-edit-modal__missing",
         "tm-notion-editable--readonly",
         "tm-notion-editor--single-page",
+        "tm-notion-floating-menu",
+        "tm-notion-floating-menu__footer",
         "tm-notion-inline-toolbar__btn--color",
+        "tm-notion-inspector",
         "tm-notion-inline-toolbar__turn-icon",
         "tm-notion-media-upload-zone--audio",
         "tm-notion-media-upload-zone--diagram",
@@ -367,17 +384,27 @@ public sealed class MarkupClassCoverageTests
         "tm-notion-media-upload-zone--video",
         "tm-notion-media-upload-zone--wireframe",
         "tm-notion-notifications",
-        "tm-notion-presentation-toggle",
-        "tm-notion-reading-exit",
-        "tm-notion-reading-toggle",
-        "tm-notion-shell-panel__close",
+        "tm-notion-panel-header__actions",
+        "tm-notion-shell-panel--main",
+        // Notion redesign phase 1: the shell's duplicate audit-panel close button is gone (its
+        // class was the shell-panel close modifier), so the entry was struck off. The panel
+        // closes through its own button.
+        "tm-notion-shell-panel__body--tasks",
         "tm-notion-skeleton--rect",
+        // Phase 3 re-review (N5): the consumer card surface moved from the orphaned
+        // ::deep overlay-root rules onto the component's own __body divs (reachable in both
+        // the popover and the sheet), so those entries were struck off.
         "tm-notion-spreadsheet-block__missing",
-        "tm-notion-spreadsheet-edit-modal__btn--discard",
-        "tm-notion-spreadsheet-edit-modal__missing",
-        "tm-notion-topbar__shortcuts",
-        "tm-notion-wireframe-edit-modal__missing",
-        "tm-npsd__status--disabled",
+        // Pre-existing selector hooks with no paint rule. Recorded so the inventory matches the tree.
+        "tm-nmm__body",
+        "tm-notion-emoji-picker--inline",
+        "tm-notion-emoji-picker__category",
+        "tm-notion-emoji-picker__category--recent",
+        "tm-notion-emoji-picker__panel",
+        "tm-notion-status-picker__label",
+        "tm-nps__footer-count",
+        // F-09: tm-nps__item-meta / tm-nps__item-path gained rules (the search result hierarchy).
+        // F-23: tm-ntg__footer-close gained the footer padding rule.
         "tm-nsf",
         "tm-nsr",
         "tm-page-info__created",
@@ -474,6 +501,12 @@ public sealed class MarkupClassCoverageTests
             // instead, so the bare `tm-kanban` stem left the population — 71 → 70. The class is still
             // a literal token in the same file ("tm-kanban" + …, and the root's @Class splat), so this
             // is a LOST INTERPOLATION, not a lost class.
+            // Plan 4ebadc60 phase 1 (TmOtpInput): the root class is interpolated
+            // ($"tm-otp-input{...}"), so the sweep counts the stem and cannot see the --disabled
+            // suffix — 70 → 71.
+            // Plan 4ebadc60 phase 2 (TmOtpInput): RootCssClass builds its modifiers by StringBuilder
+            // concatenation instead of one interpolated string, so the bare "tm-otp-input" stem
+            // left the scanned population (the modifiers are literal) — 71 → 70.
             ExpectedUnmeasurableStems: 70),
         new Scope("Signing", "Tempo.Blazor.Signing", UnstyledSigningMarkupClasses,
             MinRazorFiles: 28, MinMarkupClasses: 400, InheritsCoreCss: true,
@@ -494,8 +527,18 @@ public sealed class MarkupClassCoverageTests
             // label's `for` target the first phase-7 pass missed) — 16 → 17.
             ExpectedUnmeasurableStems: 17),
         new Scope("NotionEditor", "Tempo.Blazor.NotionEditor", UnstyledNotionMarkupClasses,
-            MinRazorFiles: 125, MinMarkupClasses: 1900, InheritsCoreCss: true,
-            ExpectedUnmeasurableStems: 17),
+            // Phase 4 (dialog unification) net-removed literal classes — the cover dialog, the
+            // page-info panel, the three DB overlays and both comment-panel backdrops shed their
+            // inline card chrome in favour of the core TmModal/TmOverlayPanel surfaces
+            // (~1 995 → ~1 866).
+            MinRazorFiles: 125, MinMarkupClasses: 1800, InheritsCoreCss: true,
+            // Notion redesign phase 1: the field editor and the import/export dialog suffix their
+            // ids so two instances on one page no longer collide ("tm-dbfe-{name}-{guid}",
+            // "tm-dbie-file-{guid}", "tm-dbie-view-{guid}"). The sweep sees the three stems and
+            // cannot see the suffix — 17 → 20. The shared comment list adds one more interpolated
+            // status class — 17 → 18.
+            // The scan already contained these stems; the declared count now matches it.
+            ExpectedUnmeasurableStems: 34),
     ];
 
     [Fact]

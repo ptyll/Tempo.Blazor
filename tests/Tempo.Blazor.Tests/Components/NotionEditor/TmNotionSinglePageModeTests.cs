@@ -68,6 +68,7 @@ public sealed class TmNotionSinglePageModeTests : LocalizationTestBase
         cut.WaitForAssertion(() => cut.Find(".tm-notion-page").Should().NotBeNull());
         cut.FindAll(".tm-notion-sidebar").Should().BeEmpty();
         cut.FindAll(".tm-notion-sidebar-toggle").Should().BeEmpty();
+        cut.FindAll("[data-tm-group='navigation']").Should().BeEmpty();
     }
 
     [Fact]

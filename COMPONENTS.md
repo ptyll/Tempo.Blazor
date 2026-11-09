@@ -9,7 +9,7 @@ Sdílený základ redesignu (tokeny, rozvržení, bottom sheet, překryvy, edito
 ## Obsah
 
 1. [Tlačítka (Buttons)](#tlačítka) — TmButton, TmSplitButton, TmCopyButton
-2. [Textové vstupy (Inputs)](#textové-vstupy) — TmTextInput, TmTextArea, TmNumberInput, TmSearchInput, TmEntityPicker, TmUserPicker, TmExpressionEditor, TmPasswordStrengthIndicator
+2. [Textové vstupy (Inputs)](#textové-vstupy) — TmTextInput, TmTextArea, TmNumberInput, TmSearchInput, TmEntityPicker, TmUserPicker, TmExpressionEditor, TmPasswordStrengthIndicator, TmOtpInput
 3. [Výběrové komponenty (Select, Dropdown)](#výběrové-komponenty) — TmSelect, TmMultiSelect, TmDropdown, TmFilterableDropdown
 4. [Přepínače a checkboxy](#přepínače-a-checkboxy) — TmCheckbox, TmToggle, TmRadioGroup, TmRadio
 5. [Datové zobrazení (Data Display)](#datové-zobrazení) — TmBadge, TmCard, TmAccordion, TmChip, TmChipGroup, TmChangeDiff, TmEmptyState, TmStatCard, TmKanbanBoard, TmMultiViewList
@@ -45,6 +45,7 @@ Sdílený základ redesignu (tokeny, rozvržení, bottom sheet, překryvy, edito
 35. [Design Token System](#design-token-system)
 35. [Diagram Editor](#diagram-editor)
 36. [Email Templates](#email-templates) — TmEmailTemplateEditor, TmEmailTemplatePreview, TmEmailTemplateToolbox, TmEmailTemplateCanvas, TmEmailPropertyPanel, TmEmailImportDialog, TmEmailExportDialog, TmEmailValidationPanel, TmEmailItemDialog, TmEmailTableCellDialog, TmEmailObjectFields a podobory
+37. [Notion Editor](#notion-editor) — TmNotionEditor, shell, komentáře, databázové pohledy
 
 ---
 
@@ -678,6 +679,65 @@ Vizuální indikátor síly hesla.
 ```razor
 <TmTextInput @bind-Value="_password" Label="Heslo" Type="password" />
 <TmPasswordStrengthIndicator Password="@_password" />
+```
+
+---
+
+### TmOtpInput
+
+Segmentovaný vstup pro ověřovací kódy (OTP/one-time code). Rendruje `Length` (4–10) buněk
+s vlastním labelem každé buňky, distribucí vloženého textu (paste/autofill), režimem
+`Masked` pro PIN a stavy `Invalid`/`Verified`. Veškerá DOM logika (filtrování znaků,
+auto-advance, navigace šipkami) žije v modulu `tm-otp-input.js`. Dokumentace:
+[docs/otp-input.md](docs/otp-input.md).
+
+#### CSS třídy
+
+| Třída | Popis |
+|-------|-------|
+| `tm-otp-input` | Root (`role="group"`, lokalizovaný `aria-label`) |
+| `tm-otp-input__cell` | Jednotlivá buňka `<input>` |
+| `tm-otp-input__separator` | Aria-hidden separátor mezi skupinami (`GroupSize`) |
+| `tm-otp-input__error` | Chybová zpráva (`Invalid` + `ErrorText`) |
+| `tm-otp-input__status` | Ověřený stav (check ikona + text) |
+| `tm-otp-input--disabled` / `--readonly` / `--invalid` / `--verified` | Modifikátory rootu |
+
+#### Parametry
+
+| Parametr | Typ | Výchozí | Popis |
+|----------|-----|---------|-------|
+| `Value` / `ValueChanged` | `string` / `EventCallback<string>` | `""` | Kompletní kód (konkatenace buněk) |
+| `Length` | `int` | `6` | Počet buněk (4–10) |
+| `Kind` | `OtpInputKind` | `Numeric` | `Numeric` (číslice, `inputmode="numeric"`) nebo `Alphanumeric` (A–Z 0–9, auto-uppercase) |
+| `GroupSize` | `int` | `0` | Separátor každých N buněk (0 = bez) |
+| `Masked` | `bool` | `false` | Buňky jako `type="password"` (PIN) |
+| `Disabled` / `ReadOnly` | `bool` | `false` | Blokace editace |
+| `Invalid` / `ErrorText` | `bool` / `string?` | `false`/`null` | Chybový stav (shake, `aria-invalid`, live region) |
+| `Verified` / `VerifiedText` | `bool` / `string?` | `false`/`null` | Ověřený stav (readonly buňky + status) |
+| `AutoFocus` | `bool` | `false` | Focus do první buňky po renderu |
+| `OnComplete` | `EventCallback<string>` | — | Přechod nekompletní → kompletní (při každém dokončení) |
+| `Id` / `Class` / `AriaLabel` / `AriaLabelledBy` / `AriaDescribedBy` / `AdditionalAttributes` | — | — | Standardní |
+
+#### Veřejné metody
+
+| Metoda | Popis |
+|--------|-------|
+| `FocusAsync()` | Focus do první prázdné buňky |
+| `ClearAsync()` | Vyčistí všechny buňky (znovu vyzbrojí `OnComplete`) |
+| `ShowErrorAsync()` | Zopakuje shake a re-announcne chybu (stejný text) |
+
+#### Příklady
+
+```razor
+@* Číselný 6místný kód s ověřením *@
+<TmOtpInput @bind-Value="_code" Length="6" OnComplete="VerifyAsync"
+            Invalid="_invalid" ErrorText="Nesprávný kód" Verified="_verified" />
+
+@* Alfanumerický záložní kód se seskupením *@
+<TmOtpInput @bind-Value="_backupCode" Length="8" Kind="OtpInputKind.Alphanumeric" GroupSize="4" />
+
+@* Maskovaný PIN *@
+<TmOtpInput @bind-Value="_pin" Length="4" Masked="true" />
 ```
 
 ---
@@ -6383,6 +6443,8 @@ Kompletní panel aktivity entity (timeline + komentáře + přílohy).
 | `ShowAttachments` | `bool` | `true` | Zobrazit přílohy |
 | `OnCommentAdded` | `EventCallback<string>` | — | Přidání komentáře (HTML). Předává se do `TmActivityComments`; při novém komentáři až po `OnCommentSubmitted` |
 | `OnCommentSubmitted` | `EventCallback<TmCommentSubmission>` | — | Nový komentář: HTML + příznak interního režimu. Log nic nefiltruje |
+| `CommentSubmitHandler` | `Func<TmCommentSubmission, Task<bool>>?` | `null` | Předá se do `TmActivityComments`; když je nastavený, nahrazuje tam `OnCommentSubmitted` + `OnCommentAdded` — `false` nechá draft otevřený |
+| `CommentEditHandler` | `Func<TmCommentEdit, Task<bool>>?` | `null` | Předá se do `TmActivityComments`; když je nastavený, nahrazuje tam `OnCommentEdited` — `false` nechá inline editor otevřený |
 | `OnCommentDeleted` | `EventCallback<string>` | — | Smazání komentáře |
 | `CommentActions` | `RenderFragment<TmCommentEntry>?` | `null` | Vlastní akce za Edit/Delete; předá se beze změny |
 | `SupportsMentions` | `bool` | `false` | Našeptávač zmínek na záložce komentářů; bez `MentionProvider` zůstane vypnutý |
@@ -6447,6 +6509,8 @@ Komentáře s přidáváním, editací a mazáním.
 | `OnCommentSubmitted` | `EventCallback<TmCommentSubmission>` | — | Nový komentář: HTML + `IsInternal`. Pořadí: tento callback, pak `OnCommentAdded`. Editace ho nevolá |
 | `OnCommentDeleted` | `EventCallback<string>` | — | Smazání |
 | `OnCommentEdited` | `EventCallback<(string Id, string NewText)>` | — | Editace |
+| `CommentSubmitHandler` | `Func<TmCommentSubmission, Task<bool>>?` | `null` | 2.10.0: save handler nového komentáře. Když je nastavený, nahrazuje `OnCommentSubmitted` + `OnCommentAdded`: `true` editor zavře, `false` nechá draft otevřený s textem a přepínačem (důvod selhání hlásí konzument, komponenta oznámí neuložení přes aria-live). Handler běží v událostním kontextu komponenty — chce-li konzument na selhání zobrazit vlastní UI, musí si sám zavolat `StateHasChanged` |
+| `CommentEditHandler` | `Func<TmCommentEdit, Task<bool>>?` | `null` | 2.10.0: save handler inline editace (`TmCommentEdit`: `CommentId` + `Html`). Když je nastavený, nahrazuje `OnCommentEdited`: `false` nechá inline editor otevřený s upraveným textem |
 | `ShowAddButton` | `bool` | `true` | Zobrazit přidávání |
 | `SupportsMentions` | `bool` | `false` | Našeptávač zmínek v composeru i inline editaci; bez `MentionProvider` zůstane vypnutý |
 | `MentionProvider` | `ITmPeopleProvider?` | `null` | Zdroj lidí pro `@` |
@@ -8963,4 +9027,71 @@ hostitelské testy (popisky jsou lokalizované, ne odvozené z názvu vlastnosti
 
 ---
 
-*Dokumentace komponent byla aktualizována o Diagram Editor, Knihovnu dokumentů (Document Library + TmDocumentOpenDialog + MCP), Email Templates 2.10.0 a Modeling.*
+## Notion Editor
+
+Balíček `Tempo.Blazor.NotionEditor`. Smlouva (pásma, překryvy, zmrazené `data-testid`, tokeny,
+JS a CSP) je v [docs/notion-editor.md](docs/notion-editor.md); tento oddíl je přehled parametrů.
+
+### Instalace
+
+```csharp
+builder.Services.AddTempoBlazor();
+```
+
+```html
+<link href="_content/Tempo.Blazor/css/tempo-blazor.css" rel="stylesheet" />
+<link href="_content/Tempo.Blazor.NotionEditor/css/tempo-blazor-notion-editor.css" rel="stylesheet" />
+<script src="_content/Tempo.Blazor.NotionEditor/js/notion-editor.js"></script>
+```
+
+Host musí obsluhovat i `_content/Tempo.Blazor/js/` — resize sloupce a timeline importují jádrový
+`pointer-drag.js`. CSP hash uvádí `pointer-drag.js` vedle `notion-editor.js`,
+`notion-db-column-resize.js` a `notion-db-timeline.js`.
+
+### TmNotionEditor
+
+| Parametr | Typ | Výchozí | Popis |
+|----------|-----|---------|-------|
+| `LayoutMode` | `TmLayoutMode` | `Auto` | Desktop ≥ 1024, tablet 640–1023, mobil < 640 kontejneru editoru. První snímek je Desktop. |
+| `Chrome` | `NotionEditorChrome` | `Full` | `Minimal` je veřejná read-only stránka; `None` je jen stránka. |
+| `InspectorContent` | `RenderFragment?` | `null` | Pravý slot hostitele. `null` nevykreslí pravý region. |
+| `ShellPanelPresentation` | `NotionShellPanelPresentation` | `Overlay` | Tasks / Blog / Analytics / Audit: `Overlay` drží stránku namountovanou, `Main` ji nahradí. Otevřený je nejvýš jeden. |
+| `CommentPresentation` | `NotionCommentPresentation` | `Auto` | Komentář bloku a textu: popover na desktopu, `TmModal` na dotyk a úzký kontejner. `Popover` drží bublinu na každé šířce. |
+| `PageCommentsPresentation` | `NotionPageCommentsPresentation` | `Inline` | `Dialog` otevře komentáře stránky v `TmModal` místo spodního panelu. |
+| `ShowSidebar` | `bool` | `true` | `false` a prázdný `InspectorContent` nevykreslí levý/pravý region ani mobilní lištu. |
+| `DocumentLibraryProvider` | `ITempoDocumentLibraryProvider?` | `null` | Bez něj se akce „Vložit existující“ nezobrazí. |
+
+Mobil drží čtení a lehké úpravy (přidat blok, komentář, My tasks, buňka). Tažení sloupce, resize
+a tažení pruhu timeline se na hrubém ukazateli ani v mobilním pásmu nenabízí — pořadí mění panel
+Properties, šířku Alt+šipka, pruh Alt+šipka / Alt+Shift+šipka. Plné chrome v úzkém boxu vynutí
+`LayoutMode="TmLayoutMode.Tablet"`.
+
+Dialogy, menu a bubliny jedou na jádrovém `TmModal` / `TmOverlayPanel` / `TmSidePanel`. Balíček
+nemá vlastní backdrop ani z-index pásmo.
+
+### Databáze
+
+`TmNotionDatabaseBlock`: `ShowSearch` (výchozí `false`) filtruje už načtené záznamy a varuje, když
+existují další stránky; `TmNotionEditor` ho pro hostovaný blok předává jako `true`. `IsPage`
+(výchozí `false`) zapíná mobilní lištu akcí. Skupiny toolbaru: `data-tm-group`
+`views | tools | primary`. Timeline je `.tm-dbtl`, tabulka zůstává `.tm-dbt`.
+
+### Tokeny
+
+Paleta: `--tm-notion-option-{color}-wash` / `-ink` / `-swatch` a
+`--tm-notion-option-text-{color}-ink` / `-wash`. Aliasy `--tm-notion-color-*`,
+`--tm-notion-bg-{color}`, `--tm-notion-text-{color}` a `--tm-notion-border-width` jsou pryč
+(2.10.0). Lokalizační klíče Notion jsou v jádrových `TmResources*.json`.
+
+### Přehled enumů balíčku
+
+| Enum | Hodnoty | Význam |
+|------|---------|--------|
+| `NotionEditorChrome` | `Full`, `Minimal`, `None` | Kolik chromu editor vykreslí. |
+| `NotionShellPanelPresentation` | `Overlay`, `Main` | Panel vedle stránky, nebo místo ní. |
+| `NotionCommentPresentation` | `Auto`, `Popover`, `Dialog` | Bublina vs. `TmModal` pro komentář bloku a textu. |
+| `NotionPageCommentsPresentation` | `Inline`, `Dialog` | Spodní panel vs. dialog komentářů stránky. |
+
+---
+
+*Dokumentace komponent byla aktualizována o Diagram Editor, Knihovnu dokumentů (Document Library + TmDocumentOpenDialog + MCP), Email Templates 2.10.0, Modeling a Notion Editor 2.10.0.*

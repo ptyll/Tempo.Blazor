@@ -11,10 +11,10 @@
     display: block;
     width: 100%;
     min-height: 200px;
-    border: 1px solid var(--tm-border-color, #e5e7eb);
+    border: 1px solid var(--tm-border-color);
     border-radius: 4px;
     overflow: hidden;
-    background: var(--tm-surface-secondary, #f9fafb);
+    background: var(--tm-surface-secondary);
 }
 
 .tm-notion-wireframe-block__svg-container {
@@ -38,7 +38,7 @@
     justify-content: center;
     width: 100%;
     min-height: 200px;
-    color: var(--tm-text-tertiary, #9ca3af);
+    color: var(--tm-text-tertiary);
 }
 
 .tm-notion-wireframe-block__overlay {
@@ -47,7 +47,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background: rgba(0, 0, 0, 0.35);
+    background: var(--tm-bg-overlay);
     opacity: 0;
     transition: opacity 0.15s ease;
 }
@@ -61,9 +61,9 @@
     align-items: center;
     gap: 6px;
     padding: 6px 14px;
-    background: var(--tm-surface, #ffffff);
-    color: var(--tm-text-primary, #111827);
-    border: 1px solid var(--tm-border-color, #e5e7eb);
+    background: var(--tm-bg-surface);
+    color: var(--tm-text-primary);
+    border: 1px solid var(--tm-border-color);
     border-radius: 6px;
     font-size: 13px;
     font-weight: 500;
@@ -72,21 +72,21 @@
 }
 
 .tm-notion-wireframe-block__edit-btn:hover {
-    background: var(--tm-surface-hover, #f3f4f6);
+    background: var(--tm-color-surface-hover);
 }
 
 .tm-notion-wireframe-block__caption {
     display: block;
     text-align: center;
     font-size: 12px;
-    color: var(--tm-text-secondary, #6b7280);
+    color: var(--tm-text-secondary);
     padding: 4px 0;
     outline: none;
 }
 
 .tm-notion-wireframe-block__caption:empty::before {
     content: attr(data-placeholder);
-    color: var(--tm-text-placeholder, #d1d5db);
+    color: var(--tm-text-tertiary);
     pointer-events: none;
 }
 
@@ -98,8 +98,8 @@
     display: inline-block;
     width: 16px;
     height: 16px;
-    border: 2px solid var(--tm-border-color, #e5e7eb);
-    border-top-color: var(--tm-primary, #2563eb);
+    border: 2px solid var(--tm-border-color);
+    border-top-color: var(--tm-color-primary);
     border-radius: 50%;
     animation: tm-wireframe-spin 0.75s linear infinite;
     flex-shrink: 0;
@@ -118,17 +118,17 @@
     align-items: center;
     justify-content: center;
     padding: 0 14px;
-    border: 1px dashed var(--tm-border-color, #d1d5db);
+    border: 1px dashed var(--tm-border-color);
     border-radius: 8px;
     background: transparent;
-    color: var(--tm-text-muted, #6b7280);
+    color: var(--tm-text-secondary);
     font-size: 13px;
     cursor: pointer;
 }
 
 .tm-notion-tempo-block__insert-existing:hover {
-    border-color: var(--tm-primary, #6366f1);
-    color: var(--tm-primary, #6366f1);
+    border-color: var(--tm-color-primary);
+    color: var(--tm-color-primary);
 }
 
 .tm-notion-tempo-block__not-found {
@@ -136,16 +136,16 @@
     align-items: center;
     gap: 12px;
     padding: 12px 16px;
-    border: 1px solid var(--tm-border-color, #e5e7eb);
+    border: 1px solid var(--tm-border-color);
     border-radius: 8px;
-    background: var(--tm-surface-2, #f9fafb);
-    color: var(--tm-text-muted, #6b7280);
+    background: var(--tm-bg-surface-secondary);
+    color: var(--tm-text-secondary);
     font-size: 14px;
 }
 
 .tm-notion-tempo-block__remove {
     padding: 4px 12px;
-    border: 1px solid var(--tm-border-color, #d1d5db);
+    border: 1px solid var(--tm-border-color);
     border-radius: 6px;
     background: transparent;
     cursor: pointer;

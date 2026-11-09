@@ -145,7 +145,8 @@ public class ToolbarOverflowE2ETests : WasmTestBase
         // The collapsed copy is real but unseen and unreachable.
         var first = bar.Locator(".tm-toolbar-item--collapsed").First;
         Assert.AreEqual("hidden", await first.EvaluateAsync<string>("el => getComputedStyle(el).visibility"));
-        Assert.AreEqual("absolute", await first.EvaluateAsync<string>("el => getComputedStyle(el).position"));
+        Assert.AreEqual("fixed", await first.EvaluateAsync<string>("el => getComputedStyle(el).position"),
+            "fixed, not absolute: an absolute copy is contained by a transformed ancestor and widens scrollWidth");
         Assert.IsTrue(await first.EvaluateAsync<bool>("el => el.inert"), "inert: not focusable, not clickable");
         Assert.AreEqual("true", await first.GetAttributeAsync("aria-hidden"));
 

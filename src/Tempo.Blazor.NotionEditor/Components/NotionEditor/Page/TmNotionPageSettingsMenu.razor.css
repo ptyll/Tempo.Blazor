@@ -6,14 +6,7 @@
     align-items: center;
 }
 
-/* ── Click-outside backdrop — one step under the popover band, like every other
-   Notion anchored surface (slash menu, token dropdown, color picker…). An inline
-   z-index here escaped the CF10n band sweep and covered the panel. ─────────── */
-.tm-npsm__backdrop {
-    position: fixed;
-    inset: 0;
-    z-index: calc(var(--tm-z-popover, 1030) - 1);
-}
+/* Phase 6: dismissal is the core overlay's. No own backdrop or z-index. */
 
 /* ── Trigger button ───────────────────────────────────────────────────────── */
 
@@ -26,33 +19,29 @@
     background: transparent;
     border: none;
     border-radius: 5px;
-    color: var(--tm-text-secondary, rgba(55,53,47,0.45));
+    color: var(--tm-text-secondary);
     cursor: pointer;
     transition: background 0.12s, color 0.12s;
 }
 
 .tm-npsm-trigger:hover,
 .tm-npsm-trigger--open {
-    background: var(--tm-hover, rgba(55,53,47,0.08));
-    color: var(--tm-text-primary, rgb(55,53,47));
+    background: var(--tm-color-surface-hover);
+    color: var(--tm-text-primary);
 }
 
 /* ── Dropdown ─────────────────────────────────────────────────────────────── */
 
 .tm-npsm {
-    position: absolute;
-    top: calc(100% + 4px);
-    right: 0;
-    z-index: var(--tm-z-popover, 1030);
-    width: 260px;
-    background: var(--tm-bg-elevated, #fff);
-    border: 1px solid var(--tm-border, rgba(55,53,47,0.14));
+    width: min(16.25rem, 100%);
+    background: var(--tm-bg-elevated);
+    border: 1px solid var(--tm-border-color);
     border-radius: 8px;
-    box-shadow: 0 8px 32px rgba(15,15,15,0.18), 0 0 0 1px rgba(15,15,15,0.04);
+    box-shadow: var(--tm-shadow-popover);
     overflow: hidden;
     animation: tm-npsm-appear 80ms ease;
     font-size: 14px;
-    color: var(--tm-text-primary, rgb(55,53,47));
+    color: var(--tm-text-primary);
 }
 
 @keyframes tm-npsm-appear {
@@ -67,7 +56,7 @@
 }
 
 .tm-npsm__section + .tm-npsm__section {
-    border-top: 1px solid var(--tm-border, rgba(55,53,47,0.09));
+    border-top: 1px solid var(--tm-border-color);
 }
 
 /* ── Menu item ────────────────────────────────────────────────────────────── */
@@ -84,24 +73,24 @@
     width: 100%;
     text-align: left;
     font-size: 14px;
-    color: var(--tm-text-primary, rgb(55,53,47));
+    color: var(--tm-text-primary);
     line-height: 1.4;
 }
 
 .tm-npsm__item:hover {
-    background: var(--tm-hover, rgba(55,53,47,0.06));
+    background: var(--tm-color-surface-hover);
 }
 
 .tm-npsm__item--danger {
-    color: var(--tm-danger, #e03e3e);
+    color: var(--tm-color-danger);
 }
 
 .tm-npsm__item--danger:hover {
-    background: rgba(224,62,62,0.07);
+    background: color-mix(in srgb, var(--tm-color-danger) 7%, transparent);
 }
 
 .tm-npsm__item--active {
-    background: var(--tm-hover, rgba(55,53,47,0.04));
+    background: var(--tm-color-surface-hover);
 }
 
 .tm-npsm__item-icon {
@@ -111,11 +100,11 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    color: var(--tm-text-secondary, rgba(55,53,47,0.5));
+    color: var(--tm-text-secondary);
 }
 
 .tm-npsm__item--danger .tm-npsm__item-icon {
-    color: var(--tm-danger, #e03e3e);
+    color: var(--tm-color-danger);
 }
 
 .tm-npsm__item-label {
@@ -127,13 +116,13 @@
 
 .tm-npsm__item-badge {
     font-size: 11px;
-    color: var(--tm-text-secondary, rgba(55,53,47,0.4));
+    color: var(--tm-text-secondary);
     flex-shrink: 0;
 }
 
 .tm-npsm__item-chevron {
     flex-shrink: 0;
-    color: var(--tm-text-secondary, rgba(55,53,47,0.4));
+    color: var(--tm-text-secondary);
     transition: transform 0.15s;
 }
 
@@ -147,7 +136,7 @@
     flex-shrink: 0;
     width: 28px;
     height: 16px;
-    background: var(--tm-border, rgba(55,53,47,0.18));
+    background: var(--tm-border-color);
     border-radius: 8px;
     position: relative;
     transition: background 0.15s;
@@ -162,13 +151,13 @@
     width: 12px;
     height: 12px;
     border-radius: 50%;
-    background: #fff;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.18);
+    background: var(--tm-color-on-primary-fixed);
+    box-shadow: var(--tm-shadow-xs);
     transition: transform 0.15s;
 }
 
 .tm-npsm__toggle--on {
-    background: var(--tm-accent, #0066cc);
+    background: var(--tm-color-primary);
 }
 
 .tm-npsm__toggle--on::after {
@@ -178,9 +167,9 @@
 /* ── Submenu panel ────────────────────────────────────────────────────────── */
 
 .tm-npsm__sub {
-    background: var(--tm-bg-subtle, rgba(55,53,47,0.02));
-    border-top: 1px solid var(--tm-border, rgba(55,53,47,0.08));
-    border-bottom: 1px solid var(--tm-border, rgba(55,53,47,0.08));
+    background: var(--tm-bg-surface-secondary);
+    border-top: 1px solid var(--tm-border-color);
+    border-bottom: 1px solid var(--tm-border-color);
     overflow: hidden;
     animation: tm-npsm-sub-appear 80ms ease;
 }
@@ -201,12 +190,12 @@
     width: 100%;
     text-align: left;
     font-size: 13px;
-    color: var(--tm-text-primary, rgb(55,53,47));
+    color: var(--tm-text-primary);
     transition: background 0.08s;
 }
 
 .tm-npsm__sub-item:hover {
-    background: var(--tm-hover, rgba(55,53,47,0.06));
+    background: var(--tm-color-surface-hover);
 }
 
 .tm-npsm__sub-toggle {
@@ -214,20 +203,20 @@
     align-items: center;
     gap: var(--tm-space-2, 8px);
     padding: var(--tm-space-2, 8px) var(--tm-space-4, 14px) var(--tm-space-2, 8px) 40px;
-    color: var(--tm-text-secondary, rgba(55,53,47,0.58));
+    color: var(--tm-text-secondary);
     cursor: pointer;
     font-size: var(--tm-font-size-xs, 12px);
     line-height: 1.3;
 }
 
 .tm-npsm__sub-toggle:hover {
-    background: var(--tm-hover, rgba(55,53,47,0.06));
+    background: var(--tm-color-surface-hover);
 }
 
 .tm-npsm__sub-toggle input {
     width: 14px;
     height: 14px;
-    accent-color: var(--tm-accent, #0066cc);
+    accent-color: var(--tm-color-primary);
 }
 
 .tm-npsm__sub-icon {
@@ -237,7 +226,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    color: var(--tm-text-secondary, rgba(55,53,47,0.5));
+    color: var(--tm-text-secondary);
     font-size: 13px;
 }
 
@@ -249,7 +238,7 @@
     gap: 8px;
     padding: 8px 14px 8px 40px;
     font-size: 12px;
-    color: var(--tm-text-secondary, rgba(55,53,47,0.5));
+    color: var(--tm-text-secondary);
 }
 
 .tm-npsm__spinner {
@@ -271,9 +260,9 @@
 
 .tm-npsm__moveto {
     padding: 8px 10px;
-    border-top: 1px solid var(--tm-border, rgba(55,53,47,0.08));
-    border-bottom: 1px solid var(--tm-border, rgba(55,53,47,0.08));
-    background: var(--tm-bg-subtle, rgba(55,53,47,0.02));
+    border-top: 1px solid var(--tm-border-color);
+    border-bottom: 1px solid var(--tm-border-color);
+    background: var(--tm-bg-surface-secondary);
 }
 
 .tm-npsm__moveto-search {
@@ -281,15 +270,15 @@
     align-items: center;
     gap: 6px;
     padding: 6px 8px;
-    background: var(--tm-bg-elevated, #fff);
-    border: 1px solid var(--tm-border, rgba(55,53,47,0.18));
+    background: var(--tm-bg-elevated);
+    border: 1px solid var(--tm-border-color);
     border-radius: 5px;
     margin-bottom: 4px;
 }
 
 .tm-npsm__moveto-icon {
     flex-shrink: 0;
-    color: var(--tm-text-secondary, rgba(55,53,47,0.4));
+    color: var(--tm-text-secondary);
 }
 
 .tm-npsm__moveto-input {
@@ -299,12 +288,12 @@
     outline: none;
     background: transparent;
     font-size: 13px;
-    color: var(--tm-text-primary, rgb(55,53,47));
+    color: var(--tm-text-primary);
     padding: 0;
 }
 
 .tm-npsm__moveto-input::placeholder {
-    color: var(--tm-text-placeholder, rgba(55,53,47,0.32));
+    color: var(--tm-text-tertiary);
 }
 
 .tm-npsm__moveto-list {
@@ -329,7 +318,7 @@
 }
 
 .tm-npsm__moveto-page:hover {
-    background: var(--tm-hover, rgba(55,53,47,0.06));
+    background: var(--tm-color-surface-hover);
 }
 
 .tm-npsm__moveto-page-icon {
@@ -341,13 +330,13 @@
     overflow: hidden;
     white-space: nowrap;
     text-overflow: ellipsis;
-    color: var(--tm-text-primary, rgb(55,53,47));
+    color: var(--tm-text-primary);
 }
 
 .tm-npsm__moveto-status {
     padding: 6px;
     font-size: 12px;
-    color: var(--tm-text-secondary, rgba(55,53,47,0.5));
+    color: var(--tm-text-secondary);
     text-align: center;
 }
 
@@ -363,18 +352,18 @@
     display: block;
     margin: var(--tm-space-1, 4px);
     white-space: normal;
-    background: var(--tm-text-primary, rgb(55,53,47));
-    color: var(--tm-color-white, #fff);
+    background: var(--tm-text-primary);
+    color: var(--tm-color-white);
     font-size: var(--tm-font-size-xs, 12px);
     line-height: 1.35;
     padding: var(--tm-space-2, 8px) var(--tm-space-3, 12px);
     border-radius: var(--tm-radius-sm, 5px);
-    box-shadow: 0 2px 10px rgba(0,0,0,0.18);
+    box-shadow: var(--tm-shadow-sm);
     animation: tm-npsm-toast-in 120ms ease;
 }
 
 .tm-npsm__toast--error {
-    background: var(--tm-danger, #e03e3e);
+    background: var(--tm-color-danger);
 }
 
 @keyframes tm-npsm-toast-in {
@@ -386,12 +375,12 @@
 
 .tm-npsm__confirm {
     padding: 12px 14px;
-    border-top: 1px solid var(--tm-border, rgba(55,53,47,0.09));
+    border-top: 1px solid var(--tm-border-color);
 }
 
 .tm-npsm__confirm-text {
     font-size: 13px;
-    color: var(--tm-text-primary, rgb(55,53,47));
+    color: var(--tm-text-primary);
     margin-bottom: 10px;
     line-height: 1.4;
 }
@@ -413,17 +402,17 @@
 
 .tm-npsm__confirm-btn--cancel {
     background: transparent;
-    border-color: var(--tm-border, rgba(55,53,47,0.2));
-    color: var(--tm-text-primary, rgb(55,53,47));
+    border-color: var(--tm-border-color);
+    color: var(--tm-text-primary);
 }
 
 .tm-npsm__confirm-btn--cancel:hover {
-    background: var(--tm-hover, rgba(55,53,47,0.06));
+    background: var(--tm-color-surface-hover);
 }
 
 .tm-npsm__confirm-btn--delete {
-    background: var(--tm-danger, #e03e3e);
-    color: #fff;
+    background: var(--tm-color-danger);
+    color: var(--tm-color-on-primary-fixed);
     border-color: transparent;
 }
 

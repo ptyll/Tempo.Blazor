@@ -1,15 +1,13 @@
 @namespace Tempo.Blazor.Components.NotionEditor.UI
 @inherits Tempo.Blazor.Components.TmComponentBase
+@using Tempo.Blazor.Components.Icons
 @using Tempo.Blazor.NotionEditor.Models
 
-<section class="tm-notion-blog tm-notion-blog-panel @Class" aria-label="@Loc["Notion_Blog_Title"]" data-testid="@TestId("notion-blog-panel")">
-    <header class="tm-notion-blog__header">
-        <div class="tm-notion-blog__title-wrap">
-            <h2 class="tm-notion-blog__title">@Loc["Notion_Blog_Title"]</h2>
-            <span class="tm-notion-blog__count" aria-live="polite">@Loc["Notion_Blog_Count", _totalCount]</span>
-        </div>
-
-        <div class="tm-notion-blog__actions">
+<section class="tm-notion-blog tm-notion-blog-panel @(_selectedPost is not null && _detailOpened ? "tm-notion-blog--detail-open" : "") @Class" aria-label="@Loc["Notion_Blog_Title"]" data-testid="@TestId("notion-blog-panel")">
+    <TmNotionPanelHeader Title="@Loc["Notion_Blog_Title"]"
+                         Subtitle="@Loc["Notion_Blog_Count", _totalCount]"
+                         OnClosed="OnClosed">
+        <Actions>
             <button type="button"
                     class="tm-notion-blog__new"
                     data-testid="@TestId("notion-blog-new")"
@@ -17,18 +15,8 @@
                     @onclick="CreatePostAsync">
                 @Loc["Notion_Blog_New"]
             </button>
-
-            <button type="button"
-                    class="tm-notion-blog__icon-btn"
-                    title="@Loc["Tm_Close"]"
-                    aria-label="@Loc["Tm_Close"]"
-                    @onclick="() => OnClosed.InvokeAsync()">
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-                    <path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
-                </svg>
-            </button>
-        </div>
-    </header>
+        </Actions>
+    </TmNotionPanelHeader>
 
     @if (_isLoading)
     {
@@ -60,12 +48,21 @@
             <nav class="tm-notion-blog__list" aria-label="@Loc["Notion_Blog_Title"]">
                 @foreach (var post in _posts)
                 {
+                    var isActive = string.Equals(_selectedPost?.Id, post.Id, StringComparison.OrdinalIgnoreCase);
+                    var postId = post.Id;
                     <button type="button"
                             class="@PostButtonClass(post)"
                             data-testid="@TestId("notion-blog-post-item")"
                             data-post-id="@post.Id"
-                            @onclick="() => SelectPostAsync(post.Id)">
+                            aria-current="@(isActive ? "true" : null)"
+                            data-focus-pending="@(_focusPostId == post.Id ? "true" : null)"
+                            @ref="_postItemRefs[postId]"
+                            @onclick="() => SelectPostAsync(postId)">
                         <span class="tm-notion-blog__post-title">@post.Title</span>
+                        @if (!string.IsNullOrWhiteSpace(PostExcerpt(post)))
+                        {
+                            <span class="tm-notion-blog__post-excerpt">@PostExcerpt(post)</span>
+                        }
                         <span class="tm-notion-blog__post-meta">
                             <span class="@PostStatusClass(post)">
                                 @(post.PublishedAt is null ? Loc["Notion_Blog_Draft"] : Loc["Notion_Blog_Published"])
@@ -101,7 +98,15 @@
             <section class="tm-notion-blog__detail">
                 @if (_selectedPost is not null)
                 {
+                    <button type="button"
+                            class="tm-notion-blog__back"
+                            data-testid="@TestId("notion-blog-back")"
+                            @onclick="ClearSelectionAsync">
+                        <TmIcon Name="@IconNames.ArrowLeft" Size="IconSize.Xs" />
+                        @Loc["Notion_Blog_BackToList"]
+                    </button>
                     <TmNotionBlogPost Post="_selectedPost"
+                                      FocusHeading="_focusDetail"
                                       IsPublishing="@(_publishingPostId == _selectedPost.Id)"
                                       OnPublish="PublishPostAsync" />
                 }

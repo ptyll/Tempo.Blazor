@@ -1,4 +1,4 @@
-<div id="tm-layout-L" class="tm-layout tm-layout--desktop tm-layout--no-container " data-layout="desktop" data-testid="tm-layout" style="display: flex; flex-direction: column; height: 100%; min-height: 0" blazor:elementReference="R">
+<div id="tm-layout-L" class="tm-layout tm-layout--desktop tm-layout--no-container " data-layout="desktop" data-pointer="fine" data-testid="tm-layout" style="display: flex; flex-direction: column; height: 100%; min-height: 0" blazor:elementReference="R">
 <div class="tm-gantt tm-gantt--desktop " data-layout="desktop">
 <div class="tm-gantt__toolbar">
 <div class="tm-toolbar tm-gantt__toolbar-bar" role="toolbar" aria-label="Gantt toolbar" blazor:elementReference="R">
@@ -22,19 +22,19 @@
 <span class="tm-toolbar-divider" role="separator" aria-hidden="true">
 </span>
 <div class="tm-toolbar-group " role="group" aria-label="Structure" data-tm-toolbar-group="T" data-tm-group="structure">
-<button type="button" class="tm-toolbar-btn tm-toolbar-btn--ghost tm-toolbar-btn--icon-only" title="Expand all" aria-label="Expand all" data-testid="gantt-expand-all" blazor:onclick="H">
+<button type="button" class="tm-toolbar-btn tm-toolbar-btn--ghost tm-toolbar-btn--icon-only" title="Expand all" aria-label="Expand all" data-testid="gantt-expand-all" blazor:onclick="H" blazor:elementReference="R">
 <svg class="tm-icon tm-icon-sm tm-icon-current" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
 <polyline points='7 6 12 11 17 6'/>
 <polyline points='7 13 12 18 17 13'/>
 </svg>
 </button>
-<button type="button" class="tm-toolbar-btn tm-toolbar-btn--ghost tm-toolbar-btn--icon-only" title="Collapse all" aria-label="Collapse all" data-testid="gantt-collapse-all" blazor:onclick="H">
+<button type="button" class="tm-toolbar-btn tm-toolbar-btn--ghost tm-toolbar-btn--icon-only" title="Collapse all" aria-label="Collapse all" data-testid="gantt-collapse-all" blazor:onclick="H" blazor:elementReference="R">
 <svg class="tm-icon tm-icon-sm tm-icon-current" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
 <polyline points='17 11 12 6 7 11'/>
 <polyline points='17 18 12 13 7 18'/>
 </svg>
 </button>
-<button type="button" class="tm-toolbar-btn tm-toolbar-btn--ghost tm-toolbar-btn--icon-only" title="Sort by date" aria-label="Sort by date" data-testid="gantt-cascade-sort" blazor:onclick="H">
+<button type="button" class="tm-toolbar-btn tm-toolbar-btn--ghost tm-toolbar-btn--icon-only" title="Sort by date" aria-label="Sort by date" data-testid="gantt-cascade-sort" blazor:onclick="H" blazor:elementReference="R">
 <svg class="tm-icon tm-icon-sm tm-icon-current" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
 <line x1='10' y1='6' x2='21' y2='6'/>
 <line x1='10' y1='12' x2='21' y2='12'/>
@@ -53,7 +53,7 @@
 <button type="button" class="tm-gantt__segment-btn tm-gantt__segment-btn--active" data-tm-toolbar-control aria-pressed="true" data-testid="gantt-view-week" blazor:onclick="H">Week</button>
 <button type="button" class="tm-gantt__segment-btn " data-tm-toolbar-control aria-pressed="false" data-testid="gantt-view-month" blazor:onclick="H">Month</button>
 </div>
-<button type="button" class="tm-toolbar-btn tm-toolbar-btn--ghost tm-toolbar-btn--icon-only" title="Fit to screen" aria-label="Fit to screen" data-testid="gantt-fit-to-screen" blazor:onclick="H">
+<button type="button" class="tm-toolbar-btn tm-toolbar-btn--ghost tm-toolbar-btn--icon-only" title="Fit to screen" aria-label="Fit to screen" data-testid="gantt-fit-to-screen" blazor:onclick="H" blazor:elementReference="R">
 <svg class="tm-icon tm-icon-sm tm-icon-current" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
 <polyline points='15 3 21 3 21 9'/>
 <polyline points='9 21 3 21 3 15'/>
@@ -61,7 +61,7 @@
 <line x1='3' y1='21' x2='10' y2='14'/>
 </svg>
 </button>
-<button type="button" class="tm-toolbar-btn tm-toolbar-btn--ghost tm-toolbar-btn--icon-only" title="Zoom out" aria-label="Zoom out" data-testid="gantt-zoom-out" blazor:onclick="H">
+<button type="button" class="tm-toolbar-btn tm-toolbar-btn--ghost tm-toolbar-btn--icon-only" title="Zoom out" aria-label="Zoom out" data-testid="gantt-zoom-out" blazor:onclick="H" blazor:elementReference="R">
 <svg class="tm-icon tm-icon-sm tm-icon-current" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
 <circle cx='11' cy='11' r='8'/>
 <line x1='21' y1='21' x2='16.65' y2='16.65'/>
@@ -72,7 +72,7 @@
 <input type="range" class="tm-gantt__zoom-slider" data-testid="gantt-zoom-slider" aria-label="Zoom level" min="50" max="200" step="25" value="100" blazor:onchange="H" />
 <span class="tm-gantt__zoom-level">100%</span>
 </div>
-<button type="button" class="tm-toolbar-btn tm-toolbar-btn--ghost tm-toolbar-btn--icon-only" title="Zoom in" aria-label="Zoom in" data-testid="gantt-zoom-in" blazor:onclick="H">
+<button type="button" class="tm-toolbar-btn tm-toolbar-btn--ghost tm-toolbar-btn--icon-only" title="Zoom in" aria-label="Zoom in" data-testid="gantt-zoom-in" blazor:onclick="H" blazor:elementReference="R">
 <svg class="tm-icon tm-icon-sm tm-icon-current" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
 <circle cx='11' cy='11' r='8'/>
 <line x1='21' y1='21' x2='16.65' y2='16.65'/>
@@ -84,18 +84,18 @@
 <span class="tm-toolbar-divider" role="separator" aria-hidden="true">
 </span>
 <div class="tm-toolbar-group " role="group" aria-label="Panels" data-tm-toolbar-group="T" data-tm-group="panels">
-<button type="button" class="tm-toolbar-btn tm-toolbar-btn--ghost tm-toolbar-btn--icon-only" title="Toggle task panel" aria-label="Toggle task panel" aria-pressed="false" data-testid="gantt-toggle-task-panel" blazor:onclick="H">
+<button type="button" class="tm-toolbar-btn tm-toolbar-btn--ghost tm-toolbar-btn--icon-only" title="Toggle task panel" aria-label="Toggle task panel" aria-pressed="false" data-testid="gantt-toggle-task-panel" blazor:onclick="H" blazor:elementReference="R">
 <svg class="tm-icon tm-icon-sm tm-icon-current" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
 <path d='M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7'/>
 <path d='M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z'/>
 </svg>
 </button>
-<button type="button" class="tm-toolbar-btn tm-toolbar-btn--ghost tm-toolbar-btn--icon-only" title="Filter" aria-label="Filter" aria-haspopup="true" aria-expanded="false" data-testid="gantt-filter-btn" blazor:onclick="H">
+<button type="button" class="tm-toolbar-btn tm-toolbar-btn--ghost tm-toolbar-btn--icon-only" title="Filter" aria-label="Filter" aria-haspopup="true" aria-expanded="false" data-testid="gantt-filter-btn" blazor:onclick="H" blazor:elementReference="R">
 <svg class="tm-icon tm-icon-sm tm-icon-current" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
 <polygon points='22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3'/>
 </svg>
 </button>
-<button type="button" class="tm-toolbar-btn tm-toolbar-btn--ghost tm-toolbar-btn--icon-only" title="History" aria-label="History" aria-haspopup="true" aria-expanded="false" data-testid="gantt-history-btn" blazor:onclick="H">
+<button type="button" class="tm-toolbar-btn tm-toolbar-btn--ghost tm-toolbar-btn--icon-only" title="History" aria-label="History" aria-haspopup="true" aria-expanded="false" data-testid="gantt-history-btn" blazor:onclick="H" blazor:elementReference="R">
 <svg class="tm-icon tm-icon-sm tm-icon-current" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
 <circle cx='12' cy='12' r='10'/>
 <polyline points='12 6 12 12 16 14'/>
@@ -105,14 +105,14 @@
 <span class="tm-toolbar-divider" role="separator" aria-hidden="true">
 </span>
 <div class="tm-toolbar-group " role="group" aria-label="Data" data-tm-toolbar-group="T" data-tm-group="data">
-<button type="button" class="tm-toolbar-btn tm-toolbar-btn--ghost tm-toolbar-btn--icon-only" title="Export" aria-label="Export" data-testid="gantt-export-btn" blazor:onclick="H">
+<button type="button" class="tm-toolbar-btn tm-toolbar-btn--ghost tm-toolbar-btn--icon-only" title="Export" aria-label="Export" data-testid="gantt-export-btn" blazor:onclick="H" blazor:elementReference="R">
 <svg class="tm-icon tm-icon-sm tm-icon-current" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
 <path d='M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4'/>
 <polyline points='7 10 12 15 17 10'/>
 <line x1='12' y1='15' x2='12' y2='3'/>
 </svg>
 </button>
-<button type="button" class="tm-toolbar-btn tm-toolbar-btn--ghost tm-toolbar-btn--icon-only" title="Import" aria-label="Import" data-testid="gantt-import-btn" blazor:onclick="H">
+<button type="button" class="tm-toolbar-btn tm-toolbar-btn--ghost tm-toolbar-btn--icon-only" title="Import" aria-label="Import" data-testid="gantt-import-btn" blazor:onclick="H" blazor:elementReference="R">
 <svg class="tm-icon tm-icon-sm tm-icon-current" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
 <path d='M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4'/>
 <polyline points='17 8 12 3 7 8'/>
@@ -133,7 +133,7 @@
 </button>
 </div>
 <div class="tm-gantt__view-settings-wrapper">
-<button type="button" class="tm-toolbar-btn tm-toolbar-btn--ghost tm-toolbar-btn--icon-only" title="View settings" aria-label="View settings" aria-haspopup="true" aria-expanded="false" data-testid="gantt-view-settings-btn" blazor:onclick="H">
+<button type="button" class="tm-toolbar-btn tm-toolbar-btn--ghost tm-toolbar-btn--icon-only" title="View settings" aria-label="View settings" aria-haspopup="true" aria-expanded="false" data-testid="gantt-view-settings-btn" blazor:onclick="H" blazor:elementReference="R">
 <svg class="tm-icon tm-icon-sm tm-icon-current" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
 <circle cx='12' cy='12' r='3'/>
 <path d='M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z'/>

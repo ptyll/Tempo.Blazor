@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Components;
+using Tempo.Blazor.Abstractions.Layout;
 using Tempo.Blazor.Components;
 using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.AspNetCore.Components.Web;
@@ -20,9 +21,16 @@ public partial class TmNotionPageSettingsMenu : TmComponentBase, IAsyncDisposabl
 
     [CascadingParameter] private NotionEditorContext Context { get; set; } = default!;
 
+    /// <summary>Page UI state: an open request from chrome (the mobile action bar) opens this menu.</summary>
+    [CascadingParameter(Name = "TmNotionPageUiState")]
+    private NotionPageUiState? UiState { get; set; }
+
     // ── Parameters ───────────────────────────────────────────────────────────
 
     [Parameter, EditorRequired] public INotionPage Page { get; set; } = default!;
+
+    /// <summary>Forced layout. Mobile presents the open menu as the core sheet.</summary>
+    [Parameter] public TmLayoutMode LayoutMode { get; set; } = TmLayoutMode.Auto;
 
     [Parameter] public bool ReadOnly { get; set; }
 
@@ -56,6 +64,7 @@ public partial class TmNotionPageSettingsMenu : TmComponentBase, IAsyncDisposabl
     // ── State ─────────────────────────────────────────────────────────────────
 
     private bool _open;
+    private ElementReference _triggerRef;
     private bool _exportOpen;
     private bool _importOpen;
     private bool _moveToOpen;
@@ -84,6 +93,23 @@ public partial class TmNotionPageSettingsMenu : TmComponentBase, IAsyncDisposabl
 
     // ── Toggle / open ──────────────────────────────────────────────────────────
 
+    protected override void OnInitialized()
+    {
+        if (UiState is not null)
+            UiState.SettingsMenuRequested += OnSettingsMenuRequested;
+    }
+
+    private Task OnSettingsMenuRequested()
+    {
+        if (ReadOnly && !Page.IsLocked) return Task.CompletedTask;
+        if (!_open)
+            _open = true;
+        _moveQuery = string.Empty;
+        _movePages = [];
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
     private async Task ToggleMenuAsync()
     {
         _open = !_open;
@@ -106,7 +132,13 @@ public partial class TmNotionPageSettingsMenu : TmComponentBase, IAsyncDisposabl
             await FocusMoveInputAsync();
     }
 
-    private void CloseMenu()
+    private Task CloseMenu()
+    {
+        CloseMenuState();
+        return Task.CompletedTask;
+    }
+
+    private void CloseMenuState()
     {
         _open          = false;
         _exportOpen    = false;
@@ -450,7 +482,7 @@ public partial class TmNotionPageSettingsMenu : TmComponentBase, IAsyncDisposabl
         if (Context.CommentProvider is null) return;
         try
         {
-            await Context.CommentProvider.MarkAllPageThreadsAsReadAsync(Page.Id.ToString("D"), "demo");
+            await Context.CommentProvider.MarkAllPageThreadsAsReadAsync(Page.Id.ToString("D"), Context.CurrentUserId);
             await ShowToastSuccessAsync(Loc["TmNotionPageSettingsMenu_MarkAllAsReadSuccess"]);
             CloseMenu();
         }
@@ -573,6 +605,8 @@ public partial class TmNotionPageSettingsMenu : TmComponentBase, IAsyncDisposabl
 
     public ValueTask DisposeAsync()
     {
+        if (UiState is not null)
+            UiState.SettingsMenuRequested -= OnSettingsMenuRequested;
         _moveDebounceCts?.Cancel();
         _moveDebounceCts?.Dispose();
         _toastCts.Cancel();

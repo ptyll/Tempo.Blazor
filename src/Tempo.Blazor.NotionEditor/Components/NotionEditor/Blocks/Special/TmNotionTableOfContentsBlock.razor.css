@@ -52,7 +52,7 @@
     align-items:   center;
     gap:           var(--tm-space-1-5);
     padding:       var(--tm-space-1) var(--tm-space-1-5);
-    padding-left:  calc(var(--tm-space-1-5) + var(--tm-toc-indent, 0px));
+    padding-left:  calc(var(--tm-space-1-5) + var(--tm-notion-indent-size, 0px));
     border-radius: var(--tm-radius-sm);
     background:    transparent;
     border:        none;

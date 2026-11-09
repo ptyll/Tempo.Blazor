@@ -3,6 +3,7 @@ using FluentAssertions;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using NSubstitute;
+using Tempo.Blazor.Abstractions.Layout;
 using Tempo.Blazor.Components.NotionEditor.Services;
 using Tempo.Blazor.Components.NotionEditor.UI;
 using Tempo.Blazor.Interfaces;
@@ -156,10 +157,53 @@ public class TmNotionTokenDropdownTests : LocalizationTestBase
 
         await cut.InvokeAsync(() => Task.CompletedTask);
 
-        var backdrop = cut.Find(".tm-notion-token-backdrop");
-        await backdrop.ClickAsync(new MouseEventArgs());
+        // The backdrop dismissal is the core overlay's OnDismissed → the shared floating menu's
+        // OnClose → the dropdown's OnClosed.
+        var menu = cut.FindComponent<TmNotionFloatingMenu>();
+        await cut.InvokeAsync(() => menu.Instance.GetType()
+            .GetMethod("OnDismissed", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!
+            .Invoke(menu.Instance, ["backdrop"]));
 
         closedFired.Should().BeTrue();
+    }
+
+    [Fact]
+    public void TokenDropdown_MobileSheet_KeepsTheCreateTokenFooter()
+    {
+        UseCustomLocalization(new Dictionary<string, string>
+        {
+            ["TmNotionTokenDropdown_Label"] = "Insert token",
+            ["TmNotionTokenDropdown_Title"] = "Insert token",
+            ["TmNotionTokenDropdown_CreateToken"] = "Create token",
+            ["TmNotionTokenDropdown_SearchPlaceholder"] = "Search tokens"
+        });
+        var ctx = BuildContext(ProviderWith(MakeToken("user.email", "User Email")));
+        var cut = Render<TmNotionTokenDropdown>(p => p
+            .Add(x => x.Visible, true)
+            .Add(x => x.LayoutMode, TmLayoutMode.Mobile)
+            .Add(x => x.OnCreateRequested, EventCallback.Factory.Create<string>(this, _ => { }))
+            .AddCascadingValue(ctx));
+
+        cut.Find(".tm-overlay-panel-sheet").Should().NotBeNull();
+        cut.FindAll(".tm-notion-token-dropdown__create-btn").Should().ContainSingle();
+        cut.Markup.Should().Contain("Insert token");
+    }
+
+    [Fact]
+    public void TokenDropdown_Desktop_HasExactlyOneCreateButton()
+    {
+        UseCustomLocalization(new Dictionary<string, string>
+        {
+            ["TmNotionTokenDropdown_CreateToken"] = "Create token"
+        });
+        var ctx = BuildContext(ProviderWith(MakeToken("user.email", "User Email")));
+        var cut = Render<TmNotionTokenDropdown>(p => p
+            .Add(x => x.Visible, true)
+            .Add(x => x.LayoutMode, TmLayoutMode.Desktop)
+            .Add(x => x.OnCreateRequested, EventCallback.Factory.Create<string>(this, _ => { }))
+            .AddCascadingValue(ctx));
+
+        cut.FindAll(".tm-notion-token-dropdown__create-btn").Should().ContainSingle();
     }
 
     // ── Stub ─────────────────────────────────────────────────────────────────

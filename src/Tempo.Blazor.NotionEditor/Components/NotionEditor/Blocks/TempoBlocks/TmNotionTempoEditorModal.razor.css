@@ -1,0 +1,41 @@
+/* The class rides the TmModal overlay, which carries the modal's scope — a scoped rule here
+   never matches it. The fill lives in the global sheet. The body is ours. */
+.tm-notion-tempo-modal__probe {
+    position: fixed;
+    visibility: hidden;
+    pointer-events: none;
+}
+
+.tm-notion-tempo-modal__body {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+    height: 100%;
+}
+
+.tm-notion-tempo-modal__loading,
+.tm-notion-tempo-modal__missing {
+    flex: 1 1 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: calc(var(--tm-space-16) * 4);
+    color: var(--tm-text-secondary);
+}
+
+.tm-notion-tempo-modal__footer {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: var(--tm-space-2);
+    width: 100%;
+}
+
+@media (pointer: coarse) {
+    .tm-notion-tempo-modal__footer ::deep .tm-btn,
+    .tm-notion-tempo-modal__maximize {
+        min-width: var(--tm-touch-target);
+        min-height: var(--tm-touch-target);
+    }
+}

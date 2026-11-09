@@ -10,12 +10,15 @@
          data-page-id="@Page.Id"
          @ref="_pageRef">
 
+<CascadingValue Value="UiState" Name="TmNotionPageUiState" IsFixed="true">
+
     @* ── Page settings button (top-right corner) ────────────────────────────── *@
     @if (!ReadOnly || Page.IsLocked)
     {
         <div class="tm-notion-page__settings-btn">
             <TmNotionPageSettingsMenu Page="Page"
                                       ReadOnly="ReadOnly"
+                                      LayoutMode="MenuLayout"
                                       OnPageUpdated="OnPageSettingsUpdated"
                                       OnPageDeleted="HandlePageDeletedAsync"
                                       OnPageHistoryRequested="HandlePageHistoryRequestedAsync"
@@ -31,6 +34,7 @@
     @* ── Page header (cover + icon + title + description) ──────────────────── *@
     <TmNotionPageHeader Page="Page"
                         ReadOnly="ReadOnly"
+                        ShowMeta="ShowMeta"
                         ShowRestrictedIndicator="@(EffectivePermission is { Mode: not PageRestrictionMode.Open })"
                         UnresolvedCommentCount="_pageUnresolvedCommentCount"
                         OnPageUpdated="OnPageUpdated"
@@ -65,18 +69,20 @@
                             <span>@_aggregateConflictError</span>
                         }
                     </span>
-                    <button type="button"
-                            class="tm-notion-load-error__retry"
-                            disabled="@_resolvingAggregateConflict"
-                            @onclick="ReloadAggregateConflictAsync">
-                        @Loc["TmNotionTableBlock_ConflictReload"]
-                    </button>
-                    <button type="button"
-                            class="tm-notion-load-error__retry"
-                            disabled="@_resolvingAggregateConflict"
-                            @onclick="ReapplyAggregateConflictAsync">
-                        @Loc["TmNotionTableBlock_ConflictReapply"]
-                    </button>
+                    <span class="tm-notion-page__aggregate-actions">
+                        <button type="button"
+                                class="tm-notion-load-error__retry tm-notion-load-error__retry--primary"
+                                disabled="@_resolvingAggregateConflict"
+                                @onclick="ReloadAggregateConflictAsync">
+                            @Loc["TmNotionTableBlock_ConflictReload"]
+                        </button>
+                        <button type="button"
+                                class="tm-notion-load-error__retry"
+                                disabled="@_resolvingAggregateConflict"
+                                @onclick="ReapplyAggregateConflictAsync">
+                            @Loc["TmNotionTableBlock_ConflictReapply"]
+                        </button>
+                    </span>
                 </div>
             }
 
@@ -152,8 +158,8 @@
 
         <TmNotionPageReactions PageId="Page.Id" />
 
-        @* ── Page comments panel ──────────────────────────────────────────── *@
-        @if (Context.CommentProvider is not null)
+        @* ── Page comments panel (Inline presentation) ───────────────────────── *@
+        @if (Context.CommentProvider is not null && Context.PageCommentsPresentation == NotionPageCommentsPresentation.Inline)
         {
             <section class="tm-notion-page__comments"
                      aria-label="@Loc["TmNotionPage_CommentsLabel"]">
@@ -166,12 +172,40 @@
 
     </div>
 
+</CascadingValue>
+
+@* ── Page comments dialog (Dialog presentation; the modal owns the scroll) ── *@
+@if (Context.CommentProvider is not null
+     && Context.PageCommentsPresentation == NotionPageCommentsPresentation.Dialog
+     && _pageCommentDialogOpen)
+{
+    <TmModal Show="true"
+             OnClose="HandlePageCommentDialogClosedAsync"
+             Title="@Loc["TmNotionPageComment_DialogTitle"]"
+             Size="ModalSize.Large"
+             MobilePresentation="MobilePresentation.Auto">
+        <ChildContent>
+            <TmNotionPageCommentPanel @ref="_pageCommentPanel"
+                                      PageId="@Page.Id.ToString()"
+                                      Mode="TmNotionPageCommentPanelMode.Embedded"
+                                      OnCountChanged="LoadPageUnresolvedCommentCountAsync" />
+        </ChildContent>
+    </TmModal>
+}
+
+<TmDialog Show="_pageCommentDiscardConfirm"
+          Type="DialogType.Confirm"
+          Title="@Loc["TmNavigationGuard_ConfirmTitle"]"
+          Message="@Loc["TmNavigationGuard_ConfirmMessage"]"
+          OnResult="HandlePageCommentDiscardResultAsync" />
+
 </article>
 
 @* ── Slash menu (portal — rendered outside the article scroll so position:fixed works) *@
 <TmNotionSlashMenu Visible="_slashMenuVisible"
                    Top="_slashMenuTop"
                    Left="_slashMenuLeft"
+                   LayoutMode="MenuLayout"
                    OnItemSelected="HandleSlashItemSelectedAsync"
                    OnSlashItemSelected="HandleSlashMenuItemSelectedAsync"
                    OnAISelected="HandleSlashAISelectedAsync"
@@ -180,6 +214,7 @@
 <TmNotionStatusPicker Visible="_statusPickerVisible"
                       Top="_statusPickerTop"
                       Left="_statusPickerLeft"
+                      LayoutMode="MenuLayout"
                       InitialLabel="@_statusInitialLabel"
                       InitialColor="_statusInitialColor"
                       OnInserted="HandleStatusInsertedAsync"
@@ -189,6 +224,7 @@
 <TmNotionMentionMenu Visible="_mentionMenuVisible"
                      Top="_mentionMenuTop"
                      Left="_mentionMenuLeft"
+                     LayoutMode="MenuLayout"
                      PagesOnly="_mentionPagesOnly"
                      OnItemSelected="HandleMentionItemSelectedAsync"
                      OnClosed="HandleMentionMenuClosedAsync" />
@@ -199,6 +235,7 @@
     <TmNotionTokenDropdown Visible="_tokenDropdownVisible"
                            Top="_tokenDropdownTop"
                            Left="_tokenDropdownLeft"
+                           LayoutMode="MenuLayout"
                            CurrentKey="_tokenCurrentKey"
                            OnItemSelected="HandleTokenItemSelectedAsync"
                            OnClosed="HandleTokenDropdownClosedAsync"
@@ -207,29 +244,37 @@
                                : default)" />
 }
 
-@* ── Page history panel (portal — position:fixed) *@
-<TmNotionPageHistory Visible="_historyVisible"
-                     PageId="@Page.Id.ToString("D")"
-                     OnClosed="() => { _historyVisible = false; StateHasChanged(); }"
-                     OnRestored="HandleHistoryRestoredAsync" />
-
 @* ── Page info panel (portal — position:fixed) *@
 <TmNotionPageInfoPanel Page="Page"
                        Blocks="_blocks"
                        Visible="_pageInfoVisible"
+                       LayoutMode="MenuLayout"
                        VisibleChanged="HandlePageInfoVisibleChangedAsync" />
 
-<TmNotionShareDialog PageId="Page.Id"
-                     Provider="Context.PublicShareProvider"
-                     Visible="_shareVisible"
-                     VisibleChanged="HandleShareVisibleChangedAsync" />
+@* A hosted page opens these through NotionEditorContext.OpenPageDialog: the editor renders them
+   outside the shell canvas, which remounts on a band flip and would close a dialog inside it.
+   A standalone page (no callback) keeps rendering them here. *@
+@if (Context.OpenPageDialog is null)
+{
+    <TmNotionPageHistory Visible="_historyVisible"
+                         PageId="@Page.Id.ToString("D")"
+                         LayoutMode="MenuLayout"
+                         OnClosed="() => { _historyVisible = false; StateHasChanged(); }"
+                         OnRestored="HandleHistoryRestoredAsync" />
 
-<TmNotionRestrictionsDialog PageId="Page.Id"
-                            Provider="Context.PermissionProvider"
-                            EffectivePermission="EffectivePermission"
-                            Visible="_restrictionsVisible"
-                            VisibleChanged="HandleRestrictionsVisibleChangedAsync"
-                            OnSaved="HandleRestrictionsSavedAsync" />
+    <TmNotionShareDialog PageId="Page.Id"
+                         Provider="Context.PublicShareProvider"
+                         Visible="_shareVisible"
+                         LayoutMode="MenuLayout"
+                         VisibleChanged="HandleShareVisibleChangedAsync" />
+
+    <TmNotionRestrictionsDialog PageId="Page.Id"
+                                Provider="Context.PermissionProvider"
+                                EffectivePermission="EffectivePermission"
+                                Visible="_restrictionsVisible"
+                                VisibleChanged="HandleRestrictionsVisibleChangedAsync"
+                                OnSaved="HandleRestrictionsSavedAsync" />
+}
 
 @* ── Inline formatting toolbar (portal — position:fixed, outside scroll) *@
 <TmNotionInlineToolbar Visible="_toolbarVisible"
@@ -253,6 +298,7 @@
 <TmNotionAiMenu Visible="_aiMenuVisible"
                 Top="_aiMenuTop"
                 Left="_aiMenuLeft"
+                LayoutMode="MenuLayout"
                 Panel="_aiMenuPanel"
                 InitialMode="_aiMenuMode"
                 PageId="@Page.Id.ToString("D")"
@@ -267,6 +313,7 @@
                            Top="@_blockCommentTop"
                            Left="@_blockCommentLeft"
                            StartInNewThreadMode="@_blockCommentStartInNewThreadMode"
+                           Presentation="@(Context.CommentPresentation)"
                            OnClosed="HandleBlockCommentClosedAsync"
                            OnCountChanged="async _ => await HandleBlockCommentCountChangedAsync(_blockCommentBlockId)" />
 
@@ -279,6 +326,7 @@
                           HighlightedText="@_textCommentHighlight"
                           Top="@_textCommentTop"
                           Left="@_textCommentLeft"
+                          Presentation="@(Context.CommentPresentation)"
                           OnClosed="HandleTextCommentClosedAsync"
                           OnResolved="HandleTextCommentResolvedAsync"
                           OnCountChanged="_ => StateHasChanged()" />

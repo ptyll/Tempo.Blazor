@@ -357,6 +357,9 @@ window.tmNotionEditor = (function () {
     }
 
     function destroyBlock(element) {
+        // The resize watcher is keyed by the element, not by the block map: a preview toggle
+        // drops the textarea before destroyBlock runs, and an early return here would leak it.
+        _unwatchCodeResize(element);
         if (!element || !_blocks.has(element)) return;
         const s = _blocks.get(element);
         _offAll(s.listeners);
@@ -468,6 +471,10 @@ window.tmNotionEditor = (function () {
 
         const onKeyDown = (event) => {
             if (event.key !== 'Escape') return;
+            // The editor root is recreated when the shell crosses a layout breakpoint. A handler
+            // whose element was detached must not throw: it runs in the capture phase, and an
+            // exception there swallows the key before the open dialog's own Escape listener.
+            if (!element.isConnected) return;
             const mode = element.getAttribute('data-view-mode');
             if (mode !== 'Reading' && mode !== 'Presentation') return;
 
@@ -569,6 +576,21 @@ window.tmNotionEditor = (function () {
     // APG menu-button pattern: when a submenu trigger opens its panel (ArrowRight,
     // Enter), focus lands on the panel's first item — an aria-expanded flip alone
     // leaves the user outside the submenu they just opened.
+    // Column count is the rendered first row (offsetTop), never a fixed 8. A grid with no
+    // layout (every cell at the same offset) reports its full cell count — one row.
+    function emojiGridColumns(grid) {
+        if (!grid || !grid.querySelectorAll) return 0;
+        const cells = grid.querySelectorAll(':scope > .tm-notion-emoji-picker__emoji');
+        if (!cells.length) return 0;
+        const top = cells[0].offsetTop;
+        let count = 0;
+        for (const cell of cells) {
+            if (cell.offsetTop !== top) break;
+            count++;
+        }
+        return count;
+    }
+
     function focusFirstMenuItem(panel) {
         if (!panel) return;
         const first = panel.querySelector('button:not([disabled])');
@@ -2116,13 +2138,10 @@ window.tmNotionEditor = (function () {
     function registerShortcuts(dotNetRef) {
         unregisterShortcuts();
         const handler = event => {
-            if ((event.key !== '?' && event.key !== 'Escape') || _isEditableShortcutTarget(event.target)) return;
-            if (event.key === '?') {
-                event.preventDefault();
-                dotNetRef.invokeMethodAsync('OnNotionShortcutKey', '?').catch(console.error);
-                return;
-            }
-            dotNetRef.invokeMethodAsync('OnNotionShortcutKey', 'Escape').catch(console.error);
+            // Escape belongs to the open dialog (TmModal). A second shortcut close fired OnClosed twice.
+            if (event.key !== '?' || _isEditableShortcutTarget(event.target)) return;
+            event.preventDefault();
+            dotNetRef.invokeMethodAsync('OnNotionShortcutKey', '?').catch(console.error);
         };
         document.addEventListener('keydown', handler, true);
         document._tmNotionShortcutsHandler = handler;
@@ -2621,82 +2640,6 @@ window.tmNotionEditor = (function () {
         element.style.left = `${nextLeft}px`;
     }
 
-    function adjustSlashMenuPosition(menuEl) {
-        if (!menuEl) return;
-
-        const vw        = window.innerWidth;
-        const vh        = window.innerHeight;
-        const margin    = 8;
-        const anchorGap = 28;
-
-        menuEl.style.maxHeight = '';
-
-        const initialRect = menuEl.getBoundingClientRect();
-        const anchorTop   = Number.parseFloat(menuEl.style.top) || initialRect.top || margin;
-        let top           = anchorTop;
-        let left          = Number.parseFloat(menuEl.style.left) || initialRect.left || margin;
-        const height      = Math.min(initialRect.height || 0, vh - (margin * 2));
-        const below       = Math.max(96, vh - anchorTop - margin);
-        const above       = Math.max(96, anchorTop - margin - anchorGap);
-        let maxHeight     = Math.min(height, below);
-
-        if (anchorTop + height > vh - margin && above > below) {
-            maxHeight = Math.min(height, above);
-            top = Math.max(margin, anchorTop - maxHeight - anchorGap);
-        } else if (anchorTop + height > vh - margin) {
-            top = Math.max(margin, vh - margin - maxHeight);
-        }
-
-        if (initialRect.right > vw - margin) {
-            left = vw - initialRect.width - margin;
-        }
-
-        top = Math.max(margin, top);
-        left = Math.max(margin, left);
-        maxHeight = Math.max(96, Math.min(maxHeight, vh - top - margin));
-
-        const listEl = menuEl.querySelector('.tm-nmm__list, .tm-notion-token-dropdown__list');
-        if (listEl) {
-            menuEl.style.maxHeight = `${maxHeight}px`;
-            menuEl.style.setProperty('--tm-floating-menu-max-height', `${maxHeight}px`);
-
-            const chromeHeight = Array.from(menuEl.children)
-                .filter(child => child !== listEl)
-                .reduce((total, child) => total + child.getBoundingClientRect().height, 0);
-            const listMaxHeight = Math.max(64, maxHeight - chromeHeight);
-            listEl.style.maxHeight = `${listMaxHeight}px`;
-            listEl.style.overflowY = 'auto';
-        } else {
-            menuEl.style.maxHeight = '';
-            menuEl.style.removeProperty('--tm-floating-menu-max-height');
-        }
-
-        menuEl.style.top = `${top}px`;
-        menuEl.style.left = `${left}px`;
-        menuEl.style.setProperty('--tm-nmm-anchor-top', `${top}px`);
-    }
-
-    // 47.1
-    function adjustTypeSwitcherPosition(panelEl) {
-        if (!panelEl) return;
-        const rect   = panelEl.getBoundingClientRect();
-        const vw     = window.innerWidth;
-        const vh     = window.innerHeight;
-        const margin = 8;
-
-        let top  = parseFloat(panelEl.style.top)  || 0;
-        let left = parseFloat(panelEl.style.left) || 0;
-
-        if (rect.bottom > vh - margin) {
-            top = top - rect.height - 4;
-            panelEl.style.top = Math.max(margin, top) + 'px';
-        }
-        if (rect.right > vw - margin) {
-            left = vw - rect.width - margin;
-            panelEl.style.left = Math.max(margin, left) + 'px';
-        }
-    }
-
     // 46.1
     function getRecentEmojis() {
         try {
@@ -2711,47 +2654,6 @@ window.tmNotionEditor = (function () {
             recent.unshift(emoji);
             localStorage.setItem('tm-notion-emoji-recent', JSON.stringify(recent.slice(0, 16)));
         } catch { }
-    }
-
-    function adjustEmojiPickerPosition(pickerEl) {
-        if (!pickerEl) return;
-        const rect   = pickerEl.getBoundingClientRect();
-        const vw     = window.innerWidth;
-        const vh     = window.innerHeight;
-        const margin = 8;
-
-        let top  = parseFloat(pickerEl.style.top)  || 0;
-        let left = parseFloat(pickerEl.style.left) || 0;
-
-        if (rect.bottom > vh - margin) {
-            top = top - rect.height - 4;
-            pickerEl.style.top = Math.max(margin, top) + 'px';
-        }
-        if (rect.right > vw - margin) {
-            left = vw - rect.width - margin;
-            pickerEl.style.left = Math.max(margin, left) + 'px';
-        }
-    }
-
-    // 45.1
-    function adjustColorPickerPosition(pickerEl) {
-        if (!pickerEl) return;
-        const rect   = pickerEl.getBoundingClientRect();
-        const vw     = window.innerWidth;
-        const vh     = window.innerHeight;
-        const margin = 8;
-
-        let top  = parseFloat(pickerEl.style.top)  || 0;
-        let left = parseFloat(pickerEl.style.left) || 0;
-
-        if (rect.bottom > vh - margin) {
-            top = top - rect.height - 4;
-            pickerEl.style.top = Math.max(margin, top) + 'px';
-        }
-        if (rect.right > vw - margin) {
-            left = vw - rect.width - margin;
-            pickerEl.style.left = Math.max(margin, left) + 'px';
-        }
     }
 
     function scrollSlashItemIntoView(listEl, flatIndex) {
@@ -3227,7 +3129,52 @@ window.tmNotionEditor = (function () {
 
     function _autoResizeTextarea(ta) {
         ta.style.height = 'auto';
-        ta.style.height = ta.scrollHeight + 'px';
+        // scrollHeight excludes a horizontal scrollbar (overflow-x: auto on long lines);
+        // add the box's non-content height so the scrollbar never covers the last line.
+        const chrome = ta.offsetHeight - ta.clientHeight;
+        ta.style.height = (ta.scrollHeight + Math.max(0, chrome)) + 'px';
+        _syncCodeHighlight(ta);
+    }
+
+    function _syncCodeHighlight(ta) {
+        const pre = ta.parentElement?.querySelector(':scope > .tm-notion-code-block__highlight');
+        if (!pre) return;
+        pre.scrollTop = ta.scrollTop;
+        pre.scrollLeft = ta.scrollLeft;
+    }
+
+    const _codeResizeObservers = new WeakMap();
+
+    function _watchCodeResize(textarea) {
+        if (_codeResizeObservers.has(textarea)) return;
+        // Watch the editor box, not the textarea: the textarea's own height is what the
+        // callback writes, so observing it would loop. Only a width change can reveal a
+        // horizontal scrollbar, so a height-only entry is ignored.
+        const host = textarea.parentElement?.classList.contains('tm-notion-code-block__editor')
+            ? textarea.parentElement
+            : textarea;
+        let lastWidth = host.clientWidth;
+        const onResize = (entries) => {
+            const width = entries?.[0]?.contentRect?.width ?? host.clientWidth;
+            if (width === lastWidth) return;
+            lastWidth = width;
+            _autoResizeTextarea(textarea);
+        };
+        const observer = typeof ResizeObserver === 'function'
+            ? new ResizeObserver(onResize)
+            : null;
+        observer?.observe(host);
+        const onScroll = () => _syncCodeHighlight(textarea);
+        textarea.addEventListener('scroll', onScroll);
+        _codeResizeObservers.set(textarea, () => {
+            observer?.disconnect();
+            textarea.removeEventListener('scroll', onScroll);
+            _codeResizeObservers.delete(textarea);
+        });
+    }
+
+    function _unwatchCodeResize(textarea) {
+        _codeResizeObservers.get(textarea)?.();
     }
 
     function initCodeKeyboardHandler(textarea, dotNetRef) {
@@ -3273,6 +3220,7 @@ window.tmNotionEditor = (function () {
             _on(textarea, 'keydown', onKeyDown),
             _on(textarea, 'input',   onInput)
         );
+        _watchCodeResize(textarea);
     }
 
     function getCode(textarea) {
@@ -3282,6 +3230,7 @@ window.tmNotionEditor = (function () {
     function setCode(textarea, code) {
         if (!textarea) return;
         textarea.value = code ?? '';
+        _watchCodeResize(textarea);
         _autoResizeTextarea(textarea);
     }
 
@@ -3468,17 +3417,29 @@ window.tmNotionEditor = (function () {
         setTimeout(() => block.classList.remove('tm-notion-block--highlight-flash'), 1200);
     }
 
-    function isNarrowViewport(maxWidth) {
-        const width = Number(maxWidth) || 1024;
-        return window.matchMedia(`(max-width: ${width}px)`).matches;
-    }
+    // ── Nested Escape ownership (phase 4 code review) ──────────────────────────
+    // A database cell editor (.tm-dbc--editing) is a plain fixed popup, NOT a
+    // TmOverlayPanel — overlay.js never tracks it, so its Escape reaches the
+    // document-capture focus trap of the enclosing core dialog (the record
+    // detail). The trap's .NET invocation is delivered after the cell's Blazor
+    // cancel handler ran (which already flipped CloseOnEscape back to true), so
+    // one physical Escape would cancel the cell AND close the dialog. Mark the
+    // key consumed in the window-capture phase — tm-focus-trap skips an Escape
+    // carrying tmEscapeHandled, exactly like an overlay.js-dismissed panel.
+    // (The slash / mention / token menus are TmOverlayPanels — overlay.js
+    // already consumes their Escape; this covers the remaining non-overlay
+    // editing surfaces.)
+    window.addEventListener('keydown', function (e) {
+        if (e.key !== 'Escape' || !e.target || !e.target.closest) return;
+        if (e.target.closest('.tm-dbc--editing')) e.tmEscapeHandled = true;
+    }, true);
 
     // ── Public API ─────────────────────────────────────────────────────────────
     return {
         // 26.1
         initBlock, destroyBlock, getHtml, getEditableHtml, getCaretOffset, setCaretOffset, setHtml,
         focus, focusAtEnd, focusAtStart, focusAtOffset,
-        initFocusTrap, destroyFocusTrap, positionContextMenu, focusFirstMenuItem, focusMenuInput,
+        initFocusTrap, destroyFocusTrap, positionContextMenu, emojiGridColumns, focusFirstMenuItem, focusMenuInput,
         initEditorKeyHandler, destroyEditorKeyHandler,
         // 26.2
         getSelectionRange, getSelectionRect, applyFormat,
@@ -3506,7 +3467,7 @@ window.tmNotionEditor = (function () {
         initColumnResize, destroyColumnResize,
         // 26.9
         scrollToBlock, initSmoothScrollSpy, destroyScrollSpy,
-        scrollToFirstUnresolvedComment, isNarrowViewport,
+        scrollToFirstUnresolvedComment,
         // 91.1
         updateCollabCursors, clearCollabCursors,
         registerShortcuts, unregisterShortcuts,
@@ -3526,7 +3487,7 @@ window.tmNotionEditor = (function () {
         replaceActiveStatusChip, cancelStatusEdit,
         insertMentionChip, cancelMentionTrigger,
         insertNotionToken, replaceNotionToken, cancelTokenTrigger, cancelChipEdit,
-        adjustSlashMenuPosition, scrollSlashItemIntoView,
+        scrollSlashItemIntoView,
         // 44.1
         initSelectionWatcher, destroySelectionWatcher,
         hasSelectionWatcher, notifySelectionChanged, forceInlineToolbarForSelection,
@@ -3535,11 +3496,8 @@ window.tmNotionEditor = (function () {
         insertInlineMath, adjustInlineToolbarPosition,
         getSelectedText, replaceSavedSelectionWithHtml,
         // 45.1
-        adjustColorPickerPosition,
         // 46.1
-        getRecentEmojis, addRecentEmoji, adjustEmojiPickerPosition,
-        // 47.1
-        adjustTypeSwitcherPosition,
+        getRecentEmojis, addRecentEmoji,
         // 80.1
         initSidebarResize, destroySidebarResize,
         // 87.1
@@ -3649,14 +3607,52 @@ window.tmNotionPdf = (function () {
 
 window.tmDb = window.tmDb || {};
 
+// tmNotionDb — the surface the database block interops against directly. The coarse-pointer
+// probe resolves the touch layout; it must never throw (headless browsers, SSR, no matchMedia).
+window.tmNotionDb = window.tmNotionDb || {};
+window.tmNotionDb.isCoarsePointer = function () {
+    try {
+        return typeof window !== 'undefined'
+            && typeof window.matchMedia === 'function'
+            && window.matchMedia('(pointer: coarse)').matches === true;
+    } catch (_) {
+        return false;
+    }
+};
+
+// Column resize lives in its own module so it can import the shared pointer-drag helper.
+// Capture the script directory once, while document.currentScript is still this classic script
+// (a later call sees null). Same pattern as tmNotionPdf._scriptDir.
+const _tmDbScriptDir = (() => {
+    const src = document.currentScript?.src ?? '';
+    return src ? src.substring(0, src.lastIndexOf('/') + 1) : '';
+})();
+
+let _columnResizeModule = null;
+
+function loadColumnResizeModule() {
+    if (_columnResizeModule) return _columnResizeModule;
+    const specifier = _tmDbScriptDir
+        ? _tmDbScriptDir + 'notion-db-column-resize.js'
+        : new URL('_content/Tempo.Blazor.NotionEditor/js/notion-db-column-resize.js', document.baseURI).href;
+    _columnResizeModule = import(specifier).catch((err) => {
+        _columnResizeModule = null;
+        console.error('tmDb.attachColumnResize: notion-db-column-resize.js failed to load', err);
+        throw err;
+    });
+    return _columnResizeModule;
+}
+
+window.tmDb.attachColumnResize = function (root, dotNetRef) {
+    return loadColumnResizeModule().then((mod) => mod.attachColumnResize(root, dotNetRef));
+};
+
 // Board drag-and-drop: fully JS-driven. Blazor drag events are async (WASM interop)
 // so preventDefault/setData never fire in time. All drag logic lives here; Blazor
 // is called back via [JSInvokable] only for state mutations.
 window.tmDb.initBoardDrag = function (element, dotNetRef) {
     if (!element || element._tmBoardDragInit) return;
     element._tmBoardDragInit = true;
-    console.log('[tmDb] initBoardDrag called, element:', element, 'dotNetRef:', dotNetRef);
-
     let isDragging = false;
     let lastEnteredCol = null;
     let draggedRecordId = '';
@@ -3665,7 +3661,6 @@ window.tmDb.initBoardDrag = function (element, dotNetRef) {
 
     element.addEventListener('dragstart', function (e) {
         const card = e.target.closest('[data-record-id]');
-        console.log('[tmDb] dragstart fired, target:', e.target, 'card found:', card);
         if (!card) return;
         isDragging = true;
         lastEnteredCol = null;
@@ -3674,7 +3669,6 @@ window.tmDb.initBoardDrag = function (element, dotNetRef) {
         dropHandled = false;
         e.dataTransfer.effectAllowed = 'move';
         e.dataTransfer.setData('text/plain', draggedRecordId);
-        console.log('[tmDb] dragstart: recordId=' + draggedRecordId + ' fromGroup=' + draggedFromGroup);
         dotNetRef.invokeMethodAsync('JsDragStart', draggedRecordId, draggedFromGroup);
     }, true);
 
@@ -3690,24 +3684,20 @@ window.tmDb.initBoardDrag = function (element, dotNetRef) {
         if (col && col !== lastEnteredCol) {
             lastEnteredCol = col;
             e.preventDefault();
-            console.log('[tmDb] dragenter col: groupValue=' + col.dataset.groupValue);
             dotNetRef.invokeMethodAsync('JsDragEnter', col.dataset.groupValue);
         }
     }, true);
 
     element.addEventListener('drop', function (e) {
         const col = e.target.closest('[data-group-value]');
-        console.log('[tmDb] drop fired, isDragging=' + isDragging + ', col:', col);
         if (!isDragging) return;
         isDragging = false;
         lastEnteredCol = null;
         dropHandled = true;
         e.preventDefault();
         if (col) {
-            console.log('[tmDb] drop: groupValue=' + col.dataset.groupValue);
             dotNetRef.invokeMethodAsync('JsDrop', col.dataset.groupValue, draggedRecordId, draggedFromGroup);
         } else {
-            console.log('[tmDb] drop: outside column, calling JsDragEnd');
             draggedRecordId = '';
             draggedFromGroup = '';
             dropHandled = false;
@@ -3716,7 +3706,6 @@ window.tmDb.initBoardDrag = function (element, dotNetRef) {
     }, true);
 
     element.addEventListener('dragend', function (e) {
-        console.log('[tmDb] dragend fired, isDragging was=' + isDragging);
         isDragging = false;
         lastEnteredCol = null;
         draggedRecordId = '';

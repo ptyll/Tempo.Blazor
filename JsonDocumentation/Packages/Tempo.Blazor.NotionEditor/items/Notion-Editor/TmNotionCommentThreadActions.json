@@ -1,0 +1,114 @@
+{
+  "itemName": "TmNotionCommentThreadActions",
+  "kind": "Component",
+  "category": "Notion Editor",
+  "description": "TmNotionCommentThreadActions Blazor component in the Notion Editor category.",
+  "packageId": "Tempo.Blazor.NotionEditor",
+  "namespace": "Tempo.Blazor.Components.NotionEditor",
+  "sourcePath": "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/UI/TmNotionCommentThreadActions.razor",
+  "documentationStatus": "generated",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.NotionEditor"
+  ],
+  "parameters": [
+    {
+      "name": "ActionsLabel",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Accessible name of the actions group."
+    },
+    {
+      "name": "CanDelete",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Shows Delete."
+    },
+    {
+      "name": "CanQuote",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Shows Quote in the menu."
+    },
+    {
+      "name": "CanEdit",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Shows Edit."
+    },
+    {
+      "name": "ClassPrefix",
+      "type": "string",
+      "isRequired": true,
+      "default": "\"tm-nbcp\"",
+      "description": "CSS class prefix of the owning panel.",
+      "editorRequired": true
+    },
+    {
+      "name": "DeleteText",
+      "type": "string",
+      "isRequired": false,
+      "default": "\"\"",
+      "description": "Delete button label."
+    },
+    {
+      "name": "EditText",
+      "type": "string",
+      "isRequired": false,
+      "default": "\"\"",
+      "description": "Edit button label."
+    },
+    {
+      "name": "MoreText",
+      "type": "string",
+      "isRequired": false,
+      "default": "\"\"",
+      "description": "⋯ menu label."
+    },
+    {
+      "name": "OnDelete",
+      "type": "EventCallback",
+      "isRequired": false,
+      "description": "Raised by Delete. The parent owns the confirm dialog."
+    },
+    {
+      "name": "OnEdit",
+      "type": "EventCallback",
+      "isRequired": false,
+      "description": "Raised by Edit."
+    },
+    {
+      "name": "OnQuote",
+      "type": "EventCallback",
+      "isRequired": false,
+      "description": "Raised by Quote."
+    },
+    {
+      "name": "OnReply",
+      "type": "EventCallback",
+      "isRequired": false,
+      "description": "Raised by Reply."
+    },
+    {
+      "name": "QuoteText",
+      "type": "string",
+      "isRequired": false,
+      "default": "\"\"",
+      "description": "Quote menu item label."
+    },
+    {
+      "name": "ReplyText",
+      "type": "string",
+      "isRequired": false,
+      "default": "\"\"",
+      "description": "Reply button label. Reply is always visible."
+    },
+    {
+      "name": "ShowReply",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "Shows the inline Reply action. A panel with a thread-level reply trigger hides it on the last entry so the two never sit next to each other."
+    }
+  ],
+  "subcategory": "UI"
+}

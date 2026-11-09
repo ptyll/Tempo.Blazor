@@ -6,10 +6,10 @@
     display: flex;
     flex-direction: column;
     width: 280px;
-    background: var(--tm-surface, #fff);
-    border: 1px solid var(--tm-border, #e5e5e5);
+    background: var(--tm-bg-surface);
+    border: 1px solid var(--tm-border-color);
     border-radius: 8px;
-    box-shadow: 0 8px 24px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.06);
+    box-shadow: var(--tm-shadow-popover);
     overflow: hidden;
     max-height: 400px;
     animation: tm-dbtm-in 0.12s ease;
@@ -27,7 +27,7 @@
     align-items: center;
     justify-content: space-between;
     padding: 10px 12px 8px;
-    border-bottom: 1px solid var(--tm-border, #e5e5e5);
+    border-bottom: 1px solid var(--tm-border-color);
     flex-shrink: 0;
 }
 
@@ -36,7 +36,7 @@
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.06em;
-    color: var(--tm-text-secondary, #777);
+    color: var(--tm-text-secondary);
 }
 
 .tm-dbtm__close-btn {
@@ -48,14 +48,14 @@
     border: none;
     border-radius: 4px;
     background: transparent;
-    color: var(--tm-text-secondary, #999);
+    color: var(--tm-text-secondary);
     cursor: pointer;
     transition: background 0.1s, color 0.1s;
 }
 
 .tm-dbtm__close-btn:hover {
-    background: var(--tm-hover, rgba(0,0,0,0.05));
-    color: var(--tm-text, #1a1a1a);
+    background: var(--tm-color-surface-hover);
+    color: var(--tm-text-primary);
 }
 
 /* ── New button ─────────────────────────────────── */
@@ -68,19 +68,19 @@
     padding: 8px 12px;
     border: none;
     background: transparent;
-    color: var(--tm-text-secondary, #555);
+    color: var(--tm-text-secondary);
     font-size: 13px;
     font-weight: 500;
     cursor: pointer;
     text-align: left;
-    border-bottom: 1px solid var(--tm-border, #e5e5e5);
+    border-bottom: 1px solid var(--tm-border-color);
     transition: background 0.1s;
     flex-shrink: 0;
 }
 
 .tm-dbtm__new-btn:hover {
-    background: var(--tm-hover, rgba(0,0,0,0.04));
-    color: var(--tm-text, #1a1a1a);
+    background: var(--tm-color-surface-hover);
+    color: var(--tm-text-primary);
 }
 
 /* ── Loading ─────────────────────────────────────── */
@@ -98,7 +98,7 @@
     margin: 0;
     padding: 16px 12px;
     font-size: 13px;
-    color: var(--tm-text-tertiary, #aaa);
+    color: var(--tm-text-tertiary);
     text-align: center;
 }
 
@@ -124,9 +124,22 @@
     position: relative;
 }
 
-.tm-dbtm__item:hover .tm-dbtm__item-actions {
+.tm-dbtm__item:hover .tm-dbtm__item-actions,
+.tm-dbtm__item:focus-within .tm-dbtm__item-actions {
     opacity: 1;
     pointer-events: auto;
+}
+
+@media (hover: none) {
+    .tm-dbtm__item-actions {
+        opacity: 1;
+        pointer-events: auto;
+    }
+
+    .tm-dbtm__action-btn {
+        min-width: var(--tm-touch-target, 24px);
+        min-height: var(--tm-touch-target, 24px);
+    }
 }
 
 .tm-dbtm__item--confirming .tm-dbtm__use-btn {
@@ -145,14 +158,14 @@
     background: transparent;
     border-radius: 5px;
     font-size: 13px;
-    color: var(--tm-text, #1a1a1a);
+    color: var(--tm-text-primary);
     cursor: pointer;
     text-align: left;
     transition: background 0.1s;
 }
 
 .tm-dbtm__use-btn:hover {
-    background: var(--tm-hover, rgba(0,0,0,0.04));
+    background: var(--tm-color-surface-hover);
 }
 
 .tm-dbtm__emoji {
@@ -162,7 +175,7 @@
 }
 
 .tm-dbtm__default-icon {
-    color: var(--tm-text-tertiary, #bbb);
+    color: var(--tm-text-tertiary);
     flex-shrink: 0;
 }
 
@@ -199,28 +212,28 @@
     border: none;
     border-radius: 4px;
     background: transparent;
-    color: var(--tm-text-secondary, #888);
+    color: var(--tm-text-secondary);
     cursor: pointer;
     transition: background 0.1s, color 0.1s;
 }
 
 .tm-dbtm__action-btn:hover {
-    background: var(--tm-hover, rgba(0,0,0,0.06));
-    color: var(--tm-text, #1a1a1a);
+    background: var(--tm-color-surface-hover);
+    color: var(--tm-text-primary);
 }
 
 .tm-dbtm__action-btn--danger:hover {
-    background: rgba(239,68,68,0.08);
-    color: #ef4444;
+    background: color-mix(in srgb, var(--tm-color-danger) 8%, transparent);
+    color: var(--tm-color-danger);
 }
 
 .tm-dbtm__confirm-del-btn {
     padding: 3px 8px;
     height: 24px;
-    border: 1px solid #ef4444;
+    border: 1px solid var(--tm-color-primary);
     border-radius: 4px;
     background: transparent;
-    color: #ef4444;
+    color: var(--tm-color-danger);
     font-size: 11px;
     font-weight: 600;
     cursor: pointer;
@@ -229,16 +242,16 @@
 }
 
 .tm-dbtm__confirm-del-btn:hover {
-    background: rgba(239,68,68,0.08);
+    background: color-mix(in srgb, var(--tm-color-danger) 8%, transparent);
 }
 
 .tm-dbtm__cancel-del-btn {
     padding: 3px 8px;
     height: 24px;
-    border: 1px solid var(--tm-border, #e5e5e5);
+    border: 1px solid var(--tm-border-color);
     border-radius: 4px;
     background: transparent;
-    color: var(--tm-text-secondary, #666);
+    color: var(--tm-text-secondary);
     font-size: 11px;
     font-weight: 500;
     cursor: pointer;
@@ -247,5 +260,5 @@
 }
 
 .tm-dbtm__cancel-del-btn:hover {
-    background: var(--tm-hover, rgba(0,0,0,0.04));
+    background: var(--tm-color-surface-hover);
 }

@@ -1,7 +1,9 @@
 using Bunit;
 using FluentAssertions;
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Web;
 using NSubstitute;
+using NSubstitute.ExceptionExtensions;
 using NSubstitute.ReturnsExtensions;
 using Tempo.Blazor.Abstractions.Shared;
 using Tempo.Blazor.Components.NotionEditor.Services;
@@ -116,6 +118,8 @@ public class TmNotionMediaUploadDialogLibraryTests : LocalizationTestBase
 
         var btn = cut.Find(".tm-media-library__item");
         await cut.InvokeAsync(() => btn.Click());
+        confirmed.Url.Should().BeNull("a click only selects; Insert confirms");
+        await cut.InvokeAsync(() => cut.Find("[data-testid=notion-media-insert]").Click());
 
         confirmed.Url.Should().Be("https://example.com/photo.jpg");
     }
@@ -144,7 +148,58 @@ public class TmNotionMediaUploadDialogLibraryTests : LocalizationTestBase
         cut.WaitForState(() => cut.FindAll(".tm-media-library__item").Count > 0);
 
         await cut.InvokeAsync(() => cut.Find(".tm-media-library__item").Click());
+        await cut.InvokeAsync(() => cut.Find("[data-testid=notion-media-insert]").Click());
 
         confirmed.FileId.Should().Be("img42");
+    }
+
+    // ── MLD-06: the library panel renders while upload is also available ──────
+
+    [Fact]
+    public async Task LibraryTab_WithFileProvider_ShowsSearchAndItems()
+    {
+        var item = MakeItem("img7", "cover.png", "https://example.com/cover.png");
+        var ctx = BuildContext(library: ProviderWith(item), file: Substitute.For<ITmFileProvider>());
+
+        var cut = Render<TmNotionMediaUploadDialog>(p => p
+            .Add(x => x.IsOpen, true)
+            .Add(x => x.MediaType, "image")
+            .AddCascadingValue(ctx));
+
+        await cut.InvokeAsync(() => cut.Find("[data-tab='library']").Click());
+
+        cut.WaitForAssertion(() =>
+        {
+            cut.Find(".tm-media-library__search-input").Should().NotBeNull();
+            cut.FindAll(".tm-media-library__item").Should().ContainSingle()
+                .Which.TextContent.Should().Contain("cover.png");
+        });
+    }
+
+    // ── MLD-07: a provider error is one request, not a render loop ────────────
+
+    [Fact]
+    public async Task LibraryTab_ProviderError_SearchesOnce()
+    {
+        var library = Substitute.For<INotionMediaLibraryProvider>();
+        library.SearchAsync(
+                Arg.Any<string>(), Arg.Any<string?>(),
+                Arg.Any<int>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
+            .ThrowsAsync(new InvalidOperationException("library down"));
+        var ctx = BuildContext(library: library, file: Substitute.For<ITmFileProvider>());
+
+        var cut = Render<TmNotionMediaUploadDialog>(p => p
+            .Add(x => x.IsOpen, true)
+            .Add(x => x.MediaType, "image")
+            .AddCascadingValue(ctx));
+
+        await cut.InvokeAsync(() => cut.Find("[data-tab='library']").Click());
+
+        cut.WaitForAssertion(() => cut.Markup.Should().Contain("TmNotionMediaUploadDialog_LibraryError"));
+        await cut.InvokeAsync(() => cut.Find("[data-tab='library']").Click(new MouseEventArgs()));
+
+        await library.Received(1).SearchAsync(
+            Arg.Any<string>(), Arg.Any<string?>(),
+            Arg.Any<int>(), Arg.Any<int>(), Arg.Any<CancellationToken>());
     }
 }

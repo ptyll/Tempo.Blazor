@@ -1,0 +1,145 @@
+/* TmOtpInput — segmented verification-code input (one cell per character). */
+
+.tm-otp-input {
+  max-width: 100%;
+  /* Inline-size containment: the root's intrinsic size must not depend on the cells, so a flex
+     or grid host is never forced wider than its track by the row's min-content (a <input>'s
+     intrinsic minimum is ~20ch, which would push a 320px phone page into the overflow-x clip).
+     The root is a block, so its used width is the available width either way. */
+  contain: inline-size;
+}
+
+.tm-otp-input__row {
+  display: flex;
+  align-items: center;
+  /* Wrapping is lazy: a group is one flex item (see __group below), so the row stays on one line
+     at every normal width and only stacks its groups when the container is too narrow for the
+     full code — a 320px phone never overflows horizontally. A @container query cannot express
+     this (the repo lints container widths to the TmBreakpoints constants, and a box can never
+     query its own size anyway). */
+  flex-wrap: wrap;
+  gap: var(--tm-space-2);
+}
+
+.tm-otp-input__group {
+  display: flex;
+  align-items: center;
+  gap: var(--tm-space-2);
+  /* The group is one flex item of the wrapping row: min-width 0 lets it shrink to the row width
+     (the cells inside keep their own floor), instead of forcing the row wide. */
+  min-width: 0;
+}
+
+.tm-otp-input__cell {
+  flex: 0 1 var(--tm-input-height-md);
+  /* Cells keep the 24px floor (they shrink to fit a narrow row, never below a tappable size). */
+  min-inline-size: var(--tm-space-6);
+  height: var(--tm-input-height-md);
+  padding: 0;
+  font-family: var(--tm-font-sans);
+  font-size: var(--tm-font-size-lg);
+  font-weight: var(--tm-font-weight-semibold);
+  text-align: center;
+  color: var(--tm-text-primary);
+  caret-color: var(--tm-color-primary);
+  background-color: var(--tm-bg-surface);
+  border: 1px solid var(--tm-border-color);
+  border-radius: var(--tm-radius-control);
+  outline: none;
+  transition: border-color var(--tm-transition-fast),
+              box-shadow var(--tm-transition-fast);
+}
+
+.tm-otp-input__cell:focus {
+  outline: 2px solid transparent;
+  border-color: var(--tm-border-color-focus);
+  box-shadow: var(--tm-focus-ring);
+}
+
+.tm-otp-input__cell:disabled {
+  color: var(--tm-text-secondary);
+  background-color: var(--tm-bg-muted);
+  cursor: not-allowed;
+}
+
+/* ReadOnly / Verified cells stay focusable (the keyboard can still reach them) but are not
+   editable — the muted surface is the only cue, so the disabled dimming is not repeated. */
+.tm-otp-input__cell:read-only:not(:disabled) {
+  background-color: var(--tm-bg-muted);
+}
+
+.tm-otp-input__separator {
+  flex: none;
+  width: var(--tm-space-3);
+  border-top: 2px solid var(--tm-border-color);
+}
+
+/* State modifiers (driven by TmOtpInput parameters). The disabled cell styles above are the
+   single dimming source — a root-level opacity on top of them would double-dim below AA contrast,
+   so the root modifier only carries the cursor cue (and a host styling hook). */
+.tm-otp-input--disabled {
+  cursor: not-allowed;
+}
+
+.tm-otp-input--readonly {
+  cursor: default;
+}
+
+.tm-otp-input--invalid .tm-otp-input__cell {
+  border-color: var(--tm-color-danger);
+}
+
+.tm-otp-input--invalid .tm-otp-input__cell:focus {
+  box-shadow: var(--tm-focus-ring-danger);
+}
+
+/* The error shake runs once when the invalid state is applied; it is a horizontal nudge only —
+   never a moving page. Neutralised by the reduced-motion enumeration in animations.css. */
+@keyframes tm-otp-input-shake {
+  0%, 100% { transform: translateX(0); }
+  25%      { transform: translateX(var(--tm-space-1)); }
+  75%      { transform: translateX(calc(-1 * var(--tm-space-1))); }
+}
+
+.tm-otp-input--invalid {
+  animation: tm-otp-input-shake var(--tm-transition-normal);
+}
+
+.tm-otp-input--verified .tm-otp-input__cell {
+  border-color: var(--tm-color-success);
+}
+
+.tm-otp-input__error {
+  margin-top: var(--tm-space-1);
+  font-family: var(--tm-font-sans);
+  font-size: var(--tm-font-size-sm);
+  color: var(--tm-color-danger-text);
+}
+
+.tm-otp-input__status {
+  display: flex;
+  align-items: center;
+  gap: var(--tm-space-1);
+  margin-top: var(--tm-space-1);
+  font-family: var(--tm-font-sans);
+  font-size: var(--tm-font-size-sm);
+  font-weight: var(--tm-font-weight-medium);
+  color: var(--tm-color-success-text);
+}
+
+@media (forced-colors: active) {
+  /* Token colours are overridden in forced colors, so the states keep a real boundary through a
+     thicker system border instead (WCAG 1.4.11). */
+  .tm-otp-input--invalid .tm-otp-input__cell,
+  .tm-otp-input--verified .tm-otp-input__cell {
+    border: 2px solid CanvasText;
+  }
+}
+
+/* Coarse pointers get 44px cells (WCAG 2.5.5 target size). */
+@media (pointer: coarse) {
+  .tm-otp-input__cell {
+    flex-basis: var(--tm-touch-target);
+    height: var(--tm-touch-target);
+  }
+}

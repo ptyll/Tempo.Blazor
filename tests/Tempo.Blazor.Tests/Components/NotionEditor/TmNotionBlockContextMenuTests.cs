@@ -103,13 +103,13 @@ public sealed class TmNotionBlockContextMenuTests : LocalizationTestBase
         cut.FindAll("button[aria-haspopup='menu']").First().Click();
         cut.FindAll(".tm-notion-ctx-sub").Should().HaveCount(1);
 
-        cut.Find(".tm-notion-ctx").KeyDown(new KeyboardEventArgs { Key = "Escape" });
+        cut.Find("[tabindex='-1'].tm-notion-ctx").KeyDown(new KeyboardEventArgs { Key = "Escape" });
 
         // APG menu-button contract: Escape inside a submenu collapses only the
         // submenu and returns focus to its trigger — the parent menu stays open.
         cut.FindAll(".tm-notion-ctx-sub").Should().BeEmpty();
         closed.Should().BeFalse("Escape with an open submenu must not close the whole menu");
-        cut.FindAll(".tm-notion-ctx").Should().HaveCount(1);
+        cut.FindAll("[tabindex='-1'].tm-notion-ctx").Should().HaveCount(1);
     }
 
     [Fact]
@@ -222,21 +222,54 @@ public sealed class TmNotionBlockContextMenuTests : LocalizationTestBase
 
         cut.FindAll("button[aria-haspopup='menu']").First().Click();
 
-        cut.Find(".tm-notion-ctx").KeyDown(new KeyboardEventArgs { Key = "ArrowLeft" });
+        cut.Find("[tabindex='-1'].tm-notion-ctx").KeyDown(new KeyboardEventArgs { Key = "ArrowLeft" });
 
         cut.FindAll(".tm-notion-ctx-sub").Should().BeEmpty();
         closed.Should().BeFalse();
     }
 
     [Fact]
-    public void Escape_WithoutOpenSubmenu_ClosesMenu()
+    public void Escape_WithoutOpenSubmenu_LeavesTheCloseToTheOverlay()
     {
+        // Phase-13 review: a top-level Escape no longer closes through the component — the core
+        // overlay (window capture) dismisses the panel and restores focus to the handle anchor.
+        // The component only collapses submenus; CloseOnEscape hands the top-level Escape over.
         var closed = false;
         var cut = RenderMenu(TextBlock(), v => closed = v);
 
-        cut.Find(".tm-notion-ctx").KeyDown(new KeyboardEventArgs { Key = "Escape" });
+        cut.Find("[tabindex='-1'].tm-notion-ctx").KeyDown(new KeyboardEventArgs { Key = "Escape" });
 
-        closed.Should().BeTrue();
+        closed.Should().BeFalse("a top-level Escape is the overlay's job — focus returns to the handle");
+        cut.FindComponent<Tempo.Blazor.Components.Overlay.TmOverlayPanel>().Instance
+            .CloseOnEscape.Should().BeTrue("with no submenu open the overlay owns Escape");
+    }
+
+    [Fact]
+    public void Escape_WithOpenSubmenu_DisablesOverlayCloseOnEscape()
+    {
+        // While a submenu is open the overlay must NOT eat Escape — the component collapses the
+        // submenu instead (same predicate drives CloseOnEscape and HandleKeyDownAsync).
+        var cut = RenderMenu(CalloutBlock());
+
+        cut.FindAll("button[aria-haspopup='menu']").First().Click();
+
+        cut.FindComponent<Tempo.Blazor.Components.Overlay.TmOverlayPanel>().Instance
+            .CloseOnEscape.Should().BeFalse("an open submenu owns Escape — the overlay stays out");
+    }
+
+    [Fact]
+    public void Delete_IsLast_AndInitialFocusLandsOnANonDestructiveItem()
+    {
+        // F-14: Delete moved to the end of the menu (Notion convention). The first direct-child
+        // menuitem — the InitialFocusSelector target — must never be the destructive action, so
+        // Enter right after opening cannot delete the block.
+        var cut = RenderMenu(TextBlock());
+
+        var items = cut.Find(".tm-notion-ctx").QuerySelectorAll(":scope > button[role='menuitem']");
+        items[^1].ClassList.Should().Contain("tm-notion-ctx__item--danger",
+            "Delete is the last top-level item");
+        items[0].ClassList.Should().NotContain("tm-notion-ctx__item--danger",
+            "the initial focus lands on the first non-destructive item");
     }
 
     [Fact]

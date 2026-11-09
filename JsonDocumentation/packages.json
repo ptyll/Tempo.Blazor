@@ -204,7 +204,9 @@
         "src/Tempo.Blazor.NotionEditor/Components"
       ],
       "includePatterns": [],
-      "excludePatterns": [],
+      "excludePatterns": [
+        "[\\\\/]TmNotionTempoEditorModal\\.(razor|cs)"
+      ],
       "includePublicTypes": true,
       "includeAssets": true
     },

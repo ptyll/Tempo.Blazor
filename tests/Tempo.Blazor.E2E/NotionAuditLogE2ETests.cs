@@ -32,7 +32,12 @@ public sealed class NotionAuditLogE2ETests : NotionE2ETestBase
         await panel.GetByTestId("notion-audit-user-filter").FillAsync("demo");
         await panel.GetByTestId("notion-audit-action-filter").SelectOptionAsync("edit");
         await panel.GetByTestId("notion-audit-apply").ClickAsync();
-        await Assertions.Expect(panel.GetByTestId("notion-audit-list")).ToContainTextAsync("CF32 Audit Workspace Updated");
+        // Phase 5 keeps metadata behind the row toggle (table and cards).
+        var toggles = panel.Locator(".tm-notion-audit__row-toggle:visible");
+        var toggleCount = await toggles.CountAsync();
+        for (var i = 0; i < toggleCount; i++)
+            await toggles.Nth(i).ClickAsync();
+        await Assertions.Expect(panel.Locator(".tm-notion-audit__row-details:visible").Filter(new() { HasText = "CF32 Audit Workspace Updated" })).ToHaveCountAsync(1);
 
         await panel.GetByTestId("notion-audit-export").ClickAsync();
         await Assertions.Expect(panel.GetByTestId("notion-audit-export-link")).ToHaveAttributeAsync("href", new Regex("^data:text/csv"));
@@ -71,7 +76,7 @@ public sealed class NotionAuditLogE2ETests : NotionE2ETestBase
 
     private static async Task OpenAuditAsync(IPage page)
     {
-        await page.GetByTestId("notion-audit-open").ClickAsync();
+        await ClickNotionCommandAsync(page, "notion-audit-open");
         await page.GetByTestId("notion-audit-panel").WaitForAsync(new LocatorWaitForOptions
         {
             State = WaitForSelectorState.Visible,

@@ -2,7 +2,7 @@
   "itemName": "TmNotionWireframeEditModal",
   "kind": "Component",
   "category": "Notion Editor",
-  "description": "Modal dialog hosting the dynamically loaded wireframe editor (or a missing-package notice) with Save and Discard actions and a loading spinner.",
+  "description": "Fullscreen wireframe edit modal on the shared TmNotionTempoEditorModal shell. The editor resolves its own container (desktop chrome at 1024+, its narrow and mobile panels below). Discard while the document changed confirms first; a missing package disables Save.",
   "packageId": "Tempo.Blazor.NotionEditor",
   "namespace": "Tempo.Blazor.Components.NotionEditor.Blocks.TempoBlocks",
   "sourcePath": "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/Blocks/TempoBlocks/TmNotionWireframeEditModal.razor",

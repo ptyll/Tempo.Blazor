@@ -3,32 +3,30 @@
 @using Tempo.Blazor.NotionEditor.Interfaces
 @using Tempo.Blazor.NotionEditor.Models
 @using Tempo.Blazor.NotionEditor.Enums
+@using Tempo.Blazor.Components.Avatars
+@using Tempo.Blazor.Components.Buttons
+@using Tempo.Blazor.Components.Feedback
+@using Tempo.Blazor.Components.Icons
 @using Tempo.Blazor.Components.NotionEditor.Services
 
 @if (Visible)
 {
-    @* ── Backdrop ──────────────────────────────────────────────────────────── *@
-    <div class="tm-nph-backdrop" @onclick="CloseAsync" aria-hidden="true"></div>
-
-    @* ── Panel ─────────────────────────────────────────────────────────────── *@
-    <div class="tm-nph" role="dialog" aria-modal="true"
-         aria-label="@Loc["TmNotionPageHistory_PanelLabel"]">
+    <TmModal Show="true"
+             OnClose="CloseAsync"
+             Title="@Loc["TmNotionPageHistory_Title"]"
+             Size="@(IsMobile ? ModalSize.Fullscreen : ModalSize.XLarge)"
+             MobilePresentation="MobilePresentation.Fullscreen"
+             LayoutMode="LayoutMode"
+             CloseOnOverlayClick="false"
+             ShowFooter="true"
+             Class="tm-nph-host">
+    <ChildContent>
+    <div class="tm-nph" data-layout="@ResolvedLayout.ToString().ToLowerInvariant()" data-mobile-preview="@_mobilePreview.ToString().ToLowerInvariant()">
 
         @* ════════════════════════════════════════════════════════════════════ *@
         @* ── LEFT: Version list sidebar ────────────────────────────────────── *@
         @* ════════════════════════════════════════════════════════════════════ *@
         <aside class="tm-nph__sidebar" aria-label="@Loc["TmNotionPageHistory_VersionList"]">
-
-            <div class="tm-nph__sidebar-header">
-                <h2 class="tm-nph__sidebar-title">@Loc["TmNotionPageHistory_Title"]</h2>
-                <button class="tm-nph__close-btn" type="button"
-                        aria-label="@Loc["Tm_Close"]"
-                        @onclick="CloseAsync">
-                    <svg width="15" height="15" viewBox="0 0 15 15" fill="none" aria-hidden="true">
-                        <path d="M2 2l11 11M13 2L2 13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-                    </svg>
-                </button>
-            </div>
 
             @* ── Compare mode banner ────────────────────────────────────────── *@
             @if (_compareMode)
@@ -45,7 +43,7 @@
             }
 
             @* ── Version items ─────────────────────────────────────────────── *@
-            <div class="tm-nph__version-list" role="list">
+            <div class="tm-nph__version-list" role="listbox" aria-label="@Loc["TmNotionPageHistory_VersionList"]" aria-multiselectable="true">
 
                 @if (_versionsLoading)
                 {
@@ -71,10 +69,22 @@
                                     @(isSelected  ? "tm-nph__version-item--selected"  : "")
                                     @(isFrom      ? "tm-nph__version-item--compare-from" : "")
                                     @(isTo        ? "tm-nph__version-item--compare-to"   : "")"
-                             role="listitem"
-                             tabindex="0"
-                             @onclick="() => SelectVersionAsync(version)"
-                             @onkeydown="e => HandleVersionKeyDownAsync(e, version)">
+                             data-version-id="@version.Id.ToString("D")"
+                             role="option"
+                             aria-selected="@(_picked.Contains(version.Id).ToString().ToLowerInvariant())"
+                             tabindex="@(_focusedVersionId == version.Id ? 0 : -1)"
+                             @onclick="() => PreviewVersionAsync(version)"
+                             @onkeydown="e => HandleVersionKeyDownAsync(e, version)"
+                             @onkeydown:stopPropagation="true">
+
+                            <input type="checkbox"
+                                   class="tm-nph__pick"
+                                   checked="@_picked.Contains(version.Id)"
+                                   tabindex="-1"
+                                   aria-label="@Loc["TmNotionPageHistory_Pick"]"
+                                   data-testid="@TestId("notion-history-pick")"
+                                   @onclick:stopPropagation="true"
+                                   @onchange="() => PickVersion(version)" />
 
                             <div class="tm-nph__version-time-group">
                                 <time class="tm-nph__version-time"
@@ -97,9 +107,7 @@
                             </div>
 
                             <div class="tm-nph__version-author">
-                                <div class="tm-nph__version-avatar" aria-hidden="true">
-                                    @AvatarInitial(version.EditedByDisplayName)
-                                </div>
+                                <TmAvatar Name="@version.EditedByDisplayName" Size="AvatarSize.Xs" />
                                 <span class="tm-nph__version-author-name">@version.EditedByDisplayName</span>
                             </div>
 
@@ -176,7 +184,7 @@
                             @string.Format(Loc["TmNotionPageHistory_EditedBy"], _selectedVersion.EditedByDisplayName)
                         </span>
                     </div>
-                    <div class="tm-nph__toolbar-actions">
+                    <div class="tm-nph__toolbar-actions tm-nph__preview-toolbar-actions">
                         <button class="tm-nph__toolbar-btn tm-nph__toolbar-btn--secondary"
                                 type="button"
                                 disabled="@_compareMode"
@@ -255,6 +263,8 @@
                                 @onclick="() => SetDiffViewMode(NotionDiffViewMode.Inline)">
                             @Loc["TmNotionPageHistory_DiffModeInline"]
                         </button>
+                        @if (!IsMobile)
+                        {
                         <button class="tm-nph__toolbar-btn @(_diffViewMode == NotionDiffViewMode.SideBySide ? "tm-nph__toolbar-btn--active" : "")"
                                 type="button"
                                 data-testid="@TestId("notion-diff-mode-side-by-side")"
@@ -262,6 +272,7 @@
                                 @onclick="() => SetDiffViewMode(NotionDiffViewMode.SideBySide)">
                             @Loc["TmNotionPageHistory_DiffModeSideBySide"]
                         </button>
+                        }
                         <button class="tm-nph__toolbar-btn tm-nph__toolbar-btn--secondary"
                                 type="button"
                                 @onclick="ExitDiff">
@@ -271,6 +282,7 @@
                 </div>
 
                 @* ── Diff legend ───────────────────────────────────────────── *@
+                <p class="tm-nph__summary" data-testid="@TestId("notion-history-change-count")">@ChangeSummary</p>
                 <div class="tm-nph__diff-legend" role="group" aria-label="@Loc["TmNotionPageHistory_DiffLegend"]">
                     <span class="tm-nph__legend-item tm-nph__legend-item--added">
                         @Loc["TmNotionPageHistory_DiffAdded"]
@@ -295,29 +307,45 @@
         </section>
 
     </div>
-
-    @* ── Restore confirmation dialog ────────────────────────────────────────── *@
-    @if (_showRestoreConfirm)
-    {
-        <div class="tm-nph-confirm-backdrop" @onclick="CancelRestore" aria-hidden="true"></div>
-        <div class="tm-nph-confirm" role="alertdialog"
-             aria-label="@Loc["TmNotionPageHistory_RestoreConfirmTitle"]"
-             aria-modal="true">
-            <h3 class="tm-nph-confirm__title">@Loc["TmNotionPageHistory_RestoreConfirmTitle"]</h3>
-            <p class="tm-nph-confirm__body">
-                @string.Format(Loc["TmNotionPageHistory_RestoreConfirmBody"],
-                    _selectedVersion?.EditedAt.ToLocalTime().ToString("f"))
-            </p>
-            <div class="tm-nph-confirm__actions">
-                <button class="tm-nph-confirm__cancel" type="button" @onclick="CancelRestore">
-                    @Loc["TmNotionPageHistory_Cancel"]
-                </button>
-                <button class="tm-nph-confirm__ok" type="button" @onclick="ConfirmRestoreAsync">
-                    @Loc["TmNotionPageHistory_RestoreConfirm"]
-                </button>
-            </div>
+    </ChildContent>
+    <Footer>
+        <div class="tm-nph__footer">
+            <TmButton Variant="ButtonVariant.Secondary"
+                      Disabled="@(!CanCompareSelected)"
+                      OnClick="CompareSelectedAsync"
+                      data-testid="@TestId("notion-history-compare-selected")">
+                @Loc["TmNotionPageHistory_CompareSelected"]
+            </TmButton>
+            <TmButton Variant="ButtonVariant.Primary"
+                      Disabled="@(!CanRestore || _restoring)"
+                      OnClick="RestoreAsync"
+                      data-testid="@TestId("notion-history-restore")">
+                @Loc["TmNotionPageHistory_Restore"]
+            </TmButton>
+            @if (IsMobile && _mobilePreview)
+            {
+                <TmButton Variant="ButtonVariant.Ghost"
+                          Class="tm-nph__back"
+                          OnClick="BackToList"
+                          data-testid="@TestId("notion-history-back")">
+                    <TmIcon Name="@IconNames.ChevronLeft" Size="IconSize.Xs" />
+                    @Loc["TmNotionPageHistory_Back"]
+                </TmButton>
+            }
         </div>
-    }
+    </Footer>
+    </TmModal>
+
+    <TmDialog Show="_showRestoreConfirm"
+              Type="DialogType.Confirm"
+              IsDangerous="true"
+              Title="@Loc["TmNotionPageHistory_RestoreConfirmTitle"]"
+              Message="@string.Format(Loc["TmNotionPageHistory_RestoreConfirmBody"], _selectedVersion?.EditedAt.ToLocalTime().ToString("f"))"
+              OkButtonText="@Loc["TmNotionPageHistory_RestoreConfirm"]"
+              CancelButtonText="@Loc["TmNotionPageHistory_Cancel"]"
+              LayoutMode="ResolvedLayout"
+              OnResult="HandleRestoreResult"
+              data-testid="@TestId("notion-history-restore-confirm")" />
 
     @* ── Error toast ────────────────────────────────────────────────────────── *@
     @if (!string.IsNullOrEmpty(_error))

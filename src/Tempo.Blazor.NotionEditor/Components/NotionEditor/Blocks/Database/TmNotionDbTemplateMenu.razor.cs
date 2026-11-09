@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Web;
 using Tempo.Blazor.Components.NotionEditor.Services;
 using Tempo.Blazor.NotionEditor.Interfaces;
 using Tempo.Blazor.NotionEditor.Models;
@@ -27,6 +28,13 @@ public partial class TmNotionDbTemplateMenu : ComponentBase
     private List<IDatabaseRecordTemplate> _templates = [];
     private bool  _loading;
     private Guid? _deletingId;
+    private ElementReference _root;
+
+    private async Task OnKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key != "Escape") return;
+        await OnClose.InvokeAsync();
+    }
 
     // ── Lifecycle ─────────────────────────────────────────────────────────────
 

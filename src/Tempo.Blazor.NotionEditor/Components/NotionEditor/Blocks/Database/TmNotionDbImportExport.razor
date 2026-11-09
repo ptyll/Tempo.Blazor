@@ -2,31 +2,20 @@
 @using Tempo.Blazor.NotionEditor.Enums
 @using Tempo.Blazor.NotionEditor.Interfaces
 @using Tempo.Blazor.NotionEditor.Models
+@using Tempo.Blazor.Components.Buttons
+@using Tempo.Blazor.Components.Feedback
 
-<div class="tm-dbie__overlay" @onclick="CloseAsync">
-    <div class="tm-dbie__modal" @onclick:stopPropagation="true"
-         role="dialog" aria-modal="true"
-         aria-label="@Loc["TmNotionDbImportExport_Title"]">
-
-        @* ── Toolbar ───────────────────────────────────────────────────── *@
-        <div class="tm-dbie__toolbar">
-            <div class="tm-dbie__breadcrumb">
-                @if (!string.IsNullOrEmpty(DatabaseName))
-                {
-                    <span class="tm-dbie__bc-db">@DatabaseName</span>
-                    <span class="tm-dbie__bc-sep" aria-hidden="true">›</span>
-                }
-                <span class="tm-dbie__bc-title">@Loc["TmNotionDbImportExport_Title"]</span>
-            </div>
-            <button class="tm-dbie__close-btn"
-                    type="button"
-                    title="@Loc["TmNotionDbImportExport_Close"]"
-                    @onclick="CloseAsync">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                    <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-                </svg>
-            </button>
-        </div>
+@* Phase 4 (DB-3): import/export rides the core TmModal — visible title, ×, Escape, focus return,
+   fixed footer with the primary action (mobile renders the mapping rows as cards under 600 px).
+   No own overlay. *@
+<TmModal Show="Show"
+         OnClose="CloseAsync"
+         Title="@Loc["TmNotionDbImportExport_Title"]"
+         Subtitle="@(string.IsNullOrEmpty(DatabaseName) ? null : DatabaseName)"
+         Size="ModalSize.Large"
+         MobilePresentation="MobilePresentation.Auto">
+    <ChildContent>
+        <div class="tm-dbie">
 
         @* ── Tabs ──────────────────────────────────────────────────────── *@
         <div class="tm-dbie__tabs" role="tablist">
@@ -71,9 +60,9 @@
                         <InputFile OnChange="HandleFileSelectedAsync"
                                    accept=".csv"
                                    class="tm-dbie__file-input"
-                                   id="tm-dbie-file"
+                                   id="@FileInputId"
                                    disabled="@_importLoading" />
-                        <label for="tm-dbie-file" class="tm-dbie__drop-label">
+                        <label for="@FileInputId" class="tm-dbie__drop-label">
                             @if (_importLoading)
                             {
                                 <span class="tm-dbie__spinner" aria-hidden="true"></span>
@@ -87,6 +76,7 @@
                                     <line x1="12" y1="3" x2="12" y2="15" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
                                 </svg>
                                 <span class="tm-dbie__drop-text">@Loc["TmNotionDbImportExport_DropZone"]</span>
+                                <span class="tm-dbie__choose-file">@Loc["TmNotionDbImportExport_ChooseFile"]</span>
                                 <span class="tm-dbie__drop-hint">@Loc["TmNotionDbImportExport_DropZoneHint"]</span>
                             }
                         </label>
@@ -172,27 +162,6 @@
                             @_importError
                         </div>
                     }
-
-                    <div class="tm-dbie__map-footer">
-                        <button class="tm-dbie__primary-btn"
-                                type="button"
-                                disabled="@(_importLoading || !_columnMapping.Any(kv => kv.Value.HasValue))"
-                                @onclick="HandleImportAsync">
-                            @if (_importLoading)
-                            {
-                                <span class="tm-dbie__spinner tm-dbie__spinner--sm" aria-hidden="true"></span>
-                            }
-                            else
-                            {
-                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-                                    <polyline points="17 8 12 3 7 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                                    <line x1="12" y1="3" x2="12" y2="15" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-                                </svg>
-                            }
-                            @Loc["TmNotionDbImportExport_ImportBtn"]
-                        </button>
-                    </div>
                 }
             }
             else
@@ -204,7 +173,7 @@
 
                     <div class="tm-dbie__export-options">
                         <label class="tm-dbie__export-opt @(_exportViewId is null ? "tm-dbie__export-opt--active" : "")">
-                            <input type="radio" name="tm-dbie-view" @onchange="() => _exportViewId = null" checked="@(_exportViewId is null)" />
+                            <input type="radio" name="@ExportViewName" @onchange="() => _exportViewId = null" checked="@(_exportViewId is null)" />
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                                 <path d="M3 9h18M3 15h18M9 3v18M15 3v18" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
                             </svg>
@@ -215,7 +184,7 @@
                         {
                             var v = view;
                             <label class="tm-dbie__export-opt @(_exportViewId == v.Id ? "tm-dbie__export-opt--active" : "")">
-                                <input type="radio" name="tm-dbie-view" @onchange="() => _exportViewId = v.Id" checked="@(_exportViewId == v.Id)" />
+                                <input type="radio" name="@ExportViewName" @onchange="() => _exportViewId = v.Id" checked="@(_exportViewId == v.Id)" />
                                 <span class="tm-dbie__view-icon" aria-hidden="true">@ViewIcon(v.Type)</span>
                                 @v.Name
                             </label>
@@ -233,31 +202,40 @@
                         </div>
                     }
 
-                    <button class="tm-dbie__primary-btn"
-                            type="button"
-                            disabled="@_exportLoading"
-                            @onclick="HandleExportAsync">
-                        @if (_exportLoading)
-                        {
-                            <span class="tm-dbie__spinner tm-dbie__spinner--sm" aria-hidden="true"></span>
-                        }
-                        else
-                        {
-                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-                                <polyline points="7 10 12 15 17 10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                                <line x1="12" y1="15" x2="12" y2="3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-                            </svg>
-                        }
-                        @Loc["TmNotionDbImportExport_ExportBtn"]
-                    </button>
-
                 </div>
             }
 
         </div>
-    </div>
-</div>
+        </div>
+    </ChildContent>
+    <Footer>
+        <div class="tm-dbie__footer">
+            @if (_tab == ActiveTab.Import && _importStep == ImportStep.MapColumns)
+            {
+                <TmButton Variant="ButtonVariant.Ghost" OnClick="BackToUpload">@Loc["TmNotionDbImportExport_Back"]</TmButton>
+            }
+            <div class="tm-dbie__footer-main">
+                <TmButton Variant="ButtonVariant.Ghost" OnClick="CloseAsync">@Loc["TmNotionDbImportExport_Close"]</TmButton>
+                @if (_tab == ActiveTab.Import && _importStep == ImportStep.MapColumns)
+                {
+                    <TmButton Variant="ButtonVariant.Primary"
+                              Disabled="@(_importLoading || !_columnMapping.Any(kv => kv.Value.HasValue))"
+                              OnClick="HandleImportAsync">
+                        @Loc["TmNotionDbImportExport_ImportBtn"]
+                    </TmButton>
+                }
+                else if (_tab == ActiveTab.Export)
+                {
+                    <TmButton Variant="ButtonVariant.Primary"
+                              Disabled="@_exportLoading"
+                              OnClick="HandleExportAsync">
+                        @Loc["TmNotionDbImportExport_ExportBtn"]
+                    </TmButton>
+                }
+            </div>
+        </div>
+    </Footer>
+</TmModal>
 
 @code {
     private static MarkupString ViewIcon(DatabaseViewType type) => (MarkupString)(type switch

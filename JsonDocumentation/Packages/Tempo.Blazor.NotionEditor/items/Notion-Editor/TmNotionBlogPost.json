@@ -25,6 +25,12 @@
       "description": "Additional CSS class."
     },
     {
+      "name": "FocusHeading",
+      "type": "bool",
+      "isRequired": false,
+      "description": "When true, the heading takes focus after render (compact master → detail)."
+    },
+    {
       "name": "IsPublishing",
       "type": "bool",
       "isRequired": true,

@@ -8,6 +8,19 @@ using Tempo.Blazor.Models;
 
 namespace Tempo.Blazor.Components.NotionEditor.UI;
 
+/// <summary>Result layout of <see cref="TmNotionAuditLogPanel"/>.</summary>
+public enum TmNotionAuditLogLayout
+{
+    /// <summary>The container query decides: a table on a wide container, cards on a narrow one.</summary>
+    Auto,
+
+    /// <summary>Always the table (with column headers), regardless of the container width.</summary>
+    Table,
+
+    /// <summary>Always the cards, regardless of the container width.</summary>
+    Cards,
+}
+
 /// <summary>Filterable audit log panel for Notion workspace actions.</summary>
 public partial class TmNotionAuditLogPanel : TmComponentBase
 {
@@ -26,6 +39,102 @@ public partial class TmNotionAuditLogPanel : TmComponentBase
 
     /// <summary>Number of audit entries shown per page.</summary>
     [Parameter] public int PageSize { get; set; } = DefaultPageSize;
+
+    /// <summary>
+    /// Result layout: <see cref="TmNotionAuditLogLayout.Auto"/> (default) renders both the table
+    /// and the cards and lets the panel's own container query pick; <see cref="TmNotionAuditLogLayout.Table"/>
+    /// / <see cref="TmNotionAuditLogLayout.Cards"/> pin one of them.
+    /// </summary>
+    [Parameter] public TmNotionAuditLogLayout Layout { get; set; } = TmNotionAuditLogLayout.Auto;
+
+    private string LayoutModifier => Layout switch
+    {
+        TmNotionAuditLogLayout.Table => "tm-notion-audit--table",
+        TmNotionAuditLogLayout.Cards => "tm-notion-audit--cards",
+        _ => string.Empty,
+    };
+
+    private readonly HashSet<string> _expandedEntryIds = new(StringComparer.Ordinal);
+
+    private bool _filtersSheetOpen;
+
+    private int ActiveFilterCount =>
+        (string.IsNullOrWhiteSpace(_userFilter) ? 0 : 1)
+        + (string.IsNullOrWhiteSpace(_actionFilter) ? 0 : 1)
+        + (string.IsNullOrWhiteSpace(_fromFilter) ? 0 : 1)
+        + (string.IsNullOrWhiteSpace(_toFilter) ? 0 : 1);
+
+    private bool IsExpanded(TmActivityEntry entry) => _expandedEntryIds.Contains(entry.Id);
+
+    private void ToggleExpanded(TmActivityEntry entry)
+    {
+        if (!_expandedEntryIds.Remove(entry.Id))
+            _expandedEntryIds.Add(entry.Id);
+        StateHasChanged();
+    }
+
+    private Task OpenFiltersSheetAsync()
+    {
+        _filtersSheetOpen = true;
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    private Task CloseFiltersSheet()
+    {
+        _filtersSheetOpen = false;
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    private async Task ApplyFiltersFromSheetAsync()
+    {
+        _filtersSheetOpen = false;
+        await ApplyFiltersAsync();
+    }
+
+    private async Task ClearFiltersFromSheetAsync()
+    {
+        _filtersSheetOpen = false;
+        await ClearFiltersAsync();
+    }
+
+    private async Task HandleMoreActionAsync(string value)
+    {
+        if (string.Equals(value, "export", StringComparison.OrdinalIgnoreCase))
+            await PrepareCsvExportAsync();
+    }
+
+    /// <summary>
+    /// Translates a known audit metadata key (<c>title</c>, <c>parent</c>, <c>changes</c>,
+    /// <c>reason</c>, <c>user</c>, <c>permission</c>) through <c>Notion_Audit_Meta_*</c>; unknown
+    /// keys render verbatim.
+    /// </summary>
+    private string TranslateMetaKey(string key)
+    {
+        var normalized = ToPascalKey(key);
+        return Loc.TryGetString($"Notion_Audit_Meta_{normalized}", out var label)
+            ? label
+            : key;
+    }
+
+    /// <summary>Translates a known entity type (<c>page</c>, <c>database</c>); unknown types render verbatim.</summary>
+    private string GetEntityTypeLabel(string entityType)
+    {
+        var normalized = ToPascalKey(entityType);
+        return Loc.TryGetString($"Notion_Audit_Entity_{normalized}", out var label)
+            ? label
+            : entityType;
+    }
+
+    /// <summary>"title" → "Title"; keeps the resource-key family PascalCase while unknown shapes stay safe.</summary>
+    private static string ToPascalKey(string value)
+    {
+        var normalized = NormalizeCssToken(value);
+        return normalized.Length == 0
+            ? normalized
+            : char.ToUpperInvariant(normalized[0]) + normalized[1..];
+    }
 
     private PagedResult<TmActivityEntry> _result = new() { Page = 1, PageSize = DefaultPageSize };
     private string _userFilter = string.Empty;

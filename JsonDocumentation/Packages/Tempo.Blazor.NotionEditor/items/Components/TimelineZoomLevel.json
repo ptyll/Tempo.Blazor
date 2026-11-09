@@ -1,0 +1,10 @@
+{
+  "kind": "Enum",
+  "category": "Components",
+  "namespace": "Tempo.Blazor.Components.NotionEditor.Blocks.Database",
+  "description": "Zoom of the database timeline. One column is a day, a week or a month.",
+  "packageId": "Tempo.Blazor.NotionEditor",
+  "sourcePath": "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/Blocks/Database/TimelineGeometry.cs",
+  "documentationStatus": "generated",
+  "itemName": "TimelineZoomLevel"
+}

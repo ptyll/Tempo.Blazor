@@ -1,5 +1,6 @@
 using AngleSharp.Dom;
 using Bunit;
+using Tempo.Blazor.Components.Dropdowns;
 using FluentAssertions;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Rendering;
@@ -72,10 +73,6 @@ public sealed class TmNotionPageCommentPanelDraftGuardTests : LocalizationTestBa
             ["TmNotionPageComment_MarkAllAsRead"] = "Mark all as read",
             ["TmNotionPageComment_Watch"] = "Watch thread",
             ["TmNotionPageComment_Unwatch"] = "Unwatch",
-            ["TmNotionPageComment_Time_JustNow"] = "just now",
-            ["TmNotionPageComment_Time_MinutesAgo"] = "{0}m ago",
-            ["TmNotionPageComment_Time_HoursAgo"] = "{0}h ago",
-            ["TmNotionPageComment_Time_DaysAgo"] = "{0}d ago"
         });
     }
 
@@ -113,8 +110,11 @@ public sealed class TmNotionPageCommentPanelDraftGuardTests : LocalizationTestBa
     }
 
     private static IElement FindEntryAction(IRenderedComponent<DraftGuardHost> cut, string titlePart)
-        => cut.FindAll(".tm-npcp__entry-action")
-              .First(e => e.GetAttribute("title")?.Contains(titlePart) == true);
+    {
+        var value = titlePart.Contains("Delete") ? "delete" : "edit";
+        cut.InvokeAsync(() => cut.FindComponent<TmDropdown>().Instance.SelectItemAsync(value)).Wait();
+        return cut.Find("[data-testid=notion-comment-entry-menu]");
+    }
 
     /// <summary>The panel instance under the host — the draft-guard surface lives there.</summary>
     private static TmNotionPageCommentPanel Panel(IRenderedComponent<DraftGuardHost> cut)
@@ -237,7 +237,7 @@ public sealed class TmNotionPageCommentPanelDraftGuardTests : LocalizationTestBa
         var cut = RenderHost(provider, states);
         await SeedThreadAsync(cut, provider);
 
-        FindEntryAction(cut, "Edit").Click();
+        FindEntryAction(cut, "Edit");
         cut.FindAll(".tm-npcp__edit-wrap").Should().ContainSingle();
 
         var entryId = provider.PageComments[0].Entries[0].Id;

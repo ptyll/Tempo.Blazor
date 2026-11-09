@@ -1,13 +1,4 @@
-/* ── Backdrop ─────────────────────────────────────────────────────────────── */
-
-.tm-nps-backdrop {
-    position: fixed;
-    inset: 0;
-    z-index: calc(var(--tm-z-overlay, 1060) - 1);
-    background: var(--tm-bg-overlay);
-    backdrop-filter: blur(2px);
-    animation: tm-nps-fade-in var(--tm-transition-fast);
-}
+/* Phase 6: the backdrop and stacking are the core TmModal's. */
 
 @keyframes tm-nps-fade-in {
     from { opacity: 0; }
@@ -17,28 +8,16 @@
 /* ── Modal card ───────────────────────────────────────────────────────────── */
 
 .tm-nps {
-    position: fixed;
-    inset: 0;
-    z-index: var(--tm-z-overlay, 1060);
     display: flex;
-    align-items: flex-start;
-    justify-content: center;
-    padding: var(--tm-space-16) var(--tm-space-4) 0;
-    pointer-events: none;
+    flex-direction: column;
 }
 
 .tm-nps__card {
     pointer-events: all;
-    width: min(37.5rem, calc(100vw - (var(--tm-space-4) * 2)));
-    max-height: calc(100vh - (var(--tm-space-16) * 2));
+    width: 100%;
     display: flex;
     flex-direction: column;
-    background: var(--tm-color-surface-elevated);
-    border: 1px solid var(--tm-color-border);
-    border-radius: var(--tm-radius-lg);
-    box-shadow: var(--tm-shadow-xl);
     overflow: hidden;
-    animation: tm-nps-slide-in var(--tm-transition-fast);
 }
 
 @keyframes tm-nps-slide-in {
@@ -87,7 +66,7 @@
     min-height: 2rem;
     padding: var(--tm-space-1) var(--tm-space-2);
     background: transparent;
-    border: 1px solid var(--tm-color-border);
+    border: 1px solid var(--tm-border-color);
     border-radius: var(--tm-radius-sm);
     font-size: var(--tm-font-size-xs);
     color: var(--tm-text-secondary);
@@ -135,7 +114,7 @@
     min-height: 2.25rem;
     font-size: var(--tm-font-size-sm);
     padding: var(--tm-space-1) var(--tm-space-2);
-    border: 1px solid var(--tm-color-border);
+    border: 1px solid var(--tm-border-color);
     border-radius: var(--tm-radius-sm);
     background: var(--tm-color-surface-elevated);
     color: var(--tm-text-primary);
@@ -163,7 +142,7 @@
 
 .tm-nps__filter-clear:hover {
     background: var(--tm-color-surface-hover);
-    border-color: var(--tm-color-border);
+    border-color: var(--tm-border-color);
     color: var(--tm-text-primary);
 }
 
@@ -172,17 +151,18 @@
 .tm-nps__results {
     flex: 0 1 auto;
     min-height: 3.5rem;
-    max-height: min(22rem, calc(100vh - 24rem));
+    /* F-09: a centered large modal (not a fullscreen sheet) — the list never exceeds 80dvh. */
+    max-height: min(22rem, 80dvh);
     overflow-y: auto;
     padding: var(--tm-space-2) 0;
     scrollbar-width: thin;
-    scrollbar-color: var(--tm-color-border) transparent;
+    scrollbar-color: var(--tm-border-color) transparent;
 }
 
 .tm-nps__results::-webkit-scrollbar { width: var(--tm-space-1); }
 
 .tm-nps__results::-webkit-scrollbar-thumb {
-    background: var(--tm-color-border);
+    background: var(--tm-border-color);
     border-radius: var(--tm-radius-xs);
 }
 
@@ -195,7 +175,6 @@
     padding: var(--tm-space-2) var(--tm-space-4) var(--tm-space-1);
     font-size: var(--tm-font-size-xs);
     font-weight: var(--tm-font-weight-semibold);
-    text-transform: uppercase;
     color: var(--tm-text-tertiary);
     user-select: none;
 }
@@ -270,10 +249,20 @@
     gap: var(--tm-space-1);
 }
 
+/* F-09: hierarchy — the title is the largest element; path/meta/snippet stay secondary. */
 .tm-nps__item-title {
-    font-size: var(--tm-font-size-sm);
-    font-weight: var(--tm-font-weight-medium);
+    font-size: var(--tm-font-size-md);
+    font-weight: var(--tm-font-weight-semibold);
     color: var(--tm-text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.tm-nps__item-meta,
+.tm-nps__item-path {
+    font-size: var(--tm-font-size-sm);
+    color: var(--tm-text-secondary);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -351,7 +340,7 @@
     height: 1.125rem;
     padding: 0 4px;
     background: var(--tm-color-surface-elevated);
-    border: 1px solid var(--tm-color-border);
+    border: 1px solid var(--tm-border-color);
     border-bottom-width: 2px;
     border-radius: var(--tm-radius-sm);
     font-size: var(--tm-font-size-xs);
@@ -370,9 +359,9 @@
         padding: var(--tm-space-2);
     }
 
-    .tm-nps__card {
-        width: 100%;
-        max-height: calc(100vh - (var(--tm-space-2) * 2));
+    .tm-nps__results {
+        flex: 1;
+        max-height: none;
     }
 
     .tm-nps__search-row {

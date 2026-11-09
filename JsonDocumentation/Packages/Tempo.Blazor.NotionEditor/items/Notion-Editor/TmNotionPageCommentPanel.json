@@ -23,6 +23,13 @@
       "isRequired": false
     },
     {
+      "name": "Mode",
+      "type": "TmNotionPageCommentPanelMode",
+      "isRequired": false,
+      "default": "Inline",
+      "description": "Inline (default) renders the collapsible toggle + expandable body; Embedded renders the always-expanded body with no toggle and loads threads up front — used inside the page-comments dialog (TmNotionEditor.PageCommentsPresentation=Dialog) and any host-owned container."
+    },
+    {
       "name": "OnCountChanged",
       "type": "EventCallback",
       "isRequired": false

@@ -2,6 +2,7 @@
 @inject ToastService Toast
 @inject ITmNotificationService Notifications
 @inject ITmLocalizer Loc
+@inject Tempo.Blazor.Demo.SharedUI.Services.DemoToastPresentationState ToastPresentation
 @implements IDisposable
 @using Tempo.Blazor.Abstractions.Shared
 @using Tempo.Blazor.Components.Workflow
@@ -106,6 +107,10 @@
                           OnClick="@(() => Toast.ShowInfo("This toast stays for 10 seconds.", "Long Duration", 10000))">
                     Long (10s)
                 </TmButton>
+                <TmButton Size="ButtonSize.Sm" Variant="ButtonVariant.Ghost" data-testid="toast-short-duration"
+                          OnClick="@(() => Toast.Show(new ToastOptions { Message = "Short-lived toast (1.5 s) — hover me to keep it.", Duration = 1500 }))">
+                    Short-lived (1.5 s)
+                </TmButton>
                 <TmButton Size="ButtonSize.Sm" Variant="ButtonVariant.Ghost" OnClick="@FireMultipleToasts">
                     Multiple
                 </TmButton>
@@ -116,6 +121,151 @@
         </div>
     </div>
 </section>
+
+<!-- Toast Actions: Undo -->
+<section class="demo-section" data-testid="toast-undo-section">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Toast actions — Undo</h2>
+        <span class="px-2 py-0.5 text-xs font-medium bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 rounded-full">ShowUndo</span>
+    </div>
+
+    <div class="showcase-card">
+        <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">
+            Delete an item: a toast with an <strong>Undo</strong> action appears (at least
+            <code class="px-1.5 py-0.5 bg-slate-100 dark:bg-slate-800 rounded text-xs font-mono">MinActionDuration</code> = 10 s so the action stays reachable).
+            Activating Undo restores the item. <kbd class="px-1.5 py-0.5 bg-slate-100 dark:bg-slate-800 rounded text-xs font-mono">Alt+T</kbd> moves focus to the
+            newest action button.
+        </p>
+        <ul class="space-y-2 mb-4" data-testid="toast-undo-list">
+            @foreach (var item in _undoItems)
+            {
+                <li class="flex items-center justify-between rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-2" data-testid="toast-undo-item">
+                    <span class="text-sm text-slate-700 dark:text-slate-300">@item</span>
+                    <TmButton Variant="ButtonVariant.Ghost" Size="ButtonSize.Sm" data-testid="toast-undo-delete"
+                              OnClick="@(() => DeleteItemAsync(item))">Delete</TmButton>
+                </li>
+            }
+        </ul>
+        @if (_undoItems.Count == 0)
+        {
+            <p class="text-sm text-slate-500 dark:text-slate-400 mb-4" data-testid="toast-undo-empty">All items deleted — use Undo in the toast to restore.</p>
+        }
+        @if (_lastDeleted is not null)
+        {
+            <TmButton Variant="ButtonVariant.Secondary" Size="ButtonSize.Sm" data-testid="toast-undo-restore-direct"
+                      OnClick="RestoreLastDeletedAsync">Restore “@_lastDeleted” directly</TmButton>
+        }
+    </div>
+</section>
+
+<!-- Toast Promise -->
+<section class="demo-section" data-testid="toast-promise-section">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Promise toasts — simulated upload (2 s)</h2>
+        <span class="px-2 py-0.5 text-xs font-medium bg-cyan-100 dark:bg-cyan-900/30 text-cyan-700 dark:text-cyan-300 rounded-full">PromiseAsync</span>
+    </div>
+
+    <div class="showcase-card">
+        <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">
+            One toast lives through the whole operation: a sticky <strong>loading</strong> state with a spinner,
+            then an <strong>in-place</strong> update to success or error — the toast never jumps in the stack.
+        </p>
+        <div class="flex flex-wrap gap-3">
+            <TmButton Variant="ButtonVariant.Primary" Size="ButtonSize.Sm" data-testid="toast-promise-success"
+                      OnClick="@(() => RunUploadAsync(succeed: true))">Upload (succeeds)</TmButton>
+            <TmButton Variant="ButtonVariant.Danger" Size="ButtonSize.Sm" data-testid="toast-promise-error"
+                      OnClick="@(() => RunUploadAsync(succeed: false))">Upload (fails)</TmButton>
+        </div>
+    </div>
+</section>
+
+<!-- Dedupe + custom content -->
+<section class="demo-section" data-testid="toast-dedupe-section">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Dedupe (Key) &amp; custom content</h2>
+        <span class="px-2 py-0.5 text-xs font-medium bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 rounded-full">Show(ToastOptions)</span>
+    </div>
+
+    <div class="showcase-card">
+        <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">
+            Click <strong>Count</strong> repeatedly: every click replaces the same toast in place (same position,
+            timer restarts) instead of stacking. <strong>Custom content</strong> renders a host-owned fragment below the message.
+        </p>
+        <div class="flex flex-wrap gap-3">
+            <TmButton Variant="ButtonVariant.Secondary" Size="ButtonSize.Sm" data-testid="toast-dedupe-count"
+                      OnClick="ShowDedupeToastAsync">Count (@_dedupeCount)</TmButton>
+            <TmButton Variant="ButtonVariant.Ghost" Size="ButtonSize.Sm" data-testid="toast-custom-content"
+                      OnClick="ShowCustomToast">Custom content toast</TmButton>
+        </div>
+    </div>
+</section>
+
+<!-- Positions & deck -->
+<section class="demo-section" data-testid="toast-presentation-section">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Positions &amp; collapsed deck</h2>
+        <span class="px-2 py-0.5 text-xs font-medium bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-300 rounded-full">6 positions + Stacked</span>
+    </div>
+
+    <div class="showcase-card">
+        <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">
+            These buttons reconfigure the shared layout container, then push a toast so the effect is
+            visible immediately. <strong>Stacked deck</strong> keeps the newest three cards fully visible and
+            collapses the older ones to thin strips — hover the stack to expand it. On a touch device,
+            swipe a card horizontally to dismiss it.
+        </p>
+        <div class="flex flex-wrap gap-2 mb-3" data-testid="toast-position-buttons">
+            @foreach (var position in Enum.GetValues<ToastPosition>())
+            {
+                var p = position;
+                <TmButton Variant="@(ToastPresentation.Position == p ? ButtonVariant.Primary : ButtonVariant.Ghost)"
+                          Size="ButtonSize.Sm" data-testid="@($"toast-position-{p.ToString().ToLowerInvariant()}")"
+                          OnClick="@(() => SetToastPosition(p))">@p</TmButton>
+            }
+        </div>
+        <div class="flex flex-wrap gap-3">
+            <TmButton Variant="@(ToastPresentation.Stacked ? ButtonVariant.Primary : ButtonVariant.Secondary)"
+                      Size="ButtonSize.Sm" data-testid="toast-deck-toggle"
+                      OnClick="ToggleStackedAsync">Stacked deck: @(ToastPresentation.Stacked ? "on" : "off")</TmButton>
+            <TmButton Variant="ButtonVariant.Secondary" Size="ButtonSize.Sm" data-testid="toast-deck-fill"
+                      OnClick="FillDeckAsync">Push 5 toasts</TmButton>
+            <TmButton Variant="ButtonVariant.Ghost" Size="ButtonSize.Sm" data-testid="toast-presentation-demo"
+                      OnClick="@(() => Toast.ShowInfo($"Position: {ToastPresentation.Position}"))">Show toast</TmButton>
+        </div>
+    </div>
+</section>
+
+<!-- Escape probe: a toast action inside a modal -->
+<section class="demo-section" data-testid="toast-escape-section">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Escape ordering inside a modal</h2>
+        <span class="px-2 py-0.5 text-xs font-medium bg-teal-100 dark:bg-teal-900/30 text-teal-700 dark:text-teal-300 rounded-full">tmEscapeHandled</span>
+    </div>
+
+    <div class="showcase-card">
+        <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">
+            Open the modal, push a toast with an action, focus the action (<kbd class="px-1.5 py-0.5 bg-slate-100 dark:bg-slate-800 rounded text-xs font-mono">Alt+T</kbd>)
+            and press <kbd class="px-1.5 py-0.5 bg-slate-100 dark:bg-slate-800 rounded text-xs font-mono">Escape</kbd>: the toast is dismissed while the modal
+            stays open — the toast marks the event handled so the modal's own Escape does not fire.
+        </p>
+        <TmButton Variant="ButtonVariant.Secondary" Size="ButtonSize.Sm" data-testid="toast-escape-open-modal"
+                  OnClick="@(() => { _escapeModalOpen = true; StateHasChanged(); })">Open modal</TmButton>
+    </div>
+</section>
+
+<TmModal Show="_escapeModalOpen" Title="Escape ordering probe" data-testid="toast-escape-modal"
+         OnClose="@(() => { _escapeModalOpen = false; StateHasChanged(); })">
+    <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">
+        Push the toast, focus its action with Alt+T, then press Escape — the toast closes, this modal stays.
+    </p>
+    <TmButton Variant="ButtonVariant.Primary" Size="ButtonSize.Sm" data-testid="toast-escape-push"
+              OnClick="@(() => Toast.Show(new ToastOptions
+                       {
+                           Message = "Action toast inside the modal",
+                           Severity = ToastSeverity.Info,
+                           Action = new ToastAction { Label = "Run action", OnClick = () => { Toast.ShowSuccess("Action ran"); return Task.CompletedTask; } },
+                       }))">Push action toast</TmButton>
+</TmModal>
 
 <!-- Notification Bell -->
 <section class="demo-section">
@@ -1187,6 +1337,146 @@
         Toast.ShowInfo("Processing started…");
         Toast.ShowWarning("Disk space low.");
     }
+
+    // ── Toast actions: Undo demo ────────────────────────────────────────────
+    private readonly List<string> _undoItems = ["Quarterly report.docx", "Budget 2026.xlsx", "Meeting notes.md"];
+    private string? _lastDeleted;
+
+    private Task DeleteItemAsync(string item)
+    {
+        _undoItems.Remove(item);
+        _lastDeleted = item;
+        Toast.ShowUndo($"“{item}” deleted.", onUndo: () =>
+        {
+            if (!_undoItems.Contains(item))
+            {
+                _undoItems.Add(item);
+            }
+
+            _lastDeleted = null;
+            StateHasChanged();
+            return Task.CompletedTask;
+        });
+        return Task.CompletedTask;
+    }
+
+    private Task RestoreLastDeletedAsync()
+    {
+        if (_lastDeleted is { } item && !_undoItems.Contains(item))
+        {
+            _undoItems.Add(item);
+        }
+
+        _lastDeleted = null;
+        return Task.CompletedTask;
+    }
+
+    // ── Promise toast demo (simulated 2 s upload) ───────────────────────────
+    private async Task RunUploadAsync(bool succeed)
+    {
+        try
+        {
+            await Toast.PromiseAsync(
+                async ct =>
+                {
+                    await Task.Delay(2000, ct);
+                    if (!succeed)
+                    {
+                        throw new InvalidOperationException("The upload endpoint returned 500.");
+                    }
+                },
+                new ToastPromiseOptions
+                {
+                    LoadingMessage = "Uploading report.pdf…",
+                    LoadingTitle = "Upload",
+                    SuccessMessage = _ => "report.pdf uploaded (2.1 MB).",
+                    SuccessTitle = "Upload complete",
+                    ErrorMessage = ex => $"Upload failed: {ex.Message}",
+                    ErrorTitle = "Upload failed",
+                });
+        }
+        catch (InvalidOperationException)
+        {
+            // The demo surfaces the failure through the error toast; nothing else to do.
+        }
+    }
+
+    // ── Dedupe (Key) + custom content demo ──────────────────────────────────
+    private int _dedupeCount;
+
+    private Task ShowDedupeToastAsync()
+    {
+        _dedupeCount++;
+        Toast.Show(new ToastOptions
+        {
+            Message = $"Counted {_dedupeCount}× — one toast, replaced in place.",
+            Severity = ToastSeverity.Info,
+            Key = "demo-dedupe-counter",
+        });
+        return Task.CompletedTask;
+    }
+
+    private void ShowCustomToast()
+        => Toast.Show(new ToastOptions
+        {
+            Message = "A toast with host-owned content below the message.",
+            Severity = ToastSeverity.Info,
+            Content = builder =>
+            {
+                builder.OpenElement(0, "div");
+                builder.AddAttribute(1, "class", "flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400");
+                builder.OpenElement(2, "span");
+                builder.AddContent(3, "Progress:");
+                builder.CloseElement();
+                builder.OpenElement(4, "progress");
+                builder.AddAttribute(5, "value", "70");
+                builder.AddAttribute(6, "max", "100");
+                builder.AddAttribute(7, "class", "w-32");
+                builder.CloseElement();
+                builder.CloseElement();
+            },
+        });
+
+    // ── Positions & deck demo ───────────────────────────────────────────────
+    private void SetToastPosition(ToastPosition position)
+    {
+        ToastPresentation.Position = position;
+        Toast.ShowInfo($"Toast position: {position}");
+    }
+
+    private Task ToggleStackedAsync()
+    {
+        ToastPresentation.Stacked = !ToastPresentation.Stacked;
+        Toast.ShowInfo($"Stacked deck: {(ToastPresentation.Stacked ? "on" : "off")}");
+        return Task.CompletedTask;
+    }
+
+    private async Task FillDeckAsync()
+    {
+        // Space the pushes so every toast gets a distinct CreatedAt — pushed within the same
+        // millisecond the deck's "newest three" order would be tie-broken arbitrarily and the
+        // wrong cards would collapse.
+        var messages = new[]
+        {
+            "Deck toast 1 (oldest)",
+            "Deck toast 2",
+            "Deck toast 3",
+            "Deck toast 4",
+            "Deck toast 5 (newest)",
+        };
+        for (var i = 0; i < messages.Length; i++)
+        {
+            Toast.Show(new ToastOptions
+            {
+                Message = messages[i],
+                Severity = i % 2 == 0 ? ToastSeverity.Success : ToastSeverity.Info,
+            });
+            await Task.Delay(120);
+        }
+    }
+
+    // ── Escape ordering probe ───────────────────────────────────────────────
+    private bool _escapeModalOpen;
 
     private async Task AddNotificationAsync()
     {

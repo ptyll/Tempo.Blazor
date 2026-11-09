@@ -1269,11 +1269,23 @@
           "description": "Consumer actions rendered after the built-in Edit and Delete buttons, inside .tm-comment-actions wrapped by .tm-comment-actions__custom, once per comment with that comment's TmCommentEntry. The component does not interpret the fragment: the consumer supplies its own button and any confirmation dialog (for example an admin toggle between internal and public). The component never hides an internal comment. The actions row renders when the comment can be edited or deleted, or when this fragment is set; it is omitted when none of those apply. While that comment is being edited inline the row is hidden; other comments keep theirs. The wrapper is not focusable and does not handle keys, so it does not change tab order — put a native button in the fragment."
         },
         {
+          "name": "CommentEditHandler",
+          "type": "Func<TmCommentEdit, Task<bool>>?",
+          "isRequired": false,
+          "description": "Optional save handler for an inline edit. When set, it runs INSTEAD of OnCommentEdited, with the same data in a named TmCommentEdit record (CommentId, Html). Return true: the inline editor closes. Return false: the inline editor stays open with the edited text and the dirty draft state is preserved; the consumer presents the reason. The handler converts its own failures to false — an exception propagates (the in-flight flag still clears in finally and the editor stays open). Null keeps OnCommentEdited, behavior unchanged."
+        },
+        {
           "name": "Comments",
           "type": "IReadOnlyList<TmCommentEntry>",
           "isRequired": false,
           "default": "[]",
           "description": "Comments to render. An entry with IsInternal is painted with the internal wash, IconNames.Lock and the localized Internal label; it is never hidden — the consumer or server filters visibility. Valid Badges render in the meta row as subtle pill TmBadges. A null Badges list is treated as empty. Defaults to an empty list."
+        },
+        {
+          "name": "CommentSubmitHandler",
+          "type": "Func<TmCommentSubmission, Task<bool>>?",
+          "isRequired": false,
+          "description": "Optional save handler for a NEW comment. When set, it runs INSTEAD of OnCommentSubmitted and OnCommentAdded. Return true: the editor closes and clears and the internal switch resets. Return false: the editor stays open with the typed text and the internal-switch state preserved, the aria-live status announces the non-save (the consumer presents the actual reason), and no draft transition is reported. The handler converts its own failures to false — an exception propagates (the in-flight flag still clears in finally and the editor stays open). Null keeps the legacy callbacks, order unchanged."
         },
         {
           "name": "MentionProvider",
@@ -1285,7 +1297,7 @@
           "name": "OnCommentAdded",
           "type": "EventCallback<string>",
           "isRequired": false,
-          "description": "Raised with the submitted HTML when the user posts a new comment. Stays for hosts that only need the body. Prefer OnCommentSubmitted when the host must also know whether the composer was in internal mode — that callback fires first, then this one, with the same HTML. Both stay; neither replaces the other."
+          "description": "Raised with the submitted HTML when the user posts a new comment. Stays for hosts that only need the body. Prefer OnCommentSubmitted when the host must also know whether the composer was in internal mode — that callback fires first, then this one, with the same HTML. Both stay; neither replaces the other. Neither runs when CommentSubmitHandler is set — the handler replaces them."
         },
         {
           "name": "OnCommentDeleted",
@@ -1297,13 +1309,13 @@
           "name": "OnCommentEdited",
           "type": "EventCallback<(string Id, string Html)>",
           "isRequired": false,
-          "description": "Raised with the comment id and the new HTML when the user saves an edit."
+          "description": "Raised with the comment id and the new HTML when the user saves an edit. Does not run when CommentEditHandler is set — the handler replaces it."
         },
         {
           "name": "OnCommentSubmitted",
           "type": "EventCallback<TmCommentSubmission>",
           "isRequired": false,
-          "description": "Raised when the user posts a NEW comment, before OnCommentAdded, with the HTML and the composer internal flag (TmCommentSubmission). Document order is fixed: this callback, then OnCommentAdded. An edit does not raise it. An effectively empty composer raises neither callback. When this callback has no delegate, only OnCommentAdded runs."
+          "description": "Raised when the user posts a NEW comment, before OnCommentAdded, with the HTML and the composer internal flag (TmCommentSubmission). Document order is fixed: this callback, then OnCommentAdded. An edit does not raise it. An effectively empty composer raises neither callback. When this callback has no delegate, only OnCommentAdded runs. Neither runs when CommentSubmitHandler is set — the handler replaces them."
         },
         {
           "name": "OnDraftChanged",
@@ -1447,10 +1459,22 @@
           "description": "Consumer actions rendered after the built-in Edit and Delete buttons, once per comment. Forwarded; the log does not interpret the fragment."
         },
         {
+          "name": "CommentEditHandler",
+          "type": "Func<TmCommentEdit, Task<bool>>?",
+          "isRequired": false,
+          "description": "Optional save handler for an inline edit, forwarded to TmActivityComments. When set it replaces OnCommentEdited there: return true to close the inline editor, false to keep the edited text. Null (default) keeps the legacy callback. Added in 2.10.0."
+        },
+        {
           "name": "Comments",
           "type": "IReadOnlyList<TmCommentEntry>",
           "isRequired": false,
           "default": "[]"
+        },
+        {
+          "name": "CommentSubmitHandler",
+          "type": "Func<TmCommentSubmission, Task<bool>>?",
+          "isRequired": false,
+          "description": "Optional save handler for a NEW comment, forwarded to TmActivityComments. When set it replaces OnCommentSubmitted and OnCommentAdded there: return true to close the editor, false to keep the draft open. Null (default) keeps the legacy callbacks, order unchanged. Added in 2.10.0."
         },
         {
           "name": "EntityId",
@@ -8625,6 +8649,26 @@
       ]
     },
     {
+      "itemName": "OtpInputKind",
+      "kind": "Enum",
+      "category": "Components",
+      "namespace": "Tempo.Blazor.Components.Inputs",
+      "description": "Which characters TmOtpInput accepts per cell and the keyboard it presents.",
+      "packageId": "Tempo.Blazor",
+      "sourcePath": "src/Tempo.Blazor/Components/Inputs/OtpInputKind.cs",
+      "documentationStatus": "merged",
+      "values": [
+        {
+          "name": "Numeric",
+          "description": "ASCII digits 0-9 only. Presents the numeric keyboard (inputmode=\"numeric\")."
+        },
+        {
+          "name": "Alphanumeric",
+          "description": "ASCII letters (normalized to uppercase) and digits. Presents the standard keyboard."
+        }
+      ]
+    },
+    {
       "itemName": "OverlayAlign",
       "kind": "Enum",
       "category": "Components",
@@ -9846,6 +9890,16 @@
       "description": "Lifecycle state of a tracked upload: Uploading, Scanning, Completed, Failed, Cancelled, or Blocked.",
       "packageId": "Tempo.Blazor",
       "sourcePath": "src/Tempo.Blazor/Components/Files/TmUploadItem.cs",
+      "documentationStatus": "merged"
+    },
+    {
+      "itemName": "ToastPoliteness",
+      "kind": "Enum",
+      "category": "Components",
+      "namespace": "Tempo.Blazor.Components.Feedback",
+      "description": "Live-region politeness of a toast announcement: how urgently a screen reader interrupts to speak it. Maps to the ARIA role the container renders: Polite → role=\"status\", Assertive → role=\"alert\".",
+      "packageId": "Tempo.Blazor",
+      "sourcePath": "src/Tempo.Blazor/Components/Feedback/ToastEnums.cs",
       "documentationStatus": "merged"
     },
     {
@@ -16503,7 +16557,7 @@
       "kind": "Component",
       "category": "Feedback",
       "namespace": "Tempo.Blazor.Components.Feedback",
-      "description": "Fixed-position container that renders toast notifications from the injected ToastService. Supports four screen positions and auto-dismiss with animated progress bars.",
+      "description": "Fixed-position container that renders toast notifications from the injected ToastService. Supports six screen positions, auto-dismiss with animated progress bars, an optional collapsed-deck presentation and swipe-to-dismiss (touch/pen).",
       "packageId": "Tempo.Blazor",
       "sourcePath": "src/Tempo.Blazor/Components/Feedback/TmToastContainer.razor",
       "documentationStatus": "merged",
@@ -16519,29 +16573,60 @@
           "description": "Maximum number of toasts visible at once."
         },
         {
+          "name": "MinActionDuration",
+          "type": "int",
+          "isRequired": false,
+          "default": "10_000",
+          "description": "Minimum duration (milliseconds) for toasts carrying an action button (e.g. Undo): a shorter requested duration is floored to this value so the action stays reachable long enough to react. Pushed to ToastService.MinActionDuration when parameters are set (set it before showing toasts). Sticky toasts (duration <= 0) and toasts without an action are never floored."
+        },
+        {
+          "name": "PauseOnHover",
+          "type": "bool",
+          "isRequired": false,
+          "default": "true",
+          "description": "Pause the auto-dismiss timer while the pointer hovers a toast or focus is inside it (mouseenter/focusin pause, mouseleave/focusout resume with the remaining time). A hidden document pauses every toast regardless of this setting."
+        },
+        {
           "name": "Position",
           "type": "ToastPosition",
           "isRequired": false,
           "default": "ToastPosition.TopRight",
           "description": "Position of the toast container on screen."
+        },
+        {
+          "name": "Stacked",
+          "type": "bool",
+          "isRequired": false,
+          "default": "false",
+          "description": "Collapsed-deck presentation: the newest three toasts stay fully visible, every older card collapses to a thin strip (a pure-CSS depth hint), and hovering the container or moving focus inside it expands the deck."
         }
       ],
       "cssClasses": [
         "tm-toast-container",
         "tm-toast-container--top-right",
         "tm-toast-container--top-left",
+        "tm-toast-container--top-center",
         "tm-toast-container--bottom-right",
         "tm-toast-container--bottom-left",
+        "tm-toast-container--bottom-center",
+        "tm-toast-container--stacked",
         "tm-toast",
         "tm-toast--success",
         "tm-toast--error",
         "tm-toast--warning",
         "tm-toast--info",
+        "tm-toast--paused",
+        "tm-toast--loading",
+        "tm-toast--deck-collapsed",
+        "tm-toast--swipe-return",
         "tm-toast-body",
         "tm-toast-icon",
+        "tm-toast-spinner",
         "tm-toast-content",
         "tm-toast-title",
         "tm-toast-message",
+        "tm-toast-custom",
+        "tm-toast-action",
         "tm-toast-dismiss",
         "tm-toast-progress",
         "tm-toast-progress-bar"
@@ -16554,6 +16639,18 @@
         {
           "title": "Bottom-left position with limit",
           "code": "<TmToastContainer Position=\"ToastPosition.BottomLeft\" MaxVisible=\"3\" />"
+        },
+        {
+          "title": "Undoable action toast",
+          "code": "ToastService.ShowUndo(\"Item deleted\", OnUndoAsync)"
+        },
+        {
+          "title": "Promise toast: loading in place, success or error update",
+          "code": "await ToastService.PromiseAsync(ct => SaveAsync(ct), new ToastPromiseOptions { LoadingMessage = \"Saving…\", SuccessMessage = _ => \"Saved\", ErrorMessage = ex => $\"Save failed: {ex.Message}\" });"
+        },
+        {
+          "title": "Collapsed deck at the top center",
+          "code": "<TmToastContainer Position=\"ToastPosition.TopCenter\" Stacked=\"true\" />"
         }
       ]
     },
@@ -21547,6 +21644,175 @@
       ]
     },
     {
+      "itemName": "TmOtpInput",
+      "kind": "Component",
+      "category": "Inputs",
+      "namespace": "Tempo.Blazor.Components.Inputs",
+      "description": "Segmented one-time-code input: one cell per character, auto-advance on typing, Backspace steps back, arrow/Home/End navigation, optional grouping separators and masking.",
+      "packageId": "Tempo.Blazor",
+      "sourcePath": "src/Tempo.Blazor/Components/Inputs/TmOtpInput.razor",
+      "documentationStatus": "merged",
+      "requiredImports": [
+        "@using Tempo.Blazor.Components.Inputs"
+      ],
+      "parameters": [
+        {
+          "name": "AriaDescribedBy",
+          "type": "string?",
+          "isRequired": false,
+          "description": "aria-describedby of the group (e.g. a hint or error message id)."
+        },
+        {
+          "name": "AriaLabel",
+          "type": "string?",
+          "isRequired": false,
+          "description": "aria-label of the group. Defaults to the localized \"Verification code\" label; ignored when AriaLabelledBy is set (the reference wins per WAI-ARIA)."
+        },
+        {
+          "name": "AriaLabelledBy",
+          "type": "string?",
+          "isRequired": false,
+          "description": "aria-labelledby of the group. When set, AriaLabel is not rendered."
+        },
+        {
+          "name": "AutoFocus",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Moves focus to the first cell after the first render."
+        },
+        {
+          "name": "Class",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Additional CSS class(es) applied to the root element."
+        },
+        {
+          "name": "Disabled",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Disables every cell and applies the tm-otp-input--disabled root modifier."
+        },
+        {
+          "name": "ErrorText",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Error message rendered below the input (and announced politely) while Invalid is true. Localize it through ITmLocalizer; null or empty renders no error element and adds no {Id}-error reference — use that when a surrounding TmFormField renders the message instead."
+        },
+        {
+          "name": "GroupSize",
+          "type": "int",
+          "isRequired": false,
+          "description": "Renders an aria-hidden separator between groups of this many cells (0 = no separators).",
+          "default": "0"
+        },
+        {
+          "name": "Id",
+          "type": "string",
+          "isRequired": false,
+          "default": "Guid.NewGuid().ToString(\"n\")[..8]",
+          "description": "HTML id attribute of the root group."
+        },
+        {
+          "name": "Invalid",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Error state: applies the tm-otp-input--invalid root modifier (with the shake animation) and sets aria-invalid=\"true\" plus an aria-describedby pointing at the ErrorText message on the group and every cell. Setting Invalid=true WITHOUT ErrorText is the supported way to surface a message owned by a surrounding TmFormField (reachable through the host AriaDescribedBy). The message text is announced through a single always-rendered polite live region; call ShowErrorAsync() to replay the shake and re-announce an unchanged error."
+        },
+        {
+          "name": "Kind",
+          "type": "OtpInputKind",
+          "isRequired": false,
+          "default": "OtpInputKind.Numeric",
+          "description": "Which characters are accepted (Numeric: ASCII digits; Alphanumeric: letters normalized to uppercase plus digits) and which keyboard is presented via inputmode."
+        },
+        {
+          "name": "Length",
+          "type": "int",
+          "isRequired": false,
+          "default": "6",
+          "description": "Number of cells. Must be between 4 and 10; other values throw ArgumentOutOfRangeException."
+        },
+        {
+          "name": "Masked",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Renders every cell as type=\"password\" so the code is hidden while typing."
+        },
+        {
+          "name": "OnComplete",
+          "type": "EventCallback<string>",
+          "isRequired": false,
+          "description": "Fires exactly once each time the code transitions from incomplete to complete; clearing a character and completing again fires it again."
+        },
+        {
+          "name": "ReadOnly",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Renders every cell readonly and applies the tm-otp-input--readonly root modifier: the code stays visible and focusable but cannot be edited."
+        },
+        {
+          "name": "Value",
+          "type": "string",
+          "isRequired": false,
+          "default": "\"\"",
+          "description": "The complete verification code. Equals the concatenation of all cell values."
+        },
+        {
+          "name": "ValueChanged",
+          "type": "EventCallback<string>",
+          "isRequired": false,
+          "description": "Fires when the code changes (every accepted or removed character)."
+        },
+        {
+          "name": "Verified",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Verified state: blocks editing (the cells become readonly), applies the tm-otp-input--verified root modifier and renders the localized verified status (check icon + text) below the input, referenced from every cell through aria-describedby=\"{Id}-status\" and announced through the polite live region."
+        },
+        {
+          "name": "VerifiedText",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Optional text of the verified status row (additive): overrides the localized TmOtpInput_VerifiedStatus default in the status element AND in the polite live region, so a host with its own verified wording (e.g. a signing step reusing the host's \"Verified\" key) keeps ONE consistent text everywhere."
+        },
+        {
+          "name": "DataTestId",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Overrides the root data-testid."
+        },
+        {
+          "name": "TestIdPrefix",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Namespaces every internal data-testid as \"{prefix}-{name}\"."
+        },
+        {
+          "name": "AdditionalAttributes",
+          "type": "Dictionary<string, object>?",
+          "isRequired": false,
+          "description": "Additional attributes applied to the root element."
+        }
+      ],
+      "methods": [
+        {
+          "name": "FocusAsync",
+          "signature": "Task FocusAsync()",
+          "description": "Moves focus to the first empty cell (selecting it); a complete code focuses the first cell. No-op while Disabled."
+        },
+        {
+          "name": "ClearAsync",
+          "signature": "Task ClearAsync()",
+          "description": "Clears every cell, raises ValueChanged with the empty string, syncs the DOM (one batched setCellValues call) and re-arms OnComplete. No-op while editing is blocked."
+        },
+        {
+          "name": "ShowErrorAsync",
+          "signature": "Task ShowErrorAsync()",
+          "description": "Re-triggers the invalid shake (JS reflow restart) and re-announces the error message: the single polite live region is cleared for one render and then restored, because it only announces changes. Call after (re)applying Invalid/ErrorText when the same error is already shown."
+        }
+      ]
+    },
+    {
       "itemName": "TmPasswordStrengthIndicator",
       "kind": "Component",
       "category": "Inputs",
@@ -25338,6 +25604,13 @@
           "description": "Id of the host element (typically the opener button) focus returns to when the SHEET presentation closes — via Escape, the header close, the backdrop, a swipe or the host setting Open to false. Null keeps the focus scope default."
         },
         {
+          "name": "ShowHeader",
+          "type": "bool",
+          "isRequired": false,
+          "default": "true",
+          "description": "The host's own chrome carries the title/close (e.g. a panel that renders its own header): opt out of the built-in header row. When false the sheet renders no header and no drawer close button (the host content owns its own), and the panel falls back to the localized default accessible name."
+        },
+        {
           "name": "Side",
           "type": "SidePanelSide",
           "isRequired": false,
@@ -27028,6 +27301,12 @@
           "isRequired": false,
           "default": "$\"tm-overlay-panel-{Guid.NewGuid():n}\"",
           "description": "Id of the rendered panel element. Defaults to a generated value; supply one when the anchor should reference it (e.g. via aria-controls). In sheet mode the id lands on the content wrapper inside the drawer body, so the reference resolves in both presentations."
+        },
+        {
+          "name": "InitialFocusSelector",
+          "type": "string?",
+          "isRequired": false,
+          "description": "CSS selector of the element a trapped desktop popover focuses first. Null keeps the first focusable."
         },
         {
           "name": "InitialMode",
@@ -29915,6 +30194,18 @@
           "type": "RenderFragment<TmCommentEntry>?",
           "isRequired": false,
           "description": "Consumer actions rendered after the built-in Edit and Delete buttons of each task comment. Forwarded; the panel does not interpret the fragment."
+        },
+        {
+          "name": "CommentEditHandler",
+          "type": "Func<TmCommentEdit, Task<bool>>?",
+          "isRequired": false,
+          "description": "Optional save handler for an inline comment edit, forwarded to the embedded TmActivityComments. Relevant only for host-supplied comments with CanEdit; the panel raises no edit callback of its own. Return true to close the inline editor, false to keep the edited text open. Null (default) keeps the legacy callback. Added in 2.10.0."
+        },
+        {
+          "name": "CommentSubmitHandler",
+          "type": "Func<TmCommentSubmission, Task<bool>>?",
+          "isRequired": false,
+          "description": "Optional save handler for a NEW comment, forwarded to the embedded TmActivityComments. When set it runs INSTEAD of the panel's comment posting (the legacy OnCommentAdded entry callback): return true to close the composer, false to keep the draft open. Null (default) keeps the legacy behavior. Added in 2.10.0."
         },
         {
           "name": "Dependencies",
@@ -33036,6 +33327,16 @@
       "documentationStatus": "merged"
     },
     {
+      "itemName": "ToastAction",
+      "kind": "Record",
+      "category": "Services",
+      "namespace": "Tempo.Blazor.Services",
+      "description": "An action button rendered inside a toast (the classic use is Undo). The label resolves through ITmLocalizer when LabelKey is set, so services stay localization-free.",
+      "packageId": "Tempo.Blazor",
+      "sourcePath": "src/Tempo.Blazor/Services/ToastOptions.cs",
+      "documentationStatus": "merged"
+    },
+    {
       "itemName": "ToastInstance",
       "kind": "Record",
       "category": "Services",
@@ -33043,6 +33344,26 @@
       "description": "Describes a single toast notification instance.",
       "packageId": "Tempo.Blazor",
       "sourcePath": "src/Tempo.Blazor/Services/ToastService.cs",
+      "documentationStatus": "merged"
+    },
+    {
+      "itemName": "ToastOptions",
+      "kind": "Record",
+      "category": "Services",
+      "namespace": "Tempo.Blazor.Services",
+      "description": "Configuration for a toast shown through Show. Purely additive over the classic ShowSuccess/ShowInfo/ShowWarning/ShowError helpers: every property is optional and the defaults reproduce a classic info toast.",
+      "packageId": "Tempo.Blazor",
+      "sourcePath": "src/Tempo.Blazor/Services/ToastOptions.cs",
+      "documentationStatus": "merged"
+    },
+    {
+      "itemName": "ToastPromiseOptions",
+      "kind": "Record",
+      "category": "Services",
+      "namespace": "Tempo.Blazor.Services",
+      "description": "Configuration for ToastService.PromiseAsync: the three phases of a long-running operation surfaced through ONE toast — a sticky loading state, an in-place update to Success (or Error) when the operation settles. The service stays localization-free: the caller supplies every message.",
+      "packageId": "Tempo.Blazor",
+      "sourcePath": "src/Tempo.Blazor/Services/ToastOptions.cs",
       "documentationStatus": "merged"
     },
     {
@@ -33986,6 +34307,13 @@
           "type": "string?",
           "isRequired": false,
           "description": "Icon name from IconNames. Displayed before the text."
+        },
+        {
+          "name": "KeepMenuOpen",
+          "type": "bool",
+          "isRequired": false,
+          "description": "The \"More\" entry keeps the menu open while its action runs. A panel opened by the action would otherwise close with the menu before it rendered.",
+          "default": "false"
         },
         {
           "name": "LabelPosition",
@@ -35441,6 +35769,10 @@
       "kind": "Css"
     },
     {
+      "path": "src/Tempo.Blazor/wwwroot/css/components/_otp-input.css",
+      "kind": "Css"
+    },
+    {
       "path": "src/Tempo.Blazor/wwwroot/css/components/_overlay-panel.css",
       "kind": "Css"
     },
@@ -35837,6 +36169,10 @@
       "kind": "JavaScript"
     },
     {
+      "path": "src/Tempo.Blazor/wwwroot/js/tm-otp-input.js",
+      "kind": "JavaScript"
+    },
+    {
       "path": "src/Tempo.Blazor/wwwroot/js/tm-panel-resize.js",
       "kind": "JavaScript"
     },
@@ -35854,6 +36190,18 @@
     },
     {
       "path": "src/Tempo.Blazor/wwwroot/js/tm-splitter.js",
+      "kind": "JavaScript"
+    },
+    {
+      "path": "src/Tempo.Blazor/wwwroot/js/tm-toast-swipe.js",
+      "kind": "JavaScript"
+    },
+    {
+      "path": "src/Tempo.Blazor/wwwroot/js/tm-toast-visibility.js",
+      "kind": "JavaScript"
+    },
+    {
+      "path": "src/Tempo.Blazor/wwwroot/js/tm-toast.js",
       "kind": "JavaScript"
     },
     {
@@ -35969,6 +36317,10 @@
       "kind": "JavaScript"
     },
     {
+      "path": "src/Tempo.Blazor/wwwroot/js/__tests__/tm-otp-input.test.mjs",
+      "kind": "JavaScript"
+    },
+    {
       "path": "src/Tempo.Blazor/wwwroot/js/__tests__/tm-panel-resize.test.mjs",
       "kind": "JavaScript"
     },
@@ -35982,6 +36334,18 @@
     },
     {
       "path": "src/Tempo.Blazor/wwwroot/js/__tests__/tm-splitter.test.mjs",
+      "kind": "JavaScript"
+    },
+    {
+      "path": "src/Tempo.Blazor/wwwroot/js/__tests__/tm-toast-swipe.test.mjs",
+      "kind": "JavaScript"
+    },
+    {
+      "path": "src/Tempo.Blazor/wwwroot/js/__tests__/tm-toast-visibility.test.mjs",
+      "kind": "JavaScript"
+    },
+    {
+      "path": "src/Tempo.Blazor/wwwroot/js/__tests__/tm-toast.test.mjs",
       "kind": "JavaScript"
     },
     {
@@ -36002,11 +36366,11 @@
     }
   ],
   "summary": {
-    "itemCount": 449,
-    "manualItemCount": 449,
-    "generatedItemCount": 441,
+    "itemCount": 455,
+    "manualItemCount": 455,
+    "generatedItemCount": 447,
     "generatedOnlyItemCount": 0,
-    "componentCount": 236,
-    "publicApiTypeCount": 205
+    "componentCount": 237,
+    "publicApiTypeCount": 210
   }
 }

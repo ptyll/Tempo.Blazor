@@ -101,7 +101,7 @@ public partial class TmNotionTextBlock : ComponentBase, IAsyncDisposable
     private string _bgClass =>
         string.IsNullOrEmpty(Content?.BackgroundColor)
             ? string.Empty
-            : $"tm-notion-bg-{Content.BackgroundColor}";
+            : $"tm-notion-bg-{NotionColorTokens.Name(Content.BackgroundColor)}";
 
     // ── Lifecycle ────────────────────────────────────────────────────────────
 

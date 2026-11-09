@@ -20,7 +20,7 @@ public sealed class AiToolCallFormattingTests
         AiJsonPrettyPrinter.TryFormat("""{"query":"refunds","limit":5}""", out var formatted)
             .Should().BeTrue();
 
-        formatted.Should().Be("{\n  \"query\": \"refunds\",\n  \"limit\": 5\n}");
+        formatted.Replace("\r\n", "\n").Should().Be("{\n  \"query\": \"refunds\",\n  \"limit\": 5\n}");
     }
 
     [Fact]

@@ -118,8 +118,19 @@ public sealed class NotionDatabaseRecoveryE2ETests : NotionE2ETestBase
 
     private async Task SwitchViewAsync(ILocator db, string viewName)
     {
-        var tab = db.Locator(".tm-db__view-tab").Filter(new LocatorFilterOptions { HasText = viewName }).First;
-        await tab.ClickAsync();
+        // Only the first four views render as tabs; Calendar and Timeline sit behind "More views".
+        var tab = db.Locator(".tm-db__view-tab").Filter(new LocatorFilterOptions { HasText = viewName });
+        if (await tab.CountAsync() > 0)
+        {
+            await tab.First.ClickAsync();
+        }
+        else
+        {
+            await db.GetByTestId("notion-db-more-views").Locator(".tm-dropdown-trigger").ClickAsync();
+            await Page.Locator(".tm-dropdown-item, [role='menuitem']")
+                .Filter(new LocatorFilterOptions { HasText = viewName }).First.ClickAsync();
+        }
+
         await Page.WaitForTimeoutAsync(500);
     }
 
@@ -172,8 +183,8 @@ public sealed class NotionDatabaseRecoveryE2ETests : NotionE2ETestBase
 
     private static async Task AssertTimelineStateAsync(ILocator db)
     {
-        await Assertions.Expect(db.Locator(".tm-dbt__zoom-group")).ToBeVisibleAsync();
-        await Assertions.Expect(db.Locator(".tm-dbt__gantt")).ToBeVisibleAsync();
+        await Assertions.Expect(db.Locator(".tm-dbtl__zoom-group")).ToBeVisibleAsync();
+        await Assertions.Expect(db.Locator(".tm-dbtl__gantt")).ToBeVisibleAsync();
     }
 
     private async Task OpenFilterPanelAsync(ILocator db)

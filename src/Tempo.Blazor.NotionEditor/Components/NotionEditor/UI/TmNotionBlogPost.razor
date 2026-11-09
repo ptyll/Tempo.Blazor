@@ -1,13 +1,22 @@
 @namespace Tempo.Blazor.Components.NotionEditor.UI
 @inherits Tempo.Blazor.Components.TmComponentBase
+@using Tempo.Blazor.Components.Icons
 @using Tempo.Blazor.Components.NotionEditor.Blocks
+@using Tempo.Blazor.Components.NotionEditor.Services
 @using Tempo.Blazor.NotionEditor.Interfaces
 @using Tempo.Blazor.NotionEditor.Models
 
 <article class="tm-notion-blog-post @Class" data-testid="@TestId("notion-blog-post")" data-post-id="@Post.Id">
+    @if (CoverUrl is not null)
+    {
+        <img class="tm-notion-blog-post__cover"
+             src="@CoverUrl"
+             alt="@Post.Title" />
+    }
+
     <header class="tm-notion-blog-post__header">
         <div class="tm-notion-blog-post__title-wrap">
-            <h2 class="tm-notion-blog-post__title">@Post.Title</h2>
+            <h2 class="tm-notion-blog-post__title" tabindex="-1" data-focus-pending="@(FocusHeading ? "true" : null)" @ref="_titleRef">@Post.Title</h2>
             <div class="tm-notion-blog-post__meta">
                 <span class="@StatusClass">@StatusText</span>
                 @if (Post.PublishedAt is not null)
@@ -16,7 +25,7 @@
                         @Post.PublishedAt.Value.ToString("d")
                     </time>
                 }
-                <span>@Post.AuthorId</span>
+                <span class="tm-notion-blog-post__author">@_authorName</span>
             </div>
         </div>
 
@@ -36,4 +45,12 @@
         <TmNotionBlockList Blocks="PostBlocks"
                            ReadOnly="true" />
     </div>
+
+    @if (Post.PublishedAt is { } publishedAt)
+    {
+        <footer class="tm-notion-blog-post__footer">
+            <TmIcon Name="@IconNames.Clock" Size="IconSize.Xs" />
+            <span>@(string.Format(Loc["Notion_Blog_PublishedOn"], publishedAt.ToLocalTime().ToString("d")))</span>
+        </footer>
+    }
 </article>

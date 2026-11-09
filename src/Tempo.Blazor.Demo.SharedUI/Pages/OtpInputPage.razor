@@ -1,0 +1,174 @@
+@page "/otp-input"
+@using Tempo.Blazor.Components.Inputs
+<PageTitle>OTP Input – Tempo.Blazor</PageTitle>
+
+<!-- Page Header -->
+<div class="mb-8">
+    <h1 class="text-3xl font-bold text-slate-900 dark:text-white mb-2">OTP Input</h1>
+    <p class="text-slate-600 dark:text-slate-400">
+        <code class="px-1.5 py-0.5 bg-slate-100 dark:bg-slate-800 rounded text-xs font-mono">&lt;TmOtpInput /&gt;</code>
+        is a segmented one-time-code input: per-cell labels, paste distribution, <code class="px-1.5 py-0.5 bg-slate-100 dark:bg-slate-800 rounded text-xs font-mono">autocomplete="one-time-code"</code>,
+        masked PIN mode, grouping separators and invalid/verified states.
+    </p>
+</div>
+
+<!-- Numeric 6-digit with simulated SMS verification -->
+<section class="demo-section" data-testid="otp-numeric">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Numeric code — simulated SMS verification</h2>
+        <span class="px-2 py-0.5 text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full">Kind=Numeric · Length=6</span>
+    </div>
+
+    <div class="showcase-card">
+        <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">
+            Press <strong>Send SMS code</strong> to simulate the delivery, then type or paste the code.
+            The demo verifies against <code class="px-1.5 py-0.5 bg-slate-100 dark:bg-slate-800 rounded text-xs font-mono">123456</code> — any other complete code is rejected
+            (shake + error) and a correct code flips the input to the verified state.
+        </p>
+
+        @if (!_codeSent)
+        {
+            <TmButton Variant="ButtonVariant.Primary" data-testid="otp-send-sms" OnClick="SendCodeAsync">Send SMS code</TmButton>
+        }
+        else
+        {
+            <div class="flex flex-wrap items-end gap-4">
+                <div>
+                    <div class="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Enter the 6-digit code (demo code: 123456)</div>
+                    <TmOtpInput @ref="_numericOtp"
+                                @bind-Value="_numericValue"
+                                Length="6"
+                                Kind="OtpInputKind.Numeric"
+                                Invalid="_numericInvalid"
+                                ErrorText="@(_numericInvalid ? "Incorrect code. Try again." : null)"
+                                Verified="_numericVerified"
+                                OnComplete="VerifyNumericAsync"
+                                data-testid="otp-numeric-input" />
+                </div>
+                <TmButton Variant="ButtonVariant.Ghost" Size="ButtonSize.Sm" data-testid="otp-numeric-reset" OnClick="ResetNumericAsync">Start over</TmButton>
+            </div>
+            <p class="text-xs text-slate-500 dark:text-slate-400 mt-3">
+                Paste works from any cell — a copied “123 456” fills the whole input. On a phone the OS
+                autofill (SMS code) lands in one step through <code class="px-1 py-0.5 bg-slate-100 dark:bg-slate-800 rounded text-xs font-mono">autocomplete="one-time-code"</code>.
+            </p>
+        }
+    </div>
+</section>
+
+<!-- Alphanumeric with grouping -->
+<section class="demo-section" data-testid="otp-alphanumeric">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Alphanumeric backup code — grouping</h2>
+        <span class="px-2 py-0.5 text-xs font-medium bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 rounded-full">Kind=Alphanumeric · Length=8 · GroupSize=4</span>
+    </div>
+
+    <div class="showcase-card">
+        <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">
+            Letters are accepted and uppercased automatically; <code class="px-1.5 py-0.5 bg-slate-100 dark:bg-slate-800 rounded text-xs font-mono">GroupSize="4"</code>
+            renders an aria-hidden separator every four cells to match how backup codes are printed.
+        </p>
+        <TmOtpInput @bind-Value="_alphaValue"
+                    Length="8"
+                    Kind="OtpInputKind.Alphanumeric"
+                    GroupSize="4"
+                    data-testid="otp-alpha-input" />
+        <p class="text-xs text-slate-500 dark:text-slate-400 mt-3" data-testid="otp-alpha-echo">
+            Value: @(string.IsNullOrEmpty(_alphaValue) ? "—" : _alphaValue)
+        </p>
+    </div>
+</section>
+
+<!-- Masked PIN -->
+<section class="demo-section" data-testid="otp-pin">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">PIN — masked</h2>
+        <span class="px-2 py-0.5 text-xs font-medium bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300 rounded-full">Masked · Length=4</span>
+    </div>
+
+    <div class="showcase-card">
+        <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">
+            <code class="px-1.5 py-0.5 bg-slate-100 dark:bg-slate-800 rounded text-xs font-mono">Masked="true"</code> renders every cell as
+            <code class="px-1.5 py-0.5 bg-slate-100 dark:bg-slate-800 rounded text-xs font-mono">type="password"</code> so the code stays hidden while typing.
+        </p>
+        <TmOtpInput @bind-Value="_pinValue"
+                    Length="4"
+                    Masked="true"
+                    data-testid="otp-pin-input" />
+        <p class="text-xs text-slate-500 dark:text-slate-400 mt-3" data-testid="otp-pin-echo">
+            Entered digits: @(_pinValue.Length)/4 @(string.IsNullOrEmpty(_pinValue) ? "" : "(hidden)")
+        </p>
+    </div>
+</section>
+
+<!-- Paste / autofill hints -->
+<section class="demo-section" data-testid="otp-hints">
+    <div class="flex items-center space-x-2 mb-4">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Paste &amp; autofill behaviour</h2>
+    </div>
+
+    <div class="showcase-card">
+        <ul class="list-disc list-inside space-y-2 text-sm text-slate-600 dark:text-slate-400">
+            <li>Pasting a multi-character code into any cell distributes it over the remaining cells; text with spaces or dashes (“123-456”) is cleaned first.</li>
+            <li>When the copied text has a prefix (e.g. “Your code: AB12CD”), the last run matching the remaining length wins.</li>
+            <li>Browser/SMS autofill writes the whole code in one input event — handled without a caret round-trip.</li>
+            <li>Backspace steps back to the previous cell; arrow keys and Home/End move between cells; every cell has its own label (“Digit 3 of 6”).</li>
+        </ul>
+    </div>
+</section>
+
+@code {
+    private TmOtpInput? _numericOtp;
+    private bool _codeSent;
+    private string _numericValue = string.Empty;
+    private bool _numericInvalid;
+    private bool _numericVerified;
+
+    private string _alphaValue = string.Empty;
+    private string _pinValue = string.Empty;
+
+    private const string DemoCode = "123456";
+
+    private async Task SendCodeAsync()
+    {
+        _codeSent = true;
+        _numericInvalid = false;
+        _numericVerified = false;
+        if (_numericOtp is not null)
+        {
+            await _numericOtp.ClearAsync();
+        }
+    }
+
+    private async Task VerifyNumericAsync(string code)
+    {
+        await Task.Delay(400); // simulate a network round-trip
+        if (code == DemoCode)
+        {
+            _numericInvalid = false;
+            _numericVerified = true;
+        }
+        else
+        {
+            _numericVerified = false;
+            _numericInvalid = true;
+            // Re-show the same error: replay the shake and re-announce through the live region.
+            if (_numericOtp is not null)
+            {
+                await _numericOtp.ShowErrorAsync();
+                await _numericOtp.ClearAsync();
+                await _numericOtp.FocusAsync();
+            }
+        }
+    }
+
+    private async Task ResetNumericAsync()
+    {
+        _numericInvalid = false;
+        _numericVerified = false;
+        if (_numericOtp is not null)
+        {
+            await _numericOtp.ClearAsync();
+            await _numericOtp.FocusAsync();
+        }
+    }
+}

@@ -1,9 +1,22 @@
 @namespace Tempo.Blazor.Components.NotionEditor.Blocks.Database
+@inherits Tempo.Blazor.Components.TmComponentBase
 @using Tempo.Blazor.NotionEditor.Enums
 @using Tempo.Blazor.NotionEditor.Models
 @using Tempo.Blazor.NotionEditor.Interfaces
+@using Tempo.Blazor.Components.Inputs
+@using Tempo.Blazor.Components.Overlay
+@using Tempo.Blazor.Components.Toolbar
+@using Tempo.Blazor.Components.Icons
+@using Tempo.Blazor.Components.Actions
+@using Tempo.Blazor.Components.Dropdowns
+@using Tempo.Blazor.Abstractions.Layout
 
+@if (!string.IsNullOrEmpty(_deleteError))
+{
+    <div class="tm-db__error" role="alert">@_deleteError</div>
+}
 <div class="tm-db @(IsFocused ? "tm-db--focused" : "")"
+     data-layout="@LayoutName"
      tabindex="-1"
      @onfocus="OnFocused"
      @oncontextmenu="HandleContextMenuAsync"
@@ -41,131 +54,156 @@
             }
         </div>
 
-        @* Toolbar *@
-        <div class="tm-db__toolbar" role="group">
-            <button class="tm-db__tool-btn @(_showFilterPanel ? "tm-db__tool-btn--active" : "") @(_localFilter is not null ? "tm-db__tool-btn--filtered" : "")"
-                    type="button"
-                    @onclick="ToggleFilterPanel"
-                    title="@Loc["TmNotionDatabaseBlock_Filter"]">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                    <path d="M22 3H2l8 9.46V19l4 2v-8.54z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
-                </svg>
-                @Loc["TmNotionDatabaseBlock_Filter"]
-                @if (_localFilter is not null)
-                {
-                    <span class="tm-db__tool-badge">@CountConditions(_localFilter)</span>
-                }
-            </button>
+        @* Toolbar (DB-5): the core TmToolbar. Groups are [views] | [filter/sort/group + overflow] |
+           [primary New]. Which group sits on the bar is a layout detail; hosts key off data-tm-group
+           and data-tool, never a positional selector. *@
+        <TmToolbar @ref="_toolbar" Overflow="ToolbarOverflow.Menu" Labels="ToolbarLabels.Auto" Class="tm-db__toolbar" AriaLabel="@Loc["TmNotionDatabaseBlock_Toolbar"]">
 
-            <button class="tm-db__tool-btn @(_showSortPanel ? "tm-db__tool-btn--active" : "") @(_localSorts is { Count: > 0 } ? "tm-db__tool-btn--filtered" : "")"
-                    type="button"
-                    @onclick="ToggleSortPanel"
-                    title="@Loc["TmNotionDatabaseBlock_Sort"]">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                    <path d="M3 6h18M7 12h10M11 18h2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-                </svg>
-                @Loc["TmNotionDatabaseBlock_Sort"]
-                @if (_localSorts is { Count: > 0 })
+            @* Views: tabs on desktop/tablet, the active view as a dropdown on mobile. *@
+            <TmToolbarGroup Label="@Loc["TmNotionDatabaseBlock_ViewTabs"]" AdditionalAttributes="@(Group("views"))">
+                @if (IsMobileLayout)
                 {
-                    <span class="tm-db__tool-badge">@_localSorts.Count</span>
+                    <TmToolbarItem Priority="ToolbarButtonPriority.Pinned" Class="tm-db__view-switch">
+                        <TmDropdown Text="@(_activeView?.Name ?? Loc["TmNotionDatabaseBlock_ViewTable"])"
+                                    ShowChevron="false"
+                                    AriaLabel="@Loc["TmNotionDatabaseBlock_ViewTabs"]"
+                                    data-testid="@TestId("notion-db-view-switch")"
+                                    OnSelect="v => SetActiveViewAsync(Guid.Parse(v))">
+                            @foreach (var view in _views)
+                            {
+                                <TmDropdownItem Value="@view.Id.ToString()">@view.Name</TmDropdownItem>
+                            }
+                        </TmDropdown>
+                    </TmToolbarItem>
                 }
-            </button>
+            </TmToolbarGroup>
 
-            <button class="tm-db__tool-btn @(_showGroupPanel ? "tm-db__tool-btn--active" : "") @(_localGrouping is not null ? "tm-db__tool-btn--filtered" : "")"
-                    type="button"
-                    @onclick="ToggleGroupPanel"
-                    title="@Loc["TmNotionDatabaseBlock_Group"]">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                    <rect x="2" y="5" width="20" height="4" rx="1" stroke="currentColor" stroke-width="1.5"/>
-                    <rect x="2" y="11" width="20" height="4" rx="1" stroke="currentColor" stroke-width="1.5"/>
-                    <rect x="2" y="17" width="12" height="4" rx="1" stroke="currentColor" stroke-width="1.5"/>
-                </svg>
-                @Loc["TmNotionDatabaseBlock_Group"]
-                @if (_localGrouping is not null)
-                {
-                    <span class="tm-db__tool-badge">1</span>
-                }
-            </button>
+            <TmToolbarGroup Label="@Loc["TmNotionDatabaseBlock_GroupTools"]" AdditionalAttributes="@(Group("tools"))">
+            <TmToolbarButton @ref="_filterTrigger" Class="@ToolClass(_showFilterPanel, _localFilter is not null)"
+                    Icon="@IconNames.Filter"
+                    Text="@Loc["TmNotionDatabaseBlock_Filter"]"
+                    Tooltip="@Loc["TmNotionDatabaseBlock_Filter"]"
+                    Badge="@(_localFilter is not null ? CountConditions(_localFilter).ToString() : null)"
+                    Pressed="_showFilterPanel"
+                    KeepMenuOpen="true"
+                    Priority="ToolbarButtonPriority.Pinned"
+                    AdditionalAttributes="@(Tool("filter", "notion-db-filter-open", _filterTriggerId))"
+                    OnClick="ToggleFilterPanel" />
+
+            <TmToolbarButton @ref="_sortTrigger" Class="@ToolClass(_showSortPanel, _localSorts is { Count: > 0 })"
+                    Icon="@IconNames.ArrowUp"
+                    Text="@Loc["TmNotionDatabaseBlock_Sort"]"
+                    Tooltip="@Loc["TmNotionDatabaseBlock_Sort"]"
+                    Badge="@(_localSorts is { Count: > 0 } ? _localSorts.Count.ToString() : null)"
+                    Pressed="_showSortPanel"
+                    Priority="ToolbarButtonPriority.Primary"
+                    AdditionalAttributes="@(Tool("sort", "notion-db-sort-open", _sortTriggerId))"
+                    OnClick="ToggleSortPanel" />
+
+            <TmToolbarButton @ref="_groupTrigger" Class="@ToolClass(_showGroupPanel, _localGrouping is not null)"
+                    Icon="@IconNames.Layers"
+                    Text="@Loc["TmNotionDatabaseBlock_Group"]"
+                    Tooltip="@Loc["TmNotionDatabaseBlock_Group"]"
+                    Badge="@(_localGrouping is not null ? "1" : null)"
+                    Pressed="_showGroupPanel"
+                    Priority="ToolbarButtonPriority.Secondary"
+                    AdditionalAttributes="@(Tool("group", "notion-db-group-open", _groupTriggerId))"
+                    OnClick="ToggleGroupPanel" />
 
             @if (_activeView?.Type == DatabaseViewType.Table || _activeView is null)
             {
-                <button class="tm-db__tool-btn @(_showSubItems ? "tm-db__tool-btn--active" : "")"
-                        type="button"
-                        @onclick="() => _showSubItems = !_showSubItems"
-                        title="@Loc["TmNotionDatabaseBlock_SubItems"]">
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                        <path d="M8 6h13M8 12h10M8 18h7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-                        <circle cx="4" cy="6"  r="1.5" fill="currentColor"/>
-                        <circle cx="4" cy="12" r="1.5" fill="currentColor"/>
-                        <circle cx="4" cy="18" r="1.5" fill="currentColor"/>
-                    </svg>
-                    @Loc["TmNotionDatabaseBlock_SubItems"]
-                </button>
+                <TmToolbarButton Class="@ToolClass(_showSubItems, false)"
+                        Icon="@IconNames.ListTree"
+                        Text="@Loc["TmNotionDatabaseBlock_SubItems"]"
+                        Tooltip="@Loc["TmNotionDatabaseBlock_SubItems"]"
+                        Pressed="_showSubItems"
+                        Priority="@SecondaryPriority"
+                        AdditionalAttributes="@(Tool("sub-items", "notion-db-sub-items"))"
+                        OnClick="ToggleSubItems" />
             }
 
-            <button class="tm-db__tool-btn @(_showFieldsPanel ? "tm-db__tool-btn--active" : "")"
-                    type="button"
-                    @onclick="ToggleFieldsPanel"
-                    title="@Loc["TmNotionDatabaseBlock_Properties"]">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                    <path d="M12 4v16M8 8H4a2 2 0 0 0-2 2v4a2 2 0 0 0 2 2h4M16 8h4a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-                </svg>
-                @Loc["TmNotionDatabaseBlock_Properties"]
-            </button>
+            <TmToolbarButton @ref="_fieldsTrigger" Class="@ToolClass(_showFieldsPanel, false)"
+                    Icon="@IconNames.Columns"
+                    Text="@Loc["TmNotionDatabaseBlock_Properties"]"
+                    Tooltip="@Loc["TmNotionDatabaseBlock_Properties"]"
+                    Pressed="_showFieldsPanel"
+                    KeepMenuOpen="true"
+                    Priority="@SecondaryPriority"
+                    AdditionalAttributes="@(Tool("properties", "notion-db-properties-open", _fieldsTriggerId))"
+                    OnClick="ToggleFieldsPanel" />
 
             @if (OnOpenAsPage.HasDelegate)
             {
-                <button class="tm-db__tool-btn"
-                        type="button"
-                        @onclick="HandleOpenAsPageAsync"
-                        title="@Loc["TmNotionDatabaseBlock_OpenAsPage"]">
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                        <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-                        <polyline points="15 3 21 3 21 9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                        <line x1="10" y1="14" x2="21" y2="3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-                    </svg>
-                </button>
+                <TmToolbarButton Class="tm-db__tool-btn"
+                        Icon="@IconNames.ExternalLink"
+                        Text="@Loc["TmNotionDatabaseBlock_OpenAsPage"]"
+                        Tooltip="@Loc["TmNotionDatabaseBlock_OpenAsPage"]"
+                        LabelPosition="ToolbarLabelPosition.Hidden"
+                        Priority="@SecondaryPriority"
+                        AdditionalAttributes="@(Tool("open-as-page", "notion-db-open-as-page"))"
+                        OnClick="HandleOpenAsPageAsync" />
             }
 
-            <button class="tm-db__tool-btn @(_showImportExport ? "tm-db__tool-btn--active" : "")"
-                    type="button"
-                    @onclick="ToggleImportExport"
-                    title="@Loc["TmNotionDatabaseBlock_ImportExport"]">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-                    <polyline points="7 10 12 15 17 10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                    <line x1="12" y1="15" x2="12" y2="3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-                </svg>
-                @Loc["TmNotionDatabaseBlock_ImportExport"]
-            </button>
+            <TmToolbarButton Class="@ToolClass(_showImportExport, false)"
+                    Icon="@IconNames.Download"
+                    Text="@Loc["TmNotionDatabaseBlock_ImportExport"]"
+                    Tooltip="@Loc["TmNotionDatabaseBlock_ImportExport"]"
+                    Pressed="_showImportExport"
+                    Priority="@SecondaryPriority"
+                    AdditionalAttributes="@(Tool("import-export", "notion-db-import-export"))"
+                    OnClick="ToggleImportExport" />
+            </TmToolbarGroup>
 
             @if (!ReadOnly)
             {
-                <div class="tm-db__new-group">
-                    <button class="tm-db__new-btn"
-                            type="button"
-                            @onclick="HandleNewRecordAsync">
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                            <path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-                        </svg>
-                        @Loc["TmNotionDatabaseBlock_New"]
-                    </button>
-                    <button class="tm-db__new-chevron @(_showTemplateMenu ? "tm-db__new-chevron--active" : "")"
-                            type="button"
-                            title="@Loc["TmNotionDatabaseBlock_Templates"]"
-                            @onclick="ToggleTemplateMenu">
-                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                            <path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        </svg>
-                    </button>
-                </div>
+                <TmToolbarGroup Label="@Loc["TmNotionDatabaseBlock_New"]" AdditionalAttributes="@(Group("primary"))">
+                    <TmToolbarButton Class="tm-db__new-btn"
+                            Icon="@IconNames.Plus"
+                            Text="@Loc["TmNotionDatabaseBlock_New"]"
+                            Tooltip="@Loc["TmNotionDatabaseBlock_New"]"
+                            Variant="ButtonVariant.Primary"
+                            Priority="ToolbarButtonPriority.Pinned"
+                            AdditionalAttributes="@(Tool("new", "notion-db-new"))"
+                            OnClick="HandleNewRecordAsync" />
+                    <TmToolbarButton @ref="_templatesTrigger" Class="@(_showTemplateMenu ? "tm-db__new-chevron tm-db__new-chevron--active" : "tm-db__new-chevron")"
+                            Icon="@IconNames.ChevronDown"
+                            Text="@Loc["TmNotionDatabaseBlock_Templates"]"
+                            Tooltip="@Loc["TmNotionDatabaseBlock_Templates"]"
+                            LabelPosition="ToolbarLabelPosition.Hidden"
+                            Pressed="_showTemplateMenu"
+                            Priority="ToolbarButtonPriority.Pinned"
+                            AdditionalAttributes="@(Tool("templates", "notion-db-templates", _templatesTriggerId))"
+                            OnClick="ToggleTemplateMenu" />
+                </TmToolbarGroup>
             }
-        </div>
+        </TmToolbar>
     </div>
 
-    @* ── View tabs ───────────────────────────────────────────────────────── *@
+    @* Search (NO2): client-side over the records already loaded. The provider contract is unchanged,
+       so a database with more pages says so instead of pretending the search is complete. *@
+    @if (ShowSearch)
+    {
+        <div class="tm-db__search">
+            <TmIcon Name="@IconNames.Search" Size="IconSize.Sm" />
+            <input class="tm-db__search-input"
+                   type="search"
+                   data-testid="@TestId("notion-db-search")"
+                   placeholder="@Loc["TmNotionDb_SearchRecords"]"
+                   aria-label="@Loc["TmNotionDb_SearchRecords"]"
+                   aria-describedby="@SearchStatusId"
+                   value="@_searchText"
+                   @oninput="OnSearchInput" />
+            <span id="@SearchStatusId" class="tm-db__search-hint" data-testid="@TestId(SearchIsPartial ? "notion-db-search-loaded-only" : "notion-db-search-status")" role="status" aria-live="polite">
+                @(SearchIsPartial ? Loc["TmNotionDb_SearchLoadedOnly"] : string.Empty)
+            </span>
+        </div>
+    }
+
+    @* ── View tabs (desktop/tablet; mobile uses the toolbar dropdown) ───── *@
+    @if (!IsMobileLayout)
+    {
     <div class="tm-db__view-tabs" role="tablist" aria-label="@Loc["TmNotionDatabaseBlock_ViewTabs"]">
-        @foreach (var view in _views)
+        @foreach (var view in _views.Take(VisibleTabCount))
         {
             var v = view;
             <div class="tm-db__view-tab-wrap @(_activeViewId == v.Id ? "tm-db__view-tab-wrap--active" : "")"
@@ -187,6 +225,7 @@
                 {
                     <button class="tm-db__view-tab @(_activeViewId == v.Id ? "tm-db__view-tab--active" : "")"
                             role="tab"
+                            data-testid="@TestId("notion-db-view-tab")"
                             aria-selected="@(_activeViewId == v.Id)"
                             type="button"
                             @onclick="() => SetActiveViewAsync(v.Id)"
@@ -212,6 +251,20 @@
             </div>
         }
 
+        @if (_views.Count > VisibleTabCount)
+        {
+            <TmDropdown Text="@Loc["TmNotionDb_MoreViews"]"
+                        Class="tm-db__more-views"
+                        AriaLabel="@Loc["TmNotionDb_MoreViews"]"
+                        data-testid="@TestId("notion-db-more-views")"
+                        OnSelect="v => SetActiveViewAsync(Guid.Parse(v))">
+                @foreach (var view in _views.Skip(VisibleTabCount))
+                {
+                    <TmDropdownItem Value="@view.Id.ToString()">@view.Name</TmDropdownItem>
+                }
+            </TmDropdown>
+        }
+
         @if (!ReadOnly)
         {
             <div class="tm-db__view-add-wrap">
@@ -227,12 +280,43 @@
             </div>
         }
     </div>
+    }
+
+    @* Mobile action bar — only when the database IS the page (B1 Q3). An inline block keeps the
+       compact toolbar with "More" and never grows a second bar. *@
+    @if (IsPage && IsMobileLayout)
+    {
+        <span @ref="_mobileMoreAnchor" hidden></span>
+        <TmMobileActionBar Items="MobileActions" LayoutMode="TmLayoutMode.Mobile" MaxVisible="4" />
+        @if (_showMobileMore)
+        {
+            <TmOverlayPanel Anchor="_mobileMoreAnchor"
+                            IsOpen="true"
+                            IsOpenChanged="OnMobileMoreOpenChanged"
+                            MobilePresentation="PanelPresentation.Sheet"
+                            LayoutMode="TmLayoutMode.Mobile"
+                            Role="dialog"
+                            AriaLabel="@Loc["TmNotionDb_More"]"
+                            SheetTitle="@Loc["TmNotionDb_More"]"
+                            Class="tm-db__mobile-more"
+                            data-testid="@TestId("notion-db-mobile-more")">
+                <div class="tm-db__mobile-more-list" role="menu">
+                    <button type="button" role="menuitem" @onclick="OpenMobileGroupAsync">@Loc["TmNotionDatabaseBlock_Group"]</button>
+                    <button type="button" role="menuitem" @onclick="OpenMobileImportAsync">@Loc["TmNotionDatabaseBlock_ImportExport"]</button>
+                    @if (OnOpenAsPage.HasDelegate)
+                    {
+                        <button type="button" role="menuitem" @onclick="OpenMobilePageAsync">@Loc["TmNotionDatabaseBlock_OpenAsPage"]</button>
+                    }
+                    <button type="button" role="menuitem" @onclick="OpenMobilePropertiesAsync">@Loc["TmNotionDatabaseBlock_Properties"]</button>
+                </div>
+            </TmOverlayPanel>
+        }
+    }
 
     @* ── View context menu (fixed, outside overflow container) ───────────── *@
     @if (_viewContextMenu is not null)
     {
         var vm = _viewContextMenu;
-        <div class="tm-db__floatmenu-backdrop" @onclick="CloseViewContextMenu" aria-hidden="true"></div>
         <div class="tm-db__floatmenu"
              style="left:@(_viewCtxMenuX)px;top:@(_viewCtxMenuY)px"
              role="menu"
@@ -269,7 +353,6 @@
     @* ── Add view picker (fixed, outside overflow container) ─────────────── *@
     @if (_showAddViewPicker)
     {
-        <div class="tm-db__floatmenu-backdrop" @onclick="() => _showAddViewPicker = false" aria-hidden="true"></div>
         <div class="tm-db__floatmenu"
              style="left:@(_addPickerX)px;top:@(_addPickerY)px"
              role="menu"
@@ -293,57 +376,142 @@
         </div>
     }
 
-    @* ── Panels ──────────────────────────────────────────────────────────── *@
+    @* ── Panels ────────────────────────────────────────────────────────────
+       Phase 4 (DB-3): anchored core TmOverlayPanel popovers (bottom sheet on mobile). No own
+       backdrop or z-index. *@
     @if (_showFieldsPanel)
     {
-        <div class="tm-db__panel tm-db__panel--fields" role="dialog" aria-label="@Loc["TmNotionDatabaseBlock_Properties"]">
-            <div class="tm-db__panel-header">
-                <span class="tm-db__panel-title">@Loc["TmNotionDatabaseBlock_Properties"]</span>
-                <div class="tm-db__panel-actions">
-                    <button class="tm-db__panel-link" type="button" @onclick="ShowAllFieldsAsync">@Loc["TmNotionDatabaseBlock_ShowAll"]</button>
-                    <button class="tm-db__panel-link" type="button" @onclick="HideAllFieldsAsync">@Loc["TmNotionDatabaseBlock_HideAll"]</button>
+        <TmOverlayPanel Anchor="@PanelAnchor(_fieldsTrigger, _fieldsTriggerId)"
+                        IsOpen="true"
+                        IsOpenChanged="OnFieldsPanelOpenChanged"
+                        MobilePresentation="PanelPresentation.Auto"
+                        Placement="OverlayPlacement.Bottom"
+                        Align="OverlayAlign.End"
+                        Role="dialog"
+                        AriaLabel="@Loc["TmNotionDatabaseBlock_Properties"]"
+                        SheetTitle="@Loc["TmNotionDatabaseBlock_Properties"]"
+                        OnDismissed="OnFieldsPanelDismissed">
+            <div class="tm-db__panel tm-db__panel--fields" aria-label="@Loc["TmNotionDatabaseBlock_Properties"]">
+                <div class="tm-db__panel-header">
+                    <div class="tm-db__panel-headings">
+                        <span class="tm-db__panel-title">@Loc["TmNotionDatabaseBlock_Properties"]</span>
+                        <span class="tm-db__panel-subtitle">@Loc["TmNotionDatabaseBlock_PropertiesSubtitle"]</span>
+                    </div>
+                    <div class="tm-db__panel-actions">
+                        <button class="tm-db__panel-link" type="button" @onclick="ShowAllFieldsAsync">@Loc["TmNotionDatabaseBlock_ShowAll"]</button>
+                        <button class="tm-db__panel-link" type="button" @onclick="HideAllFieldsAsync">@Loc["TmNotionDatabaseBlock_HideAll"]</button>
+                    </div>
                 </div>
+                @foreach (var field in _fields)
+                {
+                    if (field.IsPrimary)
+                    {
+                        @* The primary field is always visible — it renders locked. *@
+                        <div class="tm-db__field-row tm-db__field-row--primary">
+                            <span class="tm-db__field-icon" aria-hidden="true"><TmIcon Name="@DatabaseFieldIcons.Get(field.Type)" Size="IconSize.Xs" /></span>
+                            <span class="tm-db__field-name">@field.Name</span>
+                            <span class="tm-db__field-lock" title="@Loc["TmNotionDatabaseBlock_FieldLocked"]">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                    <rect x="4" y="11" width="16" height="10" rx="2" stroke="currentColor" stroke-width="1.5"/>
+                                    <path d="M8 11V7a4 4 0 1 1 8 0v4" stroke="currentColor" stroke-width="1.5"/>
+                                </svg>
+                            </span>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="tm-db__field-row">
+                            <span class="tm-db__field-icon" aria-hidden="true"><TmIcon Name="@DatabaseFieldIcons.Get(field.Type)" Size="IconSize.Xs" /></span>
+                            <span class="tm-db__field-name">@field.Name</span>
+                            @if (!ReadOnly)
+                            {
+                                <button type="button" class="tm-db__field-move"
+                                        aria-label="@Loc["TmNotionDb_MoveFieldUp"]"
+                                        disabled="@(FieldIndex(field) <= 1)"
+                                        @onclick="() => MoveFieldAsync(field, -1)">↑</button>
+                                <button type="button" class="tm-db__field-move"
+                                        aria-label="@Loc["TmNotionDb_MoveFieldDown"]"
+                                        disabled="@(FieldIndex(field) >= _fields.Count - 1)"
+                                        @onclick="() => MoveFieldAsync(field, 1)">↓</button>
+                            }
+                            <TmToggle Value="field.IsVisible"
+                                      ValueChanged="value => ToggleFieldVisibilityAsync(field, value)"
+                                      Disabled="ReadOnly"
+                                      AriaLabel="@field.Name" />
+                        </div>
+                    }
+                }
+                <button class="tm-db__panel-done" type="button" @onclick="CloseFieldsPanelAsync">
+                    @Loc["TmNotionDb_Done"]
+                </button>
             </div>
-            @foreach (var field in _fields.Where(f => !f.IsPrimary))
-            {
-                <label class="tm-db__field-row">
-                    <span class="tm-db__field-icon" aria-hidden="true">@FieldTypeIcon(field.Type)</span>
-                    <span class="tm-db__field-name">@field.Name</span>
-                    <input class="tm-db__field-toggle"
-                           type="checkbox"
-                           checked="@field.IsVisible"
-                           disabled="@ReadOnly"
-                           @onchange="e => ToggleFieldVisibilityAsync(field, (bool)(e.Value ?? false))" />
-                </label>
-            }
-        </div>
+        </TmOverlayPanel>
     }
 
     @if (_showFilterPanel)
     {
-        <TmNotionDbFilterBar Fields="@_fields"
-                             Filter="@_localFilter"
-                             ReadOnly="@ReadOnly"
-                             OnFilterChanged="HandleFilterChangedAsync"
-                             OnClose="ToggleFilterPanel" />
+        <TmOverlayPanel Anchor="@PanelAnchor(_filterTrigger, _filterTriggerId)"
+                        IsOpen="true"
+                        IsOpenChanged="OnFilterPanelOpenChanged"
+                        MobilePresentation="PanelPresentation.Auto"
+                        Placement="OverlayPlacement.Bottom"
+                        Align="OverlayAlign.Start"
+                        Role="dialog"
+                        AriaLabel="@Loc["TmNotionDatabaseBlock_Filter"]"
+                        SheetTitle="@Loc["TmNotionDatabaseBlock_Filter"]"
+                        OnDismissed="OnFilterPanelDismissed">
+            <div class="tm-db__panel">
+                <TmNotionDbFilterBar Fields="@_fields"
+                                     Filter="@_localFilter"
+                                     ReadOnly="@ReadOnly"
+                                     OnFilterChanged="HandleFilterChangedAsync"
+                                     OnClose="ToggleFilterPanel" />
+            </div>
+        </TmOverlayPanel>
     }
 
     @if (_showSortPanel)
     {
-        <TmNotionDbSortBar Fields="@_fields"
-                           Sorts="@_localSorts"
-                           ReadOnly="@ReadOnly"
-                           OnSortsChanged="HandleSortsChangedAsync"
-                           OnClose="ToggleSortPanel" />
+        <TmOverlayPanel Anchor="@PanelAnchor(_sortTrigger, _sortTriggerId)"
+                        IsOpen="true"
+                        IsOpenChanged="OnSortPanelOpenChanged"
+                        MobilePresentation="PanelPresentation.Auto"
+                        Placement="OverlayPlacement.Bottom"
+                        Align="OverlayAlign.Start"
+                        Role="dialog"
+                        AriaLabel="@Loc["TmNotionDatabaseBlock_Sort"]"
+                        SheetTitle="@Loc["TmNotionDatabaseBlock_Sort"]"
+                        OnDismissed="OnSortPanelDismissed">
+            <div class="tm-db__panel">
+                <TmNotionDbSortBar Fields="@_fields"
+                                   Sorts="@_localSorts"
+                                   ReadOnly="@ReadOnly"
+                                   OnSortsChanged="HandleSortsChangedAsync"
+                                   OnClose="ToggleSortPanel" />
+            </div>
+        </TmOverlayPanel>
     }
 
     @if (_showGroupPanel)
     {
-        <TmNotionDbGroupBar Fields="@_fields"
-                            Grouping="@(_localGrouping ?? _activeView?.Grouping)"
-                            ReadOnly="@ReadOnly"
-                            OnGroupingChanged="HandleGroupingChangedAsync"
-                            OnClose="ToggleGroupPanel" />
+        <TmOverlayPanel Anchor="@PanelAnchor(_groupTrigger, _groupTriggerId)"
+                        IsOpen="true"
+                        IsOpenChanged="OnGroupPanelOpenChanged"
+                        MobilePresentation="PanelPresentation.Auto"
+                        Placement="OverlayPlacement.Bottom"
+                        Align="OverlayAlign.Start"
+                        Role="dialog"
+                        AriaLabel="@Loc["TmNotionDatabaseBlock_Group"]"
+                        SheetTitle="@Loc["TmNotionDatabaseBlock_Group"]"
+                        OnDismissed="OnGroupPanelDismissed">
+            <div class="tm-db__panel">
+                <TmNotionDbGroupBar Fields="@_fields"
+                                    Grouping="@(_localGrouping ?? _activeView?.Grouping)"
+                                    ReadOnly="@ReadOnly"
+                                    OnGroupingChanged="HandleGroupingChangedAsync"
+                                    OnClose="ToggleGroupPanel" />
+            </div>
+        </TmOverlayPanel>
     }
 
     @if (_editingField is not null)
@@ -359,12 +527,23 @@
 
     @if (_showTemplateMenu)
     {
-        <TmNotionDbTemplateMenu DatabaseId="@_databaseId"
-                                Fields="@_fields"
-                                ReadOnly="@ReadOnly"
-                                OnRecordCreated="HandleTemplateRecordCreatedAsync"
-                                OnEditTemplate="HandleEditTemplateAsync"
-                                OnClose="() => _showTemplateMenu = false" />
+        <TmOverlayPanel Anchor="@PanelAnchor(_templatesTrigger, _templatesTriggerId)"
+                        IsOpen="true"
+                        IsOpenChanged="OnTemplateMenuOpenChanged"
+                        MobilePresentation="PanelPresentation.Auto"
+                        Placement="OverlayPlacement.Bottom"
+                        Align="OverlayAlign.End"
+                        Role="dialog"
+                        AriaLabel="@Loc["TmNotionDbTemplateMenu_Title"]"
+                        SheetTitle="@Loc["TmNotionDbTemplateMenu_Title"]"
+                        OnDismissed="OnTemplateMenuDismissed">
+            <TmNotionDbTemplateMenu DatabaseId="@_databaseId"
+                                    Fields="@_fields"
+                                    ReadOnly="@ReadOnly"
+                                    OnRecordCreated="HandleTemplateRecordCreatedAsync"
+                                    OnEditTemplate="HandleEditTemplateAsync"
+                                    OnClose="CloseTemplateMenuAsync" />
+        </TmOverlayPanel>
     }
 
     @if (_openRecord is not null)
@@ -374,7 +553,9 @@
                                 DatabaseName="@(_inlineContent?.Title ?? string.Empty)"
                                 ReadOnly="@ReadOnly"
                                 OnClose="HandleRecordDetailClosedAsync"
-                                OnRecordUpdated="HandleRecordDetailUpdatedAsync" />
+                                OnRecordUpdated="HandleRecordDetailUpdatedAsync"
+                                OnRecordDeleted="HandleRecordDeletedAsync"
+                                OnOpenAsPage="HandleRecordOpenedAsPageAsync" />
     }
 
     @if (_editingTemplate is not null)
@@ -401,7 +582,6 @@
     @* ── Block context menu ─────────────────────────────────────────────────*@
     @if (_blockCtxOpen)
     {
-        <div class="tm-db__ctx-backdrop" @onclick="CloseBlockContextMenu" aria-hidden="true"></div>
         <div class="tm-db__ctx-menu"
              style="left:@(_blockCtxX)px;top:@(_blockCtxY)px"
              role="menu"
@@ -488,7 +668,7 @@
 
     private RenderFragment RenderTableView() =>
     @<TmNotionDbTableView Fields="@_fields"
-                           Records="@_records"
+                           Records="@VisibleRecords"
                            GroupByField="@TableGroupByField"
                            HideEmptyGroups="@(_localGrouping?.HideEmptyGroups ?? _activeView?.Grouping?.HideEmptyGroups ?? false)"
                            ShowSubItems="@_showSubItems"
@@ -498,13 +678,15 @@
                            OnExpandRecord="HandleExpandRecordAsync"
                            OnNewRecord="HandleNewRecordAsync"
                            OnNewField="HandleAddFieldAsync"
+                           OnRecordDeleted="HandleRecordDeletedAsync"
+                           CoarsePointer="@CoarsePointer"
                            OnFieldResized="HandleFieldResizedAsync"
                            OnFieldMoved="HandleFieldMovedAsync"
                            OnFieldEdit="OpenFieldEditor" />;
 
     private RenderFragment RenderCalendarView() =>
     @<TmNotionDbCalendarView Fields="@_fields"
-                              Records="@_records"
+                              Records="@VisibleRecords"
                               DateFieldId="@(CalendarConfig?.DateFieldId)"
                               ReadOnly="@ReadOnly"
                               OnRecordUpdated="HandleRecordUpdatedAsync"
@@ -513,7 +695,7 @@
 
     private RenderFragment RenderGalleryView() =>
     @<TmNotionDbGalleryView Fields="@_fields"
-                             Records="@_records"
+                             Records="@VisibleRecords"
                              ReadOnly="@ReadOnly"
                              CardSize="@(GalleryConfig?.CardSize ?? GalleryCardSize.Medium)"
                              CoverFieldId="@(GalleryConfig?.CoverFieldId)"
@@ -524,7 +706,7 @@
 
     private RenderFragment RenderTimelineView() =>
     @<TmNotionDbTimelineView Fields="@_fields"
-                              Records="@_records"
+                              Records="@VisibleRecords"
                               StartDateFieldId="@(TimelineConfig?.StartDateFieldId)"
                               EndDateFieldId="@(TimelineConfig?.EndDateFieldId)"
                               ShowTableArea="@(TimelineConfig?.ShowTableArea ?? true)"
@@ -535,7 +717,7 @@
 
     private RenderFragment RenderBoardView() =>
     @<TmNotionDbBoardView Fields="@_fields"
-                           Records="@_records"
+                           Records="@VisibleRecords"
                            GroupByField="@BoardGroupField"
                            ReadOnly="@ReadOnly"
                            HideEmptyGroups="@(_localGrouping?.HideEmptyGroups ?? _activeView?.Grouping?.HideEmptyGroups ?? false)"
@@ -545,7 +727,7 @@
 
     private RenderFragment RenderListView() =>
     @<TmNotionDbListView Fields="@_fields"
-                         Records="@_records"
+                         Records="@VisibleRecords"
                          PreviewFieldIds="@(_activeView?.VisibleFieldIds)"
                          ReadOnly="@ReadOnly"
                          OnRecordClicked="HandleRecordClickAsync"

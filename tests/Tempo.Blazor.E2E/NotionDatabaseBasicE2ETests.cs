@@ -60,8 +60,16 @@ public class NotionDatabaseBasicE2ETests : WasmTestBase
     private async Task SwitchDatabaseViewAsync(IPage page, ILocator db, string viewName)
     {
         var tab = db.Locator(".tm-db__view-tab").Filter(new LocatorFilterOptions { HasText = viewName });
-        await tab.WaitForAsync(new LocatorWaitForOptions { Timeout = 5000 });
-        await tab.ClickAsync();
+        if (await tab.CountAsync() > 0 && await tab.First.IsVisibleAsync())
+        {
+            await tab.First.ClickAsync();
+        }
+        else
+        {
+            await db.GetByTestId("notion-db-more-views").Locator(".tm-dropdown-trigger").ClickAsync();
+            await page.Locator("[role='menuitem']").Filter(new LocatorFilterOptions { HasText = viewName })
+                .First.ClickAsync();
+        }
         await page.WaitForTimeoutAsync(800);
     }
 
@@ -194,8 +202,8 @@ public class NotionDatabaseBasicE2ETests : WasmTestBase
         var db = await NavigateToDatabaseBlockAsync(page);
         await SwitchDatabaseViewAsync(page, db, "Timeline");
 
-        // The timeline view has a unique zoom-group toolbar (.tm-dbt__zoom-group)
-        var zoomGroup = db.Locator(".tm-dbt__zoom-group");
+        // The timeline view has a unique zoom-group toolbar (.tm-dbtl__zoom-group)
+        var zoomGroup = db.Locator(".tm-dbtl__zoom-group");
         await zoomGroup.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 8000 });
         Assert.IsTrue(await zoomGroup.IsVisibleAsync(), "Timeline view should show zoom controls");
 
@@ -321,8 +329,10 @@ public class NotionDatabaseBasicE2ETests : WasmTestBase
         var firstRow = db.Locator(".tm-dbt__row").First;
         await firstRow.WaitForAsync(new LocatorWaitForOptions { Timeout = 8000 });
         var spacer = firstRow.Locator(".tm-dbt__cell--spacer");
-        await spacer.ScrollIntoViewIfNeededAsync();
-        await spacer.ClickAsync(new LocatorClickOptions { Force = true });
+        await spacer.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Attached, Timeout = 8000 });
+        // The spacer is past the horizontal scroll and under the sticky columns, so a pointer
+        // click never reaches it. Dispatch the click on the cell itself.
+        await spacer.EvaluateAsync("el => el.click()");
         await page.WaitForTimeoutAsync(800);
     }
 
@@ -335,7 +345,8 @@ public class NotionDatabaseBasicE2ETests : WasmTestBase
 
         await OpenFirstRecordDetailAsync(page, db);
 
-        var modal = page.Locator(".tm-dbrd__modal");
+        // Phase 4: the record detail rides the core TmModal — the visible overlay hosts .tm-dbrd.
+        var modal = page.Locator(".tm-modal-overlay:has(.tm-dbrd)");
         await modal.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 8000 });
         Assert.IsTrue(await modal.IsVisibleAsync(), "Record detail modal should open after clicking the row spacer");
 
@@ -351,11 +362,11 @@ public class NotionDatabaseBasicE2ETests : WasmTestBase
 
         await OpenFirstRecordDetailAsync(page, db);
 
-        var modal = page.Locator(".tm-dbrd__modal");
+        var modal = page.Locator(".tm-modal-overlay:has(.tm-dbrd)");
         await modal.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 8000 });
 
         // Close it
-        var closeBtn = page.Locator(".tm-dbrd__close-btn");
+        var closeBtn = page.Locator(".tm-modal-close");
         await closeBtn.ClickAsync();
         await page.WaitForTimeoutAsync(600);
 
@@ -363,5 +374,44 @@ public class NotionDatabaseBasicE2ETests : WasmTestBase
         Assert.IsFalse(await modal.IsVisibleAsync(), "Record detail modal should be hidden after clicking Close");
 
         await TakeScreenshotAsync(page, "db_record_detail_close");
+    }
+
+    [TestMethod]
+    [Description("Escape while a property cell edits cancels the cell only — the record detail dialog stays open; the next Escape closes it")]
+    public async Task Database_RecordDetail_NestedEscape_KeepsTheDialogOpen()
+    {
+        var page = await OpenNotionEditorAsync();
+        var db = await NavigateToDatabaseBlockAsync(page);
+
+        await OpenFirstRecordDetailAsync(page, db);
+
+        var modal = page.Locator(".tm-modal-overlay:has(.tm-dbrd)");
+        await modal.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 8000 });
+
+        // Enter cell edit mode (the nested surface). Escape belongs to the cell: it cancels the
+        // edit and must NOT close the host dialog. The cell editors are plain fixed popups (not
+        // TmOverlayPanels), so notion-editor.js marks their Escape tmEscapeHandled in the
+        // window-capture phase — tm-focus-trap skips a marked key, exactly like an
+        // overlay.js-dismissed slash/mention menu.
+        var propValue = page.Locator(".tm-dbrd__prop-value").First;
+        await propValue.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 8000 });
+        await propValue.EvaluateAsync("el => el.click()");
+        await page.WaitForTimeoutAsync(600);
+        Assert.AreEqual(1, await page.Locator(".tm-dbrd__prop-row--editing").CountAsync(),
+            "A property cell should be in edit mode before Escape");
+        Assert.IsTrue(await modal.IsVisibleAsync(), "Record detail should be open before Escape");
+
+        await page.Keyboard.PressAsync("Escape");
+        await page.WaitForTimeoutAsync(800);
+
+        // The cell edit is cancelled AND the dialog survives the same physical Escape.
+        Assert.AreEqual(0, await page.Locator(".tm-dbrd__prop-row--editing").CountAsync(),
+            "Escape should cancel the cell edit");
+        Assert.IsTrue(await modal.IsVisibleAsync(),
+            "The record detail dialog must stay open when Escape cancels the nested cell edit");
+
+        // The NEXT Escape (no nested surface open) closes the dialog itself.
+        await page.Keyboard.PressAsync("Escape");
+        await modal.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Hidden, Timeout = 5000 });
     }
 }

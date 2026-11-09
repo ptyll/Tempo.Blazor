@@ -1,34 +1,24 @@
 @namespace Tempo.Blazor.Components.NotionEditor.Page
+@inherits Tempo.Blazor.Components.TmComponentBase
 @using Tempo.Blazor.NotionEditor.Interfaces
 @using Tempo.Blazor.NotionEditor.Models
+@using Tempo.Blazor.Components.Buttons
+@using Tempo.Blazor.Components.Feedback
+@using Tempo.Blazor.Components.Icons
+@using Tempo.Blazor.Abstractions.Layout
 
-@if (Visible)
-{
-    <div class="tm-nprd-backdrop" aria-hidden="true" @onclick="CloseAsync"></div>
-    <section class="tm-nprd"
-             role="dialog"
-             aria-modal="true"
-             aria-labelledby="tm-nprd-title"
-             @onclick:stopPropagation="true">
-        <header class="tm-nprd__header">
-            <div>
-                <h2 id="tm-nprd-title">@Loc["Notion_Restrictions_Title"]</h2>
-                @if (EffectivePermission?.IsInherited == true)
-                {
-                    <p class="tm-nprd__inherited">@Loc["Notion_Restrictions_Inherited"]</p>
-                }
-            </div>
-            <button class="tm-nprd__icon-btn"
-                    type="button"
-                    aria-label="@Loc["Tm_Close"]"
-                    title="@Loc["Tm_Close"]"
-                    @onclick="CloseAsync">
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-                    <path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-                </svg>
-            </button>
-        </header>
-
+@* Phase 7 (N8): restrictions ride the core TmModal. The footer (including "Remove restrictions")
+   sits outside the scrolling body. Records become cards on a mobile layout. *@
+<TmModal Show="Visible"
+         OnClose="CloseAsync"
+         Title="@Loc["Notion_Restrictions_Title"]"
+         Size="ModalSize.Large"
+         MobilePresentation="MobilePresentation.Sheet"
+         LayoutMode="ResolvedLayout"
+         CloseOnOverlayClick="false"
+         Class="tm-nprd-host"
+         data-testid="@TestId("notion-restrictions-dialog")">
+    <ChildContent>
         @if (_loading)
         {
             <div class="tm-nprd__loading" role="status" aria-busy="true">
@@ -38,101 +28,134 @@
         }
         else
         {
-            <div class="tm-nprd__field">
-                <label for="tm-nprd-mode">@Loc["Notion_Restrictions_Mode"]</label>
-                <select id="tm-nprd-mode" class="tm-nprd__select" value="@_mode" @onchange="HandleModeChanged">
-                    <option value="@PageRestrictionMode.Open">@Loc["Notion_Restrictions_ModeOpen"]</option>
-                    <option value="@PageRestrictionMode.ReadOnlyForSome">@Loc["Notion_Restrictions_ModeReadOnlyForSome"]</option>
-                    <option value="@PageRestrictionMode.EditForSome">@Loc["Notion_Restrictions_ModeEditForSome"]</option>
-                </select>
-            </div>
+            <div class="tm-nprd" data-layout="@ResolvedLayout.ToString().ToLowerInvariant()">
+                @if (EffectivePermission?.IsInherited == true)
+                {
+                    <TmAlert Severity="AlertSeverity.Info"
+                             Variant="AlertVariant.Soft"
+                             Class="tm-nprd__banner"
+                             role="status"
+                             data-testid="@TestId("notion-restrictions-inherited")">
+                        @Loc["Notion_Restrictions_Inherited"]
+                    </TmAlert>
+                }
 
-            <div class="tm-nprd__add" aria-label="@Loc["Notion_Restrictions_AddUser"]">
-                <select class="tm-nprd__select tm-nprd__select--compact"
-                        aria-label="@Loc["Notion_Restrictions_SubjectType"]"
-                        value="@_newSubjectType"
-                        @onchange="HandleSubjectTypeChanged">
-                    <option value="@PageRestrictionSubjectType.User">@Loc["Notion_Restrictions_User"]</option>
-                    <option value="@PageRestrictionSubjectType.Group">@Loc["Notion_Restrictions_Group"]</option>
-                </select>
-                <input class="tm-nprd__input"
-                       type="text"
-                       aria-label="@Loc["Notion_Restrictions_Subject"]"
-                       placeholder="@Loc["Notion_Restrictions_SubjectPlaceholder"]"
-                       value="@_newSubjectId"
-                       @oninput="e => _newSubjectId = e.Value?.ToString() ?? string.Empty" />
-                <select class="tm-nprd__select tm-nprd__select--compact"
-                        aria-label="@Loc["Notion_Restrictions_Permission"]"
-                        value="@_newPermission"
-                        @onchange="HandlePermissionChanged">
-                    <option value="@PageRestrictionPermission.View">@Loc["Notion_Restrictions_View"]</option>
-                    <option value="@PageRestrictionPermission.Comment">@Loc["Notion_Restrictions_Comment"]</option>
-                    <option value="@PageRestrictionPermission.Edit">@Loc["Notion_Restrictions_Edit"]</option>
-                </select>
-                <button class="tm-nprd__add-btn"
-                        type="button"
-                        disabled="@string.IsNullOrWhiteSpace(_newSubjectId)"
-                        @onclick="AddEntry">
-                    @(_newSubjectType == PageRestrictionSubjectType.User
-                        ? Loc["Notion_Restrictions_AddUser"]
-                        : Loc["Notion_Restrictions_AddGroup"])
-                </button>
-            </div>
+                <section class="tm-nprd__section" aria-labelledby="tm-nprd-mode-heading">
+                    @* F-18: one visible "Restriction mode" text — the select names itself after the
+                       heading instead of duplicating it in a second (visually hidden) label. *@
+                    <h3 id="tm-nprd-mode-heading" class="tm-nprd__heading">@Loc["Notion_Restrictions_Mode"]</h3>
+                    <select id="tm-nprd-mode" class="tm-nprd__select" value="@_mode" aria-labelledby="tm-nprd-mode-heading" @onchange="HandleModeChanged">
+                        <option value="@PageRestrictionMode.Open">@Loc["Notion_Restrictions_ModeOpen"]</option>
+                        <option value="@PageRestrictionMode.ReadOnlyForSome">@Loc["Notion_Restrictions_ModeReadOnlyForSome"]</option>
+                        <option value="@PageRestrictionMode.EditForSome">@Loc["Notion_Restrictions_ModeEditForSome"]</option>
+                    </select>
+                </section>
 
-            @if (_entries.Count == 0)
-            {
-                <div class="tm-nprd__empty">@Loc["Notion_Restrictions_Empty"]</div>
-            }
-            else
-            {
-                <div class="tm-nprd__entries" role="list">
-                    @foreach (var entry in _entries)
+                <section class="tm-nprd__section" aria-labelledby="tm-nprd-people-heading">
+                    <h3 id="tm-nprd-people-heading" class="tm-nprd__heading">@Loc["Notion_Restrictions_People"]</h3>
+                    <form class="tm-nprd__add"
+                          data-testid="@TestId("notion-restrictions-add-form")"
+                          @onsubmit="AddEntry"
+                          @onsubmit:preventDefault="true">
+                        <select class="tm-nprd__select tm-nprd__select--compact"
+                                aria-label="@Loc["Notion_Restrictions_SubjectType"]"
+                                value="@_newSubjectType"
+                                @onchange="HandleSubjectTypeChanged">
+                            <option value="@PageRestrictionSubjectType.User">@Loc["Notion_Restrictions_User"]</option>
+                            <option value="@PageRestrictionSubjectType.Group">@Loc["Notion_Restrictions_Group"]</option>
+                        </select>
+                        <input class="tm-nprd__input"
+                               type="text"
+                               aria-label="@Loc["Notion_Restrictions_Subject"]"
+                               placeholder="@Loc["Notion_Restrictions_SubjectPlaceholder"]"
+                               value="@_newSubjectId"
+                               data-testid="@TestId("notion-restrictions-subject")"
+                               @oninput="e => _newSubjectId = e.Value?.ToString() ?? string.Empty" />
+                        <select class="tm-nprd__select tm-nprd__select--compact"
+                                aria-label="@Loc["Notion_Restrictions_Permission"]"
+                                value="@_newPermission"
+                                @onchange="HandlePermissionChanged">
+                            <option value="@PageRestrictionPermission.View">@Loc["Notion_Restrictions_View"]</option>
+                            <option value="@PageRestrictionPermission.Comment">@Loc["Notion_Restrictions_Comment"]</option>
+                            <option value="@PageRestrictionPermission.Edit">@Loc["Notion_Restrictions_Edit"]</option>
+                        </select>
+                        <TmButton Type="ButtonType.Submit"
+                                  Variant="ButtonVariant.Secondary"
+                                  Class="tm-nprd__add-btn"
+                                  Disabled="@string.IsNullOrWhiteSpace(_newSubjectId)">
+                            @(_newSubjectType == PageRestrictionSubjectType.User
+                                ? Loc["Notion_Restrictions_AddUser"]
+                                : Loc["Notion_Restrictions_AddGroup"])
+                        </TmButton>
+                    </form>
+                </section>
+
+                <div class="tm-nprd__scroll" data-testid="@TestId("notion-restrictions-scroll")">
+                    @if (_entries.Count == 0)
                     {
-                        var captured = entry;
-                        <div class="tm-nprd__entry" role="listitem">
-                            <span class="tm-nprd__subject-kind">@SubjectTypeText(captured.SubjectType)</span>
-                            <span class="tm-nprd__subject" title="@captured.SubjectId">@captured.SubjectId</span>
-                            <span class="tm-nprd__source">@Loc["Notion_Restrictions_Explicit"]</span>
-                            <select class="tm-nprd__select tm-nprd__select--entry"
-                                    aria-label="@Loc["Notion_Restrictions_Permission"]"
-                                    value="@captured.Permission"
-                                    @onchange="e => UpdateEntryPermission(captured, e)">
-                                <option value="@PageRestrictionPermission.View">@Loc["Notion_Restrictions_View"]</option>
-                                <option value="@PageRestrictionPermission.Comment">@Loc["Notion_Restrictions_Comment"]</option>
-                                <option value="@PageRestrictionPermission.Edit">@Loc["Notion_Restrictions_Edit"]</option>
-                            </select>
-                            <button class="tm-nprd__icon-btn"
-                                    type="button"
-                                    aria-label="@Loc["Notion_Restrictions_Remove"]"
-                                    title="@Loc["Notion_Restrictions_Remove"]"
-                                    @onclick="() => RemoveEntry(captured)">
-                                <svg width="15" height="15" viewBox="0 0 15 15" fill="none" aria-hidden="true">
-                                    <path d="M3 4h9M6 4V2.7h3V4M5 6.2v4.2M10 6.2v4.2M4 4l.5 8h6L11 4"
-                                          stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
-                                </svg>
-                            </button>
+                        <div class="tm-nprd__empty">@Loc["Notion_Restrictions_Empty"]</div>
+                    }
+                    else
+                    {
+                        <div class="tm-nprd__entries" role="list">
+                            @foreach (var entry in _entries)
+                            {
+                                var captured = entry;
+                                <div class="tm-nprd__entry" role="listitem" data-testid="@TestId("notion-restrictions-entry")">
+                                    <TmIcon Name="@(captured.SubjectType == PageRestrictionSubjectType.User ? IconNames.User : IconNames.Users)"
+                                            Size="IconSize.Sm" />
+                                    <span class="tm-nprd__subject-kind">@SubjectTypeText(captured.SubjectType)</span>
+                                    <span class="tm-nprd__subject" title="@captured.SubjectId">@captured.SubjectId</span>
+                                    <span class="tm-nprd__source">@Loc["Notion_Restrictions_Explicit"]</span>
+                                    <select class="tm-nprd__select tm-nprd__select--entry"
+                                            aria-label="@Loc["Notion_Restrictions_Permission"]"
+                                            value="@captured.Permission"
+                                            @onchange="e => UpdateEntryPermission(captured, e)">
+                                        <option value="@PageRestrictionPermission.View">@Loc["Notion_Restrictions_View"]</option>
+                                        <option value="@PageRestrictionPermission.Comment">@Loc["Notion_Restrictions_Comment"]</option>
+                                        <option value="@PageRestrictionPermission.Edit">@Loc["Notion_Restrictions_Edit"]</option>
+                                    </select>
+                                    <button class="tm-nprd__icon-btn"
+                                            type="button"
+                                            aria-label="@Loc["Notion_Restrictions_Remove"]"
+                                            title="@Loc["Notion_Restrictions_Remove"]"
+                                            @onclick="() => RemoveEntry(captured)">
+                                        <TmIcon Name="@IconNames.Trash2" Size="IconSize.Xs" />
+                                    </button>
+                                </div>
+                            }
                         </div>
                     }
                 </div>
-            }
 
-            @if (!string.IsNullOrWhiteSpace(_error))
-            {
-                <div class="tm-nprd__error" role="alert">@_error</div>
-            }
-
-            <footer class="tm-nprd__footer">
-                <button class="tm-nprd__secondary" type="button" @onclick="CloseAsync">
-                    @Loc["Tm_Cancel"]
-                </button>
-                <button class="tm-nprd__primary" type="button" disabled="@_saving" @onclick="SaveAsync">
-                    @if (_saving)
-                    {
-                        <span class="tm-nprd__spinner" aria-hidden="true"></span>
-                    }
-                    @Loc["Tm_Save"]
-                </button>
-            </footer>
+                @if (!string.IsNullOrWhiteSpace(_error))
+                {
+                    <div class="tm-nprd__error" role="alert">@_error</div>
+                }
+            </div>
         }
-    </section>
-}
+    </ChildContent>
+    <Footer>
+        @if (!_loading)
+        {
+            <div class="tm-nprd__footer">
+                <TmButton Variant="ButtonVariant.Danger"
+                          Disabled="_saving"
+                          OnClick="RemoveRestrictions"
+                          data-testid="@TestId("notion-restrictions-remove-all")">
+                    @Loc["Notion_Restrictions_RemoveAll"]
+                </TmButton>
+                <div class="tm-nprd__footer-end">
+                    <TmButton Variant="ButtonVariant.Ghost" OnClick="CloseAsync">@Loc["Tm_Cancel"]</TmButton>
+                    <TmButton Variant="ButtonVariant.Primary"
+                              Class="tm-nprd__primary"
+                              Disabled="_saving"
+                              OnClick="SaveAsync"
+                              data-testid="@TestId("notion-restrictions-save")">
+                        @Loc["Tm_Save"]
+                    </TmButton>
+                </div>
+            </div>
+        }
+    </Footer>
+</TmModal>

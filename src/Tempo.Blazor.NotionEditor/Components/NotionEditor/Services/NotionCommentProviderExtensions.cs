@@ -7,7 +7,6 @@ internal static class NotionCommentProviderExtensions
 {
     private const string PageEntityType = "notion-page";
     private const string BlockEntityType = "notion-block";
-    private const string CurrentUserId = "demo";
 
     public static TmEntityRef PageEntity(string pageId)
         => TmEntityRef.Create(PageEntityType, pageId);
@@ -29,31 +28,41 @@ internal static class NotionCommentProviderExtensions
         return await provider.GetForEntityAsync(BlockEntity(blockId));
     }
 
+    /// <summary>
+    /// Creates a page comment authored by <paramref name="currentUserId"/>. A null or blank id is stored
+    /// as an empty author id — never the historical <c>"demo"</c> stand-in.
+    /// </summary>
     public static async Task<TmCommentThread> AddPageCommentAsync(
         this ITmCommentProvider provider,
         string pageId,
-        string htmlContent)
+        string htmlContent,
+        string? currentUserId)
     {
         return await provider.CreateThreadAsync(new TmCommentThread
         {
             EntityRef = PageEntity(pageId),
             Anchor = TmCommentAnchor.None(),
             Visibility = TmCommentVisibility.Internal,
-            Entries = [CreateEntry(string.Empty, htmlContent)]
+            Entries = [CreateEntry(string.Empty, htmlContent, currentUserId: currentUserId)]
         });
     }
 
+    /// <summary>
+    /// Creates a block comment authored by <paramref name="currentUserId"/>. A null or blank id is stored
+    /// as an empty author id — never the historical <c>"demo"</c> stand-in.
+    /// </summary>
     public static async Task<TmCommentThread> AddBlockCommentAsync(
         this ITmCommentProvider provider,
         string blockId,
-        string htmlContent)
+        string htmlContent,
+        string? currentUserId)
     {
         return await provider.CreateThreadAsync(new TmCommentThread
         {
             EntityRef = BlockEntity(blockId),
             Anchor = TmCommentAnchor.Block(blockId),
             Visibility = TmCommentVisibility.Internal,
-            Entries = [CreateEntry(string.Empty, htmlContent)]
+            Entries = [CreateEntry(string.Empty, htmlContent, currentUserId: currentUserId)]
         });
     }
 
@@ -64,7 +73,8 @@ internal static class NotionCommentProviderExtensions
         int endOffset,
         string highlightedText,
         string htmlContent,
-        string commentId)
+        string commentId,
+        string? currentUserId)
     {
         var thread = new TmCommentThread
         {
@@ -73,7 +83,7 @@ internal static class NotionCommentProviderExtensions
             Anchor = TmCommentAnchor.TextRange(blockId, startOffset, endOffset, highlightedText),
             Visibility = TmCommentVisibility.Internal
         };
-        thread.Entries.Add(CreateEntry(thread.Id, htmlContent));
+        thread.Entries.Add(CreateEntry(thread.Id, htmlContent, currentUserId: currentUserId));
         return await provider.CreateThreadAsync(thread);
     }
 
@@ -89,17 +99,20 @@ internal static class NotionCommentProviderExtensions
         this ITmCommentProvider provider,
         string threadId,
         string htmlContent,
-        string? parentEntryId = null)
+        string? parentEntryId,
+        string? currentUserId)
     {
-        return await provider.ReplyAsync(threadId, CreateEntry(threadId, htmlContent, parentEntryId));
+        return await provider.ReplyAsync(threadId, CreateEntry(threadId, htmlContent, parentEntryId, currentUserId));
     }
 
     public static async Task<TmCommentEntry> EditCommentAsync(
         this ITmCommentProvider provider,
         string threadId,
         string entryId,
-        string htmlContent)
+        string htmlContent,
+        string? currentUserId)
     {
+        var userId = currentUserId?.Trim() ?? string.Empty;
         return await provider.UpdateEntryAsync(threadId, entryId, new TmCommentEntry
         {
             Id = entryId,
@@ -107,7 +120,7 @@ internal static class NotionCommentProviderExtensions
             Body = htmlContent,
             BodyFormat = TmCommentBodyFormat.Html,
             EditedAt = DateTimeOffset.UtcNow,
-            Author = new TmUserRef { Id = CurrentUserId, DisplayName = CurrentUserId }
+            Author = new TmUserRef { Id = userId, DisplayName = userId }
         });
     }
 
@@ -126,16 +139,20 @@ internal static class NotionCommentProviderExtensions
 
     public static async Task<TmCommentThread> ResolveCommentAsync(
         this ITmCommentProvider provider,
-        string threadId)
+        string threadId,
+        string? currentUserId)
     {
-        return await provider.ResolveAsync(threadId, new TmUserRef { Id = CurrentUserId, DisplayName = CurrentUserId });
+        var userId = currentUserId?.Trim() ?? string.Empty;
+        return await provider.ResolveAsync(threadId, new TmUserRef { Id = userId, DisplayName = userId });
     }
 
     public static async Task<TmCommentThread> UnresolveCommentAsync(
         this ITmCommentProvider provider,
-        string threadId)
+        string threadId,
+        string? currentUserId)
     {
-        return await provider.ReopenAsync(threadId, new TmUserRef { Id = CurrentUserId, DisplayName = CurrentUserId });
+        var userId = currentUserId?.Trim() ?? string.Empty;
+        return await provider.ReopenAsync(threadId, new TmUserRef { Id = userId, DisplayName = userId });
     }
 
     public static async Task MarkThreadAsReadAsync(
@@ -217,13 +234,15 @@ internal static class NotionCommentProviderExtensions
     private static TmCommentEntry CreateEntry(
         string threadId,
         string htmlContent,
-        string? parentEntryId = null)
+        string? parentEntryId = null,
+        string? currentUserId = null)
     {
+        var userId = currentUserId?.Trim() ?? string.Empty;
         return new TmCommentEntry
         {
             ThreadId = threadId,
             ParentEntryId = string.IsNullOrWhiteSpace(parentEntryId) ? null : parentEntryId,
-            Author = new TmUserRef { Id = CurrentUserId, DisplayName = CurrentUserId },
+            Author = new TmUserRef { Id = userId, DisplayName = userId },
             Body = htmlContent,
             BodyFormat = TmCommentBodyFormat.Html,
             CreatedAt = DateTimeOffset.UtcNow,

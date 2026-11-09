@@ -1,6 +1,10 @@
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.JSInterop;
+using Tempo.Blazor.Components.Toolbar;
+using Tempo.Blazor.Abstractions.Layout;
+using Tempo.Blazor.Components.Actions;
+using Tempo.Blazor.Components.Icons;
 using Tempo.Blazor.Components.NotionEditor.Services;
 using Tempo.Blazor.NotionEditor.Enums;
 using Tempo.Blazor.NotionEditor.Interfaces;
@@ -8,7 +12,7 @@ using Tempo.Blazor.NotionEditor.Models;
 
 namespace Tempo.Blazor.Components.NotionEditor.Blocks.Database;
 
-public partial class TmNotionDatabaseBlock : ComponentBase
+public partial class TmNotionDatabaseBlock : TmComponentBase
 {
     // ── DI ───────────────────────────────────────────────────────────────────
 
@@ -27,6 +31,23 @@ public partial class TmNotionDatabaseBlock : ComponentBase
     [Parameter] public EventCallback             OnFocused    { get; set; }
     [Parameter] public EventCallback<IPageBlock> OnUpdated    { get; set; }
     [Parameter] public EventCallback             OnOpenAsPage { get; set; }
+
+    /// <summary>
+    /// Pins the database's own layout. <see cref="TmLayoutMode.Auto"/> follows the cascaded layout
+    /// (the editor decides it); a forced value lets a host — and a test — render a mode without a DOM.
+    /// </summary>
+    [Parameter] public TmLayoutMode LayoutMode { get; set; } = TmLayoutMode.Auto;
+
+    /// <summary>Shows the client-side "search records" field (NO2). Default off, so existing hosts are unchanged.</summary>
+    [Parameter] public bool ShowSearch { get; set; }
+
+    /// <summary>
+    /// The database fills the page (opened as a page, or the only content). Only then does the mobile
+    /// action bar render (B1 Q3); an inline block keeps the compact toolbar.
+    /// </summary>
+    [Parameter] public bool IsPage { get; set; }
+
+    [CascadingParameter] private TmLayoutContext? Layout { get; set; }
 
     // ── Derived content ──────────────────────────────────────────────────────
 
@@ -89,6 +110,119 @@ public partial class TmNotionDatabaseBlock : ComponentBase
                 ?? _fields.FirstOrDefault(f => f.Type == DatabaseFieldType.Select);
         }
     }
+
+    // ── Layout + search (DB-5, NO2) ──────────────────────────────────────────
+
+    private string _searchText = string.Empty;
+
+    private TmLayoutMode EffectiveLayout => LayoutMode == TmLayoutMode.Auto
+        ? Layout?.Resolved ?? TmLayoutMode.Desktop
+        : LayoutMode;
+
+    private bool IsMobileLayout => EffectiveLayout == TmLayoutMode.Mobile;
+
+    /// <summary>Tabs kept on the row; the rest go behind "More views" so the row cannot overflow.</summary>
+    private const int VisibleTabCount = 4;
+
+    private string LayoutName => EffectiveLayout.ToString().ToLowerInvariant();
+
+    /// <summary>Compact layouts park the secondary actions in "More"; desktop measures them.</summary>
+    private ToolbarButtonPriority SecondaryPriority => EffectiveLayout == TmLayoutMode.Desktop
+        ? ToolbarButtonPriority.Secondary
+        : ToolbarButtonPriority.OverflowOnly;
+
+    private bool SearchIsPartial => ShowSearch
+        && _searchText.Length > 0
+        && _totalRecords > _records.Count;
+
+    /// <summary>The records the active view renders: every loaded record, or the search subset (NO2).</summary>
+    private IReadOnlyList<IDatabaseRecord> VisibleRecords
+    {
+        get
+        {
+            if (!ShowSearch || _searchText.Length == 0) return _records;
+            return _records.Where(MatchesSearch).ToList();
+        }
+    }
+
+    private bool MatchesSearch(IDatabaseRecord record)
+    {
+        foreach (var value in record.Fields.Values)
+        {
+            if (NotionDatabaseValueFormatter.Format(value)
+                .Contains(_searchText, StringComparison.CurrentCultureIgnoreCase))
+                return true;
+        }
+        return false;
+    }
+
+    private void OnSearchInput(ChangeEventArgs e) => _searchText = e.Value?.ToString() ?? string.Empty;
+
+    private void ToggleSubItems() => _showSubItems = !_showSubItems;
+
+    private int FieldIndex(IDatabaseField field) => _fields.FindIndex(f => f.Id == field.Id);
+
+    /// <summary>Non-drag column order (WCAG 2.5.7). The primary field stays first.</summary>
+    private async Task MoveFieldAsync(IDatabaseField field, int delta)
+    {
+        if (ReadOnly || Context.DatabaseProvider is null) return;
+        var index = FieldIndex(field);
+        var target = index + delta;
+        if (index <= 0 || target <= 0 || target >= _fields.Count) return;
+        (_fields[index], _fields[target]) = (_fields[target], _fields[index]);
+        await Context.DatabaseProvider.ReorderFieldsAsync(
+            _databaseId.ToString(), _fields.Select(f => f.Id.ToString()));
+    }
+
+    private static Dictionary<string, object> Group(string key) => new() { ["data-tm-group"] = key };
+
+    private Dictionary<string, object> Tool(string tool, string testId, string? elementId = null)
+    {
+        var attributes = new Dictionary<string, object>
+        {
+            ["data-tool"] = tool,
+            ["data-testid"] = TestId(testId)
+        };
+        if (elementId is not null) attributes["id"] = elementId;
+        return attributes;
+    }
+
+    private static string ToolClass(bool active, bool marked) =>
+        "tm-db__tool-btn"
+        + (active ? " tm-db__tool-btn--active" : string.Empty)
+        + (marked ? " tm-db__tool-btn--filtered" : string.Empty);
+
+    private IReadOnlyList<TmActionItem> MobileActions =>
+    [
+        new()
+        {
+            Id = "new",
+            Label = Loc["TmNotionDatabaseBlock_New"],
+            Icon = IconNames.Plus,
+            OnClick = EventCallback.Factory.Create(this, HandleNewRecordAsync)
+        },
+        new()
+        {
+            Id = "filter",
+            Label = Loc["TmNotionDatabaseBlock_Filter"],
+            Icon = IconNames.Filter,
+            OnClick = EventCallback.Factory.Create(this, ToggleFilterPanel)
+        },
+        new()
+        {
+            Id = "sort",
+            Label = Loc["TmNotionDatabaseBlock_Sort"],
+            Icon = IconNames.ArrowUp,
+            OnClick = EventCallback.Factory.Create(this, (Action)ToggleSortPanel)
+        },
+        new()
+        {
+            Id = "more",
+            Label = Loc["TmNotionDb_More"],
+            Icon = IconNames.MoreHorizontal,
+            OnClick = EventCallback.Factory.Create(this, ToggleMobileMore)
+        }
+    ];
 
     private IDatabaseField? TableGroupByField
     {
@@ -416,6 +550,36 @@ public partial class TmNotionDatabaseBlock : ComponentBase
         return Task.CompletedTask;
     }
 
+    /// <summary>
+    /// Adapts the detail's record callback to the block's parameterless <c>OnOpenAsPage</c>.
+    /// The open record is already <c>_openRecord</c>, so the host does not need the record again.
+    /// </summary>
+    private Task HandleRecordOpenedAsPageAsync(IDatabaseRecord _)
+        => OnOpenAsPage.InvokeAsync();
+
+    private string? _deleteError;
+
+    private async Task HandleRecordDeletedAsync(IDatabaseRecord record)
+    {
+        if (Context.DatabaseProvider is null || ReadOnly) return;
+        try
+        {
+            await Context.DatabaseProvider.DeleteRecordAsync(_databaseId.ToString(), record.Id.ToString());
+        }
+        catch (Exception)
+        {
+            _deleteError = Loc["TmNotionDbRecordDetail_DeleteFailed"];
+            StateHasChanged();
+            throw;
+        }
+
+        _deleteError = null;
+        _records.RemoveAll(r => r.Id == record.Id);
+        if (_totalRecords > 0) _totalRecords--;
+        if (_openRecord?.Id == record.Id) _openRecord = null;
+        StateHasChanged();
+    }
+
     private async Task HandleRecordUpdatedAsync(IDatabaseRecord record)
     {
         if (Context.DatabaseProvider is null || ReadOnly) return;
@@ -517,16 +681,206 @@ public partial class TmNotionDatabaseBlock : ComponentBase
 
     // ── Fields panel ─────────────────────────────────────────────────────────
 
-    private void ToggleFieldsPanel()
+    private TmToolbar? _toolbar;
+    private TmToolbarButton? _filterTrigger;
+    private TmToolbarButton? _sortTrigger;
+    private TmToolbarButton? _groupTrigger;
+    private TmToolbarButton? _fieldsTrigger;
+    private TmToolbarButton? _templatesTrigger;
+    private ElementReference _mobileMoreAnchor;
+    private bool _showMobileMore;
+    private bool _coarsePointer;
+    private bool _anchorsReady;
+
+    /// <summary>A finger or a pen: header drag and the column resize handle are not the path.</summary>
+    private bool CoarsePointer => IsMobileLayout || _coarsePointer;
+
+    private readonly string SearchStatusId = $"tm-db-search-{Guid.NewGuid():N}";
+    private string _filterTriggerId = $"tm-db-filter-{Guid.NewGuid():N}";
+    private readonly string _sortTriggerId = $"tm-db-sort-{Guid.NewGuid():N}";
+    private readonly string _groupTriggerId = $"tm-db-group-{Guid.NewGuid():N}";
+    private readonly string _fieldsTriggerId = $"tm-db-fields-{Guid.NewGuid():N}";
+    private readonly string _templatesTriggerId = $"tm-db-templates-{Guid.NewGuid():N}";
+
+    /// <summary>
+    /// The trigger the panel anchors on. A tool that the toolbar moved into "More" is not in the tab
+    /// order, so the panel anchors on the More button and focus returns there.
+    /// </summary>
+    private ElementReference PanelAnchor(TmToolbarButton? trigger, string triggerId)
+    {
+        if (_toolbar?.IsInMenu(trigger?.MenuId) == true && _toolbar.MoreButton.Id is not null)
+            return _toolbar.MoreButton;
+        var element = trigger?.Element ?? default;
+        return string.IsNullOrEmpty(element.Id) ? new ElementReference(triggerId) : element;
+    }
+
+    private string TriggerId(TmToolbarButton? trigger) => trigger switch
+    {
+        _ when ReferenceEquals(trigger, _filterTrigger) => _filterTriggerId,
+        _ when ReferenceEquals(trigger, _sortTrigger) => _sortTriggerId,
+        _ when ReferenceEquals(trigger, _groupTrigger) => _groupTriggerId,
+        _ when ReferenceEquals(trigger, _fieldsTrigger) => _fieldsTriggerId,
+        _ when ReferenceEquals(trigger, _templatesTrigger) => _templatesTriggerId,
+        _ => trigger?.Element.Id ?? string.Empty
+    };
+
+    private async Task ReturnFocusAsync(TmToolbarButton? trigger)
+    {
+        var target = _toolbar?.IsInMenu(trigger?.MenuId) == true && _toolbar.MoreButton.Id is not null
+            ? _toolbar.MoreButton
+            : trigger?.Element ?? default;
+        await target.FocusAsync();
+    }
+
+    private void ToggleMobileMore() => _showMobileMore = !_showMobileMore;
+
+    private void OnMobileMoreOpenChanged(bool open)
+    {
+        if (!open) _showMobileMore = false;
+    }
+
+    private Task OpenMobileGroupAsync() => HandleMobileMoreAsync("group");
+
+    private Task OpenMobileImportAsync() => HandleMobileMoreAsync("import-export");
+
+    private Task OpenMobilePageAsync() => HandleMobileMoreAsync("open-as-page");
+
+    private Task OpenMobilePropertiesAsync() => HandleMobileMoreAsync("properties");
+
+    private async Task HandleMobileMoreAsync(string value)
+    {
+        _showMobileMore = false;
+        switch (value)
+        {
+            case "group": ToggleGroupPanel(); break;
+            case "import-export": ToggleImportExport(); break;
+            case "open-as-page": await HandleOpenAsPageAsync(); break;
+            case "properties": ToggleFieldsPanel(); break;
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        // A panel opened in this render was given the trigger's ElementReference before the button
+        // captured it. One more render reads the assigned reference. The HTML id follows that
+        // reference, so a test that reads the button's id sees the anchor.
+        if (!_anchorsReady || _filterTrigger?.Element.Id is { Length: > 0 } filterId && filterId != _filterTriggerId)
+        {
+            _anchorsReady = true;
+            if (_filterTrigger?.Element.Id is { Length: > 0 } id) _filterTriggerId = id;
+            StateHasChanged();
+        }
+
+        if (!firstRender) return;
+        try
+        {
+            _coarsePointer = await JS.InvokeAsync<bool>("tmNotionDb.isCoarsePointer");
+            if (_coarsePointer) StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"coarse pointer probe failed: {ex.Message}");
+        }
+    }
+
+    // The anchored overlay panels close through IsOpenChanged / OnDismissed (outside pointer,
+    // Escape) — both funnel into the same close path as the toggle.
+
+    private async Task OnFieldsPanelOpenChanged(bool open)
+    {
+        if (!open)
+        {
+            _showFieldsPanel = false;
+            await ReturnFocusAsync(_fieldsTrigger);
+        }
+    }
+
+    private async Task OnFieldsPanelDismissed(string? _)
+    {
+        _showFieldsPanel = false;
+        await ReturnFocusAsync(_fieldsTrigger);
+    }
+
+    /// <summary>The sticky "Done" action of the Properties panel — the explicit close path
+    /// (Q9 autosave: leaving confirms nothing, it just closes, like the sheet header Done).</summary>
+    private async Task CloseFieldsPanelAsync()
+    {
+        _showFieldsPanel = false;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task OnFilterPanelOpenChanged(bool open)
+    {
+        if (!open)
+        {
+            _showFilterPanel = false;
+            await ReturnFocusAsync(_filterTrigger);
+        }
+    }
+
+    private async Task OnFilterPanelDismissed(string? _)
+    {
+        _showFilterPanel = false;
+        await ReturnFocusAsync(_filterTrigger);
+    }
+
+    private async Task OnSortPanelOpenChanged(bool open)
+    {
+        if (!open)
+        {
+            _showSortPanel = false;
+            await ReturnFocusAsync(_sortTrigger);
+        }
+    }
+
+    private async Task OnSortPanelDismissed(string? _)
+    {
+        _showSortPanel = false;
+        await ReturnFocusAsync(_sortTrigger);
+    }
+
+    private async Task OnGroupPanelOpenChanged(bool open)
+    {
+        if (!open)
+        {
+            _showGroupPanel = false;
+            await ReturnFocusAsync(_groupTrigger);
+        }
+    }
+
+    private async Task OnGroupPanelDismissed(string? _)
+    {
+        _showGroupPanel = false;
+        await ReturnFocusAsync(_groupTrigger);
+    }
+
+    private async Task OnTemplateMenuOpenChanged(bool open)
+    {
+        if (!open)
+        {
+            _showTemplateMenu = false;
+            await ReturnFocusAsync(_templatesTrigger);
+        }
+    }
+
+    private async Task OnTemplateMenuDismissed(string? _)
+    {
+        _showTemplateMenu = false;
+        await ReturnFocusAsync(_templatesTrigger);
+    }
+
+    private async Task ToggleFieldsPanel()
     {
         _showFieldsPanel = !_showFieldsPanel;
         if (_showFieldsPanel) { _showFilterPanel = false; _showSortPanel = false; _showGroupPanel = false; _editingField = null; }
+        else await ReturnFocusAsync(_fieldsTrigger);
     }
 
-    private void ToggleFilterPanel()
+    private async Task ToggleFilterPanel()
     {
         _showFilterPanel = !_showFilterPanel;
         if (_showFilterPanel) { _showFieldsPanel = false; _showSortPanel = false; _showGroupPanel = false; _editingField = null; }
+        else await ReturnFocusAsync(_filterTrigger);
     }
 
     private void ToggleSortPanel()
@@ -554,6 +908,7 @@ public partial class TmNotionDatabaseBlock : ComponentBase
         _showImportExport  = false;
         _showAddViewPicker = false;
         _viewContextMenu   = null;
+        _showMobileMore    = false;
     }
 
     private void ToggleImportExport()
@@ -573,6 +928,12 @@ public partial class TmNotionDatabaseBlock : ComponentBase
         _showImportExport = false;
         await LoadRecordsAsync();
         StateHasChanged();
+    }
+
+    private async Task CloseTemplateMenuAsync()
+    {
+        _showTemplateMenu = false;
+        await ReturnFocusAsync(_templatesTrigger);
     }
 
     private void ToggleTemplateMenu()
@@ -804,27 +1165,5 @@ public partial class TmNotionDatabaseBlock : ComponentBase
         DatabaseViewType.Timeline => "<svg width='12' height='12' viewBox='0 0 24 24' fill='none' aria-hidden='true'><path d='M3 6h18M3 12h14M3 18h10' stroke='currentColor' stroke-width='1.5' stroke-linecap='round'/><rect x='5' y='4' width='8' height='4' rx='1' fill='currentColor'/><rect x='5' y='10' width='5' height='4' rx='1' fill='currentColor'/></svg>",
         DatabaseViewType.List     => "<svg width='12' height='12' viewBox='0 0 24 24' fill='none' aria-hidden='true'><path d='M9 6h12M9 12h12M9 18h12M5 6h.01M5 12h.01M5 18h.01' stroke='currentColor' stroke-width='1.5' stroke-linecap='round'/></svg>",
         _                         => string.Empty
-    });
-
-    private static MarkupString FieldTypeIcon(DatabaseFieldType type) => (MarkupString)(type switch
-    {
-        DatabaseFieldType.Text            => "<svg width='12' height='12' viewBox='0 0 24 24' fill='none' aria-hidden='true'><path d='M4 7h16M4 12h16M4 17h10' stroke='currentColor' stroke-width='1.5' stroke-linecap='round'/></svg>",
-        DatabaseFieldType.Number          => "<svg width='12' height='12' viewBox='0 0 24 24' fill='none' aria-hidden='true'><path d='M7 3L5 21M19 3l-2 18M3 9h18M3 15h18' stroke='currentColor' stroke-width='1.5' stroke-linecap='round'/></svg>",
-        DatabaseFieldType.Select          => "<svg width='12' height='12' viewBox='0 0 24 24' fill='none' aria-hidden='true'><circle cx='12' cy='12' r='9' stroke='currentColor' stroke-width='1.5'/><circle cx='12' cy='12' r='4' fill='currentColor'/></svg>",
-        DatabaseFieldType.MultiSelect     => "<svg width='12' height='12' viewBox='0 0 24 24' fill='none' aria-hidden='true'><rect x='2' y='5' width='9' height='6' rx='1' fill='currentColor'/><rect x='13' y='5' width='9' height='6' rx='1' fill='currentColor'/><rect x='2' y='14' width='9' height='6' rx='1' fill='currentColor'/></svg>",
-        DatabaseFieldType.Status          => "<svg width='12' height='12' viewBox='0 0 24 24' fill='none' aria-hidden='true'><circle cx='12' cy='12' r='9' stroke='currentColor' stroke-width='1.5'/><path d='M8 12l3 3 5-5' stroke='currentColor' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/></svg>",
-        DatabaseFieldType.Date or DatabaseFieldType.DateRange
-                                          => "<svg width='12' height='12' viewBox='0 0 24 24' fill='none' aria-hidden='true'><rect x='3' y='4' width='18' height='17' rx='2' stroke='currentColor' stroke-width='1.5'/><path d='M16 2v4M8 2v4M3 10h18' stroke='currentColor' stroke-width='1.5' stroke-linecap='round'/></svg>",
-        DatabaseFieldType.Checkbox        => "<svg width='12' height='12' viewBox='0 0 24 24' fill='none' aria-hidden='true'><rect x='3' y='3' width='18' height='18' rx='2' stroke='currentColor' stroke-width='1.5'/><path d='M7 12l4 4 6-6' stroke='currentColor' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/></svg>",
-        DatabaseFieldType.Person          => "<svg width='12' height='12' viewBox='0 0 24 24' fill='none' aria-hidden='true'><circle cx='12' cy='8' r='4' stroke='currentColor' stroke-width='1.5'/><path d='M4 20c0-4 3.6-7 8-7s8 3 8 7' stroke='currentColor' stroke-width='1.5' stroke-linecap='round'/></svg>",
-        DatabaseFieldType.Url             => "<svg width='12' height='12' viewBox='0 0 24 24' fill='none' aria-hidden='true'><path d='M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71' stroke='currentColor' stroke-width='1.5' stroke-linecap='round'/><path d='M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71' stroke='currentColor' stroke-width='1.5' stroke-linecap='round'/></svg>",
-        DatabaseFieldType.Email           => "<svg width='12' height='12' viewBox='0 0 24 24' fill='none' aria-hidden='true'><rect x='2' y='4' width='20' height='16' rx='2' stroke='currentColor' stroke-width='1.5'/><path d='M2 8l10 6 10-6' stroke='currentColor' stroke-width='1.5'/></svg>",
-        DatabaseFieldType.Phone           => "<svg width='12' height='12' viewBox='0 0 24 24' fill='none' aria-hidden='true'><path d='M5 4h4l2 5-2.5 1.5a11 11 0 0 0 4 4L14 12l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z' stroke='currentColor' stroke-width='1.5' stroke-linejoin='round'/></svg>",
-        DatabaseFieldType.Files           => "<svg width='12' height='12' viewBox='0 0 24 24' fill='none' aria-hidden='true'><path d='M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z' stroke='currentColor' stroke-width='1.5'/><polyline points='14 2 14 8 20 8' stroke='currentColor' stroke-width='1.5'/></svg>",
-        DatabaseFieldType.CreatedTime or DatabaseFieldType.LastEditedTime
-                                          => "<svg width='12' height='12' viewBox='0 0 24 24' fill='none' aria-hidden='true'><circle cx='12' cy='12' r='9' stroke='currentColor' stroke-width='1.5'/><path d='M12 7v5l3 3' stroke='currentColor' stroke-width='1.5' stroke-linecap='round'/></svg>",
-        DatabaseFieldType.CreatedBy or DatabaseFieldType.LastEditedBy
-                                          => "<svg width='12' height='12' viewBox='0 0 24 24' fill='none' aria-hidden='true'><circle cx='9' cy='7' r='4' stroke='currentColor' stroke-width='1.5'/><path d='M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2' stroke='currentColor' stroke-width='1.5'/><path d='M16 11l2 2 4-4' stroke='currentColor' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/></svg>",
-        _                                 => "<svg width='12' height='12' viewBox='0 0 24 24' fill='none' aria-hidden='true'><path d='M4 7h16M4 12h16M4 17h10' stroke='currentColor' stroke-width='1.5' stroke-linecap='round'/></svg>"
     });
 }

@@ -52,6 +52,13 @@
       "description": "Optional actions rendered in the header, next to the close button."
     },
     {
+      "name": "ShowHeader",
+      "type": "bool",
+      "isRequired": false,
+      "default": "true",
+      "description": "The host's own chrome carries the title/close (e.g. a panel that renders its own header): opt out of the built-in header row. When false the sheet renders no header and no drawer close button (the host content owns its own), and the panel falls back to the localized default accessible name."
+    },
+    {
       "name": "ChildContent",
       "type": "RenderFragment?",
       "isRequired": false,

@@ -400,6 +400,16 @@
     </div>
 
     <div class="showcase-card">
+        @* Fáze 5 (TmOtpInput integration): the phone step's code input mode is switchable —
+            Single (the core TmTextInput, default) vs Segmented (the core TmOtpInput). *@
+        <div class="mb-3 signing-components-page__phone-code-mode" data-testid="signing-phone-code-mode">
+            <TmSelect TValue="SigningCodeInputMode"
+                      Id="signing-phone-code-mode"
+                      Label="Phone code input mode"
+                      Value="_stepPhoneCodeInputMode"
+                      ValueChanged="value => _stepPhoneCodeInputMode = value"
+                      Options="_phoneCodeInputModeOptions" />
+        </div>
         <div class="grid grid-cols-1 xl:grid-cols-2 gap-4" data-testid="signing-steps-demo">
             <TmSigningTextStep Field="@_stepTextField"
                                Value="@_stepTextValue"
@@ -434,13 +444,25 @@
                                      AttachmentsChanged="HandleStepImageAttachmentsChanged"
                                      MaxFileSize="50000"
                                      data-testid="signing-step-image" />
-            <TmSigningPhoneStep Field="@_stepPhoneField"
-                                CountryCode="+420"
-                                PhoneNumber="@_stepPhoneNumber"
-                                PhoneNumberChanged="value => _stepPhoneNumber = value"
-                                ValueChanged="value => _stepPhoneValue = value"
-                                OnSendCode="HandleStepPhoneCodeSent"
-                                data-testid="signing-step-phone" />
+            @* Fáze 5: the demo verifier drives the full OTP state machine — "123456" confirms the
+                number, anything else is rejected (the invalid state then replays on the segmented
+                TmOtpInput). The validation message reaches the standalone step through the same
+                cascade the runner uses. *@
+            <CascadingValue Name="TmSigningRunnerValidation" Value="@_stepPhoneValidationMessage" IsFixed="false">
+                <TmSigningPhoneStep Field="@_stepPhoneField"
+                                    CountryCode="+420"
+                                    PhoneNumber="@_stepPhoneNumber"
+                                    PhoneNumberChanged="value => _stepPhoneNumber = value"
+                                    ValueChanged="value => _stepPhoneValue = value"
+                                    OtpCode="@_stepPhoneOtpCode"
+                                    OtpCodeChanged="HandleStepPhoneOtpCodeChanged"
+                                    CodeInputMode="@_stepPhoneCodeInputMode"
+                                    OtpInvalid="@_stepPhoneOtpInvalid"
+                                    Verified="@_stepPhoneVerified"
+                                    OnSendCode="HandleStepPhoneCodeSent"
+                                    OnVerifyCode="HandleStepPhoneVerify"
+                                    data-testid="signing-step-phone" />
+            </CascadingValue>
             <TmSigningSignatureStep Field="@_stepSignatureField"
                                     Value="@_stepSignatureValue"
                                     ValueChanged="value => _stepSignatureValue = value"
@@ -833,6 +855,12 @@
     private string? _designerCulture = "cs-CZ";
     private string? _runnerCulture = "en-US";
     private TmSigningDefaultSignatureMode _runnerSignatureMode = TmSigningDefaultSignatureMode.Auto;
+    private SigningCodeInputMode _stepPhoneCodeInputMode = SigningCodeInputMode.Single;
+    private static readonly IReadOnlyList<SelectOption<SigningCodeInputMode>> _phoneCodeInputModeOptions =
+    [
+        new() { Value = SigningCodeInputMode.Single, Label = "Single (text input)" },
+        new() { Value = SigningCodeInputMode.Segmented, Label = "Segmented (TmOtpInput)" }
+    ];
     private static readonly IReadOnlyList<SelectOption<TmSigningDefaultSignatureMode>> _signatureModeOptions =
     [
         new() { Value = TmSigningDefaultSignatureMode.Auto, Label = "Auto (Draw on touch)" },
@@ -2269,9 +2297,53 @@
         _stepStatus = $"Attachments: {attachments.Count}";
     }
 
+    private const string DemoPhoneCode = "123456";
+    private string? _stepPhoneOtpCode;
+    private bool _stepPhoneVerified;
+    private bool _stepPhoneOtpInvalid;
+    private string? _stepPhoneValidationMessage;
+
+    private void HandleStepPhoneOtpCodeChanged(string? value)
+    {
+        _stepPhoneOtpCode = value;
+        // OTP error ownership: a NEW non-empty draft invalidates the old invalid-code state —
+        // the same contract the runner implements.
+        if (!string.IsNullOrEmpty(value) && _stepPhoneOtpInvalid)
+        {
+            _stepPhoneOtpInvalid = false;
+            _stepPhoneValidationMessage = null;
+        }
+    }
+
+    private async Task HandleStepPhoneVerify()
+    {
+        // Demo verifier: the demo code "123456" confirms the number, anything else is rejected —
+        // so the verified / invalid states of both code input modes can be explored.
+        await Task.Yield();
+        if (string.Equals(_stepPhoneOtpCode, DemoPhoneCode, StringComparison.Ordinal))
+        {
+            _stepPhoneVerified = true;
+            _stepPhoneOtpInvalid = false;
+            _stepPhoneValidationMessage = null;
+            _stepStatus = $"Phone verified (demo code {DemoPhoneCode})";
+        }
+        else
+        {
+            _stepPhoneVerified = false;
+            _stepPhoneOtpInvalid = true;
+            _stepPhoneValidationMessage = $"Invalid code — the demo code is {DemoPhoneCode}.";
+            _stepStatus = "Invalid phone code";
+        }
+    }
+
     private void HandleStepPhoneCodeSent(string phone)
     {
-        _stepStatus = $"Phone code sent: {phone}";
+        // A new code invalidates the previous confirmation and draft — the same flow the runner
+        // implements for a resend.
+        _stepPhoneVerified = false;
+        _stepPhoneOtpInvalid = false;
+        _stepPhoneValidationMessage = null;
+        _stepStatus = $"Phone code sent: {phone} (demo code {DemoPhoneCode})";
     }
 
     private void HandleStepCheckout(SigningField field)

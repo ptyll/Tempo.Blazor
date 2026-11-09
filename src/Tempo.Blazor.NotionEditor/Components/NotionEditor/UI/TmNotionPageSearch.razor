@@ -4,24 +4,17 @@
 @using Tempo.Blazor.NotionEditor.Models
 @using Tempo.Blazor.Components.NotionEditor.Services
 
-@if (_visible)
-{
-    @* ── Backdrop ──────────────────────────────────────────────────────────── *@
-    <div class="tm-nps-backdrop"
-         @onclick="CloseAsync"
-         aria-hidden="true">
-    </div>
-
-    @* ── Modal ─────────────────────────────────────────────────────────────── *@
-    <div class="tm-nps" role="presentation">
-
-        <div class="tm-nps__card"
-             role="dialog"
-             aria-modal="true"
-             aria-label="@Loc["TmNotionPageSearch_DialogLabel"]"
-             @onkeydown="HandleCardKeyDownAsync"
-             @onkeydown:stopPropagation="true"
-             @onclick:stopPropagation="true">
+@* Phase 6 (N10): page search rides the core TmModal — title, ×, Escape, focus return and a
+   fullscreen sheet on mobile. No own backdrop or z-index. *@
+<TmModal Show="_visible"
+         OnClose="CloseAsync"
+         Title="@Loc["TmNotionPageSearch_DialogLabel"]"
+         Size="ModalSize.Large"
+         MobilePresentation="MobilePresentation.Fullscreen"
+         Class="tm-nps-host"
+         InitialFocusSelector=".tm-nps__search-input">
+    <ChildContent>
+        <div class="tm-nps tm-nps__card" @onkeydown:stopPropagation="true">
 
             @* ── Search row ────────────────────────────────────────────────── *@
             <div class="tm-nps__search-row">
@@ -33,14 +26,16 @@
                           stroke-linecap="round"/>
                 </svg>
 
-                <input class="tm-nps__search-input"
+                <input id="@_inputId"
+                       class="tm-nps__search-input"
                        type="text"
                        autocomplete="off"
                        spellcheck="false"
                        role="combobox"
                        aria-autocomplete="list"
                        aria-expanded="true"
-                       aria-controls="tm-nps-results"
+                       aria-controls="@ResultsId"
+                       aria-activedescendant="@ActiveOptionId"
                        placeholder="@Loc["TmNotionPageSearch_Placeholder"]"
                        value="@_query"
                        @ref="_inputRef"
@@ -49,15 +44,19 @@
 
                 <button class="tm-nps__filter-toggle @(_showFilters || HasActiveFilters ? "tm-nps__filter-toggle--active" : "")"
                         type="button"
+                        aria-expanded="@(_showFilters ? "true" : "false")"
+                        aria-controls="@FiltersId"
                         title="@Loc["TmNotionPageSearch_FilterTitle"]"
-                        @onclick="ToggleFilters">
+                        @onclick="ToggleFilters"
+                        @onkeydown="StopToggleKey"
+                        @onkeydown:stopPropagation="true">
                     <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
                         <path d="M1 2.5h10M3 6h6M5 9.5h2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
                     </svg>
                     @Loc["TmNotionPageSearch_FilterLabel"]
                     @if (HasActiveFilters)
                     {
-                        <span>·</span>
+                        <span>· @ActiveFilterCount</span>
                     }
                 </button>
 
@@ -66,11 +65,12 @@
             @* ── Advanced filter panel ─────────────────────────────────────── *@
             @if (_showFilters)
             {
-                <div class="tm-nps__filters">
+                <div id="tm-nps-filters" class="tm-nps__filters">
 
                     <div class="tm-nps__filter-group">
-                        <label class="tm-nps__filter-label">@Loc["TmNotionPageSearch_FilterAuthorLabel"]</label>
-                        <input class="tm-nps__filter-input"
+                        <label class="tm-nps__filter-label" for="@_filterIds["author"]">@Loc["TmNotionPageSearch_FilterAuthorLabel"]</label>
+                        <input id="@_filterIds["author"]"
+                               class="tm-nps__filter-input"
                                data-testid="@TestId("notion-search-filter-author")"
                                type="text"
                                placeholder="@Loc["TmNotionPageSearch_FilterAuthorPlaceholder"]"
@@ -79,8 +79,9 @@
                     </div>
 
                     <div class="tm-nps__filter-group">
-                        <label class="tm-nps__filter-label">@Loc["TmNotionPageSearch_FilterLabelLabel"]</label>
-                        <input class="tm-nps__filter-input"
+                        <label class="tm-nps__filter-label" for="@_filterIds["label"]">@Loc["TmNotionPageSearch_FilterLabelLabel"]</label>
+                        <input id="@_filterIds["label"]"
+                               class="tm-nps__filter-input"
                                data-testid="@TestId("notion-search-filter-label")"
                                type="text"
                                placeholder="@Loc["TmNotionPageSearch_FilterLabelPlaceholder"]"
@@ -89,8 +90,9 @@
                     </div>
 
                     <div class="tm-nps__filter-group">
-                        <label class="tm-nps__filter-label">@Loc["TmNotionPageSearch_FilterTypeLabel"]</label>
-                        <select class="tm-nps__filter-input"
+                        <label class="tm-nps__filter-label" for="@_filterIds["type"]">@Loc["TmNotionPageSearch_FilterTypeLabel"]</label>
+                        <select id="@_filterIds["type"]"
+                                class="tm-nps__filter-input"
                                 data-testid="@TestId("notion-search-filter-type")"
                                 value="@_filterType"
                                 @onchange="e => { _filterType = e.Value?.ToString() ?? string.Empty; _ = ApplyFiltersAsync(); }">
@@ -105,8 +107,9 @@
                     </div>
 
                     <div class="tm-nps__filter-group">
-                        <label class="tm-nps__filter-label">@Loc["TmNotionPageSearch_FilterSpaceLabel"]</label>
-                        <input class="tm-nps__filter-input"
+                        <label class="tm-nps__filter-label" for="@_filterIds["space"]">@Loc["TmNotionPageSearch_FilterSpaceLabel"]</label>
+                        <input id="@_filterIds["space"]"
+                               class="tm-nps__filter-input"
                                data-testid="@TestId("notion-search-filter-space")"
                                type="text"
                                placeholder="@Loc["TmNotionPageSearch_FilterSpacePlaceholder"]"
@@ -115,8 +118,9 @@
                     </div>
 
                     <div class="tm-nps__filter-group">
-                        <label class="tm-nps__filter-label">@Loc["TmNotionPageSearch_FilterDateFromLabel"]</label>
-                        <input class="tm-nps__filter-input"
+                        <label class="tm-nps__filter-label" for="@_filterIds["from"]">@Loc["TmNotionPageSearch_FilterDateFromLabel"]</label>
+                        <input id="@_filterIds["from"]"
+                               class="tm-nps__filter-input"
                                data-testid="@TestId("notion-search-filter-created-after")"
                                type="date"
                                value="@_filterDateFrom"
@@ -124,8 +128,9 @@
                     </div>
 
                     <div class="tm-nps__filter-group">
-                        <label class="tm-nps__filter-label">@Loc["TmNotionPageSearch_FilterDateToLabel"]</label>
-                        <input class="tm-nps__filter-input"
+                        <label class="tm-nps__filter-label" for="@_filterIds["to"]">@Loc["TmNotionPageSearch_FilterDateToLabel"]</label>
+                        <input id="@_filterIds["to"]"
+                               class="tm-nps__filter-input"
                                data-testid="@TestId("notion-search-filter-created-before")"
                                type="date"
                                value="@_filterDateTo"
@@ -133,8 +138,9 @@
                     </div>
 
                     <div class="tm-nps__filter-group">
-                        <label class="tm-nps__filter-label">@Loc["TmNotionPageSearch_FilterEditedBeforeLabel"]</label>
-                        <input class="tm-nps__filter-input"
+                        <label class="tm-nps__filter-label" for="@_filterIds["edited"]">@Loc["TmNotionPageSearch_FilterEditedBeforeLabel"]</label>
+                        <input id="@_filterIds["edited"]"
+                               class="tm-nps__filter-input"
                                data-testid="@TestId("notion-search-filter-edited-before")"
                                type="date"
                                value="@_filterEditedBefore"
@@ -156,7 +162,7 @@
 
             @* ── Results ───────────────────────────────────────────────────── *@
             <div class="tm-nps__results"
-                 id="tm-nps-results"
+                 id="@ResultsId"
                  role="listbox"
                  aria-label="@Loc["TmNotionPageSearch_ResultsLabel"]">
 
@@ -181,7 +187,7 @@
                     @if (_pages.Count > 0)
                     {
                         <div class="tm-nps__section-header" role="presentation">
-                            @Loc["TmNotionPageSearch_SectionPages"]
+                            @Loc["TmNotionPageSearch_SectionPages"] (@_pages.Count)
                         </div>
 
                         @for (int _pIdx = 0; _pIdx < _pages.Count; _pIdx++)
@@ -189,7 +195,8 @@
                             var page   = _pages[_pIdx];
                             var pIdx   = _pIdx;
 
-                            <div class="tm-nps__item @(IsPageSelected(pIdx) ? "tm-nps__item--selected" : "")"
+                            <div id="@OptionId(pIdx)"
+                                 class="tm-nps__item @(IsPageSelected(pIdx) ? "tm-nps__item--selected" : "")"
                                  role="option"
                                  aria-selected="@IsPageSelected(pIdx)"
                                  @onclick="() => NavigateToPageAsync(page)"
@@ -201,6 +208,13 @@
 
                                 <div class="tm-nps__item-body">
                                     <span class="tm-nps__item-title">@GetPageTitle(page)</span>
+                                    @if (PagePath(page) is { } path)
+                                    {
+                                        <span class="tm-nps__item-path">
+                                            <span class="tm-sr-only">@Loc["TmNotionPageSearch_Path"] </span>@path
+                                        </span>
+                                    }
+                                    <span class="tm-nps__item-meta">@PageMeta(page)</span>
                                 </div>
 
                                 <span class="tm-nps__item-shortcut" aria-hidden="true">↵</span>
@@ -213,7 +227,7 @@
                     @if (_blocks.Count > 0)
                     {
                         <div class="tm-nps__section-header" role="presentation">
-                            @Loc["TmNotionPageSearch_SectionBlocks"]
+                            @Loc["TmNotionPageSearch_SectionBlocks"] (@_blocks.Count)
                         </div>
 
                         @for (int _bIdx = 0; _bIdx < _blocks.Count; _bIdx++)
@@ -221,7 +235,8 @@
                             var result = _blocks[_bIdx];
                             var bIdx   = _bIdx;
 
-                            <div class="tm-nps__item @(IsBlockSelected(bIdx) ? "tm-nps__item--selected" : "")"
+                            <div id="@OptionId(_pages.Count + bIdx)"
+                                 class="tm-nps__item @(IsBlockSelected(bIdx) ? "tm-nps__item--selected" : "")"
                                  role="option"
                                  aria-selected="@IsBlockSelected(bIdx)"
                                  @onclick="() => NavigateToBlockResultAsync(result)"
@@ -251,7 +266,8 @@
             </div>
 
             @* ── Footer hints ──────────────────────────────────────────────── *@
-            <div class="tm-nps__footer" aria-hidden="true">
+            <div class="tm-nps__footer">
+                <span class="tm-nps__footer-count">@string.Format(Loc["TmNotionPageSearch_ResultCount"], _flatResults.Count)</span>
                 <span class="tm-nps__footer-hint">
                     <kbd class="tm-nps__kbd">↑</kbd>
                     <kbd class="tm-nps__kbd">↓</kbd>
@@ -273,6 +289,5 @@
             </div>
 
         </div>
-
-    </div>
-}
+    </ChildContent>
+</TmModal>

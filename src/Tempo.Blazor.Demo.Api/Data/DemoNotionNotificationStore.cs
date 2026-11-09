@@ -135,6 +135,33 @@ public sealed class DemoNotionNotificationStore : ITmNotificationService
         OnChanged?.Invoke();
     }
 
+    /// <summary>
+    /// Phase-5 evidence seed: one unread item per icon tone, each with a body line, so the
+    /// notification panel screenshot shows the second line and the tinted type icons.
+    /// </summary>
+    public void SeedE2EPhase5()
+    {
+        Clear();
+        var now = DateTimeOffset.UtcNow;
+        PublishAsync(Item(TmNotificationTypes.Mention, "Ada mentioned you", "On Launch notes: \"can you confirm the date?\"", now.AddMinutes(-4)));
+        PublishAsync(Item(TmNotificationTypes.Reaction, "Grace reacted", "Thumbs up on Knowledge base cleanup.", now.AddMinutes(-18)));
+        PublishAsync(Item(TmNotificationTypes.ThreadResolved, "Linus resolved a thread", "The migration checklist thread is resolved.", now.AddHours(-1)));
+        PublishAsync(Item(TmNotificationTypes.PageEdited, "Margaret edited a page", "Release Follow-up gained a new task.", now.AddHours(-3)));
+        PublishAsync(Item(TmNotificationTypes.PageShared, "Alan shared a page", "You can now edit the public documentation space.", now.AddDays(-1), read: true));
+    }
+
+    private static TmNotification Item(string type, string title, string body, DateTimeOffset createdAt, bool read = false)
+        => new()
+        {
+            RecipientUserId = "demo",
+            Type = type,
+            Title = title,
+            Body = body,
+            Actor = new TmUserRef { Id = "demo", DisplayName = "Demo" },
+            CreatedAt = createdAt,
+            ReadAt = read ? createdAt : null,
+        };
+
     // Snapshot of every per-recipient bucket. Reads/marks aggregate across all of them so
     // the demo's single viewer sees the whole generated feed (mentions addressed to other
     // demo users, watch notifications, direct publishes, …).

@@ -100,6 +100,8 @@ builder.Services.AddScoped<DemoNotionImportExportProvider>();
 
 // Register Tempo.Blazor services (ITmLocalizer, ThemeService, ToastService)
 builder.Services.AddTempoBlazor();
+// Demo-only: the Feedback page drives the layout toast container position/deck presentation.
+builder.Services.AddScoped<Tempo.Blazor.Demo.SharedUI.Services.DemoToastPresentationState>();
 // Since 2.9.1 the relative-time stamps read the browser's time zone by default (ITmUserTimeZone,
 // tm-user-zone.js); the former AddTempoUserTimeZone() call is an obsolete no-op alias.
 // Demo-only strings (TmDemo_*, *Demo_* pages) come from SharedUI's DemoResources; everything

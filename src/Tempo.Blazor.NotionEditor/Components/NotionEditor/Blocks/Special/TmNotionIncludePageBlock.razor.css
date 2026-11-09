@@ -7,7 +7,7 @@
     min-width: 0;
     max-width: 100%;
     padding: var(--tm-space-3) var(--tm-space-4);
-    border: 1px solid var(--tm-color-primary-border, var(--tm-border-color));
+    border: 1px solid var(--tm-color-primary-soft-border, var(--tm-border-color));
     border-radius: var(--tm-radius-md);
     background: var(--tm-bg-surface);
     box-shadow: inset 3px 0 0 var(--tm-color-primary);

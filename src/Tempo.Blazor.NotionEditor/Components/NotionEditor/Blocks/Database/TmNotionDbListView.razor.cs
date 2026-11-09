@@ -1,13 +1,14 @@
 using System.Globalization;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
+using Tempo.Blazor.Components.NotionEditor.Services;
 using Tempo.Blazor.NotionEditor.Enums;
 using Tempo.Blazor.NotionEditor.Interfaces;
 using Tempo.Blazor.NotionEditor.Models;
 
 namespace Tempo.Blazor.Components.NotionEditor.Blocks.Database;
 
-public partial class TmNotionDbListView : ComponentBase
+public partial class TmNotionDbListView : TmComponentBase
 {
     // ── Parameters ───────────────────────────────────────────────────────────
 
@@ -38,74 +39,24 @@ public partial class TmNotionDbListView : ComponentBase
         }
     }
 
-    private string GetPrimaryValue(IDatabaseRecord record)
-    {
-        var pf = PrimaryField;
-        if (pf is null) return string.Empty;
-        return record.Fields.TryGetValue(pf.Id.ToString(), out var v)
-            ? NotionDatabaseValueFormatter.Format(v, "MMM d")
-            : string.Empty;
-    }
-
     // ── Field chip rendering ──────────────────────────────────────────────────
 
-    // Returns (displayValue, cssColor?) — one tuple per visible chip
-    internal IEnumerable<(string Value, string? Color)> GetFieldChips(IDatabaseRecord record, IDatabaseField field)
+    /// <summary>The chip the row shows for one field: the raw value plus the option colour, if any.</summary>
+    private (object? Value, string? Color)? ChipOf(IDatabaseRecord record, IDatabaseField field)
     {
-        if (!record.Fields.TryGetValue(field.Id.ToString(), out var v) || v is null)
-            return [];
+        if (!record.Fields.TryGetValue(field.Id.ToString(), out var value) || value is null)
+            return null;
 
-        switch (field.Type)
+        string? color = field.Config switch
         {
-            case DatabaseFieldType.Status when field.Config is IStatusFieldConfig sc:
-            {
-                var val = v.ToString() ?? string.Empty;
-                if (val.Length == 0) return [];
-                var opt = sc.Groups.SelectMany(g => g.Options)
-                    .FirstOrDefault(o => string.Equals(o.Name, val, StringComparison.OrdinalIgnoreCase));
-                return [(val, opt?.Color)];
-            }
+            ISelectFieldConfig select => select.Options
+                .FirstOrDefault(o => string.Equals(o.Name, value.ToString(), StringComparison.OrdinalIgnoreCase))?.Color,
+            IStatusFieldConfig status => status.Groups.SelectMany(g => g.Options)
+                .FirstOrDefault(o => string.Equals(o.Name, value.ToString(), StringComparison.OrdinalIgnoreCase))?.Color,
+            _ => null
+        };
 
-            case DatabaseFieldType.Select when field.Config is ISelectFieldConfig sel:
-            {
-                var val = v.ToString() ?? string.Empty;
-                if (val.Length == 0) return [];
-                var opt = sel.Options
-                    .FirstOrDefault(o => string.Equals(o.Name, val, StringComparison.OrdinalIgnoreCase));
-                return [(val, opt?.Color)];
-            }
-
-            case DatabaseFieldType.MultiSelect when field.Config is ISelectFieldConfig msel:
-            {
-                var vals = v switch
-                {
-                    string[] arr            => arr,
-                    IEnumerable<string> lst => lst.ToArray(),
-                    string s                => s.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries),
-                    _                       => Array.Empty<string>()
-                };
-                return vals
-                    .Where(val => val.Length > 0)
-                    .Select(val =>
-                    {
-                        var opt = msel.Options.FirstOrDefault(o =>
-                            string.Equals(o.Name, val, StringComparison.OrdinalIgnoreCase));
-                        return (val, opt?.Color);
-                    });
-            }
-
-            case DatabaseFieldType.Checkbox:
-            {
-                if (v is bool b && !b) return [];
-                return [("✓", null)];
-            }
-
-            default:
-            {
-                var formatted = NotionDatabaseValueFormatter.Format(v, "MMM d");
-                return formatted.Length > 0 ? [(formatted, null)] : [];
-            }
-        }
+        return NotionDatabaseValueFormatter.Format(value).Length == 0 ? null : (value, color);
     }
 
     // ── Event handlers ────────────────────────────────────────────────────────

@@ -90,6 +90,41 @@
 <body class="bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 antialiased">
     <component type="typeof(App)" render-mode="ServerPrerendered" />
 
+    @* The standard reconnect modal: a transient SignalR blip (browser sleep, adapter reset, load)
+       then reconnects silently instead of falling back to the fatal error banner — long-running
+       E2E sessions otherwise die mid-test with no logged exception. Blazor Server drives the state
+       through classes on #components-reconnect-modal: -show while reconnecting, -failed when the
+       circuit did not come back (the failed state offers the reload link). *@
+    <div id="components-reconnect-modal" class="hidden fixed top-0 left-0 right-0 z-50">
+        <div class="bg-amber-50 dark:bg-amber-950 border-b border-amber-200 dark:border-amber-800 px-6 py-2 text-sm text-amber-800 dark:text-amber-200">
+            <span class="components-reconnect-progress">Reconnecting…</span>
+            <span class="components-reconnect-failed-message hidden">
+                Connection lost.
+                <a href="" class="font-medium underline hover:no-underline">Reload</a>
+            </span>
+        </div>
+    </div>
+    <style>
+        /* Tailwind's .hidden keeps the modal invisible until Blazor adds its state classes. */
+        #components-reconnect-modal.components-reconnect-show,
+        #components-reconnect-modal.components-reconnect-failed {
+            display: block;
+        }
+
+        #components-reconnect-modal .components-reconnect-failed-message {
+            display: none;
+        }
+
+        #components-reconnect-modal.components-reconnect-failed .components-reconnect-progress {
+            display: none;
+        }
+
+        #components-reconnect-modal.components-reconnect-failed .components-reconnect-failed-message {
+            display: inline;
+        }
+    </style>
+
+    <!-- Error UI -->
     <div id="blazor-error-ui" class="hidden fixed bottom-0 left-0 right-0 z-50">
         <div class="bg-red-50 dark:bg-red-950 border-t border-red-200 dark:border-red-800 px-6 py-4">
             <div class="max-w-7xl mx-auto flex items-center justify-between">

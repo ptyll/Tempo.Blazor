@@ -1,0 +1,108 @@
+@namespace Tempo.Blazor.Components.NotionEditor.UI
+@inherits Tempo.Blazor.Components.TmComponentBase
+@using Tempo.Blazor.Components.Dropdowns
+@using Tempo.Blazor.Components.Icons
+
+@* Reply stays inline. Edit, Delete and Quote live in the core TmDropdown so the menu is
+   keyboard-reachable and not a second hover-only copy of the same actions. *@
+<div class="@($"{ClassPrefix}__entry-actions")"
+     role="group"
+     aria-label="@ActionsLabel"
+     data-testid="@TestId("notion-comment-entry-actions")"
+     @onkeydown:stopPropagation="true">
+    @if (ShowReply)
+    {
+        <button class="@($"{ClassPrefix}__entry-action")"
+                type="button"
+                title="@ReplyText"
+                data-testid="@TestId("notion-comment-reply")"
+                @onclick="OnReply">
+            <TmIcon Name="@IconNames.MessageSquare" Size="IconSize.Sm" />
+            @ReplyText
+        </button>
+    }
+    @if (CanEdit || CanDelete || CanQuote)
+    {
+        <TmDropdown Class="@($"{ClassPrefix}__entry-menu")"
+                    Icon="@IconNames.MoreHorizontal"
+                    ShowChevron="false"
+                    Text=""
+                    AriaLabel="@MoreText"
+                    data-testid="@TestId("notion-comment-entry-menu")"
+                    OnSelect="OnMenuAsync">
+            @if (CanEdit)
+            {
+                <TmDropdownItem Value="edit" Icon="@IconNames.Pencil" data-testid="@TestId("notion-comment-edit-menu")">
+                    @EditText
+                </TmDropdownItem>
+            }
+            @if (CanQuote)
+            {
+                <TmDropdownItem Value="quote" Icon="@IconNames.MessageSquare" data-testid="@TestId("notion-comment-quote-menu")">
+                    @QuoteText
+                </TmDropdownItem>
+            }
+            @if (CanDelete)
+            {
+                <TmDropdownItem Value="delete" Icon="@IconNames.Trash" Class="tm-dropdown-item-danger" data-testid="@TestId("notion-comment-delete-menu")">
+                    @DeleteText
+                </TmDropdownItem>
+            }
+        </TmDropdown>
+    }
+</div>
+
+@code {
+    /// <summary>CSS class prefix of the owning panel.</summary>
+    [Parameter, EditorRequired] public string ClassPrefix { get; set; } = "tm-nbcp";
+
+    /// <summary>Accessible name of the actions group.</summary>
+    [Parameter] public string? ActionsLabel { get; set; }
+
+    /// <summary>Reply button label. Reply is always visible.</summary>
+    [Parameter] public string ReplyText { get; set; } = string.Empty;
+
+    /// <summary>⋯ menu label.</summary>
+    [Parameter] public string MoreText { get; set; } = string.Empty;
+
+    /// <summary>Edit menu item label.</summary>
+    [Parameter] public string EditText { get; set; } = string.Empty;
+
+    /// <summary>Delete menu item label.</summary>
+    [Parameter] public string DeleteText { get; set; } = string.Empty;
+
+    /// <summary>Quote menu item label.</summary>
+    [Parameter] public string QuoteText { get; set; } = string.Empty;
+
+    /// <summary>Shows Edit in the menu.</summary>
+    [Parameter] public bool CanEdit { get; set; }
+
+    /// <summary>Shows Delete in the menu.</summary>
+    [Parameter] public bool CanDelete { get; set; }
+
+    /// <summary>Shows Quote in the menu.</summary>
+    [Parameter] public bool CanQuote { get; set; }
+
+    /// <summary>Shows the inline Reply action. A panel with a thread-level reply trigger
+    /// (F-21) hides it on the last entry so the two never sit next to each other.</summary>
+    [Parameter] public bool ShowReply { get; set; } = true;
+
+    /// <summary>Raised by Reply.</summary>
+    [Parameter] public EventCallback OnReply { get; set; }
+
+    /// <summary>Raised by Edit.</summary>
+    [Parameter] public EventCallback OnEdit { get; set; }
+
+    /// <summary>Raised by Delete. The parent owns the confirm dialog.</summary>
+    [Parameter] public EventCallback OnDelete { get; set; }
+
+    /// <summary>Raised by Quote.</summary>
+    [Parameter] public EventCallback OnQuote { get; set; }
+
+    private async Task OnMenuAsync(string value)
+    {
+        if (value == "edit") await OnEdit.InvokeAsync();
+        else if (value == "delete") await OnDelete.InvokeAsync();
+        else if (value == "quote") await OnQuote.InvokeAsync();
+    }
+}

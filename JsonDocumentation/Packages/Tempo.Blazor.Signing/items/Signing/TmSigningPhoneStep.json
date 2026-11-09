@@ -30,6 +30,20 @@
       "description": "Additional CSS classes for the shell element."
     },
     {
+      "name": "CodeInputMode",
+      "type": "SigningCodeInputMode",
+      "isRequired": false,
+      "default": "Single",
+      "description": "How the one-time-code input renders („Nové komponenty 1/7\" fáze 5): Single (the default) keeps the single core TmTextInput; Segmented swaps it for the core TmOtpInput with CodeLength cells — completing the code automatically starts the verification when a verifier is wired, a wrong code drives the input's invalid state (the step shell keeps owning the error text; every new failure replays the shake through ShowErrorAsync) and a resend clears and refocuses the input."
+    },
+    {
+      "name": "CodeLength",
+      "type": "int",
+      "isRequired": false,
+      "default": "6",
+      "description": "Number of OTP cells in Segmented mode (the TmOtpInput.Length; must be between 4 and 10). Defaults to 6; ignored in Single mode."
+    },
+    {
       "name": "CodeSent",
       "type": "bool",
       "isRequired": false,

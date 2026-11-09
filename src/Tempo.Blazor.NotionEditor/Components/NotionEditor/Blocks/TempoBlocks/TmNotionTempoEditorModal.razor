@@ -1,0 +1,100 @@
+@namespace Tempo.Blazor.Components.NotionEditor.Blocks.TempoBlocks
+@inherits Tempo.Blazor.Components.TmComponentBase
+@using Tempo.Blazor.Abstractions.Layout
+@using Tempo.Blazor.Components.Buttons
+@using Tempo.Blazor.Components.Feedback
+@using Tempo.Blazor.Components.Icons
+@using Tempo.Blazor.Components.Layout
+
+@* N12: one shell for the Diagram / Spreadsheet / Wireframe edit modals. The header is the core
+   TmModal header (title + Maximize + ×); the footer order is Discard | Save and close. Discard
+   while dirty asks first. At ≥1280 the panel is XLarge until Maximize; below 1024 the body
+   reports a compact layout so the embedded editor drops toolbox, inspector and minimap. *@
+@if (LayoutMode == TmLayoutMode.Auto)
+{
+    <TmLayoutObserver Class="tm-notion-tempo-modal__probe"
+                      Style="position:fixed;inset:0;visibility:hidden;pointer-events:none"
+                      Breakpoints="EditorBands"
+                      IsContainer="false"
+                      ResolvedLayoutChanged="OnBandMeasured" />
+}
+<TmModal Show="true"
+         OnClose="RequestDiscardAsync"
+         Title="@Title"
+         Size="@ModalSize"
+         MobilePresentation="MobilePresentation.AutoFullscreen"
+         LayoutMode="Band"
+         CloseOnOverlayClick="false"
+         CloseOnEscape="true"
+         Class="@($"tm-notion-tempo-modal {(_maximized ? "tm-notion-tempo-modal--maximized" : null)} {Class}")"
+         data-testid="@TestId"
+         data-maximized="@_maximized.ToString().ToLowerInvariant()"
+         data-editor-layout="@EditorLayout.ToString().ToLowerInvariant()">
+    <HeaderActions>
+        @if (CanMaximize)
+        {
+            <TmButton Variant="ButtonVariant.Ghost"
+                      Class="tm-notion-tempo-modal__maximize"
+                      AriaLabel="@Loc["TmNotionTempoEditor_Maximize"]"
+                      aria-pressed="@_maximized.ToString().ToLowerInvariant()"
+                      OnClick="ToggleMaximize"
+                      data-testid="@TestId("notion-tempo-modal-maximize")">
+                <TmIcon Name="@(_maximized ? IconNames.Minimize2 : IconNames.Maximize2)" Size="IconSize.Sm" />
+            </TmButton>
+        }
+    </HeaderActions>
+    <ChildContent>
+        <div class="tm-notion-tempo-modal__body">
+            @if (Loading)
+            {
+                <div class="tm-notion-tempo-modal__loading @StatusClass" role="status">
+                    <TmSpinner />
+                </div>
+            }
+            else if (Missing)
+            {
+                <div class="tm-notion-tempo-modal__missing @StatusClass" role="status">@MissingText</div>
+            }
+            else
+            {
+                <CascadingValue Value="EditorLayout" Name="@EditorLayoutScope" IsFixed="false">
+                    @ChildContent
+                </CascadingValue>
+            }
+        </div>
+    </ChildContent>
+    <Footer>
+        <div class="tm-notion-tempo-modal__footer" data-testid="@TestId("notion-tempo-modal-footer")">
+            <TmButton Variant="ButtonVariant.Ghost"
+                      Class="@($"tm-notion-tempo-modal__btn--discard {DiscardClass}")"
+                      Disabled="Saving"
+                      OnClick="RequestDiscardAsync"
+                      data-testid="@TestId("notion-tempo-modal-discard")">
+                <TmIcon Name="@IconNames.Trash2" Size="IconSize.Xs" />
+                @DiscardText
+            </TmButton>
+            <TmButton Variant="ButtonVariant.Primary"
+                      Class="@($"tm-notion-tempo-modal__btn--primary {SaveClass}")"
+                      Disabled="@(Saving || Missing)"
+                      OnClick="OnSave"
+                      data-testid="@TestId("notion-tempo-modal-save")">
+                <TmIcon Name="@IconNames.Save" Size="IconSize.Xs" />
+                @SaveText
+            </TmButton>
+        </div>
+    </Footer>
+</TmModal>
+
+@if (_confirming)
+{
+    <TmDialog Show="true"
+              Type="DialogType.Confirm"
+              Variant="DialogVariant.Warning"
+              IsDangerous="true"
+              Title="@ConfirmTitle"
+              Message="@ConfirmMessage"
+              OkButtonText="@ConfirmOkText"
+              CancelButtonText="@ConfirmCancelText"
+              OnResult="ResolveConfirmAsync"
+              data-testid="@TestId("notion-tempo-modal-discard-confirm")" />
+}

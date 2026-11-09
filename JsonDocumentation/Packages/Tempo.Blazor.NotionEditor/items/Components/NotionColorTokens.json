@@ -1,0 +1,55 @@
+{
+  "kind": "Class",
+  "category": "Components",
+  "namespace": "Tempo.Blazor.Components.NotionEditor.Services",
+  "description": "Maps a stored block colour onto the data-palette token names. A document saved before 2.10.0 stores the picker hex; a new document stores the colour name. Both render through --tm-notion-color-*, so the theme decides the colour.",
+  "packageId": "Tempo.Blazor.NotionEditor",
+  "sourcePath": "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/Services/NotionColorTokens.cs",
+  "documentationStatus": "documented",
+  "members": [
+    {
+      "name": "Name",
+      "kind": "Method",
+      "type": "string?",
+      "description": "Returns the palette name (gray, red, orange, yellow, green, blue, purple, pink, brown) for a legacy picker hex, or the stored value unchanged when it is already a name or unknown.",
+      "parameters": [
+        {
+          "name": "stored",
+          "type": "string?",
+          "description": "The colour stored on the block: a palette name, a legacy hex, or null."
+        }
+      ]
+    },
+    {
+      "name": "InlineHex",
+      "kind": "Method",
+      "type": "string?",
+      "description": "The one allowlisted legacy hex document.execCommand will keep. The toolbar paints the swatch from the token and sends this hex; null when the name is not on the palette.",
+      "parameters": [
+        {
+          "name": "name",
+          "type": "string?",
+          "description": "A palette name such as brown. Anything else returns null."
+        },
+        {
+          "name": "background",
+          "type": "bool",
+          "description": "True for the highlight hex, false for the text hex."
+        }
+      ]
+    },
+    {
+      "name": "OptionSolid",
+      "kind": "Method",
+      "type": "string",
+      "description": "The option chip token var(--tm-notion-option-{name}-solid) for a stored name or legacy hex, or var(--tm-color-primary) when the value is empty or unknown.",
+      "parameters": [
+        {
+          "name": "stored",
+          "type": "string?",
+          "description": "The option colour: a palette name, a legacy hex, or null."
+        }
+      ]
+    }
+  ]
+}

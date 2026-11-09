@@ -17641,7 +17641,7 @@
       "kind": "Record",
       "category": "Layout",
       "namespace": "Tempo.Blazor.Abstractions.Layout",
-      "description": "The layout a component has resolved, cascaded to its children so they can branch in markup without measuring anything themselves. Mode = requested mode (Auto when measuring); Resolved = rendered mode, never Auto; CssModifier = desktop|tablet|mobile.",
+      "description": "The layout a component has resolved, cascaded to its children so they can branch in markup without measuring anything themselves. Mode = requested mode (Auto when measuring); Resolved = rendered mode, never Auto; CssModifier = desktop|tablet|mobile; IsCoarsePointer = matchMedia('(pointer: coarse)'), independent of the width band, false until an observer reports.",
       "packageId": "Tempo.Blazor.Abstractions",
       "sourcePath": "src/Tempo.Blazor.Abstractions/Layout/TmLayoutContext.cs",
       "documentationStatus": "merged",
@@ -17651,6 +17651,12 @@
           "kind": "Property",
           "type": "string",
           "description": "The BEM modifier for Resolved: desktop, tablet or mobile."
+        },
+        {
+          "name": "IsCoarsePointer",
+          "kind": "Property",
+          "type": "bool",
+          "description": "True when the primary pointer is coarse (a finger): matchMedia('(pointer: coarse)'). Independent of Resolved, so a desktop-width layout on a touch device still reads true. False until an observer reports, and false when there is no observer."
         },
         {
           "name": "IsDesktop",
@@ -31872,6 +31878,16 @@
       "documentationStatus": "merged"
     },
     {
+      "itemName": "NotionPageDialog",
+      "kind": "Enum",
+      "category": "Notion Editor",
+      "namespace": "Tempo.Blazor.NotionEditor.Enums",
+      "description": "The editor-owned page dialogs a page can ask the shell to open (NotionEditorContext.OpenPageDialog). The page calls the context instead of rendering the dialog itself: the shell canvas remounts on a band flip, and a dialog inside it would close mid-open.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/NotionEditor/Enums/NotionPageDialog.cs",
+      "documentationStatus": "merged"
+    },
+    {
       "itemName": "NotionPageSave",
       "kind": "Class",
       "category": "Notion Editor",
@@ -35651,7 +35667,7 @@
       "kind": "Interface",
       "category": "Shared",
       "namespace": "Tempo.Blazor.Abstractions.Shared",
-      "description": "Uniform dirty-guard surface implemented by every component whose composer text lives in private fields the host cannot observe through parameters: TmActivityComments, TmChat, TmNotionBlockCommentPanel, TmNotionTextCommentPanel, TmNotionPageCommentPanel, TmNotionPageCommentSection, TmDocumentCommentComposer, TmDocumentCommentThread, TmDocumentCommentRail, TmDocumentCommentThreadPanel and TmDocumentPageViewer. Flow: poll HasUnsavedDraft (or track OnDraftChanged), ask in the CONSUMER'S OWN confirmation dialog, then DiscardDraftAsync — no implementing component shows a confirmation itself.",
+      "description": "Uniform dirty-guard surface implemented by every component whose composer text lives in private fields the host cannot observe through parameters: TmActivityComments, TmChat, TmNotionBlockCommentPanel, TmNotionTextCommentPanel, TmNotionPageCommentPanel, TmDocumentCommentComposer, TmDocumentCommentThread, TmDocumentCommentRail, TmDocumentCommentThreadPanel and TmDocumentPageViewer. Flow: poll HasUnsavedDraft (or track OnDraftChanged), ask in the CONSUMER'S OWN confirmation dialog, then DiscardDraftAsync — no implementing component shows a confirmation itself.",
       "packageId": "Tempo.Blazor.Abstractions",
       "sourcePath": "src/Tempo.Blazor.Abstractions/Shared/ITmDraftGuard.cs",
       "documentationStatus": "merged",
@@ -36696,6 +36712,30 @@
           "kind": "Property",
           "type": "bool",
           "description": "true when the new-comment composer's internal switch is on. Additive: existing three-argument constructions keep false. Not part of the dirty decision — a switch with no typed text is not an unsaved draft. Discarding the draft (cancel, successful submit, or DiscardDraftAsync) resets it to false. Always false while an existing comment is being edited; that editor has no switch."
+        }
+      ]
+    },
+    {
+      "itemName": "TmCommentEdit",
+      "kind": "Record",
+      "category": "Shared",
+      "namespace": "Tempo.Blazor.Abstractions.Shared",
+      "description": "Payload of an inline edit save from TmActivityComments, delivered by CommentEditHandler (when set) instead of OnCommentEdited. CommentId is the edited comment id; Html is the inline editor HTML exactly as held at save. The handler returns true to close the editor or false to keep it open with the text preserved.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Shared/TmCommentEdit.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "CommentId",
+          "kind": "Property",
+          "type": "string",
+          "description": "Id of the comment being edited (TmCommentEntry.Id)."
+        },
+        {
+          "name": "Html",
+          "kind": "Property",
+          "type": "string",
+          "description": "Edited comment HTML, exactly as the inline editor held it."
         }
       ]
     },
@@ -44920,11 +44960,11 @@
   ],
   "libraryExamples": [],
   "summary": {
-    "itemCount": 1705,
-    "manualItemCount": 1705,
-    "generatedItemCount": 1689,
+    "itemCount": 1707,
+    "manualItemCount": 1707,
+    "generatedItemCount": 1691,
     "generatedOnlyItemCount": 0,
     "componentCount": 0,
-    "publicApiTypeCount": 1689
+    "publicApiTypeCount": 1691
   }
 }

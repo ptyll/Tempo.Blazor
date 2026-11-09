@@ -1,26 +1,20 @@
 @namespace Tempo.Blazor.Components.NotionEditor.UI
 @inherits Tempo.Blazor.Components.TmComponentBase
 @using Tempo.Blazor.Abstractions.Shared
+@using Tempo.Blazor.Components.Dropdowns
+@using Tempo.Blazor.Components.Feedback
+@using Tempo.Blazor.Components.Icons
 
-<section class="tm-notion-audit @Class" aria-label="@Loc["Notion_Audit_Title"]" data-testid="@TestId("notion-audit-panel")">
-    <header class="tm-notion-audit__header">
-        <div class="tm-notion-audit__title-wrap">
-            <h2 class="tm-notion-audit__title">@Loc["Notion_Audit_Title"]</h2>
+<section class="tm-notion-audit @LayoutModifier @Class" aria-label="@Loc["Notion_Audit_Title"]" data-testid="@TestId("notion-audit-panel")">
+    <TmNotionPanelHeader Title="@Loc["Notion_Audit_Title"]"
+                         OnClosed="OnClosed">
+        <Actions>
             <span class="tm-notion-audit__subtitle" data-testid="@TestId("notion-audit-count")">@Loc["Notion_Audit_Count", _result.TotalCount]</span>
-        </div>
+        </Actions>
+    </TmNotionPanelHeader>
 
-        <button type="button"
-                class="tm-notion-audit__icon-btn"
-                title="@Loc["Tm_Close"]"
-                aria-label="@Loc["Tm_Close"]"
-                @onclick="() => OnClosed.InvokeAsync()">
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-                <path d="M4 4l8 8M12 4L4 12" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
-            </svg>
-        </button>
-    </header>
-
-    <div class="tm-notion-audit__filters" aria-label="@Loc["Notion_Audit_Filter"]">
+    @* ── Filters: inline on a wide container, sheet trigger on a compact one ── *@
+    <div class="tm-notion-audit__filters tm-notion-audit__filters--inline" aria-label="@Loc["Notion_Audit_Filter"]">
         <label class="tm-notion-audit__field">
             <span>@Loc["Notion_Audit_User"]</span>
             <input value="@_userFilter"
@@ -57,6 +51,24 @@
                 @Loc["Notion_Audit_Clear"]
             </button>
         </div>
+    </div>
+
+    @* ── Compact filter sheet trigger + the ⋯ overflow with the export ── *@
+    <div class="tm-notion-audit__compact-bar">
+        <button type="button"
+                class="tm-notion-audit__button tm-notion-audit__button--ghost"
+                data-testid="@TestId("notion-audit-filters-open")"
+                @onclick="OpenFiltersSheetAsync">
+            @(string.Format(Loc["Notion_Audit_FiltersOpen"], ActiveFilterCount))
+        </button>
+        <TmDropdown AriaLabel="@Loc["Notion_Audit_More"]"
+                    Icon="@IconNames.MoreHorizontal"
+                    Class="tm-notion-audit__more"
+                    OnSelect="HandleMoreActionAsync">
+            <ChildContent>
+                <TmDropdownItem Value="export">@Loc["Notion_Audit_Export"]</TmDropdownItem>
+            </ChildContent>
+        </TmDropdown>
     </div>
 
     <div class="tm-notion-audit__toolbar">
@@ -101,32 +113,95 @@
     }
     else
     {
+        @* ── Wide layout: a real table ──────────────────────────────────── *@
+        <table class="tm-notion-audit__table" data-testid="@TestId("notion-audit-table")">
+            <thead>
+                <tr>
+                    <th scope="col">@Loc["Notion_Audit_ColAction"]</th>
+                    <th scope="col">@Loc["Notion_Audit_ColTimestamp"]</th>
+                    <th scope="col">@Loc["Notion_Audit_ColUser"]</th>
+                    <th scope="col">@Loc["Notion_Audit_ColEntityType"]</th>
+                    <th scope="col">@Loc["Notion_Audit_ColEntityId"]</th>
+                    <th scope="col">@Loc["Notion_Audit_ColDetails"]</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var entry in _result.Items)
+                {
+                    var expanded = IsExpanded(entry);
+                    <tr class="tm-notion-audit__row" data-testid="@TestId("notion-audit-row")">
+                        <td>
+                            <span class="tm-notion-audit__action tm-notion-audit__action--@NormalizeCssToken(entry.Action)">
+                                @GetActionLabel(entry.Action)
+                            </span>
+                        </td>
+                        <td>
+                            <time datetime="@entry.Timestamp.ToString("O")">@FormatTimestamp(entry.Timestamp)</time>
+                        </td>
+                        <td>@GetUserDisplay(entry)</td>
+                        <td><span class="tm-notion-audit__entity-type">@GetEntityTypeLabel(entry.EntityRef.EntityType)</span></td>
+                        <td><code>@ShortenTargetId(entry.EntityRef.EntityId)</code></td>
+                        <td>
+                            @if (entry.Metadata?.Count > 0)
+                            {
+                                <button type="button"
+                                        class="tm-notion-audit__row-toggle"
+                                        aria-expanded="@(expanded ? "true" : "false")"
+                                        aria-label="@Loc["Notion_Audit_DetailsFor", GetActionLabel(entry.Action), FormatTimestamp(entry.Timestamp)]"
+                                        @onclick="() => ToggleExpanded(entry)">
+                                    <svg class="tm-notion-audit__row-chevron @(expanded ? "tm-notion-audit__row-chevron--open" : "")"
+                                         width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+                                        <path d="M4 5.5l3 3 3-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                                    </svg>
+                                </button>
+                            }
+                        </td>
+                    </tr>
+                    @if (entry.Metadata?.Count > 0 && expanded)
+                    {
+                        <tr class="tm-notion-audit__row-details-row">
+                            <td colspan="6">
+                                @EntryDetails(entry)
+                            </td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+
+        @* ── Narrow layout: cards (the container query picks one of the two) ── *@
         <ol class="tm-notion-audit__list" data-testid="@TestId("notion-audit-list")">
             @foreach (var entry in _result.Items)
             {
+                var expanded = IsExpanded(entry);
                 <li class="tm-notion-audit__entry" data-testid="@TestId("notion-audit-entry")">
                     <div class="tm-notion-audit__entry-head">
                         <span class="tm-notion-audit__action tm-notion-audit__action--@NormalizeCssToken(entry.Action)">
                             @GetActionLabel(entry.Action)
                         </span>
                         <time datetime="@entry.Timestamp.ToString("O")">@FormatTimestamp(entry.Timestamp)</time>
+                        @if (entry.Metadata?.Count > 0)
+                        {
+                            <button type="button"
+                                    class="tm-notion-audit__row-toggle"
+                                    aria-expanded="@(expanded ? "true" : "false")"
+                                    aria-label="@Loc["Notion_Audit_DetailsFor", GetActionLabel(entry.Action), FormatTimestamp(entry.Timestamp)]"
+                                    @onclick="() => ToggleExpanded(entry)">
+                                <svg class="tm-notion-audit__row-chevron @(expanded ? "tm-notion-audit__row-chevron--open" : "")"
+                                     width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+                                    <path d="M4 5.5l3 3 3-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                            </button>
+                        }
                     </div>
                     <div class="tm-notion-audit__entry-main">
                         <strong>@GetUserDisplay(entry)</strong>
-                        <span>@entry.EntityRef.EntityType</span>
+                        <span class="tm-notion-audit__entity-type">@GetEntityTypeLabel(entry.EntityRef.EntityType)</span>
                         <code>@ShortenTargetId(entry.EntityRef.EntityId)</code>
                     </div>
-                    @if (entry.Metadata?.Count > 0)
+                    @if (entry.Metadata?.Count > 0 && expanded)
                     {
-                        <dl class="tm-notion-audit__details">
-                            @foreach (var detail in entry.Metadata.OrderBy(pair => pair.Key, StringComparer.OrdinalIgnoreCase))
-                            {
-                                <div>
-                                    <dt>@detail.Key</dt>
-                                    <dd>@detail.Value</dd>
-                                </div>
-                            }
-                        </dl>
+                        @EntryDetails(entry)
                     }
                 </li>
             }
@@ -159,3 +234,70 @@
         </footer>
     }
 </section>
+
+@* ── Compact filters sheet (a dialog on a wide container, a sheet on mobile) ── *@
+@if (_filtersSheetOpen)
+{
+    <TmModal Show="true"
+             OnClose="CloseFiltersSheet"
+             Title="@Loc["Notion_Audit_FiltersSheet"]"
+             Size="ModalSize.Small"
+             MobilePresentation="MobilePresentation.Auto">
+        <ChildContent>
+            <div class="tm-notion-audit__filters tm-notion-audit__filters--sheet">
+                <label class="tm-notion-audit__field">
+                    <span>@Loc["Notion_Audit_User"]</span>
+                    <input value="@_userFilter"
+                           data-testid="@TestId("notion-audit-user-filter-sheet")"
+                           @oninput="OnUserFilterInput" />
+                </label>
+
+                <label class="tm-notion-audit__field">
+                    <span>@Loc["Notion_Audit_Action"]</span>
+                    <select value="@_actionFilter" data-testid="@TestId("notion-audit-action-filter-sheet")" @onchange="OnActionFilterChanged">
+                        <option value="">@Loc["Notion_Audit_Action_All"]</option>
+                        @foreach (var action in AvailableActions)
+                        {
+                            <option value="@action">@GetActionLabel(action)</option>
+                        }
+                    </select>
+                </label>
+
+                <label class="tm-notion-audit__field">
+                    <span>@Loc["Notion_Audit_From"]</span>
+                    <input type="date" value="@_fromFilter" data-testid="@TestId("notion-audit-from-filter-sheet")" @onchange="OnFromFilterChanged" />
+                </label>
+
+                <label class="tm-notion-audit__field">
+                    <span>@Loc["Notion_Audit_To"]</span>
+                    <input type="date" value="@_toFilter" data-testid="@TestId("notion-audit-to-filter-sheet")" @onchange="OnToFilterChanged" />
+                </label>
+
+                <div class="tm-notion-audit__filter-actions">
+                    <button type="button" class="tm-notion-audit__button" data-testid="@TestId("notion-audit-apply-sheet")" @onclick="ApplyFiltersFromSheetAsync">
+                        @Loc["Notion_Audit_Filter"]
+                    </button>
+                    <button type="button" class="tm-notion-audit__button tm-notion-audit__button--ghost" data-testid="@TestId("notion-audit-clear-sheet")" @onclick="ClearFiltersFromSheetAsync">
+                        @Loc["Notion_Audit_Clear"]
+                    </button>
+                </div>
+            </div>
+        </ChildContent>
+    </TmModal>
+}
+
+@code {
+    /// <summary>Details block shared by the table and card layouts: every metadata pair, translated keys.</summary>
+    private RenderFragment EntryDetails(TmActivityEntry entry) => __builder =>
+    {
+        <dl class="tm-notion-audit__row-details" data-testid="@TestId("notion-audit-row-details")">
+            @foreach (var detail in entry.Metadata!.OrderBy(pair => pair.Key, StringComparer.OrdinalIgnoreCase))
+            {
+                <div>
+                    <dt>@TranslateMetaKey(detail.Key)</dt>
+                    <dd>@detail.Value</dd>
+                </div>
+            }
+        </dl>
+    };
+}

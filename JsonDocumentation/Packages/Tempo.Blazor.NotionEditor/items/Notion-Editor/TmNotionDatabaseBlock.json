@@ -41,6 +41,25 @@
       "name": "OnOpenAsPage",
       "type": "EventCallback",
       "isRequired": false
+    },
+    {
+      "name": "LayoutMode",
+      "type": "TmLayoutMode",
+      "isRequired": false,
+      "default": "TmLayoutMode.Auto",
+      "description": "Pins the database's own layout. Auto follows the cascaded layout (the editor decides it); a forced value lets a host — and a test — render a mode without a DOM."
+    },
+    {
+      "name": "ShowSearch",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Shows the client-side \"search records\" field (NO2). Default off, so existing hosts are unchanged."
+    },
+    {
+      "name": "IsPage",
+      "type": "bool",
+      "isRequired": false,
+      "description": "The database fills the page (opened as a page, or the only content). Only then does the mobile action bar render; an inline block keeps the compact toolbar."
     }
   ],
   "subcategory": "Blocks / Database"

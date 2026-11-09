@@ -308,6 +308,8 @@
                                             OnVerifyCode="@GetPhoneVerifyCallback(CurrentStep.Field.Uuid)"
                                             OnChangeNumber="@GetPhoneChangeNumberCallback(CurrentStep.Field.Uuid)"
                                             Verified="@IsPhoneVerified(CurrentStep.Field)"
+                                            CodeInputMode="@CodeInputMode"
+                                            CodeLength="@CodeLength"
                                             AppearsOn="@CurrentStep.AppearsOn"
                                             Culture="@CurrentCulture"
                                             FallbackCulture="@FallbackCulture"

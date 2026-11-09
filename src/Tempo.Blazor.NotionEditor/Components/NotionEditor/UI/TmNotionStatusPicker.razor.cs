@@ -1,4 +1,6 @@
+using System.Globalization;
 using Microsoft.AspNetCore.Components;
+using Tempo.Blazor.Abstractions.Layout;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.JSInterop;
 using Tempo.Blazor.NotionEditor.Enums;
@@ -33,12 +35,13 @@ public partial class TmNotionStatusPicker : ComponentBase
     /// <summary>Raised when the user dismisses the picker.</summary>
     [Parameter] public EventCallback OnClosed { get; set; }
 
-    private ElementReference _pickerRef;
+    /// <summary>Forced layout. Mobile presents the menu as the core sheet.</summary>
+    [Parameter] public TmLayoutMode LayoutMode { get; set; } = TmLayoutMode.Auto;
+
     private ElementReference _inputRef;
+    private readonly string _inputId = $"tm-status-label-{Guid.NewGuid():N}";
     private bool _wasVisible;
     private bool _needsFocus;
-    private double _top;
-    private double _left;
     private string _label = string.Empty;
     private NotionStatusColor _color = NotionStatusColor.Gray;
 
@@ -54,8 +57,6 @@ public partial class TmNotionStatusPicker : ComponentBase
     {
         if (Visible && !_wasVisible)
         {
-            _top = Top;
-            _left = Left;
             _label = InitialLabel ?? string.Empty;
             _color = InitialColor;
             _needsFocus = true;
@@ -68,7 +69,6 @@ public partial class TmNotionStatusPicker : ComponentBase
     {
         if (Visible)
         {
-            try { await JS.InvokeVoidAsync("tmNotionEditor.adjustSlashMenuPosition", _pickerRef); } catch { }
         }
 
         if (_needsFocus && Visible)

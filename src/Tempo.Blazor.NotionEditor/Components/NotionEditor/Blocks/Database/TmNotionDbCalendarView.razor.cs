@@ -1,17 +1,22 @@
 using System.Globalization;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
+using Tempo.Blazor.Abstractions.Layout;
+using Tempo.Blazor.Localization;
+using Tempo.Blazor.Components;
+using Tempo.Blazor.Components.NotionEditor.Services;
 using Tempo.Blazor.NotionEditor.Enums;
 using Tempo.Blazor.NotionEditor.Interfaces;
 using Tempo.Blazor.NotionEditor.Models;
 
 namespace Tempo.Blazor.Components.NotionEditor.Blocks.Database;
 
-public partial class TmNotionDbCalendarView : ComponentBase
+public partial class TmNotionDbCalendarView
 {
     private record CalendarCell(DateOnly Date, bool IsCurrentMonth, List<IDatabaseRecord> Records);
 
-    private const int MaxEventsPerCell = 4;
+    // Three chips fit the cell; the fourth event is the +N overflow popover.
+    private const int MaxEventsPerCell = 3;
 
     // ── Parameters ───────────────────────────────────────────────────────────
 
@@ -24,10 +29,18 @@ public partial class TmNotionDbCalendarView : ComponentBase
     [Parameter] public EventCallback<IDatabaseRecord> OnRecordClicked { get; set; }
     [Parameter] public EventCallback<DateTime>        OnNewRecord     { get; set; }
 
+    /// <summary>Cascaded layout. A mobile container opens the day as a sheet instead of a popover.</summary>
+    [CascadingParameter] private TmLayoutContext? Layout { get; set; }
+
+    private bool IsMobile => Layout?.IsMobile == true;
+
     // ── Calendar state ───────────────────────────────────────────────────────
 
     private DateOnly         _currentMonth;
     private List<CalendarCell> _cells = [];
+
+    /// <summary>The day whose overflow list is open, or null when the list is closed.</summary>
+    private DateOnly? _overflowDate;
     private bool               _initialized;
 
     protected override void OnParametersSet()
@@ -35,7 +48,9 @@ public partial class TmNotionDbCalendarView : ComponentBase
         if (!_initialized)
         {
             var today = DateOnly.FromDateTime(DateTime.Today);
-            _currentMonth = new DateOnly(today.Year, today.Month, 1);
+            var dated = Records.Select(FirstRecordDate).FirstOrDefault(date => date is not null);
+            var seed = dated ?? today;
+            _currentMonth = new DateOnly(seed.Year, seed.Month, 1);
             _initialized  = true;
         }
         ComputeCalendar();
@@ -47,9 +62,10 @@ public partial class TmNotionDbCalendarView : ComponentBase
         var month    = _currentMonth.Month;
         var firstDay = new DateOnly(year, month, 1);
 
-        // Monday-based: Monday=0 … Sunday=6
+        // G7: the week starts on the culture's first day (en-US Sunday, cs-CZ Monday).
         var firstDow    = (int)firstDay.DayOfWeek;
-        var startOffset = (firstDow + 6) % 7;
+        var weekStart   = (int)CultureInfo.CurrentCulture.DateTimeFormat.FirstDayOfWeek;
+        var startOffset = (firstDow - weekStart + 7) % 7;
         var startDate   = firstDay.AddDays(-startOffset);
 
         _cells = Enumerable.Range(0, 42)
@@ -68,6 +84,15 @@ public partial class TmNotionDbCalendarView : ComponentBase
         ? Fields.FirstOrDefault(f => f.Id == DateFieldId)
         : Fields.FirstOrDefault(f =>
             f.Type is DatabaseFieldType.Date or DatabaseFieldType.DateRange);
+
+    private DateOnly? FirstRecordDate(IDatabaseRecord record)
+    {
+        var field = DateField;
+        if (field is null || !record.Fields.TryGetValue(field.Id.ToString(), out var value) || value is null)
+            return null;
+        var parsed = ParseDate(value);
+        return parsed is null ? null : DateOnly.FromDateTime(parsed.Value);
+    }
 
     private List<IDatabaseRecord> GetRecordsForDate(DateOnly date)
     {
@@ -127,16 +152,34 @@ public partial class TmNotionDbCalendarView : ComponentBase
         get
         {
             var names = CultureInfo.CurrentCulture.DateTimeFormat.AbbreviatedDayNames;
-            // Reorder Mon…Sun (DayOfWeek: Sun=0, Mon=1 … Sat=6)
-            return [names[1], names[2], names[3], names[4], names[5], names[6], names[0]];
+            var start = (int)CultureInfo.CurrentCulture.DateTimeFormat.FirstDayOfWeek;
+            return Enumerable.Range(0, 7).Select(i => names[(start + i) % 7]).ToArray();
         }
     }
+
+    private string MoreLabel(int count) => Loc.Plural("TmNotionDbCalendarView_More", count);
 
     private static IEnumerable<IDatabaseRecord> VisibleEvents(CalendarCell cell)
         => cell.Records.Take(MaxEventsPerCell);
 
     private static int OverflowCount(CalendarCell cell)
         => Math.Max(0, cell.Records.Count - MaxEventsPerCell);
+
+    private Task SetOverflowOpen(DateOnly date, bool open)
+    {
+        _overflowDate = open ? date : (_overflowDate == date ? null : _overflowDate);
+        return Task.CompletedTask;
+    }
+
+    private async Task SelectOverflowRecordAsync(IDatabaseRecord record)
+    {
+        _overflowDate = null;
+        await HandleEventClickAsync(record);
+    }
+
+    private CalendarCell? OverflowCell => _overflowDate is { } date
+        ? _cells.FirstOrDefault(c => c.Date == date)
+        : null;
 
     // ── Event color ───────────────────────────────────────────────────────────
 
@@ -157,22 +200,20 @@ public partial class TmNotionDbCalendarView : ComponentBase
                 color = sel.Options
                     .FirstOrDefault(o => string.Equals(o.Name, val, StringComparison.OrdinalIgnoreCase))?.Color;
 
-            if (!string.IsNullOrEmpty(color)) return color;
+            if (!string.IsNullOrEmpty(color)) return NotionColorTokens.OptionSolid(color);
         }
-        return "var(--tm-primary, #2383e2)";
+        return NotionColorTokens.OptionSolid(null);
     }
 
     // ── Primary value ─────────────────────────────────────────────────────────
 
     private IDatabaseField? PrimaryField => Fields.FirstOrDefault(f => f.IsPrimary);
 
-    private string GetPrimaryValue(IDatabaseRecord record)
+    private object? PrimaryRaw(IDatabaseRecord record)
     {
         var primary = PrimaryField;
-        if (primary is null) return string.Empty;
-        return record.Fields.TryGetValue(primary.Id.ToString(), out var v)
-            ? v?.ToString() ?? string.Empty
-            : string.Empty;
+        if (primary is null) return null;
+        return record.Fields.TryGetValue(primary.Id.ToString(), out var value) ? value : null;
     }
 
     // ── Drag & drop ──────────────────────────────────────────────────────────
@@ -224,6 +265,11 @@ public partial class TmNotionDbCalendarView : ComponentBase
 
     private async Task HandleCellClickAsync(DateOnly date)
     {
+        if (IsMobile)
+        {
+            await SetOverflowOpen(date, true);
+            return;
+        }
         if (ReadOnly) return;
         await OnNewRecord.InvokeAsync(date.ToDateTime(TimeOnly.MinValue));
     }

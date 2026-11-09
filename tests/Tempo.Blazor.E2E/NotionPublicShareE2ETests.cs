@@ -16,7 +16,7 @@ public sealed class NotionPublicShareE2ETests : NotionE2ETestBase
         await OpenShareDialogAsync(page);
 
         var dialog = page.GetByTestId("notion-share-dialog");
-        await dialog.GetByTestId("notion-share-allow-comments").CheckAsync();
+        await dialog.GetByTestId("notion-share-allow-comments").Locator(".tm-toggle-track").ClickAsync();
         await dialog.GetByTestId("notion-share-create").ClickAsync();
         var urlInput = dialog.GetByTestId("notion-share-url");
         await Assertions.Expect(urlInput).ToHaveValueAsync(new System.Text.RegularExpressions.Regex("/p/.+"));
@@ -45,6 +45,9 @@ public sealed class NotionPublicShareE2ETests : NotionE2ETestBase
         TestContext.WriteLine($"UX CF33 public page baseline captured: {publicCapture.FullPagePath} / {publicCapture.RegionPath}");
 
         await dialog.GetByTestId("notion-share-revoke").ClickAsync();
+        var confirm = page.GetByTestId("notion-share-revoke-confirm");
+        await confirm.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10000 });
+        await confirm.Locator(".tm-dialog-btn-ok").ClickAsync();
         await Assertions.Expect(dialog.GetByTestId("notion-share-disabled")).ToBeVisibleAsync();
         var revokedCapture = await CaptureBaselineAsync("share", "cf33-revoked-share-dialog", page.Locator(".tm-npsd").First);
         TestContext.WriteLine($"UX CF33 revoked dialog baseline captured: {revokedCapture.FullPagePath} / {revokedCapture.RegionPath}");
@@ -62,7 +65,8 @@ public sealed class NotionPublicShareE2ETests : NotionE2ETestBase
     public async Task CF33_PublicShare_EdgeCases_Baseline()
     {
         var providerless = await OpenNotionEditorAsync("?disablePublicShareProvider=true");
-        await providerless.Locator(".tm-npsm-trigger").First.ClickAsync();
+        await providerless.Locator(".tm-notion-page").First.HoverAsync();
+        await providerless.Locator(".tm-npsm-trigger").First.ClickAsync(new LocatorClickOptions { Force = true });
         var providerlessMenu = providerless.Locator(".tm-npsm").First;
         await providerlessMenu.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10000 });
         Assert.AreEqual(0, await providerless.GetByTestId("notion-share-open").CountAsync(), "Share entry point should be hidden when no public share provider is configured.");
@@ -95,8 +99,11 @@ public sealed class NotionPublicShareE2ETests : NotionE2ETestBase
 
     private static async Task OpenShareDialogAsync(IPage page)
     {
-        await page.Locator(".tm-npsm-trigger").First.ClickAsync();
-        await page.GetByTestId("notion-share-open").ClickAsync();
+        await page.Locator(".tm-notion-editor[data-editor-layout]").First
+            .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10000 });
+        await page.Locator(".tm-notion-page").First.HoverAsync();
+        await page.Locator(".tm-npsm-trigger").First.ClickAsync(new LocatorClickOptions { Force = true });
+        await page.Locator(".tm-npsm").GetByTestId("notion-share-open").ClickAsync();
         await page.GetByTestId("notion-share-dialog").WaitForAsync(new LocatorWaitForOptions
         {
             State = WaitForSelectorState.Visible,

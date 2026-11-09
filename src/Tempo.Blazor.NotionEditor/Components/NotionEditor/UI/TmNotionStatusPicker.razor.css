@@ -1,25 +1,28 @@
-.tm-notion-status-picker-backdrop {
+/* Virtual anchor — zero-size pin at the caret the overlay positions against. */
+.tm-notion-status-picker__anchor {
     position: fixed;
-    inset: 0;
-    z-index: var(--tm-z-dropdown);
+    width: 0;
+    height: 0;
+    pointer-events: none;
 }
 
-.tm-notion-status-picker {
-    position: fixed;
-    z-index: calc(var(--tm-z-dropdown) + 1);
+/* Panel surface lives on the component's own body — the only element rendered in both the
+   popover and the sheet presentation (the overlay root is a child component, N325/N5). The
+   sheet-presentation reset is in the package global _notion-floating-menus.css. */
+.tm-notion-status-picker__body {
     width: min(calc(var(--tm-space-16) * 5), calc(100vw - var(--tm-space-6)));
     padding: var(--tm-space-2);
     display: grid;
     gap: var(--tm-space-2);
     background: var(--tm-color-surface-elevated);
-    border: var(--tm-border-width-1, 1px) solid var(--tm-color-border);
+    border: var(--tm-border-width, 1px) solid var(--tm-border-color);
     border-radius: var(--tm-radius-md);
     box-shadow: var(--tm-shadow-lg);
 }
 
 .tm-notion-status-picker__input {
     width: 100%;
-    border: var(--tm-border-width-1, 1px) solid var(--tm-color-border);
+    border: var(--tm-border-width, 1px) solid var(--tm-border-color);
     border-radius: var(--tm-radius-sm);
     background: var(--tm-bg-surface);
     color: var(--tm-text-primary);
@@ -30,7 +33,7 @@
 
 .tm-notion-status-picker__input:focus {
     border-color: var(--tm-color-primary);
-    box-shadow: 0 0 0 var(--tm-border-width-2, 2px) var(--tm-color-primary-subtle);
+    box-shadow: 0 0 0 var(--tm-border-width, 2px) var(--tm-color-primary-subtle);
 }
 
 .tm-notion-status-picker__preview {
@@ -46,7 +49,7 @@
 }
 
 .tm-notion-status-picker__swatch {
-    border: var(--tm-border-width-1, 1px) solid var(--tm-color-border);
+    border: var(--tm-border-width, 1px) solid var(--tm-border-color);
     border-radius: var(--tm-radius-sm);
     background: var(--tm-bg-surface);
     padding: var(--tm-space-1);
@@ -61,12 +64,12 @@
     height: var(--tm-space-5);
     border-radius: var(--tm-radius-full);
     background: var(--tm-status-bg);
-    border: var(--tm-border-width-1, 1px) solid var(--tm-status-border);
+    border: var(--tm-border-width, 1px) solid var(--tm-status-border);
 }
 
 .tm-notion-status-picker__swatch--selected {
     border-color: var(--tm-color-primary);
-    box-shadow: 0 0 0 var(--tm-border-width-2, 2px) var(--tm-color-primary-subtle);
+    box-shadow: 0 0 0 var(--tm-border-width, 2px) var(--tm-color-primary-subtle);
 }
 
 .tm-notion-status-picker__insert {
@@ -88,74 +91,52 @@
     opacity: var(--tm-opacity-disabled, 0.5);
 }
 
-.tm-notion-status,
 .tm-notion-status-picker__swatch--gray {
     --tm-status-bg: var(--tm-color-gray-100);
     --tm-status-text: var(--tm-color-gray-800);
     --tm-status-border: var(--tm-color-gray-200);
 }
 
-.tm-notion-status--blue,
 .tm-notion-status-picker__swatch--blue {
     --tm-status-bg: var(--tm-color-primary-100);
     --tm-status-text: var(--tm-color-primary-800);
     --tm-status-border: var(--tm-color-primary-200);
 }
 
-.tm-notion-status--green,
 .tm-notion-status-picker__swatch--green {
     --tm-status-bg: var(--tm-color-success-subtle);
     --tm-status-text: var(--tm-color-success-text);
     --tm-status-border: var(--tm-color-success-soft-border);
 }
 
-.tm-notion-status--yellow,
 .tm-notion-status-picker__swatch--yellow {
     --tm-status-bg: var(--tm-color-warning-subtle);
     --tm-status-text: var(--tm-color-warning-text);
     --tm-status-border: var(--tm-color-warning-soft-border);
 }
 
-.tm-notion-status--red,
 .tm-notion-status-picker__swatch--red {
     --tm-status-bg: var(--tm-color-danger-subtle);
     --tm-status-text: var(--tm-color-danger-text);
     --tm-status-border: var(--tm-color-danger-soft-border);
 }
 
-.tm-notion-status--purple,
 .tm-notion-status-picker__swatch--purple {
-    --tm-status-bg: var(--tm-notion-bg-purple);
-    --tm-status-text: var(--tm-notion-text-purple);
-    --tm-status-border: var(--tm-notion-text-purple);
+    --tm-status-bg: var(--tm-notion-option-text-purple-wash);
+    --tm-status-text: var(--tm-notion-option-text-purple-ink);
+    --tm-status-border: var(--tm-notion-option-text-purple-ink);
 }
 
-.tm-notion-status {
-    --tm-notion-status-max-label-width: 24ch;
+/* The chip itself is injected into contenteditable HTML, so its rules live in
+   _notion-typography.css. Scoped CSS here never reached them. */
 
-    display: inline-flex;
-    align-items: baseline;
-    max-width: min(calc(var(--tm-space-16, 4rem) * 3), var(--tm-notion-status-max-label-width));
-    padding: calc(var(--tm-space-1) / 2) var(--tm-space-2);
-    border-radius: var(--tm-radius-full);
-    border: var(--tm-border-width-1, 1px) solid var(--tm-status-border);
-    background: var(--tm-status-bg);
-    color: var(--tm-status-text);
-    font-size: 0.78em;
-    font-weight: var(--tm-font-weight-semibold);
-    line-height: 1.35;
-    text-transform: uppercase;
-    vertical-align: baseline;
-    white-space: nowrap;
-    user-select: none;
-    cursor: pointer;
-}
+/* Coarse pointers: the swatches keep a finger-sized hit area (they were 32px rows). */
+@media (pointer: coarse) {
+    .tm-notion-status-picker__swatch {
+        min-height: var(--tm-touch-target);
+    }
 
-.tm-notion-status__label {
-    display: block;
-    min-width: 0;
-    max-width: var(--tm-notion-status-max-label-width);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    .tm-notion-status-picker__swatch span {
+        height: var(--tm-space-6);
+    }
 }

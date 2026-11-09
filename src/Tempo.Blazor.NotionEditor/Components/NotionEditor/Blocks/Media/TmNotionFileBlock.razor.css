@@ -13,23 +13,23 @@
     align-items:   center;
     gap:           10px;
     padding:       10px 14px;
-    background:    var(--tm-notion-bg-block-hover, rgba(0, 0, 0, 0.03));
-    border:        1px solid var(--tm-border-subtle, #e8e8e8);
+    background:    var(--tm-notion-bg-block-hover);
+    border:        1px solid var(--tm-color-border-subtle);
     border-radius: var(--tm-radius-md, 6px);
     transition:    background var(--tm-notion-anim-fast, 120ms),
                    border-color var(--tm-notion-anim-fast, 120ms);
 }
 
 .tm-notion-file-block__card:hover {
-    background:   var(--tm-notion-bg-block-hover, rgba(0, 0, 0, 0.05));
-    border-color: var(--tm-border-default, #d8d8d8);
+    background:   var(--tm-notion-bg-block-hover);
+    border-color: var(--tm-border-color);
 }
 
 /* ── Icon ─────────────────────────────────────────────────────── */
 
 .tm-notion-file-block__icon {
     flex-shrink: 0;
-    color:       var(--tm-text-tertiary, #aaa);
+    color:       var(--tm-text-tertiary);
 }
 
 /* ── Name + size ──────────────────────────────────────────────── */
@@ -45,7 +45,7 @@
 .tm-notion-file-block__name {
     font-size:     13px;
     font-weight:   500;
-    color:         var(--tm-text-primary, #1a1a1a);
+    color:         var(--tm-text-primary);
     white-space:   nowrap;
     overflow:      hidden;
     text-overflow: ellipsis;
@@ -53,7 +53,7 @@
 
 .tm-notion-file-block__size {
     font-size: 11px;
-    color:     var(--tm-text-tertiary, #aaa);
+    color:     var(--tm-text-tertiary);
 }
 
 /* ── Actions ──────────────────────────────────────────────────── */
@@ -72,9 +72,9 @@
     padding:       4px 10px;
     font-size:     12px;
     font-weight:   500;
-    color:         var(--tm-text-secondary, #555);
+    color:         var(--tm-text-secondary);
     background:    transparent;
-    border:        1px solid var(--tm-border-subtle, #e0e0e0);
+    border:        1px solid var(--tm-color-border-subtle);
     border-radius: var(--tm-radius-sm, 4px);
     text-decoration: none;
     transition:    background var(--tm-notion-anim-fast, 120ms),
@@ -82,9 +82,9 @@
 }
 
 .tm-notion-file-block__download:hover {
-    background: var(--tm-brand-bg-subtle, rgba(0, 112, 243, 0.06));
-    color:      var(--tm-brand-primary, #0070f3);
-    border-color: var(--tm-brand-primary, #0070f3);
+    background: var(--tm-color-primary-subtle);
+    color:      var(--tm-color-primary);
+    border-color: var(--tm-color-primary);
 }
 
 .tm-notion-file-block__replace-btn {
@@ -94,9 +94,9 @@
     width:           28px;
     height:          28px;
     padding:         0;
-    color:           var(--tm-text-tertiary, #aaa);
+    color:           var(--tm-text-tertiary);
     background:      transparent;
-    border:          1px solid var(--tm-border-subtle, #e0e0e0);
+    border:          1px solid var(--tm-color-border-subtle);
     border-radius:   var(--tm-radius-sm, 4px);
     cursor:          pointer;
     transition:      color var(--tm-notion-anim-fast, 120ms),
@@ -104,8 +104,8 @@
 }
 
 .tm-notion-file-block__replace-btn:hover {
-    color:       var(--tm-text-primary, #333);
-    background:  var(--tm-notion-bg-block-hover, rgba(0, 0, 0, 0.06));
+    color:       var(--tm-text-primary);
+    background:  var(--tm-notion-bg-block-hover);
 }
 
 /* ── Caption ──────────────────────────────────────────────────── */
@@ -113,7 +113,7 @@
 .tm-notion-file-block__caption {
     margin-top:  4px;
     font-size:   12px;
-    color:       var(--tm-text-tertiary, #aaa);
+    color:       var(--tm-text-tertiary);
     min-height:  20px;
     outline:     none;
     padding:     2px 0;
@@ -121,6 +121,6 @@
 
 .tm-notion-file-block__caption:empty::before {
     content:        attr(data-placeholder);
-    color:          var(--tm-text-tertiary, #bbb);
+    color:          var(--tm-text-tertiary);
     pointer-events: none;
 }

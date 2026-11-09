@@ -25,7 +25,7 @@ public class NotionMyTasksE2ETests : NotionE2ETestBase
         Assert.IsTrue(File.Exists(capture.RegionPath), "CF4 My Tasks UX baseline should be written.");
         await AssertTaskPanelLayoutAsync(page);
 
-        await page.Locator(".tm-my-tasks__filter", new PageLocatorOptions { HasTextString = "Page" }).First.ClickAsync();
+        await ClickTaskFilterAsync(page, "Page");
         await page.WaitForSelectorAsync(".tm-my-tasks__group[data-group-key='CF4 Release Follow-up']", new PageWaitForSelectorOptions
         {
             State = WaitForSelectorState.Visible,
@@ -33,7 +33,7 @@ public class NotionMyTasksE2ETests : NotionE2ETestBase
         });
         var groupedCapture = await CaptureBaselineAsync("tasks", "cf4-my-tasks-grouped-by-page", page.Locator(".tm-notion-editor").First);
         Assert.IsTrue(File.Exists(groupedCapture.RegionPath), "CF4 grouped My Tasks UX baseline should be written.");
-        await page.Locator(".tm-my-tasks__filter", new PageLocatorOptions { HasTextString = "Due date" }).First.ClickAsync();
+        await ClickTaskFilterAsync(page, "Due date");
 
         await page.Locator($"[data-task-id='{OverdueTaskId}'] .tm-my-tasks__check").First.ClickAsync();
         await page.WaitForSelectorAsync($"[data-task-id='{OverdueTaskId}']", new PageWaitForSelectorOptions
@@ -88,7 +88,7 @@ public class NotionMyTasksE2ETests : NotionE2ETestBase
 
         await SeedManyTasksPageAsync();
         await OpenTasksPanelAsync(page);
-        await page.Locator(".tm-my-tasks__filter", new PageLocatorOptions { HasTextString = "Overdue" }).First.ClickAsync();
+        await ClickTaskFilterAsync(page, "Overdue");
         await page.WaitForSelectorAsync(".tm-my-tasks__group[data-group-key='overdue']", new PageWaitForSelectorOptions
         {
             State = WaitForSelectorState.Visible,
@@ -103,6 +103,28 @@ public class NotionMyTasksE2ETests : NotionE2ETestBase
         Assert.IsTrue(scrollable, "Many-task list should be internally scrollable.");
 
         await AssertTaskPanelLayoutAsync(page);
+    }
+
+    /// <summary>
+    /// Below 640px the inline filters are hidden and "Filters (n)" opens them in a sheet.
+    /// Click the visible copy, then close the sheet so the grouped list is reachable.
+    /// </summary>
+    private static async Task ClickTaskFilterAsync(IPage page, string label)
+    {
+        var inline = page.Locator(".tm-my-tasks__filters--inline .tm-my-tasks__filter",
+            new PageLocatorOptions { HasTextString = label }).First;
+        if (await inline.CountAsync() > 0 && await inline.IsVisibleAsync())
+        {
+            await inline.ClickAsync();
+            return;
+        }
+
+        await page.GetByTestId("notion-tasks-filters-open").ClickAsync();
+        var sheet = page.Locator(".tm-overlay-panel-sheet, .tm-sheet").Last;
+        await sheet.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 8000 });
+        await sheet.Locator(".tm-my-tasks__filter", new LocatorLocatorOptions { HasTextString = label }).First.ClickAsync();
+        await page.Keyboard.PressAsync("Escape");
+        await sheet.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Hidden, Timeout = 8000 });
     }
 
     private static async Task OpenTasksPanelAsync(IPage page)
@@ -159,6 +181,7 @@ public class NotionMyTasksE2ETests : NotionE2ETestBase
         var hasOverflow = await page.Locator(".tm-my-tasks").EvaluateAsync<bool>(
             """
             panel => Array.from(panel.querySelectorAll('.tm-my-tasks__item, .tm-my-tasks__filter, .tm-my-tasks__header'))
+                .filter(el => el.getClientRects().length > 0)
                 .some(el => {
                     const rect = el.getBoundingClientRect();
                     const parent = panel.getBoundingClientRect();

@@ -1,11 +1,12 @@
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.JSInterop;
+using Tempo.Blazor.Abstractions.Layout;
 
 namespace Tempo.Blazor.Components.NotionEditor.UI;
 
 /// <summary>Modal overlay that lists Notion editor keyboard shortcuts.</summary>
-public partial class TmNotionShortcutsPanel : ComponentBase, IAsyncDisposable
+public partial class TmNotionShortcutsPanel : TmComponentBase, IAsyncDisposable
 {
     [Inject] private IJSRuntime JS { get; set; } = default!;
 
@@ -20,6 +21,10 @@ public partial class TmNotionShortcutsPanel : ComponentBase, IAsyncDisposable
     /// <summary>Shortcut groups rendered by the panel. Defaults to the built-in Notion catalog.</summary>
     [Parameter]
     public IReadOnlyList<NotionShortcutGroup> Groups { get; set; } = NotionShortcutCatalog.DefaultGroups;
+
+    /// <summary>Forced layout. Mobile presents the panel as a sheet.</summary>
+    [Parameter]
+    public TmLayoutMode LayoutMode { get; set; } = TmLayoutMode.Auto;
 
     private DotNetObjectReference<TmNotionShortcutsPanel>? _dotNetRef;
 
@@ -46,23 +51,11 @@ public partial class TmNotionShortcutsPanel : ComponentBase, IAsyncDisposable
     public async Task OnNotionShortcutKey(string key)
     {
         if (key == "?")
-        {
             await VisibleChanged.InvokeAsync(true);
-        }
-        else if (key == "Escape" && Visible)
-        {
-            await CloseAsync();
-        }
     }
 
     private Task CloseAsync()
         => VisibleChanged.InvokeAsync(false);
-
-    private async Task HandleKeyDownAsync(KeyboardEventArgs args)
-    {
-        if (args.Key == "Escape")
-            await CloseAsync();
-    }
 
     /// <inheritdoc />
     public async ValueTask DisposeAsync()

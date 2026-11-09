@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Components;
+using Tempo.Blazor.Abstractions.Layout;
 using Tempo.Blazor.Components;
 using Microsoft.AspNetCore.Components.Web;
-using Microsoft.JSInterop;
 using Tempo.Blazor.NotionEditor.Interfaces;
 using Tempo.Blazor.NotionEditor.Models;
 
@@ -10,7 +10,6 @@ namespace Tempo.Blazor.Components.NotionEditor.Page;
 public partial class TmNotionShareDialog : TmComponentBase
 {
     [Inject] private NavigationManager Navigation { get; set; } = default!;
-    [Inject] private IJSRuntime JS { get; set; } = default!;
 
     /// <summary>Controls whether the dialog is visible.</summary>
     [Parameter] public bool Visible { get; set; }
@@ -24,10 +23,26 @@ public partial class TmNotionShareDialog : TmComponentBase
     /// <summary>Provider used for creating, revoking, and reading public shares.</summary>
     [Parameter] public INotionPublicShareProvider? Provider { get; set; }
 
+    /// <summary>Forced layout. Mobile presents the dialog as the core sheet.</summary>
+    [Parameter] public TmLayoutMode LayoutMode { get; set; } = TmLayoutMode.Auto;
+
+    /// <summary>The cascaded viewport. Auto sheets when the viewport is mobile.</summary>
+    [CascadingParameter(Name = TmLayoutScopes.Viewport)] public TmLayoutContext? Layout { get; set; }
+
+    private TmLayoutMode ResolvedLayout =>
+        LayoutMode != TmLayoutMode.Auto ? LayoutMode : Layout?.Resolved ?? TmLayoutMode.Auto;
+
+    /// <summary>
+    /// Asks before revoking an active link. Defaults to true; a host that wants the old
+    /// one-click revoke passes false.
+    /// </summary>
+    [Parameter] public bool ConfirmRevoke { get; set; } = true;
+
     private bool _loadedForVisible;
     private bool _loading;
     private bool _saving;
-    private bool _copying;
+    private bool _confirmRevoke;
+    private string _copied = string.Empty;
     private bool _allowComments;
     private DateOnly? _expiresDate;
     private string? _error;
@@ -120,6 +135,23 @@ public partial class TmNotionShareDialog : TmComponentBase
         }
     }
 
+    private Task AskRevoke()
+    {
+        if (!ConfirmRevoke)
+            return RevokeAsync();
+        _confirmRevoke = true;
+        return Task.CompletedTask;
+    }
+
+    private async Task HandleRevokeResult(bool? confirmed)
+    {
+        _confirmRevoke = false;
+        if (confirmed == true)
+            await RevokeAsync();
+    }
+
+    private void AnnounceCopied() => _copied = Loc["Notion_Share_Copied"];
+
     private async Task RevokeAsync()
     {
         if (Provider is null || _saving) return;
@@ -141,34 +173,14 @@ public partial class TmNotionShareDialog : TmComponentBase
         }
     }
 
-    private async Task CopyAsync()
-    {
-        if (!IsShareUsable || _copying) return;
-
-        _copying = true;
-        _error = null;
-        try
-        {
-            await JS.InvokeVoidAsync("tmNotionEditor.copyToClipboard", ShareUrl);
-        }
-        catch
-        {
-            _error = Loc["TmNotionPageSettingsMenu_ErrorCopy"];
-        }
-        finally
-        {
-            _copying = false;
-        }
-    }
-
     private async Task CloseAsync()
     {
         _error = null;
         await VisibleChanged.InvokeAsync(false);
     }
 
-    private void HandleAllowCommentsChanged(ChangeEventArgs args)
-        => _allowComments = args.Value is bool value && value;
+    private void HandleAllowCommentsChanged(bool value)
+        => _allowComments = value;
 
     private void HandleExpiresChanged(ChangeEventArgs args)
     {

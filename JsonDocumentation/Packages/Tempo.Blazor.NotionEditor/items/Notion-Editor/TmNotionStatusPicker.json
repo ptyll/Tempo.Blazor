@@ -31,6 +31,13 @@
       "description": "Initial label used when opening the picker for an existing chip."
     },
     {
+      "name": "LayoutMode",
+      "type": "TmLayoutMode",
+      "isRequired": false,
+      "default": "Auto",
+      "description": "Forced layout. Mobile presents the picker as the core sheet."
+    },
+    {
       "name": "Left",
       "type": "double",
       "isRequired": false,

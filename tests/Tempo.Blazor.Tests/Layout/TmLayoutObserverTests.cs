@@ -426,6 +426,77 @@ public class TmLayoutObserverTests : LocalizationTestBase
     }
 
     [Fact]
+    public void PointerSignal_DefaultsFine_AndSurvivesAWithExpression()
+    {
+        var context = new TmLayoutContext(TmLayoutMode.Auto, TmLayoutMode.Desktop);
+
+        context.IsCoarsePointer.Should().BeFalse("a context with no pointer report is a fine pointer");
+        var coarse = context with { IsCoarsePointer = true };
+        coarse.IsCoarsePointer.Should().BeTrue();
+        coarse.Resolved.Should().Be(TmLayoutMode.Desktop, "pointer kind does not change the width band");
+        coarse.Should().NotBe(context);
+    }
+
+    [Fact]
+    public async Task OnPointerKindChanged_StampsTheCascade_WithoutChangingTheWidthBand()
+    {
+        var module = JSInterop.SetupModule(ModulePath);
+        module.SetupVoid("observe", invocation => true);
+
+        var cut = Render<TmLayoutObserver>(parameters => parameters
+            .Add(p => p.LayoutMode, TmLayoutMode.Auto)
+            .AddChildContent(PointerProbe.Fragment));
+
+        cut.Find(".pointer-probe").TextContent.Should().Be("fine");
+        cut.Find(".tm-layout").GetAttribute("data-pointer").Should().Be("fine");
+
+        await cut.InvokeAsync(() => cut.Instance.OnPointerKindChanged(true));
+
+        cut.Find(".pointer-probe").TextContent.Should().Be("coarse");
+        cut.Find(".tm-layout").GetAttribute("data-pointer").Should().Be("coarse");
+        cut.Find(".tm-layout").GetAttribute("data-layout").Should().Be("desktop",
+            "a coarse pointer at a desktop width stays desktop");
+
+        await cut.InvokeAsync(() => cut.Instance.OnPointerKindChanged(true));
+        cut.Find(".pointer-probe").TextContent.Should().Be("coarse");
+    }
+
+    [Fact]
+    public void ForcedObserver_InheritsTheAncestorPointer_WithoutImportingJs()
+    {
+        var cut = Render<CascadingValue<TmLayoutContext>>(parameters => parameters
+            .Add(p => p.Value, new TmLayoutContext(TmLayoutMode.Auto, TmLayoutMode.Desktop) { IsCoarsePointer = true })
+            .Add(p => p.IsFixed, false)
+            .AddChildContent<TmLayoutObserver>(observer => observer
+                .Add(p => p.LayoutMode, TmLayoutMode.Desktop)
+                .AddChildContent(PointerProbe.Fragment)));
+
+        cut.Find(".pointer-probe").TextContent.Should().Be("coarse",
+            "a forced observer does not measure, so it must not hide the ancestor's pointer signal");
+        JSInterop.VerifyNotInvoke("import");
+    }
+
+    /// <summary>Reads the unnamed cascade's pointer signal.</summary>
+    private sealed class PointerProbe : ComponentBase
+    {
+        public static RenderFragment Fragment => builder =>
+        {
+            builder.OpenComponent<PointerProbe>(0);
+            builder.CloseComponent();
+        };
+
+        [CascadingParameter] public TmLayoutContext? Layout { get; set; }
+
+        protected override void BuildRenderTree(RenderTreeBuilder builder)
+        {
+            builder.OpenElement(0, "span");
+            builder.AddAttribute(1, "class", "pointer-probe");
+            builder.AddContent(2, Layout?.IsCoarsePointer == true ? "coarse" : "fine");
+            builder.CloseElement();
+        }
+    }
+
+    [Fact]
     public void EditorShellConsumer_UnderMobileViewportScope_AdoptsTheInheritedLayout()
     {
         // The TmDiagramEditor renders through TmEditorShell; a callback-only consumer must end up

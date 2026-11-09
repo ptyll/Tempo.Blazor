@@ -36,14 +36,14 @@
     align-items:   center;
     gap:           10px;
     padding:       10px 14px;
-    background:    var(--tm-notion-bg-block-hover, rgba(0, 0, 0, 0.03));
-    border:        1px solid var(--tm-border-subtle, #e8e8e8);
+    background:    var(--tm-notion-bg-block-hover);
+    border:        1px solid var(--tm-color-border-subtle);
     border-radius: var(--tm-radius-md, 6px);
 }
 
 .tm-notion-audio-block__icon {
     flex-shrink: 0;
-    color:       var(--tm-text-tertiary, #aaa);
+    color:       var(--tm-text-tertiary);
 }
 
 .tm-notion-audio-block__audio {
@@ -60,9 +60,9 @@
     width:           28px;
     height:          28px;
     padding:         0;
-    color:           var(--tm-text-tertiary, #aaa);
+    color:           var(--tm-text-tertiary);
     background:      transparent;
-    border:          1px solid var(--tm-border-subtle, #e8e8e8);
+    border:          1px solid var(--tm-color-border-subtle);
     border-radius:   var(--tm-radius-sm, 4px);
     cursor:          pointer;
     transition:      color var(--tm-notion-anim-fast, 120ms),
@@ -70,6 +70,6 @@
 }
 
 .tm-notion-audio-block__replace-btn:hover {
-    color:       var(--tm-text-primary, #333);
-    background:  var(--tm-notion-bg-block-hover, rgba(0, 0, 0, 0.06));
+    color:       var(--tm-text-primary);
+    background:  var(--tm-notion-bg-block-hover);
 }

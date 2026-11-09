@@ -1,30 +1,14 @@
-.tm-ntg__backdrop {
-    position: fixed;
-    inset: 0;
-    z-index: var(--tm-z-modal);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: var(--tm-space-4);
-    background: var(--tm-bg-overlay);
-}
+/* Phase 6: the backdrop and stacking are the core TmModal's. */
 
 .tm-ntg {
     --tm-ntg-card-width: calc(var(--tm-space-16) + var(--tm-space-16) + var(--tm-space-16) + var(--tm-space-16) + var(--tm-space-4));
     --tm-ntg-card-min-height: calc(var(--tm-space-16) + var(--tm-space-16) + var(--tm-space-16) + var(--tm-space-16) + var(--tm-space-16));
 
-    width: min(58rem, 100%);
-    max-height: min(44rem, calc(100vh - var(--tm-space-8)));
+    width: 100%;
     display: grid;
     grid-template-rows: auto auto 1fr;
     gap: var(--tm-space-4);
-    padding: var(--tm-space-5);
-    border: 1px solid var(--tm-color-border);
-    border-radius: var(--tm-radius-lg);
-    background: var(--tm-color-surface);
-    color: var(--tm-color-text);
-    box-shadow: var(--tm-shadow-xl);
-    overflow: hidden;
+    color: var(--tm-text-primary);
 }
 
 .tm-ntg__header {
@@ -58,7 +42,7 @@
     justify-content: center;
     width: 2rem;
     height: 2rem;
-    border: 1px solid var(--tm-color-border);
+    border: 1px solid var(--tm-border-color);
     border-radius: var(--tm-radius-md);
     background: var(--tm-color-surface);
     color: var(--tm-color-text-muted);
@@ -67,7 +51,7 @@
 
 .tm-ntg__close:hover,
 .tm-ntg__close:focus-visible {
-    color: var(--tm-color-text);
+    color: var(--tm-text-primary);
     border-color: var(--tm-color-primary);
     outline: none;
 }
@@ -83,7 +67,7 @@
     gap: var(--tm-space-2);
     min-height: 2.5rem;
     padding: 0 var(--tm-space-3);
-    border: 1px solid var(--tm-color-border);
+    border: 1px solid var(--tm-border-color);
     border-radius: var(--tm-radius-md);
     background: var(--tm-bg-muted);
 }
@@ -104,7 +88,7 @@
     border: 0;
     outline: 0;
     background: transparent;
-    color: var(--tm-color-text);
+    color: var(--tm-text-primary);
     font: inherit;
     font-size: var(--tm-font-size-sm);
 }
@@ -120,7 +104,7 @@
     flex: 0 0 auto;
     min-height: 2rem;
     padding: 0 var(--tm-space-3);
-    border: 1px solid var(--tm-color-border);
+    border: 1px solid var(--tm-border-color);
     border-radius: var(--tm-radius-full);
     background: var(--tm-color-surface);
     color: var(--tm-color-text-muted);
@@ -155,7 +139,7 @@
     grid-template-rows: auto 1fr auto;
     min-width: 0;
     min-height: var(--tm-ntg-card-min-height);
-    border: 1px solid var(--tm-color-border);
+    border: 1px solid var(--tm-border-color);
     border-radius: var(--tm-radius-md);
     background: var(--tm-color-surface);
     overflow: hidden;
@@ -184,7 +168,7 @@
     display: block;
     height: .45rem;
     border-radius: var(--tm-radius-full);
-    background: var(--tm-color-border);
+    background: var(--tm-border-color);
 }
 
 .tm-ntg__line--wide {
@@ -225,7 +209,7 @@
 
 .tm-ntg__card-title {
     margin: var(--tm-space-2) 0 0;
-    color: var(--tm-color-text);
+    color: var(--tm-text-primary);
     font-size: var(--tm-font-size-base);
     font-weight: var(--tm-font-weight-semibold);
     line-height: var(--tm-line-height-tight);
@@ -251,7 +235,7 @@
     min-height: 2.25rem;
     border: 0;
     border-radius: var(--tm-radius-md);
-    background: var(--tm-color-primary);
+    background: var(--tm-color-primary-solid);
     color: var(--tm-color-white);
     font: inherit;
     font-size: var(--tm-font-size-sm);
@@ -261,7 +245,7 @@
 
 .tm-ntg__use:hover,
 .tm-ntg__use:focus-visible {
-    background: var(--tm-color-primary-hover);
+    background: var(--tm-color-primary-700);
     outline: none;
 }
 
@@ -299,17 +283,13 @@
     }
 }
 
+/* ── Footer (inside the TmModal footer fragment) ─────────────────────────────
+   F-23: the Close action used to sit glued to the right edge with no padding. */
+.tm-ntg__footer-close {
+    padding: var(--tm-space-3) var(--tm-space-4);
+}
+
 @media (max-width: 42rem) {
-    .tm-ntg__backdrop {
-        align-items: stretch;
-        padding: var(--tm-space-2);
-    }
-
-    .tm-ntg {
-        max-height: none;
-        padding: var(--tm-space-4);
-    }
-
     .tm-ntg__grid {
         grid-template-columns: 1fr;
     }

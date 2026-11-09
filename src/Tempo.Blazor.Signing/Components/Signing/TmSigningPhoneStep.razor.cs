@@ -11,7 +11,15 @@ namespace Tempo.Blazor.Components.Signing;
 /// functional resend countdown on the core <see cref="TmSelect"/> / <see cref="TmTextInput"/>
 /// components (Signing redesign phase 4, SI1; countdown and verification in phase 6, S2-5). Every
 /// control carries a visible localized label; the OTP input carries
-/// <c>inputmode="numeric"</c> + <c>autocomplete="one-time-code"</c>.
+/// <c>inputmode="numeric"</c> + <c>autocomplete="one-time-code"</c>. With
+/// <see cref="CodeInputMode"/> = <see cref="SigningCodeInputMode.Segmented"/> („Nové komponenty
+/// 1/7" fáze 5) the code types into the segmented core <see cref="TmOtpInput"/> instead: the
+/// invalid/verified states map onto it (the verified status reuses the step's own
+/// <c>TmSigningStep_Verified</c> wording through the input's <c>VerifiedText</c>), completing
+/// the code auto-verifies when a verifier is wired, a wrong code replays the shake and clears +
+/// refocuses the cells, and a resend clears + refocuses it. While a verify runs the segmented
+/// cells turn READONLY (never disabled — focus stays reachable) and the otp row carries
+/// <c>aria-busy</c>; the manual Verify action stays visible in every mode a verifier is wired.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -41,6 +49,9 @@ namespace Tempo.Blazor.Components.Signing;
 /// LIVE REGION (WCAG 2.4.3/4.1.3): one ALWAYS-RENDERED visually-hidden <c>role="status"</c>
 /// region announces the phase events ("Code sent", "Verified", "Resend available"); the ticking
 /// countdown text itself carries <c>aria-live="off"</c> so it never re-announces every second.
+/// In SEGMENTED mode the "Verified" event is announced by the <see cref="TmOtpInput"/>'s own
+/// live region instead — the step stays silent so exactly ONE verified text sounds (fáze 5
+/// review).
 /// </para>
 /// <para>
 /// DISPOSAL: the component is <see cref="IAsyncDisposable"/> because the Blazor renderer prefers
@@ -91,7 +102,14 @@ public partial class TmSigningPhoneStep : IAsyncDisposable
     // becomes (or already is) the next thing to type into. A pending flag defers the move to
     // OnAfterRenderAsync when the input only exists AFTER the send's re-render.
     private TmTextInput? _otpInput;
+    private TmOtpInput? _otpSegmentedInput;
     private bool _pendingOtpFocus;
+
+    // Fáze 5 (segmented mode): the rising edge of OtpInvalid replays the TmOtpInput error
+    // (ShowErrorAsync — shake + live-region re-announce) for repeated wrong codes, then clears
+    // and refocuses the cells so the next full code fires OnComplete again.
+    private bool _lastOtpInvalid;
+    private bool _otpInvalidRisingEdge;
 
     // Functional resend countdown (Signing redesign phase 6, S2-5): the clock is injectable so a
     // test advances a FakeTimeProvider instead of sleeping — the same seam the runner's autosave
@@ -194,6 +212,26 @@ public partial class TmSigningPhoneStep : IAsyncDisposable
     /// </summary>
     [Parameter] public EventCallback OnChangeNumber { get; set; }
 
+    /// <summary>
+    /// How the one-time-code input renders („Nové komponenty 1/7" fáze 5):
+    /// <see cref="SigningCodeInputMode.Single"/> (the default) keeps the single core
+    /// <c>TmTextInput</c>; <see cref="SigningCodeInputMode.Segmented"/> swaps it for the core
+    /// <see cref="TmOtpInput"/> with <see cref="CodeLength"/> cells — completing the code then
+    /// automatically starts the verification when a verifier is wired, a wrong code drives the
+    /// input's invalid state (the step shell keeps owning the error text, referenced through the
+    /// input's <c>aria-describedby</c>; every new failure replays the shake through
+    /// <c>ShowErrorAsync</c>) and a resend clears and refocuses the input.
+    /// </summary>
+    [Parameter] public SigningCodeInputMode CodeInputMode { get; set; } = SigningCodeInputMode.Single;
+
+    /// <summary>
+    /// Number of OTP cells in <see cref="SigningCodeInputMode.Segmented"/> mode (the
+    /// <see cref="TmOtpInput.Length"/>; must be between 4 and 10 — validated in
+    /// <see cref="OnParametersSet"/> with an <see cref="ArgumentOutOfRangeException"/> while
+    /// segmented). Defaults to 6; ignored in <see cref="SigningCodeInputMode.Single"/> mode.
+    /// </summary>
+    [Parameter] public int CodeLength { get; set; } = 6;
+
     /// <summary>Short text describing where the field appears in the document.</summary>
     [Parameter] public string? AppearsOn { get; set; }
 
@@ -287,10 +325,27 @@ public partial class TmSigningPhoneStep : IAsyncDisposable
         }
 
         // The live region announces the HOST confirmation event (the transition, not the state —
-        // re-rendering the same text would not announce anything, a flip re-renders it once).
-        if (Verified && !_lastVerified)
+        // re-rendering the same text would not announce anything, a flip re-renders it once). In
+        // SEGMENTED mode the step stays silent instead (fáze 5 review): the TmOtpInput announces
+        // its own verified status through its live region, so exactly ONE live text sounds.
+        if (Verified && !_lastVerified && !IsSegmented)
         {
             _announcement = Loc["TmSigningStep_Verified"];
+        }
+
+        // Fáze 5 (segmented mode): the rising edge of OtpInvalid (a NEW wrong-code report, the
+        // runner clears the flag on every new draft) replays the TmOtpInput error presentation —
+        // ShowErrorAsync after the render restarts the shake and re-announces the message.
+        _otpInvalidRisingEdge = OtpInvalid && !_lastOtpInvalid;
+        _lastOtpInvalid = OtpInvalid;
+
+        // Fáze 5 review: CodeLength is the TmOtpInput.Length — validated in the SEGMENTED mode
+        // (where it actually drives the cell count); Single mode ignores it, exactly like before.
+        if (IsSegmented && (CodeLength < 4 || CodeLength > 10))
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(CodeLength), CodeLength,
+                $"{nameof(TmSigningPhoneStep)}.{nameof(CodeLength)} must be between 4 and 10 in {nameof(SigningCodeInputMode)}.{nameof(SigningCodeInputMode.Segmented)} mode.");
         }
 
         // The countdown stops on a STATE TRANSITION only — once the host confirms (the OTP row is
@@ -313,6 +368,19 @@ public partial class TmSigningPhoneStep : IAsyncDisposable
         : RunnerValidationMessage;
 
     private bool HasValidationMessage => !string.IsNullOrWhiteSpace(EffectiveValidationMessage);
+
+    /// <summary>Whether the code types into the segmented core <see cref="TmOtpInput"/> (fáze 5).</summary>
+    private bool IsSegmented => CodeInputMode == SigningCodeInputMode.Segmented;
+
+    /// <summary>
+    /// The ids the segmented <see cref="TmOtpInput"/> references (fáze 5): the step shell OWNS the
+    /// error text (its <c>role="alert"</c> validation box renders it in EVERY mode, so a wrong
+    /// code looks identical to hosts) — while the error targets the OTP input the cells reference
+    /// the shell's validation id; otherwise they reference the step description.
+    /// </summary>
+    private string? SegmentedOtpDescribedBy => OtpInvalid
+        ? _validationId
+        : HasDescription ? _descriptionId : null;
 
     /// <summary>
     /// The effective verified state: the host's <see cref="Verified"/> unless the signer asked to
@@ -498,6 +566,16 @@ public partial class TmSigningPhoneStep : IAsyncDisposable
         return OtpCodeChanged.InvokeAsync(OtpCode);
     }
 
+    /// <summary>
+    /// The segmented <see cref="TmOtpInput"/> completed the code (fáze 5): with a verifier wired
+    /// the completion ALSO starts the verification (fáze 5 review: the manual Verify action
+    /// stays visible as an extra path — both drive the same <see cref="VerifyCodeAsync"/> which
+    /// ignores a second call while one is in flight). Without a verifier the code stays
+    /// cosmetic, exactly the documented legacy behaviour.
+    /// </summary>
+    private Task HandleOtpCompleteAsync(string code)
+        => OnVerifyCode.HasDelegate ? VerifyCodeAsync() : Task.CompletedTask;
+
     /// <summary>The Change-number action of the VERIFIED state (phase 6 review item 1): unlocks the
     /// number editing locally, stops the stale countdown and asks the HOST to clear its
     /// confirmation — the send state resets so the new number starts a fresh flow.</summary>
@@ -588,6 +666,10 @@ public partial class TmSigningPhoneStep : IAsyncDisposable
         // message and never flips any state (phase 6 review item 5).
         _validationMessage = null;
         _verifyInFlight = true;
+        // The in-flight state renders BEFORE the host round-trip (fáze 5 review): the otp row
+        // turns aria-busy and the segmented cells turn READONLY (never disabled — the focus stays
+        // reachable) while the verifier runs.
+        await InvokeAsync(StateHasChanged);
         try
         {
             await OnVerifyCode.InvokeAsync();
@@ -666,12 +748,27 @@ public partial class TmSigningPhoneStep : IAsyncDisposable
     /// </summary>
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        // Fáze 5 (segmented mode): a NEW wrong-code report replays the TmOtpInput error
+        // presentation (shake + live-region re-announce of the same message), then CLEARS and
+        // REFOCUSES the cells — the wrong draft is worthless, and clearing re-arms OnComplete so
+        // the next full code starts the verification again.
+        if (_otpInvalidRisingEdge)
+        {
+            _otpInvalidRisingEdge = false;
+            if (_otpSegmentedInput is not null && !IsVerifiedState)
+            {
+                await _otpSegmentedInput.ShowErrorAsync();
+                await _otpSegmentedInput.ClearAsync();
+                await _otpSegmentedInput.FocusAsync();
+            }
+        }
+
         if (!_pendingOtpFocus)
         {
             return;
         }
 
-        if (_otpInput is null || IsVerifiedState)
+        if ((_otpInput is null && _otpSegmentedInput is null) || IsVerifiedState)
         {
             return;
         }
@@ -685,7 +782,16 @@ public partial class TmSigningPhoneStep : IAsyncDisposable
         }
 
         _pendingOtpFocus = false;
-        await _otpInput.FocusAsync();
+        if (_otpSegmentedInput is not null)
+        {
+            // Fáze 5 resend contract: a fresh code invalidates the previous draft — ClearAsync
+            // empties the cells (raising OtpCodeChanged) and FocusAsync moves to the first cell.
+            await _otpSegmentedInput.ClearAsync();
+            await _otpSegmentedInput.FocusAsync();
+            return;
+        }
+
+        await _otpInput!.FocusAsync();
     }
 
     /// <inheritdoc />

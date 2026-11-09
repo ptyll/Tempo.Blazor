@@ -116,6 +116,45 @@ public class TmSidePanelTests : LocalizationTestBase
     }
 
     [Fact]
+    public void Docked_ShowHeaderFalse_RendersNoHeaderNoClose_NamesPanelByDefault()
+    {
+        var cut = RenderPanel(TmLayoutMode.Desktop, p => p
+            .Add(x => x.Title, "Inspector")
+            .Add(x => x.ShowHeader, false));
+
+        cut.FindAll(".tm-side-panel__header").Should().BeEmpty();
+        cut.FindAll(".tm-side-panel__close").Should().BeEmpty();
+        cut.Find(".tm-side-panel--docked").GetAttribute("aria-label")
+            .Should().Be("Side panel", "without the built-in header the panel falls back to the localized default name");
+    }
+
+    [Fact]
+    public void Sheet_ShowHeaderFalse_RendersNoHeaderNoClose_NamesSheetByDefault()
+    {
+        var cut = RenderPanel(TmLayoutMode.Tablet, p => p
+            .Add(x => x.Title, "Inspector")
+            .Add(x => x.ShowHeader, false));
+
+        cut.FindAll(".tm-drawer__close").Should().BeEmpty(
+            "the host chrome carries its own close, the drawer must not render a second one");
+        cut.FindAll(".tm-side-panel__header").Should().BeEmpty();
+        cut.FindAll(".tm-drawer__title").Should().BeEmpty();
+        cut.Find(".tm-drawer").GetAttribute("aria-label")
+            .Should().Be("Side panel", "without the built-in header the sheet falls back to the localized default name");
+    }
+
+    [Fact]
+    public void Sheet_ShowHeaderTrue_StillRendersClose()
+    {
+        var cut = RenderPanel(TmLayoutMode.Tablet, p => p
+            .Add(x => x.Title, "Inspector")
+            .Add(x => x.ShowHeader, true));
+
+        cut.FindAll(".tm-drawer__close").Should().HaveCount(1);
+        cut.Find(".tm-drawer").GetAttribute("aria-label").Should().Be("Inspector");
+    }
+
+    [Fact]
     public void Sheet_AdoptsOpenParameterChange()
     {
         var cut = RenderPanel(TmLayoutMode.Tablet);

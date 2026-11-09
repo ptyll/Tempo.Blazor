@@ -1,7 +1,10 @@
 @namespace Tempo.Blazor.Components.NotionEditor.Blocks.Database
+@inherits Tempo.Blazor.Components.TmComponentBase
 @using Tempo.Blazor.NotionEditor.Models
 @using Tempo.Blazor.NotionEditor.Interfaces
 @using Tempo.Blazor.NotionEditor.Enums
+@using Tempo.Blazor.Components.Icons
+@using Tempo.Blazor.Components.NotionEditor.Blocks.Database
 
 <div class="tm-dblv" role="list" aria-label="@Loc["TmNotionDbListView_Label"]">
 
@@ -31,11 +34,12 @@
         @foreach (var record in Records)
         {
             var rec   = record;
-            var title = GetPrimaryValue(rec);
+            var title = NotionDatabaseValueFormatter.PrimaryText(rec, Fields, "MMM d");
 
             <div class="tm-dblv__row"
                  role="listitem"
                  tabindex="0"
+                 data-testid="@TestId("notion-db-list-row")"
                  @key="rec.Id"
                  @onclick="() => HandleRowClickAsync(rec)"
                  @onkeydown="e => HandleRowKeyAsync(e, rec)">
@@ -61,21 +65,15 @@
                     <span class="tm-dblv__chips" aria-label="@Loc["TmNotionDbListView_Properties"]">
                         @foreach (var field in previewFields)
                         {
-                            @foreach (var (val, color) in GetFieldChips(rec, field))
+                            var chip = ChipOf(rec, field);
+                            if (chip is { } shown)
                             {
-                                if (color is not null)
-                                {
-                                    <span class="tm-dblv__chip tm-dblv__chip--colored"
-                                          style="--chip-color:@color"
-                                          title="@field.Name">
-                                        <span class="tm-dblv__chip-dot" aria-hidden="true"></span>
-                                        @val
-                                    </span>
-                                }
-                                else
-                                {
-                                    <span class="tm-dblv__chip" title="@field.Name">@val</span>
-                                }
+                                <span class="tm-dblv__chip @(shown.Color is not null ? "tm-dblv__chip--colored" : "")"
+                                      data-testid="@TestId("notion-db-list-chip")"
+                                      data-color="@shown.Color"
+                                      title="@field.Name">
+                                    <TmNotionDbPropertyValue Field="field" Value="shown.Value" />
+                                </span>
                             }
                         }
                     </span>

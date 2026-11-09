@@ -1,3 +1,4 @@
+using System.Collections;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Tempo.Blazor.NotionEditor.Models;
@@ -52,11 +53,25 @@ public partial class TmNotionDbCellMultiSelect : TmNotionDbCellBase
         else if (e.Key == "Enter") await ApplyAsync();
     }
 
+    private IReadOnlyList<string> ReadTags() => ParseTags(Value).ToList();
+
     private static IEnumerable<string> ParseTags(object? value) => value switch
     {
         string[] arr             => arr,
         IEnumerable<string> list => list,
         string s when s.Length > 0 => s.Split(',', StringSplitOptions.RemoveEmptyEntries),
+        // The API round-trips a MultiSelect as a JSON array; the demo client normalizes it to an
+        // object[] (F-04/F-05), and a bare JsonElement arrives from hosts that skip normalization.
+        System.Text.Json.JsonElement { ValueKind: System.Text.Json.JsonValueKind.Array } json
+            => json.EnumerateArray().Select(e => e.ValueKind == System.Text.Json.JsonValueKind.String
+                ? e.GetString() ?? string.Empty
+                : e.ToString()),
+        System.Text.Json.JsonElement { ValueKind: System.Text.Json.JsonValueKind.String } json
+            when (json.GetString() ?? string.Empty).Length > 0
+            => (json.GetString() ?? string.Empty).Split(',', StringSplitOptions.RemoveEmptyEntries),
+        IEnumerable many         => many.Cast<object?>()
+                                          .Select(v => v?.ToString() ?? string.Empty)
+                                          .Where(s => s.Length > 0),
         _                        => []
     };
 }

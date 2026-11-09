@@ -209,11 +209,9 @@
 }
 
 /* ── Sheet presentation (F11, MobilePresentation) ───────────────────────────── */
-/* The sheet header already carries the title, so the in-panel duplicate is dropped; the
-   filter/mark-all actions stay reachable inside the sheet body. */
-.tm-overlay-panel-sheet .tm-notification-bell__title {
-    display: none;
-}
+/* The sheet header carries its own title, but the in-panel title stays visible too: a
+   notification sheet at 390 must show .tm-notification-bell__title. The filter/mark-all
+   actions stay reachable inside the sheet body. */
 
 /* The popover's 400px list cap is a popover-height contract; a content-height sheet sizes to
    its content under the drawer's MaxHeight instead. */

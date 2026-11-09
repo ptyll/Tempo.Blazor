@@ -96,6 +96,7 @@
                       AriaLabel="@EffectiveAriaLabel"
                       AriaLabelledBy="@AriaLabelledBy"
                       CloseOnEscape="false"
+                      InitialFocusSelector="@InitialFocusSelector"
                       AdditionalAttributes="TrapFocusAttributes">
             @ChildContent
         </TmFocusScope>
@@ -303,6 +304,13 @@
     /// overlay.js, which restores focus to the anchor on dismissal. Default false. Popover mode only.
     /// </summary>
     [Parameter] public bool TrapFocus { get; set; }
+
+    /// <summary>
+    /// CSS selector of the element a trapped popover focuses first, scoped to the panel. Null
+    /// keeps the scope default (the first focusable). A menu whose role lives on an inner element
+    /// passes its first item here so a nested submenu does not win the initial move.
+    /// </summary>
+    [Parameter] public string? InitialFocusSelector { get; set; }
 
     /// <summary>
     /// The layout the panel presentation resolves from. <see cref="TmLayoutMode.Auto"/> follows the

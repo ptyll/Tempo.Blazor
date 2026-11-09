@@ -2,7 +2,7 @@
   "itemName": "TmNotionDbTimelineView",
   "kind": "Component",
   "category": "Notion Editor",
-  "description": "Gantt-style timeline view with day/week/month zoom and an optional sidebar table. Positions records as horizontal bars from their start and end date fields, with drag to move or resize (updating the dates), a today marker, and period navigation.",
+  "description": "Gantt-style timeline view (root classes tm-dbt tm-dbtl) with day/week/month zoom and an optional sidebar. Bars move and resize through the shared pointer-drag helper (no Blazor render on pointermove); Shift+Arrow moves a bar one unit and Alt+Arrow resizes it. A mobile layout hides the sidebar and a tap opens a date sheet. The header has a month row and a week row, a labelled today marker, and a pluralized record-count footer.",
   "packageId": "Tempo.Blazor.NotionEditor",
   "namespace": "Tempo.Blazor.Components.NotionEditor.Blocks.Database",
   "sourcePath": "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/Blocks/Database/TmNotionDbTimelineView.razor",

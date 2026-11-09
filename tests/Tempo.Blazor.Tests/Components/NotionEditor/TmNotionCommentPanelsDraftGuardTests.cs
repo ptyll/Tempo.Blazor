@@ -1,4 +1,5 @@
 using Bunit;
+using Tempo.Blazor.Components.Dropdowns;
 using FluentAssertions;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Rendering;
@@ -169,9 +170,7 @@ public class TmNotionBlockCommentPanelDraftGuardTests : LocalizationTestBase
         cut.Find(".tm-nbcp__reply .tm-nbcp__reply-input").Input("Reply draft");
         Panel(cut).HasUnsavedDraft.Should().BeTrue();
 
-        cut.FindAll(".tm-nbcp__entry-action")
-            .First(e => e.GetAttribute("title")?.Contains("Delete") == true)
-            .Click();
+        cut.InvokeAsync(() => cut.FindComponent<TmDropdown>().Instance.SelectItemAsync("delete")).Wait();
         cut.Find(".tm-dialog-btn-ok").Click();
 
         // The typed text survives into the new-thread composer (same input), so the delete must

@@ -17,7 +17,7 @@ public sealed class NotionAnalyticsE2ETests : NotionE2ETestBase
 
         var panel = page.GetByTestId("notion-analytics-panel");
         await Assertions.Expect(panel.GetByTestId("notion-analytics-top-pages")).ToContainTextAsync("CF31 Adoption Report");
-        await Assertions.Expect(panel.Locator(".tm-notion-analytics__sparkline-line")).ToBeVisibleAsync();
+        await Assertions.Expect(panel.Locator(".tm-notion-analytics__chart .tm-chart")).ToBeVisibleAsync();
 
         var firstViews = await ReadViewsAsync(page);
         await page.ReloadAsync(new PageReloadOptions { WaitUntil = WaitUntilState.DOMContentLoaded, Timeout = 60000 });
@@ -58,7 +58,7 @@ public sealed class NotionAnalyticsE2ETests : NotionE2ETestBase
 
     private static async Task OpenAnalyticsAsync(IPage page)
     {
-        await page.GetByTestId("notion-analytics-open").ClickAsync();
+        await ClickNotionCommandAsync(page, "notion-analytics-open");
         await page.GetByTestId("notion-analytics-panel").WaitForAsync(new LocatorWaitForOptions
         {
             State = WaitForSelectorState.Visible,

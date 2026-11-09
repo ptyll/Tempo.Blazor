@@ -1,0 +1,54 @@
+{
+  "itemName": "TmNotionPanelHeader",
+  "kind": "Component",
+  "category": "Notion Editor",
+  "description": "The one header of a Notion shell panel: title, optional subtitle, actions and close.",
+  "packageId": "Tempo.Blazor.NotionEditor",
+  "namespace": "Tempo.Blazor.Components.NotionEditor.UI",
+  "sourcePath": "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/UI/Shared/TmNotionPanelHeader.razor",
+  "documentationStatus": "generated",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.NotionEditor.UI"
+  ],
+  "parameters": [
+    {
+      "name": "Actions",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "Host actions rendered before the close button."
+    },
+    {
+      "name": "Class",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Additional CSS class."
+    },
+    {
+      "name": "FocusOnOpen",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Moves focus into the header when the panel opens."
+    },
+    {
+      "name": "OnClosed",
+      "type": "EventCallback",
+      "isRequired": false,
+      "description": "Raised by the close button and by Escape."
+    },
+    {
+      "name": "Subtitle",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Optional subtitle under the title."
+    },
+    {
+      "name": "Title",
+      "type": "string",
+      "isRequired": true,
+      "default": "\"\"",
+      "description": "The panel title. Rendered as an h2.",
+      "editorRequired": true
+    }
+  ],
+  "subcategory": "UI / Shared"
+}

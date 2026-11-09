@@ -1,0 +1,222 @@
+{
+  "itemName": "TmNotionCommentThreadView",
+  "kind": "Component",
+  "category": "Notion Editor",
+  "description": "TmNotionCommentThreadView Blazor component in the Notion Editor category.",
+  "packageId": "Tempo.Blazor.NotionEditor",
+  "namespace": "Tempo.Blazor.Components.NotionEditor",
+  "sourcePath": "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/UI/TmNotionCommentThreadView.razor",
+  "documentationStatus": "generated",
+  "requiredImports": [
+    "@using Tempo.Blazor.Components.NotionEditor"
+  ],
+  "parameters": [
+    {
+      "name": "AbsoluteTime",
+      "type": "Func<DateTimeOffset, string>?",
+      "isRequired": false,
+      "description": "Absolute time for the title."
+    },
+    {
+      "name": "CanDelete",
+      "type": "Func<TmCommentEntry, bool>?",
+      "isRequired": false,
+      "description": "True when the current user may delete the entry."
+    },
+    {
+      "name": "CanEdit",
+      "type": "Func<TmCommentEntry, bool>?",
+      "isRequired": false,
+      "description": "True when the current user may edit the entry."
+    },
+    {
+      "name": "Class",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Class of the list root. Defaults to {ClassPrefix}__thread."
+    },
+    {
+      "name": "ClassPrefix",
+      "type": "string",
+      "isRequired": true,
+      "default": "\"tm-nbcp\"",
+      "description": "CSS class prefix of the owning panel.",
+      "editorRequired": true
+    },
+    {
+      "name": "EditingEntryId",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Entry currently being edited."
+    },
+    {
+      "name": "EditText",
+      "type": "string",
+      "isRequired": false,
+      "default": "\"\"",
+      "description": "Text of the open edit."
+    },
+    {
+      "name": "FormatBody",
+      "type": "Func<TmCommentEntry, MarkupString>?",
+      "isRequired": false,
+      "description": "Turns an entry body into the markup the panel shows."
+    },
+    {
+      "name": "FormatTime",
+      "type": "Func<DateTimeOffset, string>?",
+      "isRequired": false,
+      "description": "Relative time. The parent resolves ITmRelativeTimeFormatter."
+    },
+    {
+      "name": "HideReplyOnLastEntry",
+      "type": "bool",
+      "isRequired": false,
+      "default": "false",
+      "description": "Hides the inline Reply action on the last entry (panels that render a thread-level reply trigger right below the thread)."
+    },
+    {
+      "name": "InlineReplyBaseline",
+      "type": "string",
+      "isRequired": false,
+      "default": "\"\"",
+      "description": "Text that does not count as an inline-reply draft."
+    },
+    {
+      "name": "InlineReplyResetToken",
+      "type": "int",
+      "isRequired": false,
+      "description": "Bumped by the parent to clear or reseed the inline composer."
+    },
+    {
+      "name": "InlineReplyText",
+      "type": "string",
+      "isRequired": false,
+      "default": "\"\"",
+      "description": "Seed of the open inline reply (the auto-inserted quote). Not updated per keystroke."
+    },
+    {
+      "name": "InlineReplyTextChanged",
+      "type": "Action<string>?",
+      "isRequired": false,
+      "description": "Stores the inline reply text without re-rendering the thread."
+    },
+    {
+      "name": "LabelPrefix",
+      "type": "string",
+      "isRequired": false,
+      "default": "\"TmNotionBlockComment\"",
+      "description": "Localization prefix used when Labels is null."
+    },
+    {
+      "name": "Labels",
+      "type": "TmNotionCommentLabels?",
+      "isRequired": false,
+      "description": "Resolved strings. Null reads them from LabelPrefix."
+    },
+    {
+      "name": "MentionProvider",
+      "type": "ITmPeopleProvider?",
+      "isRequired": false,
+      "description": "People provider for @-mentions inside edit and reply composers."
+    },
+    {
+      "name": "Nodes",
+      "type": "IReadOnlyList<CommentThreadNode>",
+      "isRequired": false,
+      "default": "[]",
+      "description": "Reply tree. The parent builds it."
+    },
+    {
+      "name": "OnCancelEdit",
+      "type": "EventCallback",
+      "isRequired": false,
+      "description": "Raised by the edit cancel."
+    },
+    {
+      "name": "OnCancelReply",
+      "type": "EventCallback",
+      "isRequired": false,
+      "description": "Raised by the inline reply cancel."
+    },
+    {
+      "name": "OnDelete",
+      "type": "EventCallback<TmCommentEntry>",
+      "isRequired": false,
+      "description": "Raised by Delete. The parent shows the confirm dialog."
+    },
+    {
+      "name": "OnDraftChanged",
+      "type": "EventCallback",
+      "isRequired": false,
+      "description": "Raised after a draft-bearing field changes, so the parent can publish its snapshot."
+    },
+    {
+      "name": "OnEdit",
+      "type": "EventCallback<TmCommentEntry>",
+      "isRequired": false,
+      "description": "Raised by Edit."
+    },
+    {
+      "name": "OnEditKeyDown",
+      "type": "EventCallback<KeyboardEventArgs>",
+      "isRequired": false,
+      "description": "Raised for a keydown inside the edit composer."
+    },
+    {
+      "name": "OnEditTextChanged",
+      "type": "EventCallback<string>",
+      "isRequired": false,
+      "description": "Raised when the edit text changes."
+    },
+    {
+      "name": "OnEntryKeyDown",
+      "type": "EventCallback<TmNotionCommentEntryKey>",
+      "isRequired": false,
+      "description": "Raised for a keydown on an entry row."
+    },
+    {
+      "name": "OnQuote",
+      "type": "EventCallback<TmCommentEntry>",
+      "isRequired": false,
+      "description": "Raised by Quote. A delegate shows the menu item."
+    },
+    {
+      "name": "OnReply",
+      "type": "EventCallback<TmCommentEntry>",
+      "isRequired": false,
+      "description": "Raised by Reply."
+    },
+    {
+      "name": "OnSaveEdit",
+      "type": "EventCallback",
+      "isRequired": false,
+      "description": "Raised by the edit save."
+    },
+    {
+      "name": "OnSubmitReply",
+      "type": "EventCallback",
+      "isRequired": false,
+      "description": "Raised by the inline reply submit."
+    },
+    {
+      "name": "Reactions",
+      "type": "RenderFragment<TmCommentEntry>?",
+      "isRequired": false,
+      "description": "Reactions fragment. Null hides reactions."
+    },
+    {
+      "name": "ReplyingToEntryId",
+      "type": "string?",
+      "isRequired": false,
+      "description": "Entry currently being replied to."
+    },
+    {
+      "name": "Submitting",
+      "type": "bool",
+      "isRequired": false,
+      "description": "True while a send is in flight."
+    }
+  ],
+  "subcategory": "UI"
+}

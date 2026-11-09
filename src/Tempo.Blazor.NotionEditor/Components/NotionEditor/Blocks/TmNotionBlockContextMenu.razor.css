@@ -2,40 +2,19 @@
    TmNotionBlockContextMenu — block action dropdown (scoped)
    ═══════════════════════════════════════════════════════════════ */
 
-/* ── Backdrop (click-outside capture) ────────────────────────── */
-
-.tm-notion-ctx-backdrop {
-    position:   fixed;
-    inset:      0;
-    z-index:    calc(var(--tm-z-dropdown) - 1);
-}
+/* Phase 6: dismissal and stacking are the core overlay's. */
 
 /* ── Menu panel ───────────────────────────────────────────────── */
 
-/* The menu is viewport-fixed and positioned by tmNotionEditor.positionContextMenu
-   at the anchor's rect. It must NOT be position:absolute inside the block: the
-   block lives in the scrollable .tm-notion-main column, so scrolling the column
-   (which scroll-reveal actions do when a submenu item overflows the column's
-   client rect) would drag the menu out from under a stationary pointer, firing
-   a phantom @onmouseleave that collapses open submenus mid-interaction. */
+/* Placement is the shared floating menu's. The inner panel keeps only the card chrome. */
 .tm-notion-ctx {
-    position:      fixed;
-    top:           0;
-    left:          0;
-    visibility:    hidden;
-    z-index:       var(--tm-z-dropdown);
     min-width:     192px;
     padding:       var(--tm-space-1);
     background:    var(--tm-bg-surface);
     border:        1px solid var(--tm-border-color);
     border-radius: var(--tm-radius-lg);
-    box-shadow:    0 8px 24px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.07);
+    box-shadow: var(--tm-shadow-popover);
     animation:     tm-notion-ctx-in var(--tm-notion-anim-fast) ease;
-}
-
-/* Revealed once JS has written top/left — prevents a one-frame flash at 0,0. */
-.tm-notion-ctx--positioned {
-    visibility: visible;
 }
 
 @keyframes tm-notion-ctx-in {
@@ -68,15 +47,15 @@
 }
 
 .tm-notion-ctx__item--danger {
-    color: var(--tm-color-error, #e53935);
+    color: var(--tm-color-error);
 }
 
 .tm-notion-ctx__item--danger:hover {
-    background: rgba(229, 57, 53, 0.06);
+    background: color-mix(in srgb, var(--tm-color-danger) 6%, transparent);
 }
 
 .tm-notion-ctx__item--active {
-    background: var(--tm-notion-bg-block-selected, rgba(59, 130, 246, 0.08));
+    background: var(--tm-notion-bg-block-selected);
     font-weight: var(--tm-font-weight-medium);
 }
 
@@ -140,7 +119,7 @@
     background:    var(--tm-bg-surface);
     border:        1px solid var(--tm-border-color);
     border-radius: var(--tm-radius-lg);
-    box-shadow:    0 8px 24px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.07);
+    box-shadow: var(--tm-shadow-popover);
     animation:     tm-notion-ctx-in var(--tm-notion-anim-fast) ease;
 }
 
@@ -170,10 +149,12 @@
     font-size: var(--tm-font-size-sm);
 }
 
-/* ── Color submenu ────────────────────────────────────────────── */
+/* ── Color submenu (F-12) ─────────────────────────────────────── */
 
+/* The group label is its own row above the swatch grid. */
 .tm-notion-ctx-color__section-label {
-    padding:     4px var(--tm-space-2) 2px;
+    display:     block;
+    padding:     var(--tm-space-2) var(--tm-space-2) var(--tm-space-1);
     font-size:   var(--tm-font-size-xs);
     font-weight: var(--tm-font-weight-medium);
     color:       var(--tm-text-tertiary);
@@ -189,13 +170,21 @@
     display:       inline-flex;
     align-items:   center;
     justify-content: center;
-    width:         18px;
-    height:        18px;
+    /* F-12: 18px swatches were clipped by the 72px panel — 28px desktop, 44px coarse. */
+    width:         28px;
+    height:        28px;
     border-radius: var(--tm-radius-sm);
     flex-shrink:   0;
-    font-size:     12px;
+    font-size:     var(--tm-font-size-sm);
     font-weight:   var(--tm-font-weight-bold);
     border:        1px solid var(--tm-border-color);
+}
+
+@media (pointer: coarse) {
+    .tm-notion-ctx-color__swatch {
+        width:  var(--tm-touch-target);
+        height: var(--tm-touch-target);
+    }
 }
 
 .tm-notion-ctx-color__swatch--text {

@@ -127,6 +127,12 @@
       "description": "ARIA role of the panel — typically menu, listbox, dialog or tooltip. A Role=\"dialog\" panel must carry an accessible name via AriaLabelledBy (preferred when the panel renders a visible title) or AriaLabel. When the role lives on an inner element instead, leave this unset and pass SheetInitialFocusSelector so a mobile sheet still opens on that element."
     },
     {
+      "name": "InitialFocusSelector",
+      "type": "string?",
+      "isRequired": false,
+      "description": "CSS selector of the element a trapped desktop popover focuses first. Null keeps the first focusable."
+    },
+    {
       "name": "SheetInitialFocusSelector",
       "type": "string?",
       "isRequired": false,

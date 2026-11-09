@@ -5,12 +5,14 @@
 @using Tempo.Blazor.Components.Feedback
 
 @* ── Inline panel — rendered inside page header area ─────────────────────── *@
-<div class="tm-npcp @(Expanded ? "tm-npcp--expanded" : "")"
+<div class="tm-npcp @((Expanded || Mode == TmNotionPageCommentPanelMode.Embedded) ? "tm-npcp--expanded" : "") @(Mode == TmNotionPageCommentPanelMode.Embedded ? "tm-npcp--embedded" : "")"
      role="region"
      aria-label="@Loc["TmNotionPageComment_PanelLabel"]"
      @ref="_panelRef">
 
-    @* ── Toggle header ─────────────────────────────────────────────────────── *@
+    @* ── Toggle header (Inline mode only; Embedded renders the body directly) ── *@
+    @if (Mode == TmNotionPageCommentPanelMode.Inline)
+    {
     <button class="tm-npcp__toggle"
             type="button"
             aria-expanded="@Expanded"
@@ -28,40 +30,46 @@
             </span>
         }
     </button>
+    }
 
-    @* ── Expandable body ───────────────────────────────────────────────────── *@
-    @if (Expanded)
+    @* ── Expandable body (Inline: when Expanded; Embedded: always) ─────────── *@
+    @if (Mode == TmNotionPageCommentPanelMode.Embedded || Expanded)
     {
         <div class="tm-npcp__body">
 
-            @* ── Thread list ──────────────────────────────────────────────── *@
-            @if (_loading)
-            {
-                <div class="tm-npcp__status" aria-live="polite" aria-busy="true">
-                    <span class="tm-npcp__spinner" aria-hidden="true"></span>
-                    @Loc["TmNotionPageComment_Loading"]
-                </div>
-            }
-            else if (_comments.Count == 0)
-            {
-                <div class="tm-npcp__status">@Loc["TmNotionPageComment_NoComments"]</div>
-            }
-            else
-            {
-                @* ── Toolbar ──────────────────────────────────────────────── *@
-                <div class="tm-npcp__toolbar">
-                    <button class="tm-npcp__mark-all-read"
-                            type="button"
-                            @onclick="MarkAllAsReadAsync">
-                        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
-                            <path d="M2 6l3 3 5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                        </svg>
-                        @Loc["TmNotionPageComment_MarkAllAsRead"]
-                    </button>
-                </div>
+            @* ── Summary bar: unresolved count + mark all as read ──────────── *@
+            <div class="tm-npcp__summary">
+                <span class="tm-npcp__summary-count">
+                    @Loc.Plural("TmNotionPageComment_UnresolvedSummary", _unresolvedCount)
+                </span>
+                <button class="tm-npcp__mark-all-read"
+                        type="button"
+                        disabled="@(_comments.Count == 0)"
+                        @onclick="MarkAllAsReadAsync">
+                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+                        <path d="M2 6l3 3 5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    @Loc["TmNotionPageComment_MarkAllAsRead"]
+                </button>
+            </div>
 
-                <div class="tm-npcp__threads" role="list" aria-label="@Loc["TmNotionPageComment_Thread"]">
-                    @foreach (var comment in _comments)
+            @* ── Thread list ──────────────────────────────────────────────── *@
+            <TmNotionCommentThreadList ClassPrefix="tm-npcp"
+                                       Class="tm-npcp__threads"
+                                       ListLabel="@Loc["TmNotionPageComment_Thread"]"
+                                       Loading="_loading"
+                                       Empty="@(_comments.Count == 0)"
+                                       LoadingText="@Loc["TmNotionPageComment_Loading"]"
+                                       EmptyText="@Loc["TmNotionPageComment_NoComments"]"
+                                       ShowDeleteConfirm="_showDeleteConfirm"
+                                       DeleteTitle="@Loc["TmNotionPageComment_Delete"]"
+                                       DeleteMessage="@Loc["TmNotionPageComment_DeleteConfirm"]"
+                                       DeleteOkText="@Loc["Tm_Delete"]"
+                                       DeleteCancelText="@Loc["Tm_Cancel"]"
+                                       OnDeleteResult="HandleDeleteConfirmResult">
+            @if (!_loading && _comments.Count > 0)
+            {
+                @foreach (var comment in _comments)
                     {
                         var threadTree = CommentThreadHelper.BuildTree(comment.Entries);
                         <div class="tm-npcp__thread @(comment.IsResolved() ? "tm-npcp__thread--resolved" : "")"
@@ -126,217 +134,98 @@
                             </div>
 
                             @* ── Entries (tree) ───────────────────────────── *@
-                            @foreach (var node in FlattenTree(threadTree))
-                            {
-                                <div class="tm-npcp__entry tm-npcp__entry--level-@node.Level @(_replyingToEntryId == node.Entry.Id ? "tm-npcp__entry--replying" : "")"
-                                     role="listitem"
-                                     tabindex="0"
-                                     @onkeydown="e => HandleEntryKeyDownAsync(e, node.Entry, comment)">
-                                        <div class="tm-npcp__entry-indent"></div>
-                                        <div class="tm-npcp__entry-content">
-                                            <div class="tm-npcp__avatar" aria-hidden="true">
-                                                @if (!string.IsNullOrEmpty(node.Entry.AuthorAvatarUrl()))
-                                                {
-                                                    <img class="tm-npcp__avatar-img" src="@node.Entry.AuthorAvatarUrl()" alt="" />
-                                                }
-                                                else
-                                                {
-                                                    <span class="tm-npcp__avatar-fallback">@AvatarInitial(node.Entry.AuthorDisplayName())</span>
-                                                }
-                                            </div>
-                                            <div class="tm-npcp__entry-body">
-                                                <div class="tm-npcp__entry-meta">
-                                                    <span class="tm-npcp__entry-author">@node.Entry.AuthorDisplayName()</span>
-                                                    <time class="tm-npcp__entry-time" datetime="@node.Entry.CreatedAt.ToString("O")">
-                                                        @FormatTime(node.Entry.CreatedAt)
-                                                    </time>
-                                                </div>
-
-                                                @if (_editingEntryId == node.Entry.Id)
-                                                {
-                                                    @* Isolated from the entry's Enter->reply
-                                                       handler: Enter inside the edit input must
-                                                       insert a newline, not start a reply. *@
-                                                    <div class="tm-npcp__edit-wrap" @onkeydown:stopPropagation="true">
-                                                        <TmCommentMentionInput Class="tm-npcp__edit-input"
-                                                                               Rows="3"
-                                                                               @bind-Value="_editText"
-                                                                               @bind-Value:after="NotifyDraftChangedAsync"
-                                                                               OnKeyDown="HandleEditKeyDownAsync"
-                                                                               AriaLabel="@Loc["TmNotionPageComment_EditLabel"]"
-                                                                               MentionProvider="Context.MentionProvider" />
-                                                        <div class="tm-npcp__edit-actions">
-                                                            <button class="tm-npcp__edit-save" type="button"
-                                                                    disabled="@string.IsNullOrWhiteSpace(_editText)"
-                                                                    @onclick="SaveEditAsync">@Loc["TmNotionPageComment_Save"]</button>
-                                                            <button class="tm-npcp__edit-cancel" type="button"
-                                                                    @onclick="CancelEdit">@Loc["TmNotionPageComment_Cancel"]</button>
-                                                        </div>
-                                                    </div>
-                                                }
-                                                else
-                                                {
-                                                    <div class="tm-npcp__entry-text">@((MarkupString)CommentHtmlFormatter.Format(NotionHtmlSanitizer.SanitizeBlockContent(node.Entry.HtmlContent())))</div>
-                                                    @if (node.Entry.EditedAt.HasValue)
-                                                    {
-                                                        <span class="tm-npcp__entry-edited">@Loc["TmNotionPageComment_Edited"]</span>
-                                                    }
-                                                    @* Reaction buttons are native <button>s inside
-                                                       the keyed entry — isolate their keydowns too. *@
-                                                    <span @onkeydown:stopPropagation="true"><TmCommentReactions Reactions="node.Entry.Reactions"
-                                                                        EntryId="@node.Entry.Id"
-                                                                        CurrentUserId="@CurrentUserId"
-                                                                        Provider="@(Context.CommentProvider as ITmCommentReactionProvider)"
-                                                                        OnChanged="StateHasChanged" /></span>
-                                                }
-
-                                                @if (_editingEntryId != node.Entry.Id)
-                                                {
-                                                    @* Native <button>s: their keydowns must not
-                                                       bubble into the entry's Enter->reply case. *@
-                                                    <div class="tm-npcp__entry-actions" role="group" @onkeydown:stopPropagation="true">
-                                                        <button class="tm-npcp__entry-action"
-                                                                type="button"
-                                                                title="@Loc["TmNotionPageComment_ReplyToThis"]"
-                                                                @onclick="() => StartReplyToEntry(node.Entry, comment)">
-                                                            <svg width="11" height="11" viewBox="0 0 12 12" fill="none" aria-hidden="true">
-                                                                <path d="M6 2v5M6 7l-2-2M6 7l2-2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
-                                                            </svg>
-                                                            @Loc["TmNotionPageComment_ReplyToThis"]
-                                                        </button>
-                                                        @if (node.Entry.CanEdit)
-                                                        {
-                                                            <button class="tm-npcp__entry-action" type="button"
-                                                                    title="@Loc["TmNotionPageComment_Edit"]"
-                                                                    @onclick="() => StartEdit(node.Entry)">
-                                                                <svg width="11" height="11" viewBox="0 0 11 11" fill="none" aria-hidden="true">
-                                                                    <path d="M2 8.5l1.5.5 5-5-2-2L2 8.5zm7-7l1 1-1.5 1.5-1-1L9 1.5z"
-                                                                          stroke="currentColor" stroke-width="1.2" stroke-linecap="round" fill="none"/>
-                                                                </svg>
-                                                                @Loc["TmNotionPageComment_Edit"]
-                                                            </button>
-                                                        }
-                                                        @if (node.Entry.CanDelete)
-                                                        {
-                                                            <button class="tm-npcp__entry-action tm-npcp__entry-action--danger" type="button"
-                                                                    title="@Loc["TmNotionPageComment_Delete"]"
-                                                                    @onclick="() => DeleteEntryAsync(comment, node.Entry)">
-                                                                <svg width="11" height="11" viewBox="0 0 11 11" fill="none" aria-hidden="true">
-                                                                    <path d="M2 3h7M4 3V1.5h3V3M4.5 5v3.5M6.5 5v3.5M2.5 3l.5 6.5h5L9 3"
-                                                                          stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
-                                                                </svg>
-                                                                @Loc["TmNotionPageComment_Delete"]
-                                                            </button>
-                                                        }
-                                                    </div>
-                                                }
-
-                                                @* Inline reply *@
-                                                @if (_replyingToEntryId == node.Entry.Id)
-                                                {
-                                                    <div class="tm-npcp__inline-reply" @onkeydown:stopPropagation="true">
-                                                        <TmCommentMentionInput Class="tm-npcp__reply-input"
-                                                                               Rows="2"
-                                                                               Placeholder="@Loc["TmNotionPageComment_ReplyPlaceholder"]"
-                                                                               @bind-Value="_inlineReplyText"
-                                                                               @bind-Value:after="NotifyDraftChangedAsync"
-                                                                               OnKeyDown="HandleInlineReplyKeyDownAsync"
-                                                                               AriaLabel="@Loc["TmNotionPageComment_ReplyLabel"]"
-                                                                               MentionProvider="Context.MentionProvider" />
-                                                        <div class="tm-npcp__reply-actions">
-                                                            <span class="tm-npcp__reply-hint">@Loc["TmNotionPageComment_ReplyHint"]</span>
-                                                            <div class="tm-npcp__reply-btns">
-                                                                <button class="tm-npcp__reply-cancel" type="button"
-                                                                        @onclick="CancelInlineReply">@Loc["TmNotionPageComment_Cancel"]</button>
-                                                                <button class="tm-npcp__reply-send" type="button"
-                                                                        disabled="@(string.IsNullOrWhiteSpace(_inlineReplyText) || _submitting)"
-                                                                        @onclick="SendInlineReplyAsync">
-                                                                    @if (_submitting)
-                                                                    {
-                                                                        <span class="tm-npcp__spinner tm-npcp__spinner--sm" aria-hidden="true"></span>
-                                                                    }
-                                                                    @Loc["TmNotionPageComment_Reply"]
-                                                                </button>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                }
-                                            </div>
-                                        </div>
-
-                                    </div>
-                            }
+                            <TmNotionCommentThreadView ClassPrefix="tm-npcp"
+                                                       Nodes="threadTree"
+                                                       ReplyingToEntryId="@_replyingToEntryId"
+                                                       EditingEntryId="@_editingEntryId"
+                                                       EditText="@_editText"
+                                                       OnEditTextChanged="OnEditTextChanged"
+                                                       OnEditKeyDown="HandleEditKeyDownAsync"
+                                                       InlineReplyText="@_inlineReplyText"
+                                                       InlineReplyBaseline="@_inlineReplyBaseline"
+                                                       InlineReplyResetToken="_inlineReset"
+                                                       InlineReplyTextChanged="OnInlineText"
+                                                       FormatTime="FormatTime"
+                                                       AbsoluteTime="AbsoluteTime"
+                                                       FormatBody="FormatEntry"
+                                                       CanEdit="e => e.CanEdit"
+                                                       CanDelete="e => e.CanDelete"
+                                                       MentionProvider="Context.MentionProvider"
+                                                       OnEntryKeyDown="OnEntryKey"
+                                                       OnReply="OnReply"
+                                                       OnEdit="StartEdit"
+                                                       OnDelete="OnDelete"
+                                                       OnSubmitReply="SendInlineReplyAsync"
+                                                       OnCancelReply="CancelInlineReply"
+                                                       OnSaveEdit="SaveEditAsync"
+                                                       OnCancelEdit="CancelEdit"
+                                                       OnDraftChanged="NotifyDraftChangedAsync"
+                                                       Submitting="_submitting"
+                                                       LabelPrefix="TmNotionPageComment"
+                                                        HideReplyOnLastEntry="true">
+                                <Reactions>
+                                    <span @onkeydown:stopPropagation="true">
+                                        <TmCommentReactions Reactions="context.Reactions"
+                                                            EntryId="@context.Id"
+                                                            CurrentUserId="@CurrentUserId"
+                                                            Provider="@(Context.CommentProvider as ITmCommentReactionProvider)"
+                                                            OnChanged="StateHasChanged" />
+                                    </span>
+                                </Reactions>
+                            </TmNotionCommentThreadView>
 
                             @* ── Thread reply ────────────────────────────── *@
                             @if (!comment.IsResolved() && _replyingToEntryId is null)
                             {
                                 @if (_replyingToCommentId == comment.Id)
                                 {
-                                    <div class="tm-npcp__thread-reply">
-                                        <TmCommentMentionInput Class="tm-npcp__reply-input"
-                                                               Rows="2"
-                                                               Placeholder="@Loc["TmNotionPageComment_ReplyPlaceholder"]"
-                                                               @bind-Value="_replyText"
-                                                               @bind-Value:after="NotifyDraftChangedAsync"
-                                                               OnKeyDown="HandleReplyKeyDownAsync"
-                                                               AriaLabel="@Loc["TmNotionPageComment_ReplyLabel"]"
-                                                               MentionProvider="Context.MentionProvider" />
-                                        <div class="tm-npcp__reply-actions">
-                                            <span class="tm-npcp__reply-hint">@Loc["TmNotionPageComment_ReplyHint"]</span>
-                                            <div class="tm-npcp__reply-btns">
-                                                <button class="tm-npcp__reply-cancel" type="button"
-                                                        @onclick="CancelReply">@Loc["TmNotionPageComment_Cancel"]</button>
-                                                <button class="tm-npcp__reply-send" type="button"
-                                                        disabled="@(string.IsNullOrWhiteSpace(_replyText) || _submitting)"
-                                                        @onclick="SendReplyAsync">
-                                                    @if (_submitting)
-                                                    {
-                                                        <span class="tm-npcp__spinner tm-npcp__spinner--sm" aria-hidden="true"></span>
-                                                    }
-                                                    @Loc["TmNotionPageComment_Reply"]
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
+                                    <TmNotionCommentComposer ClassPrefix="tm-npcp"
+                                                             Class="tm-npcp__thread-reply"
+                                                             Value=""
+                                                             ResetToken="_replyReset"
+                                                             TextChanged="OnReplyText"
+                                                             DraftChanged="OnComposerDraft"
+                                                             Placeholder="@Loc["TmNotionPageComment_ReplyPlaceholder"]"
+                                                             AriaLabel="@Loc["TmNotionPageComment_ReplyLabel"]"
+                                                             Hint="@Loc["TmNotionPageComment_ReplyHint"]"
+                                                             SubmitText="@Loc["TmNotionPageComment_Reply"]"
+                                                             CancelText="@Loc["TmNotionPageComment_Cancel"]"
+                                                             Cancel="CancelReply"
+                                                             OnSubmit="SubmitReply"
+                                                             Submitting="_submitting"
+                                                             MentionProvider="Context.MentionProvider" />
                                 }
                                 else
                                 {
                                     <button class="tm-npcp__reply-trigger" type="button"
                                             @onclick="() => StartReply(comment)">
-                                        @Loc["TmNotionPageComment_ReplyTrigger"]
+                                        @Loc["TmNotionPageComment_ReplyToThis"]
                                     </button>
                                 }
                             }
                         </div>
                     }
-                </div>
             }
+            </TmNotionCommentThreadList>
 
             @* ── New comment input ─────────────────────────────────────────── *@
             @if (_replyingToCommentId is null && _replyingToEntryId is null)
             {
-                <div class="tm-npcp__new-comment">
-                    <TmCommentMentionInput Class="tm-npcp__reply-input"
-                                           Rows="2"
-                                           Placeholder="@Loc["TmNotionPageComment_NewPlaceholder"]"
-                                           @bind-Value="_newCommentText"
-                                           @bind-Value:after="NotifyDraftChangedAsync"
-                                           OnKeyDown="HandleNewKeyDownAsync"
-                                           AriaLabel="@Loc["TmNotionPageComment_NewLabel"]"
-                                           MentionProvider="Context.MentionProvider" />
-                    <div class="tm-npcp__reply-actions">
-                        <span class="tm-npcp__reply-hint">@Loc["TmNotionPageComment_ReplyHint"]</span>
-                        <button class="tm-npcp__reply-send" type="button"
-                                disabled="@(string.IsNullOrWhiteSpace(_newCommentText) || _submitting)"
-                                @onclick="SendNewCommentAsync">
-                            @if (_submitting)
-                            {
-                                <span class="tm-npcp__spinner tm-npcp__spinner--sm" aria-hidden="true"></span>
-                            }
-                            @Loc["TmNotionPageComment_Comment"]
-                        </button>
-                    </div>
-                </div>
+                <TmNotionCommentComposer ClassPrefix="tm-npcp"
+                                         Class="tm-npcp__new-comment"
+                                         Value=""
+                                         ResetToken="_newReset"
+                                         TextChanged="OnNewText"
+                                         DraftChanged="OnComposerDraft"
+                                         Placeholder="@Loc["TmNotionPageComment_NewPlaceholder"]"
+                                         AriaLabel="@Loc["TmNotionPageComment_NewLabel"]"
+                                         Hint="@Loc["TmNotionPageComment_ReplyHint"]"
+                                         SubmitText="@Loc["TmNotionPageComment_Comment"]"
+                                         OnSubmit="SubmitNew"
+                                         Submitting="_submitting"
+                                         ShowAvatar="true"
+                                         AuthorName="@CurrentUserId"
+                                         MentionProvider="Context.MentionProvider" />
             }
 
             @if (!string.IsNullOrEmpty(_error))
@@ -344,15 +233,7 @@
                 <div class="tm-npcp__error" role="alert">@_error</div>
             }
 
-            @* ── Delete confirmation dialog ───────────────────────────────────────────── *@
-            <TmDialog Show="_showDeleteConfirm"
-                      Type="DialogType.Confirm"
-                      Title="@Loc["TmNotionPageComment_Delete"]"
-                      Message="@Loc["TmNotionPageComment_DeleteConfirm"]"
-                      IsDangerous="true"
-                      OkButtonText="@Loc["Tm_Delete"]"
-                      CancelButtonText="@Loc["Tm_Cancel"]"
-                      OnResult="HandleDeleteConfirmResult" />
+
 
         </div>
     }

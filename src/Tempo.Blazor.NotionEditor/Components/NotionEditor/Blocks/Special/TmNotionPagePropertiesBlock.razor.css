@@ -1,8 +1,8 @@
 .tm-page-props {
-    border: 1px solid var(--tm-color-border);
+    border: 1px solid var(--tm-border-color);
     border-radius: var(--tm-radius-md);
     background: var(--tm-color-surface);
-    color: var(--tm-color-text);
+    color: var(--tm-text-primary);
     overflow: hidden;
 }
 
@@ -11,7 +11,7 @@
     align-items: center;
     gap: var(--tm-space-2);
     padding: var(--tm-space-3);
-    border-bottom: 1px solid var(--tm-color-border);
+    border-bottom: 1px solid var(--tm-border-color);
     background: var(--tm-bg-muted);
 }
 
@@ -46,10 +46,10 @@
 }
 
 .tm-page-props__add {
-    border: 1px solid var(--tm-color-border);
+    border: 1px solid var(--tm-border-color);
     border-radius: var(--tm-radius-sm);
     background: var(--tm-color-surface);
-    color: var(--tm-color-text);
+    color: var(--tm-text-primary);
     padding: var(--tm-space-1) var(--tm-space-3);
     font: inherit;
     font-size: var(--tm-font-size-sm);
@@ -88,13 +88,13 @@
 }
 
 .tm-page-props__row {
-    border-top: 1px solid var(--tm-color-border);
+    border-top: 1px solid var(--tm-border-color);
 }
 
 .tm-page-props__th,
 .tm-page-props__cell {
     padding: var(--tm-space-2);
-    border-right: 1px solid var(--tm-color-border);
+    border-right: 1px solid var(--tm-border-color);
 }
 
 .tm-page-props__th:last-child,
@@ -109,7 +109,7 @@
     border: 1px solid transparent;
     border-radius: var(--tm-radius-sm);
     background: transparent;
-    color: var(--tm-color-text);
+    color: var(--tm-text-primary);
     font: inherit;
     line-height: 1.35;
     padding: var(--tm-space-1) var(--tm-space-2);

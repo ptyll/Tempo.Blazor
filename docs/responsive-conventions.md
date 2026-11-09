@@ -118,8 +118,12 @@ that frame has no measurement yet.
 - `LayoutMode="Mobile"`, `Tablet` or `Desktop` forces that layout and **never imports the
   observer**. A test renders a mode without a DOM, and a host can pin a layout.
 - Children read the cascaded `TmLayoutContext` (`Mode`, `Resolved`, `IsMobile`, `IsTablet`,
-  `IsDesktop`, `CssModifier`). The root also carries `tm-layout--{mode}` and `data-layout`, so CSS
-  can branch without the context.
+  `IsDesktop`, `CssModifier`, `IsCoarsePointer`). The root also carries `tm-layout--{mode}`,
+  `data-layout` and `data-pointer` (`coarse` or `fine`), so CSS can branch without the context.
+  `IsCoarsePointer` is `matchMedia('(pointer: coarse)')`, reported when that query flips — never
+  from `pointermove`. It is independent of the width band: a desktop-width touch device stays
+  `data-layout="desktop"` and reads coarse. A forced observer does not measure; it inherits the
+  ancestor's signal. False until a report arrives.
 - `ResolvedLayoutChanged` fires when the rendered mode changes. The initial value is not a change,
   except that an Auto observer which inherits a non-Desktop resolution from a cascading parent
   reports it once so late-mounted consumers adopt it. Never pair `LayoutMode` with

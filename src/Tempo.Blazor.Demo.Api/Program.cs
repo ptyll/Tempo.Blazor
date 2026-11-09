@@ -18,6 +18,11 @@ QuestPDF.Settings.License = QuestPDF.Infrastructure.LicenseType.Community;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// IFieldConfig / IDatabaseViewConfig are polymorphic ([JsonPolymorphic] on the interfaces in
+// Abstractions): STJ writes the runtime payload with a $type discriminator and reads it back, so
+// both the API responses (F-04/F-05: Select/Status options reach the WASM client) and the client's
+// PUT/POST bodies bind on the server.
+
 // `diagrams.db` next to the project is COMMITTED, so anything that boots this host mutates the
 // working tree — the e2e lane leaves it modified plus a -wal/-shm pair every run. Overridable via
 // `Demo__DiagramsDbPath`, which the Playwright host launcher points at a temp directory; unset it
@@ -44,6 +49,7 @@ builder.Services.AddCors(o => o.AddDefaultPolicy(p =>
     p.SetIsOriginAllowed(origin => DemoCorsPolicy.IsAllowed(origin, configuredOrigins, isDevelopment))
      .AllowAnyMethod()
      .AllowAnyHeader()
+     .WithExposedHeaders("X-Demo-Pid", "X-Demo-Stored", "X-Demo-After")
      .AllowCredentials()));   // required for SignalR WebSocket handshake; SetIsOriginAllowed echoes the origin, so credentials stay valid
 
 builder.Services.AddSignalR();

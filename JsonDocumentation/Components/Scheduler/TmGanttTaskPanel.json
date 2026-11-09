@@ -95,6 +95,18 @@
       "description": "Fires when the user submits a new comment. The entry's IsInternal is the composer flag when the host used the internal switch; the panel never hides internal comments."
     },
     {
+      "name": "CommentSubmitHandler",
+      "type": "Func<TmCommentSubmission, Task<bool>>?",
+      "isRequired": false,
+      "description": "Optional save handler for a NEW comment, forwarded to the embedded TmActivityComments. When set it runs INSTEAD of the panel's comment posting (the legacy OnCommentAdded entry callback): return true to close the composer, false to keep the draft open. Null (default) keeps the legacy behavior. Added in 2.10.0."
+    },
+    {
+      "name": "CommentEditHandler",
+      "type": "Func<TmCommentEdit, Task<bool>>?",
+      "isRequired": false,
+      "description": "Optional save handler for an inline comment edit, forwarded to the embedded TmActivityComments. Relevant only for host-supplied comments with CanEdit; the panel raises no edit callback of its own. Return true to close the inline editor, false to keep the edited text open. Null (default) keeps the legacy callback. Added in 2.10.0."
+    },
+    {
       "name": "CommentActions",
       "type": "RenderFragment<TmCommentEntry>?",
       "isRequired": false,

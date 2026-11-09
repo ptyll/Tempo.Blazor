@@ -1,7 +1,7 @@
 /* ── Root ─────────────────────────────────────────────────────────────────── */
 .tm-dbsb {
-    border-bottom: 1px solid var(--tm-border, #e5e7eb);
-    background: var(--tm-bg-1, #fafafa);
+    border-bottom: 1px solid var(--tm-border-color);
+    background: var(--tm-bg-surface-secondary);
     animation: tm-dbsb-in 0.15s ease;
 }
 
@@ -16,7 +16,7 @@
     align-items: center;
     justify-content: space-between;
     padding: 9px 14px 7px;
-    border-bottom: 1px solid var(--tm-border, #e5e7eb);
+    border-bottom: 1px solid var(--tm-border-color);
 }
 
 .tm-dbsb__title {
@@ -24,7 +24,7 @@
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.06em;
-    color: var(--tm-text-2, #6b7280);
+    color: var(--tm-text-secondary);
 }
 
 .tm-dbsb__close {
@@ -37,21 +37,21 @@
     border: none;
     border-radius: 4px;
     background: transparent;
-    color: var(--tm-text-2, #9ca3af);
+    color: var(--tm-text-secondary);
     cursor: pointer;
     transition: background 0.12s, color 0.12s;
 }
 
 .tm-dbsb__close:hover {
-    background: var(--tm-bg-2, #f3f4f6);
-    color: var(--tm-text, #111827);
+    background: var(--tm-bg-surface-secondary);
+    color: var(--tm-text-primary);
 }
 
 /* ── Empty ──────────────────────────────────────────────────────────────── */
 .tm-dbsb__empty {
     padding: 14px 16px;
     font-size: 0.8125rem;
-    color: var(--tm-text-2, #9ca3af);
+    color: var(--tm-text-secondary);
     margin: 0;
 }
 
@@ -72,7 +72,7 @@
 }
 
 .tm-dbsb__row--drag-over {
-    background: color-mix(in srgb, var(--tm-accent, #3b82f6) 6%, transparent);
+    background: color-mix(in srgb, var(--tm-color-primary) 6%, transparent);
 }
 
 .tm-dbsb__row--drag-over::before {
@@ -82,7 +82,7 @@
     right: 14px;
     top: 0;
     height: 2px;
-    background: var(--tm-accent, #3b82f6);
+    background: var(--tm-color-primary);
     border-radius: 1px;
 }
 
@@ -99,12 +99,12 @@
     width: 16px;
     height: 24px;
     cursor: grab;
-    color: var(--tm-text-3, #d1d5db);
+    color: var(--tm-text-tertiary);
     transition: color 0.12s;
 }
 
 .tm-dbsb__drag-handle:hover {
-    color: var(--tm-text-2, #9ca3af);
+    color: var(--tm-text-secondary);
 }
 
 .tm-dbsb__row:active .tm-dbsb__drag-handle {
@@ -119,23 +119,23 @@
     height: 28px;
     padding: 0 6px;
     font-size: 0.8rem;
-    border: 1px solid var(--tm-border, #d1d5db);
+    border: 1px solid var(--tm-border-color);
     border-radius: 4px;
-    background: var(--tm-bg, #fff);
-    color: var(--tm-text, #111827);
+    background: var(--tm-bg-surface);
+    color: var(--tm-text-primary);
     cursor: pointer;
     transition: border-color 0.12s;
 }
 
 .tm-dbsb__select:focus {
     outline: none;
-    border-color: var(--tm-accent, #3b82f6);
-    box-shadow: 0 0 0 2px color-mix(in srgb, var(--tm-accent, #3b82f6) 15%, transparent);
+    border-color: var(--tm-color-primary);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--tm-color-primary) 15%, transparent);
 }
 
 .tm-dbsb__select:disabled {
-    background: var(--tm-bg-1, #f9fafb);
-    color: var(--tm-text-2, #9ca3af);
+    background: var(--tm-bg-surface-secondary);
+    color: var(--tm-text-secondary);
     cursor: default;
 }
 
@@ -143,7 +143,7 @@
 .tm-dbsb__dir-toggle {
     display: inline-flex;
     flex-shrink: 0;
-    border: 1px solid var(--tm-border, #d1d5db);
+    border: 1px solid var(--tm-border-color);
     border-radius: 5px;
     overflow: hidden;
 }
@@ -158,23 +158,23 @@
     background: none;
     border: none;
     cursor: pointer;
-    color: var(--tm-text-2, #6b7280);
+    color: var(--tm-text-secondary);
     white-space: nowrap;
     transition: background 0.1s, color 0.1s;
 }
 
 .tm-dbsb__dir-btn + .tm-dbsb__dir-btn {
-    border-left: 1px solid var(--tm-border, #d1d5db);
+    border-left: 1px solid var(--tm-border-color);
 }
 
 .tm-dbsb__dir-btn--active {
-    background: var(--tm-accent, #3b82f6);
-    color: #fff;
+    background: var(--tm-color-primary-solid);
+    color: var(--tm-color-on-primary-fixed);
 }
 
 .tm-dbsb__dir-btn:not(.tm-dbsb__dir-btn--active):hover {
-    background: var(--tm-bg-2, #f3f4f6);
-    color: var(--tm-text, #111827);
+    background: var(--tm-bg-surface-secondary);
+    color: var(--tm-text-primary);
 }
 
 .tm-dbsb__dir-btn:disabled {
@@ -194,14 +194,14 @@
     border: none;
     border-radius: 4px;
     background: transparent;
-    color: var(--tm-text-2, #9ca3af);
+    color: var(--tm-text-secondary);
     cursor: pointer;
     transition: background 0.12s, color 0.12s;
 }
 
 .tm-dbsb__remove:hover {
-    background: color-mix(in srgb, var(--tm-danger, #ef4444) 10%, transparent);
-    color: var(--tm-danger, #ef4444);
+    background: color-mix(in srgb, var(--tm-color-danger) 10%, transparent);
+    color: var(--tm-color-danger);
 }
 
 /* ── Footer ─────────────────────────────────────────────────────────────── */
@@ -210,7 +210,7 @@
     align-items: center;
     gap: 4px;
     padding: 7px 14px 9px;
-    border-top: 1px solid var(--tm-border, #e5e7eb);
+    border-top: 1px solid var(--tm-border-color);
 }
 
 .tm-dbsb__add-btn {
@@ -220,17 +220,17 @@
     padding: 4px 10px;
     font-size: 0.8rem;
     background: transparent;
-    border: 1px solid var(--tm-border, #d1d5db);
+    border: 1px solid var(--tm-border-color);
     border-radius: 5px;
-    color: var(--tm-text-2, #6b7280);
+    color: var(--tm-text-secondary);
     cursor: pointer;
     transition: background 0.12s, color 0.12s, border-color 0.12s;
 }
 
 .tm-dbsb__add-btn:hover {
-    background: var(--tm-bg-2, #f3f4f6);
-    color: var(--tm-text, #111827);
-    border-color: var(--tm-text-3, #9ca3af);
+    background: var(--tm-bg-surface-secondary);
+    color: var(--tm-text-primary);
+    border-color: var(--tm-text-tertiary);
 }
 
 .tm-dbsb__clear-btn {
@@ -240,11 +240,11 @@
     background: transparent;
     border: none;
     border-radius: 5px;
-    color: var(--tm-danger, #ef4444);
+    color: var(--tm-color-danger);
     cursor: pointer;
     transition: background 0.12s;
 }
 
 .tm-dbsb__clear-btn:hover {
-    background: color-mix(in srgb, var(--tm-danger, #ef4444) 8%, transparent);
+    background: color-mix(in srgb, var(--tm-color-danger) 8%, transparent);
 }

@@ -38,8 +38,8 @@
 .tm-notion-header-cover__btn {
     font-size:       var(--tm-font-size-xs);
     font-weight:     var(--tm-font-weight-medium);
-    color:           rgba(255,255,255,0.92);
-    background:      rgba(0,0,0,0.35);
+    color: var(--tm-text-secondary);
+    background: color-mix(in srgb, var(--tm-color-gray-900) 35%, transparent);
     border:          none;
     border-radius:   var(--tm-radius-sm);
     padding:         4px var(--tm-space-2);
@@ -50,11 +50,11 @@
 }
 
 .tm-notion-header-cover__btn:hover {
-    background: rgba(0,0,0,0.55);
+    background: color-mix(in srgb, var(--tm-color-gray-900) 55%, transparent);
 }
 
 .tm-notion-header-cover__btn--remove:hover {
-    background: rgba(239,68,68,0.6);
+    background: color-mix(in srgb, var(--tm-color-danger) 60%, transparent);
 }
 
 .tm-notion-header-cover__drag-hint {
@@ -63,8 +63,8 @@
     left:            50%;
     transform:       translateX(-50%);
     font-size:       var(--tm-font-size-xs);
-    color:           rgba(255,255,255,0.88);
-    background:      rgba(0,0,0,0.3);
+    color: var(--tm-text-secondary);
+    background: color-mix(in srgb, var(--tm-color-gray-900) 30%, transparent);
     backdrop-filter: blur(4px);
     border-radius:   var(--tm-radius-sm);
     padding:         4px 10px;
@@ -78,65 +78,14 @@
     opacity: 1;
 }
 
-/* ── Cover dialog ─────────────────────────────────────────────── */
-
-.tm-notion-cover-dialog-backdrop {
-    position: fixed;
-    inset:    0;
-    z-index:  var(--tm-notion-z-menu, 200);
-}
-
-.tm-notion-cover-dialog {
-    position:     absolute;
-    top:          var(--tm-notion-cover-height, 200px);
-    left:         var(--tm-notion-page-padding-x, 2rem);
-    z-index:      calc(var(--tm-notion-z-menu, 200) + 1);
-    width:        clamp(280px, 380px, 90vw);
-    background:   var(--tm-notion-bg-menu, var(--tm-bg-surface));
-    border:       1px solid var(--tm-notion-border, var(--tm-border-color));
-    border-radius: var(--tm-radius-lg);
-    box-shadow:   var(--tm-notion-shadow-menu, var(--tm-shadow-lg));
-    overflow:     hidden;
-}
-
-.tm-notion-cover-dialog__header {
-    display:     flex;
-    align-items: center;
-    padding:     var(--tm-space-3) var(--tm-space-4);
-    border-bottom: 1px solid var(--tm-notion-border, var(--tm-border-color));
-}
-
-.tm-notion-cover-dialog__title {
-    flex:        1;
-    font-size:   var(--tm-font-size-sm);
-    font-weight: var(--tm-font-weight-semibold);
-    color:       var(--tm-text-primary);
-}
-
-.tm-notion-cover-dialog__close {
-    display:         flex;
-    align-items:     center;
-    justify-content: center;
-    width:           24px;
-    height:          24px;
-    border:          none;
-    background:      transparent;
-    color:           var(--tm-text-tertiary);
-    border-radius:   var(--tm-radius-sm);
-    cursor:          pointer;
-    transition:      background var(--tm-notion-anim-fast), color var(--tm-notion-anim-fast);
-}
-
-.tm-notion-cover-dialog__close:hover {
-    background: var(--tm-notion-bg-block-hover);
-    color:      var(--tm-text-primary);
-}
+/* ── Cover dialog ───────────────────────────────────────────────
+   Phase 4: the dialog chrome rides the core TmModal — the stylesheet keeps only the content
+   styles (no own backdrop, no positioning, no z-index). */
 
 .tm-notion-cover-dialog__body {
-    padding: var(--tm-space-4);
     display: flex;
     flex-direction: column;
-    gap:     var(--tm-space-3);
+    gap: var(--tm-space-3);
 }
 
 .tm-notion-cover-dialog__label {
@@ -169,47 +118,42 @@
 }
 
 .tm-notion-cover-dialog__input:focus {
-    border-color: var(--tm-notion-interactive-focus, var(--tm-color-primary));
-}
-
-.tm-notion-cover-dialog__submit {
-    height:        32px;
-    padding:       0 var(--tm-space-3);
-    border:        none;
-    border-radius: var(--tm-radius-sm);
-    font-size:     var(--tm-font-size-sm);
-    font-weight:   var(--tm-font-weight-medium);
-    background:    var(--tm-color-primary, #2563eb);
-    color:         #fff;
-    cursor:        pointer;
-    white-space:   nowrap;
-    transition:    opacity var(--tm-notion-anim-fast);
-}
-
-.tm-notion-cover-dialog__submit:disabled {
-    opacity: 0.45;
-    cursor:  not-allowed;
+    border-color: var(--tm-focus-ring, var(--tm-color-primary));
 }
 
 .tm-notion-cover-dialog__presets {
-    display:   flex;
-    flex-wrap: wrap;
-    gap:       var(--tm-space-2);
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(44px, 1fr));
+    gap: var(--tm-space-2);
 }
 
 .tm-notion-cover-dialog__preset {
-    width:         36px;
-    height:        36px;
+    position:      relative;
+    height:        44px;
     border:        2px solid transparent;
     border-radius: var(--tm-radius-sm);
     cursor:        pointer;
     transition:    border-color var(--tm-notion-anim-fast), transform var(--tm-notion-anim-fast);
-    flex-shrink:   0;
 }
 
 .tm-notion-cover-dialog__preset:hover {
-    border-color: var(--tm-notion-interactive-focus, var(--tm-color-primary));
-    transform:    scale(1.1);
+    border-color: var(--tm-focus-ring, var(--tm-color-primary));
+    transform:    scale(1.05);
+}
+
+.tm-notion-cover-dialog__preset--current {
+    border-color: var(--tm-focus-ring, var(--tm-color-primary));
+}
+
+.tm-notion-cover-dialog__preset-check {
+    position:   absolute;
+    inset:      0;
+    display:    flex;
+    align-items: center;
+    justify-content: center;
+    color:      var(--tm-color-on-primary-fixed);
+    font-size:  var(--tm-font-size-sm);
+    text-shadow: 0 0 2px var(--tm-notion-bg-slash-menu, var(--tm-bg-surface));
 }
 
 /* ── Page meta ────────────────────────────────────────────────── */
@@ -354,7 +298,7 @@
     max-width: min(100%, 18rem);
     min-height: 26px;
     padding: 3px var(--tm-space-2);
-    border: 1px solid var(--tm-color-warning-border, var(--tm-color-warning));
+    border: 1px solid var(--tm-color-warning-soft-border, var(--tm-color-warning));
     border-radius: var(--tm-radius-full);
     background: var(--tm-color-warning-subtle, var(--tm-bg-muted));
     color: var(--tm-color-warning-text, var(--tm-text-primary));
@@ -449,125 +393,7 @@
     color:      var(--tm-text-primary);
 }
 
-/* ── Emoji picker ─────────────────────────────────────────────── */
-
-.tm-notion-emoji-picker-backdrop {
-    position: fixed;
-    inset:    0;
-    z-index:  var(--tm-notion-z-menu, 200);
-}
-
-.tm-notion-emoji-picker {
-    position:      absolute;
-    left:          var(--tm-notion-page-padding-x, 2rem);
-    z-index:       calc(var(--tm-notion-z-menu, 200) + 1);
-    width:         clamp(280px, 340px, 90vw);
-    max-height:    440px;
-    display:       flex;
-    flex-direction: column;
-    background:    var(--tm-notion-bg-menu, var(--tm-bg-surface));
-    border:        1px solid var(--tm-notion-border, var(--tm-border-color));
-    border-radius: var(--tm-radius-lg);
-    box-shadow:    var(--tm-notion-shadow-menu, var(--tm-shadow-lg));
-    overflow:      hidden;
-}
-
-.tm-notion-emoji-picker__header {
-    display:       flex;
-    align-items:   center;
-    gap:           var(--tm-space-2);
-    padding:       var(--tm-space-2) var(--tm-space-3);
-    border-bottom: 1px solid var(--tm-notion-border, var(--tm-border-color));
-    flex-shrink:   0;
-}
-
-.tm-notion-emoji-picker__search {
-    flex:          1;
-    min-width:     0;
-    height:        30px;
-    padding:       0 var(--tm-space-2);
-    border:        1px solid var(--tm-notion-border, var(--tm-border-color));
-    border-radius: var(--tm-radius-sm);
-    font-size:     var(--tm-font-size-sm);
-    color:         var(--tm-text-primary);
-    background:    var(--tm-notion-bg, var(--tm-bg-page));
-    outline:       none;
-    transition:    border-color var(--tm-notion-anim-fast);
-}
-
-.tm-notion-emoji-picker__search:focus {
-    border-color: var(--tm-notion-interactive-focus, var(--tm-color-primary));
-}
-
-.tm-notion-emoji-picker__remove {
-    font-size:     var(--tm-font-size-xs);
-    font-weight:   var(--tm-font-weight-medium);
-    color:         var(--tm-text-tertiary);
-    background:    transparent;
-    border:        none;
-    border-radius: var(--tm-radius-sm);
-    padding:       3px var(--tm-space-2);
-    cursor:        pointer;
-    white-space:   nowrap;
-    transition:    color var(--tm-notion-anim-fast), background var(--tm-notion-anim-fast);
-}
-
-.tm-notion-emoji-picker__remove:hover {
-    color:      var(--tm-color-danger, #ef4444);
-    background: var(--tm-notion-bg-block-hover);
-}
-
-.tm-notion-emoji-picker__body {
-    flex:       1;
-    overflow-y: auto;
-    padding:    var(--tm-space-2) var(--tm-space-3);
-    scrollbar-width: thin;
-    scrollbar-color: var(--tm-notion-border) transparent;
-}
-
-.tm-notion-emoji-picker__category {
-    margin-bottom: var(--tm-space-3);
-}
-
-.tm-notion-emoji-picker__category--recent {
-    padding-bottom: var(--tm-space-2);
-    border-bottom: 1px solid var(--tm-notion-border, var(--tm-border-color));
-}
-
-.tm-notion-emoji-picker__category-label {
-    font-size:      var(--tm-font-size-xs);
-    font-weight:    var(--tm-font-weight-semibold);
-    color:          var(--tm-text-tertiary);
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    margin-bottom:  var(--tm-space-1);
-    padding:        0 2px;
-}
-
-.tm-notion-emoji-picker__grid {
-    display:               grid;
-    grid-template-columns: repeat(8, 1fr);
-    gap:                   2px;
-}
-
-.tm-notion-emoji-picker__btn {
-    display:         flex;
-    align-items:     center;
-    justify-content: center;
-    width:           32px;
-    height:          32px;
-    border:          none;
-    background:      transparent;
-    border-radius:   var(--tm-radius-sm);
-    font-size:       1.25rem;
-    cursor:          pointer;
-    transition:      background var(--tm-notion-anim-fast);
-    line-height:     1;
-}
-
-.tm-notion-emoji-picker__btn:hover {
-    background: var(--tm-notion-bg-block-hover);
-}
+/* Phase 6 (NO4): the emoji picker is the UI component and styles itself. */
 
 /* ── Responsive ────────────────────────────────────────────────── */
 
@@ -592,13 +418,56 @@
         font-size: 3.5rem;
     }
 
-    .tm-notion-emoji-picker__grid {
-        grid-template-columns: repeat(7, 1fr);
-    }
-
     .tm-notion-cover-dialog {
         left:  var(--tm-notion-page-padding-x-narrow, 1rem);
         right: var(--tm-notion-page-padding-x-narrow, 1rem);
         width: auto;
     }
+}
+
+/* ── Meta row (phase 5, N2) ─────────────────────────────────────── */
+
+.tm-notion-header-meta-row {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--tm-space-2) var(--tm-space-5);
+    margin-top: var(--tm-space-3);
+    font-size: var(--tm-font-size-sm);
+    color: var(--tm-text-secondary);
+}
+
+.tm-notion-header-meta-row__item {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--tm-space-2);
+    min-width: 0;
+}
+
+.tm-notion-header-meta-row__label {
+    color: var(--tm-text-tertiary);
+}
+
+.tm-notion-header-meta-row__time {
+    color: var(--tm-text-secondary);
+}
+
+.tm-notion-header-meta-row__author {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.tm-notion-header-meta-row__comment-link {
+    padding: 0;
+    border: none;
+    background: transparent;
+    font: inherit;
+    color: var(--tm-text-secondary);
+    cursor: pointer;
+    transition: color var(--tm-notion-anim-fast);
+}
+
+.tm-notion-header-meta-row__comment-link:hover {
+    color: var(--tm-color-primary);
 }

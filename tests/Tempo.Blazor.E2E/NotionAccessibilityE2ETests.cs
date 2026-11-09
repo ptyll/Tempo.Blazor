@@ -33,11 +33,13 @@ public class NotionAccessibilityE2ETests : NotionE2ETestBase
         await AssertNoHorizontalOverflowAsync(page, ".tm-notion-editor", "layout mobile editor");
         await CaptureBaselineAsync("accessibility", "eb17-mobile-columns", page.Locator($"[data-block-id='{FourColumnListId}']").First);
 
-        await page.Locator(".tm-notion-sidebar-toggle").First.ClickAsync();
+        await page.Locator(".tm-notion-sidebar-toggle").First.ClickAsync(new LocatorClickOptions { Force = true });
         await page.Locator(".tm-notion-sidebar--visible").First.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 5000 });
         await AssertTouchTargetsAsync(page, ".tm-notion-sidebar-toggle, .tm-notion-sidebar button:visible, .tm-notion-sidebar a:visible", "mobile sidebar");
         await CaptureBaselineAsync("accessibility", "eb17-mobile-sidebar", page.Locator(".tm-notion-editor").First);
-        await page.Mouse.ClickAsync(380, 24);
+        // Phase 3: below desktop the sidebar is a non-modal bottom sheet with no backdrop, so a
+        // coordinate click no longer dismisses it — the sheet's own close button does.
+        await page.Locator(".tm-editor-shell__sheet-close").First.ClickAsync();
         await page.WaitForFunctionAsync(
             "() => !document.querySelector('.tm-notion-sidebar--visible')",
             new PageWaitForFunctionOptions { Timeout = 5000 });
@@ -124,18 +126,20 @@ public class NotionAccessibilityE2ETests : NotionE2ETestBase
         var menuButton = block.Locator(".tm-notion-handle__menu-anchor > .tm-notion-handle__btn").First;
         await menuButton.ClickAsync();
 
-        var contextMenu = page.Locator(".tm-notion-ctx").First;
+        // Phase 6: the menu rides TmOverlayPanel; the single .tm-notion-ctx-panel class is the
+        // surface rendered in both the popover and the sheet, and that panel is the focus root.
+        var contextMenu = page.Locator(".tm-notion-ctx-panel").First;
         await contextMenu.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 5000 });
-        Assert.IsTrue(await ActiveElementIsInsideAsync(page, ".tm-notion-ctx"), "Block menu should receive focus after opening.");
+        Assert.IsTrue(await ActiveElementIsInsideAsync(page, ".tm-notion-ctx-panel"), "Block menu should receive focus after opening.");
 
         for (var i = 0; i < 8; i++)
         {
             await page.Keyboard.PressAsync(i % 2 == 0 ? "Tab" : "Shift+Tab");
-            Assert.IsTrue(await ActiveElementIsInsideAsync(page, ".tm-notion-ctx"), "Tab traversal should stay inside the block context menu.");
+            Assert.IsTrue(await ActiveElementIsInsideAsync(page, ".tm-notion-ctx-panel"), "Tab traversal should stay inside the block context menu.");
         }
 
         await page.Keyboard.PressAsync("Escape");
-        await Assertions.Expect(page.Locator(".tm-notion-ctx")).ToHaveCountAsync(0);
+        await Assertions.Expect(page.Locator(".tm-notion-ctx-panel")).ToHaveCountAsync(0);
         Assert.IsTrue(await menuButton.EvaluateAsync<bool>("el => document.activeElement === el"), "Block menu trigger should regain focus after Escape.");
 
         await SeedMediaPageAsync();

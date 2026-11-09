@@ -1,109 +1,96 @@
 @namespace Tempo.Blazor.Components.NotionEditor.Blocks.Database
 @using Tempo.Blazor.NotionEditor.Enums
 @using Tempo.Blazor.NotionEditor.Interfaces
+@using Tempo.Blazor.Components.Buttons
+@using Tempo.Blazor.Components.Icons
+@using Tempo.Blazor.Components.Feedback
 @using Tempo.Blazor.Components.NotionEditor.Blocks
 @using Tempo.Blazor.Components.NotionEditor.Blocks.Database.Cells
 
-<div class="tm-dbte__overlay" @onclick="OnClose" role="dialog" aria-modal="true" aria-label="@TemplateName">
+@* Phase 4 (DB-3): the template editor rides the core TmModal — titled „Edit template“ with the
+   database subtitle, Large centred dialog on desktop, fullscreen sheet on mobile, Escape, focus
+   return and a fixed footer. No own overlay. *@
+<TmModal Show="Show"
+         OnClose="HandleCloseAsync"
+         Title="@Loc["TmNotionDbTemplateEditor_EditTitle"]"
+         Subtitle="@(string.IsNullOrEmpty(DatabaseName) ? null : DatabaseName)"
+         Size="ModalSize.Large"
+         MobilePresentation="MobilePresentation.AutoFullscreen"
+         CloseOnEscape="@(_editingFieldId is null)">
+    <ChildContent>
+        <div class="tm-dbte">
 
-    <div class="tm-dbte__modal" @onclick:stopPropagation="true">
+            @* ── Body ─────────────────────────────────────────────────────── *@
+            <div class="tm-dbte__body">
 
-        @* ── Toolbar ──────────────────────────────────────────────────────── *@
-        <div class="tm-dbte__toolbar">
-            <span class="tm-dbte__breadcrumb">
-                @if (DatabaseName is { Length: > 0 })
-                {
-                    <span class="tm-dbte__breadcrumb-db">@DatabaseName</span>
-                    <svg class="tm-dbte__breadcrumb-sep" width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                        <path d="M9 18l6-6-6-6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                }
-                <span class="tm-dbte__breadcrumb-label">@Loc["TmNotionDbTemplateEditor_Breadcrumb"]</span>
-                <svg class="tm-dbte__breadcrumb-sep" width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                    <path d="M9 18l6-6-6-6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-                <span class="tm-dbte__breadcrumb-name">@TemplateName</span>
-            </span>
-
-            <div class="tm-dbte__toolbar-actions">
-                <button class="tm-dbte__close-btn"
-                        type="button"
-                        aria-label="@Loc["TmNotionDbTemplateEditor_Close"]"
-                        @onclick="OnClose">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                        <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-                    </svg>
-                </button>
-            </div>
-        </div>
-
-        @* ── Body ─────────────────────────────────────────────────────────── *@
-        <div class="tm-dbte__body">
-
-            @* Template name + emoji *@
-            <div class="tm-dbte__name-row">
-                @if (_iconEmoji is { Length: > 0 } ei)
-                {
-                    <span class="tm-dbte__name-emoji" aria-hidden="true">@ei</span>
-                }
-                <textarea class="tm-dbte__name-input"
-                          placeholder="@Loc["TmNotionDbTemplateEditor_Untitled"]"
-                          rows="1"
-                          disabled="@ReadOnly"
-                          value="@_nameBuffer"
-                          @oninput="e => _nameBuffer = e.Value?.ToString() ?? string.Empty"
-                          @onblur="CommitNameAsync"></textarea>
-            </div>
-
-            @* Default field values *@
-            @{
-                var nonPrimary = NonPrimaryFields.ToList();
-            }
-            @if (nonPrimary.Count > 0)
-            {
-                <div class="tm-dbte__props" aria-label="@Loc["TmNotionDbTemplateEditor_Properties"]">
-                    @foreach (var field in nonPrimary)
+                @* Template name + emoji *@
+                <div class="tm-dbte__name-row">
+                    @if (_iconEmoji is { Length: > 0 } ei)
                     {
-                        var fid       = field.Id;
-                        var isEditing = _editingFieldId == fid;
-                        _localFields.TryGetValue(fid.ToString(), out var fieldValue);
-                        <div class="tm-dbte__prop-row @(isEditing ? "tm-dbte__prop-row--editing" : "")">
-                            <div class="tm-dbte__prop-label">
-                                <span class="tm-dbte__prop-icon" aria-hidden="true">@FieldTypeIcon(field.Type)</span>
-                                <span class="tm-dbte__prop-name">@field.Name</span>
-                            </div>
-                            <div class="tm-dbte__prop-value"
-                                 @onclick="() => { if (!ReadOnly && !isEditing) _editingFieldId = fid; }">
-                                <TmNotionDbCell Field="field"
-                                               Value="fieldValue"
-                                               ReadOnly="ReadOnly"
-                                               IsEditing="isEditing"
-                                               OnCommit="val => HandleCellCommitAsync(field, val)"
-                                               OnCancel="() => _editingFieldId = null"
-                                               OnEditRequested="() => _editingFieldId = fid" />
-                            </div>
-                        </div>
+                        <span class="tm-dbte__name-emoji" aria-hidden="true">@ei</span>
                     }
+                    <textarea class="tm-dbte__name-input"
+                              placeholder="@Loc["TmNotionDbTemplateEditor_Untitled"]"
+                              rows="1"
+                              disabled="@ReadOnly"
+                              value="@_nameBuffer"
+                              @oninput="e => _nameBuffer = e.Value?.ToString() ?? string.Empty"
+                              @onblur="CommitNameAsync"></textarea>
                 </div>
-            }
 
-            <hr class="tm-dbte__divider" aria-hidden="true" />
+                @* Default field values — property grid, stacked under 600 px. *@
+                @{
+                    var nonPrimary = NonPrimaryFields.ToList();
+                }
+                @if (nonPrimary.Count > 0)
+                {
+                    <div class="tm-dbte__props" aria-label="@Loc["TmNotionDbTemplateEditor_Properties"]">
+                        @foreach (var field in nonPrimary)
+                        {
+                            var fid       = field.Id;
+                            var isEditing = _editingFieldId == fid;
+                            _localFields.TryGetValue(fid.ToString(), out var fieldValue);
+                            <div class="tm-dbte__prop-row @(isEditing ? "tm-dbte__prop-row--editing" : "")">
+                                <div class="tm-dbte__prop-label">
+                                    <span class="tm-dbte__prop-icon" aria-hidden="true"><TmIcon Name="@DatabaseFieldIcons.Get(field.Type)" Size="IconSize.Xs" /></span>
+                                    <span class="tm-dbte__prop-name">@field.Name</span>
+                                </div>
+                                <div class="tm-dbte__prop-value"
+                                     @onclick="() => { if (!ReadOnly && !isEditing) _editingFieldId = fid; }">
+                                    <TmNotionDbCell Field="field"
+                                                   Value="fieldValue"
+                                                   ReadOnly="ReadOnly"
+                                                   IsEditing="isEditing"
+                                                   OnCommit="val => HandleCellCommitAsync(field, val)"
+                                                   OnCancel="() => _editingFieldId = null"
+                                                   OnEditRequested="() => _editingFieldId = fid" />
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
 
-            @* Content blocks *@
-            <div class="tm-dbte__content">
-                <TmNotionBlockList Blocks="@_localBlocks"
-                                   ReadOnly="@ReadOnly"
-                                   ActiveBlockId="@_activeBlockId"
-                                   OnReorder="HandleReorderAsync"
-                                   OnBlockFocused="HandleBlockFocusedAsync"
-                                   OnBlockDeleted="HandleBlockDeletedAsync"
-                                   OnBlockUpdated="HandleBlockUpdatedAsync"
-                                   OnBlockDuplicated="HandleBlockDuplicatedAsync"
-                                   OnConvertBlock="HandleConvertBlockAsync"
-                                   OnAddBlockAfter="HandleAddBlockAfterAsync"
-                                   OnAddBlockAtEnd="HandleAddBlockAtEndAsync" />
+                <hr class="tm-dbte__divider" aria-hidden="true" />
+
+                @* Content blocks *@
+                <div class="tm-dbte__content">
+                    <TmNotionBlockList Blocks="@_localBlocks"
+                                       ReadOnly="@ReadOnly"
+                                       ActiveBlockId="@_activeBlockId"
+                                       OnReorder="HandleReorderAsync"
+                                       OnBlockFocused="HandleBlockFocusedAsync"
+                                       OnBlockDeleted="HandleBlockDeletedAsync"
+                                       OnBlockUpdated="HandleBlockUpdatedAsync"
+                                       OnBlockDuplicated="HandleBlockDuplicatedAsync"
+                                       OnConvertBlock="HandleConvertBlockAsync"
+                                       OnAddBlockAfter="HandleAddBlockAfterAsync"
+                                       OnAddBlockAtEnd="HandleAddBlockAtEndAsync" />
+                </div>
+
             </div>
-
         </div>
-    </div>
-</div>
+    </ChildContent>
+    <Footer>
+        <TmButton Variant="ButtonVariant.Primary" OnClick="HandleCloseAsync">@Loc["TmNotionDb_Done"]</TmButton>
+    </Footer>
+</TmModal>

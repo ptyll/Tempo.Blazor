@@ -1,19 +1,22 @@
 @namespace Tempo.Blazor.Components.NotionEditor.UI
 @using Tempo.Blazor.NotionEditor.Enums
+@using Tempo.Blazor.Components.Overlay
 
-@if (Visible)
-{
-    <div class="tm-notion-status-picker-backdrop" @onclick="HandleBackdropClickAsync" aria-hidden="true"></div>
+<TmNotionFloatingMenu IsOpen="Visible"
+                      LayoutMode="LayoutMode"
+                      Top="Top"
+                      Left="Left"
+                      Placement="OverlayPlacement.Bottom"
+                      Role="dialog"
+                      Title="@Loc["TmNotionStatusPicker_Title"]"
+                      AriaLabel="@Loc["Notion_Status_Insert"]"
+                      Class="tm-notion-status-picker"
+                      OnClose="HandleBackdropClickAsync">
+    <div class="tm-notion-status-picker__body" @onkeydown="HandleKeyDownAsync" @onkeydown:stopPropagation="true">
 
-    <div class="tm-notion-status-picker"
-         role="dialog"
-         aria-label="@Loc["Notion_Status_Insert"]"
-         style="top:@(_top)px;left:@(_left)px"
-         @ref="_pickerRef"
-         @onkeydown="HandleKeyDownAsync"
-         @onkeydown:stopPropagation="true">
-
-        <input class="tm-notion-status-picker__input"
+        <label class="tm-notion-status-picker__label" for="@_inputId">@Loc["Notion_Status_Placeholder"]</label>
+        <input id="@_inputId"
+               class="tm-notion-status-picker__input"
                type="text"
                autocomplete="off"
                spellcheck="false"
@@ -30,14 +33,15 @@
             </span>
         </div>
 
-        <div class="tm-notion-status-picker__colors" role="listbox">
+        <div class="tm-notion-status-picker__colors" role="radiogroup" aria-label="@Loc["Notion_Status_Insert"]">
             @foreach (var color in Colors)
             {
                 var selected = color == _color;
                 <button type="button"
+                        role="radio"
                         class="tm-notion-status-picker__swatch tm-notion-status-picker__swatch--@CssColor(color) @(selected ? "tm-notion-status-picker__swatch--selected" : null)"
                         aria-label="@Loc[$"Notion_Status_Color_{color}"]"
-                        aria-selected="@selected"
+                        aria-checked="@(selected ? "true" : "false")"
                         title="@Loc[$"Notion_Status_Color_{color}"]"
                         @onclick="() => SelectColor(color)">
                     <span aria-hidden="true"></span>
@@ -52,4 +56,4 @@
             @Loc["Notion_Status_Insert"]
         </button>
     </div>
-}
+</TmNotionFloatingMenu>

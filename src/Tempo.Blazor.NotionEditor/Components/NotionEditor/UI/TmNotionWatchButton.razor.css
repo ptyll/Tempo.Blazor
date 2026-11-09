@@ -13,20 +13,21 @@
     min-width: 2rem;
     height: 2rem;
     padding: 0 var(--tm-space-2);
-    border: 1px solid var(--tm-color-border);
+    border: 1px solid var(--tm-border-color);
     border-radius: var(--tm-radius-md);
     background: var(--tm-color-surface);
-    color: var(--tm-color-text-secondary);
+    color: var(--tm-text-secondary);
     font: inherit;
     font-size: var(--tm-font-size-sm);
     line-height: 1;
+    white-space: nowrap;
     cursor: pointer;
     transition: background-color var(--tm-transition-fast), color var(--tm-transition-fast), border-color var(--tm-transition-fast);
 }
 
 .tm-notion-watch__toggle:hover:not(:disabled),
 .tm-notion-watch--active .tm-notion-watch__toggle {
-    border-color: color-mix(in srgb, var(--tm-color-primary) 42%, var(--tm-color-border));
+    border-color: color-mix(in srgb, var(--tm-color-primary) 42%, var(--tm-border-color));
     background: color-mix(in srgb, var(--tm-color-primary) 10%, var(--tm-color-surface));
     color: var(--tm-color-primary);
 }
@@ -54,7 +55,9 @@
     accent-color: var(--tm-color-primary);
 }
 
-@media (max-width: 760px) {
+/* Below the desktop band the toolbar room goes to the tools: the watch control keeps its
+   label only on desktop, icon-only (visually-hidden text) on tablet and phone. */
+@media (max-width: 1024px) {
     .tm-notion-watch__toggle span,
     .tm-notion-watch__children span {
         position: absolute;
@@ -65,6 +68,7 @@
         white-space: nowrap;
     }
 
+    .tm-notion-watch__toggle,
     .tm-notion-watch__children {
         padding: 0 var(--tm-space-1);
     }

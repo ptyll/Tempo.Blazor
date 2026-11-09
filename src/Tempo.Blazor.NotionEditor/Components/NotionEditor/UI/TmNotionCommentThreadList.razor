@@ -1,0 +1,83 @@
+@namespace Tempo.Blazor.Components.NotionEditor.UI
+@inherits Tempo.Blazor.Components.TmComponentBase
+@using Tempo.Blazor.Abstractions.Shared
+@using Tempo.Blazor.Components.Feedback
+@using Tempo.Blazor.Components.NotionEditor.Models
+
+@* Shared thread list, loading/empty states and the delete confirm the three panels used to copy. *@
+<div class="@ListClass" role="list" aria-label="@ListLabel" data-testid="@TestId("notion-comment-thread-list")">
+    @if (Loading)
+    {
+        <div class="@StatusClass" aria-live="polite" aria-busy="true">
+            <span class="@SpinnerClass" aria-hidden="true"></span>
+            @LoadingText
+        </div>
+    }
+    else if (Empty)
+    {
+        @* The --empty modifier lets a panel centre/pad the empty state without touching the
+           inline loading status that shares the base class. *@
+        <div class="@StatusClass @StatusClass--empty">@EmptyText</div>
+    }
+    else
+    {
+        @ChildContent
+    }
+</div>
+
+<TmDialog Show="@ShowDeleteConfirm"
+          Type="DialogType.Confirm"
+          Title="@DeleteTitle"
+          Message="@DeleteMessage"
+          IsDangerous="true"
+          OkButtonText="@DeleteOkText"
+          CancelButtonText="@DeleteCancelText"
+          OnResult="OnDeleteResult" />
+
+@code {
+    /// <summary>CSS class prefix of the owning panel.</summary>
+    [Parameter, EditorRequired] public string ClassPrefix { get; set; } = "tm-nbcp";
+
+    /// <summary>Class of the list root. Defaults to <c>{ClassPrefix}__thread</c>.</summary>
+    [Parameter] public string? Class { get; set; }
+
+    /// <summary>Accessible name of the list.</summary>
+    [Parameter] public string? ListLabel { get; set; }
+
+    /// <summary>Shows the loading status instead of the list.</summary>
+    [Parameter] public bool Loading { get; set; }
+
+    /// <summary>Shows the empty status when nothing is loading.</summary>
+    [Parameter] public bool Empty { get; set; }
+
+    /// <summary>Loading status text.</summary>
+    [Parameter] public string? LoadingText { get; set; }
+
+    /// <summary>Empty status text.</summary>
+    [Parameter] public string? EmptyText { get; set; }
+
+    /// <summary>The list body. Rendered only when the list is neither loading nor empty.</summary>
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    /// <summary>Shows the shared delete confirmation.</summary>
+    [Parameter] public bool ShowDeleteConfirm { get; set; }
+
+    /// <summary>Delete dialog title.</summary>
+    [Parameter] public string? DeleteTitle { get; set; }
+
+    /// <summary>Delete dialog message.</summary>
+    [Parameter] public string? DeleteMessage { get; set; }
+
+    /// <summary>Delete dialog confirm label.</summary>
+    [Parameter] public string? DeleteOkText { get; set; }
+
+    /// <summary>Delete dialog cancel label.</summary>
+    [Parameter] public string? DeleteCancelText { get; set; }
+
+    /// <summary>Raised by the delete dialog.</summary>
+    [Parameter] public EventCallback<bool?> OnDeleteResult { get; set; }
+
+    private string ListClass => string.IsNullOrEmpty(Class) ? $"{ClassPrefix}__thread" : Class;
+    private string StatusClass => $"{ClassPrefix}__status";
+    private string SpinnerClass => $"{ClassPrefix}__spinner";
+}

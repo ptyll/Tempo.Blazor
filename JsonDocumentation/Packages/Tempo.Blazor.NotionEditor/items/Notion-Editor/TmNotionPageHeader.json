@@ -47,6 +47,13 @@
       "description": "When true, displays a visible page-level restricted access indicator in the header."
     },
     {
+      "name": "ShowMeta",
+      "type": "bool",
+      "isRequired": false,
+      "default": "false",
+      "description": "Opt-in meta row under the title: last-edited time (relative, absolute in the title tooltip), the last editor (TmAvatar + name resolved through the mention provider, raw id fallback) and the unresolved comment count as a link (fires OnCommentBadgeClicked). Defaults to false."
+    },
+    {
       "name": "UnresolvedCommentCount",
       "type": "int",
       "isRequired": false,

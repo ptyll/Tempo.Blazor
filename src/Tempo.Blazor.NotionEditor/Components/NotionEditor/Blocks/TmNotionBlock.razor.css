@@ -102,14 +102,14 @@
     opacity: 0.7;
     margin-left: 3px;
     padding-left: 3px;
-    border-left: 1px solid rgba(255,255,255,0.4);
+    border-left: 1px solid var(--tm-border-color);
 }
 
 .tm-notion-block__comment-thread-resolved-count {
     margin-left: 2px;
     font-size: 9px;
     opacity: 0.7;
-    background: rgba(255,255,255,0.2);
+    background: color-mix(in srgb, var(--tm-color-white) 20%, transparent);
     border-radius: 8px;
     padding: 0 3px;
 }
@@ -134,9 +134,9 @@
     max-width:        240px;
     padding:          8px 10px;
     background:       var(--tm-bg-primary);
-    border:           1px solid var(--tm-border-default);
+    border:           1px solid var(--tm-border-color);
     border-radius:    var(--tm-radius-md);
-    box-shadow:       0 4px 12px rgba(0,0,0,0.12);
+    box-shadow: var(--tm-shadow-popover);
     pointer-events:   none;
     animation:        tooltipFadeIn 150ms ease-out;
 }
@@ -217,181 +217,9 @@
     min-width: 0;
 }
 
-/* ── Media blocks ─────────────────────────────────────────────── */
-
-.tm-notion-media-figure {
-    margin:  0;
-    display: block;
-    width:   100%;
-}
-
-.tm-notion-media-image,
-.tm-notion-media-video {
-    display:    block;
-    max-width:  100%;
-    height:     auto;
-    border-radius: var(--tm-radius-sm);
-}
-
-.tm-notion-media-audio {
-    width: 100%;
-}
-
-.tm-notion-media-caption {
-    font-size:  var(--tm-font-size-sm);
-    color:      var(--tm-text-tertiary);
-    text-align: center;
-    margin-top: var(--tm-space-1);
-}
-
-/* ── Media empty state ────────────────────────────────────────── */
-
-.tm-notion-media-empty {
-    display:       flex;
-    align-items:   center;
-    gap:           var(--tm-space-2);
-    padding:       var(--tm-space-3) var(--tm-space-4);
-    border:        1px dashed var(--tm-notion-border, var(--tm-border-color));
-    border-radius: var(--tm-radius-md);
-    color:         var(--tm-text-tertiary);
-    font-size:     var(--tm-font-size-sm);
-    background:    var(--tm-notion-bg-block-hover);
-    cursor:        default;
-}
-
-/* ── File link ────────────────────────────────────────────────── */
-
-.tm-notion-file-link {
-    display:       flex;
-    align-items:   center;
-    gap:           var(--tm-space-2);
-    padding:       var(--tm-space-2) var(--tm-space-3);
-    border:        1px solid var(--tm-notion-border, var(--tm-border-color));
-    border-radius: var(--tm-radius-md);
-    color:         var(--tm-text-primary);
-    text-decoration: none;
-    font-size:     var(--tm-font-size-sm);
-    transition:    background var(--tm-notion-anim-fast);
-}
-
-.tm-notion-file-link:hover {
-    background: var(--tm-notion-bg-block-hover);
-    text-decoration: underline;
-}
-
-.tm-notion-file-link__size {
-    color:     var(--tm-text-tertiary);
-    font-size: var(--tm-font-size-xs);
-    margin-left: auto;
-}
-
-/* ── Bookmark ─────────────────────────────────────────────────── */
-
-.tm-notion-bookmark {
-    display:        flex;
-    text-decoration: none;
-    border:         1px solid var(--tm-notion-border, var(--tm-border-color));
-    border-radius:  var(--tm-radius-md);
-    overflow:       hidden;
-    min-height:     72px;
-    transition:     background var(--tm-notion-anim-fast);
-}
-
-.tm-notion-bookmark:hover {
-    background: var(--tm-notion-bg-block-hover);
-}
-
-.tm-notion-bookmark__body {
-    flex:    1;
-    padding: var(--tm-space-3) var(--tm-space-4);
-    display: flex;
-    flex-direction: column;
-    gap:     var(--tm-space-1);
-    min-width: 0;
-}
-
-.tm-notion-bookmark__title {
-    font-size:   var(--tm-font-size-sm);
-    font-weight: var(--tm-font-weight-semibold);
-    color:       var(--tm-text-primary);
-    white-space: nowrap;
-    overflow:    hidden;
-    text-overflow: ellipsis;
-}
-
-.tm-notion-bookmark__description {
-    font-size:   var(--tm-font-size-xs);
-    color:       var(--tm-text-secondary);
-    display:     -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow:    hidden;
-}
-
-.tm-notion-bookmark__url {
-    display:     flex;
-    align-items: center;
-    gap:         var(--tm-space-1);
-    font-size:   var(--tm-font-size-xs);
-    color:       var(--tm-text-tertiary);
-    margin-top:  auto;
-}
-
-.tm-notion-bookmark__cover {
-    width:            160px;
-    flex-shrink:      0;
-    background-size:  cover;
-    background-repeat: no-repeat;
-    background-position: center;
-}
-
-/* ── Embed ────────────────────────────────────────────────────── */
-
-.tm-notion-embed {
-    width:         100%;
-    min-height:    300px;
-    border:        1px solid var(--tm-notion-border, var(--tm-border-color));
-    border-radius: var(--tm-radius-md);
-    overflow:      hidden;
-}
-
-.tm-notion-embed__frame {
-    width:   100%;
-    height:  100%;
-    min-height: 300px;
-    border:  none;
-}
-
-/* ── Page link ────────────────────────────────────────────────── */
-
-.tm-notion-page-link {
-    display:       flex;
-    align-items:   center;
-    gap:           var(--tm-space-2);
-    padding:       var(--tm-space-2) var(--tm-space-3);
-    border-radius: var(--tm-radius-md);
-    cursor:        pointer;
-    transition:    background var(--tm-notion-anim-fast);
-    font-size:     var(--tm-notion-text-size);
-    font-weight:   var(--tm-font-weight-medium);
-    color:         var(--tm-text-primary);
-    user-select:   none;
-}
-
-.tm-notion-page-link:hover {
-    background: var(--tm-notion-bg-block-hover);
-}
-
-.tm-notion-page-link__icon {
-    font-size:   1.1em;
-    flex-shrink: 0;
-}
-
-.tm-notion-page-link__external {
-    color:       var(--tm-text-tertiary);
-    flex-shrink: 0;
-}
-
+/* Media, bookmark, embed, file-link and page-link rules used to live here.
+   They styled classes no block renders (the live components own tm-notion-*-block),
+   so scoped CSS never applied them. Removed in Fáze 2. */
 /* ── Unsupported block ────────────────────────────────────────── */
 
 .tm-notion-block-unsupported {

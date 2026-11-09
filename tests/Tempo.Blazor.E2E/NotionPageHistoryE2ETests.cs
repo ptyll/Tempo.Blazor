@@ -149,19 +149,20 @@ public class NotionPageHistoryE2ETests : WasmTestBase
         await versionItems.Nth(1).ClickAsync();
 
         // Wait for the preview toolbar
-        var restoreBtn = panel.Locator(".tm-nph__toolbar-btn--primary").First;
+        var restoreBtn = page.GetByTestId("notion-history-restore");
         await restoreBtn.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 8000 });
 
-        // Click Restore → confirm dialog appears
+        // Click Restore → the core TmDialog appears (the local .tm-nph-confirm box is gone).
+        // The dialog is a sibling of the history modal, so it is not inside the panel locator.
         await restoreBtn.ClickAsync();
-        var confirmDialog = page.Locator(".tm-nph-confirm").First;
+        var confirmDialog = page.GetByTestId("notion-history-restore-confirm");
         await confirmDialog.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 5000 });
         Assert.IsTrue(await confirmDialog.IsVisibleAsync(), "Restore confirm dialog should appear");
 
         await TakeScreenshotAsync(page, "history_restore_confirm");
 
-        // Confirm the restore — panel should close
-        var okBtn = confirmDialog.Locator(".tm-nph-confirm__ok").First;
+        // Confirm the restore — panel should close. The OK class rides the TmButton root.
+        var okBtn = confirmDialog.Locator("button.tm-dialog-btn-ok").First;
         await okBtn.ClickAsync();
         await panel.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Hidden, Timeout = 10000 });
         Assert.IsFalse(await panel.IsVisibleAsync(), "History panel should close after confirming restore");
@@ -176,7 +177,9 @@ public class NotionPageHistoryE2ETests : WasmTestBase
         var page  = await OpenNotionEditorAsync();
         var panel = await OpenPageHistoryAsync(page);
 
-        var closeBtn = panel.Locator(".tm-nph__close-btn").First;
+        // Phase 7 review removed the inner .tm-nph__close-btn. The header close is the core
+        // TmModal button, a descendant of the overlay that carries .tm-nph-host.
+        var closeBtn = page.Locator(".tm-nph-host button.tm-modal-close").First;
         await closeBtn.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 5000 });
         await closeBtn.ClickAsync();
 
@@ -263,7 +266,7 @@ public class NotionPageHistoryRecoveryE2ETests : NotionE2ETestBase
         });
 
         await versionItems.Nth(1).ClickAsync();
-        var restoreButton = panel.Locator(".tm-nph__toolbar-btn--primary").First;
+        var restoreButton = page.GetByTestId("notion-history-restore");
         await restoreButton.WaitForAsync(new LocatorWaitForOptions
         {
             State = WaitForSelectorState.Visible,
@@ -271,7 +274,7 @@ public class NotionPageHistoryRecoveryE2ETests : NotionE2ETestBase
         });
         await restoreButton.ClickAsync();
 
-        var confirmDialog = page.Locator(".tm-nph-confirm").First;
+        var confirmDialog = page.GetByTestId("notion-history-restore-confirm");
         await confirmDialog.WaitForAsync(new LocatorWaitForOptions
         {
             State = WaitForSelectorState.Visible,
@@ -280,7 +283,7 @@ public class NotionPageHistoryRecoveryE2ETests : NotionE2ETestBase
         await AssertNoHorizontalOverflowAsync(confirmDialog, "EB13 restore confirmation dialog");
         await CaptureBaselineAsync("page-history", "restore-confirm", confirmDialog);
 
-        await confirmDialog.Locator(".tm-nph-confirm__ok").First.ClickAsync();
+        await confirmDialog.Locator("button.tm-dialog-btn-ok").First.ClickAsync();
         await panel.WaitForAsync(new LocatorWaitForOptions
         {
             State = WaitForSelectorState.Hidden,

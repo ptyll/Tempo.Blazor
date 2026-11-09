@@ -17,4 +17,13 @@
 .tm-notion-notifications__panel {
     width: 24rem;
     max-width: calc(100vw - 1.5rem);
+    /* :where(.tm-overlay-panel) resets background, border and shadow. The bell dropdown
+       rule does not match this class, so the panel has to paint its own chrome. */
+    background: var(--tm-bg-surface);
+    border: 1px solid var(--tm-border-color);
+    border-radius: var(--tm-radius-lg);
+    box-shadow: var(--tm-shadow-lg);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
 }

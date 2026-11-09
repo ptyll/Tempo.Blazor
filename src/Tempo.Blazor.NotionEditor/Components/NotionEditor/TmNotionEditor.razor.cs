@@ -1,7 +1,12 @@
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Web;
 using Tempo.Blazor.Components;
+using Tempo.Blazor.Components.Actions;
+using Tempo.Blazor.Components.Layout;
+using Tempo.Blazor.Components.Toolbar;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.JSInterop;
+using Tempo.Blazor.Abstractions.Layout;
 using Tempo.Blazor.Abstractions.Shared;
 using Tempo.Blazor.Abstractions.WorkItems;
 using Tempo.Blazor.Components.NotionEditor.Services;
@@ -116,6 +121,61 @@ public partial class TmNotionEditor : TmComponentBase, IAsyncDisposable
     /// <summary>Group identifiers used for permission checks for the current user.</summary>
     [Parameter] public IReadOnlyList<string> CurrentUserGroupIds { get; set; } = [];
 
+    /// <summary>
+    /// How the editor decides its responsive layout. <see cref="TmLayoutMode.Auto"/> (default)
+    /// measures the editor's own container (desktop ≥1024, tablet 640–1023, mobile &lt;640; the first
+    /// frame, before a measurement, is Desktop). A forced value pins the layout for a host or a test
+    /// and is cascaded into the page, the menus and the database blocks.
+    /// </summary>
+    [Parameter] public TmLayoutMode LayoutMode { get; set; } = TmLayoutMode.Auto;
+
+    /// <summary>
+    /// How much chrome the editor renders. <see cref="NotionEditorChrome.Full"/> (default) is today's
+    /// editor. <see cref="NotionEditorChrome.Minimal"/> hides shortcuts, the bell, mode toggles and
+    /// badges. <see cref="NotionEditorChrome.None"/> renders the page only.
+    /// </summary>
+    [Parameter] public NotionEditorChrome Chrome { get; set; } = NotionEditorChrome.Full;
+
+    /// <summary>
+    /// Host slot for a page inspector, rendered through <see cref="TmSidePanel"/> on the right.
+    /// Null (default) renders no right region — the editor does not invent inspector content (G10).
+    /// </summary>
+    [Parameter] public RenderFragment? InspectorContent { get; set; }
+
+    /// <summary>
+    /// How the Tasks / Blog / Analytics / Audit shell panels present themselves.
+    /// <see cref="NotionShellPanelPresentation.Overlay"/> (default) rides the core
+    /// <see cref="TmSidePanel"/> — docked next to the page on a desktop layout, a side sheet on a
+    /// tablet layout and a full-height sheet on a mobile layout — while the page stays mounted.
+    /// <see cref="NotionShellPanelPresentation.Main"/> replaces the page in the main region
+    /// (the pre-phase-3 hosting). At most one shell panel is open at a time either way.
+    /// </summary>
+    [Parameter] public NotionShellPanelPresentation ShellPanelPresentation { get; set; } = NotionShellPanelPresentation.Overlay;
+
+    /// <summary>
+    /// How the block / text comment panels present (NO1). <see cref="NotionCommentPresentation.Auto"/>
+    /// (the default) keeps the anchored popover bubble on a fine desktop pointer and opens the core
+    /// modal / sheet on a coarse pointer and on touch and narrow containers; <see cref="NotionCommentPresentation.Popover"/>
+    /// pins the bubble at every layout; <see cref="NotionCommentPresentation.Dialog"/> always opens
+    /// the modal.
+    /// </summary>
+    [Parameter] public NotionCommentPresentation CommentPresentation { get; set; } = NotionCommentPresentation.Auto;
+
+    /// <summary>
+    /// How the page-level comment panel presents (phase 5, P4). <see cref="NotionPageCommentsPresentation.Inline"/>
+    /// (the default) keeps the collapsible panel at the bottom of the page;
+    /// <see cref="NotionPageCommentsPresentation.Dialog"/> renders no inline panel — the header badge
+    /// and the Comments page action open a core <c>TmModal</c> hosting the Embedded panel (a sheet
+    /// on a mobile layout).
+    /// </summary>
+    [Parameter] public NotionPageCommentsPresentation PageCommentsPresentation { get; set; } = NotionPageCommentsPresentation.Inline;
+
+    /// <summary>
+    /// Opt-in page meta row under the title (last edited, last editor, comment count link).
+    /// Defaults to <see langword="false"/>; the demo turns it on.
+    /// </summary>
+    [Parameter] public bool ShowMeta { get; set; }
+
     /// <summary>Additional CSS class on the root element.</summary>
     [Parameter] public string? Class { get; set; }
 
@@ -141,7 +201,15 @@ public partial class TmNotionEditor : TmComponentBase, IAsyncDisposable
     private bool                       _isLoading;
     private string?                    _loadError;
     private bool                       _sidebarVisible = true;
-    private bool                       _sidebarOverlay;
+    private TmLayoutMode               _resolvedLayout = TmLayoutMode.Desktop;
+
+    /// <summary>The viewport scope — its pointer signal is copied into <see cref="LayoutCascade"/>.</summary>
+    [CascadingParameter(Name = TmLayoutScopes.Viewport)]
+    private TmLayoutContext? ViewportLayout { get; set; }
+    private bool                       _sidebarTouched;
+
+    /// <summary>Below desktop the drawer starts closed; a forced mode must not wait for the JS probe.</summary>
+    private bool SidebarStartsClosed => EffectiveLayout is TmLayoutMode.Mobile or TmLayoutMode.Tablet;
     private bool                       _topbarScrolled;
     private NotionEditorContext        _context        = default!;
     private ElementReference           _rootRef;
@@ -150,13 +218,12 @@ public partial class TmNotionEditor : TmComponentBase, IAsyncDisposable
     private IJSObjectReference?        _jsScrollListener;
     private NotionCollaborationSync?   _collabSync;
     private bool                       _notificationPanelOpen;
-    private bool                       _tasksPanelOpen;
-    private bool                       _blogPanelOpen;
-    private bool                       _analyticsPanelOpen;
-    private bool                       _auditPanelOpen;
+    private NotionShellPanel           _openShellPanel = NotionShellPanel.None;
     private bool                       _shortcutsVisible;
     private bool                       _templateGalleryOpen;
     private string?                    _selectedSpaceId;
+    /// <summary>Space last taken from a loaded page. A user pick (sidebar) is not overwritten.</summary>
+    private string?                    _pageSpaceId;
     private NotionEditorViewMode       _viewMode = NotionEditorViewMode.Normal;
     private string?                    _scrollSpyBlockId;
     private PageEffectivePermissionDto? _effectivePermission;
@@ -182,10 +249,228 @@ public partial class TmNotionEditor : TmComponentBase, IAsyncDisposable
 
     // ── Computed ─────────────────────────────────────────────────────────────
 
+    private bool _inspectorOpen;
+
+    /// <summary>Main presentation hides the page while a shell panel is open; Overlay keeps it mounted.</summary>
+    private bool MainPanelReplacesPage => ShellPanelPresentation == NotionShellPanelPresentation.Main
+        && _openShellPanel != NotionShellPanel.None;
+    private ElementReference _sidebarRef;
+    private ElementReference _sidebarToggleRef;
+
+    /// <summary>The localized title of the open shell panel (names the side sheet).</summary>
+    private string ShellPanelTitle => _openShellPanel switch
+    {
+        NotionShellPanel.Tasks    => Loc["Notion_Tasks_Title"],
+        NotionShellPanel.Blog     => Loc["Notion_Blog_Title"],
+        NotionShellPanel.Analytics => Loc["Notion_Analytics_Title"],
+        NotionShellPanel.Audit    => Loc["Notion_Audit_Title"],
+        _                         => string.Empty,
+    };
+
+    /// <summary>The side sheet width of the open shell panel.</summary>
+    private string ShellPanelWidth => _openShellPanel switch
+    {
+        // Blog and audit need the wide table. Tasks stays wide enough that a 1440/1600 dock
+        // is a ≥640px container (inline filters); a phone sheet is still <640 (Filters button).
+        NotionShellPanel.Blog or NotionShellPanel.Audit => "min(52rem, 100%)",
+        NotionShellPanel.Tasks => "min(42rem, 100%)",
+        _ => "26rem",
+    };
+
+    /// <summary>The toolbar trigger focus returns to when Escape closes the overlay panel.</summary>
+    private string? ShellPanelTriggerId => _openShellPanel switch
+    {
+        NotionShellPanel.Tasks     => "notion-tasks",
+        NotionShellPanel.Blog      => "notion-blog-open",
+        NotionShellPanel.Analytics => "notion-analytics-open",
+        NotionShellPanel.Audit     => "notion-audit-open",
+        _                          => null,
+    };
+
+    private string RootClasses => $"tm-notion-editor {_editorModifiers} {Class}".Trim();
+
+    /// <summary>The layout cascaded into the page, the menus and the database blocks.</summary>
+    private TmLayoutMode EffectiveLayout => LayoutMode == TmLayoutMode.Auto ? _resolvedLayout : LayoutMode;
+
+    private TmLayoutContext LayoutCascade => new(LayoutMode, EffectiveLayout)
+    {
+        // The shell observer is nearer than this cascade. A forced shell does not measure, so it
+        // inherits this value — without the copy a pinned desktop width would hide a coarse pointer.
+        IsCoarsePointer = ViewportLayout?.IsCoarsePointer == true,
+    };
+
+    private Dictionary<string, object> ShellAttributes => new()
+    {
+        ["data-notion-scroll-root"] = true,
+        ["data-view-mode"] = ViewModeName,
+        ["data-editor-layout"] = LayoutModeName,
+        ["tabindex"] = 0,
+        ["onkeydown"] = EventCallback.Factory.Create<KeyboardEventArgs>(this, OnEditorKeyDown)
+    };
+
+    private string LayoutModeName => EffectiveLayout switch
+    {
+        TmLayoutMode.Mobile => "mobile",
+        TmLayoutMode.Tablet => "tablet",
+        _ => "desktop"
+    };
+
+    private string PageTitle => string.IsNullOrWhiteSpace(_currentPage?.Title)
+        ? Loc["TmNotionEditor_Untitled"]
+        : _currentPage!.Title;
+
+    /// <summary>Tablet and mobile keep the low-priority tools in the toolbar "More" menu.</summary>
+    private ToolbarButtonPriority ToolPriority => EffectiveLayout is TmLayoutMode.Tablet or TmLayoutMode.Mobile
+        ? ToolbarButtonPriority.OverflowOnly
+        : ToolbarButtonPriority.Secondary;
+
+    /// <summary>
+    /// My Tasks stays pinned on desktop and tablet. On the mobile band the pinned sidebar toggle,
+    /// watch and bell (44px touch targets each) already fill a 320px bar; a pinned Tasks could
+    /// not fold into "More" and the More trigger painted over it (taps opened More instead).
+    /// </summary>
+    private ToolbarButtonPriority TasksPriority => EffectiveLayout is TmLayoutMode.Mobile
+        ? ToolbarButtonPriority.Primary
+        : ToolbarButtonPriority.Pinned;
+
+    private static Dictionary<string, object> Group(string key) => new() { ["data-tm-group"] = key };
+
+    private Dictionary<string, object> Test(string id) => new() { ["data-testid"] = TestId(id) };
+
+    /// <summary>
+    /// The mobile action bar. Reading/presentation mode keeps only Exit; otherwise the bar pins at
+    /// most three actions (Add block, Comments, My tasks when a work-item source exists) and the
+    /// rest live in the More sheet with their test ids. The page actions (Add block, Comments,
+    /// Page settings) are invoked through the cascaded <see cref="NotionPageActions"/> the page
+    /// itself exposes — the bar never duplicates page logic.
+    /// </summary>
+    private IReadOnlyList<TmActionItem>? MobileBarActions
+    {
+        get
+        {
+            if (EffectiveLayout != TmLayoutMode.Mobile || Chrome != NotionEditorChrome.Full)
+                return null;
+
+            // No navigation and no inspector: the bar is editor chrome too — a host that renders
+            // the page only (public share, single-page surface) gets no bar.
+            if (!EffectiveShowSidebar && InspectorContent is null)
+                return null;
+
+            if (IsReadOnlyViewMode)
+            {
+                return
+                [
+                    Action("exit-reading", Loc["Notion_Reading_Exit"], "x", ExitViewModeAsync)
+                ];
+            }
+
+            var items = new List<TmActionItem>();
+            var pageActionsLabel = Loc["TmNotionEditor_PageActions"];
+            if (_context?.PageActions is not null && !IsEffectivelyReadOnly)
+            {
+                items.Add(Action("add", Loc["TmNotionEditor_AddBlock"], "plus",
+                    () => _context.PageActions!.AddBlock?.Invoke() ?? Task.CompletedTask, pageActionsLabel));
+                if (CommentProvider is not null)
+                {
+                    items.Add(Action("comments", Loc["TmNotionEditor_Comments"], "message-square",
+                        () => _context.PageActions!.OpenComments?.Invoke() ?? Task.CompletedTask, pageActionsLabel));
+                }
+            }
+            if (_context?.WorkItemSource is not null && !SinglePageMode)
+                items.Add(Action("tasks", Loc["Notion_Tasks_Title"], "check-square", ToggleTasksPanelAsync));
+
+            // The More sheet holds the remaining tools; every entry keeps its test id.
+            items.Add(new TmActionItem
+            {
+                Id = "shortcuts",
+                Label = Loc["Notion_Shortcuts_Title"],
+                Icon = "help-circle",
+                Overflow = ActionOverflow.Always,
+                TestId = TestId("notion-shortcuts-open"),
+                OnClick = EventCallback.Factory.Create(this, OpenShortcutsAsync)
+            });
+            if (_context?.AuditProvider is not null && !SinglePageMode)
+                items.Add(MoreAction("audit", Loc["Notion_Audit_Title"], "file-text", "notion-audit-open", ToggleAuditPanelAsync));
+            if (_context?.BlogProvider is not null && !SinglePageMode)
+                items.Add(MoreAction("blog", Loc["Notion_Blog_Title"], "book-open", "notion-blog-open", ToggleBlogPanelAsync));
+            if (_context?.AnalyticsProvider is not null && !SinglePageMode)
+                items.Add(MoreAction("analytics", Loc["Notion_Analytics_Title"], "bar-chart-2", "notion-analytics-open", ToggleAnalyticsPanelAsync));
+            if (_context?.PublicShareProvider is not null && !SinglePageMode)
+                items.Add(MoreAction("share", Loc["TmNotionEditor_Share"], "share-2", "notion-share-open", OpenShareAsync));
+            items.Add(MoreAction("reading", Loc["Notion_Reading_Enter"], "book-open", "notion-reading-toggle", EnterReadingModeAsync));
+            items.Add(MoreAction("presentation", Loc["Notion_Presentation_Enter"], "monitor", "notion-presentation-toggle", EnterPresentationModeAsync));
+            if (_context?.WatchProvider is not null && _currentPage is not null)
+                items.Add(MoreAction("watch", Loc["Notion_Watch_Start"], "eye", "notion-watch-toggle", ToggleWatchFromBarAsync));
+            if (_context?.PageActions?.OpenPageSettings is not null && !IsEffectivelyReadOnly)
+                items.Add(MoreAction("page-settings", Loc["TmNotionPageSettingsMenu_TriggerLabel"], "settings", "notion-page-settings", OpenPageSettingsFromBarAsync, pageActionsLabel));
+            return items;
+        }
+    }
+
+    private TmActionItem MoreAction(string id, string label, string icon, string testId, Func<Task> click, string? groupLabel = null) => new()
+    {
+        Id = id,
+        Label = label,
+        Icon = icon,
+        Overflow = ActionOverflow.Always,
+        TestId = TestId(testId),
+        Group = groupLabel is null ? null : "page-actions",
+        GroupLabel = groupLabel,
+        OnClick = EventCallback.Factory.Create(this, click)
+    };
+
+    private Task OpenPageSettingsFromBarAsync()
+        => _context.PageActions?.OpenPageSettings?.Invoke() ?? Task.CompletedTask;
+
+    private async Task ToggleWatchFromBarAsync()
+    {
+        if (_context.WatchProvider is null || _currentPage is null) return;
+        var pageId = _currentPage.Id.ToString("D");
+        try
+        {
+            var watching = await _context.WatchProvider.IsWatchingAsync(pageId, EffectiveCurrentUserId);
+            if (watching)
+                await _context.WatchProvider.UnwatchAsync(pageId, EffectiveCurrentUserId);
+            else
+                await _context.WatchProvider.WatchAsync(pageId, EffectiveCurrentUserId, includeChildren: false);
+        }
+        catch { /* watch state is non-critical */ }
+    }
+
+    private TmActionItem Action(string id, string label, string icon, Func<Task> click, string? groupLabel = null) => new()
+    {
+        Id = id,
+        Label = label,
+        Icon = icon,
+        Group = groupLabel is null ? null : "page-actions",
+        GroupLabel = groupLabel,
+        OnClick = EventCallback.Factory.Create(this, click)
+    };
+
+    private Task OpenShareAsync()
+    {
+        _shareDialogOpen = true;
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    /// <summary>The page re-registered its actions — re-render the chrome that consumes them.</summary>
+    private Task NotifyPageActionsChanged() => InvokeAsync(StateHasChanged);
+
+    private static Dictionary<string, object> Attrs(params (string Key, object Value)[] pairs)
+    {
+        var map = new Dictionary<string, object>();
+        foreach (var (key, value) in pairs)
+            map[key] = value;
+        return map;
+    }
+
     private string _editorModifiers => string.Concat(
         _currentPage?.IsFullWidth == true ? " tm-notion-editor--full-width" : string.Empty,
         IsEffectivelyReadOnly              ? " tm-notion-editor--locked"     : string.Empty,
         SinglePageMode                     ? " tm-notion-editor--single-page" : string.Empty,
+        EffectiveLayout == TmLayoutMode.Mobile  ? " tm-notion-editor--mobile" : string.Empty,
+        EffectiveLayout == TmLayoutMode.Tablet  ? " tm-notion-editor--tablet" : string.Empty,
         _viewMode == NotionEditorViewMode.Reading ? " tm-notion-editor--reading" : string.Empty,
         _viewMode == NotionEditorViewMode.Presentation ? " tm-notion-editor--presentation" : string.Empty
     ).TrimStart();
@@ -209,7 +494,7 @@ public partial class TmNotionEditor : TmComponentBase, IAsyncDisposable
             if (_resolvedCurrentUser is not null)
                 return string.IsNullOrWhiteSpace(_resolvedCurrentUser.User?.Id) ? "anonymous" : _resolvedCurrentUser.User.Id;
 
-            return string.IsNullOrWhiteSpace(CurrentUserId) ? "demo" : CurrentUserId.Trim();
+            return string.IsNullOrWhiteSpace(CurrentUserId) ? string.Empty : CurrentUserId.Trim();
         }
     }
 
@@ -220,7 +505,7 @@ public partial class TmNotionEditor : TmComponentBase, IAsyncDisposable
             if (_resolvedCurrentUser is not null)
                 return _resolvedCurrentUser.User;
 
-            var userId = string.IsNullOrWhiteSpace(CurrentUserId) ? "demo" : CurrentUserId.Trim();
+            var userId = string.IsNullOrWhiteSpace(CurrentUserId) ? string.Empty : CurrentUserId.Trim();
             return new TmUserRef { Id = userId, DisplayName = userId };
         }
     }
@@ -237,6 +522,8 @@ public partial class TmNotionEditor : TmComponentBase, IAsyncDisposable
             _collabSync = new NotionCollaborationSync();
 
         _context = BuildContext();
+        if (SidebarStartsClosed)
+            _sidebarVisible = false;
     }
 
     protected override async Task OnParametersSetAsync()
@@ -290,7 +577,6 @@ public partial class TmNotionEditor : TmComponentBase, IAsyncDisposable
         {
             _selfRef = DotNetObjectReference.Create(this);
             await InitEditorKeyHandlerAsync();
-            await InitializeResponsiveSidebarAsync();
             await InitScrollListenerAsync();
 
             if (InitialPageId is not null && !HasSinglePageConfigError)
@@ -326,8 +612,17 @@ public partial class TmNotionEditor : TmComponentBase, IAsyncDisposable
             var page = await DataProvider.GetPageAsync(pageId);
             _navStack.Push(pageId);
             _currentPageId = pageId;
+            if (EffectiveLayout is TmLayoutMode.Mobile or TmLayoutMode.Tablet)
+                _sidebarVisible = false;
             _currentPage   = page;
-            _selectedSpaceId ??= string.IsNullOrWhiteSpace(page.SpaceId) ? null : page.SpaceId;
+            // Follow the loaded page unless the user picked another space. A one-shot ??= kept the
+            // space from the first navigation, so a seed that moved the page (blog posts live in
+            // "team") still queried the old space and the panel listed 0 posts.
+            var loadedSpaceId = string.IsNullOrWhiteSpace(page.SpaceId) ? null : page.SpaceId;
+            if (_selectedSpaceId is null
+                || string.Equals(_selectedSpaceId, _pageSpaceId, StringComparison.OrdinalIgnoreCase))
+                _selectedSpaceId = loadedSpaceId;
+            _pageSpaceId = loadedSpaceId;
 
             if (_aggregateSession is not null)
             {
@@ -396,28 +691,38 @@ public partial class TmNotionEditor : TmComponentBase, IAsyncDisposable
 
     private void ToggleSidebar()
     {
+        _sidebarTouched = true;
         _sidebarVisible = !_sidebarVisible;
-        StateHasChanged();
     }
 
-    private async Task InitializeResponsiveSidebarAsync()
+    private Task OnShellLayoutChanged(TmLayoutMode mode)
     {
-        if (!EffectiveShowSidebar)
-            return;
-
-        try
-        {
-            var isOverlayViewport = await JS.InvokeAsync<bool>("tmNotionEditor.isNarrowViewport", 1024);
-            _sidebarOverlay = isOverlayViewport;
-            if (isOverlayViewport)
-                _sidebarVisible = false;
-            StateHasChanged();
-        }
-        catch
-        {
-            _sidebarOverlay = false;
-        }
+        _resolvedLayout = mode;
+        if (!_sidebarTouched)
+            _sidebarVisible = mode == TmLayoutMode.Desktop;
+        return Task.CompletedTask;
     }
+
+    private Task ToggleSidebarAsync()
+    {
+        ToggleSidebar();
+        return Task.CompletedTask;
+    }
+
+    private Task OnSidebarOpenChanged(bool open)
+    {
+        if (open) _sidebarTouched = true;
+        _sidebarVisible = open;
+        return Task.CompletedTask;
+    }
+
+    private Task OnInspectorOpenChanged(bool open)
+    {
+        _inspectorOpen = open;
+        return Task.CompletedTask;
+    }
+
+    private void CloseSidebar() => _sidebarVisible = false;
 
     private void OnNotificationDropdownOpenChanged(bool isOpen)
     {
@@ -427,57 +732,56 @@ public partial class TmNotionEditor : TmComponentBase, IAsyncDisposable
 
     private void ToggleTasksPanel()
     {
-        _tasksPanelOpen = !_tasksPanelOpen;
-        if (_tasksPanelOpen)
-            CloseSecondaryPanels(exceptTasks: true);
+        _openShellPanel = _openShellPanel == NotionShellPanel.Tasks ? NotionShellPanel.None : NotionShellPanel.Tasks;
+        if (_openShellPanel != NotionShellPanel.None)
+            CloseTemplateGalleryOnly();
         StateHasChanged();
     }
 
-    private void CloseTasksPanel()
+    private Task ToggleTasksPanelAsync() { ToggleTasksPanel(); return Task.CompletedTask; }
+    private Task ToggleBlogPanelAsync() { ToggleBlogPanel(); return Task.CompletedTask; }
+    private Task ToggleAnalyticsPanelAsync() { ToggleAnalyticsPanel(); return Task.CompletedTask; }
+    private Task ToggleAuditPanelAsync() { ToggleAuditPanel(); return Task.CompletedTask; }
+    private Task OpenShortcutsAsync() { OpenShortcutsPanel(); return Task.CompletedTask; }
+    private Task EnterReadingModeAsync() { EnterReadingMode(); return Task.CompletedTask; }
+    private Task EnterPresentationModeAsync() { EnterPresentationMode(); return Task.CompletedTask; }
+    private Task ExitViewModeAsync() { ExitViewMode(); return Task.CompletedTask; }
+
+    /// <summary>The one close path of the open shell panel (its ×, Escape and the side sheet close).</summary>
+    private void CloseShellPanel()
     {
-        _tasksPanelOpen = false;
+        _openShellPanel = NotionShellPanel.None;
         StateHasChanged();
+    }
+
+    private Task OnShellPanelOverlayClosed(bool open)
+    {
+        if (!open)
+            CloseShellPanel();
+        return Task.CompletedTask;
     }
 
     private void ToggleBlogPanel()
     {
-        _blogPanelOpen = !_blogPanelOpen;
-        if (_blogPanelOpen)
-            CloseSecondaryPanels(exceptBlog: true);
+        _openShellPanel = _openShellPanel == NotionShellPanel.Blog ? NotionShellPanel.None : NotionShellPanel.Blog;
+        if (_openShellPanel != NotionShellPanel.None)
+            CloseTemplateGalleryOnly();
         StateHasChanged();
     }
 
     private void ToggleAnalyticsPanel()
     {
-        _analyticsPanelOpen = !_analyticsPanelOpen;
-        if (_analyticsPanelOpen)
-            CloseSecondaryPanels(exceptAnalytics: true);
+        _openShellPanel = _openShellPanel == NotionShellPanel.Analytics ? NotionShellPanel.None : NotionShellPanel.Analytics;
+        if (_openShellPanel != NotionShellPanel.None)
+            CloseTemplateGalleryOnly();
         StateHasChanged();
     }
 
     private void ToggleAuditPanel()
     {
-        _auditPanelOpen = !_auditPanelOpen;
-        if (_auditPanelOpen)
-            CloseSecondaryPanels(exceptAudit: true);
-        StateHasChanged();
-    }
-
-    private void CloseBlogPanel()
-    {
-        _blogPanelOpen = false;
-        StateHasChanged();
-    }
-
-    private void CloseAnalyticsPanel()
-    {
-        _analyticsPanelOpen = false;
-        StateHasChanged();
-    }
-
-    private void CloseAuditPanel()
-    {
-        _auditPanelOpen = false;
+        _openShellPanel = _openShellPanel == NotionShellPanel.Audit ? NotionShellPanel.None : NotionShellPanel.Audit;
+        if (_openShellPanel != NotionShellPanel.None)
+            CloseTemplateGalleryOnly();
         StateHasChanged();
     }
 
@@ -496,7 +800,7 @@ public partial class TmNotionEditor : TmComponentBase, IAsyncDisposable
 
     private Task OpenTemplateGalleryAsync()
     {
-        CloseSecondaryPanels();
+        _openShellPanel = NotionShellPanel.None;
         _templateGalleryOpen = true;
         StateHasChanged();
         return Task.CompletedTask;
@@ -508,16 +812,19 @@ public partial class TmNotionEditor : TmComponentBase, IAsyncDisposable
         StateHasChanged();
     }
 
+    /// <summary>Closes the template gallery only — the shell panels are single-state already.</summary>
+    private void CloseTemplateGalleryOnly() => _templateGalleryOpen = false;
+
     private void EnterReadingMode()
     {
-        CloseSecondaryPanels();
+        _openShellPanel = NotionShellPanel.None;
         _viewMode = NotionEditorViewMode.Reading;
         StateHasChanged();
     }
 
     private void EnterPresentationMode()
     {
-        CloseSecondaryPanels();
+        _openShellPanel = NotionShellPanel.None;
         _viewMode = NotionEditorViewMode.Presentation;
         StateHasChanged();
     }
@@ -541,15 +848,6 @@ public partial class TmNotionEditor : TmComponentBase, IAsyncDisposable
             ExitViewMode();
 
         return Task.CompletedTask;
-    }
-
-    private void CloseSecondaryPanels(bool exceptTasks = false, bool exceptBlog = false, bool exceptAnalytics = false, bool exceptAudit = false)
-    {
-        if (!exceptTasks) _tasksPanelOpen = false;
-        if (!exceptBlog) _blogPanelOpen = false;
-        if (!exceptAnalytics) _analyticsPanelOpen = false;
-        if (!exceptAudit) _auditPanelOpen = false;
-        _templateGalleryOpen = false;
     }
 
     private async Task HandleTemplateSelectedAsync(NotionTemplateDto template)
@@ -613,13 +911,17 @@ public partial class TmNotionEditor : TmComponentBase, IAsyncDisposable
 
     private async Task NavigateToTaskBlockAsync((string PageId, string BlockId) target)
     {
-        _tasksPanelOpen = false;
+        _openShellPanel = NotionShellPanel.None;
 
         if (!string.Equals(_currentPageId, target.PageId, StringComparison.OrdinalIgnoreCase))
         {
             await NavigateToPageAsync(target.PageId);
         }
 
+        // Let the navigation render commit before scrolling: on Blazor Server the re-render is
+        // queued on the renderer's work item queue and this callback may still run ahead of it;
+        // the Yield hands the scroll to a later turn so the block exists in the DOM. (Ordering
+        // relied upon — see the Notion plan, fáze 3 review.)
         await Task.Yield();
         try { await JS.InvokeVoidAsync("tmNotionEditor.scrollToBlock", target.BlockId); }
         catch { }
@@ -818,11 +1120,16 @@ public partial class TmNotionEditor : TmComponentBase, IAsyncDisposable
         TokenProvider               = TokenProvider,
         AllowedBlockTypes           = AllowedBlockTypes,
         DeniedBlockTypes            = SinglePageMode ? SinglePageDeniedBlockTypes : null,
+        CommentPresentation         = CommentPresentation,
+        PageCommentsPresentation    = PageCommentsPresentation,
+        PageActions                 = _context?.PageActions,
+        PageActionsChanged          = NotifyPageActionsChanged,
         NavigateTo                  = pageId => NavigateToPageAsync(pageId),
         SelectedSpaceId             = _selectedSpaceId,
         SelectSpace                 = SinglePageMode ? null : HandleSpaceSelectedAsync,
         CurrentPageMovedToSpace     = SinglePageMode ? null : HandleCurrentPageMovedToSpaceAsync,
-        OpenTemplateGallery         = SinglePageMode ? null : OpenTemplateGalleryAsync
+        OpenTemplateGallery         = SinglePageMode ? null : OpenTemplateGalleryAsync,
+        OpenPageDialog              = OpenPageDialogFromPage
     };
 
     // ── Dispose ──────────────────────────────────────────────────────────────

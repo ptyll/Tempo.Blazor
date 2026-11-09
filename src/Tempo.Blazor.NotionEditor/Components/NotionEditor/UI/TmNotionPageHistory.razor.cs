@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Components;
+using Tempo.Blazor.Abstractions.Layout;
 using Tempo.Blazor.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Tempo.Blazor.Components.NotionEditor.Services;
@@ -24,6 +25,25 @@ public partial class TmNotionPageHistory : TmComponentBase, IAsyncDisposable
     [Parameter] public EventCallback          OnClosed   { get; set; }
     [Parameter] public EventCallback<string>  OnRestored { get; set; }
 
+    /// <summary>Forced layout. Mobile drills from the version list into the preview.</summary>
+    [Parameter] public TmLayoutMode LayoutMode { get; set; } = TmLayoutMode.Auto;
+
+    /// <summary>The cascaded viewport. Auto drills into the preview when the viewport is mobile.</summary>
+    [CascadingParameter(Name = TmLayoutScopes.Viewport)] public TmLayoutContext? Layout { get; set; }
+
+    private TmLayoutMode ResolvedLayout =>
+        LayoutMode != TmLayoutMode.Auto ? LayoutMode : Layout?.Resolved ?? TmLayoutMode.Auto;
+
+    private bool IsMobile => ResolvedLayout == TmLayoutMode.Mobile;
+    private bool CanCompareSelected => _picked.Count == 2;
+    private bool CanRestore => _selectedVersion is not null && !(_page == 1 && _versions.Count > 0 && _selectedVersion.Id == _versions[0].Id);
+
+    private string ChangeSummary => string.Format(
+        Loc["TmNotionPageHistory_ChangeCount"],
+        _diffs.Count(diff => diff.DiffType == BlockDiffType.Added),
+        _diffs.Count(diff => diff.DiffType == BlockDiffType.Removed),
+        _diffs.Count(diff => diff.DiffType == BlockDiffType.Modified));
+
     // ── Constants ─────────────────────────────────────────────────────────────
 
     private const int PageSize = 20;
@@ -47,6 +67,9 @@ public partial class TmNotionPageHistory : TmComponentBase, IAsyncDisposable
 
     private bool                    _compareMode;
     private bool                    _showRestoreConfirm;
+    private bool                    _mobilePreview;
+    private readonly List<Guid>     _picked = [];
+    private Guid?                   _focusedVersionId;
     private bool                    _wasVisible;
 
     private string                  _error              = string.Empty;
@@ -108,6 +131,7 @@ public partial class TmNotionPageHistory : TmComponentBase, IAsyncDisposable
             var result = await Context.HistoryProvider.GetVersionsAsync(PageId, _page, PageSize);
             _versions    = result.Items;
             _totalCount  = result.TotalCount;
+            _focusedVersionId = _versions.FirstOrDefault()?.Id;
         }
         catch
         {
@@ -121,13 +145,24 @@ public partial class TmNotionPageHistory : TmComponentBase, IAsyncDisposable
 
     // ── Select version ────────────────────────────────────────────────────────
 
-    private async Task SelectVersionAsync(IPageVersion version)
+    /// <summary>A row click previews the version. It never changes the comparison selection.</summary>
+    private Task PreviewVersionAsync(IPageVersion version)
     {
-        if (_compareMode)
-        {
-            await SelectForCompareAsync(version);
-            return;
-        }
+        _focusedVersionId = version.Id;
+        return ShowPreviewAsync(version);
+    }
+
+    /// <summary>The checkbox (and Space) toggles the version in the comparison selection.</summary>
+    private void PickVersion(IPageVersion version)
+    {
+        _focusedVersionId = version.Id;
+        TogglePicked(version);
+    }
+
+    private async Task ShowPreviewAsync(IPageVersion version)
+    {
+        if (IsMobile)
+            _mobilePreview = true;
 
         if (_selectedVersion?.Id == version.Id && _view == HistoryView.Preview) return;
 
@@ -156,8 +191,39 @@ public partial class TmNotionPageHistory : TmComponentBase, IAsyncDisposable
 
     private async Task HandleVersionKeyDownAsync(KeyboardEventArgs e, IPageVersion version)
     {
-        if (e.Key is "Enter" or " ")
-            await SelectVersionAsync(version);
+        var index = IndexOf(version);
+        switch (e.Key)
+        {
+            case " " or "Spacebar":
+                PickVersion(version);
+                break;
+            case "Enter":
+                await PreviewVersionAsync(version);
+                break;
+            case "ArrowDown":
+                await MoveFocusAsync(index + 1);
+                break;
+            case "ArrowUp":
+                await MoveFocusAsync(index - 1);
+                break;
+        }
+    }
+
+    private int IndexOf(IPageVersion version)
+    {
+        for (var i = 0; i < _versions.Count; i++)
+        {
+            if (_versions[i].Id == version.Id) return i;
+        }
+
+        return -1;
+    }
+
+    private async Task MoveFocusAsync(int index)
+    {
+        if (index < 0 || index >= _versions.Count) return;
+        _focusedVersionId = _versions[index].Id;
+        await InvokeAsync(StateHasChanged);
     }
 
     // ── Pagination ────────────────────────────────────────────────────────────
@@ -182,9 +248,21 @@ public partial class TmNotionPageHistory : TmComponentBase, IAsyncDisposable
 
     // ── Restore ───────────────────────────────────────────────────────────────
 
-    private void RestoreAsync() => _showRestoreConfirm = true;
+    private void RestoreAsync()
+    {
+        if (!CanRestore) return;
+        _showRestoreConfirm = true;
+    }
 
     private void CancelRestore() => _showRestoreConfirm = false;
+
+    private Task HandleRestoreResult(bool? confirmed)
+    {
+        _showRestoreConfirm = false;
+        return confirmed == true ? ConfirmRestoreAsync() : Task.CompletedTask;
+    }
+
+    private void BackToList() => _mobilePreview = false;
 
     private async Task ConfirmRestoreAsync()
     {
@@ -220,6 +298,36 @@ public partial class TmNotionPageHistory : TmComponentBase, IAsyncDisposable
         _compareMode        = true;
         _compareFromVersion = _selectedVersion;
         _compareToVersion   = null;
+        _picked.Clear();
+        _picked.Add(_selectedVersion.Id);
+    }
+
+    private void TogglePicked(IPageVersion version)
+    {
+        if (!_picked.Remove(version.Id))
+        {
+            if (_picked.Count >= 2)
+                _picked.RemoveAt(0);
+            _picked.Add(version.Id);
+        }
+    }
+
+    private async Task CompareSelectedAsync()
+    {
+        if (_picked.Count != 2) return;
+
+        // Older version first, whatever order the user picked them in.
+        var picked = _versions.Where(version => _picked.Contains(version.Id))
+            .OrderBy(version => version.EditedAt)
+            .ToList();
+        if (picked.Count != 2) return;
+
+        _compareFromVersion = picked[0];
+        _compareToVersion = picked[1];
+        _compareMode = false;
+        if (IsMobile)
+            _mobilePreview = true;
+        await LoadDiffAsync();
     }
 
     private void CancelCompare()
@@ -274,13 +382,27 @@ public partial class TmNotionPageHistory : TmComponentBase, IAsyncDisposable
         }
     }
 
-    private void ExitDiff()
+    private Task ExitDiff()
     {
-        _view               = _selectedVersion is not null ? HistoryView.Preview : HistoryView.Empty;
+        // A two-version pick never sets _selectedVersion, so falling back to Empty hid the preview
+        // the user had just been comparing. Show the last selected version, otherwise version B.
+        // Version B is the newer of the two picks (CompareSelected orders by EditedAt). A row
+        // click before the comparison wins, because that is the preview the user last chose.
+        var target = _selectedVersion ?? _compareToVersion ?? _compareFromVersion;
         _compareFromVersion = null;
         _compareToVersion   = null;
         _diffs              = [];
         _diffViewMode       = NotionDiffViewMode.Inline;
+        if (target is null)
+        {
+            _view = HistoryView.Empty;
+            return Task.CompletedTask;
+        }
+
+        // Empty first: ShowPreviewAsync returns early while the view is already Preview of target,
+        // which a row click before the comparison would have set. The exit must reload that preview.
+        _view = HistoryView.Empty;
+        return ShowPreviewAsync(target);
     }
 
     private void SetDiffViewMode(NotionDiffViewMode viewMode)

@@ -1,6 +1,8 @@
 @namespace Tempo.Blazor.Components.NotionEditor.Sidebar
 @inherits Tempo.Blazor.Components.TmComponentBase
 @using Tempo.Blazor.NotionEditor.Interfaces
+@using Tempo.Blazor.Components.Feedback
+@using Tempo.Blazor.Components.Buttons
 
 <CascadingValue Value="this" IsFixed="true">
     @if (SelectedCount > 0)
@@ -48,79 +50,108 @@
         </div>
     }
 
-    @if (_bulkPickerOpen)
-    {
-        <div class="tm-npt-bulk-panel"
-             role="dialog"
-             aria-label="@Loc["TmNotionPageTree_BulkTargetTitle"]">
-            <div class="tm-npt-bulk-panel__header">
-                <strong>@Loc["TmNotionPageTree_BulkTargetTitle"]</strong>
-                <button class="tm-npt-bulk-panel__close"
-                        type="button"
-                        aria-label="@Loc["Tm_Close"]"
-                        @onclick="CloseBulkPanels">
-                    <span aria-hidden="true">&times;</span>
-                </button>
-            </div>
+    @* ── Bulk target picker — core TmModal (phase 4): visible title with the action and count,
+         APG flat listbox (aria-level), roving tabindex, Arrow/Home/End navigation,
+         ArrowRight/Left expand/collapse, two-step selection (Enter only selects — the sticky
+         "Select" button confirms), no own backdrop. ── *@
+    <TmModal Show="_bulkPickerOpen"
+             OnClose="CloseBulkPanels"
+             Title="@BulkPickerTitle"
+             Size="ModalSize.Small"
+             MobilePresentation="MobilePresentation.Auto"
+             data-testid="@TestId("notion-page-bulk-target-dialog")">
+        <ChildContent>
             <input class="tm-npt-bulk-panel__search"
                    type="search"
                    data-testid="@TestId("notion-page-bulk-target-search")"
                    placeholder="@Loc["TmNotionPageTree_MoveToSearch"]"
                    value="@_bulkTargetQuery"
                    @oninput="OnBulkTargetSearchAsync" />
-            <div class="tm-npt-bulk-panel__results">
-                <button class="tm-npt-bulk-panel__result"
-                        type="button"
-                        data-testid="@TestId("notion-page-bulk-target-root")"
-                        @onclick="() => ExecuteBulkTargetAsync(null)">
-                    @Loc["TmNotionPageTree_MoveToRoot"]
-                </button>
+            <div class="tm-npt-bulk-panel__results"
+                 role="listbox"
+                 aria-label="@Loc["TmNotionPageTree_BulkTargetTitle"]"
+                 @onkeydown="OnTargetListKeyDown"
+                 @onkeydown:preventDefault="_targetNavHandled">
                 @if (_bulkTargetLoading)
                 {
                     <span class="tm-npt-spinner" aria-hidden="true"></span>
                 }
                 else
                 {
-                    @foreach (var page in _bulkTargetResults)
-                    {
-                        var target = page;
+                    <div class="tm-npt-bulk-panel__row">
                         <button class="tm-npt-bulk-panel__result"
                                 type="button"
-                                data-testid="@TestId("notion-page-bulk-target-page")"
-                                @onclick="() => ExecuteBulkTargetAsync(target)">
-                            @if (!string.IsNullOrEmpty(target.IconEmoji))
-                            {
-                                <span aria-hidden="true">@target.IconEmoji</span>
-                            }
-                            @(string.IsNullOrWhiteSpace(target.Title) ? Loc["TmNotionPageTree_Untitled"].ToString() : target.Title)
+                                role="option"
+                                aria-level="1"
+                                data-testid="@TestId("notion-page-bulk-target-root")"
+                                aria-selected="@(_pendingTargetIsRoot ? "true" : "false")"
+                                tabindex="@(_pendingTargetIsRoot ? 0 : -1)"
+                                @ref="_rootTargetRef"
+                                @onclick="() => SelectBulkTarget(null)">
+                            @Loc["TmNotionPageTree_MoveToRoot"]
                         </button>
+                    </div>
+                    @for (var i = 0; i < _visibleRows.Count; i++)
+                    {
+                        var row = _visibleRows[i];
+                        var rowIndex = i;
+                        <div class="tm-npt-bulk-panel__row" style="@($"margin-left: calc({row.Depth} * var(--tm-space-5))")">
+                            @if (!row.Node.ChildrenLoaded || row.Node.Children.Count > 0)
+                            {
+                                @* Pointer affordance only (aria-hidden) — the keyboard path is
+                                   ArrowRight/Left on the option (WCAG 2.5.7). *@
+                                <span class="tm-npt-bulk-panel__expand @(row.Node.Expanded ? "tm-npt-bulk-panel__expand--open" : "")"
+                                      role="presentation"
+                                      aria-hidden="true"
+                                      @onclick="() => ToggleNodeAsync(row.Node)">
+                                    <span>▸</span>
+                                </span>
+                            }
+                            else
+                            {
+                                <span class="tm-npt-bulk-panel__expand tm-npt-bulk-panel__expand--spacer" aria-hidden="true"></span>
+                            }
+                            <button class="tm-npt-bulk-panel__result"
+                                    type="button"
+                                    role="option"
+                                    aria-level="@(row.Depth + 2)"
+                                    data-testid="@TestId("notion-page-bulk-target-page")"
+                                    aria-selected="@(IsPending(row.Page) ? "true" : "false")"
+                                    tabindex="@(IsPending(row.Page) ? 0 : -1)"
+                                    @ref="_rowRefs[rowIndex]"
+                                    @onclick="() => SelectBulkTarget(row.Page)">
+                                @if (!string.IsNullOrEmpty(row.Page.IconEmoji))
+                                {
+                                    <span aria-hidden="true">@row.Page.IconEmoji</span>
+                                }
+                                @(string.IsNullOrWhiteSpace(row.Page.Title) ? Loc["TmNotionPageTree_Untitled"].ToString() : row.Page.Title)
+                            </button>
+                        </div>
                     }
                 }
             </div>
-        </div>
-    }
+        </ChildContent>
+        <Footer>
+            <TmButton Variant="ButtonVariant.Ghost" OnClick="CloseBulkPanels">@Loc["Tm_Cancel"]</TmButton>
+            <TmButton Variant="ButtonVariant.Primary"
+                      Disabled="@(!_pendingTargetIsRoot && _pendingTargetPage is null)"
+                      OnClick="ConfirmBulkTargetAsync"
+                      data-testid="@TestId("notion-page-bulk-target-select")">
+                @Loc["TmNotionPageTree_BulkSelect"]
+            </TmButton>
+        </Footer>
+    </TmModal>
 
-    @if (_bulkDeleteConfirmOpen)
-    {
-        <div class="tm-npt-bulk-panel"
-             role="dialog"
-             aria-label="@Loc["TmNotionPageTree_BulkDeleteTitle"]">
-            <p class="tm-npt-bulk-panel__message">@Loc["TmNotionPageTree_BulkDeleteMessage"]</p>
-            <div class="tm-npt-bulk-panel__actions">
-                <button class="tm-npt-bulk-toolbar__button"
-                        type="button"
-                        @onclick="CloseBulkPanels">
-                    @Loc["TmNotionPageTree_DeleteNo"]
-                </button>
-                <button class="tm-npt-bulk-toolbar__button tm-npt-bulk-toolbar__button--danger"
-                        type="button"
-                        data-testid="@TestId("notion-page-bulk-delete-confirm-button")"
-                        @onclick="ExecuteBulkDeleteAsync">
-                    @Loc["TmNotionPageTree_DeleteYes"]
-                </button>
-            </div>
-        </div>
-    }
+    @* ── Bulk delete — core danger TmDialog (phase 4): Escape cancels, initial focus on Cancel. ── *@
+    <TmDialog Show="_bulkDeleteConfirmOpen"
+              Type="DialogType.Confirm"
+              IsDangerous="true"
+              Title="@Loc["TmNotionPageTree_BulkDeleteTitle"]"
+              Message="@Loc.Plural("TmNotionPageTree_BulkDeleteMessage", SelectedCount)"
+              OkButtonText="@Loc["TmNotionPageTree_DeleteYes"]"
+              CancelButtonText="@Loc["TmNotionPageTree_DeleteNo"]"
+              OnResult="HandleBulkDeleteResult"
+              data-testid="@TestId("notion-page-bulk-delete-confirm")" />
 
     @if (RootPages.Count == 0)
     {

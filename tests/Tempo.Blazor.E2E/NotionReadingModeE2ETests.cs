@@ -14,7 +14,7 @@ public sealed class NotionReadingModeE2ETests : NotionE2ETestBase
         var page = await OpenNotionEditorAsync();
         await SeedRichPageAsync();
 
-        await page.Locator(".tm-notion-reading-toggle").ClickAsync();
+        await ClickNotionCommandAsync(page, "notion-reading-toggle");
         await WaitForViewModeAsync(page, "Reading");
         await AssertCleanReadSurfaceAsync(page, "desktop reading");
         await AssertNoDuplicatedReadOnlyTextAsync(page, "desktop reading");
@@ -28,7 +28,7 @@ public sealed class NotionReadingModeE2ETests : NotionE2ETestBase
         Assert.AreEqual(0, await page.Locator(".tm-notion-page--readonly").CountAsync(),
             "Exiting reading mode should restore the editable page surface.");
 
-        await page.Locator(".tm-notion-presentation-toggle").ClickAsync();
+        await ClickNotionCommandAsync(page, "notion-presentation-toggle");
         await WaitForViewModeAsync(page, "Presentation");
         await AssertCleanReadSurfaceAsync(page, "presentation");
         await AssertNoDuplicatedReadOnlyTextAsync(page, "presentation");
@@ -46,7 +46,7 @@ public sealed class NotionReadingModeE2ETests : NotionE2ETestBase
         await WaitForViewModeAsync(page, "Normal");
 
         await page.SetViewportSizeAsync(390, 844);
-        await page.EvaluateAsync("() => document.querySelector('.tm-notion-reading-toggle')?.click()");
+        await ClickNotionCommandAsync(page, "notion-reading-toggle");
         await WaitForViewModeAsync(page, "Reading");
         await AssertCleanReadSurfaceAsync(page, "mobile reading");
         await AssertNoDuplicatedReadOnlyTextAsync(page, "mobile reading");

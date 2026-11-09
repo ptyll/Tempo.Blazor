@@ -1,7 +1,9 @@
 using System.Globalization;
 using Microsoft.AspNetCore.Components;
 using Tempo.Blazor.Components;
+using Tempo.Blazor.Components.Charts;
 using Tempo.Blazor.Components.NotionEditor.Services;
+using Tempo.Blazor.Localization;
 using Tempo.Blazor.NotionEditor.Interfaces;
 using Tempo.Blazor.NotionEditor.Models;
 
@@ -10,10 +12,16 @@ namespace Tempo.Blazor.Components.NotionEditor.UI;
 /// <summary>Analytics summary panel for the active Notion space and page.</summary>
 public partial class TmNotionAnalyticsPanel : TmComponentBase
 {
-    private const int SparklineWidth = 220;
-    private const int SparklineHeight = 64;
+    private static readonly IReadOnlyList<(int Days, string Key)> RangeOptions =
+    [
+        (7, "Notion_Analytics_Range7"),
+        (14, "Notion_Analytics_Range14"),
+        (30, "Notion_Analytics_Range30"),
+    ];
 
     [CascadingParameter] private NotionEditorContext Context { get; set; } = default!;
+
+    [Inject] private IServiceProvider Services { get; set; } = default!;
 
     /// <summary>Analytics provider used to query page views and top pages.</summary>
     [Parameter, EditorRequired] public INotionAnalyticsProvider AnalyticsProvider { get; set; } = default!;
@@ -21,7 +29,8 @@ public partial class TmNotionAnalyticsPanel : TmComponentBase
     /// <summary>Space whose top pages should be displayed.</summary>
     [Parameter, EditorRequired] public string SpaceId { get; set; } = string.Empty;
 
-    /// <summary>Currently open page id used for the main analytics summary.</summary>
+    /// <summary>Currently open page id used for the main analytics summary. When null, the page
+    /// metric cards stay hidden and only the range chart / top pages render.</summary>
     [Parameter] public Guid? CurrentPageId { get; set; }
 
     /// <summary>Maximum number of top pages to show.</summary>
@@ -40,11 +49,42 @@ public partial class TmNotionAnalyticsPanel : TmComponentBase
     private string? _loadError;
     private Guid? _loadedPageId;
     private string? _loadedSpaceId;
+    private int _rangeDays = 14;
+
+    private ITmRelativeTimeFormatter? _relativeTime;
+
+    /// <summary>Cached per component — <see cref="TmRelativeTime.Resolve"/> allocates a fallback when none is registered.</summary>
+    private ITmRelativeTimeFormatter RelativeTime => _relativeTime ??= TmRelativeTime.Resolve(Services, Loc);
+
+    private string AbsoluteTime(DateTime dt) => RelativeTime.Absolute(dt);
 
     private PageAnalyticsDto CurrentSummary => _currentAnalytics ?? new PageAnalyticsDto
     {
         PageId = CurrentPageId ?? Guid.Empty
     };
+
+    private ChartData ChartData
+    {
+        get
+        {
+            var points = CurrentSummary.ViewsByDay;
+            return new ChartData
+            {
+                // Short month/day labels: a culture "d" ("7/14/2026") clips the last tick
+                // on a narrow panel. M/d stays inside the plot padding.
+                Labels = points.Select(point => point.Date.ToString("M/d", CultureInfo.InvariantCulture)).ToArray(),
+                Datasets =
+                [
+                    new ChartDataset
+                    {
+                        Label = Loc["Notion_Analytics_Views"],
+                        Values = points.Select(point => (double)point.Views).ToArray(),
+                        Color = "var(--tm-color-primary)"
+                    }
+                ]
+            };
+        }
+    }
 
     protected override async Task OnParametersSetAsync()
     {
@@ -53,6 +93,14 @@ public partial class TmNotionAnalyticsPanel : TmComponentBase
 
         _loadedPageId = CurrentPageId;
         _loadedSpaceId = SpaceId;
+        await LoadAsync();
+    }
+
+    private async Task SetRangeAsync(int days)
+    {
+        if (_rangeDays == days)
+            return;
+        _rangeDays = days;
         await LoadAsync();
     }
 
@@ -75,7 +123,7 @@ public partial class TmNotionAnalyticsPanel : TmComponentBase
                     SpaceId,
                     new NotionAnalyticsRange
                     {
-                        From = today.AddDays(-13),
+                        From = today.AddDays(-(_rangeDays - 1)),
                         To = today,
                         Take = Math.Clamp(TopPageCount, 1, 20)
                     });
@@ -96,12 +144,17 @@ public partial class TmNotionAnalyticsPanel : TmComponentBase
         }
     }
 
+    /// <summary>
+    /// Resolves top-page titles through the data provider, caching per page id so a range switch
+    /// or reload never re-fetches an already-resolved title (the old path re-queried on every load).
+    /// </summary>
     private async Task ResolveTopPageTitlesAsync()
     {
-        _pageTitles.Clear();
-
         foreach (var analytics in _topPages)
         {
+            if (_pageTitles.ContainsKey(analytics.PageId))
+                continue;
+
             try
             {
                 var page = await Context.DataProvider.GetPageAsync(analytics.PageId.ToString("D"));
@@ -124,27 +177,4 @@ public partial class TmNotionAnalyticsPanel : TmComponentBase
         var max = pages.Count == 0 ? 0 : pages.Max(page => page.Views);
         return max <= 0 ? 0 : Math.Clamp(analytics.Views / (double)max * 100, 0, 100);
     }
-
-    private static string BuildSparklinePoints(IReadOnlyList<PageAnalyticsPointDto> points)
-    {
-        if (points.Count == 0)
-            return $"0,{SparklineHeight} {SparklineWidth},{SparklineHeight}";
-
-        if (points.Count == 1)
-        {
-            var y = points[0].Views <= 0 ? SparklineHeight : SparklineHeight / 2;
-            return $"0,{y.ToString("0.##", CultureInfo.InvariantCulture)} {SparklineWidth},{y.ToString("0.##", CultureInfo.InvariantCulture)}";
-        }
-
-        var max = Math.Max(1, points.Max(point => point.Views));
-        return string.Join(" ", points.Select((point, index) =>
-        {
-            var x = index / (double)(points.Count - 1) * SparklineWidth;
-            var y = SparklineHeight - point.Views / (double)max * (SparklineHeight - 6) - 3;
-            return $"{x.ToString("0.##", CultureInfo.InvariantCulture)},{y.ToString("0.##", CultureInfo.InvariantCulture)}";
-        }));
-    }
-
-    private static string FormatDate(DateTime? date)
-        => date is null ? string.Empty : date.Value.ToLocalTime().ToString("g", CultureInfo.CurrentCulture);
 }

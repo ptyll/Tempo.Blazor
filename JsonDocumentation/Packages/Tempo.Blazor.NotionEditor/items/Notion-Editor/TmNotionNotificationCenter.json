@@ -31,6 +31,12 @@
       "description": "Raised whenever the dropdown is opened or closed."
     },
     {
+      "name": "OnViewAll",
+      "type": "EventCallback",
+      "isRequired": false,
+      "description": "Optional \"View all\" footer action (Q-P8, G9): the footer renders only when a handler is supplied; invoking it closes the panel."
+    },
+    {
       "name": "PollInterval",
       "type": "TimeSpan",
       "isRequired": false,

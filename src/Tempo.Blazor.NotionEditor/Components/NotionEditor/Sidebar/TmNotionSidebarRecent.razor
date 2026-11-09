@@ -36,7 +36,8 @@
                             <span class="tm-nsr-item__body">
                                 <span class="tm-nsr-item__title">@GetTitle(page)</span>
                                 <time class="tm-nsr-item__time"
-                                      datetime="@(page.LastEditedAt.ToString("yyyy-MM-ddTHH:mm:ssZ"))">
+                                      datetime="@(page.LastEditedAt.ToString("yyyy-MM-ddTHH:mm:ssZ"))"
+                                      title="@RelativeTime.Absolute(new DateTimeOffset(DateTime.SpecifyKind(page.LastEditedAt, DateTimeKind.Utc)))">
                                     @GetRelativeTime(page.LastEditedAt)
                                 </time>
                             </span>

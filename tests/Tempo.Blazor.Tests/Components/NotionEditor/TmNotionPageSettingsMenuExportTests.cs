@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.JSInterop;
+using Tempo.Blazor.Abstractions.Layout;
 using Tempo.Blazor.Components.NotionEditor.Page;
 using Tempo.Blazor.Components.NotionEditor.Services;
 using Tempo.Blazor.NotionEditor.Enums;
@@ -18,6 +19,23 @@ public class TmNotionPageSettingsMenuExportTests : LocalizationTestBase
     public TmNotionPageSettingsMenuExportTests()
     {
         JSInterop.Mode = JSRuntimeMode.Loose;
+    }
+
+    [Fact]
+    public void Mobile_PresentsTheOpenMenuAsASheet()
+    {
+        var cut = Render<TmNotionPageSettingsMenu>(parameters => parameters
+            .Add(p => p.Page, new NotionPage { Id = Guid.NewGuid(), Title = "Page" })
+            .Add(p => p.LayoutMode, TmLayoutMode.Mobile)
+            .AddCascadingValue(new NotionEditorContext
+            {
+                DataProvider = new EmptyNotionProvider(),
+                BlockService = NSubstitute.Substitute.For<INotionEditorBlockService>()
+            }));
+
+        cut.Find(".tm-npsm-trigger").Click();
+
+        cut.Find(".tm-overlay-panel-sheet, .tm-modal--sheet").Should().NotBeNull();
     }
 
     [Fact]
@@ -102,18 +120,16 @@ public class TmNotionPageSettingsMenuExportTests : LocalizationTestBase
     }
 
     [Fact]
-    public void OpenMenu_ClickOutsideBackdrop_UsesScopedClassNotInlineZIndex()
+    public void OpenMenu_ClickOutsideBackdrop_UsesTheCoreOverlay()
     {
         var cut = RenderMenu(importExportProvider: null);
 
         cut.Find(".tm-npsm-trigger").Click();
 
-        // CF10n follow-up: the click-outside layer sits one step under the popover
-        // band via the scoped class. The old inline z-index:9998 escaped the CSS
-        // band sweep, covered the 1030 panel and made every menu item unclickable
-        // (Playwright hit-test reported an aria-hidden div intercepting).
-        var backdrop = cut.Find(".tm-npsm__backdrop");
-        backdrop.GetAttribute("style").Should().BeNullOrEmpty();
+        // Phase 6: the menu no longer paints its own backdrop. Dismissal is the core overlay's,
+        // so the markup carries neither the old scoped backdrop nor an inline z-index.
+        cut.FindAll(".tm-npsm__backdrop").Should().BeEmpty();
+        cut.Markup.Should().NotContain("z-index:");
     }
 
     [Fact]

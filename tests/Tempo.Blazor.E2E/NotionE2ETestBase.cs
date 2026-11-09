@@ -11,8 +11,11 @@ namespace Tempo.Blazor.E2E;
 public abstract class NotionE2ETestBase : WasmTestBase
 {
     private IPage? _page;
-    private int _viewportWidth = 1280;
-    private int _viewportHeight = 720;
+    // 1600, not 1280: the demo app shell consumes ~280px, and the editor classifies its OWN
+    // container (desktop from 1024). 1280 left the shell on the tablet overlay, so the page tree
+    // was a closed drawer and Secondary tools were collapsed.
+    private int _viewportWidth = 1600;
+    private int _viewportHeight = 900;
 
     protected IPage Page => _page ?? throw new InvalidOperationException("OpenNotionEditorAsync must be called before using the page.");
 
@@ -56,8 +59,28 @@ public abstract class NotionE2ETestBase : WasmTestBase
             State = WaitForSelectorState.Visible,
             Timeout = 60000
         });
+        // F-01: a visible #blazor-error-ui means an unhandled Blazor exception on the page — the
+        // same guard SmokeLaneE2ETests asserts. Fail here instead of capturing a broken surface.
+        await AssertNoBlazorErrorUiAsync(_page);
 
         return _page;
+    }
+
+    /// <summary>
+    /// F-01 guard: a visible <c>#blazor-error-ui</c> means an unhandled Blazor exception occurred.
+    /// Screenshot captures must not accept such a page (the bar covers the bottom ~60 px and
+    /// signals a broken render), so every capture helper asserts this like SmokeLaneE2ETests.
+    /// </summary>
+    protected static async Task AssertNoBlazorErrorUiAsync(IPage page)
+    {
+        var errorUiVisible = await page.EvaluateAsync<bool>(
+            """
+            () => {
+                const el = document.querySelector('#blazor-error-ui');
+                return !!el && getComputedStyle(el).display !== 'none';
+            }
+            """);
+        Assert.IsFalse(errorUiVisible, "#blazor-error-ui is visible — an unhandled Blazor exception occurred on the Notion demo page.");
     }
 
     protected async Task<IPage> OpenNotionEditorAsync(int viewportWidth, int viewportHeight, string query = "")
@@ -242,12 +265,12 @@ public abstract class NotionE2ETestBase : WasmTestBase
 
     protected async Task SeedSidebarDeepPageAsync()
     {
-        await InvokeSeedAsync("seedSidebarDeepPage");
-        await Page.WaitForSelectorAsync(".tm-notion-sidebar", new PageWaitForSelectorOptions
-        {
-            State = WaitForSelectorState.Visible,
-            Timeout = 60000
-        });
+        // The JS helper posts and then schedules its own location.reload(). Waiting for the
+        // sidebar on that in-flight navigation is what timed EB11 out at 60s. Seed through the
+        // API, reload once, and only then look for the docked tree.
+        await SeedViaApiAndReloadAsync("seedSidebarDeepPage");
+        // Do not wait for .tm-notion-sidebar here. On a phone the shell unmounts a closed drawer,
+        // so that wait is the 60s timeout. The caller opens the drawer, or reads the docked tree.
     }
 
     protected async Task SeedSidebarEmptyPageAsync()
@@ -590,35 +613,11 @@ public abstract class NotionE2ETestBase : WasmTestBase
         });
     }
 
-    protected async Task SeedBlogPageAsync()
-    {
-        await InvokeSeedAsync("seedBlogPage");
-        await Page.WaitForSelectorAsync(".tm-notion-page", new PageWaitForSelectorOptions
-        {
-            State = WaitForSelectorState.Visible,
-            Timeout = 60000
-        });
-    }
+    protected async Task SeedBlogPageAsync() => await SeedViaApiAndReloadAsync("seedBlogPage");
 
-    protected async Task SeedEmptyBlogPageAsync()
-    {
-        await InvokeSeedAsync("seedEmptyBlogPage");
-        await Page.WaitForSelectorAsync(".tm-notion-page", new PageWaitForSelectorOptions
-        {
-            State = WaitForSelectorState.Visible,
-            Timeout = 60000
-        });
-    }
+    protected async Task SeedEmptyBlogPageAsync() => await SeedViaApiAndReloadAsync("seedEmptyBlogPage");
 
-    protected async Task SeedManyBlogPostsPageAsync()
-    {
-        await InvokeSeedAsync("seedManyBlogPostsPage");
-        await Page.WaitForSelectorAsync(".tm-notion-page", new PageWaitForSelectorOptions
-        {
-            State = WaitForSelectorState.Visible,
-            Timeout = 60000
-        });
-    }
+    protected async Task SeedManyBlogPostsPageAsync() => await SeedViaApiAndReloadAsync("seedManyBlogPostsPage");
 
     protected async Task SeedBulkPagesAsync()
     {
@@ -742,6 +741,7 @@ public abstract class NotionE2ETestBase : WasmTestBase
         var fullPath = Path.Combine(outputDir, $"{safeState}.png");
         var regionPath = Path.Combine(outputDir, $"{safeState}.region.png");
 
+        await AssertNoBlazorErrorUiAsync(Page);
         await Page.WaitForTimeoutAsync(250);
         await Page.ScreenshotAsync(new PageScreenshotOptions
         {
@@ -770,6 +770,7 @@ public abstract class NotionE2ETestBase : WasmTestBase
         var fullPath = Path.Combine(outputDir, $"{safeState}.png");
         var regionPath = Path.Combine(outputDir, $"{safeState}.region.png");
 
+        await AssertNoBlazorErrorUiAsync(Page);
         await Page.WaitForTimeoutAsync(250);
         await Page.ScreenshotAsync(new PageScreenshotOptions
         {
@@ -800,6 +801,34 @@ public abstract class NotionE2ETestBase : WasmTestBase
         }
     }
 
+    /// <summary>
+    /// Clicks a Notion toolbar command whether it is on the bar or has left into "More"
+    /// (phase 3: tablet/mobile tools are OverflowOnly; a narrow desktop bar collapses Secondary).
+    /// A collapsed copy keeps <c>data-testid</c> but is inert; the menu entry carries
+    /// <c>data-menu-testid</c>. An OverflowOnly entry owns <c>data-testid</c> inside the menu.
+    /// </summary>
+    protected static async Task ClickNotionCommandAsync(IPage page, string testId)
+    {
+        var onBar = page.Locator(
+            $".tm-notion-topbar [data-testid='{testId}']:not(.tm-toolbar-item--collapsed)").First;
+        if (await onBar.CountAsync() > 0 && await onBar.IsVisibleAsync())
+        {
+            await onBar.ClickAsync();
+            return;
+        }
+
+        var more = page.Locator(".tm-notion-topbar .tm-toolbar-more").First;
+        await more.ClickAsync(new LocatorClickOptions { Force = true });
+        var entry = page.Locator(
+            $"[data-menu-testid='{testId}'], .tm-toolbar-more__menu [data-testid='{testId}']").First;
+        await entry.WaitForAsync(new LocatorWaitForOptions
+        {
+            State = WaitForSelectorState.Visible,
+            Timeout = 5000
+        });
+        await entry.ClickAsync();
+    }
+
     protected async Task InvokeSeedAsync(string methodName)
     {
         _ = Page;
@@ -808,6 +837,30 @@ public abstract class NotionE2ETestBase : WasmTestBase
             methodName,
             new PageWaitForFunctionOptions { Timeout = 60000 });
         await Page.EvaluateAsync("methodName => window.tmNotionDemo[methodName]()", methodName);
+    }
+
+    /// <summary>
+    /// Seeds through the API the demo helper wraps, then reloads once. The helper posts and
+    /// schedules its own <c>location.reload()</c>, so calling it and reloading again aborts the
+    /// seed (<c>net::ERR_ABORTED</c>) and the next panel opens against the pre-seed store.
+    /// </summary>
+    protected async Task SeedViaApiAndReloadAsync(string scenario)
+    {
+        using var http = DemoApiTestHttp.CreateClient();
+        using var response = await http.PostAsync($"/api/notion/e2e/seed/{Uri.EscapeDataString(scenario)}", null);
+        response.EnsureSuccessStatusCode();
+
+        await Page.ReloadAsync(new PageReloadOptions
+        {
+            WaitUntil = WaitUntilState.DOMContentLoaded,
+            Timeout = 60000
+        });
+        await WaitForAppReadyAsync(Page);
+        await Page.WaitForSelectorAsync(".tm-notion-page", new PageWaitForSelectorOptions
+        {
+            State = WaitForSelectorState.Visible,
+            Timeout = 60000
+        });
     }
 
     /// <summary>

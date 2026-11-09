@@ -44,6 +44,17 @@
 
 <PageTitle>Notion Editor – Tempo.Blazor</PageTitle>
 
+<style>
+    /* The demo shell's sticky top bar would cover the embedded editor's chrome and intercept its
+       clicks once the page scrolls. On this page the bar goes static (it scrolls away with the
+       content) — the same data-demo-shell hook the modeling editor page uses. This replaces the
+       E2E init-script hack that hid the bar from the tests. */
+    .demo-shell:has(.notion-editor-demo) [data-demo-shell="main"] > .sticky { position: static; }
+    /* The shared page body is max-w-7xl. With the 18.5rem demo sidebar that leaves the editor
+       below its 1024 desktop breakpoint even at a 1440 viewport, so shell panels open as sheets. */
+    .demo-shell:has(.notion-editor-demo) [data-demo-shell="page-body"] { max-width: none !important; }
+</style>
+
 <!-- Page Header -->
 <div class="mb-8">
     <h1 class="text-3xl font-bold text-slate-900 dark:text-white mb-2">Notion Editor</h1>
@@ -53,7 +64,7 @@
 </div>
 
 <!-- ═══ Interactive editor ═══════════════════════════════════════════════════ -->
-<section class="demo-section mb-6">
+<section class="demo-section mb-6 notion-editor-demo">
     <div class="flex flex-wrap items-center justify-between gap-3 mb-3">
         <div>
             <h2 class="text-xl font-semibold text-slate-800 dark:text-slate-200">Interactive Editor</h2>
@@ -87,7 +98,12 @@
     }
     else if (_currentPage != null)
     {
-        <div style="height: 600px; border: 1px solid var(--tm-color-border); border-radius: var(--tm-radius-lg); overflow: hidden; background: var(--tm-bg-surface);">
+        @* ?stage=<px> pins the interactive editor to a fixed width — the responsive-shell E2E proves
+           the editor classifies from its OWN container (mobile at a 1440 viewport when the host
+           column is narrow), not from the viewport. The height stays viewport-independent on
+           purpose: a 100dvh calc feeds back into the page height and breaks Playwright fullPage
+           baseline captures (elements never settle while the viewport is temporarily resized). *@
+        <div style="height: min(900px, 60rem); min-height: 640px; border: 1px solid var(--tm-color-border); border-radius: var(--tm-radius-lg); overflow: hidden; background: var(--tm-bg-surface); @StageWidthStyle">
             <TmNotionEditor @key="_editorRefreshKey"
                             DataProvider="@DataProvider"
                             AggregateProvider="@AggregateProvider"
@@ -124,6 +140,9 @@
                             CurrentUserId="@CurrentUserId"
                             CurrentUserGroupIds="@CurrentUserGroupIds"
                             ReadOnly="@IsQueryFlagEnabled("readonly")"
+                            CommentPresentation="CommentPresentationForQuery"
+                            PageCommentsPresentation="PageCommentsPresentationForQuery"
+                            ShowMeta="true"
                             InitialPageId="@_currentPage.Id.ToString()"
                             ShowSidebar="true"
                             OnCreateTokenRequested="@CreateTokenAsync"
@@ -1055,6 +1074,7 @@
         "seedMediaPage",
         "seedMentionTokenPage",
         "seedPageInfoPage",
+        "seedPhase5Evidence",
         "seedPagePropertiesPage",
         "seedPageReactionsEmptyPage",
         "seedPageReactionsManyPage",
@@ -1065,6 +1085,7 @@
         "seedSearchPage",
         "seedSidebarDeepPage",
         "seedSidebarEmptyPage",
+        "seedSidebarTrashChildPage",
         "seedSidebarTrashPage",
         "seedSmartLinksPage",
         "seedSpacesPage",
@@ -1119,16 +1140,21 @@
             (() => {
                 const apiBase = {{apiBaseJson}};
                 const methods = {{methodsJson}};
-                const seed = async (scenario) => {
-                    const response = await fetch(`${apiBase}/api/notion/e2e/seed/${encodeURIComponent(scenario)}`, {
+                const seed = (scenario) => {
+                    // Return the fetch promise. A fire-and-forget POST plus an immediate reload
+                    // aborts the seed (net::ERR_ABORTED) and the next panel opens against the
+                    // pre-seed store — blog lists then render "0 posts".
+                    return fetch(`${apiBase}/api/notion/e2e/seed/${encodeURIComponent(scenario)}`, {
                         method: 'POST'
+                    }).then(response => {
+                        if (!response.ok) {
+                            throw new Error(`Notion E2E seed '${scenario}' failed with ${response.status}`);
+                        }
+                        window.setTimeout(() => window.location.reload(), 0);
+                        return true;
                     });
-                    if (!response.ok) {
-                        throw new Error(`Notion E2E seed '${scenario}' failed with ${response.status}`);
-                    }
-                    window.setTimeout(() => window.location.reload(), 0);
-                    return true;
                 };
+                window.tmNotionDemoApiBase = apiBase;
                 window.tmNotionDemo = window.tmNotionDemo || {};
                 for (const method of methods) {
                     window.tmNotionDemo[method] = () => seed(method);
@@ -1202,6 +1228,27 @@
         => GetQueryValue(key) is { } value &&
            (string.IsNullOrWhiteSpace(value) || bool.TryParse(value, out var parsed) && parsed);
 
+    /// <summary>
+    /// <c>?comments=dialog|popover|auto</c> pins the block / text comment presentation for the
+    /// phase-4 dialog E2E (the default <c>Auto</c> follows the layout).
+    /// </summary>
+    private NotionCommentPresentation CommentPresentationForQuery
+        => GetQueryValue("comments")?.ToLowerInvariant() switch
+        {
+            "dialog" => NotionCommentPresentation.Dialog,
+            "popover" => NotionCommentPresentation.Popover,
+            _ => NotionCommentPresentation.Auto,
+        };
+
+    /// <summary>
+    /// <c>?pageComments=dialog</c> pins the page-comment panel to the dialog presentation
+    /// (phase 5, P4). The default stays Inline.
+    /// </summary>
+    private NotionPageCommentsPresentation PageCommentsPresentationForQuery
+        => GetQueryValue("pageComments")?.Equals("dialog", StringComparison.OrdinalIgnoreCase) == true
+            ? NotionPageCommentsPresentation.Dialog
+            : NotionPageCommentsPresentation.Inline;
+
     private string CurrentUserId => GetQueryValue("user") switch
     {
         { Length: > 0 } user => user,
@@ -1236,6 +1283,15 @@
 
         return null;
     }
+
+    /// <summary>
+    /// <c>?stage=&lt;px&gt;</c> pins the interactive editor to a fixed width so the responsive-shell
+    /// E2E can prove the editor classifies from its own container on a desktop viewport.
+    /// </summary>
+    private string? StageWidthStyle =>
+        int.TryParse(GetQueryValue("stage"), out var width) && width >= 240
+            ? $"width: min(100%, {width}px); margin-inline: auto;"
+            : null;
 
     private async Task<(string Key, string DisplayName, string? ColorClass)?> CreateTokenAsync(string query)
     {

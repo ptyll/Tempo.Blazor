@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
+using Microsoft.JSInterop;
+using Tempo.Blazor.Components;
 using Tempo.Blazor.NotionEditor.Enums;
 using Tempo.Blazor.NotionEditor.Interfaces;
 using Tempo.Blazor.NotionEditor.Models;
@@ -8,8 +10,16 @@ namespace Tempo.Blazor.Components.NotionEditor.Blocks.Database;
 
 public enum TableRowHeight { Short, Medium, Tall }
 
-public partial class TmNotionDbTableView : ComponentBase
+public partial class TmNotionDbTableView : IAsyncDisposable
 {
+    [Inject] private IJSRuntime JS { get; set; } = default!;
+
+    private ElementReference _tableRef;
+    private IJSObjectReference? _resizeSession;
+    private DotNetObjectReference<TmNotionDbTableView>? _dotNetRef;
+    private readonly string _resizeHintId = $"tm-dbt-resize-hint-{Guid.NewGuid():N}";
+    private string ResizeHintId => _resizeHintId;
+
     // ── Parameters ───────────────────────────────────────────────────────────
 
     [Parameter, EditorRequired] public IReadOnlyList<IDatabaseField>  Fields  { get; set; } = [];
@@ -23,12 +33,23 @@ public partial class TmNotionDbTableView : ComponentBase
     [Parameter] public EventCallback                                   OnNewField      { get; set; }
     [Parameter] public EventCallback<IDatabaseRecord>                  OnRecordClicked { get; set; }
     [Parameter] public EventCallback<(Guid FieldId, int Width)>        OnFieldResized  { get; set; }
+
+    /// <summary>Raised after the user confirms deleting a row. The block owns the provider call.</summary>
+    [Parameter] public EventCallback<IDatabaseRecord>                  OnRecordDeleted { get; set; }
     [Parameter] public EventCallback<(int FromIndex, int ToIndex)>     OnFieldMoved    { get; set; }
     [Parameter] public EventCallback<IDatabaseField>                   OnFieldEdit     { get; set; }
     [Parameter] public IDatabaseField?                                 GroupByField    { get; set; }
     [Parameter] public bool                                            HideEmptyGroups { get; set; }
     [Parameter] public bool                                            ShowSubItems    { get; set; }
     [Parameter] public EventCallback<IDatabaseRecord>                  OnExpandRecord  { get; set; }
+
+    /// <summary>
+    /// A coarse pointer (touch). Hides the header drag and the column resize handle; column order
+    /// then changes from the Properties panel (the non-drag alternative, WCAG 2.5.7).
+    /// </summary>
+    [Parameter] public bool CoarsePointer { get; set; }
+
+    private string HeaderDraggable => (!ReadOnly && !CoarsePointer).ToString().ToLowerInvariant();
 
     // ── Inline edit state ────────────────────────────────────────────────────
 
@@ -105,41 +126,118 @@ public partial class TmNotionDbTableView : ComponentBase
         return field.Width ?? (field.IsPrimary ? 200 : 140);
     }
 
-    // ── Column resize ─────────────────────────────────────────────────────────
+    /// <summary>
+    /// The column's inline width. The primary column caps at the scrollport minus the sticky
+    /// offset: a sticky cell wider than that does not stick, and an inline width beats the
+    /// class rule that would otherwise cap it.
+    /// </summary>
+    private string ColumnStyle(IDatabaseField field, int width)
+        => field.IsPrimary
+            ? $"min-width:min({width}px, calc(100cqi - 52px)); width:min({width}px, calc(100cqi - 52px))"
+            : $"min-width:{width}px; width:{width}px";
 
-    private Guid?  _resizingFieldId;
-    private double _resizeStartX;
-    private int    _resizeStartWidth;
+    // ── Column resize ─────────────────────────────────────────────────────────
+    // The drag writes the width to the header cell in JS (notion-db-column-resize.js, which
+    // imports the shared pointer-drag helper). Blazor state changes only when the gesture ends,
+    // so a pointermove never re-renders the table. Alt+Arrow on the handle is the keyboard path.
+
     private readonly Dictionary<Guid, int> _columnWidths = new();
 
-    private void StartResize(PointerEventArgs e, IDatabaseField field)
+    private IDatabaseRecord? _pendingDelete;
+
+    private bool AskDeleteRow(IDatabaseRecord record)
     {
-        _resizingFieldId  = field.Id;
-        _resizeStartX     = e.ClientX;
-        _resizeStartWidth = GetColumnWidth(field);
+        _pendingDelete = record;
+        return true;
     }
 
-    private void OnResizeMove(PointerEventArgs e)
+    private Task OnRowMenuAsync(IDatabaseRecord record, string value) => value switch
     {
-        if (_resizingFieldId is null) return;
-        var delta    = (int)(e.ClientX - _resizeStartX);
-        var newWidth = Math.Max(60, _resizeStartWidth + delta);
-        _columnWidths[_resizingFieldId.Value] = newWidth;
+        "delete" => Task.FromResult(AskDeleteRow(record)),
+        "open"   => OnRecordClicked.InvokeAsync(record),
+        _        => Task.CompletedTask
+    };
+
+    private Task ConfirmDeleteRowAsync(bool? confirmed)
+    {
+        var record = _pendingDelete;
+        _pendingDelete = null;
+        return confirmed == true && record is not null
+            ? OnRecordDeleted.InvokeAsync(record)
+            : Task.CompletedTask;
     }
 
-    private async Task StopResizeAsync(PointerEventArgs e)
+    private bool _resizeWanted;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (_resizingFieldId is null) return;
-        var fieldId = _resizingFieldId.Value;
-        _resizingFieldId = null;
-        var width = _columnWidths.TryGetValue(fieldId, out var w) ? w : 140;
-        await OnFieldResized.InvokeAsync((fieldId, width));
+        // Delegated attach listens on the table root, so later fields and a ReadOnly flip that
+        // mounts handles after the first render still resize. Re-attach only when the want-state
+        // changes (ReadOnly), not on every render.
+        var want = !ReadOnly;
+        if (want == _resizeWanted && _resizeSession is not null) return;
+        if (!want)
+        {
+            await DetachResizeAsync();
+            _resizeWanted = false;
+            return;
+        }
+
+        _dotNetRef ??= DotNetObjectReference.Create(this);
+        try
+        {
+            _resizeSession = await JS.InvokeAsync<IJSObjectReference>(
+                "tmDb.attachColumnResize", _tableRef, _dotNetRef);
+            _resizeWanted = true;
+        }
+        catch (Exception ex)
+        {
+            _resizeWanted = false;
+            Console.Error.WriteLine($"tmDb.attachColumnResize failed: {ex.Message}");
+        }
+    }
+
+    private async Task DetachResizeAsync()
+    {
+        if (_resizeSession is null) return;
+        var session = _resizeSession;
+        _resizeSession = null;
+        try { await session.InvokeVoidAsync("detach"); }
+        catch (JSDisconnectedException) { }
+        catch (Exception ex) { Console.Error.WriteLine($"column resize detach failed: {ex.Message}"); }
+        try { await session.DisposeAsync(); }
+        catch (JSDisconnectedException) { }
+    }
+
+    /// <summary>JS callback. Commits a finished resize — never called per pointermove.</summary>
+    [JSInvokable]
+    public Task OnColumnResized(string fieldId, int width)
+    {
+        if (!Guid.TryParse(fieldId, out var id)) return Task.CompletedTask;
+        _columnWidths[id] = Math.Max(60, width);
+        return OnFieldResized.InvokeAsync((id, _columnWidths[id]));
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        try { await DetachResizeAsync(); }
+        catch (JSDisconnectedException) { }
+        catch (Exception ex) { Console.Error.WriteLine($"column resize dispose failed: {ex.Message}"); }
+        _dotNetRef?.Dispose();
     }
 
     // ── Column drag reorder ───────────────────────────────────────────────────
 
     private int _dragFromFieldIndex = -1;
     private int _dragOverFieldIndex = -1;
+
+    private void OnHeaderDragStart(DragEventArgs e, int fieldIndex)
+    {
+        // The handle is draggable="false" and preventDefaults its own dragstart. A bubbled
+        // dragstart whose type we cannot see still starts a reorder — the handle's own
+        // handler stops that. This path is the column-header reorder.
+        OnDragStart(fieldIndex);
+    }
 
     private void OnDragStart(int fieldIndex) => _dragFromFieldIndex = fieldIndex;
 
@@ -241,27 +339,5 @@ public partial class TmNotionDbTableView : ComponentBase
         public IReadOnlyList<IDatabaseRecord> Records { get; } = records;
     }
 
-    // ── Column header icons (static helpers) ─────────────────────────────────
-
-    private static MarkupString FieldTypeIcon(DatabaseFieldType type) => (MarkupString)(type switch
-    {
-        DatabaseFieldType.Text            => "<svg width='12' height='12' viewBox='0 0 24 24' fill='none' aria-hidden='true'><path d='M4 7h16M4 12h16M4 17h10' stroke='currentColor' stroke-width='1.5' stroke-linecap='round'/></svg>",
-        DatabaseFieldType.Number          => "<svg width='12' height='12' viewBox='0 0 24 24' fill='none' aria-hidden='true'><path d='M7 3L5 21M19 3l-2 18M3 9h18M3 15h18' stroke='currentColor' stroke-width='1.5' stroke-linecap='round'/></svg>",
-        DatabaseFieldType.Select          => "<svg width='12' height='12' viewBox='0 0 24 24' fill='none' aria-hidden='true'><circle cx='12' cy='12' r='9' stroke='currentColor' stroke-width='1.5'/><circle cx='12' cy='12' r='4' fill='currentColor'/></svg>",
-        DatabaseFieldType.MultiSelect     => "<svg width='12' height='12' viewBox='0 0 24 24' fill='none' aria-hidden='true'><rect x='2' y='5' width='9' height='6' rx='1' fill='currentColor'/><rect x='13' y='5' width='9' height='6' rx='1' fill='currentColor'/><rect x='2' y='14' width='9' height='6' rx='1' fill='currentColor'/></svg>",
-        DatabaseFieldType.Status          => "<svg width='12' height='12' viewBox='0 0 24 24' fill='none' aria-hidden='true'><circle cx='12' cy='12' r='9' stroke='currentColor' stroke-width='1.5'/><path d='M8 12l3 3 5-5' stroke='currentColor' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/></svg>",
-        DatabaseFieldType.Date or DatabaseFieldType.DateRange
-                                          => "<svg width='12' height='12' viewBox='0 0 24 24' fill='none' aria-hidden='true'><rect x='3' y='4' width='18' height='17' rx='2' stroke='currentColor' stroke-width='1.5'/><path d='M16 2v4M8 2v4M3 10h18' stroke='currentColor' stroke-width='1.5' stroke-linecap='round'/></svg>",
-        DatabaseFieldType.Checkbox        => "<svg width='12' height='12' viewBox='0 0 24 24' fill='none' aria-hidden='true'><rect x='3' y='3' width='18' height='18' rx='2' stroke='currentColor' stroke-width='1.5'/><path d='M7 12l4 4 6-6' stroke='currentColor' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/></svg>",
-        DatabaseFieldType.Person          => "<svg width='12' height='12' viewBox='0 0 24 24' fill='none' aria-hidden='true'><circle cx='12' cy='8' r='4' stroke='currentColor' stroke-width='1.5'/><path d='M4 20c0-4 3.6-7 8-7s8 3 8 7' stroke='currentColor' stroke-width='1.5' stroke-linecap='round'/></svg>",
-        DatabaseFieldType.Url             => "<svg width='12' height='12' viewBox='0 0 24 24' fill='none' aria-hidden='true'><path d='M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71' stroke='currentColor' stroke-width='1.5' stroke-linecap='round'/><path d='M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71' stroke='currentColor' stroke-width='1.5' stroke-linecap='round'/></svg>",
-        DatabaseFieldType.Email           => "<svg width='12' height='12' viewBox='0 0 24 24' fill='none' aria-hidden='true'><rect x='2' y='4' width='20' height='16' rx='2' stroke='currentColor' stroke-width='1.5'/><path d='M2 8l10 6 10-6' stroke='currentColor' stroke-width='1.5'/></svg>",
-        DatabaseFieldType.Phone           => "<svg width='12' height='12' viewBox='0 0 24 24' fill='none' aria-hidden='true'><path d='M5 4h4l2 5-2.5 1.5a11 11 0 0 0 4 4L14 12l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z' stroke='currentColor' stroke-width='1.5' stroke-linejoin='round'/></svg>",
-        DatabaseFieldType.Files           => "<svg width='12' height='12' viewBox='0 0 24 24' fill='none' aria-hidden='true'><path d='M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z' stroke='currentColor' stroke-width='1.5'/><polyline points='14 2 14 8 20 8' stroke='currentColor' stroke-width='1.5'/></svg>",
-        DatabaseFieldType.CreatedTime or DatabaseFieldType.LastEditedTime
-                                          => "<svg width='12' height='12' viewBox='0 0 24 24' fill='none' aria-hidden='true'><circle cx='12' cy='12' r='9' stroke='currentColor' stroke-width='1.5'/><path d='M12 7v5l3 3' stroke='currentColor' stroke-width='1.5' stroke-linecap='round'/></svg>",
-        DatabaseFieldType.CreatedBy or DatabaseFieldType.LastEditedBy
-                                          => "<svg width='12' height='12' viewBox='0 0 24 24' fill='none' aria-hidden='true'><circle cx='9' cy='7' r='4' stroke='currentColor' stroke-width='1.5'/><path d='M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2' stroke='currentColor' stroke-width='1.5'/><path d='M16 11l2 2 4-4' stroke='currentColor' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/></svg>",
-        _                                 => "<svg width='12' height='12' viewBox='0 0 24 24' fill='none' aria-hidden='true'><path d='M4 7h16M4 12h16M4 17h10' stroke='currentColor' stroke-width='1.5' stroke-linecap='round'/></svg>"
-    });
+    // Column header icons come from DatabaseFieldIcons (DB-2).
 }

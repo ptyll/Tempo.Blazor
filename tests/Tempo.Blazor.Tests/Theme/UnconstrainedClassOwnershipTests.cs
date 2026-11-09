@@ -186,11 +186,18 @@ public class UnconstrainedClassOwnershipTests
         ".tm-btn Tempo.Blazor/_button.css|Tempo.Blazor/_color-picker.css",
         ".tm-condition-builder__row Tempo.Blazor.Signing/_condition-builder.css|Tempo.Blazor.Signing/_signing-field-editor-panel.css",
 
+        // NotionEditor phase 10: the tempo edit modal and the history dialog fill their panel. The
+        // host class rides the TmModal overlay, so the rule has to live in the package stylesheet;
+        // the guard strips :fullscreen and the chain then looks unconstrained. It is strictly
+        // narrower than the core modal rules (the overlay host class), so import order decides
+        // nothing — Override.
+        ".tm-modal Tempo.Blazor.NotionEditor/_notion-floating-menus.css|Tempo.Blazor/_modal.css",
+        ".tm-modal-body Tempo.Blazor.NotionEditor/_notion-floating-menus.css|Tempo.Blazor/_modal.css",
+        ".tm-modal-container Tempo.Blazor.NotionEditor/_notion-floating-menus.css|Tempo.Blazor/_modal.css",
+
         // NotionEditor's dark skin restyles the typography file's blocks — background Overrides on
         // the callout/code-block classes and on code itself, all inside the notion regions.
-        ".tm-notion-callout Tempo.Blazor.NotionEditor/_notion-dark.css|Tempo.Blazor.NotionEditor/_notion-typography.css",
-        ".tm-notion-code-block Tempo.Blazor.NotionEditor/_notion-dark.css|Tempo.Blazor.NotionEditor/_notion-typography.css",
-        "code Tempo.Blazor.NotionEditor/_notion-dark.css|Tempo.Blazor.NotionEditor/_notion-typography.css",
+        ".tm-notion-editor Tempo.Blazor.NotionEditor/_notion-dark.css|Tempo.Blazor.NotionEditor/_notion-variables.css",
 
         // Round 5: the label span ships as display: contents in _button.css (geometry-neutral), and
         // the sheet footer opts into truncation by blockifying it (display: block; min-width: 0;

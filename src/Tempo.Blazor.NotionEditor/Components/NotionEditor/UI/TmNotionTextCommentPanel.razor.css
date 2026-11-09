@@ -1,34 +1,47 @@
-/* ── Backdrop ──────────────────────────────────────────────────────────────── */
+/* Phase 4 (NO1): no own backdrop and no z-index — the popover bubble rides the core
+   TmOverlayPanel (browser top layer, positioned by overlay.js against the zero-size anchor); the
+   dialog/sheet surface is the core TmModal. */
 
-.tm-ntcp-backdrop {
-    position: fixed;
-    inset: 0;
-    z-index: calc(var(--tm-z-popover, 1030) - 1);
-    background: transparent;
-}
-
-/* ── Popover card ──────────────────────────────────────────────────────────── */
+/* ── Panel card ──────────────────────────────────────────────────────────── */
 
 .tm-ntcp {
-    position: fixed;
-    z-index: var(--tm-z-popover, 1030);
     width: 300px;
     max-height: 480px;
     display: flex;
     flex-direction: column;
-    background: var(--tm-bg-elevated, #fff);
-    border: 1px solid var(--tm-border, rgba(55,53,47,0.16));
+    background: var(--tm-bg-elevated);
+    border: 1px solid var(--tm-border-color);
     border-radius: 8px;
-    box-shadow: 0 8px 32px rgba(15,15,15,0.18), 0 0 0 1px rgba(15,15,15,0.04);
+    box-shadow: var(--tm-shadow-popover);
     font-size: 14px;
-    color: var(--tm-text-primary, rgb(55,53,47));
+    color: var(--tm-text-primary);
     overflow: hidden;
-    animation: tm-ntcp-appear 90ms ease;
 }
 
-@keyframes tm-ntcp-appear {
-    from { opacity: 0; transform: translateY(-6px) scale(0.97); }
-    to   { opacity: 1; transform: translateY(0)    scale(1);    }
+/* Inside the TmOverlayPanel popover the panel root paints the chrome — the card keeps only the
+   sizing (the popover root carries TmOverlayPanel's scope, so this is a modifier class). */
+.tm-ntcp--popover {
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+}
+
+/* Inside the core TmModal the card fills the body (scoped — the card carries this component's
+   scope attribute in both surfaces). */
+
+.tm-ntcp--in-dialog {
+    position: static;
+    width: 100%;
+    max-height: none;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+}
+
+/* The TmModal header owns the × in the dialog surface. */
+.tm-ntcp--in-dialog .tm-ntcp__close-btn {
+    display: none;
 }
 
 /* ── Header ────────────────────────────────────────────────────────────────── */
@@ -38,8 +51,9 @@
     align-items: flex-start;
     justify-content: space-between;
     gap: 8px;
-    padding: 10px 12px 8px;
-    border-bottom: 1px solid var(--tm-border, rgba(55,53,47,0.09));
+    /* F-20: one inset for the whole card — the empty thread state and the quote now align. */
+    padding: 10px var(--tm-space-4) 8px;
+    border-bottom: 1px solid var(--tm-border-color);
     flex-shrink: 0;
 }
 
@@ -51,16 +65,16 @@
     gap: 5px;
     flex: 1;
     min-width: 0;
-    padding: 5px 8px;
-    border-left: 3px solid var(--tm-yellow, #f5c842);
-    background: rgba(245,200,66,0.10);
+    padding: 5px 8px 5px 0;
+    border-left: 3px solid var(--tm-color-warning);
+    background: color-mix(in srgb, var(--tm-color-warning) 10%, transparent);
     border-radius: 0 4px 4px 0;
-    color: var(--tm-text-secondary, rgba(55,53,47,0.65));
+    color: var(--tm-text-secondary);
 }
 
 .tm-ntcp__highlight-preview svg {
     flex-shrink: 0;
-    color: var(--tm-yellow-dark, #c4a224);
+    color: var(--tm-color-warning-text);
     margin-top: 1px;
 }
 
@@ -68,11 +82,36 @@
     font-size: 12px;
     line-height: 1.4;
     font-style: italic;
-    color: var(--tm-text-secondary, rgba(55,53,47,0.65));
+    color: var(--tm-text-secondary);
     overflow: hidden;
     display: -webkit-box;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
+}
+
+/* Dialog: the whole quote, clamped to four lines until expanded. */
+
+.tm-ntcp--in-dialog .tm-ntcp__highlight-snippet {
+    -webkit-line-clamp: 4;
+}
+
+.tm-ntcp--in-dialog .tm-ntcp__highlight-preview--expanded .tm-ntcp__highlight-snippet {
+    -webkit-line-clamp: unset;
+    display: block;
+}
+
+.tm-ntcp__quote-toggle {
+    flex-shrink: 0;
+    align-self: flex-start;
+    border: none;
+    background: transparent;
+    padding: 0;
+    font-size: 12px;
+    color: var(--tm-color-primary);
+    cursor: pointer;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    white-space: nowrap;
 }
 
 /* ── Header actions ────────────────────────────────────────────────────────── */
@@ -91,29 +130,29 @@
     align-items: center;
     gap: 4px;
     padding: 3px 7px;
-    border: 1px solid var(--tm-border, rgba(55,53,47,0.16));
+    border: 1px solid var(--tm-border-color);
     border-radius: 5px;
     background: transparent;
     font-size: 11.5px;
-    color: var(--tm-text-secondary, rgba(55,53,47,0.65));
+    color: var(--tm-text-secondary);
     cursor: pointer;
     transition: background 80ms, color 80ms, border-color 80ms;
     white-space: nowrap;
 }
 
 .tm-ntcp__resolve-btn:hover {
-    background: var(--tm-bg-hover, rgba(55,53,47,0.06));
-    color: var(--tm-text-primary, rgb(55,53,47));
-    border-color: var(--tm-border-strong, rgba(55,53,47,0.30));
+    background: var(--tm-color-surface-hover);
+    color: var(--tm-text-primary);
+    border-color: var(--tm-border-color-strong);
 }
 
 .tm-ntcp__resolve-btn--unresolve {
-    color: var(--tm-green, #2d9a5e);
-    border-color: rgba(45,154,94,0.35);
+    color: var(--tm-color-success);
+    border-color: color-mix(in srgb, var(--tm-color-success) 35%, transparent);
 }
 
 .tm-ntcp__resolve-btn--unresolve:hover {
-    background: rgba(45,154,94,0.08);
+    background: color-mix(in srgb, var(--tm-color-success) 8%, transparent);
 }
 
 /* ── Close button ──────────────────────────────────────────────────────────── */
@@ -127,14 +166,14 @@
     border: none;
     border-radius: 4px;
     background: transparent;
-    color: var(--tm-text-secondary, rgba(55,53,47,0.45));
+    color: var(--tm-text-secondary);
     cursor: pointer;
     transition: background 80ms, color 80ms;
 }
 
 .tm-ntcp__close-btn:hover {
-    background: var(--tm-bg-hover, rgba(55,53,47,0.06));
-    color: var(--tm-text-primary, rgb(55,53,47));
+    background: var(--tm-color-surface-hover);
+    color: var(--tm-text-primary);
 }
 
 /* ── Resolved banner ───────────────────────────────────────────────────────── */
@@ -144,11 +183,11 @@
     align-items: center;
     gap: 5px;
     padding: 7px 12px;
-    background: rgba(45,154,94,0.08);
-    color: var(--tm-green, #2d9a5e);
+    background: color-mix(in srgb, var(--tm-color-success) 8%, transparent);
+    color: var(--tm-color-success);
     font-size: 12px;
     font-weight: 500;
-    border-bottom: 1px solid rgba(45,154,94,0.15);
+    border-bottom: 1px solid color-mix(in srgb, var(--tm-color-success) 15%, transparent);
     flex-shrink: 0;
 }
 
@@ -157,7 +196,7 @@
 .tm-ntcp__thread {
     flex: 1;
     overflow-y: auto;
-    padding: 10px 12px;
+    padding: var(--tm-space-3) var(--tm-space-4);
     display: flex;
     flex-direction: column;
     gap: 12px;
@@ -166,7 +205,7 @@
 
 .tm-ntcp__thread::-webkit-scrollbar { width: 4px; }
 .tm-ntcp__thread::-webkit-scrollbar-thumb {
-    background: var(--tm-border, rgba(55,53,47,0.16));
+    background: var(--tm-border-color);
     border-radius: 2px;
 }
 
@@ -178,7 +217,15 @@
     gap: 7px;
     padding: 6px 0;
     font-size: 13px;
-    color: var(--tm-text-secondary, rgba(55,53,47,0.45));
+    color: var(--tm-text-secondary);
+}
+
+/* Empty state: centred with breathing room — the bare status line read as a layout defect
+   in the popover when a highlighted passage had no comments yet. */
+.tm-ntcp__status--empty {
+    justify-content: center;
+    padding: var(--tm-space-6) var(--tm-space-4);
+    text-align: center;
 }
 
 /* ── Spinner ───────────────────────────────────────────────────────────────── */
@@ -187,8 +234,8 @@
     display: inline-block;
     width: 13px;
     height: 13px;
-    border: 2px solid var(--tm-border, rgba(55,53,47,0.16));
-    border-top-color: var(--tm-text-secondary, rgba(55,53,47,0.45));
+    border: 2px solid var(--tm-border-color);
+    border-top-color: var(--tm-text-secondary);
     border-radius: 50%;
     animation: tm-ntcp-spin 0.6s linear infinite;
 }
@@ -203,322 +250,31 @@
     to { transform: rotate(360deg); }
 }
 
-/* ── Entry ─────────────────────────────────────────────────────────────────── */
-
-.tm-ntcp__entry {
-    display: flex;
-    flex-direction: row;
-    align-items: flex-start;
-}
-
-.tm-ntcp__entry-indent {
-    flex-shrink: 0;
-    width: 0;
-    border-left: 2px solid var(--tm-border, rgba(55,53,47,0.10));
-    margin-right: 9px;
-    align-self: stretch;
-    min-height: 20px;
-}
-
-.tm-ntcp__entry--level-1 .tm-ntcp__entry-indent { width: 12px; }
-.tm-ntcp__entry--level-2 .tm-ntcp__entry-indent { width: 24px; }
-.tm-ntcp__entry--level-3 .tm-ntcp__entry-indent { width: 36px; }
-.tm-ntcp__entry--level-4 .tm-ntcp__entry-indent { width: 48px; }
-.tm-ntcp__entry--level-5 .tm-ntcp__entry-indent { width: 60px; }
-
-.tm-ntcp__entry-content {
-    flex: 1;
-    display: flex;
-    gap: 9px;
-    align-items: flex-start;
-    min-width: 0;
-}
-
-.tm-ntcp__avatar {
-    flex-shrink: 0;
-    width: 26px;
-    height: 26px;
-    border-radius: 50%;
-    overflow: hidden;
-    background: var(--tm-accent, #2383e2);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.tm-ntcp__avatar-img { width: 100%; height: 100%; object-fit: cover; }
-
-.tm-ntcp__avatar-fallback {
-    font-size: 11px;
-    font-weight: 600;
-    color: #fff;
-    line-height: 1;
-}
-
-.tm-ntcp__entry-body {
-    flex: 1;
-    min-width: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 3px;
-}
-
-.tm-ntcp__entry-meta {
-    display: flex;
-    align-items: baseline;
-    gap: 5px;
-}
-
-.tm-ntcp__entry-author {
-    font-size: 12.5px;
-    font-weight: 600;
-    color: var(--tm-text-primary, rgb(55,53,47));
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.tm-ntcp__entry-time {
-    font-size: 11px;
-    color: var(--tm-text-secondary, rgba(55,53,47,0.45));
-    white-space: nowrap;
-    flex-shrink: 0;
-}
-
-.tm-ntcp__entry-text {
-    font-size: 13px;
-    line-height: 1.5;
-    color: var(--tm-text-primary, rgb(55,53,47));
-    word-break: break-word;
-}
-
-.tm-ntcp__entry-edited {
-    font-size: 11px;
-    color: var(--tm-text-secondary, rgba(55,53,47,0.45));
-    font-style: italic;
-}
-
-.tm-ntcp__entry-actions {
-    display: flex;
-    gap: 2px;
-    opacity: 0;
-    transition: opacity 100ms;
-}
-
-.tm-ntcp__entry:hover .tm-ntcp__entry-actions { opacity: 1; }
-
-.tm-ntcp__entry-action {
-    display: flex;
-    align-items: center;
-    gap: 3px;
-    padding: 2px 5px;
-    border: none;
-    border-radius: 4px;
-    background: transparent;
-    font-size: 11px;
-    color: var(--tm-text-secondary, rgba(55,53,47,0.55));
-    cursor: pointer;
-    transition: background 80ms, color 80ms;
-}
-
-.tm-ntcp__entry-action:hover {
-    background: var(--tm-bg-hover, rgba(55,53,47,0.06));
-    color: var(--tm-text-primary, rgb(55,53,47));
-}
-
-.tm-ntcp__entry-action--danger:hover {
-    background: rgba(235,87,87,0.08);
-    color: var(--tm-red, #eb5757);
-}
-
-/* ── Edit mode ─────────────────────────────────────────────────────────────── */
-
-.tm-ntcp__edit-wrap { display: flex; flex-direction: column; gap: 5px; }
-
-.tm-ntcp__edit-input {
-    width: 100%;
-    box-sizing: border-box;
-    padding: 5px 7px;
-    border: 1.5px solid var(--tm-accent, #2383e2);
-    border-radius: 4px;
-    background: var(--tm-bg-input, #fff);
-    font-size: 12.5px;
-    color: var(--tm-text-primary, rgb(55,53,47));
-    resize: vertical;
-    outline: none;
-    font-family: inherit;
-    line-height: 1.5;
-}
-
-.tm-ntcp__edit-actions { display: flex; gap: 5px; justify-content: flex-end; }
-
-.tm-ntcp__edit-save {
-    padding: 3px 10px;
-    border: none;
-    border-radius: 4px;
-    background: var(--tm-accent, #2383e2);
-    color: #fff;
-    font-size: 11.5px;
-    font-weight: 500;
-    cursor: pointer;
-}
-
-.tm-ntcp__edit-save:disabled { opacity: 0.45; cursor: not-allowed; }
-
-.tm-ntcp__edit-cancel {
-    padding: 3px 10px;
-    border: 1px solid var(--tm-border, rgba(55,53,47,0.16));
-    border-radius: 4px;
-    background: transparent;
-    color: var(--tm-text-secondary, rgba(55,53,47,0.65));
-    font-size: 11.5px;
-    cursor: pointer;
-}
-
-.tm-ntcp__edit-cancel:hover { background: var(--tm-bg-hover, rgba(55,53,47,0.06)); }
-
-/* ── Inline reply ──────────────────────────────────────────────────────────── */
-
-.tm-ntcp__inline-reply {
-    margin-top: 5px;
-    padding: 8px;
-    background: var(--tm-bg-subtle, rgba(55,53,47,0.02));
-    border: 1px solid var(--tm-border, rgba(55,53,47,0.10));
-    border-radius: 6px;
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
-}
-
-.tm-ntcp__reply-btns {
-    display: flex;
-    gap: 6px;
-}
-
-.tm-ntcp__reply-cancel {
-    padding: 4px 10px;
-    border: 1px solid var(--tm-border, rgba(55,53,47,0.16));
-    border-radius: 5px;
-    background: transparent;
-    color: var(--tm-text-secondary, rgba(55,53,47,0.65));
-    font-size: 12px;
-    cursor: pointer;
-    transition: background 80ms;
-}
-
-.tm-ntcp__reply-cancel:hover {
-    background: var(--tm-bg-hover, rgba(55,53,47,0.06));
-}
-
-/* ── Reply ─────────────────────────────────────────────────────────────────── */
-
-.tm-ntcp__reply {
-    flex-shrink: 0;
-    border-top: 1px solid var(--tm-border, rgba(55,53,47,0.09));
-    padding: 9px 12px;
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
-}
-
-.tm-ntcp__reply-input {
-    width: 100%;
-    box-sizing: border-box;
-    padding: 6px 8px;
-    border: 1.5px solid var(--tm-border, rgba(55,53,47,0.16));
-    border-radius: 5px;
-    background: var(--tm-bg-input, #fff);
-    font-size: 13px;
-    color: var(--tm-text-primary, rgb(55,53,47));
-    resize: none;
-    outline: none;
-    font-family: inherit;
-    line-height: 1.5;
-    transition: border-color 100ms;
-}
-
-.tm-ntcp__reply-input:focus { border-color: var(--tm-accent, #2383e2); }
-
-.tm-ntcp__reply-input::placeholder {
-    color: var(--tm-text-secondary, rgba(55,53,47,0.40));
-}
-
-.tm-ntcp__reply-actions {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-}
-
-.tm-ntcp__reply-hint {
-    font-size: 11px;
-    color: var(--tm-text-secondary, rgba(55,53,47,0.40));
-}
-
-.tm-ntcp__reply-send {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    padding: 4px 12px;
-    border: none;
-    border-radius: 5px;
-    background: var(--tm-accent, #2383e2);
-    color: #fff;
-    font-size: 12px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: opacity 80ms, background 80ms;
-}
-
-.tm-ntcp__reply-send:hover:not(:disabled) { background: var(--tm-accent-hover, #1a6fc4); }
-.tm-ntcp__reply-send:disabled { opacity: 0.45; cursor: not-allowed; }
+/* Entry and composer live in tempo-blazor-notion-editor.css (one copy for the three panels). */
 
 /* ── Error ─────────────────────────────────────────────────────────────────── */
 
 .tm-ntcp__error {
     flex-shrink: 0;
     padding: 7px 12px;
-    background: rgba(235,87,87,0.08);
-    border-top: 1px solid rgba(235,87,87,0.15);
-    color: var(--tm-red, #eb5757);
+    background: color-mix(in srgb, var(--tm-color-danger) 8%, transparent);
+    border-top: 1px solid color-mix(in srgb, var(--tm-color-danger) 15%, transparent);
+    color: var(--tm-color-danger);
     font-size: 12px;
 }
 
-/* ── Quote blockquote ──────────────────────────────────────────────────────── */
-
-.tm-comment-quote {
-    margin: 3px 0;
-    padding: 5px 8px;
-    border-left: 3px solid var(--tm-accent, #2383e2);
-    background: var(--tm-bg-subtle, rgba(55,53,47,0.03));
-    border-radius: 0 4px 4px 0;
-    color: var(--tm-text-secondary, rgba(55,53,47,0.75));
-    font-size: 12.5px;
-    line-height: 1.5;
-}
-
-/* ── Active reply branch highlight ─────────────────────────────────────────── */
-
-.tm-ntcp__entry--replying .tm-ntcp__entry-indent {
-    border-left-color: var(--tm-accent, #2383e2);
-    border-left-width: 3px;
-}
-
-.tm-ntcp__entry--replying .tm-ntcp__entry-content {
-    background: var(--tm-bg-hover, rgba(35,131,226,0.06));
-    border-radius: 6px;
-}
 
 /* ── Text highlight class (used on inline spans in blocks) ─────────────────── */
 
 ::deep .tm-text-comment-highlight {
-    background: rgba(245,200,66,0.35);
+    background: var(--tm-notion-comment-highlight);
     border-radius: 2px;
     cursor: pointer;
     transition: background 100ms;
 }
 
 ::deep .tm-text-comment-highlight:hover {
-    background: rgba(245,200,66,0.60);
+    background: var(--tm-notion-comment-highlight-active);
 }
 
 ::deep .tm-text-comment-highlight--resolved {
@@ -526,33 +282,3 @@
     text-decoration: none;
 }
 
-/* ── Watch button ──────────────────────────────────────────────────────────── */
-
-.tm-ntcp__watch-btn {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    padding: 4px 8px;
-    border: 1px solid var(--tm-border, rgba(55,53,47,0.16));
-    border-radius: 5px;
-    background: transparent;
-    font-size: 12px;
-    color: var(--tm-text-secondary, rgba(55,53,47,0.65));
-    cursor: pointer;
-    transition: background 80ms, color 80ms, border-color 80ms;
-}
-
-.tm-ntcp__watch-btn:hover {
-    background: var(--tm-bg-hover, rgba(55,53,47,0.06));
-    color: var(--tm-text-primary, rgb(55,53,47));
-    border-color: var(--tm-border-strong, rgba(55,53,47,0.30));
-}
-
-.tm-ntcp__watch-btn--watching {
-    color: var(--tm-accent, #2383e2);
-    border-color: rgba(35,131,226,0.35);
-}
-
-.tm-ntcp__watch-btn--watching:hover {
-    background: rgba(35,131,226,0.08);
-}

@@ -65,7 +65,8 @@ public class NotionOverlayInModalE2ETests : WasmTestBase
         await OpenPageInModalAsync(page);
 
         await page.GetByTestId("overlay-modal-open-mention").ClickAsync();
-        var panel = page.Locator(".tm-nmm");
+        // Phase 6: .tm-nmm is the floating-menu body; the top-layer popover is its overlay panel.
+        var panel = page.Locator(".tm-overlay-panel:has(.tm-nmm)");
         await panel.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible });
 
         await AssertTopmostAtCentreAsync(panel);
@@ -96,7 +97,7 @@ public class NotionOverlayInModalE2ETests : WasmTestBase
 
     [TestMethod]
     public async Task MentionMenu_Firefox_InsideTmModal_IsTopmost()
-        => await RunFirefoxLegAsync("overlay-modal-open-mention", ".tm-nmm");
+        => await RunFirefoxLegAsync("overlay-modal-open-mention", ".tm-overlay-panel:has(.tm-nmm)");
 
     private async Task RunFirefoxLegAsync(string triggerTestId, string panelSelector)
     {

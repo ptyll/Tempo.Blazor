@@ -1,22 +1,68 @@
 @namespace Tempo.Blazor.Components.NotionEditor.UI
+@using Tempo.Blazor.Components.Overlay
 
-@if (Visible)
+@if (Inline)
 {
-    @* ── Backdrop ────────────────────────────────────────────────────────────── *@
-    <div class="tm-notion-emoji-picker-backdrop"
-         @onclick="HandleBackdropClickAsync"
-         aria-hidden="true"></div>
+    <div class="tm-notion-emoji-picker tm-notion-emoji-picker__panel tm-notion-emoji-picker--inline" role="group"
+         aria-label="@Loc["TmNotionEmojiPicker_SearchPlaceholder"]">
+        @PickerBody
+    </div>
+}
+else
+{
+<TmNotionFloatingMenu IsOpen="Visible"
+                      LayoutMode="LayoutMode"
+                      Top="Top"
+                      Left="Left"
+                      Placement="OverlayPlacement.Bottom"
+                      Role="dialog"
+                      Title="@Loc["TmNotionEmojiPicker_Title"]"
+                      AriaLabel="@Loc["TmNotionEmojiPicker_SearchPlaceholder"]"
+                      Class="tm-notion-emoji-picker tm-notion-emoji-picker__panel"
+                      OnClose="HandleBackdropClickAsync">
+    <Footer>
+        @if (ShowRemove)
+        {
+            <button class="tm-notion-emoji-picker__remove tm-notion-emoji-picker__remove--footer"
+                    type="button"
+                    @onclick="HandleRemoveAsync">
+                @Loc["TmNotionEmojiPicker_Remove"]
+            </button>
+        }
+    </Footer>
+    <ChildContent>
+        @PickerBody
+    </ChildContent>
+</TmNotionFloatingMenu>
+}
 
-    @* ── Panel ───────────────────────────────────────────────────────────────── *@
-    <div class="tm-notion-emoji-picker"
-         role="dialog"
-         aria-label="@Loc["TmNotionEmojiPicker_SearchPlaceholder"]"
-         style="top:@(_top)px;left:@(_left)px"
-         @ref="_pickerRef"
-         @onkeydown="HandleKeyDownAsync"
-         @onmousedown:preventDefault="true">
+@code {
+    private int _recentLoop;
+    private int _categoryLoop;
+    private int _searchLoop;
 
-        @* ── Top bar: search + random ─────────────────────────────────────────── *@
+    private RenderFragment EmojiCell(int index, string emoji, string name)
+        => index == _focusIndex ? FocusedCell(emoji, name) : RestCell(emoji, name);
+
+    private RenderFragment FocusedCell(string emoji, string name) => @<button class="tm-notion-emoji-picker__emoji tm-notion-emoji-picker__btn"
+            type="button"
+            title="@name"
+            aria-label="@name"
+            tabindex="0"
+            @ref="_focusCell"
+            @onclick="() => SelectEmojiAsync(emoji)"
+            @onclick:preventDefault="true">@emoji</button>;
+
+    private RenderFragment RestCell(string emoji, string name) => @<button class="tm-notion-emoji-picker__emoji tm-notion-emoji-picker__btn"
+            type="button"
+            title="@name"
+            aria-label="@name"
+            tabindex="-1"
+            @onclick="() => SelectEmojiAsync(emoji)"
+            @onclick:preventDefault="true">@emoji</button>;
+
+    private RenderFragment PickerBody => @<div class="tm-notion-emoji-picker__body" @onkeydown="HandleKeyDownAsync" @onmousedown:preventDefault="true">
+
         <div class="tm-notion-emoji-picker__top">
             <div class="tm-notion-emoji-picker__search-wrap">
                 <svg class="tm-notion-emoji-picker__search-icon" width="14" height="14"
@@ -33,8 +79,18 @@
                        @ref="_searchRef"
                        @oninput="HandleQueryInputAsync"
                        @onmousedown:stopPropagation="true"
+                       @onkeydown="HandleSearchKeyDownAsync"
                        @onkeydown:stopPropagation="true" />
             </div>
+            @if (ShowRemove && Inline)
+            {
+                <button class="tm-notion-emoji-picker__remove"
+                        type="button"
+                        @onclick="HandleRemoveAsync"
+                        @onclick:stopPropagation="true">
+                    @Loc["TmNotionEmojiPicker_Remove"]
+                </button>
+            }
             <button class="tm-notion-emoji-picker__random"
                     title="@Loc["TmNotionEmojiPicker_Random"]"
                     @onclick="HandleRandomAsync"
@@ -43,7 +99,6 @@
             </button>
         </div>
 
-        @* ── Category tabs (hidden during search) ─────────────────────────────── *@
         @if (!_isSearching)
         {
             <div class="tm-notion-emoji-picker__tabs" role="tablist">
@@ -62,12 +117,10 @@
             </div>
         }
 
-        @* ── Scrollable emoji area ─────────────────────────────────────────────── *@
         <div class="tm-notion-emoji-picker__scroll" @ref="_scrollRef">
 
             @if (_isSearching)
             {
-                @* ── Search results ─────────────────────────────────────────────── *@
                 @if (_searchResults.Count == 0)
                 {
                     <div class="tm-notion-emoji-picker__empty">
@@ -76,64 +129,52 @@
                 }
                 else
                 {
-                    <div class="tm-notion-emoji-picker__grid">
+                    <div class="tm-notion-emoji-picker__grid" @ref="_searchGridRef" @onkeydown="HandleGridKeyDownAsync" @onkeydown:preventDefault="_gridNavHandled">
+                        @{ _searchLoop = 0; }
                         @foreach (var entry in _searchResults)
                         {
                             var captured = entry;
-                            <button class="tm-notion-emoji-picker__emoji"
-                                    title="@captured.Name"
-                                    aria-label="@captured.Name"
-                                    @onclick="() => SelectEmojiAsync(captured.Emoji)"
-                                    @onclick:preventDefault="true">
-                                @captured.Emoji
-                            </button>
+                            var index = _searchLoop++;
+                            @EmojiCell(index, captured.Emoji, captured.Name)
                         }
                     </div>
                 }
             }
             else
             {
-                @* ── Recently used ───────────────────────────────────────────────── *@
                 @if (_recentEmojis.Count > 0)
                 {
+                    <div class="tm-notion-emoji-picker__category tm-notion-emoji-picker__category--recent">
                     <div class="tm-notion-emoji-picker__section-label">
                         @Loc["TmNotionEmojiPicker_RecentlyUsed"]
                     </div>
-                    <div class="tm-notion-emoji-picker__grid tm-notion-emoji-picker__grid--recent">
+                    <div class="tm-notion-emoji-picker__grid tm-notion-emoji-picker__grid--recent" @ref="_recentGridRef" @onkeydown="HandleGridKeyDownAsync" @onkeydown:preventDefault="_gridNavHandled">
+                        @{ _recentLoop = 0; }
                         @foreach (var emoji in _recentEmojis)
                         {
                             var captured = emoji;
-                            <button class="tm-notion-emoji-picker__emoji"
-                                    title="@captured"
-                                    aria-label="@captured"
-                                    @onclick="() => SelectEmojiAsync(captured)"
-                                    @onclick:preventDefault="true">
-                                @captured
-                            </button>
+                            var index = _recentLoop++;
+                            @EmojiCell(index, captured, captured)
                         }
+                    </div>
                     </div>
                 }
 
-                @* ── Current category ────────────────────────────────────────────── *@
                 <div class="tm-notion-emoji-picker__section-label">
                     @CategoryLabel(_activeCategory)
                 </div>
-                <div class="tm-notion-emoji-picker__grid">
+                <div class="tm-notion-emoji-picker__grid" @ref="_categoryGridRef" @onkeydown="HandleGridKeyDownAsync" @onkeydown:preventDefault="_gridNavHandled">
+                    @{ _categoryLoop = 0; }
                     @foreach (var entry in _categoryEmojis)
                     {
                         var captured = entry;
-                        <button class="tm-notion-emoji-picker__emoji"
-                                title="@captured.Name"
-                                aria-label="@captured.Name"
-                                @onclick="() => SelectEmojiAsync(captured.Emoji)"
-                                @onclick:preventDefault="true">
-                            @captured.Emoji
-                        </button>
+                        var index = _recentEmojis.Count + _categoryLoop++;
+                        @EmojiCell(index, captured.Emoji, captured.Name)
                     }
                 </div>
             }
 
         </div>
 
-    </div>
+    </div>;
 }

@@ -190,6 +190,12 @@ public partial class TmGanttTaskPanel
     /// <summary>Fires when the user submits a new comment. The entry's <see cref="TmCommentEntry.IsInternal"/> is the composer flag when the host used the internal switch; the panel never hides internal comments.</summary>
     [Parameter] public EventCallback<TmCommentEntry> OnCommentAdded { get; set; }
 
+    /// <summary>Optional save handler for a NEW comment, forwarded to the embedded <c>TmActivityComments</c>. When set it runs INSTEAD of the panel's comment posting (the legacy <see cref="OnCommentAdded"/> entry callback): return <see langword="true"/> to close the composer, <see langword="false"/> to keep the draft open. Null (default) keeps the legacy behavior.</summary>
+    [Parameter] public Func<TmCommentSubmission, Task<bool>>? CommentSubmitHandler { get; set; }
+
+    /// <summary>Optional save handler for an inline comment edit, forwarded to the embedded <c>TmActivityComments</c>. Relevant only for host-supplied comments with <see cref="TmCommentEntry.CanEdit"/>; the panel raises no edit callback of its own. Return <see langword="true"/> to close the inline editor, <see langword="false"/> to keep the edited text open. Null (default) keeps the legacy callback.</summary>
+    [Parameter] public Func<TmCommentEdit, Task<bool>>? CommentEditHandler { get; set; }
+
     /// <summary>Consumer actions rendered after the built-in Edit and Delete buttons of each task comment. Forwarded; the panel does not interpret the fragment.</summary>
     [Parameter] public RenderFragment<TmCommentEntry>? CommentActions { get; set; }
 

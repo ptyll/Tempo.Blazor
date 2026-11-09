@@ -1507,9 +1507,9 @@ public sealed class Eb1BaselineRenderer
             [
                 Cell("Discovery"),
                 Cell("Scope"),
-                Cell("Done", 1, 2, "rgba(34, 197, 94, 0.16)"),
+                Cell("Done", 1, 2, "green"),
                 Cell("Nora"),
-                Cell("Low", 1, 1, "rgba(34, 197, 94, 0.12)"),
+                Cell("Low", 1, 1, "green"),
                 Cell("Ship")
             ]
         });
@@ -1521,7 +1521,7 @@ public sealed class Eb1BaselineRenderer
                 Cell("API"),
                 Hidden(1, 2),
                 Cell("Ivan"),
-                Cell("Medium", 1, 1, "rgba(245, 158, 11, 0.16)"),
+                Cell("Medium", 1, 1, "yellow"),
                 Cell("Watch")
             ]
         });
@@ -1531,9 +1531,9 @@ public sealed class Eb1BaselineRenderer
             [
                 Cell("Launch"),
                 Cell("Comms"),
-                Cell("Blocked", 1, 1, "rgba(239, 68, 68, 0.14)"),
+                Cell("Blocked", 1, 1, "red"),
                 Cell("Sara"),
-                Cell("High", 1, 1, "rgba(239, 68, 68, 0.12)"),
+                Cell("High", 1, 1, "red"),
                 Cell("Escalate")
             ]
         });
@@ -1833,6 +1833,40 @@ public sealed class Eb1BaselineRenderer
         MergeOriginRow = originRow,
         MergeOriginColumn = originColumn
     };
+
+    public void SeedE2EPhase7SurfacesPage()
+    {
+        RemoveBlocksForPages(MockNotionDataStore.Page1Id);
+        AddTo(Guid.Parse("eb700000-0000-0000-0000-000000000001"), MockNotionDataStore.Page1Id, BlockType.Paragraph, 0, new TextBlockContent
+        {
+            Html = "Phase 7 evidence paragraph."
+        });
+        AddTo(Guid.Parse("eb700000-0000-0000-0000-000000000011"), MockNotionDataStore.Page1Id, BlockType.Image, 1, new ImageBlockContent
+        {
+            Url = string.Empty,
+            Caption = "Upload target"
+        });
+        AddTo(Guid.Parse("eb700000-0000-0000-0000-000000000040"), MockNotionDataStore.Page1Id, BlockType.Diagram, 2, new DiagramBlockContent
+        {
+            Caption = "Phase 7 diagram"
+        });
+        AddTo(Guid.Parse("eb700000-0000-0000-0000-000000000120"), MockNotionDataStore.Page1Id, BlockType.TemplateButton, 3, new TemplateButtonBlockContent
+        {
+            Label = "Insert status update",
+            TemplateBlocks =
+            [
+                new PageBlock
+                {
+                    Id = Guid.Parse("eb700000-0000-0000-0000-000000000121"),
+                    PageId = MockNotionDataStore.Page1Id,
+                    Type = BlockType.Paragraph,
+                    Content = new TextBlockContent { Html = "Status update" },
+                    CreatedAt = DateTime.UtcNow,
+                    LastEditedAt = DateTime.UtcNow
+                }
+            ]
+        });
+    }
 
     public void SeedE2EMediaPage()
     {

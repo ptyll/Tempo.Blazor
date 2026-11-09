@@ -1,23 +1,21 @@
-/* ── Backdrop ─────────────────────────────────────────────────────────────── */
-
-.tm-notion-type-switcher-backdrop {
+/* Virtual anchor — zero-size pin at the caret the overlay positions against. */
+.tm-notion-type-switcher__anchor {
     position: fixed;
-    inset: 0;
-    /* N191: popover-band tokens — the backdrop sits one step under the anchored panel. */
-    z-index: calc(var(--tm-z-popover, 1030) - 1);
+    width: 0;
+    height: 0;
+    pointer-events: none;
 }
 
-/* ── Panel ───────────────────────────────────────────────────────────────── */
-
-.tm-notion-type-switcher {
-    position: fixed;
-    z-index: var(--tm-z-popover, 1030);
+/* Panel surface lives on the component's own body — the only element rendered in both the
+   popover and the sheet presentation (the overlay root is a child component, N325/N5). The
+   sheet-presentation reset is in the package global _notion-floating-menus.css. */
+.tm-notion-type-switcher__body {
     min-width: 220px;
     padding: 6px 4px;
-    background: var(--tm-surface-overlay, #fff);
-    border: 1px solid var(--tm-border, rgba(55,53,47,.16));
+    background: var(--tm-bg-elevated);
+    border: 1px solid var(--tm-border-color);
     border-radius: 8px;
-    box-shadow: 0 8px 24px rgba(0,0,0,.14), 0 2px 6px rgba(0,0,0,.08);
+    box-shadow: var(--tm-shadow-popover);
     animation: tm-type-switcher-appear 80ms ease;
     transform-origin: top left;
 }
@@ -34,7 +32,7 @@
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: .07em;
-    color: var(--tm-text-secondary, rgba(55,53,47,.5));
+    color: var(--tm-text-secondary);
     padding: 6px 12px 3px;
     user-select: none;
 }
@@ -50,7 +48,7 @@
     border: none;
     border-radius: 5px;
     background: transparent;
-    color: var(--tm-text, rgba(55,53,47,.85));
+    color: var(--tm-text-primary);
     cursor: pointer;
     text-align: left;
     transition: background .08s;
@@ -58,11 +56,11 @@
 
 .tm-notion-type-switcher__item:hover,
 .tm-notion-type-switcher__item--highlighted {
-    background: var(--tm-hover, rgba(55,53,47,.06));
+    background: var(--tm-color-surface-hover);
 }
 
 .tm-notion-type-switcher__item--current {
-    color: var(--tm-primary, #2383e2);
+    color: var(--tm-color-primary);
 }
 
 /* ── Icon ────────────────────────────────────────────────────────────────── */
@@ -74,12 +72,12 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    color: var(--tm-text-secondary, rgba(55,53,47,.55));
+    color: var(--tm-text-secondary);
     transition: color .08s;
 }
 
 .tm-notion-type-switcher__item--current .tm-notion-type-switcher__item-icon {
-    color: var(--tm-primary, #2383e2);
+    color: var(--tm-color-primary);
 }
 
 /* ── Name ────────────────────────────────────────────────────────────────── */
@@ -100,13 +98,13 @@
 
 .tm-notion-type-switcher__item-check {
     flex-shrink: 0;
-    color: var(--tm-primary, #2383e2);
+    color: var(--tm-color-primary);
 }
 
 /* ── Divider ─────────────────────────────────────────────────────────────── */
 
 .tm-notion-type-switcher__divider {
     height: 1px;
-    background: var(--tm-border, rgba(55,53,47,.09));
+    background: var(--tm-border-color);
     margin: 5px 8px;
 }

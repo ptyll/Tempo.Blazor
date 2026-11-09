@@ -29,7 +29,7 @@
     width: 20px;
     height: 20px;
     border-radius: 3px;
-    color: var(--tm-color-muted, var(--tm-color-text-muted, #9ca3af));
+    color: var(--tm-text-secondary, var(--tm-color-text-muted));
     font-size: 11px;
     letter-spacing: -2px;
     cursor: grab;
@@ -38,8 +38,8 @@
 }
 
 .tm-notion-table__drag-icon:hover {
-    background-color: var(--tm-color-bg-hover, var(--tm-color-surface-hover, #f3f4f6));
-    color: var(--tm-color-text, #374151);
+    background-color: var(--tm-color-surface-hover);
+    color: var(--tm-text-primary);
 }
 
 .tm-notion-table__row-delete {
@@ -49,7 +49,7 @@
     padding: 0;
     border: none;
     background: none;
-    color: var(--tm-color-muted, var(--tm-color-text-muted, #9ca3af));
+    color: var(--tm-text-secondary, var(--tm-color-text-muted));
     cursor: pointer;
     border-radius: 3px;
     align-items: center;
@@ -62,27 +62,34 @@
 }
 
 .tm-notion-table__row-delete:hover {
-    background-color: var(--tm-color-danger-bg, var(--tm-color-danger-subtle, #fee2e2));
-    color: var(--tm-color-danger, #ef4444);
+    background-color: var(--tm-color-danger-subtle);
+    color: var(--tm-color-danger);
 }
 
 .tm-notion-table__cell-td {
-    border: 1px solid var(--tm-color-border);
-    border-top: var(--tm-notion-table-cell-border-top, 1px solid var(--tm-color-border));
-    border-right: var(--tm-notion-table-cell-border-right, 1px solid var(--tm-color-border));
-    border-bottom: var(--tm-notion-table-cell-border-bottom, 1px solid var(--tm-color-border));
-    border-left: var(--tm-notion-table-cell-border-left, 1px solid var(--tm-color-border));
+    --tm-notion-table-cell-background: initial;
+    --tm-notion-table-cell-width: initial;
+    --tm-notion-table-cell-vertical: initial;
+    --tm-notion-table-cell-text: initial;
+    --tm-notion-table-cell-border-top: initial;
+    --tm-notion-table-cell-border-right: initial;
+    --tm-notion-table-cell-border-bottom: initial;
+    --tm-notion-table-cell-border-left: initial;
+    border-top: var(--tm-notion-table-cell-border-top, 1px solid var(--tm-notion-border-table, var(--tm-border-color)));
+    border-right: var(--tm-notion-table-cell-border-right, 1px solid var(--tm-notion-border-table, var(--tm-border-color)));
+    border-bottom: var(--tm-notion-table-cell-border-bottom, 1px solid var(--tm-notion-border-table, var(--tm-border-color)));
+    border-left: var(--tm-notion-table-cell-border-left, 1px solid var(--tm-notion-border-table, var(--tm-border-color)));
     padding: 0;
     width: var(--tm-notion-table-cell-width, var(--tm-notion-table-cell-width-default));
     min-width: var(--tm-notion-table-cell-width, var(--tm-notion-table-cell-width-default));
     max-width: var(--tm-notion-table-cell-width, var(--tm-notion-table-cell-width-default));
     vertical-align: var(--tm-notion-table-cell-vertical, top);
     position: relative;
-    background: var(--tm-notion-table-cell-background, var(--tm-bg-surface));
+    background: var(--tm-notion-table-cell-background, var(--tm-notion-bg, var(--tm-bg-surface)));
 }
 
 .tm-notion-table__cell-td--selected {
-    box-shadow: inset 0 0 0 2px var(--tm-color-primary, #5470ef);
+    box-shadow: inset 0 0 0 2px var(--tm-color-primary);
 }
 
 /* Column alignment carried over from a GFM table separator row (:---, :---:, ---:).
@@ -107,7 +114,7 @@
     min-height: 34px;
     padding: 6px 10px;
     outline: none;
-    color: var(--tm-notion-table-cell-text, var(--tm-color-text));
+    color: var(--tm-notion-table-cell-text, var(--tm-text-primary));
     font-size: 14px;
     line-height: 1.5;
     word-break: break-word;
@@ -117,7 +124,7 @@
 }
 
 .tm-notion-table__cell:focus {
-    box-shadow: inset 0 0 0 2px var(--tm-color-primary, #5470ef);
+    box-shadow: inset 0 0 0 2px var(--tm-color-primary);
 }
 
 .tm-notion-table__cell--readonly {
@@ -130,9 +137,7 @@
 
 .tm-notion-table-row--header .tm-notion-table__cell-td,
 .tm-notion-table__cell-td--header-col {
-    background-color: var(
-        --tm-notion-table-cell-background,
-        var(--tm-color-bg-subtle, var(--tm-bg-surface-secondary)));
+    background: var(--tm-notion-table-cell-background, var(--tm-bg-surface-secondary));
 }
 
 .tm-notion-table-row--header .tm-notion-table__cell,
@@ -145,7 +150,7 @@
 }
 
 .tm-notion-table-row--drag-over .tm-notion-table__cell-td {
-    box-shadow: inset 0 2px 0 var(--tm-color-primary, #5470ef);
+    box-shadow: inset 0 2px 0 var(--tm-color-primary);
 }
 
 @media (max-width: 1024px) {

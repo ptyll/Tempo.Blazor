@@ -1,5 +1,6 @@
 using Bunit;
 using FluentAssertions;
+using Microsoft.AspNetCore.Components.Web;
 using Microsoft.Extensions.DependencyInjection;
 using Tempo.Blazor.Components.Feedback;
 using Tempo.Blazor.Services;
@@ -203,15 +204,91 @@ public class TmToastTests : LocalizationTestBase
     }
 
     [Fact]
-    public void Container_HasAriaRole_Alert()
+    public void Container_IsA_LabelledRegion()
+    {
+        var cut = Render<TmToastContainer>();
+
+        var region = cut.Find(".tm-toast-container");
+        region.GetAttribute("role").Should().Be("region");
+        region.GetAttribute("aria-label").Should().Be("Notifications");
+    }
+
+    [Fact]
+    public void Container_TwoPersistentLiveRegions_ExistEmpty_OnFirstRender()
+    {
+        var cut = Render<TmToastContainer>();
+
+        var polite = cut.Find("[data-toast-live='polite']");
+        var assertive = cut.Find("[data-toast-live='assertive']");
+        polite.GetAttribute("role").Should().Be("status");
+        assertive.GetAttribute("role").Should().Be("alert");
+        polite.TextContent.Should().BeEmpty("nothing was announced yet");
+        assertive.TextContent.Should().BeEmpty("nothing was announced yet");
+    }
+
+    [Fact]
+    public void Container_Show_AnnouncesTitleAndMessage_InThePoliteRegion()
     {
         var cut = Render<TmToastContainer>();
         var svc = Services.GetRequiredService<ToastService>();
 
-        svc.ShowError("Alert!");
+        svc.ShowInfo("Saved", "Backup");
         cut.Render();
 
-        cut.Find(".tm-toast").GetAttribute("role").Should().Be("alert");
+        cut.WaitForAssertion(() =>
+            cut.Find("[data-toast-live='polite']").TextContent.Trim().Should().Be("Backup: Saved"));
+    }
+
+    [Fact]
+    public void Container_Error_AnnouncesInTheAssertiveRegion()
+    {
+        var cut = Render<TmToastContainer>();
+        var svc = Services.GetRequiredService<ToastService>();
+
+        svc.ShowError("Failed");
+        cut.Render();
+
+        cut.WaitForAssertion(() =>
+            cut.Find("[data-toast-live='assertive']").TextContent.Trim().Should().Be("Failed"));
+    }
+
+    [Fact]
+    public void Container_Dedupe_AnnouncesOncePerTextChange()
+    {
+        var cut = Render<TmToastContainer>();
+        var svc = Services.GetRequiredService<ToastService>();
+
+        svc.Show(new ToastOptions { Message = "Saving…", Key = "save" });
+        cut.Render();
+        cut.WaitForAssertion(() =>
+            cut.Find("[data-toast-live='polite']").TextContent.Trim().Should().Be("Saving…"));
+
+        // Same text: the replacement announces NOTHING (an unchanged textContent would not be
+        // re-spoken by a screen reader anyway).
+        svc.Show(new ToastOptions { Message = "Saving…", Key = "save" });
+        cut.Render();
+        cut.WaitForAssertion(() => cut.Find(".tm-toast-message").TextContent.Trim().Should().Be("Saving…"));
+        cut.Find("[data-toast-live='polite']").TextContent.Trim().Should().Be("Saving…");
+
+        // Changed text: exactly one fresh announcement of the new text.
+        svc.Show(new ToastOptions { Message = "Saved", Key = "save" });
+        cut.Render();
+        cut.WaitForAssertion(() =>
+            cut.Find("[data-toast-live='polite']").TextContent.Trim().Should().Be("Saved"));
+    }
+
+    [Fact]
+    public void Container_ToastCard_CarriesNoLiveRole()
+    {
+        var cut = Render<TmToastContainer>();
+        var svc = Services.GetRequiredService<ToastService>();
+
+        svc.ShowInfo("FYI");
+        svc.ShowError("Boom");
+        cut.Render();
+
+        foreach (var card in cut.FindAll(".tm-toast"))
+            card.HasAttribute("role").Should().BeFalse("announcements live in the two persistent regions, not the cards");
     }
 
     // ── F3 review round 3 (V1b): the container re-raises on every push ─────────
@@ -377,5 +454,468 @@ public class TmToastTests : LocalizationTestBase
 
         trap.Invocations.Where(i => i.Identifier == "restoreTrapFocusIfLost").Should().HaveCount(1,
             "one coalesced id-set change ({first} -> {second}) asks the trap exactly once");
+    }
+
+    // ── fze-3: action button, Content fragment, pause on hover/focus, Escape, politeness ──
+
+    [Fact]
+    public void Container_RendersActionButton_ClickInvokesDelegateAndClosesToast()
+    {
+        var cut = Render<TmToastContainer>();
+        var svc = Services.GetRequiredService<ToastService>();
+        var invoked = false;
+        svc.Show(new ToastOptions
+        {
+            Message = "Deleted",
+            Action = new ToastAction { Label = "Restore", OnClick = () => { invoked = true; return Task.CompletedTask; } },
+        });
+        cut.Render();
+
+        var button = cut.Find(".tm-toast-action");
+        button.TextContent.Trim().Should().Be("Restore");
+
+        button.Click();
+        cut.Render();
+
+        invoked.Should().BeTrue("activating the action runs the delegate");
+        cut.FindAll(".tm-toast").Should().BeEmpty("the toast closes after its action ran");
+    }
+
+    [Fact]
+    public void Container_ShowUndo_RendersLocalizedUndoLabel()
+    {
+        var cut = Render<TmToastContainer>();
+        var svc = Services.GetRequiredService<ToastService>();
+
+        svc.ShowUndo("Item deleted", () => Task.CompletedTask);
+        cut.Render();
+
+        cut.Find(".tm-toast-action").TextContent.Trim().Should().Be("Undo");
+    }
+
+    [Fact]
+    public void Container_RendersContentFragmentBelowMessage()
+    {
+        var cut = Render<TmToastContainer>();
+        var svc = Services.GetRequiredService<ToastService>();
+
+        svc.Show(new ToastOptions
+        {
+            Message = "Body",
+            Content = builder => builder.AddMarkupContent(0, "<em>extra</em>"),
+        });
+        cut.Render();
+
+        cut.Find(".tm-toast-custom").TextContent.Should().Contain("extra");
+    }
+
+    [Fact]
+    public void Container_PoliteToast_IsAnnouncedViaThePoliteRegion()
+    {
+        var cut = Render<TmToastContainer>();
+        var svc = Services.GetRequiredService<ToastService>();
+
+        svc.ShowInfo("FYI");
+        cut.Render();
+
+        cut.WaitForAssertion(() =>
+            cut.Find("[data-toast-live='polite']").TextContent.Trim().Should().Be("FYI"));
+    }
+
+    [Fact]
+    public void Container_MouseEnter_PausesAndMarksPaused_MouseLeave_Resumes()
+    {
+        var cut = Render<TmToastContainer>();
+        var svc = Services.GetRequiredService<ToastService>();
+
+        svc.ShowInfo("hover me");
+        cut.Render();
+        var id = svc.Toasts[0].Id;
+
+        cut.Find(".tm-toast").TriggerEvent("onmouseenter", new MouseEventArgs());
+        cut.Render();
+
+        svc.IsPaused(id).Should().BeTrue("hovering pauses the auto-dismiss timer");
+        cut.Find(".tm-toast").ClassList.Should().Contain("tm-toast--paused",
+            "the paused modifier freezes the progress animation via animation-play-state");
+
+        cut.Find(".tm-toast").TriggerEvent("onmouseleave", new MouseEventArgs());
+        cut.Render();
+
+        svc.IsPaused(id).Should().BeFalse("leaving resumes the timer with the remaining time");
+        cut.Find(".tm-toast").ClassList.Should().NotContain("tm-toast--paused");
+    }
+
+    [Fact]
+    public void Container_FocusIn_Pauses_FocusOut_Resumes()
+    {
+        var cut = Render<TmToastContainer>();
+        var svc = Services.GetRequiredService<ToastService>();
+
+        svc.ShowInfo("focus me");
+        cut.Render();
+        var id = svc.Toasts[0].Id;
+
+        cut.Find(".tm-toast").TriggerEvent("onfocusin", new FocusEventArgs());
+        cut.Render();
+        svc.IsPaused(id).Should().BeTrue("focusing into the toast (Tab to its buttons) pauses it");
+
+        cut.Find(".tm-toast").TriggerEvent("onfocusout", new FocusEventArgs());
+        cut.Render();
+        svc.IsPaused(id).Should().BeFalse();
+    }
+
+    [Fact]
+    public void Container_PauseOnHoverFalse_DoesNotPause()
+    {
+        var cut = Render<TmToastContainer>(p => p.Add(c => c.PauseOnHover, false));
+        var svc = Services.GetRequiredService<ToastService>();
+
+        svc.ShowInfo("never pause");
+        cut.Render();
+        var id = svc.Toasts[0].Id;
+
+        cut.Find(".tm-toast").TriggerEvent("onmouseenter", new MouseEventArgs());
+        cut.Render();
+
+        svc.IsPaused(id).Should().BeFalse();
+        cut.Find(".tm-toast").ClassList.Should().NotContain("tm-toast--paused");
+    }
+
+    [Fact]
+    public void Container_StickyToast_DoesNotPauseOnHover()
+    {
+        var cut = Render<TmToastContainer>();
+        var svc = Services.GetRequiredService<ToastService>();
+
+        svc.ShowInfo("sticky", duration: 0);
+        cut.Render();
+        var id = svc.Toasts[0].Id;
+
+        cut.Find(".tm-toast").TriggerEvent("onmouseenter", new MouseEventArgs());
+        cut.Render();
+
+        svc.IsPaused(id).Should().BeFalse("a sticky toast has no timer to pause");
+    }
+
+    [Fact]
+    public void Container_EscapeDismissal_ComesFromTheJsModule_DismissToastRemovesTheCard()
+    {
+        // Escape handling lives in tm-toast.js (keydown listener on the container): Blazor only
+        // exposes the dismissal entry point the module calls.
+        var cut = Render<TmToastContainer>();
+        var svc = Services.GetRequiredService<ToastService>();
+
+        svc.ShowInfo("escapable");
+        cut.Render();
+        cut.FindAll(".tm-toast").Should().HaveCount(1);
+
+        cut.Instance.DismissToast(svc.Toasts.Single().Id);
+        cut.Render();
+
+        cut.FindAll(".tm-toast").Should().BeEmpty("DismissToast (fired by the JS Escape listener) removes the card");
+    }
+
+    [Fact]
+    public void Container_ActionButton_CarriesTheAltTKeyshortcut()
+    {
+        var cut = Render<TmToastContainer>();
+        var svc = Services.GetRequiredService<ToastService>();
+
+        svc.ShowUndo("Item deleted", () => Task.CompletedTask);
+        cut.Render();
+
+        cut.Find(".tm-toast-action").GetAttribute("aria-keyshortcuts").Should().Be("Alt+T",
+            "the JS module focuses the newest action button on Alt+T and the button advertises it");
+    }
+
+    [Fact]
+    public void Container_DoubleClickAction_RunsTheDelegateOnce()
+    {
+        var cut = Render<TmToastContainer>();
+        var svc = Services.GetRequiredService<ToastService>();
+        var invocations = 0;
+        svc.Show(new ToastOptions
+        {
+            Message = "Deleted",
+            Action = new ToastAction { Label = "Restore", OnClick = () => { invocations++; return Task.CompletedTask; } },
+        });
+        cut.Render();
+
+        cut.Find(".tm-toast-action").Click();
+        cut.Render();
+
+        invocations.Should().Be(1);
+        cut.FindAll(".tm-toast-action").Should().BeEmpty(
+            "the toast is removed BEFORE the delegate runs — a second click lands on a gone card");
+        cut.FindAll(".tm-toast").Should().BeEmpty();
+    }
+
+    [Fact]
+    public void Container_ActionDelegateThrowing_StillClosesTheToast()
+    {
+        var cut = Render<TmToastContainer>();
+        var svc = Services.GetRequiredService<ToastService>();
+        svc.Show(new ToastOptions
+        {
+            Message = "Deleted",
+            Action = new ToastAction { Label = "Restore", OnClick = () => throw new InvalidOperationException("boom") },
+        });
+        cut.Render();
+
+        var click = () => cut.Find(".tm-toast-action").Click();
+
+        click.Should().Throw<InvalidOperationException>();
+        cut.Render();
+        cut.FindAll(".tm-toast").Should().BeEmpty("remove-first means the toast closes even when the delegate throws");
+    }
+
+    [Fact]
+    public void Container_MinActionDuration_FloorsActionToasts()
+    {
+        var cut = Render<TmToastContainer>(p => p.Add(c => c.MinActionDuration, 15000));
+        var svc = Services.GetRequiredService<ToastService>();
+
+        svc.Show(new ToastOptions { Message = "m", Duration = 3000, Action = new ToastAction { Label = "Undo" } });
+        cut.Render();
+
+        svc.Toasts[0].Duration.Should().Be(15000, "the container pushes its floor into the service");
+        cut.Find(".tm-toast-progress-bar").GetAttribute("style").Should().Contain("15000ms");
+    }
+
+    [Fact]
+    public void Container_MinActionDuration_DefaultIsTenSeconds()
+    {
+        var cut = Render<TmToastContainer>();
+        var svc = Services.GetRequiredService<ToastService>();
+
+        svc.Show(new ToastOptions { Message = "m", Duration = 3000, Action = new ToastAction { Label = "Undo" } });
+        cut.Render();
+
+        svc.Toasts[0].Duration.Should().Be(10_000);
+    }
+
+    [Fact]
+    public async Task Container_DocumentHidden_PausesAll_VisibleResumesNonHeldToasts()
+    {
+        var module = JSInterop.SetupModule("./_content/Tempo.Blazor/js/tm-toast-visibility.js");
+        module.Setup<bool>("watch", _ => true).SetResult(false);
+
+        var cut = Render<TmToastContainer>();
+        var svc = Services.GetRequiredService<ToastService>();
+        svc.ShowInfo("one");
+        svc.ShowInfo("two");
+        cut.Render();
+        var idOne = svc.Toasts[0].Id;
+
+        var instance = cut.Instance;
+        await instance.OnDocumentVisibilityChanged(hidden: true);
+        cut.Render();
+
+        svc.IsPaused(idOne).Should().BeTrue("a hidden document pauses every auto-dismiss timer");
+
+        // A toast the user is hovering when the tab hides must stay paused after the tab returns.
+        cut.FindAll(".tm-toast")[0].TriggerEvent("onmouseenter", new MouseEventArgs());
+        cut.Render();
+
+        await instance.OnDocumentVisibilityChanged(hidden: false);
+        cut.Render();
+
+        svc.IsPaused(idOne).Should().BeTrue("the hovered toast stays paused — the hold outlives the tab switch");
+        svc.Toasts.Count(t => !svc.IsPaused(t.Id)).Should().Be(1, "the non-held toast resumed");
+    }
+
+    // ── fze-4: loading spinner, Warning politeness, deck, center positions ──
+
+    [Fact]
+    public void Container_LoadingToast_RendersSpinner_AndNoProgressBar()
+    {
+        var cut = Render<TmToastContainer>();
+        var svc = Services.GetRequiredService<ToastService>();
+
+        svc.Show(new ToastOptions { Message = "Loading", IsLoading = true });
+        cut.Render();
+
+        cut.Find(".tm-toast").ClassList.Should().Contain("tm-toast--loading");
+        cut.Find(".tm-toast-spinner").GetAttribute("aria-hidden").Should().Be("true",
+            "the spinner is decorative — the live region announces the message");
+        cut.FindAll(".tm-toast-progress").Should().BeEmpty("a loading toast has no countdown to show");
+    }
+
+    [Fact]
+    public void Container_NonLoadingToast_RendersNoSpinner()
+    {
+        var cut = Render<TmToastContainer>();
+        var svc = Services.GetRequiredService<ToastService>();
+
+        svc.ShowInfo("plain");
+        cut.Render();
+
+        cut.FindAll(".tm-toast-spinner").Should().BeEmpty();
+        cut.FindAll(".tm-toast-icon").Should().NotBeEmpty("the severity icon is the non-loading visual");
+    }
+
+    [Fact]
+    public void Container_Warning_AnnouncesInTheAssertiveRegion_ByDefault()
+    {
+        var cut = Render<TmToastContainer>();
+        var svc = Services.GetRequiredService<ToastService>();
+
+        svc.ShowWarning("Careful");
+        cut.Render();
+
+        cut.WaitForAssertion(() =>
+            cut.Find("[data-toast-live='assertive']").TextContent.Trim().Should().Be("Careful"));
+        cut.Find("[data-toast-live='polite']").TextContent.Trim().Should().BeEmpty();
+    }
+
+    [Fact]
+    public void Container_Warning_WithExplicitPoliteness_Polite_IsAnnouncedInThePoliteRegion()
+    {
+        var cut = Render<TmToastContainer>();
+        var svc = Services.GetRequiredService<ToastService>();
+
+        svc.Show(new ToastOptions { Message = "Careful", Severity = ToastSeverity.Warning, Politeness = ToastPoliteness.Polite });
+        cut.Render();
+
+        cut.WaitForAssertion(() =>
+            cut.Find("[data-toast-live='polite']").TextContent.Trim().Should().Be("Careful"));
+        cut.Find("[data-toast-live='assertive']").TextContent.Trim().Should().BeEmpty();
+    }
+
+    [Fact]
+    public void Container_Stacked_RendersTheDeckModifier()
+    {
+        var cut = Render<TmToastContainer>(p => p.Add(c => c.Stacked, true));
+        var svc = Services.GetRequiredService<ToastService>();
+
+        svc.ShowInfo("one");
+        svc.ShowInfo("two");
+        svc.ShowInfo("three");
+        svc.ShowInfo("four");
+        cut.Render();
+
+        cut.Find(".tm-toast-container").ClassList.Should().Contain("tm-toast-container--stacked",
+            "Stacked=true switches the container into the collapsed-deck presentation");
+        var cards = cut.FindAll(".tm-toast");
+        cards.Should().HaveCount(4, "the deck keeps every toast in the DOM — CSS collapses the layers");
+        cards[0].ClassList.Should().Contain("tm-toast--deck-collapsed",
+            "only the newest three layers stay fully visible — the oldest card collapses to a strip");
+        cards[1].ClassList.Should().NotContain("tm-toast--deck-collapsed");
+        cards[2].ClassList.Should().NotContain("tm-toast--deck-collapsed");
+        cards[3].ClassList.Should().NotContain("tm-toast--deck-collapsed");
+    }
+
+    [Fact]
+    public async Task Container_HoveringALoadingToast_RePausesIt_WhenThePromiseSettles()
+    {
+        var cut = Render<TmToastContainer>();
+        var svc = Services.GetRequiredService<ToastService>();
+
+        var gate = new TaskCompletionSource<int>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var pending = svc.PromiseAsync(_ => gate.Task,
+            new ToastPromiseOptions { LoadingMessage = "Working…", SuccessMessage = r => $"Got {r}" });
+        cut.Render();
+        var id = svc.Toasts.Should().ContainSingle().Which.Id;
+
+        // Hover while the toast is still LOADING: a loading toast is sticky (duration 0), so there
+        // is no timer to pause yet — but the hold must register, and the moment the promise settles
+        // (the update gives the toast a real duration and arms the timer) the hold re-pauses it.
+        cut.Find(".tm-toast").TriggerEvent("onmouseenter", new MouseEventArgs());
+        cut.Render();
+        svc.IsPaused(id).Should().BeFalse("a sticky loading toast has no timer to pause");
+
+        gate.SetResult(7);
+        await pending;
+        cut.Render();
+
+        svc.IsPaused(id).Should().BeTrue(
+            "the held toast is re-paused when the settle arms its auto-dismiss timer");
+        cut.Find(".tm-toast").ClassList.Should().Contain("tm-toast--paused");
+    }
+
+    [Fact]
+    public void Container_Stacked_RendersTheHiddenCount_AsANonLiveSrOnlyText()
+    {
+        var cut = Render<TmToastContainer>(p => p.Add(c => c.Stacked, true));
+        var svc = Services.GetRequiredService<ToastService>();
+
+        svc.ShowInfo("one");
+        svc.ShowInfo("two");
+        svc.ShowInfo("three");
+        cut.Render();
+        cut.FindAll("[data-toast-deck-count]").Should().BeEmpty(
+            "with no collapsed card there is nothing to count");
+
+        svc.ShowInfo("four");
+        svc.ShowInfo("five");
+        cut.Render();
+
+        var count = cut.FindAll("[data-toast-deck-count]").Should().ContainSingle().Subject;
+        count.ClassList.Should().Contain("tm-sr-only");
+        count.TextContent.Trim().Should().Be("2 hidden notifications",
+            "the two collapsed strips are counted for screen readers");
+        count.GetAttribute("role").Should().BeNull("the count is NOT a live region — the live regions announce toasts");
+        count.GetAttribute("aria-live").Should().BeNull();
+    }
+
+    [Fact]
+    public void Container_NotStacked_RendersNoDeckClasses()
+    {
+        var cut = Render<TmToastContainer>();
+        var svc = Services.GetRequiredService<ToastService>();
+
+        svc.ShowInfo("one");
+        svc.ShowInfo("two");
+        svc.ShowInfo("three");
+        svc.ShowInfo("four");
+        cut.Render();
+
+        cut.Find(".tm-toast-container").ClassList.Should().NotContain("tm-toast-container--stacked");
+        cut.FindAll(".tm-toast--deck-collapsed").Should().BeEmpty(
+            "without Stacked no card collapses, however many are visible");
+    }
+
+    [Fact]
+    public void Container_PositionClass_TopCenter()
+    {
+        var cut = Render<TmToastContainer>(p => p.Add(c => c.Position, ToastPosition.TopCenter));
+
+        cut.Find(".tm-toast-container").ClassList.Should().Contain("tm-toast-container--top-center");
+    }
+
+    [Fact]
+    public void Container_PositionClass_BottomCenter()
+    {
+        var cut = Render<TmToastContainer>(p => p.Add(c => c.Position, ToastPosition.BottomCenter));
+
+        cut.Find(".tm-toast-container").ClassList.Should().Contain("tm-toast-container--bottom-center");
+    }
+
+    [Fact]
+    public async Task Container_PromiseFlow_UpdatesTheLoadingToastInPlace()
+    {
+        var cut = Render<TmToastContainer>();
+        var svc = Services.GetRequiredService<ToastService>();
+
+        // Gated so the loading phase is actually observable: an already-completed task would skip
+        // straight to the success update before the first render.
+        var gate = new TaskCompletionSource<int>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var pending = svc.PromiseAsync(_ => gate.Task,
+            new ToastPromiseOptions { LoadingMessage = "Working…", SuccessMessage = r => $"Got {r}" });
+        cut.Render();
+
+        cut.WaitForAssertion(() => cut.Find(".tm-toast-spinner").Should().NotBeNull());
+        cut.Find(".tm-toast-message").TextContent.Trim().Should().Be("Working…");
+        cut.FindAll(".tm-toast-progress").Should().BeEmpty();
+
+        gate.SetResult(7);
+        await pending;
+        cut.Render();
+
+        cut.WaitForAssertion(() => cut.Find(".tm-toast-message").TextContent.Trim().Should().Be("Got 7"));
+        cut.FindAll(".tm-toast").Should().HaveCount(1, "the success renders in the SAME card");
+        cut.FindAll(".tm-toast-spinner").Should().BeEmpty("the spinner is gone after the promise settled");
+        cut.Find(".tm-toast").ClassList.Should().Contain("tm-toast--success");
     }
 }

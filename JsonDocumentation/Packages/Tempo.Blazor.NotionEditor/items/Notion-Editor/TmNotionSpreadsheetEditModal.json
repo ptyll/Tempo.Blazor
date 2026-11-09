@@ -2,7 +2,7 @@
   "itemName": "TmNotionSpreadsheetEditModal",
   "kind": "Component",
   "category": "Notion Editor",
-  "description": "Modal dialog hosting the dynamically loaded spreadsheet editor (or a missing-package notice) with Save and Discard actions and a loading spinner.",
+  "description": "Fullscreen spreadsheet edit modal on the shared TmNotionTempoEditorModal shell. The spreadsheet resolves its own container, so a narrow modal gets its mobile chrome. A cell change marks the modal dirty and Discard confirms first; a missing package disables Save.",
   "packageId": "Tempo.Blazor.NotionEditor",
   "namespace": "Tempo.Blazor.Components.NotionEditor.Blocks.TempoBlocks",
   "sourcePath": "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/Blocks/TempoBlocks/TmNotionSpreadsheetEditModal.razor",

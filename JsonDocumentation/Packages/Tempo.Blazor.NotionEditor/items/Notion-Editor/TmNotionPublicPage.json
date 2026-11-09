@@ -26,16 +26,15 @@
     },
     {
       "name": "Class",
-      "type": "page shell.</summary> [Parameter] public string?",
+      "type": "string?",
       "isRequired": false,
       "description": "Additional CSS class on the public page shell."
     },
     {
       "name": "CommentProvider",
       "type": "ITmCommentProvider?",
-      "isRequired": true,
-      "description": "Optional comments provider enabled only when the public share allows comments.",
-      "editorRequired": true
+      "isRequired": false,
+      "description": "Optional comments provider enabled only when the public share allows comments."
     },
     {
       "name": "DataProvider",
@@ -46,7 +45,7 @@
     },
     {
       "name": "PublicShareProvider",
-      "type": "share tokens.</summary> [Parameter, EditorRequired] public INotionPublicShareProvider",
+      "type": "INotionPublicShareProvider",
       "isRequired": true,
       "description": "Provider that resolves public share tokens."
     }

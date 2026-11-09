@@ -1,0 +1,10 @@
+{
+  "kind": "Record",
+  "category": "Services",
+  "namespace": "Tempo.Blazor.Services",
+  "description": "Configuration for ToastService.PromiseAsync: the three phases of a long-running operation surfaced through ONE toast — a sticky loading state, an in-place update to Success (or Error) when the operation settles. The service stays localization-free: the caller supplies every message.",
+  "packageId": "Tempo.Blazor",
+  "sourcePath": "src/Tempo.Blazor/Services/ToastOptions.cs",
+  "documentationStatus": "generated",
+  "itemName": "ToastPromiseOptions"
+}

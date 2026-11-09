@@ -83,14 +83,6 @@ public sealed class TmNotionFloatingZBandTests
     [Theory]
     // anchored surface only — no click-capture backdrop
     [InlineData("UI/TmNotionInlineToolbar", 1)]
-    // backdrop + panel pairs
-    [InlineData("UI/TmNotionSlashMenu", 2)]
-    [InlineData("UI/TmNotionBlockTypeSwitcher", 2)]
-    [InlineData("UI/TmNotionColorPicker", 2)]
-    [InlineData("UI/TmNotionEmojiPicker", 2)]
-    [InlineData("UI/TmNotionBlockCommentPanel", 2)]
-    [InlineData("UI/TmNotionTextCommentPanel", 2)]
-    [InlineData("UI/TmNotionTokenDropdown", 2)]
     public void FloatingNotionSurfaces_SitOnThePopoverBand(string scopedCss, int zDeclarations)
     {
         var css = File.ReadAllText(Path.Combine(
@@ -100,7 +92,7 @@ public sealed class TmNotionFloatingZBandTests
         var declarations = AnyLevel.Matches(css);
         declarations.Should().HaveCount(
             zDeclarations,
-            $"{scopedCss}: expected exactly the backdrop+surface z-index declarations");
+            $"{scopedCss}: expected exactly the surface z-index declaration");
 
         foreach (Match declaration in declarations)
         {
@@ -114,11 +106,20 @@ public sealed class TmNotionFloatingZBandTests
     /// CF18-7: surfaces migrated onto <c>TmOverlayPanel</c> declare NO z-index of their own —
     /// the popover top layer + overlay.js own stacking, and a stray band claim on the panel
     /// root would silently compete with the top layer.
+    /// Phase 4 (NO1): the block / text comment popovers dropped their own backdrop and z-index —
+    /// the popover bubble paints DOM-late fixed, the dialog/sheet surface is the core TmModal.
     /// </summary>
     [Theory]
     [InlineData("UI/TmNotionAiMenu")]
     [InlineData("UI/TmNotionMentionMenu")]
     [InlineData("UI/TmCommentMentionInput")]
+    [InlineData("UI/TmNotionSlashMenu")]
+    [InlineData("UI/TmNotionBlockTypeSwitcher")]
+    [InlineData("UI/TmNotionEmojiPicker")]
+    [InlineData("UI/TmNotionTokenDropdown")]
+    [InlineData("UI/TmNotionStatusPicker")]
+    [InlineData("UI/TmNotionBlockCommentPanel")]
+    [InlineData("UI/TmNotionTextCommentPanel")]
     public void OverlayHostedSurfaces_DeclareNoOwnZIndex(string scopedCss)
     {
         var css = CssComment.Replace(File.ReadAllText(Path.Combine(
@@ -130,22 +131,51 @@ public sealed class TmNotionFloatingZBandTests
             + "territory; any own z-index here is a regression");
     }
 
-    /// <summary>Full-screen take-overs ride the overlay band; their dialogs stack above it.</summary>
-    [Theory]
-    [InlineData("UI/TmNotionPageSearch", "--tm-z-overlay", 2)]
-    [InlineData("UI/TmNotionPageHistory", "--tm-z-overlay", 4)]
-    public void FullScreenTakeOvers_SitOnTheOverlayBand(string scopedCss, string band, int overlayDeclarations)
+    /// <summary>
+    /// Phase 4 (DB-3) review: the legacy <c>.tm-db__floatmenu</c> block carried its own
+    /// <c>--tm-z-dropdown</c> band claim (and a click-capture backdrop under it) — a stale duplicate
+    /// of the z-index-free rules further down the same sheet. The block was deleted; the guard
+    /// pins the stylesheet to in-flow numeric layering only (the sticky primary column at 1–2) —
+    /// no <c>--tm-z-*</c> band claim may come back.
+    /// </summary>
+    [Fact]
+    public void DatabaseBlock_DeclaresNoZBandClaim()
+    {
+        var css = CssComment.Replace(File.ReadAllText(Path.Combine(
+            FindRepositoryRoot(), "src", "Tempo.Blazor.NotionEditor",
+            "Components", "NotionEditor", "Blocks", "Database", "TmNotionDatabaseBlock.razor.css")),
+            string.Empty);
+
+        var bandClaims = AnyLevel.Matches(css)
+            .Where(m => m.Groups[1].Value.Contains("--tm-z-", StringComparison.Ordinal))
+            .ToList();
+        bandClaims.Should().BeEmpty(
+            "TmNotionDatabaseBlock: the view-tab float / ctx menus are plain fixed surfaces — the "
+            + "stale z-index band duplicate must stay deleted");
+    }
+
+    /// <summary>A dialog that covers the page rides the core TmModal, so its own CSS claims no band.</summary>
+    [Fact]
+    public void DialogSurfaces_ClaimNoPrivateBand()
     {
         var css = File.ReadAllText(Path.Combine(
             FindRepositoryRoot(), "src", "Tempo.Blazor.NotionEditor",
-            "Components", "NotionEditor", $"{scopedCss}.razor.css"));
+            "Components", "NotionEditor", "UI", "TmNotionMediaUploadDialog.razor.css"));
 
-        var declarations = AnyLevel.Matches(css);
-        var onBand = declarations.Count(d => d.Groups[1].Value.Contains(band, StringComparison.Ordinal));
-        onBand.Should().Be(
-            overlayDeclarations,
-            $"{scopedCss}: backdrop+panel ride {band}; PageHistory's confirm dialog stacks two "
-            + "same-band offsets above its panel and its toast rides --tm-z-toast");
+        AnyLevel.Matches(css).Should().BeEmpty("the media dialog rides TmModal");
+    }
+
+    /// <summary>Full-screen take-overs ride TmModal; their own CSS claims no overlay band.</summary>
+    [Fact]
+    public void FullScreenTakeOvers_ClaimNoPrivateBand()
+    {
+        var css = File.ReadAllText(Path.Combine(
+            FindRepositoryRoot(), "src", "Tempo.Blazor.NotionEditor",
+            "Components", "NotionEditor", "UI", "TmNotionPageHistory.razor.css"));
+
+        AnyLevel.Matches(css)
+            .Count(match => match.Groups[1].Value.Contains("--tm-z-overlay", StringComparison.Ordinal))
+            .Should().Be(0, "page history rides TmModal");
     }
 
     private static string FindRepositoryRoot()

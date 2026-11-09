@@ -1,12 +1,16 @@
 @namespace Tempo.Blazor.Components.NotionEditor.Blocks.Database
+@inherits Tempo.Blazor.Components.TmComponentBase
+@using Tempo.Blazor.Localization
 @using Tempo.Blazor.NotionEditor.Enums
 @using Tempo.Blazor.NotionEditor.Models
 @using Tempo.Blazor.NotionEditor.Interfaces
 @using Tempo.Blazor.Components.NotionEditor.Blocks.Database.Cells
+@using Tempo.Blazor.Components.Dropdowns
+@using Tempo.Blazor.Components.Icons
 
-<div class="tm-dbt-wrap @RowHeightClass @(WrapCells ? "tm-dbt--wrap" : "") @(_resizingFieldId.HasValue ? "tm-dbt--resizing" : "")"
-     @onpointermove="OnResizeMove"
-     @onpointerup="StopResizeAsync">
+<div class="tm-dbt-wrap @RowHeightClass @(WrapCells ? "tm-dbt--wrap" : "")"
+     @ref="_tableRef">
+    <span id="@ResizeHintId" class="tm-dbt__resize-hint">@Loc["TmNotionDbTableView_ResizeColumnHint"]</span>
 
     <div class="tm-dbt-scroll">
         <table class="tm-dbt" role="grid" aria-label="@Loc["TmNotionDatabaseBlock_ViewTable"]">
@@ -19,6 +23,7 @@
                                type="checkbox"
                                checked="@AllSelected"
                                title="@Loc["TmNotionDbTableView_SelectAllRows"]"
+                               aria-label="@Loc["TmNotionDbTableView_SelectAllRows"]"
                                @onchange="ToggleSelectAll" />
                     </th>
 
@@ -31,24 +36,34 @@
                         var isDragOver = _dragOverFieldIndex == fi && _dragFromFieldIndex >= 0 && _dragFromFieldIndex != fi;
                         <th class="tm-dbt__th @(field.IsPrimary ? "tm-dbt__th--primary" : "") @(isDragOver ? "tm-dbt__th--dragover" : "")"
                             scope="col"
-                            style="min-width:@(width)px; width:@(width)px"
-                            draggable="@(!ReadOnly)"
-                            @ondragstart="() => OnDragStart(fi)"
+                            style="@ColumnStyle(field, width)"
+                            draggable="@HeaderDraggable"
+                            @ondragstart="e => OnHeaderDragStart(e, fi)"
                             @ondragover:preventDefault="true"
                             @ondragover="() => OnDragOver(fi)"
                             @ondrop="() => OnDropAsync(fi)">
                             <span class="tm-dbt__th-inner"
                                   role="@(OnFieldEdit.HasDelegate ? "button" : null)"
                                   @onclick="() => OnFieldEdit.InvokeAsync(field)">
-                                <span class="tm-dbt__th-icon" aria-hidden="true">@FieldTypeIcon(field.Type)</span>
+                                <span class="tm-dbt__th-icon" aria-hidden="true"><TmIcon Name="@DatabaseFieldIcons.Get(field.Type)" Size="IconSize.Xs" /></span>
                                 <span class="tm-dbt__th-name">@field.Name</span>
                             </span>
-                            @if (!ReadOnly)
+                            @if (!ReadOnly && !CoarsePointer)
                             {
                                 <span class="tm-dbt__resize-handle"
-                                      @onpointerdown="e => StartResize(e, field)"
-                                      @onpointerdown:stopPropagation="true"
-                                      aria-hidden="true"></span>
+                                      data-resize-field="@field.Id"
+                                      draggable="false"
+                                      tabindex="0"
+                                      role="separator"
+                                      aria-orientation="vertical"
+                                      aria-valuemin="60"
+                                      aria-valuemax="800"
+                                      aria-valuenow="@width"
+                                      aria-keyshortcuts="Alt+ArrowLeft Alt+ArrowRight"
+                                      aria-describedby="@ResizeHintId"
+                                      aria-label="@Loc["TmNotionDbTableView_ResizeColumn", field.Name]"
+                                      title="@Loc["TmNotionDbTableView_ResizeColumnHint"]"
+                                      @ondragstart:preventDefault="true"></span>
                             }
                         </th>
                     }
@@ -60,6 +75,7 @@
                             <button class="tm-dbt__add-field-btn"
                                     type="button"
                                     title="@Loc["TmNotionDatabaseBlock_AddField"]"
+                                    aria-label="@Loc["TmNotionDatabaseBlock_AddField"]"
                                     @onclick="OnNewField">
                                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                                     <path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
@@ -94,10 +110,12 @@
                             <tr class="tm-dbt__group-row">
                                 <td class="tm-dbt__group-sep" colspan="@colCount">
                                     <div class="tm-dbt__group-sep-inner">
+                                        <span class="tm-dbt__group-dot" aria-hidden="true"></span>
                                         <button class="tm-dbt__group-toggle"
                                                 type="button"
+                                                data-testid="@TestId("notion-db-group-toggle")"
                                                 aria-expanded="@(!isCollapsed)"
-                                                aria-label="@(isCollapsed ? Loc["TmNotionDbTableView_GroupExpand"] : Loc["TmNotionDbTableView_GroupCollapse"])"
+                                                aria-label="@(isCollapsed ? Loc["TmNotionDb_ExpandGroup"] : Loc["TmNotionDb_CollapseGroup"])"
                                                 @onclick="() => ToggleGroup(g.Key)">
                                             <svg class="tm-dbt__group-chevron @(isCollapsed ? "tm-dbt__group-chevron--collapsed" : "")"
                                                  width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -130,16 +148,36 @@
                                 var isExpanded = ShowSubItems && IsRecordExpanded(record.Id);
 
                                 @* ── Parent row ── *@
-                                <tr class="tm-dbt__row @(isSelected ? "tm-dbt__row--selected" : "")">
+                                <tr class="tm-dbt__row @(isSelected ? "tm-dbt__row--selected" : "")" style="height: var(--tm-dbt-row-height);">
 
-                                    @* Row checkbox *@
+                                    @* Row checkbox and the non-drag delete (the row has no context menu) *@
                                     <td class="tm-dbt__cell tm-dbt__cell--check">
                                         <input class="tm-dbt__check"
                                                type="checkbox"
                                                checked="@isSelected"
                                                title="@Loc["TmNotionDbTableView_SelectRow"]"
+                                               aria-label="@Loc["TmNotionDbTableView_SelectRow"]"
                                                @onchange="() => ToggleSelectRow(record.Id)"
                                                @onclick:stopPropagation="true" />
+                                        @if (!ReadOnly && OnRecordDeleted.HasDelegate)
+                                        {
+                                            <span class="tm-dbt__row-menu" @onclick:stopPropagation="true">
+                                                <TmDropdown Class="tm-dbt__row-delete"
+                                                            Icon="@IconNames.MoreHorizontal"
+                                                            ShowChevron="false"
+                                                            Text=""
+                                                            AriaLabel="@Loc["TmNotionDb_RowActions"]"
+                                                            data-testid="@TestId("notion-db-table-row-delete")"
+                                                            OnSelect="v => OnRowMenuAsync(record, v)">
+                                                    <TmDropdownItem Value="open" Icon="@IconNames.ExternalLink">
+                                                        @Loc["TmNotionDb_OpenRecord"]
+                                                    </TmDropdownItem>
+                                                    <TmDropdownItem Value="delete" Icon="@IconNames.Trash">
+                                                        @Loc["TmNotionDbRecordDetail_Delete"]
+                                                    </TmDropdownItem>
+                                                </TmDropdown>
+                                            </span>
+                                        }
                                     </td>
 
                                     @* Data cells *@
@@ -205,7 +243,7 @@
                                     @foreach (var child in GetDirectChildren(record.Id))
                                     {
                                         var childSelected = IsSelected(child.Id);
-                                        <tr class="tm-dbt__row tm-dbt__row--sub @(childSelected ? "tm-dbt__row--selected" : "")">
+                                        <tr class="tm-dbt__row tm-dbt__row--sub @(childSelected ? "tm-dbt__row--selected" : "")" style="height: var(--tm-dbt-row-height);">
 
                                             <td class="tm-dbt__cell tm-dbt__cell--check">
                                                 <input class="tm-dbt__check"
@@ -278,4 +316,17 @@
             @Loc["TmNotionDatabaseBlock_AddRecord"]
         </button>
     }
+
+    <div class="tm-dbt__footer" data-testid="@TestId("notion-db-table-footer")">
+        @Loc.Plural("TmNotionDbTableView_RecordCount", Records.Count)
+    </div>
+
+    <TmDialog Show="@(_pendingDelete is not null)"
+              Title="@Loc["TmNotionDbRecordDetail_Delete"]"
+              Type="DialogType.Confirm"
+              IsDangerous="true"
+              Message="@Loc["TmNotionDbRecordDetail_DeleteConfirm"]"
+              OkButtonText="@Loc["Tm_Delete"]"
+              CancelButtonText="@Loc["Tm_Cancel"]"
+              OnResult="ConfirmDeleteRowAsync" />
 </div>

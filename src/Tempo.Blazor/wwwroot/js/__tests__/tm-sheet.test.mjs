@@ -106,6 +106,7 @@ test('trackViewport writes lengths, so the sheet is usable before the module run
         props: new Map(),
         style: {
             setProperty(name, value) { root.props.set(name, value); },
+            removeProperty(name) { root.props.delete(name); },
         },
     };
     const viewport = { height: 430, offsetTop: 12 };
@@ -122,6 +123,8 @@ test('trackViewport writes lengths, so the sheet is usable before the module run
     assert.equal(root.props.get('--tm-sheet-viewport'), '430px', 'the viewport variable is a length, not a bare number');
     assert.equal(root.props.get('--tm-sheet-keyboard'), '402px');
     stop();
+    assert.equal(root.props.has('--tm-sheet-viewport'), false, 'stopping drops the stored viewport so a later band is not clipped by it');
+    assert.equal(root.props.has('--tm-sheet-keyboard'), false);
     delete globalThis.window;
 });
 
@@ -700,7 +703,10 @@ test('a legacy boolean track argument still works alongside the options object',
 test('trackViewport writes the lengths on an explicit tracking root when given one', () => {
     const makeRoot = () => {
         const root = { props: new Map() };
-        root.style = { setProperty(name, value) { root.props.set(name, value); } };
+        root.style = {
+            setProperty(name, value) { root.props.set(name, value); },
+            removeProperty(name) { root.props.delete(name); },
+        };
         root.classList = { contains: () => false, toggle: () => {} };
         return root;
     };
@@ -727,7 +733,10 @@ test('attachGesture forwards an explicit viewport tracking root', () => {
     installWindow(430);
     const sheet = panel(400);
     const trackingRoot = { props: new Map() };
-    trackingRoot.style = { setProperty(name, value) { trackingRoot.props.set(name, value); } };
+    trackingRoot.style = {
+        setProperty(name, value) { trackingRoot.props.set(name, value); },
+        removeProperty(name) { trackingRoot.props.delete(name); },
+    };
     trackingRoot.classList = { contains: () => false, toggle: () => {} };
     sheet.closest = () => null;
     const sink = host();

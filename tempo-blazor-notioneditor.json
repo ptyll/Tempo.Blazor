@@ -57,7 +57,6 @@
       "Tempo.Blazor.Components.NotionEditor.Models",
       "Tempo.Blazor.Components.NotionEditor.Page",
       "Tempo.Blazor.Components.NotionEditor.Services",
-      "Tempo.Blazor.Components.NotionEditor.Shared",
       "Tempo.Blazor.Components.NotionEditor.Sidebar",
       "Tempo.Blazor.Components.NotionEditor.UI",
       "Tempo.Blazor.Configuration"
@@ -269,6 +268,30 @@
           "name": "Description",
           "kind": "Property",
           "type": "string"
+        }
+      ]
+    },
+    {
+      "itemName": "DatabaseFieldIcons",
+      "kind": "Class",
+      "category": "Components",
+      "namespace": "Tempo.Blazor.Components.NotionEditor.Blocks.Database",
+      "description": "The one icon map for a database field type (DB-2). The six inline SVG copies it replaces all rendered through TmIcon now, so a new field type fails the icon test instead of falling through to a text glyph in one view and nothing in another.",
+      "packageId": "Tempo.Blazor.NotionEditor",
+      "sourcePath": "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/Blocks/Database/DatabaseFieldIcons.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "Get",
+          "kind": "Method",
+          "type": "string",
+          "description": "The IconNames glyph for type.",
+          "parameters": [
+            {
+              "name": "type",
+              "type": "DatabaseFieldType"
+            }
+          ]
         }
       ]
     },
@@ -580,6 +603,82 @@
       ]
     },
     {
+      "itemName": "NotionColorTokens",
+      "kind": "Class",
+      "category": "Components",
+      "namespace": "Tempo.Blazor.Components.NotionEditor.Services",
+      "description": "Maps a stored block colour onto the data-palette token names. A document saved before 2.10.0 stores the picker hex; a new document stores the colour name. Both render through --tm-notion-color-*, so the theme decides the colour.",
+      "packageId": "Tempo.Blazor.NotionEditor",
+      "sourcePath": "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/Services/NotionColorTokens.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "InlineHex",
+          "kind": "Method",
+          "type": "string?",
+          "description": "The one allowlisted legacy hex document.execCommand will keep. The toolbar paints the swatch from the token and sends this hex; null when the name is not on the palette.",
+          "parameters": [
+            {
+              "name": "name",
+              "type": "string?"
+            },
+            {
+              "name": "background",
+              "type": "bool"
+            }
+          ]
+        },
+        {
+          "name": "Name",
+          "kind": "Method",
+          "type": "string?",
+          "description": "Returns the palette name (gray, red, orange, yellow, green, blue, purple, pink, brown) for a legacy picker hex, or the stored value unchanged when it is already a name or unknown.",
+          "parameters": [
+            {
+              "name": "stored",
+              "type": "string?"
+            }
+          ]
+        },
+        {
+          "name": "OptionInk",
+          "kind": "Method",
+          "type": "string",
+          "description": "The option ink (--tm-notion-option-{name}-ink), or the secondary text.",
+          "parameters": [
+            {
+              "name": "stored",
+              "type": "string?"
+            }
+          ]
+        },
+        {
+          "name": "OptionSolid",
+          "kind": "Method",
+          "type": "string",
+          "description": "The option chip token var(--tm-notion-option-{name}-solid) for a stored name or legacy hex, or var(--tm-color-primary) when the value is empty or unknown.",
+          "parameters": [
+            {
+              "name": "stored",
+              "type": "string?"
+            }
+          ]
+        },
+        {
+          "name": "OptionWash",
+          "kind": "Method",
+          "type": "string",
+          "description": "The option wash (--tm-notion-option-{name}-wash), or the muted surface.",
+          "parameters": [
+            {
+              "name": "stored",
+              "type": "string?"
+            }
+          ]
+        }
+      ]
+    },
+    {
       "itemName": "NotionCommandStack",
       "kind": "Class",
       "category": "Components",
@@ -703,6 +802,16 @@
       ]
     },
     {
+      "itemName": "NotionCommentPresentation",
+      "kind": "Enum",
+      "category": "Components",
+      "namespace": "Tempo.Blazor.Components.NotionEditor",
+      "description": "How the block / text comment panels present (see TmNotionEditor.CommentPresentation): Popover keeps the anchored bubble at every layout, Dialog always renders the core TmModal (centred dialog on desktop, sheet on mobile), Auto (the default) follows the layout — popover on a desktop layout, dialog / sheet on touch and narrow containers.",
+      "packageId": "Tempo.Blazor.NotionEditor",
+      "sourcePath": "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/NotionCommentPresentation.cs",
+      "documentationStatus": "merged"
+    },
+    {
       "itemName": "NotionDiffViewMode",
       "kind": "Enum",
       "category": "Components",
@@ -743,6 +852,16 @@
       "documentationStatus": "merged"
     },
     {
+      "itemName": "NotionEditorChrome",
+      "kind": "Enum",
+      "category": "Components",
+      "namespace": "Tempo.Blazor.Components.NotionEditor",
+      "description": "How much chrome TmNotionEditor renders around the page.",
+      "packageId": "Tempo.Blazor.NotionEditor",
+      "sourcePath": "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/NotionEditorChrome.cs",
+      "documentationStatus": "merged"
+    },
+    {
       "itemName": "NotionEditorContext",
       "kind": "Class",
       "category": "Components",
@@ -771,6 +890,12 @@
           ]
         },
         {
+          "name": "RaiseAggregateConflictDetectedAsync",
+          "kind": "Method",
+          "type": "Task",
+          "description": "Invokes AggregateConflictDetected when a block save conflicted."
+        },
+        {
           "name": "RaiseBlockConverted",
           "kind": "Method",
           "type": "void",
@@ -793,6 +918,24 @@
               "type": "IPageBlock"
             }
           ]
+        },
+        {
+          "name": "RememberPages",
+          "kind": "Method",
+          "type": "void",
+          "description": "Records pages the sidebar or editor already loaded, so search can resolve parents.",
+          "parameters": [
+            {
+              "name": "pages",
+              "type": "IEnumerable<INotionPage>?"
+            }
+          ]
+        },
+        {
+          "name": "AggregateConflictDetected",
+          "kind": "Property",
+          "type": "Func<Task>?",
+          "description": "Raised when a block save hits an aggregate concurrency conflict. The block handler swallows the thrown conflict so typing can continue; the page uses this to show the banner."
         },
         {
           "name": "AggregateSession",
@@ -857,6 +1000,12 @@
           "kind": "Property",
           "type": "NotionCollaborationSync?",
           "description": "Active collaboration sync service (null when CollaborationProvider is absent)."
+        },
+        {
+          "name": "CommentPresentation",
+          "kind": "Property",
+          "type": "NotionCommentPresentation",
+          "description": "How the block / text comment panels present (NO1): Popover keeps the anchored bubble, Dialog the core modal, Auto (the default) resolves per layout. Set from TmNotionEditor.CommentPresentation."
         },
         {
           "name": "CommentProvider",
@@ -955,10 +1104,28 @@
           "description": "Navigates to the given page by ID. Supplied by TmNotionEditor and used by child page / linked page / breadcrumb blocks to trigger in-editor navigation."
         },
         {
+          "name": "OpenPageDialog",
+          "kind": "Property",
+          "type": "Action<NotionPageDialog, Guid>?",
+          "description": "Opens an editor-owned page dialog (restrictions, share, history) for a page. The page calls this instead of rendering the dialog itself: the shell canvas remounts on a band flip, and a dialog inside it would close mid-open."
+        },
+        {
           "name": "OpenTemplateGallery",
           "kind": "Property",
           "type": "Func<Task>?",
           "description": "Opens the new-page template gallery from the sidebar."
+        },
+        {
+          "name": "PageCache",
+          "kind": "Property",
+          "type": "IReadOnlyDictionary<string, INotionPage>",
+          "description": "Pages already loaded by the sidebar or the editor, keyed by id. Search path resolution reads this cache and must not call the data provider."
+        },
+        {
+          "name": "PageCommentsPresentation",
+          "kind": "Property",
+          "type": "NotionPageCommentsPresentation",
+          "description": "How the page-level comment panel presents (phase 5): Inline (the default) keeps the collapsible panel at the bottom of the page; Dialog renders no inline panel — the header badge and the Comments page action open a core TmModal with the Embedded panel. Set from TmNotionEditor.PageCommentsPresentation."
         },
         {
           "name": "PagePropertiesProvider",
@@ -1307,6 +1474,26 @@
       ]
     },
     {
+      "itemName": "NotionPageCommentsPresentation",
+      "kind": "Enum",
+      "category": "Components",
+      "namespace": "Tempo.Blazor.Components.NotionEditor",
+      "description": "How the page-level comment panel presents (see TmNotionEditor.PageCommentsPresentation): Inline (the default) keeps the collapsible panel at the bottom of the page; Dialog renders no inline panel — the header badge and the Comments page action open a core TmModal hosting the Embedded panel body (a sheet on a mobile layout).",
+      "packageId": "Tempo.Blazor.NotionEditor",
+      "sourcePath": "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/NotionCommentPresentation.cs",
+      "documentationStatus": "merged"
+    },
+    {
+      "itemName": "NotionShellPanelPresentation",
+      "kind": "Enum",
+      "category": "Components",
+      "namespace": "Tempo.Blazor.Components.NotionEditor",
+      "description": "How the Tasks / Blog / Analytics / Audit shell panels present themselves (see TmNotionEditor.ShellPanelPresentation).",
+      "packageId": "Tempo.Blazor.NotionEditor",
+      "sourcePath": "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/NotionShellPanelPresentation.cs",
+      "documentationStatus": "merged"
+    },
+    {
       "itemName": "NotionShortcutCatalog",
       "kind": "Class",
       "category": "Components",
@@ -1471,6 +1658,154 @@
       "itemName": "Tempo.Blazor.Components.NotionEditor.Commands.BatchCommand"
     },
     {
+      "itemName": "TimelineGeometry",
+      "kind": "Class",
+      "category": "Components",
+      "namespace": "Tempo.Blazor.Components.NotionEditor.Blocks.Database",
+      "description": "Pure pixel-to-day maths for the database timeline. The pointer helper reports pixels; this converts them, so a drag never needs a render to know how far it moved.",
+      "packageId": "Tempo.Blazor.NotionEditor",
+      "sourcePath": "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/Blocks/Database/TimelineGeometry.cs",
+      "documentationStatus": "merged"
+    },
+    {
+      "itemName": "TimelineZoomLevel",
+      "kind": "Enum",
+      "category": "Components",
+      "namespace": "Tempo.Blazor.Components.NotionEditor.Blocks.Database",
+      "description": "Zoom of the database timeline. One column is a day, a week or a month.",
+      "packageId": "Tempo.Blazor.NotionEditor",
+      "sourcePath": "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/Blocks/Database/TimelineGeometry.cs",
+      "documentationStatus": "merged"
+    },
+    {
+      "itemName": "TmNotionAuditLogLayout",
+      "kind": "Enum",
+      "category": "Components",
+      "namespace": "Tempo.Blazor.Components.NotionEditor.UI",
+      "description": "Result layout of TmNotionAuditLogPanel: Auto (the default) renders both the table and the cards and lets the panel's own container query pick (table on a wide container, cards below 640 px); Table and Cards pin one of the two at every width.",
+      "packageId": "Tempo.Blazor.NotionEditor",
+      "sourcePath": "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/UI/TmNotionAuditLogPanel.razor.cs",
+      "documentationStatus": "merged"
+    },
+    {
+      "itemName": "TmNotionCommentLabels",
+      "kind": "Record",
+      "category": "Components",
+      "namespace": "Tempo.Blazor.Components.NotionEditor.UI",
+      "description": "Every user-visible string of the shared comment thread, resolved from one localization prefix.",
+      "packageId": "Tempo.Blazor.NotionEditor",
+      "sourcePath": "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/UI/TmNotionCommentLabels.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "For",
+          "kind": "Method",
+          "type": "TmNotionCommentLabels",
+          "description": "Builds the record from one panel's localization prefix (TmNotionBlockComment, …).",
+          "parameters": [
+            {
+              "name": "loc",
+              "type": "ITmLocalizer"
+            },
+            {
+              "name": "prefix",
+              "type": "string"
+            }
+          ]
+        },
+        {
+          "name": "ActionsLabel",
+          "kind": "Property",
+          "type": "string?",
+          "description": "Accessible name of the actions group."
+        },
+        {
+          "name": "Cancel",
+          "kind": "Property",
+          "type": "string",
+          "description": "Cancel button label."
+        },
+        {
+          "name": "Delete",
+          "kind": "Property",
+          "type": "string",
+          "description": "Delete menu item label."
+        },
+        {
+          "name": "Edit",
+          "kind": "Property",
+          "type": "string",
+          "description": "Edit menu item label."
+        },
+        {
+          "name": "Edited",
+          "kind": "Property",
+          "type": "string",
+          "description": "Edited marker."
+        },
+        {
+          "name": "EditLabel",
+          "kind": "Property",
+          "type": "string",
+          "description": "Accessible name of the edit composer."
+        },
+        {
+          "name": "ListLabel",
+          "kind": "Property",
+          "type": "string?",
+          "description": "Accessible name of the thread list."
+        },
+        {
+          "name": "More",
+          "kind": "Property",
+          "type": "string",
+          "description": "⋯ menu label."
+        },
+        {
+          "name": "Quote",
+          "kind": "Property",
+          "type": "string",
+          "description": "Quote menu item label."
+        },
+        {
+          "name": "Reply",
+          "kind": "Property",
+          "type": "string",
+          "description": "Reply button label. Reply stays inline."
+        },
+        {
+          "name": "ReplyHint",
+          "kind": "Property",
+          "type": "string?",
+          "description": "Hint beside the inline reply submit button."
+        },
+        {
+          "name": "ReplyLabel",
+          "kind": "Property",
+          "type": "string?",
+          "description": "Inline reply accessible name."
+        },
+        {
+          "name": "ReplyPlaceholder",
+          "kind": "Property",
+          "type": "string?",
+          "description": "Inline reply placeholder."
+        },
+        {
+          "name": "ReplySubmit",
+          "kind": "Property",
+          "type": "string",
+          "description": "Inline reply submit label."
+        },
+        {
+          "name": "Save",
+          "kind": "Property",
+          "type": "string",
+          "description": "Save button label."
+        }
+      ]
+    },
+    {
       "itemName": "TmNotionDbCellBase",
       "kind": "Class",
       "category": "Components",
@@ -1532,6 +1867,16 @@
       "description": "Per-block comment summary for margin-thread indicators and hover tooltip.",
       "packageId": "Tempo.Blazor.NotionEditor",
       "sourcePath": "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/Page/TmNotionPage.razor.cs",
+      "documentationStatus": "merged"
+    },
+    {
+      "itemName": "TmNotionPageCommentPanelMode",
+      "kind": "Enum",
+      "category": "Components",
+      "namespace": "Tempo.Blazor.Components.NotionEditor.UI",
+      "description": "Presentation mode of TmNotionPageCommentPanel. Inline (the default) renders the collapsible toggle plus the expandable body; Embedded renders the always-expanded body with no toggle — used inside the page-comments dialog (PageCommentsPresentation=Dialog) and any host-owned container.",
+      "packageId": "Tempo.Blazor.NotionEditor",
+      "sourcePath": "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/UI/TmNotionPageCommentPanelMode.cs",
       "documentationStatus": "merged"
     },
     {
@@ -1731,7 +2076,7 @@
       "category": "Notion Editor",
       "subcategory": "UI",
       "namespace": "Tempo.Blazor.Components.NotionEditor.UI",
-      "description": "AI assistant panel with Generate, Improve, Summarize, and Ask tabs. Runs the AI provider, streaming output into a live region, and offers run, accept (as HTML), retry, cancel, and discard. The menu is a TmOverlayPanel anchored to a zero-size virtual element pinned at the Top/Left coordinates — popover=\"manual\" puts it in the browser top layer so it paints above a host TmModal. overlay.js supplies flip/shift viewport clamping and Escape + outside-pointerdown dismissal (IsOpenChanged). Panel-root styles live in the global _notion-floating-menus.css because the panel element carries the overlay's scope attribute, not this component's.",
+      "description": "AI assistant panel with iconed Generate, Improve, Summarize, and Ask tabs (aria-selected, arrow keys). Runs the AI provider, streaming output into a live region, and offers run, accept (as HTML), retry, cancel, and discard. The menu is a TmOverlayPanel anchored to a zero-size virtual element pinned at the Top/Left coordinates — popover=\"manual\" puts it in the browser top layer so it paints above a host TmModal. overlay.js supplies flip/shift viewport clamping and Escape + outside-pointerdown dismissal (IsOpenChanged). Panel-root styles live in the global _notion-floating-menus.css because the panel element carries the overlay's scope attribute, not this component's.",
       "packageId": "Tempo.Blazor.NotionEditor",
       "sourcePath": "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/UI/TmNotionAiMenu.razor",
       "documentationStatus": "merged",
@@ -1751,6 +2096,13 @@
           "isRequired": false,
           "default": "NotionAiMenuMode.Generate",
           "description": "Initial mode selected when the menu opens."
+        },
+        {
+          "name": "LayoutMode",
+          "type": "TmLayoutMode",
+          "isRequired": false,
+          "default": "TmLayoutMode.Auto",
+          "description": "Forced layout. Mobile presents the menu as the core sheet."
         },
         {
           "name": "Left",
@@ -1781,6 +2133,13 @@
           "type": "bool",
           "isRequired": false,
           "description": "Renders the component as a wider page-level panel."
+        },
+        {
+          "name": "PromptMaxLength",
+          "type": "int",
+          "isRequired": false,
+          "default": "2000",
+          "description": "Maximum prompt length. The textarea carries maxlength and the counter shows the count."
         },
         {
           "name": "Provider",
@@ -1943,6 +2302,13 @@
           "type": "string?",
           "isRequired": false,
           "description": "Additional CSS class."
+        },
+        {
+          "name": "Layout",
+          "type": "TmNotionAuditLogLayout",
+          "isRequired": false,
+          "default": "TmNotionAuditLogLayout.Auto",
+          "description": "Result layout: Auto (default) renders both the table and the cards and lets the panel's own container query pick (table on a wide container, cards below 640 px); Table and Cards pin one of them at every width."
         },
         {
           "name": "OnClosed",
@@ -2191,6 +2557,13 @@
           "isRequired": false
         },
         {
+          "name": "Presentation",
+          "type": "NotionCommentPresentation",
+          "isRequired": false,
+          "default": "NotionCommentPresentation.Auto",
+          "description": "How the panel presents (NO1). Auto (the default) keeps the anchored popover bubble on a desktop layout and opens the core TmModal / sheet on a narrow (mobile) layout; Popover pins the bubble; Dialog always opens the modal. The host passes TmNotionEditor.CommentPresentation through the editor context."
+        },
+        {
           "name": "StartInNewThreadMode",
           "type": "bool",
           "isRequired": false
@@ -2223,10 +2596,22 @@
       ],
       "parameters": [
         {
+          "name": "Anchor",
+          "type": "ElementReference",
+          "isRequired": true,
+          "description": "The trigger the popover anchors to when Top and Left are unset."
+        },
+        {
           "name": "Block",
           "type": "IPageBlock",
           "isRequired": true,
           "editorRequired": true
+        },
+        {
+          "name": "Left",
+          "type": "double?",
+          "isRequired": false,
+          "description": "Viewport left of the handle the menu anchors to. Null keeps the DOM anchor."
         },
         {
           "name": "OnBackgroundChange",
@@ -2282,6 +2667,12 @@
           "name": "OnTurnInto",
           "type": "EventCallback<BlockType>",
           "isRequired": false
+        },
+        {
+          "name": "Top",
+          "type": "double?",
+          "isRequired": false,
+          "description": "Viewport top of the handle the menu anchors to. Null keeps the DOM anchor."
         }
       ]
     },
@@ -2550,6 +2941,13 @@
           "isRequired": true
         },
         {
+          "name": "LayoutMode",
+          "type": "TmLayoutMode",
+          "isRequired": false,
+          "default": "TmLayoutMode.Auto",
+          "description": "Forced layout. Mobile presents the switcher as the core sheet."
+        },
+        {
           "name": "Left",
           "type": "double",
           "isRequired": false
@@ -2652,6 +3050,12 @@
           "type": "string?",
           "isRequired": false,
           "description": "Additional CSS class."
+        },
+        {
+          "name": "FocusHeading",
+          "type": "bool",
+          "isRequired": false,
+          "description": "When true, the heading takes focus after render (compact master → detail)."
         },
         {
           "name": "IsPublishing",
@@ -3180,61 +3584,6 @@
       "parameters": []
     },
     {
-      "itemName": "TmNotionColorPicker",
-      "kind": "Component",
-      "category": "Notion Editor",
-      "subcategory": "UI",
-      "namespace": "Tempo.Blazor.Components.NotionEditor.UI",
-      "description": "Popup with text-color and background-color swatch sections (including a default/none option), raising OnColorSelected as a text/background pair where one side is set.",
-      "packageId": "Tempo.Blazor.NotionEditor",
-      "sourcePath": "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/UI/TmNotionColorPicker.razor",
-      "documentationStatus": "merged",
-      "requiredImports": [
-        "@using Tempo.Blazor.Components.NotionEditor.UI"
-      ],
-      "parameters": [
-        {
-          "name": "Left",
-          "type": "double",
-          "isRequired": false
-        },
-        {
-          "name": "OnClosed",
-          "type": "EventCallback",
-          "isRequired": false,
-          "description": "Raised when the picker is dismissed without a selection."
-        },
-        {
-          "name": "OnColorSelected",
-          "type": "EventCallback<(string? TextColor, string? BgColor)>",
-          "isRequired": false,
-          "description": "Raised when a color is chosen. Exactly one element of the tuple is non-null: (hex, null) → text color selected; (null, hex) → background color selected. (null, null) → default (remove color) selected for either section."
-        },
-        {
-          "name": "SelectedBgColor",
-          "type": "string?",
-          "isRequired": false,
-          "description": "Currently active background-color hex, or null for default."
-        },
-        {
-          "name": "SelectedTextColor",
-          "type": "string?",
-          "isRequired": false,
-          "description": "Currently active text-color hex, or null for default."
-        },
-        {
-          "name": "Top",
-          "type": "double",
-          "isRequired": false
-        },
-        {
-          "name": "Visible",
-          "type": "bool",
-          "isRequired": false
-        }
-      ]
-    },
-    {
       "itemName": "TmNotionColumnBlock",
       "kind": "Component",
       "category": "Notion Editor",
@@ -3366,6 +3715,593 @@
       ]
     },
     {
+      "itemName": "TmNotionCommentComposer",
+      "kind": "Component",
+      "category": "Notion Editor",
+      "subcategory": "UI",
+      "namespace": "Tempo.Blazor.Components.NotionEditor",
+      "description": "TmNotionCommentComposer Blazor component in the Notion Editor category.",
+      "packageId": "Tempo.Blazor.NotionEditor",
+      "sourcePath": "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/UI/TmNotionCommentComposer.razor",
+      "documentationStatus": "merged",
+      "requiredImports": [
+        "@using Tempo.Blazor.Components.NotionEditor"
+      ],
+      "parameters": [
+        {
+          "name": "AriaLabel",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Accessible name of the composer."
+        },
+        {
+          "name": "AuthorAvatarUrl",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Avatar image. Empty falls back to initials."
+        },
+        {
+          "name": "AuthorName",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Display name used for the avatar initials."
+        },
+        {
+          "name": "Baseline",
+          "type": "string",
+          "isRequired": false,
+          "default": "\"\"",
+          "description": "Text that does not count as a draft (the auto-inserted quote). Empty for a fresh composer."
+        },
+        {
+          "name": "Cancel",
+          "type": "EventCallback",
+          "isRequired": false,
+          "description": "Raised when the user cancels. Presence of a delegate shows the cancel button."
+        },
+        {
+          "name": "CancelText",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Cancel button label. Rendered only when Cancel has a delegate."
+        },
+        {
+          "name": "Class",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Wrapper class. Defaults to {ClassPrefix}__reply."
+        },
+        {
+          "name": "ClassPrefix",
+          "type": "string",
+          "isRequired": true,
+          "default": "\"tm-nbcp\"",
+          "description": "CSS class prefix of the owning panel (tm-nbcp, tm-ntcp, tm-npcp).",
+          "editorRequired": true
+        },
+        {
+          "name": "Disabled",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Disables the composer regardless of its text."
+        },
+        {
+          "name": "DraftChanged",
+          "type": "EventCallback<bool>",
+          "isRequired": false,
+          "description": "Raised only when the draft flag flips: the text differs from Baseline. Not raised per keystroke, so the parent thread is not rebuilt while the user types."
+        },
+        {
+          "name": "Hint",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Hint rendered beside the submit button (for example Ctrl+Enter)."
+        },
+        {
+          "name": "MentionProvider",
+          "type": "ITmPeopleProvider?",
+          "isRequired": false,
+          "description": "People provider for @-mentions. Null hides the mention menu."
+        },
+        {
+          "name": "OnSubmit",
+          "type": "EventCallback<string>",
+          "isRequired": false,
+          "description": "Raised on submit with the current text. The parent owns the provider call."
+        },
+        {
+          "name": "Placeholder",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Placeholder shown in the empty composer."
+        },
+        {
+          "name": "ResetToken",
+          "type": "int",
+          "isRequired": false,
+          "description": "Bumped by the parent to apply Value again (clear or reseed)."
+        },
+        {
+          "name": "Rows",
+          "type": "int",
+          "isRequired": false,
+          "default": "2",
+          "description": "Visible rows of the composer."
+        },
+        {
+          "name": "ShowAvatar",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Shows the current user's avatar (or initials) beside the composer."
+        },
+        {
+          "name": "SubmitText",
+          "type": "string",
+          "isRequired": false,
+          "default": "\"\"",
+          "description": "Submit button label."
+        },
+        {
+          "name": "Submitting",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Disables the composer and the submit button while a send is in flight."
+        },
+        {
+          "name": "TextChanged",
+          "type": "Action<string>?",
+          "isRequired": false,
+          "description": "Receives every text change WITHOUT re-rendering the parent (a plain action, not an event callback). The parent stores it so HasUnsavedDraft can be polled."
+        },
+        {
+          "name": "Value",
+          "type": "string",
+          "isRequired": false,
+          "default": "\"\"",
+          "description": "Seed and reset channel. The composer does not write back on each keystroke — that would re-render the parent thread. The parent sets this to clear or to prefill a quote."
+        }
+      ]
+    },
+    {
+      "itemName": "TmNotionCommentThreadActions",
+      "kind": "Component",
+      "category": "Notion Editor",
+      "subcategory": "UI",
+      "namespace": "Tempo.Blazor.Components.NotionEditor",
+      "description": "TmNotionCommentThreadActions Blazor component in the Notion Editor category.",
+      "packageId": "Tempo.Blazor.NotionEditor",
+      "sourcePath": "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/UI/TmNotionCommentThreadActions.razor",
+      "documentationStatus": "merged",
+      "requiredImports": [
+        "@using Tempo.Blazor.Components.NotionEditor"
+      ],
+      "parameters": [
+        {
+          "name": "ActionsLabel",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Accessible name of the actions group."
+        },
+        {
+          "name": "CanDelete",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Shows Delete."
+        },
+        {
+          "name": "CanEdit",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Shows Edit."
+        },
+        {
+          "name": "CanQuote",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Shows Quote in the menu."
+        },
+        {
+          "name": "ClassPrefix",
+          "type": "string",
+          "isRequired": true,
+          "default": "\"tm-nbcp\"",
+          "description": "CSS class prefix of the owning panel.",
+          "editorRequired": true
+        },
+        {
+          "name": "DeleteText",
+          "type": "string",
+          "isRequired": false,
+          "default": "\"\"",
+          "description": "Delete button label."
+        },
+        {
+          "name": "EditText",
+          "type": "string",
+          "isRequired": false,
+          "default": "\"\"",
+          "description": "Edit button label."
+        },
+        {
+          "name": "MoreText",
+          "type": "string",
+          "isRequired": false,
+          "default": "\"\"",
+          "description": "⋯ menu label."
+        },
+        {
+          "name": "OnDelete",
+          "type": "EventCallback",
+          "isRequired": false,
+          "description": "Raised by Delete. The parent owns the confirm dialog."
+        },
+        {
+          "name": "OnEdit",
+          "type": "EventCallback",
+          "isRequired": false,
+          "description": "Raised by Edit."
+        },
+        {
+          "name": "OnQuote",
+          "type": "EventCallback",
+          "isRequired": false,
+          "description": "Raised by Quote."
+        },
+        {
+          "name": "OnReply",
+          "type": "EventCallback",
+          "isRequired": false,
+          "description": "Raised by Reply."
+        },
+        {
+          "name": "QuoteText",
+          "type": "string",
+          "isRequired": false,
+          "default": "\"\"",
+          "description": "Quote menu item label."
+        },
+        {
+          "name": "ReplyText",
+          "type": "string",
+          "isRequired": false,
+          "default": "\"\"",
+          "description": "Reply button label. Reply is always visible."
+        },
+        {
+          "name": "ShowReply",
+          "type": "bool",
+          "isRequired": false,
+          "default": "true",
+          "description": "Shows the inline Reply action. A panel with a thread-level reply trigger hides it on the last entry so the two never sit next to each other."
+        }
+      ]
+    },
+    {
+      "itemName": "TmNotionCommentThreadList",
+      "kind": "Component",
+      "category": "Notion Editor",
+      "subcategory": "UI",
+      "namespace": "Tempo.Blazor.Components.NotionEditor",
+      "description": "Shared comment thread list: loading and empty states plus the delete confirmation the three panels used to copy.",
+      "packageId": "Tempo.Blazor.NotionEditor",
+      "sourcePath": "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/UI/TmNotionCommentThreadList.razor",
+      "documentationStatus": "merged",
+      "requiredImports": [
+        "@using Tempo.Blazor.Components.NotionEditor",
+        "@using Tempo.Blazor.Components.NotionEditor.UI"
+      ],
+      "parameters": [
+        {
+          "name": "ChildContent",
+          "type": "RenderFragment?",
+          "isRequired": false,
+          "description": "The list body. Rendered only when the list is neither loading nor empty."
+        },
+        {
+          "name": "Class",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Class of the list root. Defaults to {ClassPrefix}__thread."
+        },
+        {
+          "name": "ClassPrefix",
+          "type": "string",
+          "isRequired": true,
+          "default": "\"tm-nbcp\"",
+          "description": "CSS class prefix of the owning panel.",
+          "editorRequired": true
+        },
+        {
+          "name": "DeleteCancelText",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Delete dialog cancel label."
+        },
+        {
+          "name": "DeleteMessage",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Delete dialog message."
+        },
+        {
+          "name": "DeleteOkText",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Delete dialog confirm label."
+        },
+        {
+          "name": "DeleteTitle",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Delete dialog title."
+        },
+        {
+          "name": "Empty",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Shows the empty status when nothing is loading."
+        },
+        {
+          "name": "EmptyText",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Empty status text."
+        },
+        {
+          "name": "ListLabel",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Accessible name of the list."
+        },
+        {
+          "name": "Loading",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Shows the loading status instead of the list."
+        },
+        {
+          "name": "LoadingText",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Loading status text."
+        },
+        {
+          "name": "OnDeleteResult",
+          "type": "EventCallback<bool?>",
+          "isRequired": false,
+          "description": "Raised by the delete dialog."
+        },
+        {
+          "name": "ShowDeleteConfirm",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Shows the shared delete confirmation."
+        }
+      ]
+    },
+    {
+      "itemName": "TmNotionCommentThreadView",
+      "kind": "Component",
+      "category": "Notion Editor",
+      "subcategory": "UI",
+      "namespace": "Tempo.Blazor.Components.NotionEditor",
+      "description": "TmNotionCommentThreadView Blazor component in the Notion Editor category.",
+      "packageId": "Tempo.Blazor.NotionEditor",
+      "sourcePath": "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/UI/TmNotionCommentThreadView.razor",
+      "documentationStatus": "merged",
+      "requiredImports": [
+        "@using Tempo.Blazor.Components.NotionEditor"
+      ],
+      "parameters": [
+        {
+          "name": "AbsoluteTime",
+          "type": "Func<DateTimeOffset, string>?",
+          "isRequired": false,
+          "description": "Absolute time for the title."
+        },
+        {
+          "name": "CanDelete",
+          "type": "Func<TmCommentEntry, bool>?",
+          "isRequired": false,
+          "description": "True when the current user may delete the entry."
+        },
+        {
+          "name": "CanEdit",
+          "type": "Func<TmCommentEntry, bool>?",
+          "isRequired": false,
+          "description": "True when the current user may edit the entry."
+        },
+        {
+          "name": "Class",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Class of the list root. Defaults to {ClassPrefix}__thread."
+        },
+        {
+          "name": "ClassPrefix",
+          "type": "string",
+          "isRequired": true,
+          "default": "\"tm-nbcp\"",
+          "description": "CSS class prefix of the owning panel.",
+          "editorRequired": true
+        },
+        {
+          "name": "EditingEntryId",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Entry currently being edited."
+        },
+        {
+          "name": "EditText",
+          "type": "string",
+          "isRequired": false,
+          "default": "\"\"",
+          "description": "Text of the open edit."
+        },
+        {
+          "name": "FormatBody",
+          "type": "Func<TmCommentEntry, MarkupString>?",
+          "isRequired": false,
+          "description": "Turns an entry body into the markup the panel shows."
+        },
+        {
+          "name": "FormatTime",
+          "type": "Func<DateTimeOffset, string>?",
+          "isRequired": false,
+          "description": "Relative time. The parent resolves ITmRelativeTimeFormatter."
+        },
+        {
+          "name": "HideReplyOnLastEntry",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Hides the inline Reply action on the last entry (panels that render a thread-level reply trigger right below the thread).",
+          "default": "false"
+        },
+        {
+          "name": "InlineReplyBaseline",
+          "type": "string",
+          "isRequired": false,
+          "default": "\"\"",
+          "description": "Text that does not count as an inline-reply draft."
+        },
+        {
+          "name": "InlineReplyResetToken",
+          "type": "int",
+          "isRequired": false,
+          "description": "Bumped by the parent to clear or reseed the inline composer."
+        },
+        {
+          "name": "InlineReplyText",
+          "type": "string",
+          "isRequired": false,
+          "default": "\"\"",
+          "description": "Seed of the open inline reply (the auto-inserted quote). Not updated per keystroke."
+        },
+        {
+          "name": "InlineReplyTextChanged",
+          "type": "Action<string>?",
+          "isRequired": false,
+          "description": "Stores the inline reply text without re-rendering the thread."
+        },
+        {
+          "name": "LabelPrefix",
+          "type": "string",
+          "isRequired": false,
+          "default": "\"TmNotionBlockComment\"",
+          "description": "Localization prefix used when Labels is null."
+        },
+        {
+          "name": "Labels",
+          "type": "TmNotionCommentLabels?",
+          "isRequired": false,
+          "description": "Resolved strings. Null reads them from LabelPrefix."
+        },
+        {
+          "name": "MentionProvider",
+          "type": "ITmPeopleProvider?",
+          "isRequired": false,
+          "description": "People provider for @-mentions inside edit and reply composers."
+        },
+        {
+          "name": "Nodes",
+          "type": "IReadOnlyList<CommentThreadNode>",
+          "isRequired": false,
+          "default": "[]",
+          "description": "Reply tree. The parent builds it."
+        },
+        {
+          "name": "OnCancelEdit",
+          "type": "EventCallback",
+          "isRequired": false,
+          "description": "Raised by the edit cancel."
+        },
+        {
+          "name": "OnCancelReply",
+          "type": "EventCallback",
+          "isRequired": false,
+          "description": "Raised by the inline reply cancel."
+        },
+        {
+          "name": "OnDelete",
+          "type": "EventCallback<TmCommentEntry>",
+          "isRequired": false,
+          "description": "Raised by Delete. The parent shows the confirm dialog."
+        },
+        {
+          "name": "OnDraftChanged",
+          "type": "EventCallback",
+          "isRequired": false,
+          "description": "Raised after a draft-bearing field changes, so the parent can publish its snapshot."
+        },
+        {
+          "name": "OnEdit",
+          "type": "EventCallback<TmCommentEntry>",
+          "isRequired": false,
+          "description": "Raised by Edit."
+        },
+        {
+          "name": "OnEditKeyDown",
+          "type": "EventCallback<KeyboardEventArgs>",
+          "isRequired": false,
+          "description": "Raised for a keydown inside the edit composer."
+        },
+        {
+          "name": "OnEditTextChanged",
+          "type": "EventCallback<string>",
+          "isRequired": false,
+          "description": "Raised when the edit text changes."
+        },
+        {
+          "name": "OnEntryKeyDown",
+          "type": "EventCallback<TmNotionCommentEntryKey>",
+          "isRequired": false,
+          "description": "Raised for a keydown on an entry row."
+        },
+        {
+          "name": "OnQuote",
+          "type": "EventCallback<TmCommentEntry>",
+          "isRequired": false,
+          "description": "Raised by Quote. A delegate shows the menu item."
+        },
+        {
+          "name": "OnReply",
+          "type": "EventCallback<TmCommentEntry>",
+          "isRequired": false,
+          "description": "Raised by Reply."
+        },
+        {
+          "name": "OnSaveEdit",
+          "type": "EventCallback",
+          "isRequired": false,
+          "description": "Raised by the edit save."
+        },
+        {
+          "name": "OnSubmitReply",
+          "type": "EventCallback",
+          "isRequired": false,
+          "description": "Raised by the inline reply submit."
+        },
+        {
+          "name": "Reactions",
+          "type": "RenderFragment<TmCommentEntry>?",
+          "isRequired": false,
+          "description": "Reactions fragment. Null hides reactions."
+        },
+        {
+          "name": "ReplyingToEntryId",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Entry currently being replied to."
+        },
+        {
+          "name": "Submitting",
+          "type": "bool",
+          "isRequired": false,
+          "description": "True while a send is in flight."
+        }
+      ]
+    },
+    {
       "itemName": "TmNotionContentByLabelBlock",
       "kind": "Component",
       "category": "Notion Editor",
@@ -3431,6 +4367,19 @@
           "isRequired": false
         },
         {
+          "name": "IsPage",
+          "type": "bool",
+          "isRequired": false,
+          "description": "The database fills the page (opened as a page, or the only content). Only then does the mobile action bar render; an inline block keeps the compact toolbar."
+        },
+        {
+          "name": "LayoutMode",
+          "type": "TmLayoutMode",
+          "isRequired": false,
+          "default": "TmLayoutMode.Auto",
+          "description": "Pins the database's own layout. Auto follows the cascaded layout (the editor decides it); a forced value lets a host — and a test — render a mode without a DOM."
+        },
+        {
           "name": "OnFocused",
           "type": "EventCallback",
           "isRequired": false
@@ -3449,6 +4398,12 @@
           "name": "ReadOnly",
           "type": "bool",
           "isRequired": false
+        },
+        {
+          "name": "ShowSearch",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Shows the client-side \"search records\" field (NO2). Default off, so existing hosts are unchanged."
         }
       ]
     },
@@ -3458,7 +4413,7 @@
       "category": "Notion Editor",
       "subcategory": "Blocks / Database",
       "namespace": "Tempo.Blazor.Components.NotionEditor.Blocks.Database",
-      "description": "Kanban board view that groups database records into columns by a select or status field. Renders cards with cover image, title, and preview properties, supports drag-and-drop between columns (which rewrites the group field), and offers per-column add-card.",
+      "description": "Kanban board view that groups database records into columns by a select or status field. Cards render their values through the shared property renderer and offer a Move-to menu (the non-drag alternative) plus an add-card button. Desktop drag-and-drop is unchanged. On a mobile layout each lane is 85% wide and snaps.",
       "packageId": "Tempo.Blazor.NotionEditor",
       "sourcePath": "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/Blocks/Database/TmNotionDbBoardView.razor",
       "documentationStatus": "merged",
@@ -3524,7 +4479,7 @@
       "category": "Notion Editor",
       "subcategory": "Blocks / Database",
       "namespace": "Tempo.Blazor.Components.NotionEditor.Blocks.Database",
-      "description": "Monthly calendar view (a six-week, Monday-based grid) that places records as colored events on their date field. Supports previous/next/today navigation, drag-to-reschedule, click-to-create, and per-cell overflow indicators.",
+      "description": "Monthly calendar view (a six-week grid whose first day follows the current culture) that places records as colored pills on their date field. Supports previous/next/today navigation and per-cell overflow. On a mobile layout tapping a day or the pluralized '+N more' opens a day sheet; elsewhere the overflow stays a popover.",
       "packageId": "Tempo.Blazor.NotionEditor",
       "sourcePath": "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/Blocks/Database/TmNotionDbCalendarView.razor",
       "documentationStatus": "merged",
@@ -3933,6 +4888,13 @@
           "name": "ReadOnly",
           "type": "bool",
           "isRequired": false
+        },
+        {
+          "name": "Show",
+          "type": "bool",
+          "isRequired": false,
+          "default": "true",
+          "description": "Whether the editor dialog is open. Defaults to true — the host renders the component only while editing (inside the core TmModal since phase 4)."
         }
       ]
     },
@@ -4141,6 +5103,13 @@
           "isRequired": false
         },
         {
+          "name": "Show",
+          "type": "bool",
+          "isRequired": false,
+          "default": "true",
+          "description": "Whether the dialog is open. Defaults to true — the host renders the component only while the dialog is shown (inside the core TmModal since phase 4)."
+        },
+        {
           "name": "Views",
           "type": "IReadOnlyList<IDatabaseView>",
           "isRequired": true,
@@ -4201,6 +5170,42 @@
       ]
     },
     {
+      "itemName": "TmNotionDbPropertyValue",
+      "kind": "Component",
+      "category": "Notion Editor",
+      "subcategory": "Blocks / Database",
+      "namespace": "Tempo.Blazor.Components.NotionEditor.Blocks.Database",
+      "description": "Read-only renderer for one database field value (DB-2). It sits on top of NotionDatabaseValueFormatter and adds the presentation the plain text lost: a colored pill for Select/Status/MultiSelect, initials for a person, a check for a checkbox and nothing for an empty value.",
+      "packageId": "Tempo.Blazor.NotionEditor",
+      "sourcePath": "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/Blocks/Database/TmNotionDbPropertyValue.razor",
+      "documentationStatus": "merged",
+      "requiredImports": [
+        "@using Tempo.Blazor.Components.NotionEditor.Blocks.Database"
+      ],
+      "parameters": [
+        {
+          "name": "DateFormat",
+          "type": "string",
+          "isRequired": false,
+          "default": "\"\"",
+          "description": "Date format passed to the shared formatter. Defaults to a short date."
+        },
+        {
+          "name": "Field",
+          "type": "IDatabaseField?",
+          "isRequired": true,
+          "description": "The field the value belongs to. Drives the presentation.",
+          "editorRequired": true
+        },
+        {
+          "name": "Value",
+          "type": "object?",
+          "isRequired": false,
+          "description": "The raw stored value. Null or empty renders nothing."
+        }
+      ]
+    },
+    {
       "itemName": "TmNotionDbRecordDetail",
       "kind": "Component",
       "category": "Notion Editor",
@@ -4239,6 +5244,12 @@
           "isRequired": false
         },
         {
+          "name": "OnRecordDeleted",
+          "type": "EventCallback<IDatabaseRecord>",
+          "isRequired": false,
+          "description": "Raised after the user confirms deleting this record. The detail does not call the provider itself — the host owns the row list and the DeleteRecordAsync call."
+        },
+        {
           "name": "OnRecordUpdated",
           "type": "EventCallback<IDatabaseRecord>",
           "isRequired": false
@@ -4253,6 +5264,13 @@
           "type": "IDatabaseRecord",
           "isRequired": true,
           "editorRequired": true
+        },
+        {
+          "name": "Show",
+          "type": "bool",
+          "isRequired": false,
+          "default": "true",
+          "description": "Whether the detail dialog is open. Defaults to true — the host renders the component only while a record is open (inside the core TmModal since phase 4)."
         }
       ]
     },
@@ -4315,6 +5333,12 @@
       ],
       "parameters": [
         {
+          "name": "CoarsePointer",
+          "type": "bool",
+          "isRequired": false,
+          "description": "A coarse pointer (touch). Hides the header drag and the column resize handle; column order then changes from the Properties panel (the non-drag alternative, WCAG 2.5.7)."
+        },
+        {
           "name": "Fields",
           "type": "IReadOnlyList<IDatabaseField>",
           "isRequired": true,
@@ -4365,6 +5389,12 @@
           "name": "OnRecordClicked",
           "type": "EventCallback<IDatabaseRecord>",
           "isRequired": false
+        },
+        {
+          "name": "OnRecordDeleted",
+          "type": "EventCallback<IDatabaseRecord>",
+          "isRequired": false,
+          "description": "Raised after the user confirms deleting a row. The block owns the provider call."
         },
         {
           "name": "OnRecordUpdated",
@@ -4446,6 +5476,13 @@
           "isRequired": false
         },
         {
+          "name": "Show",
+          "type": "bool",
+          "isRequired": false,
+          "default": "true",
+          "description": "Whether the editor dialog is open. Defaults to true — the host renders the component only while a template is being edited (inside the core TmModal since phase 4)."
+        },
+        {
           "name": "Template",
           "type": "IDatabaseRecordTemplate",
           "isRequired": true,
@@ -4509,7 +5546,7 @@
       "category": "Notion Editor",
       "subcategory": "Blocks / Database",
       "namespace": "Tempo.Blazor.Components.NotionEditor.Blocks.Database",
-      "description": "Gantt-style timeline view with day/week/month zoom and an optional sidebar table. Positions records as horizontal bars from their start and end date fields, with drag to move or resize (updating the dates), a today marker, and period navigation.",
+      "description": "Gantt-style timeline view (root classes tm-dbt tm-dbtl) with day/week/month zoom and an optional sidebar. Bars move and resize through the shared pointer-drag helper (no Blazor render on pointermove); Shift+Arrow moves a bar one unit and Alt+Arrow resizes it. A mobile layout hides the sidebar and a tap opens a date sheet. The header has a month row and a week row, a labelled today marker, and a pluralized record-count footer.",
       "packageId": "Tempo.Blazor.NotionEditor",
       "sourcePath": "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/Blocks/Database/TmNotionDbTimelineView.razor",
       "documentationStatus": "merged",
@@ -4617,7 +5654,7 @@
       "category": "Notion Editor",
       "subcategory": "Blocks / Tempo Blocks",
       "namespace": "Tempo.Blazor.Components.NotionEditor.Blocks.TempoBlocks",
-      "description": "Modal dialog hosting the dynamically loaded diagram editor (or a missing-package notice) with Save and Discard actions and a loading spinner while the document loads.",
+      "description": "Fullscreen diagram edit modal on the shared TmNotionTempoEditorModal shell. Hosts the dynamically loaded diagram editor, which resolves its own container (desktop chrome at 1024+, its narrow and mobile panels below). Discard while the document changed confirms first; a missing package disables Save.",
       "packageId": "Tempo.Blazor.NotionEditor",
       "sourcePath": "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/Blocks/TempoBlocks/TmNotionDiagramEditModal.razor",
       "documentationStatus": "merged",
@@ -4789,6 +5826,13 @@
           "description": "Enables bookmark blocks that fetch Open Graph metadata from URLs."
         },
         {
+          "name": "Chrome",
+          "type": "NotionEditorChrome",
+          "isRequired": false,
+          "default": "NotionEditorChrome.Full",
+          "description": "How much chrome the editor renders. Full is today's editor. Minimal hides shortcuts, the bell, mode toggles and badges. None renders the page only."
+        },
+        {
           "name": "Class",
           "type": "string?",
           "isRequired": false,
@@ -4799,6 +5843,13 @@
           "type": "INotionCollaborationProvider?",
           "isRequired": false,
           "description": "Enables real-time collaboration — live cursor presence and remote block sync."
+        },
+        {
+          "name": "CommentPresentation",
+          "type": "NotionCommentPresentation",
+          "isRequired": false,
+          "default": "NotionCommentPresentation.Auto",
+          "description": "How the block / text comment panels present (NO1). Auto (the default) keeps the anchored popover bubble on a desktop layout and opens the core modal / sheet on touch and narrow containers; Popover pins the bubble at every layout; Dialog always opens the modal."
         },
         {
           "name": "CommentProvider",
@@ -4874,6 +5925,19 @@
           "description": "Page ID to open on first render. Supports @bind-InitialPageId."
         },
         {
+          "name": "InspectorContent",
+          "type": "RenderFragment?",
+          "isRequired": false,
+          "description": "Host slot for a page inspector, rendered through TmSidePanel on the right. Null renders no right region — the editor does not invent inspector content."
+        },
+        {
+          "name": "LayoutMode",
+          "type": "TmLayoutMode",
+          "isRequired": false,
+          "default": "TmLayoutMode.Auto",
+          "description": "How the editor decides its responsive layout. Auto measures the editor's own container (desktop ≥1024, tablet 640–1023, mobile <640). A forced value pins the layout for a host or a test and is cascaded into the page, the menus and the database blocks."
+        },
+        {
           "name": "MediaLibraryProvider",
           "type": "INotionMediaLibraryProvider?",
           "isRequired": false,
@@ -4910,6 +5974,13 @@
           "description": "Raised when the user requests to open the trash panel from the sidebar."
         },
         {
+          "name": "PageCommentsPresentation",
+          "type": "NotionPageCommentsPresentation",
+          "isRequired": false,
+          "default": "NotionPageCommentsPresentation.Inline",
+          "description": "How the page-level comment panel presents (P4). Inline (the default) keeps the collapsible panel at the bottom of the page; Dialog renders no inline panel — the header badge and the Comments page action open a core TmModal hosting the Embedded panel body (a sheet on a mobile layout)."
+        },
+        {
           "name": "PagePropertiesProvider",
           "type": "INotionPagePropertiesProvider?",
           "isRequired": false
@@ -4940,6 +6011,20 @@
           "type": "INotionSearchProvider?",
           "isRequired": false,
           "description": "Enables the Ctrl+P full-screen page search dialog and [[ page link autocomplete."
+        },
+        {
+          "name": "ShellPanelPresentation",
+          "type": "NotionShellPanelPresentation",
+          "isRequired": false,
+          "default": "NotionShellPanelPresentation.Overlay",
+          "description": "How the Tasks / Blog / Analytics / Audit shell panels present themselves. Overlay (default) rides the core TmSidePanel — docked next to the page on a desktop layout, a side sheet on a tablet layout and a full-height sheet on a mobile layout — while the page stays mounted. Main replaces the page in the main region. At most one shell panel is open at a time either way."
+        },
+        {
+          "name": "ShowMeta",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Opt-in page meta row under the title (last edited, last editor, comment count link), forwarded to the rendered TmNotionPage. Defaults to false; the demo turns it on.",
+          "default": "false"
         },
         {
           "name": "ShowSidebar",
@@ -5086,7 +6171,11 @@
           "title": "Single-page mode — embed one page as a work-item description field",
           "code": "@using Tempo.Blazor.NotionEditor.Enums\n\n@code {\n    // Rich-text description blocks only — multi-page blocks are removed automatically in SinglePageMode.\n    private static readonly IReadOnlySet<BlockType> DescriptionBlocks = new HashSet<BlockType>\n    {\n        BlockType.Paragraph, BlockType.Heading1, BlockType.Heading2, BlockType.Heading3,\n        BlockType.BulletList, BlockType.NumberedList, BlockType.TodoItem,\n        BlockType.Quote, BlockType.Callout, BlockType.Code, BlockType.Divider, BlockType.Image, BlockType.Table\n    };\n\n    void OpenElsewhere(string pageId) { /* host opens the linked page in a dialog / new tab */ }\n}\n\n<TmNotionEditor DataProvider=\"@DataProvider\"\n                AggregateProvider=\"@AggregateProvider\"\n                SinglePageMode=\"true\"\n                InitialPageId=\"@WorkItem.DescriptionPageId\"\n                AllowedBlockTypes=\"@DescriptionBlocks\"\n                OnPageNavigationRequested=\"OpenElsewhere\" />"
         }
-      ]
+      ],
+      "cssClasses": [
+        "tm-notion-editor"
+      ],
+      "notes": "The editor root carries the package tokens. Surfaces, text, borders and radii alias core tokens (--tm-bg-page, --tm-color-primary, --tm-border-color, --tm-radius-card) and recompute inside .tm-notion-editor, so a nested data-theme or indigo theme reaches them. The option and text palettes are --tm-notion-option-* and --tm-notion-color-*; their literals live only in _notion-variables.css and _notion-dark.css. A stored block colour is a palette name (gray, red, orange, yellow, green, blue, purple, pink, brown), and a document saved before 2.10.0 still renders because the legacy hex is mapped to that name."
     },
     {
       "itemName": "TmNotionEmbedBlock",
@@ -5138,63 +6227,76 @@
       "itemName": "TmNotionEmojiPicker",
       "kind": "Component",
       "category": "Notion Editor",
-      "subcategory": "Shared",
-      "namespace": "Tempo.Blazor.Components.NotionEditor.Shared",
-      "description": "Emoji picker popup used by the Notion editor in two variants: the Shared picker renders a search input, categorised emoji grid and an optional Remove button positioned relative to the nearest positioned ancestor; the UI variant is an absolutely-positioned popup driven by Visible/Top/Left coordinates.",
+      "subcategory": "UI",
+      "namespace": "Tempo.Blazor.Components.NotionEditor.UI",
+      "description": "The one emoji picker of the Notion editor. Search filters the grid, recent emoji render first, arrow keys move a single roving tabindex, and Escape closes it. ShowRemove adds the Remove action.",
       "packageId": "Tempo.Blazor.NotionEditor",
-      "sourcePath": "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/Shared/TmNotionEmojiPicker.razor",
+      "sourcePath": "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/UI/TmNotionEmojiPicker.razor",
       "documentationStatus": "merged",
       "requiredImports": [
-        "@using Tempo.Blazor.Components.NotionEditor.Shared"
+        "@using Tempo.Blazor.Components.NotionEditor.UI"
       ],
       "parameters": [
         {
-          "name": "OnClosed",
-          "type": "EventCallback",
-          "isRequired": false,
-          "description": "Fired when the backdrop is clicked (close without action)."
-        },
-        {
-          "name": "OnRemoved",
-          "type": "EventCallback",
-          "isRequired": false,
-          "description": "Shared variant: fired when the optional Remove action is used."
-        },
-        {
-          "name": "OnSelected",
-          "type": "EventCallback<string>",
-          "isRequired": false,
-          "description": "Shared variant: fired with the chosen emoji."
-        },
-        {
-          "name": "ShowRemoveButton",
+          "name": "Inline",
           "type": "bool",
           "isRequired": false,
-          "description": "Shared variant: shows the Remove action that raises OnRemoved."
+          "description": "Renders in place instead of portalling. A host that supplies its own dialog sets this."
         },
         {
-          "name": "Visible",
-          "type": "bool",
+          "name": "LayoutMode",
+          "type": "TmLayoutMode",
           "isRequired": false,
-          "description": "UI variant: whether the popup is shown."
-        },
-        {
-          "name": "Top",
-          "type": "double",
-          "isRequired": false,
-          "description": "UI variant: vertical position of the popup in pixels."
+          "default": "TmLayoutMode.Auto",
+          "description": "Forced layout. Mobile presents the picker as the core sheet."
         },
         {
           "name": "Left",
           "type": "double",
           "isRequired": false,
-          "description": "UI variant: horizontal position of the popup in pixels."
+          "description": "Fixed left position in CSS pixels."
+        },
+        {
+          "name": "OnClosed",
+          "type": "EventCallback",
+          "isRequired": false,
+          "description": "Raised when the picker is dismissed without a selection."
         },
         {
           "name": "OnEmojiSelected",
           "type": "EventCallback<string>",
           "isRequired": false,
-          "description": "UI variant: fired with the chosen emoji."
+          "description": "Raised when the user selects an emoji. The argument is the emoji character."
+        },
+        {
+          "name": "OnRemoved",
+          "type": "EventCallback",
+          "isRequired": false,
+          "description": "Raised by the Remove action."
+        },
+        {
+          "name": "RecentEmojis",
+          "type": "IReadOnlyList<string>?",
+          "isRequired": false,
+          "description": "Recent emoji to render first. Null reads them from localStorage."
+        },
+        {
+          "name": "ShowRemove",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Shows the Remove action. Off unless the host can clear an icon."
+        },
+        {
+          "name": "Top",
+          "type": "double",
+          "isRequired": false,
+          "description": "Fixed top position in CSS pixels."
+        },
+        {
+          "name": "Visible",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Shows or hides the picker."
         }
       ]
     },
@@ -5379,6 +6481,141 @@
           "name": "ReadOnly",
           "type": "bool",
           "isRequired": false
+        }
+      ]
+    },
+    {
+      "itemName": "TmNotionFloatingMenu",
+      "kind": "Component",
+      "category": "Notion Editor",
+      "subcategory": "UI / Shared",
+      "namespace": "Tempo.Blazor.Components.NotionEditor.UI",
+      "description": "The one floating menu of the Notion package. Desktop is an anchored popover; mobile is the core sheet. Title and footer render only in the sheet.",
+      "packageId": "Tempo.Blazor.NotionEditor",
+      "sourcePath": "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/UI/Shared/TmNotionFloatingMenu.razor",
+      "documentationStatus": "merged",
+      "requiredImports": [
+        "@using Tempo.Blazor.Components.NotionEditor.UI"
+      ],
+      "parameters": [
+        {
+          "name": "Align",
+          "type": "OverlayAlign",
+          "isRequired": false,
+          "default": "OverlayAlign.Start",
+          "description": "Cross-axis alignment against the anchor. A trigger on the viewport's trailing edge passes End so the panel opens inward."
+        },
+        {
+          "name": "AnchorElement",
+          "type": "ElementReference?",
+          "isRequired": false,
+          "description": "The element the popover anchors to. Null uses the zero-size pin; a trigger menu passes its button."
+        },
+        {
+          "name": "AriaLabel",
+          "type": "string?",
+          "isRequired": false,
+          "description": "The accessible name of the desktop popover. Defaults to Title (a desktop popover with no title needs an explicit value to stay a named dialog)."
+        },
+        {
+          "name": "ChildContent",
+          "type": "RenderFragment?",
+          "isRequired": false,
+          "description": "The menu body."
+        },
+        {
+          "name": "Class",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Extra CSS classes for the core overlay panel root."
+        },
+        {
+          "name": "CloseOnEscape",
+          "type": "bool",
+          "isRequired": false,
+          "default": "true",
+          "description": "Whether the core overlay closes on Escape. A menu that owns its own Escape contract (a submenu collapses first) passes false."
+        },
+        {
+          "name": "Footer",
+          "type": "RenderFragment?",
+          "isRequired": false,
+          "description": "Footer rendered in both the desktop popover and the mobile sheet. A host that only wants it on the sheet must not also render the same action in ChildContent."
+        },
+        {
+          "name": "InitialFocusSelector",
+          "type": "string?",
+          "isRequired": false,
+          "description": "CSS selector of the element a trapped desktop popover focuses first. Null keeps the first focusable."
+        },
+        {
+          "name": "IsOpen",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Whether the menu is open."
+        },
+        {
+          "name": "IsOpenChanged",
+          "type": "EventCallback<bool>",
+          "isRequired": false,
+          "description": "Raised when the core overlay changes the open state."
+        },
+        {
+          "name": "LayoutMode",
+          "type": "TmLayoutMode",
+          "isRequired": false,
+          "default": "TmLayoutMode.Auto",
+          "description": "Forced layout. Auto reads the cascaded context."
+        },
+        {
+          "name": "Left",
+          "type": "double?",
+          "isRequired": false,
+          "description": "See Top. Null anchors the menu where it renders in the DOM flow."
+        },
+        {
+          "name": "OnClose",
+          "type": "EventCallback",
+          "isRequired": false,
+          "description": "Raised by Escape, an outside click and the sheet's Close button."
+        },
+        {
+          "name": "Placement",
+          "type": "OverlayPlacement",
+          "isRequired": false,
+          "default": "OverlayPlacement.Bottom",
+          "description": "The edge the popover opens from. The sheet presentation ignores it."
+        },
+        {
+          "name": "Role",
+          "type": "string",
+          "isRequired": false,
+          "default": "\"dialog\"",
+          "description": "The ARIA role of the panel (a dialog or a listbox menu)."
+        },
+        {
+          "name": "SheetInitialFocusSelector",
+          "type": "string?",
+          "isRequired": false,
+          "description": "CSS selector of the element a mobile sheet focuses first. Null keeps the role default."
+        },
+        {
+          "name": "Title",
+          "type": "string?",
+          "isRequired": false,
+          "description": "The sheet title. A desktop popover renders none."
+        },
+        {
+          "name": "Top",
+          "type": "double?",
+          "isRequired": false,
+          "description": "Viewport anchor coordinate of the zero-size anchor (a caret or a measured trigger)."
+        },
+        {
+          "name": "TrapFocus",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Trap Tab inside a desktop popover and move initial focus into it. The mobile sheet traps through its drawer."
         }
       ]
     },
@@ -5620,9 +6857,21 @@
           "isRequired": true
         },
         {
+          "name": "CurrentBackgroundColor",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Palette token name of the current background colour. The matching swatch is pressed."
+        },
+        {
           "name": "CurrentHref",
           "type": "string?",
           "isRequired": false
+        },
+        {
+          "name": "CurrentTextColor",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Palette token name of the current text colour. The matching swatch is pressed."
         },
         {
           "name": "DotNetRef",
@@ -5670,9 +6919,21 @@
           "isRequired": false
         },
         {
+          "name": "OnBackgroundColorSelected",
+          "type": "EventCallback<string?>",
+          "isRequired": false,
+          "description": "Raised with the palette token name, never a hex, when a background swatch is picked."
+        },
+        {
           "name": "OnComment",
           "type": "EventCallback<string>",
           "isRequired": false
+        },
+        {
+          "name": "OnTextColorSelected",
+          "type": "EventCallback<string?>",
+          "isRequired": false,
+          "description": "Raised with the palette token name, never a hex, when a text swatch is picked."
         },
         {
           "name": "OnTurnInto",
@@ -5793,6 +7054,13 @@
           "isRequired": false
         },
         {
+          "name": "LayoutMode",
+          "type": "TmLayoutMode",
+          "isRequired": false,
+          "default": "TmLayoutMode.Auto",
+          "description": "Forced layout. Mobile presents the dialog as the core sheet."
+        },
+        {
           "name": "MediaType",
           "type": "string",
           "isRequired": false,
@@ -5826,6 +7094,13 @@
         "@using Tempo.Blazor.Components.NotionEditor.UI"
       ],
       "parameters": [
+        {
+          "name": "LayoutMode",
+          "type": "TmLayoutMode",
+          "isRequired": false,
+          "default": "TmLayoutMode.Auto",
+          "description": "Forced layout. Mobile presents the menu as the core sheet."
+        },
         {
           "name": "Left",
           "type": "double",
@@ -5933,7 +7208,7 @@
           "name": "CurrentUserId",
           "type": "string",
           "isRequired": false,
-          "default": "\"demo\"",
+          "default": "\"\"",
           "description": "User whose notifications should be shown in the center."
         },
         {
@@ -5941,6 +7216,12 @@
           "type": "EventCallback<bool>",
           "isRequired": false,
           "description": "Raised whenever the dropdown is opened or closed."
+        },
+        {
+          "name": "OnViewAll",
+          "type": "EventCallback",
+          "isRequired": false,
+          "description": "Optional \"View all\" footer action (Q-P8, G9): the footer renders only when a handler is supplied; invoking it closes the panel."
         },
         {
           "name": "PollInterval",
@@ -6121,6 +7402,13 @@
           "type": "bool",
           "isRequired": false,
           "description": "When true all editing interactions are disabled."
+        },
+        {
+          "name": "ShowMeta",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Opt-in page meta row under the title (last edited relative + absolute time, last editor avatar + resolved name, unresolved comment count as a link). Defaults to false; the demo turns it on.",
+          "default": "false"
         }
       ]
     },
@@ -6142,6 +7430,13 @@
           "name": "Expanded",
           "type": "bool",
           "isRequired": false
+        },
+        {
+          "name": "Mode",
+          "type": "TmNotionPageCommentPanelMode",
+          "isRequired": false,
+          "default": "TmNotionPageCommentPanelMode.Inline",
+          "description": "Inline (default) renders the collapsible toggle + expandable body; Embedded renders the always-expanded body with no toggle and loads threads up front — used inside the page-comments dialog (TmNotionEditor.PageCommentsPresentation=Dialog) and any host-owned container."
         },
         {
           "name": "OnCountChanged",
@@ -6169,59 +7464,6 @@
           "type": "string",
           "isRequired": false,
           "default": "\"\""
-        }
-      ]
-    },
-    {
-      "itemName": "TmNotionPageCommentSection",
-      "kind": "Component",
-      "category": "Notion Editor",
-      "subcategory": "UI",
-      "namespace": "Tempo.Blazor.Components.NotionEditor.UI",
-      "description": "Thin labeled-section wrapper that renders TmNotionPageCommentPanel, forwarding the page id, expanded state, and the expanded, count, and mention callbacks.",
-      "packageId": "Tempo.Blazor.NotionEditor",
-      "sourcePath": "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/UI/TmNotionPageCommentSection.razor",
-      "documentationStatus": "merged",
-      "requiredImports": [
-        "@using Tempo.Blazor.Components.NotionEditor.UI"
-      ],
-      "parameters": [
-        {
-          "name": "Expanded",
-          "type": "bool",
-          "isRequired": false,
-          "description": "Whether the page comment section is expanded."
-        },
-        {
-          "name": "OnCountChanged",
-          "type": "EventCallback",
-          "isRequired": false,
-          "description": "Raised after the comment count may have changed."
-        },
-        {
-          "name": "OnDraftChanged",
-          "type": "EventCallback<TmNotionCommentDraftState>",
-          "isRequired": false,
-          "description": "Pass-through of the embedded panel's OnDraftChanged: forwards the panel's deduped TmNotionCommentDraftState transitions so a host rendering the section gets the same draft-guard visibility as the bare panel. Pair with HasUnsavedDraft for polling and DiscardDraftAsync for the discard after the host's own confirmation."
-        },
-        {
-          "name": "OnExpandedChanged",
-          "type": "EventCallback<bool>",
-          "isRequired": false,
-          "description": "Raised when the expanded state changes."
-        },
-        {
-          "name": "OnMentionClicked",
-          "type": "EventCallback<string>",
-          "isRequired": false,
-          "description": "Raised when a user mention inside a comment is activated."
-        },
-        {
-          "name": "PageId",
-          "type": "string",
-          "isRequired": false,
-          "default": "\"\"",
-          "description": "Page identifier whose page-level comment threads are displayed."
         }
       ]
     },
@@ -6269,6 +7511,13 @@
           "isRequired": false
         },
         {
+          "name": "ShowMeta",
+          "type": "bool",
+          "isRequired": false,
+          "description": "Opt-in meta row under the title: last-edited time (relative, absolute in the title tooltip), the last editor (TmAvatar + name resolved through the mention provider, raw id fallback) and the unresolved comment count as a link (fires OnCommentBadgeClicked). Defaults to false.",
+          "default": "false"
+        },
+        {
           "name": "ShowRestrictedIndicator",
           "type": "bool",
           "isRequired": false,
@@ -6296,6 +7545,13 @@
         "@using Tempo.Blazor.Components.NotionEditor.UI"
       ],
       "parameters": [
+        {
+          "name": "LayoutMode",
+          "type": "TmLayoutMode",
+          "isRequired": false,
+          "default": "TmLayoutMode.Auto",
+          "description": "Forced layout. Mobile presents the history as a list, then a preview with Back."
+        },
         {
           "name": "OnClosed",
           "type": "EventCallback",
@@ -6338,6 +7594,13 @@
           "type": "IReadOnlyList<IPageBlock>?",
           "isRequired": false,
           "description": "Currently loaded page blocks. When absent, the component loads them from the block provider."
+        },
+        {
+          "name": "LayoutMode",
+          "type": "TmLayoutMode",
+          "isRequired": false,
+          "default": "TmLayoutMode.Auto",
+          "description": "Forced layout. Mobile presents the panel as a sheet."
         },
         {
           "name": "Page",
@@ -6512,6 +7775,13 @@
       ],
       "parameters": [
         {
+          "name": "LayoutMode",
+          "type": "TmLayoutMode",
+          "isRequired": false,
+          "default": "TmLayoutMode.Auto",
+          "description": "Forced layout. Mobile presents the open menu as the core sheet."
+        },
+        {
           "name": "OnAIAskPageRequested",
           "type": "EventCallback",
           "isRequired": false,
@@ -6645,6 +7915,61 @@
       ]
     },
     {
+      "itemName": "TmNotionPanelHeader",
+      "kind": "Component",
+      "category": "Notion Editor",
+      "subcategory": "UI / Shared",
+      "namespace": "Tempo.Blazor.Components.NotionEditor.UI",
+      "description": "The one header of a Notion shell panel: title, optional subtitle, actions and close.",
+      "packageId": "Tempo.Blazor.NotionEditor",
+      "sourcePath": "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/UI/Shared/TmNotionPanelHeader.razor",
+      "documentationStatus": "merged",
+      "requiredImports": [
+        "@using Tempo.Blazor.Components.NotionEditor.UI"
+      ],
+      "parameters": [
+        {
+          "name": "Actions",
+          "type": "RenderFragment?",
+          "isRequired": false,
+          "description": "Host actions rendered before the close button."
+        },
+        {
+          "name": "Class",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Additional CSS class."
+        },
+        {
+          "name": "FocusOnOpen",
+          "type": "bool",
+          "isRequired": false,
+          "default": "true",
+          "description": "Moves focus into the header when the panel opens."
+        },
+        {
+          "name": "OnClosed",
+          "type": "EventCallback",
+          "isRequired": false,
+          "description": "Raised by the close button and by Escape."
+        },
+        {
+          "name": "Subtitle",
+          "type": "string?",
+          "isRequired": false,
+          "description": "Optional subtitle under the title."
+        },
+        {
+          "name": "Title",
+          "type": "string",
+          "isRequired": true,
+          "default": "\"\"",
+          "description": "The panel title. Rendered as an h2.",
+          "editorRequired": true
+        }
+      ]
+    },
+    {
       "itemName": "TmNotionPdfBlock",
       "kind": "Component",
       "category": "Notion Editor",
@@ -6721,8 +8046,7 @@
           "name": "CommentProvider",
           "type": "ITmCommentProvider?",
           "isRequired": false,
-          "description": "Optional comments provider enabled only when the public share allows comments.",
-          "editorRequired": true
+          "description": "Optional comments provider enabled only when the public share allows comments."
         },
         {
           "name": "DataProvider",
@@ -6875,6 +8199,13 @@
           "description": "Effective permission displayed by the dialog when inherited."
         },
         {
+          "name": "LayoutMode",
+          "type": "TmLayoutMode",
+          "isRequired": false,
+          "default": "TmLayoutMode.Auto",
+          "description": "Forced layout. Mobile presents the dialog as a sheet."
+        },
+        {
           "name": "OnSaved",
           "type": "EventCallback",
           "isRequired": false,
@@ -6923,6 +8254,20 @@
       ],
       "parameters": [
         {
+          "name": "ConfirmRevoke",
+          "type": "bool",
+          "isRequired": false,
+          "default": "true",
+          "description": "When true, revoking the public link asks for confirmation before the provider call."
+        },
+        {
+          "name": "LayoutMode",
+          "type": "TmLayoutMode",
+          "isRequired": false,
+          "default": "TmLayoutMode.Auto",
+          "description": "Forced layout. Mobile presents the dialog as a sheet."
+        },
+        {
           "name": "PageId",
           "type": "Guid",
           "isRequired": true,
@@ -6970,6 +8315,13 @@
           "isRequired": false,
           "default": "NotionShortcutCatalog.DefaultGroups",
           "description": "Shortcut groups rendered by the panel. Defaults to the built-in Notion catalog."
+        },
+        {
+          "name": "LayoutMode",
+          "type": "TmLayoutMode",
+          "isRequired": false,
+          "default": "TmLayoutMode.Auto",
+          "description": "Forced layout. Mobile presents the panel as the core sheet."
         },
         {
           "name": "Visible",
@@ -7110,6 +8462,13 @@
       ],
       "parameters": [
         {
+          "name": "LayoutMode",
+          "type": "TmLayoutMode",
+          "isRequired": false,
+          "default": "TmLayoutMode.Auto",
+          "description": "Forced layout. Mobile presents the menu as the core sheet."
+        },
+        {
           "name": "Left",
           "type": "double",
           "isRequired": false
@@ -7243,7 +8602,7 @@
       "category": "Notion Editor",
       "subcategory": "Blocks / Tempo Blocks",
       "namespace": "Tempo.Blazor.Components.NotionEditor.Blocks.TempoBlocks",
-      "description": "Modal dialog hosting the dynamically loaded spreadsheet editor (or a missing-package notice) with Save and Discard actions and a loading spinner.",
+      "description": "Fullscreen spreadsheet edit modal on the shared TmNotionTempoEditorModal shell. The spreadsheet resolves its own container, so a narrow modal gets its mobile chrome. A cell change marks the modal dirty and Discard confirms first; a missing package disables Save.",
       "packageId": "Tempo.Blazor.NotionEditor",
       "sourcePath": "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/Blocks/TempoBlocks/TmNotionSpreadsheetEditModal.razor",
       "documentationStatus": "merged",
@@ -7300,6 +8659,13 @@
           "type": "string?",
           "isRequired": false,
           "description": "Initial label used when opening the picker for an existing chip."
+        },
+        {
+          "name": "LayoutMode",
+          "type": "TmLayoutMode",
+          "isRequired": false,
+          "default": "TmLayoutMode.Auto",
+          "description": "Forced layout. Mobile presents the picker as the core sheet."
         },
         {
           "name": "Left",
@@ -7755,6 +9121,13 @@
       ],
       "parameters": [
         {
+          "name": "LayoutMode",
+          "type": "TmLayoutMode",
+          "isRequired": false,
+          "default": "TmLayoutMode.Auto",
+          "description": "Forced layout. Mobile presents the gallery fullscreen."
+        },
+        {
           "name": "OnClosed",
           "type": "EventCallback",
           "isRequired": false,
@@ -7972,6 +9345,13 @@
           "name": "OnResolved",
           "type": "EventCallback",
           "isRequired": false
+        },
+        {
+          "name": "Presentation",
+          "type": "NotionCommentPresentation",
+          "isRequired": false,
+          "default": "NotionCommentPresentation.Auto",
+          "description": "How the panel presents (NO1) — see TmNotionBlockCommentPanel.Presentation. In the dialog the whole quote renders (clamped to four lines with a Show full quote toggle); the popover truncates it."
         },
         {
           "name": "StartOffset",
@@ -8246,6 +9626,13 @@
           "description": "Pre-selects the item matching this key when the dropdown opens."
         },
         {
+          "name": "LayoutMode",
+          "type": "TmLayoutMode",
+          "isRequired": false,
+          "default": "TmLayoutMode.Auto",
+          "description": "Forced layout. Mobile presents the menu as the core sheet."
+        },
+        {
           "name": "Left",
           "type": "double",
           "isRequired": false
@@ -8420,7 +9807,7 @@
       "category": "Notion Editor",
       "subcategory": "Blocks / Tempo Blocks",
       "namespace": "Tempo.Blazor.Components.NotionEditor.Blocks.TempoBlocks",
-      "description": "Modal dialog hosting the dynamically loaded wireframe editor (or a missing-package notice) with Save and Discard actions and a loading spinner.",
+      "description": "Fullscreen wireframe edit modal on the shared TmNotionTempoEditorModal shell. The editor resolves its own container (desktop chrome at 1024+, its narrow and mobile panels below). Discard while the document changed confirms first; a missing package disables Save.",
       "packageId": "Tempo.Blazor.NotionEditor",
       "sourcePath": "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/Blocks/TempoBlocks/TmNotionWireframeEditModal.razor",
       "documentationStatus": "merged",
@@ -8529,16 +9916,32 @@
       "kind": "Css"
     },
     {
+      "path": "src/Tempo.Blazor.NotionEditor/wwwroot/js/notion-db-column-resize.js",
+      "kind": "JavaScript"
+    },
+    {
+      "path": "src/Tempo.Blazor.NotionEditor/wwwroot/js/notion-db-timeline.js",
+      "kind": "JavaScript"
+    },
+    {
       "path": "src/Tempo.Blazor.NotionEditor/wwwroot/js/notion-editor.js",
+      "kind": "JavaScript"
+    },
+    {
+      "path": "src/Tempo.Blazor.NotionEditor/wwwroot/js/__tests__/notion-db-column-resize.test.mjs",
+      "kind": "JavaScript"
+    },
+    {
+      "path": "src/Tempo.Blazor.NotionEditor/wwwroot/js/__tests__/notion-db-timeline.test.mjs",
       "kind": "JavaScript"
     }
   ],
   "summary": {
-    "itemCount": 173,
-    "manualItemCount": 173,
-    "generatedItemCount": 172,
+    "itemCount": 189,
+    "manualItemCount": 189,
+    "generatedItemCount": 188,
     "generatedOnlyItemCount": 0,
-    "componentCount": 128,
-    "publicApiTypeCount": 44
+    "componentCount": 133,
+    "publicApiTypeCount": 55
   }
 }

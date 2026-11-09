@@ -2,114 +2,12 @@
    TmNotionDbTemplateEditor  (prefix: tm-dbte__)
    ═══════════════════════════════════════════════ */
 
-/* ── Overlay ─────────────────────────────────── */
-.tm-dbte__overlay {
-    position: fixed;
-    inset: 0;
-    z-index: var(--tm-z-modal, 1040);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: rgba(0, 0, 0, 0.45);
-    backdrop-filter: blur(2px);
-    animation: tm-dbte-fade-in 0.15s ease;
-}
+/* Phase 4 (DB-3): the dialog chrome rides the core TmModal — content styles only
+   (no own overlay, no toolbar, no z-index). */
 
-@keyframes tm-dbte-fade-in {
-    from { opacity: 0; }
-    to   { opacity: 1; }
-}
-
-/* ── Modal panel ─────────────────────────────── */
-.tm-dbte__modal {
-    position: relative;
-    width: min(780px, 96vw);
-    max-height: 90vh;
-    background: var(--tm-surface, #fff);
-    border: 1px solid var(--tm-border, #e5e5e5);
-    border-radius: 10px;
-    box-shadow: 0 24px 80px -12px rgba(0,0,0,0.28), 0 4px 20px rgba(0,0,0,0.1);
-    display: flex;
+.tm-dbte {
+    display:        flex;
     flex-direction: column;
-    overflow: hidden;
-    animation: tm-dbte-slide-in 0.18s cubic-bezier(.22,1,.36,1);
-}
-
-@keyframes tm-dbte-slide-in {
-    from { opacity: 0; transform: translateY(12px) scale(0.98); }
-    to   { opacity: 1; transform: translateY(0) scale(1); }
-}
-
-/* ── Toolbar ─────────────────────────────────── */
-.tm-dbte__toolbar {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    padding: 10px 16px;
-    border-bottom: 1px solid var(--tm-border, #e5e5e5);
-    background: var(--tm-surface-secondary, #f9f9f9);
-    flex-shrink: 0;
-}
-
-.tm-dbte__breadcrumb {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    min-width: 0;
-    flex: 1;
-}
-
-.tm-dbte__breadcrumb-db,
-.tm-dbte__breadcrumb-label {
-    font-size: 12px;
-    font-weight: 500;
-    color: var(--tm-text-secondary, #777);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: 140px;
-}
-
-.tm-dbte__breadcrumb-sep {
-    color: var(--tm-text-tertiary, #aaa);
-    flex-shrink: 0;
-}
-
-.tm-dbte__breadcrumb-name {
-    font-size: 12px;
-    font-weight: 600;
-    color: var(--tm-text, #1a1a1a);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: 200px;
-}
-
-.tm-dbte__toolbar-actions {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    flex-shrink: 0;
-}
-
-.tm-dbte__close-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 28px;
-    height: 28px;
-    border: none;
-    border-radius: 5px;
-    background: transparent;
-    color: var(--tm-text-secondary, #777);
-    cursor: pointer;
-    transition: background 0.12s, color 0.12s;
-}
-
-.tm-dbte__close-btn:hover {
-    background: var(--tm-hover, rgba(0,0,0,0.05));
-    color: var(--tm-text, #1a1a1a);
 }
 
 /* ── Template badge ──────────────────────────── */
@@ -118,8 +16,8 @@
     align-items: center;
     gap: 4px;
     padding: 2px 8px;
-    background: color-mix(in srgb, var(--tm-primary, #2383e2) 10%, transparent);
-    color: var(--tm-primary, #2383e2);
+    background: color-mix(in srgb, var(--tm-color-primary) 10%, transparent);
+    color: var(--tm-color-primary);
     border-radius: 20px;
     font-size: 11px;
     font-weight: 600;
@@ -160,14 +58,14 @@
     font-size: 1.75rem;
     font-weight: 700;
     line-height: 1.25;
-    color: var(--tm-text, #1a1a1a);
+    color: var(--tm-text-primary);
     padding: 0;
     overflow: hidden;
     field-sizing: content;
 }
 
 .tm-dbte__name-input::placeholder {
-    color: var(--tm-text-placeholder, #ccc);
+    color: var(--tm-text-tertiary);
 }
 
 .tm-dbte__name-input:disabled {
@@ -192,11 +90,11 @@
 }
 
 .tm-dbte__prop-row:hover {
-    background: var(--tm-hover, rgba(0,0,0,0.03));
+    background: var(--tm-color-surface-hover);
 }
 
 .tm-dbte__prop-row--editing {
-    background: var(--tm-hover, rgba(0,0,0,0.03));
+    background: var(--tm-color-surface-hover);
 }
 
 .tm-dbte__prop-label {
@@ -207,13 +105,13 @@
     min-width: 120px;
     flex-shrink: 0;
     padding: 7px 8px;
-    color: var(--tm-text-secondary, #777);
+    color: var(--tm-text-secondary);
 }
 
 .tm-dbte__prop-icon {
     display: flex;
     align-items: center;
-    color: var(--tm-text-tertiary, #aaa);
+    color: var(--tm-text-tertiary);
     flex-shrink: 0;
 }
 
@@ -236,7 +134,7 @@
 /* ── Divider ─────────────────────────────────── */
 .tm-dbte__divider {
     border: none;
-    border-top: 1px solid var(--tm-border, #e5e5e5);
+    border-top: 1px solid var(--tm-border-color);
     margin: 20px 0;
 }
 
@@ -244,4 +142,9 @@
 .tm-dbte__content {
     flex: 1;
     min-height: 80px;
+}
+
+@media (max-width: 600px) {
+    .tm-dbte__prop-row { flex-direction: column; gap: 0; }
+    .tm-dbte__prop-label { width: auto; min-width: 0; max-width: none; padding-bottom: 0; }
 }

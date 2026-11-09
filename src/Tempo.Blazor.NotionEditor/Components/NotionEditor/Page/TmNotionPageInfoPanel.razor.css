@@ -1,29 +1,12 @@
-.tm-page-info-backdrop {
-    position: fixed;
-    inset: 0;
-    z-index: var(--tm-z-overlay);
-    background: var(--tm-bg-overlay);
-}
+/* Phase 4 (N1): the panel chrome rides the core TmModal — the stylesheet keeps only the content
+   styles (no own backdrop, no positioning, no z-index). */
 
 .tm-page-info {
-    --tm-page-info-width: 22.5rem;
-    --tm-page-info-close-size: 2rem;
     --tm-page-info-metric-min: 6rem;
     --tm-page-info-metric-min-height: 4.875rem;
 
-    position: fixed;
-    top: var(--tm-space-4);
-    right: var(--tm-space-4);
-    z-index: calc(var(--tm-z-overlay) + 1);
-    width: min(var(--tm-page-info-width), calc(100vw - var(--tm-space-4) * 2));
-    max-height: calc(100vh - var(--tm-space-4) * 2);
-    overflow: auto;
-    padding: var(--tm-space-4);
-    border: 1px solid var(--tm-color-border);
-    border-radius: var(--tm-radius-lg);
-    background: var(--tm-color-surface);
-    color: var(--tm-color-text);
-    box-shadow: var(--tm-shadow-xl);
+    display: flex;
+    flex-direction: column;
 }
 
 .tm-page-info__header {
@@ -49,28 +32,6 @@
     line-height: var(--tm-line-height-normal);
 }
 
-.tm-page-info__close {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    flex: 0 0 var(--tm-page-info-close-size);
-    width: var(--tm-page-info-close-size);
-    height: var(--tm-page-info-close-size);
-    border: 1px solid transparent;
-    border-radius: var(--tm-radius-md);
-    background: transparent;
-    color: var(--tm-color-text-muted);
-    cursor: pointer;
-}
-
-.tm-page-info__close:hover,
-.tm-page-info__close:focus-visible {
-    border-color: var(--tm-color-border);
-    background: var(--tm-color-surface-hover);
-    color: var(--tm-color-text);
-    outline: none;
-}
-
 .tm-page-info__section {
     padding: var(--tm-space-4) 0;
 }
@@ -88,6 +49,9 @@
 
 .tm-page-info__fact dt,
 .tm-page-info__metric-label {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--tm-space-1);
     color: var(--tm-color-text-muted);
     font-size: var(--tm-font-size-xs);
     font-weight: var(--tm-font-weight-medium);
@@ -100,11 +64,14 @@
     justify-content: space-between;
     gap: var(--tm-space-2);
     margin: 0;
-    color: var(--tm-color-text);
+    color: var(--tm-text-primary);
     font-size: var(--tm-font-size-sm);
 }
 
 .tm-page-info__user {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--tm-space-2);
     min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -122,9 +89,13 @@
     gap: var(--tm-space-2);
 }
 
+/* Rows auto 1fr with the value anchored to the end: cards in one row share the same value
+   baseline even when a label wraps to two lines. */
 .tm-page-info__metric {
     display: grid;
+    grid-template-rows: auto 1fr;
     gap: var(--tm-space-2);
+    min-width: 0;
     min-height: var(--tm-page-info-metric-min-height);
     padding: var(--tm-space-3);
     border: 1px solid var(--tm-color-border-subtle);
@@ -132,23 +103,24 @@
     background: var(--tm-surface-secondary);
 }
 
+/* The label never wraps: it truncates with an ellipsis instead of pushing the value down
+   and breaking the row baseline. */
+.tm-page-info__metric-label {
+    min-width: 0;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 .tm-page-info__metric-value {
+    align-self: end;
     font-size: var(--tm-font-size-xl);
     font-weight: var(--tm-font-weight-semibold);
     line-height: var(--tm-line-height-tight);
 }
 
 @media (max-width: 520px) {
-    .tm-page-info {
-        top: auto;
-        right: var(--tm-space-2);
-        bottom: var(--tm-space-2);
-        left: var(--tm-space-2);
-        width: auto;
-        max-height: calc(100vh - var(--tm-space-4));
-        border-radius: var(--tm-radius-lg) var(--tm-radius-lg) var(--tm-radius-md) var(--tm-radius-md);
-    }
-
     .tm-page-info__fact dd {
         align-items: flex-start;
         flex-direction: column;

@@ -1,0 +1,10 @@
+{
+  "kind": "Record",
+  "category": "Services",
+  "namespace": "Tempo.Blazor.Services",
+  "description": "Configuration for a toast shown through Show. Purely additive over the classic ShowSuccess/ShowInfo/ShowWarning/ShowError helpers: every property is optional and the defaults reproduce a classic info toast.",
+  "packageId": "Tempo.Blazor",
+  "sourcePath": "src/Tempo.Blazor/Services/ToastOptions.cs",
+  "documentationStatus": "generated",
+  "itemName": "ToastOptions"
+}

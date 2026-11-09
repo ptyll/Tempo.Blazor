@@ -195,6 +195,33 @@ public class NotionMarkdownShortcutsE2ETests : NotionE2ETestBase
     }
 
     [TestMethod]
+    [Description("Brown picked from the toolbar is the allowlisted hex and is still brown after a reload")]
+    public async Task BrownInlineColour_SurvivesSaveAndReload()
+    {
+        var page = await OpenNotionEditorAsync();
+        var blockId = await TypeIntoFirstParagraphAsync(page, "brown");
+
+        await page.Keyboard.PressAsync("Control+A");
+        await page.Locator(".tm-notion-inline-toolbar").First.WaitForAsync(Visible());
+        await page.Locator(".tm-notion-inline-toolbar__btn--color").ClickAsync();
+        await page.Locator(".tm-notion-inline-toolbar__color-swatch[style*='--tm-notion-option-text-brown-ink)']").ClickAsync();
+        await page.WaitForTimeoutAsync(400);
+
+        var painted = await Block(page, blockId).Locator("[style*='color']").First.GetAttributeAsync("style");
+        StringAssert.Contains(painted, "100, 71, 58",
+            "The toolbar must send the allowlisted brown hex, not the CSS name 'brown'.");
+
+        await page.EvaluateAsync("() => document.activeElement?.blur()");
+        await page.WaitForTimeoutAsync(900);
+        await page.ReloadAsync(new PageReloadOptions { WaitUntil = WaitUntilState.DOMContentLoaded, Timeout = 60000 });
+        await WaitForAppReadyAsync(page);
+        await page.Locator(".tm-notion-page").First.WaitForAsync(Visible());
+
+        var reloaded = await Block(page, blockId).Locator("[style*='color']").First.GetAttributeAsync("style");
+        StringAssert.Contains(reloaded, "100, 71, 58", "Brown must still be brown after the reload.");
+    }
+
+    [TestMethod]
     [Description("The editor ships without debug logging")]
     public async Task Editor_DoesNotLogToConsole()
     {

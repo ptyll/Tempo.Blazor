@@ -1,52 +1,25 @@
 @namespace Tempo.Blazor.Components.NotionEditor.Blocks.TempoBlocks
-@using Tempo.Blazor.NotionEditor.Interfaces
 @using Tempo.Blazor.Components.Diagram.Models
 @using Tempo.Blazor.Components.Diagram.Services
 
-<div class="tm-notion-diagram-edit-modal"
-     role="dialog"
-     aria-modal="true"
-     aria-label="@Loc["TmNotionDiagramEditModal_Title"]">
-
-    @if (_loading)
-    {
-        <div class="tm-notion-diagram-edit-modal__loading">
-            <span class="tm-notion-diagram-edit-modal__spinner" aria-hidden="true"></span>
-        </div>
-    }
-    else if (_document is not null)
-    {
-        @if (DiagramEditorComponentType is not null)
-        {
-            <DynamicComponent Type="DiagramEditorComponentType"
-                              Parameters="DiagramEditorParameters" />
-        }
-        else
-        {
-            <div class="tm-notion-diagram-edit-modal__missing" role="status">
-                @Loc["TmNotionDiagramEditModal_MissingPackage"]
-            </div>
-        }
-
-        <div class="tm-notion-diagram-edit-modal__footer">
-            <button class="tm-notion-diagram-edit-modal__btn tm-notion-diagram-edit-modal__btn--primary"
-                    type="button"
-                    disabled="@(_saving || DiagramEditorComponentType is null)"
-                    @onclick="SaveAsync">
-                @if (_saving)
-                {
-                    <span class="tm-notion-diagram-edit-modal__spinner tm-notion-diagram-edit-modal__spinner--sm"
-                          aria-hidden="true"></span>
-                }
-                @Loc["TmNotionDiagramEditModal_Save"]
-            </button>
-            <button class="tm-notion-diagram-edit-modal__btn"
-                    type="button"
-                    disabled="@_saving"
-                    @onclick="DiscardAsync">
-                @Loc["TmNotionDiagramEditModal_Discard"]
-            </button>
-        </div>
-    }
-
-</div>
+<TmNotionTempoEditorModal Title="@Loc["TmNotionDiagramEditModal_Title"]"
+                          Loading="_loading"
+                          Saving="_saving"
+                          Missing="@(_document is null || DiagramEditorComponentType is null)"
+                          MissingText="@Loc["TmNotionDiagramEditModal_MissingPackage"]"
+                          IsDirty="_dirty"
+                          DiscardText="@Loc["TmNotionDiagramEditModal_Discard"]"
+                          SaveText="@Loc["TmNotionDiagramEditModal_Save"]"
+                          ConfirmTitle="@Loc["TmNotionTempoEditorModal_DiscardTitle"]"
+                          ConfirmMessage="@Loc["TmNotionTempoEditorModal_DiscardMessage"]"
+                          ConfirmOkText="@Loc["TmNotionTempoEditorModal_DiscardConfirm"]"
+                          ConfirmCancelText="@Loc["Tm_Cancel"]"
+                          StatusClass="tm-notion-diagram-edit-modal__loading"
+                          DiscardClass="tm-notion-diagram-edit-modal__btn"
+                          SaveClass="tm-notion-diagram-edit-modal__btn tm-notion-diagram-edit-modal__btn--primary"
+                          Class="tm-notion-diagram-edit-modal"
+                          TestId="notion-diagram-edit-modal"
+                          OnSave="SaveAsync"
+                          OnDiscard="DiscardAsync">
+    <DynamicComponent Type="DiagramEditorComponentType" Parameters="DiagramEditorParameters" />
+</TmNotionTempoEditorModal>

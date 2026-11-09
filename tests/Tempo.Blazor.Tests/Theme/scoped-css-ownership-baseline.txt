@@ -1,16 +1,5 @@
 # Baseline of scoped .razor.css rules whose key class is rendered by a DIFFERENT component.
 # May only shrink. Format: <relative path> :: <class>
-# Frozen by F0 (P21). Moving the Gantt rules is the Gantt plan's work; the Notion rows belong to
-# that plan. The Modeling row was fixed by the Modeling redesign plan phase 1 (::deep).
-src/Tempo.Blazor.NotionEditor/Components/NotionEditor/Blocks/Layout/TmNotionColumnBlock.razor.css :: tm-notion-block-list
-src/Tempo.Blazor.NotionEditor/Components/NotionEditor/Blocks/Layout/TmNotionColumnBlock.razor.css :: tm-notion-block-list__after
-src/Tempo.Blazor.NotionEditor/Components/NotionEditor/Blocks/Table/TmNotionTableBlock.razor.css :: tm-notion-table__cell
-src/Tempo.Blazor.NotionEditor/Components/NotionEditor/Blocks/Table/TmNotionTableBlock.razor.css :: tm-notion-table__cell--readonly
-src/Tempo.Blazor.NotionEditor/Components/NotionEditor/Blocks/Table/TmNotionTableBlock.razor.css :: tm-notion-table__cell-td
-src/Tempo.Blazor.NotionEditor/Components/NotionEditor/Blocks/Table/TmNotionTableBlock.razor.css :: tm-notion-table__drag-icon
-src/Tempo.Blazor.NotionEditor/Components/NotionEditor/Blocks/Table/TmNotionTableBlock.razor.css :: tm-notion-table__handle
-src/Tempo.Blazor.NotionEditor/Components/NotionEditor/Blocks/Table/TmNotionTableBlock.razor.css :: tm-notion-table__handle-cell
-src/Tempo.Blazor.NotionEditor/Components/NotionEditor/Blocks/Table/TmNotionTableBlock.razor.css :: tm-notion-table__row-delete
-src/Tempo.Blazor.NotionEditor/Components/NotionEditor/TmNotionEditor.razor.css :: tm-notion-block__content
-src/Tempo.Blazor.NotionEditor/Components/NotionEditor/TmNotionEditor.razor.css :: tm-notion-editable
-src/Tempo.Blazor.NotionEditor/Components/NotionEditor/UI/TmNotionStatusPicker.razor.css :: tm-notion-status
+# Frozen by F0 (P21). The Gantt rows were removed by the Gantt plan. Notion Fáze 2 removed every
+# Notion row: the dead duplicates were deleted and the column drop target moved to the component
+# that renders it. The file stays so the guard still has a baseline to shrink against.

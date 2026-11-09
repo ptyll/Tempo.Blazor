@@ -11,6 +11,13 @@ public partial class TmNotionDbImportExport : ComponentBase
 {
     [Inject] private IJSRuntime JS { get; set; } = default!;
 
+    /// <summary>Suffixes the file input id and the export radio name so two dialogs do not collide.</summary>
+    private readonly string _idSuffix = Guid.NewGuid().ToString("N");
+
+    private string FileInputId => $"tm-dbie-file-{_idSuffix}";
+
+    private string ExportViewName => $"tm-dbie-view-{_idSuffix}";
+
     [CascadingParameter] private NotionEditorContext Context { get; set; } = default!;
 
     // ── Parameters ────────────────────────────────────────────────────────────
@@ -20,6 +27,11 @@ public partial class TmNotionDbImportExport : ComponentBase
     [Parameter, EditorRequired] public IReadOnlyList<IDatabaseView>   Views         { get; set; } = [];
     [Parameter]                 public string                         DatabaseName  { get; set; } = string.Empty;
     [Parameter]                 public bool                           ReadOnly      { get; set; }
+
+    /// <summary>Whether the dialog is open. Defaults to <c>true</c> — the host renders the
+    /// component only while the dialog is shown.</summary>
+    [Parameter]                 public bool                           Show          { get; set; } = true;
+
     [Parameter]                 public EventCallback                  OnImported    { get; set; }
     [Parameter]                 public EventCallback                  OnClose       { get; set; }
 

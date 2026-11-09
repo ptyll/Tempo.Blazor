@@ -194,9 +194,15 @@ public sealed class NotionAuthoringContractE2ETests : WasmTestBase
         TestContext.AddResultFile(normalPath);
 
         await page.SetViewportSizeAsync(390, 844);
-        await page.Locator(".tm-notion-sidebar-close").ClickAsync();
-        await Assertions.Expect(page.Locator(".tm-notion-sidebar"))
-            .ToHaveClassAsync(new Regex("tm-notion-sidebar--hidden"));
+        // Phase 3: the page tree is a shell drawer that starts closed on the mobile band and
+        // is not mounted at all — there is no close button to click. Close the drawer only
+        // when it is actually open; the sidebar is "hidden" trivially when absent.
+        var sidebarClose = page.Locator(".tm-notion-sidebar-close");
+        if (await sidebarClose.CountAsync() > 0)
+            await sidebarClose.ClickAsync();
+        var sidebar = page.Locator(".tm-notion-sidebar");
+        if (await sidebar.CountAsync() > 0)
+            await Assertions.Expect(sidebar).ToHaveClassAsync(new Regex("tm-notion-sidebar--hidden"));
         await table.ScrollIntoViewIfNeededAsync();
         await Assertions.Expect(table).ToBeVisibleAsync();
         var pageOverflows = await page.EvaluateAsync<bool>(

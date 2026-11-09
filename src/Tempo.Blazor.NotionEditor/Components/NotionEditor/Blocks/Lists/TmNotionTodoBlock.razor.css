@@ -46,7 +46,7 @@
 .tm-notion-todo__box {
     width: 16px;
     height: 16px;
-    border: 1.5px solid var(--tm-notion-checkbox-border, rgba(55,53,47,0.35));
+    border: 1.5px solid var(--tm-notion-border);
     border-radius: 3px;
     background: transparent;
     display: flex;
@@ -59,27 +59,27 @@
 /* Hover (when not disabled) */
 .tm-notion-todo__input:not(:disabled):hover ~ .tm-notion-todo__box,
 .tm-notion-todo__input:not(:disabled):focus-visible ~ .tm-notion-todo__box {
-    border-color: var(--tm-notion-interactive-focus, #2383e2);
-    background: var(--tm-notion-checkbox-hover-bg, rgba(35,131,226,0.07));
+    border-color: var(--tm-focus-ring);
+    background: var(--tm-notion-bg-block-hover);
 }
 
 /* Focus ring via label */
 .tm-notion-todo__input:focus-visible ~ .tm-notion-todo__box {
-    outline: 2px solid var(--tm-notion-interactive-focus, #2383e2);
+    outline: 2px solid var(--tm-focus-ring);
     outline-offset: 1px;
 }
 
 /* Checked state */
 .tm-notion-todo--checked .tm-notion-todo__box {
-    background: var(--tm-notion-interactive-focus, #2383e2);
-    border-color: var(--tm-notion-interactive-focus, #2383e2);
+    background: var(--tm-focus-ring);
+    border-color: var(--tm-focus-ring);
 }
 
 /* Check icon — hidden by default, shown when checked */
 .tm-notion-todo__check-icon {
     width: 10px;
     height: 10px;
-    color: #fff;
+    color: var(--tm-color-on-primary-fixed);
     opacity: 0;
     transform: scale(0.6);
     transition: opacity 150ms ease, transform 150ms ease;
@@ -95,7 +95,7 @@
     flex: 1;
     min-width: 0;
     outline: none;
-    line-height: var(--tm-notion-line-height, 1.6);
+    line-height: var(--tm-notion-text-line-height, 1.6);
     color: var(--tm-text-primary);
     word-break: break-word;
     overflow-wrap: break-word;
@@ -105,26 +105,26 @@
 /* Checked: strikethrough + fade */
 .tm-notion-todo--checked .tm-notion-todo__text {
     text-decoration: line-through;
-    text-decoration-color: var(--tm-text-secondary, rgba(55,53,47,0.55));
+    text-decoration-color: var(--tm-text-secondary);
     opacity: 0.6;
 }
 
 .tm-notion-todo__text:empty::before {
     content: attr(data-placeholder);
-    color: var(--tm-text-placeholder, rgba(55,53,47,0.35));
+    color: var(--tm-text-tertiary);
     pointer-events: none;
 }
 
 /* ── Text colour (via data-color) ────────────────────────────────────────── */
-.tm-notion-todo__text[data-color="gray"]    { color: var(--tm-notion-color-gray); }
-.tm-notion-todo__text[data-color="brown"]   { color: var(--tm-notion-color-brown); }
-.tm-notion-todo__text[data-color="orange"]  { color: var(--tm-notion-color-orange); }
-.tm-notion-todo__text[data-color="yellow"]  { color: var(--tm-notion-color-yellow); }
-.tm-notion-todo__text[data-color="green"]   { color: var(--tm-notion-color-green); }
-.tm-notion-todo__text[data-color="blue"]    { color: var(--tm-notion-color-blue); }
-.tm-notion-todo__text[data-color="purple"]  { color: var(--tm-notion-color-purple); }
-.tm-notion-todo__text[data-color="pink"]    { color: var(--tm-notion-color-pink); }
-.tm-notion-todo__text[data-color="red"]     { color: var(--tm-notion-color-red); }
+.tm-notion-todo__text[data-color="gray"]    { color: var(--tm-notion-option-text-gray-ink); }
+.tm-notion-todo__text[data-color="brown"]   { color: var(--tm-notion-option-text-brown-ink); }
+.tm-notion-todo__text[data-color="orange"]  { color: var(--tm-notion-option-text-orange-ink); }
+.tm-notion-todo__text[data-color="yellow"]  { color: var(--tm-notion-option-text-yellow-ink); }
+.tm-notion-todo__text[data-color="green"]   { color: var(--tm-notion-option-text-green-ink); }
+.tm-notion-todo__text[data-color="blue"]    { color: var(--tm-notion-option-text-blue-ink); }
+.tm-notion-todo__text[data-color="purple"]  { color: var(--tm-notion-option-text-purple-ink); }
+.tm-notion-todo__text[data-color="pink"]    { color: var(--tm-notion-option-text-pink-ink); }
+.tm-notion-todo__text[data-color="red"]     { color: var(--tm-notion-option-text-red-ink); }
 
 /* ── Alignment ───────────────────────────────────────────────────────────── */
 .tm-notion-todo__text.tm-notion-align-center { text-align: center; }
@@ -144,25 +144,25 @@
 .tm-notion-todo__text ::deep code {
     font-family: var(--tm-notion-font-mono, monospace);
     font-size: 0.875em;
-    background: var(--tm-notion-inline-code-bg, rgba(135,131,120,0.15));
+    background: var(--tm-notion-bg-code);
     border-radius: 3px;
     padding: 0.1em 0.35em;
 }
 
 .tm-notion-todo__text ::deep a {
-    color: var(--tm-notion-link-color, #2e8bff);
+    color: var(--tm-notion-link-color);
     text-decoration: underline;
     text-underline-offset: 2px;
 }
 
 .tm-notion-todo__text ::deep mark {
-    background: var(--tm-notion-highlight-bg, rgba(255,212,0,0.35));
+    background: var(--tm-notion-comment-highlight);
     border-radius: 2px;
     padding: 0 2px;
 }
 
 .tm-notion-todo__text ::deep ::selection {
-    background: var(--tm-notion-selection-bg, rgba(35,131,226,0.28));
+    background: var(--tm-notion-selection-bg);
 }
 
 /* ── Action item metadata ───────────────────────────────────────────────── */
@@ -285,7 +285,7 @@
     margin-left: calc(var(--tm-space-4) + var(--tm-space-2));
     border: 1px solid var(--tm-border-color);
     border-radius: var(--tm-radius-md);
-    background: var(--tm-surface);
+    background: var(--tm-bg-surface);
     box-shadow: var(--tm-shadow-lg);
 }
 
@@ -304,7 +304,7 @@
     min-height: var(--tm-space-8);
     border: 1px solid var(--tm-border-color);
     border-radius: var(--tm-radius-sm);
-    background: var(--tm-surface);
+    background: var(--tm-bg-surface);
     color: var(--tm-text-primary);
     padding: 0 var(--tm-space-2);
 }

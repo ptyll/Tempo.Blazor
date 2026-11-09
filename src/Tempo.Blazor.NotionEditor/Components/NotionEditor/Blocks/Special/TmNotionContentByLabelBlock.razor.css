@@ -170,6 +170,13 @@
     opacity: 0.55;
 }
 
+/* Coarse pointers: the primary "Add label" action keeps a finger-sized hit area. */
+@media (pointer: coarse) {
+    .tm-cbl__add-label {
+        min-block-size: var(--tm-touch-target);
+    }
+}
+
 .tm-cbl__label-select:disabled {
     opacity: 0.55;
 }

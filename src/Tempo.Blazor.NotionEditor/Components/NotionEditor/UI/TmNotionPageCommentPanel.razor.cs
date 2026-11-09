@@ -4,6 +4,7 @@ using Microsoft.JSInterop;
 using Tempo.Blazor.Abstractions.Shared;
 using Tempo.Blazor.Components.NotionEditor.Models;
 using Tempo.Blazor.Components.NotionEditor.Services;
+using Tempo.Blazor.Localization;
 using Tempo.Blazor.NotionEditor.Helpers;
 using Tempo.Blazor.NotionEditor.Models;
 
@@ -11,12 +12,77 @@ namespace Tempo.Blazor.Components.NotionEditor.UI;
 
 public partial class TmNotionPageCommentPanel : ComponentBase, IDisposable, ITmDraftGuard
 {
-    private const string CurrentUserId = "demo";
+    /// <summary>Author id from the cascaded editor context. Never the historical "demo" stand-in.</summary>
+    private string CurrentUserId => Context?.CurrentUserId ?? string.Empty;
 
     // ── DI ───────────────────────────────────────────────────────────────────
 
     [Inject] private IJSRuntime JS { get; set; } = default!;
+    [Inject] private IServiceProvider Services { get; set; } = default!;
     [Inject] private CommentNotificationOrchestrator? NotificationOrchestrator { get; set; }
+
+    private ITmRelativeTimeFormatter? _relativeTime;
+
+    /// <summary>Cached per component — <see cref="TmRelativeTime.Resolve"/> allocates a fallback when none is registered.</summary>
+    private ITmRelativeTimeFormatter RelativeTime => _relativeTime ??= TmRelativeTime.Resolve(Services, Loc);
+
+    private void OnNewText(string text) => _newCommentText = text;
+
+    private void OnReplyText(string text) => _replyText = text;
+
+    private void OnInlineText(string text) => _inlineReplyText = text;
+
+    private Task OnComposerDraft(bool _) => NotifyDraftChangedAsync();
+
+    private Task OnEditTextChanged(string text)
+    {
+        _editText = text;
+        return NotifyDraftChangedAsync();
+    }
+
+    private Task OnEntryKey(TmNotionCommentThreadView.TmNotionCommentEntryKey key)
+    {
+        var comment = ThreadOf(key.Entry);
+        return comment is null
+            ? Task.CompletedTask
+            : HandleEntryKeyDownAsync(key.Args, key.Entry, comment);
+    }
+
+    private Task OnReply(TmCommentEntry entry)
+    {
+        var comment = ThreadOf(entry);
+        return comment is null ? Task.CompletedTask : StartReplyToEntry(entry, comment);
+    }
+
+    private Task OnDelete(TmCommentEntry entry)
+    {
+        var comment = ThreadOf(entry);
+        if (comment is not null)
+            DeleteEntryAsync(comment, entry);
+        return Task.CompletedTask;
+    }
+
+    private TmCommentThread? ThreadOf(TmCommentEntry entry)
+        => _comments.FirstOrDefault(c => c.Entries.Any(e => e.Id == entry.Id));
+
+    private Task SubmitNew(string text)
+    {
+        _newCommentText = text;
+        return SendNewCommentAsync();
+    }
+
+    private Task SubmitReply(string text)
+    {
+        _replyText = text;
+        return SendReplyAsync();
+    }
+
+    private MarkupString FormatEntry(TmCommentEntry entry)
+        => (MarkupString)CommentHtmlFormatter.Format(NotionHtmlSanitizer.SanitizeBlockContent(entry.HtmlContent()));
+
+    private string FormatTime(DateTimeOffset dt) => RelativeTime.Format(dt);
+
+    private string AbsoluteTime(DateTimeOffset dt) => RelativeTime.Absolute(dt);
 
     // ── Cascaded ─────────────────────────────────────────────────────────────
 
@@ -26,6 +92,13 @@ public partial class TmNotionPageCommentPanel : ComponentBase, IDisposable, ITmD
 
     [Parameter] public string PageId   { get; set; } = string.Empty;
     [Parameter] public bool   Expanded { get; set; }
+
+    /// <summary>
+    /// <see cref="TmNotionPageCommentPanelMode.Inline"/> (default) renders the collapsible toggle;
+    /// <see cref="TmNotionPageCommentPanelMode.Embedded"/> renders the always-expanded body with no
+    /// toggle — used inside the page-comments dialog (<c>PageCommentsPresentation=Dialog</c>).
+    /// </summary>
+    [Parameter] public TmNotionPageCommentPanelMode Mode { get; set; } = TmNotionPageCommentPanelMode.Inline;
 
     [Parameter] public EventCallback<bool> OnExpandedChanged { get; set; }
 
@@ -69,6 +142,9 @@ public partial class TmNotionPageCommentPanel : ComponentBase, IDisposable, ITmD
 
     private string _newCommentText    = string.Empty;
     private string _replyText         = string.Empty;
+    private int _newReset;
+    private int _replyReset;
+    private int _inlineReset;
     private string? _replyingToCommentId;
 
     private string? _editingEntryId;
@@ -91,6 +167,7 @@ public partial class TmNotionPageCommentPanel : ComponentBase, IDisposable, ITmD
     private TmNotionCommentDraftState _lastDraftState = new(false, false, false, null, false);
 
     private bool   _initialized;
+    private bool   _mentionHandlerAttached;
     private ElementReference _panelRef;
     private DotNetObjectReference<TmNotionPageCommentPanel>? _dotNetRef;
 
@@ -102,6 +179,9 @@ public partial class TmNotionPageCommentPanel : ComponentBase, IDisposable, ITmD
         {
             _initialized = true;
             await LoadUnresolvedCountAsync();
+            // Embedded has no toggle click to lazy-load the threads — fetch them up front.
+            if (Mode == TmNotionPageCommentPanelMode.Embedded)
+                await LoadAsync();
         }
     }
 
@@ -113,9 +193,18 @@ public partial class TmNotionPageCommentPanel : ComponentBase, IDisposable, ITmD
             StateHasChanged();
         }
         if (firstRender)
-        {
             _dotNetRef = DotNetObjectReference.Create(this);
+
+        // The panel body (and its mention chips) mounts when Expanded flips false→true (Inline)
+        // or on first render (Embedded), neither of which is firstRender.
+        if ((Mode == TmNotionPageCommentPanelMode.Embedded || Expanded) && !_mentionHandlerAttached)
+        {
+            _mentionHandlerAttached = true;
             try { await JS.InvokeVoidAsync("tmNotionEditor.initMentionClickHandler", _panelRef, _dotNetRef); } catch { /* best-effort */ }
+        }
+        else if (Mode == TmNotionPageCommentPanelMode.Inline && !Expanded)
+        {
+            _mentionHandlerAttached = false;
         }
     }
 
@@ -166,8 +255,11 @@ public partial class TmNotionPageCommentPanel : ComponentBase, IDisposable, ITmD
         => InvokeAsync(async () =>
         {
             _newCommentText       = string.Empty;
+            _newReset++;
             _replyingToCommentId  = null;
             _replyText            = string.Empty;
+            _replyReset++;
+            _inlineReset++;
             _replyingToEntryId    = null;
             _inlineReplyComment   = null;
             _inlineReplyText      = string.Empty;
@@ -292,7 +384,7 @@ public partial class TmNotionPageCommentPanel : ComponentBase, IDisposable, ITmD
             var rawText = _newCommentText.Trim();
             var encoded = await CommentMentionHelper.EncodeAsync(rawText, Context.MentionProvider);
 
-            await Context.CommentProvider.AddPageCommentAsync(PageId, encoded);
+            await Context.CommentProvider.AddPageCommentAsync(PageId, encoded, CurrentUserId);
 
             // Re-load to get the created entry for notification
             await LoadAsync();
@@ -302,6 +394,7 @@ public partial class TmNotionPageCommentPanel : ComponentBase, IDisposable, ITmD
                 await CommentMentionHelper.NotifyAsync(rawText, entry, comment.Id, PageId, Context.MentionProvider, NotificationOrchestrator);
 
             _newCommentText  = string.Empty;
+            _newReset++;
             await NotifyDraftChangedAsync();
         }
         catch
@@ -326,6 +419,7 @@ public partial class TmNotionPageCommentPanel : ComponentBase, IDisposable, ITmD
     {
         _replyingToCommentId = comment.Id;
         _replyText           = string.Empty;
+        _replyReset++;
         await NotifyDraftChangedAsync();
     }
 
@@ -333,6 +427,7 @@ public partial class TmNotionPageCommentPanel : ComponentBase, IDisposable, ITmD
     {
         _replyingToCommentId = null;
         _replyText           = string.Empty;
+        _replyReset++;
         await NotifyDraftChangedAsync();
     }
 
@@ -351,7 +446,7 @@ public partial class TmNotionPageCommentPanel : ComponentBase, IDisposable, ITmD
             var rawText = _replyText.Trim();
             var encoded = await CommentMentionHelper.EncodeAsync(rawText, Context.MentionProvider);
 
-            await Context.CommentProvider.ReplyToCommentAsync(_replyingToCommentId, encoded);
+            await Context.CommentProvider.ReplyToCommentAsync(_replyingToCommentId, encoded, parentEntryId: null, CurrentUserId);
 
             var comment = _comments.FirstOrDefault(c => c.Id == _replyingToCommentId);
             var entry = comment?.Entries.LastOrDefault();
@@ -360,6 +455,7 @@ public partial class TmNotionPageCommentPanel : ComponentBase, IDisposable, ITmD
 
             _replyingToCommentId = null;
             _replyText           = string.Empty;
+            _replyReset++;
             await LoadAsync();
             await NotifyDraftChangedAsync();
         }
@@ -416,6 +512,7 @@ public partial class TmNotionPageCommentPanel : ComponentBase, IDisposable, ITmD
         // The auto-quote is a baseline, not user content: the draft flag rises only once the
         // reply text moves beyond it.
         _inlineReplyBaseline = _inlineReplyText;
+        _inlineReset++;
         StateHasChanged();
         await NotifyDraftChangedAsync();
     }
@@ -426,6 +523,7 @@ public partial class TmNotionPageCommentPanel : ComponentBase, IDisposable, ITmD
         _inlineReplyComment  = null;
         _inlineReplyText     = string.Empty;
         _inlineReplyBaseline = string.Empty;
+        _inlineReset++;
         await NotifyDraftChangedAsync();
     }
 
@@ -447,7 +545,8 @@ public partial class TmNotionPageCommentPanel : ComponentBase, IDisposable, ITmD
             await Context.CommentProvider.ReplyToCommentAsync(
                 _inlineReplyComment.Id,
                 encoded,
-                _replyingToEntryId);
+                _replyingToEntryId,
+                CurrentUserId);
 
             var entry = _inlineReplyComment.Entries.LastOrDefault();
             if (entry is not null)
@@ -457,6 +556,7 @@ public partial class TmNotionPageCommentPanel : ComponentBase, IDisposable, ITmD
             _inlineReplyComment  = null;
             _inlineReplyText     = string.Empty;
             _inlineReplyBaseline = string.Empty;
+            _inlineReset++;
             await LoadAsync();
             await NotifyDraftChangedAsync();
         }
@@ -486,7 +586,7 @@ public partial class TmNotionPageCommentPanel : ComponentBase, IDisposable, ITmD
         _error = string.Empty;
         try
         {
-            await Context.CommentProvider.MarkAllPageThreadsAsReadAsync(PageId, "demo");
+            await Context.CommentProvider.MarkAllPageThreadsAsReadAsync(PageId, CurrentUserId);
             await LoadAsync();
         }
         catch
@@ -503,7 +603,7 @@ public partial class TmNotionPageCommentPanel : ComponentBase, IDisposable, ITmD
         _error = string.Empty;
         try
         {
-            await Context.CommentProvider.ResolveCommentAsync(comment.Id);
+            await Context.CommentProvider.ResolveCommentAsync(comment.Id, CurrentUserId);
             await LoadAsync();
         }
         catch
@@ -518,7 +618,7 @@ public partial class TmNotionPageCommentPanel : ComponentBase, IDisposable, ITmD
         _error = string.Empty;
         try
         {
-            await Context.CommentProvider.UnresolveCommentAsync(comment.Id);
+            await Context.CommentProvider.UnresolveCommentAsync(comment.Id, CurrentUserId);
             await LoadAsync();
         }
         catch
@@ -562,7 +662,7 @@ public partial class TmNotionPageCommentPanel : ComponentBase, IDisposable, ITmD
             if (thread is null)
                 return;
 
-            await Context.CommentProvider.EditCommentAsync(thread.Id, _editingEntryId, encoded);
+            await Context.CommentProvider.EditCommentAsync(thread.Id, _editingEntryId, encoded, CurrentUserId);
             _editingEntryId   = null;
             _editText         = string.Empty;
             _editOriginalText = string.Empty;
@@ -621,7 +721,7 @@ public partial class TmNotionPageCommentPanel : ComponentBase, IDisposable, ITmD
 
     // ── Subscribe / Unsubscribe ───────────────────────────────────────────────
 
-    private static bool IsSubscribed(TmCommentThread comment)
+    private bool IsSubscribed(TmCommentThread comment)
         => comment.SubscribedUserIds.Contains(CurrentUserId);
 
     private async Task SubscribeAsync(TmCommentThread comment)
@@ -669,16 +769,6 @@ public partial class TmNotionPageCommentPanel : ComponentBase, IDisposable, ITmD
 
     private static string AvatarInitial(string name)
         => name.Length > 0 ? name[0].ToString().ToUpperInvariant() : "?";
-
-    private static string FormatTime(DateTimeOffset dt)
-    {
-        var diff = DateTimeOffset.UtcNow - dt.ToUniversalTime();
-        if (diff.TotalMinutes < 1)  return "just now";
-        if (diff.TotalHours   < 1)  return $"{(int)diff.TotalMinutes}m ago";
-        if (diff.TotalDays    < 1)  return $"{(int)diff.TotalHours}h ago";
-        if (diff.TotalDays    < 7)  return $"{(int)diff.TotalDays}d ago";
-        return dt.ToString("MMM d, yyyy");
-    }
 
     private static string StripHtml(string html)
     {

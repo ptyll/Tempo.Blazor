@@ -94,7 +94,7 @@ public partial class TmNotionHeadingBlock : ComponentBase, IAsyncDisposable
     private string _bgClass =>
         string.IsNullOrEmpty(Content?.BackgroundColor)
             ? string.Empty
-            : $"tm-notion-bg-{Content.BackgroundColor}";
+            : $"tm-notion-bg-{NotionColorTokens.Name(Content.BackgroundColor)}";
 
     private string _closedClass => _isToggleOpen ? string.Empty : "tm-notion-heading--closed";
 

@@ -1,0 +1,52 @@
+@namespace Tempo.Blazor.Components.NotionEditor.Blocks.Database
+@inherits Tempo.Blazor.Components.TmComponentBase
+@using Tempo.Blazor.Components.Icons
+@using Tempo.Blazor.NotionEditor.Enums
+@using Tempo.Blazor.NotionEditor.Models
+
+@* DB-2: the one read-only renderer for a field value. Board, Gallery, List, the timeline sidebar
+   and the calendar day list all used their own FormatFieldValue; a Select now reads as a pill, a
+   Person as initials and an empty value as nothing, in every one of them. *@
+@if (Field is not null)
+{
+    @switch (Field.Type)
+    {
+        case DatabaseFieldType.Select:
+        case DatabaseFieldType.Status:
+        case DatabaseFieldType.MultiSelect:
+            @foreach (var pill in Pills)
+            {
+                <span class="tm-dbv__pill" data-testid="@TestId("notion-db-value-pill")" data-color="@pill.Color"
+                      style="background:@PillBackground(pill.Color); color:@PillForeground(pill.Color);">@pill.Name</span>
+            }
+            break;
+
+        case DatabaseFieldType.Person:
+        case DatabaseFieldType.CreatedBy:
+        case DatabaseFieldType.LastEditedBy:
+            @if (Text.Length > 0)
+            {
+                <span class="tm-dbv__person" data-testid="@TestId("notion-db-value-person")">
+                    <span class="tm-dbv__avatar" aria-hidden="true" style="background:@AvatarColor(Text)">@Initials(Text)</span>
+                    <span class="tm-dbv__person-name">@Text</span>
+                </span>
+            }
+            break;
+
+        case DatabaseFieldType.Checkbox:
+            @if (Checked)
+            {
+                <span class="tm-dbv__check" role="img" data-testid="@TestId("notion-db-value-check")" aria-label="@Loc["TmNotionDatabaseBlock_CheckedYes"]">
+                    <TmIcon Name="@IconNames.Check" Size="IconSize.Xs" />
+                </span>
+            }
+            break;
+
+        default:
+            @if (Text.Length > 0)
+            {
+                <span class="tm-dbv" data-testid="@TestId("notion-db-value")">@Text</span>
+            }
+            break;
+    }
+}

@@ -77,7 +77,7 @@ public sealed class NotionBlogE2ETests : NotionE2ETestBase
 
     private static async Task OpenBlogAsync(IPage page)
     {
-        await page.GetByTestId("notion-blog-open").ClickAsync();
+        await ClickNotionCommandAsync(page, "notion-blog-open");
         await page.GetByTestId("notion-blog-panel").WaitForAsync(new LocatorWaitForOptions
         {
             State = WaitForSelectorState.Visible,

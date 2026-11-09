@@ -58,7 +58,7 @@ public class TmNotionMyTasksTests : LocalizationTestBase
 
         cut.WaitForAssertion(() =>
         {
-            cut.Find(".tm-my-tasks__title").TextContent.Should().Be("My Tasks");
+            cut.Find(".tm-notion-panel-header__title").TextContent.Should().Be("My Tasks");
             cut.FindAll(".tm-my-tasks__item").Should().HaveCount(3);
             cut.Markup.Should().Contain("Overdue");
             cut.Markup.Should().Contain("Today");
@@ -127,7 +127,7 @@ public class TmNotionMyTasksTests : LocalizationTestBase
 
         cut.WaitForAssertion(() =>
         {
-            cut.Find(".tm-my-tasks__count").TextContent.Should().Be("1 tasks");
+            cut.Find(".tm-notion-panel-header__subtitle").TextContent.Should().Be("1 tasks");
             cut.FindAll(".tm-my-tasks__item").Should().ContainSingle()
                 .Which.GetAttribute("data-task-id").Should().Be("task-completed");
         });
@@ -157,7 +157,7 @@ public class TmNotionMyTasksTests : LocalizationTestBase
 
             cut.WaitForAssertion(() =>
             {
-                cut.Find(".tm-my-tasks__count").TextContent.Should().Be($"{expected} tasks");
+                cut.Find(".tm-notion-panel-header__subtitle").TextContent.Should().Be($"{expected} tasks");
                 cut.FindAll(".tm-my-tasks__item").Should().HaveCount(expected);
             });
         }

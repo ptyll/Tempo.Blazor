@@ -98,6 +98,7 @@ builder.Services.AddTempoDemoLocalizer();
 // it — the WASM demo's ?now= clock — registers its own before this TryAdd, so it keeps winning.
 builder.Services.AddTempoDemoClock();
 builder.Services.AddScoped<Tempo.Blazor.Demo.SharedUI.Layout.ColorThemeState>();
+builder.Services.AddScoped<Tempo.Blazor.Demo.SharedUI.Services.DemoToastPresentationState>();
 builder.Services.AddTempoBlazorPdfViewer();
 builder.Services.AddTempoBlazorCodes();
 builder.Services.AddTempoBlazorAI();

@@ -2,6 +2,8 @@ using Bunit;
 using FluentAssertions;
 using Microsoft.AspNetCore.Components;
 using Tempo.Blazor.Abstractions.Shared;
+using Tempo.Blazor.Components.Avatars;
+using Tempo.Blazor.Components.Feedback;
 using Tempo.Blazor.Components.NotionEditor.Page;
 using Tempo.Blazor.Components.NotionEditor.Services;
 using Tempo.Blazor.NotionEditor.Enums;
@@ -77,6 +79,92 @@ public sealed class TmNotionPageInfoPanelTests : LocalizationTestBase
         cut.Markup.Should().NotContain("unknown-user-id");
     }
 
+    [Fact]
+    public void Panel_Escape_RaisesVisibleChangedFalse()
+    {
+        var visibleChanges = new List<bool>();
+        var page = MakePage("ada", "grace");
+        var cut = Render<CascadingValue<NotionEditorContext>>(parameters => parameters
+            .Add(p => p.Value, BuildContext(mentionProvider: new FakeMentionProvider()))
+            .AddChildContent<TmNotionPageInfoPanel>(child => child
+                .Add(p => p.Page, page)
+                .Add(p => p.Blocks, [])
+                .Add(p => p.Visible, true)
+                .Add(p => p.VisibleChanged, EventCallback.Factory.Create<bool>(this, v => visibleChanges.Add(v)))));
+
+        cut.WaitForAssertion(() => cut.FindComponent<TmModal>().Should().NotBeNull());
+        cut.InvokeAsync(() => cut.FindComponent<TmFocusScope>().Instance.HandleFocusTrapEscapeAsync())
+            .GetAwaiter().GetResult();
+
+        visibleChanges.Should().ContainSingle().Which.Should().BeFalse();
+    }
+
+    [Fact]
+    public void Panel_RendersUsersThroughTmAvatar()
+    {
+        var page = MakePage("ada", "grace");
+        var cut = RenderPanel(BuildContext(mentionProvider: new FakeMentionProvider()), page, []);
+
+        cut.FindComponents<TmAvatar>().Should().HaveCountGreaterThanOrEqualTo(2,
+            "created-by and last-edited-by render as avatars (image or initials fallback)");
+        cut.Markup.Should().Contain("Ada Lovelace");
+    }
+
+    [Fact]
+    public void Panel_HasCloseButtonFooter()
+    {
+        var page = MakePage("ada", "grace");
+        var cut = RenderPanel(BuildContext(mentionProvider: new FakeMentionProvider()), page, []);
+
+        var footer = cut.Find(".tm-modal-footer");
+        footer.Should().NotBeNull();
+        footer.TextContent.Should().Contain("Close");
+    }
+
+    [Fact]
+    public void Panel_UsesCoreModal_WithoutOwnBackdropOrZIndex()
+    {
+        var css = System.Text.RegularExpressions.Regex.Replace(
+            File.ReadAllText(Path.Combine(
+                FindRepositoryRoot(), "src", "Tempo.Blazor.NotionEditor",
+                "Components", "NotionEditor", "Page", "TmNotionPageInfoPanel.razor.css")),
+            @"/\*.*?\*/", string.Empty,
+            System.Text.RegularExpressions.RegexOptions.Singleline);
+
+        css.Should().NotContain("tm-page-info-backdrop");
+        css.Should().NotContain("z-index");
+    }
+
+    [Fact]
+    public void Panel_MetricCards_AnchorValuesAndClampLabels()
+    {
+        var css = System.Text.RegularExpressions.Regex.Replace(
+            File.ReadAllText(Path.Combine(
+                FindRepositoryRoot(), "src", "Tempo.Blazor.NotionEditor",
+                "Components", "NotionEditor", "Page", "TmNotionPageInfoPanel.razor.css")),
+            @"/\*.*?\*/", string.Empty,
+            System.Text.RegularExpressions.RegexOptions.Singleline);
+
+        // Rows auto 1fr with the value at the end keeps one baseline per row; the label truncates
+        // instead of wrapping (UX review of the phase-4 page-info capture).
+        var metric = System.Text.RegularExpressions.Regex.Match(css,
+            @"\.tm-page-info__metric\s*\{(?<body>[^}]*)\}");
+        metric.Success.Should().BeTrue();
+        metric.Groups["body"].Value.Should().Contain("grid-template-rows: auto 1fr");
+
+        var label = System.Text.RegularExpressions.Regex.Matches(css,
+            @"\.tm-page-info__metric-label\s*\{(?<body>[^}]*)\}");
+        label.Count.Should().BeGreaterThan(1, "the shared dt/label rule plus the metric-only override");
+        var labelBody = label[^1].Groups["body"].Value;
+        labelBody.Should().Contain("white-space: nowrap");
+        labelBody.Should().Contain("text-overflow: ellipsis");
+
+        var value = System.Text.RegularExpressions.Regex.Match(css,
+            @"\.tm-page-info__metric-value\s*\{(?<body>[^}]*)\}");
+        value.Success.Should().BeTrue();
+        value.Groups["body"].Value.Should().Contain("align-self: end");
+    }
+
     private IRenderedComponent<CascadingValue<NotionEditorContext>> RenderPanel(
         NotionEditorContext context,
         INotionPage page,
@@ -98,6 +186,14 @@ public sealed class TmNotionPageInfoPanelTests : LocalizationTestBase
             AnalyticsProvider = analyticsProvider,
             MentionProvider = mentionProvider
         };
+
+    private static string FindRepositoryRoot()
+    {
+        var directory = new DirectoryInfo(AppContext.BaseDirectory);
+        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "TempoBlazor.slnx")))
+            directory = directory.Parent;
+        return directory?.FullName ?? throw new DirectoryNotFoundException("Could not find TempoBlazor.slnx.");
+    }
 
     private static NotionPage MakePage(string? createdBy, string? editedBy) => new()
     {

@@ -1,0 +1,24 @@
+{
+  "kind": "Class",
+  "category": "Components",
+  "namespace": "Tempo.Blazor.Components.NotionEditor.Blocks.Database",
+  "description": "The one icon map for a database field type (DB-2). The six inline SVG copies it replaces all rendered through TmIcon now, so a new field type fails the icon test instead of falling through to a text glyph in one view and nothing in another.",
+  "packageId": "Tempo.Blazor.NotionEditor",
+  "sourcePath": "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/Blocks/Database/DatabaseFieldIcons.cs",
+  "documentationStatus": "generated",
+  "members": [
+    {
+      "name": "Get",
+      "kind": "Method",
+      "type": "string",
+      "description": "The IconNames glyph for type.",
+      "parameters": [
+        {
+          "name": "type",
+          "type": "DatabaseFieldType"
+        }
+      ]
+    }
+  ],
+  "itemName": "DatabaseFieldIcons"
+}

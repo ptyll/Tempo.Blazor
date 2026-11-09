@@ -68,6 +68,31 @@ public class TmOverlayPanelTests : LocalizationTestBase
         cut.Find(".tm-focus-scope").GetAttribute("aria-label").Should().Be("Pick a date");
     }
 
+    [Fact]
+    public void InitialFocusSelector_ReachesTheFocusScope_AndIsNullByDefault()
+    {
+        // Phase-6 exception: a trapped popover names its first-focus element (a menu whose role
+        // lives on an inner element passes its first item so a nested submenu cannot win).
+        var module = SetupOverlayModule();
+        var cut = Render<TmOverlayPanel>(p => p
+            .Add(c => c.IsOpen, true)
+            .Add(c => c.TrapFocus, true)
+            .Add(c => c.Role, "dialog")
+            .Add(c => c.InitialFocusSelector, ".tm-overlay-panel [role='menuitem']:first-child")
+            .AddChildContent("<div>Body</div>"));
+
+        cut.FindComponent<TmFocusScope>().Instance.InitialFocusSelector
+            .Should().Be(".tm-overlay-panel [role='menuitem']:first-child");
+
+        var plain = Render<TmOverlayPanel>(p => p
+            .Add(c => c.IsOpen, true)
+            .Add(c => c.TrapFocus, true)
+            .Add(c => c.Role, "dialog")
+            .AddChildContent("<div>Body</div>"));
+
+        plain.FindComponent<TmFocusScope>().Instance.InitialFocusSelector.Should().BeNull();
+    }
+
     private const string ModulePath = "./_content/Tempo.Blazor/js/overlay.js";
 
     private BunitJSModuleInterop SetupOverlayModule()

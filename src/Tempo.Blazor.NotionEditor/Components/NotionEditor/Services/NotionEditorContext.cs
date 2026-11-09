@@ -78,11 +78,48 @@ public sealed class NotionEditorContext
     /// <summary>Raised by the sidebar space switcher when the active space changes.</summary>
     public Func<string?, Task>?            SelectSpace              { get; init; }
 
+    /// <summary>
+    /// How the block / text comment panels present (NO1): <c>Popover</c> keeps the anchored
+    /// bubble, <c>Dialog</c> the core modal, <c>Auto</c> (the default) resolves per layout.
+    /// Set from <c>TmNotionEditor.CommentPresentation</c>.
+    /// </summary>
+    public NotionCommentPresentation CommentPresentation { get; init; } = NotionCommentPresentation.Auto;
+
+    /// <summary>
+    /// How the page-level comment panel presents (phase 5): <c>Inline</c> (the default) keeps the
+    /// collapsible panel at the bottom of the page; <c>Dialog</c> renders no inline panel — the
+    /// header badge and the Comments page action open a core <c>TmModal</c> with the Embedded panel.
+    /// Set from <c>TmNotionEditor.PageCommentsPresentation</c>.
+    /// </summary>
+    public NotionPageCommentsPresentation PageCommentsPresentation { get; init; } = NotionPageCommentsPresentation.Inline;
+
     /// <summary>Raised after the active page is moved to another space.</summary>
     public Func<string, Task>?             CurrentPageMovedToSpace  { get; init; }
 
     /// <summary>Opens the new-page template gallery from the sidebar.</summary>
     public Func<Task>?                     OpenTemplateGallery      { get; init; }
+
+    /// <summary>
+    /// Opens an editor-owned page dialog (restrictions, share, history) for a page. The page calls this
+    /// instead of rendering the dialog itself: the shell canvas remounts on a band flip, and a
+    /// dialog inside it would close mid-open.
+    /// </summary>
+    public Action<NotionPageDialog, Guid>?   OpenPageDialog           { get; init; }
+
+    /// <summary>
+    /// Page-level actions (add block, comments, page settings) the rendered
+    /// <see cref="Page.TmNotionPage"/> registers for chrome above it — the mobile action bar
+    /// invokes these instead of duplicating page logic. Preserved across <c>BuildContext</c>
+    /// rebuilds; populated by the page itself.
+    /// </summary>
+    internal NotionPageActions? PageActions { get; set; }
+
+    /// <summary>
+    /// Raised by the page right after it (re)registers <see cref="PageActions"/> — the editor
+    /// re-renders the chrome (the mobile bar) so the new actions appear without waiting for the
+    /// next editor-owned state change.
+    /// </summary>
+    internal Func<Task>? PageActionsChanged { get; set; }
 
     /// <summary>
     /// Raised when a block type is converted (e.g. via slash menu or toolbar).
@@ -93,6 +130,16 @@ public sealed class NotionEditorContext
 
     /// <summary>Invokes <see cref="BlockConverted"/> if any subscriber is attached.</summary>
     public void RaiseBlockConverted(IPageBlock block) => BlockConverted?.Invoke(block);
+
+    /// <summary>
+    /// Raised when a block save hits an aggregate concurrency conflict. The block handler
+    /// swallows the thrown conflict so typing can continue; the page uses this to show the banner.
+    /// </summary>
+    public Func<Task>? AggregateConflictDetected { get; set; }
+
+    /// <summary>Invokes <see cref="AggregateConflictDetected"/> when a block save conflicted.</summary>
+    public Task RaiseAggregateConflictDetectedAsync()
+        => AggregateConflictDetected?.Invoke() ?? Task.CompletedTask;
 
     /// <summary>Raised by nested blocks when they create a sibling block through the shared provider.</summary>
     public Func<IPageBlock, Task>? BlockCreated { get; set; }
@@ -121,4 +168,21 @@ public sealed class NotionEditorContext
     public bool IsBlockTypeAllowed(BlockType type)
         => (AllowedBlockTypes is null || AllowedBlockTypes.Contains(type))
         && (DeniedBlockTypes is null || !DeniedBlockTypes.Contains(type));
+
+    private readonly Dictionary<string, INotionPage> _pageCache = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// Pages already loaded by the sidebar or the editor, keyed by id. Search path resolution
+    /// reads this cache and must not call the data provider.
+    /// </summary>
+    public IReadOnlyDictionary<string, INotionPage> PageCache => _pageCache;
+
+    /// <summary>Records pages the sidebar or editor already loaded, so search can resolve parents.</summary>
+    public void RememberPages(IEnumerable<INotionPage>? pages)
+    {
+        if (pages is null)
+            return;
+        foreach (var page in pages)
+            _pageCache[page.Id.ToString()] = page;
+    }
 }

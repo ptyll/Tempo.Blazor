@@ -2,15 +2,15 @@
     position: fixed;
     /* N191: popover band, same floating-surface level as TmNotionSlashMenu — a bare
        9998 sat above the modal band's top (--tm-z-modal, 1040 token scale end). */
-    z-index: var(--tm-z-popover, 1030);
+    z-index: var(--tm-z-popover);
     display: flex;
     align-items: center;
     gap: 1px;
     padding: 4px 6px;
-    background: var(--tm-surface-overlay, #fff);
-    border: 1px solid var(--tm-border, rgba(55,53,47,.16));
+    background: var(--tm-bg-elevated);
+    border: 1px solid var(--tm-border-color);
     border-radius: 6px;
-    box-shadow: 0 4px 16px rgba(0,0,0,.12), 0 1px 4px rgba(0,0,0,.08);
+    box-shadow: var(--tm-shadow-popover);
     white-space: nowrap;
     animation: tm-toolbar-appear 80ms ease;
     transform-origin: bottom center;
@@ -32,7 +32,7 @@
     border: none;
     border-radius: 4px;
     background: transparent;
-    color: var(--tm-text, rgba(55,53,47,.85));
+    color: var(--tm-text-primary);
     cursor: pointer;
     font-size: 13px;
     font-weight: 500;
@@ -41,7 +41,7 @@
 }
 
 .tm-notion-inline-toolbar__btn:hover {
-    background: var(--tm-hover, rgba(55,53,47,.08));
+    background: var(--tm-color-surface-hover);
 }
 
 .tm-notion-inline-toolbar__btn:focus-visible,
@@ -49,13 +49,13 @@
 .tm-notion-inline-toolbar__link-apply:focus-visible,
 .tm-notion-inline-toolbar__color-swatch:focus-visible,
 .tm-notion-inline-toolbar__turninto-item:focus-visible {
-    outline: 2px solid var(--tm-color-primary, var(--tm-primary, #2383e2));
+    outline: 2px solid var(--tm-color-primary);
     outline-offset: 2px;
 }
 
 .tm-notion-inline-toolbar__btn--active {
-    background: var(--tm-hover, rgba(55,53,47,.08));
-    color: var(--tm-primary, #2383e2);
+    background: var(--tm-color-surface-hover);
+    color: var(--tm-color-primary);
 }
 
 .tm-notion-inline-toolbar__btn--text {
@@ -72,7 +72,7 @@
     width: 1px;
     height: 16px;
     margin: 0 3px;
-    background: var(--tm-border, rgba(55,53,47,.16));
+    background: var(--tm-border-color);
     flex-shrink: 0;
 }
 
@@ -86,7 +86,7 @@
 }
 
 .tm-notion-inline-toolbar__link-icon {
-    color: var(--tm-text-secondary, rgba(55,53,47,.5));
+    color: var(--tm-text-secondary);
     flex-shrink: 0;
 }
 
@@ -96,13 +96,13 @@
     border: none;
     outline: none;
     background: transparent;
-    color: var(--tm-text, rgba(55,53,47,.9));
+    color: var(--tm-text-primary);
     font-size: 13px;
     padding: 0 2px;
 }
 
 .tm-notion-inline-toolbar__link-input::placeholder {
-    color: var(--tm-text-secondary, rgba(55,53,47,.4));
+    color: var(--tm-text-secondary);
 }
 
 .tm-notion-inline-toolbar__link-remove,
@@ -120,27 +120,27 @@
     width: 22px;
     height: 22px;
     background: transparent;
-    color: var(--tm-text-secondary, rgba(55,53,47,.5));
+    color: var(--tm-text-secondary);
     flex-shrink: 0;
 }
 
 .tm-notion-inline-toolbar__link-remove:hover {
-    background: var(--tm-hover, rgba(55,53,47,.08));
-    color: var(--tm-text, rgba(55,53,47,.85));
+    background: var(--tm-color-surface-hover);
+    color: var(--tm-text-primary);
 }
 
 .tm-notion-inline-toolbar__link-apply {
     padding: 3px 10px;
     height: 26px;
-    background: var(--tm-primary, #2383e2);
-    color: #fff;
+    background: var(--tm-color-primary-solid);
+    color: var(--tm-color-on-primary-fixed);
     font-size: 12px;
     font-weight: 500;
     white-space: nowrap;
 }
 
 .tm-notion-inline-toolbar__link-apply:hover:not(:disabled) {
-    background: var(--tm-primary-hover, #1a73d0);
+    background: var(--tm-color-primary-700);
 }
 
 .tm-notion-inline-toolbar__link-apply:disabled {
@@ -150,11 +150,25 @@
 
 /* ── Color panel ─────────────────────────────────────────────────────────── */
 
-.tm-notion-inline-toolbar__color-panel {
+::deep .tm-notion-inline-toolbar__color-panel {
     display: flex;
     flex-direction: column;
     gap: 4px;
     padding: 4px 2px;
+    background: var(--tm-notion-bg-slash-menu, var(--tm-bg-surface));
+    border: 1px solid var(--tm-notion-border, var(--tm-border-color));
+    border-radius: var(--tm-radius-md);
+    box-shadow: var(--tm-notion-menu-shadow, var(--tm-shadow-lg));
+}
+
+/* Sheet presentation: the palette class now rides an inner element (the sheet content never
+   receives the overlay Class), still inside the toolbar scope — strip the card chrome the
+   popover would have carried. */
+::deep .tm-overlay-panel-sheet .tm-notion-inline-toolbar__color-panel {
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    background: transparent;
 }
 
 .tm-notion-inline-toolbar__color-row-label {
@@ -162,7 +176,7 @@
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: .06em;
-    color: var(--tm-text-secondary, rgba(55,53,47,.5));
+    color: var(--tm-text-secondary);
     padding: 0 2px;
 }
 
@@ -184,14 +198,14 @@
 }
 
 .tm-notion-inline-toolbar__color-swatch:hover {
-    border-color: var(--tm-primary, #2383e2);
+    border-color: var(--tm-color-primary);
     transform: scale(1.15);
 }
 
 .tm-notion-inline-toolbar__color-swatch--default {
-    background: var(--tm-hover, rgba(55,53,47,.08));
-    color: var(--tm-text-secondary, rgba(55,53,47,.5));
-    border-color: var(--tm-border, rgba(55,53,47,.16));
+    background: var(--tm-color-surface-hover);
+    color: var(--tm-text-secondary);
+    border-color: var(--tm-border-color);
 }
 
 /* ── Turn-into panel ─────────────────────────────────────────────────────── */
@@ -212,7 +226,7 @@
     padding: 0 10px;
     border: none;
     background: transparent;
-    color: var(--tm-text, rgba(55,53,47,.85));
+    color: var(--tm-text-primary);
     font-size: 13px;
     text-align: left;
     cursor: pointer;
@@ -222,7 +236,19 @@
 }
 
 .tm-notion-inline-toolbar__turninto-item:hover {
-    background: var(--tm-hover, rgba(55,53,47,.08));
+    background: var(--tm-color-surface-hover);
+}
+
+/* F-15: the item icon reuses the slash-menu SVGs. */
+.tm-notion-inline-toolbar__turninto-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    margin-right: 6px;
+    flex-shrink: 0;
+    color: var(--tm-text-secondary);
 }
 
 /* ── Align panel ─────────────────────────────────────────────────────────── */
@@ -289,7 +315,7 @@
         width: min(180px, 48vw);
     }
 
-    .tm-notion-inline-toolbar__color-panel {
+    ::deep .tm-notion-inline-toolbar__color-panel {
         width: min(300px, calc(100vw - 2rem));
     }
 

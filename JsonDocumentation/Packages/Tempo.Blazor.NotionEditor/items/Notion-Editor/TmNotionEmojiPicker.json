@@ -2,63 +2,76 @@
   "itemName": "TmNotionEmojiPicker",
   "kind": "Component",
   "category": "Notion Editor",
-  "description": "Emoji picker popup used by the Notion editor in two variants: the Shared picker renders a search input, categorised emoji grid and an optional Remove button positioned relative to the nearest positioned ancestor; the UI variant is an absolutely-positioned popup driven by Visible/Top/Left coordinates.",
+  "description": "The one emoji picker of the Notion editor. Search filters the grid, recent emoji render first, arrow keys move a single roving tabindex, and Escape closes it. ShowRemove adds the Remove action.",
   "packageId": "Tempo.Blazor.NotionEditor",
-  "namespace": "Tempo.Blazor.Components.NotionEditor.Shared",
-  "sourcePath": "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/Shared/TmNotionEmojiPicker.razor",
+  "namespace": "Tempo.Blazor.Components.NotionEditor.UI",
+  "sourcePath": "src/Tempo.Blazor.NotionEditor/Components/NotionEditor/UI/TmNotionEmojiPicker.razor",
   "documentationStatus": "generated",
   "requiredImports": [
-    "@using Tempo.Blazor.Components.NotionEditor.Shared"
+    "@using Tempo.Blazor.Components.NotionEditor.UI"
   ],
   "parameters": [
-    {
-      "name": "OnClosed",
-      "type": "EventCallback",
-      "isRequired": false,
-      "description": "Fired when the backdrop is clicked (close without action)."
-    },
-    {
-      "name": "OnSelected",
-      "type": "EventCallback<string>",
-      "isRequired": false,
-      "description": "Shared variant: fired with the chosen emoji."
-    },
-    {
-      "name": "OnRemoved",
-      "type": "EventCallback",
-      "isRequired": false,
-      "description": "Shared variant: fired when the optional Remove action is used."
-    },
-    {
-      "name": "ShowRemoveButton",
-      "type": "bool",
-      "isRequired": false,
-      "description": "Shared variant: shows the Remove action that raises OnRemoved."
-    },
     {
       "name": "Visible",
       "type": "bool",
       "isRequired": false,
-      "description": "UI variant: whether the popup is shown."
+      "description": "Shows or hides the picker."
     },
     {
       "name": "Top",
       "type": "double",
       "isRequired": false,
-      "description": "UI variant: vertical position of the popup in pixels."
+      "description": "Fixed top position in CSS pixels."
     },
     {
       "name": "Left",
       "type": "double",
       "isRequired": false,
-      "description": "UI variant: horizontal position of the popup in pixels."
+      "description": "Fixed left position in CSS pixels."
+    },
+    {
+      "name": "Inline",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Renders in place instead of portalling. A host that supplies its own dialog sets this."
+    },
+    {
+      "name": "LayoutMode",
+      "type": "TmLayoutMode",
+      "isRequired": false,
+      "default": "Auto",
+      "description": "Forced layout. Mobile presents the picker as the core sheet."
+    },
+    {
+      "name": "ShowRemove",
+      "type": "bool",
+      "isRequired": false,
+      "description": "Shows the Remove action. Off unless the host can clear an icon."
+    },
+    {
+      "name": "RecentEmojis",
+      "type": "IReadOnlyList<string>?",
+      "isRequired": false,
+      "description": "Recent emoji to render first. Null reads them from localStorage."
     },
     {
       "name": "OnEmojiSelected",
       "type": "EventCallback<string>",
       "isRequired": false,
-      "description": "UI variant: fired with the chosen emoji."
+      "description": "Raised when the user selects an emoji. The argument is the emoji character."
+    },
+    {
+      "name": "OnRemoved",
+      "type": "EventCallback",
+      "isRequired": false,
+      "description": "Raised by the Remove action."
+    },
+    {
+      "name": "OnClosed",
+      "type": "EventCallback",
+      "isRequired": false,
+      "description": "Raised when the picker is dismissed without a selection."
     }
   ],
-  "subcategory": "Shared"
+  "subcategory": "UI"
 }

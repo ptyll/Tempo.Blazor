@@ -114,7 +114,10 @@ public class NotionCodeBlockMarkdownPreviewE2ETests : NotionE2ETestBase
         var emptyPreview = empty.Locator("[data-testid='notion-code-preview']");
         await emptyPreview.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 10000 });
         await page.WaitForTimeoutAsync(500);
-        Assert.AreEqual(string.Empty, (await emptyPreview.InnerTextAsync()).Trim(), "Empty markdown should render an empty preview.");
+        Assert.AreEqual(string.Empty, (await emptyPreview.InnerTextAsync()).Trim(),
+            "Empty markdown should render an empty preview.");
+        Assert.AreEqual(0, await emptyPreview.Locator(":scope > *").CountAsync(),
+            "Empty markdown should render no preview children.");
 
         var broken = await CreateMarkdownCodeBlockAsync(page, "| broken | table\nnot a separator\n| x |");
         await broken.Locator("[data-testid='notion-code-preview-toggle']").ClickAsync();
@@ -184,11 +187,18 @@ public class NotionCodeBlockMarkdownPreviewE2ETests : NotionE2ETestBase
 
     private static async Task<ILocator> InsertBlockViaSlashMenuAsync(IPage page, string searchTerm)
     {
-        var para = page.Locator(".tm-notion-paragraph[contenteditable='true']").First;
+        var para = page.Locator(".tm-notion-paragraph[contenteditable='true']").Last;
         await para.WaitForAsync(new LocatorWaitForOptions { Timeout = 10000 });
         await para.ClickAsync();
-        await page.Keyboard.PressAsync("End");
+        // End moves the caret to the end of the current line, so a paragraph that already holds
+        // text inserts the slash into that text. Control+End lands at the end of the block.
+        await page.Keyboard.PressAsync("Control+End");
         await page.Keyboard.PressAsync("Enter");
+        var created = page.Locator(".tm-notion-paragraph[contenteditable='true']").Last;
+        await created.WaitForAsync(new LocatorWaitForOptions { Timeout = 5000 });
+        var beforeSlash = await created.EvaluateAsync<string>("el => el.innerText");
+        Assert.IsTrue(string.IsNullOrEmpty(beforeSlash),
+            $"The new block must be empty before the slash trigger, but it held '{beforeSlash}'.");
         await page.WaitForTimeoutAsync(1000);
 
         await page.Keyboard.TypeAsync("/");

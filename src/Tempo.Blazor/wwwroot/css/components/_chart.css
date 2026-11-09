@@ -46,7 +46,7 @@
 
 .tm-chart__axis-label {
     fill: var(--tm-text-secondary);
-    font-size: 11px;
+    font-size: var(--tm-font-size-xs);
 }
 
 .tm-chart__axis-zero {
@@ -141,7 +141,7 @@
 
 .tm-chart__label {
     fill: var(--tm-text-secondary);
-    font-size: 12px;
+    font-size: var(--tm-font-size-xs);
     user-select: none;
     pointer-events: none;
 }

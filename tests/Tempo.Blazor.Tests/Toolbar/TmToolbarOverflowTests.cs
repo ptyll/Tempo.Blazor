@@ -670,6 +670,67 @@ public class TmToolbarOverflowTests : LocalizationTestBase
         options.Should().Contain("\"shift\":true");
     }
 
+    // ── Phase-13 review: the NotionEditor redesign exceptions on the core toolbar ──────────────
+
+    [Fact]
+    public void IsInMenu_ReportsItemsThatOnlyRenderInTheMoreMenu()
+    {
+        // TmToolbar.IsInMenu(elementId) lets a host tell whether the item carrying that
+        // data-tm-toolbar-item id currently renders only inside "More" — a panel opened from it
+        // then returns focus to the More trigger instead of the invisible bar copy.
+        SetupModule();
+        var cut = RenderToolbar(Buttons(new Spec("Alpha"), new Spec("Beta"), new Spec("Gamma")));
+        cut.WaitForAssertion(() => cut.FindAll("[data-tm-toolbar-item]").Should().HaveCount(3));
+        var ids = ItemIdsInDomOrder(cut);
+
+        // Unmeasured: nothing is in the menu yet.
+        cut.Instance.IsInMenu(ids[0]).Should().BeFalse();
+        cut.Instance.IsInMenu(null).Should().BeFalse("no item id is never in the menu");
+
+        cut.InvokeAsync(() => cut.Instance.OnFitChanged(1, ids));
+
+        cut.Instance.IsInMenu(ids[0]).Should().BeFalse("Alpha stays on the bar");
+        cut.Instance.IsInMenu(ids[1]).Should().BeTrue("Beta left the bar and only renders in More");
+        cut.Instance.IsInMenu(ids[2]).Should().BeTrue("Gamma left the bar and only renders in More");
+    }
+
+    [Fact]
+    public void MoreButton_ExposesTheRenderedMoreTrigger_AndDefaultsToEmpty()
+    {
+        // An OverflowOnly button guarantees the menu renders without waiting for a measurement.
+        SetupModule();
+        var cut = RenderToolbar(Buttons(
+            new Spec("Alpha"), new Spec("Hidden", ToolbarButtonPriority.OverflowOnly)));
+        cut.WaitForAssertion(() => cut.Find("button.tm-toolbar-more").Should().NotBeNull());
+
+        cut.Instance.MoreButton.Id.Should().NotBeNull("the trigger rendered — its element is exposed");
+
+        var empty = RenderToolbar(Buttons(new Spec("Alpha")), ToolbarOverflow.None);
+        empty.Instance.MoreButton.Id.Should().BeNull("no menu renders without overflow");
+    }
+
+    [Fact]
+    public void MeasuredZero_NormalizesToTheBelowOneClamp_NeverAnEmptyAutoBar()
+    {
+        // tm-toolbar.js reports 0 when nothing fits. The toolbar stores it as -1 so the shared
+        // partition's below-one clamp governs: at least one Auto button stays on the bar and a
+        // Pinned button always stays — a measured zero never paints an all-menu Auto bar.
+        SetupModule();
+        var cut = RenderToolbar(Buttons(
+            new Spec("Alpha"), new Spec("Beta", ToolbarButtonPriority.Secondary),
+            new Spec("Save", ToolbarButtonPriority.Pinned)));
+        cut.WaitForAssertion(() => cut.FindAll("[data-tm-toolbar-item]").Should().HaveCount(3));
+
+        cut.InvokeAsync(() => cut.Instance.OnFitChanged(0));
+
+        cut.FindAll(".tm-toolbar-item--collapsed").Select(b => b.TextContent.Trim())
+            .Should().Equal(new[] { "Alpha", "Beta" }, "only the pinned button stays on the bar");
+        var save = cut.FindAll("button.tm-toolbar-btn").Single(b => b.TextContent.Contains("Save"));
+        save.ClassList.Should().NotContain("tm-toolbar-item--collapsed");
+        OpenMenu(cut);
+        MenuLabels(cut).Should().Equal("Alpha", "Beta");
+    }
+
     /// <summary>A component between the toolbar and the group that owns the label state: re-rendering it must not re-render the toolbar.</summary>
     private sealed class GroupSlot : Microsoft.AspNetCore.Components.ComponentBase
     {

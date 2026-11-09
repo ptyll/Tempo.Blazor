@@ -216,6 +216,54 @@
       "description": "Show the left navigation sidebar."
     },
     {
+      "name": "LayoutMode",
+      "type": "TmLayoutMode",
+      "isRequired": false,
+      "default": "Auto",
+      "description": "How the editor decides its responsive layout. Auto measures the editor's own container (desktop ≥1024, tablet 640–1023, mobile <640). A forced value pins the layout for a host or a test and is cascaded into the page, the menus and the database blocks."
+    },
+    {
+      "name": "Chrome",
+      "type": "NotionEditorChrome",
+      "isRequired": false,
+      "default": "Full",
+      "description": "How much chrome the editor renders. Full is today's editor. Minimal hides shortcuts, the bell, mode toggles and badges. None renders the page only."
+    },
+    {
+      "name": "InspectorContent",
+      "type": "RenderFragment?",
+      "isRequired": false,
+      "description": "Host slot for a page inspector, rendered through TmSidePanel on the right. Null renders no right region — the editor does not invent inspector content."
+    },
+    {
+      "name": "ShellPanelPresentation",
+      "type": "NotionShellPanelPresentation",
+      "isRequired": false,
+      "default": "Overlay",
+      "description": "How the Tasks / Blog / Analytics / Audit shell panels present themselves. Overlay (default) rides the core TmSidePanel — docked next to the page on a desktop layout, a side sheet on a tablet layout and a full-height sheet on a mobile layout — while the page stays mounted. Main replaces the page in the main region. At most one shell panel is open at a time either way."
+    },
+    {
+      "name": "CommentPresentation",
+      "type": "NotionCommentPresentation",
+      "isRequired": false,
+      "default": "Auto",
+      "description": "How the block / text comment panels present (NO1). Auto (the default) keeps the anchored popover bubble on a desktop layout and opens the core modal / sheet on touch and narrow containers; Popover pins the bubble at every layout; Dialog always opens the modal."
+    },
+    {
+      "name": "PageCommentsPresentation",
+      "type": "NotionPageCommentsPresentation",
+      "isRequired": false,
+      "default": "Inline",
+      "description": "How the page-level comment panel presents (P4). Inline (the default) keeps the collapsible panel at the bottom of the page; Dialog renders no inline panel — the header badge and the Comments page action open a core TmModal hosting the Embedded panel body (a sheet on a mobile layout)."
+    },
+    {
+      "name": "ShowMeta",
+      "type": "bool",
+      "isRequired": false,
+      "default": "false",
+      "description": "Opt-in page meta row under the title (last edited, last editor, comment count link), forwarded to the rendered TmNotionPage. Defaults to false; the demo turns it on."
+    },
+    {
       "name": "SinglePageMode",
       "type": "bool",
       "isRequired": false,
@@ -349,5 +397,9 @@
       "code": "@using Tempo.Blazor.NotionEditor.Enums\n\n@code {\n    // Rich-text description blocks only — multi-page blocks are removed automatically in SinglePageMode.\n    private static readonly IReadOnlySet<BlockType> DescriptionBlocks = new HashSet<BlockType>\n    {\n        BlockType.Paragraph, BlockType.Heading1, BlockType.Heading2, BlockType.Heading3,\n        BlockType.BulletList, BlockType.NumberedList, BlockType.TodoItem,\n        BlockType.Quote, BlockType.Callout, BlockType.Code, BlockType.Divider, BlockType.Image, BlockType.Table\n    };\n\n    void OpenElsewhere(string pageId) { /* host opens the linked page in a dialog / new tab */ }\n}\n\n<TmNotionEditor DataProvider=\"@DataProvider\"\n                AggregateProvider=\"@AggregateProvider\"\n                SinglePageMode=\"true\"\n                InitialPageId=\"@WorkItem.DescriptionPageId\"\n                AllowedBlockTypes=\"@DescriptionBlocks\"\n                OnPageNavigationRequested=\"OpenElsewhere\" />"
     }
   ],
+  "cssClasses": [
+    "tm-notion-editor"
+  ],
+  "notes": "The editor root carries the package tokens. Surfaces, text, borders and radii alias core tokens (--tm-bg-page, --tm-color-primary, --tm-border-color, --tm-radius-card) and recompute inside .tm-notion-editor, so a nested data-theme or indigo theme reaches them. The option and text palettes are --tm-notion-option-* and --tm-notion-color-*; their literals live only in _notion-variables.css and _notion-dark.css. A stored block colour is a palette name (gray, red, orange, yellow, green, blue, purple, pink, brown), and a document saved before 2.10.0 still renders because the legacy hex is mapped to that name.",
   "packageId": "Tempo.Blazor.NotionEditor"
 }

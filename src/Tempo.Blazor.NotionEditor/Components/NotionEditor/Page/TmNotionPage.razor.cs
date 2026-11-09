@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.JSInterop;
 using System.Net;
+using Tempo.Blazor.Abstractions.Layout;
 using Tempo.Blazor.Abstractions.Shared;
 using Tempo.Blazor.Components.NotionEditor.Commands;
 using Tempo.Blazor.Components.NotionEditor.Services;
@@ -38,6 +39,14 @@ public partial class TmNotionPage : ComponentBase, IAsyncDisposable
     [CascadingParameter]
     private NotionEditorContext Context { get; set; } = default!;
 
+    // The viewport scope, not the shell's unnamed cascade: a menu opened from this page sheets
+    // when the VIEWPORT is mobile, even while the shell container is still desktop.
+    [CascadingParameter(Name = TmLayoutScopes.Viewport)]
+    private TmLayoutContext? Viewport { get; set; }
+
+    /// <summary>The layout the page's menus present with. Auto reads the viewport scope.</summary>
+    private TmLayoutMode MenuLayout => Viewport is { Mode: TmLayoutMode.Auto } ? TmLayoutMode.Auto : Viewport?.Resolved ?? TmLayoutMode.Auto;
+
     // ── Parameters ───────────────────────────────────────────────────────────
 
     /// <summary>The page to display (required).</summary>
@@ -47,6 +56,13 @@ public partial class TmNotionPage : ComponentBase, IAsyncDisposable
     /// <summary>When true all editing interactions are disabled.</summary>
     [Parameter]
     public bool ReadOnly { get; set; }
+
+    /// <summary>
+    /// Opt-in page meta row under the title (last edited, last editor, comment count link).
+    /// Defaults to <see langword="false"/>; the demo turns it on.
+    /// </summary>
+    [Parameter]
+    public bool ShowMeta { get; set; }
 
     /// <summary>Raised after the page metadata (title, icon, cover) is saved.</summary>
     [Parameter]
@@ -132,6 +148,9 @@ public partial class TmNotionPage : ComponentBase, IAsyncDisposable
     // ── Page-level unresolved comment count (header badge) ────────────────────
 
     private int _pageUnresolvedCommentCount;
+    private bool  _pageCommentDialogOpen;
+    private bool _pageCommentDiscardConfirm;
+    private TmNotionPageCommentPanel? _pageCommentPanel;
 
     // ── Slash menu state ─────────────────────────────────────────────────────
 
@@ -139,6 +158,7 @@ public partial class TmNotionPage : ComponentBase, IAsyncDisposable
     private double _slashMenuTop;
     private double _slashMenuLeft;
     private string _slashBlockId = string.Empty;
+    private NotionPageActions? _pageActions;
 
     // ── Inline status picker state ───────────────────────────────────────────
 
@@ -210,6 +230,24 @@ public partial class TmNotionPage : ComponentBase, IAsyncDisposable
     protected override async Task OnParametersSetAsync()
     {
         Context.BlockCreated = HandleExternalBlockCreatedAsync;
+        Context.AggregateConflictDetected = HandleAggregateConflictDetectedAsync;
+
+        // The mobile action bar (rendered by the editor above this page) invokes the page's own
+        // handlers through the cascaded context — the page stays the single owner of its menus.
+        // Registered once per page: re-raising on every parameter set would loop the chrome
+        // (each raise re-renders the editor, which re-sets parameters on the page).
+        _pageActions ??= new NotionPageActions
+        {
+            AddBlock         = OpenSlashFromActionAsync,
+            OpenComments     = OpenCommentsFromActionAsync,
+            OpenPageSettings = () => UiState.RequestSettingsMenuAsync(),
+        };
+        if (!ReferenceEquals(Context.PageActions, _pageActions))
+        {
+            Context.PageActions = _pageActions;
+            if (Context.PageActionsChanged is not null)
+                await Context.PageActionsChanged();
+        }
 
         if (!ReferenceEquals(Page, _lastPage))
         {
@@ -227,8 +265,17 @@ public partial class TmNotionPage : ComponentBase, IAsyncDisposable
 
     private async void OnRemoteBlockChanged(BlockChange _)
     {
-        // Remote edit arrived — reload all blocks for the page (last-write-wins)
-        await InvokeAsync(RefreshAsync);
+        // Remote edit arrived — reload all blocks for the page (last-write-wins). Event-handler
+        // signature: an exception escaping an async void handler is unhandled and takes the whole
+        // circuit down, so the reload is fenced.
+        try
+        {
+            await InvokeAsync(RefreshAsync);
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or JSException or JSDisconnectedException or ObjectDisposedException)
+        {
+            // The page is mid-dispose or the runtime is gone — the next navigation re-subscribes.
+        }
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -540,6 +587,14 @@ public partial class TmNotionPage : ComponentBase, IAsyncDisposable
 
     private Task HandlePageHistoryRequestedAsync()
     {
+        // The editor owns the dialog (outside the remounting shell canvas) when it registered the
+        // callback. A standalone page keeps the dialog it renders itself.
+        if (Context.OpenPageDialog is { } open)
+        {
+            open(NotionPageDialog.History, Page.Id);
+            return Task.CompletedTask;
+        }
+
         _historyVisible = true;
         StateHasChanged();
         return Task.CompletedTask;
@@ -561,6 +616,14 @@ public partial class TmNotionPage : ComponentBase, IAsyncDisposable
 
     private Task HandleShareRequestedAsync()
     {
+        // The editor owns the dialog (outside the remounting shell canvas) when it registered the
+        // callback. A standalone page keeps the dialog it renders itself.
+        if (Context.OpenPageDialog is { } open)
+        {
+            open(NotionPageDialog.Share, Page.Id);
+            return Task.CompletedTask;
+        }
+
         _shareVisible = true;
         StateHasChanged();
         return Task.CompletedTask;
@@ -575,6 +638,12 @@ public partial class TmNotionPage : ComponentBase, IAsyncDisposable
 
     private Task HandleRestrictionsRequestedAsync()
     {
+        if (Context.OpenPageDialog is { } open)
+        {
+            open(NotionPageDialog.Restrictions, Page.Id);
+            return Task.CompletedTask;
+        }
+
         _restrictionsVisible = true;
         StateHasChanged();
         return Task.CompletedTask;
@@ -782,7 +851,17 @@ public partial class TmNotionPage : ComponentBase, IAsyncDisposable
             _blocks = [.._blocks];
             StateHasChanged();
 
-            await RestoreCaretAsync(converted.Id.ToString(), caretOffset);
+            // The queued render replaces the source editable with the converted block's DOM;
+            // restoring the caret before that patch lands focuses the old node, and focus dies
+            // on <body> when the patch removes it (Turn-into then loses the keyboard). Yield so
+            // the batch applies first, then restore into the new editable.
+            await Task.Yield();
+            // Clicking a toolbar entry collapses the DOM selection before the caret is captured,
+            // so caretOffset can be null even though the user's context is the block. Restoring
+            // nothing leaves focus on the unmounted toolbar button and the keyboard dies on
+            // <body> — fall back to focusing the converted block at the end of its text
+            // (setCaretOffset clamps a past-end offset to the block's end).
+            await RestoreCaretAsync(converted.Id.ToString(), caretOffset ?? int.MaxValue);
         }
         catch
         {
@@ -920,6 +999,17 @@ public partial class TmNotionPage : ComponentBase, IAsyncDisposable
     private static string FormatAggregateIssues(IEnumerable<NotionAggregateIssue> issues)
         => string.Join(Environment.NewLine, issues.Select(issue => issue.Message));
 
+    private Task HandleAggregateConflictDetectedAsync()
+    {
+        if (Context.AggregateSession?.HasPendingConflict != true)
+            return Task.CompletedTask;
+
+        _hasAggregateConflict = true;
+        _loadBlocksError = null;
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
     private void SetBlockOperationError()
     {
         _hasAggregateConflict = Context.AggregateSession?.HasPendingConflict == true;
@@ -952,7 +1042,7 @@ public partial class TmNotionPage : ComponentBase, IAsyncDisposable
             {
                 var comments = await Context.CommentProvider.GetBlockCommentsAsync(blockId);
                 foreach (var c in comments)
-                    await Context.CommentProvider.MarkThreadAsReadAsync(c.Id, "demo");
+                    await Context.CommentProvider.MarkThreadAsReadAsync(c.Id, Context.CurrentUserId);
                 await HandleBlockCommentCountChangedAsync(blockId);
             }
             catch { }
@@ -977,7 +1067,7 @@ public partial class TmNotionPage : ComponentBase, IAsyncDisposable
             try
             {
                 var comments = await Context.CommentProvider.GetBlockCommentsAsync(blockId);
-                _blockCommentCounts[blockId] = ComputeBlockCommentInfo(comments);
+                _blockCommentCounts[blockId] = ComputeBlockCommentInfo(comments, Context.CurrentUserId);
                 StateHasChanged();
             }
             catch { }
@@ -999,7 +1089,7 @@ public partial class TmNotionPage : ComponentBase, IAsyncDisposable
         try
         {
             var comments = await Context.CommentProvider.GetBlockCommentsAsync(blockId);
-            var info = ComputeBlockCommentInfo(comments);
+            var info = ComputeBlockCommentInfo(comments, Context.CurrentUserId);
             if (info.Unresolved > 0 || info.ResolvedUnread > 0)
                 _blockCommentCounts[blockId] = info;
             else
@@ -1010,11 +1100,12 @@ public partial class TmNotionPage : ComponentBase, IAsyncDisposable
         catch { }
     }
 
-    private static BlockCommentInfo ComputeBlockCommentInfo(IEnumerable<TmCommentThread> comments)
+    private static BlockCommentInfo ComputeBlockCommentInfo(IEnumerable<TmCommentThread> comments, string currentUserId)
     {
         var list = comments.ToList();
         var unresolved   = list.Count(c => !c.IsResolved());
-        var resolvedUnread = list.Count(c => c.IsResolved() && !c.ReadByUserIds.Contains("demo"));
+        var userId = currentUserId ?? string.Empty;
+        var resolvedUnread = list.Count(c => c.IsResolved() && !c.ReadByUserIds.Contains(userId));
 
         // Find the latest entry across all threads for tooltip data
         TmCommentEntry? latest = null;
@@ -1036,7 +1127,7 @@ public partial class TmNotionPage : ComponentBase, IAsyncDisposable
                 text = text[..120] + "…";
         }
 
-        var hasUnread = list.Any(c => c.LastActivityAt().HasValue && !c.ReadByUserIds.Contains("demo"));
+        var hasUnread = list.Any(c => c.LastActivityAt().HasValue && !c.ReadByUserIds.Contains(userId));
 
         return new BlockCommentInfo(
             unresolved,
@@ -1065,7 +1156,7 @@ public partial class TmNotionPage : ComponentBase, IAsyncDisposable
             {
                 var comments = await Context.CommentProvider.GetBlockCommentsAsync(blockId);
                 foreach (var c in comments)
-                    await Context.CommentProvider.MarkThreadAsReadAsync(c.Id, "demo");
+                    await Context.CommentProvider.MarkThreadAsReadAsync(c.Id, Context.CurrentUserId);
                 await HandleBlockCommentCountChangedAsync(blockId);
             }
             catch { }
@@ -1090,7 +1181,7 @@ public partial class TmNotionPage : ComponentBase, IAsyncDisposable
             try
             {
                 var comments = await Context.CommentProvider.GetBlockCommentsAsync(blockId);
-                _blockCommentCounts[blockId] = ComputeBlockCommentInfo(comments);
+                _blockCommentCounts[blockId] = ComputeBlockCommentInfo(comments, Context.CurrentUserId);
                 StateHasChanged();
             }
             catch { }
@@ -1101,8 +1192,11 @@ public partial class TmNotionPage : ComponentBase, IAsyncDisposable
     {
         _textCommentId       = commentId;
         _textCommentBlockId  = _toolbarBlockId;
-        _textCommentTop      = _toolbarTop;
-        _textCommentLeft     = _toolbarLeft + 40;
+        // Anchor on the SELECTION rect, not the toolbar: the toolbar top is clamped 40px above
+        // the selection and goes negative at the viewport's top edge — the panel's zero-size
+        // anchor then parks the popover hidden (overlay.js requires anchor.bottom > 0).
+        _textCommentTop      = _toolbarTop + 40;
+        _textCommentLeft     = _toolbarLeft + 160;
         _textCommentVisible  = true;
         _toolbarVisible      = false; // hide toolbar when comment panel opens
         StateHasChanged();
@@ -1140,14 +1234,58 @@ public partial class TmNotionPage : ComponentBase, IAsyncDisposable
         return Task.CompletedTask;
     }
 
-    /// <summary>Scrolls the page to the first block with an unresolved comment (header badge click).</summary>
+    /// <summary>
+    /// Header badge click (Inline): scrolls the page to the first block with an unresolved comment.
+    /// Dialog presentation: opens the page comments dialog instead.
+    /// </summary>
     private async Task HandleCommentBadgeClickedAsync()
     {
+        if (Context.PageCommentsPresentation == NotionPageCommentsPresentation.Dialog)
+        {
+            _pageCommentDialogOpen = true;
+            StateHasChanged();
+            return;
+        }
+
         try
         {
             await JS.InvokeVoidAsync("tmNotionEditor.scrollToFirstUnresolvedComment");
         }
         catch { /* SSR / test */ }
+    }
+
+    /// <summary>Dialog close: an unsaved draft asks first; confirm discards, then the count refreshes.</summary>
+    private Task HandlePageCommentDialogClosedAsync()
+    {
+        if (_pageCommentPanel?.HasUnsavedDraft == true)
+        {
+            _pageCommentDiscardConfirm = true;
+            StateHasChanged();
+            return Task.CompletedTask;
+        }
+
+        return ClosePageCommentDialogAsync();
+    }
+
+    private async Task HandlePageCommentDiscardResultAsync(bool? confirmed)
+    {
+        _pageCommentDiscardConfirm = false;
+        if (confirmed != true)
+        {
+            StateHasChanged();
+            return;
+        }
+
+        if (_pageCommentPanel is not null)
+            await _pageCommentPanel.DiscardDraftAsync();
+        await ClosePageCommentDialogAsync();
+    }
+
+    private async Task ClosePageCommentDialogAsync()
+    {
+        _pageCommentDialogOpen = false;
+        await LoadPageUnresolvedCommentCountAsync();
+        StateHasChanged();
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
@@ -1251,6 +1389,58 @@ public partial class TmNotionPage : ComponentBase, IAsyncDisposable
     };
 
     // ── Slash menu handlers ───────────────────────────────────────────────────
+
+    /// <summary>Shared UI state cascaded to the page chrome (the settings menu open request).</summary>
+    private NotionPageUiState UiState { get; } = new();
+
+    /// <summary>
+    /// The AddBlock page action: opens the slash menu anchored below the focused (or last) block,
+    /// creating a paragraph first when the page is empty.
+    /// </summary>
+    private async Task OpenSlashFromActionAsync()
+    {
+        if (ReadOnly) return;
+
+        var target = _activeBlockId is { } active && _blocks.Exists(b => b.Id == active)
+            ? _blocks.First(b => b.Id == active)
+            : _blocks.LastOrDefault();
+        if (target is null)
+        {
+            await AddBlockAsync(BlockType.Paragraph);
+            target = _blocks.LastOrDefault();
+            if (target is null) return;
+        }
+
+        _slashBlockId = target.Id.ToString();
+        _slashMenuTop = 120;
+        _slashMenuLeft = 120;
+        try
+        {
+            var rect = await JS.InvokeAsync<DomRect>("tmNotionEditor.getBlockBoundingRect", _slashBlockId);
+            if (rect is not null)
+            {
+                _slashMenuTop = rect.Top + rect.Height;
+                _slashMenuLeft = rect.Left;
+            }
+        }
+        catch { /* SSR / test — the defaults anchor the menu */ }
+
+        _slashMenuVisible = true;
+        StateHasChanged();
+    }
+
+    /// <summary>The Comments page action: expands the page comments panel (Inline) or opens the
+    /// comments dialog (Dialog presentation).</summary>
+    private Task OpenCommentsFromActionAsync()
+    {
+        if (Context.CommentProvider is null) return Task.CompletedTask;
+        if (Context.PageCommentsPresentation == NotionPageCommentsPresentation.Dialog)
+            _pageCommentDialogOpen = true;
+        else
+            _pageCommentExpanded = true;
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
 
     private Task HandleSlashMenuOpenedAsync((string BlockId, double Top, double Left) args)
     {

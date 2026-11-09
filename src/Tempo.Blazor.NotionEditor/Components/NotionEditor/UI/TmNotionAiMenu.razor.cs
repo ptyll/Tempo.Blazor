@@ -1,7 +1,11 @@
+using System.Globalization;
 using System.Text.Encodings.Web;
 using Microsoft.AspNetCore.Components;
+using Microsoft.JSInterop;
+using Tempo.Blazor.Abstractions.Layout;
 using Tempo.Blazor.Components;
 using Microsoft.AspNetCore.Components.Web;
+using Tempo.Blazor.Components.Icons;
 using Tempo.Blazor.Components.NotionEditor.Services;
 using Tempo.Blazor.NotionEditor.Enums;
 using Tempo.Blazor.NotionEditor.Interfaces;
@@ -27,6 +31,8 @@ public enum NotionAiMenuMode
 
 public partial class TmNotionAiMenu : TmComponentBase, IAsyncDisposable
 {
+    [Inject] private IJSRuntime Js { get; set; } = default!;
+
     [CascadingParameter] private NotionEditorContext? Context { get; set; }
 
     /// <summary>Controls whether the AI menu is rendered.</summary>
@@ -37,6 +43,15 @@ public partial class TmNotionAiMenu : TmComponentBase, IAsyncDisposable
 
     /// <summary>Fixed left coordinate for inline menu placement.</summary>
     [Parameter] public double Left { get; set; }
+
+    /// <summary>Forced layout. Mobile presents the menu as the core sheet.</summary>
+    [Parameter] public TmLayoutMode LayoutMode { get; set; } = TmLayoutMode.Auto;
+
+    /// <summary>The cascaded viewport. An Auto menu sheets when the viewport is mobile.</summary>
+    [CascadingParameter(Name = TmLayoutScopes.Viewport)] public TmLayoutContext? Layout { get; set; }
+
+    private TmLayoutMode ResolvedLayout =>
+        LayoutMode != TmLayoutMode.Auto ? LayoutMode : Layout?.Resolved ?? TmLayoutMode.Auto;
 
     /// <summary>Renders the component as a wider page-level panel.</summary>
     [Parameter] public bool Panel { get; set; }
@@ -65,6 +80,14 @@ public partial class TmNotionAiMenu : TmComponentBase, IAsyncDisposable
     /// <summary>Raised when the user closes or discards the menu.</summary>
     [Parameter] public EventCallback OnClosed { get; set; }
 
+    private static readonly (NotionAiMenuMode Mode, string Key, string TestId, string Icon)[] Modes =
+    [
+        (NotionAiMenuMode.Generate, "Notion_AI_Generate", "notion-ai-mode-generate", IconNames.WandSparkles),
+        (NotionAiMenuMode.Improve, "Notion_AI_Improve", "notion-ai-mode-improve", IconNames.Pencil),
+        (NotionAiMenuMode.Summarize, "Notion_AI_Summarize", "notion-ai-mode-summarize", IconNames.List),
+        (NotionAiMenuMode.Ask, "Notion_AI_Ask", "notion-ai-mode-ask", IconNames.Message),
+    ];
+
     private static readonly (AiImproveMode Mode, string Key, string TestId)[] ImproveOptions =
     [
         (AiImproveMode.Grammar,    "Notion_AI_Mode_Grammar",   "notion-ai-improve-grammar"),
@@ -78,6 +101,9 @@ public partial class TmNotionAiMenu : TmComponentBase, IAsyncDisposable
     private NotionAiMenuMode _mode;
     private AiImproveMode _improveMode = AiImproveMode.Grammar;
     private string _prompt = string.Empty;
+
+    /// <summary>Maximum characters accepted by the prompt. Defaults to 2000.</summary>
+    [Parameter] public int PromptMaxLength { get; set; } = 2000;
     private string _question = string.Empty;
     private string _streamedText = string.Empty;
     private string? _error;
@@ -92,9 +118,13 @@ public partial class TmNotionAiMenu : TmComponentBase, IAsyncDisposable
 
     private string AnchorStyle => Panel
         ? "top:calc(var(--tm-space-8) + 48px);right:var(--tm-space-8);"
-        : "top:var(--tm-space-4);right:var(--tm-space-4);";
+        : string.Create(CultureInfo.InvariantCulture, $"top:{Top}px;left:{Left}px");
 
     private string PanelClass => Panel ? "tm-notion-ai tm-notion-ai--panel" : "tm-notion-ai";
+
+    private bool _hasResult => !_isStreaming && !string.IsNullOrWhiteSpace(_streamedText);
+
+    private static string ModeTabId(NotionAiMenuMode mode) => "notion-ai-tab-" + mode.ToString().ToLowerInvariant();
 
     protected override void OnParametersSet()
     {
@@ -116,16 +146,32 @@ public partial class TmNotionAiMenu : TmComponentBase, IAsyncDisposable
     private string ModeButtonClass(NotionAiMenuMode mode)
         => _mode == mode ? "tm-notion-ai__tab tm-notion-ai__tab--active" : "tm-notion-ai__tab";
 
-    private void SetMode(NotionAiMenuMode mode)
+    private readonly ElementReference[] _tabElements = new ElementReference[Modes.Length];
+
+    private static int ModeIndex(NotionAiMenuMode mode)
+        => Array.FindIndex(Modes, candidate => candidate.Mode == mode);
+
+    private async Task SetMode(NotionAiMenuMode mode)
     {
-        if (_isStreaming) return;
+        if (_isStreaming || _mode == mode) return;
 
         _mode = mode;
         _error = null;
         _streamedText = string.Empty;
+        await InvokeAsync(StateHasChanged);
+        var index = ModeIndex(mode);
+        if (index >= 0)
+        {
+            try { await _tabElements[index].FocusAsync(); }
+            catch (InvalidOperationException) { }
+        }
     }
 
-    private void HandlePromptInput(ChangeEventArgs args) => _prompt = args.Value?.ToString() ?? string.Empty;
+    private void HandlePromptInput(ChangeEventArgs args)
+    {
+        var value = args.Value?.ToString() ?? string.Empty;
+        _prompt = value.Length > PromptMaxLength ? value[..PromptMaxLength] : value;
+    }
 
     private void HandleQuestionInput(ChangeEventArgs args) => _question = args.Value?.ToString() ?? string.Empty;
 
@@ -259,6 +305,35 @@ public partial class TmNotionAiMenu : TmComponentBase, IAsyncDisposable
         return new AIRequestSnapshot(NotionAiMenuMode.Ask, string.Empty, string.Empty, _improveMode, PageId ?? string.Empty, _question.Trim());
     }
 
+    private async Task CopyAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_streamedText) || _isStreaming) return;
+
+        try
+        {
+            await Js.InvokeVoidAsync("tmNotionEditor.copyToClipboard", _streamedText);
+        }
+        catch (JSException)
+        {
+            // A host without the interop still keeps the result on screen.
+        }
+    }
+
+    private async Task HandleModeKeyAsync(KeyboardEventArgs args, NotionAiMenuMode current)
+    {
+        var index = Array.FindIndex(Modes, mode => mode.Mode == current);
+        var next = args.Key switch
+        {
+            "ArrowRight" or "ArrowDown" => Modes[(index + 1) % Modes.Length].Mode,
+            "ArrowLeft" or "ArrowUp" => Modes[(index - 1 + Modes.Length) % Modes.Length].Mode,
+            "Home" => Modes[0].Mode,
+            "End" => Modes[^1].Mode,
+            _ => (NotionAiMenuMode?)null,
+        };
+        if (next is { } target)
+            await SetMode(target);
+    }
+
     private async Task AcceptAsync()
     {
         if (string.IsNullOrWhiteSpace(_streamedText) || _isStreaming) return;
@@ -306,6 +381,12 @@ public partial class TmNotionAiMenu : TmComponentBase, IAsyncDisposable
         if (args.Key == "Escape")
         {
             await CloseAsync();
+            return;
+        }
+
+        if (args.Key == "Enter" && (args.CtrlKey || args.MetaKey) && !_isStreaming)
+        {
+            await RunAsync();
         }
     }
 
