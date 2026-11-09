@@ -1269,11 +1269,23 @@
               "description": "Consumer actions rendered after the built-in Edit and Delete buttons, inside .tm-comment-actions wrapped by .tm-comment-actions__custom, once per comment with that comment's TmCommentEntry. The component does not interpret the fragment: the consumer supplies its own button and any confirmation dialog (for example an admin toggle between internal and public). The component never hides an internal comment. The actions row renders when the comment can be edited or deleted, or when this fragment is set; it is omitted when none of those apply. While that comment is being edited inline the row is hidden; other comments keep theirs. The wrapper is not focusable and does not handle keys, so it does not change tab order — put a native button in the fragment."
             },
             {
+              "name": "CommentEditHandler",
+              "type": "Func<TmCommentEdit, Task<bool>>?",
+              "isRequired": false,
+              "description": "Optional save handler for an inline edit. When set, it runs INSTEAD of OnCommentEdited, with the same data in a named TmCommentEdit record (CommentId, Html). Return true: the inline editor closes. Return false: the inline editor stays open with the edited text and the dirty draft state is preserved; the consumer presents the reason. The handler converts its own failures to false — an exception propagates (the in-flight flag still clears in finally and the editor stays open). Null keeps OnCommentEdited, behavior unchanged."
+            },
+            {
               "name": "Comments",
               "type": "IReadOnlyList<TmCommentEntry>",
               "isRequired": false,
               "default": "[]",
               "description": "Comments to render. An entry with IsInternal is painted with the internal wash, IconNames.Lock and the localized Internal label; it is never hidden — the consumer or server filters visibility. Valid Badges render in the meta row as subtle pill TmBadges. A null Badges list is treated as empty. Defaults to an empty list."
+            },
+            {
+              "name": "CommentSubmitHandler",
+              "type": "Func<TmCommentSubmission, Task<bool>>?",
+              "isRequired": false,
+              "description": "Optional save handler for a NEW comment. When set, it runs INSTEAD of OnCommentSubmitted and OnCommentAdded. Return true: the editor closes and clears and the internal switch resets. Return false: the editor stays open with the typed text and the internal-switch state preserved, the aria-live status announces the non-save (the consumer presents the actual reason), and no draft transition is reported. The handler converts its own failures to false — an exception propagates (the in-flight flag still clears in finally and the editor stays open). Null keeps the legacy callbacks, order unchanged."
             },
             {
               "name": "MentionProvider",
@@ -1285,7 +1297,7 @@
               "name": "OnCommentAdded",
               "type": "EventCallback<string>",
               "isRequired": false,
-              "description": "Raised with the submitted HTML when the user posts a new comment. Stays for hosts that only need the body. Prefer OnCommentSubmitted when the host must also know whether the composer was in internal mode — that callback fires first, then this one, with the same HTML. Both stay; neither replaces the other."
+              "description": "Raised with the submitted HTML when the user posts a new comment. Stays for hosts that only need the body. Prefer OnCommentSubmitted when the host must also know whether the composer was in internal mode — that callback fires first, then this one, with the same HTML. Both stay; neither replaces the other. Neither runs when CommentSubmitHandler is set — the handler replaces them."
             },
             {
               "name": "OnCommentDeleted",
@@ -1297,13 +1309,13 @@
               "name": "OnCommentEdited",
               "type": "EventCallback<(string Id, string Html)>",
               "isRequired": false,
-              "description": "Raised with the comment id and the new HTML when the user saves an edit."
+              "description": "Raised with the comment id and the new HTML when the user saves an edit. Does not run when CommentEditHandler is set — the handler replaces it."
             },
             {
               "name": "OnCommentSubmitted",
               "type": "EventCallback<TmCommentSubmission>",
               "isRequired": false,
-              "description": "Raised when the user posts a NEW comment, before OnCommentAdded, with the HTML and the composer internal flag (TmCommentSubmission). Document order is fixed: this callback, then OnCommentAdded. An edit does not raise it. An effectively empty composer raises neither callback. When this callback has no delegate, only OnCommentAdded runs."
+              "description": "Raised when the user posts a NEW comment, before OnCommentAdded, with the HTML and the composer internal flag (TmCommentSubmission). Document order is fixed: this callback, then OnCommentAdded. An edit does not raise it. An effectively empty composer raises neither callback. When this callback has no delegate, only OnCommentAdded runs. Neither runs when CommentSubmitHandler is set — the handler replaces them."
             },
             {
               "name": "OnDraftChanged",
@@ -109098,6 +109110,30 @@
           ]
         },
         {
+          "itemName": "TmCommentEdit",
+          "kind": "Record",
+          "category": "Shared",
+          "namespace": "Tempo.Blazor.Abstractions.Shared",
+          "description": "Payload of an inline edit save from TmActivityComments, delivered by CommentEditHandler (when set) instead of OnCommentEdited. CommentId is the edited comment id; Html is the inline editor HTML exactly as held at save. The handler returns true to close the editor or false to keep it open with the text preserved.",
+          "packageId": "Tempo.Blazor.Abstractions",
+          "sourcePath": "src/Tempo.Blazor.Abstractions/Shared/TmCommentEdit.cs",
+          "documentationStatus": "merged",
+          "members": [
+            {
+              "name": "CommentId",
+              "kind": "Property",
+              "type": "string",
+              "description": "Id of the comment being edited (TmCommentEntry.Id)."
+            },
+            {
+              "name": "Html",
+              "kind": "Property",
+              "type": "string",
+              "description": "Edited comment HTML, exactly as the inline editor held it."
+            }
+          ]
+        },
+        {
           "itemName": "TmCommentEntry",
           "kind": "Class",
           "category": "Shared",
@@ -117318,12 +117354,12 @@
       ],
       "libraryExamples": [],
       "summary": {
-        "itemCount": 1573,
-        "manualItemCount": 1573,
-        "generatedItemCount": 1557,
+        "itemCount": 1574,
+        "manualItemCount": 1574,
+        "generatedItemCount": 1558,
         "generatedOnlyItemCount": 0,
         "componentCount": 0,
-        "publicApiTypeCount": 1557
+        "publicApiTypeCount": 1558
       }
     },
     {
@@ -134316,10 +134352,10 @@
   ],
   "summary": {
     "packageCount": 28,
-    "itemCount": 3492,
-    "manualItemCount": 3492,
+    "itemCount": 3493,
+    "manualItemCount": 3493,
     "generatedOnlyItemCount": 0,
     "componentCount": 536,
-    "publicApiTypeCount": 2904
+    "publicApiTypeCount": 2905
   }
 }

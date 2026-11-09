@@ -1,0 +1,10 @@
+{
+  "kind": "Record",
+  "category": "Shared",
+  "namespace": "Tempo.Blazor.Abstractions.Shared",
+  "description": "Payload of an inline edit save from TmActivityComments, delivered by CommentEditHandler (when set) instead of OnCommentEdited. CommentId is the edited comment id; Html is the inline editor HTML exactly as held at save. The handler returns true to close the editor or false to keep it open with the text preserved.",
+  "packageId": "Tempo.Blazor.Abstractions",
+  "sourcePath": "src/Tempo.Blazor.Abstractions/Shared/TmCommentEdit.cs",
+  "documentationStatus": "generated",
+  "itemName": "TmCommentEdit"
+}

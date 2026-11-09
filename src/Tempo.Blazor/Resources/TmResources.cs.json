@@ -735,6 +735,7 @@
   "TmActivityComments_InternalToggle": "Interní",
   "TmActivityComments_InternalToggleHint": "Tento komentář uvidí jen interní uživatelé.",
   "TmActivityComments_SubmitComment": "Odeslat komentář",
+  "TmActivityComments_SubmitNotSaved": "Komentář se nepodařilo uložit. Text zůstal zachován.",
   "TmActivityComments_Submitting": "Odesílání komentáře.",
   "TmActivityLog_AttachmentsTab": "Přílohy",
   "TmActivityLog_CommentsTab": "Komentáře",

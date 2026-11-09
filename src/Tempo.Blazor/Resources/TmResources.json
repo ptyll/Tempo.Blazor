@@ -731,6 +731,7 @@
   "TmActivityComments_InternalToggle": "Internal",
   "TmActivityComments_InternalToggleHint": "Only internal users will see this comment.",
   "TmActivityComments_SubmitComment": "Post comment",
+  "TmActivityComments_SubmitNotSaved": "Comment was not saved. Your text is kept.",
   "TmActivityComments_Submitting": "Posting comment.",
   "TmActivityLog_AttachmentsTab": "Attachments",
   "TmActivityLog_CommentsTab": "Comments",

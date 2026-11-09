@@ -3047,6 +3047,8 @@ to{transform:translateX(0);}
 .tm-comment-actions__custom .tm-link-button{display:inline-flex;align-items:center;gap:var(--tm-space-1);}
 .tm-comment-editor{display:flex;flex-direction:column;gap:var(--tm-space-2);margin-top:var(--tm-space-2);}
 .tm-comment-editor-actions{display:flex;flex-wrap:wrap;align-items:center;gap:var(--tm-space-2);}
+.tm-comment-submit-btn[aria-disabled="true"]{opacity:var(--tm-opacity-disabled);cursor:not-allowed;}
+.tm-btn.tm-comment-submit-btn[aria-disabled="true"]:hover{background-color:var(--tm-color-primary);border-color:var(--tm-color-primary);color:var(--tm-color-on-primary);}
 .tm-comment-editor--internal{padding:var(--tm-space-2);border-radius:var(--tm-radius-md);border-inline-start:var(--tm-space-1) solid var(--tm-comment-internal-accent);background:var(--tm-comment-internal-bg);}
 .tm-comment-internal-toggle{margin-inline-end:auto;}
 .tm-comments-add-btn{align-self:flex-start;}

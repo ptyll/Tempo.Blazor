@@ -110,7 +110,8 @@ public sealed class MarkupClassCoverageTests
         // The internal-switch hint is a visually-hidden aria-describedby target (tm-sr-only
         // carries the hiding). The class is the stable hook, so it stays rule-free.
         "tm-comment-internal-toggle-hint",
-        "tm-comment-submit-btn",
+        // Gained its own rule in _activity-comments.css: the aria-disabled in-flight look
+        // (.tm-comment-submit-btn[aria-disabled="true"]) means it is no longer rule-free.
         "tm-currency-input",
         "tm-currency-input__amount",
         "tm-currency-input__converted",

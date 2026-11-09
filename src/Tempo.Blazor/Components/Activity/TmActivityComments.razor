@@ -81,6 +81,7 @@
                         @if (_editingCommentId == c.Id)
                         {
                             <div class="tm-comment-editor">
+                                <span class="tm-sr-only" role="status" aria-live="polite">@_editLive</span>
                                 <TmRichEditorSimple @ref="_editEditor"
                                                     @bind-Value="_editorContent"
                                                     @bind-Value:after="NotifyDraftChangedAsync"
@@ -90,7 +91,7 @@
                                 <div class="tm-comment-editor-actions">
                                     <button class="tm-btn tm-btn-primary tm-btn-sm tm-comment-submit-btn"
                                             type="button"
-                                            disabled="@_isSubmitting"
+                                            aria-disabled="@(_isSubmitting ? "true" : null)"
                                             @onclick="() => SubmitEditAsync(c.Id)">
                                         @Loc["Tm_Save"]
                                     </button>
@@ -188,7 +189,7 @@
                 }
                 <button class="tm-btn tm-btn-primary tm-btn-sm tm-comment-submit-btn"
                         type="button"
-                        disabled="@_isSubmitting"
+                        aria-disabled="@(_isSubmitting ? "true" : null)"
                         @onclick="SubmitNewCommentAsync">
                     @Loc["TmActivityComments_SubmitComment"]
                 </button>
@@ -212,10 +213,25 @@
     [Parameter] public IReadOnlyList<TmCommentEntry> Comments { get; set; } = [];
 
     /// <summary>
+    /// Optional save handler for a NEW comment. When set, it runs INSTEAD of
+    /// <see cref="OnCommentSubmitted"/> and <see cref="OnCommentAdded"/>. Return
+    /// <see langword="true"/> when the comment was saved: the editor closes and clears, and the
+    /// internal switch resets. Return <see langword="false"/> when the save failed: the editor
+    /// stays open with the typed text and the internal-switch state preserved, the component
+    /// announces the non-save through its aria-live status (the consumer presents the actual
+    /// reason), and no draft transition is reported. The handler is expected to convert its own
+    /// failures to <see langword="false"/> — an exception propagates like an exception from the
+    /// legacy callbacks (the in-flight flag still clears in <c>finally</c> and the editor stays
+    /// open). Null (default) keeps the legacy callbacks, order unchanged.
+    /// </summary>
+    [Parameter] public Func<TmCommentSubmission, Task<bool>>? CommentSubmitHandler { get; set; }
+
+    /// <summary>
     /// Raised with the submitted HTML when the user posts a new comment. Stays for hosts that
     /// only need the body. Prefer <see cref="OnCommentSubmitted"/> when the host must also know
     /// whether the composer was in internal mode — that callback fires first, then this one, with
-    /// the same HTML. Both stay; neither replaces the other.
+    /// the same HTML. Both stay; neither replaces the other. Neither runs when
+    /// <see cref="CommentSubmitHandler"/> is set — the handler replaces them.
     /// </summary>
     [Parameter] public EventCallback<string> OnCommentAdded { get; set; }
 
@@ -225,7 +241,8 @@
     /// <see cref="OnCommentAdded"/>. An edit does not raise it — changing an existing comment's
     /// visibility is the consumer's job (see <see cref="CommentActions"/>). An effectively empty
     /// composer raises neither callback. When this callback has no delegate, only
-    /// <see cref="OnCommentAdded"/> runs.
+    /// <see cref="OnCommentAdded"/> runs. Neither runs when <see cref="CommentSubmitHandler"/> is
+    /// set — the handler replaces them.
     /// </summary>
     [Parameter] public EventCallback<TmCommentSubmission> OnCommentSubmitted { get; set; }
 
@@ -252,7 +269,23 @@
     /// <summary>Raised with the comment id when the user deletes a comment.</summary>
     [Parameter] public EventCallback<string> OnCommentDeleted { get; set; }
 
-    /// <summary>Raised with the comment id and the new HTML when the user saves an edit.</summary>
+    /// <summary>
+    /// Optional save handler for an inline edit. When set, it runs INSTEAD of
+    /// <see cref="OnCommentEdited"/>, with the same data in a named <see cref="TmCommentEdit"/>
+    /// record. Return <see langword="true"/> when the save succeeded: the inline editor closes.
+    /// Return <see langword="false"/> when it failed: the inline editor stays open with the
+    /// edited text and the dirty draft state is preserved; the consumer presents the reason.
+    /// The handler is expected to convert its own failures to <see langword="false"/> — an
+    /// exception propagates like an exception from <see cref="OnCommentEdited"/> (the in-flight
+    /// flag still clears in <c>finally</c> and the editor stays open). Null (default) keeps
+    /// <see cref="OnCommentEdited"/>, behavior unchanged.
+    /// </summary>
+    [Parameter] public Func<TmCommentEdit, Task<bool>>? CommentEditHandler { get; set; }
+
+    /// <summary>
+    /// Raised with the comment id and the new HTML when the user saves an edit. Does not run
+    /// when <see cref="CommentEditHandler"/> is set — the handler replaces it.
+    /// </summary>
     [Parameter] public EventCallback<(string Id, string Html)> OnCommentEdited { get; set; }
 
     /// <summary>Shows the Add comment button when no editor is open. Defaults to true.</summary>
@@ -314,6 +347,22 @@
     private bool _composerInternal;
     private bool _isSubmitting;
     private string _composerLive = string.Empty;
+
+    /// <summary>
+    /// Polite live-region text of the INLINE editor. Empty unless the last edit save reported
+    /// <see langword="false"/> — the not-saved announcement — cleared again by
+    /// <see cref="StartEdit"/>, <see cref="CancelEdit"/> and <see cref="DiscardDraftAsync"/>.
+    /// </summary>
+    private string _editLive = string.Empty;
+
+    /// <summary>
+    /// Bumped by every editor open/close/target change (<see cref="ShowEditor"/>,
+    /// <see cref="CancelEditor"/>, <see cref="StartEdit"/>, <see cref="CancelEdit"/>,
+    /// <see cref="DiscardDraftAsync"/>). A submit that was in flight while the target changed
+    /// must not close the NEW target: the generation captured before the await is compared
+    /// after it, and the shared close is skipped on mismatch.
+    /// </summary>
+    private int _draftGeneration;
 
     /// <summary>Autocomplete is on only when the host asked for it AND supplied a provider.</summary>
     private bool MentionsEnabled => SupportsMentions && MentionProvider is not null;
@@ -379,6 +428,8 @@
             _editorOriginalContent = string.Empty;
             _composerInternal = false;
             _composerLive = string.Empty;
+            _editLive = string.Empty;
+            _draftGeneration++;
             StateHasChanged();
             await NotifyDraftChangedAsync();
         });
@@ -499,6 +550,8 @@
         _editorOriginalContent = string.Empty;
         _composerInternal = false;
         _composerLive = string.Empty;
+        _editLive = string.Empty;
+        _draftGeneration++;
         _showEditor = true;
         await NotifyDraftChangedAsync();
     }
@@ -510,6 +563,7 @@
         _editorOriginalContent = string.Empty;
         _composerInternal = false;
         _composerLive = string.Empty;
+        _draftGeneration++;
         await NotifyDraftChangedAsync();
     }
 
@@ -520,9 +574,11 @@
         _showEditor = false;
         _composerInternal = false;
         _composerLive = string.Empty;
+        _editLive = string.Empty;
         _editingCommentId = comment.Id;
         _editorContent = comment.Body;
         _editorOriginalContent = comment.Body;
+        _draftGeneration++;
         await NotifyDraftChangedAsync();
     }
 
@@ -531,6 +587,8 @@
         _editingCommentId = null;
         _editorContent = string.Empty;
         _editorOriginalContent = string.Empty;
+        _editLive = string.Empty;
+        _draftGeneration++;
         await NotifyDraftChangedAsync();
     }
 
@@ -540,27 +598,52 @@
 
         var html = _editorContent;
         var isInternal = _composerInternal;
+        var generation = _draftGeneration;
+        var submittingText = Loc["TmActivityComments_Submitting"];
         _isSubmitting = true;
-        _composerLive = Loc["TmActivityComments_Submitting"];
+        _composerLive = submittingText;
         StateHasChanged();
         try
         {
-            // Document order, pinned: OnCommentSubmitted, then OnCommentAdded. Same HTML.
-            if (OnCommentSubmitted.HasDelegate)
+            if (CommentSubmitHandler is not null)
             {
-                await OnCommentSubmitted.InvokeAsync(new TmCommentSubmission(html, isInternal));
+                // Handler replaces both legacy callbacks. false keeps the editor open with the
+                // typed text and the internal-switch state; the aria-live status announces the
+                // non-save while the consumer presents the actual reason.
+                if (!await CommentSubmitHandler(new TmCommentSubmission(html, isInternal)))
+                {
+                    _composerLive = Loc["TmActivityComments_SubmitNotSaved"];
+                    StateHasChanged();
+                    return;
+                }
             }
+            else
+            {
+                // Document order, pinned: OnCommentSubmitted, then OnCommentAdded. Same HTML.
+                if (OnCommentSubmitted.HasDelegate)
+                {
+                    await OnCommentSubmitted.InvokeAsync(new TmCommentSubmission(html, isInternal));
+                }
 
-            await OnCommentAdded.InvokeAsync(html);
+                await OnCommentAdded.InvokeAsync(html);
+            }
         }
         finally
         {
             _isSubmitting = false;
+            // An exception left the in-flight status up — reset it (the false path already
+            // replaced it with the not-saved announcement, and a success closes via CancelEditor,
+            // so only reset when nobody else touched the text).
+            if (_composerLive == submittingText) _composerLive = string.Empty;
         }
 
-        // Closes through the shared CancelEditor, which emits the closed-editor state
-        // exactly once and resets the internal switch.
-        await CancelEditor();
+        // Close through the shared CancelEditor only when THIS submit still owns the open
+        // composer: the user may have cancelled it (or started an edit) while the save was
+        // in flight, and a blind CancelEditor would wipe the new draft.
+        if (_draftGeneration == generation)
+        {
+            await CancelEditor();
+        }
     }
 
     private async Task SubmitEditAsync(string commentId)
@@ -571,16 +654,35 @@
         StateHasChanged();
         try
         {
-            await OnCommentEdited.InvokeAsync((commentId, _editorContent));
+            if (CommentEditHandler is not null)
+            {
+                // Handler replaces OnCommentEdited. false keeps the inline editor open with the
+                // edited text and announces the non-save through the inline editor's aria-live
+                // status; the consumer presents the failure reason.
+                if (!await CommentEditHandler(new TmCommentEdit(commentId, _editorContent)))
+                {
+                    _editLive = Loc["TmActivityComments_SubmitNotSaved"];
+                    StateHasChanged();
+                    return;
+                }
+            }
+            else
+            {
+                await OnCommentEdited.InvokeAsync((commentId, _editorContent));
+            }
         }
         finally
         {
             _isSubmitting = false;
         }
 
-        // Closes through the shared CancelEdit so the closed-editor state is reported
-        // exactly once — a successful submit must clear the consumer's dirty flag.
-        await CancelEdit();
+        // Close through the shared CancelEdit only when the SAME comment is still being
+        // edited — the user may have switched to another comment's edit while the save was
+        // in flight, and a blind CancelEdit would close that editor and wipe its content.
+        if (_editingCommentId == commentId)
+        {
+            await CancelEdit();
+        }
     }
 
     private async Task DeleteCommentAsync(string commentId)

@@ -733,6 +733,7 @@
   "TmActivityComments_InternalToggle": "Interne",
   "TmActivityComments_InternalToggleHint": "Seuls les utilisateurs internes verront ce commentaire.",
   "TmActivityComments_SubmitComment": "Publier le commentaire",
+  "TmActivityComments_SubmitNotSaved": "Le commentaire n'a pas été enregistré. Votre texte est conservé.",
   "TmActivityComments_Submitting": "Publication du commentaire.",
   "TmActivityLog_AttachmentsTab": "Pièces jointes",
   "TmActivityLog_CommentsTab": "Commentaires",

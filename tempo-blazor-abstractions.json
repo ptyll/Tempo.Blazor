@@ -31375,6 +31375,30 @@
       ]
     },
     {
+      "itemName": "TmCommentEdit",
+      "kind": "Record",
+      "category": "Shared",
+      "namespace": "Tempo.Blazor.Abstractions.Shared",
+      "description": "Payload of an inline edit save from TmActivityComments, delivered by CommentEditHandler (when set) instead of OnCommentEdited. CommentId is the edited comment id; Html is the inline editor HTML exactly as held at save. The handler returns true to close the editor or false to keep it open with the text preserved.",
+      "packageId": "Tempo.Blazor.Abstractions",
+      "sourcePath": "src/Tempo.Blazor.Abstractions/Shared/TmCommentEdit.cs",
+      "documentationStatus": "merged",
+      "members": [
+        {
+          "name": "CommentId",
+          "kind": "Property",
+          "type": "string",
+          "description": "Id of the comment being edited (TmCommentEntry.Id)."
+        },
+        {
+          "name": "Html",
+          "kind": "Property",
+          "type": "string",
+          "description": "Edited comment HTML, exactly as the inline editor held it."
+        }
+      ]
+    },
+    {
       "itemName": "TmCommentEntry",
       "kind": "Class",
       "category": "Shared",
@@ -39595,11 +39619,11 @@
   ],
   "libraryExamples": [],
   "summary": {
-    "itemCount": 1573,
-    "manualItemCount": 1573,
-    "generatedItemCount": 1557,
+    "itemCount": 1574,
+    "manualItemCount": 1574,
+    "generatedItemCount": 1558,
     "generatedOnlyItemCount": 0,
     "componentCount": 0,
-    "publicApiTypeCount": 1557
+    "publicApiTypeCount": 1558
   }
 }
