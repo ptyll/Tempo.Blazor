@@ -317,7 +317,7 @@ public class SchedulerTouchE2ETests : WasmTestBase
         });
         RegisterContext(context);
         var page = await context.NewPageAsync();
-        await page.GotoAsync($"{BaseUrl}/scheduler", new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
+        await page.GotoAsync(SchedulerDemoUrl.For(BaseUrl), new PageGotoOptions { WaitUntil = WaitUntilState.Load, Timeout = 60000 });
         await WaitForAppReadyAsync(page);
         await page.Locator("[data-testid='scheduler-interactive']").ScrollIntoViewIfNeededAsync();
         return page;
